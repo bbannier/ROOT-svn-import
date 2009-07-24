@@ -45,7 +45,7 @@ public:
   virtual Bool_t attach(RooWorkspace& w) ;
   virtual Bool_t initialize() ;
   virtual Bool_t execute() ;
-  virtual RooDataSet* finalize() ;
+  virtual Bool_t finalize() ;
 
   void Print(Option_t *options= 0) const;
 

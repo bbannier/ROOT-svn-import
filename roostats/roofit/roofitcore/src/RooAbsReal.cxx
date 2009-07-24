@@ -1225,7 +1225,7 @@ TH1* RooAbsReal::createHistogram(const char *name, const RooAbsRealLValue& xvar,
   // Define configuration for this method
   RooCmdConfig pc(Form("RooAbsReal::createHistogram(%s)",GetName())) ;
   pc.defineInt("scaling","Scaling",0,1) ;
-  pc.defineObject("projObs","ProjectedObservables",0,0) ;
+  pc.defineSet("projObs","ProjectedObservables",0,0) ;
   pc.defineObject("yvar","YVar",0,0) ;
   pc.defineObject("zvar","ZVar",0,0) ;  
   pc.allowUndefined() ;
@@ -1246,7 +1246,7 @@ TH1* RooAbsReal::createHistogram(const char *name, const RooAbsRealLValue& xvar,
     vars.add(*zvar) ;
   }
 
-  RooArgSet* projObs = static_cast<RooArgSet*>(pc.getObject("projObs")) ;
+  RooArgSet* projObs = pc.getSet("projObs") ;
   RooArgSet* intObs = 0 ;
 
   Bool_t doScaling = pc.getInt("scaling") ;

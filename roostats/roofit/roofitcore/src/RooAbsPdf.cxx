@@ -699,8 +699,8 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("verbose","Verbose",0,0) ;
   pc.defineInt("optConst","Optimize",0,0) ;
   pc.defineInt("cloneData","CloneData",2,0) ;
-  pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
-  pc.defineObject("cPars","Constrain",0,0) ;
+  pc.defineSet("projDepSet","ProjectedObservables",0,0) ;
+  pc.defineSet("cPars","Constrain",0,0) ;
   pc.defineInt("constrAll","Constrained",0,0) ;
   pc.defineSet("extCons","ExternalConstraints",0,0) ;
   pc.defineMutex("Range","RangeWithName") ;
@@ -727,7 +727,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
     cloneData = optConst ;
   }
 
-  RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
+  RooArgSet* cPars = pc.getSet("cPars") ;
   Bool_t doStripDisconnected=kFALSE ;
 
   // If no explicit list of parameters to be constrained is specified apply default algorithm
@@ -764,7 +764,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   }
 
   RooArgSet projDeps ;
-  RooArgSet* tmp = (RooArgSet*) pc.getObject("projDepSet") ;  
+  RooArgSet* tmp = pc.getSet("projDepSet") ;  
   if (tmp) {
     projDeps.add(*tmp) ;
   }
@@ -948,7 +948,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineString("mintype","Minimizer",0,"") ;
   pc.defineString("minalg","Minimizer",1,"") ;
   pc.defineObject("minosSet","Minos",0,0) ;
-  pc.defineObject("cPars","Constrain",0,0) ;
+  pc.defineSet("cPars","Constrain",0,0) ;
   pc.defineSet("extCons","ExternalConstraints",0,0) ;
   pc.defineMutex("FitOptions","Verbose") ;
   pc.defineMutex("FitOptions","Save") ;

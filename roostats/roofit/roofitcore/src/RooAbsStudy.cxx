@@ -61,7 +61,7 @@ RooAbsStudy::~RooAbsStudy()
 {
   // Destructor
   if (_summaryData) delete _summaryData ;
-  if (_storeDetails && _ownDetailData) {
+  if (_ownDetailData && _detailData) {
     _detailData->Delete() ;
     delete _detailData ;
   }
