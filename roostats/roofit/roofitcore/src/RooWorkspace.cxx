@@ -57,6 +57,7 @@
 #include <map>
 #include <string>
 #include <list>
+#include <set>
 
 using namespace std ;
 
@@ -231,6 +232,60 @@ RooWorkspace::~RooWorkspace()
 
 
 //_____________________________________________________________________________
+Bool_t RooWorkspace::import(const char* fileSpec, const RooCmdArg& arg1, const RooCmdArg& arg2, const RooCmdArg& arg3) 
+{
+  // Import a RooAbsArg or RooAbsData set from a workspace in a file. Filespec should be constructed as "filename:wspacename:objectname"
+  // The arguments will be passed on to the relevant RooAbsArg& or RooAbsData& import call
+
+  // Parse file/workspace/objectname specification
+  char buf[1024] ;
+  strcpy(buf,fileSpec) ;
+  char* filename = strtok(buf,":") ;
+  char* wsname = strtok(0,":") ;
+  char* objname = strtok(0,":") ;
+
+  // Check that parsing was successful
+  if (!filename||!wsname||!objname) {
+    coutE(InputArguments) << "RooWorkspace(" << GetName() << ") ERROR in file specification, expecting for 'filename:wsname:objname'" << endl ;
+    return kTRUE ;
+  }
+
+  // Check that file can be opened
+  TFile* f = TFile::Open(filename) ;
+  if (f==0) {
+    coutE(InputArguments) << "RooWorkspace(" << GetName() << ") ERROR opening file " << filename << endl ;
+    return 0 ;
+  }
+
+  // That that file contains workspace
+  RooWorkspace* w = dynamic_cast<RooWorkspace*>(f->Get(wsname)) ;
+  if (w==0) {
+    coutE(InputArguments) << "RooWorkspace(" << GetName() << ") ERROR: No object named " << wsname << " in file " << filename 
+			  << " or object is not a RooWorkspace" << endl ;
+    return 0 ;
+  }
+
+  // Check that workspace contains object and forward to appropriate import method
+  RooAbsArg* arg = w->arg(objname) ;
+  if (arg) {
+    Bool_t ret = import(*arg,arg1,arg2,arg3) ;
+    delete f ;
+    return ret ;    
+  }
+  RooAbsData* data = w->data(objname) ;
+  if (data) {
+    Bool_t ret = import(*data,arg1,arg2,arg3) ;
+    delete f ;
+    return ret ;    
+  }
+
+  coutE(InputArguments) << "RooWorkspace(" << GetName() << ") ERROR: No RooAbsArg or RooAbsData object named " << objname 
+			<< " in workspace " << wsname << " in file " << filename << endl ;
+  return kTRUE ;  
+}
+
+
+//_____________________________________________________________________________
 Bool_t RooWorkspace::import(const RooArgSet& args, const RooCmdArg& arg1, const RooCmdArg& arg2, const RooCmdArg& arg3) 
 {
   // Import multiple RooAbsArg objects into workspace. For details on arguments see documentation
@@ -262,6 +317,7 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
   //  RenameConflictNodes(const char* suffix) -- Add suffix to branch node name if name conflicts with existing node in workspace
   //  RenameAllNodes(const char* suffix) -- Add suffix to all branch node names including top level node
   //  RenameAllVariables(const char* suffix) -- Add suffix to all variables names
+  //  RenameAllVariablesExcept(const char* suffix, const char* exceptionList) -- Add suffix to all variables names, except ones listed
   //  RenameVariable(const char* inputName, const char* outputName) -- Rename variable as specified upon import.
   //  RecycleConflictNodes() -- If any of the function objects to be imported already exist in the name space, connect the
   //                            imported expression to the already existing nodes. WARNING: use with care! If function definitions
@@ -283,6 +339,7 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
   pc.defineString("conflictSuffix","RenameConflictNodes",0) ;
   pc.defineString("allSuffix","RenameAllNodes",0) ;
   pc.defineString("allVarsSuffix","RenameAllVariables",0) ;
+  pc.defineString("allVarsExcept","RenameAllVariables",1) ;
   pc.defineString("varChangeIn","RenameVar",0,"",kTRUE) ;
   pc.defineString("varChangeOut","RenameVar",1,"",kTRUE) ;
   pc.defineString("factoryTag","FactoryTag",0) ;
@@ -303,6 +360,7 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
   const char* suffixC = pc.getString("conflictSuffix") ;
   const char* suffixA = pc.getString("allSuffix") ;
   const char* suffixV = pc.getString("allVarsSuffix") ;
+  const char* exceptVars = pc.getString("allVarsExcept") ;
   const char* varChangeIn = pc.getString("varChangeIn") ;
   const char* varChangeOut = pc.getString("varChangeOut") ;
   Int_t useExistingNodes = pc.getInt("useExistingNodes") ;
@@ -341,13 +399,27 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
     }       
   }
 
-  // Process RenameAllVariables argument if specified
+  // Process RenameAllVariables argument if specified  
+  // First convert exception list if provided
+  std::set<string> exceptVarNames ;
+  char tmp[1024] ;
+  if (exceptVars && strlen(exceptVars)) {
+    strcpy(tmp,exceptVars) ;
+    char* ptr = strtok(tmp,",") ;
+    while(ptr) {
+      exceptVarNames.insert(ptr) ;
+      ptr = strtok(0,",") ;
+    }
+  }
+
   if (suffixV != 0 && strlen(suffixV)>0) {
     RooArgSet* vars = inArg.getVariables() ;
     TIterator* iter = vars->createIterator() ;
     RooAbsArg* v ;
     while((v=(RooAbsArg*)iter->Next())) {
-      varMap[v->GetName()] = Form("%s_%s",v->GetName(),suffixV) ;
+      if (exceptVarNames.find(v->GetName())==exceptVarNames.end()) {
+	varMap[v->GetName()] = Form("%s_%s",v->GetName(),suffixV) ;
+      }
     }
     delete iter ;
     delete vars ;
@@ -389,7 +461,7 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
   RooAbsArg* branch ;
   while ((branch=(RooAbsArg*)iter->Next())) {
     RooAbsArg* wsbranch = _allOwnedNodes.find(branch->GetName()) ;
-    if (wsbranch && wsbranch!=branch && !branch->getAttribute("RooWorkspace::Recycle")) {
+    if (wsbranch && wsbranch!=branch && !branch->getAttribute("RooWorkspace::Recycle") && !useExistingNodes) {
       conflictNodes.add(*branch) ;
     }
   }
