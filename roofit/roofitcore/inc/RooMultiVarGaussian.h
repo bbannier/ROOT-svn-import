@@ -43,6 +43,8 @@ public:
   Int_t getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK=kTRUE) const; 
   void initGenerator(Int_t code) ;
   void generateEvent(Int_t code); 
+
+  const TMatrixDSym& covarianceMatrix() const { return _cov ; }
   
   class AnaIntData {
   public:

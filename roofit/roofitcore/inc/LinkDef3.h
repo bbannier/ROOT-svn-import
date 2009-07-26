@@ -92,6 +92,8 @@
 #pragma link C++ class RooNumGenConfig+ ;
 #pragma link C++ class RooNumGenFactory+ ;
 #pragma link C++ class RooMultiVarGaussian+ ;
+#pragma link C++ class RooMultiVarGaussian::AnaIntData+ ;
+#pragma link C++ class RooMultiVarGaussian::GenData+ ;
 #pragma link C++ class RooXYChi2Var+ ;
 #pragma link C++ class RooAbsDataStore+ ;
 #pragma link C++ class RooTreeDataStore+ ;

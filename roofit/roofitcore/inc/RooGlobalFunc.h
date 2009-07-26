@@ -248,6 +248,7 @@ RooCmdArg Color(Color_t color) ;
 RooCmdArg RenameConflictNodes(const char* suffix) ;
 RooCmdArg RenameAllNodes(const char* suffix) ; 
 RooCmdArg RenameAllVariables(const char* suffix) ; 
+RooCmdArg RenameAllVariablesExcept(const char* suffix,const char* exceptionList) ; 
 RooCmdArg RenameVariable(const char* inputName, const char* outputName) ;
 RooCmdArg Rename(const char* suffix) ;
 RooCmdArg RecycleConflictNodes(Bool_t flag=kTRUE) ;
