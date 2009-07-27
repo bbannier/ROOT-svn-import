@@ -4,6 +4,8 @@
 
 #include "Riostream.h"
 
+#include "TError.h"
+
 #include <ga/ga.h>
 #include <ga/std_stream.h>
 
@@ -23,7 +25,7 @@
 namespace ROOT { 
 namespace Math {
    
-GAlibMinimizer::GAlibMinimizer(): 
+GAlibMinimizer::GAlibMinimizer(int): 
    fObjective(0), fMinValue(0), fX(0), 
    fGAType(GAlibTypeSimple), fGASelector(GAlibRouletteWheelSelector),
    fGAScaling(GAlibLinearScaling), fGAScalingFactor(1.2),
@@ -62,9 +64,11 @@ bool GAlibMinimizer::SetLimitedVariable(unsigned int , const std::string & , dou
    return false;
 }
 
-bool GAlibMinimizer::SetVariable(unsigned int, const std::string&, double, double) 
+bool GAlibMinimizer::SetVariable(unsigned int, const std::string&, double value, double) 
 {
    //It does nothing! As there is no variable if it has no limits!
+   Warning("GAlibMinimizer::SetVariable", "Variables should be limited on a Genetic Minimizer");
+   fAllele->add( value - 3, value + 3 );
    return false;
 }
 
