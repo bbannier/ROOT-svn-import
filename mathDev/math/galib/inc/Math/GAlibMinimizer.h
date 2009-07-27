@@ -78,7 +78,7 @@ public:
 
 public: 
 
-   GAlibMinimizer ();
+   GAlibMinimizer (int = 0);
    virtual ~GAlibMinimizer ();
 
    virtual void Clear();
