@@ -5,6 +5,10 @@
 
 #include "Math/IFunction.h"
 
+#include "TError.h"
+
+#include <cassert>
+
 namespace ROOT {
 namespace Math {
    
@@ -73,9 +77,12 @@ bool GeneticMinimizer::SetLimitedVariable(unsigned int , const std::string & , d
    return true;
 }
 
-bool GeneticMinimizer::SetVariable(unsigned int, const std::string&, double, double) 
+bool GeneticMinimizer::SetVariable(unsigned int, const std::string&, double value, double) 
 {
    //It does nothing! As there is no variable if it has no limits!
+   Warning("GeneticMinimizer::SetVariable", "Variables should be limited on a Genetic Minimizer");
+   fRanges.push_back( new TMVA::Interval(value - 3, value + 3) );
+   
    return false;
 }
 
