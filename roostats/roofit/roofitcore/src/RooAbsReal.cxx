@@ -2320,6 +2320,94 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
 
 
 
+//_____________________________________________________________________________
+Double_t RooAbsReal::getPropagatedError(const RooFitResult& fr) 
+{
+  // Calculate error on self by propagated errors on parameters with correlations as given by fit result
+  // The linearly propagated error is calculated as follows
+  //                                    T            
+  // error(x) = F_a(x) * Corr(a,a') F_a'(x)
+  //
+  // where     F_a(x) = [ f(x,a+da) - f(x,a-da) ] / 2, with f(x) this function and 'da' taken from the fit result
+  //       Corr(a,a') = the correlation matrix from the fit result
+  //
+
+
+  // Clone self for internal use
+  RooAbsReal* cloneFunc = (RooAbsReal*) cloneTree() ;
+  RooArgSet* errorParams = cloneFunc->getObservables(fr.floatParsFinal()) ;
+  RooArgSet* nset = cloneFunc->getParameters(*errorParams) ;
+    
+  // Make list of parameter instances of cloneFunc in order of error matrix
+  RooArgList paramList ;
+  const RooArgList& fpf = fr.floatParsFinal() ;
+  vector<int> fpf_idx ;
+  for (Int_t i=0 ; i<fpf.getSize() ; i++) {
+    RooAbsArg* par = errorParams->find(fpf[i].GetName()) ;
+    if (par) {
+      paramList.add(*par) ;
+      fpf_idx.push_back(i) ;
+    }
+  }
+
+  vector<Double_t> plusVar, minusVar ;    
+  
+  // Create vector of plus,minus variations for each parameter  
+  TMatrixDSym V(paramList.getSize()==fr.floatParsFinal().getSize()?
+		fr.covarianceMatrix():
+		fr.reducedCovarianceMatrix(paramList)) ;
+  
+  for (Int_t ivar=0 ; ivar<paramList.getSize() ; ivar++) {
+    
+    RooRealVar& rrv = (RooRealVar&)fpf[fpf_idx[ivar]] ;
+    
+    Double_t cenVal = rrv.getVal() ;
+    Double_t errVal = sqrt(V(ivar,ivar)) ;
+    
+    // Make Plus variation
+    ((RooRealVar*)paramList.at(ivar))->setVal(cenVal+errVal) ;
+    plusVar.push_back(cloneFunc->getVal(nset)) ;
+    
+    // Make Minus variation
+    ((RooRealVar*)paramList.at(ivar))->setVal(cenVal-errVal) ;
+    minusVar.push_back(cloneFunc->getVal(nset)) ;
+    
+    ((RooRealVar*)paramList.at(ivar))->setVal(cenVal) ;
+  }
+  
+  TMatrixDSym C(paramList.getSize()) ;      
+  vector<double> errVec(paramList.getSize()) ;
+  for (int i=0 ; i<paramList.getSize() ; i++) {
+    errVec[i] = sqrt(V(i,i)) ;
+    for (int j=i ; j<paramList.getSize() ; j++) {
+      C(i,j) = V(i,j)/sqrt(V(i,i)*V(j,j)) ;
+      C(j,i) = C(i,j) ;
+    }
+  }
+  
+  // Make vector of variations
+  TVectorD F(plusVar.size()) ;
+  for (unsigned int j=0 ; j<plusVar.size() ; j++) {
+    F[j] = (plusVar[j]-minusVar[j])/2 ;
+  }
+
+  // Calculate error in linear approximation from variations and correlation coefficient
+  Double_t sum = F*(C*F) ;
+
+  delete cloneFunc ;
+  delete errorParams ;
+  delete nset ;
+
+  return sqrt(sum) ;
+}
+
+
+
+
+
+
+
+
 
 
 //_____________________________________________________________________________
