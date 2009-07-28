@@ -66,6 +66,10 @@ public:
     // Return value with given choice of observables
     return getVal(&set) ; 
   }
+
+
+  Double_t getPropagatedError(const RooFitResult& fr) ;
+
   Bool_t operator==(Double_t value) const ;
   virtual Bool_t operator==(const RooAbsArg& other) ;
   inline const Text_t *getUnit() const { 
