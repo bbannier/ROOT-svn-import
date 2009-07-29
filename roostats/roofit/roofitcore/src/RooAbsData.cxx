@@ -1626,13 +1626,13 @@ RooPlot* RooAbsData::plotOn(RooPlot* frame, const RooLinkedList& argList) const
   if (o.etype == Auto) {
     o.etype = isNonPoissonWeighted() ? SumW2 : Poisson ;    
     if (o.etype == SumW2) {
-      coutI(InputArguments) << "RooTreeData::plotOn(" << GetName() 
+      coutI(InputArguments) << "RooAbsData::plotOn(" << GetName() 
 			    << ") INFO: dataset has non-integer weights, auto-selecting SumW2 errors instead of Poisson errors" << endl ;
     }
   }
   
   if (o.addToHistName && !frame->findObject(o.addToHistName,RooHist::Class())) {
-    coutE(InputArguments) << "RooTreeData::plotOn(" << GetName() << ") cannot find existing histogram " << o.addToHistName 
+    coutE(InputArguments) << "RooAbsData::plotOn(" << GetName() << ") cannot find existing histogram " << o.addToHistName 
 			  << " to add to in RooPlot" << endl ;
     return frame ;
   }
@@ -1862,7 +1862,7 @@ RooPlot* RooAbsData::plotAsymOn(RooPlot* frame, const RooAbsCategoryLValue& asym
   }
 
   // convert this histogram to a RooHist object on the heap
-  RooHist *graph= new RooHist(*hist1,*hist2,0,1,o.xErrorSize,kFALSE,o.scaleFactor);
+  RooHist *graph= new RooHist(*hist1,*hist2,0,1,o.etype,o.xErrorSize,kFALSE,o.scaleFactor);
   graph->setYAxisLabel(Form("Asymmetry in %s",asymCat.GetName())) ;
 
   // initialize the frame's normalization setup, if necessary
@@ -1958,7 +1958,7 @@ RooPlot* RooAbsData::plotEffOn(RooPlot* frame, const RooAbsCategoryLValue& effCa
   }
 
   // convert this histogram to a RooHist object on the heap
-  RooHist *graph= new RooHist(*hist1,*hist2,0,1,o.xErrorSize,kTRUE);
+  RooHist *graph= new RooHist(*hist1,*hist2,0,1,o.etype,o.xErrorSize,kTRUE);
   graph->setYAxisLabel(Form("Efficiency of %s=%s",effCat.GetName(),effCat.lookupType(1)->GetName())) ;
 
   // initialize the frame's normalization setup, if necessary
