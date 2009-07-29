@@ -465,7 +465,7 @@ RooNDKeysPdf::loadDataSet(Bool_t firstCall) const
     _mean[j]  = _x1[j]/_x0[j];
     _sigma[j] = sqrt(_x2[j]/_x0[j]-_mean[j]*_mean[j]);
   }
-
+ 
   for (Int_t j=0; j<_nDim; j++) {
     for (Int_t k=0; k<_nDim; k++) 
       (*_covMat)(j,k) = mat(j,k)/_x0[j] - _mean[j]*_mean[k] ;
@@ -785,7 +785,6 @@ RooNDKeysPdf::calculateBandWidth() const
 
 
 Double_t
-
 //_____________________________________________________________________________
 RooNDKeysPdf::gauss(vector<Double_t>& x, vector<vector<Double_t> >& weights) const 
 {
@@ -826,9 +825,8 @@ RooNDKeysPdf::gauss(vector<Double_t>& x, vector<vector<Double_t> >& weights) con
 
       g *= exp( -c*pow(r,2) );
       g *= 1./(_sqrt2pi*weight[j]);
-      g *= _wMap[_idx[i]];
     }
-    z += g;
+    z += (g*_wMap[_idx[i]]);
   }
   return z;
 }
