@@ -14,6 +14,7 @@
 #include "RooStats/ConfInterval.h"
 #include "RooStats/ConfidenceBelt.h"
 #include "RooStats/FeldmanCousins.h"
+//#include "RooStats/ProfileLike.h"
 
 #include "RooDataSet.h"
 #include "RooRealVar.h"
@@ -71,17 +72,18 @@ void rs401c_FeldmanCousins()
   // set the distribution creator, which encodes the test statistic
   fc.SetPdf(pois);
   fc.SetParameters(parameters);
-  fc.SetTestSize(.05); // set size of test
+  fc.SetTestSize(.1); // set size of test
   fc.SetData(*data);
   fc.UseAdaptiveSampling(true);
   fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
-  fc.SetNBins(30); // number of points to test per parameter
+  fc.CreateConfBelt(true); // number counting analysis: dataset always has 1 entry with N events observed
+  fc.SetNBins(100); // number of points to test per parameter
 
   // use the Feldman-Cousins tool
   ConfInterval* interval = fc.GetInterval();
 
   ConfidenceBelt* belt = 0;
-  //  belt = fc.GetConfidenceBelt();
+  belt = fc.GetConfidenceBelt();
 
   // make a canvas for plots
   TCanvas* intervalCanvas =  new TCanvas("intervalCanvas");
