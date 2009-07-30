@@ -1083,11 +1083,11 @@ void G__make_ifunctable(char* funcheader)
       int len = strlen(paraname);
       paraname.Resize(len + 10);
       paraname[len++] = cin;
-      cin = G__fgetstream(paraname, ")", len);
+      cin = G__fgetstream(paraname, len, ")");
       len = strlen(paraname);
       paraname.Resize(len + 10);
       paraname[len++] = cin;
-      cin = G__fgetstream_template(paraname, ",;{", len);
+      cin = G__fgetstream_template(paraname, len, ",;{");
    }
    // If header ignore following headers, else read function body.
    if ((paraname[0] == '\0'
@@ -1244,7 +1244,7 @@ void G__make_ifunctable(char* funcheader)
 
       if (G__dispsource) G__disp_mask = 1000;
       paraname = funcheader;
-      cin = G__fgetstream(paraname, ")", strlen(paraname));
+      cin = G__fgetstream(paraname, strlen(paraname), ")");
       iin = strlen(paraname);
       paraname += ")";
       if (G__dispsource) G__disp_mask = 0;
@@ -1979,14 +1979,14 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                         fpos_t tmp_pos;
                         fgetpos(G__ifile.fp, &tmp_pos);
                         int tmp_line = G__ifile.line_number;
-                        c = G__fgetstream(param_name, "[=,)", len);
+                        c = G__fgetstream(param_name, len, "[=,)");
                         fsetpos(G__ifile.fp, &tmp_pos);
                         G__ifile.line_number = tmp_line;
                         G__disp_mask = 0;
                      }
                      if (c == '[') {
                         // Collect all the rest of the array bounds.
-                        c = G__fgetstream(param_name, "=,)", len);
+                        c = G__fgetstream(param_name, len, "=,)");
                         ptrcnt = 0; // FIXME: This erases all pointers (int* ary[d][d] is broken!)
                         break;
                      }
@@ -2050,7 +2050,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                      ptrcnt = 0;
                      // Start constructing the parameter name part.
                      buf[i++] = '(';
-                     c = G__fgetstream(buf, "*)", i);
+                     c = G__fgetstream(buf, i, "*)");
                      if (c == '*') {
                         buf.Resize(i + 1);
                         buf[i++] = c;
@@ -2073,7 +2073,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                         buf[i++] = ')';
                      }
                      // Copy out the rest of the parameter specification (up to a default value, if any).
-                     c = G__fdumpstream(buf, ",)=", i);
+                     c = G__fdumpstream(buf, i, ",)=");
                   }
                   //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
 #ifndef G__OLDIMPLEMENTATION2191
@@ -2094,7 +2094,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                   }
                   // Collect next keyword or id into param_name.
                   param_name[0] = c;
-                  c = G__fgetstream(param_name, "[=,)& \t", 1);
+                  c = G__fgetstream(param_name, 1, "[=,)& \t");
                   if (!strcmp(param_name, "const")) { // handle const keyword
                      ifunc->param[func_now][iin]->isconst |= G__PCONSTVAR; // FIXME: This is intentionally wrong!  Fix the code that depends on this!
                      param_name[0] = 0;
@@ -2122,7 +2122,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                               if (G__dispsource) {
                                  G__disp_mask = 1;
                               }
-                              c = G__fgetstream(param_name, "=,)", len);
+                              c = G__fgetstream(param_name, len, "=,)");
                               // Note: Either we next process a default value, or enclosing loop terminates.
                               break;
                            }

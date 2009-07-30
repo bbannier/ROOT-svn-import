@@ -607,7 +607,7 @@ void G__define_struct(char type)
       if (c == ':') {
          tagname += "::";
          int len = strlen(tagname);
-         c = G__fgetname_template(tagname, "{:;=&", len);
+         c = G__fgetname_template(tagname, len, "{:;=&");
       }
       else {
          fseek(G__ifile.fp, -1, SEEK_CUR);

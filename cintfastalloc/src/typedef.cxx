@@ -324,7 +324,7 @@ void G__define_type()
          type1[len++] = c;
          do { // ignore white space inside template
             // humm .. thoes this translate correctly nested templates?
-            c = G__fgetstream_template(type1, ">", len);
+            c = G__fgetstream_template(type1, len, ">");
             len = strlen(type1);
          }
          while (isspace(c));
@@ -682,32 +682,32 @@ void G__define_type()
       fpos_t tmppos;
       fgetpos(G__ifile.fp, &tmppos);
       int tmpline = G__ifile.line_number;
-      c = G__fgetname(type_name, ";,[", 1);
+      c = G__fgetname(type_name, 1, ";,[");
       if (isspace(c) && !strcmp(type_name, "*const")) {
          isconst |= G__PCONSTVAR;
-         c = G__fgetstream(type_name, ";,[", 1);
+         c = G__fgetstream(type_name, 1, ";,[");
       }
       else {
          G__disp_mask = strlen(type_name) - 1;
          G__ifile.line_number = tmpline;
          fsetpos(G__ifile.fp, &tmppos);
-         c = G__fgetstream(type_name, ";,[", 1);
+         c = G__fgetstream(type_name, 1, ";,[");
       }
    }
    else if (!strcmp(type_name, "**")) {
       fpos_t tmppos;
       fgetpos(G__ifile.fp, &tmppos);
       int tmpline = G__ifile.line_number;
-      c = G__fgetname(type_name, ";,[", 1);
+      c = G__fgetname(type_name, 1, ";,[");
       if (isspace(c) && !strcmp(type_name, "*const")) {
          isconst |= G__PCONSTVAR;
-         c = G__fgetstream(type_name, ";,[", 1);
+         c = G__fgetstream(type_name, 1, ";,[");
       }
       else {
          G__disp_mask = strlen(type_name) - 1;
          G__ifile.line_number = tmpline;
          fsetpos(G__ifile.fp, &tmppos);
-         c = G__fgetstream(type_name, ";,[", 1);
+         c = G__fgetstream(type_name, 1, ";,[");
       }
       isorgtypepointer = 1;
       type = toupper(type);
@@ -723,7 +723,7 @@ void G__define_type()
    }
    else if (!strcmp(type_name, "*const")) {
       isconst |= G__PCONSTVAR;
-      c = G__fgetstream(type_name, ";,[", 1);
+      c = G__fgetstream(type_name, 1, ";,[");
    }
 #ifndef G__OLDIMPLEMENTATION1856
    else if (!strcmp(type_name, "const*")) {
@@ -735,7 +735,7 @@ void G__define_type()
             isconst |= G__CONSTVAR;
          }
          type_name[0] = '*';
-         c = G__fgetstream(type_name, ";,[", 1);
+         c = G__fgetstream(type_name, 1, ";,[");
       }
       if ((c == '&') && (type_name[0] != '&')) {
          reftype = G__PARAREFERENCE;
@@ -750,7 +750,7 @@ void G__define_type()
       isorgtypepointer = 1;
       type = toupper(type);
       type_name[0] = '*';
-      c = G__fgetstream(type_name, "*;,[", 1);
+      c = G__fgetstream(type_name, 1, "*;,[");
    }
    else if (!strcmp(type_name, "const*&")) {
       isconst |= G__CONSTVAR;
@@ -762,7 +762,7 @@ void G__define_type()
    if (isspace(c)) {
       if ((type_name[0] == '(') && (c != ';') && (c != ',')) {
          do {
-            c = G__fgetstream(type_name, ";,", strlen(type_name));
+            c = G__fgetstream(type_name, strlen(type_name), ";,");
             type_name.Set(strlen(type_name), c);
          }
          while ((c != ';') && (c != ','));
@@ -791,7 +791,7 @@ void G__define_type()
       else if (!strcmp(type_name, "const*")) {
          isconst |= G__PCONSTVAR;
          type_name[0] = '*';
-         c = G__fgetstream(type_name, ";,[", 1);
+         c = G__fgetstream(type_name, 1, ";,[");
       }
       else {
          G__FastAllocString ltemp1(G__LONGLINE);

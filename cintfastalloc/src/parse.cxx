@@ -168,7 +168,7 @@ static int G__setline(G__FastAllocString& statement, int c, int* piout)
 {
    // -- FIXME: Describe this function!
    if ((c != '\n') && (c != '\r')) {
-      c = G__fgetname(statement, "\n\r", 1);
+      c = G__fgetname(statement, 1, "\n\r");
       //
       //
       if (!isdigit(statement[1])) {
@@ -623,7 +623,7 @@ static int G__exec_function(G__FastAllocString& statement, int* pc, int* piout, 
       //fprintf(stderr, "G__exec_function: Function call is followed by an operator.\n");
       if ((*pc != ';') && (*pc != ',')) {
          statement[(*piout)++] = *pc;
-         *pc = G__fgetstream_new(statement , ";", (*piout));
+         *pc = G__fgetstream_new(statement ,  (*piout), ";");
       }
       if (G__breaksignal) {
          int ret = G__beforelargestep(statement, piout, plargestep);
@@ -646,7 +646,7 @@ static int G__exec_function(G__FastAllocString& statement, int* pc, int* piout, 
       //fprintf(stderr, "G__exec_function: Function call is followed by '('.\n");
       int len = strlen(statement);
       statement[len++] = *pc;
-      *pc = G__fgetstream_newtemplate(statement, ")", len);
+      *pc = G__fgetstream_newtemplate(statement, len, ")");
       len = strlen(statement);
       statement[len++] = *pc;
       statement[len] = 0;
@@ -654,7 +654,7 @@ static int G__exec_function(G__FastAllocString& statement, int* pc, int* piout, 
       while (*pc != ';') {
          len = strlen(statement);
          statement[len++] = *pc;
-         *pc = G__fgetstream_newtemplate(statement, ");", len);
+         *pc = G__fgetstream_newtemplate(statement, len, ");");
          if (*pc == ';') {
             break;
          }
@@ -4269,7 +4269,7 @@ static int G__keyword_anytime_8(G__FastAllocString& statement)
          }
          else {
             tcname[len] = store_c;
-            c = G__fgetstream_template(tcname, ";", strlen(tcname));
+            c = G__fgetstream_template(tcname, strlen(tcname), ";");
          }
       }
       if (!G__defined_templateclass(tcname)) {
@@ -4752,7 +4752,7 @@ void G__pp_skip(int elifskip)
                if (oneline[i] == '\\') {
                   int len = strlen(condition);
                   while (1) {
-                     G__fgetstream(condition, "\n\r", len);
+                     G__fgetstream(condition, len, "\n\r");
                      if (condition[len] == '\\' && (condition[len+1] == '\n' ||
                                                     condition[len+1] == '\r')) {
                         char* p = condition + len;
@@ -4783,7 +4783,7 @@ void G__pp_skip(int elifskip)
                      if (!posCommentEnd) {
                         if (G__skip_comment())
                            break;
-                        if (G__fgetstream(condition, "\r\n", posComment - condition.data()) == EOF)
+                        if (G__fgetstream(condition, posComment - condition.data(), "\r\n") == EOF)
                            break;
                      }
                      else {
@@ -4846,7 +4846,7 @@ int G__pp_if()
    int store_asm_noverflow;
    int haveOpenDefined = -1; // need to convert defined FOO to defined(FOO)
    do {
-      c = G__fgetstream(condition, " \n\r", len);
+      c = G__fgetstream(condition, len, " \n\r");
       len = strlen(condition);
       if (len > 0 && (condition[len] == '\n' || condition[len] == '\r')) --len;
       if (haveOpenDefined != -1) {
@@ -5299,7 +5299,7 @@ G__value G__exec_statement(int* mparen)
                            while (c == ':') {
                               casepara += "::";
                               int lenxxx = strlen(casepara);
-                              G__fgetstream(casepara, ":", lenxxx);
+                              G__fgetstream(casepara, lenxxx, ":");
                               c = G__fgetc();
                            }
                            // Backup one character.
@@ -5587,7 +5587,7 @@ G__value G__exec_statement(int* mparen)
                            }
                            else {
                               statement.Set(0, c);
-                              c = G__fgetstream_template(statement, ";", 1);
+                              c = G__fgetstream_template(statement, 1, ";");
                               result = G__new_operator(statement);
                               // Reset the statement buffer.
                               iout = 0;
@@ -5746,7 +5746,7 @@ G__value G__exec_statement(int* mparen)
                                  G__disp_mask = 1;
                               }
                               // Scan the reset of the parenthesised new expression.
-                              c = G__fgetstream_template(statement, ")", iout);
+                              c = G__fgetstream_template(statement, iout, ")");
                               iout = strlen(statement);
                               statement.Set(iout++, c);
                               // And terminate the statement buffer.
@@ -6110,9 +6110,9 @@ G__value G__exec_statement(int* mparen)
                               }
                               else {
                                  statement += "[";
-                                 c = G__fgetstream(statement, "]", strlen(statement));
+                                 c = G__fgetstream(statement, strlen(statement), "]");
                                  statement += "]";
-                                 c = G__fgetstream(statement, ";", strlen(statement));
+                                 c = G__fgetstream(statement, strlen(statement), ";");
                               }
                            }
                            // Note: iout == 1, if 'delete[]'
@@ -6701,7 +6701,7 @@ G__value G__exec_statement(int* mparen)
             ) {
                // -- Handle an assignment.
                statement.Set(iout, '=');
-               c = G__fgetstream_new(statement, ";,{}", iout + 1);
+               c = G__fgetstream_new(statement, iout + 1, ";,{}");
                if ((c == '}') || (c == '{')) {
                   G__syntaxerror(statement);
                   --*mparen;
@@ -6932,19 +6932,19 @@ G__value G__exec_statement(int* mparen)
                         casepara[0] = '(';
                         {
                            int lencasepara = 1;
-                           c = G__fgetstream(casepara, ":", lencasepara);
+                           c = G__fgetstream(casepara, lencasepara, ":");
                            if (c==')') {
                               lencasepara = strlen(casepara);
                               casepara.Resize(lencasepara + 2);
                               casepara[lencasepara] = ')';
                               ++lencasepara;
-                              G__fgetstream(casepara, ":", lencasepara);
+                              G__fgetstream(casepara, lencasepara, ":");
                            }
                            c = G__fgetc();
                            while (c == ':') {
                               casepara += "::";
                               lencasepara = strlen(casepara);
-                              G__fgetstream(casepara, ":", lencasepara);
+                              G__fgetstream(casepara, lencasepara, ":");
                               c = G__fgetc();
                            }
                         }
@@ -7054,7 +7054,7 @@ G__value G__exec_statement(int* mparen)
                ) {
                   // Read to 'func(xxxxxx)'
                   //                     ^
-                  c = G__fgetstream_new(statement , ")", iout);
+                  c = G__fgetstream_new(statement , iout, ")");
                   iout = strlen(statement);
                   statement.Resize(iout + 2);
                   statement[iout++] = c;
@@ -7069,7 +7069,7 @@ G__value G__exec_statement(int* mparen)
                      // -- We have a new expression, either placement or parenthesized typename.
                      // Grab the rest of the line.
                      statement.Set(iout++, c);
-                     c = G__fgetstream_template(statement, ";", iout);
+                     c = G__fgetstream_template(statement, iout, ";");
                      // Find the position of the first open parenthesis.
                      char* pnew = strchr(statement, '(');
                      G__ASSERT(pnew);
@@ -7095,7 +7095,7 @@ G__value G__exec_statement(int* mparen)
                }
                else if (iout > 3) {
                   // -- Nope, just a parenthesized construct, accumulate it and keep going.
-                  c = G__fgetstream_new(statement, ")", iout);
+                  c = G__fgetstream_new(statement, iout, ")");
                   iout = strlen(statement);
                   statement.Set(iout++, c);
                }
@@ -7122,19 +7122,19 @@ G__value G__exec_statement(int* mparen)
                casepara[0] = '(';
                {
                   int lencasepara = 1;
-                  c = G__fgetstream(casepara, ":", lencasepara);
+                  c = G__fgetstream(casepara, lencasepara, ":");
                   if (c==')') {
                      lencasepara = strlen(casepara);
                      casepara.Resize(lencasepara + 2);
                      casepara[lencasepara] = ')';
                      ++lencasepara;
-                     G__fgetstream(casepara, ":", lencasepara);
+                     G__fgetstream(casepara, lencasepara, ":");
                   }
                   c = G__fgetc();
                   while (c == ':') {
                      casepara += "::";
                      lencasepara = strlen(casepara);
-                     G__fgetstream(casepara, ":", lencasepara);
+                     G__fgetstream(casepara, lencasepara, ":");
                      c = G__fgetc();
                   }
                }
@@ -7473,7 +7473,7 @@ G__value G__exec_statement(int* mparen)
                   //   O  Vector<Array<T> >  This has to be handled here
                   //
                   statement.Set(iout++, c);
-                  c = G__fgetstream_template(statement, ">", iout);
+                  c = G__fgetstream_template(statement, iout, ">");
                   G__ASSERT(c == '>');
                   iout = strlen(statement);
                   if (statement[iout-1] == '>') {
