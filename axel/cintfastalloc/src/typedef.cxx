@@ -1066,14 +1066,10 @@ void G__define_type()
             // in case of struct,union
             //
             else {
-               switch (tagtype) {
-                  case 's':
-                  case 'c':
-                  case 'u':
-                  default:
-                     /* enum already handled above */
-                     G__fprinterr(G__serr, "Error: Illegal tagtype. struct,union,enum expected\n");
-                     break;
+               if (tagtype != 's' && tagtype != 'c' && tagtype != 'u') {
+                  /* enum already handled above */
+                  G__fprinterr(G__serr, "Error: Illegal tagtype. struct,union,enum expected\n");
+                  break;
                }
                store_local = G__p_local;
                G__p_local = G__struct.memvar[G__tagnum];
