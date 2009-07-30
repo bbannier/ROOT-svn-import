@@ -11740,7 +11740,7 @@ void G__specify_link(int link_stub)
   int done=0;
 
   /* Get link language interface */
-  c = G__fgetname_template(buf,";\n\r");
+  c = G__fgetname_template(buf, 0, ";\n\r");
 
   if(strncmp(buf,"postproc",5)==0) {
     int store_globalcomp2 = G__globalcomp;
@@ -11749,10 +11749,10 @@ void G__specify_link(int link_stub)
     G__globalcomp = G__NOLINK;
     G__store_globalcomp = G__NOLINK;
     G__prerun = 0;
-    c = G__fgetname_template(buf,";");
+    c = G__fgetname_template(buf, 0, ";");
     if(G__LOADFILE_SUCCESS<=G__loadfile(buf)) {
       G__FastAllocString buf2(G__ONELINE);
-      c = G__fgetstream(buf2,";");
+      c = G__fgetstream(buf2, 0, ";");
       G__calc(buf2);
       G__unloadfile(buf);
     }
@@ -11819,7 +11819,7 @@ void G__specify_link(int link_stub)
   if(';'==c)  return;
 
   /* Get type of language construct */
-  c = G__fgetname_template(buf,";\n\r");
+  c = G__fgetname_template(buf, 0, ";\n\r");
 
   if(G__MACROLINK==globalcomp&&strncmp(buf,"function",3)!=0) {
     G__fprinterr(G__serr,"Warning: #pragma link MACRO only valid for global function. Ignored\n");
@@ -11890,7 +11890,7 @@ void G__specify_link(int link_stub)
         }
 
      // fetch next token
-     c = G__fgetname_template(buf,";\n\r");
+     c = G__fgetname_template(buf, 0, ";\n\r");
   }
 
 
@@ -11945,7 +11945,7 @@ void G__specify_link(int link_stub)
     if(strncmp(buf,"class+protected",6)==0) protectedaccess = 1;
 #endif
 #endif
-    c = G__fgetstream_template(buf,";\n\r");
+    c = G__fgetstream_template(buf, 0, ";\n\r");
     for (iirf = 0; iirf < 3; iirf++) {
       if (buf[strlen(buf)-1] == '-') {
         rfNoStreamer = 1;
@@ -12100,7 +12100,7 @@ void G__specify_link(int link_stub)
     fpos_t pos;
     int store_line = G__ifile.line_number;
     fgetpos(G__ifile.fp,&pos);
-    c = G__fgetstream_template(buf,";\n\r<>");
+    c = G__fgetstream_template(buf, 0, ";\n\r<>");
 
     if(G__CPPLINK==globalcomp) globalcomp=G__METHODLINK;
 
@@ -12122,12 +12122,12 @@ void G__specify_link(int link_stub)
     else {
       fsetpos(G__ifile.fp,&pos);
       G__ifile.line_number = store_line;
-      c = G__fgetstream_template(buf,";\n\r");
+      c = G__fgetstream_template(buf, 0, ";\n\r");
     }
 
 
 #else /* 828 */
-    c = G__fgetstream_template(buf,";\n\r");
+    c = G__fgetstream_template(buf, 0, ";\n\r");
 #endif /* 828 */
 
 
@@ -12307,7 +12307,7 @@ void G__specify_link(int link_stub)
   * #pragma link [spec] operators [classname];
   *************************************************************************/
   else if(strncmp(buf,"operators",3)==0) {
-     c = G__fgetname_template(buf,";\n\r");
+     c = G__fgetname_template(buf, 0, ";\n\r");
 
      // Do not (yet) support wildcarding
      int cltag = G__defined_tagname(buf,1);
@@ -12362,7 +12362,7 @@ void G__specify_link(int link_stub)
   * #pragma link [spec] global [name];
   *************************************************************************/
   else if(strncmp(buf,"global",3)==0) {
-    c = G__fgetname_template(buf,";\n\r");
+    c = G__fgetname_template(buf, 0, ";\n\r");
     p = strrchr(buf,'*');
     if(p) {
 #if defined(G__REGEXP)
@@ -12447,7 +12447,7 @@ void G__specify_link(int link_stub)
   *  introduced. Keeping this just for future needs.
   *************************************************************************/
   else if(strncmp(buf,"all_datamembers",5)==0) {
-    if(';'!=c) c = G__fgetstream_template(buf,";\n\r");
+    if(';'!=c) c = G__fgetstream_template(buf, 0, ";\n\r");
     if(buf[0]) {
       struct G__var_array *var;
       int ig15;
@@ -12481,7 +12481,7 @@ void G__specify_link(int link_stub)
   *************************************************************************/
   else if(strncmp(buf,"all_methods",5)==0||
           strncmp(buf,"all_functions",5)==0) {
-    if(';'!=c) c = G__fgetstream_template(buf,";\n\r");
+    if(';'!=c) c = G__fgetstream_template(buf, 0, ";\n\r");
     if(G__CPPLINK==globalcomp) globalcomp=G__METHODLINK;
     if(buf[0]) {
       struct G__ifunc_table_internal *ifunc;
@@ -12523,7 +12523,7 @@ void G__specify_link(int link_stub)
   * #pragma link [spec] typedef [name];
   *************************************************************************/
   else if(strncmp(buf,"typedef",3)==0) {
-    c = G__fgetname_template(buf,";\n\r");
+    c = G__fgetname_template(buf, 0, ";\n\r");
     p = strrchr(buf,'*');
     if(p && *(p+1)=='>') p=(char*)NULL;
     if(p) {
@@ -12615,7 +12615,7 @@ void G__specify_link(int link_stub)
   * #pragma link [spec] ioctortype [item];
   *************************************************************************/
   else if(strncmp(buf,"ioctortype",3)==0) {
-      c = G__fgetname(buf,";\n\r");
+      c = G__fgetname(buf, 0, ";\n\r");
       if (G__p_ioctortype_handler) G__p_ioctortype_handler(buf);
   }
 #endif
@@ -12633,15 +12633,15 @@ void G__specify_link(int link_stub)
     char* fullItem[_MAX_PATH], fullIndex = fullItem[_MAX_PATH], fullIndex_sb;
 #endif
     fgetpos(G__ifile.fp,&pos);
-    c = G__fgetname(buf,";\n\r");
+    c = G__fgetname(buf, 0, ";\n\r");
     if(strcmp(buf,"class")==0||strcmp(buf,"struct")==0||
         strcmp(buf,"namespace")==0) {
-      if(isspace(c)) c = G__fgetstream_template(buf,";\n\r");
+      if(isspace(c)) c = G__fgetstream_template(buf, 0, ";\n\r");
       tagflag = 1;
     }
     else {
       fsetpos(G__ifile.fp,&pos);
-      c = G__fgetstream_template(buf,";\n\r<>");
+      c = G__fgetstream_template(buf, 0, ";\n\r<>");
       unsigned int buflen = strlen(buf) - 1;
       if (buf[0]=='"' && buf[buflen]=='"') {
          // Skip the quotes (that allowed us to keep the spaces.
@@ -12831,7 +12831,7 @@ void G__specify_link(int link_stub)
   * #pragma link [spec] all [item];
   *************************************************************************/
   else if(strncmp(buf,"all",2)==0) {
-    c = G__fgetname_template(buf,";\n\r");
+    c = G__fgetname_template(buf, 0, ";\n\r");
     if(strncmp(buf,"class",3)==0) {
       for(i=0;i<G__struct.alltag;i++) {
         if(G__NOLINK==globalcomp ||
@@ -13500,7 +13500,7 @@ void G__specify_extra_include() {
     for(i=0;i<G__MAXFILE;i++)
       G__extra_include[i]=(char*)malloc(G__MAXFILENAME*sizeof(char));
   };
-  c = G__fgetstream_template(buf,";\n\r<>");
+  c = G__fgetstream_template(buf, 0, ";\n\r<>");
   if ( 1 ) { /* should we check if the file exist ? */
     tobecopied = buf;
     if (buf[0]=='\"' || buf[0]=='\'') tobecopied++;

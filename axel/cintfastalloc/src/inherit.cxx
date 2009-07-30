@@ -133,7 +133,7 @@ int G__baseconstructorwp()
   if(':'==c) c=',';
   
   while(','==c) {
-    c=G__fgetstream_newtemplate(buf,"({,"); /* case 3) */
+    c=G__fgetstream_newtemplate(buf, 0, "({,"); /* case 3) */
     if('('==c) {
       if(pbaseparamin) {
         pbaseparam->next
@@ -150,11 +150,11 @@ int G__baseconstructorwp()
       pbaseparam->param = (char*)NULL;
       pbaseparam->name=(char*)malloc(strlen(buf)+1);
       strcpy(pbaseparam->name,buf);
-      c=G__fgetstream_newtemplate(buf,")");
+      c=G__fgetstream_newtemplate(buf, 0, ")");
       pbaseparam->param=(char*)malloc(strlen(buf)+1);
       strcpy(pbaseparam->param,buf);
       ++n;
-      c=G__fgetstream(buf,",{");
+      c=G__fgetstream(buf, 0, ",{");
     }
   }
   

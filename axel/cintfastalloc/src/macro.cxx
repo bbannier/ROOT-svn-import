@@ -361,7 +361,7 @@ static int G__replacefuncmacro(const char* item, G__Callfuncmacro* callfuncmacro
    semicolumn = 0;
    while (1) {
       G__disp_mask = 10000; // FIXME: Crazy!
-      c = G__fgetstream(symbol, punctuation);
+      c = G__fgetstream(symbol, 0,  punctuation);
       if ('\0' != symbol[0]) {
          if (!double_quote && !single_quote) {
             G__argsubstitute(symbol, callpara, defpara);

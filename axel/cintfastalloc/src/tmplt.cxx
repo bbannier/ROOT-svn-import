@@ -383,8 +383,8 @@ struct G__Templatearg *G__read_formal_templatearg()
 
     /*  template<class T,class E,int S> ...
      *           ^                            */
-    c = G__fgetname(type,"<");
-    if (strcmp (type, "const") == 0 && c == ' ') c=G__fgetname(type,"<");
+    c = G__fgetname(type, 0, "<");
+    if (strcmp (type, "const") == 0 && c == ' ') c=G__fgetname(type, 0, "<");
     if(strcmp(type,"class")==0 || strcmp(type,"typename")==0) {
       p->type = G__TMPLT_CLASSARG;
     }
@@ -403,7 +403,7 @@ struct G__Templatearg *G__read_formal_templatearg()
         int linenum;
         fgetpos(G__ifile.fp,&pos);
         linenum = G__ifile.line_number;
-        c = G__fgetname(name,",>="); 
+        c = G__fgetname(name, 0, ",>="); 
         if(strcmp(name,"int")==0) p->type = G__TMPLT_UINTARG;
         else if(strcmp(name,"short")==0) p->type = G__TMPLT_USHORTARG;
         else if(strcmp(name,"char")==0) p->type = G__TMPLT_UCHARARG;
@@ -411,7 +411,7 @@ struct G__Templatearg *G__read_formal_templatearg()
           p->type = G__TMPLT_ULONGARG;
           fgetpos(G__ifile.fp,&pos);
           linenum = G__ifile.line_number;
-          c = G__fgetname(name,",>="); 
+          c = G__fgetname(name, 0, ",>="); 
           if(strcmp(name,"int")==0) {
             p->type = G__TMPLT_ULONGARG;
           }
@@ -451,7 +451,7 @@ struct G__Templatearg *G__read_formal_templatearg()
 
     /*  template<class T,class E,int S> ...
      *                 ^                     */
-    c = G__fgetstream(name,",>="); /* G__fgetstream_tmplt() ? */
+    c = G__fgetstream(name, 0, ",>="); /* G__fgetstream_tmplt() ? */
     while(name[0] && '*'==name[strlen(name)-1]) {
       if(G__TMPLT_CLASSARG==p->type) p->type = G__TMPLT_POINTERARG1;
       else p->type+=G__TMPLT_POINTERARG1;
@@ -461,7 +461,7 @@ struct G__Templatearg *G__read_formal_templatearg()
     strcpy(p->string,name);
 
     if('='==c) {
-      c = G__fgetstream_template(name,",>"); /* G__fgetstream_tmplt() ? */
+      c = G__fgetstream_template(name, 0, ",>"); /* G__fgetstream_tmplt() ? */
       p->default_parameter=(char*)malloc(strlen(name)+1);
       strcpy(p->default_parameter,name);
     }
@@ -1262,7 +1262,7 @@ int G__explicit_template_specialization()
   G__disp_mask = 1000;
 
   /* forward proving */
-  cin = G__fgetname_template(buf,":{;");
+  cin = G__fgetname_template(buf, 0, ":{;");
   if(strcmp(buf,"class")==0 || strcmp(buf,"struct")==0) {
     /* template<>  class A<int> { A(A& x); A& operator=(A& x); };
      *                  ^                      */
@@ -1279,7 +1279,7 @@ int G__explicit_template_specialization()
 
     /* def_para.next = (struct G__Templatearg *)NULL; */
 
-    cin = G__fgetname_template(buf,":{;");
+    cin = G__fgetname_template(buf, 0, ":{;");
     G__FastAllocString templatename(buf);
     pp=strchr(templatename,'<');
     if(pp) *pp=0;
@@ -1390,12 +1390,12 @@ void G__declare_template()
   /* if(G__dispsource) G__disp_mask=1000; */
 
   do {
-     c=G__fgetname_template(temp,"(<");
+     c=G__fgetname_template(temp, 0, "(<");
      if (strcmp(temp,"friend")==0) {
         isfrienddecl = 1;
         // We do not need to autoload friend declaration.
         autoload_old = G__set_class_autoloading(0);
-        c=G__fgetname_template(temp,"(<");
+        c=G__fgetname_template(temp, 0, "(<");
      }
   } while(strcmp(temp,"inline")==0||strcmp(temp,"const")==0
      || strcmp(temp,"typename")==0 || strcmp(temp,"static") == 0
@@ -1405,7 +1405,7 @@ void G__declare_template()
   if(strcmp(temp,"class")==0 || strcmp(temp,"struct")==0) {
      fpos_t fppreclassname;
      fgetpos(G__ifile.fp, &fppreclassname);
-     c = G__fgetstream_template(temp,":{;"); /* read template name */
+     c = G__fgetstream_template(temp, 0, ":{;"); /* read template name */
      bool haveFuncReturn = false; // whether we have "class A<T>::B f()"
      if(';'==c) {
         isforwarddecl = 1;
@@ -1419,7 +1419,7 @@ void G__declare_template()
            haveFuncReturn = true;
            // put temp back onto the stream, get up to '<'
            fsetpos(G__ifile.fp, &fppreclassname);
-           c = G__fgetname_template(temp,"(<");
+           c = G__fgetname_template(temp, 0, "(<");
         } else
            fsetpos(G__ifile.fp, &fpprepeek);
      }
@@ -1453,8 +1453,8 @@ void G__declare_template()
      *  also the return value could be a pointer or reference or const 
      *  or any combination of the 3
      *                      ^>^            */
-    c = G__fgetstream_template(temp3,">");
-    c = G__fgetname_template(temp2,"*&(;");
+    c = G__fgetstream_template(temp3, 0, ">");
+    c = G__fgetname_template(temp2, 0, "*&(;");
     if (c=='*' && strncmp(temp2,"operator",strlen("operator"))==0) {
        temp2 += "*";
        c = G__fgetname_template(temp2,"*&(;=", strlen(temp2));
@@ -1467,7 +1467,7 @@ void G__declare_template()
        /* we skip all the & and * we see and what's in between.
           This should be removed from the func name (what we are looking for)
           anything preceding combinations of *,& and const. */
-       c = G__fgetname_template(temp2,"*&(;=");
+       c = G__fgetname_template(temp2, 0, "*&(;=");
        size_t len = strlen(temp2);
        static size_t oplen( strlen( "::operator" ) );
        
@@ -1557,7 +1557,7 @@ void G__declare_template()
       G__disp_mask = 1000;
       fgetpos(G__ifile.fp,&posx);
       linex = G__ifile.line_number;
-      c=G__fgetname(temp,"&*(;<");
+      c=G__fgetname(temp, 0, "&*(;<");
       if(0==strcmp(temp,"const")) {
         G__constvar = G__CONSTVAR;
         if(G__dispsource) G__fprinterr(G__serr,"%s",temp());
@@ -1568,7 +1568,7 @@ void G__declare_template()
         fsetpos(G__ifile.fp,&posx);
         G__ifile.line_number = linex;
       }
-      c=G__fgetstream(temp,"(;<");
+      c=G__fgetstream(temp, 0, "(;<");
       /* Judge by c? '('  global or '<' member */
     }
     /*
@@ -1627,7 +1627,7 @@ void G__declare_template()
     // template<..> inline|const type  f(T a,S b) { ... }
     //                               ^
     do {
-      c=G__fgetname_template(temp,"(<&*");
+      c=G__fgetname_template(temp, 0, "(<&*");
       if(strcmp(temp,"operator")==0) {
          if (isspace(c)){
             c=G__fgetstream(temp,"(", 8);
@@ -2615,7 +2615,7 @@ void G__replacetemplate(const char* templatename,const char *tagname,G__Charlist
   while(1) {
     G__disp_mask = 10000;
     SET_READINGFILE; /* ON777 */
-    c = G__fgetstream(symbol,punctuation);
+    c = G__fgetstream(symbol, 0, punctuation);
     SET_WRITINGFILE; /* ON777 */
     if('~'==c) isnew=1;
     else if(','==c) isnew=0;
@@ -2688,7 +2688,7 @@ void G__replacetemplate(const char* templatename,const char *tagname,G__Charlist
                      if (G__templatesubstitute(subsubst,callpara,def_para,templatename
                                                ,tagname,c,npara,1) && '>'!=c) {
                         G__FastAllocString ignorebuf(G__LONGLINE);
-                        c=G__fgetstream(ignorebuf,">");
+                        c=G__fgetstream(ignorebuf, 0, ">");
                         G__ASSERT('>'==c);
                         c='>';
                      }
@@ -2705,7 +2705,7 @@ void G__replacetemplate(const char* templatename,const char *tagname,G__Charlist
                   if (G__templatesubstitute(subsubst,callpara,def_para,templatename
                                             ,tagname,c,npara,1) && '>'!=c) {
                      G__FastAllocString ignorebuf(G__LONGLINE);
-                     c=G__fgetstream(ignorebuf,">");
+                     c=G__fgetstream(ignorebuf, 0, ">");
                      G__ASSERT('>'==c);
                      c='>';
                   }
@@ -2720,7 +2720,7 @@ void G__replacetemplate(const char* templatename,const char *tagname,G__Charlist
            ,tagname,c,npara,isnew) && '>'!=c) {
               G__FastAllocString ignorebuf(G__LONGLINE);
               SET_READINGFILE; /* ON777 */
-              c=G__fgetstream(ignorebuf,">");
+              c=G__fgetstream(ignorebuf, 0, ">");
               SET_WRITINGFILE; /* ON777 */
               G__ASSERT('>'==c);
               c='>';
@@ -2815,7 +2815,7 @@ void G__replacetemplate(const char* templatename,const char *tagname,G__Charlist
      && ';'!=c
      ) {
         SET_READINGFILE; /* ON777 */
-        G__fgetstream(symbol,";");
+        G__fgetstream(symbol, 0, ";");
         const_c = 0;
         SET_WRITINGFILE; /* ON777 */
         fprintf(G__mfp,"%s ;",symbol());
@@ -3645,7 +3645,7 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
      *                                                        ^   ^  */
 
     do { /* read typename */
-      c = G__fgetname_template(paraname,",)<*&=");
+      c = G__fgetname_template(paraname, 0, ",)<*&=");
     } while(strcmp(paraname,"class")==0 || strcmp(paraname,"struct")==0 ||
             strcmp(paraname,"const")==0 || strcmp(paraname,"volatile")==0
             || strcmp(paraname,"typename")==0
@@ -3656,18 +3656,18 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
 
     /*  template<class T,template<class U> class E> type func(T a,E<T> b) {
      *                                                         ^   ^  */
-    /* if(isspace(c)) c = G__fgetname(temp,"<,()*&[="); */
+    /* if(isspace(c)) c = G__fgetname(temp, 0, "<,()*&[="); */
     /*  template<class T,template<class U> class E> type func(T a,E<T> b) {
      *                                                          ^  ^  */
 
     /* 1. function parameter, fixed fundamental type */
     if(strcmp(paraname,"unsigned")==0) {
       unsigned_flag = -1;
-      if('*'!=c && '&'!=c) c = G__fgetname(paraname,",)*&=");
+      if('*'!=c && '&'!=c) c = G__fgetname(paraname, 0, ",)*&=");
     }
     else if(strcmp(paraname,"signed")==0) {
       unsigned_flag = 0;
-      if('*'!=c && '&'!=c) c = G__fgetname(paraname,",)*&=");
+      if('*'!=c && '&'!=c) c = G__fgetname(paraname, 0, ",)*&=");
     }
     if(strcmp(paraname,"int")==0) {
       deftmpfunc->func_para.type[tmp] = 'i' + unsigned_flag;
@@ -3684,7 +3684,7 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
     else if(strcmp(paraname,"long")==0) {
       deftmpfunc->func_para.type[tmp] = 'l' + unsigned_flag;
       if('*'!=c && '&'!=c) {
-        c = G__fgetname(paraname,",)*&[=");
+        c = G__fgetname(paraname, 0, ",)*&[=");
         if(strcmp(paraname,"double")==0) deftmpfunc->func_para.type[tmp]='d';
       }
     }
@@ -3734,7 +3734,7 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
           }
         }
         ++nt;
-        c = G__fgetstream(paraname,",>");
+        c = G__fgetstream(paraname, 0, ",>");
       } while(','==c);
       if('>'==c) {
         ntarg[nt]=G__istemplatearg(paraname,deftmpfunc->def_para);
@@ -3809,19 +3809,19 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
         break;
       case '[':
         c=G__fignorestream("]");
-        c = G__fgetname(temp,",()*&[=");
+        c = G__fgetname(temp, 0, ",()*&[=");
         ++pointlevel;
         break;
       case '*':
         ++pointlevel;
-        c = G__fgetname(temp,",()*&[=");
+        c = G__fgetname(temp, 0, ",()*&[=");
         break;
       case '&':
         ++reftype;
-        c = G__fgetname(temp,",()*&[=");
+        c = G__fgetname(temp, 0, ",()*&[=");
         break;
       default:
-        c = G__fgetname(temp,",()*&[=");
+        c = G__fgetname(temp, 0, ",()*&[=");
         break;
       }
     }
