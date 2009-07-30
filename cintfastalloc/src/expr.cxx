@@ -1241,7 +1241,7 @@ G__value G__getexpr(const char* expression)
                if (G__defined_templateclass(ebuf)) {
                   ++ig1;
                   ebuf[lenbuf++] = c;
-                  c = G__getstream_template(expression, &ig1, ebuf, ">", lenbuf);
+                  c = G__getstream_template(expression, &ig1, ebuf, lenbuf, ">");
                   lenbuf = strlen(ebuf);
                   ebuf[lenbuf++] = c;
                   ebuf[lenbuf] = '\0';
@@ -1257,13 +1257,13 @@ G__value G__getexpr(const char* expression)
                         )) {
                   ++ig1;
                   ebuf[lenbuf++] = c;
-                  c = G__getstream_template(expression, &ig1, ebuf, ">", lenbuf);
+                  c = G__getstream_template(expression, &ig1, ebuf, lenbuf, ">");
                   if ('>' == c) ebuf += ">";
                   lenbuf = strlen(ebuf);
-                  c = G__getstream_template(expression, &ig1, ebuf, "(", lenbuf);
+                  c = G__getstream_template(expression, &ig1, ebuf, lenbuf, "(");
                   if ('(' == c) ebuf += "(";
                   lenbuf = strlen(ebuf);
-                  c = G__getstream_template(expression, &ig1, ebuf, ")", lenbuf);
+                  c = G__getstream_template(expression, &ig1, ebuf, lenbuf, ")");
                   if (')' == c) ebuf += ")";
                   lenbuf = strlen(ebuf);
                   --ig1;
@@ -1276,7 +1276,7 @@ G__value G__getexpr(const char* expression)
                   /* TODO, implement casts, may need to introduce new instruction */
                   ++ig1;
                   ebuf[0] = '(';
-                  c = G__getstream_template(expression, &ig1, ebuf, ">", 1);
+                  c = G__getstream_template(expression, &ig1, ebuf, 1, ">");
                   lenbuf = strlen(ebuf);
                   ebuf += ")";
                   --ig1;
