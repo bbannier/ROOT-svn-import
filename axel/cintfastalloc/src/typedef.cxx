@@ -353,11 +353,11 @@ void G__define_type()
 
    if (!strcmp(type1, "unsigned")) {
       unsigned_flag = 1;
-      c = G__fgetname(type1, "");
+      c = G__fgetname(type1, 0, "");
    }
    else if (!strcmp(type1, "signed")) {
       unsigned_flag = 0;
-      c = G__fgetname(type1, "");
+      c = G__fgetname(type1, 0, "");
    }
    else if (!strcmp(type1, "unsigned*")) {
       unsigned_flag = 1;
