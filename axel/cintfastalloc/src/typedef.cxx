@@ -52,15 +52,14 @@ static void G__shiftstring(char* s, int n)
 static int G__defined_typename_exact(char* type_name)
 {
    // Search already defined typedef names, -1 is returned if not found
-   int i, flag = 0, len;
+   int i, flag = 0;
    char ispointer = 0;
-   char temp[G__LONGLINE];
+   int len = strlen(type_name) + 1;
+   G__FastAllocString temp(len);
    char *p;
-   char temp2[G__LONGLINE];
+   G__FastAllocString temp2(type_name);
    int env_tagnum;
    char *par;
-
-   strcpy(temp2, type_name);
 
    /* find 'xxx::yyy' */
    p = (char*)G__find_last_scope_operator(temp2);
@@ -70,7 +69,7 @@ static int G__defined_typename_exact(char* type_name)
    if (par && p && par < p) p = (char*)NULL;
 
    if (p) {
-      strcpy(temp, p + 2);
+      temp = p + 2;
       *p = '\0';
       if (temp2 == p) env_tagnum = -1; /* global scope */
 #ifndef G__STD_NAMESPACE
@@ -88,7 +87,7 @@ static int G__defined_typename_exact(char* type_name)
       }
    }
    else {
-      strcpy(temp, temp2);
+      temp = temp2;
       env_tagnum = G__get_envtagnum();
    }
 
@@ -220,18 +219,17 @@ void G__define_type()
    //        ^
    fpos_t rewind_fpos;
    int c;
-   char type1[G__LONGLINE];
-   char tagname[G__LONGLINE];
-   char type_name[G__LONGLINE];
-   char temp[G__LONGLINE];
+   G__FastAllocString type1(G__LONGLINE);
+   G__FastAllocString tagname(G__LONGLINE);
+   G__FastAllocString type_name(G__LONGLINE);
+   G__FastAllocString temp(G__LONGLINE);
    int isnext;
    fpos_t next_fpos;
    int store_tagnum;
    int store_def_struct_member = 0;
    struct G__var_array* store_local;
-   char category[10];
-   char memname[G__MAXNAME];
-   char val[G__ONELINE];
+   G__FastAllocString memname(G__MAXNAME);
+   G__FastAllocString val(G__ONELINE);
    char type;
    char tagtype = 0;
    int unsigned_flag = 0;
@@ -245,7 +243,7 @@ void G__define_type()
    int itemp;
    int nindex = 0;
    int index[G__MAXVARDIM];
-   char aryindex[G__MAXNAME];
+   G__FastAllocString aryindex(G__MAXNAME);
    char* p;
    int store_var_type;
    int typenum;
@@ -326,7 +324,7 @@ void G__define_type()
          type1[len++] = c;
          do { // ignore white space inside template
             // humm .. thoes this translate correctly nested templates?
-            c = G__fgetstream_template(type1 + len, ">");
+            c = G__fgetstream_template(type1, ">", len);
             len = strlen(type1);
          }
          while (isspace(c));
@@ -451,7 +449,7 @@ void G__define_type()
       if (strcmp(type1, "class") == 0) tagtype = 'c';
       if (strcmp(type1, "union") == 0) tagtype = 'u';
       if (strcmp(type1, "enum") == 0) tagtype = 'e';
-      tagname[0] = '\0';
+      tagname[0] = 0;
 
       /*  typedef [struct|union|enum]{ member } newtype;
        *                              ^ */
@@ -565,19 +563,21 @@ void G__define_type()
          tagtype = G__struct.type[itemp];
 #ifndef G__OLDIMPLEMENTATION1503
          if (G__struct.parent_tagnum[itemp] != -1) {
-            sprintf(tagname, "%s::%s", G__fulltagname(G__struct.parent_tagnum[itemp], 0), G__struct.name[itemp]);
+            tagname = G__fulltagname(G__struct.parent_tagnum[itemp], 0);
+            tagname += "::";
+            tagname += G__struct.name[itemp];
          }
          else {
-            strcpy(tagname, G__struct.name[itemp]);
+            tagname = G__struct.name[itemp];
          }
 #else // G__OLDIMPLEMENTATION1503
-         strcpy(tagname, G__fulltagname(itemp, 0));
+         tagname = G__fulltagname(itemp, 0);
 #endif // G__OLDIMPLEMENTATION1503
          ++G__struct.istypedefed[itemp];
       }
       else {
          tagtype = 0;
-         tagname[0] = '\0';
+         tagname[0] = 0;
       }
       typedef2 = 1;
    }
@@ -593,7 +593,7 @@ void G__define_type()
     */
 
    if (rawunsigned) {
-      strcpy(type_name, type1);
+      type_name = type1;
    }
    else {
       c = G__fgetname_template(type_name, ";,[");
@@ -624,7 +624,7 @@ void G__define_type()
       else if (type == 'k') {
          type = 'm';
       }
-      strcpy(tagname, "");
+      tagname = "";
       c = G__fgetname(type_name, ";,[");
    }
    if (
@@ -648,7 +648,7 @@ void G__define_type()
       if (type == 'l') {
          // int tmptypenum;
          type = 'q';
-         strcpy(tagname, "");
+         tagname = "";
       }
       c = G__fgetname(type_name, ";,[");
    }
@@ -682,32 +682,32 @@ void G__define_type()
       fpos_t tmppos;
       fgetpos(G__ifile.fp, &tmppos);
       int tmpline = G__ifile.line_number;
-      c = G__fgetname(type_name + 1, ";,[");
+      c = G__fgetname(type_name, ";,[", 1);
       if (isspace(c) && !strcmp(type_name, "*const")) {
          isconst |= G__PCONSTVAR;
-         c = G__fgetstream(type_name + 1, ";,[");
+         c = G__fgetstream(type_name, ";,[", 1);
       }
       else {
          G__disp_mask = strlen(type_name) - 1;
          G__ifile.line_number = tmpline;
          fsetpos(G__ifile.fp, &tmppos);
-         c = G__fgetstream(type_name + 1, ";,[");
+         c = G__fgetstream(type_name, ";,[", 1);
       }
    }
    else if (!strcmp(type_name, "**")) {
       fpos_t tmppos;
       fgetpos(G__ifile.fp, &tmppos);
       int tmpline = G__ifile.line_number;
-      c = G__fgetname(type_name + 1, ";,[");
+      c = G__fgetname(type_name, ";,[", 1);
       if (isspace(c) && !strcmp(type_name, "*const")) {
          isconst |= G__PCONSTVAR;
-         c = G__fgetstream(type_name + 1, ";,[");
+         c = G__fgetstream(type_name, ";,[", 1);
       }
       else {
          G__disp_mask = strlen(type_name) - 1;
          G__ifile.line_number = tmpline;
          fsetpos(G__ifile.fp, &tmppos);
-         c = G__fgetstream(type_name + 1, ";,[");
+         c = G__fgetstream(type_name, ";,[", 1);
       }
       isorgtypepointer = 1;
       type = toupper(type);
@@ -723,7 +723,7 @@ void G__define_type()
    }
    else if (!strcmp(type_name, "*const")) {
       isconst |= G__PCONSTVAR;
-      c = G__fgetstream(type_name + 1, ";,[");
+      c = G__fgetstream(type_name, ";,[", 1);
    }
 #ifndef G__OLDIMPLEMENTATION1856
    else if (!strcmp(type_name, "const*")) {
@@ -735,7 +735,7 @@ void G__define_type()
             isconst |= G__CONSTVAR;
          }
          type_name[0] = '*';
-         c = G__fgetstream(type_name + 1, ";,[");
+         c = G__fgetstream(type_name, ";,[", 1);
       }
       if ((c == '&') && (type_name[0] != '&')) {
          reftype = G__PARAREFERENCE;
@@ -750,7 +750,7 @@ void G__define_type()
       isorgtypepointer = 1;
       type = toupper(type);
       type_name[0] = '*';
-      c = G__fgetstream(type_name + 1, "*;,[");
+      c = G__fgetstream(type_name, "*;,[", 1);
    }
    else if (!strcmp(type_name, "const*&")) {
       isconst |= G__CONSTVAR;
@@ -762,11 +762,11 @@ void G__define_type()
    if (isspace(c)) {
       if ((type_name[0] == '(') && (c != ';') && (c != ',')) {
          do {
-            c = G__fgetstream(type_name + strlen(type_name), ";,");
-            sprintf(type_name + strlen(type_name), "%c", c);
+            c = G__fgetstream(type_name, ";,", strlen(type_name));
+            type_name.Set(strlen(type_name), c);
          }
          while ((c != ';') && (c != ','));
-         type_name[strlen(type_name)-1] = '\0';
+         type_name[strlen(type_name)-1] = 0;
       }
       else if (!strcmp(type_name, "const")) {
          isconst |= G__PCONSTVAR;
@@ -791,10 +791,10 @@ void G__define_type()
       else if (!strcmp(type_name, "const*")) {
          isconst |= G__PCONSTVAR;
          type_name[0] = '*';
-         c = G__fgetstream(type_name + 1, ";,[");
+         c = G__fgetstream(type_name, ";,[", 1);
       }
       else {
-         char ltemp1[G__LONGLINE];
+         G__FastAllocString ltemp1(G__LONGLINE);
          c = G__fgetstream(ltemp1, ";,[");
          if (ltemp1[0] == '(') {
             type = 'q';
@@ -822,32 +822,32 @@ void G__define_type()
       if (p == type_name) {
          // function to pointer 'typedef type (*newtype)();'
          // handle this as 'typedef void* newtype;'
-         strcpy(val, p + 1);
+         val = p + 1;
          p = strchr(val, ')');
          *p = '\0';
-         strcpy(type_name, val);
+         type_name = val;
          type = 'y';
          p = strstr(type_name, "::*");
          if (p) {
             // pointer to member function 'typedef type (A::*p)();
-            strcpy(val, p + 3);
-            strcpy(type_name, val);
+            val = p + 3;
+            type_name = val;
             type = 'a';
          }
       }
       else if ((p == (type_name + 1)) && (type_name[0] == '*')) {
          // function to pointer 'typedef type *(*newtype)();'
          // handle this as 'typedef void* newtype;'
-         strcpy(val, p + 1);
+         val = p + 1;
          p = strchr(val, ')');
          *p = '\0';
-         strcpy(type_name, val);
+         type_name = val;
          type = 'Q';
          p = strstr(type_name, "::*");
          if (p) {
             // pointer to member function 'typedef type (A::*p)();
-            strcpy(val, p + 3);
-            strcpy(type_name, val);
+            val = p + 3;
+            type_name = val;
             type = 'a';
          }
       }
@@ -902,8 +902,8 @@ void G__define_type()
             ++ix;
          }
       }
-      strcpy(val, type_name);
-      strcpy(type_name, val + ix);
+      val = type_name;
+      type_name = val + ix;
    }
    // typedef oldtype &newtype
    if (type_name[0] == '&') {
@@ -914,8 +914,8 @@ void G__define_type()
          reftype = G__PARAREFERENCE;
       }
       if (strlen(type_name) > 1) {
-         strcpy(val, type_name);
-         strcpy(type_name, val + 1);
+         val = type_name;
+         type_name = val + 1;
       }
    }
    //
@@ -968,10 +968,11 @@ void G__define_type()
       G__newtype.hash[typenum] = len;
       if (!tagname[0]) {
          if (G__globalcomp == G__CPPLINK) {
-            sprintf(tagname, "%s", type_name);
+            tagname = type_name;
          }
          else {
-            sprintf(tagname, "$%s", type_name);
+            tagname = "$";
+            tagname += type_name;
          }
          taglen = strlen(tagname);
       }
@@ -1067,14 +1068,8 @@ void G__define_type()
             else {
                switch (tagtype) {
                   case 's':
-                     sprintf(category, "struct");
-                     break;
                   case 'c':
-                     sprintf(category, "class");
-                     break;
                   case 'u':
-                     sprintf(category, "union");
-                     break;
                   default:
                      /* enum already handled above */
                      G__fprinterr(G__serr, "Error: Illegal tagtype. struct,union,enum expected\n");
@@ -1180,15 +1175,6 @@ int G__defined_typename_noerror(const char* type_name, int noerror)
    int i;
    int len;
    char ispointer = 0;
-#ifndef G__OLDIMPLEMENTATION1823
-   char buf[G__BUFLEN];
-   char buf2[G__BUFLEN];
-   char* temp = buf;
-   char* temp2 = buf2;
-#else
-   char temp[G__LONGLINE];
-   char temp2[G__LONGLINE];
-#endif
    char* p;
    int env_tagnum;
    int typenum = -1;
@@ -1196,13 +1182,7 @@ int G__defined_typename_noerror(const char* type_name, int noerror)
    unsigned long thisflag = 0;
    char* par;
 
-#ifndef G__OLDIMPLEMENTATION1823
-   if (strlen(type_name) > (G__BUFLEN - 10)) {
-      temp2 = (char*) malloc(strlen(type_name) + 10);
-      temp = (char*) malloc(strlen(type_name) + 10);
-   }
-#endif
-   strcpy(temp2, type_name);
+   G__FastAllocString temp2(type_name);
 
    // find 'xxx::yyy'
    // const ns::T - the const does not belong to the ns!
@@ -1212,6 +1192,7 @@ int G__defined_typename_noerror(const char* type_name, int noerror)
    }
    p = (char*) G__find_last_scope_operator(skipconst);
 
+   G__FastAllocString temp(strlen(skipconst));
 
    // abandon scope operator if 'zzz (xxx::yyy)www'
    par = strchr(skipconst, '(');
@@ -1220,7 +1201,7 @@ int G__defined_typename_noerror(const char* type_name, int noerror)
    }
 
    if (p) {
-      strcpy(temp, p + 2);
+      temp = p + 2;
       *p = '\0';
       if (skipconst == p) {
          env_tagnum = -1; // global scope
@@ -1240,7 +1221,7 @@ int G__defined_typename_noerror(const char* type_name, int noerror)
       }
    }
    else {
-      strcpy(temp, skipconst);
+      temp = skipconst;
       env_tagnum = G__get_envtagnum();
    }
 
@@ -1308,14 +1289,6 @@ int G__defined_typename_noerror(const char* type_name, int noerror)
    } else {
       i = G__newtype.alltype;
    }
-#ifndef G__OLDIMPLEMENTATION1823
-   if (temp != buf) {
-      free(temp);
-   }
-   if (temp2 != buf2) {
-      free(temp2);
-   }
-#endif
    return typenum;
 }
 
@@ -1341,8 +1314,7 @@ int G__search_typename(const char* typenamein, int typein, int tagnum, int refty
    int i, flag = 0, len;
    char ispointer = 0;
 
-   char type_name[G__LONGLINE];
-   strcpy(type_name, typenamein);
+   G__FastAllocString type_name(typenamein);
    /* keep uniqueness for pointer to function typedefs */
 #ifndef G__OLDIMPLEMENTATION2191
    if ('1' == typein) G__make_uniqueP2Ftypedef(type_name);
