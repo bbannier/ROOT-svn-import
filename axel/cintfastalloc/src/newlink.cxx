@@ -12111,12 +12111,12 @@ void G__specify_link(int link_stub)
       store_line = G__ifile.line_number;
       fgetpos(G__ifile.fp,&pos);
       buf[len] = G__fgetc();
-      if(buf[len]==c||'='==buf[len]) c=G__fgetstream_template(buf,";\n\r", len+1);
+      if(buf[len]==c||'='==buf[len]) c=G__fgetstream_template(buf, len+1, ";\n\r");
       else {
         fsetpos(G__ifile.fp,&pos);
         G__ifile.line_number = store_line;
         if(G__dispsource) G__disp_mask = 1;
-        c = G__fgetstream_template(buf,";\n\r", len);
+        c = G__fgetstream_template(buf, len, ";\n\r");
       }
     }
     else {

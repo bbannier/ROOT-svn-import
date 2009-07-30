@@ -1457,11 +1457,11 @@ void G__declare_template()
     c = G__fgetname_template(temp2, 0, "*&(;");
     if (c=='*' && strncmp(temp2,"operator",strlen("operator"))==0) {
        temp2 += "*";
-       c = G__fgetname_template(temp2,"*&(;=", strlen(temp2));
+       c = G__fgetname_template(temp2, strlen(temp2), "*&(;=");
 
     } else if (c=='&' && strncmp(temp2,"operator",strlen("operator"))==0) {
        temp2 += "&";
-       c = G__fgetname_template(temp2,"*(;=", strlen(temp2));
+       c = G__fgetname_template(temp2, strlen(temp2), "*(;=");
     }
     while (c=='&'||c=='*') {
        /* we skip all the & and * we see and what's in between.
@@ -1478,7 +1478,7 @@ void G__declare_template()
              temp2.Set(len + 1, 0);
              temp2.Set(len, c);
              ++len;
-             c = G__fgetname_template(temp2,"*&(;=", len);
+             c = G__fgetname_template(temp2, len, "*&(;=");
           }
        }
     }
@@ -1489,15 +1489,15 @@ void G__declare_template()
     }
     if(isspace(c)) {
       if(strcmp(temp2,"::~")==0)
-         c = G__fgetname_template(temp2,"(;", 3);
+         c = G__fgetname_template(temp2, 3, "(;");
       else if(strcmp(temp2,"::")==0)
-         c = G__fgetname_template(temp2,"(;", 2);
+         c = G__fgetname_template(temp2, 2, "(;");
       else if((p=strstr(temp2,"::"))&&strcmp(p,"::operator")==0) {
         /* A<T> A<T>::operator T () { } */
         c='<'; /* this is a flag indicating this is a member function tmplt */
       }
       else if(strcmp(temp2,"operator")==0) {
-         c = G__fgetstream(temp2,"(", 8);
+         c = G__fgetstream(temp2, 8, "(");
       }
     }
 #ifdef G__OLDIMPLEMENTATION2157_YET
@@ -1601,7 +1601,7 @@ void G__declare_template()
        temp.Set(len, 0);
 
        char* ptr = temp + len;
-       c=G__fgetname_template(temp,"(", ptr - temp.data());
+       c=G__fgetname_template(temp, ptr - temp.data(), "(");
        len = strlen(temp);
     } while (c != '(');
   } 
@@ -1630,12 +1630,12 @@ void G__declare_template()
       c=G__fgetname_template(temp, 0, "(<&*");
       if(strcmp(temp,"operator")==0) {
          if (isspace(c)){
-            c=G__fgetstream(temp,"(", 8);
-            if('('==c&&0==strcmp(temp,"operator(")) c=G__fgetname(temp,"(", 9);
+            c=G__fgetstream(temp, 8, "(");
+            if('('==c&&0==strcmp(temp,"operator(")) c=G__fgetname(temp, 9, "(");
          } else if (c=='&' || c=='*') {
             temp.Set(8, c);
             temp.Set(9, 0);
-            c=G__fgetstream(temp,"(", 9);
+            c=G__fgetstream(temp, 9, "(");
          }
       }
     } while('('!=c && '<'!=c) ;
@@ -1661,11 +1661,11 @@ void G__declare_template()
     if(strcmp(temp,"operator")==0) {
       /* in case of operator< operator<= operator<< */
        temp.Set(8, c); /* operator< */
-      c=G__fgetstream(temp,"(", 9);
+      c=G__fgetstream(temp, 9, "(");
       if (temp[8] == '(') {
         if (c == ')') {
            temp.Set(9, c);
-          c=G__fgetstream(temp,"(", 10);
+          c=G__fgetstream(temp, 10, "(");
         }
         else {
           G__genericerror("Error: operator() overloading syntax error");
@@ -2651,13 +2651,13 @@ void G__replacetemplate(const char* templatename,const char *tagname,G__Charlist
                symbol[len + 1] = 0;
                symbol[len] = '(';
                ++len;
-               c=G__fgetstream(symbol,")", len); // add '('
+               c=G__fgetstream(symbol, len, ")"); // add '('
                len = strlen(symbol);
                symbol.Resize(len + 2);
                symbol[len + 1] = 0;
                symbol[len] = ')';
                ++len;
-               c=G__fgetstream(symbol, punctuation, len); // add ')'
+               c=G__fgetstream(symbol, len, punctuation); // add ')'
             } else if (c == '<') {
                // operator <, <=, <<
                size_t len = strlen(symbol);

@@ -583,14 +583,14 @@ void G__define()
                // -- C style comment, ignore.
                G__skip_comment();
                // Scan in next part.
-               c = G__fgetstream(initvalue, "\n\r\\/", strlen(initvalue));
+               c = G__fgetstream(initvalue, strlen(initvalue), "\n\r\\/");
                break;
             default:
                // -- Not a comment, take character.
                // Accumulate character.
                sprintf(initvalue + strlen(initvalue), "/%c", c);
                // Scan in next part.
-               c = G__fgetstream(initvalue, "\n\r\\/", strlen(initvalue));
+               c = G__fgetstream(initvalue, strlen(initvalue), "\n\r\\/");
                break;
          }
       }
@@ -831,7 +831,7 @@ int G__execfuncmacro_noexec(const char* macroname)
    //  Snarf the arg list.
    //
    *p = '(';
-   int c = G__fgetstream_spaces(funcmacro, ")", p - funcmacro.data() + 1);
+   int c = G__fgetstream_spaces(funcmacro, p - funcmacro.data() + 1, ")");
    i = strlen(funcmacro);
    funcmacro.Resize(i + 2);
    funcmacro[i++] = c;
