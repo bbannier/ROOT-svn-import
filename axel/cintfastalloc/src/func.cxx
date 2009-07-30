@@ -852,7 +852,7 @@ char* G__rename_templatefunc(G__FastAllocString& funcname)
       int c;
       funcname2 += "<";
       do {
-         c = G__getstream_template(ptmplt, &ip, buf, ",>");
+         c = G__getstream_template(ptmplt, &ip, buf, 0, ",>");
          len = strlen(buf) - 1;
          while ('*' == buf[len] || '&' == buf[len]) --len;
          ++len;

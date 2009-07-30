@@ -2991,9 +2991,9 @@ void G__define_var(int tagnum, int typenum)
                      int isrc = 0;
                      G__FastAllocString buf(G__LONGLINE);
                      flag = 1;
-                     c = G__getstream_template(temp, &isrc, buf, "(");
+                     c = G__getstream_template(temp, &isrc, buf, 0, "(");
                      if (c == '(') {
-                        c = G__getstream_template(temp, &isrc, buf, ")");
+                        c = G__getstream_template(temp, &isrc, buf, 0, ")");
                         if (c == ')') {
                            if (temp[isrc]) {
                               flag = 0;
