@@ -205,11 +205,11 @@ int G__using_namespace()
    int result = 0;
    G__FastAllocString buf(G__ONELINE);
    // Check if using directive or declaration.
-   int c = G__fgetname_template(buf, ";");
+   int c = G__fgetname_template(buf, 0, ";");
    if (!strcmp(buf, "namespace")) {
       // -- Using directive, treat as inheritance.
       int basetagnum, envtagnum;
-      c = G__fgetstream_template(buf, ";");
+      c = G__fgetstream_template(buf, 0, ";");
 #ifndef G__STD_NAMESPACE
       if (';' == c && strcmp(buf, "std") == 0 && G__ignore_stdnamespace) {
          return 1;
@@ -600,7 +600,7 @@ void G__define_struct(char type)
    // Now read tagname.
    //
    G__FastAllocString tagname(G__LONGLINE);
-   int c = G__fgetname_template(tagname, "{:;=&");
+   int c = G__fgetname_template(tagname, 0, "{:;=&");
    while (c == ':') {
       // -- Check for and handle nested name specifier.
       c = G__fgetc();
@@ -665,7 +665,7 @@ void G__define_struct(char type)
    else if ((c == '=') && (type == 'n')) {
       // -- We have: namespace alias=nsn; treat as typedef, handle and return.
       G__FastAllocString basename(G__LONGLINE);
-      c = G__fgetstream_template(basename, ";");
+      c = G__fgetstream_template(basename, 0, ";");
       int tagdefining = G__defined_tagname(basename, 0);
       if (tagdefining != -1) {
          int typenum;
@@ -796,9 +796,9 @@ void G__define_struct(char type)
       // Read base class name.
       G__FastAllocString basename(G__LONGLINE);
 #ifdef G__TEMPLATECLASS
-      c = G__fgetname_template(basename, "{,");
+      c = G__fgetname_template(basename, 0, "{,");
 #else // G__TEMPLATECLASS
-      c = G__fgetname(basename, "{,");
+      c = G__fgetname(basename, 0, "{,");
 #endif // G__TEMPLATECLASS
       // [struct|class] <tagname> : <private|protected|public|virtual> base1 , base2 {}
       //                                                              ^  or ^
@@ -809,7 +809,7 @@ void G__define_struct(char type)
             G__genericerror("Limitation: virtual base class not supported in interpretation");
          }
 #endif // G__VIRTUALBASE
-         c = G__fgetname_template(basename, "{,");
+         c = G__fgetname_template(basename, 0, "{,");
          isvirtualbase = G__ISVIRTUALBASE;
       }
       int baseaccess = G__PUBLIC;
@@ -819,25 +819,25 @@ void G__define_struct(char type)
       if (!strcmp(basename, "public")) {
          baseaccess = G__PUBLIC;
 #ifdef G__TEMPLATECLASS
-         c = G__fgetname_template(basename, "{,");
+         c = G__fgetname_template(basename, 0, "{,");
 #else // G__TEMPLATECLASS
-         c = G__fgetname(basename, "{,");
+         c = G__fgetname(basename, 0, "{,");
 #endif // G__TEMPLATECLASS
       }
       else if (!strcmp(basename, "private")) {
          baseaccess = G__PRIVATE;
 #ifdef G__TEMPLATECLASS
-         c = G__fgetname_template(basename, "{,");
+         c = G__fgetname_template(basename, 0, "{,");
 #else // G__TEMPLATECLASS
-         c = G__fgetname(basename, "{,");
+         c = G__fgetname(basename, 0, "{,");
 #endif // G__TEMPLATECLASS
       }
       else if (!strcmp(basename, "protected")) {
          baseaccess = G__PROTECTED;
 #ifdef G__TEMPLATECLASS
-         c = G__fgetname_template(basename, "{,");
+         c = G__fgetname_template(basename, 0, "{,");
 #else // G__TEMPLATECLASS
-         c = G__fgetname(basename, "{,");
+         c = G__fgetname(basename, 0, "{,");
 #endif // G__TEMPLATECLASS
       }
       if (!strcmp(basename, "virtual")) {
@@ -846,7 +846,7 @@ void G__define_struct(char type)
          if ((G__globalcomp == G__NOLINK) && (G__store_globalcomp == G__NOLINK))
             G__genericerror("Limitation: virtual base class not supported in interpretation");
 #endif // G__VIRTUALBASE
-         c = G__fgetname_template(basename, "{,");
+         c = G__fgetname_template(basename, 0, "{,");
          isvirtualbase = G__ISVIRTUALBASE;
       }
       if (strlen(basename) && isspace(c)) {
@@ -871,7 +871,7 @@ void G__define_struct(char type)
             )
          ) {
             // --
-            c = G__fgetname_template(temp, "{,");
+            c = G__fgetname_template(temp, 0, "{,");
             basename += temp;
             namespace_tagnum = G__defined_tagname(basename, 2);
          }
@@ -1070,7 +1070,7 @@ void G__define_struct(char type)
             do {
                int store_decl = 0;
                G__FastAllocString memname(G__ONELINE);
-               c = G__fgetstream(memname, "=,}");
+               c = G__fgetstream(memname, 0, "=,}");
                if (c == '=') {
                   char store_var_typeX = G__var_type;
                   int store_tagnumX = G__tagnum;
@@ -1078,7 +1078,7 @@ void G__define_struct(char type)
                   G__var_type = 'p';
                   G__tagnum = G__def_tagnum = -1;
                   G__FastAllocString val(G__ONELINE);
-                  c = G__fgetstream(val, ",}");
+                  c = G__fgetstream(val, 0, ",}");
                   int store_prerun = G__prerun;
                   G__prerun = 0;
                   enumval = G__getexpr(val);
@@ -1226,7 +1226,7 @@ void G__define_struct(char type)
       fgetpos(G__ifile.fp, &pos);
       linenum = G__ifile.line_number;
       G__FastAllocString basename(G__LONGLINE);
-      c = G__fgetstream(basename, ";");
+      c = G__fgetstream(basename, 0, ";");
       if (basename[0]) {
          fsetpos(G__ifile.fp, &pos);
          G__ifile.line_number = linenum;
@@ -1255,11 +1255,11 @@ void G__define_struct(char type)
       int store_linenum = G__ifile.line_number;
       G__disp_mask = 1000; // FIXME: Crazy!
       G__FastAllocString buf(G__ONELINE);
-      int ch = G__fgetname(buf, ";,(");
+      int ch = G__fgetname(buf, 0, ";,(");
       int errflag = 0;
       if (isspace(ch) && (buf[0] != '*') && !strchr(buf, '[')) {
          G__FastAllocString tmp(G__ONELINE);
-         ch = G__fgetname(tmp, ";,(");
+         ch = G__fgetname(tmp, 0, ";,(");
          if (isalnum(tmp[0])) {
             errflag = 1;
          }

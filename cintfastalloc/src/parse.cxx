@@ -4252,7 +4252,7 @@ static int G__keyword_anytime_8(G__FastAllocString& statement)
       c = G__fgetname_template(tcname, 0, ";");
       if (strcmp(tcname, "class") == 0 ||
             strcmp(tcname, "struct") == 0) {
-         c = G__fgetstream_template(tcname, "0, ;");
+         c = G__fgetstream_template(tcname, 0, "0, ;");
       }
       else if (isspace(c)) {
          int len = strlen(tcname);

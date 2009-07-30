@@ -278,7 +278,7 @@ void G__define_type()
     * read type
     */
 
-   c = G__fgetname_template(type1, "*{");
+   c = G__fgetname_template(type1, 0, "*{");
    if (c == '*') {
       strcat(type1, "*");
       c = ' ';
@@ -296,12 +296,12 @@ void G__define_type()
       if (!strcmp(type1, "const")) {
          isconst |= G__CONSTVAR;
       }
-      c = G__fgetname_template(type1, "{");
+      c = G__fgetname_template(type1, 0, "{");
    }
    if (!strcmp(type1, "::")) {  // FIXME: This makes no sense, there cannot be typedef ::{...};
       // skip a :: without a namespace in front of it (i.e. global namespace!)
       c = G__fgetspace(); // skip the next ':'
-      c = G__fgetname_template(type1, "{");
+      c = G__fgetname_template(type1, 0, "{");
    }
    if (!strncmp(type1, "::", 2)) { // Strip a leading :: (global namespace operator)
       // A leading '::' causes other typename matching functions to fail so
@@ -317,7 +317,7 @@ void G__define_type()
       if (c == ':') {
          c = G__fgetspace(); // skip the next ':'
          strcat(type1, "::");
-         c = G__fgetname_template(temp, "{");
+         c = G__fgetname_template(temp, 0, "{");
          strcat(type1, temp);
       }
       else if ((c == '<') || (c == ',') || (type1[len-1] == '<') || (type1[len-1] == ',')) {
@@ -461,7 +461,7 @@ void G__define_type()
        *  read tagname
        */
       if (c != '{') {
-         c = G__fgetname(tagname, "{");
+         c = G__fgetname(tagname, 0, "{");
       }
 
 
@@ -596,7 +596,7 @@ void G__define_type()
       type_name = type1;
    }
    else {
-      c = G__fgetname_template(type_name, ";,[");
+      c = G__fgetname_template(type_name, 0, ";,[");
    }
 
    if (
@@ -625,7 +625,7 @@ void G__define_type()
          type = 'm';
       }
       tagname = "";
-      c = G__fgetname(type_name, ";,[");
+      c = G__fgetname(type_name, 0, ";,[");
    }
    if (
       !strncmp(type_name, "double", strlen("double")) &&
@@ -650,7 +650,7 @@ void G__define_type()
          type = 'q';
          tagname = "";
       }
-      c = G__fgetname(type_name, ";,[");
+      c = G__fgetname(type_name, 0, ";,[");
    }
 
    /* in case of
@@ -676,7 +676,7 @@ void G__define_type()
          long rewindlen = (strlen(type_name) + 1) - strlen("int");
          fseek(G__ifile.fp, -rewindlen , SEEK_CUR);
       }
-      c = G__fgetstream(type_name, ";,[");
+      c = G__fgetstream(type_name, 0, ";,[");
    }
    if (!strcmp(type_name, "*")) {
       fpos_t tmppos;
@@ -714,12 +714,12 @@ void G__define_type()
    }
    else if (!strcmp(type_name, "&")) {
       reftype = G__PARAREFERENCE;
-      c = G__fgetstream(type_name, ";,[");
+      c = G__fgetstream(type_name, 0, ";,[");
    }
    else if (!strcmp(type_name, "*&")) {
       reftype = G__PARAREFERENCE;
       type = toupper(type);
-      c = G__fgetstream(type_name, ";,[");
+      c = G__fgetstream(type_name, 0, ";,[");
    }
    else if (!strcmp(type_name, "*const")) {
       isconst |= G__PCONSTVAR;
@@ -729,7 +729,7 @@ void G__define_type()
    else if (!strcmp(type_name, "const*")) {
       isconst |= G__CONSTVAR;
       type = toupper(type);
-      c = G__fgetstream(type_name, "*&;,[");
+      c = G__fgetstream(type_name, 0, "*&;,[");
       if ((c == '*') && (type_name[0] != '*')) {
          if (!strcmp(type_name, "const")) {
             isconst |= G__CONSTVAR;
@@ -742,7 +742,7 @@ void G__define_type()
          if (!strcmp(type_name, "const")) {
             isconst |= G__CONSTVAR;
          }
-         c = G__fgetstream(type_name, ";,[");
+         c = G__fgetstream(type_name, 0, ";,[");
       }
    }
    else if (!strcmp(type_name, "const**")) {
@@ -756,7 +756,7 @@ void G__define_type()
       isconst |= G__CONSTVAR;
       reftype = G__PARAREFERENCE;
       type = toupper(type);
-      c = G__fgetstream(type_name, ";,[");
+      c = G__fgetstream(type_name, 0, ";,[");
    }
 #endif
    if (isspace(c)) {
@@ -770,7 +770,7 @@ void G__define_type()
       }
       else if (!strcmp(type_name, "const")) {
          isconst |= G__PCONSTVAR;
-         c = G__fgetstream(type_name, ";,[");
+         c = G__fgetstream(type_name, 0, ";,[");
          if (!strncmp(type_name, "*const*", 7)) {
             isconst |= G__CONSTVAR;
             isorgtypepointer = 1;
@@ -795,7 +795,7 @@ void G__define_type()
       }
       else {
          G__FastAllocString ltemp1(G__LONGLINE);
-         c = G__fgetstream(ltemp1, ";,[");
+         c = G__fgetstream(ltemp1, 0, ";,[");
          if (ltemp1[0] == '(') {
             type = 'q';
          }
@@ -810,7 +810,7 @@ void G__define_type()
    while (c == '[') {
       store_var_type = G__var_type;
       G__var_type = 'p';
-      c = G__fgetstream(aryindex, "]");
+      c = G__fgetstream(aryindex, 0, "]");
       index[nindex++] = G__int(G__getexpr(aryindex));
       c = G__fignorestream("[,;");
       G__var_type = store_var_type;
@@ -1028,13 +1028,13 @@ void G__define_type()
                G__constvar = G__CONSTVAR;
                G__enumdef = 1;
                do {
-                  c = G__fgetstream(memname, "=,}");
+                  c = G__fgetstream(memname, 0, "=,}");
                   if (c == '=') {
                      int store_prerun = G__prerun;
                      char store_var_type = G__var_type;
                      G__var_type = 'p';
                      G__prerun = 0;
-                     c = G__fgetstream(val, ",}");
+                     c = G__fgetstream(val, 0, ",}");
                      enumval = G__getexpr(val);
                      G__prerun = store_prerun;
                      G__var_type = store_var_type;
@@ -1130,7 +1130,7 @@ void G__define_type()
    }
    if (isnext) {
       fsetpos(G__ifile.fp, &next_fpos);
-      c = G__fgetstream(type_name, ",;");
+      c = G__fgetstream(type_name, 0, ",;");
       goto next_name;
    }
    if (G__fons_comment) {
