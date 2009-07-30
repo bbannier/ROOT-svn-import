@@ -144,7 +144,8 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
    // calculate MLE
    RooArgSet* constrainedParams = pdf->getParameters(*data);
    RemoveConstantParameters(constrainedParams);
-   RooFitResult* fit = pdf->fitTo(*data,Extended(kFALSE), Constrain(*constrainedParams),Strategy(0),Hesse(kFALSE),Save(kTRUE),PrintLevel(-1));
+
+   RooFitResult* fit = pdf->fitTo(*data, Constrain(*constrainedParams),Strategy(0),Hesse(kFALSE),Save(kTRUE),PrintLevel(-1));
   
 
    fit->Print();
@@ -166,7 +167,7 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
       mytarget->Print();
    }
   
-   RooFitResult* fit2 = pdf->fitTo(*data,Extended(kFALSE),Constrain(*constrainedParams),Hesse(kFALSE),Strategy(0), Minos(kFALSE), Save(kTRUE),PrintLevel(-1));
+   RooFitResult* fit2 = pdf->fitTo(*data,Constrain(*constrainedParams),Hesse(kFALSE),Strategy(0), Minos(kFALSE), Save(kTRUE),PrintLevel(-1));
 
    Double_t NLLatCondMLE= fit2->minNll();
    fit2->Print();

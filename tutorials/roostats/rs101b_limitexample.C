@@ -43,6 +43,7 @@
 #include "TCanvas.h"
 #include "TLine.h"
 #include "TStopwatch.h"
+#include "TStyle.h"
 
 #include "RooStats/RooStatsUtils.h"
 
@@ -56,6 +57,7 @@ void rs101b_limitexample()
   /////////////////////////////////////////
   // An example of setting a limit in a number counting experiment with uncertainty on background and signal
   /////////////////////////////////////////
+  gStyle->SetCanvasPreferGL(kTRUE);
 
   // to time the macro
   TStopwatch t;
@@ -113,7 +115,7 @@ void rs101b_limitexample()
   fc.SetParameters( paramOfInterest );
   fc.UseAdaptiveSampling(true);
   fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
-  fc.SetNBins(100); // number of points to test per parameter
+  fc.SetNBins(10); // number of points to test per parameter
   fc.SetTestSize(.1);
   //  fc.SaveBeltToFile(true); // optional
   ConfInterval* fcint = NULL;
@@ -204,12 +206,15 @@ void rs101b_limitexample()
   TTree& chain =  ((RooTreeDataStore*) ((MCMCInterval*)mcmcint)->GetChain()->store())->tree();
   chain.SetMarkerStyle(6);
   chain.SetMarkerColor(kRed);
-  chain.Draw("s:ratioSigEff:ratioBkgEff","w","ISO"); // 3-d box proporional to posterior
+  chain.Draw("s:ratioSigEff:ratioBkgEff","w","gliso"); // 3-d box proporional to posterior
 
   // the points used in the profile construction
   TTree& parameterScan =  ((RooTreeDataStore*) fc.GetPointsToScan()->store())->tree();
   parameterScan.SetMarkerStyle(24);
   parameterScan.Draw("s:ratioSigEff:ratioBkgEff","","same");
+
+  dataCanvas->cd(1);
+  chain.Draw("s:ratioSigEff:ratioBkgEff","w","glbox"); // 3-d box proporional to posterior
 
 
   delete wspace;

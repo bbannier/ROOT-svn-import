@@ -35,6 +35,7 @@
 #include "TTree.h"
 #include "TCanvas.h"
 #include "TLine.h"
+#include "TStyle.h"
 #include "TStopwatch.h"
 
 #include "RooStats/RooStatsUtils.h"
@@ -49,6 +50,7 @@ void rs101_limitexample()
   /////////////////////////////////////////
   // An example of setting a limit in a number counting experiment with uncertainty on background and signal
   /////////////////////////////////////////
+  gStyle->SetCanvasPreferGL(kTRUE);
 
   // to time the macro
   TStopwatch t;
