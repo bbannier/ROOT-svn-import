@@ -12314,7 +12314,7 @@ void G__specify_link(int link_stub)
      if (cltag<0) {
 #ifdef G__ROOT
         if(G__dispmsg>=G__DISPERR) {
-           G__fprinterr(G__serr,"Error: link requested for operators or unknown class %s",buf);
+           G__fprinterr(G__serr,"Error: link requested for operators or unknown class %s",buf());
            G__genericerror((char*)NULL);
         }
 #else

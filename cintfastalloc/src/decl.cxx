@@ -74,7 +74,7 @@ static int G__get_newname(G__FastAllocString& new_name)
    int store_tagdefining = 0;
    G__FastAllocString temp1(G__ONELINE);
 
-   int cin = G__fgetvarname(new_name, "*&,;=():}");
+   int cin = G__fgetvarname(new_name, 0, "*&,;=():}");
    if (cin == '&') {
       if (!strcmp(new_name, "operator")) {
          new_name[8] = cin;
@@ -119,11 +119,11 @@ static int G__get_newname(G__FastAllocString& new_name)
          cin = G__fgetvarname(new_name, 2, ",;=():");
       }
       if (!strcmp(new_name, "double") && (G__var_type != 'l')) {
-         cin = G__fgetvarname(new_name, ",;=():");
+         cin = G__fgetvarname(new_name, 0, ",;=():");
          G__var_type = 'd';
       }
       else if (!strcmp(new_name, "int")) {
-         cin = G__fgetvarname(new_name, ",;=():");
+         cin = G__fgetvarname(new_name, 0, ",;=():");
       }
       else if (
          !strcmp(new_name, "long") ||
@@ -209,40 +209,40 @@ static int G__get_newname(G__FastAllocString& new_name)
          return 0;
       }
       else if (strcmp(new_name, "unsigned") == 0 || strcmp(new_name, "signed") == 0) {
-         cin = G__fgetvarname(new_name, ",;=():");
+         cin = G__fgetvarname(new_name, 0, ",;=():");
          --G__var_type; /* make it unsigned */
          if (strcmp(new_name, "int*") == 0) {
             G__var_type = toupper(G__var_type);
-            cin = G__fgetvarname(new_name, ",;=():");
+            cin = G__fgetvarname(new_name, 0, ",;=():");
          }
          else if (strcmp(new_name, "int&") == 0) {
             G__var_type = toupper(G__var_type);
-            cin = G__fgetvarname(new_name, ",;=():");
+            cin = G__fgetvarname(new_name, 0, ",;=():");
             G__reftype = G__PARAREFERENCE;
          }
          else if (strcmp(new_name, "int") == 0) {
-            cin = G__fgetvarname(new_name, ",;=():");
+            cin = G__fgetvarname(new_name, 0, ",;=():");
          }
       }
       else if (strcmp(new_name, "int*") == 0) {
-         cin = G__fgetvarname(new_name, ",;=():");
+         cin = G__fgetvarname(new_name, 0, ",;=():");
          G__var_type = toupper(G__var_type);
       }
       else if (strcmp(new_name, "double*") == 0) {
-         cin = G__fgetvarname(new_name, ",;=():");
+         cin = G__fgetvarname(new_name, 0, ",;=():");
          G__var_type = 'D';
       }
       else if (strcmp(new_name, "int&") == 0) {
-         cin = G__fgetvarname(new_name, ",;=():");
+         cin = G__fgetvarname(new_name, 0, ",;=():");
          G__reftype = G__PARAREFERENCE;
       }
       else if (strcmp(new_name, "double&") == 0) {
-         cin = G__fgetvarname(new_name, ",;=():");
+         cin = G__fgetvarname(new_name, 0, ",;=():");
          G__reftype = G__PARAREFERENCE;
       }
       if (isspace(cin)) {
          if (strcmp(new_name, "static") == 0) {
-            cin = G__fgetvarname(new_name, ",;=():");
+            cin = G__fgetvarname(new_name, 0, ",;=():");
             G__static_alloc = 1;
          }
       }
@@ -254,7 +254,7 @@ static int G__get_newname(G__FastAllocString& new_name)
             } else {
                if (isupper(G__var_type)) G__constvar |= G__PCONSTVAR;
                else                     G__constvar |= G__CONSTVAR;
-               cin = G__fgetvarname(new_name, ",;=():");
+               cin = G__fgetvarname(new_name, 0, ",;=():");
             }
             if (strcmp(new_name, "&*") == 0 || strcmp(new_name, "*&") == 0) {
                G__reftype = G__PARAREFERENCE;
@@ -263,7 +263,7 @@ static int G__get_newname(G__FastAllocString& new_name)
             }
             else if (strcmp(new_name, "&") == 0) {
                G__reftype = G__PARAREFERENCE;
-               cin = G__fgetvarname(new_name, ",;=():");
+               cin = G__fgetvarname(new_name, 0, ",;=():");
             }
             if (strcmp(new_name, "*") == 0) {
                cin = G__fgetvarname(new_name, 1, ",;=():");
@@ -274,7 +274,7 @@ static int G__get_newname(G__FastAllocString& new_name)
             }
          }
          else if (strcmp(new_name, "const&") == 0) {
-            cin = G__fgetvarname(new_name, ",;=():");
+            cin = G__fgetvarname(new_name, 0, ",;=():");
             G__reftype = G__PARAREFERENCE;
             G__constvar |= G__PCONSTVAR;
          }
@@ -299,7 +299,7 @@ static int G__get_newname(G__FastAllocString& new_name)
          }
 #endif // G__OLDIMPLEMENTATION1857
          else if (strcmp(new_name, "volatile") == 0) {
-            cin = G__fgetvarname(new_name, ",;=():");
+            cin = G__fgetvarname(new_name, 0, ",;=():");
          }
          else if (strcmp(new_name, "*volatile") == 0) {
             cin = G__fgetvarname(new_name, 1, ",;=():");
@@ -311,7 +311,7 @@ static int G__get_newname(G__FastAllocString& new_name)
             cin = G__fgetvarname(new_name, 3, ",;=():");
          }
          else if (strcmp(new_name, "inline") == 0) {
-            cin = G__fgetvarname(new_name, ",;=():");
+            cin = G__fgetvarname(new_name, 0, ",;=():");
          }
          else if (strcmp(new_name, "*inline") == 0) {
             cin = G__fgetvarname(new_name, 1, ",;=():");
@@ -324,7 +324,7 @@ static int G__get_newname(G__FastAllocString& new_name)
          }
          else if (strcmp(new_name, "virtual") == 0) {
             G__virtual = 1;
-            cin = G__fgetvarname(new_name, ",;=():");
+            cin = G__fgetvarname(new_name, 0, ",;=():");
          }
       }
       if (isspace(cin)) {
@@ -336,7 +336,7 @@ static int G__get_newname(G__FastAllocString& new_name)
             !strcmp(new_name, "&operator")
          ) {
             /* read real name */
-            cin = G__fgetstream(temp1, "(");
+            cin = G__fgetstream(temp1, 0, "(");
             /* came to
              * type  operator  +(var1 , var2);
              *                  ^
@@ -362,13 +362,13 @@ static int G__get_newname(G__FastAllocString& new_name)
                   new_name += temp1;
                   break;
                case '\0':
-                  cin = G__fgetstream(temp1, ")");
+                  cin = G__fgetstream(temp1, 0, ")");
                   if (strcmp(temp1, "") != 0 || cin != ')') {
                      G__fprinterr(G__serr, "Error: Syntax error '%s(%s%c' "
                                   , new_name(), temp1(), cin);
                      G__genericerror((char*)NULL);
                   }
-                  cin = G__fgetstream(temp1, "(");
+                  cin = G__fgetstream(temp1, 0, "(");
                   if (strcmp(temp1, "") != 0 || cin != '(') {
                      G__fprinterr(G__serr, "Error: Syntax error '%s()%s%c' "
                                   , new_name(), temp1(), cin);
@@ -414,11 +414,11 @@ static int G__get_newname(G__FastAllocString& new_name)
       int tmpline = G__ifile.line_number;
       fgetpos(G__ifile.fp, &tmppos);
       if (G__dispsource) G__disp_mask = 1000;
-      cin = G__fgetvarname(new_name, ")");
+      cin = G__fgetvarname(new_name, 0, ")");
       G__FastAllocString temp(strlen(new_name));
       if ('*' != new_name[0] || 0 == new_name[1]) goto escapehere;
       temp = new_name() + 1;
-      cin = G__fgetvarname(new_name, ",;=():}");
+      cin = G__fgetvarname(new_name, 0, ",;=():}");
       if ('[' != new_name[0]) goto escapehere;
       if (G__dispsource) {
          G__disp_mask = 0;
@@ -442,12 +442,12 @@ static int G__get_newname(G__FastAllocString& new_name)
          cin = G__fgetstream(new_name, strlen(new_name), "(");
       }
       else if ((cin == '(') && !new_name[8]) {
-         cin = G__fgetstream(new_name, ")");
-         cin = G__fgetstream(new_name, "(");
+         cin = G__fgetstream(new_name, 0, ")");
+         cin = G__fgetstream(new_name, 0, "(");
          sprintf(new_name, "operator()");
       }
       else if ((cin == ',') && !new_name[8]) {
-         cin = G__fgetstream(new_name, "(");
+         cin = G__fgetstream(new_name, 0, "(");
          sprintf(new_name, "operator,");
       }
       return cin;
@@ -697,7 +697,7 @@ static int G__initstruct(G__FastAllocString& new_name)
    int linear_index = -1;
    while (mparen) {
       // -- Read the next initializer value.
-      int c = G__fgetstream(expr, ",{}");
+      int c = G__fgetstream(expr, 0, ",{}");
       if (expr[0]) {
          // -- We have an initializer expression.
          // FIXME: Do we handle a string literal correctly here?  See similar code in G__initary().
@@ -776,7 +776,7 @@ static int G__initstruct(G__FastAllocString& new_name)
                break;
             }
             // Get next initializer expression.
-            c = G__fgetstream(expr, ",{}");
+            c = G__fgetstream(expr, 0, ",{}");
          } while (memvar);
          // Reset back to the beginning of the data member list.
          memvar = G__initmemvar(var->p_tagtable[varid], &memindex, &buf);
@@ -1022,7 +1022,7 @@ static int G__initary(G__FastAllocString& new_name)
    int linear_index = 0;
    while (brace_level) {
       // -- Read the next initializer value.
-      int c = G__fgetstream(expr, ",{}");
+      int c = G__fgetstream(expr, 0, ",{}");
       if (expr[0]) {
          // -- Found one.
          //printf("%d: '%s', ", linear_index, expr);
@@ -1377,7 +1377,7 @@ static void G__initstructary(G__FastAllocString& new_name, int tagnum)
       // FIXME: This does not allow nested curly braces.
       p_inc = 0;
       do {
-         cin = G__fgetstream(buf, ",}");
+         cin = G__fgetstream(buf, 0, ",}");
          ++p_inc;
       } while (cin != '}');
       // Now modify the name by adding the calculated dimensionality.
@@ -1452,7 +1452,7 @@ static int G__readpointer2function(G__FastAllocString& new_name, char* pvar_type
    fpos_t pos2;
    fgetpos(G__ifile.fp, &pos2);
    int line2 = G__ifile.line_number;
-   int c = G__fgetstream(new_name, "()");
+   int c = G__fgetstream(new_name, 0, "()");
    if ((new_name[0] != '*') && !strstr(new_name, "::*")) {
       fsetpos(G__ifile.fp, &pos2);
       G__ifile.line_number = line2;
@@ -1494,9 +1494,9 @@ static int G__readpointer2function(G__FastAllocString& new_name, char* pvar_type
       G__FastAllocString temp(G__ONELINE);
       int n = 0;
       while (c == '[') {
-         c = G__fgetstream(temp, "]");
+         c = G__fgetstream(temp, 0, "]");
          G__p2arylabel[n++] = G__int(G__getexpr(temp));
-         c = G__fgetstream(temp, "[;,)=");
+         c = G__fgetstream(temp, 0, "[;,)=");
       }
       G__p2arylabel[n] = 0;
       fseek(G__ifile.fp, -1, SEEK_CUR);
@@ -1757,7 +1757,7 @@ void G__define_var(int tagnum, int typenum)
             temp[0] = '\0';
          }
          else {
-            cin = G__fgetstream(temp, ",)");
+            cin = G__fgetstream(temp, 0, ",)");
             store_var_type = G__var_type;
             G__var_type = 'p';
             if (G__def_tagnum != -1) {
@@ -2022,7 +2022,7 @@ void G__define_var(int tagnum, int typenum)
                if (G__dispsource) {
                   G__disp_mask = 1000;
                }
-               cin = G__fgetname(temp, ",)!\"%&'*+-./<=>?[]^|~"); // FIXME: No '(' here because then given "B f(A(3, 5), 12)" the "A" passes the typename test and we parse it as a function declaration.
+               cin = G__fgetname(temp, 0, ",)!\"%&'*+-./<=>?[]^|~"); // FIXME: No '(' here because then given "B f(A(3, 5), 12)" the "A" passes the typename test and we parse it as a function declaration.
                if (strlen(temp) && isspace(cin)) {
                   // -- There was an argument and the parsing was stopped by a white
                   // space rather than on of ",)*&<=", it is possible that
@@ -2039,7 +2039,7 @@ void G__define_var(int tagnum, int typenum)
                         (temp[strlen(temp)-1] == ':')
                      )
                   ) {
-                     cin = G__fgetname(more, ",)!\"%&'(*+-./<=>?[]^|~");
+                     cin = G__fgetname(more, 0, ",)!\"%&'(*+-./<=>?[]^|~");
                      temp += more;
                      namespace_tagnum = G__defined_tagname(temp, 2);
                   }
@@ -2087,7 +2087,7 @@ void G__define_var(int tagnum, int typenum)
             //   type varname(const, const);
             //                ^
             // Read parameter list and build command string.
-            cin = G__fgetstream_newtemplate(temp, ")");
+            cin = G__fgetstream_newtemplate(temp, 0, ")");
             if ((new_name[0] == '*') && (var_type != 'c') && (temp[0] == '"')) {
                G__genericerror("Error: illegal pointer initialization");
             }
@@ -2429,13 +2429,13 @@ void G__define_var(int tagnum, int typenum)
                }
                bitfieldwarn = 1;
             }
-            cin = G__fgetstream(temp, ",;=}");
+            cin = G__fgetstream(temp, 0, ",;=}");
             new_name += " : ";
             new_name += temp;
             G__bitfield = 1;
          }
          else {
-            cin = G__fgetstream(temp, ",;=}");
+            cin = G__fgetstream(temp, 0, ",;=}");
             G__bitfield = atoi(temp);
             if (!G__bitfield) {
                G__bitfield = -1;
@@ -2457,10 +2457,10 @@ void G__define_var(int tagnum, int typenum)
          G__tagnum = G__get_envtagnum();
          // Scan the initializer into temp.
          if ((var_type == 'u')) {
-            cin = G__fgetstream_newtemplate(temp, ",;{}");
+            cin = G__fgetstream_newtemplate(temp, 0, ",;{}");
          }
          else {
-            cin = G__fgetstream_new(temp, ",;{");
+            cin = G__fgetstream_new(temp, 0, ",;{");
          }
          if (
             G__def_struct_member &&
@@ -3335,7 +3335,7 @@ void G__define_var(int tagnum, int typenum)
       //
       // type  var1, var2, var3;
       //             ^
-      cin = G__fgetstream(new_name, ",;=():");
+      cin = G__fgetstream(new_name, 0, ",;=():");
       if (cin == EOF) {
          // -- Reached end of input file, syntax error, missing semicolon, return.
          G__decl = store_decl;

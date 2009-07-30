@@ -1830,7 +1830,7 @@ int G__blockscope::initstruct(G__TypeReader& type, struct G__var_array* var, int
   G__FastAllocString expr(G__ONELINE);
   while (mparen) {
     // -- Read the next initializer value.
-    int c = G__fgetstream(expr, ",{}");
+    int c = G__fgetstream(expr, 0, ",{}");
     if (expr[0]) {
       // -- We have an initializer expression.
       // FIXME: Do we handle a string literal correctly here?
@@ -1878,7 +1878,7 @@ int G__blockscope::initstruct(G__TypeReader& type, struct G__var_array* var, int
           break;
         }
         // Get next initializer expression.
-        c = G__fgetstream(expr, ",{}");
+        c = G__fgetstream(expr, 0, ",{}");
       } while (memvar);
       // Reset back to the beginning of the data member list.
       memvar = G__initmemvar(var->p_tagtable[varid], &memindex, &buf);
@@ -1972,7 +1972,7 @@ int G__blockscope::initscalarary(G__TypeReader& /*type*/, struct G__var_array* v
   //
   // Read initialization list.
   //
-  c = G__fgetstream(expr, ",;{}");
+  c = G__fgetstream(expr, 0, ",;{}");
   if (c == ';') {
     // -- Should be a one-dimensional character array.
     // char  ary[] =  "abc";  
@@ -2002,7 +2002,7 @@ int G__blockscope::initscalarary(G__TypeReader& /*type*/, struct G__var_array* v
   int stringflag = 0;
   while (mparen) {
     // -- Get next initializer expression.
-    c = G__fgetstream(expr, ",{}");
+     c = G__fgetstream(expr, 0, ",{}");
     if (expr[0]) {
       // -- We got an initializer expression.
       if ((var->type[ig15] == 'c') && (expr[0] == '"')) {
