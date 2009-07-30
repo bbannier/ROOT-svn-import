@@ -152,13 +152,13 @@ int G__fgetspace(void);
 int G__fgetspace_peek(void);
 #ifdef __cplusplus
 } // extern "C"
-int G__fgetvarname(G__FastAllocString& string,const char *endmark, size_t offset = 0);
-int G__fgetname(G__FastAllocString& string,const char *endmark, size_t offset = 0);
+int G__fgetvarname(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__fgetname(G__FastAllocString& string, size_t offset, const char *endmark);
 int G__getname(const char* source,int* isrc,G__FastAllocString& string,const char *endmark);
-int G__fgetstream(G__FastAllocString& string,const char *endmark, size_t offset = 0);
+int G__fgetstream(G__FastAllocString& string, size_t offset, const char *endmark);
 void G__fgetstream_peek(G__FastAllocString& string, int nchars);
-int G__fgetstream_new(G__FastAllocString& string,const char *endmark, size_t offset = 0);
-int G__fdumpstream(G__FastAllocString& string,const char *endmark, size_t offset = 0);
+int G__fgetstream_new(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__fdumpstream(G__FastAllocString& string, size_t offset, const char *endmark);
 int G__getcommentstring(G__FastAllocString& buf,int tagnum,struct G__comment_info *pcomment);
 extern "C" {
 #endif
@@ -444,11 +444,11 @@ int G__cppif_returntype(FILE *fp,int ifn,struct G__ifunc_table_internal *ifunc,G
 char *G__string(G__value buf, G__FastAllocString& temp);
 char *G__add_quotation(const char* string,G__FastAllocString& temp);
 int G__cattemplatearg(G__FastAllocString& tagname,struct G__Charlist *charlist);
-int G__fgetname_template(G__FastAllocString& string,const char *endmark, size_t offset = 0);
-int G__fgetstream_newtemplate(G__FastAllocString& string,const char *endmark, size_t offset = 0);
-int G__fgetstream_template(G__FastAllocString& string,const char *endmark, size_t offset = 0);
-int G__fgetstream_spaces(G__FastAllocString& string,const char *endmark, size_t offset = 0);
-int G__getstream_template(const char *source,int *isrc,G__FastAllocString& string,const char *endmark, size_t offset = 0);
+int G__fgetname_template(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__fgetstream_newtemplate(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__fgetstream_template(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__fgetstream_spaces(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__getstream_template(const char *source,int *isrc,G__FastAllocString& string, size_t offset, const char *endmark);
 char* G__rename_templatefunc(G__FastAllocString& funcname);
 int G__templatesubstitute(G__FastAllocString& symbol,struct G__Charlist *callpara,struct G__Templatearg *defpara,const char *templatename,const char *tagname,int c,int npara,int isnew);
 char *G__valuemonitor(G__value buf,G__FastAllocString& temp);
