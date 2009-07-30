@@ -1827,7 +1827,7 @@ int G__blockscope::initstruct(G__TypeReader& type, struct G__var_array* var, int
   int mparen = 1;
   int linear_index = -1;
   buf.obj.i = var->p[varid] + memvar->p[memindex];
-  char expr[G__ONELINE];
+  G__FastAllocString expr(G__ONELINE);
   while (mparen) {
     // -- Read the next initializer value.
     int c = G__fgetstream(expr, ",{}");
@@ -1924,7 +1924,7 @@ int G__blockscope::initscalarary(G__TypeReader& /*type*/, struct G__var_array* v
   // int   ary[]  = { 1,2,3 };
   // int   ary[n] = { 1,2,3 };
   //               ^
-  char expr[G__ONELINE];
+  G__FastAllocString expr(G__ONELINE);
   int& num_of_elements = var->varlabel[ig15][1];
   const int& stride = var->varlabel[ig15][0];
   // Check for an unspecified length array declaration.
@@ -2579,14 +2579,14 @@ long G__blockscope::getstaticobject(const string& varname
 				    ,int noerror) {
   // todo, This implementation is not exactly correct in a sense that
   // static objects do not have block scope.
-  char temp[G__ONELINE];
+  G__FastAllocString temp(G__ONELINE);
   int hash,i;
   struct G__var_array *var;
 
   if(-1!=ifunc->tagnum) 
-    sprintf(temp,"%s\\%x\\%x\\%x",varname.c_str(),ifunc->page,ifn,ifunc->tagnum);
+     temp.Format("%s\\%x\\%x\\%x",varname.c_str(),ifunc->page,ifn,ifunc->tagnum);
   else
-    sprintf(temp,"%s\\%x\\%x" ,varname.c_str(),ifunc->page,ifn);
+     temp.Format("%s\\%x\\%x" ,varname.c_str(),ifunc->page,ifn);
 
   G__hash(temp,hash,i)
   var = &G__global;
@@ -2602,7 +2602,7 @@ long G__blockscope::getstaticobject(const string& varname
   } while(var);
 
   if(!noerror) {
-    G__fprinterr(G__serr,"Error: No memory for static object %s ",temp);
+     G__fprinterr(G__serr,"Error: No memory for static object %s ",temp());
     G__genericerror((char*)NULL); //legacy
   }
   return(0);
