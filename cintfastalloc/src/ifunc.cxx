@@ -4455,7 +4455,7 @@ struct G__funclist* G__add_templatefunc(const char* funcnamein, G__param* libp, 
          int c;
          G__FastAllocString buf(G__ONELINE);
          do {
-            c = G__getstream_template(ptmplt, &ip, buf, ",>");
+            c = G__getstream_template(ptmplt, &ip, buf, 0, ",>");
             G__checkset_charlist(buf, &call_para, ++itmp, 'u');
          }
          while (c != '>');

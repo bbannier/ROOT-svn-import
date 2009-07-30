@@ -485,7 +485,7 @@ static int G__getparameterlist(char* paralist, G__Charlist* charlist)
    c = ',';
    isrc = 0;
    while (',' == c || ' ' == c) {
-      c = G__getstream_template(paralist, &isrc, string, " \t,)\0");
+      c = G__getstream_template(paralist, &isrc, string, 0, " \t,)\0");
       if (c == '\t') c = ' ';
       if (charlist->string)
          charlist->string = (char*) realloc(charlist->string, strlen(charlist->string) + strlen(string) + 2);

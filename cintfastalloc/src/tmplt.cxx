@@ -1922,7 +1922,7 @@ int G__gettemplatearglist(const char *paralist,G__Charlist *charlist_in
   isrc=0;
   while(','==c) {
     if('\0'==paralist[0]) break;
-    c = G__getstream_template(paralist,&isrc,string,",>\0");
+    c = G__getstream_template(paralist,&isrc,string, 0, ",>\0");
     if(def_para) {
       switch(def_para->type) {
       case G__TMPLT_CLASSARG:
