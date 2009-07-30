@@ -6835,7 +6835,7 @@ G__value G__exec_statement(int* mparen)
                      if (!strcmp(statement, "return(")) {
                         //
                         // following part used to be
-                        // G__fgetstream(statement,")");
+                        // G__fgetstream(statement, 0, ")");
                         //
                         fseek(G__ifile.fp, -1, SEEK_CUR);
                         if (G__dispsource) {

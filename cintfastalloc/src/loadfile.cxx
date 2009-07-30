@@ -276,7 +276,7 @@ int G__include_file()
   if('#'==c) {
     if(G__LOADFILE_FAILURE==result && G__ispragmainclude) {
       G__ispragmainclude=0;
-      c = G__fgetname(filename,"\n\r");
+      c = G__fgetname(filename, 0, "\n\r");
       store_globalcomp = G__globalcomp;
       if(++G__gcomplevel>=G__gcomplevellimit) G__globalcomp=G__NOLINK;
       if('\n'!=c && '\r'!=c) result = G__include_file();
