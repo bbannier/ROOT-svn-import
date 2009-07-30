@@ -15,19 +15,19 @@
 
 #include "common.h"
 
-int G__fgetvarname(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */);
-int G__fgetname_template(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */);
-int G__fgetstream_newtemplate(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */);
-int G__fgetstream_template(G__FastAllocString& string, const char* endmark, size_t offset);
+int G__fgetvarname(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__fgetname_template(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__fgetstream_newtemplate(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__fgetstream_template(G__FastAllocString& string, size_t offset, const char *endmark);
 int G__getstream_template(const char* source, int* isrc,G__FastAllocString&  string, const char* endmark, size_t offset /* = 0 */);
-int G__fgetname(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */);
+int G__fgetname(G__FastAllocString& string, size_t offset, const char *endmark);
 int G__getname(const char* source, int* isrc, char* string, const char* endmark);
 int G__getfullpath(char* string, char* pbegin, int i);
-int G__fdumpstream(G__FastAllocString& string, const char* endmark, size_t offset);
-int G__fgetstream(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */);
+int G__fdumpstream(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__fgetstream(G__FastAllocString& string, size_t offset, const char *endmark);
 void G__fgetstream_peek(char* string, int nchars);
-int G__fgetstream_new(G__FastAllocString& string, const char* endmark, size_t offset);
-int G__fgetstream_spaces(G__FastAllocString& string, const char* endmark, size_t offset);
+int G__fgetstream_new(G__FastAllocString& string, size_t offset, const char *endmark);
+int G__fgetstream_spaces(G__FastAllocString& string, size_t offset, const char *endmark);
 int G__getstream(const char* source, int* isrc, char* string, const char* endmark);
 static int G__isstoragekeyword(const char* buf);
 
@@ -105,7 +105,7 @@ static int G__isstoragekeyword(const char* buf)
 }
 
 //______________________________________________________________________________
-int G__fgetname_template(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */)
+int G__fgetname_template(G__FastAllocString& string, size_t offset, const char *endmark)
 {
    //  char *string       : string until the endmark appears
    //  char *endmark      : specify endmark characters
@@ -364,7 +364,7 @@ backtoreadtemplate:
 }
 
 //______________________________________________________________________________
-int G__fgetstream_newtemplate(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */)
+int G__fgetstream_newtemplate(G__FastAllocString& string, size_t offset, const char *endmark)
 {
    //  char *string       : string until the endmark appears
    //  char *endmark      : specify endmark characters
@@ -575,7 +575,7 @@ int G__fgetstream_newtemplate(G__FastAllocString& string, const char* endmark, s
 }
 
 //______________________________________________________________________________
-int G__fgetstream_template(G__FastAllocString& string, const char* endmark, size_t offset)
+int G__fgetstream_template(G__FastAllocString& string, size_t offset, const char *endmark)
 {
    //  char *string       : string until the endmark appears
    //  char *endmark      : specify endmark characters
@@ -1077,7 +1077,7 @@ int G__fgetspace_peek()
 }
 
 //______________________________________________________________________________
-int G__fgetvarname(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */)
+int G__fgetvarname(G__FastAllocString& string, size_t offset, const char *endmark)
 {
    size_t i = offset;
    int l;
@@ -1265,7 +1265,7 @@ int G__fgetvarname(G__FastAllocString& string, const char* endmark, size_t offse
 }
 
 //______________________________________________________________________________
-int G__fgetname(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */)
+int G__fgetname(G__FastAllocString& string, size_t offset, const char *endmark)
 {
    //  char *string       : string until the endmark appears
    //  char *endmark      : specify endmark characters
@@ -1564,7 +1564,7 @@ int G__getfullpath(char* string, char* pbegin, int i)
 }
 
 //______________________________________________________________________________
-int G__fdumpstream(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */)
+int G__fdumpstream(G__FastAllocString& string, size_t offset, const char *endmark)
 {
    //  char *string       : string until the endmark appears
    //  char *endmark      : specify endmark characters
@@ -1742,7 +1742,7 @@ int G__fdumpstream(G__FastAllocString& string, const char* endmark, size_t offse
 }
 
 //______________________________________________________________________________
-int G__fgetstream(G__FastAllocString& string, const char* endmark, size_t offset /* = 0 */)
+int G__fgetstream(G__FastAllocString& string, size_t offset, const char *endmark)
 {
    // -- Read source file until specified endmark char appears.
    //
@@ -1929,7 +1929,7 @@ void G__fgetstream_peek(char* string, int nchars)
 }
 
 //______________________________________________________________________________
-int G__fgetstream_new(G__FastAllocString& string, const char* endmark, size_t offset)
+int G__fgetstream_new(G__FastAllocString& string, size_t offset, const char *endmark)
 {
    // -- Read source file until specified endmark char appears, keep space after 'new' and 'const' keywords.
    //
@@ -2106,7 +2106,7 @@ int G__fgetstream_new(G__FastAllocString& string, const char* endmark, size_t of
 }
 
 //______________________________________________________________________________
-int G__fgetstream_spaces(G__FastAllocString& string, const char* endmark, size_t offset)
+int G__fgetstream_spaces(G__FastAllocString& string, size_t offset, const char *endmark)
 {
    // -- Read source file until specified endmark char appears, retain whitespace (trimmed and collapsed).
    //
