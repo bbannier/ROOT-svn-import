@@ -297,7 +297,7 @@ static int G__createfuncmacro(char* new_name)
    G__hash(new_name, hash, i)
    deffuncmacro->hash = hash;
    /* read parameter list */
-   c = G__fgetstream(paralist, ")");
+   c = G__fgetstream(paralist, 0, ")");
    G__ASSERT(')' == c);
    G__getparameterlist(paralist, &deffuncmacro->def_para);
    /* store file pointer, line number and position */
@@ -536,7 +536,7 @@ void G__define()
    //          ^
    // read macro name
    //
-   c = G__fgetname(new_name, "(\n\r\\");
+   c = G__fgetname(new_name, 0, "(\n\r\\");
    //
    //  #define   macro   value
    //                  ^
@@ -565,7 +565,7 @@ void G__define()
       // Remember position in case it is too hard for us to handle.
       fgetpos(G__ifile.fp, &pos);
       // Grab first part.
-      c = G__fgetstream(initvalue, "\n\r\\/");
+      c = G__fgetstream(initvalue, 0, "\n\r\\/");
       // Read and remove comments until done.
       while (c == '/') {
          // -- Possible comment coming next.

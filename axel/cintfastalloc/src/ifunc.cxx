@@ -904,7 +904,7 @@ void G__make_ifunctable(char* funcheader)
     */
    isparam = 0;
    G__FastAllocString paraname(G__LONGLINE);
-   cin = G__fgetname_template(paraname, "<*&,()=");
+   cin = G__fgetname_template(paraname, 0, "<*&,()=");
    if (strlen(paraname) && isspace(cin)) {
       /* There was an argument and the parsing was stopped by a white
       * space rather than on of ",)*&<=", it is possible that
@@ -919,7 +919,7 @@ void G__make_ifunctable(char* funcheader)
               || (strcmp("std", paraname) == 0)
               || (paraname[strlen(paraname)-1] == ':'))
              && isspace(cin)) {
-         cin = G__fgetname(more, "<*&,)=");
+         cin = G__fgetname(more, 0, "<*&,)=");
          paraname += more;
          namespace_tagnum = G__defined_tagname(paraname, 2);
       }
@@ -1078,7 +1078,7 @@ void G__make_ifunctable(char* funcheader)
       cin = G__fignorestream("(");
       cin = G__fignorestream(")");
    }
-   cin = G__fgetstream_template(paraname, ",;{(");
+   cin = G__fgetstream_template(paraname, 0, ",;{(");
    if ('(' == cin) {
       int len = strlen(paraname);
       paraname.Resize(len + 10);
@@ -1688,7 +1688,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
       G__FastAllocString buf(G__LONGLINE);
       buf[0] = '\0';
       // Get first keyword, id, or separator of the type specification.
-      c = G__fgetname_template(buf, "&*[(=,)");
+      c = G__fgetname_template(buf, 0, "&*[(=,)");
       if (strlen(buf) && isspace(c)) {
          // -- There was an argument and the parsing stopped at white space.
          // It is possible that we have a qualified name, check.
@@ -1703,7 +1703,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
             )
          ) {
             G__FastAllocString more(G__LONGLINE);
-            c = G__fgetname(more, "&*[(=,)");
+            c = G__fgetname(more, 0, "&*[(=,)");
             buf += more;
             namespace_tagnum = G__defined_tagname(buf, 2);
          }
@@ -1725,7 +1725,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
          if (!strcmp(buf, "const")) {
             ifunc->param[func_now][iin]->isconst |= G__CONSTVAR;
          }
-         c = G__fgetname_template(buf, "&*[(=,)");
+         c = G__fgetname_template(buf, 0, "&*[(=,)");
          //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
       }
       //
@@ -1762,14 +1762,14 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                   break;
                default:
                   if (isspace(c)) {
-                     c = G__fgetname(buf, ",)&*[(="); // FIXME: Change to G__getname_template???
+                     c = G__fgetname(buf, 0, ",)&*[(="); // FIXME: Change to G__getname_template???
                      //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
                   }
                   else {
                      fpos_t pos;
                      fgetpos(G__ifile.fp, &pos);
                      int store_line = G__ifile.line_number;
-                     c = G__fgetname(buf, ",)&*[(=");
+                     c = G__fgetname(buf, 0, ",)&*[(=");
                      //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
                      if (strcmp(buf, "short") && strcmp(buf, "int") && strcmp(buf, "long")) {
                         G__ifile.line_number = store_line;
@@ -1783,25 +1783,25 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
             }
          }
          if (!strcmp(buf, "class")) {
-            c = G__fgetname_template(buf, ",)&*[(=");
+            c = G__fgetname_template(buf, 0, ",)&*[(=");
             //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
             tagnum = G__search_tagname(buf, 'c');
             type = 'u';
          }
          else if (!strcmp(buf, "struct")) {
-            c = G__fgetname_template(buf, ",)&*[(=");
+            c = G__fgetname_template(buf, 0, ",)&*[(=");
             //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
             tagnum = G__search_tagname(buf, 's');
             type = 'u';
          }
          else if (!strcmp(buf, "union")) {
-            c = G__fgetname_template(buf, ",)&*[(=");
+            c = G__fgetname_template(buf, 0, ",)&*[(=");
             //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
             tagnum = G__search_tagname(buf, 'u');
             type = 'u';
          }
          else if (!strcmp(buf, "enum")) {
-            c = G__fgetname_template(buf, ",)&*[(=");
+            c = G__fgetname_template(buf, 0, ",)&*[(=");
             //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
             tagnum = G__search_tagname(buf, 'e');
             type = 'i';
@@ -1821,7 +1821,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                fgetpos(G__ifile.fp, &pos);
                int store_line = G__ifile.line_number;
                int store_c = c;
-               c = G__fgetname(buf, ",)&*[(="); // FIXME: Change to G__fgetname_template???
+               c = G__fgetname(buf, 0, ",)&*[(="); // FIXME: Change to G__fgetname_template???
                //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
                if (!strcmp(buf, "long") || !strcmp(buf, "double")) {
                   if (!strcmp(buf, "long")) {
@@ -2005,7 +2005,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                   // -- Parameter has a default value, collect it, and we are done.
                   // Collect the rest of the parameter specification as the default text.
                   has_a_default = 1;
-                  c = G__fgetstream_template(buf, ",)");
+                  c = G__fgetstream_template(buf, 0, ",)");
                   // Note: The enclosing loop will terminate after we break.
                   break;
                case '(': // Assume a function pointer type, e.g., MyFunc(int, int (*fp)(int, ...), int, ...)
@@ -2054,7 +2054,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                      if (c == '*') {
                         buf.Resize(i + 1);
                         buf[i++] = c;
-                        c = G__fgetstream(param_name, ")");
+                        c = G__fgetstream(param_name, 0, ")");
                         int j = 0;
                         for (; param_name[j] == '*'; ++j) {
                            buf.Resize(i + 1);
@@ -2132,7 +2132,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                      }
                      if (c == '=') { // We have a default value.
                         has_a_default = 1;
-                        c = G__fgetstream_template(buf, ",)");
+                        c = G__fgetstream_template(buf, 0, ",)");
                         //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
                         // Note: Enclosing loop will terminate after we break.
                      }
@@ -5834,7 +5834,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
       ipara = 0;
       while (cin != ')') {
          G__FastAllocString temp(G__ONELINE);
-         cin = G__fgetstream(temp, ",)");
+         cin = G__fgetstream(temp, 0, ",)");
          if (temp[0] != '\0') {
             strcpy(paraname[ipara], temp);
             ++ipara;
@@ -6921,7 +6921,7 @@ void G__argtype2param(const char* argtype, G__param* libp, int noerror, int* err
    libp->para[0] = G__null;
 
    do {
-      c = G__getstream_template(argtype, &p, typenam, endmark);
+      c = G__getstream_template(argtype, &p, typenam, 0, endmark);
       if (typenam[0]) {
          char* start = typenam;
          while (isspace(*start)) ++start;
