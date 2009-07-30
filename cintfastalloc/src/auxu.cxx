@@ -20,7 +20,7 @@ int G__readline_FastAlloc(FILE* fp, G__FastAllocString& line, G__FastAllocString
                           int* argn, char* arg[])
 {
    // -- FIXME: Describe this function!
-   char* null_fgets = fgets(line, line.Capacity() - 1, fp);  // FIXME: Possible buffer overflow here!
+   char* null_fgets = fgets(line, line.Capacity() - 1, fp);
    if (null_fgets) {
       argbuf = line;
       G__split(line, argbuf, argn, arg);
