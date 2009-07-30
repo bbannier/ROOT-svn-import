@@ -390,7 +390,7 @@ struct G__Templatearg *G__read_formal_templatearg()
     }
     else if('<'==c && strcmp(type,"template")==0) {
       c=G__fignorestream(">");
-      c=G__fgetname(type,"");
+      c=G__fgetname(type, 0, "");
       G__ASSERT(0==strcmp(type,"class")||0==strcmp(type,"typename"));
       p->type = G__TMPLT_TMPLTARG;
     }

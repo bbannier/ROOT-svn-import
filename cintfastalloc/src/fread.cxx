@@ -19,7 +19,7 @@ int G__fgetvarname(G__FastAllocString& string, size_t offset, const char *endmar
 int G__fgetname_template(G__FastAllocString& string, size_t offset, const char *endmark);
 int G__fgetstream_newtemplate(G__FastAllocString& string, size_t offset, const char *endmark);
 int G__fgetstream_template(G__FastAllocString& string, size_t offset, const char *endmark);
-int G__getstream_template(const char* source, int* isrc,G__FastAllocString&  string, const char* endmark, size_t offset /* = 0 */);
+int G__getstream_template(const char* source, int* isrc,G__FastAllocString&  string, size_t offset, const char* endmark);
 int G__fgetname(G__FastAllocString& string, size_t offset, const char *endmark);
 int G__getname(const char* source, int* isrc, char* string, const char* endmark);
 int G__getfullpath(char* string, char* pbegin, int i);
@@ -794,7 +794,7 @@ int G__fgetstream_template(G__FastAllocString& string, size_t offset, const char
 }
 
 //______________________________________________________________________________
-int G__getstream_template(const char* source, int* isrc,G__FastAllocString&  string, const char* endmark, size_t offset /* = 0 */)
+int G__getstream_template(const char* source, int* isrc,G__FastAllocString&  string, size_t offset, const char* endmark)
 {
    //  char *source;      : source string. If NULL, read from input file
    //  int *isrc;         : char position of the *source if source!=NULL
