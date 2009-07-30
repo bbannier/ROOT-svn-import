@@ -174,10 +174,12 @@ enum EFitPanel {
    kFP_DSAME, kFP_DNONE, kFP_DADVB, kFP_DNOST, kFP_PDEF,  kFP_PVER,  kFP_PQET,
    kFP_XMIN,  kFP_XMAX,  kFP_YMIN,  kFP_YMAX,  kFP_ZMIN,  kFP_ZMAX,
    
-   kFP_LMIN,  kFP_LMIN2, kFP_LFUM,  kFP_LGSL,  kFP_MIGRAD,kFP_SIMPLX,kFP_FUMILI, 
-   kFP_COMBINATION, kFP_MINMETHOD, 
-   kFP_GSLFR, kFP_GSLPR, kFP_BFGS,  kFP_GSLLM, kFP_GSLSA,
-   kFP_SCAN,  kFP_MERR,  kFP_MTOL,  kFP_MITR,
+   kFP_LMIN,  kFP_LMIN2, kFP_LFUM,  kFP_LGSL,  kFP_LGAS,  kFP_MIGRAD,kFP_SIMPLX,
+   kFP_FUMILI,kFP_COMBINATION,      kFP_MINMETHOD, 
+   kFP_GSLFR, kFP_GSLPR, kFP_BFGS,  kFP_BFGS2, kFP_GSLLM, kFP_GSLSA,
+   kFP_SCAN,  kFP_TMVAGA,kFP_GALIB,
+
+   kFP_MERR,  kFP_MTOL,  kFP_MITR,  
    
    kFP_FIT,   kFP_RESET, kFP_CLOSE,
 
@@ -202,7 +204,7 @@ void GetParameters(TFitEditor::FuncParams_t & pars, TF1* func)
 {
    // Stores the parameters of the given function into pars
    int npar = func->GetNpar(); 
-   if (npar != (int) pars.size() ) pars.resize(npar); 
+   if (npar != (int) pars.size() ) pars.resize(npar);
    for ( Int_t i = 0; i < npar; ++i )
    {
       Double_t par_min, par_max;
@@ -217,7 +219,7 @@ void SetParameters(TFitEditor::FuncParams_t & pars, TF1* func)
 {
    // Restore the parameters from pars into the function
    int npar = func->GetNpar(); 
-   if (npar > (int) pars.size() ) pars.resize(npar); 
+   if (npar > (int) pars.size() ) pars.resize(npar);
    for ( Int_t i = 0; i < npar; ++i )
    {
       func->SetParameter(i, pars[i][PAR_VAL]);
@@ -418,9 +420,6 @@ TFitEditor::~TFitEditor()
    delete fLayoutAdd;
    delete fLayoutConv;
    fgFitDialog = 0;
-   #ifndef R__HAS_MATHMORE
-   delete fLibGSL;
-   #endif
 }
 
 //______________________________________________________________________________
@@ -781,35 +780,41 @@ void TFitEditor::CreateMinimizationTab()
                                                             5, 5, 2, 2));
    MakeTitle(fMinimization, "Library");
 
-   bool withGSL = false;
-   #ifdef R__HAS_MATHMORE
-   withGSL = true;
-   #endif
-
    TGHorizontalFrame *hl = new TGHorizontalFrame(fMinimization);
    fLibMinuit = new TGRadioButton(hl, "Minuit", kFP_LMIN);
    fLibMinuit->Associate(this);
    fLibMinuit->SetToolTipText("Use minimization from libMinuit (default)");
-   hl->AddFrame(fLibMinuit, new TGLayoutHints(kLHintsNormal, withGSL?40:35, 0, 0, 1));
+   hl->AddFrame(fLibMinuit, new TGLayoutHints(kLHintsNormal, 40, 0, 0, 1));
    fStatusBar->SetText("LIB Minuit",1);
 
    fLibMinuit2 = new TGRadioButton(hl, "Minuit2", kFP_LMIN2);
    fLibMinuit2->Associate(this);
    fLibMinuit2->SetToolTipText("New C++ version of Minuit");
-   hl->AddFrame(fLibMinuit2, new TGLayoutHints(kLHintsNormal, withGSL?25:30, 0, 0, 1));
+   hl->AddFrame(fLibMinuit2, new TGLayoutHints(kLHintsNormal, 35, 0, 0, 1));
 
    fLibFumili = new TGRadioButton(hl, "Fumili", kFP_LFUM);
    fLibFumili->Associate(this);
    fLibFumili->SetToolTipText("Use minimization from libFumili");
-   hl->AddFrame(fLibFumili, new TGLayoutHints(kLHintsNormal, withGSL?20:15, 0, 0, 1));
+   hl->AddFrame(fLibFumili, new TGLayoutHints(kLHintsNormal, 30, 0, 0, 1));
+   fMinimization->AddFrame(hl, new TGLayoutHints(kLHintsExpandX, 20, 0, 5, 1));
 
-   fLibGSL = new TGRadioButton(withGSL?hl:0, "GSL", kFP_LGSL);
+   TGHorizontalFrame *hl2 = new TGHorizontalFrame(fMinimization);
+
+   fLibGSL = new TGRadioButton(hl2, "GSL", kFP_LGSL);
    #ifdef R__HAS_MATHMORE
    fLibGSL->Associate(this);
    fLibGSL->SetToolTipText("Use minimization from libGSL");
-   hl->AddFrame(fLibGSL, new TGLayoutHints(kLHintsNormal, 15, 0, 0, 1));
+   #else
+   fLibGSL->SetState(kButtonDisabled);
+   fLibGSL->SetToolTipText("Needs GSL to be compiled");
    #endif
-   fMinimization->AddFrame(hl, new TGLayoutHints(kLHintsExpandX, 20, 0, 5, 1));
+   hl2->AddFrame(fLibGSL, new TGLayoutHints(kLHintsNormal, 40, 0, 0, 1));
+
+   fLibGenetics = new TGRadioButton(hl2, "Genetics", kFP_LGAS);
+   fLibGenetics->Associate(this);
+   fLibGenetics->SetToolTipText("Different GAs implementations");
+   hl2->AddFrame(fLibGenetics, new TGLayoutHints(kLHintsNormal, 45, 0, 0, 1));
+   fMinimization->AddFrame(hl2, new TGLayoutHints(kLHintsExpandX, 20, 0, 5, 1));
 
    MakeTitle(fMinimization, "Method");
 
@@ -966,6 +971,7 @@ void TFitEditor::ConnectSlots()
    fLibMinuit2->Connect("Toggled(Bool_t)","TFitEditor",this,"DoLibrary(Bool_t)");
    fLibFumili->Connect("Toggled(Bool_t)","TFitEditor",this,"DoLibrary(Bool_t)");
    fLibGSL->Connect("Toggled(Bool_t)","TFitEditor",this,"DoLibrary(Bool_t)");
+   fLibGenetics->Connect("Toggled(Bool_t)","TFitEditor",this,"DoLibrary(Bool_t)");
 
    // minimization method
    fMinMethodList->Connect("Selected(Int_t)", "TFitEditor", this, "DoMinMethod(Int_t)");
@@ -1030,6 +1036,7 @@ void TFitEditor::DisconnectSlots()
    fLibMinuit2->Disconnect("Toggled(Bool_t)");
    fLibFumili->Disconnect("Toggled(Bool_t)");
    fLibGSL->Disconnect("Toggled(Bool_t)");
+   fLibGenetics->Disconnect("Toggled(Bool_t)");
 
    // minimization method
    fMinMethodList->Disconnect("Selected(Int_t)");
@@ -1538,10 +1545,16 @@ void TFitEditor::FillMinMethodList(Int_t)
       fMinMethodList->AddEntry("Fletcher-Reeves conjugate gradient" , kFP_GSLFR);
       fMinMethodList->AddEntry("Polak-Ribiere conjugate gradient" ,   kFP_GSLPR);
       fMinMethodList->AddEntry("BFGS conjugate gradient" ,            kFP_BFGS);
+      fMinMethodList->AddEntry("BFGS conjugate gradient (Version 2)", kFP_BFGS2);
       fMinMethodList->AddEntry("Levenberg-Marquardt" ,                kFP_GSLLM);
       fMinMethodList->AddEntry("Simulated Annealing" ,                kFP_GSLSA);
       fMinMethodList->Select(kFP_GSLFR, kFALSE);
       fStatusBar->SetText("CONJFR",2);
+   } else if ( fLibGenetics->GetState() == kButtonDown ) 
+   {
+      fMinMethodList->AddEntry("TMVA Genetic Algorithm" ,             kFP_TMVAGA);
+      fMinMethodList->AddEntry("GA Lib Genetic Algorithm" ,           kFP_GALIB);
+      fMinMethodList->Select(kFP_TMVAGA, kFALSE);
    } else // if ( fLibMinuit2->GetState() == kButtonDown )
    {
       fMinMethodList->AddEntry("MIGRAD" ,       kFP_MIGRAD);
@@ -1745,8 +1758,6 @@ void TFitEditor::DoFit()
    switch (fType) {
       case kObjectHisto: {
          
-         cout << "P0: " << fitFunc->GetParameter(0) << endl;
-
          TH1 *hist = dynamic_cast<TH1*>(fFitObject);
          ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
@@ -2211,7 +2222,6 @@ void TFitEditor::DoSetParameters()
       default:
          break;
       }
-
       GetParameters(fFuncPars, fitFunc);
    }                            
    else {
@@ -2553,7 +2563,9 @@ void TFitEditor::DoLibrary(Bool_t on)
                fLibMinuit->SetState(kButtonDown);
                fLibMinuit2->SetState(kButtonUp);
                fLibFumili->SetState(kButtonUp);
-               fLibGSL->SetState(kButtonUp);
+               if ( fLibGSL->GetState() != kButtonDisabled )
+                  fLibGSL->SetState(kButtonUp);
+               fLibGenetics->SetState(kButtonUp);
                fStatusBar->SetText("LIB Minuit", 1);
             }
             
@@ -2566,7 +2578,9 @@ void TFitEditor::DoLibrary(Bool_t on)
                fLibMinuit->SetState(kButtonUp);
                fLibMinuit2->SetState(kButtonDown);
                fLibFumili->SetState(kButtonUp);
-               fLibGSL->SetState(kButtonUp);
+               if ( fLibGSL->GetState() != kButtonDisabled )
+                  fLibGSL->SetState(kButtonUp);
+               fLibGenetics->SetState(kButtonUp);
                fStatusBar->SetText("LIB Minuit2", 1);
             }
          }
@@ -2578,19 +2592,36 @@ void TFitEditor::DoLibrary(Bool_t on)
                fLibMinuit->SetState(kButtonUp);
                fLibMinuit2->SetState(kButtonUp);
                fLibFumili->SetState(kButtonDown);
-               fLibGSL->SetState(kButtonUp);
+               if ( fLibGSL->GetState() != kButtonDisabled )
+                  fLibGSL->SetState(kButtonUp);
+               fLibGenetics->SetState(kButtonUp);
                fStatusBar->SetText("LIB Fumili", 1);
             }
          }
          break;
       case kFP_LGSL:
+         {
+            if (on) {
+               fLibMinuit->SetState(kButtonUp);
+               fLibMinuit2->SetState(kButtonUp);
+               fLibFumili->SetState(kButtonUp);
+               if ( fLibGSL->GetState() != kButtonDisabled )
+                  fLibGSL->SetState(kButtonDown);
+               fLibGenetics->SetState(kButtonUp);
+               fStatusBar->SetText("LIB GSL", 1);
+            }
+         }
+         break;
+      case kFP_LGAS:
       {
          if (on) {
             fLibMinuit->SetState(kButtonUp);
             fLibMinuit2->SetState(kButtonUp);
             fLibFumili->SetState(kButtonUp);
-            fLibGSL->SetState(kButtonDown);
-            fStatusBar->SetText("LIB Mathmore", 1);
+            if ( fLibGSL->GetState() != kButtonDisabled )
+               fLibGSL->SetState(kButtonUp);
+            fLibGenetics->SetState(kButtonDown);
+            fStatusBar->SetText("LIB Genetics", 1);
          }
       }
       default:
@@ -2619,11 +2650,18 @@ void TFitEditor::DoMinMethod(Int_t )
    else if ( fMinMethodList->GetSelected() == kFP_GSLPR )
       fStatusBar->SetText("CONJPR",2);
    else if ( fMinMethodList->GetSelected() == kFP_BFGS )
+      fStatusBar->SetText("BFGS",2);
+   else if ( fMinMethodList->GetSelected() == kFP_BFGS2 )
       fStatusBar->SetText("BFGS2",2);
    else if ( fMinMethodList->GetSelected() == kFP_GSLLM )
       fStatusBar->SetText("GSLLM",2);
    else if ( fMinMethodList->GetSelected() == kFP_GSLSA)
       fStatusBar->SetText("SimAn",2);
+   else if ( fMinMethodList->GetSelected() == kFP_TMVAGA )
+      fStatusBar->SetText("TMVAGA",2);
+   else if ( fMinMethodList->GetSelected() == kFP_GALIB )
+      fStatusBar->SetText("GALIB",2);
+
 
 }
 
@@ -2757,13 +2795,20 @@ void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, ROOT::Ma
    else if ( fMinMethodList->GetSelected() == kFP_GSLPR )
       minOpts.SetMinimizerAlgorithm( "conjugatepr" );
    else if ( fMinMethodList->GetSelected() == kFP_BFGS )
+      minOpts.SetMinimizerAlgorithm( "bfgs" );
+   else if ( fMinMethodList->GetSelected() == kFP_BFGS2 )
       minOpts.SetMinimizerAlgorithm( "bfgs2" );
    else if ( fMinMethodList->GetSelected() == kFP_GSLLM ) {
       minOpts.SetMinimizerType ("GSLMultiFit" );
       minOpts.SetMinimizerAlgorithm( "" );
-   }
-   else if ( fMinMethodList->GetSelected() == kFP_GSLSA) {
+   } else if ( fMinMethodList->GetSelected() == kFP_GSLSA) {
       minOpts.SetMinimizerType ("GSLSimAn" );
+      minOpts.SetMinimizerAlgorithm( "" );
+   } else if ( fMinMethodList->GetSelected() == kFP_TMVAGA) {
+      minOpts.SetMinimizerType ("Geneti2c" );
+      minOpts.SetMinimizerAlgorithm( "" );
+   } else if ( fMinMethodList->GetSelected() == kFP_GALIB) {
+      minOpts.SetMinimizerType ("GAlibMin" );
       minOpts.SetMinimizerAlgorithm( "" );
    }
 
@@ -2888,8 +2933,12 @@ TF1* TFitEditor::GetFitFunction()
          if ( tmpF1 != 0 && fitFunc != 0 && 
               strcmp(tmpF1->GetExpFormula(), fEnteredFunc->GetText()) == 0 ) {
             // copy the parameters!
-            fitFunc->SetParameters(tmpF1->GetParameters());
-            GetParameters(fFuncPars, fitFunc);
+            if ( int(fFuncPars.size()) != tmpF1->GetNpar() )
+            {
+               fitFunc->SetParameters(tmpF1->GetParameters());
+               GetParameters(fFuncPars, fitFunc);
+            } else 
+               SetParameters(fFuncPars, fitFunc);
          }
       }
    }
