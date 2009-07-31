@@ -1279,6 +1279,7 @@ G__value G__getexpr(const char* expression)
                   c = G__getstream_template(expression, &ig1, ebuf, 1, ">");
                   lenbuf = strlen(ebuf);
                   ebuf += ")";
+                  ++lenbuf;
                   --ig1;
                   break;
                }
