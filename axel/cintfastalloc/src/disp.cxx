@@ -434,10 +434,12 @@ int G__listfunc_pretty(FILE *fp,int access,const char *fname,G__ifunc_table *ire
           }
         }
         
-        if(ifunc->hash[i])
+        if(ifunc->hash[i]) {
            msg.Format("%s ",G__access2string(ifunc->access[i]));
-        else
-        if(G__more(fp,"------- ")) return(1);
+           if (G__more(fp, msg)) return(1);
+        } else {
+           if(G__more(fp,"------- ")) return(1);
+        }
         if(ifunc->isexplicit[i]) {
           if(G__more(fp,"explicit ")) return(1);
         }
