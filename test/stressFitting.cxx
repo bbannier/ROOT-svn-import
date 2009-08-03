@@ -48,8 +48,8 @@ enum cmpOpts {
 };
 
 struct RefValue {
-   double* pars;
-   double  chi;
+   const double* pars;
+   const double  chi;
 };
 
 class CompareResult {
@@ -70,7 +70,7 @@ public:
       refValue = _refValue; 
    };
 
-   int parameters(int npar, double val, double ref)
+   int parameters(int npar, double val, double ref) const
    { 
       double ret = 0;
       if ( refValue && (opts & cmpPars) ) 
@@ -81,11 +81,11 @@ public:
       return ret;
    };
 
-   int chi2(double val)
+   int chi2(double val) const
    { return ( refValue && (opts & cmpChi2) ) ? compareResult(val, refValue->chi, tolChi2) : 0; };
 
 public:
-   int compareResult(double v1, double v2, double tol = 0.01) { 
+   int compareResult(double v1, double v2, double tol = 0.01) const { 
       if (std::abs(v1-v2) > tol ) return 1; 
       return 0; 
    } 
@@ -307,7 +307,7 @@ void setColor(int red = 0)
 }
 
 int testFit(const char* str1, const char* str2, const char* str3,
-               TF1* func, CompareResult& cmpResult, int opts)
+               TF1* func, CompareResult const& cmpResult, int opts)
 {
    bool debug = opts & testOptDebug;
    // so far, status will just count the number of parameters wronly
@@ -376,13 +376,13 @@ int testFit(const char* str1, const char* str2, const char* str3,
 }
 
 template <typename T, typename F>
-int testFitters(T* object, F* func, vector< vector<struct algoType> > listAlgos, struct fitFunctions* fitFunction)
+int testFitters(T* object, F* func, vector< vector<struct algoType> > listAlgos, struct fitFunctions const& fitFunction)
 {
    // counts the number of parameters wronly calculated
    int status = 0;
    int numberOfTests = 0;
-   double* origpars = &(fitFunction->origPars[0]);
-   double* fitpars = &(fitFunction->fitPars[0]);
+   const double* origpars = &(fitFunction.origPars[0]);
+   const double* fitpars = &(fitFunction.fitPars[0]);
 
    func->SetParameters(fitpars);
    
@@ -481,13 +481,13 @@ int test1DObjects()
       if ( c0 ) delete c0;
       c0 = new TCanvas("c0-1D", "Histogram1D Variable");
       if ( __DRAW__ ) h2->Draw();
-      globalStatus += status = testFitters(h2, func, listAlgos, &l1DFunctions[j]);
+      globalStatus += status = testFitters(h2, func, listAlgos, l1DFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( c1 ) delete c1;
       c1 = new TCanvas("c1-1D", "Histogram1D");
       if ( __DRAW__ ) h1->Draw();
-      globalStatus += status = testFitters(h1, func, listAlgos, &l1DFunctions[j]);
+      globalStatus += status = testFitters(h1, func, listAlgos, l1DFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
       
       if ( g1 ) delete g1;
@@ -502,7 +502,7 @@ int test1DObjects()
       listAlgosGraph[1] = treeFail;
       listAlgosGraph[2] = specialAlgos;
       listAlgosGraph[3] = fumili;
-      globalStatus += status = testFitters(g1, func, listAlgosGraph, &l1DFunctions[j]);
+      globalStatus += status = testFitters(g1, func, listAlgosGraph, l1DFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( ge1 ) delete ge1;
@@ -517,7 +517,7 @@ int test1DObjects()
       listAlgosGE[0] = commonAlgos;
       listAlgosGE[1] = treeFail;
       listAlgosGE[2] = specialAlgos;
-      globalStatus += status = testFitters(ge1, func, listAlgosGE, &l1DFunctions[j]);
+      globalStatus += status = testFitters(ge1, func, listAlgosGE, l1DFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
    }
 
@@ -606,13 +606,13 @@ int test2DObjects()
       if ( c0 ) delete c0;
       c0 = new TCanvas("c0-2D", "Histogram2D Variable");
       if ( __DRAW__ ) h2->Draw();
-      globalStatus += status = testFitters(h2, func, listH2, &l2DFunctions[h]);
+      globalStatus += status = testFitters(h2, func, listH2, l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( c1 ) delete c1;
       c1 = new TCanvas("c1-2D", "Histogram2D");
       if ( __DRAW__ ) h1->Draw();
-      globalStatus += status = testFitters(h1, func, listH2, &l2DFunctions[h]);
+      globalStatus += status = testFitters(h1, func, listH2, l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( g1 ) delete g1;
@@ -628,7 +628,7 @@ int test2DObjects()
       listAlgosGraph[1] = treeFail;
       listAlgosGraph[2] = specialAlgos;
       listAlgosGraph[3] = fumili;
-      globalStatus += status = testFitters(g1, func, listAlgosGraph, &l2DFunctions[h]);
+      globalStatus += status = testFitters(g1, func, listAlgosGraph, l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       
@@ -642,7 +642,7 @@ int test2DObjects()
       listAlgosGE[0] = commonAlgos;
       listAlgosGE[1] = treeFail;
       listAlgosGE[2] = specialAlgos;
-      globalStatus += status = testFitters(ge1, func, listAlgosGE, &l2DFunctions[h]);
+      globalStatus += status = testFitters(ge1, func, listAlgosGE, l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
    }
 
@@ -741,13 +741,13 @@ int testUnBinedFit(int n = 10000)
    f1->SetParameters( &(treeFunctions[0].fitPars[0]) ); 
    f1->FixParameter(2,1);
    tw.set(tree, "x", "");
-   globalStatus += status = testFitters(&tw, f1, listAlgos, &treeFunctions[0]);
+   globalStatus += status = testFitters(&tw, f1, listAlgos, treeFunctions[0]);
    printf("%s\n", (status?"FAILED":"OK"));
 
    TF2 * f2 = new TF2(treeFunctions[1].name,treeFunctions[1].func,minX,maxX,minY,maxY,treeFunctions[1].npars);   
    f2->SetParameters( &(treeFunctions[1].fitPars[0]) ); 
    tw.set(tree, "x:y", "");
-   globalStatus += status = testFitters(&tw, f2, listAlgos, &treeFunctions[1]);
+   globalStatus += status = testFitters(&tw, f2, listAlgos, treeFunctions[1]);
    printf("%s\n", (status?"FAILED":"OK"));
 
    vector< vector<struct algoType> > listAlgosND(1);
@@ -756,7 +756,7 @@ int testUnBinedFit(int n = 10000)
    TF1 * f4 = new TF1("gausND",gausNd,0,1,13);   
    f4->SetParameters(&(treeFunctions[2].fitPars[0]));
    tw.set(tree, "x:y:z:u:v:w", "");
-   globalStatus += status = testFitters(&tw, f4, listAlgosND, &treeFunctions[2]);
+   globalStatus += status = testFitters(&tw, f4, listAlgosND, treeFunctions[2]);
    printf("%s\n", (status?"FAILED":"OK"));
 
    delete tree;
