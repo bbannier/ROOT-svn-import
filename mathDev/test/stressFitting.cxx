@@ -47,11 +47,15 @@ enum cmpOpts {
    cmpErr  = 8,
 };
 
+// Reference structure to compare the fitting results
 struct RefValue {
    const double* pars;
    const double  chi;
 };
 
+// Class that keeps a reference structure and some tolerance values to
+// make a comparision between the reference and the result of a
+// fit. The options define what has to be compared.
 class CompareResult {
 public:
    struct RefValue* refValue;
@@ -85,18 +89,22 @@ public:
    { return ( refValue && (opts & cmpChi2) ) ? compareResult(val, refValue->chi, tolChi2) : 0; };
 
 public:
+   // Compares two doubles with a given tolerence
    int compareResult(double v1, double v2, double tol = 0.01) const { 
       if (std::abs(v1-v2) > tol ) return 1; 
       return 0; 
    } 
 };
 
+// Get the chi2 test from a recently fitted function
 double chi2FromFit(const TF1 * func )  { 
    // return last chi2 obtained from Fit method function
    assert(TVirtualFitter::GetFitter() != 0 ); 
    return (TVirtualFitter::GetFitter()->Chisquare(func->GetNpar(), func->GetParameters() ) );
 }
 
+// Create a variable range in a vector (to be passed to the histogram
+// constructor
 void FillVariableRange(Double_t v[], Int_t numberOfBins, Double_t minRange, Double_t maxRange)
 {
    Double_t minLimit = (maxRange-minRange)  / (numberOfBins*2);
@@ -115,6 +123,11 @@ void FillVariableRange(Double_t v[], Int_t numberOfBins, Double_t minRange, Doub
    }
 }
 
+// Class defining the different algorithms. It contains the library,
+// the particular algorithm and the options which will be used to
+// invoke the algorithm. It also contains a CompareResult to indicate
+// what sort of checking has to be done once the algorithm has been
+// used.
 class algoType {
 public:
    const char* type;
@@ -129,6 +142,7 @@ public:
       type(s1), algo(s2), opts(s3), cmpResult(_cmpResult) {}
 };
 
+// Different vectors containing the list of algorithms to be used.
 vector<struct algoType> commonAlgos;
 vector<struct algoType> treeFail;
 vector<struct algoType> specialAlgos;
@@ -136,6 +150,7 @@ vector<struct algoType> noGraphAlgos;
 vector<struct algoType> fumili;
 vector<struct algoType> histGaus2D;
 
+// Class defining the limits in the parameters of a function.
 class ParLimit {
 public:
    int npar;
@@ -144,6 +159,7 @@ public:
    ParLimit(int _npar = 0, double _min = 0, double _max = 0): npar(_npar), min(_min), max(_max) {};
 };
 
+// Set the limits of a function given a vector of ParLimit
 void SetParsLimits(vector<ParLimit>& v, TF1* func)
 {
    for ( vector<ParLimit>::iterator it = v.begin();
@@ -153,6 +169,12 @@ void SetParsLimits(vector<ParLimit>& v, TF1* func)
    }
 }
 
+// Class that defined a fitting function. It will contain:
+//     The name of the function
+//     A pointer to the method that implements the function
+//     origPars is the original parameters used to fill the histogram/object
+//     fitPars parameters used right before fitting.
+//     parLimits limits of the parameters to be set before fitting
 class fitFunctions {
 public:
    const char* name;
@@ -177,32 +199,37 @@ public:
    }
 };
 
+// List of functions that will be used in the test
 vector<struct fitFunctions> l1DFunctions;
 vector<struct fitFunctions> l2DFunctions;
 vector<struct fitFunctions> treeFunctions;
 
+// Gaus 1D implementation
 Double_t gaus1DImpl(Double_t* x, Double_t* p)
 {
    return p[2]*TMath::Gaus(x[0], p[0], p[1]);
 }
 
+// Polynomial implementation
 Double_t poly1DImpl(Double_t *x, Double_t *p)
 {
    Double_t xx = x[0];
    return p[0]*xx*xx*xx+p[1]*xx*xx+p[2]*xx+p[3];
 }
 
-
+// Gaus 2D Implementation
 Double_t gaus2DImpl(Double_t *x, Double_t *p)
 {
    return p[0]*TMath::Gaus(x[0], p[1], p[2])*TMath::Gaus(x[1], p[3], p[4]);
 }
 
+// Gaus 1D Normalized Implementation
 double gausNormal(Double_t* x, Double_t* p)
 {
    return p[2]*TMath::Gaus(x[0],p[0],p[1],1);
 }
 
+// Gaus 2D Normalized Implementation
 double gaus2dnormal(double *x, double *p) { 
   
    double mu_x = p[0];
@@ -218,6 +245,7 @@ double gaus2dnormal(double *x, double *p) {
    return result;
 }
 
+// N-dimensional Gaus
 double gausNd(double *x, double *p) { 
 
    double f = gaus2dnormal(x,p); 
@@ -253,17 +281,20 @@ double maxY = +5.;
 int nbinsX = 30;
 int nbinsY = 30;
 
+// Options to indicate how the test has to be run
 enum testOpt {
-   testOptPars  = 1,
-   testOptChi   = 2,
-   testOptErr   = 4,
-   testOptColor = 8,
-   testOptDebug = 16,
-   testOptCheck = 32,
+   testOptPars  = 1,  // Check parameters
+   testOptChi   = 2,  // Check Chi2 Test
+   testOptErr   = 4,  // Show the errors
+   testOptColor = 8,  // Show wrong output in color
+   testOptDebug = 16, // Print out debug version
+   testOptCheck = 32, // Make the checkings
 };
 
+// Default options that all tests will have
 int defaultOptions = testOptColor | testOptCheck;// | testOptDebug;
 
+// Print the Name of the test
 template <typename T>
 void printTestName(T* object, TF1* func)
 {
@@ -277,6 +308,7 @@ void printTestName(T* object, TF1* func)
    printf("%s", str.c_str());
 }
 
+// In debug mode, prints the title of the debug table.
 void printTitle(TF1* func)
 {
    printf("\nMin Type    | Min Algo    | OPT  | PARAMETERS             ");
@@ -288,6 +320,7 @@ void printTitle(TF1* func)
    fflush(stdout);
 }
 
+// In debug mode, separator for the different tests
 void printSeparator()
 {
    fflush(stdout);
@@ -296,6 +329,7 @@ void printSeparator()
    fflush(stdout);
 }
 
+// Sets the color of the ouput to red or normal
 void setColor(int red = 0)
 {
    char command[13];
@@ -306,6 +340,14 @@ void setColor(int red = 0)
    printf("%s", command);
 }
 
+// Test a fit once it has been done:
+//     @str1 Name of the library used
+//     @str2 Name of the algorithm used
+//     @str3 Options used when fitting
+//     @func Fitted function
+//     @cmpResult Object to compare the result. It contains all the reference 
+//               objects as well as the method to compare. It will know whether something has to be tested or not.
+//     @opts Options of the test, to know what has to be printed or tested.
 int testFit(const char* str1, const char* str2, const char* str3,
                TF1* func, CompareResult const& cmpResult, int opts)
 {
@@ -375,6 +417,11 @@ int testFit(const char* str1, const char* str2, const char* str3,
    return status;
 }
 
+// Makes all the tests combinations for:
+//      @object The object to be fitted
+//      @func The function to be used for the fitting
+//      @listAlgos All the algorithms that should be tested
+//      @fitFunction Parameters of the function used to fill the object
 template <typename T, typename F>
 int testFitters(T* object, F* func, vector< vector<struct algoType> > listAlgos, struct fitFunctions const& fitFunction)
 {
@@ -438,6 +485,7 @@ int testFitters(T* object, F* func, vector< vector<struct algoType> > listAlgos,
    return (percentageFailure < 4)?0:1;
 }
 
+// Test the diferent objects in 1D
 int test1DObjects()
 {
    // Counts how many tests failed.
@@ -537,6 +585,7 @@ int test1DObjects()
    return globalStatus;
 }
 
+// Test the different objects in 2S
 int test2DObjects()
 {
    // Counts how many tests failed.
@@ -662,6 +711,9 @@ int test2DObjects()
    return globalStatus;
 }
 
+// Make a wrapper for the TTree, as the interface for fitting
+// differs. This way, the same algorithms (testFit and testFitters)
+// can be used for all the objects.
 class TreeWrapper {
 public:
 
@@ -686,6 +738,7 @@ public:
    }
 };
 
+// Test the fittig algorithms for a TTree
 int testUnBinedFit(int n = 10000)
 {
    // Counts how many tests failed.
@@ -767,6 +820,8 @@ int testUnBinedFit(int n = 10000)
    return globalStatus;
 }
 
+// Initialize the data for the tests: List of different algorithms and
+// fitting functions.
 void init_structures()
 {
    commonAlgos.push_back( algoType( "Minuit",      "Migrad",      "Q0", CompareResult())  );
@@ -847,7 +902,7 @@ int stressFit()
 
    iret += test1DObjects();
    iret += test2DObjects();
-//    iret += testUnBinedFit();
+   iret += testUnBinedFit();
 
    return iret; 
 }
