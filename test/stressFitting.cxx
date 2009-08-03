@@ -61,6 +61,10 @@ public:
    CompareResult(int _opts = cmpPars, double _tolPar = 3, double _tolChi2 = 0.01):
       refValue(0), opts(_opts), tolPar(_tolPar), tolChi2(_tolChi2) {};
 
+   CompareResult(CompareResult const& copy):
+      refValue(copy.refValue), opts(copy.opts), 
+      tolPar(copy.tolPar), tolChi2(copy.tolChi2) {};
+
    void setRefValue(struct RefValue* _refValue)
    { 
       refValue = _refValue; 
@@ -116,17 +120,13 @@ public:
    const char* type;
    const char* algo;
    const char* opts;
-   CompareResult* cmpResult;
-   void set(const char* s1, const char* s2, const char* s3, 
-            CompareResult* _cmpResult)
-   {
-      type = s1;
-      algo = s2;
-      opts = s3;
-      cmpResult = _cmpResult;
-   };
+   CompareResult cmpResult;
+   
+   algoType(): type(0), algo(0), opts(0), cmpResult(0) {}
 
-//   ~algoType() { delete cmpResult; };
+   algoType(const char* s1, const char* s2, const char* s3, 
+            CompareResult _cmpResult):
+      type(s1), algo(s2), opts(s3), cmpResult(_cmpResult) {}
 };
 
 vector<struct algoType> commonAlgos;
@@ -141,15 +141,15 @@ public:
    int npar;
    double min;
    double max;
-   ParLimit(int _npar, double _min, double _max): npar(_npar), min(_min), max(_max) {};
+   ParLimit(int _npar = 0, double _min = 0, double _max = 0): npar(_npar), min(_min), max(_max) {};
 };
 
-void SetParsLimits(vector<ParLimit*>& v, TF1* func)
+void SetParsLimits(vector<ParLimit>& v, TF1* func)
 {
-   for ( vector<ParLimit*>::iterator it = v.begin();
+   for ( vector<ParLimit>::iterator it = v.begin();
          it !=  v.end(); ++it ) {
 //       printf("Setting parameters: %d, %f, %f\n", (*it)->npar, (*it)->min, (*it)->max);
-      func->SetParLimits((*it)->npar, (*it)->min, (*it)->max);
+      func->SetParLimits( it->npar, it->min, it->max);
    }
 }
 
@@ -160,32 +160,26 @@ public:
    unsigned int npars;
    vector<double> origPars;
    vector<double> fitPars;
-   vector<ParLimit*> parLimits;
-   void set(const char* s1, double (*f)(double*, double*),
-            unsigned int n,
-            double* v1, double* v2,
-            vector<ParLimit*>& limits)
+   vector<ParLimit> parLimits;
+
+   fitFunctions() {}
+
+   fitFunctions(const char* s1, double (*f)(double*, double*),
+                unsigned int n,
+                double* v1, double* v2,
+                vector<ParLimit>& limits):
+      name(s1), func(f), npars(n), 
+      origPars(npars), fitPars(npars), parLimits(limits.size())
    {
-      name = s1;
-      func = f;
-      npars = n;
-      origPars.resize(npars);
-      fitPars.resize(npars);
-      for ( unsigned int i = 0; i < npars; ++i )
-      {
-         origPars[i] = v1[i];
-         fitPars[i] = v2[i];
-      }
-      parLimits.resize(limits.size());
+      copy(v1, v1 + npars, origPars.begin());
+      copy(v2, v2 + npars, fitPars.begin());
       copy(limits.begin(), limits.end(), parLimits.begin());
    }
-
-   ~fitFunctions()
-   {
-      for (vector<ParLimit*>::iterator i = parLimits.begin(); i != parLimits.end(); ++i)
-         delete *i;
-   }
 };
+
+vector<struct fitFunctions> l1DFunctions;
+vector<struct fitFunctions> l2DFunctions;
+vector<struct fitFunctions> treeFunctions;
 
 Double_t gaus1DImpl(Double_t* x, Double_t* p)
 {
@@ -252,10 +246,6 @@ double gausNd(double *x, double *p) {
    return 0; 
 }
 
-vector<struct fitFunctions> l1DFunctions;
-vector<struct fitFunctions> l2DFunctions;
-vector<struct fitFunctions> treeFunctions;
-
 double minX = -5.;
 double maxX = +5.;
 double minY = -5.;
@@ -317,7 +307,7 @@ void setColor(int red = 0)
 }
 
 int testFit(const char* str1, const char* str2, const char* str3,
-               TF1* func, CompareResult* cmpResult, int opts)
+               TF1* func, CompareResult& cmpResult, int opts)
 {
    bool debug = opts & testOptDebug;
    // so far, status will just count the number of parameters wronly
@@ -338,9 +328,9 @@ int testFit(const char* str1, const char* str2, const char* str3,
          printf("%-11s | %-11s | %-4s | ", str1, str2, str3);
       for ( int i = 0; i < n; ++i ) {
          if ( opts & testOptCheck )
-            diff = cmpResult->parameters(i,
-                                         values[i], 
-                                         std::max(std::sqrt(chi2/func->GetNDF()),1.0)*func->GetParError(i));
+            diff = cmpResult.parameters(i,
+                                        values[i], 
+                                        std::max(std::sqrt(chi2/func->GetNDF()),1.0)*func->GetParError(i));
          status += diff;
          if ( opts & testOptColor )
             setColor ( diff );
@@ -401,7 +391,7 @@ int testFitters(T* object, F* func, vector< vector<struct algoType> > listAlgos,
    object->Fit(func, "Q0");
    if ( defaultOptions & testOptDebug ) printTitle(func);
    struct RefValue ref = { origpars, chi2FromFit(func) };
-   commonAlgos[0].cmpResult->setRefValue(&ref);
+   commonAlgos[0].cmpResult.setRefValue(&ref);
    int defMinOptions = testOptPars | testOptChi | testOptErr | defaultOptions;
    status += testFit(commonAlgos[0].type, commonAlgos[0].algo
                      , commonAlgos[0].opts, func
@@ -427,7 +417,7 @@ int testFitters(T* object, F* func, vector< vector<struct algoType> > listAlgos,
          func->SetParameters(fitpars);
          fflush(stdout);
          object->Fit(func, listAlgos[j][i].opts);
-         listAlgos[j][i].cmpResult->setRefValue(&ref);
+         listAlgos[j][i].cmpResult.setRefValue(&ref);
          status += testFit(listAlgos[j][i].type, listAlgos[j][i].algo, listAlgos[j][i].opts
                            , func, listAlgos[j][i].cmpResult, testFitOptions);
          numberOfTests += 1;
@@ -560,12 +550,12 @@ int test2DObjects()
    TGraph2D* g1 = 0;
    TGraph2DErrors* ge1 = 0;
    TCanvas *c0 = 0, *c1 = 0, *c2 = 0, *c3 = 0;
-   for ( unsigned int j = 0; j < l2DFunctions.size(); ++j )
+   for ( unsigned int h = 0; h < l2DFunctions.size(); ++h )
    {
       if ( func ) delete func;
-      func = new TF2( l2DFunctions[j].name, l2DFunctions[j].func, minX, maxX, minY, maxY, l2DFunctions[j].npars);
-      func->SetParameters(&(l2DFunctions[j].origPars[0]));
-      SetParsLimits(l2DFunctions[j].parLimits, func);
+      func = new TF2( l2DFunctions[h].name, l2DFunctions[h].func, minX, maxX, minY, maxY, l2DFunctions[h].npars);
+      func->SetParameters(&(l2DFunctions[h].origPars[0]));
+      SetParsLimits(l2DFunctions[h].parLimits, func);
       
       // fill an histogram 
       if ( h1 ) delete h1;
@@ -616,13 +606,13 @@ int test2DObjects()
       if ( c0 ) delete c0;
       c0 = new TCanvas("c0-2D", "Histogram2D Variable");
       if ( __DRAW__ ) h2->Draw();
-      globalStatus += status = testFitters(h2, func, listH2, &l2DFunctions[j]);
+      globalStatus += status = testFitters(h2, func, listH2, &l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( c1 ) delete c1;
       c1 = new TCanvas("c1-2D", "Histogram2D");
       if ( __DRAW__ ) h1->Draw();
-      globalStatus += status = testFitters(h1, func, listH2, &l2DFunctions[j]);
+      globalStatus += status = testFitters(h1, func, listH2, &l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( g1 ) delete g1;
@@ -638,7 +628,7 @@ int test2DObjects()
       listAlgosGraph[1] = treeFail;
       listAlgosGraph[2] = specialAlgos;
       listAlgosGraph[3] = fumili;
-      globalStatus += status = testFitters(g1, func, listAlgosGraph, &l2DFunctions[j]);
+      globalStatus += status = testFitters(g1, func, listAlgosGraph, &l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       
@@ -652,7 +642,7 @@ int test2DObjects()
       listAlgosGE[0] = commonAlgos;
       listAlgosGE[1] = treeFail;
       listAlgosGE[2] = specialAlgos;
-      globalStatus += status = testFitters(ge1, func, listAlgosGE, &l2DFunctions[j]);
+      globalStatus += status = testFitters(ge1, func, listAlgosGE, &l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
    }
 
@@ -779,96 +769,72 @@ int testUnBinedFit(int n = 10000)
 
 void init_structures()
 {
-   #ifdef R__HAS_MATHMORE
-   const unsigned int nCommonAlgos = 14;
-   #else
-   const unsigned int nCommonAlgos = 9;
-   #endif
-
-   commonAlgos.resize(nCommonAlgos);
-   commonAlgos[ 0].set( "Minuit",      "Migrad",      "Q0", new CompareResult());
-   commonAlgos[ 1].set( "Minuit",      "Minimize",    "Q0", new CompareResult());
-   commonAlgos[ 2].set( "Minuit",      "Scan",        "Q0", new CompareResult(0));
-   commonAlgos[ 3].set( "Minuit",      "Seek",        "Q0", new CompareResult());
-   commonAlgos[ 4].set( "Minuit2",     "Migrad",      "Q0", new CompareResult());
-   commonAlgos[ 5].set( "Minuit2",     "Simplex",     "Q0", new CompareResult());
-   commonAlgos[ 6].set( "Minuit2",     "Minimize",    "Q0", new CompareResult());
-   commonAlgos[ 7].set( "Minuit2",     "Scan",        "Q0", new CompareResult(0));
-   commonAlgos[ 8].set( "Minuit2",     "Fumili2",     "Q0", new CompareResult());
+   commonAlgos.push_back( algoType( "Minuit",      "Migrad",      "Q0", CompareResult())  );
+   commonAlgos.push_back( algoType( "Minuit",      "Minimize",    "Q0", CompareResult())  );
+   commonAlgos.push_back( algoType( "Minuit",      "Scan",        "Q0", CompareResult(0)) );
+   commonAlgos.push_back( algoType( "Minuit",      "Seek",        "Q0", CompareResult())  );
+   commonAlgos.push_back( algoType( "Minuit2",     "Migrad",      "Q0", CompareResult())  );
+   commonAlgos.push_back( algoType( "Minuit2",     "Simplex",     "Q0", CompareResult())  );
+   commonAlgos.push_back( algoType( "Minuit2",     "Minimize",    "Q0", CompareResult())  );
+   commonAlgos.push_back( algoType( "Minuit2",     "Scan",        "Q0", CompareResult(0)) );
+   commonAlgos.push_back( algoType( "Minuit2",     "Fumili2",     "Q0", CompareResult())  );
 #ifdef R__HAS_MATHMORE
-   commonAlgos[ 9].set( "GSLMultiMin", "conjugatefr", "Q0", new CompareResult());
-   commonAlgos[10].set( "GSLMultiMin", "conjugatepr", "Q0", new CompareResult());
-   commonAlgos[11].set( "GSLMultiMin", "bfgs2",       "Q0", new CompareResult());
-   commonAlgos[12].set( "GSLMultiFit", "",            "Q0", new CompareResult());
-   commonAlgos[13].set( "GSLSimAn",    "",            "Q0", new CompareResult());
+   commonAlgos.push_back( algoType( "GSLMultiMin", "conjugatefr", "Q0", CompareResult()) );
+   commonAlgos.push_back( algoType( "GSLMultiMin", "conjugatepr", "Q0", CompareResult()) );
+   commonAlgos.push_back( algoType( "GSLMultiMin", "bfgs2",       "Q0", CompareResult()) );
+   commonAlgos.push_back( algoType( "GSLMultiFit", "",            "Q0", CompareResult()) );
+   commonAlgos.push_back( algoType( "GSLSimAn",    "",            "Q0", CompareResult()) );
 #endif
 
-   const unsigned int nSpecialAlgos = 2;
-   specialAlgos.resize(nSpecialAlgos);
-   specialAlgos[0].set( "Minuit",      "Migrad",      "QE0",  new CompareResult());
-   specialAlgos[1].set( "Minuit",      "Migrad",      "QW0",  new CompareResult());
+   specialAlgos.push_back( algoType( "Minuit",      "Migrad",      "QE0", CompareResult()) );
+   specialAlgos.push_back( algoType( "Minuit",      "Migrad",      "QW0", CompareResult()) );
 
-   const unsigned int nNoGraphAlgos = 3;
-   noGraphAlgos.resize(nNoGraphAlgos);
-   noGraphAlgos[0].set( "Minuit",      "Migrad",      "Q0I",  new CompareResult());
-   noGraphAlgos[1].set( "Minuit",      "Migrad",      "QL0",  new CompareResult());
-   noGraphAlgos[2].set( "Minuit",      "Migrad",      "QLI0", new CompareResult());
+   noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "Q0I",  CompareResult()) );
+   noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "QL0",  CompareResult()) );
+   noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "QLI0", CompareResult()) );
 
-   const unsigned int nFumili = 1;
-   fumili.resize(nFumili);
-   fumili[0].set( "Fumili",      "Fumili",      "Q0", new CompareResult());
+   fumili.push_back( algoType( "Fumili",      "Fumili",      "Q0", CompareResult()) );
 
-   const unsigned int nTreeFail = 1;
-   treeFail.resize(nTreeFail);
-   treeFail[0].set("Minuit",      "Simplex",     "Q0", new CompareResult());
+   treeFail.push_back( algoType( "Minuit",      "Simplex",     "Q0", CompareResult()) );
 
-   const unsigned int nHistGaus2D = 16;
-   histGaus2D.resize(nHistGaus2D);
-   histGaus2D[ 0].set( "Minuit",      "Migrad",      "Q0",   new CompareResult(cmpPars,6));
-   histGaus2D[ 1].set( "Minuit",      "Minimize",    "Q0",   new CompareResult(cmpPars,6));
-   histGaus2D[ 2].set( "Minuit",      "Scan",        "Q0",   new CompareResult(0));
-   histGaus2D[ 3].set( "Minuit",      "Seek",        "Q0",   new CompareResult(cmpPars,6));
-   histGaus2D[ 4].set( "Minuit2",     "Migrad",      "Q0",   new CompareResult(cmpPars,6));
-   histGaus2D[ 5].set( "Minuit2",     "Simplex",     "Q0",   new CompareResult(cmpPars,6));
-   histGaus2D[ 6].set( "Minuit2",     "Minimize",    "Q0",   new CompareResult(cmpPars,6));
-   histGaus2D[ 7].set( "Minuit2",     "Scan",        "Q0",   new CompareResult(0));
-   histGaus2D[ 8].set( "Minuit2",     "Fumili2",     "Q0",   new CompareResult(cmpPars,6));
-   histGaus2D[ 9].set( "Minuit",      "Simplex",     "Q0",   new CompareResult(cmpPars,6));
-   histGaus2D[10].set( "Minuit",      "Migrad",      "QE0",  new CompareResult(cmpPars,6));
-   histGaus2D[11].set( "Minuit",      "Migrad",      "Q0I",  new CompareResult(cmpPars,6));
-   histGaus2D[12].set( "Minuit",      "Migrad",      "QL0",  new CompareResult());
-   histGaus2D[13].set( "Minuit",      "Migrad",      "QLI0", new CompareResult());
-   histGaus2D[14].set( "Minuit",      "Migrad",      "QW0",  new CompareResult());
-   histGaus2D[15].set( "Fumili",      "Fumili",      "Q0",   new CompareResult(cmpPars,6));
+   histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "Q0",   CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit",      "Minimize",    "Q0",   CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit",      "Scan",        "Q0",   CompareResult(0))         );
+   histGaus2D.push_back( algoType( "Minuit",      "Seek",        "Q0",   CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit2",     "Migrad",      "Q0",   CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit2",     "Simplex",     "Q0",   CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit2",     "Minimize",    "Q0",   CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit2",     "Scan",        "Q0",   CompareResult(0))         );
+   histGaus2D.push_back( algoType( "Minuit2",     "Fumili2",     "Q0",   CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit",      "Simplex",     "Q0",   CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QE0",  CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "Q0I",  CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QL0",  CompareResult())          );
+   histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QLI0", CompareResult())          );
+   histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QW0",  CompareResult())          );
+   histGaus2D.push_back( algoType( "Fumili",      "Fumili",      "Q0",   CompareResult(cmpPars,6)) );
 
-   vector<ParLimit*> emptyLimits(0);
+   vector<ParLimit> emptyLimits(0);
 
-   const unsigned int n1DFunctions = 2;
-   l1DFunctions.resize(n1DFunctions);
    double gausOrig[] = {  0.,  3., 200.};
    double gausFit[] =  {0.5, 3.7,  250.};
-   vector<ParLimit*> gaus1DLimits(1);
-   gaus1DLimits[0] = new ParLimit(1, 0, 5);
-   l1DFunctions[0].set("GAUS",       gaus1DImpl, 3, gausOrig,  gausFit, gaus1DLimits);
+   vector<ParLimit> gaus1DLimits;
+   gaus1DLimits.push_back( ParLimit(1, 0, 5) );
+   l1DFunctions.push_back( fitFunctions("GAUS",       gaus1DImpl, 3, gausOrig,  gausFit, gaus1DLimits) );
    double polyOrig[] = { 2, 3, 4, 200};
    double polyFit[] = { 6.4, -2.3, 15.4, 210.5};
-   l1DFunctions[1].set("Polynomial", poly1DImpl, 4, polyOrig, polyFit, emptyLimits);
+   l1DFunctions.push_back( fitFunctions("Polynomial", poly1DImpl, 4, polyOrig, polyFit, emptyLimits) );
 
-   const unsigned int n2DFunctions = 1;
-   l2DFunctions.resize(n2DFunctions);
    double gaus2DOrig[] = { 500., +.5, 1.5, -.5, 2.0 };
    double gaus2DFit[] = { 510., .0, 1.8, -1.0, 1.6};
-   l2DFunctions[0].set("gaus2D", gaus2DImpl, 5, gaus2DOrig, gaus2DFit, emptyLimits);
+   l2DFunctions.push_back( fitFunctions("gaus2D", gaus2DImpl, 5, gaus2DOrig, gaus2DFit, emptyLimits) );
 
-   const unsigned int nTreeFunctions = 3;
-   treeFunctions.resize(nTreeFunctions);
    double gausnOrig[3] = {1,2,1};
    double treeOrig[13] = {1,2,3,0.5, 0.5, 0, 3, 0, 4, 0, 5, 1, 10 };
    double treeFit[13]  = {1,1,1,  1, 0.1, 0, 2, 0, 3, 0, 4, 0,  9 };
-   treeFunctions[0].set("gausn", gausNormal, 3, gausnOrig, treeFit, emptyLimits);
-   treeFunctions[1].set("gaus2Dn", gaus2dnormal, 5, treeOrig, treeFit, emptyLimits);
-   treeFunctions[2].set("gausND", gausNd, 13, treeOrig, treeFit, emptyLimits);
-
+   treeFunctions.push_back( fitFunctions("gausn", gausNormal, 3, gausnOrig, treeFit, emptyLimits ));
+   treeFunctions.push_back( fitFunctions("gaus2Dn", gaus2dnormal, 5, treeOrig, treeFit, emptyLimits));
+   treeFunctions.push_back( fitFunctions("gausND", gausNd, 13, treeOrig, treeFit, emptyLimits));
 }
 
 int stressFit() 
@@ -881,7 +847,7 @@ int stressFit()
 
    iret += test1DObjects();
    iret += test2DObjects();
-   iret += testUnBinedFit();
+//    iret += testUnBinedFit();
 
    return iret; 
 }
