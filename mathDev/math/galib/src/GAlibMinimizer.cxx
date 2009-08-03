@@ -64,11 +64,11 @@ bool GAlibMinimizer::SetLimitedVariable(unsigned int , const std::string & , dou
    return false;
 }
 
-bool GAlibMinimizer::SetVariable(unsigned int, const std::string&, double value, double) 
+bool GAlibMinimizer::SetVariable(unsigned int, const std::string&, double value, double step) 
 {
    //It does nothing! As there is no variable if it has no limits!
    Warning("GAlibMinimizer::SetVariable", "Variables should be limited on a Genetic Minimizer");
-   fAllele->add( value - 3, value + 3 );
+   fAllele->add( value - (50 * step), value + (50 * step) );
    return false;
 }
 
