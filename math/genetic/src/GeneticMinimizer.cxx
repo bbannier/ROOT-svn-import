@@ -77,11 +77,11 @@ bool GeneticMinimizer::SetLimitedVariable(unsigned int , const std::string & , d
    return true;
 }
 
-bool GeneticMinimizer::SetVariable(unsigned int, const std::string&, double value, double) 
+bool GeneticMinimizer::SetVariable(unsigned int, const std::string&, double value, double step) 
 {
    //It does nothing! As there is no variable if it has no limits!
    Warning("GeneticMinimizer::SetVariable", "Variables should be limited on a Genetic Minimizer");
-   fRanges.push_back( new TMVA::Interval(value - 3, value + 3) );
+   fRanges.push_back( new TMVA::Interval(value - (50 * step), value + (50 * step)) );
    
    return false;
 }
