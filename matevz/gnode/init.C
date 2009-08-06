@@ -34,7 +34,9 @@ void init(Int_t mode = 0)
   file_list = new TEveGraphNode("Files");
   scene->AddElement(file_list);
 
-  TString dir="/home/sdavkova/root/core";
+  TString dir="$(ROOTSYS)/core";
+  gSystem->ExpandPathName(dir);
+
   Int_t   nlevels = 2;
   read_and_register_dir(dir, file_list, nlevels);
 
