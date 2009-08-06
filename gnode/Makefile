@@ -1,7 +1,7 @@
 default: libEveGNode.so
 
 CXX      := $(shell root-config --cxx)
-CXXFLAGS := $(shell root-config --cflags)
+CXXFLAGS := $(shell root-config --cflags) -fPIC
 LDFLAGS  := $(shell root-config --ldflags)
 
 SRCS := $(wildcard *.cxx)
