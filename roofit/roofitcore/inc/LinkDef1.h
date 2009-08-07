@@ -55,6 +55,7 @@
 #pragma link C++ class RooDataSet- ;
 #pragma link C++ class RooDirItem+ ;
 #pragma link C++ class RooDLLSignificanceMCSModule+ ;
+#pragma link C++ class RooUpperLimitMCSModule+ ;
 #pragma link C++ class RooAbsAnaConvPdf+ ;
 #pragma link C++ class RooAddPdf+ ;
 #pragma link C++ class RooEfficiency+ ; 
@@ -62,6 +63,7 @@
 #pragma link C++ class RooExtendPdf+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;
+#pragma link C++ class RooNuisanceGenerationMCSModule+ ;
 #endif 
  
 
