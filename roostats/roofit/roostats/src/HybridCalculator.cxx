@@ -95,14 +95,16 @@ HybridCalculator::HybridCalculator( const char *name,
                                     RooAbsPdf& bModel,
                                     RooArgList& observables,
                                     RooArgSet* nuisance_parameters,
-                                    RooAbsPdf* priorPdf ) :
+                                    RooAbsPdf* priorPdf ,
+				    bool GenerateBinned ) :
    TNamed(name,title),
    fSbModel(&sbModel),
    fBModel(&bModel),
    fParameters(nuisance_parameters),
    fPriorPdf(priorPdf),
    fData(0),
-   fWS(0)   
+   fWS(0),
+   fGenerateBinned(GenerateBinned)
 {
    /// specific HybridCalculator constructor:
    /// the user need to specify the models in the S+B case and B-only case,
@@ -110,12 +112,21 @@ HybridCalculator::HybridCalculator( const char *name,
    /// that are marginalised and the prior distribution of those parameters
 
    // observables are managed by the class (they are copied in) 
-   fObservables = new RooArgList(observables);
+  fObservables = new RooArgList(observables);
+  //Try to recover the informations from the pdf's
+  //fObservables=new RooArgList("fObservables");
+  //fParameters=new RooArgSet("fParameters");
+  // if (priorPdf){
+    
+    
+  // }
+  
 
-   SetTestStatistics(1); /// set to default
-   SetNumberOfToys(1000); 
-   if (priorPdf) UseNuisance(true); 
 
+  SetTestStatistics(1); /// set to default
+  SetNumberOfToys(1000); 
+  if (priorPdf) UseNuisance(true); 
+  
    // this->Print();
    /* if ( _verbose ) */ //this->PrintMore("v"); /// TO DO: add the verbose mode
 }
@@ -124,14 +135,16 @@ HybridCalculator::HybridCalculator( RooAbsData & data,
                                     RooAbsPdf& sbModel,
                                     RooAbsPdf& bModel,
                                     RooArgSet* nuisance_parameters,
-                                    RooAbsPdf* priorPdf ) :
+                                    RooAbsPdf* priorPdf,
+				    bool GenerateBinned ) :
    fSbModel(0),
    fBModel(0),
    fObservables(0),
    fParameters(0),
    fPriorPdf(0),
    fData(0),
-   fWS(0)
+   fWS(0),
+   fGenerateBinned(GenerateBinned)
 {
    /// HybridCalculator constructor for performing hypotesis test 
    /// the user need to specify the data set, the models in the S+B case and B-only case. 
@@ -151,7 +164,8 @@ HybridCalculator::HybridCalculator( const char *name,
                                     RooAbsPdf& sbModel,
                                     RooAbsPdf& bModel,
                                     RooArgSet* nuisance_parameters,
-                                    RooAbsPdf* priorPdf ) :
+                                    RooAbsPdf* priorPdf, 
+				    bool GenerateBinned ) :
    TNamed(name,title),
    fSbModel(0),
    fBModel(0),
@@ -159,7 +173,8 @@ HybridCalculator::HybridCalculator( const char *name,
    fParameters(0),
    fPriorPdf(0),
    fData(0),
-   fWS(0)
+   fWS(0),
+   fGenerateBinned(GenerateBinned)
 {
    /// HybridCalculator constructor for performing hypotesis test 
    /// the user need to specify the data set, the models in the S+B case and B-only case. 
@@ -371,7 +386,11 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
       }
 
       /// generate the dataset in the S+B hypothesis
-      RooAbsData* sbData = static_cast<RooAbsData*> (fSbModel->generate(*fObservables,RooFit::Extended()));
+      RooAbsData* sbData;
+      if (fGenerateBinned)    
+	sbData = static_cast<RooAbsData*> (fSbModel->generateBinned(*fObservables,RooFit::Extended()));
+      else
+	sbData = static_cast<RooAbsData*> (fSbModel->generate(*fObservables,RooFit::Extended()));
 
       /// work-around in case of an empty dataset (TO DO: need a debug in RooFit?)
       bool sbIsEmpty = false;
@@ -384,7 +403,11 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
       }
 
       /// generate the dataset in the B-only hypothesis
-      RooAbsData* bData = static_cast<RooAbsData*> (fBModel->generate(*fObservables,RooFit::Extended()));
+      RooAbsData* bData;
+      if (fGenerateBinned)
+	bData = static_cast<RooAbsData*> (fBModel->generateBinned(*fObservables,RooFit::Extended()));	
+      else 
+	bData = static_cast<RooAbsData*> (fBModel->generate(*fObservables,RooFit::Extended()));
 
       /// work-around in case of an empty dataset (TO DO: need a debug in RooFit?)
       bool bIsEmpty = false;
