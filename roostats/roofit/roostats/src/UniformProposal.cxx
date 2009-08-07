@@ -13,9 +13,12 @@
 /*
 BEGIN_HTML
 <p>
-UniformProposal is a concrete implementation of the ProposalFunction interface for use with a Markov Chain Monte Carlo algorithm.  
-This proposal function is a uniformly random distribution over the parameter space.  The proposal ignores the current point 
-when it proposes a new point.  The proposal function is symmetric, though it may not be very efficient. 
+UniformProposal is a concrete implementation of the ProposalFunction interface
+for use with a Markov Chain Monte Carlo algorithm.  This proposal function is
+a uniformly random distribution over the parameter space.  The proposal
+ignores the current point when it proposes a new point.  The proposal
+function is symmetric, though it may not cause a MetropolisHastings run to
+converge as quickly as other proposal functions.
 </p>
 END_HTML
 */
@@ -25,12 +28,24 @@ END_HTML
 #include "Rtypes.h"
 #endif
 
+#ifndef RooStats_RooStatsUtils
 #include "RooStats/RooStatsUtils.h"
+#endif
+#ifndef ROOSTATS_UniformProposal
 #include "RooStats/UniformProposal.h"
+#endif
+#ifndef ROO_ARG_SET
 #include "RooArgSet.h"
+#endif
+#ifndef ROO_MSG_SERVICE
 #include "RooMsgService.h"
+#endif
+#ifndef ROO_REAL_VAR
 #include "RooRealVar.h"
+#endif
+#ifndef ROOT_TIterator
 #include "TIterator.h"
+#endif
 
 ClassImp(RooStats::UniformProposal);
 

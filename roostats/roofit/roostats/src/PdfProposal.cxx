@@ -17,6 +17,39 @@ PdfProposal is a concrete implementation of the ProposalFunction interface.
 It proposes points across the parameter space in the distribution of the
 given PDF.
 </p>
+<p>
+To make Propose(xPrime, x) dependent on x, configure with
+PdfProposal::AddMapping(varToUpdate, valueToUse).  For example, suppose we have:
+</p>
+
+<p>
+// our parameter
+RooRealVar p("p", "p", 5, 0, 10);
+
+// create mean and sigma for gaussian proposal function
+RooRealVar meanP("meanP", "meanP", 0, 10);
+RooRealVar sigma("sigma", "sigma", 1, 0, 5);
+RooGaussian pGaussian("pGaussian", "pGaussian", p, meanP, sigma);
+
+// configure proposal function
+PdfProposal pdfProposal(pGaussian);
+pdfProposal.AddMapping(meanP, p); // each call of Propose(xPrime, x), meanP in
+                                  // the proposal function will be updated to
+                                  // the value of p in x.  this will center the
+                                  // proposal function about x's p when
+                                  // proposing for xPrime
+
+// To improve performance, PdfProposal has the ability to cache a specified
+// number of proposals. If you don't call this function, the default cache size
+// is 1, which can be slow.
+pdfProposal.SetCacheSize(desiredCacheSize);
+</p>
+
+<p>
+PdfProposal currently uses a fixed cache size. Adaptive caching methods are in the works
+for future versions.
+</p>
+
 END_HTML
 */
 //_________________________________________________
@@ -25,14 +58,30 @@ END_HTML
 #include "Rtypes.h"
 #endif
 
+#ifndef ROOSTATS_PdfProposal
 #include "RooStats/PdfProposal.h"
+#endif
+#ifndef RooStats_RooStatsUtils
 #include "RooStats/RooStatsUtils.h"
+#endif
+#ifndef ROO_ARG_SET
 #include "RooArgSet.h"
+#endif
+#ifndef ROO_DATA_SET
 #include "RooDataSet.h"
+#endif
+#ifndef ROO_ABS_PDF
 #include "RooAbsPdf.h"
+#endif
+#ifndef ROO_MSG_SERVICE
 #include "RooMsgService.h"
+#endif
+#ifndef ROO_REAL_VAR
 #include "RooRealVar.h"
+#endif
+#ifndef ROOT_TIterator
 #include "TIterator.h"
+#endif
 
 #include <map>
 
@@ -41,17 +90,23 @@ ClassImp(RooStats::PdfProposal);
 using namespace RooFit;
 using namespace RooStats;
 
+// By default, PdfProposal does NOT own the PDF that serves as the
+// proposal density function
 PdfProposal::PdfProposal() : ProposalFunction()
 {
    fPdf = NULL;
+   fOwnsPdf = kFALSE;
    fCacheSize = 1;
    fCachePosition = 0;
    fCache = NULL;
 }
 
+// By default, PdfProposal does NOT own the PDF that serves as the
+// proposal density function
 PdfProposal::PdfProposal(RooAbsPdf& pdf) : ProposalFunction()
 {
    fPdf = &pdf;
+   fOwnsPdf = kFALSE;
    fCacheSize = 1;
    fCachePosition = 0;
    fCache = NULL;
@@ -77,20 +132,30 @@ void PdfProposal::Propose(RooArgSet& xPrime, RooArgSet& x)
       // fLastX not yet initialized
       fLastX.addClone(x);
       // generate initial cache
+      RooStats::SetParameters(&x, &fMaster);
+      for (fIt = fMap.begin(); fIt != fMap.end(); fIt++)
+         fIt->first->setVal(fIt->second->getVal(&x));
       fCache = fPdf->generate(xPrime, fCacheSize);
    }
-   Bool_t moved = !Equals(fLastX, x);
 
-   // if we've moved, set the values of the variables in the PDF to the
-   // corresponding values of the variables in x, according to the
-   // mappings (i.e. let the variables in x set the given values for the
-   // PDF that will generate xPrime)
-   if (moved) {
-      // update the pdf parameters
-      for (fIt = fMap.begin(); fIt != fMap.end(); fIt++)
-         fIt->first->setVal(x.getRealValue(fIt->second->GetName()));
-      // save the new x in fLastX
-      RooStats::SetParameters(&x, &fLastX);
+   Bool_t moved = false;
+   if (fMap.size() > 0) {
+      moved = !Equals(fLastX, x);
+
+      // if we've moved, set the values of the variables in the PDF to the
+      // corresponding values of the variables in x, according to the
+      // mappings (i.e. let the variables in x set the given values for the
+      // PDF that will generate xPrime)
+      if (moved) {
+         // update the pdf parameters
+         RooStats::SetParameters(&x, &fMaster);
+
+         for (fIt = fMap.begin(); fIt != fMap.end(); fIt++)
+            fIt->first->setVal(fIt->second->getVal(&x));
+
+         // save the new x in fLastX
+         RooStats::SetParameters(&x, &fLastX);
+      }
    }
 
    // generate new cache if necessary
@@ -118,15 +183,19 @@ Bool_t PdfProposal::IsSymmetric(RooArgSet& /* x1 */, RooArgSet& /* x2 */)
 // point x2
 Double_t PdfProposal::GetProposalDensity(RooArgSet& x1, RooArgSet& x2)
 {
+   RooStats::SetParameters(&x2, &fMaster);
    for (fIt = fMap.begin(); fIt != fMap.end(); fIt++)
-      fIt->first->setVal(x2.getRealValue(fIt->second->GetName()));
+      fIt->first->setVal(fIt->second->getVal(&x2));
    RooArgSet* temp = fPdf->getObservables(x1);
    RooStats::SetParameters(&x1, temp);
    delete temp;
    return fPdf->getVal(&x1); // could just as well use x2
 }
 
-void PdfProposal::AddMapping(RooRealVar& proposalParam, RooRealVar& poi)
+void PdfProposal::AddMapping(RooRealVar& proposalParam, RooAbsReal& update)
 {
-   fMap.insert(pair<RooRealVar*, RooRealVar*>(&proposalParam, &poi));
+   fMaster.add(*update.getParameters((RooAbsData*)NULL));
+   if (update.getParameters((RooAbsData*)NULL)->getSize() == 0)
+      fMaster.add(update);
+   fMap.insert(pair<RooRealVar*, RooAbsReal*>(&proposalParam, &update));
 }
