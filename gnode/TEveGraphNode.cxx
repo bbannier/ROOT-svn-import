@@ -221,7 +221,7 @@ void TEveGraphNode::position_circle(Float_t r, Float_t phi, Float_t z_pos)
     el->StampTransBBox();
 
     TEveGeoShape *shp = dynamic_cast<TEveGeoShape*>(el);
-    cout << "Phi " << phi << " " << el->GetElementName() << " el=" << el << " shp=" << shp << endl;
+    // cout << "Phi " << phi << " " << el->GetElementName() << " el=" << el << " shp=" << shp << endl;
 
     phi += delta_phi;
   }
