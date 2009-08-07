@@ -42,13 +42,20 @@
 
 #pragma link C++ class RooStats::MCMCCalculator+; 
 #pragma link C++ class RooStats::MCMCInterval+; 
+#pragma link C++ class RooStats::MCMCIntervalPlot+; 
+#pragma link C++ class RooStats::MetropolisHastings+; 
+#pragma link C++ class RooStats::MarkovChain+; 
 #pragma link C++ class RooStats::ProposalFunction+; 
+#pragma link C++ class RooStats::ProposalHelper+; 
 #pragma link C++ class RooStats::UniformProposal+; 
 #pragma link C++ class RooStats::PdfProposal+; 
+#pragma link C++ class RooStats::Heavyside+; 
 
 #pragma link C++ class RooStats::HybridCalculator+;
+//#pragma link C++ class RooStats::HybridCalculator2+;
 #pragma link C++ class RooStats::HybridPlot+;
-#pragma link C++ class RooStats::HybridResult+;
+#pragma link C++ class RooStats::HybridResult+;				 
+//#pragma link C++ class RooStats::HybridResult2+;
 
 #pragma link C++ class RooStats::TestStatSampler+; // interface, not concrete
 #pragma link C++ class RooStats::DebuggingSampler+;
