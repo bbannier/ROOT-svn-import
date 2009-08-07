@@ -114,6 +114,7 @@ RooSimultaneous::RooSimultaneous(const char *name, const char *title,
   RooAbsPdf* pdf ;
   RooCatType* type(0) ;
   while ((pdf=(RooAbsPdf*)pIter->Next())) {
+    type = (RooCatType*) cIter->Next() ;
     pdfMap[string(type->GetName())] = pdf ;
   }
   delete pIter ;
