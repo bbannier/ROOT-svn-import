@@ -359,11 +359,7 @@ The FeldmanCousins class is a separate concrete implementation of the IntervalCa
 	
 	MCMCCalculator runs the Metropolis-Hastings algorithm (section \ref{sec:MetropolisHastings}) with the parameters of your model, a $-log($Likelihood$)$ function constructed from the model and data set, and a ProposalFunction (section \ref{sec:ProposalFunction}).  This generates a Markov chain posterior sampling, which is used to create an MCMCInterval (section \ref{sec:MCMCInterval}).
 	
-	The most basic usage of an MCMCCalculator is automatically set up with the simplified 3-arg constructor (or 4-arg with RooWorkspace).  This automatic configuration package consists of  a UniformProposal, 10,000 Metropolis-Hastings iterations, 40 burn-in steps, and 50 bins for each RooRealVar; it also determines the interval by kernel-estimation, turns on sparse histogram mode, and finds a 95\% confidence interval (see sections \ref{sec:MetropolisHastings} and \ref{sec:MCMCInterval} to learn about these options).  These are reasonable settings designed to minimize configuration steps and hassle for beginning users, making the code very simple:
-	
-	\lstinputlisting{mcmc_examples/mcmc-most-basic.C}
-	
-	All other MCMCCalculator constructors are designed for maximum user control and thus do not have any automatic settings.  You can customize the configuration (and override any automatic settings) through the mutator methods provided by MCMCCalculator.  It may be easiest to use the default no-args constructor and perform all configuration with these methods.
+	MCMCCalculator constructors are designed for maximum user control.  You can customize the configuration through the mutator methods provided by MCMCCalculator:
 	
 	\lstinputlisting{mcmc_examples/mcmc-custom-config.C}
 	
@@ -371,65 +367,31 @@ The FeldmanCousins class is a separate concrete implementation of the IntervalCa
 	\label{sec:ProposalFunction}
 	The ProposalFunction interface generalizes the task of proposing points in some distribution for some set of variables, presumably for use with the Metropolis-Hastings algorithm.
 	
-	PdfProposal is the most powerful and general ProposalFunction derived class.  It proposes points in the distribution of any RooAbsPdf you pass it to serve as its proposal density function.  It also provides a generalized means of updating PDF parameters based on the current values of PDF observables.  This is useful for centering the proposal density function around the current point when proposing others or for advanced control over the widths of peaks or anything else in the proposal function.  It also has a cacheing mechanism (off by default) which almost always significantly speeds up proposals.
+	PdfProposal is the most powerful and general ProposalFunction derived class.  It proposes points in the distribution of any RooAbsPdf you pass it to serve as its proposal density function.  It also provides a means of updating the parameters of the PDF to the current values of PDF observables.  This is useful for centering the proposal density function around the current point when proposing others.  It also has a cacheing mechanism (off by default) which almost always significantly speeds up proposals.
 	
 	Here's a PdfProposal construction example that uses a covariance matrix from the RooFitResult.  Be careful that your RooArgLists have the same order of variables as the covariance matrix uses:
 	
 	\lstinputlisting{mcmc_examples/mcmc-pdfproposal.C}
 	
-	Since PdfProposal functions are powerful but annoying to build, we created ProposalHelper to make it easier.  It will build a multi-variate Gaussian proposal function and has some handy options for doing so.  Here's how to create exactly the same proposal function as in the example above.  Note that using RooFitResult::floatParsFinal() to set the RooArgList of variables ensures the right order.
-	
-	\lstinputlisting{mcmc_examples/mcmc-proposalhelper.C}
-	
-	ProposalHelper can also create a PdfProposal with a "Bank of Clues" (cite paper) component.  This will add a PDF with a kernel placed at each "clue" point to the proposal density function.  This will increase the frequency of proposals in the clue regions which can be especially useful for helping the Metropolis-Hastings algorithm find small and/or distant regions of interest (no free lunch, of course, you need to know these regions beforehand to pick the clue points).  Just pass a RooDataSet with (possibly weighted) entries for each clue point.  You can also choose what fraction of the total proposal function integral comes from the bank of clues PDF.
-	
-	\lstinputlisting{mcmc_examples/mcmc-proposalhelper-clues.C}
-	
-	Using the covariance matrix from a RooFitResult is not required.  If you do not set the covariance matrix, ProposalHelper constructs a pretty good default for you -- a diagonal matrix with sigmas set to some fraction of the range of each corresponding RooRealVar.  You can set this fraction yourself (the default is 1/6th).
-	
-	To help Metropolis-Hastings find small and/or distant regions of interest that you do not know beforehand, you can set ProposalHelper to add a fraction of uniform proposal density to the proposal function.  Use the ProposalHelper::SetUniformFraction() method to choose what fraction the uniform PDF makes up of the entire proposal function integral.
-
 	UniformProposal is a specialized implementation of a ProposalFunction that proposes points in a uniform distribution over the range of the variables.  Its low overhead as compared to a PdfProposal using a RooUniform PDF and guaranteed symmetry makes it much faster at proposing in a purely uniform distribution.  UniformProposal does not need a cacheing mechanism.
 	
-	\subsubsection{MetropolisHastings}
+	\subsubsection{Metropolis-Hastings}
 	\label{sec:MetropolisHastings}
-	A MetropolisHastings object runs the Metropolis-Hastings algorithm to construct a Markov chain posterior sampling of a function.  At each step in the algorithm, a new point is proposed (section \ref{sec:ProposalFunction}) and possibly "visited" based on its likelihood relative to the current point.  Even when the proposal density function is not symmetric, MetropolisHastings maintains detailed balance when constructing the Markov chain by counterbalancing the relative likelihood between the two points with the relative proposal density.  That is, given the current point $x$, proposed point $x'$, likelihood function $L$, and proposal density function $Q$, we visit $x'$ iff
+	The Metropolis-Hastings algorithm constructs a Markov chain posterior sampling of a function.  At each step in the algorithm, a new point is proposed (section \ref{sec:ProposalFunction}) and possibly "visited" based on its likelihood relative to the current point.  Even when the proposal density function is not symmetric, the algorithm maintains detailed balance when constructing the Markov chain by counterbalancing the relative likelihood between the two points with the relative proposal density.  That is, given the current point $x$, proposed point $x'$, likelihood function $L$, and proposal density function $Q$, we visit $x'$ iff
 	\begin{center}
 	$\displaystyle \frac{L(x')}{L(x)} \frac{Q(x | x')}{Q(x' | x)} \geq Rand[0,1]$
 	\end{center}
-	MetropolisHastings supports ordinary and log-scale functions.  This is particularly useful for handling either regular likelihood or $\pm$log-likelihood functions.  You must tell MetropolisHastings the type and sign of function the you have supplied (if you supply a regular function, make sure that it is never 0).  Then set a ProposalFunction, parameters to propose for, and a number of algorithm iterations.  Call ConstructChain() to get the Markov chain.
-	
-	\lstinputlisting{mcmc_examples/mcmc-metropolishastings-regular.C}
-	
-	Here's how to do a similar task using a negative log-likelihood function instead:
-	
-	\lstinputlisting{mcmc_examples/mcmc-metropolishastings-nll.C}
+	Although, since MCMCCalculator uses $-log($likelihood$)$ instead of regular likelihood, the actual rules it uses for this decision are on the log scale.
 	
 	\subsubsection{MCMCInterval}
 	\label{sec:MCMCInterval}
-	MCMCInterval is a ConfInterval that determines the confidence interval on your parameters from a MarkovChain (section \ref{sec:MarkovChain}) generated by Monte Carlo.  To determine the confidence interval, MCMCInterval integrates the posterior where it is the tallest until it finds the correct cutoff height $C$ to give the target confidence level $P$.  That is, to find
+	MCMCInterval is a ConfInterval that determines the confidence interval on your parameters from a Markov chain generated by Monte Carlo.  To determine the confidence interval, MCMCInterval integrates the posterior where it is the tallest until it finds the correct cutoff height $C$ to give the target confidence level $P$.  That is, to find
 	\begin{center}
 	$\displaystyle \int\limits_{f(\mathbf{x}) \, \ge \, C} f(\mathbf{x}) \,d^nx = P$
 	\end{center}
-	MCMCInterval has a few methods for representing the posterior to do this integration.  The default is simply as a histogram, so this integral turns into a summation of bin heights.  If you have no more than 3 parameters and 100 bins, a standard histogram will be fine.  However, for higher dimensions or bin numbers, it is faster and less memory intensive to use a sparse histogram data structure (aside: in a regular histogram, 4 variables with 100 bins each requires $\sim$4GB of contiguous memory, a tall order).  By default, the histogram method adds bins to the interval until at least the desired confidence level has been reached (use MCMCInterval::SetHistStrict() to change this).
+	MCMCInterval represents the posterior Markov chain as a histogram, so this integral turns into a summation of bin heights.  By default, the histogram method adds bins to the interval until at least the desired confidence level has been reached (use MCMCInterval::SetHistStrict() to change this).  MCMCInterval will work for up to 3 parameters of interest because of the intensive memory requirements for a 4+ dimensional histogram (in a regular histogram, 4 variables with 100 bins each requires $\sim$4GB of contiguous memory, a tall order).  However, more recent development versions can use a sparse histogram data structure, which works for N dimensions.
 	
-	Another posterior representation option is kernel-estimation (often termed "keys") using a RooNDKeysPdf, which has more theoretical validity because it takes the arbitrariness out of choosing a histogram binning.  The kernel-estimation method usually takes longer than the histogram method because it typically requires several integrations to find the right cutoff such that $|P_{calculated} - P_{target}| < \epsilon$ ($\epsilon = 0.01$ by default).
-	
-	To try to remove the arbitrariness of the starting point in the Markov chain, which was rather random when it was generated by MetropolisHastings, a certain number of "burn-in" steps can be ignored from the beginning of the chain.  Generally it is a good idea to use burn-in, but the number of steps to discard depends on the function you are sampling and your proposal function, so it is off by default.  Usually you will tell the MCMCCalculator (section \ref{sec:MCMCCalculator}) the number of burn-in steps to use by calling MCMCCalculator::SetNumBurnInSteps(), since it configures the MCMCInterval.  For future versions, automatic burn-in step calculations are being considered.
-	
-	\subsubsection{MCMCIntervalPlot}
-	\label{sec:MCMCIntervalPlot}
-	
-	The MCMCIntervalPlot class helps you to visualize the interval and Markov chain.  The function MCMCIntervalPlot::Draw() will draw the interval as determined by the type of posterior representation the MCMCInterval was configured for (i.e. histogram or keys PDF).  To specifically ask for a certain interval determination to be drawn, use DrawHistInterval() or DrawKeysPdfInterval().
-	
-	\lstinputlisting{mcmc_examples/mcmc-mcmcintervalplot.C}
-	
-	\subsubsection{MarkovChain}
-	\label{sec:MarkovChain}
-	A MarkovChain stores a series of weighted steps through N-dimensional space in which each step depended only on the one before it.  Each step in the chain also has a $-log($likelihood$)$ value associated with it.  The class supplies some simple methods to access each step in the chain in order:
-	
-	\lstinputlisting{mcmc_examples/mcmc-markovchain.C}
-	
+	To try to remove the arbitrariness of the starting point in the Markov chain, which was rather random when it was generated by Metropolis-Hastings, a certain number of "burn-in" steps can be ignored from the beginning of the chain.  Generally it is a good idea to use burn-in, but the number of steps to discard depends on the function you are sampling and your proposal function, so it is off by default.  Usually you will tell the MCMCCalculator (section \ref{sec:MCMCCalculator}) the number of burn-in steps to use by calling MCMCCalculator::SetNumBurnInSteps(), since it configures the MCMCInterval.  For future versions, automatic burn-in step calculations are being considered.	
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
