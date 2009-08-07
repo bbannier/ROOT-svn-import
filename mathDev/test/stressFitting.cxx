@@ -19,6 +19,7 @@
 #include "TBackCompFitter.h"
 #include "TVirtualFitter.h"
 
+#include "Math/WrappedTF1.h"
 #include "Fit/BinData.h"
 #include "Fit/UnBinData.h"
 #include "HFitInterface.h"
@@ -38,7 +39,7 @@
 
 #include "Riostream.h"
 using namespace std;
-// This line should not exist. It is now there for testing
+// Next line should not exist. It is now there for testing
 // pourpuses.
 //#undef R__HAS_MATHMORE
 
@@ -309,15 +310,18 @@ public:
    template <typename F>
    Int_t Fit(F func, const char* opts) 
    {
-//       if ( opts[0] == 'G' )
-//       {
-//          ROOT::Fit::BinData d; 
-//          ROOT::Fit::FillData(d,object,func);
-//          ROOT::Fit::Fitter fitter; 
-//          return fitter.Fit(d, func);
-//       } else {
+      if ( opts[0] == 'G' )
+      {
+         ROOT::Fit::BinData d; 
+         ROOT::Fit::FillData(d,object,func);
+         ROOT::Math::WrappedTF1 f(*func);
+         ROOT::Fit::Fitter fitter; 
+//          printf("Gradient? FIT?!?\n");
+         return fitter.Fit(d, f);
+      } else {
+//          printf("Normal FIT\n");
          return object->Fit(func, opts);
-//       }
+      }
    };
    const char* GetName() { return object->GetName(); }
 };
@@ -884,6 +888,16 @@ void init_structures()
    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "Q0I",  CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "QL0",  CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "QLI0", CompareResult()) );
+
+// No Minuit algorithms to use with the 'G' options until some stuff is fixed.
+//    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "GQ0", CompareResult()) );
+//    noGraphAlgos.push_back( algoType( "Minuit",      "Minimize",    "GQ0", CompareResult()) );
+   noGraphAlgos.push_back( algoType( "Minuit2",     "Migrad",      "GQ0", CompareResult()) );
+   noGraphAlgos.push_back( algoType( "Minuit2",     "Minimize",    "GQ0", CompareResult()) );
+   noGraphAlgos.push_back( algoType( "Fumili",      "Fumili",      "GQ0", CompareResult()) );
+   noGraphAlgos.push_back( algoType( "Minuit2",     "Fumili",      "GQ0", CompareResult()) );
+//    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "GQE0", CompareResult()) );
+//    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "GQL0", CompareResult()) );
 
    noGraphErrorAlgos.push_back( algoType( "Fumili",      "Fumili",      "Q0", CompareResult()) );
 #ifdef R__HAS_MATHMORE
