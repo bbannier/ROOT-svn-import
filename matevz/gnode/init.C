@@ -1,4 +1,6 @@
 #include "TEveManager.h"
+#include "TEveViewer.h"
+#include "TEveScene.h"
 #include "TEveGeoShape.h"
 #include "TEveTrans.h"
 #include "TGLViewer.h"
@@ -20,7 +22,7 @@ int read_and_register_dir(const TString& dir, TEveElement* parent, Int_t level);
 TEveGraphNode *file_list = 0;
 const Float_t kZ_d   = 2;
 
-void init(Int_t mode = 0)
+void init(Int_t mode = 1)
 {
   cout <<"mode: "<< mode << endl;
 
@@ -34,10 +36,10 @@ void init(Int_t mode = 0)
   file_list = new TEveGraphNode("Files");
   scene->AddElement(file_list);
 
-  TString dir="$(ROOTSYS)/core";
+  TString dir="$(ROOTSYS)/graf3d";
   gSystem->ExpandPathName(dir);
 
-  Int_t   nlevels = 2;
+  Int_t   nlevels = 3;
   read_and_register_dir(dir, file_list, nlevels);
 
   gEve->GetDefaultGLViewer()->SetCurrentCamera(TGLViewer::kCameraPerspXOY);
@@ -46,13 +48,13 @@ void init(Int_t mode = 0)
   {
   default:
   case 0:
-    file_list->position_linear(20);
+    file_list->how_much_space(20);
     break;
   case 1:
-    file_list->position_circle(20);
+    file_list->how_much_space_circle(20);
     break;
   case 2:
-     file_list->position_spiral();
+    file_list->position_spiral();
     break;
   
   }
