@@ -43,8 +43,8 @@ ROOFITCOREH1   := Roo1DTable.h RooAbsArg.h RooAbsBinning.h RooAbsCategory.h \
                   RooCmdConfig.h RooComplex.h RooConstVar.h RooConvCoefVar.h \
                   RooConvGenContext.h RooConvIntegrandBinding.h RooCurve.h \
                   RooCustomizer.h RooDataHist.h RooDataProjBinding.h RooDataSet.h \
-                  RooDirItem.h RooDLLSignificanceMCSModule.h RooAbsAnaConvPdf.h \
-                  RooAddPdf.h RooEfficiency.h RooEffProd.h RooExtendPdf.h
+                  RooDirItem.h RooUpperLimitMCSModule.h RooDLLSignificanceMCSModule.h RooAbsAnaConvPdf.h \
+                  RooAddPdf.h RooEfficiency.h RooEffProd.h RooExtendPdf.h RooNuisanceGenerationMCSModule.h
 
 ROOFITCOREH2   := RooDouble.h RooEffGenContext.h RooEllipse.h RooErrorHandler.h \
                   RooErrorVar.h RooFit.h RooFitResult.h RooFormula.h \
