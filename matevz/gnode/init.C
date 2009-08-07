@@ -101,7 +101,7 @@ int read_and_register_dir(const TString& dir, TEveElement* parent, Int_t level)
       size = fs.fSize;
     }
     sum_size += size;
-    printf("%-20s %8d %8x %s\n",de, size, fs.fMode, dof.Data());
+    // printf("%-20s %8d %8x %s\n",de, size, fs.fMode, dof.Data());
     b->SetElementTitle(Form("%s - %d", de, size));
     b->SetShape(new TGeoTube(0, TMath::Log10(TMath::Max(1024,size)), kZ_d));
     b->SetMainColor(kCyan);
