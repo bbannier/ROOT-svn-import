@@ -84,8 +84,17 @@ void TEveGraphNodeGL::SetBBox()
 {
    // Set bounding box.
 
+   TEveTrans t(fM->RefMainTrans());
+   t.Invert();
+   fParentCenter.Set(t.ArrT());
+   // fParentCenter.Negate();
+
    if (fFaceSet)
       fBoundingBox = fFaceSet->BoundingBox();
+   else
+      fBoundingBox.SetEmpty();
+
+   fBoundingBox.ExpandAligned(fParentCenter);
 }
 
 /******************************************************************************/
@@ -105,10 +114,9 @@ void TEveGraphNodeGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    glEnd();
 
    // Draw the line
-   const Double_t *t = fM->RefMainTrans().ArrT();
    TGLUtil::LineWidth(1);
    glBegin(GL_LINES);
    glVertex3d(0, 0, 0);
-   glVertex3d(-t[0], -t[1], -t[2]);
+   glVertex3dv(fParentCenter.CArr());
    glEnd();
 }

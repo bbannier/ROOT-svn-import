@@ -29,6 +29,7 @@ private:
 protected:
    TEveGraphNode             *fM;  // Model object.
    TGLFaceSet                *fFaceSet;
+   TGLVertex3                 fParentCenter;
 
 public:
    TEveGraphNodeGL();
