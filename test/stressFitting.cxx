@@ -19,6 +19,11 @@
 #include "TBackCompFitter.h"
 #include "TVirtualFitter.h"
 
+#include "Fit/BinData.h"
+#include "Fit/UnBinData.h"
+#include "HFitInterface.h"
+#include "Fit/Fitter.h"
+
 #include "TRandom3.h"
 
 #include "TROOT.h"
@@ -33,7 +38,9 @@
 
 #include "Riostream.h"
 using namespace std;
-#undef R__HAS_MATHMORE
+// This line should not exist. It is now there for testing
+// pourpuses.
+//#undef R__HAS_MATHMORE
 
 const unsigned int __DRAW__ = 0;
 
@@ -147,7 +154,7 @@ vector<struct algoType> commonAlgos;
 vector<struct algoType> treeFail;
 vector<struct algoType> specialAlgos;
 vector<struct algoType> noGraphAlgos;
-vector<struct algoType> fumili;
+vector<struct algoType> noGraphErrorAlgos;
 vector<struct algoType> histGaus2D;
 
 // Class defining the limits in the parameters of a function.
@@ -292,7 +299,28 @@ enum testOpt {
 };
 
 // Default options that all tests will have
-int defaultOptions = testOptColor | testOptCheck;// | testOptDebug;
+int defaultOptions = testOptColor | testOptCheck; // | testOptDebug;
+
+template <typename T>
+class ObjectWrapper {
+public:
+   T object;
+   ObjectWrapper(T _obj): object(_obj) {};
+   template <typename F>
+   Int_t Fit(F func, const char* opts) 
+   {
+//       if ( opts[0] == 'G' )
+//       {
+//          ROOT::Fit::BinData d; 
+//          ROOT::Fit::FillData(d,object,func);
+//          ROOT::Fit::Fitter fitter; 
+//          return fitter.Fit(d, func);
+//       } else {
+         return object->Fit(func, opts);
+//       }
+   };
+   const char* GetName() { return object->GetName(); }
+};
 
 // Print the Name of the test
 template <typename T>
@@ -524,18 +552,20 @@ int test1DObjects()
       listAlgos[1] = treeFail;
       listAlgos[2] = specialAlgos;
       listAlgos[3] = noGraphAlgos;
-      listAlgos[4] = fumili;
+      listAlgos[4] = noGraphErrorAlgos;
 
       if ( c0 ) delete c0;
       c0 = new TCanvas("c0-1D", "Histogram1D Variable");
       if ( __DRAW__ ) h2->Draw();
-      globalStatus += status = testFitters(h2, func, listAlgos, l1DFunctions[j]);
+      ObjectWrapper<TH1D*> owh2(h2);
+      globalStatus += status = testFitters(&owh2, func, listAlgos, l1DFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( c1 ) delete c1;
       c1 = new TCanvas("c1-1D", "Histogram1D");
       if ( __DRAW__ ) h1->Draw();
-      globalStatus += status = testFitters(h1, func, listAlgos, l1DFunctions[j]);
+      ObjectWrapper<TH1D*> owh1(h1);
+      globalStatus += status = testFitters(&owh1, func, listAlgos, l1DFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
       
       if ( g1 ) delete g1;
@@ -549,8 +579,9 @@ int test1DObjects()
       listAlgosGraph[0] = commonAlgos;
       listAlgosGraph[1] = treeFail;
       listAlgosGraph[2] = specialAlgos;
-      listAlgosGraph[3] = fumili;
-      globalStatus += status = testFitters(g1, func, listAlgosGraph, l1DFunctions[j]);
+      listAlgosGraph[3] = noGraphErrorAlgos;
+      ObjectWrapper<TGraph*> owg1(g1);
+      globalStatus += status = testFitters(&owg1, func, listAlgosGraph, l1DFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( ge1 ) delete ge1;
@@ -565,7 +596,8 @@ int test1DObjects()
       listAlgosGE[0] = commonAlgos;
       listAlgosGE[1] = treeFail;
       listAlgosGE[2] = specialAlgos;
-      globalStatus += status = testFitters(ge1, func, listAlgosGE, l1DFunctions[j]);
+      ObjectWrapper<TGraphErrors*> owge1(ge1);
+      globalStatus += status = testFitters(&owge1, func, listAlgosGE, l1DFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
    }
 
@@ -647,7 +679,7 @@ int test2DObjects()
       listAlgos[1] = treeFail;
       listAlgos[2] = specialAlgos;
       listAlgos[3] = noGraphAlgos;
-      listAlgos[4] = fumili;
+      listAlgos[4] = noGraphErrorAlgos;
 
       vector< vector<struct algoType> > listH2(1);
       listH2[0] = histGaus2D;
@@ -655,13 +687,15 @@ int test2DObjects()
       if ( c0 ) delete c0;
       c0 = new TCanvas("c0-2D", "Histogram2D Variable");
       if ( __DRAW__ ) h2->Draw();
-      globalStatus += status = testFitters(h2, func, listH2, l2DFunctions[h]);
+      ObjectWrapper<TH2D*> owh2(h2);
+      globalStatus += status = testFitters(&owh2, func, listH2, l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( c1 ) delete c1;
       c1 = new TCanvas("c1-2D", "Histogram2D");
       if ( __DRAW__ ) h1->Draw();
-      globalStatus += status = testFitters(h1, func, listH2, l2DFunctions[h]);
+      ObjectWrapper<TH2D*> owh1(h1);
+      globalStatus += status = testFitters(&owh1, func, listH2, l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( g1 ) delete g1;
@@ -676,8 +710,9 @@ int test2DObjects()
       listAlgosGraph[0] = commonAlgos;
       listAlgosGraph[1] = treeFail;
       listAlgosGraph[2] = specialAlgos;
-      listAlgosGraph[3] = fumili;
-      globalStatus += status = testFitters(g1, func, listAlgosGraph, l2DFunctions[h]);
+      listAlgosGraph[3] = noGraphErrorAlgos;
+      ObjectWrapper<TGraph2D*> owg1(g1);
+      globalStatus += status = testFitters(&owg1, func, listAlgosGraph, l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       
@@ -691,7 +726,8 @@ int test2DObjects()
       listAlgosGE[0] = commonAlgos;
       listAlgosGE[1] = treeFail;
       listAlgosGE[2] = specialAlgos;
-      globalStatus += status = testFitters(ge1, func, listAlgosGE, l2DFunctions[h]);
+      ObjectWrapper<TGraph2DErrors*> owge1(ge1);
+      globalStatus += status = testFitters(&owge1, func, listAlgosGE, l2DFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
    }
 
@@ -837,9 +873,10 @@ void init_structures()
    commonAlgos.push_back( algoType( "GSLMultiMin", "conjugatefr", "Q0", CompareResult()) );
    commonAlgos.push_back( algoType( "GSLMultiMin", "conjugatepr", "Q0", CompareResult()) );
    commonAlgos.push_back( algoType( "GSLMultiMin", "bfgs2",       "Q0", CompareResult()) );
-   commonAlgos.push_back( algoType( "GSLMultiFit", "",            "Q0", CompareResult()) );
    commonAlgos.push_back( algoType( "GSLSimAn",    "",            "Q0", CompareResult()) );
 #endif
+
+   treeFail.push_back( algoType( "Minuit",      "Simplex",     "Q0", CompareResult()) );
 
    specialAlgos.push_back( algoType( "Minuit",      "Migrad",      "QE0", CompareResult()) );
    specialAlgos.push_back( algoType( "Minuit",      "Migrad",      "QW0", CompareResult()) );
@@ -848,10 +885,12 @@ void init_structures()
    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "QL0",  CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "QLI0", CompareResult()) );
 
-   fumili.push_back( algoType( "Fumili",      "Fumili",      "Q0", CompareResult()) );
+   noGraphErrorAlgos.push_back( algoType( "Fumili",      "Fumili",      "Q0", CompareResult()) );
+#ifdef R__HAS_MATHMORE
+   noGraphErrorAlgos.push_back( algoType( "GSLMultiFit", "",            "Q0", CompareResult()) ); // Not in TGraphError
+#endif
 
-   treeFail.push_back( algoType( "Minuit",      "Simplex",     "Q0", CompareResult()) );
-
+   // Same as TH1D (but different comparision scheme!): commonAlgos, 
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "Q0",   CompareResult(cmpPars,6)) );
    histGaus2D.push_back( algoType( "Minuit",      "Minimize",    "Q0",   CompareResult(cmpPars,6)) );
    histGaus2D.push_back( algoType( "Minuit",      "Scan",        "Q0",   CompareResult(0))         );
@@ -861,13 +900,27 @@ void init_structures()
    histGaus2D.push_back( algoType( "Minuit2",     "Minimize",    "Q0",   CompareResult(cmpPars,6)) );
    histGaus2D.push_back( algoType( "Minuit2",     "Scan",        "Q0",   CompareResult(0))         );
    histGaus2D.push_back( algoType( "Minuit2",     "Fumili2",     "Q0",   CompareResult(cmpPars,6)) );
+#ifdef R__HAS_MATHMORE
+   histGaus2D.push_back( algoType( "GSLMultiMin", "conjugatefr", "Q0", CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "GSLMultiMin", "conjugatepr", "Q0", CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "GSLMultiMin", "bfgs2",       "Q0", CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "GSLSimAn",    "",            "Q0", CompareResult(cmpPars,6)) );
+#endif   // treeFail
    histGaus2D.push_back( algoType( "Minuit",      "Simplex",     "Q0",   CompareResult(cmpPars,6)) );
+   // special algos
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QE0",  CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QW0",  CompareResult())          );
+   // noGraphAlgos
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "Q0I",  CompareResult(cmpPars,6)) );
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QL0",  CompareResult())          );
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QLI0", CompareResult())          );
-   histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QW0",  CompareResult())          );
+   // noGraphErrorAlgos
    histGaus2D.push_back( algoType( "Fumili",      "Fumili",      "Q0",   CompareResult(cmpPars,6)) );
+#ifdef R__HAS_MATHMORE
+   histGaus2D.push_back( algoType( "GSLMultiFit", "",            "Q0",   CompareResult(cmpPars,6)) );
+#endif
+
+
 
    vector<ParLimit> emptyLimits(0);
 
