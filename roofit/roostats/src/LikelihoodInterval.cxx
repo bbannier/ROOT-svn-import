@@ -245,9 +245,11 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param )
   //  std::cout << "lambda("<<thisArgVal<<") = " << newProfile->getVal() << std::endl;;
 
 
-  double step = thisArgVal - myarg->getMin();
+  //double step = thisArgVal - myarg->getMin();
+  double step=1;
+  
   double lastDiff = newProfile->getVal() - target, diff=lastDiff;
-  int nIterations = 0, maxIterations = 20;
+  int nIterations = 0, maxIterations = 2000;
   //  std::cout << "about to do binary search" << std::endl;
   while(fabs(diff) > 0.01 && nIterations < maxIterations){
     nIterations++;
@@ -258,6 +260,10 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param )
 
     if(lastDiff*diff < 0) // crossed target, reduce step size
       step /=2; 
+    else if(diff>0)
+      step=step*2;
+
+    
 
     myarg->setVal( thisArgVal );
     //    myarg->Print();
@@ -300,10 +306,10 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param )
   Double_t thisArgVal = param.getVal(); // need this to be MLE
   myarg->setVal( thisArgVal );
 
-
-  double step = thisArgVal - myarg->getMin();
+  double step=1;
+  
   double lastDiff = newProfile->getVal() - target, diff=lastDiff;
-  int nIterations = 0, maxIterations = 20;
+  int nIterations = 0, maxIterations = 2000; //maxIterations=20;
   //  std::cout << "about to do binary search" << std::endl;
   while(fabs(diff) > 0.01 && nIterations < maxIterations){
     nIterations++;
@@ -311,9 +317,12 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param )
       thisArgVal += step; // LR too small, increase myarg
     else
       thisArgVal -= step; // LR too big, reduce myarg
-
+    
     if(lastDiff*diff < 0) // crossed target, reduce step size
-      step /=2; 
+      step /=2;
+    else if(diff < 0)     // proposal 
+      step=step*2;        // proposal
+    
 
     myarg->setVal( thisArgVal );
     //    myarg->Print();
@@ -323,7 +332,6 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param )
     diff = 2.*(newProfile->getVal()) - target; 
     //    std::cout << "diff = " << diff << std::endl;
   }
-  
 
   // delete newProfile;
 
