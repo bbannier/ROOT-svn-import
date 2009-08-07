@@ -47,14 +47,16 @@ namespace RooStats {
                        RooAbsPdf& b_model,
                        RooArgList& observables,
                        RooArgSet* nuisance_parameters = 0,
-                       RooAbsPdf* prior_pdf = 0);
+                       RooAbsPdf* prior_pdf = 0,
+		       bool GenrateBinned = false);  //Nils 31.7.09
 
       /// Constructor for HybridCalculator using  a data set and pdf instances
       HybridCalculator(RooAbsData& data, 
                        RooAbsPdf& sb_model,
                        RooAbsPdf& b_model,
                        RooArgSet* nuisance_parameters = 0,
-                       RooAbsPdf* prior_pdf = 0);
+                       RooAbsPdf* prior_pdf = 0,
+		       bool GenrateBinned = false);  //Nils 31.7.09
 
       /// Constructor for HybridCalculator using name, title, a data set and pdf instances
       HybridCalculator(const char *name,
@@ -63,7 +65,8 @@ namespace RooStats {
                        RooAbsPdf& sb_model,
                        RooAbsPdf& b_model,
                        RooArgSet* nuisance_parameters = 0,
-                       RooAbsPdf* prior_pdf = 0);
+                       RooAbsPdf* prior_pdf = 0,
+		       bool GenrateBinned = false);  //Nils 31.7.09
 
 
    private: // not yet available 
@@ -154,6 +157,7 @@ namespace RooStats {
       HybridResult* Calculate(unsigned int nToys, bool usePriors) const;
       void PrintMore(const char* options) const;
 
+      void SetGenerateBinned(bool GenerateBinned=true) {fGenerateBinned=GenerateBinned;}
 
    private:
       void RunToys(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors) const;
@@ -163,12 +167,12 @@ namespace RooStats {
       // initialize all the data and pdf by using a workspace as input 
       bool DoInitializeFromWS();  
 
-      
+      bool fGenerateBinned; //Nils 31.7.09
 
       unsigned int fTestStatisticsIdx; // Index of the test statistics to use
       unsigned int fNToys;            // number of Toys MC
       bool  fUsePriorPdf;               // use a prior for nuisance parameters  
-
+      
       RooAbsPdf* fSbModel; // The pdf of the signal+background model
       RooAbsPdf* fBModel; // The pdf of the background model
       mutable RooArgList* fObservables; // Collection of the observables of the model
