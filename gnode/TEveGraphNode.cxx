@@ -206,6 +206,11 @@ void TEveGraphNode::position_linear(Float_t delta_x,Float_t x, Float_t z_pos)
     x += delta_x;
 
   }
+  
+}
+void TEveGraphNode::PositionLinear(Float_t delta_x,Float_t x, Float_t z_pos)
+{
+  position_linear(delta_x, x, z_pos);
   gEve->Redraw3D(kTRUE);
 }
 
@@ -225,9 +230,13 @@ void TEveGraphNode::position_circle(Float_t r, Float_t phi, Float_t z_pos)
 
     phi += delta_phi;
   }
+  
+}
+void TEveGraphNode::PositionCircle(Float_t r, Float_t phi, Float_t z_pos)
+{
+  position_circle(r,phi,z_pos);
   gEve->Redraw3D(kTRUE);
 }
-
 
 void TEveGraphNode::position_spiral(Float_t v_r, Float_t v_phi)
 {
@@ -260,6 +269,11 @@ void TEveGraphNode::position_spiral(Float_t v_r, Float_t v_phi)
 
     ++i;
   }
+
+}
+void TEveGraphNode::PositionSpiral(Float_t v_r, Float_t v_phi)
+{
+  position_spiral(v_r, v_phi);
   gEve->Redraw3D(kTRUE);
 }
 
@@ -285,15 +299,21 @@ void TEveGraphNode::position_grid(Float_t delta_x, Float_t delta_y, Int_t Nx, Fl
     }
 
   }
-  gEve->Redraw3D(kTRUE);
+
 }
-int TEveGraphNode::how_much_space (int space_per_child)
+void TEveGraphNode::PositionGrid(Float_t delta_x, Float_t delta_y, Int_t Nx, Float_t z_pos)
 {
- Int_t max_space=0;
+  position_grid(delta_x, delta_y, Nx, z_pos);
+  gEve->Redraw3D(kTRUE);
+
+}
+Float_t TEveGraphNode::how_much_space (Float_t space_per_child)
+{
+ Float_t max_space=0;
  for (TEveElement::List_i i=BeginChildren(); i != EndChildren(); ++i)
 {
      TEveGraphNode *gm=dynamic_cast<TEveGraphNode*>(*i);
-    Int_t space=gm->how_much_space(space_per_child);
+   Float_t space=gm->how_much_space(space_per_child);
      if (space>max_space)
      max_space=space;
 }
@@ -303,13 +323,13 @@ int TEveGraphNode::how_much_space (int space_per_child)
  return max_space * NumChildren();
 }
 
-int TEveGraphNode::how_much_space_circle (int space_per_child)
+Float_t TEveGraphNode::how_much_space_circle (Float_t space_per_child)
 {
- Int_t max_space=0;
+ Float_t max_space=0;
  for (TEveElement::List_i i=BeginChildren(); i != EndChildren(); ++i)
 {
      TEveGraphNode *gm=dynamic_cast<TEveGraphNode*>(*i);
-    Int_t space=gm->how_much_space_circle(space_per_child);
+    Float_t space=gm->how_much_space_circle(space_per_child);
      if (space>max_space)
      max_space=space;
 }
@@ -318,13 +338,13 @@ int TEveGraphNode::how_much_space_circle (int space_per_child)
  position_circle((max_space * NumChildren())/(2*3.14), 0, max_space);
  return (3*max_space * NumChildren())/(2*3.14);
 }
-int TEveGraphNode::how_much_space_grid (int space_per_child)
+Float_t TEveGraphNode::how_much_space_grid (Float_t space_per_child)
 {
-   Int_t max_space=0;
+   Float_t max_space=0;
    for (TEveElement::List_i i=BeginChildren(); i != EndChildren(); ++i)
   {
     TEveGraphNode *gm=dynamic_cast<TEveGraphNode*>(*i);
-    Int_t space=gm->how_much_space_grid(space_per_child);
+    Float_t space=gm->how_much_space_grid(space_per_child);
     if (space>max_space)
     max_space=space;
   }

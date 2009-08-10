@@ -39,7 +39,7 @@ void init(Int_t mode = 1)
   TString dir="$(ROOTSYS)/graf3d";
   gSystem->ExpandPathName(dir);
 
-  Int_t   nlevels = 3;
+  Int_t   nlevels = 2;
   read_and_register_dir(dir, file_list, nlevels);
 
   gEve->GetDefaultGLViewer()->SetCurrentCamera(TGLViewer::kCameraPerspXOY);
@@ -65,8 +65,8 @@ void init(Int_t mode = 1)
 
 int read_and_register_dir(const TString& dir, TEveElement* parent, Int_t level)
 {
-  if (level <= 0)
-    return 0;
+  //if (level <= 0)
+  //  return 0;
 
   // Open directory
   void* dh = gSystem->OpenDirectory(dir);
@@ -89,8 +89,10 @@ int read_and_register_dir(const TString& dir, TEveElement* parent, Int_t level)
     TString dof;
     
     TEveGraphNode *b;
-    b = new TEveGraphNode(de);
-    
+    if (level > 0) {
+      b = new TEveGraphNode(de);
+    }
+
     Int_t size = 0;
     if (fs.fMode & kS_IFDIR)
     {
@@ -104,13 +106,16 @@ int read_and_register_dir(const TString& dir, TEveElement* parent, Int_t level)
     }
     sum_size += size;
     // printf("%-20s %8d %8x %s\n",de, size, fs.fMode, dof.Data());
-    b->SetElementTitle(Form("%s - %d", de, size));
-    b->SetShape(new TGeoTube(0, TMath::Log10(TMath::Max(1024,size)), kZ_d));
-    b->SetMainColor(kCyan);
-    b->SetPickable(kTRUE); // Allow selection in GL window
-    b->SetSize(size);
-    b->SetSizeChildren(sum_size);
-    parent->AddElement(b);
+    if (level > 0)
+    {
+      b->SetElementTitle(Form("%s - %d", de, size));
+      b->SetShape(new TGeoTube(0, TMath::Log10(TMath::Max(1024, size)), kZ_d));
+      b->SetMainColor(kCyan);
+      b->SetPickable(kTRUE); // Allow selection in GL window
+      b->SetSize(size);
+      b->SetSizeChildren(sum_size);
+      parent->AddElement(b);
+    }
   }
   gSystem->FreeDirectory(dh);
   return sum_size;
