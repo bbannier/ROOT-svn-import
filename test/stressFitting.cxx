@@ -41,7 +41,7 @@
 using namespace std;
 // Next line should not exist. It is now there for testing
 // pourpuses.
-//#undef R__HAS_MATHMORE
+#undef R__HAS_MATHMORE
 
 const unsigned int __DRAW__ = 0;
 
@@ -103,13 +103,6 @@ public:
       return 0; 
    } 
 };
-
-// Get the chi2 test from a recently fitted function
-double chi2FromFit(const TF1 * func )  { 
-   // return last chi2 obtained from Fit method function
-   assert(TVirtualFitter::GetFitter() != 0 ); 
-   return (TVirtualFitter::GetFitter()->Chisquare(func->GetNpar(), func->GetParameters() ) );
-}
 
 // Create a variable range in a vector (to be passed to the histogram
 // constructor
@@ -300,8 +293,9 @@ enum testOpt {
 };
 
 // Default options that all tests will have
-int defaultOptions = testOptColor | testOptCheck; // | testOptDebug;
+int defaultOptions = testOptColor | testOptCheck;// | testOptDebug;
 
+// Object to manage the fitter depending on the optiones used
 template <typename T>
 class ObjectWrapper {
 public:
@@ -315,9 +309,27 @@ public:
          ROOT::Fit::BinData d; 
          ROOT::Fit::FillData(d,object,func);
          ROOT::Math::WrappedTF1 f(*func);
+//          f->SetDerivPrecision(10e-6);
          ROOT::Fit::Fitter fitter; 
 //          printf("Gradient? FIT?!?\n");
-         return fitter.Fit(d, f);
+         fitter.Fit(d, f);
+         const ROOT::Fit::FitResult & fitResult = fitter.Result(); 
+         // one could set directly the fit result in TF1
+         Int_t iret = fitResult.Status(); 
+         if (!fitResult.IsEmpty() ) { 
+            // set in f1 the result of the fit      
+            func->SetChisquare( fitResult.Chi2() );
+            func->SetNDF( fitResult.Ndf() );
+            func->SetNumberFitPoints( d.Size() );
+            
+            func->SetParameters( &(fitResult.Parameters().front()) ); 
+            if ( int( fitResult.Errors().size()) >= func->GetNpar() ) 
+               func->SetParErrors( &(fitResult.Errors().front()) ); 
+            
+         }
+         // Next line only for debug
+//          fitResult.Print(std::cout);
+         return iret;
       } else {
 //          printf("Normal FIT\n");
          return object->Fit(func, opts);
@@ -391,7 +403,7 @@ int testFit(const char* str1, const char* str2, const char* str3,
 
    double chi2 = 0;
    if (  opts & testOptChi || opts & testOptCheck )
-         chi2 = chi2FromFit(func);
+      chi2 = func->GetChisquare();
 
    fflush(stdout);
    if ( opts & testOptPars ) 
@@ -469,7 +481,7 @@ int testFitters(T* object, F* func, vector< vector<struct algoType> > listAlgos,
    ROOT::Math::MinimizerOptions::SetDefaultMinimizer(commonAlgos[0].type, commonAlgos[0].algo);
    object->Fit(func, "Q0");
    if ( defaultOptions & testOptDebug ) printTitle(func);
-   struct RefValue ref = { origpars, chi2FromFit(func) };
+   struct RefValue ref = { origpars, func->GetChisquare() };
    commonAlgos[0].cmpResult.setRefValue(&ref);
    int defMinOptions = testOptPars | testOptChi | testOptErr | defaultOptions;
    status += testFit(commonAlgos[0].type, commonAlgos[0].algo
@@ -889,10 +901,12 @@ void init_structures()
    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "QL0",  CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "QLI0", CompareResult()) );
 
+// Gradient algorithms
 // No Minuit algorithms to use with the 'G' options until some stuff is fixed.
 //    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "GQ0", CompareResult()) );
 //    noGraphAlgos.push_back( algoType( "Minuit",      "Minimize",    "GQ0", CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit2",     "Migrad",      "GQ0", CompareResult()) );
+//    noGraphAlgos.push_back( algoType( "Linear",      "",            ""/*"GQ0"*/, CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit2",     "Minimize",    "GQ0", CompareResult()) );
    noGraphAlgos.push_back( algoType( "Fumili",      "Fumili",      "GQ0", CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit2",     "Fumili",      "GQ0", CompareResult()) );
@@ -928,6 +942,17 @@ void init_structures()
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "Q0I",  CompareResult(cmpPars,6)) );
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QL0",  CompareResult())          );
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QLI0", CompareResult())          );
+
+// Gradient algorithms
+//    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "GQ0", CompareResult()) );
+//    histGaus2D.push_back( algoType( "Minuit",      "Minimize",    "GQ0", CompareResult()) );
+   histGaus2D.push_back( algoType( "Minuit2",     "Migrad",      "GQ0", CompareResult()) );
+   histGaus2D.push_back( algoType( "Minuit2",     "Minimize",    "GQ0", CompareResult()) );
+   histGaus2D.push_back( algoType( "Fumili",      "Fumili",      "GQ0", CompareResult()) );
+   histGaus2D.push_back( algoType( "Minuit2",     "Fumili",      "GQ0", CompareResult()) );
+//    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "GQE0", CompareResult()) );
+//    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "GQL0", CompareResult()) );
+
    // noGraphErrorAlgos
    histGaus2D.push_back( algoType( "Fumili",      "Fumili",      "Q0",   CompareResult(cmpPars,6)) );
 #ifdef R__HAS_MATHMORE
@@ -969,7 +994,7 @@ int stressFit()
 
    iret += test1DObjects();
    iret += test2DObjects();
-   iret += testUnBinedFit();
+//    iret += testUnBinedFit();
 
    return iret; 
 }
