@@ -191,7 +191,8 @@ void TMinuitMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & func)
 
    // set gradient 
    // use default case to check for derivative calculations (not force it) 
-   fMinuit->mnexcm("SET GRAD",arglist,0,ierr);
+   arglist[0] = 1;
+   fMinuit->mnexcm("SET GRAD",arglist,1,ierr);
 }
 
 void TMinuitMinimizer::Fcn( int &, double * , double & f, double * x , int /* iflag */) { 
