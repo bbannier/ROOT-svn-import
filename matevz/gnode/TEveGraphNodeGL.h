@@ -30,6 +30,7 @@ protected:
    TEveGraphNode             *fM;  // Model object.
    TGLFaceSet                *fFaceSet;
    TGLVertex3                 fParentCenter;
+   Bool_t                     fParentLine;
 
 public:
    TEveGraphNodeGL();
