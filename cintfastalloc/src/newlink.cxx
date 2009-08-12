@@ -12629,8 +12629,8 @@ void G__specify_link(int link_stub)
     struct stat statBufItem;
     struct stat statBuf;
 #ifdef G__WIN32
-    G__FastAllocString fullItem[_MAX_PATH], fullIndex_sb(_MAX_PATH);
-    char* fullItem[_MAX_PATH], fullIndex = fullItem[_MAX_PATH], fullIndex_sb;
+    G__FastAllocString fullItem(_MAX_PATH);
+    G__FastAllocString fullIndex(_MAX_PATH);
 #endif
     fgetpos(G__ifile.fp,&pos);
     c = G__fgetname(buf, 0, ";\n\r");
