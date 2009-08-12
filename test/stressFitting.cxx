@@ -150,6 +150,18 @@ vector<struct algoType> specialAlgos;
 vector<struct algoType> noGraphAlgos;
 vector<struct algoType> noGraphErrorAlgos;
 vector<struct algoType> histGaus2D;
+vector<struct algoType> linearAlgos;
+
+vector< vector<struct algoType> > listTH1DAlgos;
+vector< vector<struct algoType> > listAlgosTGraph;
+vector< vector<struct algoType> > listAlgosTGraphError;
+
+vector< vector<struct algoType> > listLinearAlgos;
+
+vector< vector<struct algoType> > listTH2DAlgos;
+vector< vector<struct algoType> > listAlgosTGraph2D;
+vector< vector<struct algoType> > listAlgosTGraph2DError;
+
 
 // Class defining the limits in the parameters of a function.
 class ParLimit {
@@ -204,6 +216,8 @@ public:
 vector<struct fitFunctions> l1DFunctions;
 vector<struct fitFunctions> l2DFunctions;
 vector<struct fitFunctions> treeFunctions;
+vector<struct fitFunctions> l1DLinearFunctions;
+vector<struct fitFunctions> l2DLinearFunctions;
 
 // Gaus 1D implementation
 Double_t gaus1DImpl(Double_t* x, Double_t* p)
@@ -211,11 +225,21 @@ Double_t gaus1DImpl(Double_t* x, Double_t* p)
    return p[2]*TMath::Gaus(x[0], p[0], p[1]);
 }
 
-// Polynomial implementation
+// 1D Polynomial implementation
 Double_t poly1DImpl(Double_t *x, Double_t *p)
 {
    Double_t xx = x[0];
    return p[0]*xx*xx*xx+p[1]*xx*xx+p[2]*xx+p[3];
+}
+
+// 2D Polynomial implementation
+Double_t poly2DImpl(Double_t *x, Double_t *p)
+{
+   Double_t xx = x[0];
+   Double_t yy = x[1];
+   return p[0]*xx*xx*xx+p[1]*xx*xx+p[2]*xx +
+          p[3]*yy*yy*yy+p[4]*yy*yy+p[5]*yy +
+          p[6];
 }
 
 // Gaus 2D Implementation
@@ -530,7 +554,10 @@ int testFitters(T* object, F* func, vector< vector<struct algoType> > listAlgos,
 }
 
 // Test the diferent objects in 1D
-int test1DObjects()
+int test1DObjects(vector< vector<struct algoType> >& listH,
+                  vector< vector<struct algoType> >& listG,
+                  vector< vector<struct algoType> >& listGE,
+                  vector<struct fitFunctions>& listOfFunctions)
 {
    // Counts how many tests failed.
    int globalStatus = 0;
@@ -543,12 +570,12 @@ int test1DObjects()
    TGraph* g1 = 0;
    TGraphErrors* ge1 = 0;
    TCanvas *c0 = 0, *c1 = 0, *c2 = 0, *c3 = 0;
-   for ( unsigned int j = 0; j < l1DFunctions.size(); ++j )
+   for ( unsigned int j = 0; j < listOfFunctions.size(); ++j )
    {
       if ( func ) delete func;
-      func = new TF1( l1DFunctions[j].name, l1DFunctions[j].func, minX, maxX, l1DFunctions[j].npars);
-      func->SetParameters(&(l1DFunctions[j].origPars[0]));
-      SetParsLimits(l1DFunctions[j].parLimits, func);
+      func = new TF1( listOfFunctions[j].name, listOfFunctions[j].func, minX, maxX, listOfFunctions[j].npars);
+      func->SetParameters(&(listOfFunctions[j].origPars[0]));
+      SetParsLimits(listOfFunctions[j].parLimits, func);
 
       // fill an histogram 
       if ( h1 ) delete h1;
@@ -563,57 +590,36 @@ int test1DObjects()
       for ( int i = 0; i < h2->GetNbinsX() + 1; ++i )
          h2->Fill( h2->GetBinCenter(i), rndm.Poisson( func->Eval( h2->GetBinCenter(i) ) ) );
 
-      vector< vector<struct algoType> > listAlgos(5);
-      listAlgos[0] = commonAlgos;
-      listAlgos[1] = treeFail;
-      listAlgos[2] = specialAlgos;
-      listAlgos[3] = noGraphAlgos;
-      listAlgos[4] = noGraphErrorAlgos;
-
-      if ( c0 ) delete c0;
-      c0 = new TCanvas("c0-1D", "Histogram1D Variable");
+      delete c0; c0 = new TCanvas("c0-1D", "Histogram1D Variable");
       if ( __DRAW__ ) h2->Draw();
       ObjectWrapper<TH1D*> owh2(h2);
-      globalStatus += status = testFitters(&owh2, func, listAlgos, l1DFunctions[j]);
+      globalStatus += status = testFitters(&owh2, func, listH, listOfFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
 
-      if ( c1 ) delete c1;
-      c1 = new TCanvas("c1-1D", "Histogram1D");
+      delete c1; c1 = new TCanvas("c1-1D", "Histogram1D");
       if ( __DRAW__ ) h1->Draw();
       ObjectWrapper<TH1D*> owh1(h1);
-      globalStatus += status = testFitters(&owh1, func, listAlgos, l1DFunctions[j]);
+      globalStatus += status = testFitters(&owh1, func, listH, listOfFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
       
-      if ( g1 ) delete g1;
-      g1 = new TGraph(h1);
+      delete g1; g1 = new TGraph(h1);
       g1->SetName("TGraph 1D");
       g1->SetTitle("TGraph 1D - title");
       if ( c2 ) delete c2;
       c2 = new TCanvas("c2-1D","TGraph");
       if ( __DRAW__ ) g1->Draw("AB*");
-      vector< vector<struct algoType> > listAlgosGraph(4);
-      listAlgosGraph[0] = commonAlgos;
-      listAlgosGraph[1] = treeFail;
-      listAlgosGraph[2] = specialAlgos;
-      listAlgosGraph[3] = noGraphErrorAlgos;
       ObjectWrapper<TGraph*> owg1(g1);
-      globalStatus += status = testFitters(&owg1, func, listAlgosGraph, l1DFunctions[j]);
+      globalStatus += status = testFitters(&owg1, func, listG, listOfFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
 
-      if ( ge1 ) delete ge1;
-      ge1 = new TGraphErrors(h1);
+      delete ge1; ge1 = new TGraphErrors(h1);
       ge1->SetName("TGraphErrors 1D");
       ge1->SetTitle("TGraphErrors 1D - title");
       if ( c3 ) delete c3;
       c3 = new TCanvas("c3-1D","TGraphError");
       if ( __DRAW__ ) ge1->Draw("AB*");
-
-      vector< vector<struct algoType> > listAlgosGE(3);
-      listAlgosGE[0] = commonAlgos;
-      listAlgosGE[1] = treeFail;
-      listAlgosGE[2] = specialAlgos;
       ObjectWrapper<TGraphErrors*> owge1(ge1);
-      globalStatus += status = testFitters(&owge1, func, listAlgosGE, l1DFunctions[j]);
+      globalStatus += status = testFitters(&owge1, func, listGE, listOfFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
    }
 
@@ -634,7 +640,10 @@ int test1DObjects()
 }
 
 // Test the different objects in 2S
-int test2DObjects()
+int test2DObjects(vector< vector<struct algoType> >& listH,
+                  vector< vector<struct algoType> >& listG,
+                  vector< vector<struct algoType> >& listGE,
+                  vector<struct fitFunctions>& listOfFunctions)
 {
    // Counts how many tests failed.
    int globalStatus = 0;
@@ -647,12 +656,12 @@ int test2DObjects()
    TGraph2D* g1 = 0;
    TGraph2DErrors* ge1 = 0;
    TCanvas *c0 = 0, *c1 = 0, *c2 = 0, *c3 = 0;
-   for ( unsigned int h = 0; h < l2DFunctions.size(); ++h )
+   for ( unsigned int h = 0; h < listOfFunctions.size(); ++h )
    {
       if ( func ) delete func;
-      func = new TF2( l2DFunctions[h].name, l2DFunctions[h].func, minX, maxX, minY, maxY, l2DFunctions[h].npars);
-      func->SetParameters(&(l2DFunctions[h].origPars[0]));
-      SetParsLimits(l2DFunctions[h].parLimits, func);
+      func = new TF2( listOfFunctions[h].name, listOfFunctions[h].func, minX, maxX, minY, maxY, listOfFunctions[h].npars);
+      func->SetParameters(&(listOfFunctions[h].origPars[0]));
+      SetParsLimits(listOfFunctions[h].parLimits, func);
       
       // fill an histogram 
       if ( h1 ) delete h1;
@@ -690,28 +699,18 @@ int test2DObjects()
             h2->Fill( xc, yc, content );
          }
 
-      vector< vector<struct algoType> > listAlgos(5);
-      listAlgos[0] = commonAlgos;
-      listAlgos[1] = treeFail;
-      listAlgos[2] = specialAlgos;
-      listAlgos[3] = noGraphAlgos;
-      listAlgos[4] = noGraphErrorAlgos;
-
-      vector< vector<struct algoType> > listH2(1);
-      listH2[0] = histGaus2D;
-
       if ( c0 ) delete c0;
       c0 = new TCanvas("c0-2D", "Histogram2D Variable");
       if ( __DRAW__ ) h2->Draw();
       ObjectWrapper<TH2D*> owh2(h2);
-      globalStatus += status = testFitters(&owh2, func, listH2, l2DFunctions[h]);
+      globalStatus += status = testFitters(&owh2, func, listH, listOfFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( c1 ) delete c1;
       c1 = new TCanvas("c1-2D", "Histogram2D");
       if ( __DRAW__ ) h1->Draw();
       ObjectWrapper<TH2D*> owh1(h1);
-      globalStatus += status = testFitters(&owh1, func, listH2, l2DFunctions[h]);
+      globalStatus += status = testFitters(&owh1, func, listH, listOfFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       if ( g1 ) delete g1;
@@ -722,13 +721,8 @@ int test2DObjects()
       if ( c2 ) delete c2;
       c2 = new TCanvas("c2-2D","TGraph");
       if ( __DRAW__ ) g1->Draw("AB*");
-      vector< vector<struct algoType> > listAlgosGraph(4);
-      listAlgosGraph[0] = commonAlgos;
-      listAlgosGraph[1] = treeFail;
-      listAlgosGraph[2] = specialAlgos;
-      listAlgosGraph[3] = noGraphErrorAlgos;
       ObjectWrapper<TGraph2D*> owg1(g1);
-      globalStatus += status = testFitters(&owg1, func, listAlgosGraph, l2DFunctions[h]);
+      globalStatus += status = testFitters(&owg1, func, listG, listOfFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
 
       
@@ -737,13 +731,8 @@ int test2DObjects()
       if ( c3 ) delete c3;
       c3 = new TCanvas("c3-2DGE","TGraphError");
       if ( __DRAW__ ) ge1->Draw("AB*");
-
-      vector< vector<struct algoType> > listAlgosGE(3);
-      listAlgosGE[0] = commonAlgos;
-      listAlgosGE[1] = treeFail;
-      listAlgosGE[2] = specialAlgos;
       ObjectWrapper<TGraph2DErrors*> owge1(ge1);
-      globalStatus += status = testFitters(&owge1, func, listAlgosGE, l2DFunctions[h]);
+      globalStatus += status = testFitters(&owge1, func, listGE, listOfFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
    }
 
@@ -906,7 +895,6 @@ void init_structures()
 //    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "GQ0", CompareResult()) );
 //    noGraphAlgos.push_back( algoType( "Minuit",      "Minimize",    "GQ0", CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit2",     "Migrad",      "GQ0", CompareResult()) );
-//    noGraphAlgos.push_back( algoType( "Linear",      "",            ""/*"GQ0"*/, CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit2",     "Minimize",    "GQ0", CompareResult()) );
    noGraphAlgos.push_back( algoType( "Fumili",      "Fumili",      "GQ0", CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit2",     "Fumili",      "GQ0", CompareResult()) );
@@ -959,7 +947,34 @@ void init_structures()
    histGaus2D.push_back( algoType( "GSLMultiFit", "",            "Q0",   CompareResult(cmpPars,6)) );
 #endif
 
+   linearAlgos.push_back( algoType( "Linear",      "",            "Q0G", CompareResult()) );
+   listLinearAlgos.push_back( linearAlgos );
 
+   listTH1DAlgos.push_back( commonAlgos );
+   listTH1DAlgos.push_back( treeFail );
+   listTH1DAlgos.push_back( specialAlgos );
+   listTH1DAlgos.push_back( noGraphAlgos );
+   listTH1DAlgos.push_back( noGraphErrorAlgos );
+
+   listAlgosTGraph.push_back( commonAlgos );
+   listAlgosTGraph.push_back( treeFail );
+   listAlgosTGraph.push_back( specialAlgos );
+   listAlgosTGraph.push_back( noGraphErrorAlgos );
+
+   listAlgosTGraphError.push_back( commonAlgos );
+   listAlgosTGraphError.push_back( treeFail );
+   listAlgosTGraphError.push_back( specialAlgos );
+
+   listTH2DAlgos.push_back( histGaus2D );
+   
+   listAlgosTGraph2D.push_back( commonAlgos );
+   listAlgosTGraph2D.push_back( treeFail );
+   listAlgosTGraph2D.push_back( specialAlgos );
+   listAlgosTGraph2D.push_back( noGraphErrorAlgos );
+
+   listAlgosTGraph2DError.push_back( commonAlgos );
+   listAlgosTGraph2DError.push_back( treeFail );
+   listAlgosTGraph2DError.push_back( specialAlgos );
 
    vector<ParLimit> emptyLimits(0);
 
@@ -968,9 +983,9 @@ void init_structures()
    vector<ParLimit> gaus1DLimits;
    gaus1DLimits.push_back( ParLimit(1, 0, 5) );
    l1DFunctions.push_back( fitFunctions("GAUS",       gaus1DImpl, 3, gausOrig,  gausFit, gaus1DLimits) );
-   double polyOrig[] = { 2, 3, 4, 200};
-   double polyFit[] = { 6.4, -2.3, 15.4, 210.5};
-   l1DFunctions.push_back( fitFunctions("Polynomial", poly1DImpl, 4, polyOrig, polyFit, emptyLimits) );
+   double poly1DOrig[] = { 2, 3, 4, 200};
+   double poly1DFit[] = { 6.4, -2.3, 15.4, 210.5};
+   l1DFunctions.push_back( fitFunctions("Polynomial", poly1DImpl, 4, poly1DOrig, poly1DFit, emptyLimits) );
 
    double gaus2DOrig[] = { 500., +.5, 1.5, -.5, 2.0 };
    double gaus2DFit[] = { 510., .0, 1.8, -1.0, 1.6};
@@ -982,6 +997,12 @@ void init_structures()
    treeFunctions.push_back( fitFunctions("gausn", gausNormal, 3, gausnOrig, treeFit, emptyLimits ));
    treeFunctions.push_back( fitFunctions("gaus2Dn", gaus2dnormal, 5, treeOrig, treeFit, emptyLimits));
    treeFunctions.push_back( fitFunctions("gausND", gausNd, 13, treeOrig, treeFit, emptyLimits));
+
+   l1DLinearFunctions.push_back( fitFunctions("Polynomial", poly1DImpl, 4, poly1DOrig, poly1DFit, emptyLimits) );
+
+   double poly2DOrig[] = { 2, 3, 4, 5, 6, 7, 200, };
+   double poly2DFit[] = { 6.4, -2.3, 15.4, 3, 10, -3, 210.5};
+   l2DLinearFunctions.push_back( fitFunctions("Poly2D", poly2DImpl, 7, poly2DOrig, poly2DFit, emptyLimits) );
 }
 
 int stressFit() 
@@ -992,9 +1013,11 @@ int stressFit()
 
    int iret = 0; 
 
-   iret += test1DObjects();
-   iret += test2DObjects();
-//    iret += testUnBinedFit();
+   iret += test1DObjects(listTH1DAlgos, listAlgosTGraph, listAlgosTGraphError, l1DFunctions);
+   iret += test2DObjects(listTH2DAlgos, listAlgosTGraph2D, listAlgosTGraph2DError, l2DFunctions);
+   iret += testUnBinedFit();
+   iret += test1DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l1DLinearFunctions);
+//    iret += test2DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l2DLinearFunctions);
 
    return iret; 
 }
