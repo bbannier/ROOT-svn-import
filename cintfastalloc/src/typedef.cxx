@@ -763,7 +763,9 @@ void G__define_type()
       if ((type_name[0] == '(') && (c != ';') && (c != ',')) {
          do {
             c = G__fgetstream(type_name, strlen(type_name), ";,");
-            type_name.Set(strlen(type_name), c);
+            size_t lentype_name = strlen(type_name);
+            type_name.Set(lentype_name, c);
+            type_name.Set(lentype_name + 1, 0);
          }
          while ((c != ';') && (c != ','));
          type_name[strlen(type_name)-1] = 0;
