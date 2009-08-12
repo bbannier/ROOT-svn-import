@@ -574,7 +574,7 @@ int G__matchfilename(int i1,const char *filename)
 #ifdef G__WIN32
    G__FastAllocString i1name(_MAX_PATH);
    G__FastAllocString fullfile(_MAX_PATH);
-  _fullpath( iname, G__srcfile[i1].filename, _MAX_PATH );
+  _fullpath( i1name, G__srcfile[i1].filename, _MAX_PATH );
   _fullpath( fullfile, filename, _MAX_PATH );
   if((stricmp(i1name, fullfile)==0)) return 1;
 #else
