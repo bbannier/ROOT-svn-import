@@ -1104,18 +1104,11 @@ void THnSparse::Multiply(const THnSparse* h)
    if (GetCalculateErrors() || h->GetCalculateErrors())
       wantErrors = kTRUE;
 
-   // Create a temporary histogram where to store the result
-   TObjArray newaxes(fNdimensions);
-   for (Int_t d = 0; d < fNdimensions; ++d) {
-      newaxes.AddAt(GetAxis(d),d);
-   }
-
    if (wantErrors) Sumw2();
 
    Double_t nEntries = GetEntries();
    // Now multiply the contents: in this case we have the intersection of the sets of bins
    Int_t* coord = new Int_t[fNdimensions];
-   memset(coord, 0, sizeof(Int_t) * fNdimensions);
    for (Long64_t i = 0; i < GetNbins(); ++i) {
       // Get the content of the bin from the current histogram
       Double_t v1 = GetBinContent(i, coord);
@@ -1130,7 +1123,6 @@ void THnSparse::Multiply(const THnSparse* h)
    }
    SetEntries(nEntries);
 
-   //now deposit the result in the original histogram....
    delete [] coord;
 }
 
