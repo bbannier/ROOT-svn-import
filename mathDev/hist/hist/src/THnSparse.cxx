@@ -1128,7 +1128,7 @@ void THnSparse::Multiply(const THnSparse* h)
 }
 
 //______________________________________________________________________________
-void THnSparse::Multiply(TF1* f, Double_t c, unsigned int)
+void THnSparse::Multiply(TF1* f, Double_t c)
 {
     // Performs the operation: this = this*c*f1
     // if errors are defined, errors are also recalculated.
