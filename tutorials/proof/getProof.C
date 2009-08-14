@@ -64,8 +64,10 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    Bool_t ext = (strcmp(uu.GetHost(), uref.GetHost()) ||
                  (uu.GetPort() != uref.GetPort())) ? kTRUE : kFALSE;
    if (ext && url && strlen(url) > 0) {
-      if (!strcmp(url, "lite") && nwrks > 0)
-         uu.SetOptions(Form("workers=%d", nwrks));
+      if (!strcmp(url, "lite")) {
+         if (dir && strlen(dir) > 0) gEnv->SetValue("Proof.Sandbox", dir);
+         if (nwrks > 0) uu.SetOptions(Form("workers=%d", nwrks));
+      }
       p = TProof::Open(uu.GetUrl());
       if (p && p->IsValid()) {
          // Check consistency
@@ -489,7 +491,6 @@ Int_t startXrootdAt(Int_t port, const char *exportdirs, Bool_t force)
 
          // Cleanimg up existing daemon
          TString cmd = Form("kill -9 %d", pid);
-         Int_t rc = 0;
          if ((rc = gSystem->Exec(cmd)) != 0)
             Printf("startXrootdAt: problems stopping xrootd process %p (%d)", pid, rc);
       }

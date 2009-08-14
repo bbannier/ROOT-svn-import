@@ -177,6 +177,18 @@ TBranch::TBranch(TTree *tree, const char* name, void* address, const char* leafl
    //             Y/I       : variable Y, type Int_t
    //             Y/I2      ; variable Y, type Int_t converted to a 16 bits integer
    //
+   //    Note that the TTree will assume that all the item are contiguous in memory.
+   //    On some platform, this is not always true of the member of a struct or a class,
+   //    due to padding and alignment.  Sorting your data member in order of decreasing
+   //    sizeof usually leads to their being contiguous in memory.
+   //
+   //       * bufsize is the buffer size in bytes for this branch
+   //         The default value is 32000 bytes and should be ok for most cases.
+   //         You can specify a larger value (eg 256000) if your Tree is not split
+   //         and each entry is large (Megabytes)
+   //         A small value for bufsize is optimum if you intend to access
+   //         the entries in the Tree randomly and your Tree is in split mode.
+   //   
    //   See an example of a Branch definition in the TTree constructor.
    //
    //   Note that in case the data type is an object, this branch can contain
@@ -861,6 +873,12 @@ Int_t TBranch::Fill()
    if ((fSkipZip && (lnew >= TBuffer::kMinimalSize)) || (buf->TestBit(TBufferFile::kNotDecompressed)) || ((lnew + (2 * nsize) + nbytes) >= fBasketSize)) {
       if (fTree->TestBit(TTree::kCircular)) {
          return nbytes;
+      }
+      Int_t nevbuf = basket->GetNevBuf();
+      if (fEntryOffsetLen > 10 &&  (4*nevbuf) < fEntryOffsetLen ) {
+         fEntryOffsetLen = nevbuf < 3 ? 10 : 4*nevbuf; // assume some fluctuations.
+      } else if (fEntryOffsetLen && nevbuf > fEntryOffsetLen) {
+         fEntryOffsetLen = 2*nevbuf; // assume some fluctuations.         
       }
       Int_t nout = WriteBasket(basket,fWriteBasket);
       return (nout >= 0) ? nbytes : -1;
@@ -1847,6 +1865,25 @@ void TBranch::SetCompressionLevel(Int_t level)
    for (Int_t i=0;i<nb;i++) {
       TBranch *branch = (TBranch*)fBranches.UncheckedAt(i);
       branch->SetCompressionLevel(level);
+   }
+}
+
+//______________________________________________________________________________
+void TBranch::SetEntryOffsetLen(Int_t newdefault, Bool_t updateExisting) 
+{
+   // Update the default value for the branch's fEntryOffsetLen if and only if 
+   // it was already non zero (and the new value is not zero)
+   // If updateExisting is true, also update all the existing branches.
+   
+   if (fEntryOffsetLen && newdefault) {
+      fEntryOffsetLen = newdefault;
+   }
+   if (updateExisting) {
+      TIter next( GetListOfBranches() );
+      TBranch *b;
+      while ( ( b = (TBranch*)next() ) ) {
+         b->SetEntryOffsetLen( newdefault, kTRUE );
+      }
    }
 }
 

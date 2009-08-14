@@ -119,7 +119,11 @@ protected:
 
    TGLRect        fViewport;       //! viewport - drawn area
    TGLColorSet    fDarkColorSet;   //! color-set with dark background
-   TGLColorSet    fLightColorSet;  //! color-set with dark background
+   TGLColorSet    fLightColorSet;  //! color-set with light background
+   Float_t        fPointScale;     //! size scale for points
+   Float_t        fLineScale;      //! width scale for lines
+   Bool_t         fSmoothPoints;   //! smooth point edge rendering
+   Bool_t         fSmoothLines;    //! smooth line edge rendering
    Int_t          fAxesType;       //! axes type
    Bool_t         fAxesDepthTest;  //! remove guides hidden-lines
    Bool_t         fReferenceOn;    //! reference marker on?
@@ -153,6 +157,7 @@ protected:
 
    // Cameras
    void        SetViewport(Int_t x, Int_t y, Int_t width, Int_t height);
+   void        SetViewport(const TGLRect& vp);
    void        SetupCameras(Bool_t reset);
 
 protected:
@@ -224,6 +229,15 @@ public:
    static void         UseDefaultColorSetForNewViewers(Bool_t x);
    static Bool_t       IsUsingDefaultColorSetForNewViewers();
 
+   Float_t GetPointScale()    const { return fPointScale; }
+   Float_t GetLineScale()     const { return fLineScale; }
+   void    SetPointScale(Float_t s) { fPointScale = s; }
+   void    SetLineScale (Float_t s) { fLineScale  = s; }
+   Bool_t  GetSmoothPoints()  const { return fSmoothPoints; }
+   Bool_t  GetSmoothLines()   const { return fSmoothLines; }
+   void    SetSmoothPoints(Bool_t s){ fSmoothPoints = s; }
+   void    SetSmoothLines(Bool_t s) { fSmoothLines  = s; }
+
    TGLLightSet* GetLightSet() const { return fLightSet; }
    TGLClipSet * GetClipSet()  const { return fClipSet; }
    Bool_t GetClipAutoUpdate() const   { return fClipAutoUpdate; }
@@ -263,6 +277,7 @@ public:
    // Request methods post cross thread request via TROOT::ProcessLineFast().
    void RequestDraw(Short_t LOD = TGLRnrCtx::kLODMed); // Cross thread draw request
    virtual void PreRender();
+   virtual void PostRender();
    void DoDraw();
 
    void DrawGuides();
@@ -275,9 +290,15 @@ public:
    Bool_t RequestOverlaySelect(Int_t x, Int_t y); // Cross thread select request
    Bool_t DoOverlaySelect(Int_t x, Int_t y);      // Window coords origin top left
 
-   // Saveing of screen image
-   Bool_t       SavePicture(const TString &fileName);
-   Bool_t       SavePicture();
+   // Saving of screen image
+   Bool_t SavePicture();
+   Bool_t SavePicture(const TString &fileName);
+   Bool_t SavePictureUsingBB (const TString &fileName);
+   Bool_t SavePictureUsingFBO(const TString &fileName, Int_t w, Int_t h, Float_t pixel_object_scale=0);
+   Bool_t SavePictureWidth (const TString &fileName, Int_t width, Bool_t pixel_object_scale=kTRUE);
+   Bool_t SavePictureHeight(const TString &fileName, Int_t height, Bool_t pixel_object_scale=kTRUE);
+   Bool_t SavePictureScale (const TString &fileName, Float_t scale, Bool_t pixel_object_scale=kTRUE);
+
    const char*  GetPictureFileName() const { return fPictureFileName.Data(); }
    void         SetPictureFileName(const TString& f) { fPictureFileName = f; }
    Float_t      GetFader() const { return fFader; }

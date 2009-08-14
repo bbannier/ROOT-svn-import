@@ -1,11 +1,11 @@
 #include <stdexcept>
-#include <iostream>
 #include <cstring>
 
 #include "TROOT.h"
 #include "TClass.h"
 #include "TVirtualGL.h"
 #include "KeySymbols.h"
+#include "Buttons.h"
 #include "TGL5D.h"
 #include "TMath.h"
 #include "TPad.h"
@@ -13,11 +13,13 @@
 #include "TF3.h"
 
 #include "TGLSurfacePainter.h"
+#include "TGLTH3Composition.h"
 #include "TGLHistPainter.h"
 #include "TGLLegoPainter.h"
 #include "TGLBoxPainter.h"
 #include "TGLTF3Painter.h"
 #include "TGLParametric.h"
+#include "TGL5DPainter.h"
 
 ClassImp(TGLHistPainter)
 
@@ -205,28 +207,27 @@ TGLHistPainter::TGLHistPainter(TGLParametricEquation *equation)
 //______________________________________________________________________________
 TGLHistPainter::TGLHistPainter(TGL5DDataSet *data)
                    : fEq(0),
-                     fHist(data->GetHist()),
-                     fF3(0),
-                     fStack(0),
-                     fPlotType(kGL5D)//THistPainter
-{
-   //This ctor creates gl-parametric plot's painter.
-   fGLPainter.reset(new TGL5DPainter(data, &fCamera, &fCoord));
-}
-
-//______________________________________________________________________________
-/*
-TGLHistPainter::TGLHistPainter(TGL5D *gl5d)
-                   : fEq(0),
                      fHist(0),
                      fF3(0),
                      fStack(0),
                      fPlotType(kGL5D)//THistPainter
 {
-   //This ctor creates gl-parametric plot's painter.
-   //fGLPainter.reset(new TGLParametricPlot(equation, &fCamera));
+   //This ctor creates plot painter for TGL5DDataSet.
+   fGLPainter.reset(new TGL5DPainter(data, &fCamera, &fCoord));
 }
-*/
+
+//______________________________________________________________________________
+TGLHistPainter::TGLHistPainter(TGLTH3Composition *data)
+                   : fEq(0),
+                     fHist(data),
+                     fF3(0),
+                     fStack(0),
+                     fPlotType(kGLTH3Composition)
+{
+   //This ctor creates plot painter for TGL5DDataSet.
+   fGLPainter.reset(new TGLTH3CompositionPainter(data, &fCamera, &fCoord));
+}
+
 //______________________________________________________________________________
 Int_t TGLHistPainter::DistancetoPrimitive(Int_t px, Int_t py)
 {
@@ -526,14 +527,14 @@ void TGLHistPainter::Paint(Option_t *o)
    const Ssiz_t glPos = option.Index("gl");
    if (glPos != kNPOS)
       option.Remove(glPos, 2);
-   else if (fPlotType != kGLParametricPlot && fPlotType != kGL5D) {
+   else if (fPlotType != kGLParametricPlot && fPlotType != kGL5D && fPlotType != kGLTH3Composition) {
       gPad->SetCopyGLDevice(kFALSE);
       if (fDefaultPainter.get())
          fDefaultPainter->Paint(o);//option.Data());
       return;
    }
 
-   if (fPlotType != kGLParametricPlot && fPlotType != kGL5D)
+   if (fPlotType != kGLParametricPlot && fPlotType != kGL5D && fPlotType != kGLTH3Composition)
       CreatePainter(ParsePaintOption(option), option);
 
    if (fPlotType == kGLDefaultPlot) {
@@ -560,7 +561,6 @@ void TGLHistPainter::Paint(Option_t *o)
          //fGLPainter->SetGLDevice(&fGLDevice);
          //Add viewport extraction here.
          PadToViewport();
-         
          if (gPad->GetFrameFillColor() != kWhite)
             fGLPainter->SetFrameColor(gROOT->GetColor(gPad->GetFrameFillColor()));
          fGLPainter->SetPadColor(gROOT->GetColor(gPad->GetFillColor()));

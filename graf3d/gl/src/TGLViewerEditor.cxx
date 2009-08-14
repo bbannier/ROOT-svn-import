@@ -40,6 +40,10 @@ TGLViewerEditor::TGLViewerEditor(const TGWindow *p,  Int_t width, Int_t height, 
    fCameraHome(0),
    fMaxSceneDrawTimeHQ(0),
    fMaxSceneDrawTimeLQ(0),
+   fPointSizeScale(0),  fLineWidthScale(0),
+   fPointSmooth(0),     fLineSmooth(0),
+   fWFLineWidth(0),     fOLLineWidth(0),
+
    fCameraCenterExt(0),
    fCaptureCenter(0),
    fCameraCenterX(0),
@@ -91,6 +95,13 @@ void TGLViewerEditor::ConnectSignals2Slots()
    fCameraHome->Connect("Pressed()", "TGLViewerEditor", this, "DoCameraHome()");
    fMaxSceneDrawTimeHQ->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdateMaxDrawTimes()");
    fMaxSceneDrawTimeLQ->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdateMaxDrawTimes()");
+   fPointSizeScale->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+   fLineWidthScale->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+   fPointSmooth->Connect("Clicked()", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+   fLineSmooth ->Connect("Clicked()", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+   fWFLineWidth->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+   fOLLineWidth->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+
    fCameraCenterExt->Connect("Clicked()", "TGLViewerEditor", this, "DoCameraCenterExt()");
    fCaptureCenter->Connect("Clicked()", "TGLViewerEditor", this, "DoCaptureCenter()");
    fDrawCameraCenter->Connect("Clicked()", "TGLViewerEditor", this, "DoDrawCameraCenter()");
@@ -149,6 +160,12 @@ void TGLViewerEditor::SetModel(TObject* obj)
    fResetCameraOnDoubleClick->SetState(fViewer->GetResetCameraOnDoubleClick() ? kButtonDown : kButtonUp);
    fMaxSceneDrawTimeHQ->SetNumber(fViewer->GetMaxSceneDrawTimeHQ());
    fMaxSceneDrawTimeLQ->SetNumber(fViewer->GetMaxSceneDrawTimeLQ());
+   fPointSizeScale->SetNumber(fViewer->GetPointScale());
+   fLineWidthScale->SetNumber(fViewer->GetLineScale ());
+   fPointSmooth->SetState(fViewer->GetSmoothPoints() ? kButtonDown : kButtonUp);
+   fLineSmooth ->SetState(fViewer->GetSmoothLines () ? kButtonDown : kButtonUp);
+   fWFLineWidth->SetNumber(fViewer->WFLineW());
+   fOLLineWidth->SetNumber(fViewer->OLLineW());
    //camera look at
    TGLCamera & cam = fViewer->CurrentCamera();
    fCameraCenterExt->SetDown(cam.GetExternalCenter());
@@ -225,6 +242,20 @@ void TGLViewerEditor::UpdateMaxDrawTimes()
 
    fViewer->SetMaxSceneDrawTimeHQ(fMaxSceneDrawTimeHQ->GetNumber());
    fViewer->SetMaxSceneDrawTimeLQ(fMaxSceneDrawTimeLQ->GetNumber());
+}
+
+//______________________________________________________________________________
+void TGLViewerEditor::UpdatePointLineStuff()
+{
+   // Slot for point-sizes and line-widths.
+
+   fViewer->SetPointScale(fPointSizeScale->GetNumber());
+   fViewer->SetLineScale (fLineWidthScale->GetNumber());
+   fViewer->SetSmoothPoints(fPointSmooth->IsDown());
+   fViewer->SetSmoothLines (fLineSmooth->IsDown());
+   fViewer->SetWFLineW(fWFLineWidth->GetNumber());
+   fViewer->SetOLLineW(fOLLineWidth->GetNumber());
+   ViewerRedraw();
 }
 
 //______________________________________________________________________________
@@ -372,7 +403,7 @@ void TGLViewerEditor::CreateStyleTab()
    af->AddFrame(fCameraHome, new TGLayoutHints(kLHintsLeft | kLHintsExpandX, 1, 1, 1, 3));
    fMaxSceneDrawTimeHQ = MakeLabeledNEntry(af, "Max HQ draw time:", 120, 6, TGNumberFormat::kNESInteger);
    fMaxSceneDrawTimeHQ->SetLimits(TGNumberFormat::kNELLimitMin, 0, 1e6);
-   fMaxSceneDrawTimeHQ->GetNumberEntry()->SetToolTipText("Maximum time spent in scene drawing\nin high-quality mode.");
+   fMaxSceneDrawTimeHQ->GetNumberEntry()->SetToolTipText("Maximum time spent in scene drawing\nin high-quality mode [ms].");
    fMaxSceneDrawTimeLQ = MakeLabeledNEntry(af, "Max LQ draw time:", 120, 6, TGNumberFormat::kNESInteger);
    fMaxSceneDrawTimeLQ->SetLimits(TGNumberFormat::kNELLimitMin, 0, 1e6);
    fMaxSceneDrawTimeLQ->GetNumberEntry()->SetToolTipText("Maximum time spent in scene drawing\nin low-quality mode (during rotation etc).");
@@ -388,6 +419,26 @@ void TGLViewerEditor::CreateStyleTab()
    fLightSet = new TGLLightSetSubEditor(this);
    fLightSet->Connect("Changed()", "TGLViewerEditor", this, "ViewerRedraw()");
    AddFrame(fLightSet, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
+
+   // Point-sizes / line-widths.
+   hf = new TGHorizontalFrame(af);
+   fPointSizeScale = MakeLabeledNEntry(hf, "Point-size scale:", 116, 4, TGNumberFormat::kNESRealOne);
+   fPointSizeScale->SetLimits(TGNumberFormat::kNELLimitMinMax, 0.1, 16);
+   fPointSmooth = new TGCheckButton(hf);
+   fPointSmooth->SetToolTipText("Use smooth points.");
+   hf->AddFrame(fPointSmooth, new TGLayoutHints(kLHintsNormal, 3, 0, 3, 0));
+   af->AddFrame(hf);
+   hf = new TGHorizontalFrame(af);
+   fLineWidthScale = MakeLabeledNEntry(hf, "Line-width scale:", 116, 4, TGNumberFormat::kNESRealOne);
+   fLineWidthScale->SetLimits(TGNumberFormat::kNELLimitMinMax, 0.1, 16);
+   fLineSmooth = new TGCheckButton(hf);
+   fLineSmooth->SetToolTipText("Use smooth lines.");
+   hf->AddFrame(fLineSmooth, new TGLayoutHints(kLHintsNormal, 3, 0, 3, 0));
+   af->AddFrame(hf);
+   fWFLineWidth = MakeLabeledNEntry(af, "Wireframe line-width:", 116, 4, TGNumberFormat::kNESRealOne);
+   fWFLineWidth->SetLimits(TGNumberFormat::kNELLimitMinMax, 0.1, 16);
+   fOLLineWidth = MakeLabeledNEntry(af, "Outline line-width:", 116, 4, TGNumberFormat::kNESRealOne);
+   fOLLineWidth->SetLimits(TGNumberFormat::kNELLimitMinMax, 0.1, 16);
 }
 
 //______________________________________________________________________________
@@ -445,6 +496,8 @@ void TGLViewerEditor::CreateGuidesTab()
    fCamMode->AddEntry("Plane", TGLCameraOverlay::kPlaneIntersect);
    fCamMode->AddEntry("Bar", TGLCameraOverlay::kBar);
    fCamMode->AddEntry("Axis", TGLCameraOverlay::kAxis);
+   fCamMode->AddEntry("Grid Front", TGLCameraOverlay::kGridFront);
+   fCamMode->AddEntry("Grid Back", TGLCameraOverlay::kGridBack);
    TGListBox* lb = fCamMode->GetListBox();
    lb->Resize(lb->GetWidth(), 5*18);
    fCamMode->Resize(90, 20);

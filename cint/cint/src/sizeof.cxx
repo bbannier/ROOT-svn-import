@@ -141,7 +141,8 @@ int G__Lsizeof(const char *type_name)
   int tagnum,typenum;
   int result;
   int pointlevel=0;
-  char namebody[G__MAXNAME+20];
+  G__FastAllocString namebody_sb(G__MAXNAME+20);
+  char* namebody = namebody_sb;
   char *p;
   int i;
 
@@ -285,7 +286,8 @@ int G__Lsizeof(const char *type_name)
   G__hash(namebody,hash,ig15)
   var = G__getvarentry(namebody,hash,&ig15,&G__global,G__p_local);
   if (!var) {
-    char temp[G__ONELINE];
+    G__FastAllocString temp_sb(G__ONELINE);
+    char* temp = temp_sb;
     if (G__memberfunc_tagnum != -1) { // questionable
       sprintf(temp, "%s\\%x\\%x\\%x", namebody, G__func_page, G__func_now, G__memberfunc_tagnum);
     }
@@ -393,7 +395,8 @@ long *G__typeid(const char *typenamein)
   int len;
   int pointlevel=0,isref=0;
   int tag_type_info;
-  char typenamebuf[G__MAXNAME*2];
+  G__FastAllocString typenamebuf_sb(G__MAXNAME*2);
+  char* typenamebuf = typenamebuf_sb;
   char *type_name;
   int isconst = 0;
 
@@ -1266,8 +1269,7 @@ void G__va_arg_put(G__va_arg_buf *pbuf,G__param *libp,int n)
       j2 = (j2 - objsize) & (objsize > 4 ? 0xfffffff8 : 0xfffffffc );
       j = j2 + ((8 - objsize) % 4);
     }
-#elif defined(__sparc) || defined(__sparc__) || defined(__SUNPRO_C) || \
-      defined(__SUNPRO_CC)
+#elif ((defined(__sparc) || defined(__i386)) && defined(__SUNPRO_CC))
     /* nothing */
 #elif (defined(__PPC__)||defined(__ppc__))&&(defined(_AIX)||defined(__APPLE__))
     /* nothing */
@@ -1288,8 +1290,7 @@ void G__va_arg_put(G__va_arg_buf *pbuf,G__param *libp,int n)
     if(mod) j = j-mod+G__va_arg_align_size;
 #elif defined(__hpux) || defined(__hppa__)
     /* nothing */
-#elif defined(__sparc) || defined(__sparc__) || defined(__SUNPRO_C) || \
-      defined(__SUNPRO_CC)
+#elif ((defined(__sparc) || defined(__i386)) && defined(__SUNPRO_CC))
     j += objsize;
     mod = j%G__va_arg_align_size;
     if(mod) j = j-mod+G__va_arg_align_size;
