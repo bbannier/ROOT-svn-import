@@ -1190,12 +1190,6 @@ void THnSparse::Divide(const THnSparse *h)
    // Remember original histogram statistics
    Double_t nEntries = fEntries;
 
-   // Create a temporary histogram where to store the result
-   TObjArray newaxes(fNdimensions);
-   for (Int_t d = 0; d < fNdimensions; ++d) {
-      newaxes.AddAt(GetAxis(d),d);
-   }
-
    if (wantErrors) Sumw2();
    Bool_t didWarn = kFALSE;
 
