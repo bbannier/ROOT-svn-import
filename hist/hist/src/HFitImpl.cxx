@@ -192,11 +192,11 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
 
 
    // set the fit function 
-   // if option grad is specified use gradient (works only for 1D) 
-   if ( (linear || fitOption.Gradient)  && f1->GetNdim() == 1) 
-      fitter->SetFunction(ROOT::Math::WrappedTF1(*f1) );
-   else 
+   // if option grad is specified use gradient 
+   if ( (linear || fitOption.Gradient) )  
       fitter->SetFunction(ROOT::Math::WrappedMultiTF1(*f1) );
+   else 
+      fitter->SetFunction(static_cast<const ROOT::Math::IParamMultiFunction &>(ROOT::Math::WrappedMultiTF1(*f1) ) );
 
    // error normalization in case of zero error in the data
    if (fitdata->GetErrorType() == ROOT::Fit::BinData::kNoError) fitConfig.SetNormErrors(true);
@@ -576,14 +576,14 @@ int ROOT::Fit::UnBinFit(ROOT::Fit::UnBinData * fitdata, TF1 * fitfunc, Foption_t
    unsigned int dim = fitdata->NDim();    
 
    // set the fit function
-   // if option grad is specified use gradient (works only for 1D) 
+   // if option grad is specified use gradient 
    // need to create a wrapper for an automatic  normalized TF1 ???
-   if ( fitOption.Gradient  && dim == 1) {
+   if ( fitOption.Gradient ) {
       assert ( (int) dim == fitfunc->GetNdim() );
       fitter->SetFunction(ROOT::Math::WrappedTF1(*fitfunc) );
    }
    else 
-      fitter->SetFunction(ROOT::Math::WrappedMultiTF1(*fitfunc, dim) );
+      fitter->SetFunction(static_cast<const ROOT::Math::IParamMultiFunction &>(ROOT::Math::WrappedMultiTF1(*fitfunc, dim) ) );
 
    // parameter setting is done automaticaly in the Fitter class 
    // need only to set limits
