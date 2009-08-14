@@ -56,6 +56,7 @@ class TH1;
 class TH1D;
 class TH2D;
 class TH3D;
+class TF1;
 
 class THnSparseArrayChunk: public TObject {
  private:
@@ -233,6 +234,7 @@ class THnSparse: public TNamed {
    void Scale(Double_t c);
    void Add(const THnSparse* h, Double_t c=1.);
    void Multiply(const THnSparse* h);
+   void Multiply(TF1* f, Double_t c = 1., unsigned int dim = 0);
    void Divide(const THnSparse* h);
    void Divide(const THnSparse* h1, const THnSparse* h2, Double_t c1 = 1., Double_t c2 = 1., Option_t* option="");
    void RebinnedAdd(const THnSparse* h, Double_t c=1.);

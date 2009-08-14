@@ -20,6 +20,7 @@
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TH3D.h"
+#include "TF1.h"
 #include "TInterpreter.h"
 #include "TMath.h"
 #include "TRandom.h"
@@ -1124,6 +1125,49 @@ void THnSparse::Multiply(const THnSparse* h)
    SetEntries(nEntries);
 
    delete [] coord;
+}
+
+//______________________________________________________________________________
+void THnSparse::Multiply(TF1* f, Double_t c, unsigned int)
+{
+    // Performs the operation: this = this*c*f1
+    // if errors are defined, errors are also recalculated.
+    //
+    // Only bins inside the function range are recomputed.
+    // IMPORTANT NOTE: If you intend to use the errors of this histogram later
+    // you should call Sumw2 before making this operation.
+    // This is particularly important if you fit the histogram after THnSparse::Multiply
+
+   std::vector<Int_t>    coord(fNdimensions);
+   std::vector<Double_t> points(fNdimensions);
+   
+   Double_t value(0);
+   
+   Bool_t wantErrors( GetCalculateErrors() );
+   if (wantErrors) Sumw2();
+
+   ULong64_t nEntries = GetNbins();
+   for ( ULong64_t i = 0; i < nEntries; i++ )
+   {
+      value = GetBinContent( i, &coord[0] );
+      
+      // Get the bin co-ordinates given an coord
+      for ( Int_t j = 0; j < fNdimensions; j++ )
+         points[j] = GetAxis( j )->GetBinCenter( coord[j] );
+      
+      if ( !f->IsInside( &points[0] ) )
+         continue;
+      TF1::RejectPoint(kFALSE);
+      
+      // Evaulate function at points
+      Double_t fvalue = f->EvalPar( &points[0], NULL );
+      
+      SetBinContent( &coord[0], c * fvalue * value );
+      if (wantErrors) {
+         Double_t error( GetBinError( i ) );
+         SetBinError(&coord[0], c * fvalue * error);
+      }
+   }
 }
 
 //______________________________________________________________________________
