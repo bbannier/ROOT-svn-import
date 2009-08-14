@@ -36,9 +36,6 @@
 //     Creates a Tree with name and title.
 //
 //     Various kinds of branches can be added to a tree:
-//       A - simple structures or list of variables. (maybe for C or Fortran structures)
-//       B - any object inheriting from TObject. (expected be most frequently used)
-//       C - a ClonesArray. (a specialized object for collections of same class objects)
 //
 //  ==> Case A
 //      ======
@@ -63,9 +60,14 @@
 //            - L : a 64 bit signed integer (Long64_t)
 //            - l : a 64 bit unsigned integer (ULong64_t)
 //            - O : a boolean (Bool_t)
-//       * if address points to a single numerical variable, the leaflist is optional:
+//       * If the address points to a single numerical variable, the leaflist is optional:
 //           int value;
 //           tree->Branch(branchname, &value);
+//       * If the address points to more than one numerical variable, we strongly recommend
+//         that the variable be sorted in decreasing order of size.  Any other order will
+//         result in a non-portable (even between CINT and compiled code on the platform)
+//         TTree (i.e. you will not be able to read it back on a platform with a different
+//         padding strategy).
 //
 //  ==> Case B
 //      ======
@@ -476,6 +478,7 @@ TTree::TTree()
 , fTimerInterval(0)
 , fScanField(25)
 , fUpdate(0)
+, fDefaultEntryOffsetLen(1000)
 , fMaxEntries(0)
 , fMaxEntryLoop(0)
 , fMaxVirtualSize(0)
@@ -535,6 +538,7 @@ TTree::TTree(const char* name, const char* title, Int_t splitlevel /* = 99 */)
 , fTimerInterval(0)
 , fScanField(25)
 , fUpdate(0)
+, fDefaultEntryOffsetLen(1000)
 , fMaxEntries(0)
 , fMaxEntryLoop(0)
 , fMaxVirtualSize(0)
@@ -3176,9 +3180,22 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  Length$(formula): return the total number of element of the formula given as a
    //                    parameter.
    //  Sum$(formula): return the sum of the value of the elements of the formula given
-   //                    as a parameter.  For eaxmple the mean for all the elements in
+   //                    as a parameter.  For example the mean for all the elements in
    //                    one entry can be calculated with:
    //                Sum$(formula)/Length$(formula)
+   //  Min$(formula): return the minimun (within one TTree entry) of the value of the
+   //                    elements of the formula given as a parameter.
+   //  Max$(formula): return the maximum (within one TTree entry) of the value of the
+   //                    elements of the formula given as a parameter.
+   //  MinIf$(formula,condition)
+   //  MaxIf$(formula,condition): return the minimum (maximum) (within one TTree entry)
+   //                    of the value of the elements of the formula given as a parameter
+   //                    if they match the condition. If not element match the condition, the result is zero.  To avoid the
+   //                    the result is zero.  To avoid the consequent peak a zero, use the 
+   //                    pattern: 
+   //    tree->Draw("MinIf$(formula,condition)","condition");
+   //                    which will avoid calculation MinIf$ for the entries that have no match 
+   //                    for the condition.
    //
    //  Alt$(primary,alternate) : return the value of "primary" if it is available
    //                 for the current iteration otherwise return the value of "alternate".
@@ -3424,6 +3441,13 @@ Int_t TTree::Fill()
    //   each branch, it copies to the branch buffer (basket) the current
    //   values of the leaves data types. If a leaf is a simple data type,
    //   a simple conversion to a machine independent format has to be done.
+   //
+   //   This machine independent version of the data is copied into a 
+   //   basket (each branch has its own basket).  When a basket is full
+   //   (32k worth of data by default), it is then optionally compressed
+   //   and written to disk (this operation is also called comitting or
+   //   'flushing' the basket).  The committed baskets are then 
+   //   immediately removed from memory.
    //
    //   The function returns the number of bytes committed to the
    //   individual branches.
@@ -6046,6 +6070,29 @@ void TTree::SetDebug(Int_t level, Long64_t min, Long64_t max)
 }
 
 //______________________________________________________________________________
+void TTree::SetDefaultEntryOffsetLen(Int_t newdefault, Bool_t updateExisting)
+{
+   // Update the default value for the branch's fEntryOffsetLen.
+   // If updateExisting is true, also update all the existing branches.
+   // If newdefault is less than 10, the new default value will be 10.
+   
+   if (newdefault < 10) {
+      newdefault = 10;
+   }
+   fDefaultEntryOffsetLen = newdefault;
+   if (updateExisting) {
+      TIter next( GetListOfBranches() );
+      TBranch *b;
+      while ( ( b = (TBranch*)next() ) ) {
+         b->SetEntryOffsetLen( newdefault, kTRUE );
+      }
+      if (fBranchRef) {
+         fBranchRef->SetEntryOffsetLen( newdefault, kTRUE );
+      }
+   }
+}
+
+//______________________________________________________________________________
 void TTree::SetDirectory(TDirectory* dir)
 {
    // Change the tree's directory.
@@ -6439,6 +6486,7 @@ void TTree::Streamer(TBuffer& b)
          OldInfoList.Streamer(b);
          OldInfoList.Delete();
       }
+      fDefaultEntryOffsetLen = 1000;
       ResetBit(kMustCleanup);
       b.CheckByteCount(R__s, R__c, TTree::IsA());
       //====end of old versions

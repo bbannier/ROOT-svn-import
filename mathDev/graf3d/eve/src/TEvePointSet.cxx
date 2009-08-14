@@ -20,7 +20,6 @@
 #include "TF3.h"
 
 #include "TColor.h"
-#include "TCanvas.h"
 #include "TBuffer3D.h"
 #include "TBuffer3DTypes.h"
 #include "TVirtualViewer3D.h"
@@ -157,7 +156,6 @@ void TEvePointSet::ComputeBBox()
    // Override of virtual method from TAttBBox.
 
    TPointSet3D::ComputeBBox();
-   AssertBBoxExtents(0.1);
 }
 
 //______________________________________________________________________________

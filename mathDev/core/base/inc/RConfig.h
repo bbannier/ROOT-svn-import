@@ -116,7 +116,10 @@
 #      define R__SEEK64
 #      define ANSICPP
 #      ifdef __i386
-#         define R__I386
+#         define R__BYTESWAP
+#      endif
+#      ifdef __x86_64
+#         define R__B64
 #         define R__BYTESWAP
 #      endif
 #   else
@@ -424,15 +427,6 @@
 #    define R__HIDDEN __attribute__((__visibility__("hidden")))
 #else
 #    define R__HIDDEN
-#endif
-
-#ifdef __KCC
-#   define R__KCC
-#   define R__ANSISTREAM      /* ANSI C++ Standard Library conformant */
-#   define R__VECNEWDELETE    /* supports overloading of new[] and delete[] */
-#   define R__PLACEMENTDELETE /* supports overloading placement delete */
-#   define R__PLACEMENTINLINE /* placement new/delete is inline in <new> */
-#   define ANSICPP
 #endif
 
 #ifdef __INTEL_COMPILER
