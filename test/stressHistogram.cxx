@@ -1617,6 +1617,84 @@ bool testMulF3D2()
    return status;
 }
 
+bool testMulFND()
+{
+   const UInt_t nDims = 3;
+   Double_t c1 = r.Rndm();
+
+   Int_t bsize[] = { TMath::Nint( r.Uniform(1, 5) ),
+                     TMath::Nint( r.Uniform(1, 5) ),
+                     TMath::Nint( r.Uniform(1, 5) )};
+   Double_t xmin[] = {minRange, minRange, minRange};
+   Double_t xmax[] = {maxRange, maxRange, maxRange};
+
+   THnSparseD* s1 = new THnSparseD("mfND-s1", "s1-Title", nDims, bsize, xmin, xmax);
+   THnSparseD* s2 = new THnSparseD("mfND-s2", "s2=f*s2",  nDims, bsize, xmin, xmax);
+
+   TF1* f = new TF1("sin", "sin(x)", minRange - 2, maxRange + 2);
+   
+   s1->Sumw2();s2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t points[nDims];
+      for ( UInt_t i = 0; i < nDims; ++ i )
+         points[i] = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      s1->Fill(points, 1.0);
+      s2->Fill(points, f->Eval( s2->GetAxis(0)->GetBinCenter( s2->GetAxis(0)->FindBin(points[0]) ) ) * c1);
+   }
+
+   s1->Multiply(f, c1);
+
+   int status = equals("MULF HND", s1, s2);
+   delete s1;
+   delete f;
+   return status;
+}
+
+bool testMulFND2()
+{
+   const UInt_t nDims = 3;
+   Double_t c1 = r.Rndm();
+
+   Int_t bsize[] = { TMath::Nint( r.Uniform(1, 5) ),
+                     TMath::Nint( r.Uniform(1, 5) ),
+                     TMath::Nint( r.Uniform(1, 5) )};
+   Double_t xmin[] = {minRange, minRange, minRange};
+   Double_t xmax[] = {maxRange, maxRange, maxRange};
+
+   THnSparseD* s1 = new THnSparseD("mfND-s1", "s1-Title", nDims, bsize, xmin, xmax);
+   THnSparseD* s2 = new THnSparseD("mfND-s2", "s2=f*s2",  nDims, bsize, xmin, xmax);
+
+   TF2* f = new TF2("sin2", "sin(x)*cos(y)", 
+                    minRange - 2, maxRange + 2,
+                    minRange - 2, maxRange + 2);
+   
+   s1->Sumw2();s2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t points[nDims];
+      for ( UInt_t i = 0; i < nDims; ++ i )
+         points[i] = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      s1->Fill(points, 1.0);
+      s2->Fill(points, f->Eval( s2->GetAxis(0)->GetBinCenter( s2->GetAxis(0)->FindBin(points[0]) ),
+                                s2->GetAxis(1)->GetBinCenter( s2->GetAxis(1)->FindBin(points[1]) ) )
+                                * c1);
+   }
+
+   s1->Multiply(f, c1);
+
+   int status = equals("MULF HND2", s1, s2);
+   delete s1;
+   delete f;
+   return status;
+}
+
 bool testDivide1() 
 {
    // Tests the first Divide method for 1D Histograms
@@ -7450,7 +7528,7 @@ int stressHistogram()
 
    // Test 6
    // Multiply Tests
-   const unsigned int numberOfMultiply = 15;
+   const unsigned int numberOfMultiply = 17;
    pointer2Test multiplyTestPointer[numberOfMultiply] = { testMul1,      testMul2,
                                                           testMulVar1,   testMulVar2,
                                                           testMul2D1,    testMul2D2,
@@ -7458,7 +7536,8 @@ int stressHistogram()
                                                           testMulSparse,
                                                           testMulF1D,    testMulF1D2,
                                                           testMulF2D,    testMulF2D2,
-                                                          testMulF3D,    testMulF3D2
+                                                          testMulF3D,    testMulF3D2,
+                                                          testMulFND,    testMulFND2
    };
    struct TTestSuite multiplyTestSuite = { numberOfMultiply, 
                                            "Multiply tests for 1D, 2D and 3D Histograms......................",
