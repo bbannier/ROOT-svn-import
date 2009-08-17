@@ -1,8 +1,8 @@
 // @(#)root/html:$Id$
-// Author: Nenad Buncic   18/10/95
+// Author: Axel Naumann, 2007
 
 /*************************************************************************
- * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
+ * Copyright (C) 1995-2009, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
  *                                                                       *
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
@@ -26,64 +26,91 @@
 
 class TDictionary;
 
+namespace RootDoc {
 class TModuleDocInfo;
+class TFileSysEntry;
+
+class TSourceFileDocInfo: public TObject {
+public:
+   TSourceFileDocInfo(const char* fsabs,
+      Ssiz_t fsrel = 0,
+      Ssiz_t incl = 0);
+
+   const TString& GetFileSystemAbs() const { return fFileSysAbs; }
+   const char* GetName() const { return fFileSysAbs.Data() + fBaseOff; }
+   const char* GetAsIncluded() const { return fFileSysAbs.Data() + fAsIncludedOff; }
+   const char* GetFileSystemRel() const { return fFileSysAbs.Data() + fFileSysRelOff; }
+   void SetFileSystemEntry(TFileSysEntry* fs) { fFileSysEntry = fs; }
+   void SetFileSystemAbs(const char* name) { fFileSysAbs = name; }
+   void SetAsIncluded(Ssiz_t off) { fAsIncludedOff = off; }
+   void SetFileSystemRel(Ssiz_t off) { fFileSysRelOff = off; }
+
+private:
+   TFileSysEntry* fFileSysEntry; //! file found on disk
+   TString fFileSysRel; // file as set by the user or name as found on disk, relative from THtml::SetInputDir()
+   Ssiz_t fBaseOff; // filename without directory, offset in fFileSysRel
+   TString fAsIncluded; // name as used in #include
+   ClassDef(TSourceFileDocInfo, 1); // File representation for THtml
+};
+
+class TMethodDocInfo: public TObject {
+public:
+   TMethodDocInfo(const char* decl, const char* doc):
+      fDecl(decl), fDoc(doc) {}
+   TMethodDocInfo(TMethod* meth, const char* doc):
+      fMethod(meth), fDoc(doc) {}
+
+   const TString& GetDoc() const { return fDoc; }
+   const TString& GetDecl() const { return fDecl; }
+   TMethod* GetMethod() const { return fMethod; }
+   const TString& GetImplAnchor() const { return fImplAnchor; }
+   void GetRefID(TString& id) const;
+
+   void SetImplAnchor(const char* anchor) { fImplAnchor = anchor; }
+   void SetMethod(TMethod* method) { fMethod = method; }
+
+private:
+   TString  fDoc; // documentation for the method
+   TString  fDecl; // declaration of the method, to find it in the class's list of methods
+   TMethod* fMethod; //! method to be documented
+   TString  fImplAnchor; // href anchor in source file
+   ClassDef(TMethodDocInfo, 1); // method documentation
+};
+
+
 //____________________________________________________________________
 //
 // Cache doc info for all known classes
 //
 class TClassDocInfo: public TObject {
 public:
-   // initialize the object
-   TClassDocInfo(TClass* cl,
-      const char* htmlfilename = "",
-      const char* fsdecl = "", const char* fsimpl = "",
-      const char* decl = 0, const char* impl = 0): 
-      fClass(cl), fModule(0), fHtmlFileName(htmlfilename),
-      fDeclFileName(decl ? decl : cl->GetDeclFileName()),
-      fImplFileName(impl ? impl : cl->GetImplFileName()),
-      fDeclFileSysName(fsdecl), fImplFileSysName(fsimpl),
-      fSelected(kTRUE) { }
-
-   TClassDocInfo(TDictionary* cl,
-      const char* htmlfilename = "",
-      const char* fsdecl = "", const char* fsimpl = "",
-      const char* decl = 0, const char* impl = 0): 
-      fClass(cl), fModule(0), fHtmlFileName(htmlfilename),
-      fDeclFileName(decl),
-      fImplFileName(impl),
-      fDeclFileSysName(fsdecl), fImplFileSysName(fsimpl),
-      fSelected(kTRUE) { }
+   // initialize given a class or a typedef
+   TClassDocInfo(TDictionary* cl);
 
    virtual ~TClassDocInfo() {}
 
-           TDictionary*    GetClass() const { return fClass; }
-   virtual const char*     GetName() const;
-           const char*     GetHtmlFileName() const { return fHtmlFileName; }
-           const char*     GetDeclFileName() const { return fDeclFileName; }
-           const char*     GetImplFileName() const { return fImplFileName; }
-           const char*     GetDeclFileSysName() const { return fDeclFileSysName; }
-           const char*     GetImplFileSysName() const { return fImplFileSysName; }
+   TDictionary*    GetClass() const { return fClass; }
+   const char*     GetName() const;
+   const char*     GetHtmlFileName() const;
+   TSourceFileDocInfo* GetDeclFile() const { return fDeclFile; }
+   TSourceFileDocInfo* GetImplFile() const { return fImplFile; }
 
-           void            SetModule(TModuleDocInfo* module) { fModule = module; }
-           TModuleDocInfo* GetModule() const { return fModule; }
+   void            SetModule(TModuleDocInfo* module) { fModule = module; }
+   TModuleDocInfo* GetModule() const { return fModule; }
 
-           void            SetSelected(Bool_t sel = kTRUE) { fSelected = sel; }
-           Bool_t          IsSelected() const { return fSelected; }
-           Bool_t          HaveSource() const { return fDeclFileSysName.Length()
-                                                   || (fClass && !dynamic_cast<TClass*>(fClass)); }
-   
-           void            SetHtmlFileName(const char* name) { fHtmlFileName = name; }
-           void            SetDeclFileName(const char* name) { fDeclFileName = name; }
-           void            SetImplFileName(const char* name) { fImplFileName = name; }
-           void            SetDeclFileSysName(const char* fsname) { fDeclFileSysName = fsname; }
-           void            SetImplFileSysName(const char* fsname) { fImplFileSysName = fsname; }
+   void            SetSelected(Bool_t sel = kTRUE) { fSelected = sel; }
+   Bool_t          IsSelected() const { return fSelected; }
+   Bool_t          HaveSource() const { return fDeclFile.GetFileSystemAbs().Length()
+                                          || (fClass && !dynamic_cast<TClass*>(fClass)); }
 
-           ULong_t         Hash() const;
+   void            SetHtmlFileName(const char* name) { fHtmlFileName = name; }
 
-           TList&          GetListOfTypedefs() { return fTypedefs; }
+   ULong_t         Hash() const;
 
-   virtual Bool_t          IsSortable() const { return kTRUE; }
-   virtual Int_t           Compare(const TObject* obj) const;
+   TList&          GetListOfTypedefs() { return fTypedefs; }
+
+   Bool_t          IsSortable() const { return kTRUE; }
+   Int_t           Compare(const TObject* obj) const;
 
 private:
    TClassDocInfo();
@@ -91,12 +118,12 @@ private:
    TDictionary*            fClass; // class (or typedef) represented by this info object
    TModuleDocInfo*         fModule; // module this class is in
    TString                 fHtmlFileName; // name of the HTML doc file
-   TString                 fDeclFileName; // header
-   TString                 fImplFileName; // source
-   TString                 fDeclFileSysName; // file system's location of the header
-   TString                 fImplFileSysName; // file system's location of the source
+   TSourceFileDocInfo*     fDeclFile; // header
+   TSourceFileDocInfo*     fImplFile; // source
    TList                   fTypedefs; // typedefs to this class
    Bool_t                  fSelected; // selected for doc output
+   TString                 fClassDoc; // documentation for this class
+   TList                   fMethodDocs; // documentation for methods
 
    ClassDef(TClassDocInfo,0); // info cache for class documentation
 };
