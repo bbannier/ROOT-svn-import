@@ -1,0 +1,26 @@
+<br> 
+<hr> 
+<a name="cint"></a> 
+<h3>CINT</h3>
+<ul>
+  <li>CINT
+  <ul>
+    <li>Improve the lookup time for type names. Improves start-up time (dictionary initialization) and parsing speed.</li>
+    <li>New link pragma to simply the generation of the dictionary for 'operators' in a rootcint dictionary.
+<pre lang=cpp>#pragma link [C++|off] operators classname;</pre>
+will turn on/off symbol table registration of the operators that are
+declared in the declaring scopes of 'classname' (and any of its enclosing
+scope) and take at least one argument that is a reference, pointer, or value argument of type <i>classname</i>.</li>
+  </ul>
+  </li>
+  <li>Reflex
+  <ul>
+    <li>Implement loading on demand of data and (most) function members for genreflex dictionaries, similar to what is available for rootcint dictionaries. This reduces the start-up time and especially the memory usage of dictionaries considerably.</li>
+  </ul>
+  </li>
+  <li>Cintex
+  <ul>
+    <li>Fix the implementation of ShowMembers in the case where the members are of type with a rootcint dictionary and no genreflex dictionary.</li>
+  </ul>
+  </li>
+</ul>
