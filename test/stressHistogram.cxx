@@ -43,10 +43,11 @@
 // Test 11: Label tests for 1D Histograms (TAxis)............................OK  //
 // Test 12: Interpolation tests for Histograms...............................OK  //
 // Test 13: Scale tests for Profiles.........................................OK  //
-// Test 14: Reference File Read for Histograms and Profiles..................OK  //
+// Test 14: Integral tests for Histograms....................................OK  //
+// Test 15: Reference File Read for Histograms and Profiles..................OK  //
 // ****************************************************************************  //
-// stressHistogram: Real Time =  50.39 seconds Cpu Time =  50.09 seconds         //
-//  ROOTMARKS = 549.411 ROOT version: 5.25/01	branches/dev/mathDev@29512       //
+// stressHistogram: Real Time =  64.01 seconds Cpu Time =  63.89 seconds         //
+//  ROOTMARKS = 430.74 ROOT version: 5.25/01	branches/dev/mathDev@29787       //
 // ****************************************************************************  //
 //                                                                               //
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*//
@@ -66,6 +67,7 @@
 
 #include "TF1.h"
 #include "TF2.h"
+#include "TF3.h"
 
 #include "TApplication.h"
 #include "TBenchmark.h"
@@ -5528,6 +5530,199 @@ bool testScale3DProf()
    return status;
 }
 
+bool testH1Integral() 
+{ 
+   int i1 = 1;
+   int i2 = 100;
+   
+   int n = 10000; 
+   TH1D * h1 = new TH1D("h1","h1",100,-5,5); 
+   h1->FillRandom("gaus",n); 
+
+  
+   TF1 * gaus = new TF1("gaus","gaus"); 
+   h1->Fit(gaus, "Q0");
+
+   // test first nentries
+   double err = 0;
+   double nent = h1->IntegralAndError(0, -1, err);
+
+   int iret = 0;
+   iret |= (nent != h1->GetEntries() );
+
+   double err1 = 0;
+   double igh = h1->IntegralAndError(i1,i2,err1,"width");
+
+   double x1 = h1->GetXaxis()->GetBinLowEdge(i1);
+   double x2 = h1->GetXaxis()->GetBinUpEdge(i2);
+
+   double igf = gaus->Integral(x1,x2); 
+   double err2 = gaus->IntegralError(x1,x2);
+
+
+   double delta = fabs( igh - igf)/ err2; 
+
+   if ( defaultEqualOptions & cmpOptDebug ) {
+      std::cout << "Estimated entries = " << nent << " +/- " << err << std::endl; 
+      std::cout << "Histogram integral =  " << igh << " +/- " << err1 << std::endl;
+      std::cout << "Function  integral =  " << igf << " +/- " << err2 << std::endl;
+      std::cout << " Difference (histogram - function) in nsigma  = " <<  delta << std::endl;
+   }
+
+
+   iret |= (delta > 3); 
+
+   if ( defaultEqualOptions & cmpOptPrint )
+      std::cout << "Integral H1:\t" << (iret?"FAILED":"OK") << std::endl;
+
+   return iret;
+}
+
+double gaus2d(const double *x, const double * p) { 
+   return p[0] * TMath::Gaus( x[0], p[1], p[2] ) * TMath::Gaus( x[1], p[3], p[4] );
+}
+double gaus3d(const double *x, const double * p) { 
+   return p[0] * TMath::Gaus( x[0], p[1], p[2] ) * TMath::Gaus( x[1], p[3], p[4] ) * TMath::Gaus( x[2], p[5], p[6] );
+}
+
+bool testH2Integral()
+{ 
+   int ix1 = 1;
+   int ix2 = 50;
+   int iy1 = 1;
+   int iy2 = 50;
+
+   int n = 10000; 
+   TH2D * h2 = new TH2D("h2","h2",50,-5,5, 50, -5, 5); 
+  
+   TF2 * gaus = new TF2("gaus2d",gaus2d,-5,5,-5,5,5); 
+   gaus->SetParameters(100,0,2,1.,1);
+   h2->FillRandom("gaus2d",n);
+   h2->Fit(gaus,"LQ0");
+
+
+   // test first nentries
+   double err = 0; 
+   double nent = h2->IntegralAndError(0,-1, 0, -1, err);
+
+   int iret = 0;
+   iret |= (nent != h2->GetEntries() );
+
+   double err1 = 0;
+   double igh = h2->IntegralAndError(ix1,ix2, iy1, iy2, err1,"width");
+
+   double x1 = h2->GetXaxis()->GetBinLowEdge(ix1);
+   double x2 = h2->GetXaxis()->GetBinUpEdge(ix2);
+   double y1 = h2->GetYaxis()->GetBinLowEdge(iy1);
+   double y2 = h2->GetYaxis()->GetBinUpEdge(iy2);
+
+   double a[2]; 
+   double b[2]; 
+   a[0] = x1; a[1] = y1; 
+   b[0] = x2; b[1] = y2; 
+   
+   double igf = gaus->Integral(x1,x2,y1,y2);    
+   double err2 = gaus->IntegralError(2,a,b);
+
+   double delta = fabs( igh - igf)/ err1; 
+
+   if ( defaultEqualOptions & cmpOptDebug ) {
+      std::cout << "Estimated entries = " << nent << " +/- " << err << std::endl; 
+      std::cout << "Histogram integral =  " << igh << " +/- " << err1 << std::endl;
+      std::cout << "Function  integral =  " << igf << " +/- " << err2 << std::endl;
+      std::cout << " Difference (histogram - function) in nsigma  = " <<  delta << std::endl;
+   }
+
+   iret |= (delta > 3); 
+
+   if ( defaultEqualOptions & cmpOptPrint )
+      std::cout << "Integral H2:\t" << (iret?"FAILED":"OK") << std::endl;
+   return iret;
+
+}
+
+bool testH3Integral()
+{ 
+   int ix1 = 1;
+   int ix2 = 50;
+   int iy1= 1;
+   int iy2 = 50;
+   int iz1 = 1;
+   int iz2 = 50;
+
+   TStopwatch w; 
+   int n = 1000000; 
+   TH3D * h3 = new TH3D("h3","h3",50,-5,5, 50, -5, 5, 50, -5, 5); 
+  
+   TF3 * gaus = new TF3("gaus3d",gaus3d,-5,5,-5,5,-5,5,7); 
+   gaus->SetParameters(100,0,2,1.,2,-1,1);
+   w.Start(); 
+   h3->FillRandom("gaus3d",n);
+
+   //gaus->SetParameter(0, h3->GetMaximum() );
+
+   w.Stop(); 
+   if ( defaultEqualOptions & cmpOptDebug )
+      std::cout << "Time to fill random " << w.RealTime() << std::endl;
+   w.Start(); 
+   h3->Fit(gaus,"LQ0");
+   if ( defaultEqualOptions & cmpOptDebug )
+      std::cout << "Time to fit         " << w.RealTime() << std::endl;
+
+
+   // test first nentries
+   double err = 0;
+   w.Start(); 
+   double nent = h3->IntegralAndError(0, -1, 0, -1, 0, -1, err);
+   w.Stop();
+   if ( defaultEqualOptions & cmpOptDebug ) {
+      std::cout << "Estimated entries = " << nent << " +/- " << err << std::endl; 
+      std::cout << "Time to integral of all  " << w.RealTime() << std::endl;
+   }
+
+   int iret = 0;
+   iret |= (nent != h3->GetEntries() );
+
+   double err1 = 0;
+   w.Start();
+   double igh = h3->IntegralAndError(ix1,ix2, iy1, iy2, iz1, iz2, err1,"width");
+   w.Stop();    
+   if ( defaultEqualOptions & cmpOptDebug ) 
+      std::cout << "Time to integral of selected  " << w.RealTime() << std::endl;
+   
+   double x1 = h3->GetXaxis()->GetBinLowEdge(ix1);
+   double x2 = h3->GetXaxis()->GetBinUpEdge(ix2);
+   double y1 = h3->GetYaxis()->GetBinLowEdge(iy1);
+   double y2 = h3->GetYaxis()->GetBinUpEdge(iy2);
+   double z1 = h3->GetZaxis()->GetBinLowEdge(iz1);
+   double z2 = h3->GetZaxis()->GetBinUpEdge(iz2);
+
+   double a[3]; 
+   double b[3]; 
+   a[0] = x1; a[1] = y1; a[2] = z1;  
+   b[0] = x2; b[1] = y2; b[2] = z2; 
+
+   w.Start();
+   double igf = gaus->Integral(x1,x2,y1,y2,z1,z2); 
+   double err2 = gaus->IntegralError(3,a,b);
+   w.Stop();    
+
+   double delta = fabs( igh - igf)/ err1; 
+
+   if ( defaultEqualOptions & cmpOptDebug ) {
+      std::cout << "Time to function integral   " << w.RealTime() << std::endl;
+      std::cout << "Histogram integral =  " << igh << " +/- " << err1 << std::endl;
+      std::cout << "Function  integral =  " << igf << " +/- " << err2 << std::endl;
+      std::cout << " Difference (histogram - function) in nsigma  = " <<  delta << std::endl;
+   }
+   
+   iret |= (delta > 3); 
+   
+   if ( defaultEqualOptions & cmpOptPrint )
+      std::cout << "Integral H3:\t" << (iret?"FAILED":"OK") << std::endl;                                                                               
+   return iret;
+}
+
 bool testRefRead1D()
 {
    // Tests consistency with a reference file for 1D Histogram
@@ -7655,8 +7850,19 @@ int stressHistogram()
                                         "Scale tests for Profiles.........................................",
                                         scaleTestPointer };
 
+   // Test 14
+   // Scale Tests
+   const unsigned int numberOfIntegral = 3;
+   pointer2Test integralTestPointer[numberOfIntegral] = { testH1Integral,
+                                                          testH2Integral,
+                                                          testH3Integral
+   };
+   struct TTestSuite integralTestSuite = { numberOfIntegral, 
+                                           "Integral tests for Histograms....................................",
+                                           integralTestPointer };
+
    // Combination of tests
-   const unsigned int numberOfSuits = 11;
+   const unsigned int numberOfSuits = 12;
    struct TTestSuite* testSuite[numberOfSuits];
    testSuite[ 0] = &rangeTestSuite;
    testSuite[ 1] = &rebinTestSuite;
@@ -7669,6 +7875,7 @@ int stressHistogram()
    testSuite[ 8] = &labelTestSuite;
    testSuite[ 9] = &interpolationTestSuite;
    testSuite[10] = &scaleTestSuite;
+   testSuite[11] = &integralTestSuite;
 
    status = 0;
    for ( unsigned int i = 0; i < numberOfSuits; ++i ) {
@@ -7683,7 +7890,7 @@ int stressHistogram()
    }
    GlobalStatus += status;
 
-   // Test 14
+   // Test 15
    // Reference Tests
    const unsigned int numberOfRefRead = 7;
    pointer2Test refReadTestPointer[numberOfRefRead] = { testRefRead1D,  testRefReadProf1D,
