@@ -16,12 +16,41 @@
 
 //______________________________________________________________________________
 //
+// Stores the different "views" (file system, include, THtml) of a source file.
+//______________________________________________________________________________
+
+ClassImp(TSourceFileDocInfo);
+
+TSourceFileDocInfo::TSourceFileDocInfo(const char* fsabs,
+      Ssiz_t fsrel /* = 0 */,
+      Ssiz_t incl /* = 0 */):
+      fBase(gSystem->BaseName(fsabs) - fabs),
+      fFileSysAbs(fsabs),
+      fFileSysRel(fsrel ? fsrel : fsabs),
+      fAsIncluded(incl ? incl : fFileSysRel)
+{
+   // Constructor taking the absolute file name, the relative file name,
+   // and the file as it is used in #include directives. The relative
+   // file name defaults to the absolute one, and the include file name
+   // defaults to the relative file name.
+}
+
+//______________________________________________________________________________
+//
 // Caches class documentation information, like which module it belongs to,
 // and whether THtml should generate documentation for the class.
 //______________________________________________________________________________
 
 
 ClassImp(TClassDocInfo);
+
+// initialize given a class or a typedef
+TClassDocInfo(TClass* cl): 
+   fClass(cl), fModule(0), fHtmlFileName(GetHtmlFileName()),
+   fDeclFile(0), fImplFile(0), fSelected(kTRUE)
+{
+
+}
 
 const char* TClassDocInfo::GetName() const
 {
