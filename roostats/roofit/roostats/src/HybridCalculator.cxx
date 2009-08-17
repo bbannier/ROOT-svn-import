@@ -385,23 +385,6 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
          delete tmpValues;
       }
 
-      /// generate the dataset in the S+B hypothesis
-      RooAbsData* sbData;
-      if (fGenerateBinned)    
-	sbData = static_cast<RooAbsData*> (fSbModel->generateBinned(*fObservables,RooFit::Extended()));
-      else
-	sbData = static_cast<RooAbsData*> (fSbModel->generate(*fObservables,RooFit::Extended()));
-
-      /// work-around in case of an empty dataset (TO DO: need a debug in RooFit?)
-      bool sbIsEmpty = false;
-      if (sbData==NULL) {
-         sbIsEmpty = true;
-         // if ( _verbose ) std::cout << "empty S+B dataset!\n";
-         RooDataSet* sbDataDummy=new RooDataSet("sbDataDummy","empty dataset",*fObservables);
-         sbData = static_cast<RooAbsData*>(new RooDataHist ("sbDataEmpty","",*fObservables,*sbDataDummy));
-         delete sbDataDummy;
-      }
-
       /// generate the dataset in the B-only hypothesis
       RooAbsData* bData;
       if (fGenerateBinned)
@@ -417,6 +400,23 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
          RooDataSet* bDataDummy=new RooDataSet("bDataDummy","empty dataset",*fObservables);
          bData = static_cast<RooAbsData*>(new RooDataHist ("bDataEmpty","",*fObservables,*bDataDummy));
          delete bDataDummy;
+      }
+
+      /// generate the dataset in the S+B hypothesis
+      RooAbsData* sbData;
+      if (fGenerateBinned)    
+	sbData = static_cast<RooAbsData*> (fSbModel->generateBinned(*fObservables,RooFit::Extended()));
+      else
+	sbData = static_cast<RooAbsData*> (fSbModel->generate(*fObservables,RooFit::Extended()));
+
+      /// work-around in case of an empty dataset (TO DO: need a debug in RooFit?)
+      bool sbIsEmpty = false;
+      if (sbData==NULL) {
+         sbIsEmpty = true;
+         // if ( _verbose ) std::cout << "empty S+B dataset!\n";
+         RooDataSet* sbDataDummy=new RooDataSet("sbDataDummy","empty dataset",*fObservables);
+         sbData = static_cast<RooAbsData*>(new RooDataHist ("sbDataEmpty","",*fObservables,*sbDataDummy));
+         delete sbDataDummy;
       }
 
       /// restore the parameters to their initial values
