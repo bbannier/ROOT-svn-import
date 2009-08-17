@@ -244,13 +244,13 @@ int XrdCryptosslX509Crl::InitFromURI(const char *uri, const char *hash)
       // Execute 'openssl crl'
       DEBUG("executing ... "<<cmd);
       if (system(cmd.c_str()) == -1) {
-         DEBUG("system: problem executing: "<<cmd);
-         return -1;
+	DEBUG("system: problem executing: "<<cmd);
+	return -1;
       }
 
       // Cleanup the temporary files
       if (unlink(outder.c_str()) != 0) {
-         DEBUG("problems removing "<<outder);
+	DEBUG("problems removing "<<outder);
       }
    }
 
