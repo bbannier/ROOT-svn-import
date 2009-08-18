@@ -11,8 +11,6 @@ private:
    Int_t   fCubicCap;   // engine cubic capacity
    Float_t fPower;      // engine power (kW)
    
-   void    Progress();
-
 public:
    TMotorcycle();
    TMotorcycle(const char *brand, const char *model, Int_t cap, Float_t power);
