@@ -6,7 +6,7 @@
 void create_histo()
 {
    // function creating a histogram using the data 
-   // located in ages.txt (ages of CSC08 participants)
+   // located in ages.txt (ages of CSC participants)
    // and saving the created histogram in a Root file
 
    FILE *stream;
