@@ -4,6 +4,11 @@
 <h1>ROOT Exercise I - Solution</h1>
 <p>Got stuck? This is the solution</p>
 <h2>2 Constructors and alike</h2>
+<div class="exercise">
+We continue to use <a href="test_motorcycle.C" class="source">test_motorcycle.C</a>.
+      As you can see the macro has a bug - instead of five motorcycles it only displays one kind
+      of motorcycles. Fix that!
+</div>
 
 As the lecture describes, you must have to pass a pointer to the TMotorcycle object <tt>mybike</tt>
 and use the pointer inside the function to really change the original object itself.
@@ -18,15 +23,11 @@ the same and unique object, without copying it each time</p>
 #include "Riostream.h"
 #include "Motorcycle.h"
 
-void setproperties(TMotorcycle *m, const char *brand, const char *model, Int_t cap, Float_t power)
+void setproperties(TMotorcycle *mybike, const char *brand, const char *model, Int_t cap, Float_t power)
 {
    // function setting (changing) parameters of the TMotorcycle class
    // passed in argument
 
-   // declare the pointer on TMotorcycle class
-   TMotorcycle *mybike;
-   // assign it to the one passed in argument
-   mybike = m;
    // set the brand
    mybike-&gt;SetBrand(brand);
    // set the model
@@ -37,13 +38,11 @@ void setproperties(TMotorcycle *m, const char *brand, const char *model, Int_t c
    mybike-&gt;SetPower(power);
 }
 
-void printinfos(TMotorcycle *m)
+void printinfos(TMotorcycle *mybike)
 {
    // function printing parameters of the TMotorcycle class
    // pointer passed in argument
 
-   // declare the class pointer (assign it to the one passed in argument)
-   TMotorcycle *mybike = m;
    // dump infos on the terminal
    cout << "Brand: " << mybike-&gt;GetBrand();
    cout << " - Model: " << mybike-&gt;GetModel();
