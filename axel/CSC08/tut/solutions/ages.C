@@ -8,7 +8,7 @@
 TH1F *create_histo()
 {
    // function creating a histogram using the data 
-   // located in ages.txt (ages of CSC08 participants)
+   // located in ages.txt (ages of CSC participants)
    // and returning a pointer on the created histogram
 
    FILE *stream;
