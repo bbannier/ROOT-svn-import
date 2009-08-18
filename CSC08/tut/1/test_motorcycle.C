@@ -1,6 +1,13 @@
 
 #include "Riostream.h"
+#include "TROOT.h"
+#include "TCanvas.h"
+#ifndef __CINT__
+// We already load the library for CINT
 #include "Motorcycle.h"
+#else
+class TMotorcycle;
+#endif
 
 void setproperties(TMotorcycle mybike, const char *brand, const char *model, Int_t cap, Float_t power)
 {
@@ -35,7 +42,7 @@ void test_motorcycle()
 
    // load the library containing the TMotorcycle class 
    // implementation
-   gSystem->Load("Motorcycle_C");
+   gROOT->ProcessLine(".L Motorcycle.C+");
    // create a canvas to display pictures of the motorcycles
    TCanvas *c1 = new TCanvas("c1", "Pictures", 1200, 600);
    // divide the canvas

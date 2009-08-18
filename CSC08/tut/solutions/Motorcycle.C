@@ -14,6 +14,7 @@ TMotorcycle::TMotorcycle() : fBrand(""), fModel(""), fCubicCap(0), fPower(0.0)
    // Default constructor.
 
    Progress();
+   printf("TMotorcycle()\n");
 }
 
 //______________________________________________________________________________
@@ -27,6 +28,7 @@ TMotorcycle::TMotorcycle(const char *brand, const char *model, Int_t cap,
    fCubicCap = cap;
    fPower    = power;
    Progress();
+   printf("TMotorcycle(...)\n");
 }
 
 //______________________________________________________________________________
@@ -39,6 +41,7 @@ TMotorcycle::TMotorcycle(const TMotorcycle &c)
    fCubicCap = c.fCubicCap;
    fPower    = c.fPower;
    Progress();
+   printf("TMotorcycle(const TMotorcycle&)\n");
 }
 
 //______________________________________________________________________________
@@ -47,6 +50,7 @@ TMotorcycle::~TMotorcycle()
    // Destructor.
 
    Progress();
+   printf("~TMotorcycle()\n");
 }
 
 //______________________________________________________________________________
@@ -61,6 +65,7 @@ TMotorcycle& TMotorcycle::operator=(const TMotorcycle &c)
       fPower    = c.fPower;
       Progress();
    } 
+   printf("op=()\n");
    return *this;
 }
 
