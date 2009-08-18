@@ -7,9 +7,6 @@ void histogram()
 {
    // Don't display fit informations
    gStyle->SetOptFit(0);
-   // Display only the following statistics informations:
-   // name, number of entries, mean and rms
-   gStyle->SetOptStat(1111);
    // create 1D histogram of floats
    // note the operator new!!!!
    // the histogram is now created on the heap
@@ -22,7 +19,7 @@ void histogram()
    sqroot->SetParameters(10.0, 4.0, 1.0, 20.0);
    // randomly fill histogram with a distribution following
    // the previously created function
-   h1.FillRandom("sqroot", 10000);
+   h1->FillRandom("sqroot", 10000);
    // finally draw (display) the histogram
-   h1.Draw();
+   h1->Draw();
 }

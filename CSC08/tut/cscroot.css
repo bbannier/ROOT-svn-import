@@ -1,3 +1,12 @@
+body { 
+margin: 12px 24px;
+background-color: #ccc;
+}
+#b { 
+background-color: #fff;
+padding: 22px;
+}
+
 .help1 {
   background-color: #fffda3;
 }
