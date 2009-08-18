@@ -2,15 +2,11 @@
 #include "Riostream.h"
 #include "Motorcycle.h"
 
-void setproperties(TMotorcycle m, const char *brand, const char *model, Int_t cap, Float_t power)
+void setproperties(TMotorcycle mybike, const char *brand, const char *model, Int_t cap, Float_t power)
 {
    // function setting (changing) parameters of the TMotorcycle class
    // passed in argument
 
-   // declare the TMotorcycle class
-   TMotorcycle mybike;
-   // set it to the one passed in argument
-   mybike = m;
    // set the brand
    mybike.SetBrand(brand);
    // set the model
@@ -21,13 +17,11 @@ void setproperties(TMotorcycle m, const char *brand, const char *model, Int_t ca
    mybike.SetPower(power);
 }
 
-void printinfos(TMotorcycle m)
+void printinfos(TMotorcycle mybike)
 {
    // function printing parameters of the TMotorcycle class
    // passed in argument
 
-   // declare the class (using the one passed in argument)
-   TMotorcycle mybike(m);
    // dump infos on the terminal
    cout << "Brand: " << mybike.GetBrand();
    cout << " - Model: " << mybike.GetModel();

@@ -7,9 +7,6 @@ void histogram()
 {
    // Don't display fit informations
    gStyle->SetOptFit(0);
-   // Display only the following statistics informations:
-   // name, number of entries, mean and rms
-   gStyle->SetOptStat(1111);
    // create 1D histogram of floats
    TH1F h1("h1", "Random numbers", 200, 0.0, 10.0);
    // create a formula
