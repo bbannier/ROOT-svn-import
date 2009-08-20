@@ -12,6 +12,10 @@ void read_tree()
 
    // open the Root file
    TFile *f = new TFile("http://server/exercise3.root");
+   if (!f || f->IsZombie()) {
+      printf("Problem opening http://server/exercise2.root \n");
+      return;
+   }
    // get the tree from the file
    TTree *myTree = (TTree*)f->Get("MyTree");
    // disable all branches 
