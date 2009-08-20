@@ -3,98 +3,43 @@
 <body class="solution">
 <h1>ROOT Exercise III - Solution</h1>
 <p>Got stuck? This is the solution</p>
-<h2>1 Split Level</h2>
+<h2>1 My First TSelector</h2>
 
 <div class="exercise">
-Run the macro <a href="exercise3.C" class="source">exercise3.C</a>
-in compiled mode.
-We, Bertand and Axel, have used that macro to generate yesterday's tree.
-Note the ROOT file's compression factor.
-Note the time it takes to write the tree by using the same mechanism as in 
-<a href="read_tree.C" class="source">read_tree.C</a> from yesterday,
-which we have included in today's sources again for your convenience.
+<p>We have created a selector (starting from the output of <tt>TTree::MakeSelector()</tt>) for you;
+	  see the files <a href="beamspot.root" class="source">TPosCorr.h</a> and <a href="beamspot.root" class="source">TPosCorr.C</a>.
+	  Run it on the TTree MyTree spread over the files</p>
+	  <pre>
+	  http://server/exercise3.root
+	  http://server/exercise3_1.root
+	  http://server/exercise3_2.root
+	  http://server/exercise3_3.root
+	  http://server/exercise3_4.root
+	  http://server/exercise3_5.root
+	  http://server/exercise3_6.root
+	  http://server/exercise3_7.root
+	  http://server/exercise3_8.root
+	  http://server/exercise3_9.root
+	  http://server/exercise3_10.root
+	  </pre>
+	  <p>Run the selector in compiled mode on the whole tree.</p>
 </div>
 
-<pre>
-.x exercise3.C+
-.q
-root
-.x read_tree.C+
-gFile-&gt;GetCompressionFactor()
-</pre>
-<p>This is what exercise3.C should look like to get the timing information:</p>
+<p>You could write a macro <tt>go.C</tt> that sets up the chain and runs the selector,
+and that you can run with <tt>.x go.C</tt>:</p>
 
 <pre>
-#include "TFile.h"
-#include "TTree.h"
-#include "TRandom.h"
-#include "TClonesArray.h"
-#include "myparticle.h"
-#include "TROOT.h"
-
-void exercise3(Int_t nevents = 1000)
+#include "TChain.h"
+void go()
 {
-   Int_t i, j;
-   gRandom-&gt;SetSeed();
-   // first create a file
-   TFile f("exercise3.root", "recreate");
-   // create a tree
-   TTree MyTree("MyTree","MyEvent Tree");
-   MyTree.SetAutoSave(10000000000);
-   // create clone arrays
-   TClonesArray *electrons = new TClonesArray("Electron");
-   TClonesArray &amp;el = *electrons;
-
-   TClonesArray *muons = new TClonesArray("Muon");
-   TClonesArray &amp;mu = *muons;
-
-   TClonesArray *pions = new TClonesArray("Pion");
-   TClonesArray &amp;pi = *pions;
-   // create a branch holding the vector
-   MyTree.Branch("electrons", &amp;electrons, 32000, 99);
-   // create a branch holding the clones array
-   MyTree.Branch("muons", &amp;muons, 32000, 99);
-   MyTree.Branch("pions", &amp;pions, 32000, 0);
-
-   // initialize Root's timing mechanism
-   <b>gROOT-&gt;Time();</b>
-
-   for (i=0;i&lt;nevents;i++) {
-      el.Clear();
-      mu.Clear();
-      pi.Clear();
-      // generate a random number of particles
-      Int_t npts = Int_t(gRandom-&gt;Gaus(1000,200));
-      if(npts &lt; 0) npts = 1;
-      for (j=0;j&lt;npts;j++) {
-         Float_t x = gRandom-&gt;Gaus(1.2);
-         Float_t y = gRandom-&gt;Gaus(0.9);
-         Float_t z = gRandom-&gt;Gaus();
-         Float_t e_e = gRandom-&gt;Landau(510,25.0);
-         Float_t e_u = gRandom-&gt;Landau(1056.6,10.0);
-         Float_t e_p = gRandom-&gt;Landau(1349.8,13.0);
-         Float_t p_e = gRandom-&gt;Landau(1.0, 0.1);
-         Float_t p_u = gRandom-&gt;Landau(2.0, 0.2);
-         Float_t p_p = gRandom-&gt;Landau(2.7, 0.27);
-         // create a new particle in the vector
-         Electron *e = new(el[j]) Electron(x, y, z, e_e, p_e);
-         Muon     *u = new(mu[j]) Muon(x, y, z, e_u, p_u);
-         Pion     *p = new(pi[j]) Pion(x, y, z, e_p, p_p);
-      }
-      // fill the tree
-      MyTree.Fill();
+   TChain* ch = new TChain("MyTree");
+   ch-&gt;Add("http://server/exercise3.root");
+   for (int i = 1; i &lt; 11; ++i) {
+       // Use TString::Format() to insert the file number (%d gets replaced by i)
+       ch-&gt;Add(TString::Format("http://server/exercise3_%d.root", i));
    }
-
-   // display the time elapsed since the first call to gROOT-&gt;Time()
-   <b>gROOT-&gt;Time();</b>
-
-   // print the content of the tree
-   MyTree.Print();
-   // write it to the file
-   MyTree.Write();
+   ch-&gt;Process("TPosCorr.C+");
 }
-
-
 </pre>
 </body>
 </html>
