@@ -8,7 +8,8 @@
 // data and other objects needed to run can be prepared with any of
 // the rs500*.C tutorial macros.
 //
-// 
+// Compute with ProfileLikelihoodCalculator a 95% CL upper limit on
+// the parameter of interest for the given data.
 //
 //////////////////////////////////////////////////////////////////////////
 
@@ -16,59 +17,45 @@ using namespace RooFit;
 using namespace RooStats;
 
 
-void rs501_ProfileLikelihoodCalculator_limit(const char* fname="WS_GaussOverFlat.root",const char* outputplot="pnll.ps")
+void rs501_ProfileLikelihoodCalculator_limit( const char* fileName="WS_GaussOverFlat.root" )
 {
+  // Open the ROOT file and import from the workspace the objects needed for this tutorial
+  TFile* file = new TFile(fileName);
+  RooWorkspace* myWS = (RooWorkspace*) file->Get("myWS");
+  RooAbsPdf* modelTmp = myWS->pdf("model");
+  RooAbsData* data = myWS->data("data");
+  RooAbsPdf* priorNuisance = myWS->pdf("priorNuisance");
+  RooArgSet* POI = myWS->set("POI");
+  RooRealVar* parameterOfInterest = POI->first();
 
-  TFile* file =new TFile(fname);
-  RooWorkspace* my_WS = (RooWorkspace*) file->Get("myWS");
-  //Import the objects needed
-  RooAbsPdf* modeltmp=my_WS->pdf("model");
-  RooAbsData* data=my_WS->data("data");
-  RooAbsPdf* priorNuisance=my_WS->pdf("priorNuisance");
-  RooArgSet* paramInterestSet=my_WS->set("POI");
-  RooRealVar* paramInterest=paramInterestSet->first();
-  RooArgSet* nuisanceParam=my_WS->set("parameters");
+  // If there are nuisance parameters, multiply their prior distribution to the full model
+  RooProdPdf* model = modelTmp;
+  if( priorNuisance!=0 ) model = new RooProdPdf("constrainedModel","Model with nuisance parameters",*modelTmp,*priorNuisance);
 
-  //If there are nuisance parameters, multiply their prior to the full model
-  if(priorNuisance!=0) {
-    RooProdPdf* model=new RooProdPdf("constrainedModel","Model with nuisance parameters",*modeltmp,*priorNuisance);
-  }
-  else{
-    RooProdPdf* model=modeltmp;
-  }
-
-  //Set up the nll
+  // Set up the ProfileLikelihoodCalculator
   ProfileLikelihoodCalculator plc;
   plc.SetPdf(*model);
   plc.SetData(*data);
-  RooArgSet POI(*paramInterest);
-  plc.SetParameters(POI);
-  plc.SetTestSize(0.1); //ProfileLikelihoodCalculator usually make intervals. 95% Upperlimit is the same as the 90% upper limit of an interval  
-  ConfInterval* pllint=plc.GetInterval();
+  plc.SetParameters(*POI);
+  // ProfileLikelihoodCalculator usually make intervals: the 95% CL one-sided upper-limit is the same as the two-sided upper-limit of a 90% CL interval  
+  plc.SetTestSize(0.10);
+
+  // Pointer to the confidence interval
+  LikelihoodInterval* interval = plc.GetInterval();
+
+  // Receive the profile-log-likelihood function
+  RooAbsReal* profile = interval->GetLikelihoodRatio();
+
+  // Compute the upper limit: a fit is needed first in order to locate the minimum of the -log(likelihood) and ease the upper limit computation
   model->fitTo(*data);
-  
-  TCanvas* c1=new TCanvas();
-  c1->cd();
-  
-  //Receive the function
-  RooAbsReal* newProfile = ((LikelihoodInterval*)pllint)->GetLikelihoodRatio();
-  //Get the limit
-  const Double_t upperlimit = ((LikelihoodInterval*)pllint)->UpperLimit(*paramInterest);
-  
-  //Make a control plot
-  RooPlot *frame = paramInterest->frame();
-  newProfile->plotOn(frame);
-  TLine *upperlimitline = new TLine(upperlimit,0.,upperlimit,1.5);
-  upperlimitline->SetLineColor(2);
-  upperlimitline->SetLineWidth(6);
-  frame->addObject(upperlimitline);
-  frame->SetMinimum(0.);
-  frame->SetMaximum(1.36+2);
-  frame->GetYaxis()->SetTitle("- log #lambda");
-  frame->Draw();
-  c1->Print(outputplot);
-  std::cout<<"A plot was saved at"<<outputplot <<std::endl;
-  std::cout<<"One sided upper limit at 95\% CL:"<<upperlimit<<std::endl; 
+  const Double_t upperLimit = interval->UpperLimit(*parameterOfInterest);
+
+  // Make a plot of the profile-likelihood and confidence interval
+  LikelihoodIntervalPlot plot(interval);
+  plot->Draw();
+
+  std::cout << "One sided upper limit at 95\% CL: "<< upperLimit << std::endl;
+
+  delete model;
   file->Close();
-  
 }
