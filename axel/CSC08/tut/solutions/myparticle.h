@@ -25,7 +25,7 @@ public:
    Int_t   fPDGCode;
    Double_t fMass, fE, fPt;
    Vertex  fVertex;
-   static const int kBlobSize = 128;
+   static const int kBlobSize = 128/8;
    Double_t fData[kBlobSize]; // BLOB
 
    MyParticle() : fPDGCode(0), fMass(0.0), fE(0.0), fPt(0.0) { }
