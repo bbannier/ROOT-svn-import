@@ -36,7 +36,10 @@ cd 3</pre>
 	  </pre>
 	  <p>Run the selector in compiled mode on the whole tree.</p>
       <a href="help11.html" class="help1">HELP!</a></li>
+  </ol></li>
 
+  <li class="lvl1">PROOF
+    <ol>    
       <li><p>That worked, but it wasn't impressively fast. What about running the same selector on PROOF?
 	  We have set up a PROOF cluster for you - you are sitting in front of it.
 	  During the first exercise, you all used one core of your machine.
@@ -46,22 +49,24 @@ cd 3</pre>
 	  <p>So let's run it! The PROOF master is called <tt>"server"</tt>. Any speed difference?</p>
       <a href="help21.html" class="help1">HELP!</a></li>
 	  
-      <li><p>.</p>
-      <a href="help91.html" class="help1">HELP!</a></li>
-
-      <li><p>Can you find out why PROOF spawns the amount of workers it does (it should be two)?</p>
-      <a href="helpA1.html" class="help1">HELP!</a></li>
-
-      <li><p>Try to change the number of workers on your computer (e.g set up 6 workers).</p>
-      <a href="helpB1.html" class="help1">HELP!</a></li>
-    </ol>
+      <li><p>That was fast, right? Now let's do it interactively. Quit ROOT and start it again.
+	  Simply run <tt>TProof::Open()</tt>. The GUI will allow you to do the same as in the previous exercise.
+	  Once the selector has run, look at the histograms that are displayed: there are plenty of PROOF statistics like
+	  the number of events per node.	  
+	  </p>
+      <a href="help31.html" class="help1">HELP!</a></li>
+	</ol>
   </li>
+  <li class="lvl1">My Second TSelector [OPTIONAL!]
+    <ol>
+	<li><p>New create your own TSelector - this time we use a different mechanism called Proxy.
+	You can create a skeleton prozy-based TSelector from a TTree by calling <tt>TTree::MakeProxy(...)</tt>.
+	Modify it so it does what the previous selector did (you may remove the call to Sleep() now ;-).
+	This kind of selector is powerful because it determines itself what part of the TTree must be read,
+	without the need to specify branches etc.</p>
+    <a href="help41.html" class="help1">HELP!</a></li>
+	</li>
+	</ol>
 </ol>
-<h2>
-Selector: draw complex var (i.e. lots of trogonometrics, loops, correlations, maybe a minimization!) but only small events (little I/O)
-New TTree spread over several TFiles (TChain) accessible via http.
-
-If Quad-Core: 2 cores for proof cluster; test selector on local, proof lite, proof cluster.
-</h2>
 </div></body>
 </html>

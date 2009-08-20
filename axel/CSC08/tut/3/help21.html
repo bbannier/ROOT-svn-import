@@ -3,28 +3,23 @@
 <body class="help1">
 <h1>ROOT Exercise III - Help Level 1</h1>
 <p>Got stuck? This might help:</p>
-<h2>1 Split Level</h2>
+<h2>2 PROOF</h2>
 
 <div class="exercise">
-Now change the macro <a href="exercise3.C" class="source">exercise3.C</a>
-such that the tree is generated with split level 0 instead of 99.
-Did the compression factor change? Why? Did the timing change? Why?
+<p>That worked, but it wasn't impressively fast. What about running the same selector on PROOF?
+	  We have set up a PROOF cluster for you - you are sitting in front of it.
+	  During the first exercise, you all used one core of your machine.
+	  PROOF is configured to use one core of your machine, too - but on all machines!
+	  Depending on when you get here the PROOF cluster might be pretty busy or completely empty,
+	  and you will get a performance improvement that depends on the available resources.</p>
+	  <p>So let's run it! The PROOF master is called <tt>"server"</tt>. Any speed difference?</p>
 </div>
 
-<p>Check the lecture on how to adjust the split level; hint: it is a property of the branch.</p>
-<p>Re-read the lecture's part on splitting to answer why the compression factor and the timing has changed:
-with split level 99, the branch's data is ordered by data member,
-whereas with split level 0 all data members are stored as one "blob" within the object that contains these data members.
-Combine that with some knowledge about what "zipping" really is (e.g. from <a href="http://en.wikipedia.org/wiki/ZIP_(file_format)">wikipedia.com</a>):
-it uses the <a href="http://en.wikipedia.org/wiki/DEFLATE">DEFLATE</a> algorithm to compress data,
-which in turn is an implementation using <a href="http://en.wikipedia.org/wiki/Huffman_coding">Huffman Coding</a>.
-That should get you to the key ingredient:
-if you have a lot of identical consecutive bytes you get a good compression factor, e.g
-12 consecutive float values of 3.0 followed by 12 floats of 0.7 compress much better than
-12 consecutive pairs of 3.0, 0.7. Now how is that related to the split level?</p>
-<p>The timing changes because split level 99 means ROOT has to handle and write a lot of baskets (branch buffers) per tree because the tree has a lot of branches.
-This causes an overhead in writing.</p>
-
+<p>The lecture tells you how to initialize a PROOF session. You will need to give the master as an argument.
+Don't forget to tell the <tt>TChain</tt> to use PROOF for <tt>Process()</tt>.
+And yes, that's of course also in the lecture.</p>
+<p>If you have a problem connecting to the PROOF server please try again.
+If the problem persists we might have to restart the server... so let us know!</p>
 <a href="help2s.html" class="solution">SOLUTION!</a>
 </body>
 </html>
