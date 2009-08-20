@@ -15,23 +15,7 @@
 cd 3</pre>
 <p>These are your exercises for this session:</p>
 <ol>
-  <li class="lvl1">Split Level
-    <ol>
-      <li><p>Run the macro <a href="exercise3.C" class="source">exercise3.C</a>
-      in compiled mode.
-      We, Bertand and Axel, have used that macro to generate yesterday's tree.
-      Note the ROOT file's compression factor.
-      Note the time it takes to write the tree by using the same mechanism as in 
-      <a href="read_tree.C" class="source">read_tree.C</a> from yesterday,
-      which we have included in today's sources again for your convenience.</p>
-      <a href="help11.html" class="help1">HELP!</a></li>
 
-      <li><p>Now change the macro <a href="exercise3.C" class="source">exercise3.C</a>
-      such that the tree is generated with split level 0 instead of 99.
-      Did the compression factor change? Why? Did the timing change? Why?</p>
-      <a href="help21.html" class="help1">HELP!</a></li>
-    </ol>
-  </li>
   <li class="lvl1">My First TSelector
     <ol>    
       <li><p>Explore the tree in <a href="beamspot.root" class="source">beamspot.root</a>.
@@ -85,5 +69,11 @@ cd 3</pre>
     </ol>
   </li>
 </ol>
+<h2>
+Selector: draw complex var (i.e. lots of trogonometrics, loops, correlations, maybe a minimization!) but only small events (little I/O)
+New TTree spread over several TFiles (TChain) accessible via http.
+
+If Quad-Core: 2 cores for proof cluster; test selector on local, proof lite, proof cluster.
+</h2>
 </div></body>
 </html>
