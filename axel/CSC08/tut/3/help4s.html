@@ -3,36 +3,12 @@
 <body class="solution">
 <h1>ROOT Exercise III - Solution</h1>
 <p>Got stuck? This is the solution</p>
-<h2>2 My First TSelector</h2>
+<h2>2 PROOF</h2>
 
 <div class="exercise">
-Actually you have more than just one file - the tree is spread over several ROOT files.
-So you want to create a TChain from them all.
-How much time of data taking does the tree from all the <tt>beamspot*.root</tt> files correspond to?
+<p>Instead of using the whole PROOF cluster, only use your local machine by running the selector in proof lite.</p>
 </div>
 
-<pre>TChain* ch = new TChain("tree3"); // create the chain, giving the trees' name
-ch-&gt;Add("beamspot*.root"); // add all files
-ch-&gt;Draw("eventinfo.fTime"); // draw the date and time. we find 2008-06-23, 16:05.
-
-// there are one million micro seconds in a second,
-// so divide them by 1000000. to get fractions of seconds
-ch-&gt;Draw("eventinfo.fTime.GetSecond() + eventinfo.fMuSec / 1000000.");
-</pre>
-<p>But that does not give you enough detail: when was the first event taken?
-When the last one?</p>
-
-<p>The simplest solution is to scan through the tree,
-see the documentation of TTree::Scan():
-<pre>ch-&gt;Scan("eventinfo.fTime.GetSecond() + eventinfo.fMuSec / 1000000",
-                 "", "", 1);
-</pre>
-
-<p>And the last event:
-<pre>ch-&gt;Scan("eventinfo.fTime.GetSecond() + eventinfo.fMuSec / 1000000.",
-                 "", "", 1, ch-&gt;GetEntries()-1);
-</pre>
-<p>The chain tells you that the first event was taken at 2008-06-23, 16:05:00.76431;
-the last one was taken at 2008-06-23, 16:05:51.47468.</p>
+<p></p>
 </body>
 </html>

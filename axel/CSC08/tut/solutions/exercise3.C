@@ -30,7 +30,7 @@ void exercise3(int type)
    // create a tree
    TTree *MyTree = new TTree("MyTree","MyEvent Tree");
    if (chain)
-	  MyTree->SetMaxTreeSize(5000000);
+	  MyTree->SetMaxTreeSize(50000000);
    // create clone arrays
    TClonesArray *electrons = new TClonesArray("Electron");
    TClonesArray &el = *electrons;

@@ -6,9 +6,11 @@
 <h2>2 My First TSelector</h2>
 
 <div class="exercise">
-Actually you have more than just one file - the tree is spread over several ROOT files.
-So you want to create a TChain from them all.
-How much time of data taking does the tree from all the <tt>beamspot*.root</tt> files correspond to?
+<p>New create your own TSelector - this time we use a different mechanism called Proxy.
+	You can create a skeleton proxy-based TSelector from a TTree by calling <tt>TTree::MakeProxy(...)</tt>.
+	Modify it so it does what the previous selector did (you may remove the call to Sleep() now ;-).
+	This kind of selector is powerful because it determines itself what part of the TTree must be read,
+	without the need to specify branches etc.</p>
 </div>
 
 <p>You should use a TChain to open a tree spread over multiple files.
