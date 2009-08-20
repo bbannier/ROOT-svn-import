@@ -1154,16 +1154,20 @@ RooAbsPdf* RooFitResult::createHessePdf(const RooArgSet& params) const
   // Handle special case of representing full covariance matrix here
   if (params3.getSize()==_finalPars->getSize()) {
 
-    TVectorD mu(_finalPars->getSize())  ;
+    RooArgList mu ;
     for (Int_t i=0 ; i<_finalPars->getSize() ; i++) {
-      mu(i) = ((RooAbsReal*)_finalPars->at(i))->getVal() ;
+      RooRealVar* parclone = (RooRealVar*) _finalPars->at(i)->Clone(Form("%s_centralvalue",_finalPars->at(i)->GetName())) ;
+      parclone->setConstant(kTRUE) ;
+      mu.add(*parclone) ;      
     }
 
     string name  = Form("pdf_%s",GetName()) ;
     string title = Form("P.d.f of %s",GetTitle()) ;
     
     // Create p.d.f.
-    return  new RooMultiVarGaussian(name.c_str(),title.c_str(),params3,mu,V) ;         
+    RooAbsPdf* mvg = new RooMultiVarGaussian(name.c_str(),title.c_str(),params3,mu,V) ; 
+    mvg->addOwnedComponents(mu) ;
+    return  mvg ;
   }
 
   //                                       -> ->
@@ -1186,9 +1190,11 @@ RooAbsPdf* RooFitResult::createHessePdf(const RooArgSet& params) const
   RooMultiVarGaussian::blockDecompose(V,map1,map2,S11,S12,S21,S22) ;
 
   // Calculate offset vectors mu1 and mu2
-  TVectorD mu1(map1.size())  ;
+  RooArgList mu1 ;
   for (UInt_t i=0 ; i<map1.size() ; i++) {
-    mu1(i) = ((RooAbsReal*)_finalPars->at(map1[i]))->getVal() ;
+    RooRealVar* parclone = (RooRealVar*) _finalPars->at(map1[i])->Clone(Form("%s_centralvalue",_finalPars->at(i)->GetName())) ;
+    parclone->setConstant(kTRUE) ;
+    mu1.add(*parclone) ;      
   }
 
   // Constructed conditional matrix form         -1
@@ -1211,7 +1217,7 @@ RooAbsPdf* RooFitResult::createHessePdf(const RooArgSet& params) const
 
   // Create p.d.f.
   RooAbsPdf* ret =  new RooMultiVarGaussian(name.c_str(),title.c_str(),params3,mu1,Vred) ;
-  
+  ret->addOwnedComponents(mu1) ;  
   return ret ;
 }
 
