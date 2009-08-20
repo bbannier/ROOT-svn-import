@@ -7096,6 +7096,14 @@ public:
       delete hw1ZY;
 
       delete s3;
+
+      // delete all histogram in gROOT
+      TList * l = gROOT->GetList(); 
+      TIter next(l);
+      TObject * obj = 0; 
+      while ((obj = next()))
+         if (obj->InheritsFrom("TH1") ) delete obj; 
+
    }
    
    virtual ~ProjectionTester()
