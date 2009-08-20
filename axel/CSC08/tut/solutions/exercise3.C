@@ -3,7 +3,7 @@
 #include "TRandom.h"
 #include "TClonesArray.h"
 #include "myparticle.h"
-#include "exercise.h"
+#include "exercise3.h"
 
 Float_t MyLandau(Double_t mean = 0, Double_t sigma = 1)
 {
@@ -15,12 +15,18 @@ Float_t MyLandau(Double_t mean = 0, Double_t sigma = 1)
    
 }
 
-void exercise3(Int_t nevents = 1000, Int_t split = 99, bool chain = false)
+void exercise3(int type)
 {
    Int_t i, j;
    gRandom->SetSeed();
    // first create a file
-   TFile* f = new TFile("exercise3.root", "recreate");
+   Int_t nevents = 1000;
+   Int_t split = type != 2 ? 99 : 0;
+   bool chain = (type == 3);
+   const char *name = "exercise2.root";
+   if (type == 2) name = "exercise2_nonsplit.root";
+   if (type == 3) name = "exercise3.root";
+   TFile* f = new TFile(name, "recreate");
    // create a tree
    TTree *MyTree = new TTree("MyTree","MyEvent Tree");
    if (chain)
