@@ -38,6 +38,10 @@ public:
 
   void     setMode(const Setting& setting) { _setting = setting; }
 
+  virtual Bool_t selfNormalized() const { 
+    // P.d.f is self normalized
+    return kTRUE ; 
+  }
 
 protected:
 
