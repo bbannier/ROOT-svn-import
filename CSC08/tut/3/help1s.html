@@ -25,12 +25,11 @@
 	  <p>Run the selector in compiled mode on the whole tree.</p>
 </div>
 
-<p>You could write a macro <tt>go.C</tt> that sets up the chain and runs the selector,
-and that you can run with <tt>.x go.C</tt>:</p>
-
+<p>You could write a macro <tt>makechain.C</tt> that sets up the chain and returns it:</p>
 <pre>
 #include "TChain.h"
-void go()
+#include "TString.h"
+TChain* makechain()
 {
    TChain* ch = new TChain("MyTree");
    ch-&gt;Add("http://server/exercise3.root");
@@ -38,8 +37,14 @@ void go()
        // Use TString::Format() to insert the file number (%d gets replaced by i)
        ch-&gt;Add(TString::Format("http://server/exercise3_%d.root", i));
    }
-   ch-&gt;Process("TPosCorr.C+");
+   return ch;
 }
 </pre>
+<p>You can now create the chain with</p>
+<pre>
+.L makechain.C
+TChain* ch = makechain();
+</pre>
+<p>You can then run the selector with <tt>ch-&gt;Process("TPosCorr.C+");</tt></p>
 </body>
 </html>
