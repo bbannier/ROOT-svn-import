@@ -20,7 +20,7 @@ void read_tree()
    // function reading particles collection in a tree
 
    // open the Root file
-   TFile *f = new TFile("http://server/exercise3.root");
+   TFile *f = new TFile("http://server/exercise2.root");
    // get the tree from the file
    TTree *myTree = (TTree*)f-&gt;Get("MyTree");
    <b>// disable all branches 

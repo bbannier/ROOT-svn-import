@@ -27,41 +27,41 @@ void read_tree()
    // function reading particles collection in a tree
 
    // open the Root file
-   TFile *f = new TFile("http://server/exercise3.root");
+   TFile *f = new TFile("http://server/exercise2.root");
    // get the tree from the file
-   TTree *myTree = (TTree*)f->Get("MyTree");
+   TTree *myTree = (TTree*)f-&gt;Get("MyTree");
    // declare a pointer on a TClonesArray 
    // and initialize it to 0
    TClonesArray *particles = 0;
    // assign the branch to the TClonesArray
-   myTree->SetBranchAddress("electrons", &particles);
+   myTree-&gt;SetBranchAddress("electrons", &amp;particles);
    
    // initialize Root's timing mechanism
-   gROOT->Time();
+   gROOT-&gt;Time();
    
    // create the 1D histogram of floats 
    // (100 bins, between 0.0 and 10.0)
    TH1F *h1 = new TH1F("h1", "Pt", 100, 0.0, 10.0);
    // get number of entries in the tree
-   Long64_t nentries = myTree->GetEntries();
+   Long64_t nentries = myTree-&gt;GetEntries();
    // loop over all entries
-   for (Long64_t ev=0;ev<nentries;ev++) {
+   for (Long64_t ev=0;ev&lt;nentries;ev++) {
       // get tree entry[ev]
-      myTree->GetEntry(ev);
+      myTree-&gt;GetEntry(ev);
       // get number of particle in the TClonesArray
-      Int_t npart = particles->GetEntriesFast();
+      Int_t npart = particles-&gt;GetEntriesFast();
       // loop over all particles
-      for (Int_t i=0;i<npart;++i) {
+      for (Int_t i=0;i&lt;npart;++i) {
          // get the ith particle
-         MyParticle *particle = (MyParticle *)particles->At(i);
+         MyParticle *particle = (MyParticle *)particles-&gt;At(i);
          // fill the histogram with particle's energy value
-         h1->Fill(particle->fE);
+         h1-&gt;Fill(particle-&gt;fE);
       }
    }
    // draw (display) the histogram
-   h1->Draw();
-   // display the time elapsed since the first call to gROOT->Time()
-   gROOT->Time();
+   h1-&gt;Draw();
+   // display the time elapsed since the first call to gROOT-&gt;Time()
+   gROOT-&gt;Time();
 }
 
 </pre>
