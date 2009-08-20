@@ -6,13 +6,12 @@
 <h2>2 Reading a Tree </h2>
 
 <div class="exercise">
-<p>Use <tt>TTree::Draw()</tt> to draw the same expression.
-Is the performance comparable to the read performance with all branches enabled?</p>
+<p>To accelerate the I/O for the non-split tree, we now enable <tt>TTree</tt>'s pre-fetch mechanism, confusingly called
+      'cache'. This is disabled by default; use the documentation to find out how to enable it. Use <tt>TTree::Draw()</tt> of the
+      same expression again (on the non-split tree). Do you notice any timing differences?</p>
 </div>
 
-<p>Use the TTree::Draw() method, e.g: <tt>myTree->Draw("electrons.fPt", "");</tt> </p>
-<p>Then your code should look like: </p>
-
+<p>If you still plot <tt>fE</tt> then your code might look like this:</p>
 <pre>
 #include "TROOT.h"
 #include "TFile.h"
@@ -27,9 +26,11 @@ void read_tree()
    // function reading particles collection in a tree
 
    // open the Root file
-   TFile *f = new TFile("http://server/exercise2.root");
+   TFile *f = new TFile("http://server/exercise2_nonsplit.root");
    // get the tree from the file
    TTree *myTree = (TTree*)f-&gt;Get("MyTree");
+   // Enable prefetching
+   myTree-&gt;SetCacheSize();
    
    // initialize Root's timing mechanism
    gROOT-&gt;Time();
@@ -40,11 +41,9 @@ void read_tree()
    // display the time elapsed since the first call to gROOT-&gt;Time()
    gROOT-&gt;Time();
 }
-
 </pre>
-
-<p>And you can notice that the performance is comparable to reading branches with all 
-branches disabled but the one you want to read</p>
-
+<p>You should see that this is faster - as fast as for the split tree.
+ROOT still has to read the full muons branch, but it does that before you need the data,
+so when you need it it's already there.</p>
 </body>
 </html>
