@@ -11,9 +11,9 @@ void read_tree()
    // function reading particles collection in a tree
 
    // open the Root file
-   TFile *f = new TFile("http://server/exercise3.root");
+   TFile *f = TFile::Open("http://server/ROOT/exercise2.root");
    if (!f || f->IsZombie()) {
-      printf("Problem opening http://server/exercise2.root \n");
+      printf("Problem opening http://server/ROOT/exercise2.root \n");
       return;
    }
    // get the tree from the file
