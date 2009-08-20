@@ -18,47 +18,35 @@ cd 3</pre>
 
   <li class="lvl1">My First TSelector
     <ol>    
-      <li><p>Explore the tree in <a href="beamspot.root" class="source">beamspot.root</a>.
-      It contains the position of the primary collision of the beam's particles
-      ("vertex 0" or "primary vertex") for a virtual experiment.
-      The position is stored in centimeters relative to the center of the detector.
-      For each position (x|y|z) the tree also denotes the time stamp of the collision,
-      where everything (year up to second) is in one branch,
-      and the fractions of seconds are stored in another branch.
-      What branches does it have? What is its structure?</p>
-      <a href="help31.html" class="help1">HELP!</a></li>
+      <li><p>We have created a selector (starting from the output of <tt>TTree::MakeSelector()</tt>) for you;
+	  see the files <a href="TPosCorr.h" class="source">TPosCorr.h</a> and <a href="TPosCorr.C" class="source">TPosCorr.C</a>.
+	  Run it on the TTree MyTree spread over the files</p>
+	  <pre>
+	  http://server/exercise3.root
+	  http://server/exercise3_1.root
+	  http://server/exercise3_2.root
+	  http://server/exercise3_3.root
+	  http://server/exercise3_4.root
+	  http://server/exercise3_5.root
+	  http://server/exercise3_6.root
+	  http://server/exercise3_7.root
+	  http://server/exercise3_8.root
+	  http://server/exercise3_9.root
+	  http://server/exercise3_10.root
+	  </pre>
+	  <p>Run the selector in compiled mode on the whole tree.</p>
+      <a href="help11.html" class="help1">HELP!</a></li>
 
-      <li><p>Actually you have more than just one file - the tree is spread over several ROOT files.
-      So you want to create a TChain from them all.
-      How much time of data taking does the tree from all the <tt>beamspot*.root</tt> files correspond to?</p>
-      <a href="help41.html" class="help1">HELP!</a></li>
-
-      <li><p>We have written a TSelector for you that analyzes this tree; you can find it in <a href="TBeamSpotSel.h" class="source">TBeamSpotSel.h</a> and <a href="TBeamSpotSel.C" class="source">TBeamSpotSel.C</a>.
-      Run it in compiled mode, e.g. using <tt>TTree::Process()</tt> on the tree in <a href="beamspot.root" class="source">beamspot.root</a>.
-      What does it display?</p>
-      <a href="help51.html" class="help1">HELP!</a></li>
-
-      <li><p>One of the experiment's students is a notorious party animal.
-      One day he had to fix a cable close to the detector,
-      but because he didn't have enough sleep he stumbled and fell.
-      Of course he didn't tell anyone - but can you find out the exact time when it happened?
-      Can you tell what has happened, maybe even (roughly) where he was working?
-      Only that much: it happened during the period of time that you have data for.</p>
-      <a href="help61.html" class="help1">HELP!</a></li>
-
-      <li><p>A beam's particles are not always colliding at the same position, even without external contributions.
-      What is the width of the beam for this experiment, in x, y, and z?
-      Does it change over time?</p>
-      <a href="help71.html" class="help1">HELP!</a></li>
-    </ol>
-  </li>
-  <li class="lvl1">Running a TSelector with PROOF <em>[OPTIONAL!]</em>.
-    <ol>
-      <li><p>Before we can use PROOF you need to start a PROOF daemon from the shell:
-      <pre>xrootd -c xpd.cf -b</pre>
-      You can now start a PROOF job (a <em>session</em> and a <em>query</em>)
-      by running <a href="run.C" class="source">run.C</a> from within ROOT.
-      Look at <a href="run.C" class="source">run.C</a> to see how similar it is compared to a non-PROOF analysis.</p>
+      <li><p>That worked, but it wasn't impressively fast. What about running the same selector on PROOF?
+	  We have set up a PROOF cluster for you - you are sitting in front of it.
+	  During the first exercise, you all used one core of your machine.
+	  PROOF is configured to use one core of your machine, too - but on all machines!
+	  Depending on when you get here the PROOF cluster might be pretty busy or completely empty,
+	  and you will get a performance improvement that depends on the available resources.</p>
+	  <p>So let's run it! The PROOF master is called <tt>"server"</tt>. Any speed difference?</p>
+      <a href="help21.html" class="help1">HELP!</a></li>
+	  
+      <li><p>.</p>
       <a href="help91.html" class="help1">HELP!</a></li>
 
       <li><p>Can you find out why PROOF spawns the amount of workers it does (it should be two)?</p>

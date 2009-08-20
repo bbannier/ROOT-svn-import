@@ -1,8 +1,8 @@
 <html>
-<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise III - Help Level 1</title></head>
-<body class="help1">
+<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise III - Help Level 2</title></head>
+<body class="help2">
 <h1>ROOT Exercise III - Help Level 1</h1>
-<p>Got stuck? This might help:</p>
+<p>Got stuck? This might help even more:</p>
 <h2>1 My First TSelector</h2>
 
 <div class="exercise">
@@ -25,11 +25,9 @@
 	  <p>Run the selector in compiled mode on the whole tree.</p>
 </div>
 
-<p>One TTree spread over many files - that calls for a TChain. Use
-<a href="http://root.cern.ch/root/html/TChain.html#TChain:Add"><tt>TChain::Add(...)</tt></a> to add all the file names.
-A <tt>TChain</tt> derives from <tt>TTree</tt>, and <tt>TTree</tt> implements a way to run a <tt>TSelector</tt>.
-The exercise asks you to run it in compiled mode, so specify a <tt>+</tt> behind the selector source file name.</p>
+<p>Remember that you must pass the TTree name when creating the TChain object!
+Use <tt>TTree::Process("TPosCorr.C+")<tt> to run the selector.</p>
 
-<a href="help12.html" class="help2">MORE HELP!</a>
+<a href="help1s.html" class="solution">SOLUTION!</a>
 </body>
 </html>
