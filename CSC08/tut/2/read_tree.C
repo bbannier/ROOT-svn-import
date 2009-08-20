@@ -12,6 +12,10 @@ void read_tree()
 
    // open the Root file
    TFile *f = TFile::Open("http://server/exercise2.root");
+   if (!f || f->IsZombie()) {
+      printf("Problem opening http://server/exercise2.root \n");
+      return;
+   }
    // get the tree from the file
    TTree *myTree = (TTree*)f->Get("MyTree");
    // declare a pointer on a TClonesArray 
