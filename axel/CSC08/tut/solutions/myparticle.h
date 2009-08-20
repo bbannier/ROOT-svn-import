@@ -25,13 +25,14 @@ public:
    Int_t   fPDGCode;
    Double_t fMass, fE, fPt;
    Vertex  fVertex;
-   Double_t fData[1024]; // BLOB
+   static const int kBlobSize = 128;
+   Double_t fData[kBlobSize]; // BLOB
 
    MyParticle() : fPDGCode(0), fMass(0.0), fE(0.0), fPt(0.0) { }
    MyParticle(Float_t x, Float_t y, Float_t z, Float_t m, Float_t e, Float_t pt) : 
               fMass(m), fE(e), fPt(pt) {
      fVertex.SetVertex(x, y, z);
-     gRandom->RndmArray(1024,fData);
+     gRandom->RndmArray(kBlobSize,fData);
    }
    virtual ~MyParticle() { }
 
