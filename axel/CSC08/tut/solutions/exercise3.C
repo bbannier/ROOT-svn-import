@@ -3,6 +3,7 @@
 #include "TRandom.h"
 #include "TClonesArray.h"
 #include "myparticle.h"
+#include "exercise.h"
 
 Float_t MyLandau(Double_t mean = 0, Double_t sigma = 1)
 {
@@ -14,15 +15,16 @@ Float_t MyLandau(Double_t mean = 0, Double_t sigma = 1)
    
 }
 
-void exercise3(Int_t nevents = 1000)
+void exercise3(Int_t nevents = 1000, Int_t split = 99, bool chain = false)
 {
    Int_t i, j;
    gRandom->SetSeed();
    // first create a file
-   TFile f("exercise3.root", "recreate");
+   TFile* f = new TFile("exercise3.root", "recreate");
    // create a tree
-   TTree MyTree("MyTree","MyEvent Tree");
-   MyTree.SetAutoSave(10000000000);
+   TTree *MyTree = new TTree("MyTree","MyEvent Tree");
+   if (chain)
+	  MyTree->SetMaxTreeSize(5000000);
    // create clone arrays
    TClonesArray *electrons = new TClonesArray("Electron");
    TClonesArray &el = *electrons;
@@ -33,10 +35,10 @@ void exercise3(Int_t nevents = 1000)
    TClonesArray *pions = new TClonesArray("Pion");
    TClonesArray &pi = *pions;
    // create a branch holding the vector
-   MyTree.Branch("electrons", &electrons, 32000, 99);
+   MyTree->Branch("electrons", &electrons, 32000, split);
    // create a branch holding the clones array
-   MyTree.Branch("muons", &muons, 32000, 99);
-   MyTree.Branch("pions", &pions, 32000, 0);
+   MyTree->Branch("muons", &muons, 32000, split);
+   MyTree->Branch("pions", &pions, 32000, split);
    for (i=0;i<nevents;i++) {
       el.Clear();
       mu.Clear();
@@ -60,11 +62,12 @@ void exercise3(Int_t nevents = 1000)
          Pion     *p = new(pi[j]) Pion(x, y, z, e_p, p_p);
       }
       // fill the tree
-      MyTree.Fill();
+      MyTree->Fill();
    }
    // print the content of the tree
-   MyTree.Print();
+   MyTree->Print();
    // write it to the file
-   MyTree.Write();
+   MyTree->Write();
+   //delete MyTree->GetCurrentFile();
 }
 

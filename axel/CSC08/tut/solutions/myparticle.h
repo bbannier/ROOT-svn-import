@@ -1,3 +1,6 @@
+#ifndef INCL_MYPARTICLE_H
+#define INCL_MYPARTICLE_H
+
 #include "TObject.h"
 
 class Vertex : public TObject {
@@ -79,3 +82,4 @@ public:
 #pragma link C++ class Pion+; 
 #endif
 
+#endif // INCL_MYPARTICLE_H
