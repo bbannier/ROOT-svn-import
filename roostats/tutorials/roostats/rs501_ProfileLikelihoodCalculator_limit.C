@@ -52,7 +52,7 @@ void rs501_ProfileLikelihoodCalculator_limit( const char* fileName="WS_GaussOver
 
   // Make a plot of the profile-likelihood and confidence interval
   LikelihoodIntervalPlot plot(interval);
-  plot->Draw();
+  plot.Draw();
 
   std::cout << "One sided upper limit at 95\% CL: "<< upperLimit << std::endl;
 
