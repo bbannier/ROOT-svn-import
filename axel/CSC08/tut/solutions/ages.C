@@ -68,7 +68,7 @@ void ages()
    // main function
    
    // display mean, constant and sigma fit informations
-   gStyle->SetOptFit(10);
+   gStyle->SetOptFit(10001);
    // Display only the following statistics informations:
    // name, number of entries, mean and rms
    gStyle->SetOptStat(1111);
