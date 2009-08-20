@@ -3,18 +3,18 @@
 <body class="help1">
 <h1>ROOT Exercise III - Help Level 1</h1>
 <p>Got stuck? This might help:</p>
-<h2>2 My First TSelector</h2>
+<h2>3 My Second TSelector [OPTIONAL!]</h2>
 
 <div class="exercise">
-We have written a TSelector for you that analyzes this tree; you can find it in <a href="TBeamSpotSel.h" class="source">TBeamSpotSel.h</a> and <a href="TBeamSpotSel.C" class="source">TBeamSpotSel.C</a>.
-Run it in compiled mode, e.g. using <tt>TTree::Process()</tt> on the tree in <a href="beamspot.root" class="source">beamspot.root</a>.
-What does it display?
+<p>New create your own TSelector - this time we use a different mechanism called Proxy.
+	You can create a skeleton proxy-based TSelector from a TTree by calling <tt>TTree::MakeProxy(...)</tt>.
+	Modify it so it does what the previous selector did (you may remove the call to Sleep() now ;-).
+	This kind of selector is powerful because it determines itself what part of the TTree must be read,
+	without the need to specify branches etc.</p>
 </div>
 
-<p>You have a chain, so you call Process() on it.
-To run it with the compiled selector you call it with the filename ending on a "+",
-see the documentation for Process().</p>
+<p>Check the documentation for TTree::MakeProxy().</p>
 
-<a href="help5s.html" class="solution">SOLUTION!</a>
+<a href="help42.html" class="help2">MORE HELP!</a>
 </body>
 </html>
