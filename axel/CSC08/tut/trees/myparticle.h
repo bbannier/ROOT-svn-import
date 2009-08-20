@@ -1,4 +1,8 @@
+#ifndef INCL_MYPARTICLE_H
+#define INCL_MYPARTICLE_H
+
 #include "TObject.h"
+#include "TRandom.h"
 
 class Vertex : public TObject {
 
@@ -19,12 +23,17 @@ class MyParticle : public TObject {
 
 public:
    Int_t   fPDGCode;
-   Float_t fMass, fE, fPt;
+   Double_t fMass, fE, fPt;
    Vertex  fVertex;
+   static const int kBlobSize = 128/8;
+   Double_t fData[kBlobSize]; // BLOB
 
    MyParticle() : fPDGCode(0), fMass(0.0), fE(0.0), fPt(0.0) { }
    MyParticle(Float_t x, Float_t y, Float_t z, Float_t m, Float_t e, Float_t pt) : 
-              fMass(m), fE(e), fPt(pt) { fVertex.SetVertex(x, y, z); }
+              fMass(m), fE(e), fPt(pt) {
+     fVertex.SetVertex(x, y, z);
+     gRandom->RndmArray(kBlobSize,fData);
+   }
    virtual ~MyParticle() { }
 
    void     SetPDGCode(Int_t code) { fPDGCode = code; }
@@ -79,3 +88,4 @@ public:
 #pragma link C++ class Pion+; 
 #endif
 
+#endif // INCL_MYPARTICLE_H

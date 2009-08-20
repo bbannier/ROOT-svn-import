@@ -73,7 +73,7 @@ void exercise3(int type)
    // print the content of the tree
    MyTree->Print();
    // write it to the file
-   MyTree->Write();
+   MyTree->Write(MyTree->GetName(), TObject::kOverwrite);
    //delete MyTree->GetCurrentFile();
 }
 
