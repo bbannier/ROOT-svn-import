@@ -37,9 +37,7 @@ cd 2</pre>
       Modify the macro to read the muons; use the TBrowser to determine the name of the branch.</p>
       <a href="help31.html" class="help1">HELP!</a></li>
 
-      <li><p>Looking at the macro you probably saw that it reads the ROOT file over the network.
-      Usually there is no difference to reading it from a local disk.
-      You can speed it up (even if you were reading from disk) by enabling only the branches that you really need to read.
+      <li><p>You can speed up the processing by enabling only the branches that you really need to read.
       Well, give it a try!</p>
       <a href="help41.html" class="help1">HELP!</a></li>
 
@@ -47,7 +45,8 @@ cd 2</pre>
       <a href="help51.html" class="help1">HELP!</a></li>
 
       <li><p>Use <tt>TTree::Draw()</tt> to draw the same expression.
-      Is the performance comparable to the read performance with all branches enabled?</p>
+      Is the performance comparable to the one of the other measurements?
+	  What does suggest - which optimization does <tt>TTree::Draw()</tt> use?</p>
       <a href="help61.html" class="help1">HELP!</a></li>
 
       <li><p>Now you use <tt>TTree::Draw()</tt> again, but on a non-split tree (split-level 0). The tree can be found in the file
