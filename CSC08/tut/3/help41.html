@@ -3,22 +3,23 @@
 <body class="help1">
 <h1>ROOT Exercise III - Help Level 1</h1>
 <p>Got stuck? This might help:</p>
-<h2>2 My First TSelector</h2>
+<h2>2 PROOF</h2>
 
 <div class="exercise">
-<p>New create your own TSelector - this time we use a different mechanism called Proxy.
-	You can create a skeleton proxy-based TSelector from a TTree by calling <tt>TTree::MakeProxy(...)</tt>.
-	Modify it so it does what the previous selector did (you may remove the call to Sleep() now ;-).
-	This kind of selector is powerful because it determines itself what part of the TTree must be read,
-	without the need to specify branches etc.</p>
+<p>That worked, but it wasn't impressively fast. What about running the same selector on PROOF?
+	  We have set up a PROOF cluster for you - you are sitting in front of it.
+	  During the first exercise, you all used one core of your machine.
+	  PROOF is configured to use one core of your machine, too - but on all machines!
+	  Depending on when you get here the PROOF cluster might be pretty busy or completely empty,
+	  and you will get a performance improvement that depends on the available resources.</p>
+	  <p>So let's run it! The PROOF master is called <tt>"server"</tt>. Any speed difference?</p>
 </div>
 
-<p>You should use a TChain to open a tree spread over multiple files.
-It's part of the lecture.</p>
-<p>Once you have the chain you can draw a part (a "leaf") of it using e.g.
-<tt>TChain::Draw()</tt>.
-Which part to draw should be obvious because you know from the previous exercise what's in the tree.</p>
-
-<a href="help42.html" class="help2">MORE HELP!</a>
+<p>The lecture tells you how to initialize a PROOF session. You will need to give the master as an argument.
+Don't forget to tell the <tt>TChain</tt> to use PROOF for <tt>Process()</tt>.
+And yes, that's of course also in the lecture.</p>
+<p>If you have a problem connecting to the PROOF server please try again.
+If the problem persists we might have to restart the server... so let us know!</p>
+<a href="help2s.html" class="solution">SOLUTION!</a>
 </body>
 </html>
