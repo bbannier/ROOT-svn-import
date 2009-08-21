@@ -139,11 +139,7 @@ typedef off_t off64_t;
      (defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN)
 #if !defined(__GNUC__) || defined(__macos__)
 
-#ifdef _LP64
-extern "C" unsigned long Swap_n2hll(unsigned long x);
-#else
 extern "C" unsigned long long Swap_n2hll(unsigned long long x);
-#endif
 #define htonll(_x_) Swap_n2hll(_x_)
 #define ntohll(_x_) Swap_n2hll(_x_)
 
