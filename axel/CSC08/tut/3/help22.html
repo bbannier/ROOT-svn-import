@@ -1,0 +1,19 @@
+<html>
+<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise III - Help Level 2</title></head>
+<body class="help2">
+<h1>ROOT Exercise III - Help Level 2</h1>
+<p>Got stuck? This might help:</p>
+<h2>1 My First TSelector</h2>
+
+<div class="exercise">
+<p>Modify and run the selector to create a histogram of the radius r = sqrt(x^2 * y^2).</p>
+</div>
+
+<p>
+Before we were filling a two-dimensional TH2F. The radius is one single value, so we need a one-dimensional histogram TH1F instead.
+You will need to change both the declaration of the histogram (see the header file <a href="TPosCorr.h" class="source">TPosCorr.h</a>)
+and the creation of the object (<tt>new TH2F(...)</tt>). You only need to pass the value of the radius to <tt>TH1F::Fill(...)</tt>.</p>
+
+<a href="help2s.html" class="solution">SOLUTION!</a>
+</body>
+</html>
