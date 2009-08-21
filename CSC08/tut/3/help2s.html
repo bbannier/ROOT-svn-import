@@ -1,0 +1,54 @@
+<html>
+<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise III - Solution</title></head>
+<body class="solution">
+<h1>ROOT Exercise III - Solution</h1>
+<p>Got stuck? This is the solution</p>
+<h2>1 My First TSelector</h2>
+
+<div class="exercise">
+<p>Modify and run the selector to create a histogram of the radius r = sqrt(x^2 * y^2).</p>
+</div>
+
+<p>The header file <a href="TPosCorr.h" class="source">TPosCorr.h</a> should contain something like <tt>TH1* fHistRadius</tt>.
+In the source file, change <tt>TPosCorr::SlaveBegin(...)</tt> to </p>
+<pre>
+void TPosCorr::SlaveBegin(TTree * /*tree*/)
+{
+   // The SlaveBegin() function is called after the Begin() function.
+   // When running with PROOF SlaveBegin() is called on each slave server.
+   // The tree argument is deprecated (on PROOF 0 is passed).
+
+   Info("SlaveBegin()", "Starting analysis...");
+   fHistRadius = new TH1F("hRadius", "radius of XY position;radius;entries",
+                          100, -10., 10.);
+
+   GetOutputList()-&gt;Add(fHistCorrPos);
+}
+</pre>
+<p>You will also need to change the filled value; change <tt>TPosCorr::Process(...)</tt> to contain</p>
+<pre>
+Bool_t TPosCorr::Process(Long64_t entry)
+{
+   //...
+   b_electrons_-&gt;GetEntry(entry);
+   b_electrons_fVertex_fX-&gt;GetEntry(entry);
+   b_electrons_fVertex_fY-&gt;GetEntry(entry);
+
+   // simulate a complex analysis...
+   gSystem-&gt;Sleep(100);
+   //...phew, done!
+   for (Int_t i = 0; i &lt; electrons_; ++i) {
+      // calculate the radius
+      Double_t x = electrons_fVertex_fX[i] - 1.2;
+	  Double_t y = electrons_fVertex_fY[i] - 0.9;
+      Double_t radius = sqrt(x*x + y*y);
+	  // fill it
+      fHistRadius-&gt;Fill(radius);
+   }
+
+   return kTRUE;
+}
+</pre>
+<p>You can then run the selector with <tt>ch-&gt;Process("TPosCorr.C+");</tt></p>
+</body>
+</html>
