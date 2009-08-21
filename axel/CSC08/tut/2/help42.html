@@ -6,10 +6,8 @@
 <h2>1 Reading a TTree</h2>
 
 <div class="exercise">
-Looking at the macro you probably saw that it reads the ROOT file over the network.
-Usually there is no difference to reading it from a local disk.
-You can speed it up (even if you were reading from disk) by enabling only the branches that you really need to read.
-Well, give it a try!
+<p>You can speed up the processing by enabling only the branches that you really need to read.
+Well, give it a try!</p>
 </div>
 
 <p>Because there are sub-branches in the major branches, you cannot just set the BranchStatus for "muons" - you will have to set it for all the branches under "muons", too.
