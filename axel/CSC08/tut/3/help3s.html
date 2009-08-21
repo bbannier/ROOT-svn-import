@@ -9,6 +9,8 @@
 <p>Instead of using the whole PROOF cluster, only use your local machine by running the selector in proof lite.</p>
 </div>
 
-<p></p>
+<p>You crate a PROOF lite session with <tt>TProof::Open("lite")</tt>.
+You tell the chain (let's assume it's called <tt>ch</tt>) to use PROOF by calling <tt>ch-&gt;SetProof()</tt>.
+Then simply run <tt>ch-&gt;Process("TPosCorr.C+")</tt>.</p>
 </body>
 </html>
