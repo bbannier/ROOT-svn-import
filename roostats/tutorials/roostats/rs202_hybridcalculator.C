@@ -139,6 +139,7 @@ void rs202_hybridcalculator(int ntoys=3000)
   double clb_data = myHybridResult->CLb();
   double cls_data = myHybridResult->CLs();
   double data_significance = myHybridResult->Significance();
+  double min2lnQ_data = myHybridResult->GetTestStat_data();
 
   /// compute the mean expected significance from toys
   double mean_sb_toys_test_stat = myHybridPlot->GetSBmean();
@@ -147,7 +148,7 @@ void rs202_hybridcalculator(int ntoys=3000)
   double toys_significance = myHybridResult->Significance();
 
   std::cout << "Completed HybridCalculator example:\n"; 
-  std::cout << " - -2lnQ = " << myHybridResult->GetTestStat_data() << endl;
+  std::cout << " - -2lnQ = " << min2lnQ_data << endl;
   std::cout << " - CL_sb = " << clsb_data << std::endl;
   std::cout << " - CL_b  = " << clb_data << std::endl;
   std::cout << " - CL_s  = " << cls_data << std::endl;
