@@ -247,6 +247,25 @@ HybridCalculator::HybridCalculator( const char *name,
 
 }
 
+HybridCalculator::HybridCalculator( const char *name,
+                                    const char *title,
+				    ModelConfig& model ) :
+   TNamed(name,title),
+   fSbModel(0),
+   fBModel(0),
+   fObservables(0),
+   fParameters(0),
+   fPriorPdf(0),
+   fData(0),
+   fWS(0)
+{
+  /// Constructor with a ModelConfig object
+  
+  SetModelConfig(model);
+
+  SetTestStatistics(1);
+  SetNumberOfToys(1000); 
+}
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -258,6 +277,17 @@ HybridCalculator::~HybridCalculator()
 }
 
 ///////////////////////////////////////////////////////////////////////////
+
+void HybridCalculator::SetModelConfig(ModelConfig& model)
+{
+  fSbModel = model.GetAlternatePdf();
+  fBModel = model.GetNullPdf(); 
+  //fObservables = model->
+  fParameters = new RooArgSet(*(model.GetNuisanceParameters()));  // going to leak
+  fPriorPdf = model.GetPriorPdf();
+  fData = model.GetData();
+  if (fPriorPdf) UseNuisance(true);
+}
 
 void HybridCalculator::SetTestStatistics(int index)
 {

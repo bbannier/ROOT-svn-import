@@ -27,6 +27,10 @@
 #include "RooStats/HybridResult.h"
 #endif
 
+#ifndef ROOSTATS_ModelConfig
+#include "RooStats/ModelConfig.h"
+#endif
+
 class TH1; 
 
 namespace RooStats {
@@ -68,6 +72,10 @@ namespace RooStats {
                        RooAbsPdf* prior_pdf = 0,
 		       bool GenerateBinned = false);  //Nils 31.7.09
 
+      /// Constructor for HybridCalculator with ModelConfig
+      HybridCalculator(const char *name,
+                       const char *title,
+                       ModelConfig& model);
 
    private: // not yet available 
  
@@ -94,7 +102,7 @@ namespace RooStats {
       /// Destructor of HybridCalculator
       virtual ~HybridCalculator();
 
-      /// inherited methods from HypoTestCalculanterface
+      /// inherited methods from HypoTestCalculator interface
       virtual HybridResult* GetHypoTest() const;
 
       // inherited setter methods from HypoTestCalculator
@@ -110,6 +118,8 @@ namespace RooStats {
       virtual void SetCommonPdf(const char* name) {fSbModelName = name; }
 
    public: 
+
+      void SetModelConfig(ModelConfig& model);
 
       // Set a common PDF for both the null and alternate
       virtual void SetCommonPdf(RooAbsPdf & pdf) { fSbModel = &pdf; }
