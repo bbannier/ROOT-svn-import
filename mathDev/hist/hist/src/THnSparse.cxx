@@ -1183,7 +1183,7 @@ void THnSparse::Divide(const THnSparse *h)
    if (!CheckConsistency(h, "Divide"))return;
 
    // Trigger error calculation if h has it
-   Bool_t wantErrors=kFALSE;
+   Bool_t wantErrors=GetCalculateErrors();
    if (!GetCalculateErrors() && h->GetCalculateErrors())
       wantErrors=kTRUE;
 
