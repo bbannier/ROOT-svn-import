@@ -44,6 +44,7 @@ END_HTML
 //
 
 class RooAbsPdf;
+class RooAbsData;
 class RooArgSet; 
 class RooWorkspace; 
 

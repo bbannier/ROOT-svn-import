@@ -3,7 +3,7 @@
 // RooStats tutorial macro #500c
 // 2009/08 - Nils Ruthmann, Gregory Schott
 //
-// Prepares a workspace (stored in a ROOT file) containing a models,
+// Prepare a workspace (stored in a ROOT file) containing a models,
 // data and other objects needed to run statistical classes in
 // RooStats.
 //
