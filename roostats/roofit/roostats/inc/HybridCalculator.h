@@ -48,7 +48,7 @@ namespace RooStats {
                        RooArgList& observables,
                        RooArgSet* nuisance_parameters = 0,
                        RooAbsPdf* prior_pdf = 0,
-		       bool GenrateBinned = false);  //Nils 31.7.09
+		       bool GenerateBinned = false);  //Nils 31.7.09
 
       /// Constructor for HybridCalculator using  a data set and pdf instances
       HybridCalculator(RooAbsData& data, 
@@ -56,7 +56,7 @@ namespace RooStats {
                        RooAbsPdf& b_model,
                        RooArgSet* nuisance_parameters = 0,
                        RooAbsPdf* prior_pdf = 0,
-		       bool GenrateBinned = false);  //Nils 31.7.09
+		       bool GenerateBinned = false);  //Nils 31.7.09
 
       /// Constructor for HybridCalculator using name, title, a data set and pdf instances
       HybridCalculator(const char *name,
@@ -66,7 +66,7 @@ namespace RooStats {
                        RooAbsPdf& b_model,
                        RooArgSet* nuisance_parameters = 0,
                        RooAbsPdf* prior_pdf = 0,
-		       bool GenrateBinned = false);  //Nils 31.7.09
+		       bool GenerateBinned = false);  //Nils 31.7.09
 
 
    private: // not yet available 
@@ -167,12 +167,10 @@ namespace RooStats {
       // initialize all the data and pdf by using a workspace as input 
       bool DoInitializeFromWS();  
 
-      bool fGenerateBinned; //Nils 31.7.09
 
       unsigned int fTestStatisticsIdx; // Index of the test statistics to use
       unsigned int fNToys;            // number of Toys MC
       bool  fUsePriorPdf;               // use a prior for nuisance parameters  
-      
       RooAbsPdf* fSbModel; // The pdf of the signal+background model
       RooAbsPdf* fBModel; // The pdf of the background model
       mutable RooArgList* fObservables; // Collection of the observables of the model
@@ -181,6 +179,8 @@ namespace RooStats {
       RooAbsData * fData;     // pointer to the data sets 
       //bool fOwnsWorkspace;    // flag indicating if calculator manages the workspace 
       RooWorkspace * fWS;     // a workspace that owns all the components to be used by the calculator
+      bool fGenerateBinned; //Nils 31.7.09
+
       TString fSbModelName;   // name of pdf of the signal+background model
       TString fBModelName;   // name of pdf of the background model
       TString fPriorPdfName;   // name of pdf of the background model

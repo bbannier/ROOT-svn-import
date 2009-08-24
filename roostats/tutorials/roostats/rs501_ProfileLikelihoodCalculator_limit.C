@@ -3,10 +3,10 @@
 // RooStats tutorial macro #501
 // 2009/08 - Nils Ruthmann, Gregory Schott
 //
-// Shows how to run the RooStats classes to perform specific
-// tasks. The ROOT file containing a workspace holding the models,
-// data and other objects needed to run can be prepared with any of
-// the rs500*.C tutorial macros.
+// Show how to run the RooStats classes to perform specific tasks. The
+// ROOT file containing a workspace holding the models, data and other
+// objects needed to run can be prepared with any of the rs500*.C
+// tutorial macros.
 //
 // Compute with ProfileLikelihoodCalculator a 95% CL upper limit on
 // the parameter of interest for the given data.
@@ -41,20 +41,18 @@ void rs501_ProfileLikelihoodCalculator_limit( const char* fileName="WS_GaussOver
   plc.SetTestSize(0.10);
 
   // Pointer to the confidence interval
+  model->fitTo(*data); // <-- problem
   LikelihoodInterval* interval = plc.GetInterval();
 
-  // Receive the profile-log-likelihood function
-  RooAbsReal* profile = interval->GetLikelihoodRatio();
-
   // Compute the upper limit: a fit is needed first in order to locate the minimum of the -log(likelihood) and ease the upper limit computation
-  model->fitTo(*data);
-  const Double_t upperLimit = interval->UpperLimit(*parameterOfInterest);
+  model->fitTo(*data); // <-- problem
+  const double upperLimit = interval->UpperLimit(*parameterOfInterest); // <-- to simplify
 
   // Make a plot of the profile-likelihood and confidence interval
   LikelihoodIntervalPlot plot(interval);
   plot.Draw();
 
-  std::cout << "One sided upper limit at 95\% CL: "<< upperLimit << std::endl;
+  std::cout << "One sided upper limit at 95% CL: "<< upperLimit << std::endl;
 
   delete model;
   file->Close();
