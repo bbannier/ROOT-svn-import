@@ -1344,8 +1344,8 @@ bool testMulSparse()
   // Tests the Multiply method for Sparse Histograms
 
    Int_t bsize[] = { TMath::Nint( r.Uniform(1, 5) ),
-                          TMath::Nint( r.Uniform(1, 5) ),
-                          TMath::Nint( r.Uniform(1, 5) )};
+                     TMath::Nint( r.Uniform(1, 5) ),
+                     TMath::Nint( r.Uniform(1, 5) )};
    Double_t xmin[] = {minRange, minRange, minRange};
    Double_t xmax[] = {maxRange, maxRange, maxRange};
 
@@ -2164,6 +2164,133 @@ bool testDivide3D2()
    delete h1;
    delete h2;
    delete h3;
+   return ret;
+}
+
+bool testDivSparse1()
+{
+   // Tests the first Divide method for 3D Histograms
+
+   Int_t bsize[] = { TMath::Nint( r.Uniform(1, 5) ),
+                     TMath::Nint( r.Uniform(1, 5) ),
+                     TMath::Nint( r.Uniform(1, 5) )};
+   Double_t xmin[] = {minRange, minRange, minRange};
+   Double_t xmax[] = {maxRange, maxRange, maxRange};
+
+   // There is no multiply with coefficients!
+   const Double_t c1 = 1; 
+   const Double_t c2 = 1;
+
+   THnSparseD* s1 = new THnSparseD("dND1-s1", "s1-Title", 3, bsize, xmin, xmax);
+   THnSparseD* s2 = new THnSparseD("dND1-s2", "s2-Title", 3, bsize, xmin, xmax);
+   THnSparseD* s4 = new THnSparseD("dND1-s4", "s4=s3*s2)", 3, bsize, xmin, xmax);
+
+   s1->Sumw2();s2->Sumw2();s4->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+
+   for ( Int_t e = 0; e < nEvents*nEvents; ++e ) {
+      Double_t points[3];
+      points[0] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      points[1] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      points[2] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      s1->Fill(points, 1.0);
+      points[0] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      points[1] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      points[2] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      s2->Fill(points, 1.0);
+      s4->Fill(points, 1.0);
+   }
+
+   THnSparseD* s3 = new THnSparseD("dND1-s3", "s3=(c1*s1)/(c2*s2)", 3, bsize, xmin, xmax);
+   s3->Divide(s1, s2, c1, c2);
+      
+   s4->Multiply(s3);
+
+   // No the bin contents has to be reduced, as it was filled twice!
+   for ( Long64_t i = 0; i < s3->GetNbins(); ++i ) {
+      Int_t coord[3];
+      s3->GetBinContent(i, coord);
+      Double_t s4BinError = s4->GetBinError(coord);
+      Double_t s2BinError = s2->GetBinError(coord);
+      Double_t s3BinContent = s3->GetBinContent(coord);
+      Double_t error = s4BinError * s4BinError;
+      error -= (2*(c2*c2)/(c1*c1)) * s3BinContent * s3BinContent * s2BinError * s2BinError;
+      s4->SetBinError(coord, sqrt(error));
+   }
+
+   bool ret = equals("DivideND1", s1, s4, cmpOptNone, 1E-6);
+   delete s1;
+   delete s2;
+   delete s3;
+   return ret;
+}
+
+
+bool testDivSparse2()
+{
+   // Tests the second Divide method for 3D Histograms
+
+   Int_t bsize[] = { TMath::Nint( r.Uniform(1, 5) ),
+                     TMath::Nint( r.Uniform(1, 5) ),
+                     TMath::Nint( r.Uniform(1, 5) )};
+   Double_t xmin[] = {minRange, minRange, minRange};
+   Double_t xmax[] = {maxRange, maxRange, maxRange};
+
+   // There is no multiply with coefficients!
+   const Double_t c1 = 1; 
+   const Double_t c2 = 1;
+
+   THnSparseD* s1 = new THnSparseD("dND2-s1", "s1-Title", 3, bsize, xmin, xmax);
+   THnSparseD* s2 = new THnSparseD("dND2-s2", "s2-Title", 3, bsize, xmin, xmax);
+   THnSparseD* s4 = new THnSparseD("dND2-s4", "s4=s3*s2)", 3, bsize, xmin, xmax);
+
+   s1->Sumw2();s2->Sumw2();s4->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+
+   for ( Int_t e = 0; e < nEvents*nEvents; ++e ) {
+      Double_t points[3];
+      points[0] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      points[1] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      points[2] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      s1->Fill(points, 1.0);
+      points[0] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      points[1] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      points[2] = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      s2->Fill(points, 1.0);
+      s4->Fill(points, 1.0);
+   }
+
+   THnSparseD* s3 = static_cast<THnSparseD*>( s1->Clone() );
+   s3->Divide(s2);
+   
+   THnSparseD* s5 = new THnSparseD("dND2-s5", "s5=(c1*s1)/(c2*s2)", 3, bsize, xmin, xmax);
+   s5->Divide(s1,s2);
+      
+   s4->Multiply(s3);
+   
+   // No the bin contents has to be reduced, as it was filled twice!
+   for ( Long64_t i = 0; i < s3->GetNbins(); ++i ) {
+      Int_t coord[3];
+      s3->GetBinContent(i, coord);
+      Double_t s4BinError = s4->GetBinError(coord);
+      Double_t s2BinError = s2->GetBinError(coord);
+      Double_t s3BinContent = s3->GetBinContent(coord);
+      Double_t error = s4BinError * s4BinError;
+      error -= (2*(c2*c2)/(c1*c1)) * s3BinContent * s3BinContent * s2BinError * s2BinError;
+      s4->SetBinError(coord, sqrt(error));
+   }
+
+   bool ret = equals("DivideND2", s1, s4, cmpOptNone, 1E-6);
+   
+   delete s1;
+   delete s2;
+   delete s3;
    return ret;
 }
 
@@ -7748,11 +7875,12 @@ int stressHistogram()
 
    // Test 7
    // Divide Tests
-   const unsigned int numberOfDivide = 8;
+   const unsigned int numberOfDivide = 10;
    pointer2Test divideTestPointer[numberOfDivide] = { testDivide1,     testDivide2,
                                                       testDivideVar1,  testDivideVar2,
                                                       testDivide2D1,   testDivide2D2,
-                                                      testDivide3D1,   testDivide3D2
+                                                      testDivide3D1,   testDivide3D2,
+                                                      testDivSparse1,  testDivSparse2
    };
    struct TTestSuite divideTestSuite = { numberOfDivide, 
                                          "Divide tests for 1D, 2D and 3D Histograms........................",
