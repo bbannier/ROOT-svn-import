@@ -130,6 +130,7 @@
 #endif
 
 #pragma link C++ class TGLObject+;
+#pragma link C++ class TGLPlot3D+;
 #pragma link C++ class TPointSet3DGL+;
 
 #pragma link C++ class TGLFont;

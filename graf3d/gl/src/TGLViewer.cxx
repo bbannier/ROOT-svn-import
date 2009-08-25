@@ -119,6 +119,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
+   fPointScale (1), fLineScale(1),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -175,6 +176,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
+   fPointScale (1), fLineScale(1),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -464,6 +466,9 @@ void TGLViewer::PreRender()
       fGLCtxId->DeleteGLResources();
    }
 
+   TGLUtil::SetPointSizeScale(fPointScale * fRnrCtx->GetRenderScale());
+   TGLUtil::SetLineWidthScale(fLineScale  * fRnrCtx->GetRenderScale());
+
    TGLViewerBase::PreRender();
 
    // Setup lighting
@@ -473,6 +478,18 @@ void TGLViewer::PreRender()
       fClipSet->SetupCurrentClip(fOverallBoundingBox);
    else
       fClipSet->SetupCurrentClipIfInvalid(fOverallBoundingBox);
+}
+
+//______________________________________________________________________________
+void TGLViewer::PostRender()
+{
+   // Restore state set in PreRender().
+   // Called after every render.
+
+   TGLUtil::SetPointSizeScale(1);
+   TGLUtil::SetLineWidthScale(1);
+
+   TGLViewerBase::PostRender();
 }
 
 //______________________________________________________________________________
@@ -528,11 +545,12 @@ void TGLViewer::DoDraw()
    {
       RenderNonSelected();
       DrawGuides();
+      RenderOverlay();
+
       glClear(GL_DEPTH_BUFFER_BIT);
       RenderSelected();
 
       glClear(GL_DEPTH_BUFFER_BIT);
-      RenderOverlay();
       DrawDebugInfo();
    }
 
@@ -1232,8 +1250,9 @@ TGLCamera& TGLViewer::RefCamera(ECameraType cameraType)
 void TGLViewer::SetCurrentCamera(ECameraType cameraType)
 {
    // Set current active camera - 'cameraType' one of:
-   // kCameraPerspX, kCameraPerspY, kCameraPerspZ
-   // kCameraOrthoXOY, kCameraOrthoXOZ, kCameraOrthoZOY
+   //   kCameraPerspX,    kCameraPerspY,    kCameraPerspZ,
+   //   kCameraOrthoXOY,  kCameraOrthoXOZ,  kCameraOrthoZOY,
+   //   kCameraOrthoXnOY, kCameraOrthoXnOZ, kCameraOrthoZnOY
 
    if (IsLocked()) {
       Error("TGLViewer::SetCurrentCamera", "expected kUnlocked, found %s", LockName(CurrentLock()));
