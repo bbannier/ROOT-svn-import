@@ -34,6 +34,7 @@
 #include "RooGlobalFunc.h"
 #include "RooConstVar.h"
 #include "TDecompChol.h"
+#include "RooFitResult.h"
 
 ClassImp(RooMultiVarGaussian)
   ;
@@ -49,12 +50,49 @@ RooMultiVarGaussian::RooMultiVarGaussian(const char *name, const char *title,
   _z(4)
 {
  _x.add(xvec) ;
+
  _mu.add(mu) ;
 
  _det = _cov.Determinant() ;
 
  // Invert covariance matrix
  _covI.Invert() ;
+}
+
+
+//_____________________________________________________________________________
+RooMultiVarGaussian::RooMultiVarGaussian(const char *name, const char *title,
+					 const RooArgList& xvec, const RooFitResult& fr) :
+  RooAbsPdf(name,title),
+  _x("x","Observables",this,kTRUE,kFALSE),
+  _mu("mu","Offset vector",this,kTRUE,kFALSE),
+  _cov(fr.reducedCovarianceMatrix(xvec)),
+  _covI(_cov),
+  _z(4)
+{
+  _det = _cov.Determinant() ;
+
+  // Fill mu vector with constant RooRealVars
+  list<string> munames ;
+  const RooArgList& fpf = fr.floatParsFinal() ;
+  for (Int_t i=0 ; i<fpf.getSize() ; i++) {
+    if (xvec.find(fpf.at(i)->GetName())) {
+      RooRealVar* parclone = (RooRealVar*) fpf.at(i)->Clone(Form("%s_centralvalue",fpf.at(i)->GetName())) ;
+      parclone->setConstant(kTRUE) ;
+      _mu.addOwned(*parclone) ;              
+      munames.push_back(fpf.at(i)->GetName()) ;
+    }
+  }
+  
+  // Fill X vector in same order as mu vector
+  for (list<string>::iterator iter=munames.begin() ; iter!=munames.end() ; iter++) {
+    RooRealVar* xvar = (RooRealVar*) xvec.find(iter->c_str()) ;
+    _x.add(*xvar) ;      
+  }
+
+  // Invert covariance matrix
+  _covI.Invert() ;
+
 }
 
 
@@ -181,7 +219,7 @@ Int_t RooMultiVarGaussian::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& 
       }
     }
   }
-  
+
   return code ;
 }
 
