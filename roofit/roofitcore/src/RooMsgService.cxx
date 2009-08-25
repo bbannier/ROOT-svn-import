@@ -347,6 +347,25 @@ RooMsgService& RooMsgService::instance()
 
 
 //_____________________________________________________________________________
+void RooMsgService::saveState() 
+{
+  // Save current state of message service
+  _streamsSaved.push(_streams) ;
+}
+
+
+
+//_____________________________________________________________________________
+void RooMsgService::restoreState() 
+{
+  // Restore last saved state of message service
+  _streams = _streamsSaved.top() ;
+  _streamsSaved.pop() ;
+}
+
+
+
+//_____________________________________________________________________________
 Bool_t RooMsgService::isActive(const RooAbsArg* self, RooFit::MsgTopic topic, RooFit::MsgLevel level) 
 {
   // Check if logging is active for given object/topic/RooFit::MsgLevel combination
