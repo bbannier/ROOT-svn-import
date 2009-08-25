@@ -359,21 +359,37 @@ RooAbsArg* RooFactoryWSTool::createArg(const char* className, const char* objNam
       } else if ((*ti)=="Double_t") {
 	RooFactoryWSTool::as_DOUBLE(i) ;
 	cintExpr += Form(",RooFactoryWSTool::as_DOUBLE(%d)",i) ;	
-      } else {
-	if (RooCintUtils::isEnum(ti->c_str())) {	  	  
-	  string qualvalue ;
-	  if (_args[i].find(Form("::",className)) != string::npos) {		    
-	    qualvalue = _args[i].c_str() ;
-	  } else {	
-	    qualvalue =  Form("%s::%s",className,_args[i].c_str()) ;	    
-	  }
-	  if (RooCintUtils::isValidEnumValue(ti->c_str(),qualvalue.c_str())) {
-	    cintExpr += Form(",(%s)%s",ti->c_str(),qualvalue.c_str()) ;
-	  } else {
-	    throw string(Form("Supplied argument %s does not represent a valid state of enum %s",_args[i].c_str(),ti->c_str())) ;
-	  }
+      } else if (RooCintUtils::isEnum(ti->c_str())) {	  	  
+	string qualvalue ;
+	if (_args[i].find(Form("::",className)) != string::npos) {		    
+	  qualvalue = _args[i].c_str() ;
+	} else {	
+	  qualvalue =  Form("%s::%s",className,_args[i].c_str()) ;	    
+	}
+	if (RooCintUtils::isValidEnumValue(ti->c_str(),qualvalue.c_str())) {
+	  cintExpr += Form(",(%s)%s",ti->c_str(),qualvalue.c_str()) ;
 	} else {
-	  throw string(Form("Required argument of type %s that is not interfaced to factory",ti->c_str())) ;
+	  throw string(Form("Supplied argument %s does not represent a valid state of enum %s",_args[i].c_str(),ti->c_str())) ;
+	  }
+      } else {
+	// Check if generic object store has argument of given name and type
+	TObject& obj = RooFactoryWSTool::as_OBJ(i) ;
+
+	// Strip argument type to bare type (i.e. const X& -> X)
+	string btype ;
+	if (ti->find("const ")==0) {
+	  btype = ti->c_str()+6 ;
+	} else {
+	  btype = *ti ;
+	}
+	if (btype.find("&")) {
+	  btype.erase(btype.size()-1,btype.size()) ;
+	}
+	
+	if (obj.InheritsFrom(btype.c_str())) {
+	  cintExpr += Form(",(%s&)RooFactoryWSTool::as_OBJ(%d)",ti->c_str(),i) ;
+	} else {
+	  throw string(Form("Required argument with name %s of type '%s' is not in the workspace",_args[i].c_str(),ti->c_str())) ;
 	}
       }
     }
@@ -752,7 +768,7 @@ RooAbsArg* RooFactoryWSTool::process(const char* expr)
   //                                                                             using the specified master index to map prototype p.d.f.s to master states
   // Interface to RooCustomizer
   //
-  // CUSTCLONE::name( orig, $Replace(origNode,substNode), ... ]               -- Create a clone of input object orig, with the specified replacements operations executed
+  // EDIT::name( orig, substNode=origNode), ... ]                             -- Create a clone of input object orig, with the specified replacements operations executed
   //
   //
   // Interface to RooClassFactory
@@ -1310,7 +1326,7 @@ string RooFactoryWSTool::processCreateArg(string& func, vector<string>& args)
     return iface->create(*this, className,instName,pargv) ;
   }
 
-  RooAbsArg* arg = createArg(className,instName,pargs) ;
+  createArg(className,instName,pargs) ;
 
   return string(instName) ;
 }
@@ -1696,6 +1712,18 @@ RooDataSet& RooFactoryWSTool::asDSET(const char* arg)
     throw string(Form("Dataset named %s is not of type RooDataSet",arg)) ;    
   }
   return *dset ;
+}
+
+
+
+//_____________________________________________________________________________
+TObject& RooFactoryWSTool::asOBJ(const char* arg)
+{
+  TObject* obj = ws().obj(arg) ;
+  if (!obj) {
+    throw string(Form("Object named %s not found",arg)) ;    
+  }
+  return *obj ;
 }
 
 
