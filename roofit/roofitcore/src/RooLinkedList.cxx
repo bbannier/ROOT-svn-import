@@ -416,6 +416,24 @@ Int_t RooLinkedList::IndexOf(const TObject* arg) const
 
 
 //_____________________________________________________________________________
+Int_t RooLinkedList::IndexOf(const char* name) const 
+{
+  // Return position of given object in list. If object
+  // is not contained in list, return -1
+
+  RooLinkedListElem* ptr = _first;
+  Int_t idx(0) ;
+  while(ptr) {
+    if (strcmp(ptr->_arg->GetName(),name)==0) return idx ;
+    ptr = ptr->_next ;
+    idx++ ;
+  }
+  return -1 ;
+}
+
+
+
+//_____________________________________________________________________________
 void RooLinkedList::Print(const char* opt) const 
 {
   // Print contents of list, defers to Print() function

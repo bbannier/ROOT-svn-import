@@ -56,6 +56,7 @@ public:
   TObject* find(const char* name) const ;
   TObject* FindObject(const char* name) const ; 
   TObject* FindObject(const TObject* obj) const ;
+  Int_t IndexOf(const char* name) const ;
   Int_t IndexOf(const TObject* arg) const ;
   TObject* First() const {
     return _first?_first->_arg:0 ;
