@@ -55,6 +55,7 @@ TEveTrack::TEveTrack() :
    fCharge(0),
    fLabel(kMinInt),
    fIndex(kMinInt),
+   fStatus(0),
    fLockPoints(kFALSE),
    fPathMarks(),
    fPropagator(0),
@@ -64,7 +65,7 @@ TEveTrack::TEveTrack() :
 }
 
 //______________________________________________________________________________
-TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* rs):
+TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* prop):
    TEveLine(),
 
    fV(t->Vx(), t->Vy(), t->Vz()),
@@ -75,6 +76,7 @@ TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* rs):
    fCharge(0),
    fLabel(label),
    fIndex(kMinInt),
+   fStatus(t->GetStatusCode()),
    fLockPoints(kFALSE),
    fPathMarks(),
    fPropagator(0),
@@ -82,7 +84,7 @@ TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* rs):
 {
    // Constructor from TParticle.
 
-   SetPropagator(rs);
+   SetPropagator(prop);
    fMainColorPtr = &fLineColor;
 
    TParticlePDG* pdgp = t->GetPDG();
@@ -95,7 +97,7 @@ TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* rs):
 }
 
 //______________________________________________________________________________
-TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
+TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* prop):
    TEveLine(),
 
    fV(t->Vx(), t->Vy(), t->Vz()),
@@ -106,6 +108,7 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
    fCharge(0),
    fLabel(t->fLabel),
    fIndex(t->fIndex),
+   fStatus(t->GetStatusCode()),
    fLockPoints(kFALSE),
    fPathMarks(),
    fPropagator(0),
@@ -113,7 +116,7 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
 {
    // Constructor from TEveUtil Monte Carlo track.
 
-   SetPropagator(rs);
+   SetPropagator(prop);
    fMainColorPtr = &fLineColor;
 
    TParticlePDG* pdgp = t->GetPDG();
@@ -126,7 +129,7 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
 }
 
 //______________________________________________________________________________
-TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* rs) :
+TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* prop) :
    TEveLine(),
 
    fV(t->fV),
@@ -137,6 +140,7 @@ TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* rs) :
    fCharge(t->fSign),
    fLabel(t->fLabel),
    fIndex(t->fIndex),
+   fStatus(t->fStatus),
    fLockPoints(kFALSE),
    fPathMarks(),
    fPropagator(0),
@@ -144,7 +148,7 @@ TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* rs) :
 {
    // Constructor from TEveUtil reconstructed track.
 
-   SetPropagator(rs);
+   SetPropagator(prop);
    fMainColorPtr = &fLineColor;
 
    SetName(t->GetName());
@@ -161,6 +165,7 @@ TEveTrack::TEveTrack(const TEveTrack& t) :
    fCharge(t.fCharge),
    fLabel(t.fLabel),
    fIndex(t.fIndex),
+   fStatus(t.fStatus),
    fLockPoints(t.fLockPoints),
    fPathMarks(),
    fPropagator(0),
@@ -265,15 +270,15 @@ void TEveTrack::SetPathMarks(const TEveTrack& t)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrack::SetPropagator(TEveTrackPropagator* rs)
+void TEveTrack::SetPropagator(TEveTrackPropagator* prop)
 {
    // Set track's render style.
-   // Reference counts of old and new render-style are updated.
+   // Reference counts of old and new propagator are updated.
 
-   if (fPropagator == rs) return;
+   if (fPropagator == prop) return;
    if (fPropagator) fPropagator->DecRefCount(this);
-   fPropagator = rs;
-   if (fPropagator) rs->IncRefCount(this);
+   fPropagator = prop;
+   if (fPropagator) prop->IncRefCount(this);
 }
 
 /******************************************************************************/
@@ -300,14 +305,14 @@ void TEveTrack::SetAttLineAttMarker(TEveTrackList* tl)
 void TEveTrack::MakeTrack(Bool_t recurse)
 {
    // Calculate track representation based on track data and current
-   // settings of the render-style.
+   // settings of the propagator.
    // If recurse is true, descend into children.
 
    if (!fLockPoints)
    {
       Reset(0);
 
-      TEveTrackPropagator& rTP((fPropagator != 0) ? *fPropagator : TEveTrackPropagator::fgDefStyle);
+      TEveTrackPropagator& rTP((fPropagator != 0) ? *fPropagator : TEveTrackPropagator::fgDefault);
 
       const Float_t maxRsq = rTP.GetMaxR() * rTP.GetMaxR();
       const Float_t maxZ   = rTP.GetMaxZ();
@@ -532,7 +537,7 @@ void TEveTrack::SetLineStyle(Style_t lstyle)
 ClassImp(TEveTrackList);
 
 //______________________________________________________________________________
-TEveTrackList::TEveTrackList(TEveTrackPropagator* rs) :
+TEveTrackList::TEveTrackList(TEveTrackPropagator* prop) :
    TEveElementList(),
    TAttMarker(1, 20, 1),
    TAttLine(1,1,1),
@@ -552,12 +557,12 @@ TEveTrackList::TEveTrackList(TEveTrackPropagator* rs) :
 
    fMainColorPtr = &fLineColor;
 
-   if (rs == 0) rs = new TEveTrackPropagator;
-   SetPropagator(rs);
+   if (prop == 0) prop = new TEveTrackPropagator;
+   SetPropagator(prop);
 }
 
 //______________________________________________________________________________
-TEveTrackList::TEveTrackList(const char* name, TEveTrackPropagator* rs) :
+TEveTrackList::TEveTrackList(const char* name, TEveTrackPropagator* prop) :
    TEveElementList(name),
    TAttMarker(1, 20, 1),
    TAttLine(1,1,1),
@@ -577,8 +582,8 @@ TEveTrackList::TEveTrackList(const char* name, TEveTrackPropagator* rs) :
 
    fMainColorPtr = &fLineColor;
 
-   if (rs == 0) rs = new TEveTrackPropagator;
-   SetPropagator(rs);
+   if (prop == 0) prop = new TEveTrackPropagator;
+   SetPropagator(prop);
 }
 
 //______________________________________________________________________________
@@ -592,16 +597,16 @@ TEveTrackList::~TEveTrackList()
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrackList::SetPropagator(TEveTrackPropagator* rs)
+void TEveTrackList::SetPropagator(TEveTrackPropagator* prop)
 {
-   // Set default render-style for tracks.
+   // Set default propagator for tracks.
    // This is not enforced onto the tracks themselves but this is the
-   // render-style that is show in the TEveTrackListEditor.
+   // propagator that is shown in the TEveTrackListEditor.
 
-   if (fPropagator == rs) return;
+   if (fPropagator == prop) return;
    if (fPropagator) fPropagator->DecRefCount();
-   fPropagator = rs;
-   if (fPropagator) rs->IncRefCount();
+   fPropagator = prop;
+   if (fPropagator) prop->IncRefCount();
 }
 
 /******************************************************************************/

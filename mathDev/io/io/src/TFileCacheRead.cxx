@@ -58,9 +58,6 @@ TFileCacheRead::TFileCacheRead() : TObject()
    fIsSorted    = kFALSE;
    fIsTransferred = kFALSE;
 
-   // Asynchronous reading
-   fBytesToPrefetch = 0;
-   fFirstIndexToPrefetch = 0;
    fAsyncReading = kFALSE;
 }
 
@@ -90,8 +87,7 @@ TFileCacheRead::TFileCacheRead(TFile *file, Int_t buffersize)
    fFile        = file;
 
    fBuffer = 0;
-   fBytesToPrefetch = 0;
-   fFirstIndexToPrefetch = 0;
+
    fAsyncReading = gEnv->GetValue("TFile.AsyncReading", 1);
    if (fAsyncReading) {
       // Check if asynchronous reading is supported by this TFile specialization
@@ -212,7 +208,17 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
    // If pos is in the list of prefetched blocks read from fBuffer,
    // otherwise need to make a normal read from file. Returns -1 in case of
    // read error, 0 in case not in cache, 1 in case read from cache.
-   Int_t i = 0;
+
+   Int_t loc = 0;
+   return ReadBufferExt(buf, pos, len, loc);
+}
+
+//_____________________________________________________________________________
+Int_t TFileCacheRead::ReadBufferExt(char *buf, Long64_t pos, Int_t len, Int_t &loc)
+{
+   // Base function for ReadBuffer. Also gives out the position
+   // of the block in the internal buffer. This helps TTreeCacheUnzip to avoid
+   // doing twice the binary search
 
    if (fNseek > 0 && !fIsSorted) {
       Sort();
@@ -229,8 +235,14 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
          // This implementation simply reads all the chunks in advance
          // in the async way.
 
-         fBytesToPrefetch = fFile->GetBytesToPrefetch();
-         fFirstIndexToPrefetch = 0;
+
+         // Use the async readv instead of single reads
+         fFile->ReadBuffers(0, 0, 0, 0); //Clear the XrdClient cache
+         if (fFile->ReadBuffers(0,fPos,fLen,fNb)) {
+            return -1;
+         }
+         fIsTransferred = kTRUE;
+
       }
    }
 
@@ -247,7 +259,7 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
    if (fAsyncReading) {
 
       Int_t retval;
-      Int_t loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
+      loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
 
       // Now we dont have to look for it in the local buffer
       // if it's async, we expect that the communication library
@@ -257,28 +269,15 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
       if (loc >= 0 && loc < fNseek && pos == fSeekSort[loc]) {
          // Block found, the caller will get it
 
-         // A speculative forward read of our chunks list
-         for (i = fFirstIndexToPrefetch; i < fNb; i++) {
-            if (!fLen[i])
-               continue;
-            if (fLen[i] > fBytesToPrefetch)
-               break;
-            // If we run out of parallel streamids in XrdClient, we'll continue later
-            if (fFile->ReadBufferAsync(fPos[i], fLen[i]))
-               break;
-            fBytesToPrefetch -= fLen[i];
-            fLen[i] = 0;
-         }
-         fFirstIndexToPrefetch = i;
-
          if (buf) {
             fFile->Seek(pos);
-            // Notify if troubles arise
-            if (fFile->ReadBuffer(buf, len))
+
+            if (fFile->ReadBuffer(buf, len)) {
                return -1;
+            }
             fFile->Seek(pos+len);
          }
-         fBytesToPrefetch += len;
+
          retval = 1;
       } else {
          // Block not found in the list, we report it as a miss
@@ -290,7 +289,8 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
 
       return retval;
    } else {
-      Int_t loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
+
+      loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
       if (loc >= 0 && loc <fNseek && pos == fSeekSort[loc]) {
          if (buf) {
             memcpy(buf,&fBuffer[fSeekPos[loc]],len);
@@ -316,8 +316,7 @@ void TFileCacheRead::SetFile(TFile *file)
       if (file && file->ReadBufferAsync(0, 0)) {
          fAsyncReading = kFALSE;
          fBuffer    = new char[fBufferSize];
-         fBytesToPrefetch = 0;
-         fFirstIndexToPrefetch = 0;
+
       }
    }
 
