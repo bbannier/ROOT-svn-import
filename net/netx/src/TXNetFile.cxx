@@ -603,13 +603,6 @@ Bool_t TXNetFile::ReadBuffer(char *buffer, Int_t bufferLength)
       }
    }
 
-   if (!st) {
-      // The data chunk was not prefetched.
-      // Set the read ahead (again) at its default value
-      Int_t rAheadsiz = gEnv->GetValue("XNet.ReadAheadSize", DFLT_READAHEADSIZE);
-      fClient->SetCacheParameters(-1, rAheadsiz, -1);
-   }
-
    // Read from the remote xrootd
    Int_t nr = fClient->Read(buffer, fOffset, bufferLength);
 
@@ -731,8 +724,11 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
    // A null buffer means that we want to use the async stuff
    //  hence we have to sync the cache size in XrdClient with the supposed
    //  size in TFile.
-   if (!buf)
+   if (!buf) {
+      // Null buffer + 0 blocks means 'reset cache'
+      if (!nbuf) ResetCache();
       SynchronizeCacheSize();
+   }
 
    // Read for the remote xrootd
    Long64_t nr = fClient->ReadV(buf, pos, len, nbuf);
@@ -1307,7 +1303,8 @@ void TXNetFile::SynchronizeCacheSize()
 
    }
 
-   fClient->SetCacheParameters(newbsz, 0, XrdClientReadCache::kRmBlk_FIFO);
+   if (newbsz)
+      fClient->SetCacheParameters(newbsz, 0, XrdClientReadCache::kRmBlk_FIFO);
 }
 
 //_____________________________________________________________________________
