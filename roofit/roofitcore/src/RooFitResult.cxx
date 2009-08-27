@@ -584,6 +584,7 @@ void RooFitResult::fillCorrMatrix(const std::vector<double>& globalCC, const TMa
 void RooFitResult::fillLegacyCorrMatrix() const 
 {
   // Sanity check
+  if (!_CM) return ;
 
   // Delete eventual prevous correlation data holders
   if (_globalCorr) delete _globalCorr ;
@@ -780,6 +781,9 @@ Bool_t RooFitResult::isIdentical(const RooFitResult& other, Double_t tol, Double
 
   // Only examine correlations for cases with >1 floating paramater
   if (_finalPars->getSize()>1) {
+    
+    fillLegacyCorrMatrix() ;
+    other.fillLegacyCorrMatrix() ;
     
     for (Int_t i=0 ; i<_globalCorr->getSize() ; i++) {
       RooAbsReal* ov = static_cast<RooAbsReal*>(other._globalCorr->find(_globalCorr->at(i)->GetName())) ;
