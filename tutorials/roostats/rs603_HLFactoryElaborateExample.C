@@ -70,7 +70,6 @@ void rs603_HLFactoryElaborateExample() {
   ofile3 << "                       data2);\n";
   ofile3.close();
 
-  exit;
 // --- Produce the two separate datasets into a WorkSpace ---
 
 HLFactory hlf("HLFactoryComplexExample",
