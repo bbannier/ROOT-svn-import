@@ -163,7 +163,7 @@ int HLFactory::AddChannel(const char* label,
             return -1;
             }
         TObjString* name = new TObjString(DatasetName);
-        fBkgPdfNames.Add(name);
+        fDatasetsNames.Add(name);
         }
 
     if (label!=0){
@@ -295,22 +295,29 @@ RooDataSet* HLFactory::GetTotDataSet(){
     if (not fCombinationDone)
         fCreateCategory();
 
-
-    TIterator* it = fBkgPdfNames.MakeIterator();
+    TIterator* it = fDatasetsNames.MakeIterator();
     TObjString* ostring;
     TObject* obj = it->Next();
     ostring = (TObjString*) obj;
     fComboDataset = (RooDataSet*) fWs->data(ostring->String()) ;
+    fComboDataset->Print();
+    TString dataname(GetName());
+    fComboDataset = new RooDataSet(*fComboDataset,dataname+"_TotData");
     int catindex=0;
     fComboCat->setIndex(catindex);
     fComboDataset->addColumn(*fComboCat);
     while ((obj = it->Next())){
         ostring=(TObjString*) obj;
         catindex++;
+        RooDataSet* dummy = new RooDataSet(*(RooDataSet*)fWs->data(ostring->String()),"");
         fComboCat->setIndex(catindex);
-        fComboDataset->merge((RooDataSet*)fWs->data(ostring->String()));
+        fComboCat->Print();
+        dummy->addColumn(*fComboCat);
+        fComboDataset->append(*dummy);
+        delete dummy;
         }
 
+    delete it;
     return fComboDataset;
 
 }
@@ -386,9 +393,6 @@ int HLFactory::fReadFile(const char*fileName, bool is_included){
     ifileContent.ReadFile(ifile);
     ifile.close();
 
-    const int nNeutrals=3;
-    TString neutrals[nNeutrals]={"\t","\n"," "};
-
     // Strip the commented lines
     TString ifileContentStripped("");
 
@@ -434,9 +438,24 @@ int HLFactory::fReadFile(const char*fileName, bool is_included){
     lineIt=lines_array->MakeIterator();
     in_comment=false;
 
+    const int nNeutrals=2;
+    TString neutrals[nNeutrals]={"\t"," "};
+
     while((line_o=(*lineIt)())){
 
         line = (static_cast<TObjString*>(line_o))->GetString();
+
+        line.Strip(TString::kBoth,' ');
+
+        line.ReplaceAll("\n","");
+
+        // Do we have an echo statement?
+        if (line.BeginsWith("echo")){
+            line = line(5,line.Length()-1);
+            if (fVerbose) std::cout << "Echoing line " << line.Data() << std::endl;
+            std::cout << "[" << GetName() << "] echo: " << line.Data() << std::endl;
+            continue;
+            }
 
         for (int i=0;i<nNeutrals;++i)
             line.ReplaceAll(neutrals[i],"");
@@ -455,14 +474,6 @@ int HLFactory::fReadFile(const char*fileName, bool is_included){
             line.ReplaceAll("#include","");
             if (fVerbose) std::cout << "Reading included file..." << std::endl;
             fReadFile(line,true);
-            continue;
-            }
-
-        // Do we have an echo statement?
-        if (line.BeginsWith("echo")){
-            line.ReplaceAll("echo","");
-            if (fVerbose) std::cout << "Echoing..." << std::endl;
-            std::cout << "[" << GetName() << "] " << line.Data() << std::endl;
             continue;
             }
 
@@ -509,9 +520,9 @@ bool HLFactory::fNamesListsConsistent(){
     // Check the number of entries in each list. If not the same and the list 
     // is not empty prompt an error.
 
-    if ((fSigBkgPdfNames.GetSize()==fBkgPdfNames.GetSize() or fSigBkgPdfNames.GetSize()*fBkgPdfNames.GetSize()==0) and
-        (fSigBkgPdfNames.GetSize()==fDatasetsNames.GetSize() or fSigBkgPdfNames.GetSize()*fDatasetsNames.GetSize()==0) and
-        (fSigBkgPdfNames.GetSize() == fLabelsNames.GetSize() or fSigBkgPdfNames.GetSize()*fLabelsNames.GetSize()==0))
+    if ((fSigBkgPdfNames.GetEntries()==fBkgPdfNames.GetEntries() or fBkgPdfNames.GetEntries()==0) and
+        (fSigBkgPdfNames.GetEntries()==fDatasetsNames.GetEntries() or fDatasetsNames.GetEntries()==0) and
+        (fSigBkgPdfNames.GetEntries()==fLabelsNames.GetEntries() or fLabelsNames.GetEntries()==0))
         return true;
     else{
         std::cerr << "The number of datasets and models added as channels " 
@@ -542,30 +553,70 @@ int HLFactory::fParseLine(TString& line){
                                 << " o_class=" << o_class.Data()
                                 << " o_descr=" << o_descr.Data() << "\n\n";
 
-        if (o_class=="TObject"){// import blindly a TObject
+
+        if (o_class.BeginsWith("import")){// import a generic TObject, for the moment a dataset in a WSpace
+            o_class.ReplaceAll("import","");
+
+            if (o_class!="DataSet"){
+                std::cerr << "Import syntax not recognised...\n";
+                return -1;
+                }
+
             o_descr.ReplaceAll("(","");
             o_descr.ReplaceAll(")","");
+            TString ifilename("");
+            TString objname("");
+            TString objinwsname("");
             TObjArray* lines_array = o_descr.Tokenize(",");
-            TString ifilename=static_cast<TObjString*>((*lines_array)[0])->GetString();
-            TString datasetname=static_cast<TObjString*>((*lines_array)[1])->GetString();
+            const int n_lines=lines_array->GetEntries();
+
+            if (n_lines != 3){
+                std::cerr << "Import syntax not recognised...\n";
+                return -1;
+                }
+
+            ifilename=static_cast<TObjString*>((*lines_array)[0])->GetString();
+            objname=static_cast<TObjString*>((*lines_array)[1])->GetString();
+            objinwsname=static_cast<TObjString*>((*lines_array)[2])->GetString();
+
             delete lines_array;
 
+            // Open the file
+            if (fVerbose) std::cout << "Opening " << ifilename.Data() << " ...\n";
             TFile* ifile=TFile::Open(ifilename);
             if (ifile==NULL){
                 std::cerr << "Could not open " << ifilename.Data() << std::endl;
                 return -1;
                 }
-            TObject* dataset=ifile->Get(datasetname);
-            if (dataset==NULL){
-                std::cerr << "Could not find " << datasetname << " in file " 
-                         <<  ifilename.Data() << std::endl;
+
+            // Getting the object: it can well be a Workspace
+            if (fVerbose) std::cout << "Getting " << objname.Data() << " from " 
+                                    << ifilename.Data() << " ...\n";
+
+            TObject* obj=ifile->Get(objname);
+
+            //obj->Print();
+
+            if (obj==NULL){
+                std::cerr << "Could not find " << objname.Data() << " in file " 
+                          <<  ifilename.Data() << std::endl;
                 return -1;
                 }
 
-            fWs->import(*dataset);
+            if (fVerbose) std::cout << "Adding to workspace " 
+                                    << objinwsname.Data() << " ...\n";
+
+        // FIXME when generic TObject addition is in there AND RooWorkspace::merge
+            TString classname(obj->ClassName());
+            if (classname!="RooWorkspace"){
+                std::cerr << "Object is not a RooWorkspace!\n";
+                return -1;
+                }
+
+            RooDataSet data(*(RooDataSet*)(((RooWorkspace*)obj)->data(objinwsname)),o_name);
+            fWs->import(data);
             return 0;
             }
-
 
         new_line=o_class+"::"+o_name+"("+o_descr+")";
 
@@ -576,6 +627,7 @@ int HLFactory::fParseLine(TString& line){
 
         fWs->factory(new_line);
 
+        return 0;
         }
 
     else{//build with the factory a var or cat.
@@ -586,14 +638,6 @@ int HLFactory::fParseLine(TString& line){
     return 0;
 
 }
-
-
-
-
-
-
-
-
 
 
 
