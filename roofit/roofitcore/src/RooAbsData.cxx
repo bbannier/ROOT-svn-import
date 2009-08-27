@@ -1433,14 +1433,14 @@ TH1 *RooAbsData::fillHistogram(TH1 *hist, const RooArgList &plotVars, const char
 
 
 //_____________________________________________________________________________
-TList* RooAbsData::split(const RooAbsCategory& splitCat) const
+TList* RooAbsData::split(const RooAbsCategory& splitCat, Bool_t createEmptyDataSets) const
 {
   // Split dataset into subsets based on states of given splitCat in this dataset.
   // A TList of RooDataSets is returned in which each RooDataSet is named
   // after the state name of splitCat of which it contains the dataset subset.
   // The observables splitCat itself is no longer present in the sub datasets.
-  // This method only creates datasets for states which have at least one entry
-  // The caller takes ownership of the returned list and its contents
+  // If createEmptyDataSets is kFALSE (default) this method only creates datasets for states 
+  // which have at least one entry The caller takes ownership of the returned list and its contents
 
   // Sanity check
   if (!splitCat.dependsOn(*get())) {
@@ -1482,6 +1482,17 @@ TList* RooAbsData::split(const RooAbsCategory& splitCat) const
   } else {
     subsetVars.remove(splitCat,kTRUE,kTRUE) ;
   }
+
+  // If createEmptyDataSets is true, prepopulate with empty sets corresponding to all states
+  if (createEmptyDataSets) {
+    TIterator* stateIter = cloneCat->typeIterator() ;
+    RooCatType* state ;
+    while ((state=(RooCatType*)stateIter->Next())) {
+      RooAbsData* subset = emptyClone(state->GetName(),state->GetName(),&subsetVars) ;
+      dsetList->Add((RooAbsArg*)subset) ;    
+    }
+  }
+
   
   // Loop over dataset and copy event to matching subset
   Int_t i ;
