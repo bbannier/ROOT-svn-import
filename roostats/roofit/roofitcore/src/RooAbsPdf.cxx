@@ -1543,7 +1543,7 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet& whatVars, const RooCmdArg& arg1
 			  << GetName() << "::expectedEvents() = " << nEvents << endl ;
     // If Poisson fluctuation results in zero events, stop here
     if (nEvents==0) {
-      return 0 ;
+      return new RooDataSet("emptyData","emptyData",whatVars) ;
     }
   } else if (nEvents==0) {
     cxcoutI(Generation) << "No number of events specified , number of events generated is " 
@@ -1676,6 +1676,10 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, Int_t nEvents, Bool_t
   // in case of an error. The caller takes ownership of the returned
   // dataset.
 
+  if (nEvents==0 && extendMode()==CanNotBeExtended) {
+    return new RooDataSet("emptyData","emptyData",whatVars) ;
+  }
+
   RooDataSet *generated = 0;
   RooAbsGenContext *context= genContext(whatVars,0,0,verbose);
   if(0 != context && context->isValid()) {
@@ -1692,10 +1696,15 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, Int_t nEvents, Bool_t
 
 
 //_____________________________________________________________________________
-RooDataSet *RooAbsPdf::generate(RooAbsGenContext& context, const RooArgSet &/*whatVars*/, const RooDataSet *prototype,
+RooDataSet *RooAbsPdf::generate(RooAbsGenContext& context, const RooArgSet &whatVars, const RooDataSet *prototype,
 				Int_t nEvents, Bool_t /*verbose*/, Bool_t randProtoOrder, Bool_t resampleProto) const 
 {
   // Internal method
+
+  if (nEvents==0) {
+    return new RooDataSet("emptyData","emptyData",whatVars) ;
+  }
+
 
   RooDataSet *generated = 0;
 
@@ -2302,12 +2311,12 @@ RooPlot* RooAbsPdf::plotOn(RooPlot* frame, RooLinkedList& cmdList) const
 	scaleFactor *= frame->getFitRangeNEvt()/nExpected ;
       }
     } else if (stype==RelativeExpected) {
-      scaleFactor *= nExpected ;
+      scaleFactor *= nExpected ; 
     } else if (stype==NumEvent) {
       scaleFactor /= nExpected ;
     }
     scaleFactor *= frame->getFitRangeBinW() ;
-  }
+  } 
   frame->updateNormVars(*frame->getPlotVar()) ;
 
   // Append overriding scale factor command at end of original command list
