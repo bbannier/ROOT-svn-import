@@ -126,7 +126,7 @@ public:
   } ;
 	
   // Split a dataset by a category
-  virtual TList* split(const RooAbsCategory& splitCat) const ;
+  virtual TList* split(const RooAbsCategory& splitCat, Bool_t createEmptyDataSets=kFALSE) const ;
  
 
   // Create 1,2, and 3D histograms from and fill it
