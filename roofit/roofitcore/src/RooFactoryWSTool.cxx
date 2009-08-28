@@ -385,6 +385,11 @@ RooAbsArg* RooFactoryWSTool::createArg(const char* className, const char* objNam
 	if (btype.find("&")) {
 	  btype.erase(btype.size()-1,btype.size()) ;
 	}
+
+	// If btype if a typedef, substitute it by the true type name
+	btype = RooCintUtils::trueName(btype.c_str()) ;
+
+	cout << "btype = " << btype << endl ;
 	
 	if (obj.InheritsFrom(btype.c_str())) {
 	  cintExpr += Form(",(%s&)RooFactoryWSTool::as_OBJ(%d)",ti->c_str(),i) ;
