@@ -70,6 +70,7 @@ public:
   Bool_t dependsOn(const RooAbsCollection& serverList, const RooAbsArg* ignoreArg=0, Bool_t valueOnly=kFALSE) const ;
   Bool_t dependsOn(const RooAbsArg& server, const RooAbsArg* ignoreArg=0, Bool_t valueOnly=kFALSE) const ;
   Bool_t overlaps(const RooAbsArg& testArg) const ;
+  Bool_t hasClients() const { return _clientList.GetSize()>0 ? kTRUE : kFALSE ; }
   inline TIterator* clientIterator() const { 
     // Return iterator over all client RooAbsArgs
     return _clientList.MakeIterator() ; 
@@ -286,6 +287,7 @@ public:
   void graphVizTree(const char* fileName, const char* delimiter="\n", bool useTitle=false, bool useLatex=false) ;
   void graphVizTree(ostream& os, const char* delimiter="\n", bool useTitle=false, bool useLatex=false) ;
 
+  void printComponentTree(const char* indent="",const char* namePat=0) ;
   void printCompactTree(const char* indent="",const char* fileName=0, const char* namePat=0, RooAbsArg* client=0) ;
   void printCompactTree(ostream& os, const char* indent="", const char* namePat=0, RooAbsArg* client=0) ;
   virtual void printCompactTreeHook(ostream& os, const char *ind="") ;

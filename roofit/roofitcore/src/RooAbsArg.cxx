@@ -52,6 +52,7 @@
 #include "RooMsgService.h"
 #include "RooExpensiveObjectCache.h"
 #include "RooAbsDataStore.h"
+#include "RooResolutionModel.h"
 
 #include <string.h>
 #include <iomanip>
@@ -1751,6 +1752,35 @@ void RooAbsArg::printCompactTree(ostream& os, const char* indent, const char* na
   RooAbsArg* arg ;
   while((arg=(RooAbsArg*)iter->Next())) {
     arg->printCompactTree(os,indent2,namePat,this) ;
+  }
+  delete iter ;
+}
+
+
+//_____________________________________________________________________________
+void RooAbsArg::printComponentTree(const char* indent, const char* namePat)
+{
+  // Print tree structure of expression tree on given ostream, only branch nodes are printed.
+  // Lead nodes (variables) will not be shown
+  //
+  // If namePat is not "*", only nodes with names matching the pattern will be printed.
+
+  if (isFundamental()) return ;
+  RooResolutionModel* rmodel = dynamic_cast<RooResolutionModel*>(this) ;
+  if (rmodel && rmodel->isConvolved()) return ;
+  if (InheritsFrom("RooConstVar")) return ;
+
+  if ( !namePat || TString(GetName()).Contains(namePat)) {
+    cout << indent ;
+    Print() ;
+  }
+
+  TString indent2(indent) ;
+  indent2 += "  " ;
+  TIterator * iter = serverIterator() ;
+  RooAbsArg* arg ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    arg->printComponentTree(indent2.Data(),namePat) ;
   }
   delete iter ;
 }
