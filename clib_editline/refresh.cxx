@@ -1004,8 +1004,7 @@ re_fastputc(EditLine *el, int c)
 {
 	// color = get color info from el, pass to term__putc
 	int curCharIndex = (el->el_line.cursor-1) - el->el_line.buffer;
-	el_color_t * louiseTmp = &el->el_line.bufcolor[curCharIndex];
-	term__putcolorch(c, louiseTmp);													// LOUISE fix term__putc call
+	term__putcolorch(c, &el->el_line.bufcolor[curCharIndex]);													// LOUISE fix term__putc call
 	el->el_display[el->el_cursor.v][el->el_cursor.h++] = c;
 	(el->el_dispcolor[el->el_cursor.v][el->el_cursor.h++]) = -1;		// LOUISE COLOUR - note: this should be null - putting to null for now as i dont know what this does
 

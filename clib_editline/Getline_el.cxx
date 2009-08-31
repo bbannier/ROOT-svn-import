@@ -238,7 +238,6 @@ static int gl_tab(char *buf, int offset, int *loc);
 
 char   *Getline(const char *prompt); /* read a line of input */
 char   *Getlinem(int mode, const char *prompt); /* allows reading char by char */
-char   *OriGetlinem(int mode, const char *prompt); /* the original Getlinem in case I muck up! */
 void    Gl_config(const char *which, int value); /* set some options */
 void    Gl_setwidth(int w);          /* specify width of screen */
 void    Gl_windowchanged();          /* call after SIGWINCH signal */
@@ -264,12 +263,15 @@ int             (*Gl_in_key)(int ch) = 0;
 /** newer imported interfaces **/
 #include "editline.h"
 
+char * hist_file; // file name for the command history (read and write)
+
 struct WriteHistoryTrigger {
-	char * hist_file;
 	~WriteHistoryTrigger() {
 		write_history(hist_file);
 	}
 };
+
+
 
 /******************** internal interface *********************************/
 
@@ -672,10 +674,11 @@ Gl_windowchanged()
 #endif
 }
 
-/* -1 = init, 0 = line mode, 1 = one char at a time mode, 2 = cleanup */
-
-/* The new and hopefully improved Getlinem method! */
-/* current passes control straight to the original method (renamed OriGetlinem) */
+/* The new and hopefully improved Getlinem method! 
+ * Uses readline() from libeditline. 
+ * History and editing are also handled by libeditline.
+ * Modes: -1 = init, 0 = line mode, 1 = one char at a time mode, 2 = cleanup
+ */
 char *
 Getlinem(int mode, const char *prompt)
 {
@@ -685,7 +688,8 @@ Getlinem(int mode, const char *prompt)
    	static int getline_initialized = 0;
 	if (getline_initialized == 0)
 	{
-		rl_initialize();
+		//rl_initialize();		// - is rl_initialize already being called by history_stifle()?
+		read_history(hist_file);
 		getline_initialized = 1;
 	}
 
@@ -711,10 +715,7 @@ Getlinem(int mode, const char *prompt)
 		// note: input_buffer will be null unless complete line entered
 		input_buffer = readline(sprompt);
 
-		// at this point i have the buffer, but do not know how long it is
-		// logic about whether input_buffer is terminated with a \n or not
-		// if yes: add history etc
-		// if no: return null
+		// if complete line is entered, add to history and return buffer, otherwise return null
 		char * ch = input_buffer;
 		
 		if (input_buffer)
@@ -732,10 +733,6 @@ Getlinem(int mode, const char *prompt)
 	}
 	return NULL;
 }
-
-char *
-OriGetlinem(int mode, const char *prompt)
-{ }
 
 int
 Gl_eof()
@@ -801,8 +798,7 @@ void
 Gl_histinit(char *file)
 { 
 	static WriteHistoryTrigger history_write_trigger;
-	history_write_trigger.hist_file = file;
-	read_history(file);
+	hist_file = file;
 }
 
 void
