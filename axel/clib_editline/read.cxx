@@ -530,7 +530,12 @@ el_gets(EditLine *el, int *nread)
 	// this happens for every char - need to add some logic to enhance to make it not check if not a word etc
 	// [a-zA-Z]+[0-9].
 	highlightKeywords(el);
-	matchParentheses(el);
+
+	// if the cursor is at some point in the middle of the buffer, check for brackets
+	if (el->el_line.cursor != el->el_line.lastchar)
+	{
+		matchParentheses(el);
+	}
 
 	
 	/* '\a' indicates entry is not complete */

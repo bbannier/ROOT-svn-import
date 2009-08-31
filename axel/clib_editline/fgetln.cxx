@@ -97,6 +97,10 @@ char *fgetln(FILE *stream, size_t *len)
     *len = sz;
   }
 
-  return sz >= 0 ? ptr : NULL;
+  if (sz != ((size_t) -1) )
+  {
+	return ptr; 
+  }
+  return NULL;
 }
 #endif

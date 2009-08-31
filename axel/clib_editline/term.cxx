@@ -1311,7 +1311,7 @@ term__putcolorch(int c, el_color_t *color)
 		else if ( color->foreColor == 2 )		// bracket: NCurses COLOR_GREEN
 		{
 			attr = WA_BOLD;
-			tm.SetColor(0,127,0);
+			tm.SetColor(0,255,0);
 		}
 		
 		// output the coloured char
