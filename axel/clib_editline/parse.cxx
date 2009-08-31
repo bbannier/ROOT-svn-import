@@ -60,7 +60,7 @@ __RCSID("$NetBSD: parse.c,v 1.14 2001/01/23 15:55:30 jdolecek Exp $");
  */
 #include "el.h"
 #include "tokenizer.h"
-#include "builtins.hpp"
+#include "builtins.h"
 #include <stdlib.h>
 
 
