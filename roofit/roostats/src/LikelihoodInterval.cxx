@@ -260,7 +260,7 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param)
 	if (fabs(step)<1E-5) {
 	  std::cout<<"WARNING upper limit is outside the parameters bounderies. Abort!"<<std::endl;
 	  delete newProfile;
-	  double ret=myarg->getMax();
+	  double ret = myarg->getMax();
 	  delete myarg;
 	  return ret;
 	}
@@ -292,7 +292,7 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param)
  
   delete newProfile;
   double ret=myarg->getVal();
-  delete myarg;
+  //delete myarg;
   return ret;
 }
 
@@ -395,7 +395,7 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param)
 
   delete newProfile;
   double ret=myarg->getVal();
-  delete myarg;
+  //delete myarg;
   return ret;
   //return x_app;
 
