@@ -1,0 +1,88 @@
+#ifndef INCLUDE_TTERMMANIP_H
+#define INCLUDE_TTERMMANIP_H
+
+#include <stdio.h>
+#include <map>
+#include <cstring>
+
+#if defined(__sun) || defined(__SUNPRO_CC)
+typedef char PutcFuncArg_t;
+#else
+typedef int PutcFuncArg_t;
+#endif
+
+// setupterm must be called before TTermManip can be created!
+class TTermManip {
+public:
+   TTermManip();
+   ~TTermManip() { ResetTerm(); }
+   
+   bool SetColor(unsigned char r, unsigned char g, unsigned char b);
+
+   void StartUnderline() { WriteTerm(fStartUnderline); }
+   void StopUnderline() { WriteTerm(fStopUnderline); }
+
+private:
+   struct Color {
+      Color(unsigned char r, unsigned char g, unsigned char b):
+         fR((r * 1001 ) / 256), fG((g * 1001 ) / 256), fB((b * 1001 ) / 256) {
+         // Re-normalize RGB components from 0 to 255 to 0 to 1000
+      }
+
+      bool operator<(const Color& c) const {
+         return fR < c.fR
+            || (fR == c.fR && (fG < c.fG
+                             || (fG == c.fG && fB < c.fB) ) );
+      }
+      unsigned char fR, fG, fB;
+   };
+
+   char* GetTermStr(const char* cap);
+
+   bool WriteTerm(char* termstr);
+
+   bool WriteTerm(char* termstr, int i);
+
+   bool ResetTerm() {
+      if (!fOrigColors) {
+#ifndef _MSC_VER
+         // some claim to not have it and they have it nevertheless - so try:
+         printf("\e[39;49m");
+#endif
+      } else {
+         WriteTerm(fOrigColors);
+      }
+      return true;
+   }
+
+   int AllocColor(const Color& col);
+
+   static int DefaultPutchar(PutcFuncArg_t c) {
+      // tputs takes int(*)(char) on solaris, so wrap putchar
+      return putchar(c);
+   }
+
+
+   bool fColorCapable;
+   bool fUsePairs;
+   bool fAnsiColors; // whether fSetFg, Bg use ANSI
+   bool fCanChangeColors; // whether the terminal can redifine existing colors
+   char* fOrigColors; // reset colors
+   char* fInitColor; // initialize a color
+   char* fInitPair; // initialize pair
+   char* fSetPair; // set color to a pair
+   char* fSetFg; // set foreground color
+   char* fSetBold; // set bold color
+   char* fSetDefault; // set normal color
+   char* fStartUnderline; // start underline;
+   char* fStopUnderline; // stop underline;
+   typedef int (*PutcFunc_t)(PutcFuncArg_t);
+   PutcFunc_t fPutc;
+
+   static const int fgStartColIdx = 5;
+
+   typedef std::map<Color, int> ColorMap_t;
+   ColorMap_t fColors;
+};
+
+#endif // INCLUDE_TTERMMANIP_H
