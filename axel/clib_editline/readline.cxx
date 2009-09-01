@@ -353,7 +353,7 @@ readline(const char *prompt)
                 // ^^^ the strdup() is because i'm afraid of leaking when
                 // e->...buffer gets duped and then assigned to itself later on
                 // via parse_line(). This isn't C++, you know. :/
-                int pr = parse_line( e, line );
+                int pr = -1; // AXEL removed: parse_line( e, line );
                 if( -1 != pr )
                 { // it was a built-in. Let's re-run THIS function again
                   // instead of returning to the user...
