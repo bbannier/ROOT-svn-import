@@ -67,7 +67,7 @@ typedef int (*history_efun_t)(ptr_t, HistEvent *, const char *);
 typedef void (*history_vfun_t)(ptr_t, HistEvent *);
 typedef int (*history_sfun_t)(ptr_t, HistEvent *, const int);
 
-struct history {
+struct history_ {
 	ptr_t h_ref;		/* Argument for history fcns	 */
 	int h_ent;		/* Last entry point for history	 */
 	history_gfun_t h_first;	/* Get the first element	 */

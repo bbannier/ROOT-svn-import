@@ -2,6 +2,7 @@
 #include <set>
 #include <cstring>
 #include <stdarg.h>
+#include <stdio.h>
 
 char* tigetstr(const char* cap) {
    // We support reset, set foreground, set bold, reset to default.
@@ -18,11 +19,11 @@ char* tigetstr(const char* cap) {
 }
 
 typedef int (*PutcFunc_t)(int);
-int tputs(const char* what, int, PutcFunc_t putc) {
+int tputs(const char* what, int, PutcFunc_t myputc) {
    if (!what || !(*what)) return 1;
    const char* c = what;
    while (*c)
-      putc(*(c++));
+      (*myputc)(*(c++));
    return c - what;
 }
 
@@ -57,7 +58,7 @@ char* tparm(const char* termstr, ...) {
    return (char*)"";
 }
 
-int setupterm(const char* /*term*/, int fd, int* errcode) {
+int setupterm(const char* /*term*/, int /*fd*/, int* errcode) {
    if (errcode) *errcode = 0;
    return !ERR;
 }

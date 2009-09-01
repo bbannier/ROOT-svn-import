@@ -156,7 +156,7 @@ void		 el_deletestr(EditLine *, int);
  * ==== History ====
  */
 
-typedef struct history History;
+typedef struct history_ History;
 
 typedef struct HistEvent {
 	int		 num;

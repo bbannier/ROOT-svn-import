@@ -64,7 +64,7 @@ em_delete_or_list(EditLine *el, int c)
 					/* if I'm at the end */
 		if (el->el_line.cursor == el->el_line.buffer) {
 					/* and the beginning */
-			term_overwrite(el, STReof, 4);	/* then do a EOF */
+                        term_overwrite(el, STReof, 0, 4);	/* then do a EOF */
 			term__flush();
 			return (CC_EOF);
 		} else {

@@ -57,12 +57,49 @@ __RCSID("$NetBSD: refresh.c,v 1.17 2001/04/13 00:53:11 lukem Exp $");
 #include "el.h"
 
 el_private void	re_addc(EditLine *, int);
-el_private void	re_update_line(EditLine *, char *, char *, int);
+el_private void	re_update_line(EditLine *, char *, char *, el_color_t*, int);
 el_private void	re_insert (EditLine *, char *, int, int, char *, int);
 el_private void	re_delete(EditLine *, char *, int, int, int);
 el_private void	re_fastputc(EditLine *, int);
 el_private void	re__strncopy(char *, char *, size_t);
 el_private void	re__copy_and_pad(char *, char *, size_t);
+/* re__copy_and_pad():
+ *	Copy string and pad with spaces
+ */
+
+el_private void
+re__copy_and_pad(char *dst, char *src, size_t width)
+{
+	int i;
+
+	for (i = 0; i < width; i++) {
+		if (*src == 0)
+			break;
+		*dst++ = *src++;
+	}
+
+	for (; i < width; i++)
+		*dst++ = ' ';
+
+	*dst = 0;
+}
+
+el_private void
+re__copy_and_pad(el_color_t *dst, el_color_t *src, size_t width)
+{
+	int i;
+
+	for (i = 0; i < width; i++) {
+		*dst++ = *src++;
+	}
+
+	for (; i < width; i++)
+		*dst++ = -1;
+
+	*dst = -1;
+}
+
+
 
 #ifdef DEBUG_REFRESH
 el_private void	re_printstr(EditLine *, char *, char *, char *);
@@ -283,8 +320,9 @@ re_refresh(EditLine *el)
 	ELRE_DEBUG(1, (__F, "updating %d lines.\r\n", el->el_refresh.r_newcv));
 	for (i = 0; i <= el->el_refresh.r_newcv; i++) {
 		/* NOTE THAT re_update_line MAY CHANGE el_display[i] */
-		re_update_line(el, el->el_display[i], el->el_vdisplay[i], i);
-		//re_update_line(el, el->el_dispcolor[i], el->el_vdispcolor[i], i);		// LOUISE COLOUR - this func also takes chars - wont work with el_color_t
+		re_update_line(el, el->el_display[i], el->el_vdisplay[i],
+                               el->el_vdispcolor[i],
+                               i);
 
 		/*
 		 * Copy the new line to be the current one, and pad out with
@@ -295,9 +333,8 @@ re_refresh(EditLine *el)
 		 */
 		re__copy_and_pad(el->el_display[i], el->el_vdisplay[i],
 		    (size_t) el->el_term.t_size.h);							
-		//re__copy_and_pad(el->el_dispcolor[i], el->el_vdispcolor[i],
-		   // (size_t) el->el_term.t_size.h);							// LOUISE COLOUR this function takes chars therefore won't work with el_color_t
-																	// need to duplicate function?
+		re__copy_and_pad(el->el_dispcolor[i], el->el_vdispcolor[i],
+                    (size_t) el->el_term.t_size.h);							// LOUISE COLOUR 
 	}
 	ELRE_DEBUG(1, (__F,
 	"\r\nel->el_refresh.r_cursor.v=%d,el->el_refresh.r_oldcv=%d i=%d\r\n",
@@ -309,7 +346,7 @@ re_refresh(EditLine *el)
 			term_move_to_char(el, 0);
 			term_clear_EOL(el, (int) strlen(el->el_display[i]));		// LOUISE COLOUR no change made
 #ifdef DEBUG_REFRESH
-			term_overwrite(el, "C\b", 2);
+			term_overwrite(el, "C\b", 0, 2);
 #endif /* DEBUG_REFRESH */
 			el->el_display[i][0] = '\0';
 			el->el_dispcolor[i][0] = -1;					// LOUISE COLOUR - note: this should be null
@@ -455,11 +492,12 @@ new:	eddie> Oh, my little buggy says to me, as lurgid as
 #define	MIN_END_KEEP	4
 
 el_private void
-re_update_line(EditLine *el, char *old, char *newp, int i)
+re_update_line(EditLine *el, char *old, char *newp, el_color_t* color, int i)
 {
 	char *o, *n, *p, c;
 	char *ofd, *ols, *oe, *nfd, *nls, *ne;
 	char *osb, *ose, *nsb, *nse;
+        el_color_t* nfd_col, *nse_col;
 	int fx, sx;
 
 	/*
@@ -469,6 +507,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 		continue;
 	ofd = o;
 	nfd = n;
+        nfd_col = color ? color + (nfd - newp) : 0;
 
 	/*
          * Find the end of both old and newp
@@ -521,6 +560,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 	nsb = nls;
 	ose = ols;
 	nse = nls;
+        nse_col = color ? color + (nse - newp) : 0;
 
 	/*
          * case 1: insert: scan from nfd to nls looking for *ofd
@@ -540,6 +580,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 				    (2 * (p - n) > n - nfd)) {
 					nsb = n;
 					nse = p;
+                                        nse_col = color ? color + (nse - newp) : 0;
 					osb = ofd;
 					ose = o;
 				}
@@ -564,6 +605,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 				    (2 * (p - o) > o - ofd)) {
 					nsb = nfd;
 					nse = n;
+                                        nse_col = color ? color + (nse - newp) : 0;
 					osb = o;
 					ose = p;
 				}
@@ -600,6 +642,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 			ose = ols;
 			nsb = nls;
 			nse = nls;
+                        nse_col = color ? color + (nse - newp) : 0;
 		}
 		if (sx > 0) {
 			ols = oe;
@@ -616,6 +659,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 			ose = ols;
 			nsb = nls;
 			nse = nls;
+                        nse_col = color ? color + (nse - newp) : 0;
 		}
 		if (sx < 0) {
 			ols = oe;
@@ -637,6 +681,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 		ose = ols;
 		nsb = nls;
 		nse = nls;
+                nse_col = color ? color + (nse - newp) : 0;
 	}
 	/*
          * Now that we are done with pragmatics we recompute fx, sx
@@ -737,7 +782,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 			if (fx > 0) {
 				ELRE_DEBUG(!EL_CAN_INSERT, (__F,
 				"ERROR: cannot insert in early first diff\n"));
-				term_insertwrite(el, nfd, fx);
+				term_insertwrite(el, nfd, nfd_col, fx);
 				re_insert(el, old, ofd - old,
 				    el->el_term.t_size.h, nfd, fx);
 			}
@@ -745,12 +790,12 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 		         * write (nsb-nfd) - fx chars of newp starting at
 		         * (nfd + fx)
 			 */
-			term_overwrite(el, nfd + fx, (nsb - nfd) - fx);
+			term_overwrite(el, nfd + fx, nfd_col ? nfd_col + fx : 0, (nsb - nfd) - fx);
 			re__strncopy(ofd + fx, nfd + fx,
 			    (size_t) ((nsb - nfd) - fx));
 		} else {
 			ELRE_DEBUG(1, (__F, "without anything to save\r\n"));
-			term_overwrite(el, nfd, (nsb - nfd));
+			term_overwrite(el, nfd, nfd_col, (nsb - nfd));
 			re__strncopy(ofd, nfd, (size_t) (nsb - nfd));
 			/*
 		         * Done
@@ -783,7 +828,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 			/*
 		         * write (nsb-nfd) chars of newp starting at nfd
 		         */
-			term_overwrite(el, nfd, (nsb - nfd));
+			term_overwrite(el, nfd, nfd_col, (nsb - nfd));
 			re__strncopy(ofd, nfd, (size_t) (nsb - nfd));
 
 		} else {
@@ -792,7 +837,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 			/*
 		         * write (nsb-nfd) chars of newp starting at nfd
 		         */
-			term_overwrite(el, nfd, (nsb - nfd));
+			term_overwrite(el, nfd, nfd_col, (nsb - nfd));
 			ELRE_DEBUG(1, (__F,
 			    "cleareol %d\n", (oe - old) - (ne - newp)));
 			term_clear_EOL(el, (oe - old) - (ne - newp));
@@ -831,11 +876,11 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 			/*
 		         * write (nls-nse) chars of newp starting at nse
 		         */
-			term_overwrite(el, nse, (nls - nse));
+			term_overwrite(el, nse, nse_col, (nls - nse));
 		} else {
 			ELRE_DEBUG(1, (__F,
 			    "but with nothing left to save\r\n"));
-			term_overwrite(el, nse, (nls - nse));
+			term_overwrite(el, nse, nse_col, (nls - nse));
 			ELRE_DEBUG(1, (__F,
 			    "cleareol %d\n", (oe - old) - (ne - newp)));
 			if ((oe - old) - (ne - newp) != 0)
@@ -867,7 +912,7 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 				 */
 				ELRE_DEBUG(!EL_CAN_INSERT, (__F,
 				 "ERROR: cannot insert in late first diff\n"));
-				term_insertwrite(el, nfd, fx);
+				term_insertwrite(el, nfd, nfd_col, fx);
 				re_insert(el, old, ofd - old,
 				    el->el_term.t_size.h, nfd, fx);
 			}
@@ -875,12 +920,12 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 		         * write (nsb-nfd) - fx chars of newp starting at
 		         * (nfd + fx)
 			 */
-			term_overwrite(el, nfd + fx, (nsb - nfd) - fx);
+			term_overwrite(el, nfd + fx, nfd_col ? nfd_col + fx : 0, (nsb - nfd) - fx);
 			re__strncopy(ofd + fx, nfd + fx,
 			    (size_t) ((nsb - nfd) - fx));
 		} else {
 			ELRE_DEBUG(1, (__F, "without anything to save\r\n"));
-			term_overwrite(el, nfd, (nsb - nfd));
+			term_overwrite(el, nfd, nfd_col, (nsb - nfd));
 			re__strncopy(ofd, nfd, (size_t) (nsb - nfd));
 		}
 	}
@@ -897,16 +942,16 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 				/* insert sx chars of newp starting at nse */
 				ELRE_DEBUG(!EL_CAN_INSERT, (__F,
 				    "ERROR: cannot insert in second diff\n"));
-				term_insertwrite(el, nse, sx);
+				term_insertwrite(el, nse, nse_col, sx);
 			}
 			/*
 		         * write (nls-nse) - sx chars of newp starting at
 			 * (nse + sx)
 		         */
-			term_overwrite(el, nse + sx, (nls - nse) - sx);
+			term_overwrite(el, nse + sx, nse_col ? nse_col + sx : 0, (nls - nse) - sx);
 		} else {
 			ELRE_DEBUG(1, (__F, "without anything to save\r\n"));
-			term_overwrite(el, nse, (nls - nse));
+			term_overwrite(el, nse, nse_col, (nls - nse));
 
 			/*
 	                 * No need to do a clear-to-end here because we were
@@ -916,27 +961,6 @@ re_update_line(EditLine *el, char *old, char *newp, int i)
 		}
 	}
 	ELRE_DEBUG(1, (__F, "done.\r\n"));
-}
-
-
-/* re__copy_and_pad():
- *	Copy string and pad with spaces
- */
-el_private void
-re__copy_and_pad(char *dst, char *src, size_t width)
-{
-	int i;
-
-	for (i = 0; i < width; i++) {
-		if (*src == '\0')
-			break;
-		*dst++ = *src++;
-	}
-
-	for (; i < width; i++)
-		*dst++ = ' ';
-
-	*dst = '\0';
 }
 
 
