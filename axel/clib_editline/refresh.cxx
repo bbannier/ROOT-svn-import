@@ -1028,9 +1028,9 @@ re_fastputc(EditLine *el, int c)
 {
 	// color = get color info from el, pass to term__putc
 	int curCharIndex = (el->el_line.cursor-1) - el->el_line.buffer;
-	term__putcolorch(c, &el->el_line.bufcolor[curCharIndex]);													// LOUISE fix term__putc call
+	term__putcolorch(c, &el->el_line.bufcolor[curCharIndex]);
 	el->el_display[el->el_cursor.v][el->el_cursor.h++] = c;
-	(el->el_dispcolor[el->el_cursor.v][el->el_cursor.h++]) = -1;		// LOUISE COLOUR - note: this should be null - putting to null for now as i dont know what this does
+	(el->el_dispcolor[el->el_cursor.v][el->el_cursor.h]) = -1;
 
 	if (el->el_cursor.h >= el->el_term.t_size.h) {
 		/* if we must overflow */
@@ -1045,28 +1045,28 @@ re_fastputc(EditLine *el, int c)
 		if (el->el_cursor.v + 1 >= el->el_term.t_size.v) {
 			int i, lins = el->el_term.t_size.v;
 			char *firstline = el->el_display[0];
-			el_color_t *firstcolor = el->el_dispcolor[0];			// LOUISE COLOUR
+			el_color_t *firstcolor = el->el_dispcolor[0];
 	
 			for(i=1; i < lins; i++) {
 				el->el_display[i-1] = el->el_display[i];
-				el->el_dispcolor[i-1] = el->el_dispcolor[i];		// LOUISE COLOUR
+				el->el_dispcolor[i-1] = el->el_dispcolor[i];
 			}
 
 			re__copy_and_pad(firstline, "", 0);
 			el->el_display[i-1] = firstline;
-			el->el_dispcolor[i-1] = firstcolor;						// LOUISE COLOUR
+			el->el_dispcolor[i-1] = firstcolor;
 		} else {
 			el->el_cursor.v++;
 			el->el_refresh.r_oldcv++;
 		}
 		if (EL_HAS_AUTO_MARGINS) {
 			if (EL_HAS_MAGIC_MARGINS) {
-				term__putcolorch(' ', NULL);								// LOUISE COLOUR
-				term__putcolorch('\b', NULL);								// LOUISE COLOUR
+				term__putcolorch(' ', NULL);
+				term__putcolorch('\b', NULL);
 			}
 		} else {
-			term__putcolorch('\r', NULL);									// LOUISE COLOUR
-			term__putcolorch('\n', NULL);									// LOUISE COLOUR
+			term__putcolorch('\r', NULL);
+			term__putcolorch('\n', NULL);
 		}
 	}
 }
@@ -1122,7 +1122,7 @@ re_clear_display(EditLine *el)
 	el->el_cursor.h = 0;
 	for (i = 0; i < el->el_term.t_size.v; i++) {
 		el->el_display[i][0] = '\0';
-		el->el_dispcolor[i][0] = -1;		//LOUISE COLOUR note: this should be null
+		el->el_dispcolor[i][0] = -1;
 	}
 	el->el_refresh.r_oldcv = 0;
 }
@@ -1147,7 +1147,7 @@ re_clear_lines(EditLine *el)
 	} else {
 		term_move_to_line(el, el->el_refresh.r_oldcv);
 					/* go to last line */
-		term__putcolorch('\r', NULL);	/* go to BOL */							// LOUISE COLOUR - this call to term putc doesn't require colour info
-		term__putcolorch('\n', NULL);	/* go to new line */					// LOUISE COLOUR
+		term__putcolorch('\r', NULL);	/* go to BOL */	
+		term__putcolorch('\n', NULL);	/* go to new line */
 	}
 }

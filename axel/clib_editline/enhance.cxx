@@ -147,10 +147,10 @@ int matchParentheses(EditLine * el) {
 	bTypes[2][0] = '[';
 	bTypes[2][1] = ']';
 
-	/* CURRENT STUFF
-	// create the substring from the currently selected char to the end of the buffer
+	// CURRENT STUFF
+	// create a string of the buffer contents
 	TString sBuffer = "";
-	for (char* c=el->el_line.cursor; c<el->el_line.lastchar; c++)
+	for (char* c=el->el_line.buffer; c<el->el_line.lastchar; c++)
 	{
 		sBuffer.Append(*c);
 	}
@@ -160,53 +160,73 @@ int matchParentheses(EditLine * el) {
 
 	if (sBuffer.Length() > 0)
 	{
-		int openIndex = el->el_line.cursor - el->el_line.buffer;
-		bool openFound = false;
+		int cursorPos = el->el_line.cursor - el->el_line.buffer;
+		int foundParenIdx = -1;
 
 		// check against each bracket type
 		int bIndex = 0;
-		for (bIndex = 0; bIndex<amtBrackets && !openFound; bIndex++)
+		for (bIndex = 0; bIndex<amtBrackets; bIndex++)
 		{
-			// if current char is equal to opening bracket
-			if (sBuffer[openIndex] == bTypes[bIndex][0])
+			// if current char is equal to opening bracket, push onto stack
+			if (sBuffer[cursorPos] == bTypes[bIndex][0])
 			{
-				locBrackets.push(openIndex);
-				openFound = true;
+				locBrackets.push(cursorPos);
+				foundParenIdx = 0;
+				break;
+			} else if (sBuffer[cursorPos] == bTypes[bIndex][1])
+			{
+				locBrackets.push(cursorPos);
+				foundParenIdx = 1;
+				break;
 			}
 		}
 
 		// current cursor char is not an open bracket, therefore no need to search
-		if ( !openFound ) 
+		if ( foundParenIdx == -1 ) 
 		{
+			// check for any highlighted brackets and remove colour info
+			for (int i = 0; i < sBuffer.Length(); i++)
+			{
+				if ( el->el_line.bufcolor[i].foreColor == COLOR_BRACKET )
+				{
+					el->el_line.bufcolor[i] = -1;		// reset to default colours
+					term__repaint(el, i);
+				}
+			}
 			return -1;
 		}
 
 		// iterate through remaining letters until find a matching closing bracket 
 		// if another open bracket of the same type is found, push onto stack 
 		// and pop on next closing bracket match
-		for (int i=openIndex; i<sBuffer.Length(); i++)
+		int step = 1;
+		if (foundParenIdx == 1) {
+			step = -1;
+		}
+
+		for (int i=cursorPos + step; i >= 0 && i<sBuffer.Length(); i += step)
 		{
 			//if current char is equal to another opening bracket, push onto stack
-			if (sBuffer[i] == bTypes[bIndex][0])
+			if (sBuffer[i] == bTypes[bIndex][foundParenIdx])
 			{
 				// push index of bracket
 				locBrackets.push(i);
 			}
 			//if current char is equal to closing bracket
-			else if (sBuffer[i] == bTypes[bIndex][1])
+			else if (sBuffer[i] == bTypes[bIndex][1 - foundParenIdx])
 			{
 				// pop previous opening bracket off stack
 				locBrackets.pop();
 				// if previous opening was the last entry, then highlight match
 				if (locBrackets.empty())
 				{
-					colorBrackets(el, openIndex, i, COLOR_BRACKET);
+					colorBrackets(el, cursorPos, i, COLOR_BRACKET);
 					break;
 				}
 			}
 		}
 	}
-*/
+
 	return index;
 }
 

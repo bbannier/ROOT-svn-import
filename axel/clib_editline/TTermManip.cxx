@@ -45,7 +45,7 @@ TTermManip::TTermManip():
    }
 
    fSetBold = GetTermStr("bold");
-   fSetDefault = GetTermStr("sgr0");
+   fSetDefault = GetTermStr("rs2");
    fStartUnderline = GetTermStr("smul");
    fStopUnderline = GetTermStr("rmul");
 

@@ -44,6 +44,8 @@ private:
    bool WriteTerm(char* termstr, int i);
 
    bool ResetTerm() {
+	  WriteTerm(fSetDefault);
+	  WriteTerm(fStopUnderline);
       if (!fOrigColors) {
 #ifndef _MSC_VER
          // some claim to not have it and they have it nevertheless - so try:
