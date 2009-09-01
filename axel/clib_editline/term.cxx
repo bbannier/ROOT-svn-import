@@ -591,6 +591,7 @@ term_move_to_line(EditLine *el, int where)
 				term_move_to_char(el, el->el_term.t_size.h - 1);
 				term_overwrite(el,
 				    &el->el_display[el->el_cursor.v][el->el_cursor.h],
+                                               0, // color irrelevant
 				    1);					// LOUISE COLOR no change made
 				/* updates Cursor */
 				del--;
@@ -677,6 +678,7 @@ mc_again:
 				 */
 				term_overwrite(el,
 				    &el->el_display[el->el_cursor.v][el->el_cursor.h],
+                                               el->el_line.bufcolor + el->el_cursor.h - el->el_prompt.p_pos.h,
 				    where - el->el_cursor.h);				// LOUISE COLOUR no change made
 
 			}
@@ -709,7 +711,7 @@ mc_again:
  *	Overstrike num characters
  */
 el_protected void
-term_overwrite(EditLine *el, char *cp, int n)
+term_overwrite(EditLine *el, char *cp, el_color_t* color, int n)
 {
 	if (n <= 0)
 		return;		/* catch bugs */
@@ -723,7 +725,7 @@ term_overwrite(EditLine *el, char *cp, int n)
 	}
 	do {
 		// need to pull color info for *cp out of bufcolor
-		term__putcolorch(*cp++, &(el->el_line.bufcolor[cp - el->el_line.buffer]));
+                term__putcolorch(*cp++, /*&(el->el_line.bufcolor[cp - el->el_line.buffer])*/ color ? color++ : 0);
 		el->el_cursor.h++;
 	} while (--n);
 
@@ -736,7 +738,9 @@ term_overwrite(EditLine *el, char *cp, int n)
 				 * situation */
 				char c;
 				if ((c = el->el_display[el->el_cursor.v][el->el_cursor.h]) != '\0')		// LOUISE COLOUR no change made
-					term_overwrite(el, &c, 1);
+					term_overwrite(el, &c,
+                                                       el->el_line.bufcolor + el->el_cursor.h - el->el_prompt.p_pos.h,
+                                                       1);
 				else {
 					term__putcolorch(' ', NULL);				// LOUISE fix term__putc call
 				}
@@ -793,7 +797,7 @@ term_deletechars(EditLine *el, int num)
  *	characters in the line
  */
 el_protected void
-term_insertwrite(EditLine *el, char *cp, int num)
+term_insertwrite(EditLine *el, char *cp, el_color_t* color, int num)
 {
 	if (num <= 0)
 		return;
@@ -814,7 +818,7 @@ term_insertwrite(EditLine *el, char *cp, int num)
 		if ((num > 1) || !GoodStr(T_ic)) {
 				/* if ic would be more expensive */
 			(void) tputsInterface(tgoto(Str(T_IC), num, num), num, term__putc);
-			term_overwrite(el, cp, num);
+			term_overwrite(el, cp, color, num);
 				/* this updates el_cursor.h */
 			return;
 		}
@@ -824,7 +828,7 @@ term_insertwrite(EditLine *el, char *cp, int num)
 		el->el_cursor.h += num;
 		do {
 			// need to get color info about cp
-			term__putcolorch(*cp++, &(el->el_line.bufcolor[cp - el->el_line.buffer]));
+                        term__putcolorch(*cp++, /*&(el->el_line.bufcolor[cp - el->el_line.buffer])*/ color ? color++ : 0);
 		} while (--num);
 
 		if (GoodStr(T_ip))	/* have to make num chars insert */
@@ -839,7 +843,7 @@ term_insertwrite(EditLine *el, char *cp, int num)
 					/* insert a char */
 		// need to get colour info from cp
 		// but if cp is not pointing withing el_line.buffer, this will be a disaster
-		term__putcolorch(*cp++, &(el->el_line.bufcolor[cp - el->el_line.buffer]));
+		term__putcolorch(*cp++, /*&(el->el_line.bufcolor[cp - el->el_line.buffer])*/ color ? color++ : 0);
 
 		el->el_cursor.h++;
 
@@ -1342,7 +1346,9 @@ term__repaint(EditLine * el, int index)
 	term_move_to_char(el, promptSize+index);
 	
 	// rewrite char
-	term_overwrite(el, el->el_line.cursor, 1);
+	term_overwrite(el, el->el_line.cursor,
+                       el->el_line.bufcolor + index,
+                       1);
 
 	// move cursor back
 	el->el_line.cursor = cursor;

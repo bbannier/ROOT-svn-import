@@ -87,8 +87,8 @@ typedef struct {
 el_protected void	term_move_to_line(EditLine *, int);
 el_protected void	term_move_to_char(EditLine *, int);
 el_protected void	term_clear_EOL(EditLine *, int);
-el_protected void	term_overwrite(EditLine *, char *, int);
-el_protected void	term_insertwrite(EditLine *, char *, int);
+el_protected void	term_overwrite(EditLine *, char *, el_color_t*, int);
+el_protected void	term_insertwrite(EditLine *, char *, el_color_t*, int);
 el_protected void	term_deletechars(EditLine *, int);
 el_protected void	term_clear_screen(EditLine *);
 el_protected void	term_beep(EditLine *);

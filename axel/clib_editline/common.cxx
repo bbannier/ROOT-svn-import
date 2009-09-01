@@ -173,7 +173,7 @@ ed_delete_next_char(EditLine *el, int c)
 #ifdef KSHVI
 				return (CC_ERROR);
 #else
-				term_overwrite(el, STReof, 4);
+				term_overwrite(el, STReof, 0, 4);
 					/* then do a EOF */
 				term__flush();
 				return (CC_EOF);

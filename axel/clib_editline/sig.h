@@ -52,6 +52,7 @@
  * Define here all the signals we are going to handle
  * The _DO macro is used to iterate in the source code
  */
+/*
 #define	ALLSIGS		\
 	_DO(SIGINT)	\
 	_DO(SIGTSTP)	\
@@ -61,6 +62,18 @@
 	_DO(SIGTERM)	\
 	_DO(SIGCONT)	\
 	_DO(SIGWINCH)
+*/
+
+// would like to add
+//	_DO(SIGSTOP)
+// but valgrind claims that one cannot handle it, and of course we trust valgrind.
+
+#define	ALLSIGS		\
+	_DO(SIGTSTP)	\
+	_DO(SIGHUP)	\
+	_DO(SIGCONT)	\
+	_DO(SIGWINCH)
+
 
 typedef sig_t	*el_signal_t;
 
