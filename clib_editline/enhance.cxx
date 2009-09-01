@@ -11,8 +11,9 @@ using namespace std;
 
 // int values for colour pairs
 #define COLOR_CLASS        4            // NCurses COLOR_BLUE
-#define COLOR_TYPE         1            // NCurses COLOR_RED
+#define COLOR_TYPE         4            // NCurses COLOR_BLUE
 #define COLOR_BRACKET      2            // NCurses COLOR_GREEN
+#define COLOR_ERROR		   1			// NCurses COLOR_RED
 
 void highlightKeywords(EditLine * el);
 int matchParentheses(EditLine * el);
@@ -114,9 +115,20 @@ int matchParentheses(EditLine * el) {
       {
          sBuffer.Append(*c);
       }
+	
+   // check for any highlighted brackets and remove colour info
+   for (int i = 0; i < sBuffer.Length(); i++)
+      {
+         if ( el->el_line.bufcolor[i].foreColor == COLOR_BRACKET || el->el_line.bufcolor[i].foreColor == COLOR_ERROR)
+            {
+               el->el_line.bufcolor[i] = -1;                // reset to default colours
+               term__repaint(el, i);
+            }
+      }
 
    // char* stack for pointers to locations of brackets
    stack<int> locBrackets;
+
 
    if (sBuffer.Length() > 0)
       {
@@ -142,17 +154,7 @@ int matchParentheses(EditLine * el) {
             }
 
          // current cursor char is not an open bracket, therefore no need to search
-         if ( foundParenIdx == -1 )
-            {
-               // check for any highlighted brackets and remove colour info
-               for (int i = 0; i < sBuffer.Length(); i++)
-                  {
-                     if ( el->el_line.bufcolor[i].foreColor == COLOR_BRACKET )
-                        {
-                           el->el_line.bufcolor[i] = -1;                // reset to default colours
-                           term__repaint(el, i);
-                        }
-                  }
+         if ( foundParenIdx == -1 ) {
                return -1;
             }
 
@@ -185,6 +187,10 @@ int matchParentheses(EditLine * el) {
                         }
                   }
             }
+		 if ( !locBrackets.empty() )
+			{
+				colorBrackets(el, cursorPos, cursorPos, COLOR_ERROR);
+			}
       }
 
    return index;
@@ -215,15 +221,15 @@ void colorWord(EditLine * el , int first, int num, int textColor)
  *      Set the colour information in the editline buffer,
  *      Then call repaint to repaint the chars with the new colour information
  */
-void colorBrackets(EditLine * el, int open, int close, int color)
+void colorBrackets(EditLine * el, int open, int close, int textColor)
 {
    int bgColor = -1;            // default background
 
-   el->el_line.bufcolor[open].foreColor = COLOR_BRACKET;
+   el->el_line.bufcolor[open].foreColor = textColor;
    el->el_line.bufcolor[open].backColor = bgColor;      
    term__repaint(el, open);     
 
-   el->el_line.bufcolor[close].foreColor = COLOR_BRACKET;
+   el->el_line.bufcolor[close].foreColor = textColor;
    el->el_line.bufcolor[close].backColor = bgColor;
    term__repaint(el, close);    
 }

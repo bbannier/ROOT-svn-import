@@ -95,9 +95,14 @@ ed_insert(EditLine *el, int c)
 		}
 		c_insert(el, 1);
 
+		// set the colour information for the new character to default
+		el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer] = -1;
+		// add the new character into el_line.buffer
 		*el->el_line.cursor++ = c;
+
 		el->el_state.doingarg = 0;	/* just in case */
 		re_fastaddc(el);		/* fast refresh for one char. */
+
 	} else {
 		if (el->el_state.inputmode != MODE_INSERT) {
 			for (i = 0; i < el->el_state.argument; i++)
@@ -111,7 +116,12 @@ ed_insert(EditLine *el, int c)
 		c_insert(el, el->el_state.argument);
 
 		while (el->el_state.argument--)
+		{
+			// set the colour information for the new character to default
+			el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer] = -1;
+			// add the new character into el_line.buffer
 			*el->el_line.cursor++ = c;
+		}
 		re_refresh(el);
 	}
 
@@ -426,7 +436,12 @@ ed_digit(EditLine *el, int c)
 			c_delafter(el, 1);
 		}
 		c_insert(el, 1);
+
+		// set the colour information for the new character to default
+		el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer] = -1;
+		// add the new character into el_line.buffer
 		*el->el_line.cursor++ = c;
+
 		el->el_state.doingarg = 0;
 		re_fastaddc(el);
 	}
@@ -937,9 +952,22 @@ ed_command(EditLine *el, int c)
 	el->el_line.cursor = el->el_line.buffer;
 
 	c_insert(el, 3);	/* prompt + ": " */
+
+	// set the colour information for the new character to default
+	el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer] = -1;
+	// add the new character into el_line.buffer
 	*el->el_line.cursor++ = '\n';
+
+	// set the colour information for the new character to default
+	el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer] = -1;
+	// add the new character into el_line.buffer
 	*el->el_line.cursor++ = ':';
+
+	// set the colour information for the new character to default
+	el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer] = -1;
+	// add the new character into el_line.buffer
 	*el->el_line.cursor++ = ' ';
+
 	re_refresh(el);
 
 	tmplen = c_gets(el, tmpbuf);

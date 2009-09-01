@@ -678,8 +678,8 @@ mc_again:
 				 */
 				term_overwrite(el,
 				    &el->el_display[el->el_cursor.v][el->el_cursor.h],
-                                               el->el_line.bufcolor + el->el_cursor.h - el->el_prompt.p_pos.h,
-				    where - el->el_cursor.h);
+                       el->el_line.bufcolor + el->el_cursor.h - el->el_prompt.p_pos.h,
+				           where - el->el_cursor.h);
 
 			}
 		} else {	/* del < 0 := moving backward */
@@ -817,8 +817,10 @@ term_insertwrite(EditLine *el, char *cp, el_color_t* color, int num)
 	if (GoodStr(T_IC))	/* if I have multiple insert */
 		if ((num > 1) || !GoodStr(T_ic)) {
 				/* if ic would be more expensive */
+
 			(void) tputs(tgoto(Str(T_IC), num, num), num, term__putc);
 			term_overwrite(el, cp, color, num);
+
 				/* this updates el_cursor.h */
 			return;
 		}
@@ -1291,7 +1293,7 @@ term__putcolorch(int c, el_color_t *color)
 
 		if ( color->foreColor == 1 )	// keyword: nCurses COLOR_RED
 		{
-			tm.SetColor(127,0,0);		// red
+			tm.SetColor(255,0,0);		// red
 		}
 		else if ( color->foreColor == 4 )		// keyword: Ncurses COLOR_BLUE
 		{
@@ -1299,7 +1301,7 @@ term__putcolorch(int c, el_color_t *color)
 		}
 		else if ( color->foreColor == 2 )		// bracket: NCurses COLOR_GREEN
 		{
-			tm.SetColor(0,204,0);		// green with bold
+			tm.SetColor(0,255,0);		// green with bold
 		}
 		
 		// output the coloured char
