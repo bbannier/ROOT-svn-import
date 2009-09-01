@@ -52,6 +52,7 @@
 #include "editline.h"
 #include "el.h"
 #include "compat.h"
+#include "TTermManip.h"
 #if !defined(lint) && !defined(SCCSID)
 __RCSID("$NetBSD: readline.c,v 1.19 2001/01/10 08:10:45 jdolecek Exp $");
 #endif /* not lint && not SCCSID */
@@ -87,6 +88,7 @@ char *rl_completer_word_break_characters = NULL;
 char *rl_completer_quote_characters = NULL;
 CPFunction *rl_completion_entry_function = NULL;
 CPPFunction *rl_attempted_completion_function = NULL;
+El_tab_hook_t rl_tab_hook = NULL;
 
 /*
  * This is set to character indicating type of completion being done by
@@ -1508,6 +1510,23 @@ rl_complete_internal(int what_to_do)
 	char *temp, **matches;
 	const char *ctemp;
 	size_t len;
+
+        if (rl_tab_hook) {
+           int cursorIdx = e->el_line.cursor - e->el_line.buffer;
+           char old = *e->el_line.cursor;
+           *e->el_line.cursor = 0;
+           TTermManip tm;
+           tm.SetColor(63,0,63);
+           int loc = rl_tab_hook(e->el_line.buffer, 0, &cursorIdx);
+           tm.ResetTerm();
+           if (loc >= 0 || loc == -2 /* new line */ || cursorIdx != e->el_line.cursor - e->el_line.buffer) {
+              e->el_line.cursor = e->el_line.buffer + cursorIdx;
+              re_clear_display(e);
+              re_refresh(e);
+           } else {
+              *e->el_line.cursor = old;
+           }
+        }
 
 	rl_completion_type = what_to_do;
 

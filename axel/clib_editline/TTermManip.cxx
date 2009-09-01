@@ -45,7 +45,10 @@ TTermManip::TTermManip():
    }
 
    fSetBold = GetTermStr("bold");
-   fSetDefault = GetTermStr("rs2");
+   // "sgr0" doesn't reset window size
+   fSetDefault = GetTermStr("sgr0");
+   if (!fSetDefault)
+      fSetDefault = GetTermStr("rs2");
    fStartUnderline = GetTermStr("smul");
    fStopUnderline = GetTermStr("rmul");
 
@@ -127,6 +130,20 @@ char* TTermManip::GetTermStr(const char* cap) {
       return NULL;
    }
    return termstr;
+}
+
+bool TTermManip::ResetTerm() {
+   WriteTerm(fSetDefault);
+   WriteTerm(fStopUnderline);
+   if (!fOrigColors) {
+#ifndef _MSC_VER
+      // some claim to not have it and they have it nevertheless - so try:
+      printf("\e[39;49m");
+#endif
+   } else {
+      WriteTerm(fOrigColors);
+   }
+   return true;
 }
 
 bool TTermManip::WriteTerm(char* termstr) {

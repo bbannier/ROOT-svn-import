@@ -22,6 +22,8 @@ public:
    void StartUnderline() { WriteTerm(fStartUnderline); }
    void StopUnderline() { WriteTerm(fStopUnderline); }
 
+   bool ResetTerm();
+
 private:
    struct Color {
       Color(unsigned char r, unsigned char g, unsigned char b):
@@ -42,20 +44,6 @@ private:
    bool WriteTerm(char* termstr);
 
    bool WriteTerm(char* termstr, int i);
-
-   bool ResetTerm() {
-	  WriteTerm(fSetDefault);
-	  WriteTerm(fStopUnderline);
-      if (!fOrigColors) {
-#ifndef _MSC_VER
-         // some claim to not have it and they have it nevertheless - so try:
-         printf("\e[39;49m");
-#endif
-      } else {
-         WriteTerm(fOrigColors);
-      }
-      return true;
-   }
 
    int AllocColor(const Color& col);
 
