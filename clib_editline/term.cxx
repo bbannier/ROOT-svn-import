@@ -597,7 +597,7 @@ term_move_to_line(EditLine *el, int where)
 				del--;
 			} else {
 				if ((del > 1) && GoodStr(T_DO)) {
-					(void) tputsInterface(tgoto(Str(T_DO), del, del), del, term__putc);	
+					(void) tputs(tgoto(Str(T_DO), del, del), del, term__putc);	
 					del = 0;
 				} else {
 					for (; del > 0; del--)
@@ -609,11 +609,11 @@ term_move_to_line(EditLine *el, int where)
 		}
 	} else {		/* del < 0 */
 		if (GoodStr(T_UP) && (-del > 1 || !GoodStr(T_up)))
-			(void) tputsInterface(tgoto(Str(T_UP), -del, -del), -del, term__putc);	
+			(void) tputs(tgoto(Str(T_UP), -del, -del), -del, term__putc);	
 		else {
 			if (GoodStr(T_up))
 				for (; del < 0; del++)
-					(void) tputsInterface(Str(T_up), 1, term__putc);					
+					(void) tputs(Str(T_up), 1, term__putc);					
 		}
 	}
 	el->el_cursor.v = where;/* now where is here */
@@ -648,11 +648,11 @@ mc_again:
 
 	if ((del < -4 || del > 4) && GoodStr(T_ch))
 		/* go there directly */
-		(void) tputsInterface(tgoto(Str(T_ch), where, where), where, term__putc);			
+		(void) tputs(tgoto(Str(T_ch), where, where), where, term__putc);			
 	else {
 		if (del > 0) {	/* moving forward */
 			if ((del > 4) && GoodStr(T_RI))
-				(void) tputsInterface(tgoto(Str(T_RI), del, del), del, term__putc);		
+				(void) tputs(tgoto(Str(T_RI), del, del), del, term__putc);		
 			else {
 					/* if I can do tabs, use them */
 				if (EL_CAN_TAB) {
@@ -679,12 +679,12 @@ mc_again:
 				term_overwrite(el,
 				    &el->el_display[el->el_cursor.v][el->el_cursor.h],
                                                el->el_line.bufcolor + el->el_cursor.h - el->el_prompt.p_pos.h,
-				    where - el->el_cursor.h);				// LOUISE COLOUR no change made
+				    where - el->el_cursor.h);
 
 			}
 		} else {	/* del < 0 := moving backward */
 			if ((-del > 4) && GoodStr(T_LE))
-				(void) tputsInterface(tgoto(Str(T_LE), -del, -del), -del, term__putc);		
+				(void) tputs(tgoto(Str(T_LE), -del, -del), -del, term__putc);		
 			else {	/* can't go directly there */
 				/*
 				 * if the "cost" is greater than the "cost"
@@ -777,18 +777,18 @@ term_deletechars(EditLine *el, int num)
 	if (GoodStr(T_DC))	/* if I have multiple delete */
 		if ((num > 1) || !GoodStr(T_dc)) {	/* if dc would be more
 							 * expen. */
-			(void) tputsInterface(tgoto(Str(T_DC), num, num), num, term__putc);		
+			(void) tputs(tgoto(Str(T_DC), num, num), num, term__putc);		
 			return;
 		}
 	if (GoodStr(T_dm))	/* if I have delete mode */
-		(void) tputsInterface(Str(T_dm), 1, term__putc);								
+		(void) tputs(Str(T_dm), 1, term__putc);								
 
 	if (GoodStr(T_dc))	/* else do one at a time */
 		while (num--)
-			(void) tputsInterface(Str(T_dc), 1, term__putc);
+			(void) tputs(Str(T_dc), 1, term__putc);
 
 	if (GoodStr(T_ed))	/* if I have delete mode */
-		(void) tputsInterface(Str(T_ed), 1, term__putc);
+		(void) tputs(Str(T_ed), 1, term__putc);
 }
 
 
@@ -817,13 +817,13 @@ term_insertwrite(EditLine *el, char *cp, el_color_t* color, int num)
 	if (GoodStr(T_IC))	/* if I have multiple insert */
 		if ((num > 1) || !GoodStr(T_ic)) {
 				/* if ic would be more expensive */
-			(void) tputsInterface(tgoto(Str(T_IC), num, num), num, term__putc);
+			(void) tputs(tgoto(Str(T_IC), num, num), num, term__putc);
 			term_overwrite(el, cp, color, num);
 				/* this updates el_cursor.h */
 			return;
 		}
 	if (GoodStr(T_im) && GoodStr(T_ei)) {	/* if I have insert mode */
-		(void) tputsInterface(Str(T_im), 1, term__putc);
+		(void) tputs(Str(T_im), 1, term__putc);
 
 		el->el_cursor.h += num;
 		do {
@@ -832,14 +832,14 @@ term_insertwrite(EditLine *el, char *cp, el_color_t* color, int num)
 		} while (--num);
 
 		if (GoodStr(T_ip))	/* have to make num chars insert */
-			(void) tputsInterface(Str(T_ip), 1, term__putc);
+			(void) tputs(Str(T_ip), 1, term__putc);
 
-		(void) tputsInterface(Str(T_ei), 1, term__putc);
+		(void) tputs(Str(T_ei), 1, term__putc);
 		return;
 	}
 	do {
 		if (GoodStr(T_ic))	/* have to make num chars insert */
-			(void) tputsInterface(Str(T_ic), 1, term__putc);
+			(void) tputs(Str(T_ic), 1, term__putc);
 					/* insert a char */
 		// need to get colour info from cp
 		// but if cp is not pointing withing el_line.buffer, this will be a disaster
@@ -848,7 +848,7 @@ term_insertwrite(EditLine *el, char *cp, el_color_t* color, int num)
 		el->el_cursor.h++;
 
 		if (GoodStr(T_ip))	/* have to make num chars insert */
-			(void) tputsInterface(Str(T_ip), 1, term__putc);
+			(void) tputs(Str(T_ip), 1, term__putc);
 					/* pad the inserted char */
 
 	} while (--num);
@@ -864,7 +864,7 @@ term_clear_EOL(EditLine *el, int num)
 	int i;
 
 	if (EL_CAN_CEOL && GoodStr(T_ce))
-		(void) tputsInterface(Str(T_ce), 1, term__putc);
+		(void) tputs(Str(T_ce), 1, term__putc);
 	else {
 		for (i = 0; i < num; i++)
 			term__putcolorch(' ', NULL);
@@ -882,11 +882,11 @@ term_clear_screen(EditLine *el)
 
 	if (GoodStr(T_cl))
 		/* send the clear screen code */
-		(void) tputsInterface(Str(T_cl), Val(T_li), term__putc);
+		(void) tputs(Str(T_cl), Val(T_li), term__putc);
 	else if (GoodStr(T_ho) && GoodStr(T_cd)) {
-		(void) tputsInterface(Str(T_ho), Val(T_li), term__putc);	/* home */
+		(void) tputs(Str(T_ho), Val(T_li), term__putc);	/* home */
 		/* clear to bottom of screen */
-		(void) tputsInterface(Str(T_cd), Val(T_li), term__putc);
+		(void) tputs(Str(T_cd), Val(T_li), term__putc);
 	} else {
 		term__putcolorch('\r', NULL);
 		term__putcolorch('\n', NULL);
@@ -902,7 +902,7 @@ term_beep(EditLine *el)
 {
 	if (GoodStr(T_bl))
 		/* what termcap says we should use */
-		(void) tputsInterface(Str(T_bl), 1, term__putc);
+		(void) tputs(Str(T_bl), 1, term__putc);
 	else
 		term__putcolorch('\007', NULL);	/* an ASCII bell; ^G */
 }
@@ -916,9 +916,9 @@ el_protected void
 term_clear_to_bottom(EditLine *el)
 {
 	if (GoodStr(T_cd))
-		(void) tputsInterface(Str(T_cd), Val(T_li), term__putc);
+		(void) tputs(Str(T_cd), Val(T_li), term__putc);
 	else if (GoodStr(T_ce))
-		(void) tputsInterface(Str(T_ce), Val(T_li), term__putc);
+		(void) tputs(Str(T_ce), Val(T_li), term__putc);
 }
 #endif
 
@@ -1264,16 +1264,6 @@ term_bind_arrow(EditLine *el)
 	}
 }
 
-el_protected void
-tputsInterface(const char *str, int affcnt, int (*putc)(int))
-{
-	tputs(str, affcnt, putc);
-	//char ch = *str;
-	
-	//attr_t attrs;
-	
-}
-
 /* term__putc():
  *	Add a character
  */
@@ -1295,27 +1285,21 @@ term__putcolorch(int c, el_color_t *color)
 
 	if ( color != NULL && c != ' ')
 	{
-		//use_default_colors(-1,-1);
-		//init_pair(pairnum, color->foreColor, -1);		// red foreground, default background
 		int errcode;
 		int setup = setupterm(0, 1, &errcode);
 		TTermManip tm;
 
-		
 		if ( color->foreColor == 1 )	// keyword: nCurses COLOR_RED
 		{
-			attr = WA_UNDERLINE;
-			tm.SetColor(127,0,0);
+			tm.SetColor(127,0,0);		// red
 		}
 		else if ( color->foreColor == 4 )		// keyword: Ncurses COLOR_BLUE
 		{
-			attr = WA_UNDERLINE;
-			tm.SetColor(0,0,127);
+			tm.SetColor(0,0,127);		// blue
 		}
 		else if ( color->foreColor == 2 )		// bracket: NCurses COLOR_GREEN
 		{
-			attr = WA_BOLD;
-			tm.SetColor(0,255,0);
+			tm.SetColor(0,204,0);		// green with bold
 		}
 		
 		// output the coloured char
@@ -1323,6 +1307,7 @@ term__putcolorch(int c, el_color_t *color)
 		term__flush();
 		return res;
 	}
+
 	// otherwise output the normal char
 	int res = fputc(c, term_outfile);
 
@@ -1330,7 +1315,7 @@ term__putcolorch(int c, el_color_t *color)
 
 }
 
-/* term__putcolorch():
+/* term__repaint():
  *	Repaint existing character at index (in order to display new colour attribute)
  */
 el_protected void
@@ -1342,7 +1327,8 @@ term__repaint(EditLine * el, int index)
 	// move to index of char to change
 	el->el_line.cursor = el->el_line.buffer + index;
 
-	int promptSize = 9;
+	int promptSize = el->el_prompt.p_pos.h;
+	int cursorPos = el->el_cursor.h;
 	term_move_to_char(el, promptSize+index);
 	
 	// rewrite char
@@ -1352,7 +1338,7 @@ term__repaint(EditLine * el, int index)
 
 	// move cursor back
 	el->el_line.cursor = cursor;
-	term_move_to_char(el, promptSize+(el->el_line.lastchar - el->el_line.buffer));
+	term_move_to_char(el, cursorPos);
 
 	term__flush();
 }
@@ -1363,7 +1349,6 @@ term__repaint(EditLine * el, int index)
 el_protected void
 term__flush(void)
 {
-
 	(void) fflush(term_outfile);
 }
 
@@ -1615,7 +1600,7 @@ term_echotc(EditLine *el, int argc, const char **argv)
 				    *argv);
 			return (-1);
 		}
-		(void) tputsInterface(scap, 1, term__putc);
+		(void) tputs(scap, 1, term__putc);
 		break;
 	case 1:
 		argv++;
@@ -1643,7 +1628,7 @@ term_echotc(EditLine *el, int argc, const char **argv)
 				    *argv);
 			return (-1);
 		}
-		(void) tputsInterface(tgoto(scap, arg_cols, arg_rows), 1, term__putc);
+		(void) tputs(tgoto(scap, arg_cols, arg_rows), 1, term__putc);
 		break;
 	default:
 		/* This is wrong, but I will ignore it... */
@@ -1699,7 +1684,7 @@ term_echotc(EditLine *el, int argc, const char **argv)
 				    *argv);
 			return (-1);
 		}
-		(void) tputsInterface(tgoto(scap, arg_cols, arg_rows), arg_rows, term__putc);
+		(void) tputs(tgoto(scap, arg_cols, arg_rows), arg_rows, term__putc);
 		break;
 	}
 	return (0);
