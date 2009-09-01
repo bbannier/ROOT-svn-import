@@ -292,7 +292,7 @@ void rl_cleanup_after_signal()
  */
 #include <iostream>
 char *
-readline(const char *prompt)
+readline(const char *prompt, bool newline)
 {
 	HistEvent ev;
 	int count;
@@ -312,9 +312,12 @@ readline(const char *prompt)
         static char nullstring[1] = { '\0' };
         // ACK! My first GOTO since BASIC! (stephan) See below...
         start_over_after_builtin:
-
 		/* get one line from input stream */
-		ret = el_gets(e, &count);	
+        if (newline) {
+		ret = el_gets_newline(e, &count);
+        } else {
+		ret = el_gets(e, &count);
+        }
 
         // std::cerr <<  "readline(): el_gets(e,"<<count<<") got ["<<(ret?ret:"NULL")<<"]\n";
         //if( 0 == ret ) return NULL;
@@ -370,90 +373,6 @@ readline(const char *prompt)
 
 	/* LINTED const cast */
 	return (char *) ret;
-}
-
-/*
-This is exactly the same as readline(const char *prompt), 
-except using el_gets_newline(e, &count) instead of el_gets(e, &count)
-*/
-char *
-readline_newline(const char *prompt)
-{
-	HistEvent ev;
-	int count;
-	const char *ret;
-
-	if (e == NULL || h == NULL)
-		rl_initialize();
-
-	/* update prompt accordingly to what has been passed */
-	if (!prompt)
-		prompt = "";
-	if (strcmp(el_rl_prompt, prompt) != 0) {
-		free(el_rl_prompt);
-		el_rl_prompt = strdup(prompt);
-	}
-
-        static char nullstring[1] = { '\0' };
-        // ACK! My first GOTO since BASIC! (stephan) See below...
-        start_over_after_builtin2:
-
-		/* get one line from input stream */
-		ret = el_gets_newline(e, &count);	
-
-        // std::cerr <<  "readline(): el_gets(e,"<<count<<") got ["<<(ret?ret:"NULL")<<"]\n";
-        if( 0 == ret ) return NULL;
-        // reminder: e owns the string, actually,
-        // which is why we duplicate it here:
-	if (ret )
-        {
-                if( count > 0) {
-                        char *foo;
-                        int lastidx;
-                        lastidx = count - 1;
-                        foo = strdup(ret);
-                        /**
-                           stephan: reminder: this sick hack is
-                           because el_gets() returns trailing a newline.
-                           if (foo[lastidx] == '\n')
-                           {
-                           foo[lastidx] = '\0';
-                           }
-                        */
-                        ret = foo;
-                } else
-                {
-                        ret = NULL;
-                }
-        }
-
-        if( NULL != ret )
-        { // added by stephan@s11n.net:
-          // Handle builtin functions here, and don't propogate them back to the client
-          // (no need for client to see them, IMO, since they can't directly manipulate
-          // them anyway).
-                char * line = strdup(e->el_line.buffer);
-                // ^^^ the strdup() is because i'm afraid of leaking when
-                // e->...buffer gets duped and then assigned to itself later on
-                // via parse_line(). This isn't C++, you know. :/
-                int pr = parse_line( e, line );
-                if( -1 != pr )
-                { // it was a built-in. Let's re-run THIS function again
-                  // instead of returning to the user...
-                        add_history( line );
-                        free( line );
-                        //fprintf( e->el_outfile, "[processed libeditline internal command. return code=%d]\n", pr );
-                        goto start_over_after_builtin2; // return readline( prompt );
-                }
-                free( line );
-        }
-
-	history(h, &ev, H_GETSIZE);
-	history_length = ev.num;
-
-	/* LINTED const cast */
-	return (char *) ret;
-
 }
 
 /*

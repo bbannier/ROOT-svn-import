@@ -696,16 +696,16 @@ Getlinem(int mode, const char *prompt)
 	// mode 2 = cleanup
 	if (mode == 2) {
 		rl_reset_terminal(0);
-    }
+        }
 
 	// mode -1 = init
 	if (mode == -1) {
 		if (prompt)
 			strcpy(sprompt, prompt);
-		input_buffer = readline_newline(sprompt);
+		input_buffer = readline(sprompt, true /*newline*/);
 
 		return input_buffer;
-   }
+        }
 
 	// mode 1 = one char at a time
 	if (mode == 1) {
@@ -713,7 +713,7 @@ Getlinem(int mode, const char *prompt)
 			strcpy(sprompt, prompt);
 
 		// note: input_buffer will be null unless complete line entered
-		input_buffer = readline(sprompt);
+		input_buffer = readline(sprompt, false /*no newline*/);
 
 		// if complete line is entered, add to history and return buffer, otherwise return null
 		char * ch = input_buffer;
@@ -781,7 +781,20 @@ gl_fixup(const char *prompt, int change, int cursor)
 
 static int
 gl_tab(char *buf, int offset, int *loc)
-{ }
+{
+/* default tab handler, acts like tabstops every 8 cols */
+    int i, count, len;
+
+    len = strlen(buf);
+    count = 8 - (offset + *loc) % 8;
+    for (i=len; i >= *loc; i--)
+        buf[i+count] = buf[i];
+    for (i=0; i < count; i++)
+        buf[*loc+i] = ' ';
+    i = *loc;
+    *loc = i + count;
+    return i;
+}
 
 /******************* History stuff **************************************/
 
