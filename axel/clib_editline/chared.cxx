@@ -488,14 +488,15 @@ ch_reset(EditLine *el)
 
 /* ch_enlargebufs():
  *	Enlarge line buffer to be able to hold twice as much characters.
+ *	Also enlarge character colour buffer so that colour buffer is always the same size as the line buffer.
  *	Returns 1 if successful, 0 if not.
  */
-
 el_protected int
 ch_enlargebufs(EditLine * el, size_t addlen)
 {
 	size_t sz, newsz;
 	char *newbuffer, *oldbuf, *oldkbuf;
+	el_color_t *newcolorbuf, *oldcolorbuf;
 
 	sz = el->el_line.limit - el->el_line.buffer + EL_LEAVE;
 	newsz = sz * 2;
@@ -512,18 +513,24 @@ ch_enlargebufs(EditLine * el, size_t addlen)
 	 * Reallocate line buffer.
 	 */
 	newbuffer = (char *) el_realloc(el->el_line.buffer, newsz);
-	if (!newbuffer)
+	newcolorbuf = (el_color_t *) el_realloc(el->el_line.bufcolor, newsz);
+	if (!newbuffer || !newcolorbuf)
 		return 0;
 
 	/* zero the newly added memory, leave old data in */
 	(void) memset(&newbuffer[sz], 0, newsz - sz);
+	(void) memset(&newcolorbuf[sz], 0, newsz -sz);
 	    
 	oldbuf = el->el_line.buffer;
+	oldcolorbuf = el->el_line.bufcolor;
 
 	el->el_line.buffer = newbuffer;
+	el->el_line.bufcolor = newcolorbuf;
 	el->el_line.cursor = newbuffer + (el->el_line.cursor - oldbuf);
 	el->el_line.lastchar = newbuffer + (el->el_line.lastchar - oldbuf);
 	el->el_line.limit  = &newbuffer[newsz - EL_LEAVE];
+
+// !!!!!!!!!!!!!!!!LOUISE: GOT AS FAR AS HERE !!!!!!!!!!!!!!!!!!!
 
 	/*
 	 * Reallocate kill buffer.
@@ -535,6 +542,7 @@ ch_enlargebufs(EditLine * el, size_t addlen)
 	/* zero the newly added memory, leave old data in */
 	(void) memset(&newbuffer[sz], 0, newsz - sz);
 
+	// LOUISE  - haven't changed the following 4 lines to reflect addition of colour buffer - may need to!!
 	oldkbuf = el->el_chared.c_kill.buf;
 
 	el->el_chared.c_kill.buf = newbuffer;
@@ -601,7 +609,12 @@ el_insertstr(EditLine *el, const char *s)
 
 	c_insert(el, (int)len);
 	while (*s)
+	{
+		// set the colour information for the new character to default
+		el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer] = -1;
+		// add the new character into el_line.buffer
 		*el->el_line.cursor++ = *s++;
+	}
 	return (0);
 }
 
@@ -663,6 +676,9 @@ c_gets(EditLine *el, char *buf)
 				term_beep(el);
 			else {
 				buf[len++] = ch;
+				// set the colour information for the new character to default
+				el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer] = -1;
+				// add the new character into el_line.buffer
 				*el->el_line.cursor++ = ch;
 				el->el_line.lastchar = el->el_line.cursor;
 			}

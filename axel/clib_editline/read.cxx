@@ -269,8 +269,9 @@ read_char(EditLine *el, char *cp)
 			return (-1);
 		}
 	}
+	// don't do this - "new" char may be a command char e.g <- or ->
 	// set the colour of the newly read in char to null
-	el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer] = -1;
+	//el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer] = -1;
 
 	return (num_read);
 }
@@ -532,7 +533,7 @@ el_gets(EditLine *el, int *nread)
 	highlightKeywords(el);
 
 	// if the cursor is at some point in the middle of the buffer, check for brackets
-	if (el->el_line.cursor != el->el_line.lastchar)
+	if (el->el_line.cursor <= el->el_line.lastchar)
 	{
 		matchParentheses(el);
 	}
