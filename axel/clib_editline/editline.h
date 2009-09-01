@@ -61,6 +61,7 @@ typedef int	  Function(const char *, int);
 typedef void	  VFunction(void);
 typedef char	 *CPFunction(const char *, int);
 typedef char	**CPPFunction(const char *, int, int);
+typedef int (*El_tab_hook_t)(char *buf, int prompt_width, int *cursor_loc);
 
 typedef struct _hist_entry {
 	const char	*line;
@@ -86,10 +87,10 @@ extern int		rl_completion_type;
 extern int		rl_completion_query_items;
 extern char		*rl_special_prefixes;
 extern int		rl_completion_append_character;
+extern El_tab_hook_t    rl_tab_hook;
 
 /* supported functions */
-char		*readline(const char *);
-char		*readline_newline(const char *);
+char		*readline(const char *, bool newline);
 int		 rl_initialize(void);
 
 void		 using_history(void);

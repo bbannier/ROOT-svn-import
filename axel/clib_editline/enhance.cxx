@@ -3,7 +3,7 @@
 #include <ncurses.h>
 #include "TRegexp.h"
 #include "TClassTable.h"
-#include "TDictionary.h"
+#include "TInterpreter.h"
 #include <stack>
 #include <set>
 
@@ -19,6 +19,7 @@ void highlightKeywords(EditLine * el);
 int matchParentheses(EditLine * el);
 void colorWord(EditLine * el, int first, int num, int color);
 void colorBrackets(EditLine * el, int open, int close, int color);
+char** rl_complete2ROOT(const char *, int, int);
 
 struct KeywordInLine {
    KeywordInLine(const TString& w, Long64_t hash, Ssiz_t pos):
@@ -35,22 +36,7 @@ struct KeywordInLine {
 void highlightKeywords(EditLine * el)
 {
    typedef std::set<int> HashSet_t;
-   static HashSet_t sHashedKnownClasses;
    static HashSet_t sHashedKnownTypes;
-
-   if (sHashedKnownClasses.empty()) {
-      TString name;
-      for (int iClass = 0; iClass < gClassTable->Classes(); ++iClass) {
-         name = TClassTable::At(iClass);
-         sHashedKnownClasses.insert(name.Hash());
-      }
-      TIter iType(gROOT->GetListOfTypes());
-      TObject* type = 0;
-      while ((type = iType())) {
-         name = type->GetName();
-         sHashedKnownTypes.insert(name.Hash());
-      }
-   }
 
    TString sBuffer(el->el_line.buffer, el->el_line.lastchar - el->el_line.buffer) ;
 
@@ -59,20 +45,17 @@ void highlightKeywords(EditLine * el)
    Ssiz_t posPrevTok = 0;
    // regular expression inverse of match expression to find end of match
    while (sBuffer.Tokenize(keyword, posNextTok, "[^a-zA-Z0-9_]")) {
-      Long64_t hash = keyword.Hash();
-      HashSet_t::const_iterator iClassHash = sHashedKnownClasses.find(hash);
-      if (iClassHash != sHashedKnownClasses.end()) {
-         if (TClassTable::GetDict(keyword)) {
-            Ssiz_t toklen = posNextTok - posPrevTok;
-            if (posNextTok == -1)
-               toklen = sBuffer.Length() - posPrevTok;
-            TString tok = sBuffer(posPrevTok, toklen);
-            Ssiz_t pos = posPrevTok + tok.Index(keyword);
-            colorWord(el, pos, keyword.Length(), COLOR_CLASS);
-            posPrevTok = posNextTok;
-            continue;
-         }
+      if (gInterpreter->CheckClassInfo(keyword)) {
+         Ssiz_t toklen = posNextTok - posPrevTok;
+         if (posNextTok == -1)
+            toklen = sBuffer.Length() - posPrevTok;
+         TString tok = sBuffer(posPrevTok, toklen);
+         Ssiz_t pos = posPrevTok + tok.Index(keyword);
+         colorWord(el, pos, keyword.Length(), COLOR_CLASS);
+         posPrevTok = posNextTok;
+         continue;
       }
+
       // don't bother with matching for type names if match already found
       if (gROOT->GetListOfTypes()->FindObject(keyword)) {
          Ssiz_t toklen = posNextTok - posPrevTok;
