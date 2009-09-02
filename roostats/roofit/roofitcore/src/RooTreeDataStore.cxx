@@ -805,6 +805,8 @@ void RooTreeDataStore::cacheArgs(const RooAbsArg* owner, RooArgSet& newVarSet, c
   // internal cache of 'newVar' will be loaded with the
   // precalculated value and it's dirty flag will be cleared.
 
+  checkInit() ;
+
   _cacheOwner = owner ;
 
   TIterator *iter = newVarSet.createIterator() ;
