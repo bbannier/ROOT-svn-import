@@ -940,15 +940,12 @@ void TEveCaloLegoGL::DrawCells2D() const
 
       // scale cells
       Float_t logMax   = TMath::Log(maxv + 1);
-      // get smallest bin to deduce bin size
-      Int_t nb = fEtaAxis->GetNbins();
-      Double_t bw = 1e4;
-      for(Int_t i= 0; i<= nb; i++)  {
-         if ( fEtaAxis->GetBinWidth(i) < bw ) bw = fEtaAxis->GetBinWidth(i);
-      }
-      nb = fPhiAxis->GetNbins();
-      for(Int_t i= 0; i<= nb; i++)  {
-         if ( fPhiAxis->GetBinWidth(i) < bw ) bw = fPhiAxis->GetBinWidth(i);
+
+      // get smallest bin to deduce bin size 
+      Float_t bw = 1e5;
+      for (UInt_t i=0; i< cellGeom.size(); i += 4 ) {
+         if ( cellGeom[i+2] -cellGeom[i] < bw) bw =  cellGeom[i+2] -cellGeom[i];
+         if ( cellGeom[i+3] -cellGeom[i+1] < bw) bw =  cellGeom[i+3] -cellGeom[i+1];
       }
       bw *= 0.5;
 
