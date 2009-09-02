@@ -1331,6 +1331,7 @@ term__repaint(EditLine * el, int index)
 
 	int promptSize = el->el_prompt.p_pos.h;
 	int cursorPos = el->el_cursor.h;
+	//term_move_to_line(el, el->el_cursor.v);
 	term_move_to_char(el, promptSize+index);
 	
 	// rewrite char
