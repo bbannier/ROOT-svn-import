@@ -111,7 +111,7 @@ HybridPlot::HybridPlot(const char* name,
   fLegend->SetName(title_leg.Data());
   fLegend->AddEntry(fSb_histo,"SB toy datasets");
   fLegend->AddEntry(fB_histo,"B toy datasets");
-  fLegend->AddEntry((TLine*)fData_testStat_line,"test statistics on Data","L");
+  fLegend->AddEntry((TLine*)fData_testStat_line,"test statistics on data","L");
   fLegend->SetFillColor(0);
 
 }
@@ -160,7 +160,6 @@ void HybridPlot::Draw(const char* options)
    fSb_histo_shaded = (TH1F*)fSb_histo->Clone("sb_shaded");
    fSb_histo_shaded->SetFillStyle(3004);
    fSb_histo_shaded->SetFillColor(kBlue);
-
 
    // Empty the bins according to the data -2lnQ
    double data_m2lnq= fData_testStat_line->GetX1();
