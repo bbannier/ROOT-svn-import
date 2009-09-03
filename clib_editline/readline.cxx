@@ -1523,15 +1523,24 @@ rl_complete_internal(int what_to_do)
 
         if (rl_tab_hook) {
            int cursorIdx = e->el_line.cursor - e->el_line.buffer;
-           char old = *e->el_line.cursor;
+           char old = *e->el_line.cursor; // presumably \a
            *e->el_line.cursor = 0;
            TTermManip tm;
            tm.SetColor(63,0,63);
            int loc = rl_tab_hook(e->el_line.buffer, 0, &cursorIdx);
            tm.ResetTerm();
            if (loc >= 0 || loc == -2 /* new line */ || cursorIdx != e->el_line.cursor - e->el_line.buffer) {
+              size_t lenbuf = strlen(e->el_line.buffer);
+              e->el_line.buffer[lenbuf] = old;
+              e->el_line.buffer[lenbuf + 1] = 0;
+              for (int i = e->el_line.cursor - e->el_line.buffer; i < cursorIdx; ++i)
+                 e->el_line.bufcolor[i] = -1;
               e->el_line.cursor = e->el_line.buffer + cursorIdx;
-              re_clear_display(e);
+              e->el_line.lastchar = e->el_line.cursor;
+              if (loc == -2) {
+                 // spit out several lines; redraw prompt!
+                 re_clear_display(e);
+              }
               re_refresh(e);
            } else {
               *e->el_line.cursor = old;
