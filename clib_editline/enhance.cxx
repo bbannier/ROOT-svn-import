@@ -138,8 +138,8 @@ int matchParentheses(EditLine * el) {
                   }
             }
 
-         // current cursor char is not an open bracket, therefore no need to search
-         if ( foundParenIdx == -1 ) {
+         // current cursor char is not an open bracket, and there is a previous char to check
+         if ( foundParenIdx == -1 && bracketPos > 0) {
 			//check previously typed char for being a closing bracket
 			bracketPos--;
 				         // check against each bracket type
