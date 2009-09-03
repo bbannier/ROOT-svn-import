@@ -65,7 +65,7 @@ RooPlot* BayesianNumIntCalculator::PlotPosterior()
 
   RooPlot* plot = fPOI->frame();
   like.plotOn(plot);
-  like.plotOn(plot,RooFit::Range(fLowerLimit,fUpperLimit),RooFit::FillColor(kYellow));
+  //like.plotOn(plot,RooFit::Range(fLowerLimit,fUpperLimit),RooFit::FillColor(kYellow));
   //plot->GetYaxis()->SetTitle("posterior probability");
   plot->Draw();
 
