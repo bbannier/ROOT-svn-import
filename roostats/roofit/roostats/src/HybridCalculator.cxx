@@ -361,7 +361,12 @@ HybridResult* HybridCalculator::Calculate(unsigned int nToys, bool usePriors) co
 
    RunToys(bVals,sbVals,nToys,usePriors);
 
-   HybridResult* result = new HybridResult(GetName(),GetTitle(),sbVals,bVals);
+   HybridResult* result;
+
+   if ( fTestStatisticsIdx==2 )
+     result = new HybridResult(GetName(),GetTitle(),sbVals,bVals,false);
+   else 
+     result = new HybridResult(GetName(),GetTitle(),sbVals,bVals);
 
    return result;
 }
