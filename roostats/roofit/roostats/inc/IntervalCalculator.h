@@ -64,7 +64,6 @@ namespace RooStats {
       // Main interface to get a ConfInterval, pure virtual
       virtual ConfInterval* GetInterval() const = 0; 
 
-    
       // Get the size of the test (eg. rate of Type I error)
       virtual Double_t Size() const = 0;
       // Get the Confidence level for the test
@@ -91,7 +90,6 @@ namespace RooStats {
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) = 0;
       
-
    protected:
       ClassDef(IntervalCalculator,1)   // Interface for tools setting limits (producing confidence intervals)
    };
