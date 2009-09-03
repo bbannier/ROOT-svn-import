@@ -94,7 +94,7 @@ char		*readline(const char *, bool newline);
 int		 rl_initialize(void);
 
 void		 using_history(void);
-int		 add_history(const char *);
+int		 add_history(char *);
 void		 clear_history(void);
 void		 stifle_history(int);
 int		 unstifle_history(void);
