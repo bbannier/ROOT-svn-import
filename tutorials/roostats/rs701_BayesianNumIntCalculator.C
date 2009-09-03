@@ -19,9 +19,10 @@ void rs701_BayesianNumIntCalculator()
   data.add(RooArgSet(*(w->var("x"))),w->var("n")->getVal());
 
   BayesianNumIntCalculator bcalc("bcalc","",model,&data,POI,priorPOI,&nuisanceParameters);
-  RooPlot* plot = bcalc.PlotPosterior();
   SimpleInterval* interval = bcalc.GetInterval();
   std::cout << "90% CL interval: [ " << interval.LowerLimit() << " - " << interval.UpperLimit() << " ] or 95% CL limits\n";
+  RooPlot* plot = bcalc.PlotPosterior();
 
   // observe one event while expecting one background event -> the 95% CL upper limit on s is 4.10
+  // observe one event while expecting zero background event -> the 95% CL upper limit on s is 4.74
 }
