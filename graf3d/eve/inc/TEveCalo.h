@@ -210,6 +210,7 @@ public:
 class TEveCaloLego : public TEveCaloViz
 {
    friend class TEveCaloLegoGL;
+   friend class TEveCaloLegoOverlay;
 
 public:
    enum EProjection_e { kAuto, k3D, k2D };
@@ -245,6 +246,9 @@ protected:
    Float_t                 fHPlaneVal;
 
    Int_t                   fTowerPicked;
+   Int_t                   fBinStep;
+
+   Int_t                   fDrawNumberCellPixels; 
 
    virtual void BuildCellIdCache();
 
@@ -291,7 +295,7 @@ public:
    void       Set2DMode(E2DMode_e p) { f2DMode = p; }
    E2DMode_e  Get2DMode() { return f2DMode; }
 
-   void       SetBoxMode(EBoxMode_e p) { fBoxMode = p; }
+   void        SetBoxMode(EBoxMode_e p) { fBoxMode = p; }
    EBoxMode_e  GetBoxMode() { return fBoxMode; }
 
    Bool_t   GetDrawHPlane() const { return fDrawHPlane; }
@@ -302,6 +306,9 @@ public:
 
    Int_t    GetTowerPicked() const { return fTowerPicked; }
    void     SetTowerPicked(Int_t p) { fTowerPicked = p;}
+
+   Int_t    GetDrawNumberCellPixels() { return fDrawNumberCellPixels; }
+   void     SetDrawNumberCellPixels(Int_t x) { fDrawNumberCellPixels = x; }
 
    virtual void ComputeBBox();
 

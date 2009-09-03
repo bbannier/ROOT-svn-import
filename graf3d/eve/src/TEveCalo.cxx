@@ -610,7 +610,10 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* d, const char* n, const char* t):
    fDrawHPlane(kFALSE),
    fHPlaneVal(0),
 
-   fTowerPicked(-1)
+   fTowerPicked(-1),
+
+   fBinStep(-1),
+   fDrawNumberCellPixels(30) // draw numbers on cell above 30 pixels
 {
    // Constructor.
 

@@ -107,7 +107,7 @@ Bool_t TEveLegoEventHandler::Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Boo
    TGLCamera &cam =  fGLViewer->GetRnrCtx()->RefCamera();
    Double_t hRotate = cam.AdjustDelta(-yDelta, Pi()/cam.RefViewport().Height(), mod1, mod2);
 
-   if (fMode == kLocked)
+   if (cam.IsOrthographic())
    {
       fTheta += hRotate;
       if (fTheta < 0) fTheta = 0;

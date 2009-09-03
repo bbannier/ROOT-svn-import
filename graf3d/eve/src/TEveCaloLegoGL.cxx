@@ -42,8 +42,6 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
       fEtaAxis(0),
       fPhiAxis(0),
       fZAxis(0),
-      fBinStep(1),
-
       fM(0),
       fDLCacheOK(kFALSE),
       fCells3D(kTRUE)
@@ -199,7 +197,7 @@ void TEveCaloLegoGL::MakeDisplayList() const
    // Create display-list that draws histogram bars.
    // It is used for filled and outline passes.
 
-   if (fBinStep>1)
+   if (fM->fBinStep > 1)
    {
       Int_t nSlices = fM->fData->GetNSlices();
       Float_t *vals;
@@ -665,12 +663,11 @@ Int_t TEveCaloLegoGL::GetGridStep(TGLRnrCtx &rnrCtx) const
    Int_t j0 = fM->fData->GetPhiBins()->FindBin(fM->GetPhiMin());
    Int_t j1 = fM->fData->GetPhiBins()->FindBin(fM->GetPhiMax());
 
-   Float_t ppb = d / Sqrt((i0 - i1) * (i0 - i1) + (j0 - j1) * (j0 - j1));
-
+   fPixelsPerBin = TMath::Nint(d / Sqrt((i0 - i1) * (i0 - i1) + (j0 - j1) * (j0 - j1)));
    Int_t ngroup;
-   if (ppb < fM->fPixelsPerBin*0.5) {
+   if (fPixelsPerBin < fM->fPixelsPerBin*0.5) {
       ngroup = 4;
-   } else if (ppb < fM->fPixelsPerBin) {
+   } else if (fPixelsPerBin < fM->fPixelsPerBin) {
       ngroup = 2;
    } else {
       ngroup = 1;
@@ -689,11 +686,11 @@ void TEveCaloLegoGL::RebinAxis(TAxis *orig, TAxis *curr) const
    Double_t bc = orig->GetBinCenter(idx0);
    if (bc > center) idx0--;
 
-   Int_t nbR = TMath::FloorNint(idx0/fBinStep) + TMath::FloorNint((orig->GetNbins() - idx0)/fBinStep);
+   Int_t nbR = TMath::FloorNint(idx0/fM->fBinStep) + TMath::FloorNint((orig->GetNbins() - idx0)/fM->fBinStep);
    Double_t *bins = new Double_t[nbR+1];
-   Int_t off = idx0 - TMath::FloorNint(idx0/fBinStep)*fBinStep;
+   Int_t off = idx0 - TMath::FloorNint(idx0/fM->fBinStep)*fM->fBinStep;
    for(Int_t i = 0; i <= nbR; i++)
-      bins[i] = orig->GetBinUpEdge(off + i*fBinStep);
+      bins[i] = orig->GetBinUpEdge(off + i*fM->fBinStep);
 
    curr->Set(nbR, bins);
    delete [] bins;
@@ -794,7 +791,7 @@ void TEveCaloLegoGL::DrawCells3D(TGLRnrCtx & rnrCtx) const
 }
 
 //______________________________________________________________________________
-void TEveCaloLegoGL::DrawCells2D() const
+void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
 {
    // Draw projected histogram.
 
@@ -806,7 +803,7 @@ void TEveCaloLegoGL::DrawCells2D() const
    Int_t max_energy_slice, cellID=0;
    Float_t sum, max_energy, x1, x2, y1, y2;
 
-   if (fBinStep == 1)
+   if (fM->fBinStep == 1)
    {
       TEveCaloData::vCellId_t::iterator currentCell = fM->fCellList.begin();
       TEveCaloData::vCellId_t::iterator nextCell    = currentCell;
@@ -917,10 +914,10 @@ void TEveCaloLegoGL::DrawCells2D() const
          x2 = cellGeom[4*i+2];
          y2 = cellGeom[4*i+3];
 
-         glVertex3f(x1, y1, sumVal[i]);
-         glVertex3f(x2, y1, sumVal[i]);
-         glVertex3f(x2, y2, sumVal[i]);
-         glVertex3f(x1, y2, sumVal[i]);
+         glVertex3f(x1, y1, 0);
+         glVertex3f(x2, y1, 0);
+         glVertex3f(x2, y2, 0);
+         glVertex3f(x1, y2, 0);
          glEnd();
       }
    }
@@ -939,12 +936,12 @@ void TEveCaloLegoGL::DrawCells2D() const
       glEnd();
 
       // scale cells
-      Float_t logMax   = TMath::Log(maxv + 1);
+      Float_t logMax   = TMath::Log10(maxv + 1);
 
       // get smallest bin to deduce bin size 
       Float_t bw = 1e5;
       for (UInt_t i=0; i< cellGeom.size(); i += 4 ) {
-         if ( cellGeom[i+2] -cellGeom[i] < bw) bw =  cellGeom[i+2] -cellGeom[i];
+         if ( cellGeom[i+2] -cellGeom[i] < bw)   bw =  cellGeom[i+2] -cellGeom[i];
          if ( cellGeom[i+3] -cellGeom[i+1] < bw) bw =  cellGeom[i+3] -cellGeom[i+1];
       }
       bw *= 0.5;
@@ -954,20 +951,46 @@ void TEveCaloLegoGL::DrawCells2D() const
          glBegin(GL_POLYGON);
          TGLUtil::Color(fM->fData->GetSliceColor(maxSlice[i]));
 
-         Float_t bws = bw*TMath::Log(sumVal[i]+1)/logMax;
+         Float_t bws = bw*TMath::Log10(sumVal[i]+1)/logMax;
 
          x = 0.5* (cellGeom[4*i] +cellGeom[4*i+2]) ;
          y = 0.5* (cellGeom[4*i+1] +cellGeom[4*i+3]) ;
-         glVertex3f(x - bws, y - bws, sumVal[i]);
-         glVertex3f(x + bws, y - bws, sumVal[i]);
-         glVertex3f(x + bws, y + bws, sumVal[i]);
-         glVertex3f(x - bws, y + bws, sumVal[i]);
+         glVertex3f(x - bws, y - bws, 0);
+         glVertex3f(x + bws, y - bws, 0);
+         glVertex3f(x + bws, y + bws, 0);
+         glVertex3f(x - bws, y + bws, 0);
 
          glEnd();
 
       }
+      if (fPixelsPerBin >= fM->fDrawNumberCellPixels)
+      {
+         TGLUtil::Color(fM->GetFontColor());
+         Float_t llx, lly, llz, urx, ury, urz;
+         Float_t xOff, yOff;
+         TGLFont font;
+         rnrCtx.RegisterFont(16, "arial", TGLFont::kPixmap, font);
+         for (UInt_t i=0; i< sumVal.size(); i++) {
+            x = 0.5* (cellGeom[4*i] +cellGeom[4*i+2]) ;
+            y = 0.5* (cellGeom[4*i+1] +cellGeom[4*i+3]) ;
+            const char* txt = Form("%.1f", sumVal[i]);
+            xOff = 0;
+            yOff = 0;
+            font.BBox(txt, llx, lly, llz, urx, ury, urz);
+            if (txt[0] == '-')
+               urx += (urx-llx)/strlen(txt);
+            xOff = -0.5 * urx;
+            yOff = -0.5 * (ury -lly);
+            glPushMatrix();
+            glTranslatef(x, y, 0.1);
+            glRasterPos2i(0, 0);
+            glBitmap(0, 0, 0, 0, xOff, yOff, 0);
+            font.Render(txt);
+            glPopMatrix();
+         }
+      }
    }
-}
+} // end DrawCells2D
 
 //______________________________________________________________________________
 void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
@@ -1000,8 +1023,8 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    glTranslatef(-fM->GetEta(), -fM->fPhi, 0);
 
    // rebin axsis , check limits, fix TwoPi cycling
-   Int_t oldBinStep = fBinStep;
-   fBinStep = GetGridStep(rnrCtx);
+   Int_t oldBinStep = fM->fBinStep;
+   fM->fBinStep = GetGridStep(rnrCtx);
    RebinAxis(fM->fData->GetEtaBins(), fEtaAxis);
    RebinAxis(fM->fData->GetPhiBins(), fPhiAxis);
 
@@ -1013,13 +1036,13 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    }
 
    // rebin data
-   if (oldBinStep != fBinStep || idCacheChanged) {
+   if (oldBinStep != fM->fBinStep || idCacheChanged) {
       fDLCacheOK = kFALSE;
 
       fRebinData.fSliceData.clear();
       fRebinData.fSliceData.clear();
 
-      if (fBinStep > 1) {
+      if (fM->fBinStep > 1) {
          fM->fData->Rebin(fEtaAxis, fPhiAxis, fM->fCellList, fM->fPlotEt, fRebinData);
          if (fM->fNormalizeRebin) {
             Double_t maxVal = 0;
@@ -1052,7 +1075,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          if (!fDLCacheOK) MakeDisplayList();
          DrawCells3D(rnrCtx);
       } else {
-         DrawCells2D();
+         DrawCells2D(rnrCtx);
       }
       glPopName();
       glPopAttrib();
@@ -1089,8 +1112,7 @@ void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & 
 
    if (rec.GetN() < 2) return;
 
-
-   if (fBinStep == 1) {
+   if (fM->fBinStep == 1) {
       Int_t cellID = rec.GetItem(1);
       TEveCaloData::CellData_t cellData;
       fM->fData->GetCellData(fM->fCellList[cellID], cellData);
