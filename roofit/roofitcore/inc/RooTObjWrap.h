@@ -24,8 +24,8 @@ class RooTObjWrap : public TNamed {
 public:
 
   RooTObjWrap(Bool_t isArray=kFALSE) : _isArray(isArray), _owning(kFALSE) {} ;
-  RooTObjWrap(TObject* inObj, Bool_t isArray=kFALSE) : TNamed(), _isArray(isArray) { _list.Add(inObj) ; } 
-  RooTObjWrap(const RooTObjWrap& other) : TNamed(other), _list(other._list) {}
+  RooTObjWrap(TObject* inObj, Bool_t isArray=kFALSE) : TNamed(), _isArray(isArray), _owning(kFALSE) { _list.Add(inObj) ; } 
+  RooTObjWrap(const RooTObjWrap& other) : TNamed(other),  _isArray(other._isArray), _owning(kFALSE), _list(other._list) {}
   virtual ~RooTObjWrap() { if (_owning) _list.Delete() ; } ;
 
   void setOwning(Bool_t flag) { _owning = flag ; }
