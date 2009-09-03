@@ -68,7 +68,10 @@
 #pragma link C++ class RooStats::NeymanConstruction+;
 #pragma link C++ class RooStats::FeldmanCousins+;
 
-//#pragma link C++ class RooStats::GeneralScanner+; // temporary name
+#pragma link C++ class RooStats::BayesianNumIntCalculator+;
+/* #pragma link C++ class RooStats::HypoTestInvertor+; */
+/* #pragma link C++ class RooStats::HypoTestInvertorResult+; */
+/* #pragma link C++ class RooStats::HypoTestInvertorPlot+; */
 #pragma link C++ class RooStats::HLFactory+;
 
 // in progress
