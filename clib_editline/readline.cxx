@@ -989,16 +989,26 @@ history_get(int num)
  * add the line to history table
  */
 int
-add_history(const char *line)
+add_history(char *line)
 {
 	HistEvent ev;
 
 	if (h == NULL || e == NULL)
 		rl_initialize();
 
-	(void) history(h, &ev, H_ENTER, line);
-	if (history(h, &ev, H_GETSIZE) == 0)
-		history_length = ev.num;
+        size_t len = strlen(line);
+        char oldlast = line[len - 1];
+        if (oldlast == '\n') {
+           // remove trailing newline; it would add a second, empty history entry
+           line[len - 1] = 0;
+        }
+        if (line[0]) {
+           // no empty lines in history, please
+           (void) history(h, &ev, H_ENTER, line);
+           if (history(h, &ev, H_GETSIZE) == 0)
+              history_length = ev.num;
+        }
+        line[len - 1] = oldlast;
 
 	return (!(history_length > 0));	/* return 0 if all is okay */
 }
