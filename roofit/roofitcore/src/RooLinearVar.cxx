@@ -72,7 +72,7 @@ RooLinearVar::RooLinearVar(const char *name, const char *title, RooAbsRealLValue
   // Constructor with RooAbsRealLValue variable and RooAbsReal slope and offset
 
   // Slope and offset may not depend on variable
-  if (slope.dependsOn(variable) || offset.dependsOn(variable)) {
+  if (slope.dependsOnValue(variable) || offset.dependsOnValue(variable)) {
     coutE(InputArguments) << "RooLinearVar::RooLinearVar(" << GetName() 
 			  << "): ERROR, slope(" << slope.GetName() << ") and offset(" 
 			  << offset.GetName() << ") may not depend on variable(" 
