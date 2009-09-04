@@ -248,7 +248,8 @@ protected:
    Int_t                   fTowerPicked;
    Int_t                   fBinStep;
 
-   Int_t                   fDrawNumberCellPixels; 
+   Int_t                   fDrawNumberCellPixels;
+   Int_t                   fCellPixelFontSize;
 
    virtual void BuildCellIdCache();
 
@@ -309,7 +310,9 @@ public:
 
    Int_t    GetDrawNumberCellPixels() { return fDrawNumberCellPixels; }
    void     SetDrawNumberCellPixels(Int_t x) { fDrawNumberCellPixels = x; }
-
+   Int_t    GetCellPixelFontSize() { return fCellPixelFontSize; }
+   void     SetCellPixelFontSize(Int_t x) { fCellPixelFontSize = x; }
+   
    virtual void ComputeBBox();
 
    ClassDef(TEveCaloLego, 0);  // Class for visualization of calorimeter histogram data.
