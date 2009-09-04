@@ -635,8 +635,6 @@ Int_t TEveCaloLegoGL::GetGridStep(TGLRnrCtx &rnrCtx) const
 {
    // Calculate view-dependent grid density.
 
-   if (!fM->fAutoRebin) return 1;
-
    using namespace TMath;
 
    GLdouble x0, y0, z0, x1, y1, z1;
@@ -664,15 +662,17 @@ Int_t TEveCaloLegoGL::GetGridStep(TGLRnrCtx &rnrCtx) const
    Int_t j1 = fM->fData->GetPhiBins()->FindBin(fM->GetPhiMax());
 
    fPixelsPerBin = TMath::Nint(d / Sqrt((i0 - i1) * (i0 - i1) + (j0 - j1) * (j0 - j1)));
-   Int_t ngroup;
-   if (fPixelsPerBin < fM->fPixelsPerBin*0.5) {
-      ngroup = 4;
-   } else if (fPixelsPerBin < fM->fPixelsPerBin) {
-      ngroup = 2;
-   } else {
-      ngroup = 1;
+   Int_t ngroup = 1;
+   if (fM->fAutoRebin)
+   {
+      if (fPixelsPerBin < fM->fPixelsPerBin*0.5) {
+         ngroup = 4;
+      } else if (fPixelsPerBin < fM->fPixelsPerBin) {
+         ngroup = 2;
+      } else {
+         ngroup = 1;
+      }
    }
-
    return ngroup;
 }
 

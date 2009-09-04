@@ -416,12 +416,12 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
          Double_t x1 = (0.5+off) * scaleStepX + expX;
          Double_t y0 = -(0.5+off) * scaleStepY; 
          Double_t y1 = scaleStepY*(ne - 0.5 + off);
-         Double_t z = -0.2;
+         Double_t zf = -0.2;
 
          TGLUtil::ColorTransparency(fFrameColor, fFrameLineTransp);
          glBegin(GL_LINE_LOOP);
-         glVertex3f(x0, y0, z); glVertex3f(x1, y0, z);
-         glVertex3f(x1, y1, z); glVertex3f(x0, y1, z);
+         glVertex3f(x0, y0, zf); glVertex3f(x1, y0, zf);
+         glVertex3f(x1, y1, zf); glVertex3f(x0, y1, zf);
          glEnd();
 
          TGLUtil::ColorTransparency(fFrameColor, fFrameBgTransp);
