@@ -969,7 +969,7 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
          Float_t llx, lly, llz, urx, ury, urz;
          Float_t xOff, yOff;
          TGLFont font;
-         rnrCtx.RegisterFont(16, "arial", TGLFont::kPixmap, font);
+         rnrCtx.RegisterFont(TGLFontManager::GetFontSize(fM->fCellPixelFontSize), "arial", TGLFont::kPixmap, font);
          for (UInt_t i=0; i< sumVal.size(); i++) {
             x = 0.5* (cellGeom[4*i] +cellGeom[4*i+2]) ;
             y = 0.5* (cellGeom[4*i+1] +cellGeom[4*i+3]) ;

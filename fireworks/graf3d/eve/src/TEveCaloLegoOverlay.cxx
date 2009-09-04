@@ -39,8 +39,12 @@ TEveCaloLegoOverlay::TEveCaloLegoOverlay() :
 
    fCalo(0),
 
+   fShowScales(kTRUE),
+   fScaleColor(kWhite), fScaleTransparency(0),
+   fScaleCoordX(0.9), fScaleCoordY(0.2),
    fCellX(-1), fCellY(-1),
-   fScaleColor(kGray), fScaleTransparency(70),
+
+   fFrameColor(kGray), fFrameLineTransp(70), fFrameBgTransp(90),
 
    fHeaderSelected(kFALSE),
 
@@ -147,11 +151,32 @@ void TEveCaloLegoOverlay::MouseLeave()
    fActiveID = -1;
 }
 
- //______________________________________________________________________________
+//______________________________________________________________________________
 void TEveCaloLegoOverlay::SetScaleColorTransparency(Color_t colIdx, UChar_t transp)
 {
+   // Set color and transparency of scales.
+
    fScaleColor = colIdx;
    fScaleTransparency = transp;
+}
+
+//______________________________________________________________________________
+void TEveCaloLegoOverlay::SetScalePosition(Double_t x, Double_t y)
+{
+   // Set scale coordinates in range [0,1]. 
+
+   fScaleCoordX = x;
+   fScaleCoordY = y;
+}
+
+//______________________________________________________________________________
+void TEveCaloLegoOverlay:: SetFrameAttribs(Color_t frameColor, UChar_t lineTransp, UChar_t bgTransp)
+{
+   // Set frame attribs.
+   
+   fFrameColor = frameColor;
+   fFrameLineTransp = lineTransp;
+   fFrameBgTransp = bgTransp;
 }
 
 //==============================================================================
@@ -251,7 +276,6 @@ void TEveCaloLegoOverlay::RenderPlaneInterface(TGLRnrCtx &rnrCtx)
 
    if (fShowSlider)
    {
-
       // event handler
       if (rnrCtx.Selection())
       {
@@ -304,8 +328,6 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
    // Draw slider of calo 2D.
 
    // scale position
-   Float_t startX = 0.85;
-   Float_t startY = 0.2;
 
    Int_t ne = 4; // number of exponents is decided is scales start with 0 value
    Double_t maxVal = fCalo->GetMaxVal();
@@ -320,7 +342,7 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
    if (cellX < scaleStep && cellY < scaleStep)
    {
       glPushMatrix();
-      glTranslatef(startX, startY, 0); // translate to lower left corner
+      glTranslatef(fScaleCoordX, fScaleCoordY, 0); // translate to lower left corner
 
       glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
       glEnable(GL_POLYGON_OFFSET_FILL);
@@ -328,6 +350,8 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
       glDisable(GL_CULL_FACE);
       glEnable(GL_BLEND);
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+      TGLRect &vp = rnrCtx.GetCamera()->RefViewport();
 
       // draw cells
       TGLUtil::ColorTransparency(fScaleColor, fScaleTransparency);
@@ -338,6 +362,11 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
          Float_t pos = i* scaleStep;
          Float_t dx = 0.5* cellX * scale;
          Float_t dy = 0.5* cellY * scale;
+         if (dx < 0.5/vp.Width())
+         {
+            ne = i-1;
+            break;
+         }
          glVertex2f( - dx, pos - dy);
          glVertex2f( - dx, pos + dy);
          glVertex2f( + dx, pos + dy);
@@ -345,31 +374,61 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
       }
       glEnd();
 
-      // write exponental numbers
-      TGLRect &vp = rnrCtx.GetCamera()->RefViewport();
-
-      glTranslatef(cellX, 0, 0);
+      // draw numbers
+      Double_t offX = cellX*TMath::Log10(TMath::Power(10, maxe)+1)/TMath::Log10(sqv); 
+      glTranslatef(offX*0.8, 0, 0);
       TGLFont fontB;
       Int_t fsb = TGLFontManager::GetFontSize(vp.Height()*0.03, 12, 36);
       rnrCtx.RegisterFont(fsb, "arial", TGLFont::kPixmap, fontB);
-      fontB.PreRender();
       TGLFont fontE;
-      Int_t fsE = TGLFontManager::GetFontSize(vp.Height()*0.015, 12, 36);
+      Int_t fsE = TGLFontManager::GetFontSize(vp.Height()*0.008, 12, 36);
       rnrCtx.RegisterFont(fsE, "arial", TGLFont::kPixmap, fontE);
-      fontE.PreRender();
 
       Float_t llx, lly, llz, urx, ury, urz;
       fontB.BBox("10", llx, lly, llz, urx, ury, urz);
       Float_t expX = urx/vp.Width();
       Float_t expY = (ury-lly)*0.5/vp.Height();
-      for (Int_t i = 0; i <= ne; ++i)
       {
-         fontB.RenderBitmap("10", 0, i*scaleStep, 0, TGLFont::kLeft);
-         if (i != maxe) fontE.RenderBitmap(Form("%d",  maxe-i), expX   , i*scaleStep+expY, 0, TGLFont::kLeft );
+         fontB.PreRender();
+         fontE.PreRender();
+         for (Int_t i = 0; i <= ne; ++i)
+         {
+            fontB.RenderBitmap("10", 0, i*scaleStep, 0, TGLFont::kLeft);
+            if (i != maxe) fontE.RenderBitmap(Form("%d",  maxe-i), expX   , i*scaleStep+expY, 0, TGLFont::kLeft );
+         }
+         fontB.PostRender();
+         fontE.PostRender();
       }
-      fontB.PostRender();
-      fontE.PostRender();
 
+
+      // draw frame
+      {
+         Float_t ex = 0.03;
+         Double_t x0 = -offX -ex;
+         Double_t x1 =  expX +ex;
+         Double_t y0 = -0.5 *  scaleStep; 
+         Double_t y1 = (ne+0.5) * scaleStep;
+         TGLUtil::Color(kWhite);
+         // glBegin(GL_LINES);
+         //glVertex2f(0, 0); 
+         // glVertex2f(0, ne*scaleStep); 
+         //glEnd();
+
+         TGLUtil::ColorTransparency(fFrameColor, fFrameLineTransp);
+
+         glBegin(GL_LINE_LOOP);
+         glVertex2f(x0, y0); glVertex2f(x1, y0);
+         glVertex2f(x1, y1); glVertex2f(x0, y1);
+         glEnd();
+
+         TGLUtil::ColorTransparency(fFrameColor, fFrameBgTransp);
+         glBegin(GL_QUADS);
+         glVertex2f(x0, y0); glVertex2f(x1, y0);
+         glVertex2f(x1, y1); glVertex2f(x0, y1);
+         glEnd();
+
+
+      }
       glPopMatrix();
       glPopAttrib();
    }
@@ -407,7 +466,7 @@ void TEveCaloLegoOverlay::Render(TGLRnrCtx& rnrCtx)
    TGLCamera& cam = rnrCtx.RefCamera();
    Bool_t drawOverlayAxis = kFALSE;
 
-   if (cam.IsOrthographic())
+   if (cam.IsOrthographic() && fShowScales)
    {
       // in 2D need pixel cell dimension
       // project lego eta-phi boundraries
@@ -457,7 +516,8 @@ void TEveCaloLegoOverlay::Render(TGLRnrCtx& rnrCtx)
       if (res.X() > cam.RefViewport().Width()*0.8 || res.Y() > cam.RefViewport().Height()*0.8)
          drawOverlayAxis = kTRUE;
    }
-   else if (fShowPlane)
+
+   if (cam.IsPerspective() && fShowPlane)
    {
       RenderPlaneInterface(rnrCtx);
    }

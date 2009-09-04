@@ -613,7 +613,8 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* d, const char* n, const char* t):
    fTowerPicked(-1),
 
    fBinStep(-1),
-   fDrawNumberCellPixels(30) // draw numbers on cell above 30 pixels
+   fDrawNumberCellPixels(30), // draw numbers on cell above 30 pixels
+   fCellPixelFontSize(15) // size of cell fonts in pixels 
 {
    // Constructor.
 
