@@ -391,17 +391,17 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
       Float_t expOff = 1;
       {
          Float_t x = 0.5*scaleStepX;
-         Float_t z = -0.1;
+         Float_t zf = -0.1;
          fontB.PreRender();
          fontE.PreRender();
          for (Int_t i = 0; i < ne; ++i)
          {
-            fontB.RenderBitmap("10", x, i*scaleStepY, z, TGLFont::kLeft);
+            fontB.RenderBitmap("10", x, i*scaleStepY, zf, TGLFont::kLeft);
             if (i != maxe)
             {
                fontB.BBox(Form("%d",  maxe-i), llx, lly, llz, urx, ury, urz);
                if (expOff >  urx/vp.Width()) expOff = urx/vp.Width();
-               fontE.RenderBitmap(Form("%d",  maxe-i), x+expX , i*scaleStepY+expY, z, TGLFont::kLeft );
+               fontE.RenderBitmap(Form("%d",  maxe-i), x+expX , i*scaleStepY+expY, zf, TGLFont::kLeft );
             }
          }
          fontB.PostRender();
