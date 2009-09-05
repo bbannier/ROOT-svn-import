@@ -661,13 +661,13 @@ Int_t TEveCaloLegoGL::GetGridStep(TGLRnrCtx &rnrCtx) const
    Int_t j0 = fM->fData->GetPhiBins()->FindBin(fM->GetPhiMin());
    Int_t j1 = fM->fData->GetPhiBins()->FindBin(fM->GetPhiMax());
 
-   fPixelsPerBin = TMath::Nint(d / Sqrt((i0 - i1) * (i0 - i1) + (j0 - j1) * (j0 - j1)));
+   Int_t pixelsPerBin = TMath::Nint(d / Sqrt((i0 - i1) * (i0 - i1) + (j0 - j1) * (j0 - j1)));
    Int_t ngroup = 1;
    if (fM->fAutoRebin)
    {
-      if (fPixelsPerBin < fM->fPixelsPerBin*0.5) {
+      if (pixelsPerBin < fM->fPixelsPerBin*0.5) {
          ngroup = 4;
-      } else if (fPixelsPerBin < fM->fPixelsPerBin) {
+      } else if (pixelsPerBin < fM->fPixelsPerBin) {
          ngroup = 2;
       } else {
          ngroup = 1;
@@ -963,14 +963,34 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
          glEnd();
 
       }
-      if (fPixelsPerBin >= fM->fDrawNumberCellPixels)
-      {
-         TGLUtil::Color(fM->GetFontColor());
-         Float_t llx, lly, llz, urx, ury, urz;
-         Float_t xOff, yOff;
-         TGLFont font;
-         rnrCtx.RegisterFont(TGLFontManager::GetFontSize(fM->fCellPixelFontSize), "arial", TGLFont::kPixmap, font);
-         for (UInt_t i=0; i< sumVal.size(); i++) {
+
+      // get value to pixels
+
+      // get projected length of diagonal to determine
+      TGLMatrix mm;
+      GLdouble pm[16];
+      GLint    vp[4];
+      glGetDoublev(GL_MODELVIEW_MATRIX, mm.Arr());
+      glGetDoublev(GL_PROJECTION_MATRIX, pm);
+      glGetIntegerv(GL_VIEWPORT, vp);
+
+      GLdouble dn[3];
+      GLdouble up[3];
+      gluProject(fM->GetEtaMin(), 0, 0, mm.Arr(), pm, vp, &dn[0], &dn[1], &dn[2]);
+      gluProject(fM->GetEtaMax(), 0, 0, mm.Arr(), pm, vp, &up[0], &up[1], &up[2]);
+      Double_t etaLenPix = up[0]-dn[0];
+      Float_t sx = etaLenPix/fM->GetEtaRng();
+
+      TGLUtil::Color(fM->GetFontColor());
+      Float_t llx, lly, llz, urx, ury, urz;
+      Float_t xOff, yOff;
+      TGLFont font;
+      rnrCtx.RegisterFont(TGLFontManager::GetFontSize(fM->fCellPixelFontSize), "arial", TGLFont::kPixmap, font);
+      for (UInt_t i=0; i< sumVal.size(); i++) {
+
+         Float_t bws = bw*TMath::Log10(sumVal[i]+1)/logMax;
+         if (bws*sx >  fM->fDrawNumberCellPixels)
+         {
             x = 0.5* (cellGeom[4*i] +cellGeom[4*i+2]) ;
             y = 0.5* (cellGeom[4*i+1] +cellGeom[4*i+3]) ;
             const char* txt = Form("%.1f", sumVal[i]);
@@ -987,6 +1007,7 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
             glBitmap(0, 0, 0, 0, xOff, yOff, 0);
             font.Render(txt);
             glPopMatrix();
+
          }
       }
    }
@@ -1101,7 +1122,6 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          glPopAttrib();
       }
    }
-
    glPopMatrix();
 }
 

@@ -71,7 +71,8 @@ protected:
    mutable TEveCaloData::RebinData_t fRebinData;
 
    mutable Bool_t                    fCells3D;
-   mutable Int_t                     fPixelsPerBin;
+   mutable Int_t                     fEtaRngPixels;
+   mutable Int_t                     fPhiRngPixels;
 
 public:
    TEveCaloLegoGL();
