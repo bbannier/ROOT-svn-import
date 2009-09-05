@@ -338,109 +338,116 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
 
    Double_t scaleStepY = 0.1; // step is 10% of screen
    Double_t scaleStepX =  scaleStepY*vp.Height()/vp.Width(); // step is 10% of screen
+  
+   Int_t ne = 3;
 
-   if (cellY < scaleStepY)
+   // define max starting exponent
+   while(cellY > scaleStepY)
    {
-      glPushMatrix();
-      glTranslatef(fScaleCoordX, fScaleCoordY, 0); // translate to lower left corner
+      maxe --;
+      cellX *= 0.1;
+      cellY *= 0.1;
+   }
+   glPushMatrix();
+   glTranslatef(fScaleCoordX, fScaleCoordY, 0); // translate to lower left corner
 
-      glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT | GL_LINE_BIT | GL_POINT_BIT);
-      glEnable(GL_BLEND);
-      glDisable(GL_CULL_FACE);
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      glEnable(GL_POLYGON_OFFSET_FILL);
-      glPolygonOffset(0.1, 1);
+   glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT | GL_LINE_BIT | GL_POINT_BIT);
+   glEnable(GL_BLEND);
+   glDisable(GL_CULL_FACE);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   glEnable(GL_POLYGON_OFFSET_FILL);
+   glPolygonOffset(0.1, 1);
 
-      // draw cells
-      glBegin(GL_QUADS);
-      TGLUtil::ColorTransparency(fScaleColor, fScaleTransparency);
-      Int_t ne = 0;
-      Float_t valFac, pos, dx, dy, z;
-      for (Int_t i=0; i < 4; ++i)
-      { 
-         ne = i;
-         valFac = TMath::Log10(TMath::Power(10, maxe-i)+1)/TMath::Log10(sqv);
-         pos = i* scaleStepY;
-         dx = 0.5* cellX * valFac;
-         dy = 0.5* cellY * valFac;
-         z = -0.1;
-         if (dy*vp.Height() < 0.5)
-         {
-            break;
-         }
-         glVertex3f( - dx, pos - dy, z);
-         glVertex3f( - dx, pos + dy, z);
-         glVertex3f( + dx, pos + dy, z);
-         glVertex3f( + dx, pos - dy, z);
+   // draw cells
+   TGLUtil::ColorTransparency(fScaleColor, fScaleTransparency);
+   Float_t valFac, pos, dx, dy, z;
+   glBegin(GL_QUADS);
+   for (Int_t i=0; i < ne; ++i)
+   { 
+      valFac = TMath::Log10(TMath::Power(10, maxe-i)+1)/TMath::Log10(sqv);
+      pos = i* scaleStepY;
+      dx = 0.5* cellX * valFac;
+      dy = 0.5* cellY * valFac;
+      glVertex2f( - dx, pos - dy);
+      glVertex2f( - dx, pos + dy);
+      glVertex2f( + dx, pos + dy);
+      glVertex2f( + dx, pos - dy);
+   }
+   glEnd();
+
+   // draw points in case suare is below pixels
+   glBegin(GL_POINTS);
+   for (Int_t i=0; i < ne; ++i)
+      glVertex2f(0, i* scaleStepY);
+   glEnd();
+
+   // draw numbers 
+   TGLUtil::Color(fScaleColor);
+   TGLFont fontB;
+   Int_t fsb = TGLFontManager::GetFontSize(vp.Height()*0.03, 12, 36);
+   rnrCtx.RegisterFont(fsb, "arial", TGLFont::kPixmap, fontB);
+   TGLFont fontE;
+   Int_t fsE = TGLFontManager::GetFontSize(vp.Height()*0.008, 8, 36);
+   rnrCtx.RegisterFont(fsE, "arial", TGLFont::kPixmap, fontE);
+
+   Float_t llx, lly, llz, urx, ury, urz;
+   fontB.BBox("10", llx, lly, llz, urx, ury, urz);
+   Float_t expX = urx/vp.Width();
+   Float_t expY = (ury-lly)*0.5/vp.Height();
+   Float_t expOff = 1;
+   fontB.PreRender();
+   fontE.PreRender();
+   glPushMatrix();
+   glTranslatef(0.5*scaleStepX, 0, 0.1);
+   for (Int_t i = 0; i < ne; ++i)
+   {
+      if (i != maxe)
+      {
+         fontB.RenderBitmap("10", 0, i*scaleStepY, 0, TGLFont::kLeft);
+         fontB.BBox(Form("%d",  maxe-i), llx, lly, llz, urx, ury, urz);
+         if (expOff >  urx/vp.Width()) expOff = urx/vp.Width();
+         fontE.RenderBitmap(Form("%d",  maxe-i), expX , i*scaleStepY+expY, 0, TGLFont::kLeft );
       }
+      else
+      {
+         fontB.RenderBitmap("1", 0, i*scaleStepY, 0, TGLFont::kLeft);
+      }
+   }
+   glPopMatrix();
+   fontB.PostRender();
+   fontE.PostRender();
+   if (expOff < 1)  expX += expOff;
+
+   // draw frame
+   {
+      Double_t off = 0.1;
+      Double_t x0 = -(0.5+off) * scaleStepX;
+      Double_t x1 = (0.5+off) * scaleStepX + expX;
+      Double_t y0 = -(0.5+off) * scaleStepY; 
+      Double_t y1 = scaleStepY*(ne - 0.5 + off);
+      Double_t zf = -0.2;
+
+      TGLUtil::ColorTransparency(fFrameColor, fFrameLineTransp);
+      glBegin(GL_LINE_LOOP);
+      glVertex3f(x0, y0, zf); glVertex3f(x1, y0, zf);
+      glVertex3f(x1, y1, zf); glVertex3f(x0, y1, zf);
       glEnd();
 
-      // draw numbers 
-      TGLUtil::Color(fScaleColor);
-      TGLFont fontB;
-      Int_t fsb = TGLFontManager::GetFontSize(vp.Height()*0.03, 12, 36);
-      rnrCtx.RegisterFont(fsb, "arial", TGLFont::kPixmap, fontB);
-      TGLFont fontE;
-      Int_t fsE = TGLFontManager::GetFontSize(vp.Height()*0.008, 8, 36);
-      rnrCtx.RegisterFont(fsE, "arial", TGLFont::kPixmap, fontE);
-
-      Float_t llx, lly, llz, urx, ury, urz;
-      fontB.BBox("10", llx, lly, llz, urx, ury, urz);
-      Float_t expX = urx/vp.Width();
-      Float_t expY = (ury-lly)*0.5/vp.Height();
-      Float_t expOff = 1;
-      {
-         Float_t x = 0.5*scaleStepX;
-         Float_t zf = -0.1;
-         fontB.PreRender();
-         fontE.PreRender();
-         for (Int_t i = 0; i < ne; ++i)
-         {
-            fontB.RenderBitmap("10", x, i*scaleStepY, zf, TGLFont::kLeft);
-            if (i != maxe)
-            {
-               fontB.BBox(Form("%d",  maxe-i), llx, lly, llz, urx, ury, urz);
-               if (expOff >  urx/vp.Width()) expOff = urx/vp.Width();
-               fontE.RenderBitmap(Form("%d",  maxe-i), x+expX , i*scaleStepY+expY, zf, TGLFont::kLeft );
-            }
-         }
-         fontB.PostRender();
-         fontE.PostRender();
-         if (expOff < 1)  expX += expOff;
-      }
-
-      // draw frame
-      {
-         Double_t off = 0.1;
-         Double_t x0 = -(0.5+off) * scaleStepX;
-         Double_t x1 = (0.5+off) * scaleStepX + expX;
-         Double_t y0 = -(0.5+off) * scaleStepY; 
-         Double_t y1 = scaleStepY*(ne - 0.5 + off);
-         Double_t zf = -0.2;
-
-         TGLUtil::ColorTransparency(fFrameColor, fFrameLineTransp);
-         glBegin(GL_LINE_LOOP);
-         glVertex3f(x0, y0, zf); glVertex3f(x1, y0, zf);
-         glVertex3f(x1, y1, zf); glVertex3f(x0, y1, zf);
-         glEnd();
-
-         TGLUtil::ColorTransparency(fFrameColor, fFrameBgTransp);
-         glPushName(0);
-         glLoadName(1);
-         glBegin(GL_QUADS);
-         glVertex2f(x0, y0); glVertex2f(x1, y0);
-         glVertex2f(x1, y1); glVertex2f(x0, y1);
-         glEnd();
-         glPopName();
-      }
-   
-      glPopMatrix();
-      glPopAttrib();
+      TGLUtil::ColorTransparency(fFrameColor, fFrameBgTransp);
+      glPushName(0);
+      glLoadName(1);
+      glBegin(GL_QUADS);
+      glVertex2f(x0, y0); glVertex2f(x1, y0);
+      glVertex2f(x1, y1); glVertex2f(x0, y1);
+      glEnd();
+      glPopName();
    }
-
+   
+   glPopMatrix();
+   glPopAttrib();
 } // end draw scales
 
-/******************************************************************************/
+ /******************************************************************************/
 
 void TEveCaloLegoOverlay::Render(TGLRnrCtx& rnrCtx)
 {
