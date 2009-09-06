@@ -331,23 +331,25 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
 
    Double_t maxVal = fCalo->GetMaxVal();
    Int_t maxe = TMath::CeilNint(TMath::Log10(maxVal+1)); // max round exponent
-   Double_t sqv = TMath::Power(10, maxe)+1; // max square value
+   Double_t sqv = TMath::Power(10, maxe)+1; // starting max square value
    Double_t fc = TMath::Log10(sqv)/TMath::Log10(fCalo->GetMaxVal()+1);
-   Double_t cellX =  fCellX * fc;
-   Double_t cellY =  fCellY * fc;
+   Double_t cellX = fCellX*fc;
+   Double_t cellY = fCellY*fc;
 
    Double_t scaleStepY = 0.1; // step is 10% of screen
    Double_t scaleStepX =  scaleStepY*vp.Height()/vp.Width(); // step is 10% of screen
   
-   Int_t ne = 3;
 
-   // define max starting exponent
+   // define max starting exponent not to take more than scalStepY height
    while(cellY > scaleStepY)
    {
+      fc = TMath::Log10(TMath::Power(10, maxe-1)+1)/TMath::Log10(TMath::Power(10, maxe)+1);
       maxe --;
-      cellX *= 0.1;
-      cellY *= 0.1;
+      cellX *= fc;
+      cellY *= fc;
    }
+
+   sqv =  TMath::Power(10, maxe)+1;
    glPushMatrix();
    glTranslatef(fScaleCoordX, fScaleCoordY, 0); // translate to lower left corner
 
@@ -360,18 +362,22 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
 
    // draw cells
    TGLUtil::ColorTransparency(fScaleColor, fScaleTransparency);
-   Float_t valFac, pos, dx, dy, z;
+   Float_t pos, dx, dy;
    glBegin(GL_QUADS);
+   Int_t ne = 3; // max number of columns
    for (Int_t i=0; i < ne; ++i)
    { 
-      valFac = TMath::Log10(TMath::Power(10, maxe-i)+1)/TMath::Log10(sqv);
-      pos = i* scaleStepY;
+      Float_t valFac = TMath::Log10(TMath::Power(10, maxe-i)+1)/TMath::Log10(sqv);
       dx = 0.5* cellX * valFac;
       dy = 0.5* cellY * valFac;
+      pos = i* scaleStepY;
+      dx = 0.5* cellX * TMath::Power(10, -i);
+      dy = 0.5* cellY * TMath::Power(10, -i);
       glVertex2f( - dx, pos - dy);
       glVertex2f( - dx, pos + dy);
       glVertex2f( + dx, pos + dy);
       glVertex2f( + dx, pos - dy);
+
    }
    glEnd();
 
@@ -401,16 +407,20 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
    glTranslatef(0.5*scaleStepX, 0, 0.1);
    for (Int_t i = 0; i < ne; ++i)
    {
-      if (i != maxe)
+      if (i == maxe)
+      {
+         fontB.RenderBitmap("1", 0, i*scaleStepY, 0, TGLFont::kLeft);
+      }
+      else if ( i == (maxe -1))
+      {
+         fontB.RenderBitmap("10", 0, i*scaleStepY, 0, TGLFont::kLeft);
+      }
+      else
       {
          fontB.RenderBitmap("10", 0, i*scaleStepY, 0, TGLFont::kLeft);
          fontB.BBox(Form("%d",  maxe-i), llx, lly, llz, urx, ury, urz);
          if (expOff >  urx/vp.Width()) expOff = urx/vp.Width();
          fontE.RenderBitmap(Form("%d",  maxe-i), expX , i*scaleStepY+expY, 0, TGLFont::kLeft );
-      }
-      else
-      {
-         fontB.RenderBitmap("1", 0, i*scaleStepY, 0, TGLFont::kLeft);
       }
    }
    glPopMatrix();
