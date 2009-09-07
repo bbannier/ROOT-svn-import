@@ -97,6 +97,7 @@ void TEveCaloLegoGL::DLCacheDrop()
 {
    // Drop all display-list definitions.
 
+   fDLCacheOK = kFALSE;
    for (SliceDLMap_i i = fDLMap.begin(); i != fDLMap.end(); ++i)
       i->second = 0;
 
@@ -108,6 +109,7 @@ void TEveCaloLegoGL::DLCachePurge()
 {
    // Unregister all display-lists.
 
+   fDLCacheOK = kFALSE;
    if (! fDLMap.empty()) {
       for (SliceDLMap_i i = fDLMap.begin(); i != fDLMap.end(); ++i) {
          if (i->second) {
@@ -1057,9 +1059,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    }
 
    // rebin data
-   if (oldBinStep != fM->fBinStep || idCacheChanged) {
-      fDLCacheOK = kFALSE;
-
+   if (fDLCacheOK==kFALSE || oldBinStep != fM->fBinStep || idCacheChanged ) {
       fRebinData.fSliceData.clear();
       fRebinData.fSliceData.clear();
 
