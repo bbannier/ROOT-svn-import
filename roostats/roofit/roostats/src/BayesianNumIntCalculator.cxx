@@ -3,7 +3,6 @@
 **/
 
 // include other header files
-#include "ostream.h"
 
 #include "RooAbsFunc.h"
 #include "RooAbsReal.h"
@@ -70,6 +69,7 @@ RooPlot* BayesianNumIntCalculator::PlotPosterior()
   plot->Draw();
 
   delete nll;
+  return plot; 
 }
 
 
