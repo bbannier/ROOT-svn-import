@@ -1,4 +1,4 @@
-# $Id: GNUmakefile,v 1.12 2009/04/15 10:22:16 fabrizio Exp $
+# $Id: GNUmakefile,v 1.13 2009/07/29 16:27:35 ganis Exp $
 #------------------------------------------------------------------------------#
 #                       C o m m o n   V a r i a b l e s                        #
 #------------------------------------------------------------------------------#
@@ -126,7 +126,7 @@ $(SECGSITEST): $(OBJECTA) $(LIBDEPS)
 
 $(SECGSIPROXY): $(OBJECTB) $(LIBDEPS)
 	@echo Creating executable $(SECGSIPROXY) 
-	$(ECHO)$(LD) $(LDOP) $(OBJECTB) $(BINLIBS) $(LIBSSL) $(LIBS) -o $(SECGSIPROXY)
+	$(ECHO)$(LD) $(LDOP) $(OBJECTB) $(BINLIBS) $(LIBS) -o $(SECGSIPROXY)
 
 $(OBJDIR)/XrdSecgsitest.o: XrdSecgsitest.cc XrdOucString.hh \
 		XrdSysError.hh XrdSutAux.hh XProtocol.hh XPtypes.hh XrdCryptoAux.hh \
