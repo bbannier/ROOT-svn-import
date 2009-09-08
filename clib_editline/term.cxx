@@ -232,7 +232,9 @@ el_private const struct termcapstr {
 	{ "kh", "send cursor home" },
 #define	T_at7	37
 	{ "@7", "send cursor end" },
-#define	T_str	38
+#define	T_kD	38
+	{ "kD", "delete a character" },
+#define	T_str	39
 	{ NULL, NULL }
 };
 
@@ -1098,6 +1100,11 @@ term_init_arrow(EditLine *el)
 	arrow[A_K_EN].key = T_at7;
 	arrow[A_K_EN].fun.cmd = ED_MOVE_TO_END;
 	arrow[A_K_EN].type = XK_CMD;
+
+	arrow[A_K_DE].name = "del";
+	arrow[A_K_DE].key = T_kD;
+	arrow[A_K_DE].fun.cmd = ED_DELETE_NEXT_CHAR; //EM_DELETE_OR_LIST;
+	arrow[A_K_DE].type = XK_CMD;
 }
 
 
@@ -1132,6 +1139,7 @@ term_reset_arrow(EditLine *el)
 	key_add(el, stOC, &arrow[A_K_RT].fun, arrow[A_K_RT].type);
 	key_add(el, stOD, &arrow[A_K_LT].fun, arrow[A_K_LT].type);
 	key_add(el, stOH, &arrow[A_K_HO].fun, arrow[A_K_HO].type);
+	key_add(el, stOF, &arrow[A_K_EN].fun, arrow[A_K_EN].type);
 	key_add(el, stOF, &arrow[A_K_EN].fun, arrow[A_K_EN].type);
 
 	if (el->el_map.type == MAP_VI) {

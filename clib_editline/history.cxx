@@ -658,7 +658,7 @@ history_save(History *h, const char *fname)
 	    retval = HPREV(h, &ev), i++) {
 		len = strlen(ev.str) * 4;
 		if (len >= max_size) {
-			max_size = (len + 1023) & 1023;
+                   max_size = (len + 1023) & ~1023; // 1024 chunk
 			ptr = (char *) h_realloc(ptr, max_size);
 		}
 		(void) strvis(ptr, ev.str, VIS_WHITE);
