@@ -95,7 +95,7 @@ el_private const el_action_t  el_map_emacs[] = {
 	/*  28 */	ED_TTY_SIGQUIT,		/* ^\ */
 	/*  29 */	ED_TTY_DSUSP,		/* ^] */
 	/*  30 */	ED_UNASSIGNED,		/* ^^ */
-	/*  31 */	ED_UNASSIGNED,		/* ^_ */
+	/*  31 */	EM_UNDO,		/* ^_ */
 	/*  32 */	ED_INSERT,		/* SPACE */
 	/*  33 */	ED_INSERT,		/* ! */
 	/*  34 */	ED_INSERT,		/* " */
@@ -889,7 +889,6 @@ el_private const el_action_t el_map_vi_command[] = {
 	/* 254 */	ED_UNASSIGNED,		/* M-~ */
 	/* 255 */	ED_UNASSIGNED		/* M-^? */
 };
-
 
 /* map_init():
  *	Initialize and allocate the maps

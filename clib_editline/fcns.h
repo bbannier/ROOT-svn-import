@@ -55,6 +55,8 @@
 #define	EM_UNIVERSAL_ARGUMENT         	 51
 #define	EM_UPPER_CASE                 	 52
 #define	EM_YANK                       	 53
+// EM_UNDO at the end
+#ifdef EL_USE_VI
 #define	VI_ADD                        	 54
 #define	VI_ADD_AT_EOL                 	 55
 #define	VI_CHANGE_CASE                	 56
@@ -91,7 +93,46 @@
 #define	VI_TO_PREV_CHAR               	 87
 #define	VI_UNDO                       	 88
 #define	VI_ZERO                       	 89
-#define	EL_NUM_FCNS                   	 90
+#else
+#define	VI_ADD                        	 ED_UNASSIGNED
+#define	VI_ADD_AT_EOL                 	 ED_UNASSIGNED
+#define	VI_CHANGE_CASE                	 ED_UNASSIGNED
+#define	VI_CHANGE_META                	 ED_UNASSIGNED
+#define	VI_CHANGE_TO_EOL              	 ED_UNASSIGNED
+#define	VI_COMMAND_MODE               	 ED_UNASSIGNED
+#define	VI_DELETE_META                	 ED_UNASSIGNED
+#define	VI_DELETE_PREV_CHAR           	 ED_UNASSIGNED
+#define	VI_END_WORD                   	 ED_UNASSIGNED
+#define	VI_INSERT                     	 ED_UNASSIGNED
+#define	VI_INSERT_AT_BOL              	 ED_UNASSIGNED
+#define	VI_KILL_LINE_PREV             	 ED_UNASSIGNED
+#define	VI_LIST_OR_EOF                	 ED_UNASSIGNED
+#define	VI_NEXT_CHAR                  	 ED_UNASSIGNED
+#define	VI_NEXT_SPACE_WORD            	 ED_UNASSIGNED
+#define	VI_NEXT_WORD                  	 ED_UNASSIGNED
+#define	VI_PASTE_NEXT                 	 ED_UNASSIGNED
+#define	VI_PASTE_PREV                 	 ED_UNASSIGNED
+#define	VI_PREV_CHAR                  	 ED_UNASSIGNED
+#define	VI_PREV_SPACE_WORD            	 ED_UNASSIGNED
+#define	VI_PREV_WORD                  	 ED_UNASSIGNED
+#define	VI_REPEAT_NEXT_CHAR           	 ED_UNASSIGNED
+#define	VI_REPEAT_PREV_CHAR           	 ED_UNASSIGNED
+#define	VI_REPEAT_SEARCH_NEXT         	 ED_UNASSIGNED
+#define	VI_REPEAT_SEARCH_PREV         	 ED_UNASSIGNED
+#define	VI_REPLACE_CHAR               	 ED_UNASSIGNED
+#define	VI_REPLACE_MODE               	 ED_UNASSIGNED
+#define	VI_SEARCH_NEXT                	 ED_UNASSIGNED
+#define	VI_SEARCH_PREV                	 ED_UNASSIGNED
+#define	VI_SUBSTITUTE_CHAR            	 ED_UNASSIGNED
+#define	VI_SUBSTITUTE_LINE            	 ED_UNASSIGNED
+#define	VI_TO_END_WORD                	 ED_UNASSIGNED
+#define	VI_TO_NEXT_CHAR               	 ED_UNASSIGNED
+#define	VI_TO_PREV_CHAR               	 ED_UNASSIGNED
+#define	VI_UNDO                       	 ED_UNASSIGNED
+#define	VI_ZERO                       	 ED_UNASSIGNED
+#endif
+#define	EM_UNDO                       	 90
+#define	EL_NUM_FCNS                   	 91
 typedef el_action_t (*el_func_t)(EditLine *, int);
 el_protected const el_func_t* func__get(void);
 #endif /* _h_fcns_c */
