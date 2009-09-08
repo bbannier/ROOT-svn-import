@@ -678,7 +678,7 @@ mc_again:
 				 */
 				term_overwrite(el,
 				    &el->el_display[el->el_cursor.v][el->el_cursor.h],
-                       el->el_line.bufcolor + el->el_cursor.h - el->el_prompt.p_pos.h,
+                       &el->el_dispcolor[el->el_cursor.v][el->el_cursor.h],
 				           where - el->el_cursor.h);
 
 			}
@@ -724,8 +724,7 @@ term_overwrite(EditLine *el, char *cp, el_color_t* color, int n)
 		return;
 	}
 	do {
-		// need to pull color info for *cp out of bufcolor
-                term__putcolorch(*cp++, /*&(el->el_line.bufcolor[cp - el->el_line.buffer])*/ color ? color++ : 0);
+        term__putcolorch(*cp++, /*&(el->el_line.bufcolor[cp - el->el_line.buffer])*/ color ? color++ : 0);
 		el->el_cursor.h++;
 	} while (--n);
 
@@ -737,12 +736,10 @@ term_overwrite(EditLine *el, char *cp, el_color_t* color, int n)
 				/* force the wrap to avoid the "magic"
 				 * situation */
 				char c;
-				if ((c = el->el_display[el->el_cursor.v][el->el_cursor.h]) != '\0')		// LOUISE COLOUR no change made
-					term_overwrite(el, &c,
-                                                       el->el_line.bufcolor + el->el_cursor.h - el->el_prompt.p_pos.h,
-                                                       1);
+				if ((c = el->el_display[el->el_cursor.v][el->el_cursor.h]) != '\0')	
+					term_overwrite(el, &c, el->el_line.bufcolor + el->el_cursor.h - el->el_prompt.p_pos.h, 1);
 				else {
-					term__putcolorch(' ', NULL);				// LOUISE fix term__putc call
+					term__putcolorch(' ', NULL);
 				}
 				el->el_cursor.h = 1;
 			}
@@ -830,7 +827,7 @@ term_insertwrite(EditLine *el, char *cp, el_color_t* color, int num)
 		el->el_cursor.h += num;
 		do {
 			// need to get color info about cp
-                        term__putcolorch(*cp++, /*&(el->el_line.bufcolor[cp - el->el_line.buffer])*/ color ? color++ : 0);
+            term__putcolorch(*cp++, /*&(el->el_line.bufcolor[cp - el->el_line.buffer])*/ color ? color++ : 0);
 		} while (--num);
 
 		if (GoodStr(T_ip))	/* have to make num chars insert */
@@ -843,8 +840,6 @@ term_insertwrite(EditLine *el, char *cp, el_color_t* color, int num)
 		if (GoodStr(T_ic))	/* have to make num chars insert */
 			(void) tputs(Str(T_ic), 1, term__putc);
 					/* insert a char */
-		// need to get colour info from cp
-		// but if cp is not pointing withing el_line.buffer, this will be a disaster
 		term__putcolorch(*cp++, /*&(el->el_line.bufcolor[cp - el->el_line.buffer])*/ color ? color++ : 0);
 
 		el->el_cursor.h++;
@@ -1291,17 +1286,31 @@ term__putcolorch(int c, el_color_t *color)
 		int setup = setupterm(0, 1, &errcode);
 		TTermManip tm;
 
-		if ( color->foreColor == 1 )	// keyword: nCurses COLOR_RED
-		{
-			tm.SetColor(255,0,0);		// red
-		}
-		else if ( color->foreColor == 4 )		// keyword: Ncurses COLOR_BLUE
-		{
-			tm.SetColor(0,0,127);		// blue
-		}
-		else if ( color->foreColor == 2 )		// bracket: NCurses COLOR_GREEN
-		{
-			tm.SetColor(0,255,0);		// green with bold
+		switch ( color->foreColor ) {
+			case 0:								// nCurses COLOR_BLACK
+					tm.SetColor(0,0,0);			// black
+					break;
+			case 1:								// nCurses COLOR_RED
+					tm.SetColor(255,0,0);		// red (with bold)
+					break;
+			case 2:								// nCurses COLOR_GREEN
+					tm.SetColor(0,255,0);		// green (with bold)
+					break;
+			case 3:								// nCurses COLOR_YELLOW
+					tm.SetColor(255,255,0);		// yellow (with bold)
+					break;			
+			case 4:								// nCurses COLOR_BLUE
+					tm.SetColor(0,0,127);		// blue
+					break;
+			case 5:								// nCurses COLOR_MAGENTA
+					tm.SetColor(127,0,127);		// magenta
+					break;
+			case 6:								// nCurses COLOR_CYAN
+					tm.SetColor(0,127,127);		// cyan
+					break;
+			case 7:								// nCurses COLOR_WHITE
+					tm.SetColor(255,255,255);	// white (with bold)
+					break;
 		}
 		
 		// output the coloured char
@@ -1330,10 +1339,14 @@ term__repaint(EditLine * el, int index)
 	el->el_line.cursor = el->el_line.buffer + index;
 
 	int promptSize = el->el_prompt.p_pos.h;
-	int cursorPos = el->el_cursor.h;
-	//term_move_to_line(el, el->el_cursor.v);
-	term_move_to_char(el, promptSize+index);
+	int oriCursor = el->el_cursor.h;
+	int oriLine = el->el_cursor.v;
 	
+	int line = (promptSize+index) / el->el_term.t_size.h;
+	int hpos = (promptSize+index) % el->el_term.t_size.h;
+	term_move_to_line(el, line);
+	term_move_to_char(el, hpos);
+
 	// rewrite char
 	term_overwrite(el, el->el_line.cursor,
                        el->el_line.bufcolor + index,
@@ -1341,7 +1354,8 @@ term__repaint(EditLine * el, int index)
 
 	// move cursor back
 	el->el_line.cursor = cursor;
-	term_move_to_char(el, cursorPos);
+	term_move_to_line(el, oriLine);
+	term_move_to_char(el, oriCursor);
 
 	term__flush();
 }
