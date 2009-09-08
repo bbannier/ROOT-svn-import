@@ -29,6 +29,7 @@ el_private const el_func_t el_func[] = {
     em_next_word,              em_set_mark,               
     em_toggle_overwrite,       em_universal_argument,     
     em_upper_case,             em_yank,                   
+#ifdef EL_USE_VI
     vi_add,                    vi_add_at_eol,             
     vi_change_case,            vi_change_meta,            
     vi_change_to_eol,          vi_command_mode,           
@@ -47,6 +48,27 @@ el_private const el_func_t el_func[] = {
     vi_substitute_line,        vi_to_end_word,            
     vi_to_next_char,           vi_to_prev_char,           
     vi_undo,                   vi_zero,                   
+#else
+    0,                    0,             
+    0,            0,            
+    0,          0,           
+    0,            0,       
+    0,               0,                 
+    0,          0,         
+    0,            0,              
+    0,        0,              
+    0,             0,             
+    0,              0,        
+    0,              0,       
+    0,       0,     
+    0,     0,           
+    0,           0,            
+    0,            0,        
+    0,        0,            
+    0,           0,           
+    0,                   0,                   
+#endif
+    em_undo,
 };
 
 el_protected const el_func_t* func__get() { return el_func; }

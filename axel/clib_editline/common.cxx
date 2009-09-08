@@ -125,8 +125,10 @@ ed_insert(EditLine *el, int c)
 		re_refresh(el);
 	}
 
+        /*
 	if (el->el_state.inputmode == MODE_REPLACE_1)
 		(void) vi_command_mode(el, 0);
+        */
 
 	return (CC_NORM);
 }

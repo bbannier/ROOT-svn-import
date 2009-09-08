@@ -112,6 +112,8 @@ el_private const struct el_bindings_t el_func_help[] = {
       "Emacs incremental next search" },
     { "em-inc-search-prev",          EM_INC_SEARCH_PREV,           
       "Emacs incremental reverse search" },
+    { "em-undo",                     EM_UNDO,                      
+      "Emacs undo last change" },
     { "ed-end-of-file",              ED_END_OF_FILE,               
       "Indicate end of file" },
     { "ed-insert",                   ED_INSERT,                    

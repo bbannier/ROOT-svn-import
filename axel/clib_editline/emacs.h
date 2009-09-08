@@ -20,4 +20,5 @@ el_protected el_action_t	em_toggle_overwrite (EditLine *, int);
 el_protected el_action_t	em_copy_prev_word (EditLine *, int);
 el_protected el_action_t	em_inc_search_next (EditLine *, int);
 el_protected el_action_t	em_inc_search_prev (EditLine *, int);
+el_protected el_action_t	em_undo (EditLine *, int);
 #endif /* _h_emacs_c */

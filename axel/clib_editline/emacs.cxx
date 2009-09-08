@@ -487,3 +487,112 @@ em_inc_search_prev(EditLine *el, int c)
 	el->el_search.patlen = 0;
 	return (ce_inc_search(el, ED_SEARCH_PREV_HISTORY));
 }
+
+
+/* vi_undo():
+ *	Vi undo last change
+ *	[u]
+ */
+el_protected el_action_t
+/*ARGSUSED*/
+em_undo(EditLine *el, int c)
+{
+	char *cp, *kp;
+	char temp;
+	int i, size;
+	c_undo_t *un = &el->el_chared.c_undo;
+
+#ifdef DEBUG_UNDO
+	(void) fprintf(el->el_errfile, "Undo: %x \"%s\" +%d -%d\n",
+	    un->action, un->buf, un->isize, un->dsize);
+#endif
+	switch (un->action) {
+	case DELETE:
+		if (un->dsize == 0)
+			return (CC_NORM);
+
+		(void) memcpy(un->buf, un->ptr, un->dsize);
+		for (cp = un->ptr; cp <= el->el_line.lastchar; cp++)
+			*cp = cp[un->dsize];
+
+		el->el_line.lastchar -= un->dsize;
+		el->el_line.cursor = un->ptr;
+
+		un->action = INSERT;
+		un->isize = un->dsize;
+		un->dsize = 0;
+		break;
+
+	case DELETE | INSERT:
+		size = un->isize - un->dsize;
+		if (size > 0)
+			i = un->dsize;
+		else
+			i = un->isize;
+		cp = un->ptr;
+		kp = un->buf;
+		while (i-- > 0) {
+			temp = *kp;
+			*kp++ = *cp;
+			*cp++ = temp;
+		}
+		if (size > 0) {
+			el->el_line.cursor = cp;
+			c_insert(el, size);
+			while (size-- > 0 && cp < el->el_line.lastchar) {
+				temp = *kp;
+				*kp++ = *cp;
+				*cp++ = temp;
+			}
+		} else if (size < 0) {
+			size = -size;
+			for (; cp <= el->el_line.lastchar; cp++) {
+				*kp++ = *cp;
+				*cp = cp[size];
+			}
+			el->el_line.lastchar -= size;
+		}
+		el->el_line.cursor = un->ptr;
+		i = un->dsize;
+		un->dsize = un->isize;
+		un->isize = i;
+		break;
+
+	case INSERT:
+		if (un->isize == 0)
+			return (CC_NORM);
+
+		el->el_line.cursor = un->ptr;
+		c_insert(el, (int) un->isize);
+		(void) memcpy(un->ptr, un->buf, un->isize);
+		un->action = DELETE;
+		un->dsize = un->isize;
+		un->isize = 0;
+		break;
+
+	case CHANGE:
+		if (un->isize == 0)
+			return (CC_NORM);
+
+		el->el_line.cursor = un->ptr;
+		size = (int) (el->el_line.cursor - el->el_line.lastchar);
+		if (size < un->isize)
+			size = un->isize;
+		cp = un->ptr;
+		kp = un->buf;
+		for (i = 0; i < size; i++) {
+			temp = *kp;
+			*kp++ = *cp;
+			*cp++ = temp;
+		}
+		un->dsize = 0;
+		break;
+
+	default:
+		return (CC_ERROR);
+	}
+
+	return (CC_REFRESH);
+}
+
+
