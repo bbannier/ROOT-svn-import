@@ -13,9 +13,11 @@
 #include "HFitInterface.h"
 
 #include "Fit/BinData.h"
+#include "Fit/SparseData.h"
 #include "Fit/FitResult.h"
 #include "Math/IParamFunction.h"
 
+#include <vector>
 
 #include <cassert> 
 #include <cmath>
@@ -553,6 +555,45 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
    std::cout << "TGraphFitInterface::FillData Graph FitData size is " << dv.Size() << std::endl;
 #endif
   
+}
+
+void FillData(SparseData & dv, const TH1 * h1, TF1 * /*func*/) 
+{
+   const int dim = h1->GetDimension();
+   vector<double> min(dim);
+   vector<double> max(dim);
+   
+   const TArray *array(dynamic_cast<const TArray*>(h1));
+   assert(array && "THIS SHOULD NOT HAPPEN!");
+   for ( int i = 0; i < array->GetSize(); ++i )
+      if ( !(h1->IsBinUOflow(i)) && h1->GetBinContent(i))
+      {
+         int x,y,z;
+         h1->GetBinXYZ(i, x, y, z);
+         
+//          cout << "FILLDATA: h1(" << i << ")"
+//               << "[" << h1->GetXaxis()->GetBinLowEdge(x) << "-" << h1->GetXaxis()->GetBinUpEdge(x) << "]";
+//          if ( dim >= 2 )
+//             cout   << "[" << h1->GetYaxis()->GetBinLowEdge(y) << "-" << h1->GetYaxis()->GetBinUpEdge(y) << "]";
+//          if ( dim >= 3 )
+//             cout   << "[" << h1->GetZaxis()->GetBinLowEdge(z) << "-" << h1->GetZaxis()->GetBinUpEdge(z) << "]";
+
+//          cout << h1->GetBinContent(i) << endl;;
+         
+         min[0] = h1->GetXaxis()->GetBinLowEdge(x);
+         max[0] = h1->GetXaxis()->GetBinUpEdge(x);
+         if ( dim <= 2 )
+         {
+            min[1] = h1->GetYaxis()->GetBinLowEdge(y);
+            max[1] = h1->GetYaxis()->GetBinUpEdge(y);
+         } 
+         if ( dim <= 3 ) {
+            min[2] = h1->GetZaxis()->GetBinLowEdge(z);
+            max[2] = h1->GetZaxis()->GetBinUpEdge(z);
+         }
+
+         dv.Add(min, max, h1->GetBinContent(i), h1->GetBinError(i));
+      }
 }
 
 void FillData ( BinData  & dv, const TGraph * gr,  TF1 * func ) {  
