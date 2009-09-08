@@ -592,7 +592,7 @@ el_private int
 history_load(History *h, const char *fname)
 {
 	FILE *fp;
-	char *line;
+	char *line = 0;
 	size_t sz, max_size;
 	char *ptr;
 	int i = -1;
@@ -604,8 +604,11 @@ history_load(History *h, const char *fname)
 	if ((line = fgetln(fp, &sz)) == NULL)
 		goto done;
 
-	if (strncmp(line, hist_cookie, sz) != 0)
+	if (strncmp(line, hist_cookie, sz) != 0) {
+		free(line);
 		goto done;
+	}
+	free(line);
 
 	ptr = (char *) h_malloc(max_size = 1024);
 	for (i = 0; (line = fgetln(fp, &sz)) != NULL; i++) {
@@ -621,7 +624,7 @@ history_load(History *h, const char *fname)
 			ptr = (char *) h_realloc(ptr, max_size);
 		}
 		(void) strunvis(ptr, line);
-		line[sz] = c;
+		free(line);
 		HENTER(h, &ev, ptr);
 	}
 	h_free(ptr);

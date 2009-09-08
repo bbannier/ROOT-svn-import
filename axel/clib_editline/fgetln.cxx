@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "compat.h"
 
 #ifndef HAVE_FGETLN
@@ -101,6 +102,7 @@ char *fgetln(FILE *stream, size_t *len)
   {
 	return ptr; 
   }
+  free(ptr);
   return NULL;
 }
 #endif

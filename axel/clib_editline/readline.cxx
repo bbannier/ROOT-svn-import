@@ -53,6 +53,7 @@
 #include "el.h"
 #include "compat.h"
 #include "TTermManip.h"
+#include "enhance.h"
 #if !defined(lint) && !defined(SCCSID)
 __RCSID("$NetBSD: readline.c,v 1.19 2001/01/10 08:10:45 jdolecek Exp $");
 #endif /* not lint && not SCCSID */
@@ -330,19 +331,22 @@ readline(const char *prompt, bool newline)
 	if (ret )
         {
                 if( count > 0) {
+					/*
                         char *foo;
                         int lastidx;
                         lastidx = count - 1;
-                        foo = strdup(ret);
-                        /**
+                        //foo = strdup(ret);
+                        / **
                            stephan: reminder: this sick hack is
                            because el_gets() returns trailing a newline.
                            if (foo[lastidx] == '\n')
                            {
                            foo[lastidx] = '\0';
                            }
-                        */
-                        ret = foo;
+						   AXEL: we don't care, caller is not supposed to mess with it.
+                        * /
+                        //ret = foo;
+						*/
                 } else
                 {
                         ret = NULL;
@@ -375,6 +379,11 @@ readline(const char *prompt, bool newline)
 
 	/* LINTED const cast */
 	return (char *) ret;
+}
+
+void setColors(char* colorTab, char* colorTabComp, char* colorBracket, char* colorBadBracket)
+{
+	setKeywordColors(colorTab, colorTabComp, colorBracket, colorBadBracket);
 }
 
 /*

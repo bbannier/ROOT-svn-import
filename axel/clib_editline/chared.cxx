@@ -87,8 +87,18 @@ c_insert(EditLine *el, int num)
 
 	if (el->el_line.cursor < el->el_line.lastchar) {
 		/* if I must move chars */
-		for (cp = el->el_line.lastchar; cp >= el->el_line.cursor; cp--)
+		for (cp = el->el_line.lastchar; cp >= el->el_line.cursor; cp--) {
 			cp[num] = *cp;
+		}
+	
+		// work out equivalent offsets for colour buffer
+		int colCursor = el->el_line.cursor - el->el_line.buffer;
+		int colLastChar = el->el_line.lastchar - el->el_line.buffer;
+		// shift colour buffer values along to match newly shifted positions
+		for (int i=colLastChar; i>=colCursor; i--) {
+			el->el_line.bufcolor[i+num] = el->el_line.bufcolor[i];
+		}
+
 	}
 	el->el_line.lastchar += num;
 }
@@ -407,11 +417,12 @@ el_protected int
 ch_init(EditLine *el)
 {
 	el->el_line.buffer		= (char *) el_malloc(EL_BUFSIZ);
-	el->el_line.bufcolor	= (el_color_t *) el_malloc(EL_BUFSIZ);
+	el->el_line.bufcolor	= (el_color_t *) el_malloc(EL_BUFSIZ*sizeof(el_color_t));
 	if (el->el_line.buffer == NULL)
 		return (-1);
 
 	(void) memset(el->el_line.buffer, 0, EL_BUFSIZ);
+	(void) memset(el->el_line.bufcolor, 0, EL_BUFSIZ*sizeof(el_color_t));
 	el->el_line.cursor		= el->el_line.buffer;
 	el->el_line.lastchar		= el->el_line.buffer;
 	el->el_line.limit		= &el->el_line.buffer[EL_BUFSIZ - 2];
