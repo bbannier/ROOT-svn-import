@@ -18,6 +18,7 @@
 #include "RooAddPdf.h"
 #include "RooAddition.h"
 #include "RooMoment.h"
+#include "RooLinearVar.h"
 #include "RooChangeTracker.h"
 
 #include "TMath.h"
@@ -32,8 +33,7 @@ RooPolyMorph::RooPolyMorph(const char *name, const char *title,
                            const TVectorD& mrefpoints,
                            const Setting& setting) :
   RooAbsPdf(name,title), 
-  _sumPdf(0),
-  _tracker(0),
+  _cacheMgr(this,10),
   m("m","m",this,_m),
   _varList("varList","List of variables",this),
   _pdfList("pdfList","List of pdfs",this),
@@ -83,8 +83,7 @@ RooPolyMorph::RooPolyMorph(const char *name, const char *title,
                            const RooArgList& mrefList,
                            const Setting& setting) :
   RooAbsPdf(name,title), 
-  _sumPdf(0),
-  _tracker(0),
+  _cacheMgr(this,10),
   m("m","m",this,_m),
   _varList("varList","List of variables",this),
   _pdfList("pdfList","List of pdfs",this),
@@ -144,8 +143,8 @@ RooPolyMorph::RooPolyMorph(const char *name, const char *title,
 //_____________________________________________________________________________
 RooPolyMorph::RooPolyMorph(const RooPolyMorph& other, const char* name) :  
   RooAbsPdf(other,name), 
-  _sumPdf(0),
-  _tracker(0),
+  _cacheMgr(other._cacheMgr,this),
+  _curNormSet(0),
   m("m",this,other.m),
   _varList("varList",this,other._varList),
   _pdfList("pdfList",this,other._pdfList),
@@ -166,8 +165,6 @@ RooPolyMorph::~RooPolyMorph()
   if (_varItr) delete _varItr;
   if (_pdfItr) delete _pdfItr;
   if (_M)      delete _M;
-  if (_sumPdf) delete _sumPdf ;
-  if (_tracker) delete _tracker ;
 }
 
 
@@ -205,8 +202,13 @@ void RooPolyMorph::initialize()
 }
 
 //_____________________________________________________________________________
-void RooPolyMorph::constructMorphPdf() const
+RooPolyMorph::CacheElem* RooPolyMorph::getCache(const RooArgSet* nset) const
 {
+  CacheElem* cache = (CacheElem*) _cacheMgr.getObj(nset,(RooArgSet*)0) ;
+  if (cache) {
+    return cache ;
+  }
+
   Int_t nVar = _varList.getSize();
   Int_t nPdf = _pdfList.getSize();
 
@@ -222,15 +224,17 @@ void RooPolyMorph::constructMorphPdf() const
 
   RooArgSet ownedComps ;
 
+  RooArgList fracl ;
+
   // fraction parameters
   RooArgList coefList("coefList");
   RooArgList coefList2("coefList2");
   for (Int_t i=0; i<2*nPdf; ++i) {
     std::string fracName = Form("frac_%d",i);
-    _frac.add(*new RooRealVar(fracName.c_str(),fracName.c_str(),1.)); // to be set later 
-    if (i<nPdf) coefList.add(*frac(i));
-    else coefList2.add(*frac(i));
-    ownedComps.add(*frac(i)) ;
+    fracl.add(*new RooRealVar(fracName.c_str(),fracName.c_str(),1.)); // to be set later 
+    if (i<nPdf) coefList.add(*(RooRealVar*)(fracl.at(i))) ;
+    else coefList2.add(*(RooRealVar*)(fracl.at(i))) ;
+    ownedComps.add(*(RooRealVar*)(fracl.at(i))) ;
   }
   // mean and sigma
   for (Int_t i=0; i<nPdf; ++i) {
@@ -283,7 +287,9 @@ void RooPolyMorph::constructMorphPdf() const
       // linear transformations, so pdf can be renormalized
       var = (RooRealVar*)(_varItr->Next());
       std::string transVarName = Form("%s_transVar_%d_%d",GetName(),i,j);
-      transVar[ij(i,j)] = new RooFormulaVar(transVarName.c_str(),transVarName.c_str(),"@0*@1+@2",RooArgList(*var,*slope[ij(i,j)],*offset[ij(i,j)]));
+      //transVar[ij(i,j)] = new RooFormulaVar(transVarName.c_str(),transVarName.c_str(),"@0*@1+@2",RooArgList(*var,*slope[ij(i,j)],*offset[ij(i,j)]));
+      transVar[ij(i,j)] = new RooLinearVar(transVarName.c_str(),transVarName.c_str(),*var,*slope[ij(i,j)],*offset[ij(i,j)]);
+
       ownedComps.add(*transVar[ij(i,j)]) ;
       cust.replaceArg(*var,*transVar[ij(i,j)]);
     }
@@ -294,54 +300,91 @@ void RooPolyMorph::constructMorphPdf() const
   // sum pdf
   
   std::string sumpdfName = Form("%s_sumpdf",GetName());
-  _sumPdf = new RooAddPdf(sumpdfName.c_str(),sumpdfName.c_str(),transPdfList,coefList);
-  _sumPdf->addOwnedComponents(ownedComps) ;
+
+
+  RooAbsPdf* sumPdf = new RooAddPdf(sumpdfName.c_str(),sumpdfName.c_str(),transPdfList,coefList);
+  sumPdf->addOwnedComponents(ownedComps) ;
 
   // change tracker for fraction parameters
   std::string trackerName = Form("%s_frac_tracker",GetName()) ;
-  _tracker = new RooChangeTracker(trackerName.c_str(),trackerName.c_str(),m.arg(),kTRUE) ;
+  RooChangeTracker* tracker = new RooChangeTracker(trackerName.c_str(),trackerName.c_str(),m.arg(),kTRUE) ;
+
+
+  // Store it in the cache
+  cache = new CacheElem(*sumPdf,*tracker,fracl) ;
+  _cacheMgr.setObj(nset,0,cache,0) ;
+
+  return cache ;
+}
+
+
+
+//_____________________________________________________________________________
+RooArgList RooPolyMorph::CacheElem::containedArgs(Action) 
+{
+  return RooArgList(*_sumPdf,*_tracker) ; 
+}
+
+
+
+//_____________________________________________________________________________
+RooPolyMorph::CacheElem::~CacheElem() 
+{ 
+  delete _sumPdf ; 
+  delete _tracker ; 
+} 
+
+
+
+//_____________________________________________________________________________
+Double_t RooPolyMorph::getVal(const RooArgSet* set) const 
+{
+  // Special version of getVal() overrides RooAbsReal::getVal() to save value of current normalization set
+  _curNormSet = (RooArgSet*)set ;
+  return RooAbsPdf::getVal(set) ;
 }
 
 
 //_____________________________________________________________________________
 Double_t RooPolyMorph::evaluate() const 
 { 
-  if (!_sumPdf) {
-    constructMorphPdf() ;
-  }
-  if (_tracker->hasChanged(kTRUE)) {
-    calculateFractions(kFALSE); // verbose turned off
+  CacheElem* cache = getCache(_curNormSet) ;
+  
+  if (cache->_tracker->hasChanged(kTRUE)) {
+    cache->calculateFractions(*this,kFALSE); // verbose turned off
   } 
-  return _sumPdf->getVal(_pdfList.nset());
+  
+  Double_t ret = cache->_sumPdf->getVal(_pdfList.nset());
+  return ret ;
 } 
+
+//_____________________________________________________________________________
+RooRealVar* RooPolyMorph::CacheElem::frac(Int_t i ) 
+{ 
+  return (RooRealVar*)(_frac.at(i))  ; 
+}
+
 
 
 //_____________________________________________________________________________
-Bool_t RooPolyMorph::redirectServersHook(const RooAbsCollection& /*newServerList*/, Bool_t /*mustReplaceAll*/, Bool_t /*nameChange*/, Bool_t /*isRecursive*/) 
-{
-  // Trigger recreation of internal p.d.f
-  _frac.removeAll() ;
-  delete _sumPdf ;
-  delete _tracker ;
-  _sumPdf = 0 ;
-  _tracker = 0 ;
-
-  return kFALSE ;
+const RooRealVar* RooPolyMorph::CacheElem::frac(Int_t i ) const 
+{ 
+  return (RooRealVar*)(_frac.at(i))  ; 
 }
 
 
 //_____________________________________________________________________________
-void RooPolyMorph::calculateFractions(Bool_t verbose) const
+void RooPolyMorph::CacheElem::calculateFractions(const RooPolyMorph& self, Bool_t verbose) const
 {
-  Int_t nPdf = _pdfList.getSize();
+  Int_t nPdf = self._pdfList.getSize();
 
-  Double_t dm = m - (*_mref)[0];
+  Double_t dm = self.m - (*self._mref)[0];
 
   // fully non-linear
   double sumposfrac=0.;
   for (Int_t i=0; i<nPdf; ++i) {
     double ffrac=0.;
-    for (Int_t j=0; j<nPdf; ++j) { ffrac += (*_M)(j,i) * (j==0?1.:TMath::Power(dm,(double)j)); }
+    for (Int_t j=0; j<nPdf; ++j) { ffrac += (*self._M)(j,i) * (j==0?1.:TMath::Power(dm,(double)j)); }
     if (ffrac>=0) sumposfrac+=ffrac;
     // fractions for pdf
     ((RooRealVar*)frac(i))->setVal(ffrac);
@@ -351,10 +394,10 @@ void RooPolyMorph::calculateFractions(Bool_t verbose) const
   }
 
   // various mode settings
-  int imin = idxmin(m);
-  int imax = idxmax(m);
-  double mfrac = (m-(*_mref)[imin])/((*_mref)[imax]-(*_mref)[imin]);
-  switch (_setting) {
+  int imin = self.idxmin(self.m);
+  int imax = self.idxmax(self.m);
+  double mfrac = (self.m-(*self._mref)[imin])/((*self._mref)[imax]-(*self._mref)[imin]);
+  switch (self._setting) {
     case NonLinear:
       // default already set above
     break;
@@ -413,4 +456,6 @@ int RooPolyMorph::idxmax(const double& mval) const
     if ( (*_mref)[i]<mmax && (*_mref)[i]>=mval ) { mmax=(*_mref)[i]; imax=i; }
   return imax;
 }
+
+
 

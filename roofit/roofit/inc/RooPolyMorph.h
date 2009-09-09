@@ -27,7 +27,8 @@ public:
 
   enum Setting { Linear, NonLinear, NonLinearPosFractions, NonLinearLinFractions } ;
 
-  RooPolyMorph() {} ; 
+  RooPolyMorph() : _curNormSet(0), _mref(0), _varItr(0), _pdfItr(0), _M(0) {}
+
   RooPolyMorph(const char *name, const char *title, RooAbsReal& _m, const RooArgList& varList,
 	       const RooArgList& pdfList, const RooArgList& mrefList, const Setting& setting = NonLinearPosFractions);
   RooPolyMorph(const char *name, const char *title, RooAbsReal& _m, const RooArgList& varList,
@@ -45,25 +46,35 @@ public:
 
 protected:
 
-  Bool_t redirectServersHook(const RooAbsCollection& /*newServerList*/, Bool_t /*mustReplaceAll*/, Bool_t /*nameChange*/, Bool_t /*isRecursive*/) ;  
+  class CacheElem : public RooAbsCacheElement {
+  public:
+    CacheElem(RooAbsPdf& sumPdf, RooChangeTracker& tracker, RooArgList flist) : _sumPdf(&sumPdf), _tracker(&tracker) { _frac.add(flist) ; } ;
+    void operModeHook(RooAbsArg::OperMode) {};
+    virtual ~CacheElem() ; 
+    virtual RooArgList containedArgs(Action) ;
+    RooAbsPdf* _sumPdf ;
+    RooChangeTracker* _tracker ; 
+    RooArgList _frac ;
 
+    RooRealVar* frac(Int_t i ) ;
+    const RooRealVar* frac(Int_t i ) const ; 
+    void calculateFractions(const RooPolyMorph& self, Bool_t verbose=kTRUE) const;
+  } ;
+  mutable RooObjCacheManager _cacheMgr ; // The cache manager
+  mutable RooArgSet* _curNormSet ; //! Current normalization set
+
+  friend class CacheElem ; // Cache needs to be able to clear _norm pointer
+
+  virtual Double_t getVal(const RooArgSet* set=0) const ;
   Double_t evaluate() const ;
 
   void     initialize();
-  void     calculateFractions(Bool_t verbose=kTRUE) const;
-  void     constructMorphPdf() const ;
+  CacheElem* getCache(const RooArgSet* nset) const ;
 
   inline   const Int_t ij(const Int_t& i, const Int_t& j) const { return (i*_varList.getSize()+j); }
   int      idxmin(const double& m) const;
   int      idxmax(const double& m) const;
 
-  RooRealVar* frac(Int_t i ) { return ((RooRealVar*)_frac.at(i)) ; }
-  const RooRealVar* frac(Int_t i ) const { return ((RooRealVar*)_frac.at(i)) ; }
-
-  mutable RooAbsPdf* _sumPdf; //!
-  mutable RooChangeTracker* _tracker ;  //!
-  mutable RooArgList _frac ;
- 
   RooRealProxy m ;
   RooListProxy _varList ;
   RooListProxy _pdfList ;
