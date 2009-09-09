@@ -306,7 +306,6 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param)
   RooRealVar* myarg = (RooRealVar *) newProfile->getVariables()->find(param.GetName());
 
   double target = TMath::ChisquareQuantile(fConfidenceLevel,fParameters->getSize())/2.;
-  double MLE=param.getVal();
   Double_t thisArgVal = param.getVal();
   myarg->setVal( thisArgVal );
 
