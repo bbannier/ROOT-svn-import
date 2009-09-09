@@ -489,7 +489,7 @@ void TEveCaloLegoOverlay::Render(TGLRnrCtx& rnrCtx)
    TGLCamera& cam = rnrCtx.RefCamera();
    Bool_t drawOverlayAxis = kFALSE;
 
-   if (cam.IsOrthographic() && fShowScales)
+   if (cam.IsOrthographic())
    {
       // in 2D need pixel cell dimension
       // project lego eta-phi boundraries
@@ -497,43 +497,46 @@ void TEveCaloLegoOverlay::Render(TGLRnrCtx& rnrCtx)
       TGLVertex3 p;
       TGLVector3 res = cam.WorldDeltaToViewport(p, rng);
 
-      // get smallest bin
-      Double_t sq = 1e4;
-      if (fCalo->fBinStep == 1)
+      if (fShowScales)
       {
-         TEveCaloData::CellData_t cellData;
-         for ( TEveCaloData::vCellId_t::iterator i = fCalo->fCellList.begin(); i != fCalo->fCellList.end(); ++i)
+         // get smallest bin
+         Double_t sq = 1e4;
+         if (fCalo->fBinStep == 1)
          {
-            fCalo->fData->GetCellData(*i, cellData);
-            if (sq > cellData.EtaDelta()) sq = cellData.EtaDelta();
-            if (sq > cellData.PhiDelta()) sq = cellData.PhiDelta();
+            TEveCaloData::CellData_t cellData;
+            for ( TEveCaloData::vCellId_t::iterator i = fCalo->fCellList.begin(); i != fCalo->fCellList.end(); ++i)
+            {
+               fCalo->fData->GetCellData(*i, cellData);
+               if (sq > cellData.EtaDelta()) sq = cellData.EtaDelta();
+               if (sq > cellData.PhiDelta()) sq = cellData.PhiDelta();
+            }
          }
+         else
+         {
+            TAxis* a;
+            Int_t nb;
+            a = fCalo->GetData()->GetEtaBins();
+            nb = a->GetNbins();
+            for (Int_t i=1 ; i<=nb; i++)
+            {
+               if (sq > a->GetBinWidth(i)) sq = a->GetBinWidth(i);
+            }
+
+            a = fCalo->GetData()->GetPhiBins();
+            nb = a->GetNbins();
+            for (Int_t i=1 ; i<=nb; i++)
+            {
+               if (sq > a->GetBinWidth(i)) sq = a->GetBinWidth(i);
+            }
+
+            sq *= fCalo->fBinStep;
+         }
+         fCellX = (res.X()*sq)/(fCalo->GetEtaRng()*1.*cam.RefViewport().Width());
+         fCellY = (res.Y()*sq)/(fCalo->GetPhiRng()*1.*cam.RefViewport().Height());
+         // printf("bin width %f cells size %f %f\n", sq, fCellX, fCellY);
+
+         RenderScales(rnrCtx);
       }
-      else
-      {
-         TAxis* a;
-         Int_t nb;
-         a = fCalo->GetData()->GetEtaBins();
-         nb = a->GetNbins();
-         for (Int_t i=1 ; i<=nb; i++)
-         {
-            if (sq > a->GetBinWidth(i)) sq = a->GetBinWidth(i);
-         }
-
-         a = fCalo->GetData()->GetPhiBins();
-         nb = a->GetNbins();
-         for (Int_t i=1 ; i<=nb; i++)
-         {
-            if (sq > a->GetBinWidth(i)) sq = a->GetBinWidth(i);
-         }
-
-         sq *= fCalo->fBinStep;
-      }
-      fCellX = (res.X()*sq)/(fCalo->GetEtaRng()*1.*cam.RefViewport().Width());
-      fCellY = (res.Y()*sq)/(fCalo->GetPhiRng()*1.*cam.RefViewport().Height());
-      // printf("bin width %f cells size %f %f\n", sq, fCellX, fCellY);
-
-      RenderScales(rnrCtx);
 
       // draw camera overlay if projected lego bbox to large
       if (res.X() > cam.RefViewport().Width()*0.8 || res.Y() > cam.RefViewport().Height()*0.8)
