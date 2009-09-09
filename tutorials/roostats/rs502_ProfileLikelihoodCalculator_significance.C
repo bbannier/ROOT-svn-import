@@ -31,6 +31,7 @@ void rs502_ProfileLikelihoodCalculator_significance( const char* fileName="WS_Ga
   // If there are nuisance parameters, multiply their prior distribution to the full model
   RooProdPdf* model = modelTmp;
   if( priorNuisance!=0 ) model = new RooProdPdf("constrainedModel","Model with nuisance parameters",*modelTmp,*priorNuisance);
+  //myWS->var("B")->setConstant();
   
   // Set up the ProfileLikelihoodCalculator
   ProfileLikelihoodCalculator plc;
@@ -51,28 +52,28 @@ void rs502_ProfileLikelihoodCalculator_significance( const char* fileName="WS_Ga
   const double upperLimit = interval->UpperLimit(*parameterOfInterest);
   parameterOfInterest->setVal(MLE);
 
-  // For the significance:  <-- problem (if no nuisance parameters)
-  /*
-  // Another way is to use the GetHypoTest function: (a plot is not possible)    
-  paramInterest->setVal(0.);
-  paramInterest->setConstant();
-  RooArgSet nullparams(*paramInterest);
+  // Get the significance using the GetHypoTest function: (a plot is not possible) 
+  
+  parameterOfInterest->setVal(0.);
+  parameterOfInterest->setConstant();
+  RooArgSet nullparams(*parameterOfInterest);
   plc->SetNullParameters(nullparams);
   HypoTestResult* testresult=plc->GetHypoTest();
-  std::cout<<"significance via HypoTestResult:" << testresult->Significance()<<std::endl;
-  */
+  const double significance = testresult->Significance();
+  
 
-  // Receive the profile-log-likelihood function
-  parameterOfInterest->setVal(MLE);
-  RooAbsReal* profile = interval->GetLikelihoodRatio();
-  profile->getVal();
-  //Go to the Bkg Hypothesis
-  RooRealVar* myarg = (RooRealVar *) profile->getVariables()->find(parameterOfInterest->GetName()); // <-- cloned!
-  myarg->setVal(0);
-  Double_t delta_nll = profile->getVal();
+  // Another way is to use directly 
+  // the profile-log-likelihood function
+//   parameterOfInterest->setVal(MLE);
+//   RooAbsReal* profile = interval->GetLikelihoodRatio();
+//   profile->getVal();
+//   //Go to the Bkg Hypothesis
+//   RooRealVar* myarg = (RooRealVar *) profile->getVariables()->find(parameterOfInterest->GetName()); // <-- cloned!
+//   myarg->setVal(0);
+//   Double_t delta_nll = profile->getVal();
 
-  const double significance = TMath::Sqrt(fabs(2*delta_nll));
-  if (delta_nll>=0) significance *= -1;
+//   const double significance = TMath::Sqrt(fabs(2*delta_nll));
+//   if (delta_nll<0) significance *= -1;
 
   // Make a plot of the profile-likelihood and confidence interval
   LikelihoodIntervalPlot plot(interval);
@@ -82,5 +83,6 @@ void rs502_ProfileLikelihoodCalculator_significance( const char* fileName="WS_Ga
   std::cout << "significance estimation: " << significance << std::endl;
 
   delete model;
-  file->Close();
+  // closing the file will delete the workspace
+  //file->Close();
 }
