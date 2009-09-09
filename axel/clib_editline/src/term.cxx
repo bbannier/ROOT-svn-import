@@ -270,6 +270,7 @@ el_private int	term_alloc_display(EditLine *);
 el_private void	term_alloc(EditLine *, const struct termcapstr *, const char *);
 el_private void	term_init_arrow(EditLine *);
 el_private void	term_reset_arrow(EditLine *);
+el_private void	term_init_color(EditLine *);
 
 
 el_private FILE *term_outfile = NULL;	/* XXX: How do we fix that? */
@@ -350,6 +351,9 @@ term_init(EditLine *el)
 	if (term_set(el, NULL) == -1)
 		return (-1);
 	term_init_arrow(el);
+
+        term_init_color(el);
+
 	return (0);
 }
 /* term_end():
@@ -679,9 +683,9 @@ mc_again:
 				 * el->el_cursor.h!!!
 				 */
 				term_overwrite(el,
-				    &el->el_display[el->el_cursor.v][el->el_cursor.h],
-                       &el->el_dispcolor[el->el_cursor.v][el->el_cursor.h],
-				           where - el->el_cursor.h);
+                                               &el->el_display[el->el_cursor.v][el->el_cursor.h],
+                                               &el->el_dispcolor[el->el_cursor.v][el->el_cursor.h],
+                                               where - el->el_cursor.h);
 
 			}
 		} else {	/* del < 0 := moving backward */
@@ -739,7 +743,7 @@ term_overwrite(EditLine *el, char *cp, el_color_t* color, int n)
 				 * situation */
 				char c;
 				if ((c = el->el_display[el->el_cursor.v][el->el_cursor.h]) != '\0')	
-					term_overwrite(el, &c, el->el_line.bufcolor + el->el_cursor.h - el->el_prompt.p_pos.h, 1);
+					term_overwrite(el, &c, &el->el_dispcolor[el->el_cursor.v][el->el_cursor.h], 1);
 				else {
 					term__putcolorch(' ', NULL);
 				}
@@ -1269,6 +1273,16 @@ term_bind_arrow(EditLine *el)
 	}
 }
 
+/* term_init_color():
+ *	Initialize the color handling
+ */
+el_private void
+term_init_color(EditLine *el)
+{
+   int errcode;
+   setupterm(0, 1, &errcode);   
+}
+
 /* term__putc():
  *	Add a character
  */
@@ -1284,15 +1298,9 @@ term__putc(int c)
 el_protected int
 term__putcolorch(int c, el_color_t *color)
 {
-	short pairnum = 1;
-	attr_t attr = WA_NORMAL;
-
-
 	if ( color != NULL && c != ' ')
 	{
-		int errcode;
-		int setup = setupterm(0, 1, &errcode);
-		TTermManip tm;
+           static TTermManip tm; /* Terminal color manipulation */
 
 		switch ( color->foreColor ) {
 			case 0:								// nCurses COLOR_BLACK
@@ -1324,6 +1332,7 @@ term__putcolorch(int c, el_color_t *color)
 		// output the coloured char
 		int res = fputc(c, term_outfile);
 		term__flush();
+                tm.ResetTerm();
 		return res;
 	}
 

@@ -108,6 +108,9 @@ hist_get(EditLine *el)
 	if (el->el_history.eventno == 0) {	/* if really the current line */
 		(void) strncpy(el->el_line.buffer, el->el_history.buf,
 		    el->el_history.sz);
+                el_color_t* col = el->el_line.bufcolor;
+                for (size_t i = 0; i < (size_t)el->el_history.sz; ++i)
+                   col[i] = -1;
 		el->el_line.lastchar = el->el_line.buffer +
 		    (el->el_history.last - el->el_history.buf);
 
@@ -135,6 +138,9 @@ hist_get(EditLine *el)
 		}
 	(void) strncpy(el->el_line.buffer, hp,
 			(size_t)(el->el_line.limit - el->el_line.buffer));
+        el_color_t* col = el->el_line.bufcolor;
+        for (size_t i = 0; i < (size_t)(el->el_line.limit - el->el_line.buffer); ++i)
+           col[i] = -1;
 	el->el_line.lastchar = el->el_line.buffer + strlen(el->el_line.buffer);
 
 	if (el->el_line.lastchar > el->el_line.buffer) {

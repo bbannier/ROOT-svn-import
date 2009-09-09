@@ -528,19 +528,28 @@ el_gets(EditLine *el, int *nread)
 		return (num ? el->el_line.buffer : NULL);
 	}
 
-	// this happens for every char - need to add some logic to enhance to make it not check if not a word etc
-	// [a-zA-Z]+[0-9].
-	highlightKeywords(el);
+        c_macro_t *ma = &el->el_chared.c_macro;
+        if (retval == CC_REFRESH && ma->level >= 0 && ma->macro[ma->level]) {
+           int subnread;
+           el_gets(el, &subnread);
+           if (nread)
+		*nread += subnread;
+        } else {
 
-	// if the cursor is at some point in the middle of the buffer, check for brackets
-	if (el->el_line.cursor <= el->el_line.lastchar)
-	{
-		matchParentheses(el);
-	}
+           // this happens for every char - need to add some logic to enhance to make it not check if not a word etc
+           // [a-zA-Z]+[0-9].
+           highlightKeywords(el);
+
+           // if the cursor is at some point in the middle of the buffer, check for brackets
+           if (el->el_line.cursor <= el->el_line.lastchar)
+              {
+                 matchParentheses(el);
+              }
 
 	
-	/* '\a' indicates entry is not complete */
-	*el->el_line.lastchar = '\a';
+           /* '\a' indicates entry is not complete */
+           *el->el_line.lastchar = '\a';
+        }
 
 	return (num ? el->el_line.buffer : NULL);
 }
