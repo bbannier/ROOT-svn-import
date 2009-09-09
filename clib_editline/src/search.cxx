@@ -59,6 +59,7 @@ __RCSID("$NetBSD: search.c,v 1.11 2001/01/23 15:55:31 jdolecek Exp $");
 #include <regexp.h>
 #endif
 #include "el.h"
+#include "enhance.h"
 
 #define	ANCHOR_SEARCHES 1
 // ^^^ don't undef ANCHOR_SEARCHES or set it to 0! It breaks ^R searches! (stephan)
@@ -237,16 +238,30 @@ ce_inc_search(EditLine *el, int dir)
 #endif
 		}
 		done = redo = 0;
+                el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] = -1;
 		*el->el_line.lastchar++ = '\n';
 		for (cp = (newdir == ED_SEARCH_PREV_HISTORY) ? STRbck : STRfwd;
-		    *cp; *el->el_line.lastchar++ = *cp++)
-			continue;
+                     *cp; *el->el_line.lastchar++ = *cp++) {
+                   el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] = -1;
+                }
+                el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] = -1;
 		*el->el_line.lastchar++ = pchar;
-		for (cp = &el->el_search.patbuf[1];
+#if ANCHOR_SEARCHES
+                cp = &el->el_search.patbuf[2];
+#else
+                cp = &el->el_search.patbuf[1];
+#endif
+		for (;
 		    cp < &el->el_search.patbuf[el->el_search.patlen];
-		    *el->el_line.lastchar++ = *cp++)
+                     *el->el_line.lastchar++ = *cp++) {
+                   el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] = -1;
 			continue;
+                }
+                el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] = -1;
 		*el->el_line.lastchar = '\0';
+
+                // Would love to highlight, but el_dispcolor isn't set up yet...
+                //highlightKeywords(el);
 		re_refresh(el);
 
 		if (el_getc(el, &ch) != 1)
@@ -260,7 +275,9 @@ ce_inc_search(EditLine *el, int dir)
 			else {
 				el->el_search.patbuf[el->el_search.patlen++] =
 				    ch;
+                                el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] = -1;
 				*el->el_line.lastchar++ = ch;
+                                el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] = -1;
 				*el->el_line.lastchar = '\0';
 				re_refresh(el);
 			}
@@ -308,10 +325,13 @@ ce_inc_search(EditLine *el, int dir)
 						}
 						el->el_search.patbuf[el->el_search.patlen++] =
 						    *el->el_line.cursor;
+                                                el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] =
+                                                   el->el_line.bufcolor[el->el_line.cursor - el->el_line.buffer];
 						*el->el_line.lastchar++ =
 						    *el->el_line.cursor++;
 					}
 					el->el_line.cursor = ocursor;
+                                        el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] = -1;
 					*el->el_line.lastchar = '\0';
 					re_refresh(el);
 					break;
@@ -334,8 +354,11 @@ ce_inc_search(EditLine *el, int dir)
 		}
 
 		while (el->el_line.lastchar > el->el_line.buffer &&
-		    *el->el_line.lastchar != '\n')
+                       *el->el_line.lastchar != '\n') {
+                   el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] = -1;
 			*el->el_line.lastchar-- = '\0';
+                }
+                el->el_line.bufcolor[el->el_line.lastchar - el->el_line.buffer] = -1;
 		*el->el_line.lastchar = '\0';
 
 		if (!done) {
@@ -379,9 +402,7 @@ ce_inc_search(EditLine *el, int dir)
 				    '\0';
 				if (el->el_line.cursor < el->el_line.buffer ||
 				    el->el_line.cursor > el->el_line.lastchar ||
-				    (ret = ce_search_line(el,
-				    &el->el_search.patbuf[1],
-				    newdir)) == CC_ERROR) {
+				    (ret = ce_search_line(el, &el->el_search.patbuf[1], newdir)) == CC_ERROR) {
 					/* avoid c_setpat */
 					el->el_state.lastcmd =
 					    (el_action_t) newdir;
@@ -398,8 +419,12 @@ ce_inc_search(EditLine *el, int dir)
 						    newdir);
 					}
 				}
-				el->el_search.patbuf[--el->el_search.patlen] =
-				    '\0';
+#if ANCHOR_SEARCHES
+                                el->el_search.patlen -= 2;
+				el->el_search.patbuf[el->el_search.patlen] = 0;
+#else
+				el->el_search.patbuf[--el->el_search.patlen] = 0;
+#endif
 				if (ret == CC_ERROR) {
 					term_beep(el);
 					if (el->el_history.eventno !=
