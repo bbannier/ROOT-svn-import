@@ -218,6 +218,33 @@ namespace ROOT {
          copy(l->begin(), l->end(), ostream_iterator<Box>(cout, "\n------\n"));
       }
 
+
+      BinData* SparseData::GetBinData()
+      {
+         list<Box>::iterator it = l->begin();
+         const unsigned int dim = it->getMin().size();
+
+         cout << "Getting the bin data" << endl;
+
+         BinData * bd = new BinData(l->getList().size(), dim, BinData::kValueError);
+         for ( ; it != l->end(); ++it )
+         {
+            vector<double> mid(dim);
+            for ( unsigned int i = 0; i < dim; ++i)
+            {
+               mid[i] = ((it->getMax()[i] - it->getMin()[i]) /2) + it->getMin()[i];
+               cout << mid[i] << " ";
+            }
+            cout << endl;
+           
+            bd->Add(&mid[0], it->getVal(), it->getError());
+         }
+         
+         return bd;
+
+         return 0;
+      }
+
       // Just for debugging pourposes
       ostream& operator <<(ostream& os, const ROOT::Fit::Box& b)
       {
