@@ -130,7 +130,9 @@ typedef struct el_chared_t {
 #define	MODE_REPLACE_1	2
 
 #include "common.h"
+#ifdef EL_USE_VI
 #include "vi.h"
+#endif
 #include "emacs.h"
 #include "search.h"
 #include "fcns.h"
