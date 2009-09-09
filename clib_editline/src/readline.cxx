@@ -268,7 +268,7 @@ rl_initialize(void)
 
 	
         // AXEL:
-        // switch to RAW mode to ROOT can handle events:
+        // switch to RAW mode so ROOT can handle events:
         tty_rawmode(e);
 	return (0);
 }
@@ -317,6 +317,7 @@ readline(const char *prompt, bool newline)
         start_over_after_builtin:
 		/* get one line from input stream */
         if (newline) {
+           tty_rawmode(e);
 		ret = el_gets_newline(e, &count);
         } else {
 		ret = el_gets(e, &count);
@@ -377,6 +378,8 @@ readline(const char *prompt, bool newline)
 	history(h, &ev, H_GETSIZE);
 	history_length = ev.num;
 
+        if (ret && !strchr(ret, '\a') && ret[strlen(ret) - 1] == '\n')
+           tty_cookedmode(e);
 	/* LINTED const cast */
 	return (char *) ret;
 }
