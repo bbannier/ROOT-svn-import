@@ -16,7 +16,7 @@
 
 #pragma link C++ enum EGetLineMode;
 
-#pragma link C++ function Getline(char*);
+//#pragma link C++ function Getline(char*);
 #pragma link C++ function Getlinem(EGetLineMode,char*);
 #pragma link C++ function Gl_histadd(char*);
 

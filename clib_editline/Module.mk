@@ -1,58 +1,57 @@
-# Module.mk for clib module
+# Module.mk for editline module
 # Copyright (c) 2000 Rene Brun and Fons Rademakers
 #
 # Author: Fons Rademakers, 29/2/2000
 
-MODNAME      := clib
+MODNAME      := editline
 MODDIR       := core/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 
-CLIBDIR      := $(MODDIR)
-CLIBDIRS     := $(CLIBDIR)/src
-CLIBDIRI     := $(CLIBDIR)/inc
+EDITLINEDIR      := $(MODDIR)
+EDITLINEDIRS     := $(EDITLINEDIR)/src
+EDITLINEDIRI     := $(EDITLINEDIR)/inc
 
-##### libClib (part of libCore) #####
-CLIBL        := $(MODDIRI)/LinkDef.h
-CLIBDS       := $(MODDIRS)/G__Clib.cxx
-CLIBDO       := $(CLIBDS:.cxx=.o)
-CLIBDH       := $(CLIBDS:.cxx=.h)
+##### libEditline (part of libCore) #####
+EDITLINEL        := $(MODDIRI)/LinkDef.h
+EDITLINEDS       := $(MODDIRS)/G__Editline.cxx
+EDITLINEDO       := $(EDITLINEDS:.cxx=.o)
+EDITLINEDH       := $(EDITLINEDS:.cxx=.h)
 
-CLIBH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
-CLIBS1       := $(wildcard $(MODDIRS)/*.c)
-CLIBS2       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-CLIBO        := $(CLIBS1:.c=.o) $(CLIBS2:.cxx=.o)
-SNPRINTFO    := $(CLIBDIRS)/snprintf.o
+EDITLINEH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
+EDITLINES1       := $(wildcard $(MODDIRS)/*.c)
+EDITLINES2       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
+EDITLINEO        := $(EDITLINES1:.c=.o) $(EDITLINES2:.cxx=.o)
 
-CLIBDEP      := $(CLIBO:.o=.d) $(CLIBDO:.o=.d)
+EDITLINEDEP      := $(EDITLINEO:.o=.d) $(EDITLINEDO:.o=.d)
 
 # used in the main Makefile
-ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(CLIBH))
+ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(EDITLINEH))
 
 # include all dependency files
-INCLUDEFILES += $(CLIBDEP)
+INCLUDEFILES += $(EDITLINEDEP)
 
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
-include/%.h:    $(CLIBDIRI)/%.h
+include/%.h:    $(EDITLINEDIRI)/%.h
 		cp $< $@
 
-$(CLIBDS):      $(CLIBDIRI)/Getline.h $(CLIBL) $(ROOTCINTTMPDEP)
+$(EDITLINEDS):      $(EDITLINEDIRI)/Getline.h $(EDITLINEL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(CLIBDIRI)/Getline.h $(CLIBL)
+		$(ROOTCINTTMP) -f $@ -c $(EDITLINEDIRI)/Getline.h $(EDITLINEL)
 
-all-$(MODNAME): $(CLIBO) $(CLIBDO)
+all-$(MODNAME): $(EDITLINEO) $(EDITLINEDO)
 
 clean-$(MODNAME):
-		@rm -f $(CLIBO) $(CLIBDO)
+		@rm -f $(EDITLINEO) $(EDITLINEDO)
 
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
-		@rm -f $(CLIBDEP) $(CLIBDS) $(CLIBDH)
+		@rm -f $(EDITLINEDEP) $(EDITLINEDS) $(EDITLINEDH)
 
 distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
-$(CLIBO):       PCHCXXFLAGS =
+$(EDITLINEO):       PCHCXXFLAGS =
