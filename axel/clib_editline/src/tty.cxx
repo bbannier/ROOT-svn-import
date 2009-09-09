@@ -54,7 +54,6 @@ __RCSID("$NetBSD: tty.c,v 1.15 2001/05/17 01:02:17 christos Exp $");
 //AXEL
 #include "errno.h"
 #include "stdio.h"
-#define DEBUG_TTY 1
 // END AXEL
 
 
@@ -482,10 +481,10 @@ tty_setup(EditLine *el)
 		return (0);
 
 	if (tty_getty(el, &el->el_tty.t_ed) == -1) {
-//#ifdef DEBUG_TTY
+#ifdef DEBUG_TTY
 		(void) fprintf(el->el_errfile,
 		    "tty_setup: tty_getty: %s\n", strerror(errno));
-//#endif /* DEBUG_TTY */
+#endif /* DEBUG_TTY */
 		return (-1);
 	}
 	el->el_tty.t_ts = el->el_tty.t_ex = el->el_tty.t_ed;
@@ -531,11 +530,11 @@ tty_setup(EditLine *el)
 		}
 		tty__setchar(&el->el_tty.t_ex, el->el_tty.t_c[EX_IO]);
 		if (tty_setty(el, &el->el_tty.t_ex) == -1) {
-//#ifdef DEBUG_TTY
+#ifdef DEBUG_TTY
 			(void) fprintf(el->el_errfile,
 			    "tty_setup: tty_setty: %s\n",
 			    strerror(errno));
-//#endif /* DEBUG_TTY */
+#endif /* DEBUG_TTY */
 			return (-1);
 		}
 	} else
@@ -819,10 +818,10 @@ tty_rawmode(EditLine *el)
 		return (0);
 
 	if (tty_getty(el, &el->el_tty.t_ts) == -1) {
-//#ifdef DEBUG_TTY
+#ifdef DEBUG_TTY
 		(void) fprintf(el->el_errfile, "tty_rawmode: tty_getty: %s\n",
 		    strerror(errno));
-//#endif /* DEBUG_TTY */
+#endif /* DEBUG_TTY */
 		return (-1);
 	}
 	/*
@@ -949,10 +948,10 @@ tty_rawmode(EditLine *el)
 		}
 	}
 	if (tty_setty(el, &el->el_tty.t_ed) == -1) {
-//#ifdef DEBUG_TTY
+#ifdef DEBUG_TTY
 		(void) fprintf(el->el_errfile, "tty_rawmode: tty_setty: %s\n",
 		    strerror(errno));
-//#endif /* DEBUG_TTY */
+#endif /* DEBUG_TTY */
 		return (-1);
 	}
 	el->el_tty.t_mode = ED_IO;
@@ -974,11 +973,11 @@ tty_cookedmode(EditLine *el)
 		return (0);
 
 	if (tty_setty(el, &el->el_tty.t_ex) == -1) {
-//#ifdef DEBUG_TTY
+#ifdef DEBUG_TTY
 		(void) fprintf(el->el_errfile,
 		    "tty_cookedmode: tty_setty: %s\n",
 		    strerror(errno));
-//#endif /* DEBUG_TTY */
+#endif /* DEBUG_TTY */
 		return (-1);
 	}
 	el->el_tty.t_mode = EX_IO;
@@ -1010,10 +1009,10 @@ tty_quotemode(EditLine *el)
 	el->el_tty.t_qu.c_lflag |= el->el_tty.t_t[QU_IO][MD_LIN].t_setmask;
 
 	if (tty_setty(el, &el->el_tty.t_qu) == -1) {
-//#ifdef DEBUG_TTY
+#ifdef DEBUG_TTY
 		(void) fprintf(el->el_errfile, "QuoteModeOn: tty_setty: %s\n",
 		    strerror(errno));
-//#endif /* DEBUG_TTY */
+#endif /* DEBUG_TTY */
 		return (-1);
 	}
 	el->el_tty.t_mode = QU_IO;
@@ -1031,10 +1030,10 @@ tty_noquotemode(EditLine *el)
 	if (el->el_tty.t_mode != QU_IO)
 		return (0);
 	if (tty_setty(el, &el->el_tty.t_ed) == -1) {
-//#ifdef DEBUG_TTY
+#ifdef DEBUG_TTY
 		(void) fprintf(el->el_errfile, "QuoteModeOff: tty_setty: %s\n",
 		    strerror(errno));
-//#endif /* DEBUG_TTY */
+#endif /* DEBUG_TTY */
 		return (-1);
 	}
 	el->el_tty.t_mode = ED_IO;
