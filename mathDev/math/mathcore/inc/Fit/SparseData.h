@@ -17,6 +17,7 @@
 
 #ifndef ROOT_Fit_DataVector
 #include "Fit/DataVector.h"
+#include "Fit/BinData.h"
 #endif
 
 #include <iostream>
@@ -40,6 +41,8 @@ namespace ROOT {
                   const double content, const double error);
          
          void PrintList();
+
+         BinData* GetBinData();
          
       private : 
          ProxyListBox *l;
