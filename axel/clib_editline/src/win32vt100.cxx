@@ -41,7 +41,7 @@ char* tparm(const char* termstr, ...) {
       va_list vl;
       va_start(vl, termstr);
 
-      int i = va_arg(vl, int);
+      va_arg(vl, int);
       va_end( vl );
       // set color i
       break;

@@ -78,8 +78,6 @@ int el_func_readline_reinit( EditLine * el, int, const char ** )
 */
 int el_func_show_function_list( EditLine * el, int, const char ** )
 {
-        int i = 0;
-        int c = 0;
         fprintf(el->el_outfile, "List of libeditline builtin functions:\n" );
         BuiltinMap::iterator it = el_internal_builtins().begin();
         BuiltinMap::iterator et = el_internal_builtins().end();

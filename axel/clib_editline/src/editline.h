@@ -124,7 +124,7 @@ char	       **completion_matches(const char *, CPFunction *);
 void		 rl_display_match_list(char **, int, int);
 
 int		 rl_insert(int, int);
-void		 rl_reset_terminal(const char *);
+void		 rl_reset_terminal(void);
 int		 rl_bind_key(int, int (*)(int, int));
 
 void rl_cleanup_after_signal();
