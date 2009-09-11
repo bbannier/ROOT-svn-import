@@ -22,8 +22,10 @@ TTermManip::TTermManip():
    fSetDefault(0),
    fStartUnderline(0),
    fStopUnderline(0),
-   fPutc(DefaultPutchar)
-   {
+   fPutc(DefaultPutchar),
+   fCurrentColorIdx(-1),
+   fCurrentlyBold(false),
+   fCurrentlyUnterlined(false)   {
    // Initialize color management
    fOrigColors = GetTermStr("oc");
    ResetTerm();
@@ -81,24 +83,15 @@ bool TTermManip::SetColor(unsigned char r, unsigned char g, unsigned char b) {
    // RGB colors range from 0 to 255
    if (fCanChangeColors) {
       int idx = AllocColor(Color(r,g,b));
-      if (fSetPair) {
-         WriteTerm(fSetPair, idx);
-      } else if (fSetFg) {
-         WriteTerm(fSetFg, idx);
+      if (idx != fCurrentColorIdx) {
+         if (fSetPair) {
+            WriteTerm(fSetPair, idx);
+         } else if (fSetFg) {
+            WriteTerm(fSetFg, idx);
+         }
+      fCurrentColorIdx = idx;
       }
    } else if (fSetFg) {
-      if (r > 127 || b > 127 || g > 127) {
-         if (fSetBold) {
-            WriteTerm(fSetBold);
-         }
-         r /= 2;
-         b /= 2;
-         g /= 2;
-      } else {
-         if (fSetDefault) {
-            WriteTerm(fSetDefault);
-         }
-      }
       int sum = r + g + b;
       r = r > sum / 4;
       g = g > sum / 4;
@@ -109,7 +102,27 @@ bool TTermManip::SetColor(unsigned char r, unsigned char g, unsigned char b) {
       } else {
          idx = (r * 4) + (g * 2) + b;
       }
-      WriteTerm(fSetFg, idx);
+      if (idx != fCurrentColorIdx) {
+         WriteTerm(fSetFg, idx);
+         fCurrentColorIdx = idx;
+      }
+      if (r > 127 || b > 127 || g > 127) {
+         // want bold
+         if (!fCurrentlyBold) {
+            if (fSetBold) {
+               WriteTerm(fSetBold);
+            }
+            r /= 2;
+            b /= 2;
+            g /= 2;
+            fCurrentlyBold = true;
+         } else {
+            if (fSetDefault && fCurrentlyBold) {
+               WriteTerm(fSetDefault);
+               fCurrentlyBold = false;
+            }
+         }
+      }
    } else {
       printf("ERROR cannot set colors!\n");
       return false;
@@ -143,6 +156,9 @@ bool TTermManip::ResetTerm() {
    } else {
       WriteTerm(fOrigColors);
    }
+   fCurrentColorIdx = -1;
+   fCurrentlyBold = false;
+   fCurrentlyUnterlined = false;
    return true;
 }
 
