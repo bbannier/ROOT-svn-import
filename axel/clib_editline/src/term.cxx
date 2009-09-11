@@ -697,8 +697,8 @@ mc_again:
 				 * from col 0
 				 */
 				if (EL_CAN_TAB ?
-				    (-del > (((unsigned int) where >> 3) +
-				     ((unsigned int) where & 07)))
+				    (-del > ((where >> 3) +
+				     (where & 07)))
 				    : (-del > where)) {
 					term__putcolorch('\r', NULL);	/* do a CR */
 					el->el_cursor.h = 0;
@@ -1280,7 +1280,7 @@ term_bind_arrow(EditLine *el)
  *	Initialize the color handling
  */
 el_private void
-term_init_color(EditLine *el)
+term_init_color(EditLine* /*el*/)
 {
    int errcode;
    setupterm(0, 1, &errcode);   
@@ -1419,7 +1419,7 @@ term__flush(void)
  */
 el_protected int
 /*ARGSUSED*/
-term_telltc(EditLine *el, int argc, const char **argv)
+term_telltc(EditLine *el, int /*argc*/, const char** /*argv*/)
 {
 	const struct termcapstr *t;
 	char **ts;
@@ -1454,7 +1454,7 @@ term_telltc(EditLine *el, int argc, const char **argv)
  */
 el_protected int
 /*ARGSUSED*/
-term_settc(EditLine *el, int argc, const char **argv)
+term_settc(EditLine *el, int /*argc*/, const char **argv)
 {
 	const struct termcapstr *ts;
 	const struct termcapval *tv;
@@ -1531,7 +1531,7 @@ term_settc(EditLine *el, int argc, const char **argv)
  */
 el_protected int
 /*ARGSUSED*/
-term_echotc(EditLine *el, int argc, const char **argv)
+term_echotc(EditLine *el, int /*argc*/, const char **argv)
 {
 	char *cap, *scap, *ep;
 	int arg_need, arg_cols, arg_rows;

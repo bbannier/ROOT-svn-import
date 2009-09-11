@@ -197,23 +197,6 @@ the leftmost change made in the buffer.  If the buffer isn't modified the
 functions should return -1.  When the hook function returns the screen is
 updated to reflect any changes made by the user function.
 
-int (*Gl_in_hook)(char *buf)
-
-        If Gl_in_hook is non-NULL the function is called each time a new
-        buffer is loaded. It is called when getline is entered, with an
-        empty buffer, it is called each time a new buffer is loaded from
-        the history with ^P or ^N, and it is called when an incremental
-        search string is accepted (when the search is terminated). The
-        buffer can be modified and will be redrawn upon return to Getline().
-
-int (*Gl_out_hook)(char *buf)
-
-        If Gl_out_hook is non-NULL it is called when a line has been
-        completed by the user entering a newline or return. The buffer
-        handed to the hook does not yet have the newline appended. If the
-        buffer is modified the screen is redrawn before getline returns the
-        buffer to the caller.
-
 int (*Gl_tab_hook)(char *buf, int prompt_width, int *cursor_loc)
 
         If Gl_tab_hook is non-NULL, it is called whenever a tab is typed.
@@ -230,9 +213,6 @@ int (*Gl_beep_hook)()
 
 extern "C" {
 
-/* forward reference needed for Gl_tab_hook */
-static int gl_tab(char *buf, int offset, int *loc);
-
 /********************* exported interface ********************************/
 
 
@@ -246,9 +226,7 @@ void    Gl_histadd(char *buf);       /* adds entries to hist */
 void    Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
                      const char* colorBadBracket, const char* colorPrompt); /* set the colours (replace default colours) for enhanced output */
 
-int             (*Gl_in_hook)(char *buf) = 0;
-int             (*Gl_out_hook)(char *buf) = 0;
-int             (*Gl_tab_hook)(char *buf, int prompt_width, int *loc) = gl_tab;
+int             (*Gl_tab_hook)(char *buf, int prompt_width, int *loc) = 0;
 int             (*Gl_beep_hook)() = 0;
 int             (*Gl_in_key)(int ch) = 0;
 }
@@ -281,256 +259,30 @@ struct WriteHistoryTrigger {
 
 extern "C" {
 
-static int      gl_init_done = -1;      /* terminal mode flag  */
-static int      gl_notty = 0;           /* 1 when not a tty */
-
-static int      gl_termw = 80;          /* actual terminal width */
-static int      gl_scroll = 27;         /* width of EOL scrolling region */
-
-static int      gl_no_echo = 0;         /* do not echo input characters */
-
-static int      gl_erase_line = 0;      /* erase line before returning */
-
-static char     gl_intrc = 0;           /* keyboard SIGINT char */
-static char     gl_quitc = 0;           /* keyboard SIGQUIT char */
-static char     gl_suspc = 0;           /* keyboard SIGTSTP char */
-static char     gl_dsuspc = 0;          /* delayed SIGTSTP char */
-
-static void     gl_cleanup();           /* to undo gl_init */
-static void     gl_char_init();         /* get ready for no echo input */
-static void     gl_char_cleanup();      /* undo gl_char_init */
-
+//static int      gl_notty = 0;           /* 1 when not a tty */
+//static int      gl_no_echo = 0;         /* do not echo input characters */
+//static int      gl_erase_line = 0;      /* erase line before returning */
 static void     gl_error(char *buf);    /* write error msg and die */
 } // extern "C"
 
 /************************ nonportable part *********************************/
 
-#ifdef MSDOS
-#include <bios.h>
-#endif
-
-#ifdef WIN32
-#  define MSDOS
-#  include <io.h>
-#  include <windows.h>
-#endif /* WIN32 */
-
-#if defined(_AIX) || defined(__Lynx__) || defined(__APPLE__) || defined(__OpenBSD__)
-#define unix
-#endif
-
-#if defined(__hpux) || defined(__osf__)       /* W.Karig@gsi.de */
-#ifndef unix
-#define unix
-#endif
-#endif
-
-#ifdef unix
-#include <unistd.h>
-#if !defined(__osf__) && !defined(_AIX)       /* W.Karig@gsi.de */
-#include <sys/ioctl.h>
-#endif
-
-#if defined(__linux__) && defined(__powerpc__)
-#   define R__PPCLINUX      /* = linux on PPC(64) */
-#endif
-#if defined(__linux__) && defined(__alpha__)
-#   define R__ALPHALINUX    /* = linux on Alpha */
-#endif
-#if defined(__linux__) && defined(__mips) /* cholm@nbi.dk */
-#   define R__MIPSLINUX    /* = linux on mips */
-#endif
-
-#if defined(TIOCGETP) && !defined(__sgi) && !defined(R__PPCLINUX) && \
-    !defined(R__ALPHALINUX)  && !defined(R__MIPSLINUX) /* use BSD interface if possible */
-#include <sgtty.h>
-struct sgttyb   new_tty, old_tty;
-struct tchars   tch;
-struct ltchars  ltch;
-#else
-#ifdef SIGTSTP          /* need POSIX interface to handle SUSP */
-#include <termios.h>
-#if defined(__sun) || defined(__sgi) || defined(R__PPCLINUX) || \
-    defined(R__ALPHALINUX) || defined(R__MIPSLINUX)
-#undef TIOCGETP         /* Solaris and SGI define TIOCGETP in <termios.h> */
-#undef TIOCSETP
-#endif
-struct termios  new_termios, old_termios;
-#else                   /* use SYSV interface */
-#include <termio.h>
-struct termio   new_termio, old_termio;
-#endif
-#endif
-#endif  /* unix */
-
-#ifdef VMS
-#include <descrip.h>
-#include <ttdef.h>
-#include <iodef.h>
-#include <starlet.h>
-#include <unistd.h>
-#include unixio
-
-static int   setbuff[2];             /* buffer to set terminal attributes */
-static short chan = -1;              /* channel to terminal */
-struct dsc$descriptor_s descrip;     /* VMS descriptor */
-#endif
-
 extern "C" {
 
 void
-Gl_config(const char *which, int value)
+Gl_config(const char *which, int /*value*/)
 {
-   if (strcmp(which, "noecho") == 0)
-      gl_no_echo = value;
-   else if (strcmp(which, "erase") == 0)
-      gl_erase_line = value;
+   if (strcmp(which, "noecho") == 0) {
+      //LOUISE - pass to el
+      //gl_no_echo = value;
+   }
+   else if (strcmp(which, "erase") == 0) {
+      //LOUISE - pass to el
+      //gl_erase_line = value;
+   }
    else
       printf("gl_config: %s ?\n", which);
 }
-
-static void
-gl_char_init()                  /* turn off input echo */
-{
-    if (gl_notty) return;
-#ifdef unix
-#ifdef TIOCGETP                 /* BSD */
-    ioctl(0, TIOCGETC, &tch);
-    ioctl(0, TIOCGLTC, &ltch);
-    gl_intrc = tch.t_intrc;
-    gl_quitc = tch.t_quitc;
-    gl_suspc = ltch.t_suspc;
-    gl_dsuspc = ltch.t_dsuspc;
-    ioctl(0, TIOCGETP, &old_tty);
-    new_tty = old_tty;
-    new_tty.sg_flags |= RAW;
-    new_tty.sg_flags &= ~ECHO;
-    ioctl(0, TIOCSETP, &new_tty);
-#else
-#ifdef SIGTSTP                  /* POSIX */
-    tcgetattr(0, &old_termios);
-    gl_intrc = old_termios.c_cc[VINTR];
-    gl_quitc = old_termios.c_cc[VQUIT];
-#ifdef VSUSP
-    gl_suspc = old_termios.c_cc[VSUSP];
-#endif
-#ifdef VDSUSP
-    gl_dsuspc = old_termios.c_cc[VDSUSP];
-#endif
-    new_termios = old_termios;
-    new_termios.c_iflag &= ~(BRKINT|ISTRIP|IXON|IXOFF);
-    new_termios.c_iflag |= (IGNBRK|IGNPAR);
-    new_termios.c_lflag &= ~(ICANON|ISIG|IEXTEN|ECHO);
-    new_termios.c_cc[VMIN] = 1;
-    new_termios.c_cc[VTIME] = 0;
-    tcsetattr(0, TCSANOW, &new_termios);
-#else                           /* SYSV */
-    ioctl(0, TCGETA, &old_termio);
-    gl_intrc = old_termio.c_cc[VINTR];
-    gl_quitc = old_termio.c_cc[VQUIT];
-    new_termio = old_termio;
-    new_termio.c_iflag &= ~(BRKINT|ISTRIP|IXON|IXOFF);
-    new_termio.c_iflag |= (IGNBRK|IGNPAR);
-    new_termio.c_lflag &= ~(ICANON|ISIG|ECHO);
-    new_termio.c_cc[VMIN] = 1;
-    new_termio.c_cc[VTIME] = 0;
-    ioctl(0, TCSETA, &new_termio);
-#endif
-#endif
-#endif /* unix */
-
-#ifdef MSDOS
-    gl_intrc = 'C' - '@';
-    gl_quitc = 'Q' - '@';
-/*    gl_suspc = ltch.t_suspc; */
-#endif /* MSDOS */
-
-#ifdef vms
-    descrip.dsc$w_length  = strlen("tt:");
-    descrip.dsc$b_dtype   = DSC$K_DTYPE_T;
-    descrip.dsc$b_class   = DSC$K_CLASS_S;
-    descrip.dsc$a_pointer = "tt:";
-    (void)sys$assign(&descrip,&chan,0,0);
-    (void)sys$qiow(0,chan,IO$_SENSEMODE,0,0,0,setbuff,8,0,0,0,0);
-    setbuff[1] |= TT$M_NOECHO;
-    (void)sys$qiow(0,chan,IO$_SETMODE,0,0,0,setbuff,8,0,0,0,0);
-#endif /* vms */
-}
-
-static void
-gl_char_cleanup()               /* undo effects of gl_char_init */
-{
-    if (gl_notty) return;
-#ifdef unix
-#ifdef TIOCSETP         /* BSD */
-    ioctl(0, TIOCSETP, &old_tty);
-#else
-#ifdef SIGTSTP          /* POSIX */
-    tcsetattr(0, TCSANOW, &old_termios);
-#else                   /* SYSV */
-    ioctl(0, TCSETA, &old_termio);
-#endif
-#endif
-#endif /* unix */
-
-#ifdef vms
-    setbuff[1] &= ~TT$M_NOECHO;
-    (void)sys$qiow(0,chan,IO$_SETMODE,0,0,0,setbuff,8,0,0,0,0);
-    sys$dassgn(chan);
-    chan = -1;
-#endif
-}
-
-#if defined(MSDOS) && !defined(WIN32)
-#  include <conio.h>
-   int pause_()
-   {
-      int first_char;
-        first_char = _getch();
-        if (first_char == 0 || first_char == 0xE0) first_char = -_getch();
-        return first_char;
-   }
-#endif
-
-#if defined(MSDOS) && defined(WIN32)
-int pause_()
-{
- static HANDLE hConsoleInput = NULL;
- static iCharCount = 0;
- static int chLastChar = 0;
-
- DWORD cRead;
-
- INPUT_RECORD pirBuffer;
- KEY_EVENT_RECORD *KeyEvent= (KEY_EVENT_RECORD *)&(pirBuffer.Event);
-
- if (!hConsoleInput) hConsoleInput = GetStdHandle(STD_INPUT_HANDLE);
-
- if (iCharCount) iCharCount--;      /* Whether several symbols had been read */
- else {
-   chLastChar = 0;
-   while (chLastChar == 0) {
-     if (!ReadConsoleInput(hConsoleInput,       /* handle of a console input buffer    */
-                           &pirBuffer,          /* address of the buffer for read data */
-                           1,                   /* number of records to read           */
-                           &cRead               /* address of number of records read   */
-        )) return 0;
-
-     if (pirBuffer.EventType == KEY_EVENT  && KeyEvent->bKeyDown == TRUE){
-         iCharCount = KeyEvent->wRepeatCount - 1;
-         chLastChar = ((int) (KeyEvent->uChar).AsciiChar & 0xffff);
-         if (chLastChar)
-              OemToCharBuff((char const *)&chLastChar,(char *)&chLastChar,1);
-         else
-              chLastChar = - (KeyEvent->wVirtualScanCode);
-/*            chLastChar = - (KeyEvent->wVirtualKeyCode); */
-     }
-   }
- }
- return chLastChar;
-
-}
-#endif
 
 
 /******************** fairly portable part *********************************/
@@ -540,7 +292,6 @@ gl_error(char *buf)
 {
     int len = strlen(buf);
 
-    gl_cleanup();
 #ifdef WIN32
     {
       char *OemBuf = (char *)malloc(2*len);
@@ -549,43 +300,16 @@ gl_error(char *buf)
       free(OemBuf);
     }
 #else
-    write(2, buf, len);
+    // LOUISE what is this?? write(2, buf, len);
 #endif
-    exit(1);
 }
-
-/*
-static void
-gl_init()
-// set up variables and terminal 
-{
-    if (gl_init_done < 0) {            // -1 only on startup
-        hist_init();
-    }
-    if (isatty(0) == 0 || isatty(1) == 0)
-        gl_notty = 1;
-    gl_char_init();
-    gl_init_done = 1;
-} */
-
-static void
-gl_cleanup()
-/* undo effects of gl_init, as necessary */
-{
-    if (gl_init_done > 0)
-        gl_char_cleanup();
-    gl_init_done = 0;
-} 
 
 void
 Gl_setwidth(int w)
 {
-    if (w > 20) {
-        gl_termw = w;
-        gl_scroll = w / 3;
-    } else {
-        gl_error("\n*** Error: minimum screen width is 21\n");
-    }
+        //gl_termw = w;
+        //gl_scroll = w / 3;
+        // LOUISE: pass to el
 }
 
 void
@@ -684,27 +408,10 @@ Getline(const char *prompt)
    return Getlinem(0, prompt);
 }
 
-static int
-gl_tab(char *buf, int offset, int *loc)
-{
-/* default tab handler, acts like tabstops every 8 cols */
-    int i, count, len;
-
-    len = strlen(buf);
-    count = 8 - (offset + *loc) % 8;
-    for (i=len; i >= *loc; i--)
-        buf[i+count] = buf[i];
-    for (i=0; i < count; i++)
-        buf[*loc+i] = ' ';
-    i = *loc;
-    *loc = i + count;
-    return i;
-}
-
 /******************* History stuff **************************************/
 
 void
-Gl_histsize(int size, int save)
+Gl_histsize(int /*size*/, int save)
 {
 	stifle_history(save);
 }
@@ -723,3 +430,9 @@ Gl_histadd(char *buf)
 }
 
 } // extern "C"
+
+int
+Gl_eof()
+{
+   return 0;
+}

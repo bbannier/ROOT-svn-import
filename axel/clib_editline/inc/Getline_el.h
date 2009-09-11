@@ -32,6 +32,7 @@ void Gl_windowchanged();
 void Gl_histsize(int size, int save);
 void Gl_histinit(char *file);
 void Gl_histadd(char *buf);
+int  Gl_eof();
 void Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
                   const char* colorBadBracket, const char* colorPrompt);
 

@@ -357,7 +357,7 @@ history_def_add(ptr_t p, HistEvent *ev, const char *str)
  */
 /* ARGSUSED */
 el_private void
-history_def_delete(history_t *h, HistEvent *ev, hentry_t *hp)
+history_def_delete(history_t *h, HistEvent* /*ev*/, hentry_t *hp)
 {
 
 	if (hp == &h->list)
@@ -424,7 +424,7 @@ history_def_enter(ptr_t p, HistEvent *ev, const char *str)
  */
 /* ARGSUSED */
 el_private void
-history_def_init(ptr_t *p, HistEvent *ev, int n)
+history_def_init(ptr_t *p, HistEvent* /*ev*/, int n)
 {
 	history_t *h = (history_t *) h_malloc(sizeof(history_t));
 
@@ -612,7 +612,6 @@ history_load(History *h, const char *fname)
 
 	ptr = (char *) h_malloc(max_size = 1024);
 	for (i = 0; (line = fgetln(fp, &sz)) != NULL; i++) {
-		char c = line[sz];
 
 		if (sz != 0 && line[sz - 1] == '\n')
 			line[--sz] = '\0';

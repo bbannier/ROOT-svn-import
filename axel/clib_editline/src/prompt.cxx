@@ -62,7 +62,7 @@ el_private const char	*prompt_default_r(EditLine *);
  */
 el_private const char *
 /*ARGSUSED*/
-prompt_default(EditLine *el)
+prompt_default(EditLine* /*el*/)
 {
 	static char a[3] = {'?', ' ', '\0'};
 
@@ -75,7 +75,7 @@ prompt_default(EditLine *el)
  */
 el_private const char *
 /*ARGSUSED*/
-prompt_default_r(EditLine *el)
+prompt_default_r(EditLine* /*el*/)
 {
 	static char a[1] = {'\0'};
 
@@ -131,7 +131,7 @@ prompt_init(EditLine *el)
  */
 el_protected void
 /*ARGSUSED*/
-prompt_end(EditLine *el)
+prompt_end(EditLine* /*el*/)
 {
 }
 

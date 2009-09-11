@@ -37,9 +37,9 @@ INCLUDEFILES += $(EDITLINEDEP)
 include/%.h:    $(EDITLINEDIRI)/%.h
 		cp $< $@
 
-$(EDITLINEDS):      $(EDITLINEDIRI)/Getline.h $(EDITLINEL) $(ROOTCINTTMPDEP)
+$(EDITLINEDS):  $(EDITLINEH) $(EDITLINEL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(EDITLINEDIRI)/Getline.h $(EDITLINEL)
+		$(ROOTCINTTMP) -f $@ -c $(EDITLINEH) $(EDITLINEL)
 
 all-$(MODNAME): $(EDITLINEO) $(EDITLINEDO)
 

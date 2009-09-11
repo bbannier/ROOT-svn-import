@@ -1212,7 +1212,7 @@ history_search_prefix(const char *str, int direction)
  */
 /* ARGSUSED */
 int
-history_search_pos(const char *str, int direction, int pos)
+history_search_pos(const char *str, int /*direction*/, int pos)
 {
 	HistEvent ev;
 	int curr_num, off;
@@ -1414,7 +1414,7 @@ username_completion_function(const char *text, int state)
  */
 /* ARGSUSED */
 static unsigned char
-_el_rl_complete(EditLine *el, int ch)
+_el_rl_complete(EditLine* /*el*/, int ch)
 {
 	return (unsigned char) rl_complete(0, ch);
 }

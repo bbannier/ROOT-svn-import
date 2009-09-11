@@ -573,7 +573,7 @@ tty_init(EditLine *el)
  */
 el_protected void
 /*ARGSUSED*/
-tty_end(EditLine *el)
+tty_end(EditLine* /*el*/)
 {
 
 	/* XXX: Maybe reset to an initial state? */
@@ -1046,7 +1046,7 @@ tty_noquotemode(EditLine *el)
  */
 el_protected int
 /*ARGSUSED*/
-tty_stty(EditLine *el, int argc, const char **cargv)
+tty_stty(EditLine *el, int /*argc*/, const char **cargv)
 {
         char ** argv = (char **)cargv;
         /** ^^^^ HUGE KLUDGE
