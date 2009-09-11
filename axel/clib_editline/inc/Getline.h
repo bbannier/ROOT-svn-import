@@ -32,13 +32,9 @@ void Gl_windowchanged();
 void Gl_histsize(int size, int save);
 void Gl_histinit(char *file);
 void Gl_histadd(char *buf);
-int  Gl_eof();
 void Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
                   const char* colorBadBracket, const char* colorPrompt);
 
-
-R__EXTERN int (*Gl_in_hook)(char *buf);
-R__EXTERN int (*Gl_out_hook)(char *buf);
 R__EXTERN int (*Gl_tab_hook)(char *buf, int prompt_width, int *cursor_loc);
 R__EXTERN int (*Gl_beep_hook)();
 R__EXTERN int (*Gl_in_key)(int key);
