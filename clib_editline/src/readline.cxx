@@ -89,6 +89,7 @@ char *rl_completer_word_break_characters = NULL;
 char *rl_completer_quote_characters = NULL;
 CPFunction *rl_completion_entry_function = NULL;
 CPPFunction *rl_attempted_completion_function = NULL;
+int tab_color = 5;
 El_tab_hook_t rl_tab_hook = NULL;
 
 /*
@@ -312,7 +313,6 @@ readline(const char *prompt, bool newline)
 		el_rl_prompt = strdup(prompt);
 	}
 
-        static char nullstring[1] = { '\0' };
         // ACK! My first GOTO since BASIC! (stephan) See below...
         start_over_after_builtin:
 		/* get one line from input stream */
@@ -367,7 +367,7 @@ readline(const char *prompt, bool newline)
                 if( -1 != pr )
                 { // it was a built-in. Let's re-run THIS function again
                   // instead of returning to the user...
-                        add_history( line );
+                        add_history(temp);
                         free( line );
                         //fprintf( e->el_outfile, "[processed libeditline internal command. return code=%d]\n", pr );
                         goto start_over_after_builtin; // return readline( prompt );
@@ -386,7 +386,11 @@ readline(const char *prompt, bool newline)
 
 void setColors(char* colorTab, char* colorTabComp, char* colorBracket, char* colorBadBracket)
 {
-	setKeywordColors(colorTab, colorTabComp, colorBracket, colorBadBracket);
+	setKeywordColors(colorTab, colorBracket, colorBadBracket);
+	
+	int col = selectColor(TString(colorTabComp));
+	if (col > -1)
+		tab_color = col;
 }
 
 /*
@@ -416,7 +420,8 @@ _rl_compat_sub(const char *str, const char *what, const char *with,
 {
 	char *result;
 	const char *temp, *newp;
-	int len, with_len, what_len, add;
+	size_t len,  add;
+	int with_len, what_len;
 	size_t size, i;
 
 	result = (char *) malloc((size = 16));
@@ -602,7 +607,7 @@ _history_expand_command(const char *command, size_t cmdlen, char **result)
 			g_on = 2;
 		else if (*cmd == 's' || *cmd == '&') {
 			char *what, *with, delim;
-			int len, from_len;
+			size_t len, from_len;
 			size_t size;
 
 			if (*cmd == '&' && (from == NULL || to == NULL))
@@ -1419,7 +1424,7 @@ completion_matches(const char *text, CPFunction *genfunc)
 {
 	char **match_list = NULL, *retstr, *prevstr;
 	size_t match_list_len, max_equal, which, i;
-	int matches;
+	size_t matches;
 
 	if (h == NULL || e == NULL)
 		rl_initialize();
@@ -1538,7 +1543,32 @@ rl_complete_internal(int what_to_do)
            char old = *e->el_line.cursor; // presumably \a
            *e->el_line.cursor = 0;
            TTermManip tm;
-           tm.SetColor(63,0,63);
+			switch ( tab_color ) {
+				case 0:								// nCurses COLOR_BLACK
+						tm.SetColor(0,0,0);			// black
+						break;
+				case 1:								// nCurses COLOR_RED
+						tm.SetColor(255,0,0);		// red (with bold)
+						break;
+				case 2:								// nCurses COLOR_GREEN
+						tm.SetColor(0,255,0);		// green (with bold)
+						break;
+				case 3:								// nCurses COLOR_YELLOW
+						tm.SetColor(255,255,0);		// yellow (with bold)
+						break;			
+				case 4:								// nCurses COLOR_BLUE
+						tm.SetColor(0,0,127);		// blue
+						break;
+				case 5:								// nCurses COLOR_MAGENTA
+						tm.SetColor(127,0,127);		// magenta
+						break;
+				case 6:								// nCurses COLOR_CYAN
+						tm.SetColor(0,127,127);		// cyan
+						break;
+				case 7:								// nCurses COLOR_WHITE
+						tm.SetColor(255,255,255);	// white (with bold)
+						break;
+			}
            int loc = rl_tab_hook(e->el_line.buffer, 0, &cursorIdx);
            tm.ResetTerm();
            if (loc >= 0 || loc == -2 /* new line */ || cursorIdx != e->el_line.cursor - e->el_line.buffer) {
@@ -1751,7 +1781,7 @@ rl_read_key(void)
  */
 /* ARGSUSED */
 void
-rl_reset_terminal(const char *p)
+rl_reset_terminal(void)
 {
 
 	if (h == NULL || e == NULL)

@@ -70,7 +70,7 @@ el_private void	re__copy_and_pad(char *, char *, size_t);
 el_private void
 re__copy_and_pad(char *dst, char *src, size_t width)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < width; i++) {
 		if (*src == 0)
@@ -87,7 +87,7 @@ re__copy_and_pad(char *dst, char *src, size_t width)
 el_private void
 re__copy_and_pad(el_color_t *dst, el_color_t *src, size_t width)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < width; i++) {
 		*dst++ = *src++;

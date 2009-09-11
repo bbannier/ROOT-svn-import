@@ -598,7 +598,7 @@ term_move_to_line(EditLine *el, int where)
 				term_overwrite(el,
 				    &el->el_display[el->el_cursor.v][el->el_cursor.h],
                                                0, // color irrelevant
-				    1);					// LOUISE COLOR no change made
+				    1);	
 				/* updates Cursor */
 				del--;
 			} else {
@@ -698,7 +698,7 @@ mc_again:
 				 */
 				if (EL_CAN_TAB ?
 				    (-del > (((unsigned int) where >> 3) +
-				     (where & 07)))
+				     ((unsigned int) where & 07)))
 				    : (-del > where)) {
 					term__putcolorch('\r', NULL);	/* do a CR */
 					el->el_cursor.h = 0;
@@ -1370,12 +1370,12 @@ term__repaint(EditLine * el, int index)
 	// store where cursor is currently (involves el)
 	char * cursor = el->el_line.cursor;
 
-	// move to index of char to change
-	el->el_line.cursor = el->el_line.buffer + index;
-
 	int promptSize = el->el_prompt.p_pos.h;
 	int oriCursor = el->el_cursor.h;
 	int oriLine = el->el_cursor.v;
+
+		// move to index of char to change
+	el->el_line.cursor = el->el_line.buffer + index;
 	
 	int line = (promptSize+index) / el->el_term.t_size.h;
 	int hpos = (promptSize+index) % el->el_term.t_size.h;

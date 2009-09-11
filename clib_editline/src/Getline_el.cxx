@@ -282,65 +282,24 @@ extern "C" {
 
 static int      gl_init_done = -1;      /* terminal mode flag  */
 static int      gl_notty = 0;           /* 1 when not a tty */
-static int      gl_eof = 0;             /* 1 when not a tty and read() == -1 */
+
 static int      gl_termw = 80;          /* actual terminal width */
 static int      gl_scroll = 27;         /* width of EOL scrolling region */
-static int      gl_width = 0;           /* net size available for input */
-static int      gl_extent = 0;          /* how far to redraw, 0 means all */
-static int      gl_overwrite = 0;       /* overwrite mode */
+
 static int      gl_no_echo = 0;         /* do not echo input characters */
-static int      gl_passwd = 0;          /* do not echo input characters */
+
 static int      gl_erase_line = 0;      /* erase line before returning */
-static int      gl_pos, gl_cnt = 0;     /* position and size of input */
-static char     gl_buf[BUF_SIZE];       /* input buffer */
-static char     gl_killbuf[BUF_SIZE]=""; /* killed text */
-static const char *gl_prompt;           /* to save the prompt string */
+
 static char     gl_intrc = 0;           /* keyboard SIGINT char */
 static char     gl_quitc = 0;           /* keyboard SIGQUIT char */
 static char     gl_suspc = 0;           /* keyboard SIGTSTP char */
 static char     gl_dsuspc = 0;          /* delayed SIGTSTP char */
-static int      gl_search_mode = 0;     /* search mode flag */
-static int      gl_savehist = 0;        /* # of lines to save in hist file */
-static char     gl_histfile[256];       /* name of history file */
 
-static void     gl_init();              /* prepare to edit a line */
 static void     gl_cleanup();           /* to undo gl_init */
 static void     gl_char_init();         /* get ready for no echo input */
 static void     gl_char_cleanup();      /* undo gl_char_init */
 
-static void     gl_addchar(int c);      /* install specified char */
-static void     gl_del(int loc);        /* del, either left (-1) or cur (0) */
 static void     gl_error(char *buf);    /* write error msg and die */
-static void     gl_fixup(const char *p, int c, int cur); /* fixup state variables and screen */
-static int      gl_getc();              /* read one char from terminal */
-static void     gl_kill();              /* delete to EOL */
-static void     gl_newline();           /* handle \n or \r */
-static void     gl_putc(int c);         /* write one char to terminal */
-static void     gl_puts(const char *buf); /* write a line to terminal */
-static void     gl_redraw();            /* issue \n and redraw all */
-static void     gl_transpose();         /* transpose two chars */
-static void     gl_yank();              /* yank killed text */
-
-static int      is_whitespace(char c);  /* "whitespace" very loosely interpreted */
-static void     gl_back_1_word();       /* move cursor back one word */
-static void     gl_kill_1_word();       /* kill to end of word */
-static void     gl_kill_back_1_word();  /* kill to begin of word */
-static void     gl_kill_region(int i, int j); /* kills from i to j */
-static void     gl_fwd_1_word();        /* move cursor forward one word */
-static void     gl_set_mark();          /* sets mark to be at point */
-static void     gl_exch();              /* exchanges point and mark */
-static void     gl_wipe();              /* kills from mark to point */
-static int      gl_mark = -1;           /* position of mark. gl_mark<0 if not set */
-
-static void     hist_init();            /* initializes hist pointers */
-static char    *hist_next();            /* return ptr to next item */
-static char    *hist_prev();            /* return ptr to prev item */
-static char    *hist_save(char *p);     /* makes copy of a string, without NL */
-
-static void     search_addchar(int c);  /* increment search string */
-static void     search_term();          /* reset with current contents */
-static void     search_back(int s);     /* look back for current string */
-static void     search_forw(int s);     /* look forw for current string */
 } // extern "C"
 
 /************************ nonportable part *********************************/
@@ -573,33 +532,7 @@ int pause_()
 #endif
 
 
-static int
-gl_getc()
-{ }
-
-static void
-gl_putc(int c)
-{ }
-
 /******************** fairly portable part *********************************/
-
-static void
-gl_puts(const char *buf)
-{
-    int len = strlen(buf);
-
-    if (gl_notty) return;
-#ifdef WIN32
-    {
-     char *OemBuf = (char *)malloc(2*len);
-     CharToOemBuff(buf,OemBuf,len);
-     write(1, OemBuf, len);
-     free(OemBuf);
-    }
-#else
-    write(1, buf, len);
-#endif
-}
 
 static void
 gl_error(char *buf)
@@ -620,18 +553,19 @@ gl_error(char *buf)
     exit(1);
 }
 
+/*
 static void
 gl_init()
-/* set up variables and terminal */
+// set up variables and terminal 
 {
-    if (gl_init_done < 0) {             /* -1 only on startup */
+    if (gl_init_done < 0) {            // -1 only on startup
         hist_init();
     }
     if (isatty(0) == 0 || isatty(1) == 0)
         gl_notty = 1;
     gl_char_init();
     gl_init_done = 1;
-}
+} */
 
 static void
 gl_cleanup()
@@ -640,7 +574,7 @@ gl_cleanup()
     if (gl_init_done > 0)
         gl_char_cleanup();
     gl_init_done = 0;
-}
+} 
 
 void
 Gl_setwidth(int w)
@@ -690,14 +624,14 @@ Getlinem(int mode, const char *prompt)
    	static int getline_initialized = 0;
 	if (getline_initialized == 0)
 	{
-		//rl_initialize();		// - is rl_initialize already being called by history_stifle()?
+		//rl_initialize();		// rl_initialize already being called by history_stifle()
 		read_history(hist_file);
 		getline_initialized = 1;
 	}
 
 	// mode 2 = cleanup
 	if (mode == 2) {
-		rl_reset_terminal(0);
+		rl_reset_terminal();
         }
 
 	// mode -1 = init
@@ -726,7 +660,6 @@ Getlinem(int mode, const char *prompt)
 			{
 				if (*ch == '\n')		// line complete!
 				{
-					add_history(input_buffer);
 					return input_buffer;
 				}
 				++ch;
@@ -743,50 +676,11 @@ Gl_setColors(char* colorTab, char* colorTabComp, char* colorBracket, char* color
 	setColors(colorTab, colorTabComp, colorBracket, colorBadBracket);
 }
 
-int
-Gl_eof()
-{ }
-
 char *
 Getline(const char *prompt)
 {
    return Getlinem(0, prompt);
 }
-
-static void
-gl_addchar(int c)
-{ }
-
-static void
-gl_yank()
-{ }
-
-static void
-gl_transpose()
-{ }
-
-static void
-gl_newline()
-{ }
-
-static void
-gl_del(int loc)
-{ }
-
-static void
-gl_kill()
-{ }
-
-static void
-gl_redraw()
-{ }
-
-static void setCursorPosition(int x)
-{ }
-
-static void
-gl_fixup(const char *prompt, int change, int cursor)
-{ }
 
 static int
 gl_tab(char *buf, int offset, int *loc)
@@ -807,9 +701,6 @@ gl_tab(char *buf, int offset, int *loc)
 
 /******************* History stuff **************************************/
 
-static void
-hist_init() { }
-
 void
 Gl_histsize(int size, int save)
 {
@@ -825,73 +716,8 @@ Gl_histinit(char *file)
 
 void
 Gl_histadd(char *buf)
-{ }
-
-static char *
-hist_prev()
-{ }
-
-static char *
-hist_next()
-{ }
-
-static char *
-hist_save(char *p)
-{ }
-
-/******************* Search stuff **************************************/
-
-static void
-search_update(int c)
-{ }
-
-static void
-search_addchar(int c)
-{ }
-
-static void
-search_term()
-{ }
-
-static void
-search_back(int new_search)
-{ }
-
-static void
-search_forw(int new_search)
-{ }
-
-
-
-/*****************************************************************************/
-/* Extra routine provided by Christian Lacunza <lacunza@cdfsg5.lbl.gov>      */
-/*****************************************************************************/
-
-static void gl_back_1_word( void )
-{ }
-
-static void gl_kill_back_1_word( void )
-{ }
-
-static void gl_kill_1_word( void )
-{ }
-
-static void gl_kill_region( int i, int j )
-{ }
-
-static void gl_fwd_1_word( void )
-{ }
-
-static int is_whitespace( char c )
-{ }
-
-static void gl_set_mark( void )
-{ }
-
-static void gl_wipe( void )
-{ }
-
-static void gl_exch( void )
-{ }
+{
+	add_history(buf);
+}
 
 } // extern "C"

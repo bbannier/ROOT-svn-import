@@ -576,7 +576,7 @@ em_undo(EditLine *el, int c)
 
 		el->el_line.cursor = un->ptr;
 		size = (int) (el->el_line.cursor - el->el_line.lastchar);
-		if (size < un->isize)
+		if ((unsigned int) size < un->isize)
 			size = un->isize;
 		cp = un->ptr;
 		kp = un->buf;
