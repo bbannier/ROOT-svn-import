@@ -367,7 +367,7 @@ readline(const char *prompt, bool newline)
                 if( -1 != pr )
                 { // it was a built-in. Let's re-run THIS function again
                   // instead of returning to the user...
-                        add_history(temp);
+                        add_history(line);
                         free( line );
                         //fprintf( e->el_outfile, "[processed libeditline internal command. return code=%d]\n", pr );
                         goto start_over_after_builtin; // return readline( prompt );
