@@ -93,7 +93,8 @@ extern El_tab_hook_t    rl_tab_hook;
 char		*readline(const char *, bool newline);
 int		 rl_initialize(void);
 
-void    setColors(char* colorTab, char* colorTabComp, char* colorBracket, char* colorBadBracket);
+void    setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
+                  const char* colorBadBracket, const char* colorPrompt);
 void		 using_history(void);
 int		 add_history(char *);
 void		 clear_history(void);

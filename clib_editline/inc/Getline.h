@@ -33,6 +33,9 @@ void Gl_histsize(int size, int save);
 void Gl_histinit(char *file);
 void Gl_histadd(char *buf);
 int  Gl_eof();
+void Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
+                  const char* colorBadBracket, const char* colorPrompt);
+
 
 R__EXTERN int (*Gl_in_hook)(char *buf);
 R__EXTERN int (*Gl_out_hook)(char *buf);

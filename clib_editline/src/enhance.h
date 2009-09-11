@@ -1,7 +1,8 @@
 #include <ncurses.h>
 #include "TROOT.h"
 
-void setKeywordColors(char* colorTab, char* colorBracket, char* colorBadBracket);
+void setKeywordColors(const char* colorTab, const char* colorBracket,
+                      const char* colorBadBracket);
 int selectColor(TString str);
 void highlightKeywords(EditLine * el);
 int matchParentheses(EditLine * el);

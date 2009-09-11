@@ -9,7 +9,7 @@
 
 using namespace std;
 
-void setKeywordColors(char* colorTab, char* colorBracket, char* colorBadBracket);
+void setKeywordColors(const char* colorTab, const char* colorBracket, const char* colorBadBracket);
 int selectColor(TString str);
 void highlightKeywords(EditLine * el);
 int matchParentheses(EditLine * el);
@@ -39,7 +39,7 @@ int color_badbracket = 1;      // NCurses COLOR_RED
  *   bracket pair:   2 (green)
  *   bad bracket:   1 (red)
  */
-void setKeywordColors(char* colorType, char* colorBracket, char* colorBadBracket)
+void setKeywordColors(const char* colorType, const char* colorBracket, const char* colorBadBracket)
 {
    int col = -1;
 

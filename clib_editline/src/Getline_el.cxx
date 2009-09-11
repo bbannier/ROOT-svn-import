@@ -243,7 +243,8 @@ void    Gl_setwidth(int w);          /* specify width of screen */
 void    Gl_windowchanged();          /* call after SIGWINCH signal */
 void    Gl_histinit(char *file); /* read entries from old histfile */
 void    Gl_histadd(char *buf);       /* adds entries to hist */
-void    Gl_setColors(char* colorTab, char* colorTabComp, char* colorBracket, char* colorBadBracket); /* set the colours (replace default colours) for enhanced output */
+void    Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
+                     const char* colorBadBracket, const char* colorPrompt); /* set the colours (replace default colours) for enhanced output */
 
 int             (*Gl_in_hook)(char *buf) = 0;
 int             (*Gl_out_hook)(char *buf) = 0;
@@ -670,10 +671,11 @@ Getlinem(int mode, const char *prompt)
 }
 
 void
-Gl_setColors(char* colorTab, char* colorTabComp, char* colorBracket, char* colorBadBracket)
+Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
+             const char* colorBadBracket, const char* colorPrompt)
 {
 	// call to enhance.cxx to set colours
-	setColors(colorTab, colorTabComp, colorBracket, colorBadBracket);
+   setColors(colorTab, colorTabComp, colorBracket, colorBadBracket, colorPrompt);
 }
 
 char *
