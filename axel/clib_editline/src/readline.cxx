@@ -384,13 +384,16 @@ readline(const char *prompt, bool newline)
 	return (char *) ret;
 }
 
-void setColors(char* colorTab, char* colorTabComp, char* colorBracket, char* colorBadBracket)
+void setColors(char* colorTab, char* colorTabComp, char* colorBracket, char* colorBadBracket, char* colorPrompt)
 {
 	setKeywordColors(colorTab, colorBracket, colorBadBracket);
 	
 	int col = selectColor(TString(colorTabComp));
 	if (col > -1)
 		tab_color = col;
+        col = selectColor(TString(colorPrompt));
+        if (col > -1)
+           prompt_setcolor(col);
 }
 
 /*
@@ -1542,35 +1545,9 @@ rl_complete_internal(int what_to_do)
            int cursorIdx = e->el_line.cursor - e->el_line.buffer;
            char old = *e->el_line.cursor; // presumably \a
            *e->el_line.cursor = 0;
-           TTermManip tm;
-			switch ( tab_color ) {
-				case 0:								// nCurses COLOR_BLACK
-						tm.SetColor(0,0,0);			// black
-						break;
-				case 1:								// nCurses COLOR_RED
-						tm.SetColor(255,0,0);		// red (with bold)
-						break;
-				case 2:								// nCurses COLOR_GREEN
-						tm.SetColor(0,255,0);		// green (with bold)
-						break;
-				case 3:								// nCurses COLOR_YELLOW
-						tm.SetColor(255,255,0);		// yellow (with bold)
-						break;			
-				case 4:								// nCurses COLOR_BLUE
-						tm.SetColor(0,0,127);		// blue
-						break;
-				case 5:								// nCurses COLOR_MAGENTA
-						tm.SetColor(127,0,127);		// magenta
-						break;
-				case 6:								// nCurses COLOR_CYAN
-						tm.SetColor(0,127,127);		// cyan
-						break;
-				case 7:								// nCurses COLOR_WHITE
-						tm.SetColor(255,255,255);	// white (with bold)
-						break;
-			}
+           term__setcolor(tab_color);
            int loc = rl_tab_hook(e->el_line.buffer, 0, &cursorIdx);
-           tm.ResetTerm();
+           term__resetcolor();
            if (loc >= 0 || loc == -2 /* new line */ || cursorIdx != e->el_line.cursor - e->el_line.buffer) {
               size_t lenbuf = strlen(e->el_line.buffer);
               e->el_line.buffer[lenbuf] = old;

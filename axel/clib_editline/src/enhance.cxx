@@ -266,7 +266,7 @@ void colorWord(EditLine * el , int first, int num, int textColor)
             term__repaint(el, index);     
       }
    if (anyChange)
-      term__resetcolor();
+      term__setcolor(-1);
 }
 
 /*
@@ -285,6 +285,6 @@ void colorBrackets(EditLine * el, int open, int close, int textColor)
    el->el_line.bufcolor[close].backColor = bgColor;
    term__repaint(el, close);    
 
-   term__resetcolor();
+   term__setcolor(-1);
 }
 

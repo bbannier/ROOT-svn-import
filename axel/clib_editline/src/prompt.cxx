@@ -52,6 +52,8 @@ __RCSID("$NetBSD: prompt.c,v 1.8 2001/01/10 07:45:41 jdolecek Exp $");
 #include <stdio.h>
 #include "el.h"
 
+el_color_t prompt_color(6, -1);
+
 el_private const char	*prompt_default(EditLine *);
 el_private const char	*prompt_default_r(EditLine *);
 
@@ -98,8 +100,9 @@ prompt_print(EditLine *el, int op)
 	else
 		elp = &el->el_rprompt;
 	p = (elp->p_func) (el);
+        el_color_t col;
 	while (*p)
-		re_putc(el, *p++, 1);
+           re_putc(el, *p++, 1, &prompt_color);
 
 	elp->p_pos.v = el->el_refresh.r_cursor.v;
 	elp->p_pos.h = el->el_refresh.r_cursor.h;
@@ -173,3 +176,13 @@ prompt_get(EditLine *el, el_pfunc_t *prf, int op)
 		*prf = el->el_rprompt.p_func;
 	return (0);
 }
+
+/* prompt_setcolor():
+ *	Set the prompt's dislpay color
+ */
+el_protected void
+prompt_setcolor(int col)
+{
+   prompt_color.foreColor = col;
+}
+

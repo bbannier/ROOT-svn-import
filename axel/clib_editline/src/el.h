@@ -71,7 +71,7 @@ typedef struct coord_t {		/* Position on the screen	*/
 typedef struct el_color_t {
 	int foreColor;			/* The foreground text colour */
 	int backColor;			/* The background colour */
-        el_color_t(): foreColor(-1), backColor(-1) {}
+        el_color_t(int f = -1, int b = -2): foreColor(f), backColor(b) {}
 
 	el_color_t& operator= (el_color_t& color) {
 		(*this).foreColor = color.foreColor;

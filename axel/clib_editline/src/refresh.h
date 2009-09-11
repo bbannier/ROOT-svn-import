@@ -52,7 +52,7 @@ typedef struct {
 	int	r_newcv;
 } el_refresh_t;
 
-el_protected void	re_putc(EditLine *, int, int);
+el_protected void	re_putc(EditLine *, int, int, el_color_t* color);
 el_protected void	re_clear_lines(EditLine *);
 el_protected void	re_clear_display(EditLine *);
 el_protected void	re_refresh(EditLine *);
