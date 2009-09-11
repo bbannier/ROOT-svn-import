@@ -94,43 +94,23 @@ void highlightKeywords(EditLine * el)
 
    TString sBuffer(el->el_line.buffer, el->el_line.lastchar - el->el_line.buffer) ;
 
-      // check whole buffer for any highlighted chars and remove colour info
-   for (int i = 0; i < (el->el_line.lastchar - el->el_line.buffer); i++)
-     {
-       if ( el->el_line.bufcolor[i].foreColor != -1 )
-         {
-            el->el_line.bufcolor[i] = -1;                // reset to default colours
-            term__repaint(el, i);
-         }
-     }
-
    TString keyword;
    Ssiz_t posNextTok = 0;
    Ssiz_t posPrevTok = 0;
    // regular expression inverse of match expression to find end of match
    while (sBuffer.Tokenize(keyword, posNextTok, "[^a-zA-Z0-9_]")) {
-      if (gInterpreter->CheckClassInfo(keyword, kFALSE)) {
-         Ssiz_t toklen = posNextTok - posPrevTok;
-         if (posNextTok == -1)
-            toklen = sBuffer.Length() - posPrevTok;
-         TString tok = sBuffer(posPrevTok, toklen);
-         Ssiz_t pos = posPrevTok + tok.Index(keyword);
-         colorWord(el, pos, keyword.Length(), color_class);
-         posPrevTok = posNextTok;
-         continue;
-      }
-
-      // don't bother with matching for type names if match already found
+      Ssiz_t toklen = posNextTok - posPrevTok;
+      if (posNextTok == -1)
+         toklen = sBuffer.Length() - posPrevTok;
+      TString tok = sBuffer(posPrevTok, toklen);
+      Ssiz_t pos = posPrevTok + tok.Index(keyword);
+      int color = -1;
       if (gROOT->GetListOfTypes()->FindObject(keyword)) {
-         Ssiz_t toklen = posNextTok - posPrevTok;
-         if (posNextTok == -1)
-            toklen = sBuffer.Length() - posPrevTok;
-         TString tok = sBuffer(posPrevTok, toklen);
-         Ssiz_t pos = posPrevTok + tok.Index(keyword);
-         colorWord(el, pos, keyword.Length(), color_type);
-         posPrevTok = posNextTok;
-         continue;
+         color = color_type;
+      } else if (gInterpreter->CheckClassInfo(keyword, kFALSE)) {
+         color = color_class;
       }
+      colorWord(el, pos, keyword.Length(), color);
       posPrevTok = posNextTok;
    }
 }
@@ -274,15 +254,19 @@ int matchParentheses(EditLine * el) {
 void colorWord(EditLine * el , int first, int num, int textColor)
 {
    int bgColor = -1;            // default background
-
+   bool anyChange = false;
    // add colour information to el.
    for (int index = first; index < first + num; ++index)
       {
+         bool changed = el->el_line.bufcolor[index].foreColor != textColor;
+         anyChange |= changed;
          el->el_line.bufcolor[index].foreColor = textColor;
          el->el_line.bufcolor[index].backColor = bgColor;
-         term__repaint(el, index);     
+         if (changed)
+            term__repaint(el, index);     
       }
-   term__resetcolor();
+   if (anyChange)
+      term__resetcolor();
 }
 
 /*

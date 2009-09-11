@@ -79,6 +79,15 @@ int TTermManip::AllocColor(const Color& col) {
    return idx;
 }
 
+void TTermManip::SetDefaultColor()
+{
+   // Set terminal to the default color.
+   if (fCurrentColorIdx != -1) {
+      ResetTerm();
+   }
+}
+
+
 bool TTermManip::SetColor(unsigned char r, unsigned char g, unsigned char b) {
    // RGB colors range from 0 to 255
    if (fCanChangeColors) {
