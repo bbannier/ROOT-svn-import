@@ -384,7 +384,8 @@ readline(const char *prompt, bool newline)
 	return (char *) ret;
 }
 
-void setColors(char* colorTab, char* colorTabComp, char* colorBracket, char* colorBadBracket, char* colorPrompt)
+void setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
+               const char* colorBadBracket, const char* colorPrompt)
 {
 	setKeywordColors(colorTab, colorBracket, colorBadBracket);
 	
