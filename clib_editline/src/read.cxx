@@ -88,7 +88,7 @@ read_debug(EditLine *el)
  */
 /* ARGSUSED */
 el_private int
-read__fixio(int fd, int e)
+read__fixio(int /*fd*/, int e)
 {
 
 	switch (e) {

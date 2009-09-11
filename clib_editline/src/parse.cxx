@@ -121,7 +121,7 @@ el_parse(EditLine *el, int argc, const char *argv[])
         }
 
 
-        int count = 0;
+
         el_builtin_t * bi = el_builtin_by_name( ptr );
         if( bi )
         {

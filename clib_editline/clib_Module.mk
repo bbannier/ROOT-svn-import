@@ -21,7 +21,6 @@ CLIBDH       := $(CLIBDS:.cxx=.h)
 CLIBH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 CLIBS1       := $(wildcard $(MODDIRS)/*.c)
 ifeq ($(BUILDEDITLINE),yes)
-CLIBH        := $(filter-out $(MODDIRI)/Getline.h,$(CLIBH))
 CLIBS1       := $(filter-out $(MODDIRS)/Getline.c,$(CLIBS1))
 endif
 CLIBS2       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))

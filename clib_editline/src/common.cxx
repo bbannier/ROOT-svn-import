@@ -57,7 +57,7 @@ __RCSID("$NetBSD: common.c,v 1.10 2001/01/10 07:45:41 jdolecek Exp $");
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_end_of_file(EditLine *el, int c)
+ed_end_of_file(EditLine *el, int /*c*/)
 {
 
 	re_goto_bottom(el);
@@ -140,7 +140,7 @@ ed_insert(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_delete_prev_word(EditLine *el, int c)
+ed_delete_prev_word(EditLine *el, int /*c*/)
 {
 	char *cp, *p, *kp;
 
@@ -168,7 +168,7 @@ ed_delete_prev_word(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_delete_next_char(EditLine *el, int c)
+ed_delete_next_char(EditLine *el, int /*c*/)
 {
 #ifdef notdef			/* XXX */
 #define	EL	el->el_line
@@ -219,7 +219,7 @@ ed_delete_next_char(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_kill_line(EditLine *el, int c)
+ed_kill_line(EditLine *el, int /*c*/)
 {
 	char *kp, *cp;
 
@@ -240,7 +240,7 @@ ed_kill_line(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_move_to_end(EditLine *el, int c)
+ed_move_to_end(EditLine *el, int /*c*/)
 {
 
 	el->el_line.cursor = el->el_line.lastchar;
@@ -263,7 +263,7 @@ ed_move_to_end(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_move_to_beg(EditLine *el, int c)
+ed_move_to_beg(EditLine *el, int /*c*/)
 {
 
 	el->el_line.cursor = el->el_line.buffer;
@@ -312,7 +312,7 @@ ed_transpose_chars(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_next_char(EditLine *el, int c)
+ed_next_char(EditLine *el, int /*c*/)
 {
 
 	if (el->el_line.cursor >= el->el_line.lastchar)
@@ -337,7 +337,7 @@ ed_next_char(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_prev_word(EditLine *el, int c)
+ed_prev_word(EditLine *el, int /*c*/)
 {
 
 	if (el->el_line.cursor == el->el_line.buffer)
@@ -363,7 +363,7 @@ ed_prev_word(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_prev_char(EditLine *el, int c)
+ed_prev_char(EditLine *el, int /*c*/)
 {
 
 	if (el->el_line.cursor > el->el_line.buffer) {
@@ -481,7 +481,7 @@ ed_argument_digit(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_unassigned(EditLine *el, int c)
+ed_unassigned(EditLine *el, int /*c*/)
 {
 
 	term_beep(el);
@@ -500,7 +500,7 @@ ed_unassigned(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_tty_sigint(EditLine *el, int c)
+ed_tty_sigint(EditLine* /*el*/, int /*c*/)
 {
 
 	return (CC_NORM);
@@ -513,7 +513,7 @@ ed_tty_sigint(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_tty_dsusp(EditLine *el, int c)
+ed_tty_dsusp(EditLine* /*el*/, int /*c*/)
 {
 
 	return (CC_NORM);
@@ -526,7 +526,7 @@ ed_tty_dsusp(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_tty_flush_output(EditLine *el, int c)
+ed_tty_flush_output(EditLine* /*el*/, int /*c*/)
 {
 
 	return (CC_NORM);
@@ -539,7 +539,7 @@ ed_tty_flush_output(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_tty_sigquit(EditLine *el, int c)
+ed_tty_sigquit(EditLine* /*el*/, int /*c*/)
 {
 
 	return (CC_NORM);
@@ -552,7 +552,7 @@ ed_tty_sigquit(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_tty_sigtstp(EditLine *el, int c)
+ed_tty_sigtstp(EditLine* /*el*/, int /*c*/)
 {
 
 	return (CC_NORM);
@@ -565,7 +565,7 @@ ed_tty_sigtstp(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_tty_stop_output(EditLine *el, int c)
+ed_tty_stop_output(EditLine* /*el*/, int /*c*/)
 {
 
 	return (CC_NORM);
@@ -578,7 +578,7 @@ ed_tty_stop_output(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_tty_start_output(EditLine *el, int c)
+ed_tty_start_output(EditLine* /*el*/, int /*c*/)
 {
 
 	return (CC_NORM);
@@ -591,7 +591,7 @@ ed_tty_start_output(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_newline(EditLine *el, int c)
+ed_newline(EditLine *el, int /*c*/)
 {
 
 	re_goto_bottom(el);
@@ -613,7 +613,7 @@ ed_newline(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_delete_prev_char(EditLine *el, int c)
+ed_delete_prev_char(EditLine *el, int /*c*/)
 {
 
 	if (el->el_line.cursor <= el->el_line.buffer)
@@ -633,7 +633,7 @@ ed_delete_prev_char(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_clear_screen(EditLine *el, int c)
+ed_clear_screen(EditLine *el, int /*c*/)
 {
 
 	term_clear_screen(el);	/* clear the whole real screen */
@@ -648,7 +648,7 @@ ed_clear_screen(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_redisplay(EditLine *el, int c)
+ed_redisplay(EditLine* /*el*/, int /*c*/)
 {
 
 	return (CC_REDISPLAY);
@@ -661,7 +661,7 @@ ed_redisplay(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_start_over(EditLine *el, int c)
+ed_start_over(EditLine *el, int /*c*/)
 {
 
 	ch_reset(el);
@@ -675,7 +675,7 @@ ed_start_over(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_sequence_lead_in(EditLine *el, int c)
+ed_sequence_lead_in(EditLine* /*el*/, int /*c*/)
 {
 
 	return (CC_NORM);
@@ -688,7 +688,7 @@ ed_sequence_lead_in(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_prev_history(EditLine *el, int c)
+ed_prev_history(EditLine *el, int /*c*/)
 {
 	char beep = 0;
 
@@ -723,7 +723,7 @@ ed_prev_history(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_next_history(EditLine *el, int c)
+ed_next_history(EditLine *el, int /*c*/)
 {
 
 	el->el_chared.c_undo.action = NOP;
@@ -745,7 +745,7 @@ ed_next_history(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_search_prev_history(EditLine *el, int c)
+ed_search_prev_history(EditLine *el, int /*c*/)
 {
 	const char *hp;
 	int h;
@@ -813,7 +813,7 @@ ed_search_prev_history(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_search_next_history(EditLine *el, int c)
+ed_search_next_history(EditLine *el, int /*c*/)
 {
 	const char *hp;
 	int h;
@@ -867,7 +867,7 @@ ed_search_next_history(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_prev_line(EditLine *el, int c)
+ed_prev_line(EditLine *el, int /*c*/)
 {
 	char *ptr;
 	int nchars = c_hpos(el);
@@ -910,7 +910,7 @@ ed_prev_line(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_next_line(EditLine *el, int c)
+ed_next_line(EditLine *el, int /*c*/)
 {
 	char *ptr;
 	int nchars = c_hpos(el);
@@ -944,7 +944,7 @@ ed_next_line(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-ed_command(EditLine *el, int c)
+ed_command(EditLine *el, int /*c*/)
 {
 	char tmpbuf[EL_BUFSIZ];
 	int tmplen;

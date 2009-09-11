@@ -387,7 +387,7 @@ re_goto_bottom(EditLine *el)
  */
 el_private void
 /*ARGSUSED*/
-re_insert(EditLine *el, char *d, int dat, int dlen, char *s, int num)
+re_insert(EditLine* /*el*/, char *d, int dat, int dlen, char *s, int num)
 {
 	char *a, *b;
 
@@ -430,7 +430,7 @@ re_insert(EditLine *el, char *d, int dat, int dlen, char *s, int num)
  */
 el_private void
 /*ARGSUSED*/
-re_delete(EditLine *el, char *d, int dat, int dlen, int num)
+re_delete(EditLine* /*el*/, char *d, int dat, int dlen, int num)
 {
 	char *a, *b;
 
