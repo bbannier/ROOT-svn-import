@@ -9,7 +9,7 @@
 
 using namespace std;
 
-void setKeywordColors(char* colorTab, char* colorTabComp, char* colorBracket, char* colorBadBracket);
+void setKeywordColors(char* colorTab, char* colorBracket, char* colorBadBracket);
 int selectColor(TString str);
 void highlightKeywords(EditLine * el);
 int matchParentheses(EditLine * el);
@@ -29,36 +29,32 @@ struct KeywordInLine {
 int color_class = 4;           // NCurses COLOR_BLUE
 int color_type = 4;            // NCurses COLOR_BLUE
 int color_bracket = 2;         // NCurses COLOR_GREEN
-int color_badbracket = 1;	   // NCurses COLOR_RED
+int color_badbracket = 1;      // NCurses COLOR_RED
 
 /**
- *	Sets the colours to use for highlighting keywords (types and classnames), 
- *	matching bracket pairs, mismatched brackets and tab completion.
- *	Overrides the default colour settings:
- *	class and type: 4 (blue)
- *	bracket pair:	2 (green)
- *	bad bracket:	1 (red)
- *	tab completion:	5  (magenta)
+ *   Sets the colours to use for highlighting keywords (types and classnames), 
+ *   matching bracket pairs, mismatched brackets and tab completion.
+ *   Overrides the default colour settings:
+ *   class and type: 4 (blue)
+ *   bracket pair:   2 (green)
+ *   bad bracket:   1 (red)
  */
-void setKeywordColors(char* colorType, char* colorTabComp, char* colorBracket, char* colorBadBracket)
+void setKeywordColors(char* colorType, char* colorBracket, char* colorBadBracket)
 {
-	int col = -1;
+   int col = -1;
 
-	col = selectColor(TString(colorType));
-	if (col > -1) 
-		color_class = col;
-	color_type = color_class; 
+   col = selectColor(TString(colorType));
+   if (col > -1) 
+      color_class = col;
+   color_type = color_class; 
 
-	col = selectColor(TString(colorBracket));
-	if (col > -1)
-		color_bracket = col;
+   col = selectColor(TString(colorBracket));
+   if (col > -1)
+      color_bracket = col;
 
-	col = selectColor(TString(colorBadBracket));
-	if (col > -1)
-		color_badbracket = col;
-
-	// do nothing with colorTabComp because don't know where it gets set!
-        // Answer: it's at readline.cxx:1541 - but how can we pass it there?
+   col = selectColor(TString(colorBadBracket));
+   if (col > -1)
+      color_badbracket = col;
 }
 
 /* 
@@ -66,25 +62,25 @@ void setKeywordColors(char* colorType, char* colorTabComp, char* colorBracket, c
  */
 int selectColor(TString str)
 {
-	if (str.Contains("black", TString::kIgnoreCase)) {
-		return 0;		// nCurses COLOR_BLACK
-	}else if (str.Contains("red", TString::kIgnoreCase)) {
-		return 1;		// nCurses COLOR_RED
-	}else if (str.Contains("green", TString::kIgnoreCase)) {
-		return 2;		// nCurses COLOR_GREEN
-	}else if (str.Contains("yellow", TString::kIgnoreCase)) {
-		return 3;		// nCurses COLOR_YELLOW
-	}else if (str.Contains("blue", TString::kIgnoreCase)) {
-		return 4;		// nCurses COLOR_BLUE
-	}else if (str.Contains("magenta", TString::kIgnoreCase)) {
-		return 5;		// nCurses COLOR_MAGENTA
-	}else if (str.Contains("cyan", TString::kIgnoreCase)) {
-		return 6;		// nCurses COLOR_CYAN
-	}else if (str.Contains("white", TString::kIgnoreCase)) {
-		return 7;		// nCurses COLOR_WHITE
-	}else {
-		return -1;
-	}
+   if (str.Contains("black", TString::kIgnoreCase)) {
+      return 0;      // nCurses COLOR_BLACK
+   }else if (str.Contains("red", TString::kIgnoreCase)) {
+      return 1;      // nCurses COLOR_RED
+   }else if (str.Contains("green", TString::kIgnoreCase)) {
+      return 2;      // nCurses COLOR_GREEN
+   }else if (str.Contains("yellow", TString::kIgnoreCase)) {
+      return 3;      // nCurses COLOR_YELLOW
+   }else if (str.Contains("blue", TString::kIgnoreCase)) {
+      return 4;      // nCurses COLOR_BLUE
+   }else if (str.Contains("magenta", TString::kIgnoreCase)) {
+      return 5;      // nCurses COLOR_MAGENTA
+   }else if (str.Contains("cyan", TString::kIgnoreCase)) {
+      return 6;      // nCurses COLOR_CYAN
+   }else if (str.Contains("white", TString::kIgnoreCase)) {
+      return 7;      // nCurses COLOR_WHITE
+   }else {
+      return -1;
+   }
 }
 
 /*
@@ -98,15 +94,15 @@ void highlightKeywords(EditLine * el)
 
    TString sBuffer(el->el_line.buffer, el->el_line.lastchar - el->el_line.buffer) ;
 
-      // check whole buffer for any highlighted brackets and remove colour info
+      // check whole buffer for any highlighted chars and remove colour info
    for (int i = 0; i < (el->el_line.lastchar - el->el_line.buffer); i++)
-	  {
-		 if ( el->el_line.bufcolor[i].foreColor != -1 )
-			{
-			   el->el_line.bufcolor[i] = -1;                // reset to default colours
-			   term__repaint(el, i);
-			}
-	  }
+     {
+       if ( el->el_line.bufcolor[i].foreColor != -1 )
+         {
+            el->el_line.bufcolor[i] = -1;                // reset to default colours
+            term__repaint(el, i);
+         }
+     }
 
    TString keyword;
    Ssiz_t posNextTok = 0;
@@ -168,7 +164,7 @@ int matchParentheses(EditLine * el) {
       {
          sBuffer.Append(*c);
       }
-	
+   
    // check whole buffer for any highlighted brackets and remove colour info
    for (int i = 0; i < (el->el_line.lastchar - el->el_line.buffer); i++)
       {
@@ -186,7 +182,7 @@ int matchParentheses(EditLine * el) {
    if (sBuffer.Length() > 0)
       {
          int cursorPos = el->el_line.cursor - el->el_line.buffer;
-		 bracketPos = cursorPos;
+       bracketPos = cursorPos;
 
          // check against each bracket type
          int bIndex = 0;
@@ -208,26 +204,26 @@ int matchParentheses(EditLine * el) {
 
          // current cursor char is not an open bracket, and there is a previous char to check
          if ( foundParenIdx == -1 && bracketPos > 0) {
-			//check previously typed char for being a closing bracket
-			bracketPos--;
-				         // check against each bracket type
-			bIndex = 0;
-			for (bIndex = 0; bIndex<amtBrackets; bIndex++)
+         //check previously typed char for being a closing bracket
+         bracketPos--;
+                     // check against each bracket type
+         bIndex = 0;
+         for (bIndex = 0; bIndex<amtBrackets; bIndex++)
             {
-			   // if current char is equal to closing bracket, push onto stack
-			   if (sBuffer[bracketPos] == bTypes[bIndex][1])
+            // if current char is equal to closing bracket, push onto stack
+            if (sBuffer[bracketPos] == bTypes[bIndex][1])
                   {
                      locBrackets.push(bracketPos);
                      foundParenIdx = 1;
-					 break;
-				  } 
-			}
-		 }
+                break;
+              } 
+         }
+       }
 
-	 	 // no bracket found on either current or previous char, return.
-		 if ( foundParenIdx == -1 ) {
-			return foundParenIdx;
-		 }
+        // no bracket found on either current or previous char, return.
+       if ( foundParenIdx == -1 ) {
+         return foundParenIdx;
+       }
 
          // iterate through remaining letters until find a matching closing bracket
          // if another open bracket of the same type is found, push onto stack
@@ -258,10 +254,10 @@ int matchParentheses(EditLine * el) {
                         }
                   }
             }
-		 if ( !locBrackets.empty() )
-			{
-				colorBrackets(el, bracketPos, bracketPos, color_badbracket);
-			}
+       if ( !locBrackets.empty() )
+         {
+            colorBrackets(el, bracketPos, bracketPos, color_badbracket);
+         }
       }
 
    return foundParenIdx;
@@ -283,8 +279,8 @@ void colorWord(EditLine * el , int first, int num, int textColor)
    for (int index = first; index < first + num; ++index)
       {
          el->el_line.bufcolor[index].foreColor = textColor;
-         el->el_line.bufcolor[index].backColor = bgColor;       
-         term__repaint(el, index);      
+         el->el_line.bufcolor[index].backColor = bgColor;
+         term__repaint(el, index);     
       }
    term__resetcolor();
 }
