@@ -58,6 +58,7 @@ void setKeywordColors(char* colorType, char* colorTabComp, char* colorBracket, c
 		color_badbracket = col;
 
 	// do nothing with colorTabComp because don't know where it gets set!
+        // Answer: it's at readline.cxx:1541 - but how can we pass it there?
 }
 
 /* 
@@ -112,7 +113,7 @@ void highlightKeywords(EditLine * el)
    Ssiz_t posPrevTok = 0;
    // regular expression inverse of match expression to find end of match
    while (sBuffer.Tokenize(keyword, posNextTok, "[^a-zA-Z0-9_]")) {
-      if (gInterpreter->CheckClassInfo(keyword)) {
+      if (gInterpreter->CheckClassInfo(keyword, kFALSE)) {
          Ssiz_t toklen = posNextTok - posPrevTok;
          if (posNextTok == -1)
             toklen = sBuffer.Length() - posPrevTok;
@@ -285,6 +286,7 @@ void colorWord(EditLine * el , int first, int num, int textColor)
          el->el_line.bufcolor[index].backColor = bgColor;       
          term__repaint(el, index);      
       }
+   term__resetcolor();
 }
 
 /*
@@ -302,5 +304,7 @@ void colorBrackets(EditLine * el, int open, int close, int textColor)
    el->el_line.bufcolor[close].foreColor = textColor;
    el->el_line.bufcolor[close].backColor = bgColor;
    term__repaint(el, close);    
+
+   term__resetcolor();
 }
 

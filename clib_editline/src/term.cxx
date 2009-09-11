@@ -1283,6 +1283,26 @@ term_init_color(EditLine *el)
    setupterm(0, 1, &errcode);   
 }
 
+/* term__gettermmanip():
+ *	Retrieve the static terminal manipulation object
+ */
+el_private TTermManip&
+term__gettermmanip()
+{
+   static TTermManip tm; /* Terminal color manipulation */
+   return tm;
+}
+
+/* term__resetcolor():
+ *	Reset the color to its default value
+ */
+el_protected void
+term__resetcolor()
+{
+   TTermManip& tm = term__gettermmanip();
+   tm.ResetTerm();
+}
+
 /* term__putc():
  *	Add a character
  */
@@ -1300,8 +1320,7 @@ term__putcolorch(int c, el_color_t *color)
 {
 	if ( color != NULL && c != ' ')
 	{
-           static TTermManip tm; /* Terminal color manipulation */
-
+           TTermManip& tm = term__gettermmanip();
 		switch ( color->foreColor ) {
 			case 0:								// nCurses COLOR_BLACK
 					tm.SetColor(0,0,0);			// black
@@ -1332,7 +1351,6 @@ term__putcolorch(int c, el_color_t *color)
 		// output the coloured char
 		int res = fputc(c, term_outfile);
 		term__flush();
-                tm.ResetTerm();
 		return res;
 	}
 

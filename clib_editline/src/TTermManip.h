@@ -19,8 +19,18 @@ public:
    
    bool SetColor(unsigned char r, unsigned char g, unsigned char b);
 
-   void StartUnderline() { WriteTerm(fStartUnderline); }
-   void StopUnderline() { WriteTerm(fStopUnderline); }
+   void StartUnderline() {
+      if (!fCurrentlyUnterlined) {
+         WriteTerm(fStartUnderline);
+         fCurrentlyUnterlined = true;
+      }
+   }
+   void StopUnderline() {
+      if (fCurrentlyUnterlined) {
+         WriteTerm(fStopUnderline);
+         fCurrentlyUnterlined = false;
+      }
+   }
 
    bool ResetTerm();
 
@@ -68,6 +78,9 @@ private:
    char* fStopUnderline; // stop underline;
    typedef int (*PutcFunc_t)(PutcFuncArg_t);
    PutcFunc_t fPutc;
+   int   fCurrentColorIdx; // index if the currently active color
+   bool  fCurrentlyBold; // whether bold is active
+   bool  fCurrentlyUnterlined; // whether underlining is active
 
    static const int fgStartColIdx = 5;
 
