@@ -56,7 +56,7 @@ __RCSID("$NetBSD: refresh.c,v 1.17 2001/04/13 00:53:11 lukem Exp $");
 
 #include "el.h"
 
-el_private void	re_addc(EditLine *, int);
+el_private void	re_addc(EditLine *, int, el_color_t* color);
 el_private void	re_update_line(EditLine *, char *, char *, el_color_t*, int);
 el_private void	re_insert (EditLine *, char *, int, int, char *, int);
 el_private void	re_delete(EditLine *, char *, int, int, int);
@@ -134,16 +134,16 @@ re_printstr(EditLine *el, char *str, char *f, char *t)
  *	Draw c, expanding tabs, control chars etc.
  */
 el_private void
-re_addc(EditLine *el, int c)
+re_addc(EditLine *el, int c, el_color_t* color)
 {
 
 	if (isprint(c)) {
-		re_putc(el, c, 1);
+           re_putc(el, c, 1, color);
 		return;
 	}
 	if (c == '\n') {				/* expand the newline */
 		int oldv = el->el_refresh.r_cursor.v;
-		re_putc(el, '\0', 0);			/* assure end of line */
+		re_putc(el, '\0', 0, 0);			/* assure end of line */
 		if (oldv == el->el_refresh.r_cursor.v) { /* XXX */
 			el->el_refresh.r_cursor.h = 0;	/* reset cursor pos */
 			el->el_refresh.r_cursor.v++;
@@ -152,22 +152,22 @@ re_addc(EditLine *el, int c)
 	}
 	if (c == '\t') {				/* expand the tab */
 		for (;;) {
-			re_putc(el, ' ', 1);
+                   re_putc(el, ' ', 1, 0);
 			if ((el->el_refresh.r_cursor.h & 07) == 0)
 				break;			/* go until tab stop */
 		}
 	} else if (iscntrl(c)) {
-		re_putc(el, '^', 1);
+           re_putc(el, '^', 1, 0);
 		if (c == '\177')
-			re_putc(el, '?', 1);
+                   re_putc(el, '?', 1, 0);
 		else
 		    /* uncontrolify it; works only for iso8859-1 like sets */
-			re_putc(el, (c | 0100), 1);
+                   re_putc(el, (c | 0100), 1, 0);
 	} else {
-		re_putc(el, '\\', 1);
-		re_putc(el, (int) ((((unsigned int) c >> 6) & 07) + '0'), 1);
-		re_putc(el, (int) ((((unsigned int) c >> 3) & 07) + '0'), 1);
-		re_putc(el, (c & 07) + '0', 1);
+           re_putc(el, '\\', 1, 0);
+           re_putc(el, (int) ((((unsigned int) c >> 6) & 07) + '0'), 1, 0);
+           re_putc(el, (int) ((((unsigned int) c >> 3) & 07) + '0'), 1, 0);
+           re_putc(el, (c & 07) + '0', 1, 0);
 	}
 }
 
@@ -176,14 +176,17 @@ re_addc(EditLine *el, int c)
  *	Draw the character given
  */
 el_protected void
-re_putc(EditLine *el, int c, int shift)
+re_putc(EditLine *el, int c, int shift, el_color_t* color)
 {
 
 	ELRE_DEBUG(1, (__F, "printing %3.3o '%c'\r\n", c, c));
 
 	el->el_vdisplay[el->el_refresh.r_cursor.v][el->el_refresh.r_cursor.h] = c;
-	el->el_vdispcolor[el->el_refresh.r_cursor.v][el->el_refresh.r_cursor.h] = -1;		// LOUISE COLOUR - note: this should be colour info not null!
-
+        if (color) {
+           el->el_vdispcolor[el->el_refresh.r_cursor.v][el->el_refresh.r_cursor.h] = *color;
+        } else {
+           el->el_vdispcolor[el->el_refresh.r_cursor.v][el->el_refresh.r_cursor.h] = -1;
+        }
 	if (!shift)
 		return;
 
@@ -285,7 +288,7 @@ re_refresh(EditLine *el)
 			cur.h = el->el_refresh.r_cursor.h;
 			cur.v = el->el_refresh.r_cursor.v;
 		}
-		re_addc(el, (unsigned char) *cp);
+		re_addc(el, (unsigned char) *cp, &el->el_line.bufcolor[cp - el->el_line.buffer]);
 	}
 
 	if (cur.h == -1) {	/* if I haven't been set yet, I'm at the end */
@@ -301,14 +304,14 @@ re_refresh(EditLine *el)
 		 * one character gap to the input buffer.
 		 */
 		while (--rhdiff > 0)	/* pad out with spaces */
-			re_putc(el, ' ', 1);
+                   re_putc(el, ' ', 1, 0);
 		prompt_print(el, EL_RPROMPT);
 	} else {
 		el->el_rprompt.p_pos.h = 0;	/* flag "not using rprompt" */
 		el->el_rprompt.p_pos.v = 0;
 	}
 
-	re_putc(el, '\0', 0);	/* make line ended with NUL, no cursor shift */
+	re_putc(el, '\0', 0, 0);	/* make line ended with NUL, no cursor shift */
 
 	el->el_refresh.r_newcv = el->el_refresh.r_cursor.v;
 

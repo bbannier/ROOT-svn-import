@@ -1316,55 +1316,57 @@ term__putc(int c)
 	return (term__putcolorch(c, NULL));
 }
 
+/* term__setcolor():
+ *	Set terminal to a given foreground colour
+ */
+el_protected void
+term__setcolor(int fgcol)
+{
+   TTermManip& tm = term__gettermmanip();
+   switch ( fgcol ) {
+   case -1:
+      tm.SetDefaultColor();
+      break;
+   case 0:								// nCurses COLOR_BLACK
+      tm.SetColor(0,0,0);			// black
+      break;
+   case 1:								// nCurses COLOR_RED
+      tm.SetColor(255,0,0);		// red (with bold)
+      break;
+   case 2:								// nCurses COLOR_GREEN
+      tm.SetColor(0,255,0);		// green (with bold)
+      break;
+   case 3:								// nCurses COLOR_YELLOW
+      tm.SetColor(255,255,0);		// yellow (with bold)
+      break;			
+   case 4:								// nCurses COLOR_BLUE
+      tm.SetColor(0,0,127);		// blue
+      break;
+   case 5:								// nCurses COLOR_MAGENTA
+      tm.SetColor(127,0,127);		// magenta
+      break;
+   case 6:								// nCurses COLOR_CYAN
+      tm.SetColor(0,127,127);		// cyan
+      break;
+   case 7:								// nCurses COLOR_WHITE
+      tm.SetColor(255,255,255);	// white (with bold)
+      break;
+   }
+		
+}
+
 /* term__putcolorch():
  *	Add a character with colour information
  */
 el_protected int
 term__putcolorch(int c, el_color_t *color)
 {
-	if ( color != NULL && c != ' ')
-	{
-           TTermManip& tm = term__gettermmanip();
-		switch ( color->foreColor ) {
-                case -1:
-                   tm.SetDefaultColor();
-                   break;
-			case 0:								// nCurses COLOR_BLACK
-					tm.SetColor(0,0,0);			// black
-					break;
-			case 1:								// nCurses COLOR_RED
-					tm.SetColor(255,0,0);		// red (with bold)
-					break;
-			case 2:								// nCurses COLOR_GREEN
-					tm.SetColor(0,255,0);		// green (with bold)
-					break;
-			case 3:								// nCurses COLOR_YELLOW
-					tm.SetColor(255,255,0);		// yellow (with bold)
-					break;			
-			case 4:								// nCurses COLOR_BLUE
-					tm.SetColor(0,0,127);		// blue
-					break;
-			case 5:								// nCurses COLOR_MAGENTA
-					tm.SetColor(127,0,127);		// magenta
-					break;
-			case 6:								// nCurses COLOR_CYAN
-					tm.SetColor(0,127,127);		// cyan
-					break;
-			case 7:								// nCurses COLOR_WHITE
-					tm.SetColor(255,255,255);	// white (with bold)
-					break;
-		}
-		
-		// output the coloured char
-		int res = fputc(c, term_outfile);
-		term__flush();
-		return res;
-	}
+   if (color != NULL && c != ' ') {
+      term__setcolor(color->foreColor);
+   }
 
-	// otherwise output the normal char
-	int res = fputc(c, term_outfile);
-
-	return res;
+   int res = fputc(c, term_outfile);
+   return res;
 
 }
 

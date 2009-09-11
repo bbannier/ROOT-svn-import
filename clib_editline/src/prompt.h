@@ -58,5 +58,6 @@ el_protected int	prompt_set(EditLine *, el_pfunc_t, int);
 el_protected int	prompt_get(EditLine *, el_pfunc_t *, int);
 el_protected int	prompt_init(EditLine *);
 el_protected void	prompt_end(EditLine *);
+el_protected void	prompt_setcolor(int col);
 
 #endif /* _h_el_prompt */
