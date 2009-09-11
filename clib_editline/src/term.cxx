@@ -705,7 +705,7 @@ mc_again:
 					goto mc_again;	/* and try again */
 				}
 				for (i = 0; i < -del; i++)
-					term__putcolorch('\b', NULL);
+					term__putcolorch('\b', &el->el_dispcolor[el->el_cursor.v][el->el_cursor.h]);
 			}
 		}
 	}
@@ -730,7 +730,10 @@ term_overwrite(EditLine *el, char *cp, el_color_t* color, int n)
 		return;
 	}
 	do {
-        term__putcolorch(*cp++, /*&(el->el_line.bufcolor[cp - el->el_line.buffer])*/ color ? color++ : 0);
+           if (color) {
+              el->el_dispcolor[el->el_cursor.v][el->el_cursor.h] = *color;
+           }
+              term__putcolorch(*cp++, /*&(el->el_line.bufcolor[cp - el->el_line.buffer])*/ color ? color++ : 0);
 		el->el_cursor.h++;
 	} while (--n);
 
@@ -1301,6 +1304,7 @@ term__resetcolor()
 {
    TTermManip& tm = term__gettermmanip();
    tm.ResetTerm();
+   term__flush();
 }
 
 /* term__putc():
@@ -1322,6 +1326,9 @@ term__putcolorch(int c, el_color_t *color)
 	{
            TTermManip& tm = term__gettermmanip();
 		switch ( color->foreColor ) {
+                case -1:
+                   tm.SetDefaultColor();
+                   break;
 			case 0:								// nCurses COLOR_BLACK
 					tm.SetColor(0,0,0);			// black
 					break;

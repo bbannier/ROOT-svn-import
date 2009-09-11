@@ -33,6 +33,7 @@ public:
    }
 
    bool ResetTerm();
+   void SetDefaultColor();
 
 private:
    struct Color {
