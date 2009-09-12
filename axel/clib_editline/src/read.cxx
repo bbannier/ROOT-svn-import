@@ -515,8 +515,8 @@ el_gets(EditLine *el, int *nread)
 				/* make sure the tty is set up correctly */
                 //(void) tty_cookedmode(el);
 	term__flush();		/* flush any buffered output */
-	if (el->el_flags & HANDLE_SIGNALS)
-		sig_clr(el);
+	//if (el->el_flags & HANDLE_SIGNALS)
+	//	sig_clr(el);
 	if (nread)
 		*nread = num;
 	if (retval == 1) /* enter key pressed - add a newline */

@@ -83,8 +83,10 @@ sig_handler(int signo)
 	switch (signo) {
 	case SIGCONT:
 		tty_rawmode(sel);
-		if (ed_redisplay(sel, 0) == CC_REFRESH)
-			re_refresh(sel);
+		//if (ed_redisplay(sel, 0) == CC_REFRESH) {
+                   re_clear_display(sel);
+                   re_refresh(sel);
+                   //}
 		term__flush();
 		break;
 
