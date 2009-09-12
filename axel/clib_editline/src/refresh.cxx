@@ -355,6 +355,7 @@ re_refresh(EditLine *el)
 			el->el_dispcolor[i][0] = -1;					// LOUISE COLOUR - note: this should be null
 		}
 
+        term__setcolor(-1); // prompt / keyword, whatever: back to normal
 	el->el_refresh.r_oldcv = el->el_refresh.r_newcv; /* set for next time */
 	ELRE_DEBUG(1, (__F,
 	    "\r\ncursor.h = %d, cursor.v = %d, cur.h = %d, cur.v = %d\r\n",
