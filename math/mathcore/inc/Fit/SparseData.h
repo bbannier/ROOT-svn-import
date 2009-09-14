@@ -38,7 +38,7 @@ namespace ROOT {
          ~SparseData();
 
          void Add(std::vector<double>& min, std::vector<double>& max, 
-                  const double content, const double error);
+                  const double content, const double error = 1.0);
          
          void PrintList();
 
