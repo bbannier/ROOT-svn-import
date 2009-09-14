@@ -642,6 +642,9 @@ el_gets(EditLine* el, int* nread) {
 
 el_public const char*
 el_gets_newline(EditLine* el, int* nread) {
+   if (el->el_flags & HANDLE_SIGNALS) {
+      sig_set(el);
+   }
    re_clear_display(el);        /* reset the display stuff */
 
    /* '\a' is used to signal that we re-entered this function without newline being hit. */
