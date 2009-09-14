@@ -93,7 +93,8 @@ typedef struct lineinfo {
  * Note that el_gets() returns the trailing newline!
  */
 const char	*el_gets(EditLine *, int *);
-const char  *el_gets_newline(EditLine *, int *);
+const char      *el_gets_newline(EditLine *, int *);
+bool             el_eof(EditLine *);
 int		 el_getc(EditLine *, char *);
 void		 el_push(EditLine *, const char *);
 
