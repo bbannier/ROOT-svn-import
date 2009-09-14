@@ -261,7 +261,6 @@ struct WriteHistoryTrigger {
 
 extern "C" {
 //static int      gl_notty = 0;           /* 1 when not a tty */
-static void gl_error(char* buf);        /* write error msg and die */
 } // extern "C"
 
 /************************ nonportable part *********************************/
@@ -279,12 +278,6 @@ Gl_config(const char* which, int value) {
 
 
 /******************** fairly portable part *********************************/
-
-static void
-gl_error(char* buf) {
-   fprintf(stderr, "%s", buf);
-}
-
 
 void
 Gl_setwidth(int /*w*/) {

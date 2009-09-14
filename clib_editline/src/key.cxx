@@ -92,7 +92,7 @@ el_private int node__try(EditLine*, key_node_t*, const char*,
 el_private key_node_t* node__get(int);
 el_private void node__put(EditLine*, key_node_t*);
 el_private int node__delete(EditLine*, key_node_t**, char*);
-el_private int node_lookup(EditLine*, char*, key_node_t*, int);
+el_private int node_lookup(EditLine*, const char*, key_node_t*, int);
 el_private int node_enum(EditLine*, key_node_t*, int);
 el_private int key__decode_char(char*, int, int);
 
@@ -247,7 +247,7 @@ key_delete(EditLine* el, char* key) {
  *	Print entire el->el_key.map if null
  */
 el_protected void
-key_print(EditLine* el, char* key) {
+key_print(EditLine* el, const char* key) {
    /* do nothing if el->el_key.map is empty and null key specified */
    if (el->el_key.map == NULL && *key == 0) {
       return;
@@ -486,7 +486,7 @@ node__get(int ch) {
  *	Print if last node
  */
 el_private int
-node_lookup(EditLine* el, char* str, key_node_t* ptr, int cnt) {
+node_lookup(EditLine* el, const char* str, key_node_t* ptr, int cnt) {
    int ncnt;
 
    if (ptr == NULL) {
@@ -583,7 +583,7 @@ node_enum(EditLine* el, key_node_t* ptr, int cnt) {
  *	function specified by val
  */
 el_protected void
-key_kprint(EditLine* el, char* key, key_value_t* val, int ntype) {
+key_kprint(EditLine* el, const char* key, key_value_t* val, int ntype) {
    el_bindings_t* fp;
    char unparsbuf[EL_BUFSIZ];
    static const char fmt[] = "%-15s->  %s\n";

@@ -75,14 +75,14 @@ typedef struct _hist_entry {
 /* global variables used by readline enabled applications */
 __BEGIN_DECLS
 extern const char* rl_library_version;
-extern char* rl_readline_name;
+extern const char* rl_readline_name;
 extern FILE* rl_instream;
 extern FILE* rl_outstream;
 extern char* rl_line_buffer;
 extern int rl_point, rl_end;
 extern int history_base, history_length;
 extern int max_input_history;
-extern char* rl_basic_word_break_characters;
+extern const char* rl_basic_word_break_characters;
 extern char* rl_completer_word_break_characters;
 extern char* rl_completer_quote_characters;
 extern CPFunction* rl_completion_entry_function;

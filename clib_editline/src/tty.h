@@ -453,7 +453,7 @@
 #define MD_NN 5
 
 typedef struct {
-   char* t_name;
+   const char* t_name;
    u_int t_setmask;
    u_int t_clrmask;
 } ttyperm_t[NN_IO][MD_NN];
