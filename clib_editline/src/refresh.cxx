@@ -262,7 +262,7 @@ re_refresh(EditLine *el)
 
 	cur.h = -1;		/* set flag in case I'm not set */
 	cur.v = 0;
-
+                             
 	prompt_print(el, EL_PROMPT);
 
 	/* draw the current input buffer */

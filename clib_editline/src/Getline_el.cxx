@@ -221,6 +221,7 @@ char   *Getlinem(int mode, const char *prompt); /* allows reading char by char *
 void    Gl_config(const char *which, int value); /* set some options */
 void    Gl_setwidth(int w);          /* specify width of screen */
 void    Gl_windowchanged();          /* call after SIGWINCH signal */
+int     Gl_eof();
 void    Gl_histinit(char *file); /* read entries from old histfile */
 void    Gl_histadd(char *buf);       /* adds entries to hist */
 void    Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
@@ -260,8 +261,6 @@ struct WriteHistoryTrigger {
 extern "C" {
 
 //static int      gl_notty = 0;           /* 1 when not a tty */
-//static int      gl_no_echo = 0;         /* do not echo input characters */
-//static int      gl_erase_line = 0;      /* erase line before returning */
 static void     gl_error(char *buf);    /* write error msg and die */
 } // extern "C"
 
@@ -270,18 +269,15 @@ static void     gl_error(char *buf);    /* write error msg and die */
 extern "C" {
 
 void
-Gl_config(const char *which, int /*value*/)
+Gl_config(const char *which, int value)
 {
    if (strcmp(which, "noecho") == 0) {
-      //LOUISE - pass to el
-      //gl_no_echo = value;
+      setEcho(!value);
    }
-   else if (strcmp(which, "erase") == 0) {
-      //LOUISE - pass to el
-      //gl_erase_line = value;
-   }
-   else
+   else {
+      // unsupported directive
       printf("gl_config: %s ?\n", which);
+   }
 }
 
 
@@ -290,26 +286,13 @@ Gl_config(const char *which, int /*value*/)
 static void
 gl_error(char *buf)
 {
-    int len = strlen(buf);
-
-#ifdef WIN32
-    {
-      char *OemBuf = (char *)malloc(2*len);
-      CharToOemBuff(buf,OemBuf,len);
-      write(2, OemBuf, len);
-      free(OemBuf);
-    }
-#else
-    // LOUISE what is this?? write(2, buf, len);
-#endif
+    fprintf(stderr, "%s", buf);
 }
 
 void
-Gl_setwidth(int w)
+Gl_setwidth(int /*w*/)
 {
-        //gl_termw = w;
-        //gl_scroll = w / 3;
-        // LOUISE: pass to el
+   termResize();  // no need to pass in width as new func detects term size itself
 }
 
 void
