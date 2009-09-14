@@ -43,6 +43,7 @@
 #if HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #else
+/*
 #ifndef __BEGIN_DECLS
 #if defined(__cplusplus)
 #define __BEGIN_DECLS   extern "C" {
@@ -52,6 +53,7 @@
 #define __END_DECLS
 #endif
 #endif
+*/
 #endif
 
 /* list of readline stuff supported by editline library's readline wrapper */
@@ -127,6 +129,7 @@ void		 rl_display_match_list(char **, int, int);
 int		 rl_insert(int, int);
 void		 rl_reset_terminal(void);
 int		 rl_bind_key(int, int (*)(int, int));
+int              rl_eof(void);
 
 void rl_cleanup_after_signal();
 __END_DECLS

@@ -429,10 +429,10 @@ Gl_histadd(char *buf)
 	add_history(buf);
 }
 
-} // extern "C"
-
 int
 Gl_eof()
 {
-   return 0;
+   return rl_eof();
 }
+
+} // extern "C"

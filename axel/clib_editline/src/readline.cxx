@@ -143,7 +143,6 @@ static int		 _rl_qsort_string_compare(const void *, const void *);
  */
 static char *el_rl_prompt = NULL;
 
-
 /* ARGSUSED */
 static char *
 _get_prompt(EditLine* /*el*/)
@@ -1793,4 +1792,8 @@ editline * el_readline_el()
 {
         if( NULL == e ) rl_initialize();
         return e;
+}
+
+int rl_eof() {
+   return el_eof(e);
 }

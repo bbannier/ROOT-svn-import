@@ -351,6 +351,45 @@ el_gets(EditLine *el, int *nread)
 
         //fprintf( el->el_errfile, "el_gets()\n" );
 
+	if (el->el_flags & NO_TTY) {
+		char *cp = el->el_line.buffer;
+		size_t idx;
+                size_t numRead = 0;
+
+		while ((numRead = read_char(el, cp)) == 1) {
+			/* make sure there is space for next character */
+			if (cp + 1 >= el->el_line.limit) {
+				idx = (cp - el->el_line.buffer);
+				if (!ch_enlargebufs(el, 2))
+					break;
+				cp = &el->el_line.buffer[idx];
+			}
+			cp++;
+                        if ( cp[-1] == '\r' || cp[-1] == '\n' )
+                        {
+                                // cp[-1] = '\0';
+                                // ^^^ added by stephan: this returning
+                                // the newline is tedious on clients
+                                // and in contrary to common STL
+                                // usage.
+				break;
+                        }
+		}
+                if (!numRead) {
+                   // singal EOF by count > 0 but line==""
+                   *cp = 0;
+                   cp++;
+                   strcpy(cp, "EOF");
+                   cp += 3;
+                }
+
+		el->el_line.cursor = el->el_line.lastchar = cp;
+		*cp = '\0';
+		if (nread)
+			*nread = el->el_line.cursor - el->el_line.buffer;
+		return (el->el_line.buffer);
+	}
+	
 	if (el->el_flags & EDIT_DISABLED) {
                 // fprintf(stderr, "el_gets() EDIT_DISABLED block\n" );
 		char *cp = el->el_line.buffer;
@@ -558,41 +597,6 @@ el_gets(EditLine *el, int *nread)
 el_public const char * 
 el_gets_newline(EditLine *el, int *nread)
 {
-	if (el->el_flags & HANDLE_SIGNALS)
-		sig_set(el);
-
-	if (el->el_flags & NO_TTY) {
-		char *cp = el->el_line.buffer;
-		size_t idx;
-
-		while (read_char(el, cp) == 1) {
-			/* make sure there is space for next character */
-			if (cp + 1 >= el->el_line.limit) {
-				idx = (cp - el->el_line.buffer);
-				if (!ch_enlargebufs(el, 2))
-					break;
-				cp = &el->el_line.buffer[idx];
-			}
-			cp++;
-                        //if ( (cp[-1] == '\r') || (cp[-1] == '\n') )
-                        if ( *cp == '\r' || *cp == '\n' )
-                        {
-                                // cp[-1] = '\0';
-                                // ^^^ added by stephan: this returning
-                                // the newline is tedious on clients
-                                // and in contrary to common STL
-                                // usage.
-				break;
-                        }
-		}
-
-		el->el_line.cursor = el->el_line.lastchar = cp;
-		*cp = '\0';
-		if (nread)
-			*nread = el->el_line.cursor - el->el_line.buffer;
-		return (el->el_line.buffer);
-	}
-	
 	re_clear_display(el);	/* reset the display stuff */
 
 	/* '\a' is used to signal that we re-entered this function without newline being hit. */
@@ -605,25 +609,20 @@ el_gets_newline(EditLine *el, int *nread)
 		ch_reset(el);
 	}
 
-#ifdef FIONREAD
-	if (el->el_tty.t_mode == EX_IO && ma->level < 0) {
-		long chrs = 0;
-                // fprintf( stderr, "el_gets() EX_IO mode.\n" );
-		(void) ioctl(el->el_infd, FIONREAD, (ioctl_t) & chrs);
-		if (chrs == 0) {
-			if (tty_rawmode(el) < 0) {
-				if (nread)
-					*nread = 0;
-				return (NULL);
-			}
-		}
-	}
-#endif /* FIONREAD */
-
-	re_refresh(el);		/* print the prompt */
+        if (!(el->el_flags & NO_TTY)) {
+           re_refresh(el);		/* print the prompt */
+        }
 	term__flush();
 
+        if (nread)
+           *nread = 0;
 	return NULL;
+}
+
+
+el_public bool
+el_eof(EditLine* el) {
+   return (!el->el_line.buffer[0] && !strcmp(el->el_line.buffer + 1, "EOF"));
 }
 
 /**
