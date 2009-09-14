@@ -3,6 +3,7 @@
 
 #include <map>
 #include <cstring>
+#include <stdio.h>
 
 // setupterm must be called before TTermManip can be created!
 class TTermManip {
