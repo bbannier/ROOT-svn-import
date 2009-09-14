@@ -98,8 +98,11 @@ extern El_in_key_hook_t rl_in_key_hook;
 char		*readline(const char *, bool newline);
 int		 rl_initialize(void);
 
-void    setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
+void  setEcho(bool echo);
+void  termResize(void);
+void  setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
                   const char* colorBadBracket, const char* colorPrompt);
+
 void		 using_history(void);
 int		 add_history(char *);
 void		 clear_history(void);

@@ -363,6 +363,21 @@ void setColors(const char* colorTab, const char* colorTabComp, const char* color
            prompt_setcolor(col);
 }
 
+void termResize(void)
+{
+   el_resize(e);  // this is called by SIGWINCH when term is resized - detects term width itself
+}
+
+void setEcho(bool echo)
+{
+   if (echo) {
+      tty_noquotemode(e);
+   } 
+   else {
+      tty_quotemode(e);
+   }
+}
+
 /*
  * history functions
  */

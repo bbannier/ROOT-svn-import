@@ -438,6 +438,11 @@ el_resize(EditLine *el)
 		term_change_size(el, lins, cols);
 
 	(void) sigprocmask(SIG_SETMASK, &oset, NULL);
+
+                              re_clear_display(el);
+                              re_clear_lines(el);
+                              re_refresh(el);
+                              term__flush();
 }
 
 
