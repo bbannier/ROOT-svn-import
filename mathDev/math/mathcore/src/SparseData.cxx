@@ -32,7 +32,7 @@ namespace ROOT {
       class Box
       {
       public:
-         Box(vector<double>& min, vector<double>& max, double value = 0.0, double error = 0.0):
+         Box(vector<double>& min, vector<double>& max, double value = 0.0, double error = 1.0):
             _min(min), _max(max), _val(value), _error(error)
          { }
          
@@ -129,7 +129,7 @@ namespace ROOT {
          boxmin[n] = min[n];
          boxmax[n] = bmin[n];
          if ( for_each(boxmin.begin(), boxmin.end(), AreaComparer(boxmax.begin())).isThereArea() )
-            l.push_back(Box(boxmin, boxmax, 0.));
+            l.push_back(Box(boxmin, boxmax));
          
          boxmin[n] = bmin[n];
          boxmax[n] = bmax[n];
@@ -144,7 +144,7 @@ namespace ROOT {
          boxmin[n] = bmax[n];
          boxmax[n] = max[n];
          if ( for_each(boxmin.begin(), boxmin.end(), AreaComparer(boxmax.begin())).isThereArea() )
-            l.push_back(Box(boxmin, boxmax, 0.));
+            l.push_back(Box(boxmin, boxmax));
       }
       
       class ProxyListBox
