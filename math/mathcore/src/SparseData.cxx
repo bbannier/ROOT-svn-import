@@ -246,7 +246,9 @@ namespace ROOT {
          list<Box>::iterator it = l->begin();
          const unsigned int dim = it->getMin().size();
 
-         BinData * bd = new BinData(l->getList().size(), dim, BinData::kValueError);
+         ROOT::Fit::DataOptions opt; 
+         opt.fIntegral=true;
+         BinData * bd = new BinData(opt,l->getList().size(), dim, BinData::kValueError);
          for ( ; it != l->end(); ++it )
          {
             bd->Add(&(it->getMin()[0]), it->getVal(), it->getError());

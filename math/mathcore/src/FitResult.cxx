@@ -337,8 +337,8 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
    if (!fValid) { 
       os << "\n****************************************\n";
       os << "            Invalid FitResult            ";
-      os << "\n****************************************\n";
-      return; 
+      //os << "\n****************************************\n";
+      //return; 
    }
 
    os << "\n****************************************\n";
