@@ -921,6 +921,11 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
 
    unsigned int n = data.Size();
 
+#ifdef DEBUG
+   std::cout << "Evaluate PoissonLogL for params = [ "; 
+   for (unsigned int j=0; j < func.NPar(); ++j) std::cout << p[j] << " , ";
+   std::cout << "]\n";
+#endif
    
    double loglike = 0;
    int nRejected = 0; 
@@ -940,6 +945,19 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
          fval = igEval( x, data.BinUpEdge(i) ) ; 
       }
       
+#ifdef DEBUG
+      std::cout << "x1 = [ "; 
+      for (unsigned int j=0; j < func.NDim(); ++j) std::cout << x[j] << " , ";
+      std::cout << "]  ";
+      if (fitOpt.fIntegral) { 
+         std::cout << "x2 = [ "; 
+         for (unsigned int j=0; j < func.NDim(); ++j) std::cout << data.BinUpEdge(i)[j] << " , ";
+         std::cout << "] ";
+      }
+      std::cout << "   fval = " << fval << std::endl;
+#endif
+
+
       // EvalLog protects against 0 values of fval but don't want to add in the -log sum 
       // negative values of fval 
       fval = std::max(fval, 0.0);
