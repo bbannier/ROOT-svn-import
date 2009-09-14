@@ -43,6 +43,8 @@ namespace ROOT {
          void PrintList();
 
          BinData* GetBinData();
+         BinData* GetBinDataIntegral();
+         BinData* GetBinDataNoCeros();
          
       private : 
          ProxyListBox *l;
