@@ -1,8 +1,7 @@
 #include <string.h>
 
-#ifndef HAVE_STRLCPY
 size_t
-strlcpy(char* dst, const char* src, size_t size) {
+el_strlcpy(char* dst, const char* src, size_t size) {
    if (size) {
       strncpy(dst, src, size - 1);
       dst[size - 1] = '\0';
@@ -14,7 +13,7 @@ strlcpy(char* dst, const char* src, size_t size) {
 
 
 size_t
-strlcat(char* dst, const char* src, size_t size) {
+el_strlcat(char* dst, const char* src, size_t size) {
    int dl = strlen(dst);
    int sz = size - dl - 1;
 
@@ -25,6 +24,3 @@ strlcat(char* dst, const char* src, size_t size) {
 
    return dl + strlen(src);
 }
-
-
-#endif

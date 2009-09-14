@@ -37,13 +37,9 @@
  */
 
 #include "compat.h"
-#if !defined(lint) && !defined(SCCSID)
-# if 0
-static char sccsid[] = "@(#)el.c	8.2 (Berkeley) 1/3/94";
-# else
-__RCSID("$NetBSD: el.c,v 1.21 2001/01/05 22:45:30 christos Exp $");
-# endif
-#endif /* not lint && not SCCSID */
+
+#include <fstream>
+#include <string>
 
 /*
  * el.c: EditLine interface functions
@@ -391,52 +387,32 @@ static const char elpath[] = "/.editrc";
  */
 el_public int
 el_source(EditLine* el, const char* fname) {
-   FILE* fp;
-   size_t len;
    char* ptr, path[MAXPATHLEN];
 
-   fp = NULL;
-
    if (fname == NULL) {
-      if (issetugid()) {
-         return -1;
-      }
-
       if ((ptr = getenv("HOME")) == NULL) {
          return -1;
       }
 
-      if (strlcpy(path, ptr, sizeof(path)) >= sizeof(path)) {
+      if (el_strlcpy(path, ptr, sizeof(path)) >= sizeof(path)) {
          return -1;
       }
 
-      if (strlcat(path, elpath, sizeof(path)) >= sizeof(path)) {
+      if (el_strlcat(path, elpath, sizeof(path)) >= sizeof(path)) {
          return -1;
       }
       fname = path;
    }
 
-   if (fp == NULL) {
-      fp = fopen(fname, "r");
-   }
-
-   if (fp == NULL) {
-      return -1;
-   }
-
-   while ((ptr = fgetln(fp, &len)) != NULL) {
-      if (len > 0 && ptr[len - 1] == '\n') {
-         --len;
-      }
-      ptr[len] = '\0';
-
-      if (parse_line(el, ptr) == -1) {
-         (void) fclose(fp);
+   std::ifstream in(fname);
+   std::string line;
+   while (in) {
+      std::getline(in, line);
+      if (parse_line(el, line.c_str()) == -1) {
          return -1;
       }
    }
 
-   (void) fclose(fp);
    return 0;
 } // el_source
 

@@ -1085,7 +1085,7 @@ term_set(EditLine* el, const char* term) {
       Val(T_li) = tgetnum("li");
 
       for (t = tstr; t->name != NULL; t++) {
-         term_alloc(el, t, tgetstr(t->name, &area));
+         term_alloc(el, t, tgetstr((char*)t->name, &area));
       }
    }
 
@@ -1719,7 +1719,7 @@ term_echotc(EditLine* el, int /*argc*/, const char** argv) {
       }
       (void) fprintf(el->el_outfile, fmtd, 0);
 #else
-      (void) fprintf(el->el_outfile, fmtd, el->el_tty.t_speed);
+      (void) fprintf(el->el_outfile, fmtd, (int)el->el_tty.t_speed);
 #endif
       return 0;
    } else if (strcmp(*argv, "rows") == 0 || strcmp(*argv, "lines") == 0) {
@@ -1743,7 +1743,7 @@ term_echotc(EditLine* el, int /*argc*/, const char** argv) {
    }
 
    if (t->name == NULL) {
-      scap = tgetstr(*argv, &area);
+      scap = tgetstr((char*)*argv, &area);
    }
 
    if (!scap || scap[0] == '\0') {

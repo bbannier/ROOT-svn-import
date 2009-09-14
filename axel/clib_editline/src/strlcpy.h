@@ -1,2 +1,4 @@
-size_t strlcpy(char* dst, const char* src, size_t size);
-size_t strlcat(char* dst, const char* src, size_t size);
+#include <cstddef>
+
+size_t el_strlcpy(char* dst, const char* src, size_t size);
+size_t el_strlcat(char* dst, const char* src, size_t size);
