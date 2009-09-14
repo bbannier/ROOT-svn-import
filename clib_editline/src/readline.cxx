@@ -146,7 +146,7 @@ static char *el_rl_prompt = NULL;
 
 /* ARGSUSED */
 static char *
-_get_prompt(EditLine *el)
+_get_prompt(EditLine* /*el*/)
 {
 	return (el_rl_prompt);
 }
