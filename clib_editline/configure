@@ -4687,6 +4687,7 @@ if test ! "x$enable_editline" = "xno" ; then
         /usr/include/curses /usr/local/include/curses \
         /usr/include /usr/local/include
     cursesincdir=$found_dir
+    curseshdr=$found_hdr
 
     check_library "libncurses libcurses" "$enable_shared" "$curseslibdir" \
         /usr/lib /usr/local/lib
@@ -5322,6 +5323,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@xrdaddopts@|$xrdaddopts|"            \
     -e "s|@xrootddir@|$xrootddir|"              \
     -e "s|@cursesincdir@|$cursesincdir|"        \
+    -e "s|@curseshdr@|$curseshdr|"              \
     -e "s|@curseslib@|$curseslib|"              \
     -e "s|@curseslibdir@|$curseslibdir|"        \
     -e "s|@buildgl@|$enable_opengl|"            \

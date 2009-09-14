@@ -49,15 +49,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <termcap.h>
+#include "rlcurses.h"
 #include <sys/types.h>
 #include <sys/ioctl.h>
 
 #include "el.h"
-#include <ncurses.h>
 #include "TTermManip.h"
-
-extern "C" int setupterm(const char* term, int fd, int* perrcode);
 
 /*
  * IMPORTANT NOTE: these routines are allowed to look at the current screen

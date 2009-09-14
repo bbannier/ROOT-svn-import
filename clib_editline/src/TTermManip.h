@@ -1,15 +1,8 @@
 #ifndef INCLUDE_TTERMMANIP_H
 #define INCLUDE_TTERMMANIP_H
 
-#include <stdio.h>
 #include <map>
 #include <cstring>
-
-#if defined(__sun) || defined(__SUNPRO_CC)
-typedef char PutcFuncArg_t;
-#else
-typedef int PutcFuncArg_t;
-#endif
 
 // setupterm must be called before TTermManip can be created!
 class TTermManip {
@@ -41,8 +34,9 @@ public:
    void SetDefaultColor();
 
 private:
-   struct Color {
-      Color(unsigned char r, unsigned char g, unsigned char b):
+   class Color {
+   public:
+      Color(unsigned char r = 0, unsigned char g = 0, unsigned char b = 0):
          fR((r* 1001) / 256),
          fG((g* 1001) / 256),
          fB((b* 1001) / 256) {
@@ -70,7 +64,7 @@ private:
    int AllocColor(const Color& col);
 
    static int
-   DefaultPutchar(PutcFuncArg_t c) {
+   DefaultPutchar(int c) {
       // tputs takes int(*)(char) on solaris, so wrap putchar
       return putchar(c);
    }
@@ -79,7 +73,7 @@ private:
    bool fColorCapable;
    bool fUsePairs;
    bool fAnsiColors; // whether fSetFg, Bg use ANSI
-   bool fCanChangeColors; // whether the terminal can redifine existing colors
+   bool fCanChangeColors; // whether the terminal can redefine existing colors
    char* fOrigColors; // reset colors
    char* fInitColor; // initialize a color
    char* fInitPair; // initialize pair
@@ -89,14 +83,13 @@ private:
    char* fSetDefault; // set normal color
    char* fStartUnderline; // start underline;
    char* fStopUnderline; // stop underline;
-   typedef int (*PutcFunc_t)(PutcFuncArg_t);
+   typedef int (*PutcFunc_t)(int);
    PutcFunc_t fPutc;
    int fCurrentColorIdx;   // index if the currently active color
    bool fCurrentlyBold;  // whether bold is active
    bool fCurrentlyUnterlined;  // whether underlining is active
 
    static const int fgStartColIdx = 5;
-
    typedef std::map<Color, int> ColorMap_t;
    ColorMap_t fColors;
 };

@@ -47,6 +47,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
+#include <alloca.h>
 #include "histedit.h"
 // #include "readline/readline.h"
 #include "editline.h"
@@ -365,12 +366,12 @@ setColors(const char* colorTab, const char* colorTabComp, const char* colorBrack
           const char* colorBadBracket, const char* colorPrompt) {
    setKeywordColors(colorTab, colorBracket, colorBadBracket);
 
-   int col = selectColor(TString(colorTabComp));
+   int col = selectColor(colorTabComp);
 
    if (col > -1) {
       tab_color = col;
    }
-   col = selectColor(TString(colorPrompt));
+   col = selectColor(colorPrompt);
 
    if (col > -1) {
       prompt_setcolor(col);
@@ -1396,7 +1397,7 @@ filename_completion_function(const char* text, int state) {
          closedir(dir);
          dir = NULL;
       }
-      temp = strrchr(text, '/');
+      temp = strrchr((char*)text, '/');
 
       if (temp) {
          temp++;

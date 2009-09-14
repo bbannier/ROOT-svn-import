@@ -63,10 +63,11 @@
 # define el_protected   /* Redefined from elsewhere to "static" */
                         /* When we want to hide everything	*/
 #endif
-
+/*
 #if HAVE_SYS_CDEFS_H
 # include <sys/cdefs.h>
 #endif
+*/
 
 #ifndef _PTR_T
 # define _PTR_T
@@ -90,6 +91,7 @@ typedef void* ioctl_t;
 typedef void (*sig_t)(int);
 #endif
 
+/*
 #ifndef __P
 # ifdef __STDC__
 #  define __P(x) x
@@ -97,5 +99,6 @@ typedef void (*sig_t)(int);
 #  define __P(x) ()
 # endif
 #endif
+*/
 
 #endif /* _h_sys */
