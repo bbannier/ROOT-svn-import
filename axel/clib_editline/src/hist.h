@@ -42,39 +42,39 @@
  * el.hist.c: History functions
  */
 #ifndef _h_el_hist
-#define	_h_el_hist
+#define _h_el_hist
 
 #include "histedit.h"
 
-typedef int (*hist_fun_t)(ptr_t, HistEvent *, int, ...);
+typedef int (*hist_fun_t)(ptr_t, HistEvent*, int, ...);
 
 typedef struct el_history_t {
-	char		*buf;		/* The history buffer		*/
-	size_t		sz;		/* Size of history buffer	*/
-	char		*last;		/* The last character		*/
-	int		 eventno;	/* Event we are looking for	*/
-	ptr_t		 ref;		/* Argument for history fcns	*/
-	hist_fun_t	 fun;		/* Event access			*/
-	HistEvent	 ev;		/* Event cookie			*/
+   char* buf;                           /* The history buffer		*/
+   size_t sz;                           /* Size of history buffer	*/
+   char* last;                          /* The last character		*/
+   int eventno;                         /* Event we are looking for	*/
+   ptr_t ref;                           /* Argument for history fcns	*/
+   hist_fun_t fun;                      /* Event access			*/
+   HistEvent ev;                        /* Event cookie			*/
 } el_history_t;
 
-#define	HIST_FUN(el, fn, arg)	\
-    ((((*(el)->el_history.fun) ((el)->el_history.ref, &(el)->el_history.ev, \
-	fn, arg)) == -1) ? NULL : (el)->el_history.ev.str)
+#define HIST_FUN(el, fn, arg) \
+   ((((*(el)->el_history.fun)((el)->el_history.ref, &(el)->el_history.ev, \
+                              fn, arg)) == -1) ? NULL : (el)->el_history.ev.str)
 
-#define	HIST_NEXT(el)		HIST_FUN(el, H_NEXT, NULL)
-#define	HIST_FIRST(el)		HIST_FUN(el, H_FIRST, NULL)
-#define	HIST_LAST(el)		HIST_FUN(el, H_LAST, NULL)
-#define	HIST_PREV(el)		HIST_FUN(el, H_PREV, NULL)
-#define	HIST_EVENT(el, num)	HIST_FUN(el, H_EVENT, num)
-#define	HIST_LOAD(el, fname)	HIST_FUN(el, H_LOAD fname)
-#define	HIST_SAVE(el, fname)	HIST_FUN(el, H_SAVE fname)
+#define HIST_NEXT(el) HIST_FUN(el, H_NEXT, NULL)
+#define HIST_FIRST(el) HIST_FUN(el, H_FIRST, NULL)
+#define HIST_LAST(el) HIST_FUN(el, H_LAST, NULL)
+#define HIST_PREV(el) HIST_FUN(el, H_PREV, NULL)
+#define HIST_EVENT(el, num) HIST_FUN(el, H_EVENT, num)
+#define HIST_LOAD(el, fname) HIST_FUN(el, H_LOAD fname)
+#define HIST_SAVE(el, fname) HIST_FUN(el, H_SAVE fname)
 
-el_protected int		hist_init(EditLine *);
-el_protected void		hist_end(EditLine *);
-el_protected el_action_t	hist_get(EditLine *);
-el_protected int		hist_set(EditLine *, hist_fun_t, ptr_t);
-el_protected int		hist_list(EditLine *, int, const char **);
-el_protected int		hist_enlargebuf(EditLine *, size_t, size_t);
+el_protected int hist_init(EditLine*);
+el_protected void hist_end(EditLine*);
+el_protected el_action_t hist_get(EditLine*);
+el_protected int hist_set(EditLine *, hist_fun_t, ptr_t);
+el_protected int hist_list(EditLine*, int, const char**);
+el_protected int hist_enlargebuf(EditLine *, size_t, size_t);
 
 #endif /* _h_el_hist */

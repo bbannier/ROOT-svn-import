@@ -42,22 +42,22 @@
  * el.prompt.h: Prompt printing stuff
  */
 #ifndef _h_el_prompt
-#define	_h_el_prompt
+#define _h_el_prompt
 
 #include "histedit.h"
 
-typedef const char * (*el_pfunc_t)(EditLine*);
+typedef const char* (*el_pfunc_t)(EditLine*);
 
 typedef struct el_prompt_t {
-	el_pfunc_t	p_func;	/* Function to return the prompt	*/
-	coord_t		p_pos;	/* position in the line after prompt	*/
+   el_pfunc_t p_func;           /* Function to return the prompt	*/
+   coord_t p_pos;               /* position in the line after prompt	*/
 } el_prompt_t;
 
-el_protected void	prompt_print(EditLine *, int);
-el_protected int	prompt_set(EditLine *, el_pfunc_t, int);
-el_protected int	prompt_get(EditLine *, el_pfunc_t *, int);
-el_protected int	prompt_init(EditLine *);
-el_protected void	prompt_end(EditLine *);
-el_protected void	prompt_setcolor(int col);
+el_protected void prompt_print(EditLine*, int);
+el_protected int prompt_set(EditLine *, el_pfunc_t, int);
+el_protected int prompt_get(EditLine*, el_pfunc_t*, int);
+el_protected int prompt_init(EditLine*);
+el_protected void prompt_end(EditLine*);
+el_protected void prompt_setcolor(int col);
 
 #endif /* _h_el_prompt */

@@ -42,13 +42,13 @@
  * tokenizer.h: Header file for tokenizer routines
  */
 #ifndef _h_tokenizer
-#define	_h_tokenizer
+#define _h_tokenizer
 
 typedef struct tokenizer Tokenizer;
 
-Tokenizer	*tok_init(const char *);
-void		 tok_reset(Tokenizer *);
-void		 tok_end(Tokenizer *);
-int		 tok_line(Tokenizer *, const char *, int *, char ***);
+Tokenizer* tok_init(const char*);
+void tok_reset(Tokenizer*);
+void tok_end(Tokenizer*);
+int tok_line(Tokenizer*, const char*, int*, char***);
 
 #endif /* _h_tokenizer */

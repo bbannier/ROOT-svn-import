@@ -42,38 +42,38 @@
  * el.map.h:	Editor maps
  */
 #ifndef _h_el_map
-#define	_h_el_map
+#define _h_el_map
 
-typedef struct el_bindings_t {	/* for the "bind" shell command */
-	const char	*name;		/* function name for bind command */
-	int		 func;		/* function numeric value */
-	const char	*description;	/* description of function */
+typedef struct el_bindings_t {  /* for the "bind" shell command */
+   const char* name;                    /* function name for bind command */
+   int func;                            /* function numeric value */
+   const char* description;             /* description of function */
 } el_bindings_t;
 
 
 typedef struct el_map_t {
-	el_action_t	*alt;		/* The current alternate key map */
-	el_action_t	*key;		/* The current normal key map	*/
-	el_action_t	*current;	/* The keymap we are using	*/
-	const el_action_t *emacs;	/* The default emacs key map	*/
-	const el_action_t *vic;		/* The vi command mode key map	*/
-	const el_action_t *vii;		/* The vi insert mode key map	*/
-	int		 type;		/* Emacs or vi			*/
-	el_bindings_t	*help;		/* The help for the editor functions */
-	el_func_t	*func;		/* List of available functions	*/
-	int		 nfunc;		/* The number of functions/help items */
+   el_action_t* alt;                    /* The current alternate key map */
+   el_action_t* key;                    /* The current normal key map	*/
+   el_action_t* current;                /* The keymap we are using	*/
+   const el_action_t* emacs;            /* The default emacs key map	*/
+   const el_action_t* vic;              /* The vi command mode key map	*/
+   const el_action_t* vii;              /* The vi insert mode key map	*/
+   int type;                            /* Emacs or vi			*/
+   el_bindings_t* help;                 /* The help for the editor functions */
+   el_func_t* func;                     /* List of available functions	*/
+   int nfunc;                           /* The number of functions/help items */
 } el_map_t;
 
-#define	MAP_EMACS	0
-#define	MAP_VI		1
+#define MAP_EMACS 0
+#define MAP_VI 1
 
-el_protected int	map_bind(EditLine *, int, const char **);
-el_protected int	map_init(EditLine *);
-el_protected void	map_end(EditLine *);
-el_protected void	map_init_vi(EditLine *);
-el_protected void	map_init_emacs(EditLine *);
-el_protected int	map_set_editor(EditLine *, char *);
-el_protected int	map_get_editor(EditLine *, const char **);
-el_protected int	map_addfunc(EditLine *, const char *, const char *, el_func_t);
+el_protected int map_bind(EditLine*, int, const char**);
+el_protected int map_init(EditLine*);
+el_protected void map_end(EditLine*);
+el_protected void map_init_vi(EditLine*);
+el_protected void map_init_emacs(EditLine*);
+el_protected int map_set_editor(EditLine*, char*);
+el_protected int map_get_editor(EditLine*, const char**);
+el_protected int map_addfunc(EditLine *, const char*, const char*, el_func_t);
 
 #endif /* _h_el_map */

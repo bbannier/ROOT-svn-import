@@ -42,14 +42,14 @@
  * el.chared.h: Character editor interface
  */
 #ifndef _h_el_chared
-#define	_h_el_chared
+#define _h_el_chared
 
 #include <ctype.h>
 #include <string.h>
 
 #include "histedit.h"
 
-#define	EL_MAXMACRO	10
+#define EL_MAXMACRO 10
 
 /*
  * This is a issue of basic "vi" look-and-feel. Defining VI_MOVE works
@@ -61,42 +61,42 @@
  * Probably the best fix is to make all the editing commands aware of
  * this fact.
  */
-#define	VI_MOVE
+#define VI_MOVE
 
 
 typedef struct c_macro_t {
-	int	  level;
-	char	**macro;
-	char	 *nline;
+   int level;
+   char** macro;
+   char* nline;
 } c_macro_t;
 
 /*
  * Undo information for both vi and emacs
  */
 typedef struct c_undo_t {
-	int	 action;
-	size_t	 isize;
-	size_t	 dsize;
-	char	*ptr;
-	char	*buf;
+   int action;
+   size_t isize;
+   size_t dsize;
+   char* ptr;
+   char* buf;
 } c_undo_t;
 
 /*
  * Current action information for vi
  */
 typedef struct c_vcmd_t {
-	int	 action;
-	char	*pos;
-	char	*ins;
+   int action;
+   char* pos;
+   char* ins;
 } c_vcmd_t;
 
 /*
  * Kill buffer for emacs
  */
 typedef struct c_kill_t {
-	char	*buf;
-	char	*last;
-	char	*mark;
+   char* buf;
+   char* last;
+   char* mark;
 } c_kill_t;
 
 /*
@@ -104,59 +104,59 @@ typedef struct c_kill_t {
  * commands from both editors!
  */
 typedef struct el_chared_t {
-	c_undo_t	c_undo;
-	c_kill_t	c_kill;
-	c_vcmd_t	c_vcmd;
-	c_macro_t	c_macro;
+   c_undo_t c_undo;
+   c_kill_t c_kill;
+   c_vcmd_t c_vcmd;
+   c_macro_t c_macro;
 } el_chared_t;
 
 
-#define	STReof		"^D\b\b"
-#define	STRQQ		"\"\""
+#define STReof "^D\b\b"
+#define STRQQ "\"\""
 
-#define	isglob(a)	(strchr("*[]?", (a)) != NULL)
-#define	isword(a)	(isprint(a))
+#define isglob(a) (strchr("*[]?", (a)) != NULL)
+#define isword(a) (isprint(a))
 
-#define	NOP		0x00
-#define	DELETE		0x01
-#define	INSERT		0x02
-#define	CHANGE		0x04
+#define NOP 0x00
+#define DELETE 0x01
+#define INSERT 0x02
+#define CHANGE 0x04
 
-#define	CHAR_FWD	0
-#define	CHAR_BACK	1
+#define CHAR_FWD 0
+#define CHAR_BACK 1
 
-#define	MODE_INSERT	0
-#define	MODE_REPLACE	1
-#define	MODE_REPLACE_1	2
+#define MODE_INSERT 0
+#define MODE_REPLACE 1
+#define MODE_REPLACE_1 2
 
 #include "common.h"
 #ifdef EL_USE_VI
-#include "vi.h"
+# include "vi.h"
 #endif
 #include "emacs.h"
 #include "search.h"
 #include "fcns.h"
 
 
-el_protected int	 cv__isword(int);
-el_protected void	 cv_delfini(EditLine *);
-el_protected char	*cv__endword(char *, char *, int);
-el_protected int	 ce__isword(int);
-el_protected void	 cv_undo(EditLine *, int, size_t, char *);
-el_protected char	*cv_next_word(EditLine*, char *, char *, int, int (*)(int));
-el_protected char	*cv_prev_word(EditLine*, char *, char *, int, int (*)(int));
-el_protected char	*c__next_word(char *, char *, int, int (*)(int));
-el_protected char	*c__prev_word(char *, char *, int, int (*)(int));
-el_protected void	 c_insert(EditLine *, int);
-el_protected void	 c_delbefore(EditLine *, int);
-el_protected void	 c_delafter(EditLine *, int);
-el_protected int	 c_gets(EditLine *, char *);
-el_protected int	 c_hpos(EditLine *);
+el_protected int cv__isword(int);
+el_protected void cv_delfini(EditLine*);
+el_protected char* cv__endword(char*, char*, int);
+el_protected int ce__isword(int);
+el_protected void cv_undo(EditLine *, int, size_t, char*);
+el_protected char* cv_next_word(EditLine *, char*, char*, int, int(*) (int));
+el_protected char* cv_prev_word(EditLine *, char*, char*, int, int(*) (int));
+el_protected char* c__next_word(char*, char*, int, int(*) (int));
+el_protected char* c__prev_word(char*, char*, int, int(*) (int));
+el_protected void c_insert(EditLine*, int);
+el_protected void c_delbefore(EditLine*, int);
+el_protected void c_delafter(EditLine*, int);
+el_protected int c_gets(EditLine*, char*);
+el_protected int c_hpos(EditLine*);
 
-el_protected int	 ch_init(EditLine *);
-el_protected void	 ch_reset(EditLine *);
+el_protected int ch_init(EditLine*);
+el_protected void ch_reset(EditLine*);
 /* el_protected int	 ch_enlargebufs	__P((EditLine *, size_t)); */
-el_protected int	 ch_enlargebufs	(EditLine *, size_t);
-el_protected void	 ch_end(EditLine *);
+el_protected int ch_enlargebufs(EditLine *, size_t);
+el_protected void ch_end(EditLine*);
 
 #endif /* _h_el_chared */

@@ -59,36 +59,36 @@ __RCSID("$NetBSD: readline.c,v 1.19 2001/01/10 08:10:45 jdolecek Exp $");
 #endif /* not lint && not SCCSID */
 
 /* for rl_complete() */
-#define	TAB		'\r'
+#define TAB '\r'
 
 /* see comment at the #ifdef for sense of this */
-#define	GDB_411_HACK
+#define GDB_411_HACK
 
 /* readline compatibility stuff - look at readline sources/documentation */
 /* to see what these variables mean */
-const char *rl_library_version = "EditLine wrapper";
-char *rl_readline_name = "";
-FILE *rl_instream = NULL;
-FILE *rl_outstream = NULL;
+const char* rl_library_version = "EditLine wrapper";
+char* rl_readline_name = "";
+FILE* rl_instream = NULL;
+FILE* rl_outstream = NULL;
 int rl_point = 0;
 int rl_end = 0;
-char *rl_line_buffer = NULL;
+char* rl_line_buffer = NULL;
 
-int history_base = 1;		/* probably never subject to change */
+int history_base = 1;           /* probably never subject to change */
 int history_length = 0;
 int max_input_history = 0;
 char history_expansion_char = '!';
 char history_subst_char = '^';
-char *history_no_expand_chars = " \t\n=(";
-Function *history_inhibit_expansion_function = NULL;
+char* history_no_expand_chars = " \t\n=(";
+Function* history_inhibit_expansion_function = NULL;
 
 int rl_inhibit_completion = 0;
 int rl_attempted_completion_over = 0;
-char *rl_basic_word_break_characters = " \t\n\"\\'`@$><=;|&{(";
-char *rl_completer_word_break_characters = NULL;
-char *rl_completer_quote_characters = NULL;
-CPFunction *rl_completion_entry_function = NULL;
-CPPFunction *rl_attempted_completion_function = NULL;
+char* rl_basic_word_break_characters = " \t\n\"\\'`@$><=;|&{(";
+char* rl_completer_word_break_characters = NULL;
+char* rl_completer_quote_characters = NULL;
+CPFunction* rl_completion_entry_function = NULL;
+CPPFunction* rl_attempted_completion_function = NULL;
 int tab_color = 5;
 El_tab_hook_t rl_tab_hook = NULL;
 El_in_key_hook_t rl_in_key_hook = NULL;
@@ -111,7 +111,7 @@ int rl_completion_query_items = 100;
  * in the parsed text when it is passed to the completion function.
  * Shell uses this to help determine what kind of completing to do.
  */
-char *rl_special_prefixes = (char *)NULL;
+char* rl_special_prefixes = (char*) NULL;
 
 /*
  * This is the character appended to the completed words if at the end of
@@ -124,52 +124,50 @@ int rl_completion_append_character = ' ';
 /* if not zero, non-unique completions always show list of possible matches */
 static int _rl_complete_show_all = 0;
 
-static History *h = NULL;
-static EditLine *e = NULL;
+static History* h = NULL;
+static EditLine* e = NULL;
 static int el_rl_complete_cmdnum = 0;
 
 /* internal functions */
-static unsigned char	 _el_rl_complete(EditLine *, int);
-static char		*_get_prompt(EditLine *);
-static HIST_ENTRY	*_move_history(int);
-static int		 _history_search_gen(const char *, int, int);
-static int		 _history_expand_command(const char *, size_t, char **);
-static char		*_rl_compat_sub(const char *, const char *,
-			    const char *, int);
-static int		 rl_complete_internal(int);
-static int		 _rl_qsort_string_compare(const void *, const void *);
+static unsigned char _el_rl_complete(EditLine*, int);
+static char* _get_prompt(EditLine*);
+static HIST_ENTRY* _move_history(int);
+static int _history_search_gen(const char*, int, int);
+static int _history_expand_command(const char*, size_t, char**);
+static char* _rl_compat_sub(const char*, const char*,
+                            const char*, int);
+static int rl_complete_internal(int);
+static int _rl_qsort_string_compare(const void*, const void*);
 
 /*
  * needed for prompt switching in readline()
  */
-static char *el_rl_prompt = NULL;
+static char* el_rl_prompt = NULL;
 
 /* ARGSUSED */
-static char *
-_get_prompt(EditLine* /*el*/)
-{
-	return (el_rl_prompt);
+static char*
+_get_prompt(EditLine* /*el*/) {
+   return el_rl_prompt;
 }
 
 
 /*
  * generic function for moving around history
  */
-static HIST_ENTRY *
-_move_history(int op)
-{
-	HistEvent ev;
-	static HIST_ENTRY rl_he;
+static HIST_ENTRY*
+_move_history(int op) {
+   HistEvent ev;
+   static HIST_ENTRY rl_he;
 
-	if (history(h, &ev, op) != 0)
-		return (HIST_ENTRY *) NULL;
+   if (history(h, &ev, op) != 0) {
+      return (HIST_ENTRY*) NULL;
+   }
 
-	rl_he.line = ev.str;
-	rl_he.data = "";
+   rl_he.line = ev.str;
+   rl_he.data = "";
 
-	return (&rl_he);
+   return &rl_he;
 }
-
 
 
 /*
@@ -180,111 +178,122 @@ _move_history(int op)
  * initialize rl compat stuff
  */
 int
-rl_initialize(void)
-{
-	HistEvent ev;
-	const LineInfo *li;
-	int i;
-	int editmode = 1;
-	struct termios t;
+rl_initialize(void) {
+   HistEvent ev;
+   const LineInfo* li;
+   int i;
+   int editmode = 1;
+   struct termios t;
 
-	if (e != NULL)
-		el_end(e);
-	if (h != NULL)
-		history_end(h);
+   if (e != NULL) {
+      el_end(e);
+   }
 
-	if (!rl_instream)
-		rl_instream = stdin;
-	if (!rl_outstream)
-		rl_outstream = stdout;
+   if (h != NULL) {
+      history_end(h);
+   }
 
-	/*
-	 * See if we don't really want to run the editor
-	 */
-	if (tcgetattr(fileno(rl_instream), &t) != -1 && (t.c_lflag & ECHO) == 0)
-		editmode = 0;
+   if (!rl_instream) {
+      rl_instream = stdin;
+   }
 
-	e = el_init(rl_readline_name, rl_instream, rl_outstream, stderr);
+   if (!rl_outstream) {
+      rl_outstream = stdout;
+   }
 
-	if (!editmode)
-		el_set(e, EL_EDITMODE, 0);
+   /*
+    * See if we don't really want to run the editor
+    */
+   if (tcgetattr(fileno(rl_instream), &t) != -1 && (t.c_lflag & ECHO) == 0) {
+      editmode = 0;
+   }
 
-	h = history_init();
-	if (!e || !h)
-		return (-1);
+   e = el_init(rl_readline_name, rl_instream, rl_outstream, stderr);
 
-	history(h, &ev, H_SETSIZE, INT_MAX);	/* unlimited */
-	history_length = 0;
-	max_input_history = INT_MAX;
-	el_set(e, EL_HIST, history, h);
+   if (!editmode) {
+      el_set(e, EL_EDITMODE, 0);
+   }
 
-	/* for proper prompt printing in readline() */
-	el_rl_prompt = strdup("");
-	el_set(e, EL_PROMPT, _get_prompt);
-	el_set(e, EL_SIGNAL, 1);
+   h = history_init();
 
+   if (!e || !h) {
+      return -1;
+   }
 
-	/* set default mode to "emacs"-style and read setting afterwards */
-	/* so this can be overriden */
-        char * editor = getenv("EDITOR");
-        el_set(e, EL_EDITOR, editor ? editor : "emacs");
+   history(h, &ev, H_SETSIZE, INT_MAX);         /* unlimited */
+   history_length = 0;
+   max_input_history = INT_MAX;
+   el_set(e, EL_HIST, history, h);
 
-	/*
-	 * Word completition - this has to go AFTER rebinding keys
-	 * to emacs-style.
-	 */
-	el_set(e, EL_ADDFN, "rl_complete",
-	    "ReadLine compatible completition function",
-	    _el_rl_complete);
-	el_set(e, EL_BIND, "^I", "rl_complete", NULL);
-
-        /** added by stephan: default emacs bindings... */
-        el_set( e, EL_BIND, "^R", "em-inc-search-prev", NULL );
-        el_set( e, EL_BIND, "^S", "em-inc-search-next", NULL );
-        /** end stephan's personal preferences. */
-
-	/*
-	 * Find out where the rl_complete function was added; this is
-	 * used later to detect that lastcmd was also rl_complete.
-	 */
-	for(i=EL_NUM_FCNS; i < e->el_map.nfunc; i++) {
-		if (e->el_map.func[i] == _el_rl_complete) {
-			el_rl_complete_cmdnum = i;
-			break;
-		}
-	}
+   /* for proper prompt printing in readline() */
+   el_rl_prompt = strdup("");
+   el_set(e, EL_PROMPT, _get_prompt);
+   el_set(e, EL_SIGNAL, 1);
 
 
-	/* read settings from configuration file */
-	el_source(e, NULL);
+   /* set default mode to "emacs"-style and read setting afterwards */
+   /* so this can be overriden */
+   char* editor = getenv("EDITOR");
+   el_set(e, EL_EDITOR, editor ? editor : "emacs");
 
-	/*
-	 * Unfortunately, some applications really do use rl_point
-	 * and rl_line_buffer directly.
-	 */
-	li = el_line(e);
-	/* LINTED const cast */
-	rl_line_buffer = (char *) li->buffer;
-	rl_point = rl_end = 0;
+   /*
+    * Word completition - this has to go AFTER rebinding keys
+    * to emacs-style.
+    */
+   el_set(e, EL_ADDFN, "rl_complete",
+          "ReadLine compatible completition function",
+          _el_rl_complete);
+   el_set(e, EL_BIND, "^I", "rl_complete", NULL);
 
-	
-        // AXEL:
-        // switch to RAW mode so ROOT can handle events:
-        tty_rawmode(e);
-	return (0);
-}
+   /** added by stephan: default emacs bindings... */
+   el_set(e, EL_BIND, "^R", "em-inc-search-prev", NULL);
+   el_set(e, EL_BIND, "^S", "em-inc-search-next", NULL);
+   /** end stephan's personal preferences. */
+
+   /*
+    * Find out where the rl_complete function was added; this is
+    * used later to detect that lastcmd was also rl_complete.
+    */
+   for (i = EL_NUM_FCNS; i < e->el_map.nfunc; i++) {
+      if (e->el_map.func[i] == _el_rl_complete) {
+         el_rl_complete_cmdnum = i;
+         break;
+      }
+   }
+
+
+   /* read settings from configuration file */
+   el_source(e, NULL);
+
+   /*
+    * Unfortunately, some applications really do use rl_point
+    * and rl_line_buffer directly.
+    */
+   li = el_line(e);
+   /* LINTED const cast */
+   rl_line_buffer = (char*) li->buffer;
+   rl_point = rl_end = 0;
+
+
+   // AXEL:
+   // switch to RAW mode so ROOT can handle events:
+   tty_rawmode(e);
+   return 0;
+} // rl_initialize
+
 
 /*
  * Ends readline/editline mode. Intended to be called
  * from signal handlers.
- * 
+ *
  * Submitted to editline by Alexey Zakhlestin, of Milk Farm Software.
  */
-void rl_cleanup_after_signal()
-{
-         el_end(e);
-         history_end(h);
+void
+rl_cleanup_after_signal() {
+   el_end(e);
+   history_end(h);
 }
+
 
 /*
  * read one line from input stream and return it, chomping
@@ -295,88 +304,101 @@ void rl_cleanup_after_signal()
  * them). They ARE added to add_history().
  */
 #include <iostream>
-char *
-readline(const char *prompt, bool newline)
-{
-	HistEvent ev;
-	int count;
-	const char *ret;
+char*
+readline(const char* prompt, bool newline) {
+   HistEvent ev;
+   int count;
+   const char* ret;
 
-	if (e == NULL || h == NULL)
-		rl_initialize();
+   if (e == NULL || h == NULL) {
+      rl_initialize();
+   }
 
-	/* update prompt accordingly to what has been passed */
-	if (!prompt)
-		prompt = "";
-	if (strcmp(el_rl_prompt, prompt) != 0) {
-		free(el_rl_prompt);
-		el_rl_prompt = strdup(prompt);
-	}
+   /* update prompt accordingly to what has been passed */
+   if (!prompt) {
+      prompt = "";
+   }
 
-        // ACK! My first GOTO since BASIC! (stephan) See below...
-        start_over_after_builtin:
-		/* get one line from input stream */
-        if (newline) {
-           tty_rawmode(e);
-		ret = el_gets_newline(e, &count);
-        } else {
-		ret = el_gets(e, &count);
-                if (rl_in_key_hook && count > 0 && e->el_line.lastchar > e->el_line.buffer) {
-                   char* key = e->el_line.lastchar;
-                   if (*key == '\a') --key;
-                   (*rl_in_key_hook)(*key);
-                }
-        }
+   if (strcmp(el_rl_prompt, prompt) != 0) {
+      free(el_rl_prompt);
+      el_rl_prompt = strdup(prompt);
+   }
 
-        // std::cerr <<  "readline(): el_gets(e,"<<count<<") got ["<<(ret?ret:"NULL")<<"]\n";
-        //if( 0 == ret ) return NULL;
+   // ACK! My first GOTO since BASIC! (stephan) See below...
+start_over_after_builtin:
+
+   /* get one line from input stream */
+   if (newline) {
+      tty_rawmode(e);
+      ret = el_gets_newline(e, &count);
+   } else {
+      ret = el_gets(e, &count);
+
+      if (rl_in_key_hook && count > 0 && e->el_line.lastchar > e->el_line.buffer) {
+         char* key = e->el_line.lastchar;
+
+         if (*key == '\a') {
+            --key;
+         }
+         (*rl_in_key_hook)(*key);
+      }
+   }
+
+   // std::cerr <<  "readline(): el_gets(e,"<<count<<") got ["<<(ret?ret:"NULL")<<"]\n";
+   //if( 0 == ret ) return NULL;
+
+   // reminder: e owns the string, actually,
+   // which is why we duplicate it here:
+   if (ret) {
+      if (count <= 0) {
+         ret = NULL;
+      }
+   }
+
+   history(h, &ev, H_GETSIZE);
+   history_length = ev.num;
+
+   if (ret && !strchr(ret, '\a') && ret[strlen(ret) - 1] == '\n') {
+      tty_cookedmode(e);
+   }
+   /* LINTED const cast */
+   return (char*) ret;
+} // readline
 
 
-        // reminder: e owns the string, actually,
-        // which is why we duplicate it here:
-	if (ret )
-        {
-                if (count <= 0) {
-                        ret = NULL;
-                }
-        }
+void
+setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
+          const char* colorBadBracket, const char* colorPrompt) {
+   setKeywordColors(colorTab, colorBracket, colorBadBracket);
 
-	history(h, &ev, H_GETSIZE);
-	history_length = ev.num;
+   int col = selectColor(TString(colorTabComp));
 
-        if (ret && !strchr(ret, '\a') && ret[strlen(ret) - 1] == '\n')
-           tty_cookedmode(e);
-	/* LINTED const cast */
-	return (char *) ret;
+   if (col > -1) {
+      tab_color = col;
+   }
+   col = selectColor(TString(colorPrompt));
+
+   if (col > -1) {
+      prompt_setcolor(col);
+   }
 }
 
-void setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
-               const char* colorBadBracket, const char* colorPrompt)
-{
-	setKeywordColors(colorTab, colorBracket, colorBadBracket);
-	
-	int col = selectColor(TString(colorTabComp));
-	if (col > -1)
-		tab_color = col;
-        col = selectColor(TString(colorPrompt));
-        if (col > -1)
-           prompt_setcolor(col);
-}
 
-void termResize(void)
-{
+void
+termResize(void) {
    el_resize(e);  // this is called by SIGWINCH when term is resized - detects term width itself
 }
 
-void setEcho(bool echo)
-{
+
+void
+setEcho(bool echo) {
    if (echo) {
       tty_noquotemode(e);
-   } 
-   else {
+   } else {
       tty_quotemode(e);
    }
 }
+
 
 /*
  * history functions
@@ -387,10 +409,10 @@ void setEcho(bool echo)
  * history expansion functions
  */
 void
-using_history(void)
-{
-	if (h == NULL || e == NULL)
-		rl_initialize();
+using_history(void) {
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
 }
 
 
@@ -399,50 +421,54 @@ using_history(void)
  * globally == 1, substitutes all occurences of what, otherwise only the
  * first one
  */
-static char *
-_rl_compat_sub(const char *str, const char *what, const char *with,
-    int globally)
-{
-	char *result;
-	const char *temp, *newp;
-	size_t len,  add;
-	int with_len, what_len;
-	size_t size, i;
+static char*
+_rl_compat_sub(const char* str, const char* what, const char* with,
+               int globally) {
+   char* result;
+   const char* temp, * newp;
+   size_t len, add;
+   int with_len, what_len;
+   size_t size, i;
 
-	result = (char *) malloc((size = 16));
-	temp = str;
-	with_len = strlen(with);
-	what_len = strlen(what);
-	len = 0;
-	do {
-		newp = strstr(temp, what);
-		if (newp) {
-			i = newp - temp;
-			add = i + with_len;
-			if (i + add + 1 >= size) {
-				size += add + 1;
-				result = (char *) realloc(result, size);
-			}
-			(void) strncpy(&result[len], temp, i);
-			len += i;
-			(void) strcpy(&result[len], with);	/* safe */
-			len += with_len;
-			temp = newp + what_len;
-		} else {
-			add = strlen(temp);
-			if (len + add + 1 >= size) {
-				size += add + 1;
-				result = (char *) realloc(result, size);
-			}
-			(void) strcpy(&result[len], temp);	/* safe */
-			len += add;
-			temp = NULL;
-		}
-	} while (temp && globally);
-	result[len] = '\0';
+   result = (char*) malloc((size = 16));
+   temp = str;
+   with_len = strlen(with);
+   what_len = strlen(what);
+   len = 0;
 
-	return (result);
-}
+   do {
+      newp = strstr(temp, what);
+
+      if (newp) {
+         i = newp - temp;
+         add = i + with_len;
+
+         if (i + add + 1 >= size) {
+            size += add + 1;
+            result = (char*) realloc(result, size);
+         }
+         (void) strncpy(&result[len], temp, i);
+         len += i;
+         (void) strcpy(&result[len], with);                     /* safe */
+         len += with_len;
+         temp = newp + what_len;
+      } else {
+         add = strlen(temp);
+
+         if (len + add + 1 >= size) {
+            size += add + 1;
+            result = (char*) realloc(result, size);
+         }
+         (void) strcpy(&result[len], temp);                     /* safe */
+         len += add;
+         temp = NULL;
+      }
+   }
+   while (temp && globally);
+   result[len] = '\0';
+
+   return result;
+} // _rl_compat_sub
 
 
 /*
@@ -457,443 +483,520 @@ _rl_compat_sub(const char *str, const char *what, const char *with,
  * it's callers responsibility to free() string returned in *result
  */
 static int
-_history_expand_command(const char *command, size_t cmdlen, char **result)
-{
-	char **arr, *tempcmd, *line, *search = NULL, *cmd;
-	const char *event_data = NULL;
-	static char *from = NULL, *to = NULL;
-	int start = -1, end = -1, max, i, idx;
-	int h_on = 0, t_on = 0, r_on = 0, e_on = 0, p_on = 0, g_on = 0;
-	int event_num = 0, retval;
-	size_t cmdsize;
+_history_expand_command(const char* command, size_t cmdlen, char** result) {
+   char** arr, * tempcmd, * line, * search = NULL, * cmd;
+   const char* event_data = NULL;
+   static char* from = NULL, * to = NULL;
+   int start = -1, end = -1, max, i, idx;
+   int h_on = 0, t_on = 0, r_on = 0, e_on = 0, p_on = 0, g_on = 0;
+   int event_num = 0, retval;
+   size_t cmdsize;
 
-	*result = NULL;
+   *result = NULL;
 
-	cmd = (char *) alloca(cmdlen + 1);
-	(void) strncpy(cmd, command, cmdlen);
-	cmd[cmdlen] = 0;
+   cmd = (char*) alloca(cmdlen + 1);
+   (void) strncpy(cmd, command, cmdlen);
+   cmd[cmdlen] = 0;
 
-	idx = 1;
-	/* find out which event to take */
-	if (cmd[idx] == history_expansion_char) {
-		event_num = history_length;
-		idx++;
-	} else {
-		int off, num;
-		size_t len;
-		off = idx;
-		while (cmd[off] && !strchr(":^$*-%", cmd[off]))
-			off++;
-		num = atoi(&cmd[idx]);
-		if (num != 0) {
-			event_num = num;
-			if (num < 0)
-				event_num += history_length + 1;
-		} else {
-			int prefix = 1, curr_num;
-			HistEvent ev;
+   idx = 1;
 
-			len = off - idx;
-			if (cmd[idx] == '?') {
-				idx++, len--;
-				if (cmd[off - 1] == '?')
-					len--;
-				else if (cmd[off] != '\n' && cmd[off] != '\0')
-					return (-1);
-				prefix = 0;
-			}
-			search = (char *) alloca(len + 1);
-			(void) strncpy(search, &cmd[idx], len);
-			search[len] = '\0';
+   /* find out which event to take */
+   if (cmd[idx] == history_expansion_char) {
+      event_num = history_length;
+      idx++;
+   } else {
+      int off, num;
+      size_t len;
+      off = idx;
 
-			if (history(h, &ev, H_CURR) != 0)
-				return (-1);
-			curr_num = ev.num;
+      while (cmd[off] && !strchr(":^$*-%", cmd[off]))
+         off++;
+      num = atoi(&cmd[idx]);
 
-			if (prefix)
-				retval = history_search_prefix(search, -1);
-			else
-				retval = history_search(search, -1);
+      if (num != 0) {
+         event_num = num;
 
-			if (retval == -1) {
-				fprintf(rl_outstream, "%s: Event not found\n",
-				    search);
-				return (-1);
-			}
-			if (history(h, &ev, H_CURR) != 0)
-				return (-1);
-			event_data = ev.str;
+         if (num < 0) {
+            event_num += history_length + 1;
+         }
+      } else {
+         int prefix = 1, curr_num;
+         HistEvent ev;
 
-			/* roll back to original position */
-			history(h, &ev, H_NEXT_EVENT, curr_num);
-		}
-		idx = off;
-	}
+         len = off - idx;
 
-	if (!event_data && event_num >= 0) {
-		HIST_ENTRY *rl_he;
-		rl_he = history_get(event_num);
-		if (!rl_he)
-			return (0);
-		event_data = rl_he->line;
-	} else
-		return (-1);
+         if (cmd[idx] == '?') {
+            idx++, len--;
 
-	if (cmd[idx] != ':')
-		return (-1);
-	cmd += idx + 1;
+            if (cmd[off - 1] == '?') {
+               len--;
+            } else if (cmd[off] != '\n' && cmd[off] != '\0') {
+               return -1;
+            }
+            prefix = 0;
+         }
+         search = (char*) alloca(len + 1);
+         (void) strncpy(search, &cmd[idx], len);
+         search[len] = '\0';
 
-	/* recognize cmd */
-	if (*cmd == '^')
-		start = end = 1, cmd++;
-	else if (*cmd == '$')
-		start = end = -1, cmd++;
-	else if (*cmd == '*')
-		start = 1, end = -1, cmd++;
-	else if (isdigit((unsigned char) *cmd)) {
-		const char *temp;
-		int shifted = 0;
+         if (history(h, &ev, H_CURR) != 0) {
+            return -1;
+         }
+         curr_num = ev.num;
 
-		start = atoi(cmd);
-		temp = cmd;
-		for (; isdigit((unsigned char) *cmd); cmd++);
-		if (temp != cmd)
-			shifted = 1;
-		if (shifted && *cmd == '-') {
-			if (!isdigit((unsigned char) *(cmd + 1)))
-				end = -2;
-			else {
-				end = atoi(cmd + 1);
-				for (; isdigit((unsigned char) *cmd); cmd++);
-			}
-		} else if (shifted && *cmd == '*')
-			end = -1, cmd++;
-		else if (shifted)
-			end = start;
-	}
-	if (*cmd == ':')
-		cmd++;
+         if (prefix) {
+            retval = history_search_prefix(search, -1);
+         } else {
+            retval = history_search(search, -1);
+         }
 
-	line = strdup(event_data);
-	for (; *cmd; cmd++) {
-		if (*cmd == ':')
-			continue;
-		else if (*cmd == 'h')
-			h_on = 1 | g_on, g_on = 0;
-		else if (*cmd == 't')
-			t_on = 1 | g_on, g_on = 0;
-		else if (*cmd == 'r')
-			r_on = 1 | g_on, g_on = 0;
-		else if (*cmd == 'e')
-			e_on = 1 | g_on, g_on = 0;
-		else if (*cmd == 'p')
-			p_on = 1 | g_on, g_on = 0;
-		else if (*cmd == 'g')
-			g_on = 2;
-		else if (*cmd == 's' || *cmd == '&') {
-			char *what, *with, delim;
-			size_t len, from_len;
-			size_t size;
+         if (retval == -1) {
+            fprintf(rl_outstream, "%s: Event not found\n",
+                    search);
+            return -1;
+         }
 
-			if (*cmd == '&' && (from == NULL || to == NULL))
-				continue;
-			else if (*cmd == 's') {
-				delim = *(++cmd), cmd++;
-				size = 16;
-				what = (char *) realloc(from, size);
-				len = 0;
-				for (; *cmd && *cmd != delim; cmd++) {
-					if (*cmd == '\\'
-					    && *(cmd + 1) == delim)
-						cmd++;
-					if (len >= size)
-						what = (char *) realloc(what,
-						    (size <<= 1));
-					what[len++] = *cmd;
-				}
-				what[len] = '\0';
-				from = what;
-				if (*what == '\0') {
-					free(what);
-					if (search)
-						from = strdup(search);
-					else {
-						from = NULL;
-						return (-1);
-					}
-				}
-				cmd++;	/* shift after delim */
-				if (!*cmd)
-					continue;
+         if (history(h, &ev, H_CURR) != 0) {
+            return -1;
+         }
+         event_data = ev.str;
 
-				size = 16;
-				with = (char *) realloc(to, size);
-				len = 0;
-				from_len = strlen(from);
-				for (; *cmd && *cmd != delim; cmd++) {
-					if (len + from_len + 1 >= size) {
-						size += from_len + 1;
-						with = (char *) realloc(with, size);
-					}
-					if (*cmd == '&') {
-						/* safe */
-						(void) strcpy(&with[len], from);
-						len += from_len;
-						continue;
-					}
-					if (*cmd == '\\'
-					    && (*(cmd + 1) == delim
-						|| *(cmd + 1) == '&'))
-						cmd++;
-					with[len++] = *cmd;
-				}
-				with[len] = '\0';
-				to = with;
+         /* roll back to original position */
+         history(h, &ev, H_NEXT_EVENT, curr_num);
+      }
+      idx = off;
+   }
 
-				tempcmd = _rl_compat_sub(line, from, to,
-				    (g_on) ? 1 : 0);
-				free(line);
-				line = tempcmd;
-				g_on = 0;
-			}
-		}
-	}
+   if (!event_data && event_num >= 0) {
+      HIST_ENTRY* rl_he;
+      rl_he = history_get(event_num);
 
-	arr = history_tokenize(line);
-	free(line);		/* no more needed */
-	if (arr && *arr == NULL)
-		free(arr), arr = NULL;
-	if (!arr)
-		return (-1);
+      if (!rl_he) {
+         return 0;
+      }
+      event_data = rl_he->line;
+   } else {
+      return -1;
+   }
 
-	/* find out max valid idx to array of array */
-	max = 0;
-	for (i = 0; arr[i]; i++)
-		max++;
-	max--;
+   if (cmd[idx] != ':') {
+      return -1;
+   }
+   cmd += idx + 1;
 
-	/* set boundaries to something relevant */
-	if (start < 0)
-		start = 1;
-	if (end < 0)
-		end = max - ((end < -1) ? 1 : 0);
+   /* recognize cmd */
+   if (*cmd == '^') {
+      start = end = 1, cmd++;
+   } else if (*cmd == '$') {
+      start = end = -1, cmd++;
+   } else if (*cmd == '*') {
+      start = 1, end = -1, cmd++;
+   } else if (isdigit((unsigned char) *cmd)) {
+      const char* temp;
+      int shifted = 0;
 
-	/* check boundaries ... */
-	if (start > max || end > max || start > end)
-		return (-1);
+      start = atoi(cmd);
+      temp = cmd;
 
-	for (i = 0; i <= max; i++) {
-		char *temp;
-		if (h_on && (i == 1 || h_on > 1) &&
-		    (temp = strrchr(arr[i], '/')))
-			*(temp + 1) = '\0';
-		if (t_on && (i == 1 || t_on > 1) &&
-		    (temp = strrchr(arr[i], '/')))
-			(void) strcpy(arr[i], temp + 1);
-		if (r_on && (i == 1 || r_on > 1) &&
-		    (temp = strrchr(arr[i], '.')))
-			*temp = '\0';
-		if (e_on && (i == 1 || e_on > 1) &&
-		    (temp = strrchr(arr[i], '.')))
-			(void) strcpy(arr[i], temp);
-	}
+      for ( ; isdigit((unsigned char) *cmd); cmd++) {
+      }
 
-	cmdsize = 1, cmdlen = 0;
-	tempcmd = (char *) malloc(cmdsize);
-	for (i = start; start <= i && i <= end; i++) {
-		int arr_len;
+      if (temp != cmd) {
+         shifted = 1;
+      }
 
-		arr_len = strlen(arr[i]);
-		if (cmdlen + arr_len + 1 >= cmdsize) {
-			cmdsize += arr_len + 1;
-			tempcmd = (char *) realloc(tempcmd, cmdsize);
-		}
-		(void) strcpy(&tempcmd[cmdlen], arr[i]);	/* safe */
-		cmdlen += arr_len;
-		tempcmd[cmdlen++] = ' ';	/* add a space */
-	}
-	while (cmdlen > 0 && isspace((unsigned char) tempcmd[cmdlen - 1]))
-		cmdlen--;
-	tempcmd[cmdlen] = '\0';
+      if (shifted && *cmd == '-') {
+         if (!isdigit((unsigned char) *(cmd + 1))) {
+            end = -2;
+         } else {
+            end = atoi(cmd + 1);
 
-	*result = tempcmd;
+            for ( ; isdigit((unsigned char) *cmd); cmd++) {
+            }
+         }
+      } else if (shifted && *cmd == '*') {
+         end = -1, cmd++;
+      } else if (shifted) {
+         end = start;
+      }
+   }
 
-	for (i = 0; i <= max; i++)
-		free(arr[i]);
-	free(arr), arr = (char **) NULL;
-	return (p_on) ? 2 : 1;
-}
+   if (*cmd == ':') {
+      cmd++;
+   }
+
+   line = strdup(event_data);
+
+   for ( ; *cmd; cmd++) {
+      if (*cmd == ':') {
+         continue;
+      } else if (*cmd == 'h') {
+         h_on = 1 | g_on, g_on = 0;
+      } else if (*cmd == 't') {
+         t_on = 1 | g_on, g_on = 0;
+      } else if (*cmd == 'r') {
+         r_on = 1 | g_on, g_on = 0;
+      } else if (*cmd == 'e') {
+         e_on = 1 | g_on, g_on = 0;
+      } else if (*cmd == 'p') {
+         p_on = 1 | g_on, g_on = 0;
+      } else if (*cmd == 'g') {
+         g_on = 2;
+      } else if (*cmd == 's' || *cmd == '&') {
+         char* what, * with, delim;
+         size_t len, from_len;
+         size_t size;
+
+         if (*cmd == '&' && (from == NULL || to == NULL)) {
+            continue;
+         } else if (*cmd == 's') {
+            delim = *(++cmd), cmd++;
+            size = 16;
+            what = (char*) realloc(from, size);
+            len = 0;
+
+            for ( ; *cmd && *cmd != delim; cmd++) {
+               if (*cmd == '\\'
+                   && *(cmd + 1) == delim) {
+                  cmd++;
+               }
+
+               if (len >= size) {
+                  what = (char*) realloc(what,
+                                         (size <<= 1));
+               }
+               what[len++] = *cmd;
+            }
+            what[len] = '\0';
+            from = what;
+
+            if (*what == '\0') {
+               free(what);
+
+               if (search) {
+                  from = strdup(search);
+               } else {
+                  from = NULL;
+                  return -1;
+               }
+            }
+            cmd++;                      /* shift after delim */
+
+            if (!*cmd) {
+               continue;
+            }
+
+            size = 16;
+            with = (char*) realloc(to, size);
+            len = 0;
+            from_len = strlen(from);
+
+            for ( ; *cmd && *cmd != delim; cmd++) {
+               if (len + from_len + 1 >= size) {
+                  size += from_len + 1;
+                  with = (char*) realloc(with, size);
+               }
+
+               if (*cmd == '&') {
+                  /* safe */
+                  (void) strcpy(&with[len], from);
+                  len += from_len;
+                  continue;
+               }
+
+               if (*cmd == '\\'
+                   && (*(cmd + 1) == delim
+                       || *(cmd + 1) == '&')) {
+                  cmd++;
+               }
+               with[len++] = *cmd;
+            }
+            with[len] = '\0';
+            to = with;
+
+            tempcmd = _rl_compat_sub(line, from, to,
+                                     (g_on) ? 1 : 0);
+            free(line);
+            line = tempcmd;
+            g_on = 0;
+         }
+      }
+   }
+
+   arr = history_tokenize(line);
+   free(line);                  /* no more needed */
+
+   if (arr && *arr == NULL) {
+      free(arr), arr = NULL;
+   }
+
+   if (!arr) {
+      return -1;
+   }
+
+   /* find out max valid idx to array of array */
+   max = 0;
+
+   for (i = 0; arr[i]; i++) {
+      max++;
+   }
+   max--;
+
+   /* set boundaries to something relevant */
+   if (start < 0) {
+      start = 1;
+   }
+
+   if (end < 0) {
+      end = max - ((end < -1) ? 1 : 0);
+   }
+
+   /* check boundaries ... */
+   if (start > max || end > max || start > end) {
+      return -1;
+   }
+
+   for (i = 0; i <= max; i++) {
+      char* temp;
+
+      if (h_on && (i == 1 || h_on > 1) &&
+          (temp = strrchr(arr[i], '/'))) {
+         *(temp + 1) = '\0';
+      }
+
+      if (t_on && (i == 1 || t_on > 1) &&
+          (temp = strrchr(arr[i], '/'))) {
+         (void) strcpy(arr[i], temp + 1);
+      }
+
+      if (r_on && (i == 1 || r_on > 1) &&
+          (temp = strrchr(arr[i], '.'))) {
+         *temp = '\0';
+      }
+
+      if (e_on && (i == 1 || e_on > 1) &&
+          (temp = strrchr(arr[i], '.'))) {
+         (void) strcpy(arr[i], temp);
+      }
+   }
+
+   cmdsize = 1, cmdlen = 0;
+   tempcmd = (char*) malloc(cmdsize);
+
+   for (i = start; start <= i && i <= end; i++) {
+      int arr_len;
+
+      arr_len = strlen(arr[i]);
+
+      if (cmdlen + arr_len + 1 >= cmdsize) {
+         cmdsize += arr_len + 1;
+         tempcmd = (char*) realloc(tempcmd, cmdsize);
+      }
+      (void) strcpy(&tempcmd[cmdlen], arr[i]);                  /* safe */
+      cmdlen += arr_len;
+      tempcmd[cmdlen++] = ' ';                  /* add a space */
+   }
+
+   while (cmdlen > 0 && isspace((unsigned char) tempcmd[cmdlen - 1]))
+      cmdlen--;
+   tempcmd[cmdlen] = '\0';
+
+   *result = tempcmd;
+
+   for (i = 0; i <= max; i++) {
+      free(arr[i]);
+   }
+   free(arr), arr = (char**) NULL;
+   return (p_on) ? 2 : 1;
+} // _history_expand_command
 
 
 /*
  * csh-style history expansion
  */
 int
-history_expand(char *str, char **output)
-{
-	int i, retval = 0, idx;
-	size_t size;
-	char *temp, *result;
+history_expand(char* str, char** output) {
+   int i, retval = 0, idx;
+   size_t size;
+   char* temp, * result;
 
-	if (h == NULL || e == NULL)
-		rl_initialize();
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
 
-	*output = strdup(str);	/* do it early */
+   *output = strdup(str);       /* do it early */
 
-	if (str[0] == history_subst_char) {
-		/* ^foo^foo2^ is equivalent to !!:s^foo^foo2^ */
-		temp = (char *) alloca(4 + strlen(str) + 1);
-		temp[0] = temp[1] = history_expansion_char;
-		temp[2] = ':';
-		temp[3] = 's';
-		(void) strcpy(temp + 4, str);
-		str = temp;
-	}
-#define	ADD_STRING(what, len) 						\
-	{								\
-		if (idx + len + 1 > size)				\
-			result = (char *) realloc(result, (size += len + 1));	\
-		(void)strncpy(&result[idx], what, len);			\
-		idx += len;						\
-		result[idx] = '\0';					\
-	}
+   if (str[0] == history_subst_char) {
+      /* ^foo^foo2^ is equivalent to !!:s^foo^foo2^ */
+      temp = (char*) alloca(4 + strlen(str) + 1);
+      temp[0] = temp[1] = history_expansion_char;
+      temp[2] = ':';
+      temp[3] = 's';
+      (void) strcpy(temp + 4, str);
+      str = temp;
+   }
+#define ADD_STRING(what, len) \
+   { \
+      if (idx + len + 1 > size) { \
+         result = (char*) realloc(result, (size += len + 1)); } \
+                                           (void) strncpy(&result[idx], what, len); \
+         idx += len; \
+         result[idx] = '\0'; \
+      }
 
-	result = NULL;
-	size = idx = 0;
-	for (i = 0; str[i];) {
-		int start, j, loop_again;
-		size_t len;
+   result = NULL;
+   size = idx = 0;
 
-		loop_again = 1;
-		start = j = i;
+   for (i = 0; str[i];) {
+      int start, j, loop_again;
+      size_t len;
+
+      loop_again = 1;
+      start = j = i;
 loop:
-		for (; str[j]; j++) {
-			if (str[j] == '\\' &&
-			    str[j + 1] == history_expansion_char) {
-				(void) strcpy(&str[j], &str[j + 1]);
-				continue;
-			}
-			if (!loop_again) {
-				if (str[j] == '?') {
-					while (str[j] && str[++j] != '?');
-					if (str[j] == '?')
-						j++;
-				} else if (isspace((unsigned char) str[j]))
-					break;
-			}
-			if (str[j] == history_expansion_char
-			    && !strchr(history_no_expand_chars, str[j + 1])
-			    && (!history_inhibit_expansion_function ||
-			    (*history_inhibit_expansion_function)(str, j) == 0))
-				break;
-		}
 
-		if (str[j] && str[j + 1] != '#' && loop_again) {
-			i = j;
-			j++;
-			if (str[j] == history_expansion_char)
-				j++;
-			loop_again = 0;
-			goto loop;
-		}
-		len = i - start;
-		temp = &str[start];
-		ADD_STRING(temp, len);
+      for ( ; str[j]; j++) {
+         if (str[j] == '\\' &&
+             str[j + 1] == history_expansion_char) {
+            (void) strcpy(&str[j], &str[j + 1]);
+            continue;
+         }
 
-		if (str[i] == '\0' || str[i] != history_expansion_char
-		    || str[i + 1] == '#') {
-			len = j - i;
-			temp = &str[i];
-			ADD_STRING(temp, len);
-			if (start == 0)
-				retval = 0;
-			else
-				retval = 1;
-			break;
-		}
-		retval = _history_expand_command(&str[i], (size_t) (j - i),
-		    &temp);
-		if (retval != -1) {
-			len = strlen(temp);
-			ADD_STRING(temp, len);
-		}
-		i = j;
-	}			/* for(i ...) */
+         if (!loop_again) {
+            if (str[j] == '?') {
+               while (str[j] && str[++j] != '?')
+                  ;
 
-	if (retval == 2) {
-		add_history(temp);
+               if (str[j] == '?') {
+                  j++;
+               }
+            } else if (isspace((unsigned char) str[j])) {
+               break;
+            }
+         }
+
+         if (str[j] == history_expansion_char
+             && !strchr(history_no_expand_chars, str[j + 1])
+             && (!history_inhibit_expansion_function ||
+                 (*history_inhibit_expansion_function)(str, j) == 0)) {
+            break;
+         }
+      }
+
+      if (str[j] && str[j + 1] != '#' && loop_again) {
+         i = j;
+         j++;
+
+         if (str[j] == history_expansion_char) {
+            j++;
+         }
+         loop_again = 0;
+         goto loop;
+      }
+      len = i - start;
+      temp = &str[start];
+      ADD_STRING(temp, len);
+
+      if (str[i] == '\0' || str[i] != history_expansion_char
+          || str[i + 1] == '#') {
+         len = j - i;
+         temp = &str[i];
+         ADD_STRING(temp, len);
+
+         if (start == 0) {
+            retval = 0;
+         } else {
+            retval = 1;
+         }
+         break;
+      }
+      retval = _history_expand_command(&str[i], (size_t) (j - i),
+                                       &temp);
+
+      if (retval != -1) {
+         len = strlen(temp);
+         ADD_STRING(temp, len);
+      }
+      i = j;
+   }                            /* for(i ...) */
+
+   if (retval == 2) {
+      add_history(temp);
 #ifdef GDB_411_HACK
-		/* gdb 4.11 has been shipped with readline, where */
-		/* history_expand() returned -1 when the line	  */
-		/* should not be executed; in readline 2.1+	  */
-		/* it should return 2 in such a case		  */
-		retval = -1;
+      /* gdb 4.11 has been shipped with readline, where */
+      /* history_expand() returned -1 when the line	  */
+      /* should not be executed; in readline 2.1+	  */
+      /* it should return 2 in such a case		  */
+      retval = -1;
 #endif
-	}
-	free(*output);
-	*output = result;
+   }
+   free(*output);
+   *output = result;
 
-	return (retval);
-}
+   return retval;
+} // history_expand
 
 
 /*
  * Parse the string into individual tokens, similarily to how shell would do it.
  */
-char **
-history_tokenize(const char *str)
-{
-	int size = 1, result_idx = 0, i, start;
-	size_t len;
-	char **result = NULL, *temp, delim = '\0';
+char**
+history_tokenize(const char* str) {
+   int size = 1, result_idx = 0, i, start;
+   size_t len;
+   char** result = NULL, * temp, delim = '\0';
 
-	for (i = 0; str[i]; i++) {
-		while (isspace((unsigned char) str[i]))
-			i++;
-		start = i;
-		for (; str[i]; i++) {
-			if (str[i] == '\\') {
-				if (str[i+1] != '\0')
-					i++;
-			} else if (str[i] == delim)
-				delim = '\0';
-			else if (!delim &&
-				    (isspace((unsigned char) str[i]) ||
-				strchr("()<>;&|$", str[i])))
-				break;
-			else if (!delim && strchr("'`\"", str[i]))
-				delim = str[i];
-		}
+   for (i = 0; str[i]; i++) {
+      while (isspace((unsigned char) str[i]))
+         i++;
+      start = i;
 
-		if (result_idx + 2 >= size) {
-			size <<= 1;
-			result = (char **) realloc(result, size * sizeof(char *));
-		}
-		len = i - start;
-		temp = (char *) malloc(len + 1);
-		(void) strncpy(temp, &str[start], len);
-		temp[len] = '\0';
-		result[result_idx++] = temp;
-		result[result_idx] = NULL;
-	}
+      for ( ; str[i]; i++) {
+         if (str[i] == '\\') {
+            if (str[i + 1] != '\0') {
+               i++;
+            }
+         } else if (str[i] == delim) {
+            delim = '\0';
+         } else if (!delim &&
+                    (isspace((unsigned char) str[i]) ||
+                     strchr("()<>;&|$", str[i]))) {
+            break;
+         } else if (!delim && strchr("'`\"", str[i])) {
+            delim = str[i];
+         }
+      }
 
-	return (result);
-}
+      if (result_idx + 2 >= size) {
+         size <<= 1;
+         result = (char**) realloc(result, size * sizeof(char*));
+      }
+      len = i - start;
+      temp = (char*) malloc(len + 1);
+      (void) strncpy(temp, &str[start], len);
+      temp[len] = '\0';
+      result[result_idx++] = temp;
+      result[result_idx] = NULL;
+   }
+
+   return result;
+} // history_tokenize
 
 
 /*
  * limit size of history record to ``max'' events
  */
 void
-stifle_history(int max)
-{
-	HistEvent ev;
+stifle_history(int max) {
+   HistEvent ev;
 
-	if (h == NULL || e == NULL)
-		rl_initialize();
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
 
-	if (history(h, &ev, H_SETSIZE, max) == 0)
-		max_input_history = max;
+   if (history(h, &ev, H_SETSIZE, max) == 0) {
+      max_input_history = max;
+   }
 }
 
 
@@ -901,24 +1004,21 @@ stifle_history(int max)
  * "unlimit" size of history - set the limit to maximum allowed int value
  */
 int
-unstifle_history(void)
-{
-	HistEvent ev;
-	int omax;
+unstifle_history(void) {
+   HistEvent ev;
+   int omax;
 
-	history(h, &ev, H_SETSIZE, INT_MAX);
-	omax = max_input_history;
-	max_input_history = INT_MAX;
-	return (omax);		/* some value _must_ be returned */
+   history(h, &ev, H_SETSIZE, INT_MAX);
+   omax = max_input_history;
+   max_input_history = INT_MAX;
+   return omax;                 /* some value _must_ be returned */
 }
 
 
 int
-history_is_stifled(void)
-{
-
-	/* cannot return true answer */
-	return (max_input_history != INT_MAX);
+history_is_stifled(void) {
+   /* cannot return true answer */
+   return max_input_history != INT_MAX;
 }
 
 
@@ -926,13 +1026,13 @@ history_is_stifled(void)
  * read history from a file given
  */
 int
-read_history(const char *filename)
-{
-	HistEvent ev;
+read_history(const char* filename) {
+   HistEvent ev;
 
-	if (h == NULL || e == NULL)
-		rl_initialize();
-	return (history(h, &ev, H_LOAD, filename));
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
+   return history(h, &ev, H_LOAD, filename);
 }
 
 
@@ -940,13 +1040,13 @@ read_history(const char *filename)
  * write history to a file given
  */
 int
-write_history(const char *filename)
-{
-	HistEvent ev;
+write_history(const char* filename) {
+   HistEvent ev;
 
-	if (h == NULL || e == NULL)
-		rl_initialize();
-	return (history(h, &ev, H_SAVE, filename));
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
+   return history(h, &ev, H_SAVE, filename);
 }
 
 
@@ -955,76 +1055,85 @@ write_history(const char *filename)
  *
  * returned pointer points to static variable
  */
-HIST_ENTRY *
-history_get(int num)
-{
-	static HIST_ENTRY she;
-	HistEvent ev;
-	int i = 1, curr_num;
+HIST_ENTRY*
+history_get(int num) {
+   static HIST_ENTRY she;
+   HistEvent ev;
+   int i = 1, curr_num;
 
-	if (h == NULL || e == NULL)
-		rl_initialize();
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
 
-	/* rewind to beginning */
-	if (history(h, &ev, H_CURR) != 0)
-		return (NULL);
-	curr_num = ev.num;
-	if (history(h, &ev, H_LAST) != 0)
-		return (NULL);	/* error */
-	while (i < num && history(h, &ev, H_PREV) == 0)
-		i++;
-	if (i != num)
-		return (NULL);	/* not so many entries */
+   /* rewind to beginning */
+   if (history(h, &ev, H_CURR) != 0) {
+      return NULL;
+   }
+   curr_num = ev.num;
 
-	she.line = ev.str;
-	she.data = NULL;
+   if (history(h, &ev, H_LAST) != 0) {
+      return NULL;              /* error */
+   }
 
-	/* rewind history to the same event it was before */
-	(void) history(h, &ev, H_FIRST);
-	(void) history(h, &ev, H_NEXT_EVENT, curr_num);
+   while (i < num && history(h, &ev, H_PREV) == 0)
+      i++;
 
-	return (&she);
-}
+   if (i != num) {
+      return NULL;              /* not so many entries */
+
+   }
+   she.line = ev.str;
+   she.data = NULL;
+
+   /* rewind history to the same event it was before */
+   (void) history(h, &ev, H_FIRST);
+   (void) history(h, &ev, H_NEXT_EVENT, curr_num);
+
+   return &she;
+} // history_get
 
 
 /*
  * add the line to history table
  */
 int
-add_history(char *line)
-{
-	HistEvent ev;
+add_history(char* line) {
+   HistEvent ev;
 
-	if (h == NULL || e == NULL)
-		rl_initialize();
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
 
-        size_t len = strlen(line);
-        char oldlast = line[len - 1];
-        if (oldlast == '\n') {
-           // remove trailing newline; it would add a second, empty history entry
-           line[len - 1] = 0;
-        }
-        if (line[0]) {
-           // no empty lines in history, please
-           (void) history(h, &ev, H_ENTER, line);
-           if (history(h, &ev, H_GETSIZE) == 0)
-              history_length = ev.num;
-        }
-        line[len - 1] = oldlast;
+   size_t len = strlen(line);
+   char oldlast = line[len - 1];
 
-	return (!(history_length > 0));	/* return 0 if all is okay */
-}
+   if (oldlast == '\n') {
+      // remove trailing newline; it would add a second, empty history entry
+      line[len - 1] = 0;
+   }
+
+   if (line[0]) {
+      // no empty lines in history, please
+      (void) history(h, &ev, H_ENTER, line);
+
+      if (history(h, &ev, H_GETSIZE) == 0) {
+         history_length = ev.num;
+      }
+   }
+   line[len - 1] = oldlast;
+
+   return !(history_length > 0);        /* return 0 if all is okay */
+} // add_history
 
 
 /*
  * clear the history list - delete all entries
  */
 void
-clear_history(void)
-{
-	HistEvent ev;
+clear_history(void) {
+   HistEvent ev;
 
-	history(h, &ev, H_CLEAR);
+   history(h, &ev, H_CLEAR);
 }
 
 
@@ -1032,32 +1141,31 @@ clear_history(void)
  * returns offset of the current history event
  */
 int
-where_history(void)
-{
-	HistEvent ev;
-	int curr_num, off;
+where_history(void) {
+   HistEvent ev;
+   int curr_num, off;
 
-	if (history(h, &ev, H_CURR) != 0)
-		return (0);
-	curr_num = ev.num;
+   if (history(h, &ev, H_CURR) != 0) {
+      return 0;
+   }
+   curr_num = ev.num;
 
-	history(h, &ev, H_FIRST);
-	off = 1;
-	while (ev.num != curr_num && history(h, &ev, H_NEXT) == 0)
-		off++;
+   history(h, &ev, H_FIRST);
+   off = 1;
 
-	return (off);
-}
+   while (ev.num != curr_num && history(h, &ev, H_NEXT) == 0)
+      off++;
+
+   return off;
+} // where_history
 
 
 /*
  * returns current history event or NULL if there is no such event
  */
-HIST_ENTRY *
-current_history(void)
-{
-
-	return (_move_history(H_CURR));
+HIST_ENTRY*
+current_history(void) {
+   return _move_history(H_CURR);
 }
 
 
@@ -1065,75 +1173,74 @@ current_history(void)
  * returns total number of bytes history events' data are using
  */
 int
-history_total_bytes(void)
-{
-	HistEvent ev;
-	int curr_num, size;
+history_total_bytes(void) {
+   HistEvent ev;
+   int curr_num, size;
 
-	if (history(h, &ev, H_CURR) != 0)
-		return (-1);
-	curr_num = ev.num;
+   if (history(h, &ev, H_CURR) != 0) {
+      return -1;
+   }
+   curr_num = ev.num;
 
-	history(h, &ev, H_FIRST);
-	size = 0;
-	do
-		size += strlen(ev.str);
-	while (history(h, &ev, H_NEXT) == 0);
+   history(h, &ev, H_FIRST);
+   size = 0;
 
-	/* get to the same position as before */
-	history(h, &ev, H_PREV_EVENT, curr_num);
+   do {
+      size += strlen(ev.str);
+   }
+   while (history(h, &ev, H_NEXT) == 0);
 
-	return (size);
-}
+   /* get to the same position as before */
+   history(h, &ev, H_PREV_EVENT, curr_num);
+
+   return size;
+} // history_total_bytes
 
 
 /*
  * sets the position in the history list to ``pos''
  */
 int
-history_set_pos(int pos)
-{
-	HistEvent ev;
-	int off, curr_num;
+history_set_pos(int pos) {
+   HistEvent ev;
+   int off, curr_num;
 
-	if (pos > history_length || pos < 0)
-		return (-1);
+   if (pos > history_length || pos < 0) {
+      return -1;
+   }
 
-	history(h, &ev, H_CURR);
-	curr_num = ev.num;
-	history(h, &ev, H_FIRST);
-	off = 0;
-	while (off < pos && history(h, &ev, H_NEXT) == 0)
-		off++;
+   history(h, &ev, H_CURR);
+   curr_num = ev.num;
+   history(h, &ev, H_FIRST);
+   off = 0;
 
-	if (off != pos) {	/* do a rollback in case of error */
-		history(h, &ev, H_FIRST);
-		history(h, &ev, H_NEXT_EVENT, curr_num);
-		return (-1);
-	}
-	return (0);
-}
+   while (off < pos && history(h, &ev, H_NEXT) == 0)
+      off++;
+
+   if (off != pos) {            /* do a rollback in case of error */
+      history(h, &ev, H_FIRST);
+      history(h, &ev, H_NEXT_EVENT, curr_num);
+      return -1;
+   }
+   return 0;
+} // history_set_pos
 
 
 /*
  * returns previous event in history and shifts pointer accordingly
  */
-HIST_ENTRY *
-previous_history(void)
-{
-
-	return (_move_history(H_PREV));
+HIST_ENTRY*
+previous_history(void) {
+   return _move_history(H_PREV);
 }
 
 
 /*
  * returns next event in history and shifts pointer accordingly
  */
-HIST_ENTRY *
-next_history(void)
-{
-
-	return (_move_history(H_NEXT));
+HIST_ENTRY*
+next_history(void) {
+   return _move_history(H_NEXT);
 }
 
 
@@ -1141,38 +1248,40 @@ next_history(void)
  * generic history search function
  */
 static int
-_history_search_gen(const char *str, int direction, int pos)
-{
-	HistEvent ev;
-	const char *strp;
-	int curr_num;
+_history_search_gen(const char* str, int direction, int pos) {
+   HistEvent ev;
+   const char* strp;
+   int curr_num;
 
-	if (history(h, &ev, H_CURR) != 0)
-		return (-1);
-	curr_num = ev.num;
+   if (history(h, &ev, H_CURR) != 0) {
+      return -1;
+   }
+   curr_num = ev.num;
 
-	for (;;) {
-		strp = strstr(ev.str, str);
-		if (strp && (pos < 0 || &ev.str[pos] == strp))
-			return (int) (strp - ev.str);
-		if (history(h, &ev, direction < 0 ? H_PREV : H_NEXT) != 0)
-			break;
-	}
+   for ( ; ;) {
+      strp = strstr(ev.str, str);
 
-	history(h, &ev, direction < 0 ? H_NEXT_EVENT : H_PREV_EVENT, curr_num);
+      if (strp && (pos < 0 || &ev.str[pos] == strp)) {
+         return (int) (strp - ev.str);
+      }
 
-	return (-1);
-}
+      if (history(h, &ev, direction < 0 ? H_PREV : H_NEXT) != 0) {
+         break;
+      }
+   }
+
+   history(h, &ev, direction < 0 ? H_NEXT_EVENT : H_PREV_EVENT, curr_num);
+
+   return -1;
+} // _history_search_gen
 
 
 /*
  * searches for first history event containing the str
  */
 int
-history_search(const char *str, int direction)
-{
-
-	return (_history_search_gen(str, direction, -1));
+history_search(const char* str, int direction) {
+   return _history_search_gen(str, direction, -1);
 }
 
 
@@ -1180,10 +1289,8 @@ history_search(const char *str, int direction)
  * searches for first history event beginning with str
  */
 int
-history_search_prefix(const char *str, int direction)
-{
-
-	return (_history_search_gen(str, direction, 0));
+history_search_prefix(const char* str, int direction) {
+   return _history_search_gen(str, direction, 0);
 }
 
 
@@ -1193,34 +1300,37 @@ history_search_prefix(const char *str, int direction)
  */
 /* ARGSUSED */
 int
-history_search_pos(const char *str, int /*direction*/, int pos)
-{
-	HistEvent ev;
-	int curr_num, off;
+history_search_pos(const char* str, int /*direction*/, int pos) {
+   HistEvent ev;
+   int curr_num, off;
 
-	off = (pos > 0) ? pos : -pos;
-	pos = (pos > 0) ? 1 : -1;
+   off = (pos > 0) ? pos : -pos;
+   pos = (pos > 0) ? 1 : -1;
 
-	if (history(h, &ev, H_CURR) != 0)
-		return (-1);
-	curr_num = ev.num;
+   if (history(h, &ev, H_CURR) != 0) {
+      return -1;
+   }
+   curr_num = ev.num;
 
-	if (history_set_pos(off) != 0 || history(h, &ev, H_CURR) != 0)
-		return (-1);
+   if (history_set_pos(off) != 0 || history(h, &ev, H_CURR) != 0) {
+      return -1;
+   }
 
+   for ( ; ;) {
+      if (strstr(ev.str, str)) {
+         return off;
+      }
 
-	for (;;) {
-		if (strstr(ev.str, str))
-			return (off);
-		if (history(h, &ev, (pos < 0) ? H_PREV : H_NEXT) != 0)
-			break;
-	}
+      if (history(h, &ev, (pos < 0) ? H_PREV : H_NEXT) != 0) {
+         break;
+      }
+   }
 
-	/* set "current" pointer back to previous state */
-	history(h, &ev, (pos < 0) ? H_NEXT_EVENT : H_PREV_EVENT, curr_num);
+   /* set "current" pointer back to previous state */
+   history(h, &ev, (pos < 0) ? H_NEXT_EVENT : H_PREV_EVENT, curr_num);
 
-	return (-1);
-}
+   return -1;
+} // history_search_pos
 
 
 /********************************/
@@ -1233,39 +1343,42 @@ history_search_pos(const char *str, int /*direction*/, int pos)
  *
  * it's callers's responsibility to free() returned string
  */
-char *
-tilde_expand(char *txt)
-{
-	struct passwd *pass;
-	char *temp;
-	size_t len = 0;
+char*
+tilde_expand(char* txt) {
+   struct passwd* pass;
+   char* temp;
+   size_t len = 0;
 
-	if (txt[0] != '~')
-		return (strdup(txt));
+   if (txt[0] != '~') {
+      return strdup(txt);
+   }
 
-	temp = strchr(txt + 1, '/');
-	if (temp == NULL)
-		temp = strdup(txt + 1);
-	else {
-		len = temp - txt + 1;	/* text until string after slash */
-		temp = (char *) malloc(len);
-		(void) strncpy(temp, txt + 1, len - 2);
-		temp[len - 2] = '\0';
-	}
-	pass = getpwnam(temp);
-	free(temp);		/* value no more needed */
-	if (pass == NULL)
-		return (strdup(txt));
+   temp = strchr(txt + 1, '/');
 
-	/* update pointer txt to point at string immedially following */
-	/* first slash */
-	txt += len;
+   if (temp == NULL) {
+      temp = strdup(txt + 1);
+   } else {
+      len = temp - txt + 1;             /* text until string after slash */
+      temp = (char*) malloc(len);
+      (void) strncpy(temp, txt + 1, len - 2);
+      temp[len - 2] = '\0';
+   }
+   pass = getpwnam(temp);
+   free(temp);                  /* value no more needed */
 
-	temp = (char *) malloc(strlen(pass->pw_dir) + 1 + strlen(txt) + 1);
-	(void) sprintf(temp, "%s/%s", pass->pw_dir, txt);
+   if (pass == NULL) {
+      return strdup(txt);
+   }
 
-	return (temp);
-}
+   /* update pointer txt to point at string immedially following */
+   /* first slash */
+   txt += len;
+
+   temp = (char*) malloc(strlen(pass->pw_dir) + 1 + strlen(txt) + 1);
+   (void) sprintf(temp, "%s/%s", pass->pw_dir, txt);
+
+   return temp;
+} // tilde_expand
 
 
 /*
@@ -1275,87 +1388,94 @@ tilde_expand(char *txt)
  *
  * it's caller's responsibility to free returned string
  */
-char *
-filename_completion_function(const char *text, int state)
-{
-	static DIR *dir = NULL;
-	static char *filename = NULL, *dirname = NULL;
-	static size_t filename_len = 0;
-	struct dirent *entry;
-	char *temp;
-	size_t len;
+char*
+filename_completion_function(const char* text, int state) {
+   static DIR* dir = NULL;
+   static char* filename = NULL, * dirname = NULL;
+   static size_t filename_len = 0;
+   struct dirent* entry;
+   char* temp;
+   size_t len;
 
-	if (state == 0 || dir == NULL) {
-		if (dir != NULL) {
-			closedir(dir);
-			dir = NULL;
-		}
-		temp = strrchr(text, '/');
-		if (temp) {
-			temp++;
-			filename = (char *) realloc(filename, strlen(temp) + 1);
-			(void) strcpy(filename, temp);
-			len = temp - text;	/* including last slash */
-			dirname = (char *) realloc(dirname, len + 1);
-			(void) strncpy(dirname, text, len);
-			dirname[len] = '\0';
-		} else {
-			filename = strdup(text);
-			dirname = NULL;
-		}
+   if (state == 0 || dir == NULL) {
+      if (dir != NULL) {
+         closedir(dir);
+         dir = NULL;
+      }
+      temp = strrchr(text, '/');
 
-		/* support for ``~user'' syntax */
-		if (dirname && *dirname == '~') {
-			temp = tilde_expand(dirname);
-			dirname = (char *) realloc(dirname, strlen(temp) + 1);
-			(void) strcpy(dirname, temp);	/* safe */
-			free(temp);	/* no longer needed */
-		}
-		/* will be used in cycle */
-		filename_len = strlen(filename);
-		if (filename_len == 0)
-			return (NULL);	/* no expansion possible */
+      if (temp) {
+         temp++;
+         filename = (char*) realloc(filename, strlen(temp) + 1);
+         (void) strcpy(filename, temp);
+         len = temp - text;                     /* including last slash */
+         dirname = (char*) realloc(dirname, len + 1);
+         (void) strncpy(dirname, text, len);
+         dirname[len] = '\0';
+      } else {
+         filename = strdup(text);
+         dirname = NULL;
+      }
 
-		dir = opendir(dirname ? dirname : ".");
-		if (!dir)
-			return (NULL);	/* cannot open the directory */
-	}
-	/* find the match */
-	while ((entry = readdir(dir)) != NULL) {
-		/* otherwise, get first entry where first */
-		/* filename_len characters are equal	  */
-		if (entry->d_name[0] == filename[0]
+      /* support for ``~user'' syntax */
+      if (dirname && *dirname == '~') {
+         temp = tilde_expand(dirname);
+         dirname = (char*) realloc(dirname, strlen(temp) + 1);
+         (void) strcpy(dirname, temp);                  /* safe */
+         free(temp);                    /* no longer needed */
+      }
+      /* will be used in cycle */
+      filename_len = strlen(filename);
+
+      if (filename_len == 0) {
+         return NULL;                   /* no expansion possible */
+
+      }
+      dir = opendir(dirname ? dirname : ".");
+
+      if (!dir) {
+         return NULL;                   /* cannot open the directory */
+      }
+   }
+
+   /* find the match */
+   while ((entry = readdir(dir)) != NULL) {
+      /* otherwise, get first entry where first */
+      /* filename_len characters are equal	  */
+      if (entry->d_name[0] == filename[0]
 #if defined(__SVR4) || defined(__linux__)
-		    && strlen(entry->d_name) >= filename_len
+          && strlen(entry->d_name) >= filename_len
 #else
-		    && entry->d_namlen >= filename_len
+          && entry->d_namlen >= filename_len
 #endif
-		    && strncmp(entry->d_name, filename,
-			filename_len) == 0)
-			break;
-	}
+          && strncmp(entry->d_name, filename,
+                     filename_len) == 0) {
+         break;
+      }
+   }
 
-	if (entry) {		/* match found */
-
-		struct stat stbuf;
+   if (entry) {                 /* match found */
+      struct stat stbuf;
 #if defined(__SVR4) || defined(__linux__)
-		len = strlen(entry->d_name) +
+      len = strlen(entry->d_name) +
 #else
-		len = entry->d_namlen +
+      len = entry->d_namlen +
 #endif
-		    ((dirname) ? strlen(dirname) : 0) + 1 + 1;
-		temp = (char *) malloc(len);
-		(void) sprintf(temp, "%s%s",
-		    dirname ? dirname : "", entry->d_name);	/* safe */
+            ((dirname) ? strlen(dirname) : 0) + 1 + 1;
+      temp = (char*) malloc(len);
+      (void) sprintf(temp, "%s%s",
+                     dirname ? dirname : "", entry->d_name);    /* safe */
 
-		/* test, if it's directory */
-		if (stat(temp, &stbuf) == 0 && S_ISDIR(stbuf.st_mode))
-			strcat(temp, "/");	/* safe */
-	} else
-		temp = NULL;
+      /* test, if it's directory */
+      if (stat(temp, &stbuf) == 0 && S_ISDIR(stbuf.st_mode)) {
+         strcat(temp, "/");                     /* safe */
+      }
+   } else {
+      temp = NULL;
+   }
 
-	return (temp);
-}
+   return temp;
+} // filename_completion_function
 
 
 /*
@@ -1365,29 +1485,32 @@ filename_completion_function(const char *text, int state)
  * (usually '~'); state is ignored
  * it's callers responsibility to free returned value
  */
-char *
-username_completion_function(const char *text, int state)
-{
-	struct passwd *pwd;
+char*
+username_completion_function(const char* text, int state) {
+   struct passwd* pwd;
 
-	if (text[0] == '\0')
-		return (NULL);
+   if (text[0] == '\0') {
+      return NULL;
+   }
 
-	if (*text == '~')
-		text++;
+   if (*text == '~') {
+      text++;
+   }
 
-	if (state == 0)
-		setpwent();
+   if (state == 0) {
+      setpwent();
+   }
 
-	while ((pwd = getpwent()) && text[0] == pwd->pw_name[0]
-	    && strcmp(text, pwd->pw_name) == 0);
+   while ((pwd = getpwent()) && text[0] == pwd->pw_name[0]
+          && strcmp(text, pwd->pw_name) == 0)
+      ;
 
-	if (pwd == NULL) {
-		endpwent();
-		return (NULL);
-	}
-	return (strdup(pwd->pw_name));
-}
+   if (pwd == NULL) {
+      endpwent();
+      return NULL;
+   }
+   return strdup(pwd->pw_name);
+} // username_completion_function
 
 
 /*
@@ -1395,77 +1518,82 @@ username_completion_function(const char *text, int state)
  */
 /* ARGSUSED */
 static unsigned char
-_el_rl_complete(EditLine* /*el*/, int ch)
-{
-	return (unsigned char) rl_complete(0, ch);
+_el_rl_complete(EditLine* /*el*/, int ch) {
+   return (unsigned char) rl_complete(0, ch);
 }
 
 
 /*
  * returns list of completitions for text given
  */
-char **
-completion_matches(const char *text, CPFunction *genfunc)
-{
-	char **match_list = NULL, *retstr, *prevstr;
-	size_t match_list_len, max_equal, which, i;
-	size_t matches;
+char**
+completion_matches(const char* text, CPFunction* genfunc) {
+   char** match_list = NULL, * retstr, * prevstr;
+   size_t match_list_len, max_equal, which, i;
+   size_t matches;
 
-	if (h == NULL || e == NULL)
-		rl_initialize();
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
 
-	matches = 0;
-	match_list_len = 1;
-	while ((retstr = (*genfunc) (text, matches)) != NULL) {
-		if (matches + 1 >= match_list_len) {
-			match_list_len <<= 1;
-			match_list = (char **) realloc(match_list,
-			    match_list_len * sizeof(char *));
-		}
-		match_list[++matches] = retstr;
-	}
+   matches = 0;
+   match_list_len = 1;
 
-	if (!match_list)
-		return (char **) NULL;	/* nothing found */
+   while ((retstr = (*genfunc)(text, matches)) != NULL) {
+      if (matches + 1 >= match_list_len) {
+         match_list_len <<= 1;
+         match_list = (char**) realloc(match_list,
+                                       match_list_len * sizeof(char*));
+      }
+      match_list[++matches] = retstr;
+   }
 
-	/* find least denominator and insert it to match_list[0] */
-	which = 2;
-	prevstr = match_list[1];
-	max_equal = strlen(prevstr);
-	for (; which <= matches; which++) {
-		for (i = 0; i < max_equal &&
-		    prevstr[i] == match_list[which][i]; i++)
-			continue;
-		max_equal = i;
-	}
+   if (!match_list) {
+      return (char**) NULL;             /* nothing found */
 
-	retstr = (char *) malloc(max_equal + 1);
-	(void) strncpy(retstr, match_list[1], max_equal);
-	retstr[max_equal] = '\0';
-	match_list[0] = retstr;
+   }
+   /* find least denominator and insert it to match_list[0] */
+   which = 2;
+   prevstr = match_list[1];
+   max_equal = strlen(prevstr);
 
-	/* add NULL as last pointer to the array */
-	if (matches + 1 >= match_list_len)
-		match_list = (char **) realloc(match_list,
-		    (match_list_len + 1) * sizeof(char *));
-	match_list[matches + 1] = (char *) NULL;
+   for ( ; which <= matches; which++) {
+      for (i = 0; i < max_equal &&
+           prevstr[i] == match_list[which][i]; i++) {
+         continue;
+      }
+      max_equal = i;
+   }
 
-	return (match_list);
-}
+   retstr = (char*) malloc(max_equal + 1);
+   (void) strncpy(retstr, match_list[1], max_equal);
+   retstr[max_equal] = '\0';
+   match_list[0] = retstr;
+
+   /* add NULL as last pointer to the array */
+   if (matches + 1 >= match_list_len) {
+      match_list = (char**) realloc(match_list,
+                                    (match_list_len + 1) * sizeof(char*));
+   }
+   match_list[matches + 1] = (char*) NULL;
+
+   return match_list;
+} // completion_matches
+
 
 /*
  * Sort function for qsort(). Just wrapper around strcasecmp().
  */
 static int
-_rl_qsort_string_compare(const void *i1, const void *i2)
-{
-	/*LINTED const castaway*/
-	const char *s1 = ((const char **)i1)[0];
-	/*LINTED const castaway*/
-	const char *s2 = ((const char **)i2)[0];
+_rl_qsort_string_compare(const void* i1, const void* i2) {
+   /*LINTED const castaway*/
+   const char* s1 = ((const char**) i1)[0];
+   /*LINTED const castaway*/
+   const char* s2 = ((const char**) i2)[0];
 
-	return strcasecmp(s1, s2);
+   return strcasecmp(s1, s2);
 }
+
 
 /*
  * Display list of strings in columnar format on readline's output stream.
@@ -1473,35 +1601,41 @@ _rl_qsort_string_compare(const void *i1, const void *i2)
  * 'max' is maximum length of string in 'matches'.
  */
 void
-rl_display_match_list (char ** matches, int len, int max)
-{
-	int i, idx, limit, count;
-	int screenwidth = e->el_term.t_size.h;
+rl_display_match_list(char** matches, int len, int max) {
+   int i, idx, limit, count;
+   int screenwidth = e->el_term.t_size.h;
 
-	/*
-	 * Find out how many entries can be put on one line, count
-	 * with two spaces between strings.
-	 */
-	limit = screenwidth / (max + 2);
-	if (limit == 0)
-		limit = 1;
+   /*
+    * Find out how many entries can be put on one line, count
+    * with two spaces between strings.
+    */
+   limit = screenwidth / (max + 2);
 
-	/* how many lines of output */
-	count = len / limit;
-	if (count * limit < len)
-		count++;
+   if (limit == 0) {
+      limit = 1;
+   }
 
-	/* Sort the items if they are not already sorted. */
-	qsort(&matches[1], (size_t)(len - 1), sizeof(char *),
-	    _rl_qsort_string_compare);
+   /* how many lines of output */
+   count = len / limit;
 
-	idx = 1;
-	for(; count > 0; count--) {
-		for(i=0; i < limit && matches[idx]; i++, idx++)
-			fprintf(e->el_outfile, "%-*s  ", max, matches[idx]);
-		fprintf(e->el_outfile, "\n");
-	}
-}
+   if (count * limit < len) {
+      count++;
+   }
+
+   /* Sort the items if they are not already sorted. */
+   qsort(&matches[1], (size_t) (len - 1), sizeof(char*),
+         _rl_qsort_string_compare);
+
+   idx = 1;
+
+   for ( ; count > 0; count--) {
+      for (i = 0; i < limit && matches[idx]; i++, idx++) {
+         fprintf(e->el_outfile, "%-*s  ", max, matches[idx]);
+      }
+      fprintf(e->el_outfile, "\n");
+   }
+} // rl_display_match_list
+
 
 /*
  * Complete the word at or before point, called by rl_complete()
@@ -1515,184 +1649,202 @@ rl_display_match_list (char ** matches, int len, int max)
  * Note: '*' support is not implemented
  */
 static int
-rl_complete_internal(int what_to_do)
-{
-	CPFunction *complet_func;
-	const LineInfo *li;
-	char *temp, **matches;
-	const char *ctemp;
-	size_t len;
+rl_complete_internal(int what_to_do) {
+   CPFunction* complet_func;
+   const LineInfo* li;
+   char* temp, ** matches;
+   const char* ctemp;
+   size_t len;
 
-        if (rl_tab_hook) {
-           int cursorIdx = e->el_line.cursor - e->el_line.buffer;
-           char old = *e->el_line.cursor; // presumably \a
-           *e->el_line.cursor = 0;
-           term__setcolor(tab_color);
-           int loc = rl_tab_hook(e->el_line.buffer, 0, &cursorIdx);
-           term__resetcolor();
-           if (loc >= 0 || loc == -2 /* new line */ || cursorIdx != e->el_line.cursor - e->el_line.buffer) {
-              size_t lenbuf = strlen(e->el_line.buffer);
-              e->el_line.buffer[lenbuf] = old;
-              e->el_line.buffer[lenbuf + 1] = 0;
-              for (int i = e->el_line.cursor - e->el_line.buffer; i < cursorIdx; ++i)
-                 e->el_line.bufcolor[i] = -1;
-              e->el_line.cursor = e->el_line.buffer + cursorIdx;
-              e->el_line.lastchar = e->el_line.cursor;
-              if (loc == -2) {
-                 // spit out several lines; redraw prompt!
-                 re_clear_display(e);
-              }
-              re_refresh(e);
-           } else {
-              *e->el_line.cursor = old;
-           }
-           return (CC_NORM);
-        }
+   if (rl_tab_hook) {
+      int cursorIdx = e->el_line.cursor - e->el_line.buffer;
+      char old = *e->el_line.cursor;      // presumably \a
+      *e->el_line.cursor = 0;
+      term__setcolor(tab_color);
+      int loc = rl_tab_hook(e->el_line.buffer, 0, &cursorIdx);
+      term__resetcolor();
 
-	rl_completion_type = what_to_do;
+      if (loc >= 0 || loc == -2 /* new line */ || cursorIdx != e->el_line.cursor - e->el_line.buffer) {
+         size_t lenbuf = strlen(e->el_line.buffer);
+         e->el_line.buffer[lenbuf] = old;
+         e->el_line.buffer[lenbuf + 1] = 0;
 
-	if (h == NULL || e == NULL)
-		rl_initialize();
+         for (int i = e->el_line.cursor - e->el_line.buffer; i < cursorIdx; ++i) {
+            e->el_line.bufcolor[i] = -1;
+         }
+         e->el_line.cursor = e->el_line.buffer + cursorIdx;
+         e->el_line.lastchar = e->el_line.cursor;
 
-	complet_func = rl_completion_entry_function;
-	if (!complet_func)
-		complet_func = filename_completion_function;
+         if (loc == -2) {
+            // spit out several lines; redraw prompt!
+            re_clear_display(e);
+         }
+         re_refresh(e);
+      } else {
+         *e->el_line.cursor = old;
+      }
+      return CC_NORM;
+   }
 
-	/* We now look backwards for the start of a filename/variable word */
-	li = el_line(e);
-	ctemp = (const char *) li->cursor;
-	while (ctemp > li->buffer
-	    && !strchr(rl_basic_word_break_characters, ctemp[-1])
-	    && (!rl_special_prefixes
-			|| !strchr(rl_special_prefixes, ctemp[-1]) ) )
-		ctemp--;
+   rl_completion_type = what_to_do;
 
-	len = li->cursor - ctemp;
-	temp = (char *) alloca(len + 1);
-	(void) strncpy(temp, ctemp, len);
-	temp[len] = '\0';
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
 
-	/* these can be used by function called in completion_matches() */
-	/* or (*rl_attempted_completion_function)() */
-	rl_point = li->cursor - li->buffer;
-	rl_end = li->lastchar - li->buffer;
+   complet_func = rl_completion_entry_function;
 
-	if (!rl_attempted_completion_function)
-		matches = completion_matches(temp, complet_func);
-	else {
-		int end = li->cursor - li->buffer;
-		matches = (*rl_attempted_completion_function) (temp, (int)
-		    (end - len), end);
-	}
+   if (!complet_func) {
+      complet_func = filename_completion_function;
+   }
 
-	if (matches) {
-		int i, retval = CC_REFRESH;
-		int matches_num, maxlen, match_len, match_display=1;
+   /* We now look backwards for the start of a filename/variable word */
+   li = el_line(e);
+   ctemp = (const char*) li->cursor;
 
-		/*
-		 * Only replace the completed string with common part of
-		 * possible matches if there is possible completion.
-		 */
-		if (matches[0][0] != '\0') {
-			el_deletestr(e, (int) len);
-			el_insertstr(e, matches[0]);
-		}
+   while (ctemp > li->buffer
+          && !strchr(rl_basic_word_break_characters, ctemp[-1])
+          && (!rl_special_prefixes
+              || !strchr(rl_special_prefixes, ctemp[-1])))
+      ctemp--;
 
-		if (what_to_do == '?')
-			goto display_matches;
+   len = li->cursor - ctemp;
+   temp = (char*) alloca(len + 1);
+   (void) strncpy(temp, ctemp, len);
+   temp[len] = '\0';
 
-		if (matches[2] == NULL && strcmp(matches[0], matches[1]) == 0) {
-			/*
-			 * We found exact match. Add a space after
-			 * it, unless we do filename completition and the
-			 * object is a directory.
-			 */
-			size_t alen = strlen(matches[0]);
-			if ((complet_func != filename_completion_function
-			      || (alen > 0 && (matches[0])[alen - 1] != '/'))
-			    && rl_completion_append_character) {
-				char buf[2];
-				buf[0] = rl_completion_append_character;
-				buf[1] = '\0';
-				el_insertstr(e, buf);
-			}
-		} else if (what_to_do == '!') {
-    display_matches:
-			/*
-			 * More than one match and requested to list possible
-			 * matches.
-			 */
+   /* these can be used by function called in completion_matches() */
+   /* or (*rl_attempted_completion_function)() */
+   rl_point = li->cursor - li->buffer;
+   rl_end = li->lastchar - li->buffer;
 
-			for(i=1, maxlen=0; matches[i]; i++) {
-				match_len = strlen(matches[i]);
-				if (match_len > maxlen)
-					maxlen = match_len;
-			}
-			matches_num = i - 1;
-				
-			/* newline to get on next line from command line */
-			fprintf(e->el_outfile, "\n");
+   if (!rl_attempted_completion_function) {
+      matches = completion_matches(temp, complet_func);
+   } else {
+      int end = li->cursor - li->buffer;
+      matches = (*rl_attempted_completion_function)(temp, (int)
+                                                    (end - len), end);
+   }
 
-			/*
-			 * If there are too many items, ask user for display
-			 * confirmation.
-			 */
-			if (matches_num > rl_completion_query_items) {
-				fprintf(e->el_outfile,
-				"Display all %d possibilities? (y or n) ",
-					matches_num);
-				fflush(e->el_outfile);
-				if (getc(stdin) != 'y')
-					match_display = 0;
-				fprintf(e->el_outfile, "\n");
-			}
+   if (matches) {
+      int i, retval = CC_REFRESH;
+      int matches_num, maxlen, match_len, match_display = 1;
 
-			if (match_display)
-				rl_display_match_list(matches, matches_num,
-					maxlen);
-			retval = CC_REDISPLAY;
-		} else if (matches[0][0]) {
-			/*
-			 * There was some common match, but the name was
-			 * not complete enough. Next tab will print possible
-			 * completions.
-			 */
-			el_beep(e);
-		} else {
-			/* lcd is not a valid object - further specification */
-			/* is needed */
-			el_beep(e);
-			retval = CC_NORM;
-		}
+      /*
+       * Only replace the completed string with common part of
+       * possible matches if there is possible completion.
+       */
+      if (matches[0][0] != '\0') {
+         el_deletestr(e, (int) len);
+         el_insertstr(e, matches[0]);
+      }
 
-		/* free elements of array and the array itself */
-		for (i = 0; matches[i]; i++)
-			free(matches[i]);
-		free(matches), matches = NULL;
+      if (what_to_do == '?') {
+         goto display_matches;
+      }
 
-		return (retval);
-	}
-	return (CC_NORM);
-}
+      if (matches[2] == NULL && strcmp(matches[0], matches[1]) == 0) {
+         /*
+          * We found exact match. Add a space after
+          * it, unless we do filename completition and the
+          * object is a directory.
+          */
+         size_t alen = strlen(matches[0]);
+
+         if ((complet_func != filename_completion_function
+              || (alen > 0 && (matches[0])[alen - 1] != '/'))
+             && rl_completion_append_character) {
+            char buf[2];
+            buf[0] = rl_completion_append_character;
+            buf[1] = '\0';
+            el_insertstr(e, buf);
+         }
+      } else if (what_to_do == '!') {
+display_matches:
+
+         /*
+          * More than one match and requested to list possible
+          * matches.
+          */
+
+         for (i = 1, maxlen = 0; matches[i]; i++) {
+            match_len = strlen(matches[i]);
+
+            if (match_len > maxlen) {
+               maxlen = match_len;
+            }
+         }
+         matches_num = i - 1;
+
+         /* newline to get on next line from command line */
+         fprintf(e->el_outfile, "\n");
+
+         /*
+          * If there are too many items, ask user for display
+          * confirmation.
+          */
+         if (matches_num > rl_completion_query_items) {
+            fprintf(e->el_outfile,
+                    "Display all %d possibilities? (y or n) ",
+                    matches_num);
+            fflush(e->el_outfile);
+
+            if (getc(stdin) != 'y') {
+               match_display = 0;
+            }
+            fprintf(e->el_outfile, "\n");
+         }
+
+         if (match_display) {
+            rl_display_match_list(matches, matches_num,
+                                  maxlen);
+         }
+         retval = CC_REDISPLAY;
+      } else if (matches[0][0]) {
+         /*
+          * There was some common match, but the name was
+          * not complete enough. Next tab will print possible
+          * completions.
+          */
+         el_beep(e);
+      } else {
+         /* lcd is not a valid object - further specification */
+         /* is needed */
+         el_beep(e);
+         retval = CC_NORM;
+      }
+
+      /* free elements of array and the array itself */
+      for (i = 0; matches[i]; i++) {
+         free(matches[i]);
+      }
+      free(matches), matches = NULL;
+
+      return retval;
+   }
+   return CC_NORM;
+} // rl_complete_internal
 
 
 /*
  * complete word at current point
  */
 int
-rl_complete(int ignore, int invoking_key)
-{
-	if (h == NULL || e == NULL)
-		rl_initialize();
-	if (rl_inhibit_completion) {
-		rl_insert(ignore, invoking_key);
-		return (CC_REFRESH);
-	} else if (e->el_state.lastcmd == el_rl_complete_cmdnum)
-		return rl_complete_internal('?');
-	else if (_rl_complete_show_all)
-		return rl_complete_internal('!');
-	else
-		return (rl_complete_internal(TAB));
+rl_complete(int ignore, int invoking_key) {
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
+
+   if (rl_inhibit_completion) {
+      rl_insert(ignore, invoking_key);
+      return CC_REFRESH;
+   } else if (e->el_state.lastcmd == el_rl_complete_cmdnum) {
+      return rl_complete_internal('?');
+   } else if (_rl_complete_show_all) {
+      return rl_complete_internal('!');
+   } else {
+      return rl_complete_internal(TAB);
+   }
 }
 
 
@@ -1704,19 +1856,19 @@ rl_complete(int ignore, int invoking_key)
  * bind key c to readline-type function func
  */
 int
-rl_bind_key(int c, int func(int, int))
-{
-	int retval = -1;
+rl_bind_key(int c, int func(int, int)) {
+   int retval = -1;
 
-	if (h == NULL || e == NULL)
-		rl_initialize();
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
 
-	if (func == rl_insert) {
-		/* XXX notice there is no range checking of ``c'' */
-		e->el_map.key[c] = ED_INSERT;
-		retval = 0;
-	}
-	return (retval);
+   if (func == rl_insert) {
+      /* XXX notice there is no range checking of ``c'' */
+      e->el_map.key[c] = ED_INSERT;
+      retval = 0;
+   }
+   return retval;
 }
 
 
@@ -1725,14 +1877,14 @@ rl_bind_key(int c, int func(int, int))
  * to input stream also
  */
 int
-rl_read_key(void)
-{
-	char fooarr[2 * sizeof(int)];
+rl_read_key(void) {
+   char fooarr[2 * sizeof(int)];
 
-	if (e == NULL || h == NULL)
-		rl_initialize();
+   if (e == NULL || h == NULL) {
+      rl_initialize();
+   }
 
-	return (el_getc(e, fooarr));
+   return el_getc(e, fooarr);
 }
 
 
@@ -1741,12 +1893,11 @@ rl_read_key(void)
  */
 /* ARGSUSED */
 void
-rl_reset_terminal(void)
-{
-
-	if (h == NULL || e == NULL)
-		rl_initialize();
-	el_reset(e);
+rl_reset_terminal(void) {
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
+   el_reset(e);
 }
 
 
@@ -1754,29 +1905,35 @@ rl_reset_terminal(void)
  * insert character ``c'' back into input stream, ``count'' times
  */
 int
-rl_insert(int count, int c)
-{
-	char arr[2];
+rl_insert(int count, int c) {
+   char arr[2];
 
-	if (h == NULL || e == NULL)
-		rl_initialize();
+   if (h == NULL || e == NULL) {
+      rl_initialize();
+   }
 
-	/* XXX - int -> char conversion can lose on multichars */
-	arr[0] = c;
-	arr[1] = '\0';
+   /* XXX - int -> char conversion can lose on multichars */
+   arr[0] = c;
+   arr[1] = '\0';
 
-	for (; count > 0; count--)
-		el_push(e, arr);
+   for ( ; count > 0; count--) {
+      el_push(e, arr);
+   }
 
-	return (0);
+   return 0;
+} // rl_insert
+
+
+editline*
+el_readline_el() {
+   if (NULL == e) {
+      rl_initialize();
+   }
+   return e;
 }
 
-editline * el_readline_el()
-{
-        if( NULL == e ) rl_initialize();
-        return e;
-}
 
-int rl_eof() {
+int
+rl_eof() {
    return el_eof(e);
 }

@@ -38,11 +38,11 @@
 
 #include "compat.h"
 #if !defined(lint) && !defined(SCCSID)
-#if 0
+# if 0
 static char sccsid[] = "@(#)parse.c	8.1 (Berkeley) 6/4/93";
-#else
+# else
 __RCSID("$NetBSD: parse.c,v 1.14 2001/01/23 15:55:30 jdolecek Exp $");
-#endif
+# endif
 #endif /* not lint && not SCCSID */
 
 /*
@@ -72,17 +72,16 @@ __RCSID("$NetBSD: parse.c,v 1.14 2001/01/23 15:55:30 jdolecek Exp $");
  * with tok_line() and friends.
  */
 el_protected int
-parse_line(EditLine *el, const char *line)
-{
-        char **argv;
-	int argc;
-	Tokenizer *tok;
+parse_line(EditLine* el, const char* line) {
+   char** argv;
+   int argc;
+   Tokenizer* tok;
 
-	tok = tok_init(NULL);
-	tok_line(tok, line, &argc, &argv);
-	argc = el_parse(el, argc, (const char **)argv);
-	tok_end(tok);
-	return (argc);
+   tok = tok_init(NULL);
+   tok_line(tok, line, &argc, &argv);
+   argc = el_parse(el, argc, (const char**) argv);
+   tok_end(tok);
+   return argc;
 }
 
 
@@ -90,46 +89,50 @@ parse_line(EditLine *el, const char *line)
  *	Command dispatcher
  */
 el_public int
-el_parse(EditLine *el, int argc, const char *argv[])
-{
-	const char *ptr;
-	int i;
+el_parse(EditLine* el, int argc, const char* argv[]) {
+   const char* ptr;
+   int i;
 
-	if (argc < 1)
-		return (-1);
-	ptr = strchr(argv[0], ':');
-	if (ptr != NULL) {
-		char *tprog;
-		size_t l;
+   if (argc < 1) {
+      return -1;
+   }
+   ptr = strchr(argv[0], ':');
 
-		if (ptr == argv[0])
-			return (0);
-		l = ptr - argv[0] - 1;
-		tprog = (char *) el_malloc(l + 1);
-		if (tprog == NULL)
-			return (0);
-		(void) strncpy(tprog, argv[0], l);
-		tprog[l] = '\0';
-		ptr++;
-		l = el_match(el->el_prog, tprog);
-		el_free(tprog);
-		if (!l)
-			return (0);
-	} else
-        {
-		ptr = argv[0];
-        }
+   if (ptr != NULL) {
+      char* tprog;
+      size_t l;
+
+      if (ptr == argv[0]) {
+         return 0;
+      }
+      l = ptr - argv[0] - 1;
+      tprog = (char*) el_malloc(l + 1);
+
+      if (tprog == NULL) {
+         return 0;
+      }
+      (void) strncpy(tprog, argv[0], l);
+      tprog[l] = '\0';
+      ptr++;
+      l = el_match(el->el_prog, tprog);
+      el_free(tprog);
+
+      if (!l) {
+         return 0;
+      }
+   } else {
+      ptr = argv[0];
+   }
 
 
+   el_builtin_t* bi = el_builtin_by_name(ptr);
 
-        el_builtin_t * bi = el_builtin_by_name( ptr );
-        if( bi )
-        {
-                i = (*(bi->func)) (el, argc, argv);
-                return (-i);
-        }
-	return (-1);
-}
+   if (bi) {
+      i = (*(bi->func))(el, argc, argv);
+      return -i;
+   }
+   return -1;
+} // el_parse
 
 
 /* parse__escape():
@@ -137,106 +140,115 @@ el_parse(EditLine *el, int argc, const char *argv[])
  *	the appropriate character or -1 if the escape is not valid
  */
 el_protected int
-parse__escape(const char **const ptr)
-{
-	const char *p;
-	int c;
+parse__escape(const char** const ptr) {
+   const char* p;
+   int c;
 
-	p = *ptr;
+   p = *ptr;
 
-	if (p[1] == 0)
-		return (-1);
+   if (p[1] == 0) {
+      return -1;
+   }
 
-	if (*p == '\\') {
-		p++;
-		switch (*p) {
-		case 'a':
-			c = '\007';	/* Bell */
-			break;
-		case 'b':
-			c = '\010';	/* Backspace */
-			break;
-		case 't':
-			c = '\011';	/* Horizontal Tab */
-			break;
-		case 'n':
-			c = '\012';	/* New Line */
-			break;
-		case 'v':
-			c = '\013';	/* Vertical Tab */
-			break;
-		case 'f':
-			c = '\014';	/* Form Feed */
-			break;
-		case 'r':
-			c = '\015';	/* Carriage Return */
-			break;
-		case 'e':
-			c = '\033';	/* Escape */
-			break;
-		case '0':
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		{
-			int cnt, ch;
+   if (*p == '\\') {
+      p++;
 
-			for (cnt = 0, c = 0; cnt < 3; cnt++) {
-				ch = *p++;
-				if (ch < '0' || ch > '7') {
-					p--;
-					break;
-				}
-				c = (c << 3) | (ch - '0');
-			}
-			if ((c & 0xffffff00) != 0)
-				return (-1);
-			--p;
-			break;
-		}
-		default:
-			c = *p;
-			break;
-		}
-	} else if (*p == '^' && isalpha((unsigned char) p[1])) {
-		p++;
-		c = (*p == '?') ? '\177' : (*p & 0237);
-	} else
-		c = *p;
-	*ptr = ++p;
-	return (c);
-}
+      switch (*p) {
+      case 'a':
+         c = '\007';                    /* Bell */
+         break;
+      case 'b':
+         c = '\010';                    /* Backspace */
+         break;
+      case 't':
+         c = '\011';                    /* Horizontal Tab */
+         break;
+      case 'n':
+         c = '\012';                    /* New Line */
+         break;
+      case 'v':
+         c = '\013';                    /* Vertical Tab */
+         break;
+      case 'f':
+         c = '\014';                    /* Form Feed */
+         break;
+      case 'r':
+         c = '\015';                    /* Carriage Return */
+         break;
+      case 'e':
+         c = '\033';                    /* Escape */
+         break;
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      {
+         int cnt, ch;
+
+         for (cnt = 0, c = 0; cnt < 3; cnt++) {
+            ch = *p++;
+
+            if (ch < '0' || ch > '7') {
+               p--;
+               break;
+            }
+            c = (c << 3) | (ch - '0');
+         }
+
+         if ((c & 0xffffff00) != 0) {
+            return -1;
+         }
+         --p;
+         break;
+      }
+      default:
+         c = *p;
+         break;
+      } // switch
+   } else if (*p == '^' && isalpha((unsigned char) p[1])) {
+      p++;
+      c = (*p == '?') ? '\177' : (*p & 0237);
+   } else {
+      c = *p;
+   }
+   *ptr = ++p;
+   return c;
+} // parse__escape
+
+
 /* parse__string():
  *	Parse the escapes from in and put the raw string out
  */
-el_protected char *
-parse__string(char *out, const char *in)
-{
-	char *rv = out;
-	int n;
+el_protected char*
+parse__string(char* out, const char* in) {
+   char* rv = out;
+   int n;
 
-	for (;;)
-		switch (*in) {
-		case '\0':
-			*out = '\0';
-			return (rv);
+   for ( ; ;) {
+      switch (*in) {
+      case '\0':
+         *out = '\0';
+         return rv;
 
-		case '\\':
-		case '^':
-			if ((n = parse__escape(&in)) == -1)
-				return (NULL);
-			*out++ = n;
-			break;
+      case '\\':
+      case '^':
 
-		default:
-			*out++ = *in++;
-			break;
-		}
-}
+         if ((n = parse__escape(&in)) == -1) {
+            return NULL;
+         }
+         *out++ = n;
+         break;
+
+      default:
+         *out++ = *in++;
+         break;
+      } // switch
+   }
+} // parse__string
 
 
 /* parse_cmd():
@@ -244,12 +256,13 @@ parse__string(char *out, const char *in)
  *	or -1 if one is not found
  */
 el_protected int
-parse_cmd(EditLine *el, const char *cmd)
-{
-	el_bindings_t *b;
+parse_cmd(EditLine* el, const char* cmd) {
+   el_bindings_t* b;
 
-	for (b = el->el_map.help; b->name != NULL; b++)
-		if (strcmp(b->name, cmd) == 0)
-			return (b->func);
-	return (-1);
+   for (b = el->el_map.help; b->name != NULL; b++) {
+      if (strcmp(b->name, cmd) == 0) {
+         return b->func;
+      }
+   }
+   return -1;
 }

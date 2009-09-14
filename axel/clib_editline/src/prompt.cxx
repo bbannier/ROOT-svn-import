@@ -38,11 +38,11 @@
 
 #include "compat.h"
 #if !defined(lint) && !defined(SCCSID)
-#if 0
+# if 0
 static char sccsid[] = "@(#)prompt.c	8.1 (Berkeley) 6/4/93";
-#else
+# else
 __RCSID("$NetBSD: prompt.c,v 1.8 2001/01/10 07:45:41 jdolecek Exp $");
-#endif
+# endif
 #endif /* not lint && not SCCSID */
 
 /*
@@ -54,75 +54,72 @@ __RCSID("$NetBSD: prompt.c,v 1.8 2001/01/10 07:45:41 jdolecek Exp $");
 
 el_color_t prompt_color(6, -1);
 
-el_private const char	*prompt_default(EditLine *);
-el_private const char	*prompt_default_r(EditLine *);
+el_private const char* prompt_default(EditLine*);
+el_private const char* prompt_default_r(EditLine*);
 
 /* prompt_default():
  *	Just a default prompt, in case the user did not provide one
  */
-el_private const char *
+el_private const char*
 /*ARGSUSED*/
-prompt_default(EditLine* /*el*/)
-{
-	static char a[3] = {'?', ' ', '\0'};
+prompt_default(EditLine* /*el*/) {
+   static char a[3] = { '?', ' ', '\0' };
 
-	return (a);
+   return a;
 }
 
 
 /* prompt_default_r():
  *	Just a default rprompt, in case the user did not provide one
  */
-el_private const char *
+el_private const char*
 /*ARGSUSED*/
-prompt_default_r(EditLine* /*el*/)
-{
-	static char a[1] = {'\0'};
+prompt_default_r(EditLine* /*el*/) {
+   static char a[1] = { '\0' };
 
-	return (a);
+   return a;
 }
 
 
 /* prompt_print():
  *	Print the prompt and update the prompt position.
  *	We use an array of integers in case we want to pass
- * 	literal escape sequences in the prompt and we want a
+ *      literal escape sequences in the prompt and we want a
  *	bit to flag them
  */
 el_protected void
-prompt_print(EditLine *el, int op)
-{
-	el_prompt_t *elp;
-	const char *p;
+prompt_print(EditLine* el, int op) {
+   el_prompt_t* elp;
+   const char* p;
 
-	if (op == EL_PROMPT)
-		elp = &el->el_prompt;
-	else
-		elp = &el->el_rprompt;
-	p = (elp->p_func) (el);
-        el_color_t col;
-	while (*p)
-           re_putc(el, *p++, 1, &prompt_color);
+   if (op == EL_PROMPT) {
+      elp = &el->el_prompt;
+   } else {
+      elp = &el->el_rprompt;
+   }
+   p = (elp->p_func)(el);
+   el_color_t col;
 
-	elp->p_pos.v = el->el_refresh.r_cursor.v;
-	elp->p_pos.h = el->el_refresh.r_cursor.h;
-}
+   while (*p)
+      re_putc(el, *p++, 1, &prompt_color);
+
+   elp->p_pos.v = el->el_refresh.r_cursor.v;
+   elp->p_pos.h = el->el_refresh.r_cursor.h;
+} // prompt_print
 
 
 /* prompt_init():
  *	Initialize the prompt stuff
  */
 el_protected int
-prompt_init(EditLine *el)
-{
-
-	el->el_prompt.p_func = prompt_default;
-	el->el_prompt.p_pos.v = 0;
-	el->el_prompt.p_pos.h = 0;
-	el->el_rprompt.p_func = prompt_default_r;
-	el->el_rprompt.p_pos.v = 0;
-	el->el_rprompt.p_pos.h = 0;
-	return (0);
+prompt_init(EditLine* el) {
+   el->el_prompt.p_func = prompt_default;
+   el->el_prompt.p_pos.v = 0;
+   el->el_prompt.p_pos.h = 0;
+   el->el_rprompt.p_func = prompt_default_r;
+   el->el_rprompt.p_pos.v = 0;
+   el->el_rprompt.p_pos.h = 0;
+   return 0;
 }
 
 
@@ -131,8 +128,7 @@ prompt_init(EditLine *el)
  */
 el_protected void
 /*ARGSUSED*/
-prompt_end(EditLine* /*el*/)
-{
+prompt_end(EditLine* /*el*/) {
 }
 
 
@@ -140,49 +136,52 @@ prompt_end(EditLine* /*el*/)
  *	Install a prompt printing function
  */
 el_protected int
-prompt_set(EditLine *el, el_pfunc_t prf, int op)
-{
-	el_prompt_t *p;
+prompt_set(EditLine* el, el_pfunc_t prf, int op) {
+   el_prompt_t* p;
 
-	if (op == EL_PROMPT)
-		p = &el->el_prompt;
-	else
-		p = &el->el_rprompt;
-	if (prf == NULL) {
-		if (op == EL_PROMPT)
-			p->p_func = prompt_default;
-		else
-			p->p_func = prompt_default_r;
-	} else
-		p->p_func = prf;
-	p->p_pos.v = 0;
-	p->p_pos.h = 0;
-	return (0);
-}
+   if (op == EL_PROMPT) {
+      p = &el->el_prompt;
+   } else {
+      p = &el->el_rprompt;
+   }
+
+   if (prf == NULL) {
+      if (op == EL_PROMPT) {
+         p->p_func = prompt_default;
+      } else {
+         p->p_func = prompt_default_r;
+      }
+   } else {
+      p->p_func = prf;
+   }
+   p->p_pos.v = 0;
+   p->p_pos.h = 0;
+   return 0;
+} // prompt_set
 
 
 /* prompt_get():
  *	Retrieve the prompt printing function
  */
 el_protected int
-prompt_get(EditLine *el, el_pfunc_t *prf, int op)
-{
+prompt_get(EditLine* el, el_pfunc_t* prf, int op) {
+   if (prf == NULL) {
+      return -1;
+   }
 
-	if (prf == NULL)
-		return (-1);
-	if (op == EL_PROMPT)
-		*prf = el->el_prompt.p_func;
-	else
-		*prf = el->el_rprompt.p_func;
-	return (0);
+   if (op == EL_PROMPT) {
+      *prf = el->el_prompt.p_func;
+   } else {
+      *prf = el->el_rprompt.p_func;
+   }
+   return 0;
 }
+
 
 /* prompt_setcolor():
  *	Set the prompt's dislpay color
  */
 el_protected void
-prompt_setcolor(int col)
-{
+prompt_setcolor(int col) {
    prompt_color.foreColor = col;
 }
-

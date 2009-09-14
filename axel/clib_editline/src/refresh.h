@@ -42,22 +42,22 @@
  * el.refresh.h: Screen refresh functions
  */
 #ifndef _h_el_refresh
-#define	_h_el_refresh
+#define _h_el_refresh
 
 #include "histedit.h"
 
 typedef struct {
-	coord_t	r_cursor;	/* Refresh cursor position	*/
-	int	r_oldcv;	/* Vertical locations		*/
-	int	r_newcv;
+   coord_t r_cursor;            /* Refresh cursor position	*/
+   int r_oldcv;                 /* Vertical locations		*/
+   int r_newcv;
 } el_refresh_t;
 
-el_protected void	re_putc(EditLine *, int, int, el_color_t* color);
-el_protected void	re_clear_lines(EditLine *);
-el_protected void	re_clear_display(EditLine *);
-el_protected void	re_refresh(EditLine *);
-el_protected void	re_refresh_cursor(EditLine *);
-el_protected void	re_fastaddc(EditLine *);
-el_protected void	re_goto_bottom(EditLine *);
+el_protected void re_putc(EditLine*, int, int, el_color_t* color);
+el_protected void re_clear_lines(EditLine*);
+el_protected void re_clear_display(EditLine*);
+el_protected void re_refresh(EditLine*);
+el_protected void re_refresh_cursor(EditLine*);
+el_protected void re_fastaddc(EditLine*);
+el_protected void re_goto_bottom(EditLine*);
 
 #endif /* _h_el_refresh */

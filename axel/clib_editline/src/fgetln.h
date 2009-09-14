@@ -1,3 +1,3 @@
 #include <stdio.h>
 
-char *fgetln(FILE *stream, size_t *len);
+char* fgetln(FILE* stream, size_t* len);

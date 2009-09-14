@@ -42,37 +42,37 @@
  * el.key.h: Key macro header
  */
 #ifndef _h_el_key
-#define	_h_el_key
+#define _h_el_key
 
 typedef union key_value_t {
-	el_action_t	 cmd;	/* If it is a command the #	*/
-	char		*str;	/* If it is a string...		*/
+   el_action_t cmd;             /* If it is a command the #	*/
+   char* str;                   /* If it is a string...		*/
 } key_value_t;
 
 typedef struct key_node_t key_node_t;
 
 typedef struct el_key_t {
-	char		*buf;	/* Key print buffer		*/
-	key_node_t	*map;	/* Key map			*/
-	key_value_t	 val;	/* Local conversion buffer	*/
+   char* buf;                   /* Key print buffer		*/
+   key_node_t* map;             /* Key map			*/
+   key_value_t val;             /* Local conversion buffer	*/
 } el_key_t;
 
-#define	XK_CMD	0
-#define	XK_STR	1
-#define	XK_NOD	2
-#define	XK_EXE	3
+#define XK_CMD 0
+#define XK_STR 1
+#define XK_NOD 2
+#define XK_EXE 3
 
-el_protected int		 key_init(EditLine *);
-el_protected void		 key_end(EditLine *);
-el_protected key_value_t	*key_map_cmd(EditLine *, int);
-el_protected key_value_t	*key_map_str(EditLine *, char *);
-el_protected void		 key_reset(EditLine *);
-el_protected int		 key_get(EditLine *, char *, key_value_t *);
-el_protected void		 key_add(EditLine *, const char *, key_value_t *, int);
-el_protected void		 key_clear(EditLine *, el_action_t *, char *);
-el_protected int		 key_delete(EditLine *, char *);
-el_protected void		 key_print(EditLine *, char *);
-el_protected void	         key_kprint(EditLine *, char *, key_value_t *, int);
-el_protected char		*key__decode_str(char *, char *, const char *);
+el_protected int key_init(EditLine*);
+el_protected void key_end(EditLine*);
+el_protected key_value_t* key_map_cmd(EditLine*, int);
+el_protected key_value_t* key_map_str(EditLine*, char*);
+el_protected void key_reset(EditLine*);
+el_protected int key_get(EditLine*, char*, key_value_t*);
+el_protected void key_add(EditLine*, const char*, key_value_t*, int);
+el_protected void key_clear(EditLine*, el_action_t*, char*);
+el_protected int key_delete(EditLine*, char*);
+el_protected void key_print(EditLine*, char*);
+el_protected void key_kprint(EditLine*, char*, key_value_t*, int);
+el_protected char* key__decode_str(char*, char*, const char*);
 
 #endif /* _h_el_key */

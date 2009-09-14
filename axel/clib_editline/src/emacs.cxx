@@ -38,11 +38,11 @@
 
 #include "compat.h"
 #if !defined(lint) && !defined(SCCSID)
-#if 0
+# if 0
 static char sccsid[] = "@(#)emacs.c	8.1 (Berkeley) 6/4/93";
-#else
+# else
 __RCSID("$NetBSD: emacs.c,v 1.9 2001/01/10 07:45:41 jdolecek Exp $");
-#endif
+# endif
 #endif /* not lint && not SCCSID */
 
 /*
@@ -57,32 +57,32 @@ __RCSID("$NetBSD: emacs.c,v 1.9 2001/01/10 07:45:41 jdolecek Exp $");
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_delete_or_list(EditLine *el, int /*c*/)
-{
+em_delete_or_list(EditLine* el, int /*c*/) {
+   if (el->el_line.cursor == el->el_line.lastchar) {
+      /* if I'm at the end */
+      if (el->el_line.cursor == el->el_line.buffer) {
+         /* and the beginning */
+         term_overwrite(el, STReof, 0, 4);                      /* then do a EOF */
+         term__flush();
+         return CC_EOF;
+      } else {
+         /*
+          * Here we could list completions, but it is an
+          * error right now
+          */
+         term_beep(el);
+         return CC_ERROR;
+      }
+   } else {
+      c_delafter(el, el->el_state.argument);            /* delete after dot */
 
-	if (el->el_line.cursor == el->el_line.lastchar) {
-					/* if I'm at the end */
-		if (el->el_line.cursor == el->el_line.buffer) {
-					/* and the beginning */
-                        term_overwrite(el, STReof, 0, 4);	/* then do a EOF */
-			term__flush();
-			return (CC_EOF);
-		} else {
-			/*
-			 * Here we could list completions, but it is an
-			 * error right now
-			 */
-			term_beep(el);
-			return (CC_ERROR);
-		}
-	} else {
-		c_delafter(el, el->el_state.argument);	/* delete after dot */
-		if (el->el_line.cursor > el->el_line.lastchar)
-			el->el_line.cursor = el->el_line.lastchar;
-				/* bounds check */
-		return (CC_REFRESH);
-	}
-}
+      if (el->el_line.cursor > el->el_line.lastchar) {
+         el->el_line.cursor = el->el_line.lastchar;
+      }
+      /* bounds check */
+      return CC_REFRESH;
+   }
+} // em_delete_or_list
 
 
 /* em_delete_next_word():
@@ -91,27 +91,30 @@ em_delete_or_list(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_delete_next_word(EditLine *el, int /*c*/)
-{
-	char *cp, *p, *kp;
+em_delete_next_word(EditLine* el, int /*c*/) {
+   char* cp, * p, * kp;
 
-	if (el->el_line.cursor == el->el_line.lastchar)
-		return (CC_ERROR);
+   if (el->el_line.cursor == el->el_line.lastchar) {
+      return CC_ERROR;
+   }
 
-	cp = c__next_word(el->el_line.cursor, el->el_line.lastchar,
-	    el->el_state.argument, ce__isword);
+   cp = c__next_word(el->el_line.cursor, el->el_line.lastchar,
+                     el->el_state.argument, ce__isword);
 
-	for (p = el->el_line.cursor, kp = el->el_chared.c_kill.buf; p < cp; p++)
-				/* save the text */
-		*kp++ = *p;
-	el->el_chared.c_kill.last = kp;
+   for (p = el->el_line.cursor, kp = el->el_chared.c_kill.buf; p < cp; p++) {
+      /* save the text */
+      *kp++ = *p;
+   }
+   el->el_chared.c_kill.last = kp;
 
-	c_delafter(el, cp - el->el_line.cursor);	/* delete after dot */
-	if (el->el_line.cursor > el->el_line.lastchar)
-		el->el_line.cursor = el->el_line.lastchar;
-				/* bounds check */
-	return (CC_REFRESH);
-}
+   c_delafter(el, cp - el->el_line.cursor);             /* delete after dot */
+
+   if (el->el_line.cursor > el->el_line.lastchar) {
+      el->el_line.cursor = el->el_line.lastchar;
+   }
+   /* bounds check */
+   return CC_REFRESH;
+} // em_delete_next_word
 
 
 /* em_yank():
@@ -120,35 +123,39 @@ em_delete_next_word(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_yank(EditLine *el, int /*c*/)
-{
-	char *kp, *cp;
+em_yank(EditLine* el, int /*c*/) {
+   char* kp, * cp;
 
-	if (el->el_chared.c_kill.last == el->el_chared.c_kill.buf) {
-		if (!ch_enlargebufs(el, 1))
-			return (CC_ERROR);
-	}
+   if (el->el_chared.c_kill.last == el->el_chared.c_kill.buf) {
+      if (!ch_enlargebufs(el, 1)) {
+         return CC_ERROR;
+      }
+   }
 
-	if (el->el_line.lastchar +
-	    (el->el_chared.c_kill.last - el->el_chared.c_kill.buf) >=
-	    el->el_line.limit)
-		return (CC_ERROR);
+   if (el->el_line.lastchar +
+       (el->el_chared.c_kill.last - el->el_chared.c_kill.buf) >=
+       el->el_line.limit) {
+      return CC_ERROR;
+   }
 
-	el->el_chared.c_kill.mark = el->el_line.cursor;
-	cp = el->el_line.cursor;
+   el->el_chared.c_kill.mark = el->el_line.cursor;
+   cp = el->el_line.cursor;
 
-	/* open the space, */
-	c_insert(el, el->el_chared.c_kill.last - el->el_chared.c_kill.buf);
-	/* copy the chars */
-	for (kp = el->el_chared.c_kill.buf; kp < el->el_chared.c_kill.last; kp++)
-		*cp++ = *kp;
+   /* open the space, */
+   c_insert(el, el->el_chared.c_kill.last - el->el_chared.c_kill.buf);
 
-	/* if an arg, cursor at beginning else cursor at end */
-	if (el->el_state.argument == 1)
-		el->el_line.cursor = cp;
+   /* copy the chars */
+   for (kp = el->el_chared.c_kill.buf; kp < el->el_chared.c_kill.last; kp++) {
+      *cp++ = *kp;
+   }
 
-	return (CC_REFRESH);
-}
+   /* if an arg, cursor at beginning else cursor at end */
+   if (el->el_state.argument == 1) {
+      el->el_line.cursor = cp;
+   }
+
+   return CC_REFRESH;
+} // em_yank
 
 
 /* em_kill_line():
@@ -157,19 +164,19 @@ em_yank(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_kill_line(EditLine *el, int /*c*/)
-{
-	char *kp, *cp;
+em_kill_line(EditLine* el, int /*c*/) {
+   char* kp, * cp;
 
-	cp = el->el_line.buffer;
-	kp = el->el_chared.c_kill.buf;
-	while (cp < el->el_line.lastchar)
-		*kp++ = *cp++;	/* copy it */
-	el->el_chared.c_kill.last = kp;
-				/* zap! -- delete all of it */
-	el->el_line.lastchar = el->el_line.buffer;
-	el->el_line.cursor = el->el_line.buffer;
-	return (CC_REFRESH);
+   cp = el->el_line.buffer;
+   kp = el->el_chared.c_kill.buf;
+
+   while (cp < el->el_line.lastchar)
+      *kp++ = *cp++;            /* copy it */
+   el->el_chared.c_kill.last = kp;
+   /* zap! -- delete all of it */
+   el->el_line.lastchar = el->el_line.buffer;
+   el->el_line.cursor = el->el_line.buffer;
+   return CC_REFRESH;
 }
 
 
@@ -179,31 +186,33 @@ em_kill_line(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_kill_region(EditLine *el, int /*c*/)
-{
-	char *kp, *cp;
+em_kill_region(EditLine* el, int /*c*/) {
+   char* kp, * cp;
 
-	if (!el->el_chared.c_kill.mark)
-		return (CC_ERROR);
+   if (!el->el_chared.c_kill.mark) {
+      return CC_ERROR;
+   }
 
-	if (el->el_chared.c_kill.mark > el->el_line.cursor) {
-		cp = el->el_line.cursor;
-		kp = el->el_chared.c_kill.buf;
-		while (cp < el->el_chared.c_kill.mark)
-			*kp++ = *cp++;	/* copy it */
-		el->el_chared.c_kill.last = kp;
-		c_delafter(el, cp - el->el_line.cursor);
-	} else {		/* mark is before cursor */
-		cp = el->el_chared.c_kill.mark;
-		kp = el->el_chared.c_kill.buf;
-		while (cp < el->el_line.cursor)
-			*kp++ = *cp++;	/* copy it */
-		el->el_chared.c_kill.last = kp;
-		c_delbefore(el, cp - el->el_chared.c_kill.mark);
-		el->el_line.cursor = el->el_chared.c_kill.mark;
-	}
-	return (CC_REFRESH);
-}
+   if (el->el_chared.c_kill.mark > el->el_line.cursor) {
+      cp = el->el_line.cursor;
+      kp = el->el_chared.c_kill.buf;
+
+      while (cp < el->el_chared.c_kill.mark)
+         *kp++ = *cp++;                 /* copy it */
+      el->el_chared.c_kill.last = kp;
+      c_delafter(el, cp - el->el_line.cursor);
+   } else {                     /* mark is before cursor */
+      cp = el->el_chared.c_kill.mark;
+      kp = el->el_chared.c_kill.buf;
+
+      while (cp < el->el_line.cursor)
+         *kp++ = *cp++;                 /* copy it */
+      el->el_chared.c_kill.last = kp;
+      c_delbefore(el, cp - el->el_chared.c_kill.mark);
+      el->el_line.cursor = el->el_chared.c_kill.mark;
+   }
+   return CC_REFRESH;
+} // em_kill_region
 
 
 /* em_copy_region():
@@ -212,28 +221,30 @@ em_kill_region(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_copy_region(EditLine *el, int /*c*/)
-{
-	char *kp, *cp;
+em_copy_region(EditLine* el, int /*c*/) {
+   char* kp, * cp;
 
-	if (el->el_chared.c_kill.mark)
-		return (CC_ERROR);
+   if (el->el_chared.c_kill.mark) {
+      return CC_ERROR;
+   }
 
-	if (el->el_chared.c_kill.mark > el->el_line.cursor) {
-		cp = el->el_line.cursor;
-		kp = el->el_chared.c_kill.buf;
-		while (cp < el->el_chared.c_kill.mark)
-			*kp++ = *cp++;	/* copy it */
-		el->el_chared.c_kill.last = kp;
-	} else {
-		cp = el->el_chared.c_kill.mark;
-		kp = el->el_chared.c_kill.buf;
-		while (cp < el->el_line.cursor)
-			*kp++ = *cp++;	/* copy it */
-		el->el_chared.c_kill.last = kp;
-	}
-	return (CC_NORM);
-}
+   if (el->el_chared.c_kill.mark > el->el_line.cursor) {
+      cp = el->el_line.cursor;
+      kp = el->el_chared.c_kill.buf;
+
+      while (cp < el->el_chared.c_kill.mark)
+         *kp++ = *cp++;                 /* copy it */
+      el->el_chared.c_kill.last = kp;
+   } else {
+      cp = el->el_chared.c_kill.mark;
+      kp = el->el_chared.c_kill.buf;
+
+      while (cp < el->el_line.cursor)
+         *kp++ = *cp++;                 /* copy it */
+      el->el_chared.c_kill.last = kp;
+   }
+   return CC_NORM;
+} // em_copy_region
 
 
 /* em_gosmacs_traspose():
@@ -241,17 +252,16 @@ em_copy_region(EditLine *el, int /*c*/)
  *	Gosling emacs transpose chars [^T]
  */
 el_protected el_action_t
-em_gosmacs_traspose(EditLine *el, int c)
-{
-
-	if (el->el_line.cursor > &el->el_line.buffer[1]) {
-		/* must have at least two chars entered */
-		c = el->el_line.cursor[-2];
-		el->el_line.cursor[-2] = el->el_line.cursor[-1];
-		el->el_line.cursor[-1] = c;
-		return (CC_REFRESH);
-	} else
-		return (CC_ERROR);
+em_gosmacs_traspose(EditLine* el, int c) {
+   if (el->el_line.cursor > &el->el_line.buffer[1]) {
+      /* must have at least two chars entered */
+      c = el->el_line.cursor[-2];
+      el->el_line.cursor[-2] = el->el_line.cursor[-1];
+      el->el_line.cursor[-1] = c;
+      return CC_REFRESH;
+   } else {
+      return CC_ERROR;
+   }
 }
 
 
@@ -261,23 +271,24 @@ em_gosmacs_traspose(EditLine *el, int c)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_next_word(EditLine *el, int /*c*/)
-{
-	if (el->el_line.cursor == el->el_line.lastchar)
-		return (CC_ERROR);
+em_next_word(EditLine* el, int /*c*/) {
+   if (el->el_line.cursor == el->el_line.lastchar) {
+      return CC_ERROR;
+   }
 
-	el->el_line.cursor = c__next_word(el->el_line.cursor,
-	    el->el_line.lastchar,
-	    el->el_state.argument,
-	    ce__isword);
+   el->el_line.cursor = c__next_word(el->el_line.cursor,
+                                     el->el_line.lastchar,
+                                     el->el_state.argument,
+                                     ce__isword);
 
-	if (el->el_map.type == MAP_VI)
-		if (el->el_chared.c_vcmd.action & DELETE) {
-			cv_delfini(el);
-			return (CC_REFRESH);
-		}
-	return (CC_CURSOR);
-}
+   if (el->el_map.type == MAP_VI) {
+      if (el->el_chared.c_vcmd.action & DELETE) {
+         cv_delfini(el);
+         return CC_REFRESH;
+      }
+   }
+   return CC_CURSOR;
+} // em_next_word
 
 
 /* em_upper_case():
@@ -286,22 +297,25 @@ em_next_word(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_upper_case(EditLine *el, int /*c*/)
-{
-	char *cp, *ep;
+em_upper_case(EditLine* el, int /*c*/) {
+   char* cp, * ep;
 
-	ep = c__next_word(el->el_line.cursor, el->el_line.lastchar,
-	    el->el_state.argument, ce__isword);
+   ep = c__next_word(el->el_line.cursor, el->el_line.lastchar,
+                     el->el_state.argument, ce__isword);
 
-	for (cp = el->el_line.cursor; cp < ep; cp++)
-		if (islower((unsigned char) *cp))
-			*cp = toupper(*cp);
+   for (cp = el->el_line.cursor; cp < ep; cp++) {
+      if (islower((unsigned char) *cp)) {
+         *cp = toupper(*cp);
+      }
+   }
 
-	el->el_line.cursor = ep;
-	if (el->el_line.cursor > el->el_line.lastchar)
-		el->el_line.cursor = el->el_line.lastchar;
-	return (CC_REFRESH);
-}
+   el->el_line.cursor = ep;
+
+   if (el->el_line.cursor > el->el_line.lastchar) {
+      el->el_line.cursor = el->el_line.lastchar;
+   }
+   return CC_REFRESH;
+} // em_upper_case
 
 
 /* em_capitol_case():
@@ -310,30 +324,35 @@ em_upper_case(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_capitol_case(EditLine *el, int /*c*/)
-{
-	char *cp, *ep;
+em_capitol_case(EditLine* el, int /*c*/) {
+   char* cp, * ep;
 
-	ep = c__next_word(el->el_line.cursor, el->el_line.lastchar,
-	    el->el_state.argument, ce__isword);
+   ep = c__next_word(el->el_line.cursor, el->el_line.lastchar,
+                     el->el_state.argument, ce__isword);
 
-	for (cp = el->el_line.cursor; cp < ep; cp++) {
-		if (isalpha((unsigned char) *cp)) {
-			if (islower((unsigned char) *cp))
-				*cp = toupper(*cp);
-			cp++;
-			break;
-		}
-	}
-	for (; cp < ep; cp++)
-		if (isupper((unsigned char) *cp))
-			*cp = tolower(*cp);
+   for (cp = el->el_line.cursor; cp < ep; cp++) {
+      if (isalpha((unsigned char) *cp)) {
+         if (islower((unsigned char) *cp)) {
+            *cp = toupper(*cp);
+         }
+         cp++;
+         break;
+      }
+   }
 
-	el->el_line.cursor = ep;
-	if (el->el_line.cursor > el->el_line.lastchar)
-		el->el_line.cursor = el->el_line.lastchar;
-	return (CC_REFRESH);
-}
+   for ( ; cp < ep; cp++) {
+      if (isupper((unsigned char) *cp)) {
+         *cp = tolower(*cp);
+      }
+   }
+
+   el->el_line.cursor = ep;
+
+   if (el->el_line.cursor > el->el_line.lastchar) {
+      el->el_line.cursor = el->el_line.lastchar;
+   }
+   return CC_REFRESH;
+} // em_capitol_case
 
 
 /* em_lower_case():
@@ -342,22 +361,25 @@ em_capitol_case(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_lower_case(EditLine *el, int /*c*/)
-{
-	char *cp, *ep;
+em_lower_case(EditLine* el, int /*c*/) {
+   char* cp, * ep;
 
-	ep = c__next_word(el->el_line.cursor, el->el_line.lastchar,
-	    el->el_state.argument, ce__isword);
+   ep = c__next_word(el->el_line.cursor, el->el_line.lastchar,
+                     el->el_state.argument, ce__isword);
 
-	for (cp = el->el_line.cursor; cp < ep; cp++)
-		if (isupper((unsigned char) *cp))
-			*cp = tolower(*cp);
+   for (cp = el->el_line.cursor; cp < ep; cp++) {
+      if (isupper((unsigned char) *cp)) {
+         *cp = tolower(*cp);
+      }
+   }
 
-	el->el_line.cursor = ep;
-	if (el->el_line.cursor > el->el_line.lastchar)
-		el->el_line.cursor = el->el_line.lastchar;
-	return (CC_REFRESH);
-}
+   el->el_line.cursor = ep;
+
+   if (el->el_line.cursor > el->el_line.lastchar) {
+      el->el_line.cursor = el->el_line.lastchar;
+   }
+   return CC_REFRESH;
+} // em_lower_case
 
 
 /* em_set_mark():
@@ -366,11 +388,9 @@ em_lower_case(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_set_mark(EditLine *el, int /*c*/)
-{
-
-	el->el_chared.c_kill.mark = el->el_line.cursor;
-	return (CC_NORM);
+em_set_mark(EditLine* el, int /*c*/) {
+   el->el_chared.c_kill.mark = el->el_line.cursor;
+   return CC_NORM;
 }
 
 
@@ -380,14 +400,13 @@ em_set_mark(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_exchange_mark(EditLine *el, int /*c*/)
-{
-	char *cp;
+em_exchange_mark(EditLine* el, int /*c*/) {
+   char* cp;
 
-	cp = el->el_line.cursor;
-	el->el_line.cursor = el->el_chared.c_kill.mark;
-	el->el_chared.c_kill.mark = cp;
-	return (CC_CURSOR);
+   cp = el->el_line.cursor;
+   el->el_line.cursor = el->el_chared.c_kill.mark;
+   el->el_chared.c_kill.mark = cp;
+   return CC_CURSOR;
 }
 
 
@@ -397,14 +416,13 @@ em_exchange_mark(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_universal_argument(EditLine *el, int /*c*/)
-{				/* multiply current argument by 4 */
-
-	if (el->el_state.argument > 1000000)
-		return (CC_ERROR);
-	el->el_state.doingarg = 1;
-	el->el_state.argument *= 4;
-	return (CC_ARGHACK);
+em_universal_argument(EditLine* el, int /*c*/) { /* multiply current argument by 4 */
+   if (el->el_state.argument > 1000000) {
+      return CC_ERROR;
+   }
+   el->el_state.doingarg = 1;
+   el->el_state.argument *= 4;
+   return CC_ARGHACK;
 }
 
 
@@ -414,11 +432,9 @@ em_universal_argument(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_meta_next(EditLine *el, int /*c*/)
-{
-
-	el->el_state.metanext = 1;
-	return (CC_ARGHACK);
+em_meta_next(EditLine* el, int /*c*/) {
+   el->el_state.metanext = 1;
+   return CC_ARGHACK;
 }
 
 
@@ -427,12 +443,10 @@ em_meta_next(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_toggle_overwrite(EditLine *el, int /*c*/)
-{
-
-	el->el_state.inputmode = (el->el_state.inputmode == MODE_INSERT) ?
-	    MODE_REPLACE : MODE_INSERT;
-	return (CC_NORM);
+em_toggle_overwrite(EditLine* el, int /*c*/) {
+   el->el_state.inputmode = (el->el_state.inputmode == MODE_INSERT) ?
+                            MODE_REPLACE : MODE_INSERT;
+   return CC_NORM;
 }
 
 
@@ -441,26 +455,28 @@ em_toggle_overwrite(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_copy_prev_word(EditLine *el, int /*c*/)
-{
-	char *cp, *oldc, *dp;
+em_copy_prev_word(EditLine* el, int /*c*/) {
+   char* cp, * oldc, * dp;
 
-	if (el->el_line.cursor == el->el_line.buffer)
-		return (CC_ERROR);
+   if (el->el_line.cursor == el->el_line.buffer) {
+      return CC_ERROR;
+   }
 
-	oldc = el->el_line.cursor;
-	/* does a bounds check */
-	cp = c__prev_word(el->el_line.cursor, el->el_line.buffer,
-	    el->el_state.argument, ce__isword);
+   oldc = el->el_line.cursor;
+   /* does a bounds check */
+   cp = c__prev_word(el->el_line.cursor, el->el_line.buffer,
+                     el->el_state.argument, ce__isword);
 
-	c_insert(el, oldc - cp);
-	for (dp = oldc; cp < oldc && dp < el->el_line.lastchar; cp++)
-		*dp++ = *cp;
+   c_insert(el, oldc - cp);
 
-	el->el_line.cursor = dp;/* put cursor at end */
+   for (dp = oldc; cp < oldc && dp < el->el_line.lastchar; cp++) {
+      *dp++ = *cp;
+   }
 
-	return (CC_REFRESH);
-}
+   el->el_line.cursor = dp;     /* put cursor at end */
+
+   return CC_REFRESH;
+} // em_copy_prev_word
 
 
 /* em_inc_search_next():
@@ -468,11 +484,9 @@ em_copy_prev_word(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_inc_search_next(EditLine *el, int /*c*/)
-{
-
-	el->el_search.patlen = 0;
-	return (ce_inc_search(el, ED_SEARCH_NEXT_HISTORY));
+em_inc_search_next(EditLine* el, int /*c*/) {
+   el->el_search.patlen = 0;
+   return ce_inc_search(el, ED_SEARCH_NEXT_HISTORY);
 }
 
 
@@ -481,11 +495,9 @@ em_inc_search_next(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_inc_search_prev(EditLine *el, int /*c*/)
-{
-
-	el->el_search.patlen = 0;
-	return (ce_inc_search(el, ED_SEARCH_PREV_HISTORY));
+em_inc_search_prev(EditLine* el, int /*c*/) {
+   el->el_search.patlen = 0;
+   return ce_inc_search(el, ED_SEARCH_PREV_HISTORY);
 }
 
 
@@ -495,104 +507,119 @@ em_inc_search_prev(EditLine *el, int /*c*/)
  */
 el_protected el_action_t
 /*ARGSUSED*/
-em_undo(EditLine *el, int /*c*/)
-{
-	char *cp, *kp;
-	char temp;
-	int i, size;
-	c_undo_t *un = &el->el_chared.c_undo;
+em_undo(EditLine* el, int /*c*/) {
+   char* cp, * kp;
+   char temp;
+   int i, size;
+   c_undo_t* un = &el->el_chared.c_undo;
 
 #ifdef DEBUG_UNDO
-	(void) fprintf(el->el_errfile, "Undo: %x \"%s\" +%d -%d\n",
-	    un->action, un->buf, un->isize, un->dsize);
+      (void) fprintf(el->el_errfile, "Undo: %x \"%s\" +%d -%d\n",
+                     un->action, un->buf, un->isize, un->dsize);
 #endif
-	switch (un->action) {
-	case DELETE:
-		if (un->dsize == 0)
-			return (CC_NORM);
 
-		(void) memcpy(un->buf, un->ptr, un->dsize);
-		for (cp = un->ptr; cp <= el->el_line.lastchar; cp++)
-			*cp = cp[un->dsize];
+   switch (un->action) {
+   case DELETE:
 
-		el->el_line.lastchar -= un->dsize;
-		el->el_line.cursor = un->ptr;
+      if (un->dsize == 0) {
+         return CC_NORM;
+      }
 
-		un->action = INSERT;
-		un->isize = un->dsize;
-		un->dsize = 0;
-		break;
+      (void) memcpy(un->buf, un->ptr, un->dsize);
 
-	case DELETE | INSERT:
-		size = un->isize - un->dsize;
-		if (size > 0)
-			i = un->dsize;
-		else
-			i = un->isize;
-		cp = un->ptr;
-		kp = un->buf;
-		while (i-- > 0) {
-			temp = *kp;
-			*kp++ = *cp;
-			*cp++ = temp;
-		}
-		if (size > 0) {
-			el->el_line.cursor = cp;
-			c_insert(el, size);
-			while (size-- > 0 && cp < el->el_line.lastchar) {
-				temp = *kp;
-				*kp++ = *cp;
-				*cp++ = temp;
-			}
-		} else if (size < 0) {
-			size = -size;
-			for (; cp <= el->el_line.lastchar; cp++) {
-				*kp++ = *cp;
-				*cp = cp[size];
-			}
-			el->el_line.lastchar -= size;
-		}
-		el->el_line.cursor = un->ptr;
-		i = un->dsize;
-		un->dsize = un->isize;
-		un->isize = i;
-		break;
+      for (cp = un->ptr; cp <= el->el_line.lastchar; cp++) {
+         *cp = cp[un->dsize];
+      }
 
-	case INSERT:
-		if (un->isize == 0)
-			return (CC_NORM);
+      el->el_line.lastchar -= un->dsize;
+      el->el_line.cursor = un->ptr;
 
-		el->el_line.cursor = un->ptr;
-		c_insert(el, (int) un->isize);
-		(void) memcpy(un->ptr, un->buf, un->isize);
-		un->action = DELETE;
-		un->dsize = un->isize;
-		un->isize = 0;
-		break;
+      un->action = INSERT;
+      un->isize = un->dsize;
+      un->dsize = 0;
+      break;
 
-	case CHANGE:
-		if (un->isize == 0)
-			return (CC_NORM);
+   case DELETE | INSERT:
+      size = un->isize - un->dsize;
 
-		el->el_line.cursor = un->ptr;
-		size = (int) (el->el_line.cursor - el->el_line.lastchar);
-		if ((unsigned int) size < un->isize)
-			size = un->isize;
-		cp = un->ptr;
-		kp = un->buf;
-		for (i = 0; i < size; i++) {
-			temp = *kp;
-			*kp++ = *cp;
-			*cp++ = temp;
-		}
-		un->dsize = 0;
-		break;
+      if (size > 0) {
+         i = un->dsize;
+      } else {
+         i = un->isize;
+      }
+      cp = un->ptr;
+      kp = un->buf;
 
-	default:
-		return (CC_ERROR);
-	}
+      while (i-- > 0) {
+         temp = *kp;
+         *kp++ = *cp;
+         *cp++ = temp;
+      }
 
-	return (CC_REFRESH);
-}
+      if (size > 0) {
+         el->el_line.cursor = cp;
+         c_insert(el, size);
 
+         while (size-- > 0 && cp < el->el_line.lastchar) {
+            temp = *kp;
+            *kp++ = *cp;
+            *cp++ = temp;
+         }
+      } else if (size < 0) {
+         size = -size;
 
+         for ( ; cp <= el->el_line.lastchar; cp++) {
+            *kp++ = *cp;
+            *cp = cp[size];
+         }
+         el->el_line.lastchar -= size;
+      }
+      el->el_line.cursor = un->ptr;
+      i = un->dsize;
+      un->dsize = un->isize;
+      un->isize = i;
+      break;
+
+   case INSERT:
+
+      if (un->isize == 0) {
+         return CC_NORM;
+      }
+
+      el->el_line.cursor = un->ptr;
+      c_insert(el, (int) un->isize);
+      (void) memcpy(un->ptr, un->buf, un->isize);
+      un->action = DELETE;
+      un->dsize = un->isize;
+      un->isize = 0;
+      break;
+
+   case CHANGE:
+
+      if (un->isize == 0) {
+         return CC_NORM;
+      }
+
+      el->el_line.cursor = un->ptr;
+      size = (int) (el->el_line.cursor - el->el_line.lastchar);
+
+      if ((unsigned int) size < un->isize) {
+         size = un->isize;
+      }
+      cp = un->ptr;
+      kp = un->buf;
+
+      for (i = 0; i < size; i++) {
+         temp = *kp;
+         *kp++ = *cp;
+         *cp++ = temp;
+      }
+      un->dsize = 0;
+      break;
+
+   default:
+      return CC_ERROR;
+   } // switch
+
+   return CC_REFRESH;
+} // em_undo

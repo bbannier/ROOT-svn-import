@@ -11,65 +11,66 @@
  * documentation.  This software is provided "as is" without express or
  * implied warranty.
  */
+
 /*
-*************************** Motivation **********************************
+ *************************** Motivation **********************************
 
-Many interactive programs read input line by line, but would like to
-provide line editing and history functionality to the end-user that
-runs the program.
+   Many interactive programs read input line by line, but would like to
+   provide line editing and history functionality to the end-user that
+   runs the program.
 
-The input-edit package provides that functionality.  As far as the
-programmer is concerned, the program only asks for the next line
-of input. However, until the user presses the RETURN key they can use
-emacs-style line editing commands and can traverse the history of lines
-previously typed.
+   The input-edit package provides that functionality.  As far as the
+   programmer is concerned, the program only asks for the next line
+   of input. However, until the user presses the RETURN key they can use
+   emacs-style line editing commands and can traverse the history of lines
+   previously typed.
 
-Other packages, such as GNU's readline, have greater capability but are
-also substantially larger.  Input-edit is small, since it uses neither
-stdio nor any termcap features, and is also quite portable.  It only uses
-\b to backspace and \007 to ring the bell on errors.  Since it cannot
-edit multiple lines it scrolls long lines left and right on the same line.
+   Other packages, such as GNU's readline, have greater capability but are
+   also substantially larger.  Input-edit is small, since it uses neither
+   stdio nor any termcap features, and is also quite portable.  It only uses
+   \b to backspace and \007 to ring the bell on errors.  Since it cannot
+   edit multiple lines it scrolls long lines left and right on the same line.
 
-Input edit uses classic (not ANSI) C, and should run on any Unix
-system (BSD or SYSV), PC's with the MSC compiler, or Vax/VMS (untested by me).
-Porting the package to new systems basicaly requires code to read a
-character when it is typed without echoing it, everything else should be OK.
+   Input edit uses classic (not ANSI) C, and should run on any Unix
+   system (BSD or SYSV), PC's with the MSC compiler, or Vax/VMS (untested by me).
+   Porting the package to new systems basicaly requires code to read a
+   character when it is typed without echoing it, everything else should be OK.
 
-I have run the package on:
+   I have run the package on:
 
         DECstation 5000, Ultrix 4.2 with cc and gcc
         Sun Sparc 2, SunOS 4.1.1, with cc
         SGI Iris, IRIX System V.3, with cc
         PC, DRDOS 5.0, with MSC 6.0
 
-The description below is broken into two parts, the end-user (editing)
-interface and the programmer interface.  Send bug reports, fixes and
-enhancements to:
+   The description below is broken into two parts, the end-user (editing)
+   interface and the programmer interface.  Send bug reports, fixes and
+   enhancements to:
 
-Chris Thewalt (thewalt@ce.berkeley.edu)
-2/4/92
+   Chris Thewalt (thewalt@ce.berkeley.edu)
+   2/4/92
 
-PS: I don't have, and don't want to add, a vi mode, sorry.
+   PS: I don't have, and don't want to add, a vi mode, sorry.
 
-************************** End-User Interface ***************************
+ ************************** End-User Interface ***************************
 
-Entering printable keys generally inserts new text into the buffer (unless
-in overwrite mode, see below).  Other special keys can be used to modify
-the text in the buffer.  In the description of the keys below, ^n means
-Control-n, or holding the CONTROL key down while pressing "n". M-B means
-Meta-B (or Alt-B). Errors will ring the terminal bell.
+   Entering printable keys generally inserts new text into the buffer (unless
+   in overwrite mode, see below).  Other special keys can be used to modify
+   the text in the buffer.  In the description of the keys below, ^n means
+   Control-n, or holding the CONTROL key down while pressing "n". M-B means
+   Meta-B (or Alt-B). Errors will ring the terminal bell.
 
-^A/^E   : Move cursor to beginning/end of the line.
-^F/^B   : Move cursor forward/backward one character.
-^D      : Delete the character under the cursor.
-^H, DEL : Delete the character to the left of the cursor.
-^K      : Kill from the cursor to the end of line.
-^L      : Redraw current line.
-^O      : Toggle overwrite/insert mode. Initially in insert mode. Text
+   ^A/^E   : Move cursor to beginning/end of the line.
+   ^F/^B   : Move cursor forward/backward one character.
+   ^D      : Delete the character under the cursor.
+   ^H, DEL : Delete the character to the left of the cursor.
+   ^K      : Kill from the cursor to the end of line.
+   ^L      : Redraw current line.
+   ^O      : Toggle overwrite/insert mode. Initially in insert mode. Text
           added in overwrite mode (including yanks) overwrite
           existing text, while insert mode does not overwrite.
-^P/^N   : Move to previous/next item on history list.
-^R/^S   : Perform incremental reverse/forward search for string on
+   ^P/^N   : Move to previous/next item on history list.
+   ^R/^S   : Perform incremental reverse/forward search for string on
           the history list.  Typing normal characters adds to the current
           search string and searches for a match. Typing ^R/^S marks
           the start of a new search, and moves on to the next match.
@@ -81,33 +82,33 @@ Meta-B (or Alt-B). Errors will ring the terminal bell.
           begins from the start of the history list.  Typing ESC or
           any other editing character accepts the current match and
           loads it into the buffer, terminating the search.
-^T      : Toggle the characters under and to the left of the cursor.
-^U      : Kill from beginning to the end of the line.
-^Y      : Yank previously killed text back at current location.  Note that
+   ^T      : Toggle the characters under and to the left of the cursor.
+   ^U      : Kill from beginning to the end of the line.
+   ^Y      : Yank previously killed text back at current location.  Note that
           this will overwrite or insert, depending on the current mode.
-M-F/M-B : Move cursor forward/backward one word.
-M-D     : Delete the word under the cursor.
-^SPC    : Set mark.
-^W      : Kill from mark to point.
-^X      : Exchange mark and point.
-TAB     : By default adds spaces to buffer to get to next TAB stop
+   M-F/M-B : Move cursor forward/backward one word.
+   M-D     : Delete the word under the cursor.
+   ^SPC    : Set mark.
+   ^W      : Kill from mark to point.
+   ^X      : Exchange mark and point.
+   TAB     : By default adds spaces to buffer to get to next TAB stop
           (just after every 8th column), although this may be rebound by the
           programmer, as described below.
-NL, CR  : returns current buffer to the program.
+   NL, CR  : returns current buffer to the program.
 
-DOS and ANSI terminal arrow key sequences are recognized, and act like:
+   DOS and ANSI terminal arrow key sequences are recognized, and act like:
 
-  up    : same as ^P
-  down  : same as ^N
-  left  : same as ^B
-  right : same as ^F
+   up    : same as ^P
+   down  : same as ^N
+   left  : same as ^B
+   right : same as ^F
 
-************************** Programmer Interface ***************************
+ ************************** Programmer Interface ***************************
 
-The programmer accesses input-edit through five functions, and optionally
-through three additional function pointer hooks.  The five functions are:
+   The programmer accesses input-edit through five functions, and optionally
+   through three additional function pointer hooks.  The five functions are:
 
-char *Getline(const char *prompt)
+   char *Getline(const char *prompt)
 
         Prints the prompt and allows the user to edit the current line. A
         pointer to the line is returned when the user finishes by
@@ -129,7 +130,7 @@ char *Getline(const char *prompt)
         the slow 1 character read()s that getline uses (note: this limitation
         has been removed).
 
-char *Getlinem(int mode, const char *prompt)
+   char *Getlinem(int mode, const char *prompt)
 
         mode: -1 = init, 0 = line mode, 1 = one char at a time mode, 2 = cleanup
 
@@ -143,25 +144,25 @@ char *Getlinem(int mode, const char *prompt)
         3) In the termination routine: Getlinem(2,NULL)
         With mode=0 the function behaves exactly like the previous function.
 
-void Gl_config(const char *which, int value)
+   void Gl_config(const char *which, int value)
 
         Set some config options. Which can be:
           "noecho":  do not echo characters (used for passwd input)
           "erase":   do erase line after return (used for text scrollers)
 
-void Gl_setwidth(int width)
+   void Gl_setwidth(int width)
 
         Set the width of the terminal to the specified width. The default
         width is 80 characters, so this function need only be called if the
         width of the terminal is not 80.  Since horizontal scrolling is
         controlled by this parameter it is important to get it right.
 
-void Gl_histinit(char *file)
+   void Gl_histinit(char *file)
 
         This function reads a history list from file. So lines from a
         previous session can be used again.
 
-void Gl_histadd(char *buf)
+   void Gl_histadd(char *buf)
 
         The Gl_histadd function checks to see if the buf is not empty or
         whitespace, and also checks to make sure it is different than
@@ -169,13 +170,13 @@ void Gl_histadd(char *buf)
         If the buf is a new non-blank string a copy is made and saved on
         the history list, so the caller can re-use the specified buf.
 
-The main loop in testgl.c, included in this directory, shows how the
-input-edit package can be used:
+   The main loop in testgl.c, included in this directory, shows how the
+   input-edit package can be used:
 
-extern char *Getline();
-extern void  Gl_histadd();
-main()
-{
+   extern char *Getline();
+   extern void  Gl_histadd();
+   main()
+   {
     char *p;
     Gl_histinit(".hist");
     do {
@@ -183,21 +184,21 @@ main()
         Gl_histadd(p);
         fputs(p, stdout);
     } while (*p != 0);
-}
+   }
 
-In order to allow the main program to have additional access to the buffer,
-to implement things such as completion or auto-indent modes, three
-function pointers can be bound to user functions to modify the buffer as
-described below.  By default Gl_in_hook and Gl_out_hook are set to NULL,
-and Gl_tab_hook is bound to a function that inserts spaces until the next
-logical tab stop is reached.  The user can reassign any of these pointers
-to other functions.  Each of the functions bound to these hooks receives
-the current buffer as the first argument, and must return the location of
-the leftmost change made in the buffer.  If the buffer isn't modified the
-functions should return -1.  When the hook function returns the screen is
-updated to reflect any changes made by the user function.
+   In order to allow the main program to have additional access to the buffer,
+   to implement things such as completion or auto-indent modes, three
+   function pointers can be bound to user functions to modify the buffer as
+   described below.  By default Gl_in_hook and Gl_out_hook are set to NULL,
+   and Gl_tab_hook is bound to a function that inserts spaces until the next
+   logical tab stop is reached.  The user can reassign any of these pointers
+   to other functions.  Each of the functions bound to these hooks receives
+   the current buffer as the first argument, and must return the location of
+   the leftmost change made in the buffer.  If the buffer isn't modified the
+   functions should return -1.  When the hook function returns the screen is
+   updated to reflect any changes made by the user function.
 
-int (*Gl_tab_hook)(char *buf, int prompt_width, int *cursor_loc)
+   int (*Gl_tab_hook)(char *buf, int prompt_width, int *cursor_loc)
 
         If Gl_tab_hook is non-NULL, it is called whenever a tab is typed.
         In addition to receiving the buffer, the current prompt width is
@@ -207,29 +208,28 @@ int (*Gl_tab_hook)(char *buf, int prompt_width, int *cursor_loc)
         TAB was received, but it can be reset so that the cursor will end
         up at the specified location after the screen is redrawn.
 
-int (*Gl_beep_hook)()
+   int (*Gl_beep_hook)()
         Called if \007 (beep) is about to be printed. Return !=0 if handled.
-*/
+ */
 
 extern "C" {
-
 /********************* exported interface ********************************/
 
 
-char   *Getline(const char *prompt); /* read a line of input */
-char   *Getlinem(int mode, const char *prompt); /* allows reading char by char */
-void    Gl_config(const char *which, int value); /* set some options */
-void    Gl_setwidth(int w);          /* specify width of screen */
-void    Gl_windowchanged();          /* call after SIGWINCH signal */
-int     Gl_eof();
-void    Gl_histinit(char *file); /* read entries from old histfile */
-void    Gl_histadd(char *buf);       /* adds entries to hist */
-void    Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
-                     const char* colorBadBracket, const char* colorPrompt); /* set the colours (replace default colours) for enhanced output */
+char* Getline(const char* prompt);   /* read a line of input */
+char* Getlinem(int mode, const char* prompt);   /* allows reading char by char */
+void Gl_config(const char* which, int value);    /* set some options */
+void Gl_setwidth(int w);             /* specify width of screen */
+void Gl_windowchanged();             /* call after SIGWINCH signal */
+int Gl_eof();
+void Gl_histinit(char* file);    /* read entries from old histfile */
+void Gl_histadd(char* buf);          /* adds entries to hist */
+void Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
+                  const char* colorBadBracket, const char* colorPrompt);    /* set the colours (replace default colours) for enhanced output */
 
-int             (*Gl_tab_hook)(char *buf, int prompt_width, int *loc) = 0;
-int             (*Gl_beep_hook)() = 0;
-int             (*Gl_in_key)(int ch) = 0;
+int (* Gl_tab_hook)(char* buf, int prompt_width, int* loc) = 0;
+int (* Gl_beep_hook)() = 0;
+int (* Gl_in_key)(int ch) = 0;
 }
 
 /******************** imported interface *********************************/
@@ -244,14 +244,15 @@ int             (*Gl_in_key)(int ch) = 0;
 /** newer imported interfaces **/
 #include "editline.h"
 
-char * hist_file; // file name for the command history (read and write)
+char* hist_file;  // file name for the command history (read and write)
 
 struct WriteHistoryTrigger {
-	~WriteHistoryTrigger() {
-		write_history(hist_file);
-	}
-};
+   ~WriteHistoryTrigger() {
+      write_history(hist_file);
+   }
 
+
+};
 
 
 /******************** internal interface *********************************/
@@ -259,22 +260,18 @@ struct WriteHistoryTrigger {
 #define BUF_SIZE 1024
 
 extern "C" {
-
 //static int      gl_notty = 0;           /* 1 when not a tty */
-static void     gl_error(char *buf);    /* write error msg and die */
+static void gl_error(char* buf);        /* write error msg and die */
 } // extern "C"
 
 /************************ nonportable part *********************************/
 
 extern "C" {
-
 void
-Gl_config(const char *which, int value)
-{
+Gl_config(const char* which, int value) {
    if (strcmp(which, "noecho") == 0) {
       setEcho(!value);
-   }
-   else {
+   } else {
       // unsupported directive
       printf("gl_config: %s ?\n", which);
    }
@@ -284,28 +281,33 @@ Gl_config(const char *which, int value)
 /******************** fairly portable part *********************************/
 
 static void
-gl_error(char *buf)
-{
-    fprintf(stderr, "%s", buf);
+gl_error(char* buf) {
+   fprintf(stderr, "%s", buf);
 }
 
+
 void
-Gl_setwidth(int /*w*/)
-{
+Gl_setwidth(int /*w*/) {
    termResize();  // no need to pass in width as new func detects term size itself
 }
 
+
 void
-Gl_windowchanged()
-{
+Gl_windowchanged() {
 #ifdef TIOCGWINSZ
+
    if (isatty(0)) {
       static char lenv[32], cenv[32];
       struct winsize wins;
       ioctl(0, TIOCGWINSZ, &wins);
 
-      if (wins.ws_col == 0) wins.ws_col = 80;
-      if (wins.ws_row == 0) wins.ws_row = 24;
+      if (wins.ws_col == 0) {
+         wins.ws_col = 80;
+      }
+
+      if (wins.ws_row == 0) {
+         wins.ws_row = 24;
+      }
 
       Gl_setwidth(wins.ws_col);
 
@@ -315,108 +317,108 @@ Gl_windowchanged()
       putenv(cenv);
    }
 #endif
-}
+} // Gl_windowchanged
 
-/* The new and hopefully improved Getlinem method! 
- * Uses readline() from libeditline. 
+
+/* The new and hopefully improved Getlinem method!
+ * Uses readline() from libeditline.
  * History and editing are also handled by libeditline.
  * Modes: -1 = init, 0 = line mode, 1 = one char at a time mode, 2 = cleanup
  */
-char *
-Getlinem(int mode, const char *prompt)
-{
-   static char sprompt[80] = {0};
-   char * input_buffer;
+char*
+Getlinem(int mode, const char* prompt) {
+   static char sprompt[80] = { 0 };
+   char* input_buffer;
    rl_tab_hook = Gl_tab_hook;
    rl_in_key_hook = Gl_in_key;
 
-   	static int getline_initialized = 0;
-	if (getline_initialized == 0)
-	{
-		//rl_initialize();		// rl_initialize already being called by history_stifle()
-		read_history(hist_file);
-		getline_initialized = 1;
-	}
+   static int getline_initialized = 0;
 
-	// mode 2 = cleanup
-	if (mode == 2) {
-		rl_reset_terminal();
-        }
+   if (getline_initialized == 0) {
+      //rl_initialize();		// rl_initialize already being called by history_stifle()
+      read_history(hist_file);
+      getline_initialized = 1;
+   }
 
-	// mode -1 = init
-	if (mode == -1) {
-		if (prompt)
-			strcpy(sprompt, prompt);
-		input_buffer = readline(sprompt, true /*newline*/);
+   // mode 2 = cleanup
+   if (mode == 2) {
+      rl_reset_terminal();
+   }
 
-		return input_buffer;
-        }
+   // mode -1 = init
+   if (mode == -1) {
+      if (prompt) {
+         strcpy(sprompt, prompt);
+      }
+      input_buffer = readline(sprompt, true /*newline*/);
 
-	// mode 1 = one char at a time
-	if (mode == 1) {
-		if (prompt)
-			strcpy(sprompt, prompt);
+      return input_buffer;
+   }
 
-		// note: input_buffer will be null unless complete line entered
-		input_buffer = readline(sprompt, false /*no newline*/);
+   // mode 1 = one char at a time
+   if (mode == 1) {
+      if (prompt) {
+         strcpy(sprompt, prompt);
+      }
 
-		// if complete line is entered, add to history and return buffer, otherwise return null
-		char * ch = input_buffer;
-		
-		if (input_buffer)
-		{
-			while ( *ch != '\a' ) 
-			{
-				if (*ch == '\n')		// line complete!
-				{
-					return input_buffer;
-				}
-				++ch;
-			}
-		}
-	}
-	return NULL;
-}
+      // note: input_buffer will be null unless complete line entered
+      input_buffer = readline(sprompt, false /*no newline*/);
+
+      // if complete line is entered, add to history and return buffer, otherwise return null
+      char* ch = input_buffer;
+
+      if (input_buffer) {
+         while (*ch != '\a') {
+            if (*ch == '\n') {                                  // line complete!
+               return input_buffer;
+            }
+            ++ch;
+         }
+      }
+   }
+   return NULL;
+} // Getlinem
+
 
 void
 Gl_setColors(const char* colorTab, const char* colorTabComp, const char* colorBracket,
-             const char* colorBadBracket, const char* colorPrompt)
-{
-	// call to enhance.cxx to set colours
+             const char* colorBadBracket, const char* colorPrompt) {
+   // call to enhance.cxx to set colours
    setColors(colorTab, colorTabComp, colorBracket, colorBadBracket, colorPrompt);
 }
 
-char *
-Getline(const char *prompt)
-{
+
+char*
+Getline(const char* prompt) {
    return Getlinem(0, prompt);
 }
+
 
 /******************* History stuff **************************************/
 
 void
-Gl_histsize(int /*size*/, int save)
-{
-	stifle_history(save);
+Gl_histsize(int /*size*/, int save) {
+   stifle_history(save);
 }
 
-void
-Gl_histinit(char *file)
-{ 
-	static WriteHistoryTrigger history_write_trigger;
-	hist_file = file;
-}
 
 void
-Gl_histadd(char *buf)
-{
-	add_history(buf);
+Gl_histinit(char* file) {
+   static WriteHistoryTrigger history_write_trigger;
+   hist_file = file;
 }
+
+
+void
+Gl_histadd(char* buf) {
+   add_history(buf);
+}
+
 
 int
-Gl_eof()
-{
+Gl_eof() {
    return rl_eof();
 }
+
 
 } // extern "C"

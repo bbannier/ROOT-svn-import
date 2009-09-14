@@ -16,21 +16,26 @@ class TTermManip {
 public:
    TTermManip();
    ~TTermManip() { ResetTerm(); }
-   
+
    bool SetColor(unsigned char r, unsigned char g, unsigned char b);
 
-   void StartUnderline() {
+   void
+   StartUnderline() {
       if (!fCurrentlyUnterlined) {
          WriteTerm(fStartUnderline);
          fCurrentlyUnterlined = true;
       }
    }
-   void StopUnderline() {
+
+
+   void
+   StopUnderline() {
       if (fCurrentlyUnterlined) {
          WriteTerm(fStopUnderline);
          fCurrentlyUnterlined = false;
       }
    }
+
 
    bool ResetTerm();
    void SetDefaultColor();
@@ -38,15 +43,21 @@ public:
 private:
    struct Color {
       Color(unsigned char r, unsigned char g, unsigned char b):
-         fR((r * 1001 ) / 256), fG((g * 1001 ) / 256), fB((b * 1001 ) / 256) {
+         fR((r* 1001) / 256),
+         fG((g* 1001) / 256),
+         fB((b* 1001) / 256) {
          // Re-normalize RGB components from 0 to 255 to 0 to 1000
       }
 
-      bool operator<(const Color& c) const {
+
+      bool
+      operator <(const Color& c) const {
          return fR < c.fR
-            || (fR == c.fR && (fG < c.fG
-                             || (fG == c.fG && fB < c.fB) ) );
+                || (fR == c.fR && (fG < c.fG
+                                   || (fG == c.fG && fB < c.fB)));
       }
+
+
       unsigned char fR, fG, fB;
    };
 
@@ -58,7 +69,8 @@ private:
 
    int AllocColor(const Color& col);
 
-   static int DefaultPutchar(PutcFuncArg_t c) {
+   static int
+   DefaultPutchar(PutcFuncArg_t c) {
       // tputs takes int(*)(char) on solaris, so wrap putchar
       return putchar(c);
    }
@@ -79,9 +91,9 @@ private:
    char* fStopUnderline; // stop underline;
    typedef int (*PutcFunc_t)(PutcFuncArg_t);
    PutcFunc_t fPutc;
-   int   fCurrentColorIdx; // index if the currently active color
-   bool  fCurrentlyBold; // whether bold is active
-   bool  fCurrentlyUnterlined; // whether underlining is active
+   int fCurrentColorIdx;   // index if the currently active color
+   bool fCurrentlyBold;  // whether bold is active
+   bool fCurrentlyUnterlined;  // whether underlining is active
 
    static const int fgStartColIdx = 5;
 
