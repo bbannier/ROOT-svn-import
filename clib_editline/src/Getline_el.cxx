@@ -345,6 +345,7 @@ Getlinem(int mode, const char *prompt)
    static char sprompt[80] = {0};
    char * input_buffer;
    rl_tab_hook = Gl_tab_hook;
+   rl_in_key_hook = Gl_in_key;
 
    	static int getline_initialized = 0;
 	if (getline_initialized == 0)

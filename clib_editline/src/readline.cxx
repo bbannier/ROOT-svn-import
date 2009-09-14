@@ -91,6 +91,7 @@ CPFunction *rl_completion_entry_function = NULL;
 CPPFunction *rl_attempted_completion_function = NULL;
 int tab_color = 5;
 El_tab_hook_t rl_tab_hook = NULL;
+El_in_key_hook_t rl_in_key_hook = NULL;
 
 /*
  * This is set to character indicating type of completion being done by
@@ -320,6 +321,11 @@ readline(const char *prompt, bool newline)
 		ret = el_gets_newline(e, &count);
         } else {
 		ret = el_gets(e, &count);
+                if (rl_in_key_hook && count > 0 && e->el_line.lastchar > e->el_line.buffer) {
+                   char* key = e->el_line.lastchar;
+                   if (*key == '\a') --key;
+                   (*rl_in_key_hook)(*key);
+                }
         }
 
         // std::cerr <<  "readline(): el_gets(e,"<<count<<") got ["<<(ret?ret:"NULL")<<"]\n";
@@ -330,48 +336,9 @@ readline(const char *prompt, bool newline)
         // which is why we duplicate it here:
 	if (ret )
         {
-                if( count > 0) {
-					/*
-                        char *foo;
-                        int lastidx;
-                        lastidx = count - 1;
-                        //foo = strdup(ret);
-                        / **
-                           stephan: reminder: this sick hack is
-                           because el_gets() returns trailing a newline.
-                           if (foo[lastidx] == '\n')
-                           {
-                           foo[lastidx] = '\0';
-                           }
-						   AXEL: we don't care, caller is not supposed to mess with it.
-                        * /
-                        //ret = foo;
-						*/
-                } else
-                {
+                if (count <= 0) {
                         ret = NULL;
                 }
-        }
-
-        if( NULL != ret )
-        { // added by stephan@s11n.net:
-          // Handle builtin functions here, and don't propogate them back to the client
-          // (no need for client to see them, IMO, since they can't directly manipulate
-          // them anyway).
-                char * line = strdup(e->el_line.buffer);
-                // ^^^ the strdup() is because i'm afraid of leaking when
-                // e->...buffer gets duped and then assigned to itself later on
-                // via parse_line(). This isn't C++, you know. :/
-                int pr = -1; // AXEL removed: parse_line( e, line );
-                if( -1 != pr )
-                { // it was a built-in. Let's re-run THIS function again
-                  // instead of returning to the user...
-                        add_history(line);
-                        free( line );
-                        //fprintf( e->el_outfile, "[processed libeditline internal command. return code=%d]\n", pr );
-                        goto start_over_after_builtin; // return readline( prompt );
-                }
-                free( line );
         }
 
 	history(h, &ev, H_GETSIZE);
@@ -1564,6 +1531,7 @@ rl_complete_internal(int what_to_do)
            } else {
               *e->el_line.cursor = old;
            }
+           return (CC_NORM);
         }
 
 	rl_completion_type = what_to_do;
