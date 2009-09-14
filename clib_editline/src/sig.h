@@ -42,7 +42,7 @@
  * el.sig.h: Signal handling functions
  */
 #ifndef _h_el_sig
-#define	_h_el_sig
+#define _h_el_sig
 
 #include <signal.h>
 
@@ -52,34 +52,35 @@
  * Define here all the signals we are going to handle
  * The _DO macro is used to iterate in the source code
  */
+
 /*
-#define	ALLSIGS		\
-	_DO(SIGINT)	\
-	_DO(SIGTSTP)	\
-	_DO(SIGSTOP)	\
-	_DO(SIGQUIT)	\
-	_DO(SIGHUP)	\
-	_DO(SIGTERM)	\
-	_DO(SIGCONT)	\
-	_DO(SIGWINCH)
-*/
+ #define	ALLSIGS		\
+        _DO(SIGINT)	\
+        _DO(SIGTSTP)	\
+        _DO(SIGSTOP)	\
+        _DO(SIGQUIT)	\
+        _DO(SIGHUP)	\
+        _DO(SIGTERM)	\
+        _DO(SIGCONT)	\
+        _DO(SIGWINCH)
+ */
 
 // would like to add
 //	_DO(SIGSTOP)
 // but valgrind claims that one cannot handle it, and of course we trust valgrind.
 
-#define	ALLSIGS		\
-	_DO(SIGTSTP)	\
-	_DO(SIGHUP)	\
-	_DO(SIGCONT)	\
-	_DO(SIGWINCH)
+#define ALLSIGS \
+   _DO(SIGTSTP) \
+   _DO(SIGHUP) \
+   _DO(SIGCONT) \
+   _DO(SIGWINCH)
 
 
-typedef sig_t	*el_signal_t;
+typedef sig_t* el_signal_t;
 
-el_protected void	sig_end(EditLine*);
-el_protected int	sig_init(EditLine*);
-el_protected void	sig_set(EditLine*);
-el_protected void	sig_clr(EditLine*);
+el_protected void sig_end(EditLine*);
+el_protected int sig_init(EditLine*);
+el_protected void sig_set(EditLine*);
+el_protected void sig_clr(EditLine*);
 
 #endif /* _h_el_sig */

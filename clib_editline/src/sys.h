@@ -42,46 +42,46 @@
  * sys.h: Put all the stupid compiler and system dependencies here...
  */
 #ifndef _h_sys
-#define	_h_sys
+#define _h_sys
 
 /**
- Notes by stephan@s11n.net.
+   Notes by stephan@s11n.net.
 
-These public, protected, private macros are bullshit. i added an el_ prefix
-to them to allow a C++ compiler to swallow this code, and set them all
-to empty values. One day i'll sed them out of the tree entirely.
-*/
+   These public, protected, private macros are bullshit. i added an el_ prefix
+   to them to allow a C++ compiler to swallow this code, and set them all
+   to empty values. One day i'll sed them out of the tree entirely.
+ */
 #ifndef el_public
-# define el_public		/* Externally visible functions/variables */
+# define el_public              /* Externally visible functions/variables */
 #endif
 
 #ifndef el_private
-# define el_private	/* Always hidden internals */
+# define el_private     /* Always hidden internals */
 #endif
 
 #ifndef el_protected
-# define el_protected	/* Redefined from elsewhere to "static" */
-			/* When we want to hide everything	*/
+# define el_protected   /* Redefined from elsewhere to "static" */
+                        /* When we want to hide everything	*/
 #endif
 
 #if HAVE_SYS_CDEFS_H
-#include <sys/cdefs.h>
+# include <sys/cdefs.h>
 #endif
 
 #ifndef _PTR_T
 # define _PTR_T
-typedef void	*ptr_t;
+typedef void* ptr_t;
 #endif
 
 #ifndef _IOCTL_T
 # define _IOCTL_T
-typedef void	*ioctl_t;
+typedef void* ioctl_t;
 #endif
 
 #include <stdio.h>
 
-#define	REGEX		/* Use POSIX.2 regular expression functions */
-#undef	REGEXP		/* Use UNIX V8 regular expression functions */
+#define REGEX           /* Use POSIX.2 regular expression functions */
+#undef  REGEXP          /* Use UNIX V8 regular expression functions */
 
 #if defined(__sun__) && defined(__SVR4)
 # undef REGEX
@@ -91,11 +91,11 @@ typedef void (*sig_t)(int);
 #endif
 
 #ifndef __P
-#ifdef __STDC__
-#define __P(x)  x
-#else
-#define __P(x)  ()
-#endif
+# ifdef __STDC__
+#  define __P(x) x
+# else
+#  define __P(x) ()
+# endif
 #endif
 
 #endif /* _h_sys */

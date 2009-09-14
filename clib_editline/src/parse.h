@@ -42,11 +42,11 @@
  * el.parse.h: Parser functions
  */
 #ifndef _h_el_parse
-#define	_h_el_parse
+#define _h_el_parse
 
-el_protected int	 parse_line(EditLine *, const char *);
-el_protected int	 parse__escape(const char ** const);
-el_protected char	*parse__string(char *, const char *);
-el_protected int	 parse_cmd(EditLine *, const char *);
+el_protected int parse_line(EditLine*, const char*);
+el_protected int parse__escape(const char** const);
+el_protected char* parse__string(char*, const char*);
+el_protected int parse_cmd(EditLine*, const char*);
 
 #endif /* _h_el_parse */

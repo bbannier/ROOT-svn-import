@@ -1,11 +1,11 @@
 #include "TTermManip.h"
 
 #ifndef _MSC_VER
-#include <curses.h>
-#include <termcap.h>
+# include <curses.h>
+# include <termcap.h>
 extern "C" int setupterm(const char* term, int fd, int* perrcode);
 #else
-#include "win32vt100.h"
+# include "win32vt100.h"
 #endif
 
 TTermManip::TTermManip():
@@ -25,13 +25,14 @@ TTermManip::TTermManip():
    fPutc(DefaultPutchar),
    fCurrentColorIdx(-1),
    fCurrentlyBold(false),
-   fCurrentlyUnterlined(false)   {
+   fCurrentlyUnterlined(false) {
    // Initialize color management
    fOrigColors = GetTermStr("oc");
    ResetTerm();
    // Use pairs where possible
    fInitPair = GetTermStr("initp");
    fUsePairs = (fInitPair != 0);
+
    if (fUsePairs) {
       fSetPair = GetTermStr("scp");
       fCanChangeColors = true;
@@ -40,6 +41,7 @@ TTermManip::TTermManip():
       fCanChangeColors = (fInitColor != 0);
       fSetFg = GetTermStr("setaf");
       fAnsiColors = true;
+
       if (!fSetFg) {
          fSetFg = GetTermStr("setf");
          fAnsiColors = false;
@@ -49,17 +51,22 @@ TTermManip::TTermManip():
    fSetBold = GetTermStr("bold");
    // "sgr0" doesn't reset window size
    fSetDefault = GetTermStr("sgr0");
-   if (!fSetDefault)
+
+   if (!fSetDefault) {
       fSetDefault = GetTermStr("rs2");
+   }
    fStartUnderline = GetTermStr("smul");
    fStopUnderline = GetTermStr("rmul");
 
    fColorCapable = fUsePairs || fSetFg;
 }
 
-int TTermManip::AllocColor(const Color& col) {
+
+int
+TTermManip::AllocColor(const Color& col) {
    ColorMap_t::iterator iCol2 = fColors.find(col);
    int idx = -1;
+
    if (iCol2 != fColors.end()) {
       idx = iCol2->second;
    } else {
@@ -67,20 +74,23 @@ int TTermManip::AllocColor(const Color& col) {
       idx = fColors.size() - 1 + fgStartColIdx;
       fColors[col] = idx;
       char* initcolcmd = 0;
+
       if (fUsePairs) {
          initcolcmd = tparm(fInitPair, idx, 0, 0, 0, col.fR, col.fG, col.fB, 0, 0);
       } else if (fInitColor) {
          initcolcmd = tparm(fInitColor, idx, col.fR, col.fG, col.fB, 0, 0, 0, 0, 0);
       }
+
       if (initcolcmd) {
          tputs(initcolcmd, 1, fPutc);
       }
    }
    return idx;
-}
+} // AllocColor
 
-void TTermManip::SetDefaultColor()
-{
+
+void
+TTermManip::SetDefaultColor() {
    // Set terminal to the default color.
    if (fCurrentColorIdx != -1) {
       ResetTerm();
@@ -88,17 +98,19 @@ void TTermManip::SetDefaultColor()
 }
 
 
-bool TTermManip::SetColor(unsigned char r, unsigned char g, unsigned char b) {
+bool
+TTermManip::SetColor(unsigned char r, unsigned char g, unsigned char b) {
    // RGB colors range from 0 to 255
    if (fCanChangeColors) {
-      int idx = AllocColor(Color(r,g,b));
+      int idx = AllocColor(Color(r, g, b));
+
       if (idx != fCurrentColorIdx) {
          if (fSetPair) {
             WriteTerm(fSetPair, idx);
          } else if (fSetFg) {
             WriteTerm(fSetFg, idx);
          }
-      fCurrentColorIdx = idx;
+         fCurrentColorIdx = idx;
       }
    } else if (fSetFg) {
       int sum = r + g + b;
@@ -106,15 +118,18 @@ bool TTermManip::SetColor(unsigned char r, unsigned char g, unsigned char b) {
       g = g > sum / 4;
       b = b > sum / 4;
       int idx = 0;
+
       if (fAnsiColors) {
          idx = r + (g * 2) + (b * 4);
       } else {
          idx = (r * 4) + (g * 2) + b;
       }
+
       if (idx != fCurrentColorIdx) {
          WriteTerm(fSetFg, idx);
          fCurrentColorIdx = idx;
       }
+
       if (r > 127 || b > 127 || g > 127) {
          // want bold
          if (!fCurrentlyBold) {
@@ -137,14 +152,16 @@ bool TTermManip::SetColor(unsigned char r, unsigned char g, unsigned char b) {
       return false;
    }
    return true;
-}
+} // SetColor
 
 
-char* TTermManip::GetTermStr(const char* cap) {
+char*
+TTermManip::GetTermStr(const char* cap) {
    char capid[8];
    strcpy(capid, cap);
    char* termstr = tigetstr(capid);
-   if (termstr == (char*)-1) {
+
+   if (termstr == (char*) -1) {
       printf("ERROR unknown capability %s\n", cap);
       return NULL;
    } else if (termstr == 0) {
@@ -154,9 +171,12 @@ char* TTermManip::GetTermStr(const char* cap) {
    return termstr;
 }
 
-bool TTermManip::ResetTerm() {
+
+bool
+TTermManip::ResetTerm() {
    WriteTerm(fSetDefault);
    WriteTerm(fStopUnderline);
+
    if (!fOrigColors) {
 #ifndef _MSC_VER
       // some claim to not have it and they have it nevertheless - so try:
@@ -169,43 +189,59 @@ bool TTermManip::ResetTerm() {
    fCurrentlyBold = false;
    fCurrentlyUnterlined = false;
    return true;
-}
+} // ResetTerm
 
-bool TTermManip::WriteTerm(char* termstr) {
-   if (!termstr) return false;
+
+bool
+TTermManip::WriteTerm(char* termstr) {
+   if (!termstr) {
+      return false;
+   }
    tputs(tparm(termstr, 0, 0, 0, 0, 0, 0, 0, 0, 0), 1, fPutc);
+
    /*if (tputs(tparm(termstr, 0, 0, 0, 0, 0, 0, 0, 0, 0), 1, fPutc) == ERR) {
       printf("ERROR writing %s\n", termstr);
       return false;
-   }*/
+      }*/
    fflush(stdout);
    return true;
 }
 
-bool TTermManip::WriteTerm(char* termstr, int i) {
-   if (!termstr) return false;
+
+bool
+TTermManip::WriteTerm(char* termstr, int i) {
+   if (!termstr) {
+      return false;
+   }
    tputs(tparm(termstr, i, 0, 0, 0, 0, 0, 0, 0, 0), 1, fPutc);
+
    /*if (tputs(tparm(termstr, i, 0, 0, 0, 0, 0, 0, 0, 0), 1, fPutc) == ERR) {
       printf("ERROR writing %s %d\n", termstr, i);
       return false;
-   }*/
+      }*/
    fflush(stdout);
    return true;
 }
 
+
 #ifdef TEST_TERMMANIP
-void testcolor(TTermManip& tm, int r, int g, int b) {
-   tm.SetColor(r,g,b);
-   if (r%2) {
+void
+testcolor(TTermManip& tm, int r, int g, int b) {
+   tm.SetColor(r, g, b);
+
+   if (r % 2) {
       tm.StartUnderline();
    }
    printf("HELLO %d %d %d\n", r, g, b);
-   if (r%2) {
+
+   if (r % 2) {
       tm.StopUnderline();
    }
 }
 
-void testall(TTermManip& tm, int h) {
+
+void
+testall(TTermManip& tm, int h) {
    testcolor(tm, h, 0, 0);
    testcolor(tm, 0, h, 0);
    testcolor(tm, 0, 0, h);
@@ -215,8 +251,11 @@ void testall(TTermManip& tm, int h) {
    testcolor(tm, h, h, h);
 }
 
-int main(int, char*[]) {
+
+int
+main(int, char*[]) {
    int errcode;
+
    if (ERR == setupterm(0, 1, &errcode)) {
       printf("ERROR in setupterm: %d\n", errcode);
       return 1;
@@ -230,5 +269,7 @@ int main(int, char*[]) {
    testcolor(tm, 0, 0, 0);
 
    return 0;
-}
+} // main
+
+
 #endif
