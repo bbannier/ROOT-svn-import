@@ -67,7 +67,7 @@ __RCSID("$NetBSD: readline.c,v 1.19 2001/01/10 08:10:45 jdolecek Exp $");
 /* readline compatibility stuff - look at readline sources/documentation */
 /* to see what these variables mean */
 const char* rl_library_version = "EditLine wrapper";
-char* rl_readline_name = "";
+const char* rl_readline_name = "";
 FILE* rl_instream = NULL;
 FILE* rl_outstream = NULL;
 int rl_point = 0;
@@ -79,12 +79,12 @@ int history_length = 0;
 int max_input_history = 0;
 char history_expansion_char = '!';
 char history_subst_char = '^';
-char* history_no_expand_chars = " \t\n=(";
+const char* history_no_expand_chars = " \t\n=(";
 Function* history_inhibit_expansion_function = NULL;
 
 int rl_inhibit_completion = 0;
 int rl_attempted_completion_over = 0;
-char* rl_basic_word_break_characters = " \t\n\"\\'`@$><=;|&{(";
+const char* rl_basic_word_break_characters = " \t\n\"\\'`@$><=;|&{(";
 char* rl_completer_word_break_characters = NULL;
 char* rl_completer_quote_characters = NULL;
 CPFunction* rl_completion_entry_function = NULL;
@@ -323,9 +323,6 @@ readline(const char* prompt, bool newline) {
       free(el_rl_prompt);
       el_rl_prompt = strdup(prompt);
    }
-
-   // ACK! My first GOTO since BASIC! (stephan) See below...
-start_over_after_builtin:
 
    /* get one line from input stream */
    if (newline) {

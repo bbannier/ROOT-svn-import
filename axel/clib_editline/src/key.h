@@ -71,8 +71,8 @@ el_protected int key_get(EditLine*, char*, key_value_t*);
 el_protected void key_add(EditLine*, const char*, key_value_t*, int);
 el_protected void key_clear(EditLine*, el_action_t*, char*);
 el_protected int key_delete(EditLine*, char*);
-el_protected void key_print(EditLine*, char*);
-el_protected void key_kprint(EditLine*, char*, key_value_t*, int);
+el_protected void key_print(EditLine*, const char*);
+el_protected void key_kprint(EditLine*, const char*, key_value_t*, int);
 el_protected char* key__decode_str(char*, char*, const char*);
 
 #endif /* _h_el_key */

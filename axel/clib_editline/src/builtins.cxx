@@ -87,7 +87,7 @@ el_func_show_function_list(EditLine* el, int, const char**) {
    for ( ; et != it; ++it) {
       bi = &((*it).second);
       fprintf(el->el_outfile,
-              "%-032s\t\t%s\n",
+              "%-32s\t\t%s\n",
               (bi->name),
               ((NULL != bi->help) ? bi->help : "")
       );

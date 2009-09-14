@@ -76,7 +76,7 @@ typedef struct el_color_t {
       backColor(b) {}
 
    el_color_t&
-   operator =(el_color_t& color) {
+   operator =(const el_color_t& color) {
       (*this).foreColor = color.foreColor;
       (*this).backColor = color.backColor;
       return *this;

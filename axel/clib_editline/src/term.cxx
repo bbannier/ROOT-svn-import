@@ -781,7 +781,7 @@ mc_again:
  *	Overstrike num characters
  */
 el_protected void
-term_overwrite(EditLine* el, char* cp, el_color_t* color, int n) {
+term_overwrite(EditLine* el, const char* cp, el_color_t* color, int n) {
    if (n <= 0) {
       return;                   /* catch bugs */
 
@@ -880,7 +880,7 @@ term_deletechars(EditLine* el, int num) {
  *	characters in the line
  */
 el_protected void
-term_insertwrite(EditLine* el, char* cp, el_color_t* color, int num) {
+term_insertwrite(EditLine* el, const char* cp, el_color_t* color, int num) {
    if (num <= 0) {
       return;
    }
@@ -1023,7 +1023,7 @@ term_clear_to_bottom(EditLine* el) {
  *	Read in the terminal capabilities from the requested terminal
  */
 el_protected int
-term_set(EditLine* el, char* term) {
+term_set(EditLine* el, const char* term) {
    int i;
    char buf[TC_BUFSIZE];
    char* area;
@@ -1312,7 +1312,7 @@ term_clear_arrow(EditLine* el, char* name) {
  *	Print the arrow key bindings
  */
 el_protected void
-term_print_arrow(EditLine* el, char* name) {
+term_print_arrow(EditLine* el, const char* name) {
    int i;
    fkey_t* arrow = el->el_term.t_fkey;
 

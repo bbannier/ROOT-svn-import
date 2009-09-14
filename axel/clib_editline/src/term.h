@@ -47,7 +47,7 @@
 #include "histedit.h"
 
 typedef struct {                /* Symbolic function key bindings	*/
-   char* name;                  /* name of the key			*/
+   const char* name;                  /* name of the key			*/
    int key;                     /* Index in termcap table		*/
    key_value_t fun;             /* Function bound to it			*/
    int type;                    /* Type of function			*/
@@ -88,8 +88,8 @@ typedef struct {
 el_protected void term_move_to_line(EditLine*, int);
 el_protected void term_move_to_char(EditLine*, int);
 el_protected void term_clear_EOL(EditLine*, int);
-el_protected void term_overwrite(EditLine*, char*, el_color_t*, int);
-el_protected void term_insertwrite(EditLine*, char*, el_color_t*, int);
+el_protected void term_overwrite(EditLine*, const char*, el_color_t*, int);
+el_protected void term_insertwrite(EditLine*, const char*, el_color_t*, int);
 el_protected void term_deletechars(EditLine*, int);
 el_protected void term_clear_screen(EditLine*);
 el_protected void term_beep(EditLine*);
@@ -97,11 +97,11 @@ el_protected int term_change_size(EditLine*, int, int);
 el_protected int term_get_size(EditLine*, int*, int*);
 el_protected int term_init(EditLine*);
 el_protected void term_bind_arrow(EditLine*);
-el_protected void term_print_arrow(EditLine*, char*);
+el_protected void term_print_arrow(EditLine*, const char*);
 el_protected int term_clear_arrow(EditLine*, char*);
 el_protected int term_set_arrow(EditLine*, char*, key_value_t*, int);
 el_protected void term_end(EditLine*);
-el_protected int term_set(EditLine*, char*);
+el_protected int term_set(EditLine*, const char*);
 el_protected int term_settc(EditLine*, int, const char**);
 el_protected int term_telltc(EditLine*, int, const char**);
 el_protected int term_echotc(EditLine*, int, const char**);
