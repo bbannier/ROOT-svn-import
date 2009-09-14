@@ -37,7 +37,8 @@ namespace ROOT {
          { }
          
          bool operator==(const Box& b)
-         { return (_min == b._min) && (_max == b._max);  }
+         { return (_min == b._min) && (_max == b._max) 
+               && (_val == b._val) && (_error == b._error);  }
          
          const vector<double>& getMin() const { return _min; }
          const vector<double>& getMax() const { return _max; }
@@ -181,10 +182,10 @@ namespace ROOT {
          l = new ProxyListBox();
          l->push_back(originalBox);
          
-         cout << "Original List: -" << endl;
-         PrintList();
-         cout << "END OF PRINTING" << endl;
-         cout << endl;
+//          cout << "Original List: -" << endl;
+//          PrintList();
+//          cout << "END OF PRINTING" << endl;
+//          cout << endl;
       }
 
       SparseData::~SparseData()
@@ -198,7 +199,8 @@ namespace ROOT {
          list<Box>::iterator it;
          it = std::find_if(l->begin(), l->end(), BoxContainer(littleBox));
          if ( it != l->end() )
-            cout << "Found: " << *it << endl;
+//             cout << "Found: " << *it << endl;
+            ;
          else
             cout << "FAILED!" << endl;
          if ( it->getVal() )
@@ -224,8 +226,6 @@ namespace ROOT {
          list<Box>::iterator it = l->begin();
          const unsigned int dim = it->getMin().size();
 
-         cout << "Getting the bin data" << endl;
-
          BinData * bd = new BinData(l->getList().size(), dim, BinData::kValueError);
          for ( ; it != l->end(); ++it )
          {
@@ -233,16 +233,48 @@ namespace ROOT {
             for ( unsigned int i = 0; i < dim; ++i)
             {
                mid[i] = ((it->getMax()[i] - it->getMin()[i]) /2) + it->getMin()[i];
-               cout << mid[i] << " ";
             }
-            cout << endl;
            
             bd->Add(&mid[0], it->getVal(), it->getError());
          }
          
          return bd;
+      }
 
-         return 0;
+      BinData* SparseData::GetBinDataIntegral()
+      {
+         list<Box>::iterator it = l->begin();
+         const unsigned int dim = it->getMin().size();
+
+         BinData * bd = new BinData(l->getList().size(), dim, BinData::kValueError);
+         for ( ; it != l->end(); ++it )
+         {
+            bd->Add(&(it->getMin()[0]), it->getVal(), it->getError());
+            bd->AddBinUpEdge(&(it->getMax()[0]));
+         }
+         
+         return bd;         
+      }
+
+      BinData* SparseData::GetBinDataNoCeros()
+      {
+         list<Box>::iterator it = l->begin();
+         const unsigned int dim = it->getMin().size();
+
+         BinData * bd = new BinData(l->getList().size(), dim, BinData::kValueError);
+         for ( ; it != l->end(); ++it )
+         {
+            if ( it->getVal() == 0 ) continue;
+            vector<double> mid(dim);
+            for ( unsigned int i = 0; i < dim; ++i)
+            {
+               mid[i] = ((it->getMax()[i] - it->getMin()[i]) /2) + it->getMin()[i];
+            }
+           
+            bd->Add(&mid[0], it->getVal(), it->getError());
+         }
+         
+         return bd;
       }
 
       // Just for debugging pourposes
