@@ -196,7 +196,7 @@ re_putc(EditLine* el, int c, int shift, el_color_t* color) {
 
    if (el->el_refresh.r_cursor.h >= el->el_term.t_size.h) {
       el->el_vdisplay[el->el_refresh.r_cursor.v][el->el_term.t_size.h] = '\0';
-      el->el_vdispcolor[el->el_refresh.r_cursor.v][el->el_term.t_size.h] = -1;                                  // LOUISE COLOUR - note: this should be null
+      el->el_vdispcolor[el->el_refresh.r_cursor.v][el->el_term.t_size.h] = -1;
 
       /* assure end of line */
       el->el_refresh.r_cursor.h = 0;            /* reset it. */
@@ -210,18 +210,18 @@ re_putc(EditLine* el, int c, int shift, el_color_t* color) {
       if (el->el_refresh.r_cursor.v + 1 >= el->el_term.t_size.v) {
          int i, lins = el->el_term.t_size.v;
          char* firstline = el->el_vdisplay[0];
-         el_color_t* firstcolor = el->el_vdispcolor[0];                                         // LOUISE COLOUR
+         el_color_t* firstcolor = el->el_vdispcolor[0];
 
          for (i = 1; i < lins; i++) {
             el->el_vdisplay[i - 1] = el->el_vdisplay[i];
-            el->el_vdispcolor[i - 1] = el->el_vdispcolor[i];                            // LOUISE COLOUR
+            el->el_vdispcolor[i - 1] = el->el_vdispcolor[i];
          }
 
          firstline[0] = '\0';                           /* empty the string */
-         firstcolor[0] = -1;                                                                                    // LOUISE COLOUR - note: this should be null
+         firstcolor[0] = -1;
 
          el->el_vdisplay[i - 1] = firstline;
-         el->el_vdispcolor[i - 1] = firstcolor;                                                         // LOUISE COLOUR
+         el->el_vdispcolor[i - 1] = firstcolor;
       } else {
          el->el_refresh.r_cursor.v++;
       }
@@ -323,12 +323,18 @@ re_refresh(EditLine* el) {
    ELRE_DEBUG(1, (__F,
                   "term.h=%d vcur.h=%d vcur.v=%d vdisplay[0]=\r\n:%80.80s:\r\n",
                   el->el_term.t_size.h, el->el_refresh.r_cursor.h,
-                  el->el_refresh.r_cursor.v, el->el_vdisplay[0]));                              // LOUISE COLOUR no changes made - not sure what this debug line does
+                  el->el_refresh.r_cursor.v, el->el_vdisplay[0]));
 
    ELRE_DEBUG(1, (__F, "updating %d lines.\r\n", el->el_refresh.r_newcv));
 
+   //int curHPos = el->el_cursor.h;
+   //int curVPos = el->el_cursor.v;
+
    for (i = 0; i <= el->el_refresh.r_newcv; i++) {
       /* NOTE THAT re_update_line MAY CHANGE el_display[i] */
+      term_move_to_line(el, i);
+      term_move_to_char(el, 0);
+      term__flush();
       re_update_line(el, el->el_display[i], el->el_vdisplay[i],
                      el->el_vdispcolor[i],
                      i);
@@ -343,8 +349,11 @@ re_refresh(EditLine* el) {
       re__copy_and_pad(el->el_display[i], el->el_vdisplay[i],
                        (size_t) el->el_term.t_size.h);
       re__copy_and_pad(el->el_dispcolor[i], el->el_vdispcolor[i],
-                       (size_t) el->el_term.t_size.h);                                                  // LOUISE COLOUR
+                       (size_t) el->el_term.t_size.h);
    }
+   //term_move_to_line(el, curVPos);
+   //term_move_to_char(el, curHPos);
+
    ELRE_DEBUG(1, (__F,
                   "\r\nel->el_refresh.r_cursor.v=%d,el->el_refresh.r_oldcv=%d i=%d\r\n",
                   el->el_refresh.r_cursor.v, el->el_refresh.r_oldcv, i));
@@ -353,12 +362,12 @@ re_refresh(EditLine* el) {
       for ( ; i <= el->el_refresh.r_oldcv; i++) {
          term_move_to_line(el, i);
          term_move_to_char(el, 0);
-         term_clear_EOL(el, (int) strlen(el->el_display[i]));                           // LOUISE COLOUR no change made
+         term_clear_EOL(el, (int) strlen(el->el_display[i]));
 #ifdef DEBUG_REFRESH
          term_overwrite(el, "C\b", 0, 2);
 #endif /* DEBUG_REFRESH */
          el->el_display[i][0] = '\0';
-         el->el_dispcolor[i][0] = -1;                                                   // LOUISE COLOUR - note: this should be null
+         el->el_dispcolor[i][0] = -1;
       }
    }
 

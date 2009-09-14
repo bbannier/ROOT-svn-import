@@ -429,6 +429,9 @@ el_resize(EditLine* el) {
    (void) sigaddset(&nset, SIGWINCH);
    (void) sigprocmask(SIG_BLOCK, &nset, &oset);
 
+   int curHPos = el->el_cursor.h;
+   int curVPos = el->el_cursor.v;
+
    /* get the correct window size */
    if (term_get_size(el, &lins, &cols)) {
       term_change_size(el, lins, cols);
@@ -436,8 +439,12 @@ el_resize(EditLine* el) {
 
    (void) sigprocmask(SIG_SETMASK, &oset, NULL);
 
-   re_clear_display(el);
-   re_clear_lines(el);
+   // We need to set the cursor position after the resize, or refresh
+   // will argue that nothing has changed (term_change_size set it to 0).
+   // Set it to the last column if too large, otherwise keep it.
+   el->el_cursor.h = curHPos >= cols ? cols - 1 : curHPos;
+   // the vertical cursor pos does not change by resizing the window
+   el->el_cursor.v = curVPos;
    re_refresh(el);
    term__flush();
 } // el_resize
