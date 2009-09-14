@@ -64,6 +64,7 @@ typedef void	  VFunction(void);
 typedef char	 *CPFunction(const char *, int);
 typedef char	**CPPFunction(const char *, int, int);
 typedef int (*El_tab_hook_t)(char *buf, int prompt_width, int *cursor_loc);
+typedef int (*El_in_key_hook_t)(int ch);
 
 typedef struct _hist_entry {
 	const char	*line;
@@ -90,6 +91,8 @@ extern int		rl_completion_query_items;
 extern char		*rl_special_prefixes;
 extern int		rl_completion_append_character;
 extern El_tab_hook_t    rl_tab_hook;
+extern El_tab_hook_t    rl_tab_hook;
+extern El_in_key_hook_t rl_in_key_hook;
 
 /* supported functions */
 char		*readline(const char *, bool newline);
