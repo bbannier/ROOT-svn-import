@@ -43,7 +43,6 @@
 #if HAVE_SYS_CDEFS_H
 # include <sys/cdefs.h>
 #else
-
 /*
  #ifndef __BEGIN_DECLS
  #if defined(__cplusplus)
@@ -54,7 +53,7 @@
  #define __END_DECLS
  #endif
  #endif
- */
+*/
 #endif
 
 /* list of readline stuff supported by editline library's readline wrapper */
@@ -73,7 +72,6 @@ typedef struct _hist_entry {
 } HIST_ENTRY;
 
 /* global variables used by readline enabled applications */
-__BEGIN_DECLS
 extern const char* rl_library_version;
 extern const char* rl_readline_name;
 extern FILE* rl_instream;
@@ -139,6 +137,5 @@ int rl_bind_key(int, int(*) (int, int));
 int rl_eof(void);
 
 void rl_cleanup_after_signal();
-__END_DECLS
 
 #endif /* _READLINE_H_ */

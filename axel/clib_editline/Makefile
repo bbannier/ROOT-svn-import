@@ -500,8 +500,8 @@ CORELIBEXTRA += $(ZLIBCLILIB)
 STATICEXTRALIBS += -lz
 endif
 ifeq ($(BUILDEDITLINE),yes)
-CORELIBEXTRA    += $(CURSESLIB)
-STATICEXTRALIBS += $(CURSESLIB)
+CORELIBEXTRA    += $(CURSESLIBDIR) $(CURSESLIB)
+STATICEXTRALIBS += $(CURSESLIBDIR) $(CURSESLIB)
 endif
 
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####

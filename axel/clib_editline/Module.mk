@@ -54,4 +54,4 @@ distclean-$(MODNAME): clean-$(MODNAME)
 distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
-$(EDITLINEO):       PCHCXXFLAGS =
+$(EDITLINEO):   CXXFLAGS+='-DR__CURSESHDR="$(CURSESHDR)"' $(CURSESINCDIR)

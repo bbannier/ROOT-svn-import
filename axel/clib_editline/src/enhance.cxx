@@ -1,6 +1,5 @@
 #include "TROOT.h"
 #include "el.h"
-#include <ncurses.h>
 #include "TRegexp.h"
 #include "TClassTable.h"
 #include "TInterpreter.h"
@@ -10,7 +9,7 @@
 using namespace std;
 
 void setKeywordColors(const char* colorTab, const char* colorBracket, const char* colorBadBracket);
-int selectColor(TString str);
+int selectColor(const char* str);
 void highlightKeywords(EditLine* el);
 int matchParentheses(EditLine* el);
 void colorWord(EditLine* el, int first, int num, int color);
@@ -71,7 +70,8 @@ setKeywordColors(const char* colorType, const char* colorBracket, const char* co
  * Return an ncurses colour integer based on the colour specified in the string.
  */
 int
-selectColor(TString str) {
+selectColor(const char* s) {
+   TString str(s);
    if (str.Contains("black", TString::kIgnoreCase)) {
       return 0;      // nCurses COLOR_BLACK
    } else if (str.Contains("red", TString::kIgnoreCase)) {
@@ -141,7 +141,7 @@ highlightKeywords(EditLine* el) {
  */
 int
 matchParentheses(EditLine* el) {
-   int amtBrackets = 3;
+   static const int amtBrackets = 3;
    int bracketPos = -1;
    int foundParenIdx = -1;
    char bTypes[amtBrackets][2];

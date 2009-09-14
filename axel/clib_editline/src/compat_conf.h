@@ -2,6 +2,13 @@
 #define HAVE_GETLINE 1
 #define HAVE_FLOCKFILE 1
 
+#ifdef __sun
+# define HAVE_SYS_CDEFS_H 0
+extern "C" {
+   typedef void (*sig_t)(int);
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////////
 // most of this #ifdef code is to work around my own preference of
 // #if FOO, instead of #ifdef FOO, in client code. Since toc

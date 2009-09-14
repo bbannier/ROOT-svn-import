@@ -9,6 +9,7 @@
 # include <sys/cdefs.h>
 #endif
 
+/*
 #ifndef __P
 # if defined(__STDC__) || defined(__cplusplus)
 #  define __P(x) x
@@ -16,5 +17,6 @@
 #  define __P(x) ()
 # endif
 #endif
+*/
 
 #endif

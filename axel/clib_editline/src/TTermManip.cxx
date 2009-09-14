@@ -1,9 +1,7 @@
 #include "TTermManip.h"
 
 #ifndef _MSC_VER
-# include <curses.h>
-# include <termcap.h>
-extern "C" int setupterm(const char* term, int fd, int* perrcode);
+# include "rlcurses.h"
 #else
 # include "win32vt100.h"
 #endif
@@ -180,7 +178,7 @@ TTermManip::ResetTerm() {
    if (!fOrigColors) {
 #ifndef _MSC_VER
       // some claim to not have it and they have it nevertheless - so try:
-      printf("\e[39;49m");
+      printf("\033[39;49m");
 #endif
    } else {
       WriteTerm(fOrigColors);
