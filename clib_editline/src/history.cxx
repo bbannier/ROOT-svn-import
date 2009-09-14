@@ -58,7 +58,8 @@ __RCSID("$NetBSD: history.c,v 1.17 2001/03/20 00:08:31 christos Exp $");
 #endif
 #include <sys/stat.h>
 
-static const char hist_cookie[] = "_HiStOrY_V2_\n";
+#include <string>
+#include <fstream>
 
 #include "histedit.h"
 
@@ -343,8 +344,8 @@ history_def_add(ptr_t p, HistEvent* ev, const char* str) {
       he_seterrev(ev, _HE_MALLOC_FAILED);
       return -1;
    }
-   (void) strlcpy(s, h->cursor->ev.str, len);
-   (void) strlcat(s, str, len);
+   (void) el_strlcpy(s, h->cursor->ev.str, len);
+   (void) el_strlcat(s, str, len);
    /* LINTED const cast */
    h_free((ptr_t) h->cursor->ev.str);
    h->cursor->ev.str = s;
@@ -587,48 +588,20 @@ history_set_fun(History* h, History* nh) {
  */
 el_private int
 history_load(History* h, const char* fname) {
-   FILE* fp;
-   char* line = 0;
-   size_t sz, max_size;
-   char* ptr;
-   int i = -1;
    HistEvent ev;
 
-   if ((fp = fopen(fname, "r")) == NULL) {
-      return i;
+   std::ifstream in(fname);
+   if (!in) {
+      return -1;
    }
 
-   if ((line = fgetln(fp, &sz)) == NULL) {
-      goto done;
+   std::string line;
+   std::getline(in, line);
+   int i = 0;
+   for (; in && std::getline(in, line); i++) {
+      HENTER(h, &ev, line.c_str());
    }
 
-   if (strncmp(line, hist_cookie, sz) != 0) {
-      free(line);
-      goto done;
-   }
-   free(line);
-
-   ptr = (char*) h_malloc(max_size = 1024);
-
-   for (i = 0; (line = fgetln(fp, &sz)) != NULL; i++) {
-      if (sz != 0 && line[sz - 1] == '\n') {
-         line[--sz] = '\0';
-      } else {
-         line[sz] = '\0';
-      }
-
-      if (max_size < sz) {
-         max_size = (sz + 1023) & ~1023;
-         ptr = (char*) h_realloc(ptr, max_size);
-      }
-      (void) strunvis(ptr, line);
-      free(line);
-      HENTER(h, &ev, ptr);
-   }
-   h_free(ptr);
-
-done:
-   (void) fclose(fp);
    return i;
 } // history_load
 
@@ -641,30 +614,18 @@ history_save(History* h, const char* fname) {
    FILE* fp;
    HistEvent ev;
    int i = 0, retval;
-   size_t len, max_size;
-   char* ptr;
 
    if ((fp = fopen(fname, "w")) == NULL) {
       return -1;
    }
 
    (void) fchmod(fileno(fp), S_IRUSR | S_IWUSR);
-   (void) fputs(hist_cookie, fp);
-   ptr = (char*) h_malloc(max_size = 1024);
 
    for (retval = HLAST(h, &ev);
         retval != -1;
         retval = HPREV(h, &ev), i++) {
-      len = strlen(ev.str) * 4;
-
-      if (len >= max_size) {
-         max_size = (len + 1023) & ~1023;           // 1024 chunk
-         ptr = (char*) h_realloc(ptr, max_size);
-      }
-      (void) strvis(ptr, ev.str, VIS_WHITE);
       (void) fprintf(fp, "%s\n", ev.str);
    }
-   h_free(ptr);
    (void) fclose(fp);
    return i;
 } // history_save

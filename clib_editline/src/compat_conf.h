@@ -63,32 +63,3 @@
 #if (0 == HAVE_UNISTD_H)
 # undef HAVE_UNISTD_H
 #endif
-
-#ifndef HAVE_VIS_H
-# define HAVE_VIS_H 0
-#endif
-#if (0 == HAVE_VIS_H)
-# undef HAVE_VIS_H
-#endif
-
-
-#ifndef HAVE_FGETLN
-# define HAVE_FGETLN 0
-#endif
-#if (0 == HAVE_FGETLN)
-# undef HAVE_FGETLN
-#endif
-
-#ifndef HAVE_ISSETUGID
-# define HAVE_ISSETUGID 0
-#endif
-#if (0 == HAVE_ISSETUGID)
-# undef HAVE_ISSETUGID
-#endif
-
-#ifndef HAVE_STRLCPY
-# define HAVE_STRLCPY 0
-#endif
-#if (0 == HAVE_STRLCPY)
-# undef HAVE_STRLCPY
-#endif
