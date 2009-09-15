@@ -185,7 +185,6 @@ TTermManip::GetTermStr(const char* cap) {
 
 bool
 TTermManip::ResetTerm() {
-   printf("AXEL: resetterm\n");
    WriteTerm(fSetDefault);
    WriteTerm(fStopUnderline);
 
