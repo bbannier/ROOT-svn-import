@@ -328,6 +328,10 @@ BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
 endif
 RINTLIBS     := $(LPATH)/libRint.lib
 endif
+ifeq ($(BUILDEDITLINE),yes)
+ROOTLIBS     += $(CURSESLIBDIR) $(CURSESLIB)
+BOOTLIBS     += $(CURSESLIBDIR) $(CURSESLIB)
+endif
 
 # ROOTLIBSDEP is intended to match the content of ROOTLIBS
 ROOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(IOLIB) $(NETLIB) $(HISTLIB) \
@@ -498,10 +502,6 @@ COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
 ifneq ($(BUILTINZLIB),yes)
 CORELIBEXTRA += $(ZLIBCLILIB)
 STATICEXTRALIBS += -lz
-endif
-ifeq ($(BUILDEDITLINE),yes)
-CORELIBEXTRA    += $(CURSESLIBDIR) $(CURSESLIB)
-STATICEXTRALIBS += $(CURSESLIBDIR) $(CURSESLIB)
 endif
 
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####

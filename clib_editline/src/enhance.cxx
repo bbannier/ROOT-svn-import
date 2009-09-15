@@ -72,22 +72,29 @@ setKeywordColors(const char* colorType, const char* colorBracket, const char* co
 int
 selectColor(const char* s) {
    TString str(s);
+   printf("AXEL: selectColor %s\n", s);
+   int ret = 0;
+   if (str.Contains("bold", TString::kIgnoreCase)
+       || str.Contains("light", TString::kIgnoreCase))
+      ret = 0x20;
+   if (str.Contains("under", TString::kIgnoreCase))
+      ret += 0x40;
    if (str.Contains("black", TString::kIgnoreCase)) {
-      return 0;      // nCurses COLOR_BLACK
+      return ret;      // nCurses COLOR_BLACK
    } else if (str.Contains("red", TString::kIgnoreCase)) {
-      return 1;      // nCurses COLOR_RED
+      return ret + 1;      // nCurses COLOR_RED
    } else if (str.Contains("green", TString::kIgnoreCase)) {
-      return 2;      // nCurses COLOR_GREEN
+      return ret + 2;      // nCurses COLOR_GREEN
    } else if (str.Contains("yellow", TString::kIgnoreCase)) {
-      return 3;      // nCurses COLOR_YELLOW
+      return ret + 3;      // nCurses COLOR_YELLOW
    } else if (str.Contains("blue", TString::kIgnoreCase)) {
-      return 4;      // nCurses COLOR_BLUE
+      return ret + 4;      // nCurses COLOR_BLUE
    } else if (str.Contains("magenta", TString::kIgnoreCase)) {
-      return 5;      // nCurses COLOR_MAGENTA
+      return ret + 5;      // nCurses COLOR_MAGENTA
    } else if (str.Contains("cyan", TString::kIgnoreCase)) {
-      return 6;      // nCurses COLOR_CYAN
+      return ret + 6;      // nCurses COLOR_CYAN
    } else if (str.Contains("white", TString::kIgnoreCase)) {
-      return 7;      // nCurses COLOR_WHITE
+      return ret + 7;      // nCurses COLOR_WHITE
    } else {
       return -1;
    }

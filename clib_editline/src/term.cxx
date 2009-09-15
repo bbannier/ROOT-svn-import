@@ -1425,33 +1425,47 @@ el_protected void
 term__setcolor(int fgcol) {
    TTermManip& tm = term__gettermmanip();
 
+   int boldify = 0;
+   if (fgcol != -1) {
+      if (fgcol & 0x20) {
+         boldify = 128;
+         fgcol &= ~0x20;
+      }
+      if (fgcol & 0x40) {
+         tm.StartUnderline();
+         fgcol &= ~0x40;
+      } else {
+         tm.StopUnderline();
+      }
+   }
+
    switch (fgcol) {
-   case - 1:
+   case -1:
       tm.SetDefaultColor();
       break;
-   case 0:                                                              // nCurses COLOR_BLACK
-      tm.SetColor(0, 0, 0);                       // black
+   case 0: // nCurses COLOR_BLACK
+      tm.SetColor(0, 0, 0);               // black
       break;
-   case 1:                                                              // nCurses COLOR_RED
-      tm.SetColor(255, 0, 0);             // red (with bold)
+   case 1: // nCurses COLOR_RED
+      tm.SetColor(127 + boldify, 0, 0);             // red
       break;
-   case 2:                                                              // nCurses COLOR_GREEN
-      tm.SetColor(0, 255, 0);             // green (with bold)
+   case 2: // nCurses COLOR_GREEN
+      tm.SetColor(0, 127 + boldify, 0);             // green
       break;
-   case 3:                                                              // nCurses COLOR_YELLOW
-      tm.SetColor(255, 255, 0);           // yellow (with bold)
+   case 3: // nCurses COLOR_YELLOW
+      tm.SetColor(127 + boldify, 127 + boldify, 0);           // yellow
       break;
-   case 4:                                                              // nCurses COLOR_BLUE
-      tm.SetColor(0, 0, 127);             // blue
+   case 4: // nCurses COLOR_BLUE
+      tm.SetColor(0, 0, 127 + boldify);             // blue
       break;
-   case 5:                                                              // nCurses COLOR_MAGENTA
-      tm.SetColor(127, 0, 127);           // magenta
+   case 5: // nCurses COLOR_MAGENTA
+      tm.SetColor(127 + boldify, 0, 127 + boldify);           // magenta
       break;
-   case 6:                                                              // nCurses COLOR_CYAN
-      tm.SetColor(0, 127, 127);           // cyan
+   case 6: // nCurses COLOR_CYAN
+      tm.SetColor(0, 127 + boldify, 127 + boldify);           // cyan
       break;
-   case 7:                                                              // nCurses COLOR_WHITE
-      tm.SetColor(255, 255, 255); // white (with bold)
+   case 7: // nCurses COLOR_WHITE
+      tm.SetColor(127 + boldify, 127 + boldify, 127 + boldify); // white
       break;
    } // switch
 

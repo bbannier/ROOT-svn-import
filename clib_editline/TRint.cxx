@@ -237,7 +237,8 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
    TString colorTabCom = gEnv->GetValue("Rint.TabComColor", "magenta");
    TString colorBracket = gEnv->GetValue("Rint.BracketColor", "green");
    TString colorBadBracket = gEnv->GetValue("Rint.BadBracketColor", "red");
-   Gl_setColors(colorType, colorTabCom, colorBracket, colorBadBracket, "yellow");
+   TString colorPrompt = gEnv->GetValue("Rint.PromptColor", "cyan");
+   Gl_setColors(colorType, colorTabCom, colorBracket, colorBadBracket, colorPrompt);
 #endif
 
    Gl_windowchanged();
