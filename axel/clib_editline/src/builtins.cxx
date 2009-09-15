@@ -1,3 +1,12 @@
+// @(#)root/editline:$Id$
+// Author: Mary-Louise Gill, 2009
+
+////////////////////////////////////////////////////////////////////////
+// This file is part of the liblineedit code. See el.h for the
+// full license (BSD).
+// File added by stephan@s11n.net, 28 Nov 2004
+////////////////////////////////////////////////////////////////////////
+
 #include "builtins.h"
 #include "editline.h"
 #include <string>

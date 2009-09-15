@@ -1,4 +1,14 @@
-/* Automatically generated file, do not edit */
+// @(#)root/editline:$Id$
+// Author: Mary-Louise Gill, 2009
+
+/*************************************************************************
+ * Copyright (C) 1995-2009, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #include "sys.h"
 #include "el.h"
 el_private const struct el_bindings_t el_func_help[] = {

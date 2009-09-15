@@ -1,3 +1,14 @@
+// @(#)root/editline:$Id$
+// Author: Mary-Louise Gill, 2009
+
+/*************************************************************************
+ * Copyright (C) 1995-2009, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 /*	$NetBSD: refresh.h,v 1.4 2001/01/10 07:45:42 jdolecek Exp $	*/
 
 /*-
@@ -35,7 +46,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)refresh.h	8.1 (Berkeley) 6/4/93
+ *	@(#)prompt.h	8.1 (Berkeley) 6/4/93
  */
 
 /*

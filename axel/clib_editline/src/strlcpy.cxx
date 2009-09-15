@@ -1,3 +1,19 @@
+// @(#)root/editline:$Id$
+// Author: Mary-Louise Gill, 2009
+
+/*************************************************************************
+ * Copyright (C) 1995-2009, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
+////////////////////////////////////////////////////////////////////////
+// This file is part of the liblineedit code. See el.h for the
+// full license (BSD).
+////////////////////////////////////////////////////////////////////////
+
 #include <string.h>
 
 size_t
