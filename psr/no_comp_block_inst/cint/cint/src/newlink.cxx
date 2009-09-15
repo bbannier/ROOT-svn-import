@@ -10434,6 +10434,13 @@ int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,const char 
     }
     return(0);
   }
+  if ( // Not a forward declaration, and no data members yet, and not a namespace.
+    size && // This is *not* a forward declaration, and
+    !G__struct.size[tagnum] && // no data members yet, and
+    (G__struct.type[tagnum] != 'n') // not a namespace.
+  ) {
+    G__struct.iscomplete[tagnum] = 1; // Clear the forward declared flag.
+  }
   G__struct.size[tagnum] = size;
   G__struct.iscpplink[tagnum] = cpplink;
 #if  !defined(G__OLDIMPLEMENTATION1545)

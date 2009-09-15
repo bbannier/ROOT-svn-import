@@ -1392,6 +1392,7 @@ struct G__tagtable {
   G__SIGNEDCHAR_T globalcomp[G__MAXSTRUCT];
   G__SIGNEDCHAR_T iscpplink[G__MAXSTRUCT];
   char isabstract[G__MAXSTRUCT];
+  char iscomplete[G__MAXSTRUCT]; // if true, is not forward-declared.
   char protectedaccess[G__MAXSTRUCT];
 
   int  line_number[G__MAXSTRUCT];

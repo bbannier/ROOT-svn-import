@@ -2195,7 +2195,6 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
 ***********************************************************************/
 int G__instantiate_templateclass(const char *tagnamein, int noerror)
 {
-  int typenum;
   int tagnum;
   int hash,temp;
   char *arg;
@@ -2220,9 +2219,16 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
 #endif
   G__FastAllocString tagname(tagnamein);
 
-  typenum =G__defined_typename(tagname);
-  if(-1!=typenum) return(G__newtype.tagnum[typenum]);
-
+  int declared_but_not_complete = 0;
+  int declared_tagnum = -1;
+  int declared_typenum = G__defined_typename(tagnamein);
+  if (declared_typenum != -1) {
+    declared_tagnum = G__newtype.tagnum[declared_typenum];
+    if (G__struct.iscomplete[declared_tagnum]) {
+      return declared_tagnum;
+    }
+    declared_but_not_complete = 1;
+  }
 #ifdef G__ASM
 #ifndef G__OLDIMPLEMENTATION2124
   if(!G__cintv6) G__abortbytecode();
@@ -2353,16 +2359,18 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
   store_templatearg_enclosedscope = G__templatearg_enclosedscope;
   G__templatearg_enclosedscope = 0;
 #endif
+  if(
 #ifndef G__OLDIMPLEMENTATION1503
-  if((defarg=
+    (defarg=
       G__gettemplatearglist(arg,&call_para,deftmpclass->def_para,&npara
                           ,deftmpclass->parent_tagnum
-                            ))) {
+                            ))
 #else
-  if(G__gettemplatearglist(arg,&call_para,deftmpclass->def_para,&npara
+    G__gettemplatearglist(arg,&call_para,deftmpclass->def_para,&npara
                           ,-1
-                           )) {
+                           )
 #endif
+  ) {
     /* If evaluated template argument is not identical as string to
      * the original argument, recursively call G__defined_tagname()
      * to find actual tagname. */

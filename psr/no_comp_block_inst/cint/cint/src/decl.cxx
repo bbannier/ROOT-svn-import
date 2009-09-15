@@ -2624,6 +2624,37 @@ void G__define_var(int tagnum, int typenum)
       if (new_name[0]) {
          G__var_type = var_type;
          if (
+            (var_type == 'u') && // class, enum, namespace, struct, or union, and
+            (new_name[0] != '*') && // not a pointer, and
+            (G__reftype == G__PARANORMAL) // not a reference
+         ) { // Class type, not ptr, not ref
+            int var_tagnum = -1;
+            if (G__typenum != -1) {
+               var_tagnum = G__newtype.tagnum[G__typenum];
+            }
+            else {
+               var_tagnum = G__tagnum;
+            }
+            G__FastAllocString var_type_name(G__MAXNAME);
+            strcpy(var_type_name, G__struct.name[var_tagnum]);
+            int var_type_name_len = strlen(var_type_name);
+            if (
+               !G__struct.iscomplete[var_tagnum] && // Type is forward declared, and
+               !G__dict_init_in_progress && // not in dictionary context, and
+               (G__struct.type[var_tagnum] != 'a') // is not marked for autoload.
+            ) {
+               if (var_type_name_len && var_type_name[var_type_name_len-1] == '>') {
+                  G__instantiate_templateclass((char*) var_type_name, 1);
+               }
+               else {
+                  G__Definedtemplateclass* deftmplt = G__defined_templateclass((char*) var_type_name);
+                  if (deftmplt && deftmplt->def_para && deftmplt->def_para->default_parameter) {
+                     G__instantiate_templateclass((char*) var_type_name, 1);
+                  }
+               }
+            }
+         }
+         if (
             // -- Struct type, not ptr, not ref, (not a mbr, or is a mbr of a namespace).
             (var_type == 'u') && // class, enum, namespace, struct, or union, and
             (new_name[0] != '*') && // not a pointer, and

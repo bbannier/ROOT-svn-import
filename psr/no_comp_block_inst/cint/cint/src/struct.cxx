@@ -1032,6 +1032,9 @@ void G__define_struct(char type)
          c = G__fignorestream("}");
       }
       else {
+         if (type != 'n') {
+            G__struct.iscomplete[G__tagnum] = 1; // Clear the forward declaration flag.
+         }
          G__struct.line_number[G__tagnum] = G__ifile.line_number;
          G__struct.filenum[G__tagnum] = G__ifile.filenum;
          int store_access = G__access;
@@ -1512,12 +1515,10 @@ int G__defined_tagname(const char* tagname, int noerror)
    // This may cause unexpected side-effect.
    //
    int i;
-   int len;
    char* p;
    G__FastAllocString temp(G__LONGLINE);
    G__FastAllocString atom_tagname(G__LONGLINE);
    int env_tagnum;
-   int store_var_type;
    switch (tagname[0]) {
       case '"':
       case '\'':
@@ -1633,14 +1634,39 @@ int G__defined_tagname(const char* tagname, int noerror)
       env_tagnum = G__get_envtagnum();
    }
    // Search for old tagname.
-   len = strlen(atom_tagname);
+   int tagname_len = strlen(tagname);
+   int atom_tagname_len = strlen(atom_tagname);
    int candidateTag = -1;
 try_again:
    NameMap::Range nameRange = G__struct.namerange->Find(atom_tagname);
    if (nameRange) {
       for (i = nameRange.Last(); i >= nameRange.First(); --i) {
-         if ((len == G__struct.hash[i]) && !strcmp(atom_tagname, G__struct.name[i])) {
+         if ((atom_tagname_len == G__struct.hash[i]) && !strcmp(atom_tagname, G__struct.name[i])) {
             if ((!p && (enclosing || env_tagnum == -1) && (G__struct.parent_tagnum[i] == -1)) || (env_tagnum == G__struct.parent_tagnum[i])) {
+               if (
+                  !G__struct.iscomplete[i] && // Match is forward declared, and
+                  (noerror < 2) && // template instantiation is allowed, and
+                  !G__dict_init_in_progress && // not in dictionary context, and
+                  (G__struct.type[i] != 'a') // match is not marked for autoload
+               ) {
+                  if (tagname_len && (tagname[tagname_len-1] == '>')) { // Possibly a template-id, and
+                     // CAUTION: tagname may be modified in following function.
+                     int instantiated_tagnum = G__instantiate_templateclass((char*) tagname, 1);
+                     if (instantiated_tagnum != -1) {
+                        return instantiated_tagnum;
+                     }
+                  }
+                  else { // Check for template with all arguments defaulted.
+                     G__Definedtemplateclass* deftmplt = G__defined_templateclass((char*) tagname);
+                     if (deftmplt && deftmplt->def_para && deftmplt->def_para->default_parameter) {
+                        // CAUTION: tagname may be modified in following function.
+                        int instantiated_tagnum = G__instantiate_templateclass((char*) tagname, 1);
+                        if (instantiated_tagnum != -1) {
+                           return instantiated_tagnum;
+                        }
+                     }
+                  }
+               }
                if (noerror < 3) {
                   G__class_autoloading(&i);
                }
@@ -1675,53 +1701,87 @@ try_again:
    } else {
       i = -1;
    }
-   if (!len) {
+   if (!atom_tagname_len) {
       atom_tagname = "$";
-      len = 1;
+      atom_tagname_len = 1;
       goto try_again;
    }
-   if (candidateTag != -1) {
+   if (candidateTag != -1) { // We have a match, return.
+      if (
+         !G__struct.iscomplete[candidateTag] && // Match is forward declared, and
+         !G__dict_init_in_progress && // not in dictionary context, and
+         (G__struct.type[candidateTag] != 'a') && // match is not marked for autoload, and
+         (noerror < 2) // template instantiation is allowed.
+      ) {
+         if (tagname_len && (tagname[tagname_len-1] == '>')) { // Possibly a template-id.
+            // CAUTION: tagname may be modified in following function.
+            int instantiated_tagnum = G__instantiate_templateclass((char*) tagname, 1);
+            if (instantiated_tagnum != -1) {
+               return instantiated_tagnum;
+            }
+         }
+         else { // Check for template with all arguments defaulted.
+            G__Definedtemplateclass* deftmplt = G__defined_templateclass((char*) tagname);
+            if (deftmplt && deftmplt->def_para && deftmplt->def_para->default_parameter) {
+               // CAUTION: tagname may be modified in following function.
+               int instantiated_tagnum = G__instantiate_templateclass((char*) tagname, 1);
+               if (instantiated_tagnum != -1) {
+                  return instantiated_tagnum;
+               }
+            }
+         }
+      }
       if (noerror < 3) {
          G__class_autoloading(&candidateTag);
       }
       return candidateTag;
    }
-   // If tagname not found, try instantiating class template.
-   len = strlen(tagname);
-   if ((tagname[len-1] == '>') && (noerror < 2) && ((len < 2) || (tagname[len-2] != '-'))) {
-      if (G__loadingDLL) {
-         G__fprinterr(G__serr, "Error: '%s' Incomplete template resolution in shared library", tagname);
-         G__genericerror(0);
-         G__fprinterr(G__serr, "Add following line in header for making dictionary\n");
-         G__fprinterr(G__serr, "   #pragma link C++ class %s;\n", tagname);
-         return -1;
-      }
-      // CAUTION: tagname may be modified in following function.
-      i = G__instantiate_templateclass((char*) tagname, noerror);
-      return i;
-   }
-   else if (noerror < 2) {
-      G__Definedtemplateclass* deftmplt = G__defined_templateclass((char*) tagname);
-      if (deftmplt && deftmplt->def_para && deftmplt->def_para->default_parameter) {
+   //
+   //  Not found, check to see if we can
+   //  do a template instantiation.
+   //
+   if ((noerror < 2) /*&& !G__dict_init_in_progress*/) { // Template instantiation is allowed and not in dictionary context.
+      if ((tagname[tagname_len-1] == '>') && ((tagname_len < 2) || (tagname[tagname_len-2] != '-'))) { // Possibly a template-id.
+         if (G__loadingDLL) {
+            G__fprinterr(G__serr, "Error: '%s' Incomplete template resolution in shared library", tagname);
+            G__genericerror(0);
+            G__fprinterr(G__serr, "Add following line in header for making dictionary\n");
+            G__fprinterr(G__serr, "   #pragma link C++ class %s;\n", tagname);
+            return -1;
+         }
+         // CAUTION: tagname may be modified in following function.
          i = G__instantiate_templateclass((char*) tagname, noerror);
          return i;
       }
+      else { // Check for template with all arguments defaulted.
+         G__Definedtemplateclass* deftmplt = G__defined_templateclass((char*) tagname);
+         if (deftmplt && deftmplt->def_para && deftmplt->def_para->default_parameter) {
+            // CAUTION: tagname may be modified in following function.
+            i = G__instantiate_templateclass((char*) tagname, noerror);
+            return i;
+         }
+      }
    }
 
-   if (noerror == 4)
+   if (noerror == 4) {
       return -1;
+   }
 
-   // Search for typename.
-   store_var_type = G__var_type;
-   i = G__defined_typename(tagname);
-   G__var_type = store_var_type;
-   if (i != -1) {
-      i = G__newtype.tagnum[i];
-      if (i != -1) {
-         if (noerror < 3) {
-            G__class_autoloading(&i);
+   //
+   //  Search for typedef.
+   //
+   if (noerror != 4) {
+      int store_var_type = G__var_type;
+      int typenum = G__defined_typename(tagname);
+      G__var_type = store_var_type;
+      if (typenum != -1) {
+         int tagnum = G__newtype.tagnum[typenum];
+         if (tagnum != -1) {
+            if (noerror < 3) {
+               G__class_autoloading(&tagnum);
+            }
+            return tagnum;
          }
-         return i;
       }
    }
    {
@@ -1908,6 +1968,7 @@ int G__search_tagname(const char* tagname, int type)
       // Initialize iden information for virtual function.
       G__struct.virtual_offset[i] = -1; // -1 means no virtual function
       G__struct.isabstract[i] = 0;
+      G__struct.iscomplete[i] = 0; // If true, then this is not a forward declaration.
       G__struct.globalcomp[i] = G__default_link ? G__globalcomp : G__NOLINK;
       G__struct.iscpplink[i] = 0;
       G__struct.protectedaccess[i] = 0;

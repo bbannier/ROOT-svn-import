@@ -988,6 +988,8 @@ int G__shl_load(char *shlfile)
   G__setdebugcond();
   store_globalcomp=G__globalcomp;
   G__globalcomp=G__NOLINK;
+  int store_dict_init_in_progress = G__dict_init_in_progress;
+  G__dict_init_in_progress = 1;
 
 
   dllid.Format("G__cpp_setup%s",dllidheader());
@@ -1030,6 +1032,7 @@ int G__shl_load(char *shlfile)
     (*sharedlib_func)();
   }
 
+  G__dict_init_in_progress = store_dict_init_in_progress;
   G__prerun=0;
   G__setdebugcond();
   G__globalcomp=store_globalcomp;
