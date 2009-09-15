@@ -217,6 +217,7 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
             G__struct.globalcomp[itag] = 0;
             G__struct.iscpplink[itag] = G__default_link ? G__globalcomp : G__NOLINK;
             G__struct.isabstract[itag] = 0;
+            G__struct.iscomplete[itag] = 0;
             G__struct.protectedaccess[itag] = 0;
             G__struct.line_number[itag] = -1;
             G__struct.filenum[itag] = -1;
@@ -320,7 +321,8 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
          G__ifile.vindex = 0;
          G__ifile.fp = G__srcfile[G__nfile - 1].fp;
          strcpy(G__ifile.name, G__srcfile[G__nfile - 1].filename);
-
+         int store_dict_init_in_progress = G__dict_init_in_progress;
+         G__dict_init_in_progress = 1;
          for (
             std::list<G__DLLINIT>::const_iterator iInitsl = permanentsl[nperm].initsl->begin();
             iInitsl != permanentsl[nperm].initsl->end();
@@ -328,6 +330,7 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
          ) {
             (*(*iInitsl))();
          }
+         G__dict_init_in_progress = store_dict_init_in_progress;
          G__ifile = store_ifile;
       }
    }

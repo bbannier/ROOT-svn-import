@@ -674,6 +674,8 @@ extern int G__ispermanentsl;
 **************************************************************************/
 extern int G__scratch_count;
 
+extern int G__dict_init_in_progress; /* True if we are calling dictionary initialization functions. */
+
 #ifndef __CINT__
 #ifdef __cplusplus
 }

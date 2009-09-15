@@ -305,6 +305,8 @@ struct G__input_file G__lasterrorpos;
 **************************************************************************/
 int G__scratch_count = 0;
  
+int G__dict_init_in_progress = false;
+
 } // extern "C"
 
 /*

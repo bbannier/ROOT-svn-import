@@ -157,7 +157,9 @@ int G__call_setup_funcs()
       }
    }
 
-   for (i = 0; i < G__nlibs; ++i)
+   int store_dict_init_in_progress = G__dict_init_in_progress;
+   G__dict_init_in_progress = 1;
+   for (i = 0; i < G__nlibs; ++i) {
       if (G__setup_func_list[i] && !G__setup_func_list[i]->inited) {
          (G__setup_func_list[i]->func)();
          G__setup_func_list[i]->inited = 1;
@@ -169,6 +171,8 @@ int G__call_setup_funcs()
          fprintf(G__sout, "Dictionary for %s initialized\n", G__setup_func_list[i]->libname); /* only for debug */
 #endif
       }
+   }
+   G__dict_init_in_progress = store_dict_init_in_progress;
    G__UnlockCriticalSection();
    G__p_local = store_p_local;
    return k;
