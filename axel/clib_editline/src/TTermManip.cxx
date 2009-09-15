@@ -23,7 +23,7 @@ TTermManip::TTermManip():
    fPutc(DefaultPutchar),
    fCurrentColorIdx(-1),
    fCurrentlyBold(false),
-   fCurrentlyUnterlined(false) {
+   fCurrentlyUnderlined(false) {
    // Initialize color management
    fOrigColors = GetTermStr("oc");
    ResetTerm();
@@ -90,8 +90,24 @@ TTermManip::AllocColor(const Color& col) {
 void
 TTermManip::SetDefaultColor() {
    // Set terminal to the default color.
+   if (fCurrentlyBold) {
+      WriteTerm(fSetDefault);
+      fCurrentlyBold = false;
+   }
+   if (fCurrentlyUnderlined) {
+      WriteTerm(fStopUnderline);
+      fCurrentlyUnderlined = false;      
+   }
    if (fCurrentColorIdx != -1) {
-      ResetTerm();
+      if (!fOrigColors) {
+#ifndef _MSC_VER
+         // some claim to not have it and they have it nevertheless - so try:
+         printf("\033[39;49m");
+#endif
+      } else {
+         WriteTerm(fOrigColors);
+      }
+      fCurrentColorIdx = -1;
    }
 }
 
@@ -110,7 +126,25 @@ TTermManip::SetColor(unsigned char r, unsigned char g, unsigned char b) {
          }
          fCurrentColorIdx = idx;
       }
-   } else if (fSetFg) {
+   } else {
+      if (r > 127 || b > 127 || g > 127) {
+         // want bold
+         if (!fCurrentlyBold) {
+            if (fSetBold) {
+               WriteTerm(fSetBold);
+            }
+            r /= 2;
+            b /= 2;
+            g /= 2;
+            fCurrentlyBold = true;
+         }
+      } else {
+         if (fSetDefault && fCurrentlyBold) {
+            WriteTerm(fSetDefault);
+         }
+         fCurrentlyBold = false;
+      }
+
       int sum = r + g + b;
       r = r > sum / 4;
       g = g > sum / 4;
@@ -123,31 +157,10 @@ TTermManip::SetColor(unsigned char r, unsigned char g, unsigned char b) {
          idx = (r * 4) + (g * 2) + b;
       }
 
-      if (idx != fCurrentColorIdx) {
+      if (fSetFg && idx != fCurrentColorIdx) {
          WriteTerm(fSetFg, idx);
          fCurrentColorIdx = idx;
       }
-
-      if (r > 127 || b > 127 || g > 127) {
-         // want bold
-         if (!fCurrentlyBold) {
-            if (fSetBold) {
-               WriteTerm(fSetBold);
-            }
-            r /= 2;
-            b /= 2;
-            g /= 2;
-            fCurrentlyBold = true;
-         } else {
-            if (fSetDefault && fCurrentlyBold) {
-               WriteTerm(fSetDefault);
-               fCurrentlyBold = false;
-            }
-         }
-      }
-   } else {
-      printf("ERROR cannot set colors!\n");
-      return false;
    }
    return true;
 } // SetColor
@@ -172,6 +185,7 @@ TTermManip::GetTermStr(const char* cap) {
 
 bool
 TTermManip::ResetTerm() {
+   printf("AXEL: resetterm\n");
    WriteTerm(fSetDefault);
    WriteTerm(fStopUnderline);
 
@@ -185,7 +199,7 @@ TTermManip::ResetTerm() {
    }
    fCurrentColorIdx = -1;
    fCurrentlyBold = false;
-   fCurrentlyUnterlined = false;
+   fCurrentlyUnderlined = false;
    return true;
 } // ResetTerm
 

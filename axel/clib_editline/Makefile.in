@@ -300,7 +300,7 @@ CLARENSLIBS    := @clarenslibs@
 BUILDPEAC      := @buildpeac@
 
 CURSESINCDIR   := $(filter-out -I/usr/include, -I@cursesincdir@)
-CURSESLIBDIR   := $(filter-out -L/usr/lib, -L@curseslibdir@)
+CURSESLIBDIR   := $(filter-out -L,$(filter-out -L/usr/lib, -L@curseslibdir@))
 CURSESHDR      := @curseshdr@
 CURSESLIB      := @curseslib@
 BUILDEDITLINE  := @buildeditline@

@@ -15,18 +15,18 @@ public:
 
    void
    StartUnderline() {
-      if (!fCurrentlyUnterlined) {
+      if (!fCurrentlyUnderlined) {
          WriteTerm(fStartUnderline);
-         fCurrentlyUnterlined = true;
+         fCurrentlyUnderlined = true;
       }
    }
 
 
    void
    StopUnderline() {
-      if (fCurrentlyUnterlined) {
+      if (fCurrentlyUnderlined) {
          WriteTerm(fStopUnderline);
-         fCurrentlyUnterlined = false;
+         fCurrentlyUnderlined = false;
       }
    }
 
@@ -88,7 +88,7 @@ private:
    PutcFunc_t fPutc;
    int fCurrentColorIdx;   // index if the currently active color
    bool fCurrentlyBold;  // whether bold is active
-   bool fCurrentlyUnterlined;  // whether underlining is active
+   bool fCurrentlyUnderlined;  // whether underlining is active
 
    static const int fgStartColIdx = 5;
    typedef std::map<Color, int> ColorMap_t;
