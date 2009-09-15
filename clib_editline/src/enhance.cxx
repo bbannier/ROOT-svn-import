@@ -72,7 +72,6 @@ setKeywordColors(const char* colorType, const char* colorBracket, const char* co
 int
 selectColor(const char* s) {
    TString str(s);
-   printf("AXEL: selectColor %s\n", s);
    int ret = 0;
    if (str.Contains("bold", TString::kIgnoreCase)
        || str.Contains("light", TString::kIgnoreCase))
