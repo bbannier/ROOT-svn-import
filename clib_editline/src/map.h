@@ -1,3 +1,14 @@
+// @(#)root/editline:$Id$
+// Author: Mary-Louise Gill, 2009
+
+/*************************************************************************
+ * Copyright (C) 1995-2009, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 /*	$NetBSD: map.h,v 1.6 2001/01/09 17:22:09 jdolecek Exp $	*/
 
 /*-
@@ -34,8 +45,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- *	@(#)map.h	8.1 (Berkeley) 6/4/93
  */
 
 /*

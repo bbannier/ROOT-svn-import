@@ -1,4 +1,14 @@
-/* Automatically generated file, do not edit */
+// @(#)root/editline:$Id$
+// Author: Mary-Louise Gill, 2009
+
+/*************************************************************************
+ * Copyright (C) 1995-2009, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #ifndef _h_common_c
 #define _h_common_c
 el_protected el_action_t ed_end_of_file(EditLine*, int);

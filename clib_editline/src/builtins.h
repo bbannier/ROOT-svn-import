@@ -1,3 +1,6 @@
+// @(#)root/editline:$Id$
+// Author: Mary-Louise Gill, 2009
+
 #ifndef _el_builtins_h_included
 #define _el_builtins_h_included 1
 ////////////////////////////////////////////////////////////////////////
