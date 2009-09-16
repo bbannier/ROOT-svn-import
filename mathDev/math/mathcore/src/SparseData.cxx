@@ -235,6 +235,7 @@ namespace ROOT {
          list<Box>::iterator it = l->begin();
          const unsigned int dim = it->getMin().size();
 
+         bd.Initialize(l->getList().size(), dim); 
          for ( ; it != l->end(); ++it )
          {
             vector<double> mid(dim);
@@ -251,6 +252,7 @@ namespace ROOT {
       {
          list<Box>::iterator it = l->begin();
 
+         bd.Initialize(l->getList().size(), it->getMin().size()); 
          for ( ; it != l->end(); ++it )
          {
             bd.Add(&(it->getMin()[0]), it->getVal(), it->getError());
@@ -263,6 +265,7 @@ namespace ROOT {
          list<Box>::iterator it = l->begin();
          const unsigned int dim = it->getMin().size();
 
+         bd.Initialize(l->getList().size(), dim);
          for ( ; it != l->end(); ++it )
          {
             if ( it->getVal() == 0 ) continue;
