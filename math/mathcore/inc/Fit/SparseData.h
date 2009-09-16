@@ -37,14 +37,17 @@ namespace ROOT {
          SparseData(TH1* h);
          ~SparseData();
 
+         unsigned int NPoints() const;
+         unsigned int NDim() const;
+
          void Add(std::vector<double>& min, std::vector<double>& max, 
                   const double content, const double error = 1.0);
          
-         void PrintList();
+         void PrintList() const;
 
-         BinData* GetBinData();
-         BinData* GetBinDataIntegral();
-         BinData* GetBinDataNoCeros();
+         void GetBinData(BinData&) const;
+         void GetBinDataIntegral(BinData&) const;
+         void GetBinDataNoZeros(BinData&) const;
          
       private : 
          ProxyListBox *l;
