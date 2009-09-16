@@ -88,9 +88,9 @@ TDataSetManagerFile::TDataSetManagerFile(const char *group,
 
       // Fill locking path
       fDataSetLockFile = Form("%s-dataset-lock", fDataSetDir.Data());
-      fDataSetLockFile.ReplaceAll("/","%");
-      fDataSetLockFile.ReplaceAll(":","%");
-      fDataSetLockFile.Insert(0, Form("%s/", gSystem->TempDirectory()));
+      fDataSetLockFile.ReplaceAll("/","_");
+      fDataSetLockFile.ReplaceAll(":","_");
+      fDataSetLockFile.Insert(0, Form("%s/", gSystem->UnixPathName(gSystem->TempDirectory())));
 
       // Limit in seconds after a lock automatically expires
       fLockFileTimeLimit = 120;
@@ -129,6 +129,8 @@ void TDataSetManagerFile::ParseInitOpts(const char *ins)
 
    // The directory is mandatory
    if (fDataSetDir.IsNull()) return;
+
+   fDataSetDir = gSystem->UnixPathName(fDataSetDir.Data());
 
    // Object is valid
    ResetBit(TObject::kInvalidObject);
@@ -361,8 +363,8 @@ TMap *TDataSetManagerFile::GetDataSets(const char *group, const char *user,
       void *dataSetDir = 0;
       if ((dataSetDir = gSystem->OpenDirectory(fDataSetDir))) {
          // loop over groups
-         const char *currentGroup = 0;
-         while ((currentGroup = gSystem->GetDirEntry(dataSetDir))) {
+         char *currentGroup = 0;
+         while ((currentGroup = StrDup(gSystem->GetDirEntry(dataSetDir)))) {
 
             if (strcmp(currentGroup, ".") == 0 || strcmp(currentGroup, "..") == 0)
                continue;
@@ -378,8 +380,8 @@ TMap *TDataSetManagerFile::GetDataSets(const char *group, const char *user,
                continue;
 
             // loop over users
-            const char *currentUser = 0;
-            while ((currentUser = gSystem->GetDirEntry(groupDir))) {
+            char *currentUser = 0;
+            while ((currentUser = StrDup(gSystem->GetDirEntry(groupDir)))) {
 
                if (strcmp(currentUser, ".") == 0 || strcmp(currentUser, "..") == 0)
                   continue;
@@ -388,8 +390,12 @@ TMap *TDataSetManagerFile::GetDataSets(const char *group, const char *user,
                   continue;
 
                BrowseDataSets(currentGroup, currentUser, option, result);
+               delete [] currentUser;
+               currentUser = 0;
             }
             gSystem->FreeDirectory(groupDir);
+            delete [] currentGroup;
+            currentGroup = 0;
          }
          gSystem->FreeDirectory(dataSetDir);
       }
@@ -545,6 +551,8 @@ Int_t TDataSetManagerFile::WriteDataSet(const char *group, const char *user,
    dataset->SetList(list);
 
    // file is written, rename to real filename
+   if (!gSystem->AccessPathName(path))
+      gSystem->Unlink(path); // needed on Windows ...
    if (gSystem->Rename(tempFile, path) != 0) {
       Error("WriteDataSet", "Renaming %s to %s failed. Dataset might be corrupted.",
                             tempFile.Data(), path.Data());

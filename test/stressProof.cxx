@@ -462,7 +462,7 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
       printf("******************************************************************\n");
    }
    if (!strcmp(url,"lite")) {
-      printf("*  PROOF-Lite session (tests #12 and #13 skipped)               **\n");
+      printf("*  PROOF-Lite session (tests #12 skipped)                       **\n");
       printf("******************************************************************\n");
    }
    if (test > 0) {
@@ -820,26 +820,29 @@ Int_t PT_Open(void *args)
    }
 
    // Get some useful info about the cluster (the sandbox dir ...)
-   gSystem->RedirectOutput(0, 0, &gRH);
-   TString testPrint(TString::Format("%s/testPrint.log", gtutdir.Data()));
-   gSystem->RedirectOutput(testPrint, "w", &gRHAdmin);
-   gProof->Print();
-   gSystem->RedirectOutput(0, 0, &gRHAdmin);
-   gSystem->RedirectOutput(glogfile, "a", &gRH);
-   TMacro macroPrint(testPrint);
-   TObjString *os = macroPrint.GetLineWith("Working directory:");
-   if (!os) {
-      printf("\n >>> Test failure: problem parsing output from Print()\n");
-      return -1;
+   if (gProof->IsLite()) {
+      gsandbox = gSystem->DirName(gProof->GetWorkDir());
+   } else {
+      gSystem->RedirectOutput(0, 0, &gRH);
+      TString testPrint(TString::Format("%s/testPrint.log", gtutdir.Data()));
+      gSystem->RedirectOutput(testPrint, "w", &gRHAdmin);
+      gProof->Print();
+      gSystem->RedirectOutput(0, 0, &gRHAdmin);
+      gSystem->RedirectOutput(glogfile, "a", &gRH);
+      TMacro macroPrint(testPrint);
+      TObjString *os = macroPrint.GetLineWith("Working directory:");
+      if (!os) {
+         printf("\n >>> Test failure: problem parsing output from Print()\n");
+         return -1;
+      }
+      Int_t from = strlen("Working directory:") + 1;
+      if (!os->GetString().Tokenize(gsandbox, from, " ")) {
+         printf("\n >>> Test failure: no sandbox dir found\n");
+         return -1;
+      }
+      gsandbox = gSystem->DirName(gsandbox);
+      gsandbox = gSystem->DirName(gsandbox);
    }
-   Int_t from = strlen("Working directory:") + 1;
-   if (!os->GetString().Tokenize(gsandbox, from, " ")) {
-      printf("\n >>> Test failure: no sandbox dir found\n");
-      return -1;
-   }
-   gsandbox = gSystem->DirName(gsandbox);
-   gsandbox = gSystem->DirName(gsandbox);
-   PutPoint();
 
    // Done
    PutPoint();
@@ -1576,10 +1579,6 @@ Int_t PT_AdminFunc(void *)
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
    }
-   // Not yet supported for PROOF-Lite
-   if (gProof->IsLite()) {
-      return 1;
-   }
    PutPoint();
    // Attach to the manager
    TProofMgr *mgr = gProof->GetManager();
@@ -1707,13 +1706,13 @@ Int_t PT_AdminFunc(void *)
    PutPoint();
 
    // Test 'cp' and 'md5sum;
-   if (mgr->Cp("http://root.cern.ch/files/h1/dstarmb.root", "~/") != 0) {
+   if (mgr->Cp("http://root.cern.ch/files/h1/dstarmb.root", "") != 0) {
       // Cp failure
       printf("\n >>> Test failure: could not retrieve remotely dstarmb.root from the Root Web server\n");
       return -1;
    }
    TString sum;
-   if (mgr->Md5sum("~/dstarmb.root", sum) != 0) {
+   if (mgr->Md5sum("dstarmb.root", sum) != 0) {
       // MD5
       printf("\n >>> Test failure: calculating the md5sum of dstarmb.root\n");
       return -1;

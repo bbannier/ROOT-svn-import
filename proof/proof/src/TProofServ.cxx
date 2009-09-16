@@ -25,10 +25,19 @@
 #include "Riostream.h"
 
 #ifdef WIN32
-   #include <process.h>
-   #include <io.h>
-   typedef long off_t;
+#include <process.h>
+#include <io.h>
+#include <sys/locking.h>
+typedef long off_t;
+#ifndef F_LOCK
+#define F_LOCK   _LK_LOCK
 #endif
+#ifndef F_ULOCK
+#define F_ULOCK  _LK_UNLCK
+#endif
+#define lockf(fd, op, sz) _locking(fd, op, sz)
+#endif // WIN32
+
 #include <errno.h>
 #include <time.h>
 #include <fcntl.h>
@@ -2540,7 +2549,7 @@ Int_t TProofServ::SetupCommon()
    }
 
    // Check the session dir
-   if (fSessionDir != gSystem->WorkingDirectory()) {
+   if (fSessionDir != gSystem->UnixPathName(gSystem->WorkingDirectory())) {
       ResolveKeywords(fSessionDir);
       if (gSystem->AccessPathName(fSessionDir))
          gSystem->mkdir(fSessionDir, kTRUE);
@@ -2729,6 +2738,14 @@ Int_t TProofServ::SetupCommon()
       }
    }
 
+   // Directories that we can unlink
+   TProof::AddUnlinkPath(gSystem->WorkingDirectory());
+   TProof::AddUnlinkPath(fWorkDir);
+   TProof::AddUnlinkPath(fSessionDir);
+   TProof::AddUnlinkPath(fCacheDir);
+   TProof::AddUnlinkPath(fPackageDir);
+   if (IsMaster()) TProof::AddUnlinkPath(fQueryDir);
+
    if (gProofDebugLevel > 0)
       Info("SetupCommon", "successfully completed");
 
@@ -2758,7 +2775,7 @@ void TProofServ::Terminate(Int_t status)
       gSystem->ChangeDirectory("/");
       // needed in case fSessionDir is on NFS ?!
       gSystem->MakeDirectory(fSessionDir+"/.delete");
-      gSystem->Exec(TString::Format("%s %s", kRM, fSessionDir.Data()));
+      TProof::Unlink(fSessionDir.Data(), kTRUE);
    }
 
    // Cleanup queries directory if empty
@@ -2768,7 +2785,7 @@ void TProofServ::Terminate(Int_t status)
          gSystem->ChangeDirectory("/");
          // needed in case fQueryDir is on NFS ?!
          gSystem->MakeDirectory(fQueryDir+"/.delete");
-         gSystem->Exec(TString::Format("%s %s", kRM, fQueryDir.Data()));
+         TProof::Unlink(fQueryDir.Data(), kTRUE);
          // Remove lock file
          if (fQueryLock)
             gSystem->Unlink(fQueryLock->GetName());
@@ -3494,12 +3511,12 @@ void TProofServ::ProcessNext()
       //
       // Expand selector files
       if (pq->GetSelecImp()) {
-         gSystem->Exec(TString::Format("%s %s", kRM, pq->GetSelecImp()->GetName()));
+         gSystem->Unlink(pq->GetSelecImp()->GetName());
          pq->GetSelecImp()->SaveSource(pq->GetSelecImp()->GetName());
       }
       if (pq->GetSelecHdr() &&
           !strstr(pq->GetSelecHdr()->GetName(), "TProofDrawHist")) {
-         gSystem->Exec(TString::Format("%s %s", kRM, pq->GetSelecHdr()->GetName()));
+         gSystem->Unlink(pq->GetSelecHdr()->GetName());
          pq->GetSelecHdr()->SaveSource(pq->GetSelecHdr()->GetName());
       }
       //
@@ -4071,8 +4088,8 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       if (md5local && md5 == (*md5local)) {
          if ((opt & TProof::kRemoveOld)) {
             // remove any previous package directory with same name
-            st = gSystem->Exec(TString::Format("%s %s/%s", kRM, fPackageDir.Data(),
-                               packnam.Data()));
+            st = TProof::Unlink(TString::Format("%s/%s", fPackageDir.Data(),
+                                                          packnam.Data()), kTRUE);
             if (st)
                Error("HandleCheckFile", "failure executing: %s %s/%s",
                      kRM, fPackageDir.Data(), packnam.Data());
@@ -4126,8 +4143,8 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       // be released below before the call to fProof->UploadPackage().
       if (err) {
          // delete par file in case of error
-         gSystem->Exec(TString::Format("%s %s/%s", kRM, fPackageDir.Data(),
-                       filenam.Data()));
+         TProof::Unlink(TString::Format("%s/%s", fPackageDir.Data(),
+                                                  filenam.Data()), kTRUE);
          fPackageLock->Unlock();
       } else if (IsMaster()) {
          // forward to workers
@@ -4263,9 +4280,10 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          if ((mess->BufferSize() > mess->Length())) (*mess) >> file;
          fCacheLock->Lock();
          if (file.IsNull() || file == "*") {
-            gSystem->Exec(TString::Format("%s %s/* %s/.*.binversion", kRM, fCacheDir.Data(), fCacheDir.Data()));
+            TProof::Unlink(TString::Format("%s/*", fCacheDir.Data()), kTRUE);
+            TProof::Unlink(TString::Format("%s/.*.binversion", fCacheDir.Data()), kTRUE);
          } else {
-            gSystem->Exec(TString::Format("%s %s/%s", kRM, fCacheDir.Data(), file.Data()));
+            TProof::Unlink(TString::Format("%s/%s", fCacheDir.Data(), file.Data()), kTRUE);
          }
          fCacheLock->Unlock();
          if (IsMaster())
@@ -4298,7 +4316,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          status = UnloadPackages();
          if (status == 0) {
             fPackageLock->Lock();
-            gSystem->Exec(TString::Format("%s %s/*", kRM, fPackageDir.Data()));
+            TProof::Unlink(TString::Format("%s/*", fPackageDir.Data()), kTRUE);
             fPackageLock->Unlock();
             if (IsMaster())
                status = fProof->ClearPackages();
@@ -4310,11 +4328,11 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          if (status == 0) {
             fPackageLock->Lock();
             // remove package directory and par file
-            gSystem->Exec(TString::Format("%s %s/%s", kRM, fPackageDir.Data(),
-                          package.Data()));
+            TProof::Unlink(TString::Format("%s/%s", fPackageDir.Data(),
+                            package.Data()), kTRUE);
             if (IsMaster())
-               gSystem->Exec(TString::Format("%s %s/%s.par", kRM, fPackageDir.Data(),
-                             package.Data()));
+               TProof::Unlink(TString::Format("%s/%s.par", fPackageDir.Data(),
+                               package.Data()), kTRUE);
             fPackageLock->Unlock();
             if (IsMaster())
                status = fProof->ClearPackage(package);
@@ -4404,7 +4422,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                      // Hard cleanup: go up the dir tree
                      gSystem->ChangeDirectory(fPackageDir);
                      // remove package directory
-                     gSystem->Exec(TString::Format("%s %s", kRM, pdir.Data()));
+                     TProof::Unlink(pdir.Data(), kTRUE);
                      // find gunzip...
                      char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP,
                                                    kExecutePermission);
@@ -4620,10 +4638,10 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          (*mess) >> package;
          fPackageLock->Lock();
          // remove package directory and par file
-         gSystem->Exec(TString::Format("%s %s/%s", kRM, fPackageDir.Data(),
-                       package.Data()));
-         gSystem->Exec(TString::Format("%s %s/%s.par", kRM, fPackageDir.Data(),
-                       package.Data()));
+         TProof::Unlink(TString::Format("%s/%s", fPackageDir.Data(),
+                                                  package.Data()), kTRUE);
+         TProof::Unlink(TString::Format("%s/%s.par", fPackageDir.Data(),
+                                                      package.Data()), kTRUE);
          fPackageLock->Unlock();
          if (IsMaster())
             fProof->DisablePackage(package);
@@ -4635,7 +4653,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          break;
       case TProof::kDisablePackages:
          fPackageLock->Lock();
-         gSystem->Exec(TString::Format("%s %s/*", kRM, fPackageDir.Data()));
+         TProof::Unlink(TString::Format("%s/*", fPackageDir.Data()), kTRUE);
          fPackageLock->Unlock();
          if (IsMaster())
             fProof->DisablePackages();
@@ -5088,9 +5106,9 @@ Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
            f, (okver ? "OK" : "not OK"), (okrev ? "OK" : "not OK") );
       // Remove all existing binaries
       binname += "*";
-      gSystem->Exec(TString::Format("%s %s/%s", kRM, fCacheDir.Data(), binname.Data()));
+      TProof::Unlink(TString::Format("%s/%s", fCacheDir.Data(), binname.Data()), kTRUE);
       // ... and the binary version file
-      gSystem->Exec(TString::Format("%s %s/%s", kRM, fCacheDir.Data(), vername.Data()));
+      TProof::Unlink(TString::Format("%s/%s", fCacheDir.Data(), vername.Data()), kTRUE);
       // Done
       if (!locked) fCacheLock->Unlock();
       return 0;
@@ -5112,11 +5130,11 @@ Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
                   docp = kFALSE;
                // Copy the file, if needed
                if (docp) {
-                  gSystem->Exec(TString::Format("%s %s", kRM, e));
+                  gSystem->Unlink(e);
                   PDB(kCache,1)
                      Info("CopyFromCache",
                           "retrieving %s from cache", fncache.Data());
-                  gSystem->Exec(TString::Format("%s %s %s", kCP, fncache.Data(), e));
+                  gSystem->CopyFile(fncache.Data(), e, kTRUE);
                }
             }
          }
@@ -5181,14 +5199,14 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
       PDB(kCache,1)
          Info("CopyToCache",
               "caching %s/%s ...", fCacheDir.Data(), name.Data());
-      gSystem->Exec(TString::Format("%s %s %s", kCP, name.Data(), fCacheDir.Data()));
+      gSystem->CopyFile(name.Data(), fCacheDir.Data(), kTRUE);
       // If needed, remove from the cache any existing binary related to 'name'
       if (dot != kNPOS) {
          binname += ".*";
          PDB(kCache,1)
             Info("CopyToCache", "opt = 0: removing binaries '%s'", binname.Data());
-         gSystem->Exec(TString::Format("%s %s/%s", kRM, fCacheDir.Data(), binname.Data()));
-         gSystem->Exec(TString::Format("%s %s/%s", kRM, fCacheDir.Data(), vername.Data()));
+         TProof::Unlink(TString::Format("%s/%s", fCacheDir.Data(), binname.Data()), kTRUE);
+         TProof::Unlink(TString::Format("%s/%s", fCacheDir.Data(), vername.Data()), kTRUE);
       }
    } else if (opt == 1) {
       // If needed, copy to the cache any existing binary related to 'name'.
@@ -5209,10 +5227,10 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
                         docp = kFALSE;
                      // Copy the file, if needed
                      if (docp) {
-                        gSystem->Exec(TString::Format("%s %s", kRM, fncache.Data()));
+                        gSystem->Unlink(fncache.Data());
                         PDB(kCache,1)
                            Info("CopyToCache","caching %s ...", e);
-                        gSystem->Exec(TString::Format("%s %s %s", kCP, e, fncache.Data()));
+                        gSystem->CopyFile(e, fncache.Data(), kTRUE);
                         savever = kTRUE;
                      }
                   }
@@ -5688,14 +5706,12 @@ Int_t TProofLockPath::Lock()
    PDB(kPackage, 2)
       Info("Lock", "%d: locking file %s ...", gSystem->GetPid(), pname);
    // lock the file
-#if !defined(R__WIN32) && !defined(R__WINGCC)
    if (lockf(fLockId, F_LOCK, (off_t) 1) == -1) {
       SysError("Lock", "error locking %s", pname);
       close(fLockId);
       fLockId = -1;
       return -1;
    }
-#endif
 
    PDB(kPackage, 2)
       Info("Lock", "%d: file %s locked", gSystem->GetPid(), pname);
@@ -5716,14 +5732,12 @@ Int_t TProofLockPath::Unlock()
       Info("Lock", "%d: unlocking file %s ...", gSystem->GetPid(), GetName());
    // unlock the file
    lseek(fLockId, 0, SEEK_SET);
-#if !defined(R__WIN32) && !defined(R__WINGCC)
    if (lockf(fLockId, F_ULOCK, (off_t)1) == -1) {
       SysError("Unlock", "error unlocking %s", GetName());
       close(fLockId);
       fLockId = -1;
       return -1;
    }
-#endif
 
    PDB(kPackage, 2)
       Info("Unlock", "%d: file %s unlocked", gSystem->GetPid(), GetName());
