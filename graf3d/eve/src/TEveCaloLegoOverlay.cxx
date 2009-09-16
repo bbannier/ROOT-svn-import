@@ -12,6 +12,8 @@
 #include "TEveCaloLegoOverlay.h"
 
 #include "TAxis.h"
+#include "TColor.h"
+#include "TROOT.h"
 
 #include "TGLRnrCtx.h"
 #include "TGLIncludes.h"
@@ -42,7 +44,7 @@ TEveCaloLegoOverlay::TEveCaloLegoOverlay() :
 
    fShowScales(kTRUE),
    fScaleColor(kWhite), fScaleTransparency(0),
-   fScaleCoordX(0.8), fScaleCoordY(0.2),
+   fScaleCoordX(0.85), fScaleCoordY(0.65),
    fCellX(-1), fCellY(-1),
 
    fFrameColor(kGray), fFrameLineTransp(0), fFrameBgTransp(90),
@@ -355,13 +357,22 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
 
    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT | GL_LINE_BIT | GL_POINT_BIT);
    glEnable(GL_BLEND);
+   glDisable(GL_LIGHTING);
    glDisable(GL_CULL_FACE);
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    glEnable(GL_POLYGON_OFFSET_FILL);
    glPolygonOffset(0.1, 1);
 
+   glPushName(0);
+   glLoadName(1);
    // draw cells
+
+   //  TColor* c = gROOT->GetColor(fScaleColor);
+   //glColor3f(c->GetRed(), c->GetGreen(), c->GetBlue());
+
    TGLUtil::ColorTransparency(fScaleColor, fScaleTransparency);
+
+   //  printf("scale color %d\n", fScaleColor);
    Float_t pos, dx, dy;
    glBegin(GL_QUADS);
    Int_t ne = 3; // max number of columns
@@ -371,13 +382,10 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
       dx = 0.5* cellX * valFac;
       dy = 0.5* cellY * valFac;
       pos = i* scaleStepY;
-      dx = 0.5* cellX * TMath::Power(10, -i);
-      dy = 0.5* cellY * TMath::Power(10, -i);
       glVertex2f( - dx, pos - dy);
       glVertex2f( - dx, pos + dy);
       glVertex2f( + dx, pos + dy);
       glVertex2f( + dx, pos - dy);
-
    }
    glEnd();
 
@@ -388,7 +396,8 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
    glEnd();
 
    // draw numbers 
-   TGLUtil::Color(fScaleColor);
+   // glColor4f(c->GetRed(), c->GetGreen(), c->GetBlue(),  1.0f - 0.01f*fScaleTransparency) ;
+
    TGLFont fontB;
    Int_t fsb = TGLFontManager::GetFontSize(vp.Height()*0.03, 12, 36);
    rnrCtx.RegisterFont(fsb, "arial", TGLFont::kPixmap, fontB);
@@ -432,26 +441,28 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
    {
       Double_t off = 0.1;
       Double_t x0 = -(0.5+off) * scaleStepX;
-      Double_t x1 = (0.5+off) * scaleStepX + expX;
+      Double_t x1 =  (0.5+off) * scaleStepX + expX;
       Double_t y0 = -(0.5+off) * scaleStepY; 
-      Double_t y1 = scaleStepY*(ne - 0.5 + off);
-      Double_t zf = -0.2;
+      Double_t y1 =  scaleStepY * (ne - 0.5 + off);
+      Double_t zf = +0.2;
 
+      // TColor* c = gROOT->GetColor(fFrameColor);
+      //glColor4f(c->GetRed(), c->GetGreen(), c->GetBlue(),  1.0f - 0.01f*fFrameLineTransp);
       TGLUtil::ColorTransparency(fFrameColor, fFrameLineTransp);
+
       glBegin(GL_LINE_LOOP);
       glVertex3f(x0, y0, zf); glVertex3f(x1, y0, zf);
       glVertex3f(x1, y1, zf); glVertex3f(x0, y1, zf);
       glEnd();
 
+      //      glColor4f(c->GetRed(), c->GetGreen(), c->GetBlue(),  1.0f - 0.01f*fFrameBgTransp);
       TGLUtil::ColorTransparency(fFrameColor, fFrameBgTransp);
-      glPushName(0);
-      glLoadName(1);
       glBegin(GL_QUADS);
       glVertex2f(x0, y0); glVertex2f(x1, y0);
       glVertex2f(x1, y1); glVertex2f(x0, y1);
       glEnd();
-      glPopName();
    }
+   glPopName();
    
    glPopMatrix();
    glPopAttrib();
