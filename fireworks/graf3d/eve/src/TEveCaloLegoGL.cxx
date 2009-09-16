@@ -993,9 +993,21 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
          Float_t bws = bw*TMath::Log10(sumVal[i]+1)/logMax;
          if (bws*sx >  fM->fDrawNumberCellPixels)
          {
-            x = 0.5* (cellGeom[4*i] +cellGeom[4*i+2]) ;
-            y = 0.5* (cellGeom[4*i+1] +cellGeom[4*i+3]) ;
-            const char* txt = Form("%.1f", sumVal[i]);
+            x = 0.5* (cellGeom[4*i]   + cellGeom[4*i+2]);
+            y = 0.5* (cellGeom[4*i+1] + cellGeom[4*i+3]);
+
+            const char* txt;
+            if (TMath::Abs(sumVal[i]) > 1000)
+               txt = Form("%d", (Int_t) 10*TMath::Nint(sumVal[i]/10.0f));
+            if (TMath::Abs(sumVal[i]) > 100)
+               txt = Form("%d", (Int_t) TMath::Nint(sumVal[i]));
+            if (TMath::Abs(sumVal[i]) > 10)
+               txt = Form("%.1f",sumVal[i] );
+            if (TMath::Abs(sumVal[i]) >= 0.01 )
+               txt = Form("%.2f", sumVal[i]);
+            else
+               txt = "nil";
+
             xOff = 0;
             yOff = 0;
             font.BBox(txt, llx, lly, llz, urx, ury, urz);
@@ -1122,6 +1134,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          glPopAttrib();
       }
    }
+
    glPopMatrix();
 }
 

@@ -61,6 +61,35 @@ void cms_calo(Bool_t hdata = kTRUE)
 }
 
 //______________________________________________________________________________
+void MakeCaloLego(TEveCaloData* data, TEveViewer* ev, TEveScene* s)
+{
+   // eta-phi histogram
+
+   TGLViewer*  v  = ev->GetGLViewer();
+
+   // lego
+   TEveCaloLego* lego = new TEveCaloLego(data);
+   s->AddElement(lego);
+   lego->Set2DMode(TEveCaloLego::kValSize);
+   lego->SetName("TwoHistLego");
+   lego->SetPixelsPerBin(8);
+   lego->InitMainTrans();
+   Float_t sc = TMath::TwoPi();
+   lego->RefMainTrans().SetScale(sc, sc, sc);
+   lego->SetAutoRebin(kFALSE);
+
+   // add overlay lego draws scales in 2D
+   TEveCaloLegoOverlay* overlay = new TEveCaloLegoOverlay();
+   overlay->SetShowPlane(kTRUE);
+   v->AddOverlayElement(overlay);
+   overlay->SetCaloLego(lego);
+
+   v->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
+   v->SetEventHandler(new TEveLegoEventHandler(lego, v->GetGLWidget(), v));
+   gEve->AddToListTree(lego, kTRUE);
+}
+
+//______________________________________________________________________________
 TEveCalo3D* MakeCalo3D(TEveCaloData* data, TEveViewer *v, TEveScene *s )
 {
    // 3D towers
@@ -69,6 +98,8 @@ TEveCalo3D* MakeCalo3D(TEveCaloData* data, TEveViewer *v, TEveScene *s )
    calo3d->SetBarrelRadius(129);
    calo3d->SetEndCapPos(300);
    s->AddElement(calo3d);
+
+   gEve->AddToListTree(calo3d, kTRUE);
 
    return calo3d;
 }
@@ -89,39 +120,10 @@ void MakeCalo2D(TEveCalo3D* calo3d, TEveViewer *ev, TEveScene *s)
    TEveProjectionAxes* axes = new TEveProjectionAxes(mng);
    axes->SetTitle("TEveProjections demo");
    s->AddElement(axes);
-   //  s->AddElement(calo3D);
-   TEveCalo2D* c2d = (TEveCalo2D*) mng->ImportElements(calo3d);
-   s->AddElement(c2d);
-}
+   TEveCalo2D* calo2d = (TEveCalo2D*) mng->ImportElements(calo3d);
+   s->AddElement(calo2d);
 
-//______________________________________________________________________________
-void MakeCaloLego(TEveCaloData* data, TEveViewer* v2, TEveScene* s2)
-{
-   // eta-phi histogram
-
-   TGLViewer*  v  = v2->GetGLViewer();
-   v->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
-   v->SetEventHandler(new TEveLegoEventHandler("Lego", v->GetGLWidget(), v));
-
-   // lego
-   TEveCaloLego* lego = new TEveCaloLego(data);
-   lego->SetPlaneColor(kBlue-5);
-   lego->Set2DMode(TEveCaloLego::kValSize);
-   lego->SetName("TwoHistLego");
-   lego->SetPixelsPerBin(8);
-   gEve->AddElement(lego, s2);
-
-   lego->InitMainTrans();
-   Float_t sc = TMath::TwoPi();
-   lego->RefMainTrans().SetScale(sc, sc, sc);
-
-   // add overlay lego draws scales in 2D
-   TEveCaloLegoOverlay* overlay = new TEveCaloLegoOverlay();
-   // overlay->SetHeaderTxt(Form("Max Et %3.1f", data->GetMaxVal(kTRUE)));
-   overlay->GetAttAxis()->SetLabelSize(0.02);
-   overlay->SetShowPlane(kTRUE);
-   v->AddOverlayElement(overlay);
-   overlay->SetCaloLego(lego);
+   gEve->AddToListTree(calo2d, kTRUE);
 }
 
 //______________________________________________________________________________
