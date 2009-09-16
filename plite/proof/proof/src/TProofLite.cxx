@@ -148,7 +148,7 @@ Int_t TProofLite::Init(const char *, const char *conffile,
    }
 
    // UNIX path for communication with workers
-   fSockPath       = Form("%s/prooflite-sockpath-%s", gSystem->TempDirectory(), GetName());
+   fSockPath.Form("%s/prooflite-sockpath-%s", gSystem->UnixPathName(gSystem->TempDirectory()), GetName());
 
    fLogLevel       = loglevel;
    fProtocol       = kPROOF_Protocol;
@@ -183,12 +183,14 @@ Int_t TProofLite::Init(const char *, const char *conffile,
    }
    fLogToWindowOnly = kFALSE;
 
-   fCacheLock = new TProofLockPath(Form("%s/%s%s", gSystem->TempDirectory(),
+   fCacheLock = new TProofLockPath(TString::Format("%s/%s%s",
+                                   gSystem->UnixPathName(gSystem->TempDirectory()),
                                    kPROOF_CacheLockFile,
                                    TString(fCacheDir).ReplaceAll("/","%").Data()));
 
    // Create 'queries' locker instance and lock it
-   fQueryLock = new TProofLockPath(Form("%s/%s%s-%s", gSystem->TempDirectory(),
+   fQueryLock = new TProofLockPath(TString::Format("%s/%s%s-%s",
+                                   gSystem->UnixPathName(gSystem->TempDirectory()),
                                    kPROOF_QueryLockFile, GetName(),
                                    TString(fQueryDir).ReplaceAll("/","%").Data()));
    fQueryLock->Lock();
@@ -332,7 +334,7 @@ TProofLite::~TProofLite()
    if (!(fQMgr && fQMgr->Queries() && fQMgr->Queries()->GetSize())) {
       // needed in case fQueryDir is on NFS ?!
       gSystem->MakeDirectory(fQueryDir+"/.delete");
-      gSystem->Exec(Form("%s %s", kRM, fQueryDir.Data()));
+      TProof::Unlink(fQueryDir.Data(), kTRUE);
    }
 
    // Remove lock file
@@ -598,8 +600,9 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
    fprintf(frc,"ProofServ.RootVersionTag: %s\n", gROOT->GetVersion());
 
    // Work dir
-   TString sandbox = gEnv->GetValue("ProofLite.Sandbox", Form("%s/%s",
-                                     gSystem->WorkingDirectory(), kPROOF_WorkDir));
+   TString sandbox = gEnv->GetValue("ProofLite.Sandbox", TString::Format("%s/%s",
+                                    gSystem->UnixPathName(gSystem->WorkingDirectory()),
+                                    kPROOF_WorkDir));
    fprintf(frc,"# Users sandbox\n");
    fprintf(frc, "ProofServ.Sandbox: %s\n", sandbox.Data());
 
@@ -638,7 +641,7 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
    // Conf dir
    fprintf(fenv, "ROOTCONFDIR=%s\n", gSystem->Getenv("ROOTSYS"));
    // TMPDIR
-   fprintf(fenv, "TMPDIR=%s\n", gSystem->TempDirectory());
+   fprintf(fenv, "TMPDIR=%s\n", gSystem->UnixPathName(gSystem->TempDirectory()));
    // Log file in the log dir
    TString logfile(Form("%s/worker-%s.log", fWorkDir.Data(), ord));
    fprintf(fenv, "ROOTPROOFLOGFILE=%s\n", logfile.Data());
@@ -678,6 +681,7 @@ Int_t TProofLite::CreateSandbox()
       sandbox.Form("~/%s", kPROOF_WorkDir);
    }
    gSystem->ExpandPathName(sandbox);
+   sandbox = gSystem->UnixPathName(sandbox);
    if (AssertPath(sandbox, kTRUE) != 0) return -1;
 
    // Package Dir
@@ -704,8 +708,9 @@ Int_t TProofLite::CreateSandbox()
    SetName(stag.Data());
 
    // Subpath for this session in the sandbox (<sandbox>/path-to-working-dir)
-   TString sessdir(gSystem->WorkingDirectory());
-   sessdir.ReplaceAll(gSystem->HomeDirectory(),"");
+   TString sessdir(gSystem->UnixPathName(gSystem->WorkingDirectory()));
+   sessdir.ReplaceAll(gSystem->UnixPathName(gSystem->HomeDirectory()),"");
+   sessdir.ReplaceAll(":","-");
    sessdir.ReplaceAll("/","-");
    sessdir.Replace(0,1,"/",1);
    sessdir.Insert(0, sandbox.Data());
@@ -725,6 +730,16 @@ Int_t TProofLite::CreateSandbox()
    if (fQueryDir.IsNull())
       fQueryDir.Form("%s/%s", sessdir.Data(), kPROOF_QueryDir);
    if (AssertPath(fQueryDir, kTRUE) != 0) return -1;
+
+
+   // Directories that we can unlink
+   TProof::AddUnlinkPath(gSystem->WorkingDirectory());
+   TProof::AddUnlinkPath(sandbox);
+   TProof::AddUnlinkPath(fWorkDir);
+   TProof::AddUnlinkPath(fCacheDir);
+   TProof::AddUnlinkPath(fPackageDir);
+   TProof::AddUnlinkPath(fDataSetDir);
+   TProof::AddUnlinkPath(fQueryDir);
 
    // Cleanup old sessions dirs
    CleanupSandbox();
@@ -1138,7 +1153,11 @@ Int_t TProofLite::CreateSymLinks(TList *files)
             // Link name
             TString lnk = Form("%s/%s", wrk->GetWorkDir(), gSystem->BaseName(os->GetName()));
             gSystem->Unlink(lnk);
+#ifndef WIN32
             if (gSystem->Symlink(tgt, lnk) != 0) {
+#else
+            if (gSystem->CopyFile(tgt, lnk, kTRUE) != 0) {
+#endif
                rc++;
                Warning("CreateSymLinks", "problems creating sym link: %s", lnk.Data());
             }
@@ -1247,11 +1266,13 @@ void TProofLite::ClearCache(const char *file)
    if (!IsValid()) return;
 
    fCacheLock->Lock();
+   TString what;
    if (!file || strlen(file) <= 0) {
-      gSystem->Exec(Form("%s %s/*", kRM, fCacheDir.Data()));
+      what.Form("%s/*", fCacheDir.Data());
    } else {
-      gSystem->Exec(Form("%s %s/%s", kRM, fCacheDir.Data(), file));
+      what.Form("%s/%s", fCacheDir.Data(), file);
    }
+   TProof::Unlink(what.Data(), kTRUE);
    fCacheLock->Unlock();
 }
 
@@ -1293,7 +1314,9 @@ Int_t TProofLite::CleanupSandbox()
       notify = kFALSE;
       TNamed *n = (TNamed *) olddirs->Last();
       if (n) {
-         gSystem->Exec(Form("%s %s", kRM, n->GetTitle()));
+         if (TProof::Unlink(n->GetTitle(), kTRUE) != 0) {
+            Warning("CleanupSandbox", "problems removing: %s", n->GetTitle());
+         }
          olddirs->Remove(n);
          delete n;
       }

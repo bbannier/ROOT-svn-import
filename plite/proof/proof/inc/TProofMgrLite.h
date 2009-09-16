@@ -29,6 +29,14 @@
 #endif
 
 class TProofMgrLite : public TProofMgr {
+private:
+   TString    fSessionDir; // The client session directory
+
+   void       ExpandPath(TString &path, Bool_t &sandbox);
+#ifdef WIN32
+   void       ShowFile(const char *what,
+                       Int_t lines = 0, UInt_t opt = 0, const char *pattern = 0);
+#endif
 
 public:
    TProofMgrLite(const char *url, Int_t loglevel = -1, const char *alias = "");
@@ -39,6 +47,19 @@ public:
                               const char *pattern = "-v | SvcMsg");
    TObjString *ReadBuffer(const char *file, Long64_t ofs, Int_t len);
    TObjString *ReadBuffer(const char *file, const char *pattern);
+
+   // File system actions
+   Int_t       Cp(const char *src, const char *dst = 0, const char *opts = 0);
+   void        Grep(const char *what, const char *how = 0, const char *where = 0);
+   void        Ls(const char *what = "~/", const char *how = 0, const char *where = 0);
+   void        More(const char *what, const char *how = 0, const char *where = 0);
+   Int_t       Rm(const char *what, const char *how = 0, const char *where = 0);
+   void        Tail(const char *what, const char *how = 0, const char *where = 0);
+   Int_t       Md5sum(const char *what, TString &sum, const char *where = 0);
+   Int_t       Stat(const char *what, FileStat_t &st, const char *where = 0);
+
+   Int_t       GetFile(const char *remote, const char *local, const char *opt = 0);
+   Int_t       PutFile(const char *local, const char *remote, const char *opt = 0);
 
    ClassDef(TProofMgrLite,0)  // XrdProofd PROOF manager interface
 };
