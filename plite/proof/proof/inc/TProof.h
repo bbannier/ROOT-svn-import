@@ -773,6 +773,8 @@ public:
    ERunStatus  GetRunStatus() const { return fRunStatus; }
    TList      *GetLoadedMacros() const { return fLoadedMacros; }
 
+   Int_t       GetSeqNum() const { return fSeqNum; }
+
    //-- input list parameter handling
    void        SetParameter(const char *par, const char *value);
    void        SetParameter(const char *par, Int_t value);
