@@ -578,16 +578,16 @@ void FillData(SparseData & dv, const TH1 * h1, TF1 * /*func*/)
 //          if ( dim >= 3 )
 //             cout   << "[" << h1->GetZaxis()->GetBinLowEdge(z) << "-" << h1->GetZaxis()->GetBinUpEdge(z) << "]";
 
-//          cout << h1->GetBinContent(i) << endl;;
+//          cout << h1->GetBinContent(i) << endl;
          
          min[0] = h1->GetXaxis()->GetBinLowEdge(x);
          max[0] = h1->GetXaxis()->GetBinUpEdge(x);
-         if ( dim <= 2 )
+         if ( dim >= 2 )
          {
             min[1] = h1->GetYaxis()->GetBinLowEdge(y);
             max[1] = h1->GetYaxis()->GetBinUpEdge(y);
          } 
-         if ( dim <= 3 ) {
+         if ( dim >= 3 ) {
             min[2] = h1->GetZaxis()->GetBinLowEdge(z);
             max[2] = h1->GetZaxis()->GetBinUpEdge(z);
          }
