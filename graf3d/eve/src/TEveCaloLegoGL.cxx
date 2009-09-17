@@ -997,16 +997,16 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
             y = 0.5* (cellGeom[4*i+1] + cellGeom[4*i+3]);
 
             const char* txt;
-            if (TMath::Abs(sumVal[i]) > 1000)
-               txt = Form("%d", (Int_t) 10*TMath::Nint(sumVal[i]/10.0f));
-            if (TMath::Abs(sumVal[i]) > 100)
-               txt = Form("%d", (Int_t) TMath::Nint(sumVal[i]));
-            if (TMath::Abs(sumVal[i]) > 10)
-               txt = Form("%.1f",sumVal[i] );
-            if (TMath::Abs(sumVal[i]) >= 0.01 )
-               txt = Form("%.2f", sumVal[i]);
+            if (sumVal[i] > 10)
+               txt = Form("%d", TMath::Nint(sumVal[i]));
+            else if (sumVal[i] > 1 )
+               txt = Form("%.1f", sumVal[i]);
+            else if (sumVal[i] > 0.01 )
+               txt = Form("%.2f", 0.01*TMath::Nint(sumVal[i]*100));
             else
-               txt = "nil";
+            {
+               txt = Form("~1e%d", TMath::Nint(TMath::Log10(sumVal[i])));
+            }
 
             xOff = 0;
             yOff = 0;
@@ -1060,6 +1060,8 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    // rebin axsis , check limits, fix TwoPi cycling
    Int_t oldBinStep = fM->fBinStep;
    fM->fBinStep = GetGridStep(rnrCtx);
+   if (oldBinStep != fM->fBinStep) fDLCacheOK=kFALSE;
+
    RebinAxis(fM->fData->GetEtaBins(), fEtaAxis);
    RebinAxis(fM->fData->GetPhiBins(), fPhiAxis);
 
@@ -1071,7 +1073,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    }
 
    // rebin data
-   if (fDLCacheOK==kFALSE || oldBinStep != fM->fBinStep || idCacheChanged ) {
+   if (fDLCacheOK==kFALSE || idCacheChanged ) {
       fRebinData.fSliceData.clear();
       fRebinData.fSliceData.clear();
 
