@@ -1198,7 +1198,12 @@ Int_t PT_Packages(void *)
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
    }
-
+#ifdef WIN32
+   // Not yet supported by PROOF-Lite on Windows
+   if (gProof->IsLite()) {
+      return 1;
+   }
+#endif
    // Cleanup the area
    PutPoint();
    TList *packs = gProof->GetListOfPackages();
@@ -1277,7 +1282,12 @@ Int_t PT_Event(void *)
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
    }
-
+#ifdef WIN32
+   // Not yet supported by PROOF-Lite on Windows
+   if (gProof->IsLite()) {
+      return 1;
+   }
+#endif
    // Define the number of events
    Long64_t nevt = 100000;
 
