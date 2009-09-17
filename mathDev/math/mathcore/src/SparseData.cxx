@@ -169,12 +169,12 @@ namespace ROOT {
 
          min[0] = h1->GetXaxis()->GetXmin();
          max[0] = h1->GetXaxis()->GetXmax();
-         if ( dim <= 2 )
+         if ( dim >= 2 )
          {
             min[1] = h1->GetYaxis()->GetXmin();
             max[1] = h1->GetYaxis()->GetXmax();
          } 
-         if ( dim <= 3 ) {
+         if ( dim >= 3 ) {
             min[2] = h1->GetZaxis()->GetXmin();
             max[2] = h1->GetZaxis()->GetXmax();
          }
