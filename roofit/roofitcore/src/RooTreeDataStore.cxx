@@ -295,13 +295,13 @@ void RooTreeDataStore::createTree(const char* name, const char* title)
   if (!_tree) {
     _tree = new TTree(name,title) ;
     _tree->SetDirectory(0) ;
+    gDirectory->RecursiveRemove(_tree) ;
   }
   if (!_cacheTree) {
     _cacheTree = new TTree(name,title) ;
     _cacheTree->SetDirectory(0) ;
+    gDirectory->RecursiveRemove(_cacheTree) ;
   }
-  gDirectory->RecursiveRemove(_tree) ;
-  gDirectory->RecursiveRemove(_cacheTree) ;
 
   if (notInMemNow) {
     gDirectory->cd(pwd) ;
@@ -940,4 +940,16 @@ void RooTreeDataStore::Draw(Option_t* option)
   _tree->Draw(option) ; 
 }
 
+//______________________________________________________________________________
+void RooTreeDataStore::Streamer(TBuffer &R__b)
+{
+   // Stream an object of class RooTreeDataStore.
+
+   if (R__b.IsReading()) {
+      R__b.ReadClassBuffer(RooTreeDataStore::Class(),this);
+      initialize() ;
+   } else {
+      R__b.WriteClassBuffer(RooTreeDataStore::Class(),this);
+   }
+}
 
