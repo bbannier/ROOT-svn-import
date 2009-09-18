@@ -13,12 +13,14 @@
 #include "TH2.h"
 #include "THLimitsFinder.h"
 
+#include "TGLViewer.h"
 #include "TGLIncludes.h"
 #include "TGLRnrCtx.h"
 #include "TGLSelectRecord.h"
 #include "TGLScene.h"
 #include "TGLCamera.h"
 #include "TGLUtil.h"
+#include "TColor.h"
 
 
 #include "TEveCaloLegoGL.h"
@@ -38,6 +40,8 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
       TGLObject(),
 
       fDataMax(0),
+      fGridColor(-1),
+      fFontColor(-1),
 
       fEtaAxis(0),
       fPhiAxis(0),
@@ -437,9 +441,9 @@ void TEveCaloLegoGL::DrawAxis3D(TGLRnrCtx & rnrCtx) const
    //
    if (fM->fData->Empty() == kFALSE)
    {
-      fZAxis->SetAxisColor(fM->fGridColor);
-      fZAxis->SetLabelColor(fM->fFontColor);
-      fZAxis->SetTitleColor(fM->fFontColor);
+      fZAxis->SetAxisColor(fGridColor);
+      fZAxis->SetLabelColor(fFontColor);
+      fZAxis->SetTitleColor(fFontColor);
       fZAxis->SetNdivisions(fM->fNZSteps*100 + 10);
       fZAxis->SetLimits(0, fDataMax);
       fZAxis->SetTitle(fM->GetPlotEt() ? "Et[GeV]" : "E[GeV]");
@@ -479,7 +483,7 @@ void TEveCaloLegoGL::DrawAxis3D(TGLRnrCtx & rnrCtx) const
          // box verticals
          TGLUtil::LineWidth(1);
          glBegin(GL_LINES);
-         TGLUtil::Color(fM->GetGridColor());
+         TGLUtil::Color(fGridColor);
 
          glVertex3f(fBackPlaneXConst[0].fX   ,fBackPlaneXConst[0].fY   ,0);
          glVertex3f(fBackPlaneXConst[0].fX   ,fBackPlaneXConst[0].fY   ,fDataMax);
@@ -531,9 +535,9 @@ void TEveCaloLegoGL::DrawAxis3D(TGLRnrCtx & rnrCtx) const
    if (fYAxisTitlePos.fX < fM->GetEtaMax()) xOff = -xOff;
 
    TAxis ax;
-   ax.SetAxisColor(fM->fGridColor);
-   ax.SetLabelColor(fM->fFontColor);
-   ax.SetTitleColor(fM->fFontColor);
+   ax.SetAxisColor(fGridColor);
+   ax.SetLabelColor(fFontColor);
+   ax.SetTitleColor(fFontColor);
    ax.SetTitleFont(fM->GetData()->GetEtaBins()->GetTitleFont());
    ax.SetLabelOffset(0.02);
    ax.SetTickLength(0.05);
@@ -573,9 +577,9 @@ void TEveCaloLegoGL::DrawAxis2D(TGLRnrCtx & rnrCtx) const
    // Draw XY axis.
 
    TAxis ax;
-   ax.SetAxisColor(fM->fGridColor);
-   ax.SetLabelColor(fM->fFontColor);
-   ax.SetTitleColor(fM->fFontColor);
+   ax.SetAxisColor(fGridColor);
+   ax.SetLabelColor(fFontColor);
+   ax.SetTitleColor(fFontColor);
    ax.SetTitleFont(fM->GetData()->GetEtaBins()->GetTitleFont());
    ax.SetLabelOffset(0.01);
    ax.SetTickLength(0.05);
@@ -713,7 +717,7 @@ void TEveCaloLegoGL::DrawHistBase(TGLRnrCtx &rnrCtx) const
 
    // XY grid
    //
-   TGLUtil::Color(fM->fGridColor);
+   TGLUtil::Color(fGridColor);
    TGLUtil::LineWidth(1);
    glBegin(GL_LINES);
    glVertex2f(eta0, phi0);
@@ -983,7 +987,7 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
       Double_t etaLenPix = up[0]-dn[0];
       Float_t sx = etaLenPix/fM->GetEtaRng();
 
-      TGLUtil::Color(fM->GetFontColor());
+      TGLUtil::Color(fFontColor);
       Float_t llx, lly, llz, urx, ury, urz;
       Float_t xOff, yOff;
       TGLFont font;
@@ -1093,6 +1097,23 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
             for (std::vector<Float_t>::iterator it = fRebinData.fSliceData.begin(); it != fRebinData.fSliceData.end(); it++)
                (*it) *= scale;
          }
+      }
+   }
+
+   fFontColor = fM->fFontColor > -1 ? fM->fFontColor :  rnrCtx.ColorSet().Markup().GetColorIndex();
+   fGridColor = fM->fGridColor;
+   if (fM->fGridColor < 0)
+   {
+      TGLViewer* glV = (TGLViewer*)rnrCtx.GetViewer();
+      if (glV->IsColorSetDark())
+      {
+         if (fM->fFontColor < 0) fFontColor = TColor::GetColorDark(fFontColor);
+         fGridColor = TColor::GetColorDark(fFontColor);     
+      }
+      else
+      {
+         if (fM->fFontColor < 0) fFontColor = TColor::GetColorBright(fFontColor);
+         fGridColor = TColor::GetColorBright(fFontColor);
       }
    }
 

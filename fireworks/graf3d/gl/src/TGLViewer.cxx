@@ -1181,6 +1181,13 @@ Bool_t TGLViewer::IsUsingDefaultColorSetForNewViewers()
    return fgUseDefaultColorSetForNewViewers;
 }
 
+//______________________________________________________________________________
+Bool_t TGLViewer::IsColorSetDark() const
+{
+   // Returns true if curremt color set is dark.
+
+   return fRnrCtx->GetBaseColorSet() == &fDarkColorSet;
+}
 
 /**************************************************************************/
 // Viewport

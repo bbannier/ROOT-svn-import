@@ -43,11 +43,11 @@ TEveCaloLegoOverlay::TEveCaloLegoOverlay() :
    fCalo(0),
 
    fShowScales(kTRUE),
-   fScaleColor(kWhite), fScaleTransparency(0),
+   fScaleColor(-1), fScaleTransparency(0),
    fScaleCoordX(0.85), fScaleCoordY(0.65),
    fCellX(-1), fCellY(-1),
 
-   fFrameColor(kGray), fFrameLineTransp(0), fFrameBgTransp(90),
+   fFrameColor(-1), fFrameLineTransp(70), fFrameBgTransp(90),
 
    fMouseX(0),  fMouseY(0),
    fInDrag(kFALSE),
@@ -365,14 +365,11 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
 
    glPushName(0);
    glLoadName(1);
+
    // draw cells
+   Color_t color = fScaleColor > -1 ? fScaleColor : rnrCtx.ColorSet().Markup().GetColorIndex();
+   TGLUtil::ColorTransparency(color, fScaleTransparency);
 
-   //  TColor* c = gROOT->GetColor(fScaleColor);
-   //glColor3f(c->GetRed(), c->GetGreen(), c->GetBlue());
-
-   TGLUtil::ColorTransparency(fScaleColor, fScaleTransparency);
-
-   //  printf("scale color %d\n", fScaleColor);
    Float_t pos, dx, dy;
    glBegin(GL_QUADS);
    Int_t ne = 3; // max number of columns
@@ -396,8 +393,6 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
    glEnd();
 
    // draw numbers 
-   // glColor4f(c->GetRed(), c->GetGreen(), c->GetBlue(),  1.0f - 0.01f*fScaleTransparency) ;
-
    TGLFont fontB;
    Int_t fsb = TGLFontManager::GetFontSize(vp.Height()*0.03, 12, 36);
    rnrCtx.RegisterFont(fsb, "arial", TGLFont::kPixmap, fontB);
@@ -446,17 +441,15 @@ void TEveCaloLegoOverlay::RenderScales(TGLRnrCtx& rnrCtx)
       Double_t y1 =  scaleStepY * (ne - 0.5 + off);
       Double_t zf = +0.2;
 
-      // TColor* c = gROOT->GetColor(fFrameColor);
-      //glColor4f(c->GetRed(), c->GetGreen(), c->GetBlue(),  1.0f - 0.01f*fFrameLineTransp);
-      TGLUtil::ColorTransparency(fFrameColor, fFrameLineTransp);
+      color = fFrameColor > -1 ?  fFrameColor : rnrCtx.ColorSet().Markup().GetColorIndex();
+      TGLUtil::ColorTransparency(color, fFrameLineTransp);
 
       glBegin(GL_LINE_LOOP);
       glVertex3f(x0, y0, zf); glVertex3f(x1, y0, zf);
       glVertex3f(x1, y1, zf); glVertex3f(x0, y1, zf);
       glEnd();
 
-      //      glColor4f(c->GetRed(), c->GetGreen(), c->GetBlue(),  1.0f - 0.01f*fFrameBgTransp);
-      TGLUtil::ColorTransparency(fFrameColor, fFrameBgTransp);
+      TGLUtil::ColorTransparency(color, fFrameBgTransp);
       glBegin(GL_QUADS);
       glVertex2f(x0, y0); glVertex2f(x1, y0);
       glVertex2f(x1, y1); glVertex2f(x0, y1);
