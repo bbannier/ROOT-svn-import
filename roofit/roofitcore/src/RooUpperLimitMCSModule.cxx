@@ -57,7 +57,7 @@ ClassImp(RooUpperLimitMCSModule)
 RooUpperLimitMCSModule::RooUpperLimitMCSModule(RooArgSet* poi, Double_t CL) : 
   RooAbsMCStudyModule(Form("RooUpperLimitMCSModule_%s",poi->first()->GetName()),Form("RooUpperLimitMCSModule_%s",poi->first()->GetName())),
   _parName(poi->first()->GetName()), 
-  _plc(0),_ul(0),_poi(0), _data(0), _model(0),_cl(CL)
+  _plc(0),_ul(0),_poi(0), _data(0),_cl(CL), _model(0)
 {
   std::cout<<"RooUpperLimitConstructor ParName:"<<_parName<<std::endl;
   std::cout<<"RooUpperLimitConstructor CL:"<<_cl<<std::endl;
@@ -71,7 +71,7 @@ RooUpperLimitMCSModule::RooUpperLimitMCSModule(RooArgSet* poi, Double_t CL) :
 RooUpperLimitMCSModule::RooUpperLimitMCSModule(const RooUpperLimitMCSModule& other) : 
   RooAbsMCStudyModule(other), 
   _parName(other._poi->first()->GetName()),
-  _cl(other._cl), _plc(0),_ul(0),_poi(other._poi), _data(0), _model(other._model)
+  _plc(0),_ul(0),_poi(other._poi), _data(0), _cl(other._cl), _model(other._model)
 {
   // Copy constructor
 }
