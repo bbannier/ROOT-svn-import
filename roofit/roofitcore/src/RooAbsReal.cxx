@@ -72,6 +72,7 @@
 #include "RooChi2Var.h"
 #include "RooFitResult.h"
 #include "RooMoment.h"
+#include "RooBrentRootFinder.h"
 
 #include "Riostream.h"
 
@@ -903,7 +904,7 @@ const RooAbsReal *RooAbsReal::createPlotProjection(const RooArgSet &dependentVar
 //_____________________________________________________________________________
 TH1 *RooAbsReal::fillHistogram(TH1 *hist, const RooArgList &plotVars,
 			       Double_t scaleFactor, const RooArgSet *projectedVars, Bool_t scaleForDensity,
-			       const RooArgSet* condObs) const 
+			       const RooArgSet* condObs, Bool_t setError) const 
 {
   // Fill the ROOT histogram 'hist' with values sampled from this
   // function at the bin centers.  Our value is calculated by first
@@ -1020,6 +1021,7 @@ TH1 *RooAbsReal::fillHistogram(TH1 *hist, const RooArgList &plotVars,
 
   // Loop over the input histogram's bins and fill each one with our projection's
   // value, calculated at the center.
+  RooAbsReal::enableEvalErrorLogging(kTRUE) ;
   Int_t xbin(0),ybin(0),zbin(0);
   Int_t bins= xbins*ybins*zbins;
   for(Int_t bin= 0; bin < bins; bin++) {
@@ -1044,10 +1046,25 @@ TH1 *RooAbsReal::fillHistogram(TH1 *hist, const RooArgList &plotVars,
       coutE(InputArguments) << "RooAbsReal::fillHistogram: Internal Error!" << endl;
       break;
     }
+
     Double_t result= scaleFactor*projected->getVal();
+    if (RooAbsReal::numEvalErrors()>0) {
+      coutW(Plotting) << "WARNING: Function evaluation error(s) at coordinates [x]=" << xvar->getVal() ;
+      if (hdim==2) ccoutW(Plotting) << " [y]=" << yvar->getVal() ;
+      if (hdim==3) ccoutW(Plotting) << " [z]=" << zvar->getVal() ;
+      ccoutW(Plotting) << endl ;
+      // RooAbsReal::printEvalErrors(ccoutW(Plotting),10) ;
+      result = 0 ;
+    }
+    RooAbsReal::clearEvalErrorLog() ;
+    
     hist->SetBinContent(hist->GetBin(xbin,ybin,zbin),result);
+    if (setError) {
+      hist->SetBinError(hist->GetBin(xbin,ybin,zbin),result) ;
+    }
     //cout << "bin " << bin << " -> (" << xbin << "," << ybin << "," << zbin << ") = " << result << endl;
   }
+  RooAbsReal::enableEvalErrorLogging(kFALSE) ;
 
   // cleanup
   delete cloneSet;
@@ -1092,9 +1109,10 @@ RooDataHist* RooAbsReal::fillDataHist(RooDataHist *hist, const RooArgSet* normSe
   }
   
   // Make deep clone of self and attach to dataset observables
-  RooArgSet* cloneSet = (RooArgSet*) RooArgSet(*this).snapshot(kTRUE) ;
-  RooAbsReal* theClone = (RooAbsReal*) cloneSet->find(GetName()) ;
-  theClone->attachDataSet(*hist) ;
+  RooArgSet* origObs = getObservables(hist) ;  
+  //RooArgSet* cloneSet = (RooArgSet*) RooArgSet(*this).snapshot(kTRUE) ;
+  //RooAbsReal* theClone = (RooAbsReal*) cloneSet->find(GetName()) ;
+  const_cast<RooAbsReal*>(this)->recursiveRedirectServers(*hist->get()) ;
   
   // Iterator over all bins of RooDataHist and fill weights
   Int_t onePct = hist->numEntries()/100 ;
@@ -1106,12 +1124,14 @@ RooDataHist* RooAbsReal::fillDataHist(RooDataHist *hist, const RooArgSet* normSe
       ccoutP(Eval) << "." << flush ;
     }
     const RooArgSet* obs = hist->get(i) ;
-    Double_t binVal = theClone->getVal(normSet?normSet:obs)*scaleFactor ;
+    Double_t binVal = /*theClone->*/getVal(normSet?normSet:obs)*scaleFactor ;
     if (correctForBinSize) binVal*= hist->binVolume() ;
     hist->set(binVal) ;
   }
 
-  delete cloneSet ;
+  //delete cloneSet ;
+  const_cast<RooAbsReal*>(this)->recursiveRedirectServers(*origObs) ;
+  delete origObs ;
 
   return hist;
 }
@@ -1255,7 +1275,7 @@ TH1* RooAbsReal::createHistogram(const char *name, const RooAbsRealLValue& xvar,
   pc.stripCmdList(argListCreate,"Scaling,ProjectedObservables") ;
 
   TH1* histo = xvar.createHistogram(name,argListCreate) ;
-  fillHistogram(histo,vars,1.0,intObs,doScaling,projObs) ;
+  fillHistogram(histo,vars,1.0,intObs,doScaling,projObs,kFALSE) ;
 
   return histo ;
 }
@@ -1470,6 +1490,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   pc.defineInt("fillStyle","FillStyle",0,-999) ;
   pc.defineString("curveName","Name",0,"") ;
   pc.defineInt("curveInvisible","Invisible",0,0) ;
+  pc.defineInt("showProg","ShowProgress",0,0) ;
   pc.defineInt("numCPU","NumCPU",0,1) ;
   pc.defineInt("interleave","NumCPU",1,0) ; 
   pc.defineString("addToCurveName","AddTo",0,"") ;
@@ -1573,6 +1594,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   o.projectionRangeName = pc.getString("projectionRangeName",0,kTRUE) ;
   o.curveName = pc.getString("curveName",0,kTRUE) ;
   o.curveInvisible = pc.getInt("curveInvisible") ;
+  o.progress = pc.getInt("showProg") ;
   o.addToCurveName = pc.getString("addToCurveName",0,kTRUE) ;
   o.addToWgtSelf = pc.getDouble("addToWgtSelf") ;
   o.addToWgtOther = pc.getDouble("addToWgtOther") ;  
@@ -1960,7 +1982,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
 
     RooAbsReal::enableEvalErrorLogging(kTRUE) ;
     RooCurve *curve = new RooCurve(*projection,*plotVar,o.rangeLo,o.rangeHi,frame->GetNbinsX(),
-				   o.scaleFactor,0,o.precision,o.precision,o.shiftToZero,o.wmode,o.numee,o.doeeval,o.eeval);
+				   o.scaleFactor,0,o.precision,o.precision,o.shiftToZero,o.wmode,o.numee,o.doeeval,o.eeval,o.progress);
     RooAbsReal::enableEvalErrorLogging(kFALSE) ;
 
 
@@ -3211,6 +3233,34 @@ Double_t RooAbsReal::maxVal(Int_t /*code*/) const
 
 
 //_____________________________________________________________________________
+void RooAbsReal::EvalError::setMessage(const char* tmp) 
+{ 
+  if (strlen(tmp)<1023) {
+    strcpy(_msg,tmp) ; 
+  } else {
+    strncpy(_msg,tmp,1020); 
+    _msg[1020]='.' ; _msg[1021]='.' ; 
+    _msg[1022]='.' ; _msg[1023]=0 ;    
+  }
+}
+
+
+
+//_____________________________________________________________________________
+void RooAbsReal::EvalError::setServerValues(const char* tmp) 
+{ 
+  if (strlen(tmp)<1023) {
+    strcpy(_srvval,tmp) ; 
+  } else {
+    strncpy(_srvval,tmp,1020); 
+    _srvval[1020]='.' ; _srvval[1021]='.' ;
+    _srvval[1022]='.' ; _srvval[1023]=0 ;    
+  }
+}
+
+
+
+//_____________________________________________________________________________
 void RooAbsReal::logEvalError(const RooAbsReal* originator, const char* origName, const char* message, const char* serverValueString) 
 {
   // Interface to insert remote error logging messages received by RooRealMPFE into current error loggin stream
@@ -3736,6 +3786,8 @@ TF1* RooAbsReal::asTF(const RooArgList& obs, const RooArgList& pars, const RooAr
   for (int i=0 ; i<pars.getSize() ; i++) {
     RooRealVar* p = (RooRealVar*) pars.at(i) ;
     tf->SetParameter(i,p->getVal()) ;
+    tf->SetParName(i,p->GetName()) ;
+    //tf->SetParLimits(i,p->getMin(),p->getMax()) ;
   }
 
   return tf ;
@@ -3765,25 +3817,37 @@ RooDerivative* RooAbsReal::derivative(RooRealVar& obs, const RooArgSet& normSet,
 
 
 //_____________________________________________________________________________
-RooMoment* RooAbsReal::moment(RooRealVar& obs, Int_t order, Bool_t central) 
+RooMoment* RooAbsReal::moment(RooRealVar& obs, Int_t order, Bool_t central, Bool_t takeRoot) 
 {
   // Return function representing moment of function of given order. If central is
   // true, the central moment is given <(x-<x>)^2>
   string name=Form("%s_MOMENT_%d%s_%s",GetName(),order,(central?"C":""),obs.GetName()) ;
   string title=Form("%sMoment of order %d of %s w.r.t %s ",(central?"Central ":""),order,GetName(),obs.GetName()) ;
-  return new RooMoment(name.c_str(),title.c_str(),*this,obs,order,central) ;
+  return new RooMoment(name.c_str(),title.c_str(),*this,obs,order,central,takeRoot) ;
 }
 
 
 //_____________________________________________________________________________
-RooMoment* RooAbsReal::moment(RooRealVar& obs, const RooArgSet& normObs, Int_t order, Bool_t central, Bool_t intNormObs) 
+RooMoment* RooAbsReal::moment(RooRealVar& obs, const RooArgSet& normObs, Int_t order, Bool_t central, Bool_t takeRoot, Bool_t intNormObs) 
 {
   // Return function representing moment of p.d.f (normalized w.r.t given observables) of given order. If central is
   // true, the central moment is given <(x-<x>)^2>. If intNormObs is true, the moment of the function integrated over
   // all normalization observables is returned.
   string name=Form("%s_MOMENT_%d%s_%s",GetName(),order,(central?"C":""),obs.GetName()) ;
   string title=Form("%sMoment of order %d of %s w.r.t %s ",(central?"Central ":""),order,GetName(),obs.GetName()) ;
-  return new RooMoment(name.c_str(),title.c_str(),*this,obs,normObs,order,central,0,intNormObs) ;
+  return new RooMoment(name.c_str(),title.c_str(),*this,obs,normObs,order,central,takeRoot,intNormObs) ;
+}
+
+
+
+//_____________________________________________________________________________
+Double_t RooAbsReal::findRoot(RooRealVar& x, Double_t xmin, Double_t xmax, Double_t yval) 
+{
+  //
+  // Return value of x (in range xmin,xmax) at which function equals yval.
+  // (Calculation is performed with Brent root finding algorithm)
+  
+  return RooBrentRootFinder(RooRealBinding(*this,x)).findRoot(xmin,xmax,yval) ;
 }
 
 
