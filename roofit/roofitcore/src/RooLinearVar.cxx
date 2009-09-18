@@ -157,13 +157,14 @@ Bool_t RooLinearVar::isJacobianOK(const RooArgSet& depList) const
   TIterator* dIter = depList.createIterator() ;
   while ((arg=(RooAbsArg*)dIter->Next())) {
     if (arg->IsA()->InheritsFrom(RooAbsReal::Class())) {
-      if (_slope.arg().dependsOn(*arg)) {
+      if (_slope.arg().dependsOnValue(*arg)) {
+// 	cout << "RooLinearVar::isJacobianOK(" << GetName() << ") return kFALSE because slope depends on value of " << arg->GetName() << endl ;
 	return kFALSE ;
       }
     }
   }
   delete dIter ;
-
+//   cout << "RooLinearVar::isJacobianOK(" << GetName() << ") return kTRUE" << endl ;
   return kTRUE ;
 }
 
