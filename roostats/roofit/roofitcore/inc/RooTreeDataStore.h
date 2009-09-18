@@ -80,6 +80,7 @@ public:
   
   // Tree access
   TTree& tree() { return *_tree ; }
+  virtual const TTree* tree() const { return _tree ; }  
 
   // Forwarded from TTree
   Stat_t GetEntries() const;
