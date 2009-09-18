@@ -54,6 +54,7 @@ public:
 
   RooAbsDataStore* store() { return _dstore ; }
   const RooAbsDataStore* store() const { return _dstore ; }
+  const TTree* tree() const ;
   
   virtual void Draw(Option_t* option = "") ;
 
