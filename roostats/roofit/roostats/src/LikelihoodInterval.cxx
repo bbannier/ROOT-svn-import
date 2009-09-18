@@ -232,7 +232,10 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param)
   RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 
   RooAbsReal* newProfile = fLikelihoodRatio->createProfile(RooArgSet(param));
-  RooRealVar* myarg = (RooRealVar *) newProfile->getVariables()->find(param.GetName());
+
+  RooArgSet* vars = newProfile->getVariables() ;
+  RooRealVar* myarg = (RooRealVar *) vars->find(param.GetName());
+  delete vars ;
 
   double target = TMath::ChisquareQuantile(fConfidenceLevel,fParameters->getSize())/2.;
 
@@ -261,7 +264,7 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param)
 	  std::cout<<"WARNING upper limit is outside the parameters bounderies. Abort!"<<std::endl;
 	  delete newProfile;
 	  double ret = myarg->getMax();
-	  delete myarg;
+	  //delete myarg;
 	  return ret;
 	}
       }
@@ -303,7 +306,10 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param)
 {  
   RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
   RooAbsReal* newProfile = fLikelihoodRatio->createProfile(RooArgSet(param));
-  RooRealVar* myarg = (RooRealVar *) newProfile->getVariables()->find(param.GetName());
+
+  RooArgSet* vars = newProfile->getVariables() ;
+  RooRealVar* myarg = (RooRealVar *)vars->find(param.GetName());
+  delete vars ;
 
   double target = TMath::ChisquareQuantile(fConfidenceLevel,fParameters->getSize())/2.;
   Double_t thisArgVal = param.getVal();
@@ -343,7 +349,7 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param)
 	  //	  delete frame;
 	  delete newProfile;
 	  double ret=myarg->getMax();
-	  delete myarg;
+	  //delete myarg;
 	  return ret;
 	}
       }
