@@ -712,7 +712,6 @@ Bool_t RooAbsArg::dependsOn(const RooAbsCollection& serverList, const RooAbsArg*
   RooAbsArg* server ;
   while ((!result && (server=(RooAbsArg*)sIter->Next()))) {
     if (dependsOn(*server,ignoreArg,valueOnly)) {
-//       cout << "dependsOnValue(" << GetName() << ") result is true for arg " << server->GetName() << endl ;
       result= kTRUE;
     }
   }
@@ -763,14 +762,14 @@ Bool_t RooAbsArg::dependsOn(const RooAbsArg& testArg, const RooAbsArg* ignoreArg
 
 
 //_____________________________________________________________________________
-Bool_t RooAbsArg::overlaps(const RooAbsArg& testArg) const
+Bool_t RooAbsArg::overlaps(const RooAbsArg& testArg, Bool_t valueOnly) const
 {
   // Test if any of the nodes of tree are shared with that of the given tree
 
   RooArgSet list("treeNodeList") ;
   treeNodeServerList(&list) ;
 
-  return testArg.dependsOn(list) ;
+  return valueOnly ? testArg.dependsOnValue(list) : testArg.dependsOn(list) ;
 }
 
 
@@ -1549,6 +1548,7 @@ void RooAbsArg::optimizeCacheMode(const RooArgSet& observables, RooArgSet& optim
     } else {
       setOperMode(ADirty) ;
     }
+  } else {
   }
   // Process any RooAbsArgs contained in any of the caches of this object
   for (Int_t i=0 ;i<numCaches() ; i++) {
