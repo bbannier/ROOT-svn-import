@@ -82,6 +82,7 @@ RooFitResult::RooFitResult(const RooFitResult& other) :
   _numBadNLL(other._numBadNLL),
   _minNLL(other._minNLL),
   _edm(other._edm),
+  _globalCorr(0),
   _randomPars(0),
   _Lt(0),
   _CM(0),
@@ -634,7 +635,7 @@ void RooFitResult::fillLegacyCorrMatrix() const
   TIterator *gcIter = _globalCorr->createIterator() ;
   TIterator *parIter = _finalPars->createIterator() ;
   RooRealVar* gcVal = 0;
-  for (unsigned int i = 0; i < _CM->GetNcols() ; ++i) {
+  for (unsigned int i = 0; i < (unsigned int)_CM->GetNcols() ; ++i) {
 
     // Find the next global correlation slot to fill, skipping fixed parameters
     gcVal = (RooRealVar*) gcIter->Next() ;
@@ -642,7 +643,7 @@ void RooFitResult::fillLegacyCorrMatrix() const
 
     // Fill a row of the correlation matrix
     TIterator* cIter = ((RooArgList*)_corrMatrix.At(i))->createIterator() ;
-    for (unsigned int it = 0; it < _CM->GetNcols() ; ++it) {
+    for (unsigned int it = 0; it < (unsigned int)_CM->GetNcols() ; ++it) {
       RooRealVar* cVal = (RooRealVar*) cIter->Next() ;
       double value = (*_CM)(i,it) ;
       cVal->setVal(value);      
@@ -952,15 +953,13 @@ void RooFitResult::setCovarianceMatrix(TMatrixDSym& V)
 TH2* RooFitResult::correlationHist(const char* name) const 
 {
   // Return TH2D of correlation matrix 
-  Int_t n = _corrMatrix.GetSize() ;
+  Int_t n = _CM->GetNcols() ;
 
   TH2D* hh = new TH2D(name,name,n,0,n,n,0,n) ;
   
   for (Int_t i = 0 ; i<n ; i++) {
-    RooArgList* row = (RooArgList*) _corrMatrix.At(i) ;
     for (Int_t j = 0 ; j<n; j++) {
-      RooAbsReal* elem = (RooAbsReal*) row->at(j) ;
-      hh->Fill(i+0.5,n-j-0.5,elem->getVal()) ;
+      hh->Fill(i+0.5,n-j-0.5,(*_CM)(i,j)) ;
     }
     hh->GetXaxis()->SetBinLabel(i+1,_finalPars->at(i)->GetName()) ;
     hh->GetYaxis()->SetBinLabel(n-i,_finalPars->at(i)->GetName()) ;    
