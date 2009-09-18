@@ -24,6 +24,7 @@
 class RooAbsArg ;
 class RooArgList ;
 class TIterator ;
+class TTree ;
 
 class RooAbsDataStore : public TNamed, public RooPrintable {
 public:
@@ -90,6 +91,8 @@ public:
   virtual void checkInit() const {} ;
   
   Bool_t hasFilledCache() const { return _cachedVars.getSize()>0 ; }
+
+  virtual const TTree* tree() const { return 0 ; }
 
  protected:
 
