@@ -36,7 +36,7 @@ public:
   virtual ~RooHist();
 
   // add a datapoint for a bin with n entries, using a Poisson error
-  void addBin(Axis_t binCenter, Int_t n, Double_t binWidth= 0, Double_t xErrorFrac=1.0, Double_t scaleFactor=1.0);
+  void addBin(Axis_t binCenter, Double_t n, Double_t binWidth= 0, Double_t xErrorFrac=1.0, Double_t scaleFactor=1.0);
   // add a datapoint for a bin with n entries, using a given error
   void addBinWithError(Axis_t binCenter, Double_t n, Double_t elow, Double_t ehigh, Double_t binWidth= 0, 
 		       Double_t xErrorFrac=1.0, Bool_t correctForBinWidth=kTRUE, Double_t scaleFactor=1.0);

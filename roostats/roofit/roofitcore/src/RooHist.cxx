@@ -103,7 +103,7 @@ RooHist::RooHist(const TH1 &data, Double_t nominalBinWidth, Double_t nSigma, Roo
     Stat_t y= data.GetBinContent(bin);
     Stat_t dy = data.GetBinError(bin) ;
     if (etype==RooAbsData::Poisson) {
-      addBin(x,roundBin(y),data.GetBinWidth(bin),xErrorFrac,scaleFactor);
+      addBin(x,y,data.GetBinWidth(bin),xErrorFrac,scaleFactor);
     } else if (etype==RooAbsData::SumW2) {
       addBinWithError(x,y,dy,dy,data.GetBinWidth(bin),xErrorFrac,correctForBinWidth,scaleFactor);
     } else {
@@ -355,25 +355,47 @@ Int_t RooHist::roundBin(Double_t y)
 }
 
 
+
 //_____________________________________________________________________________
-void RooHist::addBin(Axis_t binCenter, Int_t n, Double_t binWidth, Double_t xErrorFrac, Double_t scaleFactor) 
+void RooHist::addBin(Axis_t binCenter, Double_t n, Double_t binWidth, Double_t xErrorFrac, Double_t scaleFactor) 
 {
   // Add a bin to this histogram with the specified integer bin contents
   // and using an error bar calculated with Poisson statistics. The bin width
   // is used to set the relative scale of bins with different widths.
 
+  if (n<0) {
+    coutW(Plotting) << "RooHist::addBin(" << GetName() << ") WARNING: negative entry set to zero when Poisson error bars are requested" << endl ;
+  }
+  
   Double_t scale= 1;
   if(binWidth > 0) {
     scale= _nominalBinWidth/binWidth;
   }  
   _entries+= n;
   Int_t index= GetN();
-
+  
   // calculate Poisson errors for this bin
   Double_t ym,yp,dx(0.5*binWidth);
-  if(!RooHistError::instance().getPoissonInterval(n,ym,yp,_nSigma)) {
-    coutE(Plotting) << "RooHist::addBin: unable to add bin with " << n << " events" << endl;
-    return;
+
+  if (fabs((n-Int_t(n))>1e-5)) {
+    // need interpolation
+    Double_t ym1,yp1,ym2,yp2 ;
+    Int_t n1 = Int_t(n) ;
+    Int_t n2 = n1+1 ;
+    if(!RooHistError::instance().getPoissonInterval(n1,ym1,yp1,_nSigma) ||
+       !RooHistError::instance().getPoissonInterval(n2,ym2,yp2,_nSigma)) {
+      coutE(Plotting) << "RooHist::addBin: unable to add bin with " << n << " events" << endl;
+    }
+    ym = ym1 + (n-n1)*(ym2-ym1) ;
+    yp = yp1 + (n-n1)*(yp2-yp1) ;
+    coutW(Plotting) << "RooHist::addBin(" << GetName() 
+		    << ") WARNING: non-integer bin entry " << n << " with Poisson errors, interpolating between Poisson errors of adjacent integer" << endl ;
+  } else {
+  // integer case
+  if(!RooHistError::instance().getPoissonInterval(Int_t(n),ym,yp,_nSigma)) {
+      coutE(Plotting) << "RooHist::addBin: unable to add bin with " << n << " events" << endl;
+      return;
+    }
   }
 
   SetPoint(index,binCenter,n*scale*scaleFactor);
