@@ -25,6 +25,16 @@
 
 ClassImp(RooPolyMorph) 
 
+
+//_____________________________________________________________________________
+RooPolyMorph::RooPolyMorph() : _curNormSet(0), _mref(0), _M(0) 
+{
+  _varItr    = _varList.createIterator() ;
+  _pdfItr    = _pdfList.createIterator() ; 
+}
+
+
+
 //_____________________________________________________________________________
 RooPolyMorph::RooPolyMorph(const char *name, const char *title, 
                            RooAbsReal& _m,
@@ -208,7 +218,6 @@ RooPolyMorph::CacheElem* RooPolyMorph::getCache(const RooArgSet* nset) const
   if (cache) {
     return cache ;
   }
-
   Int_t nVar = _varList.getSize();
   Int_t nPdf = _pdfList.getSize();
 
@@ -237,17 +246,23 @@ RooPolyMorph::CacheElem* RooPolyMorph::getCache(const RooArgSet* nset) const
     ownedComps.add(*(RooRealVar*)(fracl.at(i))) ;
   }
   // mean and sigma
+  RooArgList varList(_varList) ;
   for (Int_t i=0; i<nPdf; ++i) {
     for (Int_t j=0; j<nVar; ++j) {
 
       std::string meanName = Form("%s_mean_%d_%d",GetName(),i,j);
       std::string sigmaName = Form("%s_sigma_%d_%d",GetName(),i,j);      
-
-      RooMoment* mom = new RooMoment(sigmaName.c_str(),sigmaName.c_str(),(RooAbsPdf&)*_pdfList.at(i),(RooRealVar&)*_varList.at(j),2,kTRUE,kTRUE) ;
-      sigmarv[ij(i,j)] = mom ;
-      meanrv[ij(i,j)]  = mom->mean() ;
-
-      ownedComps.add(*sigmarv[ij(i,j)]) ;
+      
+//       cout << "RooPolyMorph::getCache(" << GetName() << ") nset = " << (nset?*nset:RooArgSet()) << " creating moment for pdf "
+// 	   << _pdfList.at(i)->GetName() << " for observable " << varList.at(j)->GetName() << endl ;
+      
+       RooMoment* mom = nset ? ((RooAbsPdf*)_pdfList.at(i))->sigma((RooRealVar&)*varList.at(j),*nset) 
+	 : ((RooAbsPdf*)_pdfList.at(i))->sigma((RooRealVar&)*varList.at(j)) ;
+       
+       sigmarv[ij(i,j)] = mom ;
+       meanrv[ij(i,j)]  = mom->mean() ;
+       
+       ownedComps.add(*sigmarv[ij(i,j)]) ;
     }
   }
   // slope and offset (to be set later, depend on m)
@@ -340,8 +355,22 @@ RooPolyMorph::CacheElem::~CacheElem()
 Double_t RooPolyMorph::getVal(const RooArgSet* set) const 
 {
   // Special version of getVal() overrides RooAbsReal::getVal() to save value of current normalization set
-  _curNormSet = (RooArgSet*)set ;
+  _curNormSet = set ? (RooArgSet*)set : (RooArgSet*)&_varList ;
   return RooAbsPdf::getVal(set) ;
+}
+
+
+
+//_____________________________________________________________________________
+RooAbsPdf* RooPolyMorph::sumPdf(const RooArgSet* nset) 
+{
+  CacheElem* cache = getCache(nset ? nset : _curNormSet) ;
+  
+  if (cache->_tracker->hasChanged(kTRUE)) {
+    cache->calculateFractions(*this,kFALSE); // verbose turned off
+  } 
+  
+  return cache->_sumPdf ;
 }
 
 
