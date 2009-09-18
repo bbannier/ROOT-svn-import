@@ -410,9 +410,8 @@ RooAbsArg* RooFactoryWSTool::createArg(const char* className, const char* objNam
   // Call CINT to perform constructor call. Catch any error thrown by argument conversion method
   RooAbsArg* arg = (RooAbsArg*) gROOT->ProcessLineFast(cintExpr.c_str()) ;
 
-  arg->setStringAttribute("factory_tag",Form("%s::%s(%s)",className,objName,varList)) ;
-
   if (arg) {
+    arg->setStringAttribute("factory_tag",Form("%s::%s(%s)",className,objName,varList)) ;
     if (_ws->import(*arg,Silence())) logError() ;
     RooAbsArg* ret = _ws->arg(objName) ;
     delete arg ;
@@ -567,6 +566,7 @@ RooProdPdf* RooFactoryWSTool::prod(const char *objName, const char* pdfList)
   
   if (pdf) {
     if (_ws->import(*pdf,Silence())) logError() ;
+    delete pdf ;
     return (RooProdPdf*) _ws->pdf(objName) ;
   } else {
     return 0 ;
@@ -668,6 +668,7 @@ RooAddition* RooFactoryWSTool::addfunc(const char *objName, const char* specList
   }
 
   if (_ws->import(*sum,Silence())) logError() ;
+  delete sum ;
   return (RooAddition*) _ws->pdf(objName) ;
   
 }
@@ -877,7 +878,8 @@ std::string RooFactoryWSTool::processCompositeExpression(const char* token)
   // e.g. '$MetaArg(RooGaussian::g[x,m,s],blah)' --> '$MetaArg(g,blah)'
 
   // Allocate and fill work buffer
-  char* buf = new char[strlen(token)+1] ; 
+  char* buf_base = new char[strlen(token)+1] ;   
+  char* buf = buf_base ;
   strcpy(buf,token) ;
   char* p = buf ;
 
@@ -907,8 +909,10 @@ std::string RooFactoryWSTool::processCompositeExpression(const char* token)
   if (*buf) {
     singleExpr.push_back(buf) ;
   }
-  if (singleExpr.size()==1) {
-    return processSingleExpression(token) ;
+  if (singleExpr.size()==1) {    
+    string ret = processSingleExpression(token) ;
+    delete[] buf_base ;
+    return ret ;
   }
 
   string ret ;
@@ -920,6 +924,7 @@ std::string RooFactoryWSTool::processCompositeExpression(const char* token)
     }
   }
 
+  delete[] buf_base ;
   return ret ;
 }
 
@@ -959,7 +964,11 @@ std::string RooFactoryWSTool::processSingleExpression(const char* arg)
   char* p = strtok_r(0,"",&save) ;
   
   // Return here if token is fundamental
-  if (!p) return arg ;
+  if (!p) {
+    delete[] buf ;
+    return arg ;
+  }
+    
 
   char* tok = p ;
   Int_t blevel=0 ;
@@ -1926,7 +1935,7 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
   } else if (cl=="dataobs") {
 
     // dataobs::name[dset,func]
-    RooAbsReal* funcClone = static_cast<RooAbsReal*>(ft.asFUNC(pargv[1].c_str()).clone(instName)) ;
+    RooAbsArg* funcClone = static_cast<RooAbsArg*>(ft.asARG(pargv[1].c_str()).clone(instName)) ;
     RooAbsArg* arg = ft.asDSET(pargv[0].c_str()).addColumn(*funcClone) ;
     if (!ft.ws().fundArg(arg->GetName())) {
       if (ft.ws().import(*arg,Silence())) ft.logError() ;
