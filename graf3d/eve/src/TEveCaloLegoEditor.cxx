@@ -203,8 +203,9 @@ void TEveCaloLegoEditor::SetModel(TObject* obj)
 
    fTopViewUseMaxColor->SetState(fM->GetTopViewUseMaxColor() ? kButtonDown : kButtonUp);
    fTopViewTowerColor->SetColor(TColor::Number2Pixel(fM->GetTopViewTowerColor()), kFALSE);
-   fGridColor->SetColor(TColor::Number2Pixel(fM->GetGridColor()), kFALSE);
-   fFontColor->SetColor(TColor::Number2Pixel(fM->GetFontColor()), kFALSE);
+
+   if (fM->GetGridColor()) fGridColor->SetColor(TColor::Number2Pixel(fM->GetGridColor()), kFALSE);
+   if (fM->GetGridColor()) fFontColor->SetColor(TColor::Number2Pixel(fM->GetFontColor()), kFALSE);
 
    fPlaneColor->SetColor(TColor::Number2Pixel(fM->GetPlaneColor()), kFALSE);
    fTransparency->SetNumber(fM->GetPlaneTransparency());

@@ -458,9 +458,11 @@ void TGLCameraOverlay::Render(TGLRnrCtx& rnrCtx)
       switch (fOrthographicMode)
       {
          case kBar:
+            glDepthRange(0, 0.1);
             RenderBar(rnrCtx);
             break;
          case kAxis:
+            glDepthRange(0, 0.1);
             RenderAxis(rnrCtx, kFALSE);
             break;
          case kGridFront:

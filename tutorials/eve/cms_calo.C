@@ -71,12 +71,12 @@ void MakeCaloLego(TEveCaloData* data, TEveViewer* ev, TEveScene* s)
    TEveCaloLego* lego = new TEveCaloLego(data);
    s->AddElement(lego);
    lego->Set2DMode(TEveCaloLego::kValSize);
-   lego->SetName("TwoHistLego");
+   // lego->SetAutoRebin(kFALSE);
+   lego->SetName("Calorimeter Lego");
    lego->SetPixelsPerBin(8);
    lego->InitMainTrans();
    Float_t sc = TMath::TwoPi();
    lego->RefMainTrans().SetScale(sc, sc, sc);
-   lego->SetAutoRebin(kFALSE);
 
    // add overlay lego draws scales in 2D
    TEveCaloLegoOverlay* overlay = new TEveCaloLegoOverlay();
@@ -95,6 +95,7 @@ TEveCalo3D* MakeCalo3D(TEveCaloData* data, TEveViewer *v, TEveScene *s )
    // 3D towers
 
    TEveCalo3D* calo3d = new TEveCalo3D(data);
+   calo3d->SetName("Calorimter 3D");
    calo3d->SetBarrelRadius(129);
    calo3d->SetEndCapPos(300);
    s->AddElement(calo3d);
