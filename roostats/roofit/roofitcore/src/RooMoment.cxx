@@ -71,6 +71,11 @@ RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooR
   _ixf("!ixf","ixf",this),
   _if("!if","if",this)
 {
+//   cout << "RooMoment::ctor(" << GetName() << ") func = " << func.GetName() << " x = " << x.GetName() 
+//        << " order = " << _order << " centr = " << (centr?"T":"F") << " takeRoot = " << (takeRoot?"T":"F") << endl ; 
+
+
+  setExpensiveObjectCache(func.expensiveObjectCache()) ;
   
   string pname=Form("%s_product",name) ;
 
@@ -78,16 +83,21 @@ RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooR
   if (centr) {
     string formula=Form("pow((@0-@1),%d)*@2",_order) ;
     string m1name=Form("%s_moment1",GetName()) ;
-    RooAbsReal* mom1 = new RooMoment(m1name.c_str(),m1name.c_str(),func,x,1,kFALSE) ;
+    RooAbsReal* mom1 = func.mean(x) ;
     XF = new RooFormulaVar(pname.c_str(),formula.c_str(),RooArgList(x,*mom1,func)) ;
+    XF->setExpensiveObjectCache(func.expensiveObjectCache()) ;
     addOwnedComponents(*mom1) ;
     _mean.setArg(*mom1) ;
   } else {
     string formula=Form("pow(@0*@1,%d)",_order) ;
     XF = new RooFormulaVar(pname.c_str(),formula.c_str(),RooArgSet(x,func)) ;
+    XF->setExpensiveObjectCache(func.expensiveObjectCache()) ;
   }
-  RooAbsReal* intXF = XF->createIntegral(x) ;
-  RooAbsReal* intF =  func.createIntegral(x) ;
+  RooRealIntegral* intXF = (RooRealIntegral*) XF->createIntegral(x) ;
+  RooRealIntegral* intF =  (RooRealIntegral*) func.createIntegral(x) ;
+  intXF->setCacheNumeric(kTRUE) ;
+  intF->setCacheNumeric(kTRUE) ;
+
   _xf.setArg(*XF) ;
   _ixf.setArg(*intXF) ;
   _if.setArg(*intF) ;
@@ -101,13 +111,20 @@ RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooR
   _order(orderIn),
   _takeRoot(takeRoot),
   _nset("nset","nset",this,kFALSE,kFALSE),
-  _func("function","function",this,func),
-  _x("x","x",this,x),
+  _func("function","function",this,func,kFALSE,kFALSE),
+  _x("x","x",this,x,kFALSE,kFALSE),
   _mean("!mean","!mean",this,kFALSE,kFALSE),
   _xf("!xf","xf",this,kFALSE,kFALSE),
   _ixf("!ixf","ixf",this),
   _if("!if","if",this)
 {
+
+//   cout << "RooMoment::ctor(" << GetName() << ") func = " << func.GetName() << " x = " << x.GetName() << " nset = " << nset 
+//        << " order = " << _order << " centr = " << (centr?"T":"F") << " takeRoot = " << (takeRoot?"T":"F") 
+//        << " intNSet= " << (intNSet?"T":"F") << endl ;
+
+  setExpensiveObjectCache(func.expensiveObjectCache()) ;
+
   _nset.add(nset) ;
 
   string pname=Form("%s_product",name) ;
@@ -115,20 +132,26 @@ RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooR
   if (centr) {
     string formula=Form("pow((@0-@1),%d)*@2",_order) ;
     string m1name=Form("%s_moment1",GetName()) ;
-    RooAbsReal* mom1 = new RooMoment(m1name.c_str(),m1name.c_str(),func,x,1,kFALSE,intNSet) ;
+    RooAbsReal* mom1 = func.mean(x,nset) ;
+    //mom1->Print("v") ;
     XF = new RooFormulaVar(pname.c_str(),formula.c_str(),RooArgList(x,*mom1,func)) ;
+    XF->setExpensiveObjectCache(func.expensiveObjectCache()) ;
     addOwnedComponents(*mom1) ;
     _mean.setArg(*mom1) ;
   } else {
     string formula=Form("pow(@0*@1,%d)",_order) ;
     XF = new RooFormulaVar(pname.c_str(),formula.c_str(),RooArgSet(x,func)) ;
+    XF->setExpensiveObjectCache(func.expensiveObjectCache()) ;
   }
 
   RooArgSet intSet(x) ;
   if (intNSet) intSet.add(_nset,kTRUE) ;
 
-  RooAbsReal* intXF = XF->createIntegral(intSet,&_nset) ;
-  RooAbsReal* intF =  func.createIntegral(intSet,&_nset) ;
+  RooRealIntegral* intXF = (RooRealIntegral*) XF->createIntegral(intSet,&_nset) ;
+  RooRealIntegral* intF =  (RooRealIntegral*) func.createIntegral(intSet,&_nset) ;
+  intXF->setCacheNumeric(kTRUE) ;
+  intF->setCacheNumeric(kTRUE) ;
+
   _xf.setArg(*XF) ;
   _ixf.setArg(*intXF) ;
   _if.setArg(*intF) ;
@@ -166,7 +189,9 @@ Double_t RooMoment::evaluate() const
 {
   // Calculate value  
   Double_t ratio = _ixf / _if ;
-  return _takeRoot ? pow(ratio,1.0/_order) : ratio ;
+  Double_t ret =  _takeRoot ? pow(ratio,1.0/_order) : ratio ;
+  //cout << "RooMoment(" << GetName() << ")::evaluate() ret = " << ret << endl ;
+  return ret ;
 }
 
 
