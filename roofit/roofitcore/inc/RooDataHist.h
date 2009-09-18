@@ -155,7 +155,7 @@ protected:
 
 
   Int_t       _arrSize ; //  Size of the weight array
-  Int_t*      _idxMult ; //! Multiplier jump table for index calculation
+  std::vector<Int_t> _idxMult ; // Multiplier jump table for index calculation
 
   Double_t*       _wgt ; //[_arrSize] Weight array
   Double_t*     _errLo ; //[_arrSize] Low-side error on weight array
@@ -181,7 +181,7 @@ protected:
 
 private:
 
-  ClassDef(RooDataHist,3) // Binned data set
+  ClassDef(RooDataHist,4) // Binned data set
 };
 
 #endif
