@@ -63,7 +63,6 @@
 #pragma link C++ class RooExtendPdf+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;
-#pragma link C++ class RooNuisanceGenerationMCSModule+ ;
 #endif 
  
 
