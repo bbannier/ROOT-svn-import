@@ -78,7 +78,9 @@
 #pragma link C++ class RooHistFunc+ ;
 #pragma link C++ class RooExpensiveObjectCache+ ;
 #pragma link C++ class RooExpensiveObjectCache::ExpensiveObject+ ;
+#pragma link C++ class std::map<std::string,RooAbsPdf*>+ ;
 #pragma link C++ class std::map<std::string,TH1*>+ ;
+#pragma link C++ class std::map<std::string,RooAbsDataStore*>+ ;
 #pragma link C++ class RooFactoryWSTool+ ;
 #pragma link C++ class RooBinningCategory+ ;
 #pragma link C++ class RooDerivative+ ;
@@ -96,7 +98,8 @@
 #pragma link C++ class RooMultiVarGaussian::GenData+ ;
 #pragma link C++ class RooXYChi2Var+ ;
 #pragma link C++ class RooAbsDataStore+ ;
-#pragma link C++ class RooTreeDataStore+ ;
+#pragma link C++ class RooTreeDataStore- ;
+#pragma link C++ class RooCompositeDataStore+ ;
 #pragma link C++ class RooTreeData+ ;
 #pragma link C++ class RooMinimizer+ ;
 #pragma link C++ class RooMinimizerFcn+ ;
