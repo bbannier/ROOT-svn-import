@@ -27,7 +27,7 @@ public:
 
   enum Setting { Linear, NonLinear, NonLinearPosFractions, NonLinearLinFractions } ;
 
-  RooPolyMorph() : _curNormSet(0), _mref(0), _varItr(0), _pdfItr(0), _M(0) {}
+  RooPolyMorph() ;
 
   RooPolyMorph(const char *name, const char *title, RooAbsReal& _m, const RooArgList& varList,
 	       const RooArgList& pdfList, const RooArgList& mrefList, const Setting& setting = NonLinearPosFractions);
@@ -43,6 +43,9 @@ public:
     // P.d.f is self normalized
     return kTRUE ; 
   }
+
+  virtual Double_t getVal(const RooArgSet* set=0) const ;
+  RooAbsPdf* sumPdf(const RooArgSet* nset) ;
 
 protected:
 
@@ -60,12 +63,11 @@ protected:
     const RooRealVar* frac(Int_t i ) const ; 
     void calculateFractions(const RooPolyMorph& self, Bool_t verbose=kTRUE) const;
   } ;
-  mutable RooObjCacheManager _cacheMgr ; // The cache manager
+  mutable RooObjCacheManager _cacheMgr ; //! The cache manager
   mutable RooArgSet* _curNormSet ; //! Current normalization set
 
   friend class CacheElem ; // Cache needs to be able to clear _norm pointer
 
-  virtual Double_t getVal(const RooArgSet* set=0) const ;
   Double_t evaluate() const ;
 
   void     initialize();
@@ -76,13 +78,13 @@ protected:
   int      idxmax(const double& m) const;
 
   RooRealProxy m ;
-  RooListProxy _varList ;
+  RooSetProxy  _varList ;
   RooListProxy _pdfList ;
   mutable TVectorD* _mref;
 
   TIterator* _varItr ;   //! do not persist
   TIterator* _pdfItr ;   //!
-  mutable TMatrixD* _M; //!
+  mutable TMatrixD* _M; //
 
   Setting _setting;
 
