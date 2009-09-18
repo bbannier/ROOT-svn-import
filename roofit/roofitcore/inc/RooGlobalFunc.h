@@ -85,6 +85,7 @@ RooCmdArg MoveToBack()  ;
 RooCmdArg VisualizeError(const RooDataSet& paramData, Double_t Z=1) ;
 RooCmdArg VisualizeError(const RooFitResult& fitres, Double_t Z=1, Bool_t linearMethod=kTRUE) ;
 RooCmdArg VisualizeError(const RooFitResult& fitres, const RooArgSet& param, Double_t Z=1, Bool_t linearMethod=kTRUE) ;
+RooCmdArg ShowProgress() ;
 
 // RooAbsPdf::plotOn arguments
 RooCmdArg Normalization(Double_t scaleFactor, Int_t scaleType) ;
@@ -117,8 +118,10 @@ RooCmdArg Import(TH1& histo) ;
 RooCmdArg WeightVar(const char* name) ;
 RooCmdArg WeightVar(const RooRealVar& arg) ;
 RooCmdArg Import(const char* state, RooDataSet& data) ;
+RooCmdArg Link(const char* state, RooDataSet& data) ;
 RooCmdArg Import(RooDataSet& data) ;
 RooCmdArg Import(TTree& tree) ;
+RooCmdArg ImportFromFile(const char* fname, const char* tname) ;
 RooCmdArg StoreError(const RooArgSet& aset) ; 
 RooCmdArg StoreAsymError(const RooArgSet& aset) ; 
 
