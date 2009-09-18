@@ -1506,4 +1506,5 @@ void RooProdPdf::printMetaArgs(ostream& os) const
     }
   }
   os << " " ;    
+  delete niter ;
 }
