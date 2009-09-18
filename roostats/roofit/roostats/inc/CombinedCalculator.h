@@ -173,6 +173,7 @@ namespace RooStats {
       virtual void SetPdf(RooAbsPdf& pdf) {
          if (!fWS) 
             fWS = new RooWorkspace();
+   	    fOwnsWorkspace = true ;
          if (! fWS->pdf( pdf.GetName() ) ){
             RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
             fWS->import(pdf);
