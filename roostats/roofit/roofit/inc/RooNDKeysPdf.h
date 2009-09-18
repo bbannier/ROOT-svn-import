@@ -55,15 +55,15 @@ public:
 
   RooNDKeysPdf(const char *name, const char *title,
                const RooArgList& varList, RooDataSet& data, 
-	       TString options="a", Double_t rho=1, Double_t nSigma=3) ; 
+	       TString options="a", Double_t rho=1, Double_t nSigma=3, Bool_t rotate=kTRUE) ; 
 
   RooNDKeysPdf(const char *name, const char *title,
                RooAbsReal& x, RooDataSet& data, 
-               Mirror mirror= NoMirror, Double_t rho=1, Double_t nSigma=3) ; 
+               Mirror mirror= NoMirror, Double_t rho=1, Double_t nSigma=3, Bool_t rotate=kTRUE) ; 
 
   RooNDKeysPdf(const char *name, const char *title,
                RooAbsReal& x, RooAbsReal &y, RooDataSet& data, 
-               TString options="a", Double_t rho = 1.0, Double_t nSigma=3); 
+               TString options="a", Double_t rho = 1.0, Double_t nSigma=3, Bool_t rotate=kTRUE); 
 
   RooNDKeysPdf(const RooNDKeysPdf& other, const char* name=0);
   virtual ~RooNDKeysPdf();
@@ -178,6 +178,7 @@ protected:
   mutable TVectorD* _dx;
   mutable Double_t _sigmaAvgR;
 
+  mutable Bool_t _rotate;
 
   /// sorter function
   struct SorterTV_L2H {
