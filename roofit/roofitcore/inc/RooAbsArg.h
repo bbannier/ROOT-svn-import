@@ -69,7 +69,7 @@ public:
   }
   Bool_t dependsOn(const RooAbsCollection& serverList, const RooAbsArg* ignoreArg=0, Bool_t valueOnly=kFALSE) const ;
   Bool_t dependsOn(const RooAbsArg& server, const RooAbsArg* ignoreArg=0, Bool_t valueOnly=kFALSE) const ;
-  Bool_t overlaps(const RooAbsArg& testArg) const ;
+  Bool_t overlaps(const RooAbsArg& testArg, Bool_t valueOnly=kFALSE) const ;
   Bool_t hasClients() const { return _clientList.GetSize()>0 ? kTRUE : kFALSE ; }
   inline TIterator* clientIterator() const { 
     // Return iterator over all client RooAbsArgs
@@ -385,6 +385,7 @@ public:
   RooAbsArg *findNewServer(const RooAbsCollection &newSet, Bool_t nameChange) const;
 
   RooExpensiveObjectCache& expensiveObjectCache() const ;
+  void setExpensiveObjectCache(RooExpensiveObjectCache& cache) { _eocache = &cache ; }  
 
  protected:
 
@@ -412,6 +413,7 @@ public:
   void printAttribList(ostream& os) const;
 
   // Hooks for RooTreeData interface
+  friend class RooCompositeDataStore ;
   friend class RooTreeDataStore ;
   friend class RooTreeData ;
   friend class RooDataSet ;
@@ -450,7 +452,6 @@ public:
 
   mutable Bool_t _prohibitServerRedirect ; //! Prohibit server redirects -- Debugging tool
 
-  void setExpensiveObjectCache(RooExpensiveObjectCache& cache) { _eocache = &cache ; }  
   mutable RooExpensiveObjectCache* _eocache ; // Pointer to global cache manager for any expensive components created by this object
   
   ClassDef(RooAbsArg,4) // Abstract variable
