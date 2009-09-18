@@ -44,7 +44,7 @@ ROOFITCOREH1   := Roo1DTable.h RooAbsArg.h RooAbsBinning.h RooAbsCategory.h \
                   RooConvGenContext.h RooConvIntegrandBinding.h RooCurve.h \
                   RooCustomizer.h RooDataHist.h RooDataProjBinding.h RooDataSet.h \
                   RooDirItem.h RooUpperLimitMCSModule.h RooDLLSignificanceMCSModule.h RooAbsAnaConvPdf.h \
-                  RooAddPdf.h RooEfficiency.h RooEffProd.h RooExtendPdf.h RooNuisanceGenerationMCSModule.h
+                  RooAddPdf.h RooEfficiency.h RooEffProd.h RooExtendPdf.h
 
 ROOFITCOREH2   := RooDouble.h RooEffGenContext.h RooEllipse.h RooErrorHandler.h \
                   RooErrorVar.h RooFit.h RooFitResult.h RooFormula.h \
@@ -88,7 +88,7 @@ ROOFITCOREH3   := RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic
                   RooAbsNumGenerator.h RooFoamGenerator.h RooNumGenConfig.h RooNumGenFactory.h \
                   RooMultiVarGaussian.h RooXYChi2Var.h RooAbsDataStore.h RooTreeDataStore.h RooTreeData.h \
                   RooMinimizer.h RooMinimizerFcn.h RooMoment.h RooStudyManager.h RooAbsStudy.h \
-                  RooGenFitStudy.h RooProofDriverSelector.h RooStudyPackage.h
+                  RooGenFitStudy.h RooProofDriverSelector.h RooStudyPackage.h RooCompositeDataStore.h 
 
 ROOFITCOREH1   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH1))
 ROOFITCOREH2   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH2))
