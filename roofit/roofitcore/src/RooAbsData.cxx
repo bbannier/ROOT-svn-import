@@ -1712,7 +1712,7 @@ RooPlot *RooAbsData::plotOn(RooPlot *frame, PlotOpt o) const
   TString histName(GetName());
   histName.Append("_plot");
   TH1F *hist ;
-  if (o.bins) {
+    if (o.bins) {
     hist= static_cast<TH1F*>(var->createHistogram(histName.Data(), RooFit::AxisLabel("Events"), RooFit::Binning(*o.bins))) ;
   } else {
     hist= var->createHistogram(histName.Data(), "Events", 
@@ -2247,4 +2247,11 @@ void RooAbsData::Draw(Option_t* option)
 Bool_t RooAbsData::hasFilledCache() const 
 { 
   return _dstore->hasFilledCache() ; 
+}
+
+
+//_____________________________________________________________________________
+const TTree* RooAbsData::tree() const 
+{ 
+  return _dstore->tree() ; 
 }
