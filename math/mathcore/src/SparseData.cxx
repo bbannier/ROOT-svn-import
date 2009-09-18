@@ -22,6 +22,7 @@
 #include "Fit/SparseData.h"
 
 #include "TH1.h"
+#include "THnSparse.h"
 
 using namespace std;
 
@@ -181,11 +182,24 @@ namespace ROOT {
          Box originalBox(min, max);
          l = new ProxyListBox();
          l->push_back(originalBox);
-         
-//          cout << "Original List: -" << endl;
-//          PrintList();
-//          cout << "END OF PRINTING" << endl;
-//          cout << endl;
+      }
+
+      SparseData::SparseData(THnSparse* h1)
+      {
+         int dim(h1->GetNdimensions());
+         vector<double> min(dim);
+         vector<double> max(dim);
+
+         for ( int i = 0; i < dim; ++i )
+         {
+            TAxis* axis = h1->GetAxis(i);
+            min[i] = axis->GetXmin();
+            max[i] = axis->GetXmax();
+         }
+
+         Box originalBox(min, max);
+         l = new ProxyListBox();
+         l->push_back(originalBox);
       }
 
       SparseData::~SparseData()

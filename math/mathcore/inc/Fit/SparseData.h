@@ -25,6 +25,7 @@
 using namespace std;
 
 class TH1;
+class THnSparse;
 
 namespace ROOT { 
 
@@ -35,6 +36,7 @@ namespace ROOT {
       class SparseData : public FitData  { 
       public:
          SparseData(TH1* h);
+         SparseData(THnSparse* h);
          ~SparseData();
 
          unsigned int NPoints() const;

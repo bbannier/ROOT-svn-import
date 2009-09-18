@@ -19,6 +19,7 @@
 
 
 class TH1; 
+class THnSparse;
 class TF1;
 class TF2;
 class TGraph; 
@@ -86,6 +87,12 @@ namespace ROOT {
           needed in case of integral option and to reject points rejected by the function
       */ 
       void FillData ( SparseData  & dv, const TH1 * hist, TF1 * func = 0); 
+
+      /** 
+          fill the data vector from a THnSparse. Pass also the TF1 function which is 
+          needed in case of integral option and to reject points rejected by the function
+      */ 
+      void FillData ( SparseData  & dv, const THnSparse * hist, TF1 * func = 0); 
 
       /** 
           fill the data vector from a TGraph2D. Pass also the TF1 function which is 

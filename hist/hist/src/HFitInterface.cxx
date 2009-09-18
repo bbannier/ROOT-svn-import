@@ -23,6 +23,7 @@
 #include <cmath>
 
 #include "TH1.h"
+#include "THnSparse.h"
 #include "TF1.h"
 #include "TGraph2D.h"
 #include "TGraph.h" 
@@ -594,6 +595,36 @@ void FillData(SparseData & dv, const TH1 * h1, TF1 * /*func*/)
 
          dv.Add(min, max, h1->GetBinContent(i), h1->GetBinError(i));
       }
+}
+
+void FillData(SparseData & dv, const THnSparse * h1, TF1 * /*func*/) 
+{
+   const int dim = h1->GetNdimensions();
+   vector<double> min(dim);
+   vector<double> max(dim);
+   vector<Int_t>  coord(dim);
+
+   ULong64_t nEntries = h1->GetNbins();
+   for ( ULong64_t i = 0; i < nEntries; i++ )
+   {
+      double value = h1->GetBinContent( i, &coord[0] );
+      if ( !value ) continue;
+
+//       cout << "FILLDATA: h1(" << i << ")";
+//       for ( int j = 0; j < dim; ++j )
+//       {
+//          cout << "[" << h1->GetAxis(j)->GetBinLowEdge(coord[j]) 
+//               << "-" << h1->GetAxis(j)->GetBinUpEdge(coord[j]) << "]";
+//       }
+//       cout << h1->GetBinContent(i) << endl;
+
+      for ( int j = 0; j < dim; ++j )
+      {
+         min[j] = h1->GetAxis(j)->GetBinLowEdge(coord[j]);
+         max[j] = h1->GetAxis(j)->GetBinUpEdge(coord[j]);
+      }
+      dv.Add(min, max, value, h1->GetBinError(i));
+   }
 }
 
 void FillData ( BinData  & dv, const TGraph * gr,  TF1 * func ) {  
