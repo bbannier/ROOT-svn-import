@@ -564,6 +564,7 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
   iter = cloneSet2->createIterator() ;
   RooAbsArg* node ;
   RooArgSet recycledNodes ;
+  RooArgSet nodesToBeDeleted ;
   while((node=(RooAbsArg*)iter->Next())) {
 
     if (_autoClass) {
@@ -580,6 +581,7 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
 
     // Check if node is already in workspace (can only happen for variables or identical instances, unless RecycleConflictNodes is specified)
     RooAbsArg* wsnode = _allOwnedNodes.find(node->GetName()) ;
+
     if (wsnode) {
       // Do not import node, add not to list of nodes that require reconnection
       if (!silence && useExistingNodes) {
@@ -589,6 +591,9 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
       }
       recycledNodes.add(*_allOwnedNodes.find(node->GetName())) ;
 
+      // Delete clone of incoming node
+      nodesToBeDeleted.addOwned(*node) ;
+      
     } else {
       // Import node
       if (!silence) {
@@ -619,9 +624,10 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
       node->redirectServers(recycledNodes) ;
     }
   }
-
   delete iter ;
-  
+
+  cloneSet2->releaseOwnership() ;
+  delete cloneSet2 ;  
 
   return kFALSE ;
 }
@@ -2039,6 +2045,16 @@ void RooWorkspace::Streamer(TBuffer &R__b)
    if (R__b.IsReading()) {
 
       R__b.ReadClassBuffer(RooWorkspace::Class(),this);
+
+      // Make expensive object cache of all objects point to intermal copy.
+      // Somehow this doesn't work OK automatically
+      TIterator* iter = _allOwnedNodes.createIterator() ;
+      RooAbsArg* node ;
+      while((node=(RooAbsArg*)iter->Next())) {
+	node->setExpensiveObjectCache(_eocache) ;
+      }
+      delete iter ;
+
 
    } else {
 
