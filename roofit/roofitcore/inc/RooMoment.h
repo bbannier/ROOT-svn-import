@@ -41,6 +41,10 @@ public:
 
   RooAbsReal* mean() { return (RooAbsReal*) _mean.absArg() ; }
 
+  const RooAbsReal& xF() { return _xf.arg() ; }
+  const RooAbsReal& ixF() { return _ixf.arg() ; }
+  const RooAbsReal& iF() { return _if.arg() ; }
+
 protected:
 
   Int_t _order ;                         // Moment order
