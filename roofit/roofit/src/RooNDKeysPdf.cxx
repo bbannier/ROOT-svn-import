@@ -53,14 +53,15 @@ ClassImp(RooNDKeysPdf)
 //_____________________________________________________________________________
 RooNDKeysPdf::RooNDKeysPdf(const char *name, const char *title,
 			   const RooArgList& varList, RooDataSet& data,
-			   TString options, Double_t rho, Double_t nSigma) : 
+			   TString options, Double_t rho, Double_t nSigma, Bool_t rotate) : 
   RooAbsPdf(name,title),
   _varList("varList","List of variables",this),
   _data(data),
   _options(options),
   _widthFactor(rho),
   _nSigma(nSigma),
-  _weights(&_weights0)
+  _weights(&_weights0),
+  _rotate(rotate)
 {
   // Construct N-dimensional kernel estimation p.d.f. in observables 'varList'
   // from dataset 'data'. Options can be 
@@ -106,14 +107,15 @@ RooNDKeysPdf::RooNDKeysPdf(const char *name, const char *title,
 //_____________________________________________________________________________
 RooNDKeysPdf::RooNDKeysPdf(const char *name, const char *title,
                            RooAbsReal& x, RooDataSet& data,
-                           Mirror mirror, Double_t rho, Double_t nSigma) : 
+                           Mirror mirror, Double_t rho, Double_t nSigma, Bool_t rotate) : 
   RooAbsPdf(name,title),
   _varList("varList","List of variables",this),
   _data(data),
   _options("a"),
   _widthFactor(rho),
   _nSigma(nSigma), 
-  _weights(&_weights0)
+  _weights(&_weights0),
+  _rotate(rotate)
 { 
   // Backward compatibility constructor for (1-dim) RooKeysPdf. If you are a new user,
   // please use the first constructor form.
@@ -136,14 +138,15 @@ RooNDKeysPdf::RooNDKeysPdf(const char *name, const char *title,
 
 //_____________________________________________________________________________
 RooNDKeysPdf::RooNDKeysPdf(const char *name, const char *title, RooAbsReal& x, RooAbsReal & y,
-                           RooDataSet& data, TString options, Double_t rho, Double_t nSigma) : 
+                           RooDataSet& data, TString options, Double_t rho, Double_t nSigma, Bool_t rotate) : 
   RooAbsPdf(name,title),
   _varList("varList","List of variables",this),
   _data(data),
   _options(options),
   _widthFactor(rho),
   _nSigma(nSigma),
-  _weights(&_weights0)
+  _weights(&_weights0),
+  _rotate(rotate)
 { 
   // Backward compatibility constructor for Roo2DKeysPdf. If you are a new user,
   // please use the first constructor form.
@@ -167,7 +170,8 @@ RooNDKeysPdf::RooNDKeysPdf(const RooNDKeysPdf& other, const char* name) :
   _options(other._options),
   _widthFactor(other._widthFactor),
   _nSigma(other._nSigma),
-  _weights(&_weights0)
+  _weights(&_weights0),
+  _rotate(other._rotate)
 {
   // Constructor
   _varItr      = _varList.createIterator() ;
@@ -319,7 +323,7 @@ RooNDKeysPdf::setOptions() const
 			<< "\n\tbandWidthType    = " << _options.Contains("a")    
 			<< "\n\tmirror           = " << _mirror
 			<< "\n\tdebug            = " << _debug            
-			<< "\n\tverbose          = " << _verbose          
+			<< "\n\tverbose          = " << _verbose  
 			<< endl;
 
   if (_nSigma<2.0) {
@@ -483,11 +487,21 @@ RooNDKeysPdf::loadDataSet(Bool_t firstCall) const
       (*_corrMat)(j,k) = (*_covMat)(j,k)/(_sigma[j]*_sigma[k]) ;
   }
 
-
   if (_verbose) {
     //_covMat->Print();
     _rotMat->Print();
     _corrMat->Print();
+    _sigmaR->Print();
+  }
+
+  if (!_rotate) {
+    _rotMat->Print();
+    _sigmaR->Print();
+    TMatrixD haar(_nDim,_nDim);
+    TMatrixD unit(TMatrixD::kUnit,haar);
+    *_rotMat = unit;
+    for (Int_t j=0; j<_nDim; j++) { (*_sigmaR)[j] = _sigma[j]; }
+    _rotMat->Print();
     _sigmaR->Print();
   }
 
@@ -586,6 +600,7 @@ RooNDKeysPdf::mirrorDataSet() const
       _dataPts.push_back(epoints[m]);
       //_weights0.push_back(_weights0[i]);
       for (Int_t j=0; j<_nDim; j++) { pointR[j] = (epoints[m])[j]; }
+      pointR *= *_rotMat;
       _dataPtsR.push_back(pointR);
     }
     
@@ -599,7 +614,6 @@ RooNDKeysPdf::mirrorDataSet() const
 
 
 void
-
 //_____________________________________________________________________________
 RooNDKeysPdf::loadWeightSet() const
 {
@@ -608,9 +622,9 @@ RooNDKeysPdf::loadWeightSet() const
   for (Int_t i=0; i<_nEventsM; i++) {
     _data.get(_idx[i]);
     Double_t myweight = _data.weight();
-    if ( TMath::Abs(myweight)>_minWeight ) { 
+    //if ( TMath::Abs(myweight)>_minWeight ) { 
       _wMap[i] = myweight; 
-    }
+    //}
   }
 
   coutI(Contents) << "RooNDKeysPdf::loadWeightSet(" << this << ") : Number of weighted events : " << _wMap.size() << endl;
@@ -618,7 +632,6 @@ RooNDKeysPdf::loadWeightSet() const
 
 
 void
-
 //_____________________________________________________________________________
 RooNDKeysPdf::calculateShell(BoxInfo* bi) const 
 {
@@ -681,7 +694,6 @@ RooNDKeysPdf::calculateShell(BoxInfo* bi) const
     }
   }
 
-  
   coutI(Contents) << "RooNDKeysPdf::calculateShell() : " 
 		  << "\n Events in shell " << bi->sIdcs.size() 
 		  << "\n Events in box " << bi->bIdcs.size() 
@@ -691,7 +703,6 @@ RooNDKeysPdf::calculateShell(BoxInfo* bi) const
 
 
 void
-
 //_____________________________________________________________________________
 RooNDKeysPdf::calculatePreNorm(BoxInfo* bi) const
 {
@@ -714,7 +725,6 @@ RooNDKeysPdf::calculatePreNorm(BoxInfo* bi) const
 
 
 void
-
 //_____________________________________________________________________________
 RooNDKeysPdf::sortDataIndices(BoxInfo* bi) const
 {
@@ -743,7 +753,6 @@ RooNDKeysPdf::sortDataIndices(BoxInfo* bi) const
 
 
 void
-
 //_____________________________________________________________________________
 RooNDKeysPdf::calculateBandWidth() const
 {
@@ -758,7 +767,7 @@ RooNDKeysPdf::calculateBandWidth() const
   
   for (Int_t i=0; i<_nEvents; i++) {
     vector<Double_t>& weight = _weights0[i];
-    for (Int_t j=0; j<_nDim; j++) { weight[j] = _rho[j] * _n * (*_sigmaR)[j]; }
+    for (Int_t j=0; j<_nDim; j++) { weight[j] = _rho[j] * _n * (*_sigmaR)[j] ; }
   }
 
   // adaptive width
@@ -775,8 +784,8 @@ RooNDKeysPdf::calculateBandWidth() const
 
       vector<Double_t>& weight = _weights1[i];
       for (Int_t j=0; j<_nDim; j++) {
-	Double_t norm = ((_rho[j]*_n*(*_sigmaR)[j])/sqrt(_sigmaAvgR)) ; 
-	weight[j] = norm * f / sqrt(12.);
+	Double_t norm = (_rho[j]*_n*(*_sigmaR)[j]) / sqrt(_sigmaAvgR) ; 
+	weight[j] = norm * f / sqrt(12.) ;  //  note additional factor of sqrt(12) compared with HEP-EX/0011057
       }
     }
     _weights = &_weights1;
@@ -801,12 +810,10 @@ RooNDKeysPdf::gauss(vector<Double_t>& x, vector<vector<Double_t> >& weights) con
 
   map<Int_t,Bool_t>::iterator ibMapItr = ibMap.begin();
 
-  Double_t count(0) ;
   for (; ibMapItr!=ibMap.end(); ++ibMapItr) {
     Int_t i = (*ibMapItr).first;
 
     Double_t g(1.);
-    count++ ;
 
     const vector<Double_t>& point  = _dataPts[i];
     const vector<Double_t>& weight = weights[_idx[i]];
@@ -821,9 +828,9 @@ RooNDKeysPdf::gauss(vector<Double_t>& x, vector<vector<Double_t> >& weights) con
 
     for (Int_t j=0; j<_nDim; j++) {
       Double_t r = (*_dx)[j];  //x[j] - point[j];
-      Double_t c = 1./(2.*pow(weight[j],2));
+      Double_t c = 1./(2.*weight[j]*weight[j]);
 
-      g *= exp( -c*pow(r,2) );
+      g *= exp( -c*r*r );
       g *= 1./(_sqrt2pi*weight[j]);
     }
     z += (g*_wMap[_idx[i]]);
@@ -833,7 +840,6 @@ RooNDKeysPdf::gauss(vector<Double_t>& x, vector<vector<Double_t> >& weights) con
 
 
 void
-
 //_____________________________________________________________________________
 RooNDKeysPdf::loopRange(vector<Double_t>& x, map<Int_t,Bool_t>& ibMap) const
 {
@@ -879,7 +885,6 @@ RooNDKeysPdf::loopRange(vector<Double_t>& x, map<Int_t,Bool_t>& ibMap) const
 
 
 void
-
 //_____________________________________________________________________________
 RooNDKeysPdf::boxInfoInit(BoxInfo* bi, const char* rangeName, Int_t /*code*/) const
 {
@@ -941,11 +946,12 @@ Int_t
 //_____________________________________________________________________________
 RooNDKeysPdf::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName) const
 {
+
+  if (rangeName) return 0 ;
+
   Int_t code=0;
-
-  if (rangeName) { code=0; }
   if (matchArgs(allVars,analVars,RooArgSet(_varList))) { code=1; }
-
+  
   return code;
 
 }
@@ -1041,7 +1047,7 @@ RooNDKeysPdf::analyticalIntegral(Int_t code, const char* rangeName) const
       norm += prob * _wMap[_idx[bi->sIdcs[i]]];    
     } 
     
-    cxcoutD(Eval) << "RooNDKeysPdf::analyticalIntegral() : Final normalization : " << norm << endl;
+    cxcoutD(Eval) << "RooNDKeysPdf::analyticalIntegral() : Final normalization : " << norm << " " << bi->nEventsBW << endl;
     return norm;
   }
 }
