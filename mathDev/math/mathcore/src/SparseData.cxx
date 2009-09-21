@@ -27,22 +27,33 @@ namespace ROOT {
 
    namespace Fit { 
 
+      //This class is a helper. It represents a bin in N
+      //dimensions. The change in the name is to avoid name collision.
       class Box
       {
       public:
+         // Creates a Box with limits specified by the vectors and
+         // content=value and error=error
          Box(vector<double>& min, vector<double>& max, double value = 0.0, double error = 1.0):
             _min(min), _max(max), _val(value), _error(error)
          { }
          
+         // Compares to Boxes to see if they are equal in all its
+         // variables. This is to be used by the std::find algorithm
          bool operator==(const Box& b)
          { return (_min == b._min) && (_max == b._max) 
                && (_val == b._val) && (_error == b._error);  }
          
+         // Get the list of minimum coordinates
          const vector<double>& getMin() const { return _min; }
+         // Get the list of maximum coordinates
          const vector<double>& getMax() const { return _max; }
+         // Get the value of the Box
          double getVal() const { return _val; }
+         // Get the rror of the Box
          double getError() const { return _error; }
          
+         // Add an amount to the content of the Box
          void addVal(const double value) { _val += value; }
          
          friend class BoxContainer;
@@ -55,11 +66,16 @@ namespace ROOT {
          double _error;
       };
       
+      // This class is just a helper to be used in std::for_each to
+      // simplify the code later. It's just a definition of a method
+      // that will discern whether a Box is included into another one
       class BoxContainer
       {
       private:
          const Box& _b;
       public:
+         //Constructs the BoxContainer object with a Box that is meant
+         //to include another one that will be provided later
          BoxContainer(const Box& b): _b(b) {}
          
          bool operator() (const Box& b1)
@@ -91,6 +107,9 @@ namespace ROOT {
          }
       };
       
+      // Another helper class to be used in std::for_each to simplify
+      // the code later. It implements the operator() to know if a
+      // specified Box is big enough to contain any 'space' inside.
       class AreaComparer
       {
       public:
@@ -116,6 +135,13 @@ namespace ROOT {
          double limit;
       };
       
+
+      // This is the key of the SparseData structure. This method
+      // will, by recursion, divide the area passed as an argument in
+      // min and max into pieces to insert the Box defined by bmin and
+      // bmax. It will do so from the highest dimension until it gets
+      // to 1 and create the corresponding boxes to divide the
+      // original space.
       void DivideBox( const vector<double>& min, const vector<double>& max,
                       const vector<double>& bmin, const vector<double>& bmax,
                       const unsigned int size, const unsigned int n,
@@ -190,22 +216,28 @@ namespace ROOT {
       void SparseData::Add(std::vector<double>& min, std::vector<double>& max, 
                            const double content, const double error)
       {
+         // Little box is the new Bin to be added
          Box littleBox(min, max);
          list<Box>::iterator it;
+         // So we look for the Bin already in the list that contains
+         // littleBox
          it = std::find_if(l->begin(), l->end(), BoxContainer(littleBox));
          if ( it != l->end() )
 //             cout << "Found: " << *it << endl;
             ;
          else
             cout << "FAILED!" << endl;
+         // If it happens to have a value, then we add the value,
          if ( it->getVal() )
             it->addVal( content );
          else
          {
+            // otherwise, we divide the container!
             DivideBox(it->getMin(), it->getMax(),
                       littleBox.getMin(), littleBox.getMax(),
                       it->getMin().size(), it->getMin().size() - 1,
                       l->getList(), content, error );
+            // and remove it from the list
             l->remove(*it);
          }
       }
@@ -222,14 +254,16 @@ namespace ROOT {
          const unsigned int dim = it->getMin().size();
 
          bd.Initialize(l->getList().size(), dim); 
+         // Visit all the stored Boxes
          for ( ; it != l->end(); ++it )
          {
             vector<double> mid(dim);
+            // fill up the vector with the mid point of the Bin
             for ( unsigned int i = 0; i < dim; ++i)
             {
                mid[i] = ((it->getMax()[i] - it->getMin()[i]) /2) + it->getMin()[i];
             }
-           
+            // And store it into the BinData structure
             bd.Add(&mid[0], it->getVal(), it->getError());
          }
       }
@@ -239,9 +273,12 @@ namespace ROOT {
          list<Box>::iterator it = l->begin();
 
          bd.Initialize(l->getList().size(), it->getMin().size()); 
+         // Visit all the stored Boxes
          for ( ; it != l->end(); ++it )
          {
+            //Store the minimum value
             bd.Add(&(it->getMin()[0]), it->getVal(), it->getError());
+            //and the maximum
             bd.AddBinUpEdge(&(it->getMax()[0]));
          }
       }
@@ -252,15 +289,18 @@ namespace ROOT {
          const unsigned int dim = it->getMin().size();
 
          bd.Initialize(l->getList().size(), dim);
+         // Visit all the stored Boxes
          for ( ; it != l->end(); ++it )
          {
+            // if the value is zero, jump to the next
             if ( it->getVal() == 0 ) continue;
             vector<double> mid(dim);
+            // fill up the vector with the mid point of the Bin
             for ( unsigned int i = 0; i < dim; ++i)
             {
                mid[i] = ((it->getMax()[i] - it->getMin()[i]) /2) + it->getMin()[i];
             }
-           
+            // And store it into the BinData structure
             bd.Add(&mid[0], it->getVal(), it->getError());
          }
       }
