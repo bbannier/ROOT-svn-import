@@ -237,8 +237,8 @@ THnSparse* MarkovChain::GetAsSparseHist(RooAbsCollection* whichVars) const
    for (Int_t i = 0; i < size; i++) {
       entry = fChain->get(i);
       it->Reset();
-      for (Int_t i = 0; i < dim; i++)
-         x[i] = entry->getRealValue(it->Next()->GetName());
+      for (Int_t ii = 0; ii < dim; ii++)
+         x[ii] = entry->getRealValue(it->Next()->GetName());
       sparseHist->Fill(x, fChain->weight());
    }
    delete[] x;
