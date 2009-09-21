@@ -359,15 +359,15 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const RooAbsOptTestStatistic& oth
     
         // Revert any AClean nodes imported from original to ADirty as not optimization is applicable to test statistics with borrowed data
     Bool_t wasOpt(kFALSE) ;
-    TIterator* iter = _funcCloneSet->createIterator() ;
-    RooAbsArg *branch ;
-    while((branch=(RooAbsArg*)iter->Next())){
-      if (branch->operMode()==RooAbsArg::AClean) {
-	branch->setOperMode(RooAbsArg::ADirty) ;
+    TIterator* biter = _funcCloneSet->createIterator() ;
+    RooAbsArg *branch2 ;
+    while((branch2=(RooAbsArg*)biter->Next())){
+      if (branch2->operMode()==RooAbsArg::AClean) {
+	branch2->setOperMode(RooAbsArg::ADirty) ;
 	wasOpt=kTRUE ;
       }
     }
-    delete iter ;  
+    delete biter ;  
 
     if (wasOpt) {
       coutW(Optimization) << "RooAbsOptTestStatistic::cctor(" << GetName() << ") WARNING clone of optimized test statistic with unowned data will not be optimized, "
