@@ -971,9 +971,9 @@ TMatrixDSym* RooAbsData::corrcovMatrix(const RooArgList& vars, const char* cutSp
 
   // Calculate <x_i> and <x_i y_j>
   for(Int_t index= 0; index < numEntries(); index++) {
-    const RooArgSet* vars = get(index) ;
+    const RooArgSet* dvars = get(index) ;
     if (select && select->eval()==0) continue ;
-    if (cutRange && vars->allInRange(cutRange)) continue ;
+    if (cutRange && dvars->allInRange(cutRange)) continue ;
 
     RooRealVar* varx, *vary ;
     iter->Reset() ;
