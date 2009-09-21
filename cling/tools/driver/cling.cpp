@@ -49,10 +49,7 @@ int main( int argc, char **argv )
    langInfo.Exceptions = 1;
    
 
-   llvm::OwningPtr<clang::TargetInfo> targetInfo;
-   targetInfo.reset( clang::TargetInfo::CreateTargetInfo( HOST_TARGET ) );
-
-   cling::Interpreter interpreter( langInfo, targetInfo.get() );
+   cling::Interpreter interpreter( langInfo );
 
    //---------------------------------------------------------------------------
    // We're supposed to parse a file

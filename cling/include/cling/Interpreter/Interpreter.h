@@ -10,6 +10,7 @@
 #include <clang/Basic/LangOptions.h>
 #include <clang/Basic/Diagnostic.h>
 #include <clang/AST/Type.h>
+#include <llvm/ADT/OwningPtr.h>
 
 #include <string>
 #include <map>
@@ -30,7 +31,9 @@ namespace llvm
 //------------------------------------------------------------------------------
 namespace clang
 {
-   class TranslationUnit;
+   namespace idx {
+      class TranslationUnit;
+   }
    class Decl;
    class SourceManager;
    class FileManager;
@@ -57,10 +60,8 @@ namespace cling
       //! Constructor
       //!
       //! param language the language definition
-      //! param target   the target definition, the user remains the owner
-      //!                of the object!
       //---------------------------------------------------------------------
-      Interpreter( clang::LangOptions language, clang::TargetInfo* target );
+      Interpreter( clang::LangOptions language, clang::TargetInfo* target = 0 );
 
       //---------------------------------------------------------------------
       // Destructor
@@ -184,30 +185,31 @@ namespace cling
       struct UnitInfo_t
       {
          llvm::Module*             module; //!< compiled module
-         clang::TranslationUnit*   ast;    //!< full ast
+         clang::idx::TranslationUnit*   ast;    //!< full ast
          std::vector<clang::Decl*> decls;  //!< function declarations
       };
 
       std::map<UnitID_t, UnitInfo_t> m_units;
       clang::LangOptions             m_lang;
       clang::TargetInfo*             m_target;
+      llvm::OwningPtr<clang::TargetInfo> m_ownedTarget;
       clang::FileManager*            m_fileMgr;
       clang::DiagnosticClient*       m_diagClient;
       std::vector<std::pair<clang::Decl*, const clang::ASTContext*> >      m_decls;
       llvm::Module*                  m_module;
 
    private:
-      clang::TranslationUnit* parse( const llvm::MemoryBuffer* buff );
-      clang::TranslationUnit* parse( const std::string& fileName );
-      clang::TranslationUnit* parse( clang::SourceManager* srcMgr );
-      llvm::Module*           compile( clang::TranslationUnit* tu );
+      clang::idx::TranslationUnit* parse( const llvm::MemoryBuffer* buff );
+      clang::idx::TranslationUnit* parse( const std::string& fileName );
+      clang::idx::TranslationUnit* parse( clang::SourceManager* srcMgr );
+      llvm::Module*           compile( clang::idx::TranslationUnit* tu );
       bool                    addUnit( const UnitID_t& id,
-                                       clang::TranslationUnit* tu );
+                                       clang::idx::TranslationUnit* tu );
 
       std::vector<clang::Decl*>
-      extractDeclarations( clang::TranslationUnit* tu );
-      void insertDeclarations( clang::TranslationUnit* tu, clang::Sema* sema );
-      void dumpTU( clang::TranslationUnit* tu );
+      extractDeclarations( clang::idx::TranslationUnit* tu );
+      void insertDeclarations( clang::idx::TranslationUnit* tu, clang::Sema* sema );
+      void dumpTU( clang::idx::TranslationUnit* tu );
       clang::QualType typeCopy( clang::QualType source,
                                 const clang::ASTContext& sourceContext,
                                 clang::ASTContext& targetContext );
