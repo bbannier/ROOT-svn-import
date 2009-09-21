@@ -540,7 +540,7 @@ RooDataSet::RooDataSet(const char *name, const char *title, RooDataSet *dset,
 
 
 //_____________________________________________________________________________
-RooDataSet::RooDataSet(const char *name, const char *title, TTree *tree, 
+RooDataSet::RooDataSet(const char *name, const char *title, TTree *intree, 
 		       const RooArgSet& vars, const RooFormulaVar& cutVar, const char* wgtVarName) :
   RooAbsData(name,title,vars)
 {
@@ -558,7 +558,7 @@ RooDataSet::RooDataSet(const char *name, const char *title, TTree *tree,
   // constructor with a string based cut expression is recommended.
 
   // Initialize datastore
-  _dstore = new RooTreeDataStore(name,title,_vars,*tree,cutVar) ;
+  _dstore = new RooTreeDataStore(name,title,_vars,*intree,cutVar) ;
 
   appendToDir(this,kTRUE) ;
 
@@ -568,7 +568,7 @@ RooDataSet::RooDataSet(const char *name, const char *title, TTree *tree,
 
 
 //_____________________________________________________________________________
-RooDataSet::RooDataSet(const char *name, const char *title, TTree *tree, 
+RooDataSet::RooDataSet(const char *name, const char *title, TTree *intree, 
 		       const RooArgSet& vars, const char *selExpr, const char* wgtVarName) :
   RooAbsData(name,title,vars)
 {
@@ -588,7 +588,7 @@ RooDataSet::RooDataSet(const char *name, const char *title, TTree *tree,
   //
 
   // Initialize datastore
-  _dstore = new RooTreeDataStore(name,title,_vars,*tree,selExpr) ;
+  _dstore = new RooTreeDataStore(name,title,_vars,*intree,selExpr) ;
 
   appendToDir(this,kTRUE) ;
 
