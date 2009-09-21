@@ -15,21 +15,24 @@
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/Config/config.h>
+#include <llvm/Transforms/Utils/Cloning.h>
 
-#include <clang/Driver/TextDiagnosticPrinter.h>
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/SourceManager.h>
+#include <clang/Index/TranslationUnit.h>
 #include <clang/Lex/HeaderSearch.h>
-#include <clang/Driver/InitHeaderSearch.h>
 #include <clang/Lex/Preprocessor.h>
+#include <clang/Frontend/InitHeaderSearch.h>
+#include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/CodeGen/ModuleBuilder.h>
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/ASTConsumer.h>
-#include <clang/AST/TranslationUnit.h>
 #include <clang/AST/Decl.h>
-#include <clang/Parse/Parser.h>
 #include <clang/AST/DeclarationName.h>
 #include <clang/AST/Stmt.h>
+#include <clang/Parse/Parser.h>
+#include <clang/Basic/TargetInfo.h>
 
 // Private CLANG headers
 #include <Sema/Sema.h>
@@ -42,11 +45,15 @@ namespace cling
    //---------------------------------------------------------------------------
    // Constructor
    //---------------------------------------------------------------------------
-   Interpreter::Interpreter( clang::LangOptions language, clang::TargetInfo* target ):
+   Interpreter::Interpreter( clang::LangOptions language, clang::TargetInfo* target /*= 0*/):
       m_lang( language ), m_target( target ), m_module( 0 )
    {
       m_fileMgr    = new clang::FileManager();
       m_diagClient = new clang::TextDiagnosticPrinter( llvm::errs() );
+      if (!m_target) {
+         m_ownedTarget.reset( clang::TargetInfo::CreateTargetInfo( LLVM_HOSTTRIPLE ) );
+         m_target = m_ownedTarget.get();
+      }
    }
 
    //---------------------------------------------------------------------------
@@ -78,7 +85,7 @@ namespace cling
       //------------------------------------------------------------------------
       // Process the unit
       //------------------------------------------------------------------------
-      clang::TranslationUnit* tu = parse( fileName );
+      clang::idx::TranslationUnit* tu = parse( fileName );
       return addUnit( fileName, tu );
    }
 
@@ -113,7 +120,7 @@ namespace cling
    llvm::Module* Interpreter::link( const std::string& fileName,
                                     std::string* errMsg )
    {
-      clang::TranslationUnit* tu     = parse( fileName );
+      clang::idx::TranslationUnit* tu     = parse( fileName );
       llvm::Module*           module = compile( tu );
       llvm::Module*           result = link( module, errMsg );
       delete tu;
@@ -128,7 +135,7 @@ namespace cling
    llvm::Module* Interpreter::link( const llvm::MemoryBuffer* buff,
                                     std::string* errMsg )
    {
-      clang::TranslationUnit* tu     = parse( buff );
+      clang::idx::TranslationUnit* tu     = parse( buff );
       llvm::Module*           module = compile( tu );
       llvm::Module*           result = link( module, errMsg );
       delete tu;
@@ -150,14 +157,11 @@ namespace cling
       //------------------------------------------------------------------------
       // We have some module so we should link the current one to it
       //------------------------------------------------------------------------
-      llvm::Linker linker( "executable", "executable" );
+      llvm::Linker linker( "executable", llvm::CloneModule(module) );
 
       if( m_module )
-         if (linker.LinkInModule( copyModule( m_module ), errMsg ))
+         if (linker.LinkInModule( llvm::CloneModule( m_module ), errMsg ))
             return 0;
-
-      if( linker.LinkInModule( copyModule( module ), errMsg ) )
-         return 0;
 
       return linker.releaseModule();
    }
@@ -165,7 +169,7 @@ namespace cling
    //---------------------------------------------------------------------------
    // Parse memory buffer
    //---------------------------------------------------------------------------
-   clang::TranslationUnit* Interpreter::parse( const llvm::MemoryBuffer* buff )
+   clang::idx::TranslationUnit* Interpreter::parse( const llvm::MemoryBuffer* buff )
    {
       //------------------------------------------------------------------------
       // Create a file manager
@@ -187,7 +191,7 @@ namespace cling
    //---------------------------------------------------------------------------
    // Parse file
    //---------------------------------------------------------------------------
-   clang::TranslationUnit* Interpreter::parse( const std::string& fileName )
+   clang::idx::TranslationUnit* Interpreter::parse( const std::string& fileName )
    {
       //------------------------------------------------------------------------
       // Create a file manager
@@ -210,7 +214,7 @@ namespace cling
    //---------------------------------------------------------------------------
    // Parse
    //---------------------------------------------------------------------------
-   clang::TranslationUnit* Interpreter::parse( clang::SourceManager* srcMgr )
+   clang::idx::TranslationUnit* Interpreter::parse( clang::SourceManager* srcMgr )
    {
       //------------------------------------------------------------------------
       // Return immediately if no target was specified
@@ -256,9 +260,9 @@ namespace cling
       context = new clang::ASTContext( m_lang, *srcMgr, *m_target,
                                        pp->getIdentifierTable(),
                                        pp->getSelectorTable(),
-                                       0);
+                                       m_target->getTargetBuiltins());
 
-      clang::TranslationUnit *tu = new clang::TranslationUnit(*context);
+      clang::idx::TranslationUnit *tu = new clang::idx::TranslationUnit(*context);
       clang::Sema   sema(*pp, *context, dummyConsumer);
       clang::Parser p(*pp, sema);
 
@@ -279,7 +283,7 @@ namespace cling
    //----------------------------------------------------------------------------
    // Compile the translation unit
    //----------------------------------------------------------------------------
-   llvm::Module* Interpreter::compile( clang::TranslationUnit* tu )
+   llvm::Module* Interpreter::compile( clang::idx::TranslationUnit* tu )
    {
       if( !tu )
          return 0;
@@ -299,7 +303,7 @@ namespace cling
       //-------------------------------------------------------------------------
       // Loop over the AST
       //-------------------------------------------------------------------------
-      clang::TranslationUnit::iterator it;
+      clang::idx::TranslationUnit::iterator it;
       codeGen->InitializeTU( *tu );
 
       for( it = tu->begin(); it != tu->end(); ++it )
@@ -317,7 +321,7 @@ namespace cling
    //----------------------------------------------------------------------------
    // Add the translation unit
    //----------------------------------------------------------------------------
-   bool Interpreter::addUnit( const UnitID_t& id, clang::TranslationUnit* tu )
+   bool Interpreter::addUnit( const UnitID_t& id, clang::idx::TranslationUnit* tu )
    {
       //-------------------------------------------------------------------------
       // Check if we've got a valid translation unit
@@ -361,7 +365,7 @@ namespace cling
    // Extract the function declarations
    //----------------------------------------------------------------------------
    std::vector<clang::Decl*>
-   Interpreter::extractDeclarations( clang::TranslationUnit* tu )
+   Interpreter::extractDeclarations( clang::idx::TranslationUnit* tu )
    {
       std::vector<clang::Decl*> vect;
       if( !tu )
@@ -378,8 +382,8 @@ namespace cling
       //-------------------------------------------------------------------------
       clang::ASTContext& context = tu->getContext();
       const clang::SourceManager& srcMgr = context.getSourceManager();
-      clang::TranslationUnitDecl* tud = context.getTranslationUnitDecl();
-      clang::TranslationUnit::iterator it, itend = tud->decls_end();
+      clang::idx::TranslationUnitDecl* tud = context.getTranslationUnitDecl();
+      clang::idx::TranslationUnit::iterator it, itend = tud->decls_end();
       for( it = tud->decls_begin(); it != itend; ++it ) {
          clang::FunctionDecl* decl = dynamic_cast<clang::FunctionDecl*>( *it );
          if( decl && decls_before.find(decl) == decls_before.end()) {
@@ -392,12 +396,12 @@ namespace cling
    //----------------------------------------------------------------------------
    // Insert the implicit declarations to the translation unit
    //----------------------------------------------------------------------------
-   void Interpreter::insertDeclarations( clang::TranslationUnit* tu, clang::Sema* sema )
+   void Interpreter::insertDeclarations( clang::idx::TranslationUnit* tu, clang::Sema* sema )
    {
       clang::ASTContext& context = tu->getContext();
       clang::IdentifierTable&      table    = context.Idents;
       clang::DeclarationNameTable& declTab  = context.DeclarationNames;
-      clang::TranslationUnitDecl* tud = context.getTranslationUnitDecl();
+      clang::idx::TranslationUnitDecl* tud = context.getTranslationUnitDecl();
       std::vector<std::pair<clang::Decl*, const clang::ASTContext*> >::iterator it;
       for( it = m_decls.begin(); it != m_decls.end(); ++it ) {
          clang::FunctionDecl* func = dynamic_cast<clang::FunctionDecl*>( it->first );
@@ -422,9 +426,9 @@ namespace cling
    //----------------------------------------------------------------------------
    // Dump the translation unit
    //----------------------------------------------------------------------------
-   void Interpreter::dumpTU( clang::TranslationUnit* tu )
+   void Interpreter::dumpTU( clang::idx::TranslationUnit* tu )
    {
-      clang::TranslationUnit::iterator it;
+      clang::idx::TranslationUnit::iterator it;
       for( it = tu->begin(); it != tu->end(); ++it ) {
          clang::Stmt* body = (*it) ? (*it)->getBody() : 0;
          if( body ) {
@@ -503,6 +507,9 @@ namespace cling
       return source;
    }
 
+   /*
+     Trying to use llvm::CloneModule() instead...
+
    //-----------------------------------------------------------------------------
    // Create a copy of an existing module - the linker destroys the source!!
    //-----------------------------------------------------------------------------
@@ -535,6 +542,7 @@ namespace cling
       delete buff;
       return result;
    }
+   */
 
    //---------------------------------------------------------------------------
    // Call the Interpreter on a Module
