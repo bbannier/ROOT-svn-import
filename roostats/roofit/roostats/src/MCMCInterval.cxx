@@ -457,8 +457,8 @@ void MCMCInterval::CreateSparseHist()
    Double_t* x = new Double_t[fDimension];
    for (Int_t i = fNumBurnInSteps; i < size; i++) {
       entry = fChain->Get(i);
-      for (Int_t i = 0; i < fDimension; i++)
-         x[i] = entry->getRealValue(fAxes[i]->GetName());
+      for (Int_t ii = 0; ii < fDimension; ii++)
+         x[ii] = entry->getRealValue(fAxes[ii]->GetName());
       fSparseHist->Fill(x, fChain->Weight());
    }
    delete[] x;
