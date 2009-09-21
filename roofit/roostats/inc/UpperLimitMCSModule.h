@@ -14,8 +14,8 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-#ifndef ROO_UPPER_LIMIT_MCS_MODULE
-#define ROO_UPPER_LIMIT_MCS_MODULE
+#ifndef UPPER_LIMIT_MCS_MODULE
+#define UPPER_LIMIT_MCS_MODULE
 
 #include "RooAbsMCStudyModule.h"
 #include "RooStats/ProfileLikelihoodCalculator.h"
@@ -23,13 +23,15 @@
 #include "RooFit.h"
 #include <string>
 
-class RooUpperLimitMCSModule : public RooAbsMCStudyModule {
+namespace RooStats {
+
+class UpperLimitMCSModule : public RooAbsMCStudyModule {
 public:
 
 
-  RooUpperLimitMCSModule(RooArgSet* poi, Double_t CL=0.95) ;
-  RooUpperLimitMCSModule(const RooUpperLimitMCSModule& other) ;
-  virtual ~RooUpperLimitMCSModule() ;
+  UpperLimitMCSModule(RooArgSet* poi, Double_t CL=0.95) ;
+  UpperLimitMCSModule(const UpperLimitMCSModule& other) ;
+  virtual ~UpperLimitMCSModule() ;
 
   Bool_t initializeInstance() ; 
 
@@ -50,9 +52,10 @@ private:
   Double_t _cl;
   RooAbsPdf* _model;
 
-  ClassDef(RooUpperLimitMCSModule,0) // MCStudy module to calculate upperlimit of a given poi
+  ClassDef(UpperLimitMCSModule,0) // MCStudy module to calculate upperlimit of a given poi
 } ;
 
+}
 
 #endif
 
