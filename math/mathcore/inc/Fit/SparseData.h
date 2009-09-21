@@ -24,9 +24,6 @@
 #include <iterator>
 using namespace std;
 
-class TH1;
-class THnSparse;
-
 namespace ROOT { 
 
    namespace Fit { 
@@ -35,8 +32,8 @@ namespace ROOT {
 
       class SparseData : public FitData  { 
       public:
-         SparseData(TH1* h);
-         SparseData(THnSparse* h);
+         SparseData(vector<double>& min, vector<double>& max);
+         SparseData(const unsigned int dim, double min[], double max[]);
          ~SparseData();
 
          unsigned int NPoints() const;

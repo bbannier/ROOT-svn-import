@@ -21,9 +21,6 @@
 
 #include "Fit/SparseData.h"
 
-#include "TH1.h"
-#include "THnSparse.h"
-
 using namespace std;
 
 namespace ROOT { 
@@ -161,43 +158,18 @@ namespace ROOT {
       };
 
 
-
-      SparseData::SparseData(TH1* h1)
+      SparseData::SparseData(vector<double>& min, vector<double>& max)
       {
-         int dim(h1->GetDimension());
-         vector<double> min(dim);
-         vector<double> max(dim);
-
-         min[0] = h1->GetXaxis()->GetXmin();
-         max[0] = h1->GetXaxis()->GetXmax();
-         if ( dim >= 2 )
-         {
-            min[1] = h1->GetYaxis()->GetXmin();
-            max[1] = h1->GetYaxis()->GetXmax();
-         } 
-         if ( dim >= 3 ) {
-            min[2] = h1->GetZaxis()->GetXmin();
-            max[2] = h1->GetZaxis()->GetXmax();
-         }
          Box originalBox(min, max);
          l = new ProxyListBox();
          l->push_back(originalBox);
       }
 
-      SparseData::SparseData(THnSparse* h1)
+      SparseData::SparseData(const unsigned int dim, double min[], double max[])
       {
-         int dim(h1->GetNdimensions());
-         vector<double> min(dim);
-         vector<double> max(dim);
-
-         for ( int i = 0; i < dim; ++i )
-         {
-            TAxis* axis = h1->GetAxis(i);
-            min[i] = axis->GetXmin();
-            max[i] = axis->GetXmax();
-         }
-
-         Box originalBox(min, max);
+         vector<double> minv(min,min+dim);
+         vector<double> maxv(max,max+dim);
+         Box originalBox(minv, maxv);
          l = new ProxyListBox();
          l->push_back(originalBox);
       }
