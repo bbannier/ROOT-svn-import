@@ -35,6 +35,7 @@
 #include "RooRealVar.h"
 #include "RooNumber.h"
 #include "RooMsgService.h"
+#include "TList.h"
 
 ClassImp(RooBinning)
 ;
@@ -401,4 +402,43 @@ Double_t RooBinning::binHigh(Int_t bin) const
   if (binEdges(bin,xlo,xhi)) return  0 ;
   return xhi ;
 }
+
+
+
+//______________________________________________________________________________
+void RooBinning::Streamer(TBuffer &R__b)
+{
+   // Custom streamer that provides backward compatibility to read v1 data
+
+   if (R__b.IsReading()) {
+
+     UInt_t R__s, R__c;
+     Version_t R__v = R__b.ReadVersion(&R__s, &R__c); if (R__v) { }
+     if (R__v>1) {
+       R__b.ReadClassBuffer(RooBinning::Class(),this,R__v,R__s,R__c);
+     } else {
+       RooAbsBinning::Streamer(R__b);
+       R__b >> _xlo;
+       R__b >> _xhi;
+       R__b >> _ownBoundLo;
+       R__b >> _ownBoundHi;
+       R__b >> _nbins;
+       
+       // Convert TList to set<double>
+       TList boundaries ;
+       boundaries.Streamer(R__b);
+       TIterator* iter = boundaries.MakeIterator() ;
+       RooDouble* elem ;
+       while((elem=(RooDouble*)iter->Next())) {
+	 _boundaries.insert(*elem) ;
+       }
+       delete iter ;
+       
+       R__b.CheckByteCount(R__s, R__c, RooBinning::IsA());
+     }
+   } else {
+     R__b.WriteClassBuffer(RooBinning::Class(),this);
+   }
+}
+
 
