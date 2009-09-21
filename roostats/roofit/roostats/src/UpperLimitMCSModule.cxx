@@ -33,7 +33,7 @@
 #include "TString.h"
 //#include "RooFit.h"
 #include "RooFitResult.h"
-#include "RooUpperLimitMCSModule.h"
+#include "RooStats/UpperLimitMCSModule.h"
 #include "RooMsgService.h"
 #include "RooStats/ConfInterval.h"
 #include "RooStats/PointSetInterval.h"
@@ -46,16 +46,17 @@
 
 
 
-
-ClassImp(RooUpperLimitMCSModule)
+ClassImp(RooStats::UpperLimitMCSModule)
   ;
 
+
+using namespace RooStats ;
 
 
 
 //_____________________________________________________________________________
-RooUpperLimitMCSModule::RooUpperLimitMCSModule(RooArgSet* poi, Double_t CL) : 
-  RooAbsMCStudyModule(Form("RooUpperLimitMCSModule_%s",poi->first()->GetName()),Form("RooUpperLimitMCSModule_%s",poi->first()->GetName())),
+UpperLimitMCSModule::UpperLimitMCSModule(RooArgSet* poi, Double_t CL) : 
+  RooAbsMCStudyModule(Form("UpperLimitMCSModule_%s",poi->first()->GetName()),Form("UpperLimitMCSModule_%s",poi->first()->GetName())),
   _parName(poi->first()->GetName()), 
   _plc(0),_ul(0),_poi(0), _data(0),_cl(CL), _model(0)
 {
@@ -68,7 +69,7 @@ RooUpperLimitMCSModule::RooUpperLimitMCSModule(RooArgSet* poi, Double_t CL) :
 
 
 //_____________________________________________________________________________
-RooUpperLimitMCSModule::RooUpperLimitMCSModule(const RooUpperLimitMCSModule& other) : 
+UpperLimitMCSModule::UpperLimitMCSModule(const UpperLimitMCSModule& other) : 
   RooAbsMCStudyModule(other), 
   _parName(other._poi->first()->GetName()),
   _plc(0),_ul(0),_poi(other._poi), _data(0), _cl(other._cl), _model(other._model)
@@ -79,7 +80,7 @@ RooUpperLimitMCSModule::RooUpperLimitMCSModule(const RooUpperLimitMCSModule& oth
 
 
 //_____________________________________________________________________________
-RooUpperLimitMCSModule:: ~RooUpperLimitMCSModule() 
+UpperLimitMCSModule:: ~UpperLimitMCSModule() 
 {
   // Destructor
 
@@ -104,13 +105,13 @@ RooUpperLimitMCSModule:: ~RooUpperLimitMCSModule()
 
 
 //_____________________________________________________________________________
-Bool_t RooUpperLimitMCSModule::initializeInstance()
+Bool_t UpperLimitMCSModule::initializeInstance()
 {
   // Initialize module after attachment to RooMCStudy object
 
   // Check that parameter is also present in fit parameter list of RooMCStudy object
   if (!fitParams()->find(_parName.c_str())) {
-    coutE(InputArguments) << "RooUpperLimitMCSModule::initializeInstance:: ERROR: No parameter named " << _parName << " in RooMCStudy!" << endl ;
+    coutE(InputArguments) << "UpperLimitMCSModule::initializeInstance:: ERROR: No parameter named " << _parName << " in RooMCStudy!" << endl ;
     return kFALSE ;
   }
   
@@ -136,7 +137,7 @@ Bool_t RooUpperLimitMCSModule::initializeInstance()
 
 
 //_____________________________________________________________________________
-Bool_t RooUpperLimitMCSModule::initializeRun(Int_t /*numSamples*/) 
+Bool_t UpperLimitMCSModule::initializeRun(Int_t /*numSamples*/) 
 {
   // Initialize module at beginning of RooCMStudy run
 
@@ -147,7 +148,7 @@ Bool_t RooUpperLimitMCSModule::initializeRun(Int_t /*numSamples*/)
 
 
 //_____________________________________________________________________________
-RooDataSet* RooUpperLimitMCSModule::finalizeRun() 
+RooDataSet* UpperLimitMCSModule::finalizeRun() 
 {
   // Return auxiliary dataset with results of delta(-log(L))
   // calculations of this module so that it is merged with
@@ -160,7 +161,7 @@ RooDataSet* RooUpperLimitMCSModule::finalizeRun()
 
 //_____________________________________________________________________________
 
-// Bool_t RooUpperLimitMCSModule::processAfterFit(Int_t /*sampleNum*/)  
+// Bool_t UpperLimitMCSModule::processAfterFit(Int_t /*sampleNum*/)  
 // {
 //   // Save likelihood from nominal fit, fix chosen parameter to its
 //   // null hypothesis value and rerun fit Save difference in likelihood
@@ -189,7 +190,7 @@ RooDataSet* RooUpperLimitMCSModule::finalizeRun()
 
 
 //_____________________________________________________________________________
-Bool_t RooUpperLimitMCSModule::processBetweenGenAndFit(Int_t /*sampleNum*/) {
+Bool_t UpperLimitMCSModule::processBetweenGenAndFit(Int_t /*sampleNum*/) {
 
   std::cout<<"after generation Test"<<std::endl;
 
