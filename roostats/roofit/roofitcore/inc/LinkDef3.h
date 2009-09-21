@@ -68,7 +68,6 @@
 #pragma link C++ class RooSimWSTool::ObjSplitRule+ ;
 #pragma link C++ class RooSimWSTool::ObjBuildConfig+ ;
 #pragma link C++ class RooFracRemainder+ ;
-#pragma link C++ class RooLinearMorph+ ;
 #pragma link C++ class RooAbsCachedReal+ ;
 #pragma link C++ class RooAbsSelfCachedReal+ ;
 #pragma link C++ class RooCachedReal+ ;
