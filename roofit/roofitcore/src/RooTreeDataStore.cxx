@@ -191,14 +191,14 @@ RooTreeDataStore::RooTreeDataStore(const char *name, const char *title, RooAbsDa
 
 
 //_____________________________________________________________________________
-void RooTreeDataStore::attachCache(const RooAbsArg* newOwner, const RooArgSet& cachedVars) 
+void RooTreeDataStore::attachCache(const RooAbsArg* newOwner, const RooArgSet& cachedVarsIn) 
 {
   // Initialize cache of dataset: attach variables of cache ArgSet
   // to the corresponding TTree branches
 
   // iterate over the cache variables for this dataset
   _cachedVars.removeAll() ;
-  TIterator* iter = cachedVars.createIterator() ;
+  TIterator* iter = cachedVarsIn.createIterator() ;
   RooAbsArg *var;
   while((0 != (var= (RooAbsArg*)iter->Next()))) {    
     var->attachToTree(*_cacheTree,_defTreeBufSize) ;
