@@ -145,7 +145,7 @@ MarkovChain* MetropolisHastings::ConstructChain()
    MarkovChain* chain = new MarkovChain();
    chain->SetParameters(*fParameters);
 
-   Int_t weight = 0.0;
+   Int_t weight = 0;
    Double_t xL = 0.0, xPrimeL = 0.0, a = 0.0;
 
    RooFit::MsgLevel oldMsgLevel = RooMsgService::instance().globalKillBelow();
