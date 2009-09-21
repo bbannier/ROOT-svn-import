@@ -185,7 +185,7 @@ RooAbsPdf* HLFactory::GetTotSigBkgPdf(){
     if (fComboSigBkgPdf!=NULL)
         return fComboSigBkgPdf;
 
-    if (not fNamesListsConsistent())
+    if (!fNamesListsConsistent())
         return NULL;
 
     if (fSigBkgPdfNames.GetSize()==1){
@@ -194,7 +194,7 @@ RooAbsPdf* HLFactory::GetTotSigBkgPdf(){
         return fComboSigBkgPdf;
         }
 
-    if (not fCombinationDone)
+    if (!fCombinationDone)
         fCreateCategory();
 
     RooArgList pdfs("pdfs");
@@ -235,7 +235,7 @@ RooAbsPdf* HLFactory::GetTotBkgPdf(){
     if (fComboBkgPdf!=NULL)
         return fComboBkgPdf;
 
-    if (not fNamesListsConsistent())
+    if (!fNamesListsConsistent())
         return NULL;
 
     if (fBkgPdfNames.GetSize()==1){
@@ -243,7 +243,7 @@ RooAbsPdf* HLFactory::GetTotBkgPdf(){
         return fComboBkgPdf;
         }
 
-    if (not fCombinationDone)
+    if (!fCombinationDone)
         fCreateCategory();
 
     RooArgList pdfs("pdfs");
@@ -284,7 +284,7 @@ RooDataSet* HLFactory::GetTotDataSet(){
     if (fComboDataset!=NULL)
         return fComboDataset;
 
-    if (not fNamesListsConsistent())
+    if (!fNamesListsConsistent())
         return NULL;
 
     if (fDatasetsNames.GetSize()==1){
@@ -292,7 +292,7 @@ RooDataSet* HLFactory::GetTotDataSet(){
         return fComboDataset;
         }
 
-    if (not fCombinationDone)
+    if (!fCombinationDone)
         fCreateCategory();
 
     TIterator* it = fDatasetsNames.MakeIterator();
@@ -330,10 +330,10 @@ RooCategory* HLFactory::GetTotCategory(){
     if (fComboCat!=NULL)
         return fComboCat;
 
-    if (not fNamesListsConsistent())
+    if (!fNamesListsConsistent())
         return NULL;
 
-    if (not fCombinationDone)
+    if (!fCombinationDone)
         fCreateCategory();
 
     return fComboCat;
@@ -414,7 +414,7 @@ int HLFactory::fReadFile(const char*fileName, bool is_included){
                 }
 
         // Was line a single line comment?
-        if (line.BeginsWith("/*") and line.EndsWith("*/") or 
+        if (line.BeginsWith("/*") && line.EndsWith("*/") || 
             line.BeginsWith("//")){
             if (fVerbose) std::cout << "In single line comment..." << std::endl;
             continue;
@@ -520,9 +520,9 @@ bool HLFactory::fNamesListsConsistent(){
     // Check the number of entries in each list. If not the same and the list 
     // is not empty prompt an error.
 
-    if ((fSigBkgPdfNames.GetEntries()==fBkgPdfNames.GetEntries() or fBkgPdfNames.GetEntries()==0) and
-        (fSigBkgPdfNames.GetEntries()==fDatasetsNames.GetEntries() or fDatasetsNames.GetEntries()==0) and
-        (fSigBkgPdfNames.GetEntries()==fLabelsNames.GetEntries() or fLabelsNames.GetEntries()==0))
+    if ((fSigBkgPdfNames.GetEntries()==fBkgPdfNames.GetEntries() || fBkgPdfNames.GetEntries()==0) &&
+        (fSigBkgPdfNames.GetEntries()==fDatasetsNames.GetEntries() || fDatasetsNames.GetEntries()==0) &&
+        (fSigBkgPdfNames.GetEntries()==fLabelsNames.GetEntries() || fLabelsNames.GetEntries()==0))
         return true;
     else{
         std::cerr << "The number of datasets and models added as channels " 
@@ -540,8 +540,8 @@ int HLFactory::fParseLine(TString& line){
     TString new_line("");
 
     const int nequals = line.CountChar('=');
-    if (nequals==1 or 
-        (nequals>1 and line.Contains("SIMUL"))){ //build with the factory a pdf
+    if (nequals==1 || 
+        (nequals>1 && line.Contains("SIMUL"))){ //build with the factory a pdf
 
         const int equal_index=line.First('=');
         const int par_index=line.First('(');
