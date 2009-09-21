@@ -377,7 +377,7 @@ void RooHist::addBin(Axis_t binCenter, Double_t n, Double_t binWidth, Double_t x
   // calculate Poisson errors for this bin
   Double_t ym,yp,dx(0.5*binWidth);
 
-  if (fabs((n-Int_t(n))>1e-5)) {
+  if (fabs((double)((n-Int_t(n))>1e-5))) {
     // need interpolation
     Double_t ym1,yp1,ym2,yp2 ;
     Int_t n1 = Int_t(n) ;
