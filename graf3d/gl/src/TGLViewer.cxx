@@ -1582,6 +1582,9 @@ void TGLViewer::SetEventHandler(TGEventHandler *handler)
 {
    // Set the event-handler. The event-handler is owned by the viewer.
    // If GLWidget is set, the handler is propagated to it.
+   //
+   // If called with handler=0, the current handler will be deleted
+   // (also from TGLWidget).
 
    if (fEventHandler)
       delete fEventHandler;
