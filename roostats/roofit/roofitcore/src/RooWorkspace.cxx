@@ -267,15 +267,15 @@ Bool_t RooWorkspace::import(const char* fileSpec, const RooCmdArg& arg1, const R
   }
 
   // Check that workspace contains object and forward to appropriate import method
-  RooAbsArg* arg = w->arg(objname) ;
-  if (arg) {
-    Bool_t ret = import(*arg,arg1,arg2,arg3) ;
+  RooAbsArg* warg = w->arg(objname) ;
+  if (warg) {
+    Bool_t ret = import(*warg,arg1,arg2,arg3) ;
     delete f ;
     return ret ;    
   }
-  RooAbsData* data = w->data(objname) ;
-  if (data) {
-    Bool_t ret = import(*data,arg1,arg2,arg3) ;
+  RooAbsData* wdata = w->data(objname) ;
+  if (wdata) {
+    Bool_t ret = import(*wdata,arg1,arg2,arg3) ;
     delete f ;
     return ret ;    
   }
@@ -1627,12 +1627,12 @@ TObject* RooWorkspace::genobj(const char* name)
   // Return generic object with given name
 
   // Find object by name
-  TObject* obj = _genObjects.FindObject(name) ;
+  TObject* gobj = _genObjects.FindObject(name) ;
 
   // If found object is wrapper, return payload
-  if (obj->IsA()==RooTObjWrap::Class()) return ((RooTObjWrap*)obj)->obj() ;
+  if (gobj->IsA()==RooTObjWrap::Class()) return ((RooTObjWrap*)gobj)->obj() ;
 
-  return obj ;
+  return gobj ;
 }
 
 
