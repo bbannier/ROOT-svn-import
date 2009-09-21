@@ -262,10 +262,10 @@ RooPlot* RooAbsRealLValue::frame(const RooLinkedList& cmdList) const
     } else {
       // Symmetric mode: range is centered at mean of distribution with enough width to include
       // both lowest and highest point with margin
-      Double_t mean = rangeData->moment((RooRealVar&)*this,1) ;
-      Double_t delta = ((xmax-mean)>(mean-xmin)?(xmax-mean):(mean-xmin))*(1+pc.getDouble("rangeMargin")) ;
-      xmin = mean-delta ;
-      xmax = mean+delta ;
+      Double_t dmean = rangeData->moment((RooRealVar&)*this,1) ;
+      Double_t ddelta = ((xmax-dmean)>(dmean-xmin)?(xmax-dmean):(dmean-xmin))*(1+pc.getDouble("rangeMargin")) ;
+      xmin = dmean-ddelta ;
+      xmax = dmean+ddelta ;
       if (xmin<getMin()) xmin = getMin() ;
       if (xmin>getMax()) xmax = getMax() ;
     }
