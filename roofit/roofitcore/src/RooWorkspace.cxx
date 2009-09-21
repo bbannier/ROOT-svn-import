@@ -54,6 +54,7 @@
 #include "RooTObjWrap.h"
 #include "TROOT.h"
 #include "TFile.h"
+#include "TH1.h"
 #include "Api.h"
 #include <map>
 #include <string>
@@ -1532,12 +1533,14 @@ Bool_t RooWorkspace::import(TObject& object, Bool_t replaceExisting)
 			  << object.GetName() << " is already in workspace and replaceExisting flag is set to false" << endl ;
     return kTRUE ;
   }  
+  TH1::AddDirectory(kFALSE) ;
   if (oldObj) {
     _genObjects.Replace(oldObj,object.Clone()) ;
     delete oldObj ;
   } else {
     _genObjects.Add(object.Clone()) ;
   }
+  TH1::AddDirectory(kTRUE) ;
   return kFALSE ;
 }
 
@@ -1563,7 +1566,9 @@ Bool_t RooWorkspace::import(TObject& object, const char* aliasName, Bool_t repla
     return kTRUE ;
   }  
   
+  TH1::AddDirectory(kFALSE) ;
   RooTObjWrap* wrapper = new RooTObjWrap(object.Clone()) ;
+  TH1::AddDirectory(kTRUE) ;
   wrapper->setOwning(kTRUE) ;
   wrapper->SetName(aliasName) ;
   wrapper->SetTitle(aliasName) ;

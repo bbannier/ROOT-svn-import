@@ -95,7 +95,8 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   _numIntEngine(0), 
   _numIntegrand(0),
   _rangeName((TNamed*)RooNameReg::ptr(rangeName)),
-  _params(0)
+  _params(0),
+  _cacheNum(kFALSE)
 {
   // Construct integral of 'function' over observables in 'depList'
   // in range 'rangeName'  with normalization observables 'funcNormSet' 
@@ -705,7 +706,8 @@ RooRealIntegral::RooRealIntegral(const RooRealIntegral& other, const char* name)
   _numIntEngine(0), 
   _numIntegrand(0),
   _rangeName(other._rangeName),
-  _params(0)
+  _params(0),
+  _cacheNum(kFALSE)
 {
   // Copy constructor
 
