@@ -100,50 +100,18 @@ void RooStudyManager::runProof(Int_t nExperiments, const char* proofHost)
   coutP(Generation) << "RooStudyManager::runProof(" << GetName() << ") opening PROOF session" << endl ;
   TProof* p = TProof::Open(proofHost) ;
 
-  // Make PROOF dataset with driver tree
-  coutP(Generation) << "RooStudyManager::runProof(" << GetName() << ") making driver tree with " << nExperiments << " events" << endl ;
-  TTree* t = new TTree("t","t") ;
-  Int_t i ; t->Branch("i",&i) ;
-  for (i=0 ; i<nExperiments ; i++) t->Fill() ;
-  TDSet ds("TTree","t") ;
-  TFile f("driver.root","RECREATE") ; t->Write() ; f.Close() ;
-  ds.Add("/user/verkerke/roofit/workdir/driver.root") ;
-  delete t ;
-    
   // Propagate workspace to proof nodes
   coutP(Generation) << "RooStudyManager::runProof(" << GetName() << ") sending work package to PROOF servers" << endl ;
   p->AddInput(_pkg) ;
 
-  // Make PROOF driver selector file
-  ofstream ofsh("RooProofWrapperSelector.h") ;
-  ofsh << "#ifndef ROOPROOFWRAPPERSELECTOR_HH" << endl 
-       << "#define ROOPROOFWRAPPERSELECTOR_HH" << endl 
-       << "#include \"RooProofDriverSelector.h\"" << endl 
-       << "class RooProofWrapperSelector : public RooProofDriverSelector {" << endl 
-       << "public :" << endl 
-       << "   RooProofWrapperSelector(TTree * /*tree*/ =0) { }" << endl 
-       << "   virtual ~RooProofWrapperSelector() { }" << endl 
-       << "   ClassDef(RooProofWrapperSelector,0);" << endl 
-       << "};" << endl 
-       << "#endif" << endl ;
-  ofsh.close() ;
-  ofstream ofsc("RooProofWrapperSelector.C") ;
-  ofsc << "#include \"RooProofWrapperSelector.h\"" << endl ;
-  ofsc.close() ;
-
   // Run selector in parallel
   coutP(Generation) << "RooStudyManager::runProof(" << GetName() << ") starting PROOF processing of " << nExperiments << " experiments" << endl ;
-  p->Process(&ds,"RooProofWrapperSelector.C") ;  
+  p->Process("RooProofDriverSelector",nExperiments) ;  
 
   // Aggregate results data
   coutP(Generation) << "RooStudyManager::runProof(" << GetName() << ") aggregating results data" << endl ;
   TList* olist = p->GetOutputList() ;
   aggregateData(olist) ;
-
-  // Cleanup files
-  gSystem->Unlink("RooProofWrapperSelector.h") ;
-  gSystem->Unlink("RooProofWrapperSelector.C") ;
-  gSystem->Unlink("driver.root") ;
 }
 
 
@@ -213,15 +181,16 @@ void RooStudyManager::processBatchOutput(const char* filePat)
     TFile f(iter->c_str()) ;
 
     TList* list = f.GetListOfKeys() ;
-    TIterator* iter = list->MakeIterator();
+    TIterator* kiter = list->MakeIterator();
     
     TObject* obj ;
     TKey* key ;
-    while((key=(TKey*)iter->Next())) {      
+    while((key=(TKey*)kiter->Next())) {      
       obj = f.Get(key->GetName()) ;
       TObject* clone = obj->Clone(obj->GetName()) ;
       olist.Add(clone) ;
     }
+    delete kiter ;
   }
   aggregateData(&olist) ;
   olist.Delete() ;
