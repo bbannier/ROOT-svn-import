@@ -85,6 +85,8 @@
 #pragma link C++ class RooStats::SamplingDistPlot+;
 #pragma link C++ class RooStats::LikelihoodIntervalPlot+;
 
+#pragma link C++ class RooStats::UpperLimitMCSModule+;
+
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t , Double_t ,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauExpZ(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialObsZ(Double_t,Double_t,Double_t);
