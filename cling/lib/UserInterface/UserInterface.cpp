@@ -62,18 +62,18 @@ void cling::UserInterface::runInteractively()
    struct stat buf;
    static const char* histfile = ".cling_history";
    using_history();
-   history_max_entries = 100;
+   max_input_history = 100;
    if (stat(histfile, &buf) == 0) {
       read_history(histfile);
    }
    m_QuitRequested = false;
    while (!m_QuitRequested) {
-      char* line = readline("[cling]$ ");
-      if (line) {
-         NextInteractiveLine(line);
-         add_history(line);
-         free(line);
-      } else break;
+      char* line = readline("[cling]$ ", true);
+      while (!line) {
+         line = readline("[cling]$ ", false);
+      }
+      NextInteractiveLine(line);
+      add_history(line);
    }
    write_history(histfile);
 }
