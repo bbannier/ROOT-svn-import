@@ -567,7 +567,8 @@ void FillData(SparseData & dv, const TH1 * h1, TF1 * /*func*/)
    const TArray *array(dynamic_cast<const TArray*>(h1));
    assert(array && "THIS SHOULD NOT HAPPEN!");
    for ( int i = 0; i < array->GetSize(); ++i )
-      if ( !(h1->IsBinUOflow(i)) && h1->GetBinContent(i))
+      if ( !( h1->IsBinOverflow(i) || h1->IsBinUnderflow(i) )
+           && h1->GetBinContent(i))
       {
          int x,y,z;
          h1->GetBinXYZ(i, x, y, z);

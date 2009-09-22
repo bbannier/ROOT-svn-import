@@ -4153,57 +4153,6 @@ Bool_t TH1::IsBinUnderflow(Int_t bin) const
       return 0;
 }
 
-//______________________________________________________________________________
-Bool_t TH1::IsBinUOflow(Int_t bin) const
-{
-   int estimator = false;
-   int dim = this->GetDimension();
-   
-   int limit;
-   int endlimit;
-   const TArray *array(dynamic_cast<const TArray*>(this));
-   vector<int> nbins(3);
-   nbins[0] = this->GetNbinsX();
-   nbins[1] = this->GetNbinsY();
-   nbins[2] = this->GetNbinsZ();
-   switch ( dim ) {
-      
-   case 1:
-      estimator = (bin+1) % (2+nbins[0]) <= 1;
-      break;
-
-   case 3:
-      limit = (2+nbins[0])*(2+nbins[1]) - 1;
-      endlimit = (array->GetSize() - 1) - limit;
-      if ( bin > limit && bin < endlimit )
-      {
-         int newbin = bin%(limit+1);
-         int newlimit = (1+nbins[0]);
-         if ( newbin > newlimit && newbin < (limit - newlimit))
-            estimator = ((newbin - nbins[0] - 1) % (2+nbins[0]) <= 1);
-         else
-            estimator = 1;
-      }
-      else
-         estimator = 1;
-      break;
-      
-   case 2:
-      if (!array) exit(1);
-      limit = (1+nbins[0]);
-      endlimit = (array->GetSize() - 1) - limit;
-      if ( bin > limit && bin < endlimit )
-         estimator = ((bin - nbins[0] - 1) % (2+nbins[0]) <= 1);
-      else
-         estimator = 1;
-      break;
-      
-   default: break;
-   }
-
-   return estimator;
-}
-
 //___________________________________________________________________________
 void TH1::LabelsDeflate(Option_t *ax)
 {
