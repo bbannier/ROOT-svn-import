@@ -56,8 +56,8 @@ HLFactory::HLFactory(const char *name,
     // verbosity flag. The extension for the config files is assumed to 
     // be ".rs".
 
-    TString wsName(fileName);
-    wsName.ReplaceAll(".rs","");
+    TString wsName(name);
+    wsName+="_ws";
     fWs = new RooWorkspace(wsName,true);
 
     fSigBkgPdfNames.SetOwner();
@@ -92,7 +92,7 @@ HLFactory::HLFactory(const char* name,
 
 //_______________________________________________________
 HLFactory::HLFactory():
-    TNamed("empty","empty"),
+    TNamed("hlfactory","hlfactory"),
     fComboCat(0),
     fComboBkgPdf(0),
     fComboSigBkgPdf(0),
@@ -100,8 +100,14 @@ HLFactory::HLFactory():
     fCombinationDone(false),
     fVerbose(false),
     fInclusionLevel(0),
-    fWs(0),
-    fOwnWs(false){
+    fOwnWs(true){
+
+    fWs = new RooWorkspace("hlfactory_ws",true);
+
+    fSigBkgPdfNames.SetOwner();
+    fBkgPdfNames.SetOwner();
+    fDatasetsNames.SetOwner();
+
     }
 
 //_______________________________________________________
@@ -351,23 +357,28 @@ int HLFactory::fReadFile(const char*fileName, bool is_included){
     // Parses the configuration file. The objects can be specified following 
     // the rules of the RooFactoryWSTool, plus some more flexibility.
     //
-    // The expected format for the datacards is ".rs".
+    // The official format for the datacards is ".rs".
     //
     // All the instructions end with a ";" (like in C++).
     //
-    // Carriage returns and white lines are irrelevant (like in C++).
+    // Carriage returns and white lines are irrelevant but adviced since they 
+    // improve readability (like in C++).
     //
     // The (Roo)ClassName::objname(description) can be replaced with the more
     // "pythonic" objname = (Roo)ClassName(description).
     //
-    // The comments can be specified with // if on a single line or with /* */
-    // if on multiple lines (like in C++).
+    // The comments can be specified with a "//" if on a single line or with 
+    // /* */ if on multiple lines (like in C++).
     //
     // The "#include path/to/file.rs" statement triggers the inclusion of a 
     // configuration fragment.
     //
-    // The "echo" statement prompts a message on screen.
+    // The "import myobject:myworkspace:myrootfile" will add to the Workspace 
+    // the object myobject located in myworkspace recorded in myrootfile.
+    // Alternatively, one could choose the "import myobject:myrootfile" in case 
+    // no Workspace is present.
     //
+    // The "echo" statement prompts a message on screen.
 
     // Check the deepness of the inclusion
     if (is_included) 
@@ -376,16 +387,22 @@ int HLFactory::fReadFile(const char*fileName, bool is_included){
         fInclusionLevel=0;
 
     const int maxDeepness=50;
-    if (fInclusionLevel>maxDeepness)
-        std::cerr << "The inclusion stack is deeper than " << maxDeepness 
-                  << ". Is this a recursive inclusion?\n";
+    if (fInclusionLevel>maxDeepness){
+        TString warning("The inclusion stack is deeper than ");
+        warning+=maxDeepness;
+        warning+=". Is this a recursive inclusion?";
+        Warning("fReadFile", warning);
+        }
 
 
     // open the config file and go through it
     std::ifstream ifile(fileName);
 
     if(ifile.fail()){
-        std::cerr<<"\nFile "<< fileName << " could not be opened.\n";
+        TString error("File ");
+        error+=fileName;
+        error+=" could not be opened.";
+        Error("fReadFile", error);
         return -1;
         }
 
@@ -393,46 +410,51 @@ int HLFactory::fReadFile(const char*fileName, bool is_included){
     ifileContent.ReadFile(ifile);
     ifile.close();
 
-    // Strip the commented lines
+    // Tokenise the file using the "\n" char and parse it line by line to strip 
+    // the comments.
     TString ifileContentStripped("");
 
     TObjArray* lines_array = ifileContent.Tokenize("\n");
     TIterator* lineIt=lines_array->MakeIterator();
+
     bool in_comment=false;
     TString line;
     TObject* line_o;
 
-    while((line_o=(*lineIt)())){
+    while((line_o=(*lineIt)())){ // Start iteration on lines array
         line = (static_cast<TObjString*>(line_o))->GetString();
 
         // Are we in a multiline comment?
         if (in_comment)
             if (line.EndsWith("*/")){
                 in_comment=false;
-                if (fVerbose) std::cout << "Out of comment /* */ ..." << std::endl;
+                if (fVerbose) Info("fReadFile","Out of multiline comment ...");
+                                   
                 continue;
                 }
 
         // Was line a single line comment?
-        if (line.BeginsWith("/*") && line.EndsWith("*/") || 
+
+        if ((line.BeginsWith("/*") && line.EndsWith("*/")) || 
             line.BeginsWith("//")){
-            if (fVerbose) std::cout << "In single line comment..." << std::endl;
+            if (fVerbose) Info("fReadFile","In single line comment ...");
             continue;
             }
 
-        // Did a multiline comment just begun?
+        // Did a multiline comment just begin?
         if (line.BeginsWith("/*")){
             in_comment=true;
-            if (fVerbose) std::cout << "In comment /* */ ..." << std::endl;
+            if (fVerbose) Info("fReadFile","In multiline comment ...");
             continue;
             }
 
         ifileContentStripped+=line+"\n";
-
         }
 
     delete lines_array;
     delete lineIt;
+
+    // Now proceed with the parsing of the stripped file
 
     lines_array = ifileContentStripped.Tokenize(";");
     lineIt=lines_array->MakeIterator();
@@ -445,40 +467,46 @@ int HLFactory::fReadFile(const char*fileName, bool is_included){
 
         line = (static_cast<TObjString*>(line_o))->GetString();
 
+        // Strip spaces at the beginning and the end of the line
         line.Strip(TString::kBoth,' ');
 
+        // Put the single statement in one single line
         line.ReplaceAll("\n","");
 
-        // Do we have an echo statement?
+        // Do we have an echo statement? "A la RooFit"
         if (line.BeginsWith("echo")){
             line = line(5,line.Length()-1);
-            if (fVerbose) std::cout << "Echoing line " << line.Data() << std::endl;
-            std::cout << "[" << GetName() << "] echo: " << line.Data() << std::endl;
+            if (fVerbose) 
+              std::cout << "Echoing line " << line.Data() << std::endl;
+            std::cout << "[" << GetName() << "] echo: " 
+                      << line.Data() << std::endl;
             continue;
             }
 
+        // Spaces and tabs at this point are not needed.
         for (int i=0;i<nNeutrals;++i)
             line.ReplaceAll(neutrals[i],"");
 
 
-        if (fVerbose) std::cout << "Reading -->" << line.Data() << "<--\n";
+        if (fVerbose) Info("fReadFile","Reading -->" + line + "<--");
 
         // Was line a white space?
         if (line == ""){
-            if (fVerbose) std::cout << "Empty line: skipping ..." << std::endl;
+            if (fVerbose) Info("fReadFile","Empty line: skipping ...");
             continue;
             }
 
         // Do we have an include statement?
+        // We treat this recursively.
         if (line.BeginsWith("#include")){
             line.ReplaceAll("#include","");
-            if (fVerbose) std::cout << "Reading included file..." << std::endl;
+            if (fVerbose) Info("fReadFile","Reading included file...");
             fReadFile(line,true);
             continue;
             }
 
         // We parse the line
-        if (fVerbose) std::cout << "Parsing the line..." << std::endl;
+        if (fVerbose) Info("fReadFile","Parsing the line...");
         fParseLine(line); 
         }
 
@@ -535,88 +563,76 @@ bool HLFactory::fNamesListsConsistent(){
 int HLFactory::fParseLine(TString& line){
     // Parse a single line and puts the content in the RooWorkSpace
 
-    if (fVerbose) std::cout << "\nParsing line: " << line.Data() << std::endl;
+    if (fVerbose) Info("fParseLine","Parsing line: "+line);
 
     TString new_line("");
 
     const int nequals = line.CountChar('=');
-    if (nequals==1 || 
-        (nequals>1 && line.Contains("SIMUL"))){ //build with the factory a pdf
 
+    // Build with the factory a var or cat, or pipe the command directly.
+
+    if (line.Contains("::") || // It is a ordinary statement
+        nequals==0 || //it is a RooRealVar or cat with 0,1,2,3.. indexes
+        (line.Contains("[") &&
+         line.Contains("]") &&
+         nequals>0 &&    // It is a cat like "tag[B0=1,B0bar=-1]" 
+         ! line.Contains("(") &&
+         ! line.Contains(")"))) { 
+      fWs->factory(line);
+      return 0;
+      }
+
+    // Transform the line o_name = o_class(o_descr) in o_class::o_name(o_descr)
+    if (nequals==1 || 
+        (nequals > 1 and line.Contains("SIMUL"))){
+        
+        // Divide the line in 3 components: o_name,o_class and o_descr
+        // assuming that o_name=o_class(o_descr)
         const int equal_index=line.First('=');
         const int par_index=line.First('(');
         TString o_name(line(0,equal_index));
         TString o_class(line(equal_index+1,par_index-equal_index-1));
         TString o_descr(line(par_index+1,line.Length()-par_index-2));
 
-        if (fVerbose) std::cout << "\no_name=" << o_name.Data()
-                                << " o_class=" << o_class.Data()
-                                << " o_descr=" << o_descr.Data() << "\n\n";
+        if (fVerbose) Info("fParseLine","o_name="+o_name+
+                                        " o_class="+o_class+
+                                        " o_descr="+o_descr);
 
+        // Now two cases either we wanna produce an object or import something 
+        // under a new name.
+        if (o_class =="import"){// import a generic TObject into the WS
+        // Now see if we have a workspace or not, according to the number of
+        // entries in the description..
 
-        if (o_class.BeginsWith("import")){// import a generic TObject, for the moment a dataset in a WSpace
-            o_class.ReplaceAll("import","");
+        TObjArray* descr_array = o_descr.Tokenize(",");
 
-            if (o_class!="DataSet"){
-                std::cerr << "Import syntax not recognised...\n";
-                return -1;
-                }
+        const int n_descr_parts=descr_array->GetEntries();
+    
+        if (n_descr_parts<2 or n_descr_parts>3) 
+          Error("fParseLine","Import wrong syntax: cannot process "+o_descr);
 
-            o_descr.ReplaceAll("(","");
-            o_descr.ReplaceAll(")","");
-            TString ifilename("");
-            TString objname("");
-            TString objinwsname("");
-            TObjArray* lines_array = o_descr.Tokenize(",");
-            const int n_lines=lines_array->GetEntries();
+        TString obj_name (static_cast<TObjString*>(descr_array->At(n_descr_parts-1))->GetString());
+        TString ws_name("");
+        TString rootfile_name (static_cast<TObjString*>(descr_array->At(0))->GetString());
 
-            if (n_lines != 3){
-                std::cerr << "Import syntax not recognised...\n";
-                return -1;
-                }
+        TFile* ifile=TFile::Open(rootfile_name);
+        if (ifile==0)
+            return 1;
 
-            ifilename=static_cast<TObjString*>((*lines_array)[0])->GetString();
-            objname=static_cast<TObjString*>((*lines_array)[1])->GetString();
-            objinwsname=static_cast<TObjString*>((*lines_array)[2])->GetString();
-
-            delete lines_array;
-
-            // Open the file
-            if (fVerbose) std::cout << "Opening " << ifilename.Data() << " ...\n";
-            TFile* ifile=TFile::Open(ifilename);
-            if (ifile==NULL){
-                std::cerr << "Could not open " << ifilename.Data() << std::endl;
-                return -1;
-                }
-
-            // Getting the object: it can well be a Workspace
-            if (fVerbose) std::cout << "Getting " << objname.Data() << " from " 
-                                    << ifilename.Data() << " ...\n";
-
-            TObject* obj=ifile->Get(objname);
-
-            //obj->Print();
-
-            if (obj==NULL){
-                std::cerr << "Could not find " << objname.Data() << " in file " 
-                          <<  ifilename.Data() << std::endl;
-                return -1;
-                }
-
-            if (fVerbose) std::cout << "Adding to workspace " 
-                                    << objinwsname.Data() << " ...\n";
-
-        // FIXME when generic TObject addition is in there AND RooWorkspace::merge
-            TString classname(obj->ClassName());
-            if (classname!="RooWorkspace"){
-                std::cerr << "Object is not a RooWorkspace!\n";
-                return -1;
-                }
-
-            RooDataSet data(*(RooDataSet*)(((RooWorkspace*)obj)->data(objinwsname)),o_name);
-            fWs->import(data);
-            return 0;
-            }
+        if (n_descr_parts==3){// in presence of a Ws
+          o_descr.ReplaceAll(",",":");
+          fWs->import(o_descr);
+          }
+        else if(n_descr_parts==2){ // in presence of an object in rootfile
+          if (fVerbose)
+            Info("fParseLine","Importing "+obj_name+" from "+rootfile_name+
+                 " under the name of "+o_name);
+          TObject* the_obj=ifile->Get(obj_name);
+          fWs->import(*the_obj,o_name);
+          }
+        delete ifile;
+        return 0;
+        } // end of import block
 
         new_line=o_class+"::"+o_name+"("+o_descr+")";
 
@@ -630,9 +646,8 @@ int HLFactory::fParseLine(TString& line){
         return 0;
         }
 
-    else{//build with the factory a var or cat.
-        new_line=line;
-        fWs->factory(new_line);
+    else { // In case we do not know what to do we pipe it..
+        fWs->factory(line);
         }
 
     return 0;
