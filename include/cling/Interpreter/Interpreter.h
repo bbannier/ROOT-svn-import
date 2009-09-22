@@ -31,9 +31,8 @@ namespace llvm
 //------------------------------------------------------------------------------
 namespace clang
 {
-   namespace idx {
-      class TranslationUnit;
-   }
+   class TranslationUnitDecl;
+   class DeclContext;
    class Decl;
    class SourceManager;
    class FileManager;
@@ -184,9 +183,9 @@ namespace cling
    protected:
       struct UnitInfo_t
       {
-         llvm::Module*             module; //!< compiled module
-         clang::idx::TranslationUnit*   ast;    //!< full ast
-         std::vector<clang::Decl*> decls;  //!< function declarations
+         llvm::Module*                 module; //!< compiled module
+         clang::TranslationUnitDecl*   ast;    //!< full ast
+         std::vector<clang::Decl*>     decls;  //!< function declarations
       };
 
       std::map<UnitID_t, UnitInfo_t> m_units;
@@ -199,17 +198,17 @@ namespace cling
       llvm::Module*                  m_module;
 
    private:
-      clang::idx::TranslationUnit* parse( const llvm::MemoryBuffer* buff );
-      clang::idx::TranslationUnit* parse( const std::string& fileName );
-      clang::idx::TranslationUnit* parse( clang::SourceManager* srcMgr );
-      llvm::Module*           compile( clang::idx::TranslationUnit* tu );
+      clang::TranslationUnitDecl* parse( const llvm::MemoryBuffer* buff );
+      clang::TranslationUnitDecl* parse( const std::string& fileName );
+      clang::TranslationUnitDecl* parse( clang::SourceManager* srcMgr );
+      llvm::Module*           compile( clang::TranslationUnitDecl* tu );
       bool                    addUnit( const UnitID_t& id,
-                                       clang::idx::TranslationUnit* tu );
+                                       clang::TranslationUnitDecl* tu );
 
       std::vector<clang::Decl*>
-      extractDeclarations( clang::idx::TranslationUnit* tu );
-      void insertDeclarations( clang::idx::TranslationUnit* tu, clang::Sema* sema );
-      void dumpTU( clang::idx::TranslationUnit* tu );
+      extractDeclarations( clang::TranslationUnitDecl* tu );
+      void insertDeclarations( clang::TranslationUnitDecl* tu, clang::Sema* sema );
+      void dumpTU( clang::DeclContext* dc );
       clang::QualType typeCopy( clang::QualType source,
                                 const clang::ASTContext& sourceContext,
                                 clang::ASTContext& targetContext );
