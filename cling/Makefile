@@ -1,5 +1,5 @@
 LEVEL = ../..
-DIRS := lib
+DIRS := lib tools
 
 include $(LEVEL)/Makefile.common
 

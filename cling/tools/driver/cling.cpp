@@ -17,6 +17,8 @@
 #include <llvm/Function.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/System/DynamicLibrary.h>
+#include <llvm/System/Signals.h>
+#include <llvm/Support/PrettyStackTrace.h>
 
 #include <cling/Interpreter/Interpreter.h>
 #include <cling/UserInterface/UserInterface.h>
@@ -26,6 +28,9 @@
 //------------------------------------------------------------------------------
 int main( int argc, char **argv )
 {
+
+   llvm::sys::PrintStackTraceOnErrorSignal();
+   llvm::PrettyStackTraceProgram X(argc, argv);
 
    //---------------------------------------------------------------------------
    // Check if we should run in the "interactive" mode
@@ -45,7 +50,7 @@ int main( int argc, char **argv )
    langInfo.CPlusPlus   = 1;
    langInfo.CPlusPlus0x = 1;
    langInfo.CXXOperatorNames = 1;
-   langInfo.Boolean = 1;
+   langInfo.Bool = 1;
    langInfo.Exceptions = 1;
    
 

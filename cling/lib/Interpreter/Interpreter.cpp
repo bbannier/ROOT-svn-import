@@ -7,6 +7,8 @@
 #include <cling/Interpreter/Interpreter.h>
 
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/System/Host.h>
+#include <llvm/System/Path.h>
 #include <llvm/ADT/OwningPtr.h>
 #include <llvm/Linker.h>
 #include <llvm/Module.h>
@@ -21,6 +23,7 @@
 
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/SourceManager.h>
+#include <clang/Basic/Version.h>
 #include <clang/Lex/HeaderSearch.h>
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Frontend/InitHeaderSearch.h>
@@ -51,8 +54,9 @@ namespace cling
    {
       m_fileMgr    = new clang::FileManager();
       m_diagClient = new clang::TextDiagnosticPrinter( llvm::errs() );
+      m_diagClient->setLangOptions(&language);
       if (!m_target) {
-         m_ownedTarget.reset( clang::TargetInfo::CreateTargetInfo( LLVM_HOSTTRIPLE ) );
+         m_ownedTarget.reset(clang::TargetInfo::CreateTargetInfo(llvm::sys::getHostTriple()));
          m_target = m_ownedTarget.get();
       }
    }
@@ -231,8 +235,12 @@ namespace cling
 
       hiInit.AddDefaultEnvVarPaths( m_lang );
       hiInit.AddDefaultSystemIncludePaths( m_lang );
-      hiInit.AddPath( CLANG_SYS_HEADERS, clang::InitHeaderSearch::System,
-                      false, false, false );
+      llvm::sys::Path clangIncl(LLVM_LIBDIR, strlen(LLVM_LIBDIR));
+      clangIncl.appendComponent("clang");
+      clangIncl.appendComponent(CLANG_VERSION_STRING);
+      clangIncl.appendComponent("include");
+      hiInit.AddPath( clangIncl.c_str(), clang::InitHeaderSearch::System,
+                      true, false, false, true /*ignore sysroot*/);
       hiInit.Realize();
 
       //-------------------------------------------------------------------------
