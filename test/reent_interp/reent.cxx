@@ -22,12 +22,10 @@ int call_interp(const char* code) {
    langInfo.CPlusPlus   = 1;
    langInfo.CPlusPlus0x = 1;
    langInfo.CXXOperatorNames = 1;
-   langInfo.Boolean = 1;
+   langInfo.Bool = 1;
    langInfo.Exceptions = 1;
 
-   llvm::OwningPtr<clang::TargetInfo> targetInfo;
-   targetInfo.reset( clang::TargetInfo::CreateTargetInfo( HOST_TARGET ) );
-   cling::Interpreter interp( langInfo, targetInfo.get() );
+   cling::Interpreter interp(langInfo);
    std::string wrapped_code("int reentrant_main(int argc, char* argv[]) { ");
    wrapped_code += code;
    wrapped_code += "return 0;}";

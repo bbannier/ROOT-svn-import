@@ -54,11 +54,15 @@ namespace cling
    {
       m_fileMgr    = new clang::FileManager();
       m_diagClient = new clang::TextDiagnosticPrinter( llvm::errs() );
-      m_diagClient->setLangOptions(&language);
       if (!m_target) {
          m_ownedTarget.reset(clang::TargetInfo::CreateTargetInfo(llvm::sys::getHostTriple()));
          m_target = m_ownedTarget.get();
+         llvm::StringMap<bool> Features;
+         m_target->getDefaultFeatures("", Features);
+         m_target->HandleTargetFeatures(Features);
       }
+      m_target->getDefaultLangOptions(language);
+      m_diagClient->setLangOptions(&language);
    }
 
    //---------------------------------------------------------------------------
