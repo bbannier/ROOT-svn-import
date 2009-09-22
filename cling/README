@@ -14,8 +14,8 @@
 1.1 Dependencies
 
    CLING source depends on the LLVM [1] and CLANG [2] headers and libraries.
-You will also need CMake [3] >= 2.6.1 to build all of those packages and
-subversion [4] to get the source code.
+You will also need CMake [3] >= 2.6.1 or GNU Make to build all of those
+packages and subversion [4] to get the source code.
 
    [1] http://llvm.org
    [2] http://clang.llvm.org
@@ -41,7 +41,7 @@ subversion [4] to get the source code.
      cat tools/cling/patches/llvm* | patch -p0
      cat tools/cling/patches/clang* | ( cd tools/clang; patch -p0 ) 
 
-   * Configure, build and install them:
+   * Configure, build and install them, eitehr using CMake:
 
      cd ..
      mkdir build
@@ -52,6 +52,15 @@ subversion [4] to get the source code.
            -DCMAKE_CXX_COMPILER=`which c++` \
            -DCMAKE_C_COMPILER=`which gcc` \
            ../src
+     make
+     make install
+
+     or GNU Make (see ../src/configure --help for all options):
+
+     cd ..
+     mkdir build
+     cd build
+     ../src/configure --prfix=/some/install/dir
      make
      make install
 
