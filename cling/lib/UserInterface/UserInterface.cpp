@@ -16,8 +16,7 @@
 
 #include <sys/stat.h>
 #include <stdio.h>
-#include <readline/readline.h>
-#include <readline/history.h>
+#include <cling/EditLine/EditLine.h>
 
 namespace llvm {
    class Module;

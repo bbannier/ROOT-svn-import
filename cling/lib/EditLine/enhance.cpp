@@ -9,13 +9,15 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#include "TROOT.h"
 #include "el.h"
-#include "TRegexp.h"
-#include "TClassTable.h"
-#include "TInterpreter.h"
 #include <stack>
 #include <set>
+#include <string>
+
+#ifdef R__ROOT
+#include "TROOT.h"
+#include "TInterpreter.h"
+#endif
 
 using namespace std;
 
@@ -26,17 +28,6 @@ int matchParentheses(EditLine_t* el);
 void colorWord(EditLine_t* el, int first, int num, int color);
 void colorBrackets(EditLine_t* el, int open, int close, int color);
 char** rl_complete2ROOT(const char*, int, int);
-
-struct KeywordInLine_t {
-   KeywordInLine_t(const TString& w, Long64_t hash, Ssiz_t pos):
-      fWord(w),
-      fHash(hash),
-      fPosBegin(pos) {}
-
-   TString fWord;
-   Long64_t fHash;
-   Ssiz_t fPosBegin;
-};
 
 // int values for colour highlighting
 int color_class = 4;           // NCurses COLOR_BLUE
@@ -62,39 +53,11 @@ setKeywordColors(int colorType, int colorBracket, int colorBadBracket) {
 
 
 /*
- *      Use gRoot to establish keywords known to root.
+ *      Highlight keywords and types
  *
  */
 void
-highlightKeywords(EditLine_t* el) {
-   typedef std::set<int> HashSet_t;
-   static HashSet_t sHashedKnownTypes;
-
-   TString sBuffer(el->fLine.fBuffer, el->fLine.fLastChar - el->fLine.fBuffer);
-
-   TString keyword;
-   Ssiz_t posNextTok = 0;
-   Ssiz_t posPrevTok = 0;
-
-   // regular expression inverse of match expression to find end of match
-   while (sBuffer.Tokenize(keyword, posNextTok, "[^a-zA-Z0-9_]")) {
-      Ssiz_t toklen = posNextTok - posPrevTok;
-
-      if (posNextTok == -1) {
-         toklen = sBuffer.Length() - posPrevTok;
-      }
-      TString tok = sBuffer(posPrevTok, toklen);
-      Ssiz_t pos = posPrevTok + tok.Index(keyword);
-      int color = -1;
-
-      if (gROOT->GetListOfTypes()->FindObject(keyword)) {
-         color = color_type;
-      } else if (gInterpreter->CheckClassInfo(keyword, kFALSE)) {
-         color = color_class;
-      }
-      colorWord(el, pos, keyword.Length(), color);
-      posPrevTok = posNextTok;
-   }
+highlightKeywords(EditLine_t* /*el*/) {
 } // highlightKeywords
 
 
@@ -123,10 +86,10 @@ matchParentheses(EditLine_t* el) {
 
    // CURRENT STUFF
    // create a string of the buffer contents
-   TString sBuffer = "";
+   std::string sBuffer = "";
 
    for (char* c = el->fLine.fBuffer; c < el->fLine.fLastChar; c++) {
-      sBuffer.Append(*c);
+      sBuffer += *c;
    }
 
    // check whole buffer for any highlighted brackets and remove colour info
@@ -140,7 +103,7 @@ matchParentheses(EditLine_t* el) {
    // char* stack for pointers to locations of brackets
    stack<int> locBrackets;
 
-   if (sBuffer.Length() > 0) {
+   if (!sBuffer.empty()) {
       int cursorPos = el->fLine.fCursor - el->fLine.fBuffer;
       bracketPos = cursorPos;
 
@@ -191,7 +154,7 @@ matchParentheses(EditLine_t* el) {
          step = -1;
       }
 
-      for (int i = bracketPos + step; i >= 0 && i < sBuffer.Length(); i += step) {
+      for (int i = bracketPos + step; i >= 0 && i < (int)sBuffer.size(); i += step) {
          //if current char is equal to another opening bracket, push onto stack
          if (sBuffer[i] == bTypes[bIndex][foundParenIdx]) {
             // push index of bracket
