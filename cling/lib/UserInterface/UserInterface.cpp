@@ -4,44 +4,26 @@
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
-// temporary - this has to go away after 2009-01-21!
-#define CLING_USE_READLINE
-
 #include <cling/UserInterface/UserInterface.h>
 
 #include <cling/Interpreter/Interpreter.h>
 
 #include <llvm/System/DynamicLibrary.h>
+#include <llvm/System/Path.h>
 #include <llvm/Support/MemoryBuffer.h>
-#
-#include <Inuit/Widgets/UI.h>
-#include <Inuit/Widgets/EditLine.h>
-#include <Inuit/Drivers/TerminalDriver.h>
-#include <Inuit/Drivers/InputDriver.h>
 
 #include <iostream>
 
-#ifdef CLING_USE_READLINE
 #include <sys/stat.h>
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#endif
 
 namespace llvm {
    class Module;
 }
 
-using namespace Inuit;
-
 namespace {
-
-   // Event handler for Inuit::UI
-   static bool InputHandler(Inuit::UI& ui, const Inuit::Input& input, void* userParam)
-   {
-      cling::UserInterface* cui = (cling::UserInterface*)userParam;
-      cui->HandleEvent(ui, input);
-   }
 
    //------------------------------------------------------------------------------
    // String constants - MOVE SOMEWHERE REASONABLE!
@@ -56,16 +38,8 @@ namespace {
 // Construct an interface for an interpreter
 //---------------------------------------------------------------------------
 cling::UserInterface::UserInterface(Interpreter& interp, const char* prompt /*= "[cling] $"*/):
-   m_Interp(&interp), m_EditLine(0), m_UI(0)
+   m_Interp(&interp)
 {
-#ifndef CLING_USE_READLINE
-   TerminalDriver& td = TerminalDriver::Instance();
-   InputDriver& ed = InputDriver::Instance(td);
-   m_UI = new UI(Pos(td.GetSize().fW, td.GetSize().fH), ed);
-   m_UI->AddInputHandler(InputHandler, this);
-   m_EditLine = new EditLine(m_UI, Pos(0, td.GetSize().fH - 1), td.GetSize().fW, prompt);
-   m_UI->AddElement(m_EditLine);
-#endif
 }
 
 
@@ -74,8 +48,6 @@ cling::UserInterface::UserInterface(Interpreter& interp, const char* prompt /*= 
 //---------------------------------------------------------------------------
 cling::UserInterface::~UserInterface()
 {
-   delete m_EditLine;
-   delete m_UI;
 }
 
 //---------------------------------------------------------------------------
@@ -88,7 +60,6 @@ void cling::UserInterface::runInteractively()
    std::cerr << "* Type C code and press enter to run it *" << std::endl;
    std::cerr << "* Type .q, exit or ctrl+D to quit       *" << std::endl;
    std::cerr << "*****************************************" << std::endl;
-#ifdef CLING_USE_READLINE
    struct stat buf;
    static const char* histfile = ".cling_history";
    using_history();
@@ -106,36 +77,9 @@ void cling::UserInterface::runInteractively()
       } else break;
    }
    write_history(histfile);
-#else
-   m_UI->ProcessInputs();
-#endif
 }
 
 
-//---------------------------------------------------------------------------
-// Handle an event passed from EventHandler
-//---------------------------------------------------------------------------
-bool cling::UserInterface::HandleEvent(Inuit::UI& ui, const Inuit::Input& input)
-{
-   if (input.GetType() == Input::kTypePrintable
-       && (input.GetPrintable() == 'q' || input.GetPrintable() == 'Q'))
-      ui.RequestQuit();
-   else if (input.GetType() == Input::kTypeNonPrintable
-            && input.GetNonPrintable() == Inuit::Input::kNPEnter) {
-      Inuit::EditLine* editLine = dynamic_cast<Inuit::EditLine*>(ui.GetFocusedWidget());
-      if (editLine && m_EditLine == editLine) {
-         ui.GetTerminalDriver().SetManagedMode(false);
-         bool clearLine = NextInteractiveLine(editLine->GetText());
-         ui.GetTerminalDriver().SetManagedMode(true);
-         if (clearLine) {
-            editLine->SetText("");
-         }
-      } else return false;
-   } else return false;
-   return true;
-}
-
- 
 //---------------------------------------------------------------------------
 // Process an interactive line, return whether processing was successful
 //---------------------------------------------------------------------------
@@ -227,11 +171,7 @@ bool cling::UserInterface::ProcessMeta(const std::string& input)
          break;
       }
    case 'q':
-#ifdef CLING_USE_READLINE
       m_QuitRequested = true;
-#else
-      m_UI->RequestQuit();
-#endif
       break;
    default:
       return false;

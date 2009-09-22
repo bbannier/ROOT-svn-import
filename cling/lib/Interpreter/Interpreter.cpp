@@ -17,14 +17,15 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/Config/config.h>
 #include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/LLVMContext.h>
 
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/SourceManager.h>
-#include <clang/Index/TranslationUnit.h>
 #include <clang/Lex/HeaderSearch.h>
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Frontend/InitHeaderSearch.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
+#include <clang/Frontend/CompileOptions.h>
 #include <clang/CodeGen/ModuleBuilder.h>
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/ASTConsumer.h>
@@ -85,7 +86,7 @@ namespace cling
       //------------------------------------------------------------------------
       // Process the unit
       //------------------------------------------------------------------------
-      clang::idx::TranslationUnit* tu = parse( fileName );
+      clang::TranslationUnitDecl* tu = parse( fileName );
       return addUnit( fileName, tu );
    }
 
@@ -120,7 +121,7 @@ namespace cling
    llvm::Module* Interpreter::link( const std::string& fileName,
                                     std::string* errMsg )
    {
-      clang::idx::TranslationUnit* tu     = parse( fileName );
+      clang::TranslationUnitDecl* tu = parse( fileName );
       llvm::Module*           module = compile( tu );
       llvm::Module*           result = link( module, errMsg );
       delete tu;
@@ -135,7 +136,7 @@ namespace cling
    llvm::Module* Interpreter::link( const llvm::MemoryBuffer* buff,
                                     std::string* errMsg )
    {
-      clang::idx::TranslationUnit* tu     = parse( buff );
+      clang::TranslationUnitDecl* tu = parse( buff );
       llvm::Module*           module = compile( tu );
       llvm::Module*           result = link( module, errMsg );
       delete tu;
@@ -169,7 +170,7 @@ namespace cling
    //---------------------------------------------------------------------------
    // Parse memory buffer
    //---------------------------------------------------------------------------
-   clang::idx::TranslationUnit* Interpreter::parse( const llvm::MemoryBuffer* buff )
+   clang::TranslationUnitDecl* Interpreter::parse( const llvm::MemoryBuffer* buff )
    {
       //------------------------------------------------------------------------
       // Create a file manager
@@ -191,7 +192,7 @@ namespace cling
    //---------------------------------------------------------------------------
    // Parse file
    //---------------------------------------------------------------------------
-   clang::idx::TranslationUnit* Interpreter::parse( const std::string& fileName )
+   clang::TranslationUnitDecl* Interpreter::parse( const std::string& fileName )
    {
       //------------------------------------------------------------------------
       // Create a file manager
@@ -214,7 +215,7 @@ namespace cling
    //---------------------------------------------------------------------------
    // Parse
    //---------------------------------------------------------------------------
-   clang::idx::TranslationUnit* Interpreter::parse( clang::SourceManager* srcMgr )
+   clang::TranslationUnitDecl* Interpreter::parse( clang::SourceManager* srcMgr )
    {
       //------------------------------------------------------------------------
       // Return immediately if no target was specified
@@ -257,12 +258,13 @@ namespace cling
       //-------------------------------------------------------------------------
       clang::ASTContext* context;
       clang::ASTConsumer dummyConsumer;
+      clang::Builtin::Context builtinContext(*m_target);
       context = new clang::ASTContext( m_lang, *srcMgr, *m_target,
                                        pp->getIdentifierTable(),
                                        pp->getSelectorTable(),
-                                       m_target->getTargetBuiltins());
+                                       builtinContext);
 
-      clang::idx::TranslationUnit *tu = new clang::idx::TranslationUnit(*context);
+      clang::TranslationUnitDecl *tu = clang::TranslationUnitDecl::Create(*context);
       clang::Sema   sema(*pp, *context, dummyConsumer);
       clang::Parser p(*pp, sema);
 
@@ -271,7 +273,7 @@ namespace cling
 
       insertDeclarations( tu, &sema );
 
-      clang::Parser::DeclTy *adecl;
+      clang::Parser::DeclGroupPtrTy adecl;
   
       while( !p.ParseTopLevelDecl(adecl) ) {}
 
@@ -283,7 +285,7 @@ namespace cling
    //----------------------------------------------------------------------------
    // Compile the translation unit
    //----------------------------------------------------------------------------
-   llvm::Module* Interpreter::compile( clang::idx::TranslationUnit* tu )
+   llvm::Module* Interpreter::compile( clang::TranslationUnitDecl* tu )
    {
       if( !tu )
          return 0;
@@ -298,18 +300,22 @@ namespace cling
       // Create the code generator
       //-------------------------------------------------------------------------
       llvm::OwningPtr<clang::CodeGenerator> codeGen;
-      codeGen.reset( CreateLLVMCodeGen( diag, m_lang, "-", false ) );
+      clang::CompileOptions options;
+      llvm::LLVMContext llvmContext;
+      codeGen.reset(CreateLLVMCodeGen(diag, "SOME NAME [Interpreter::compile()]",
+                                      options, llvmContext));
 
       //-------------------------------------------------------------------------
       // Loop over the AST
       //-------------------------------------------------------------------------
-      clang::idx::TranslationUnit::iterator it;
-      codeGen->InitializeTU( *tu );
+      
+      codeGen->Initialize(tu->getASTContext());
 
-      for( it = tu->begin(); it != tu->end(); ++it )
-         codeGen->HandleTopLevelDecl( *it );
+      for( clang::TranslationUnitDecl::decl_iterator it = tu->decls_begin(),
+              itE = tu->decls_end(); it != itE; ++it )
+         codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*it));
 
-      codeGen->HandleTranslationUnit(*tu);
+      codeGen->HandleTranslationUnit(tu->getASTContext());
 
       //-------------------------------------------------------------------------
       // Return the module
@@ -321,7 +327,7 @@ namespace cling
    //----------------------------------------------------------------------------
    // Add the translation unit
    //----------------------------------------------------------------------------
-   bool Interpreter::addUnit( const UnitID_t& id, clang::idx::TranslationUnit* tu )
+   bool Interpreter::addUnit( const UnitID_t& id, clang::TranslationUnitDecl* tu )
    {
       //-------------------------------------------------------------------------
       // Check if we've got a valid translation unit
@@ -365,7 +371,7 @@ namespace cling
    // Extract the function declarations
    //----------------------------------------------------------------------------
    std::vector<clang::Decl*>
-   Interpreter::extractDeclarations( clang::idx::TranslationUnit* tu )
+   Interpreter::extractDeclarations( clang::TranslationUnitDecl* tu )
    {
       std::vector<clang::Decl*> vect;
       if( !tu )
@@ -380,56 +386,59 @@ namespace cling
       //-------------------------------------------------------------------------
       // Loop over the declarations
       //-------------------------------------------------------------------------
-      clang::ASTContext& context = tu->getContext();
-      const clang::SourceManager& srcMgr = context.getSourceManager();
-      clang::idx::TranslationUnitDecl* tud = context.getTranslationUnitDecl();
-      clang::idx::TranslationUnit::iterator it, itend = tud->decls_end();
-      for( it = tud->decls_begin(); it != itend; ++it ) {
-         clang::FunctionDecl* decl = dynamic_cast<clang::FunctionDecl*>( *it );
-         if( decl && decls_before.find(decl) == decls_before.end()) {
-            vect.push_back( decl );
-            m_decls.push_back( std::make_pair(*it, &context ) );
-         }         
+      clang::ASTContext& context = tu->getASTContext();
+      //const clang::SourceManager& srcMgr = context.getSourceManager();
+      for( clang::TranslationUnitDecl::decl_iterator it = tu->decls_begin(),
+              itend = tu->decls_end(); it != itend; ++it ) {
+         if (it->getKind() == clang::Decl::Function) {
+            clang::FunctionDecl* decl = static_cast<clang::FunctionDecl*>( *it );
+            if( decl && decls_before.find(decl) == decls_before.end()) {
+               vect.push_back( decl );
+               m_decls.push_back( std::make_pair(*it, &context ) );
+            }
+         }
       }
+      return vect;
    }
 
    //----------------------------------------------------------------------------
    // Insert the implicit declarations to the translation unit
    //----------------------------------------------------------------------------
-   void Interpreter::insertDeclarations( clang::idx::TranslationUnit* tu, clang::Sema* sema )
+   void Interpreter::insertDeclarations( clang::TranslationUnitDecl* tu, clang::Sema* sema )
    {
-      clang::ASTContext& context = tu->getContext();
+      clang::ASTContext& context = tu->getASTContext();
       clang::IdentifierTable&      table    = context.Idents;
       clang::DeclarationNameTable& declTab  = context.DeclarationNames;
-      clang::idx::TranslationUnitDecl* tud = context.getTranslationUnitDecl();
       std::vector<std::pair<clang::Decl*, const clang::ASTContext*> >::iterator it;
       for( it = m_decls.begin(); it != m_decls.end(); ++it ) {
-         clang::FunctionDecl* func = dynamic_cast<clang::FunctionDecl*>( it->first );
-         if( func ) {
-            clang::IdentifierInfo&       id       = table.get(std::string(func->getNameAsString()));
-            clang::DeclarationName       dName    = declTab.getIdentifier( &id );
-            
-            clang::FunctionDecl* decl = clang::FunctionDecl::Create( context,
-                                                                     tud,
-                                                                     func->getLocation(),
-                                                                     dName,
-                                                                     typeCopy( func->getType(), *it->second, context ) );
-            tud->addDecl( decl );
-            sema->IdResolver.AddDecl( decl );
-            if (sema->TUScope)
-               sema->TUScope->AddDecl( decl );
+         if (it->first->getKind() == clang::Decl::Function) {
+            clang::FunctionDecl* func = static_cast<clang::FunctionDecl*>( it->first );
+            if( func ) {
+               clang::IdentifierInfo&       id       = table.get(std::string(func->getNameAsString()));
+               clang::DeclarationName       dName    = declTab.getIdentifier( &id );
+
+               clang::FunctionDecl* decl = clang::FunctionDecl::Create( context,
+                                                                        tu,
+                                                                        func->getLocation(),
+                                                                        dName,
+                                                                        typeCopy( func->getType(), *it->second, context ),
+                                                                        0 /*DeclInfo*/);
+               tu->addDecl( decl );
+               sema->IdResolver.AddDecl( decl );
+               if (sema->TUScope)
+                  sema->TUScope->AddDecl( clang::Action::DeclPtrTy::make(decl) );
+            }
          }
-         
       }
    }
 
    //----------------------------------------------------------------------------
    // Dump the translation unit
    //----------------------------------------------------------------------------
-   void Interpreter::dumpTU( clang::idx::TranslationUnit* tu )
+   void Interpreter::dumpTU( clang::DeclContext* dc )
    {
-      clang::idx::TranslationUnit::iterator it;
-      for( it = tu->begin(); it != tu->end(); ++it ) {
+      for (clang::DeclContext::decl_iterator it = dc->decls_begin(),
+              itE = dc->decls_end(); it != itE; ++it ) {
          clang::Stmt* body = (*it) ? (*it)->getBody() : 0;
          if( body ) {
             std::cerr << "--- AST ---" << std::endl;
@@ -447,15 +456,15 @@ namespace cling
                                           clang::ASTContext& targetContext )
    {
       const clang::BuiltinType*       bt;
-      const clang::PointerType*       pt;
       const clang::FunctionType*      ft1;
-      const clang::FunctionTypeProto* ft2;
+      const clang::FunctionProtoType* ft2;
 
       //--------------------------------------------------------------------------
       // Deal with a builtin type
       //--------------------------------------------------------------------------
       if( (bt = source.getTypePtr()->getAsBuiltinType()) ) {
-         return clang::QualType( targetContext.getBuiltinType( bt->getKind() ).getTypePtr(),
+         return clang::QualType( bt->getCanonicalTypeInternal().getUnqualifiedType().getTypePtr () 
+                                 /*was: targetContext.getBuiltinType( bt->getKind() ).getTypePtr()*/,
                                  source.getCVRQualifiers() );
       }
 
@@ -463,7 +472,7 @@ namespace cling
       // Deal with a pointer type
       //--------------------------------------------------------------------------
       else if( source.getTypePtr()->isPointerType() ) {
-         pt = source.getTypePtr()->getAsPointerType();
+         const clang::PointerType* pt = source.getTypePtr()->getAs<clang::PointerType>();
          clang::QualType pointee = typeCopy( pt->getPointeeType(),
                                              sourceContext,
                                              targetContext );
@@ -476,22 +485,22 @@ namespace cling
       // Deal with a function type
       //--------------------------------------------------------------------------
       else if( source.getTypePtr()->isFunctionType() ) {
-         ft1  = dynamic_cast<clang::FunctionType*>(source.getTypePtr());
-         ft2  = dynamic_cast<clang::FunctionTypeProto*>(source.getTypePtr());
+         ft1  = static_cast<clang::FunctionType*>(source.getTypePtr());
 
          //-----------------------------------------------------------------------
          // No parameters
          //-----------------------------------------------------------------------
-         if( !ft2 )
-            return targetContext.getFunctionTypeNoProto( typeCopy( ft1->getResultType(),
+         if( ft1->getTypeClass() != clang::Type::FunctionProto )
+            return targetContext.getFunctionNoProtoType( typeCopy( ft1->getResultType(),
                                                                    sourceContext,
                                                                    targetContext ) );
 
+         ft2  = static_cast<clang::FunctionProtoType*>(source.getTypePtr());
          //-----------------------------------------------------------------------
          // We have some parameters
          //-----------------------------------------------------------------------
          std::vector<clang::QualType> args;
-         clang::FunctionTypeProto::arg_type_iterator it;
+         clang::FunctionProtoType::arg_type_iterator it;
          for( it = ft2->arg_type_begin(); it != ft2->arg_type_end(); ++it )
             args.push_back( typeCopy( *it, sourceContext, targetContext ) );
 
@@ -503,7 +512,7 @@ namespace cling
                                                ft2->getTypeQuals() );
       }
 
-      throw std::runtime_error( std::string("Unable to convert type: ") + source.getAsString() );
+      assert("Unable to convert type");
       return source;
    }
 

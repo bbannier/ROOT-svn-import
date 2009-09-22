@@ -9,12 +9,6 @@
 
 #include <string>
 
-namespace Inuit {
-   class Input;
-   class UI;
-   class EditLine;
-}
-
 namespace llvm {
    class Module;
 }
@@ -35,19 +29,12 @@ namespace cling {
       void executeSingleCodeLine(const char* line);
       void loadFile(const char* file);
 
-      bool HandleEvent(Inuit::UI& ui, const Inuit::Input& input);
-
    private:
-      static bool EventHandler(Inuit::UI& ui, const Inuit::Input& input, void* userParam);
       bool NextInteractiveLine(const std::string& line);
       bool ProcessMeta(const std::string& input);
 
       Interpreter* m_Interp;
-#ifdef CLING_USE_READLINE
       bool m_QuitRequested;
-#endif
-      Inuit::EditLine* m_EditLine;
-      Inuit::UI* m_UI;
    };
 }
 

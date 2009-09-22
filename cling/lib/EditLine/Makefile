@@ -1,4 +1,4 @@
-##===- cling/lib/UserInterface/Makefile---------------------*- Makefile -*-===##
+##===- cling/lib/EditLine/Makefile--------------------------*- Makefile -*-===##
 # 
 #                     The LLVM Compiler Infrastructure
 #
@@ -7,20 +7,17 @@
 # 
 ##===----------------------------------------------------------------------===##
 #
-#  This implements the a C++ interpreter user frontend.
+#  This implements the a C++ interpreter backend.
 #
 ##===----------------------------------------------------------------------===##
 
 LEVEL = ../../../..
-LIBRARYNAME := clingUserInterface
+LIBRARYNAME := clingEditLine
 BUILD_ARCHIVE = 1
 CXXFLAGS = -fno-rtti
 
 # Don't install Cling libraries
 NO_INSTALL = 1
-
-CPPFLAGS += -I$(PROJ_SRC_DIR)/../../include -I$(PROJ_SRC_DIR)/../../../clang/include \
--I$(PROJ_SRC_DIR)/../../../clang/lib -I$(PROJ_OBJ_DIR)/../../include -I$(PROJ_OBJ_DIR)/../../../clang/include 
 
 include $(LEVEL)/Makefile.common
 
