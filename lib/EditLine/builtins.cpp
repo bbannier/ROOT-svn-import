@@ -8,7 +8,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 #include "builtins.h"
-#include "editline.h"
+#include <cling/EditLine/EditLine.h>
 #include <string>
 #include <vector>
 #include <map>

@@ -57,7 +57,7 @@
 #include <alloca.h>
 #include "histedit.h"
 // #include "readline/readline.h"
-#include "editline.h"
+#include <cling/EditLine/EditLine.h>
 #include "el.h"
 #include "compat.h"
 #include "TTermManip.h"
