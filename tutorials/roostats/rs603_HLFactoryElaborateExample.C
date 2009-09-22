@@ -62,12 +62,12 @@ void rs603_HLFactoryElaborateExample() {
   ofstream ofile3(card_name3);
   ofile3 << "echo Now reading the included file!;\n\n";
   ofile3 << "echo Including datasets in a Workspace in a Root file...;\n";
-  ofile3 << "data1 = importDataSet (rs603_infile.root,\n";
-  ofile3 << "                       rs603_ws,\n";
-  ofile3 << "                       data1);\n\n";
-  ofile3 << "data2 = importDataSet (rs603_infile.root,\n";
-  ofile3 << "                       rs603_ws,\n";
-  ofile3 << "                       data2);\n";
+  ofile3 << "data1 = import(rs603_infile.root,\n";
+  ofile3 << "               rs603_ws,\n";
+  ofile3 << "               data1);\n\n";
+  ofile3 << "data2 = import(rs603_infile.root,\n";
+  ofile3 << "               rs603_ws,\n";
+  ofile3 << "               data2);\n";
   ofile3.close();
 
 // --- Produce the two separate datasets into a WorkSpace ---
