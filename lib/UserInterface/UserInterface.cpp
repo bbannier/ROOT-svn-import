@@ -69,9 +69,17 @@ void cling::UserInterface::runInteractively()
    m_QuitRequested = false;
    while (!m_QuitRequested) {
       char* line = readline("[cling]$ ", true);
-      while (!line) {
+      do {
          line = readline("[cling]$ ", false);
-      }
+         if (line) {
+            for (const char* c = line; *c; ++c) {
+               if (*c == '\a') {
+                  line = 0;
+                  break;
+               }
+            }
+         }
+      } while (!line);
       NextInteractiveLine(line);
       add_history(line);
    }
