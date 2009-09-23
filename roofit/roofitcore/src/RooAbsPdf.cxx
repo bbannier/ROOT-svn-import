@@ -1699,9 +1699,8 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, Int_t nEvents, Bool_t
 RooDataSet *RooAbsPdf::generate(RooAbsGenContext& context, const RooArgSet &whatVars, const RooDataSet *prototype,
 				Int_t nEvents, Bool_t /*verbose*/, Bool_t randProtoOrder, Bool_t resampleProto) const 
 {
-  // Internal method
-
-  if (nEvents==0) {
+  // Internal method  
+  if (nEvents==0 && (prototype==0 || prototype->numEntries()==0)) {
     return new RooDataSet("emptyData","emptyData",whatVars) ;
   }
 
