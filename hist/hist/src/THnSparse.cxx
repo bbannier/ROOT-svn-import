@@ -26,6 +26,8 @@
 #include "TRandom.h"
 #include <cassert>
 
+#include "TError.h"
+
 //______________________________________________________________________________
 //
 // THnSparseCompactBinCoord is a class used by THnSparse internally. It
@@ -507,6 +509,89 @@ TH1* THnSparse::CreateHist(const char* name, const char* title,
    hist->Rebuild();
 
    return hist;
+}
+
+//______________________________________________________________________________
+THnSparse* THnSparse::CreateSparse(const char* name, const char* title,
+                                   const TH1* h, Int_t ChunkSize)
+{
+   //Arrays that will be needed later. Initialized to 0.
+   int nbins[3] = {0,0,0};
+   double minRange[3] = {0.,0.,0.};
+   double maxRange[3] = {0.,0.,0.};
+
+   // Get the dimension of the TH1
+   int ndim = 1;
+   if      ( dynamic_cast<const TH3*>(h) ) ndim = 3;
+   else if ( dynamic_cast<const TH2*>(h) ) ndim = 2;
+
+   // Start getting the arrays filled, depending on the dimension of
+   // TH1
+   if ( ndim >= 1 )
+   {
+      nbins[0]    = h->GetNbinsX();
+      minRange[0] = h->GetXaxis()->GetXmin();
+      maxRange[0] = h->GetXaxis()->GetXmax();
+   }
+
+   if ( ndim >= 2 )
+   {
+      nbins[1]    = h->GetNbinsY();
+      minRange[1] = h->GetYaxis()->GetXmin();
+      maxRange[1] = h->GetYaxis()->GetXmax();
+   }
+
+   if ( ndim >= 3 )
+   {
+      nbins[2]    = h->GetNbinsZ();
+      minRange[2] = h->GetZaxis()->GetXmin();
+      maxRange[2] = h->GetZaxis()->GetXmax();
+   }
+
+
+   // Create the corresponding THnSparse, depending on the storage
+   // type of the TH1. The class name will be "TH??\0" where the first
+   // ? is 1,2 or 3 and the second ? indicates the stograge as C, S,
+   // I, F or D.
+   THnSparse* s = 0;
+   const char* cname( h->ClassName() );
+   if      ( cname[3] == 'C' )
+      s = new THnSparseC(name, title, ndim, nbins, minRange, maxRange, ChunkSize);
+   else if ( cname[3] == 'S' )
+      s = new THnSparseS(name, title, ndim, nbins, minRange, maxRange, ChunkSize);
+   else if ( cname[3] == 'I' )
+      s = new THnSparseI(name, title, ndim, nbins, minRange, maxRange, ChunkSize);
+   else if ( cname[3] == 'F' )
+      s = new THnSparseF(name, title, ndim, nbins, minRange, maxRange, ChunkSize);
+   else if ( cname[3] == 'D' )
+      s = new THnSparseD(name, title, ndim, nbins, minRange, maxRange, ChunkSize);
+   else  
+   {
+      ::Warning("THnSparse::CreateSparse", "Unknown Type of Histogram");
+      return 0;
+   }
+
+   // Get the array to know the number of entries of the TH1
+   const TArray *array = dynamic_cast<const TArray*>(h);
+   if ( !array ) 
+   {
+      ::Warning("THnSparse::CreateSparse", "Unknown Type of Histogram");
+      return 0;
+   }
+
+   // Fill the THnSparse with the bins that have content.
+   for ( int i = 0; i < array->GetSize(); ++i )
+   {
+      double value = h->GetBinContent(i);
+      if ( !value ) continue;
+      double error = h->GetBinError(i);
+      int x[3] = {0,0,0};
+      h->GetBinXYZ(i, x[0], x[1], x[2]);
+      s->SetBinContent(x, value);
+      s->SetBinError(x, error);
+   }
+
+   return s;
 }
 
 //______________________________________________________________________________

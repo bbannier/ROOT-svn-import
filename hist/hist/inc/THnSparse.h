@@ -165,6 +165,9 @@ class THnSparse: public TNamed {
  public:
    virtual ~THnSparse();
 
+   static THnSparse* CreateSparse(const char* name, const char* title,
+                                  const TH1* axes, Int_t ChunkSize = 1024 * 16);
+
    Int_t  GetNChunks() const { return fBinContent.GetEntriesFast(); }
    TObjArray* GetListOfAxes() { return &fAxes; }
    TAxis* GetAxis(Int_t dim) const { return (TAxis*)fAxes[dim]; }
