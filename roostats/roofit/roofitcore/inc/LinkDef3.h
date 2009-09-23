@@ -43,6 +43,8 @@
 #pragma link C++ class RooWorkspace- ;
 #pragma link C++ class RooWorkspace::CodeRepo- ;
 #pragma link C++ class RooWorkspace::WSDir+ ;
+#pragma link C++ class list<TObject*>+ ;
+#pragma link C++ class list<RooAbsData*>+ ;
 #pragma link C++ class RooProfileLL+ ;
 #pragma link C++ class RooAbsCachedPdf+ ;
 #pragma link C++ class RooAbsSelfCachedPdf+ ;
