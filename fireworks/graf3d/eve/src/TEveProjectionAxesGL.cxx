@@ -384,7 +384,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          // Bottom.
          glPushMatrix();
          glTranslatef( 0, b, 0);
-         fAxisPainter.SetLabelAlign(TGLFont::kCenterDown);
+         fAxisPainter.SetLabelAlign(TGLFont::kCenterH, TGLFont::kTop);
          fAxisPainter.RnrLabels();
          fAxisPainter.RnrLines();
          glPopMatrix();
@@ -392,13 +392,13 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          // Top.
          glPushMatrix();
          glTranslatef( 0, t, 0);
-         fAxisPainter.SetLabelAlign(TGLFont::kCenterUp);
+         fAxisPainter.SetLabelAlign(TGLFont::kCenterH, TGLFont::kBottom);
          fAxisPainter.RefTMOff(0).Negate();
          fAxisPainter.RnrLabels();
          fAxisPainter.RnrLines();
          glPopMatrix();
       }
-     
+
       // Y-axis.
       if (fM->fAxesMode == TEveProjectionAxes::kAll ||
           fM->fAxesMode == TEveProjectionAxes::kVertical)
@@ -412,7 +412,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          // Left.
          glPushMatrix();
          glTranslatef(l, 0, 0);
-         fAxisPainter.SetLabelAlign(TGLFont::kLeft);
+         fAxisPainter.SetLabelAlign(TGLFont::kLeft, TGLFont::kCenterV);
          fAxisPainter.RnrLabels();
          fAxisPainter.RnrLines();
          glPopMatrix();
@@ -420,7 +420,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          // Right.
          glPushMatrix();
          glTranslatef(r, 0, 0);
-         fAxisPainter.SetLabelAlign(TGLFont::kRight);
+         fAxisPainter.SetLabelAlign(TGLFont::kRight, TGLFont::kCenterV);
          fAxisPainter.RefTMOff(0).Negate();
          fAxisPainter.RnrLabels();
          fAxisPainter.RnrLines();
