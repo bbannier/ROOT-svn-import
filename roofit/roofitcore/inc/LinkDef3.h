@@ -102,8 +102,10 @@
 #pragma link C++ class RooTreeDataStore- ;
 #pragma link C++ class RooCompositeDataStore+ ;
 #pragma link C++ class RooTreeData+ ;
+#ifndef __ROOFIT_NOROOMINIMIZER
 #pragma link C++ class RooMinimizer+ ;
 #pragma link C++ class RooMinimizerFcn+ ;
+#endif
 #pragma link C++ class RooMoment+ ;
 #pragma link C++ class RooStudyManager+ ;
 #pragma link C++ class RooStudyPackage+ ;
