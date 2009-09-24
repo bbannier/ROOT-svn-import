@@ -42,18 +42,19 @@ int main( int argc, char **argv )
    // Set up the interpreter
    //---------------------------------------------------------------------------
    clang::LangOptions langInfo;
-   langInfo.C99         = 1;
+   //langInfo.C99         = 1;
    langInfo.HexFloats   = 1;
    langInfo.BCPLComment = 1; // Only for C99/C++.
    langInfo.Digraphs    = 1; // C94, C99, C++.
    //langInfo.CPlusPlus   = 1;
-   //langInfo.CPlusPlus0x = 1;
+   langInfo.CPlusPlus0x = 1;
    langInfo.CXXOperatorNames = 1;
    langInfo.Bool = 1;
-   langInfo.Exceptions = 1;
+   langInfo.Exceptions = 0;
    langInfo.GNUMode = 1;
    langInfo.NoInline = 1;
-   
+   langInfo.GNUInline = 1;
+   langInfo.DollarIdents = 1;
 
    cling::Interpreter interpreter( langInfo );
 
