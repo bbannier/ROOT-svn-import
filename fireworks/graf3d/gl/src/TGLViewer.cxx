@@ -46,12 +46,14 @@
 #include "TVirtualGL.h"
 
 #include "TGLWidget.h"
+// #include "TGLFBO.h"
 #include "TGLViewerEditor.h"
 
 #include "KeySymbols.h"
 #include "TContextMenu.h"
 #include "TImage.h"
 
+#include <stdexcept>
 
 #ifndef GL_BGRA
 #define GL_BGRA GL_BGRA_EXT
@@ -119,7 +121,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
-   fPointScale (1), fLineScale(1),
+   fPointScale (1), fLineScale(1), fSmoothPoints(kFALSE), fSmoothLines(kFALSE),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -176,7 +178,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
-   fPointScale (1), fLineScale(1),
+   fPointScale (1), fLineScale(1), fSmoothPoints(kFALSE), fSmoothLines(kFALSE),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -469,6 +471,9 @@ void TGLViewer::PreRender()
    TGLUtil::SetPointSizeScale(fPointScale * fRnrCtx->GetRenderScale());
    TGLUtil::SetLineWidthScale(fLineScale  * fRnrCtx->GetRenderScale());
 
+   if (fSmoothPoints) glEnable(GL_POINT_SMOOTH); else glDisable(GL_POINT_SMOOTH);
+   if (fSmoothLines)  glEnable(GL_LINE_SMOOTH);  else glDisable(GL_LINE_SMOOTH);
+
    TGLViewerBase::PreRender();
 
    // Setup lighting
@@ -588,6 +593,16 @@ void TGLViewer::DoDraw()
 }
 
 //______________________________________________________________________________
+Bool_t TGLViewer::SavePicture()
+{
+   // Save current image using the defualt file name which can be set
+   // via SetPictureFileName() and defaults to "viewer.jpg".
+   // Really useful for the files ending with 'gif+'.
+
+   return SavePicture(fPictureFileName);
+}
+
+//______________________________________________________________________________
 Bool_t TGLViewer::SavePicture(const TString &fileName)
 {
    // Save current image in various formats (gif, gif+, jpg, png, eps, pdf).
@@ -597,58 +612,210 @@ Bool_t TGLViewer::SavePicture(const TString &fileName)
    // can be covered by other windows.
    // Returns false if something obvious goes wrong, true otherwise.
 
-   if (fileName.EndsWith(".gif") || fileName.EndsWith(".gif+") ||
-       fileName.EndsWith(".jpg") || fileName.EndsWith(".png"))
+   if (fileName.EndsWith(".eps"))
    {
-      if ( ! TakeLock(kDrawLock)) {
-         Error("TGLViewer::SavePicture", "viewer locked - try later.");
-         return kFALSE;
-      }
-
-      std::auto_ptr<TImage> image(TImage::Create());
-
-      fRnrCtx->SetGrabImage(kTRUE);
-
-      fLOD = TGLRnrCtx::kLODHigh;
-
-      if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoDraw()", this));
-      else
-         DoDraw();
-
-      image->FromGLBuffer(fRnrCtx->GetGrabbedImage(), fViewport.Width(), fViewport.Height());
-
-      fRnrCtx->SetGrabImage(kFALSE);
-      delete [] fRnrCtx->GetGrabbedImage();
-      fRnrCtx->SetGrabbedImage(0);
-
-      image->WriteImage(fileName.Data());
-   }
-   else if (fileName.EndsWith(".eps"))
-   {
-      TGLOutput::Capture(*this, TGLOutput::kEPS_BSP, fileName.Data());
+      return TGLOutput::Capture(*this, TGLOutput::kEPS_BSP, fileName.Data());
    }
    else if (fileName.EndsWith(".pdf"))
    {
-      TGLOutput::Capture(*this, TGLOutput::kPDF_BSP, fileName.Data());
+      return TGLOutput::Capture(*this, TGLOutput::kPDF_BSP, fileName.Data());
    }
    else
    {
-      Warning("TGLViewer::SavePicture",
-              "file %s cannot be saved with this extension.", fileName.Data());
+      /*
+      if (GLEW_VERSION_1_5)
+      {
+         return SavePictureUsingFBO(fileName, fViewport.Width(), fViewport.Height(), kFALSE);
+      }
+      else
+      {
+         return SavePictureUsingBB(fileName);
+      }
+      */
+      return SavePictureUsingBB(fileName);
+   }
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::SavePictureUsingBB(const TString &fileName)
+{
+   // Save current image in various formats (gif, gif+, jpg, png).
+   // 'gif+' will append image to an existng file (animated gif).
+   // Back-Buffer is used for capturing of the image.
+   // The viewer window most be fully contained within the desktop but
+   // can be covered by other windows.
+   // Returns false if something obvious goes wrong, true otherwise.
+
+   static const TString eh("TGLViewer::SavePictureUsingBB");
+
+   if (! fileName.EndsWith(".gif") && ! fileName.EndsWith(".gif+") &&
+       ! fileName.EndsWith(".jpg") && ! fileName.EndsWith(".png"))
+   {
+      Warning(eh, "file %s cannot be saved with this extension.", fileName.Data());
       return kFALSE;
    }
+
+   if ( ! TakeLock(kDrawLock)) {
+      Error(eh, "viewer locked - try later.");
+      return kFALSE;
+   }
+
+   std::auto_ptr<TImage> image(TImage::Create());
+
+   fRnrCtx->SetGrabImage(kTRUE, GL_BACK);
+
+   fLOD = TGLRnrCtx::kLODHigh;
+
+   if (!gVirtualX->IsCmdThread())
+      gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoDraw()", this));
+   else
+      DoDraw();
+
+   image->FromGLBuffer(fRnrCtx->GetGrabbedImage(), fViewport.Width(), fViewport.Height());
+
+   fRnrCtx->SetGrabImage(kFALSE);
+   delete [] fRnrCtx->GetGrabbedImage();
+   fRnrCtx->SetGrabbedImage(0);
+
+   image->WriteImage(fileName.Data());
+
    return kTRUE;
 }
 
 //______________________________________________________________________________
-Bool_t TGLViewer::SavePicture()
+/*
+Bool_t TGLViewer::SavePictureUsingFBO(const TString &fileName, Int_t w, Int_t h,
+                                      Float_t pixel_object_scale)
+*/
+Bool_t TGLViewer::SavePictureUsingFBO(const TString &, Int_t, Int_t, Float_t)
 {
-   // Save current image using the defualt file name which can be set
-   // via SetPictureFileName() and defaults to "viewer.jpg".
-   // Really useful for the files ending with 'gif+'.
+   // Save current image in various formats (gif, gif+, jpg, png).
+   // 'gif+' will append image to an existng file (animated gif).
+   // Frame-Buffer-Object is used for capturing of the image - OpenGL
+   // 1.5 is required.
+   // The viewer window does not have to be visible at all.
+   // Returns false if something obvious goes wrong, true otherwise.
+   //
+   // pixel_object_scale is used to scale (as much as possible) the
+   // objects whose representation size is pixel based (point-sizes,
+   // line-widths, bitmap/pixmap font-sizes).
+   // If set to 0 (default) no scaling is applied.
 
-   return SavePicture(fPictureFileName);
+   static const TString eh("TGLViewer::SavePictureUsingFBO");
+
+   throw eh + "frame-buffer objects not supported on fireworks branch.";
+
+   /*
+   if (! fileName.EndsWith(".gif") && ! fileName.EndsWith(".gif+") &&
+       ! fileName.EndsWith(".jpg") && ! fileName.EndsWith(".png"))
+   {
+      Warning(eh, "file %s cannot be saved with this extension.", fileName.Data());
+      return kFALSE;
+   }
+
+   if ( ! TakeLock(kDrawLock)) {
+      Error(eh, "viewer locked - try later.");
+      return kFALSE;
+   }
+
+   std::auto_ptr<TImage> image(TImage::Create());
+
+   MakeCurrent();
+
+   TGLFBO *fbo = new TGLFBO();
+   try
+   {
+      fbo->Init(w, h);
+   }
+   catch (std::runtime_error& exc)
+   {
+      Error(eh, exc.what());
+      return kFALSE;
+   }
+
+   TGLRect old_vp(fViewport);
+   SetViewport(0, 0, w, h);
+
+   Float_t old_scale = 1;
+   if (pixel_object_scale != 0)
+   {
+      old_scale = fRnrCtx->GetRenderScale();
+      fRnrCtx->SetRenderScale(old_scale * pixel_object_scale);
+   }
+
+   fRnrCtx->SetGrabImage(kTRUE, 0);
+
+   fLOD = TGLRnrCtx::kLODHigh;
+
+   fbo->Bind();
+
+   if (!gVirtualX->IsCmdThread())
+      gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoDraw()", this));
+   else
+      DoDraw();
+
+   fbo->Unbind();
+   delete fbo;
+
+   image->FromGLBuffer(fRnrCtx->GetGrabbedImage(), fViewport.Width(), fViewport.Height());
+
+   fRnrCtx->SetGrabImage(kFALSE);
+   delete [] fRnrCtx->GetGrabbedImage();
+   fRnrCtx->SetGrabbedImage(0);
+
+   image->WriteImage(fileName.Data());
+
+   if (pixel_object_scale != 0)
+   {
+      fRnrCtx->SetRenderScale(old_scale);
+   }
+
+   SetViewport(old_vp);
+
+   return kTRUE;
+   */
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::SavePictureWidth(const TString &fileName, Int_t width,
+                                   Bool_t pixel_object_scale)
+{
+   // Save picture with given width (height scaled proportinally).
+   // If pixel_object_scale is true (default), the corresponding
+   // scaling gets calculated from the current window size.
+
+   Float_t scale  = Float_t(width) / fViewport.Width();
+   Int_t   height = TMath::Nint(scale*fViewport.Height());
+
+   return SavePictureUsingFBO(fileName, width, height, pixel_object_scale ? scale : 0);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::SavePictureHeight(const TString &fileName, Int_t height,
+                                    Bool_t pixel_object_scale)
+{
+   // Save picture with given height (width scaled proportinally).
+   // If pixel_object_scale is true (default), the corresponding
+   // scaling gets calculated from the current window size.
+
+   Float_t scale = Float_t(height) / fViewport.Height();
+   Int_t   width = TMath::Nint(scale*fViewport.Width());
+
+   return SavePictureUsingFBO(fileName, width, height, pixel_object_scale ? scale : 0);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::SavePictureScale (const TString &fileName, Float_t scale,
+                                    Bool_t pixel_object_scale)
+{
+   // Save picture with given scale to current window size.
+   // If pixel_object_scale is true (default), the same scaling is
+   // used.
+
+   Int_t w = TMath::Nint(scale*fViewport.Width());
+   Int_t h = TMath::Nint(scale*fViewport.Height());
+
+   return SavePictureUsingFBO(fileName, w, h, pixel_object_scale ? scale : 0);
 }
 
 //______________________________________________________________________________
@@ -750,7 +917,10 @@ void TGLViewer::PostDraw()
    if (fRnrCtx->GetGrabImage())
    {
       UChar_t* xx = new UChar_t[4 * fViewport.Width() * fViewport.Height()];
-      glReadBuffer(GL_BACK);
+      if (fRnrCtx->GetGrabBuffer() != 0)
+      {
+         glReadBuffer(fRnrCtx->GetGrabBuffer());
+      }
       glPixelStorei(GL_PACK_ALIGNMENT,1);
       glReadPixels(0, 0, fViewport.Width(), fViewport.Height(),
                    GL_BGRA, GL_UNSIGNED_BYTE, xx);
@@ -1199,10 +1369,6 @@ void TGLViewer::SetViewport(Int_t x, Int_t y, Int_t width, Int_t height)
    // Set viewer viewport (window area) with bottom/left at (x,y), with
    // dimensions 'width'/'height'
 
-   if (IsLocked() && fGLDevice == -1) {
-      Error("TGLViewer::SetViewport", "expected kUnlocked, found %s", LockName(CurrentLock()));
-      return;
-   }
    // Only process if changed
    if (fViewport.X() == x && fViewport.Y() == y &&
        fViewport.Width() == width && fViewport.Height() == height) {
@@ -1217,6 +1383,12 @@ void TGLViewer::SetViewport(Int_t x, Int_t y, Int_t width, Int_t height)
    }
 }
 
+void TGLViewer::SetViewport(const TGLRect& vp)
+{
+   // Set viewr viewport from TGLRect.
+
+   SetViewport(vp.X(), vp.Y(), vp.Width(), vp.Height());
+}
 
 /**************************************************************************/
 // Camera methods

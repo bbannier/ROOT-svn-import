@@ -94,6 +94,7 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
    fQuadric       (0),
 
    fGrabImage     (kFALSE),
+   fGrabBuffer    (-1),
    fGrabbedImage  (0)
 {
    // Constructor.
