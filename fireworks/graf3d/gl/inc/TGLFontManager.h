@@ -84,8 +84,6 @@ public:
 
    void  Render(const TString &txt) const;
    void  Render(const TString &txt, Float_t x, Float_t y, Float_t z, ETextAlignH_e alignH, ETextAlignV_e alignV) const;
-   void  Render(const TString &txt, const Float_t*, ETextAlignH_e alignH, ETextAlignV_e alignV) const;
-   void  Render(const TString &txt, const Double_t*, ETextAlignH_e alignH, ETextAlignV_e alignV) const;
 
    // helper gl draw functions
    virtual void PreRender(Bool_t autoLight=kTRUE, Bool_t lightOn=kFALSE) const;
@@ -146,8 +144,8 @@ public:
    static TObjArray*        GetFontFileArray();
    static FontSizeVec_t*    GetFontSizeArray();
 
-   static Int_t             GetFontSize(Float_t ds);
-   static Int_t             GetFontSize(Float_t ds, Int_t min, Int_t max);
+   static Int_t             GetFontSize(Int_t ds);
+   static Int_t             GetFontSize(Int_t ds, Int_t min, Int_t max);
    static const char*       GetFontNameFromId(Int_t);
 
    void   ClearFontTrash();
