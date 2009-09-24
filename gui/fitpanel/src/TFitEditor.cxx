@@ -167,7 +167,10 @@ using std::queue;
 enum EFitPanel {
    kFP_FLIST, kFP_GAUS,  kFP_GAUSN, kFP_EXPO,  kFP_LAND,  kFP_LANDN,
    kFP_POL0,  kFP_POL1,  kFP_POL2,  kFP_POL3,  kFP_POL4,  kFP_POL5,
-   kFP_POL6,  kFP_POL7,  kFP_POL8,  kFP_POL9,  kFP_USER,
+   kFP_POL6,  kFP_POL7,  kFP_POL8,  kFP_POL9,  
+   kFP_XYGAUS,kFP_XYEXP, kFP_XYLAN, kFP_XYLANN,
+// Above here -> All editable formulaes!
+   kFP_USER,
    kFP_NONE,  kFP_ADD,   kFP_CONV,  kFP_FILE,  kFP_PARS,  kFP_RBUST, kFP_EMPW1,
    kFP_INTEG, kFP_IMERR, kFP_USERG, kFP_ADDLS, kFP_ALLW1, kFP_IFITR, kFP_NOCHI,
    kFP_MLIST, kFP_MCHIS, kFP_MBINL, kFP_MUBIN, kFP_MUSER, kFP_MLINF, kFP_MUSR,
@@ -1471,7 +1474,17 @@ void TFitEditor::FillFunctionList(Int_t)
       fFuncList->Select(kFP_GAUS);
    }
    else if ( fTypeFit->GetSelected() == kFP_PRED2D && fDim == 2 ) {
-      // TODO - if we decide to implement some!
+      fFuncList->AddEntry("xygaus", kFP_XYGAUS);
+      fFuncList->AddEntry("xyexpo", kFP_XYEXP);
+      fFuncList->AddEntry("xylandau", kFP_XYLAN);
+      fFuncList->AddEntry("xylandaun", kFP_XYLANN);
+
+      // Need to be setted this way, otherwise when the functions
+      // are removed, the list doesn't show them.x
+      TGListBox *lb = fFuncList->GetListBox(); 
+      lb->Resize(lb->GetWidth(), 200);
+
+      fFuncList->Select(kFP_XYGAUS);
    }
    else if ( fTypeFit->GetSelected() == kFP_UFUNC ) {
       Int_t newid = kFP_ALTFUNC;
@@ -1486,8 +1499,10 @@ void TFitEditor::FillFunctionList(Int_t)
       }
        if ( newid != kFP_ALTFUNC )
             fFuncList->Select(newid-1);
-       else if( fDim <= 1 ) {
+       else if( fDim == 1 ) {
           fTypeFit->Select(kFP_PRED1D, kTRUE);
+       } else if( fDim == 2 ) {
+          fTypeFit->Select(kFP_PRED2D, kTRUE);
        }
    } 
    else if ( fTypeFit->GetSelected() == kFP_PREVFIT ) {
@@ -1509,8 +1524,10 @@ void TFitEditor::FillFunctionList(Int_t)
       }
       if ( newid == kFP_ALTFUNC ) {
          fTypeFit->RemoveEntry(kFP_PREVFIT);
-         if( fDim <= 1 )
+         if( fDim == 1 )
             fTypeFit->Select(kFP_PRED1D, kTRUE);
+         else if ( fDim == 2 )
+            fTypeFit->Select(kFP_PRED2D, kTRUE);
          else
             fTypeFit->Select(kFP_UFUNC, kTRUE);
       }
@@ -2477,6 +2494,14 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
          fTypeFit->RemoveEntry(kFP_PRED1D);
    }
 
+   if ( fDim == 2 ) {
+      if ( !fTypeFit->FindEntry("Predef-2D") ) 
+         fTypeFit->InsertEntry("Predef-2D", kFP_PRED2D, kFP_PREVFIT);
+   } else {
+      if ( fTypeFit->FindEntry("Predef-2D") )
+         fTypeFit->RemoveEntry(kFP_PRED2D);
+   }
+
    return set;
 }
 
@@ -2902,7 +2927,7 @@ TF1* TFitEditor::GetFitFunction()
       if ( tmpF1 == 0 )
       {
                new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
-                            "Error...", "DoFit\nVerify the entered function string!",
+                            "Error...", "GetFitFunction\nVerify the entered function string!",
                             kMBIconStop,kMBOk, 0);
                return 0;
       }
