@@ -13,6 +13,7 @@
 #include <llvm/Linker.h>
 #include <llvm/Module.h>
 #include <llvm/Function.h>
+#include <llvm/Target/TargetSelect.h>
 #include <llvm/Bitcode/BitstreamWriter.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Support/MemoryBuffer.h>
@@ -49,19 +50,24 @@ namespace cling
    //---------------------------------------------------------------------------
    // Constructor
    //---------------------------------------------------------------------------
-   Interpreter::Interpreter( clang::LangOptions language, clang::TargetInfo* target /*= 0*/):
-      m_lang( language ), m_target( target ), m_module( 0 )
+   Interpreter::Interpreter(clang::LangOptions language):
+      m_lang( language ), m_module( 0 )
    {
+      m_llvmContext = &llvm::getGlobalContext();
       m_fileMgr    = new clang::FileManager();
-      m_diagClient = new clang::TextDiagnosticPrinter( llvm::errs() );
-      if (!m_target) {
-         m_ownedTarget.reset(clang::TargetInfo::CreateTargetInfo(llvm::sys::getHostTriple()));
-         m_target = m_ownedTarget.get();
+
+      // target:
+      llvm::InitializeNativeTarget();
+      m_target = clang::TargetInfo::CreateTargetInfo(llvm::sys::getHostTriple());
+      {
          llvm::StringMap<bool> Features;
          m_target->getDefaultFeatures("", Features);
          m_target->HandleTargetFeatures(Features);
       }
       m_target->getDefaultLangOptions(language);
+
+      // diagostics:
+      m_diagClient = new clang::TextDiagnosticPrinter( llvm::errs() );
       m_diagClient->setLangOptions(&language);
    }
 
@@ -72,6 +78,7 @@ namespace cling
    {
       delete m_fileMgr;
       delete m_diagClient;
+      delete m_target;
    }
 
    //---------------------------------------------------------------------------
@@ -127,7 +134,7 @@ namespace cling
    // compiler but do not add it to the list
    //---------------------------------------------------------------------------
    llvm::Module* Interpreter::link( const std::string& fileName,
-                                    std::string* errMsg )
+                                         std::string* errMsg )
    {
       clang::TranslationUnitDecl* tu = parse( fileName );
       llvm::Module*           module = compile( tu );
@@ -142,7 +149,7 @@ namespace cling
    // compiler but do not add it to the list
    //---------------------------------------------------------------------------
    llvm::Module* Interpreter::link( const llvm::MemoryBuffer* buff,
-                                    std::string* errMsg )
+                                         std::string* errMsg )
    {
       clang::TranslationUnitDecl* tu = parse( buff );
       llvm::Module*           module = compile( tu );
@@ -226,12 +233,6 @@ namespace cling
    clang::TranslationUnitDecl* Interpreter::parse( clang::SourceManager* srcMgr )
    {
       //------------------------------------------------------------------------
-      // Return immediately if no target was specified
-      //------------------------------------------------------------------------
-      if( !m_target )
-         return 0;
-
-      //------------------------------------------------------------------------
       // Create the header database
       //------------------------------------------------------------------------
       clang::HeaderSearch     headerInfo( *m_fileMgr );
@@ -268,16 +269,16 @@ namespace cling
       //-------------------------------------------------------------------------
       // Parse the AST and generate the code
       //-------------------------------------------------------------------------
-      clang::ASTContext* context;
+      clang::ASTContext* astContext;
       clang::ASTConsumer dummyConsumer;
       clang::Builtin::Context builtinContext(*m_target);
-      context = new clang::ASTContext( m_lang, *srcMgr, *m_target,
+      astContext = new clang::ASTContext( m_lang, *srcMgr, *m_target,
                                        pp->getIdentifierTable(),
                                        pp->getSelectorTable(),
                                        builtinContext);
 
-      clang::TranslationUnitDecl *tu = clang::TranslationUnitDecl::Create(*context);
-      clang::Sema   sema(*pp, *context, dummyConsumer);
+      clang::TranslationUnitDecl *tu = clang::TranslationUnitDecl::Create(*astContext);
+      clang::Sema   sema(*pp, *astContext, dummyConsumer);
       clang::Parser p(*pp, sema);
 
       pp->EnterMainSourceFile();
@@ -313,9 +314,8 @@ namespace cling
       //-------------------------------------------------------------------------
       llvm::OwningPtr<clang::CodeGenerator> codeGen;
       clang::CompileOptions options;
-      llvm::LLVMContext llvmContext;
       codeGen.reset(CreateLLVMCodeGen(diag, "SOME NAME [Interpreter::compile()]",
-                                      options, llvmContext));
+                                      options, *m_llvmContext));
 
       //-------------------------------------------------------------------------
       // Loop over the AST
@@ -398,15 +398,15 @@ namespace cling
       //-------------------------------------------------------------------------
       // Loop over the declarations
       //-------------------------------------------------------------------------
-      clang::ASTContext& context = tu->getASTContext();
-      //const clang::SourceManager& srcMgr = context.getSourceManager();
+      clang::ASTContext& astContext = tu->getASTContext();
+      //const clang::SourceManager& srcMgr = astContext.getSourceManager();
       for( clang::TranslationUnitDecl::decl_iterator it = tu->decls_begin(),
               itend = tu->decls_end(); it != itend; ++it ) {
          if (it->getKind() == clang::Decl::Function) {
             clang::FunctionDecl* decl = static_cast<clang::FunctionDecl*>( *it );
             if( decl && decls_before.find(decl) == decls_before.end()) {
                vect.push_back( decl );
-               m_decls.push_back( std::make_pair(*it, &context ) );
+               m_decls.push_back( std::make_pair(*it, &astContext ) );
             }
          }
       }
@@ -418,9 +418,9 @@ namespace cling
    //----------------------------------------------------------------------------
    void Interpreter::insertDeclarations( clang::TranslationUnitDecl* tu, clang::Sema* sema )
    {
-      clang::ASTContext& context = tu->getASTContext();
-      clang::IdentifierTable&      table    = context.Idents;
-      clang::DeclarationNameTable& declTab  = context.DeclarationNames;
+      clang::ASTContext& astContext = tu->getASTContext();
+      clang::IdentifierTable&      table    = astContext.Idents;
+      clang::DeclarationNameTable& declTab  = astContext.DeclarationNames;
       std::vector<std::pair<clang::Decl*, const clang::ASTContext*> >::iterator it;
       for( it = m_decls.begin(); it != m_decls.end(); ++it ) {
          if (it->first->getKind() == clang::Decl::Function) {
@@ -429,11 +429,11 @@ namespace cling
                clang::IdentifierInfo&       id       = table.get(std::string(func->getNameAsString()));
                clang::DeclarationName       dName    = declTab.getIdentifier( &id );
 
-               clang::FunctionDecl* decl = clang::FunctionDecl::Create( context,
+               clang::FunctionDecl* decl = clang::FunctionDecl::Create( astContext,
                                                                         tu,
                                                                         func->getLocation(),
                                                                         dName,
-                                                                        typeCopy( func->getType(), *it->second, context ),
+                                                                        typeCopy( func->getType(), *it->second, astContext ),
                                                                         0 /*DeclInfo*/);
                tu->addDecl( decl );
                sema->IdResolver.AddDecl( decl );
@@ -574,7 +574,11 @@ namespace cling
       //---------------------------------------------------------------------------
       // Create the execution engine
       //---------------------------------------------------------------------------
-      llvm::OwningPtr<llvm::ExecutionEngine> engine( llvm::ExecutionEngine::create( module ) );
+      llvm::EngineBuilder builder(module);
+      std::string errMsg;
+      builder.setErrorStr(&errMsg);
+      builder.setEngineKind(llvm::EngineKind::JIT);
+      llvm::OwningPtr<llvm::ExecutionEngine> engine( builder.create() );
 
       if( !engine ) {
          std::cout << "[!] Unable to create the execution engine!" << std::endl;
@@ -589,6 +593,9 @@ namespace cling
          std::cerr << "[!] Cannot find the entry function" << name << "!" << std::endl;
          return 1;
       }
+
+      // Run static constructors.
+      engine->runStaticConstructorsDestructors(false);
 
       //---------------------------------------------------------------------------
       // Create argv
