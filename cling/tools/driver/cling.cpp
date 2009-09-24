@@ -50,7 +50,7 @@ int main( int argc, char **argv )
    langInfo.CPlusPlus0x = 1;
    langInfo.CXXOperatorNames = 1;
    langInfo.Bool = 1;
-   langInfo.Exceptions = 0;
+   langInfo.Exceptions = 1;
    langInfo.GNUMode = 1;
    langInfo.NoInline = 1;
    langInfo.GNUInline = 1;
