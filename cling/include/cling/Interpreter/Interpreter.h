@@ -24,6 +24,7 @@ namespace llvm
 {
    class MemoryBuffer;
    class Module;
+   class LLVMContext;
 }
 
 //------------------------------------------------------------------------------
@@ -60,7 +61,7 @@ namespace cling
       //!
       //! param language the language definition
       //---------------------------------------------------------------------
-      Interpreter( clang::LangOptions language, clang::TargetInfo* target = 0 );
+      Interpreter(clang::LangOptions language);
 
       //---------------------------------------------------------------------
       // Destructor
@@ -110,7 +111,7 @@ namespace cling
       //!         pointer is returned
       //---------------------------------------------------------------------
       virtual llvm::Module* link( const std::string& fileName,
-                                  std::string* errMsg = 0);
+                                       std::string* errMsg = 0);
 
       //---------------------------------------------------------------------
       //! Compile the buffer and link it to all the modules known to the
@@ -122,7 +123,7 @@ namespace cling
       //!         pointer is returned
       //---------------------------------------------------------------------
       virtual llvm::Module* link( const llvm::MemoryBuffer* buff,
-                                  std::string* errMsg = 0);
+                                       std::string* errMsg = 0);
 
       //---------------------------------------------------------------------
       //! Link the module to all the modules known to the compiler but do
@@ -191,11 +192,11 @@ namespace cling
       std::map<UnitID_t, UnitInfo_t> m_units;
       clang::LangOptions             m_lang;
       clang::TargetInfo*             m_target;
-      llvm::OwningPtr<clang::TargetInfo> m_ownedTarget;
       clang::FileManager*            m_fileMgr;
       clang::DiagnosticClient*       m_diagClient;
       std::vector<std::pair<clang::Decl*, const clang::ASTContext*> >      m_decls;
       llvm::Module*                  m_module;
+      llvm::LLVMContext*             m_llvmContext;
 
    private:
       clang::TranslationUnitDecl* parse( const llvm::MemoryBuffer* buff );

@@ -9,7 +9,6 @@
 #include <string>
 
 #include <clang/Basic/LangOptions.h>
-#include <clang/Basic/TargetInfo.h>
 
 #include <llvm/ADT/OwningPtr.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>

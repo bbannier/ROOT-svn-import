@@ -98,10 +98,10 @@ bool cling::UserInterface::NextInteractiveLine(const std::string& line)
    // Wrap the code
    //----------------------------------------------------------------------
    std::string wrapped = code_prefix + line + code_suffix;
-   llvm::MemoryBuffer* buff;
-   buff  = llvm::MemoryBuffer::getMemBufferCopy( &*wrapped.begin(),
-                                                 &*wrapped.end(),
-                                                 "CLING" );
+   llvm::MemoryBuffer* buff
+      = llvm::MemoryBuffer::getMemBufferCopy( &*wrapped.begin(),
+                                              &*wrapped.end(),
+                                              "CLING" );
 
    //----------------------------------------------------------------------
    // Parse and run it
