@@ -18,6 +18,7 @@
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/JIT.h>
 #include <llvm/Config/config.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/LLVMContext.h>
