@@ -80,10 +80,10 @@ void cling::UserInterface::runInteractively()
             }
          }
       } while (!line);
-      NextInteractiveLine(line);
       add_history(line);
+      write_history(histfile);
+      NextInteractiveLine(line);
    }
-   write_history(histfile);
 }
 
 
