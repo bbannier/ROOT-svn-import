@@ -22,6 +22,7 @@
 #include <llvm/Config/config.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/LLVMContext.h>
+#include <llvm/Support/FormattedStream.h>
 
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/SourceManager.h>
@@ -32,6 +33,7 @@
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/CompileOptions.h>
 #include "clang/Frontend/InitPreprocessor.h"
+#include "clang/Frontend/ASTConsumers.h"
 #include <clang/CodeGen/ModuleBuilder.h>
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/ASTConsumer.h>
@@ -287,9 +289,12 @@ namespace cling
 
       clang::TranslationUnitDecl *tu = astContext->getTranslationUnitDecl();
 
-      clang::ASTConsumer dummyConsumer;
+      //clang::ASTConsumer dummyConsumer;
+      llvm::raw_stdout_ostream out;
+      //llvm::raw_null_ostream out;
+      clang::ASTConsumer* dummyConsumer = clang::CreateASTPrinter(&out);
       
-      clang::Sema   sema(*pp, *astContext, dummyConsumer);
+      clang::Sema   sema(*pp, *astContext, *dummyConsumer);
       clang::Parser p(*pp, sema);
 
       pp->EnterMainSourceFile();
@@ -303,10 +308,7 @@ namespace cling
 
       clang::Parser::DeclGroupPtrTy adecl;
   
-      while( !p.ParseTopLevelDecl(adecl) ) {}      
-      
-      //clang::ParseAST(*pp, &dummyConsumer, *astContext,/*PrintStats=*/ true,
-      //                /* CompleteTranslationUnit= */ false /*,...*/);
+      while( !p.ParseTopLevelDecl(adecl) ) {}
 
       dumpTU(tu);
 
@@ -608,7 +610,7 @@ namespace cling
       //---------------------------------------------------------------------------
       llvm::Function* func( module->getFunction( name ) );
       if( !func ) {
-         std::cerr << "[!] Cannot find the entry function " << name << "!"  << std::endl;
+         std::cerr << "[!] Cannot find the entry function " << name << "!" << std::endl;
          return 1;
       }
 
