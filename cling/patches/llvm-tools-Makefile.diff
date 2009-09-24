@@ -1,7 +1,7 @@
-Index: ../../../llvm-trunk-src/tools/Makefile
+Index: tools/Makefile
 ===================================================================
---- ../../../llvm-trunk-src/tools/Makefile	(revision 82220)
-+++ ../../../llvm-trunk-src/tools/Makefile	(working copy)
+--- tools/Makefile	(revision 82689)
++++ tools/Makefile	(working copy)
 @@ -10,7 +10,7 @@
  LEVEL := ..
  
