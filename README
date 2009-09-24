@@ -51,7 +51,7 @@ packages and subversion [4] to get the source code.
            -DCMAKE_BUILD_TYPE=Debug \
            -DCMAKE_CXX_COMPILER=`which c++` \
            -DCMAKE_C_COMPILER=`which gcc` \
-           ../src
+           ../llvm
      make
      make install
 
@@ -60,7 +60,7 @@ packages and subversion [4] to get the source code.
      cd ..
      mkdir build
      cd build
-     ../src/configure --prfix=/some/install/dir
+     ../llvm/configure --prefix=/some/install/dir
      make
      make install
 
@@ -69,3 +69,4 @@ packages and subversion [4] to get the source code.
    To interpret a C file type: "./cling test.c". To invoke cling in the
 interactive mode type "cling" without file name.  Use ".L filename" to 
 load libraries or C++ files.  Type C++ code at the prompt to interpret it.
+
