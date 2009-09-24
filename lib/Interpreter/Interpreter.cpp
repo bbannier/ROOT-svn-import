@@ -474,7 +474,7 @@ namespace cling
       //--------------------------------------------------------------------------
       // Deal with a builtin type
       //--------------------------------------------------------------------------
-      if( (bt = source.getTypePtr()->getAsBuiltinType()) ) {
+      if( (bt = source.getTypePtr()->getAs<clang::BuiltinType>()) ) {
          return clang::QualType( bt->getCanonicalTypeInternal().getUnqualifiedType().getTypePtr () 
                                  /*was: targetContext.getBuiltinType( bt->getKind() ).getTypePtr()*/,
                                  source.getCVRQualifiers() );
