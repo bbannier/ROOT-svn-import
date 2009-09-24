@@ -595,6 +595,7 @@ namespace cling
 
       if( !engine ) {
          std::cout << "[!] Unable to create the execution engine!" << std::endl;
+         std::cout << errMsg << std::endl;
          return 1;
       }
 
