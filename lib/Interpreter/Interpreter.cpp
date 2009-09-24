@@ -30,6 +30,7 @@
 #include <clang/Frontend/InitHeaderSearch.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/CompileOptions.h>
+#include "clang/Frontend/InitPreprocessor.h"
 #include <clang/CodeGen/ModuleBuilder.h>
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/ASTConsumer.h>
@@ -265,6 +266,9 @@ namespace cling
       clang::Preprocessor*  pp =
          new clang::Preprocessor( diag, m_lang, *m_target, *srcMgr,
                                   headerInfo);
+
+      clang::PreprocessorInitOptions InitOpts;
+      clang::InitializePreprocessor(*pp, InitOpts);
 
       pp->getBuiltinInfo().InitializeBuiltins(pp->getIdentifierTable(),
                                               pp->getLangOptions().NoBuiltin);
