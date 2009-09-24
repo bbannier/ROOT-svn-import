@@ -70,6 +70,6 @@ pdf->plotOn(xframe,Slice(*thecat),ProjWData(*thecat,*data)) ;
 thecat->setIndex(1);
 pdf->plotOn(xframe,Slice(*thecat),ProjWData(*thecat,*data)) ;
 
-
+gROOT->SetStyle("Plain");
 xframe->Draw();
 }
