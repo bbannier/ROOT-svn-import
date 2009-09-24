@@ -1086,7 +1086,6 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
       }
    }
 
-   //   fFontColor = fM->fFontColor > -1 ? fM->fFontColor :  rnrCtx.ColorSet().Markup().GetColorIndex();
    fFontColor = fM->fFontColor > -1 ? fM->fFontColor :  rnrCtx.ColorSet().Markup().GetColorIndex();
    fGridColor = fM->fGridColor;
    if (fM->fGridColor < 0)
