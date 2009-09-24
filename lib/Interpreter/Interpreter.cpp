@@ -285,7 +285,7 @@ namespace cling
                                   pp->getSelectorTable(),
                                   pp->getBuiltinInfo());
 
-      clang::TranslationUnitDecl *tu = clang::TranslationUnitDecl::Create(*astContext);
+      clang::TranslationUnitDecl *tu = astContext->getTranslationUnitDecl();
 
       clang::ASTConsumer dummyConsumer;
       
@@ -293,14 +293,18 @@ namespace cling
       clang::Parser p(*pp, sema);
 
       pp->EnterMainSourceFile();
+
+      // The following is similar to clang::Parser::ParseTranslationUnit
+      // except that we add insertDeclarations
+      // and remove the ExitScope.
       p.Initialize();
 
       insertDeclarations( tu, &sema );
 
       clang::Parser::DeclGroupPtrTy adecl;
   
-      while( !p.ParseTopLevelDecl(adecl) ) {}
-
+      while( !p.ParseTopLevelDecl(adecl) ) {}      
+      
       //clang::ParseAST(*pp, &dummyConsumer, *astContext,/*PrintStats=*/ true,
       //                /* CompleteTranslationUnit= */ false /*,...*/);
 
@@ -595,8 +599,7 @@ namespace cling
       llvm::OwningPtr<llvm::ExecutionEngine> engine( builder.create() );
 
       if( !engine ) {
-         std::cout << "[!] Unable to create the execution engine!" << std::endl;
-         std::cout << errMsg << std::endl;
+         std::cout << "[!] Unable to create the execution engine! (" << errMsg << ")" << std::endl;
          return 1;
       }
 
@@ -605,7 +608,7 @@ namespace cling
       //---------------------------------------------------------------------------
       llvm::Function* func( module->getFunction( name ) );
       if( !func ) {
-         std::cerr << "[!] Cannot find the entry function" << name << "!" << std::endl;
+         std::cerr << "[!] Cannot find the entry function " << name << "!"  << std::endl;
          return 1;
       }
 
