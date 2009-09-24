@@ -302,13 +302,15 @@ namespace cling
       // The following is similar to clang::Parser::ParseTranslationUnit
       // except that we add insertDeclarations
       // and remove the ExitScope.
-      p.Initialize();
-
-      insertDeclarations( tu, &sema );
-
-      clang::Parser::DeclGroupPtrTy adecl;
-  
-      while( !p.ParseTopLevelDecl(adecl) ) {}
+//      p.Initialize();
+//
+//      insertDeclarations( tu, &sema );
+//
+//      clang::Parser::DeclGroupPtrTy adecl;
+//  
+//      while( !p.ParseTopLevelDecl(adecl) ) {}
+      
+      p.ParseTranslationUnit();
 
       dumpTU(tu);
 
