@@ -24,6 +24,8 @@
 #include "TGButton.h"
 #include "TGLViewer.h"
 
+#include "TMath.h"
+
 #include <KeySymbols.h>
 
 //______________________________________________________________________________
@@ -184,17 +186,7 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
       Float_t posY = vp.Height() * fPosY;
 
       // Text rendering
-      Float_t cfs = fLabelFontSize*vp.Width();
-      Int_t fs = TGLFontManager::GetFontSize(cfs);
-      if (fLabelFont.GetMode() == TGLFont::kUndef)
-      {
-         rnrCtx.RegisterFont(fs, "arial",  TGLFont::kPixmap, fLabelFont);
-      }
-      else if (fLabelFont.GetSize() != fs)
-      {
-         rnrCtx.ReleaseFont(fLabelFont);
-         rnrCtx.RegisterFont(fs, "arial",  TGLFont::kPixmap, fLabelFont);
-      }
+      rnrCtx.RegisterFontNoScale(TMath::Nint(fLabelFontSize*vp.Width()), "arial",  TGLFont::kPixmap, fLabelFont);
 
       // move to picked location
       glTranslatef(posX, posY, -0.99);
@@ -328,10 +320,7 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
       fLabelFont.PostRender();
 
       // menu
-      if (fMenuFont.GetMode() == TGLFont::kUndef)
-      {
-         rnrCtx.RegisterFont(padF, "arial",  TGLFont::kPixmap, fMenuFont);
-      }
+      rnrCtx.RegisterFontNoScale(padF, "arial",  TGLFont::kPixmap, fMenuFont);
 
       if (fActive)
       {
