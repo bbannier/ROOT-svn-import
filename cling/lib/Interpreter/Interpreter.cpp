@@ -38,6 +38,7 @@
 #include <clang/AST/Stmt.h>
 #include <clang/Parse/Parser.h>
 #include <clang/Basic/TargetInfo.h>
+#include <clang/Sema/ParseAST.h>
 
 // Private CLANG headers
 #include <Sema/Sema.h>
@@ -265,19 +266,24 @@ namespace cling
          new clang::Preprocessor( diag, m_lang, *m_target, *srcMgr,
                                   headerInfo);
 
+      pp->getBuiltinInfo().InitializeBuiltins(pp->getIdentifierTable(),
+                                              pp->getLangOptions().NoBuiltin);
 
       //-------------------------------------------------------------------------
       // Parse the AST and generate the code
       //-------------------------------------------------------------------------
-      clang::ASTContext* astContext;
-      clang::ASTConsumer dummyConsumer;
-      clang::Builtin::Context builtinContext(*m_target);
-      astContext = new clang::ASTContext( m_lang, *srcMgr, *m_target,
-                                       pp->getIdentifierTable(),
-                                       pp->getSelectorTable(),
-                                       builtinContext);
+      clang::ASTContext* astContext
+         = new clang::ASTContext( pp->getLangOptions(),
+                                  pp->getSourceManager(),
+                                  pp->getTargetInfo(),
+                                  pp->getIdentifierTable(),
+                                  pp->getSelectorTable(),
+                                  pp->getBuiltinInfo());
 
       clang::TranslationUnitDecl *tu = clang::TranslationUnitDecl::Create(*astContext);
+
+      clang::ASTConsumer dummyConsumer;
+      
       clang::Sema   sema(*pp, *astContext, dummyConsumer);
       clang::Parser p(*pp, sema);
 
@@ -290,7 +296,10 @@ namespace cling
   
       while( !p.ParseTopLevelDecl(adecl) ) {}
 
-      //      dumpTU( tu );
+      //clang::ParseAST(*pp, &dummyConsumer, *astContext,/*PrintStats=*/ true,
+      //                /* CompleteTranslationUnit= */ false /*,...*/);
+
+      dumpTU(tu);
 
       return tu;
    }
