@@ -41,7 +41,7 @@ packages and subversion [4] to get the source code.
      cat tools/cling/patches/llvm* | patch -p0
      cat tools/cling/patches/clang* | ( cd tools/clang; patch -p0 ) 
 
-   * Configure, build and install them, eitehr using CMake:
+   * Configure, build and install them, either using CMake:
 
      cd ..
      mkdir build
