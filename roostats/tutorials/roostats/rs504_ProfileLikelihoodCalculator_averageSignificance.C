@@ -57,12 +57,6 @@ void rs504_ProfileLikelihoodCalculator_averageSignificance(const char* fname="WS
   RooDLLSignificanceMCSModule sigModule(*paramInterest,0) ;
   //If there are nuisance parameters present, they should be generated according to their pdf for every new toy experiment.
   //this is done using a MCSModule
-  if(priorNuisance!=0){
-    cout<<"The following nuisance parameters are taken into account:"<<endl;
-    nuisanceParam->Print();
-    RooNuisanceGenerationMCSModule nuisanceModule(nuisanceParam,priorNuisance);
-    mcs->addModule(nuisanceModule);
-  }
   mcs->addModule(sigModule);
   mcs->generateAndFit(ntoys);
 

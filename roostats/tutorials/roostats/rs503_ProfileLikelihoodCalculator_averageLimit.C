@@ -1,5 +1,5 @@
 
-void rs503_ProfileLikelihoodCalculator_averageLimit(const char* fname="WS_GaussOverFlat.root",int ntoys=10,const char* outputplot="pll_avLimit.ps"){
+void rs503_ProfileLikelihoodCalculator_averageLimit(const char* fname="WS_GaussOverFlat.root",int ntoys=1000,const char* outputplot="pll_avLimit.ps"){
   using namespace RooFit ;
   using namespace RooStats ;
   TStopwatch t;
@@ -59,16 +59,9 @@ void rs503_ProfileLikelihoodCalculator_averageLimit(const char* fname="WS_GaussO
   }
 
   //Adding a module which allows to compute the upper limit in every generation cycle
-  RooUpperLimitMCSModule limitModule(paramInterestSet,0.95) ;
+  UpperLimitMCSModule limitModule(paramInterestSet,0.95) ;
   mcs->addModule(limitModule) ;
   
-  //If there are nuisance parameters present, they should be generated according to their pdf for every new toy experiment.
-  //this is done using a MCSModule
-  if(priorNuisance!=0){
-    RooNuisanceGenerationMCSModule nuisanceModule(nuisanceParam,priorNuisance);
-    mcs->addModule(nuisanceModule);
-  }
-
   cout<<"start fit process"<<endl;
   mcs->generateAndFit(ntoys);
 
@@ -84,9 +77,10 @@ void rs503_ProfileLikelihoodCalculator_averageLimit(const char* fname="WS_GaussO
   c2->cd(2);
   mcslimitvsevt_histo->Draw();
   c2->Print(outputplot);
-  file->Close();
+  //file->Close();
   t.Stop();
   t.Print();
+
 }
 
 

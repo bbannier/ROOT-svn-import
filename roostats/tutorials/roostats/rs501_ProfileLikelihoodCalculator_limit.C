@@ -41,12 +41,14 @@ void rs501_ProfileLikelihoodCalculator_limit( const char* fileName="WS_GaussOver
   plc.SetTestSize(0.10);
 
   // Pointer to the confidence interval
-  model->fitTo(*data); // <-- problem
+  model->fitTo(*data,SumW2Error(kFALSE)); // <-- problem
   LikelihoodInterval* interval = plc.GetInterval();
 
   // Compute the upper limit: a fit is needed first in order to locate the minimum of the -log(likelihood) and ease the upper limit computation
-  model->fitTo(*data); // <-- problem
+  model->fitTo(*data,SumW2Error(kFALSE)); // <-- problem
   const double upperLimit = interval->UpperLimit(*parameterOfInterest); // <-- to simplify
+
+  file->Close();
 
   // Make a plot of the profile-likelihood and confidence interval
   LikelihoodIntervalPlot plot(interval);
@@ -55,5 +57,4 @@ void rs501_ProfileLikelihoodCalculator_limit( const char* fileName="WS_GaussOver
   std::cout << "One sided upper limit at 95% CL: "<< upperLimit << std::endl;
 
   delete model;
-  file->Close();
 }
