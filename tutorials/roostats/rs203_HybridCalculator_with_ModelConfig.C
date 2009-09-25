@@ -49,7 +49,10 @@ void rs203_HybridCalculator_with_ModelConfig()
   RooExtendPdf bkg_ext_pdf("bkg_ext_pdf","",bkg_pdf,bkg_yield);
 
   // total sig+bkg (extended PDF)
-  RooAddPdf tot_pdf("tot_pdf","",RooArgList(sig_pdf,bkg_pdf),RooArgList(sig_yield,bkg_yield));
+  RooAddPdf tot_pdf("tot_pdf","",RooArgList(sig_pdf,bkg_ext_pdf),RooArgList(sig_yield,bkg_yield));
+
+  /// this does not work , why ??
+  //RooAddPdf tot_pdf("tot_pdf","",RooArgList(sig_pdf,bkg_pdf),RooArgList(sig_yield,bkg_yield));
 
   /// build the prior PDF on the parameters to be integrated
   // gaussian contraint on the background yield ( N_B = 40 +/- 10  ie. 25% )
@@ -63,18 +66,24 @@ void rs203_HybridCalculator_with_ModelConfig()
 
   //***********************************************************************//
 
-  ModelConfig model("model","ModelConfig of the analysis");
-  model.SetData(*data);
-  model.SetAlternatePdf(tot_pdf);
-  model.SetNullPdf(bkg_ext_pdf);
-  model.SetNuisanceParameters(nuisance_parameters);
-  model.SetPriorPdf(bkg_yield_prior);
+  std::cout << "create first model " << std::endl;
+
+  ModelConfig model1("S+B model","S+B ModelConfig of the analysis");
+  model1.SetPdf(tot_pdf);
+
+  std::cout << "create second model " << std::endl;
+
+  ModelConfig model2("B model","B ModelConfig of the analysis");
+  model2.SetPdf(bkg_ext_pdf);
+  model2.GetWS()->Print();
+  model2.SetNuisanceParameters(nuisance_parameters);
+  model2.SetPriorPdf(bkg_yield_prior);
  
   //***********************************************************************//
 
   /// run HybridCalculator on those inputs 
-  HybridCalculator myHybridCalc( "myHybridCalc","HybridCalculator example", model );
-  //myHybridCalc.SetModelConfig(&model); // alternative
+  HybridCalculator myHybridCalc( "myHybridCalc","HybridCalculator example", *data, model1, model2 );
+  //myHybridCalc.SetModel(&model); // alternative
 
   myHybridCalc.SetNumberOfToys(3000); 
   //myHybridCalc.UseNuisance(false);                            
