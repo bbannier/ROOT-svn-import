@@ -57,10 +57,11 @@ protected:
    Bool_t         fNoTrees;         // True if Trees should not be merged (default is kFALSE)
 
    Bool_t	  fLocal;           // Makes local copies of merging files if True (default is kFALSE)
+   Bool_t	  fHistoOneGo;      // Merger histos in one go
    TList	 *fMergeList;       // list of the files need to be merged 
 
 public:
-   TFileMerger(Bool_t isLocal = kTRUE);
+   TFileMerger(Bool_t isLocal = kTRUE, Bool_t histoonego = kTRUE);
    virtual ~TFileMerger();
 
    const char *GetOutputFileName() const { return fOutputFilename; }
@@ -76,11 +77,11 @@ public:
    virtual Bool_t OutputFile(const char *url);
    virtual void   PrintFiles(Option_t *options);
    virtual Bool_t Merge(Bool_t = kTRUE);
-   virtual Bool_t MergeRecursive(TDirectory *target, TList *sourcelist, Int_t isdir);
+   virtual Bool_t MergeRecursive(TDirectory *target, TList *sourcelist);
    virtual void   SetFastMethod(Bool_t fast=kTRUE)  {fFastMethod = fast;}
    virtual void   SetNotrees(Bool_t notrees=kFALSE) {fNoTrees = notrees;}
 
-   ClassDef(TFileMerger,1)  // File copying and merging services
+   ClassDef(TFileMerger,2)  // File copying and merging services
 };
 
 #endif

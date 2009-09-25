@@ -832,6 +832,23 @@ void TGLCamera::SetCenterVec(Double_t x, Double_t y, Double_t z)
 }
 
 //______________________________________________________________________________
+void TGLCamera::SetCenterVecWarp(Double_t x, Double_t y, Double_t z)
+{
+   // Set camera center vector and do not keep the same combined
+   // camera transformation matrix.
+   // It appears as if the camera warped to the new center.
+
+   if (fExternalCenter)
+      fExtCenter.Set(x, y, z);
+   else
+      fDefCenter.Set(x, y, z);
+
+   fCamBase.SetBaseVec(4, *fCenter);
+
+   IncTimeStamp();
+}
+
+//______________________________________________________________________________
 Double_t TGLCamera::GetTheta() const
 {
    // Get angle between camera up axis.

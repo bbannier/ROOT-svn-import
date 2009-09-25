@@ -30,18 +30,16 @@ TEveCaloLegoEditor::TEveCaloLegoEditor(const TGWindow *p, Int_t width, Int_t hei
                                        UInt_t options, Pixel_t back) :
    TGedFrame(p, width, height, options | kVerticalFrame, back),
    fM(0),
-   fTopViewUseMaxColor(0),
-   fTopViewTowerColor(0),
    fGridColor(0),
    fFontColor(0),
    fPlaneColor(0),
    fTransparency(0),
 
-   fNZSteps(0),
-
    fProjection(0),
    f2DMode(0),
    fBoxMode(0),
+
+   fCell2DTextMin(0),
 
    fRebinFrame(0),
    fAutoRebin(0),
@@ -53,21 +51,6 @@ TEveCaloLegoEditor::TEveCaloLegoEditor(const TGWindow *p, Int_t width, Int_t hei
 
    MakeTitle("TEveCaloLego");
 
-   {  // tower color in 2d, top-view
-      TGHorizontalFrame* f = new TGHorizontalFrame(this);
-      TGLabel* lab = new TGLabel(f, "Tower-2D:");
-      f->AddFrame(lab, new TGLayoutHints(kLHintsLeft|kLHintsBottom, 1, 8, 1, 1));
-
-      fTopViewTowerColor = new TGColorSelect(f, 0, -1);
-      f->AddFrame(fTopViewTowerColor, new TGLayoutHints(kLHintsLeft|kLHintsTop, 3, 1, 0, 1));
-      fTopViewTowerColor->Connect("ColorSelected(Pixel_t)", "TEveCaloLegoEditor", this, "DoTopViewTowerColor(Pixel_t)");
-
-      fTopViewUseMaxColor = new TGCheckButton(f, "Auto color");
-      f->AddFrame(fTopViewUseMaxColor); // new TGLayoutHints());
-      fTopViewUseMaxColor->Connect("Clicked()", "TEveCaloLegoEditor", this, "DoTopViewUseMaxColor()");
-
-      AddFrame(f, new TGLayoutHints(kLHintsTop, 1, 1, 1, 0));
-   }
    {  // grid color
       TGHorizontalFrame* f = new TGHorizontalFrame(this);
       TGLabel* lab = new TGLabel(f, "GridColor:");
@@ -110,22 +93,10 @@ TEveCaloLegoEditor::TEveCaloLegoEditor(const TGWindow *p, Int_t width, Int_t hei
       f->AddFrame(fTransparency, new TGLayoutHints(kLHintsLeft, 0, 0, 0, 0));
       fTransparency->Connect("ValueSet(Long_t)","TEveCaloLegoEditor", this, "DoTransparency()");
 
-
-
       AddFrame(f, new TGLayoutHints(kLHintsTop, 1, 1, 1, 0));
    }
 
    Int_t lw = 80;
-   fNZSteps = new TEveGValuator(this, "ZTickMarks:", 90, 0);
-   fNZSteps->SetLabelWidth(lw);
-   fNZSteps->SetNELength(5);
-   fNZSteps->SetShowSlider(kFALSE);
-   fNZSteps->Build();
-   fNZSteps->SetLimits(1, 20);
-   fNZSteps->SetToolTip("Number of labels along the Z axis.");
-   fNZSteps->Connect("ValueSet(Double_t)", "TEveCaloLegoEditor", this, "DoNZSteps()");
-   AddFrame(fNZSteps, new TGLayoutHints(kLHintsTop, 4, 2, 1, 2));
-
 
    fProjection = MakeLabeledCombo("Project:", 1);
    fProjection->AddEntry("Auto", TEveCaloLego::kAuto);
@@ -143,6 +114,16 @@ TEveCaloLegoEditor::TEveCaloLegoEditor(const TGWindow *p, Int_t width, Int_t hei
    fBoxMode->AddEntry("Back",  TEveCaloLego::kBack);
    fBoxMode->AddEntry("FrontBack",  TEveCaloLego::kFrontBack);
    fBoxMode->Connect("Selected(Int_t)", "TEveCaloLegoEditor", this, "DoBoxMode()");
+
+   fCell2DTextMin = new TEveGValuator(this, "Cell2DTexMin:", 90, 0);
+   fCell2DTextMin->SetLabelWidth(lw);
+   fCell2DTextMin->SetNELength(5);
+   fCell2DTextMin->SetShowSlider(kFALSE);
+   fCell2DTextMin->Build();
+   fCell2DTextMin->SetLimits(1, 1000);
+   fCell2DTextMin->SetToolTip("Draw cell values above N pixels.");
+   fCell2DTextMin->Connect("ValueSet(Double_t)", "TEveCaloLegoEditor", this, "DoCell2DTextMin()");
+   AddFrame(fCell2DTextMin, new TGLayoutHints(kLHintsTop, 1, 2, 1, 2));
 
    MakeRebinFrame();
 }
@@ -190,7 +171,7 @@ TGComboBox* TEveCaloLegoEditor::MakeLabeledCombo(const char* name, Int_t off)
    combo->Resize(90, 20);
    hf->AddFrame(combo, clh);
 
-   AddFrame(hf, new TGLayoutHints(kLHintsTop, 4, 1, 1, off));
+   AddFrame(hf, new TGLayoutHints(kLHintsTop, 1, 1, 1, off));
    return combo;
 }
 
@@ -201,15 +182,13 @@ void TEveCaloLegoEditor::SetModel(TObject* obj)
 
    fM = dynamic_cast<TEveCaloLego*>(obj);
 
-   fTopViewUseMaxColor->SetState(fM->GetTopViewUseMaxColor() ? kButtonDown : kButtonUp);
-   fTopViewTowerColor->SetColor(TColor::Number2Pixel(fM->GetTopViewTowerColor()), kFALSE);
-   fGridColor->SetColor(TColor::Number2Pixel(fM->GetGridColor()), kFALSE);
-   fFontColor->SetColor(TColor::Number2Pixel(fM->GetFontColor()), kFALSE);
+   fGridColor->SetColor(TColor::Number2Pixel(fM->GetGridColor() < 0 ? 0 : fM->GetGridColor()), kFALSE);
+   fFontColor->SetColor(TColor::Number2Pixel(fM->GetFontColor() < 0 ? 0 : fM->GetFontColor()), kFALSE);
 
    fPlaneColor->SetColor(TColor::Number2Pixel(fM->GetPlaneColor()), kFALSE);
    fTransparency->SetNumber(fM->GetPlaneTransparency());
 
-   fNZSteps->SetValue(fM->GetNZSteps());
+   fCell2DTextMin->SetValue(fM->GetDrawNumberCellPixels());
 
    fProjection->Select(fM->GetProjection(), kFALSE);
    f2DMode->Select(fM->Get2DMode(), kFALSE);
@@ -218,24 +197,6 @@ void TEveCaloLegoEditor::SetModel(TObject* obj)
    fPixelsPerBin->SetValue(fM->GetPixelsPerBin());
    fAutoRebin->SetState(fM->GetAutoRebin() ? kButtonDown : kButtonUp);
    fNormalizeRebin->SetState(fM->GetNormalizeRebin() ? kButtonDown : kButtonUp);
-}
-
-//______________________________________________________________________________
-void TEveCaloLegoEditor::DoTopViewUseMaxColor()
-{
-   // Slot for TopViewUseMaxColor.
-
-   fM->SetTopViewUseMaxColor(fTopViewUseMaxColor->IsOn());
-   Update();
-}
-
-//______________________________________________________________________________
-void TEveCaloLegoEditor::DoTopViewTowerColor(Pixel_t pixel)
-{
-   // Slot for TopViewTowerColor.
-
-   fM->SetTopViewTowerColor(Color_t(TColor::GetColor(pixel)));
-   Update();
 }
 
 //______________________________________________________________________________
@@ -266,11 +227,11 @@ void TEveCaloLegoEditor::DoPlaneColor(Pixel_t pixel)
 }
 
 //______________________________________________________________________________
-void TEveCaloLegoEditor::DoNZSteps()
+void TEveCaloLegoEditor::DoCell2DTextMin()
 {
-   // Slot for NZStep.
+   // Slot for setting limit in pixels in which cell value is rendered.
 
-   fM->SetNZSteps((Int_t)fNZSteps->GetValue());
+   fM->SetDrawNumberCellPixels((Int_t)fCell2DTextMin->GetValue());
    Update();
 }
 

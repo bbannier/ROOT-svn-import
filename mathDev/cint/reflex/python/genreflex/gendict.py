@@ -841,6 +841,9 @@ class genDictionary(object) :
     c += '# pragma GCC diagnostic ignored "-Warray-bounds"\n'
     c += '#endif\n'
     c += '#include "%s"\n' % self.hfile
+    c += '#ifdef CONST\n'
+    c += '# undef CONST\n'
+    c += '#endif\n'
     c += '#include "Reflex/Builder/ReflexBuilder.h"\n'
     c += '#include <typeinfo>\n'
     c += '\n'
@@ -996,7 +999,7 @@ class genDictionary(object) :
         #--------------------------------------------------------------------------
         # Process the data members
         #--------------------------------------------------------------------------
-        sourceMembers = [member.strip() for member in rule['attrs']['source'].split(',')]
+        sourceMembers = [member.strip() for member in rule['attrs']['source'].split(';')]
         sourceMembersSpl = []
         for member in sourceMembers:
           type = ''
@@ -1006,11 +1009,11 @@ class genDictionary(object) :
           if len(spl) == 1:
             elem = member
           else:
-            type = spl[0]
-            elem = spl[1]
+            type = ' '.join(spl[0:len(spl)-1])
+            elem = spl[len(spl)-1]
           sourceMembersSpl.append( (type, elem) )
 
-        targetMembers = [member.strip() for member in rule['attrs']['target'].split(',')]
+        targetMembers = [member.strip() for member in rule['attrs']['target'].split(';')]
 
         #--------------------------------------------------------------------------
         # Print things out
@@ -1032,7 +1035,7 @@ class genDictionary(object) :
     for rule in rules:
       if rule.has_key( 'code' ):
         funcname = 'readraw_%s_%d' % (clt, i)
-        targetMembers = [member.strip() for member in rule['attrs']['target'].split(',')]
+        targetMembers = [member.strip() for member in rule['attrs']['target'].split(';')]
         sc += 'static void %s( char *target, TBuffer *oldObj )\n' % (funcname,)
         sc += '{\n'
         sc += '#if 0\n';
@@ -1058,7 +1061,7 @@ class genDictionary(object) :
   def removeBrokenIoRules( self, cl, rules, members ):
     for rule in rules:
       if rule.has_key( 'target'):
-        targets = [target.strip() for target in rule['attrs']['target'].split(',')]
+        targets = [target.strip() for target in rule['attrs']['target'].split(';')]
         ok = True
         for t in targets:
           if not members.has_key( t ): ok = False
@@ -1080,7 +1083,7 @@ class genDictionary(object) :
         for rule in ruleList:
           if not rule['attrs'].has_key( 'include' ):
             continue
-          lst = [r.strip() for r in rule['attrs']['include'].split( ',' )]
+          lst = [r.strip() for r in rule['attrs']['include'].split( ';' )]
           for r in lst:
             testDict[r] = 1
     return testDict.keys()

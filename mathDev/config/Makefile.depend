@@ -14,6 +14,7 @@ ASIMAGEGUILIBDEPM      = $(GRAFLIB) $(HISTLIB) $(GUILIB) $(ASIMAGELIB) $(IOLIB)
 ASIMAGEGSLIBDEPM       = $(GRAFLIB) $(ASIMAGELIB)
 GEDLIBDEPM             = $(HISTLIB) $(GPADLIB) $(GRAFLIB) $(GUILIB) $(TREELIB) \
                          $(TREEPLAYERLIB)
+GVIZLIBDEPM            = $(HISTLIB) $(GRAFLIB)
 POSTSCRIPTLIBDEPM      = $(GRAFLIB)
 GUILIBDEPM             = $(GPADLIB) $(GRAFLIB) $(IOLIB) $(MATHCORELIB)
 GUIHTMLLIBDEPM         = $(GUILIB) $(GRAFLIB) $(NETLIB)
@@ -82,7 +83,8 @@ ROOFITCORELIBDEPM      = $(HISTLIB) $(GRAFLIB) $(MATRIXLIB) $(TREELIB) \
 ROOFITLIBDEPM          = $(ROOFITCORELIB) $(TREELIB) $(IOLIB) $(MATRIXLIB) \
                          $(MATHCORELIB) 
 ROOSTATSLIBDEPM        = $(ROOFITLIB) $(ROOFITCORELIB) $(TREELIB) $(IOLIB) \
-                         $(MATRIXLIB) $(HISTLIB) $(MATHCORELIB) $(GRAFLIB) $(GPADLIB)
+                         $(MATRIXLIB) $(HISTLIB) $(MATHCORELIB) $(GRAFLIB) \
+                         $(GPADLIB)
 ifneq ($(BUILDBOTHCINT),)
 PYTHONLIBDEPM          = $(METATCINTLIB)
 endif
@@ -95,7 +97,7 @@ KRB5AUTHLIBDEPM        = $(RAUTHLIB) $(NETLIB)
 SRVAUTHLIBDEPM         = $(NETLIB)
 QTGSILIBDEPM           = $(GUILIB) $(GPADLIB)
 FITPANELLIBDEPM        = $(GUILIB) $(GPADLIB) $(HISTLIB) $(GRAFLIB) $(TREELIB) \
-			 $(MATHCORELIB)
+                         $(MATHCORELIB)
 RFIOLIBDEPM            = $(IOLIB)
 DCACHELIBDEPM          = $(IOLIB)
 CHIRPLIBDEPM           = $(IOLIB)
@@ -117,6 +119,8 @@ EVELIBDEPM             = $(GEOMLIB) $(GEOMPAINTERLIB) $(G3DLIB) $(GUILIB) \
                          $(GPADLIB) $(GRAFLIB) $(HISTLIB) $(PHYSICSLIB) \
                          $(GEDLIB) $(EGLIB) $(TREELIB) $(TREEPLAYERLIB) \
                          $(GLLIB) $(IOLIB) $(RINTLIB) $(MATHCORELIB)
+GVIZ3DLIBDEPM          = $(GUILIB) $(GEDLIB) $(GPADLIB) $(G3DLIB) $(GRAFLIB) \
+                         $(GEOMLIB) $(GLLIB)
 MEMSTATLIBDEPM         = $(TREELIB) $(GPADLIB) $(GRAFLIB)
 MEMSTATGUILIBDEPM      = $(MEMSTATLIB) $(TREELIB) $(GUILIB)
 RECLIBDEPM             = $(IOLIB) $(TREELIB) $(GUILIB) $(THREADLIB)
@@ -136,6 +140,7 @@ ASIMAGEGUILIBDEP       = $(ASIMAGEGUILIBDEPM)
 ASIMAGEGSLIBDEP        = $(ASIMAGEGSLIBDEPM)
 GEDLIBDEP              = $(GEDLIBDEPM)
 POSTSCRIPTLIBDEP       = $(POSTSCRIPTLIBDEPM)
+GVIZLIBDEP             = $(GVIZLIBDEPM)
 GUILIBDEP              = $(GUILIBDEPM)
 GUIHTMLLIBDEP          = $(GUIHTMLLIBDEPM)
 HISTPAINTERLIBDEP      = $(HISTPAINTERLIBDEPM)
@@ -213,6 +218,7 @@ X3DLIBDEP              = $(X3DLIBDEPM)
 MONALISALIBDEP         = $(MONALISALIBDEPM)
 THREADLIBDEP           = $(THREADLIBDEPM)
 EVELIBDEP              = $(EVELIBDEPM)
+GVIZ3DLIBDEP           = $(GVIZ3DLIBDEPM)
 MEMSTATLIBDEP          = $(MEMSTATLIBDEPM)
 MEMSTATGUILIBDEP       = $(MEMSTATGUILIBDEPM)
 RECLIBDEP              = $(RECLIBDEPM)
@@ -234,6 +240,7 @@ ASIMAGEGUILIBEXTRA      = lib/libGraf.lib lib/libHist.lib lib/libGui.lib \
 ASIMAGEGSLIBEXTRA       = lib/libGraf.lib lib/libASImage.lib
 GEDLIBEXTRA             = lib/libHist.lib lib/libGpad.lib lib/libGraf.lib \
                           lib/libTree.lib lib/libTreePlayer.lib lib/libGui.lib
+GVIZLIBEXTRA            = lib/libHist.lib lib/libGraf.lib
 POSTSCRIPTLIBEXTRA      = lib/libGraf.lib
 GUILIBEXTRA             = lib/libGpad.lib lib/libGraf.lib lib/libRIO.lib \
                           lib/libMathCore.lib
@@ -359,6 +366,9 @@ EVELIBEXTRA             = lib/libGeom.lib lib/libGeomPainter.lib \
                           lib/libGed.lib lib/libEG.lib lib/libTree.lib \
                           lib/libTreePlayer.lib lib/libRGL.lib lib/libRIO.lib \
                           lib/libRint.lib lib/libMathCore.lib
+GVIZ3DLIBEXTRA          = lib/libGui.lib lib/libRGL.lib lib/libGeom.lib \
+                          lib/libGed.lib lib/libGpad.lib lib/libGraf3d.lib \
+                          lib/libGraf.lib
 MEMSTATLIBEXTRA         = lib/libTree.lib lib/libGpad.lib lib/libGraf.lib
 MEMSTATGUILIBEXTRA      = lib/libMemStat.lib lib/libTree.lib lib/libGui.lib
 RECLIBEXTRA             = lib/libGui.lib lib/libRIO.lib lib/libTree.lib \
@@ -373,6 +383,7 @@ GRAFLIBEXTRA            = -Llib -lHist -lMatrix -lRIO -lMathCore
 GPADLIBEXTRA            = -Llib -lGraf -lHist
 G3DLIBEXTRA             = -Llib -lGraf -lHist -lGpad -lMathCore
 GEDLIBEXTRA             = -Llib -lHist -lGpad -lGraf -lGui -lTree -lTreePlayer
+GVIZLIBEXTRA            = -Llib -lHist -lGraf
 POSTSCRIPTLIBEXTRA      = -Llib -lGraf
 GUILIBEXTRA             = -Llib -lGpad -lGraf -lRIO -lMathCore
 HISTPAINTERLIBEXTRA     = -Llib -lGraf -lHist -lMatrix -lGpad -lMathCore
@@ -471,6 +482,7 @@ THREADLIBEXTRA          = -Llib -lRIO
 EVELIBEXTRA             = -Llib -lGeom -lGeomPainter -lGraf3d -lGui -lGpad \
                           -lGraf -lHist -lPhysics -lGed -lEG -lTree \
                           -lTreePlayer -lRGL -lRIO -lRint -lMathCore
+GVIZ3DLIBEXTRA          = -Llib -lGui -lGed -lGpad -lGraf3d -lGraf -lGeom -lRGL
 MEMSTATLIBEXTRA         = -Llib -lTree -lGpad -lGraf
 MEMSTATGUILIBEXTRA      = -Llib -lMemStat -lTree -lGui
 RECLIBEXTRA             = -Llib -lGui -lRIO -lTree -lThread

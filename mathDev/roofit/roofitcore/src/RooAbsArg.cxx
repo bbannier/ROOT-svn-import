@@ -36,6 +36,7 @@
 
 #include "TClass.h"
 #include "TObjString.h"
+// #include "TGraphStruct.h"
 
 #include "RooMsgService.h"
 #include "RooAbsArg.h"
@@ -52,11 +53,13 @@
 #include "RooMsgService.h"
 #include "RooExpensiveObjectCache.h"
 #include "RooAbsDataStore.h"
+#include "RooResolutionModel.h"
 
 #include <string.h>
 #include <iomanip>
 #include <fstream>
 #include <algorithm>
+#include <sstream>
 
 using namespace std ;
 
@@ -509,7 +512,7 @@ void RooAbsArg::treeNodeServerList(RooAbsCollection* list, const RooAbsArg* arg,
 
 
 //_____________________________________________________________________________
-RooArgSet* RooAbsArg::getParameters(const RooAbsData* set) const
+RooArgSet* RooAbsArg::getParameters(const RooAbsData* set, Bool_t stripDisconnected) const
 {
   // Create a list of leaf nodes in the arg tree starting with
   // ourself as top node that don't match any of the names of the variable list
@@ -517,13 +520,52 @@ RooArgSet* RooAbsArg::getParameters(const RooAbsData* set) const
   // function is responsible for deleting the returned argset.
   // The complement of this function is getObservables()
 
-  return getParameters(set?set->get():0) ;
+  return getParameters(set?set->get():0,stripDisconnected) ;
 }
 
 
+//_____________________________________________________________________________
+void RooAbsArg::addParameters(RooArgSet& params, const RooArgSet* nset,Bool_t stripDisconnected) const
+{
+  // INTERNAL helper function for getParameters() 
+
+  RooArgSet parList("parameters") ;
+
+  TIterator* siter = serverIterator() ;
+  RooAbsArg* server ;
+
+  RooArgSet nodeParamServers ;
+  RooArgSet nodeBranchServers ;
+  while((server=(RooAbsArg*)siter->Next())) {
+    if (server->isValueServer(*this)) {
+      if (server->isFundamental()) {
+	if (!nset || !server->dependsOn(*nset)) {
+	  nodeParamServers.add(*server) ;
+	}       
+      } else {
+	nodeBranchServers.add(*server) ;
+      }
+    }
+  }
+  delete siter ;
+
+  // Allow pdf to strip parameters from list before adding it
+  getParametersHook(nset,&nodeParamServers,stripDisconnected) ;
+
+  // Add parameters of this node to the combined list
+  params.add(nodeParamServers,kTRUE) ;
+
+  // Now recurse into branch servers
+  TIterator* biter = nodeBranchServers.createIterator() ;
+  while((server=(RooAbsArg*)biter->Next())) {
+    server->addParameters(params,nset) ;
+  }
+  delete biter ;
+}
+
 
 //_____________________________________________________________________________
-RooArgSet* RooAbsArg::getParameters(const RooArgSet* nset) const
+RooArgSet* RooAbsArg::getParameters(const RooArgSet* nset, Bool_t stripDisconnected) const
 {
   // Create a list of leaf nodes in the arg tree starting with
   // ourself as top node that don't match any of the names the args in the
@@ -534,31 +576,7 @@ RooArgSet* RooAbsArg::getParameters(const RooArgSet* nset) const
 
   RooArgSet parList("parameters") ;
 
-  // Create and fill deep server list
-  RooArgSet leafList("leafNodeServerList") ;
-  treeNodeServerList(&leafList,0,kFALSE,kTRUE,kTRUE) ;
-  // leafNodeServerList(&leafList) ;
-
-  // Copy non-dependent servers to parameter list
-  TIterator* sIter = leafList.createIterator() ;
-  RooAbsArg* arg ;
-  while ((arg=(RooAbsArg*)sIter->Next())) {
-
-    if ((!nset || !arg->dependsOn(*nset)) && arg->isLValue()) {
-      parList.add(*arg) ;
-    }
-  }
-  delete sIter ;
-
-  // Call hook function for all branch nodes
-  RooArgSet branchList ;
-  branchNodeServerList(&branchList) ;
-  RooAbsArg* branch ;
-  TIterator* bIter = branchList.createIterator() ;
-  while((branch=(RooAbsArg*)bIter->Next())) {
-    branch->getParametersHook(nset, &parList) ;
-  }
-  delete bIter ;
+  addParameters(parList,nset,stripDisconnected) ;
 
   RooArgList tmp(parList) ;
   tmp.sort() ;
@@ -696,7 +714,6 @@ Bool_t RooAbsArg::dependsOn(const RooAbsCollection& serverList, const RooAbsArg*
   RooAbsArg* server ;
   while ((!result && (server=(RooAbsArg*)sIter->Next()))) {
     if (dependsOn(*server,ignoreArg,valueOnly)) {
-//       cout << "dependsOnValue(" << GetName() << ") result is true for arg " << server->GetName() << endl ;
       result= kTRUE;
     }
   }
@@ -747,14 +764,14 @@ Bool_t RooAbsArg::dependsOn(const RooAbsArg& testArg, const RooAbsArg* ignoreArg
 
 
 //_____________________________________________________________________________
-Bool_t RooAbsArg::overlaps(const RooAbsArg& testArg) const
+Bool_t RooAbsArg::overlaps(const RooAbsArg& testArg, Bool_t valueOnly) const
 {
   // Test if any of the nodes of tree are shared with that of the given tree
 
   RooArgSet list("treeNodeList") ;
   treeNodeServerList(&list) ;
 
-  return testArg.dependsOn(list) ;
+  return valueOnly ? testArg.dependsOnValue(list) : testArg.dependsOn(list) ;
 }
 
 
@@ -1344,7 +1361,12 @@ void RooAbsArg::printMultiline(ostream& os, Int_t /*contents*/, Bool_t /*verbose
     
     if (proxy->IsA()->InheritsFrom(RooArgProxy::Class())) {
       os << indent << "    " << proxy->name() << " -> " ;
-      ((RooArgProxy*)proxy)->absArg()->printStream(os,kName,kSingleLine) ;
+      RooAbsArg* parg = ((RooArgProxy*)proxy)->absArg() ;
+      if (parg) {
+	parg->printStream(os,kName,kSingleLine) ;
+      } else {
+	os << " (empty)" << endl ; ;
+      }
     } else {
       os << indent << "    " << proxy->name() << " -> " ;
       os << endl ;
@@ -1528,6 +1550,7 @@ void RooAbsArg::optimizeCacheMode(const RooArgSet& observables, RooArgSet& optim
     } else {
       setOperMode(ADirty) ;
     }
+  } else {
   }
   // Process any RooAbsArgs contained in any of the caches of this object
   for (Int_t i=0 ;i<numCaches() ; i++) {
@@ -1602,7 +1625,7 @@ Bool_t RooAbsArg::findConstantNodes(const RooArgSet& observables, RooArgSet& cac
       // Add to cache list
       cxcoutD(Optimization) << "RooAbsArg::findConstantNodes(" << GetName() << ") adding self to list of constant nodes" << endl ;
 
-      cacheList.add(*this) ;
+      cacheList.add(*this,kFALSE) ;
     }
 
   } else {
@@ -1731,6 +1754,35 @@ void RooAbsArg::printCompactTree(ostream& os, const char* indent, const char* na
   RooAbsArg* arg ;
   while((arg=(RooAbsArg*)iter->Next())) {
     arg->printCompactTree(os,indent2,namePat,this) ;
+  }
+  delete iter ;
+}
+
+
+//_____________________________________________________________________________
+void RooAbsArg::printComponentTree(const char* indent, const char* namePat)
+{
+  // Print tree structure of expression tree on given ostream, only branch nodes are printed.
+  // Lead nodes (variables) will not be shown
+  //
+  // If namePat is not "*", only nodes with names matching the pattern will be printed.
+
+  if (isFundamental()) return ;
+  RooResolutionModel* rmodel = dynamic_cast<RooResolutionModel*>(this) ;
+  if (rmodel && rmodel->isConvolved()) return ;
+  if (InheritsFrom("RooConstVar")) return ;
+
+  if ( !namePat || TString(GetName()).Contains(namePat)) {
+    cout << indent ;
+    Print() ;
+  }
+
+  TString indent2(indent) ;
+  indent2 += "  " ;
+  TIterator * iter = serverIterator() ;
+  RooAbsArg* arg ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    arg->printComponentTree(indent2.Data(),namePat) ;
   }
   delete iter ;
 }
@@ -1873,11 +1925,11 @@ RooAbsCache* RooAbsArg::getCache(Int_t index) const
 
 
 //_____________________________________________________________________________
-RooArgSet* RooAbsArg::getVariables() const
+RooArgSet* RooAbsArg::getVariables(Bool_t stripDisconnected) const
 {
   // Return RooArgSet with all variables (tree leaf nodes of expresssion tree)
 
-  return getParameters(RooArgSet()) ;
+  return getParameters(RooArgSet(),stripDisconnected) ;
 }
 
 
@@ -1993,6 +2045,74 @@ void RooAbsArg::graphVizAddConnections(set<pair<RooAbsArg*,RooAbsArg*> >& linkSe
   }
   delete sIter ;
 }
+
+
+
+// //_____________________________________________________________________________
+// TGraphStruct* RooAbsArg::graph(Bool_t useFactoryTag, Double_t textSize) 
+// {
+//   // Return a TGraphStruct object filled with the tree structure of the pdf object
+
+//   TGraphStruct* theGraph = new TGraphStruct() ;
+
+//   // First list all the tree nodes
+//   RooArgSet nodeSet ;
+//   treeNodeServerList(&nodeSet) ;
+//   TIterator* iter = nodeSet.createIterator() ;
+//   RooAbsArg* node ;
+
+
+//   // iterate over nodes
+//   while((node=(RooAbsArg*)iter->Next())) {
+
+//     // Skip node that represent numeric constants
+//     if (node->IsA()->InheritsFrom(RooConstVar::Class())) continue ;
+    
+//     string nodeName ;
+//     if (useFactoryTag && node->getStringAttribute("factory_tag")) {
+//       nodeName  = node->getStringAttribute("factory_tag") ;
+//     } else {
+//       if (node->isFundamental()) {
+// 	nodeName = node->GetName();
+//       } else {
+// 	ostringstream oss ;
+// 	node->printStream(oss,(node->defaultPrintContents(0)&(~kValue)),node->defaultPrintStyle(0)) ;
+// 	nodeName= oss.str() ;
+// // 	nodeName = Form("%s::%s",node->IsA()->GetName(),node->GetName());
+
+//       }
+//     }
+//     if (strncmp(nodeName.c_str(),"Roo",3)==0) {
+//       nodeName = string(nodeName.c_str()+3) ;
+//     }
+//     node->setStringAttribute("graph_name",nodeName.c_str()) ;
+
+//     TGraphNode* gnode = theGraph->AddNode(nodeName.c_str(),nodeName.c_str()) ;
+//     gnode->SetLineWidth(2) ;
+//     gnode->SetTextColor(node->isFundamental()?kBlue:kRed) ;
+//     gnode->SetTextSize(textSize) ;
+//   }
+//   delete iter ;
+
+//   // Get set of all server links
+//   set<pair<RooAbsArg*,RooAbsArg*> > links ;
+//   graphVizAddConnections(links) ;
+
+//   // And insert them into the graph
+//   set<pair<RooAbsArg*,RooAbsArg*> >::iterator liter = links.begin() ;
+//   for( ; liter != links.end() ; ++liter ) {
+
+//     TGraphNode* n1 = (TGraphNode*)theGraph->GetListOfNodes()->FindObject(liter->first->getStringAttribute("graph_name")) ;
+//     TGraphNode* n2 = (TGraphNode*)theGraph->GetListOfNodes()->FindObject(liter->second->getStringAttribute("graph_name")) ;
+//     if (n1 && n2) {
+//       TGraphEdge* edge = theGraph->AddEdge(n1,n2) ;
+//       edge->SetLineWidth(2) ;
+//     }
+//   }
+  
+//   return theGraph ;
+// }
+
 
 
 //_____________________________________________________________________________

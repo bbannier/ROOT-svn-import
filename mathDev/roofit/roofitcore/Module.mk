@@ -80,14 +80,15 @@ ROOFITCOREH3   := RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic
                   RooHistPdf.h RooCachedPdf.h RooFFTConvPdf.h RooDataHistSliceIter.h RooCacheManager.h \
                   RooAbsCache.h RooAbsCacheElement.h RooObjCacheManager.h RooExtendedTerm.h RooSentinel.h \
                   RooParamBinning.h RooConstraintSum.h RooRecursiveFraction.h RooDataWeightedAverage.h \
-                  RooSimWSTool.h RooFracRemainder.h RooLinearMorph.h RooAbsCachedReal.h \
+                  RooSimWSTool.h RooFracRemainder.h RooAbsCachedReal.h \
                   RooAbsSelfCachedReal.h RooCachedReal.h RooNumCdf.h RooChangeTracker.h \
                   RooNumRunningInt.h RooHistFunc.h RooExpensiveObjectCache.h \
                   RooBinningCategory.h RooCintUtils.h RooFactoryWSTool.h RooTFoamBinding.h RooFunctor.h	\
                   RooDerivative.h RooGenFunction.h RooMultiGenFunction.h RooAdaptiveIntegratorND.h \
                   RooAbsNumGenerator.h RooFoamGenerator.h RooNumGenConfig.h RooNumGenFactory.h \
                   RooMultiVarGaussian.h RooXYChi2Var.h RooAbsDataStore.h RooTreeDataStore.h RooTreeData.h \
-                  RooMinimizer.h RooMinimizerFcn.h
+                  RooMinimizer.h RooMinimizerFcn.h RooMoment.h RooStudyManager.h RooAbsStudy.h \
+                  RooGenFitStudy.h RooProofDriverSelector.h RooStudyPackage.h RooCompositeDataStore.h 
 
 ROOFITCOREH1   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH1))
 ROOFITCOREH2   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH2))

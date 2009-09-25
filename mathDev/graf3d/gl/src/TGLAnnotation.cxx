@@ -24,6 +24,8 @@
 #include "TGButton.h"
 #include "TGLViewer.h"
 
+#include "TMath.h"
+
 #include <KeySymbols.h>
 
 //______________________________________________________________________________
@@ -83,26 +85,26 @@ Bool_t TGLAnnotation::Handle(TGLRnrCtx&          rnrCtx,
    {
       case kButtonPress:
       {
-         // Chech selRec ... if pressed in 'X', 'E'
-         if (recID == 2)
-         {
-            delete this;
-         }
-         else if (recID == 3)
-         {
-            MakeEditor();
-         }
-         else
-         {
-            fMouseX = event->fX;
-            fMouseY = event->fY;
-            fInDrag = kTRUE;
-         }
+         fMouseX = event->fX;
+         fMouseY = event->fY;
+         fInDrag = kTRUE;
+         
          return kTRUE;
       }
       case kButtonRelease:
       {
          fInDrag = kFALSE;
+
+         if (recID == 2)
+         {
+            delete this;
+            fParent->RequestDraw(rnrCtx.ViewerLOD());
+         }
+         else if (recID == 3)
+         {
+            MakeEditor();
+         }
+
          return kTRUE;
       }
       case kMotionNotify:
@@ -116,20 +118,6 @@ Bool_t TGLAnnotation::Handle(TGLRnrCtx&          rnrCtx,
             fMouseY = event->fY;
          }
          return kTRUE;
-      }
-      case kGKeyPress:
-      {
-         switch (rnrCtx.GetEventKeySym())
-         {
-            case kKey_E: case kKey_e:
-               MakeEditor();
-               return kTRUE;
-            case kKey_X: case kKey_x:
-               delete this;
-               return kTRUE;
-            default:
-               return kFALSE;
-         }
       }
       default:
       {
@@ -160,8 +148,11 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
 {
    // Render the annotation.
 
-   glDisable(GL_LIGHTING);
+   Float_t old_depth_range[2];
+   glGetFloatv(GL_DEPTH_RANGE, old_depth_range);
+   glDepthRange(0, 0.001);
 
+   glDisable(GL_LIGHTING);
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT | GL_POINT_BIT);
    Float_t r, g, b;
    // button
@@ -195,17 +186,7 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
       Float_t posY = vp.Height() * fPosY;
 
       // Text rendering
-      Float_t cfs = fLabelFontSize*vp.Width();
-      Int_t fs = TGLFontManager::GetFontSize(cfs);
-      if (fLabelFont.GetMode() == TGLFont::kUndef)
-      {
-         rnrCtx.RegisterFont(fs, "arial",  TGLFont::kPixmap, fLabelFont);
-      }
-      else if (fLabelFont.GetSize() != fs)
-      {
-         rnrCtx.ReleaseFont(fLabelFont);
-         rnrCtx.RegisterFont(fs, "arial",  TGLFont::kPixmap, fLabelFont);
-      }
+      rnrCtx.RegisterFontNoScale(TMath::Nint(fLabelFontSize*vp.Width()), "arial",  TGLFont::kPixmap, fLabelFont);
 
       // move to picked location
       glTranslatef(posX, posY, -0.99);
@@ -339,10 +320,7 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
       fLabelFont.PostRender();
 
       // menu
-      if (fMenuFont.GetMode() == TGLFont::kUndef)
-      {
-         rnrCtx.RegisterFont(padF, "arial",  TGLFont::kPixmap, fMenuFont);
-      }
+      rnrCtx.RegisterFontNoScale(padF, "arial",  TGLFont::kPixmap, fMenuFont);
 
       if (fActive)
       {
@@ -351,9 +329,9 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
          Float_t x = padT;
          Float_t y = height + padT + 0.5*padF;
          fMenuFont.PreRender();
-         fMenuFont.RenderBitmap("X", x, y, 0, TGLFont::kLeft);
+         fMenuFont.Render("X", x, y, 0, TGLFont::kLeft, TGLFont::kCenterV);
          x += padM + padT;
-         fMenuFont.RenderBitmap("E", x, y, 0, TGLFont::kLeft);
+         fMenuFont.Render("E", x, y, 0, TGLFont::kLeft, TGLFont::kCenterV);
          fMenuFont.PostRender();
       }
 
@@ -376,6 +354,7 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
    glVertex3dv(fPointer.Arr());
    glEnd();
    glPopAttrib();
+   glDepthRange(old_depth_range[0], old_depth_range[1]);
 }
 
 //______________________________________________________________________________

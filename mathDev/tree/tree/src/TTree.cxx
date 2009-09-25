@@ -712,6 +712,32 @@ TTree::~TTree()
 }
 
 //______________________________________________________________________________
+void TTree::AddBranchToCache(const char*bname, Bool_t subbranches)
+{
+   //add branch with name bname to the Tree cache
+   //if subbranches is true all the branches of the subbranches are also put to the cache
+   //if bname="*" all branches are added to the cache
+   
+   TFile *f = GetCurrentFile();
+   if (!f) return;
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   if (tc) tc->AddBranch(bname,subbranches);
+}
+
+//______________________________________________________________________________
+void TTree::AddBranchToCache(TBranch *b, Bool_t subbranches)
+{
+   //add branch b to the Tree cache
+   //if subbranches is true all the branches of the subbranches are also put to the cache
+   
+   TFile *f = GetCurrentFile();
+   if (!f) return;
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   if (tc) tc->AddBranch(b,subbranches);
+}
+
+
+//______________________________________________________________________________
 void TTree::AddClone(TTree* clone)
 {
    // Add a cloned tree to our list of trees to be notified whenever we change
@@ -2214,15 +2240,27 @@ TFile* TTree::ChangeFile(TFile* file)
 }
 
 //______________________________________________________________________________
-Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType datatype, Bool_t isptr)
+Int_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType datatype, Bool_t isptr)
 {
    // Check whether or not the address described by the last 3 parameters
    // matches the content of the branch. If a Data Model Evolution conversion
    // is involved, reset the fInfo of the branch.
-
+   // The return values are:
+   //  kMissingBranch (-5) : Missing branch
+   //  kInternalError (-4) : Internal error (could not find the type corresponding to a data type number
+   //  kMissingCompiledCollectionProxy (-3) : Missing compiled collection proxy for a compiled collection
+   //  kMismatch (-2) : Non-Class Pointer type given does not match the type expected by the branch
+   //  kClassMismatch (-1) : Class Pointer type given does not match the type expected by the branch
+   //  kMatch (0) : perfect match
+   //  kMatchConversion (1) : match with (I/O) conversion 
+   //  kMatchConversionCollection (2) : match with (I/O) conversion of the content of a collection
+   //  kMakeClass (3) : MakeClass mode so we can not check.
+   //  kVoidPtr (4) : void* passed so no check was made.
+   //  kNoCheck (5) : Underlying TBranch not yet available so no check was made.
+   
    if (GetMakeClass()) {
       // If we are in MakeClass mode so we do not really use classes.
-      return kTRUE;
+      return kMakeClass;
    }
 
    // Let's determine what we need!
@@ -2252,6 +2290,7 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
             TDataType* data = gROOT->GetType(element->GetTypeNameBasic());
             if (!data) {
                Error("CheckBranchAddress", "Did not find the type number for %s", element->GetTypeNameBasic());
+               return kInternalError;
             } else {
                expectedType = (EDataType) data->GetType();
             }
@@ -2296,12 +2335,12 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
       if( !ptrClass->GetConversionStreamerInfo( expectedClass, bEl->GetClassVersion() ) &&
           !ptrClass->FindConversionStreamerInfo( expectedClass, bEl->GetCheckSum() ) ) {
          Error("SetBranchAddress", "The pointer type given \"%s\" does not correspond to the type needed \"%s\" by the branch: %s", ptrClass->GetName(), bEl->GetClassName(), branch->GetName());
-         return kFALSE;
+         return kClassMismatch;
       }
       else {
          
          bEl->SetTargetClassName( ptrClass->GetName() );         
-         return kTRUE;
+         return kMatchConversion;
       }
       
    } else if (expectedClass && ptrClass && !expectedClass->InheritsFrom(ptrClass)) {
@@ -2322,26 +2361,27 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
          {
             TBranchElement* bEl = (TBranchElement*)branch;
             bEl->SetTargetClassName( ptrClass->GetName() );         
-            return kTRUE;
+            return kMatchConversionCollection;
          }
       }
       
       Error("SetBranchAddress", "The pointer type given (%s) does not correspond to the class needed (%s) by the branch: %s", ptrClass->GetName(), expectedClass->GetName(), branch->GetName());
-      return kFALSE;
+      return kClassMismatch;
       
    } else if ((expectedType != kOther_t) && (datatype != kOther_t) && (expectedType != kNoType_t) && (datatype != kNoType_t) && (expectedType != datatype)) {
       if (datatype != kChar_t) {
          // For backward compatibility we assume that (char*) was just a cast and/or a generic address
          Error("SetBranchAddress", "The pointer type given \"%s\" (%d) does not correspond to the type needed \"%s\" (%d) by the branch: %s", TDataType::GetTypeName(datatype), datatype, TDataType::GetTypeName(expectedType), expectedType, branch->GetName());
-         return kFALSE;
+         return kMismatch;
       }
    }
    if (expectedClass && expectedClass->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(expectedClass->GetCollectionProxy())) {
       Error("SetBranchAddress", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
             "Please generate the dictionary for this class (%s)",
             expectedClass->GetName(), branch->GetName(), expectedClass->GetName());
+      return kMissingCompiledCollectionProxy;
    }
-   return kTRUE;
+   return kMatch;
 }
 
 //______________________________________________________________________________
@@ -4558,25 +4598,6 @@ Double_t TTree::GetMinimum(const char* columname)
 }
 
 //______________________________________________________________________________
-const char* TTree::GetNameByIndex(TString& varexp, Int_t* index, Int_t colindex) const
-{
-   // Return name corresponding to colindex in varexp.
-   //
-   //   varexp is a string of names separated by :
-   //   index is an array with pointers to the start of name[i] in varexp
-   //
-
-   Int_t i1,n;
-   static TString column;
-   if (colindex<0 ) return "";
-   i1 = index[colindex] + 1;
-   n  = index[colindex+1] - i1;
-   column = varexp(i1,n);
-   //  return (const char*)Form((const char*)column);
-   return column.Data();
-}
-
-//______________________________________________________________________________
 TVirtualTreePlayer* TTree::GetPlayer()
 {
    // Load the TTreePlayer (if not already done).
@@ -4832,22 +4853,6 @@ Int_t TTree::MakeCode(const char* filename)
    GetPlayer();
    if (!fPlayer) return 0;
    return fPlayer->MakeCode(filename);
-}
-
-//______________________________________________________________________________
-void TTree::MakeIndex(TString& varexp, Int_t* index)
-{
-   // Build index array for names in varexp.
-
-   Int_t ivar = 1;
-   index[0] = -1;
-   for (Int_t i = 0; i < varexp.Length(); ++i) {
-      if (varexp[i] == ':') {
-         index[ivar] = i;
-         ++ivar;
-      }
-   }
-   index[ivar] = varexp.Length();
 }
 
 //______________________________________________________________________________
@@ -5310,6 +5315,23 @@ void TTree::Print(Option_t* option) const
       TTree * t = fr->GetTree();
       if (t) t->Print(option);
    }
+}
+
+//______________________________________________________________________________
+void TTree::PrintCacheStats(Option_t* option) const
+{
+   // print statistics about the TreeCache for this tree, like
+   //   ******TreeCache statistics for file: cms2.root ******
+   //   Reading 73921562 bytes in 716 transactions
+   //   Average transaction = 103.242405 Kbytes
+   //   Number of blocks in current cache: 202, total size : 6001193
+   //
+   // if option = "a" the list of blocks in the cache is printed
+   
+   TFile *f = GetCurrentFile();
+   if (!f) return;
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   if (tc) tc->Print(option);
 }
 
 //______________________________________________________________________________
@@ -5818,9 +5840,10 @@ void TTree::SetBasketSize(const char* bname, Int_t buffsize)
 }
 
 //_______________________________________________________________________
-void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr)
+Int_t TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr)
 {
    // Change branch address, dealing with clone trees properly.
+   // See TTree::CheckBranchAddressType for the semantic of the return value.
    //
    // Note: See the comments in TBranchElement::SetAddress() for the
    //       meaning of the addr parameter.
@@ -5829,7 +5852,7 @@ void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr)
    TBranch* branch = GetBranch(bname);
    if (!branch) {
       Error("SetBranchAddress", "unknown branch -> %s", bname);
-      return;
+      return kNoCheck;
    }
    if (ptr) {
       *ptr = branch;
@@ -5846,24 +5869,27 @@ void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr)
       }
    }
    branch->SetAddress(addr);
+   return kVoidPtr;
 }
 
 //_______________________________________________________________________
-void TTree::SetBranchAddress(const char* bname, void* addr, TClass* ptrClass, EDataType datatype, Bool_t isptr)
+Int_t TTree::SetBranchAddress(const char* bname, void* addr, TClass* ptrClass, EDataType datatype, Bool_t isptr)
 {
    // Verify the validity of the type of addr before calling SetBranchAddress.
+   // See TTree::CheckBranchAddressType for the semantic of the return value.
    //
    // Note: See the comments in TBranchElement::SetAddress() for the
    //       meaning of the addr parameter.
    //
 
-   SetBranchAddress(bname, addr, 0, ptrClass, datatype, isptr);
+   return SetBranchAddress(bname, addr, 0, ptrClass, datatype, isptr);
 }
 
 //_______________________________________________________________________
-void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr, TClass* ptrClass, EDataType datatype, Bool_t isptr)
+Int_t TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr, TClass* ptrClass, EDataType datatype, Bool_t isptr)
 {
-   //  Verify the validity of the type of addr before calling SetBranchAddress.
+   // Verify the validity of the type of addr before calling SetBranchAddress.
+   // See TTree::CheckBranchAddressType for the semantic of the return value.
    //
    // Note: See the comments in TBranchElement::SetAddress() for the
    //       meaning of the addr parameter.
@@ -5872,14 +5898,15 @@ void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr, TClas
    TBranch* branch = GetBranch(bname);
    if (!branch) {
       Error("SetBranchAddress", "unknown branch -> %s", bname);
-      return;
+      return kMissingBranch;
    }
    if (ptr) {
       *ptr = branch;
    }
 
-   CheckBranchAddressType(branch, ptrClass, datatype, isptr);
+   Int_t res = CheckBranchAddressType(branch, ptrClass, datatype, isptr);
    SetBranchAddress(bname, addr);
+   return res;
 }
 
 //_______________________________________________________________________
@@ -6052,7 +6079,7 @@ void TTree::SetBranchStyle(Int_t style)
    fgBranchStyle = style;
 }
 
- //______________________________________________________________________________
+//______________________________________________________________________________
 void TTree::SetCacheSize(Long64_t cacheSize)
 {
    // Set maximum size of the file cache (default is 10000000, i.e., 10 MB).
@@ -6090,6 +6117,25 @@ void TTree::SetCacheSize(Long64_t cacheSize)
       new TTreeCacheUnzip(this, cacheSize);
    else
       new TTreeCache(this, cacheSize);
+}
+
+//______________________________________________________________________________
+void TTree::SetCacheEntryRange(Long64_t first, Long64_t last)
+{
+   //interface to TTreeCache to set the cache entry range
+   
+   TFile *f = GetCurrentFile();
+   if (!f) return;
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   if (tc) tc->SetEntryRange(first,last);
+}
+
+//______________________________________________________________________________
+void TTree::SetCacheLearnEntries(Int_t n)
+{
+   //interface to TTreeCache to set the number of entries for the learning phase
+
+   TTreeCache::SetLearnEntries(n);
 }
 
 //______________________________________________________________________________
@@ -6406,6 +6452,16 @@ void TTree::SetObject(const char* name, const char* title)
 }
 
 //______________________________________________________________________________
+void TTree::SetParallelUnzip(Bool_t opt)
+{
+   //enable or disable parallel unzipping of Tree buffers
+   
+   if (opt) TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kEnable);
+   else     TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kDisable);
+   
+}
+
+//______________________________________________________________________________
 void TTree::SetTreeIndex(TVirtualIndex* index)
 {
    // The current TreeIndex is replaced by the new index.
@@ -6519,6 +6575,17 @@ void TTree::StartViewer()
    if (fPlayer) {
       fPlayer->StartViewer(600, 400);
    }
+}
+
+//______________________________________________________________________________
+void TTree::StopCacheLearningPhase()
+{
+   // stop the cache learning phase
+
+   TFile *f = GetCurrentFile();
+   if (!f) return;
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   if (tc) tc->StopLearningPhase();
 }
 
 //______________________________________________________________________________

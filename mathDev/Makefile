@@ -80,7 +80,7 @@ MODULES       = build cint/cint core/metautils core/pcre core/utils core/base \
                 core/rint html montecarlo/eg \
                 geom/geom geom/geompainter montecarlo/vmc \
                 math/fumili math/mlp math/quadp net/auth gui/guibuilder io/xml \
-                math/foam math/splot math/smatrix io/sql tmva \
+                math/foam math/splot math/smatrix io/sql \
                 geom/geombuilder hist/spectrum hist/spectrumpainter \
                 gui/fitpanel proof/proof proof/proofplayer \
                 gui/sessionviewer gui/guihtml gui/recorder
@@ -111,7 +111,7 @@ endif
 ifeq ($(BUILDGLEW),yes)
 MODULES      += graf3d/glew
 endif
-MODULES      += graf3d/gl graf3d/eve
+MODULES      += graf3d/gl graf3d/eve graf3d/gviz3d 
 endif
 ifeq ($(BUILDMYSQL),yes)
 MODULES      += sql/mysql
@@ -166,6 +166,9 @@ MODULES      += montecarlo/pythia8
 endif
 ifeq ($(BUILDFFTW3),yes)
 MODULES      += math/fftw
+endif
+ifeq ($(BUILDGVIZ),yes)
+MODULES      += graf2d/gviz
 endif
 ifeq ($(BUILDPYTHON),yes)
 MODULES      += bindings/pyroot
@@ -260,6 +263,12 @@ endif
 ifneq ($(ARCH),win32)
 MODULES      += net/rpdutils net/rootd proof/proofd
 endif
+ifeq ($(BUILDEDITLINE),yes)
+MODULES      += core/editline
+endif
+ifeq ($(BUILDTMVA),yes)
+MODULES      += tmva
+endif
 ifeq ($(BUILDXRD),yes)
 ifeq ($(ARCH),win32)
 MODULES      += proof/proofd
@@ -270,7 +279,7 @@ endif
 -include MyModules.mk   # allow local modules
 
 ifneq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean),)
-MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
+MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
                 graf3d/gl graf3d/ftgl graf3d/glew io/rfio io/castor \
                 montecarlo/pythia6 montecarlo/pythia8 misc/table \
                 sql/mysql sql/pgsql sql/sapdb net/srputils graf3d/x3d \
@@ -280,11 +289,11 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
                 proof/proofd proof/proofx proof/clarens proof/peac \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
-                cint/cintexcompat \
+                cint/cintexcompat tmva \
                 cint/cint7 roofit/roofitcore roofit/roofit roofit/roostats \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve montecarlo/g4root net/glite misc/memstat \
-                math/genvector net/bonjour
+                math/genvector net/bonjour graf3d/gviz3d graf2d/gviz
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -484,17 +493,21 @@ STATICEXTRALIBS = $(PCRELDFLAGS) $(PCRELIB) \
 ##### libCore #####
 
 COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) \
-                $(SYSTEML) $(CLIBL) $(METAUTILSL)
+                $(SYSTEML) $(CLIBL) $(METAUTILSL) $(EDITLINEL)
 COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(CLIBO) \
-                $(METAUTILSO)
+                $(METAUTILSO) $(EDITLINEO)
 COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(SYSTEMDO) $(CLIBDO) \
-                $(METAUTILSDO)
+                $(METAUTILSDO) $(EDITLINEDO)
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
 ifneq ($(BUILTINZLIB),yes)
 CORELIBEXTRA += $(ZLIBCLILIB)
 STATICEXTRALIBS += -lz
+endif
+ifeq ($(BUILDEDITLINE),yes)
+CORELIBEXTRA += $(CURSESLIBDIR) $(CURSESLIB)
+STATICEXTRALIBS += $(CURSESLIBDIR) $(CURSESLIB)
 endif
 
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####
@@ -1196,6 +1209,9 @@ showbuild:
 	@echo "FFTW3LIBDIR        = $(FFTW3LIBDIR)"
 	@echo "FFTW3LIB           = $(FFTW3LIB)"
 	@echo "FFTW3INCDIR        = $(FFTW3INCDIR)"
+	@echo "GVIZLIBDIR         = $(GVIZLIBDIR)"
+	@echo "GVIZLIB            = $(GVIZLIB)"
+	@echo "GVIZINCDIR         = $(GVIZINCDIR)"
 	@echo "SAPDBINCDIR        = $(SAPDBINCDIR)"
 	@echo "SRPLIBDIR          = $(SRPLIBDIR)"
 	@echo "SRPINCDIR          = $(SRPINCDIR)"

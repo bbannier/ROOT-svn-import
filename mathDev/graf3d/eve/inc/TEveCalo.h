@@ -210,6 +210,7 @@ public:
 class TEveCaloLego : public TEveCaloViz
 {
    friend class TEveCaloLegoGL;
+   friend class TEveCaloLegoOverlay;
 
 public:
    enum EProjection_e { kAuto, k3D, k2D };
@@ -223,8 +224,6 @@ private:
 protected:
    TEveCaloData::vCellId_t fCellList;
 
-   Bool_t                  fTopViewUseMaxColor;
-   Color_t                 fTopViewTowerColor;
    Color_t                 fFontColor;
    Color_t                 fGridColor;
    Color_t                 fPlaneColor;
@@ -245,6 +244,10 @@ protected:
    Float_t                 fHPlaneVal;
 
    Int_t                   fTowerPicked;
+   Int_t                   fBinStep;
+
+   Int_t                   fDrawNumberCellPixels;
+   Int_t                   fCellPixelFontSize;
 
    virtual void BuildCellIdCache();
 
@@ -254,12 +257,6 @@ public:
    virtual ~TEveCaloLego(){}
 
    virtual void  SetData(TEveCaloData* d);
-
-   Bool_t   GetTopViewUseMaxColor() const { return fTopViewUseMaxColor; }
-   void     SetTopViewUseMaxColor(Bool_t x) { fTopViewUseMaxColor = x; }
-
-   Color_t  GetTopViewTowerColor() const { return fTopViewTowerColor; }
-   void     SetTopViewTowerColor(Color_t x) { fTopViewTowerColor = x; }
 
    Color_t  GetFontColor() const { return fFontColor; }
    void     SetFontColor(Color_t ci) { fFontColor=ci; }
@@ -291,7 +288,7 @@ public:
    void       Set2DMode(E2DMode_e p) { f2DMode = p; }
    E2DMode_e  Get2DMode() { return f2DMode; }
 
-   void       SetBoxMode(EBoxMode_e p) { fBoxMode = p; }
+   void        SetBoxMode(EBoxMode_e p) { fBoxMode = p; }
    EBoxMode_e  GetBoxMode() { return fBoxMode; }
 
    Bool_t   GetDrawHPlane() const { return fDrawHPlane; }
@@ -303,6 +300,11 @@ public:
    Int_t    GetTowerPicked() const { return fTowerPicked; }
    void     SetTowerPicked(Int_t p) { fTowerPicked = p;}
 
+   Int_t    GetDrawNumberCellPixels() { return fDrawNumberCellPixels; }
+   void     SetDrawNumberCellPixels(Int_t x) { fDrawNumberCellPixels = x; }
+   Int_t    GetCellPixelFontSize() { return fCellPixelFontSize; }
+   void     SetCellPixelFontSize(Int_t x) { fCellPixelFontSize = x; }
+   
    virtual void ComputeBBox();
 
    ClassDef(TEveCaloLego, 0);  // Class for visualization of calorimeter histogram data.

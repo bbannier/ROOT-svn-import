@@ -73,6 +73,8 @@ TEveViewer::~TEveViewer()
 {
    // Destructor.
 
+   fGLViewer->SetEventHandler(0);
+
    fGLViewerFrame->UnmapWindow();
    GetGUICompositeFrame()->RemoveFrame(fGLViewerFrame);
    fGLViewerFrame->ReparentWindow(gClient->GetDefaultRoot());
@@ -106,8 +108,14 @@ void TEveViewer::PreUndock()
    // On mac we have to force recreation of gl-context.
 
    TEveWindowFrame::PreUndock();
-   if (fgRecreateGlOnDockOps) {
-      fGLViewer->DestroyGLWidget();
+   if (fgRecreateGlOnDockOps)
+   {
+      // Mac only: TGLWidget can be already deleted
+      // in case of recursive delete
+      if (fGLViewer->GetGLWidget())
+      {
+         fGLViewer->DestroyGLWidget();
+      }
    }
 }
 

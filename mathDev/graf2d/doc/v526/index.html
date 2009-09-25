@@ -19,6 +19,9 @@
     The font 122 is the greek one. With a such TLatex "a" becomes "alpha", 
     "b" becomes " beta" etc ... It is not the recommended way to do greek
     characters with TLatex, but it should work anyway.
+<li> In TPostScript::DrawPolyMarker: do not draw the markers is the marker size
+     is 0.
+<li> Right aligned or centered text was not correctly positioned when rotated.
 </ul>
 
 <h4>TASImage</h4>
@@ -35,6 +38,12 @@
 </ul>
 
 <h3>Graphics Primitives</h3>
+
+<h4>New class TGraphTime</h4>
+TGraphTime is used to draw a set of objects evolving with nsteps in time between tmin and tmax.
+each time step has a new list of objects. This list can be identical to
+the list of objects in the previous steps, but with different attributes.
+   see example of use in $ROOTSYS/tutorials/graphs/gtime.C
 
 <h4>TLatex</h4>
 <ul>
