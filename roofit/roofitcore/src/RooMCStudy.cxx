@@ -121,8 +121,8 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& model, const RooArgSet& observables,
   pc.defineObject("fitModel","FitModel",0,0) ;
   pc.defineObject("condObs","ProjectedDependents",0,0) ;
   pc.defineObject("protoData","PrototypeData",0,0) ;
-  pc.defineObject("cPars","Constrain",0,0) ;
-  pc.defineObject("extCons","ExternalConstraints",0,0) ;
+  pc.defineSet("cPars","Constrain",0,0) ;
+  pc.defineSet("extCons","ExternalConstraints",0,0) ;
   pc.defineInt("silence","Silence",0,0) ;
   pc.defineInt("randProtoData","PrototypeData",0,0) ;
   pc.defineInt("verboseGen","Verbose",0,0) ;
@@ -157,8 +157,8 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& model, const RooArgSet& observables,
   _randProto = pc.getInt("randProtoData") ;
 
   // Process constraints specifications
-  const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
-  const RooArgSet* extCons = static_cast<RooArgSet*>(pc.getObject("extCons")) ;
+  const RooArgSet* cPars = pc.getSet("cPars") ;
+  const RooArgSet* extCons = pc.getSet("extCons") ;
   
   // If constraints are specified, add to fit options
   if (cPars) {
@@ -176,7 +176,7 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& model, const RooArgSet& observables,
     allConstraints.add(*constraints) ;
     delete constraints ;
   }
-
+  
   // Construct constraint p.d.f
   if (allConstraints.getSize()>0) {
     _constrPdf = new RooProdPdf("mcs_constr_prod","RooMCStudy constraints product",allConstraints) ;
