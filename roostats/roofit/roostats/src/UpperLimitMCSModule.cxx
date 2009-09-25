@@ -196,16 +196,14 @@ Bool_t UpperLimitMCSModule::processBetweenGenAndFit(Int_t /*sampleNum*/) {
 
 
   static_cast<RooRealVar*>(_poi->first())->setVal(static_cast<RooRealVar*>(fitInitParams()->find(_parName.c_str()))->getVal());
-  RooStats::ProfileLikelihoodCalculator plc;
+  
   //_poi->first()->Print();
   static_cast<RooRealVar*>(_poi->first())->setBins(1000);
-  plc.SetPdf(*(fitModel()));
-  plc.SetData(*(genSample()));
   //fitModel()->Print("v");
- 
   std::cout<<"generated Entries:"<<genSample()->numEntries()<<std::endl;
-  plc.SetParameters(*_poi);
-  
+
+  RooStats::ProfileLikelihoodCalculator plc( *(genSample()), *(fitModel()), *_poi);
+   
   //PLC calculates intervals. for one sided ul multiply testsize by two
   plc.SetTestSize(2*(1-_cl));
   RooStats::ConfInterval* pllint=plc.GetInterval();

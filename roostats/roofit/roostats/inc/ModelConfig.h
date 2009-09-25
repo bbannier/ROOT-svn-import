@@ -28,10 +28,8 @@
 #include "RooWorkspace.h"
 #endif
 
-#ifndef ROO_MSG_SERVICE
-#include "RooMsgService.h"
-#endif
 
+#include <string>
 
 //_________________________________________________
 /*
@@ -50,156 +48,62 @@ namespace RooStats {
 class ModelConfig : public TNamed {
 
 public:
-   ModelConfig() : TNamed(){
+
+   ModelConfig() : TNamed(), fWS(0), fOwnsWorkspace(false) {
+   }
+    
+   ModelConfig(const char* name) : TNamed(name, name), fWS(0), fOwnsWorkspace(false) {
+   }
+    
+   ModelConfig(const char* name, const char* title) : TNamed(name, title), fWS(0), fOwnsWorkspace(false) {
       fWS = 0;
       fOwnsWorkspace = false;
    }
     
-   ModelConfig(const char* name) : TNamed(name, name){
-      fWS = 0;
-      fOwnsWorkspace = false;
-   }
-    
-   ModelConfig(const char* name, const char* title) : TNamed(name, title){
-      fWS = 0;
-      fOwnsWorkspace = false;
-   }
-    
-   ~ModelConfig() {
-      // destructor.
-      if( fOwnsWorkspace && fWS) delete fWS;
-   }
-    
+   // destructor.
+   virtual ~ModelConfig(); 
+
    // set a workspace that owns all the necessary components for the analysis
-   void SetWorkspace(RooWorkspace & ws) {
-      if (!fWS)
-         fWS = &ws;
-      else{
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-         fWS->merge(ws);
-         RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-      }
-      
-   }
-
-   // helper function to avoid code duplication
-   void DefineSet(const char* name, RooArgSet& set){
-      if (!fWS) {
-         fWS = new RooWorkspace();
-         fOwnsWorkspace = true; 
-      }
-      if (! fWS->set( name )){
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-         fWS->defineSet(name, set);
-         RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-      }
-   }
-    
-
-   // Set the DataSet, add to the the workspace if not already there
-   void SetData(RooAbsData & data) {      
-      if (!fWS) {
-         fWS = new RooWorkspace();
-         fOwnsWorkspace = true; 
-      }
-      if (! fWS->data( data.GetName() ) ){
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-         fWS->import(data);
-         RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-      }
-      SetData( data.GetName() );
-   }
+   virtual void SetWorkspace(RooWorkspace & ws);
 
    // Set the proto DataSet, add to the the workspace if not already there
-   void SetProtoData(RooAbsData & data) {      
-      if (!fWS) {
-         fWS = new RooWorkspace();
-         fOwnsWorkspace = true; 
-      }
-      if (! fWS->data( data.GetName() ) ){
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-         fWS->import(data);
-         RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-      }
+   virtual void SetProtoData(RooAbsData & data) {      
+      ImportDataInWS(data); 
       SetProtoData( data.GetName() );
    }
     
    // Set the Pdf, add to the the workspace if not already there
-   void SetPdf(RooAbsPdf& pdf) {
-      if (!fWS) 
-         fWS = new RooWorkspace();
-      if (! fWS->pdf( pdf.GetName() ) ){
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-         fWS->import(pdf,RooFit::RecycleConflictNodes(kTRUE));
-         RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-      }
-      SetPdf( pdf.GetName() );
+   virtual void SetPdf(RooAbsPdf& pdf) {
+      ImportPdfInWS(pdf);
+      SetPdf( pdf.GetName() );      
+   }
+
+   // Set the Prior Pdf, add to the the workspace if not already there
+   virtual void SetPriorPdf(RooAbsPdf& pdf) {
+      ImportPdfInWS(pdf);
+      SetPriorPdf( pdf.GetName() );      
    }
     
-   // Set the Prior Pdf, add to the the workspace if not already there
-   void SetPriorPdf(RooAbsPdf& pdf) {
-     if (!fWS) 
-         fWS = new RooWorkspace();
-      if (! fWS->pdf( pdf.GetName() ) ){
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-         fWS->import(pdf,RooFit::RecycleConflictNodes(kTRUE));
-         RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-      }
-      SetPriorPdf( pdf.GetName() );
-   }
-
-   // Set the NullPdf, add to the the workspace if not already there
-   void SetNullPdf(RooAbsPdf& pdf) {
-      if (!fWS) 
-         fWS = new RooWorkspace();
-      if (! fWS->pdf( pdf.GetName() ) ){
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-         fWS->import(pdf,RooFit::RecycleConflictNodes(kTRUE));
-         RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-      }
-      SetNullPdf( pdf.GetName() );
-   }
-
-
-   // Set the AlternatePdf, add to the the workspace if not already there
-   void SetAlternatePdf(RooAbsPdf& pdf) {
-      if (!fWS) 
-         fWS = new RooWorkspace();
-      if (! fWS->pdf( pdf.GetName() ) ){
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-         fWS->import(pdf,RooFit::RecycleConflictNodes(kTRUE));
-         RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-      }
-      SetAlternatePdf( pdf.GetName() );
-   }
-
-
    // specify the parameters of interest in the interval
-   void SetParameters(RooArgSet& set) {
-      string temp = GetName();
-      temp+="_POI";
-      fPOIName=temp.c_str();
-      DefineSet(fPOIName, set);
+   virtual void SetParameters(RooArgSet& set) {
+      fPOIName=std::string(GetName()) + "_POI";
+      DefineSetInWS(fPOIName.c_str(), set);
    }
     
    // specify the nuisance parameters (eg. the rest of the parameters)
-   void SetNuisanceParameters(RooArgSet& set) {
-     string* temp = new string(GetName()); // creates a small memory leak
-     *temp += "_NuisParams";
-     fNuisParamsName = temp->c_str();
-     DefineSet(fNuisParamsName, set);
+   virtual void SetNuisanceParameters(RooArgSet& set) {
+      fNuisParamsName=std::string(GetName()) + "_NuisParams";
+      DefineSetInWS(fNuisParamsName.c_str(), set);
    }
 
    // set parameter values for the null if using a common PDF
-   void SetSnapshot(RooArgSet& set) {
-      string temp = GetName();
-      temp+="_Snapshot";
-      fSnapshotName=temp.c_str();
-      DefineSet(fSnapshotName, set);
+   virtual void SetSnapshot(RooArgSet& set) {
+      fSnapshotName=std::string(GetName()) + "_Snapshot";
+      DefineSetInWS(fSnapshotName.c_str(), set);
    }    
     
    // specify the name of the PDF in the workspace to be used
-   void SetPdf(const char* name) {
+   virtual void SetPdf(const char* name) {
       if(!fWS){
          coutE(ObjectHandling) << "workspace not set" << endl;
          return;
@@ -210,32 +114,8 @@ public:
          coutE(ObjectHandling) << "pdf "<<name<< " does not exist in workspace"<<endl;
    }
 
-   // specify the name of the NullPDF in the workspace to be used
-   void SetNullPdf(const char* name) {
-      if(!fWS){
-         coutE(ObjectHandling) << "workspace not set" << endl;
-         return;
-      }
-      if(fWS->pdf(name))
-         fNullPdfName = name;
-      else
-         coutE(ObjectHandling) << "pdf "<<name<< " does not exist in workspace"<<endl;
-   }
-
-   // specify the name of the AlternatePDF in the workspace to be used
-   void SetAlternatePdf(const char* name) {
-      if(!fWS){
-         coutE(ObjectHandling) << "workspace not set" << endl;
-         return;
-      }
-      if(fWS->pdf(name))
-         fAlternatePdfName = name;
-      else
-         coutE(ObjectHandling) << "pdf "<<name<< " does not exist in workspace"<<endl;
-   }
-
    // specify the name of the PDF in the workspace to be used
-   void SetPriorPdf(const char* name) {
+   virtual void SetPriorPdf(const char* name) {
       if(!fWS){
          coutE(ObjectHandling) << "workspace not set" << endl;
          return;
@@ -246,20 +126,9 @@ public:
          coutE(ObjectHandling) << "pdf "<<name<< " does not exist in workspace"<<endl;
    }
 
-   // specify the name of the dataset in the workspace to be used
-   void SetData(const char* name){
-      if(!fWS){
-         coutE(ObjectHandling) << "workspace not set" << endl;
-         return;
-      }
-      if(fWS->data(name))
-         fDataName = name;
-      else
-         coutE(ObjectHandling) << "dataset "<<name<< " does not exist in workspace"<<endl;
-   }
 
    // specify the name of the dataset in the workspace to be used
-   void SetProtoData(const char* name){
+   virtual void SetProtoData(const char* name){
       if(!fWS){
          coutE(ObjectHandling) << "workspace not set" << endl;
          return;
@@ -273,65 +142,65 @@ public:
 
    /* getter methods */
 
-   RooWorkspace * GetWorkspace() { return (fWS) ? fWS : 0;   }
 
    /// get model PDF (return NULL if pdf has not been specified or does not exist)
-   RooAbsPdf * GetPdf() { return (fWS) ? fWS->pdf(fPdfName) : 0;   }
-
-  /// get model NullPDF (return NULL if pdf has not been specified or does not exist)
-   RooAbsPdf * GetNullPdf() { return (fWS) ? fWS->pdf(fNullPdfName) : 0;   }
-
-  /// get model AlternatePDF (return NULL if pdf has not been specified or does not exist)
-   RooAbsPdf * GetAlternatePdf() { return (fWS) ? fWS->pdf(fAlternatePdfName) : 0;   }
-
-   /// get data set (return NULL if data set has not been specified or does not exist)
-   RooAbsData * GetData() { return (fWS) ? fWS->data(fDataName) : 0; }
+   RooAbsPdf * GetPdf() const { return (fWS) ? fWS->pdf(fPdfName.c_str()) : 0;   }
 
    /// get RooArgSet containing the parameter of interest (return NULL if not existing) 
-   const RooArgSet * GetParametersOfInterest() { return (fWS) ? fWS->set(fPOIName) : 0; } 
+   const RooArgSet * GetParametersOfInterest() const { return (fWS) ? fWS->set(fPOIName.c_str()) : 0; } 
 
    /// get RooArgSet containing the nuisance parameters (return NULL if not existing) 
-   const RooArgSet * GetNuisanceParameters() { return (fWS) ? fWS->set(fNuisParamsName) : 0; } 
+   const RooArgSet * GetNuisanceParameters() const { return (fWS) ? fWS->set(fNuisParamsName.c_str()) : 0; } 
 
    /// get RooArgSet containing the constraint parameters (return NULL if not existing) 
-   const RooArgSet * GetConstraintParameters() { return (fWS) ? fWS->set(fConstrainedParamName) : 0; } 
+   const RooArgSet * GetConstraintParameters() const { return (fWS) ? fWS->set(fConstrainedParamName.c_str()) : 0; } 
 
    /// get parameters prior pdf  (return NULL if not existing) 
-   RooAbsPdf * GetPriorPdf() { return (fWS) ? fWS->pdf(fPriorPdfName) : 0; } 
+   RooAbsPdf * GetPriorPdf() const { return (fWS) ? fWS->pdf(fPriorPdfName.c_str()) : 0; } 
 
    /// get RooArgSet for observales  (return NULL if not existing) 
-   const RooArgSet * GetObservables() { return (fWS) ? fWS->set(fObservablesName) : 0; } 
+   const RooArgSet * GetObservables() const { return (fWS) ? fWS->set(fObservablesName.c_str()) : 0; } 
 
    /// get RooArgSet for conditional observales  (return NULL if not existing) 
-   const RooArgSet * GetConditionalObservables() { return (fWS) ? fWS->set(fConditionalObservablesName) : 0; } 
+   const RooArgSet * GetConditionalObservables() const { return (fWS) ? fWS->set(fConditionalObservablesName.c_str()) : 0; } 
 
    /// get Proto data set (return NULL if not existing) 
-   RooAbsData * GetProtoData()  {  return (fWS) ? fWS->data(fProtoDataName) : 0; } 
+   RooAbsData * GetProtoData()  const {  return (fWS) ? fWS->data(fProtoDataName.c_str()) : 0; } 
 
    /// get RooArgSet for parameters for a particular hypothesis  (return NULL if not existing) 
-   const RooArgSet * GetSnapshot() { return (fWS) ? fWS->set(fSnapshotName) : 0; } 
-
+   const RooArgSet * GetSnapshot() const { return (fWS) ? fWS->set(fSnapshotName.c_str()) : 0; } 
+ 
+   const RooWorkspace * GetWS() const { return fWS; }
     
 protected:
+
+   
+   // helper functions to define a set in the WS
+   void DefineSetInWS(const char* name, RooArgSet& set);
+    
+   // internal function to import Pdf in WS
+   void ImportPdfInWS(RooAbsPdf & pdf);
+      
+   // internal function to import data in WS
+   void ImportDataInWS(RooAbsData & data); 
     
    RooWorkspace* fWS; // a workspace that owns all the components to be used by the calculator
    Bool_t fOwnsWorkspace;
-   const char* fNullPdfName; // name of  NullPDF in workspace
-   const char* fAlternatePdfName; // name of  AlternatePDF in workspace
-   const char* fPdfName; // name of  PDF in workspace
-   const char* fDataName; // name of data set in workspace
-   const char* fPOIName; // name for RooArgSet specifying parameters of interest
+
+   std::string fPdfName; // name of  PDF in workspace
+   std::string fDataName; // name of data set in workspace
+   std::string fPOIName; // name for RooArgSet specifying parameters of interest
     
-   const char* fNuisParamsName; // name for RooArgSet specifying nuisance parameters
-   const char* fConstrainedParamName; // name for RooArgSet specifying constrained parameters
-   const char* fPriorPdfName; // name for RooAbsPdf specifying a prior on the parameters
+   std::string fNuisParamsName; // name for RooArgSet specifying nuisance parameters
+   std::string fConstrainedParamName; // name for RooArgSet specifying constrained parameters
+   std::string fPriorPdfName; // name for RooAbsPdf specifying a prior on the parameters
     
-   const char* fConditionalObservablesName; // name for RooArgSet specifying conditional observables
-   const char* fProtoDataName; // name for RooArgSet specifying dataset that should be used as protodata
+   std::string fConditionalObservablesName; // name for RooArgSet specifying conditional observables
+   std::string fProtoDataName; // name for RooArgSet specifying dataset that should be used as protodata
     
-   const char* fSnapshotName; // name for RooArgSet that specifies a particular hypothesis
+   std::string fSnapshotName; // name for RooArgSet that specifies a particular hypothesis
     
-   const char* fObservablesName; // name for RooArgSet specifying observable parameters. 
+   std::string fObservablesName; // name for RooArgSet specifying observable parameters. 
     
    ClassDef(ModelConfig,1) // A class that holds configuration information for a model using a workspace as a store
       
