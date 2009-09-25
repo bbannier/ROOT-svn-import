@@ -1,22 +1,37 @@
+#include "RooRandom.h"
+#include "RooRealVar.h"
+#include "RooProdPdf.h"
+#include "RooWorkspace.h"
+#include "RooStats/HybridCalculator.h"
+#include "RooStats/HybridResult.h"
+#include "RooStats/HybridPlot.h"
+
+#include "TFile.h"
+#include "TStopwatch.h"
+#include "TCanvas.h"
 
 
-void rs505_HybridCalculator_significance(const char* fname="WS_GaussOverFlat_withSystematics.root",int ntoys=5000,const char* outputplot="hc_sign_shape_nosyst.ps"){
-  using namespace RooFit;
-  using namespace RooStats;
+using namespace RooFit;
+using namespace RooStats;
+
+
+void rs505_HybridCalculator_significance(const char* fname="WS_GaussOverFlat_withSystematics.root",int ntoys=5000,const char* outputplot="hc_sign_shape_nosyst.pdf"){
+
   RooRandom::randomGenerator()->SetSeed(100);
   TStopwatch t;
   t.Start();
   TFile* file =new TFile(fname);
   RooWorkspace* my_WS = (RooWorkspace*) file->Get("myWS");
+  if (!my_WS) return; 
   //Import the objects needed
   RooAbsPdf* model=my_WS->pdf("model");
   RooAbsData* data=my_WS->data("data");
   RooAbsPdf* priorNuisance=my_WS->pdf("priorNuisance");
-  RooArgSet* paramInterestSet=my_WS->set("POI");
-  RooRealVar* paramInterest=paramInterestSet->first();
+  //const RooArgSet* paramInterestSet=my_WS->set("POI");
+  //RooRealVar* paramInterest= (RooRealVar*) paramInterestSet->first();
   RooAbsPdf* modelBkg=my_WS->pdf("modelBkg");
-  RooArgSet* observable=my_WS->set("observables");
-  RooArgSet* nuisanceParam=my_WS->set("parameters");
+  //const RooArgSet* observable=my_WS->set("observables");
+  const RooArgSet* nuisanceParam=my_WS->set("parameters");
   
  
   HybridCalculator * hc=new HybridCalculator("hc","HybridCalculator",*data,*model,*modelBkg);
