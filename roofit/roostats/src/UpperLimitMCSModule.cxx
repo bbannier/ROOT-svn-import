@@ -1,20 +1,14 @@
-/*****************************************************************************
- * Project: RooFit                                                           *
- * Package: RooFitCore                                                       *
- * 
- * Authors:                                                                  *
- *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
- *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
- *                                                                           *
- * Copyright (c) 2000-2005, Regents of the University of California          *
- *                          and Stanford University. All rights reserved.    *
- *                                                                           *
- * Redistribution and use in source and binary forms,                        *
- * with or without modification, are permitted according to the terms        *
- * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
- *****************************************************************************/
+// @(#)root/roostats:$Id: CombinedCalculator.h 30450 2009-09-25 13:30:32Z moneta $
+// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke, Nils Ruthmann
+/*************************************************************************
+ * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
 
-// Author: This module has been designed by Nils Ruthmann
+
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -39,10 +33,12 @@
 #include "RooStats/PointSetInterval.h"
 #include "RooStats/LikelihoodInterval.h"
 #include "RooStats/LikelihoodIntervalPlot.h"
+#include "RooStats/ProfileLikelihoodCalculator.h"
 #include "TCanvas.h"
 #include "RooMinuit.h"
 #include "RooNLLVar.h"
 #include "RooCmdArg.h"
+#include "RooRealVar.h"
 
 
 
@@ -55,7 +51,7 @@ using namespace RooStats ;
 
 
 //_____________________________________________________________________________
-UpperLimitMCSModule::UpperLimitMCSModule(RooArgSet* poi, Double_t CL) : 
+UpperLimitMCSModule::UpperLimitMCSModule(const RooArgSet* poi, Double_t CL) : 
   RooAbsMCStudyModule(Form("UpperLimitMCSModule_%s",poi->first()->GetName()),Form("UpperLimitMCSModule_%s",poi->first()->GetName())),
   _parName(poi->first()->GetName()), 
   _plc(0),_ul(0),_poi(0), _data(0),_cl(CL), _model(0)
