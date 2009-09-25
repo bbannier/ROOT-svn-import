@@ -5427,7 +5427,7 @@ public:
 #include "RooDataSet.h"
 #include "RooGaussian.h"
 #include "RooPolynomial.h"
-#include "RooLinearMorph.h"
+#include "RooIntegralMorph.h"
 #include "RooNLLVar.h"
 #include "TCanvas.h"
 #include "RooPlot.h"
@@ -5472,7 +5472,7 @@ public:
 
   // Construct interpolating pdf in (x,a) represent g1(x) at a=a_min
   // and g2(x) at a=a_max
-  RooLinearMorph lmorph("lmorph","lmorph",g1,g2,x,alpha) ;
+  RooIntegralMorph lmorph("lmorph","lmorph",g1,g2,x,alpha) ;
 
 
 

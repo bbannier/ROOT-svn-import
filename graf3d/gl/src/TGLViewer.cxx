@@ -121,7 +121,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
-   fPointScale (1), fLineScale(1), fSmoothPoints(kTRUE), fSmoothLines(kTRUE),
+   fPointScale (1), fLineScale(1), fSmoothPoints(kFALSE), fSmoothLines(kFALSE),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -178,7 +178,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
-   fPointScale (1), fLineScale(1), fSmoothPoints(kTRUE), fSmoothLines(kTRUE),
+   fPointScale (1), fLineScale(1), fSmoothPoints(kFALSE), fSmoothLines(kFALSE),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -1341,6 +1341,13 @@ Bool_t TGLViewer::IsUsingDefaultColorSetForNewViewers()
    return fgUseDefaultColorSetForNewViewers;
 }
 
+//______________________________________________________________________________
+Bool_t TGLViewer::IsColorSetDark() const
+{
+   // Returns true if curremt color set is dark.
+
+   return fRnrCtx->GetBaseColorSet() == &fDarkColorSet;
+}
 
 /**************************************************************************/
 // Viewport
@@ -1737,6 +1744,9 @@ void TGLViewer::SetEventHandler(TGEventHandler *handler)
 {
    // Set the event-handler. The event-handler is owned by the viewer.
    // If GLWidget is set, the handler is propagated to it.
+   //
+   // If called with handler=0, the current handler will be deleted
+   // (also from TGLWidget).
 
    if (fEventHandler)
       delete fEventHandler;

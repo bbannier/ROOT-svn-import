@@ -239,10 +239,14 @@ void TTreeFormula::Init(const char*name, const char* expression)
          if (fNcodes == 1) {
             // If the string is by itself, then it can safely be histogrammed as
             // in a string based axis.  To histogram the number inside the string
-            // just make part of a useless expression (for example: mystring+0)
+            // just make it part of a useless expression (for example: mystring+0)
             SetBit(kIsCharacter);
          }
          continue;
+      }
+      if (GetAction(i)==kJump && GetActionParam(i)==fNoper) {
+         // We have cond ? string1 : string2
+         if (IsString(fNoper-1)) SetBit(kIsCharacter);
       }
    }
    if (fNoper==1 && GetAction(0)==kAliasString) {
@@ -3957,6 +3961,9 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
             case kLeftShift : pos--; tab[pos-1]= ((Long64_t) tab[pos-1]) <<((Long64_t) tab[pos]); continue;
             case kRightShift: pos--; tab[pos-1]= ((Long64_t) tab[pos-1]) >>((Long64_t) tab[pos]); continue;
 
+            case kJump   : i = (oper & kTFOperMask); continue;
+            case kJumpIf : pos--; if (!tab[pos]) i = (oper & kTFOperMask); continue;
+
             case kStringConst: {
                // String
                pos2++; stringStack[pos2-1] = (char*)fExpr[i].Data();
@@ -4531,7 +4538,7 @@ Bool_t  TTreeFormula::IsLeafString(Int_t code) const
                   // this is a variable length char array
                   return kTRUE;
                }
-               }
+            }
          } else if (leaf->InheritsFrom("TLeafElement")) {
             TBranchElement * br = (TBranchElement*)leaf->GetBranch();
             Int_t bid = br->GetID();
@@ -4608,7 +4615,9 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
    } else if (mode == -1) {
       sprintf(value, "%s", GetTitle());
    } else if (mode == 0) {
-      if (fNstring && fNval==0 && fNoper==1) {
+      if ( (fNstring && fNval==0 && fNoper==1) ||
+           (TestBit(kIsCharacter)) )
+      {
          const char * val = 0;
          if (fLookupType[0]==kTreeMember) {
             val = (char*)GetLeafInfo(0)->GetValuePointer((TLeaf*)0x0,instance);
@@ -4617,7 +4626,7 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
             TBranch *branch = leaf->GetBranch();
             Long64_t readentry = branch->GetTree()->GetReadEntry();
             R__LoadBranch(branch,readentry,fQuickLoad);
-            if (fLookupType[0]==kDirect) {
+            if (fLookupType[0]==kDirect && fNoper==1) {
                val = (const char*)leaf->GetValuePointer();
             } else {
                val = ((TTreeFormula*)this)->EvalStringInstance(instance);
@@ -4799,6 +4808,30 @@ void TTreeFormula::Streamer(TBuffer &R__b)
       R__b.WriteClassBuffer(TTreeFormula::Class(),this);
    }
 }
+
+//______________________________________________________________________________
+Bool_t TTreeFormula::StringToNumber(Int_t oper)
+{
+   // Try to 'demote' a string into an array bytes.  If this is not possible,
+   // return false.
+   
+   Int_t code = GetActionParam(oper);
+   if (GetAction(oper)==kDefinedString && fLookupType[code]==kDirect) {
+      if (oper>0 && GetAction(oper-1)==kJump) {
+         // We are the second hand of a ternary operator, let's not do the fixing.
+         return kFALSE;
+      }
+      TLeaf *leaf = (TLeaf*)fLeaves.At(code);
+      if (leaf &&  (leaf->InheritsFrom("TLeafC") || leaf->InheritsFrom("TLeafB") ) ) {
+         SetAction(oper, kDefinedVariable, code );
+         fNval++;
+         fNstring--;
+         return kTRUE;
+      }
+   }
+   return kFALSE;
+}
+
 
 //______________________________________________________________________________
 void TTreeFormula::UpdateFormulaLeaves()

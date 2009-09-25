@@ -390,6 +390,9 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
       cy = (UInt_t)pad->GetCanvas()->GetWindowTopY();
    }
       
+   Resize(size);
+   MapWindow();
+
    if (cw + size.fWidth < dw) {
       Int_t gedx = 0, gedy = 0;
       gedx = cx+cw+4;
@@ -398,8 +401,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
       SetWMPosition(gedx, gedy);
    } 
 
-   Resize(size);
-   MapWindow();
    gVirtualX->RaiseWindow(GetId());
 
    ChangeOptions(GetOptions() | kFixedSize);

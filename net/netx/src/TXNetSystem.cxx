@@ -35,6 +35,7 @@
 
 #include "XrdClient/XrdClientAdmin.hh"
 #include "XrdClient/XrdClientConn.hh"
+#include <XrdClient/XrdClientConst.hh>
 #include "XrdClient/XrdClientEnv.hh"
 #include "XProtocol/XProtocol.hh"
 
@@ -118,10 +119,17 @@ XrdClientAdmin *TXNetSystem::Connect(const char *url)
       return cadm;
    }
 
+   // Do not block: restore old value after
+   Int_t maxOld = EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
+
    // Try to connect to the server
+   gEnv->SetValue("XNet.FirstConnectMaxCnt", 1);
+   EnvPutInt(NAME_FIRSTCONNECTMAXCNT, 1);
    if (cadm->Connect()) {
       fIsXRootd = kTRUE;
+      EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxOld);
    } else {
+      EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxOld);
       if (fgRootdBC) {
          Bool_t isRootd =
             (cadm->GetClientConn()->GetServerType() == kSTRootd);
@@ -623,6 +631,25 @@ Bool_t TXNetSystem::GetPathsInfo(const char *paths, UChar_t *info)
 
    // Done
    return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TXNetSystem::IsPathLocal(const char *path)
+{
+   // Returns TRUE if the url in 'path' points to the local file system.
+   // This is used to avoid going through the NIC card for local operations.
+
+   if (fIsXRootd) {
+      TXNetSystemConnectGuard cg(this, path);
+      if (cg.IsValid()) {
+         if (cg.ClientAdmin()->GetClientConn()->GetServerType() != kSTDataXrootd) {
+            // Not an end point data server: cannot assert locality
+            return kFALSE;
+         }
+      }
+   }
+   // Either an end-point data server or 'rootd': check for locality
+   return TSystem::IsPathLocal(path);
 }
 
 //_____________________________________________________________________________

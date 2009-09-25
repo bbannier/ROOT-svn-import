@@ -68,7 +68,7 @@ TDataSetManagerFile::TDataSetManagerFile(const char *group,
             ResetBit(TDataSetManager::kCheckQuota);
             ResetBit(TDataSetManager::kAllowRegister);
             ResetBit(TDataSetManager::kAllowVerify);
-            ResetBit(TDataSetManager::kAllowStaging);
+            ResetBit(TDataSetManager::kTrustInfo);
             dir.Form("%s/%s/%s", fDataSetDir.Data(), fGroup.Data(), fUser.Data());
             if (gSystem->AccessPathName(dir)) {
                Error("TDataSetManagerFile",
@@ -315,6 +315,11 @@ TMap *TDataSetManagerFile::GetDataSets(const char *group, const char *user,
    if (user && fgCommonDataSetTag == user)
      user = fCommonUser;
 
+   // Special treatment for the COMMON user
+   Bool_t notCommonUser = kTRUE;
+   if ((user && fCommonUser == user) &&
+       (group && fCommonGroup == group)) notCommonUser = kFALSE;
+
    // convert * to "nothing"
    if (group && (strcmp(group, "*") == 0 || strlen(group) == 0))
       group = 0;
@@ -350,54 +355,61 @@ TMap *TDataSetManagerFile::GetDataSets(const char *group, const char *user,
       // add the common ones
       BrowseDataSets(fCommonGroup, fCommonUser, option, result);
       user = 0;
+   } else {
+      // Fill the information at least once
+      if (!notCommonUser) notCommonUser = kTRUE;
    }
 
-   // group, user defined, no looping needed
-   if (user && group) {
-      BrowseDataSets(group, user, option, result);
-      if (!printing) return (TMap *)result;
-   } else {
-      // loop needed
-      void *dataSetDir = 0;
-      if ((dataSetDir = gSystem->OpenDirectory(fDataSetDir))) {
-         // loop over groups
-         const char *currentGroup = 0;
-         while ((currentGroup = gSystem->GetDirEntry(dataSetDir))) {
+   // Fill the information only once
+   if (notCommonUser) {
+      // group, user defined, no looping needed
+      if (user && group) {
+         BrowseDataSets(group, user, option, result);
+         if (!printing) return (TMap *)result;
+      } else {
+         // loop needed
+         void *dataSetDir = 0;
+         if ((dataSetDir = gSystem->OpenDirectory(fDataSetDir))) {
+            // loop over groups
+            const char *currentGroup = 0;
+            while ((currentGroup = gSystem->GetDirEntry(dataSetDir))) {
 
-            if (strcmp(currentGroup, ".") == 0 || strcmp(currentGroup, "..") == 0)
-               continue;
-
-            if (group && strcmp(group, currentGroup))
-               continue;
-
-            TString groupDirPath;
-            groupDirPath.Form("%s/%s", fDataSetDir.Data(), currentGroup);
-
-            void *groupDir = gSystem->OpenDirectory(groupDirPath);
-            if (!groupDir)
-               continue;
-
-            // loop over users
-            const char *currentUser = 0;
-            while ((currentUser = gSystem->GetDirEntry(groupDir))) {
-
-               if (strcmp(currentUser, ".") == 0 || strcmp(currentUser, "..") == 0)
+               if (strcmp(currentGroup, ".") == 0 || strcmp(currentGroup, "..") == 0)
                   continue;
 
-               if (user && strcmp(user, currentUser))
+               if (group && strcmp(group, currentGroup))
                   continue;
 
-               BrowseDataSets(currentGroup, currentUser, option, result);
+               TString groupDirPath;
+               groupDirPath.Form("%s/%s", fDataSetDir.Data(), currentGroup);
+
+               void *groupDir = gSystem->OpenDirectory(groupDirPath);
+               if (!groupDir)
+                  continue;
+
+               // loop over users
+               const char *currentUser = 0;
+               while ((currentUser = gSystem->GetDirEntry(groupDir))) {
+
+                  if (strcmp(currentUser, ".") == 0 || strcmp(currentUser, "..") == 0)
+                     continue;
+
+                  if (user && strcmp(user, currentUser))
+                     continue;
+
+                  BrowseDataSets(currentGroup, currentUser, option, result);
+               }
+               gSystem->FreeDirectory(groupDir);
             }
-            gSystem->FreeDirectory(groupDir);
+            gSystem->FreeDirectory(dataSetDir);
          }
-         gSystem->FreeDirectory(dataSetDir);
       }
    }
    // Print the result, if required
    if (printing) {
       TList *output = (TList *)result;
       output->Sort();
+      Printf("Dataset repository: %s", fDataSetDir.Data());
       Printf("Dataset URI                               | # Files | Default tree | # Events |   Disk   | Staged");
       TIter iter4(output);
       TObjString* formattedLine = 0;
@@ -581,13 +593,16 @@ Bool_t TDataSetManagerFile::ExistsDataSet(const char *group, const char *user,
 
 //______________________________________________________________________________
 Int_t TDataSetManagerFile::RegisterDataSet(const char *uri,
-                                                TFileCollection *dataSet,
-                                                const char *opts)
+                                           TFileCollection *dataSet,
+                                           const char *opts)
 {
    // Register a dataset, perfoming quota checkings and verification, if required.
    // Fails if a dataset with the same name already exists, unless 'opts'
    // contains 'O', in which case the old dataset is overwritten.
-   // If 'opts' contains 'V' the dataset files are also verified.
+   // If 'opts' contains 'V' the dataset files are also verified (if the dataset manager
+   // is configured to allow so).
+   // If 'opts' contains 'T' the in the dataset object (status bits, meta,...)
+   // is trusted, i.e. not reset (if the dataset manager is configured to allow so).
    // By default the dataset is not verified.
    // Returns 0 on success, -1 on failure
 
@@ -607,6 +622,7 @@ Int_t TDataSetManagerFile::RegisterDataSet(const char *uri,
       // Fail if it exists already
       if (ExistsDataSet(fGroup, fUser, dsName)) {
          //Dataset name does exist
+         Error("RegisterDataSet", "dataset '%s' exists already", uri);
          return -1;
       }
    }
@@ -637,16 +653,31 @@ Int_t TDataSetManagerFile::RegisterDataSet(const char *uri,
    delete uniqueFileList;
 
    // Enforce certain settings
-   dataSet->SetName(dsName);
-   dataSet->ResetBitAll(TFileInfo::kStaged);
-   dataSet->ResetBitAll(TFileInfo::kCorrupted);
-   dataSet->RemoveMetaData();
+   Bool_t reset = kTRUE;
+   if (opt.Contains("T", TString::kIgnoreCase)) {
+      if (!TestBit(TDataSetManager::kTrustInfo)) {
+         Warning("RegisterDataSet", "configured to not trust the information"
+                                    " provided by users: ignoring request");
+      } else {
+         reset = kFALSE;
+      }
+   }
+   if (reset) {
+      dataSet->SetName(dsName);
+      dataSet->ResetBitAll(TFileInfo::kStaged);
+      dataSet->ResetBitAll(TFileInfo::kCorrupted);
+      dataSet->RemoveMetaData();
+   }
 
    // Verify the dataset if required
    if (opt.Contains("V", TString::kIgnoreCase)) {
-      if (ScanDataSet(dataSet, (UInt_t)(kReopen | kDebug)) < 0) {
-         Error("RegisterDataSet", "problems verifying the dataset");
-         return -1;
+      if (TestBit(TDataSetManager::kAllowVerify)) {
+         if (ScanDataSet(dataSet, (UInt_t)(kReopen | kDebug)) < 0) {
+            Error("RegisterDataSet", "problems verifying the dataset");
+            return -1;
+         }
+      } else {
+         Warning("RegisterDataSet", "user-driven verification not allowed: ignoring request");
       }
    }
 
@@ -769,10 +800,10 @@ Int_t TDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
       return -1;
 
    // Parse options
-   Bool_t notify = (gDebug > 0 || (option & kDebug)) ? kTRUE : kFALSE;
+   Bool_t notify = (option & kDebug) ? kTRUE : kFALSE;
    // Max number of files
    Int_t maxFiles = ((option & kMaxFiles) && (filesmax > -1)) ? filesmax : -1;
-   if (maxFiles > -1 && notify)
+   if (maxFiles > -1 && gDebug > 0)
       Info("ScanDataSet", "processing a maximum of %d files", maxFiles);
    // Reopen
    Bool_t reopen = ((option & kReopen) || (option & kTouch)) ? kTRUE : kFALSE;
@@ -794,6 +825,9 @@ Int_t TDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
    TIter iter2(dataset->GetList());
    TFileInfo *fileInfo = 0;
    while ((fileInfo = dynamic_cast<TFileInfo*> (iter2.Next()))) {
+
+      // For real time monitoring
+      gSystem->DispatchOneEvent();
 
       fileInfo->ResetUrl();
       if (!fileInfo->GetCurrentUrl()) {
@@ -848,9 +882,6 @@ Int_t TDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
          continue;
       }
 
-      // Staging must be allowed
-      if (!TestBit(TDataSetManager::kAllowStaging)) continue;
-
       // Only open maximum number of 'new' files
       if (maxFiles > 0 && newStagedFiles.GetEntries() >= maxFiles)
          continue;
@@ -866,7 +897,7 @@ Int_t TDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
       Bool_t result = kFALSE;
       if (stager) {
          result = stager->IsStaged(url.GetUrl());
-         if (notify && gDebug > 0)
+         if (gDebug > 0)
             Info("ScanDataSet", "IsStaged: %s: %d", url.GetUrl(), result);
          if (createStager)
             SafeDelete(stager);
@@ -885,21 +916,27 @@ Int_t TDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
 
    // loop over now staged files
    if (notify && newStagedFiles.GetEntries() > 0)
-      Info("ScanDataSet",
-           "opening %d files that appear to be newly staged.",
+      Info("ScanDataSet", "opening %d files that appear to be newly staged",
            newStagedFiles.GetEntries());
 
    // Prevent blocking of TFile::Open, if the file disappeared in the last nanoseconds
    Bool_t oldStatus = TFile::GetOnlyStaged();
    TFile::SetOnlyStaged(kTRUE);
 
+   // Notify each 'fqnot' files (min 1, max 100)
+   Int_t fqnot = (newStagedFiles.GetSize() > 10) ? newStagedFiles.GetSize() / 10 : 1;
+   if (fqnot > 100) fqnot = 100;
    Int_t count = 0;
    TIter iter3(&newStagedFiles);
    while ((fileInfo = dynamic_cast<TFileInfo*> (iter3.Next()))) {
 
-      if (notify && count++ % 100 == 0)
+      if (notify && (count%fqnot == 0))
          Info("ScanDataSet", "processing %d.'new' file: %s",
                              count, fileInfo->GetCurrentUrl()->GetUrl());
+      count++;
+
+      // For real time monitoring
+      gSystem->DispatchOneEvent();
 
       TUrl *url = fileInfo->GetCurrentUrl();
 
@@ -920,11 +957,12 @@ Int_t TDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
       fileInfo->SetBit(TFileInfo::kStaged);
 
       // Add url of the disk server in front of the list
-      TUrl urlDiskServer(*url);
-      urlDiskServer.SetHost(file->GetEndpointUrl()->GetHost());
-      fileInfo->AddUrl(urlDiskServer.GetUrl(), kTRUE);
-      if (notify)
-        Info("ScanDataSet", "added URL %s", urlDiskServer.GetUrl());
+      TUrl eurl(*(file->GetEndpointUrl()));
+      eurl.SetOptions(url->GetOptions());
+      eurl.SetAnchor(url->GetAnchor());
+      fileInfo->AddUrl(eurl.GetUrl(kTRUE), kTRUE);
+      if (gDebug > 0)
+        Info("ScanDataSet", "added URL %s", eurl.GetUrl(kTRUE));
 
       if (file->GetSize() > 0)
           fileInfo->SetSize(file->GetSize());
@@ -952,8 +990,8 @@ Int_t TDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
          TIter keyIter(file->GetListOfKeys());
          TKey *key = 0;
          while ((key = dynamic_cast<TKey*> (keyIter.Next()))) {
-            if (strcmp(key->GetClassName(), "TTree"))
-               continue;
+
+            if (!TClass::GetClass(key->GetClassName())->InheritsFrom("TTree")) continue;
 
             TString keyStr;
             keyStr.Form("/%s", key->GetName());
@@ -964,7 +1002,7 @@ Int_t TDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
                metaData = new TFileInfoMeta(keyStr, key->GetClassName());
                fileInfo->AddMetaData(metaData);
 
-               if (notify)
+               if (gDebug > 0)
                   Info("ScanDataSet", "created meta data for tree %s", keyStr.Data());
             }
 
@@ -972,12 +1010,13 @@ Int_t TDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
             // TODO if we cannot read the tree, is the file corrupted also?
             TTree *tree = dynamic_cast<TTree*> (file->Get(key->GetName()));
             if (tree) {
-               if (tree->GetEntries() > 0)
+               if (tree->GetEntries() >= 0) {
                   metaData->SetEntries(tree->GetEntries());
-               if (tree->GetTotBytes() > 0)
-                  metaData->SetTotBytes(tree->GetTotBytes());
-               if (tree->GetZipBytes() > 0)
-                  metaData->SetZipBytes(tree->GetZipBytes());
+                  if (tree->GetTotBytes() >= 0)
+                     metaData->SetTotBytes(tree->GetTotBytes());
+                  if (tree->GetZipBytes() >= 0)
+                     metaData->SetZipBytes(tree->GetZipBytes());
+               }
             }
          }
       }
@@ -1000,6 +1039,9 @@ Int_t TDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
    if (result > 0 && notify)
       Info("ScanDataSet", "%d files 'new'; %d files touched; %d files disappeared",
                           GetNOpenedFiles(), GetNTouchedFiles(), GetNDisapparedFiles());
+
+   // For real time monitoring
+   gSystem->DispatchOneEvent();
 
    return result;
 }

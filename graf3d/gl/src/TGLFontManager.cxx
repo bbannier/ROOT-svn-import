@@ -226,7 +226,7 @@ void TGLFont::Render(const char* txt, Double_t x, Double_t y, Double_t angle, Do
 }
 
 //______________________________________________________________________________
-void TGLFont::Render(const char* txt) const
+void TGLFont::Render(const TString &txt) const
 {
    // Render text.
 
@@ -248,40 +248,54 @@ void TGLFont::Render(const char* txt) const
 }
 
 //______________________________________________________________________________
-void TGLFont::RenderBitmap(const char* txt, Float_t xs, Float_t ys, Float_t zs, ETextAlign_e align) const
+void  TGLFont:: Render(const TString &txt, Float_t x, Float_t y, Float_t z,
+             ETextAlignH_e alignH, ETextAlignV_e alignV) const
 {
-   // Render text at the given position. Offset depends of text aligment.
+   // Render text with given alignmentrepl and at given position.
 
    glPushMatrix();
-   glTranslatef(xs, ys, zs);
 
+   glTranslatef(x, y, z);
+
+   x=0, y=0;
    Float_t llx, lly, llz, urx, ury, urz;
    BBox(txt, llx, lly, llz, urx, ury, urz);
-   if (txt[0] == '-')
-      urx += (urx-llx)/strlen(txt);
 
-   Float_t x=0, y=0;
-   switch (align)
+   switch (alignH)
    {
-      case kCenterUp:
-         x = -urx*0.5; y = -ury;
+      case TGLFont::kRight:
+         x = -urx;
          break;
-      case kCenterDown:
-         x = -urx*0.5; y = 0;
-         break;
-      case kRight:
-         x = -urx; y =(lly -ury)*0.5;
-         break;
-      case kLeft:
-         x = 0; y = -ury*0.5;
+
+      case  TGLFont::kCenterH:
+         x = -urx*0.5;
          break;
       default:
          break;
    };
-   glRasterPos2i(0, 0);
-   glBitmap(0, 0, 0, 0, x, y, 0);
-   Render(txt);
 
+   switch (alignV)
+   {
+      case TGLFont::kBottom:
+         y = -ury;
+         break;
+      case  TGLFont::kCenterV:
+         y = -ury*0.5;
+         break;
+      default:
+         break;
+   };
+
+   if (fMode == TGLFont::kPixmap || fMode ==  TGLFont::kBitmap)
+   {
+      glRasterPos2i(0, 0);
+      glBitmap(0, 0, 0, 0, x, y, 0);
+   }
+   else
+   {
+      glTranslatef(x, y, 0);
+   }
+   Render(txt);
    glPopMatrix();
 }
 
@@ -362,11 +376,15 @@ TGLFontManager::~TGLFontManager()
 }
 
 //______________________________________________________________________________
-void TGLFontManager::RegisterFont(Int_t size, Int_t fileID, TGLFont::EMode mode, TGLFont &out)
+void TGLFontManager::RegisterFont(Int_t sizeIn, Int_t fileID, TGLFont::EMode mode, TGLFont &out)
 {
    // Provide font with given size, file and FTGL class.
 
    if (fgStaticInitDone == kFALSE) InitStatics();
+
+   Int_t  size = GetFontSize(sizeIn);
+   if (mode == out.GetMode() && fileID == out.GetFile() && size == out.GetSize())
+      return;
 
    FontMap_i it = fFontMap.find(TGLFont(size, fileID, mode));
    if (it == fFontMap.end())
@@ -484,7 +502,7 @@ TGLFontManager::FontSizeVec_t* TGLFontManager::GetFontSizeArray()
 }
 
 //______________________________________________________________________________
-Int_t TGLFontManager::GetFontSize(Float_t ds)
+Int_t TGLFontManager::GetFontSize(Int_t ds)
 {
    // Get availabe font size.
 
@@ -497,7 +515,7 @@ Int_t TGLFontManager::GetFontSize(Float_t ds)
 }
 
 //______________________________________________________________________________
-Int_t TGLFontManager::GetFontSize(Float_t ds, Int_t min, Int_t max)
+Int_t TGLFontManager::GetFontSize(Int_t ds, Int_t min, Int_t max)
 {
    // Get availabe font size.
 
@@ -527,7 +545,7 @@ void TGLFontManager::InitStatics()
    fgFontFileArray.Add(new TObjString("timesi"));   //  10
    fgFontFileArray.Add(new TObjString("timesbd"));  //  20
    fgFontFileArray.Add(new TObjString("timesbi"));  //  30
- 
+
    fgFontFileArray.Add(new TObjString("arial"));    //  40
    fgFontFileArray.Add(new TObjString("ariali"));   //  50
    fgFontFileArray.Add(new TObjString("arialbd"));  //  60

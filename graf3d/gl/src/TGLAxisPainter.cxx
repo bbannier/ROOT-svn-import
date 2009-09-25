@@ -47,7 +47,10 @@ TGLAxisPainter::TGLAxisPainter():
    fDir(1, 0, 0),
    fTMNDim(1),
    fLabelPixelFontSize(14),
-   fTitlePixelFontSize(14)
+   fTitlePixelFontSize(14),
+
+   fLabelAlignH(TGLFont::kCenterH),
+   fLabelAlignV(TGLFont::kCenterV)
 {
    // Constructor.
 }
@@ -58,6 +61,15 @@ TGLAxisPainter::~TGLAxisPainter()
 {
    // Destructor.
 
+}
+
+//______________________________________________________________________________
+void TGLAxisPainter::SetLabelAlign(TGLFont::ETextAlignH_e h, TGLFont::ETextAlignV_e v)
+{
+   // Set label align.
+
+   fLabelAlignH = h;
+   fLabelAlignV = v;
 }
 
 //______________________________________________________________________________
@@ -99,7 +111,7 @@ void TGLAxisPainter::FormAxisValue(Double_t  val, TString &s) const
       s.Remove(ld + fDecimals);
 
    TPMERegexp zeroes("[-+]?0\\.0*$");
-   zeroes.Substitute(s, "0");   
+   zeroes.Substitute(s, "0");
 }
 
 //______________________________________________________________________________
@@ -189,57 +201,27 @@ void TGLAxisPainter::SetTextFormat(Double_t min, Double_t max, Double_t bw1)
 //
 // Utility functions.
 
-
-
 //______________________________________________________________________________
-void TGLAxisPainter::RnrText( const char* txt, const TGLVector3 &pos, const TGLFont::ETextAlign_e align, const TGLFont &font) const
+void TGLAxisPainter::RnrText(const TString &txt, const TGLVector3 &p, TGLFont::ETextAlignH_e aH, TGLFont::ETextAlignV_e aV, const TGLFont &font) const
 {
    // Render text at the given position. Offset depends of text aligment.
 
-   glPushMatrix();
-
-   glTranslatef(pos.X(), pos.Y(), pos.Z());
-   Float_t llx, lly, llz, urx, ury, urz;
-   font.BBox(txt, llx, lly, llz, urx, ury, urz);
-
-   Float_t x=0, y=0;
-   switch (align)
-   {
-      case TGLFont::kCenterUp:
-         if (txt[0] == '-')
-            urx += (urx-llx)/strlen(txt);
-         x = -urx*0.5; y = -ury;
-         break;
-      case TGLFont::kCenterDown:
-         if (txt[0] == '-')
-            urx += (urx-llx)/strlen(txt);
-         x = -urx*0.5; y = 0;
-         break;
-      case TGLFont::kRight:
-         x = -urx; y =(lly -ury)*0.5;
-         break;
-      case TGLFont::kLeft:
-         x = 0; y = -ury*0.5;
-         break;
-      default:
-         break;
-   };
-
-
    if (fFontMode == TGLFont::kPixmap || fFontMode ==  TGLFont::kBitmap)
    {
-      glRasterPos2i(0, 0);
-      glBitmap(0, 0, 0, 0, x, y, 0);
+     font.Render(txt, p.X(), p.Y(), p.Z(), aH, aV);
    }
    else
    {
+      // In case of non pixmap font, size is adjusted to the projected view in order to
+      // be visible on zoom out. In other words texture and polygon fonts imitate
+      // pixmap font behaviour.
+      glPushMatrix();
+      glTranslated(p.X(), p.Y(), p.Z());
       Double_t sc = fLabel3DFontSize/fLabelPixelFontSize;
       glScaled(sc, sc, 1);
-      glTranslatef(x, y, 0);
+      font.Render(txt, 0, 0, 0, aH, aV);
+      glPopMatrix();
    }
-
-   font.Render(txt);
-   glPopMatrix();
 }
 
 //______________________________________________________________________________
@@ -247,17 +229,9 @@ void TGLAxisPainter::SetLabelFont(TGLRnrCtx &rnrCtx, const char* fontName, Int_t
 {
    // Set label font derived from TAttAxis.
 
-   fLabelPixelFontSize = TGLFontManager::GetFontSize(fontSize);
+   rnrCtx.RegisterFontNoScale(fontSize, fontName, fFontMode, fLabelFont);
    fLabel3DFontSize = size3d;
-   if (fLabelFont.GetMode() == TGLFont::kUndef)
-   {
-      rnrCtx.RegisterFont(fLabelPixelFontSize, fontName, fFontMode, fLabelFont);
-   }
-   else if (fLabelFont.GetSize() != fontSize|| fLabelFont.GetFile() != fAttAxis->GetLabelFont() || fLabelFont.GetMode() != fFontMode )
-   {
-      rnrCtx.ReleaseFont(fLabelFont);
-      rnrCtx.RegisterFont(fLabelPixelFontSize, fontName, fFontMode, fLabelFont);
-   }
+   fLabelPixelFontSize = fLabelFont.GetSize();
 }
 
 //______________________________________________________________________________
@@ -280,7 +254,7 @@ void TGLAxisPainter::RnrLabels() const
    for (LabVec_t::const_iterator it = fLabVec.begin(); it != fLabVec.end(); ++it) {
       FormAxisValue((*it).second, s);
       p = (*it).first;
-      RnrText(s.Data(), fDir*p, fLabelAlign, fLabelFont);
+      RnrText(s, fDir*p, fLabelAlignH, fLabelAlignV, fLabelFont);
    }
 
    fLabelFont.PostRender();
@@ -293,31 +267,22 @@ void TGLAxisPainter::SetTitleFont(TGLRnrCtx &rnrCtx, const char* fontName,
 {
    // Set title font derived from TAttAxis.
 
-   fTitlePixelFontSize = TGLFontManager::GetFontSize(fontSize);
+   rnrCtx.RegisterFontNoScale(fontSize, fontName, fFontMode, fTitleFont);
+   fTitlePixelFontSize = fTitleFont.GetSize();
    fTitle3DFontSize = size3d;
-
-   if (fTitleFont.GetMode() == TGLFont::kUndef)
-   {
-      rnrCtx.RegisterFont(fontSize, fontName, fFontMode, fTitleFont);
-   }
-   else if (fTitleFont.GetSize() != fontSize|| fTitleFont.GetFile() != fAttAxis->GetTitleFont() || fTitleFont.GetMode() != fFontMode )
-   {
-      rnrCtx.ReleaseFont(fTitleFont);
-      rnrCtx.RegisterFont(fTitlePixelFontSize, fontName, fFontMode, fTitleFont);
-   }
 }
 
 //______________________________________________________________________________
-void TGLAxisPainter::RnrTitle(const char* txt, TGLVector3 &pos , TGLFont::ETextAlign_e align) const
+void TGLAxisPainter::RnrTitle(const TString &txt, TGLVector3 &pos , TGLFont::ETextAlignH_e aH, TGLFont::ETextAlignV_e aV) const
 {
    // Draw title at given position.
 
    if (fUseAxisColors)
       TGLUtil::Color(fAttAxis->GetTitleColor());
 
-   const char* title = (fExp) ? Form("%s [10^%d]", fExp, txt) : txt;
+   TString title = (fExp) ? Form("%s [10^%d]", txt.Data(), fExp) : txt;
    fTitleFont.PreRender();
-   RnrText(title, pos, align, fTitleFont);
+   RnrText(title, pos, aH, aV, fTitleFont);
    fTitleFont.PostRender();
 }
 
@@ -329,6 +294,7 @@ void TGLAxisPainter::RnrLines() const
    if (fUseAxisColors)
       TGLUtil::Color(fAttAxis->GetAxisColor());
 
+   TGLUtil::LineWidth(1);
    glBegin(GL_LINES);
 
    // Main line.
@@ -441,10 +407,10 @@ void TGLAxisPainter::PaintAxis(TGLRnrCtx &rnrCtx, TAxis* ax)
    const char* labFontName   = TGLFontManager::GetFontNameFromId(fAttAxis->GetLabelFont());
    const char* titleFontName = TGLFontManager::GetFontNameFromId(fAttAxis->GetTitleFont());
 
+   // pixel font size is set externaly for pixmap and bitmap fonts
+   // for texture and polygon fonts font size is set here, to get font resolution
    if (fFontMode == TGLFont::kPolygon || fFontMode == TGLFont::kTexture)
    {
-      // get sensible pixel resolution relative to projected axis length
-      // in pixmap for this is given explicitly
       GLdouble mm[16], pm[16];
       GLint    vp[4];
       glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
@@ -458,8 +424,8 @@ void TGLAxisPainter::PaintAxis(TGLRnrCtx &rnrCtx, TAxis* ax)
                                  (up[1] - dn[1]) * (up[1] - dn[1]) +
                                  (up[2] - dn[2]) * (up[2] - dn[2]));
 
-      fLabelPixelFontSize = TMath::CeilNint(len*fAttAxis->GetLabelSize());
-      fTitlePixelFontSize = TMath::CeilNint(len*fAttAxis->GetTitleSize());
+      fLabelPixelFontSize = TMath::Nint(len*fAttAxis->GetLabelSize());
+      fTitlePixelFontSize = TMath::Nint(len*fAttAxis->GetTitleSize());
    }
 
    SetLabelFont(rnrCtx, labFontName,   fLabelPixelFontSize, (max - min)*fAttAxis->GetLabelSize());
@@ -476,7 +442,7 @@ void TGLAxisPainter::PaintAxis(TGLRnrCtx &rnrCtx, TAxis* ax)
    RnrLabels();
 
    if (ax->GetTitle())
-      RnrTitle(ax->GetTitle(), fTitlePos, fLabelAlign);
+      RnrTitle(ax->GetTitle(), fTitlePos, fLabelAlignH, fLabelAlignV);
 }
 
 
@@ -515,7 +481,7 @@ void TGLAxisPainterBox::SetAxis3DTitlePos(TGLRnrCtx &rnrCtx)
 
    Double_t y0 =  fAxis[1]->GetXmin();
    Double_t y1 =  fAxis[1]->GetXmax();
- 
+
    Double_t z0 =  fAxis[2]->GetXmin();
    Double_t z1 =  fAxis[2]->GetXmax();
 
@@ -611,17 +577,17 @@ void TGLAxisPainterBox::DrawAxis3D(TGLRnrCtx &rnrCtx)
    SetLabelPixelFontSize(TMath::CeilNint(len*fAxis[2]->GetLabelSize()));
    SetTitlePixelFontSize(TMath::CeilNint(len*fAxis[2]->GetTitleSize()));
 
- 
+
    // Z axis
-   //  
+   //
    // tickmark vector = 10 pixels left
    fAxis[2]->SetTickLength(1.); // leave this relative factor neutral
    TGLVertex3 worldRef(fAxisTitlePos[2].X(), fAxisTitlePos[2].Y(), fAxisTitlePos[2].Z());
    RefTMOff(0) = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, -10, 0, &mm);
    SetTMNDim(1);
    RefDir().Set(0., 0., 1.);
-   SetLabelAlign(TGLFont::kRight);
-   glPushMatrix();  
+   SetLabelAlign(TGLFont::kRight,  TGLFont::kBottom);
+   glPushMatrix();
    glTranslatef(fAxisTitlePos[2].X(), fAxisTitlePos[2].Y(), 0);
    RefTitlePos().Set(RefTMOff(0).X(), RefTMOff(0).Y(),fAxisTitlePos[2].Z());
    PaintAxis(rnrCtx, fAxis[2]);
@@ -631,7 +597,7 @@ void TGLAxisPainterBox::DrawAxis3D(TGLRnrCtx &rnrCtx)
    //
    SetTMNDim(2);
    RefTMOff(1).Set(0, 0, fAxis[2]->GetXmin()- fAxis[2]->GetXmax());
-   SetLabelAlign(TGLFont::kCenterUp);
+   SetLabelAlign(TGLFont::kCenterH, TGLFont::kBottom);
    // X
    glPushMatrix();
    RefDir().Set(1, 0, 0);

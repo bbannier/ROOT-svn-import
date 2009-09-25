@@ -50,9 +50,8 @@
 ClassImp(TGLEventHandler);
 
 //______________________________________________________________________________
-TGLEventHandler::TGLEventHandler(const char *name, TGWindow *w, TObject *obj,
-                                 const char *title) :
-   TGEventHandler(name, w, obj, title),
+TGLEventHandler::TGLEventHandler(TGWindow *w, TObject *obj) :
+   TGEventHandler      ("TGLEventHandler", w, obj),
    fGLViewer           ((TGLViewer *)obj),
    fMouseTimer         (0),
    fLastPos            (-1, -1),
@@ -766,7 +765,8 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    }
    else if (fGLViewer->fDragAction == TGLViewer::kDragOverlay)
    {
-      processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
+      if (fGLViewer->fCurrentOvlElm)
+         processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
    }
 
    fLastPos.fX = event->fX;

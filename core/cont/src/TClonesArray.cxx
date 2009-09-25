@@ -483,6 +483,41 @@ TObject *TClonesArray::Remove(TObject *obj)
 }
 
 //______________________________________________________________________________
+void TClonesArray::RemoveRange(Int_t idx1, Int_t idx2)
+{
+   // Remove objects from index idx1 to idx2 included.
+
+   if (!BoundsOk("RemoveRange", idx1)) return;
+   if (!BoundsOk("RemoveRange", idx2)) return;
+
+   Long_t dtoronly = TObject::GetDtorOnly();
+
+   idx1 -= fLowerBound;
+   idx2 -= fLowerBound;
+
+   Bool_t change = kFALSE;
+   for (TObject **obj=fCont+idx1; obj<=fCont+idx2; obj++) {
+      if (!*obj) continue;
+      if ((*obj)->TestBit(kNotDeleted)) {
+         // Tell custom operator delete() not to delete space when
+         // object fCont[i] is deleted. Only destructors are called
+         // for this object.
+         TObject::SetDtorOnly(*obj);
+         delete *obj;
+      }
+      *obj = 0;
+      change = kTRUE;
+   }
+
+   TObject::SetDtorOnly((void*)dtoronly);
+
+   // recalculate array size
+   if (change) Changed();
+   if (idx1 < fLast || fLast > idx2) return;
+   do { fLast--; } while (fLast >= 0 && fCont[fLast] == 0);
+}
+
+//______________________________________________________________________________
 void TClonesArray::SetClass(const TClass *cl, Int_t s)
 {
    // Create an array of clone objects of class cl. The class must inherit from

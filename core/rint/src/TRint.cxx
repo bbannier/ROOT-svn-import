@@ -21,7 +21,6 @@
 #include "TROOT.h"
 #include "TClass.h"
 #include "TVirtualX.h"
-#include "Getline.h"
 #include "TStyle.h"
 #include "TObjectTable.h"
 #include "TClassTable.h"
@@ -41,6 +40,12 @@
 #include "TError.h"
 #include "snprintf.h"
 #include <stdlib.h>
+
+#ifdef R__BUILDEDITLINE
+#include "Getline_el.h"
+#else
+#include "Getline.h"
+#endif
 
 #ifdef R__UNIX
 #include <signal.h>
@@ -226,6 +231,29 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
    }
    Gl_histsize(hist_size, hist_save);
    Gl_histinit((char *)logon);
+     
+#ifdef R__BUILDEDITLINE
+   // black on white or white on black?
+   static const char* defaultColorsBW[] = {
+      "bold blue", "magenta", "bold green", "bold red underlined", "default"
+   };
+   static const char* defaultColorsWB[] = {
+      "yellow", "magenta", "bold green", "bold red underlined", "default"
+   };
+
+   const char** defaultColors = defaultColorsBW;
+   TString revColor = gEnv->GetValue("Rint.ReverseColor", "no");
+   if (revColor.Contains("yes", TString::kIgnoreCase)) {
+      defaultColors = defaultColorsWB;
+   }
+   TString colorType = gEnv->GetValue("Rint.TypeColor", defaultColors[0]);
+   TString colorTabCom = gEnv->GetValue("Rint.TabComColor", defaultColors[1]);
+   TString colorBracket = gEnv->GetValue("Rint.BracketColor", defaultColors[2]);
+   TString colorBadBracket = gEnv->GetValue("Rint.BadBracketColor", defaultColors[3]);
+   TString colorPrompt = gEnv->GetValue("Rint.PromptColor", defaultColors[4]);
+   Gl_setColors(colorType, colorTabCom, colorBracket, colorBadBracket, colorPrompt);
+#endif
+
    Gl_windowchanged();
 
    atexit(ResetTermAtExit);

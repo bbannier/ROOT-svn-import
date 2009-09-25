@@ -193,6 +193,11 @@ FFTW3LIBDIR    := @fftw3libdir@
 FFTW3LIB       := @fftw3lib@
 FFTW3INCDIR    := $(filter-out /usr/include, @fftw3incdir@)
 
+BUILDGVIZ      := @buildgviz@
+GRAPHVIZLIBDIR := @gvizlibdir@
+GRAPHVIZLIB    := @gvizlib@
+GRAPHVIZINCDIR := $(filter-out /usr/include, @gvizincdir@)
+
 BUILDPYTHON    := @buildpython@
 PYTHONLIBDIR   := @pythonlibdir@
 PYTHONLIB      := @pythonlib@
@@ -293,11 +298,19 @@ BUILDGDML      := @buildgdml@
 
 BUILDTABLE     := @buildtable@
 
+BUILDTMVA      := @buildtmva@
+
 BUILDCLARENS   := @buildclarens@
 CLARENSINC     := $(filter-out -I/usr/include, @clarensincdir@)
 CLARENSLIBS    := @clarenslibs@
 
 BUILDPEAC      := @buildpeac@
+
+CURSESINCDIR   := $(filter-out -I/usr/include, -I@cursesincdir@)
+CURSESLIBDIR   := @curseslibdir@
+CURSESHDR      := @curseshdr@
+CURSESLIB      := @curseslib@
+BUILDEDITLINE  := @buildeditline@
 
 CPPUNIT        := @cppunit@
 GCCXML         := @gccxml@
