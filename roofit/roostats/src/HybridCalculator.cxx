@@ -76,10 +76,9 @@ HybridCalculator::HybridCalculator(const char *name,
    fSbModel(0),
    fBModel(0),
    fObservables(0),
-   fParameters(0),
+   fNuisanceParameters(0),
    fPriorPdf(0),
-   fData(0),
-   fWS(0)
+   fData(0)
 {
    // constructor with name and title
    // set default parameters
@@ -89,21 +88,22 @@ HybridCalculator::HybridCalculator(const char *name,
 }
 
 
+/// constructor without the data - is it needed ???????????
 HybridCalculator::HybridCalculator( const char *name,
                                     const char *title,
                                     RooAbsPdf& sbModel,
                                     RooAbsPdf& bModel,
                                     RooArgList& observables,
-                                    RooArgSet* nuisance_parameters,
+                                    const RooArgSet* nuisance_parameters,
                                     RooAbsPdf* priorPdf ,
 				    bool GenerateBinned ) :
    TNamed(name,title),
    fSbModel(&sbModel),
    fBModel(&bModel),
-   fParameters(nuisance_parameters),
+   fNuisanceParameters(nuisance_parameters),
    fPriorPdf(priorPdf),
    fData(0),
-   fWS(0),
+   //fWS(0),
    fGenerateBinned(GenerateBinned)
 {
    /// specific HybridCalculator constructor:
@@ -115,7 +115,7 @@ HybridCalculator::HybridCalculator( const char *name,
   fObservables = new RooArgList(observables);
   //Try to recover the informations from the pdf's
   //fObservables=new RooArgList("fObservables");
-  //fParameters=new RooArgSet("fParameters");
+  //fNuisanceParameters=new RooArgSet("fNuisanceParameters");
   // if (priorPdf){
     
     
@@ -131,19 +131,20 @@ HybridCalculator::HybridCalculator( const char *name,
    /* if ( _verbose ) */ //this->PrintMore("v"); /// TO DO: add the verbose mode
 }
 
+
 HybridCalculator::HybridCalculator( RooAbsData & data, 
                                     RooAbsPdf& sbModel,
                                     RooAbsPdf& bModel,
-                                    RooArgSet* nuisance_parameters,
+                                    const RooArgSet* nuisance_parameters,
                                     RooAbsPdf* priorPdf,
 				    bool GenerateBinned ) :
-   fSbModel(0),
-   fBModel(0),
+   fSbModel(&sbModel),
+   fBModel(&bModel),
    fObservables(0),
-   fParameters(0),
-   fPriorPdf(0),
-   fData(0),
-   fWS(0),
+   fNuisanceParameters(nuisance_parameters),
+   fPriorPdf(priorPdf),
+   fData(&data),
+//   fWS(0),
    fGenerateBinned(GenerateBinned)
 {
    /// HybridCalculator constructor for performing hypotesis test 
@@ -151,7 +152,7 @@ HybridCalculator::HybridCalculator( RooAbsData & data,
    /// In case of treatment of nuisance parameter, the user need to specify the  
    /// the list of parameters  that are marginalised and the prior distribution of those parameters
 
-   Initialize(data, bModel, sbModel, 0, 0, nuisance_parameters, priorPdf); 
+   //Initialize(data, bModel, sbModel, 0, 0, nuisance_parameters, priorPdf); 
 
    SetTestStatistics(1); /// set to default
    SetNumberOfToys(1000); 
@@ -163,17 +164,17 @@ HybridCalculator::HybridCalculator( const char *name,
                                     RooAbsData & data, 
                                     RooAbsPdf& sbModel,
                                     RooAbsPdf& bModel,
-                                    RooArgSet* nuisance_parameters,
+                                    const RooArgSet* nuisance_parameters,
                                     RooAbsPdf* priorPdf, 
 				    bool GenerateBinned ) :
    TNamed(name,title),
-   fSbModel(0),
-   fBModel(0),
+   fSbModel(&sbModel),
+   fBModel(&bModel),
    fObservables(0),
-   fParameters(0),
-   fPriorPdf(0),
-   fData(0),
-   fWS(0),
+   fNuisanceParameters(nuisance_parameters),
+   fPriorPdf(priorPdf),
+   fData(&data),
+   // fWS(0),
    fGenerateBinned(GenerateBinned)
 {
    /// HybridCalculator constructor for performing hypotesis test 
@@ -181,34 +182,7 @@ HybridCalculator::HybridCalculator( const char *name,
    /// In case of treatment of nuisance parameter, the user need to specify the  
    /// the list of parameters  that are marginalised and the prior distribution of those parameters
 
-   Initialize(data, bModel, sbModel, 0, 0, nuisance_parameters, priorPdf); 
-
-   SetTestStatistics(1); /// set to default
-   SetNumberOfToys(1000); 
-   if (priorPdf) UseNuisance(true); 
-
-}
-
-HybridCalculator::HybridCalculator( RooWorkspace & wks, 
-                                    const char * data, 
-                                    const char * sbModel,
-                                    const char * bModel,
-                                    RooArgSet* nuisance_parameters,
-                                    const char* priorPdf ) :
-   fSbModel(0),
-   fBModel(0),
-   fObservables(0),
-   fParameters(0),
-   fPriorPdf(0),
-   fData(0),
-   fWS(0)
-{
-   /// HybridCalculator constructor for performing hypotesis test from a Workspace 
-   /// the user need to specify the data set, the models in the S+B case and B-only case. 
-   /// In case of treatment of nuisance parameter, the user need to specify the  
-   /// the list of parameters  that are marginalised and the prior distribution of those parameters
-
-   Initialize(wks, data, bModel, sbModel, 0, 0, nuisance_parameters, priorPdf);
+   //Initialize(data, bModel, sbModel, 0, 0, nuisance_parameters, priorPdf); 
 
    SetTestStatistics(1); /// set to default
    SetNumberOfToys(1000); 
@@ -219,49 +193,25 @@ HybridCalculator::HybridCalculator( RooWorkspace & wks,
 
 HybridCalculator::HybridCalculator( const char *name,
                                     const char *title,
-                                    RooWorkspace & wks, 
-                                    const char * data, 
-                                    const char * sbModel,
-                                    const char * bModel,
-                                    RooArgSet* nuisance_parameters,
-                                    const char* priorPdf ) :
+                                    RooAbsData& data, 
+                                    const ModelConfig& sbModel, 
+                                    const ModelConfig& bModel) :
    TNamed(name,title),
-   fSbModel(0),
-   fBModel(0),
-   fObservables(0),
-   fParameters(0),
-   fPriorPdf(0),
-   fData(0),
-   fWS(0)
+   fSbModel(sbModel.GetPdf()),
+   fBModel(bModel.GetPdf()),
+   fObservables(0),  // no need to set them - can be taken from the data
+   fNuisanceParameters((sbModel.GetNuisanceParameters()) ? sbModel.GetNuisanceParameters()  :  bModel.GetNuisanceParameters()),
+   fPriorPdf((sbModel.GetPriorPdf()) ? sbModel.GetPriorPdf()  :  bModel.GetPriorPdf()),
+   fData(&data)
+   //fWS(0) 
 {
-   /// HybridCalculator constructor for performing hypotesis test from a Workspace 
-   /// the user need to specify the data set, the models in the S+B case and B-only case. 
-   /// In case of treatment of nuisance parameter, the user need to specify the  
-   /// the list of parameters  that are marginalised and the prior distribution of those parameters
+  /// Constructor with a ModelConfig object representing the signal + background model and 
+  /// another model config representig the background only model
+  /// a Prior pdf for the nuiscane parameter of the signal and background can be specified in 
+  /// the s+b model or the b model. If it is specified in the s+b model, the one of the s+b model will be used 
 
-   Initialize(wks, data, bModel, sbModel, 0, 0, nuisance_parameters, priorPdf);
-
-   SetTestStatistics(1); /// set to default
-   SetNumberOfToys(1000); 
-   if (priorPdf) UseNuisance(true); 
-
-}
-
-HybridCalculator::HybridCalculator( const char *name,
-                                    const char *title,
-				    ModelConfig& model ) :
-   TNamed(name,title),
-   fSbModel(0),
-   fBModel(0),
-   fObservables(0),
-   fParameters(0),
-   fPriorPdf(0),
-   fData(0),
-   fWS(0)
-{
-  /// Constructor with a ModelConfig object
-  
-  SetModelConfig(model);
+   if (fPriorPdf) 
+      UseNuisance(true);
 
   SetTestStatistics(1);
   SetNumberOfToys(1000); 
@@ -278,15 +228,19 @@ HybridCalculator::~HybridCalculator()
 
 ///////////////////////////////////////////////////////////////////////////
 
-void HybridCalculator::SetModelConfig(ModelConfig& model)
+void HybridCalculator::SetNullModel(const ModelConfig& model)
 {
-  fSbModel = model.GetAlternatePdf();
-  fBModel = model.GetNullPdf(); 
-  //fObservables = model->
-  fParameters = new RooArgSet(*(model.GetNuisanceParameters()));  // going to leak
-  fPriorPdf = model.GetPriorPdf();
-  fData = model.GetData();
-  if (fPriorPdf) UseNuisance(true);
+   fBModel = model.GetPdf();
+   // only if it has not been set before
+   if (!fPriorPdf) fPriorPdf = model.GetPriorPdf(); 
+   if (!fNuisanceParameters) fNuisanceParameters = model.GetNuisanceParameters(); 
+}
+
+void HybridCalculator::SetAlternateModel(const ModelConfig& model)
+{
+   fSbModel = model.GetPdf();
+   fPriorPdf = model.GetPriorPdf(); 
+   fNuisanceParameters = model.GetNuisanceParameters(); 
 }
 
 void HybridCalculator::SetTestStatistics(int index)
@@ -385,15 +339,15 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
    assert(fSbModel);
    if (usePriors)  { 
       assert(fPriorPdf); 
-      assert(fParameters);
+      assert(fNuisanceParameters);
    }
 
    std::vector<double> parameterValues; /// array to hold the initial parameter values
    /// backup the initial values of the parameters that are varied by the prior MC-integration
-   int nParameters = (fParameters) ? fParameters->getSize() : 0;
+   int nParameters = (fNuisanceParameters) ? fNuisanceParameters->getSize() : 0;
    RooArgList parametersList("parametersList");  /// transforms the RooArgSet in a RooArgList (needed for .at())
    if (usePriors && nParameters>0) {
-      parametersList.add(*fParameters);
+      parametersList.add(*fNuisanceParameters);
       parameterValues.resize(nParameters);
       for (int iParameter=0; iParameter<nParameters; iParameter++) {
          RooRealVar* oneParam = (RooRealVar*) parametersList.at(iParameter);
@@ -412,7 +366,7 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
       /// vary the value of the integrated parameters according to the prior pdf
       if (usePriors && nParameters>0) {
          /// generation from the prior pdf (TO DO: RooMCStudy could be used here)
-         RooDataSet* tmpValues = (RooDataSet*) fPriorPdf->generate(*fParameters,1);
+         RooDataSet* tmpValues = (RooDataSet*) fPriorPdf->generate(*fNuisanceParameters,1);
          for (int iParameter=0; iParameter<nParameters; iParameter++) {
             RooRealVar* oneParam = (RooRealVar*) parametersList.at(iParameter);
             oneParam->setVal(tmpValues->get()->getRealValue(oneParam->GetName()));
@@ -548,9 +502,9 @@ void HybridCalculator::PrintMore(const char* options) const
       fObservables->Print(options);
    }
 
-   if (fParameters) { 
+   if (fNuisanceParameters) { 
       std::cout << "\nParameters being integrated:\n";
-      fParameters->Print(options);
+      fNuisanceParameters->Print(options);
    }
 
    if (fPriorPdf) { 
@@ -566,10 +520,6 @@ void HybridCalculator::PrintMore(const char* options) const
 HybridResult* HybridCalculator::GetHypoTest() const {  
    // perform the hypothesis test and return result of hypothesis test 
 
-   if (fWS)  { 
-      // hack but needed now here (should be moved in a setter method)
-      if (!(const_cast<HybridCalculator &>(*this)).DoInitializeFromWS() ) return 0; 
-   }
    // check first that everything needed is there 
    if (!DoCheckInputs()) return 0;  
    RooAbsData * treeData = dynamic_cast<RooAbsData *> (fData); 
@@ -581,42 +531,6 @@ HybridResult* HybridCalculator::GetHypoTest() const {
    return Calculate( *treeData, fNToys, usePrior);  
 }
 
-bool HybridCalculator::DoInitializeFromWS() { 
-   if (!fWS) return false; 
-   fData = fWS->data(fDataName); 
-
-   if (!fData) { 
-      std::cerr << "Error in HybridCalculator::DoInitializeFromWS - data " << fDataName << " is NOT found in workspace" << std::endl;
-      return false; 
-   }
-
-   // if observable have not been set take them from data 
-   if (fData->get() ) fObservables =  new RooArgList( *fData->get() );
-   if (!fObservables) { 
-      std::cerr << "Error in HybridCalculator::DoInitializeFromWS - data " << fDataName << " has not observables" << std::endl;
-      return false; 
-   }
-
-   fSbModel = fWS->pdf(fSbModelName); 
-   if (!fSbModel) { 
-      std::cerr << "Error in HybridCalculator::DoInitializeFromWS - S+B pdf " << fSbModelName << " is NOT found in workspace" << std::endl;
-      return false; 
-   }
-   fBModel = fWS->pdf(fBModelName); 
-   if (!fBModel) { 
-      std::cerr << "Error in HybridCalculator::DoInitializeFromWS - B pdf " << fBModelName << " is NOT found in workspace" << std::endl;
-      return false; 
-   }
-
-   if (fUsePriorPdf) { 
-      fPriorPdf = fWS->pdf(fPriorPdfName); 
-      if (!fPriorPdf) { 
-         std::cerr << "Warning in HybridCalculator::DoInitializeFromWS - Prior pdf " << fPriorPdfName << " is NOT found in workspace" << std::endl;
-         UseNuisance(false);
-      }
-   }
-   return true; 
-}
 
 bool HybridCalculator::DoCheckInputs() const { 
    if (!fData) { 
@@ -640,7 +554,7 @@ bool HybridCalculator::DoCheckInputs() const {
       std::cerr << "Error in HybridCalculator - B pdf has not been set" << std::endl;
       return false; 
    }
-   if (fUsePriorPdf && !fParameters) { 
+   if (fUsePriorPdf && !fNuisanceParameters) { 
       std::cerr << "Error in HybridCalculator - nuisance parameters have not been set " << std::endl;
       return false; 
    }
@@ -651,15 +565,4 @@ bool HybridCalculator::DoCheckInputs() const {
    return true; 
 }
 
-void HybridCalculator::SetWorkspace(RooWorkspace& ws) {  
-   // set an external workspace containing data and pdf's
-   // if a workspace already esists merge with existing one
-   // one needs to set later pdf names and data names
-   if (!fWS) {
-      fWS = &ws; 
-   }
-   else { 
-      fWS->merge(ws);
-   }
-}
 

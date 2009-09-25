@@ -96,7 +96,7 @@ LikelihoodInterval::LikelihoodInterval(const char* name, const char* title) :
 }
 
 //____________________________________________________________________
-LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr, RooArgSet* params) :
+LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr, const RooArgSet* params) :
    ConfInterval(name,name)
 {
    // Alternate constructor
@@ -105,7 +105,7 @@ LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr, RooArgS
 }
 
 //____________________________________________________________________
-LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooAbsReal* lr, RooArgSet* params) :
+LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooAbsReal* lr, const RooArgSet* params) :
    ConfInterval(name,title)
 {
    // Alternate constructor
