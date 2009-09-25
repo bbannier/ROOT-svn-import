@@ -13,6 +13,14 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
+#include "RooRealVar.h"
+#include "RooProdPdf.h"
+#include "RooWorkspace.h"
+#include "RooStats/ProfileLikelihoodCalculator.h"
+#include "RooStats/LikelihoodIntervalPlot.h"
+
+#include "TFile.h"
+
 using namespace RooFit;
 using namespace RooStats;
 
@@ -25,18 +33,16 @@ void rs501_ProfileLikelihoodCalculator_limit( const char* fileName="WS_GaussOver
   RooAbsPdf* modelTmp = myWS->pdf("model");
   RooAbsData* data = myWS->data("data");
   RooAbsPdf* priorNuisance = myWS->pdf("priorNuisance");
-  RooArgSet* POI = myWS->set("POI");
-  RooRealVar* parameterOfInterest = POI->first();
+  const RooArgSet* POI = myWS->set("POI");
+  RooRealVar* parameterOfInterest = dynamic_cast<RooRealVar*>(POI->first());
+  assert(parameterOfInterest);
 
   // If there are nuisance parameters, multiply their prior distribution to the full model
-  RooProdPdf* model = modelTmp;
+  RooAbsPdf* model = modelTmp;
   if( priorNuisance!=0 ) model = new RooProdPdf("constrainedModel","Model with nuisance parameters",*modelTmp,*priorNuisance);
 
   // Set up the ProfileLikelihoodCalculator
-  ProfileLikelihoodCalculator plc;
-  plc.SetPdf(*model);
-  plc.SetData(*data);
-  plc.SetParameters(*POI);
+  ProfileLikelihoodCalculator plc(*data, *model, *POI);
   // ProfileLikelihoodCalculator usually make intervals: the 95% CL one-sided upper-limit is the same as the two-sided upper-limit of a 90% CL interval  
   plc.SetTestSize(0.10);
 
