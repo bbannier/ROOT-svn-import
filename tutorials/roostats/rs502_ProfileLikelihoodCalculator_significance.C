@@ -41,16 +41,22 @@ void rs502_ProfileLikelihoodCalculator_significance( const char* fileName="WS_Ga
   // The 68% CL ProfileLikelihoodCalculator interval correspond to test size of 0.32
   plc.SetTestSize(0.32);
 
-  model->fitTo(*data);
+
+  // Compute the confidence interval: a fit is needed first in order to locate the minimum of the -log(likelihood) and ease the upper limit computation
+
+  model->fitTo(*data,SumW2Error(kFALSE));
   // Pointer to the confidence interval
   LikelihoodInterval* interval = plc.GetInterval();
 
-  // Compute the confidence interval: a fit is needed first in order to locate the minimum of the -log(likelihood) and ease the upper limit computation
   const double MLE = parameterOfInterest->getVal();
   const double lowerLimit = interval->LowerLimit(*parameterOfInterest);
   parameterOfInterest->setVal(MLE);
   const double upperLimit = interval->UpperLimit(*parameterOfInterest);
   parameterOfInterest->setVal(MLE);
+
+  // Make a plot of the profile-likelihood and confidence interval
+  LikelihoodIntervalPlot plot(interval);
+  plot.Draw();
 
   // Get the significance using the GetHypoTest function: (a plot is not possible) 
   
@@ -61,7 +67,6 @@ void rs502_ProfileLikelihoodCalculator_significance( const char* fileName="WS_Ga
   HypoTestResult* testresult=plc->GetHypoTest();
   const double significance = testresult->Significance();
   
-
   // Another way is to use directly 
   // the profile-log-likelihood function
 //   parameterOfInterest->setVal(MLE);
@@ -75,11 +80,7 @@ void rs502_ProfileLikelihoodCalculator_significance( const char* fileName="WS_Ga
 //   const double significance = TMath::Sqrt(fabs(2*delta_nll));
 //   if (delta_nll<0) significance *= -1;
 
-  // Make a plot of the profile-likelihood and confidence interval
-  LikelihoodIntervalPlot plot(interval);
-  plot.Draw();
-
-  std::cout<<"68% CL interval: [ " << lowerLimit << " ; " << upperLimit << " ]\n";
+  std::cout << "68% CL interval: [ " << lowerLimit << " ; " << upperLimit << " ]\n";
   std::cout << "significance estimation: " << significance << std::endl;
 
   delete model;
