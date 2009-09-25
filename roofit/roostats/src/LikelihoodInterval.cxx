@@ -239,10 +239,10 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param)
 
   double target = TMath::ChisquareQuantile(fConfidenceLevel,fParameters->getSize())/2.;
 
-  Double_t thisArgVal = param.getVal();
-  myarg->setVal( thisArgVal );
+  Double_t thisArgVal = param.getVal()*0.99;
+  myarg->setVal( thisArgVal);
 
-
+  Double_t maxStep = (myarg->getMax()-myarg->getMin())/10 ;
 
   double step=-1;
   double L= newProfile->getVal();
@@ -253,33 +253,48 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param)
   double x_app=0;
   int nIterations = 0, maxIterations = 100;
   while(fabs(diff)>0.01 && nIterations<maxIterations){
+
     nIterations++;
     L_old=L;
     thisArgVal=thisArgVal+step;
     if (thisArgVal<myarg->getMin())
       {
 	thisArgVal=myarg->getMin(); 
+
 	step=thisArgVal+step-x_app;
 	if (fabs(step)<1E-5) {
-	  std::cout<<"WARNING upper limit is outside the parameters bounderies. Abort!"<<std::endl;
+	  std::cout<<"WARNING lower limit is outside the parameters bounderies. Abort!"<<std::endl;
 	  delete newProfile;
-	  double ret = myarg->getMax();
+	  double ret = myarg->getMin();
 	  //delete myarg;
 	  return ret;
 	}
       }
     
-    
+        
     myarg->setVal( thisArgVal );
     L=newProfile->getVal();
+
+    // If L is below target and we are at boundary stop here
+    if ((fabs(myarg->getVal()-myarg->getMin())<1e-5) && (L<target)) {
+      std::cout<<"WARNING lower limit is outside the parameters bounderies (L at lower bound of " << myarg->GetName() << " is " << L 
+	       << ", which is less than target value of " << target << "). Abort!"<<std::endl;
+      delete newProfile;
+      double ret = myarg->getMin();
+      return ret;      
+    }
+
     //Compute the linear function
     a=(L-L_old)/(step);
-    if (a<1E-3)
-      std::cout<<"WARNING: the slope of the Likelihood linear approximation is close to zero."<<std::endl;
+    if (fabs(a)<1E-3) {
+      std::cout<<"WARNING: the slope of the Likelihood linear approximation is close to zero" <<std::endl;
+    }
     b=L-a*thisArgVal;
     //approximate the position of the desired L value
-    x_app=(target-b)/a;
+    x_app=(target-b)/a;    
     step=x_app-thisArgVal;
+    if (step>maxStep) step=maxStep ;
+    if (step<-maxStep) step=-maxStep ;
     diff=L-target;
 
     if(a>0) {
@@ -312,8 +327,10 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param)
   delete vars ;
 
   double target = TMath::ChisquareQuantile(fConfidenceLevel,fParameters->getSize())/2.;
-  Double_t thisArgVal = param.getVal();
+  Double_t thisArgVal = param.getVal()*1.01 ;
   myarg->setVal( thisArgVal );
+
+  Double_t maxStep = (myarg->getMax()-myarg->getMin())/10 ;
 
   bool toggleplot=false; //For debugging purposes, could think of interfacing a Filepattern to outside to have controlplots stored
   double step=1;
@@ -356,6 +373,17 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param)
     
     myarg->setVal( thisArgVal );
     L=newProfile->getVal();
+
+    // If L is below target and we are at boundary stop here
+    if ((fabs(myarg->getVal()-myarg->getMax())<1e-5) && (L<target)) {
+      std::cout<<"WARNING upper limit is outside the parameters bounderies (L at upper bound of " << myarg->GetName() << " is " << L 
+	       << ", which is less than target value of " << target << "). Abort!"<<std::endl;
+      delete newProfile;
+      double ret = myarg->getMax();
+      return ret;      
+    }
+
+
     //Compute the linear approximation
     a=(L-L_old)/(step);
    
@@ -367,6 +395,8 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param)
     //approximate the position of the desired L value
     x_app=(target-b)/a;
     step=x_app-thisArgVal;
+    if (step>maxStep) step=maxStep ;
+    if (step<-maxStep) step=-maxStep ;
     diff=L-target;
 
     //If slope is negative you are below the minimum
