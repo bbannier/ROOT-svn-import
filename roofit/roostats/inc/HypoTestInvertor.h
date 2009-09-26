@@ -1,12 +1,31 @@
+// @(#)root/roostats:$Id: SimpleInterval.h 30478 2009-09-25 19:42:07Z schott $
+// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
+/*************************************************************************
+ * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #ifndef ROOSTATS_HypoTestInvertor
 #define ROOSTATS_HypoTestInvertor
 
-#include "TGraph.h"
-#include "TNamed.h"
-#include "RooRealVar.h"
-#include "RooStats/IntervalCalculator.h"
-#include "RooStats/HypoTestInvertorResult.h"
 
+
+#ifndef ROOSTATS_IntervalCalculator
+#include "RooStats/IntervalCalculator.h"
+#endif
+
+#ifndef ROOSTATS_HypoTestCalculator
+#include "RooStats/HypoTestCalculator.h"
+#endif
+
+#ifndef  ROOSTATS_HypoTestInvertorResult
+#include "RooStats/HypoTestInvertorResult.h"
+#endif
+
+class RooRealVar;
 
 
 namespace RooStats {

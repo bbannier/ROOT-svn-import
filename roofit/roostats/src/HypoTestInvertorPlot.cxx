@@ -1,14 +1,26 @@
+// @(#)root/roostats:$Id: SimpleInterval.h 30478 2009-09-25 19:42:07Z schott $
+// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
+/*************************************************************************
+ * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 /**
    HypoTestInvertorPlot class
 
 **/
 
 // include other header files
-#include "ostream.h"
 #include "RooStats/HybridResult.h"
 
 // include header file of this class 
 #include "RooStats/HypoTestInvertorPlot.h"
+#include "RooStats/HypoTestInvertorResult.h"
+
+#include "TGraph.h"
 
 ClassImp(RooStats::HypoTestInvertorPlot)
 
@@ -30,8 +42,8 @@ TGraph* HypoTestInvertorPlot::MakePlot()
 {
   const int nEntries = fResults->Size();
 
-  Double_t xArray[nEntries];
-  Double_t yArray[nEntries];
+  std::vector<Double_t> xArray(nEntries);
+  std::vector<Double_t> yArray(nEntries);
   for (int i=0; i<nEntries; i++) {
     xArray[i] = fResults->GetXValue(i);
     yArray[i] = fResults->GetYValue(i);
@@ -68,7 +80,7 @@ TGraph* HypoTestInvertorPlot::MakePlot()
 // 759 	  	       }
 
 
-  TGraph* graph = new TGraph(nEntries,xArray,yArray);
+  TGraph* graph = new TGraph(nEntries,&xArray.front(),&yArray.front());
   return graph;
 }
 
