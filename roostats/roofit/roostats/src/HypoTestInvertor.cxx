@@ -1,19 +1,30 @@
+// @(#)root/roostats:$Id: SimpleInterval.h 30478 2009-09-25 19:42:07Z schott $
+// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
+/*************************************************************************
+ * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 /**
    HypoTestInvertor class
 
 **/
 
 // include other header files
-#include "ostream.h"
 
 #include "RooAbsPdf.h"
 #include "RooAbsData.h"
 #include "RooRealVar.h"
+
 #include "RooStats/HybridCalculator.h"
 #include "RooStats/HybridResult.h"
 
 // include header file of this class 
 #include "RooStats/HypoTestInvertor.h"
+
 
 ClassImp(RooStats::HypoTestInvertor)
 
@@ -136,6 +147,7 @@ bool HypoTestInvertor::RunOnePoint( double thisX )
     std::cout << "I will not run because the specified value in not in the range of the variable being scanned\n";
     return false;
   }
+
   std::cout << "Running for " << fScannedVariable->GetName() << " = " << thisX << endl;
   
   double oldValue = fScannedVariable->getVal();
@@ -150,12 +162,12 @@ bool HypoTestInvertor::RunOnePoint( double thisX )
   HypoTestResult* myHybridResult =  calculator->GetHypoTest(); 
 
   // fill the results in the HypoTestInvertorResult
-  fResults->xValues.push_back(thisX);
-  fResults->yObjects.Add(myHybridResult); // TO DO vector of HypoTestResult
+  fResults->fXValues.push_back(thisX);
+  fResults->fYObjects.Add(myHybridResult); // TO DO vector of HypoTestResult
 
   //delete calculator;
 
-  std::cout << "DONE\n";
+  //std::cout << "DONE\n";
 
   fScannedVariable->setVal(oldValue);
 

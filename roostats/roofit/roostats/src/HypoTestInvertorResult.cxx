@@ -1,10 +1,19 @@
+// @(#)root/roostats:$Id: SimpleInterval.h 30478 2009-09-25 19:42:07Z schott $
+// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
+/*************************************************************************
+ * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
+
 /**
    HypoTestInvertorResult class
 
 **/
 
-// include other header files
-#include "ostream.h"
 
 // include header file of this class 
 #include "RooStats/HypoTestInvertorResult.h"
@@ -31,7 +40,7 @@ HypoTestInvertorResult::HypoTestInvertorResult( const char* name,
 
   SetConfidenceLevel(cl);
 
-  yObjects.SetOwner();
+  fYObjects.SetOwner();
 }
 
 
@@ -41,24 +50,24 @@ HypoTestInvertorResult::~HypoTestInvertorResult()
 }
 
  
-double HypoTestInvertorResult::GetXValue( int index )
+double HypoTestInvertorResult::GetXValue( int index ) const
 {
   if ( index >= Size() || index<0 ) {
     std::cout << "Problem: You are asking for an impossible array index value\n";
     return -999;
   }
 
-  return xValues[index];
+  return fXValues[index];
 }
 
-double HypoTestInvertorResult::GetYValue( int index )
+double HypoTestInvertorResult::GetYValue( int index ) const
 {
   if ( index >= Size() || index<0 ) {
     std::cout << "Problem: You are asking for an impossible array index value\n";
     return -999;
   }
 
-  return ((HybridResult*)yObjects.At(index))->CLs();
+  return ((HybridResult*)fYObjects.At(index))->CLs();
 }
 
 
