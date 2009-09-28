@@ -60,18 +60,21 @@ using namespace RooStats;
 
 
 //_______________________________________________________
-FeldmanCousins::FeldmanCousins() {
+FeldmanCousins::FeldmanCousins() : 
+   fTestStatSampler(0),
+   fPointsToTest(0),
+   fAdaptiveSampling(false), 
+   fNbins(10), 
+   fFluctuateData(true),
+   fDoProfileConstruction(true),
+   fSaveBeltToFile(false),
+   fCreateBelt(false)
+{
    // default constructor
   fWS = new RooWorkspace("FeldmanCousinsWS");
   fOwnsWorkspace = true;
   fDataName = "";
   fPdfName = "";
-  fAdaptiveSampling=false;
-  fPointsToTest = 0;
-  fTestStatSampler = 0;
-  fNbins = 10;
-  fFluctuateData=true;
-  fDoProfileConstruction=true;
 }
 
 //_______________________________________________________
