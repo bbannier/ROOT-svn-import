@@ -48,7 +48,7 @@ namespace RooStats {
 
    class ModelConfig;
 
-   class MCMCCalculator : public IntervalCalculator, public TObject {
+   class MCMCCalculator : public IntervalCalculator, public TNamed {
 
    public:
       // default constructor

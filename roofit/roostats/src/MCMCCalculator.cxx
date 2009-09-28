@@ -85,7 +85,8 @@ MCMCCalculator::MCMCCalculator() :
    fPOI(0),
    fPropFunc(0), 
    fPdf(0), 
-   fData(0)
+   fData(0),
+   fAxes(0)
 {
    // default constructor
    fNumIters = 0;
@@ -104,7 +105,8 @@ MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
    fPOI(&paramsOfInterest),
    fPropFunc(0), 
    fPdf(&pdf), 
-   fData(&data)
+   fData(&data),
+   fAxes(0)
 {
    SetupBasicUsage();
 }
@@ -116,7 +118,8 @@ MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
 MCMCCalculator::MCMCCalculator(RooAbsData& data, const ModelConfig & model) :
    fPropFunc(0), 
    fPdf(model.GetPdf()), 
-   fData(&data)
+   fData(&data),
+   fAxes(0)
 {
    SetModel(model);
    SetupBasicUsage();
@@ -218,8 +221,8 @@ MCMCInterval* MCMCCalculator::GetInterval() const
 
    MarkovChain* chain = mh.ConstructChain();
 
-   MCMCInterval* interval = new MCMCInterval("mcmcinterval", "MCMCInterval",
-                                             *fPOI, *chain);
+   TString name = TString("MCMCInterval_") + TString(GetName() ); 
+   MCMCInterval* interval = new MCMCInterval(name, name, *fPOI, *chain);
    if (fAxes != NULL)
       interval->SetAxes(*fAxes);
    if (fNumBurnInSteps > 0)

@@ -55,7 +55,7 @@ namespace RooStats {
 
    class ModelConfig; 
 
-   class IntervalCalculator {//: public TNamed {
+   class IntervalCalculator { 
 
    public:
       //IntervalCalculator();
