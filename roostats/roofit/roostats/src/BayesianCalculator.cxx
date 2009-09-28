@@ -57,17 +57,27 @@ BayesianCalculator::BayesianCalculator( RooAbsData& data,
                        ModelConfig & model) : 
    fData(&data), 
    fPdf(model.GetPdf()),
-   fPOI( *model.GetParametersOfInterest() ),
-   fPriorPOI( model.GetPriorPdf()),
-   fNuisanceParameters( *model.GetNuisanceParameters() )
+   fPriorPOI( model.GetPriorPdf())
 {
    // constructor from Model Config
+   SetModel(model);
 }
 
 
 BayesianCalculator::~BayesianCalculator()
 {
    // destructor
+}
+
+void BayesianCalculator::SetModel(const ModelConfig & model) {
+   // set the model
+   fPdf = model.GetPdf();
+   fPriorPOI =  model.GetPriorPdf(); 
+   // assignment operator = does not do a real copy the sets (must use add method) 
+   fPOI.removeAll();
+   fNuisanceParameters.removeAll();
+   if (model.GetParametersOfInterest()) fPOI.add( *(model.GetParametersOfInterest()) );
+   if (model.GetNuisanceParameters())  fNuisanceParameters.add( *(model.GetNuisanceParameters() ) );
 }
 
 
@@ -93,7 +103,7 @@ RooPlot* BayesianCalculator::PlotPosterior()
    RooAbsReal* nll = posterior.createNLL(*fData);
    RooFormulaVar like("like","exp(-@0)",RooArgList(*nll));
 
-   like.createIntegral(fNuisanceParameters);
+   if (fNuisanceParameters.getSize() > 0) like.createIntegral(fNuisanceParameters);
 
    RooAbsRealLValue * poi = dynamic_cast<RooAbsRealLValue *>(fPOI.first() );
    assert(poi );
@@ -113,6 +123,7 @@ SimpleInterval* BayesianCalculator::GetInterval() const
    // returns a SimpleInterval with the lower/upper limit on the scanned variable
 
    if (!fPdf || !fPriorPOI) return 0; 
+   if (fPOI.getSize() == 0) return 0; 
    if (fPOI.getSize() > 1) { 
       std::cerr << "BayesianCalculator::GetInterval - current implementation works only on 1D intervals" << std::endl;
       return 0; 

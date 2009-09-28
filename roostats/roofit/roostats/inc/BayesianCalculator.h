@@ -59,6 +59,8 @@ namespace RooStats {
 
       virtual void  SetData(RooAbsData & data) { fData = &data; }
 
+      virtual void SetModel(const ModelConfig & model); 
+
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
       virtual void SetTestSize(Double_t size) {fSize = size;}
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)

@@ -41,6 +41,8 @@ END_HTML
 #include "RooStats/PointSetInterval.h"
 #endif
 
+#include "RooStats/ModelConfig.h"
+
 #include "RooStats/SamplingDistribution.h"
 
 #include "RooStats/ProfileLikelihoodTestStat.h"
@@ -61,6 +63,8 @@ using namespace RooStats;
 
 //_______________________________________________________
 FeldmanCousins::FeldmanCousins() : 
+   fPdf(0),
+   fData(0),
    fTestStatSampler(0),
    fPointsToTest(0),
    fAdaptiveSampling(false), 
@@ -71,18 +75,26 @@ FeldmanCousins::FeldmanCousins() :
    fCreateBelt(false)
 {
    // default constructor
-  fWS = new RooWorkspace("FeldmanCousinsWS");
-  fOwnsWorkspace = true;
-  fDataName = "";
-  fPdfName = "";
+//   fWS = new RooWorkspace("FeldmanCousinsWS");
+//   fOwnsWorkspace = true;
+//   fDataName = "";
+//   fPdfName = "";
 }
 
 //_______________________________________________________
 FeldmanCousins::~FeldmanCousins() {
    // destructor
-  if(fOwnsWorkspace && fWS) delete fWS;
+   //if(fOwnsWorkspace && fWS) delete fWS;
   if(fPointsToTest) delete fPointsToTest;
   if(fTestStatSampler) delete fTestStatSampler;
+}
+
+//_______________________________________________________
+void FeldmanCousins::SetModel(const ModelConfig & model) { 
+   // set the model
+   fPdf = model.GetPdf();
+   fPOI = model.GetParametersOfInterest(); 
+   fNuisParams = model.GetNuisanceParameters(); 
 }
 
 //_______________________________________________________
@@ -90,8 +102,8 @@ void FeldmanCousins::CreateTestStatSampler() const{
   // specify the Test Statistic and create a ToyMC test statistic sampler
 
   // get ingredients
-  RooAbsPdf* pdf   = fWS->pdf(fPdfName);
-  RooAbsData* data = fWS->data(fDataName);
+   RooAbsPdf* pdf   = fPdf; //fWS->pdf(fPdfName);
+   RooAbsData* data = fData; //fWS->data(fDataName);
   if (data && pdf ) {
 
     // get parameters (params of interest + nuisance)
@@ -129,8 +141,8 @@ void FeldmanCousins::CreateParameterPoints() const{
   // allow ability to profile on some nuisance paramters
 
   // get ingredients
-  RooAbsPdf* pdf   = fWS->pdf(fPdfName);
-  RooAbsData* data = fWS->data(fDataName);
+  RooAbsPdf* pdf   = fPdf; //fWS->pdf(fPdfName);
+  RooAbsData* data = fData;//fWS->data(fDataName);
   if (data && pdf ){
 
     // get parameters (params of interest + nuisance)
@@ -210,7 +222,7 @@ ConfInterval* FeldmanCousins::GetInterval() const {
   // It constructs a RooStats::PointSetInterval.
 
   // local variables
-  RooAbsData* data = fWS->data(fDataName);
+  RooAbsData* data = fData; //fWS->data(fDataName);
   if(!data) {
     cout << "Data is not set, FeldmanCousins not initialized" << endl;
     return 0;
@@ -225,6 +237,7 @@ ConfInterval* FeldmanCousins::GetInterval() const {
   // Create a Neyman Construction
   RooStats::NeymanConstruction nc;
   // configure it
+  nc.SetName( GetName() );
   nc.SetTestStatSampler(*fTestStatSampler);
   nc.SetTestSize(fSize); // set size of test
   nc.SetParameterPointsToTest( *fPointsToTest );
