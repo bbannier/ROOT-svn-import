@@ -1,14 +1,31 @@
+/////////////////////////////////////////////////////////////////////////
+//
+// 'Hypothesis Test Inversion' RooStats tutorial macro #801
+// author: Gregory Schott
+// date Sep 2009
+//
+// This tutorial shows an example of using the HypoTestInvertor class 
+//
+/////////////////////////////////////////////////////////////////////////
+
 #include "RooRealVar.h"
+#include "RooConstVar.h"
 #include "RooProdPdf.h"
 #include "RooWorkspace.h"
 #include "RooDataSet.h"
+#include "RooPolynomial.h"
+#include "RooAddPdf.h"
+#include "RooExtendPdf.h"
 
 #include "RooStats/HypoTestInvertor.h"
 #include "RooStats/HypoTestInvertorResult.h"
 #include "RooStats/HypoTestInvertorPlot.h"
+#include "RooStats/HybridCalculator.h"
+
 
 using namespace RooFit;
 using namespace RooStats;
+
 
 void rs801_HypoTestInvertor()
 {
@@ -18,7 +35,8 @@ void rs801_HypoTestInvertor()
   RooFormulaVar ns("ns","1*r*lumi",RooArgList(lumi,r));
   RooRealVar nb("nb","background yield",1);
   RooRealVar x("x","dummy observable",0,1);
-  RooPolynomial flatPdf("flatPdf","flat PDF",x,RooFit::RooConst(0));
+  RooConstVar p0(RooFit::RooConst(0));
+  RooPolynomial flatPdf("flatPdf","flat PDF",x,p0);
   RooAddPdf totPdf("totPdf","S+B model",RooArgList(flatPdf,flatPdf),RooArgList(ns,nb));
   RooExtendPdf bkgPdf("bkgPdf","B-only model",flatPdf,nb);
   RooDataSet* data = totPdf.generate(x,1);

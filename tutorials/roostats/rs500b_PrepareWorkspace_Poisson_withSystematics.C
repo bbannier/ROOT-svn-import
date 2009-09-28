@@ -20,11 +20,24 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
+
+#include "RooAbsPdf.h"
+#include "RooRealVar.h"
+#include "RooDataHist.h"
+#include "RooPlot.h"
+#include "RooWorkspace.h"
+
+#include "TFile.h"
+
+
 using namespace RooFit;
-using namespace RooStats;
 
+// prepare the workspace
+// type = 0 : binned data with fixed number of total events
+// type = 1 : binned data with N with POisson fluctuations
+// type = 2 : binned data without any bin-by bin fluctuations (Asimov data)
 
-void rs500b_PrepareWorkspace_Poisson_withSystematics( TString fileName = "WS_Poisson_withSystematics.root" )
+void rs500b_PrepareWorkspace_Poisson_withSystematics( TString fileName = "WS_Poisson_withSystematics.root", int type = 1 )
 {
 
   // use a RooWorkspace to store the pdf models, prior informations, list of parameters,...
@@ -51,10 +64,21 @@ void rs500b_PrepareWorkspace_Poisson_withSystematics( TString fileName = "WS_Poi
   myWS.defineSet("parameters","B") ;
   
   // Generate data
-  RooAbsData* data = myWS.pdf("model")->generateBinned(*myWS.set("observables"),Name("data"),ExpectedData());
+  RooAbsData* data = 0; 
+  // binned data with fixed number of events
+  if (type ==0) data = myWS.pdf("model")->generateBinned(*myWS.set("observables"),myWS.var("S")->getVal(),Name("data"));
+  // binned data with Poisson fluctuations
+  if (type ==1) data = myWS.pdf("model")->generateBinned(*myWS.set("observables"),Extended(),Name("data"));
+  // Asimov data: binned data without any fluctuations (average case) 
+  if (type == 2)  data = myWS.pdf("model")->generateBinned(*myWS.set("observables"),Name("data"),ExpectedData());
   myWS.import(*data) ;
-
 
   myWS.writeToFile(fileName);  
   std::cout << "\nRooFit model initialized and stored in " << fileName << std::endl;
+
+  // control plot of the generated data
+  RooPlot* plot = myWS.var("x")->frame();
+  data->plotOn(plot);
+  plot->DrawClone();
+
 }
