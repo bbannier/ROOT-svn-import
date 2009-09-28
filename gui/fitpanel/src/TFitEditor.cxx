@@ -154,7 +154,9 @@
 #include "TTree.h"
 #include "TTreeInput.h"
 #include "TAdvancedGraphicsDialog.h"
+
 #include "RConfigure.h"
+#include "TPluginManager.h"
 
 #include <sstream>
 #include <vector>
@@ -815,9 +817,18 @@ void TFitEditor::CreateMinimizationTab()
    hl2->AddFrame(fLibGSL, new TGLayoutHints(kLHintsNormal, 40, 0, 0, 1));
 
    fLibGenetics = new TGRadioButton(hl2, "Genetics", kFP_LGAS);
-   fLibGenetics->Associate(this);
-   fLibGenetics->SetToolTipText("Different GAs implementations");
+   if (gPluginMgr->FindHandler("ROOT::Math::Minimizer","Genetic") ||
+       gPluginMgr->FindHandler("ROOT::Math::Minimizer","GAlibMin") )
+   {
+      fLibGenetics->Associate(this);
+      fLibGenetics->SetToolTipText("Different GAs implementations");
+   } else {
+      fLibGenetics->SetState(kButtonDisabled);
+      fLibGenetics->SetToolTipText("Needs any of the genetic" 
+                                   "minimizers to be compiled");
+   }
    hl2->AddFrame(fLibGenetics, new TGLayoutHints(kLHintsNormal, 45, 0, 0, 1));
+
    fMinimization->AddFrame(hl2, new TGLayoutHints(kLHintsExpandX, 20, 0, 5, 1));
 
    MakeTitle(fMinimization, "Method");
@@ -1570,9 +1581,13 @@ void TFitEditor::FillMinMethodList(Int_t)
       fStatusBar->SetText("CONJFR",2);
    } else if ( fLibGenetics->GetState() == kButtonDown ) 
    {
-      fMinMethodList->AddEntry("TMVA Genetic Algorithm" ,             kFP_TMVAGA);
-      fMinMethodList->AddEntry("GA Lib Genetic Algorithm" ,           kFP_GALIB);
-      fMinMethodList->Select(kFP_TMVAGA, kFALSE);
+      if ( gPluginMgr->FindHandler("ROOT::Math::Minimizer","GAlibMin") ) {
+         fMinMethodList->AddEntry("GA Lib Genetic Algorithm" , kFP_GALIB);
+         fMinMethodList->Select(kFP_GALIB, kFALSE);
+      } else if (gPluginMgr->FindHandler("ROOT::Math::Minimizer","Genetic")) {
+         fMinMethodList->AddEntry("TMVA Genetic Algorithm" ,   kFP_TMVAGA);
+         fMinMethodList->Select(kFP_TMVAGA, kFALSE);
+      }
    } else // if ( fLibMinuit2->GetState() == kButtonDown )
    {
       fMinMethodList->AddEntry("MIGRAD" ,       kFP_MIGRAD);
@@ -2591,6 +2606,7 @@ void TFitEditor::DoLibrary(Bool_t on)
                fLibFumili->SetState(kButtonUp);
                if ( fLibGSL->GetState() != kButtonDisabled )
                   fLibGSL->SetState(kButtonUp);
+               if ( fLibGenetics->GetState() != kButtonDisabled )
                fLibGenetics->SetState(kButtonUp);
                fStatusBar->SetText("LIB Minuit", 1);
             }
@@ -2606,7 +2622,8 @@ void TFitEditor::DoLibrary(Bool_t on)
                fLibFumili->SetState(kButtonUp);
                if ( fLibGSL->GetState() != kButtonDisabled )
                   fLibGSL->SetState(kButtonUp);
-               fLibGenetics->SetState(kButtonUp);
+               if ( fLibGenetics->GetState() != kButtonDisabled )
+                  fLibGenetics->SetState(kButtonUp);
                fStatusBar->SetText("LIB Minuit2", 1);
             }
          }
@@ -2620,7 +2637,8 @@ void TFitEditor::DoLibrary(Bool_t on)
                fLibFumili->SetState(kButtonDown);
                if ( fLibGSL->GetState() != kButtonDisabled )
                   fLibGSL->SetState(kButtonUp);
-               fLibGenetics->SetState(kButtonUp);
+               if ( fLibGenetics->GetState() != kButtonDisabled )
+                  fLibGenetics->SetState(kButtonUp);
                fStatusBar->SetText("LIB Fumili", 1);
             }
          }
@@ -2633,7 +2651,8 @@ void TFitEditor::DoLibrary(Bool_t on)
                fLibFumili->SetState(kButtonUp);
                if ( fLibGSL->GetState() != kButtonDisabled )
                   fLibGSL->SetState(kButtonDown);
-               fLibGenetics->SetState(kButtonUp);
+               if ( fLibGenetics->GetState() != kButtonDisabled )
+                  fLibGenetics->SetState(kButtonUp);
                fStatusBar->SetText("LIB GSL", 1);
             }
          }
@@ -2646,7 +2665,8 @@ void TFitEditor::DoLibrary(Bool_t on)
             fLibFumili->SetState(kButtonUp);
             if ( fLibGSL->GetState() != kButtonDisabled )
                fLibGSL->SetState(kButtonUp);
-            fLibGenetics->SetState(kButtonDown);
+            if ( fLibGenetics->GetState() != kButtonDisabled )
+               fLibGenetics->SetState(kButtonDown);
             fStatusBar->SetText("LIB Genetics", 1);
          }
       }
