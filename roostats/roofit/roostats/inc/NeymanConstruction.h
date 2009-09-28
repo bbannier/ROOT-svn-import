@@ -76,42 +76,14 @@ namespace RooStats {
       virtual Double_t Size() const {return fSize;}
       // Get the Confidence level for the test
       virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}  
-      // set a workspace that owns all the necessary components for the analysis
-//      virtual void SetWorkspace(RooWorkspace& ws) {fWS = &ws;}
 
-    virtual void SetModel(const ModelConfig &);
+      virtual void SetModel(const ModelConfig &);
 
       // Set the DataSet 
-    virtual void SetData(RooAbsData& data) {      fData = &data; }
-//          if (!fWS) {
-//             fWS = new RooWorkspace();
-//             fOwnsWorkspace = true; 
-//          }
-//          if (! fWS->data(data.GetName()) ) {
-// 	   RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-//             fWS->import(data);
-// 	    RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-//          }
-//          SetData(data.GetName());
-//       }
+      virtual void SetData(RooAbsData& data) {      fData = &data; }
 
       // Set the Pdf, add to the the workspace if not already there
-    virtual void SetPdf(RooAbsPdf& pdf) { 	fPdf = &pdf; }  
-//          if (!fWS) 
-//             fWS = new RooWorkspace();
-//          if (! fWS->pdf( pdf.GetName() ))
-//          {
-//             RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-//             fWS->import(pdf);
-//             RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-//          }
-//          SetPdf(pdf.GetName());
-//       }
-
-      // specify the name of the dataset in the workspace to be used
-//       virtual void SetData(const char* name) {fDataName = name;}
-//       // specify the name of the PDF in the workspace to be used
-//       virtual void SetPdf(const char* name) {fPdfName = name;}
+      virtual void SetPdf(RooAbsPdf& pdf) { 	fPdf = &pdf; }  
 
       // specify the parameters of interest in the interval
       virtual void SetParameters(const RooArgSet& set) {fPOI = &set;}
@@ -121,7 +93,6 @@ namespace RooStats {
       virtual void SetTestSize(Double_t size) {fSize = size;}
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
-
 
       ConfidenceBelt* GetConfidenceBelt() {return fConfBelt;}
 
@@ -138,10 +109,6 @@ namespace RooStats {
       Double_t fSize; // size of the test (eg. specified rate of Type I error)
       RooAbsPdf * fPdf; // common PDF
       RooAbsData * fData; // data set 
-//       RooWorkspace* fWS; // a workspace that owns all the components to be used by the calculator
-//       Bool_t fOwnsWorkspace; // flag if this object owns its workspace
-//       const char* fPdfName; // name of  common PDF in workspace
-//       const char* fDataName; // name of data set in workspace
       const RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
       const RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
       TestStatSampler* fTestStatSampler;

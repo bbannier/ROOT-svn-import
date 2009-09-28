@@ -290,7 +290,7 @@ ConfInterval* NeymanConstruction::GetInterval() const {
   }
 
   delete f;
-  delete data;
+  //delete data;
   return interval;
 }
 
@@ -445,7 +445,7 @@ ConfInterval* NeymanConstruction::Run(TList *SamplingList) const {
   TString name = TString("ClassicalConfidenceInterval_") + TString(GetName() ); 
   PointSetInterval* interval  = new PointSetInterval(name, name, *fPointsToTest);
   
-  delete data;
+  //delete data;
   return interval;
 }
 
