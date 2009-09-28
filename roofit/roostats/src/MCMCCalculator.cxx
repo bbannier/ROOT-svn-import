@@ -195,6 +195,9 @@ MCMCInterval* MCMCCalculator::GetInterval() const
    bool useDefaultPropFunc = (fPropFunc == 0); 
    if (useDefaultPropFunc) fPropFunc = new UniformProposal(); 
 
+   cout << "  Data " << fData << endl;
+   fData->Print();
+
    RooArgSet* constrainedParams = fPdf->getParameters(*fData);
    RooAbsReal* nll = fPdf->createNLL(*fData, Constrain(*constrainedParams));
    delete constrainedParams;

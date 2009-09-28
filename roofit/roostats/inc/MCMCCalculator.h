@@ -81,10 +81,6 @@ namespace RooStats {
          Int_t numIters, RooArgList* axes = NULL, Double_t size = 0.05);
 
       virtual ~MCMCCalculator() {}
-//       {
-//          if (fOwnsWorkspace)
-//             delete fWS;
-//       }
 
       // Main interface to get a ConfInterval
       virtual MCMCInterval* GetInterval() const;
@@ -96,52 +92,11 @@ namespace RooStats {
 
       virtual void SetModel(const ModelConfig & model); 
 
-//       // set a workspace that owns all the necessary components for the analysis
-//       virtual void SetWorkspace(RooWorkspace & ws)
-//       {
-//          if (!fWS)
-//             fWS = &ws;
-//          else {
-//             //RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-//             fWS->merge(ws);
-// 	    //RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-//          }
-//       }
-
-      // set the name of the data set
-//       virtual void SetData(const char* data) { fDataName = data; }
-
       // Set the DataSet, add to the the workspace if not already there
       virtual void SetData(RooAbsData& data) { fData = &data; }
-//       {
-//          if (!fWS) {
-//             fWS = new RooWorkspace();
-//             fOwnsWorkspace = true; 
-//          }
-//          if (! fWS->data(data.GetName()) ) {
-//             RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-//             fWS->import(data);
-// 	    RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-//          }
-//          SetData(data.GetName());
-//       }
-
-      // set the name of the pdf
-//       virtual void SetPdf(const char* name) { fPdfName = name; }
 
       // Set the Pdf, add to the the workspace if not already there
       virtual void SetPdf(RooAbsPdf& pdf) { fPdf = &pdf; }
-//       {
-//          if (!fWS) 
-//             fWS = new RooWorkspace();
-//          if (! fWS->pdf( pdf.GetName() ))
-//          {
-//             RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-//             fWS->import(pdf);
-//             RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-//          }
-//          SetPdf(pdf.GetName());
-//       }
 
       // specify the parameters of interest in the interval
       virtual void SetParameters(const RooArgSet& set) { fPOI = &set; }
