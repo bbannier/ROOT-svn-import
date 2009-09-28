@@ -20,26 +20,38 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
+
+#include "RooAbsPdf.h"
+#include "RooRealVar.h"
+#include "RooDataHist.h"
+#include "RooDataSet.h"
+#include "RooPlot.h"
+#include "RooWorkspace.h"
+
+#include "TFile.h"
+
+
 using namespace RooFit;
-using namespace RooStats;
 
+// prepare the workspace
+// type = 0 : unbinned data with total number of events fluctuating using Poisson statistics
+// type = 1 : binned data with total number of events fluctuating using Poisson statistics
+// type = 2 : binned data without any bin-bin fuctuation (Asimov data)
 
-void rs500c_PrepareWorkspace_GaussOverFlat( TString fileName = "WS_GaussOverFlat.root" )
+void rs500c_PrepareWorkspace_GaussOverFlat( TString fileName = "WS_GaussOverFlat.root", int type= 1 )
 {
   // use a RooWorkspace to store the pdf models, prior informations, list of parameters,...
   RooWorkspace myWS("myWS");
 
   // Observable
   myWS.factory("mass[0,500]") ;
-
+  
   // Pdf in observable, 
   myWS.factory("Gaussian::sigPdf(mass,200,50)") ;
   myWS.factory("Uniform::bkgPdf(mass)") ;
   myWS.factory("SUM::model(S[0,0,60]*sigPdf,B[10]*bkgPdf") ;
-
   // Background only pdf
   myWS.factory("ExtendPdf::modelBkg(bkgPdf,B)") ;
-
   // Priors
   myWS.factory("Uniform::priorPOI(S)") ;
 
@@ -48,10 +60,22 @@ void rs500c_PrepareWorkspace_GaussOverFlat( TString fileName = "WS_GaussOverFlat
   myWS.defineSet("POI","S");
   
   // Generate data
-  RooAbsData* data = myWS.pdf("model")->generateBinned(*myWS.set("observables"),Name("data"),ExpectedData());
+  RooAbsData* data = 0;
+  // unbinned data with Poisson fluctuations for total number of events
+  if (type == 0) data = myWS.pdf("model")->generate(*myWS.set("observables"),Extended(),Name("data"));  
+  // binned data with Poisson fluctuations for total number of events
+  if (type == 1) data = myWS.pdf("model")->generateBinned(*myWS.set("observables"),Extended(),Name("data"));  
+  // binned without any fluctuations (average case)
+  if (type == 2) data = myWS.pdf("model")->generateBinned(*myWS.set("observables"),Name("data"),ExpectedData());
+
   myWS.import(*data) ;
 
   myWS.writeToFile(fileName);  
   std::cout << "\nRooFit model initialized and stored in " << fileName << std::endl;
+
+  // control plot of the generated data
+  RooPlot* plot = myWS.var("mass")->frame();
+  data->plotOn(plot);
+  plot->DrawClone();
 
 }

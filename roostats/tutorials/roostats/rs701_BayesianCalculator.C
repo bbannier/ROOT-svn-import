@@ -1,3 +1,14 @@
+/////////////////////////////////////////////////////////////////////////
+//
+// 'Bayesian Calculator' RooStats tutorial macro #701
+// author: Gregory Schott
+// date Sep 2009
+//
+// This tutorial shows an example of using the BayesianCalculator class 
+//
+/////////////////////////////////////////////////////////////////////////
+
+
 #include "RooRealVar.h"
 #include "RooProdPdf.h"
 #include "RooWorkspace.h"
@@ -31,7 +42,7 @@ void rs701_BayesianCalculator()
   BayesianCalculator bcalc(data,*model,RooArgSet(*POI),*priorPOI,&nuisanceParameters);
   SimpleInterval* interval = bcalc.GetInterval();
   std::cout << "90% CL interval: [ " << interval->LowerLimit() << " - " << interval->UpperLimit() << " ] or 95% CL limits\n";
-  RooPlot* plot = bcalc.PlotPosterior();
+  bcalc.PlotPosterior();
   
   // observe one event while expecting one background event -> the 95% CL upper limit on s is 4.10
   // observe one event while expecting zero background event -> the 95% CL upper limit on s is 4.74
