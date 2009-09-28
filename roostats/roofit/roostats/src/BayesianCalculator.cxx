@@ -33,7 +33,14 @@ ClassImp(RooStats::BayesianCalculator)
 namespace RooStats { 
 
 
-
+BayesianCalculator::BayesianCalculator() :
+  fData(0),
+  fPdf(0),
+  fPriorPOI(0),
+  fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0)
+{
+   // default constructor
+}
 
 BayesianCalculator::BayesianCalculator( /* const char* name,  const char* title, */						   
 						    RooAbsData& data,
@@ -46,7 +53,8 @@ BayesianCalculator::BayesianCalculator( /* const char* name,  const char* title,
   fPdf(&pdf),
   fPOI(POI),
   fPriorPOI(&priorPOI),
-  fNuisanceParameters(*nuisanceParameters)
+  fNuisanceParameters(*nuisanceParameters), 
+  fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0)
 {
    // constructor
    fLowerLimit = -999;
@@ -57,7 +65,8 @@ BayesianCalculator::BayesianCalculator( RooAbsData& data,
                        ModelConfig & model) : 
    fData(&data), 
    fPdf(model.GetPdf()),
-   fPriorPOI( model.GetPriorPdf())
+   fPriorPOI( model.GetPriorPdf()),
+   fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0)
 {
    // constructor from Model Config
    SetModel(model);
@@ -67,6 +76,11 @@ BayesianCalculator::BayesianCalculator( RooAbsData& data,
 BayesianCalculator::~BayesianCalculator()
 {
    // destructor
+     if (fProductPdf) delete fProductPdf; 
+     if (fLogLike) delete fLogLike; 
+     if (fLikelihood) delete fLikelihood; 
+     if (fIntegratedLikelihood) delete fIntegratedLikelihood; 
+     if (fPosteriorPdf) delete fPosteriorPdf;      
 }
 
 void BayesianCalculator::SetModel(const ModelConfig & model) {
@@ -81,20 +95,28 @@ void BayesianCalculator::SetModel(const ModelConfig & model) {
 }
 
 
-// RooAbsPdf* BayesianNumIntCalculator::GetPosteriorPdf()
-// {
-//   if (fPosteriorPdf==0) {
-//     fProductPdf = new RooProdPdf("product","",RooArgList(*fPdf,*fPriorPOI));
-//     RooAbsReal* nll = product->createNLL(*fData);
-//     fLikelihood = new RooFormulaVar("fLikelihood","exp(-@0)",RooArgList(*nll));
-//     fIntegratedLikelihood = fLikelihood->createIntegral(*fNuisanceParameters);
+RooAbsPdf* BayesianCalculator::GetPosteriorPdf()
+{
+  if (fPosteriorPdf!=0) {
+     if (fProductPdf) delete fProductPdf; 
+     if (fLogLike) delete fLogLike; 
+     if (fLikelihood) delete fLikelihood; 
+     if (fIntegratedLikelihood) delete fIntegratedLikelihood; 
+     if (fPosteriorPdf) delete fPosteriorPdf;      
+  }
+  fProductPdf = new RooProdPdf("product","",RooArgList(*fPdf,*fPriorPOI));
+  fLogLike = fProductPdf->createNLL(*fData);
+  fLikelihood = new RooFormulaVar("fLikelihood","exp(-@0)",RooArgList(*fLogLike));
+  if (fNuisanceParameters.getSize() > 0) fIntegratedLikelihood = fLikelihood->createIntegral(fNuisanceParameters);
 
-//     TString posterior_name = this->GetName();
-//     posterior_name += "_posteriorPdf";
-//     fPosteriorPdf = new RooGenericPdf(posterior_name,"@0",fIntegratedLikelihood);
-//   }
-//   return fPosteriorPdf;
-// }
+  TString posterior_name = this->GetName();
+  posterior_name += "_posteriorPdf";
+  if (fNuisanceParameters.getSize() > 0) 
+     fPosteriorPdf = new RooGenericPdf(posterior_name,"@0",*fIntegratedLikelihood);
+  else 
+     fPosteriorPdf = new RooGenericPdf(posterior_name,"@0",*fLikelihood);
+  return fPosteriorPdf;
+}
 
 
 RooPlot* BayesianCalculator::PlotPosterior()

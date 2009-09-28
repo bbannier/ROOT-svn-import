@@ -28,6 +28,7 @@
 class RooAbsData; 
 class RooAbsPdf; 
 class RooPlot; 
+class RooAbsReal;
 
 namespace RooStats {
 
@@ -39,7 +40,7 @@ namespace RooStats {
    public:
 
       // constructor
-      BayesianCalculator( ) {}
+      BayesianCalculator( );
 
       BayesianCalculator( RooAbsData& data,
                           RooAbsPdf& pdf,
@@ -54,6 +55,9 @@ namespace RooStats {
       virtual ~BayesianCalculator() ;
 
       RooPlot* PlotPosterior() ; 
+
+      // return posterior pdf (object is managed by the BayesianCalculator class)
+      RooAbsPdf * GetPosteriorPdf(); 
 
       virtual SimpleInterval* GetInterval() const ; 
 
@@ -77,6 +81,13 @@ namespace RooStats {
       RooArgSet fPOI;
       RooAbsPdf* fPriorPOI;
       RooArgSet fNuisanceParameters;
+
+      RooAbsPdf * fProductPdf; 
+      RooAbsReal * fLogLike; 
+      RooAbsReal * fLikelihood; 
+      RooAbsReal * fIntegratedLikelihood; 
+      RooAbsPdf * fPosteriorPdf; 
+      
 
       double fSize; 
 
