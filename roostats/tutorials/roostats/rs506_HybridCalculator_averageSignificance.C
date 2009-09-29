@@ -1,25 +1,39 @@
+#include "RooRandom.h"
+#include "RooRealVar.h"
+#include "RooProdPdf.h"
+#include "RooWorkspace.h"
+#include "RooStats/HybridCalculator.h"
+#include "RooStats/HybridResult.h"
+#include "RooStats/HybridPlot.h"
 
+#include "TFile.h"
+#include "TStopwatch.h"
+#include "TCanvas.h"
 
-void rs506_HybridCalculator_averageSignificance(const char* fname="WS_counting_syst.root",int ntoys=2500,const char* outputplot="hc_averagesign_counting_syst.ps"){
-  using namespace RooFit;
-  using namespace RooStats;
+using namespace RooFit;
+using namespace RooStats;
+
+void rs506_HybridCalculator_averageSignificance(const char* fname="WS_GaussOverFlat_withSystematics.root",int ntoys=2500,const char* outputplot="hc_averagesign_counting_syst.ps"){
+
   RooRandom::randomGenerator()->SetSeed(100);
   TStopwatch t;
   t.Start();
 
   TFile* file =new TFile(fname);
-  RooWorkspace* my_WS = (RooWorkspace*) file->Get("my_WS");
+  RooWorkspace* my_WS = (RooWorkspace*) file->Get("myWS");
+  if (!my_WS) return; 
+
   //Import the objects needed
   RooAbsPdf* model=my_WS->pdf("model");
   RooAbsPdf* priorNuisance=my_WS->pdf("priorNuisance");
 
-  RooArgSet* paramInterestSet=my_WS->set("paramInterest");
-  RooRealVar* paramInterest=paramInterestSet->first();
+  //const RooArgSet* paramInterestSet=my_WS->set("paramInterest");
+  //RooRealVar* paramInterest=(RooRealVar*) paramInterestSet->first();
   RooAbsPdf* modelBkg=my_WS->pdf("modelBkg");
-  RooArgSet* observable=my_WS->set("observable");
-  RooArgSet* nuisanceParam=my_WS->set("parameters");
+  const RooArgSet* nuisanceParam=my_WS->set("parameters");
+  RooArgList observable(*(my_WS->set("observables") ) );
   
-  HybridCalculator * hc=new HybridCalculator("hc","HybridCalculator",*model,*modelBkg,*observable);
+  HybridCalculator * hc=new HybridCalculator("hc","HybridCalculator",*model,*modelBkg,observable);
   hc->SetNumberOfToys(ntoys);
   hc->SetTestStatistics(1);
   bool usepriors=false;
