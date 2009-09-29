@@ -511,7 +511,7 @@ namespace cling
                                              sourceContext,
                                              targetContext );
          clang::QualType result = targetContext.getPointerType( pointee );
-         result.setCVRQualifiers( source.getCVRQualifiers() );
+         result.setFastQualifiers( source.getFastQualifiers() );
          return result;
       }
 
