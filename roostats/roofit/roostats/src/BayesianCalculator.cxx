@@ -23,6 +23,7 @@
 #include "RooGenericPdf.h"
 #include "RooPlot.h"
 #include "RooProdPdf.h"
+#include "TAxis.h"
 
 // include header file of this class 
 #include "RooStats/BayesianCalculator.h"
@@ -33,7 +34,7 @@ ClassImp(RooStats::BayesianCalculator)
 namespace RooStats { 
 
 
-BayesianCalculator::BayesianCalculator() :
+BayesianCalculator::BayesianCalculator( ) :
   fData(0),
   fPdf(0),
   fPriorPOI(0),
@@ -43,13 +44,12 @@ BayesianCalculator::BayesianCalculator() :
    // default constructor
 }
 
-BayesianCalculator::BayesianCalculator( /* const char* name,  const char* title, */						   
-						    RooAbsData& data,
-                                                    RooAbsPdf& pdf,
-						    const RooArgSet& POI,
-						    RooAbsPdf& priorPOI,
-						    const RooArgSet* nuisanceParameters ) :
-   //TNamed( TString(name), TString(title) ),
+
+BayesianCalculator::BayesianCalculator( RooAbsData& data,
+					RooAbsPdf& pdf,
+					const RooArgSet& POI,
+					RooAbsPdf& priorPOI,
+					const RooArgSet* nuisanceParameters ) :
   fData(&data),
   fPdf(&pdf),
   fPOI(POI),
@@ -61,8 +61,9 @@ BayesianCalculator::BayesianCalculator( /* const char* name,  const char* title,
    // constructor
 }
 
+
 BayesianCalculator::BayesianCalculator( RooAbsData& data,
-                       ModelConfig & model) : 
+					ModelConfig & model ) : 
    fData(&data), 
    fPdf(model.GetPdf()),
    fPriorPOI( model.GetPriorPdf()),
@@ -77,14 +78,17 @@ BayesianCalculator::BayesianCalculator( RooAbsData& data,
 BayesianCalculator::~BayesianCalculator()
 {
    // destructor
-     if (fProductPdf) delete fProductPdf; 
-     if (fLogLike) delete fLogLike; 
-     if (fLikelihood) delete fLikelihood; 
-     if (fIntegratedLikelihood) delete fIntegratedLikelihood; 
-     if (fPosteriorPdf) delete fPosteriorPdf;      
+  if (fProductPdf) delete fProductPdf;
+  if (fLogLike) delete fLogLike;
+  if (fLikelihood) delete fLikelihood;
+  if (fIntegratedLikelihood) delete fIntegratedLikelihood;
+  if (fPosteriorPdf) delete fPosteriorPdf;
+  if (fInterval) delete fInterval;
 }
 
-void BayesianCalculator::SetModel(const ModelConfig & model) {
+
+void BayesianCalculator::SetModel(const ModelConfig & model)
+{
    // set the model
    fPdf = model.GetPdf();
    fPriorPOI =  model.GetPriorPdf(); 
@@ -92,12 +96,20 @@ void BayesianCalculator::SetModel(const ModelConfig & model) {
    fPOI.removeAll();
    fNuisanceParameters.removeAll();
    if (model.GetParametersOfInterest()) fPOI.add( *(model.GetParametersOfInterest()) );
-   if (model.GetNuisanceParameters())  fNuisanceParameters.add( *(model.GetNuisanceParameters() ) );
+   if (model.GetNuisanceParameters()) fNuisanceParameters.add( *(model.GetNuisanceParameters()) );
 }
 
 
 RooAbsPdf* BayesianCalculator::GetPosteriorPdf()
 {
+  // run some checks
+  if (!fPdf || !fPriorPOI) return 0; 
+  if (fPOI.getSize() == 0) return 0; 
+  if (fPOI.getSize() > 1) { 
+    std::cerr << "BayesianCalculator::GetInterval - current implementation works only on 1D intervals" << std::endl;
+    return 0; 
+  }
+
   if (fPosteriorPdf!=0) {
      if (fProductPdf) delete fProductPdf; 
      if (fLogLike) delete fLogLike; 
@@ -105,88 +117,70 @@ RooAbsPdf* BayesianCalculator::GetPosteriorPdf()
      if (fIntegratedLikelihood) delete fIntegratedLikelihood; 
      if (fPosteriorPdf) delete fPosteriorPdf;      
   }
+
   fProductPdf = new RooProdPdf("product","",RooArgList(*fPdf,*fPriorPOI));
   fLogLike = fProductPdf->createNLL(*fData);
   fLikelihood = new RooFormulaVar("fLikelihood","exp(-@0)",RooArgList(*fLogLike));
-  if (fNuisanceParameters.getSize() > 0) fIntegratedLikelihood = fLikelihood->createIntegral(fNuisanceParameters);
+  if ( fNuisanceParameters.getSize()>0 ) fIntegratedLikelihood = fLikelihood->createIntegral(fNuisanceParameters);
 
   TString posterior_name = this->GetName();
   posterior_name += "_posteriorPdf";
-  if (fNuisanceParameters.getSize() > 0) 
-     fPosteriorPdf = new RooGenericPdf(posterior_name,"@0",*fIntegratedLikelihood);
-  else 
-     fPosteriorPdf = new RooGenericPdf(posterior_name,"@0",*fLikelihood);
+  if ( fNuisanceParameters.getSize()>0 ) fPosteriorPdf = new RooGenericPdf(posterior_name,"@0",*fIntegratedLikelihood);
+  else fPosteriorPdf = new RooGenericPdf(posterior_name,"@0",*fLikelihood);
+
   return fPosteriorPdf;
 }
 
 
-RooPlot* BayesianCalculator::PlotPosterior()
+RooPlot* BayesianCalculator::GetPosteriorPlot()
 {
-   RooProdPdf posterior("posterior","",RooArgList(*fPdf,*fPriorPOI));
-   RooAbsReal* nll = posterior.createNLL(*fData);
-   RooFormulaVar like("like","exp(-@0)",RooArgList(*nll));
+  if (!fPosteriorPdf) GetPosteriorPdf();
+  if (!fInterval) GetInterval();
 
-   if (fNuisanceParameters.getSize() > 0) like.createIntegral(fNuisanceParameters);
+  RooAbsRealLValue* poi = dynamic_cast<RooAbsRealLValue*>( fPOI.first() );
+  assert( poi );
 
-   RooAbsRealLValue * poi = dynamic_cast<RooAbsRealLValue *>(fPOI.first() );
-   assert(poi );
-   RooPlot* plot = poi->frame();
-   like.plotOn(plot);
-   //like.plotOn(plot,RooFit::Range(fLowerLimit,fUpperLimit),RooFit::FillColor(kYellow));
-   //plot->GetYaxis()->SetTitle("posterior probability");
-   plot->Draw();
-
-   delete nll;
-   return plot; 
+  RooPlot* plot = poi->frame();
+  plot->SetTitle(TString("Posterior probability of parameter \"")+TString(poi->GetName())+TString("\""));  
+  fPosteriorPdf->plotOn(plot,RooFit::Range(fInterval->LowerLimit(),fInterval->UpperLimit(),kFALSE),RooFit::VLines(),RooFit::DrawOption("F"),RooFit::MoveToBack(),RooFit::FillColor(kGray));
+  fPosteriorPdf->plotOn(plot);
+  plot->GetYaxis()->SetTitle("posterior probability");
+  
+  return plot; 
 }
 
 
 SimpleInterval* BayesianCalculator::GetInterval() const
 {
-   // returns a SimpleInterval with the lower/upper limit on the scanned variable
+  // returns a SimpleInterval with the lower/upper limit on the scanned variable
+  if (fInterval) delete fInterval;
 
-   if (!fPdf || !fPriorPOI) return 0; 
-   if (fPOI.getSize() == 0) return 0; 
-   if (fPOI.getSize() > 1) { 
-      std::cerr << "BayesianCalculator::GetInterval - current implementation works only on 1D intervals" << std::endl;
-      return 0; 
-   }
+  RooAbsPdf* posterior = (RooAbsPdf*) GetPosteriorPdf();
 
-   RooProdPdf posterior("posterior","",RooArgList(*fPdf,*fPriorPOI));
-   RooAbsReal* nll = posterior.createNLL(*fData);
-   RooFormulaVar like("like","exp(-@0)",RooArgList(*nll));
-
-   RooAbsReal * like2 = &like; 
-   if (fNuisanceParameters.getSize() > 0 ) 
-      like2 = like.createIntegral(fNuisanceParameters);
-
-   RooGenericPdf pp("pp","@0",*like2);
-   RooAbsReal* cdf = pp.createCdf(fPOI);
+  RooAbsReal* cdf = posterior->createCdf(fPOI);
    
+  RooAbsFunc* cdf_bind = cdf->bindVars(fPOI,&fPOI);
+  RooBrentRootFinder brf(*cdf_bind);
+  brf.setTol(0.00005);
 
-   RooAbsFunc* cdf_bind = cdf->bindVars(fPOI,&fPOI);
-   RooBrentRootFinder brf(*cdf_bind);
-   brf.setTol(0.00005);
+  RooAbsRealLValue* poi = dynamic_cast<RooAbsRealLValue*>( fPOI.first() ); 
+  assert( poi );
    
-   RooAbsRealLValue * poi = dynamic_cast<RooAbsRealLValue *>( fPOI.first()); 
-   assert(poi);
+  double y = fSize;
+  double lowerLimit = poi->getMin(); 
+  double upperLimit = poi->getMax(); 
+  brf.findRoot(lowerLimit,poi->getMin(),poi->getMax(),y);
    
-   double y = fSize;
-   double lowerLimit = 0; 
-   double upperLimit = 0; 
-   brf.findRoot(lowerLimit,poi->getMin(),poi->getMax(),y);
+  y = 1-fSize;
+  brf.findRoot(upperLimit,poi->getMin(),poi->getMax(),y);
    
-   y=1-fSize;
-   brf.findRoot(upperLimit,poi->getMin(),poi->getMax(),y);
-   
-   delete cdf_bind;
-   delete cdf;
-   delete nll;
+  delete cdf_bind;
+  delete cdf;
 
-   TString interval_name = TString("BayesianInterval_a") + TString(this->GetName());
-   SimpleInterval* interval = new SimpleInterval(interval_name,"SimpleInterval from BayesianCalculator",poi,lowerLimit,upperLimit);
+  TString interval_name = TString("BayesianInterval_a") + TString(this->GetName());
+  fInterval = new SimpleInterval(interval_name,"SimpleInterval from BayesianCalculator",poi,lowerLimit,upperLimit);
   
-   return interval;
+  return fInterval;
 }
 
 } // end namespace RooStats
