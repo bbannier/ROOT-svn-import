@@ -100,7 +100,7 @@ void BayesianCalculator::SetModel(const ModelConfig & model)
 }
 
 
-RooAbsPdf* BayesianCalculator::GetPosteriorPdf()
+RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
 {
   // run some checks
   if (!fPdf || !fPriorPOI) return 0; 
@@ -132,7 +132,7 @@ RooAbsPdf* BayesianCalculator::GetPosteriorPdf()
 }
 
 
-RooPlot* BayesianCalculator::GetPosteriorPlot()
+RooPlot* BayesianCalculator::GetPosteriorPlot() const
 {
   if (!fPosteriorPdf) GetPosteriorPdf();
   if (!fInterval) GetInterval();
