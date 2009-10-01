@@ -121,6 +121,12 @@ namespace ROOT {
        */ 
       void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1 ); 
 
+      /** 
+          compute initial parameter for 2D gaussian function given the fit data
+          Set the sigma limits for zero top 10* initial rms values 
+          Set the initial parameter values in the TF1
+       */ 
+      void Init2DGaus(const ROOT::Fit::BinData & data, TF1 * f1 ); 
 
       /**
          compute confidence intervals at level cl for a fitted histogram h1 in a TGraphErrors gr
