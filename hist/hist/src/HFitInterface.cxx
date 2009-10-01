@@ -372,6 +372,97 @@ void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1)
 
 }
 
+//______________________________________________________________________________
+void Init2DGaus(const ROOT::Fit::BinData & data, TF1 * f1)
+{
+   //   -*-*-*-*Compute Initial values of parameters for a gaussian
+   //           derivaed from function H1InitGaus defined in TH1.cxx  
+   //           ===================================================
+
+
+   static const double sqrtpi = 2.506628;
+
+   //   - Compute mean value and RMS of the data
+   unsigned int n = data.Size();
+   if (n == 0) return; 
+   double sumx = 0, sumy = 0;
+   double sumx2 = 0, sumy2 = 0; 
+   double allcha = 0;
+   double valmax = 0; 
+   double rangex = data.Coords(n-1)[0] - data.Coords(0)[0];
+   double rangey = data.Coords(n-1)[1] - data.Coords(0)[1];
+   // to avoid binwidthx = 0 set arbitrarly to 1
+   double binwidthx = 1, binwidthy = 1;
+   if ( rangex > 0) binwidthx = rangex; 
+   if ( rangey > 0) binwidthy = rangey; 
+   double x0 = 0, y0 = 0;
+   for (unsigned int i = 0; i < n; ++i) { 
+      double val; 
+      const double *coords = data.GetPoint(i,val);
+      double x = coords[0], y = coords[1];
+      sumx  += val*x; 
+      sumy  += val*y;
+      sumx2 += val*x*x; 
+      sumy2 += val*y*y;
+      allcha += val; 
+      if (val > valmax) valmax = val; 
+      if (i > 0) { 
+         double dx = x - x0; 
+         if (dx < binwidthx) binwidthx = dx; 
+         double dy = y - y0;
+         if (dy < binwidthy) binwidthy = dy; 
+      }         
+      x0 = x; 
+      y0 = y;
+   }
+
+   if (allcha <= 0) return;
+   double meanx = sumx/allcha, meany = sumy/allcha;
+   double rmsx  = sumx2/allcha - meanx*meanx;
+   double rmsy  = sumy2/allcha - meany*meany;
+
+
+   if (rmsx > 0) 
+      rmsx  = std::sqrt(rmsx);
+   else
+      rmsx  = binwidthx*n/4;
+
+   if (rmsy > 0) 
+      rmsy  = std::sqrt(rmsy);
+   else
+      rmsy  = binwidthy*n/4;
+
+
+    //if the distribution is really gaussian, the best approximation
+   //is binwidx*allcha/(sqrtpi*rmsx)
+   //However, in case of non-gaussian tails, this underestimates
+   //the normalisation constant. In this case the maximum value
+   //is a better approximation.
+   //We take the average of both quantities
+
+   double constant = 0.5 * (valmax+ binwidthx*allcha/(sqrtpi*rmsx))*
+                           (valmax+ binwidthy*allcha/(sqrtpi*rmsy));
+
+   f1->SetParameter(0,constant);
+   f1->SetParameter(1,meanx);
+   f1->SetParameter(2,rmsx);
+   f1->SetParLimits(2,0,10*rmsx);
+   f1->SetParameter(3,meany);
+   f1->SetParameter(4,rmsy);
+   f1->SetParLimits(4,0,10*rmsy);
+
+#ifdef DEBUG
+   std::cout << "2D Gaussian initial par values" 
+             << constant << "   " 
+             << meanx    << "   " 
+             << rmsx
+             << meany    << "   " 
+             << rmsy
+             << std::endl;
+#endif
+
+}
+
 // filling fit data from TGraph objects
 
 BinData::ErrorType GetDataType(const TGraph * gr, const DataOptions & fitOpt) { 
