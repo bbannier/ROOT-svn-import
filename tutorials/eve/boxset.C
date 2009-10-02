@@ -3,8 +3,8 @@
 
 // Demonstrates usage of TEveBoxSet class.
 
-TEveBoxSet* boxset_test(Float_t x=0, Float_t y=0, Float_t z=0,
-                        Int_t num=100, Bool_t register=kTRUE)
+TEveBoxSet* boxset(Float_t x=0, Float_t y=0, Float_t z=0,
+		   Int_t num=100, Bool_t register=kTRUE)
 {
    TEveManager::Create();
 
@@ -13,8 +13,15 @@ TEveBoxSet* boxset_test(Float_t x=0, Float_t y=0, Float_t z=0,
 
    TEveRGBAPalette* pal = new TEveRGBAPalette(0, 130);
 
+   TEveFrameBox* frm = new TEveFrameBox();
+   frm->SetAABoxCenterHalfSize(0, 0, 0, 12, 12, 12);
+   frm->SetFrameColor(kCyan);
+   frm->SetBackColorRGBA(120,120,120,20);
+   frm->SetDrawBack(kTRUE);
+
    TEveBoxSet* q = new TEveBoxSet("BoxSet");
    q->SetPalette(pal);
+   q->SetFrame(frm);
    q->Reset(TEveBoxSet::kBT_AABox, kFALSE, 64);
    for (Int_t i=0; i<num; ++i) {
       q->AddBox(r.Uniform(-10, 10), r.Uniform(-10, 10), r.Uniform(-10, 10),
@@ -35,8 +42,8 @@ TEveBoxSet* boxset_test(Float_t x=0, Float_t y=0, Float_t z=0,
    return q;
 }
 
-TEveBoxSet* boxset_test_colisval(Float_t x=0, Float_t y=0, Float_t z=0,
-                                 Int_t num=100, Bool_t register=kTRUE)
+TEveBoxSet* boxset_colisval(Float_t x=0, Float_t y=0, Float_t z=0,
+			    Int_t num=100, Bool_t register=kTRUE)
 {
    TEveManager::Create();
 
