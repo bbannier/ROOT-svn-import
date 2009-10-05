@@ -1,0 +1,5 @@
+mathnag module works only at CERN
+
+to use need to setup licence by doing (on lxplus at CERN)
+
+export NAG_KUSARI_FILE=licelan2:
