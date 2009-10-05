@@ -2236,7 +2236,6 @@ void TH1::Divide(const TH1 *h1)
    }
    if (fDimension < 2) nbinsy = -1;
    if (fDimension < 3) nbinsz = -1;
-   if (fDimension < 3) nbinsz = -1;
 
 //    Create Sumw2 if h1 has Sumw2 set
    if (fSumw2.fN == 0 && h1->GetSumw2N() != 0) Sumw2();
