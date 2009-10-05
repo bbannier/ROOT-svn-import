@@ -1,4 +1,4 @@
-#include "/usr/include/expat.h"
+#include "expat.h"
 #include <stdio.h>
 
 int xml() {
