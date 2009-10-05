@@ -54,11 +54,11 @@ BayesianCalculator::BayesianCalculator( RooAbsData& data,
   fPdf(&pdf),
   fPOI(POI),
   fPriorPOI(&priorPOI),
-  fNuisanceParameters(*nuisanceParameters), 
   fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0),
   fSize(0.05)
 {
    // constructor
+   if (nuisanceParameters) fNuisanceParameters.add(*nuisanceParameters); 
 }
 
 
@@ -119,7 +119,12 @@ RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
   }
 
   fProductPdf = new RooProdPdf("product","",RooArgList(*fPdf,*fPriorPOI));
+//   RooArgSet* constrainedParams = fProductPdf->getParameters(*fData);
+//   fLogLike = fProductPdf->createNLL(*fData, RooFit::Constrain(*constrainedParams));
+//   delete constrainedParams;
+
   fLogLike = fProductPdf->createNLL(*fData);
+
   fLikelihood = new RooFormulaVar("fLikelihood","exp(-@0)",RooArgList(*fLogLike));
   if ( fNuisanceParameters.getSize()>0 ) fIntegratedLikelihood = fLikelihood->createIntegral(fNuisanceParameters);
 
@@ -127,6 +132,9 @@ RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
   posterior_name += "_posteriorPdf";
   if ( fNuisanceParameters.getSize()>0 ) fPosteriorPdf = new RooGenericPdf(posterior_name,"@0",*fIntegratedLikelihood);
   else fPosteriorPdf = new RooGenericPdf(posterior_name,"@0",*fLikelihood);
+
+  //fPosteriorPdf = new RooProdPdf("posterior","posterior", *fPosteriorPdf, *fPriorPOI);
+
 
   return fPosteriorPdf;
 }
