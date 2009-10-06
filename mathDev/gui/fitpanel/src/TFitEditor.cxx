@@ -1954,11 +1954,24 @@ void TFitEditor::DoDataSet(Int_t selected)
 
    // Get the name of the object
    TGTextLBEntry* textEntry = static_cast<TGTextLBEntry*>(fDataSet->GetListBox()->GetEntry(selected));
+   string textEntryStr = textEntry->GetText()->GetString();
    string name = textEntry->GetText()->GetString()+textEntry->GetText()->First(':')+2;
    
    // Check the object exists and it is registered
-   TObject* objSelected = gROOT->FindObject(name.c_str());
-   if ( !objSelected ) return;
+   TObject* objSelected(0);
+   if ( textEntryStr.find_first_of("TTree::") == 0 ) {
+      // It's a tree, so the name is before the space (' ')
+      objSelected = gROOT->FindObject(name.substr(0, name.find(' ')).c_str());
+   } else {
+      // It's not a tree, so the name is the complete string
+      objSelected = gROOT->FindObject(name.c_str());
+   }
+
+   if ( !objSelected ) 
+   {
+      //cerr << "Object not found! Please report the error! " << endl;
+      return;
+   }
 
    // If it is a tree, and there is no variables selected, show a dialog
    if ( objSelected->InheritsFrom("TTree") && 
@@ -2527,12 +2540,14 @@ void TFitEditor::ShowObjectName(TObject* obj)
    // Show object name on the top.
 
    TString name;
+   bool isTree;
    
    // Build the string to be compared to look for the object.
    if (obj) {
       name = obj->ClassName();
       name.Append("::");
       name.Append(obj->GetName());
+      isTree = strcmp(obj->ClassName(), "TTree") == 0;
    } else {
       name = "No object selected";
    }
@@ -2543,6 +2558,8 @@ void TFitEditor::ShowObjectName(TObject* obj)
    TGTextLBEntry* selectedEntry = static_cast<TGTextLBEntry*> ( fDataSet->GetSelectedEntry());
    if ( selectedEntry ) {
       string selectedName = selectedEntry->GetText()->GetString();
+      if ( isTree )
+         selectedName = selectedName.substr(0, selectedName.find(' '));
       if ( name.CompareTo(selectedName.c_str()) == 0 ) {
          Layout();
          return;
@@ -2555,6 +2572,8 @@ void TFitEditor::ShowObjectName(TObject* obj)
    while ( TGTextLBEntry* entry = static_cast<TGTextLBEntry*> 
            ( fDataSet->GetListBox()->GetEntry(entryId)) ) {
       string compareName = entry->GetText()->GetString();
+      if ( isTree ) 
+         compareName = compareName.substr(0, compareName.find(' '));
       if ( name.CompareTo(compareName.c_str()) == 0 ) {
          // If the object is found, select it
          fDataSet->Select(entryId, false);
