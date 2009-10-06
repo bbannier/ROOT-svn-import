@@ -56,7 +56,7 @@ namespace RooStats {
 
     /// Dump the Workspace content as configuration file
     /* It needs some workspace object list or something..*/
-    void DumpCfg(const char* cardname){cardname=0;}; // Dump the factory content as configuration file
+    void DumpCfg(const char* cardname); // Dump the factory content as configuration file
 
     /// Get the combined signal plus background pdf
     RooAbsPdf* GetTotSigBkgPdf(); // Get the Signal and Background combined model
@@ -129,6 +129,8 @@ namespace RooStats {
     /// Parse a single line an puts the content in the RooWorkSpace
     int fParseLine(TString& line);
 
+    /// The Cards that were read
+    TString fHLFactoryInstructions;
 
   ClassDef(HLFactory,1)  // The high Level Model Factory to create models from datacards
 
