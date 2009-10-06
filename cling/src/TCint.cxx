@@ -42,6 +42,8 @@
 #include "THashTable.h"
 #include "RConfigure.h"
 #include "compiledata.h"
+#include "cling/Interpreter/Interpreter.h"
+#include "cling/UserInterface/UserInterface.h"
 
 #include <vector>
 #include <set>
@@ -392,6 +394,25 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
    // (float and double return values will be truncated).
 
    Long_t ret = 0;
+
+   clang::LangOptions langInfo;
+   //langInfo.C99         = 1;
+   langInfo.HexFloats   = 1;
+   langInfo.BCPLComment = 1; // Only for C99/C++.
+   langInfo.Digraphs    = 1; // C94, C99, C++.
+   //langInfo.CPlusPlus   = 1;
+   langInfo.CPlusPlus0x = 1;
+   langInfo.CXXOperatorNames = 1;
+   langInfo.Bool = 1;
+   langInfo.NeXTRuntime = 1;
+   langInfo.NoInline = 1;
+   langInfo.Exceptions = 1;
+   langInfo.GNUMode = 1;
+   langInfo.NoInline = 1;
+   langInfo.GNUInline = 1;
+   langInfo.DollarIdents = 1;
+   cling::Interpreter interp(langInfo); 
+   cling::UserInterface ui(interp);
    if (gApplication) {
       if (gApplication->IsCmdThread()) {
          if (gGlobalMutex && !gCINTMutex && fLockProcessLine) {
@@ -449,7 +470,8 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
 
       int prerun = G__getPrerun();
       G__setPrerun(0);
-      ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+      //ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+      ui.executeSingleCodeLine(line);
       G__setPrerun(prerun);
       if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
          ResetGlobals();
