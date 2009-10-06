@@ -31,6 +31,7 @@ END_HTML
 #include "TObject.h"
 #include "TObjArray.h"
 #include "TObjString.h"
+#include "TDatime.h"
 
 #include "RooSimultaneous.h"
 
@@ -180,6 +181,99 @@ int HLFactory::AddChannel(const char* label,
     return 0;
 
 }
+//_______________________________________________________
+
+void HLFactory::DumpCfg(const char* cardname){
+  // Print to file the configuration that was used to produce the Workspace.
+  // If the workspace was not produced with the HLFactory, print nothing.
+
+
+    TString instructions_header("\n// Instructions used to build \"");
+    instructions_header+=GetName();
+    instructions_header+="\" HLFactory -------------\n";
+    instructions_header+="#echo Interpreting instructions;\n\n"; 
+
+    // Set date and time in the string of instructions
+    TDatime t;
+  
+    TString header("/*\nInstructions for HLFactory ");
+    header+=GetName();
+    header+="\nHLFactory istanciated on the ";
+    header+=t.GetDay();
+    header+="-";
+    header+=t.GetMonth();
+    header+="-";
+    header+=t.GetYear();
+    header+=" at ";
+    header+=t.GetHour();
+    header+=":";
+    header+=t.GetMinute();
+    header+=":";
+    header+=t.GetSecond();
+    header+="\n*/\n";
+
+
+    // Now set all the relevant imports. The objects are written to a root file
+    // if they are not Roo* objects (except datasets).
+
+    TString orfilename(GetName());
+    orfilename+=".root";
+
+    TString import_instr("\n// Import objects used to build \"");
+    import_instr+=GetName();
+    import_instr+="\" HLFactory\n";
+    import_instr+="// Source rootfile: "+orfilename+ "-------------\n";
+    import_instr+="#echo Importing Objects;\n\n";    
+
+    TString wsname(fWs->GetName());
+    RooWorkspace Ws(wsname);
+    
+    // The datasets
+    std::list<RooAbsData*> ldata=fWs->allData();
+    std::list<RooAbsData*>::iterator it=ldata.begin();
+    for(;it!=ldata.end();++it) {
+      TString o_name((*it)->GetName());
+      TString classname((*it)->ClassName());
+      Ws.import(* static_cast<RooAbsData*>(*it));
+      import_instr+=o_name+"=import("+orfilename+","+
+                                      fWs->GetName()+","+
+                                      o_name+");\n";
+
+      }
+
+    // the generic objects
+    std::list<TObject*> lobjs=fWs->allGenericObjects();
+    std::list<TObject*>::iterator ito=lobjs.begin();
+    for(;ito!=lobjs.end();++ito) {
+      TString o_name((*ito)->GetName());
+      TString classname((*ito)->ClassName());
+      Ws.import(*(*it),o_name);
+      import_instr+=o_name+"=import("+orfilename+","+
+                                    fWs->GetName()+","+
+                                    o_name+");\n";
+      }
+
+
+    Ws.writeToFile(orfilename);
+
+    TString card(header);
+    card+=import_instr;
+    card+=instructions_header;
+    card+=fHLFactoryInstructions;
+
+    if (TString(cardname)==""){
+      std::cout << card.Data() << std::endl;
+      }
+    else{
+      ofstream ofile(cardname);
+      ofile << card.Data() ;
+      ofile.close();
+      TString info("Datacard written to " );
+      info+=cardname;
+      Info ("DumpCfg",info);
+      }
+
+  }
 
 //_______________________________________________________
 RooAbsPdf* HLFactory::GetTotSigBkgPdf(){
@@ -381,6 +475,13 @@ int HLFactory::fReadFile(const char*fileName, bool is_included){
     //
     // The "echo" statement prompts a message on screen.
 
+    // Check if the file is specified
+    if(fileName==0){
+        TString warning("No file specified!");
+        Warning ("fReadFile", warning);
+        return -1;
+        }
+
     // Check the deepness of the inclusion
     if (is_included) 
         fInclusionLevel+=1;
@@ -393,6 +494,7 @@ int HLFactory::fReadFile(const char*fileName, bool is_included){
         warning+=maxDeepness;
         warning+=". Is this a recursive inclusion?";
         Warning("fReadFile", warning);
+
         }
 
 
@@ -580,12 +682,13 @@ int HLFactory::fParseLine(TString& line){
          ! line.Contains("(") &&
          ! line.Contains(")"))) { 
       fWs->factory(line);
+      fHLFactoryInstructions+=line+";\n";
       return 0;
       }
 
     // Transform the line o_name = o_class(o_descr) in o_class::o_name(o_descr)
     if (nequals==1 || 
-        (nequals > 1 and line.Contains("SIMUL"))){
+        (nequals > 1 && line.Contains("SIMUL"))){
         
         // Divide the line in 3 components: o_name,o_class and o_descr
         // assuming that o_name=o_class(o_descr)
@@ -609,7 +712,7 @@ int HLFactory::fParseLine(TString& line){
 
         const int n_descr_parts=descr_array->GetEntries();
     
-        if (n_descr_parts<2 or n_descr_parts>3) 
+        if (n_descr_parts<2 || n_descr_parts>3) 
           Error("fParseLine","Import wrong syntax: cannot process "+o_descr);
 
         TString obj_name (static_cast<TObjString*>(descr_array->At(n_descr_parts-1))->GetString());
@@ -632,6 +735,18 @@ int HLFactory::fParseLine(TString& line){
           fWs->import(*the_obj,o_name);
           }
         delete ifile;
+
+//         TString factory_line(o_name+"=import(");
+//         factory_line+=GetName();
+//         factory_line+=".root,";
+//         factory_line+=fWs->GetName();
+//         factory_line+=","+o_name+");\n";
+
+//         fHLFactoryInstructions+=factory_line;
+
+
+
+
         return 0;
         } // end of import block
 
@@ -643,12 +758,13 @@ int HLFactory::fParseLine(TString& line){
             }
 
         fWs->factory(new_line);
-
+        fHLFactoryInstructions+=line+";\n";
         return 0;
         }
 
     else { // In case we do not know what to do we pipe it..
         fWs->factory(line);
+        fHLFactoryInstructions+=line+";\n";
         }
 
     return 0;
