@@ -110,8 +110,11 @@ namespace cling
       //------------------------------------------------------------------------
       // Process the unit
       //------------------------------------------------------------------------
-      clang::TranslationUnitDecl* tu = parse( fileName );
-      return addUnit( fileName, tu );
+      ParseEnvironment *pEnv = parse( fileName );
+      clang::TranslationUnitDecl* tu = pEnv->getASTContext()->getTranslationUnitDecl();
+      bool res = addUnit( fileName, tu );
+      delete pEnv;
+      return res;
    }
 
    //---------------------------------------------------------------------------
@@ -145,10 +148,11 @@ namespace cling
    llvm::Module* Interpreter::link( const std::string& fileName,
                                           std::string* errMsg )
    {
-      clang::TranslationUnitDecl* tu = parse( fileName );
+      ParseEnvironment *pEnv = parse( fileName );
+      clang::TranslationUnitDecl* tu = pEnv->getASTContext()->getTranslationUnitDecl();
       llvm::Module*           module = compile( tu );
       llvm::Module*           result = link( module, errMsg );
-      delete tu;
+      delete pEnv;
       delete module;
       return result;
    }
@@ -158,9 +162,10 @@ namespace cling
    // compiler but do not add it to the list
    //---------------------------------------------------------------------------
    llvm::Module* Interpreter::link( const llvm::MemoryBuffer* buff,
-                                         std::string* errMsg )
+                                          std::string* errMsg )
    {
-      clang::TranslationUnitDecl* tu = parse( buff );
+      ParseEnvironment *pEnv = parse( buff );
+      clang::TranslationUnitDecl* tu = pEnv->getASTContext()->getTranslationUnitDecl();
       llvm::Module*           module = compile( tu );
       llvm::Module*           result = link( module, errMsg );
       delete tu;
@@ -194,7 +199,7 @@ namespace cling
    //---------------------------------------------------------------------------
    // Parse memory buffer
    //---------------------------------------------------------------------------
-   clang::TranslationUnitDecl* Interpreter::parse( const llvm::MemoryBuffer* buff )
+   ParseEnvironment* Interpreter::parse( const llvm::MemoryBuffer* buff )
    {
       //------------------------------------------------------------------------
       // Create a file manager
@@ -216,7 +221,7 @@ namespace cling
    //---------------------------------------------------------------------------
    // Parse file
    //---------------------------------------------------------------------------
-   clang::TranslationUnitDecl* Interpreter::parse( const std::string& fileName )
+   ParseEnvironment* Interpreter::parse( const std::string& fileName )
    {
       //------------------------------------------------------------------------
       // Create a file manager
@@ -235,80 +240,34 @@ namespace cling
 
       return parse( srcMgr.get() );
    }
-
-   void Interpreter::initHeaderSearch(clang::HeaderSearch &headerInfo) {      
-      //------------------------------------------------------------------------
-      // Fill the header database
-      //------------------------------------------------------------------------
-   
-      clang::InitHeaderSearch hiInit( headerInfo );
-      hiInit.AddDefaultEnvVarPaths( m_lang );
-      hiInit.AddDefaultSystemIncludePaths( m_lang );
-      llvm::sys::Path clangIncl(LLVM_LIBDIR, strlen(LLVM_LIBDIR));
-      clangIncl.appendComponent("clang");
-      clangIncl.appendComponent(CLANG_VERSION_STRING);
-      clangIncl.appendComponent("include");
-      hiInit.AddPath( clangIncl.c_str(), clang::InitHeaderSearch::System,
-                     true, false, false, true /*ignore sysroot*/);
-      hiInit.Realize();
-   }
    
    //---------------------------------------------------------------------------
    // Parse
    //---------------------------------------------------------------------------
-   clang::TranslationUnitDecl* Interpreter::parse( clang::SourceManager* srcMgr )
+   ParseEnvironment* Interpreter::parse( clang::SourceManager* srcMgr )
    {
-      //------------------------------------------------------------------------
-      // Create the header database
-      //------------------------------------------------------------------------
-      clang::HeaderSearch     headerInfo( *m_fileMgr );
-      initHeaderSearch(headerInfo);
-
       //-------------------------------------------------------------------------
       // Create diagnostics
       //-------------------------------------------------------------------------
       clang::Diagnostic diag( m_diagClient );
       diag.setSuppressSystemWarnings( true );
 
-      //-------------------------------------------------------------------------
-      // Create the preprocessor - a memory leak yuck!!
-      //-------------------------------------------------------------------------
-      //llvm::OwningPtr<clang::Preprocessor>  pp;
-      //pp.reset( new clang::Preprocessor( diag, m_lang, *m_target, *srcMgr,
-      //                                   headerInfo ) );
-
-      clang::Preprocessor*  pp =
-         new clang::Preprocessor( diag, m_lang, *m_target, *srcMgr,
-                                  headerInfo);
-
-      clang::PreprocessorInitOptions InitOpts;
-      clang::InitializePreprocessor(*pp, InitOpts);
-
-      pp->getBuiltinInfo().InitializeBuiltins(pp->getIdentifierTable(),
-                                              pp->getLangOptions().NoBuiltin);
-
-      //-------------------------------------------------------------------------
-      // Parse the AST and generate the code
-      //-------------------------------------------------------------------------
-      clang::ASTContext* astContext
-         = new clang::ASTContext( pp->getLangOptions(),
-                                  pp->getSourceManager(),
-                                  pp->getTargetInfo(),
-                                  pp->getIdentifierTable(),
-                                  pp->getSelectorTable(),
-                                  pp->getBuiltinInfo());
-
-      clang::TranslationUnitDecl *tu = astContext->getTranslationUnitDecl();
+      //------------------------------------------------------------------------
+      // Setup a parse environement
+      //------------------------------------------------------------------------
+      ParseEnvironment *pEnv = new ParseEnvironment(m_lang, *m_target, &diag, m_fileMgr, srcMgr);
+      
+      clang::TranslationUnitDecl *tu = pEnv->getASTContext()->getTranslationUnitDecl();
 
       //clang::ASTConsumer dummyConsumer;
       llvm::raw_stdout_ostream out;
       //llvm::raw_null_ostream out;
       clang::ASTConsumer* dummyConsumer = clang::CreateASTPrinter(&out);
       
-      clang::Sema   sema(*pp, *astContext, *dummyConsumer);
-      clang::Parser p(*pp, sema);
+      clang::Sema   sema(*pEnv->getPreprocessor(), *pEnv->getASTContext(), *dummyConsumer);
+      clang::Parser p(*pEnv->getPreprocessor(), sema);
 
-      pp->EnterMainSourceFile();
+      pEnv->getPreprocessor()->EnterMainSourceFile();
 
       // The following is similar to clang::Parser::ParseTranslationUnit
       // except that we add insertDeclarations
@@ -325,7 +284,7 @@ namespace cling
 
       dumpTU(tu);
 
-      return tu;
+      return pEnv;
    }
 
    //----------------------------------------------------------------------------
@@ -755,8 +714,8 @@ namespace cling
          consumer.maxPos = consumer.pos + buffer->getBuffer().size();
          consumer.sm = pEnvCheck.getSourceManager();  
          buffer = llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(),
-                                                                           &*line.end(),
-                                                                           "CLING" );
+                                                       &*line.end(),
+                                                       "CLING" );
          pEnvCheck.getSourceManager()->createMainFileIDForMemBuffer( buffer );
          clang::ParseAST( *pEnvCheck.getPreprocessor(), &consumer, *pEnvCheck.getASTContext());
          if (pdc.hadError(clang::diag::err_unterminated_block_comment))
