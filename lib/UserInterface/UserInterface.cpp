@@ -85,6 +85,15 @@ void cling::UserInterface::runInteractively()
 
 
 //---------------------------------------------------------------------------
+// Compile and execute a single line of code.
+//---------------------------------------------------------------------------
+void cling::UserInterface::executeSingleCodeLine(const char* line)
+{
+   int err = NextInteractiveLine(line);
+}
+
+
+//---------------------------------------------------------------------------
 // Process an interactive line, return whether processing was successful
 //---------------------------------------------------------------------------
 int cling::UserInterface::NextInteractiveLine(const std::string& line)
