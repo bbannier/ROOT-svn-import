@@ -6,6 +6,9 @@
 
 #include <cling/Interpreter/Interpreter.h>
 
+#include "Diagnostics.h"
+#include "ParseEnvironment.h"
+
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/System/Host.h>
 #include <llvm/System/Path.h>
@@ -43,6 +46,7 @@
 #include <clang/Parse/Parser.h>
 #include <clang/Basic/TargetInfo.h>
 #include <clang/Sema/ParseAST.h>
+#include <clang/Lex/LexDiagnostic.h>
 
 // Private CLANG headers
 #include <Sema/Sema.h>
@@ -139,7 +143,7 @@ namespace cling
    // compiler but do not add it to the list
    //---------------------------------------------------------------------------
    llvm::Module* Interpreter::link( const std::string& fileName,
-                                         std::string* errMsg )
+                                          std::string* errMsg )
    {
       clang::TranslationUnitDecl* tu = parse( fileName );
       llvm::Module*           module = compile( tu );
@@ -232,6 +236,23 @@ namespace cling
       return parse( srcMgr.get() );
    }
 
+   void Interpreter::initHeaderSearch(clang::HeaderSearch &headerInfo) {      
+      //------------------------------------------------------------------------
+      // Fill the header database
+      //------------------------------------------------------------------------
+   
+      clang::InitHeaderSearch hiInit( headerInfo );
+      hiInit.AddDefaultEnvVarPaths( m_lang );
+      hiInit.AddDefaultSystemIncludePaths( m_lang );
+      llvm::sys::Path clangIncl(LLVM_LIBDIR, strlen(LLVM_LIBDIR));
+      clangIncl.appendComponent("clang");
+      clangIncl.appendComponent(CLANG_VERSION_STRING);
+      clangIncl.appendComponent("include");
+      hiInit.AddPath( clangIncl.c_str(), clang::InitHeaderSearch::System,
+                     true, false, false, true /*ignore sysroot*/);
+      hiInit.Realize();
+   }
+   
    //---------------------------------------------------------------------------
    // Parse
    //---------------------------------------------------------------------------
@@ -241,17 +262,7 @@ namespace cling
       // Create the header database
       //------------------------------------------------------------------------
       clang::HeaderSearch     headerInfo( *m_fileMgr );
-      clang::InitHeaderSearch hiInit( headerInfo );
-
-      hiInit.AddDefaultEnvVarPaths( m_lang );
-      hiInit.AddDefaultSystemIncludePaths( m_lang );
-      llvm::sys::Path clangIncl(LLVM_LIBDIR, strlen(LLVM_LIBDIR));
-      clangIncl.appendComponent("clang");
-      clangIncl.appendComponent(CLANG_VERSION_STRING);
-      clangIncl.appendComponent("include");
-      hiInit.AddPath( clangIncl.c_str(), clang::InitHeaderSearch::System,
-                      true, false, false, true /*ignore sysroot*/);
-      hiInit.Realize();
+      initHeaderSearch(headerInfo);
 
       //-------------------------------------------------------------------------
       // Create diagnostics
@@ -650,4 +661,212 @@ namespace cling
 
       return executeModuleMain( module, myfuncname );
    }
+   
+   Interpreter::InputType Interpreter::analyzeInput(const std::string& contextSource,
+                                                    const std::string& line,
+                                                    int& indentLevel,
+                                                    std::vector<clang::FunctionDecl*> *fds)
+   {
+      // Check if there is an explicitation continuation character.
+      if (line.length() > 1 && line[line.length() - 2] == '\\') {
+         indentLevel = 1;
+         return Incomplete;
+      }
+      
+      //-------------------------------------------------------------------------
+      // Create diagnostics
+      //-------------------------------------------------------------------------
+      ProxyDiagnosticClient tokpdc(NULL);
+      clang::Diagnostic tokdiag( &tokpdc );
+      tokdiag.setSuppressSystemWarnings( true );
+      
+      //------------------------------------------------------------------------
+      // Setup a parse environement
+      //------------------------------------------------------------------------
+      ParseEnvironment pEnv(m_lang, *m_target, &tokdiag, m_fileMgr);
+      
+      //------------------------------------------------------------------------
+      // Register with the source manager
+      //------------------------------------------------------------------------
+      llvm::MemoryBuffer* buffer = llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(),
+                                                                        &*line.end(),
+                                                                        "CLING" );
+      pEnv.getSourceManager()->createMainFileIDForMemBuffer( buffer );
+      
+      if( pEnv.getSourceManager()->getMainFileID().isInvalid() )
+         return Incomplete;
+      
+      // Check the tokens.
+      clang::Token lastTok;
+      bool tokWasDo = false;
+      int stackSize = analyzeTokens( *pEnv.getPreprocessor(), lastTok, indentLevel, tokWasDo);
+      if (stackSize < 0) 
+         return TopLevel;
+      
+      // tokWasDo is used for do { ... } while (...); loops
+      if (lastTok.is(clang::tok::semi) || (lastTok.is(clang::tok::r_brace) && !tokWasDo)) {
+         if (stackSize > 0) return Incomplete;
+
+         ProxyDiagnosticClient pdc(NULL);
+         clang::Diagnostic diag(&pdc);
+         // Setting this ensures "foo();" is not a valid top-level declaration.
+         diag.setDiagnosticMapping(clang::diag::ext_missing_type_specifier,
+                                   clang::diag::MAP_ERROR);
+         diag.setSuppressSystemWarnings(true);
+         std::string src = contextSource + buffer->getBuffer().str();
+         struct : public clang::ASTConsumer {
+            bool hadIncludedDecls;
+            unsigned pos;
+            unsigned maxPos;
+            clang::SourceManager *sm;
+            std::vector<clang::FunctionDecl*> fds;
+            void HandleTopLevelDecl(clang::DeclGroupRef D) {
+               for (clang::DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
+                  if (clang::FunctionDecl *FD = dyn_cast<clang::FunctionDecl>(*I)) {
+                     clang::SourceLocation Loc = FD->getTypeSpecStartLoc();
+                     if (!Loc.isValid())
+                        continue;
+                     if (sm->isFromMainFile(Loc)) {
+                        unsigned offset = sm->getFileOffset(sm->getInstantiationLoc(Loc));
+                        if (offset >= pos) {
+                           fds.push_back(FD);
+                        }
+                     } else {
+                        while (!sm->isFromMainFile(Loc)) {
+                           const clang::SrcMgr::SLocEntry& Entry =
+									sm->getSLocEntry(sm->getFileID(sm->getSpellingLoc(Loc)));
+                           if (!Entry.isFile())
+                              break;
+                           Loc = Entry.getFile().getIncludeLoc();
+                        }
+                        unsigned offset = sm->getFileOffset(Loc);
+                        if (offset >= pos) {
+                           hadIncludedDecls = true;
+                        }
+                     }
+                  }
+               }
+            }
+         } consumer;
+         // Need to reset the preprocessor.
+         ParseEnvironment pEnvCheck(m_lang, *m_target, &diag, m_fileMgr);
+         consumer.hadIncludedDecls = false;
+         consumer.pos = contextSource.length();
+         consumer.maxPos = consumer.pos + buffer->getBuffer().size();
+         consumer.sm = pEnvCheck.getSourceManager();  
+         buffer = llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(),
+                                                                           &*line.end(),
+                                                                           "CLING" );
+         pEnvCheck.getSourceManager()->createMainFileIDForMemBuffer( buffer );
+         clang::ParseAST( *pEnvCheck.getPreprocessor(), &consumer, *pEnvCheck.getASTContext());
+         if (pdc.hadError(clang::diag::err_unterminated_block_comment))
+            return Incomplete;
+         if (!pdc.hadErrors() && (!consumer.fds.empty() || consumer.hadIncludedDecls)) {
+            if (!consumer.fds.empty())
+               fds->swap(consumer.fds);
+            return TopLevel;
+         }
+         return Stmt;
+      }
+      
+      return Incomplete;
+   }
+   
+   int Interpreter::analyzeTokens(clang::Preprocessor& PP,
+                                  clang::Token& lastTok,
+                                  int& indentLevel,
+                                  bool& tokWasDo)
+   {
+      int result;
+      std::stack<std::pair<clang::Token, clang::Token> > S; // Tok, PrevTok
+      
+      indentLevel = 0;
+      PP.EnterMainSourceFile();
+      
+      clang::Token Tok;
+      PP.Lex(Tok);
+      while (Tok.isNot(clang::tok::eof)) {
+         if (Tok.is(clang::tok::l_square)) {
+            S.push(std::make_pair(Tok, lastTok)); // [
+         } else if (Tok.is(clang::tok::l_paren)) {
+            S.push(std::make_pair(Tok, lastTok)); // (
+         } else if (Tok.is(clang::tok::l_brace)) {
+            S.push(std::make_pair(Tok, lastTok)); // {
+            indentLevel++;
+         } else if (Tok.is(clang::tok::r_square)) {
+            if (S.empty() || S.top().first.isNot(clang::tok::l_square)) {
+               std::cout << "Unmatched [\n";
+               return -1;
+            }
+            tokWasDo = false;
+            S.pop();
+         } else if (Tok.is(clang::tok::r_paren)) {
+            if (S.empty() || S.top().first.isNot(clang::tok::l_paren)) {
+               std::cout << "Unmatched (\n";
+               return -1;
+            }
+            tokWasDo = false;
+            S.pop();
+         } else if (Tok.is(clang::tok::r_brace)) {
+            if (S.empty() || S.top().first.isNot(clang::tok::l_brace)) {
+               std::cout << "Unmatched {\n";
+               return -1;
+            }
+            tokWasDo = S.top().second.is(clang::tok::kw_do);
+            S.pop();
+            indentLevel--;
+         }
+         lastTok = Tok;
+         PP.Lex(Tok);
+      }
+      result = S.size();
+      
+      // TODO: We need to properly account for indent-level for blocks that do not
+      //       have braces... such as:
+      //
+      //       if (X)
+      //         Y;
+      //
+      // TODO: Do-while without braces doesn't work, e.g.:
+      //
+      //       do
+      //         foo();
+      //       while (bar());
+      //
+      // Both of the above could be solved by some kind of rewriter-pass that would
+      // insert implicit braces (or simply a more involved analysis).
+      
+      // Also try to match preprocessor conditionals...
+      if (result == 0) {
+         clang::Lexer Lexer(PP.getSourceManager().getMainFileID(),
+                            PP.getSourceManager(),
+                            PP.getLangOptions());
+         Lexer.LexFromRawLexer(Tok);
+         while (Tok.isNot(clang::tok::eof)) {
+            if (Tok.is(clang::tok::hash)) {
+               Lexer.LexFromRawLexer(Tok);
+               if (clang::IdentifierInfo *II = PP.LookUpIdentifierInfo(Tok)) { 
+                  switch (II->getPPKeywordID()) {
+                     case clang::tok::pp_if:
+                     case clang::tok::pp_ifdef:
+                     case clang::tok::pp_ifndef:
+                        result++;
+                        break;
+                     case clang::tok::pp_endif:
+                        if (result == 0)
+                           return -1; // Nesting error.
+                        result--;
+                        break;
+                     default:
+                        break;
+                  }
+               }
+            }
+            Lexer.LexFromRawLexer(Tok);
+         }
+      }
+      
+      return result;
+   }
+   
 }

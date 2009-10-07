@@ -40,6 +40,10 @@ namespace clang
    class TargetInfo;
    class Sema;
    class ASTContext;
+   class FunctionDecl;
+   class Preprocessor;
+   class Token;
+   class HeaderSearch;
 }
 
 namespace cling
@@ -51,6 +55,12 @@ namespace cling
    class Interpreter
    {
    public:
+      
+      //---------------------------------------------------------------------
+      //! Mark the type of statement found in the command line
+      //---------------------------------------------------------------------
+      enum InputType { Incomplete, TopLevel, Stmt }; 
+      
       //---------------------------------------------------------------------
       //! Unit identifier - must be constructable from a std::string
       //---------------------------------------------------------------------
@@ -95,6 +105,22 @@ namespace cling
       //---------------------------------------------------------------------
       virtual bool removeUnit( const UnitID_t& id );
 
+      //---------------------------------------------------------------------
+      //! Check if the input is complete or not.
+      //!
+      //! @param context code to prefix to the input
+      //! @param line code to analyze
+      //! @param indentLevel keep track of the block nesting
+      //! @param return function declaration found in the code
+      //! @return true if the unit was removed, false otherwise
+      //---------------------------------------------------------------------
+      InputType analyzeInput(const std::string& contextSource,
+                             const std::string& line,
+                             int& indentLevel,
+                             std::vector<clang::FunctionDecl*> *fds);
+      
+      
+      
       //---------------------------------------------------------------------
       //! Get a compiled  module linking together all translation units
       //!
@@ -214,6 +240,12 @@ namespace cling
                                 const clang::ASTContext& sourceContext,
                                 clang::ASTContext& targetContext );
       llvm::Module* copyModule( const llvm::Module* src );
+      
+      int analyzeTokens(clang::Preprocessor& PP,
+                        clang::Token& lastTok,
+                        int& indentLevel,
+                        bool& tokWasDo);
+      void initHeaderSearch(clang::HeaderSearch &headerInfo);
    };
 }
 

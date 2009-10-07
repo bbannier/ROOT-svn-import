@@ -67,10 +67,13 @@ void cling::UserInterface::runInteractively()
       read_history(histfile);
    }
    m_QuitRequested = false;
+   const static std::string defaultPrompt("[cling]$ ");
+   const static std::string defaultCont("... ");
+   std::string prompt = defaultPrompt;
    while (!m_QuitRequested) {
-      char* line = readline("[cling]$ ", true);
+      char* line = readline(prompt.c_str(), true);
       do {
-         line = readline("[cling]$ ", false);
+         line = readline(prompt.c_str(), false);
          if (line) {
             for (const char* c = line; *c; ++c) {
                if (*c == '\a') {
@@ -82,7 +85,12 @@ void cling::UserInterface::runInteractively()
       } while (!line);
       add_history(line);
       write_history(histfile);
-      NextInteractiveLine(line);
+      int indent = NextInteractiveLine(line);
+      if (indent==0) {
+         prompt = defaultPrompt;
+      } else {
+         prompt = defaultCont + std::string(indent * 3, ' ');
+      }
    }
 }
 
@@ -90,19 +98,40 @@ void cling::UserInterface::runInteractively()
 //---------------------------------------------------------------------------
 // Process an interactive line, return whether processing was successful
 //---------------------------------------------------------------------------
-bool cling::UserInterface::NextInteractiveLine(const std::string& line)
+int cling::UserInterface::NextInteractiveLine(const std::string& line)
 {
    if (ProcessMeta(line)) return true;
    
    //----------------------------------------------------------------------
+   // Check if the statement is complete.  Use the continuation prompt 
+   // otherwise
+   //----------------------------------------------------------------------
+
+   std::string src = ""; // genSource("");     
+   
+   m_input.append( line );
+   
+   int indentLevel;
+   std::vector<clang::FunctionDecl *> fnDecls;
+   bool shouldBeTopLevel = false;
+   switch (m_Interp->analyzeInput(src, m_input, indentLevel, &fnDecls)) {
+      case Interpreter::Incomplete:
+         return indentLevel;
+      case Interpreter::TopLevel:
+         shouldBeTopLevel = true;
+      case Interpreter::Stmt:
+         break;
+   }
+   
+   //----------------------------------------------------------------------
    // Wrap the code
    //----------------------------------------------------------------------
-   std::string wrapped = code_prefix + line + code_suffix;
+   std::string wrapped = code_prefix + m_input + code_suffix;
    llvm::MemoryBuffer* buff
-      = llvm::MemoryBuffer::getMemBufferCopy( &*wrapped.begin(),
-                                              &*wrapped.end(),
-                                              "CLING" );
-
+      = llvm::MemoryBuffer::getMemBufferCopy(&*wrapped.begin(),
+                                             &*wrapped.end(),
+                                             "CLING" );
+   
    //----------------------------------------------------------------------
    // Parse and run it
    //----------------------------------------------------------------------
@@ -115,10 +144,11 @@ bool cling::UserInterface::NextInteractiveLine(const std::string& line)
       if (!errMsg.empty())
          std::cerr << "[!] " << errMsg << std::endl;
       std::cerr << std::endl;
-      return false;
+      return -1;
    }
    m_Interp->executeModuleMain( module, "imain" );
-   return true;
+   m_input.clear();
+   return 0;
 }
 
 
@@ -147,6 +177,7 @@ bool cling::UserInterface::ProcessMeta(const std::string& input)
                else
                   std::cerr << "[i] Failure: " << errMsg << std::endl;
             } else {
+               // TODO: Need to double check that it is a text file ...
                if( m_Interp->addUnit( filename ) )
                   std::cerr << "[i] Success!" << std::endl;
                else

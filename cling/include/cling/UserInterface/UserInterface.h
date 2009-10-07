@@ -30,11 +30,13 @@ namespace cling {
       void loadFile(const char* file);
 
    private:
-      bool NextInteractiveLine(const std::string& line);
+      int NextInteractiveLine(const std::string& line);
       bool ProcessMeta(const std::string& input);
 
       Interpreter* m_Interp;
       bool m_QuitRequested;
+      int m_contLevel;     // How many continuation level (i.e. open nested blocks)
+      std::string m_input; // Accumulation of the incomplete lines. 
    };
 }
 
