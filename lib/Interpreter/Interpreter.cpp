@@ -949,7 +949,11 @@ namespace cling
                                                                         "CLING" );
       pEnv.getSourceManager()->createMainFileIDForMemBuffer( buffer );
       clang::ParseAST( *pEnv.getPreprocessor(), &consumer, *pEnv.getASTContext());
-      
+
+      // TODO: In order to properly support unnamed macro which could contains
+      // interleaving of #define, #undef and global and to properly support
+      // #define and #undef inside class and struct declaration, we will
+      // need to 'merge' this list and the list of stmts.
       for(unsigned int x = 0; x < macros->getMacrosVector().size(); ++x) {
          fprintf(stderr,"found macro: %s\n",macros->getMacrosVector()[x].c_str());
       }
@@ -957,17 +961,25 @@ namespace cling
       statements.clear();
       if (diag.hasErrorOccurred()) {
          return false;
-      } else if (stmts.size() == 1) {
-         fprintf(stderr, "Unique is: %s\n", input.c_str());
-
-         statements.push_back(input);
+//      } else if (stmts.size() == 1) {
+//         fprintf(stderr, "Unique is: %s\n", input.c_str());
+//
+//         statements.push_back(input);
       } else {
          for (unsigned i = 0; i < stmts.size(); i++) {
+            stmts[i]->dump();
             SrcRange range = getStmtRangeWithSemicolon(stmts[i], *sm, m_lang);
             std::string s = src.substr(range.first, range.second - range.first);
 
             fprintf(stderr, "Split %d is: %s\n", i, s.c_str());
-            
+
+            if (const clang::Expr *E = dyn_cast<clang::Expr>(stmts[i])) {
+               fprintf(stderr,"Has expression: %s\n",s.c_str());
+            } else if (const clang::DeclStmt *DS = dyn_cast<clang::DeclStmt>(stmts[i])) {
+               fprintf(stderr,"Has declaration: %s\n",s.c_str());
+            } else {
+               fprintf(stderr,"Has something else: %s\n",s.c_str());
+            }
             statements.push_back(s);
          }
       }
