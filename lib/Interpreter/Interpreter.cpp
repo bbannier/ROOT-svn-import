@@ -6,6 +6,9 @@
 
 #include <cling/Interpreter/Interpreter.h>
 
+#include <iostream>
+#include <cstdio>
+
 #include "Diagnostics.h"
 #include "ParseEnvironment.h"
 #include "Visitors.h"
@@ -339,8 +342,6 @@ namespace cling
       //------------------------------------------------------------------------
       ParseEnvironment *pEnv = new ParseEnvironment(m_lang, *m_target, &diag, m_fileMgr, srcMgr);
       
-      clang::TranslationUnitDecl *tu = pEnv->getASTContext()->getTranslationUnitDecl();
-
       //clang::ASTConsumer dummyConsumer;
       llvm::raw_stdout_ostream out;
       //llvm::raw_null_ostream out;
@@ -354,6 +355,9 @@ namespace cling
       // The following is similar to clang::Parser::ParseTranslationUnit
       // except that we add insertDeclarations
       // and remove the ExitScope.
+
+//      clang::TranslationUnitDecl *tu = pEnv->getASTContext()->getTranslationUnitDecl();
+//
 //      p.Initialize();
 //
 //      insertDeclarations( tu, &sema );
@@ -968,12 +972,16 @@ namespace cling
 
             fprintf(stderr, "Split %d is: %s\n", i, s.c_str());
 
-            if (const clang::Expr *E = dyn_cast<clang::Expr>(stmts[i])) {
+            const clang::Expr *E = dyn_cast<clang::Expr>(stmts[i]);
+            if (E) {
                fprintf(stderr,"Has expression: %s\n",s.c_str());
-            } else if (const clang::DeclStmt *DS = dyn_cast<clang::DeclStmt>(stmts[i])) {
-               fprintf(stderr,"Has declaration: %s\n",s.c_str());
             } else {
-               fprintf(stderr,"Has something else: %s\n",s.c_str());
+               const clang::DeclStmt *DS = dyn_cast<clang::DeclStmt>(stmts[i]);
+               if (DS) {
+                  fprintf(stderr,"Has declaration: %s\n",s.c_str());
+               } else {
+                  fprintf(stderr,"Has something else: %s\n",s.c_str());
+               }
             }
             statements.push_back(s);
          }

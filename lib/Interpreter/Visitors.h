@@ -13,6 +13,7 @@
 // author:  Alexei Svitkine
 
 #include <string>
+#include <cstdio>
 #include <vector>
 
 #include <llvm/ADT/OwningPtr.h>
