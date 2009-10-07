@@ -34,8 +34,10 @@ namespace cling {
                                       clang::TargetInfo& target,
                                       clang::Diagnostic *diag,
                                       clang::FileManager *fileMgr,
+                                      clang::SourceManager *srcMgr,
                                       clang::PPCallbacks *callbacks) :
-	m_srcMgr(new clang::SourceManager),
+	m_srcMgr(srcMgr==0 ? new clang::SourceManager : 0),
+   m_ext_srcMgr(srcMgr),
 	m_fileMgr(fileMgr ? 0 : new clang::FileManager), // create a file manager only if we have to
 	m_headerInfo(new clang::HeaderSearch(fileMgr ? *fileMgr : *m_fileMgr))
    {
@@ -57,7 +59,7 @@ namespace cling {
       //-------------------------------------------------------------------------
       // Create the preprocessor
       //-------------------------------------------------------------------------      
-      m_preproc.reset(new clang::Preprocessor(*diag, options, target, *m_srcMgr, *m_headerInfo));
+      m_preproc.reset(new clang::Preprocessor(*diag, options, target, *getSourceManager(), *m_headerInfo));
       m_preproc->setPPCallbacks(callbacks);
       clang::PreprocessorInitOptions ppOptions;
       InitializePreprocessor(*m_preproc, ppOptions);
@@ -67,7 +69,7 @@ namespace cling {
       
       
       m_ast.reset(new clang::ASTContext(options,
-                                       *m_srcMgr,
+                                       *getSourceManager(),
                                        target,
                                        m_preproc->getIdentifierTable(),
                                        m_preproc->getSelectorTable(),
@@ -86,7 +88,7 @@ namespace cling {
    
    clang::SourceManager * ParseEnvironment::getSourceManager() const
    {
-      return m_srcMgr.get();
+      return m_ext_srcMgr ? m_ext_srcMgr : m_srcMgr.get();
    }
 
 }

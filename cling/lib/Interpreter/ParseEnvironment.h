@@ -42,10 +42,11 @@ namespace cling {
    public:
       
       ParseEnvironment(const clang::LangOptions& options,
-                     clang::TargetInfo& target,
-                     clang::Diagnostic *diag,
-                     clang::FileManager *fileMgr = 0,
-                     clang::PPCallbacks *callbacks = 0);
+                       clang::TargetInfo& target,
+                       clang::Diagnostic *diag,
+                       clang::FileManager *fileMgr = 0,
+                       clang::SourceManager *srcMgr = 0,
+                       clang::PPCallbacks *callbacks = 0);
       
       clang::ASTContext * getASTContext() const;
       clang::Preprocessor * getPreprocessor() const;
@@ -53,7 +54,8 @@ namespace cling {
       
    private:
       
-      llvm::OwningPtr<clang::SourceManager> m_srcMgr;
+      llvm::OwningPtr<clang::SourceManager> m_srcMgr;     // Source manager we own
+      clang::SourceManager*                 m_ext_srcMgr; // Source manager we do not own.
       llvm::OwningPtr<clang::FileManager>   m_fileMgr;
       llvm::OwningPtr<clang::HeaderSearch>  m_headerInfo;
       llvm::OwningPtr<clang::Preprocessor>  m_preproc;
