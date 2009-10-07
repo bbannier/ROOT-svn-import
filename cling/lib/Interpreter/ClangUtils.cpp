@@ -44,27 +44,34 @@ SrcRange getStmtRangeWithSemicolon(const clang::Stmt *S,
 {
 	clang::SourceLocation SLoc = sm.getInstantiationLoc(S->getLocStart());
 	clang::SourceLocation ELoc = sm.getInstantiationLoc(S->getLocEnd());
-	unsigned start = sm.getFileOffset(SLoc);
-	unsigned end   = sm.getFileOffset(ELoc);
+	unsigned start = SLoc.isValid() ? sm.getFileOffset(SLoc) : 0;
+	unsigned end   = ELoc.isValid() ? sm.getFileOffset(ELoc) : 0;
 
 	// Below code copied from clang::Lexer::MeasureTokenLength():
-	clang::SourceLocation Loc = sm.getInstantiationLoc(ELoc);
-	std::pair<clang::FileID, unsigned> LocInfo = sm.getDecomposedLoc(Loc);
-	std::pair<const char *,const char *> Buffer = sm.getBufferData(LocInfo.first);
-	const char *StrData = Buffer.first+LocInfo.second;
-	clang::Lexer TheLexer(Loc, options, Buffer.first, StrData, Buffer.second);
-	clang::Token TheTok;
-	TheLexer.LexFromRawLexer(TheTok);
-	// End copied code.
-	end += TheTok.getLength();
+   if (end!=0) {
+      clang::SourceLocation Loc = sm.getInstantiationLoc(ELoc);
+      std::pair<clang::FileID, unsigned> LocInfo = sm.getDecomposedLoc(Loc);
+      std::pair<const char *,const char *> Buffer = sm.getBufferData(LocInfo.first);
+      const char *StrData = Buffer.first+LocInfo.second;
+      clang::Lexer TheLexer(Loc, options, Buffer.first, StrData, Buffer.second);
+      clang::Token TheTok;
+      TheLexer.LexFromRawLexer(TheTok);
+      // End copied code.
+      end += TheTok.getLength();
 
-	// Check if we the source range did include the semicolon.
-	if (TheTok.isNot(clang::tok::semi) && TheTok.isNot(clang::tok::r_brace)) {
-		TheLexer.LexFromRawLexer(TheTok);
-		if (TheTok.is(clang::tok::semi)) {
-			end += TheTok.getLength();
-		}
-	}
+      // Check if we the source range did include the semicolon.
+      if (TheTok.isNot(clang::tok::semi) && TheTok.isNot(clang::tok::r_brace)) {
+         TheLexer.LexFromRawLexer(TheTok);
+         if (TheTok.is(clang::tok::semi)) {
+            end += TheTok.getLength();
+         }
+      }
+   } else {
+      clang::SourceLocation Loc = sm.getInstantiationLoc(SLoc);
+      std::pair<clang::FileID, unsigned> LocInfo = sm.getDecomposedLoc(Loc);
+      std::pair<const char *,const char *> Buffer = sm.getBufferData(LocInfo.first);
+      end = Buffer.second - Buffer.first;
+   }
 
 	return SrcRange(start, end);
 }
