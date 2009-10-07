@@ -961,13 +961,8 @@ namespace cling
       statements.clear();
       if (diag.hasErrorOccurred()) {
          return false;
-//      } else if (stmts.size() == 1) {
-//         fprintf(stderr, "Unique is: %s\n", input.c_str());
-//
-//         statements.push_back(input);
       } else {
          for (unsigned i = 0; i < stmts.size(); i++) {
-            stmts[i]->dump();
             SrcRange range = getStmtRangeWithSemicolon(stmts[i], *sm, m_lang);
             std::string s = src.substr(range.first, range.second - range.first);
 
