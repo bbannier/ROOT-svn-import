@@ -8,6 +8,8 @@
 
 #include "Diagnostics.h"
 #include "ParseEnvironment.h"
+#include "Visitors.h"
+#include "ClangUtils.h"
 
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/System/Host.h>
@@ -47,6 +49,7 @@
 #include <clang/Basic/TargetInfo.h>
 #include <clang/Sema/ParseAST.h>
 #include <clang/Lex/LexDiagnostic.h>
+#include <clang/Lex/MacroInfo.h>
 
 // Private CLANG headers
 #include <Sema/Sema.h>
@@ -56,6 +59,65 @@
 
 namespace cling
 {
+   
+   //
+   // MacroDetector
+   //
+   
+   class MacroDetector : public clang::PPCallbacks
+   {
+      
+   public:
+      
+      MacroDetector(const clang::LangOptions& options, unsigned int minpos,clang::SourceManager *sm) 
+          : m_options(options), m_minpos(minpos), m_srcMgr(sm) {}
+      
+      void setSourceManager(clang::SourceManager *sm) { m_srcMgr = sm; }
+      std::vector<std::string>& getMacrosVector() { return m_macros; }
+      
+      void MacroDefined(const clang::IdentifierInfo *II,
+                        const clang::MacroInfo *MI) {
+         if (MI->isBuiltinMacro() || m_srcMgr==0)
+            return;
+         clang::FileID mainFileID = m_srcMgr->getMainFileID();
+         if (m_srcMgr->getFileID(MI->getDefinitionLoc()) == mainFileID) {
+            std::pair<const char*, const char*> buf = m_srcMgr->getBufferData(mainFileID);
+            SrcRange range = getMacroRange(MI, *m_srcMgr, m_options);
+            if (range.first >= m_minpos) {
+               std::string str(buf.first + range.first, range.second - range.first);
+               fprintf(stderr,"noticing macro: %s\n",str.c_str());
+               m_macros.push_back("#define " + str);
+            }
+         }
+      }
+      
+      void MacroUndefined(const clang::IdentifierInfo *II,
+                          const clang::MacroInfo *MI) {
+         if (MI->isBuiltinMacro() || m_srcMgr==0)
+            return;
+         clang::FileID mainFileID = m_srcMgr->getMainFileID();
+         if (m_srcMgr->getFileID(MI->getDefinitionLoc()) == mainFileID) {
+            std::pair<const char*, const char*> buf = m_srcMgr->getBufferData(mainFileID);
+            SrcRange range = getMacroRange(MI, *m_srcMgr, m_options);
+            if (range.first >= m_minpos) {
+               std::string str(buf.first + range.first, range.second - range.first);
+               size_t pos = str.find(' ');
+               if (pos != std::string::npos)
+                  str = str.substr(0, pos);
+               m_macros.push_back("#undef " + str);
+            }
+         }
+      }
+      
+   private:
+      
+      const clang::LangOptions& m_options;
+      unsigned int m_minpos;
+      clang::SourceManager* m_srcMgr;
+      std::vector<std::string> m_macros;
+      
+   };
+   
    //---------------------------------------------------------------------------
    // Constructor
    //---------------------------------------------------------------------------
@@ -110,7 +172,7 @@ namespace cling
       //------------------------------------------------------------------------
       // Process the unit
       //------------------------------------------------------------------------
-      ParseEnvironment *pEnv = parse( fileName );
+      ParseEnvironment *pEnv = parseFile( fileName );
       clang::TranslationUnitDecl* tu = pEnv->getASTContext()->getTranslationUnitDecl();
       bool res = addUnit( fileName, tu );
       delete pEnv;
@@ -145,13 +207,13 @@ namespace cling
    // Compile the filename and link it to all the modules known to the
    // compiler but do not add it to the list
    //---------------------------------------------------------------------------
-   llvm::Module* Interpreter::link( const std::string& fileName,
+   llvm::Module* Interpreter::linkFile( const std::string& fileName,
                                           std::string* errMsg )
    {
-      ParseEnvironment *pEnv = parse( fileName );
+      ParseEnvironment *pEnv = parseFile( fileName );
       clang::TranslationUnitDecl* tu = pEnv->getASTContext()->getTranslationUnitDecl();
       llvm::Module*           module = compile( tu );
-      llvm::Module*           result = link( module, errMsg );
+      llvm::Module*           result = linkModule( module, errMsg );
       delete pEnv;
       delete module;
       return result;
@@ -161,13 +223,27 @@ namespace cling
    // Compile the buffer and link it to all the modules known to the
    // compiler but do not add it to the list
    //---------------------------------------------------------------------------
-   llvm::Module* Interpreter::link( const llvm::MemoryBuffer* buff,
-                                          std::string* errMsg )
+   llvm::Module* Interpreter::linkSource ( const std::string& source,
+                                                 std::string* errMsg )
    {
-      ParseEnvironment *pEnv = parse( buff );
+      //------------------------------------------------------------------------------
+      // String constants - MOVE SOMEWHERE REASONABLE!
+      //------------------------------------------------------------------------------
+      static const std::string code_prefix = "#include <stdio.h>\nint imain(int argc, char** argv) {\n";
+      static const std::string code_suffix = ";\nreturn 0; } ";
+      
+      std::vector<std::string> statements;
+      splitInput(source, statements);
+
+      //----------------------------------------------------------------------
+      // Wrap the code
+      //----------------------------------------------------------------------
+      std::string wrapped = code_prefix + source + code_suffix;
+
+      ParseEnvironment *pEnv = parseSource( wrapped );
       clang::TranslationUnitDecl* tu = pEnv->getASTContext()->getTranslationUnitDecl();
       llvm::Module*           module = compile( tu );
-      llvm::Module*           result = link( module, errMsg );
+      llvm::Module*           result = linkModule( module, errMsg );
       delete tu;
       delete module;
       return result;
@@ -177,7 +253,7 @@ namespace cling
    // Link the module to all the modules known to the compiler but do
    // not add it to the list
    //---------------------------------------------------------------------------
-   llvm::Module* Interpreter::link( llvm::Module *module, std::string* errMsg )
+   llvm::Module* Interpreter::linkModule( llvm::Module *module, std::string* errMsg )
    {
       if( !module ) {
          if (errMsg) *errMsg = "Module is NULL";
@@ -199,8 +275,14 @@ namespace cling
    //---------------------------------------------------------------------------
    // Parse memory buffer
    //---------------------------------------------------------------------------
-   ParseEnvironment* Interpreter::parse( const llvm::MemoryBuffer* buff )
+   ParseEnvironment* Interpreter::parseSource( const std::string& source )
    {
+      //------------------------------------------------------------------------
+      // Create memory buffer
+      //------------------------------------------------------------------------
+      llvm::MemoryBuffer* buff = llvm::MemoryBuffer::getMemBufferCopy(&*source.begin(),
+                                                                      &*source.end(),
+                                                                      "CLING" );
       //------------------------------------------------------------------------
       // Create a file manager
       //------------------------------------------------------------------------
@@ -221,7 +303,7 @@ namespace cling
    //---------------------------------------------------------------------------
    // Parse file
    //---------------------------------------------------------------------------
-   ParseEnvironment* Interpreter::parse( const std::string& fileName )
+   ParseEnvironment* Interpreter::parseFile( const std::string& fileName )
    {
       //------------------------------------------------------------------------
       // Create a file manager
@@ -282,7 +364,7 @@ namespace cling
       
       p.ParseTranslationUnit();
 
-      dumpTU(tu);
+      // dumpTU(tu);
 
       return pEnv;
    }
@@ -355,7 +437,7 @@ namespace cling
       //-------------------------------------------------------------------------
       // Linke in the module
       //-------------------------------------------------------------------------
-      llvm::Module* module = link( uinfo.module );
+      llvm::Module* module = linkModule( uinfo.module );
       if( !module ) {
          delete tu;
          delete module;
@@ -605,7 +687,7 @@ namespace cling
    int Interpreter::executeFile( const std::string& filename,
                                  const std::string& funcname)
    {
-      llvm::Module* module = link( filename );
+      llvm::Module* module = linkFile( filename );
       if(!module) {
          std::cerr << "[!] Errors occured while parsing file " << filename << "!" << std::endl;
          return 1;
@@ -828,4 +910,68 @@ namespace cling
       return result;
    }
    
+   bool Interpreter::splitInput(const std::string& input, std::vector<std::string>& statements) 
+   {
+      // Insert the environment so that the code input
+      // to insure all the appropriate symbols are defined.
+      std::string src = ""; // prefix source;
+      
+      unsigned int newpos = src.length();
+      
+      // Introduce a specific synthetic function so that
+      // we can find the 
+      src += "void __cling_internal() {\n";
+      // const unsigned pos = src.length();
+      src += input;
+      src += "\n}\n";
+ 
+      fprintf(stderr,"code:\n%s\n",src.c_str());
+      
+      clang::Diagnostic diag( m_diagClient );
+      diag.setSuppressSystemWarnings( true );
+      // Set offset on the diagnostics provider.
+      // diag.setOffset(pos);
+      
+      std::vector<clang::Stmt*> stmts;
+      
+      MacroDetector* macros = new MacroDetector(m_lang, newpos, 0);
+      ParseEnvironment pEnv(m_lang, *m_target, &diag, m_fileMgr, 0, macros);
+
+      clang::SourceManager *sm = pEnv.getSourceManager();
+      macros->setSourceManager( sm );
+      StmtSplitter splitter(src, *sm, m_lang, &stmts);
+      FunctionBodyConsumer<StmtSplitter> consumer(&splitter, "__cling_internal");
+
+      fprintf(stderr, "Parsing in splitInput()...\n");
+
+      llvm::MemoryBuffer* buffer = llvm::MemoryBuffer::getMemBufferCopy(&*src.begin(),
+                                                                        &*src.end(),
+                                                                        "CLING" );
+      pEnv.getSourceManager()->createMainFileIDForMemBuffer( buffer );
+      clang::ParseAST( *pEnv.getPreprocessor(), &consumer, *pEnv.getASTContext());
+      
+      for(unsigned int x = 0; x < macros->getMacrosVector().size(); ++x) {
+         fprintf(stderr,"found macro: %s\n",macros->getMacrosVector()[x].c_str());
+      }
+      
+      statements.clear();
+      if (diag.hasErrorOccurred()) {
+         return false;
+      } else if (stmts.size() == 1) {
+         fprintf(stderr, "Unique is: %s\n", input.c_str());
+
+         statements.push_back(input);
+      } else {
+         for (unsigned i = 0; i < stmts.size(); i++) {
+            SrcRange range = getStmtRangeWithSemicolon(stmts[i], *sm, m_lang);
+            std::string s = src.substr(range.first, range.second - range.first);
+
+            fprintf(stderr, "Split %d is: %s\n", i, s.c_str());
+            
+            statements.push_back(s);
+         }
+      }
+      return true;
+      
+   }
 }

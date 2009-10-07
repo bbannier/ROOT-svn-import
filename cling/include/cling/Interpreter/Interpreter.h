@@ -48,6 +48,8 @@ namespace clang
 
 namespace cling
 {
+   class ParseEnvironment;
+   
    //---------------------------------------------------------------------------
    //! Class for managing many translation units supporting automatic
    //! forward declarations and linking
@@ -119,8 +121,6 @@ namespace cling
                              int& indentLevel,
                              std::vector<clang::FunctionDecl*> *fds);
       
-      
-      
       //---------------------------------------------------------------------
       //! Get a compiled  module linking together all translation units
       //!
@@ -136,8 +136,8 @@ namespace cling
       //! @return the resulting module or 0, consult the diagnostics if a 0
       //!         pointer is returned
       //---------------------------------------------------------------------
-      virtual llvm::Module* link( const std::string& fileName,
-                                       std::string* errMsg = 0);
+      virtual llvm::Module* linkFile( const std::string& fileName,
+                                            std::string* errMsg = 0);
 
       //---------------------------------------------------------------------
       //! Compile the buffer and link it to all the modules known to the
@@ -148,8 +148,8 @@ namespace cling
       //! @return the resulting module or 0, consult the diagnostics if a 0
       //!         pointer is returned
       //---------------------------------------------------------------------
-      virtual llvm::Module* link( const llvm::MemoryBuffer* buff,
-                                       std::string* errMsg = 0);
+      virtual llvm::Module* linkSource( const std::string& src,
+                                              std::string* errMsg = 0);
 
       //---------------------------------------------------------------------
       //! Link the module to all the modules known to the compiler but do
@@ -158,8 +158,8 @@ namespace cling
       //! @return the resulting module or 0, consult the diagnostics if a 0
       //!         pointer is returned
       //---------------------------------------------------------------------
-      virtual llvm::Module* link( llvm::Module *module,
-                                  std::string* errMsg = 0);
+      virtual llvm::Module* linkModule( llvm::Module *module,
+                                        std::string* errMsg = 0);
 
       //---------------------------------------------------------------------
       //! Execute a module containing a function funcname.
@@ -224,13 +224,14 @@ namespace cling
       llvm::Module*                  m_module;
       llvm::LLVMContext*             m_llvmContext;
 
+
    private:
-      clang::TranslationUnitDecl* parse( const llvm::MemoryBuffer* buff );
-      clang::TranslationUnitDecl* parse( const std::string& fileName );
-      clang::TranslationUnitDecl* parse( clang::SourceManager* srcMgr );
-      llvm::Module*           compile( clang::TranslationUnitDecl* tu );
-      bool                    addUnit( const UnitID_t& id,
-                                       clang::TranslationUnitDecl* tu );
+      ParseEnvironment* parseSource( const std::string& source );
+      ParseEnvironment* parseFile( const std::string& fileName );
+      ParseEnvironment* parse( clang::SourceManager* srcMgr );
+      llvm::Module*     compile( clang::TranslationUnitDecl* tu );
+      bool              addUnit( const UnitID_t& id,
+                                 clang::TranslationUnitDecl* tu );
 
       std::vector<clang::Decl*>
       extractDeclarations( clang::TranslationUnitDecl* tu );
@@ -245,7 +246,9 @@ namespace cling
                         clang::Token& lastTok,
                         int& indentLevel,
                         bool& tokWasDo);
-      void initHeaderSearch(clang::HeaderSearch &headerInfo);
+      
+      bool splitInput(const std::string& input, std::vector<std::string>& statements);
+            
    };
 }
 

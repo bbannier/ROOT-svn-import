@@ -22,17 +22,6 @@ namespace llvm {
    class Module;
 }
 
-namespace {
-
-   //------------------------------------------------------------------------------
-   // String constants - MOVE SOMEWHERE REASONABLE!
-   //------------------------------------------------------------------------------
-   static std::string code_prefix = "#include <stdio.h>\nint imain(int argc, char** argv) {\n";
-   static std::string code_suffix = ";\nreturn 0; } ";
-
-} // unnamed namespace
-
-
 //---------------------------------------------------------------------------
 // Construct an interface for an interpreter
 //---------------------------------------------------------------------------
@@ -123,20 +112,12 @@ int cling::UserInterface::NextInteractiveLine(const std::string& line)
          break;
    }
    
-   //----------------------------------------------------------------------
-   // Wrap the code
-   //----------------------------------------------------------------------
-   std::string wrapped = code_prefix + m_input + code_suffix;
-   llvm::MemoryBuffer* buff
-      = llvm::MemoryBuffer::getMemBufferCopy(&*wrapped.begin(),
-                                             &*wrapped.end(),
-                                             "CLING" );
    
-   //----------------------------------------------------------------------
+    //----------------------------------------------------------------------
    // Parse and run it
    //----------------------------------------------------------------------
    std::string errMsg;
-   llvm::Module* module = m_Interp->link( buff, &errMsg );
+   llvm::Module* module = m_Interp->linkSource( m_input, &errMsg );
 
    if(!module) {
       std::cerr << std::endl;
