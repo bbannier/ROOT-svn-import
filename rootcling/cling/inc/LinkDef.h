@@ -14,5 +14,5 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class TCling;
+#pragma link C++ class TCint;
 #endif
