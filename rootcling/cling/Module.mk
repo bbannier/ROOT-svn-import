@@ -74,14 +74,19 @@ check-cling-header:
 
 ##### extra rules ######
 $(CLINGO) $(clingdo): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS \
-                                  -I$(LLVMDIR)/include/ -I$(LLVMDIR)/include/llvm
+                                  -I$(LLVMDIR)/include
 # remove TCint and its dictionary:
 METAO := $(subst $(METATCINTDO),$(CLINGDO),$(subst $(METATCINTO),$(CLINGO),$(METAO)))
 CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
- -lclingInterpreter -lclingUserInterface -lclingEditLine -lclangFrontend -lclangSema \
- -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis -lclangAST -lclangBasic \
- -lLLVMSystem -lLLVMJIT -lLLVMX86CodeGen -lLLVMExecutionEngine -lLLVMLinker \
- -lLLVMTransformUtils -lLLVMCore -lLLVMSupport
+ -lclingInterpreter -lclingUserInterface -lclingEditLine -lclangFrontend \
+ -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
+ -lclangAST -lclangBasic \
+ -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
+ -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86AsmParser -lLLVMX86AsmPrinter \
+ -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86Info -lLLVMAsmPrinter \
+ -lLLVMCodeGen -lLLVMScalarOpts -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
+ -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC -lLLVMCore \
+ -lLLVMSupport -lLLVMSystem
 
 # This hack does two things:
 # 1. remove core/meta/inc/TCint.h from the list of files to be copied to include/
