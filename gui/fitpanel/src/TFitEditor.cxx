@@ -455,7 +455,7 @@ void TFitEditor::CreateFunctionGroup()
 
    fTypeFit = new TGComboBox(tf0, kFP_TLIST);
    fTypeFit->AddEntry("User Func", kFP_UFUNC);
-   fTypeFit->AddEntry("Prev. Fit", kFP_PREVFIT);
+//    fTypeFit->AddEntry("Prev. Fit", kFP_PREVFIT);
    fTypeFit->AddEntry("Predef-1D", kFP_PRED1D);
    fTypeFit->Resize(90, 20);
    fTypeFit->Select(kFP_PRED1D, kFALSE);
@@ -2848,6 +2848,8 @@ TF1* TFitEditor::HasFitFunction()
             return func;
          }
       }
+   } else {
+      fTypeFit->Select(kFP_UFUNC);
    }
 
    fDrawAdvanced->SetState(kButtonDisabled);
