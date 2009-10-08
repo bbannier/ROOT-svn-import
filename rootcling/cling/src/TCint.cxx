@@ -437,7 +437,8 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
 
             int prerun = G__getPrerun();
             G__setPrerun(0);
-            ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+            //ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+            ui.executeSingleCodeLine(line);
             G__setPrerun(prerun);
             if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
                ResetGlobals();
