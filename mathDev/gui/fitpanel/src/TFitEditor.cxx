@@ -152,6 +152,7 @@
 #include "Fit/BinData.h"
 #include "TMultiGraph.h"
 #include "TTree.h"
+#include "TTreePlayer.h"
 #include "TTreeInput.h"
 #include "TAdvancedGraphicsDialog.h"
 
@@ -244,6 +245,18 @@ void InitParameters(TF1* func, FitObject * fitobj)
       // case gaussian or Landau
    }
 }
+
+void GetTreeVarsAndCuts(TGComboBox* dataSet, string& variables, string& cuts)
+{
+   TGTextLBEntry* textEntry = 
+      static_cast<TGTextLBEntry*>( dataSet->GetListBox()->GetEntry( dataSet->GetSelected() ) );
+   string name = textEntry->GetText()->GetString();
+   variables = name.substr( name.find('(') + 2, name.find(',') - name.find('(') - 3 );
+   cuts = name.substr( name.find(',') + 3, name.find(')') - name.find(',') - 4 );
+
+   return;
+}
+
 
 ClassImp(TFitEditor)
 
@@ -1799,20 +1812,6 @@ void TFitEditor::DoFit()
       case kObjectGraph: {
 
          TGraph *gr = dynamic_cast<TGraph*>(fFitObject);
-         // not sure if this is needed 
-//         TH1F *hist = gr->GetHistogram();
-//          if (hist) { //!!! for many graphs in a pad, use the xmin/xmax of pad!!!
-//             Int_t npoints = gr->GetN();
-//             Double_t *gx = gr->GetX();
-//             Double_t gxmin, gxmax;
-//             const Int_t imin =  TMath::LocMin(npoints,gx);
-//             const Int_t imax =  TMath::LocMax(npoints,gx);
-//             gxmin = gx[imin];
-//             gxmax = gx[imax];
-//             if (xmin < gxmin) xmin = gxmin;
-//             if (xmax > gxmax) xmax = gxmax;
-//          }
-
          FitObject(gr, fitFunc, fitOpts, mopts, strDrawOpts, drange);
          break;
       }
@@ -1825,8 +1824,8 @@ void TFitEditor::DoFit()
       }
       case kObjectGraph2D: {
 
-         TGraph2D *mg = dynamic_cast<TGraph2D*>(fFitObject);
-         FitObject(mg, fitFunc, fitOpts, mopts, strDrawOpts, drange);
+         TGraph2D *g2d = dynamic_cast<TGraph2D*>(fFitObject);
+         FitObject(g2d, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
          break;
       }
@@ -1835,13 +1834,72 @@ void TFitEditor::DoFit()
          break;
       }
       case kObjectTree:  {
-         TGTextLBEntry* textEntry = 
-            static_cast<TGTextLBEntry*>( fDataSet->GetListBox()->GetEntry( fDataSet->GetSelected() ) );
-         string name = textEntry->GetText()->GetString();
-         dynamic_cast<TTree*>(fFitObject)->UnbinnedFit("gausND",
-                                                       name.substr( name.find('(') + 2, name.find(',') - name.find('(') - 3 ).c_str(),
-                                                       name.substr( name.find(',') + 3, name.find(')') - name.find(',') - 4 ).c_str(),
-                                                       "");
+         string variables;
+         string cuts;
+         GetTreeVarsAndCuts(fDataSet, variables, cuts);
+         
+         TTree *tree = dynamic_cast<TTree*>(fFitObject);
+         if ( !tree ) return;
+
+         gROOT->ls();
+         tree->Draw(variables.c_str(),"","goff candle");
+
+         TTreePlayer * player = (TTreePlayer*) tree->GetPlayer();
+         if ( !player ) {
+            Error("DoFit","Player reference is NULL"); 
+            return; 
+         }
+
+         TSelectorDraw * selector = (TSelectorDraw* ) player->GetSelector(); 
+         if ( !selector ) {
+            Error("DoFit","Selector reference is NULL"); 
+            return; 
+         }
+
+         // use pointer stored in the tree (not copy the data in)
+         unsigned int ndim = player->GetDimension();
+         if ( ndim == 0 ) {
+            Error("DoFit","NDIM == 0"); 
+            return; 
+         }
+
+         std::vector<double *> vlist; 
+         for (unsigned int i = 0; i < ndim; ++i) {  
+            double * v =  selector->GetVal(i);
+            if (v != 0) vlist.push_back(v);
+            else 
+               std::cerr << "pointer for variable " << i << " is zero" << std::endl;
+         } 
+         if (vlist.size() != ndim) { 
+            Error("DoFit","Vector is not complete"); 
+            return; 
+         }
+         
+         // fill the data 
+         Long64_t nrows = player->GetSelectedRows();
+         if ( !nrows ) {
+            Error("DoFit","NROWS == 0"); 
+            return; 
+         }
+
+         ROOT::Fit::UnBinData * fitdata = new ROOT::Fit::UnBinData(nrows, ndim, vlist.begin());
+         
+         for ( int i = 0; i < std::min(int(fitdata->Size()),10); ++i) { 
+            // print j coordinate 
+            for (unsigned int j = 0; j < ndim; ++j) {  
+               printf(" x_%d [%d] = %f  \n", j, i,*(fitdata->Coords(i)+j) );
+            } 
+            printf("\n");
+         }
+         
+   
+         //TVirtualFitter::SetDefaultFitter("Minuit");
+         Foption_t fitOption; 
+         ROOT::Math::MinimizerOptions minOption;
+         fitOption.Verbose=1;
+         
+         ROOT::Fit::UnBinFit(fitdata, fitFunc, fitOption, minOption);
+         
          break;
       }
    }
@@ -1976,7 +2034,7 @@ void TFitEditor::DoDataSet(Int_t selected)
    // If it is a tree, and there is no variables selected, show a dialog
    if ( objSelected->InheritsFrom("TTree") && 
         name.find(' ') == string::npos ) {
-      char variables[256]; char cuts[256];
+      char variables[256] = {0}; char cuts[256] = {0};
       strcpy(variables, "Sin input!");
       new TTreeInput( fClient->GetRoot(), GetMainFrame(), variables, cuts );
       if ( strcmp ( variables, "" ) == 0 ) {
@@ -2902,11 +2960,13 @@ void TFitEditor::SetEditable(Bool_t state)
 void TFitEditor::GetRanges(ROOT::Fit::DataRange& drange)
 {
    // Return the ranges selected by the sliders.
-   Int_t ixmin = (Int_t)(fSliderX->GetMinPosition()); 
-   Int_t ixmax = (Int_t)(fSliderX->GetMaxPosition()); 
-   Double_t xmin = fXaxis->GetBinLowEdge(ixmin);
-   Double_t xmax = fXaxis->GetBinUpEdge(ixmax);
-   drange.AddRange(0,xmin, xmax);
+   if ( fDim > 0 ) {
+      Int_t ixmin = (Int_t)(fSliderX->GetMinPosition()); 
+      Int_t ixmax = (Int_t)(fSliderX->GetMaxPosition()); 
+      Double_t xmin = fXaxis->GetBinLowEdge(ixmin);
+      Double_t xmax = fXaxis->GetBinUpEdge(ixmax);
+      drange.AddRange(0,xmin, xmax);
+   }
 
    if ( fDim > 1 ) {
       assert(fYaxis); 
@@ -2973,6 +3033,13 @@ TF1* TFitEditor::GetFitFunction()
       }
       fitFunc = (TF1*)tmpF1->IsA()->New();
       tmpF1->Copy(*fitFunc);
+      if ( int(fFuncPars.size()) != tmpF1->GetNpar() )
+      {
+         fitFunc->SetParameters(tmpF1->GetParameters());
+         GetParameters(fFuncPars, fitFunc);
+      } else {
+         SetParameters(fFuncPars, fitFunc);
+      }
    }
 
    if ( fitFunc == 0 )
@@ -2982,12 +3049,15 @@ TF1* TFitEditor::GetFitFunction()
       double xmin, xmax, ymin, ymax, zmin, zmax;
       drange.GetRange(xmin, xmax, ymin, ymax, zmin, zmax);
 
-      if ( fDim == 1 || fDim == 0 )
-         fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(), xmin, xmax );
-      else if ( fDim == 2 )
-         fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText(), xmin, xmax, ymin, ymax );
-      else if ( fDim == 3 )
-         fitFunc = new TF3("lastFitFunc",fEnteredFunc->GetText(), xmin, xmax, ymin, ymax, zmin, zmax );
+      if ( fDim == 1 || fDim == 0 ) {
+         fitFunc = new TF1("PrevFitTMP",fEnteredFunc->GetText(), xmin, xmax );
+      }
+      else if ( fDim == 2 ) {
+         fitFunc = new TF2("PrevFitTMP",fEnteredFunc->GetText(), xmin, xmax, ymin, ymax );
+      }
+      else if ( fDim == 3 ) {
+         fitFunc = new TF3("PrevFitTMP",fEnteredFunc->GetText(), xmin, xmax, ymin, ymax, zmin, zmax );
+      }
 
       // if the function is not a C defined
       if ( fNone->GetState() != kButtonDisabled )
