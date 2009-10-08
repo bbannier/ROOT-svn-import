@@ -977,7 +977,7 @@ void TFitEditor::ConnectSlots()
    // advanced draw options
    fDrawAdvanced->Connect("Clicked()", "TFitEditor", this, "DoAdvancedOptions()");
 
-   if (fDim > 0) {
+   if (fType != kObjectTree) {
       fSliderX->Connect("PositionChanged()","TFitEditor",this, "DoSliderXMoved()");
       fSliderXMax->Connect("ValueSet(Long_t)", "TFitEditor", this, "DoNumericSliderXChanged()");
       fSliderXMin->Connect("ValueSet(Long_t)", "TFitEditor", this, "DoNumericSliderXChanged()");
@@ -1046,7 +1046,7 @@ void TFitEditor::DisconnectSlots()
    fUserButton->Disconnect("Clicked()");
    fDrawAdvanced->Disconnect("Clicked()");
 
-   if (fDim > 0) {
+   if (fType != kObjectTree) {
       fSliderX->Disconnect("PositionChanged()");
       fSliderXMax->Disconnect("ValueChanged(Long_t)");
       fSliderXMin->Disconnect("ValueChanged(Long_t)");
@@ -1169,8 +1169,13 @@ void TFitEditor::UpdateGUI()
 
    DrawSelection(true);
 
+   if ( fType == kObjectTree )
+      // Don't do anything with the sliders, as they work with TAxis
+      // that are not defined for the TTree
+      return;
+
    // sliders
-   if (fDim > 0) {
+   if (fType != kObjectTree) { // This is as fDim > 0
       TH1* hist = 0;
       switch (fType) {
          case kObjectHisto:
@@ -1713,7 +1718,7 @@ void TFitEditor::DoUseFuncRange()
          if ( tmpTF1 ) {
             Double_t xmin, ymin, zmin, xmax, ymax, zmax;
             tmpTF1->GetRange(xmin, ymin, zmin, xmax, ymax, zmax);
-            if ( fDim > 0 ) {
+            if ( fType != kObjectTree ) {
                fSliderXMin->SetNumber( xmin );
                fSliderXMax->SetNumber( xmax );
                DoNumericSliderXChanged();
@@ -1929,7 +1934,7 @@ void TFitEditor::DoFit()
       // after the GUI has been updated.  It would be more elegant to
       // disconnect the signal from fParentPad, however, this doesn't
       // work for unknown reasons.
-      if ( fDim > 0 ) fSliderX->GetPosition(xmin, xmax);
+      if ( fType != kObjectTree ) fSliderX->GetPosition(xmin, xmax);
       if ( fDim > 1 ) fSliderY->GetPosition(ymin, ymax);
       if ( fDim > 2 ) fSliderZ->GetPosition(zmin, zmax);
       fParentPad->Update();
@@ -1940,9 +1945,9 @@ void TFitEditor::DoFit()
    UpdateGUI();
 
    if ( fParentPad ) {
-      if ( fDim > 0 ) { fSliderX->SetPosition(xmin, xmax); DoSliderXMoved(); }
-      if ( fDim > 1 ) { fSliderY->SetPosition(ymin, ymax); DoSliderYMoved(); }
-      if ( fDim > 2 ) { fSliderZ->SetPosition(zmin, zmax); DoSliderZMoved(); }
+      if ( fType != kObjectTree ) { fSliderX->SetPosition(xmin, xmax); DoSliderXMoved(); }
+      if ( fType != kObjectTree && fDim > 1 ) { fSliderY->SetPosition(ymin, ymax); DoSliderYMoved(); }
+      if ( fType != kObjectTree && fDim > 2 ) { fSliderZ->SetPosition(zmin, zmax); DoSliderZMoved(); }
       fParentPad->GetCanvas()->SetCursor(kPointer);
       fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
       
@@ -2540,7 +2545,12 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
    } else if (obj->InheritsFrom("TTree")) {
       fType = kObjectTree;
       set = kTRUE;
-      fDim = 0; 
+      string variables, cuts;
+      GetTreeVarsAndCuts(fDataSet, variables, cuts);
+      fDim = 1;
+      for ( unsigned int i = 0; i < variables.size() && fDim <= 2; ++i )
+         if ( ':' == variables[i] ) fDim += 1;
+      if ( fDim > 2 ) fDim = 0;
       fMethodList->RemoveAll();
       fMethodList->AddEntry("Unbinned Likelihood", kFP_MUBIN);
       fMethodList->Select(kFP_MUBIN, kFALSE);      
@@ -2563,12 +2573,12 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       fRobustValue->GetNumberEntry()->SetToolTipText("Set robust value");
    }
 
-   if ( fDim < 2 )
+   if ( fDim < 2 || fType == kObjectTree )
       fGeneral->HideFrame(fSliderYParent);
    else
       fGeneral->ShowFrame(fSliderYParent);
 
-   if ( fDim < 1 )
+   if ( fDim < 1 || fType == kObjectTree )
       fGeneral->HideFrame(fSliderXParent);
    else
       fGeneral->ShowFrame(fSliderXParent);
@@ -2960,7 +2970,11 @@ void TFitEditor::SetEditable(Bool_t state)
 void TFitEditor::GetRanges(ROOT::Fit::DataRange& drange)
 {
    // Return the ranges selected by the sliders.
-   if ( fDim > 0 ) {
+   
+   // It's not working for trees as they don't have TAxis.
+   if ( fType == kObjectTree ) return;
+
+   if ( fType != kObjectTree ) {
       Int_t ixmin = (Int_t)(fSliderX->GetMinPosition()); 
       Int_t ixmax = (Int_t)(fSliderX->GetMaxPosition()); 
       Double_t xmin = fXaxis->GetBinLowEdge(ixmin);
