@@ -455,7 +455,6 @@ void TFitEditor::CreateFunctionGroup()
 
    fTypeFit = new TGComboBox(tf0, kFP_TLIST);
    fTypeFit->AddEntry("User Func", kFP_UFUNC);
-//    fTypeFit->AddEntry("Prev. Fit", kFP_PREVFIT);
    fTypeFit->AddEntry("Predef-1D", kFP_PRED1D);
    fTypeFit->Resize(90, 20);
    fTypeFit->Select(kFP_PRED1D, kFALSE);
@@ -1497,7 +1496,7 @@ void TFitEditor::FillFunctionList(Int_t)
       fFuncList->AddEntry("user",   kFP_USER);
 
       // Need to be setted this way, otherwise when the functions
-      // are removed, the list doesn't show them.x
+      // are removed, the list doesn't show them.
       TGListBox *lb = fFuncList->GetListBox();
       lb->Resize(lb->GetWidth(), 200);
 
