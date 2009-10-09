@@ -89,7 +89,7 @@ void cling::UserInterface::runInteractively()
 //---------------------------------------------------------------------------
 void cling::UserInterface::executeSingleCodeLine(const char* line)
 {
-   int err = NextInteractiveLine(line);
+   /*int err =*/ NextInteractiveLine(line);
 }
 
 
