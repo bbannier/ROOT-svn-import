@@ -44,10 +44,14 @@
 #include "compiledata.h"
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/UserInterface/UserInterface.h"
+#include "clang/AST/ASTContext.h"
 
 #include <vector>
 #include <set>
 #include <string>
+
+clang::ASTContext* ClingGimmeAnAST();
+static clang::ASTContext* sDummyAST;
 
 #if G__CINTVERSION == 70030000
 // Ignore SetGetLineFunc in Cint7
@@ -179,7 +183,11 @@ void* TCint::fgSetOfSpecials = 0;
 ClassImp(TCint)
 
 //______________________________________________________________________________
-TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
+TCint::TCint(const char *name, const char *title) :
+   TInterpreter(name, title),
+   fLangInfo(0),
+   fInterpreter(0),
+   fUserInterface(0)
 {
    // Initialize the CINT interpreter interface.
 
@@ -219,6 +227,26 @@ TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
 
    // Make sure that ALL macros are seen as C++.
    G__LockCpp();
+
+   fLangInfo = new clang::LangOptions();
+   //fLangInfo->C99         = 1;
+   fLangInfo->HexFloats   = 1;
+   fLangInfo->BCPLComment = 1; // Only for C99/C++.
+   fLangInfo->Digraphs    = 1; // C94, C99, C++.
+   //fLangInfo->CPlusPlus   = 1;
+   fLangInfo->CPlusPlus0x = 1;
+   fLangInfo->CXXOperatorNames = 1;
+   fLangInfo->Bool = 1;
+   fLangInfo->NeXTRuntime = 1;
+   fLangInfo->NoInline = 1;
+   fLangInfo->Exceptions = 1;
+   fLangInfo->GNUMode = 1;
+   fLangInfo->NoInline = 1;
+   fLangInfo->GNUInline = 1;
+   fLangInfo->DollarIdents = 1;   
+
+   fInterpreter = new cling::Interpreter(*fLangInfo);
+   fUserInterface = new cling::UserInterface(*fInterpreter);
 }
 
 //______________________________________________________________________________
@@ -234,6 +262,7 @@ TCint::~TCint()
 
    delete fMapfile;
    delete fRootmapFiles;
+   delete sDummyAST;
    gCint = 0;
 }
 
@@ -266,6 +295,7 @@ Int_t TCint::InitializeDictionaries()
 
    R__LOCKGUARD(gCINTMutex);
 
+   sDummyAST = ClingGimmeAnAST();
    return G__call_setup_funcs();
 }
 
@@ -359,22 +389,16 @@ Bool_t TCint::IsLoaded(const char* filename) const
 }
 
 //______________________________________________________________________________
-Int_t TCint::Load(const char *filename, Bool_t system)
+Int_t TCint::Load(const char *filename, Bool_t /*system*/)
 {
    // Load a library file in CINT's memory.
    // if 'system' is true, the library is never unloaded.
 
    R__LOCKGUARD2(gCINTMutex);
 
-   int i;
-   if (!system)
-      i = G__loadfile(filename);
-   else
-      i = G__loadsystemfile(filename);
+   fUserInterface->executeSingleCodeLine(TString(".L ") + filename);
 
-   UpdateListOfTypes();
-
-   return i;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -395,24 +419,6 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
 
    Long_t ret = 0;
 
-   clang::LangOptions langInfo;
-   //langInfo.C99         = 1;
-   langInfo.HexFloats   = 1;
-   langInfo.BCPLComment = 1; // Only for C99/C++.
-   langInfo.Digraphs    = 1; // C94, C99, C++.
-   //langInfo.CPlusPlus   = 1;
-   langInfo.CPlusPlus0x = 1;
-   langInfo.CXXOperatorNames = 1;
-   langInfo.Bool = 1;
-   langInfo.NeXTRuntime = 1;
-   langInfo.NoInline = 1;
-   langInfo.Exceptions = 1;
-   langInfo.GNUMode = 1;
-   langInfo.NoInline = 1;
-   langInfo.GNUInline = 1;
-   langInfo.DollarIdents = 1;
-   cling::Interpreter interp(langInfo); 
-   cling::UserInterface ui(interp);
    if (gApplication) {
       if (gApplication->IsCmdThread()) {
          if (gGlobalMutex && !gCINTMutex && fLockProcessLine) {
@@ -438,7 +444,7 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
             int prerun = G__getPrerun();
             G__setPrerun(0);
             //ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
-            ui.executeSingleCodeLine(line);
+            fUserInterface->executeSingleCodeLine(line);
             G__setPrerun(prerun);
             if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
                ResetGlobals();
@@ -472,7 +478,7 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
       int prerun = G__getPrerun();
       G__setPrerun(0);
       //ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
-      ui.executeSingleCodeLine(line);
+      fUserInterface->executeSingleCodeLine(line);
       G__setPrerun(prerun);
       if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
          ResetGlobals();

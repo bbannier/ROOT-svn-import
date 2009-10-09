@@ -52,6 +52,14 @@ class TMethod;
 class TObjArray;
 class TEnv;
 
+namespace clang {
+   class LangOptions;
+}
+namespace cling {
+   class Interpreter;
+   class UserInterface;
+}
+
 class TCint : public TInterpreter {
 
 private:
@@ -67,10 +75,15 @@ private:
    TObjArray      *fRootmapFiles;   //list of non-default rootmap files loaded
    Bool_t          fLockProcessLine;//true if ProcessLine should lock gCINTMutex
    static void    *fgSetOfSpecials; //set of TObject*s used in CINT variables
+   clang::LangOptions* fLangInfo;   // language definition / features
+   cling::Interpreter* fInterpreter;// cling
+   cling::UserInterface* fUserInterface;//cling's command processor
 
    TCint() : fMore(-1), fExitCode(0), fDictPos(), fDictPosGlobals(),
-     fSharedLibs(), fIncludePath(), fRootmapLoadPath(), fMapfile(0),
-     fRootmapFiles(0), fLockProcessLine(kFALSE) { }  //for Dictionary() only
+             fSharedLibs(), fIncludePath(), fRootmapLoadPath(), fMapfile(0),
+             fRootmapFiles(0), fLockProcessLine(kFALSE),
+             fLangInfo(0), fInterpreter(0), fUserInterface(0)
+   { }  //for Dictionary() only
    TCint(const TCint&);             // not implemented
    TCint &operator=(const TCint&);  // not implemented
    void Execute(TMethod *, TObjArray *, int * /*error*/ = 0) { }
