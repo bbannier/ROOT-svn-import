@@ -47,7 +47,7 @@ namespace cling {
       
       clang::InitHeaderSearch hiInit(*m_headerInfo);
       hiInit.AddDefaultEnvVarPaths(options);
-      hiInit.AddDefaultSystemIncludePaths(options);
+      hiInit.AddDefaultSystemIncludePaths(options, target.getTriple());
       llvm::sys::Path clangIncl(LLVM_LIBDIR, strlen(LLVM_LIBDIR));
       clangIncl.appendComponent("clang");
       clangIncl.appendComponent(CLANG_VERSION_STRING);
