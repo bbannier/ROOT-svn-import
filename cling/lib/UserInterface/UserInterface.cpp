@@ -177,6 +177,7 @@ bool cling::UserInterface::ProcessMeta(const std::string& input)
          break;
       }
    case 'x':
+   case 'X':
       {
          size_t first = 3;
          while (isspace(input[first])) ++first;
