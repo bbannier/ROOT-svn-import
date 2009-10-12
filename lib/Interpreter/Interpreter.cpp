@@ -235,15 +235,28 @@ namespace cling
       static const std::string code_prefix = "#include <stdio.h>\nint imain(int argc, char** argv) {\n";
       static const std::string code_suffix = ";\nreturn 0; } ";
       
-      std::vector<std::string> statements;
-      splitInput(source, statements);
+      // check whether we have a preprocessor statement:
+      size_t posHash = 0;
+      while (isspace(source[posHash]))
+         ++posHash;
+      if (source[posHash] != '#')
+         posHash = std::string::npos;
 
-      //----------------------------------------------------------------------
-      // Wrap the code
-      //----------------------------------------------------------------------
-      std::string wrapped = code_prefix + source + code_suffix;
+      ParseEnvironment *pEnv = 0;
+      if (posHash == std::string::npos) {
+         std::vector<std::string> statements;
+         splitInput(source, statements);
 
-      ParseEnvironment *pEnv = parseSource( wrapped );
+         //----------------------------------------------------------------------
+         // Wrap the code
+         //----------------------------------------------------------------------
+         std::string wrapped = code_prefix + source + code_suffix;
+         pEnv = parseSource( wrapped );
+      } else {
+         // preprocessor statement; nothing to wrap
+         pEnv = parseSource( source );         
+      }
+
       clang::TranslationUnitDecl* tu = pEnv->getASTContext()->getTranslationUnitDecl();
       llvm::Module*           module = compile( tu );
       llvm::Module*           result = linkModule( module, errMsg );
@@ -700,8 +713,11 @@ namespace cling
       if (funcname == "()") {
          size_t posSlash = filename.find_last_of('/');
          ++posSlash; // npos to 0, good!
-         size_t posDot = filename.find('.'); // npos is OK, too.
-         myfuncname = filename.substr(posSlash, posDot);
+         myfuncname = filename.substr(posSlash);
+         size_t posDot = myfuncname.find('.');
+         if (posDot != std::string::npos) {
+            myfuncname.erase(posDot, -1);
+         }
       }
 
       return executeModuleMain( module, myfuncname );
