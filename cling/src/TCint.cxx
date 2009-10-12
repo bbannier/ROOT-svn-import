@@ -556,6 +556,7 @@ void TCint::PrintIntro()
    // Print CINT introduction and help message.
 
    Printf("\nCINT/ROOT C/C++ Interpreter version %s", G__cint_version());
+   Printf(">>>>>>>>> cling-ified version <<<<<<<<<<");
    Printf("Type ? for help. Commands must be C++ statements.");
    Printf("Enclose multiple statements between { }.");
 }

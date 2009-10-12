@@ -30,7 +30,7 @@ clang::ASTContext* ClingGimmeAnAST() {
       langInfo.HexFloats   = 1;
       langInfo.BCPLComment = 1; // Only for C99/C++.
       langInfo.Digraphs    = 1; // C94, C99, C++.
-      //langInfo.CPlusPlus   = 1;
+      langInfo.CPlusPlus   = 1;
       langInfo.CPlusPlus0x = 1;
       langInfo.CXXOperatorNames = 1;
       langInfo.Bool = 1;
@@ -65,7 +65,7 @@ clang::ASTContext* ClingGimmeAnAST() {
 
       clang::InitHeaderSearch hiInit(*headerInfo.get());
       hiInit.AddDefaultEnvVarPaths(langInfo);
-      hiInit.AddDefaultSystemIncludePaths(langInfo);
+      hiInit.AddDefaultSystemIncludePaths(langInfo, target->getTriple());
       llvm::sys::Path clangIncl(LLVM_LIBDIR, strlen(LLVM_LIBDIR));
       clangIncl.appendComponent("clang");
       clangIncl.appendComponent(CLANG_VERSION_STRING);
