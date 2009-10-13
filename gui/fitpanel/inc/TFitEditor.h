@@ -32,6 +32,7 @@
 #include "Fit/DataRange.h"
 
 #include <vector>
+#include <map>
 #include <utility>
 
 //--- Object types
@@ -129,9 +130,9 @@ protected:
       Double_t & operator[](UInt_t i) { return fP[i];}
       Double_t fP[3];
    };
-   std::vector<FuncParamData_t>  fFuncPars;         // function parameters (value + limits)
+   std::vector<FuncParamData_t> fFuncPars; // function parameters (value + limits)
 
-   std::vector<std::pair<TObject*, TF1*> > fPrevFit;             // Previous succesful fits.
+   std::multimap<TObject*, TF1*> fPrevFit; // Previous succesful fits.
    std::vector<TF1*> fSystemFuncs;         // functions managed by the fitpanel
 
    TGRadioButton       *fLibMinuit;        // set default minimization library (Minuit)
