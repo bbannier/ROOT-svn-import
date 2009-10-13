@@ -511,6 +511,8 @@ TFitEditor::~TFitEditor()
 
    DisconnectSlots();
    fCloseButton->Disconnect("Clicked()");
+   fDataSet->Disconnect("Selected(Int_t)");
+   fUpdateButton->Disconnect("Clicked()");
    TQObject::Disconnect("TCanvas", "Selected(TVirtualPad *, TObject *, Int_t)",
                         this, "SetFitObject(TVirtualPad *, TObject *, Int_t)");
    gROOT->GetListOfCleanups()->Remove(this);
@@ -1102,7 +1104,6 @@ void TFitEditor::DisconnectSlots()
 
    Disconnect("CloseWindow()");
 
-   fDataSet->Disconnect("Selected(Int_t)");
    fFuncList->Disconnect("Selected(Int_t)");
    fEnteredFunc->Disconnect("ReturnPressed()");
    fSetParam->Disconnect("Clicked()");
@@ -1120,7 +1121,6 @@ void TFitEditor::DisconnectSlots()
    fNoStoreDrawing->Disconnect("Toggled(Bool_t)");
 
    // fit, reset, close buttons
-   fUpdateButton->Disconnect("Clicked()");
    fFitButton->Disconnect("Clicked()");
    fResetButton->Disconnect("Clicked()");
    
@@ -1502,7 +1502,6 @@ void TFitEditor::DoNoSelection()
    }
    
    DisconnectSlots();
-   fDataSet->Connect("Selected(Int_t)", "TFitEditor", this, "DoDataSet(Int_t)");
    fParentPad = 0;
    fFitObject = 0;
    fStatusBar->SetText("No selection",0);
@@ -1536,6 +1535,8 @@ void TFitEditor::RecursiveRemove(TObject* obj)
                         "SetFitObject(TVirtualPad *, TObject *, Int_t)");
       TQObject::Connect("TCanvas", "Closed()", "TFitEditor", this, 
                         "DoNoSelection()");
+
+      DoUpdate();
       return;
    }
    if (obj == fParentPad) {
