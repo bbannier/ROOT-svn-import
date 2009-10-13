@@ -167,8 +167,8 @@ using std::queue;
 
 #include "Riostream.h"
 
-typedef std::vector<std::pair<TObject*, TF1*> >::iterator fPrevFitIter;
-typedef std::vector<TF1*>::iterator fSystemFuncIter;
+typedef std::multimap<TObject*, TF1*>::iterator fPrevFitIter;
+typedef std::vector<TF1*>::iterator             fSystemFuncIter;
 
 enum EFitPanel {
    kFP_FLIST, kFP_GAUS,  kFP_GAUSN, kFP_EXPO,  kFP_LAND,  kFP_LANDN,
@@ -229,12 +229,11 @@ TF1* TFitEditor::FindFunction()
    // If we are looking for previously fitted functions, look in the
    // fPrevFit data structure.
    } else if ( fTypeFit->GetSelected() == kFP_PREVFIT ) {
-      for ( fPrevFitIter it = fPrevFit.begin();
-            it != fPrevFit.end(); ++it ) {
+      pair<fPrevFitIter, fPrevFitIter> look = fPrevFit.equal_range(fFitObject);
+      for ( fPrevFitIter it = look.first; it != look.second; ++it ) {
          TF1* f = it->second;
-         if ( it->first == fFitObject )
-            if ( strcmp( f->GetName(), name ) == 0 )
-               return f;
+         if ( strcmp( f->GetName(), name ) == 0 )
+            return f;
       }
    }
 
@@ -1619,11 +1618,9 @@ void TFitEditor::FillFunctionList(Int_t)
    else if ( fTypeFit->GetSelected() == kFP_PREVFIT ) {
       Int_t newid = kFP_ALTFUNC;
 
-      for ( fPrevFitIter i = fPrevFit.begin();
-            i != fPrevFit.end(); ++i ) {
-         if ( i->first == fFitObject ) {
-            fFuncList->AddEntry(i->second->GetName(), newid++);
-         }
+      pair<fPrevFitIter, fPrevFitIter> look = fPrevFit.equal_range(fFitObject);
+      for ( fPrevFitIter it = look.first; it != look.second; ++it ) {
+         fFuncList->AddEntry(it->second->GetName(), newid++);
       }
 
       if ( newid == kFP_ALTFUNC ) {
@@ -2025,7 +2022,7 @@ void TFitEditor::DoFit()
    if ( strcmp(tmpTF1->GetName(), "PrevFitTMP") != 0 )
       name << "-" << tmpTF1->GetName();
    tmpTF1->SetName(name.str().c_str());
-   fPrevFit.push_back(make_pair(fFitObject, tmpTF1));
+   fPrevFit.insert(make_pair(fFitObject, tmpTF1));
    fSystemFuncs.push_back( copyTF1(tmpTF1) );
 
    float xmin, xmax, ymin, ymax, zmin, zmax;
@@ -2948,7 +2945,7 @@ TF1* TFitEditor::HasFitFunction()
                   break;
             }
             if ( it == fPrevFit.end() ) {
-               fPrevFit.push_back( make_pair( fFitObject, static_cast<TF1*>( copyTF1( func ) ) ) );
+               fPrevFit.insert( make_pair( fFitObject, static_cast<TF1*>( copyTF1( func ) ) ) );
             }
          }
       }
