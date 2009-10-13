@@ -443,8 +443,23 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
 
             int prerun = G__getPrerun();
             G__setPrerun(0);
-            //ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
-            fUserInterface->executeSingleCodeLine(line);
+            if ((line[0] == '#') || (line[0] == '.')) {
+               // Preprocessor or special cmd, have cint process it too.
+               ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+            }
+            TString aclicMode;
+            TString arguments;
+            TString io;
+            TString fname;
+            if (!strncmp(line, ".L", 2)) { // Load cmd, check for use of ACLiC.
+               fname = gSystem->SplitAclicMode(line+3, aclicMode, arguments, io);
+            }
+            if (aclicMode.Length()) { // ACLiC, pass to cint and not to cling.
+               ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+            }
+            else {
+               fUserInterface->executeSingleCodeLine(line);
+            }
             G__setPrerun(prerun);
             if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
                ResetGlobals();
@@ -477,8 +492,23 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
 
       int prerun = G__getPrerun();
       G__setPrerun(0);
-      //ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
-      fUserInterface->executeSingleCodeLine(line);
+      if ((line[0] == '#') || (line[0] == '.')) {
+         // Preprocessor or special cmd, have cint process it too.
+         ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+      }
+      TString aclicMode;
+      TString arguments;
+      TString io;
+      TString fname;
+      if (!strncmp(line, ".L", 2)) { // Load cmd, check for use of ACLiC.
+         fname = gSystem->SplitAclicMode(line+3, aclicMode, arguments, io);
+      }
+      if (aclicMode.Length()) { // ACLiC, pass to cint and not to cling.
+         ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+      }
+      else {
+         fUserInterface->executeSingleCodeLine(line);
+      }
       G__setPrerun(prerun);
       if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
          ResetGlobals();
