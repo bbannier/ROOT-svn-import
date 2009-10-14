@@ -4,8 +4,8 @@
 // author:  Lukasz Janyst <ljanyst@cern.ch>
 //------------------------------------------------------------------------------
 
-#ifndef CLING_USERINTERFACE_H
-#define CLING_USERINTERFACE_H
+#ifndef CLING_METAPROCESSOR_H
+#define CLING_METAPROCESSOR_H
 
 #include <string>
 
@@ -19,27 +19,26 @@ namespace cling {
    //---------------------------------------------------------------------------
    //! Class for the user interaction with the interpreter
    //---------------------------------------------------------------------------
-   class UserInterface
+   class MetaProcessor
    {
    public:
-      UserInterface(Interpreter& interp, const char* prompt = "[cling] $");
-      ~UserInterface();
+      MetaProcessor(Interpreter& interp, const char* prompt = "[cling] $");
+      ~MetaProcessor();
 
-      void runInteractively();
-      void executeSingleCodeLine(const char* line);
-      void loadFile(const char* file);
+      bool process(const char* code);
+      bool isQuitRequested() const { return m_QuitRequested; }
+      void requestQuit(bool req) { m_QuitRequested = req; }
 
    private:
-      int NextInteractiveLine(const std::string& line);
       bool ProcessMeta(const std::string& input);
 
       Interpreter* m_Interp;
-      bool m_QuitRequested;
+      bool m_QuitRequested; // Whether the event loop has been requested top end
       int m_contLevel;     // How many continuation level (i.e. open nested blocks)
-      std::string m_input; // Accumulation of the incomplete lines. 
+      std::string m_input; // Accumulation of the incomplete lines.
    };
 }
 
-#endif // CLING_USERINTERFACE_H
+#endif // CLING_METAPROCESSOR_H
 
 

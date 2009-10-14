@@ -4,7 +4,7 @@
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
-#include <cling/UserInterface/UserInterface.h>
+#include <cling/MetaProcessor/MetaProcessor.h>
 
 #include <cling/Interpreter/Interpreter.h>
 
@@ -25,8 +25,10 @@ namespace llvm {
 //---------------------------------------------------------------------------
 // Construct an interface for an interpreter
 //---------------------------------------------------------------------------
-cling::UserInterface::UserInterface(Interpreter& interp, const char* prompt /*= "[cling] $"*/):
-   m_Interp(&interp)
+cling::MetaProcessor::MetaProcessor(Interpreter& interp, const char* prompt /*= "[cling] $"*/):
+   m_Interp(&interp),
+   m_QuitRequested(false),
+   m_contLevel(-1)
 {
 }
 
@@ -34,71 +36,17 @@ cling::UserInterface::UserInterface(Interpreter& interp, const char* prompt /*= 
 //---------------------------------------------------------------------------
 // Destruct the interface
 //---------------------------------------------------------------------------
-cling::UserInterface::~UserInterface()
+cling::MetaProcessor::~MetaProcessor()
 {
 }
 
 //---------------------------------------------------------------------------
-// Interact with the user using a prompt
+// Compile and execute some code or process some meta command.
+// Return whether successful.
 //---------------------------------------------------------------------------
-void cling::UserInterface::runInteractively()
+bool cling::MetaProcessor::process(const char* code)
 {
-   std::cerr << std::endl;
-   std::cerr << "**** Welcome to the cling prototype! ****" << std::endl;
-   std::cerr << "* Type C code and press enter to run it *" << std::endl;
-   std::cerr << "* Type .q, exit or ctrl+D to quit       *" << std::endl;
-   std::cerr << "*****************************************" << std::endl;
-   struct stat buf;
-   static const char* histfile = ".cling_history";
-   using_history();
-   max_input_history = 100;
-   if (stat(histfile, &buf) == 0) {
-      read_history(histfile);
-   }
-   m_QuitRequested = false;
-   const static std::string defaultPrompt("[cling]$ ");
-   const static std::string defaultCont("... ");
-   std::string prompt = defaultPrompt;
-   while (!m_QuitRequested) {
-      char* line = readline(prompt.c_str(), true);
-      do {
-         line = readline(prompt.c_str(), false);
-         if (line) {
-            for (const char* c = line; *c; ++c) {
-               if (*c == '\a') {
-                  line = 0;
-                  break;
-               }
-            }
-         }
-      } while (!line);
-      add_history(line);
-      write_history(histfile);
-      int indent = NextInteractiveLine(line);
-      if (indent==0) {
-         prompt = defaultPrompt;
-      } else {
-         prompt = defaultCont + std::string(indent * 3, ' ');
-      }
-   }
-}
-
-
-//---------------------------------------------------------------------------
-// Compile and execute a single line of code.
-//---------------------------------------------------------------------------
-void cling::UserInterface::executeSingleCodeLine(const char* line)
-{
-   /*int err =*/ NextInteractiveLine(line);
-}
-
-
-//---------------------------------------------------------------------------
-// Process an interactive line, return whether processing was successful
-//---------------------------------------------------------------------------
-int cling::UserInterface::NextInteractiveLine(const std::string& line)
-{
-   if (ProcessMeta(line)) return true;
+   if (ProcessMeta(code)) return true;
    
    //----------------------------------------------------------------------
    // Check if the statement is complete.  Use the continuation prompt 
@@ -107,7 +55,7 @@ int cling::UserInterface::NextInteractiveLine(const std::string& line)
 
    std::string src = ""; // genSource("");     
    
-   m_input.append( line );
+   m_input.append( code );
    
    int indentLevel;
    std::vector<clang::FunctionDecl *> fnDecls;
@@ -145,7 +93,7 @@ int cling::UserInterface::NextInteractiveLine(const std::string& line)
 //---------------------------------------------------------------------------
 // Process possible meta commands (.L,...)
 //---------------------------------------------------------------------------
-bool cling::UserInterface::ProcessMeta(const std::string& input)
+bool cling::MetaProcessor::ProcessMeta(const std::string& input)
 {
    if (input[0] != '.') return false;
    switch (input[1]) {

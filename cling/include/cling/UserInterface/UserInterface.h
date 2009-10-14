@@ -15,6 +15,7 @@ namespace llvm {
 
 namespace cling {
    class Interpreter;
+   class MetaProcessor;
 
    //---------------------------------------------------------------------------
    //! Class for the user interaction with the interpreter
@@ -26,17 +27,10 @@ namespace cling {
       ~UserInterface();
 
       void runInteractively();
-      void executeSingleCodeLine(const char* line);
-      void loadFile(const char* file);
 
    private:
-      int NextInteractiveLine(const std::string& line);
-      bool ProcessMeta(const std::string& input);
-
-      Interpreter* m_Interp;
+      MetaProcessor* m_MetaProcessor;
       bool m_QuitRequested;
-      int m_contLevel;     // How many continuation level (i.e. open nested blocks)
-      std::string m_input; // Accumulation of the incomplete lines. 
    };
 }
 
