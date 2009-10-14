@@ -57,7 +57,7 @@ namespace clang {
 }
 namespace cling {
    class Interpreter;
-   class UserInterface;
+   class MetaProcessor;
 }
 
 class TCint : public TInterpreter {
@@ -77,16 +77,27 @@ private:
    static void    *fgSetOfSpecials; //set of TObject*s used in CINT variables
    clang::LangOptions* fLangInfo;   // language definition / features
    cling::Interpreter* fInterpreter;// cling
-   cling::UserInterface* fUserInterface;//cling's command processor
+   cling::MetaProcessor* fMetaProcessor;//cling's command processor
 
    TCint() : fMore(-1), fExitCode(0), fDictPos(), fDictPosGlobals(),
              fSharedLibs(), fIncludePath(), fRootmapLoadPath(), fMapfile(0),
              fRootmapFiles(0), fLockProcessLine(kFALSE),
-             fLangInfo(0), fInterpreter(0), fUserInterface(0)
+             fLangInfo(0), fInterpreter(0), fMetaProcessor(0)
    { }  //for Dictionary() only
    TCint(const TCint&);             // not implemented
    TCint &operator=(const TCint&);  // not implemented
    void Execute(TMethod *, TObjArray *, int * /*error*/ = 0) { }
+   Bool_t IsCINTClassInfo(void* ci) const {
+      return (const void*)ci != (const void*) this;
+   }
+
+   enum EInterpreterKind {
+      kCINT,
+      kCling,
+      kInvalidInterpreter,
+      kNumInterpreters = kInvalidInterpreter
+   };
+   EInterpreterKind CheckClassInfoInternal(const char *name, Bool_t autoload = kTRUE);
 
 protected:
 

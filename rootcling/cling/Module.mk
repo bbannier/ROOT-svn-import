@@ -80,7 +80,6 @@ METAO := $(subst $(METATCINTDO),$(CLINGDO),$(subst $(METATCINTO),$(CLINGO),$(MET
 dummy := $(shell echo "METAO=$(METAO)" 2>&1)
 CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
  -lclingInterpreter -lclingUserInterface -lclingEditLine \
- -lncurses \
  -lclangFrontend \
  -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
  -lclangAST -lclangBasic \
