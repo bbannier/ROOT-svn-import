@@ -31,8 +31,8 @@ void rs702_BayesianCalculator()
   // using namespace RooStats;
 
   RooWorkspace* w = new RooWorkspace("w",true);
-  w->factory("SUM::pdf(s[1.01,10]*Uniform(x[0,1]),b[1,0,3]*Uniform(x))");
-  w->factory("Gaussian::prior_b(b,1,0.8)");
+  w->factory("SUM::pdf(s[1.01,10]*Uniform(x[0,1]),b[1,0,10]*Uniform(x))");
+  w->factory("Gaussian::prior_b(b,3,1)");
   w->factory("PROD::model(pdf,prior_b)");
   RooAbsPdf* model = w->pdf("model");
   RooArgSet* nuisanceParameters = new RooArgSet(*(w->var("b")));
@@ -40,6 +40,7 @@ void rs702_BayesianCalculator()
 
   w->factory("Uniform::priorPOI(s)");
   w->factory("GenericPdf::priorPOI2('1/s',s)");
+  //w->factory("Gaussian::priorPOI2(s,5,0.2)");
   RooRealVar* POI = w->var("s");
   RooAbsPdf* priorPOI = w->pdf("priorPOI");
   RooAbsPdf* priorPOI2 = w->pdf("priorPOI2");
@@ -48,9 +49,12 @@ void rs702_BayesianCalculator()
   RooDataSet data("data","",RooArgSet(*(w->var("x")),*(w->var("n"))),"n");
   data.add(RooArgSet(*(w->var("x"))),w->var("n")->getVal());
 
-  BayesianCalculator bcalc1(data,*model,RooArgSet(*POI),*priorPOI,nuisanceParameters);
-  BayesianCalculator bcalc2(data,*model,RooArgSet(*POI),*priorPOI2,nuisanceParameters);
-  BayesianCalculator bcalc3(data,*(w->pdf("pdf")),RooArgSet(*POI),*priorPOI,noNuisanceParameters);
+  BayesianCalculator bcalc1(data,*model,RooArgSet(*POI),*priorPOI,0);
+  bcalc1.SetName("BC_flatPrior");
+  BayesianCalculator bcalc2(data,*model,RooArgSet(*POI),*priorPOI2,0);
+  bcalc2.SetName("BC_1oversPrior");
+  BayesianCalculator bcalc3(data,*(w->pdf("pdf")),RooArgSet(*POI),*priorPOI,nuisanceParameters);
+  bcalc3.SetName("BC_flatPrior_syst");
   bcalc1.SetTestSize(0.05);
   bcalc2.SetTestSize(0.05);
   bcalc3.SetTestSize(0.05);
@@ -75,11 +79,13 @@ void rs702_BayesianCalculator()
 
   pad->cd(2);
   RooPlot* plotSyst = w->var("b")->frame();
-  plotSyst->SetTitle(TString("Prior on nuisance parameter \"")+TString(POI->GetName())+TString("\""));  
+  plotSyst->SetTitle(TString("Prior on nuisance parameter \"")+TString((nuisanceParameters->first())->GetName())+TString("\""));  
   w->pdf("prior_b")->plotOn(plotSyst,LineStyle(kDashed),LineColor(kRed));   
   plotSyst->Draw();
 
-  c1->cd(2);
+  pad = (TPad *) c1->cd(2);
+  pad->Divide(2,1);
+  pad->cd(1);
 
   RooAbsPdf* fPosteriorPdf1 = bcalc1.GetPosteriorPdf();
   RooAbsPdf* fPosteriorPdf2 = bcalc2.GetPosteriorPdf();
@@ -93,13 +99,16 @@ void rs702_BayesianCalculator()
   plot->GetYaxis()->SetTitle("posterior probability");
   plot->Draw();
 
-  // plot of cdf
-//   RooAbsReal * cdf1 =  fPosteriorPdf1->createCdf(RooArgSet(*POI));
-//   RooAbsReal * cdf2 =  fPosteriorPdf2->createCdf(RooArgSet(*POI));
-//   RooPlot* plot2 = POI->frame();
-//   cdf1->plotOn(plot2);
-//   cdf2->plotOn(plot2,LineStyle(kDashed),LineColor(kGreen));
-//   plot2->Draw();
 
-  c1->cd();
+  pad->cd(2);
+  // plot of cdf
+  RooAbsReal * cdf1 =  fPosteriorPdf1->createCdf(RooArgSet(*POI));
+  RooAbsReal * cdf2 =  fPosteriorPdf2->createCdf(RooArgSet(*POI));
+  RooAbsReal * cdf3 =  fPosteriorPdf3->createCdf(RooArgSet(*POI));
+   RooPlot* plot2 = POI->frame();
+   cdf1->plotOn(plot2);
+   cdf2->plotOn(plot2,LineStyle(kDashed),LineColor(kGreen));
+   cdf3->plotOn(plot2,LineStyle(kDashed),LineColor(kRed));
+   plot2->Draw();
+
 }
