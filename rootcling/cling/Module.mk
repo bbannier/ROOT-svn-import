@@ -79,7 +79,7 @@ $(CLINGO) $(clingdo): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
 METAO := $(subst $(METATCINTDO),$(CLINGDO),$(subst $(METATCINTO),$(CLINGO),$(METAO)))
 dummy := $(shell echo "METAO=$(METAO)" 2>&1)
 CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
- -lclingInterpreter -lclingUserInterface -lclingEditLine \
+ -lclingInterpreter -lclingMetaProcessor -lclingEditLine \
  -lclangFrontend \
  -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
  -lclangAST -lclangBasic \
