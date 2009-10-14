@@ -159,13 +159,15 @@
 #include "RConfigure.h"
 #include "TPluginManager.h"
 
+#include <iostream>
 #include <sstream>
 #include <vector>
 #include <queue>
 using std::vector;
 using std::queue;
-
-#include "Riostream.h"
+using std::pair;
+using std::ostringstream;
+using std::make_pair;
 
 typedef std::multimap<TObject*, TF1*>::iterator fPrevFitIter;
 typedef std::vector<TF1*>::iterator             fSystemFuncIter;
@@ -216,7 +218,7 @@ TF1* TFitEditor::FindFunction()
 
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
    if ( !te ) return 0;
-   const char* name(te->GetTitle());
+   TString name(te->GetTitle());
 
    // Look for a system function if it's USER DEFINED function
    if ( fTypeFit->GetSelected() == kFP_UFUNC ) {
@@ -320,13 +322,13 @@ void InitParameters(TF1* func, FitObject * fitobj)
    }
 }
 
-void GetTreeVarsAndCuts(TGComboBox* dataSet, string& variables, string& cuts)
+void GetTreeVarsAndCuts(TGComboBox* dataSet, TString& variablesStr, TString& cutsStr)
 {
    TGTextLBEntry* textEntry = 
       static_cast<TGTextLBEntry*>( dataSet->GetListBox()->GetEntry( dataSet->GetSelected() ) );
-   string name = textEntry->GetText()->GetString();
-   variables = name.substr( name.find('(') + 2, name.find(',') - name.find('(') - 3 );
-   cuts = name.substr( name.find(',') + 3, name.find(')') - name.find(',') - 4 );
+   TString nameStr ( textEntry->GetText()->GetString() );
+   variablesStr = nameStr(nameStr.First('(') + 2, nameStr.First(',') - nameStr.First('(') - 3);
+   cutsStr = nameStr( nameStr.First(',') + 3, nameStr.First(')') - nameStr.First(',') - 4 );
 
    return;
 }
@@ -1935,15 +1937,15 @@ void TFitEditor::DoFit()
          break;
       }
       case kObjectTree:  {
-         string variables;
-         string cuts;
+         TString variables;
+         TString cuts;
          GetTreeVarsAndCuts(fDataSet, variables, cuts);
          
          TTree *tree = dynamic_cast<TTree*>(fFitObject);
          if ( !tree ) return;
 
          gROOT->ls();
-         tree->Draw(variables.c_str(),"","goff candle");
+         tree->Draw(variables,"","goff candle");
 
          TTreePlayer * player = (TTreePlayer*) tree->GetPlayer();
          if ( !player ) {
@@ -2116,17 +2118,17 @@ void TFitEditor::DoDataSet(Int_t selected)
 
    // Get the name of the object
    TGTextLBEntry* textEntry = static_cast<TGTextLBEntry*>(fDataSet->GetListBox()->GetEntry(selected));
-   string textEntryStr = textEntry->GetText()->GetString();
-   string name = textEntry->GetText()->GetString()+textEntry->GetText()->First(':')+2;
+   TString textEntryStr = textEntry->GetText()->GetString();
+   TString name = textEntry->GetText()->GetString()+textEntry->GetText()->First(':')+2;
    
    // Check the object exists and it is registered
    TObject* objSelected(0);
-   if ( textEntryStr.find_first_of("TTree::") == 0 ) {
+   if ( textEntryStr.First("TTree::") == 0 ) {
       // It's a tree, so the name is before the space (' ')
-      objSelected = gROOT->FindObject(name.substr(0, name.find(' ')).c_str());
+      objSelected = gROOT->FindObject(name(0, name.First(' ')).String());
    } else {
       // It's not a tree, so the name is the complete string
-      objSelected = gROOT->FindObject(name.c_str());
+      objSelected = gROOT->FindObject(name);
    }
 
    if ( !objSelected ) 
@@ -2137,7 +2139,7 @@ void TFitEditor::DoDataSet(Int_t selected)
 
    // If it is a tree, and there is no variables selected, show a dialog
    if ( objSelected->InheritsFrom("TTree") && 
-        name.find(' ') == string::npos ) {
+        name.First(' ') == kNPOS ) {
       char variables[256] = {0}; char cuts[256] = {0};
       strcpy(variables, "Sin input!");
       new TTreeInput( fClient->GetRoot(), GetMainFrame(), variables, cuts );
@@ -2644,10 +2646,10 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
    } else if (obj->InheritsFrom("TTree")) {
       fType = kObjectTree;
       set = kTRUE;
-      string variables, cuts;
+      TString variables, cuts;
       GetTreeVarsAndCuts(fDataSet, variables, cuts);
       fDim = 1;
-      for ( unsigned int i = 0; i < variables.size() && fDim <= 2; ++i )
+      for ( int i = 0; i < variables.Length() && fDim <= 2; ++i )
          if ( ':' == variables[i] ) fDim += 1;
       if ( fDim > 2 ) fDim = 0;
       fMethodList->RemoveAll();
@@ -2724,10 +2726,10 @@ void TFitEditor::ShowObjectName(TObject* obj)
    // to search through the list
    TGTextLBEntry* selectedEntry = static_cast<TGTextLBEntry*> ( fDataSet->GetSelectedEntry());
    if ( selectedEntry ) {
-      string selectedName = selectedEntry->GetText()->GetString();
+      TString selectedName = selectedEntry->GetText()->GetString();
       if ( isTree )
-         selectedName = selectedName.substr(0, selectedName.find(' '));
-      if ( name.CompareTo(selectedName.c_str()) == 0 ) {
+         selectedName = selectedName(0, selectedName.First(' '));
+      if ( name.CompareTo(selectedName) == 0 ) {
          Layout();
          return;
       }
@@ -2738,10 +2740,10 @@ void TFitEditor::ShowObjectName(TObject* obj)
    bool found = false;
    while ( TGTextLBEntry* entry = static_cast<TGTextLBEntry*> 
            ( fDataSet->GetListBox()->GetEntry(entryId)) ) {
-      string compareName = entry->GetText()->GetString();
+      TString compareName = entry->GetText()->GetString();
       if ( isTree ) 
-         compareName = compareName.substr(0, compareName.find(' '));
-      if ( name.CompareTo(compareName.c_str()) == 0 ) {
+         compareName = compareName(0, compareName.First(' '));
+      if ( name.CompareTo(compareName) == 0 ) {
          // If the object is found, select it
          fDataSet->Select(entryId, false);
          found = true;
