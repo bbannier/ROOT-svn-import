@@ -1,4 +1,4 @@
-##===- cling/lib/UserInterface/Makefile---------------------*- Makefile -*-===##
+##===- cling/lib/MetaProcessor/Makefile---------------------*- Makefile -*-===##
 # 
 #                     The LLVM Compiler Infrastructure
 #
@@ -12,7 +12,7 @@
 ##===----------------------------------------------------------------------===##
 
 LEVEL = ../../../..
-LIBRARYNAME := clingUserInterface
+LIBRARYNAME := clingMetaProcessor
 BUILD_ARCHIVE = 1
 CXXFLAGS = -fno-rtti
 
