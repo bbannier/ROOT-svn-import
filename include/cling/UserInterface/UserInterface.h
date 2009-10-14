@@ -30,7 +30,6 @@ namespace cling {
 
    private:
       MetaProcessor* m_MetaProcessor;
-      bool m_QuitRequested;
    };
 }
 
