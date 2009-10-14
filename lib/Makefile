@@ -8,7 +8,7 @@
 ##===----------------------------------------------------------------------===##
 LEVEL = ../../..
 
-PARALLEL_DIRS = Interpreter EditLine UserInterface 
+PARALLEL_DIRS = Interpreter MetaProcessor EditLine UserInterface 
 
 include $(LEVEL)/Makefile.common
 
