@@ -3159,11 +3159,6 @@ void TFitEditor::GetFunctionsFromSystem()
          fSystemFuncs.push_back( copyTF1(func) ); 
       }
    }
-
-   for ( fSystemFuncIter it = fSystemFuncs.begin();
-         it != fSystemFuncs.end();
-         ++it ) {
-   }
 }
 
 // This function returns a TList with all the functions used in the
