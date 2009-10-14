@@ -256,7 +256,6 @@ TF1* copyTF1(TF1* f)
       f->GetRange(xmin,ymin,zmin,xmax,ymax,zmax);
       fnew->SetRange(xmin,ymin,zmin,xmax,ymax,zmax);
       fnew->SetParent( 0 );
-      fnew->SetBit(TF1::kNotDraw);
       fnew->SetBit(TFormula::kNotGlobal);
       return fnew;
    } else if ( dynamic_cast<TF2*>(f) != 0 ) {
@@ -266,7 +265,6 @@ TF1* copyTF1(TF1* f)
       fnew->SetRange(xmin,ymin,xmax,ymax);
       fnew->Save(xmin,xmax,ymin,ymax,0,0);
       fnew->SetParent( 0 );
-      fnew->SetBit(TF1::kNotDraw);
       fnew->SetBit(TFormula::kNotGlobal);
       return fnew;
    } else {
@@ -276,7 +274,6 @@ TF1* copyTF1(TF1* f)
       fnew->SetRange(xmin,xmax);
       fnew->Save(xmin,xmax,0,0,0,0);
       fnew->SetParent( 0 );
-      fnew->SetBit(TF1::kNotDraw);
       fnew->SetBit(TFormula::kNotGlobal);
       return fnew;
    }
