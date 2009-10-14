@@ -43,7 +43,7 @@
 #include "RConfigure.h"
 #include "compiledata.h"
 #include "cling/Interpreter/Interpreter.h"
-#include "cling/UserInterface/UserInterface.h"
+#include "cling/MetaProcessor/MetaProcessor.h"
 #include "clang/AST/ASTContext.h"
 
 #include <vector>
@@ -187,7 +187,7 @@ TCint::TCint(const char *name, const char *title) :
    TInterpreter(name, title),
    fLangInfo(0),
    fInterpreter(0),
-   fUserInterface(0)
+   fMetaProcessor(0)
 {
    // Initialize the CINT interpreter interface.
 
@@ -246,7 +246,7 @@ TCint::TCint(const char *name, const char *title) :
    fLangInfo->DollarIdents = 1;   
 
    fInterpreter = new cling::Interpreter(*fLangInfo);
-   fUserInterface = new cling::UserInterface(*fInterpreter);
+   fMetaProcessor = new cling::MetaProcessor(*fInterpreter);
 }
 
 //______________________________________________________________________________
@@ -396,9 +396,15 @@ Int_t TCint::Load(const char *filename, Bool_t /*system*/)
 
    R__LOCKGUARD2(gCINTMutex);
 
-   fUserInterface->executeSingleCodeLine(TString(".L ") + filename);
+   int i;
+   if (!system)
+      i = G__loadfile(filename);
+   else
+      i = G__loadsystemfile(filename);
 
-   return 0;
+   UpdateListOfTypes();
+
+   return i;
 }
 
 //______________________________________________________________________________
@@ -458,7 +464,7 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
                ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
             }
             else {
-               fUserInterface->executeSingleCodeLine(line);
+               fMetaProcessor->process(line);
             }
             G__setPrerun(prerun);
             if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
@@ -507,7 +513,7 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
          ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
       }
       else {
-         fUserInterface->executeSingleCodeLine(line);
+         fMetaProcessor->process(line);
       }
       G__setPrerun(prerun);
       if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
@@ -809,9 +815,11 @@ void TCint::SetClassInfo(TClass *cl, Bool_t reload)
 
    if (!cl->fClassInfo || reload) {
 
-      delete (G__ClassInfo*)cl->fClassInfo;
+      if (IsCINTClassInfo(cl->fClassInfo)) {
+         delete (G__ClassInfo*)cl->fClassInfo;
+      }
       cl->fClassInfo = 0;
-      if (CheckClassInfo(cl->GetName())) {
+      if (CheckClassInfoInternal(cl->GetName()) == kCINT) {
 
          G__ClassInfo *info = new G__ClassInfo(cl->GetName());
          cl->fClassInfo = info;
@@ -855,8 +863,16 @@ void TCint::SetClassInfo(TClass *cl, Bool_t reload)
 //______________________________________________________________________________
 Bool_t TCint::CheckClassInfo(const char *name, Bool_t autoload /*= kTRUE*/)
 {
+   // See CheckClassInfoInternal().
+   return CheckClassInfoInternal(name, autoload) != kInvalidInterpreter;
+}
+
+//______________________________________________________________________________
+TCint::EInterpreterKind TCint::CheckClassInfoInternal(const char *name, Bool_t autoload /*= kTRUE*/)
+{
    // Checks if a class with the specified name is defined in CINT.
-   // Returns kFALSE is class is not defined.
+   // Returns kInvalidInterpreter if class is not defined.
+   // Otherwise it returns the interpreter kind that the type is defined in.
 
    // In the case where the class is not loaded and belongs to a namespace
    // or is nested, looking for the full class name is outputing a lots of
@@ -899,14 +915,14 @@ Bool_t TCint::CheckClassInfo(const char *name, Bool_t autoload /*= kTRUE*/)
       if (*(current+1) != ':') {
          Error("CheckClassInfo", "unexpected token : in %s", classname);
          delete [] classname;
-         return kFALSE;
+         return kInvalidInterpreter;
       }
 
       *current = '\0';
       G__ClassInfo info(classname);
       if (!info.IsValid()) {
          delete [] classname;
-         return kFALSE;
+         return kInvalidInterpreter;
       }
       *current = ':';
       current += 2;
@@ -922,21 +938,21 @@ Bool_t TCint::CheckClassInfo(const char *name, Bool_t autoload /*= kTRUE*/)
       G__ClassInfo info(tagnum);
       // If autoloading is off then Property() == 0 for autoload entries.
       if (!autoload && !info.Property())
-         return kTRUE;
+         return kCINT;
       if (info.Property() & (G__BIT_ISENUM | G__BIT_ISCLASS | G__BIT_ISSTRUCT | G__BIT_ISUNION | G__BIT_ISNAMESPACE)) {
          // We are now sure that the entry is not in fact an autoload entry.
          delete [] classname;
-         return kTRUE;
+         return kCINT;
       }
    }
    G__TypedefInfo t(name);
    if (t.IsValid() && !(t.Property()&G__BIT_ISFUNDAMENTAL)) {
       delete [] classname;
-      return kTRUE;
+      return kCINT;
    }
 
    delete [] classname;
-   return kFALSE;
+   return kInvalidInterpreter;
 }
 
 //______________________________________________________________________________
