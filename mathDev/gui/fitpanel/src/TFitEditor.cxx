@@ -3166,6 +3166,26 @@ void TFitEditor::GetFunctionsFromSystem()
    }
 }
 
+// This function returns a TList with all the functions used in the
+// FitPanel to fit a given object. If the object passed is NULL, then
+// the object used is the currently selected one. It is important to
+// notice that the FitPanel is still the owner of those
+// functions. This means that the user SHOULD NOT delete any of these
+// functions, as the FitPanel will do so in the destructor.
+TList* TFitEditor::GetListOfFittingFunctions(TObject* obj)
+{
+   if (!obj) obj = fFitObject;
+
+   TList *retList = new TList();
+
+   pair<fPrevFitIter, fPrevFitIter> look = fPrevFit.equal_range(obj);
+   for ( fPrevFitIter it = look.first; it != look.second; ++it ) {
+      retList->Add(it->second);
+   }
+
+   return retList;
+}
+
 TF1* TFitEditor::GetFitFunction() 
 {
    TF1 *fitFunc = 0;
