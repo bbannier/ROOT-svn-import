@@ -255,7 +255,7 @@ namespace cling
       //------------------------------------------------------------------------------
       // String constants - MOVE SOMEWHERE REASONABLE!
       //------------------------------------------------------------------------------
-      static const std::string code_prefix = "#include <stdio.h>\nint imain(int argc, char** argv) {\n";
+      static const std::string code_prefix = "#include <stdio.h>\nextern \"C\" int imain(int argc, char** argv) {\n";
       static const std::string code_suffix = ";\nreturn 0; } ";
       
       // check whether we have a preprocessor statement:
