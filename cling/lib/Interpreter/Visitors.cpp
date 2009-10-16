@@ -84,8 +84,6 @@ void StmtSplitter::VisitChildren(clang::Stmt *S)
 
 void StmtSplitter::VisitStmt(clang::Stmt *S)
 {
-   fprintf(stderr,"visit stmt\n");
-   S->dump();
 	m_vec_stmts->push_back(S);
 }
 
