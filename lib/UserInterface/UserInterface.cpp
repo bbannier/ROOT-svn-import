@@ -75,9 +75,10 @@ void cling::UserInterface::runInteractively()
       add_history(line);
       write_history(histfile);
       int indent = m_MetaProcessor->process(line);
-      if (indent==0) {
+      if (indent<=0) {
          prompt = defaultPrompt;
       } else {
+         // Continuation requested.
          prompt = defaultCont + std::string(indent * 3, ' ');
       }
    }
