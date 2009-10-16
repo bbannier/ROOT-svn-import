@@ -470,7 +470,9 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
             else {
                if (strcmp(line, "#include <iostream>")) { 
                   // cling cannot parse <iostream>
-                  fMetaProcessor->process(line);
+                  if (fMetaProcessor->process(line) > 0) {
+                     printf("...\n");
+                  }
                }
             }
             G__setPrerun(prerun);
@@ -520,7 +522,9 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
          ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
       }
       else {
-         fMetaProcessor->process(line);
+         if (fMetaProcessor->process(line) > 0) {
+            printf("...\n");
+         }
       }
       G__setPrerun(prerun);
       if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
