@@ -25,6 +25,7 @@ namespace llvm
    class MemoryBuffer;
    class Module;
    class LLVMContext;
+   class StringRef;
 }
 
 //------------------------------------------------------------------------------
@@ -207,6 +208,18 @@ namespace cling
          return m_diagClient;
       }
 
+      //---------------------------------------------------------------------
+      //! Add an entry to the interpreter's include path
+      //---------------------------------------------------------------------
+      void addIncludePath(const llvm::StringRef& dir);
+
+      //---------------------------------------------------------------------
+      //! Get the niterpreter's include paths; can be NULL
+      //---------------------------------------------------------------------
+      const std::vector<std::string>* getIncludePaths() const {
+         return m_inclPaths;
+      }
+
    protected:
       struct UnitInfo_t
       {
@@ -223,6 +236,7 @@ namespace cling
       std::vector<std::pair<clang::Decl*, const clang::ASTContext*> >      m_decls;
       llvm::Module*                  m_module;
       llvm::LLVMContext*             m_llvmContext;
+      std::vector<std::string>*      m_inclPaths;
 
 
    private:
