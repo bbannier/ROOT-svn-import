@@ -42,11 +42,12 @@ cling::MetaProcessor::~MetaProcessor()
 
 //---------------------------------------------------------------------------
 // Compile and execute some code or process some meta command.
-// Return whether successful.
+// Return 0 when successful; 1+indent level when a continuation is needed,
+// and -1 in case an error was encountered.
 //---------------------------------------------------------------------------
-bool cling::MetaProcessor::process(const char* code)
+int cling::MetaProcessor::process(const char* code)
 {
-   if (ProcessMeta(code)) return true;
+   if (ProcessMeta(code)) return 0;
    
    //----------------------------------------------------------------------
    // Check if the statement is complete.  Use the continuation prompt 
@@ -62,7 +63,7 @@ bool cling::MetaProcessor::process(const char* code)
    bool shouldBeTopLevel = false;
    switch (m_Interp->analyzeInput(src, m_input, indentLevel, &fnDecls)) {
       case Interpreter::Incomplete:
-         return indentLevel;
+         return 1 + indentLevel;
       case Interpreter::TopLevel:
          shouldBeTopLevel = true;
       case Interpreter::Stmt:
