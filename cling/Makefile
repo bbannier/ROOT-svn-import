@@ -50,7 +50,7 @@ install-local::
 ifneq ($(PROJ_SRC_ROOT),$(PROJ_OBJ_ROOT))
 	$(Verb) if test -d "$(PROJ_OBJ_ROOT)/tools/cling/include" ; then \
 	  cd $(PROJ_OBJ_ROOT)/tools/cling/include && \
-	  for hdr in `find . -type f -print | grep -v CVS .tmp` ; do \
+	  for hdr in `find . -type f -print | grep -v CVS | grep -v .tmp` ; do \
 	    $(DataInstall) $$hdr $(PROJ_includedir)/$$hdr ; \
 	  done ; \
 	fi
