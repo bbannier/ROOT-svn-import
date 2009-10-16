@@ -46,6 +46,7 @@ namespace cling {
                        clang::Diagnostic *diag,
                        clang::FileManager *fileMgr = 0,
                        clang::SourceManager *srcMgr = 0,
+                       const std::vector<std::string>* inclPath = 0,
                        clang::PPCallbacks *callbacks = 0);
       
       clang::ASTContext * getASTContext() const;

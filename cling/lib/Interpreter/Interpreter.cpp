@@ -17,7 +17,9 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/System/Host.h>
 #include <llvm/System/Path.h>
+#include <llvm/System/Process.h>
 #include <llvm/ADT/OwningPtr.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Linker.h>
 #include <llvm/Module.h>
 #include <llvm/Function.h>
@@ -125,7 +127,7 @@ namespace cling
    // Constructor
    //---------------------------------------------------------------------------
    Interpreter::Interpreter(clang::LangOptions language):
-      m_lang( language ), m_module( 0 )
+      m_lang( language ), m_module( 0 ), m_inclPaths(0)
    {
       m_llvmContext = &llvm::getGlobalContext();
       m_fileMgr    = new clang::FileManager();
@@ -141,7 +143,16 @@ namespace cling
       m_target->getDefaultLangOptions(language);
 
       // diagostics:
-      m_diagClient = new clang::TextDiagnosticPrinter( llvm::errs() );
+      m_diagClient
+         = new clang::TextDiagnosticPrinter( llvm::errs(),
+                                             true,
+                                             true,
+                                             true,
+                                             false,
+                                             false,
+                                             true,
+                                             llvm::sys::Process::StandardErrColumns(),
+                                             true);
       m_diagClient->setLangOptions(&language);
    }
 
@@ -153,6 +164,18 @@ namespace cling
       delete m_fileMgr;
       delete m_diagClient;
       delete m_target;
+      delete m_inclPaths;
+   }
+
+   //---------------------------------------------------------------------
+   //! Add an entry to the interpreter's include path
+   //---------------------------------------------------------------------
+   void Interpreter::addIncludePath(const llvm::StringRef& dir)
+   {
+      if (!m_inclPaths) {
+         m_inclPaths = new std::vector<std::string>;
+      }
+      m_inclPaths->push_back(dir);
    }
 
    //---------------------------------------------------------------------------
@@ -302,7 +325,8 @@ namespace cling
       //------------------------------------------------------------------------
       // Create a file manager
       //------------------------------------------------------------------------
-      llvm::OwningPtr<clang::SourceManager> srcMgr( new clang::SourceManager() );
+      //FIXME: Memory leak!
+      clang::SourceManager* srcMgr = new clang::SourceManager();
 
       //------------------------------------------------------------------------
       // Register with the source manager
@@ -313,7 +337,7 @@ namespace cling
       if( srcMgr->getMainFileID().isInvalid() )
          return 0;
 
-      return parse( srcMgr.get() );
+      return parse( srcMgr );
    }
 
    //---------------------------------------------------------------------------
@@ -324,7 +348,8 @@ namespace cling
       //------------------------------------------------------------------------
       // Create a file manager
       //------------------------------------------------------------------------
-      llvm::OwningPtr<clang::SourceManager> srcMgr( new clang::SourceManager() );
+      //FIXME: Memory leak!
+      clang::SourceManager* srcMgr = new clang::SourceManager();
 
       //------------------------------------------------------------------------
       // Feed in the file
@@ -336,7 +361,7 @@ namespace cling
       if( srcMgr->getMainFileID().isInvalid() )
          return 0;
 
-      return parse( srcMgr.get() );
+      return parse( srcMgr );
    }
    
    //---------------------------------------------------------------------------
@@ -353,7 +378,7 @@ namespace cling
       //------------------------------------------------------------------------
       // Setup a parse environement
       //------------------------------------------------------------------------
-      ParseEnvironment *pEnv = new ParseEnvironment(m_lang, *m_target, &diag, m_fileMgr, srcMgr);
+      ParseEnvironment *pEnv = new ParseEnvironment(m_lang, *m_target, &diag, m_fileMgr, srcMgr, m_inclPaths);
       
       //clang::ASTConsumer dummyConsumer;
       llvm::raw_stdout_ostream out;
@@ -744,7 +769,7 @@ namespace cling
       //------------------------------------------------------------------------
       // Setup a parse environement
       //------------------------------------------------------------------------
-      ParseEnvironment pEnv(m_lang, *m_target, &tokdiag, m_fileMgr);
+      ParseEnvironment pEnv(m_lang, *m_target, &tokdiag, m_fileMgr, 0, m_inclPaths);
       
       //------------------------------------------------------------------------
       // Register with the source manager
@@ -810,7 +835,7 @@ namespace cling
             }
          } consumer;
          // Need to reset the preprocessor.
-         ParseEnvironment pEnvCheck(m_lang, *m_target, &diag, m_fileMgr);
+         ParseEnvironment pEnvCheck(m_lang, *m_target, &diag, m_fileMgr, 0, m_inclPaths);
          consumer.hadIncludedDecls = false;
          consumer.pos = contextSource.length();
          consumer.maxPos = consumer.pos + buffer->getBuffer().size();
@@ -955,7 +980,8 @@ namespace cling
       std::vector<clang::Stmt*> stmts;
       
       MacroDetector* macros = new MacroDetector(m_lang, newpos, 0);
-      ParseEnvironment pEnv(m_lang, *m_target, &diag, m_fileMgr, 0, macros);
+      ParseEnvironment pEnv(m_lang, *m_target, &diag, m_fileMgr, 0,
+                            m_inclPaths, macros);
 
       clang::SourceManager *sm = pEnv.getSourceManager();
       macros->setSourceManager( sm );
@@ -964,9 +990,10 @@ namespace cling
 
       fprintf(stderr, "Parsing in splitInput()...\n");
 
-      llvm::MemoryBuffer* buffer = llvm::MemoryBuffer::getMemBufferCopy(&*src.begin(),
-                                                                        &*src.end(),
-                                                                        "CLING" );
+      llvm::MemoryBuffer* buffer
+         = llvm::MemoryBuffer::getMemBufferCopy(&*src.begin(),
+                                                &*src.end(),
+                                                "CLING" );
       pEnv.getSourceManager()->createMainFileIDForMemBuffer( buffer );
       clang::ParseAST( *pEnv.getPreprocessor(), &consumer, *pEnv.getASTContext());
 

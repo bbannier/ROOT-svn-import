@@ -35,6 +35,7 @@ namespace cling {
                                       clang::Diagnostic *diag,
                                       clang::FileManager *fileMgr,
                                       clang::SourceManager *srcMgr,
+                                      const std::vector<std::string>* inclPath,
                                       clang::PPCallbacks *callbacks) :
 	m_srcMgr(srcMgr==0 ? new clang::SourceManager : 0),
    m_ext_srcMgr(srcMgr),
@@ -54,6 +55,13 @@ namespace cling {
       clangIncl.appendComponent("include");
       hiInit.AddPath( clangIncl.c_str(), clang::InitHeaderSearch::System,
                      true, false, false, true /*ignore sysroot*/);
+      if (inclPath) {
+         for (std::vector<std::string>::const_iterator iP = inclPath->begin(),
+                 iE = inclPath->end(); iP != iE; ++iP) {
+            hiInit.AddPath(*iP, clang::InitHeaderSearch::Angled,
+                           true, true, false);
+         }
+      }
       hiInit.Realize();
       
       //-------------------------------------------------------------------------
