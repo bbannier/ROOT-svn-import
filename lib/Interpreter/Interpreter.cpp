@@ -155,6 +155,8 @@ namespace cling
                                              llvm::sys::Process::StandardErrColumns(),
                                              true);
       m_diagClient->setLangOptions(&language);
+      
+      m_globalDeclarations = "#include <stdio.h>\n";
    }
 
    //---------------------------------------------------------------------------
@@ -1144,76 +1146,68 @@ namespace cling
                                     std::string& globalDecls,
                                     std::string& processedCode)
    {
-      // Check whether we have an initializer.
-      bool initializers = false;
+
+      std::vector<std::string> stmts;
+      clang::SourceManager *sm = pEnv->getSourceManager();
+      clang::ASTContext *context = pEnv->getASTContext();
       for (clang::DeclStmt::const_decl_iterator D = DS->decl_begin(),
            E = DS->decl_end(); D != E; ++D) {
          if (const clang::VarDecl *VD = dyn_cast<clang::VarDecl>(*D)) {
-            if (VD->getInit()) {
-               initializers = true;
-            }
-         }
-      }
-      if (initializers) {
-         // Note we do not handle correctly the case:
-         //    struct X { int i; } a = {2};
-         // In 'globalDecls' we are missing the struct declaration ( struct X { int i; }; )
-         std::vector<std::string> decls;
-         std::vector<std::string> stmts;
-         clang::SourceManager *sm = pEnv->getSourceManager();
-         clang::ASTContext *context = pEnv->getASTContext();
-         for (clang::DeclStmt::const_decl_iterator D = DS->decl_begin(),
-              E = DS->decl_end(); D != E; ++D) {
-            if (const clang::VarDecl *VD = dyn_cast<clang::VarDecl>(*D)) {
-               std::string decl = genVarDecl(clang::PrintingPolicy(m_lang),
-                                             VD->getType(), VD->getNameAsCString());
-               if (const clang::Expr *I = VD->getInit()) {
-                  SrcRange range = getStmtRange(I, *sm, m_lang);
-                  if (I->isConstantInitializer(*context)) {
-                     // Keep the whole thing in the global context.
-                     processedCode.append( decl + "=" + src.substr(range.first, range.second - range.first) + ";\n" );
-                  } else if (const clang::InitListExpr *ILE = dyn_cast<clang::InitListExpr>(I)) {
-                     // If it's an InitListExpr like {'a','b','c'}, but with non-constant
-                     // initializers, then split it up into x[0] = 'a'; x[1] = 'b'; and
-                     // so forth, which would go in the function body, while making the
-                     // declaration global.
-                     unsigned numInits = ILE->getNumInits();
-                     for (unsigned i = 0; i < numInits; i++) {
-                        std::string stmt;
-                        llvm::raw_string_ostream stmtstream(stmt);
-                        stmtstream << VD->getNameAsCString() << "[" << i << "] = ";
-                        range = getStmtRange(ILE->getInit(i), *sm, m_lang);
-                        stmtstream << src.substr(range.first, range.second - range.first) << ";";
-                        stmts.push_back(stmtstream.str());
-                     }
-                     processedCode.append( decl + ";\n" );
-                  } else {
-                     std::string stmt( VD->getNameAsCString() );
-                     stmt += " = " + src.substr(range.first, range.second - range.first) + ";";
-                     stmts.push_back(stmt);
-                     processedCode.append( decl + ";\n" );
+            std::string decl = genVarDecl(clang::PrintingPolicy(m_lang),
+                                          VD->getType(), VD->getNameAsCString());
+            if (const clang::Expr *I = VD->getInit()) {
+               SrcRange range = getStmtRange(I, *sm, m_lang);
+               if (I->isConstantInitializer(*context)) {
+                  // Keep the whole thing in the global context.
+                  processedCode.append( decl + "=" + src.substr(range.first, range.second - range.first) + ";\n" );
+               } else if (const clang::InitListExpr *ILE = dyn_cast<clang::InitListExpr>(I)) {
+                  // If it's an InitListExpr like {'a','b','c'}, but with non-constant
+                  // initializers, then split it up into x[0] = 'a'; x[1] = 'b'; and
+                  // so forth, which would go in the function body, while making the
+                  // declaration global.
+                  unsigned numInits = ILE->getNumInits();
+                  for (unsigned i = 0; i < numInits; i++) {
+                     std::string stmt;
+                     llvm::raw_string_ostream stmtstream(stmt);
+                     stmtstream << VD->getNameAsCString() << "[" << i << "] = ";
+                     range = getStmtRange(ILE->getInit(i), *sm, m_lang);
+                     stmtstream << src.substr(range.first, range.second - range.first) << ";";
+                     stmts.push_back(stmtstream.str());
                   }
+                  processedCode.append( decl + ";\n" );
                } else {
-                  // Just add it as a definition without an initializer.
+                  std::string stmt( VD->getNameAsCString() );
+                  stmt += " = " + src.substr(range.first, range.second - range.first) + ";";
+                  stmts.push_back(stmt);
                   processedCode.append( decl + ";\n" );
                }
-               decls.push_back(decl + ";\n");
+            } else {
+               // Just add it as a definition without an initializer.
+               processedCode.append( decl + ";\n" );
             }
+            globalDecls.append("extern "+decl+";\n");  
+//         }  if (const clang::RecordDecl *rec = dyn_cast<clang::RecordDecl>(*D)) {
+            
+         } else {
+            clang::SourceLocation SLoc = sm->getInstantiationLoc((*D)->getLocStart());
+            clang::SourceLocation ELoc = sm->getInstantiationLoc((*D)->getLocEnd());
+            SrcRange range = getRangeWithSemicolon(SLoc, ELoc, *sm, m_lang);
+            std::string decl = src.substr(range.first, range.second - range.first);
+            processedCode.append( decl + ";\n" );
+            globalDecls.append( decl + ";\n");
          }
-         for (unsigned i = 0; i < decls.size(); ++i) {
-            globalDecls.append("extern "+decls[i]+"\n");  
-         }
-         if (stmts.size() > 0) { 
-            std::string initstmts;
-            llvm::raw_string_ostream stmtstream( initstmts );
-            for (unsigned i = 0; i < stmts.size(); ++i) {
-               stmtstream << stmts[i] << 'n';
-            }
-            appendStatement(processedCode, stmtstream.str());
-         }
-         return true;
       }
-      return false;
+
+      if (stmts.size() > 0) { 
+         std::string initstmts;
+         llvm::raw_string_ostream stmtstream( initstmts );
+         for (unsigned i = 0; i < stmts.size(); ++i) {
+            stmtstream << stmts[i] << 'n';
+         }
+         appendStatement(processedCode, stmtstream.str());
+      }
+      return true;
+
    }
    
 }

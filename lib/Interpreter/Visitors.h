@@ -63,6 +63,7 @@ namespace cling {
       
       void VisitChildren(clang::Stmt *S);
       void VisitStmt(clang::Stmt *S);
+      void VisitDeclStmt(clang::DeclStmt *S);
       
    private:
       
