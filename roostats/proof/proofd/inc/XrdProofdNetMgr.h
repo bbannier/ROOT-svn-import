@@ -52,15 +52,20 @@ private:
    int                fResourceType;   // resource type
    XrdProofdFile      fPROOFcfg;       // PROOF static configuration
    bool               fReloadPROOFcfg; // Whether the file should regurarl checked for updates
+   bool               fDfltFallback;   // Whether to fallback to default if file cannot be read
    bool               fWorkerUsrCfg;   // user cfg files enabled / disabled
    int                fRequestTO;      // Timeout on broadcast request
 
-   std::list<XrdProofWorker *> fWorkers;               // List of possible workers
-   std::list<XrdProofWorker *> fNodes;                 // List of worker unique nodes
+   std::list<XrdProofWorker *> fDfltWorkers; // List of possible default workers
+   std::list<XrdProofWorker *> fRegWorkers;  // List of all workers registered
+   std::list<XrdProofWorker *> fWorkers;     // List of currently available workers
+   std::list<XrdProofWorker *> fNodes;       // List of worker unique nodes
 
    void               CreateDefaultPROOFcfg();
    int                ReadPROOFcfg(bool reset = 1);
    int                FindUniqueNodes();
+
+   int                LocateLocalFile(XrdOucString &file);
 
    int                DoDirectiveAdminReqTO(char *, XrdOucStream *, bool);
    int                DoDirectiveResource(char *, XrdOucStream *, bool);

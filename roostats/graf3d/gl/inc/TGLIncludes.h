@@ -1,5 +1,5 @@
 // @(#)root/gl:$Id$
-// Author:  Richard Maunder  25/05/2005
+// Authors:  Timur and Matevz, May 2008
 
 /*************************************************************************
  * Copyright (C) 1995-2004, Rene Brun and Fons Rademakers.               *
@@ -12,31 +12,21 @@
 #ifndef ROOT_TGLIncludes
 #define ROOT_TGLIncludes
 
+// GL includes - include this if you are calling OpenGL functions.
+
+#ifdef WIN32
+#include "Windows4Root.h"
+#endif
+
 #ifndef G__DICTIONARY
 
 #include <GL/glew.h>
-#ifdef WIN32
-#include <GL/wglew.h>
-#include "Windows4Root.h"
-#else //WIN32
-#include <GL/glxew.h>
-#endif //WIN32
 
-#else //G__DICTIONARY
-
-#ifdef WIN32
-#ifndef ROOT_Windows4Root
-#include "Windows4Root.h"
-#include <GL/gl.h>
-#include <GL/glu.h>
-#endif
 #else
+
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include <GL/glx.h>
+
 #endif
 
-#endif //G__DICTIONARY
-
-#endif // ROOT_TGLIncludes
-
+#endif

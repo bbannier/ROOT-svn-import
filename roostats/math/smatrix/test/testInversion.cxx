@@ -3,8 +3,6 @@
 #include "TMatrixTSym.h"
 #include "TDecompChol.h"
 #include "TDecompBK.h"
-#include "Minuit2/LASymMatrix.h"
-#include "Minuit2/MnPrint.h"
 
 #include "TRandom.h"
 #include <vector>
@@ -334,7 +332,7 @@ bool stressSymPosInversion(int n, bool selftest ) {
       double s11 = invert2<SymMatrix, Choleski> (v1, time,"SMatrix Chol");
       double s12 = invert2<SymMatrix, BK> (v1, time,"SMatrix   BK");
       double s13 = invert2<SymMatrix, Cramer> (v1, time,"SMatrix Cram");
-      iret  |=  ( equal(s1,s2) && equal(s1,s3) ); 
+      iret  |=  ( equal(s11,s12) && equal(s11,s13) ); 
       if (!iret) 
          std::cout << "result SMatrix choleski  " << s11 << " BK   " << s12 << " cramer " << s13 << std::endl;
       std::cout << std::endl; 

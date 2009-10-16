@@ -28,6 +28,7 @@
 #include "XrdProofdProofServMgr.h"
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdSys/XrdSysPriv.hh"
+#include "XrdSys/XrdSysLogger.hh"
 
 // Tracing
 #include "XrdProofdTrace.h"
@@ -205,13 +206,33 @@ XrdROOTMgr::XrdROOTMgr(XrdProofdManager *mgr,
           : XrdProofdConfig(pi->ConfigFN, e)
 {
    // Constructor
-
    fMgr = mgr;
    fSched = pi->Sched;
+   fLogger = pi->eDest->logger();
    fROOT.clear();
 
    // Configuration directives
    RegisterDirectives();
+}
+
+//__________________________________________________________________________
+void XrdROOTMgr::SetLogDir(const char *dir)
+{
+   // Set the log dir
+   XPDLOC(SMGR, "ROOTMgr::SetLogDir")
+
+   if (fMgr && dir && strlen(dir)) {
+      // MAke sure that the directory to store logs from validation exists
+      XPDFORM(fLogDir, "%s/rootsysvalidation", dir);
+      XrdProofUI ui;
+      XrdProofdAux::GetUserInfo(fMgr->EffectiveUser(), ui);
+      if (XrdProofdAux::AssertDir(fLogDir.c_str(), ui, fMgr->ChangeOwn()) != 0) {
+         XPDERR("unable to assert the rootsys log validation path: "<<fLogDir);
+         fLogDir = "";
+      } else {
+         TRACE(ALL,"rootsys log validation path: "<<fLogDir);
+      }
+   }
 }
 
 //__________________________________________________________________________
@@ -317,7 +338,7 @@ int XrdROOTMgr::DoDirectiveRootSys(char *val, XrdOucStream *cfg, bool)
 
    // Two tokens may be meaningful
    XrdOucString dir = val;
-   val = cfg->GetToken();
+   val = cfg->GetWord();
    XrdOucString tag = val;
    bool ok = 1;
    if (tag == "if") {
@@ -330,7 +351,7 @@ int XrdROOTMgr::DoDirectiveRootSys(char *val, XrdOucStream *cfg, bool)
       // Check for additional info in the form: bindir incdir libdir datadir
       XrdOucString a[4];
       int i = 0;
-      while ((val = cfg->GetToken())) { a[i++] = val; }
+      while ((val = cfg->GetWord())) { a[i++] = val; }
       XrdROOT *rootc = new XrdROOT(dir.c_str(), tag.c_str(), a[0].c_str(),
                                    a[1].c_str(), a[2].c_str(), a[3].c_str());
       // Check if already validated
@@ -394,19 +415,61 @@ int XrdROOTMgr::Validate(XrdROOT *r, XrdScheduler *sched)
       return -1;
    }
 
+   // Debug flag
+   bool debug = 0;
+   if (TRACING(DBG)) debug = 1;
+
+   // Log the attemp into this file
+   XrdOucString logfile, rootrc;
+   if (fLogDir.length() > 0) {
+      XrdOucString tag(r->Tag());
+      tag.replace("/","-");
+      XPDFORM(logfile, "%s/root.%s.log", fLogDir.c_str(), tag.c_str());
+      if (debug) {
+         XPDFORM(rootrc, "%s/root.%s.rootrc", fLogDir.c_str(), tag.c_str());
+      }
+   }
+
    // Fork a test agent process to handle this session
    TRACE(FORK,"XrdROOTMgr::Validate: forking external proofsrv");
    int pid = -1;
    if (!(pid = sched->Fork("proofsrv"))) {
 
-      char *argvv[5] = {0};
+      if (logfile.length() > 0 && fLogger) {
+         // Log to the session log file from now on
+         fLogger->Bind(logfile.c_str());
+         // Transfer the info to proofserv
+         char *ev = new char[strlen("ROOTPROOFLOGFILE=") + logfile.length() + 2];
+         sprintf(ev, "ROOTPROOFLOGFILE=%s", logfile.c_str());
+         putenv(ev);
+         if (debug && rootrc.length() > 0) {
+            // Create .rootrc
+            FILE *frc = fopen(rootrc.c_str(),"w");
+            if (frc) {
+               fprintf(frc, "Proof.DebugLevel: 1\n");
+               fclose(frc);
+            }
+            // Transfer the info to proofserv
+            ev = new char[strlen("ROOTRCFILE=") + rootrc.length() + 2];
+            sprintf(ev, "ROOTRCFILE=%s", rootrc.c_str());
+            putenv(ev);
+         }
+      }
+
+      char *argvv[6] = {0};
 
       // start server
       argvv[0] = (char *)r->PrgmSrv();
       argvv[1] = (char *)"proofserv";
       argvv[2] = (char *)"xpd";
       argvv[3] = (char *)"test";
-      argvv[4] = 0;
+      if (debug) {
+         argvv[4] = (char *)"1";
+         argvv[5] = 0;
+      } else {
+         argvv[4] = 0;
+         argvv[5] = 0;
+      }
 
       // Set basic environment for proofserv
       if (XrdProofdProofServMgr::SetProofServEnv(fMgr, r) != 0) {
@@ -486,6 +549,16 @@ int XrdROOTMgr::Validate(XrdROOT *r, XrdScheduler *sched)
 
    // Set valid, record protocol and update export string
    r->SetValid((kXR_int16) ntohl(proto));
+
+   // Cleanup files
+   if (logfile.length() > 0 && !debug) {
+      if (unlink(logfile.c_str()) != 0) {
+         TRACE(XERR, "problems unlinking "<<logfile<<"; errno: "<<errno);
+      }
+   }
+   if (debug && rootrc.length() > 0 && unlink(rootrc.c_str()) != 0) {
+      TRACE(XERR, "problems unlinking "<<rootrc<<"; errno: "<<errno);
+   }
 
    // Cleanup
    close(fp[0]);

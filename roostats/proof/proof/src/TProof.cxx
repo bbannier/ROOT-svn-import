@@ -74,7 +74,7 @@
 #include "TTree.h"
 #include "TUrl.h"
 #include "TFileCollection.h"
-#include "TProofDataSetManager.h"
+#include "TDataSetManager.h"
 
 TProof *gProof = 0;
 TVirtualMutex *gProofMutex = 0;
@@ -558,6 +558,10 @@ Int_t TProof::Init(const char *, const char *conffile,
       fConfDir     = confdir;
       fConfFile    = conffile;
    }
+
+   // Analysise the conffile field
+   ParseConfigField(fConfFile);
+
    fWorkDir        = gSystem->WorkingDirectory();
    fLogLevel       = loglevel;
    fProtocol       = kPROOF_Protocol;
@@ -610,7 +614,7 @@ Int_t TProof::Init(const char *, const char *conffile,
    // Status of cluster
    fNotIdle = 0;
    // Query type
-   fSync = kTRUE;
+   fSync = (attach) ? kFALSE : kTRUE;
    // Not enqueued
    fIsWaiting = kFALSE;
 
@@ -780,6 +784,90 @@ Int_t TProof::Init(const char *, const char *conffile,
       gROOT->GetListOfSockets()->Add(this);
    }
    return fActiveSlaves->GetSize();
+}
+
+//______________________________________________________________________________
+void TProof::ParseConfigField(const char *config)
+{
+   // The config file field may contain special instructions which need to be
+   // parsed at the beginning, e.g. for debug runs with valgrind.
+
+   TString sconf(config);
+
+   // Analysise the field
+   Int_t ivg = kNPOS;
+   if ((ivg = sconf.Index("valgrind")) != kNPOS) {
+      Int_t jvg = sconf.Index(',', ivg);
+      Int_t lvg = (jvg != kNPOS) ? (jvg-ivg) : sconf.Length();
+      TString vgconf = sconf(ivg, lvg);
+      // Any existing valgrind setting? User can give full settings, which we fully respect,
+      // or pass additional options for valgrind by prefixing 'valgrind_opts:'. For example,
+      //    TProof::AddEnvVar("PROOF_MASTER_WRAPPERCMD", "valgrind_opts:--time-stamp --leak-check=full"
+      // will add option "--time-stamp --leak-check=full" to our default options
+      TString mst, wrk, all;
+      TList *envs = fgProofEnvList;
+      TNamed *n = 0;
+      if (envs) {
+         if ((n = (TNamed *) envs->FindObject("PROOF_WRAPPERCMD")))
+            all = n->GetTitle();
+         if ((n = (TNamed *) envs->FindObject("PROOF_MASTER_WRAPPERCMD")))
+            mst = n->GetTitle();
+         if ((n = (TNamed *) envs->FindObject("PROOF_SLAVE_WRAPPERCMD")))
+            wrk = n->GetTitle();
+      }
+      if (all != "" && mst == "") mst = all;
+      if (all != "" && wrk == "") wrk = all;
+      if (all != "" && all.BeginsWith("valgrind_opts:")) {
+         // The field is used to add an option Reset the setting
+         Info("ParseConfigField","valgrind run: resetting 'PROOF_WRAPPERCMD':"
+                                 " must be set again for next run , if any");
+         TProof::DelEnvVar("PROOF_WRAPPERCMD");
+      }
+      TString var, cmd("valgrind -v --suppressions=<rootsys>/etc/valgrind-root.supp");
+      TString mstlab("NO"), wrklab("NO");
+      if (vgconf == "valgrind" || vgconf.Contains("master")) {
+         // Check if we have to add a var
+         if (mst == "" || mst.BeginsWith("valgrind_opts:")) {
+            mst.ReplaceAll("valgrind_opts:","");
+            var.Form("%s --log-file=<logfilemst>.valgrind.log %s", cmd.Data(), mst.Data());
+            TProof::AddEnvVar("PROOF_MASTER_WRAPPERCMD", var);
+            mstlab = "YES";
+         } else if (mst != "") {
+            mstlab = "YES";
+         }
+      }
+      if (vgconf.Contains("=workers") || vgconf.Contains("+workers")) {
+         // Check if we have to add a var
+         if (wrk == "" || wrk.BeginsWith("valgrind_opts:")) {
+            wrk.ReplaceAll("valgrind_opts:","");
+            var.Form("%s --log-file=<logfilewrk>.valgrind.log %s", cmd.Data(), wrk.Data());
+            TProof::AddEnvVar("PROOF_SLAVE_WRAPPERCMD", var);
+            TString nwrks("2");
+            Int_t inw = vgconf.Index('#');
+            if (inw != kNPOS) {
+               nwrks = vgconf(inw+1, vgconf.Length());
+               if (!nwrks.IsDigit()) nwrks = "2";
+            }
+            TProof::AddEnvVar("PROOF_NWORKERS", nwrks);
+            wrklab = nwrks;
+            // Register the additional worker log in the session file
+            // (for the master is done automatically)
+            TProof::AddEnvVar("PROOF_ADDITIONALLOG", "valgrind.log*");
+         } else if (wrk != "") {
+            wrklab = "ALL";
+         }
+      }
+      // Increase the relevant timeouts
+      TProof::AddEnvVar("PROOF_INTWAIT", "5000");
+      gEnv->SetValue("Proof.SocketActivityTimeout", 6000);
+      // Warn for slowness
+      Printf(" ");
+      Printf(" ---> Starting a debug run with valgrind (master:%s, workers:%s)", mstlab.Data(), wrklab.Data());
+      Printf(" ---> Please be patient: startup may be VERY slow ...");
+      Printf(" ---> Logs will be available as special tags in the log window (from the progress dialog or TProof::LogViewer()) ");
+      Printf(" ---> (Reminder: this debug run makes sense only if you are running a debug version of ROOT)");
+      Printf(" ");
+   }
 }
 
 //______________________________________________________________________________
@@ -1099,7 +1187,7 @@ Bool_t TProof::StartSlaves(Bool_t attach)
    } else {
 
       // create master server
-      Printf("Starting master: opening connection ... ");
+      Printf("Starting master: opening connection ...");
       TSlave *slave = CreateSubmaster(fUrl.GetUrl(), "0", "master", 0);
 
       if (slave->IsValid()) {
@@ -1194,8 +1282,6 @@ Bool_t TProof::StartSlaves(Bool_t attach)
             }
 
             fSlaves->Add(slave);
-            fAllMonitor->Add(slave->GetSocket());
-
             fIntHandler = new TProofInterruptHandler(this);
          }
 
@@ -2761,6 +2847,9 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                fIsWaiting = kFALSE;
             }
 
+            // Redirect the output, if needed
+            fRedirLog = (fSync) ? fRedirLog : kTRUE;
+
             // The signal is used on masters by XrdProofdProtocol to catch
             // the start of processing; on clients it allows to update the
             // progress dialog
@@ -2946,6 +3035,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                         fPlayer->GetPacketizer()->AddProcessed(sl, status, 0, &listOfMissingFiles);
                      if (ret > 0)
                         fPlayer->GetPacketizer()->MarkBad(sl, status, &listOfMissingFiles);
+                     // This object is now owned by the packetizer
+                     status = 0;
                   }
                } else {
                   fPlayer->AddEventsProcessed(events);
@@ -8696,6 +8787,14 @@ void TProof::SaveWorkerInfo()
       return;
    }
 
+   // Do we need to register an additional line for another log?
+   TString addlogext;
+   if (gSystem->Getenv("PROOF_ADDITIONALLOG")) {
+      addlogext = gSystem->Getenv("PROOF_ADDITIONALLOG");
+      if (gDebug > 0)
+         Info("SaveWorkerInfo", "request for additional line with ext: '%s'",  addlogext.Data());
+   }
+
    // Loop over the list of workers (active is any worker not flagged as bad)
    TIter nxa(fSlaves);
    TSlave *wrk = 0;
@@ -8705,6 +8804,12 @@ void TProof::SaveWorkerInfo()
       fprintf(fwrk,"%s@%s:%d %d %s %s.log\n",
                    wrk->GetUser(), wrk->GetName(), wrk->GetPort(), status,
                    wrk->GetOrdinal(), wrk->GetWorkDir());
+      // Additional line, if required
+      if (addlogext.Length() > 0) {
+         fprintf(fwrk,"%s@%s:%d %d %s %s.%s\n",
+                     wrk->GetUser(), wrk->GetName(), wrk->GetPort(), status,
+                     wrk->GetOrdinal(), wrk->GetWorkDir(), addlogext.Data());
+      }
    }
 
    // Close file
@@ -8807,7 +8912,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Double_t &value)
 
 //______________________________________________________________________________
 Int_t TProof::AssertDataSet(TDSet *dset, TList *input,
-                            TProofDataSetManager *mgr, TString &emsg)
+                            TDataSetManager *mgr, TString &emsg)
 {
    // Make sure that dataset is in the form to be processed. This may mean
    // retrieving the relevant info from the dataset manager or from the

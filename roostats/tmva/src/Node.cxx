@@ -12,7 +12,6 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
- *      Xavier Prudent  <prudent@lapp.in2p3.fr>  - LAPP, France                   *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
@@ -20,7 +19,6 @@
  *      CERN, Switzerland                                                         * 
  *      U. of Victoria, Canada                                                    * 
  *      MPI-K Heidelberg, Germany                                                 * 
- *      LAPP, Annecy, France                                                      *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -41,11 +39,11 @@
 //______________________________________________________________________
 
 #include <stdexcept>
+#include <iosfwd>
 #include <iostream>
 
-#include "Riostream.h"
-
 #include "TMVA/Node.h"
+#include "TMVA/Tools.h"
 
 ClassImp(TMVA::Node)
 
@@ -80,7 +78,7 @@ TMVA::Node::Node( Node* p, char pos )
 }
 
 //_______________________________________________________________________
-TMVA::Node::Node (const Node &n ) 
+TMVA::Node::Node ( const Node &n ) 
    : fParent( NULL ), 
      fLeft  ( NULL), 
      fRight ( NULL ), 
@@ -95,14 +93,14 @@ TMVA::Node::Node (const Node &n )
 }
 
 //_______________________________________________________________________
-TMVA::Node::~Node( void )
+TMVA::Node::~Node()
 {
    // node destructor
    fgCount--;
 }
 
 //_______________________________________________________________________
-Int_t TMVA::Node::CountMeAndAllDaughters( void ) const 
+Int_t TMVA::Node::CountMeAndAllDaughters() const 
 {
    //recursively go through the part of the tree below this node and count all daughters
    Int_t n=1;
@@ -116,7 +114,7 @@ Int_t TMVA::Node::CountMeAndAllDaughters( void ) const
 
 // print a node
 //_______________________________________________________________________
-ostream& TMVA::operator<<(ostream& os, const TMVA::Node& node)
+ostream& TMVA::operator<<( ostream& os, const TMVA::Node& node )
 { 
    // output operator for a node  
    node.Print(os);
@@ -124,11 +122,50 @@ ostream& TMVA::operator<<(ostream& os, const TMVA::Node& node)
 }
 
 //_______________________________________________________________________
-ostream& TMVA::operator<<(ostream& os, const TMVA::Node* node)
+ostream& TMVA::operator<<( ostream& os, const TMVA::Node* node )
 { 
    // output operator with a pointer to the node (which still prints the node itself)
    if (node!=NULL) node->Print(os);
    return os;                // Return the output stream.
 }
 
+//_______________________________________________________________________
+void* TMVA::Node::AddXMLTo( void* parent ) const
+{
+   // add attributes to XML
+   std::stringstream s("");
+   AddContentToNode(s);
+   void* node = gTools().AddChild(parent, "Node", s.str().c_str());
+   gTools().AddAttr( node, "pos",   fPos );
+   gTools().AddAttr( node, "depth", fDepth );
+   AddAttributesToNode(node);
+   if (fLeft)  fLeft->AddXMLTo(node);
+   if (fRight) fRight->AddXMLTo(node);
+   return node;
+}
 
+//_______________________________________________________________________
+void TMVA::Node::ReadXML( void* node )
+{
+   // read attributes from XML
+   ReadAttributes(node);
+   const char* content = gTools().xmlengine().GetNodeContent(node);
+   if (content) {
+      std::stringstream s(content);
+      ReadContent(s);
+   }
+   gTools().ReadAttr( node, "pos",   fPos );
+   gTools().ReadAttr( node, "depth", fDepth );
+
+   void* ch = gTools().xmlengine().GetChild(node);
+   while (ch) {
+      Node* n = CreateNode();
+      n->ReadXML(ch);
+      if (n->GetPos()=='l') { fLeft  = n; }
+      else if(n->GetPos()=='r') { fRight = n; }
+      else { 
+         std::cout << "neither left nor right" << std::endl;
+      }
+      ch = gTools().xmlengine().GetNext(ch);
+   }
+}

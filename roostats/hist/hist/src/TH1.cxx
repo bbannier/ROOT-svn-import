@@ -4754,7 +4754,7 @@ Long64_t TH1::Merge(TCollection *li)
    Int_t binx, ix, nx;
    Double_t cu;
    Bool_t canRebin=TestBit(kCanRebin);
-   ResetBit(kCanRebin); // reset, otherwise setting the under/overflow will rebin
+   if (!allHaveLabels) ResetBit(kCanRebin); // reset, otherwise setting the under/overflow will rebin
    while (TH1* h=(TH1*)next()) {
       // process only if the histogram has limits; otherwise it was processed before
       if (h->GetXaxis()->GetXmin() < h->GetXaxis()->GetXmax()) {
@@ -7378,7 +7378,8 @@ void TH1::SetBinContent(Int_t binx, Int_t biny, Double_t content)
    // see convention for numbering bins in TH1::GetBin
    if (binx <0 || binx>fXaxis.GetNbins()+1) return;
    if (biny <0 || biny>fYaxis.GetNbins()+1) return;
-   SetBinContent(biny*(fXaxis.GetNbins()+2) + binx,content);
+   Int_t bin = GetBin(binx,biny);
+   SetBinContent(bin,content);
 }
 
 //______________________________________________________________________________
@@ -7399,7 +7400,8 @@ void TH1::SetCellContent(Int_t binx, Int_t biny, Double_t content)
 
    if (binx <0 || binx>fXaxis.GetNbins()+1) return;
    if (biny <0 || biny>fYaxis.GetNbins()+1) return;
-   SetBinContent(biny*(fXaxis.GetNbins()+2) + binx,content);
+   Int_t bin = GetBin(binx,biny);
+   SetBinContent(bin,content);
 }
 
 //______________________________________________________________________________
@@ -7408,7 +7410,8 @@ void TH1::SetBinError(Int_t binx, Int_t biny, Double_t error)
    // see convention for numbering bins in TH1::GetBin
    if (binx <0 || binx>fXaxis.GetNbins()+1) return;
    if (biny <0 || biny>fYaxis.GetNbins()+1) return;
-   SetBinError(biny*(fXaxis.GetNbins()+2) + binx,error);
+   Int_t bin = GetBin(binx,biny);
+   SetBinError(bin,error);
 }
 
 //______________________________________________________________________________
