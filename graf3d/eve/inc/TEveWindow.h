@@ -133,6 +133,9 @@ public:
    void SomeWindowClosed(TEveWindow* w);
    void MainFrameClosed();
 
+   TEveWindow* GetOriginalSlot() const { return fOriginalSlot; }
+   TEveWindow* GetOriginalContainer() const { return fOriginalContainer; }
+
    ClassDef(TEveCompositeFrameInMainFrame, 0); // Eve-composite-frame that is contained in one tab of a TGTab.
 };
 
@@ -370,6 +373,7 @@ public:
    virtual TGFrame*        GetGUIFrame();
 
    virtual Bool_t          CanMakeNewSlots() const { return kTRUE; }
+   virtual TEveWindowSlot* NewSlotWithWeight(Float_t w);
    virtual TEveWindowSlot* NewSlot(); // *MENU*
 
    void FlipOrientation(); // *MENU*

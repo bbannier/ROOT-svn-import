@@ -653,7 +653,7 @@ void Cint::Internal::G__define_struct(char type)
    ::Reflex::Scope store_tagnum;
    int store_def_struct_member = 0;
    ::Reflex::Scope store_local;
-   G__value enumval;
+   G__value enumval = G__null;
    int store_access;
    G__StrBuf basename_sb(G__LONGLINE);
    char* basename = basename_sb;
@@ -1703,7 +1703,7 @@ extern "C" void G__set_class_autoloading_table(char* classname, char* libname)
    int store_enable_autoloading = G__enable_autoloading;
    G__enable_autoloading = 0;
    // First check whether this is already defined as typedef.
-   Reflex::Type typedf( G__find_typedef(classname) );
+   Reflex::Type typedf( G__find_typedef(classname, 3 /* no complaint if the template does not exist */ ) );
    if (typedf) {
       // The autoloading might actually be 'targeted' to the FinalType per se.
       // For example in the case of the STL, the autoload classname would be
@@ -2412,7 +2412,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
       G__struct.name[i] = (char*) malloc((size_t)(len + 1));
       strcpy(G__struct.name[i], atom_tagname);
       G__struct.hash[i] = len;
-      G__struct.size[i] = 0;
+      G__struct.size[i] = 0; // (type=='e') ? 4 : 0; // For consistency with Reflex (Need for cintexcompat)
       G__struct.type[i] = type; // 'c' class, 'e' enum, 'n', namespace, 's' struct, 'u' union
       G__struct.baseclass[i] = new G__inheritance();
       G__struct.virtual_offset[i] = G__PVOID; // -1 means no virtual function

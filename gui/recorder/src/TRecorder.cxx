@@ -26,21 +26,22 @@
 //  Recording                                                           //
 //  ==================================================================  //
 //                                                                      //
-//  1] Start recording                                                  //
+//  1] To start recording                                               //
 //                                                                      //
 //    TRecorder r(const char *filename, "NEW")                          //
 //    TRecorder r(const char *filename, "RECREATE")                     //
 //                                                                      //
 //    or:                                                               //
 //                                                                      //
-//    TRecorder::Start(const char *filename, ...)                       //
+//    TRecorder *recorder = new TRecorder;                              //
+//    recorder->Start(const char *filename, ...)                        //
 //                                                                      //
 //    -filename      Name of ROOT file in which to save                 //
 //                   recorded events.                                   //
 //                                                                      //
-//  2] Stop recording                                                   //
+//  2] To stop recording                                                //
 //                                                                      //
-//    TEventRecodrer::Stop()                                            //
+//    recorder->Stop()                                                  //
 //                                                                      //
 //                                                                      //
 //  IMPORTANT:                                                          //
@@ -67,14 +68,15 @@
 //  Replaying                                                           //
 //  =================================================================== //
 //                                                                      //
-//  1] Start replaying                                                  //
+//  1] To start replaying                                               //
 //                                                                      //
 //    TRecorder r(const char *filename)                                 //
 //    TRecorder r(const char *filename, "READ")                         //
 //                                                                      //
 //    or:                                                               //
 //                                                                      //
-//    TRecorder::Replay(const char *filename,                           //
+//    TRecorder *recorder = new TRecorder;                              //
+//    recorder->Replay(const char *filename,                            //
 //                      Bool_t showMouseCursor = kTRUE);                //
 //                                                                      //
 //    -filename         A name of file with recorded events             //
@@ -93,23 +95,23 @@
 //  Therefore it is strongly recommended to start both recording        //
 //  and replaying with empty ROOT environment.                          //
 //                                                                      //
-//  2] Pause replaying                                                  //
+//  2] To pause replaying                                               //
 //                                                                      //
-//    TRecorder::Pause()                                                //
+//    recorder->Pause()                                                 //
 //                                                                      //
-//    Replaying is stopped until TRecorder::Resume() is called.         //
+//    Replaying is stopped until recorder->Resume() is called.          //
 //                                                                      //
 //                                                                      //
-//  3] Resume paused replaying                                          //
+//  3] To resume paused replaying                                       //
 //                                                                      //
-//    TRecorder::Resume()                                               //
+//    recorder->Resume()                                                //
 //                                                                      //
 //    Resumes previously stopped replaying.                             //
 //                                                                      //
 //                                                                      //
-//  4] Stop replaying before its end                                    //
+//  4] To stop replaying before its end                                 //
 //                                                                      //
-//    TRecorder::Stop()                                                 //
+//    recorder->Stop()                                                  //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -168,6 +170,7 @@ TRecorder::TRecorder()
 {
    // Creates initial INACTIVE state for the recorder
 
+   fFilename = "";
    fRecorderState = new TRecorderInactive();
 }
 
@@ -179,6 +182,7 @@ TRecorder::TRecorder(const char *filename, Option_t *option)
    // READ will start replaying)
 
    TString opt(option);
+   fFilename = "";
    fRecorderState = new TRecorderInactive();
    if ((opt == "NEW") || (opt == "RECREATE"))
       Start(filename, option);
@@ -192,6 +196,15 @@ TRecorder::~TRecorder()
    // Destructor.
 
    delete fRecorderState;
+}
+
+//______________________________________________________________________________
+void TRecorder::Browse(TBrowser *)
+{
+   // Browse the recorder from a ROOT file. This allows to replay a 
+   // session from the browser.
+
+   Replay(fFilename);
 }
 
 //______________________________________________________________________________
@@ -320,8 +333,10 @@ TRecorderReplaying::~TRecorderReplaying()
    gClient->Disconnect(gClient, "RegisteredWindow(Window_t)", this, "WaitForWindow(Window_t)");
    gClient->Disconnect(gClient, "RegisteredWindow(Window_t)", this, "RegisterWindow(Window_t)");
 
-   fFile->Close();
-   delete fFile;
+   if (fFile) {
+      fFile->Close();
+      delete fFile;
+   }
 
    delete fWindowList;
    delete fCmdEvent;
@@ -356,8 +371,8 @@ Bool_t TRecorderReplaying::Initialize(TRecorder *r, Bool_t showMouseCursor, TRec
    fRecorder = r;
    fShowMouseCursor = showMouseCursor;
 
-   if (fFile->IsZombie() || !fFile->IsOpen())
-      return false;
+   if (!fFile || fFile->IsZombie() || !fFile->IsOpen())
+      return kFALSE;
 
    fCmdTree   = (TTree*) fFile->Get(kCmdEventTree);
    fWinTree   = (TTree*) fFile->Get(kWindowsTree);
@@ -366,7 +381,7 @@ Bool_t TRecorderReplaying::Initialize(TRecorder *r, Bool_t showMouseCursor, TRec
 
    if (!fCmdTree || !fWinTree || ! fGuiTree || ! fExtraTree) {
       Error("TRecorderReplaying::Initialize", "The ROOT file is not valid event logfile.");
-      return false;
+      return kFALSE;
    }
 
    try {
@@ -377,20 +392,17 @@ Bool_t TRecorderReplaying::Initialize(TRecorder *r, Bool_t showMouseCursor, TRec
    }
    catch(...) {
       Error("TRecorderReplaying::Initialize", "The ROOT file is not valid event logfile");
-      return false;
+      return kFALSE;
    }
 
    // No event to replay in given ROOT file
    if (!PrepareNextEvent()) {
       Info("TRecorderReplaying::Initialize", "Log file empty. No event to replay.");
-      return false;
+      return kFALSE;
    }
 
    // Number of registered windows during recording
    fWinTreeEntries = fWinTree->GetEntries();
-
-   // TCanvas *c = new TCanvas();
-   // delete c;
 
    // When a window is registered during replaying, TRecorderReplaying::RegisterWindow(Window_t) is called
    gClient->Connect("RegisteredWindow(Window_t)", "TRecorderReplaying", this, "RegisterWindow(Window_t)");
@@ -400,9 +412,13 @@ Bool_t TRecorderReplaying::Initialize(TRecorder *r, Bool_t showMouseCursor, TRec
    TFile *f = TFile::Open(fFile->GetName());
    TIter nextkey(f->GetListOfKeys());
    TKey *key;
+   TObject *obj;
    while ((key = (TKey*)nextkey())) {
       fFilterStatusBar = kTRUE;
-      fCanv = (TCanvas*) key->ReadObj();
+      obj = key->ReadObj();
+      if (!obj->InheritsFrom("TCanvas"))
+         continue;
+      fCanv = (TCanvas*) obj;
       fCanv->Draw();
    }
    TCanvas *canvas;
@@ -415,14 +431,12 @@ Bool_t TRecorderReplaying::Initialize(TRecorder *r, Bool_t showMouseCursor, TRec
 
    f->Close();
 
-   fMutex->Lock();
-   fMutex->UnLock();
-
+   gPad = 0;
    // Starts replaying
    fTimer->Connect("Timeout()", "TRecorderReplaying", this, "ReplayRealtime()");
    fTimer->Start(0);
 
-   return true;
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -826,9 +840,12 @@ void TRecorderInactive::Start(TRecorder *r, const char *filename, Option_t *opti
    // Int_t winCount        = number of IDs it this list [0 by default]
 
    TRecorderRecording *rec = new TRecorderRecording(r, filename, option, w, winCount);
-   rec->StartRecording();
-
-   r->ChangeState(rec);
+   if (rec->StartRecording()) {
+      r->ChangeState(rec);
+      r->fFilename = gSystem->BaseName(filename);
+   }
+   else
+      delete rec;
 }
 
 //______________________________________________________________________________
@@ -844,6 +861,7 @@ Bool_t TRecorderInactive::Replay(TRecorder *r, const char *filename, Bool_t show
 
    if (replay->Initialize(r, showMouseCursor, mode)) {
       r->ChangeState(replay);
+      r->fFilename = gSystem->BaseName(filename);
       return kTRUE;
    }
    else {
@@ -1062,7 +1080,8 @@ TRecorderRecording::~TRecorderRecording()
 
    delete[] fFilteredIds;
 
-   delete fFile;
+   if (fFile)
+      delete fFile;
    delete fTimer;
    delete fCmdEvent;
    delete fGuiEvent;
@@ -1074,6 +1093,9 @@ Bool_t TRecorderRecording::StartRecording()
 {
    // Connects appropriate signals and slots in order to gain all registered windows and processed events in ROOT
    // Starts the recording
+
+   if (!fFile || fFile->IsZombie() || !fFile->IsOpen())
+      return kFALSE;
 
    // When user types something in the commandline, TRecorderRecording::RecordCmdEvent(const char* line) is called
    gApplication->Connect("LineProcessed(const char*)", "TRecorderRecording", this, "RecordCmdEvent(const char* line)");
@@ -1135,7 +1157,7 @@ Bool_t TRecorderRecording::StartRecording()
 
    Info("TRecorderRecording::StartRecording", "Recording started. Log file: %s", fFile->GetName());
 
-   return true;
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -1157,6 +1179,7 @@ void TRecorderRecording::Stop(TRecorder *, Bool_t guiCommand)
    if (fCmdEventPending && guiCommand)
       fCmdTree->Fill();
 
+   fRecorder->Write("recorder");
    fFile->Write();
    fFile->Close();
    fTimer->TurnOff();
@@ -1333,6 +1356,8 @@ void TRecorderRecording::RecordText(const TObject* obj)
    cad += "); l->SetTextSize(";
    cad += texto->GetTextSize();
    cad += "); gPad->Modified(); gPad->Update();";
+   cad += " TVirtualPad *spad = gPad->GetCanvas()->GetSelectedPad();";
+   cad += " gPad->GetCanvas()->Selected(spad, l, kButton1Down);";
    extratime += interval;
    RecordExtraEvent(cad, extratime);
 }
@@ -1392,6 +1417,13 @@ void TRecorderRecording::CopyEvent(Event_t *e, Window_t wid)
    for(Int_t i=0; i<5; ++i)
       fGuiEvent->fUser[i] = e->fUser[i];
 
+   if (e->fType == kGKeyPress || e->fType == kKeyRelease) {
+      char tmp[10] = {0};
+      UInt_t keysym = 0;
+      gVirtualX->LookupString(e, tmp, sizeof(tmp), keysym);
+      fGuiEvent->fCode = keysym;
+   }
+
    fGuiEvent->fMasked  = wid;
 }
 
@@ -1402,9 +1434,9 @@ Bool_t TRecorderRecording::IsFiltered(Window_t id)
 
    for(Int_t i=0; i < fFilteredIdsCount; ++i)
       if (id == fFilteredIds[i])
-         return true;
+         return kTRUE;
 
-   return false;
+   return kFALSE;
 }
 
 //______________________________________________________________________________
@@ -1851,6 +1883,14 @@ Event_t *TRecGuiEvent::CreateEvent(TRecGuiEvent *ge)
 
    for(Int_t i=0; i<5; ++i)
       e->fUser[i] = ge->fUser[i];
+
+   if (ge->fType == kGKeyPress || ge->fType == kKeyRelease) {
+      e->fCode    = gVirtualX->KeysymToKeycode(ge->fCode);
+#ifdef R__WIN32
+      e->fUser[1] = 1;
+      e->fUser[2] = e->fCode;
+#endif
+   }
 
    return e;
 }

@@ -150,7 +150,7 @@ int XrdProofdProtCfg::DoDirective(XrdProofdDirective *d,
 
    XrdOucString port(val);
    if (d->fName == "xrd.protocol") {
-      port = cfg->GetToken();
+      port = cfg->GetWord();
       port.replace("xproofd:", "");
    } else if (d->fName != "port") {
       return -1;
@@ -364,6 +364,12 @@ void XrdProofdProtocol::Reset()
       fAuthProt = 0;
    }
    memset(&fSecEntity, 0, sizeof(fSecEntity));
+   // Cleanup existing XrdProofdResponse objects
+   std::vector<XrdProofdResponse *>::iterator ii = fResponses.begin(); // One per each logical connection
+   while (ii != fResponses.end()) {
+      delete *ii;
+      ii++;
+   }
    fResponses.clear();
 }
 
