@@ -46,7 +46,7 @@ int main( int argc, char **argv )
    langInfo.HexFloats   = 1;
    langInfo.BCPLComment = 1; // Only for C99/C++.
    langInfo.Digraphs    = 1; // C94, C99, C++.
-   //langInfo.CPlusPlus   = 1;
+   langInfo.CPlusPlus   = 1;
    langInfo.CPlusPlus0x = 1;
    langInfo.CXXOperatorNames = 1;
    langInfo.Bool = 1;
