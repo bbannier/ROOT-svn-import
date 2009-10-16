@@ -233,7 +233,7 @@ TCint::TCint(const char *name, const char *title) :
    fLangInfo->HexFloats   = 1;
    fLangInfo->BCPLComment = 1; // Only for C99/C++.
    fLangInfo->Digraphs    = 1; // C94, C99, C++.
-   //fLangInfo->CPlusPlus   = 1;
+   fLangInfo->CPlusPlus   = 1;
    fLangInfo->CPlusPlus0x = 1;
    fLangInfo->CXXOperatorNames = 1;
    fLangInfo->Bool = 1;
@@ -246,6 +246,10 @@ TCint::TCint(const char *name, const char *title) :
    fLangInfo->DollarIdents = 1;   
 
    fInterpreter = new cling::Interpreter(*fLangInfo);
+   TString inclPath(gSystem->GetIncludePath() + 2); // skip "-I"
+   inclPath = inclPath.Strip(TString::kBoth);
+   gSystem->ExpandPathName(inclPath);
+   fInterpreter->addIncludePath(inclPath.Data());
    fMetaProcessor = new cling::MetaProcessor(*fInterpreter);
 }
 
@@ -464,7 +468,10 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
                ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
             }
             else {
-               fMetaProcessor->process(line);
+               if (strcmp(line, "#include <iostream>")) { 
+                  // cling cannot parse <iostream>
+                  fMetaProcessor->process(line);
+               }
             }
             G__setPrerun(prerun);
             if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
