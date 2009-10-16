@@ -47,6 +47,8 @@ cling::MetaProcessor::~MetaProcessor()
 //---------------------------------------------------------------------------
 int cling::MetaProcessor::process(const char* code)
 {
+   if (code==0 || code[0]==0 || (code[0]=='\n' && code[1]==0)) return 0;
+   
    if (ProcessMeta(code)) return 0;
    
    //----------------------------------------------------------------------
@@ -78,6 +80,7 @@ int cling::MetaProcessor::process(const char* code)
    llvm::Module* module = m_Interp->linkSource( m_input, &errMsg );
 
    if(!module) {
+      m_input.clear();
       std::cerr << std::endl;
       std::cerr << "[!] Errors occured while parsing your code!" << std::endl;
       if (!errMsg.empty())
@@ -85,7 +88,7 @@ int cling::MetaProcessor::process(const char* code)
       std::cerr << std::endl;
       return -1;
    }
-   m_Interp->executeModuleMain( module, "imain" );
+   m_Interp->loadModule( module );
    m_input.clear();
    return 0;
 }

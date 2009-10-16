@@ -33,6 +33,7 @@
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/SourceManager.h>
@@ -233,8 +234,8 @@ namespace cling
    // Compile the filename and link it to all the modules known to the
    // compiler but do not add it to the list
    //---------------------------------------------------------------------------
-   llvm::Module* Interpreter::linkFile( const std::string& fileName,
-                                          std::string* errMsg )
+   llvm::Module* Interpreter::linkFile(const std::string& fileName,
+                                       std::string* errMsg )
    {
       ParseEnvironment *pEnv = parseFile( fileName );
       clang::TranslationUnitDecl* tu = pEnv->getASTContext()->getTranslationUnitDecl();
@@ -268,24 +269,50 @@ namespace cling
       ParseEnvironment *pEnv = 0;
       if (posHash == std::string::npos) {
          std::vector<std::string> statements;
-         splitInput(source, statements);
 
          //----------------------------------------------------------------------
          // Wrap the code
          //----------------------------------------------------------------------
-         std::string wrapped = code_prefix + source + code_suffix;
-         pEnv = parseSource( wrapped );
+#if 0
+         unsigned int anon_start = exprCount;
+         std::string wrapped( splitInput(source, statements) );
+         if (wrapped.length()) {
+            if (0) {
+               unsigned int anon_end = exprCount;
+               llvm::raw_string_ostream strcode(wrapped);
+               strcode << '\n' << code_prefix << '\n';
+               for(unsigned int ui = anon_start; ui < anon_end; ++ui) {
+                  strcode << "   __cling_anon" << ui << "();\n";
+               }
+               strcode << code_suffix << '\n';
+               strcode.flush();
+               // wrapped.append(code_prefix + code_suffix);
+            }
+            std::cerr << "Will parse for execution: \n" << wrapped << '\n';
+            pEnv = parseSource( wrapped );
+         }
+#endif
+         std::string wrapped( splitInput(source, statements) );            
+         if (wrapped.length()) {
+            std::cerr << "Will parse for execution: \n" << wrapped << '\n';
+            pEnv = parseSource( wrapped );
+         }
       } else {
          // preprocessor statement; nothing to wrap
-         pEnv = parseSource( source );         
+         pEnv = parseSource( source );
+         m_globalDeclarations.append( source );
       }
 
-      clang::TranslationUnitDecl* tu = pEnv->getASTContext()->getTranslationUnitDecl();
-      llvm::Module*           module = compile( tu );
-      llvm::Module*           result = linkModule( module, errMsg );
-      delete tu;
-      delete module;
-      return result;
+      if (pEnv) {
+         clang::TranslationUnitDecl* tu = pEnv->getASTContext()->getTranslationUnitDecl();
+         llvm::Module*           module = compile( tu );
+         llvm::Module*           result = linkModule( module, errMsg );
+         delete tu;
+         delete module;
+         return result;
+      } else {
+         return 0;
+      }
    }
 
    //---------------------------------------------------------------------------
@@ -302,13 +329,17 @@ namespace cling
       //------------------------------------------------------------------------
       // We have some module so we should link the current one to it
       //------------------------------------------------------------------------
-      llvm::Linker linker( "executable", llvm::CloneModule(module) );
-
-      if( m_module )
-         if (linker.LinkInModule( llvm::CloneModule( m_module ), errMsg ))
+      if( !m_module) {
+         llvm::Linker linker( "executable", llvm::CloneModule(module) );
+         m_module = linker.releaseModule();
+      } else {
+         llvm::Linker linker( "executable", llvm::CloneModule(m_module) );
+         if (linker.LinkInModule( llvm::CloneModule( module ), errMsg ))
             return 0;
+         m_module = linker.releaseModule();
+      }
 
-      return linker.releaseModule();
+      return m_module;
    }
 
    //---------------------------------------------------------------------------
@@ -490,7 +521,6 @@ namespace cling
       // Everything went ok - register
       //-------------------------------------------------------------------------
       m_units[id] = uinfo;
-      m_module = module;
       
       return true;
    }
@@ -681,11 +711,14 @@ namespace cling
    }
    */
 
+   // FIXME: memory leak
+   static llvm::ExecutionEngine* engine = 0;
+   
    //---------------------------------------------------------------------------
-   // Call the Interpreter on a Module
+   // Load an interpreter on a Module, making sure to run the global variable
+   // initialization.
    //---------------------------------------------------------------------------
-   int Interpreter::executeModuleMain( llvm::Module *module,
-                                       const std::string& name)
+   bool Interpreter::loadModule( llvm::Module *module )
    {
       //---------------------------------------------------------------------------
       // Create the execution engine
@@ -694,32 +727,60 @@ namespace cling
       std::string errMsg;
       builder.setErrorStr(&errMsg);
       builder.setEngineKind(llvm::EngineKind::JIT);
-      llvm::OwningPtr<llvm::ExecutionEngine> engine( builder.create() );
-
+      
+      if( !engine ) {
+         engine = builder.create();
+      }
+      
       if( !engine ) {
          std::cout << "[!] Unable to create the execution engine! (" << errMsg << ")" << std::endl;
+         return false;
+      }
+
+      static bool firsttime = true;
+      if (firsttime) {
+         // Run static constructors.
+         engine->runStaticConstructorsDestructors(false);
+         firsttime = false;
+      }
+      
+      engine->runStaticConstructorsDestructors(module,false);
+      
+      return true;
+         
+   }
+      
+   //---------------------------------------------------------------------------
+   // Call the Interpreter on a Module
+   //---------------------------------------------------------------------------
+   int Interpreter::executeModuleMain( llvm::Module *module,
+                                      const std::string& name)
+   {
+      
+      if (loadModule(module)) {
+         
+         //---------------------------------------------------------------------------
+         // Look for the imain function
+         //---------------------------------------------------------------------------
+         llvm::Function* func( module->getFunction( name ) );
+         if( !func ) {
+            std::cerr << "[!] Cannot find the entry function " << name << "!" << std::endl;
+            return 1;
+         }
+
+         //---------------------------------------------------------------------------
+         // Create argv
+         //---------------------------------------------------------------------------
+         std::vector<std::string> params;
+         params.push_back( "executable" );
+
+         return engine->runFunctionAsMain( func,  params, 0 );   
+
+      } else {
+         
          return 1;
       }
 
-      //---------------------------------------------------------------------------
-      // Look for the imain function
-      //---------------------------------------------------------------------------
-      llvm::Function* func( module->getFunction( name ) );
-      if( !func ) {
-         std::cerr << "[!] Cannot find the entry function " << name << "!" << std::endl;
-         return 1;
-      }
-
-      // Run static constructors.
-      engine->runStaticConstructorsDestructors(false);
-
-      //---------------------------------------------------------------------------
-      // Create argv
-      //---------------------------------------------------------------------------
-      std::vector<std::string> params;
-      params.push_back( "executable" );
-
-      return engine->runFunctionAsMain( func,  params, 0 );   
    }
 
 
@@ -741,7 +802,7 @@ namespace cling
          myfuncname = filename.substr(posSlash);
          size_t posDot = myfuncname.find('.');
          if (posDot != std::string::npos) {
-            myfuncname.erase(posDot, -1);
+            myfuncname.erase(posDot);
          }
       }
 
@@ -820,7 +881,7 @@ namespace cling
                      } else {
                         while (!sm->isFromMainFile(Loc)) {
                            const clang::SrcMgr::SLocEntry& Entry =
-									sm->getSLocEntry(sm->getFileID(sm->getSpellingLoc(Loc)));
+                              sm->getSLocEntry(sm->getFileID(sm->getSpellingLoc(Loc)));
                            if (!Entry.isFile())
                               break;
                            Loc = Entry.getFile().getIncludeLoc();
@@ -955,11 +1016,44 @@ namespace cling
       return result;
    }
    
-   bool Interpreter::splitInput(const std::string& input, std::vector<std::string>& statements) 
+   static void appendStatement(std::string &processedCode, const std::string &stmt) 
+   {
+      static unsigned int exprCount = 0;
+
+      llvm::raw_string_ostream strcode(processedCode);
+      // FIXME: The clang code generator does not yet properly handle anonymous namespace
+      // (i.e. the initialization are not run if we use the anonimous namespace.
+#ifdef CLING_USE_ANONYMOUS_NAMESPACE
+      strcode << "namespace {\n   ";
+#endif
+      strcode << "static int __cling_anon" << exprCount << "() {   ";
+      strcode << stmt << " return 0;  };\n";
+#ifdef CLING_USE_ANONYMOUS_NAMESPACE
+      strcode << "   ";
+#endif
+      strcode << "int __cling_exec" << exprCount << " = __cling_anon" << exprCount << "();";
+#ifdef CLING_USE_ANONYMOUS_NAMESPACE
+      strcode << '}';
+#endif
+      strcode << '\n'; 
+      ++exprCount;      
+   }
+   
+   // Generate a variable declaration (like "int i;") for the specified type
+   // and variable name. Works for non-trivial types like function pointers.
+   std::string genVarDecl(const clang::PrintingPolicy& PP,
+                          const clang::QualType& type,
+                          const std::string& vName) {
+      std::string str = vName;
+      type.getUnqualifiedType().getAsStringInternal(str, PP);
+      return str;
+   }
+   
+   std::string Interpreter::splitInput(const std::string& input, std::vector<std::string>& statements) 
    {
       // Insert the environment so that the code input
       // to insure all the appropriate symbols are defined.
-      std::string src = ""; // prefix source;
+      std::string src = m_globalDeclarations;
       
       unsigned int newpos = src.length();
       
@@ -1006,30 +1100,120 @@ namespace cling
       }
       
       statements.clear();
+      std::string newGlobalDecls; // To be added to m_globalDecls after we have executed this round.
+      std::string processedCode;  // Hold the code we will actually compile.
+      
+      
       if (diag.hasErrorOccurred()) {
-         return false;
+         return "";
       } else {
+         clang::QualType QT;
          for (unsigned i = 0; i < stmts.size(); i++) {
             SrcRange range = getStmtRangeWithSemicolon(stmts[i], *sm, m_lang);
             std::string s = src.substr(range.first, range.second - range.first);
 
             fprintf(stderr, "Split %d is: %s\n", i, s.c_str());
 
-            const clang::Expr *E = dyn_cast<clang::Expr>(stmts[i]);
-            if (E) {
+            if (const clang::Expr *E = dyn_cast<clang::Expr>(stmts[i])) {
                fprintf(stderr,"Has expression: %s\n",s.c_str());
-            } else {
-               const clang::DeclStmt *DS = dyn_cast<clang::DeclStmt>(stmts[i]);
-               if (DS) {
-                  fprintf(stderr,"Has declaration: %s\n",s.c_str());
-               } else {
-                  fprintf(stderr,"Has something else: %s\n",s.c_str());
+               QT = E->getType();
+               appendStatement(processedCode,s);
+            } else if ( const clang::DeclStmt *DS = dyn_cast<clang::DeclStmt>(stmts[i]) ) {
+               fprintf(stderr,"Has declaration: %s\n",s.c_str());
+               if (!handleDeclStmt( DS, &pEnv, src, newGlobalDecls, processedCode )) {
+                  newGlobalDecls.append("extern "+s+'\n');
+                  processedCode.append(s+'\n');
                }
+            } else {
+               fprintf(stderr,"Has something else: %s\n",s.c_str());
+               processedCode.append(s+'\n');
             }
             statements.push_back(s);
          }
       }
-      return true;
+      fprintf(stderr,"Code to retain: %s\n",newGlobalDecls.c_str());
+      fprintf(stderr,"Code to execute: %s\n",processedCode.c_str());
       
+      processedCode = m_globalDeclarations + processedCode;
+      m_globalDeclarations.append(newGlobalDecls);
+      return processedCode;
    }
+   
+   bool Interpreter::handleDeclStmt(const clang::DeclStmt *DS, ParseEnvironment *pEnv, 
+                                    const std::string& src,
+                                    std::string& globalDecls,
+                                    std::string& processedCode)
+   {
+      // Check whether we have an initializer.
+      bool initializers = false;
+      for (clang::DeclStmt::const_decl_iterator D = DS->decl_begin(),
+           E = DS->decl_end(); D != E; ++D) {
+         if (const clang::VarDecl *VD = dyn_cast<clang::VarDecl>(*D)) {
+            if (VD->getInit()) {
+               initializers = true;
+            }
+         }
+      }
+      if (initializers) {
+         // Note we do not handle correctly the case:
+         //    struct X { int i; } a = {2};
+         // In 'globalDecls' we are missing the struct declaration ( struct X { int i; }; )
+         std::vector<std::string> decls;
+         std::vector<std::string> stmts;
+         clang::SourceManager *sm = pEnv->getSourceManager();
+         clang::ASTContext *context = pEnv->getASTContext();
+         for (clang::DeclStmt::const_decl_iterator D = DS->decl_begin(),
+              E = DS->decl_end(); D != E; ++D) {
+            if (const clang::VarDecl *VD = dyn_cast<clang::VarDecl>(*D)) {
+               std::string decl = genVarDecl(clang::PrintingPolicy(m_lang),
+                                             VD->getType(), VD->getNameAsCString());
+               if (const clang::Expr *I = VD->getInit()) {
+                  SrcRange range = getStmtRange(I, *sm, m_lang);
+                  if (I->isConstantInitializer(*context)) {
+                     // Keep the whole thing in the global context.
+                     processedCode.append( decl + "=" + src.substr(range.first, range.second - range.first) + ";\n" );
+                  } else if (const clang::InitListExpr *ILE = dyn_cast<clang::InitListExpr>(I)) {
+                     // If it's an InitListExpr like {'a','b','c'}, but with non-constant
+                     // initializers, then split it up into x[0] = 'a'; x[1] = 'b'; and
+                     // so forth, which would go in the function body, while making the
+                     // declaration global.
+                     unsigned numInits = ILE->getNumInits();
+                     for (unsigned i = 0; i < numInits; i++) {
+                        std::string stmt;
+                        llvm::raw_string_ostream stmtstream(stmt);
+                        stmtstream << VD->getNameAsCString() << "[" << i << "] = ";
+                        range = getStmtRange(ILE->getInit(i), *sm, m_lang);
+                        stmtstream << src.substr(range.first, range.second - range.first) << ";";
+                        stmts.push_back(stmtstream.str());
+                     }
+                     processedCode.append( decl + ";\n" );
+                  } else {
+                     std::string stmt( VD->getNameAsCString() );
+                     stmt += " = " + src.substr(range.first, range.second - range.first) + ";";
+                     stmts.push_back(stmt);
+                     processedCode.append( decl + ";\n" );
+                  }
+               } else {
+                  // Just add it as a definition without an initializer.
+                  processedCode.append( decl + ";\n" );
+               }
+               decls.push_back(decl + ";\n");
+            }
+         }
+         for (unsigned i = 0; i < decls.size(); ++i) {
+            globalDecls.append("extern "+decls[i]+"\n");  
+         }
+         if (stmts.size() > 0) { 
+            std::string initstmts;
+            llvm::raw_string_ostream stmtstream( initstmts );
+            for (unsigned i = 0; i < stmts.size(); ++i) {
+               stmtstream << stmts[i] << 'n';
+            }
+            appendStatement(processedCode, stmtstream.str());
+         }
+         return true;
+      }
+      return false;
+   }
+   
 }

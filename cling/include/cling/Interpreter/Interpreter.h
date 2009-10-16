@@ -45,6 +45,7 @@ namespace clang
    class Preprocessor;
    class Token;
    class HeaderSearch;
+   class DeclStmt;
 }
 
 namespace cling
@@ -163,6 +164,12 @@ namespace cling
                                         std::string* errMsg = 0);
 
       //---------------------------------------------------------------------
+      //! Load a module making sure to execute the global variable initialization.
+      //!
+      //! @return true if the module was loaded.
+      bool loadModule( llvm::Module *module);
+
+      //---------------------------------------------------------------------
       //! Execute a module containing a function funcname.
       //!
       //! @return funcname()'s return value
@@ -238,6 +245,7 @@ namespace cling
       llvm::LLVMContext*             m_llvmContext;
       std::vector<std::string>*      m_inclPaths;
 
+      std::string                    m_globalDeclarations;
 
    private:
       ParseEnvironment* parseSource( const std::string& source );
@@ -261,7 +269,11 @@ namespace cling
                         int& indentLevel,
                         bool& tokWasDo);
       
-      bool splitInput(const std::string& input, std::vector<std::string>& statements);
+      std::string splitInput(const std::string& input, std::vector<std::string>& statements);
+      bool handleDeclStmt(const clang::DeclStmt *DS, ParseEnvironment *pEnv, 
+                          const std::string& src,
+                          std::string& globalDecls,
+                          std::string& processedCode);
             
    };
 }
