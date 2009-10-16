@@ -44,7 +44,16 @@ SrcRange getStmtRangeWithSemicolon(const clang::Stmt *S,
 {
 	clang::SourceLocation SLoc = sm.getInstantiationLoc(S->getLocStart());
 	clang::SourceLocation ELoc = sm.getInstantiationLoc(S->getLocEnd());
-	unsigned start = SLoc.isValid() ? sm.getFileOffset(SLoc) : 0;
+
+   return getRangeWithSemicolon(SLoc,ELoc,sm,options);
+}
+   
+SrcRange getRangeWithSemicolon(clang::SourceLocation SLoc,
+                               clang::SourceLocation ELoc,
+                               const clang::SourceManager& sm,
+                               const clang::LangOptions& options)
+{
+   unsigned start = SLoc.isValid() ? sm.getFileOffset(SLoc) : 0;
 	unsigned end   = ELoc.isValid() ? sm.getFileOffset(ELoc) : 0;
 
 	// Below code copied from clang::Lexer::MeasureTokenLength():

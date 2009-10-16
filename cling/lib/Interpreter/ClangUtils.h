@@ -22,6 +22,7 @@ namespace clang {
 	class Preprocessor;
 	class LangOptions;
 	class MacroInfo;
+   class SourceLocation;
 } // namespace clang
 
 namespace cling {
@@ -40,6 +41,14 @@ namespace cling {
                                       const clang::SourceManager& sm,
                                       const clang::LangOptions& options);
    
+   
+   // Get the source range of the specified Stmt, ensuring that a semicolon is
+   // included, if necessary - since the clang ranges do not guarantee this.
+   SrcRange getRangeWithSemicolon(clang::SourceLocation SLoc,
+                                  clang::SourceLocation ELoc,
+                                  const clang::SourceManager& sm,
+                                  const clang::LangOptions& options);
+
    // Get the source range of the macro definition excluding the #define.
    SrcRange getMacroRange(const clang::MacroInfo *MI,
                           const clang::SourceManager& sm,
