@@ -25,7 +25,7 @@ namespace cling {
       MetaProcessor(Interpreter& interp);
       ~MetaProcessor();
 
-      bool process(const char* code);
+      int process(const char* code);
       bool isQuitRequested() const { return m_QuitRequested; }
       void requestQuit(bool req) { m_QuitRequested = req; }
 
