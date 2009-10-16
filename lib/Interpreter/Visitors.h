@@ -91,7 +91,6 @@ namespace cling {
       void HandleTopLevelDecl(clang::DeclGroupRef D) {
          for (clang::DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
             if (clang::FunctionDecl *FD = dyn_cast<clang::FunctionDecl>(*I)) {
-               fprintf(stderr,"will visit:\n"); FD->dump();
                if (FD->getNameAsCString() == _funcName) {
                   if (clang::Stmt *S = FD->getBody()) {
                      m_visitor->VisitChildren(S);
