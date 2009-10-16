@@ -22,7 +22,7 @@ namespace cling {
    class MetaProcessor
    {
    public:
-      MetaProcessor(Interpreter& interp, const char* prompt = "[cling] $");
+      MetaProcessor(Interpreter& interp);
       ~MetaProcessor();
 
       bool process(const char* code);

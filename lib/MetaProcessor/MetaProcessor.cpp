@@ -25,7 +25,7 @@ namespace llvm {
 //---------------------------------------------------------------------------
 // Construct an interface for an interpreter
 //---------------------------------------------------------------------------
-cling::MetaProcessor::MetaProcessor(Interpreter& interp, const char* prompt /*= "[cling] $"*/):
+cling::MetaProcessor::MetaProcessor(Interpreter& interp):
    m_Interp(&interp),
    m_QuitRequested(false),
    m_contLevel(-1)
