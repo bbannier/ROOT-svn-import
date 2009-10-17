@@ -331,7 +331,7 @@ namespace cling
       //------------------------------------------------------------------------
       // We have some module so we should link the current one to it
       //------------------------------------------------------------------------
-      if( !m_module) {
+      if(!m_module) {
          llvm::Linker linker( "executable", llvm::CloneModule(module) );
          m_module = linker.releaseModule();
       } else {
@@ -744,10 +744,9 @@ namespace cling
          // Run static constructors.
          engine->runStaticConstructorsDestructors(false);
          firsttime = false;
+      } else {
+         engine->runStaticConstructorsDestructors(module,false);
       }
-      
-      engine->runStaticConstructorsDestructors(module,false);
-      
       return true;
          
    }
