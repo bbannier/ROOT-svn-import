@@ -77,7 +77,6 @@ $(CLINGO) $(clingdo): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
                                   -I$(LLVMDIR)/include
 # remove TCint and its dictionary:
 METAO := $(subst $(METATCINTDO),$(CLINGDO),$(subst $(METATCINTO),$(CLINGO),$(METAO)))
-dummy := $(shell echo "METAO=$(METAO)" 2>&1)
 CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
  -lclingInterpreter -lclingMetaProcessor -lclingEditLine \
  -lclangFrontend \
