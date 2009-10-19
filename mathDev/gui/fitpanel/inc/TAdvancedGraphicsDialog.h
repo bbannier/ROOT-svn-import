@@ -9,6 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#ifndef ROOT__TAdvancedGraphicsDialog__
+#define ROOT__TAdvancedGraphicsDialog__
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TAdvancedGraphicsDialog                                              //
@@ -40,9 +43,6 @@ enum EAdvanceGraphicsDialog {
 
    kAGD_PARCOUNTER = 1000
 };
-
-#ifndef __TAdvancedGraphicsDialog__
-#define __TAdvancedGraphicsDialog__
 
 class TAdvancedGraphicsDialog : public TGTransientFrame {
 
