@@ -235,7 +235,7 @@ public:
 public:
    typedef std::vector<FuncParamData_t > FuncParams_t; 
 
-   
+   friend class FitEditorUnitTesting;
    ClassDef(TFitEditor,0)  //Fit Panel interface
 };
 
