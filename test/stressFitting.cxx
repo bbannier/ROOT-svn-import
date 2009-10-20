@@ -838,14 +838,14 @@ int testUnBinedFit(int n = 10000)
    globalStatus += status = testFitters(&tw, f1, listAlgos, treeFunctions[0]);
    printf("%s\n", (status?"FAILED":"OK"));
 
+   vector< vector<struct algoType> > listAlgosND(1);
+   listAlgosND[0] = commonAlgos;
+
    TF2 * f2 = new TF2(treeFunctions[1].name,treeFunctions[1].func,minX,maxX,minY,maxY,treeFunctions[1].npars);   
    f2->SetParameters( &(treeFunctions[1].fitPars[0]) ); 
    tw.set(tree, "x:y", "");
-   globalStatus += status = testFitters(&tw, f2, listAlgos, treeFunctions[1]);
+   globalStatus += status = testFitters(&tw, f2, listAlgosND, treeFunctions[1]);
    printf("%s\n", (status?"FAILED":"OK"));
-
-   vector< vector<struct algoType> > listAlgosND(1);
-   listAlgosND[0] = commonAlgos;
 
    TF1 * f4 = new TF1("gausND",gausNd,0,1,13);   
    f4->SetParameters(&(treeFunctions[2].fitPars[0]));
@@ -870,7 +870,6 @@ void init_structures()
    commonAlgos.push_back( algoType( "Minuit",      "Scan",        "Q0", CompareResult(0)) );
    commonAlgos.push_back( algoType( "Minuit",      "Seek",        "Q0", CompareResult())  );
    commonAlgos.push_back( algoType( "Minuit2",     "Migrad",      "Q0", CompareResult())  );
-   commonAlgos.push_back( algoType( "Minuit2",     "Simplex",     "Q0", CompareResult())  );
    commonAlgos.push_back( algoType( "Minuit2",     "Minimize",    "Q0", CompareResult())  );
    commonAlgos.push_back( algoType( "Minuit2",     "Scan",        "Q0", CompareResult(0)) );
    commonAlgos.push_back( algoType( "Minuit2",     "Fumili2",     "Q0", CompareResult())  );
@@ -882,6 +881,7 @@ void init_structures()
 #endif
 
    treeFail.push_back( algoType( "Minuit",      "Simplex",     "Q0", CompareResult()) );
+   treeFail.push_back( algoType( "Minuit2",     "Simplex",     "Q0", CompareResult())  );
 
    specialAlgos.push_back( algoType( "Minuit",      "Migrad",      "QE0", CompareResult()) );
    specialAlgos.push_back( algoType( "Minuit",      "Migrad",      "QW0", CompareResult()) );
@@ -912,7 +912,6 @@ void init_structures()
    histGaus2D.push_back( algoType( "Minuit",      "Scan",        "Q0",   CompareResult(0))         );
    histGaus2D.push_back( algoType( "Minuit",      "Seek",        "Q0",   CompareResult(cmpPars,6)) );
    histGaus2D.push_back( algoType( "Minuit2",     "Migrad",      "Q0",   CompareResult(cmpPars,6)) );
-   histGaus2D.push_back( algoType( "Minuit2",     "Simplex",     "Q0",   CompareResult(cmpPars,6)) );
    histGaus2D.push_back( algoType( "Minuit2",     "Minimize",    "Q0",   CompareResult(cmpPars,6)) );
    histGaus2D.push_back( algoType( "Minuit2",     "Scan",        "Q0",   CompareResult(0))         );
    histGaus2D.push_back( algoType( "Minuit2",     "Fumili2",     "Q0",   CompareResult(cmpPars,6)) );
@@ -923,6 +922,7 @@ void init_structures()
    histGaus2D.push_back( algoType( "GSLSimAn",    "",            "Q0", CompareResult(cmpPars,6)) );
 #endif   // treeFail
    histGaus2D.push_back( algoType( "Minuit",      "Simplex",     "Q0",   CompareResult(cmpPars,6)) );
+   histGaus2D.push_back( algoType( "Minuit2",     "Simplex",     "Q0",   CompareResult(cmpPars,6)) );
    // special algos
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QE0",  CompareResult(cmpPars,6)) );
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QW0",  CompareResult())          );
