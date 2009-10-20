@@ -157,6 +157,7 @@ namespace cling
       m_diagClient->setLangOptions(&language);
       
       m_globalDeclarations = "#include <stdio.h>\n";
+
    }
 
    //---------------------------------------------------------------------------
@@ -275,7 +276,7 @@ namespace cling
          //----------------------------------------------------------------------
          // Wrap the code
          //----------------------------------------------------------------------
-#if 0
+#if 0 /* Because clang does not support anonymous namespace correctly */
          unsigned int anon_start = exprCount;
          std::string wrapped( splitInput(source, statements) );
          if (wrapped.length()) {
@@ -1154,7 +1155,8 @@ namespace cling
          if (const clang::VarDecl *VD = dyn_cast<clang::VarDecl>(*D)) {
             std::string decl = genVarDecl(clang::PrintingPolicy(m_lang),
                                           VD->getType(), VD->getNameAsCString());
-            if (const clang::Expr *I = VD->getInit()) {
+            const clang::Expr *I = VD->getInit();
+            if ( I && 0==dyn_cast<clang::CXXConstructExpr>(I)) {
                SrcRange range = getStmtRange(I, *sm, m_lang);
                if (I->isConstantInitializer(*context)) {
                   // Keep the whole thing in the global context.

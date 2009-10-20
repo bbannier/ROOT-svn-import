@@ -27,12 +27,23 @@ SrcRange getStmtRange(const clang::Stmt *S,
 {
 	clang::SourceLocation SLoc = sm.getInstantiationLoc(S->getLocStart());
 	clang::SourceLocation ELoc = sm.getInstantiationLoc(S->getLocEnd());
+
 	// This is necessary to get the correct range of function-like macros.
 	if (SLoc == ELoc && S->getLocEnd().isMacroID())
 		ELoc = sm.getInstantiationRange(S->getLocEnd()).second;
-	unsigned start = sm.getFileOffset(SLoc);
-	unsigned end   = sm.getFileOffset(ELoc);
-	end += clang::Lexer::MeasureTokenLength(ELoc, sm, options);
+	unsigned start = SLoc.isValid() ? sm.getFileOffset(SLoc) : 0;
+	unsigned end   = ELoc.isValid() ? sm.getFileOffset(ELoc) : 0;
+
+	if (end!=0) {
+		end += clang::Lexer::MeasureTokenLength(ELoc, sm, options);
+	} else if (start!=0) {
+	      clang::SourceLocation Loc = sm.getInstantiationLoc(SLoc);
+	      std::pair<clang::FileID, unsigned> LocInfo = sm.getDecomposedLoc(Loc);
+	      std::pair<const char *,const char *> Buffer = sm.getBufferData(LocInfo.first);
+	      end = Buffer.second - Buffer.first;		
+	} else {
+	
+	}
 	return SrcRange(start, end);
 }
 
@@ -42,8 +53,8 @@ SrcRange getStmtRangeWithSemicolon(const clang::Stmt *S,
                                    const clang::SourceManager& sm,
                                    const clang::LangOptions& options)
 {
-	clang::SourceLocation SLoc = sm.getInstantiationLoc(S->getLocStart());
-	clang::SourceLocation ELoc = sm.getInstantiationLoc(S->getLocEnd());
+   clang::SourceLocation SLoc = sm.getInstantiationLoc(S->getLocStart());
+   clang::SourceLocation ELoc = sm.getInstantiationLoc(S->getLocEnd());
 
    return getRangeWithSemicolon(SLoc,ELoc,sm,options);
 }
@@ -54,7 +65,7 @@ SrcRange getRangeWithSemicolon(clang::SourceLocation SLoc,
                                const clang::LangOptions& options)
 {
    unsigned start = SLoc.isValid() ? sm.getFileOffset(SLoc) : 0;
-	unsigned end   = ELoc.isValid() ? sm.getFileOffset(ELoc) : 0;
+   unsigned end   = ELoc.isValid() ? sm.getFileOffset(ELoc) : 0;
 
 	// Below code copied from clang::Lexer::MeasureTokenLength():
    if (end!=0) {
@@ -81,7 +92,6 @@ SrcRange getRangeWithSemicolon(clang::SourceLocation SLoc,
       std::pair<const char *,const char *> Buffer = sm.getBufferData(LocInfo.first);
       end = Buffer.second - Buffer.first;
    }
-
 	return SrcRange(start, end);
 }
 
@@ -96,7 +106,6 @@ SrcRange getMacroRange(const clang::MacroInfo *MI,
 	unsigned end   = sm.getFileOffset(ELoc);
 	end += clang::Lexer::MeasureTokenLength(ELoc, sm, options);
 	return SrcRange(start, end);
-
 }
 
 } // namespace ccons
