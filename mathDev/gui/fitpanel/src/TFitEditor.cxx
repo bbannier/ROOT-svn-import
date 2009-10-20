@@ -159,7 +159,6 @@
 #include "RConfigure.h"
 #include "TPluginManager.h"
 
-#include <iostream>
 #include <sstream>
 #include <vector>
 #include <queue>
@@ -170,6 +169,10 @@ using std::ostringstream;
 using std::make_pair;
 
 #include "CommonDefs.h"
+
+// #include <iostream>
+// using std::cout;
+// using std::endl;
 
 void SearchCanvases(TSeqCollection* canvases, vector<TObject*>& objects);
 
@@ -1566,7 +1569,9 @@ void TFitEditor::FillFunctionList(Int_t)
             it != fSystemFuncs.end(); ++it ) {
          TF1* f = (*it);
          if ( strncmp(f->GetName(), "PrevFit", 7) != 0 ) {
-            fFuncList->AddEntry(f->GetName(), newid++); 
+            if ( f->GetNdim() == fDim ) {
+               fFuncList->AddEntry(f->GetName(), newid++); 
+            }
          }
       }
       if ( newid != kFP_ALTFUNC )
@@ -1579,7 +1584,6 @@ void TFitEditor::FillFunctionList(Int_t)
    } 
    else if ( fTypeFit->GetSelected() == kFP_PREVFIT ) {
       Int_t newid = kFP_ALTFUNC;
-
       pair<fPrevFitIter, fPrevFitIter> look = fPrevFit.equal_range(fFitObject);
       for ( fPrevFitIter it = look.first; it != look.second; ++it ) {
          fFuncList->AddEntry(it->second->GetName(), newid++);
@@ -3111,11 +3115,26 @@ void TFitEditor::GetFunctionsFromSystem()
 
    fSystemFuncs.clear();
 
+   const unsigned int nfuncs = 16;
+   const char* fnames[nfuncs] = { "gaus" ,   "gausn", "expo", "landau",
+                                  "landaun", "pol0",  "pol1", "pol2",
+                                  "pol3",    "pol4",  "pol5", "pol6",
+                                  "pol7",    "pol8",  "pol9", "user"
+   };
+
    TIter functionsIter(gROOT->GetListOfFunctions());
    TObject* obj;
    while( ( obj = (TObject*) functionsIter() ) ) {
       if ( TF1* func = dynamic_cast<TF1*>(obj) ) {
-         fSystemFuncs.push_back( copyTF1(func) ); 
+         bool addFunction = true;
+         for ( unsigned int i = 0; i < nfuncs; ++i ) {
+            if ( strcmp( func->GetName(), fnames[i] ) == 0 ) {
+               addFunction = false;
+               break;
+            }
+         }
+         if ( addFunction )
+            fSystemFuncs.push_back( copyTF1(func) ); 
       }
    }
 }
