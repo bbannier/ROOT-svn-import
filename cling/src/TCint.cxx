@@ -230,11 +230,11 @@ TCint::TCint(const char *name, const char *title) :
 
    fLangInfo = new clang::LangOptions();
    //fLangInfo->C99         = 1;
-   fLangInfo->HexFloats   = 1;
+   //fLangInfo->HexFloats   = 1;
    fLangInfo->BCPLComment = 1; // Only for C99/C++.
    fLangInfo->Digraphs    = 1; // C94, C99, C++.
    fLangInfo->CPlusPlus   = 1;
-   fLangInfo->CPlusPlus0x = 1;
+   //fLangInfo->CPlusPlus0x = 1;
    fLangInfo->CXXOperatorNames = 1;
    fLangInfo->Bool = 1;
    fLangInfo->NeXTRuntime = 1;
@@ -243,7 +243,8 @@ TCint::TCint(const char *name, const char *title) :
    fLangInfo->GNUMode = 1;
    fLangInfo->NoInline = 1;
    fLangInfo->GNUInline = 1;
-   fLangInfo->DollarIdents = 1;   
+   fLangInfo->DollarIdents = 1;
+   fLangInfo->POSIXThreads = 1;
 
    fInterpreter = new cling::Interpreter(*fLangInfo);
    TString inclPath(gSystem->GetIncludePath() + 2); // skip "-I"
