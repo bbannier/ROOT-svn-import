@@ -838,8 +838,12 @@ int testUnBinedFit(int n = 10000)
    globalStatus += status = testFitters(&tw, f1, listAlgos, treeFunctions[0]);
    printf("%s\n", (status?"FAILED":"OK"));
 
-   vector< vector<struct algoType> > listAlgosND(1);
+   vector<struct algoType> noCompareInTree;
+   noCompareInTree.push_back(algoType( "Minuit2",     "Simplex",     "Q0", CompareResult(0)));
+
+   vector< vector<struct algoType> > listAlgosND(2);
    listAlgosND[0] = commonAlgos;
+   listAlgosND[1] = noCompareInTree;
 
    TF2 * f2 = new TF2(treeFunctions[1].name,treeFunctions[1].func,minX,maxX,minY,maxY,treeFunctions[1].npars);   
    f2->SetParameters( &(treeFunctions[1].fitPars[0]) ); 
