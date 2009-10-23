@@ -108,7 +108,6 @@ void TEveCaloViz::IncImpliedSelected()
    // Virtual method od TEveElement::IncImpliedSelected().
    // It has same functionality as its base class with additional
    // debug print of selected cells list.
-
    if (gDebug > 1)
    {
       printf("%s::IncImpliedSelected, selected %d cells:\n", GetElementName(), (Int_t)fData->GetCellsSelected().size());
@@ -369,7 +368,7 @@ void TEveCaloViz::Paint(Option_t* /*option*/)
 }
 
 //______________________________________________________________________________
-TClass* TEveCaloViz::ProjectedClass() const
+TClass* TEveCaloViz::ProjectedClass(const TEveProjection*) const
 {
    // Virtual from TEveProjectable, returns TEveCalo2D class.
 
@@ -566,6 +565,8 @@ void TEveCalo2D::BuildCellIdCache()
       }
    }
 
+   BuildCellIdCacheSelected();
+
    fCellIdCacheOK= kTRUE;
 }
 
@@ -621,24 +622,24 @@ void TEveCalo2D::ComputeBBox()
    Float_t ze = fEndCapPos + th;
 
    x = r,  y = 0, z = 0;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
    x = -r, y = 0, z = 0;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
 
    x = 0, y = 0, z = ze;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
    x = 0, y = 0, z = -ze;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
 
    x = 0, y = r,  z = 0;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
    x = 0, y = -r, z = 0;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
 }
 
