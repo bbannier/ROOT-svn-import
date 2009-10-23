@@ -79,6 +79,7 @@
 
 #include "TROOT.h"
 #include <algorithm>
+#include <cassert>
 
 const unsigned int __DRAW__ = 0;
 
@@ -103,7 +104,7 @@ enum compareOptions {
 };
 
 const int defaultEqualOptions = 0; //cmpOptPrint;
-//int defaultEqualOptions = cmpOptPrint;
+// int defaultEqualOptions = cmpOptPrint;
 
 const double defaultErrorLimit = 1.E-10;
 
@@ -139,6 +140,7 @@ int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIM
 int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
 int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
 int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
+int equals(const char* msg, THnSparse* h1, TH1* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
 int equals(Double_t n1, Double_t n2, double ERRORLIMIT = defaultErrorLimit);
 int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = defaultErrorLimit);
 ostream& operator<<(ostream& out, TH1D* h);
@@ -5705,6 +5707,9 @@ bool testH1Integral()
    return iret;
 }
 
+double gaus1d(const double *x, const double * p) { 
+   return p[0] * TMath::Gaus( x[0], p[1], p[2] );
+}
 double gaus2d(const double *x, const double * p) { 
    return p[0] * TMath::Gaus( x[0], p[1], p[2] ) * TMath::Gaus( x[1], p[3], p[4] );
 }
@@ -5848,6 +5853,157 @@ bool testH3Integral()
    if ( defaultEqualOptions & cmpOptPrint )
       std::cout << "Integral H3:\t" << (iret?"FAILED":"OK") << std::endl;                                                                               
    return iret;
+}
+
+bool testConversion1D()
+{
+   const int nbins[3] = {50,11,12};
+   const double minRangeArray[3] = {2.,4.,4.};
+   const double maxRangeArray[3] = {5.,8.,10.};
+   
+   const int nevents = 500;
+
+   TF1* f = new TF1("gaus1D", gaus1d, minRangeArray[0], maxRangeArray[0], 3);
+   f->SetParameters(10., 3.5, .4);
+
+   TH1 *h1c = new TH1C("h1c", "h1-title", nbins[0], minRangeArray[0], maxRangeArray[0]);
+   TH1 *h1s = new TH1S("h1s", "h1-title", nbins[0], minRangeArray[0], maxRangeArray[0]);
+   TH1 *h1i = new TH1I("h1i", "h1-title", nbins[0], minRangeArray[0], maxRangeArray[0]);
+   TH1 *h1f = new TH1F("h1f", "h1-title", nbins[0], minRangeArray[0], maxRangeArray[0]);
+   TH1 *h1d = new TH1D("h1d", "h1-title", nbins[0], minRangeArray[0], maxRangeArray[0]);
+
+   h1c->FillRandom("gaus1D", nevents);
+   h1s->FillRandom("gaus1D", nevents);
+   h1i->FillRandom("gaus1D", nevents);
+   h1f->FillRandom("gaus1D", nevents);
+   h1d->FillRandom("gaus1D", nevents);
+
+   THnSparse* s1c = THnSparse::CreateSparse("s1c", "s1cTitle", h1c);
+   THnSparse* s1s = THnSparse::CreateSparse("s1s", "s1sTitle", h1s);
+   THnSparse* s1i = THnSparse::CreateSparse("s1i", "s1iTitle", h1i);
+   THnSparse* s1f = THnSparse::CreateSparse("s1f", "s1fTitle", h1f);
+   THnSparse* s1d = THnSparse::CreateSparse("s1d", "s1dTitle", h1d);
+
+   int status = 0;
+   status += equals("TH1-THnSparseC", s1c, h1c);
+   status += equals("TH1-THnSparseS", s1s, h1s);
+   status += equals("TH1-THnSparseI", s1i, h1i);
+   status += equals("TH1-THnSparseF", s1f, h1f);
+   status += equals("TH1-THnSparseD", s1d, h1d);
+
+   return status;
+}
+
+bool testConversion2D()
+{
+   const int nbins[3] = {50,11,12};
+   const double minRangeArray[3] = {2.,4.,4.};
+   const double maxRangeArray[3] = {5.,8.,10.};
+   
+   const int nevents = 500;
+
+   TF2* f = new TF2("gaus2D", gaus2d,
+                    minRangeArray[0], maxRangeArray[0], 
+                    minRangeArray[1], maxRangeArray[1],
+                    5);
+   f->SetParameters(10., 3.5, .4, 6, 1);
+
+   TH2 *h2c = new TH2C("h2c", "h2-title", 
+                       nbins[0], minRangeArray[0], maxRangeArray[0],
+                       nbins[1], minRangeArray[1], maxRangeArray[1]);
+                       
+   TH2 *h2s = new TH2S("h2s", "h2-title", 
+                       nbins[0], minRangeArray[0], maxRangeArray[0],
+                       nbins[1], minRangeArray[1], maxRangeArray[1]);
+   TH2 *h2i = new TH2I("h2i", "h2-title", 
+                       nbins[0], minRangeArray[0], maxRangeArray[0],
+                       nbins[1], minRangeArray[1], maxRangeArray[1]);
+   TH2 *h2f = new TH2F("h2f", "h2-title", 
+                       nbins[0], minRangeArray[0], maxRangeArray[0],
+                       nbins[1], minRangeArray[1], maxRangeArray[1]);
+   TH2 *h2d = new TH2D("h2d", "h2-title", 
+                       nbins[0], minRangeArray[0], maxRangeArray[0],
+                       nbins[1], minRangeArray[1], maxRangeArray[1]);
+
+   h2c->FillRandom("gaus2D", nevents);
+   h2s->FillRandom("gaus2D", nevents);
+   h2i->FillRandom("gaus2D", nevents);
+   h2f->FillRandom("gaus2D", nevents);
+   h2d->FillRandom("gaus2D", nevents);
+
+   THnSparse* s2c = THnSparse::CreateSparse("s2c", "s2cTitle", h2c);
+   THnSparse* s2s = THnSparse::CreateSparse("s2s", "s2sTitle", h2s);
+   THnSparse* s2i = THnSparse::CreateSparse("s2i", "s2iTitle", h2i);
+   THnSparse* s2f = THnSparse::CreateSparse("s2f", "s2fTitle", h2f);
+   THnSparse* s2d = THnSparse::CreateSparse("s2d", "s2dTitle", h2d);
+
+   int status = 0;
+   status += equals("TH2-THnSparseC", s2c, h2c);
+   status += equals("TH2-THnSparseS", s2s, h2s);
+   status += equals("TH2-THnSparseI", s2i, h2i);
+   status += equals("TH2-THnSparseF", s2f, h2f);
+   status += equals("TH2-THnSparseD", s2d, h2d);
+
+   return status;
+}
+
+bool testConversion3D()
+{
+   const int nbins[3] = {50,11,12};
+   const double minRangeArray[3] = {2.,4.,4.};
+   const double maxRangeArray[3] = {5.,8.,10.};
+   
+   const int nevents = 500;
+
+   TF3* f = new TF3("gaus3D", gaus3d,
+                    minRangeArray[0], maxRangeArray[0], 
+                    minRangeArray[1], maxRangeArray[1],
+                    minRangeArray[2], maxRangeArray[2],
+                    7);
+   f->SetParameters(10., 3.5, .4, 6, 1, 7, 2);
+
+   TH3 *h3c = new TH3C("h3c", "h3-title", 
+                       nbins[0], minRangeArray[0], maxRangeArray[0],
+                       nbins[1], minRangeArray[1], maxRangeArray[1],
+                       nbins[2], minRangeArray[2], maxRangeArray[2]);
+                       
+   TH3 *h3s = new TH3S("h3s", "h3-title", 
+                       nbins[0], minRangeArray[0], maxRangeArray[0],
+                       nbins[1], minRangeArray[1], maxRangeArray[1],
+                       nbins[2], minRangeArray[2], maxRangeArray[2]);
+   TH3 *h3i = new TH3I("h3i", "h3-title", 
+                       nbins[0], minRangeArray[0], maxRangeArray[0],
+                       nbins[1], minRangeArray[1], maxRangeArray[1],
+                       nbins[2], minRangeArray[2], maxRangeArray[2]);
+   TH3 *h3f = new TH3F("h3f", "h3-title", 
+                       nbins[0], minRangeArray[0], maxRangeArray[0],
+                       nbins[1], minRangeArray[1], maxRangeArray[1],
+                       nbins[2], minRangeArray[2], maxRangeArray[2]);
+   TH3 *h3d = new TH3D("h3d", "h3-title", 
+                       nbins[0], minRangeArray[0], maxRangeArray[0],
+                       nbins[1], minRangeArray[1], maxRangeArray[1],
+                       nbins[2], minRangeArray[2], maxRangeArray[2]);
+
+   h3c->FillRandom("gaus3D", nevents);
+   h3s->FillRandom("gaus3D", nevents);
+   h3i->FillRandom("gaus3D", nevents);
+   h3f->FillRandom("gaus3D", nevents);
+   h3d->FillRandom("gaus3D", nevents);
+
+   THnSparse* s3c = THnSparse::CreateSparse("s3c", "s3cTitle", h3c);
+   THnSparse* s3s = THnSparse::CreateSparse("s3s", "s3sTitle", h3s);
+   THnSparse* s3i = THnSparse::CreateSparse("s3i", "s3iTitle", h3i);
+   THnSparse* s3f = THnSparse::CreateSparse("s3f", "s3fTitle", h3f);
+   THnSparse* s3d = THnSparse::CreateSparse("s3d", "s3dTitle", h3d);
+
+   int status = 0;
+   status += equals("TH3-THnSparseC", s3c, h3c);
+   status += equals("TH3-THnSparseS", s3s, h3s);
+   status += equals("TH3-THnSparseI", s3i, h3i);
+   status += equals("TH3-THnSparseF", s3f, h3f);
+   status += equals("TH3-THnSparseD", s3d, h3d);
+
+   return status;
 }
 
 bool testRefRead1D()
@@ -7987,7 +8143,7 @@ int stressHistogram()
                                         scaleTestPointer };
 
    // Test 14
-   // Scale Tests
+   // Integral Tests
    const unsigned int numberOfIntegral = 3;
    pointer2Test integralTestPointer[numberOfIntegral] = { testH1Integral,
                                                           testH2Integral,
@@ -7997,8 +8153,20 @@ int stressHistogram()
                                            "Integral tests for Histograms....................................",
                                            integralTestPointer };
 
+   // Test 15
+   // TH1-THnSparse Conversions Tests
+   const unsigned int numberOfConversions = 3;
+   pointer2Test conversionsTestPointer[numberOfConversions] = { testConversion1D,
+                                                                testConversion2D,
+                                                                testConversion3D,
+   };
+   struct TTestSuite conversionsTestSuite = { numberOfConversions, 
+                                              "TH1-THnSparse Conversion tests...................................",
+                                              conversionsTestPointer };
+
+
    // Combination of tests
-   const unsigned int numberOfSuits = 12;
+   const unsigned int numberOfSuits = 13;
    struct TTestSuite* testSuite[numberOfSuits];
    testSuite[ 0] = &rangeTestSuite;
    testSuite[ 1] = &rebinTestSuite;
@@ -8012,6 +8180,7 @@ int stressHistogram()
    testSuite[ 9] = &interpolationTestSuite;
    testSuite[10] = &scaleTestSuite;
    testSuite[11] = &integralTestSuite;
+   testSuite[12] = &conversionsTestSuite;
 
    status = 0;
    for ( unsigned int i = 0; i < numberOfSuits; ++i ) {
@@ -8026,7 +8195,7 @@ int stressHistogram()
    }
    GlobalStatus += status;
 
-   // Test 15
+   // Test 16
    // Reference Tests
    const unsigned int numberOfRefRead = 7;
    pointer2Test refReadTestPointer[numberOfRefRead] = { testRefRead1D,  testRefReadProf1D,
@@ -8181,6 +8350,65 @@ int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options, double ER
    delete h2;
    
    return differents;
+}
+
+int equals(const char* msg, THnSparse* s, TH1* h2, int options, double ERRORLIMIT)
+{
+   options = options | defaultEqualOptions;
+   bool print = options & cmpOptPrint;
+   bool debug = options & cmpOptDebug;
+   bool compareError = ! (options & cmpOptNoError);
+   
+   int differents = 0;
+
+   const int dim ( s->GetNdimensions() );
+   if ( dynamic_cast<TH3*>(h2) ) {
+      if ( dim != 3 )
+         return 1;
+   } else if ( dynamic_cast<TH2*>(h2) ) {
+      if ( dim != 2 )
+         return 1;
+   } else if ( dim != 1 )
+      return 1;
+              
+   TArray* array = dynamic_cast<TArray*>(h2);
+   assert(array && "NO ARRAY!");
+
+   Int_t* coord = new Int_t[3];
+   for (Long64_t i = 0; i < s->GetNbins(); ++i) 
+   {
+      Double_t v1 = s->GetBinContent(i, coord);
+      Double_t err1 = s->GetBinError(coord);
+
+      int bin  = h2->GetBin(coord[0], coord[1], coord[2]);
+      Double_t v2 = h2->GetBinContent(bin);
+      Double_t err2 = h2->GetBinError(bin);
+
+      differents += equals(v1, v2, ERRORLIMIT);
+      if ( compareError )
+         differents += equals(err1  , err2, ERRORLIMIT);
+   }
+
+   for (Long64_t i = 0; i < array->GetSize(); ++i) 
+   {
+      h2->GetBinXYZ(i, coord[0], coord[1], coord[2]);
+      
+      Double_t v1 = s->GetBinContent(coord);
+      Double_t err1 = s->GetBinError(coord);
+      
+      Double_t v2 = h2->GetBinContent(i);
+      Double_t err2 = h2->GetBinError(i);
+
+      differents += equals(v1, v2, ERRORLIMIT);
+      if ( compareError )
+         differents += equals(err1  , err2, ERRORLIMIT);
+   }
+
+   if ( print || debug ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
+   
+   delete h2;
+   
+   return differents;  
 }
 
 int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT)
