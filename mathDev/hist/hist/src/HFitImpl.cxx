@@ -11,6 +11,7 @@
 #include "TGraph.h"
 #include "TMultiGraph.h"
 #include "TGraph2D.h"
+#include "THnSparse.h"
 
 #include "Fit/Fitter.h"
 #include "Fit/BinData.h"
@@ -43,6 +44,7 @@ namespace HFit {
    int GetDimension(const TGraph * ) { return 1; }
    int GetDimension(const TMultiGraph * ) { return 1; }
    int GetDimension(const TGraph2D * ) { return 2; }
+   int GetDimension(const THnSparse * s1) { return s1->GetNdimensions(); }
 
    int CheckFitFunction(const TF1 * f1, int hdim);
 
@@ -55,6 +57,7 @@ namespace HFit {
    void GetDrawingRange(TGraph * gr, ROOT::Fit::DataRange & range);
    void GetDrawingRange(TMultiGraph * mg, ROOT::Fit::DataRange & range);
    void GetDrawingRange(TGraph2D * gr, ROOT::Fit::DataRange & range);
+   void GetDrawingRange(THnSparse * s, ROOT::Fit::DataRange & range);
 
 
    template <class FitObject>
@@ -424,6 +427,19 @@ void HFit::GetDrawingRange(TGraph2D * gr,  ROOT::Fit::DataRange & range) {
    HFit::GetDrawingRange(gr->GetHistogram(), range);
 }
 
+void HFit::GetDrawingRange(THnSparse * s1, ROOT::Fit::DataRange & range) { 
+   // get range from histogram and update the DataRange class  
+   // if a ranges already exist in that dimension use that one
+
+   Int_t ndim = GetDimension(s1);
+
+   for ( int i = 0; i < ndim; ++i ) {
+      if ( range.Size(i) == 0 ) {
+         TAxis *axis = s1->GetAxis(i);
+         range.AddRange(i, axis->GetXmin(), axis->GetXmax());
+      }
+   }
+}
 
 template<class FitObject>
 void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, const char *goption) { 
@@ -705,7 +721,10 @@ int ROOT::Fit::FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & foption , const RO
    return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
 
-
+int ROOT::Fit::FitObject(THnSparse * s1, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+   // sparse histogram fitting
+   return HFit::Fit(s1,f1,foption,moption,goption,range); 
+}
 
 
 

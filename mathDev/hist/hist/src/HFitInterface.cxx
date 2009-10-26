@@ -719,6 +719,32 @@ void FillData(SparseData & dv, const THnSparse * h1, TF1 * /*func*/)
    }
 }
 
+void FillData(BinData & dv, const THnSparse * s1, TF1 * func) 
+{
+   // Fill the Range of the THnSparse
+   unsigned int const ndim = s1->GetNdimensions();
+   double xmin[ndim];
+   double xmax[ndim];
+   for ( unsigned int i = 0; i < ndim; ++i ) {
+      TAxis* axis = s1->GetAxis(i);
+      xmin[i] = axis->GetXmin();
+      xmax[i] = axis->GetXmax();
+   }
+
+   // Get the sparse data
+   ROOT::Fit::SparseData d(ndim, xmin, xmax);
+   ROOT::Fit::FillData(d, s1, func);
+
+   // Create the bin data from the sparse data
+   d.GetBinDataIntegral(dv);
+
+   // Put default options, needed for the likelihood fitting of sparse
+   // data.
+   ROOT::Fit::DataOptions& dopt = dv.Opt();
+   dopt.fUseEmpty = true;
+   dopt.fIntegral = true;
+}
+
 void FillData ( BinData  & dv, const TGraph * gr,  TF1 * func ) {  
    //  fill the data vector from a TGraph. Pass also the TF1 function which is 
    // needed in case to exclude points rejected by the function

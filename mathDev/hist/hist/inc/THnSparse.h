@@ -166,7 +166,7 @@ class THnSparse: public TNamed {
    virtual ~THnSparse();
 
    static THnSparse* CreateSparse(const char* name, const char* title,
-                                  const TH1* axes, Int_t ChunkSize = 1024 * 16);
+                                  const TH1* h1, Int_t ChunkSize = 1024 * 16);
 
    Int_t  GetNChunks() const { return fBinContent.GetEntriesFast(); }
    TObjArray* GetListOfAxes() { return &fAxes; }
@@ -185,6 +185,9 @@ class THnSparse: public TNamed {
    Long_t Fill(const char* name[], Double_t w = 1.) {
       return Fill(GetBin(name), w);
    }
+
+   Int_t Fit(TF1 *f1 ,Option_t *option = "", Option_t *goption = "");
+   TList* GetListOfFunctions() { return 0; }
 
    Double_t GetEntries() const { return fEntries; }
    Double_t GetWeightSum() const { return fTsumw; }
