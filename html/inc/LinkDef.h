@@ -32,8 +32,19 @@
 #pragma link C++ class THtml::TModuleDefinition;
 #pragma link C++ class THtml::TFileDefinition;
 #pragma link C++ class THtml::TPathDefinition;
-#pragma link C++ class THtml::TFileSysEntry;
-#pragma link C++ class THtml::TFileSysDir;
-#pragma link C++ class THtml::TFileSysRoot;
-#pragma link C++ class THtml::TFileSysDB;
+
+#pragma link C++ class Doc::TFileSysEntry;
+#pragma link C++ class Doc::TFileSysDir;
+#pragma link C++ class Doc::TFileSysRoot;
+#pragma link C++ class Doc::TFileSysDB;
+
+#pragma link C++ class Doc::TDocString+;
+#pragma link C++ class Doc::TDocString::TDocRef+;
+#pragma link C++ class Doc::TDocStringTable+;
+#pragma link C++ class Doc::TDocumented+;
+#pragma link C++ class Doc::TMemberDoc+;
+#pragma link C++ class Doc::TFunctionDoc+;
+#pragma link C++ class Doc::TDataDoc+;
+#pragma link C++ class Doc::TTypedefDoc+;
+#pragma link C++ class Doc::TClassDoc+;
 #endif
