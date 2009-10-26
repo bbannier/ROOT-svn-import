@@ -18,6 +18,7 @@
 #include "TClassEdit.h"
 #include "TClassTable.h"
 #include "TDataType.h"
+#include "TDocFileDB.h"
 #include "TDocInfo.h"
 #include "TDocOutput.h"
 #include "TEnv.h"
@@ -78,7 +79,7 @@ void THtml::THelperBase::SetOwner(THtml* html) {
 
 
 //______________________________________________________________________________
-bool THtml::TModuleDefinition::GetModule(TClass* cl, TFileSysEntry* fse,
+bool THtml::TModuleDefinition::GetModule(TClass* cl, Doc::TFileSysEntry* fse,
                                          TString& out_modulename) const
 {
    // Set out_modulename to cl's module name; return true if it's valid.
@@ -99,7 +100,7 @@ bool THtml::TModuleDefinition::GetModule(TClass* cl, TFileSysEntry* fse,
    // own class from TModuleDefinition and pass it to THtml::SetModuleDefinition().
    //
    // The fse parameter is used to determine the relevant part of the path, i.e.
-   // to not include parent directories of a TFileSysRoot.
+   // to not include parent directories of a Doc::TFileSysRoot.
 
    out_modulename = "USER";
    if (!cl) return false;
@@ -245,7 +246,7 @@ void THtml::TFileDefinition::SplitClassIntoDirFile(const TString& clname, TStrin
 
 //______________________________________________________________________________
 bool THtml::TFileDefinition::GetDeclFileName(const TClass* cl, TString& out_filename,
-                                             TString& out_fsys, TFileSysEntry** fse) const
+                                             TString& out_fsys, Doc::TFileSysEntry** fse) const
 {
    // Determine cl's declaration file name. Usually it's just
    // cl->GetDeclFileName(), but sometimes conversions need to be done
@@ -262,7 +263,7 @@ bool THtml::TFileDefinition::GetDeclFileName(const TClass* cl, TString& out_file
 
 //______________________________________________________________________________
 bool THtml::TFileDefinition::GetImplFileName(const TClass* cl, TString& out_filename,
-                                             TString& out_fsys, TFileSysEntry** fse) const
+                                             TString& out_fsys, Doc::TFileSysEntry** fse) const
 {
    // Determine cl's implementation file name. Usually it's just
    // cl->GetImplFileName(), but sometimes conversions need to be done.
@@ -293,7 +294,7 @@ void THtml::TFileDefinition::NormalizePath(TString& filename) const
 
 
 //______________________________________________________________________________
-TString THtml::TFileDefinition::MatchFileSysName(TString& filename, TFileSysEntry** fse) const
+TString THtml::TFileDefinition::MatchFileSysName(TString& filename, Doc::TFileSysEntry** fse) const
 {
    // Find filename in the list of system files; return the system file name
    // and change filename to the file name as included.
@@ -303,8 +304,8 @@ TString THtml::TFileDefinition::MatchFileSysName(TString& filename, TFileSysEntr
    TString filesysname;
    if (bucket) {
       TIter iFS(bucket);
-      TFileSysEntry* fsentry = 0;
-      while ((fsentry = (TFileSysEntry*) iFS())) {
+      Doc::TFileSysEntry* fsentry = 0;
+      while ((fsentry = (Doc::TFileSysEntry*) iFS())) {
          if (!filename.EndsWith(fsentry->GetName()))
             continue;
          fsentry->GetFullName(filesysname, kTRUE); // get the short version
@@ -325,7 +326,7 @@ TString THtml::TFileDefinition::MatchFileSysName(TString& filename, TFileSysEntr
 //______________________________________________________________________________
 bool THtml::TFileDefinition::GetFileName(const TClass* cl, bool decl,
                                          TString& out_filename, TString& out_fsys,
-                                         TFileSysEntry** fse) const
+                                         Doc::TFileSysEntry** fse) const
 {
    // Common implementation for GetDeclFileName(), GetImplFileName()
 
@@ -607,9 +608,9 @@ bool THtml::TPathDefinition::GetFileNameFromInclude(const char* included, TStrin
    // or found. For ROOT, out_fsname corresponds to included prepended with
    // "include"; only THtml prefers to work on the original files, e.g.
    // core/base/inc/TObject.h instead of include/TObject.h, so the
-   // default implementation searches the TFileSysDB for an entry with
+   // default implementation searches the Doc::TFileSysDB for an entry with
    // basename(included) and with matching directory part, setting out_fsname
-   // to the TFileSysEntry's path.
+   // to the Doc::TFileSysEntry's path.
 
    if (!included) return false;
 
@@ -634,11 +635,11 @@ bool THtml::TPathDefinition::GetFileNameFromInclude(const char* included, TStrin
    TString alldir(gSystem->DirName(included));
    TObjArray* arrSubDirs = alldir.Tokenize("/");
    TIter iEntry(bucket);
-   TFileSysEntry* entry = 0;
-   while ((entry = (TFileSysEntry*) iEntry())) {
+   Doc::TFileSysEntry* entry = 0;
+   while ((entry = (Doc::TFileSysEntry*) iEntry())) {
       if (incBase != entry->GetName()) continue;
       // find entry with matching enclosing directory
-      THtml::TFileSysDir* parent = entry->GetParent();
+      Doc::TFileSysDir* parent = entry->GetParent();
       for (int i = arrSubDirs->GetEntries() - 1; parent && i >= 0; --i) {
          const TString& subdir(((TObjString*)(*arrSubDirs)[i])->String());
          if (!subdir.Length() || subdir == ".")
@@ -657,89 +658,6 @@ bool THtml::TPathDefinition::GetFileNameFromInclude(const char* included, TStrin
    delete arrSubDirs;
    return false;
 }
-
-//______________________________________________________________________________
-void THtml::TFileSysDir::Recurse(TFileSysDB* db, const char* path)
-{
-   // Recursively fill entries by parsing the contents of path.
-
-   TString dir(path);
-   if (gDebug > 0 || GetLevel() < 2)
-      Info("Recurse", "scanning %s...", path);
-   TPMERegexp regexp(db->GetIgnore());
-   dir += "/";
-   void* hDir = gSystem->OpenDirectory(dir);
-   const char* direntry = 0;
-   while ((direntry = gSystem->GetDirEntry(hDir))) {
-      if (!direntry[0] || direntry[0] == '.' || regexp.Match(direntry)) continue;
-      TString entryPath(dir + direntry);
-      if (gSystem->AccessPathName(entryPath, kReadPermission))
-         continue;
-      FileStat_t buf;
-      gSystem->GetPathInfo(entryPath, buf);
-      if (R_ISDIR(buf.fMode)) {
-         // skip if we would nest too deeply,  and skip soft links:
-         if (GetLevel() > db->GetMaxLevel()
-#ifndef R__WIN32
-             || db->GetMapIno().GetValue(buf.fIno)
-#endif
-             ) continue;
-         TFileSysDir* subdir = new TFileSysDir(direntry, this);
-         fDirs.Add(subdir);
-#ifndef R__WIN32
-         db->GetMapIno().Add(buf.fIno, (Long_t)subdir);
-#endif
-         subdir->Recurse(db, entryPath);
-      } else {
-         int delen = strlen(direntry);
-         // only .cxx and .h are taken
-         if (strcmp(direntry + delen - 4, ".cxx")
-             && strcmp(direntry + delen - 2, ".h"))
-            continue;
-         TFileSysEntry* entry = new TFileSysEntry(direntry, this);
-         db->GetEntries().Add(entry);
-         fFiles.Add(entry);
-      }
-   } // while dir entry
-   gSystem->FreeDirectory(hDir);
-}
-
-
-//______________________________________________________________________________
-void THtml::TFileSysDB::Fill()
-{
-   // Recursively fill entries by parsing the path specified in GetName();
-   // can be a THtml::GetDirDelimiter() delimited list of paths.
-
-   TString dir;
-   Ssiz_t posPath = 0;
-   while (fName.Tokenize(dir, posPath, THtml::GetDirDelimiter())) {
-      if (gSystem->AccessPathName(dir, kReadPermission)) {
-         Warning("Fill", "Cannot read InputPath \"%s\"!", dir.Data());
-         continue;
-      }
-      FileStat_t buf;
-      gSystem->GetPathInfo(dir, buf);
-      if (R_ISDIR(buf.fMode)) {
-#ifndef R__WIN32
-         TFileSysRoot* prevroot = (TFileSysRoot*) (Long_t)GetMapIno().GetValue(buf.fIno);
-         if (prevroot != 0) {
-            Warning("Fill", "InputPath \"%s\" already present as \"%s\"!", dir.Data(), prevroot->GetName());
-            continue;
-         }
-#endif
-         TFileSysRoot* root = new TFileSysRoot(dir, this);
-         fDirs.Add(root);
-#ifndef R__WIN32
-         GetMapIno().Add(buf.fIno, (Long_t)root);
-#endif
-         root->Recurse(this, dir);
-      } else {
-         Warning("Fill", "Cannot read InputPath \"%s\"!", dir.Data());
-      }
-   }
-}
-
 
 ////////////////////////////////////////////////////////////////////////////////
 /* BEGIN_HTML
@@ -1607,7 +1525,7 @@ void THtml::CreateListOfClasses(const char* filter)
       TString src;
       TString srcFS;
       TString htmlfilename;
-      TFileSysEntry* fse = 0;
+      Doc::TFileSysEntry* fse = 0;
 
       TClassDocInfo* cdi = (TClassDocInfo*) fDocEntityInfo.fClasses.FindObject(cname);
       if (cdi) {
@@ -2028,17 +1946,6 @@ void THtml::GetHtmlFileName(TClass * classPtr, TString& filename) const
 }
 
 //______________________________________________________________________________
-const char* THtml::GetHtmlFileName(const char* classname) const
-{
-   // Get the html file name for a class named classname.
-   // Returns 0 if the class is not documented.
-   TClassDocInfo* cdi = (TClassDocInfo*) fDocEntityInfo.fClasses.FindObject(classname);
-   if (cdi)
-      return cdi->GetHtmlFileName();
-   return 0;
-}
-
-//______________________________________________________________________________
 TClass *THtml::GetClass(const char *name1) const
 {
 //*-*-*-*-*Return pointer to class with name*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -2067,75 +1974,6 @@ TClass *THtml::GetClass(const char *name1) const
    if (cl && GetDeclFileName(cl, kFALSE, declFileName))
       return cl;
    return 0;
-}
-
-//______________________________________________________________________________
-bool THtml::GetDeclFileName(TClass * cl, Bool_t filesys, TString& out_name) const
-{
-   // Return declaration file name; return the full path if filesys is true.
-   return GetDeclImplFileName(cl, filesys, true, out_name);
-}
-
-//______________________________________________________________________________
-bool THtml::GetImplFileName(TClass * cl, Bool_t filesys, TString& out_name) const
-{
-   // Return implementation file name
-   return GetDeclImplFileName(cl, filesys, false, out_name);
-}
-
-//______________________________________________________________________________
-bool THtml::GetDeclImplFileName(TClass * cl, bool filesys, bool decl, TString& out_name) const
-{
-   // Combined implementation for GetDeclFileName(), GetImplFileName():
-   // Return declaration / implementation file name (depending on decl);
-   // return the full path if filesys is true.
-
-   out_name = "";
-
-   R__LOCKGUARD(GetMakeClassMutex());
-   TClassDocInfo* cdi = (TClassDocInfo*) fDocEntityInfo.fClasses.FindObject(cl->GetName());
-   // whether we need to determine the fil name
-   bool determine = (!cdi); // no cdi
-   if (!determine) determine |=  decl &&  filesys && !cdi->GetDeclFileSysName()[0];
-   if (!determine) determine |=  decl && !filesys && !cdi->GetDeclFileName()[0];
-   if (!determine) determine |= !decl &&  filesys && !cdi->GetImplFileSysName()[0];
-   if (!determine) determine |= !decl && !filesys && !cdi->GetImplFileName()[0];
-   if (determine) {
-      TString name;
-      TString sysname;
-      if (decl) {
-         if (!GetFileDefinition().GetDeclFileName(cl, name, sysname))
-            return false;
-      } else {
-         if (!GetFileDefinition().GetImplFileName(cl, name, sysname))
-            return false;
-      }
-      if (cdi) {
-         if (decl) {
-            if (!cdi->GetDeclFileName() || !cdi->GetDeclFileName()[0])
-               cdi->SetDeclFileName(name);
-            if (!cdi->GetDeclFileSysName() || !cdi->GetDeclFileSysName()[0])
-               cdi->SetDeclFileSysName(sysname);
-         } else {
-            if (!cdi->GetImplFileName() || !cdi->GetImplFileName()[0])
-               cdi->SetImplFileName(name);
-            if (!cdi->GetImplFileSysName() || !cdi->GetImplFileSysName()[0])
-               cdi->SetImplFileSysName(sysname);
-         }
-      }
-
-      if (filesys) out_name = sysname;
-      else         out_name = name;
-      return true;
-   }
-   if (filesys) {
-      if (decl) out_name = cdi->GetDeclFileSysName();
-      else      out_name = cdi->GetImplFileSysName();
-   } else {
-      if (decl) out_name = cdi->GetDeclFileName();
-      else      out_name = cdi->GetImplFileName();
-   }
-   return true;
 }
 
 //______________________________________________________________________________
@@ -2413,7 +2251,7 @@ void THtml::SetLocalFiles() const
 {
    // Fill the files available in the file system below fPathInfo.fInputPath
    if (fLocalFiles) delete fLocalFiles;
-   fLocalFiles = new TFileSysDB(fPathInfo.fInputPath, fPathInfo.fIgnorePath + "|(\\b" + GetOutputDir(kFALSE) + "\\b)" , 6);
+   fLocalFiles = new Doc::TFileSysDB(fPathInfo.fInputPath, fPathInfo.fIgnorePath + "|(\\b" + GetOutputDir(kFALSE) + "\\b)" , 6);
 }
 
 //______________________________________________________________________________

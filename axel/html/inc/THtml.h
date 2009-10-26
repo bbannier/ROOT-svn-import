@@ -26,20 +26,17 @@
 #include "THashList.h"
 #endif
 
-#ifndef ROOT_THashTable
-#include "THashTable.h"
-#endif
-
-#ifndef ROOT_TExMap
-#include "TExMap.h"
-#endif
-
 #include <map>
 
 class TClass;
 class TClassDocInfo;
 class TGClient;
 class TVirtualMutex;
+
+namespace Doc {
+   class TFileSysDB;
+   class TFileSysEntry;
+}
 
 class THtml: public TObject {
 public:
@@ -56,15 +53,13 @@ public:
       ClassDef(THelperBase, 0); // a helper object's base class
    };
 
-   class TFileSysEntry;
-
    //______________________________________________________________
    // Helper class to translate between classes and their
    // modules. Can be derived from and thus replaced by
    // the user; see THtml::SetModuleDefinition().
    class TModuleDefinition: public THelperBase {
    public:
-      virtual bool GetModule(TClass* cl, TFileSysEntry* fse, TString& out_modulename) const;
+      virtual bool GetModule(TClass* cl, Doc::TFileSysEntry* fse, TString& out_modulename) const;
       ClassDef(TModuleDefinition, 0); // helper class to determine a class's module
    };
 
@@ -75,13 +70,13 @@ public:
    class TFileDefinition: public THelperBase {
    public:
       virtual bool GetDeclFileName(const TClass* cl, TString& out_filename, TString& out_fsys,
-                                   TFileSysEntry** fse = 0) const;
+                                   Doc::TFileSysEntry** fse = 0) const;
       virtual bool GetImplFileName(const TClass* cl, TString& out_filename, TString& out_fsys,
-                                   TFileSysEntry** fse = 0) const;
+                                   Doc::TFileSysEntry** fse = 0) const;
    protected:
       virtual bool GetFileName(const TClass* cl, bool decl, TString& out_filename, TString& out_fsys,
-                               TFileSysEntry** fse = 0) const;
-      TString MatchFileSysName(TString& filename, TFileSysEntry** fse = 0) const;
+                               Doc::TFileSysEntry** fse = 0) const;
+      TString MatchFileSysName(TString& filename, Doc::TFileSysEntry** fse = 0) const;
 
       void SplitClassIntoDirFile(const TString& clname, TString& dir, TString& filename) const;
       void NormalizePath(TString& path) const;
@@ -102,96 +97,6 @@ public:
    protected:
       ClassDef(TPathDefinition, 0); // helper class to determine directory layouts
    };
-
-   class TFileSysDir;
-   class TFileSysDB;
-   //______________________________________________________________
-   // Utility class representing a directory entry
-   class TFileSysEntry: public TObject {
-   public:
-      TFileSysEntry(const char* name, TFileSysDir* parent):
-         fName(name), fParent(parent), fLevel(parent ? parent->GetLevel() + 1 : 0) {}
-      const char* GetName() const { return fName; }
-      virtual ULong_t Hash() const { return fName.Hash(); }
-      virtual void GetFullName(TString& fullname, Bool_t asIncluded) const {
-         if (fParent) {
-            fParent->GetFullName(fullname, asIncluded);
-            if (fullname[0])
-               fullname += "/";
-         } else
-            fullname = "";
-         fullname += fName;
-      }
-
-      TFileSysDir* GetParent() const { return fParent; }
-      Int_t GetLevel() const { return fLevel; }
-   protected:
-      TString      fName; // name of the element
-      TFileSysDir* fParent; // parent directory
-      Int_t        fLevel; // level of directory
-      ClassDef(TFileSysEntry, 0); // an entry of the local file system
-   };
-
-   //______________________________________________________________
-   // Utility class representing a directory
-   class TFileSysDir: public TFileSysEntry {
-   public:
-      TFileSysDir(const char* name, TFileSysDir* parent):
-         TFileSysEntry(name, parent)
-      { fFiles.SetOwner(); fDirs.SetOwner(); }
-      const TList* GetFiles() const { return &fFiles; }
-      const TList* GetSubDirs() const { return &fDirs; }
-
-      void Recurse(TFileSysDB* db, const char* path);
-
-   protected:
-      TList fFiles;
-      TList fDirs;
-      ClassDef(TFileSysDir, 0); // an directory of the local file system
-   };
-
-   //______________________________________________________________
-   // Utility class representing a root directory as specified in
-   // THtml::GetInputPath()
-   class TFileSysRoot: public TFileSysDir {
-   public:
-      TFileSysRoot(const char* name, TFileSysDB* parent):
-         TFileSysDir(name, parent) {}
-      void GetFullName(TString& fullname, Bool_t asIncluded) const {
-         // prepend directory part of THtml::GetInputPath() only
-         // if !asIncluded
-         fullname = "";
-         if (!asIncluded)
-            fullname += fName;
-      }
-
-      ClassDef(TFileSysRoot, 0); // an root directory of the local file system
-   };
-
-   //______________________________________________________________
-   // Utility class representing a directory
-   class TFileSysDB: public TFileSysDir {
-   public:
-      TFileSysDB(const char* path, const char* ignore, Int_t maxdirlevel):
-         TFileSysDir(path, 0), fEntries(1009, 5), fIgnorePath(ignore), fMaxLevel(maxdirlevel)
-      { Fill(); }
-
-      TExMap& GetMapIno() { return fMapIno; }
-      THashTable& GetEntries() { return fEntries; }
-      const TString& GetIgnore() const { return fIgnorePath; }
-      Int_t   GetMaxLevel() const { return fMaxLevel; }
-
-   protected:
-      void Fill();
-
-   private:
-      TExMap   fMapIno; // inode to TFileSysDir map, to detect softlinks
-      THashTable fEntries; // hash map of all filenames without paths
-      TString  fIgnorePath; // regexp of path to ignore while building entry tree
-      Int_t    fMaxLevel; // maximum level of directory nesting
-      ClassDef(TFileSysDB, 0); // instance of file system data
-   };
-
 
    //______________________________________________________________
    // Configuration holder for path related settings
@@ -338,7 +243,7 @@ public:
    void                SortListOfModules() { fDocEntityInfo.fModules.Sort(); }
    const TList*        GetListOfModules() const { return &fDocEntityInfo.fModules; }
    const TList*        GetListOfClasses() const { return &fDocEntityInfo.fClasses; }
-   TFileSysDB*         GetLocalFiles() const { if (!fLocalFiles) SetLocalFiles(); return fLocalFiles; }
+   Doc::TFileSysDB*    GetLocalFiles() const { if (!fLocalFiles) SetLocalFiles(); return fLocalFiles; }
    TVirtualMutex*      GetMakeClassMutex() const { return  fMakeClassMutex; }
    virtual void        GetModuleNameForClass(TString& module, TClass* cl) const;
    const PathInfo_t&    GetPathInfo() const { return fPathInfo; }
@@ -419,7 +324,7 @@ protected:
    mutable TPathDefinition *fPathDef; // object translating classes to module names
    mutable TModuleDefinition *fModuleDef; // object translating classes to module names
    mutable TFileDefinition* fFileDef; // object translating classes to file names
-   mutable TFileSysDB    *fLocalFiles; // files found locally for a given source path
+   mutable Doc::TFileSysDB* fLocalFiles; // files found locally for a given source path
    Bool_t		fBatch; // Whether to enable GUI output
 
    ClassDef(THtml,0)  //Convert class(es) into HTML file(s)
