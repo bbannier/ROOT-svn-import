@@ -65,6 +65,11 @@ namespace ROOT {
          fitting function for a TGraph2D (called from TGraph2D::Fit)
        */
       int FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
+
+      /**
+         fitting function for a THnSparse (called from THnSparse::Fit)
+       */
+      int FitObject(THnSparse * s1, TF1 *f1, Foption_t & option, const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
 #endif
 
       /** 
@@ -93,6 +98,12 @@ namespace ROOT {
           needed in case of integral option and to reject points rejected by the function
       */ 
       void FillData ( SparseData  & dv, const THnSparse * hist, TF1 * func = 0); 
+
+      /** 
+          fill the data vector from a THnSparse. Pass also the TF1 function which is 
+          needed in case of integral option and to reject points rejected by the function
+      */ 
+      void FillData ( BinData  & dv, const THnSparse * hist, TF1 * func = 0); 
 
       /** 
           fill the data vector from a TGraph2D. Pass also the TF1 function which is 

@@ -28,6 +28,11 @@
 
 #include "TError.h"
 
+#include "HFitInterface.h"
+#include "Fit/SparseData.h"
+#include "Fit/Fitter.h"
+#include "Math/WrappedMultiTF1.h"
+
 //______________________________________________________________________________
 //
 // THnSparseCompactBinCoord is a class used by THnSparse internally. It
@@ -592,6 +597,31 @@ THnSparse* THnSparse::CreateSparse(const char* name, const char* title,
    }
 
    return s;
+}
+
+//______________________________________________________________________________
+Int_t THnSparse::Fit(TF1 *f ,Option_t *option ,Option_t *goption)
+{
+   // Creates the preconditions for the fit.
+
+   Foption_t fitOption;
+
+   if (!TH1::FitOptionsMake(option,fitOption)) return 0;
+
+   // The function used to fit cannot be stored in a THnSparse. It
+   // cannot be drawn either. Perhaps in the future.
+   fitOption.Nostore = true;
+   // Use likelihood fit.
+   fitOption.Like = true;
+   // create range and minimizer options with default values 
+   ROOT::Fit::DataRange range(GetNdimensions()); 
+   for ( int i = 0; i < GetNdimensions(); ++i ) {
+      TAxis *axis = GetAxis(i);
+      range.AddRange(i, axis->GetXmin(), axis->GetXmax());
+   }
+   ROOT::Math::MinimizerOptions minOption; 
+   
+   return ROOT::Fit::FitObject(this, f , fitOption , minOption, goption, range); 
 }
 
 //______________________________________________________________________________
