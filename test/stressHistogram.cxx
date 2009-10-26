@@ -44,7 +44,8 @@
 // Test 12: Interpolation tests for Histograms...............................OK  //
 // Test 13: Scale tests for Profiles.........................................OK  //
 // Test 14: Integral tests for Histograms....................................OK  //
-// Test 15: Reference File Read for Histograms and Profiles..................OK  //
+// Test 15: TH1-THnSparse Conversion tests...................................OK
+// Test 16: Reference File Read for Histograms and Profiles..................OK
 // ****************************************************************************  //
 // stressHistogram: Real Time =  64.01 seconds Cpu Time =  63.89 seconds         //
 //  ROOTMARKS = 430.74 ROOT version: 5.25/01	branches/dev/mathDev@29787       //
