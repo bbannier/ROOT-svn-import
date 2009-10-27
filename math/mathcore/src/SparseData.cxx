@@ -225,8 +225,12 @@ namespace ROOT {
          if ( it != l->end() )
 //             cout << "Found: " << *it << endl;
             ;
-         else
-            cout << "FAILED!" << endl;
+         else {
+//             cout << "SparseData::Add -> FAILED! box not found! " << endl;
+//             cout << littleBox << endl;
+            return; // Does not add the box, as it is part of the
+                    // underflow/overflow bin
+         }
          // If it happens to have a value, then we add the value,
          if ( it->getVal() )
             it->addVal( content );
