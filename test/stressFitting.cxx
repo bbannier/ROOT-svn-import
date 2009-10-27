@@ -1,5 +1,6 @@
 #include "TH1.h"
 #include "TH2.h"
+#include "THnSparse.h"
 #include "TGraph.h"
 #include "TGraph2D.h"
 #include "TGraphErrors.h"
@@ -374,6 +375,7 @@ void printTestName(T* object, TF1* func)
    while ( str.length() != 65 )
       str += '.';
    printf("%s", str.c_str());
+   fflush(stdout);
 }
 
 // In debug mode, prints the title of the debug table.
@@ -491,7 +493,7 @@ int testFit(const char* str1, const char* str2, const char* str3,
 //      @listAlgos All the algorithms that should be tested
 //      @fitFunction Parameters of the function used to fill the object
 template <typename T, typename F>
-int testFitters(T* object, F* func, vector< vector<struct algoType> > listAlgos, struct fitFunctions const& fitFunction)
+int testFitters(T* object, F* func, vector< vector<struct algoType> >& listAlgos, struct fitFunctions const& fitFunction)
 {
    // counts the number of parameters wronly calculated
    int status = 0;
@@ -567,6 +569,7 @@ int test1DObjects(vector< vector<struct algoType> >& listH,
    TF1* func = 0;
    TH1D* h1 = 0;
    TH1D* h2 = 0;
+   THnSparse* s1 = 0;
    TGraph* g1 = 0;
    TGraphErrors* ge1 = 0;
    TCanvas *c0 = 0, *c1 = 0, *c2 = 0, *c3 = 0;
@@ -580,14 +583,14 @@ int test1DObjects(vector< vector<struct algoType> >& listH,
       // fill an histogram 
       if ( h1 ) delete h1;
       h1 = new TH1D("Histogram 1D","h1-title",nbinsX,minX,maxX);
-      for ( int i = 0; i < h1->GetNbinsX() + 1; ++i )
+      for ( int i = 0; i <= h1->GetNbinsX() + 1; ++i )
          h1->Fill( h1->GetBinCenter(i), rndm.Poisson( func->Eval( h1->GetBinCenter(i) ) ) );
 
       double v[nbinsX];
       FillVariableRange(v, nbinsX, minX, maxX);
       if ( h2 ) delete h2;
       h2 = new TH1D("Histogram 1D Variable","h2-title",nbinsX, v);
-      for ( int i = 0; i < h2->GetNbinsX() + 1; ++i )
+      for ( int i = 0; i <= h2->GetNbinsX() + 1; ++i )
          h2->Fill( h2->GetBinCenter(i), rndm.Poisson( func->Eval( h2->GetBinCenter(i) ) ) );
 
       delete c0; c0 = new TCanvas("c0-1D", "Histogram1D Variable");
@@ -621,6 +624,11 @@ int test1DObjects(vector< vector<struct algoType> >& listH,
       ObjectWrapper<TGraphErrors*> owge1(ge1);
       globalStatus += status = testFitters(&owge1, func, listGE, listOfFunctions[j]);
       printf("%s\n", (status?"FAILED":"OK"));
+
+      delete s1; s1 = THnSparse::CreateSparse("THnSparse 1D", "THnSparse 1D - title", h1);
+      ObjectWrapper<THnSparse*> ows1(s1);
+      globalStatus += status = testFitters(&ows1, func, listH, listOfFunctions[j]);
+      printf("%s\n", (status?"FAILED":"OK"));
    }
 
    if ( ! __DRAW__ )
@@ -653,6 +661,7 @@ int test2DObjects(vector< vector<struct algoType> >& listH,
    TF2* func = 0;
    TH2D* h1 = 0;
    TH2D* h2 = 0;
+   THnSparse* s1 = 0;
    TGraph2D* g1 = 0;
    TGraph2DErrors* ge1 = 0;
    TCanvas *c0 = 0, *c1 = 0, *c2 = 0, *c3 = 0;
@@ -669,8 +678,8 @@ int test2DObjects(vector< vector<struct algoType> >& listH,
       if ( ge1 ) delete ge1;
       ge1 = new TGraph2DErrors((h1->GetNbinsX() + 1) * (h1->GetNbinsY() + 1));
       unsigned int counter = 0;
-      for ( int i = 0; i < h1->GetNbinsX() + 1; ++i )
-         for ( int j = 0; j < h1->GetNbinsY() + 1; ++j ) 
+      for ( int i = 0; i <= h1->GetNbinsX() + 1; ++i )
+         for ( int j = 0; j <= h1->GetNbinsY() + 1; ++j ) 
          {
             double xc = h1->GetXaxis()->GetBinCenter(i);
             double yc = h1->GetYaxis()->GetBinCenter(j);
@@ -690,8 +699,8 @@ int test2DObjects(vector< vector<struct algoType> >& listH,
       double y[nbinsY];
       FillVariableRange(y, nbinsY, minY, maxY);
       h2 = new TH2D("Histogram 2D Variable","h2-title",nbinsX, x, nbinsY, y);
-      for ( int i = 0; i < h2->GetNbinsX() + 1; ++i )
-         for ( int j = 0; j < h2->GetNbinsY() + 1; ++j ) 
+      for ( int i = 0; i <= h2->GetNbinsX() + 1; ++i )
+         for ( int j = 0; j <= h2->GetNbinsY() + 1; ++j ) 
          {
             double xc = h2->GetXaxis()->GetBinCenter(i);
             double yc = h2->GetYaxis()->GetBinCenter(j);
@@ -733,6 +742,11 @@ int test2DObjects(vector< vector<struct algoType> >& listH,
       if ( __DRAW__ ) ge1->Draw("AB*");
       ObjectWrapper<TGraph2DErrors*> owge1(ge1);
       globalStatus += status = testFitters(&owge1, func, listGE, listOfFunctions[h]);
+      printf("%s\n", (status?"FAILED":"OK"));
+
+      delete s1; s1 = THnSparse::CreateSparse("THnSparse 2D", "THnSparse 2D - title", h1);
+      ObjectWrapper<THnSparse*> ows1(s1);
+      globalStatus += status = testFitters(&ows1, func, listH, listOfFunctions[h]);
       printf("%s\n", (status?"FAILED":"OK"));
    }
 
@@ -1020,8 +1034,8 @@ int stressFit()
    iret += test1DObjects(listTH1DAlgos, listAlgosTGraph, listAlgosTGraphError, l1DFunctions);
    iret += test2DObjects(listTH2DAlgos, listAlgosTGraph2D, listAlgosTGraph2DError, l2DFunctions);
    iret += testUnBinedFit();
-   iret += test1DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l1DLinearFunctions);
-   iret += test2DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l2DLinearFunctions);
+//   iret += test1DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l1DLinearFunctions);
+//    iret += test2DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l2DLinearFunctions);
 
    return iret; 
 }
