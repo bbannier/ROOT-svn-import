@@ -657,7 +657,11 @@ void FillData(SparseData & dv, const TH1 * h1, TF1 * /*func*/)
    
    const TArray *array(dynamic_cast<const TArray*>(h1));
    assert(array && "THIS SHOULD NOT HAPPEN!");
-   for ( int i = 0; i < array->GetSize(); ++i )
+   for ( int i = 0; i < array->GetSize(); ++i ) {
+//       printf("i: %d; OF: %d; UF: %d; C: %f\n"
+//              , i
+//              , h1->IsBinOverflow(i) , h1->IsBinUnderflow(i)
+//              , h1->GetBinContent(i));
       if ( !( h1->IsBinOverflow(i) || h1->IsBinUnderflow(i) )
            && h1->GetBinContent(i))
       {
@@ -687,6 +691,7 @@ void FillData(SparseData & dv, const TH1 * h1, TF1 * /*func*/)
 
          dv.Add(min, max, h1->GetBinContent(i), h1->GetBinError(i));
       }
+   }
 }
 
 void FillData(SparseData & dv, const THnSparse * h1, TF1 * /*func*/) 
@@ -702,7 +707,25 @@ void FillData(SparseData & dv, const THnSparse * h1, TF1 * /*func*/)
       double value = h1->GetBinContent( i, &coord[0] );
       if ( !value ) continue;
 
-//       cout << "FILLDATA: h1(" << i << ")";
+//       cout << "FILLDATA(SparseData): h1(" << i << ")";
+
+      // Exclude underflows and oveflows! (defect behaviour with the TH1*)
+      bool insertBox = true;
+      for ( int j = 0; j < dim && insertBox; ++j )
+      {
+         TAxis* axis = h1->GetAxis(j);
+         if ( ( axis->GetBinLowEdge(coord[j]) < axis->GetXmin() ) ||
+              ( axis->GetBinUpEdge(coord[j])  > axis->GetXmax() ) ) {
+            insertBox = false;
+         }
+         min[j] = h1->GetAxis(j)->GetBinLowEdge(coord[j]);
+         max[j] = h1->GetAxis(j)->GetBinUpEdge(coord[j]);
+      }
+      if ( !insertBox ) { 
+//          cout << "NOT INSERTED!"<< endl; 
+         continue; 
+      }
+
 //       for ( int j = 0; j < dim; ++j )
 //       {
 //          cout << "[" << h1->GetAxis(j)->GetBinLowEdge(coord[j]) 
@@ -710,11 +733,6 @@ void FillData(SparseData & dv, const THnSparse * h1, TF1 * /*func*/)
 //       }
 //       cout << h1->GetBinContent(i) << endl;
 
-      for ( int j = 0; j < dim; ++j )
-      {
-         min[j] = h1->GetAxis(j)->GetBinLowEdge(coord[j]);
-         max[j] = h1->GetAxis(j)->GetBinUpEdge(coord[j]);
-      }
       dv.Add(min, max, value, h1->GetBinError(i));
    }
 }
@@ -734,6 +752,8 @@ void FillData(BinData & dv, const THnSparse * s1, TF1 * func)
    // Get the sparse data
    ROOT::Fit::SparseData d(ndim, xmin, xmax);
    ROOT::Fit::FillData(d, s1, func);
+
+//    cout << "FillData(BinData & dv, const THnSparse * s1, TF1 * func) (1)" << endl;
 
    // Create the bin data from the sparse data
    d.GetBinDataIntegral(dv);
