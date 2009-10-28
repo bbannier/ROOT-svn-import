@@ -320,7 +320,7 @@ TEveViewerList::TEveViewerList(const char* n, const char* t) :
    fShowTooltip   (kTRUE),
 
    fBrightness(0),
-  fUseLightColorSet(kFALSE)
+   fUseLightColorSet(kFALSE)
 {
    // Constructor.
 
@@ -544,7 +544,7 @@ void TEveViewerList::OnReClicked(TObject *obj, UInt_t /*button*/, UInt_t /*state
    if (el && !el->IsPickable())
       el = 0;
 
-   gEve->GetSelection()->SelectionRepeated(el);
+   gEve->GetSelection()->UserRePickedElement(el);
 }
 
 //______________________________________________________________________________
@@ -561,7 +561,7 @@ void TEveViewerList::OnUnClicked(TObject *obj, UInt_t /*button*/, UInt_t /*state
    TEveElement* el = dynamic_cast<TEveElement*>(obj);
    if (el && !el->IsPickable())
       el = 0;
-   gEve->GetSelection()->UserRePickedElement(el);
+   gEve->GetSelection()->UserUnPickedElement(el);
 }
 
 //______________________________________________________________________________
