@@ -51,7 +51,7 @@ Int_t Doc::TDocumented::Compare(const TObject* obj) const {
    };
    TClass* me = IsA();
    TClass* it = obj->IsA();
-   for (int i = 0; i < sizeof(sClasses) / sizeof(TClass*); ++i) {
+   for (size_t i = 0; i < sizeof(sClasses) / sizeof(TClass*); ++i) {
       if (me == sClasses[i]) {
          return -1;
       }

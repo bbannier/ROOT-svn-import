@@ -28,15 +28,17 @@ ClassImp(Doc::TDocStringTable);
 
 
 //______________________________________________________________________________
-Doc::TDocStringTable::~TDocStringTable() {
+Doc::TDocStringTable::~TDocStringTable()
+{
    // Destructor
 }
 
 //______________________________________________________________________________
-UInt_t Doc::TDocStringTable::GetIndex(const char* str) {
+UInt_t Doc::TDocStringTable::GetIndexOrAdd(const char* str)
+{
    // Get the index for the given string, add it if it isn't found.
    if (!str) {
-      Error("GetIndex()", "string is NULL!");
+      Error("GetIndexOrAdd()", "string is NULL!");
       return (UInt_t) -1;
    }
    TObjString* os = (TObjString*) fHashedStrings.FindObject(str);
@@ -50,13 +52,45 @@ UInt_t Doc::TDocStringTable::GetIndex(const char* str) {
 }
 
 //______________________________________________________________________________
-const TString& Doc::TDocStringTable::GetString(UInt_t idx) const {
-   static const TString sNullRef;
+const TString& Doc::TDocStringTable::GetString(UInt_t idx) const
+{
    // Get the string for a given index
+   static const TString sNullRef;
+
    TObjString* os = (TObjString*)fIndexedStrings[idx];
    if (!os) {
       return sNullRef;
    }
    return os->String();
+}
+
+//______________________________________________________________________________
+Int_t Doc::TDocStringTable::GetIndex(const char* str) const
+{
+   // Determine whether the tablew contains str
+   if (!str) {
+      Error("Contains()", "string is NULL!");
+      return -1;
+   }
+   TObjString* os = (TObjString*) fHashedStrings.FindObject(str);
+   if (!os) return -1;
+   return os->GetUniqueID();
+}
+
+//______________________________________________________________________________
+void Doc::TDocStringTable::Remove(const char* str)
+{
+   // Remove a string
+   if (!str) {
+      Error("Remove()", "string is NULL!");
+      return;
+   }
+   Int_t idx = GetIndex(str);
+   if (idx == -1) {
+      Error("Remove()", "string is not found!");
+      return;
+   }
+   fHashedStrings.Remove(fIndexedStrings[idx]);
+   fIndexedStrings.RemoveAt(idx);
 }
 

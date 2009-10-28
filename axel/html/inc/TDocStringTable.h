@@ -30,12 +30,16 @@
 namespace Doc {
 class TDocStringTable: public TObject {
 public:
-   TDocStringTable() {}
+   TDocStringTable() {fIndexedStrings.SetOwner();}
    virtual ~TDocStringTable();
-   UInt_t GetIndex(const char* str);
+   UInt_t GetIndexOrAdd(const char* str);
    const TString& GetString(UInt_t idx) const;
 
    const TObjArray* GetArray() const { return &fIndexedStrings; }
+   Bool_t Contains(const char* str) const { return GetIndex(str) != -1; }
+   Int_t GetIndex(const char* str) const;
+
+   void Remove(const char* str);
 
 private:
    THashTable fHashedStrings; // strings accessible by their hashes
