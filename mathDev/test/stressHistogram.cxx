@@ -44,8 +44,9 @@
 // Test 12: Interpolation tests for Histograms...............................OK  //
 // Test 13: Scale tests for Profiles.........................................OK  //
 // Test 14: Integral tests for Histograms....................................OK  //
-// Test 15: TH1-THnSparse Conversion tests...................................OK
-// Test 16: Reference File Read for Histograms and Profiles..................OK
+// Test 15: TH1-THnSparse Conversion tests...................................OK  //
+// Test 16: Filldata tests for Histograms and Sparses........................OK  //
+// Test 17: Reference File Read for Histograms and Profiles..................OK  //
 // ****************************************************************************  //
 // stressHistogram: Real Time =  64.01 seconds Cpu Time =  63.89 seconds         //
 //  ROOTMARKS = 430.74 ROOT version: 5.25/01	branches/dev/mathDev@29787       //
@@ -69,6 +70,9 @@
 #include "TF1.h"
 #include "TF2.h"
 #include "TF3.h"
+
+#include "Fit/SparseData.h"
+#include "HFitInterface.h"
 
 #include "TApplication.h"
 #include "TBenchmark.h"
@@ -5892,6 +5896,12 @@ bool testConversion1D()
    status += equals("TH1-THnSparseF", s1f, h1f);
    status += equals("TH1-THnSparseD", s1d, h1d);
 
+   delete s1c;
+   delete s1s;
+   delete s1i;
+   delete s1f;
+   delete s1d;
+
    return status;
 }
 
@@ -5944,6 +5954,12 @@ bool testConversion2D()
    status += equals("TH2-THnSparseI", s2i, h2i);
    status += equals("TH2-THnSparseF", s2f, h2f);
    status += equals("TH2-THnSparseD", s2d, h2d);
+
+   delete s2c;
+   delete s2s;
+   delete s2i;
+   delete s2f;
+   delete s2d;
 
    return status;
 }
@@ -6004,6 +6020,652 @@ bool testConversion3D()
    status += equals("TH3-THnSparseF", s3f, h3f);
    status += equals("TH3-THnSparseD", s3d, h3d);
 
+   delete s3c;
+   delete s3s;
+   delete s3i;
+   delete s3f;
+   delete s3d;
+
+   return status;
+}
+
+int findBin(ROOT::Fit::BinData& bd, const double *x)
+{
+   const unsigned int ndim = bd.NDim();
+   const unsigned int npoints = bd.NPoints();
+
+   for ( unsigned int i = 0; i < npoints; ++i )
+   {
+      double value1, error1;
+      const double *x1 = bd.GetPoint(i, value1, error1);
+
+//       cout << "\ti: " << i
+//            << " x: ";
+//       std::copy(x1, x1+ndim, ostream_iterator<double>(cout, " "));
+//       cout << " val: " << value1
+//            << " error: " << error1
+//            << endl;
+
+      bool thisIsIt = true;
+      for ( unsigned int j = 0; j < ndim; ++j )
+      {
+         thisIsIt &= fabs(x1[j] - x[j]) < 1E-15;
+      }
+      if ( thisIsIt ) { 
+//          cout << "RETURNED!" << endl;
+         return i; 
+      }
+   }
+
+//    cout << "ERROR FINDING BIN!" << endl;
+   return -1;
+}
+
+bool operator ==(ROOT::Fit::BinData& bd1, ROOT::Fit::BinData& bd2)
+{
+   const unsigned int ndim = bd1.NDim();
+   const unsigned int npoints = bd1.NPoints();
+
+   bool equals = true;
+
+   for ( unsigned int i = 0; i < npoints && equals; ++i )
+   {
+      double value1, error1;
+      const double *x1 = bd1.GetPoint(i, value1, error1);
+
+//       cout << "i: " << i
+//            << " x: ";
+//       std::copy(x1, x1+ndim, ostream_iterator<double>(cout, " "));
+//       cout << " val: " << value1
+//            << " error: " << error1
+//            << endl;
+
+      int bin = findBin(bd2, x1);
+      assert(bin >= 0 && "BIN NOT FOUND!");
+
+      double value2 = 0, error2;
+      const double *x2 = bd2.GetPoint(bin, value2, error2);
+
+      equals &= ( value1 == value2 );
+      equals &= ( error1 == error2 );
+      for ( unsigned int j = 0; j < ndim; ++j )
+      {
+         equals &= fabs(x1[j] - x2[j]) < 1E-15;
+      }
+   }
+
+   return equals;   
+}
+
+
+int findBin(ROOT::Fit::SparseData& sd, 
+            const vector<double>& minRef, const vector<double>& maxRef,
+            const double valRef, const double errorRef)
+{
+   const unsigned int ndim = sd.NDim();
+   const unsigned int npoints = sd.NPoints();
+
+   for ( unsigned int i = 0; i < npoints; ++i )
+   {
+      vector<double> min(ndim);
+      vector<double> max(ndim);
+      double val;
+      double error;
+      sd.GetPoint(i, min, max, val, error);
+
+//       cout << "\ti: " << i
+//            << " min: ";
+//       std::copy(min.begin(), min.end(), ostream_iterator<double>(cout, " "));
+//       cout << " max: ";
+//       std::copy(max.begin(), max.end(), ostream_iterator<double>(cout, " "));
+//       cout << " val: " << val
+//            << " error: " << error
+//            << endl;
+
+      bool thisIsIt = true;
+//       cout << "\t\t" << thisIsIt << " ";
+      thisIsIt &= !equals(valRef, val, 1E-8);
+//       cout << thisIsIt << " ";
+      thisIsIt &= !equals(errorRef, error, 1E-15);
+//       cout << thisIsIt << " ";
+      for ( unsigned int j = 0; j < ndim && thisIsIt; ++j )
+      {
+         thisIsIt &= !equals(minRef[j], min[j]);
+//          cout << thisIsIt << " ";
+         thisIsIt &= !equals(maxRef[j], max[j]);
+//          cout << thisIsIt << " ";
+      }
+//       cout << thisIsIt << " " << endl;
+      if ( thisIsIt ) { 
+//          cout << "RETURNING " << i << endl; 
+         return i; 
+      }
+   }
+
+//    cout << "ERROR FINDING BIN!" << endl;
+   return -1;
+}
+bool operator ==(ROOT::Fit::SparseData& sd1, ROOT::Fit::SparseData& sd2)
+{
+   const unsigned int ndim = sd1.NDim();
+
+   const unsigned int npoints1 = sd1.NPoints();
+   const unsigned int npoints2 = sd2.NPoints();
+
+   bool equals = (npoints1 == npoints2);
+
+   for ( unsigned int i = 0; i < npoints1 && equals; ++i )
+   {
+      vector<double> min(ndim);
+      vector<double> max(ndim);
+      double val;
+      double error;
+      sd1.GetPoint(i, min, max, val, error);
+
+      equals &= (findBin(sd2, min, max, val, error) >= 0 );
+   }
+
+   for ( unsigned int i = 0; i < npoints2 && equals; ++i )
+   {
+      vector<double> min(ndim);
+      vector<double> max(ndim);
+      double val;
+      double error;
+      sd2.GetPoint(i, min, max, val, error);
+
+      equals &= (findBin(sd1, min, max, val, error) >= 0 );
+   }
+
+   return equals;     
+}
+
+bool testSparseData1DFull()
+{
+   TF1* func = new TF1( "GAUS", gaus1d, minRange, maxRange, 3);
+   func->SetParameters(0.,  3., 200.);
+   func->SetParLimits( 1, 0, 5 );
+
+   TH1D* h1 = new TH1D("fsdf1D","h1-title",numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value,  1.0);
+   }
+
+   THnSparse* s1 = THnSparse::CreateSparse("fsdf1Ds", "THnSparse 1D - title", h1);
+
+   unsigned int const dim = 1;
+   double min[dim] = {minRange};
+   double max[dim] = {maxRange};
+   ROOT::Fit::SparseData spTH1(dim, min,max);
+   ROOT::Fit::FillData(spTH1,h1, 0);
+
+   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::FillData(spSparse,s1, 0);
+
+   int status = 1;
+   if ( (spTH1 == spSparse ) &&
+        (spSparse == spTH1 ) )
+      status = 0;
+
+   delete func;
+   delete h1;
+   delete s1;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testSparseData1DFull: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testSparseData1DSparse()
+{
+   TF1* func = new TF1( "GAUS", gaus1d, minRange, maxRange, 3);
+   func->SetParameters(0.,  3., 200.);
+   func->SetParLimits( 1, 0, 5 );
+
+   TH1D* h1 = new TH1D("fsds1D","h1-title",numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < numberOfBins; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value,  1.0);
+   }
+
+   THnSparse* s1 = THnSparse::CreateSparse("fsds1Ds", "THnSparse 1D - title", h1);
+
+   unsigned int const dim = 1;
+   double min[dim] = {minRange};
+   double max[dim] = {maxRange};
+   ROOT::Fit::SparseData spTH1(dim, min,max);
+   ROOT::Fit::FillData(spTH1,h1, 0);
+
+   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::FillData(spSparse,s1, 0);
+
+   int status = 1;
+   if ( (spTH1 == spSparse ) &&
+        (spSparse == spTH1 ) )
+      status = 0;
+
+   delete func;
+   delete h1;
+   delete s1;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testSparseData1DSpar: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testSparseData2DFull()
+{
+   TF2* func = new TF2( "GAUS2D", gaus2d, minRange, maxRange, 3);
+   func->SetParameters(500., +.5, 1.5, -.5, 2.0);
+
+   TH2D* h2 = new TH2D("fsdf2D","h2-title",
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+   }
+
+   THnSparse* s2 = THnSparse::CreateSparse("fsdf2Ds", "THnSparse 2D - title", h2);
+
+   unsigned int const dim = 1;
+   double min[dim] = {minRange};
+   double max[dim] = {maxRange};
+   ROOT::Fit::SparseData spTH2(dim, min,max);
+   ROOT::Fit::FillData(spTH2,h2, 0);
+
+   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::FillData(spSparse,s2, 0);
+
+   int status = 1;
+   if ( (spTH2 == spSparse ) &&
+        (spSparse == spTH2 ) )
+      status = 0;
+
+   delete func;
+   delete h2;
+   delete s2;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testSparseData2DFull: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testSparseData2DSparse()
+{
+   TF2* func = new TF2( "GAUS2D", gaus2d, minRange, maxRange, 3);
+   func->SetParameters(500., +.5, 1.5, -.5, 2.0);
+
+   TH2D* h2 = new TH2D("fsds2D","h2-title",
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < numberOfBins * numberOfBins; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+   }
+
+   THnSparse* s2 = THnSparse::CreateSparse("fsds2Ds", "THnSparse 2D - title", h2);
+
+   unsigned int const dim = 1;
+   double min[dim] = {minRange};
+   double max[dim] = {maxRange};
+   ROOT::Fit::SparseData spTH2(dim, min,max);
+   ROOT::Fit::FillData(spTH2,h2, 0);
+
+   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::FillData(spSparse,s2, 0);
+
+   int status = 1;
+   if ( (spTH2 == spSparse ) &&
+        (spSparse == spTH2 ) )
+      status = 0;
+
+   delete func;
+   delete h2;
+   delete s2;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testSparseData2DSpar: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testSparseData3DFull()
+{
+   TF2* func = new TF2( "GAUS3D", gaus3d, minRange, maxRange, 3);
+   func->SetParameters(500., +.5, 1.5, -.5, 2.0);
+
+   TH3D* h3 = new TH3D("fsdf3D","h3-title",
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, z, 1.0);
+   }
+
+   THnSparse* s3 = THnSparse::CreateSparse("fsdf3Ds", "THnSparse 3D - title", h3);
+
+   unsigned int const dim = 1;
+   double min[dim] = {minRange};
+   double max[dim] = {maxRange};
+   ROOT::Fit::SparseData spTH3(dim, min,max);
+   ROOT::Fit::FillData(spTH3,h3, 0);
+
+   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::FillData(spSparse,s3, 0);
+
+   int status = 1;
+   if ( (spTH3 == spSparse ) &&
+        (spSparse == spTH3 ) )
+      status = 0;
+
+   delete func;
+   delete h3;
+   delete s3;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testSparseData3DFull: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testSparseData3DSparse()
+{
+   TF2* func = new TF2( "GAUS3D", gaus3d, minRange, maxRange, 3);
+   func->SetParameters(500., +.5, 1.5, -.5, 2.0);
+
+   TH3D* h3 = new TH3D("fsds3D","h3-title",
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < numberOfBins * numberOfBins * numberOfBins; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, z, 1.0);
+   }
+
+   THnSparse* s3 = THnSparse::CreateSparse("fsds3Ds", "THnSparse 3D - title", h3);
+
+   unsigned int const dim = 1;
+   double min[dim] = {minRange};
+   double max[dim] = {maxRange};
+   ROOT::Fit::SparseData spTH3(dim, min,max);
+   ROOT::Fit::FillData(spTH3,h3, 0);
+
+   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::FillData(spSparse,s3, 0);
+
+   int status = 1;
+   if ( (spTH3 == spSparse ) &&
+        (spSparse == spTH3 ) )
+      status = 0;
+
+   delete func;
+   delete h3;
+   delete s3;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testSparseData3DSpar: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testBinDataData1D()
+{
+   TF1* func = new TF1( "GAUS", gaus1d, minRange, maxRange, 3);
+   func->SetParameters(0.,  3., 200.);
+   func->SetParLimits( 1, 0, 5 );
+
+   TH1D* h1 = new TH1D("fbd1D","h1-title",numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value,  1.0);
+   }
+
+   THnSparse* s1 = THnSparse::CreateSparse("fbd1Ds", "THnSparse 1D - title", h1);
+
+   ROOT::Fit::BinData bdTH1;
+   ROOT::Fit::FillData(bdTH1, h1);
+
+   unsigned int const dim = 1;
+   double min[dim] = {minRange};
+   double max[dim] = {maxRange};
+   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::FillData(spSparseTmp,s1, 0);
+   ROOT::Fit::BinData bdSparse;
+   spSparseTmp.GetBinData(bdSparse);
+
+
+   int status = 1;
+   if ( (bdTH1 == bdSparse ) &&
+        (bdSparse == bdTH1 ) )
+      status = 0;
+
+   delete func;
+   delete h1;
+   delete s1;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testBinDataData1D: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testBinDataData2D()
+{
+   TF1* func = new TF1( "GAUS", gaus2d, minRange, maxRange, 3);
+   func->SetParameters(0.,  3., 200.);
+   func->SetParLimits( 1, 0, 5 );
+
+   TH2D* h2 = new TH2D("fbd2D","h2-title",
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+   }
+
+   THnSparse* s2 = THnSparse::CreateSparse("fbd2Ds", "THnSparse 2D - title", h2);
+
+   ROOT::Fit::BinData bdTH2;
+   ROOT::Fit::FillData(bdTH2, h2);
+
+   unsigned int const dim = 2;
+   double min[dim] = {minRange, minRange};
+   double max[dim] = {maxRange, maxRange};
+   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::FillData(spSparseTmp,s2, 0);
+   ROOT::Fit::BinData bdSparse(spSparseTmp.NPoints(), spSparseTmp.NDim());
+   spSparseTmp.GetBinData(bdSparse);
+
+
+   int status = 1;
+   if ( (bdTH2 == bdSparse ) &&
+        (bdSparse == bdTH2 ) )
+      status = 0;
+
+   delete func;
+   delete h2;
+   delete s2;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testBinDataData2D: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testBinDataData3D()
+{
+   TF1* func = new TF1( "GAUS", gaus3d, minRange, maxRange, 3);
+   func->SetParameters(0.,  3., 200.);
+   func->SetParLimits( 1, 0, 5 );
+
+   TH3D* h3 = new TH3D("fbd3D","h3-title",
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, z, 1.0);
+   }
+
+   THnSparse* s3 = THnSparse::CreateSparse("fbd3Ds", "THnSparse 3D - title", h3);
+
+   ROOT::Fit::BinData bdTH3;
+   ROOT::Fit::FillData(bdTH3, h3);
+
+   unsigned int const dim = 3;
+   double min[dim] = {minRange, minRange, minRange};
+   double max[dim] = {maxRange, maxRange, maxRange};
+   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::FillData(spSparseTmp,s3, 0);
+   ROOT::Fit::BinData bdSparse(spSparseTmp.NPoints(), spSparseTmp.NDim());
+   spSparseTmp.GetBinData(bdSparse);
+
+
+   int status = 1;
+   if ( (bdTH3 == bdSparse ) &&
+        (bdSparse == bdTH3 ) )
+      status = 0;
+
+   delete func;
+   delete h3;
+   delete s3;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testBinDataData3D: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testBinDataData1DInt()
+{
+   TF1* func = new TF1( "GAUS", gaus1d, minRange, maxRange, 3);
+   func->SetParameters(0.,  3., 200.);
+   func->SetParLimits( 1, 0, 5 );
+
+   TH1D* h1 = new TH1D("fbdi1D","h1-title",numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value,  1.0);
+   }
+
+   THnSparse* s1 = THnSparse::CreateSparse("fbdi1Ds", "THnSparse 1D - title", h1);
+
+   ROOT::Fit::DataOptions opt;
+   opt.fUseEmpty = true;
+   opt.fIntegral = true;
+
+   ROOT::Fit::BinData bdTH1(opt);
+   ROOT::Fit::FillData(bdTH1, h1);
+
+   unsigned int const dim = 1;
+   double min[dim] = {minRange};
+   double max[dim] = {maxRange};
+   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::FillData(spSparseTmp,s1, 0);
+   ROOT::Fit::BinData bdSparse;
+   spSparseTmp.GetBinDataIntegral(bdSparse);
+
+
+   int status = 1;
+   if ( (bdTH1 == bdSparse ) &&
+        (bdSparse == bdTH1 ) )
+      status = 0;
+
+   delete func;
+   delete h1;
+   delete s1;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testBinDataData1DInt: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testBinDataData2DInt()
+{
+   TF1* func = new TF1( "GAUS", gaus2d, minRange, maxRange, 3);
+   func->SetParameters(0.,  3., 200.);
+   func->SetParLimits( 1, 0, 5 );
+
+   TH2D* h2 = new TH2D("fbdi2D","h2-title",
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+   }
+
+   THnSparse* s2 = THnSparse::CreateSparse("fbdi2Ds", "THnSparse 2D - title", h2);
+
+   ROOT::Fit::DataOptions opt;
+   opt.fUseEmpty = true;
+   opt.fIntegral = true;
+
+   ROOT::Fit::BinData bdTH2(opt);
+   ROOT::Fit::FillData(bdTH2, h2);
+
+   unsigned int const dim = 2;
+   double min[dim] = {minRange, minRange};
+   double max[dim] = {maxRange, maxRange};
+   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::FillData(spSparseTmp,s2, 0);
+   ROOT::Fit::BinData bdSparse(spSparseTmp.NPoints(), spSparseTmp.NDim());
+   spSparseTmp.GetBinDataIntegral(bdSparse);
+
+
+   int status = 1;
+   if ( (bdTH2 == bdSparse ) &&
+        (bdSparse == bdTH2 ) )
+      status = 0;
+
+   delete func;
+   delete h2;
+   delete s2;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testBinDataData2DInt: \t" << (status?"FAILED":"OK") << endl;
+   return status;
+}
+
+bool testBinDataData3DInt()
+{
+   TF1* func = new TF1( "GAUS", gaus3d, minRange, maxRange, 3);
+   func->SetParameters(0.,  3., 200.);
+   func->SetParLimits( 1, 0, 5 );
+
+   TH3D* h3 = new TH3D("fbdi3D","h3-title",
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange,
+                       numberOfBins,minRange,maxRange);
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, z, 1.0);
+   }
+
+   THnSparse* s3 = THnSparse::CreateSparse("fbdi3Ds", "THnSparse 3D - title", h3);
+
+   ROOT::Fit::DataOptions opt;
+   opt.fUseEmpty = true;
+   opt.fIntegral = true;
+
+   ROOT::Fit::BinData bdTH3(opt);
+   ROOT::Fit::FillData(bdTH3, h3);
+
+   unsigned int const dim = 3;
+   double min[dim] = {minRange, minRange, minRange};
+   double max[dim] = {maxRange, maxRange, maxRange};
+   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::FillData(spSparseTmp,s3, 0);
+   ROOT::Fit::BinData bdSparse(spSparseTmp.NPoints(), spSparseTmp.NDim());
+   spSparseTmp.GetBinDataIntegral(bdSparse);
+
+
+   int status = 1;
+   if ( (bdTH3 == bdSparse ) &&
+        (bdSparse == bdTH3 ) )
+      status = 0;
+
+   delete func;
+   delete h3;
+   delete s3;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testBinDataData3DInt: \t" << (status?"FAILED":"OK") << endl;
    return status;
 }
 
@@ -8165,9 +8827,26 @@ int stressHistogram()
                                               "TH1-THnSparse Conversion tests...................................",
                                               conversionsTestPointer };
 
+   // Test 16
+   // FillData Tests
+   const unsigned int numberOfFillData = 12;
+   pointer2Test fillDataTestPointer[numberOfFillData] = { testSparseData1DFull,  testSparseData1DSparse,
+                                                          testSparseData2DFull,  testSparseData2DSparse,
+                                                          testSparseData3DFull,  testSparseData3DSparse,
+                                                          testBinDataData1D, 
+                                                          testBinDataData2D,
+                                                          testBinDataData3D,
+                                                          testBinDataData1DInt,
+                                                          testBinDataData2DInt,
+                                                          testBinDataData3DInt,
+   };
+   struct TTestSuite fillDataTestSuite = { numberOfFillData, 
+                                           "FillData tests for Histograms and Sparses........................",
+                                           fillDataTestPointer };
+
 
    // Combination of tests
-   const unsigned int numberOfSuits = 13;
+   const unsigned int numberOfSuits = 14;
    struct TTestSuite* testSuite[numberOfSuits];
    testSuite[ 0] = &rangeTestSuite;
    testSuite[ 1] = &rebinTestSuite;
@@ -8182,6 +8861,7 @@ int stressHistogram()
    testSuite[10] = &scaleTestSuite;
    testSuite[11] = &integralTestSuite;
    testSuite[12] = &conversionsTestSuite;
+   testSuite[13] = &fillDataTestSuite;
 
    status = 0;
    for ( unsigned int i = 0; i < numberOfSuits; ++i ) {
@@ -8196,7 +8876,7 @@ int stressHistogram()
    }
    GlobalStatus += status;
 
-   // Test 16
+   // Test 17
    // Reference Tests
    const unsigned int numberOfRefRead = 7;
    pointer2Test refReadTestPointer[numberOfRefRead] = { testRefRead1D,  testRefReadProf1D,
