@@ -34,6 +34,7 @@ namespace Doc {
 class TDataDoc;
 class TFunctionDoc;
 class TTypedefDoc;
+class TModuleDoc;
 
 class TClassDoc: public TDocumented {
 public:
@@ -45,28 +46,38 @@ public:
       kUnion, // it's a union
       kEnum, // it's an enum
       kNamespace, // it's a namespace
+      kTypedef, // it's a typedef to a class - should that be here?
       kUnknownKind, // not set
       kNumKinds = kUnknownKind, // number of kinds
       kKindBitMask = BIT(16) | BIT(17) | BIT(18)
    };
 
    TClassDoc() {}
-   TClassDoc(const char* name, EKind kind, const char* module, TClass* cl);
+   TClassDoc(const char* name, TClass* cl, const char* module);
 
    virtual ~TClassDoc();
 
-   const TString& GetModule() const { return fModule; }
+   const TString& GetModuleName() const { return fModule; }
    const TCollection* GetMembers() const { return &fMembers; }
    const TCollection* GetTypes() const { return &fTypes; }
    const TCollection* GetSeeAlso() const { return &fSeeAlso; }
    EKind  GetKind() const { return (EKind) (TestBits(kKindBitMask) - BIT(16)); }
 
-   const char* GetURL() const;
+   const char* GetURL() const { return fHtmlFileName; }
+   const char* GetHtmlFileName() const { return fHtmlFileName; }
    Int_t Compare(const TObject* obj) const;
 
-   TDataDoc* AddDataMember(const char* name, const char* type);
+   TDataDoc*     AddDataMember(const char* name, const char* type);
    TFunctionDoc* AddFunctionMember(const char* name, const char* type, const char* signature);
-   TTypedefDoc* AddTypedef(const char* name, const TDocString& underlying);
+   TTypedefDoc*  AddTypedef(const char* name, const TDocString& underlying);
+   void          AddSeeAlso(TDocumented* seealso);
+   void          SetHtmlFileName(const char* htmlfilename) { fHtmlFileName = htmlfilename; }
+
+   Bool_t        HaveSource() { return !fSrcFiles.IsEmpty(); }
+   TCollection&  GetFiles() { return fSrcFiles; }
+
+   void          SetSelected(Bool_t sel = kTRUE) { fSelected = sel; }
+   Bool_t        IsSelected() const { return kTRUE; }
 
 private:
    TDocString fShortDoc; // short documentation
@@ -77,7 +88,11 @@ private:
    TDocStringTable fRefFiles; // files containing the struct and its members
    TList fMembers; // data (TDataDoc) of function (TFunctionDoc) members
    TList fTypes; // types contained in this class, list of TTypedefDoc
-   TList fSeeAlso; // types referenced by this class; list of TObjString
+   TList fSeeAlso; // types referenced by this class and typedefs of this class; list of TObjString
+
+   mutable TString fHtmlFileName; //! cached name of the HTML doc file
+   TList fSrcFiles; //! collection of TFileSysEntry (decl, impl) associated with this class
+   Bool_t fSelected; //! whether selected for documentation output
 
    ClassDef(TClassDoc, 1); // Documentation for a class
 };

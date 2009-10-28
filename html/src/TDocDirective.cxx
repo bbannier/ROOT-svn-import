@@ -2,7 +2,6 @@
 
 #include "TApplication.h"
 #include "TClass.h"
-#include "TDocInfo.h"
 #include "TDocOutput.h"
 #include "TDocParser.h"
 #include "THtml.h"

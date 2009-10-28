@@ -39,6 +39,8 @@ public:
    const TObjArray* GetModules() const { return fModules.GetArray(); }
 
    void AddDependency(const char* name);
+   void RemoveDependency(const char* name) { fDependencies.Remove(name); }
+   Bool_t DependsOn(const char* name) const { return fDependencies.Contains(name); }
    const TObjArray* GetDependencies() const { return fDependencies.GetArray(); }
 
    Int_t Compare(const TObject* obj) const;

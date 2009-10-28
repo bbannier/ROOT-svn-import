@@ -13,18 +13,22 @@
 
 #include "Riostream.h"
 #include "TClassDocOutput.h"
+#include "TClass.h"
 #include "TClassEdit.h"
+#include "TClassDoc.h"
 #include "TDataMember.h"
 #include "TDataType.h"
-#include "TDocInfo.h"
 #include "TDocParser.h"
 #include "TEnv.h"
 #include "TGlobal.h"
 #include "THtml.h"
 #include "TInterpreter.h"
+#include "TLibraryDoc.h"
 #include "TMethod.h"
+#include "TModuleDoc.h"
 #include "TROOT.h"
 #include "TSystem.h"
+#include "TTypedefDoc.h"
 #include "TUrl.h"
 #include "TVirtualMutex.h"
 #include "TVirtualPad.h"
@@ -625,14 +629,14 @@ void TDocOutput::CreateHierarchy()
 
 
    // loop on all classes
-   TClassDocInfo* cdi = 0;
+   Doc::TClassDoc* cdi = 0;
    TIter iClass(fHtml->GetListOfClasses());
-   while ((cdi = (TClassDocInfo*)iClass())) {
-      if (!cdi->HaveSource())
+   while ((cdi = (Doc::TClassDoc*)iClass())) {
+      if (cdi->HaveSource())
          continue;
 
       // get class
-      TDictionary *dictPtr = cdi->GetClass();
+      TDictionary *dictPtr = cdi->GetDictionary();
       TClass *basePtr = dynamic_cast<TClass*>(dictPtr);
       if (basePtr == 0) {
          if (!dictPtr)
@@ -684,8 +688,8 @@ void TDocOutput::CreateClassIndex()
       std::vector<std::string> classNames;
       {
          TIter iClass(fHtml->GetListOfClasses());
-         TClassDocInfo* cdi = 0;
-         while ((cdi = (TClassDocInfo*)iClass()))
+         Doc::TClassDoc* cdi = 0;
+         while ((cdi = (Doc::TClassDoc*)iClass()))
             if (cdi->IsSelected() && cdi->HaveSource())
                classNames.push_back(cdi->GetName());
       }
@@ -708,14 +712,14 @@ void TDocOutput::CreateClassIndex()
    // loop on all classes
    UInt_t currentIndexEntry = 0;
    TIter iClass(fHtml->GetListOfClasses());
-   TClassDocInfo* cdi = 0;
+   Doc::TClassDoc* cdi = 0;
    Int_t i = 0;
-   while ((cdi = (TClassDocInfo*)iClass())) {
+   while ((cdi = (Doc::TClassDoc*)iClass())) {
       if (!cdi->IsSelected() || !cdi->HaveSource())
          continue;
 
       // get class
-      TDictionary *currentDict = cdi->GetClass();
+      TDictionary *currentDict = cdi->GetDictionary();
       TClass* currentClass = dynamic_cast<TClass*>(currentDict);
       if (!currentClass) {
          if (!currentDict)
@@ -729,7 +733,7 @@ void TDocOutput::CreateClassIndex()
                      indexChars[currentIndexEntry].length()))
          indexFile << "<a name=\"idx" << currentIndexEntry++ << "\"></a>";
 
-      TString htmlFile(cdi->GetHtmlFileName());
+      TString htmlFile(cdi->GetURL());
       if (htmlFile.Length()) {
          indexFile << "<a href=\"";
          indexFile << htmlFile;
@@ -758,7 +762,7 @@ void TDocOutput::CreateClassIndex()
 void TDocOutput::CreateModuleIndex()
 {
    // Create the class index for each module, picking up documentation from the
-   // module's TModuleDocInfo::GetInputPath() plus the (possibly relative)
+   // module's TModuleDoc::GetInputPath() plus the (possibly relative)
    // THtml::GetModuleDocPath(). Also creates the library dependency plot if dot
    // exists, see THtml::HaveDot().
 
@@ -777,12 +781,12 @@ void TDocOutput::CreateModuleIndex()
                  << "splines=true;" << endl
                  << "K=0.1;" << endl;
 
-   TModuleDocInfo* module = 0;
+   Doc::TModuleDoc* module = 0;
    TIter iterModule(fHtml->GetListOfModules());
 
    std::stringstream sstrCluster;
    std::stringstream sstrDeps;
-   while ((module = (TModuleDocInfo*)iterModule())) {
+   while ((module = (Doc::TModuleDoc*)iterModule())) {
       if (!module->IsSelected())
          continue;
 
@@ -824,15 +828,15 @@ void TDocOutput::CreateModuleIndex()
       std::list<std::string> classNames;
       {
          TIter iClass(module->GetClasses());
-         TClassDocInfo* cdi = 0;
-         while ((cdi = (TClassDocInfo*) iClass())) {
+         Doc::TClassDoc* cdi = 0;
+         while ((cdi = (Doc::TClassDoc*) iClass())) {
             if (!cdi->IsSelected() || !cdi->HaveSource())
                continue;
             classNames.push_back(cdi->GetName());
 
             if (classNames.size() > 1) continue;
 
-            TClass* cdiClass = dynamic_cast<TClass*>(cdi->GetClass());
+            TClass* cdiClass = dynamic_cast<TClass*>(cdi->GetDictionary());
             if (!cdiClass)
                continue;
 
@@ -852,10 +856,10 @@ void TDocOutput::CreateModuleIndex()
                continue;
 
             // allocate entry, even if no dependencies
-            TLibraryDocInfo *libdeps =
-               (TLibraryDocInfo*)fHtml->GetLibraryDependencies()->FindObject(thisLib);
+            Doc::TLibraryDoc *libdeps =
+               (Doc::TLibraryDoc*)fHtml->GetLibraryDependencies()->FindObject(thisLib);
             if (!libdeps) {
-               libdeps = new TLibraryDocInfo(thisLib);
+               libdeps = new Doc::TLibraryDoc(thisLib);
                fHtml->GetLibraryDependencies()->Add(libdeps);
             }
             libdeps->AddModule(module->GetName());
@@ -867,7 +871,7 @@ void TDocOutput::CreateModuleIndex()
                         size_t posExt = lib.find('.');
                         if (posExt != std::string::npos)
                            lib.erase(posExt);
-                        libdeps->AddDependency(lib);
+                        libdeps->AddDependency(lib.c_str());
                      }
                      lib.erase();
                   } else
@@ -877,21 +881,21 @@ void TDocOutput::CreateModuleIndex()
                   size_t posExt = lib.find('.');
                   if (posExt != std::string::npos)
                      lib.erase(posExt);
-                  libdeps->AddDependency(lib);
+                  libdeps->AddDependency(lib.c_str());
                }
             } // if dependencies
          } // while next class in module
       } // just a scope block
 
       TIter iClass(module->GetClasses());
-      TClassDocInfo* cdi = 0;
+      Doc::TClassDoc* cdi = 0;
       UInt_t count = 0;
       UInt_t currentIndexEntry = 0;
-      while ((cdi = (TClassDocInfo*) iClass())) {
+      while ((cdi = (Doc::TClassDoc*) iClass())) {
          if (!cdi->IsSelected() || !cdi->HaveSource())
             continue;
 
-         TDictionary *classPtr = cdi->GetClass();
+         TDictionary *classPtr = cdi->GetDictionary();
          if (!classPtr) {
             Error("CreateModuleIndex", "Unknown class '%s' !", cdi->GetName());
             continue;
@@ -967,37 +971,35 @@ void TDocOutput::CreateModuleIndex()
    // A->C, A->B->C, keep only A->B->C.
 
    TIter iLib(fHtml->GetLibraryDependencies());
-   TLibraryDocInfo* libinfo = 0;
-   while ((libinfo = (TLibraryDocInfo*)iLib())) {
+   Doc::TLibraryDoc* libinfo = 0;
+   while ((libinfo = (Doc::TLibraryDoc*)iLib())) {
       if (!libinfo->GetName() || !libinfo->GetName()[0]) continue;
 
-      std::set<std::string>& deps = libinfo->GetDependencies();
-      for (std::set<std::string>::iterator iDep = deps.begin();
-           iDep != deps.end(); ++iDep) {
+      TIter iDeps(libinfo->GetDependencies());
+      TObjString* os = 0;
+      while ((os = (TObjString*) iDeps())) {
          Bool_t already_indirect = kFALSE;
-         for (std::set<std::string>::const_iterator iDep2 = deps.begin();
-              !already_indirect && iDep2 != deps.end(); ++iDep2) {
-            if (iDep == iDep2) continue;
-            TLibraryDocInfo* libinfo2 = (TLibraryDocInfo*)
-               fHtml->GetLibraryDependencies()->FindObject(iDep2->c_str());
+         TIter iDeps2(libinfo->GetDependencies());
+         TObjString* os2 = 0;
+         while (!already_indirect && (os2 = (TObjString*) iDeps2())) {
+            if (os == os2) continue; // yes, we compare the pointers!
+            Doc::TLibraryDoc* libinfo2 = (Doc::TLibraryDoc*)
+               fHtml->GetLibraryDependencies()->FindObject(os2->String());
             if (!libinfo2) continue;
-            const std::set<std::string>& deps2 = libinfo2->GetDependencies();
-            already_indirect |= deps2.find(*iDep) != deps2.end();
+            already_indirect |= libinfo2->DependsOn(os->String());
          }
          if (already_indirect) {
-            std::set<std::string>::iterator iRemove = iDep;
-            --iDep; // otherwise we cannot do the for loop's ++iDep
-            deps.erase(*iRemove);
-         }
+            libinfo->RemoveDependency(os->String()); 
+        }
       } // for library dependencies of module in library
    } // for libaries
 
    iLib.Reset();
-   while ((libinfo = (TLibraryDocInfo*)iLib())) {
+   while ((libinfo = (Doc::TLibraryDoc*)iLib())) {
       if (!libinfo->GetName() || !libinfo->GetName()[0]) continue;
 
-      const std::set<std::string>& modules = libinfo->GetModules();
-      if (modules.size() > 1) {
+      const TObjArray* modules = libinfo->GetModules();
+      if (modules->GetSize() > 1) {
          sstrCluster << "subgraph cluster" << libinfo->GetName() << " {" << endl
                      << "style=filled;" << endl
                      << "color=lightgray;" << endl
@@ -1006,19 +1008,20 @@ void TDocOutput::CreateModuleIndex()
             sstrCluster << "Everything depends on ";
          sstrCluster << libinfo->GetName() << "\";" << endl;
 
-         for (std::set<std::string>::const_iterator iModule = modules.begin();
-              iModule != modules.end(); ++iModule) {
-            sstrCluster << "\"" << *iModule << "\" [style=filled,color=white,URL=\""
-                        << *iModule << "_Index.html\"];" << endl;
+         TIter iModule(modules);
+         TObjString* osModule = 0;
+         while ((osModule = (TObjString*) iModule())) {
+            sstrCluster << "\"" << osModule->String() << "\" [style=filled,color=white,URL=\""
+                        << osModule->String() << "_Index.html\"];" << endl;
          }
          sstrCluster << endl
                      << "}" << endl;
       } else {
          // only one module
-         sstrCluster << "\"" << *modules.begin()
+         sstrCluster << "\"" << ((TObjString*)modules->First())->String()
                      << "\" [label=\"" << libinfo->GetName()
                      << "\",style=filled,color=lightgray,shape=box,URL=\""
-                     << *modules.begin() << "_Index.html\"];" << endl;
+                     << ((TObjString*)modules->First())->String() << "_Index.html\"];" << endl;
       }
 
       // GetSharedLib doesn't mention libCore or libCint; add them by hand
@@ -1028,17 +1031,17 @@ void TDocOutput::CreateModuleIndex()
         sstrDeps << "\"" << iModule->first << "\" -> \"CINT\" [lhead=clusterlibCint];" << endl;
       */
 
-      const std::string& mod = *(modules.begin());
-      const std::set<std::string>& deps = libinfo->GetDependencies();
-      for (std::set<std::string>::const_iterator iDep = deps.begin();
-            iDep != deps.end(); ++iDep) {
+      const TString& mod = ((TObjString*)modules->First())->String();
+      TIter iDep(libinfo->GetDependencies());
+      TObjString* osDep = 0;
+      while ((osDep = (TObjString*) iDep())) {
          // cannot create dependency on iDep directly, use its first module instead.
-         TLibraryDocInfo* depLibInfo = (TLibraryDocInfo*)
-            fHtml->GetLibraryDependencies()->FindObject(iDep->c_str());
-         if (!depLibInfo || depLibInfo->GetModules().empty())
+         Doc::TLibraryDoc* depLibInfo = (Doc::TLibraryDoc*)
+            fHtml->GetLibraryDependencies()->FindObject(osDep->String());
+         if (!depLibInfo || depLibInfo->GetModules()->IsEmpty())
             continue; // ouch!
 
-         const std::string& moddep = *(depLibInfo->GetModules().begin());
+         const TString& moddep = ((TObjString*)depLibInfo->GetModules()->First())->String();
          sstrDeps << "\"" << mod << "\" -> \"" << moddep << "\";" << endl;
       }
       // make sure libCore ends up at the bottom
@@ -1124,13 +1127,14 @@ void TDocOutput::CreateClassTypeDefs()
    TDocParser parser(*this);
 
    TIter iClass(GetHtml()->GetListOfClasses());
-   TClassDocInfo* cdi = 0;
-   while ((cdi = (TClassDocInfo*) iClass())) {
-      if (cdi->GetListOfTypedefs().IsEmpty())
+   Doc::TClassDoc* cdi = 0;
+   while ((cdi = (Doc::TClassDoc*) iClass())) {
+      if (cdi->GetTypes()->IsEmpty())
          continue;
-      TIter iTypedefs(&cdi->GetListOfTypedefs());
-      TDataType* dt = 0;
-      while ((dt = (TDataType*) iTypedefs())) {
+      TIter iTypedefs(cdi->GetTypes());
+      Doc::TTypedefDoc* tdc = 0;
+      while ((tdc = (Doc::TTypedefDoc*) iTypedefs())) {
+         TDataType* dt = (TDataType*) tdc->GetDictionary();
          if (gDebug > 0)
             Info("CreateClassTypeDefs", "Creating typedef %s to class %s",
                  dt->GetName(), cdi->GetName());
@@ -1159,7 +1163,7 @@ void TDocOutput::CreateClassTypeDefs()
          TString sTitle("typedef ");
          sTitle += dtName;
 
-         TClass* cls = dynamic_cast<TClass*>(cdi->GetClass());
+         TClass* cls = dynamic_cast<TClass*>(cdi->GetDictionary());
          if (cls) {
             // show box with lib, include
             // needs to go first to allow title on the left
@@ -1186,7 +1190,7 @@ void TDocOutput::CreateClassTypeDefs()
 
          TString modulename;
          fHtml->GetModuleNameForClass(modulename, cls);
-         TModuleDocInfo* module = (TModuleDocInfo*) fHtml->GetListOfModules()->FindObject(modulename);
+         Doc::TModuleDoc* module = (Doc::TModuleDoc*) fHtml->GetListOfModules()->FindObject(modulename);
          WriteTopLinks(outfile, module, dt->GetName());
 
          outfile << "<div class=\"dropshadow\"><div class=\"withshadow\">";
@@ -1783,14 +1787,14 @@ void TDocOutput::ReferenceEntity(TSubString& str, TDataType* entity, const char*
    NameSpace2FileName(mangledEntity);
 
    TString link;
-   TClassDocInfo* cdi = 0;
    bool isClassTypedef = entity->GetType() == -1;
    if (isClassTypedef)
       /* is class/ struct / union */
       isClassTypedef = isClassTypedef && (entity->Property() & 7);
+   Doc::TClassDoc* cdi = 0;
    if (isClassTypedef) {
       std::string shortTypeName(fHtml->ShortType(entity->GetFullTypeName()));
-      cdi = (TClassDocInfo*) GetHtml()->GetListOfClasses()->FindObject(shortTypeName.c_str());
+      cdi = (Doc::TClassDoc*) GetHtml()->GetListOfClasses()->FindObject(shortTypeName.c_str());
    }
    if (cdi) {
       link = mangledEntity + ".html";
@@ -2229,8 +2233,8 @@ void TDocOutput::WriteModuleLinks(std::ostream& out)
       // find index chars
       fHtml->SortListOfModules();
       TIter iModule(fHtml->GetListOfModules());
-      TModuleDocInfo* module = 0;
-      while ((module = (TModuleDocInfo*) iModule())) {
+      Doc::TModuleDoc* module = 0;
+      while ((module = (Doc::TModuleDoc*) iModule())) {
          if (!module->GetName() || strchr(module->GetName(), '/'))
             continue;
          if (module->IsSelected()) {
@@ -2264,19 +2268,20 @@ void TDocOutput::WriteLineNumbers(std::ostream& out, Long_t nLines, const TStrin
 }
 
 //______________________________________________________________________________
-void TDocOutput::WriteModuleLinks(std::ostream& out, TModuleDocInfo* super)
+void TDocOutput::WriteModuleLinks(std::ostream& out, Doc::TModuleDoc* super)
 {
    // Create a div containing links to all modules
 
-   if (super->GetSub().GetSize()) {
+   if (!super->GetSub()->IsEmpty()) {
       TString superName(super->GetName());
       superName.ToUpper();
       out << "<div id=\"indxModules\"><h4>" << superName << " Modules</h4>" << endl;
       // find index chars
-      super->GetSub().Sort();
-      TIter iModule(&super->GetSub());
-      TModuleDocInfo* module = 0;
-      while ((module = (TModuleDocInfo*) iModule())) {
+      TList* lsub = (TList*)super->GetSub();
+      lsub->Sort();
+      TIter iModule(super->GetSub());
+      Doc::TModuleDoc* module = 0;
+      while ((module = (Doc::TModuleDoc*) iModule())) {
          if (module->IsSelected()) {
             TString name(module->GetName());
             name.ToUpper();
@@ -2331,7 +2336,7 @@ void TDocOutput::WriteSearch(std::ostream& out)
 
 
 //______________________________________________________________________________
-void TDocOutput::WriteLocation(std::ostream& out, TModuleDocInfo* module, const char* classname)
+void TDocOutput::WriteLocation(std::ostream& out, Doc::TModuleDoc* module, const char* classname)
 {
    // make a link to the description
    out << "<div class=\"location\">" << endl; // location
@@ -2373,7 +2378,7 @@ void TDocOutput::WriteLocation(std::ostream& out, TModuleDocInfo* module, const 
 
 
 //______________________________________________________________________________
-void TDocOutput::WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const char* classname,
+void TDocOutput::WriteTopLinks(std::ostream& out, Doc::TModuleDoc* module, const char* classname,
                                Bool_t withLocation)
 {
    // Write the first part of the links shown ontop of each doc page;

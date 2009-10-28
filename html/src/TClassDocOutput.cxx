@@ -12,11 +12,12 @@
 #include "TClassDocOutput.h"
 
 #include "TBaseClass.h"
+#include "TClass.h"
+#include "TClassDoc.h"
 #include "TClassEdit.h"
 #include "TDataMember.h"
 #include "TMethodArg.h"
 #include "TDataType.h"
-#include "TDocInfo.h"
 #include "TDocParser.h"
 #include "TEnv.h"
 #include "TError.h"
@@ -1103,11 +1104,11 @@ Bool_t TClassDocOutput::CreateHierarchyDot()
           << "rankdir=RL;" << endl;
 
    // loop on all classes
-   TClassDocInfo* cdi = 0;
+   Doc::TClassDoc* cdi = 0;
    TIter iClass(fHtml->GetListOfClasses());
-   while ((cdi = (TClassDocInfo*)iClass())) {
+   while ((cdi = (Doc::TClassDoc*)iClass())) {
 
-      TDictionary *dict = cdi->GetClass();
+      TDictionary *dict = cdi->GetDictionary();
       TClass *cl = dynamic_cast<TClass*>(dict);
       if (cl == 0) {
          if (!dict)
@@ -1208,11 +1209,11 @@ void TClassDocOutput::DescendHierarchy(std::ostream& out, TClass* basePtr, Int_t
 
    UInt_t numClasses = 0;
 
-   TClassDocInfo* cdi = 0;
+   Doc::TClassDoc* cdi = 0;
    TIter iClass(fHtml->GetListOfClasses());
-   while ((cdi = (TClassDocInfo*)iClass()) && (!maxLines || fHierarchyLines<maxLines)) {
+   while ((cdi = (Doc::TClassDoc*)iClass()) && (!maxLines || fHierarchyLines<maxLines)) {
 
-      TClass *classPtr = dynamic_cast<TClass*>(cdi->GetClass());
+      TClass *classPtr = dynamic_cast<TClass*>(cdi->GetDictionary());
       if (!classPtr) continue;
 
       // find base classes with same name as basePtr
@@ -1455,7 +1456,7 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
 
    TString modulename;
    fHtml->GetModuleNameForClass(modulename, fCurrentClass);
-   TModuleDocInfo* module = (TModuleDocInfo*) fHtml->GetListOfModules()->FindObject(modulename);
+   Doc::TModuleDoc* module = (Doc::TModuleDoc*) fHtml->GetListOfModules()->FindObject(modulename);
    WriteTopLinks(classFile, module, fCurrentClass->GetName(), kFALSE);
 
    classFile << "<div class=\"descrhead\"><div class=\"descrheadcontent\">" << endl // descrhead line 3

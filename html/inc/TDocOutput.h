@@ -36,10 +36,13 @@ class TDataMember;
 class TDataType;
 class TGClient;
 class THtml;
-class TModuleDocInfo;
 class TString;
 class TSubString;
 class TVirtualPad;
+
+namespace Doc {
+   class TModuleDoc;
+}
 
 class TDocOutput: public TObject {
 protected:
@@ -63,10 +66,10 @@ protected:
                                   const char *lastUpdate, const char *author,
                                   const char *copyright, const char* footer);
    virtual void   WriteSearch(std::ostream& out);
-   void           WriteLocation(std::ostream& out, TModuleDocInfo* module, const char* classname = 0);
+   void           WriteLocation(std::ostream& out, Doc::TModuleDoc* module, const char* classname = 0);
    void           WriteModuleLinks(std::ostream& out);
-   void           WriteModuleLinks(std::ostream& out, TModuleDocInfo* super);
-   void           WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const char* classname = 0, Bool_t withLocation = kTRUE);
+   void           WriteModuleLinks(std::ostream& out, Doc::TModuleDoc* super);
+   void           WriteTopLinks(std::ostream& out, Doc::TModuleDoc* module, const char* classname = 0, Bool_t withLocation = kTRUE);
 
 public:
    enum EFileType { kSource, kInclude, kTree, kDoc };

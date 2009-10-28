@@ -14,12 +14,12 @@
 #include "Riostream.h"
 #include "TBaseClass.h"
 #include "TClass.h"
+#include "TClassDoc.h"
 #include "TClassDocOutput.h"
 #include "TClassEdit.h"
 #include "TClassTable.h"
 #include "TDataType.h"
 #include "TDocFileDB.h"
-#include "TDocInfo.h"
 #include "TDocOutput.h"
 #include "TEnv.h"
 #include "TInterpreter.h"
@@ -1286,7 +1286,7 @@ const char* THtml::GetEtcDir() const
 
 
 //______________________________________________________________________________
-TClassDocInfo *THtml::GetNextClass()
+Doc::TClassDoc *THtml::GetNextClass()
 {
    // Return the next class to be generated for MakeClassThreaded.
 
@@ -1294,8 +1294,8 @@ TClassDocInfo *THtml::GetNextClass()
 
    R__LOCKGUARD(GetMakeClassMutex());
 
-   TClassDocInfo* classinfo = 0;
-   while ((classinfo = (TClassDocInfo*)(*fThreadedClassIter)())
+   Doc::TClassDoc* classinfo = 0;
+   while ((classinfo = (Doc::TClassDoc*)(*fThreadedClassIter)())
           && !classinfo->IsSelected()) { }
 
    if (!classinfo) {
@@ -1459,11 +1459,12 @@ void  THtml::GetModuleNameForClass(TString& module, TClass* cl) const
    // Return the module name for a given class.
    // Use the cached information from fDocEntityInfo.fClasses.
 
-   module = "(UNKNOWN)";
-   TClassDocInfo* cdi = (TClassDocInfo*)fDocEntityInfo.fClasses.FindObject(cl->GetName());
-   if (!cdi || !cdi->GetModule())
-      return;
-   module = cdi->GetModule()->GetName();
+   Doc::TClassDoc* cdi = (Doc::TClassDoc*)fDocEntityInfo.fClasses.FindObject(cl->GetName());
+   if (!cdi || cdi->GetModuleName().IsNull()) {
+      module = "(UNKNOWN)";
+   } else {
+      module = cdi->GetModuleName();
+   }
 }
 
 
@@ -1520,94 +1521,31 @@ void THtml::CreateListOfClasses(const char* filter)
       Bool_t matchesSelection = re.Match(s);
 
 
-      TString hdr;
-      TString hdrFS;
-      TString src;
-      TString srcFS;
+      TList srcfiles; // of Doc::TFileSysEntry*
       TString htmlfilename;
       Doc::TFileSysEntry* fse = 0;
 
-      TClassDocInfo* cdi = (TClassDocInfo*) fDocEntityInfo.fClasses.FindObject(cname);
-      if (cdi) {
-         hdr = cdi->GetDeclFileName();
-         hdrFS = cdi->GetDeclFileSysName();
-         src = cdi->GetImplFileName();
-         srcFS = cdi->GetImplFileSysName();
-         htmlfilename = cdi->GetHtmlFileName();
-      }
-
-      if (!hdrFS.Length()) {
-         if (!GetFileDefinition().GetDeclFileName(classPtr, hdr, hdrFS, &fse)) {
-            // we don't even know where the class is defined;
-            // just skip. Silence if it doesn't match the selection anyway
-            if (i == -1 ) {
-               skipROOTClasses = true;
-               Info("CreateListOfClasses", "Cannot find header file for TObject at %s given the input path %s.",
-                  classPtr->GetDeclFileName(), GetInputPath().Data());
-               Info("CreateListOfClasses", "Assuming documentation is not for ROOT classes, or you need to pass "
-                  "the proper directory to THtml::SetInputPath() so I can find %s.", classPtr->GetDeclFileName());
-               continue;
-            }
-            // ignore STL
-            if (classPtr->GetDeclFileName() && !strncmp(classPtr->GetDeclFileName(), "prec_stl/", 9))
-               continue;
-            if (skipROOTClasses) {
-               if (classPtr->GetSharedLibs() && classPtr->GetSharedLibs()[0]) {
-                  std::string lib(classPtr->GetSharedLibs());
-                  size_t posSpace = lib.find(' ');
-                  if (posSpace != std::string::npos)
-                     lib.erase(posSpace);
-                  if (rootLibs.find(lib) == rootLibs.end()) {
-#ifdef ROOTLIBDIR
-                     TString rootlibdir = ROOTLIBDIR;
-#else
-                     TString rootlibdir = "lib";
-                     gSystem->PrependPathName(gRootDir, rootlibdir);
-#endif
-                     TString sLib(lib);
-                     if (sLib.Index('.') == -1) {
-                        sLib += ".";
-                        sLib += gSystem->GetSoExt();
-                     }
-                     gSystem->PrependPathName(rootlibdir, sLib);
-                     if (gSystem->AccessPathName(sLib))
-                        // the library doesn't exist in $ROOTSYS/lib, so it's not
-                        // a root lib and we need to tell the user.
-                        classesDeclFileNotFound.AddLast(classPtr);
-                     else rootLibs.insert(lib);
-                  } // end "if rootLibs does not contain lib"
-               } else {
-                  // lib name unknown
-                  static const char* rootClassesToIgnore[] =
-                  { "ColorStruct_t", "CpuInfo_t", "Event_t", "FileStat_t", "GCValues_t", "MemInfo_t",
-                     "PictureAttributes_t", "Point_t", "ProcInfo_t", "ROOT", "ROOT::Fit",
-                     "Rectangle_t", "RedirectHandle_t", "Segment_t", "SetWindowAttributes_t",
-                     "SysInfo_t", "TCint", "UserGroup_t", "WindowAttributes_t", "timespec", 0};
-                  static const char* rootClassStemsToIgnore[] =
-                  { "ROOT::Math", "TKDTree", "TMatrixT", "TParameter", "vector", 0 };
-                  static size_t rootClassStemsToIgnoreLen[] = {0, 0, 0, 0, 0};
-                  static std::set<std::string> setRootClassesToIgnore;
-                  if (setRootClassesToIgnore.empty()) {
-                     for (int ii = 0; rootClassesToIgnore[ii]; ++ii)
-                        setRootClassesToIgnore.insert(rootClassesToIgnore[ii]);
-                     for (int ii = 0; rootClassStemsToIgnore[ii]; ++ii)
-                        rootClassStemsToIgnoreLen[ii] = strlen(rootClassStemsToIgnore[ii]);
-                  }
-                  // only complain about this class if it should not be ignored:
-                  if (setRootClassesToIgnore.find(cname) == setRootClassesToIgnore.end()) {
-                     bool matched = false;
-                     for (int ii = 0; !matched && rootClassStemsToIgnore[ii]; ++ii)
-                        matched = !strncmp(cname, rootClassStemsToIgnore[ii], rootClassStemsToIgnoreLen[ii]);
-                     if (!matched)
-                        classesDeclFileNotFound.AddLast(classPtr);
-                  }
-               } // lib name known
-               continue;
-            } else {
-               if (matchesSelection && (!classPtr->GetDeclFileName() || !strstr(classPtr->GetDeclFileName(),"prec_stl/")))
-                  classesDeclFileNotFound.AddLast(classPtr);
-               continue;
-            }
+      if (!GetFileDefinition().GetDeclFileName(classPtr, hdr, hdrFS, &fse)) {
+         // we don't even know where the class is defined;
+         // just skip. Silence if it doesn't match the selection anyway
+         if (i == -1 ) {
+            skipROOTClasses = true;
+            Info("CreateListOfClasses", "Cannot find header file for TObject at %s given the input path %s.",
+                 classPtr->GetDeclFileName(), GetInputPath().Data());
+            Info("CreateListOfClasses", "Assuming documentation is not for ROOT classes, or you need to pass "
+                 "the proper directory to THtml::SetInputPath() so I can find %s.", classPtr->GetDeclFileName());
+            continue;
+         }
+         // ignore STL
+         if (classPtr->GetDeclFileName() && !strncmp(classPtr->GetDeclFileName(), "prec_stl/", 9))
+            continue;
+         if (skipROOTClasses) {
+            DetermineComplaintForMissingSource(classPtr, clname, rootlibs, classesDeclFileNotFound);
+            continue;
+         } else {
+            if (matchesSelection && (!classPtr->GetDeclFileName() || !strstr(classPtr->GetDeclFileName(),"prec_stl/")))
+               classesDeclFileNotFound.AddLast(classPtr);
+            continue;
          }
       }
 
@@ -1622,63 +1560,29 @@ void THtml::CreateListOfClasses(const char* filter)
       if (!htmlfilename.Length())
          GetHtmlFileName(classPtr, htmlfilename);
 
-      if (!cdi) {
-         cdi = new TClassDocInfo(classPtr, htmlfilename, hdrFS, srcFS, hdr, src);
-         fDocEntityInfo.fClasses.Add(cdi);
-      } else {
-         cdi->SetDeclFileName(hdr);
-         cdi->SetImplFileName(src);
-         cdi->SetDeclFileSysName(hdrFS);
-         cdi->SetImplFileSysName(srcFS);
-         cdi->SetHtmlFileName(htmlfilename);
-      }
-
-      cdi->SetSelected(matchesSelection);
-
       TString modulename;
       GetModuleDefinition().GetModule(classPtr, fse, modulename);
       if (!modulename.Length() || modulename == "USER") 
          GetModuleNameForClass(modulename, classPtr);
       
-      TModuleDocInfo* module = (TModuleDocInfo*) fDocEntityInfo.fModules.FindObject(modulename);
-      if (!module) {
-         bool moduleSelected = cdi->IsSelected();
+      Doc::TClassDoc* cdi = new Doc::TClassDoc(cname, classPtr, modulename);
+      cdi->SetHtmlFileName(htmlfilename);
+      cdi->GetFiles().Add(hdrFS);
+      cdi->GetFiles().Add(srcFS);
+      cdi->SetSelected(matchesSelection);
 
-         TString parentModuleName(gSystem->DirName(modulename));
-         TModuleDocInfo* super = 0;
-         if (parentModuleName.Length() && parentModuleName != ".") {
-            super = (TModuleDocInfo*) fDocEntityInfo.fModules.FindObject(parentModuleName);
-            if (!super) {
-               // create parents:
-               TString token;
-               Ssiz_t pos = 0;
-               while (parentModuleName.Tokenize(token, pos, "/")) {
-                  if (!token.Length() || token == ".") continue;
-                  super = new TModuleDocInfo(token, super);
-                  super->SetSelected(moduleSelected);
-                  fDocEntityInfo.fModules.Add(super);
-               }
-            }
-         }
-         module = new TModuleDocInfo(modulename, super);
-         module->SetSelected(moduleSelected);
-         fDocEntityInfo.fModules.Add(module);
-      }
+      fDocEntityInfo.fClasses.Add(cdi);
 
-      if (module) {
-         module->AddClass(cdi);
-         cdi->SetModule(module);
-         if (cdi->HaveSource() && cdi->IsSelected())
-            module->SetSelected();
-      }
+      Doc::TModuleDoc* module = GetOrCreateModule(modulename, matchesSelection);
+      module->AddClass(cdi->GetName());
+      if (cdi->HaveSource() && cdi->IsSelected())
+         module->SetSelected();
 
-      // clear the typedefs; we fill them later
-      cdi->GetListOfTypedefs().Clear();
-
-      if (gDebug > 0)
+      if (gDebug > 0) {
          Info("CreateListOfClasses", "Adding class %s, module %s (%sselected)",
               cdi->GetName(), module ? module->GetName() : "[UNKNOWN]",
               cdi->IsSelected() ? "" : "not ");
+      }
    }
 
 
@@ -1725,33 +1629,39 @@ void THtml::CreateListOfClasses(const char* filter)
    TDocOutput output(*this);
    while ((dt = (TDataType*) iTypedef())) {
       if (dt->GetType() != -1) continue;
-      TClassDocInfo* cdi = (TClassDocInfo*) fDocEntityInfo.fClasses.FindObject(dt->GetFullTypeName());
+
+      bool inNamespace = true;
+      TString surroundingNamespace(dt->GetName());
+      Ssiz_t posTemplate = surroundingNamespace.Last('>');
+      inNamespace = inNamespace && (posTemplate == kNPOS);
+      Doc::TClassDoc* surroundingCD = 0;
+      if (inNamespace) {
+         Ssiz_t posColumn = surroundingNamespace.Last(':');
+         if (posColumn != kNPOS) {
+            surroundingNamespace.Remove(posColumn - 1);
+            TClass* clSurrounding = GetClass(surroundingNamespace);
+            inNamespace = inNamespace && (!clSurrounding || IsNamespace(clSurrounding));
+            surroundingCD = fDocEntityInfo.fClasses.FindObject(ShortType(surroundingNamespace));
+         }
+      }
+
+      TString htmlfilename(dt->GetName());
+      output.NameSpace2FileName(htmlfilename);
+      htmlfilename += ".html";
+      Doc::TTypedefDoc* tddoc = new Doc::TTypedefDoc(surroundingCD, ShortType(dt->GetName()), td);
+      cdiTD->SetModule(cdi->GetModule());
+      cdiTD->SetSelected(cdi->IsSelected());
+      cdi->GetModule()->AddClass(cdiTD);
+
+      TClass* tdcl = TClass::GetClass(dt->GetFullTypeName());
+      Doc::TClassDoc* cdi = (Doc::TClassDoc*) fDocEntityInfo.fClasses.FindObject(ShortType(tdcl->GetName()));
       if (cdi) {
-         cdi->GetListOfTypedefs().Add(dt);
+         cdi->AddSeeAlso(dt->GetName());
          if (gDebug > 1)
             Info("CreateListOfClasses", "Adding typedef %s to class %s",
                  dt->GetName(), cdi->GetName());
 
-         bool inNamespace = true;
-         TString surroundingNamespace(dt->GetName());
-         Ssiz_t posTemplate = surroundingNamespace.Last('>');
-         inNamespace = inNamespace && (posTemplate == kNPOS);
-         if (inNamespace) {
-            Ssiz_t posColumn = surroundingNamespace.Last(':');
-            if (posColumn != kNPOS) {
-               surroundingNamespace.Remove(posColumn - 1);
-               TClass* clSurrounding = GetClass(surroundingNamespace);
-               inNamespace = inNamespace && (!clSurrounding || IsNamespace(clSurrounding));
-            }
-         }
          if (inNamespace && cdi->GetModule()) {
-            TString htmlfilename(dt->GetName());
-            output.NameSpace2FileName(htmlfilename);
-            htmlfilename += ".html";
-            TClassDocInfo* cdiTD = new TClassDocInfo(dt, htmlfilename);
-            cdiTD->SetModule(cdi->GetModule());
-            cdiTD->SetSelected(cdi->IsSelected());
-            cdi->GetModule()->AddClass(cdiTD);
          }
       }
    }
@@ -1843,6 +1753,66 @@ void THtml::CreateStyleSheet() const {
 }
 
 
+//______________________________________________________________________________
+void THtml::DetermineComplaintForMissingSource(TClass* classPtr, const char* clname,
+                                               std::set<std::string>& rootlibs,
+                                               TList* classesDeclFileNotFound) const
+{
+   // Determine whether missing sources for class clname (with TClass* classPtr)
+   // should cuase a warning message or not. If it should, add classPtr to
+   // classesDeclFileNotFound. rootlibs is a collection of known root libraries
+   // that this function might append to.
+   if (classPtr->GetSharedLibs() && classPtr->GetSharedLibs()[0]) {
+      std::string lib(classPtr->GetSharedLibs());
+      size_t posSpace = lib.find(' ');
+      if (posSpace != std::string::npos)
+         lib.erase(posSpace);
+      if (rootLibs.find(lib) == rootLibs.end()) {
+#ifdef ROOTLIBDIR
+         TString rootlibdir = ROOTLIBDIR;
+#else
+         TString rootlibdir = "lib";
+         gSystem->PrependPathName(gRootDir, rootlibdir);
+#endif
+         TString sLib(lib);
+         if (sLib.Index('.') == -1) {
+            sLib += ".";
+            sLib += gSystem->GetSoExt();
+         }
+         gSystem->PrependPathName(rootlibdir, sLib);
+         if (gSystem->AccessPathName(sLib))
+            // the library doesn't exist in $ROOTSYS/lib, so it's not
+            // a root lib and we need to tell the user.
+            classesDeclFileNotFound.AddLast(classPtr);
+         else rootLibs.insert(lib);
+      } // end "if rootLibs does not contain lib"
+   } else {
+      // lib name unknown
+      static const char* rootClassesToIgnore[] =
+         { "ColorStruct_t", "CpuInfo_t", "Event_t", "FileStat_t", "GCValues_t", "MemInfo_t",
+           "PictureAttributes_t", "Point_t", "ProcInfo_t", "ROOT", "ROOT::Fit",
+           "Rectangle_t", "RedirectHandle_t", "Segment_t", "SetWindowAttributes_t",
+           "SysInfo_t", "TCint", "UserGroup_t", "WindowAttributes_t", "timespec", 0};
+      static const char* rootClassStemsToIgnore[] =
+         { "ROOT::Math", "TKDTree", "TMatrixT", "TParameter", "vector", 0 };
+      static size_t rootClassStemsToIgnoreLen[] = {0, 0, 0, 0, 0};
+      static std::set<std::string> setRootClassesToIgnore;
+      if (setRootClassesToIgnore.empty()) {
+         for (int ii = 0; rootClassesToIgnore[ii]; ++ii)
+            setRootClassesToIgnore.insert(rootClassesToIgnore[ii]);
+         for (int ii = 0; rootClassStemsToIgnore[ii]; ++ii)
+            rootClassStemsToIgnoreLen[ii] = strlen(rootClassStemsToIgnore[ii]);
+      }
+      // only complain about this class if it should not be ignored:
+      if (setRootClassesToIgnore.find(cname) == setRootClassesToIgnore.end()) {
+         bool matched = false;
+         for (int ii = 0; !matched && rootClassStemsToIgnore[ii]; ++ii)
+            matched = !strncmp(cname, rootClassStemsToIgnore[ii], rootClassStemsToIgnoreLen[ii]);
+         if (!matched)
+            classesDeclFileNotFound.AddLast(classPtr);
+      }
+   } // lib name known
+}
 
 //______________________________________________________________________________
 void THtml::GetDerivedClasses(TClass* cl, std::map<TClass*, Int_t>& derived) const
@@ -1851,8 +1821,8 @@ void THtml::GetDerivedClasses(TClass* cl, std::map<TClass*, Int_t>& derived) con
    // distance to cl
 
    TIter iClass(&fDocEntityInfo.fClasses);
-   TClassDocInfo* cdi = 0;
-   while ((cdi = (TClassDocInfo*) iClass())) {
+   Doc::TClassDoc* cdi = 0;
+   while ((cdi = (Doc::TClassDoc*) iClass())) {
       TClass* candidate = dynamic_cast<TClass*>(cdi->GetClass());
       if (!candidate) continue;
       if (candidate != cl && candidate->InheritsFrom(cl)) {
@@ -1960,7 +1930,7 @@ TClass *THtml::GetClass(const char *name1) const
       if (ret) return 0;
    }
 
-   TClassDocInfo* cdi = (TClassDocInfo*)fDocEntityInfo.fClasses.FindObject(name1);
+   Doc::TClassDoc* cdi = (Doc::TClassDoc*)fDocEntityInfo.fClasses.FindObject(name1);
    if (!cdi) return 0;
    TClass *cl = dynamic_cast<TClass*>(cdi->GetClass());
    // hack to get rid of prec_stl types
@@ -1974,6 +1944,37 @@ TClass *THtml::GetClass(const char *name1) const
    if (cl && GetDeclFileName(cl, kFALSE, declFileName))
       return cl;
    return 0;
+}
+
+//______________________________________________________________________________
+Doc::TModuleDoc* THtml::GetOrCreateModule(const char* name, Bool_t selected)
+{
+   Doc::TModuleDoc* module = (Doc::TModuleDoc*) fDocEntityInfo.fModules.FindObject(name);
+   if (module) {
+      return module;
+   }
+
+   TString parentModuleName(gSystem->DirName(name));
+   TModuleDocInfo* super = 0;
+   if (parentModuleName.Length() && parentModuleName != ".") {
+      super = (TModuleDocInfo*) fDocEntityInfo.fModules.FindObject(parentModuleName);
+      if (!super) {
+         // create parents:
+         TString token;
+         Ssiz_t pos = 0;
+         while (parentModuleName.Tokenize(token, pos, "/")) {
+            if (!token.Length() || token == ".") continue;
+            super = new TModuleDocInfo(token, super);
+            super->SetSelected(selected);
+            fDocEntityInfo.fModules.Add(super);
+         }
+      }
+   }
+   module = new TModuleDocInfo(name, super);
+   module->SetSelected(selected);
+   fDocEntityInfo.fModules.Add(module);
+
+   return module;
 }
 
 //______________________________________________________________________________
@@ -2066,11 +2067,11 @@ void THtml::MakeAll(Bool_t force, const char *filter, int numthreads /*= -1*/)
 
    if (numthreads == 1) {
       // CreateListOfClasses(filter); already done by MakeIndex
-      TClassDocInfo* classinfo = 0;
+      Doc::TClassDoc* classinfo = 0;
       TIter iClassInfo(&fDocEntityInfo.fClasses);
       UInt_t count = 0;
 
-      while ((classinfo = (TClassDocInfo*)iClassInfo())) {
+      while ((classinfo = (Doc::TClassDoc*)iClassInfo())) {
          if (!classinfo->IsSelected()) 
             continue;
          fCounter.Form("%5d", fDocEntityInfo.fClasses.GetSize() - count++);
@@ -2129,7 +2130,7 @@ void THtml::MakeClass(const char *className, Bool_t force)
 //
    CreateListOfClasses("*");
 
-   TClassDocInfo* cdi = (TClassDocInfo*)fDocEntityInfo.fClasses.FindObject(className);
+   Doc::TClassDoc* cdi = (Doc::TClassDoc*)fDocEntityInfo.fClasses.FindObject(className);
    if (!cdi) {
       if (!TClassEdit::IsStdClass(className)) // stl classes won't be available, so no warning
          Error("MakeClass", "Unknown class '%s'!", className);
@@ -2150,7 +2151,7 @@ void THtml::MakeClass(void *cdi_void, Bool_t force)
    if (!fDocEntityInfo.fClasses.GetSize())
       CreateListOfClasses("*");
 
-   TClassDocInfo* cdi = (TClassDocInfo*) cdi_void;
+   Doc::TClassDoc* cdi = (Doc::TClassDoc*) cdi_void;
    TClass* currentClass = dynamic_cast<TClass*>(cdi->GetClass());
 
    if (!currentClass) {
@@ -2188,7 +2189,7 @@ void* THtml::MakeClassThreaded(void* info) {
 
    const THtmlThreadInfo* hti = (const THtmlThreadInfo*)info;
    if (!hti) return 0;
-   TClassDocInfo* classinfo = 0;
+   Doc::TClassDoc* classinfo = 0;
    while ((classinfo = hti->GetHtml()->GetNextClass()))
       hti->GetHtml()->MakeClass(classinfo, hti->GetForce());
 
@@ -2321,9 +2322,9 @@ void THtml::SetOutputDir(const char *dir)
 void THtml::SetDeclFileName(TClass* cl, const char* filename)
 {
    // Explicitly set a decl file name for TClass cl.
-   TClassDocInfo* cdi = (TClassDocInfo*) fDocEntityInfo.fClasses.FindObject(cl->GetName());
+   Doc::TClassDoc* cdi = (Doc::TClassDoc*) fDocEntityInfo.fClasses.FindObject(cl->GetName());
    if (!cdi) {
-      cdi = new TClassDocInfo(cl, "" /*html*/, "" /*fsdecl*/, "" /*fsimpl*/, filename);
+      cdi = new Doc::TClassDoc(cl, "" /*html*/, "" /*fsdecl*/, "" /*fsimpl*/, filename);
       fDocEntityInfo.fClasses.Add(cdi);
    } else
       cdi->SetDeclFileName(filename);
@@ -2333,9 +2334,9 @@ void THtml::SetDeclFileName(TClass* cl, const char* filename)
 void THtml::SetImplFileName(TClass* cl, const char* filename)
 {
    // Explicitly set a impl file name for TClass cl.
-   TClassDocInfo* cdi = (TClassDocInfo*) fDocEntityInfo.fClasses.FindObject(cl->GetName());
+   Doc::TClassDoc* cdi = (Doc::TClassDoc*) fDocEntityInfo.fClasses.FindObject(cl->GetName());
    if (!cdi) {
-      cdi = new TClassDocInfo(cl, "" /*html*/, "" /*fsdecl*/, "" /*fsimpl*/, 0 /*decl*/, filename);
+      cdi = new Doc::TClassDoc(cl, "" /*html*/, "" /*fsdecl*/, "" /*fsimpl*/, 0 /*decl*/, filename);
       fDocEntityInfo.fClasses.Add(cdi);
    } else
       cdi->SetImplFileName(filename);

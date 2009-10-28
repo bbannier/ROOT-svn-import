@@ -27,12 +27,15 @@
 #include "TDocStringTable.h"
 #endif
 
+class TCollection;
+class THashList;
+
 namespace Doc {
 class TModuleDoc: public TDocumented {
 public:
    TModuleDoc() {}
-   TModuleDoc(const char* name):
-      TDocumented(name) {}
+   TModuleDoc(const char* name, const char* parent):
+      TDocumented(name), fSuper(parent), fSub(0) {}
    virtual ~TModuleDoc();
 
    void AddClass(const char* name);
@@ -42,11 +45,22 @@ public:
 
    virtual const char* GetURL() const;
 
+   const TString& GetSuper() const { return fSuper; }
+   TCollection*   GetSub() const;
+
+   void        SetSelected(Bool_t sel = kTRUE) { fSelected = sel; }
+   Bool_t      IsSelected() const { return kTRUE; }
+
 protected:
-   TDocStringTable fClasses; // classes contained in this module
    TDictionary* FindDictionary() const { return 0; }
 
 private:
+   TDocStringTable fClasses; // classes contained in this module
+   TString fSuper; // name of module containing this module
+
+   Bool_t  fSelected; //! whether selected for documentation output
+   mutable THashList*  fSub; //! modules contained in this module
+
    ClassDef(TModuleDoc, 1); // Documentation for a file
 };
 } // namespace Doc

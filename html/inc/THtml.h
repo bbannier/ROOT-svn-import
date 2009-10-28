@@ -29,11 +29,12 @@
 #include <map>
 
 class TClass;
-class TClassDocInfo;
 class TGClient;
 class TVirtualMutex;
 
 namespace Doc {
+   class TClassDoc;
+   class TModuleDoc;
    class TFileSysDB;
    class TFileSysEntry;
 }
@@ -303,8 +304,13 @@ protected:
    void            CreateListOfClasses(const char* filter);
    virtual bool    GetDeclImplFileName(TClass* cl, bool filesys, bool decl, TString& out_name) const;
    void            MakeClass(void* cdi, Bool_t force=kFALSE);
-   TClassDocInfo  *GetNextClass();
+   Doc::TClassDoc* GetNextClass();
    void            SetLocalFiles() const;
+   Doc::TModuleDoc* GetOrCreateModule(const char* name, Bool_t selected);
+   void            DetermineComplaintForMissingSource(TClass* classPtr, const char* clname,
+                                                      std::set<std::string>& rootlibs,
+                                                      TList& classesDeclFileNotFound) const;
+                                                      
 
    static void    *MakeClassThreaded(void* info);
 

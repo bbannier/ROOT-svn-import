@@ -32,8 +32,9 @@ class TTypedefDoc: public TDocumented {
 public:
 
    TTypedefDoc();
-   TTypedefDoc(TClassDoc* owner, const char* name, const TDocString& underlying):
-      TDocumented(name), fUnderlyingType(underlying) {}
+   TTypedefDoc(TClassDoc* owner, const char* name,
+               const TDocString& underlying, TDictionary* td = 0):
+      TDocumented(name, td), fUnderlyingType(underlying), fOwner(owner) {}
    virtual ~TTypedefDoc();
 
    Int_t Compare(const TObject* obj) const;
@@ -44,6 +45,7 @@ private:
    TTypedefDoc(const TTypedefDoc&); // intentionally not implemented
 
    TDocString fUnderlyingType; // the underlying type of this typedef
+   TDocumented* fOwner; // parent of this typedef
    ClassDef(TTypedefDoc, 1); // Documentation for a class
 };
 } // namespace Doc

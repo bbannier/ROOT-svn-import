@@ -64,7 +64,7 @@ void Doc::TDocString::AddRef(TDocStringTable* table, Ssiz_t from, Ssiz_t to,
 
    if (type == TDocRef::kNumRefTypes) {
       Error("AddRef", "Cannot add reference to entity %s\n",
-            doc->IsA()->GetName());
+            doc->ClassName());
       return;
    }
 
