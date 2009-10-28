@@ -17,6 +17,8 @@
 #include <vector>
 #include <list>
 
+#include <stdexcept>
+
 #include <cmath>
 
 #include "Fit/SparseData.h"
@@ -226,8 +228,8 @@ namespace ROOT {
 //             cout << "Found: " << *it << endl;
             ;
          else {
-//             cout << "SparseData::Add -> FAILED! box not found! " << endl;
-//             cout << littleBox << endl;
+            cout << "SparseData::Add -> FAILED! box not found! " << endl;
+            cout << littleBox << endl;
             return; // Does not add the box, as it is part of the
                     // underflow/overflow bin
          }
@@ -244,6 +246,26 @@ namespace ROOT {
             // and remove it from the list
             l->remove(*it);
          }
+      }
+
+      void SparseData::GetPoint(const unsigned int i, 
+                                std::vector<double>& min, std::vector<double>&max,
+                                double& content, double& error)
+      {
+         unsigned int counter = 0;
+         list<Box>::iterator it = l->begin();
+         while ( it != l->end() && counter != i ) {
+            ++it; 
+            ++counter;
+         }
+
+         if ( (it == l->end()) || (counter != i) )
+            throw std::out_of_range("SparseData::GetPoint");
+
+         min = it->getMin();
+         max = it->getMax();
+         content = it->getVal();
+         error = it->getError();
       }
 
       void SparseData::PrintList() const

@@ -20,8 +20,6 @@
 #include "Fit/BinData.h"
 #endif
 
-#include <iostream>
-#include <iterator>
 using namespace std;
 
 namespace ROOT { 
@@ -51,6 +49,10 @@ namespace ROOT {
          void Add(std::vector<double>& min, std::vector<double>& max, 
                   const double content, const double error = 1.0);
          
+         void GetPoint(const unsigned int i, 
+                       std::vector<double>& min, std::vector<double>&max,
+                       double& content, double& error);
+
          // Debug method to print the list of bins stored
          void PrintList() const;
 
