@@ -149,7 +149,10 @@ protected:
    
    static TFitEditor *fgFitDialog;         // singleton fit panel
 
+protected:
    void        GetFunctionsFromSystem();
+   void        ProcessTreeInput(TObject* objSelected, Int_t selected,
+                                TString variables, TString cuts);
    TF1*        FindFunction();
    void        FillDataSetList();
    TGComboBox* BuildMethodList(TGFrame *parent, Int_t id);

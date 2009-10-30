@@ -2083,17 +2083,24 @@ void TFitEditor::DoDataSet(Int_t selected)
    TGTextLBEntry* textEntry = static_cast<TGTextLBEntry*>(fDataSet->GetListBox()->GetEntry(selected));
    TString textEntryStr = textEntry->GetText()->GetString();
    TString name = textEntry->GetText()->GetString()+textEntry->GetText()->First(':')+2;
+   TString className = textEntryStr(0,textEntry->GetText()->First(':'));
    
    // Check the object exists and it is registered
    TObject* objSelected(0);
-   if ( textEntryStr.First("TTree::") == 0 ) {
+   if ( className == "TTree" ) {
       // It's a tree, so the name is before the space (' ')
-      objSelected = gROOT->FindObject(name(0, name.First(' ')).String());
+      TString lookStr;
+      if ( name.First(' ') == kNPOS )
+         lookStr = name;
+      else 
+         lookStr = name(0, name.First(' '));
+      //cout << "\t1 SITREE: '" << lookStr << "'" << endl;
+      objSelected = gROOT->FindObject(lookStr);
    } else {
       // It's not a tree, so the name is the complete string
+      //cout << "\t1 NOTREE: '" << name << "'" << endl;
       objSelected = gROOT->FindObject(name);
    }
-
    if ( !objSelected ) 
    {
       //cerr << "Object not found! Please report the error! " << endl;
@@ -2110,14 +2117,7 @@ void TFitEditor::DoDataSet(Int_t selected)
          DoNoSelection();
          return;
       }
-
-      // If the input is valid, insert the tree with the selections as an entry to fDataSet
-      TString entryName = (objSelected)->ClassName(); entryName.Append("::"); entryName.Append((objSelected)->GetName());
-      entryName.Append(" (\""); entryName.Append(variables); entryName.Append("\", \"");
-      entryName.Append(cuts); entryName.Append("\")");
-      Int_t newid = fDataSet->GetNumberOfEntries() + kFP_NOSEL;
-      fDataSet->InsertEntry(entryName, newid, selected );
-      fDataSet->Select(newid);
+      ProcessTreeInput(objSelected, selected, variables, cuts);
    }
 
    // Search the canvas where the object is drawn, if any
@@ -2145,6 +2145,18 @@ void TFitEditor::DoDataSet(Int_t selected)
 
    // Set the proper object and canvas (if found!)
    SetFitObject( found?currentPad:NULL, objSelected, kButton1Down);
+}
+
+void TFitEditor::ProcessTreeInput(TObject* objSelected, Int_t selected,
+                                  TString variables, TString cuts)
+{
+   // If the input is valid, insert the tree with the selections as an entry to fDataSet
+   TString entryName = (objSelected)->ClassName(); entryName.Append("::"); entryName.Append((objSelected)->GetName());
+   entryName.Append(" (\""); entryName.Append(variables); entryName.Append("\", \"");
+   entryName.Append(cuts); entryName.Append("\")");
+   Int_t newid = fDataSet->GetNumberOfEntries() + kFP_NOSEL;
+   fDataSet->InsertEntry(entryName, newid, selected );
+   fDataSet->Select(newid);
 }
 
 //______________________________________________________________________________
