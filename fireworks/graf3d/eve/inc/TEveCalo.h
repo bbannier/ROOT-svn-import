@@ -71,8 +71,6 @@ public:
 
    virtual ~TEveCaloViz();
 
-   virtual void IncImpliedSelected();
-
    virtual TEveElement* ForwardSelection();
    virtual TEveElement* ForwardEdit();
 
@@ -226,7 +224,7 @@ class TEveCaloLego : public TEveCaloViz
 
 public:
    enum EProjection_e { kAuto, k3D, k2D };
-   enum E2DMode_e     { kValColor, kValSize };
+   enum E2DMode_e     { kValColor, kValSize, kValSizeOutline };
    enum EBoxMode_e    { kNone, kFrontBack, kBack};
 
 private:
