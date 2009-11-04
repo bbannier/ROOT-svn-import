@@ -1571,8 +1571,17 @@ void TFitEditor::FillFunctionList(Int_t)
       for ( fSystemFuncIter it = fSystemFuncs.begin();
             it != fSystemFuncs.end(); ++it ) {
          TF1* f = (*it);
+         // Don't include system functions that has been previously
+         // used to fit, as those are included under the kFP_PREVFIT
+         // section.
          if ( strncmp(f->GetName(), "PrevFit", 7) != 0 ) {
-            if ( f->GetNdim() == fDim ) {
+            // If the dimension of the object coincides with the
+            // dimension of the function, then include the function in
+            // the list. It will also include de function if the
+            // dimension of the object is 0 (i.e. a multivariable
+            // TTree) as it is currently imposible to know how many
+            // dimensions a TF1 coming from a C raw function has.
+            if ( f->GetNdim() == fDim || fDim == 0) {
                fFuncList->AddEntry(f->GetName(), newid++); 
             }
          }
@@ -2937,6 +2946,10 @@ TF1* TFitEditor::HasFitFunction()
 
    } else {
       fTypeFit->Select(kFP_UFUNC);
+      // Call FillFunctionList as it might happen that the user is
+      // changing from a TTree to another one, and thus the fFuncList
+      // if not properly filled
+      FillFunctionList();
    }
 
    fDrawAdvanced->SetState(kButtonDisabled);
