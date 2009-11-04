@@ -237,7 +237,10 @@ TF1* copyTF1(TF1* f)
       f->Copy(*fnew);
       f->GetRange(xmin,xmax);
       fnew->SetRange(xmin,xmax);
-      fnew->Save(xmin,xmax,0,0,0,0);
+      // This next line is added, as fnew-Save fails with gausND! As
+      // the number of dimensions is unknown...
+      if ( '\0' != fnew->GetExpFormula()[0] )
+         fnew->Save(xmin,xmax,0,0,0,0);
       fnew->SetParent( 0 );
       fnew->SetBit(TFormula::kNotGlobal);
       return fnew;
@@ -1908,7 +1911,7 @@ void TFitEditor::DoFit()
          if ( !tree ) return;
 
          gROOT->ls();
-         tree->Draw(variables,"","goff candle");
+         tree->Draw(variables,cuts,"goff candle");
 
          TTreePlayer * player = (TTreePlayer*) tree->GetPlayer();
          if ( !player ) {
