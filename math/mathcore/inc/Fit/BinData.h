@@ -465,6 +465,13 @@ public :
       if (fBinEdge.size() == 0 || icoord*fDim > fBinEdge.size() ) return 0; 
       return &fBinEdge[ icoord * fDim];
    }
+   
+   /**
+      query if the data store the bin edges instead of the center
+   */
+   bool HasBinEdges() const {
+      return fBinEdge.size() > 0 && fBinEdge.size() == fDim*fNPoints;
+   }
 
    /** 
        add the bin width data, a pointer to an array with the bin upper edge information.
