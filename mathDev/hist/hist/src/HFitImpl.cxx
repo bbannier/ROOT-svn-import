@@ -191,9 +191,8 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
       else if (special == 400)      ROOT::Fit::InitGaus  (*fitdata,f1); // landau (use the same)
       else if (special == 410)      ROOT::Fit::Init2DGaus(*fitdata,f1); // 2D landau (use the same)
 
-   // need to do a linear fit first for expo and poly ? 
-//             else if (special == 200)      H1InitExpo();
-//             else if (special == 299+npar) H1InitPolynom();
+      else if (special == 200)      ROOT::Fit::InitExpo  (*fitdata, f1); // exponential
+
    }
 
 

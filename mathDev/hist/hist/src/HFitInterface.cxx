@@ -277,6 +277,44 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    
 }
 
+//______________________________________________________________________________
+void InitExpo(const ROOT::Fit::BinData & data, TF1 * f1)
+{
+   //   -*-*-*-*Compute rough values of parameters for an  exponential
+   //           ===================================================
+
+   unsigned int n = data.Size();
+   if (n == 0) return; 
+
+   // find xmin and xmax of the data
+   double valxmin;
+   double xmin = *(data.GetPoint(0,valxmin));
+   double xmax = xmin;
+   double valxmax = valxmin;    
+
+   for (unsigned int i = 1; i < n; ++ i) { 
+      double val; 
+      double x = *(data.GetPoint(i,val) );
+      if (x < xmin) { 
+         xmin = x; 
+         valxmin = val; 
+      }
+      else if (x > xmax) { 
+         xmax = x; 
+         valxmax = val; 
+      }
+   }
+
+   // avoid negative values of valxmin/valxmax
+   if (valxmin <= 0 && valxmax > 0 ) valxmin = valxmax; 
+   else if (valxmax <=0 && valxmin > 0) valxmax = valxmin; 
+   else if (valxmin <=0 && valxmax <= 0) { valxmin = 1; valxmax = 1; }
+
+   double slope = std::log( valxmax/valxmin) / (xmax - xmin); 
+   double constant = std::log(valxmin) - slope * xmin;
+   f1->SetParameters(constant, slope);
+}
+
 
 //______________________________________________________________________________
 void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1)
@@ -284,7 +322,7 @@ void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1)
    //   -*-*-*-*Compute Initial values of parameters for a gaussian
    //           derivaed from function H1InitGaus defined in TH1.cxx  
    //           ===================================================
-
+   
 
    static const double sqrtpi = 2.506628;
 
