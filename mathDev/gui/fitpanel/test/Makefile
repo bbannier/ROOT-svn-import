@@ -34,7 +34,7 @@ $(UNITTEST):      $(UNITTESTOBJ)
 		    @echo "$@ done"
 
 clean:
-		@rm -f $(OBJS)
+		@rm -f $(OBJS) outputUnitTesting.txt
 
 distclean:      clean
 		@rm -f $(PROGRAMS)

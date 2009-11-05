@@ -66,7 +66,7 @@ public:
    FitEditorUnitTesting() {
       // Redirect the stdout to a file outputUnitTesting.txt
       old_stdout = dup (fileno (stdout));
-      (void) freopen ("ouputUnitTesting.txt", "w", stdout);
+      (void) freopen ("outputUnitTesting.txt", "w", stdout);
       out = fdopen (old_stdout, "w");
 
       // Execute the initial script
