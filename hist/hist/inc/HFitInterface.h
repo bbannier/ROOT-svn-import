@@ -123,6 +123,13 @@ namespace ROOT {
       */ 
       void FillData ( BinData  & dv, const TMultiGraph * gr,  TF1 * func = 0); 
 
+
+      /** 
+          compute initial parameter for an exponential function given the fit data
+          Set the constant and slope assuming a simple exponential going through xmin and xmax 
+          of the data set
+       */ 
+      void InitExpo(const ROOT::Fit::BinData & data, TF1 * f1 ); 
       
 
       /** 
