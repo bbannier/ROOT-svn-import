@@ -189,10 +189,16 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    TAxis *zaxis  = hfit->GetZaxis();
 
    
+   double binVolume = 0.0;
+   double minimumBinVolume = std::abs( (xaxis->GetXmax()-xaxis->GetXmin()) *
+                                       (yaxis->GetXmax()-yaxis->GetXmin()) * 
+                                       (zaxis->GetXmax()-zaxis->GetXmin()) ); 
+
    for ( binx = hxfirst; binx <= hxlast; ++binx) {
       if (useBinEdges) {
          x[0] = xaxis->GetBinLowEdge(binx);       
          s[0] = xaxis->GetBinUpEdge(binx);
+         binVolume = s[0]-x[0];
       }
       else
          x[0] = xaxis->GetBinCenter(binx);
@@ -206,69 +212,51 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
          if (func->RejectedPoint() ) continue; 
       }
 
-      if ( hdim > 1 ) { 
-         for ( biny = hyfirst; biny <= hylast; ++biny) {
+      for ( biny = hyfirst; biny <= hylast; ++biny) {
+         if (useBinEdges) {
+            x[1] = yaxis->GetBinLowEdge(biny);
+            s[1] = yaxis->GetBinUpEdge(biny);
+            binVolume *= (s[1]-x[1]);
+         }
+         else
+            x[1] = yaxis->GetBinCenter(biny);
+            
+         for ( binz = hzfirst; binz <= hzlast; ++binz) {
             if (useBinEdges) {
-               x[1] = yaxis->GetBinLowEdge(biny);
-               s[1] = yaxis->GetBinUpEdge(biny);
+               x[2] = zaxis->GetBinLowEdge(binz);
+               s[2] = zaxis->GetBinUpEdge(binz);
+               binVolume *= (s[2]-x[2]);
             }
             else
-               x[1] = yaxis->GetBinCenter(biny);
-            
-            if ( hdim >  2 ) { 
-               for ( binz = hzfirst; binz <= hzlast; ++binz) {
-                  if (fitOpt.fIntegral) {
-                     x[2] = zaxis->GetBinLowEdge(binz);
-                     s[2] = zaxis->GetBinUpEdge(binz);
-                  }
-                  else
-                     x[2] = zaxis->GetBinCenter(binz);
-//                  if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
-                  double value =  hfit->GetBinContent(binx, biny, binz);
-                  double error =  hfit->GetBinError(binx, biny, binz); 
-                  if (!HFitInterface::AdjustError(fitOpt,error,value) ) continue; 
-                  //dv.Add(BinPoint(  x,  hfit->GetBinContent(binx, biny, binz), error ) );
-                  if (ndim < hdim) // case of fitting a function with less dimension
-                     dv.Add(   &x.front(),  x[2], error * zaxis->GetBinWidth(binz)  );
-                  else { 
-                     dv.Add(   &x.front(),  value, error  );
-                     if (useBinEdges) dv.AddBinUpEdge( &s.front() ); 
-                  }
-               }  // end loop on z bins
-            }
-            else if (hdim == 2) { 
-               // for dim == 2
-//               if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
-               double value =  hfit->GetBinContent(binx, biny);
-               double error =  hfit->GetBinError(binx, biny); 
-               if (!HFitInterface::AdjustError(fitOpt,error,value) ) continue; 
-               if (ndim < hdim) // case of fitting a function with less dimension
-                  dv.Add(   &x.front(),  x[1], error * yaxis->GetBinWidth(biny)  );
-               else {
-                  dv.Add( &x.front(), value, error  );
-                  if (useBinEdges) dv.AddBinUpEdge( &s.front());
-               }
-            }   
-            
-         }  // end loop on y bins
-         
-      }
-      else if (ndim == 1) { 
-#ifdef DEBUG
-         std::cout << "bin " << binx << " add point " << x[0] << "  " << hfit->GetBinContent(binx) << std::endl;
-#endif
-         // for 1D 
-//         if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
-         double value =  hfit->GetBinContent(binx);
-         double error =  hfit->GetBinError(binx); 
-         if (!HFitInterface::AdjustError(fitOpt,error,value) ) continue; 
-         dv.Add( x.front(),  value, error  );
-         // in case of integral fits add also bin width
-         if (useBinEdges) dv.AddBinUpEdge(&s.front());
+               x[2] = zaxis->GetBinCenter(binz);
 
-      }
-      
-   }   // end 1D loop 
+            double value =  hfit->GetBinContent(binx, biny, binz);
+            double error =  hfit->GetBinError(binx, biny, binz); 
+            if (!HFitInterface::AdjustError(fitOpt,error,value) ) continue; 
+
+            if (ndim == hdim -1) { // case of fitting a function with  dimension -1
+               if (hdim == 2)  dv.Add(   &x.front(),  x[1], error * yaxis->GetBinWidth(biny)  );
+               if (hdim == 3)  dv.Add(   &x.front(),  x[2], error * zaxis->GetBinWidth(binz)  );
+            } else { 
+               dv.Add(   &x.front(),  value, error  );
+               if (useBinEdges) { 
+                  dv.AddBinUpEdge( &s.front() ); 
+                  // set reference the bin volume as the smallest one found with non-zero value
+                  if (value > 0 && binVolume < minimumBinVolume) {
+                     dv.SetRefVolume(binVolume);
+                     minimumBinVolume = binVolume;
+                  }
+               }
+            }
+
+           
+#ifdef DEBUG
+            std::cout << "bin " << binx << " add point " << x[0] << "  " << hfit->GetBinContent(binx) << std::endl;
+#endif
+
+         }  // end loop on z bins
+      }  // end loop on y bins
+   }   // end loop on x axis 
    
    
 #ifdef DEBUG
@@ -789,7 +777,8 @@ void FillData(BinData & dv, const THnSparse * s1, TF1 * func)
    // data.
    ROOT::Fit::DataOptions& dopt = dv.Opt();
    dopt.fUseEmpty = true;
-   dopt.fIntegral = true;
+   //dopt.fIntegral = true;
+   if (!dopt.fIntegral) dopt.fBinVolume = true; 
 }
 
 void FillData ( BinData  & dv, const TGraph * gr,  TF1 * func ) {  
