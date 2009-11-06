@@ -65,3 +65,5 @@ distclean-$MODNAME): clean-$MODNAME)
 		@rm -f $(HTMLDEP) $(HTMLDS) $(HTMLDH) $(HTMLLIB) $(HTMLMAP)
 
 distclean::     distclean-$MODNAME)
+
+$(HTMLO): CXXFLAGS:=-Ihtml/inc $(CXXFLAGS)

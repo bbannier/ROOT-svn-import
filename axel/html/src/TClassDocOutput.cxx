@@ -13,7 +13,7 @@
 
 #include "TBaseClass.h"
 #include "TClass.h"
-#include "TClassDoc.h"
+#include "TDocTypeName.h"
 #include "TClassEdit.h"
 #include "TDataMember.h"
 #include "TMethodArg.h"
@@ -1104,9 +1104,9 @@ Bool_t TClassDocOutput::CreateHierarchyDot()
           << "rankdir=RL;" << endl;
 
    // loop on all classes
-   Doc::TClassDoc* cdi = 0;
+   Doc::TDocTypeName* cdi = 0;
    TIter iClass(fHtml->GetListOfClasses());
-   while ((cdi = (Doc::TClassDoc*)iClass())) {
+   while ((cdi = (Doc::TDocTypeName*)iClass())) {
 
       TDictionary *dict = cdi->GetDictionary();
       TClass *cl = dynamic_cast<TClass*>(dict);
@@ -1209,9 +1209,9 @@ void TClassDocOutput::DescendHierarchy(std::ostream& out, TClass* basePtr, Int_t
 
    UInt_t numClasses = 0;
 
-   Doc::TClassDoc* cdi = 0;
+   Doc::TDocTypeName* cdi = 0;
    TIter iClass(fHtml->GetListOfClasses());
-   while ((cdi = (Doc::TClassDoc*)iClass()) && (!maxLines || fHierarchyLines<maxLines)) {
+   while ((cdi = (Doc::TDocTypeName*)iClass()) && (!maxLines || fHierarchyLines<maxLines)) {
 
       TClass *classPtr = dynamic_cast<TClass*>(cdi->GetDictionary());
       if (!classPtr) continue;

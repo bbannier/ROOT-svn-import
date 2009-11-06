@@ -12,10 +12,11 @@
 #include "TDocOutput.h"
 
 #include "Riostream.h"
-#include "TClassDocOutput.h"
 #include "TClass.h"
-#include "TClassEdit.h"
 #include "TClassDoc.h"
+#include "TClassDocOutput.h"
+#include "TClassEdit.h"
+#include "TDocTypeName.h"
 #include "TDataMember.h"
 #include "TDataType.h"
 #include "TDocParser.h"
@@ -629,9 +630,9 @@ void TDocOutput::CreateHierarchy()
 
 
    // loop on all classes
-   Doc::TClassDoc* cdi = 0;
+   Doc::TDocTypeName* cdi = 0;
    TIter iClass(fHtml->GetListOfClasses());
-   while ((cdi = (Doc::TClassDoc*)iClass())) {
+   while ((cdi = (Doc::TDocTypeName*)iClass())) {
       if (cdi->HaveSource())
          continue;
 
@@ -688,8 +689,8 @@ void TDocOutput::CreateClassIndex()
       std::vector<std::string> classNames;
       {
          TIter iClass(fHtml->GetListOfClasses());
-         Doc::TClassDoc* cdi = 0;
-         while ((cdi = (Doc::TClassDoc*)iClass()))
+         Doc::TDocTypeName* cdi = 0;
+         while ((cdi = (Doc::TDocTypeName*)iClass()))
             if (cdi->IsSelected() && cdi->HaveSource())
                classNames.push_back(cdi->GetName());
       }
@@ -712,9 +713,9 @@ void TDocOutput::CreateClassIndex()
    // loop on all classes
    UInt_t currentIndexEntry = 0;
    TIter iClass(fHtml->GetListOfClasses());
-   Doc::TClassDoc* cdi = 0;
+   Doc::TDocTypeName* cdi = 0;
    Int_t i = 0;
-   while ((cdi = (Doc::TClassDoc*)iClass())) {
+   while ((cdi = (Doc::TDocTypeName*)iClass())) {
       if (!cdi->IsSelected() || !cdi->HaveSource())
          continue;
 
@@ -733,7 +734,7 @@ void TDocOutput::CreateClassIndex()
                      indexChars[currentIndexEntry].length()))
          indexFile << "<a name=\"idx" << currentIndexEntry++ << "\"></a>";
 
-      TString htmlFile(cdi->GetURL());
+      TString htmlFile(cdi->GetHtmlFileName());
       if (htmlFile.Length()) {
          indexFile << "<a href=\"";
          indexFile << htmlFile;
@@ -827,9 +828,9 @@ void TDocOutput::CreateModuleIndex()
 
       std::list<std::string> classNames;
       {
-         TIter iClass(module->GetClasses());
-         Doc::TClassDoc* cdi = 0;
-         while ((cdi = (Doc::TClassDoc*) iClass())) {
+         TIter iClass(module->GetClasses().GetArray());
+         Doc::TDocTypeName* cdi = 0;
+         while ((cdi = (Doc::TDocTypeName*) iClass())) {
             if (!cdi->IsSelected() || !cdi->HaveSource())
                continue;
             classNames.push_back(cdi->GetName());
@@ -888,10 +889,10 @@ void TDocOutput::CreateModuleIndex()
       } // just a scope block
 
       TIter iClass(module->GetClasses());
-      Doc::TClassDoc* cdi = 0;
+      Doc::TDocTypeName* cdi = 0;
       UInt_t count = 0;
       UInt_t currentIndexEntry = 0;
-      while ((cdi = (Doc::TClassDoc*) iClass())) {
+      while ((cdi = (Doc::TDocTypeName*) iClass())) {
          if (!cdi->IsSelected() || !cdi->HaveSource())
             continue;
 
@@ -1127,8 +1128,10 @@ void TDocOutput::CreateClassTypeDefs()
    TDocParser parser(*this);
 
    TIter iClass(GetHtml()->GetListOfClasses());
-   Doc::TClassDoc* cdi = 0;
-   while ((cdi = (Doc::TClassDoc*) iClass())) {
+   Doc::TDocTypeName* dtn = 0;
+   while ((dtn = (Doc::TDocTypeName*) iClass())) {
+      Doc::TClassDoc* cdi = dynamic_cast<Doc::TClassDoc*>(dtn->GetDoc());
+      if (!cdi) continue;
       if (cdi->GetTypes()->IsEmpty())
          continue;
       TIter iTypedefs(cdi->GetTypes());
@@ -1791,10 +1794,10 @@ void TDocOutput::ReferenceEntity(TSubString& str, TDataType* entity, const char*
    if (isClassTypedef)
       /* is class/ struct / union */
       isClassTypedef = isClassTypedef && (entity->Property() & 7);
-   Doc::TClassDoc* cdi = 0;
+   Doc::TDocTypeName* cdi = 0;
    if (isClassTypedef) {
       std::string shortTypeName(fHtml->ShortType(entity->GetFullTypeName()));
-      cdi = (Doc::TClassDoc*) GetHtml()->GetListOfClasses()->FindObject(shortTypeName.c_str());
+      cdi = (Doc::TDocTypeName*) GetHtml()->GetListOfClasses()->FindObject(shortTypeName.c_str());
    }
    if (cdi) {
       link = mangledEntity + ".html";

@@ -21,14 +21,17 @@
 #include "TDataType.h"
 #include "TDocFileDB.h"
 #include "TDocOutput.h"
+#include "TDocTypeName.h"
 #include "TEnv.h"
 #include "TInterpreter.h"
+#include "TModuleDoc.h"
 #include "TObjString.h"
 #include "TPRegexp.h"
 #include "TRegexp.h"
 #include "TROOT.h"
 #include "TSystem.h"
 #include "TThread.h"
+#include "TTypedefDoc.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -341,7 +344,11 @@ bool THtml::TFileDefinition::GetFileName(const TClass* cl, bool decl,
    TString possiblePath;
    TString filesysname;
 
-   TString clfile = decl ? cl->GetDeclFileName() : cl->GetImplFileName();
+   TString clfile;
+   if (out_filename[0] == 0)
+      clfile = decl ? cl->GetDeclFileName() : cl->GetImplFileName();
+   else clfile = out_filename;
+
    NormalizePath(clfile);
              
    out_filename = clfile;
@@ -1218,6 +1225,32 @@ void THtml::CreateAuxiliaryFiles() const
 }
 
 //______________________________________________________________________________
+void THtml::FindFilesForType(Doc::TDocTypeName* type, TClass* cl) const
+{
+   // Locate files containing (parts of) type.
+   // Currently matches decl and impl file names with collection of TFileSysEntry
+   // found by THtml.
+   Doc::TFileSysEntry* fse = 0;
+   TString fshort = type->GetDeclFileName();
+   TString fs;
+   if (GetFileDefinition().GetDeclFileName(cl, fshort, fs, &fse)) {
+      type->GetFiles().Add(fse);
+      if (fshort != type->GetDeclFileName() && fshort != cl->GetDeclFileName()) {
+         // remember that this was explicitly specified
+         type->SetDeclFileName(fshort);
+      }
+   }
+   fshort = type->GetImplFileName();
+   if (GetFileDefinition().GetImplFileName(cl, fshort, fs, &fse)) {
+      type->GetFiles().Add(fse);
+      if (fshort != type->GetImplFileName() && fshort != cl->GetDeclFileName()) {
+         // remember that this was explicitly specified
+         type->SetDeclFileName(fshort);
+      }
+   }
+}
+
+//______________________________________________________________________________
 const THtml::TModuleDefinition& THtml::GetModuleDefinition() const
 {
    // Return the TModuleDefinition (or derived) object as set by
@@ -1286,7 +1319,7 @@ const char* THtml::GetEtcDir() const
 
 
 //______________________________________________________________________________
-Doc::TClassDoc *THtml::GetNextClass()
+Doc::TDocTypeName *THtml::GetNextClass()
 {
    // Return the next class to be generated for MakeClassThreaded.
 
@@ -1294,8 +1327,8 @@ Doc::TClassDoc *THtml::GetNextClass()
 
    R__LOCKGUARD(GetMakeClassMutex());
 
-   Doc::TClassDoc* classinfo = 0;
-   while ((classinfo = (Doc::TClassDoc*)(*fThreadedClassIter)())
+   Doc::TDocTypeName* classinfo = 0;
+   while ((classinfo = (Doc::TDocTypeName*)(*fThreadedClassIter)())
           && !classinfo->IsSelected()) { }
 
    if (!classinfo) {
@@ -1459,11 +1492,102 @@ void  THtml::GetModuleNameForClass(TString& module, TClass* cl) const
    // Return the module name for a given class.
    // Use the cached information from fDocEntityInfo.fClasses.
 
-   Doc::TClassDoc* cdi = (Doc::TClassDoc*)fDocEntityInfo.fClasses.FindObject(cl->GetName());
-   if (!cdi || cdi->GetModuleName().IsNull()) {
+   Doc::TDocTypeName* cdi = (Doc::TDocTypeName*)fDocEntityInfo.fClasses.FindObject(cl->GetName());
+   if (!cdi || !cdi->GetModule()) {
       module = "(UNKNOWN)";
    } else {
-      module = cdi->GetModuleName();
+      module = cdi->GetModule()->GetName();
+   }
+}
+
+
+//______________________________________________________________________________
+void THtml::AddClassName(const char* cname, TClass* classPtr, Bool_t selected,
+                         TList& classesDeclFileNotFound,
+                         TList& classesImplFileNotFound,
+                         std::set<std::string>& rootlibs,
+                         Bool_t preRun, Bool_t& skipROOTClasses)
+{
+// Add a class to the list of all known classes
+
+   Doc::TDocTypeName* dtn = new Doc::TDocTypeName(cname, classPtr);
+   FindFilesForType(dtn, classPtr);
+
+   if (!dtn->HaveSource()) {
+      // we don't even know where the class is defined;
+      // just skip. Silence if it doesn't match the selection anyway
+      if (preRun) {
+         skipROOTClasses = true;
+         Info("CreateListOfClasses", "Cannot find header file for TObject at %s given the input path %s.",
+              classPtr->GetDeclFileName(), GetInputPath().Data());
+         Info("CreateListOfClasses", "Assuming documentation is not for ROOT classes, or you need to pass "
+              "the proper directory to THtml::SetInputPath() so I can find %s.", classPtr->GetDeclFileName());
+         return;
+      }
+      // ignore STL
+      if (classPtr->GetDeclFileName() && !strncmp(classPtr->GetDeclFileName(), "prec_stl/", 9))
+         return;
+      if (skipROOTClasses) {
+         DetermineComplaintForMissingSource(classPtr, cname, rootlibs, classesDeclFileNotFound);
+         return;
+      } else {
+         if (selected && (!classPtr->GetDeclFileName() || !strstr(classPtr->GetDeclFileName(),"prec_stl/")))
+            classesDeclFileNotFound.AddLast(classPtr);
+         return;
+      }
+   }
+
+   Doc::TDocTypeName* dtnOld = (Doc::TDocTypeName*) fDocEntityInfo.fClasses.FindObject(cname);
+   if (dtnOld) {
+      if (dtnOld->GetKey() && !dtn->IsNewerThan(dtnOld->GetKey())) {
+         // Up to date documentation already exists in the key.
+         return;
+      }
+      fDocEntityInfo.fClasses.Remove(dtnOld);
+   } 
+
+   Bool_t haveSource = (!dtn->GetFiles().IsEmpty()
+                        // we need at least one non-header file:
+                        && (!dtn->GetFiles().First()->TestBit(BIT(16))
+                            || !dtn->GetFiles().Last()->TestBit(BIT(16))));
+   if (!haveSource) {
+      classesImplFileNotFound.AddLast(classPtr);
+   }
+
+   TString htmlfilename;
+   GetHtmlFileName(classPtr, htmlfilename);
+   dtn->SetHtmlFileName(htmlfilename);
+
+   Doc::TFileSysEntry* fseSource = 0;
+   TIter iFSE(&dtn->GetFiles());
+   while ((fseSource = (Doc::TFileSysEntry*) iFSE())
+          && fseSource->IsHeader()) {}
+
+   TString modulename;
+   GetModuleDefinition().GetModule(classPtr, fseSource, modulename);
+   if (!modulename.Length() || modulename == "USER") 
+      GetModuleNameForClass(modulename, classPtr);
+
+   selected &= !dtn->GetFiles().IsEmpty();
+   Doc::TModuleDoc* module = GetOrCreateModule(modulename, selected);
+   // Create the class doc object and store the (relative) file names:
+   Doc::TClassDoc* cdi = new Doc::TClassDoc(cname, classPtr, modulename);
+   dtn->SetDoc(cdi);
+   iFSE.Reset();
+   TString fseName;
+   while ((fseSource = (Doc::TFileSysEntry*) iFSE())) {
+      // not the full path, but only "as included":
+      fseSource->GetFullName(fseName, true);
+      cdi->GetRefFiles().Insert(fseName);
+   }
+
+   fDocEntityInfo.fClasses.Add(dtn);
+   module->AddClass(dtn->GetName());
+
+   if (gDebug > 0) {
+      Info("AddClassName", "Adding class %s, module %s (%sselected)",
+           cdi->GetName(), module ? module->GetName() : "[UNKNOWN]",
+           cdi->IsSelected() ? "" : "not ");
    }
 }
 
@@ -1481,8 +1605,10 @@ void THtml::CreateListOfClasses(const char* filter)
    Int_t totalNumberOfClasses = gClassTable->Classes();
 
    // allocate memory
+   /*
    fDocEntityInfo.fClasses.Clear();
    fDocEntityInfo.fModules.Clear();
+   */
 
    fDocEntityInfo.fClassFilter = filter;
 
@@ -1500,7 +1626,6 @@ void THtml::CreateListOfClasses(const char* filter)
 
    // pre-run TObject at i == -1
    for (Int_t i = -1; i < totalNumberOfClasses; i++) {
-
       // get class name
       const char *cname = 0;
       if (i < 0) cname = "TObject";
@@ -1515,77 +1640,11 @@ void THtml::CreateListOfClasses(const char* filter)
       if (!classPtr) continue;
 
       std::string shortName(ShortType(cname));
-      cname = shortName.c_str();
 
-      TString s = cname;
-      Bool_t matchesSelection = re.Match(s);
-
-
-      TList srcfiles; // of Doc::TFileSysEntry*
-      TString htmlfilename;
-      Doc::TFileSysEntry* fse = 0;
-
-      if (!GetFileDefinition().GetDeclFileName(classPtr, hdr, hdrFS, &fse)) {
-         // we don't even know where the class is defined;
-         // just skip. Silence if it doesn't match the selection anyway
-         if (i == -1 ) {
-            skipROOTClasses = true;
-            Info("CreateListOfClasses", "Cannot find header file for TObject at %s given the input path %s.",
-                 classPtr->GetDeclFileName(), GetInputPath().Data());
-            Info("CreateListOfClasses", "Assuming documentation is not for ROOT classes, or you need to pass "
-                 "the proper directory to THtml::SetInputPath() so I can find %s.", classPtr->GetDeclFileName());
-            continue;
-         }
-         // ignore STL
-         if (classPtr->GetDeclFileName() && !strncmp(classPtr->GetDeclFileName(), "prec_stl/", 9))
-            continue;
-         if (skipROOTClasses) {
-            DetermineComplaintForMissingSource(classPtr, clname, rootlibs, classesDeclFileNotFound);
-            continue;
-         } else {
-            if (matchesSelection && (!classPtr->GetDeclFileName() || !strstr(classPtr->GetDeclFileName(),"prec_stl/")))
-               classesDeclFileNotFound.AddLast(classPtr);
-            continue;
-         }
-      }
-
-      Bool_t haveSource = (srcFS.Length());
-      if (!haveSource)
-         haveSource = GetFileDefinition().GetImplFileName(classPtr, src, srcFS, fse ? 0 : &fse);
-
-      if (!haveSource) {
-         classesImplFileNotFound.AddLast(classPtr);
-      }
-
-      if (!htmlfilename.Length())
-         GetHtmlFileName(classPtr, htmlfilename);
-
-      TString modulename;
-      GetModuleDefinition().GetModule(classPtr, fse, modulename);
-      if (!modulename.Length() || modulename == "USER") 
-         GetModuleNameForClass(modulename, classPtr);
-      
-      Doc::TClassDoc* cdi = new Doc::TClassDoc(cname, classPtr, modulename);
-      cdi->SetHtmlFileName(htmlfilename);
-      cdi->GetFiles().Add(hdrFS);
-      cdi->GetFiles().Add(srcFS);
-      cdi->SetSelected(matchesSelection);
-
-      fDocEntityInfo.fClasses.Add(cdi);
-
-      Doc::TModuleDoc* module = GetOrCreateModule(modulename, matchesSelection);
-      module->AddClass(cdi->GetName());
-      if (cdi->HaveSource() && cdi->IsSelected())
-         module->SetSelected();
-
-      if (gDebug > 0) {
-         Info("CreateListOfClasses", "Adding class %s, module %s (%sselected)",
-              cdi->GetName(), module ? module->GetName() : "[UNKNOWN]",
-              cdi->IsSelected() ? "" : "not ");
-      }
+      AddClassName(shortName.c_str(), classPtr, re.Match(shortName),
+                   classesDeclFileNotFound, classesImplFileNotFound,
+                   i == -1, skipROOTClasses);
    }
-
-
 
    bool cannotFind = false;
    if (!classesDeclFileNotFound.IsEmpty()) {
@@ -1630,38 +1689,57 @@ void THtml::CreateListOfClasses(const char* filter)
    while ((dt = (TDataType*) iTypedef())) {
       if (dt->GetType() != -1) continue;
 
-      bool inNamespace = true;
+      {
+         TObject oldTD = fDocEntityInfo.fClasses.FindObject(dt->GetName());
+         if (oldID) delete oldTD;
+      }
+
+      bool enclosed = true;
       TString surroundingNamespace(dt->GetName());
       Ssiz_t posTemplate = surroundingNamespace.Last('>');
-      inNamespace = inNamespace && (posTemplate == kNPOS);
-      Doc::TClassDoc* surroundingCD = 0;
-      if (inNamespace) {
+      enclosed = enclosed && (posTemplate == kNPOS);
+      Doc::TDocTypeName* surroundingCD = 0;
+      if (enclosed) {
          Ssiz_t posColumn = surroundingNamespace.Last(':');
          if (posColumn != kNPOS) {
             surroundingNamespace.Remove(posColumn - 1);
             TClass* clSurrounding = GetClass(surroundingNamespace);
-            inNamespace = inNamespace && (!clSurrounding || IsNamespace(clSurrounding));
-            surroundingCD = fDocEntityInfo.fClasses.FindObject(ShortType(surroundingNamespace));
+            enclosed = enclosed && (!clSurrounding || IsNamespace(clSurrounding));
+            surroundingCD = (Doc::TDocTypeName*)fDocEntityInfo.fClasses.FindObject(ShortType(surroundingNamespace));
+            if (!surroundingCD) {
+               Error("CreateListOfClasses",
+                     "Cannot find documentation type name for %s even though all classes have been created!",
+                     surroundingNamespace.Data());
+            }
          }
       }
 
-      TString htmlfilename(dt->GetName());
+      Doc::TTypedefDoc* tddoc = new Doc::TTypedefDoc(surroundingCD, ShortType(dt->GetName()), dt);
+
+      TString htmlfilename(tddoc->GetName());
       output.NameSpace2FileName(htmlfilename);
       htmlfilename += ".html";
-      Doc::TTypedefDoc* tddoc = new Doc::TTypedefDoc(surroundingCD, ShortType(dt->GetName()), td);
-      cdiTD->SetModule(cdi->GetModule());
-      cdiTD->SetSelected(cdi->IsSelected());
-      cdi->GetModule()->AddClass(cdiTD);
+      tddoc->SetHtmlFileName(htmlfilename);
 
+      // The module is defined as the one of the enclosing class,
+      // or if unknown as the underlying type's module: we simply
+      // don't have a file location for the definition of the typedefs
+      // in TDataType
       TClass* tdcl = TClass::GetClass(dt->GetFullTypeName());
-      Doc::TClassDoc* cdi = (Doc::TClassDoc*) fDocEntityInfo.fClasses.FindObject(ShortType(tdcl->GetName()));
-      if (cdi) {
-         cdi->AddSeeAlso(dt->GetName());
-         if (gDebug > 1)
-            Info("CreateListOfClasses", "Adding typedef %s to class %s",
-                 dt->GetName(), cdi->GetName());
+      Doc::TDocTypeName* cdi = (Doc::TDocTypeName*) fDocEntityInfo.fClasses.FindObject(ShortType(tdcl->GetName()));
 
-         if (inNamespace && cdi->GetModule()) {
+      Doc::TModuleDoc* mod = 0;
+      if (surroundingCD) mod = surroundingCD->GetModule();
+      else if (cdi) mod = cdi->GetModule();
+
+      TDocTypeName* cdiTD = new TDocTypeName(dt, tddoc, mod);
+      cdiTD->SetSelected(mod ? mod->IsSelected() : true);
+
+      if (cdi) {
+         cdi->AddSeeAlso(tddoc->GetName());
+         if (gDebug > 1) {
+            Info("CreateListOfClasses", "Adding typedef %s to class %s",
+                 tddoc->GetName(), cdi->GetName());
          }
       }
    }
@@ -1821,8 +1899,8 @@ void THtml::GetDerivedClasses(TClass* cl, std::map<TClass*, Int_t>& derived) con
    // distance to cl
 
    TIter iClass(&fDocEntityInfo.fClasses);
-   Doc::TClassDoc* cdi = 0;
-   while ((cdi = (Doc::TClassDoc*) iClass())) {
+   Doc::TDocTypeName* cdi = 0;
+   while ((cdi = (Doc::TDocTypeName*) iClass())) {
       TClass* candidate = dynamic_cast<TClass*>(cdi->GetClass());
       if (!candidate) continue;
       if (candidate != cl && candidate->InheritsFrom(cl)) {
@@ -1930,7 +2008,7 @@ TClass *THtml::GetClass(const char *name1) const
       if (ret) return 0;
    }
 
-   Doc::TClassDoc* cdi = (Doc::TClassDoc*)fDocEntityInfo.fClasses.FindObject(name1);
+   Doc::TDocTypeName* cdi = (Doc::TDocTypeName*)fDocEntityInfo.fClasses.FindObject(name1);
    if (!cdi) return 0;
    TClass *cl = dynamic_cast<TClass*>(cdi->GetClass());
    // hack to get rid of prec_stl types
@@ -2067,11 +2145,11 @@ void THtml::MakeAll(Bool_t force, const char *filter, int numthreads /*= -1*/)
 
    if (numthreads == 1) {
       // CreateListOfClasses(filter); already done by MakeIndex
-      Doc::TClassDoc* classinfo = 0;
+      Doc::TDocTypeName* classinfo = 0;
       TIter iClassInfo(&fDocEntityInfo.fClasses);
       UInt_t count = 0;
 
-      while ((classinfo = (Doc::TClassDoc*)iClassInfo())) {
+      while ((classinfo = (Doc::TDocTypeName*)iClassInfo())) {
          if (!classinfo->IsSelected()) 
             continue;
          fCounter.Form("%5d", fDocEntityInfo.fClasses.GetSize() - count++);
@@ -2130,7 +2208,7 @@ void THtml::MakeClass(const char *className, Bool_t force)
 //
    CreateListOfClasses("*");
 
-   Doc::TClassDoc* cdi = (Doc::TClassDoc*)fDocEntityInfo.fClasses.FindObject(className);
+   Doc::TDocTypeName* cdi = (Doc::TDocTypeName*)fDocEntityInfo.fClasses.FindObject(className);
    if (!cdi) {
       if (!TClassEdit::IsStdClass(className)) // stl classes won't be available, so no warning
          Error("MakeClass", "Unknown class '%s'!", className);
@@ -2151,7 +2229,7 @@ void THtml::MakeClass(void *cdi_void, Bool_t force)
    if (!fDocEntityInfo.fClasses.GetSize())
       CreateListOfClasses("*");
 
-   Doc::TClassDoc* cdi = (Doc::TClassDoc*) cdi_void;
+   Doc::TDocTypeName* cdi = (Doc::TDocTypeName*) cdi_void;
    TClass* currentClass = dynamic_cast<TClass*>(cdi->GetClass());
 
    if (!currentClass) {
@@ -2189,7 +2267,7 @@ void* THtml::MakeClassThreaded(void* info) {
 
    const THtmlThreadInfo* hti = (const THtmlThreadInfo*)info;
    if (!hti) return 0;
-   Doc::TClassDoc* classinfo = 0;
+   Doc::TDocTypeName* classinfo = 0;
    while ((classinfo = hti->GetHtml()->GetNextClass()))
       hti->GetHtml()->MakeClass(classinfo, hti->GetForce());
 
@@ -2252,7 +2330,9 @@ void THtml::SetLocalFiles() const
 {
    // Fill the files available in the file system below fPathInfo.fInputPath
    if (fLocalFiles) delete fLocalFiles;
-   fLocalFiles = new Doc::TFileSysDB(fPathInfo.fInputPath, fPathInfo.fIgnorePath + "|(\\b" + GetOutputDir(kFALSE) + "\\b)" , 6);
+   fLocalFiles = new Doc::TFileSysDB(fPathInfo.fInputPath,
+                                     fPathInfo.fIgnorePath + "|(\\b" + GetOutputDir(kFALSE) + "\\b)",
+                                     6);
 }
 
 //______________________________________________________________________________
@@ -2262,7 +2342,7 @@ void THtml::SetModuleDefinition(const TModuleDefinition& md)
    // object (a la traits).
    delete fModuleDef;
    fModuleDef = (TModuleDefinition*) md.Clone();
-   fModuleDef->SetOwner(const_cast<THtml*>(this));
+   fModuleDef->SetOwner(this);
 }
 
 
@@ -2273,7 +2353,7 @@ void THtml::SetFileDefinition(const TFileDefinition& md)
    // object (a la traits).
    delete fFileDef;
    fFileDef = (TFileDefinition*) md.Clone();
-   fFileDef->SetOwner(const_cast<THtml*>(this));
+   fFileDef->SetOwner(this);
 }
 
 
@@ -2322,10 +2402,11 @@ void THtml::SetOutputDir(const char *dir)
 void THtml::SetDeclFileName(TClass* cl, const char* filename)
 {
    // Explicitly set a decl file name for TClass cl.
-   Doc::TClassDoc* cdi = (Doc::TClassDoc*) fDocEntityInfo.fClasses.FindObject(cl->GetName());
+   CreateListOfClasses();
+
+   Doc::TDocTypeName* cdi = (Doc::TDocTypeName*) fDocEntityInfo.fClasses.FindObject(ShortType(cl->GetName()));
    if (!cdi) {
-      cdi = new Doc::TClassDoc(cl, "" /*html*/, "" /*fsdecl*/, "" /*fsimpl*/, filename);
-      fDocEntityInfo.fClasses.Add(cdi);
+      Error("SetDeclFileName", "Class %s is unknown!", cl->GetName());
    } else
       cdi->SetDeclFileName(filename);
 }
@@ -2334,10 +2415,10 @@ void THtml::SetDeclFileName(TClass* cl, const char* filename)
 void THtml::SetImplFileName(TClass* cl, const char* filename)
 {
    // Explicitly set a impl file name for TClass cl.
-   Doc::TClassDoc* cdi = (Doc::TClassDoc*) fDocEntityInfo.fClasses.FindObject(cl->GetName());
+   CreateListOfClasses();
+   Doc::TDocTypeName* cdi = (Doc::TDocTypeName*) fDocEntityInfo.fClasses.FindObject(ShortType(cl->GetName()));
    if (!cdi) {
-      cdi = new Doc::TClassDoc(cl, "" /*html*/, "" /*fsdecl*/, "" /*fsimpl*/, 0 /*decl*/, filename);
-      fDocEntityInfo.fClasses.Add(cdi);
+      Error("SetDeclFileName", "Class %s is unknown!", cl->GetName());
    } else
       cdi->SetImplFileName(filename);
 }

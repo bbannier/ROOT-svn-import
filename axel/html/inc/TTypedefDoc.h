@@ -28,6 +28,8 @@
 #endif
 
 namespace Doc {
+class TClassDoc;
+
 class TTypedefDoc: public TDocumented {
 public:
 

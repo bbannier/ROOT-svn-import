@@ -39,7 +39,7 @@ public:
    virtual ~TModuleDoc();
 
    void AddClass(const char* name);
-   const TObjArray* GetClasses() const { return fClasses.GetArray(); }
+   const TDocStringTable& GetClasses() const { return fClasses; }
 
    Int_t Compare(const TObject* obj) const;
 
@@ -56,6 +56,7 @@ protected:
 
 private:
    TDocStringTable fClasses; // classes contained in this module
+   TDocStringTable fTypedefs; // typedefs contained in this module
    TString fSuper; // name of module containing this module
 
    Bool_t  fSelected; //! whether selected for documentation output

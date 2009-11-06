@@ -13,29 +13,45 @@
 
 #include "TClass.h"
 
+//______________________________________________________________________________
 Doc::TClassDoc::TClassDoc(const char* name, TClass* cl, const char* module):
-   TDocumented(name, cl), fModule(module), fKind(kUnknownKind)
+   TDocumented(name, cl), fModule(module)
 {
+   EKind kind = kUnknownKind;
    // Constructor initializing all members
    if (cl->Property() & kIsClass) {
-      fKind = kClass;
+      kind = kClass;
    } else if (cl->Property() & kIsEnum) {
-      fKind = kEnum;
+      kind = kEnum;
    } else if (cl->Property() & kIsNamespace) {
-      fKind = kNamespace;
+      kind = kNamespace;
    } else if (cl->Property() & kIsStruct) {
-      fKind = kStruct;
+      kind = kStruct;
    } else if (cl->Property() & kIsTypedef) {
-      fKind = kTypedef;
+      kind = kTypedef;
    } else if (cl->Property() & kIsUnion) {
-      fKind = kUnion;
+      kind = kUnion;
    }
+   SetKind(kind);
+
    fMembers.SetOwner();
    fTypes.SetOwner();
    fSeeAlso.SetOwner();
 }
 
+//______________________________________________________________________________
 Doc::TClassDoc::~TClassDoc()
 {
    // Destructor
 }
+
+//______________________________________________________________________________
+const char* Doc::TClassDoc::GetTitle() const {
+   // The title represents the kind, to allow a EKind to be determined from
+   // the TKey holding a TDocTypeEntry.
+   static const char* sTitles[kNumKinds + 1] = {
+      "c", "s", "u", "e", "n", "t", "?"
+   };
+   return sTitles[GetKind() - kClass];
+}
+
