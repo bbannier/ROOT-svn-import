@@ -113,6 +113,8 @@ private:
 
    TH1& operator=(const TH1&); // Not implemented
 
+   static bool CheckConsistency(const TH1* h1, const TH1* h2);
+
 protected:
    TH1();
    TH1(const char *name,const char *title,Int_t nbinsx,Double_t xlow,Double_t xup);
