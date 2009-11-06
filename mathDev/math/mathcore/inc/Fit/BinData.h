@@ -481,6 +481,16 @@ public :
    */
    void AddBinUpEdge(const double * binwidth); 
 
+   /** 
+       retrieve the reference volume used to normalize the data when the option bin volume is set
+    */ 
+   double RefVolume() const { return fRefVolume; }
+
+   /**
+      set the reference volume used to normalize the data when the option bin volume is set
+    */
+   void SetRefVolume(double value) { fRefVolume = value; }
+
 protected: 
 
    void SetNPoints(unsigned int n) { fNPoints = n; }
@@ -497,6 +507,7 @@ private:
 
    std::vector<double> fBinEdge;  // vector containing the bin upper edge (coordinate will contain low edge) 
 
+   double fRefVolume;  // reference bin volume - used to normalize the bins in case of variable bins data
 
 #ifdef USE_BINPOINT_CLASS
    mutable BinPoint fPoint; 
