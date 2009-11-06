@@ -68,12 +68,51 @@ void Doc::TFileSysDir::Recurse(TFileSysDB* db, const char* path)
 #endif
          subdir->Recurse(db, entryPath);
       } else {
-         int delen = strlen(direntry);
-         // only .cxx and .h are taken
-         if (strcmp(direntry + delen - 4, ".cxx")
-             && strcmp(direntry + delen - 2, ".h"))
-            continue;
+         size_t len = strlen(direntry);
+         if (len < 3) continue; // need at least a.h
+         const char* ext = direntry + len;
+         if (direntry[len - 1] == '.') continue;
+         if (direntry[len - 2] == '.') ext -=  1;
+         else if (direntry[len - 3] == '.') ext -= 2;
+         else if (direntry[len - 4] == '.') ext -= 3;
+         // we don't deal with "map" yet:
+         else continue;
+
+         char e = tolower(ext[0]);
+         if (e == 'c' || e == 'h') {
+            // adopted from "info gcc":
+            //   .cxx, .cpp, .c++, .cc, .cp, .c
+            //   .hxx, .hpp, .h++, .hh, .hp, .h;
+            // see below for .tcc!
+            if (!ext[1]) {
+               ; // all is good
+            } else if (!ext[2]) {
+               char extl = tolower(ext[1]);
+               if ((extl != 'c') && (extl != 'p'))
+                  e = '!';
+            } else if (!ext[3] && (ext[1] == ext[2])) {
+               char extl = tolower(ext[1]);
+               if ((extl != 'x') && (extl != 'p') && (extl != '+'))
+                  e = '%';
+            }
+         }
+
+         bool isSource = e == 'c';
+         bool isHeader = e == 'h';
+
+         if (!isSource && !isHeader) {
+            // Commonly called a header, but for our purposes
+            // a source file (doesn't contain the class definition):
+            //   .tcc
+            isSource = (tolower(ext[0]) == 't'
+                         && tolower(ext[1]) == 'c'
+                         && tolower(ext[2]) == 'c');
+            if (!isSource)
+               continue;
+         }
+
          TFileSysEntry* entry = new TFileSysEntry(direntry, this);
+         entry->SetHeader(isHeader);
          db->GetEntries().Add(entry);
          fFiles.Add(entry);
       }

@@ -45,6 +45,8 @@ namespace Doc {
 
       TFileSysDir* GetParent() const { return fParent; }
       Int_t GetLevel() const { return fLevel; }
+      void SetHeader(bool isHeader) { SetBit(BIT(16), isHeader); }
+      Bool_t IsHeader() const { return TestBit(BIT(16)); }
    protected:
       TString      fName; // name of the element
       TFileSysDir* fParent; // parent directory

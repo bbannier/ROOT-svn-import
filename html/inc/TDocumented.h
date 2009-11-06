@@ -43,10 +43,10 @@ public:
    };
 
    // A file location, combination of file name idx in parent's
-   // TClassDoc::fFiles and line number.
+   // TClassDoc::fRefFiles and line number.
    class TFileLocation {
    public:
-      TFileLocation(UInt_t fileNameIdx, UInt_t lineNo):
+      TFileLocation(UInt_t fileNameIdx = (UInt_t) -1, UInt_t lineNo = (UInt_t) -1):
          fFileNameIdx(fileNameIdx), fLineNo(lineNo) {}
 
    private:
@@ -71,6 +71,16 @@ public:
    Bool_t IsSortable() const { return kTRUE; }
    Int_t  Compare(const TObject* obj) const;
 
+   const TFileLocation& GetLocation(ELocationSpec spec) const {
+      // Retrieve file location for the declaration or implementation
+      return fFileLocations[spec];
+   }
+
+   void SetLocation(ELocationSpec spec, const TFileLocation& loc) {
+      // Set file location for the declaration or implementation
+      fFileLocations[spec] = loc;
+   }
+
    TDictionary* GetDictionary() const {
       if (!fTDictionary) fTDictionary = FindDictionary();
       return fTDictionary;
@@ -86,7 +96,7 @@ private:
 
    TString fName; // name of the entity
    TDocString fDocumentation; // documentation of this entity
-   UInt_t fFileLocations[kNumLocationSpec]; // locations of declaration and definition
+   TFileLocation fFileLocations[kNumLocationSpec]; // locations of declaration and definition
 
    mutable TDictionary* fTDictionary; //! dictionary element documented by this object
 

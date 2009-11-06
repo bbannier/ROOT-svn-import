@@ -32,6 +32,7 @@ class TDocStringTable: public TObject {
 public:
    TDocStringTable() {fIndexedStrings.SetOwner();}
    virtual ~TDocStringTable();
+   void Insert(const char* str) { GetIndexOrAdd(str); }
    UInt_t GetIndexOrAdd(const char* str);
    const TString& GetString(UInt_t idx) const;
 

@@ -27,13 +27,14 @@
 #endif
 
 #include <map>
+#include <set>
 
 class TClass;
 class TGClient;
 class TVirtualMutex;
 
 namespace Doc {
-   class TClassDoc;
+   class TDocTypeName;
    class TModuleDoc;
    class TFileSysDB;
    class TFileSysEntry;
@@ -302,15 +303,20 @@ protected:
    virtual void    CreateStyleSheet() const;
    void            CreateListOfTypes();
    void            CreateListOfClasses(const char* filter);
+   void            AddClassName(const char* cname, TClass* classPtr, Bool_t selected,
+                                TList& classesDeclFileNotFound,
+                                TList& classesImplFileNotFound,
+                                std::set<std::string>& rootlibs,
+                                Bool_t preRun, Bool_t& skipROOTClasses);
    virtual bool    GetDeclImplFileName(TClass* cl, bool filesys, bool decl, TString& out_name) const;
    void            MakeClass(void* cdi, Bool_t force=kFALSE);
-   Doc::TClassDoc* GetNextClass();
+   Doc::TDocTypeName* GetNextClass();
    void            SetLocalFiles() const;
    Doc::TModuleDoc* GetOrCreateModule(const char* name, Bool_t selected);
    void            DetermineComplaintForMissingSource(TClass* classPtr, const char* clname,
                                                       std::set<std::string>& rootlibs,
                                                       TList& classesDeclFileNotFound) const;
-                                                      
+   void            FindFilesForType(Doc::TDocTypeName* type, TClass* cl) const;
 
    static void    *MakeClassThreaded(void* info);
 
