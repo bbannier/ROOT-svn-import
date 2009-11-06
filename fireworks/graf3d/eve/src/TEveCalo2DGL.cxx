@@ -165,9 +165,8 @@ void TEveCalo2DGL::DrawRPhiHighlighted(TGLRnrCtx & /*rnrCtx*/) const
 
    for(UInt_t phiBin = 1; phiBin <= nPhiBins; ++phiBin)
    {
-      if (fM->fCellListsSelected[phiBin])
+      if (fM->fCellListsSelected[phiBin] && fM->fCellLists[phiBin])
       {
-         assert(fM->fCellLists[phiBin]);
          Float_t off = 0;
          // selected eta sum
          for (Int_t s=0; s<nSlices; ++s) sliceVal[s] = 0;
@@ -348,9 +347,8 @@ void TEveCalo2DGL::DrawRhoZHighlighted(TGLRnrCtx & /*rnrCtx*/) const
 
    for (UInt_t etaBin = 1; etaBin <= nEtaBins; ++etaBin)
    {
-      if (fM->fCellListsSelected[etaBin])
+      if (fM->fCellListsSelected[etaBin] && fM->fCellLists[etaBin])
       {
-         assert(fM->fCellLists[etaBin]);
          offUp = 0; offLow =0;
          // selected phi sum
          for (Int_t s = 0; s < nSlices; ++s) {
