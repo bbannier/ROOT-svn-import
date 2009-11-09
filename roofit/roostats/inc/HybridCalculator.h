@@ -132,7 +132,7 @@ namespace RooStats {
       // control to use bin data generation 
       void SetGenerateBinned(bool on = true) { fGenerateBinned = on; }
       
-      void SetTestStatistics(int index);
+      void SetTestStatistic(int index);
 
       HybridResult* Calculate(TH1& data, unsigned int nToys, bool usePriors) const;
       HybridResult* Calculate(RooAbsData& data, unsigned int nToys, bool usePriors) const;
