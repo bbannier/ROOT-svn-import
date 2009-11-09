@@ -3588,6 +3588,7 @@ Int_t TH1::FitOptionsMake(Option_t *choptin, Foption_t &fitOption)
 
    if (strstr(chopt,"Q"))  fitOption.Quiet   = 1;
    if (strstr(chopt,"V")) {fitOption.Verbose = 1; fitOption.Quiet = 0;}
+   if (strstr(chopt,"X"))  fitOption.Chi2    = 1;
    if (strstr(chopt,"L"))  fitOption.Like    = 1;
    if (strstr(chopt,"LL")) fitOption.Like    = 2;
    if (strstr(chopt,"W"))  fitOption.W1      = 1;
