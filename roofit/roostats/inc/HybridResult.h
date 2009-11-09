@@ -61,6 +61,15 @@ namespace RooStats {
       // Return p-value for alternate hypothesis
       Double_t AlternatePValue() const;
 
+      /// The error on the "confidence level" of the null hypothesis
+      Double_t CLbError() const;
+      
+      /// The error on the "confidence level" of the alternative hypothesis
+      Double_t CLsplusbError() const;
+      
+      /// The error on the ratio CLs+b/CLb
+      Double_t CLsError() const;
+
    private:
       std::vector<double> fTestStat_b; // vector of results for B-only toy-MC
       std::vector<double> fTestStat_sb; // vector of results for S+B toy-MC
