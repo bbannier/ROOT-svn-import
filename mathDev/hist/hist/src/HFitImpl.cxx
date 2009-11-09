@@ -148,6 +148,7 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
    if (fitOption.W1) opt.fErrors1 = true;
    if (fitOption.W1 > 1) opt.fUseEmpty = true; // use empty bins with weight=1
 
+   //opt.fBinVolume = 1; // for testing
 
    if (opt.fUseRange) { 
 #ifdef DEBUG
