@@ -57,12 +57,24 @@ FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, con
    fFitFunc(0), 
    fParams(std::vector<double>( min.NDim() ) )
 {
+
+   // set minimizer type 
+   fMinimType = fconfig.MinimizerType();
+
+   // append algorithm name for minimizer that support it  
+   if ( (fMinimType.find("Fumili") == std::string::npos) &&
+        (fMinimType.find("GSLMultiFit") == std::string::npos) 
+      ) { 
+      if (fconfig.MinimizerAlgoType() != "") fMinimType += " / " + fconfig.MinimizerAlgoType(); 
+   }
+
    // replace ncalls if minimizer does not support it (they are taken then from the FitMethodFunction)
    if (fNCalls == 0) fNCalls = ncalls;
 
    // Constructor from a minimizer, fill the data. ModelFunction  is passed as non const 
    // since it will be managed by the FitResult
    const unsigned int npar = fParams.size();
+   if (npar == 0) return;
 
    if (min.X() ) std::copy(min.X(), min.X() + npar, fParams.begin());
    else { 
@@ -77,7 +89,7 @@ FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, con
 
    // set right parameters in function (in case minimizer did not do before)
    // do also when fit is not valid
-   if (func) { 
+   if (func ) { 
       fFitFunc = dynamic_cast<IModelFunction *>( func->Clone() ); 
       assert(fFitFunc);
       fFitFunc->SetParameters(&fParams.front());
@@ -141,15 +153,6 @@ FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, con
          fGlobalCC.push_back(globcc); 
       }
       
-   }
-
-   fMinimType = fconfig.MinimizerType();
-
-   // append algorithm name for minimizer that support it  
-   if ( (fMinimType.find("Fumili") == std::string::npos) &&
-        (fMinimType.find("GSLMultiFit") == std::string::npos) 
-      ) { 
-      if (fconfig.MinimizerAlgoType() != "") fMinimType += " / " + fconfig.MinimizerAlgoType(); 
    }
 
 }
