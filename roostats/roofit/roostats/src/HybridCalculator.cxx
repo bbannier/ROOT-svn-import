@@ -82,7 +82,7 @@ HybridCalculator::HybridCalculator(const char *name,
 {
    // constructor with name and title
    // set default parameters
-   SetTestStatistics(1); 
+   SetTestStatistic(1); 
    SetNumberOfToys(1000); 
    UseNuisance(false); 
 }
@@ -123,7 +123,7 @@ HybridCalculator::HybridCalculator( const char *name,
   
 
 
-  SetTestStatistics(1); /// set to default
+  SetTestStatistic(1); /// set to default
   SetNumberOfToys(1000); 
   if (priorPdf) UseNuisance(true); 
   
@@ -154,7 +154,7 @@ HybridCalculator::HybridCalculator( RooAbsData & data,
 
    //Initialize(data, bModel, sbModel, 0, 0, nuisance_parameters, priorPdf); 
 
-   SetTestStatistics(1); /// set to default
+   SetTestStatistic(1); /// set to default
    SetNumberOfToys(1000); 
    if (priorPdf) UseNuisance(true); 
 }
@@ -184,7 +184,7 @@ HybridCalculator::HybridCalculator( const char *name,
 
    //Initialize(data, bModel, sbModel, 0, 0, nuisance_parameters, priorPdf); 
 
-   SetTestStatistics(1); /// set to default
+   SetTestStatistic(1); /// set to default
    SetNumberOfToys(1000); 
    if (priorPdf) UseNuisance(true); 
 
@@ -213,7 +213,7 @@ HybridCalculator::HybridCalculator( const char *name,
    if (fPriorPdf) 
       UseNuisance(true);
 
-  SetTestStatistics(1);
+  SetTestStatistic(1);
   SetNumberOfToys(1000); 
 }
 
@@ -243,7 +243,7 @@ void HybridCalculator::SetAlternateModel(const ModelConfig& model)
    fNuisanceParameters = model.GetNuisanceParameters(); 
 }
 
-void HybridCalculator::SetTestStatistics(int index)
+void HybridCalculator::SetTestStatistic(int index)
 {
    /// set the desired test statistics:
    /// index=1 : 2 * log( L_sb / L_b )  (DEFAULT)

@@ -43,7 +43,7 @@ void rs801_HypoTestInvertor()
 
   // prepare the calculator
   HybridCalculator myhc("myhc","",*data, totPdf, bkgPdf,0,0);
-  myhc.SetTestStatistics(2);
+  myhc.SetTestStatistic(2);
   myhc.SetNumberOfToys(1000);
   myhc.UseNuisance(false);                            
 

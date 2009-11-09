@@ -35,7 +35,7 @@ void rs506_HybridCalculator_averageSignificance(const char* fname="WS_GaussOverF
   
   HybridCalculator * hc=new HybridCalculator("hc","HybridCalculator",*model,*modelBkg,observable);
   hc->SetNumberOfToys(ntoys);
-  hc->SetTestStatistics(1);
+  hc->SetTestStatistic(1);
   bool usepriors=false;
   if(priorNuisance!=0){
     hc->UseNuisance(kTRUE);

@@ -89,7 +89,7 @@ void rs203_HybridCalculator_with_ModelConfig()
   //myHybridCalc.UseNuisance(false);                            
 
   // here I use the default test statistics: 2*lnQ (optional)
-  myHybridCalc.SetTestStatistics(1);
+  myHybridCalc.SetTestStatistic(1);
 
   // calculate by running toys for the S+B and B hypothesis and retrieve the result
   HybridResult* myHybridResult = myHybridCalc.GetHypoTest(); 
