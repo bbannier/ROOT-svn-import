@@ -501,13 +501,13 @@ private:
    unsigned int fDim;       // coordinate dimension
    unsigned int fPointSize; // total point size including value and errors (= fDim + 2 for error in only Y ) 
    unsigned int fNPoints;   // number of contained points in the data set (can be different than size of vector)
+   double fRefVolume;  // reference bin volume - used to normalize the bins in case of variable bins data
 
    DataVector * fDataVector;  // pointer to the copied in data vector
    DataWrapper * fDataWrapper;  // pointer to the external data wrapper structure
 
    std::vector<double> fBinEdge;  // vector containing the bin upper edge (coordinate will contain low edge) 
 
-   double fRefVolume;  // reference bin volume - used to normalize the bins in case of variable bins data
 
 #ifdef USE_BINPOINT_CLASS
    mutable BinPoint fPoint; 
