@@ -149,6 +149,8 @@ void TMinuitMinimizer::SetFunction(const  ROOT::Math::IMultiGenFunction & func) 
 
    fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
 
+   // switch off gradient calculations
+   fMinuit->mnexcm("SET NOGrad",arglist,0,ierr);
 }
 
 void TMinuitMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & func) { 
