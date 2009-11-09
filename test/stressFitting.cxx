@@ -151,6 +151,7 @@ vector<struct algoType> treeFail;
 vector<struct algoType> specialAlgos;
 vector<struct algoType> noGraphAlgos;
 vector<struct algoType> noGraphErrorAlgos;
+vector<struct algoType> graphErrorAlgos;
 vector<struct algoType> histGaus2D;
 vector<struct algoType> linearAlgos;
 
@@ -679,6 +680,8 @@ int test2DObjects(vector< vector<struct algoType> >& listH,
       h1 = new TH2D("Histogram 2D","h1-title",nbinsX,minX,maxX,nbinsY,minY,maxY);
       if ( ge1 ) delete ge1;
       ge1 = new TGraph2DErrors((h1->GetNbinsX() + 1) * (h1->GetNbinsY() + 1));
+      ge1->SetName("Graph2D with Errors");
+      ge1->SetTitle("Graph2D with Errors");
       unsigned int counter = 0;
       for ( int i = 0; i <= h1->GetNbinsX() + 1; ++i )
          for ( int j = 0; j <= h1->GetNbinsY() + 1; ++j ) 
@@ -726,9 +729,9 @@ int test2DObjects(vector< vector<struct algoType> >& listH,
 
       if ( g1 ) delete g1;
       g1 = new TGraph2D(h1);
-      //Warning in <TROOT::Append>: Replacing existing TGraph2D: Graph2D (Potential memory leak).
       g1->SetName("TGraph 2D");
       g1->SetTitle("TGraph 2D - title");
+
       if ( c2 ) delete c2;
       c2 = new TCanvas("c2-2D","TGraph");
       if ( __DRAW__ ) g1->Draw("AB*");
@@ -968,7 +971,16 @@ void init_structures()
    histGaus2D.push_back( algoType( "GSLMultiFit", "",            "Q0",   CompareResult(cmpPars,6)) );
 #endif
 
-   linearAlgos.push_back( algoType( "Linear",      "",            "Q0G", CompareResult()) );
+   graphErrorAlgos.push_back( algoType( "Minuit",      "Migrad",      "Q0EX0", CompareResult()) );
+   graphErrorAlgos.push_back( algoType( "Minuit2",      "Migrad",      "Q0EX0", CompareResult()) );
+
+
+   // For testing the liear fitter we can force the use by setting Linear the default minimizer and use
+   // teh G option. In this case the fit is linearized using the gradient as the linear components
+   // Option "G" has not to be set as first option character to avoid using Fitter class in 
+   // the test program 
+   // Use option "X" to force Chi2 calculations
+   linearAlgos.push_back( algoType( "Linear",      "",            "Q0XG", CompareResult()) );
    listLinearAlgos.push_back( linearAlgos );
 
    listTH1DAlgos.push_back( commonAlgos );
@@ -985,6 +997,7 @@ void init_structures()
    listAlgosTGraphError.push_back( commonAlgos );
    listAlgosTGraphError.push_back( treeFail );
    listAlgosTGraphError.push_back( specialAlgos );
+   listAlgosTGraphError.push_back( graphErrorAlgos );
 
    listTH2DAlgos.push_back( histGaus2D );
    
@@ -996,6 +1009,7 @@ void init_structures()
    listAlgosTGraph2DError.push_back( commonAlgos );
    listAlgosTGraph2DError.push_back( treeFail );
    listAlgosTGraph2DError.push_back( specialAlgos );
+   listAlgosTGraph2DError.push_back( graphErrorAlgos );
 
    vector<ParLimit> emptyLimits(0);
 
@@ -1036,13 +1050,19 @@ int stressFit()
    int iret = 0; 
 
    //defaultOptions = testOptColor | testOptCheck | testOptDebug;
+
+
+   std::cout << "Test 1D and 2D objects\n";
    iret += test1DObjects(listTH1DAlgos, listAlgosTGraph, listAlgosTGraphError, l1DFunctions);
    iret += test2DObjects(listTH2DAlgos, listAlgosTGraph2D, listAlgosTGraph2DError, l2DFunctions);
-   defaultOptions = testOptColor | testOptCheck;
+   std::cout << "Test Linear fits\n";
+   iret += test1DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l1DLinearFunctions);
+   iret += test2DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l2DLinearFunctions);
+   //defaultOptions = testOptColor | testOptCheck;
+   // tree test
+   std::cout << "Test unbinned fits\n";
    iret += testUnBinnedFit(2000);  // reduce statistics
-//   iret += test1DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l1DLinearFunctions);
-//    iret += test2DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l2DLinearFunctions);
-
+   
    return iret; 
 }
    
