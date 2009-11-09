@@ -145,6 +145,7 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
    opt.fUseRange = fitOption.Range; 
    if (fitOption.Like) opt.fUseEmpty = true;  // use empty bins in log-likelihood fits 
    if (linear) opt.fCoordErrors = false; // cannot use coordinate errors in a linear fit
+   if (fitOption.NoErrX) opt.fCoordErrors = false;  // do not use coordinate errors when requested
    if (fitOption.W1) opt.fErrors1 = true;
    if (fitOption.W1 > 1) opt.fUseEmpty = true; // use empty bins with weight=1
 
@@ -523,6 +524,7 @@ void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) {
    TString opt = option;
    opt.ToUpper();
    opt.ReplaceAll("ROB", "H");
+   opt.ReplaceAll("EX0", "T");
 
    //for robust fitting, see if # of good points is defined
    // decode parameters for robust fitting
@@ -542,6 +544,7 @@ void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) {
    if (opt.Contains("Q")) fitOption.Quiet   = 1;
    if (opt.Contains("V")){fitOption.Verbose = 1; fitOption.Quiet   = 0;}
    if (opt.Contains("L")) fitOption.Like    = 1;
+   if (opt.Contains("X")) fitOption.Chi2    = 1;
    if (opt.Contains("I")) fitOption.Integral= 1;
    if (opt.Contains("LL")) fitOption.Like   = 2;
    if (opt.Contains("W")) fitOption.W1      = 1;
@@ -555,6 +558,7 @@ void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) {
    if (opt.Contains("B")) fitOption.Bound   = 1;
    if (opt.Contains("C")) fitOption.Nochisq = 1;
    if (opt.Contains("F")) fitOption.Minuit  = 1;
+   if (opt.Contains("T")) fitOption.NoErrX   = 1;
    if (opt.Contains("H")) { fitOption.Robust  = 1;   fitOption.hRobust = h; } 
 
 }

@@ -939,8 +939,9 @@ Int_t TGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axis_t rxmin, Ax
    //             = "U" Use a User specified fitting algorithm (via SetFCN)
    //             = "Q" Quiet mode (minimum printing)
    //             = "V" Verbose mode (default is between Q and V)
-   //             = "B" Use this option when you want to fix one or more parameters
-   //                   and the fitting function is like "gaus","expo","poln","landau".
+   //             = "B"  User defined parameter settings are used for predefined functions 
+   //                    like "gaus", "expo", "poln", "landau".  
+   //                    Use this option when you want to fix one or more parameters for these functions.
    //             = "R" Use the Range specified in the function range
    //             = "N" Do not store the graphics function, do not draw
    //             = "0" Do not plot the result of the fit. By default the fitted function
@@ -950,6 +951,7 @@ Int_t TGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axis_t rxmin, Ax
    //             = "C" In case of linear fitting, not calculate the chisquare
    //                    (saves time)
    //             = "F" If fitting a polN, switch to minuit fitter
+   //             = "EX0" When fitting a TGraphErrors do not consider errors in the coordinate
    //             = "ROB" In case of linear fitting, compute the LTS regression
    //                     coefficients (robust(resistant) regression), using
    //                     the default fraction of good points
@@ -1013,7 +1015,9 @@ Int_t TGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axis_t rxmin, Ax
    //
    // Changing the fitting function:
    //
-   //   By default the fitting function GraphFitChisquare is used.
+   //   By default a chi2 fitting function is used for fitting a TGraph.
+   //   The function is implemented in FitUtil::EvaluateChi2. 
+   //   In case of TGraphErrors an effective chi2 is used (see below)
    //   To specify a User defined fitting function, specify option "U" and
    //   call the following functions:
    //     TVirtualFitter::Fitter(mygraph)->SetFCN(MyFittingFunction)
@@ -1044,6 +1048,7 @@ Int_t TGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axis_t rxmin, Ax
    //   The improvement, compared to the first method (f(x+ exhigh) - f(x-exlow))/2
    //   is of (error of x)**2 order. This approach is called "effective variance method".
    //   This improvement has been made in version 4.00/08 by Anna Kreshuk.
+   //   The implementation is provided in the function FitUtil::EvaluateChi2Effective
    //
    // NOTE:
    //   1) By using the "effective variance" method a simple linear regression
@@ -1053,10 +1058,15 @@ Int_t TGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axis_t rxmin, Ax
    //   2) The effective variance technique assumes that there is no correlation
    //      between the x and y coordinate .
    //
-   //   Note, that the linear fitter doesn't take into account the errors in x. If errors
-   //   in x are important, go through minuit (use option "F" for polynomial fitting).
+   //   3) The standard chi2 (least square) method without error in the coordinates (x) can 
+   //       be forced by using option "EX0"
    //
-   //   3) When fitting a TGraph (ie no errors associated to each point),
+   //   4)  The linear fitter doesn't take into account the errors in x. When fitting a 
+   //       TGraphErrors with a linear functions the errors in x willnot be considere.
+   //        If errors in x are important, go through minuit (use option "F" for polynomial fitting).
+   //    
+   //
+   //   5) When fitting a TGraph (ie no errors associated to each point),
    //   a correction is applied to the errors on the parameters with the following
    //   formula:
    //      errorp *= sqrt(chisquare/(ndf-1))
