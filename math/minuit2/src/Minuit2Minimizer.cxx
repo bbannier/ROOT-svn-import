@@ -500,6 +500,7 @@ bool Minuit2Minimizer::GetMinosError(unsigned int i, double & errLow, double & e
 
    // debug result of Minos 
    // print error message in Minos
+
    if (debugLevel >= 1) {
       if (!me.LowerValid() )  
          std::cout << "Minos:  Invalid lower error for parameter " << i << std::endl; 
@@ -525,12 +526,15 @@ bool Minuit2Minimizer::GetMinosError(unsigned int i, double & errLow, double & e
    }
 
 
-   if (debugLevel == 0) {
-      if (!me.IsValid() ) { 
-         std::cout << "Error running Minos for parameter " << i << std::endl; 
-         if ( fStatus%100 == 0 )  fStatus += 10; 
-         return false; 
-      }
+   if (!me.IsValid() ) { 
+      //std::cout << "Error running Minos for parameter " << i << std::endl; 
+      int mstatus = 5; 
+      if (me.AtLowerMaxFcn() ) mstatus = 1; 
+      if (me.AtUpperMaxFcn() ) mstatus = 2; 
+      if (me.LowerNewMin() ) mstatus = 3; 
+      if (me.UpperNewMin() ) mstatus = 4; 
+      fStatus += 10*mstatus; 
+      return false; 
    }
          
    errLow = me.Lower();
@@ -674,12 +678,18 @@ bool Minuit2Minimizer::Hesse( ) {
 
    if (!fState.HasCovariance() ) { 
       // if false means error is not valid and this is due to a failure in Hesse
-      if (PrintLevel() > 0) { 
-         MN_INFO_MSG2("Minuit2Minimizer::Hesse","Hesse failed ");
-         return false; 
+      if (PrintLevel() > 0) MN_INFO_MSG2("Minuit2Minimizer::Hesse","Hesse failed ");
+      // update minimizer error status 
+      int hstatus = 4;
+      // informationon error state can be retrieved only if fMinimum is available
+      if (fMinimum) { 
+         if (fMinimum->Error().HesseFailed() ) hstatus = 1;
+         if (fMinimum->Error().InvertFailed() ) hstatus = 2;
+         else if (!(fMinimum->Error().IsPosDef()) ) hstatus = 3;
       }
+      fStatus += 100*hstatus; 
+      return false; 
    }
-
 
    return true;       
 }
