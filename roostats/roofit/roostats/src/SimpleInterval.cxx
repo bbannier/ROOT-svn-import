@@ -41,21 +41,21 @@ ClassImp(RooStats::SimpleInterval) ;
 using namespace RooStats;
 
 //____________________________________________________________________
-SimpleInterval::SimpleInterval() : fLowerLimit(0), fUpperLimit(0)
+SimpleInterval::SimpleInterval() : fParameters(0), fLowerLimit(0), fUpperLimit(0)
 {
    // Default constructor
 }
 
 //____________________________________________________________________
 SimpleInterval::SimpleInterval(const char* name) :
-   ConfInterval(name,name), fLowerLimit(0), fUpperLimit(0)
+   ConfInterval(name,name), fParameters(0), fLowerLimit(0), fUpperLimit(0)
 {
    // Alternate constructor
 }
 
 //____________________________________________________________________
 SimpleInterval::SimpleInterval(const char* name, const char* title) :
-   ConfInterval(name,title), fLowerLimit(0), fUpperLimit(0)
+   ConfInterval(name,title), fParameters(0), fLowerLimit(0), fUpperLimit(0)
 {
    // Alternate constructor
 }
