@@ -116,7 +116,7 @@ FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, con
       if (chi2func == 0) 
          fChi2 = fVal;
       else { 
-         // compute chi2 equivalent
+         // compute chi2 equivalent for likelihood fits
          fChi2 = (*chi2func)(&fParams[0]); 
       }
    }
@@ -340,14 +340,16 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
    if (!fValid) { 
       os << "\n****************************************\n";
       os << "            Invalid FitResult            ";
-      //os << "\n****************************************\n";
-      //return; 
    }
-
+   
    os << "\n****************************************\n";
    //os << "            FitResult                   \n\n";
    os << "Minimizer is " << fMinimType << std::endl;
    unsigned int npar = fParams.size(); 
+   if (npar == 0) { 
+      std::cout << "Error: FitResult is empty !" << std::endl;
+      return;
+   }
    const unsigned int nw = 25; 
    if (fVal != fChi2 || fChi2 < 0) 
       os << std::setw(nw) << std::left << "LogLikelihood" << " =\t" << fVal << std::endl;
