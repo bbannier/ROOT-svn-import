@@ -10,22 +10,22 @@
 
 
 /**
-   HypoTestInvertorResult class
+   HypoTestInverterResult class
 
 **/
 
 
 // include header file of this class 
-#include "RooStats/HypoTestInvertorResult.h"
+#include "RooStats/HypoTestInverterResult.h"
 #include "RooStats/HybridResult.h"
 
-ClassImp(RooStats::HypoTestInvertorResult)
+ClassImp(RooStats::HypoTestInverterResult)
 
 using namespace RooStats;
 
 
 
-HypoTestInvertorResult::HypoTestInvertorResult( const char* name,
+HypoTestInverterResult::HypoTestInverterResult( const char* name,
 						const char* title,
 						RooRealVar* scannedVariable,
 						double cl ) :
@@ -45,13 +45,13 @@ HypoTestInvertorResult::HypoTestInvertorResult( const char* name,
 }
 
 
-HypoTestInvertorResult::~HypoTestInvertorResult()
+HypoTestInverterResult::~HypoTestInverterResult()
 {
   // destructor
 }
 
  
-double HypoTestInvertorResult::GetXValue( int index ) const
+double HypoTestInverterResult::GetXValue( int index ) const
 {
   if ( index >= Size() || index<0 ) {
     std::cout << "Problem: You are asking for an impossible array index value\n";
@@ -61,7 +61,7 @@ double HypoTestInvertorResult::GetXValue( int index ) const
   return fXValues[index];
 }
 
-double HypoTestInvertorResult::GetYValue( int index ) const
+double HypoTestInverterResult::GetYValue( int index ) const
 {
   if ( index >= Size() || index<0 ) {
     std::cout << "Problem: You are asking for an impossible array index value\n";
@@ -76,7 +76,7 @@ double HypoTestInvertorResult::GetYValue( int index ) const
 }
 
 
-void HypoTestInvertorResult::CalculateLimits()
+void HypoTestInverterResult::CalculateLimits()
 { 
   // find the 2 objects the closer to the limit and make a linear extrapolation to the target
 

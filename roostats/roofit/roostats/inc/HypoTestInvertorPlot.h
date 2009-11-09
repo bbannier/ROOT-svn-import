@@ -8,8 +8,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_HypoTestInvertorPlot
-#define ROOSTATS_HypoTestInvertorPlot
+#ifndef ROOSTATS_HypoTestInverterPlot
+#define ROOSTATS_HypoTestInverterPlot
 
 #include "TNamed.h"
 
@@ -18,29 +18,29 @@ class TGraph;
 
 namespace RooStats {
 
-  class HypoTestInvertorResult; 
+  class HypoTestInverterResult; 
 
-  class HypoTestInvertorPlot : public TNamed {
+  class HypoTestInverterPlot : public TNamed {
 
   public:
 
     // constructor
-    HypoTestInvertorPlot( const char* name, 
+    HypoTestInverterPlot( const char* name, 
 			  const char* title,
-			  HypoTestInvertorResult* results ) ;
+			  HypoTestInverterResult* results ) ;
 
     TGraph* MakePlot() ;
 
     // destructor
-    ~HypoTestInvertorPlot() ;
+    ~HypoTestInverterPlot() ;
 
   private:
 
-    HypoTestInvertorResult* fResults;
+    HypoTestInverterResult* fResults;
 
   protected:
 
-    ClassDef(HypoTestInvertorPlot,1)  // HypoTestInvertorPlot class
+    ClassDef(HypoTestInverterPlot,1)  // HypoTestInverterPlot class
 
   };
 }

@@ -9,7 +9,7 @@
  *************************************************************************/
 
 /**
-   HypoTestInvertor class
+   HypoTestInverter class
 
 **/
 
@@ -23,15 +23,15 @@
 #include "RooStats/HybridResult.h"
 
 // include header file of this class 
-#include "RooStats/HypoTestInvertor.h"
+#include "RooStats/HypoTestInverter.h"
 
 
-ClassImp(RooStats::HypoTestInvertor)
+ClassImp(RooStats::HypoTestInverter)
 
 using namespace RooStats;
 
 
-HypoTestInvertor::HypoTestInvertor( const char* name,
+HypoTestInverter::HypoTestInverter( const char* name,
 				    const char* title ) :
    TNamed( TString(name), TString(title) ), 
    fCalculator0(0),
@@ -42,7 +42,7 @@ HypoTestInvertor::HypoTestInvertor( const char* name,
 }
 
 
-HypoTestInvertor::HypoTestInvertor( const char* name,
+HypoTestInverter::HypoTestInverter( const char* name,
 				    const char* title,
 				    HypoTestCalculator* myhc0,
 				    RooRealVar* scannedVariable ) :
@@ -54,24 +54,24 @@ HypoTestInvertor::HypoTestInvertor( const char* name,
 
   //if (myhc0->ClassName()!="HybridCalculator") std::cout << "NOT SUPPORTED\n";
 
-  // create a new HypoTestInvertorResult to hold all computed results
+  // create a new HypoTestInverterResult to hold all computed results
   TString results_name = this->GetName();
   results_name += "_results";
-  fResults = new HypoTestInvertorResult(results_name,"HypoTestInvertorResult",scannedVariable,ConfidenceLevel());
+  fResults = new HypoTestInverterResult(results_name,"HypoTestInverterResult",scannedVariable,ConfidenceLevel());
 
 }
 
 
-HypoTestInvertor::~HypoTestInvertor()
+HypoTestInverter::~HypoTestInverter()
 {
   // destructor
   
-  // delete the HypoTestInvertorResult
+  // delete the HypoTestInverterResult
    if (fResults) delete fResults;
 }
 
 
-bool HypoTestInvertor::RunAutoScan( double xMin, double xMax, double epsilon )
+bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double epsilon )
 {
   double target = Size();
   bool status;
@@ -109,7 +109,7 @@ bool HypoTestInvertor::RunAutoScan( double xMin, double xMax, double epsilon )
 }
 
 
-bool HypoTestInvertor::RunFixedScan( int nBins, double xMin, double xMax )
+bool HypoTestInverter::RunFixedScan( int nBins, double xMin, double xMax )
 {
   // safety checks
   if ( nBins<=0 ) {
@@ -143,7 +143,7 @@ bool HypoTestInvertor::RunFixedScan( int nBins, double xMin, double xMax )
 }
 
 
-bool HypoTestInvertor::RunOnePoint( double thisX )
+bool HypoTestInverter::RunOnePoint( double thisX )
 {
   // check if thisX is in the range specified for fScannedVariable
   if ( thisX<fScannedVariable->getMin() || thisX>fScannedVariable->getMax() ) {
@@ -164,7 +164,7 @@ bool HypoTestInvertor::RunOnePoint( double thisX )
   // compute the results
   HypoTestResult* myHybridResult =  calculator->GetHypoTest(); 
 
-  // fill the results in the HypoTestInvertorResult
+  // fill the results in the HypoTestInverterResult
   fResults->fXValues.push_back(thisX);
   fResults->fYObjects.Add(myHybridResult); // TO DO vector of HypoTestResult
 
