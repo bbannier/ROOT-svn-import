@@ -295,12 +295,16 @@ void InitParameters(TF1* func, FitObject * fitobj)
 {
    // Parameter initialization for the function
 
-   int special = func->GetNumber(); 
-   if (special == 100 || special == 400) { 
+   const int special = func->GetNumber(); 
+   if (100 == special || 400 == special) { 
       ROOT::Fit::BinData data; 
       ROOT::Fit::FillData(data,fitobj,func); 
       ROOT::Fit::InitGaus(data, func);
       // case gaussian or Landau
+   } else if ( 110 == special || 410 == special ) {
+      ROOT::Fit::BinData data;
+      ROOT::Fit::FillData(data,fitobj,func);
+      ROOT::Fit::Init2DGaus(data,func);
    }
 }
 
