@@ -129,8 +129,8 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
    Int_t special = f1->GetNumber();
    Bool_t linear = f1->IsLinear();
    Int_t npar = f1->GetNpar();
-   if (special==299+npar)
-      linear = kTRUE;
+   if (special==299+npar)  linear = kTRUE;
+   // do not use linear fitter in these case
    if (fitOption.Bound || fitOption.Like || fitOption.Errors || fitOption.Gradient || fitOption.More || fitOption.User|| fitOption.Integral || fitOption.Minuit)
       linear = kFALSE;
 
