@@ -602,7 +602,25 @@ THnSparse* THnSparse::CreateSparse(const char* name, const char* title,
 //______________________________________________________________________________
 Int_t THnSparse::Fit(TF1 *f ,Option_t *option ,Option_t *goption)
 {
-   // Creates the preconditions for the fit.
+//   Fit a THnSparse with function f
+// 
+//   since the data is sparse by default a likelihood fit is performed 
+//   merging all the regions with empty bins for betetr performance efficiency
+// 
+//  Since the THnSparse is not drawn no graphics options are passed 
+//  Here is the list of possible options 
+// 
+//                = "I"  Use integral of function in bin instead of value at bin center
+//                = "X"  Use chi2 method (default is log-likelihood method)
+//                = "U"  Use a User specified fitting algorithm (via SetFCN)
+//                = "Q"  Quiet mode (minimum printing)
+//                = "V"  Verbose mode (default is between Q and V)
+//                = "E"  Perform better Errors estimation using Minos technique
+//                = "B"  Use this option when you want to fix one or more parameters
+//                       and the fitting function is like "gaus", "expo", "poln", "landau".
+//                = "M"  More. Improve fit results
+//                = "R"  Use the Range specified in the function range
+
 
    Foption_t fitOption;
 
@@ -611,8 +629,8 @@ Int_t THnSparse::Fit(TF1 *f ,Option_t *option ,Option_t *goption)
    // The function used to fit cannot be stored in a THnSparse. It
    // cannot be drawn either. Perhaps in the future.
    fitOption.Nostore = true;
-   // Use likelihood fit.
-   fitOption.Like = true;
+   // Use likelihood fit if not specified
+   if (!fitOption.Chi2) fitOption.Like = true;
    // create range and minimizer options with default values 
    ROOT::Fit::DataRange range(GetNdimensions()); 
    for ( int i = 0; i < GetNdimensions(); ++i ) {

@@ -3085,8 +3085,9 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //                = "Q"  Quiet mode (minimum printing)
 //                = "V"  Verbose mode (default is between Q and V)
 //                = "E"  Perform better Errors estimation using Minos technique
-//                = "B"  Use this option when you want to fix one or more parameters
-//                       and the fitting function is like "gaus", "expo", "poln", "landau".
+//                = "B"  User defined parameter settings are used for predefined functions 
+//                       like "gaus", "expo", "poln", "landau".  
+//                       Use this option when you want to fix one or more parameters for these functions.
 //                = "M"  More. Improve fit results
 //                = "R"  Use the Range specified in the function range
 //                = "N"  Do not store the graphics function, do not draw
@@ -3176,9 +3177,15 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //      Access to the fit status
 //      ========================
 //     The function return the status of the fit (fitResult) in the following form
-//       fitResult = migradResult + 10*minosResult + 100*hesseResult + 1000*improveResult
+//     fitResult = minimizerResultCode 
+//     when Minuit (or Minuit2) is used as minimizer the result obtained is 
+//     fitResult =  migradResult + 10*minosResult + 100*hesseResult + 1000*improveResult
 //     The fitResult is 0 is the fit is OK.
-//     The fitResult is negative in case of an error not connected with the fit.
+//     The other resulting code will depend on the minimizer used. For example in the case of
+//     TMinuit the returns errors will be either 0 or 4 in case of a failed minmization 
+//     (see the documentation of TMinuit::mnexcm)  
+//     For Minuit2 see the documentation of Minuit2Minimizer::Minimize
+//     The value of fitResult is negative in case of an error not connected with the fit.
 //
 //      Access to the fit results
 //      =========================

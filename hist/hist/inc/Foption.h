@@ -28,8 +28,9 @@ struct Foption_t {
 //*-*   The following structure members are set to 1 if the option is selected:
    int Quiet;       // "Q"  Quiet mode. No print
    int Verbose;     // "V"  Verbose mode. Print results after each iteration
-   int Bound;       // "B"  Some or all parameters are bounded
-   int Like;        // "L"  Use Log Likelihood. Default is chisquare method
+   int Bound;       // "B"  When using pre-defined functions user parameter settings are used instead of default one
+   int Chi2;        // "X"  For fitting THnsparse use chi2 method (default is likelihood)
+   int Like;        // "L"  Use Log Likelihood. Default is chisquare method except fitting THnsparse
    int User;        // "U"  Use a User specified fitting algorithm (via SetFCN)
    int W1;          // "W"  Set all the weights to 1. Ignore error bars
    int Errors;      // "E"  Performs a better error evaluation, calling HESSE and MINOS
@@ -42,13 +43,15 @@ struct Foption_t {
    int Integral;    // "I"  Use function integral instead of function in center of bin
    int Nochisq;     // "C"  In case of linear fitting, don't calculate the chisquare
    int Minuit;      // "F"  If fitting a polN, switch to minuit fitter
-   int Robust;      // "ROB" For a TGraph use robust fitting
+   int NoErrX;      // "EX0" or "T" When fitting a TGraphErrors do not consider error in coordinates 
+   int Robust;      // "ROB" or "H":  For a TGraph use robust fitting
    double hRobust;  //  value of h parameter used in robust fitting 
 
   Foption_t() :
       Quiet     (0),
       Verbose   (0),
       Bound     (0),
+      Chi2      (0),
       Like      (0),
       User      (0),
       W1        (0),
@@ -62,6 +65,7 @@ struct Foption_t {
       Integral  (0),
       Nochisq   (0),
       Minuit    (0),
+      NoErrX    (0),
       Robust    (0),
       hRobust   (0)
    {}
