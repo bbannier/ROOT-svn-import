@@ -8,8 +8,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_HypoTestInvertor
-#define ROOSTATS_HypoTestInvertor
+#ifndef ROOSTATS_HypoTestInverter
+#define ROOSTATS_HypoTestInverter
 
 
 
@@ -21,8 +21,8 @@
 #include "RooStats/HypoTestCalculator.h"
 #endif
 
-#ifndef  ROOSTATS_HypoTestInvertorResult
-#include "RooStats/HypoTestInvertorResult.h"
+#ifndef  ROOSTATS_HypoTestInverterResult
+#include "RooStats/HypoTestInverterResult.h"
 #endif
 
 class RooRealVar;
@@ -30,22 +30,22 @@ class RooRealVar;
 
 namespace RooStats {
 
-  class HypoTestInvertor : public IntervalCalculator, public TNamed {
+  class HypoTestInverter : public IntervalCalculator, public TNamed {
 
   private:
     // default constructor (make private, used only for I/O)
-    HypoTestInvertor( const char* name,
+    HypoTestInverter( const char* name,
 		      const char* title ) ;
 
   public:
 
     // constructor
-    HypoTestInvertor( const char* name, 
+    HypoTestInverter( const char* name, 
 		      const char* title, 
 		      HypoTestCalculator* myhc0,
 		      RooRealVar* scannedVariable  ) ;
 
-    virtual HypoTestInvertorResult* GetInterval() const { return fResults; } ;
+    virtual HypoTestInverterResult* GetInterval() const { return fResults; } ;
 
     bool RunAutoScan( double xMin, double xMax, double epsilon );
 
@@ -67,19 +67,19 @@ namespace RooStats {
     virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}
  
     // destructor
-    virtual ~HypoTestInvertor() ;
+    virtual ~HypoTestInverter() ;
 
   private:
 
     HypoTestCalculator* fCalculator0;   // pointer to the calculator passed in the constructor
     RooRealVar* fScannedVariable;     // pointer to the constrained variable
-    HypoTestInvertorResult* fResults;
+    HypoTestInverterResult* fResults;
     
     double fSize;
 
   protected:
 
-    ClassDef(HypoTestInvertor,1)  // HypoTestInvertor class
+    ClassDef(HypoTestInverter,1)  // HypoTestInverter class
 
   };
 }

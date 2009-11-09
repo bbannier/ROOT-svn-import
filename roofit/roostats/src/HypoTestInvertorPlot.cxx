@@ -9,7 +9,7 @@
  *************************************************************************/
 
 /**
-   HypoTestInvertorPlot class
+   HypoTestInverterPlot class
 
 **/
 
@@ -17,20 +17,20 @@
 #include "RooStats/HybridResult.h"
 
 // include header file of this class 
-#include "RooStats/HypoTestInvertorPlot.h"
-#include "RooStats/HypoTestInvertorResult.h"
+#include "RooStats/HypoTestInverterPlot.h"
+#include "RooStats/HypoTestInverterResult.h"
 
 #include "TGraph.h"
 
-ClassImp(RooStats::HypoTestInvertorPlot)
+ClassImp(RooStats::HypoTestInverterPlot)
 
 using namespace RooStats;
 
 
 
-HypoTestInvertorPlot::HypoTestInvertorPlot( const char* name,
+HypoTestInverterPlot::HypoTestInverterPlot( const char* name,
 					    const char* title,
-					    HypoTestInvertorResult* results ) :
+					    HypoTestInverterResult* results ) :
   TNamed( TString(name), TString(title) ),
   fResults(results)
 {
@@ -38,7 +38,7 @@ HypoTestInvertorPlot::HypoTestInvertorPlot( const char* name,
 }
 
 
-TGraph* HypoTestInvertorPlot::MakePlot()
+TGraph* HypoTestInverterPlot::MakePlot()
 {
   const int nEntries = fResults->Size();
 
@@ -84,7 +84,7 @@ TGraph* HypoTestInvertorPlot::MakePlot()
   return graph;
 }
 
-HypoTestInvertorPlot::~HypoTestInvertorPlot()
+HypoTestInverterPlot::~HypoTestInverterPlot()
 {
   // destructor
 }

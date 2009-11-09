@@ -8,8 +8,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_HypoTestInvertorResult
-#define ROOSTATS_HypoTestInvertorResult
+#ifndef ROOSTATS_HypoTestInverterResult
+#define ROOSTATS_HypoTestInverterResult
 
 
 
@@ -21,18 +21,18 @@ class RooRealVar;
 
 namespace RooStats {
 
-  class HypoTestInvertorResult : public SimpleInterval /*, public TNamed*/ {
+  class HypoTestInverterResult : public SimpleInterval /*, public TNamed*/ {
 
   public:
 
     // constructor
-    HypoTestInvertorResult( const char* name, 
+    HypoTestInverterResult( const char* name, 
 			    const char* title,
 			    RooRealVar* scannedVariable,
 			    double cl ) ;
 
     // destructor
-    virtual ~HypoTestInvertorResult() ; // TO DO DELETE ALL yOBJECTS
+    virtual ~HypoTestInverterResult() ; // TO DO DELETE ALL yOBJECTS
 
     // function to return the yValue
 
@@ -65,9 +65,9 @@ namespace RooStats {
 
      TList fYObjects;
 
-     friend class HypoTestInvertor;
+     friend class HypoTestInverter;
 
-     ClassDef(HypoTestInvertorResult,1)  // HypoTestInvertorResult class
+     ClassDef(HypoTestInverterResult,1)  // HypoTestInverterResult class
 
   };
 }

@@ -151,9 +151,9 @@
 		 Form(".x %srs701_BayesianCalculator.C+",path2tutorial),
 		 "Example of using the BayesianCalculator class",buttonType);
 
-  bar->AddButton(Form("(%i) HypoTestInvertor",++ic), 
-		 Form(".x %srs801_HypoTestInvertor.C+",path2tutorial),
-		 "Example of using the HypoTestInvertor class",buttonType);
+  bar->AddButton(Form("(%i) HypoTestInverter",++ic), 
+		 Form(".x %srs801_HypoTestInverter.C+",path2tutorial),
+		 "Example of using the HypoTestInverter class",buttonType);
 
   ic = 0;
   bar->AddButton(Form("(%i) Bernstein Correction",++ic), 
