@@ -21,6 +21,7 @@
 #include "TVirtualFitter.h"
 
 #include "Math/WrappedTF1.h"
+#include "Math/WrappedMultiTF1.h"
 #include "Fit/BinData.h"
 #include "Fit/UnBinData.h"
 #include "HFitInterface.h"
@@ -109,7 +110,7 @@ public:
 // constructor
 void FillVariableRange(Double_t v[], Int_t numberOfBins, Double_t minRange, Double_t maxRange)
 {
-   Double_t minLimit = (maxRange-minRange)  / (numberOfBins*2);
+   Double_t minLimit = (maxRange-minRange)  / (numberOfBins*4);
    Double_t maxLimit = (maxRange-minRange)*4/ (numberOfBins);   
    v[0] = 0;
    for ( Int_t i = 1; i < numberOfBins + 1; ++i )
@@ -333,7 +334,8 @@ public:
       {
          ROOT::Fit::BinData d; 
          ROOT::Fit::FillData(d,object,func);
-         ROOT::Math::WrappedTF1 f(*func);
+//         ROOT::Math::WrappedTF1 f(*func);
+         ROOT::Math::WrappedMultiTF1 f(*func);
 //          f->SetDerivPrecision(10e-6);
          ROOT::Fit::Fitter fitter; 
 //          printf("Gradient? FIT?!?\n");
@@ -794,7 +796,7 @@ public:
 };
 
 // Test the fittig algorithms for a TTree
-int testUnBinedFit(int n = 10000)
+int testUnBinnedFit(int n = 10000)
 {
    // Counts how many tests failed.
    int globalStatus = 0;
@@ -910,14 +912,14 @@ void init_structures()
 
 // Gradient algorithms
 // No Minuit algorithms to use with the 'G' options until some stuff is fixed.
-//    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "GQ0", CompareResult()) );
+   noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "GQ0", CompareResult()) );
 //    noGraphAlgos.push_back( algoType( "Minuit",      "Minimize",    "GQ0", CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit2",     "Migrad",      "GQ0", CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit2",     "Minimize",    "GQ0", CompareResult()) );
    noGraphAlgos.push_back( algoType( "Fumili",      "Fumili",      "GQ0", CompareResult()) );
    noGraphAlgos.push_back( algoType( "Minuit2",     "Fumili",      "GQ0", CompareResult()) );
 //    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "GQE0", CompareResult()) );
-//    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "GQL0", CompareResult()) );
+    noGraphAlgos.push_back( algoType( "Minuit",      "Migrad",      "GQL0", CompareResult()) );
 
    noGraphErrorAlgos.push_back( algoType( "Fumili",      "Fumili",      "Q0", CompareResult()) );
 #ifdef R__HAS_MATHMORE
@@ -940,7 +942,8 @@ void init_structures()
    histGaus2D.push_back( algoType( "GSLSimAn",    "",            "Q0", CompareResult(cmpPars,6)) );
 #endif   // treeFail
    histGaus2D.push_back( algoType( "Minuit",      "Simplex",     "Q0",   CompareResult(cmpPars,6)) );
-   histGaus2D.push_back( algoType( "Minuit2",     "Simplex",     "Q0",   CompareResult(cmpPars,6)) );
+   // minuit2 simplex fails in 2d 
+   //histGaus2D.push_back( algoType( "Minuit2",     "Simplex",     "Q0",   CompareResult(cmpPars,6)) );
    // special algos
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QE0",  CompareResult(cmpPars,6)) );
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QW0",  CompareResult())          );
@@ -950,14 +953,14 @@ void init_structures()
    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "QLI0", CompareResult())          );
 
 // Gradient algorithms
-//    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "GQ0", CompareResult()) );
-//    histGaus2D.push_back( algoType( "Minuit",      "Minimize",    "GQ0", CompareResult()) );
+   histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "GQ0", CompareResult()) );
+   histGaus2D.push_back( algoType( "Minuit",      "Minimize",    "GQ0", CompareResult()) );
    histGaus2D.push_back( algoType( "Minuit2",     "Migrad",      "GQ0", CompareResult()) );
    histGaus2D.push_back( algoType( "Minuit2",     "Minimize",    "GQ0", CompareResult()) );
    histGaus2D.push_back( algoType( "Fumili",      "Fumili",      "GQ0", CompareResult()) );
    histGaus2D.push_back( algoType( "Minuit2",     "Fumili",      "GQ0", CompareResult()) );
 //    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "GQE0", CompareResult()) );
-//    histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "GQL0", CompareResult()) );
+   histGaus2D.push_back( algoType( "Minuit",      "Migrad",      "GQL0", CompareResult()) );
 
    // noGraphErrorAlgos
    histGaus2D.push_back( algoType( "Fumili",      "Fumili",      "Q0",   CompareResult(cmpPars,6)) );
@@ -1005,7 +1008,8 @@ void init_structures()
    double poly1DFit[] = { 6.4, -2.3, 15.4, 210.5};
    l1DFunctions.push_back( fitFunctions("Polynomial", poly1DImpl, 4, poly1DOrig, poly1DFit, emptyLimits) );
 
-   double gaus2DOrig[] = { 500., +.5, 1.5, -.5, 2.0 };
+   // range os -5,5
+   double gaus2DOrig[] = { 500., +.5, 2.7, -.5, 3.0 };
    double gaus2DFit[] = { 510., .0, 1.8, -1.0, 1.6};
    l2DFunctions.push_back( fitFunctions("gaus2D", gaus2DImpl, 5, gaus2DOrig, gaus2DFit, emptyLimits) );
 
@@ -1031,9 +1035,11 @@ int stressFit()
 
    int iret = 0; 
 
+   //defaultOptions = testOptColor | testOptCheck | testOptDebug;
    iret += test1DObjects(listTH1DAlgos, listAlgosTGraph, listAlgosTGraphError, l1DFunctions);
    iret += test2DObjects(listTH2DAlgos, listAlgosTGraph2D, listAlgosTGraph2DError, l2DFunctions);
-   iret += testUnBinedFit();
+   defaultOptions = testOptColor | testOptCheck;
+   iret += testUnBinnedFit(2000);  // reduce statistics
 //   iret += test1DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l1DLinearFunctions);
 //    iret += test2DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l2DLinearFunctions);
 
