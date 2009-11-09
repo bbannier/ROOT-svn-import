@@ -530,6 +530,7 @@ extern void H1LeastSquareSeqnd(Int_t n, Double_t *a, Int_t idim, Int_t &ifail, I
 // Internal exceptions for the CheckConsistency method
 class DifferentNumberOfBins: public std::exception {};
 class DifferentAxisLimits: public std::exception {};
+class DifferentBinLimits: public std::exception {};
 
 ClassImp(TH1)
 
@@ -861,6 +862,8 @@ void TH1::Add(const TH1 *h1, Double_t c1)
       return;
    } catch(DifferentAxisLimits& e) {
       Warning("Add","Attempt to add histograms with different axis limits");
+   } catch(DifferentBinLimits& e) {
+      Warning("Add","Attempt to add histograms with different bin limits");
    }
 
    if (fDimension < 2) nbinsy = -1;
@@ -961,6 +964,8 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
       return;
    } catch(DifferentAxisLimits& e) {
       Warning("Add","Attempt to add histograms with different axis limits");
+   } catch(DifferentBinLimits& e) {
+      Warning("Add","Attempt to add histograms with different bin limits");
    }
 
    if (fDimension < 2) nbinsy = -1;
@@ -1155,6 +1160,27 @@ Int_t TH1::BufferFill(Double_t x, Double_t w)
    return -2;
 }
 
+bool CheckBinLimits(const TArrayD* h1Array, const TArrayD* h2Array)
+{
+   Int_t fN = h1Array->fN;
+   if ( fN != 0 ) {
+      if ( h2Array->fN != fN ) {
+         throw(DifferentBinLimits());
+         return false;
+      }
+      else {
+         for ( int i = 0; i < fN; ++i ) {
+            if ( ! TMath::AreEqualAbs( h1Array->GetAt(i), h2Array->GetAt(i), 1E-10 ) ) {
+               throw(DifferentBinLimits());
+               return false;
+            }
+         }
+      }
+   }
+
+   return true;
+}
+
 //___________________________________________________________________________
 bool TH1::CheckConsistency(const TH1* h1, const TH1* h2)
 {
@@ -1178,7 +1204,14 @@ bool TH1::CheckConsistency(const TH1* h1, const TH1* h2)
       throw(DifferentAxisLimits());
       return false;
    }
-   return true;
+
+   bool ret = true;
+
+   ret &= CheckBinLimits(h1->GetXaxis()->GetXbins(), h2->GetXaxis()->GetXbins());
+   ret &= CheckBinLimits(h1->GetYaxis()->GetXbins(), h2->GetYaxis()->GetXbins());
+   ret &= CheckBinLimits(h1->GetZaxis()->GetXbins(), h2->GetZaxis()->GetXbins());
+
+   return ret;
 }
 
 //___________________________________________________________________________
@@ -2243,6 +2276,8 @@ void TH1::Divide(const TH1 *h1)
       return;
    } catch(DifferentAxisLimits& e) {
       Warning("Divide","Attempt to divide histograms with different axis limits");
+   } catch(DifferentBinLimits& e) {
+      Warning("Divide","Attempt to divide histograms with different bin limits");
    }
 
    if (fDimension < 2) nbinsy = -1;
@@ -2329,6 +2364,8 @@ void TH1::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Option_
       return;
    } catch(DifferentAxisLimits& e) {
       Warning("Divide","Attempt to divide histograms with different axis limits");
+   } catch(DifferentBinLimits& e) {
+      Warning("Divide","Attempt to divide histograms with different bin limits");
    }
 
    if (!c2) {
@@ -4897,6 +4934,8 @@ void TH1::Multiply(const TH1 *h1)
       return;
    } catch(DifferentAxisLimits& e) {
       Warning("Multiply","Attempt to multiply histograms with different axis limits");
+   } catch(DifferentBinLimits& e) {
+      Warning("Multiply","Attempt to multiply histograms with different bin limits");
    }
 
    if (fDimension < 2) nbinsy = -1;
@@ -4974,6 +5013,8 @@ void TH1::Multiply(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Optio
       return;
    } catch(DifferentAxisLimits& e) {
       Warning("Multiply","Attempt to multiply histograms with different axis limits");
+   } catch(DifferentBinLimits& e) {
+      Warning("Multiply","Attempt to multiply histograms with different bin limits");
    }
 
    if (fDimension < 2) nbinsy = -1;
