@@ -13,7 +13,7 @@
 
 #include "TNamed.h"
 
-class TGraph; 
+class TGraphErrors; 
 
 
 namespace RooStats {
@@ -29,7 +29,7 @@ namespace RooStats {
 			  const char* title,
 			  HypoTestInverterResult* results ) ;
 
-    TGraph* MakePlot() ;
+    TGraphErrors* MakePlot() ;
 
     // destructor
     ~HypoTestInverterPlot() ;

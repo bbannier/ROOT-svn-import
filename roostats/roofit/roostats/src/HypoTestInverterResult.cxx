@@ -24,6 +24,12 @@ ClassImp(RooStats::HypoTestInverterResult)
 using namespace RooStats;
 
 
+HypoTestInverterResult::HypoTestInverterResult( ) :
+  fUseCLs(false)
+{
+  // default constructor
+}
+
 
 HypoTestInverterResult::HypoTestInverterResult( const char* name,
 						const char* title,
@@ -31,14 +37,8 @@ HypoTestInverterResult::HypoTestInverterResult( const char* name,
 						double cl ) :
    SimpleInterval(name,title,scannedVariable,-9999,+9999), 
    fUseCLs(false)
-  //TNamed( TString(name), TString(title) ),
-  //fScannedVariable(scannedVariable)
 {
   // constructor
-
-//   fLowerLimit = -9999;      // default value: replace by -infinity? by 0?
-//   fUpperLimit = +9999;      // default value: replace by +infinity?
-
   SetConfidenceLevel(cl);
 
   fYObjects.SetOwner();
@@ -48,6 +48,8 @@ HypoTestInverterResult::HypoTestInverterResult( const char* name,
 HypoTestInverterResult::~HypoTestInverterResult()
 {
   // destructor
+
+  // delete fYobjects
 }
 
  
@@ -69,12 +71,23 @@ double HypoTestInverterResult::GetYValue( int index ) const
   }
 
   if (fUseCLs) 
-     return ((HybridResult*)fYObjects.At(index))->CLs();
+    return ((HybridResult*)fYObjects.At(index))->CLs();
   else 
-     return ((HybridResult*)fYObjects.At(index))->AlternatePValue();  // CLs+b
-
+    return ((HybridResult*)fYObjects.At(index))->AlternatePValue();  // CLs+b
 }
 
+double HypoTestInverterResult::GetYError( int index ) const
+{
+  if ( index >= Size() || index<0 ) {
+    std::cout << "Problem: You are asking for an impossible array index value\n";
+    return -999;
+  }
+
+  if (fUseCLs) 
+    return ((HybridResult*)fYObjects.At(index))->CLsError();
+  else 
+    return ((HybridResult*)fYObjects.At(index))->CLsplusbError();
+}
 
 void HypoTestInverterResult::CalculateLimits()
 { 
@@ -106,7 +119,6 @@ void HypoTestInverterResult::CalculateLimits()
     }
 
   fLowerLimit = ((RooRealVar*)fParameters->first())->getMin();
-
   fUpperLimit = GetXValue(i1)+(cl-GetYValue(i1))*(GetXValue(i2)-GetXValue(i1))/(GetYValue(i2)-GetYValue(i1)); // MAYBE TOO MANY GETYVALUE CALLS!
 
   return;
