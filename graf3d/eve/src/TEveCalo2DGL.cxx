@@ -155,6 +155,8 @@ void TEveCalo2DGL::DrawRPhiHighlighted(TGLRnrCtx & /*rnrCtx*/) const
 {
    // Draw selected calorimeter cells in RPhi projection.
 
+   static const TEveException eh("TEveCalo2DGL::DrawRPhiHighlighted ");
+
    TEveCaloData* data = fM->fData;
    TEveCaloData::CellData_t cellData;
    Int_t  nSlices  = data->GetNSlices();
@@ -165,8 +167,11 @@ void TEveCalo2DGL::DrawRPhiHighlighted(TGLRnrCtx & /*rnrCtx*/) const
 
    for(UInt_t phiBin = 1; phiBin <= nPhiBins; ++phiBin)
    {
-      if (fM->fCellListsSelected[phiBin] && fM->fCellLists[phiBin])
+      if (fM->fCellListsSelected[phiBin])
       {
+         if (!fM->fCellLists[phiBin])
+            throw eh + "selected cell not in cell list cache.";
+
          Float_t off = 0;
          // selected eta sum
          for (Int_t s=0; s<nSlices; ++s) sliceVal[s] = 0;
@@ -332,6 +337,8 @@ void TEveCalo2DGL::DrawRhoZHighlighted(TGLRnrCtx & /*rnrCtx*/) const
 {
    // Draw selected calorimeter cells in RhoZ projection.
 
+   static const TEveException eh("TEveCalo2DGL::DrawRhoZHighlighted ");
+
    TEveCaloData* data = fM->GetData();
    Int_t  nSlices     = data->GetNSlices();
    UInt_t nEtaBins    = data->GetEtaBins()->GetNbins();
@@ -347,8 +354,11 @@ void TEveCalo2DGL::DrawRhoZHighlighted(TGLRnrCtx & /*rnrCtx*/) const
 
    for (UInt_t etaBin = 1; etaBin <= nEtaBins; ++etaBin)
    {
-      if (fM->fCellListsSelected[etaBin] && fM->fCellLists[etaBin])
+      if (fM->fCellListsSelected[etaBin])
       {
+         if (!fM->fCellLists[etaBin])
+            throw(eh + "selected cell not in cell list cache.");
+
          offUp = 0; offLow =0;
          // selected phi sum
          for (Int_t s = 0; s < nSlices; ++s) {
@@ -430,6 +440,8 @@ void TEveCalo2DGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* pshp
 {
    // Draw towers in highlight mode.
 
+   static const TEveException eh("TEveCalo2DGL::DrawHighlight ");
+
    if ((pshp->GetSelected() == 2) && fM->fData->GetCellsSelected().size())
    {
       glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT  | GL_LINE_BIT );
@@ -442,11 +454,16 @@ void TEveCalo2DGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* pshp
       glColor4ubv(rnrCtx.ColorSet().Selection(pshp->GetSelected()).CArr());
       TGLUtil::LockColor();
 
-      if (IsRPhi())
-         DrawRPhiHighlighted(rnrCtx);
-      else
-         DrawRhoZHighlighted(rnrCtx);
-
+      try {
+         if (IsRPhi())
+            DrawRPhiHighlighted(rnrCtx);
+         else
+            DrawRhoZHighlighted(rnrCtx);
+      }
+      catch (TEveException& exc)
+      {
+         Warning(eh, exc);
+      }
       TGLUtil::UnlockColor();
 
       glPopAttrib();
