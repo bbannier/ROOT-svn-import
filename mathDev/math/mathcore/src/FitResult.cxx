@@ -162,7 +162,9 @@ FitResult::~FitResult() {
    if (fFitFunc) delete fFitFunc;   
 }
 
-FitResult::FitResult(const FitResult &rhs) { 
+FitResult::FitResult(const FitResult &rhs) : 
+   fFitFunc(0) 
+{ 
    // Implementation of copy constructor
    (*this) = rhs; 
 }
