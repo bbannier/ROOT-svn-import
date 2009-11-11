@@ -131,15 +131,11 @@ namespace RooStats {
    protected:
 
       Double_t fSize; // size of the test (eg. specified rate of Type I error)
-      //RooWorkspace* fWS; // owns all the components used by the calculator
       const RooArgSet  * fPOI; // parameters of interest for interval
       const RooArgSet  * fNuisParams; // nuisance parameters for interval
-      //Bool_t fOwnsWorkspace; // whether we own the workspace
       mutable ProposalFunction* fPropFunc; // Proposal function for MCMC integration
       RooAbsPdf * fPdf;   // pointer to common PDF (owned by the workspace) 
       RooAbsData * fData;  // pointer to the data (owned by the workspace)
-//       const char* fPdfName; // name of common PDF in workspace
-//       const char* fDataName; // name of data set in workspace
       Int_t fNumIters; // number of iterations to run metropolis algorithm
       Int_t fNumBurnInSteps; // number of iterations to discard as burn-in, starting from the first
       Int_t fNumBins; // set the number of bins to create for each

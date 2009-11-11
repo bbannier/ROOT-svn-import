@@ -24,9 +24,17 @@ namespace RooStats {
    class HypoTestResult : public TNamed {
 
    public:
-      HypoTestResult();
+      
+      // default constructor
+      explicit HypoTestResult(const char* name = 0, const char * title = 0);
+
+      // constructor from name, null and alternate p values 
       HypoTestResult(const char* name, Double_t nullp, Double_t altp);
+
+      // constructor from name, title, null and alternate p values 
       HypoTestResult(const char* name, const char* title, Double_t nullp, Double_t altp);
+
+      // destructor 
       virtual ~HypoTestResult();
 
       // Return p-value for null hypothesis

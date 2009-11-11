@@ -73,7 +73,7 @@ HybridResult::HybridResult( const char *name, const char *title,
 ///////////////////////////////////////////////////////////////////////////
 
 HybridResult::HybridResult( const char *name, const char *title) :
-   HypoTestResult(name,title,0,0),
+   HypoTestResult(name,title),
    fTestStat_data(-999.),
    fComputationsNulDoneFlag(false),
    fComputationsAltDoneFlag(false)
@@ -81,16 +81,6 @@ HybridResult::HybridResult( const char *name, const char *title) :
    // HybridResult constructor (with name and title)
 }
 
-///////////////////////////////////////////////////////////////////////////
-
-HybridResult::HybridResult( ) :
-   HypoTestResult("HybridResult_DefaultName","HybridResult",0,0),
-   fTestStat_data(-999.),
-   fComputationsNulDoneFlag(false),
-   fComputationsAltDoneFlag(false)
-{
-   // HybridResult default constructor
-}
 
 ///////////////////////////////////////////////////////////////////////////
 
