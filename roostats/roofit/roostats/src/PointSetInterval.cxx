@@ -44,18 +44,6 @@ ClassImp(RooStats::PointSetInterval) ;
 
 using namespace RooStats;
 
-//____________________________________________________________________
-PointSetInterval::PointSetInterval() 
-{
-   // Default constructor
-}
-
-//____________________________________________________________________
-PointSetInterval::PointSetInterval(const char* name) :
-  ConfInterval(name,name), fParameterPointsInInterval(0)
-{
-   // Alternate constructor
-}
 
 //____________________________________________________________________
 PointSetInterval::PointSetInterval(const char* name, const char* title) :
@@ -89,7 +77,7 @@ PointSetInterval::~PointSetInterval()
 
 
 //____________________________________________________________________
-Bool_t PointSetInterval::IsInInterval(const RooArgSet &parameterPoint) 
+Bool_t PointSetInterval::IsInInterval(const RooArgSet &parameterPoint) const
 {  
    // Method to determine if a parameter point is in the interval
 

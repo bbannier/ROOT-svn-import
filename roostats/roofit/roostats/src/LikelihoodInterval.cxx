@@ -115,7 +115,7 @@ LikelihoodInterval::~LikelihoodInterval()
 
 
 //____________________________________________________________________
-Bool_t LikelihoodInterval::IsInInterval(const RooArgSet &parameterPoint) 
+Bool_t LikelihoodInterval::IsInInterval(const RooArgSet &parameterPoint) const 
 {  
   // This is the main method to satisfy the RooStats::ConfInterval interface.  
   // It returns true if the parameter point is in the interval.
@@ -184,7 +184,7 @@ Bool_t LikelihoodInterval::CheckParameters(const RooArgSet &parameterPoint) cons
 
 
 //____________________________________________________________________
-Double_t LikelihoodInterval::LowerLimit(RooRealVar& param) 
+Double_t LikelihoodInterval::LowerLimit(const RooRealVar& param) 
 {  
 
    // compute upper limit, check first if limit has been computed 
@@ -293,7 +293,7 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param)
 
 
 //____________________________________________________________________
-Double_t LikelihoodInterval::UpperLimit(RooRealVar& param) 
+Double_t LikelihoodInterval::UpperLimit(const RooRealVar& param) 
 {  
    // compute upper limit, check first if limit has been computed 
    std::map<std::string, double>::const_iterator itr = fUpperLimits.find(param.GetName());
@@ -415,3 +415,7 @@ void LikelihoodInterval::ResetLimits() {
    fLowerLimits.clear(); 
    fUpperLimits.clear(); 
 }
+
+// Int_t LikelihoodInterval::GetContourPoints(const RooRealVar & paramX, const RooRealVar & paramY, Double_t * x, Double_t *y, Int_t npoints ) { 
+//    return npoints;
+// }

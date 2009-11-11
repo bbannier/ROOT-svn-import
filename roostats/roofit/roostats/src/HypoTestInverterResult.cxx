@@ -24,8 +24,9 @@ ClassImp(RooStats::HypoTestInverterResult)
 using namespace RooStats;
 
 
-HypoTestInverterResult::HypoTestInverterResult( ) :
-  fUseCLs(false)
+HypoTestInverterResult::HypoTestInverterResult(const char * name, const char * title ) :
+   SimpleInterval(name,title),
+   fUseCLs(false)
 {
   // default constructor
 }
@@ -33,15 +34,13 @@ HypoTestInverterResult::HypoTestInverterResult( ) :
 
 HypoTestInverterResult::HypoTestInverterResult( const char* name,
 						const char* title,
-						RooRealVar* scannedVariable,
+						const RooRealVar& scannedVariable,
 						double cl ) :
-   SimpleInterval(name,title,scannedVariable,-9999,+9999), 
+   SimpleInterval(name,title,scannedVariable,0,0,cl), 
    fUseCLs(false)
 {
   // constructor
-  SetConfidenceLevel(cl);
-
-  fYObjects.SetOwner();
+   fYObjects.SetOwner();
 }
 
 
@@ -118,7 +117,7 @@ void HypoTestInverterResult::CalculateLimits()
       }
     }
 
-  fLowerLimit = ((RooRealVar*)fParameters->first())->getMin();
+  fLowerLimit = ((RooRealVar*)fParameters.first())->getMin();
   fUpperLimit = GetXValue(i1)+(cl-GetYValue(i1))*(GetXValue(i2)-GetXValue(i1))/(GetYValue(i2)-GetYValue(i1)); // MAYBE TOO MANY GETYVALUE CALLS!
 
   return;

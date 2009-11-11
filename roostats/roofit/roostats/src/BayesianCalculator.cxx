@@ -16,7 +16,7 @@
 
 #include "RooAbsFunc.h"
 #include "RooAbsReal.h"
-#include "RooAbsRealLValue.h"
+#include "RooRealVar.h"
 #include "RooArgSet.h"
 #include "RooBrentRootFinder.h"
 #include "RooFormulaVar.h"
@@ -189,7 +189,7 @@ SimpleInterval* BayesianCalculator::GetInterval() const
    RooBrentRootFinder brf(*cdf_bind);
    brf.setTol(0.00005);
    
-   RooAbsRealLValue * poi = dynamic_cast<RooAbsRealLValue *>( fPOI.first()); 
+   RooRealVar * poi = dynamic_cast<RooRealVar *>( fPOI.first()); 
    assert(poi);
    
    double y = fSize;
@@ -204,7 +204,7 @@ SimpleInterval* BayesianCalculator::GetInterval() const
    delete cdf;
 
    TString interval_name = TString("BayesianInterval_a") + TString(this->GetName());
-   fInterval = new SimpleInterval(interval_name,"SimpleInterval from BayesianCalculator",poi,lowerLimit,upperLimit);
+   fInterval = new SimpleInterval(interval_name,"SimpleInterval from BayesianCalculator",*poi,lowerLimit,upperLimit,ConfidenceLevel());
   
    return fInterval;
 }
