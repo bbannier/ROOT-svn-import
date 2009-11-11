@@ -58,7 +58,8 @@ namespace RooStats {
       // ProposalFunction, number of iterations, burn in steps, confidence
       // level, and interval determination method. Any of these basic
       // settings can be overridden by calling one of the Set...() methods.
-      MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest);
+      // optionally pass the prior pdf , if not passed is assumed the given pdf already contains the prior inside
+      MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest, RooAbsPdf * priorPdf = 0);
 
       // This constructor will set up a basic settings package including a
       // ProposalFunction, number of iterations, burn in steps, confidence
@@ -77,7 +78,7 @@ namespace RooStats {
 
       // alternate constructor, no automatic basic settings
       MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
-         const RooArgSet& paramsOfInterest, ProposalFunction& proposalFunction,
+                     const RooArgSet& paramsOfInterest, RooAbsPdf * priorPdf, ProposalFunction& proposalFunction,
          Int_t numIters, RooArgList* axes = NULL, Double_t size = 0.05);
 
       virtual ~MCMCCalculator() {}
@@ -134,8 +135,9 @@ namespace RooStats {
       const RooArgSet  * fPOI; // parameters of interest for interval
       const RooArgSet  * fNuisParams; // nuisance parameters for interval
       mutable ProposalFunction* fPropFunc; // Proposal function for MCMC integration
-      RooAbsPdf * fPdf;   // pointer to common PDF (owned by the workspace) 
-      RooAbsData * fData;  // pointer to the data (owned by the workspace)
+      RooAbsPdf * fPdf;        // pointer to common PDF (owned by the workspace) 
+      RooAbsPdf * fPriorPdf;   // pointer to prior  PDF (owned by the workspace) 
+      RooAbsData * fData;     // pointer to the data (owned by the workspace)
       Int_t fNumIters; // number of iterations to run metropolis algorithm
       Int_t fNumBurnInSteps; // number of iterations to discard as burn-in, starting from the first
       Int_t fNumBins; // set the number of bins to create for each
