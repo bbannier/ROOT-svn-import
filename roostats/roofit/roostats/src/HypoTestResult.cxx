@@ -49,7 +49,8 @@ ClassImp(RooStats::HypoTestResult) ;
 using namespace RooStats;
 
 //____________________________________________________________________
-HypoTestResult::HypoTestResult()
+HypoTestResult::HypoTestResult(const char* name, const char * title) : 
+   TNamed(name,title), fNullPValue(0), fAlternatePValue(0)
 {
    // Default constructor
 }
