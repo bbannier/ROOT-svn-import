@@ -35,11 +35,11 @@ void rs701_BayesianCalculator()
   RooRealVar* POI = w->var("s");
   RooAbsPdf* priorPOI = w->pdf("priorPOI");
 
-  w->factory("n[1]"); // observed number of events
+  w->factory("n[2]"); // observed number of events
   RooDataSet data("data","",RooArgSet(*(w->var("x")),*(w->var("n"))),"n");
   data.add(RooArgSet(*(w->var("x"))),w->var("n")->getVal());
 
-  BayesianCalculator bcalc(data,*model,RooArgSet(*POI),*priorPOI,&nuisanceParameters);
+  BayesianCalculator bcalc(data,*model,RooArgSet(*POI),priorPOI,&nuisanceParameters);
   bcalc.SetTestSize(0.05);
 
   SimpleInterval* interval = bcalc.GetInterval();

@@ -49,11 +49,11 @@ void rs702_BayesianCalculator()
   RooDataSet data("data","",RooArgSet(*(w->var("x")),*(w->var("n"))),"n");
   data.add(RooArgSet(*(w->var("x"))),w->var("n")->getVal());
 
-  BayesianCalculator bcalc1(data,*model,RooArgSet(*POI),*priorPOI,0);
+  BayesianCalculator bcalc1(data,*model,RooArgSet(*POI),priorPOI,0);
   bcalc1.SetName("BC_flatPrior");
-  BayesianCalculator bcalc2(data,*model,RooArgSet(*POI),*priorPOI2,0);
+  BayesianCalculator bcalc2(data,*model,RooArgSet(*POI),priorPOI2,0);
   bcalc2.SetName("BC_1oversPrior");
-  BayesianCalculator bcalc3(data,*(w->pdf("pdf")),RooArgSet(*POI),*priorPOI,nuisanceParameters);
+  BayesianCalculator bcalc3(data,*(w->pdf("pdf")),RooArgSet(*POI),priorPOI,nuisanceParameters);
   bcalc3.SetName("BC_flatPrior_syst");
   bcalc1.SetTestSize(0.05);
   bcalc2.SetTestSize(0.05);
