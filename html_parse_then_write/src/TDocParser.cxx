@@ -34,7 +34,8 @@ namespace {
 
    class TMethodWrapperImpl: public TDocParser::TMethodWrapper {
    public:
-      TMethodWrapperImpl(const TMethod* m): fMeth(m) {}
+      TMethodWrapperImpl(const TMethod* m, int overloadIdx):
+         fMeth(m), fOverloadIdx(overloadIdx) {}
 
       static void SetClass(const TClass* cl) { fgClass = cl; }
 
@@ -42,6 +43,8 @@ namespace {
       Int_t GetNargs() const { return fMeth->GetNargs(); }
       virtual const TMethod* GetMethod() const { return fMeth; }
       Bool_t IsSortable() const { return kTRUE; }
+
+      Int_t GetOverloadIdx() const { return fOverloadIdx; }
 
       Int_t Compare(const TObject *obj) const {
          const TMethodWrapperImpl* m = dynamic_cast<const TMethodWrapperImpl*>(obj);
@@ -80,6 +83,7 @@ namespace {
    private:
       static const TClass* fgClass; // current class, defining inheritance sort order
       const TMethod* fMeth; // my method
+      Int_t fOverloadIdx; // this is the n-th overload
    };
 
    const TClass* TMethodWrapperImpl::fgClass = 0;
@@ -222,6 +226,7 @@ void TDocParser::AddClassMethodsRecursively(TBaseClass* bc)
 
    TMethod *method;
    TIter nextMethod(cl->GetListOfMethods());
+   std::map<std::string, int> methOverloads;
 
    while ((method = (TMethod *) nextMethod())) {
 
@@ -259,8 +264,10 @@ void TDocParser::AddClassMethodsRecursively(TBaseClass* bc)
          TMethodWrapperImpl* other = (TMethodWrapperImpl*) fMethods[access].FindObject(method->GetName());
          hidden |= (other) && (other->GetMethod()->GetClass() != method->GetClass());
       }
-      if (!hidden)
-         fMethods[mtype].Add(new TMethodWrapperImpl(method));
+      if (!hidden) {
+         fMethods[mtype].Add(new TMethodWrapperImpl(method, methOverloads[method->GetName()]));
+         ++methOverloads[method->GetName()];
+      }
    }
 
    TIter iBase(cl->GetListOfBases());

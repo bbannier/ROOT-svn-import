@@ -87,6 +87,7 @@ public:
    class TMethodWrapper: public TObject {
    public:
       virtual const TMethod* GetMethod() const = 0;
+      virtual Int_t GetOverloadIdx() const = 0;
    };
 
 protected:
