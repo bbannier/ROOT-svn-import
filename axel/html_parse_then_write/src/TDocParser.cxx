@@ -24,6 +24,7 @@
 #include "THtml.h"
 #include "TInterpreter.h"
 #include "TMethod.h"
+#include "TPRegexp.h"
 #include "TROOT.h"
 #include "TSystem.h"
 #include "TVirtualMutex.h"
@@ -1589,7 +1590,7 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
       return;
    }
 
-   TString pattern(methodPattern);
+   TPMERegexp patternRE(methodPattern ? methodPattern : "");
 
    TString codeOneLiner;
    TString methodRet;
@@ -1687,8 +1688,11 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
 
          if (!wroteMethodNowWaitingForOpenBlock) {
             // check for method
-            Ssiz_t posPattern = pattern.Length() ? fLineRaw.Index(pattern) : kNPOS;
-            if (posPattern != kNPOS && pattern.Length()) {
+            Ssiz_t posPattern = kNPOS;
+            if (methodPattern) {
+               posPattern = fLineRaw.Index((TPRegexp&)patternRE);
+            }
+            if (posPattern != kNPOS && methodPattern) {
                // no strings, no blocks in front of function declarations / implementations
                static const char vetoChars[] = "{\"";
                for (int ich = 0; posPattern != kNPOS && vetoChars[ich]; ++ich) {
@@ -1697,8 +1701,11 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
                      posPattern = kNPOS;
                }
             }
-            if (posPattern != kNPOS || !pattern.Length()) {
-               posPattern += pattern.Length();
+            if (posPattern != kNPOS || !methodPattern) {
+               if (methodPattern) {
+                  patternRE.Match(fLineRaw);
+                  posPattern += patternRE[0].Length();
+               }
                LocateMethodInCurrentLine(posPattern, methodRet, methodName, 
                   methodParam, srcHtmlOut, anchor, sourceFile, allowPureVirtual);
                if (methodName.Length()) {
@@ -1806,9 +1813,20 @@ void TDocParser::LocateMethodsInSource(std::ostream& out)
    pattern += "::";
    
    TString implFileName;
-   if (fHtml->GetImplFileName(fCurrentClass, kTRUE, implFileName))
+   if (fHtml->GetImplFileName(fCurrentClass, kTRUE, implFileName)) {
       LocateMethods(out, implFileName, kFALSE /*source info*/, useDocxxStyle, 
                     kFALSE /*allowPureVirtual*/, pattern, ".cxx.html");
+      Ssiz_t posGt = pattern.Index('>');
+      if (posGt != kNPOS) {
+         // template! Re-run with pattern '...<.*>::'
+         Ssiz_t posLt = pattern.Index('<');
+         if (posLt != kNPOS && posLt < posGt) {
+            pattern.Replace(posLt + 1, posGt - posLt - 1, ".*");
+            LocateMethods(out, implFileName, kFALSE /*source info*/, useDocxxStyle, 
+                    kFALSE /*allowPureVirtual*/, pattern, ".cxx.html");
+         }
+      }
+   }
 }
 
 //______________________________________________________________________________
