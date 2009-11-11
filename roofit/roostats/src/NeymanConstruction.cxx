@@ -94,8 +94,10 @@ NeymanConstruction::NeymanConstruction() :
 void NeymanConstruction::SetModel(const ModelConfig & model) { 
    // set the model
    fPdf = model.GetPdf();
-   fPOI = model.GetParametersOfInterest(); 
-   fNuisParams = model.GetNuisanceParameters(); 
+   fPOI.removeAll();
+   fNuisParams.removeAll();
+   if (model.GetParametersOfInterest() ) fPOI.add(*model.GetParametersOfInterest());
+   if (model.GetNuisanceParameters() )   fNuisParams.add(*model.GetNuisanceParameters());
 }
 
 //_______________________________________________________

@@ -258,7 +258,7 @@ namespace RooStats {
 
    protected:
       // data members
-      const RooArgSet  *fParameters; // parameters of interest for this interval
+      RooArgSet  fParameters; // parameters of interest for this interval
       MarkovChain* fChain; // the markov chain
       RooDataHist* fDataHist; // the binned Markov Chain data
       RooNDKeysPdf* fKeysPdf; // the kernel estimation pdf

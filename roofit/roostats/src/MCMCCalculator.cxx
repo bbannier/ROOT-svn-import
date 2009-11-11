@@ -84,7 +84,6 @@ using namespace RooStats;
 
 // default constructor
 MCMCCalculator::MCMCCalculator() : 
-   fPOI(0),
    fPropFunc(0), 
    fPdf(0), 
    fPriorPdf(0),
@@ -106,7 +105,7 @@ MCMCCalculator::MCMCCalculator() :
 MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
                                const RooArgSet& paramsOfInterest,
                                RooAbsPdf * prior) : 
-   fPOI(&paramsOfInterest),
+   fPOI(paramsOfInterest),
    fPropFunc(0), 
    fPdf(&pdf), 
    fPriorPdf(prior),
@@ -153,15 +152,17 @@ void MCMCCalculator::SetModel(const ModelConfig & model) {
    // set the model
    fPdf = model.GetPdf();  
    fPriorPdf = model.GetPriorPdf();
-   if (model.GetParametersOfInterest() ) fPOI = model.GetParametersOfInterest();
-   if (model.GetNuisanceParameters() )   fNuisParams = model.GetNuisanceParameters();
+   fPOI.removeAll();
+   fNuisParams.removeAll();
+   if (model.GetParametersOfInterest() ) fPOI.add(*model.GetParametersOfInterest());
+   if (model.GetNuisanceParameters() )   fNuisParams.add(*model.GetNuisanceParameters());
 }
 
 // alternate constructor, specifying many arguments
 MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
                                const RooArgSet& paramsOfInterest, RooAbsPdf * prior, ProposalFunction& proposalFunction,
                                Int_t numIters, RooArgList* axes, Double_t size) : 
-   fPOI(&paramsOfInterest),
+   fPOI(paramsOfInterest),
    fPropFunc(&proposalFunction), 
    fPdf(&pdf), 
    fPriorPdf(prior),
@@ -197,7 +198,8 @@ MCMCInterval* MCMCCalculator::GetInterval() const
 {
    // Main interface to get a RooStats::ConfInterval.  
 
-   if (!fData || !fPdf || !fPOI  ) return 0;
+   if (!fData || !fPdf   ) return 0;
+   if (fPOI.getSize() == 0) return 0;
 
    // if a proposal funciton has not been specified create a default one
    bool useDefaultPropFunc = (fPropFunc == 0); 
@@ -219,7 +221,7 @@ MCMCInterval* MCMCCalculator::GetInterval() const
    RemoveConstantParameters(params);
    if (fNumBins > 0) {
       SetBins(*params, fNumBins);
-      SetBins(*fPOI, fNumBins);
+      SetBins(fPOI, fNumBins);
       if (dynamic_cast<PdfProposal*>(fPropFunc)) {
          RooArgSet* proposalVars = ((PdfProposal*)fPropFunc)->GetPdf()->
                                                getParameters((RooAbsData*)NULL);
@@ -238,7 +240,7 @@ MCMCInterval* MCMCCalculator::GetInterval() const
    MarkovChain* chain = mh.ConstructChain();
 
    TString name = TString("MCMCInterval_") + TString(GetName() ); 
-   MCMCInterval* interval = new MCMCInterval(name, name, *fPOI, *chain);
+   MCMCInterval* interval = new MCMCInterval(name, name, fPOI, *chain);
    if (fAxes != NULL)
       interval->SetAxes(*fAxes);
    if (fNumBurnInSteps > 0)

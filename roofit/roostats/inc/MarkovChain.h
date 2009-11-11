@@ -121,8 +121,8 @@ namespace RooStats {
       }
 
    protected:
-      RooArgSet* fParameters;
-      RooArgSet* fDataEntry;
+      RooArgSet * fParameters;
+      RooArgSet * fDataEntry;
       RooDataSet* fChain;
       RooRealVar* fNLL;
       RooRealVar* fWeight;

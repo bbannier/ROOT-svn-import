@@ -100,9 +100,9 @@ namespace RooStats {
       virtual void SetPdf(RooAbsPdf& pdf) { fPdf = &pdf; }
 
       // specify the parameters of interest in the interval
-      virtual void SetParameters(const RooArgSet& set) { fPOI = &set; }
+      virtual void SetParameters(const RooArgSet& set) { fPOI.removeAll(); fPOI.add(set); }
       // specify the nuisance parameters (eg. the rest of the parameters)
-      virtual void SetNuisanceParameters(const RooArgSet& set) {fNuisParams = &set;}
+      virtual void SetNuisanceParameters(const RooArgSet& set) {fNuisParams.removeAll(); fNuisParams.add(set);}
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
       virtual void SetTestSize(Double_t size) {fSize = size;}
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
@@ -131,9 +131,9 @@ namespace RooStats {
 
    protected:
 
-      Double_t fSize; // size of the test (eg. specified rate of Type I error)
-      const RooArgSet  * fPOI; // parameters of interest for interval
-      const RooArgSet  * fNuisParams; // nuisance parameters for interval
+      Double_t fSize;          // size of the test (eg. specified rate of Type I error)
+      RooArgSet   fPOI;        // parameters of interest for interval
+      RooArgSet   fNuisParams; // nuisance parameters for interval (not really used)
       mutable ProposalFunction* fPropFunc; // Proposal function for MCMC integration
       RooAbsPdf * fPdf;        // pointer to common PDF (owned by the workspace) 
       RooAbsPdf * fPriorPdf;   // pointer to prior  PDF (owned by the workspace) 
