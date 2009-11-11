@@ -191,6 +191,11 @@ void TClassDocOutput::ListFunctions(std::ostream& classFile)
          classFile << ":";
          mangled = method->GetName();
          NameSpace2FileName(mangled);
+         Int_t overloadIdx = methWrap->GetOverloadIdx();
+         if (overloadIdx) {
+            mangled += "%";
+            mangled += overloadIdx;
+         }
          classFile << mangled << "\">";
          if (method->GetClass() != fCurrentClass) {
             classFile << "<span class=\"baseclass\">";
