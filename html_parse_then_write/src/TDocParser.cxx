@@ -1846,9 +1846,20 @@ void TDocParser::LocateMethodsInHeaderInline(std::ostream& out)
    pattern += "::";
    
    TString declFileName;
-   if (fHtml->GetDeclFileName(fCurrentClass, kTRUE, declFileName))
+   if (fHtml->GetDeclFileName(fCurrentClass, kTRUE, declFileName)) {
       LocateMethods(out, declFileName, kTRUE /*source info*/, useDocxxStyle, 
                     kFALSE /*allowPureVirtual*/, pattern, 0);
+      Ssiz_t posGt = pattern.Index('>');
+      if (posGt != kNPOS) {
+         // template! Re-run with pattern '...<.*>::'
+         Ssiz_t posLt = pattern.Index('<');
+         if (posLt != kNPOS && posLt < posGt) {
+            pattern.Replace(posLt + 1, posGt - posLt - 1, ".*");
+            LocateMethods(out, declFileName, kTRUE /*source info*/, useDocxxStyle, 
+                    kFALSE /*allowPureVirtual*/, pattern, 0);
+         }
+      }
+   }
 }
 
 //______________________________________________________________________________
