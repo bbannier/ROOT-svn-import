@@ -43,6 +43,11 @@ class TClassDocOutput;
 class TDocOutput;
 class THtml;
 
+namespace Doc {
+   class TClassDoc;
+   class TDocString;
+}
+
 class TDocParser: public TObject {
 protected:
    enum EDocContext {
@@ -95,12 +100,10 @@ protected:
    UInt_t         fLineNo;          // current line number
    TString        fLineRaw;         // current line
    TString        fLineStripped;    // current line without surrounding spaces
-   TString        fLineComment;         // current line with links and directives for doc
    TString        fLineSource;      // current line with links
-   TString        fComment;         // current comment
    TString        fFirstClassDoc;   // first class-doc found - per file, taken if fLastClassDoc is empty
    TString        fLastClassDoc;    // last class-doc found - becomes class doc at ClassImp or first method
-   TClass*        fCurrentClass;    // current class context of sources being parsed
+   Doc::TClassDoc*fCurrentClass;    // current class context of sources being parsed
    TClass*        fRecentClass;     // recently seen class context of sources being parsed, e.g. for Convert()
    TString        fCurrentModule;   // current module context of sources being parsed
    TString        fCurrentMethodTag;// name_idx of the currently parsed method
@@ -169,11 +172,10 @@ public:
    void          Convert(std::ostream& out, std::istream& in, const char* relpath,
                          Bool_t isCode, Bool_t interpretDirectives);
    void          DecrementMethodCount(const char* name);
-   virtual void  DecorateKeywords(std::ostream& out, const char* text);
-   virtual void  DecorateKeywords(TString& text);
+   virtual void  DecorateKeywords(Doc::TDocString& text);
    virtual void  DeleteDirectiveOutput() const;
    const TList*  GetMethods(EAccess access) const { return &fMethods[access]; }
-   TClass*       GetCurrentClass() const { return fCurrentClass; }
+   Doc::TClassDoc* GetCurrentClass() const { return fCurrentClass; }
    void          GetCurrentModule(TString& out_module) const;
    TDocOutput*   GetDocOutput() const { return fDocOutput; }
    Long_t        GetLineNumber() const { return fLineNumber; }

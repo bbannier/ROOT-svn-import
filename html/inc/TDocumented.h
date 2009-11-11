@@ -34,8 +34,8 @@ class TDocumented: public TObject {
 public:
    // Access specification
    enum EAccess {
-      kPublic = BIT(14),
-      kProtected,
+      kPublic,
+      kProtected = BIT(14),
       kPrivate,
       kUnknownAccess,
       kNumAccess = kUnknownAccess,

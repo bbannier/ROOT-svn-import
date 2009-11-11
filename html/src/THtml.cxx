@@ -1510,7 +1510,7 @@ void THtml::AddClassName(const char* cname, TClass* classPtr, Bool_t selected,
 {
 // Add a class to the list of all known classes
 
-   Doc::TDocTypeName* dtn = new Doc::TDocTypeName(cname, classPtr);
+   Doc::TDocTypeName* dtn = new Doc::TDocTypeName(classPtr);
    FindFilesForType(dtn, classPtr);
 
    if (!dtn->HaveSource()) {
@@ -1587,7 +1587,7 @@ void THtml::AddClassName(const char* cname, TClass* classPtr, Bool_t selected,
    if (gDebug > 0) {
       Info("AddClassName", "Adding class %s, module %s (%sselected)",
            cdi->GetName(), module ? module->GetName() : "[UNKNOWN]",
-           cdi->IsSelected() ? "" : "not ");
+           dtn->IsSelected() ? "" : "not ");
    }
 }
 
@@ -1643,7 +1643,7 @@ void THtml::CreateListOfClasses(const char* filter)
 
       AddClassName(shortName.c_str(), classPtr, re.Match(shortName),
                    classesDeclFileNotFound, classesImplFileNotFound,
-                   i == -1, skipROOTClasses);
+                   rootLibs, i == -1, skipROOTClasses);
    }
 
    bool cannotFind = false;
@@ -1690,8 +1690,8 @@ void THtml::CreateListOfClasses(const char* filter)
       if (dt->GetType() != -1) continue;
 
       {
-         TObject oldTD = fDocEntityInfo.fClasses.FindObject(dt->GetName());
-         if (oldID) delete oldTD;
+         TObject* oldTD = fDocEntityInfo.fClasses.FindObject(dt->GetName());
+         if (oldTD) delete oldTD;
       }
 
       bool enclosed = true;
@@ -1714,6 +1714,7 @@ void THtml::CreateListOfClasses(const char* filter)
          }
       }
 
+      parser.
       Doc::TTypedefDoc* tddoc = new Doc::TTypedefDoc(surroundingCD, ShortType(dt->GetName()), dt);
 
       TString htmlfilename(tddoc->GetName());

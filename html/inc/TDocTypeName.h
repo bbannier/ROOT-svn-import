@@ -39,8 +39,8 @@ public:
 
    // Kind of C++ record this TDocTypeName is describing
    enum EKind {
-      kClass = BIT(16), // it's a class
-      kStruct, // it's a struct
+      kClass, // it's a class
+      kStruct = BIT(16), // it's a struct
       kUnion, // it's a union
       kEnum, // it's an enum
       kNamespace, // it's a namespace
