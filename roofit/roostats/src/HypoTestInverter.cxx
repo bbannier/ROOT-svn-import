@@ -57,7 +57,7 @@ HypoTestInverter::HypoTestInverter( const char* name,
   // create a new HypoTestInverterResult to hold all computed results
   TString results_name = this->GetName();
   results_name += "_results";
-  fResults = new HypoTestInverterResult(results_name,"HypoTestInverterResult",scannedVariable,ConfidenceLevel());
+  fResults = new HypoTestInverterResult(results_name,"HypoTestInverterResult",*scannedVariable,ConfidenceLevel());
 
 }
 

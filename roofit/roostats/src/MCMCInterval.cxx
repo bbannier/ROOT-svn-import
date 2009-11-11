@@ -142,59 +142,6 @@ using namespace std;
 
 static const Double_t DEFAULT_EPSILON = 0.01;
 
-MCMCInterval::MCMCInterval() : ConfInterval()
-{
-   fConfidenceLevel = 0.0;
-   fHistConfLevel = 0.0;
-   fKeysConfLevel = 0.0;
-   fFull = 0.0;
-   fChain = NULL;
-   fAxes = NULL;
-   fDataHist = NULL;
-   fSparseHist = NULL;
-   fKeysPdf = NULL;
-   fProduct = NULL;
-   fHeavyside = NULL;
-   fKeysDataHist = NULL;
-   fCutoffVar = NULL;
-   fHist = NULL;
-   fNumBurnInSteps = 0;
-   fHistCutoff = -1;
-   fKeysCutoff = -1;
-   fDimension = 1;
-   fUseKeys = kFALSE;
-   fUseSparseHist = kFALSE;
-   fIsHistStrict = kTRUE;
-   fEpsilon = DEFAULT_EPSILON;
-   fParameters = NULL;
-}
-
-MCMCInterval::MCMCInterval(const char* name) : ConfInterval(name, name)
-{
-   fConfidenceLevel = 0.0;
-   fHistConfLevel = 0.0;
-   fKeysConfLevel = 0.0;
-   fFull = 0.0;
-   fChain = NULL;
-   fAxes = NULL;
-   fDataHist = NULL;
-   fSparseHist = NULL;
-   fKeysPdf = NULL;
-   fProduct = NULL;
-   fHeavyside = NULL;
-   fKeysDataHist = NULL;
-   fCutoffVar = NULL;
-   fHist = NULL;
-   fNumBurnInSteps = 0;
-   fHistCutoff = -1;
-   fKeysCutoff = -1;
-   fDimension = 1;
-   fUseKeys = kFALSE;
-   fUseSparseHist = kFALSE;
-   fIsHistStrict = kTRUE;
-   fEpsilon = DEFAULT_EPSILON;
-   fParameters = NULL;
-}
 
 MCMCInterval::MCMCInterval(const char* name, const char* title)
    : ConfInterval(name, title)
@@ -251,6 +198,22 @@ MCMCInterval::MCMCInterval(const char* name, const char* title,
    SetParameters(parameters);
 }
 
+MCMCInterval::~MCMCInterval()
+{
+   // destructor
+   delete[] fAxes;
+   delete fHist;
+   delete fChain;
+   // kbelasco: check here for memory management errors
+   delete fDataHist;
+   delete fSparseHist;
+   delete fKeysPdf;
+   delete fProduct;
+   delete fHeavyside;
+   delete fKeysDataHist;
+   delete fCutoffVar;
+}
+
 struct CompareDataHistBins {
    CompareDataHistBins(RooDataHist* hist) : fDataHist(hist) {}
    bool operator() (Int_t bin1 , Int_t bin2) { 
@@ -273,7 +236,7 @@ struct CompareSparseHistBins {
    THnSparse* fSparseHist; 
 };
 
-Bool_t MCMCInterval::IsInInterval(const RooArgSet& point) 
+Bool_t MCMCInterval::IsInInterval(const RooArgSet& point) const 
 {
    if (fUseKeys) {
       // evaluate keyspdf at point and return whether >= cutoff
@@ -737,6 +700,10 @@ Double_t MCMCInterval::GetActualConfidenceLevel()
       return fKeysConfLevel;
    else
       return fHistConfLevel;
+}
+
+Double_t  MCMCInterval::GetSumOfWeights() const { 
+   return fDataHist->sum(kFALSE);
 }
 
 Double_t MCMCInterval::LowerLimit(RooRealVar& param)

@@ -96,7 +96,7 @@ namespace RooStats {
       mutable RooAbsPdf* fPosteriorPdf; 
       mutable SimpleInterval* fInterval;     // cached pointer to resulting interval
 
-      double fSize; 
+      double fSize;   // size used for getting the interval
 
 
    protected:
