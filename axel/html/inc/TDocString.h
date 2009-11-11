@@ -39,11 +39,14 @@ public:
    class TDocRef: public TObject {
    public:
       enum ERefType {
-         kClass = BIT(16),
-         kMember,
+         kClass,
+         kMember = BIT(16),
          kTypedef,
+         kComment,
+         kString,
+         kKeyword,
          kNumRefTypes,
-         kRefTypeMask = BIT(16) | BIT(17)
+         kRefTypeMask = BIT(16) | BIT(17) | BIT(18)
       };
       TDocRef(TDocStringTable* table, const char* refname,
               Ssiz_t from, Ssiz_t to, ERefType reftype):
@@ -85,7 +88,7 @@ public:
    TDocString(const char* str = ""): fStr(str), fRefs(0) {}
    virtual ~TDocString();
 
-   void AddRef(TDocStringTable* table, Ssiz_t from, Ssiz_t to, TDocumented* doc);
+   void AddRef(TDocStringTable* table, Ssiz_t from, Ssiz_t to, TDocumented* doc = 0);
    TCollection* GetListOfRefs() const { return fRefs; }
 
    operator const char*() const { return fStr; }

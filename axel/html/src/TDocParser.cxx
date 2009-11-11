@@ -422,19 +422,11 @@ void TDocParser::Convert(std::ostream& out, std::istream& in, const char* relpat
 }
 
 //______________________________________________________________________________
-void TDocParser::DecorateKeywords(std::ostream& out, const char *text)
+void TDocParser::DecorateKeywords(TDocString& docstr, TDocStringTable* table)
 {
-   // Expand keywords in text, writing to out.
-   TString str(text);
-   DecorateKeywords(str);
-   out << str;
-}
-
-//______________________________________________________________________________
-void TDocParser::DecorateKeywords(TString& line)
-{
-   // Find keywords in line and create URLs around them. Escape characters with a 
-   // special meaning for HTML. Protect "Begin_Html"/"End_Html" pairs, and set the
+   // Find keywords in line and create TDocString's references for them.
+   // Escape characters with a special meaning for HTML.
+   // Protect "Begin_Html"/"End_Html" pairs, and set the
    // parsing context. Evaluate sequences like a::b->c.
    // Skip regions where directives are active.
 
@@ -447,6 +439,7 @@ void TDocParser::DecorateKeywords(TString& line)
       kNumAccesses
    } scoping = kNada;
 
+   TString& line = docstr.String();
    currentType.push_back(0);
 
    Ssiz_t i = 0;
@@ -535,6 +528,8 @@ void TDocParser::DecorateKeywords(TString& line)
       } else // code or comment
          currentType.back() = 0;
 
+      Ssiz_t stringStart = (Ssiz_t) -1;
+      Ssiz_t commentStart = (Ssiz_t) -1;
 
       if (!IsWord(line[i])){
 
@@ -561,8 +556,12 @@ void TDocParser::DecorateKeywords(TString& line)
                   (line.Length() > i + 2 && line[i + 2] == '\'') ||
                   // '\a'
                   (line.Length() > i + 3 && line[i + 1] == '\'' && line[i + 3] == '\'')))) {
-
-               fDocOutput->DecorateEntityBegin(line, i, kString);
+               if (stringStart != (Ssiz_t) -1 ) {
+                  Warning("DecorateKeywords", "Comment already started at %ld!",
+                          stringStart);
+               } else {
+                  stringStart = i;
+               }
                fParseContext.push_back(kString);
                currentType.back() = 0;
                closeString = kFALSE;
@@ -572,7 +571,12 @@ void TDocParser::DecorateKeywords(TString& line)
                if (line[i+1] == '/')
                   fParseContext.back() |= kCXXComment;
                currentType.back() = 0;
-               fDocOutput->DecorateEntityBegin(line, i, kComment);
+               if (commentStart != (Ssiz_t) -1 ) {
+                  Warning("DecorateKeywords", "Comment already started at %ld!",
+                          commentStart);
+               } else {
+                  commentStart = i;
+               }
                ++i;
             } else if (context == kComment 
                && !(fParseContext.back() & kCXXComment)
@@ -583,7 +587,11 @@ void TDocParser::DecorateKeywords(TString& line)
 
                currentType.back() = 0;
                i += 2;
-               fDocOutput->DecorateEntityEnd(line, i, kComment);
+               if (commentStart == (Ssiz_t) -1 ) {
+                  Warning("DecorateKeywords", "Comment not active!");
+               } else {
+                  docstr.AddRef(table, commentStart, i, TDocString::kComment);
+               }
                if (!fCommentAtBOL) {
                   if (InContext(kDirective))
                      ((TDocDirective*)fDirectiveHandlers.Last())->AddLine(line(copiedToCommentUpTo, i));
@@ -602,7 +610,12 @@ void TDocParser::DecorateKeywords(TString& line)
             fDocOutput->ReplaceSpecialChars(line, i);
 
          if (closeString) {
-            fDocOutput->DecorateEntityEnd(line, i, kString);
+            if (stringStart == (Ssiz_t) -1) {
+               Warning("DecorateKeywords", "Expected string start to be set!");
+            } else {
+               docstr.AddRef(table, stringStart, i, TDocString::kString);
+               stringStart = (Ssiz_t) -1;
+            }
             if (fParseContext.size()>1)
                fParseContext.pop_back();
 
@@ -637,10 +650,9 @@ void TDocParser::DecorateKeywords(TString& line)
       // don't replace keywords in comments
       if (Context() == kCode
          && fgKeywords.find(word.Data()) != fgKeywords.end()) {
-         fDocOutput->DecorateEntityBegin(line, i, kKeyword);
-         i += word.Length();
-         fDocOutput->DecorateEntityEnd(line, i, kKeyword);
-         --i; // -1 for ++i
+         Ssiz_t wordlen = word.Length();
+         docstr.AddRef(table, i, i + wordlen, TDocString::kKeyword);
+         i += wordlen - 1; // -1 for ++i
          currentType.back() = 0;
          continue;
       }
@@ -807,7 +819,12 @@ void TDocParser::DecorateKeywords(TString& line)
 
    // clean up, no strings across lines
    if (Context() == kString) {
-      fDocOutput->DecorateEntityEnd(line, i, kString);
+      if (stringStart == (Ssiz_t) -1) {
+         Warning("DecorateKeywords", "Expected string start to be set!");
+      } else {
+         docstr.AddRef(table, stringStart, i, kString);
+         stringStart = (Ssiz_t) -1;
+      }
       if (fParseContext.size()>1)
          fParseContext.pop_back();
       currentType.back() = 0;
@@ -828,10 +845,10 @@ void TDocParser::DecorateKeywords(TString& line)
    // </span> gets sent to the directive.
    // clean up, no CPP comment across lines
    if (InContext(kComment) & kCXXComment) {
-      fDocOutput->DecorateEntityEnd(line, i, kComment);
-      if (fLineComment.Length()) {
-         Ssiz_t pos = fLineComment.Length();
-         fDocOutput->DecorateEntityEnd(fLineComment, pos, kComment);
+      if (commentStart == (Ssiz_t) -1 ) {
+         Warning("DecorateKeywords", "Comment not active!");
+      } else {
+         docstr.AddRef(table, commentStart, i, TDocString::kComment);
       }
       RemoveCommentContext(kTRUE);
       currentType.back() = 0;
@@ -957,7 +974,7 @@ Bool_t TDocParser::HandleDirective(TString& line, Ssiz_t& pos, TString& word,
    if (!clDirective)
       return kFALSE;
 
-   // we'll need end later on: afer the begin block, both end _and_ begin can be true.
+   // we'll need end later on: after the begin block, both end _and_ begin can be true.
    Bool_t end = !begin;
 
    TDocDirective* directive = 0; // allow re-use of object from begin block in end

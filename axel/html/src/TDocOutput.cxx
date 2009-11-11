@@ -888,7 +888,7 @@ void TDocOutput::CreateModuleIndex()
          } // while next class in module
       } // just a scope block
 
-      TIter iClass(module->GetClasses());
+      TIter iClass(module->GetClasses().GetArray());
       Doc::TDocTypeName* cdi = 0;
       UInt_t count = 0;
       UInt_t currentIndexEntry = 0;

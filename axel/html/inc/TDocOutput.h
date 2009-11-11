@@ -93,19 +93,22 @@ public:
    virtual void   CreateClassTypeDefs();
    virtual void   CreateHierarchy();
 
+   /*
    virtual void   DecorateEntityBegin(TString& str, Ssiz_t& pos, TDocParser::EParseContext type);
    virtual void   DecorateEntityEnd(TString& str, Ssiz_t& pos, TDocParser::EParseContext type);
+   */
    virtual void   FixupAuthorSourceInfo(TString& authors);
    const char*    GetExtension() const { return ".html"; }
    THtml*         GetHtml() { return fHtml; }
    virtual Bool_t IsModified(TClass *classPtr, EFileType type);
    virtual void   NameSpace2FileName(TString &name);
-
+   /*
    virtual void   ReferenceEntity(TSubString& str, TClass* entity, const char* comment = 0);
    virtual void   ReferenceEntity(TSubString& str, TDataMember* entity, const char* comment = 0);
    virtual void   ReferenceEntity(TSubString& str, TDataType* entity, const char* comment = 0);
    virtual void   ReferenceEntity(TSubString& str, TMethod* entity, const char* comment = 0);
    virtual Bool_t ReferenceIsRelative(const char* reference) const;
+   */
 
    virtual const char* ReplaceSpecialChars(char c);
    void           ReplaceSpecialChars(std::ostream &out, const char *string);
