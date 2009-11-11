@@ -75,6 +75,8 @@ END_HTML
 #include "RooStats/PdfProposal.h"
 #endif
 
+#include "RooProdPdf.h"
+
 ClassImp(RooStats::MCMCCalculator);
 
 using namespace RooFit;
@@ -85,6 +87,7 @@ MCMCCalculator::MCMCCalculator() :
    fPOI(0),
    fPropFunc(0), 
    fPdf(0), 
+   fPriorPdf(0),
    fData(0),
    fAxes(0)
 {
@@ -101,10 +104,12 @@ MCMCCalculator::MCMCCalculator() :
 // RooRealVar, determines interval by keys, and turns on sparse histogram
 // mode in the MCMCInterval.  Finds a 95% confidence interval.
 MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
-                               const RooArgSet& paramsOfInterest) : 
+                               const RooArgSet& paramsOfInterest,
+                               RooAbsPdf * prior) : 
    fPOI(&paramsOfInterest),
    fPropFunc(0), 
    fPdf(&pdf), 
+   fPriorPdf(prior),
    fData(&data),
    fAxes(0)
 {
@@ -118,8 +123,8 @@ MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
 MCMCCalculator::MCMCCalculator(RooAbsData& data, const ModelConfig & model) :
    fPropFunc(0), 
    fPdf(model.GetPdf()), 
-   fData(&data),
-   fAxes(0)
+   fPriorPdf(0),
+   fData(&data)
 {
    SetModel(model);
    SetupBasicUsage();
@@ -131,6 +136,7 @@ MCMCCalculator::MCMCCalculator(RooAbsData& data, const ModelConfig & model,
                                RooArgList* axes, Double_t size) : 
    fPropFunc(&proposalFunction), 
    fPdf(model.GetPdf()), 
+   fPriorPdf(0),
    fData(&data), 
    fAxes(axes)
 {
@@ -146,17 +152,19 @@ MCMCCalculator::MCMCCalculator(RooAbsData& data, const ModelConfig & model,
 void MCMCCalculator::SetModel(const ModelConfig & model) { 
    // set the model
    fPdf = model.GetPdf();  
+   fPriorPdf = model.GetPriorPdf();
    if (model.GetParametersOfInterest() ) fPOI = model.GetParametersOfInterest();
    if (model.GetNuisanceParameters() )   fNuisParams = model.GetNuisanceParameters();
 }
 
 // alternate constructor, specifying many arguments
 MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
-                               const RooArgSet& paramsOfInterest, ProposalFunction& proposalFunction,
+                               const RooArgSet& paramsOfInterest, RooAbsPdf * prior, ProposalFunction& proposalFunction,
                                Int_t numIters, RooArgList* axes, Double_t size) : 
    fPOI(&paramsOfInterest),
    fPropFunc(&proposalFunction), 
    fPdf(&pdf), 
+   fPriorPdf(prior),
    fData(&data), 
    fAxes(axes)
 {
@@ -193,10 +201,18 @@ MCMCInterval* MCMCCalculator::GetInterval() const
 
    // if a proposal funciton has not been specified create a default one
    bool useDefaultPropFunc = (fPropFunc == 0); 
+   bool usePriorPdf = (fPriorPdf != 0);
    if (useDefaultPropFunc) fPropFunc = new UniformProposal(); 
 
-   RooArgSet* constrainedParams = fPdf->getParameters(*fData);
-   RooAbsReal* nll = fPdf->createNLL(*fData, Constrain(*constrainedParams));
+   // if prior is given create product 
+   RooAbsPdf * prodPdf = fPdf;
+   if (usePriorPdf) { 
+      TString prodName = TString("product_") + TString(fPdf->GetName()) + TString("_") + TString(fPriorPdf->GetName() );   
+      prodPdf = new RooProdPdf(prodName,prodName,RooArgList(*fPdf,*fPriorPdf) );
+   }
+
+   RooArgSet* constrainedParams = prodPdf->getParameters(*fData);
+   RooAbsReal* nll = prodPdf->createNLL(*fData, Constrain(*constrainedParams));
    delete constrainedParams;
 
    RooArgSet* params = nll->getParameters(*fData);
@@ -232,6 +248,9 @@ MCMCInterval* MCMCCalculator::GetInterval() const
    interval->SetConfidenceLevel(1.0 - fSize);
 
    if (useDefaultPropFunc) delete fPropFunc; 
+   if (usePriorPdf) delete prodPdf; 
+   delete nll; 
+   delete params;
    
    return interval;
 }

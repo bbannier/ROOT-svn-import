@@ -45,7 +45,7 @@ namespace RooStats {
       BayesianCalculator( RooAbsData& data,
                           RooAbsPdf& pdf,
                           const RooArgSet & POI,
-                          RooAbsPdf& priorPOI,
+                          RooAbsPdf* priorPOI = 0,
                           const RooArgSet* nuisanceParameters = 0 );
 
       BayesianCalculator( RooAbsData& data,
