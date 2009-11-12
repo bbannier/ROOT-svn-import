@@ -25,13 +25,10 @@ namespace RooStats {
 
   public:
     // default constructors
-    explicit SimpleInterval(const char* name = 0, const char* title = 0);
+    explicit SimpleInterval(const char* name = 0);
 
     // constructor from name, the Parameter of interest and lower/upper bound values 
     SimpleInterval(const char* name, const RooRealVar & var, Double_t lower, Double_t upper, Double_t cl);
-
-    // constructor from name, title, the Parameter of interest and lower/upper bound values 
-    SimpleInterval(const char* name, const char* title, const RooRealVar& var, Double_t lower , Double_t upper, Double_t cl);
 
     // destructor
     virtual ~SimpleInterval();
@@ -62,7 +59,6 @@ namespace RooStats {
   private:
 
     ClassDef(SimpleInterval,1)  // Concrete implementation of ConfInterval for simple 1-D intervals in the form [a,b]
-
 
     RooArgSet fParameters; // set containing the parameter of interest
     Double_t  fLowerLimit; // lower interval limit

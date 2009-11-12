@@ -31,34 +31,32 @@ ClassImp(RooStats::HypoTestInverter)
 using namespace RooStats;
 
 
-HypoTestInverter::HypoTestInverter( const char* name,
-				    const char* title ) :
-   TNamed( TString(name), TString(title) ), 
+HypoTestInverter::HypoTestInverter( ) :
    fCalculator0(0),
    fScannedVariable(0),
    fResults(0)
 {
-  // default constructor (doesn't do anything)
+  // default constructor (doesn't do anything) 
 }
 
 
 HypoTestInverter::HypoTestInverter( const char* name,
-				    const char* title,
 				    HypoTestCalculator* myhc0,
 				    RooRealVar* scannedVariable ) :
-  TNamed( TString(name), TString(title) ),
+  TNamed( name, name ),
   fCalculator0(myhc0),
   fScannedVariable(scannedVariable)
 {
   // constructor
+  if (name==0) SetName("HypoTestInverter");
 
   //if (myhc0->ClassName()!="HybridCalculator") std::cout << "NOT SUPPORTED\n";
 
   // create a new HypoTestInverterResult to hold all computed results
   TString results_name = this->GetName();
   results_name += "_results";
-  fResults = new HypoTestInverterResult(results_name,"HypoTestInverterResult",*scannedVariable,ConfidenceLevel());
-
+  fResults = new HypoTestInverterResult(results_name,*scannedVariable,ConfidenceLevel());
+  fResults->SetTitle("HypoTestInverter Result");
 }
 
 

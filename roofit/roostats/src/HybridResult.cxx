@@ -43,11 +43,22 @@ using namespace RooStats;
 
 ///////////////////////////////////////////////////////////////////////////
 
-HybridResult::HybridResult( const char *name, const char *title,
+HybridResult::HybridResult( const char *name) :
+   HypoTestResult(name),
+   fTestStat_data(-999.),
+   fComputationsNulDoneFlag(false),
+   fComputationsAltDoneFlag(false)
+{
+   // HybridResult default constructor (with name )
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+HybridResult::HybridResult( const char *name,
                             std::vector<double>& testStat_sb_vals,
                             std::vector<double>& testStat_b_vals,
 			    bool sumLargerValues ) :
-   HypoTestResult(name,title,0,0),
+   HypoTestResult(name,0,0),
    fTestStat_data(-999.),
    fComputationsNulDoneFlag(false),
    fComputationsAltDoneFlag(false),
@@ -68,17 +79,6 @@ HybridResult::HybridResult( const char *name, const char *title,
    fTestStat_b.reserve(vector_size_b);
    for (int i=0;i<vector_size_b;++i)
       fTestStat_b.push_back(testStat_b_vals[i]);
-}
-
-///////////////////////////////////////////////////////////////////////////
-
-HybridResult::HybridResult( const char *name, const char *title) :
-   HypoTestResult(name,title),
-   fTestStat_data(-999.),
-   fComputationsNulDoneFlag(false),
-   fComputationsAltDoneFlag(false)
-{
-   // HybridResult constructor (with name and title)
 }
 
 

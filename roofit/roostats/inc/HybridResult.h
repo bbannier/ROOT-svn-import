@@ -29,10 +29,10 @@ namespace RooStats {
    public:
 
       /// Default constructor 
-      explicit HybridResult(const char *name = 0,const char *title = 0);
+      explicit HybridResult(const char *name = 0);
 
       /// Constructor for HybridResult
-      HybridResult(const char *name,const char *title,std::vector<double>& testStat_sb_vals,
+      HybridResult(const char *name,std::vector<double>& testStat_sb_vals,
                    std::vector<double>& testStat_b_vals, bool sumLargerValues=true);
 
 

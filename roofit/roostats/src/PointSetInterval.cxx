@@ -46,24 +46,17 @@ using namespace RooStats;
 
 
 //____________________________________________________________________
-PointSetInterval::PointSetInterval(const char* name, const char* title) :
-   ConfInterval(name,title), fParameterPointsInInterval(0)
+PointSetInterval::PointSetInterval(const char* name) :
+   ConfInterval(name), fParameterPointsInInterval(0)
 {
-   // Alternate constructor
+   // Default constructor
 }
 
 //____________________________________________________________________
 PointSetInterval::PointSetInterval(const char* name, RooAbsData& data) :
-   ConfInterval(name,name), fParameterPointsInInterval(&data)
+   ConfInterval(name), fParameterPointsInInterval(&data)
 {
-   // Alternate constructor
-}
-
-//____________________________________________________________________
-PointSetInterval::PointSetInterval(const char* name, const char* title, RooAbsData& data) :
-   ConfInterval(name,title), fParameterPointsInInterval(&data)
-{
-   // Alternate constructor
+   // Alternate constructor passing the dataset 
 }
 
 

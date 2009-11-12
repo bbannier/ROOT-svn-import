@@ -209,7 +209,8 @@ SimpleInterval* BayesianCalculator::GetInterval() const
    delete cdf;
 
    TString interval_name = TString("BayesianInterval_a") + TString(this->GetName());
-   fInterval = new SimpleInterval(interval_name,"SimpleInterval from BayesianCalculator",*poi,lowerLimit,upperLimit,ConfidenceLevel());
+   fInterval = new SimpleInterval(interval_name,*poi,lowerLimit,upperLimit,ConfidenceLevel());
+   fInterval->SetTitle("SimpleInterval from BayesianCalculator");
   
    return fInterval;
 }

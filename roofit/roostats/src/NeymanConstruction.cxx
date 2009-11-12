@@ -281,7 +281,7 @@ ConfInterval* NeymanConstruction::GetInterval() const {
 
   // create an interval based pointsInInterval
   PointSetInterval* interval 
-    = new PointSetInterval("ClassicalConfidenceInterval", "ClassicalConfidenceInterval", *pointsInInterval);
+    = new PointSetInterval("ClassicalConfidenceInterval", *pointsInInterval);
   
 
   if(fSaveBeltToFile){
@@ -445,7 +445,7 @@ ConfInterval* NeymanConstruction::Run(TList *SamplingList) const {
 
   // create an interval based fPointsToTest
   TString name = TString("ClassicalConfidenceInterval_") + TString(GetName() ); 
-  PointSetInterval* interval  = new PointSetInterval(name, name, *fPointsToTest);
+  PointSetInterval* interval  = new PointSetInterval(name, *fPointsToTest);
   
   //delete data;
   return interval;
