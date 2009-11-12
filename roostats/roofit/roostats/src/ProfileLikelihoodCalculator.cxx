@@ -78,8 +78,8 @@ ProfileLikelihoodCalculator::ProfileLikelihoodCalculator() :
 }
 
 ProfileLikelihoodCalculator::ProfileLikelihoodCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest, 
-                                                         Double_t size, const RooArgSet* nullParams ) :
-   CombinedCalculator(data,pdf, paramsOfInterest, size, nullParams ), 
+                                                         Double_t size, const RooArgSet* nullParams, const RooArgSet* altParams ) :
+   CombinedCalculator(data,pdf, paramsOfInterest, size, nullParams, altParams ), 
    fFitResult(0)
 {
    // constructor from pdf and parameters
@@ -95,7 +95,7 @@ ProfileLikelihoodCalculator::ProfileLikelihoodCalculator(RooAbsData& data,  Mode
    if (model.GetPriorPdf() ) { 
       std::string name = std::string("Costrained_") + (model.GetPdf())->GetName() + std::string("_with_") + (model.GetPriorPdf())->GetName();
       fPdf = new RooProdPdf(name.c_str(),name.c_str(), *(model.GetPdf()), *(model.GetPriorPdf()) );
-      // set pdf in ModelConfig which will import in WS  that will manage it 
+      // set pdf in ModelConfig which will import in WS  and it will manage it 
       model.SetPdf(*fPdf);
    }
 }
@@ -152,7 +152,7 @@ LikelihoodInterval* ProfileLikelihoodCalculator::GetInterval() const {
 //    RooAbsData* data = fWS->data(fDataName);
    RooAbsPdf * pdf = GetPdf();
    RooAbsData* data = GetData(); 
-   if (!data || !pdf || !fPOI) return 0;
+   if (!data || !pdf || fPOI.getSize() == 0) return 0;
 
    RooArgSet* constrainedParams = pdf->getParameters(*data);
    RemoveConstantParameters(constrainedParams);
@@ -165,7 +165,7 @@ LikelihoodInterval* ProfileLikelihoodCalculator::GetInterval() const {
    */
 
    RooAbsReal* nll = pdf->createNLL(*data, CloneData(kTRUE), Constrain(*constrainedParams));
-   RooAbsReal* profile = nll->createProfile(*fPOI);
+   RooAbsReal* profile = nll->createProfile(fPOI);
    profile->addOwnedComponents(*nll) ;  // to avoid memory leak
 
 
@@ -180,7 +180,7 @@ LikelihoodInterval* ProfileLikelihoodCalculator::GetInterval() const {
    const RooArgList & fitParams = fFitResult->floatParsFinal(); 
    for (int i = 0; i < fitParams.getSize(); ++i) {
       RooRealVar & fitPar =  (RooRealVar &) fitParams[i];
-      RooRealVar * par = (RooRealVar*) fPOI->find( fitPar.GetName() );      
+      RooRealVar * par = (RooRealVar*) fPOI.find( fitPar.GetName() );      
       if (par) { 
          par->setVal( fitPar.getVal() );
          par->setError( fitPar.getError() );
@@ -197,7 +197,7 @@ LikelihoodInterval* ProfileLikelihoodCalculator::GetInterval() const {
 
    // make a list of fPOI with fit result values and pass to LikelihoodInterval class
    // bestPOI is a cloned list of POI only with their best fit values 
-   TIter iter = fPOI->createIterator(); 
+   TIter iter = fPOI.createIterator(); 
    RooArgSet fitParSet(fitParams); 
    RooArgSet * bestPOI = new RooArgSet();  
    while (RooAbsArg * arg =  (RooAbsArg*) iter.Next() ) { 
@@ -207,7 +207,7 @@ LikelihoodInterval* ProfileLikelihoodCalculator::GetInterval() const {
    }
    // fPOI contains the paramter of interest of the PL object 
    // and bestPOI contains a snapshot with the best fit values 
-   LikelihoodInterval* interval = new LikelihoodInterval(name, profile, fPOI, bestPOI);
+   LikelihoodInterval* interval = new LikelihoodInterval(name, profile, &fPOI, bestPOI);
    interval->SetConfidenceLevel(1.-fSize);
    delete constrainedParams;
    return interval;
@@ -229,7 +229,7 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
 
    if (!data || !pdf) return 0;
 
-   if (!fNullParams) return 0; 
+   if (fNullParams.getSize() == 0) return 0; 
 
    // do a global fit 
    if (!fFitResult) DoGlobalFit(); 
@@ -246,7 +246,7 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
 
    // set POI to given values, set constant, calculate conditional MLE
    RooArgList poiList; /// make ordered list since a vector will be associated to keep parameter values
-   poiList.add(*fNullParams); 
+   poiList.add(fNullParams); 
    std::vector<double> oldValues(poiList.getSize() ); 
    for (unsigned int i = 0; i < oldValues.size(); ++i) { 
       RooRealVar * mytarget = (RooRealVar*) constrainedParams->find(poiList[i].GetName());
