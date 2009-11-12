@@ -71,9 +71,10 @@ namespace RooStats {
    public:
 
       // default constructor
-      explicit MCMCInterval(const char* name = 0, const char* title = 0);
+      explicit MCMCInterval(const char* name = 0);
+
       // constructor from parameter of interest and Markov chain object
-      MCMCInterval(const char* name, const char* title, const RooArgSet& parameters,
+      MCMCInterval(const char* name, const RooArgSet& parameters,
                    MarkovChain& chain);
 
       enum {DEFAULT_NUM_BINS = 50};

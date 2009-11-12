@@ -24,8 +24,8 @@ ClassImp(RooStats::HypoTestInverterResult)
 using namespace RooStats;
 
 
-HypoTestInverterResult::HypoTestInverterResult(const char * name, const char * title ) :
-   SimpleInterval(name,title),
+HypoTestInverterResult::HypoTestInverterResult(const char * name ) :
+   SimpleInterval(name),
    fUseCLs(false)
 {
   // default constructor
@@ -33,10 +33,9 @@ HypoTestInverterResult::HypoTestInverterResult(const char * name, const char * t
 
 
 HypoTestInverterResult::HypoTestInverterResult( const char* name,
-						const char* title,
 						const RooRealVar& scannedVariable,
 						double cl ) :
-   SimpleInterval(name,title,scannedVariable,0,0,cl), 
+   SimpleInterval(name,scannedVariable,-999,999,cl), 
    fUseCLs(false)
 {
   // constructor

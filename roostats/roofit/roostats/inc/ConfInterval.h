@@ -42,7 +42,7 @@ namespace RooStats {
    public:
 
       // constructor given name and title 
-      explicit ConfInterval(const char* name = 0, const char* title = 0) : TNamed(name,title) {} 
+      explicit ConfInterval(const char* name = 0) : TNamed(name,name) {} 
 
       // destructor
       virtual ~ConfInterval() {}

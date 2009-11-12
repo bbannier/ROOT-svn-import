@@ -143,8 +143,8 @@ using namespace std;
 static const Double_t DEFAULT_EPSILON = 0.01;
 
 
-MCMCInterval::MCMCInterval(const char* name, const char* title)
-   : ConfInterval(name, title)
+MCMCInterval::MCMCInterval(const char* name)
+   : ConfInterval(name)
 {
    fConfidenceLevel = 0.0;
    fHistConfLevel = 0.0;
@@ -170,8 +170,8 @@ MCMCInterval::MCMCInterval(const char* name, const char* title)
    fEpsilon = DEFAULT_EPSILON;
 }
 
-MCMCInterval::MCMCInterval(const char* name, const char* title,
-        const RooArgSet& parameters, MarkovChain& chain) : ConfInterval(name, title)
+MCMCInterval::MCMCInterval(const char* name,
+        const RooArgSet& parameters, MarkovChain& chain) : ConfInterval(name)
 {
    fNumBurnInSteps = 0;
    fConfidenceLevel = 0.0;

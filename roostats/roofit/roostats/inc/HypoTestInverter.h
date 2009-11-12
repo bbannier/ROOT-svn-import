@@ -32,16 +32,14 @@ namespace RooStats {
 
   class HypoTestInverter : public IntervalCalculator, public TNamed {
 
-  private:
-    // default constructor (make private, used only for I/O)
-    HypoTestInverter( const char* name,
-		      const char* title ) ;
-
   public:
+
+    // default constructor (used only for I/O)
+    HypoTestInverter();
+
 
     // constructor
     HypoTestInverter( const char* name, 
-		      const char* title, 
 		      HypoTestCalculator* myhc0,
 		      RooRealVar* scannedVariable  ) ;
 

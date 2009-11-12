@@ -58,7 +58,7 @@ namespace RooStats {
    class IntervalCalculator { 
 
    public:
-      //IntervalCalculator();
+
       virtual ~IntervalCalculator() {}
     
       // Main interface to get a ConfInterval, pure virtual

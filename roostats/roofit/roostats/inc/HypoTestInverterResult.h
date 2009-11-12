@@ -26,11 +26,10 @@ namespace RooStats {
   public:
 
     // default constructor
-    explicit HypoTestInverterResult(const char* name = 0, const char * title = 0);
+    explicit HypoTestInverterResult(const char* name = 0);
 
     // constructor
     HypoTestInverterResult( const char* name, 
-			    const char* title,
 			    const RooRealVar& scannedVariable,
 			    double cl ) ;
 

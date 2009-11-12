@@ -252,7 +252,7 @@ MCMCInterval* MCMCCalculator::GetInterval() const
    MarkovChain* chain = mh.ConstructChain();
 
    TString name = TString("MCMCInterval_") + TString(GetName() ); 
-   MCMCInterval* interval = new MCMCInterval(name, name, fPOI, *chain);
+   MCMCInterval* interval = new MCMCInterval(name, fPOI, *chain);
    if (fAxes != NULL)
       interval->SetAxes(*fAxes);
    if (fNumBurnInSteps > 0)

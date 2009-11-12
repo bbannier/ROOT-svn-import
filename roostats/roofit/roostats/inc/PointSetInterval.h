@@ -29,14 +29,11 @@ namespace RooStats {
   public:
 
      // default constructors
-    explicit PointSetInterval(const char* name = 0, const char* title = 0);
+    explicit PointSetInterval(const char* name = 0);
 
     // constructor from name and data set specifying the interval points
     PointSetInterval(const char* name, RooAbsData&);
 
-    // constructor from name, title  and data set specifying the interval points
-    PointSetInterval(const char* name, const char* title, RooAbsData&);
-    
     // destructor
     virtual ~PointSetInterval();
         

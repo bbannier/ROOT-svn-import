@@ -43,31 +43,24 @@ using namespace RooStats;
 
 
 //____________________________________________________________________
-SimpleInterval::SimpleInterval(const char* name, const char* title) :
-   ConfInterval(name,title),  fLowerLimit(0), fUpperLimit(0), fConfidenceLevel(0)
+SimpleInterval::SimpleInterval(const char* name) :
+   ConfInterval(name),  fLowerLimit(0), fUpperLimit(0), fConfidenceLevel(0)
 {
    // Default constructor
 }
 
 //____________________________________________________________________
 SimpleInterval::SimpleInterval(const char* name, const RooRealVar & var, Double_t lower, Double_t upper, Double_t cl) :
-   ConfInterval(name,name), fLowerLimit(lower), fUpperLimit(upper), fConfidenceLevel(cl)
+   ConfInterval(name), fLowerLimit(lower), fUpperLimit(upper), fConfidenceLevel(cl)
 {
    // Alternate constructor
-   std::string s = std::string(name) + "_parameters"; 
-   fParameters.setName( s.c_str());
+   if (name) { 
+      std::string s = std::string(name) + "_parameters"; 
+      fParameters.setName( s.c_str());
+   }
    fParameters.addClone( var );
 }
 
-//____________________________________________________________________
-SimpleInterval::SimpleInterval(const char* name, const char* title, const RooRealVar& var, Double_t lower, Double_t upper, Double_t cl):
-   ConfInterval(name,title), fLowerLimit(lower), fUpperLimit(upper), fConfidenceLevel(cl)
-{
-   // Alternate constructor
-   std::string s = std::string(name) + "_parameters"; 
-   fParameters.setName(s.c_str());
-   fParameters.addClone( var );
-}
 
 
 //____________________________________________________________________
