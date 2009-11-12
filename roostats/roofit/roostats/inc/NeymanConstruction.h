@@ -75,6 +75,7 @@ namespace RooStats {
 
       // Get the size of the test (eg. rate of Type I error)
       virtual Double_t Size() const {return fSize;}
+
       // Get the Confidence level for the test
       virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}  
 

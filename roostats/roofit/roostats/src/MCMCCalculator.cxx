@@ -104,11 +104,23 @@ MCMCCalculator::MCMCCalculator() :
 // mode in the MCMCInterval.  Finds a 95% confidence interval.
 MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
                                const RooArgSet& paramsOfInterest,
-                               RooAbsPdf * prior) : 
+                               RooAbsPdf & prior) : 
    fPOI(paramsOfInterest),
    fPropFunc(0), 
    fPdf(&pdf), 
-   fPriorPdf(prior),
+   fPriorPdf(&prior),
+   fData(&data),
+   fAxes(0)
+{
+   SetupBasicUsage();
+}
+// same as above but not passing a prior pdf
+MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
+                               const RooArgSet& paramsOfInterest) :
+   fPOI(paramsOfInterest),
+   fPropFunc(0), 
+   fPdf(&pdf), 
+   fPriorPdf(0),
    fData(&data),
    fAxes(0)
 {
@@ -160,12 +172,12 @@ void MCMCCalculator::SetModel(const ModelConfig & model) {
 
 // alternate constructor, specifying many arguments
 MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
-                               const RooArgSet& paramsOfInterest, RooAbsPdf * prior, ProposalFunction& proposalFunction,
+                               const RooArgSet& paramsOfInterest, RooAbsPdf & prior, ProposalFunction& proposalFunction,
                                Int_t numIters, RooArgList* axes, Double_t size) : 
    fPOI(paramsOfInterest),
    fPropFunc(&proposalFunction), 
    fPdf(&pdf), 
-   fPriorPdf(prior),
+   fPriorPdf(&prior),
    fData(&data), 
    fAxes(axes)
 {

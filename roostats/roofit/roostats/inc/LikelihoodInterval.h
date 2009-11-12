@@ -23,7 +23,18 @@
 #include "RooAbsReal.h"
 #endif
 
+#ifndef ROOT_Math_IFunctionfwd
+#include "Math/IFunctionfwd.h"
+#endif
+
 #include <map>
+#include <memory>
+
+namespace ROOT { 
+   namespace Math { 
+      class Minimizer; 
+   }
+}
 
 namespace RooStats {
 
@@ -66,6 +77,10 @@ namespace RooStats {
       // return the upper bound of the interval on a given parameter 
       Double_t UpperLimit(const RooRealVar& param) ;
 
+      // find both lower and upper interval boundaries for a given parameter
+      // retun false if the bounds have not been found
+      Bool_t FindLimits(const RooRealVar & param, double & lower, double &upper);
+
       /**
          return the 2D-contour points for the given subset of parameters
          by default make the contour using 30 points. The User has to preallocate the x and y array which will return 
@@ -73,7 +88,7 @@ namespace RooStats {
          The return value of the funciton specify the number of contour point found.
          In case of error a zero is returned
       */
-      //Int_t GetContourPoints(const RooRealVar & paramX, const RooRealVar & paramY, Double_t * x, Double_t *y, Int_t npoints = 30);
+      Int_t GetContourPoints(const RooRealVar & paramX, const RooRealVar & paramY, Double_t * x, Double_t *y, Int_t npoints = 30);
 
       // return the profile log-likelihood ratio function
       RooAbsReal* GetLikelihoodRatio() {return fLikelihoodRatio;}
@@ -86,6 +101,9 @@ namespace RooStats {
       // reset the cached limit values
       void ResetLimits(); 
 
+      // internal function to create the minimizer for finding the contours
+      bool CreateMinimizer();
+
    private:
 
       RooArgSet   fParameters; // parameters of interest for this interval
@@ -94,7 +112,9 @@ namespace RooStats {
       Double_t fConfidenceLevel; // Requested confidence level (eg. 0.95 for 95% CL)
       std::map<std::string, double> fLowerLimits; // map with cached lower bound values
       std::map<std::string, double> fUpperLimits; // map with cached upper bound values
-      
+      std::auto_ptr<ROOT::Math::Minimizer > fMinimizer; //! transient pointer to minimizer class used to find limits and contour
+      std::auto_ptr<RooFunctor>           fFunctor;   //! transient pointer to functor class used by the minimizer
+      std::auto_ptr<ROOT::Math::IMultiGenFunction> fMinFunc; //! transient pointer to the minimization function 
 
       ClassDef(LikelihoodInterval,1)  // Concrete implementation of a ConfInterval based on a likelihood ratio
       

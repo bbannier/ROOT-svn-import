@@ -50,13 +50,13 @@ BayesianCalculator::BayesianCalculator( /* const char* name,  const char* title,
 						    RooAbsData& data,
                                                     RooAbsPdf& pdf,
 						    const RooArgSet& POI,
-						    RooAbsPdf* priorPOI,
+						    RooAbsPdf& priorPOI,
 						    const RooArgSet* nuisanceParameters ) :
    //TNamed( TString(name), TString(title) ),
   fData(&data),
   fPdf(&pdf),
   fPOI(POI),
-  fPriorPOI(priorPOI),
+  fPriorPOI(&priorPOI),
   fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0),
   fInterval(0),
   fSize(0.05)
@@ -122,26 +122,26 @@ RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
 
    // run some checks
    if (!fPdf ) return 0; 
+   if (!fPriorPOI) { 
+      std::cerr << "BayesianCalculator::GetPosteriorPdf - missing prior pdf" << std::endl;
+   }
    if (fPOI.getSize() == 0) return 0; 
    if (fPOI.getSize() > 1) { 
       std::cerr << "BayesianCalculator::GetPosteriorPdf - current implementation works only on 1D intervals" << std::endl;
       return 0; 
    }
 
-   // if a prior PPOI is given make the product with the pdf 
-   // otherwise assume the prior is already specified in the pdf
-   RooAbsPdf * prodPdf = fPdf;
-   if (fPriorPOI) {
-      // create a unique name for the product pdf 
-      TString prodName = TString("product_") + TString(fPdf->GetName()) + TString("_") + TString(fPriorPOI->GetName() );   
-      fProductPdf = new RooProdPdf(prodName,"",RooArgList(*fPdf,*fPriorPOI));
-   }
-   RooArgSet* constrainedParams = prodPdf->getParameters(*fData);
+
+   // create a unique name for the product pdf 
+   TString prodName = TString("product_") + TString(fPdf->GetName()) + TString("_") + TString(fPriorPOI->GetName() );   
+   fProductPdf = new RooProdPdf(prodName,"",RooArgList(*fPdf,*fPriorPOI));
+
+   RooArgSet* constrainedParams = fProductPdf->getParameters(*fData);
 
    // use RooFit::Constrain() to make product of likelihood with prior pdf
-   fLogLike = prodPdf->createNLL(*fData, RooFit::Constrain(*constrainedParams) );
+   fLogLike = fProductPdf->createNLL(*fData, RooFit::Constrain(*constrainedParams) );
 
-   TString likeName = TString("likelihood_") + TString(prodPdf->GetName());   
+   TString likeName = TString("likelihood_") + TString(fProductPdf->GetName());   
    fLikelihood = new RooFormulaVar(likeName,"exp(-@0)",RooArgList(*fLogLike));
    RooAbsReal * plike = fLikelihood; 
    if (fNuisanceParameters.getSize() > 0) { 
@@ -197,7 +197,7 @@ SimpleInterval* BayesianCalculator::GetInterval() const
    RooRealVar * poi = dynamic_cast<RooRealVar *>( fPOI.first()); 
    assert(poi);
    
-   double y = fSize;
+   double y = fSize*2;
    double lowerLimit = 0; 
    double upperLimit = 0; 
    brf.findRoot(lowerLimit,poi->getMin(),poi->getMax(),y);
