@@ -991,7 +991,7 @@ RooProduct* MCMCInterval::GetPosteriorKeysProduct()
 RooArgSet* MCMCInterval::GetParameters() const
 {  
    // returns list of parameters
-   return (RooArgSet*) fParameters.clone((std::string(fParameters.GetName())+"_clone").c_str());
+   return new RooArgSet(fParameters);
 }
 
 Bool_t MCMCInterval::AcceptableConfLevel(Double_t confLevel)

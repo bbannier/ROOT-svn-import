@@ -121,7 +121,7 @@ Bool_t PointSetInterval::IsInInterval(const RooArgSet &parameterPoint) const
 RooArgSet* PointSetInterval::GetParameters() const
 {  
    // returns list of parameters
-  return (RooArgSet*) fParameterPointsInInterval->get()->Clone();
+   return new RooArgSet(*(fParameterPointsInInterval->get()) );
 }
 
 //____________________________________________________________________

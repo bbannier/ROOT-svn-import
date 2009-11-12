@@ -51,14 +51,9 @@ SimpleInterval::SimpleInterval(const char* name) :
 
 //____________________________________________________________________
 SimpleInterval::SimpleInterval(const char* name, const RooRealVar & var, Double_t lower, Double_t upper, Double_t cl) :
-   ConfInterval(name), fLowerLimit(lower), fUpperLimit(upper), fConfidenceLevel(cl)
+   ConfInterval(name), fParameters(var), fLowerLimit(lower), fUpperLimit(upper), fConfidenceLevel(cl)
 {
    // Alternate constructor
-   if (name) { 
-      std::string s = std::string(name) + "_parameters"; 
-      fParameters.setName( s.c_str());
-   }
-   fParameters.addClone( var );
 }
 
 
@@ -96,7 +91,7 @@ Bool_t SimpleInterval::IsInInterval(const RooArgSet &parameterPoint) const
 RooArgSet* SimpleInterval::GetParameters() const
 {  
    // return cloned list of parameters
-   return (RooArgSet*) fParameters.clone((std::string(fParameters.GetName())+"_clone").c_str());
+   return new RooArgSet(fParameters);
 }
 
 //____________________________________________________________________
