@@ -158,7 +158,6 @@ Bool_t LikelihoodInterval::IsInInterval(const RooArgSet &parameterPoint) const
 RooArgSet* LikelihoodInterval::GetParameters() const
 {  
   // returns list of parameters
-  //return (RooArgSet*) fParameters->clone((std::string(fParameters->GetName())+"_clone").c_str());
    return new RooArgSet(fParameters); 
 }
 

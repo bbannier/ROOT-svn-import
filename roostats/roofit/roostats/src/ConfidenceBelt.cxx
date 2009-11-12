@@ -246,7 +246,7 @@ AcceptanceRegion* ConfidenceBelt::GetAcceptanceRegion(RooArgSet &parameterPoint,
 RooArgSet* ConfidenceBelt::GetParameters() const
 {  
    // returns list of parameters
-  return (RooArgSet*) fParameterPoints->get()->Clone();
+   return new RooArgSet(*(fParameterPoints->get()));
 }
 
 //____________________________________________________________________
