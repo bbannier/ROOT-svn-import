@@ -101,4 +101,9 @@
 #pragma link C++ function RooStats::RemoveConstantParameters(RooArgSet* set);
 #pragma link C++ function RooStats::SetParameters(const RooArgSet* , RooArgSet* );
 
+// need for auto_ptr object in Likelihoodinterval since they are forwd declared
+#pragma extra_include "Math/IFunction.h";
+#pragma extra_include "Math/Minimizer.h";
+#pragma extra_include "RooFunctor.h";
+
 #endif

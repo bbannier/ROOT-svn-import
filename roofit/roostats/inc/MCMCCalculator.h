@@ -58,8 +58,11 @@ namespace RooStats {
       // ProposalFunction, number of iterations, burn in steps, confidence
       // level, and interval determination method. Any of these basic
       // settings can be overridden by calling one of the Set...() methods.
-      // optionally pass the prior pdf , if not passed is assumed the given pdf already contains the prior inside
-      MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest, RooAbsPdf * priorPdf = 0);
+      // Force to pass the a prior PDF for the parameter of interest 
+      MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest, RooAbsPdf & priorPdf );
+
+      // same constructor but without prior (assume the prior is already in the model or it will be passed later) 
+      MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest );
 
       // This constructor will set up a basic settings package including a
       // ProposalFunction, number of iterations, burn in steps, confidence
@@ -78,7 +81,7 @@ namespace RooStats {
 
       // alternate constructor, no automatic basic settings
       MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
-                     const RooArgSet& paramsOfInterest, RooAbsPdf * priorPdf, ProposalFunction& proposalFunction,
+                     const RooArgSet& paramsOfInterest, RooAbsPdf & priorPdf, ProposalFunction& proposalFunction,
          Int_t numIters, RooArgList* axes = NULL, Double_t size = 0.05);
 
       virtual ~MCMCCalculator() {}
@@ -93,26 +96,35 @@ namespace RooStats {
 
       virtual void SetModel(const ModelConfig & model); 
 
-      // Set the DataSet, add to the the workspace if not already there
+      // Set the DataSet if not already there
       virtual void SetData(RooAbsData& data) { fData = &data; }
 
-      // Set the Pdf, add to the the workspace if not already there
+      // Set the Pdf if not already there
       virtual void SetPdf(RooAbsPdf& pdf) { fPdf = &pdf; }
+
+      // Set the Prior Pdf if not already there
+      virtual void SetPriorPdf(RooAbsPdf& pdf) { fPriorPdf = &pdf; }
 
       // specify the parameters of interest in the interval
       virtual void SetParameters(const RooArgSet& set) { fPOI.removeAll(); fPOI.add(set); }
+
       // specify the nuisance parameters (eg. the rest of the parameters)
       virtual void SetNuisanceParameters(const RooArgSet& set) {fNuisParams.removeAll(); fNuisParams.add(set);}
+
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
       virtual void SetTestSize(Double_t size) {fSize = size;}
+
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
+
       // set the proposal function for suggesting new points for the MCMC
       virtual void SetProposalFunction(ProposalFunction& proposalFunction)
       { fPropFunc = &proposalFunction; }
+
       // set the number of iterations to run the metropolis algorithm
       virtual void SetNumIters(Int_t numIters)
       { fNumIters = numIters; }
+
       // set the number of steps in the chain to discard as burn-in,
       // starting from the first
       virtual void SetNumBurnInSteps(Int_t numBurnInSteps)
