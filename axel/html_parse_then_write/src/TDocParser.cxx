@@ -32,16 +32,17 @@
 
 namespace {
 
-   class TMethodWrapperImpl: public TDocParser::TMethodWrapper {
+   class TMethodWrapperImpl: public TDocMethodWrapper {
    public:
-      TMethodWrapperImpl(const TMethod* m, int overloadIdx):
+      TMethodWrapperImpl(TMethod* m, int overloadIdx):
          fMeth(m), fOverloadIdx(overloadIdx) {}
 
       static void SetClass(const TClass* cl) { fgClass = cl; }
 
       const char* GetName() const { return fMeth->GetName(); }
+      ULong_t Hash() const { return fMeth->Hash();}
       Int_t GetNargs() const { return fMeth->GetNargs(); }
-      virtual const TMethod* GetMethod() const { return fMeth; }
+      virtual TMethod* GetMethod() const { return fMeth; }
       Bool_t IsSortable() const { return kTRUE; }
 
       Int_t GetOverloadIdx() const { return fOverloadIdx; }
@@ -82,7 +83,7 @@ namespace {
 
    private:
       static const TClass* fgClass; // current class, defining inheritance sort order
-      const TMethod* fMeth; // my method
+      TMethod* fMeth; // my method
       Int_t fOverloadIdx; // this is the n-th overload
    };
 
@@ -153,6 +154,10 @@ TDocParser::TDocParser(TClassDocOutput& docOutput, TClass* cl):
    fClassDescrTag = fHtml->GetClassDocTag();
 
    TMethodWrapperImpl::SetClass(cl);
+
+   for (int ia = 0; ia < 3; ++ia) {
+      fMethods[ia].Rehash(101);
+   }
 
    AddClassMethodsRecursively(0);
    AddClassDataMembersRecursively(0);
@@ -2078,7 +2083,7 @@ void TDocParser::WriteMethod(std::ostream& out, TString& ret,
    if (fClassDocState < kClassDoc_Written)
       WriteClassDoc(out);
 
-   TMethod* guessedMethod = 0;
+   TDocMethodWrapper* guessedMethod = 0;
    int nparams = params.CountChar(',');
    TString strippedParams(params);
    if (strippedParams[0] == '(') {
@@ -2088,18 +2093,20 @@ void TDocParser::WriteMethod(std::ostream& out, TString& ret,
    if (strippedParams.Strip(TString::kBoth).Length())
       ++nparams;
 
-   TMethod* method = 0;
-   TIter nextMethod(fCurrentClass->GetListOfMethods());
-   while ((method = (TMethod *) nextMethod()))
-      if (name == method->GetName()
-          && method->GetListOfMethodArgs()->GetSize() == nparams) {
-         if (guessedMethod) {
-            // not unique, don't try to solve overload
-            guessedMethod = 0;
-            break;
-         } else
-            guessedMethod = method;
-      }
+   TList candidates;
+   for (int access = 0; access < 3; ++access) {
+      TList* methList = fMethods[access].GetListForObject(name);
+      TIter nextMethod(methList);
+      TDocMethodWrapper* method = 0;
+      while ((method = (TDocMethodWrapper *) nextMethod()))
+         if (name == method->GetName()
+             && method->GetMethod()->GetListOfMethodArgs()->GetSize() == nparams) {
+            candidates.Add(method);
+         }
+   }
+
+   if (candidates.GetSize() == 1)
+      guessedMethod = (TDocMethodWrapper*) candidates.First();
 
    dynamic_cast<TClassDocOutput*>(fDocOutput)->WriteMethod(out, ret, name, params, filename, anchor,
                                                            fComment, codeOneLiner, guessedMethod);

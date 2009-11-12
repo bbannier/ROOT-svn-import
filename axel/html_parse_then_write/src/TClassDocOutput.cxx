@@ -153,8 +153,8 @@ void TClassDocOutput::ListFunctions(std::ostream& classFile)
          << "<table class=\"func\" id=\"tabfunc" << accessID[access] << "\" cellspacing=\"0\">" << endl;
 
       TIter iMethWrap(methods);
-      TDocParser::TMethodWrapper *methWrap = 0;
-      while ((methWrap = (TDocParser::TMethodWrapper*) iMethWrap())) {
+      TDocMethodWrapper *methWrap = 0;
+      while ((methWrap = (TDocMethodWrapper*) iMethWrap())) {
          const TMethod* method = methWrap->GetMethod();
 
          // it's a c'tor - Cint stores the class name as return type
@@ -1574,7 +1574,7 @@ void TClassDocOutput::WriteMethod(std::ostream& out, TString& ret,
                                   TString& name, TString& params,
                                   const char* filename, TString& anchor,
                                   TString& comment, TString& codeOneLiner,
-                                  TMethod* guessedMethod)
+                                  TDocMethodWrapper* guessedMethod)
 {
    // Write method name with return type ret and parameters param to out.
    // Build a link using file and anchor. Cooment it with comment, and
@@ -1590,6 +1590,10 @@ void TClassDocOutput::WriteMethod(std::ostream& out, TString& ret,
    out << mangled << ":";
    mangled = name;
    NameSpace2FileName(mangled);
+   if (guessedMethod && guessedMethod->GetOverloadIdx()) {
+      mangled += "%";
+      mangled += guessedMethod->GetOverloadIdx();
+   }
    out << mangled << "\" href=\"src/" << filename;
    if (anchor.Length())
       out << "#" << anchor;
@@ -1599,7 +1603,7 @@ void TClassDocOutput::WriteMethod(std::ostream& out, TString& ret,
    if (guessedMethod) {
       out << "(";
       TMethodArg* arg;
-      TIter iParam(guessedMethod->GetListOfMethodArgs());
+      TIter iParam(guessedMethod->GetMethod()->GetListOfMethodArgs());
       Bool_t first = kTRUE;
       while ((arg = (TMethodArg*) iParam())) {
          if (!first) out << ", ";
@@ -1615,7 +1619,7 @@ void TClassDocOutput::WriteMethod(std::ostream& out, TString& ret,
          out << paramGuessed;
       }
       out << ")";
-      if (guessedMethod->Property() & kIsMethConst)
+      if (guessedMethod->GetMethod()->Property() & kIsMethConst)
          out << " const";
    } else {
       fParser->DecorateKeywords(params);
