@@ -25,10 +25,12 @@ namespace RooStats {
 
    public:
 
+      // default constructor (needed for I/O)
       ProfileLikelihoodCalculator();
 
+      // constructor from data and a model. In case of hypothesis tests the model  describing 
       ProfileLikelihoodCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest, 
-                                  Double_t size = 0.05, const RooArgSet* nullParams = 0 );
+                                  Double_t size = 0.05, const RooArgSet* nullParams = 0, const RooArgSet* altParams = 0 );
 
       ProfileLikelihoodCalculator(RooAbsData& data, ModelConfig & model, Double_t size = 0.05);
 
