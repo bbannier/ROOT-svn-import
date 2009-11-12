@@ -39,6 +39,10 @@
 #include "TVirtualFFT.h"
 #include "TSystem.h"
 
+#include "HFitInterface.h"
+#include "Fit/DataRange.h"
+#include "Math/MinimizerOptions.h"
+
 //______________________________________________________________________________
 /* Begin_Html
 <center><h2>The Histogram classes</h2></center>
@@ -3026,7 +3030,7 @@ TObject *TH1::FindObject(const TObject *obj) const
 }
 
 //______________________________________________________________________________
-Int_t TH1::Fit(const char *fname ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
+TFitResult TH1::Fit(const char *fname ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
 {
 //                     Fit histogram with function fname
 //                     =================================
@@ -3068,7 +3072,7 @@ Int_t TH1::Fit(const char *fname ,Option_t *option ,Option_t *goption, Double_t 
 }
 
 //______________________________________________________________________________
-Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
+TFitResult TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
 {
 //                     Fit histogram with function f1
 //                     ==============================
@@ -3281,7 +3285,14 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    // implementation of Fit method is in file hist/src/HFitImpl.cxx
-   return DoFit( f1 , option , goption, xxmin, xxmax); 
+   Foption_t fitOption;
+
+   if (!FitOptionsMake(option,fitOption)) return 0;
+   // create range and minimizer options with default values 
+   ROOT::Fit::DataRange range(xxmin,xxmax); 
+   ROOT::Math::MinimizerOptions minOption; 
+   
+   return ROOT::Fit::FitObject(this, f1 , fitOption , minOption, goption, range); 
 }
 
 //______________________________________________________________________________
@@ -3605,6 +3616,7 @@ Int_t TH1::FitOptionsMake(Option_t *choptin, Foption_t &fitOption)
    if (strstr(chopt,"U")) {fitOption.User    = 1; fitOption.Like = 0;}
    if (strstr(chopt,"F"))  fitOption.Minuit = 1;
    if (strstr(chopt,"C"))  fitOption.Nochisq = 1;
+   if (strstr(chopt,"S"))  fitOption.StoreResult = 1;
    return 1;
 }
 

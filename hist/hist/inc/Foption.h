@@ -45,29 +45,31 @@ struct Foption_t {
    int Minuit;      // "F"  If fitting a polN, switch to minuit fitter
    int NoErrX;      // "EX0" or "T" When fitting a TGraphErrors do not consider error in coordinates 
    int Robust;      // "ROB" or "H":  For a TGraph use robust fitting
+   int StoreResult; // "S": Stores the result in a TFitResult structure
    double hRobust;  //  value of h parameter used in robust fitting 
 
   Foption_t() :
-      Quiet     (0),
-      Verbose   (0),
-      Bound     (0),
-      Chi2      (0),
-      Like      (0),
-      User      (0),
-      W1        (0),
-      Errors    (0),
-      More      (0),
-      Range     (0),
-      Gradient  (0),
-      Nostore   (0),
-      Nograph   (0),
-      Plus      (0),
-      Integral  (0),
-      Nochisq   (0),
-      Minuit    (0),
-      NoErrX    (0),
-      Robust    (0),
-      hRobust   (0)
+      Quiet        (0),
+      Verbose      (0),
+      Bound        (0),
+      Chi2         (0),
+      Like         (0),
+      User         (0),
+      W1           (0),
+      Errors       (0),
+      More         (0),
+      Range        (0),
+      Gradient     (0),
+      Nostore      (0),
+      Nograph      (0),
+      Plus         (0),
+      Integral     (0),
+      Nochisq      (0),
+      Minuit       (0),
+      NoErrX       (0),
+      Robust       (0),
+      StoreResult  (0), 
+      hRobust      (0)
    {}
 };
 
