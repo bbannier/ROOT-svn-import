@@ -38,6 +38,9 @@
 #include <string>
 #include <cassert>
 
+#include "HFitInterface.h"
+#include "Fit/DataRange.h"
+#include "Math/MinimizerOptions.h"
 
 extern void H1LeastSquareSeqnd(Int_t n, Double_t *a, Int_t idim, Int_t &ifail, Int_t k, Double_t *b);
 
@@ -1113,8 +1116,12 @@ Int_t TGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axis_t rxmin, Ax
    //   The fitResult is 0 is the fit is OK.
    //   The fitResult is negative in case of an error not connected with the fit.
 
-   return DoFit( f1 , option , goption, rxmin, rxmax);
-
+   Foption_t fitOption;
+   ROOT::Fit::FitOptionsMake(option,fitOption);
+   // create range and minimizer options with default values 
+   ROOT::Fit::DataRange range(rxmin,rxmax); 
+   ROOT::Math::MinimizerOptions minOption; 
+   return ROOT::Fit::FitObject(this, f1 , fitOption , minOption, goption, range);
 }
 
 
