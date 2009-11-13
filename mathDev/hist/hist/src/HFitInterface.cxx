@@ -198,14 +198,6 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
          x[0] = xaxis->GetBinCenter(binx);
       
 
-      // need to evaluate function to know about rejected points
-      // hugly but no other solutions
-      if (func != 0) { 
-         func->RejectPoint(false);
-         (*func)( &x[0] );  // evaluate using stored function parameters
-         if (func->RejectedPoint() ) continue; 
-      }
-
       for ( biny = hyfirst; biny <= hylast; ++biny) {
          if (useBinEdges) {
             x[1] = yaxis->GetBinLowEdge(biny);
@@ -221,6 +213,15 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
             }
             else
                x[2] = zaxis->GetBinCenter(binz);
+
+            // need to evaluate function to know about rejected points
+            // hugly but no other solutions
+            if (func != 0) { 
+               func->RejectPoint(false);
+               (*func)( &x[0] );  // evaluate using stored function parameters
+               if (func->RejectedPoint() ) continue; 
+            }
+
 
             double value =  hfit->GetBinContent(binx, biny, binz);
             double error =  hfit->GetBinError(binx, biny, binz); 
