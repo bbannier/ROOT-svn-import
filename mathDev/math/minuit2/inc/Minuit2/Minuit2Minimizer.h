@@ -122,6 +122,10 @@ public:
    /// get name of variables (override if minimizer support storing of variable names)
    virtual std::string VariableName(unsigned int ivar) const;
 
+   /// get index of variable given a variable given a name
+   /// return -1 if variable is not found
+   virtual int VariableIndex(const std::string & name) const;
+
    /** 
        method to perform the minimization. 
        Return false in case the minimization did not converge. In this case a 

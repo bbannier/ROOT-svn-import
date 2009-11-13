@@ -72,6 +72,7 @@ void RestoreGlobalPrintLevel(int ) {}
 
 
 Minuit2Minimizer::Minuit2Minimizer(ROOT::Minuit2::EMinimizerType type ) : 
+   Minimizer(),
    fDim(0),
    fMinimizer(0),
    fMinuitFCN(0),
@@ -82,6 +83,7 @@ Minuit2Minimizer::Minuit2Minimizer(ROOT::Minuit2::EMinimizerType type ) :
 }
 
 Minuit2Minimizer::Minuit2Minimizer(const char *  type ) : 
+   Minimizer(),
    fDim(0),
    fMinimizer(0),
    fMinuitFCN(0),
@@ -231,8 +233,17 @@ bool Minuit2Minimizer::SetFixedVariable(unsigned int ivar , const std::string & 
 
 std::string Minuit2Minimizer::VariableName(unsigned int ivar) const { 
    // return the variable name
+   if (ivar >= fState.MinuitParameters().size() ) return std::string();
    return fState.GetName(ivar);
 }
+
+
+int Minuit2Minimizer::VariableIndex(const std::string & name) const { 
+   // return the variable index
+   // check if variable exist
+   return fState.Trafo().FindIndex(name);
+}
+
 
 bool Minuit2Minimizer::SetVariableValue(unsigned int ivar, double val) { 
    // set value for variable ivar (only for existing parameters)
@@ -313,6 +324,9 @@ bool Minuit2Minimizer::Minimize() {
 
    // switch off Minuit2 printing
    int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
+
+   // set the precision if needed
+   if (Precision() > 0) fState.SetPrecision(Precision());
       
    const ROOT::Minuit2::FCNGradientBase * gradFCN = dynamic_cast<const ROOT::Minuit2::FCNGradientBase *>( fMinuitFCN ); 
    if ( gradFCN != 0) {
@@ -491,6 +505,9 @@ bool Minuit2Minimizer::GetMinosError(unsigned int i, double & errLow, double & e
    // switch off Minuit2 printing
    int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
 
+   // set the precision if needed
+   if (Precision() > 0) fState.SetPrecision(Precision());
+
    ROOT::Minuit2::MnMinos minos( *fMinuitFCN, *fMinimum);
    // check if variable is not fixed 
 
@@ -562,6 +579,9 @@ bool Minuit2Minimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
    // switch off Minuit2 printing
    int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
 
+   // set the precision if needed
+   if (Precision() > 0) fState.SetPrecision(Precision());
+
    MnParameterScan scan( *fMinuitFCN, fState.Parameters() );
    double amin = scan.Fval(); // fcn value of the function before scan 
 
@@ -617,6 +637,9 @@ bool Minuit2Minimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
    // switch off Minuit2 printing (for level of  0,1)
    int prev_level = (PrintLevel() <= 1 ) ?   TurnOffPrintInfoLevel() : -1; 
 
+   // set the precision if needed
+   if (Precision() > 0) fState.SetPrecision(Precision());
+
    // eventually one should specify tolerance in contours 
    MnContours contour(*fMinuitFCN, *fMinimum, Strategy() ); 
    
@@ -654,6 +677,9 @@ bool Minuit2Minimizer::Hesse( ) {
 
    // switch off Minuit2 printing
    int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
+
+   // set the precision if needed
+   if (Precision() > 0) fState.SetPrecision(Precision());
 
    ROOT::Minuit2::MnHesse hesse( strategy );
 
