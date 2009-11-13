@@ -27,7 +27,7 @@ TFitResultPtr::~TFitResultPtr()
 
 TFitResultPtr::operator int() const 
 {
-   if ( fPointer != 0 )
+   if ( fPointer == 0 )
       return fStatus;
    else
       return fPointer->Status();
