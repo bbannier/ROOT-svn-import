@@ -25,12 +25,12 @@ can be used to construct a LikelihoodInterval.
 <ul>
  <li>a model common model (eg. a family of specific models which includes both the null and alternate),</li>
  <li>a data set, </li>
- <li>a set of parameters of which specify the null (including values and const/non-const status), </li>
- <li>a set of parameters of which specify the alternate (including values and const/non-const status),</li>
- <li>a set of parameters of nuisance parameters  (including values and const/non-const status).</li>
+ <li>a set of parameters of interest. The nuisance parameters will be all other parameters of the model </li>
+ <li>a set of parameters of which specify the null hypothesis (including values and const/non-const status)  </li>
 </ul>
-The interface allows one to pass the model, data, and parameters via a workspace and then specify them with names.
-The interface will be extended so that one does not need to use a workspace.
+The interface allows one to pass the model, data, and parameters either directly or via a ModelConfig class.
+The alternate hypothesis leaves the parameter free to take any value other than those specified by the null hypotesis. There is therefore no need to 
+specify the alternate parameters. 
 </p>
 <p>
 After configuring the calculator, one only needs to ask GetHypoTest() (which will return a HypoTestResult pointer) or GetInterval() (which will return an ConfInterval pointer).
@@ -78,8 +78,8 @@ ProfileLikelihoodCalculator::ProfileLikelihoodCalculator() :
 }
 
 ProfileLikelihoodCalculator::ProfileLikelihoodCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest, 
-                                                         Double_t size, const RooArgSet* nullParams, const RooArgSet* altParams ) :
-   CombinedCalculator(data,pdf, paramsOfInterest, size, nullParams, altParams ), 
+                                                         Double_t size, const RooArgSet* nullParams ) :
+   CombinedCalculator(data,pdf, paramsOfInterest, size, nullParams ), 
    fFitResult(0)
 {
    // constructor from pdf and parameters
