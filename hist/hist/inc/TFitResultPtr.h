@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Id: TFitResult.h 28961 2009-06-12 15:13:46Z dmgonzal $
+// @(#)root/mathcore:$Id: TFitResultPtr.h 28961 2009-06-12 15:13:46Z dmgonzal $
 // Author: David Gonzalez Maline Tue Nov 10 15:01:24 2009
 
 /**********************************************************************
@@ -8,12 +8,12 @@
  *                                                                    *
  **********************************************************************/
 
-#ifndef ROOT_TFitResult
-#define ROOT_TFitResult
+#ifndef ROOT_TFitResultPtr
+#define ROOT_TFitResultPtr
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TFitResult                                                           //
+// TFitResultPtr                                                        //
 //                                                                      //
 // Provides a way to view the fit result and to store them.             //
 //                                                                      //
@@ -21,23 +21,31 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TNamed.h"
-#include "Fit/FitResult.h"
 
-class TFitResult:public TNamed, public ROOT::Fit::FitResult {
+class TFitResult;
+
+class TFitResultPtr {
 public:
 
-   // Default constructor for I/O
-   TFitResult(int status = 0): TNamed("TFitResult","Title"), 
-                           ROOT::Fit::FitResult() {
-      fStatus = status;
-   };
+   TFitResultPtr(int status): fStatus(status), fPointer(0) {};
+   TFitResultPtr(TFitResult* p): fStatus(0), fPointer(p) {};
+   TFitResultPtr(const TFitResultPtr& p);
 
-   TFitResult(const ROOT::Fit::FitResult& f): TNamed("TFitResult","Title"),
-                                              ROOT::Fit::FitResult(f) {};
+   operator int() const;
+   
+   TFitResult& operator*() const;
+   TFitResult* operator->() const;
+   TFitResult* Get() const;
 
-   virtual ~TFitResult() {};
+   TFitResultPtr& operator= (const TFitResultPtr&);
 
-   ClassDef(TFitResult,1)
+   virtual ~TFitResultPtr();
+
+private:
+   int fStatus;
+   TFitResult* fPointer;
+
+   ClassDef(TFitResultPtr,1)
 };
 
 #endif

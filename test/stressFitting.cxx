@@ -320,7 +320,7 @@ enum testOpt {
 };
 
 // Default options that all tests will have
-int defaultOptions = testOptColor | testOptCheck;// | testOptDebug;
+int defaultOptions = testOptColor | testOptCheck | testOptDebug;
 
 // Object to manage the fitter depending on the optiones used
 template <typename T>

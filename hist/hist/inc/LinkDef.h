@@ -22,6 +22,7 @@
 #pragma link C++ class TFormulaPrimitive+;
 #pragma link C++ class TFractionFitter+;
 #pragma link C++ class TFitResult+;
+#pragma link C++ class TFitResultPtr+;
 #pragma link C++ class TF1-;
 #pragma link C++ class TF12+;
 #pragma link C++ class TF2-;
