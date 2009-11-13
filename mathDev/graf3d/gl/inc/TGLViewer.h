@@ -59,6 +59,8 @@ public:
                       kCameraOrthoXOY,  kCameraOrthoXOZ,  kCameraOrthoZOY,
                       kCameraOrthoXnOY, kCameraOrthoXnOZ, kCameraOrthoZnOY };
 
+   enum ESecSelType { kOnRequest, kOnKeyMod1 };
+
 private:
    TGLViewer(const TGLViewer &);             // Not implemented
    TGLViewer & operator=(const TGLViewer &); // Not implemented
@@ -284,8 +286,10 @@ public:
    void DrawGuides();
    void DrawDebugInfo();
 
-   Bool_t RequestSelect(Int_t x, Int_t y, Bool_t trySecSel=kFALSE); // Cross thread select request
-   Bool_t DoSelect(Int_t x, Int_t y, Bool_t trySecSel=kFALSE);      // Window coords origin top left
+   Bool_t RequestSelect(Int_t x, Int_t y);          // Cross thread select request
+   Bool_t DoSelect(Int_t x, Int_t y);               // First level selecton (shapes/objects).
+   Bool_t RequestSecondarySelect(Int_t x, Int_t y); // Cross thread secondary select request
+   Bool_t DoSecondarySelect(Int_t x, Int_t y);      // Second level selecton (inner structure).
    void   ApplySelection();
 
    Bool_t RequestOverlaySelect(Int_t x, Int_t y); // Cross thread select request
@@ -326,6 +330,8 @@ public:
    virtual void Activated() { Emit("Activated()"); } // *SIGNAL*
    virtual void Clicked(TObject *obj); //*SIGNAL*
    virtual void Clicked(TObject *obj, UInt_t button, UInt_t state); //*SIGNAL*
+   virtual void ReClicked(TObject *obj, UInt_t button, UInt_t state); //*SIGNAL*
+   virtual void UnClicked(TObject *obj, UInt_t button, UInt_t state); //*SIGNAL*
    virtual void DoubleClicked() { Emit("DoubleClicked()"); } // *SIGNAL*
 
    TGEventHandler *GetEventHandler() const { return fEventHandler; }

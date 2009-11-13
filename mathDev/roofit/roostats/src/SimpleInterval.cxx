@@ -83,12 +83,13 @@ SimpleInterval::SimpleInterval(const char* name, const char* title, RooAbsArg* v
 SimpleInterval::~SimpleInterval()
 {
    // Destructor
+  // NEED TO DELETE fParameters->addClone
 
 }
 
 
 //____________________________________________________________________
-Bool_t SimpleInterval::IsInInterval(RooArgSet &parameterPoint) 
+Bool_t SimpleInterval::IsInInterval(const RooArgSet &parameterPoint) 
 {  
 
    // Method to determine if a parameter point is in the interval
@@ -107,7 +108,6 @@ Bool_t SimpleInterval::IsInInterval(RooArgSet &parameterPoint)
 
 
    return true;
-  
 }
 
 //____________________________________________________________________
@@ -118,7 +118,7 @@ RooArgSet* SimpleInterval::GetParameters() const
 }
 
 //____________________________________________________________________
-Bool_t SimpleInterval::CheckParameters(RooArgSet &parameterPoint) const
+Bool_t SimpleInterval::CheckParameters(const RooArgSet &parameterPoint) const
 {  
 
    if (parameterPoint.getSize() != fParameters->getSize() ) {

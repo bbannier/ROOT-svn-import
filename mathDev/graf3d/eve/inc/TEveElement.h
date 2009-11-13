@@ -13,6 +13,7 @@
 #define ROOT_TEveElement
 
 #include "TEveUtil.h"
+#include "TEveProjectionBases.h"
 
 #include "TNamed.h"
 #include "TRef.h"
@@ -164,8 +165,8 @@ public:
    TEveElement* FindChild(TPRegexp& regexp, const TClass* cls=0);
    Int_t        FindChildren(List_t& matches, const TString&  name, const TClass* cls=0);
    Int_t        FindChildren(List_t& matches, TPRegexp& regexp, const TClass* cls=0);
-   TEveElement* FirstChild() const { return fChildren.front(); }
-   TEveElement* LastChild () const { return fChildren.back();  }
+   TEveElement* FirstChild() const { return fChildren.empty() ? 0 : fChildren.front(); }
+   TEveElement* LastChild () const { return fChildren.empty() ? 0 : fChildren.back();  }
 
    void EnableListElements (Bool_t rnr_self=kTRUE,  Bool_t rnr_children=kTRUE);  // *MENU*
    void DisableListElements(Bool_t rnr_self=kFALSE, Bool_t rnr_children=kFALSE); // *MENU*
@@ -298,14 +299,17 @@ public:
 
    Bool_t IsPickable()    const { return fPickable; }
    void   SetPickable(Bool_t p) { fPickable = p; }
+   
+   virtual TEveElement* ForwardSelection();
+   virtual TEveElement* ForwardEdit();
 
-   void SelectElement(Bool_t state);
-   void IncImpliedSelected();
-   void DecImpliedSelected();
+   virtual void SelectElement(Bool_t state);
+   virtual void IncImpliedSelected();
+   virtual void DecImpliedSelected();
 
-   void HighlightElement(Bool_t state);
-   void IncImpliedHighlighted();
-   void DecImpliedHighlighted();
+   virtual void HighlightElement(Bool_t state);
+   virtual void IncImpliedHighlighted();
+   virtual void DecImpliedHighlighted();
 
    virtual void FillImpliedSelectedSet(Set_t& impSelSet);
 
@@ -396,7 +400,8 @@ public:
 /******************************************************************************/
 
 class TEveElementList : public TEveElement,
-                        public TNamed
+                        public TNamed,
+                        public TEveProjectable
 {
 private:
    TEveElementList& operator=(const TEveElementList&); // Not implemented
@@ -433,7 +438,34 @@ public:
 
    virtual Bool_t AcceptElement(TEveElement* el);
 
+   virtual TClass* ProjectedClass(const TEveProjection* p) const;
+
    ClassDef(TEveElementList, 0); // List of TEveElement objects with a possibility to limit the class of accepted elements.
+};
+
+
+/******************************************************************************/
+// TEveElementListProjected
+/******************************************************************************/
+
+class TEveElementListProjected : public TEveElementList,
+                                 public TEveProjected
+{
+private:
+   TEveElementListProjected(const TEveElementListProjected&);            // Not implemented
+   TEveElementListProjected& operator=(const TEveElementListProjected&); // Not implemented
+
+
+protected:
+   virtual void SetDepthLocal(Float_t d);
+
+public:
+   TEveElementListProjected();
+   virtual ~TEveElementListProjected() {}
+
+   virtual void UpdateProjection();
+
+   ClassDef(TEveElementListProjected, 0); // Projected TEveElementList.
 };
 
 #endif

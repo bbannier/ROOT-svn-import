@@ -60,10 +60,12 @@ TGLEventHandler::TGLEventHandler(TGWindow *w, TObject *obj) :
    fTooltip            (0),
    fActiveButtonID     (0),
    fLastEventState     (0),
+   fIgnoreButtonUp     (kFALSE),
    fInPointerGrab      (kFALSE),
    fMouseTimerRunning  (kFALSE),
    fTooltipShown       (kFALSE),
-   fTooltipPixelTolerance (3)
+   fTooltipPixelTolerance (3),
+   fSecSelType(TGLViewer::kOnRequest)
 {
    // Constructor.
 
@@ -335,7 +337,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                fGLViewer->CurrentCamera().SetCenterVec(v.X(), v.Y(), v.Z());
             }
             else
-            { 
+            {
                TGLSelectRecord& rec = fGLViewer->GetSelRec();
                TObject* obj = rec.GetObject();
                TGLRect& vp = fGLViewer->CurrentCamera().RefViewport();
@@ -377,8 +379,10 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                   } else {
                      fGLViewer->SelectionChanged(); // Just notify clients.
                   }
-               } else if (event->fState & kKeyMod1Mask) {
-                  fGLViewer->RequestSelect(event->fX, event->fY, kTRUE);
+                  fIgnoreButtonUp = kTRUE;
+               } else if ((fSecSelType == TGLViewer::kOnRequest || fSecSelType == TGLViewer::kOnKeyMod1) && (event->fState & kKeyMod1Mask)) {
+                  fGLViewer->RequestSelect(event->fX, event->fY);
+                  fGLViewer->RequestSecondarySelect(event->fX, event->fY);
                   if (fGLViewer->fSecSelRec.GetPhysShape() != 0)
                   {
                      TGLLogicalShape& lshape = const_cast<TGLLogicalShape&>
@@ -386,8 +390,10 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                      lshape.ProcessSelection(*fGLViewer->fRnrCtx, fGLViewer->fSecSelRec);
                      handled = kTRUE;
                   }
+                  fIgnoreButtonUp = kTRUE;
                }
-               if ( ! handled) {
+               if ( ! handled)
+               {
                   fGLViewer->fDragAction = TGLViewer::kDragCameraRotate;
                   grabPointer = kTRUE;
                   if (fMouseTimer) {
@@ -443,13 +449,19 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
    // Button UP
    else if (event->fType == kButtonRelease)
    {
+      if (fIgnoreButtonUp)
+      {
+         fIgnoreButtonUp = kFALSE;
+         return kTRUE;
+      }
+
       if (fInPointerGrab)
       {
          gVirtualX->GrabPointer(0, 0, 0, 0, kFALSE);
          fInPointerGrab = kFALSE;
       }
 
-      if (fGLViewer->GetPushAction() !=  TGLViewer::kPushStd)
+      if (fGLViewer->GetPushAction() != TGLViewer::kPushStd)
       {
          // This should be 'tool' dependant.
          fGLViewer->fPushAction = TGLViewer::kPushStd;
@@ -500,13 +512,46 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
           (eventSt.fCode == event->fCode))
       {
          TObject *obj = 0;
-         fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
+         fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY);
          TGLPhysicalShape *phys_shape = fGLViewer->fSelRec.GetPhysShape();
-         if (phys_shape) {
-            obj = phys_shape->GetLogical()->GetExternal();
+
+         if (phys_shape) obj = phys_shape->GetLogical()->GetExternal();
+      
+         // secondary selection
+         if (phys_shape && fSecSelType == TGLViewer::kOnRequest
+             && phys_shape->GetLogical()->AlwaysSecondarySelect())
+         {
+            fGLViewer->RequestSecondarySelect(fLastPos.fX, fLastPos.fY);
+            fGLViewer->fSecSelRec.SetMultiple(event->fState & kKeyControlMask);
+
+            if (fGLViewer->fSecSelRec.GetPhysShape() != 0)
+            {
+               TGLLogicalShape& lshape = const_cast<TGLLogicalShape&>
+                  (*fGLViewer->fSecSelRec.GetPhysShape()->GetLogical());
+
+               lshape.ProcessSelection(*fGLViewer->fRnrCtx, fGLViewer->fSecSelRec);
+               switch (fGLViewer->fSecSelRec.GetSecSelResult())
+               {
+                  case TGLSelectRecord::kEnteringSelection:
+                     fGLViewer->Clicked(obj, event->fCode, event->fState);
+                     break;
+                  case TGLSelectRecord::kLeavingSelection:
+                     fGLViewer->UnClicked(obj, event->fCode, event->fState);
+                     break;
+                  case TGLSelectRecord::kModifyingInternalSelection:
+                     fGLViewer->ReClicked(obj, event->fCode, event->fState);
+                     break;
+                  default:
+                     break;
+               };
+            }
          }
-         fGLViewer->Clicked(obj);
-         fGLViewer->Clicked(obj, event->fCode, event->fState);
+         else
+         {
+            fGLViewer->Clicked(obj);
+            fGLViewer->Clicked(obj, event->fCode, event->fState);
+         }
+
          eventSt.fX = 0;
          eventSt.fY = 0;
          eventSt.fCode = 0;
@@ -647,7 +692,7 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
             break;
 
          case kKey_F1:
-            fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
+            fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY);
             fGLViewer->MouseIdle(fGLViewer->fSelRec.GetPhysShape(), (UInt_t)fLastPos.fX, (UInt_t)fLastPos.fY);
             break;
 
@@ -814,7 +859,7 @@ Bool_t TGLEventHandler::HandleTimer(TTimer *t)
    {
       if (fLastMouseOverPos != fLastPos)
       {
-         fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
+         fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY);
          if (fLastMouseOverShape != fGLViewer->fSelRec.GetPhysShape())
          {
             fLastMouseOverShape = fGLViewer->fSelRec.GetPhysShape();

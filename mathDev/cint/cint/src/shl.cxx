@@ -866,6 +866,7 @@ int G__shl_load(char *shlfile)
     }
     else {
       G__shl_load_error(shlfile,"Load Error");
+      G__sl_handle.pop_back();
       --G__allsl;
       return(-1);
     }
@@ -1165,7 +1166,7 @@ int G__isinterpretedp2f(void *p2f)
 * Called by
 *   G__getvariable()
 *
-* Calling fucntion by pointer to function
+* Calling function by pointer to function
 ******************************************************************/
 G__value G__pointer2func(G__value *obj_p2f,char *parameter0 ,char *parameter1,int *known3)
 {

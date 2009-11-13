@@ -8,6 +8,10 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+//         $Id$
+
+const char *XrdClientReadVCVSID = "$Id$";
+
 #include "XrdClient/XrdClientReadV.hh"
 #include "XrdClient/XrdClientConn.hh"
 #include "XrdClient/XrdClientDebug.hh"
@@ -203,7 +207,7 @@ int XrdClientReadV::SubmitToCacheReadVResp(XrdClientConn *xrdc, char *respdata,
 	}
 	res = pos_from;
 
-	delete respdata;
+	free( respdata );
 
     return res;
 

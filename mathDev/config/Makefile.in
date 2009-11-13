@@ -197,6 +197,7 @@ BUILDGVIZ      := @buildgviz@
 GRAPHVIZLIBDIR := @gvizlibdir@
 GRAPHVIZLIB    := @gvizlib@
 GRAPHVIZINCDIR := $(filter-out /usr/include, @gvizincdir@)
+GRAPHVIZCFLAGS := @gvizcflags@
 
 BUILDPYTHON    := @buildpython@
 PYTHONLIBDIR   := @pythonlibdir@
@@ -215,7 +216,8 @@ XMLCLILIB      := @xmllib@
 XMLINCDIR      := $(filter-out /usr/include, @xmlincdir@)
 
 BUILDXRD       := @buildxrd@
-XROOTDDIR      := @xrootddir@
+XRDINCDIR      := @xrdincdir@
+XRDLIBDIR      := @xrdlibdir@
 XRDADDOPTS     := @xrdaddopts@
 EXTRA_XRDFLAGS := @extraxrdflags@
 

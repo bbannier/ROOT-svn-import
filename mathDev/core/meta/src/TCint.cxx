@@ -47,6 +47,12 @@
 #include <set>
 #include <string>
 
+#if G__CINTVERSION == 70030000
+// Ignore SetGetLineFunc in Cint7
+void G__SetGetlineFunc(char*(*)(const char* prompt),
+                       void (*)(char* line)) {}
+#endif
+
 using namespace std;
 
 R__EXTERN int optind;
@@ -524,6 +530,15 @@ void TCint::PrintIntro()
    Printf("Type ? for help. Commands must be C++ statements.");
    Printf("Enclose multiple statements between { }.");
 }
+
+//______________________________________________________________________________
+void TCint::SetGetline(char*(*getlineFunc)(const char* prompt),
+		       void (*histaddFunc)(char* line))
+{
+   // Set a getline function to call when input is needed.
+   G__SetGetlineFunc(getlineFunc, histaddFunc);
+}
+
 
 //______________________________________________________________________________
 void TCint::RecursiveRemove(TObject *obj)

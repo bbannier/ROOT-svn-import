@@ -278,9 +278,7 @@ void stressLinear(Int_t maxSizeReq,Int_t verbose)
     cout << "******************************************************************" <<endl;
   }
 
-  //Backward Compatibilty of Streamers
-  if(0)
-  if (gROOT->GetVersionInt() > 40800)
+  //Backward Compatibility of Streamers
   {
     cout << "*  Starting  Backward IO compatibility - S T R E S S             *" <<endl;
     cout << "******************************************************************" <<endl;
@@ -294,11 +292,18 @@ void stressLinear(Int_t maxSizeReq,Int_t verbose)
   Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
   printf("******************************************************************\n");
   if (UNIX) {
-    FILE *fp = gSystem->OpenPipe("uname -a", "r");
-    Char_t line[60];
-    fgets(line,60,fp); line[59] = 0;
-    printf("*  SYS: %s\n",line);
-    gSystem->ClosePipe(fp);
+     TString sp = gSystem->GetFromPipe("uname -a");
+     sp.Resize(60);
+     printf("*  SYS: %s\n",sp.Data());
+     if (strstr(gSystem->GetBuildNode(),"Linux")) {
+        sp = gSystem->GetFromPipe("lsb_release -d -s");
+        printf("*  SYS: %s\n",sp.Data());
+     }
+     if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+        sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+        sp += " Mac OS X ";
+        printf("*  SYS: %s\n",sp.Data());
+     }
   } else {
     const Char_t *os = gSystem->Getenv("OS");
     if (!os) printf("*  SYS: Windows 95\n");
@@ -4370,7 +4375,8 @@ void astress_decomp_io(Int_t msize)
 
 void stress_backward_io()
 {
-  TFile *f = new TFile("linearIO.root");
+  TFile::SetCacheFileDir(".");
+  TFile *f = TFile::Open("http://root.cern.ch/files/linearIO.root","CACHEREAD");
 
   TMatrixF mf1 = THilbertMatrixF(-5,5,-5,5);
   mf1[1][2] = TMath::Pi();

@@ -16,6 +16,21 @@
 #include <stdio.h>
 
 #include <gvc.h>
+#include <gvplugin.h>
+
+#ifdef GVIZ_STATIC
+extern gvplugin_library_t gvplugin_dot_layout_LTX_library;
+///extern gvplugin_library_t gvplugin_neato_layout_LTX_library;
+///extern gvplugin_library_t gvplugin_core_LTX_library;
+
+
+lt_symlist_t lt_preloaded_symbols[] = {
+   { "gvplugin_dot_layout_LTX_library",   (void*)(&gvplugin_dot_layout_LTX_library) },
+///   { "gvplugin_neato_layout_LTX_library", (void*)(&gvplugin_neato_layout_LTX_library) },
+///   { "gvplugin_core_LTX_library",         (void*)(&gvplugin_core_LTX_library) },
+   { 0, 0 }
+};
+#endif
 
 ClassImp(TGraphStruct)
 
@@ -135,7 +150,10 @@ void TGraphStruct::DumpAsDotFile(const char *filename)
 {
    // Dump this graph structure as a "dot" file.
 
-   if (!fGVGraph) Layout();
+   if (!fGVGraph) {
+     Int_t ierr = Layout();
+     if (ierr) return;
+   }
    FILE  *file;
    file=fopen(filename,"wt");
    agwrite(fGVGraph, file);
@@ -148,7 +166,10 @@ void TGraphStruct::Draw(Option_t *option)
 {
    // Draw the graph
 
-   if (!fGVGraph) Layout();
+   if (!fGVGraph) {
+     Int_t ierr = Layout();
+     if (ierr) return;
+   }
 
    // Get the bounding box
    if (gPad) {
@@ -183,7 +204,7 @@ void TGraphStruct::Draw(Option_t *option)
 
 
 //______________________________________________________________________________
-void TGraphStruct::Layout()
+Int_t TGraphStruct::Layout()
 {
    // Layout the graph into a GraphViz data structure
 
@@ -192,7 +213,11 @@ void TGraphStruct::Layout()
 
    // Create the graph context.
    if (fGVC) gvFreeContext(fGVC);
+#ifdef GVIZ_STATIC
+   fGVC = gvContextPlugins(lt_preloaded_symbols, 0);
+#else
    fGVC = gvContext();
+#endif
 
    // Create the graph.
    if (fGVGraph) {
@@ -222,7 +247,8 @@ void TGraphStruct::Layout()
    }
 
    // Layout the graph
-   gvLayout(fGVC, fGVGraph, (char*)"dot");
+   int ierr = gvLayout(fGVC, fGVGraph, (char*)"dot");
+   if (ierr) return ierr;
 
    // Layout the nodes
    if (fNodes) {
@@ -243,6 +269,8 @@ void TGraphStruct::Layout()
          edge->Layout();
       }
    }
+
+   return 0;
 }
 
 

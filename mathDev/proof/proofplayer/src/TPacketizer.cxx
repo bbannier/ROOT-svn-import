@@ -222,7 +222,6 @@ public:
    ~TSlaveStat();
 
    TFileNode  *GetFileNode() const { return fFileNode; }
-   const char *GetName() const { return fSlave->GetName(); }
 
    void        SetFileNode(TFileNode *node) { fFileNode = node; }
 };
@@ -243,14 +242,24 @@ TPacketizer::TSlaveStat::~TSlaveStat()
    SafeDelete(fStatus);
 }
 
-TProofProgressStatus* TPacketizer::TSlaveStat::AddProcessed(TProofProgressStatus *st)
+TProofProgressStatus *TPacketizer::TSlaveStat::AddProcessed(TProofProgressStatus *st)
 {
+   // Update the status info to the 'st'.
+   // return the difference (*st - *fStatus)
+
    if (st) {
+      // The entriesis not correct in 'st'
+      Long64_t lastEntries = st->GetEntries() - fStatus->GetEntries();
+      // The last proc time should not be added
+      fStatus->SetLastProcTime(0.);
+      // Get the diff
       TProofProgressStatus *diff = new TProofProgressStatus(*st - *fStatus);
       *fStatus += *diff;
+      // Set the correct value
+      fStatus->SetLastEntries(lastEntries);
       return diff;
    } else {
-      Error("AddProcessed", "status of the worker undefined");
+      Error("AddProcessed", "status arg undefined");
       return 0;
    }
 }
@@ -276,6 +285,7 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
    fActive = 0;
    fFileNodes = 0;
    fMaxPerfIdx = 1;
+   fMaxSlaveCnt = 0;
 
    if (!fProgressStatus) {
       Error("TPacketizerAdaptive", "No progress status");
@@ -305,11 +315,6 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
       fMaxSlaveCnt = maxSlaveCnt;
       PDB(kPacketizer,1)
          Info("TPacketizer", "setting max number of workers per node to %ld", fMaxSlaveCnt);
-   } else {
-      // Use number of CPUs as default cutting at 2
-      SysInfo_t si;
-      gSystem->GetSysInfo(&si);
-      fMaxSlaveCnt =  (si.fCpus > 2) ? si.fCpus : 2;
    }
 
    fPackets = new TList;
@@ -454,7 +459,7 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
            strncmp(url.GetProtocol(),"rfio", 4)) ) {
          host = "no-host";
       } else {
-         host = url.GetHost();
+         host = url.GetHostFQDN();
       }
 
       TFileNode *node = (TFileNode*) fFileNodes->FindObject( host );
@@ -480,6 +485,10 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
    PDB(kGlobal,1)
       Info("TPacketizer","Processing %lld entries in %d files on %d hosts",
                          fTotalEntries, files, fFileNodes->GetSize());
+
+   // Set the total number for monitoring
+   if (gPerfStats)
+      gPerfStats->SetNumEvents(fTotalEntries);
 
    Reset();
 
@@ -580,7 +589,7 @@ TPacketizer::TFileNode *TPacketizer::NextUnAllocNode()
    }
 
    TFileNode *fn = (TFileNode*) fUnAllocated->First();
-   if (fn != 0 && fn->GetSlaveCnt() >= fMaxSlaveCnt) {
+   if (fn != 0 && fMaxSlaveCnt > 0 && fn->GetSlaveCnt() >= fMaxSlaveCnt) {
       PDB(kPacketizer,1) Info("NextUnAllocNode","Reached Slaves per Node Limit (%d)",
                               fMaxSlaveCnt);
       fn = 0;
@@ -625,7 +634,7 @@ TPacketizer::TFileNode *TPacketizer::NextActiveNode()
    }
 
    TFileNode *fn = (TFileNode*) fActive->First();
-   if (fn != 0 && fn->GetSlaveCnt() >= fMaxSlaveCnt) {
+   if (fn != 0 && fMaxSlaveCnt > 0 && fn->GetSlaveCnt() >= fMaxSlaveCnt) {
       PDB(kPacketizer,1) Info("NextActiveNode","Reached Slaves per Node Limit (%d)", fMaxSlaveCnt);
       fn = 0;
    }
@@ -982,6 +991,32 @@ Long64_t TPacketizer::GetEntriesProcessed(TSlave *slave) const
 }
 
 //______________________________________________________________________________
+Float_t TPacketizer::GetCurrentRate(Bool_t &all)
+{
+   // Get Estimation of the current rate; just summing the current rates of
+   // the active workers
+
+   all = kTRUE;
+   // Loop over the workers
+   Float_t currate = 0.;
+   if (fSlaveStats && fSlaveStats->GetSize() > 0) {
+      TIter nxw(fSlaveStats);
+      TObject *key;
+      while ((key = nxw()) != 0) {
+         TSlaveStat *slstat = (TSlaveStat *) fSlaveStats->GetValue(key);
+         if (slstat && slstat->GetProgressStatus() && slstat->GetEntriesProcessed() > 0) {
+            // Sum-up the current rates
+            currate += slstat->GetProgressStatus()->GetCurrentRate();
+         } else {
+            all = kFALSE;
+         }
+      }
+   }
+   // Done
+   return currate;
+}
+
+//______________________________________________________________________________
 TDSetElement *TPacketizer::GetNextPacket(TSlave *sl, TMessage *r)
 {
    // Get next packet
@@ -1081,6 +1116,8 @@ TDSetElement *TPacketizer::GetNextPacket(TSlave *sl, TMessage *r)
       }
       file = 0;
    }
+   // Reset the current file field
+   slstat->fCurFile = file;
 
    if (!file) {
 
@@ -1139,4 +1176,20 @@ TDSetElement *TPacketizer::GetNextPacket(TSlave *sl, TMessage *r)
       slstat->fCurElem->SetEntryList(base->GetEntryList(), first, num);
 
    return slstat->fCurElem;
+}
+
+//______________________________________________________________________________
+Int_t TPacketizer::GetActiveWorkers()
+{
+   // Return the number of workers still processing
+
+   Int_t actw = 0;   
+   TIter nxw(fSlaveStats);
+   TObject *key;
+   while ((key = nxw())) {
+      TSlaveStat *wrkstat = (TSlaveStat *) fSlaveStats->GetValue(key);
+      if (wrkstat && wrkstat->fCurFile) actw++;
+   }
+   // Done
+   return actw;
 }

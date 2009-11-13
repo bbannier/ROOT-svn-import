@@ -245,7 +245,7 @@ ifneq ($(F77),)
 MODULES      += misc/minicern hist/hbook
 endif
 ifeq ($(BUILDXRD),yes)
-ifneq ($(XROOTDDIR),)
+ifneq ($(XRDLIBDIR),)
 MODULES      += net/netx
 else
 MODULES      += net/xrootd net/netx
@@ -611,6 +611,7 @@ skip:
 -include $(patsubst %,%/ModuleVars.mk,$(MODULES))
 include $(patsubst %,%/Module.mk,$(MODULES))
 
+-include cint/cling/Module.mk  # irrelevant except for LLVM dev
 -include MyRules.mk            # allow local rules
 
 ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist \

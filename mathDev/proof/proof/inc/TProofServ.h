@@ -119,12 +119,17 @@ private:
    TStopwatch    fCompute;          //measures time spend processing a packet
    Int_t         fQuerySeqNum;      //sequential number of the current or last query
 
+   Int_t         fTotSessions;      //Total number of PROOF sessions on the cluster 
+   Int_t         fActSessions;      //Total number of active PROOF sessions on the cluster 
+   Float_t       fEffSessions;      //Effective Number of PROOF sessions on the assigned machines
+
    TFileHandler *fInputHandler;     //Input socket handler
 
    TQueryResultManager *fQMgr;      //Query-result manager
 
    TList        *fWaitingQueries;   //list of TProofQueryResult waiting to be processed
    Bool_t        fIdle;             //TRUE if idle
+   TMutex       *fQMtx;             // To protect async msg queue
 
    TList        *fQueuedMsg;        //list of messages waiting to be processed
 
@@ -176,6 +181,14 @@ private:
    void          SendResults(TSocket *sock, TList *outlist = 0, TQueryResult *pq = 0);
    Int_t         RegisterDataSets(TList *in, TList *out);
 
+   // Waiting queries handlers
+   void          SetIdle(Bool_t st = kTRUE);
+   Bool_t        IsWaiting();
+   Int_t         WaitingQueries();
+   Int_t         QueueQuery(TProofQueryResult *pq);
+   TProofQueryResult *NextQuery();
+   Int_t         CleanupWaitingQueries(Bool_t del = kTRUE, TList *qls = 0);
+
 protected:
    virtual void  HandleArchive(TMessage *mess);
    virtual Int_t HandleCache(TMessage *mess);
@@ -196,6 +209,8 @@ protected:
    virtual void  DeletePlayer();
 
    virtual Int_t Fork();
+   Int_t         GetSessionStatus();
+   Bool_t        IsIdle();
 
 public:
    TProofServ(Int_t *argc, char **argv, FILE *flog = 0);
@@ -224,6 +239,10 @@ public:
    Float_t        GetRealTime()   const { return fRealTime; }
    Float_t        GetCpuTime()    const { return fCpuTime; }
    Int_t          GetQuerySeqNum() const { return fQuerySeqNum; }
+
+   Int_t          GetTotSessions() const { return fTotSessions; }
+   Int_t          GetActSessions() const { return fActSessions; }
+   Float_t        GetEffSessions() const { return fEffSessions; }
 
    void           GetOptions(Int_t *argc, char **argv);
    TList         *GetEnabledPackages() const { return fEnabledPackages; }
@@ -258,6 +277,8 @@ public:
    void           Run(Bool_t retrn = kFALSE);
 
    void           Print(Option_t *option="") const;
+
+   void           RestartComputeTime();
 
    TObject       *Get(const char *namecycle);
    TDSetElement  *GetNextPacket(Long64_t totalEntries = -1);

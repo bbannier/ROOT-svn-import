@@ -39,6 +39,9 @@
 #ifndef ROOT_TArrayF
 #include "TArrayF.h"
 #endif
+#ifndef ROOT_TArrayI
+#include "TArrayI.h"
+#endif
 #ifndef ROOT_TList
 #include "TList.h"
 #endif
@@ -56,7 +59,6 @@
 #endif
 
 class TSelector;
-class TProof;
 class TSocket;
 class TVirtualPacketizer;
 class TSlave;
@@ -169,6 +171,8 @@ public:
                       Float_t evtrti, Float_t mbrti)
                 { Progress(total, processed, bytesread, initTime, procTime,
                            evtrti, mbrti); } // *SIGNAL*
+   void      Progress(TProofProgressInfo *pi); // *SIGNAL*
+   void      Progress(TSlave *, TProofProgressInfo *pi) { Progress(pi); } // *SIGNAL*
    void      Feedback(TList *objs); // *SIGNAL*
 
    TDrawFeedback *CreateDrawFeedback(TProof *p);
@@ -195,6 +199,9 @@ public:
                           Bool_t abort = kFALSE, Int_t timeout = 0);
 
    virtual void      SetInitTime() { }
+   Long64_t  GetCacheSize();
+   Int_t     GetLearnEntries();
+
    void              SetProcessing(Bool_t on = kTRUE);
    TProofProgressStatus  *GetProgressStatus() const { return fProgressStatus; }
 
@@ -298,6 +305,8 @@ public:
                            Float_t evtrti, Float_t mbrti)
                       { Progress(total, processed, bytesread, initTime, procTime,
                            evtrti, mbrti); } // *SIGNAL*
+   void           Progress(TProofProgressInfo *pi); // *SIGNAL*
+   void           Progress(TSlave *, TProofProgressInfo *pi) { Progress(pi); } // *SIGNAL*
    void           Feedback(TList *objs); // *SIGNAL*
    TDSetElement  *GetNextPacket(TSlave *slave, TMessage *r);
    TVirtualPacketizer *GetPacketizer() const { return fPacketizer; }
@@ -345,6 +354,9 @@ private:
    TArrayF   fSlaveProcTime;
    TArrayF   fSlaveEvtRti;
    TArrayF   fSlaveMBRti;
+   TArrayI   fSlaveActW;
+   TArrayI   fSlaveTotS;
+   TArrayF   fSlaveEffS;
    TList     fSlaves;
    Bool_t    fReturnFeedback;
 
@@ -367,10 +379,12 @@ public:
                   Float_t evtrti, Float_t mbrti)
                     { TProofPlayerRemote::Progress(total, processed, bytesread,
                                                    initTime, procTime, evtrti, mbrti); }
+   void  Progress(TProofProgressInfo *pi) { TProofPlayerRemote::Progress(pi); }
    void  Progress(TSlave *sl, Long64_t total, Long64_t processed);
    void  Progress(TSlave *sl, Long64_t total, Long64_t processed, Long64_t bytesread,
                   Float_t initTime, Float_t procTime,
                   Float_t evtrti, Float_t mbrti);
+   void  Progress(TSlave *sl, TProofProgressInfo *pi);
 
    ClassDef(TProofPlayerSuperMaster,0)  // PROOF player running on super master
 };

@@ -20,8 +20,7 @@
 // TEveCompound
 //==============================================================================
 
-class TEveCompound : public TEveElementList,
-                     public TEveProjectable
+class TEveCompound : public TEveElementList
 {
 private:
    TEveCompound(const TEveCompound&);            // Not implemented
@@ -47,7 +46,7 @@ public:
 
    virtual void FillImpliedSelectedSet(Set_t& impSelSet);
 
-   virtual TClass* ProjectedClass() const;
+   virtual TClass* ProjectedClass(const TEveProjection* p) const;
 
    ClassDef(TEveCompound, 0); // Container for managing compounds of TEveElements.
 };
@@ -65,6 +64,7 @@ private:
    TEveCompoundProjected& operator=(const TEveCompoundProjected&); // Not implemented
 
 protected:
+   virtual void SetDepthLocal(Float_t /*d*/) {}
 
 public:
    TEveCompoundProjected();
@@ -72,8 +72,6 @@ public:
 
    virtual void SetMainColor(Color_t color);
 
-   // Abstract from TEveProjected, we seem not to care.
-   virtual void SetDepth(Float_t /*d*/) {}
    virtual void UpdateProjection()      {}
 
    ClassDef(TEveCompoundProjected, 0); // Projected TEveCompund container.

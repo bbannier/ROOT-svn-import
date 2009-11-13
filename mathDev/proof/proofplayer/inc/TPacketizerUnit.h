@@ -27,12 +27,14 @@
 #ifndef ROOT_TVirtualPacketizer
 #include "TVirtualPacketizer.h"
 #endif
+#ifndef ROOT_TMap
+#include "TMap.h"
+#endif
 
 
 class TMessage;
 class TTimer;
 class TTree;
-class TMap;
 class TProofStats;
 class TStopwatch;
 
@@ -70,6 +72,9 @@ public:
    TDSetElement *GetNextPacket(TSlave *sl, TMessage *r);
 
    Double_t      GetCurrentTime();
+
+   Float_t       GetCurrentRate(Bool_t &all);
+   Int_t         GetActiveWorkers() { return fSlaveStats->GetSize(); }
 
    ClassDef(TPacketizerUnit,0)  //Generate work packets for parallel processing
 };

@@ -40,12 +40,14 @@ protected:
    UChar_t        fScaleTransparency; //transaprency in %
    Double_t       fScaleCoordX;
    Double_t       fScaleCoordY;
+   Double_t       fScaleW;
+   Double_t       fScaleH;
    Double_t       fCellX;
    Double_t       fCellY;
 
    Color_t        fFrameColor;
    UChar_t        fFrameLineTransp;
-   UChar_t        fFrameBgTransp;;
+   UChar_t        fFrameBgTransp;
 
    // move of scales
    Int_t             fMouseX, fMouseY; //! last mouse position

@@ -57,15 +57,17 @@ public:
    virtual void FileEvent(const char *slave, const char *slavename, const char *nodename,
                           const char *filename, Bool_t isStart) = 0;
 
-   virtual void FileOpenEvent(TFile *file, const char *filename, Double_t proctime) = 0;
+   virtual void FileOpenEvent(TFile *file, const char *filename, Double_t start) = 0;
 
-   virtual void FileReadEvent(TFile *file, Int_t len, Double_t proctime) = 0;
+   virtual void FileReadEvent(TFile *file, Int_t len, Double_t start) = 0;
 
    virtual void RateEvent(Double_t proctime, Double_t deltatime,
                           Long64_t eventsprocessed, Long64_t bytesRead) = 0;
 
    virtual void SetBytesRead(Long64_t num) = 0;
    virtual Long64_t GetBytesRead() const = 0;
+   virtual void SetNumEvents(Long64_t num) = 0;
+   virtual Long64_t GetNumEvents() const = 0;
 
    static const char *EventType(EEventType type);
 

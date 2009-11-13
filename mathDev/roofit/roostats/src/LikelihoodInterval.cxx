@@ -75,55 +75,47 @@ ClassImp(RooStats::LikelihoodInterval) ;
 
 using namespace RooStats;
 
-//____________________________________________________________________
-LikelihoodInterval::LikelihoodInterval() : fLikelihoodRatio(0)
-{
-   // Default constructor
-}
-
-//____________________________________________________________________
-LikelihoodInterval::LikelihoodInterval(const char* name) :
-   ConfInterval(name,name), fLikelihoodRatio(0)
-{
-   // Alternate constructor
-}
 
 //____________________________________________________________________
 LikelihoodInterval::LikelihoodInterval(const char* name, const char* title) :
-   ConfInterval(name,title), fLikelihoodRatio(0)
+   ConfInterval(name,title), fBestFitParams(0), fLikelihoodRatio(0)
 {
-   // Alternate constructor
+   // Default constructor with name and title
 }
 
 //____________________________________________________________________
-LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr, RooArgSet* params) :
-   ConfInterval(name,name)
+LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr, const RooArgSet* params,  RooArgSet * bestParams) :
+   ConfInterval(name,name), 
+   fParameters(*params), 
+   fBestFitParams(bestParams), 
+   fLikelihoodRatio(lr)
 {
-   // Alternate constructor
-  fLikelihoodRatio = lr;
-  fParameters = params;
+   // Alternate constructor taking a pointer to the profile likelihood ratio, parameter of interest and 
+   // optionally a snaphot of best parameter of interest for interval
 }
 
 //____________________________________________________________________
-LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooAbsReal* lr, RooArgSet* params) :
-   ConfInterval(name,title)
+LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooAbsReal* lr, const RooArgSet* params,   RooArgSet * bestParams) :
+   ConfInterval(name,title), 
+   fParameters(*params), 
+   fBestFitParams( bestParams ), 
+   fLikelihoodRatio(lr)
 {
-   // Alternate constructor
-  fLikelihoodRatio = lr;
-  fParameters = params;
+   // Alternate constructor taking a pointer to the profile likelihood ratio, parameter of interest and 
+   // optionally a snaphot of best parameter of interest for interval
 }
 
 //____________________________________________________________________
 LikelihoodInterval::~LikelihoodInterval()
 {
    // Destructor
-  if(fLikelihoodRatio) delete fLikelihoodRatio;
-
+   if (fBestFitParams) delete fBestFitParams; 
+   if (fLikelihoodRatio) delete fLikelihoodRatio;
 }
 
 
 //____________________________________________________________________
-Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint) 
+Bool_t LikelihoodInterval::IsInInterval(const RooArgSet &parameterPoint) 
 {  
   // This is the main method to satisfy the RooStats::ConfInterval interface.  
   // It returns true if the parameter point is in the interval.
@@ -142,27 +134,6 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
   }
 
   
-  /*
-  ///////////////////////////
-  // Debugging
-  RooProfileLL* profile = (RooProfileLL*) fLikelihoodRatio;
-  profile->nll().Print();
-  //  profile->nll().printCompactTree();
-  RooNLLVar* nll = (RooNLLVar*) (profile->getComponents()->find("nll_modelWithConstraints_modelWithConstraintsData"));
-  RooDataSet* tmpData = (RooDataSet*) &(nll->data());
-  nll->Print();
-  std::cout << "nll = " << nll << " data = " << &(nll->data()) <<  " " << tmpData << std::endl;
-  tmpData->Print();
-  for(int i=0; i<tmpData->numEntries(); ++i)
-    tmpData->get(i)->Print("v");
-
-  std::cout<< "best fit params = " << std::endl;
-  profile->bestFitParams().Print("v");
-
-  SetParameters(&(profile->bestFitParams()), fLikelihoodRatio->getVariables() );
-  //////////////////////////
-  */
-
 
   // set parameters
   SetParameters(&parameterPoint, fLikelihoodRatio->getVariables() );
@@ -175,27 +146,13 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
   }
 
 
-  /*  
-    std::cout << "in likelihood interval: LR = " <<
-      fLikelihoodRatio->getVal() << " " << 
-    " ndof = " << parameterPoint.getSize() << 
-    " alpha = " << 1.-fConfidenceLevel << " cl = " << fConfidenceLevel <<
-    " with P = " <<
-    TMath::Prob( 2* fLikelihoodRatio->getVal(), parameterPoint.getSize())  <<
-    " and CL = " << fConfidenceLevel << std::endl;
-
-    parameterPoint.Print("v");
-    fLikelihoodRatio->getVariables()->Print("v");
-    //    fLikelihoodRatio->printCompactTree();
-    */
-    
-
   // here we use Wilks' theorem.
   if ( TMath::Prob( 2* fLikelihoodRatio->getVal(), parameterPoint.getSize()) < (1.-fConfidenceLevel) )
     return false;
 
 
-  RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
+  //RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
+
   return true;
   
 }
@@ -204,19 +161,20 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
 RooArgSet* LikelihoodInterval::GetParameters() const
 {  
   // returns list of parameters
-  return (RooArgSet*) fParameters->clone((std::string(fParameters->GetName())+"_clone").c_str());
+  //return (RooArgSet*) fParameters->clone((std::string(fParameters->GetName())+"_clone").c_str());
+   return new RooArgSet(fParameters); 
 }
 
 //____________________________________________________________________
-Bool_t LikelihoodInterval::CheckParameters(RooArgSet &parameterPoint) const
+Bool_t LikelihoodInterval::CheckParameters(const RooArgSet &parameterPoint) const
 {  
   // check that the parameters are correct
 
-  if (parameterPoint.getSize() != fParameters->getSize() ) {
+  if (parameterPoint.getSize() != fParameters.getSize() ) {
     std::cout << "size is wrong, parameters don't match" << std::endl;
     return false;
   }
-  if ( ! parameterPoint.equals( *fParameters ) ) {
+  if ( ! parameterPoint.equals( fParameters ) ) {
     std::cout << "size is ok, but parameters don't match" << std::endl;
     return false;
   }
@@ -226,115 +184,234 @@ Bool_t LikelihoodInterval::CheckParameters(RooArgSet &parameterPoint) const
 
 
 //____________________________________________________________________
-Double_t LikelihoodInterval::LowerLimit(RooRealVar& param ) 
+Double_t LikelihoodInterval::LowerLimit(RooRealVar& param) 
 {  
-// A binary search to get lower/upper limit for a given parameter.  Slow.
 
-  RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
+   // compute upper limit, check first if limit has been computed 
+   std::map<std::string, double>::const_iterator itr = fLowerLimits.find(param.GetName());
+   if (itr != fLowerLimits.end() ) 
+      return itr->second;
+
+   // otherwise compute limit
+
+   //RooMsgService::instance().setGlobalKillBelow(RooFit::WARNING) ;
+
   RooAbsReal* newProfile = fLikelihoodRatio->createProfile(RooArgSet(param));
-  RooRealVar* myarg = (RooRealVar *) newProfile->getVariables()->find(param.GetName());
 
-  // to do this cleanly, should start at minimum.  Either need minimum from somewhere else, or need to find it via Minuit.
-  // for testing, have param use min value
+  RooArgSet* vars = newProfile->getVariables() ;
+  RooRealVar* myarg = (RooRealVar *) vars->find(param.GetName());
+  delete vars ;
 
-  // do binary search for minimum
-  double target = TMath::ChisquareQuantile(fConfidenceLevel,fParameters->getSize());
+  // I think here ndf must be 1 
+  double target = TMath::ChisquareQuantile(fConfidenceLevel,1)/2.;
 
-  Double_t thisArgVal = param.getVal(); // need this to be MLE
-  myarg->setVal( thisArgVal );
-  //  std::cout << "lambda("<<thisArgVal<<") = " << newProfile->getVal() << std::endl;;
+  //Double_t thisArgVal = param.getVal()*0.99;
 
+  // initial point for the scan - 
+  // start from  xmin - nsigma * error
+  Double_t nsigma = target * 2; 
+  RooRealVar * fitPar = (RooRealVar *) fBestFitParams->find(param.GetName() ); 
+  Double_t thisArgVal = fitPar->getVal() - nsigma * fitPar->getError(); 
 
-  double step = thisArgVal - myarg->getMin();
-  double lastDiff = newProfile->getVal() - target, diff=lastDiff;
-  int nIterations = 0, maxIterations = 20;
-  //  std::cout << "about to do binary search" << std::endl;
-  while(fabs(diff) > 0.01 && nIterations < maxIterations){
+  myarg->setVal( thisArgVal);
+
+  Double_t maxStep = (myarg->getMax()-myarg->getMin())/10 ;
+
+  double step=-1;
+  double L= newProfile->getVal();
+  double L_old=0;
+  double diff = L - target;
+  //the parameters for the linear approximation
+  double a=0, b=0;
+  double x_app=0;
+  int nIterations = 0, maxIterations = 100;
+  while(fabs(diff)>0.01 && nIterations<maxIterations){
+
     nIterations++;
-    if(diff<0)
-      thisArgVal -= step; // LR too small, reduce myarg
-    else
-      thisArgVal += step; // LR too big, increase myarg
+    L_old=L;
+    thisArgVal=thisArgVal+step;
+    if (thisArgVal<myarg->getMin())
+      {
+	thisArgVal=myarg->getMin(); 
 
-    if(lastDiff*diff < 0) // crossed target, reduce step size
-      step /=2; 
-
+	step=thisArgVal+step-x_app;
+	if (fabs(step)<1E-5) {
+          ccoutW(Eval) <<  "Lower limit is outside the parameters bounderies. Abort!" <<std::endl;
+	  delete newProfile;
+	  double ret = myarg->getMin();
+	  return ret;
+	}
+      }
+    
+        
     myarg->setVal( thisArgVal );
-    //    myarg->Print();
-    //    std::cout << "lambda("<<thisArgVal<<") = " << newProfile->getVal() << std::endl;;
-    lastDiff = diff;
-    // abs below to protect small negative numbers from numerical precision
-    diff = 2.*(newProfile->getVal()) - target; 
-    //    std::cout << "diff = " << diff << std::endl;
+    L=newProfile->getVal();
+
+    // If L is below target and we are at boundary stop here
+    if ((fabs(myarg->getVal()-myarg->getMin())<1e-5) && (L<target)) {
+      ccoutW(Eval) <<"WARNING lower limit is outside the parameters bounderies (L at lower bound of " << myarg->GetName() << " is " << L 
+	       << ", which is less than target value of " << target << "). Abort!"<<std::endl;
+      delete newProfile;
+      double ret = myarg->getMin();
+      return ret;      
+    }
+
+    //Compute the linear function
+    a=(L-L_old)/(step);
+    if (fabs(a)<1E-3) {
+       ccoutD(Eval) <<"WARNING: the slope of the Likelihood linear approximation is close to zero" <<std::endl;
+    }
+    b=L-a*thisArgVal;
+    //approximate the position of the desired L value
+    x_app=(target-b)/a;    
+    step=x_app-thisArgVal;
+    if (step>maxStep) step=maxStep ;
+    if (step<-maxStep) step=-maxStep ;
+    diff=L-target;
+
+    if(a>0) {
+      ccoutD(Eval) <<"WARNING: you are on the right of the MLE. Step towards MLE"<<std::endl;
+      step=-(myarg->getMax()-myarg->getMin())/100; //Do a constant step, typical for the dimenions of the problem towards the minimum
+     
+      
+    }
   }
-  
-
-  RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-
-  // put the parameters back to the way they were
-  //  (*fParameters) = (*snapshot);
+    
+  ccoutD(Eval) <<"LL search Iterations:"<< nIterations<<std::endl;
+ 
+  //cout << "LL iterations " << nIterations << " value = " << myarg->getVal() << " PL = " << newProfile->getVal() << std::endl;
 
   delete newProfile;
-  return myarg->getVal();
+  double ret=myarg->getVal();
 
+  fLowerLimits[param.GetName()] = ret; 
+  //RooMsgService::instance().setGlobalKillBelow(RooFit::INFO) ;
+
+  return ret;
 }
 
 
 
 //____________________________________________________________________
-Double_t LikelihoodInterval::UpperLimit(RooRealVar& param ) 
+Double_t LikelihoodInterval::UpperLimit(RooRealVar& param) 
 {  
+   // compute upper limit, check first if limit has been computed 
+   std::map<std::string, double>::const_iterator itr = fUpperLimits.find(param.GetName());
+   if (itr != fUpperLimits.end() ) 
+      return itr->second;
 
-  // A binary search to get lower/upper limit for a given parameter.  Slow.
-  RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
+   // otherwise compute limit
 
+   //RooMsgService::instance().setGlobalKillBelow(RooFit::WARNING) ;
   RooAbsReal* newProfile = fLikelihoodRatio->createProfile(RooArgSet(param));
-  RooRealVar* myarg = (RooRealVar *) newProfile->getVariables()->find(param.GetName());
 
-  // to do this cleanly, should start at minimum.  Either need minimum from somewhere else, or need to find it via Minuit.
-  // for testing, have param use min value
+  RooArgSet* vars = newProfile->getVariables() ;
+  RooRealVar* myarg = (RooRealVar *)vars->find(param.GetName());
+  delete vars ;
 
-  // do binary search for minimum
-  double target = TMath::ChisquareQuantile(fConfidenceLevel,fParameters->getSize());
+  double target = TMath::ChisquareQuantile(fConfidenceLevel, 1)/2.;
+  //Double_t thisArgVal = param.getVal()*1.01 ;
 
-  Double_t thisArgVal = param.getVal(); // need this to be MLE
+  // start from  xmin + nsigma * error
+  Double_t nsigma = target * 2; 
+  RooRealVar * fitPar = (RooRealVar *) fBestFitParams->find(param.GetName() ); 
+  Double_t thisArgVal = fitPar->getVal() + nsigma * fitPar->getError(); 
+
+  //std::cout << " param UL - start value  " << thisArgVal << " val  " << myarg->getVal(); 
+
   myarg->setVal( thisArgVal );
 
+  Double_t maxStep = (myarg->getMax()-myarg->getMin())/10 ;
 
-  double step = thisArgVal - myarg->getMin();
-  double lastDiff = newProfile->getVal() - target, diff=lastDiff;
-  int nIterations = 0, maxIterations = 20;
-  //  std::cout << "about to do binary search" << std::endl;
-  while(fabs(diff) > 0.01 && nIterations < maxIterations){
+  double step=1;
+  double L= newProfile->getVal();
+  double L_old=0;
+  double diff = L - target;
+
+  //std::cout << " L =   " << L << " diff = " << diff << std::endl;
+
+  //the parameters for the linear approximation
+  double a=0, b=0;
+  double x_app=0;
+  int nIterations = 0, maxIterations = 100;
+  while(fabs(diff)>0.01 && nIterations<maxIterations){
     nIterations++;
-    if(diff<0)
-      thisArgVal += step; // LR too small, increase myarg
-    else
-      thisArgVal -= step; // LR too big, reduce myarg
 
-    if(lastDiff*diff < 0) // crossed target, reduce step size
-      step /=2; 
+//     std::cout << " iter " << nIterations << " step " << step << " val " << thisArgVal 
+//               << "  L_old " << L_old << "  L " << L << std::endl; 
 
+    L_old=L;
+    thisArgVal=thisArgVal+step;
+
+ 
+    if (thisArgVal>myarg->getMax())
+    {
+        ccoutD(Eval) <<"WARNING: near the upper boundery"<<std::endl;
+	thisArgVal=myarg->getMax(); 
+	step=thisArgVal+step-x_app;
+	//std::cout<<"DEBUG: step:"<<step<<" thistArgVal:"<<thisArgVal<<std::endl;
+	if (fabs(step)<1E-5) {
+	  ccoutW(Eval) <<"Upper limit is outside the parameters bounderies. Abort!"<<std::endl;
+	  delete newProfile;
+	  double ret=myarg->getMax();
+	  return ret;
+	}
+    }
+    
     myarg->setVal( thisArgVal );
-    //    myarg->Print();
-    //    std::cout << "lambda("<<thisArgVal<<") = " << newProfile->getVal() << std::endl;;
-    lastDiff = diff;
-    // abs below to protect small negative numbers from numerical precision
-    diff = 2.*(newProfile->getVal()) - target; 
-    //    std::cout << "diff = " << diff << std::endl;
+    L=newProfile->getVal();
+
+    // If L is below target and we are at boundary stop here
+    if ((fabs(myarg->getVal()-myarg->getMax())<1e-5) && (L<target)) {
+       ccoutW(Eval) <<"WARNING upper limit is outside the parameters bounderies (L at upper bound of " << myarg->GetName() << " is " << L 
+	       << ", which is less than target value of " << target << "). Abort!"<<std::endl;
+       delete newProfile;
+       double ret = myarg->getMax();
+       return ret;      
+    }
+
+
+    //Compute the linear approximation
+    a=(L-L_old)/(step);
+   
+    if (fabs(a)<1E-3){
+       ccoutD(Eval) <<"WARNING: the slope of the Likelihood linear approximation is close to zero."<<std::endl;
+    }
+    b=L-a*thisArgVal;
+    //approximate the position of the desired L value
+    x_app=(target-b)/a;
+    step=x_app-thisArgVal;
+    if (step>maxStep) step=maxStep ;
+    if (step<-maxStep) step=-maxStep ;
+    diff=L-target;
+
+    //If slope is negative you are below the minimum
+    if(a<0) {
+      ccoutD(Eval)<<"WARNING: you are on the left of the MLE. Step towards MLE"<<std::endl;
+      step=(myarg->getMax()-myarg->getMin())/100; //Do a constant step, typical for the dimenions of the problem towards the minimum
+      //L_old=0;
+      
+    }
+    
   }
-  
+    
+  ccoutD(Eval) <<"UL search Iterations:"<< nIterations<<std::endl;
 
-  // delete newProfile;
+  //cout << "UL iterations " << nIterations << " value = " << myarg->getVal() << " PL = " << newProfile->getVal() << std::endl;
 
-  RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
+  // restore ROOT reporting message level
+  //RooMsgService::instance().setGlobalKillBelow(RooFit::INFO) ;
 
-  // put the parameters back to the way they were
-  //  (*fParameters) = (*snapshot);
+  delete newProfile;
+  double ret=myarg->getVal();
 
-  return myarg->getVal();
+  fUpperLimits[param.GetName()] = ret; 
+  return ret;
 
 }
 
-
-
+void LikelihoodInterval::ResetLimits() { 
+   // reset map with cached limits
+   fLowerLimits.clear(); 
+   fUpperLimits.clear(); 
+}

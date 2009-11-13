@@ -77,7 +77,7 @@
 //       * If className is not specified, Branch uses the type of p_object to determine the
 //           type of the object.
 //       * If className is used to specify explicitly the object type, the className must
-//           be of a type related to the one pointed to by the pointer.  It should be either 
+//           be of a type related to the one pointed to by the pointer.  It should be either
 //           a parent or derived class.
 //       * if splitlevel=0, the object is serialized in the branch buffer.
 //       * if splitlevel=1 (default), this branch will automatically be split
@@ -94,10 +94,10 @@
 //             TTree::ResetBranchAddress is called.
 //
 //       Note: The pointer p_object must be initialized before calling TTree::Branch
-//          Do either: 
+//          Do either:
 //             MyDataClass* p_object = 0;
 //             tree->Branch(branchname, &p_object);
-//          Or 
+//          Or
 //             MyDataClass* p_object = new MyDataClass;
 //             tree->Branch(branchname, &p_object);
 //
@@ -109,7 +109,7 @@
 //       Note: The 2nd parameter must be the address of a valid object.
 //              The object must not be destroyed (i.e. be deleted) until the TTree
 //               is deleted or TTree::ResetBranchAddress is called.
-//        
+//
 //       * if splitlevel=0, the object is serialized in the branch buffer.
 //       * if splitlevel=1 (default), this branch will automatically be split
 //           into subbranches, with one subbranch for each data member or object
@@ -361,7 +361,7 @@
 #include <stdio.h>
 
 Int_t    TTree::fgBranchStyle = 1;  // Use new TBranch style with TBranchElement.
-Long64_t TTree::fgMaxTreeSize = 1900000000;
+Long64_t TTree::fgMaxTreeSize = 100000000000LL;
 
 TTree* gTree;
 
@@ -373,14 +373,14 @@ ClassImp(TTree)
 //------------------------------------------------------------------------------
 //
 
-static char DataTypeToChar(EDataType datatype) 
+static char DataTypeToChar(EDataType datatype)
 {
    // Return the leaflist 'char' for a given datatype.
 
    switch(datatype) {
    case kChar_t:     return 'B';
    case kUChar_t:    return 'b';
-   case kBool_t:     return 'O'; 
+   case kBool_t:     return 'O';
    case kShort_t:    return 'S';
    case kUShort_t:   return 's';
    case kCounter:
@@ -388,7 +388,7 @@ static char DataTypeToChar(EDataType datatype)
    case kUInt_t:     return 'i';
    case kDouble_t:
    case kDouble32_t: return 'D';
-   case kFloat_t: 
+   case kFloat_t:
    case kFloat16_t:  return 'F';
    case kLong_t:     return 0; // unsupported
    case kULong_t:    return 0; // unsupported?
@@ -398,9 +398,9 @@ static char DataTypeToChar(EDataType datatype)
 
    case kCharStar:   return 'C';
    case kBits:       return 0; //unsupported
-      
+
    case kOther_t:
-   case kNoType_t: 
+   case kNoType_t:
    default:
       return 0;
    }
@@ -474,6 +474,7 @@ TTree::TTree()
 , fTotBytes(0)
 , fZipBytes(0)
 , fSavedBytes(0)
+, fFlushedBytes(0)
 , fWeight(1)
 , fTimerInterval(0)
 , fScanField(25)
@@ -482,7 +483,8 @@ TTree::TTree()
 , fMaxEntries(0)
 , fMaxEntryLoop(0)
 , fMaxVirtualSize(0)
-, fAutoSave(100000000)
+, fAutoSave(300000000)
+, fAutoFlush(-30000000)
 , fEstimate(1000000)
 , fCacheSize(10000000)
 , fChainOffset(0)
@@ -534,6 +536,7 @@ TTree::TTree(const char* name, const char* title, Int_t splitlevel /* = 99 */)
 , fTotBytes(0)
 , fZipBytes(0)
 , fSavedBytes(0)
+, fFlushedBytes(0)
 , fWeight(1)
 , fTimerInterval(0)
 , fScanField(25)
@@ -542,7 +545,8 @@ TTree::TTree(const char* name, const char* title, Int_t splitlevel /* = 99 */)
 , fMaxEntries(0)
 , fMaxEntryLoop(0)
 , fMaxVirtualSize(0)
-, fAutoSave(100000000)
+, fAutoSave(300000000)
+, fAutoFlush(-30000000)
 , fEstimate(1000000)
 , fCacheSize(10000000)
 , fChainOffset(0)
@@ -695,8 +699,8 @@ TTree::~TTree()
    }
    if (fEntryList) {
       if (fEntryList->TestBit(kCanDelete) && fEntryList->GetDirectory()==0) {
-         // Delete the entry list if it is marked to be deleted and it is not also 
-         // owned by a directory.  (Otherwise we would need to make sure that a 
+         // Delete the entry list if it is marked to be deleted and it is not also
+         // owned by a directory.  (Otherwise we would need to make sure that a
          // TDirectoryFile that has a TTree in it does a 'slow' TList::Delete.
          delete fEntryList;
          fEntryList=0;
@@ -714,10 +718,11 @@ TTree::~TTree()
 //______________________________________________________________________________
 void TTree::AddBranchToCache(const char*bname, Bool_t subbranches)
 {
-   //add branch with name bname to the Tree cache
-   //if subbranches is true all the branches of the subbranches are also put to the cache
-   //if bname="*" all branches are added to the cache
-   
+   // Add branch with name bname to the Tree cache.
+   // If bname="*" all branches are added to the cache.
+   // if subbranches is true all the branches of the subbranches are 
+   // also put to the cache.
+
    TFile *f = GetCurrentFile();
    if (!f) return;
    TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
@@ -727,9 +732,10 @@ void TTree::AddBranchToCache(const char*bname, Bool_t subbranches)
 //______________________________________________________________________________
 void TTree::AddBranchToCache(TBranch *b, Bool_t subbranches)
 {
-   //add branch b to the Tree cache
-   //if subbranches is true all the branches of the subbranches are also put to the cache
-   
+   // Add branch b to the Tree cache.
+   // if subbranches is true all the branches of the subbranches are 
+   // also put to the cache.
+
    TFile *f = GetCurrentFile();
    if (!f) return;
    TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
@@ -741,7 +747,8 @@ void TTree::AddBranchToCache(TBranch *b, Bool_t subbranches)
 void TTree::AddClone(TTree* clone)
 {
    // Add a cloned tree to our list of trees to be notified whenever we change
-   //  our branch addresses or when we are deleted.
+   // our branch addresses or when we are deleted.
+
    if (!fClones) {
       fClones = new TList();
       fClones->SetOwner(false);
@@ -1109,7 +1116,7 @@ TBranch* TTree::BranchImpRef(const char* branchname, TClass* ptrClass, EDataType
       if (datatype == kOther_t || datatype == kNoType_t) {
          Error("Branch", "The pointer specified for %s is not of a class or type known to ROOT", branchname);
       } else {
-         TString varname; varname.Form("%s/%c",branchname,DataTypeToChar(datatype));         
+         TString varname; varname.Form("%s/%c",branchname,DataTypeToChar(datatype));
          return Branch(branchname,addobj,varname.Data(),bufsize);
       }
       return 0;
@@ -2133,7 +2140,7 @@ TFile* TTree::ChangeFile(TFile* file)
    // a file named "__N", then "___N", etc.
    //
    // fgMaxTreeSize can be set via the static function TTree::SetMaxTreeSize.
-   // The default value of fgMaxTreeSize is 1.9 Gigabytes.
+   // The default value of fgMaxTreeSize is 100 Gigabytes.
    //
    // If the current file contains other objects like TH1 and TTree,
    // these objects are automatically moved to the new file.
@@ -2252,12 +2259,12 @@ Int_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType
    //  kMismatch (-2) : Non-Class Pointer type given does not match the type expected by the branch
    //  kClassMismatch (-1) : Class Pointer type given does not match the type expected by the branch
    //  kMatch (0) : perfect match
-   //  kMatchConversion (1) : match with (I/O) conversion 
+   //  kMatchConversion (1) : match with (I/O) conversion
    //  kMatchConversionCollection (2) : match with (I/O) conversion of the content of a collection
    //  kMakeClass (3) : MakeClass mode so we can not check.
    //  kVoidPtr (4) : void* passed so no check was made.
    //  kNoCheck (5) : Underlying TBranch not yet available so no check was made.
-   
+
    if (GetMakeClass()) {
       // If we are in MakeClass mode so we do not really use classes.
       return kMakeClass;
@@ -2331,43 +2338,43 @@ Int_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType
        ptrClass->GetSchemaRules()->HasRuleWithSourceClass(expectedClass->GetName() ) ) {
 
       TBranchElement* bEl = (TBranchElement*)branch;
-      
+
       if( !ptrClass->GetConversionStreamerInfo( expectedClass, bEl->GetClassVersion() ) &&
           !ptrClass->FindConversionStreamerInfo( expectedClass, bEl->GetCheckSum() ) ) {
          Error("SetBranchAddress", "The pointer type given \"%s\" does not correspond to the type needed \"%s\" by the branch: %s", ptrClass->GetName(), bEl->GetClassName(), branch->GetName());
          return kClassMismatch;
       }
       else {
-         
-         bEl->SetTargetClassName( ptrClass->GetName() );         
+
+         bEl->SetTargetClassName( ptrClass->GetName() );
          return kMatchConversion;
       }
-      
+
    } else if (expectedClass && ptrClass && !expectedClass->InheritsFrom(ptrClass)) {
 
       if (expectedClass->GetCollectionProxy() && ptrClass->GetCollectionProxy() &&
           branch->InheritsFrom( TBranchElement::Class() ) &&
-          expectedClass->GetCollectionProxy()->GetValueClass() && 
-          ptrClass->GetCollectionProxy()->GetValueClass() ) 
+          expectedClass->GetCollectionProxy()->GetValueClass() &&
+          ptrClass->GetCollectionProxy()->GetValueClass() )
       {
          // In case of collection, we know how to convert them, if we know how to convert their content.
          // NOTE: we need to extend this to std::pair ...
-         
+
          TClass *onfileValueClass = expectedClass->GetCollectionProxy()->GetValueClass();
          TClass *inmemValueClass = ptrClass->GetCollectionProxy()->GetValueClass();
 
          if (inmemValueClass->GetSchemaRules() &&
-             inmemValueClass->GetSchemaRules()->HasRuleWithSourceClass(onfileValueClass->GetName() ) ) 
+             inmemValueClass->GetSchemaRules()->HasRuleWithSourceClass(onfileValueClass->GetName() ) )
          {
             TBranchElement* bEl = (TBranchElement*)branch;
-            bEl->SetTargetClassName( ptrClass->GetName() );         
+            bEl->SetTargetClassName( ptrClass->GetName() );
             return kMatchConversionCollection;
          }
       }
-      
+
       Error("SetBranchAddress", "The pointer type given (%s) does not correspond to the class needed (%s) by the branch: %s", ptrClass->GetName(), expectedClass->GetName(), branch->GetName());
       return kClassMismatch;
-      
+
    } else if ((expectedType != kOther_t) && (datatype != kOther_t) && (expectedType != kNoType_t) && (datatype != kNoType_t) && (expectedType != datatype)) {
       if (datatype != kChar_t) {
          // For backward compatibility we assume that (char*) was just a cast and/or a generic address
@@ -2910,7 +2917,7 @@ void TTree::Delete(Option_t* option /* = "" */)
 
     // Delete object from CINT symbol table so it can not be used anymore.
    gCint->DeleteGlobal(this);
-   
+
    // Warning: We have intentional invalidated this object while inside a member function!
    delete this;
 }
@@ -3209,7 +3216,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //    tree.Draw("myvar","Entry$%2==0");
    //
    //  Entry$      : return the current entry number (== TTree::GetReadEntry())
-   //  LocalEntry$ : return the current entry number in the current tree of a 
+   //  LocalEntry$ : return the current entry number in the current tree of a
    //                chain (== GetTree()->GetReadEntry())
    //  Entries$    : return the total number of entries (== TTree::GetEntries())
    //  Length$     : return the total number of element of this formula for this
@@ -3231,10 +3238,10 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  MaxIf$(formula,condition): return the minimum (maximum) (within one TTree entry)
    //                    of the value of the elements of the formula given as a parameter
    //                    if they match the condition. If not element match the condition, the result is zero.  To avoid the
-   //                    the result is zero.  To avoid the consequent peak a zero, use the 
-   //                    pattern: 
+   //                    the result is zero.  To avoid the consequent peak a zero, use the
+   //                    pattern:
    //    tree->Draw("MinIf$(formula,condition)","condition");
-   //                    which will avoid calculation MinIf$ for the entries that have no match 
+   //                    which will avoid calculation MinIf$ for the entries that have no match
    //                    for the condition.
    //
    //  Alt$(primary,alternate) : return the value of "primary" if it is available
@@ -3261,7 +3268,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  The ternary operator is not directly support in TTree::Draw however, to plot the
    //  equivalent of 'var2<20 ? -99 : var1', you can use:
    //     tree->Draw("(var2<20)*99+(var2>=20)*var1","");
-   // 
+   //
    //     Drawing a user function accessing the TTree data directly
    //     =========================================================
    //
@@ -3482,11 +3489,11 @@ Int_t TTree::Fill()
    //   values of the leaves data types. If a leaf is a simple data type,
    //   a simple conversion to a machine independent format has to be done.
    //
-   //   This machine independent version of the data is copied into a 
+   //   This machine independent version of the data is copied into a
    //   basket (each branch has its own basket).  When a basket is full
    //   (32k worth of data by default), it is then optionally compressed
    //   and written to disk (this operation is also called comitting or
-   //   'flushing' the basket).  The committed baskets are then 
+   //   'flushing' the basket).  The committed baskets are then
    //   immediately removed from memory.
    //
    //   The function returns the number of bytes committed to the
@@ -3497,7 +3504,23 @@ Int_t TTree::Fill()
    //   If no data are written, because, e.g., the branch is disabled,
    //   the number of bytes returned is 0.
    //
-
+   //        The baskets are flushed and the Tree header saved at regular intervals
+   //         ---------------------------------------------------------------------
+   //   At regular intervals, when the amount of data written so far (fTotBytes) is
+   //   greater than fAutoFlush (see SetAutoFlush) all the baskets are flushed to disk.
+   //   This makes future reading faster as it guarantees that baskets belonging to nearby
+   //   entries will be on the same disk region.
+   //   When the first call to flush the baskets happen, we also take this opportunity
+   //   to optimize the baskets buffers.
+   //   We also check if the number of bytes written is greater than fAutoSave (see SetAutoSave).
+   //   In this case we also write the Tree header. This makes the Tree recoverable up to this point
+   //   in case the program writing the Tree crashes.
+   //   Note that the user can also decide to call FlushBaskets and AutoSave in her event loop
+   //   on the base of the number of events written instead of the number of bytes written.
+   //
+   //   Note that calling FlushBaskets too often increases the IO time.
+   //   Note that calling AutoSave too often increases the IO time and also the file size.
+   
    Int_t nbytes = 0;
    Int_t nerror = 0;
    Int_t nb = fBranches.GetEntriesFast();
@@ -3543,8 +3566,37 @@ Int_t TTree::Fill()
    if (fEntries > fMaxEntries) {
       KeepCircular();
    }
-   if ((fTotBytes - fSavedBytes) > fAutoSave) {
-      AutoSave();
+   if (fAutoFlush < 0) {
+      // Is it time to flush, autosave or optimize baskets?
+      // case when -fAutoFlush is the number of bytes triggering the FlushBaskets
+      if ((fZipBytes - fFlushedBytes) > -fAutoFlush) {
+         if (fFlushedBytes <= 0) {
+            //we take the opportunity to Optimizebaskets at this point (it calls FlushBaskets)
+            OptimizeBaskets(fTotBytes,1,"");
+            if (gDebug > 0) printf("OptimizeBaskets called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
+         }
+         fFlushedBytes = fZipBytes;
+         fAutoFlush    = fEntries;
+      }
+   } else if (fAutoFlush > 0) {
+      // Is it time to flush, autosave or optimize baskets?
+      // case when fAutoFlush is the number of entries triggering the FlushBaskets
+      if (fEntries > 1 && fEntries%fAutoFlush == 0) {
+         if (fFlushedBytes <= 0) {
+            //we take the opportunity to Optimizebaskets at this point (it calls FlushBaskets)
+            OptimizeBaskets(fTotBytes,1,"");
+            if (gDebug > 0) printf("OptimizeBaskets called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
+         } else if ((fZipBytes - fSavedBytes) > fAutoSave) {
+            //we have read an AutoSave point. It flushes baskets and save the Tree header
+            AutoSave();
+            if (gDebug > 0) printf("AutoSave called at entry %lld, fZipBytes=%lld, fSavedBytes=%lld\n",fEntries,fZipBytes,fSavedBytes);
+         } else {
+            //we only FlushBaskets
+            FlushBaskets();
+            if (gDebug > 0) printf("FlushBasket called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
+         }
+         fFlushedBytes = fZipBytes;
+      }
    }
    // Check that output file is still below the maximum size.
    // If above, close the current file and continue on a new file.
@@ -3569,16 +3621,16 @@ Int_t TTree::Fill()
 static TBranch *R__FindBranchHelper(TObjArray *list, const char *branchname) {
    // Search in the array for a branch matching the branch name,
    // with the branch possibly expressed as a 'full' path name (with dots).
-   
+
    if (list==0) return 0;
-   
+
    Int_t nbranches = list->GetEntries();
 
    UInt_t brlen = strlen(branchname);
-   
+
    for(Int_t index = 0; index < nbranches; ++index) {
-      TBranch *where = (TBranch*)list->UncheckedAt(index); 
-      
+      TBranch *where = (TBranch*)list->UncheckedAt(index);
+
       const char *name = where->GetName();
       UInt_t len = strlen(name);
       if (name[len-1]==']') {
@@ -3624,7 +3676,7 @@ TBranch* TTree::FindBranch(const char* branchname)
    if (kFindBranch & fFriendLockStatus) {
       return 0;
    }
-   
+
    TBranch* branch = 0;
    // If the first part of the name match the TTree name, look for the right part in the
    // list of branches.
@@ -3646,7 +3698,7 @@ TBranch* TTree::FindBranch(const char* branchname)
          return nestedbranch;
       }
    }
-   
+
    // Search in list of friends.
    if (!fFriends) {
       return 0;
@@ -3858,7 +3910,7 @@ Int_t TTree::FlushBaskets() const
    // Write to disk all the basket that have not yet been individually written.
    //
    // Return the number of bytes written or -1 in case of write error.
-   
+
    if (!fDirectory) return 0;
    Int_t nbytes = 0;
    Int_t nerror = 0;
@@ -5110,31 +5162,31 @@ Bool_t TTree::Notify()
 }
 
 //______________________________________________________________________________
-void TTree::OptimizeBaskets(Int_t maxMemory, Float_t minComp, Option_t *option) 
+void TTree::OptimizeBaskets(Int_t maxMemory, Float_t minComp, Option_t *option)
 {
    //This function may be called after having filled some entries in a Tree
    //Using the information in the existing branch buffers, it will reassign
    //new branch buffer sizes to optimize time and memory.
    //
    //The function computes the best values for branch buffer sizes such that
-   //the total buffer sizes is less than maxMemory and nearby entries written 
+   //the total buffer sizes is less than maxMemory and nearby entries written
    //at the same time.
-   //In case the branch compression factor for the data written so far is less 
+   //In case the branch compression factor for the data written so far is less
    //than compMin, the compression is disabled.
    //
    //if option ="d" an analysis report is printed.
-      
+
    //Flush existing baskets if the file is writable
    if (this->GetDirectory()->IsWritable()) this->FlushBaskets();
-   
+
    TString opt = option;
    opt.ToLower();
    Bool_t pDebug = kFALSE;
    if (opt.Contains("d")) pDebug = kTRUE;
    TObjArray *leaves = this->GetListOfLeaves();
    Int_t nleaves = leaves->GetEntries();
-   Int_t bmin = 2048;
-   Int_t bmax = 512000;
+   Int_t bmin = 512;
+   Int_t bmax = 256000;
    Double_t treeSize = (Double_t)this->GetTotBytes();
    Double_t aveSize = treeSize/nleaves;
    Double_t memFactor = 1;
@@ -5168,7 +5220,7 @@ void TTree::OptimizeBaskets(Int_t maxMemory, Float_t minComp, Option_t *option)
             if (pDebug) printf("Changing buffer size from %6d to %6d bytes for %s\n",oldBsize,newBsize,branch->GetName());
             branch->SetBasketSize(newBsize);
          }
-         newMemsize += newBsize;       
+         newMemsize += newBsize;
          newBaskets += 1+Int_t(totBytes/newBsize);
          if (pass == 0) continue;
          //Reset the compression level in case the compression factor is small
@@ -5327,7 +5379,7 @@ void TTree::PrintCacheStats(Option_t* option) const
    //   Number of blocks in current cache: 202, total size : 6001193
    //
    // if option = "a" the list of blocks in the cache is printed
-   
+
    TFile *f = GetCurrentFile();
    if (!f) return;
    TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
@@ -5503,7 +5555,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
    //
    // FILLING a TTree WITH MULTIPLE INPUT TEXT FILES
    // ----------------------------------------------
-   // To fill a TTree with multiple input text files, proceed as indicated above 
+   // To fill a TTree with multiple input text files, proceed as indicated above
    // for the first input file and omit the second argument for subsequent calls
    //    T.ReadFile("file1.dat","branch descriptor");
    //    T.ReadFile("file2.dat");
@@ -5598,6 +5650,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
    return nlines;
 }
 
+//______________________________________________________________________________
 void TTree::RecursiveRemove(TObject *obj)
 {
    // Make sure that obj (which is being deleted or will soon be) is no
@@ -5807,6 +5860,53 @@ Bool_t TTree::SetAlias(const char* aliasName, const char* aliasFormula)
    TNamed* holder = new TNamed(aliasName, aliasFormula);
    fAliases->Add(holder);
    return kTRUE;
+}
+
+//_______________________________________________________________________
+void TTree::SetAutoFlush(Long64_t autof)
+{
+   // This function may be called at the start of a program to change
+   // the default value for fAutoFlush.
+   //
+   //     CASE 1 : autof > 0
+   //     ------------------
+   // autof is the number of consecutive entries after which TTree::Fill will
+   // flush all branch buffers to disk.
+   //
+   //     CASE 2 : autof < 0
+   //     ------------------
+   // When filling the Tree the branch buffers will be flushed to disk when
+   // more than autof bytes have been written to the file. At the first FlushBaskets
+   // TTree::Fill will replace fAutoFlush by the current value of fEntries.
+   //
+   // Calling this function with autof<0 is interesting when it is hard to estimate
+   // the size of one entry. This value is also independent of the Tree.
+   //
+   // When calling SetAutoFlush with no arguments, the
+   // default value is -30000000, ie that the first AutoFlush will be done when
+   // 30 MBytes of data are written to the file.
+   //
+   //     CASE 3 : autof = 0
+   //     ------------------
+   // The AutoFlush mechanism is disabled.
+   //
+   // Flushing the buffers at regular intervals optimize the location of
+   // consecutive entries on the disk.
+
+   fAutoFlush = autof;
+}
+
+//_______________________________________________________________________
+void TTree::SetAutoSave(Long64_t autos)
+{
+   //This function may be called at the start of a program to change
+   //the default value for fAutoSave(300000000, ie 300 MBytes).
+   //When filling the Tree the branch buffers as well as the Tree header
+   //will be flushed to disk when more than fAutoSave bytes have been written to the file.
+   //In case of a program crash, it will be possible to recover the data in the Tree
+   //up to the last AutoSave point.
+
+   fAutoSave = autos;
 }
 
 //_______________________________________________________________________
@@ -6082,14 +6182,20 @@ void TTree::SetBranchStyle(Int_t style)
 //______________________________________________________________________________
 void TTree::SetCacheSize(Long64_t cacheSize)
 {
-   // Set maximum size of the file cache (default is 10000000, i.e., 10 MB).
-   // if cachesize <= 0 the existing cache (if any) is deleted
+   // Set maximum size of the file cache .
+   // if cachesize = 0 the existing cache (if any) is deleted.
+   // if cachesize = -1 (default) it is set to the AutoFlush value when writing
+   //    the Tree (default is 30 MBytes).
    // WARNING: Currently only ONE TTree object can be 'cached' per TFile object.
    // This call disable the cache for the other TTree objects read from the same
    // TFile object as this TTree (The SetCacheSize called __last__ wins).
    // To cache multiple TTree objects in the same ROOT file, you must create
    // one TFile object per TTree object.
 
+   if (cacheSize < 0) {
+      if (fAutoFlush < 0) cacheSize = -fAutoFlush;
+      else cacheSize = Long64_t(1.5*fAutoFlush*fZipBytes/(fEntries+1));
+   }
    TFile* file = GetCurrentFile();
    if (!file) {
       fCacheSize = cacheSize;
@@ -6102,14 +6208,14 @@ void TTree::SetCacheSize(Long64_t cacheSize)
       }
       delete pf;
       pf = 0;
-      if (cacheSize <= 0) {
+      if (cacheSize == 0) {
          file->SetCacheRead(0);
          fCacheSize=0;
          return;
       }
    }
    fCacheSize = cacheSize;
-   if (cacheSize <= 0) {
+   if (cacheSize == 0) {
       return;
    }
 
@@ -6123,7 +6229,7 @@ void TTree::SetCacheSize(Long64_t cacheSize)
 void TTree::SetCacheEntryRange(Long64_t first, Long64_t last)
 {
    //interface to TTreeCache to set the cache entry range
-   
+
    TFile *f = GetCurrentFile();
    if (!f) return;
    TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
@@ -6209,7 +6315,7 @@ void TTree::SetDefaultEntryOffsetLen(Int_t newdefault, Bool_t updateExisting)
    // Update the default value for the branch's fEntryOffsetLen.
    // If updateExisting is true, also update all the existing branches.
    // If newdefault is less than 10, the new default value will be 10.
-   
+
    if (newdefault < 10) {
       newdefault = 10;
    }
@@ -6455,10 +6561,10 @@ void TTree::SetObject(const char* name, const char* title)
 void TTree::SetParallelUnzip(Bool_t opt)
 {
    //enable or disable parallel unzipping of Tree buffers
-   
+
    if (opt) TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kEnable);
    else     TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kDisable);
-   
+
 }
 
 //______________________________________________________________________________
@@ -6611,7 +6717,7 @@ void TTree::Streamer(TBuffer& b)
          if (fEstimate <= 10000) {
             fEstimate = 1000000;
          }
-         fSavedBytes = fTotBytes;
+         fCacheSize    = fAutoFlush;
          ResetBit(kMustCleanup);
          return;
       }
@@ -6745,7 +6851,7 @@ void TTree::UseCurrentStyle()
 }
 
 //______________________________________________________________________________
-Int_t TTree::Write(const char *name, Int_t option, Int_t bufsize) const 
+Int_t TTree::Write(const char *name, Int_t option, Int_t bufsize) const
 {
    // Write this object to the current directory. For more see TObject::Write
    // Write calls TTree::FlushBaskets before writing the tree.

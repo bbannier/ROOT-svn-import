@@ -91,6 +91,11 @@ ifeq ($(PLATFORM),win32)
 TARGETS    += $(XRDEXECS)
 endif
 
+# Make sure that PWD is defined (it may not be for example when running 'make' via 'sudo')
+ifeq ($(PWD),)
+PWD := $(shell pwd)
+endif
+
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
@@ -114,7 +119,8 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		macosxicc:*)     xopt="--ccflavour=icc";; \
 		macosx*:*)       xopt="--ccflavour=macos";; \
 		solaris64*:*:i86pc:*) xopt="--ccflavour=sunCCamd --use-xrd-strlcpy";; \
-		solaris*:*:i86pc:*) xopt="--ccflavour=sunCCi86pc --use-xrd-strlcpy";; \
+                solaris*:5.1*:i86pc:*) xopt="--use-xrd-strlcpy";; \
+                solaris*:*:i86pc:*) xopt="--ccflavour=sunCCi86pc --use-xrd-strlcpy";; \
 		solarisgcc:5.8)  xopt="--ccflavour=gcc";; \
 		solaris*:5.8)    xopt="--ccflavour=sunCC";; \
 		solarisgcc:5.9)  xopt="--ccflavour=gcc";; \
@@ -124,9 +130,23 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		win32gcc:*)      xopt="win32gcc";; \
 		*)               xopt="";; \
 		esac; \
-		if [ "x$(KRB5LIB)" = "x" ] ; then \
-		   xopt="$$xopt --disable-krb5"; \
-		fi; \
+                if [ ! "x$(KRB5LIBDIR)" = "x" ] ; then \
+                   xlib=`echo $(KRB5LIBDIR) | cut -c3-`; \
+                   xopt="$$xopt --with-krb5-libdir=$$xlib"; \
+                elif [ ! "x$(KRB5LIB)" = "x" ] ; then \
+                   xlibs=`echo $(KRB5LIB)`; \
+                   for l in $$xlibs; do \
+                      if [ ! "x$$l" = "x-lkrb5" ] && [ ! "x$$l" = "x-lk5crypto" ]  ; then \
+                         xlib=`dirname $$l`; \
+                         xopt="$$xopt --with-krb5-libdir=$$xlib"; \
+                         break; \
+                      fi; \
+                   done; \
+                fi; \
+                if [ ! "x$(KRB5INCDIR)" = "x" ] ; then \
+                   xinc=`echo $(KRB5INCDIR)`; \
+                   xopt="$$xopt --with-krb5-incdir=$$xinc"; \
+                fi; \
 		if [ "x$(BUILDXRDGSI)" = "x" ] ; then \
 		   xopt="$$xopt --disable-gsi"; \
 		fi; \

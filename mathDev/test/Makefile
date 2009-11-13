@@ -279,7 +279,7 @@ endif
 		@echo "$@ done"
 
 $(EVENT):       $(EVENTSO) $(MAINEVENTO)
-		$(LD) $(LDFLAGS) $(MAINEVENTO) $(EVENTLIB) $(LIBS) $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $(MAINEVENTO) $(EVENTO) $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"
 
@@ -456,7 +456,7 @@ $(GUIVIEWER):   $(GUIVIEWERO)
 		@echo "$@ done"
 
 $(STRESS):      $(STRESSO) $(EVENT)
-		$(LD) $(LDFLAGS) $(STRESSO) $(EVENTLIB) $(LIBS) $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $(STRESSO) $(EVENTO) $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"
 
@@ -644,11 +644,10 @@ clean:
 		@rm -f $(OBJS) $(TRACKMATHSRC) core
 
 distclean:      clean
-		-@mv -f linearIO.root linearIO.roott
 		@rm -f $(PROGRAMS) $(EVENTSO) $(EVENTLIB) *Dict.* *.def *.exp \
-		   *.root *.ps *.so *.lib *.dll *.d *.log .def so_locations
-		@rm -rf cxx_repository files
-		-@mv -f linearIO.roott linearIO.root
+		   *.root *.ps *.so *.lib *.dll *.d *.log .def so_locations \
+		   files/*
+		@rm -rf cxx_repository
 		-@cd RootShower && $(MAKE) distclean
 		-@cd rhtml && $(MAKE) distclean
 		-@cd RootIDE && $(MAKE) distclean

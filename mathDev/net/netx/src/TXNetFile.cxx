@@ -52,6 +52,8 @@
 #include "TVirtualMonitoring.h"
 #include "TFileStager.h"
 #include "TFileCacheRead.h"
+#include "TTimeStamp.h"
+#include "TVirtualPerfStats.h"
 
 #include <XrdClient/XrdClient.hh>
 #include <XrdClient/XrdClientConst.hh>
@@ -192,11 +194,11 @@ void TXNetFile::FormUrl(TUrl uu, TString &uus)
 //_____________________________________________________________________________
 Int_t TXNetFile::ParseOptions(const char *opts,
                               Int_t &cachesz, Int_t &readaheadsz,
-                              Int_t &rmpolicy, Int_t &mxredir)
+                              Int_t &rmpolicy, Int_t &mxredir, Int_t &rastrategy, Int_t &readtrimblksz)
 {
    // Parse input options for cache parameters
-   static const char *keys[4] = { "cachesz=", "readaheadsz=", "rmpolicy=",
-                                  "mxredir=" };
+   static const char *keys[6] = { "cachesz=", "readaheadsz=", "rmpolicy=",
+                                  "mxredir=", "readaheadstrategy=", "readtrimblksz=" };
    Int_t fo = 0;
    TString s(opts);
 
@@ -222,6 +224,10 @@ Int_t TXNetFile::ParseOptions(const char *opts,
                rmpolicy = val.Atoi();
             else if (i == 3)
                mxredir = val.Atoi();
+            else if (i == 4)
+               rastrategy = val.Atoi();
+            else if (i == 5)
+               readtrimblksz = val.Atoi();
          }
       }
    }
@@ -229,8 +235,9 @@ Int_t TXNetFile::ParseOptions(const char *opts,
    // Notify
    if (gDebug > 0)
       Info("ParseCacheOptions","found: cachesz = %d, readaheadsz = %d, "
-                               "rmpolicy = %d, mxredir = %d",
-                               cachesz, readaheadsz, rmpolicy, mxredir);
+           "rmpolicy = %d, mxredir = %d, rastrategy = %d, readtrimblksz = %d",
+           cachesz, readaheadsz, rmpolicy, mxredir, rastrategy, readtrimblksz);
+
    // Done
    return fo;
 }
@@ -242,6 +249,7 @@ void TXNetFile::CreateXClient(const char *url, Option_t *option, Int_t netopt,
    // The real creation work is done here.
 
    Int_t cachesz = -1, readaheadsz = -1, rmpolicy = -1, mxredir = -1, np = 0;
+   Int_t readaheadstrategy = -1, readtrimblksz = -1;
 
    fClient = 0;
    fNetopt = netopt;
@@ -285,7 +293,9 @@ void TXNetFile::CreateXClient(const char *url, Option_t *option, Int_t netopt,
 
    // Get client (cache, redir) parameters, if any
    np = ParseOptions(TUrl(url).GetOptions(),
-                     cachesz, readaheadsz, rmpolicy, mxredir);
+                     cachesz, readaheadsz, rmpolicy, mxredir,
+                     readaheadstrategy, readtrimblksz);
+
    // Set max redir, if asked
    if (mxredir > 0) {
       if (fClient->GetClientConn()) {
@@ -302,6 +312,19 @@ void TXNetFile::CreateXClient(const char *url, Option_t *option, Int_t netopt,
                                "rmpolicy = %d",
                                cachesz, readaheadsz, rmpolicy);
       fClient->SetCacheParameters(cachesz, readaheadsz, rmpolicy);
+
+      if (readaheadstrategy >= 0) {
+         if (gDebug > 0)
+            Info("CreateXClient", "setting readaheadstrategy = %d", readaheadstrategy);
+         fClient->SetReadAheadStrategy(readaheadstrategy);
+      }
+
+      if (readtrimblksz >= 0) {
+         if (gDebug > 0)
+            Info("CreateXClient", "setting readtrimblksz = %d", readtrimblksz);
+         fClient->SetBlockReadTrimming(readtrimblksz);
+      }
+
    }
 
    //
@@ -603,6 +626,9 @@ Bool_t TXNetFile::ReadBuffer(char *buffer, Int_t bufferLength)
       }
    }
 
+   Double_t start = 0;
+   if (gPerfStats) start = TTimeStamp();
+
    // Read from the remote xrootd
    Int_t nr = fClient->Read(buffer, fOffset, bufferLength);
 
@@ -627,6 +653,9 @@ Bool_t TXNetFile::ReadBuffer(char *buffer, Int_t bufferLength)
      fgReadCalls++;
 #endif
    }
+
+   if (gPerfStats)
+      gPerfStats->FileReadEvent(this, bufferLength, start);
 
    if (gMonitoringWriter)
       gMonitoringWriter->SendFileReadProgress(this);
@@ -659,6 +688,9 @@ Bool_t TXNetFile::ReadBufferAsync(Long64_t offs, Int_t bufferLength)
       return kTRUE;
    }
 
+   Double_t start = 0;
+   if (gPerfStats) start = TTimeStamp();
+
    Bool_t result = kFALSE;
 
    if (bufferLength==0)
@@ -670,7 +702,7 @@ Bool_t TXNetFile::ReadBufferAsync(Long64_t offs, Int_t bufferLength)
    // This doesnt return the number of bytes read...
    // and even if it did we dont want to update fBytesRead
    // because that would be updated in the real read
-   XReqErrorType nr = fClient->Read_Async(offs, bufferLength);
+   XReqErrorType nr = fClient->Read_Async(offs+fArchiveOffset, bufferLength);
 
    if (nr != kOK)
       return kTRUE;
@@ -684,6 +716,9 @@ Bool_t TXNetFile::ReadBufferAsync(Long64_t offs, Int_t bufferLength)
    fgBytesRead += bufferLength;
    fgReadCalls++;
 #endif
+
+   if (gPerfStats)
+      gPerfStats->FileReadEvent(this, bufferLength, start);
 
    if (gDebug > 1)
       Info("ReadBufferAsync", "%d bytes of data read request from offset"
@@ -720,6 +755,12 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
       return kTRUE;
    }
 
+   Double_t start = 0;
+   if (gPerfStats) start = TTimeStamp();
+
+   if (fArchiveOffset)
+      for (Int_t i = 0; i < nbuf; i++)
+         pos[i] += fArchiveOffset;
 
    // A null buffer means that we want to use the async stuff
    //  hence we have to sync the cache size in XrdClient with the supposed
@@ -754,6 +795,9 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
       fgReadCalls++;
 #endif
 
+      if (gPerfStats)
+         gPerfStats->FileReadEvent(this, nr, start);
+
       if (gMonitoringWriter)
          gMonitoringWriter->SendFileReadProgress(this);
 
@@ -764,8 +808,13 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
       Info("ReadBuffers", "XrdClient->ReadV failed, executing TFile::ReadBuffers");
 
    // If it wasnt able to use the specialized call
-   // then use the generic one that is like a queue
-   return TFile::ReadBuffers(buf, pos, len, nbuf);
+   // then use the generic one that is a plain loop
+   // of individual requests
+   if (buf)
+      return TFile::ReadBuffers(buf, pos, len, nbuf);
+   // If the async call was needed (buf == 0) and it got an error,
+   // just return error
+   else return kTRUE;
 }
 
 //_____________________________________________________________________________
@@ -872,13 +921,16 @@ void TXNetFile::Init(Bool_t create)
          if (gMonitoringWriter)
             gMonitoringWriter->SendFileOpenProgress(this, fOpenPhases, "endopen", kTRUE);
 
-         // Set the Endpoint Url we are now connected to
-         fEndpointUrl = fClient->GetClientConn()->GetCurrentUrl().GetUrl().c_str();
-         // Check equivalence of initial and end-point Url to see whether we have
-         // been redirected
-         if (fEndpointUrl.GetPort() != fUrl.GetPort() ||
-            strcmp(fEndpointUrl.GetHostFQDN(), fUrl.GetHostFQDN()))
-            SetBit(TFile::kRedirected);
+         // Set the Endpoint Url we are now connected to. Unless there was some opaque info
+         // which cannot be re-used
+         if (fClient->GetClientConn() && fClient->GetClientConn()->fRedirOpaque.length() <= 0) {
+            fEndpointUrl = fClient->GetClientConn()->GetCurrentUrl().GetUrl().c_str();
+            // Check equivalence of initial and end-point Url to see whether we have
+            // been redirected
+            if (fEndpointUrl.GetPort() != fUrl.GetPort() ||
+               strcmp(fEndpointUrl.GetHostFQDN(), fUrl.GetHostFQDN()))
+               SetBit(TFile::kRedirected);
+         }
       } else {
          if (gDebug > 0)
             Info("Init","open request failed!");
@@ -1137,9 +1189,14 @@ void TXNetFile::SetEnv()
    EnvPutInt(NAME_CONNECTTIMEOUT, connTO);
 
    // Reconnect Timeout
-   Int_t recoTO = gEnv->GetValue("XNet.ReconnectTimeout",
-                                  DFLT_RECONNECTTIMEOUT);
-   EnvPutInt(NAME_RECONNECTTIMEOUT, recoTO);
+   Int_t recoTO = gEnv->GetValue("XNet.ReconnectWait",
+                                  DFLT_RECONNECTWAIT);
+   if (recoTO == DFLT_RECONNECTWAIT) {
+      // Check also the old variable name
+      recoTO = gEnv->GetValue("XNet.ReconnectTimeout",
+                                  DFLT_RECONNECTWAIT);
+   }
+   EnvPutInt(NAME_RECONNECTWAIT, recoTO);
 
    // Request Timeout
    Int_t requTO = gEnv->GetValue("XNet.RequestTimeout",
@@ -1151,15 +1208,12 @@ void TXNetFile::SetEnv()
                                     DFLT_MAXREDIRECTCOUNT);
    EnvPutInt(NAME_MAXREDIRECTCOUNT, maxRedir);
 
-   // Whether to use a separate thread for garbage collection
-   Int_t garbCollTh = gEnv->GetValue("XNet.StartGarbageCollectorThread",
-                                      DFLT_STARTGARBAGECOLLECTORTHREAD);
-   EnvPutInt(NAME_STARTGARBAGECOLLECTORTHREAD, garbCollTh);
 
    // Read ahead size
    Int_t rAheadsiz = gEnv->GetValue("XNet.ReadAheadSize",
                                      DFLT_READAHEADSIZE);
    EnvPutInt(NAME_READAHEADSIZE, rAheadsiz);
+
 
    // Cache size (<= 0 disables cache)
    Int_t rCachesiz = gEnv->GetValue("XNet.ReadCacheSize",

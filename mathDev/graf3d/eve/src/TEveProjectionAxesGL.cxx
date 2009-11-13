@@ -352,7 +352,8 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       if (fM->GetDrawOrigin())
       {
          TEveVector zero;
-         fProjection->ProjectVector(zero);
+         fProjection->ProjectVector(zero, 0);
+         TGLUtil::LineWidth(1);
          TGLUtil::LineWidth(1);
          glBegin(GL_LINES);
          glVertex3f(zero[0] + d, zero[1], zero[2]); glVertex3f(zero[0] - d, zero[1], zero[2]);
@@ -370,6 +371,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       glGetIntegerv(GL_VIEWPORT, vp);
       Float_t refLength =  TMath::Sqrt((TMath::Power(vp[2]-vp[0], 2) + TMath::Power(vp[3]-vp[1], 2)));
       Float_t tickLength = TMath::Sqrt((TMath::Power(r-l, 2) + TMath::Power(t-b, 2)));
+      fAxisPainter.SetFontMode(TGLFont::kPixmap);
       fAxisPainter.SetLabelFont(rnrCtx, TGLFontManager::GetFontNameFromId(fM->GetLabelFont()),  TMath::CeilNint(refLength*0.02), tickLength*fM->GetLabelSize());
 
       Float_t min, max;
