@@ -365,8 +365,17 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
       if (fitOption.Verbose) bcfitter->PrintResults(2,0.);
       else if (!fitOption.Quiet) bcfitter->PrintResults(1,0.);
 
-      if (fitOption.StoreResult)
-         return TFitResultPtr(new TFitResult(fitResult));
+      if (fitOption.StoreResult) 
+      {
+         TFitResult* fr = new TFitResult(fitResult);
+         TString name = "TFitResult-";
+         name = name + h1->GetName() + "-" + f1->GetName();
+         TString title = "TFitResult-";
+         title += h1->GetTitle();
+         fr->SetName(name);
+         fr->SetTitle(title);
+         return TFitResultPtr(fr);
+      }
       else 
          return TFitResultPtr(iret);
 }
