@@ -254,15 +254,59 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
    Int_t ctime = 0;
    UInt_t *cdatime = 0;
    char line[kline];
-   TDataMember *member = cl->GetDataMember(mname);
-   if (!member) return;
-   TDataType *membertype = member->GetDataType();
+
+   TDataType *membertype;
+   TString memberTypeName;
+   const char *memberName;
+   const char *memberFullTypeName;
+   const char *memberTitle;
+   Bool_t isapointer;
+   Bool_t isbasic;
+
+   if (TDataMember *member = cl->GetDataMember(mname)) {
+      memberTypeName = member->GetTypeName();
+      memberName = member->GetName();
+      memberFullTypeName = member->GetFullTypeName();
+      memberTitle = member->GetTitle();
+      isapointer = member->IsaPointer();
+      isbasic = member->IsBasic();
+      membertype = member->GetDataType();
+   } else if (!cl->IsLoaded()) {
+      // The class is not loaded, hence it is 'emulated' and the main source of
+      // information is the StreamerInfo.
+      TVirtualStreamerInfo *info = cl->GetStreamerInfo();
+      if (!info) return;
+      const char *cursor = mname;
+      while ( (*cursor)=='*' ) ++cursor;
+      TString elname( cursor );
+      Ssiz_t pos = elname.Index("[");
+      if ( pos != kNPOS ) {
+         elname.Remove( pos );
+      }
+      TStreamerElement *element = (TStreamerElement*)info->GetElements()->FindObject(elname.Data());
+      memberFullTypeName = element->GetTypeName();
+      
+      memberTypeName = memberFullTypeName;
+      memberTypeName = memberTypeName.Strip(TString::kTrailing, '*');
+      if (memberTypeName.Index("const ")==0) memberTypeName.Remove(0,6);
+
+      memberName = element->GetName();
+      memberTitle = element->GetTitle();
+      isapointer = element->IsaPointer() || element->GetType() == TVirtualStreamerInfo::kCharStar;
+      membertype = gROOT->GetType(memberFullTypeName);
+      
+      isbasic = membertype !=0;
+   } else {
+      return;
+   }
+   
+   
    Bool_t isdate = kFALSE;
-   if (strcmp(member->GetName(),"fDatime") == 0 && strcmp(member->GetTypeName(),"UInt_t") == 0) {
+   if (strcmp(memberName,"fDatime") == 0 && strcmp(memberTypeName,"UInt_t") == 0) {
       isdate = kTRUE;
    }
    Bool_t isbits = kFALSE;
-   if (strcmp(member->GetName(),"fBits") == 0 && strcmp(member->GetTypeName(),"UInt_t") == 0) {
+   if (strcmp(memberName,"fBits") == 0 && strcmp(memberTypeName,"UInt_t") == 0) {
       isbits = kTRUE;
    }
 
@@ -276,11 +320,11 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
    char *pointer = (char*)add;
    char **ppointer = (char**)(pointer);
 
-   if (member->IsaPointer()) {
+   if (isapointer) {
       char **p3pointer = (char**)(*ppointer);
       if (!p3pointer)
          sprintf(&line[kvalue],"->0");
-      else if (!member->IsBasic())
+      else if (!isbasic)
          sprintf(&line[kvalue],"->%lx ", (Long_t)p3pointer);
       else if (membertype) {
          if (!strcmp(membertype->GetTypeName(), "char")) {
@@ -302,8 +346,8 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
          } else {
             strcpy(&line[kvalue], membertype->AsString(p3pointer));
          }
-      } else if (!strcmp(member->GetFullTypeName(), "char*") ||
-                 !strcmp(member->GetFullTypeName(), "const char*")) {
+      } else if (!strcmp(memberFullTypeName, "char*") ||
+                 !strcmp(memberFullTypeName, "const char*")) {
          i = strlen(*ppointer);
          if (kvalue+i >= kline) i=kline-kvalue;
          Bool_t isPrintable = kTRUE;
@@ -336,12 +380,11 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
       sprintf(&line[kvalue],"->%lx ", (Long_t)pointer);
 
    // Encode data member title
-   if (isdate == kFALSE && strcmp(member->GetFullTypeName(), "char*") &&
-       strcmp(member->GetFullTypeName(), "const char*")) {
+   if (isdate == kFALSE && strcmp(memberFullTypeName, "char*") && strcmp(memberFullTypeName, "const char*")) {
       i = strlen(&line[0]); line[i] = ' ';
-      Int_t lentit = strlen(member->GetTitle());
+      Int_t lentit = strlen(memberTitle);
       if (lentit > 250-ktitle) lentit = 250-ktitle;
-      strncpy(&line[ktitle],member->GetTitle(),lentit);
+      strncpy(&line[ktitle],memberTitle,lentit);
       line[ktitle+lentit] = 0;
    }
    Printf("%s", line);
@@ -366,13 +409,22 @@ class TBuildRealData : public TMemberInspector {
 private:
    void    *fRealDataObject;
    TClass  *fRealDataClass;
+   UInt_t   fBits;       //bit field status word
 
 public:
-   TBuildRealData(void *obj, TClass *cl)  {
+   TBuildRealData(void *obj, TClass *cl) : fBits(0) {
       fRealDataObject = obj;
       fRealDataClass = cl;
    }
    void Inspect(TClass *cl, const char *parent, const char *name, const void *addr);
+
+   //----- bit manipulation
+   void     SetBit(UInt_t f, Bool_t set);
+   void     SetBit(UInt_t f) { fBits |= f & TObject::kBitMask; }
+   void     ResetBit(UInt_t f) { fBits &= ~(f & TObject::kBitMask); }
+   Bool_t   TestBit(UInt_t f) const { return (Bool_t) ((fBits & f) != 0); }
+   Int_t    TestBits(UInt_t f) const { return (Int_t) (fBits & f); }
+   void     InvertBit(UInt_t f) { fBits ^= f & TObject::kBitMask; }
 };
 
 //______________________________________________________________________________
@@ -454,9 +506,9 @@ void TBuildRealData::Inspect(TClass* cl, const char* pname, const char* mname, c
          // classes composing this object (base classes, type of
          // embedded object and same for their data members).
          //
-         TClass* dmclass = TClass::GetClass(dm->GetTypeName(), kTRUE, isTransient);
+         TClass* dmclass = TClass::GetClass(dm->GetTypeName(), kTRUE, isTransient || TestBit(TRealData::kTransient));
          if (!dmclass) {
-            dmclass = TClass::GetClass(dm->GetTrueTypeName(), kTRUE, isTransient);
+            dmclass = TClass::GetClass(dm->GetTrueTypeName(), kTRUE, isTransient || TestBit(TRealData::kTransient));
          }
          if (dmclass) {
             if (dmclass->Property()) {
@@ -467,9 +519,9 @@ void TBuildRealData::Inspect(TClass* cl, const char* pname, const char* mname, c
             if ((dmclass != cl) && !dm->IsaPointer()) {
                if (dmclass->GetCollectionProxy()) {
                   TClass* valcl = dmclass->GetCollectionProxy()->GetValueClass();
-                  if (valcl) valcl->BuildRealData();
+                  if (valcl && !(valcl->Property() & kIsAbstract)) valcl->BuildRealData(0, isTransient || TestBit(TRealData::kTransient));
                } else {
-                  dmclass->BuildRealData(const_cast<void*>(add), isTransient);
+                  dmclass->BuildRealData(const_cast<void*>(add), isTransient || TestBit(TRealData::kTransient));
                }
             }
          }
@@ -951,7 +1003,11 @@ void TClass::Init(const char *name, Version_t cversion,
 
    if ( stl || !strncmp(GetName(),"stdext::hash_",13) || !strncmp(GetName(),"__gnu_cxx::hash_",16) ) {
       fCollectionProxy = TVirtualStreamerInfo::Factory()->GenEmulatedProxy( GetName() );
-      fSizeof = fCollectionProxy->Sizeof();
+      if (fCollectionProxy) {
+         fSizeof = fCollectionProxy->Sizeof();
+      } else if (!silent) {
+         Warning("Init","Collection proxy for %s was not properly initialized!",GetName());
+      }
       if (fStreamer==0) {
          fStreamer =  TVirtualStreamerInfo::Factory()->GenEmulatedClassStreamer( GetName() );
       }
@@ -1260,7 +1316,7 @@ void TClass::BuildRealData(void* pointer, Bool_t isTransient)
       BuildEmulatedRealData("", 0, this);
       return;
    }
-
+ 
    void* realDataObject = pointer;
 
    // If we are not given an object, and the class
@@ -1295,8 +1351,12 @@ void TClass::BuildRealData(void* pointer, Bool_t isTransient)
       // CallShowMember will force a call to InheritsFrom, which indirectly
       // calls TClass::GetClass.  It forces the loading of new typedefs in 
       // case some of them were not yet loaded.
+      Bool_t wasTransient = brd.TestBit(TRealData::kTransient);
+      if (isTransient) {
+         brd.SetBit(TRealData::kTransient);
+      }
       if ( ! CallShowMembers(realDataObject, brd, parent) ) {
-         if ( isTransient ) {
+         if ( brd.TestBit(TRealData::kTransient) ) {
             // This is a transient data member, so it is probably fine to not have 
             // access to its content.  However let's no mark it as definitively setup,
             // since another class might use this class for a persistent data member and
@@ -1306,6 +1366,9 @@ void TClass::BuildRealData(void* pointer, Bool_t isTransient)
          } else {
             Error("BuildRealData", "Cannot find any ShowMembers function for %s!", GetName());
          }
+      }
+      if (isTransient && !wasTransient) {
+         brd.ResetBit(TRealData::kTransient);
       }
 
       // Take this opportunity to build the real data for base classes.
@@ -1410,7 +1473,7 @@ Bool_t TClass::CallShowMembers(void* obj, TMemberInspector &insp, char *parent,
       return kTRUE;
    } else {
 
-      if (isATObject == -1) {
+      if (isATObject == -1 && IsLoaded()) {
          // Force a call to InheritsFrom. This function indirectly
          // calls TClass::GetClass.  It forces the loading of new
          // typedefs in case some of them were not yet loaded.
@@ -1468,6 +1531,10 @@ Bool_t TClass::CallShowMembers(void* obj, TMemberInspector &insp, char *parent,
             gCint->CallFunc_Exec((CallFunc_t*)fInterShowMembers,address);
             return kTRUE;
          }
+      } else if (TVirtualStreamerInfo* sinfo = GetStreamerInfo()) {
+         
+         sinfo->CallShowMembers(obj,insp,parent);
+         return kTRUE;
       } // isATObject
    } // fShowMembers is set
 
@@ -2003,6 +2070,8 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
    // Static method returning pointer to TClass of the specified class name.
    // If load is true an attempt is made to obtain the class by loading
    // the appropriate shared library (directed by the rootmap file).
+   // If silent is 'true', do not warn about missing dictionary for the class.
+   // (typically used for class that are used only for transient members)
    // Returns 0 in case class is not found.
 
    if (!name || !strlen(name)) return 0;
@@ -2060,7 +2129,7 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
 
       } else {
 
-         cl = gROOT->FindSTLClass(name,kFALSE);
+         cl = gROOT->FindSTLClass(name,kFALSE,silent);
 
          if (cl) {
             if (cl->IsLoaded()) return cl;
@@ -2077,8 +2146,8 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
    if (!load) return 0;
 
    TClass *loadedcl = 0;
-   if (cl) loadedcl = gROOT->LoadClass(cl->GetName());
-   else    loadedcl = gROOT->LoadClass(name);
+   if (cl) loadedcl = gROOT->LoadClass(cl->GetName(),silent);
+   else    loadedcl = gROOT->LoadClass(name,silent);
 
    if (loadedcl) return loadedcl;
 
@@ -2091,7 +2160,7 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
    }
    if (TClassEdit::IsSTLCont(name)) {
 
-      return gROOT->FindSTLClass(name,kTRUE);
+      return gROOT->FindSTLClass(name,kTRUE,silent);
 
    } else if ( strncmp(name,"std::",5)==0 ) {
 

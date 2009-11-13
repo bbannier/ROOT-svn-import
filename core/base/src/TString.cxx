@@ -17,6 +17,32 @@
 //                                                                      //
 // Cannot be stored in a TCollection... use TObjString instead.         //
 //                                                                      //
+// The underlying string is stored as a char* that can be accessed via  //
+// TString::Data().                                                     //
+// TString provides copy-on-write semantics with reference counting     //
+// so that multiple TString objects can refer to the same data.         //
+// For example:                                                         //
+//   root [0] TString orig("foo")                                       //
+//   root [1] TString copy(orig)  // 'orig' and 'copy' point to the     //
+//                                // same data...                       //
+//   root [2] orig.Data()                                               //
+//   (const char* 0x98936f8)"foo"                                       //
+//   root [3] copy.Data()                                               //
+//   (const char* 0x98936f8)"foo"                                       //
+//   root [4] copy="bar"          // Editing 'copy' makes it point      //
+//                                // elsewhere
+//   (class TString)"bar"                                               //
+//   root [5] copy.Data()                                               //
+//   (const char* 0x98939b8)"bar"                                       //
+//                                                                      //
+// Substring operations are provided by the TSubString class, which     //
+// holds a reference to the original string and its data, along with    //
+// the offset and length of the substring. To retrieve the substring    //
+// as a TString, construct a TString from it, eg:                       //
+//   root [0] TString s("hello world")                                  //
+//   root [1] TString s2( s(0,5) )                                      //
+//   root [2] s2                                                        //
+//   (class TString)"hello"                                             //
 //////////////////////////////////////////////////////////////////////////
 
 #include "RConfig.h"
@@ -792,7 +818,7 @@ void TString::Resize(Ssiz_t n)
 }
 
 //______________________________________________________________________________
-TSubString TString::Strip(EStripType st, char c)
+TSubString TString::Strip(EStripType st, char c) const
 {
    // Return a substring of self stripped at beginning and/or end.
 
@@ -808,14 +834,6 @@ TSubString TString::Strip(EStripType st, char c)
          --end;
    if (end == start) start = end = kNPOS;  // make the null substring
    return TSubString(*this, start, end-start);
-}
-
-//______________________________________________________________________________
-TSubString TString::Strip(EStripType st, char c) const
-{
-   // Just use the "non-const" version, adjusting the return type.
-
-   return ((TString*)this)->Strip(st,c);
 }
 
 //______________________________________________________________________________
@@ -1358,7 +1376,7 @@ TSubString::TSubString(const TString &str, Ssiz_t start, Ssiz_t nextent)
 }
 
 //______________________________________________________________________________
-TSubString TString::operator()(Ssiz_t start, Ssiz_t len)
+TSubString TString::operator()(Ssiz_t start, Ssiz_t len) const
 {
    // Return sub-string of string starting at start with length len.
 
@@ -1374,7 +1392,7 @@ TSubString TString::operator()(Ssiz_t start, Ssiz_t len)
 
 //______________________________________________________________________________
 TSubString TString::SubString(const char *pattern, Ssiz_t startIndex,
-                              ECaseCompare cmp)
+                              ECaseCompare cmp) const
 {
    // Returns a substring matching "pattern", or the null substring
    // if there is no such match.  It would be nice if this could be yet another
@@ -1403,33 +1421,6 @@ char& TSubString::operator()(Ssiz_t i)
 
    fStr.Cow();
    return fStr.fData[fBegin+i];
-}
-
-//______________________________________________________________________________
-TSubString TString::operator()(Ssiz_t start, Ssiz_t len) const
-{
-   // Return sub-string of string starting at start with length len.
-
-   if (start < Length() && len > 0) {
-      if (start+len > Length())
-         len = Length() - start;
-   } else {
-      start = kNPOS;
-      len   = 0;
-   }
-   return TSubString(*this, start, len);
-}
-
-//______________________________________________________________________________
-TSubString TString::SubString(const char *pattern, Ssiz_t startIndex,
-                              ECaseCompare cmp) const
-{
-   // Return sub-string matching pattern, starting at index. Cmp selects
-   // the type of case conversion.
-
-   Ssiz_t len = pattern ? strlen(pattern) : 0;
-   Ssiz_t i = Index(pattern, len, startIndex, cmp);
-   return TSubString(*this, i, i == kNPOS ? 0 : len);
 }
 
 //______________________________________________________________________________

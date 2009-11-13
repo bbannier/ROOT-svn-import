@@ -674,6 +674,14 @@ void TProofPlayer::Progress(Long64_t /*total*/, Long64_t /*processed*/,
 }
 
 //______________________________________________________________________________
+void TProofPlayer::Progress(TProofProgressInfo * /*pi*/)
+{
+   // Report progress (may not be used in this class).
+
+   MayNotUse("Progress");
+}
+
+//______________________________________________________________________________
 void TProofPlayer::Feedback(TList *)
 {
    // Set feedback list (may not be used in this class).
@@ -769,6 +777,23 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
       dset->Reset();
 
+      // Set parameters controlling the iterator behaviour
+      Int_t useTreeCache = 1;
+      if (TProof::GetParameter(fInput, "PROOF_UseTreeCache", useTreeCache) == 0) {
+         if (useTreeCache > -1 && useTreeCache < 2)
+            gEnv->SetValue("ProofPlayer.UseTreeCache", useTreeCache);
+      }
+      Long64_t cacheSize = 10000000;
+      if (TProof::GetParameter(fInput, "PROOF_CacheSize", cacheSize) == 0) {
+         TString sz = TString::Format("%lld", cacheSize);
+         gEnv->SetValue("ProofPlayer.CacheSize", sz.Data());
+      }
+      // Parallel unzipping
+      Int_t useParallelUnzip = 0;
+      if (TProof::GetParameter(fInput, "PROOF_UseParallelUnzip", useParallelUnzip) == 0) {
+         if (useParallelUnzip > -1 && useParallelUnzip < 2)
+            gEnv->SetValue("ProofPlayer.UseParallelUnzip", useParallelUnzip);
+      }
       fEvIter = TEventIter::Create(dset, fSelector, first, nentries);
 
       if (version == 0) {
@@ -803,8 +828,8 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       Info("Process","Looping over Process()");
 
    // get the byte read counter at the beginning of processing
-   Long64_t readbytesatstart = 0;
-   readbytesatstart = TFile::GetFileBytesRead();
+   Long64_t readbytesatstart = TFile::GetFileBytesRead();
+   Long64_t readcallsatstart = TFile::GetFileReadCalls();
    // force the first monitoring info
    if (gMonitoringWriter)
       gMonitoringWriter->SendProcessingProgress(0,0,kTRUE);
@@ -816,10 +841,6 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    gAbort = kFALSE;
    Long64_t entry;
    fProgressStatus->Reset();
-
-   // Signal the master that we start processing
-   if (gProofServ)
-      gProofServ->GetSocket()->Send(kPROOF_ENDINIT);
 
    // Get the frequency for logging memory consumption information
    TParameter<Long64_t> *par = (TParameter<Long64_t>*)fInput->FindObject("PROOF_MemLogFreq");
@@ -856,6 +877,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
          if (fSelStatus->IsOk()) {
             fProgressStatus->IncEntries();
             fProgressStatus->SetBytesRead(TFile::GetFileBytesRead()-readbytesatstart);
+            fProgressStatus->SetReadCalls(TFile::GetFileReadCalls()-readcallsatstart);
             if (gMonitoringWriter)
                gMonitoringWriter->SendProcessingProgress(fProgressStatus->GetEntries(),
                        TFile::GetFileBytesRead()-readbytesatstart, kFALSE);
@@ -1183,6 +1205,24 @@ void TProofPlayer::FeedBackCanvas(const char *name, Bool_t create)
    return;
 }
 
+//______________________________________________________________________________
+Long64_t TProofPlayer::GetCacheSize()
+{
+   // Return the size in bytes of the cache
+
+   if (fEvIter) return fEvIter->GetCacheSize();
+   return -1;
+}
+
+//______________________________________________________________________________
+Int_t TProofPlayer::GetLearnEntries()
+{
+   // Return the number of entries in the learning phase
+
+   if (fEvIter) return fEvIter->GetLearnEntries();
+   return -1;
+}
+
 //------------------------------------------------------------------------------
 
 ClassImp(TProofPlayerLocal)
@@ -1390,11 +1430,11 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
          Int_t ngood = dset->GetListOfElements()->GetSize();
          Int_t nbad = listOfMissingFiles->GetSize();
          Double_t xb = Double_t(nbad) / Double_t(ngood + nbad);
-         msg = Form(" About %.2f %c of the requested files (%d out of %d) were missing; details in"
+         msg = Form(" About %.2f %c of the requested files (%d out of %d) were missing or unusable; details in"
                     " the 'missingFiles' list", xb * 100., '%', nbad, nbad + ngood);
          tmpStatus->Add(msg.Data());
          msg = Form(" +++\n"
-                    " +++ About %.2f %c of the requested files (%d out of %d) are missing; details in"
+                    " +++ About %.2f %c of the requested files (%d out of %d) are missing or unusable; details in"
                     " the 'MissingFiles' list\n"
                     " +++", xb * 100., '%', nbad, nbad + ngood);
          if (gProofServ) gProofServ->SendAsynMessage(msg.Data());
@@ -2054,6 +2094,34 @@ void TProofPlayerRemote::Progress(Long64_t total, Long64_t processed,
       gProofServ->GetSocket()->Send(m);
    }
 }
+
+//______________________________________________________________________________
+void TProofPlayerRemote::Progress(TProofProgressInfo *pi)
+{
+   // Progress signal.
+
+   if (pi) {
+      PDB(kGlobal,1)
+         Info("Progress","%lld %lld %lld %f %f %f %f %d %f", pi->fTotal, pi->fProcessed, pi->fBytesRead,
+                           pi->fInitTime, pi->fProcTime, pi->fEvtRateI, pi->fMBRateI,
+                           pi->fActWorkers, pi->fEffSessions);
+
+      if (IsClient()) {
+         fProof->Progress(pi->fTotal, pi->fProcessed, pi->fBytesRead,
+                           pi->fInitTime, pi->fProcTime,
+                           pi->fEvtRateI, pi->fMBRateI,
+                           pi->fActWorkers, pi->fTotSessions, pi->fEffSessions);
+      } else {
+         // Send to the previous tier
+         TMessage m(kPROOF_PROGRESS);
+         m << pi;
+         gProofServ->GetSocket()->Send(m);
+      }
+   } else {
+      Warning("Progress","TProofProgressInfo object undefined!");
+   }
+}
+
 
 //______________________________________________________________________________
 void TProofPlayerRemote::Feedback(TList *objs)
@@ -2806,6 +2874,9 @@ TDSetElement *TProofPlayerRemote::GetNextPacket(TSlave *slave, TMessage *r)
 {
    // Get next packet for specified slave.
 
+   // The first call to this determines the end of initialization
+   SetInitTime();
+
    TDSetElement *e = fPacketizer->GetNextPacket( slave, r );
 
    if (e == 0) {
@@ -2967,10 +3038,23 @@ Bool_t TProofPlayerSlave::HandleTimer(TTimer *)
 
    // If in sequential (0-slave-PROOF) mode we do not have a packetizer
    // so we also send the info to update the progress bar.
-   if (gProofServ && gProofServ->IsMaster() && !gProofServ->IsParallel()) {
+   if (gProofServ) {
+      Bool_t sendm = kFALSE;
       TMessage m(kPROOF_PROGRESS);
-      m << fTotalEvents << GetEventsProcessed();
-      gProofServ->GetSocket()->Send(m);
+      if (gProofServ->IsMaster() && !gProofServ->IsParallel()) {
+         sendm = kTRUE;
+         if (gProofServ->GetProtocol() > 25) {
+            m << GetProgressStatus();
+         } else if (gProofServ->GetProtocol() > 11) {
+            TProofProgressStatus *ps = GetProgressStatus();
+            m << fTotalEvents << ps->GetEntries() << ps->GetBytesRead()
+              << (Float_t) -1. << (Float_t) ps->GetProcTime()
+              << (Float_t) ps->GetRate() << (Float_t) -1.;
+         } else {
+            m << fTotalEvents << GetEventsProcessed();
+         }
+      }
+      if (sendm) gProofServ->GetSocket()->Send(m);
    }
 
    if (fFeedback == 0) return kFALSE;
@@ -3230,6 +3314,12 @@ Long64_t TProofPlayerSuperMaster::Process(TDSet *dset, const char *selector_file
                fSlaveEvtRti[fSlaveEvtRti.GetSize()-1] = -1.;
                fSlaveMBRti.Set(fSlaveMBRti.GetSize()+1);
                fSlaveMBRti[fSlaveMBRti.GetSize()-1] = -1.;
+               fSlaveActW.Set(fSlaveActW.GetSize()+1);
+               fSlaveActW[fSlaveActW.GetSize()-1] = 0;
+               fSlaveTotS.Set(fSlaveTotS.GetSize()+1);
+               fSlaveTotS[fSlaveTotS.GetSize()-1] = 0;
+               fSlaveEffS.Set(fSlaveEffS.GetSize()+1);
+               fSlaveEffS[fSlaveEffS.GetSize()-1] = 0.;
             }
          }
       }
@@ -3327,10 +3417,76 @@ void TProofPlayerSuperMaster::Progress(TSlave *sl, Long64_t total,
             nsrti++;
          }
    }
-   erti = (nerti > 0) ? erti / nerti : 0.;
    srti = (nsrti > 0) ? srti / nerti : 0.;
 
    Progress(tot, proc, bytes, init, ptime, erti, srti);
+}
+
+//______________________________________________________________________________
+void TProofPlayerSuperMaster::Progress(TSlave *wrk, TProofProgressInfo *pi)
+{
+   // Progress signal.
+
+   if (pi) {
+      PDB(kGlobal,2)
+         Info("Progress","%s: %lld %lld %lld %f %f %f %f %d %f", wrk->GetOrdinal(),
+                         pi->fTotal, pi->fProcessed, pi->fBytesRead,
+                         pi->fInitTime, pi->fProcTime, pi->fEvtRateI, pi->fMBRateI,
+                         pi->fActWorkers, pi->fEffSessions);
+
+      Int_t idx = fSlaves.IndexOf(wrk);
+      if (fSlaveTotals[idx] != pi->fTotal)
+         Warning("Progress", "total events has changed for worker %s", wrk->GetName());
+      fSlaveTotals[idx] = pi->fTotal;
+      fSlaveProgress[idx] = pi->fProcessed;
+      fSlaveBytesRead[idx] = pi->fBytesRead;
+      fSlaveInitTime[idx] = (pi->fInitTime > -1.) ? pi->fInitTime : fSlaveInitTime[idx];
+      fSlaveProcTime[idx] = (pi->fProcTime > -1.) ? pi->fProcTime : fSlaveProcTime[idx];
+      fSlaveEvtRti[idx] = (pi->fEvtRateI > -1.) ? pi->fEvtRateI : fSlaveEvtRti[idx];
+      fSlaveMBRti[idx] = (pi->fMBRateI > -1.) ? pi->fMBRateI : fSlaveMBRti[idx];
+      fSlaveActW[idx] = (pi->fActWorkers > -1) ? pi->fActWorkers : fSlaveActW[idx];
+      fSlaveTotS[idx] = (pi->fTotSessions > -1) ? pi->fTotSessions : fSlaveTotS[idx];
+      fSlaveEffS[idx] = (pi->fEffSessions > -1.) ? pi->fEffSessions : fSlaveEffS[idx];
+
+      Int_t i;
+      Int_t nerti = 0;
+      Int_t nsrti = 0;
+      TProofProgressInfo pisum(0, 0, 0, -1., -1., 0., 0., 0, 0, 0.);
+      for (i = 0; i < fSlaveTotals.GetSize(); i++) {
+         pisum.fTotal += fSlaveTotals[i];
+         if (i < fSlaveProgress.GetSize())
+            pisum.fProcessed += fSlaveProgress[i];
+         if (i < fSlaveBytesRead.GetSize())
+            pisum.fBytesRead += fSlaveBytesRead[i];
+         if (i < fSlaveInitTime.GetSize())
+            if (fSlaveInitTime[i] > -1. && (pisum.fInitTime < 0. || fSlaveInitTime[i] < pisum.fInitTime))
+               pisum.fInitTime = fSlaveInitTime[i];
+         if (i < fSlaveProcTime.GetSize())
+            if (fSlaveProcTime[i] > -1. && (pisum.fProcTime < 0. || fSlaveProcTime[i] > pisum.fProcTime))
+               pisum.fProcTime = fSlaveProcTime[i];
+         if (i < fSlaveEvtRti.GetSize())
+            if (fSlaveEvtRti[i] > -1.) {
+               pisum.fEvtRateI += fSlaveEvtRti[i];
+               nerti++;
+            }
+         if (i < fSlaveMBRti.GetSize())
+            if (fSlaveMBRti[i] > -1.) {
+               pisum.fMBRateI += fSlaveMBRti[i];
+               nsrti++;
+            }
+         if (i < fSlaveActW.GetSize())
+            pisum.fActWorkers += fSlaveActW[i];
+         if (i < fSlaveTotS.GetSize())
+            if (fSlaveTotS[i] > -1 && (pisum.fTotSessions < 0. || fSlaveTotS[i] > pisum.fTotSessions))
+               pisum.fTotSessions = fSlaveTotS[i];
+         if (i < fSlaveEffS.GetSize())
+            if (fSlaveEffS[i] > -1. && (pisum.fEffSessions < 0. || fSlaveEffS[i] > pisum.fEffSessions))
+               pisum.fEffSessions = fSlaveEffS[i];
+      }
+      pisum.fMBRateI = (nsrti > 0) ? pisum.fMBRateI / nerti : 0.;
+
+      Progress(&pisum);
+   }
 }
 
 //______________________________________________________________________________
@@ -3377,8 +3533,16 @@ Bool_t TProofPlayerSuperMaster::HandleTimer(TTimer *)
    srti = (nsrti > 0) ? srti / nerti : 0.;
 
    TMessage m(kPROOF_PROGRESS);
+   if (gProofServ->GetProtocol() > 25) {
+      // Fill the message now
+      TProofProgressInfo pi(tot, proc, bytes, init, ptime,
+                            erti, srti, -1,
+                            gProofServ->GetTotSessions(), gProofServ->GetEffSessions());
+      m << &pi;
+   } else {
 
-   m << tot << proc << bytes << init << ptime << erti << srti;
+      m << tot << proc << bytes << init << ptime << erti << srti;
+   }
 
    // send message to client;
    gProofServ->GetSocket()->Send(m);

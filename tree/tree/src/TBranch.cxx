@@ -426,7 +426,7 @@ TBranch::~TBranch()
    // Remove our leaves from our tree's list of leaves.
    if (fTree) {
       TObjArray* lst = fTree->GetListOfLeaves();
-      if (lst) {
+      if (lst && lst->GetLast()!=-1) {
          lst->RemoveAll(&fLeaves);
       }
    }
@@ -825,7 +825,7 @@ Int_t TBranch::Fill()
    }
 
    // Should we create a new basket?
-   // fSkipZip force one entry per buffer
+   // fSkipZip force one entry per buffer (old stuff still maintained for CDF)
    // Transfer full compressed buffer only
 
    if ((fSkipZip && (lnew >= TBuffer::kMinimalSize)) || (buf->TestBit(TBufferFile::kNotDecompressed)) || ((lnew + (2 * nsize) + nbytes) >= fBasketSize)) {
@@ -1051,6 +1051,7 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
    // create/decode basket parameters from buffer
    TFile *file = GetFile(0);
    basket = new TBasket(file);
+   // fSkipZip is old stuff still maintained for CDF
    if (fSkipZip) basket->SetBit(TBufferFile::kNotDecompressed);
    basket->SetBranch(this);
    if (fBasketBytes[basketnumber] == 0) {
@@ -1058,10 +1059,9 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
    }
    //add branch to cache (if any)
    TFileCacheRead *pf = file ? file->GetCacheRead() : 0;
-   if (pf && pf->InheritsFrom(TTreeCache::Class())){
-      TTreeCache *tpf = (TTreeCache*)pf;
-      tpf->AddBranch(this);
-      if (fSkipZip) tpf->SetSkipZip();
+   if (pf){
+      if (pf->IsLearning()) pf->AddBranch(this);
+      if (fSkipZip) pf->SetSkipZip();
    }
 
    //now read basket

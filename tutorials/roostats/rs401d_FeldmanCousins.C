@@ -212,7 +212,7 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false, bool doMCMC = true)
   fc.SetTestSize(.1); // set size of test
   fc.SetData(*data);
   fc.UseAdaptiveSampling(true);
-  fc.SetNBins(30); // number of points to test per parameter
+  fc.SetNBins(10); // number of points to test per parameter
 
   // use the Feldman-Cousins tool
   ConfInterval* interval = 0;
@@ -299,7 +299,7 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false, bool doMCMC = true)
     // most of this code is just to switch x/y axes in the histogram
     TH1* posterior = ((MCMCInterval*)mcmcInterval)->GetPosteriorHist();
 
-    Double_t mcmclevel = ((MCMCInterval*)mcmcInterval)->GetCutoff();
+    Double_t mcmclevel = ((MCMCInterval*)mcmcInterval)->GetHistCutoff();
     posterior->SetContour(1,&mcmclevel);
     posterior->SetLineColor(kMagenta);
     posterior->SetLineWidth(2);

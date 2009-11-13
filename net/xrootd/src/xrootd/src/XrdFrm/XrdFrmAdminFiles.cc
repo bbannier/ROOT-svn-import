@@ -10,6 +10,8 @@
   
 //          $Id$
 
+const char *XrdFrmAdminFilesCVSID = "$Id$";
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -25,8 +27,6 @@
 #include "XrdFrm/XrdFrmFiles.hh"
 #include "XrdFrm/XrdFrmUtils.hh"
 #include "XrdOss/XrdOssPath.hh"
-
-const char *XrdFrmAdminFilesCVSID = "$Id$";
 
 using namespace XrdFrm;
 
@@ -168,8 +168,8 @@ int XrdFrmAdmin::mkFile(int What, const char *Path, const char *Data, int DLen)
 
 // Set correct ownership
 //
-   Uid = (Opt.Uid < 0 ? Stat.st_uid : Opt.Uid);
-   Gid = (Opt.Gid < 0 ? Stat.st_gid : Opt.Gid);
+   Uid = (int(Opt.Uid) < 0 ? Stat.st_uid : Opt.Uid);
+   Gid = (int(Opt.Gid) < 0 ? Stat.st_gid : Opt.Gid);
    if (Stat.st_uid != Uid || Stat.st_gid != Gid)
       {do {rc = fchown(theFD, Uid, Gid);} while(rc && errno == EINTR);
        if (rc) {Emsg(errno, "set uid/gid for pfn ", tempFN);

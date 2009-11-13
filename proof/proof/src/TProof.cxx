@@ -187,24 +187,54 @@ void TSlaveInfo::Print(Option_t *opt) const
    TString stat = fStatus == kActive ? "active" :
                   fStatus == kBad ? "bad" :
                   "not active";
-   TString msd  = fMsd.IsNull() ? "<null>" : fMsd.Data();
 
-   if (!opt) opt = "";
-   if (!strcmp(opt, "active") && fStatus != kActive)
-      return;
-   if (!strcmp(opt, "notactive") && fStatus != kNotActive)
-      return;
-   if (!strcmp(opt, "bad") && fStatus != kBad)
-      return;
+   Bool_t newfmt = kFALSE;
+   TString oo(opt);
+   if (oo.Contains("N")) {
+      newfmt = kTRUE;
+      oo.ReplaceAll("N","");
+   }
+   if (oo == "active" && fStatus != kActive) return;
+   if (oo == "notactive" && fStatus != kNotActive) return;
+   if (oo == "bad" && fStatus != kBad) return;
 
-   cout << "Slave: "          << fOrdinal
-        << "  hostname: "     << fHostName
-        << "  msd: "          << msd
-        << "  perf index: "   << fPerfIndex
-        << "  "               << stat
-        << endl;
+   if (newfmt) {
+      TString msd, si;
+      if (!(fMsd.IsNull())) msd.Form("| msd: %s ", fMsd.Data());
+      if (fSysInfo.fCpus > 0) {
+         si.Form("| %s, %d cores, %d MB ram", fHostName.Data(),
+               fSysInfo.fCpus, fSysInfo.fPhysRam);
+      } else {
+         si.Form("| %s", fHostName.Data());
+      }
+      Printf("Worker: %9s %s %s| %s", fOrdinal.Data(), si.Data(), msd.Data(), stat.Data());
+
+   } else {
+      TString msd  = fMsd.IsNull() ? "<null>" : fMsd.Data();
+
+      cout << "Slave: "          << fOrdinal
+         << "  hostname: "     << fHostName
+         << "  msd: "          << msd
+         << "  perf index: "   << fPerfIndex
+         << "  "               << stat
+         << endl;
+   }
 }
 
+//______________________________________________________________________________
+void TSlaveInfo::SetSysInfo(SysInfo_t si)
+{
+   // Setter for fSysInfo
+
+   fSysInfo.fOS       = si.fOS;          // OS
+   fSysInfo.fModel    = si.fModel;       // computer model
+   fSysInfo.fCpuType  = si.fCpuType;     // type of cpu
+   fSysInfo.fCpus     = si.fCpus;        // number of cpus
+   fSysInfo.fCpuSpeed = si.fCpuSpeed;    // cpu speed in MHz
+   fSysInfo.fBusSpeed = si.fBusSpeed;    // bus speed in MHz
+   fSysInfo.fL2Cache  = si.fL2Cache;     // level 2 cache size in KB
+   fSysInfo.fPhysRam  = si.fPhysRam;     // Physical RAM
+}
 
 //------------------------------------------------------------------------------
 
@@ -869,6 +899,15 @@ void TProof::ParseConfigField(const char *config)
       Printf(" ---> Logs will be available as special tags in the log window (from the progress dialog or TProof::LogViewer()) ");
       Printf(" ---> (Reminder: this debug run makes sense only if you are running a debug version of ROOT)");
       Printf(" ");
+
+   } else if (sconf.BeginsWith("workers=")) {
+
+      // Request for a given number of workers (within the max) or worker
+      // startup combination:
+      //      workers=5         start max 5 workers (or less, if less are assigned)
+      //      workers=2x        start max 2 workers (or less, if less are assigned)
+      sconf.ReplaceAll("workers=","");
+      TProof::AddEnvVar("PROOF_NWORKERS", sconf);
    }
 }
 
@@ -1814,6 +1853,13 @@ TList *TProof::GetListOfSlaveInfos()
                slaveinfo->SetStatus(TSlaveInfo::kBad);
                break;
             }
+         }
+         // Get system info if supported
+         if (slave->IsValid()) {
+            if (slave->GetSocket()->Send(kPROOF_GETSLAVEINFO) == -1)
+               MarkBad(slave, "could not send kPROOF_GETSLAVEINFO message");
+            else
+               masters.Add(slave);
          }
 
       } else if (slave->GetSlaveType() == TSlave::kMaster) {
@@ -3006,13 +3052,17 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
          {
             PDB(kGlobal,2) Info("HandleInputMessage","kPROOF_PROGRESS: enter");
 
-            if (GetRemoteProtocol() > 11) {
+            if (GetRemoteProtocol() > 25) {
                // New format
+               TProofProgressInfo *pi = 0;
+               (*mess) >> pi;
+               fPlayer->Progress(sl,pi);
+            } else if (GetRemoteProtocol() > 11) {
                Long64_t total, processed, bytesread;
                Float_t initTime, procTime, evtrti, mbrti;
                (*mess) >> total >> processed >> bytesread
-                       >> initTime >> procTime
-                       >> evtrti >> mbrti;
+                     >> initTime >> procTime
+                     >> evtrti >> mbrti;
                if (fPlayer)
                   fPlayer->Progress(sl, total, processed, bytesread,
                                     initTime, procTime, evtrti, mbrti);
@@ -3091,7 +3141,20 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                   TSlaveInfo* slinfo =
                      dynamic_cast<TSlaveInfo*>(tmpinfo->At(i));
                   if (slinfo) {
-                     fSlaveInfo->Add(slinfo);
+                     // Check if we have already a instance for this worker
+                     TIter nxw(fSlaveInfo);
+                     TSlaveInfo *ourwi = 0;
+                     while ((ourwi = (TSlaveInfo *)nxw())) {
+                        if (!strcmp(ourwi->GetOrdinal(), slinfo->GetOrdinal())) {
+                           ourwi->SetSysInfo(slinfo->GetSysInfo());
+                           break;
+                        }
+                     }
+                     if (!ourwi) {
+                        fSlaveInfo->Add(slinfo);
+                     } else {
+                        slinfo = ourwi;
+                     }
                      if (slinfo->fStatus != TSlaveInfo::kBad) {
                         if (!active) slinfo->SetStatus(TSlaveInfo::kNotActive);
                         if (bad) slinfo->SetStatus(TSlaveInfo::kBad);
@@ -3232,8 +3295,10 @@ void TProof::UpdateDialog()
               "processing was stopped - %lld events processed",
               fPlayer->GetEventsProcessed());
 
-      if (GetRemoteProtocol() > 11) {
+      if (GetRemoteProtocol() > 25) {
          // New format
+         Progress(-1, fPlayer->GetEventsProcessed(), -1, -1., -1., -1., -1., -1, -1, -1.);
+      } else if (GetRemoteProtocol() > 11) {
          Progress(-1, fPlayer->GetEventsProcessed(), -1, -1., -1., -1., -1.);
       } else {
          Progress(-1, fPlayer->GetEventsProcessed());
@@ -3242,7 +3307,12 @@ void TProof::UpdateDialog()
    }
 
    // Final update of the dialog box
-   if (GetRemoteProtocol() > 11) {
+   if (GetRemoteProtocol() > 25) {
+      // New format
+      EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t,Int_t,Int_t,Float_t)",
+              10, (Long64_t)(-1), (Long64_t)(-1), (Long64_t)(-1),(Float_t)(-1.),(Float_t)(-1.),
+                  (Float_t)(-1.),(Float_t)(-1.),(Int_t)(-1),(Int_t)(-1),(Float_t)(-1.));
+   } else if (GetRemoteProtocol() > 11) {
       // New format
       EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
                7, (Long64_t)(-1), (Long64_t)(-1), (Long64_t)(-1),
@@ -5513,17 +5583,36 @@ Int_t TProof::DisablePackage(const char *package)
    // Nothing more to do if we are a Lite-session
    if (IsLite()) return 0;
 
-   TMessage mess(kPROOF_CACHE);
-   mess << Int_t(kDisablePackage) << pac;
-   Broadcast(mess, kUnique);
+   Int_t st = -1;
+   Bool_t done = kFALSE;
+   if (fManager) {
+      // Try to do it via XROOTD (new way)
+      TString path;
+      path.Form("~/packages/%s", package);
+      if (fManager->Rm(path, "-rf", "all") != -1) {
+         path.Append(".par");
+         if (fManager->Rm(path, "-f", "all") != -1) {
+            done = kTRUE;
+            st = 0;
+         }
+      }
+   }
+   if (!done) {
+      // Try via TProofServ (old way)
+      TMessage mess(kPROOF_CACHE);
+      mess << Int_t(kDisablePackage) << pac;
+      Broadcast(mess, kUnique);
 
-   TMessage mess2(kPROOF_CACHE);
-   mess2 << Int_t(kDisableSubPackage) << pac;
-   Broadcast(mess2, fNonUniqueMasters);
+      TMessage mess2(kPROOF_CACHE);
+      mess2 << Int_t(kDisableSubPackage) << pac;
+      Broadcast(mess2, fNonUniqueMasters);
 
-   Collect(kAllUnique);
+      Collect(kAllUnique);
+      st = fStatus;
+   }
 
-   return fStatus;
+   // Done
+   return st;
 }
 
 //______________________________________________________________________________
@@ -5533,7 +5622,7 @@ Int_t TProof::DisablePackageOnClient(const char *package)
    // Returns 0 in case of success and -1 in case of error.
 
    if (TestBit(TProof::kIsClient)) {
-      // remove the package directory and the par file
+      // Remove the package directory and the par file locally
       fPackageLock->Lock();
       gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(), package));
       gSystem->Exec(Form("%s %s/%s.par", kRM, fPackageDir.Data(), package));
@@ -6599,7 +6688,7 @@ void TProof::HandleLibIncPath(const char *what, Bool_t add, const char *dirs)
 
    // Check type of action
    if ((type != "lib") && (type != "inc")) {
-      Error("HandleLibIncPath","unknown action type: %s", type.Data());
+      Error("HandleLibIncPath","unknown action type: %s - protocol error?", type.Data());
       return;
    }
 
@@ -6610,7 +6699,7 @@ void TProof::HandleLibIncPath(const char *what, Bool_t add, const char *dirs)
    TObjArray *op = 0;
    if (path.Length() > 0 && path != "-") {
       if (!(op = path.Tokenize(" "))) {
-         Error("HandleLibIncPath","decomposing path %s", path.Data());
+         Warning("HandleLibIncPath","decomposing path %s", path.Data());
          return;
       }
    }
@@ -6638,8 +6727,9 @@ void TProof::HandleLibIncPath(const char *what, Bool_t add, const char *dirs)
                   gSystem->SetDynamicPath(newlibpath);
                }
             } else {
-               Info("HandleLibIncPath",
-                    "libpath %s does not exist or cannot be read - not added", xlib.Data());
+               if (gDebug > 0)
+                  Info("HandleLibIncPath",
+                       "libpath %s does not exist or cannot be read - not added", xlib.Data());
             }
          }
 
@@ -6658,8 +6748,9 @@ void TProof::HandleLibIncPath(const char *what, Bool_t add, const char *dirs)
                if (curincpath.Index(xinc) == kNPOS)
                   gSystem->AddIncludePath(Form("-I%s", xinc.Data()));
             } else
-               Info("HandleLibIncPath",
-                    "incpath %s does not exist or cannot be read - not added", xinc.Data());
+               if (gDebug > 0)
+                   Info("HandleLibIncPath",
+                        "incpath %s does not exist or cannot be read - not added", xinc.Data());
          }
       }
 
@@ -6809,6 +6900,28 @@ void TProof::Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
    } else {
       EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
              7, total, processed, bytesread, initTime, procTime, evtrti, mbrti);
+   }
+}
+
+//______________________________________________________________________________
+void TProof::Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
+                      Float_t initTime, Float_t procTime,
+                      Float_t evtrti, Float_t mbrti, Int_t actw, Int_t tses, Float_t eses)
+{
+   // Get query progress information. Connect a slot to this signal
+   // to track progress.
+
+   PDB(kGlobal,1)
+      Info("Progress","%lld %lld %lld %f %f %f %f %d %f", total, processed, bytesread,
+                                initTime, procTime, evtrti, mbrti, actw, eses);
+
+   if (gROOT->IsBatch()) {
+      // Simple progress bar
+      if (total > 0)
+         PrintProgress(total, processed, procTime);
+   } else {
+      EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t,Int_t,Int_t,Float_t)",
+             10, total, processed, bytesread, initTime, procTime, evtrti, mbrti, actw, tses, eses);
    }
 }
 

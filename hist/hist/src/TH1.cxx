@@ -433,7 +433,9 @@ All histogram classes are derived from the base class TH1
      affecting the aspect of the clone.
 <p>
      One can use TH1::SetMaximum() and TH1::SetMinimum() to force a particular
-     value for the maximum or the minimum scale on the plot.
+     value for the maximum or the minimum scale on the plot. (For 1-D 
+     histograms this means the y-axis, while for 2-D histograms these 
+     functions affect the z-axis).
 <p>
      TH1::UseCurrentStyle() can be used to change all histogram graphics
      attributes to correspond to the current selected style.
@@ -660,7 +662,6 @@ TH1::TH1(const char *name,const char *title,Int_t nbins,const Float_t *xbins)
    if (xbins) fXaxis.Set(nbins,xbins);
    else       fXaxis.Set(nbins,0,1);
    fNcells = fXaxis.GetNbins()+2;
-   if (fgDefaultSumw2) Sumw2();
 }
 
 //______________________________________________________________________________
@@ -686,7 +687,6 @@ TH1::TH1(const char *name,const char *title,Int_t nbins,const Double_t *xbins)
    if (xbins) fXaxis.Set(nbins,xbins);
    else       fXaxis.Set(nbins,0,1);
    fNcells = fXaxis.GetNbins()+2;
-   if (fgDefaultSumw2) Sumw2();
 }
 
 //______________________________________________________________________________
@@ -877,15 +877,18 @@ void TH1::Add(const TH1 *h1, Double_t c1)
    if (fSumw2.fN == 0 && h1->GetSumw2N() != 0) Sumw2();
 
 //   - Add statistics
-   fEntries += c1*h1->GetEntries();
+   Double_t entries = TMath::Abs( GetEntries() + c1 * h1->GetEntries() ); 
    Double_t s1[kNstat], s2[kNstat];
-   Int_t i;
-   for (i=0;i<kNstat;i++) {s1[i] = s2[i] = 0;}
-   GetStats(s1);
-   h1->GetStats(s2);
-   for (i=0;i<kNstat;i++) {
-      if (i == 1) s1[i] += c1*c1*s2[i];
-      else        s1[i] += TMath::Abs(c1)*s2[i];
+// statistics can be preserbed only in case of positive coefficients
+// otherwise with negative c1 (histogram subtraction) one risks to get negative variances   
+   Bool_t resetStats = (c1 < 0);
+   if (!resetStats) { 
+      GetStats(s1);
+      h1->GetStats(s2);
+      for (Int_t i=0;i<kNstat;i++) {
+         if (i == 1) s1[i] += c1*c1*s2[i];
+         else        s1[i] += c1*s2[i];
+      }
    }
 
    SetMinimum();
@@ -924,7 +927,14 @@ void TH1::Add(const TH1 *h1, Double_t c1)
    }
 
    // update statistics (do here to avoid changes by SetBinContent)
-   PutStats(s1);
+   if (resetStats)  { 
+      // statistics need to be reset in case coefficient are negative
+      ResetStats(); 
+   }
+   else { 
+      PutStats(s1);
+      SetEntries(entries);
+   }
 }
 
 //______________________________________________________________________________
@@ -980,15 +990,19 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
    if (fSumw2.fN == 0 && (h1->GetSumw2N() != 0 || h2->GetSumw2N() != 0)) Sumw2();
 
 //   - Add statistics
-   Double_t nEntries = c1*h1->GetEntries() + c2*h2->GetEntries();
+   Double_t nEntries = TMath::Abs( c1*h1->GetEntries() + c2*h2->GetEntries() );
    Double_t s1[kNstat], s2[kNstat], s3[kNstat];
-   Int_t i;
-   for (i=0;i<kNstat;i++) {s1[i] = s2[i] = s3[i] = 0;}
-   h1->GetStats(s1);
-   h2->GetStats(s2);
-   for (i=0;i<kNstat;i++) {
-      if (i == 1) s3[i] = c1*c1*s1[i] + c2*c2*s2[i];
-      else        s3[i] = TMath::Abs(c1)*s1[i] + TMath::Abs(c2)*s2[i];
+   
+// statistics can be preserbed only in case of positive coefficients
+// otherwise with negative c1 (histogram subtraction) one risks to get negative variances   
+   Bool_t resetStats = (c1*c2 < 0);   
+   if (!resetStats) { 
+      h1->GetStats(s1);
+      h2->GetStats(s2);
+      for (Int_t i=0;i<kNstat;i++) {
+         if (i == 1) s3[i] = c1*c1*s1[i] + c2*c2*s2[i];
+         else        s3[i] = TMath::Abs(c1)*s1[i] + TMath::Abs(c2)*s2[i];
+      }
    }
 
    SetMinimum();
@@ -1042,9 +1056,15 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
          }
       }
    }
-   // update statistics (do here to avoid changes by SetBinContent)
-   PutStats(s3);
-   SetEntries(nEntries);
+   if (resetStats)  { 
+      // statistics need to be reset in case coefficient are negative
+      ResetStats(); 
+   }
+   else { 
+      // update statistics (do here to avoid changes by SetBinContent)
+      PutStats(s3);
+      SetEntries(nEntries);
+   }
 }
 
 
@@ -2242,7 +2262,6 @@ void TH1::Divide(TF1 *f1, Double_t c1)
       }
    }
    ResetStats(); 
-   SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -2318,7 +2337,6 @@ void TH1::Divide(const TH1 *h1)
       }
    }
    ResetStats(); 
-   SetEntries( GetEffectiveEntries() );
 }
 
 
@@ -2433,8 +2451,6 @@ void TH1::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Option_
    if (binomial)  
       // in case of binomial division use denominator for number of entries
       SetEntries ( h2->GetEntries() ); 
-   else 
-      SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -3444,7 +3460,7 @@ Double_t TH1::GetEffectiveEntries() const
 
    Stat_t s[kNstat];
    this->GetStats(s);// s[1] sum of squares of weights, s[0] sum of weights
-   return (s[1] ? s[0]*s[0]/s[1] : 0.);
+   return (s[1] ? s[0]*s[0]/s[1] : TMath::Abs(s[0]) );
 }
 
 //______________________________________________________________________________
@@ -6515,6 +6531,23 @@ void TH1::PutStats(Double_t *stats)
 }
 
 //______________________________________________________________________________
+void TH1::ResetStats() 
+{ 
+   // Reset the statistics including the number of entries 
+   // and replace with values calculates from bin content
+   // The number of entries is set to the total bin content ot (in case of weighted histogram) 
+   // to number of effective entries 
+   Double_t stats[kNstat]; 
+   fTsumw = 0; 
+   fEntries = 1; // to force re-calculation of the statistics in TH1::GetStats 
+   GetStats(stats);
+   PutStats(stats);
+   fEntries = TMath::Abs(fTsumw);
+   // use effective entries for weighted histograms:  (sum_w) ^2 / sum_w2 
+   if (fSumw2.fN > 0 && fTsumw > 0 && stats[1] > 0 ) fEntries = stats[0]*stats[0]/ stats[1];
+}
+
+//______________________________________________________________________________
 Double_t TH1::GetSumOfWeights() const
 {
    //   -*-*-*-*-*-*Return the sum of weights excluding under/overflows*-*-*-*-*
@@ -6990,7 +7023,14 @@ void TH1::SetContourLevel(Int_t level, Double_t value)
 //______________________________________________________________________________
 Double_t TH1::GetMaximum(Double_t maxval) const
 {
-   //  Return maximum value smaller than maxval of bins in the range*-*-*-*-*-*
+   //  Return maximum value smaller than maxval of bins in the range, 
+   //  unless the value has been overridden by TH1::SetMaximum,
+   //  in which case it returns that value. (This happens, for example, 
+   //  when the histogram is drawn and the y or z axis limits are changed
+   // 
+   //  To get the maximum value of bins in the histogram regardless of
+   //  whether the value has been overridden, use
+   //      h->GetBinContent(h->GetMaximumBin())
 
    if (fMaximum != -1111) return fMaximum;
    Int_t bin, binx, biny, binz;
@@ -7058,7 +7098,14 @@ Int_t TH1::GetMaximumBin(Int_t &locmax, Int_t &locmay, Int_t &locmaz) const
 //______________________________________________________________________________
 Double_t TH1::GetMinimum(Double_t minval) const
 {
-   //  Return minimum value greater than minval of bins in the range
+   //  Return minimum value smaller than maxval of bins in the range, 
+   //  unless the value has been overridden by TH1::SetMinimum,
+   //  in which case it returns that value. (This happens, for example, 
+   //  when the histogram is drawn and the y or z axis limits are changed
+   // 
+   //  To get the minimum value of bins in the histogram regardless of
+   //  whether the value has been overridden, use
+   //     h->GetBinContent(h->GetMinimumBin())
 
    if (fMinimum != -1111) return fMinimum;
    Int_t bin, binx, biny, binz;
@@ -7262,11 +7309,12 @@ void TH1::SetBins(Int_t nx, Double_t xmin, Double_t xmax, Int_t ny, Double_t ymi
 //______________________________________________________________________________
 void TH1::SetMaximum(Double_t maximum)
 {
-   //   -*-*-*-*-*-*-*Set the maximum value for the Y axis*-*-*-*-*-*-*-*-*-*-*-*
-   //                 ====================================
-   // By default the maximum value is automatically set to the maximum
-   // bin content plus a margin of 10 per cent.
-   // Use TH1::GetMaximum to find the maximum value of an histogram
+   // Set the maximum value for the Y axis, in case of 1-D histograms, 
+   // or the Z axis in case of 2-D histograms
+   //
+   // By default the maximum value used in drawing is the maximum value of the histogram plus a margin of 10 per cent. If this function has been called, the value of 'maximum' is used, with no extra margin.
+   //
+   // TH1::GetMaximum returns the maximum value of the bins in the histogram, unless the maximum has been set manually by this function or by altering the y/z axis limits
    // Use TH1::GetMaximumBin to find the bin with the maximum value of an histogram
    //
    fMaximum = maximum;
@@ -7276,11 +7324,12 @@ void TH1::SetMaximum(Double_t maximum)
 //______________________________________________________________________________
 void TH1::SetMinimum(Double_t minimum)
 {
-   //   -*-*-*-*-*-*-*Set the minimum value for the Y axis*-*-*-*-*-*-*-*-*-*-*-*
-   //                 ====================================
-   // By default the minimum value is automatically set to zero if all bin contents
-   // are positive or the minimum - 10 per cent otherwise.
-   // Use TH1::GetMinimum to find the minimum value of an histogram
+   // Set the minimum value for the Y axis, in case of 1-D histograms, 
+   // or the Z axis in case of 2-D histograms
+   //
+   // By default the minimum value used in drawing is the minimum value of the histogram plus a margin of 10 per cent. If this function has been called, the value of 'minimum' is used, with no extra margin.
+   //
+   // TH1::GetMinimum returns the minimum value of the bins in the histogram, unless the minimum has been set manually by this function or by altering the y/z axis limits
    // Use TH1::GetMinimumBin to find the bin with the minimum value of an histogram
    //
    fMinimum = minimum;
@@ -8275,6 +8324,7 @@ TH1I::TH1I(const char *name,const char *title,Int_t nbins,const Double_t *xbins)
    //
    fDimension = 1;
    TArrayI::Set(fNcells);
+   if (fgDefaultSumw2) Sumw2();
 }
 
 //______________________________________________________________________________

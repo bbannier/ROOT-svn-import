@@ -188,11 +188,18 @@ void stress(Int_t nevent, Int_t style = 1,
    Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
    printf("******************************************************************\n");
    if (UNIX) {
-      FILE *fp = gSystem->OpenPipe("uname -a", "r");
-      char line[60];
-      fgets(line,60,fp); line[59] = 0;
-      printf("*  SYS: %s\n",line);
-      gSystem->ClosePipe(fp);
+      TString sp = gSystem->GetFromPipe("uname -a");
+      sp.Resize(60);
+      printf("*  SYS: %s\n",sp.Data());
+      if (strstr(gSystem->GetBuildNode(),"Linux")) {
+         sp = gSystem->GetFromPipe("lsb_release -d -s");
+         printf("*  SYS: %s\n",sp.Data());
+      }
+      if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+         sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+         sp += " Mac OS X ";
+         printf("*  SYS: %s\n",sp.Data());
+      }
    } else {
       const char *os = gSystem->Getenv("OS");
       if (!os) printf("*  SYS: Windows 95\n");

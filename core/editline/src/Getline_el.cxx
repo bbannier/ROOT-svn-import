@@ -244,12 +244,16 @@ int (* Gl_in_key)(int ch) = 0;
 /** newer imported interfaces **/
 #include "editline.h"
 
-const char* hist_file;  // file name for the command history (read and write)
+const char* hist_file = 0;  // file name for the command history (read and write)
 
 namespace {
    struct WriteHistoryTrigger_t {
       ~WriteHistoryTrigger_t() {
-         write_history(hist_file);
+         if (hist_file && rl_isinitialized()) {
+            // Only write history if editline was actually used.
+            // It might be uninitialized when libCore was loaded into python.
+            write_history(hist_file);
+         }
       }
    };
 }
@@ -327,7 +331,7 @@ Getlinem(int mode, const char* prompt) {
 
    static int getline_initialized = 0;
 
-   if (getline_initialized == 0) {
+   if (hist_file && getline_initialized == 0) {
       //rl_initialize();		// rl_initialize already being called by history_stifle()
       read_history(hist_file);
       getline_initialized = 1;
@@ -423,7 +427,9 @@ Gl_histadd(char* buf) {
    // Add to history; write the file out in case
    // the process is abort()ed by executing the line.
    add_history(buf);
-   write_history(hist_file);
+   if (hist_file) {
+      write_history(hist_file);
+   }
 }
 
 

@@ -747,7 +747,7 @@ const TSeqCollection *TTabCom::GetListOfUsers()
 
 // ----------------------------------------------------------------------------
 //
-//                           static utility funcitons
+//                           static utility functions
 //
 
 //______________________________________________________________________________
@@ -1225,7 +1225,7 @@ void TTabCom::NoMsg(Int_t errorLevel)
 }
 
 //
-//                           static utility funcitons
+//                           static utility functions
 //
 // ----------------------------------------------------------------------------
 
@@ -1764,7 +1764,7 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
    case kSYS_FileName:
       {
          const TString fileName = s3("[^ \"]*$");
-         const TString filePath = DeterminePath(fileName,0);
+         const TString filePath = DeterminePath(fileName,".");
          const TSeqCollection *pListOfFiles = GetListOfFilesInPath(filePath.Data());
 
          pos = Complete("[^\" /]*$", pListOfFiles, "filename\"");

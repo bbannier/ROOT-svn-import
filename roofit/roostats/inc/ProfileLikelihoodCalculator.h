@@ -18,30 +18,43 @@
 #include "RooStats/LikelihoodInterval.h"
 
 namespace RooStats {
+   
+   class LikelihoodInterval; 
 
-   class ProfileLikelihoodCalculator : public CombinedCalculator {
+   class ProfileLikelihoodCalculator : public CombinedCalculator, public TNamed {
+
    public:
+
       ProfileLikelihoodCalculator();
 
-      ProfileLikelihoodCalculator(RooWorkspace& ws, RooAbsData& data, RooAbsPdf& pdf, RooArgSet& paramsOfInterest, 
-                                  Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0);
+      ProfileLikelihoodCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest, 
+                                  Double_t size = 0.05, const RooArgSet* nullParams = 0 );
 
-      ProfileLikelihoodCalculator(RooAbsData& data, RooAbsPdf& pdf, RooArgSet& paramsOfInterest, 
-                                  Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0);
-
+      ProfileLikelihoodCalculator(RooAbsData& data, ModelConfig & model, Double_t size = 0.05);
 
 
       virtual ~ProfileLikelihoodCalculator();
     
       // main interface, implemented
-      virtual ConfInterval* GetInterval() const ; 
+      virtual LikelihoodInterval* GetInterval() const ; 
 
       // main interface, implemented
       virtual HypoTestResult* GetHypoTest() const;   
     
+      
 
    protected:
+
+      // clear internal fit result
+      void DoReset() const; 
+
+      // perform a global fit 
+      void DoGlobalFit() const; 
+
       ClassDef(ProfileLikelihoodCalculator,1) // A concrete implementation of CombinedCalculator that uses the ProfileLikelihood ratio.
+
+      mutable RooFitResult * fFitResult;  // internal  result of gloabl fit 
+      
    };
 }
 #endif

@@ -21,7 +21,7 @@
 
 namespace RooStats {
  class SimpleInterval : public ConfInterval {
-  private:
+  protected:
     RooArgSet* fParameters; // parameter of interest
     Double_t fLowerLimit; // lower limit
     Double_t fUpperLimit; // upper limit
@@ -32,24 +32,24 @@ namespace RooStats {
     SimpleInterval();
     SimpleInterval(const char* name);
     SimpleInterval(const char* name, const char* title);
-    SimpleInterval(const char* name, RooAbsArg*, Double_t, Double_t);
-    SimpleInterval(const char* name, const char* title, RooAbsArg*, Double_t, Double_t);
+    SimpleInterval(const char* name, RooAbsArg* var, Double_t, Double_t);
+    SimpleInterval(const char* name, const char* title, RooAbsArg* var, Double_t, Double_t);
     virtual ~SimpleInterval();
         
-    virtual Bool_t IsInInterval(RooArgSet&);
+    virtual Bool_t IsInInterval(const RooArgSet&);
     virtual void SetConfidenceLevel(Double_t cl) {fConfidenceLevel = cl;}
     virtual Double_t ConfidenceLevel() const {return fConfidenceLevel;}
  
     // Method to return lower limit
-    Double_t LowerLimit() {return fLowerLimit;}
+    virtual Double_t LowerLimit() {return fLowerLimit;}
     // Method to return upper limit
-    Double_t UpperLimit() {return fUpperLimit;}
+    virtual Double_t UpperLimit() {return fUpperLimit;}
     
     // do we want it to return list of parameters
     virtual RooArgSet* GetParameters() const;
 
     // check if parameters are correct. (dummy implementation to start)
-    Bool_t CheckParameters(RooArgSet&) const ;
+    Bool_t CheckParameters(const RooArgSet&) const ;
 
 
     

@@ -3759,11 +3759,20 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
       fprintf(fp,"#endif\n");
       fprintf(fp,"\n");
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
       fprintf(fp,"#if defined(__GNUC__) && (__GNUC__ > 3) && (__GNUC_MINOR__ > 1)\n");
       fprintf(fp,"#pragma GCC diagnostic ignored \"-Wstrict-aliasing\"\n");
       fprintf(fp,"#endif\n");
       fprintf(fp,"\n");
+#endif
+
+#ifdef __INTEL_COMPILER
+      fprintf(fp,"#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1100)\n");
+      fprintf(fp,"# pragma warning (disable 21)\n");
+      fprintf(fp,"# pragma warning (disable 191)\n");
+      fprintf(fp,"#endif\n");
+      fprintf(fp,"\n");
+      
 #endif
 
       if(G__dicttype!=kFunctionSymbols)
@@ -4476,7 +4485,7 @@ bool G__is_tagnum_safe(int i)
  * in the file. For this, we create a pointer to a function when we have 
  * non-virtual functions a function call when we do have virtual functions.
  * For the latter, it's easier if we have just one object and then we call
- * all the functions with it, so what we need is a big funtion doing that
+ * all the functions with it, so what we need is a big function doing that
  * for every class.
  *
  * This preface will try to create the declaration of this function
@@ -4486,7 +4495,7 @@ bool G__is_tagnum_safe(int i)
 void G__write_preface(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
 {
   // Write the prototype of the function
-  // Let's keep it simple G__funtion_class
+  // Let's keep it simple G__function_class
   const char *dllid;
   if(G__DLLID[0]) dllid=G__DLLID;
   else if(G__PROJNAME[0]) dllid=G__PROJNAME;
@@ -4524,7 +4533,7 @@ void G__write_dummy_ptr(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
  * in the file. For this we create a pointer to a function when we have 
  * non-virtual functions a function call when we do have virtual functions.
  * For the latter, it's easier if we have just one object and then we call
- * all the functions with it, so what we need is a big funtion doing that
+ * all the functions with it, so what we need is a big function doing that
  * for every class.
  *
  * This postface just has to finish what we started in G__write_preface
@@ -12313,7 +12322,7 @@ void G__specify_link(int link_stub)
         }
 #else
         if(G__dispmsg>=G__DISPNOTE) {
-           G__fprinterr(G__serr,"Note: link requested for unknown class %s",buf);
+           G__fprinterr(G__serr,"Note: link requested for unknown class %s",buf());
            G__printlinenum();
         }
 #endif

@@ -205,6 +205,8 @@ Int_t TChain::Add(TChain* chain)
       delete[] fTreeOffset;
       fTreeOffset = trees;
    }
+   if (!chain) return 0;
+   chain->GetEntries(); //to force the computation of nentries
    TIter next(chain->GetListOfFiles());
    Int_t nf = 0;
    TChainElement* element = 0;
@@ -1843,6 +1845,9 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
    // Copy the entries.
    if (fastClone) {
       // For each tree in the chain.
+      // disable the read and write cache
+      GetTree()->GetCurrentFile()->SetCacheRead(0);
+      newTree->GetCurrentFile()->SetCacheWrite(0);
       for (Long64_t i = 0; i < nentries; i += GetTree()->GetEntries()) {
          if (LoadTree(i) < 0) {
             break;

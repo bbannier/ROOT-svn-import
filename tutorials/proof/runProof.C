@@ -18,8 +18,8 @@
 //      This will create a local PROOF session and run an analysis filling 100 histos
 //      with 100000 gaussian random numbers, and displaying them in a canvas with 100
 //      pads (10x10).
-//      The number of entries and the number of histograms can be passed as 'arguments'
-//      to 'simple': e.g. to fill 16 histos with 1000000 entries use
+//      The number of histograms can be passed as 'arguments' to 'simple': e.g. to fill
+//      16 histos with 1000000 entries use
 //
 //      root[] runProof("simple(nevt=1000000,nhist=16)")
 //
@@ -38,7 +38,22 @@
 //
 //   root[] runProof("event")
 //
-//  4. "pythia8"
+//  4. "eventproc"
+//
+//      This is an example of using PROOF par files and process 'event' data from the root HTTP
+//      server. It runs the ProofEventProc selector which is derived from the EventTree_Proc
+//      one found under test/ProofBench.
+//      The following specific arguments are available:
+//      - 'readall'  to read the whole event; by default only the braches needed by the analysis
+//                   are read (read 25% more bytes)
+//      - 'datasrc=<dir-with-files>' to read the files from another server; the files must be named
+//                                   'event_<num>.root' where <num>=1,2,...
+//      - 'files=N' to change the number of files to be analysed (default is 10; max is 50 for
+//                  the HTTP server).
+//
+//   root[] runProof("eventproc")
+//
+//  5. "pythia8"
 //
 //      This runs Pythia8 generation based on main03.cc example in Pythia 8.1 
 //
@@ -51,7 +66,7 @@
 //
 //   root[] runProof("pythia8")
 //
-//  5. "ntuple"
+//  6. "ntuple"
 //
 //      This is an example of final merging via files created on the workers, using
 //      TProofOutputFile. The final file is called ProofNtuple.root and it is created
@@ -61,12 +76,12 @@
 //
 //   root[] runProof("ntuple")
 //
-//  6. "dataset"
+//  7. "dataset"
 //
 //      This is an example of automatic creation of a dataset from files created on the
 //      workers, using TProofOutputFile. The dataset is called testNtuple and it is
 //      automatically registered and verified. The files contain the same ntuple as in
-//      previous example/tutorial 5 (the same selector ProofNTuple is used with a slightly
+//      previous example/tutorial 6 (the same selector ProofNTuple is used with a slightly
 //      different configuration). The dataset is then used to produce the same plot
 //      as in 5 but using the DrawSelect methods of PROOF, which also show how to set
 //      style, color and other drawing attributes in PROOF. Depending on the relative
@@ -76,10 +91,38 @@
 //
 //   root[] runProof("dataset")
 //
+//   General arguments
+//   -----------------
 //
-//   In all cases, to run in non blocking mode the option 'asyn' is available, e.g.
+//   The following arguments are valid for all examples (the ones specific to each
+//   tutorial have been explained above)
 //
-//   root[] runProof("h1(asyn)")
+//   1. nevt=N
+//
+//      Set the number of entries to N
+//      E.g. runProof("simple(nevt=1000000000)") runs simple with 1000000000
+//
+//   2. asyn
+//
+//      Run in non blocking mode
+//      E.g. root[] runProof("h1(asyn)")
+//
+//   3. nwrk=N
+//
+//      Set the number of active workers to N; usefull to test performance on a remote
+//      cluster where control about the number of workers is not possible.
+//      E.g. runProof("event(nwrk=2)") runs 'event' with 2 workers
+//
+//   4. punzip
+//
+//      Use parallel unzipping in reading files where relevant
+//      E.g. root[] runProof("eventproc(punzip)")
+//
+//   5. cache=<bytes> (or <kbytes>K or <mbytes>M) 
+//
+//      Change the size of the tree cache; 0 or <0 disables the cache; value cane be in
+//      bytes (no suffix), kilobytes (suffix 'K') or megabytes (suffix 'M')
+//      E.g. root[] runProof("eventproc(cache=0)") 
 //
 //
 //
@@ -270,21 +313,95 @@ void runProof(const char *what = "simple",
       return;
    }
 
+   // Parse out number of events and  'asyn' option, used almost by every test
+   TString aNevt, aNwrk, opt, sel, punzip("off"), aCache;
+   Long64_t suf = 1;
+   while (args.Tokenize(tok, from, " ")) {
+      // Number of events
+      if (tok.BeginsWith("nevt=")) {
+         aNevt = tok;
+         aNevt.ReplaceAll("nevt=","");
+         if (!aNevt.IsDigit()) {
+            Printf("runProof: %s: error parsing the 'nevt=' option (%s) - ignoring", act.Data(), tok.Data());
+            aNevt = "";
+         }
+      }
+      // Sync or async ?
+      if (tok.BeginsWith("asyn"))
+         opt = "ASYN";
+      // Number of workers
+      if (tok.BeginsWith("nwrk=")) {
+         aNwrk = tok;
+         aNwrk.ReplaceAll("nwrk=","");
+         if (!aNwrk.IsDigit()) {
+            Printf("runProof: %s: error parsing the 'nwrk=' option (%s) - ignoring", act.Data(), tok.Data());
+            aNwrk = "";
+         }
+      }
+      // Parallel unzipping ?
+      if (tok.BeginsWith("punzip"))
+         punzip = "on";
+      // Number of workers
+      if (tok.BeginsWith("cache=")) {
+         aCache = tok;
+         aCache.ReplaceAll("cache=","");
+         if (aCache.EndsWith("k")) { aCache.Remove(TString::kTrailing, 'k'); suf = 1024; }
+         if (aCache.EndsWith("K")) { aCache.Remove(TString::kTrailing, 'K'); suf = 1024; }
+         if (aCache.EndsWith("M")) { aCache.Remove(TString::kTrailing, 'M'); suf = 1024*1024; }
+         if (!aCache.IsDigit()) {
+            Printf("runProof: %s: error parsing the 'cache=' option (%s) - ignoring", act.Data(), tok.Data());
+            aCache = "";
+         }
+      }
+   }
+   Long64_t nevt = (aNevt.IsNull()) ? -1 : aNevt.Atoi();
+   Long64_t nwrk = (aNwrk.IsNull()) ? -1 : aNwrk.Atoi();
+   from = 0;
+
+   // Set number workers
+   if (nwrk > 0) {
+      if (proof->GetParallel() < nwrk) {
+         Printf("runProof: %s: request for a number of workers larger then available - ignored", act.Data());
+      } else {
+         proof->SetParallel(nwrk);
+      }
+   }
+
+   // Parallel unzip
+   if (punzip == "on") {
+      proof->SetParameter("PROOF_UseParallelUnzip", (Int_t)1);
+      Printf("runProof: %s: parallel unzip enabled", act.Data());
+   } else {
+      proof->SetParameter("PROOF_UseParallelUnzip", (Int_t)0);
+   }
+
+   // Tree cache
+   if (!aCache.IsNull()) {
+      Long64_t cachesz = aCache.Atoi() * suf;
+      if (cachesz <= 0) {
+         proof->SetParameter("PROOF_UseTreeCache", (Int_t)0);
+         Printf("runProof: %s: disabling tree cache", act.Data());
+      } else {
+         proof->SetParameter("PROOF_UseTreeCache", (Int_t)1);
+         proof->SetParameter("PROOF_CacheSize", cachesz);
+         Printf("runProof: %s: setting cache size to %lld", act.Data(), cachesz);
+      }
+   } else {
+      // Use defaults
+      proof->DeleteParameters("PROOF_UseTreeCache");
+      proof->DeleteParameters("PROOF_CacheSize");
+   }
+
    // Action
    if (act == "simple") {
       // ProofSimple is an example of non-data driven analysis; it
       // creates and fills with random numbers a given number of histos
-      TString aNevt, aNhist, opt;
+
+      // Default 10000 events
+      nevt = (nevt < 0) ? 100000 : nevt;
+      // Find out the number of histograms
+      TString aNhist;
       while (args.Tokenize(tok, from, " ")) {
-         // Number of events
-         if (tok.BeginsWith("nevt=")) {
-            aNevt = tok;
-            aNevt.ReplaceAll("nevt=","");
-            if (!aNevt.IsDigit()) {
-               Printf("runProof: error parsing the 'nevt=' option (%s) - ignoring", tok.Data());
-               aNevt = "";
-            }
-         }
          // Number of histos
          if (tok.BeginsWith("nhist=")) {
             aNhist = tok;
@@ -294,18 +411,14 @@ void runProof(const char *what = "simple",
                aNhist = "";
             }
          }
-         // Sync or async ?
-         if (tok.BeginsWith("asyn"))
-            opt = "ASYN";
       }
-      Long64_t nevt = (aNevt.IsNull()) ? 100000 : aNevt.Atoi();
       Int_t nhist = (aNhist.IsNull()) ? 100 : aNhist.Atoi();
       Printf("\nrunProof: running \"simple\" with nhist= %d and nevt= %d\n", nhist, nevt);
 
       // The number of histograms is added as parameter in the input list
       proof->SetParameter("ProofSimple_NHist", (Long_t)nhist);
       // The selector string
-      TString sel = Form("%s/proof/ProofSimple.C+", tutorials.Data());
+      sel.Form("%s/proof/ProofSimple.C+", tutorials.Data());
       //
       // Run it for nevt times
       proof->Process(sel.Data(), nevt, opt);
@@ -313,12 +426,6 @@ void runProof(const char *what = "simple",
    } else if (act == "h1") {
       // This is the famous 'h1' example analysis run on Proof reading the
       // data from the ROOT http server.
-      TString opt;
-      while (args.Tokenize(tok, from, " ")) {
-         // Sync or async ?
-         if (tok.BeginsWith("asyn"))
-            opt = "ASYN";
-      }
 
       // Create the chain
       TChain *chain = new TChain("h42");
@@ -329,8 +436,8 @@ void runProof(const char *what = "simple",
       // We run on Proof
       chain->SetProof();
       // The selector
-      TString sel = Form("%s/tree/h1analysis.C+", tutorials.Data());
-      // Run it for 10000 times
+      sel.Form("%s/tree/h1analysis.C+", tutorials.Data());
+      // Run it 
       Printf("\nrunProof: running \"h1\"\n");
       chain->Process(sel.Data(),opt);
 
@@ -367,26 +474,11 @@ void runProof(const char *what = "simple",
          Printf("runProof: pythia8: libEGPythia8 not found \n");
          return;
       }
-      // Setting number of events from arguments
-      TString aNevt, opt;
-      while (args.Tokenize(tok, from, " ")) {
-         // Number of events
-         if (tok.BeginsWith("nevt=")) {
-            aNevt = tok;
-            aNevt.ReplaceAll("nevt=","");
-            if (!aNevt.IsDigit()) {
-               Printf("runProof: pythia8: error parsing the 'nevt=' option (%s) - ignoring", tok.Data());
-               aNevt = "";
-            }
-         }
-         // Sync or async ?
-         if (tok.BeginsWith("asyn"))
-            opt = "ASYN";
-      }
-      Long64_t nevt = (aNevt.IsNull()) ? 100 : aNevt.Atoi();
+      // Setting the default number of events, if needed
+      nevt = (nevt < 0) ? 100 : nevt;
       Printf("\nrunProof: running \"Pythia01\" nevt= %d\n", nevt);
       // The selector string
-      TString sel = Form("%s/proof/ProofPythia.C+", tutorials.Data());
+      sel.Form("%s/proof/ProofPythia.C+", tutorials.Data());
       // Run it for nevt times
       proof->Process(sel.Data(), nevt);
 
@@ -407,50 +499,87 @@ void runProof(const char *what = "simple",
       Printf("Enabled packages...\n");
       proof->ShowEnabledPackages(); 
 
-      // Setting number of events from arguments
-      TString aNevt, opt;
-      while (args.Tokenize(tok, from, " ")) {
-         // Number of events
-         if (tok.BeginsWith("nevt=")) {
-            aNevt = tok;
-            aNevt.ReplaceAll("nevt=","");
-            if (!aNevt.IsDigit()) {
-               Printf("runProof: event: error parsing the 'nevt=' option (%s) - ignoring", tok.Data());
-               aNevt = "";
-            }
-         }
-         // Sync or async ?
-         if (tok.BeginsWith("asyn"))
-            opt = "ASYN";
-      }
-
-      Long64_t nevt = (aNevt.IsNull()) ? 100 : aNevt.Atoi();
+      // Setting the default number of events, if needed
+      nevt = (nevt < 0) ? 100 : nevt;
       Printf("\nrunProof: running \"event\" nevt= %d\n", nevt);
       // The selector string
-      TString sel = Form("%s/proof/ProofEvent.C+", tutorials.Data());
+      sel.Form("%s/proof/ProofEvent.C+", tutorials.Data());
       // Run it for nevt times
       proof->Process(sel.Data(), nevt);
+
+  } else if (act == "eventproc") {
+
+      TString eventpar = TString::Format("%s/proof/event.par", tutorials.Data());
+      gSystem->ExpandPathName(eventpar);
+      if (gSystem->AccessPathName(eventpar.Data())) {
+         eventpar = gSystem->BaseName(eventpar.Data());
+         if (gSystem->AccessPathName(eventpar.Data())) {
+            Printf("runProof: event: par file not found: tried 'proof/event.par'"
+                   " and 'event.par'");
+            return;
+         }
+      }
+
+      proof->UploadPackage(eventpar);
+      proof->EnablePackage("event");
+      Printf("Enabled packages...\n");
+      proof->ShowEnabledPackages(); 
+
+      // Extract the number of files to process, data source and
+      // other parameters controlling the run ... 
+      TString aFiles, aDataSrc("http://root.cern.ch/files/data");
+      proof->SetParameter("ProofEventProc_Read", "optimized");
+      while (args.Tokenize(tok, from, " ")) {
+         // Number of events
+         if (tok.BeginsWith("files=")) {
+            aFiles = tok;
+            aFiles.ReplaceAll("files=","");
+            if (!aFiles.IsDigit()) {
+               Printf("runProof: error parsing the 'files=' option (%s) - ignoring", tok.Data());
+               aFiles = "";
+            }
+         } else if (tok.BeginsWith("datasrc=")) {
+            aDataSrc = tok;
+            aDataSrc.ReplaceAll("datasrc=","");
+            if (aDataSrc.IsDigit()) {
+               Printf("runProof: error parsing the 'datasrc=' option (%s) - ignoring", tok.Data());
+               aFiles = "";
+            }
+         } else if (tok == "readall") {
+            proof->SetParameter("ProofEventProc_Read", "readall");
+            Printf("runProof: eventproc: reading the full event");
+         }
+      }
+      Int_t nFiles = (aFiles.IsNull()) ? 10 : aFiles.Atoi();
+         Printf("runProof: found aFiles: '%s', nFiles: %d", aFiles.Data(), nFiles);
+      if (nFiles > 50) {
+         Printf("runProof: max number of files is 50 - resizing request");
+         nFiles = 50;
+      }
+
+      // Create the chain
+      TChain *c = new TChain("EventTree");
+      Int_t i = 1;
+      TString fn;
+      for (i = 1; i <= nFiles; i++) {
+         fn.Form("%s/event_%d.root", aDataSrc.Data(), i);
+         c->AddFile(fn.Data());
+      }
+      c->SetProof();
+
+      // The selector
+      sel.Form("%s/proof/ProofEventProc.C+", tutorials.Data());
+      // Run it
+      Printf("\nrunProof: running \"eventproc\"\n");
+      c->Process(sel.Data(), opt);
 
    } else if (act == "ntuple") {
 
       // ProofNtuple is an example of non-data driven analysis; it
       // creates and fills a disk resident ntuple with automatic file merging 
-      TString aNevt, opt;
-      while (args.Tokenize(tok, from, " ")) {
-         // Number of events
-         if (tok.BeginsWith("nevt=")) {
-            aNevt = tok;
-            aNevt.ReplaceAll("nevt=","");
-            if (!aNevt.IsDigit()) {
-               Printf("runProof: error parsing the 'nevt=' option (%s) - ignoring", tok.Data());
-               aNevt = "";
-            }
-         }
-         // Sync or async ?
-         if (tok.BeginsWith("asyn"))
-            opt = "ASYN";
-      }
-      Long64_t nevt = (aNevt.IsNull()) ? 1000 : aNevt.Atoi();
+
+      // Set the default number of events, if needed
+      nevt = (nevt < 0) ? 1000 : nevt;
       Printf("\nrunProof: running \"ntuple\" with nevt= %d\n", nevt);
 
       // Output file
@@ -482,8 +611,8 @@ void runProof(const char *what = "simple",
       proof->AddInput(new TNamed("PROOF_OUTPUTFILE", fout.Data()));
 
       // The selector string
-      TString sel = Form("%s/proof/ProofNtuple.C+", tutorials.Data());
-       //
+      sel.Form("%s/proof/ProofNtuple.C+", tutorials.Data());
+
       // Run it for nevt times
       proof->Process(sel.Data(), nevt, opt);
 
@@ -492,22 +621,9 @@ void runProof(const char *what = "simple",
       // ProofDSet is an example of analysis creating data files on each node which are
       // automatically registered as dataset; the newly created dataset is used to create
       // the final plots. The data are of the same type as for the 'ntuple' example.
-      TString aNevt, opt;
-      while (args.Tokenize(tok, from, " ")) {
-         // Number of events
-         if (tok.BeginsWith("nevt=")) {
-            aNevt = tok;
-            aNevt.ReplaceAll("nevt=","");
-            if (!aNevt.IsDigit()) {
-               Printf("runProof: error parsing the 'nevt=' option (%s) - ignoring", tok.Data());
-               aNevt = "";
-            }
-         }
-         // Sync or async ?
-         if (tok.BeginsWith("asyn"))
-            opt = "ASYN";
-      }
-      Long64_t nevt = (aNevt.IsNull()) ? 1000000 : aNevt.Atoi();
+
+      // Set the default number of events, if needed
+      nevt = (nevt < 0) ? 1000000 : nevt;
       Printf("\nrunProof: running \"dataset\" with nevt= %d\n", nevt);
 
       // Ask for registration of the dataset (the default is the the TFileCollection is return
@@ -518,7 +634,7 @@ void runProof(const char *what = "simple",
       proof->SetParameter("PROOF_NTUPLE_DONT_PLOT", "");
 
       // The selector string
-      TString sel = Form("%s/proof/ProofNtuple.C+", tutorials.Data());
+      sel.Form("%s/proof/ProofNtuple.C+", tutorials.Data());
       //
       // Run it for nevt times
       proof->Process(sel.Data(), nevt, opt);

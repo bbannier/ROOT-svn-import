@@ -420,8 +420,14 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
 
 #ifndef ROOTPREFIX
    if (lib.EndsWith("libCore.dylib") || lib.EndsWith("libCore.so")) {
-      TString rs = gSystem->DirName(lib);
-      gSystem->Setenv("ROOTSYS", gSystem->DirName(rs));
+      char respath[kMAXPATHLEN];
+      if (!realpath(lib, respath)) {
+         if (!gSystem->Getenv("ROOTSYS"))
+            ::SysError("TUnixSystem::DylibAdded", "error getting realpath of libCore, please set ROOTSYS in the shell");
+      } else {
+         TString rs = gSystem->DirName(respath);
+         gSystem->Setenv("ROOTSYS", gSystem->DirName(rs));
+      }
    }
 #endif
 
@@ -946,10 +952,10 @@ void TUnixSystem::DispatchOneEvent(Bool_t pendingOnly)
       *fWriteready = *fWritemask;
 
       int mxfd = TMath::Max(fMaxrfd, fMaxwfd);
-      if (mxfd > -1) mxfd++;
+      mxfd++;
 
       // if nothing to select (socket or timer) return
-      if (mxfd == -1 && nextto == -1)
+      if (mxfd == 0 && nextto == -1)
          return;
 
       fNfd = UnixSelect(mxfd, fReadready, fWriteready, nextto);
@@ -2056,6 +2062,7 @@ void TUnixSystem::StackTrace()
    gdbscript += GetExePath();
    gdbscript += " ";
    gdbscript += GetPid();
+   gdbscript += " 1>&2";
    Exec(gdbscript);
    delete [] gdb;
    return;
@@ -2138,6 +2145,7 @@ void TUnixSystem::StackTrace()
       gdbscript.Form("%s/etc/gdb-backtrace.sh ", gSystem->Getenv("ROOTSYS"));
 # endif
       gdbscript += GetPid();
+      gdbscript += " 1>&2";
       Exec(gdbscript);
       delete [] gdb;
    } else {
@@ -4193,7 +4201,7 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
       if (ldpath.IsNull())
          dynpath = rdynpath;
       else {
-         dynpath = rdynpath; dynpath += ":"; dynpath += ldpath;
+         dynpath = ldpath; dynpath += ":"; dynpath += rdynpath;
       }
 
 #ifdef ROOTLIBDIR

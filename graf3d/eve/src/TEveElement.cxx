@@ -1537,6 +1537,26 @@ void TEveElement::ElementChanged(Bool_t update_scenes, Bool_t redraw)
 /******************************************************************************/
 
 //______________________________________________________________________________
+TEveElement* TEveElement::ForwardSelection()
+{
+   // Returns element to be selected on click.
+   // If value is zero the selected object will follow rules in
+   // TEveSelection.
+
+   return 0;
+}
+
+//______________________________________________________________________________
+TEveElement* TEveElement::ForwardEdit()
+{
+   // Returns element to be displayed in GUI editor on click.
+   // If value is zero the displayed object will follow rules in
+   // TEveSelection.
+
+   return 0;
+}
+
+//______________________________________________________________________________
 void TEveElement::SelectElement(Bool_t state)
 {
    // Set element's selection state. Stamp appropriately.
@@ -1782,6 +1802,7 @@ ClassImp(TEveElementList);
 TEveElementList::TEveElementList(const char* n, const char* t, Bool_t doColor) :
    TEveElement(),
    TNamed(n, t),
+   TEveProjectable(),
    fColor(0),
    fDoColor(doColor),
    fChildClass(0)
@@ -1797,6 +1818,7 @@ TEveElementList::TEveElementList(const char* n, const char* t, Bool_t doColor) :
 TEveElementList::TEveElementList(const TEveElementList& e) :
    TEveElement (e),
    TNamed      (e),
+   TEveProjectable(),
    fColor      (e.fColor),
    fDoColor    (e.fDoColor),
    fChildClass (e.fChildClass)
@@ -1813,4 +1835,46 @@ Bool_t TEveElementList::AcceptElement(TEveElement* el)
    if (fChildClass && ! el->IsA()->InheritsFrom(fChildClass))
       return kFALSE;
    return kTRUE;
+}
+
+//______________________________________________________________________________
+TClass* TEveElementList::ProjectedClass(const TEveProjection*) const
+{
+   // Virtual from TEveProjectable, returns TEveCompoundProjected class.
+
+   return TEveElementListProjected::Class();
+}
+
+
+/******************************************************************************/
+/******************************************************************************/
+// TEveElementListProjected
+/******************************************************************************/
+
+//______________________________________________________________________________
+//
+// A projected element list -- required for proper propagation
+// of render state to projected views.
+
+ClassImp(TEveElementListProjected);
+
+//______________________________________________________________________________
+TEveElementListProjected::TEveElementListProjected() :
+   TEveElementList("TEveElementListProjected")
+{
+   // Constructor.
+}
+
+//______________________________________________________________________________
+void TEveElementListProjected::SetDepthLocal(Float_t /*d*/)
+{
+   // This is abstract method from base-class TEveProjected.
+   // No implementation.
+}
+
+//______________________________________________________________________________
+void TEveElementListProjected::UpdateProjection()
+{
+   // This is abstract method from base-class TEveProjected.
+   // No implementation.
 }

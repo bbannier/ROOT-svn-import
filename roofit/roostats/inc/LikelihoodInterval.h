@@ -23,29 +23,33 @@
 #include "RooAbsReal.h"
 #endif
 
+#include <map>
+
 namespace RooStats {
 
    class LikelihoodInterval : public ConfInterval {
 
    public:
 
-      LikelihoodInterval();
-      LikelihoodInterval(const char* name);
-      LikelihoodInterval(const char* name, const char* title);
-      LikelihoodInterval(const char* name, RooAbsReal*, RooArgSet*);
-      LikelihoodInterval(const char* name, const char* title, RooAbsReal*, RooArgSet*);
+      // defult constructor 
+      explicit LikelihoodInterval(const char* name = 0, const char* title = 0);
+      /// construct the interval from a Profile Likelihood object, parameter of interest and optionally a snapshot of 
+      /// POI with their best fit values 
+      LikelihoodInterval(const char* name, RooAbsReal*, const RooArgSet*,  RooArgSet * = 0);
+      LikelihoodInterval(const char* name, const char* title, RooAbsReal*, const RooArgSet*, RooArgSet * = 0);
       virtual ~LikelihoodInterval();
         
-      virtual Bool_t IsInInterval(RooArgSet&);
-      virtual void SetConfidenceLevel(Double_t cl) {fConfidenceLevel = cl;}
+      virtual Bool_t IsInInterval(const RooArgSet&);
+
+      virtual void SetConfidenceLevel(Double_t cl) {fConfidenceLevel = cl; ResetLimits(); }
       virtual Double_t ConfidenceLevel() const {return fConfidenceLevel;}
  
 
-      // do we want it to return list of parameters
-      virtual RooArgSet* GetParameters() const;
+      // return list of parameters of interest.  User manages the return object
+      virtual  RooArgSet* GetParameters() const;
 
       // check if parameters are correct. (dummy implementation to start)
-      Bool_t CheckParameters(RooArgSet&) const ;
+      Bool_t CheckParameters(const RooArgSet&) const ;
 
 
       // Method to return lower limit on a given parameter 
@@ -54,11 +58,22 @@ namespace RooStats {
     
       RooAbsReal* GetLikelihoodRatio() {return fLikelihoodRatio;}
 
+      // return a pointer to a snapshot with best fit parameter of interest
+      const RooArgSet * GetBestFitParameters() const { return fBestFitParams; }
+
+   protected: 
+      // reset the cached limit values
+      void ResetLimits(); 
+
    private:
 
-      RooArgSet* fParameters; // parameters of interest for this interval
-      RooAbsReal* fLikelihoodRatio; // likelihood ratio function used to make contours
+      RooArgSet   fParameters; // parameters of interest for this interval
+      RooArgSet * fBestFitParams; // snapshot of the model parameters with best fit value (managed internally)
+      RooAbsReal* fLikelihoodRatio; // likelihood ratio function used to make contours (managed internally)
       Double_t fConfidenceLevel; // Requested confidence level (eg. 0.95 for 95% CL)
+      std::map<std::string, double> fLowerLimits; // map with cached lower limit values
+      std::map<std::string, double> fUpperLimits; // map with cached upper limit values
+      
 
       ClassDef(LikelihoodInterval,1)  // Concrete implementation of a ConfInterval based on a likelihood ratio
       

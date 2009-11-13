@@ -1174,7 +1174,9 @@ with options, prefix with --with-, enables corresponding support
   xml-libdir         XML support, location of libxml2
   x11-libdir         X11 support, path to libX11
   xpm-libdir         XPM support, path to libXpm
-  xrootd             XROOTD support, path to alternative XROOTD distribution
+  xrootd             XROOTD support, path to external XROOTD distribution
+  xrootd-incdir      XROOTD support, path to external XROOTD header files (XrdVersion.hh, ...)
+  xrootd-libdir      XROOTD support, path to external XROOTD libraries
 
 with compiler options, prefix with --with-, overrides default value
 
@@ -1273,6 +1275,9 @@ if test "x$platform" = "xmacosx" ; then
 
    if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
       macosx105=yes
+   fi
+   if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 6 ]; then
+      macosx106=yes
    fi
 fi
 
@@ -1400,6 +1405,8 @@ if test $# -gt 0 ; then
       --with-xpm-libdir=*)     xpmlibdir=$optarg     ;;
       --with-xrootd=*)         xrootddir=$optarg     ; enable_xrootd="yes"  ;;
       --with-xrootd-opts=*)    xrdaddopts=$optarg    ; enable_xrootd="yes"  ;;
+      --with-xrootd-incdir=*)  xrdincdir=$optarg     ; enable_xrootd="yes"  ;;
+      --with-xrootd-libdir=*)  xrdlibdir=$optarg     ; enable_xrootd="yes"  ;;
       --with-cc=*)             altcc=$optarg         ;;
       --with-cxx=*)            altcxx=$optarg        ;;
       --with-f77=*)            altf77=$optarg        ;;
@@ -2404,7 +2411,7 @@ if test ! "x$enable_qt" = "xno" || \
 	for j in $i/moc-qt${qtvers} $i/moc-qt${qtvers}.exe $i/moc $i/moc.exe ;
 	do
 	    if test -x $j ; then
-          moc_vers=`$j -v >/dev/stdout 2>&1 | \
+          moc_vers=`$j -v 2>&1 | \
           sed -e 's/.*(Qt //' -e 's/\.[0-9]*\.[0-9][-0-9a-z]*)//'`
                 if test ! "$moc_vers" = "$qtvers" ; then
 		    logmsg "$j: moc version ${moc_vers} does not match Qt version ${qtvers}"
@@ -2749,13 +2756,35 @@ if test ! "x$enable_gviz" = "xno"; then
     # At this time, libgvplugin_core.a should always be prefered over .so,
     # to avoid forcing users to install graphviz.
     check_library "libgvc" "no" "$gvizlibdir" $GVIZ $GVIZ/lib \
-                  $GVIZ/.libs /usr/local/lib /usr/local/lib/graphviz \
-                  /usr/lib /usr/lib/graphviz /opt/local/lib
-    gvizlib=$found_lib
-    gvizlibdir=$found_dir
+                  $GVIZ/.libs /usr/local/lib /usr/lib /opt/local/lib
+    gvizlib1=$found_lib
+    gvizlibir=$found_dir
+    check_library "libgraph" "no" "$gvizlibdir" $GVIZ $GVIZ/lib \
+                  $GVIZ/.libs /usr/local/lib /usr/lib /opt/local/lib
+    gvizlib2=$found_lib
+    check_library "libcdt" "no" "$gvizlibdir" $GVIZ $GVIZ/lib \
+                  $GVIZ/.libs /usr/local/lib /usr/lib /opt/local/lib
+    gvizlib3=$found_lib
+    check_library "libpathplan" "no" "$gvizlibdir" $GVIZ $GVIZ/lib \
+                  $GVIZ/.libs /usr/local/lib /usr/lib /opt/local/lib
+    gvizlib4=$found_lib
+    check_library "libgvplugin_dot_layout" "no" "$gvizlibdir" $GVIZ $GVIZ/lib \
+                  $GVIZ/.libs /usr/local/lib/graphviz /usr/lib/graphviz \
+                  /opt/local/lib/graphviz
+    gvizlibp1=$found_lib
+    gvizlibpir=$found_dir
 
-    if test "x$gvizincdir" = "x" || test "x$gvizlib" = "x"; then
+    if test "x$gvizincdir" = "x" || test "x$gvizlib1"  = "x" ||
+       test "x$gvizlib2"   = "x" || test "x$gvizlib3"  = "x" || 
+       test "x$gvizlib4"   = "x" || test "x$gvizlibp1" = "x" ; then
         enable_gviz="no"
+    else
+       if test "x$gvizlibir" = "x" ; then
+           gvizcflags=-DGVIZ_STATIC
+           gvizlib="$gvizlibp1 $gvizlib1 $gvizlib2 $gvizlib3 $gvizlib4 -lexpat"
+       else
+           gvizlib="$gvizlibir $gvizlib1"
+       fi
     fi
 fi
 check_explicit "$enable_gviz" "$enable_gviz_explicit" \
@@ -3325,42 +3354,71 @@ xrdcomm=""
 # If we are required to use an external XROOTD distribution
 # we just define the pointers
 extraxrdflags="-DUSENEWHDRS"
-if test ! "x$xrootddir" = "x"; then
 
-   # We do not need to build, just the paths for includes and libs
-   xrdcomm="no, using xrootd at $xrootddir"
+# Check if we are asked to use an external XROOTD; priority to specific
+# inc and lib settings
+externalxrd="no"
+if test ! "x$xrdlibdir" = "x" && test ! "x$xrdincdir" = "x"; then
+   externalxrd="yes"
+elif test ! "x$xrootddir" = "x"; then
+   externalxrd="yes"
+fi
+if test "x$enable_xrootd" = "xyes" && test "x$externalxrd" = "xyes"; then
 
-   # Check version
-   verh=$xrootddir/src/XrdVersion.hh
-   xrdver=`grep XrdVERSION $verh`
-   if test $? -eq 0 ; then
-      set $xrdver
-      xrdver=$3
-   else
-      xrdver="unknown"
-   fi
-   decrefone=20070628
-   decreftwo=20070723
-   decrefthree=20071004
-   decver=0
-   if test ! "x$xrdver" = "xunknown"; then
-      tmpver=`echo $xrdver | cut -c2-9`
-      decver=`expr 1 \* 0"$tmpver"`
-   fi
-   if [ $decver -gt $decrefone ] ; then
-      if [ $decver -gt $decrefthree ] ; then
-         xrdcomm="$xrdcomm (version is > 20071004)"
-         extraxrdflags="$extraxrdflags"
-      elif [ $decver -gt $decreftwo ] ; then
-         xrdcomm="$xrdcomm (version is > 20070723)"
-         extraxrdflags="-DOLDXRDLOCATE $extraxrdflags"
-      else
-         xrdcomm="$xrdcomm (version is > 20070628)"
-         extraxrdflags="-DOLDXRDOUC -DOLDXRDLOCATE $extraxrdflags"
+   if test ! "x$xrdlibdir" = "x" && test ! "x$xrdincdir" = "x"; then
+      xrdcomm="no, using xrootd at $xrdlibdir, $xrdincdir"
+      if test ! -f "$xrdincdir/XrdVersion.hh" ; then
+         enable_xrootd="no"
+         xrdcomm="no, asked to use installation at $xrdincdir, but version file missing: disabling"
       fi
-   else
-      xrdcomm="$xrdcomm (version is <= 20070628: setting the appropriate compilation flag)"
-      extraxrdflags="-DOLDXRCPHYCONN -DOLDXRDOUC -DOLDXRDLOCATE $extraxrdflags"
+   elif test ! "x$xrootddir" = "x"; then
+      xrdlibdir="$xrootddir/lib"
+      xrdcomm="no, using xrootd at $xrootddir"
+      if test -f "$xrootddir/include/xrootd/XrdVersion.hh" ; then
+         xrdincdir="$xrootddir/include/xrootd"
+      elif test -f "$xrootddir/src/XrdVersion.hh" ; then
+         xrdincdir="$xrootddir/src"
+      else
+         enable_xrootd="no"
+         xrdcomm="no, asked to use installation at $xrootddir, but version file missing: disabling"
+      fi
+   fi
+
+   if test "x$enable_xrootd" = "yes" ; then
+
+      # Check version
+      verh=$xrdincdir/XrdVersion.hh
+      xrdver=`grep XrdVERSION $verh`
+      if test $? -eq 0 ; then
+         set $xrdver
+         xrdver=$3
+      else
+         xrdver="unknown"
+      fi
+
+      decrefone=20070628
+      decreftwo=20070723
+      decrefthree=20071004
+      decver=0
+      if test ! "x$xrdver" = "xunknown"; then
+         tmpver=`echo $xrdver | cut -c2-9`
+         decver=`expr 1 \* 0"$tmpver"`
+      fi
+      if [ $decver -gt $decrefone ] ; then
+         if [ $decver -gt $decrefthree ] ; then
+            xrdcomm="$xrdcomm (version is > 20071004)"
+            extraxrdflags="$extraxrdflags"
+         elif [ $decver -gt $decreftwo ] ; then
+            xrdcomm="$xrdcomm (version is > 20070723)"
+            extraxrdflags="-DOLDXRDLOCATE $extraxrdflags"
+         else
+            xrdcomm="$xrdcomm (version is > 20070628)"
+            extraxrdflags="-DOLDXRDOUC -DOLDXRDLOCATE $extraxrdflags"
+         fi
+      else
+         xrdcomm="$xrdcomm (version is <= 20070628: setting the appropriate compilation flag)"
+         extraxrdflags="-DOLDXRCPHYCONN -DOLDXRDOUC -DOLDXRDLOCATE $extraxrdflags"
+      fi
    fi
 
 else
@@ -4134,9 +4192,10 @@ if test ! "x$enable_afs" = "xno" ; then
     if test "x$afslib" = "x" ; then
         enable_afs="no"
     else
+        afsextracflags="-DR__AFS"
         # flag for error_message prototype
         if test "x$hasafserrormessage" = "xno" ; then
-           afsextracflags="-DR__AFSOLDCOMERR"
+           afsextracflags="$afsextracflags -DR__AFSOLDCOMERR"
         fi
         # Warn about usage of static libs to build a shared object
         if test "x$afsshared" = "xno" ; then
@@ -5029,8 +5088,11 @@ fi
 if test ! "x$enable_editline_explicit" = "x" ; then
    rm -f core/rint/src/TRint.o core/rint/src/TRint.d
 fi
-rm -f lib/libRXML* bin/libRXML* bin/xproofd etc/system.rootmap
-rm -f lib/libProofGui* bin/libProofGui* bin/xrdgsiproxy
+if test ! "x$macosx106" = "x"; then
+   rm -f bin/python64 bin/ruby64
+fi
+rm -f lib/libRXML* bin/libRXML* etc/system.rootmap
+rm -f lib/libProofGui* bin/libProofGui*
 rm -f lib/libMySQL* bin/libMySQL* lib/libGedOld* bin/libGedOld*
 rm -f lib/libSQL.* bin/libSQL.*
 rm -f lib/libASPluginGS.* bin/g2rootold*
@@ -5311,6 +5373,7 @@ sed -e "s|@globusincdir@|$globusincdir|"        \
     -e "s|@gvizincdir@|$gvizincdir|"            \
     -e "s|@gvizlib@|$gvizlib|"                  \
     -e "s|@gvizlibdir@|$gvizlibdir|"            \
+    -e "s|@gvizcflags@|$gvizcflags|"            \
     -e "s|@dnssdincdir@|$dnssdincdir|"          \
     -e "s|@dnssdlib@|$dnssdlib|"                \
     -e "s|@dnssdlibdir@|$dnssdlibdir|"          \
@@ -5388,7 +5451,8 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@xpmlib@|$xpmlib|"                    \
     -e "s|@xpmlibdir@|$xpmlibdir|"              \
     -e "s|@xrdaddopts@|$xrdaddopts|"            \
-    -e "s|@xrootddir@|$xrootddir|"              \
+    -e "s|@xrdlibdir@|$xrdlibdir|"              \
+    -e "s|@xrdincdir@|$xrdincdir|"              \
     -e "s|@cursesincdir@|$cursesincdir|"        \
     -e "s|@curseshdr@|$curseshdr|"              \
     -e "s|@curseslib@|$curseslib|"              \
@@ -5500,8 +5564,25 @@ result "done"
 # include/RConfigOptions.h
 #
 message "Writing $CONFIGOPTOUT"
+
+features=""
+for f in $options ; do
+    bar="$`echo $f`"
+    if test "x`eval echo $bar`" = "xyes" ; then
+       feat=`echo $f | sed 's/enable_//'`
+       if test -z "$features"; then
+          features="$feat"
+       else
+          features="$features $feat"
+       fi
+    fi
+done
+# threads are now always enabled
+features="$features thread"
+
 sed \
     -e "s|@configoptions@|$configoptions|" \
+    -e "s|@configfeatures@|$features|"     \
     < RConfigOptions.tmp > RConfigOptions-out.tmp
 rm -f RConfigOptions.tmp
 
@@ -5555,17 +5636,6 @@ if test ! "x$altldorg" = "x" ; then
 else
     altld2="$altld"
 fi
-
-features=""
-for f in $options ; do
-    bar="$`echo $f`"
-    if test "x`eval echo $bar`" = "xyes" ; then
-       feat=`echo $f | sed 's/enable_//'`
-       features="$features $feat"
-    fi
-done
-# threads are now always enabled
-features="$features thread"
 
 sed -e "s|@architecture@|$arch|"           \
     -e "s|@platform@|$platform|"           \
@@ -5730,15 +5800,15 @@ result "done"
 # macros/html.C
 #
 message "Writing $HTMLOUT"
-sed_args="-e s/@altf77@/$altf772/"
+sed_args="-e s|@altf77@|$altf772|"
 for opt in $options; do
-   sed_args="${sed_args} -e s/@$opt@/"
+   sed_args="${sed_args} -e s|@$opt@|"
    if eval "test x$`eval echo $opt` = xyes"; then
       sed_args="${sed_args}kTRUE"
    else
       sed_args="${sed_args}kFALSE"
    fi
-   sed_args="${sed_args}/g"
+   sed_args="${sed_args}|g"
 done
 sed $sed_args < $HTMLIN > $HTMLOUT
 result done

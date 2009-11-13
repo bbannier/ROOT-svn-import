@@ -72,6 +72,9 @@ TDCacheFile::TDCacheFile(const char *path, Option_t *option,
    // see the TFile ctor. The preferred interface to this constructor is
    // via TFile::Open().
 
+   // dCap client does not ignore ?filetpye=raw and other options, remove it
+   path = fUrl.GetFile();
+
    TString pathString = GetDcapPath(path);
    path = pathString.Data();
 
@@ -172,11 +175,18 @@ TDCacheFile::TDCacheFile(const char *path, Option_t *option,
       fWritable = kFALSE;
    }
 
-   // use 8K ( default ) read-ahead buffer to get file header.
+   // use 128K ( default ) read-ahead buffer to get file header,
+   // the buffer size can be overriden by env var "DCACHE_RA_BUFFER",
    // vector read are not affected by read-ahead buffer
-   if(read) {
-     dc_setBufferSize(fD, RAHEAD_BUFFER_SIZE); 
-   }else{
+   if (read) {
+     int dcache_RAHEAD_SIZE = RAHEAD_BUFFER_SIZE;
+     const char *DCACHE_RA_BUFFER = gSystem->Getenv("DCACHE_RA_BUFFER");
+     if (DCACHE_RA_BUFFER) {
+        int ra_buffer = atoi(DCACHE_RA_BUFFER);
+        dcache_RAHEAD_SIZE = ra_buffer<=0 ? dcache_RAHEAD_SIZE : ra_buffer;
+     }
+     dc_setBufferSize(fD, RAHEAD_BUFFER_SIZE);
+   } else {
      dc_noBuffering(fD);
    }
 
@@ -232,7 +242,7 @@ Bool_t TDCacheFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf
    Int_t total_len = 0;
    for (Int_t i = 0; i < nbuf; i++) {
 	   vector[i].buf    = &buf[total_len];
-	   vector[i].offset = pos[i];
+	   vector[i].offset = pos[i] + fArchiveOffset;
 	   vector[i].len    = len[i];
 	   total_len       += len[i];
    }

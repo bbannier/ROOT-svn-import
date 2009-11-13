@@ -110,6 +110,7 @@ TFile *gFile;                 //Pointer to current file
 Long64_t TFile::fgBytesRead  = 0;
 Long64_t TFile::fgBytesWrite = 0;
 Long64_t TFile::fgFileCounter = 0;
+Int_t    TFile::fgReadaheadSize = 256000;
 Int_t    TFile::fgReadCalls = 0;
 Bool_t   TFile::fgReadInfo = kTRUE;
 TList   *TFile::fgAsyncOpenRequests = 0;
@@ -296,6 +297,7 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    fSumBuffer    = 0;
    fSum2Buffer   = 0;
    fBytesRead    = 0;
+   fBytesReadExtra = 0;
    fBytesWrite   = 0;
    fClassIndex   = 0;
    fSeekInfo     = 0;
@@ -601,16 +603,8 @@ void TFile::Init(Bool_t create)
          }
       }
       //*-*-------------Read directory info
-      Int_t nk = sizeof(Int_t) +sizeof(Version_t) +2*sizeof(Int_t)+2*sizeof(Short_t);
-      if (fVersion < 1000000) { //small file
-         nk += 2*sizeof(Int_t);
-      } else {
-         nk += 2*sizeof(Long64_t);
-      }
-      // nk is the distance between the start of key record and the location of the number
-      // of bytes in the (held) class name (i.e. lname). So
-      // nk = sum of size of:  NBytes, Version, ObjLen, DateTime, KeyLen, Cycle, SeekKey, SeekPdir
-      // (the current calculation assumes the 32 bits file format).
+      // buffer_keyloc is the start of the key record.
+      char *buffer_keyloc = 0;
 
       Int_t nbytes = fNbytesName + TDirectoryFile::Sizeof();
       if (nbytes+fBEGIN > kBEGIN+200) {
@@ -620,9 +614,10 @@ void TFile::Init(Bool_t create)
          Seek(fBEGIN);
          ReadBuffer(buffer,nbytes);
          buffer = header+fNbytesName;
+         buffer_keyloc = header;
       } else {
          buffer = header+fBEGIN+fNbytesName;
-         nk += fBEGIN;
+         buffer_keyloc = header+fBEGIN;
       }
       Version_t version,versiondir;
       frombuf(buffer,&version); versiondir = version%1000;
@@ -643,11 +638,20 @@ void TFile::Init(Bool_t create)
       if (versiondir > 1) fUUID.ReadBuffer(buffer);
 
       //*-*---------read TKey::FillBuffer info
-      buffer = header+nk;
+      buffer_keyloc += sizeof(Int_t); // Skip NBytes;
+      Version_t keyversion;
+      frombuf(buffer_keyloc, &keyversion);
+      // Skip ObjLen, DateTime, KeyLen, Cycle, SeekKey, SeekPdir
+      if (keyversion > 1000) {
+         // Large files
+         buffer_keyloc += 2*sizeof(Int_t)+2*sizeof(Short_t)+2*sizeof(Long64_t);
+      } else {
+         buffer_keyloc += 2*sizeof(Int_t)+2*sizeof(Short_t)+2*sizeof(Int_t);
+      }
       TString cname;
-      cname.ReadBuffer(buffer);
-      cname.ReadBuffer(buffer); // fName.ReadBuffer(buffer); file may have been renamed
-      fTitle.ReadBuffer(buffer);
+      cname.ReadBuffer(buffer_keyloc);
+      cname.ReadBuffer(buffer_keyloc); // fName.ReadBuffer(buffer); file may have been renamed
+      fTitle.ReadBuffer(buffer_keyloc);
       delete [] header;
       if (fNbytesName < 10 || fNbytesName > 10000) {
          Error("Init","cannot read directory info of file %s", GetName());
@@ -1338,7 +1342,7 @@ Bool_t TFile::ReadBuffer(char *buf, Int_t len)
       if (gMonitoringWriter)
          gMonitoringWriter->SendFileReadProgress(this);
       if (gPerfStats != 0) {
-         gPerfStats->FileReadEvent(this, len, double(TTimeStamp())-start);
+         gPerfStats->FileReadEvent(this, len, start);
       }
       return kFALSE;
    }
@@ -1353,17 +1357,53 @@ Bool_t TFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
    // Note that for nbuf=1, this call is equivalent to TFile::ReafBuffer.
    // This function is overloaded by TNetFile, TWebFile, etc.
    // Returns kTRUE in case of failure.
-
+   
    Int_t k = 0;
    Bool_t result = kTRUE;
    TFileCacheRead *old = fCacheRead;
    fCacheRead = 0;
-   for (Int_t i = 0; i < nbuf; i++) {
-      Seek(pos[i]);
-      result = ReadBuffer(&buf[k], len[i]);
-      if (result) break;
-      k += len[i];
-   }
+   Long64_t curbegin = pos[0];
+   Long64_t cur;
+   char *buf2 = 0;
+   Int_t i = 0, n = 0;
+   while (i < nbuf) {
+      cur = pos[i]+len[i];
+      Bool_t bigRead = kTRUE;
+      if (cur -curbegin < fgReadaheadSize) {n++; i++; bigRead = kFALSE;}
+      if (bigRead || (i>=nbuf)) {
+         if (n == 0) {
+            //if the block to read is about the same size as the read-ahead buffer
+            //we read the block directly
+            Seek(pos[i]);
+            result = ReadBuffer(&buf[k], len[i]);
+            if (result) break;
+            k += len[i];
+            i++;
+         } else {
+            //otherwise we read all blocks that fit in the read-ahead buffer
+            Seek(curbegin);
+            if (buf2 == 0) buf2 = new char[fgReadaheadSize];
+            //we read ahead
+            Long64_t nahead = pos[i-1]+len[i-1]-curbegin;
+            result = ReadBuffer(buf2, nahead);
+            if (result) break;
+            //now copy from the read-ahead buffer to the cache
+            Int_t kold = k;
+            for (Int_t j=0;j<n;j++) {
+               memcpy(&buf[k],&buf2[pos[i-n+j]-curbegin],len[i-n+j]);
+               k += len[i-n+j];
+            }
+            Int_t nok = k-kold;
+            Long64_t extra = nahead-nok;
+            fBytesReadExtra += extra;
+            fBytesRead      -= extra;
+            fgBytesRead     -= extra;
+            n = 0;
+         }
+         curbegin = pos[i];
+      }
+   } 
+   if (buf2) delete [] buf2;
    fCacheRead = old;
    return result;
 }
@@ -1567,7 +1607,8 @@ Int_t TFile::Recover()
       for (i = 0;i < nwhc; i++) frombuf(buffer, &classname[i]);
       classname[nwhci] = '\0';
       TDatime::GetDateTime(datime, date, time);
-      if (seekpdir == fSeekDir && !TClass::GetClass(classname)->InheritsFrom("TFile")
+      TClass *tclass = TClass::GetClass(classname);
+      if (seekpdir == fSeekDir && tclass && !tclass->InheritsFrom("TFile")
                                && strcmp(classname,"TBasket")) {
          key = new TKey(this);
          key->ReadKeyBuffer(bufread);
@@ -2184,7 +2225,9 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
             // The 'sub' StreamerInfo start with the main StreamerInfo name,
             // it subinfo is likely to be a nested class.
             const Int_t sublen = strlen(subinfo->GetName());
-            if ( (sublen > len) && subinfo->GetName()[len+1]==':') {
+            if ( (sublen > len) && subinfo->GetName()[len+1]==':'
+               && !subClasses.FindObject(subinfo->GetName()) /* We need to insure uniqueness */) 
+            {
                subClasses.Add(subinfo);
             }
          }
@@ -3124,6 +3167,17 @@ Int_t TFile::GetFileReadCalls()
 
    return fgReadCalls;
 }
+
+//______________________________________________________________________________
+Int_t TFile::GetReadaheadSize()
+{
+   // Static function returning the readahead buffer size.
+   
+   return fgReadaheadSize;
+}
+
+//______________________________________________________________________________
+void TFile::SetReadaheadSize(Int_t bytes) { fgReadaheadSize = bytes; }
 
 //______________________________________________________________________________
 void TFile::SetFileBytesRead(Long64_t bytes) { fgBytesRead = bytes; }

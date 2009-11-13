@@ -38,7 +38,6 @@ XrdProofdProofServ::XrdProofdProofServ()
    fProtocol = 0;
    fParent = 0;
    fPingSem = 0;
-   fQueryNum = 0;
    fStartMsg = 0;
    fStatus = kXPD_idle;
    fSrvPID = -1;
@@ -72,7 +71,6 @@ XrdProofdProofServ::~XrdProofdProofServ()
 {
    // Destructor
 
-   SafeDelete(fQueryNum);
    SafeDelete(fStartMsg);
    SafeDelete(fPingSem);
 
@@ -198,7 +196,6 @@ void XrdProofdProofServ::Reset()
    fResponse = 0;
    fProtocol = 0;
    fParent = 0;
-   SafeDelete(fQueryNum);
    SafeDelete(fStartMsg);
    SafeDelete(fPingSem);
    fSrvPID = -1;
@@ -313,7 +310,7 @@ int XrdProofdProofServ::FreeClientID(int pid)
    XPDLOC(SMGR, "ProofServ::FreeClientID")
 
    TRACE(DBG, "svrPID: "<<fSrvPID<< ", pid: "<<pid<<", session status: "<<
-              fStatus<<", # clients: "<< fClients.size());
+              fStatus<<", # clients: "<< fNClients);
    int rc = -1;
    if (pid <= 0) {
       TRACE(XERR, "undefined pid!");
@@ -326,24 +323,26 @@ int XrdProofdProofServ::FreeClientID(int pid)
       // Remove this from the list of clients
       std::vector<XrdClientID *>::iterator i;
       for (i = fClients.begin(); i != fClients.end(); ++i) {
-         if ((*i) && (*i)->P() && (*i)->P()->Pid() == pid) {
-            (*i)->Reset();
-            fNClients--;
-            // Record time of last disconnection
-            if (fNClients <= 0)
-               fDisconnectTime = time(0);
-            rc = 0;
-            break;
+         if ((*i) && (*i)->P()) {
+            if ((*i)->P()->Pid() == pid || (*i)->P()->Pid() == -1) {
+               (*i)->Reset();
+               fNClients--;
+               // Record time of last disconnection
+               if (fNClients <= 0)
+                  fDisconnectTime = time(0);
+               rc = 0;
+               break;
+            }
          }
       }
    }
-   if (TRACING(REQ)) {
+   if (TRACING(REQ) && (rc == 0)) {
       int spid = SrvPID();
       TRACE(REQ, spid<<": slot for client pid: "<<pid<<" has been reset");
    }
 
    // Out of range
-   return -1;
+   return rc;
 }
 
 //__________________________________________________________________________
@@ -734,6 +733,7 @@ int XrdProofdProofServ::SetAdminPath(const char *a)
 
    fAdminPath = a;
 
+   // The session file
    struct stat st;
    if (stat(a, &st) != 0 && errno == ENOENT) {
       // Create the file
@@ -745,6 +745,32 @@ int XrdProofdProofServ::SetAdminPath(const char *a)
       TRACE(XERR, "unable to open / create admin path "<< fAdminPath << "; errno = "<<errno);
       return -1;
    }
+
+   // The status file
+   XrdOucString fn;
+   XPDFORM(fn, "%s.status", a);
+   if (stat(fn.c_str(), &st) != 0 && errno == ENOENT) {
+      // Create the file
+      FILE *fpid = fopen(fn.c_str(), "w");
+      if (fpid) {
+         fprintf(fpid, "%d", fStatus);
+         fclose(fpid);
+      } else {
+         TRACE(XERR, "unable to open / create status path "<< fn << "; errno = "<<errno);
+         return -1;
+      }
+   }
+   // Set the ownership of the status file to the user
+   XrdProofUI ui;
+   if (XrdProofdAux::GetUserInfo(fClient.c_str(), ui) != 0) {
+      TRACE(XERR, "unable to get info for user "<<fClient<<"; errno = "<<errno);
+      return -1;
+   }
+   if (XrdProofdAux::ChangeOwn(fn.c_str(), ui) != 0) {
+      TRACE(XERR, "unable to give ownership of the status file "<< fn << " to user; errno = "<<errno);
+      return -1;
+   }
+
    // Done
    return 0;
 }
@@ -797,7 +823,7 @@ static int ExportWorkerDescription(const char *k, XrdProofWorker *w, void *s)
          // Add export version of the info
          (*wrks) += w->Export(k);
       }
-      TRACE(ALL, k <<" : "<<w->fHost.c_str()<<":"<<w->fPort <<" act: "<<w->Active());
+      TRACE(HDBG, k <<" : "<<w->fHost.c_str()<<":"<<w->fPort <<" act: "<<w->Active());
       // Check next
       return 0;
    }
@@ -883,4 +909,62 @@ void XrdProofdProofServ::RemoveQuery(const char *tag)
 
    // Done
    return;
+}
+
+//__________________________________________________________________________
+static int CountEffectiveSessions(const char *, XrdProofWorker *w, void *s)
+{
+   // Decrease active session counters on worker w
+
+   int *actw = (int *)s;
+   if (w && actw) {
+      *actw += w->GetNActiveSessions();
+      // Check next
+      return 0;
+   }
+
+   // Not enough info: stop
+   return 1;
+}
+
+//__________________________________________________________________________
+void XrdProofdProofServ::SendClusterInfo(int nsess, int nacti)
+{
+   // Calculate the effective number of users on this session nodes
+   // and communicate it to the master together with the total number
+   // of sessions and the number of active sessions. for monitoring issues.
+   XPDLOC(PMGR, "SendClusterInfo")
+
+   // Only if we are active
+   if (fWorkers.Num() <= 0) return;
+
+   int actw = 0;
+   fWorkers.Apply(CountEffectiveSessions, (void *)&actw);
+   // The number of effective sessions * 1000
+   int neffs = (actw*1000)/fWorkers.Num();
+   TRACE(DBG, "# sessions: "<<nsess<<", # active: "<<nacti<<", # effective: "<<neffs/1000.);
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   // Prepare buffer
+   int len = 3*sizeof(kXR_int32);
+   char *buf = new char[len];
+   kXR_int32 off = 0;
+   kXR_int32 itmp = nsess;
+   itmp = static_cast<kXR_int32>(htonl(itmp));
+   memcpy(buf + off, &itmp, sizeof(kXR_int32));
+   off += sizeof(kXR_int32);
+   itmp = nacti;
+   itmp = static_cast<kXR_int32>(htonl(itmp));
+   memcpy(buf + off, &itmp, sizeof(kXR_int32));
+   off += sizeof(kXR_int32);
+   itmp = neffs;
+   itmp = static_cast<kXR_int32>(htonl(itmp));
+   memcpy(buf + off, &itmp, sizeof(kXR_int32));
+   // Send over
+   if (!fResponse || fResponse->Send(kXR_attn, kXPD_clusterinfo, buf, len) != 0) {
+      // Failure
+      TRACE(XERR,"problems sending proofserv");
+   }
+
 }
