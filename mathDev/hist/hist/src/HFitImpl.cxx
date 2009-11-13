@@ -29,6 +29,7 @@
 #include "TVirtualPad.h" // for gPad
 
 #include "TBackCompFitter.h"
+#include "TFitResultPtr.h"
 #include "TFitResult.h"
 
 #include <stdlib.h>
@@ -62,7 +63,7 @@ namespace HFit {
 
 
    template <class FitObject>
-   TFitResult Fit(FitObject * h1, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption,  ROOT::Fit::DataRange & range); 
+   TFitResultPtr Fit(FitObject * h1, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption,  ROOT::Fit::DataRange & range); 
 
    template <class FitObject>
    void StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, const char *goption);
@@ -103,7 +104,7 @@ int HFit::CheckFitFunction(const TF1 * f1, int dim) {
 }
 
 template<class FitObject>
-TFitResult HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math::MinimizerOptions & minOption, const char *goption, ROOT::Fit::DataRange & range)
+TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math::MinimizerOptions & minOption, const char *goption, ROOT::Fit::DataRange & range)
 {
    // perform fit of histograms, or graphs using new fitting classes 
    // use same routines for fitting both graphs and histograms
@@ -365,9 +366,9 @@ TFitResult HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROO
       else if (!fitOption.Quiet) bcfitter->PrintResults(1,0.);
 
       if (fitOption.StoreResult)
-         return TFitResult(fitResult);
+         return TFitResultPtr(new TFitResult(fitResult));
       else 
-         return TFitResult(iret);
+         return TFitResultPtr(iret);
 }
 
 
@@ -704,33 +705,33 @@ int ROOT::Fit::UnBinFit(ROOT::Fit::UnBinData * fitdata, TF1 * fitfunc, Foption_t
 
 // implementations of ROOT::Fit::FitObject functions (defined in HFitInterface) in terms of the template HFit::Fit
 
-TFitResult ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+TFitResultPtr ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
    // histogram fitting
    return HFit::Fit(h1,f1,foption,moption,goption,range); 
 }
 
-TFitResult ROOT::Fit::FitObject(TGraph * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+TFitResultPtr ROOT::Fit::FitObject(TGraph * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
   // exclude options not valid for graphs
    HFit::CheckGraphFitOptions(foption);
     // TGraph fitting
    return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
 
-TFitResult ROOT::Fit::FitObject(TMultiGraph * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+TFitResultPtr ROOT::Fit::FitObject(TMultiGraph * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
   // exclude options not valid for graphs
    HFit::CheckGraphFitOptions(foption);
     // TMultiGraph fitting
    return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
 
-TFitResult ROOT::Fit::FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+TFitResultPtr ROOT::Fit::FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
   // exclude options not valid for graphs
    HFit::CheckGraphFitOptions(foption);
     // TGraph2D fitting
    return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
 
-TFitResult ROOT::Fit::FitObject(THnSparse * s1, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+TFitResultPtr ROOT::Fit::FitObject(THnSparse * s1, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
    // sparse histogram fitting
    return HFit::Fit(s1,f1,foption,moption,goption,range); 
 }

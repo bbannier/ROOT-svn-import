@@ -28,7 +28,7 @@ class TGraph2D;
 class TMultiGraph; 
 struct Foption_t; 
 
-#include "TFitResult.h"
+#include "TFitResultPtr.h"
 
 namespace ROOT { 
 
@@ -55,27 +55,27 @@ namespace ROOT {
       /**
          fitting function for a TH1 (called from TH1::Fit)
        */
-      TFitResult FitObject(TH1 * h1, TF1 *f1, Foption_t & option, const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
+      TFitResultPtr FitObject(TH1 * h1, TF1 *f1, Foption_t & option, const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
 
       /**
          fitting function for a TGraph (called from TGraph::Fit)
        */
-      TFitResult FitObject(TGraph * gr, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range);  
+      TFitResultPtr FitObject(TGraph * gr, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range);  
 
       /**
          fitting function for a MultiGraph (called from TMultiGraph::Fit)
        */
-      TFitResult FitObject(TMultiGraph * mg, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range);  
+      TFitResultPtr FitObject(TMultiGraph * mg, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range);  
 
       /**
          fitting function for a TGraph2D (called from TGraph2D::Fit)
        */
-      TFitResult FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
+      TFitResultPtr FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
 
       /**
          fitting function for a THnSparse (called from THnSparse::Fit)
        */
-      TFitResult FitObject(THnSparse * s1, TF1 *f1, Foption_t & option, const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
+      TFitResultPtr FitObject(THnSparse * s1, TF1 *f1, Foption_t & option, const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
 #endif
 
       /** 

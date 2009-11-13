@@ -600,7 +600,7 @@ THnSparse* THnSparse::CreateSparse(const char* name, const char* title,
 }
 
 //______________________________________________________________________________
-TFitResult THnSparse::Fit(TF1 *f ,Option_t *option ,Option_t *goption)
+TFitResultPtr THnSparse::Fit(TF1 *f ,Option_t *option ,Option_t *goption)
 {
 //   Fit a THnSparse with function f
 // 

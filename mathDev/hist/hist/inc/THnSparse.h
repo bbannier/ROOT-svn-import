@@ -52,7 +52,7 @@
 
 class TAxis;
 class TCollection;
-class TFitResult;
+class TFitResultPtr;
 class TH1;
 class TH1D;
 class TH2D;
@@ -187,7 +187,7 @@ class THnSparse: public TNamed {
       return Fill(GetBin(name), w);
    }
 
-   TFitResult Fit(TF1 *f1 ,Option_t *option = "", Option_t *goption = "");
+   TFitResultPtr Fit(TF1 *f1 ,Option_t *option = "", Option_t *goption = "");
    TList* GetListOfFunctions() { return 0; }
 
    Double_t GetEntries() const { return fEntries; }

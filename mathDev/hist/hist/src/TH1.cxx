@@ -3030,7 +3030,7 @@ TObject *TH1::FindObject(const TObject *obj) const
 }
 
 //______________________________________________________________________________
-TFitResult TH1::Fit(const char *fname ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
+TFitResultPtr TH1::Fit(const char *fname ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
 {
 //                     Fit histogram with function fname
 //                     =================================
@@ -3072,7 +3072,7 @@ TFitResult TH1::Fit(const char *fname ,Option_t *option ,Option_t *goption, Doub
 }
 
 //______________________________________________________________________________
-TFitResult TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
+TFitResultPtr TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
 {
 //                     Fit histogram with function f1
 //                     ==============================
