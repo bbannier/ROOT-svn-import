@@ -318,6 +318,18 @@ bool TMinuitMinimizer::SetVariableValue(unsigned int ivar, double val) {
    return (ierr==0);
 }
 
+std::string TMinuitMinimizer::VariableName(unsigned int ivar) const { 
+   // return the variable name
+   if (!fMinuit || (int) ivar > fMinuit->fNu) return std::string();
+return std::string(fMinuit->fCpnam[ivar]);
+}
+
+int TMinuitMinimizer::VariableIndex(const std::string & ) const { 
+   // return variable index
+   Error("TMinuitMinimizer::VariableIndex"," find index of a variable from its name  is not implemented in TMinuit");
+   return -1;
+}
+
 bool TMinuitMinimizer::Minimize() { 
    // perform the minimization using the algorithm chosen previously by the user  
    // By default Migrad is used. 
@@ -354,6 +366,11 @@ bool TMinuitMinimizer::Minimize() {
    // suppress warning in case Printlevel() == 0 
    if (printlevel == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
 
+   // set precision if needed
+   if (Precision() > 0)  { 
+      arglist[0] = Precision();
+      fMinuit->mnexcm("SET EPS",arglist,1,ierr);
+   }
 
    arglist[0] = MaxFunctionCalls(); 
    arglist[1] = Tolerance(); 
@@ -561,6 +578,13 @@ bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & e
 
       // suppress warning in case Printlevel() == 0 
       if (PrintLevel() == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
+
+      // set precision if needed
+      if (Precision() > 0)  { 
+         arglist[0] = Precision();
+         fMinuit->mnexcm("SET EPS",arglist,1,ierr);
+      }
+
    }
 
    // syntax of MINOS is MINOS [maxcalls] [parno]
@@ -631,8 +655,16 @@ bool TMinuitMinimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
       
    arglist[0] = PrintLevel()-1; 
    fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
+
    // suppress warning in case Printlevel() == 0 
    if (PrintLevel() == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
+
+   // set precision if needed
+   if (Precision() > 0)  { 
+      arglist[0] = Precision();
+      fMinuit->mnexcm("SET EPS",arglist,1,ierr);
+   }
+
 
    if (npoints < 4) { 
       Error("Contour","Cannot make contour with so few points");
@@ -693,6 +725,11 @@ bool TMinuitMinimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
    // suppress warning in case Printlevel() == 0 
    if (PrintLevel() == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
 
+   // set precision if needed
+   if (Precision() > 0)  { 
+      arglist[0] = Precision();
+      fMinuit->mnexcm("SET EPS",arglist,1,ierr);
+   }
 
    if (nstep == 0) return false; 
    arglist[0] = ipar+1;  // TMinuit starts from 1 
@@ -745,6 +782,12 @@ bool TMinuitMinimizer::Hesse() {
 
    // suppress warning in case Printlevel() == 0 
    if (printlevel == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
+
+   // set precision if needed
+   if (Precision() > 0)  { 
+      arglist[0] = Precision();
+      fMinuit->mnexcm("SET EPS",arglist,1,ierr);
+   }
 
    arglist[0] = MaxFunctionCalls(); 
 
