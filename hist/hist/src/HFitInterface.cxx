@@ -743,8 +743,8 @@ void FillData(BinData & dv, const THnSparse * s1, TF1 * func)
 {
    // Fill the Range of the THnSparse
    unsigned int const ndim = s1->GetNdimensions();
-   double xmin[ndim];
-   double xmax[ndim];
+   vector<double> xmin(ndim);
+   vector<double> xmax(ndim);
    for ( unsigned int i = 0; i < ndim; ++i ) {
       TAxis* axis = s1->GetAxis(i);
       xmin[i] = axis->GetXmin();
@@ -760,7 +760,7 @@ void FillData(BinData & dv, const THnSparse * s1, TF1 * func)
    dopt.fBinVolume = true;
 
    // Get the sparse data
-   ROOT::Fit::SparseData d(ndim, xmin, xmax);
+   ROOT::Fit::SparseData d(ndim, &xmin[0], &xmax[0]);
    ROOT::Fit::FillData(d, s1, func);
 
 //    cout << "FillData(BinData & dv, const THnSparse * s1, TF1 * func) (1)" << endl;
