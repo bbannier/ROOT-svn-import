@@ -50,7 +50,7 @@ namespace RooStats {
     Double_t LowerLimit() { CalculateLimits(); return fLowerLimit; }
     Double_t UpperLimit() { CalculateLimits(); return fUpperLimit; }
 
-    Double_t UpperLimitError() { return 0; };
+    Double_t UpperLimitEstimatedError();
 
   private:
 
@@ -59,6 +59,7 @@ namespace RooStats {
   protected:
 
     bool fUseCLs; 
+    Double_t fUpperLimitError;
 
     std::vector<double> fXValues;
 
@@ -66,9 +67,8 @@ namespace RooStats {
 
     friend class HypoTestInverter;
 
-    ClassDef(HypoTestInverterResult,1)  // HypoTestInverterResult class
-
-      };
+    ClassDef(HypoTestInverterResult,1)  // HypoTestInverterResult class      
+  };
 }
 
 #endif
