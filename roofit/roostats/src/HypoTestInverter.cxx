@@ -11,6 +11,7 @@
 /**
    HypoTestInverter class
 
+   New contributions to this class have been written by Matthias Wolf (advanced AutoRun algorithm)
 **/
 
 // include other header files
@@ -106,6 +107,70 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double epsilon )
   return true;
 }
 
+bool HypoTestInverter::RunAutoScan2( double xMin, double xMax, double nSigma )
+{
+  // Search for the value of the searched variable where the CL is within
+  // nSigma of the desired level.  This is done by consecutively replacing
+  // the worst value of the interval with one that has been interpolated
+  // exponentially.
+
+  double target = Size();
+
+  double leftX = xMin;
+  double rightX = xMax;
+  if (!RunOnePoint(leftX)) return false;
+  double leftCL = fResults->GetYValue(fResults->Size()-1);
+  double leftCLError = fResults->GetYError(fResults->Size()-1);
+  if (!RunOnePoint(rightX)) return false;
+  double rightCL = fResults->GetYValue(fResults->Size()-1);
+  double rightCLError = fResults->GetYError(fResults->Size()-1);
+  double centerCL;
+  double centerCLError;
+
+  do {
+    if (!leftCL) leftCL = DBL_EPSILON;
+    if (!rightCL) rightCL = DBL_EPSILON;
+
+    double a = (log(leftCL) - log(rightCL)) / (leftX - rightX);
+    double b = leftCL / exp(a * leftX);
+    double x = (log(target) - log(b)) / a;
+    if (isnan(x)) {
+      std::cout << "ERROR: Failed the auto run for finding target\n";
+      return false;
+    }
+
+    if (!RunOnePoint(x)) return false;
+    centerCL = fResults->GetYValue(fResults->Size()-1);
+    centerCLError = fResults->GetYError(fResults->Size()-1);
+
+    // Test if the interval points are on different sides, then replace the
+    // one on the "right" side with the center
+    if ( (leftCL > target) == (rightCL < target) ) {
+      if ( (centerCL > target) == (leftCL > target) ) {
+        leftX = x;
+	leftCL = centerCL;
+	leftCLError = centerCLError;
+      } else {
+        rightX = x;
+	rightCL = centerCL;
+	rightCLError = centerCLError;
+      }
+    // Otherwise replace the point farest away from target (measured in
+    // sigmas)
+    } else if ( (fabs(leftCL - target) / leftCLError) >
+	        (fabs(rightCL - target) / rightCLError) ) {
+      leftX = x;
+      leftCL = centerCL;
+      leftCLError = centerCLError;
+    } else {
+      rightX = x;
+      rightCL = centerCL;
+      rightCLError = centerCLError;
+    }
+  } while ( fabs(centerCL-target) > nSigma*centerCLError );
+
+  return true;
+}
 
 bool HypoTestInverter::RunFixedScan( int nBins, double xMin, double xMax )
 {
@@ -156,7 +221,6 @@ bool HypoTestInverter::RunOnePoint( double thisX )
   fScannedVariable->setVal(thisX);
 
   // create a clone of the HypoTestCalculator
-  //HypoTestCalculator* calculator = (HypoTestCalculator*) ((HybridCalculator*) fCalculator0)->Clone(); // MAYBE WE DON'T NEED
   HypoTestCalculator* calculator = fCalculator0;
   
   // compute the results
@@ -164,11 +228,9 @@ bool HypoTestInverter::RunOnePoint( double thisX )
 
   // fill the results in the HypoTestInverterResult
   fResults->fXValues.push_back(thisX);
-  fResults->fYObjects.Add(myHybridResult); // TO DO vector of HypoTestResult
+  fResults->fYObjects.Add(myHybridResult);
 
   //delete calculator;
-
-  //std::cout << "DONE\n";
 
   fScannedVariable->setVal(oldValue);
 
