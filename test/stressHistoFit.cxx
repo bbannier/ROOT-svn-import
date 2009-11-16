@@ -1,3 +1,74 @@
+// @(#)root/test:$name:  $:$id: stressHistoFit.cxx,v 1.15 2002/10/25 10:47:51 rdm exp $
+// Authors: David Gonzalez Maline November 2008
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*//
+//                                                                               //
+//                                                                               //
+// Set of tests for different minimization algorithms and for                    //
+// different objects. The tests are divided into three types:                    //
+//                                                                               //
+// 1. 1D and 2D Objects, including 1D and 2D histograms, 1D and 2D               //
+//    histograms with variable bins, TGraph, TGraphErrors, TGraph2D,             //
+//    TGraph2DErrors                                                             //
+// 2. Same as before, but trying linear fitters.                                 //
+// 3. Unbinned fits with trees of different dimensions.                          //
+//                                                                               //
+// Each test will performed fits with different functions and                    //
+// different minimization algorithms selected. There is an error                 //
+// tolerance for each one of them. There is also the possibility to              //
+// inspect each one of the test individually changing the                        //
+// defaultOptions variable.                                                      //
+//                                                                               //
+//                                                                               //
+// An example of output when all the tests run OK is shown below:                //
+// ****************************************************************************  //
+// *  Starting  stress  H I S T O F I T                                       *  //
+// ****************************************************************************  //
+//                                                                               //
+// Test 1D and 2D objects                                                        //
+//                                                                               //
+// Test For Object 'Histogram 1D Variable' with 'GAUS'..............OK           //
+// Test For Object 'Histogram 1D' with 'GAUS'.......................OK           //
+// Test For Object 'TGraph 1D' with 'GAUS'..........................OK           //
+// Test For Object 'TGraphErrors 1D' with 'GAUS'....................OK           //
+// Test For Object 'THnSparse 1D' with 'GAUS'.......................OK           //
+// Test For Object 'Histogram 1D Variable' with 'Polynomial'........OK           //
+// Test For Object 'Histogram 1D' with 'Polynomial'.................OK           //
+// Test For Object 'TGraph 1D' with 'Polynomial'....................OK           //
+// Test For Object 'TGraphErrors 1D' with 'Polynomial'..............OK           //
+// Test For Object 'THnSparse 1D' with 'Polynomial'.................OK           //
+// Test For Object 'Histogram 2D Variable' with 'gaus2D'............OK           //
+// Test For Object 'Histogram 2D' with 'gaus2D'.....................OK           //
+// Test For Object 'TGraph 2D' with 'gaus2D'........................OK           //
+// Test For Object 'TGraphErrors 2DGE' with 'gaus2D'................OK           //
+// Test For Object 'THnSparse 2D' with 'gaus2D'.....................OK           //
+//                                                                               //
+// Test Linear fits                                                              //
+//                                                                               //
+// Test For Object 'Histogram 1D Variable' with 'Polynomial'........OK           //
+// Test For Object 'Histogram 1D' with 'Polynomial'.................OK           //
+// Test For Object 'TGraph 1D' with 'Polynomial'....................OK           //
+// Test For Object 'TGraphErrors 1D' with 'Polynomial'..............OK           //
+// Test For Object 'THnSparse 1D' with 'Polynomial'.................OK           //
+// Test For Object 'Histogram 2D Variable' with 'Poly2D'............OK           //
+// Test For Object 'Histogram 2D' with 'Poly2D'.....................OK           //
+// Test For Object 'TGraph 2D' with 'Poly2D'........................OK           //
+// Test For Object 'TGraphErrors 2DGE' with 'Poly2D'................OK           //
+// Test For Object 'THnSparse 2D' with 'Poly2D'.....................OK           //
+//                                                                               //
+// Test unbinned fits                                                            //
+//                                                                               //
+// Test For Object 'tree' with 'gausn'..............................OK           //
+// Test For Object 'tree' with 'gaus2Dn'............................OK           //
+// Test For Object 'tree' with 'gausND'.............................OK           //
+//                                                                               //
+// ****************************************************************************  //
+// stressHistoFit: Real Time =  72.19 seconds Cpu Time =  72.19 seconds          //
+//  ROOTMARKS = 381.216 ROOT version: 5.25/03	branches/dev/mathDev@31176       //
+// ****************************************************************************  //
+//                                                                               //
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*//
+
 #include "TH1.h"
 #include "TH2.h"
 #include "THnSparse.h"
@@ -31,6 +102,7 @@
 
 #include "TROOT.h"
 //#include "RConfigure.h"
+#include "TBenchmark.h"
 #include "TCanvas.h"
 #include "TApplication.h"
 
@@ -1049,20 +1121,33 @@ int stressFit()
 
    int iret = 0; 
 
-   //defaultOptions = testOptColor | testOptCheck | testOptDebug;
+   TBenchmark bm;
+   bm.Start("stressHistoFit");
 
+   cout << "****************************************************************************" <<endl;
+   cout << "*  Starting  stress  H I S T O F I T                                       *" <<endl;
+   cout << "****************************************************************************" <<endl;
 
-   std::cout << "Test 1D and 2D objects\n";
+   std::cout << "\nTest 1D and 2D objects\n\n";
    iret += test1DObjects(listTH1DAlgos, listAlgosTGraph, listAlgosTGraphError, l1DFunctions);
    iret += test2DObjects(listTH2DAlgos, listAlgosTGraph2D, listAlgosTGraph2DError, l2DFunctions);
-   std::cout << "Test Linear fits\n";
+   std::cout << "\nTest Linear fits\n\n";
    iret += test1DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l1DLinearFunctions);
    iret += test2DObjects(listLinearAlgos, listLinearAlgos, listLinearAlgos, l2DLinearFunctions);
    //defaultOptions = testOptColor | testOptCheck;
    // tree test
-   std::cout << "Test unbinned fits\n";
+   std::cout << "\nTest unbinned fits\n\n";
    iret += testUnBinnedFit(2000);  // reduce statistics
    
+   bm.Stop("stressHistoFit");
+   std::cout <<"\n****************************************************************************\n";
+   bm.Print("stressHistoFit");
+   const double reftime = 32; // needs to be updated // ref time on  pcbrun4
+   double rootmarks = 860 * reftime / bm.GetCpuTime("stressHistoFit");
+   std::cout << " ROOTMARKS = " << rootmarks << " ROOT version: " << gROOT->GetVersion() << "\t" 
+             << gROOT->GetSvnBranch() << "@" << gROOT->GetSvnRevision() << std::endl;
+   std::cout <<"****************************************************************************\n";
+
    return iret; 
 }
    
