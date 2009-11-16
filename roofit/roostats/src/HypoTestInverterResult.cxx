@@ -45,17 +45,15 @@ HypoTestInverterResult::HypoTestInverterResult( const char* name,
    SimpleInterval(name,scannedVariable,-999,999,cl), 
    fUseCLs(false)
 {
-  // constructor
+  // constructor 
    fYObjects.SetOwner();
 }
 
 
 HypoTestInverterResult::~HypoTestInverterResult()
 {
-  // destructor
-
-  // delete fYobjects
-  for (int i=1; i<=Size(); i++) delete ((HybridResult*) fYObjects.At(i));
+   // destructor
+   // no need to delete explictly the objects in the TList since the TList owns the objects
 }
 
  
