@@ -166,9 +166,9 @@ STRESSFITO    = stressFit.$(ObjSuf)
 STRESSFITS    = stressFit.$(SrcSuf)
 STRESSFIT     = stressFit$(ExeSuf)
 
-STRESSHISTOFITO    = stresshistofit.$(ObjSuf)
-STRESSHISTOFITS    = stresshistofit.$(SrcSuf)
-STRESSHISTOFIT     = stresshistofit$(ExeSuf)
+STRESSHISTOFITO    = stressHistoFit.$(ObjSuf)
+STRESSHISTOFITS    = stressHistoFit.$(SrcSuf)
+STRESSHISTOFIT     = stressHistoFit$(ExeSuf)
 
 STRESSTMVAO    = stressTMVA.$(ObjSuf)
 STRESSTMVAS    = stressTMVA.$(SrcSuf)
