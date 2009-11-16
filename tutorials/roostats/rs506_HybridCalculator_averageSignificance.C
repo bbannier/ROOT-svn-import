@@ -33,7 +33,7 @@ void rs506_HybridCalculator_averageSignificance(const char* fname="WS_GaussOverF
   const RooArgSet* nuisanceParam=my_WS->set("parameters");
   RooArgList observable(*(my_WS->set("observables") ) );
   
-  HybridCalculator * hc=new HybridCalculator("hc","HybridCalculator",*model,*modelBkg,observable);
+  HybridCalculator * hc=new HybridCalculator(*model,*modelBkg,observable);
   hc->SetNumberOfToys(ntoys);
   hc->SetTestStatistic(1);
   bool usepriors=false;

@@ -188,8 +188,10 @@ void DoHypothesisTest(RooWorkspace* wks){
   // here we explicitly set the value of the parameters for the null.  
   // We want no signal contribution, eg. mu = 0
   RooRealVar* mu = wks->var("mu");
-  RooArgSet* nullParams = new RooArgSet("nullParams");
-  nullParams->addClone(*mu);
+//   RooArgSet* nullParams = new RooArgSet("nullParams");
+//   nullParams->addClone(*mu);
+  RooArgSet poi(*mu);
+  RooArgSet * nullParams = (RooArgSet*) poi.snapshot(); 
   nullParams->setRealValue("mu",0); 
 
   

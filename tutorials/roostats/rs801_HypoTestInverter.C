@@ -22,6 +22,7 @@
 #include "RooStats/HypoTestInverterPlot.h"
 #include "RooStats/HybridCalculator.h"
 
+#include "TGraphErrors.h"
 
 using namespace RooFit;
 using namespace RooStats;
