@@ -199,6 +199,7 @@ RooCmdArg Conditional(const RooArgSet& pdfSet, const RooArgSet& depSet, Bool_t d
 // RooAbsPdf::generate arguments
 RooCmdArg ProtoData(const RooDataSet& protoData, Bool_t randomizeOrder=kFALSE, Bool_t resample=kFALSE) ;
 RooCmdArg NumEvents(Int_t numEvents) ;
+RooCmdArg NumEvents(Double_t numEvents) ;
 RooCmdArg ExpectedData(Bool_t flag=kTRUE) ; 
 RooCmdArg Asimov(Bool_t flag=kTRUE) ; 
 
