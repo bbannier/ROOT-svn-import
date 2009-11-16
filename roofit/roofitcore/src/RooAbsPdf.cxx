@@ -1875,7 +1875,7 @@ Bool_t RooAbsPdf::isDirectGenSafe(const RooAbsArg& arg) const
 
 
 //_____________________________________________________________________________
-RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, Int_t nEvents, const RooCmdArg& arg1,
+RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, Double_t nEvents, const RooCmdArg& arg1,
 				       const RooCmdArg& arg2, const RooCmdArg& arg3,const RooCmdArg& arg4, const RooCmdArg& arg5) 
 {
   // Generate a new dataset containing the specified variables with events sampled from our distribution. 
@@ -1926,6 +1926,7 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, const RooCmdAr
   pc.defineInt("verbose","Verbose",0,0) ;
   pc.defineInt("extended","Extended",0,0) ;
   pc.defineInt("nEvents","NumEvents",0,0) ;
+  pc.defineDouble("nEventsD","NumEventsD",0,-1.) ;
   pc.defineInt("expectedData","ExpectedData",0,0) ;
   
   // Process and check varargs 
@@ -1935,7 +1936,10 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, const RooCmdAr
   }
 
   // Decode command line arguments
-  Int_t nEvents = pc.getInt("nEvents") ;
+  Double_t nEvents = pc.getDouble("nEventsD") ;
+  if (nEvents<0) {
+    nEvents = pc.getInt("nEvents") ;
+  }
   //Bool_t verbose = pc.getInt("verbose") ;
   Bool_t extended = pc.getInt("extended") ;
   Bool_t expectedData = pc.getInt("expectedData") ;
@@ -1969,7 +1973,7 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, const RooCmdAr
 
 
 //_____________________________________________________________________________
-RooDataHist *RooAbsPdf::generateBinned(const RooArgSet &whatVars, Int_t nEvents, Bool_t expectedData, Bool_t extended) const 
+RooDataHist *RooAbsPdf::generateBinned(const RooArgSet &whatVars, Double_t nEvents, Bool_t expectedData, Bool_t extended) const 
 {
   // Generate a new dataset containing the specified variables with
   // events sampled from our distribution. Generate the specified
