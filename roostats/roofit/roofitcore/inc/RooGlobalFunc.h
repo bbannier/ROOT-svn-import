@@ -118,7 +118,7 @@ RooCmdArg Import(TH1& histo) ;
 RooCmdArg WeightVar(const char* name) ;
 RooCmdArg WeightVar(const RooRealVar& arg) ;
 RooCmdArg Import(const char* state, RooDataSet& data) ;
-RooCmdArg Link(const char* state, RooDataSet& data) ;
+RooCmdArg Link(const char* state, RooAbsData& data) ;
 RooCmdArg Import(RooDataSet& data) ;
 RooCmdArg Import(TTree& tree) ;
 RooCmdArg ImportFromFile(const char* fname, const char* tname) ;
