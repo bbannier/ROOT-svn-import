@@ -82,7 +82,7 @@ void rs203_HybridCalculator_with_ModelConfig()
   //***********************************************************************//
 
   /// run HybridCalculator on those inputs 
-  HybridCalculator myHybridCalc( "myHybridCalc","HybridCalculator example", *data, model1, model2 );
+  HybridCalculator myHybridCalc(*data, model1, model2 );
   //myHybridCalc.SetModel(&model); // alternative
 
   myHybridCalc.SetNumberOfToys(3000); 
