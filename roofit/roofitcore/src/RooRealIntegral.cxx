@@ -708,7 +708,7 @@ RooRealIntegral::RooRealIntegral(const RooRealIntegral& other, const char* name)
   _numIntegrand(0),
   _rangeName(other._rangeName),
   _params(0),
-  _cacheNum(kFALSE)
+  _cacheNum(other._cacheNum)
 {
   // Copy constructor
 
