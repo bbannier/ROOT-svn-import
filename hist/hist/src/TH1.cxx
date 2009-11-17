@@ -4935,7 +4935,6 @@ void TH1::Multiply(TF1 *f1, Double_t c1)
       }
    }
    ResetStats(); 
-   SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -5008,7 +5007,6 @@ void TH1::Multiply(const TH1 *h1)
       }
    }
    ResetStats(); 
-   SetEntries( GetEffectiveEntries() );
 }
 
 
@@ -5089,7 +5087,6 @@ void TH1::Multiply(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Optio
       }
    }
    ResetStats(); 
-   SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -5768,11 +5765,16 @@ void TH1::Streamer(TBuffer &b)
       if (R__v > 2) {
          b.ReadClassBuffer(TH1::Class(), this, R__v, R__s, R__c);
 
+         ResetBit(kCanDelete);
+         ResetBit(kMustCleanup);
          fXaxis.SetParent(this);
          fYaxis.SetParent(this);
          fZaxis.SetParent(this);
-         ResetBit(kCanDelete);
-         ResetBit(kMustCleanup);
+         TIter next(fFunctions);
+         TObject *obj;
+         while ((obj=next())) {
+            if (obj->InheritsFrom(TF1::Class())) ((TF1*)obj)->SetParent(this);
+         }
          return;
       }
       //process old versions before automatic schema evolution
@@ -6535,7 +6537,7 @@ void TH1::ResetStats()
 { 
    // Reset the statistics including the number of entries 
    // and replace with values calculates from bin content
-   // The number of entries is set to the total bin content ot (in case of weighted histogram) 
+   // The number of entries is set to the total bin content or (in case of weighted histogram) 
    // to number of effective entries 
    Double_t stats[kNstat]; 
    fTsumw = 0; 

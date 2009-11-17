@@ -1,4 +1,4 @@
-// @(#)root/hist:$Id: TFitResultPtr.cxx 31127 2009-11-12 14:16:09Z dmgonzal $
+// @(#)root/hist:$Id$
 // Author: David Gonzalez Maline   12/11/09
 
 /*************************************************************************
@@ -11,47 +11,68 @@
 
 #include "TFitResultPtr.h"
 #include "TFitResult.h"
+#include "TError.h"
+
+/**
+TFitResultPtr provides an indirection to the TFitResult class and with a semantics
+identical to a TFitResult pointer, i.e. it is like a smart pointer to a TFitResult. 
+In addition it provides an automatic comversion to an integer. In this way it can be 
+returned from the TH1::Fit method and the change in TH1::Fit be backward compatible. 
+The class 
+
+ */
 
 ClassImp(TFitResultPtr)
 
-TFitResultPtr::TFitResultPtr(const TFitResultPtr& p)
+TFitResultPtr::TFitResultPtr(TFitResult * p) :  
+   fStatus(-1), 
+   fPointer(p) 
 {
-   fPointer = new TFitResult(*p);
+   // constructor from a TFitResult pointer
+   if (fPointer != 0) fStatus = fPointer->Status(); 
+}
+
+TFitResultPtr::TFitResultPtr(const TFitResultPtr& rhs) : 
+   fStatus(rhs.fStatus), fPointer(0)
+{
+   // copy constructor - create a new TFitResult if needed
+   if (rhs.fPointer != 0)  fPointer = new TFitResult(*rhs);
 }
 
 TFitResultPtr::~TFitResultPtr()
 {
-   if ( fPointer )
+   // destructor - delete the contained TFitResult pointer if needed
+   if ( fPointer != 0)
       delete fPointer;
 }
 
-TFitResultPtr::operator int() const 
-{
-   if ( fPointer == 0 )
-      return fStatus;
-   else
-      return fPointer->Status();
-}
 
 TFitResult& TFitResultPtr::operator*() const
 {
+   // impelment the de-reference operator to make the class acts as a pointer to a TFitResult
+   // assert in case the class does not contain a pointer to TFitResult
+   R__ASSERT (fPointer != 0);
    return *fPointer;
 }
 
 TFitResult* TFitResultPtr::operator->() const
 {
+   // implement the -> operator to make the class acts as a pointer to a TFitResult
+   // assert in case the class does not contain a pointer to TFitResult
+   R__ASSERT (fPointer != 0);
    return fPointer;
 }
 
-TFitResult* TFitResultPtr::Get() const
-{
-   return fPointer;
-}
 
-TFitResultPtr& TFitResultPtr::operator=(const TFitResultPtr& p)
-{
-   if ( fPointer )
-      delete fPointer;
-   fPointer = new TFitResult(*p);
+TFitResultPtr & TFitResultPtr::operator=(const TFitResultPtr& rhs) 
+{ 
+   // assignment operator
+   // if needed copy the TFitResult  object and delete previous one if existing
+   if ( &rhs == this) return *this; // self assignment
+   fStatus = rhs.fStatus; 
+   if ( fPointer ) delete fPointer;
+   fPointer = 0;
+   if (rhs.fPointer != 0)  fPointer = new TFitResult(*rhs);
    return *this;
 }
+

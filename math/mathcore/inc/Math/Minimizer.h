@@ -93,7 +93,7 @@ public:
       fMaxCalls(0), 
       fMaxIter(0),
       fTol(1.E-6), 
-      fPrec(0),
+      fPrec(-1),
       fUp(1.)
    {} 
 

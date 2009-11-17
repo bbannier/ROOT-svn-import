@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Id: TFitResult.h 28961 2009-06-12 15:13:46Z dmgonzal $
+// @(#)root/mathcore:$Id$
 // Author: David Gonzalez Maline Tue Nov 10 15:01:24 2009
 
 /*************************************************************************
@@ -21,8 +21,14 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#ifndef ROOT_TNamed
 #include "TNamed.h"
+#endif
+
+#ifndef ROOT_FIT_FitResult
 #include "Fit/FitResult.h"
+#endif
+
 
 class TFitResult:public TNamed, public ROOT::Fit::FitResult {
 public:
@@ -33,12 +39,14 @@ public:
       fStatus = status;
    };
 
+   // constructor from an IFitResult
    TFitResult(const ROOT::Fit::FitResult& f): TNamed("TFitResult","TFitResult"),
                                               ROOT::Fit::FitResult(f) {};
 
    virtual ~TFitResult() {};
 
-   ClassDef(TFitResult,1)
+
+   ClassDef(TFitResult,1)  // Class holding the result of the fit 
 };
 
 #endif
