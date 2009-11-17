@@ -1099,9 +1099,12 @@ TObject* THnSparse::ProjectionAny(Int_t ndim, const Int_t* dim,
    delete [] coord;
 
    if (wantSparse)
+      // need to check also when producing a THNSParse how to reset the number of entries
       sparse->SetEntries(fEntries);
-   else
-      hist->SetEntries(fEntries);
+   else  
+      // need to reset the statistics which will set also the number of entries
+      // according to the bins filled
+      hist->ResetStats(); 
 
    if (hadRange) {
       // reset kAxisRange bit:

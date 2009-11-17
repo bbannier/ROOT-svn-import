@@ -28,10 +28,6 @@ HWORLDO       = hworld.$(ObjSuf)
 HWORLDS       = hworld.$(SrcSuf)
 HWORLD        = hworld$(ExeSuf)
 
-STRESSHISTO   = stressHistogram.$(ObjSuf)
-STRESSHISTS   = stressHistogram.$(SrcSuf)
-STRESSHIST    = stressHistogram$(ExeSuf)
-
 CTORTUREO     = ctorture.$(ObjSuf)
 CTORTURES     = ctorture.$(SrcSuf)
 CTORTURE      = ctorture$(ExeSuf)
@@ -214,13 +210,18 @@ STRESSITERO    = stressIterators.$(ObjSuf)
 STRESSITERS    = stressIterators.$(SrcSuf)
 STRESSITER     = stressIterators$(ExeSuf)
 
+STRESSHISTO   = stressHistogram.$(ObjSuf)
+STRESSHISTS   = stressHistogram.$(SrcSuf)
+STRESSHIST    = stressHistogram$(ExeSuf)
+
+
 OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(TSTRINGO) $(TCOLLEXO) $(VVECTORO) $(VMATRIXO) $(VLAZYO) \
                 $(HELLOO) $(ACLOCKO) $(STRESSO) $(TBENCHO) $(BENCHO) \
                 $(STRESSSHAPESO) $(TCOLLBMO) $(STRESSGEOMETRYO) $(STRESSLO) \
                 $(STRESSGO) $(STRESSSPO) $(TESTBITSO) $(STRESSTMVAO) \
                 $(CTORTUREO) $(QPRANDOMO) $(THREADSO) $(STRESSVECO) \
-                $(STRESSMATHO) $(STRESSFITO) $(STRESSHISTOFITO)$(STRESSHEPIXO) \
+                $(STRESSMATHO) $(STRESSFITO) $(STRESSHISTOFITO) $(STRESSHEPIXO) \
                 $(STRESSENTRYLISTO) $(STRESSROOFITO) $(STRESSPROOFO) \
                 $(STRESSMATHMOREO) $(STRESSITERO) $(STRESSHISTO)
 
@@ -284,11 +285,6 @@ $(EVENT):       $(EVENTSO) $(MAINEVENTO)
 		@echo "$@ done"
 
 $(HWORLD):      $(HWORLDO)
-		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
-		$(MT_EXE)
-		@echo "$@ done"
-
-$(STRESSHIST):  $(STRESSHISTO)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"
@@ -639,6 +635,12 @@ $(STRESSITER):	$(STRESSITERO)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"
+
+$(STRESSHIST):  $(STRESSHISTO)
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
+		$(MT_EXE)
+		@echo "$@ done"
+
 
 clean:
 		@rm -f $(OBJS) $(TRACKMATHSRC) core

@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Id: TFitResultPtr.h 28961 2009-06-12 15:13:46Z dmgonzal $
+// @(#)root/mathcore:$Id$
 // Author: David Gonzalez Maline Tue Nov 10 15:01:24 2009
 
 /*************************************************************************
@@ -16,36 +16,43 @@
 //                                                                      //
 // TFitResultPtr                                                        //
 //                                                                      //
-// Provides n indirection to TFitResult so that the interface to it is  //
-// much stable                                                          //
+// Provides an indirection to TFitResult class and with a semantics     //
+// identical to a TFitResult pointer                                    //
 //                                                                      //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#include "TNamed.h"
+#ifndef ROOT_Rtypes
+#include "Rtypes.h"
+#endif
 
 class TFitResult;
 
 class TFitResultPtr {
 public:
 
-   TFitResultPtr(int status): fStatus(status), fPointer(0) {};
-   TFitResultPtr(TFitResult* p): fStatus(0), fPointer(p) {};
-   TFitResultPtr(const TFitResultPtr& p);
+   TFitResultPtr(int status = -1): fStatus(status), fPointer(0) {};
 
-   operator int() const;
+   TFitResultPtr(TFitResult* p);
+
+   TFitResultPtr(const TFitResultPtr& rhs); 
+
+   operator int() const { return fStatus; }
    
    TFitResult& operator*() const;
-   TFitResult* operator->() const;
-   TFitResult* Get() const;
 
-   TFitResultPtr& operator= (const TFitResultPtr&);
+   TFitResult* operator->() const;
+
+   TFitResult* Get() const { return fPointer; }
+
+   TFitResultPtr& operator= (const TFitResultPtr& rhs); 
 
    virtual ~TFitResultPtr();
 
 private:
-   int fStatus;
-   TFitResult* fPointer;
+   
+   int fStatus;          // fit status code
+   TFitResult* fPointer; // Smart Pointer to TFitResult class  
 
    ClassDef(TFitResultPtr,1)
 };

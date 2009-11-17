@@ -1741,8 +1741,7 @@ bool testDivide1()
       error -= (2*(c2*c2)/(c1*c1)) * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h2->GetBinError(bin)*h2->GetBinError(bin); 
       h4->SetBinError( bin, sqrt(error) );
    }
-   h4->SetEntries( h4->GetEffectiveEntries() ); 
-
+   h4->ResetStats();
    h1->ResetStats(); 
 
    bool ret = equals("Divide1D1", h1, h4, cmpOptStats );
@@ -1792,7 +1791,7 @@ bool testDivideVar1()
       error -= (2*(c2*c2)/(c1*c1)) * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h2->GetBinError(bin)*h2->GetBinError(bin); 
       h4->SetBinError( bin, sqrt(error) );
    }
-   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h4->ResetStats();
    h1->ResetStats(); 
 
    bool ret = equals("DivideVar1D1", h1, h4, cmpOptStats);
@@ -1874,7 +1873,7 @@ bool testDivide2()
       h4->SetBinError( bin, sqrt(error) );
    }
 
-   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h4->ResetStats(); 
    h1->ResetStats(); 
 
    bool ret = equals("Divide1D2", h1, h4, cmpOptStats);
@@ -1921,7 +1920,7 @@ bool testDivideVar2()
       h4->SetBinError( bin, sqrt(error) );
    }
 
-   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h4->ResetStats(); 
    h1->ResetStats(); 
 
    bool ret = equals("DivideVar1D2", h1, h4, cmpOptStats);
@@ -1980,7 +1979,7 @@ bool testDivide2D1()
       }
    }
 
-   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h4->ResetStats(); 
    h1->ResetStats(); 
 
    bool ret = equals("Divide2D1", h1, h4, cmpOptStats );
@@ -2034,7 +2033,7 @@ bool testDivide2D2()
       }
    }
 
-   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h4->ResetStats(); 
    h1->ResetStats(); 
 
    bool ret = equals("Divide2D2", h1, h4, cmpOptStats);
@@ -2103,7 +2102,7 @@ bool testDivide3D1()
       }
    }
 
-   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h4->ResetStats(); 
    h1->ResetStats(); 
 
    bool ret = equals("Divide3D1", h1, h4, cmpOptStats);
@@ -2164,7 +2163,7 @@ bool testDivide3D2()
       }
    }
 
-   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h4->ResetStats(); 
    h1->ResetStats(); 
 
    bool ret = equals("Divide3D2", h1, h4, cmpOptStats);

@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Id: SparseData.h 29267 2009-06-30 10:16:44Z moneta $
+// @(#)root/mathcore:$Id$
 // Author: David Gonzalez Maline Wed Aug 28 15:23:43 2009
 
 /**********************************************************************
