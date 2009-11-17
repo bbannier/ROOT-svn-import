@@ -158,7 +158,7 @@ public:
 
    int parameters(int npar, double val, double ref) const
    { 
-      double ret = 0;
+      int ret = 0;
       if ( refValue && (opts & cmpPars) ) 
       {
          ret = compareResult(val, refValue->pars[npar], tolPar*ref);
@@ -374,12 +374,12 @@ double gausNd(double *x, double *p) {
    return 0; 
 }
 
-double minX = -5.;
-double maxX = +5.;
-double minY = -5.;
-double maxY = +5.;
-int nbinsX = 30;
-int nbinsY = 30;
+const double minX = -5.;
+const double maxX = +5.;
+const double minY = -5.;
+const double maxY = +5.;
+const int nbinsX = 30;
+const int nbinsY = 30;
 
 // Options to indicate how the test has to be run
 enum testOpt {
