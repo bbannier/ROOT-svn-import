@@ -661,7 +661,7 @@ int test1DObjects(vector< vector<struct algoType> >& listH,
       for ( int i = 0; i <= h1->GetNbinsX() + 1; ++i )
          h1->Fill( h1->GetBinCenter(i), rndm.Poisson( func->Eval( h1->GetBinCenter(i) ) ) );
 
-      double v[nbinsX];
+      double v[nbinsX + 1];
       FillVariableRange(v, nbinsX, minX, maxX);
       if ( h2 ) delete h2;
       h2 = new TH1D("Histogram 1D Variable","h2-title",nbinsX, v);
@@ -771,9 +771,9 @@ int test2DObjects(vector< vector<struct algoType> >& listH,
          }
 
       if ( h2 ) delete h2;
-      double x[nbinsX];
+      double x[nbinsX + 1];
       FillVariableRange(x, nbinsX, minX, maxX);
-      double y[nbinsY];
+      double y[nbinsY + 1];
       FillVariableRange(y, nbinsY, minY, maxY);
       h2 = new TH2D("Histogram 2D Variable","h2-title",nbinsX, x, nbinsY, y);
       for ( int i = 0; i <= h2->GetNbinsX() + 1; ++i )
