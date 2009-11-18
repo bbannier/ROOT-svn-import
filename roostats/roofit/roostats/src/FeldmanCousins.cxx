@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: FeldmanCousins.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id$
 // Author: Kyle Cranmer   January 2009
 
 /*************************************************************************
