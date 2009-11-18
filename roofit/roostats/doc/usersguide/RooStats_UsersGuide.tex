@@ -1,6 +1,9 @@
 \documentclass[11pt]{article}
 \usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
-\geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
+
+%\geometry{letterpaper}
+\geometry{a4paper}
+
 %\geometry{landscape}                % Activate for for rotated page geometry
 %\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
 %\usepackage{graphicx}
@@ -11,8 +14,8 @@
 %\usepackage{graphviz}
 \usepackage{dot2texi}
 \usepackage{pgf}
-\usepackage{tikz}
-\usetikzlibrary{shapes,arrows,automata}
+%\usepackage{tikz}  % commented for compilation (is it needed??)
+%\usetikzlibrary{shapes,arrows,automata}  % commented for compilation (is it needed??)
 
 \usepackage{amssymb}
 \usepackage{color}
@@ -32,7 +35,7 @@
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
 \title{RooStats User's Guide}
-\author{Kyle Cranmer}
+\author{Kyle Cranmer, Lorenzo Moneta, Gr\eacute;gory Schott, Wouter Verkerke}
 %\date{}                                           % Activate to display a given date or no date
 
 \definecolor{listinggray}{gray}{0.9}
@@ -44,7 +47,7 @@
 	rulecolor=,
 	language=C++,
         basicstyle=\ttfamily\scriptsize,
-        upquote=true,
+%        upquote=true,                       % commented for compilation (is it needed??)
         aboveskip={1.5\baselineskip},
         columns=fixed,
         showstringspaces=false,
@@ -87,12 +90,12 @@ Document version 0
 
 \vspace{.5in}
 
-{\large Kyle Cranmer, Gregory Schott, Lorenzo Moneta, Wouter Verkerke}
+{\large Kyle Cranmer, Gr\eacute;gory Schott, Lorenzo Moneta, Wouter Verkerke}
 
 \vspace{2in}
 {\em With contributions from:}\\
 
-Danilo Piparo, Giacinto Piacquadio, Maurizio Pierini, George H. Lewis, Alfio Lazzaro, Mario Pelliccioni
+Danilo Piparo, Giacinto Piacquadio, Maurizio Pierini, George H. Lewis, Alfio Lazzaro, Mario Pelliccioni, Matthias Wolf
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
