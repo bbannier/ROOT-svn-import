@@ -158,7 +158,7 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double epsilon, in
 	  int nToysTarget = (int) TMath::Max(nToys*1.5, 1.2*nToys*pow(centerCLError/epsilon,2)); // estimated number of toys until the target precision is reached
 	  ((HybridCalculator*)fCalculator0)->SetNumberOfToys(nToysTarget);
       
-	  std::cout << "Increasing the number of toys to: " << nToysTarget << " (CL error is: " << centerCLError << ")\n";
+	  std::cout << "Increasing the number of toys to: " << nToysTarget << " (CL error was: " << centerCLError << ")\n";
 
 // 	  centerCL = fResults->GetYValue(fResults->Size()-1);
 // 	  centerCLError = fResults->GetYValue(fResults->Size()-1);
