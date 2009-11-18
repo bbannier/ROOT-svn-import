@@ -45,7 +45,7 @@ void rs801_HypoTestInverter()
   // prepare the calculator
   HybridCalculator myhc(*data, totPdf, bkgPdf,0,0);
   myhc.SetTestStatistic(2);
-  myhc.SetNumberOfToys(500);
+  myhc.SetNumberOfToys(100);
   myhc.UseNuisance(false);                            
 
   // run the hypothesis-test invertion
@@ -64,8 +64,10 @@ void rs801_HypoTestInverter()
   TGraphErrors* gr1 = myInverterPlot.MakePlot();
   gr1->Draw("ALP");
 
+  double ulError = results->UpperLimitEstimatedError();
+
   std::cout << "The computed upper limit is: " << results->UpperLimit() << std::endl;
-  std::cout << "an estimated error on this upper limit is: " << results->UpperLimitEstimatedError() << std::endl;
+  std::cout << "an estimated error on this upper limit is: " << ulError << std::endl;
   // expected result: 4.10
 }
 int main() { 
