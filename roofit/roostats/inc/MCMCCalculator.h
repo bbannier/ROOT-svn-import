@@ -61,16 +61,20 @@ namespace RooStats {
       // Force to pass the a prior PDF for the parameter of interest 
       MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest, RooAbsPdf & priorPdf );
 
-      // same constructor but without prior (assume the prior is already in the model or it will be passed later) 
+      // Constructor as before but without a  prior.
+      // In this case it is assumed the prior is already included in the model
+      // This constructor will set up a basic settings package including a
+      // ProposalFunction, number of iterations, burn in steps, confidence
+      // level, and interval determination method. Any of these basic
+      // settings can be overridden by calling one of the Set...() methods.
       MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest );
 
+      // Constructor from a ModelConfig class. 
       // This constructor will set up a basic settings package including a
       // ProposalFunction, number of iterations, burn in steps, confidence
       // level, and interval determination method. Any of these basic
       // settings can be overridden by calling one of the Set...() methods.
       MCMCCalculator(RooAbsData& data, const ModelConfig& model);
-//       MCMCCalculator(RooWorkspace& ws, RooAbsData& data, RooAbsPdf& pdf,
-//             RooArgSet& paramsOfInterest);
 
       // alternate constructor, no automatic basic settings
       MCMCCalculator(RooAbsData& data, const ModelConfig& model, ProposalFunction& proposalFunction,
