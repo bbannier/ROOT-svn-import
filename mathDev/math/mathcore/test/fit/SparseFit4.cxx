@@ -6,7 +6,7 @@
 #include "TApplication.h"
 #include "TMath.h"
 
-#include "Fit/SparseData.h"
+#include "Fit/TSparseData.h"
 #include "HFitInterface.h"
 #include "Fit/Fitter.h"
 #include "Math/WrappedMultiTF1.h"
@@ -162,8 +162,8 @@ void DoFit(THnSparse* s, TF1* f, ROOT::Fit::BinData& bd)
 {
    ///////////////// CREATE THE SPARSE DATA
    cout << "Retrieving the Sparse Data Structure" << endl;
-   //ROOT::Fit::SparseData d(s);
-   ROOT::Fit::SparseData d(s->GetNdimensions(), xmin, xmax);
+   //ROOT::Fit::TSparseData d(s);
+   ROOT::Fit::TSparseData d(s->GetNdimensions(), xmin, xmax);
    ROOT::Fit::FillData(d, s, 0);
    d.GetBinData(bd);
 
@@ -212,8 +212,8 @@ void fitSparse1D()
    fillSparse(s1,f,5);
    
    cout << "Retrieving the Sparse Data Structure" << endl;
-   //ROOT::Fit::SparseData d(s1);
-   ROOT::Fit::SparseData d(ndim, xmin, xmax);
+   //ROOT::Fit::TSparseData d(s1);
+   ROOT::Fit::TSparseData d(ndim, xmin, xmax);
    ROOT::Fit::FillData(d, s1, 0);
 }
 

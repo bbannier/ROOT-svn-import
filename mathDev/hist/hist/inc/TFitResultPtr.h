@@ -29,6 +29,11 @@
 class TFitResult;
 
 class TFitResultPtr {
+private:
+   
+   int fStatus;          // fit status code
+   TFitResult* fPointer; // Smart Pointer to TFitResult class  
+
 public:
 
    TFitResultPtr(int status = -1): fStatus(status), fPointer(0) {};
@@ -48,11 +53,6 @@ public:
    TFitResultPtr& operator= (const TFitResultPtr& rhs); 
 
    virtual ~TFitResultPtr();
-
-private:
-   
-   int fStatus;          // fit status code
-   TFitResult* fPointer; // Smart Pointer to TFitResult class  
 
    ClassDef(TFitResultPtr,1)
 };

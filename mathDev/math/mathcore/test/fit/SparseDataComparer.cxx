@@ -4,7 +4,7 @@
 #include "TApplication.h"
 
 #include "TMath.h"
-#include "Fit/SparseData.h"
+#include "Fit/TSparseData.h"
 #include "HFitInterface.h"
 #include "Fit/Fitter.h"
 #include "Math/WrappedMultiTF1.h"
@@ -124,7 +124,7 @@ void OneDimension()
 
    double min[] = { minRange[0] };
    double max[] = { maxRange[0] };
-   ROOT::Fit::SparseData sd(1, min,max);
+   ROOT::Fit::TSparseData sd(1, min,max);
    ROOT::Fit::FillData(sd, h);
    ROOT::Fit::BinData bd2;
    sd.GetBinData(bd2);
@@ -163,7 +163,7 @@ void TwoDimensions()
 
    double min[] = { minRange[0], minRange[1] };
    double max[] = { maxRange[0], maxRange[1] };
-   ROOT::Fit::SparseData sd(2, min, max);
+   ROOT::Fit::TSparseData sd(2, min, max);
 
    ROOT::Fit::FillData(sd, h);
    ROOT::Fit::BinData bd2;

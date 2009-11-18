@@ -8,10 +8,10 @@
  *                                                                    *
  **********************************************************************/
 
-// Header file for class SparseData
+// Header file for class TSparseData
 
-#ifndef ROOT_Fit_SparseData
-#define ROOT_Fit_SparseData
+#ifndef ROOT_Fit_TSparseData
+#define ROOT_Fit_TSparseData
 
 #include <vector>
 
@@ -26,19 +26,19 @@ namespace ROOT {
 
    namespace Fit { 
 
-      // This is a proxy to a list<Box>
-      class ProxyListBox;
+      // This is a proxy to a list<TBox>
+      class TProxyListBox;
 
-      class SparseData : public FitData  { 
+      class TSparseData : public FitData  { 
       public:
          //Constructor with a vector
-         SparseData(vector<double>& min, vector<double>& max);
+         TSparseData(vector<double>& min, vector<double>& max);
          
          //Constructor with a dimension and two arrays
-         SparseData(const unsigned int dim, double min[], double max[]);
+         TSparseData(const unsigned int dim, double min[], double max[]);
 
          //Destructor
-         ~SparseData();
+         ~TSparseData();
 
          //Returns the number of points stored
          unsigned int NPoints() const;
@@ -64,7 +64,7 @@ namespace ROOT {
          void GetBinDataNoZeros(BinData&) const;
          
       private : 
-         ProxyListBox *l;
+         TProxyListBox *fList;
       };
       
    } // end namespace Fit
@@ -73,4 +73,4 @@ namespace ROOT {
 
 
 
-#endif /* ROOT_Fit_SparseData */
+#endif /* ROOT_Fit_TSparseData */
