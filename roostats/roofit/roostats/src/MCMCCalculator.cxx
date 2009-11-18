@@ -114,6 +114,7 @@ MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
 {
    SetupBasicUsage();
 }
+
 // same as above but not passing a prior pdf
 MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
                                const RooArgSet& paramsOfInterest) :
