@@ -134,20 +134,21 @@ void HypoTestInverterResult::CalculateLimits()
 
   } else {
 
-    // find the object the closest to the target and take it as the upper limit
-
-    double v1 = fabs(GetYValue(0)-cl);
-    int i1 = 0;
+    // find the object with the smallest error that is < 1 sigma from the target
+    double bestValue = fabs(GetYValue(0)-cl);
+    int bestIndex = 0;
     for (int i=1; i<Size(); i++) {
-      double vt = fabs(GetYValue(i)-cl);
-      if ( vt<v1 ) {
-	v1 = vt;
-	i1 = i;
+      if ( fabs(GetYValue(i)-cl)<GetYError(i) ) { // less than 1 sigma from target CL
+	double value = fabs(GetYValue(i)-cl);
+	if ( value<bestValue ) {
+	  bestValue = value;
+	  bestIndex = i;
+	}
       }
     }
 
     fLowerLimit = ((RooRealVar*)fParameters.first())->getMin();
-    fUpperLimit = GetXValue(i1);
+    fUpperLimit = GetXValue(bestIndex);
   }
 
   return;
