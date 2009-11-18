@@ -51,13 +51,15 @@ void rs801_HypoTestInverter()
   // run the hypothesis-test invertion
   HypoTestInverter myInverter("myInverter",&myhc,&r);
   myInverter.SetTestSize(0.05);
-  myInverter.GetInterval()->UseCLs(true);
+  myInverter.UseCLs(true);
   // myInverter.RunFixedScan(5,1,6);
-  //myInverter.RunAutoScan(1,6,0.005);
-  myInverter.RunAutoScan2(1,6,0.005);
+  myInverter.RunAutoScan(1,6,0.005);  
+  // myInverter.RunAutoScan(1,6,0.005,1);  // run an alternative autoscan algorithm 
   //myInverter.RunOnePoint(3.9);
 
+
   HypoTestInverterResult* results = myInverter.GetInterval();
+
   HypoTestInverterPlot myInverterPlot("myInverterPlot","",results);
   TGraphErrors* gr1 = myInverterPlot.MakePlot();
   gr1->Draw("ALP");
@@ -65,4 +67,7 @@ void rs801_HypoTestInverter()
   std::cout << "The computed upper limit is: " << results->UpperLimit() << std::endl;
   std::cout << "an estimated error on this upper limit is: " << results->UpperLimitEstimatedError() << std::endl;
   // expected result: 4.10
+}
+int main() { 
+   rs801_HypoTestInverter();
 }
