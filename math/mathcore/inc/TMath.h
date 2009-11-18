@@ -554,9 +554,9 @@ Iterator TMath::LocMax(Iterator first, Iterator last)
 }
 
 template<typename T> 
-struct CompareDesc { 
+struct CompareDesc_t { 
 
-   CompareDesc(T d) : fData(d) {}
+   CompareDesc_t(T d) : fData(d) {}
 
    template<typename Index>
    bool operator()(Index i1, Index i2) { 
@@ -567,9 +567,9 @@ struct CompareDesc {
 };
 
 template<typename T> 
-struct CompareAsc { 
+struct CompareAsc_t { 
 
-   CompareAsc(T d) : fData(d) {}
+   CompareAsc_t(T d) : fData(d) {}
 
    template<typename Index>
    bool operator()(Index i1, Index i2) { 
@@ -765,9 +765,9 @@ void TMath::SortItr(Iterator first, Iterator last, IndexIterator index, Bool_t d
    }
    
    if ( down )
-      std::sort(index, cindex, CompareDesc<Iterator>(first) );
+      std::sort(index, cindex, CompareDesc_t<Iterator>(first) );
    else
-       std::sort(index, cindex, CompareAsc<Iterator>(first) );
+       std::sort(index, cindex, CompareAsc_t<Iterator>(first) );
 }
 
 template <typename Element, typename Index> void TMath::Sort(Index n, const Element* a, Index* index, Bool_t down)
@@ -783,9 +783,9 @@ template <typename Element, typename Index> void TMath::Sort(Index n, const Elem
 
    for(Index i = 0; i < n; i++) { index[i] = i; }
    if ( down )
-      std::sort(index, index + n, CompareDesc<const Element*>(a) );
+      std::sort(index, index + n, CompareDesc_t<const Element*>(a) );
    else
-      std::sort(index, index + n, CompareAsc<const Element*>(a) );
+      std::sort(index, index + n, CompareAsc_t<const Element*>(a) );
 }
 
 template <typename T> T *TMath::Cross(const T v1[3],const T v2[3], T out[3])

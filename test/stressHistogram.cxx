@@ -71,7 +71,7 @@
 #include "TF2.h"
 #include "TF3.h"
 
-#include "Fit/SparseData.h"
+#include "Fit/TSparseData.h"
 #include "HFitInterface.h"
 
 #include "TApplication.h"
@@ -6097,7 +6097,7 @@ bool operator ==(ROOT::Fit::BinData& bd1, ROOT::Fit::BinData& bd2)
 }
 
 
-int findBin(ROOT::Fit::SparseData& sd, 
+int findBin(ROOT::Fit::TSparseData& sd, 
             const vector<double>& minRef, const vector<double>& maxRef,
             const double valRef, const double errorRef)
 {
@@ -6144,7 +6144,7 @@ int findBin(ROOT::Fit::SparseData& sd,
 //    cout << "ERROR FINDING BIN!" << endl;
    return -1;
 }
-bool operator ==(ROOT::Fit::SparseData& sd1, ROOT::Fit::SparseData& sd2)
+bool operator ==(ROOT::Fit::TSparseData& sd1, ROOT::Fit::TSparseData& sd2)
 {
    const unsigned int ndim = sd1.NDim();
 
@@ -6195,10 +6195,10 @@ bool testSparseData1DFull()
    unsigned int const dim = 1;
    double min[dim] = {minRange};
    double max[dim] = {maxRange};
-   ROOT::Fit::SparseData spTH1(dim, min,max);
+   ROOT::Fit::TSparseData spTH1(dim, min,max);
    ROOT::Fit::FillData(spTH1,h1, 0);
 
-   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::TSparseData spSparse(dim, min,max);
    ROOT::Fit::FillData(spSparse,s1, 0);
 
    int status = 1;
@@ -6231,10 +6231,10 @@ bool testSparseData1DSparse()
    unsigned int const dim = 1;
    double min[dim] = {minRange};
    double max[dim] = {maxRange};
-   ROOT::Fit::SparseData spTH1(dim, min,max);
+   ROOT::Fit::TSparseData spTH1(dim, min,max);
    ROOT::Fit::FillData(spTH1,h1, 0);
 
-   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::TSparseData spSparse(dim, min,max);
    ROOT::Fit::FillData(spSparse,s1, 0);
 
    int status = 1;
@@ -6269,10 +6269,10 @@ bool testSparseData2DFull()
    unsigned int const dim = 1;
    double min[dim] = {minRange};
    double max[dim] = {maxRange};
-   ROOT::Fit::SparseData spTH2(dim, min,max);
+   ROOT::Fit::TSparseData spTH2(dim, min,max);
    ROOT::Fit::FillData(spTH2,h2, 0);
 
-   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::TSparseData spSparse(dim, min,max);
    ROOT::Fit::FillData(spSparse,s2, 0);
 
    int status = 1;
@@ -6307,10 +6307,10 @@ bool testSparseData2DSparse()
    unsigned int const dim = 1;
    double min[dim] = {minRange};
    double max[dim] = {maxRange};
-   ROOT::Fit::SparseData spTH2(dim, min,max);
+   ROOT::Fit::TSparseData spTH2(dim, min,max);
    ROOT::Fit::FillData(spTH2,h2, 0);
 
-   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::TSparseData spSparse(dim, min,max);
    ROOT::Fit::FillData(spSparse,s2, 0);
 
    int status = 1;
@@ -6347,10 +6347,10 @@ bool testSparseData3DFull()
    unsigned int const dim = 1;
    double min[dim] = {minRange};
    double max[dim] = {maxRange};
-   ROOT::Fit::SparseData spTH3(dim, min,max);
+   ROOT::Fit::TSparseData spTH3(dim, min,max);
    ROOT::Fit::FillData(spTH3,h3, 0);
 
-   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::TSparseData spSparse(dim, min,max);
    ROOT::Fit::FillData(spSparse,s3, 0);
 
    int status = 1;
@@ -6387,10 +6387,10 @@ bool testSparseData3DSparse()
    unsigned int const dim = 1;
    double min[dim] = {minRange};
    double max[dim] = {maxRange};
-   ROOT::Fit::SparseData spTH3(dim, min,max);
+   ROOT::Fit::TSparseData spTH3(dim, min,max);
    ROOT::Fit::FillData(spTH3,h3, 0);
 
-   ROOT::Fit::SparseData spSparse(dim, min,max);
+   ROOT::Fit::TSparseData spSparse(dim, min,max);
    ROOT::Fit::FillData(spSparse,s3, 0);
 
    int status = 1;
@@ -6426,7 +6426,7 @@ bool testBinDataData1D()
    unsigned int const dim = 1;
    double min[dim] = {minRange};
    double max[dim] = {maxRange};
-   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::TSparseData spSparseTmp(dim, min,max);
    ROOT::Fit::FillData(spSparseTmp,s1, 0);
    ROOT::Fit::BinData bdSparse;
    spSparseTmp.GetBinData(bdSparse);
@@ -6468,7 +6468,7 @@ bool testBinDataData2D()
    unsigned int const dim = 2;
    double min[dim] = {minRange, minRange};
    double max[dim] = {maxRange, maxRange};
-   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::TSparseData spSparseTmp(dim, min,max);
    ROOT::Fit::FillData(spSparseTmp,s2, 0);
    ROOT::Fit::BinData bdSparse(spSparseTmp.NPoints(), spSparseTmp.NDim());
    spSparseTmp.GetBinData(bdSparse);
@@ -6512,7 +6512,7 @@ bool testBinDataData3D()
    unsigned int const dim = 3;
    double min[dim] = {minRange, minRange, minRange};
    double max[dim] = {maxRange, maxRange, maxRange};
-   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::TSparseData spSparseTmp(dim, min,max);
    ROOT::Fit::FillData(spSparseTmp,s3, 0);
    ROOT::Fit::BinData bdSparse(spSparseTmp.NPoints(), spSparseTmp.NDim());
    spSparseTmp.GetBinData(bdSparse);
@@ -6555,7 +6555,7 @@ bool testBinDataData1DInt()
    unsigned int const dim = 1;
    double min[dim] = {minRange};
    double max[dim] = {maxRange};
-   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::TSparseData spSparseTmp(dim, min,max);
    ROOT::Fit::FillData(spSparseTmp,s1, 0);
    ROOT::Fit::BinData bdSparse;
    spSparseTmp.GetBinDataIntegral(bdSparse);
@@ -6601,7 +6601,7 @@ bool testBinDataData2DInt()
    unsigned int const dim = 2;
    double min[dim] = {minRange, minRange};
    double max[dim] = {maxRange, maxRange};
-   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::TSparseData spSparseTmp(dim, min,max);
    ROOT::Fit::FillData(spSparseTmp,s2, 0);
    ROOT::Fit::BinData bdSparse(spSparseTmp.NPoints(), spSparseTmp.NDim());
    spSparseTmp.GetBinDataIntegral(bdSparse);
@@ -6649,7 +6649,7 @@ bool testBinDataData3DInt()
    unsigned int const dim = 3;
    double min[dim] = {minRange, minRange, minRange};
    double max[dim] = {maxRange, maxRange, maxRange};
-   ROOT::Fit::SparseData spSparseTmp(dim, min,max);
+   ROOT::Fit::TSparseData spSparseTmp(dim, min,max);
    ROOT::Fit::FillData(spSparseTmp,s3, 0);
    ROOT::Fit::BinData bdSparse(spSparseTmp.NPoints(), spSparseTmp.NDim());
    spSparseTmp.GetBinDataIntegral(bdSparse);
