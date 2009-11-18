@@ -66,111 +66,125 @@ HypoTestInverter::~HypoTestInverter()
   // destructor
   
   // delete the HypoTestInverterResult
-   if (fResults) delete fResults;
+  if (fResults) delete fResults;
 }
 
 
-bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double epsilon )
+bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double epsilon, int numAlgorithm  )
 {
   double target = Size();
-  bool status;
 
-  double xLow = xMin;
-  status = RunOnePoint(xMin);
-  if ( !status ) return false;
-  double yLow = fResults->GetYValue(fResults->Size()-1);
+  if (numAlgorithm==0) {
 
-  double xHigh = xMax;
-  status = RunOnePoint(xMax);
-  if ( !status ) return false;
-  double yHigh = fResults->GetYValue(fResults->Size()-1);
+    // Search for the value of the searched variable where the CL is within
+    // 1 sigma of the desired level and sigma smaller than epsilon.  This is done by consecutively replacing
+    // the worst value of the interval with one that has been interpolated
+    // exponentially.
 
-  // after the initial points, check the point in the middle of the last two 
-  // closest points, until the value is in the range target+/-epsilon
-  // the final value becomes the inverted upper limit value
+    double nSigma = 1;
 
-  bool stopNow = false;
-  while ( !stopNow || fResults->Size()==30 ) {
-    double xMiddle = xLow+0.5*(xHigh-xLow);
-    status = RunOnePoint(xMiddle);
-    if ( !status ) return false;
-    double yMiddle = fResults->GetYValue(fResults->Size()-1);
-    if (fabs(yMiddle-target)<epsilon) stopNow = true;
-    else if ( yMiddle>target && yHigh<target ) { xLow = xMiddle; yLow = yMiddle; }
-    else if ( yMiddle<target && yHigh<target ) { xHigh = xMiddle; yHigh = yMiddle; }
-    else if ( yMiddle<target && yHigh>target ) { xLow = xMiddle; yLow = yMiddle; }
-    else if ( yMiddle>target && yHigh>target ) { xHigh = xMiddle; yHigh = yMiddle; }
-  }
+    double leftX = xMin;
+    double rightX = xMax;
+    if (!RunOnePoint(leftX)) return false;
+    double leftCL = fResults->GetYValue(fResults->Size()-1);
+    double leftCLError = fResults->GetYError(fResults->Size()-1);
+    if (!RunOnePoint(rightX)) return false;
+    double rightCL = fResults->GetYValue(fResults->Size()-1);
+    double rightCLError = fResults->GetYError(fResults->Size()-1);
+    double centerCL;
+    double centerCLError;
 
-  std::cout << "Converged in " << fResults->Size() << " iterations\n";
+    do {
+      if (!leftCL) leftCL = DBL_EPSILON;
+      if (!rightCL) rightCL = DBL_EPSILON;
 
-  return true;
-}
+      double a = (log(leftCL) - log(rightCL)) / (leftX - rightX);
+      double b = leftCL / exp(a * leftX);
+      double x = (log(target) - log(b)) / a;
+      if (isnan(x)) {
+	std::cout << "ERROR: Failed the auto run for finding target\n";
+	return false;
+      }
 
-bool HypoTestInverter::RunAutoScan2( double xMin, double xMax, double nSigma )
-{
-  // Search for the value of the searched variable where the CL is within
-  // nSigma of the desired level.  This is done by consecutively replacing
-  // the worst value of the interval with one that has been interpolated
-  // exponentially.
+      if (!RunOnePoint(x)) return false;
+      centerCL = fResults->GetYValue(fResults->Size()-1);
+      centerCLError = fResults->GetYError(fResults->Size()-1);
 
-  double target = Size();
-
-  double leftX = xMin;
-  double rightX = xMax;
-  if (!RunOnePoint(leftX)) return false;
-  double leftCL = fResults->GetYValue(fResults->Size()-1);
-  double leftCLError = fResults->GetYError(fResults->Size()-1);
-  if (!RunOnePoint(rightX)) return false;
-  double rightCL = fResults->GetYValue(fResults->Size()-1);
-  double rightCLError = fResults->GetYError(fResults->Size()-1);
-  double centerCL;
-  double centerCLError;
-
-  do {
-    if (!leftCL) leftCL = DBL_EPSILON;
-    if (!rightCL) rightCL = DBL_EPSILON;
-
-    double a = (log(leftCL) - log(rightCL)) / (leftX - rightX);
-    double b = leftCL / exp(a * leftX);
-    double x = (log(target) - log(b)) / a;
-    if (isnan(x)) {
-      std::cout << "ERROR: Failed the auto run for finding target\n";
-      return false;
-    }
-
-    if (!RunOnePoint(x)) return false;
-    centerCL = fResults->GetYValue(fResults->Size()-1);
-    centerCLError = fResults->GetYError(fResults->Size()-1);
-
-    // Test if the interval points are on different sides, then replace the
-    // one on the "right" side with the center
-    if ( (leftCL > target) == (rightCL < target) ) {
-      if ( (centerCL > target) == (leftCL > target) ) {
-        leftX = x;
+      // Test if the interval points are on different sides, then replace the
+      // one on the "right" side with the center
+      if ( (leftCL > target) == (rightCL < target) ) {
+	if ( (centerCL > target) == (leftCL > target) ) {
+	  leftX = x;
+	  leftCL = centerCL;
+	  leftCLError = centerCLError;
+	} else {
+	  rightX = x;
+	  rightCL = centerCL;
+	  rightCLError = centerCLError;
+	}
+	// Otherwise replace the point farest away from target (measured in
+	// sigmas)
+      } else if ( (fabs(leftCL - target) / leftCLError) >
+		  (fabs(rightCL - target) / rightCLError) ) {
+	leftX = x;
 	leftCL = centerCL;
 	leftCLError = centerCLError;
       } else {
-        rightX = x;
+	rightX = x;
 	rightCL = centerCL;
 	rightCLError = centerCLError;
       }
-    // Otherwise replace the point farest away from target (measured in
-    // sigmas)
-    } else if ( (fabs(leftCL - target) / leftCLError) >
-	        (fabs(rightCL - target) / rightCLError) ) {
-      leftX = x;
-      leftCL = centerCL;
-      leftCLError = centerCLError;
-    } else {
-      rightX = x;
-      rightCL = centerCL;
-      rightCLError = centerCLError;
-    }
-  } while ( fabs(centerCL-target) > nSigma*centerCLError );
+//       if ( fabs(centerCL-target) > nSigma*centerCLError && centerCLError > epsilon  ) {
+// 	do {
+	// add statistics to the number of toys to gain precision
 
-  return true;
+	  int nToys = ((HybridCalculator*)fCalculator0)->GetNumberOfToys(); // current number of toys
+	  int nToysTarget = (int) TMath::Min(nToys*1.5, 1.2*nToys*pow(centerCLError/epsilon,2)); // estimated number of toys until the target precision is reached
+	  ((HybridCalculator*)fCalculator0)->SetNumberOfToys(nToysTarget);
+
+// 	} while ( fabs(centerCL-target) > nSigma*centerCLError && centerCLError > epsilon )
+//       }
+
+    } while ( fabs(centerCL-target) > nSigma*centerCLError && centerCLError <= epsilon );
+    std::cout << "Converged in " << fResults->Size() << " iterations\n";
+    return true;
+  } else if ( numAlgorithm==1 ) {
+    // Newton search
+
+    double xLow = xMin;
+    bool status = RunOnePoint(xMin);
+    if ( !status ) return false;
+    double yLow = fResults->GetYValue(fResults->Size()-1);
+
+    double xHigh = xMax;
+    status = RunOnePoint(xMax);
+    if ( !status ) return false;
+    double yHigh = fResults->GetYValue(fResults->Size()-1);
+
+    // after the initial points, check the point in the middle of the last two 
+    // closest points, until the value is in the range target+/-epsilon
+    // the final value becomes the inverted upper limit value
+
+    bool stopNow = false;
+    while ( !stopNow || fResults->Size()==30 ) {
+      double xMiddle = xLow+0.5*(xHigh-xLow);
+      status = RunOnePoint(xMiddle);
+      if ( !status ) return false;
+      double yMiddle = fResults->GetYValue(fResults->Size()-1);
+      if (fabs(yMiddle-target)<epsilon) stopNow = true;
+      else if ( yMiddle>target && yHigh<target ) { xLow = xMiddle; yLow = yMiddle; }
+      else if ( yMiddle<target && yHigh<target ) { xHigh = xMiddle; yHigh = yMiddle; }
+      else if ( yMiddle<target && yHigh>target ) { xLow = xMiddle; yLow = yMiddle; }
+      else if ( yMiddle>target && yHigh>target ) { xHigh = xMiddle; yHigh = yMiddle; }
+    }
+    std::cout << "Converged in " << fResults->Size() << " iterations\n";
+    return true;
+  } else {
+    std::cout << "not valid algorithm option specified\n";
+    return false;
+  }
 }
+
 
 bool HypoTestInverter::RunFixedScan( int nBins, double xMin, double xMax )
 {

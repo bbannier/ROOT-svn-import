@@ -45,8 +45,7 @@ namespace RooStats {
 
     virtual HypoTestInverterResult* GetInterval() const { return fResults; } ;
 
-    bool RunAutoScan( double xMin, double xMax, double epsilon=0.005 );
-    bool RunAutoScan2( double xMin, double xMax, double nSigma=1 );
+    bool RunAutoScan( double xMin, double xMax, double epsilon=0.005, int numAlgorithm=0 );
 
     bool RunFixedScan( int nBins, double xMin, double xMax );
 
