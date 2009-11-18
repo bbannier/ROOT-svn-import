@@ -19,6 +19,6 @@ all:  $(GENFIGURES)
 
 
 .C.pdf:
-	root.exe -b $< 
+	root.exe -b -q $< 
 clean:
 	rm RooStats_UsersGuide.aux RooStats_UsersGuide.log RooStats_UsersGuide.out RooStats_UsersGuide.toc $(GENDOT) $(GENTEX)
