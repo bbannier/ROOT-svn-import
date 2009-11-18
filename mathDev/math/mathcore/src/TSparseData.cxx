@@ -20,7 +20,9 @@
 #include <stdexcept>
 
 #include <cmath>
+#include <limits>
 
+// #include "TMath.h"
 #include "Fit/TSparseData.h"
 
 using namespace std;
@@ -116,15 +118,16 @@ namespace ROOT {
       class TAreaComparer
       {
       public:
-         TAreaComparer(vector<double>::iterator iter, double cmpLimit = 1e-16): 
+         TAreaComparer(vector<double>::iterator iter): 
             fThereIsArea(true), 
             fIter(iter),
-            fLimit(cmpLimit)
+            fLimit(10 * std::numeric_limits<double>::epsilon())
          {};
          
          void operator() (double value)
          {
             if ( fabs(value- (*fIter)) < fLimit )
+//             if ( TMath::AreEqualRel(value, (*fIter), fLimit) )
                fThereIsArea = false;
             
             fIter++;
