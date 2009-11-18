@@ -1,9 +1,0 @@
-digraph G{
-"G" [ color=red, label="\texttt{RooGaussian}:G"];
-"x" [ color=blue, label="\texttt{RooRealVar}:x"];
-"mu" [ color=blue, label="\texttt{RooRealVar}:\mu"];
-"sigma" [ color=blue, label="\texttt{RooRealVar}:\sigma"];
-"G" -> "mu";
-"G" -> "sigma";
-"G" -> "x";
-}
