@@ -113,7 +113,9 @@ namespace RooStats {
 
       // set number of toy MC (Default is 1000)
       void SetNumberOfToys(unsigned int ntoys) { fNToys = ntoys; }
-      unsigned int GetNumberOfToys() { return fNToys; }
+
+      // return number of toys used
+      unsigned int GetNumberOfToys() const { return fNToys; }
 
       // control use of the pdf for the nuisance parameter and marginalize them
       void UseNuisance(bool on = true) { fUsePriorPdf = on; }

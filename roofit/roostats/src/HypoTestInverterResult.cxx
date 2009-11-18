@@ -33,7 +33,7 @@ using namespace RooStats;
 HypoTestInverterResult::HypoTestInverterResult(const char * name ) :
    SimpleInterval(name),
    fUseCLs(false),
-   fUpperLimitError(0)
+   fUpperLimitError(-1)
 {
   // default constructor
 }
@@ -43,7 +43,8 @@ HypoTestInverterResult::HypoTestInverterResult( const char* name,
 						const RooRealVar& scannedVariable,
 						double cl ) :
    SimpleInterval(name,scannedVariable,-999,999,cl), 
-   fUseCLs(false)
+   fUseCLs(false),
+   fUpperLimitError(-1)
 {
   // constructor 
    fYObjects.SetOwner();
@@ -137,6 +138,7 @@ void HypoTestInverterResult::CalculateLimits()
     }
   }
 
+
   fLowerLimit = ((RooRealVar*)fParameters.first())->getMin();
   fUpperLimit = GetXValue(i1);
 
@@ -166,11 +168,9 @@ Double_t HypoTestInverterResult::UpperLimitEstimatedError()
   const double minX = xs[0];
   const double maxX = xs[Size()-1];
 
-  TF1* fct = new TF1("fct", "exp([0] * x + [1] * x**2)", minX, maxX);
-  graph->Fit(fct);
+  TF1 fct("fct", "exp([0] * x + [1] * x**2)", minX, maxX);
+  graph->Fit(&fct,"Q");
 
-  delete fct;
-  delete graph;
 
   // find the object the closest to the limit
   double cl = 1-ConfidenceLevel();
@@ -185,9 +185,10 @@ Double_t HypoTestInverterResult::UpperLimitEstimatedError()
       }
     }
 
-  double m = fct->Derivative( GetXValue(i1) );
-
+  double m = fct.Derivative( GetXValue(i1) );
   fUpperLimitError = fabs( GetYError(i1) / m);
+
+  delete graph;
   
   return fUpperLimitError;
 }

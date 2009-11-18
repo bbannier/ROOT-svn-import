@@ -35,7 +35,9 @@ using namespace RooStats;
 HypoTestInverter::HypoTestInverter( ) :
    fCalculator0(0),
    fScannedVariable(0),
-   fResults(0)
+   fResults(0),
+   fUseCLs(false),
+   fSize(0)
 {
   // default constructor (doesn't do anything) 
 }
@@ -43,21 +45,19 @@ HypoTestInverter::HypoTestInverter( ) :
 
 HypoTestInverter::HypoTestInverter( const char* name,
 				    HypoTestCalculator* myhc0,
-				    RooRealVar* scannedVariable ) :
+				    RooRealVar* scannedVariable, double size ) :
   TNamed( name, name ),
   fCalculator0(myhc0),
-  fScannedVariable(scannedVariable)
+  fScannedVariable(scannedVariable), 
+  fResults(0),
+  fUseCLs(false),
+  fSize(size)
 {
   // constructor
   if (name==0) SetName("HypoTestInverter");
 
   //if (myhc0->ClassName()!="HybridCalculator") std::cout << "NOT SUPPORTED\n";
 
-  // create a new HypoTestInverterResult to hold all computed results
-  TString results_name = this->GetName();
-  results_name += "_results";
-  fResults = new HypoTestInverterResult(results_name,*scannedVariable,ConfidenceLevel());
-  fResults->SetTitle("HypoTestInverter Result");
 }
 
 
@@ -69,10 +69,26 @@ HypoTestInverter::~HypoTestInverter()
   if (fResults) delete fResults;
 }
 
+void  HypoTestInverter::CreateResults() { 
+  // create a new HypoTestInverterResult to hold all computed results
+   if (fResults == 0) {
+      TString results_name = this->GetName();
+      results_name += "_results";
+      fResults = new HypoTestInverterResult(results_name,*fScannedVariable,ConfidenceLevel());
+      fResults->SetTitle("HypoTestInverter Result");
+      fResults->fInterpolate = true; 
+   }
+   fResults->UseCLs(fUseCLs);
+}
+
 
 bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double epsilon, int numAlgorithm  )
 {
+
   double target = Size();
+  CreateResults();
+  fResults->fInterpolate = false; 
+
 
   if (numAlgorithm==0) {
 
@@ -188,6 +204,7 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double epsilon, in
 
 bool HypoTestInverter::RunFixedScan( int nBins, double xMin, double xMax )
 {
+   CreateResults();
   // safety checks
   if ( nBins<=0 ) {
     std::cout << "Please provide nBins>0\n";
@@ -222,6 +239,8 @@ bool HypoTestInverter::RunFixedScan( int nBins, double xMin, double xMax )
 
 bool HypoTestInverter::RunOnePoint( double thisX )
 {
+   CreateResults();
+
   // check if thisX is in the range specified for fScannedVariable
   if ( thisX<fScannedVariable->getMin() || thisX>fScannedVariable->getMax() ) {
     std::cout << "I will not run because the specified value in not in the range of the variable being scanned\n";
