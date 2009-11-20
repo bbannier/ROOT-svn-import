@@ -1631,6 +1631,11 @@ void THtml::CreateListOfClasses(const char* filter)
       if (i < 0) cname = "TObject";
       else cname = gClassTable->Next();
 
+      if (i >= 0 && !strcmp(cname, "TObject")) {
+         // skip the second iteration on TObject
+         continue;
+      }
+
       // This is a hack for until after Cint and Reflex are one.
       if (strstr(cname, "__gnu_cxx::")) continue;
 
@@ -2248,6 +2253,8 @@ void THtml::MakeClass(void *cdi_void, Bool_t force)
       htmlFile.Remove(0);
    }
    if (htmlFile.Length()) {
+      TDocParser parser(cdi);
+      parser.Parse(force);
       TClassDocOutput cdo(*this, currentClass, &cdi->GetListOfTypedefs());
       cdo.Class2Html(force);
       cdo.MakeTree(force);
