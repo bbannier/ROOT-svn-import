@@ -18,7 +18,7 @@ LIBDIR    = lib
 VPATH     = $(OBJDIR)
 INCLUDES += -I./
 
-DICTHEAD  = inc/$(PACKAGE)_Dict.h
+DICTHEAD  = src/$(PACKAGE)_Dict.h
 DICTFILE  = src/$(PACKAGE)_Dict.C
 DICTOBJ   = $(OBJDIR)/$(PACKAGE)_Dict.o
 DICTLDEF  = inc/LinkDef.h
@@ -43,7 +43,9 @@ DEPLIST=$(foreach var,$(CPPLIST:.$(SrcSuf)=.d),$(DEPDIR)/$(var))
 
 # Implicit rule to compile all classes
 %.o : src/%.cxx 
-	@ln -sf inc TMVA
+	if [[ ( ! -e TMVA ) ]]; then \
+		ln -sf inc TMVA; \
+	fi
 	@printf "Compiling $< ... "
 	@mkdir -p $(OBJDIR)
 	@$(CXX) $(INCLUDES) $(CXXFLAGS) -ggdb -c $< -o $(OBJDIR)/$(notdir $@)
