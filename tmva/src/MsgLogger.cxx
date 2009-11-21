@@ -43,7 +43,7 @@ ClassImp(TMVA::MsgLogger)
 // this is the hard-coded maximum length of the source names
 UInt_t TMVA::MsgLogger::fgMaxSourceSize = 25;
 Bool_t TMVA::MsgLogger::fgInhibitOutput = kFALSE;
-void   TMVA::MsgLogger::InhibitOutput() { fgInhibitOutput = kTRUE;  }	 
+void   TMVA::MsgLogger::InhibitOutput() { fgInhibitOutput = kTRUE;  }
 void   TMVA::MsgLogger::EnableOutput()  { fgInhibitOutput = kFALSE; }
 
 //_______________________________________________________________________

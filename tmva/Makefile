@@ -14,6 +14,7 @@ PACKAGE=TMVA
 LD_LIBRARY_PATH := $(shell root-config --libdir):$(LD_LIBRARY_PATH)
 OBJDIR    = obj
 DEPDIR    = $(OBJDIR)/dep
+LIBDIR    = lib
 VPATH     = $(OBJDIR)
 INCLUDES += -I./
 
@@ -24,7 +25,7 @@ DICTLDEF  = inc/LinkDef.h
 SKIPCPPLIST = 
 SKIPHLIST =  $(DICTHEAD) $(DICTLDEF)
 LIBFILE   = lib/lib$(PACKAGE).a
-SHLIBFILE = lib/lib$(PACKAGE).$(DllSuf)
+SHLIBFILE = lib$(PACKAGE).$(DllSuf)
 DLLIBFILE = lib/lib$(PACKAGE).dll
 ROOTMAP   = lib/lib$(PACKAGE).rootmap
 UNAME = $(shell uname)
@@ -45,7 +46,6 @@ DEPLIST=$(foreach var,$(CPPLIST:.$(SrcSuf)=.d),$(DEPDIR)/$(var))
 	@ln -sf inc TMVA
 	@printf "Compiling $< ... "
 	@mkdir -p $(OBJDIR)
-	echo $(CXX) $(INCLUDES) $(CXXFLAGS) -ggdb -c $< -o $(OBJDIR)/$(notdir $@)
 	@$(CXX) $(INCLUDES) $(CXXFLAGS) -ggdb -c $< -o $(OBJDIR)/$(notdir $@)
 	@echo "Done"
 
@@ -67,9 +67,9 @@ linklib:
 			( ! -e lib/lib$(PACKAGE).1.dylib ) ) || \
 			( ! -e lib/lib$(PACKAGE).1.so ) ]]; then \
 		printf "Setting up soft links to the TMVA library ... "; \
-		ln -sf $(SHLIBFILE) lib/lib$(PACKAGE).1.so; \
+		ln -sf $(SHLIBFILE) $(LIBDIR)/lib$(PACKAGE).1.so; \
 		if [[ `root-config --platform` == "macosx" ]]; then \
-			ln -sf $(SHLIBFILE) lib/lib$(PACKAGE).1.dylib; \
+			ln -sf $(SHLIBFILE) $(LIBDIR)/lib$(PACKAGE).1.dylib; \
 		fi; \
 		echo "Done"; \
 	fi
@@ -103,17 +103,18 @@ $(LIBFILE): $(DICTOBJ) $(OLIST)
 	@echo "Done"
 
 # Rule to combine objects into a unix shared library
-$(SHLIBFILE): $(OLIST) $(DICTOBJ)
-	@printf "Building shared library $(SHLIBFILE) ... "
-	@mkdir -p lib
-	@rm -f $(SHLIBFILE)
-	@$(LD) -L$(shell root-config --libdir) $(SOFLAGS) $(addprefix $(OBJDIR)/,$(OLIST)) $(DICTOBJ) -o $(SHLIBFILE) -lMinuit -lXMLIO
+$(LIBDIR)/$(SHLIBFILE): $(OLIST) $(DICTOBJ)
+	@printf "Building shared library $(LIBDIR)/$(SHLIBFILE) ... "
+	@mkdir -p $(LIBDIR)
+	@rm -f $(LIBDIR)/$(SHLIBFILE)
+	@$(LD) -L$(shell root-config --libdir) $(SOFLAGS) $(addprefix $(OBJDIR)/,$(OLIST)) $(DICTOBJ) -o $(LIBDIR)/$(SHLIBFILE) -lMinuit -lXMLIO
 #	ln -fs $(SHLIBFILE) lib/lib$(PACKAGE).1.so
 	@echo "Done"
 
 # Rule to combine objects into a unix shared library
 $(ROOTMAP): $(DICTLDEF)
 	@printf "Building $(ROOTMAP) ... "
+	@mkdir -p $(LIBDIR)
 	rlibmap -f -o $@ -l lib$(PACKAGE).1.$(DllSuf) -d libMinuit.so libMLP.so libMatrix.so libTree.so libGraf.so libTreePlayer.so libXMLIO.so -c $<
 	@echo "Done"
 
@@ -127,20 +128,23 @@ $(DLLIBFILE): $(OLIST) $(DICTOBJ)
 # Useful build targets
 lib: $(LIBFILE) 
 
-shlib: $(SHLIBFILE) $(ROOTMAP)
+shlib: $(LIBDIR)/$(SHLIBFILE) $(ROOTMAP)
 
 winlib: $(DLLIBFILE)
 
 vars:
 	#echo $(patsubst src/%,%,$(wildcard src/*.$(SrcSuf)))
-	echo $(DEPLIST)
+	echo $(LIBDIR)/$(SHLIBFILE)
 
 clean:
+	rm -rf obj
+	rm -rf lib
+	rm -f TMVA 
 	rm -f $(DICTFILE) $(DICTHEAD)
 	rm -f $(OBJDIR)/*.o
 	rm -f $(DEPDIR)/*.d
 	rm -f $(LIBFILE)
-	rm -f $(SHLIBFILE)
+	rm -f $(LIBDIR)/$(SHLIBFILE)
 	rm -f lib/lib$(PACKAGE).1.so
 	rm -f lib/lib$(PACKAGE).1.dylib
 	rm -f $(ROOTMAP)
@@ -151,7 +155,7 @@ distclean:
 	rm -f *~
 	rm -f $(DICTFILE) $(DICTHEAD)
 	rm -f $(LIBFILE)
-	rm -f $(SHLIBFILE)
+	rm -f $(LIBDIR)/$(SHLIBFILE	)
 	rm -f lib/lib$(PACKAGE).1.so
 	rm -f lib/lib$(PACKAGE).1.dylib
 	rm -f $(ROOTMAP)
