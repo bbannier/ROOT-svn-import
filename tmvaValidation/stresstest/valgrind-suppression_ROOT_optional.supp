@@ -1,0 +1,23 @@
+
+# Additional valgrind suppression file for ROOT.
+#
+# To use, run valgrind with:
+#   valgrind --suppressions=valgrind-suppression_ROOT_optional.supp ...
+#
+# This file suppresses valgrind reports that probably need to be fixed
+# but have not yet been evaluated. This is meant to silence your output,
+# by removing warnings that are not under your control.
+# It only suppresses leaks, no errors!
+
+
+#########  CINT
+{
+   Cint: leaking G__memfunc_para_setup called by dictionary
+   Memcheck:Leak
+   fun:malloc
+   fun:G__memfunc_para_setup
+   fun:G__parse_parameter_link
+   fun:G__memfunc_setup
+   fun:_Z*G__cpp_setup_func*
+   fun:G__cpp_setup_func*
+}

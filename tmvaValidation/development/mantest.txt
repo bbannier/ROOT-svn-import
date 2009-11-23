@@ -1,0 +1,48 @@
+.TH "TMVA" 1
+.SH NAME
+.B TMVA \- Toolkit for Multivariate Data Analysis
+.nf
+       Copyright (C) 2005-2007 CERN, MPI-K Heidelberg and Victoria U.
+       Home page http://tmva.sourceforge.net
+       All rights reserved, please read http://tmva.sf.net/license.txt
+.fi
+.SH SYNOPSIS
+The following TMVA training and application examples must be executed from the subdirectory "macros": 
+
+.nf
+.B Training \ \  : root -l TMVAnalysis\\\(\\\\"classifier1,classifier2,...\\\\"\\\\)
+.B Application\ : root -l TMVApplication\\\(\\\\"classifier1,classifier2,...\\\\"\\\\) 
+.fi
+
+(the backslashes are required for ROOT prompt commands)
+.SH DESCRIPTION
+TMVA provides a ROOT-integrated environment for the parallel training, testing
+and evaluation of sophisticated multivariate classification techniques.
+The package includes:
+
+.nf
+\- Rectangular cut optimisation (binary splits)
+\- Projective likelihood estimator
+\- Multi-dimensional likelihood estimator (PDE range-search)
+\- Linear discriminant analysis (H-Matrix and Fisher discriminant)
+\- Artificial neural networks (three different implementations)
+\- Boosted/bagged decision trees (with pruning)
+\- Predictive learning via rule ensembles (RuleFit)
+\- Support Vector Machine (development version)
+.fi
+
+The complete TMVA Users Guide is available at the following hyperlink: 
+http://tmva.sourceforge.net/docu/TMVAUsersGuide.pdf
+.SH OPTIONS
+.TP
+.B \-<a command line switch>
+<description of what that switch does>
+.TP
+.B \-<a command line switch>
+<description of what that switch does>
+.TP
+.B <etc . . .>
+.SH "SEE ALSO"
+<a list of related man pages>
+.SH BUGS
+<known bugs if any>

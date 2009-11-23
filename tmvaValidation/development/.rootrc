@@ -1,0 +1,6 @@
+Unix.*.Root.MacroPath:   .:../macros
+
+Rint.Load:               ../macros/TMVAalias.C
+Rint.Logon:              ../macros/TMVAlogon.C
+Rint.Logoff:             ../macros/TMVAlogoff.C
+Rint.History:            ./.root_hist
