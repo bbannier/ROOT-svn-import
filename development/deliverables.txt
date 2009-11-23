@@ -1,0 +1,20 @@
+Release-independent developments
+
+  - improved test suite in nightlies (Eckhard)
+  - ACAT conference
+
+4.1.0 (new features) - due date: end of 2009
+
+  - multiclass (Peter)
+  - regression calibration (spline versus regression value)
+  - Fix SetTestTree and SetTrainingTree
+
+4.0.3 (bug fix) - due date: end of Oct
+
+  - 'txt' backward compatibility (Joerg) --> almost done
+  - versioning: 'xml'  backward compatibility (Helge, all) --> done
+  - MethodCategory for regression (Andreas)
+  - macros for MethodCategory (Andreas)
+  - did we REALLY fix the SetTesting and SetTraining tree problem? Why does a user have to give a split mode? (see posting from Noel Dawe
+
+

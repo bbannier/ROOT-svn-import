@@ -1,0 +1,46 @@
+
+div.TabView div.Tabs {
+  height: 24px;
+}
+
+td.good { background-color: lawngreen; }
+td.good a:hover { font-weight:bold; }
+
+td.undec { background-color: gold; }
+td.undec a:hover { font-weight:bold; }
+
+td.bad { background-color: #DC143C; }
+td.bad a:hover { font-weight:bold; }
+
+div.TabView div.Tabs a {
+  float: left;
+  display: block;
+  text-align: center;
+  height:      24px;
+  line-height: 28px;
+  vertical-align: middle;
+  background: #eeeeee;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 12px;
+  color: #000080;
+}
+
+div.TabView div.Tabs a:hover, div.TabView div.Tabs a.Active {
+  background: #C6DEFF;
+}
+
+div.TabView div.Pages {
+  clear: both;
+  border: 1px solid #909090;
+}
+
+div.TabView div.Pages div.Page {
+  height: 100%;
+  padding: 0px;
+}
+
+div.TabView div.Pages div.Page div.Pad {
+  padding: 10px 18px;
+}
+
