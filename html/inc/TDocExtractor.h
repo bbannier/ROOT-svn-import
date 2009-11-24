@@ -1,20 +1,20 @@
 // @(#)root/html:$Id$
-// Author: Axel Naumann 2007-01-09
+// Author: Axel Naumann 2009-11-24
 
 /*************************************************************************
- * Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
+ * Copyright (C) 1995-2009, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
  *                                                                       *
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_TDocParser
-#define ROOT_TDocParser
+#ifndef ROOT_TDocExtractor
+#define ROOT_TDocExtractor
 
 ////////////////////////////////////////////////////////////////////////////
 //                                                                        //
-// TDocParser                                                             //
+// TDocExtractor                                                             //
 //                                                                        //
 // Parses documentation in source files                                   //
 //                                                                        //
@@ -54,15 +54,7 @@ public:
    virtual Int_t GetOverloadIdx() const = 0;
 };
 
-class TDocParser: public TObject {
-protected:
-   enum EDocContext {
-      kIgnore,
-      kDocFunc,
-      kDocClass,
-      kNumDocContexts
-   };
-
+class TDocExtractor: public TObject {
 public:
    enum ESourceInfo {
       kInfoLastUpdate,
@@ -72,41 +64,28 @@ public:
       kInfoLastGenerated,
       kNumSourceInfos
    };
-   enum EAccess {
-      kPrivate,
-      kProtected,
-      kPublic
-   };
-   enum EParseContext {
-      kNoContext,
-      kCode,
-      kComment,
-      kDirective,
-      kString,
-      kKeyword,
-      kCPP,
-      kVerbatim,
-      kNumParseContexts,
-      kParseContextMask = BIT(4) - 1
-   };
-   enum EParseContextFlag {
-      kCXXComment = BIT(4), // kComment is a C++ comment, or macro/html/latex content is surrounded by /* */
-      kParseContextFlagMask = (UInt_t)(~(BIT(4) - 1))
-
-   };
 
 protected:
    THtml*         fHtml;            // THtml object using us
-   UInt_t         fLineNo;          // current line number
-   TString        fLineRaw;         // current line
+   TString        fFirstClassDoc;   // first class-doc found - per file, taken if fLastClassDoc is empty
+   TString        fLastClassDoc;    // last class-doc found - becomes class doc at ClassImp or first method
+   Doc::TClassDoc*fCurrentClass;    // current class context of sources being parsed
+   TClass*        fRecentClass;     // recently seen class context of sources being parsed, e.g. for Convert()
+   TString        fCurrentModule;   // current module context of sources being parsed
+   TString        fCurrentMethodTag;// name_idx of the currently parsed method
+   Int_t          fDirectiveCount;  // index of directive for current method
    Long_t         fLineNumber;      // source line number
    TString        fCurrentFile;     // current source / header file name
    std::map<std::string /*name*/, Int_t > fMethodCounts;     // number of undocumented overloads
-   EDocContext    fDocContext;      // current context of parsed sources for documenting
-   std::list<UInt_t> fParseContext; // current context of parsed sources
    Bool_t         fCheckForMethod;  // whether to check the current line for a method
-   Bool_t         fCommentAtBOL;    // at the beginning of the current line, fParseContext contained kComment
+   TString        fClassDescrTag;   // tag for finding the class description
+   TString        fSourceInfoTags[kNumSourceInfos]; // tags for source info elements (copyright, last changed, author)
+   TList          fDirectiveHandlers;// handler for doc directives (TDocDirective objects)
+   Bool_t         fAllowDirectives;  // whether directives are to be interpreted
    std::set<UInt_t> fExtraLinesWithAnchor; // lines that need an additional anchor
+   TString        fSourceInfo[kNumSourceInfos];// author, last changed, ...
+   THashList      fMethods[3];      // methods as TMethodWrapper objects (by access)
+   TList          fDataMembers[6];  // data members (by access, plus enums)
 
    static std::set<std::string>  fgKeywords; // C++ keywords
 
@@ -140,9 +119,9 @@ protected:
    void           WriteSourceLine(std::ostream& out);
 
 public:
-   TDocParser(TClassDocOutput& docOutput, TClass* cl);
-   TDocParser(TDocOutput& docOutput);
-   virtual       ~TDocParser();
+   TDocExtractor(TClassDocOutput& docOutput, TClass* cl);
+   TDocExtractor(TDocOutput& docOutput);
+   virtual       ~TDocExtractor();
 
    static void   AnchorFromLine(const TString& line, TString& anchor);
    void          Convert(std::ostream& out, std::istream& in, const char* relpath,
@@ -167,7 +146,7 @@ public:
    virtual void  Parse(std::ostream& out);
    static Bool_t Strip(TString& s);
 
-   ClassDef(TDocParser,0); // parser for reference documentation
+   ClassDef(TDocExtractor,0); // parser for reference documentation
 };
 
-#endif // ROOT_TDocParser
+#endif // ROOT_TDocExtractor
