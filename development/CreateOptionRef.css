@@ -1,0 +1,30 @@
+td { vertical-align: middle: text-align: left; font-family: sans-serif; font-size: 80%; }
+th { vertical-align: baseline: text-align: font-family: sans-serif; font-weight: bold; font-size: 90%; }
+
+td.option { width: 160 }
+td.array  { width: 50 }
+td.val    { width: 120 }
+td.predef { width: 150 }
+td.info   { width: 320 }
+
+th.alltitle { color: white; background-color: #2B3856; padding: 0 }
+th.alldescr { font-weight: normal; color: #222222; background-color: white; font-size: 80%; }
+th.coltitle { color: black; background-color: #98AFC7; }
+
+table.mytable {
+    table-layout: fixed;
+    margin: 0em 0em 0em 0;
+    background: white;
+    border-collapse: collapse;
+}
+table.mytable th.coltitle, table.mytable th.alltitle, table.mytable th.alldescr, table.mytable td {
+    border: 2px white solid;
+    padding: 0.2em;
+}
+table.mytable th {
+    text-align: left;
+}
+table.mytable caption {
+    margin-left: inherit;
+    margin-right: inherit;
+}

@@ -1,0 +1,22 @@
+Instructions on how to use the interface to J.Friedmans RuleFit
+===============================================================
+
+1. Create a working directory
+
+   mkdir rulefit
+
+2. Get rf_go.exe from Jeromes homepage from
+
+   wget http://www-stat.stanford.edu/~jhf/r-rulefit/linux/rf_go.exe
+
+   and move this into the rulefit dir.
+
+
+Now it should work with "Use_RuleFitJF = 1".
+Options are given in MethodRuleFitJF::DeclareOptions().
+
+For documentation on the options, see:
+http://www-stat.stanford.edu/~jhf/r-rulefit/RuleFit_help.html#rulefit
+
+Note that I haven't yet made a method that reads the model produced.
+Hence, it will only work properly for the training and testing within devTMVA.

@@ -1,0 +1,231 @@
+#GEN -*-*-*-*-*-*-*-*-*-*-*- general info -*-*-*-*-*-*-*-*-*-*-*-
+
+Method         : Likelihood::Likelihood
+TMVA Release   : 3.9.7         [198919]
+ROOT Release   : 5.22/00       [333312]
+Creator        : stelzer
+Date           : Sat Sep 26 15:25:43 2009
+Host           : Linux rabenstein2 2.6.24-23-generic #1 SMP Mon Jan 26 00:13:11 UTC 2009 i686 GNU/Linux
+Dir            : /home/stelzer/TMVA397/macros
+Training events: 6000
+
+
+#OPT -*-*-*-*-*-*-*-*-*-*-*-*- options -*-*-*-*-*-*-*-*-*-*-*-*-
+
+# Set by User:
+V: "False" [Verbose mode]
+H: "False" [Print classifier-specific help message]
+NSmooth: "10" [Number of smoothing iterations for the input histograms]
+NAvEvtPerBin: "50" [Average number of events per PDF bin]
+TransformOutput: "False" [Transform likelihood output by inverse sigmoid function]
+# Default:
+D: "False" [Use-decorrelated-variables flag (depreciated)]
+Normalise: "False" [Normalise input variables]
+VarTransform: "None" [Variable transformation method]
+VarTransformType: "Signal" [Use signal or background events to derive for variable transformation (the transformation is applied on both types of, course)]
+NbinsMVAPdf: "60" [Number of bins used for the PDFs of classifier outputs]
+NsmoothMVAPdf: "2" [Number of smoothing iterations for classifier PDFs]
+VerboseLevel: "Default" [Verbosity level]
+CreateMVAPdfs: "False" [Create PDFs for classifier outputs (signal and background)]
+TxtWeightFilesOnly: "True" [If True: write all training results (weights) as text files (False: some are written in ROOT format)]
+NSmoothSig[0]: "10" [Number of smoothing iterations for the input histograms]
+    NSmoothSig[1]: "10"
+    NSmoothSig[2]: "10"
+    NSmoothSig[3]: "10"
+NSmoothBkg[0]: "10" [Number of smoothing iterations for the input histograms]
+    NSmoothBkg[1]: "10"
+    NSmoothBkg[2]: "10"
+    NSmoothBkg[3]: "10"
+NAvEvtPerBinSig[0]: "50" [Average num of events per PDF bin and variable (signal)]
+    NAvEvtPerBinSig[1]: "50"
+    NAvEvtPerBinSig[2]: "50"
+    NAvEvtPerBinSig[3]: "50"
+NAvEvtPerBinBkg[0]: "50" [Average num of events per PDF bin and variable (background)]
+    NAvEvtPerBinBkg[1]: "50"
+    NAvEvtPerBinBkg[2]: "50"
+    NAvEvtPerBinBkg[3]: "50"
+PDFInterpol[0]: "Spline2" [Method of interpolating reference histograms (e.g. Spline2 or KDE)]
+    PDFInterpol[1]: "Spline2"
+    PDFInterpol[2]: "Spline2"
+    PDFInterpol[3]: "Spline2"
+KDEtype: "Gauss" [KDE kernel type (1=Gauss)]
+KDEiter: "Nonadaptive" [Number of iterations (1=non-adaptive, 2=adaptive)]
+KDEFineFactor: "1" [Fine tuning factor for Adaptive KDE: Factor to multyply the width of the kernel]
+KDEborder: "None" [Border effects treatment (1=no treatment , 2=kernel renormalization, 3=sample mirroring)]
+##
+
+
+#VAR -*-*-*-*-*-*-*-*-*-*-*-* variables *-*-*-*-*-*-*-*-*-*-*-*-
+
+NVar 4
+var1+var2                     var1_P_var2                       'F'    [-6.05220985413,6.37847995758]
+var1-var2                     var1_M_var2                       'F'    [-4.34529972076,4.76599025726]
+var3                          var3                              'F'    [-5.18697977066,4.18717002869]
+var4                          var4                              'F'    [-4.88857984543,4.54254007339]
+
+
+#MAT -*-*-*-*-*-*-*-*-* transformation data -*-*-*-*-*-*-*-*-*-
+
+
+#WGT -*-*-*-*-*-*-*-*-*-*-*-*- weights -*-*-*-*-*-*-*-*-*-*-*-*-
+
+NSmooth         10
+InterpolMethod  2
+KDE_type        0
+KDE_iter        1
+KDE_border      1
+KDE_finefactor  0
+Histogram       var1_P_var2_sig_smooth_original   60   -6.05220985413   6.37847995758
+Weights 
+0               0               0               0               0               
+0               2               0               2               3               
+3               2               9               11              10              
+16              19              19              40              43              
+51              48              71              94              97              
+113             132             119             134             158             
+146             153             133             149             154             
+134             118             118             132             94              
+74              66              78              60              34              
+42              31              24              16              15              
+7               12              4               6               3               
+0               0               0               0               0               
+NSmooth         10
+InterpolMethod  2
+KDE_type        0
+KDE_iter        1
+KDE_border      1
+KDE_finefactor  0
+Histogram       var1_P_var2_bgd_smooth_original   60   -6.05220985413   6.37847995758
+Weights 
+1               3               3               1               2               
+8               8               9               14              21              
+20              25              38              52              47              
+44              82              94              98              100             
+119             137             132             137             150             
+141             144             144             136             138             
+134             108             100             108             78              
+92              63              56              38              41              
+35              23              23              12              11              
+9               8               2               4               2               
+2               2               1               0               0               
+0               0               0               0               0               
+NSmooth         10
+InterpolMethod  2
+KDE_type        0
+KDE_iter        1
+KDE_border      1
+KDE_finefactor  0
+Histogram       var1_M_var2_sig_smooth_original   60   -4.34529972076   4.76599025726
+Weights 
+1               1               1               4               2               
+2               5               2               9               14              
+10              19              28              25              37              
+41              50              65              71              96              
+115             116             122             128             161             
+154             157             193             143             157             
+152             156             119             118             86              
+91              71              72              43              37              
+29              26              27              9               8               
+9               9               4               2               1               
+1               1               0               0               0               
+0               0               0               0               0               
+NSmooth         10
+InterpolMethod  2
+KDE_type        0
+KDE_iter        1
+KDE_border      1
+KDE_finefactor  0
+Histogram       var1_M_var2_bgd_smooth_original   60   -4.34529972076   4.76599025726
+Weights 
+0               0               0               0               0               
+1               2               1               5               6               
+9               6               18              8               18              
+26              25              44              56              73              
+78              69              86              104             144             
+155             135             148             136             167             
+157             161             151             167             120             
+110             108             83              75              57              
+63              49              35              51              20              
+23              16              11              7               8               
+4               0               1               1               1               
+0               0               0               0               0               
+NSmooth         10
+InterpolMethod  2
+KDE_type        0
+KDE_iter        1
+KDE_border      1
+KDE_finefactor  0
+Histogram       var3_sig_smooth_original   60   -5.18697977066   4.18717002869
+Weights 
+0               0               0               0               0               
+0               0               0               0               0               
+0               0               0               0               1               
+0               1               4               4               7               
+9               6               17              20              26              
+44              48              60              72              93              
+116             126             147             158             171             
+168             179             184             199             160             
+170             151             135             117             95              
+79              60              37              43              20              
+29              18              8               5               5               
+4               0               0               2               1               
+NSmooth         10
+InterpolMethod  2
+KDE_type        0
+KDE_iter        1
+KDE_border      1
+KDE_finefactor  0
+Histogram       var3_bgd_smooth_original   60   -5.18697977066   4.18717002869
+Weights 
+1               0               0               0               0               
+0               2               0               1               3               
+0               2               2               8               17              
+16              24              44              55              57              
+76              90              100             122             150             
+164             172             183             169             189             
+191             176             173             152             125             
+93              90              97              70              40              
+40              33              24              15              14              
+5               5               6               2               0               
+2               0               0               0               0               
+0               0               0               0               0               
+NSmooth         10
+InterpolMethod  2
+KDE_type        0
+KDE_iter        1
+KDE_border      1
+KDE_finefactor  0
+Histogram       var4_sig_smooth_original   60   -4.88857984543   4.54254007339
+Weights 
+0               0               0               0               0               
+0               0               0               0               0               
+0               0               0               0               0               
+0               5               0               5               11              
+6               16              15              27              37              
+45              53              70              100             119             
+103             147             169             192             162             
+166             206             201             155             160             
+155             142             126             103             76              
+61              44              32              24              24              
+16              12              8               3               0               
+3               0               0               0               0               
+NSmooth         10
+InterpolMethod  2
+KDE_type        0
+KDE_iter        1
+KDE_border      1
+KDE_finefactor  0
+Histogram       var4_bgd_smooth_original   60   -4.88857984543   4.54254007339
+Weights 
+1               0               0               0               1               
+0               3               2               6               10              
+3               11              17              31              36              
+49              77              78              85              115             
+132             144             194             167             173             
+200             194             206             160             134             
+121             126             122             79              77              
+59              54              40              30              17              
+16              6               8               8               3               
+2               2               1               0               0               
+0               0               0               0               0               
+0               0               0               0               0               

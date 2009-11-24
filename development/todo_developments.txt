@@ -1,0 +1,35 @@
+Future developments for TMVA
+----------------------------
+
+General (framework, or for all methods):
+
+  - finalise category classifier
+    todo: include regression, describe in users guide
+  - cross validation (generalised) inclusing self-optimisation of methods (Helge, Joerg)
+  - multiclass classification (Peter)
+  - 'brut-force' ranking
+  - preprocessing for subsets of variables only (note: subset*s*)
+  - better GUI, generally improved analysis scripts
+  - real test suit + nightly validation and error reporting
+
+...less clear:
+
+  - regression including calibration (?)
+  - tie TMVA to RooFit, eg, use of RooAbsPdf in Likelihood (?)
+  - integration of systematic errors ?
+
+Method-specific:
+
+  - bayesian neural network (Jan)
+  - evolutionary algorithm (Peter)
+  - unsupervised learning (bump hunting) 
+
+Other items:
+
+  - see file: development/todo.txt 
+
+Paper:
+
+  - analysis paper (Editor: Eckhard)
+
+

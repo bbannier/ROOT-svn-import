@@ -1,0 +1,91 @@
+#GEN -*-*-*-*-*-*-*-*-*-*-*- general info -*-*-*-*-*-*-*-*-*-*-*-
+
+Method         : Fisher::Fisher
+TMVA Release   : 3.9.7         [198919]
+ROOT Release   : 5.22/00       [333312]
+Creator        : stelzer
+Date           : Sat Sep 26 15:26:06 2009
+Host           : Linux rabenstein2 2.6.24-23-generic #1 SMP Mon Jan 26 00:13:11 UTC 2009 i686 GNU/Linux
+Dir            : /home/stelzer/TMVA397/macros
+Training events: 6000
+
+
+#OPT -*-*-*-*-*-*-*-*-*-*-*-*- options -*-*-*-*-*-*-*-*-*-*-*-*-
+
+# Set by User:
+Normalise: "False" [Normalise input variables]
+NbinsMVAPdf: "50" [Number of bins used for the PDFs of classifier outputs]
+NsmoothMVAPdf: "1" [Number of smoothing iterations for classifier PDFs]
+V: "False" [Verbose mode]
+H: "True" [Print classifier-specific help message]
+CreateMVAPdfs: "True" [Create PDFs for classifier outputs (signal and background)]
+Method: "Fisher" [Discrimination method]
+# Default:
+D: "False" [Use-decorrelated-variables flag (depreciated)]
+VarTransform: "None" [Variable transformation method]
+VarTransformType: "Signal" [Use signal or background events to derive for variable transformation (the transformation is applied on both types of, course)]
+VerboseLevel: "Default" [Verbosity level]
+TxtWeightFilesOnly: "True" [If True: write all training results (weights) as text files (False: some are written in ROOT format)]
+##
+
+
+#VAR -*-*-*-*-*-*-*-*-*-*-*-* variables *-*-*-*-*-*-*-*-*-*-*-*-
+
+NVar 4
+var1+var2                     var1_P_var2                       'F'    [-6.05220985413,6.37847995758]
+var1-var2                     var1_M_var2                       'F'    [-4.34529972076,4.76599025726]
+var3                          var3                              'F'    [-5.18697977066,4.18717002869]
+var4                          var4                              'F'    [-4.88857984543,4.54254007339]
+
+
+#MAT -*-*-*-*-*-*-*-*-* transformation data -*-*-*-*-*-*-*-*-*-
+
+
+#MVAPDFS -*-*-*-*-*-*-*-*-*-*-* MVA PDFS -*-*-*-*-*-*-*-*-*-*-*-
+NSmooth         1
+InterpolMethod  2
+KDE_type        0
+KDE_iter        1
+KDE_border      1
+KDE_finefactor  0
+Histogram       Fisher_tr_S_original   50   -1.57254138771   1.45444168342
+Weights 
+0               0               0               0               0               
+0               0               0               0               0               
+1               1               1               4               3               
+4               10              9               11              29              
+44              42              66              85              122             
+126             145             179             207             177             
+223             208             190             216             178             
+158             128             110             82              76              
+48              42              24              14              12              
+9               9               1               4               1               
+
+NSmooth         1
+InterpolMethod  2
+KDE_type        0
+KDE_iter        1
+KDE_border      1
+KDE_finefactor  0
+Histogram       Fisher_tr_B_original   50   -1.57254138771   1.45444168342
+Weights 
+1               0               0               2               4               
+8               8               14              22              26              
+32              49              79              95              116             
+121             159             167             207             196             
+215             235             207             192             158             
+138             126             95              82              72              
+52              44              28              11              12              
+8               9               3               5               0               
+0               2               0               0               0               
+0               0               0               0               0               
+
+
+
+#WGT -*-*-*-*-*-*-*-*-*-*-*-*- weights -*-*-*-*-*-*-*-*-*-*-*-*-
+
+0.0036561262178
+-0.0820037540932
+0.00847494379786
+-0.276588878835
+0.658812304275

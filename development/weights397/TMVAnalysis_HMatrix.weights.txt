@@ -1,0 +1,57 @@
+#GEN -*-*-*-*-*-*-*-*-*-*-*- general info -*-*-*-*-*-*-*-*-*-*-*-
+
+Method         : HMatrix::HMatrix
+TMVA Release   : 3.9.7         [198919]
+ROOT Release   : 5.22/00       [333312]
+Creator        : stelzer
+Date           : Sat Sep 26 15:26:05 2009
+Host           : Linux rabenstein2 2.6.24-23-generic #1 SMP Mon Jan 26 00:13:11 UTC 2009 i686 GNU/Linux
+Dir            : /home/stelzer/TMVA397/macros
+Training events: 6000
+
+
+#OPT -*-*-*-*-*-*-*-*-*-*-*-*- options -*-*-*-*-*-*-*-*-*-*-*-*-
+
+# Set by User:
+V: "False" [Verbose mode]
+H: "False" [Print classifier-specific help message]
+# Default:
+D: "False" [Use-decorrelated-variables flag (depreciated)]
+Normalise: "True" [Normalise input variables]
+VarTransform: "None" [Variable transformation method]
+VarTransformType: "Signal" [Use signal or background events to derive for variable transformation (the transformation is applied on both types of, course)]
+NbinsMVAPdf: "60" [Number of bins used for the PDFs of classifier outputs]
+NsmoothMVAPdf: "2" [Number of smoothing iterations for classifier PDFs]
+VerboseLevel: "Default" [Verbosity level]
+CreateMVAPdfs: "False" [Create PDFs for classifier outputs (signal and background)]
+TxtWeightFilesOnly: "True" [If True: write all training results (weights) as text files (False: some are written in ROOT format)]
+##
+
+
+#VAR -*-*-*-*-*-*-*-*-*-*-*-* variables *-*-*-*-*-*-*-*-*-*-*-*-
+
+NVar 4
+var1+var2                     var1_P_var2                       'F'    [-6.05220985413,6.37847995758]
+var1-var2                     var1_M_var2                       'F'    [-4.34529972076,4.76599025726]
+var3                          var3                              'F'    [-5.18697977066,4.18717002869]
+var4                          var4                              'F'    [-4.88857984543,4.54254007339]
+
+
+#MAT -*-*-*-*-*-*-*-*-* transformation data -*-*-*-*-*-*-*-*-*-
+
+
+#WGT -*-*-*-*-*-*-*-*-*-*-*-*- weights -*-*-*-*-*-*-*-*-*-*-*-*-
+
+HMatrix
+0.071853177126  -0.128172178652
+-0.0922545512925  -0.00520467216523
+0.233870832266  -0.0274904145531
+0.204280714175  -0.136708367481
+28.1052990007  -4.04820077092  0.75355912865  -25.2375596693  
+-4.04820077092  17.5973282893  2.08720862818  5.58809111599  
+0.75355912865  2.08720862818  125.955588827  -117.227063296  
+-25.2375596693  5.58809111599  -117.227063296  154.076385038  
+28.846855971  -4.8964131052  -0.966925126139  -25.848291418  
+-4.8964131052  17.1297931173  1.32177057373  7.09335707737  
+-0.966925126139  1.32177057373  128.382528018  -116.219720172  
+-25.848291418  7.09335707737  -116.219720172  152.817839413  

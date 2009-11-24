@@ -1,0 +1,99 @@
+Creation of html page for option reference:
+
+   cd TMVA
+   source setup.sh
+   cd development
+   root -l DumpOptionsReference.C  # if a new method has been created, make sure it is called 
+   python CreateOptionRef.py       # this creates the file optionRef.html
+
+   # copy to sourceforge:
+   scp optionRef.html andreas.hoecker@tmva.sourceforge.net:tmva/htdocs/
+
+   # and check that it looks right:
+   http://tmva.sourceforge.net/optionRef.html
+
+Creation of html page for TMVA@ROOT version reference:
+
+   cd TMVA
+   source setup.sh
+   cd development
+   python CreateRootVersionRef.py  # this creates the file versionRef.html
+
+   # copy to sourceforge:
+   scp versionRef.html andreas.hoecker@tmva.sourceforge.net:tmva/htdocs/
+
+   # and check that it looks right:
+   http://tmva.sourceforge.net/versionRef.html
+
+---------------------------------------------------------------------------------------------
+
+Creation of new sourceforge release (quite some hand work):
+
+    0) First thing: update the release notes:
+
+         cd TMVA
+         emacs development/RELNOTES
+
+    1) Tag the latest TMVA version in CVS:
+
+         cd TMVA
+         python development/tmvaTag.py 3.9.5
+
+         (just type "python development/tmvaTag.py" for usage)
+
+    2) Go to some temporary test space and re-checkout TMVA
+
+         cd ~/tmp/
+         cvs -z3 -d:pserver:anonymous@tmva.cvs.sourceforge.net:/cvsroot/tmva co -P TMVA 
+
+         check the version in TMVA/src/Version.h that *really* the latest version 
+         has been checked out.
+
+    3) Remove non-public directories
+
+         cd TMVA
+         rm -rf development/ reader/ test/
+
+    4) Create tar file with *correct* filename !
+
+         cd ../
+         tar zcf TMVA-v3.9.5.tgz TMVA
+
+    5) Open Firefox or IE (Safari didn't work properly last time), and go to login page:
+
+         http://sourceforge.net/projects/tmva
+
+       After login, go to tmva project page:
+
+         https://sourceforge.net/projects/tmva
+
+       Under the "Admin" menu button, scroll down to "File Releases" - click on it.
+
+    6) On this page, click on "Add Release" in the "TMVA" line (NOT the "TMVA-v3.7.1" line, which is a bug !)
+
+    7) Next page: input the release name. PLEASE USE THE FORMAT:
+
+         TMVA-v3.9.5
+
+    8) Next page: fill in the release log and follow the instructions
+
+         For file upload: go to WEB upload page: https://frs.sourceforge.net/webupload
+
+
+    9) Update the TMVA web pages:
+
+          ssh <your-sourceforge-name>@tmva.sourceforge.net
+          cd tmva/htdocs
+          xemacs index.html
+
+       - add the contents of the developments/RELNOTES file in the correct format (!).
+       - search for "V03" and replace the CVS command by the correct release
+
+       Update the news archive:
+
+          xemacs news_archive.html
+
+       - add the same content again, by respecting the format.
+
+    10) Send email to tmva-users mailing list: tmva-users@lists.sourceforge.net,
+        copying again the RELNOTES as postscriptum into the message

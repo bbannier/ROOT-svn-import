@@ -1,0 +1,109 @@
+#GEN -*-*-*-*-*-*-*-*-*-*-*- general info -*-*-*-*-*-*-*-*-*-*-*-
+
+Method         : MLP::MLP
+TMVA Release   : 3.9.7         [198919]
+ROOT Release   : 5.22/00       [333312]
+Creator        : stelzer
+Date           : Sat Sep 26 15:30:23 2009
+Host           : Linux rabenstein2 2.6.24-23-generic #1 SMP Mon Jan 26 00:13:11 UTC 2009 i686 GNU/Linux
+Dir            : /home/stelzer/TMVA397/macros
+Training events: 6000
+
+
+#OPT -*-*-*-*-*-*-*-*-*-*-*-*- options -*-*-*-*-*-*-*-*-*-*-*-*-
+
+# Set by User:
+Normalise: "True" [Normalise input variables]
+V: "False" [Verbose mode]
+H: "True" [Print classifier-specific help message]
+NCycles: "200" [Number of training cycles]
+HiddenLayers: "N+1,N" [Specification of hidden layer architecture (N stands for number of variables; any integers may also be used)]
+NeuronType: "tanh" [Neuron activation function type]
+TestRate: "5" [Test for overtraining performed at each #th epochs]
+# Default:
+D: "False" [Use-decorrelated-variables flag (depreciated)]
+VarTransform: "None" [Variable transformation method]
+VarTransformType: "Signal" [Use signal or background events to derive for variable transformation (the transformation is applied on both types of, course)]
+NbinsMVAPdf: "60" [Number of bins used for the PDFs of classifier outputs]
+NsmoothMVAPdf: "2" [Number of smoothing iterations for classifier PDFs]
+VerboseLevel: "Default" [Verbosity level]
+CreateMVAPdfs: "False" [Create PDFs for classifier outputs (signal and background)]
+TxtWeightFilesOnly: "True" [If True: write all training results (weights) as text files (False: some are written in ROOT format)]
+NeuronInputType: "sum" [Neuron input function type]
+TrainingMethod: "BP" [Train with Back-Propagation (BP - default) or Genetic Algorithm (GA - slower and worse)]
+LearningRate: "0.02" [ANN learning rate parameter]
+DecayRate: "0.01" [Decay rate for learning parameter]
+BPMode: "sequential" [Back-propagation learning mode: sequential or batch]
+BatchSize: "-1" [Batch size: number of events/batch, only set if in Batch Mode, -1 for BatchSize=number_of_events]
+##
+
+
+#VAR -*-*-*-*-*-*-*-*-*-*-*-* variables *-*-*-*-*-*-*-*-*-*-*-*-
+
+NVar 4
+var1+var2                     var1_P_var2                       'F'    [-6.05220985413,6.37847995758]
+var1-var2                     var1_M_var2                       'F'    [-4.34529972076,4.76599025726]
+var3                          var3                              'F'    [-5.18697977066,4.18717002869]
+var4                          var4                              'F'    [-4.88857984543,4.54254007339]
+
+
+#MAT -*-*-*-*-*-*-*-*-* transformation data -*-*-*-*-*-*-*-*-*-
+
+
+#WGT -*-*-*-*-*-*-*-*-*-*-*-*- weights -*-*-*-*-*-*-*-*-*-*-*-*-
+
+Weights
+(layer0,neuron0)-(layer1,neuron0): 0.417817412581
+(layer0,neuron0)-(layer1,neuron1): 0.932457809866
+(layer0,neuron0)-(layer1,neuron2): -0.653051490633
+(layer0,neuron0)-(layer1,neuron3): 0.998816686254
+(layer0,neuron0)-(layer1,neuron4): -1.70231717801
+(layer0,neuron1)-(layer1,neuron0): -0.843393308474
+(layer0,neuron1)-(layer1,neuron1): -0.499174793046
+(layer0,neuron1)-(layer1,neuron2): 1.04028149273
+(layer0,neuron1)-(layer1,neuron3): -0.949055543661
+(layer0,neuron1)-(layer1,neuron4): 0.0619235188165
+(layer0,neuron2)-(layer1,neuron0): -1.4706512176
+(layer0,neuron2)-(layer1,neuron1): -0.881435369406
+(layer0,neuron2)-(layer1,neuron2): -1.4244002915
+(layer0,neuron2)-(layer1,neuron3): -0.856532712964
+(layer0,neuron2)-(layer1,neuron4): -2.58374197279
+(layer0,neuron3)-(layer1,neuron0): 1.6938657514
+(layer0,neuron3)-(layer1,neuron1): -0.0514445603992
+(layer0,neuron3)-(layer1,neuron2): 3.93466667988
+(layer0,neuron3)-(layer1,neuron3): 1.21055123769
+(layer0,neuron3)-(layer1,neuron4): 6.56994939665
+(layer0,neuron4)-(layer1,neuron0): -0.409018073923
+(layer0,neuron4)-(layer1,neuron1): -0.070811468493
+(layer0,neuron4)-(layer1,neuron2): 0.423012707342
+(layer0,neuron4)-(layer1,neuron3): 0.291372126305
+(layer0,neuron4)-(layer1,neuron4): 0.3548202438
+(layer1,neuron0)-(layer2,neuron0): -0.641412935041
+(layer1,neuron0)-(layer2,neuron1): 1.88607569689
+(layer1,neuron0)-(layer2,neuron2): -0.552828658738
+(layer1,neuron0)-(layer2,neuron3): -1.0496296841
+(layer1,neuron1)-(layer2,neuron0): -0.906431452745
+(layer1,neuron1)-(layer2,neuron1): 0.487467684788
+(layer1,neuron1)-(layer2,neuron2): 0.40428548615
+(layer1,neuron1)-(layer2,neuron3): 0.167450060377
+(layer1,neuron2)-(layer2,neuron0): 0.218752775086
+(layer1,neuron2)-(layer2,neuron1): 1.05481978076
+(layer1,neuron2)-(layer2,neuron2): 0.0762807895599
+(layer1,neuron2)-(layer2,neuron3): -0.991870176483
+(layer1,neuron3)-(layer2,neuron0): 1.39070909729
+(layer1,neuron3)-(layer2,neuron1): -0.77423654312
+(layer1,neuron3)-(layer2,neuron2): 0.508290912627
+(layer1,neuron3)-(layer2,neuron3): 1.52858922023
+(layer1,neuron4)-(layer2,neuron0): 0.77652511162
+(layer1,neuron4)-(layer2,neuron1): 1.01229103837
+(layer1,neuron4)-(layer2,neuron2): 1.0919172875
+(layer1,neuron4)-(layer2,neuron3): -0.834970053057
+(layer1,neuron5)-(layer2,neuron0): -1.08895674769
+(layer1,neuron5)-(layer2,neuron1): 0.0904623165113
+(layer1,neuron5)-(layer2,neuron2): -0.639816535122
+(layer1,neuron5)-(layer2,neuron3): 2.28941041019
+(layer2,neuron0)-(layer3,neuron0): 0.374735623501
+(layer2,neuron1)-(layer3,neuron0): 0.396503259389
+(layer2,neuron2)-(layer3,neuron0): 0.289529993039
+(layer2,neuron3)-(layer3,neuron0): -0.990891982423
+(layer2,neuron4)-(layer3,neuron0): 1.01375125796
