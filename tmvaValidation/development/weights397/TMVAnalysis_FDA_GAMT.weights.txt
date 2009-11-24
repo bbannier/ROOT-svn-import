@@ -1,0 +1,54 @@
+#GEN -*-*-*-*-*-*-*-*-*-*-*- general info -*-*-*-*-*-*-*-*-*-*-*-
+
+Method         : FDA::FDA_GAMT
+TMVA Release   : 3.9.7         [198919]
+ROOT Release   : 5.22/00       [333312]
+Creator        : stelzer
+Date           : Sat Sep 26 15:29:52 2009
+Host           : Linux rabenstein2 2.6.24-23-generic #1 SMP Mon Jan 26 00:13:11 UTC 2009 i686 GNU/Linux
+Dir            : /home/stelzer/TMVA397/macros
+Training events: 6000
+
+
+#OPT -*-*-*-*-*-*-*-*-*-*-*-*- options -*-*-*-*-*-*-*-*-*-*-*-*-
+
+# Set by User:
+V: "False" [Verbose mode]
+H: "True" [Print classifier-specific help message]
+Formula: "(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3" [The discrimination formula]
+ParRanges: "(-1,1);(-10,10);(-10,10);(-10,10);(-10,10)" [Parameter ranges]
+FitMethod: "GA" [Optimisation Method]
+Converger: "MINUIT" [FitMethod uses Converger to improve result]
+# Default:
+D: "False" [Use-decorrelated-variables flag (depreciated)]
+Normalise: "False" [Normalise input variables]
+VarTransform: "None" [Variable transformation method]
+VarTransformType: "Signal" [Use signal or background events to derive for variable transformation (the transformation is applied on both types of, course)]
+NbinsMVAPdf: "60" [Number of bins used for the PDFs of classifier outputs]
+NsmoothMVAPdf: "2" [Number of smoothing iterations for classifier PDFs]
+VerboseLevel: "Default" [Verbosity level]
+CreateMVAPdfs: "False" [Create PDFs for classifier outputs (signal and background)]
+TxtWeightFilesOnly: "True" [If True: write all training results (weights) as text files (False: some are written in ROOT format)]
+##
+
+
+#VAR -*-*-*-*-*-*-*-*-*-*-*-* variables *-*-*-*-*-*-*-*-*-*-*-*-
+
+NVar 4
+var1+var2                     var1_P_var2                       'F'    [-6.05220985413,6.37847995758]
+var1-var2                     var1_M_var2                       'F'    [-4.34529972076,4.76599025726]
+var3                          var3                              'F'    [-5.18697977066,4.18717002869]
+var4                          var4                              'F'    [-4.88857984543,4.54254007339]
+
+
+#MAT -*-*-*-*-*-*-*-*-* transformation data -*-*-*-*-*-*-*-*-*-
+
+
+#WGT -*-*-*-*-*-*-*-*-*-*-*-*- weights -*-*-*-*-*-*-*-*-*-*-*-*-
+
+5
+0.502640149386
+-0.0592188623402
+0.00612101270182
+-0.199747955807
+0.475761439888

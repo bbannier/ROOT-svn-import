@@ -1,0 +1,26 @@
+=== Issues to be resolved before migration to new framework: TMVA 4 ===
+
+--- Bugs or problems to be solved:
+
+- [ Does the PluginHandler work in new framework ? --> Joerg ]
+- [ Does the "block" feature of the shuffeling of the events work as it should (DataSetFactory)? ]
+
+--- Features to be added:
+
+- [ Pruning with weights doesn't work properly --> Helge ]
+- [ Andrzej's regression developments fuer SVN ]
+- Re-add "AddSignalTrainingEvent" usw zu Factory.h (Joerg)
+
+--- To be added to Users Guide:
+
+- Update index !
+
+--- Tests to be done
+
+- Improve nightlies to compare old with new references, and application with training
+
+-----------------------------------------
+
+Regression und TMVAClassification(Regression)Application in nightlies, auch ROC: --> Joerg
+Test text file reading from TMVA-3.9.6 version: All
+

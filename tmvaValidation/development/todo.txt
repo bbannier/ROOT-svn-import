@@ -1,0 +1,191 @@
+s# $Id$
+-------------------------------------------------------------------------------------------
+
+* known bugs/problems
+
+  - sometimes the efficiency number given is equal to 1.0000 --> maybe a binning problem ?!
+  - Setting number of test events to 0 does not work (if one wants to use all events for training)
+
+* graphics:
+
+  - button with special plots for each method (in particular for NN)
+
+* users guide (see also tmvaDoc/todo.txt)
+
+  - ADD MEMORY CONSUMPTION PER CLASSIFIER TO COMPARISON TABLE ON P22 
+
+* code/features:
+
+  highest priority:
+
+  - ALLOW DECORRELATION (MORE GENERAL: PREPROCESSING) FOR "SOME" VARIABLES ONLY (Joerg, Andreas)
+  - add cross validation and method optimisation (pre-loop)
+  - Add 'int' possibility to reader
+
+  high priority:
+
+  - MakeClass incl. regression
+  - SVM regression (Andrzej)
+  - polymorphise the PDF class
+  - MLP: N*N or 2*N doesn't seem to work...
+  - clean up MethodBase
+  - add cross validation for all methods  
+  - ensure proper treatment of event weights, in particular negative event weights by all methods/tools
+  - when adding several trees, it should be possible to use different event-wise weight expressions for each tree
+  - add variables to test tree, without using them in MVA in any way (flag them)
+  - add the possibility to the reader to cut on a classifier output requiring 
+    a certain signal efficiency
+  - unsupervised learning (bump hunting)
+  - add "double" types to Reader::AddVariable in the reader ?
+  - explain in doc how to use the TMVA classifiers outside of the TMVA framework.
+  - add TMultiLayerPerceptron standalone class feature to TMVA
+  - setweightexpression for signal variables even if expression is not in background tree (Alfio)
+  - give output with computed accuracy for each classifier
+  - make VERBOSE useful for the user !
+  - allow additional bin in likelihood for over- and underflow, and make parameter ranges to work 
+  - interpret column-wise information --> using trigger selection (see Tania's problem)!
+    = add possibility to choose an event as a function of "at least one candidate must be good"
+  - need event caching in DataSet (instead of tree)
+  - need normalisation to be handled in VariableTransformations
+  - make kd-tree transparant through common BinaryTree base class
+  - reconsider ROC curve (efficiency) calculations (Peter)
+  - to we want multiple output nodes ? how to do this for all methods ?
+  - check weight file syntax more thoroughly and give feedback to user
+  - allow full RooFit PDFs (RooAbsPdf) as input to likelihood method  
+  - NEED FULL COMMITTEE METHOD (INCL. MULTICUTS)
+  - try decorrelation of decision trees in forest
+  - do overlap plots
+  - automatic binning checker (likelihood, proba calculus)
+  - move calculation of cov matrix from DatSet to VariableTransforms
+  - add ranges to AddVariable
+  - each method should be able to control its output level for DEBUG info
+  - initialize eff plots to 0 instead of 1
+  - let user decide whether training efficiencies and various performance
+  - change efficiency calculations in MethodBase (Peter)
+  - perform brute-force ranking generally in MethodBase (or somewhere else) (Fredrik)
+  - ranking implementation and event weights for: 
+    + HMatrix (ranking)
+    + PDERS (ranking)
+    + Cuts (ranking)
+    + SVM (Marcin - needs weights and ranking)
+  - make likelihood MVA calculation (GetMvaValue) more efficient
+  - add to DataSet class special function to compute decorrelated variables 
+    if not requested by any MVA method
+  - outlier finder
+    + give no. of removed events (overflow) below and above cut
+    + give more explicit warnings
+  - more "const" functions in classes (constify TMVA)
+
+  lower priority:
+
+  - implement a kind of "efficiency-checker" which tests the obtained eff/rej-curves
+    for their quality (e.g. if there are bins without cuts in the cuts-method, 
+    oszillating results instead of a smooth falling curve, ... ). 
+    In case of a bad result, this function would call the a function within the TMVA-method 
+    which produced this bad result. This function would give some recommendations of 
+    how to improve the result (e.g. "you obtained a bad result, to improve: 
+    increase the population size, ..." )
+  - compile with -weffc++ option
+  - replace "RootFinder" by ROOT version 
+
+* new methods
+
+  - Bayesian Classifiers (Abhishek)
+  - how to treat large systematics on discriminating variables ?
+  - do we need interface to 'R' ?
+  - integration of RooFit into TMVA ? --> what can help us ? --> Categorisation !
+    (also: one might be able to use a full RooProdPdf as signal and background
+     reference in TMVA)
+
+* release + docu
+
+  - manual update (all)
+  - paper (all)
+
+-------------------------------------------------------------------------------------
+* jobs for the Summer 2007
+
+  small:
+
+  /* done */  - mu-transform -> rarity (A)
+  - add normalisation to VariableTransformBase (J)
+  - allow training update of a single method w/o retraining everybody (J)
+
+  medium:
+
+  - better/nicer GUI (SummerS)
+  - create ATLAS external package, compatibility with AOD + SAN (structured objects)
+  - decorrelations of decision tree in forest (H)
+  - adaptive binning for likelihood PDFs (A)
+  - brute force ranking facility (F)
+  - event weights for RuleFit (F) and SVM (AZ)
+  - treatment of systematics in TMVA (J + Kyle)
+  - /* done */ - provide "MakeClass" mechanism to create simple output C++ classes (ROOT-independent)
+
+  saignant:
+
+  - multiregion categorised MVAs (includes: different variables & MVAs (?)) (design: H + J)
+  - "small" committee method (include any MVA as variable to any other MVA) (design: A + J)
+  - full committee method (SummerS)
+  - multiple output classes ? (not yet)
+
+-------------------------------------------------------------------------------------------
+
+Test suit:
+
+  - outputs of all test jobs (defined below) should be scanned for 'WARNING' and 
+    'FATAL' and be also compared with reference log, weight and class files
+
+  - jobs to be run (running includes: training, testing, application, MakeClassTester,
+    plot comparisons): to be able to compare test and application results we need
+    an ApplicatoinTester.
+
+    + standard job (3k lin correlated Gauss variables - all float) - all classifiers
+
+    + standard plot with var=var='I' - all classifiers
+
+    + standard job with maximum number of training and test events that can be 
+      processed within one night (all methods)
+    + standard job with very large number of training events - all possible classifiers
+
+    + job with schachbrett variables
+
+    + standard job with the largest possible number of input variables that 
+      can be processed within one night (all methods)
+    + standard job with very large number of input variables - all possible classifiers
+
+    + job with crazy input variables (delta peaks, NaNs, very long tails, etc)
+    + ... what else ?
+
+  - should also test the plotting macros somehow... 
+    + check if all output eps/gif/png files are created
+    + comparison of eps outputs ?
+    + ... more ?   
+
+  - what else ?
+
+-------------------------------------------------------------------------------------------
+
+Multicut + committee proposal:
+
+   "cut1*mva1{var1,var2}, 
+    cut2*mva2{var1,var2,var3,mva1,mva3}, 
+    (cut3, cut4)*mva4{var1,var3}, 
+    cut5*(a*mva5{var1,var2}+b*mva5{var3,mva5}, ...;
+    mva1, options; mva2, options; ..."
+
+Simple multicut example:
+
+   "((cut1, cut2,cut3)*mva);
+    (mva, options)"
+
+If one wants to use Fisher together with the input varibles in a BDT:
+
+   "BDT{var1,var2,var3,Fisher}; 
+    BDL, options; 
+    Fisher, options"
+
+----------------------------------------------------------------
+
+PDF.cxx: FillHistToGraph():  is the return in the second line correct, then let's delete the rest! (Andreas)
+

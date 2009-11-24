@@ -1,0 +1,115 @@
+#GEN -*-*-*-*-*-*-*-*-*-*-*- general info -*-*-*-*-*-*-*-*-*-*-*-
+
+Method         : TMlpANN::TMlpANN
+TMVA Release   : 3.9.7         [198919]
+ROOT Release   : 5.22/00       [333312]
+Creator        : stelzer
+Date           : Sat Sep 26 15:30:59 2009
+Host           : Linux rabenstein2 2.6.24-23-generic #1 SMP Mon Jan 26 00:13:11 UTC 2009 i686 GNU/Linux
+Dir            : /home/stelzer/TMVA397/macros
+Training events: 6000
+
+
+#OPT -*-*-*-*-*-*-*-*-*-*-*-*- options -*-*-*-*-*-*-*-*-*-*-*-*-
+
+# Set by User:
+V: "False" [Verbose mode]
+H: "False" [Print classifier-specific help message]
+NCycles: "200" [Number of training cycles]
+HiddenLayers: "N+1,N" [Specification of hidden layer architecture (N stands for number of variables; any integers may also be used)]
+ValidationFraction: "0.3" [Fraction of events in training tree used for cross validation]
+LearningMethod: "bfgs" [Learning method]
+# Default:
+D: "False" [Use-decorrelated-variables flag (depreciated)]
+Normalise: "False" [Normalise input variables]
+VarTransform: "None" [Variable transformation method]
+VarTransformType: "Signal" [Use signal or background events to derive for variable transformation (the transformation is applied on both types of, course)]
+NbinsMVAPdf: "60" [Number of bins used for the PDFs of classifier outputs]
+NsmoothMVAPdf: "2" [Number of smoothing iterations for classifier PDFs]
+VerboseLevel: "Default" [Verbosity level]
+CreateMVAPdfs: "False" [Create PDFs for classifier outputs (signal and background)]
+TxtWeightFilesOnly: "True" [If True: write all training results (weights) as text files (False: some are written in ROOT format)]
+##
+
+
+#VAR -*-*-*-*-*-*-*-*-*-*-*-* variables *-*-*-*-*-*-*-*-*-*-*-*-
+
+NVar 4
+var1+var2                     var1_P_var2                       'F'    [-6.05220985413,6.37847995758]
+var1-var2                     var1_M_var2                       'F'    [-4.34529972076,4.76599025726]
+var3                          var3                              'F'    [-5.18697977066,4.18717002869]
+var4                          var4                              'F'    [-4.88857984543,4.54254007339]
+
+
+#MAT -*-*-*-*-*-*-*-*-* transformation data -*-*-*-*-*-*-*-*-*-
+
+
+#WGT -*-*-*-*-*-*-*-*-*-*-*-*- weights -*-*-*-*-*-*-*-*-*-*-*-*-
+
+#input normalization
+1.7593 -0.011886
+1.15678 -0.0116495
+1.1772 -0.0162446
+1.28216 -0.0136992
+#output normalization
+1 0
+#neurons weights
+-0.470959
+0.38473
+0.0346353
+-0.221562
+1.07917
+0.679204
+0.156374
+1.49802
+0.899164
+0.110084
+-0.64825
+-0.712437
+0.345097
+1.44291
+#synapses weights
+-1.19053
+-0.342091
+-0.279518
+-3.37236
+-0.911604
+0.17233
+-1.75292
+4.44671
+1.89124
+0.0202072
+-0.0679699
+-1.85755
+0.138822
+-0.00228785
+2.33813
+-4.58508
+-0.786812
+-0.180192
+-2.90925
+-0.608762
+-0.859308
+1.0992
+-1.14665
+-0.733312
+-0.225704
+-1.75581
+-3.35366
+0.321465
+2.46021
+1.73916
+0.0256651
+-1.77124
+0.792465
+0.337004
+0.371262
+-0.25284
+2.44223
+-0.784464
+-0.0464121
+-0.872015
+0.536448
+-1.62757
+0.216931
+-0.886467
