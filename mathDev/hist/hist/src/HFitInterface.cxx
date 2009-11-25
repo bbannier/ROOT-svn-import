@@ -13,7 +13,7 @@
 #include "HFitInterface.h"
 
 #include "Fit/BinData.h"
-#include "Fit/TSparseData.h"
+#include "Fit/SparseData.h"
 #include "Fit/FitResult.h"
 #include "Math/IParamFunction.h"
 
@@ -652,7 +652,7 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
   
 }
 
-void FillData(TSparseData & dv, const TH1 * h1, TF1 * /*func*/) 
+void FillData(SparseData & dv, const TH1 * h1, TF1 * /*func*/) 
 {
    const int dim = h1->GetDimension();
    vector<double> min(dim);
@@ -697,7 +697,7 @@ void FillData(TSparseData & dv, const TH1 * h1, TF1 * /*func*/)
    }
 }
 
-void FillData(TSparseData & dv, const THnSparse * h1, TF1 * /*func*/) 
+void FillData(SparseData & dv, const THnSparse * h1, TF1 * /*func*/) 
 {
    const int dim = h1->GetNdimensions();
    vector<double> min(dim);
@@ -710,7 +710,7 @@ void FillData(TSparseData & dv, const THnSparse * h1, TF1 * /*func*/)
       double value = h1->GetBinContent( i, &coord[0] );
       if ( !value ) continue;
 
-//       cout << "FILLDATA(TSparseData): h1(" << i << ")";
+//       cout << "FILLDATA(SparseData): h1(" << i << ")";
 
       // Exclude underflows and oveflows! (defect behaviour with the TH1*)
       bool insertBox = true;
@@ -761,7 +761,7 @@ void FillData(BinData & dv, const THnSparse * s1, TF1 * func)
    dopt.fBinVolume = true;
 
    // Get the sparse data
-   ROOT::Fit::TSparseData d(ndim, &xmin[0], &xmax[0]);
+   ROOT::Fit::SparseData d(ndim, &xmin[0], &xmax[0]);
    ROOT::Fit::FillData(d, s1, func);
 
 //    cout << "FillData(BinData & dv, const THnSparse * s1, TF1 * func) (1)" << endl;

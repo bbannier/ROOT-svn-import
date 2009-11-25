@@ -43,7 +43,7 @@ namespace ROOT {
       class DataRange; 
       class BinData;
       class UnBinData; 
-      class TSparseData;
+      class SparseData;
 
 #ifndef __CINT__  // does not link on Windows (why ??)
 
@@ -97,13 +97,13 @@ namespace ROOT {
           fill the data vector from a TH1 with sparse data. Pass also the TF1 function which is 
           needed in case of integral option and to reject points rejected by the function
       */ 
-      void FillData ( TSparseData  & dv, const TH1 * hist, TF1 * func = 0); 
+      void FillData ( SparseData  & dv, const TH1 * hist, TF1 * func = 0); 
 
       /** 
           fill the data vector from a THnSparse. Pass also the TF1 function which is 
           needed in case of integral option and to reject points rejected by the function
       */ 
-      void FillData ( TSparseData  & dv, const THnSparse * hist, TF1 * func = 0); 
+      void FillData ( SparseData  & dv, const THnSparse * hist, TF1 * func = 0); 
 
       /** 
           fill the data vector from a THnSparse. Pass also the TF1 function which is 
