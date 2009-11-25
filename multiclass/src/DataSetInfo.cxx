@@ -72,6 +72,7 @@ TMVA::DataSetInfo::DataSetInfo(const TString& name)
      fOwnRootDir(0),
      fVerbose( kFALSE ),
      fSignalClass(0),
+     fTargetsForMulticlass(0),
      fLogger( new MsgLogger("DataSetInfo", kINFO) )
 {
    // constructor
@@ -85,6 +86,8 @@ TMVA::DataSetInfo::~DataSetInfo()
    if(fDataSet!=0) delete fDataSet;
    
    for(UInt_t i=0; i<fClasses.size(); i++) delete fClasses[i];
+
+   delete fTargetsForMulticlass;
 
    delete fLogger;
 }
@@ -144,7 +147,17 @@ void TMVA::DataSetInfo::PrintClasses() const
 //_______________________________________________________________________
 Bool_t TMVA::DataSetInfo::IsSignal( const TMVA::Event* ev ) const 
 {
-    return (ev->GetClass()  == fSignalClass); 
+   return (ev->GetClass()  == fSignalClass); 
+}
+
+//_______________________________________________________________________
+std::vector<Float_t>*  TMVA::DataSetInfo::GetTargetsForMulticlass( const TMVA::Event* ev ) 
+{
+   if( !fTargetsForMulticlass ) fTargetsForMulticlass = new std::vector<Float_t>( GetNClasses() );
+//   fTargetsForMulticlass->resize( GetNClasses() );
+   fTargetsForMulticlass->assign( GetNClasses(), 0.0 );
+   fTargetsForMulticlass->at( ev->GetClass() ) = 1.0;
+   return fTargetsForMulticlass; 
 }
 
 
