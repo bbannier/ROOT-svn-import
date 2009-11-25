@@ -252,6 +252,9 @@ class THnSparse: public TNamed {
    Double_t ComputeIntegral();
    void GetRandom(Double_t *rand, Bool_t subBinRandom = kTRUE);
 
+   void ResetAxisRange(Int_t i);
+   void ResetAxisRanges();
+
    //void Draw(Option_t* option = "");
 
    ClassDef(THnSparse, 1); // Interfaces of sparse n-dimensional histogram

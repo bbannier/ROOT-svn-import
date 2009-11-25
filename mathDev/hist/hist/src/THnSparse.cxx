@@ -1731,3 +1731,30 @@ Double_t THnSparse::ComputeIntegral()
    fIntegralStatus = kValidInt;
    return fIntegral[GetNbins()];
 }
+
+//______________________________________________________________________________
+void THnSparse::ResetAxisRange(Int_t i){
+   
+   // resets the axis range of the axis[i]
+   if(i > fAxes.GetEntriesFast()){
+      Error("Access to axis", "Requested non existing axis");
+      return;
+   }
+   TAxis *axis = (dynamic_cast<TAxis*>(fAxes.At(i)));
+   if(!axis){
+      Error("Access to axis", "Axis not found");
+      return;
+   }
+   axis->SetRangeUser(axis->GetXmin(), axis->GetXmax());
+}
+
+//______________________________________________________________________________
+void THnSparse::ResetAxisRanges(){
+   
+   // reset ranges of all axes
+   TAxis *axis = 0;
+   for(Int_t i = 0; i< fAxes.GetEntriesFast(); ++i){
+      axis = (dynamic_cast<TAxis*>(fAxes.At(i)));
+      axis->SetRangeUser(axis->GetXmin(), axis->GetXmax());
+   }
+}
