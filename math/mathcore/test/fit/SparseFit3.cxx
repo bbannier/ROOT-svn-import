@@ -6,7 +6,7 @@
 #include "TApplication.h"
 #include "TMath.h"
 
-#include "Fit/TSparseData.h"
+#include "Fit/SparseData.h"
 #include "HFitInterface.h"
 #include "Fit/Fitter.h"
 #include "Math/WrappedMultiTF1.h"
@@ -177,7 +177,7 @@ void fit3DHist()
 
 ///////////////// CREATE THE SPARSE DATA
    cout << "Retrieving the Sparse Data Structure" << endl;
-   ROOT::Fit::TSparseData d(min,max);
+   ROOT::Fit::SparseData d(min,max);
    ROOT::Fit::FillData(d, h1, 0);
    ROOT::Fit::BinData bd;
    d.GetBinData(bd);
@@ -291,7 +291,7 @@ void fit2DHist()
 
 ///////////////// CREATE THE SPARSE DATA
    cout << "Retrieving the Sparse Data Structure" << endl;
-   ROOT::Fit::TSparseData d(min,max);
+   ROOT::Fit::SparseData d(min,max);
    ROOT::Fit::FillData(d, h1, 0);
    ROOT::Fit::BinData bd;
    d.GetBinData(bd);
@@ -397,7 +397,7 @@ void fit2DHist()
 //    h1->FillRandom("MyGaus",1000);
 
 //    cout << "Retrieving the Sparse Data Structure" << endl;
-//    ROOT::Fit::TSparseData d(h1);
+//    ROOT::Fit::SparseData d(h1);
 //    ROOT::Fit::FillData(d, h1, 0);
 //    ROOT::Fit::BinData* bd = d.GetBinData();
 

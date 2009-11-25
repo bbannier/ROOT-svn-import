@@ -23,7 +23,7 @@
 #include <limits>
 
 // #include "TMath.h"
-#include "Fit/TSparseData.h"
+#include "Fit/SparseData.h"
 
 using namespace std;
 
@@ -142,7 +142,7 @@ namespace ROOT {
       };
       
 
-      // This is the key of the TSparseData structure. This method
+      // This is the key of the SparseData structure. This method
       // will, by recursion, divide the area passed as an argument in
       // min and max into pieces to insert the TBox defined by bmin and
       // bmax. It will do so from the highest dimension until it gets
@@ -190,9 +190,9 @@ namespace ROOT {
       };
 
 
-      TSparseData::TSparseData(vector<double>& min, vector<double>& max)
+      SparseData::SparseData(vector<double>& min, vector<double>& max)
       {
-         // Creates a TSparseData convering the range defined by min
+         // Creates a SparseData convering the range defined by min
          // and max. For this it will create an empty TBox for that
          // range.
          TBox originalBox(min, max);
@@ -200,9 +200,9 @@ namespace ROOT {
          fList->PushBack(originalBox);
       }
 
-      TSparseData::TSparseData(const unsigned int dim, double min[], double max[])
+      SparseData::SparseData(const unsigned int dim, double min[], double max[])
       {
-         // Creates a TSparseData convering the range defined by min
+         // Creates a SparseData convering the range defined by min
          // and max. For this it will create an empty TBox for that
          // range.
          vector<double> minv(min,min+dim);
@@ -212,22 +212,22 @@ namespace ROOT {
          fList->PushBack(originalBox);
       }
 
-      TSparseData::~TSparseData()
+      SparseData::~SparseData()
       { delete fList; }
 
-      unsigned int TSparseData::NPoints() const
+      unsigned int SparseData::NPoints() const
       {
          // Returns the number of points stored, including the 0 ones.
          return fList->GetList().size();
       }
       
-      unsigned int TSparseData::NDim() const
+      unsigned int SparseData::NDim() const
       {
-         // Returns the number of dimension of the TSparseData object.
+         // Returns the number of dimension of the SparseData object.
          return fList->Begin()->GetMin().size();
       }
 
-      void TSparseData::Add(std::vector<double>& min, std::vector<double>& max, 
+      void SparseData::Add(std::vector<double>& min, std::vector<double>& max, 
                            const double content, const double error)
       {
          // Add a box to the stored ones. For that, it will look for
@@ -244,7 +244,7 @@ namespace ROOT {
 //             cout << "Found: " << *it << endl;
             ;
          else {
-            cout << "TSparseData::Add -> FAILED! box not found! " << endl;
+            cout << "SparseData::Add -> FAILED! box not found! " << endl;
             cout << littleBox << endl;
             return; // Does not add the box, as it is part of the
                     // underflow/overflow bin
@@ -264,7 +264,7 @@ namespace ROOT {
          }
       }
 
-      void TSparseData::GetPoint(const unsigned int i, 
+      void SparseData::GetPoint(const unsigned int i, 
                                 std::vector<double>& min, std::vector<double>&max,
                                 double& content, double& error)
       {
@@ -279,7 +279,7 @@ namespace ROOT {
          }
 
          if ( (it == fList->End()) || (counter != i) )
-            throw std::out_of_range("TSparseData::GetPoint");
+            throw std::out_of_range("SparseData::GetPoint");
 
          min = it->GetMin();
          max = it->GetMax();
@@ -287,14 +287,14 @@ namespace ROOT {
          error = it->GetError();
       }
 
-      void TSparseData::PrintList() const
+      void SparseData::PrintList() const
       {
          // Debug method to print a list with all the data stored.
          copy(fList->Begin(), fList->End(), ostream_iterator<TBox>(cout, "\n------\n"));
       }
 
 
-      void TSparseData::GetBinData(BinData& bd) const
+      void SparseData::GetBinData(BinData& bd) const
       {
          // Created the corresponding BinData
 
@@ -316,7 +316,7 @@ namespace ROOT {
          }
       }
 
-      void TSparseData::GetBinDataIntegral(BinData& bd) const
+      void SparseData::GetBinDataIntegral(BinData& bd) const
       {
          // Created the corresponding BinData as with the Integral
          // option.
@@ -334,7 +334,7 @@ namespace ROOT {
          }
       }
 
-      void TSparseData::GetBinDataNoZeros(BinData& bd) const
+      void SparseData::GetBinDataNoZeros(BinData& bd) const
       {
          // Created the corresponding BinData, but it does not include
          // all the data with value equal to 0.

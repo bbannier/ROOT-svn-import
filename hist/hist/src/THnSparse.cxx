@@ -29,7 +29,7 @@
 #include "TError.h"
 
 #include "HFitInterface.h"
-#include "Fit/TSparseData.h"
+#include "Fit/DataRange.h"
 #include "Fit/Fitter.h"
 #include "Math/WrappedMultiTF1.h"
 
