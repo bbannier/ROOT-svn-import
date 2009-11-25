@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Matt Jachowski
+// Author: Andreas Hoecker, Peter Speckmayer, Matt Jachowski
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -14,6 +14,7 @@
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker  <Andreas.Hocker@cern.ch> - CERN, Switzerland             *
  *      Matt Jachowski   <jachowski@stanford.edu> - Stanford University, USA      *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch>  - CERN, Switzerland          *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>   - CERN, Switzerland             *
  *                                                                                *
  * Small changes (regression):                                                    *
@@ -121,6 +122,8 @@ namespace TMVA {
       virtual Double_t GetMvaValue( Double_t* err = 0 );
 
       virtual const std::vector<Float_t> &GetRegressionValues();
+
+      virtual const std::vector<Float_t> &GetMulticlassValues();
       
       // write method specific histos to target file
       virtual void WriteMonitoringHistosToFile() const;

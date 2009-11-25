@@ -1,5 +1,5 @@
 // @(#)Root/tmva $Id$   
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss 
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss, Kai Voss 
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -73,6 +73,7 @@
 
 #include "TMVA/ResultsClassification.h"
 #include "TMVA/ResultsRegression.h"
+#include "TMVA/ResultsMulticlass.h"
 
 const Int_t  MinNoTrainingEvents = 10;
 const Int_t  MinNoTestEvents     = 1;
@@ -904,7 +905,8 @@ void TMVA::Factory::TrainAllMethods()
 
    // here the training starts
    Log() << kINFO << "Train all methods for " 
-         << (fAnalysisType == Types::kRegression ? "Regression" : "Classification") << " ..." << Endl;
+         << (fAnalysisType == Types::kRegression ? "Regression" : 
+	     (fAnalysisType == Types::kMulticlass ? "Multiclass" : "Classification") ) << " ..." << Endl;
 
    MVector::iterator itrMethod;
 
@@ -922,7 +924,8 @@ void TMVA::Factory::TrainAllMethods()
       }
 
       Log() << kINFO << "Train method: " << mva->GetMethodName() << " for " 
-            << (fAnalysisType == Types::kRegression ? "Regression" : "Classification") << Endl;
+            << (fAnalysisType == Types::kRegression ? "Regression" : 
+		(fAnalysisType == Types::kMulticlass ? "Multiclass classification" : "Classification")) << Endl;
       mva->TrainMethod();
       Log() << kINFO << "Training finished" << Endl;
    }
@@ -1002,7 +1005,8 @@ void TMVA::Factory::TestAllMethods()
       MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
       Types::EAnalysisType analysisType = mva->GetAnalysisType();
       Log() << kINFO << "Test method: " << mva->GetMethodName() << " for " 
-              << (analysisType == Types::kRegression ? "Regression" : "Classification") << " performance" << Endl;
+              << (analysisType == Types::kRegression ? "Regression" : 
+		  (analysisType == Types::kMulticlass ? "Multiclass classification" : "Classification")) << " performance" << Endl;
       mva->AddOutput( Types::kTesting, analysisType );
    }
 }
@@ -1125,6 +1129,7 @@ void TMVA::Factory::EvaluateAllMethods( void )
    MVector methodsNoCuts; 
 
    Bool_t doRegression = kFALSE;
+   Bool_t doMulticlass = kFALSE;
 
    // iterate over methods and evaluate
    MVector::iterator itrMethod    = fMethods.begin();
@@ -1169,6 +1174,11 @@ void TMVA::Factory::EvaluateAllMethods( void )
          Log() << kINFO << "Write evaluation histograms to file" << Endl;
          theMethod->WriteEvaluationHistosToFile(Types::kTesting);
          theMethod->WriteEvaluationHistosToFile(Types::kTraining);
+      } else if (theMethod->DoMulticlass()) {
+	 doMulticlass = kTRUE;
+         Log() << kINFO << "Evaluate multiclass classification method: " << theMethod->GetMethodName() << Endl;         
+
+	 theMethod->TestMulticlass();
       } else {
          
          Log() << kINFO << "Evaluate classifier: " << theMethod->GetMethodName() << Endl;
@@ -1245,9 +1255,11 @@ void TMVA::Factory::EvaluateAllMethods( void )
       rmstrainT[0]  = vtmp[15];
       minftestT[0]  = vtmp[16];
       minftrainT[0] = vtmp[17];
-   }
-   // now sort the variables according to the best 'eff at Beff=0.10'
-   else {
+   } else if( doMulticlass ) {
+      // do nothing for the moment
+      // TODO: fill in something meaningfull
+   }  else {
+      // now sort the variables according to the best 'eff at Beff=0.10'
       for (Int_t k=0; k<2; k++) {
          std::vector< std::vector<Double_t> > vtemp;
          vtemp.push_back( effArea[k] );  // this is the vector that is ranked
@@ -1291,7 +1303,7 @@ void TMVA::Factory::EvaluateAllMethods( void )
    
    const Int_t nmeth = methodsNoCuts.size();
    const Int_t nvar  = DefaultDataSetInfo().GetNVariables();
-   if (!doRegression) {
+   if (!doRegression && !doMulticlass ) {
 
       if (nmeth > 0) {
 
@@ -1493,7 +1505,9 @@ void TMVA::Factory::EvaluateAllMethods( void )
       Log() << kINFO << hLine << Endl;
       Log() << kINFO << Endl;
    }
-   else {
+   else if( doMulticlass ){
+      // do whatever necessary  TODO
+   } else {
       Log() << Endl;
       TString hLine = "--------------------------------------------------------------------------------";
       Log() << kINFO << "Evaluation results ranked by best signal efficiency and purity (area)" << Endl;

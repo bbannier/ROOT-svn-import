@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Matt Jachowski, Joerg Stelzer
+// Author: Andreas Hoecker, Matt Jachowski, Peter Speckmayer, Joerg Stelzer
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -18,6 +18,7 @@
  *      Matt Jachowski        <jachowski@stanford.edu> - Stanford University, USA *
  *      Kamil Kraszewski      <kalq@cern.ch>           - IFJ & UJ, Poland         *
  *      Maciej Kruk           <mkruk@cern.ch>          - IFJ & AGH, Poland        *
+ *      Peter Speckmayer      <peter.speckmayer@cern.ch> - CERN, Switzerland      *
  *      Joerg Stelzer         <stelzer@cern.ch>        - DESY, Germany            *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
@@ -99,7 +100,7 @@ Bool_t TMVA::MethodMLP::HasAnalysisType( Types::EAnalysisType type, UInt_t numbe
 {
    // MLP can handle classification with 2 classes and regression with one regression-target
    if (type == Types::kClassification && numberClasses == 2 ) return kTRUE;
-   //   if (type == Types::kRegression     && numberTargets == 1 ) return kTRUE;
+   if (type == Types::kMulticlass     && numberClasses > 1 )  return kTRUE;
    if (type == Types::kRegression ) return kTRUE;
 
    return kFALSE;
@@ -243,7 +244,8 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
    Double_t estimator = 0;
 
    // loop over all training events 
-   Int_t nEvents = GetNEvents();
+   Int_t  nEvents  = GetNEvents();
+   UInt_t nClasses = DataInfo().GetNClasses();
    UInt_t nTgts = DataInfo().GetNTargets();
    for (Int_t i = 0; i < nEvents; i++) {
 
@@ -261,8 +263,16 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
             d += (dt*dt);
          }
          d = TMath::Sqrt(d);
-      }
-      else {
+      } else if (DoMulticlass() ) {
+	 UInt_t cls = ev->GetClass();
+         for (UInt_t icls = 0; icls < nClasses; icls++) {
+            v = GetOutputNeuron( icls )->GetActivationValue();
+            Double_t dt = v - ( icls==cls ? 1.0 : 0.0 );
+            d += (dt*dt);
+         }
+         d = TMath::Sqrt(d);
+	 
+      } else {
          Double_t desired = GetDesiredOutput( ev );
          v = GetOutputNeuron()->GetActivationValue();
          d = v - desired;
@@ -277,8 +287,9 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
    if (histS != 0) fEpochMonHistS.push_back( histS );
    if (histB != 0) fEpochMonHistB.push_back( histB );
 
-   if (DoRegression()) estimator = TMath::Sqrt(estimator/Float_t(nEvents));
-   else                estimator = estimator*0.5/Float_t(nEvents);
+   if      (DoRegression()) estimator = TMath::Sqrt(estimator/Float_t(nEvents));
+   else if (DoMulticlass()) estimator = TMath::Sqrt(estimator/Float_t(nEvents));
+   else                     estimator = estimator*0.5/Float_t(nEvents);
 
    Data()->SetCurrentType( saveType );
 
@@ -512,8 +523,15 @@ void TMVA::MethodMLP::SimulateEvent( const Event* ev )
          Double_t error = ( GetOutputNeuron( itgt )->GetActivationValue() - desired )*eventWeight;
          GetOutputNeuron( itgt )->SetError(error);
       }
-   }
-   else {
+   } else if (DoMulticlass()) {
+      UInt_t nClasses = DataInfo().GetNClasses();
+      UInt_t cls      = ev->GetClass();
+      for (UInt_t icls = 0; icls < nClasses; icls++) {
+         Double_t desired  = ( cls==icls ? 1.0 : 0.0 );
+         Double_t error    = ( GetOutputNeuron( icls )->GetActivationValue() - desired )*eventWeight;
+         GetOutputNeuron( icls )->SetError(error);
+      }
+   } else {
       Double_t desired     = GetDesiredOutput( ev );
       Double_t error = ( GetOutputNeuron()->GetActivationValue() - desired )*eventWeight;
       GetOutputNeuron()->SetError(error);
@@ -724,8 +742,11 @@ Double_t TMVA::MethodMLP::GetError()
          for (UInt_t itgt = 0; itgt < ntgts; itgt++) {
             error += GetSqrErr( ev, itgt );
          }
-      }
-      else {
+      } else if ( DoMulticlass() ){
+	 for( UInt_t icls = 0, iclsEnd = DataInfo().GetNClasses(); icls < iclsEnd; icls++ ){
+	    error += GetSqrErr( ev, icls );
+	 }
+      } else {
          error = GetSqrErr( ev );
       }
       Result += error * ev->GetWeight();   
@@ -740,6 +761,7 @@ Double_t TMVA::MethodMLP::GetSqrErr( const Event* ev, UInt_t index )
    Double_t output = GetOutputNeuron( index )->GetActivationValue();
    Double_t target = 0;
    if (DoRegression()) target = ev->GetTarget( index );
+   if (DoMulticlass()) target = (ev->GetClass() == index ? 1.0 : 0.0 );
    else                target = GetDesiredOutput( ev );  
 
    error = (output-target)*(output-target);
@@ -963,7 +985,9 @@ void TMVA::MethodMLP::TrainOneEvent(Int_t ievt)
    Double_t eventWeight = ev->GetWeight();
    ForceNetworkInputs( ev );
    ForceNetworkCalculations();
+//   std::cout << "class " << ev->GetClass() << std::endl;
    if (DoRegression()) UpdateNetwork( ev->GetTargets(),       eventWeight );
+   if (DoMulticlass()) UpdateNetwork( *DataInfo().GetTargetsForMulticlass( ev ), eventWeight );
    else                UpdateNetwork( GetDesiredOutput( ev ), eventWeight );
 }
 
@@ -992,7 +1016,8 @@ void TMVA::MethodMLP::UpdateNetwork(std::vector<Float_t>& desired, Double_t even
 {
    // update the network based on how closely
    // the output matched the desired output
-   for (UInt_t i = 0; i < DataInfo().GetNTargets(); i++) {
+   for (UInt_t i = 0; i < desired.size(); i++) {
+//      std::cout << "i: " << i << "  desired : " << desired.at(i) << std::endl;
       Double_t error = GetOutputNeuron( i )->GetActivationValue() - desired.at(i);
       error *= eventWeight;
       GetOutputNeuron( i )->SetError(error);
