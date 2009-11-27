@@ -62,8 +62,6 @@ TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window, Option_t* opt) :
    fGeometries  (0),
    fGeometryAliases (0),
    fBrowser     (0),
-   fEditor      (0),
-   fStatusBar   (0),
 
    fMacroFolder (0),
 
@@ -131,7 +129,6 @@ TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window, Option_t* opt) :
 
    // Build GUI
    fBrowser   = new TEveBrowser(w, h);
-   fStatusBar = fBrowser->GetStatusBar();
    fBrowser->Connect("CloseWindow()", "TEveManager", this, "CloseEveWindow()");
 
    // ListTreeEditor
@@ -139,7 +136,6 @@ TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window, Option_t* opt) :
    fLTEFrame = new TEveGListTreeEditorFrame;
    fBrowser->StopEmbedding("Eve");
    fLTEFrame->ConnectSignals();
-   fEditor = fLTEFrame->fEditor;
 
    // See how many GL viewers are requested, remove from options.
    TString str_opt(opt);
@@ -242,24 +238,12 @@ void TEveManager::ClearOrphanage()
    fUseOrphanage = old_state;
 }
 
-/******************************************************************************/
-
-//______________________________________________________________________________
-TCanvas* TEveManager::AddCanvasTab(const char* name)
-{
-   // Add a new canvas tab.
-
-   fBrowser->StartEmbedding(1, -1);
-   TCanvas* c = new TCanvas;
-   fBrowser->StopEmbedding(name);
-
-   return c;
-}
+//==============================================================================
 
 //______________________________________________________________________________
 TGWindow* TEveManager::GetMainWindow() const
 {
-   // Get the main window, i.e. the first created reve-browser.
+   // Get the main window, i.e. EVE-browser.
 
    return fBrowser;
 }
@@ -279,6 +263,36 @@ TGLViewer* TEveManager::GetDefaultGLViewer() const
 
    TEveViewer *ev = GetDefaultViewer();
    return ev ? ev->GetGLViewer() : 0;
+}
+
+//______________________________________________________________________________
+TEveGedEditor* TEveManager::GetEditor() const
+{
+   // Returns main object editor.
+
+   return fLTEFrame->GetEditor();
+}
+
+//______________________________________________________________________________
+TGStatusBar* TEveManager::GetStatusBar() const
+{
+   // Returns main window status bar.
+
+   return fBrowser->GetStatusBar();
+}
+
+//==============================================================================
+
+//______________________________________________________________________________
+TCanvas* TEveManager::AddCanvasTab(const char* name)
+{
+   // Add a new canvas tab.
+
+   fBrowser->StartEmbedding(1, -1);
+   TCanvas* c = new TCanvas;
+   fBrowser->StopEmbedding(name);
+
+   return c;
 }
 
 //______________________________________________________________________________
@@ -305,7 +319,7 @@ TEveViewer* TEveManager::SpawnNewViewer(const char* name, const char* title,
    }
 
    TEveViewer* v = new TEveViewer(name, title);
-   v->SpawnGLViewer(embed ? fEditor : 0);
+   v->SpawnGLViewer(embed ? GetEditor() : 0);
 
    slot->ReplaceWindow(v);
 
@@ -347,7 +361,7 @@ void TEveManager::EditElement(TEveElement* element)
 
    static const TEveException eh("TEveManager::EditElement ");
 
-   fEditor->DisplayElement(element);
+   GetEditor()->DisplayElement(element);
 }
 
 /******************************************************************************/
@@ -394,8 +408,9 @@ void TEveManager::DoRedraw3D()
    // but more can come).
    for (TEveElement::Set_i i = fStampedElements.begin(); i != fStampedElements.end(); ++i)
    {
-      if (fEditor->GetModel() == (*i)->GetEditorObject(eh))
-         EditElement((*i));
+      if (GetEditor()->GetModel() == (*i)->GetEditorObject(eh))
+         EditElement(*i);
+      TEveGedEditor::ElementChanged(*i);
 
       (*i)->ClearStamps();
    }
@@ -427,8 +442,9 @@ void TEveManager::ElementChanged(TEveElement* element, Bool_t update_scenes, Boo
 
    static const TEveException eh("TEveElement::ElementChanged ");
 
-   if (fEditor->GetModel() == element->GetEditorObject(eh))
+   if (GetEditor()->GetModel() == element->GetEditorObject(eh))
       EditElement(element);
+   TEveGedEditor::ElementChanged(element);
 
    if (update_scenes) {
       TEveElement::List_t scenes;
@@ -548,8 +564,9 @@ void TEveManager::PreDeleteElement(TEveElement* element)
    // Called from TEveElement prior to its destruction so the
    // framework components (like object editor) can unreference it.
 
-   if (fEditor->GetEveElement() == element)
+   if (GetEditor()->GetEveElement() == element)
       EditElement(0);
+   TEveGedEditor::ElementDeleted(element);
 
    if (fScenes)
       fScenes->DestroyElementRenderers(element);
@@ -584,7 +601,7 @@ Bool_t TEveManager::ElementPaste(TEveElement* element)
    // The object to paste is taken from the editor (this is not
    // exactly right) and handed to 'element' for pasting.
 
-   TEveElement* src = fEditor->GetEveElement();
+   TEveElement* src = GetEditor()->GetEveElement();
    if (src)
       return element->HandleElementPaste(src);
    return kFALSE;
@@ -617,17 +634,22 @@ Bool_t TEveManager::InsertVizDBEntry(const TString& tag, TEveElement* model,
    {
       if (replace)
       {
-         TEveElement* old_model = dynamic_cast<TEveElement*>(pair->Value());
-         for (TEveElement::List_i i = old_model->BeginChildren(); i != old_model->EndChildren(); ++i)
-         {
-            (*i)->SetVizModel(model);
-            if (update)
-               (*i)->CopyVizParams(model);
-         }
-         old_model->DecDenyDestroy();
-         old_model->Destroy();
          model->IncDenyDestroy();
          model->SetRnrChildren(kFALSE);
+
+         TEveElement* old_model = dynamic_cast<TEveElement*>(pair->Value());
+         while (old_model->HasChildren())
+         {
+            TEveElement *el = old_model->FirstChild();
+            el->SetVizModel(model);
+            if (update)
+            {
+               el->CopyVizParams(model);
+               el->PropagateVizParamsToProjecteds();
+            }
+         }
+         old_model->DecDenyDestroy();
+
          pair->SetValue(dynamic_cast<TObject*>(model));
          return kTRUE;
       }
@@ -692,6 +714,7 @@ void TEveManager::LoadVizDB(const TString& filename)
    // how the registered entries are handled.
 
    TEveUtil::Macro(filename);
+   Redraw3D();
 }
 
 //______________________________________________________________________________
@@ -705,7 +728,10 @@ void TEveManager::SaveVizDB(const TString& filename)
       return;
    }
 
-   ofstream out(filename, ios::out | ios::trunc);
+   TString exp_filename(filename);
+   gSystem->ExpandPathName(exp_filename);
+
+   ofstream out(exp_filename, ios::out | ios::trunc);
    out << "void " << re[1] << "()\n";
    out << "{\n";
    out << "   TEveManager::Create();\n";
@@ -910,6 +936,8 @@ void TEveManager::Terminate()
    // Properly terminate global TEveManager.
 
    if (!gEve) return;
+
+   TEveGedEditor::DestroyEditors();
 
    TEveGListTreeEditorFrame *lf = gEve->fLTEFrame;
    TEveBrowser              *b  = gEve->GetBrowser();

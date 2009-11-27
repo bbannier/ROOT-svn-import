@@ -130,7 +130,7 @@ Int_t TEventIter::LoadDir()
       TDirectory *dirsave = gDirectory;
 
       Double_t start = 0;
-      if (gPerfStats != 0) start = TTimeStamp();
+      if (gPerfStats) start = TTimeStamp();
 
       // Take into acoount possible prefixes
       TFile::EFileType typ = TFile::kDefault;
@@ -141,7 +141,7 @@ Int_t TEventIter::LoadDir()
          fname = fFilename;
       fFile = TFile::Open(fname);
 
-      if (gPerfStats != 0) {
+      if (gPerfStats) {
          gPerfStats->FileOpenEvent(fFile, fFilename, start);
          fOldBytesRead = 0;
       }
@@ -235,9 +235,11 @@ Long64_t TEventIterUnit::GetNextEvent()
          fNum = 0;
          return -1;
       }
+      fFirst = fElem->GetFirst();
    }
+   Long64_t event = fNum - fCurrent + fFirst ;
    --fCurrent;
-   return fCurrent;
+   return event;
 }
 
 //------------------------------------------------------------------------
@@ -287,7 +289,7 @@ Long64_t TEventIterObj::GetNextEvent()
 
    while ( fElem == 0 || fElemNum == 0 || fCur < fFirst-1 ) {
 
-      if (gPerfStats != 0 && fFile != 0) {
+      if (gPerfStats && fFile) {
          Long64_t bytesRead = fFile->GetBytesRead();
          gPerfStats->SetBytesRead(bytesRead - fOldBytesRead);
          fOldBytesRead = bytesRead;
@@ -417,7 +419,7 @@ TEventIterTree::TEventIterTree(TDSet *dset, TSelector *sel, Long64_t first, Long
    fFileTrees = new TList;
    fFileTrees->SetOwner();
    fUseTreeCache = gEnv->GetValue("ProofPlayer.UseTreeCache", 1);
-   fCacheSize = gEnv->GetValue("ProofPlayer.CacheSize", 10000000);
+   fCacheSize = gEnv->GetValue("ProofPlayer.CacheSize", -1);
    fUseParallelUnzip = gEnv->GetValue("ProofPlayer.UseParallelUnzip", 0);
    if (fUseParallelUnzip) {
       TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kEnable);
@@ -471,27 +473,21 @@ TTree* TEventIterTree::GetTrees(TDSetElement *elem)
 
    if (main && main != fTree) {
       // Set the file cache
-      if (!localfile) {
-         if (fUseTreeCache) {
-            TFile *curfile = main->GetCurrentFile();
-            if (!fTreeCache) {
-               main->SetCacheSize(fCacheSize);
-               fTreeCache = (TTreeCache *)curfile->GetCacheRead();
-            } else {
-               curfile->SetCacheRead(fTreeCache);
-               main->SetCacheSize(fCacheSize); // Destroys fTreeCache
-               fTreeCache = (TTreeCache *)curfile->GetCacheRead();
-               fTreeCache->UpdateBranches(main, kTRUE);
-            }
-            fTreeCacheIsLearning = fTreeCache->IsLearning();
-            if (fTreeCacheIsLearning)
-               Info("GetTrees","the tree cache is in learning phase");
+      if (fUseTreeCache) {
+         TFile *curfile = main->GetCurrentFile();
+         if (!fTreeCache) {
+            main->SetCacheSize(fCacheSize);
+            fTreeCache = (TTreeCache *)curfile->GetCacheRead();
          } else {
-            // Disable the cache
-            main->SetCacheSize(-1);
+            curfile->SetCacheRead(fTreeCache);
+            fTreeCache->UpdateBranches(main, kTRUE);
          }
+         fTreeCacheIsLearning = fTreeCache->IsLearning();
+         if (fTreeCacheIsLearning)
+            Info("GetTrees","the tree cache is in learning phase");
       } else {
-         fTreeCache = 0;
+         // Disable the cache
+         main->SetCacheSize(0);
       }
 
       Bool_t loc = kFALSE;
@@ -666,7 +662,7 @@ Long64_t TEventIterTree::GetNextEvent()
 
    while ( fElem == 0 || fElemNum == 0 || fCur < fFirst-1 ) {
 
-      if (gPerfStats != 0 && fTree != 0) {
+      if (gPerfStats && fTree) {
          Long64_t totBytesRead = fTree->GetCurrentFile()->GetBytesRead();
          Long64_t bytesRead = totBytesRead - fOldBytesRead;
          gPerfStats->SetBytesRead(bytesRead);

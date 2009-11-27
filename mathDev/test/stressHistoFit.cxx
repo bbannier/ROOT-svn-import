@@ -133,6 +133,7 @@ enum cmpOpts {
 struct RefValue {
    const double* pars;
    const double  chi;
+   RefValue(const double* p = 0, const double c = 0.0): pars(p), chi(c) {};
 };
 
 // Class that keeps a reference structure and some tolerance values to
@@ -582,7 +583,7 @@ int testFitters(T* object, F* func, vector< vector<struct algoType> >& listAlgos
    ROOT::Math::MinimizerOptions::SetDefaultMinimizer(commonAlgos[0].type, commonAlgos[0].algo);
    object->Fit(func, "Q0");
    if ( defaultOptions & testOptDebug ) printTitle(func);
-   struct RefValue ref = { origpars, func->GetChisquare() };
+   struct RefValue ref(origpars, func->GetChisquare());
    commonAlgos[0].cmpResult.setRefValue(&ref);
    int defMinOptions = testOptPars | testOptChi | testOptErr | defaultOptions;
    status += testFit(commonAlgos[0].type, commonAlgos[0].algo
@@ -1142,8 +1143,8 @@ int stressFit()
    bm.Stop("stressHistoFit");
    std::cout <<"\n****************************************************************************\n";
    bm.Print("stressHistoFit");
-   const double reftime = 32; // needs to be updated // ref time on  pcbrun4
-   double rootmarks = 860 * reftime / bm.GetCpuTime("stressHistoFit");
+   const double reftime = 124; // ref time on  pcbrun4
+   double rootmarks = 800 * reftime / bm.GetCpuTime("stressHistoFit");
    std::cout << " ROOTMARKS = " << rootmarks << " ROOT version: " << gROOT->GetVersion() << "\t" 
              << gROOT->GetSvnBranch() << "@" << gROOT->GetSvnRevision() << std::endl;
    std::cout <<"****************************************************************************\n";

@@ -54,7 +54,7 @@ public:
 
    virtual ~TFitResultPtr();
 
-   ClassDef(TFitResultPtr,1)
+   ClassDef(TFitResultPtr,1)  //indirection to TFitResult
 };
 
 #endif

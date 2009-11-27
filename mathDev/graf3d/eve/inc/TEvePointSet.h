@@ -79,6 +79,8 @@ public:
    void   SetPointIntIds(Int_t n, Int_t* ids);
 
    virtual void SetMarkerColor(Color_t col) { SetMainColor(col); }
+   virtual void SetMarkerStyle(Style_t mstyle=1);
+   virtual void SetMarkerSize(Size_t msize=1);
 
    virtual void Paint(Option_t* option="");
 
@@ -181,6 +183,8 @@ public:
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
    virtual void UpdateProjection();
+
+   virtual void PointSelected(Int_t id);
 
    ClassDef(TEvePointSetProjected, 1); // Projected copy of a TEvePointSet.
 };

@@ -846,7 +846,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
    // be in the case where some entry do not exist.
    if (tleaf != realtree && tleaf->GetTreeIndex()) {
       // reset the multiplicity
-      if (fMultiplicity == 0) fMultiplicity = 1;
+      if (fMultiplicity >= 0) fMultiplicity = 1;
    }
 
    // Analyze the content of 'right'
@@ -5084,19 +5084,18 @@ void TTreeFormula::ResetDimensions() {
             else if (leaf->GetLenStatic()>1) fMultiplicity = 2;
          }
       } else {
-        if (leaf->GetLenStatic()>1 && fMultiplicity!=1) fMultiplicity = 2;
-        else {
-           // If the leaf belongs to a friend tree which has an index, we might
-           // be in the case where some entry do not exist.
-
-           TTree *realtree = fTree ? fTree->GetTree() : 0;
-           TTree *tleaf = leaf->GetBranch()->GetTree();
-           if (tleaf && tleaf != realtree && tleaf->GetTreeIndex()) {
-              // Reset the multiplicity if we have a friend tree with an index.
-              fMultiplicity = 1;
-           }
-
-        }
+         if (leaf->GetLenStatic()>1 && fMultiplicity!=1) fMultiplicity = 2;
+      }
+      if (fMultiplicity!=1) {
+         // If the leaf belongs to a friend tree which has an index, we might
+         // be in the case where some entry do not exist.
+            
+         TTree *realtree = fTree ? fTree->GetTree() : 0;
+         TTree *tleaf = leaf->GetBranch()->GetTree();
+         if (tleaf && tleaf != realtree && tleaf->GetTreeIndex()) {
+            // Reset the multiplicity if we have a friend tree with an index.
+            fMultiplicity = 1;
+         }
       }
 
       Int_t virt_dim2 = 0;
@@ -5186,7 +5185,7 @@ Bool_t TTreeFormula::LoadCurrentDim() {
             outofbounds = kTRUE;
             continue;
          } else {
-            fNdata[i] = 1;
+            fNdata[i] = fCumulSizes[i][0];
          }
       }
       Bool_t hasBranchCount2 = kFALSE;

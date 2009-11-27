@@ -77,6 +77,7 @@ void TEveStraightLineSet::AddMarker(Int_t line, Float_t pos)
 
 /******************************************************************************/
 
+//______________________________________________________________________________
 void TEveStraightLineSet::CopyVizParams(const TEveElement* el)
 {
    // Copy visualization parameters from element el.
@@ -88,6 +89,7 @@ void TEveStraightLineSet::CopyVizParams(const TEveElement* el)
       TAttMarker::operator=(*m);
       fRnrMarkers = m->fRnrMarkers;
       fRnrLines   = m->fRnrLines;
+      fDepthTest  = m->fDepthTest;
    }
 
    TEveElement::CopyVizParams(el);
@@ -103,8 +105,9 @@ void TEveStraightLineSet::WriteVizParams(ostream& out, const TString& var)
    TString t = "   " + var + "->";
    TAttMarker::SaveMarkerAttributes(out, var);
    TAttLine  ::SaveLineAttributes  (out, var);
-   out << t << "SetRnrMarkers(" << fRnrMarkers << ");\n";
-   out << t << "SetRnrLines("   << fRnrLines   << ");\n";
+   out << t << "SetRnrMarkers(" << ToString(fRnrMarkers) << ");\n";
+   out << t << "SetRnrLines("   << ToString(fRnrLines)   << ");\n";
+   out << t << "SetDepthTest("  << ToString(fDepthTest)  << ");\n";
 }
 
 /******************************************************************************/

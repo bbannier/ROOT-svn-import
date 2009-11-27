@@ -949,7 +949,7 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
 
    Long64_t bytesRead = 0;
 
-   if (gPerfStats != 0) bytesRead = gPerfStats->GetBytesRead();
+   if (gPerfStats) bytesRead = gPerfStats->GetBytesRead();
 
    if (fCompute.Counter() > 0)
       fCompute.Stop();
@@ -3253,6 +3253,9 @@ void TProofServ::HandleProcess(TMessage *mess)
          Warning("HandleProcess", "could not get query sequential number!");
 
       // Make the ordinal number available in the selector
+      TObject *nord = 0;
+      while ((nord = input->FindObject("PROOF_Ordinal")))
+         input->Remove(nord);
       input->Add(new TNamed("PROOF_Ordinal", GetOrdinal()));
 
       // Set input
