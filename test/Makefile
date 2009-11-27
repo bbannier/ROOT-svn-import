@@ -44,7 +44,7 @@ profileClassification: TMVAClassification
 clean:
 	rm -f $(BINS)
 
-$(TMVALIB): ../src/*.cxx ../src/*.h
+$(TMVALIB): ../src/*.cxx ../inc/*.h
 	$(MAKE) -C ../src/
 
 install:
@@ -79,7 +79,7 @@ $(PUBLISH)/uptodate: install TMVApp.root ../test/CompareHistsTrainAndApplied.C
 
 
 
-$(BINS): % : %.cxx ../src/*.h
+$(BINS): % : %.cxx ../inc/*.h
 	@echo -n "Building $@ ... "
 	$(CXX) $(CCFLAGS) $< $(INCLUDE) $(LIBS) -g -o $@
 	@echo "Done"
