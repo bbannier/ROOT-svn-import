@@ -256,6 +256,50 @@ void TEvePointSet::SetPointIntIds(Int_t n, Int_t* ids)
 /******************************************************************************/
 
 //______________________________________________________________________________
+void TEvePointSet::SetMarkerStyle(Style_t mstyle)
+{
+   // Set marker style, propagate to projecteds.
+
+   static const TEveException eh("TEvePointSet::SetMarkerStyle ");
+
+   std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
+   while (pi != fProjectedList.end())
+   {
+      TEvePointSet* pt = dynamic_cast<TEvePointSet*>(*pi);
+      if (pt)
+      {
+         pt->SetMarkerStyle(mstyle);
+         pt->StampObjProps();
+      }
+      ++pi;
+   }
+   TAttMarker::SetMarkerStyle(mstyle);
+}
+
+//______________________________________________________________________________
+void TEvePointSet::SetMarkerSize(Size_t msize)
+{
+   // Set marker size, propagate to projecteds.
+
+   static const TEveException eh("TEvePointSet::SetMarkerSize ");
+
+   std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
+   while (pi != fProjectedList.end())
+   {
+      TEvePointSet* pt = dynamic_cast<TEvePointSet*>(*pi);
+      if (pt)
+      {
+         pt->SetMarkerSize(msize);
+         pt->StampObjProps();
+      }
+      ++pi;
+   }
+   TAttMarker::SetMarkerSize(msize);
+}
+
+/******************************************************************************/
+
+//______________________________________________________________________________
 void TEvePointSet::Paint(Option_t* /*option*/)
 {
    // Paint point-set.
@@ -794,4 +838,14 @@ void TEvePointSetProjected::UpdateProjection()
       p[0] = o[0]; p[1] = o[1]; p[2] = o[2];
       proj.ProjectPoint(p[0], p[1], p[2], fDepth);
    }
+}
+
+//______________________________________________________________________________
+void TEvePointSetProjected::PointSelected(Int_t id)
+{
+   // Virtual method of base class TPointSet3D.
+   // Forward to projectable.
+
+   TEvePointSet *ps = dynamic_cast<TEvePointSet*>(fProjectable);
+   ps->PointSelected(id);
 }

@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: MarkovChain.cxx 26805 2009-06-17 14:31:02Z kbelasco $
+// @(#)root/roostats:$Id$
 // Authors: Kevin Belasco        17/06/2009
 // Authors: Kyle Cranmer         17/06/2009
 /*************************************************************************
@@ -115,8 +115,7 @@ void MarkovChain::SetParameters(RooArgSet& parameters)
    fNLL = (RooRealVar*)fDataEntry->find(NLL_NAME);
    fWeight = (RooRealVar*)fDataEntry->find(WEIGHT_NAME);
 
-   fChain = new RooDataSet(DATASET_NAME, "Markov Chain", *fDataEntry);
-   fChain->setWeightVar(*fWeight);
+   fChain = new RooDataSet(DATASET_NAME, "Markov Chain", *fDataEntry,WEIGHT_NAME);
 }
 
 void MarkovChain::Add(RooArgSet& entry, Double_t nllValue, Double_t weight)

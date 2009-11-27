@@ -1040,6 +1040,8 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
                defined->ref = 0;
                break;
             case 'R': /* right shift */
+               // for a>>b, the unsignedness of a defines
+               // whether the result is unsigned
                switch (defined->type) {
                   case 'b':
                   case 'r':
@@ -1049,13 +1051,26 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
                   }
                   break;
                   default:
-                     G__letULonglong(defined, 'm', ulldefined >> ullexpression);
+                     // signed version:
+                     G__letLonglong(defined, 'n', G__Longlong(*defined) >> ullexpression);
                      break;
                }
                defined->ref = 0;
                break;
             case 'L': /* left shift */
-               G__letULonglong(defined, 'm', ulldefined << ullexpression);
+               switch (defined->type) {
+                  case 'b':
+                  case 'r':
+                  case 'h':
+                  case 'k': {
+                     G__letULonglong(defined, 'm', ulldefined << ullexpression);
+                  }
+                  break;
+                  default:
+                     // signed version:
+                     G__letLonglong(defined, 'n', G__Longlong(*defined) << ullexpression);
+                     break;
+               }
                defined->ref = 0;
                break;
             case '!':
@@ -1261,7 +1276,8 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
                   case 'r':
                   case 'h':
                   case 'k': {
-                     G__letLonglong(defined, 'n', lldefined >> llexpression);
+                     G__letULonglong(defined, 'n', 0);
+                     defined->obj.ulo = G__ULonglong(*defined) >> llexpression;
                   }
                   break;
                   default:
@@ -1271,7 +1287,19 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
                defined->ref = 0;
                break;
             case 'L': /* left shift */
-               G__letLonglong(defined, 'n', lldefined << llexpression);
+               switch (defined->type) {
+                  case 'b':
+                  case 'r':
+                  case 'h':
+                  case 'k': {
+                     G__letULonglong(defined, 'n', 0);
+                     defined->obj.ulo = G__ULonglong(*defined) << llexpression;
+                  }
+                  break;
+                  default:
+                     G__letLonglong(defined, 'n', lldefined << llexpression);
+                     break;
+               }
                defined->ref = 0;
                break;
             case '!':
@@ -1504,17 +1532,31 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
                   case 'h':
                   case 'k': {
                      unsigned long uudefined = udefined;
-                     G__letint(defined, 'k', uudefined >> uexpression);
+                     G__letint(defined, 'k', 0);
+                     defined->obj.ulo = uudefined >> uexpression;
                   }
                   break;
                   default:
-                     G__letint(defined, resultTypeChar, udefined >> uexpression);
+                     G__letint(defined, resultTypeChar, G__int(*defined) >> uexpression);
                      break;
                }
                defined->ref = 0;
                break;
             case 'L': /* left shift */
-               G__letint(defined, resultTypeChar, udefined << uexpression);
+               switch (defined->type) {
+                  case 'b':
+                  case 'r':
+                  case 'h':
+                  case 'k': {
+                     unsigned long uudefined = udefined;
+                     G__letint(defined, 'k', 0);
+                     defined->obj.ulo = uudefined << uexpression;
+                  }
+                  break;
+                  default:
+                     G__letint(defined, resultTypeChar, G__int(*defined) << uexpression);
+                     break;
+               }
                defined->ref = 0;
                break;
             case '@': /* power */
@@ -1730,10 +1772,20 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
                break;
             case 'R': /* right shift */
                if (!G__prerun) {
-                  unsigned long udefined = (unsigned long)G__uint(*defined);
-                  unsigned long uexpression = (unsigned long)G__uint(expressionin);
-                  G__letint(defined, resultTypeChar, udefined >> uexpression);
-                  defined->obj.ulo = udefined >> uexpression;
+                  switch (defined->type) {
+                  case 'b':
+                  case 'r':
+                  case 'h':
+                  case 'k': {
+                     unsigned long udefined = (unsigned long)G__uint(*defined);
+                     G__letint(defined, defined->type, 0);
+                     defined->obj.ulo = udefined >> lexpression;
+                  }     
+                  break;
+                  default:
+                     G__letint(defined, defined->type, 0);
+                     defined->obj.i = ldefined >> lexpression;
+                  }
                }
                else {
                   G__letint(defined, resultTypeChar, ldefined >> lexpression);
@@ -1742,10 +1794,20 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
                break;
             case 'L': /* left shift */
                if (!G__prerun) {
-                  long ldefined = G__int(*defined);
-                  unsigned long uexpression = (unsigned long) G__uint(expressionin);
-                  G__letint(defined, defined->type, ldefined << uexpression);
-                  defined->obj.i = ldefined << uexpression;
+                  switch (defined->type) {
+                  case 'b':
+                  case 'r':
+                  case 'h':
+                  case 'k': {
+                     unsigned long udefined = (unsigned long)G__uint(*defined);
+                     G__letint(defined, defined->type, 0);
+                     defined->obj.ulo = udefined << lexpression;
+                  }
+                  break;
+                  default:
+                     G__letint(defined, defined->type, 0);
+                     defined->obj.i = ldefined << lexpression;
+                  }
                }
                else {
                   G__letint(defined, resultTypeChar, ldefined << lexpression);

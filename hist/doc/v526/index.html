@@ -6,9 +6,17 @@
 <h4>new class TGraphTime</h4>
 <ul>
 <li> <tt>TGraphTime</tt> is a new class to organize and draw a list of 
-     objects evolving with time. An example of use is shown in the tutorial
-     <tt>$ROOTSYS/tutorials/graphs/gtime.C</tt>.</li>
+     objects evolving with time. An example of use is shown in the tutorials
+     <tt>$ROOTSYS/tutorials/graphs/gtime.C</tt> and
+     <tt>$ROOTSYS/tutorials/graphs/gtime2.C</tt>.</li>
 </ul>
+<p>The tutorial gtime.C shows the evolution of a set of points with time and it
+produces the following picture.
+<p><img src="gtime.gif"></img></p>
+<p>The tutorial gtime2.C is an example of TGraphTime showing how the class could be used to visualize
+a set of particles with their time stamp in a MonteCarlo program.
+It produces the following picture.
+<p><img src="gtime2.gif"></img></p>
 
 
 
@@ -31,7 +39,6 @@ text sizes:
      to make sure the error bars fit entirely on the plot when a 
      <tt>THStack</tt> is plotted with the option E. The following 
      macro showed the problem:
-<li> An horizontal line was drawn at y=0 when the minimum was negative.
 <pre>
 {
    TH1D *h1 = new TH1D("h1","h1",10,0,10);
@@ -103,6 +110,7 @@ text sizes:
   <a href="https://savannah.cern.ch/bugs/?55911">#55911</a>.
   <li>In the implementation of  TH1::ResetStats(), set the statistics to the one calculated using the bin center and also reset the number of entries to the
       total bin content or to the effective entries in case of a weighted histogram.
+  <li>Check the histogram compatibility, by comparing each bin, in the case of variable bin histogram, when using the histogram operation methods <tt>TH1::Add</tt> or  <tt>TH1::Multiply</tt> or <tt>TH1::Divide</tt>
   </ul>
 
 <h4>THistPainter</h4>
@@ -118,6 +126,14 @@ that the surface is plotted with colors and the contours on top with lines.
   <li>Fixed problem in &lt;http://root.cern.ch/phpBB2/viewtopic.php?t=9208&highlight=&gt;</li>
 </ul>
 
+<h4>TGraphErrors</h4>
+<ul>
+  <li>Add a new fitting option <tt>"EX0"</tt>, to neglect the error in X when fitting
+  </li>
+  </ul>
+
+  
+
 <h4>THnSparse</h4>
 <ul>
   <li>Make a function to generate a THnSparse from a corresponding TH1.</li>
@@ -126,14 +142,39 @@ that the surface is plotted with colors and the contours on top with lines.
   <li>Implement the multiplication proposal in
     &lt;http://root.cern.ch/phpBB2/viewtopic.php?t=7692&gt;, as weel
     as implemeting unit tests for it.</li>
+    <li>Add a new method <tt>Fit()</tt> for fitting a THNSparse. By default the likelihood method is used. For using a least square
+    method (not really reccomended) if the histogram is really sparse, the option "X" must be used.  
 </ul>
+
+<h4>new classes TFitResult, TFitResultPtr</h4>
+<ul>
+ <li> All the <tt>Fit</tt> methods of the Hist library instead of returning an integer now return a <tt>TFitResultPtr</tt> object. The <tt>TFitResultPtr</tt> is an object that converts automatically to an integer, which represents the status code of the fit. If the Fit method is used as before, there is a no visible change for the user.
+  <li>When using the fit option <tt>"S"</tt>, the <tt>TFitResultPtr</tt> will now contain a pointer to the new <tt>TFitResult</tt> class. It will behave as a smart pointer to <tt>TFitResult</tt>,
+by using the <tt>-></tt> operator the user can call the <tt>TFitResult</tt> methods or access directly the <tt>TFitResult</tt> object, by using the de-reference operator <tt>*</tt> or
+  <tt>TFitResultPtr::Get()</tt>. 
+  <li>The <tt>TFitResult</tt> class derives from the <tt>ROOT::Math::FitResult</tt>, which contains all the result information from a fit and from <tt>TNamed</tt>. It provides then I/O capabilities for the FitResult object and convenience methods like <tt>Print()</tt>, <tt>Write()</tt>, <tt>GetCovarianceMatrix()</tt> and <tt>GetCorrelationMatrix()</tt> which return a TMatrixDSym object.
+  <li>Example of usage:
+  <pre>
+     TFitResult r = h->Fit("myFunc","S");
+     TMatrixDSym cov = r->GetCovarianceMatrix();  //  to access the covariance matrix
+     Double_t chi2   = r->Chi2(); // to retrieve the fit chi2 
+     Double_t par0   = r->Value(0); // retrieve the value for the parameter 0 
+     Double_t err0   = r->Error(0); // retrieve the error for the parameter 0 
+     r->Print("V");     // print full information of fit including covariance matrix
+     r->Write();        // store the result in a file
+</pre>
+  </ul>
+  
+
 
 <h3>FitPanel</h3>
 <ul>
   <li>Added predefined 2D Functions.</li>
-  <li>Addition of new minimization algorithms from the GSL library and
-  two genetic minimzers.</li>
+  <li>Addition of new minimization algorithms from the GSL library and foreseen the addition of 
+  genetic minimizers when will be released.</li>
   <li>Fixed up to three bugs from the previous release</li>
+  <li>Added the Update Button. This way the user can update the content of the fitpanel with all the new objects and functions created in the current ROOT session.
+  <li>Changed the way the TF1s were being copied internally. Instead of using TObject::Clone, now it's using the TF1 copy constructor</li>
 </ul>
 
 <h4>new tutorial rebin.C</h4>

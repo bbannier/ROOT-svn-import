@@ -4,7 +4,7 @@
 // author: Gregory Schott
 // date Sep 2009
 //
-// This tutorial shows an example of using the HypoTestInvertor class 
+// This tutorial shows an example of using the HypoTestInverter class 
 //
 /////////////////////////////////////////////////////////////////////////
 
@@ -17,17 +17,18 @@
 #include "RooAddPdf.h"
 #include "RooExtendPdf.h"
 
-#include "RooStats/HypoTestInvertor.h"
-#include "RooStats/HypoTestInvertorResult.h"
-#include "RooStats/HypoTestInvertorPlot.h"
+#include "RooStats/HypoTestInverter.h"
+#include "RooStats/HypoTestInverterResult.h"
+#include "RooStats/HypoTestInverterPlot.h"
 #include "RooStats/HybridCalculator.h"
 
+#include "TGraphErrors.h"
 
 using namespace RooFit;
 using namespace RooStats;
 
 
-void rs801_HypoTestInvertor()
+void rs801_HypoTestInverter()
 {
   // prepare the model
   RooRealVar lumi("lumi","luminosity",1);
@@ -42,23 +43,31 @@ void rs801_HypoTestInvertor()
   RooDataSet* data = totPdf.generate(x,1);
 
   // prepare the calculator
-  HybridCalculator myhc("myhc","",*data, totPdf, bkgPdf,0,0);
-  myhc.SetTestStatistics(2);
-  myhc.SetNumberOfToys(1000);
+  HybridCalculator myhc(*data, totPdf, bkgPdf,0,0);
+  myhc.SetTestStatistic(2);
+  myhc.SetNumberOfToys(500);
   myhc.UseNuisance(false);                            
 
   // run the hypothesis-test invertion
-  HypoTestInvertor myInvertor("myInvertor","",&myhc,&r);
-  myInvertor.SetTestSize(0.05);
-  // myInvertor.RunFixedScan(5,1,6);
-  myInvertor.RunAutoScan(1,6,0.005);
-  myInvertor.RunOnePoint(3.9);
+  HypoTestInverter myInverter("myInverter",&myhc,&r);
+  myInverter.SetTestSize(0.05);
+  myInverter.UseCLs(true);
+  // myInverter.RunFixedScan(5,1,6);
+  myInverter.RunAutoScan(1,6,0.005);  
+  // myInverter.RunAutoScan(1,6,0.005,1);  // run an alternative autoscan algorithm 
+  //myInverter.RunOnePoint(3.9);
 
-  HypoTestInvertorResult* results = myInvertor.GetInterval();
-  HypoTestInvertorPlot myInvertorPlot("myInvertorPlot","",results);
-  TGraph* gr1 = myInvertorPlot.MakePlot();
-  gr1->Draw("ALP*");
+
+  HypoTestInverterResult* results = myInverter.GetInterval();
+
+  HypoTestInverterPlot myInverterPlot("myInverterPlot","",results);
+  TGraphErrors* gr1 = myInverterPlot.MakePlot();
+  gr1->Draw("ALP");
 
   std::cout << "The computed upper limit is: " << results->UpperLimit() << std::endl;
+  std::cout << "an estimated error on this upper limit is: " << results->UpperLimitEstimatedError() << std::endl;
   // expected result: 4.10
+}
+int main() { 
+   rs801_HypoTestInverter();
 }

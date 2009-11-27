@@ -26,8 +26,8 @@ namespace ROOT {
 
    namespace Fit { 
 
-      // This is a proxy to a list<TBox>
-      class TProxyListBox;
+      // This is a proxy to a list<Box>
+      class ProxyListBox;
 
       class SparseData : public FitData  { 
       public:
@@ -64,7 +64,7 @@ namespace ROOT {
          void GetBinDataNoZeros(BinData&) const;
          
       private : 
-         TProxyListBox *fList;
+         ProxyListBox *fList;
       };
       
    } // end namespace Fit

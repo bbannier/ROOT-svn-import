@@ -34,7 +34,7 @@ void rs505_HybridCalculator_significance(const char* fname="WS_GaussOverFlat_wit
   const RooArgSet* nuisanceParam=my_WS->set("parameters");
   
  
-  HybridCalculator * hc=new HybridCalculator("hc","HybridCalculator",*data,*model,*modelBkg);
+  HybridCalculator * hc=new HybridCalculator(*data,*model,*modelBkg);
   hc->SetNumberOfToys(ntoys);
   bool usepriors=false;
 

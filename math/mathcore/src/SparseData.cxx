@@ -33,19 +33,19 @@ namespace ROOT {
 
       //This class is a helper. It represents a bin in N
       //dimensions. The change in the name is to avoid name collision.
-      class TBox
+      class Box
       {
       public:
-         // Creates a TBox with limits specified by the vectors and
+         // Creates a Box with limits specified by the vectors and
          // content=value and error=error
-         TBox(const vector<double>& min, const vector<double>& max, 
+         Box(const vector<double>& min, const vector<double>& max, 
              const double value = 0.0, const double error = 1.0):
             fMin(min), fMax(max), fVal(value), fError(error)
          { }
          
-         // Compares to TBoxes to see if they are equal in all its
+         // Compares to Boxes to see if they are equal in all its
          // variables. This is to be used by the std::find algorithm
-         bool operator==(const TBox& b)
+         bool operator==(const Box& b)
          { return (fMin == b.fMin) && (fMax == b.fMax) 
                && (fVal == b.fVal) && (fError == b.fError);  }
          
@@ -53,16 +53,16 @@ namespace ROOT {
          const vector<double>& GetMin() const { return fMin; }
          // Get the list of maximum coordinates
          const vector<double>& GetMax() const { return fMax; }
-         // Get the value of the TBox
+         // Get the value of the Box
          double GetVal() const { return fVal; }
-         // Get the rror of the TBox
+         // Get the rror of the Box
          double GetError() const { return fError; }
          
-         // Add an amount to the content of the TBox
+         // Add an amount to the content of the Box
          void AddVal(const double value) { fVal += value; }
          
-         friend class TBoxContainer;
-         friend ostream& operator <<(ostream& os, const TBox& b);
+         friend class BoxContainer;
+         friend ostream& operator <<(ostream& os, const Box& b);
          
       private:
          vector<double> fMin;
@@ -73,21 +73,21 @@ namespace ROOT {
       
       // This class is just a helper to be used in std::for_each to
       // simplify the code later. It's just a definition of a method
-      // that will discern whether a TBox is included into another one
-      class TBoxContainer
+      // that will discern whether a Box is included into another one
+      class BoxContainer
       {
       private:
-         const TBox& fBox;
+         const Box& fBox;
       public:
-         //Constructs the TBoxContainer object with a TBox that is meant
+         //Constructs the BoxContainer object with a Box that is meant
          //to include another one that will be provided later
-         TBoxContainer(const TBox& b): fBox(b) {}
+         BoxContainer(const Box& b): fBox(b) {}
          
-         bool operator() (const TBox& b1)
+         bool operator() (const Box& b1)
          { return operator()(fBox, b1);  }
          
          // Looks if b2 is included in b1
-         bool operator() (const TBox& b1, const TBox& b2)
+         bool operator() (const Box& b1, const Box& b2)
          {
             bool isIn = true;
             vector<double>::const_iterator boxit = b2.fMin.begin();
@@ -114,14 +114,14 @@ namespace ROOT {
       
       // Another helper class to be used in std::for_each to simplify
       // the code later. It implements the operator() to know if a
-      // specified TBox is big enough to contain any 'space' inside.
-      class TAreaComparer
+      // specified Box is big enough to contain any 'space' inside.
+      class AreaComparer
       {
       public:
-         TAreaComparer(vector<double>::iterator iter): 
+         AreaComparer(vector<double>::iterator iter): 
             fThereIsArea(true), 
             fIter(iter),
-            fLimit(10 * std::numeric_limits<double>::epsilon())
+            fLimit(8 * std::numeric_limits<double>::epsilon())
          {};
          
          void operator() (double value)
@@ -144,71 +144,71 @@ namespace ROOT {
 
       // This is the key of the SparseData structure. This method
       // will, by recursion, divide the area passed as an argument in
-      // min and max into pieces to insert the TBox defined by bmin and
+      // min and max into pieces to insert the Box defined by bmin and
       // bmax. It will do so from the highest dimension until it gets
       // to 1 and create the corresponding boxes to divide the
       // original space.
       void DivideBox( const vector<double>& min, const vector<double>& max,
                       const vector<double>& bmin, const vector<double>& bmax,
                       const unsigned int size, const unsigned int n,
-                      list<TBox>& l, const double val, const double error)
+                      list<Box>& l, const double val, const double error)
       {
          vector<double> boxmin(min);
          vector<double> boxmax(max);
          
          boxmin[n] = min[n];
          boxmax[n] = bmin[n];
-         if ( for_each(boxmin.begin(), boxmin.end(), TAreaComparer(boxmax.begin())).IsThereArea() )
-            l.push_back(TBox(boxmin, boxmax));
+         if ( for_each(boxmin.begin(), boxmin.end(), AreaComparer(boxmax.begin())).IsThereArea() )
+            l.push_back(Box(boxmin, boxmax));
          
          boxmin[n] = bmin[n];
          boxmax[n] = bmax[n];
          if ( n == 0 ) 
          {
-            if ( for_each(boxmin.begin(), boxmin.end(), TAreaComparer(boxmax.begin())).IsThereArea() )
-               l.push_back(TBox(boxmin, boxmax, val, error));
+            if ( for_each(boxmin.begin(), boxmin.end(), AreaComparer(boxmax.begin())).IsThereArea() )
+               l.push_back(Box(boxmin, boxmax, val, error));
          }
          else
             DivideBox(boxmin, boxmax, bmin, bmax, size, n-1, l, val, error);
          
          boxmin[n] = bmax[n];
          boxmax[n] = max[n];
-         if ( for_each(boxmin.begin(), boxmin.end(), TAreaComparer(boxmax.begin())).IsThereArea() )
-            l.push_back(TBox(boxmin, boxmax));
+         if ( for_each(boxmin.begin(), boxmin.end(), AreaComparer(boxmax.begin())).IsThereArea() )
+            l.push_back(Box(boxmin, boxmax));
       }
       
-      class TProxyListBox
+      class ProxyListBox
       {
       public:
-         void PushBack(TBox& box) { fProxy.push_back(box); }
-         list<TBox>::iterator Begin() { return fProxy.begin(); }
-         list<TBox>::iterator End() { return fProxy.end(); }
-         void Remove(list<TBox>::iterator it) { fProxy.erase(it); }
-         list<TBox>& GetList() { return fProxy; }
+         void PushBack(Box& box) { fProxy.push_back(box); }
+         list<Box>::iterator Begin() { return fProxy.begin(); }
+         list<Box>::iterator End() { return fProxy.end(); }
+         void Remove(list<Box>::iterator it) { fProxy.erase(it); }
+         list<Box>& GetList() { return fProxy; }
       private:
-         list<TBox> fProxy;
+         list<Box> fProxy;
       };
 
 
       SparseData::SparseData(vector<double>& min, vector<double>& max)
       {
          // Creates a SparseData convering the range defined by min
-         // and max. For this it will create an empty TBox for that
+         // and max. For this it will create an empty Box for that
          // range.
-         TBox originalBox(min, max);
-         fList = new TProxyListBox();
+         Box originalBox(min, max);
+         fList = new ProxyListBox();
          fList->PushBack(originalBox);
       }
 
       SparseData::SparseData(const unsigned int dim, double min[], double max[])
       {
          // Creates a SparseData convering the range defined by min
-         // and max. For this it will create an empty TBox for that
+         // and max. For this it will create an empty Box for that
          // range.
          vector<double> minv(min,min+dim);
          vector<double> maxv(max,max+dim);
-         TBox originalBox(minv, maxv);
-         fList = new TProxyListBox();
+         Box originalBox(minv, maxv);
+         fList = new ProxyListBox();
          fList->PushBack(originalBox);
       }
 
@@ -235,11 +235,11 @@ namespace ROOT {
          // or updated it.
 
          // Little box is the new Bin to be added
-         TBox littleBox(min, max);
-         list<TBox>::iterator it;
+         Box littleBox(min, max);
+         list<Box>::iterator it;
          // So we look for the Bin already in the list that contains
          // littleBox
-         it = std::find_if(fList->Begin(), fList->End(), TBoxContainer(littleBox));
+         it = std::find_if(fList->Begin(), fList->End(), BoxContainer(littleBox));
          if ( it != fList->End() )
 //             cout << "Found: " << *it << endl;
             ;
@@ -272,7 +272,7 @@ namespace ROOT {
          // data stored in the class.
 
          unsigned int counter = 0;
-         list<TBox>::iterator it = fList->Begin();
+         list<Box>::iterator it = fList->Begin();
          while ( it != fList->End() && counter != i ) {
             ++it; 
             ++counter;
@@ -290,7 +290,7 @@ namespace ROOT {
       void SparseData::PrintList() const
       {
          // Debug method to print a list with all the data stored.
-         copy(fList->Begin(), fList->End(), ostream_iterator<TBox>(cout, "\n------\n"));
+         copy(fList->Begin(), fList->End(), ostream_iterator<Box>(cout, "\n------\n"));
       }
 
 
@@ -298,11 +298,11 @@ namespace ROOT {
       {
          // Created the corresponding BinData
 
-         list<TBox>::iterator it = fList->Begin();
+         list<Box>::iterator it = fList->Begin();
          const unsigned int dim = it->GetMin().size();
 
          bd.Initialize(fList->GetList().size(), dim); 
-         // Visit all the stored TBoxes
+         // Visit all the stored Boxes
          for ( ; it != fList->End(); ++it )
          {
             vector<double> mid(dim);
@@ -321,10 +321,10 @@ namespace ROOT {
          // Created the corresponding BinData as with the Integral
          // option.
 
-         list<TBox>::iterator it = fList->Begin();
+         list<Box>::iterator it = fList->Begin();
 
          bd.Initialize(fList->GetList().size(), it->GetMin().size()); 
-         // Visit all the stored TBoxes
+         // Visit all the stored Boxes
          for ( ; it != fList->End(); ++it )
          {
             //Store the minimum value
@@ -339,11 +339,11 @@ namespace ROOT {
          // Created the corresponding BinData, but it does not include
          // all the data with value equal to 0.
 
-         list<TBox>::iterator it = fList->Begin();
+         list<Box>::iterator it = fList->Begin();
          const unsigned int dim = it->GetMin().size();
 
          bd.Initialize(fList->GetList().size(), dim);
-         // Visit all the stored TBoxes
+         // Visit all the stored Boxes
          for ( ; it != fList->End(); ++it )
          {
             // if the value is zero, jump to the next
@@ -360,7 +360,7 @@ namespace ROOT {
       }
 
       // Just for debugging pourposes
-      ostream& operator <<(ostream& os, const ROOT::Fit::TBox& b)
+      ostream& operator <<(ostream& os, const ROOT::Fit::Box& b)
       {
          os << "min: ";
          copy(b.GetMin().begin(), b.GetMin().end(), ostream_iterator<double>(os, " "));

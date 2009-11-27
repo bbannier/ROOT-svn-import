@@ -120,6 +120,8 @@
 
 // TEveGedEditor
 #pragma link C++ class TEveGedEditor+;
+#pragma link C++ class TEveGedNameFrame+;
+#pragma link C++ class TEveGedNameTextButton+;
 
 // TEveMacro
 #pragma link C++ class TEveMacro+;

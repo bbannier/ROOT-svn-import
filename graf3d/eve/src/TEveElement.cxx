@@ -341,13 +341,13 @@ void TEveElement::SetVizModel(TEveElement* model)
    // viz-model.
 
    if (fVizModel) {
-      fVizModel->RemoveElement(this);
       --fParentIgnoreCnt;
+      fVizModel->RemoveElement(this);
    }
    fVizModel = model;
    if (fVizModel) {
-      ++fParentIgnoreCnt;
       fVizModel->AddElement(this);
+      ++fParentIgnoreCnt;
    }
 }
 
@@ -1804,6 +1804,15 @@ const TGPicture* TEveElement::GetListTreeCheckBoxIcon()
    if (fRnrChildren ) idx++;
 
    return fgRnrIcons[idx];
+}
+
+//______________________________________________________________________________
+const char* TEveElement::ToString(Bool_t b)
+{
+   // Convert Bool_t to string - kTRUE or kFALSE.
+   // Needed in WriteVizParams().
+
+   return b ? "kTRUE" : "kFALSE";
 }
 
 

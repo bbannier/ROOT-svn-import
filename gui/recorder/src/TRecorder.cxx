@@ -132,6 +132,7 @@
 #include "TLatex.h"
 #include "TVirtualDragManager.h"
 #include "TGPicture.h"
+#include "KeySymbols.h"
 
 // Names of ROOT GUI events. Used for listing event logs.
 const char *kRecEventNames[] = {
@@ -388,8 +389,6 @@ TRecorderReplaying::~TRecorderReplaying()
    fTimer->TurnOff();
    // delete fTimer;
 
-   gClient->Disconnect(gClient, "RegisteredWindow(Window_t)", this,
-                       "WaitForWindow(Window_t)");
    gClient->Disconnect(gClient, "RegisteredWindow(Window_t)", this,
                        "RegisterWindow(Window_t)");
 
@@ -654,11 +653,11 @@ Bool_t TRecorderReplaying::FilterEvent(TRecGuiEvent *e)
 
    // We do not replay any client messages except closing of windows
    if (e->fType == kClientMessage) {
-      if (!((e->fFormat == 32) && ((Atom_t)e->fUser[0] == gWM_DELETE_WINDOW) &&
-            (e->fHandle != gROOT_MESSAGE)))
-         return kTRUE;
-      else
+      if ((e->fFormat == 32) && (e->fHandle != TRecGuiEvent::kROOT_MESSAGE)
+          && ((Atom_t)e->fUser[0] == TRecGuiEvent::kWM_DELETE_WINDOW))
          return kFALSE;
+      else
+         return kTRUE;
    }
 
    // See TRecorderRecording::SetTypeOfConfigureNotify to get know
@@ -807,9 +806,8 @@ Bool_t TRecorderReplaying::CanOverlap()
       return kFALSE;
    }
 
-   // Commandline events.
-   // Overlapping not allowed
-   if (fNextEvent->GetType() == TRecEvent::kCmdEvent)
+   // only GUI events overlapping is allowed
+   if (fNextEvent->GetType() != TRecEvent::kGuiEvent)
       return kFALSE;
 
 
@@ -822,12 +820,9 @@ Bool_t TRecorderReplaying::CanOverlap()
    // GUI event
    TRecGuiEvent *e  = (TRecGuiEvent*) fNextEvent;
 
-   // Overlapping allowed only for ButtonPress
-   if (e->fType == kButtonPress)
-      return kTRUE;
-
-   // and ButtonRelease events
-   if (e->fType == kButtonRelease)
+   // Overlapping allowed for ButtonPress, ButtonRelease and MotionNotify
+   if (e->fType == kButtonPress || e->fType == kButtonRelease ||
+       e->fType == kMotionNotify)
       return kTRUE;
 
    return kFALSE;
@@ -849,6 +844,9 @@ void TRecorderReplaying::ReplayRealtime()
    // to keep events execution in the right order.
    // The excpetions are determined by TRecorderReplaying::CanOverlap()
    //
+
+   UInt_t keysym;
+   char str[2];
 
    if ((gROOT->GetEditorMode() == kText) ||
        (gROOT->GetEditorMode() == kPaveLabel)){
@@ -875,6 +873,22 @@ void TRecorderReplaying::ReplayRealtime()
       // Remembers its execution time to compute time difference with
       // the next event
       fPreviousEventTime = fNextEvent->GetTime();
+
+      // Special execution of events causing potential deadlocks
+      if (fNextEvent->GetType() == TRecEvent::kGuiEvent) {
+         TRecGuiEvent *ev = (TRecGuiEvent *)fNextEvent;
+         if (ev->fType == kGKeyPress && ev->fState & kKeyControlMask) {
+            Event_t *e = ev->CreateEvent(ev);
+            gVirtualX->LookupString(e, str, sizeof(str), keysym);
+            // catch the ctrl-s event
+            if ((keysym & ~0x20) == kKey_S) {
+               fEventReplayed = 1;
+               PrepareNextEvent();
+               ev->ReplayEvent(fShowMouseCursor);
+               return;
+            }
+         }
+      }
 
       // REPLAYS CURRENT EVENT
       fNextEvent->ReplayEvent(fShowMouseCursor);
@@ -1644,8 +1658,14 @@ void TRecorderRecording::CopyEvent(Event_t *e, Window_t wid)
    fGuiEvent->fHandle      = e->fHandle;
    fGuiEvent->fFormat      = e->fFormat;
 
+   if (fGuiEvent->fHandle == gROOT_MESSAGE)
+      fGuiEvent->fHandle = TRecGuiEvent::kROOT_MESSAGE;
+
    for(Int_t i=0; i<5; ++i)
       fGuiEvent->fUser[i] = e->fUser[i];
+
+   if (fGuiEvent->fUser[0] == (Int_t)gWM_DELETE_WINDOW)
+      fGuiEvent->fUser[0] = TRecGuiEvent::kWM_DELETE_WINDOW;
 
    if (e->fType == kGKeyPress || e->fType == kKeyRelease) {
       char tmp[10] = {0};
@@ -2065,7 +2085,8 @@ void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
             // Linux: movement of the window
             // first get window attribute to compensate the border size
             gVirtualX->GetWindowAttributes(e->fWindow, attr);
-            w->Move(e->fX - attr.fX, e->fY - attr.fY);
+            if ((e->fX - attr.fX > 0) && (e->fY - attr.fY > 0))
+               w->Move(e->fX - attr.fX, e->fY - attr.fY);
          }
          else {
             if (e->fUser[4] == TRecGuiEvent::kCNResize) {
@@ -2168,8 +2189,14 @@ Event_t *TRecGuiEvent::CreateEvent(TRecGuiEvent *ge)
    e->fHandle = ge->fHandle;
    e->fFormat = ge->fFormat;
 
+   if (e->fHandle == TRecGuiEvent::kROOT_MESSAGE)
+      e->fHandle = gROOT_MESSAGE;
+
    for(Int_t i=0; i<5; ++i)
       e->fUser[i] = ge->fUser[i];
+
+   if (e->fUser[0] == TRecGuiEvent::kWM_DELETE_WINDOW)
+      e->fUser[0] = gWM_DELETE_WINDOW;
 
    if (ge->fType == kGKeyPress || ge->fType == kKeyRelease) {
       e->fCode    = gVirtualX->KeysymToKeycode(ge->fCode);

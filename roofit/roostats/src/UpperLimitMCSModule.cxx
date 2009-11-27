@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: CombinedCalculator.h 30450 2009-09-25 13:30:32Z moneta $
+// @(#)root/roostats:$Id$
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke, Nils Ruthmann
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -210,7 +210,7 @@ Bool_t UpperLimitMCSModule::processBetweenGenAndFit(Int_t /*sampleNum*/) {
 
 
   //Go to the fit Value for zour POI to make sure upperlimit works correct.
-  fitModel()->fitTo(*genSample());
+  //fitModel()->fitTo(*genSample());
   
 
 
@@ -218,15 +218,15 @@ Bool_t UpperLimitMCSModule::processBetweenGenAndFit(Int_t /*sampleNum*/) {
   
   _data->add(RooArgSet(*_ul));
   std::cout<<"UL:"<<_ul->getVal()<<std::endl;
-  if (_ul->getVal()<1){
+//   if (_ul->getVal()<1){
     
-  RooStats::LikelihoodIntervalPlot plotpll((RooStats::LikelihoodInterval*) pllint);
-  TCanvas c1;
-  plotpll.Draw();
-  c1.Print("test.ps");
-  std::cout<<" UL<1 whats going on here?"<<std::endl;
-  abort();
-  }
+//   RooStats::LikelihoodIntervalPlot plotpll((RooStats::LikelihoodInterval*) pllint);
+//   TCanvas c1;
+//   plotpll.Draw();
+//   c1.Print("test.ps");
+//   std::cout<<" UL<1 whats going on here?"<<std::endl;
+//   abort();
+//   }
   
   delete pllint;
   
