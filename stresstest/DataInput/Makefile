@@ -5,14 +5,14 @@
 
 MAKEFLAGS = --no-print-directory -r -s
 
-INCLUDE = -I../../include $(shell root-config --cflags)
-LIBS    = -L../../lib/ $(shell root-config --libs) -lTMVA.1 -lMLP -lTreePlayer -lMinuit
+INCLUDE = -I../../../tmva/include $(shell root-config --cflags)
 
 BINS = TMVATestDataInput
 
 ROOTFILES = TMVAInputData.root
 
-TMVALIB = ../lib/libTMVA.1.so
+TMVALIB =../../../tmva/lib/libTMVA.1.so
+LIBS    = -L../../../tmva/lib $(shell root-config --libs) -lTMVA.1 -lMLP -lTreePlayer -lMinuit
 
 all: $(BINS) TMVAInputData.root
 
@@ -28,8 +28,13 @@ clean:
 fullclean: clean
 	rm -rf results weights
 
-$(BINS): % : %.cxx ../../src/*.h *.h
+$(TMVALIB):
+	echo make sure that the local TMVA lib can be found here: $(TMVALIB)
+
+$(BINS): % : %.cxx *.cxx *.h $(TMVALIB) 
+	echo make sure that LD_LIBRARY_PATH is set via tmva/test/setup.sh
 	@echo -n "Building $@ ... "
+	echo $(CXX) $(CCFLAGS) $(INCLUDE) $(LIBS) -g -o 
 	$(CXX) $(CCFLAGS) $< $(INCLUDE) $(LIBS) -g -o $@
 	@echo "Done"
 
