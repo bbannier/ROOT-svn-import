@@ -1617,12 +1617,13 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
    Bool_t emptyUndefined  = kTRUE;
 
    // check if the vectors of all classes are empty
+   //Int_t n = 0;
    emptyTraining  = dsi.GetNClasses()  <= UInt_t(std::count_if( tmpEventVector[Types::kTraining].begin(), tmpEventVector[Types::kTraining].end(), 
-								std::mem_fun_ref(&EventVector::empty) ) );
+                                                                std::mem_fun_ref(&EventVector::empty)) );
    emptyTesting   = dsi.GetNClasses()  <= UInt_t(std::count_if( tmpEventVector[Types::kTesting].begin(), tmpEventVector[Types::kTesting].end(), 
-								std::mem_fun_ref(&EventVector::empty) ) );
+                                                                std::mem_fun_ref(&EventVector::empty)) );
    emptyUndefined = dsi.GetNClasses()  <= UInt_t(std::count_if( tmpEventVector[Types::kMaxTreeType].begin(), tmpEventVector[Types::kMaxTreeType].end(), 
-								std::mem_fun_ref(&EventVector::empty) ) );
+                                                                std::mem_fun_ref(&EventVector::empty)) );
 
    TMVA::RandomGenerator rndm( splitSeed );
    
@@ -1865,33 +1866,33 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
       // insert other classes
       EvtVecIt itTarget;
       for( UInt_t cls = 1; cls < dsi.GetNClasses(); ++cls ){
-	 Log() << kDEBUG << "insert class " << cls << Endl;
-	 // training vector
-	 itTarget = --(trainingEventVector->begin()); // start one before begin
-	 // loop over source 
-	 for( itEvent = tmpEventVector[Types::kTraining].at(cls).begin(), itEventEnd = tmpEventVector[Types::kTraining].at(cls).end(); itEvent != itEventEnd; ++itEvent ){
-	    if( std::distance( itTarget, trainingEventVector->end()) < Int_t(cls+1) ) {
-	       itTarget = trainingEventVector->end();
-	       trainingEventVector->insert( itTarget, itEvent, itEventEnd ); // fill in the rest without mixing
-	       break;
-	    }else{ 
-	       itTarget += cls+1;
-	       trainingEventVector->insert( itTarget, (*itEvent) ); // fill event
-	    }
-	 }
-	 // testing vector
-	 itTarget = --(testingEventVector->begin());
-	 // loop over source 
-	 for( itEvent = tmpEventVector[Types::kTesting].at(cls).begin(), itEventEnd = tmpEventVector[Types::kTesting].at(cls).end(); itEvent != itEventEnd; ++itEvent ){
-	    if( std::distance( itTarget, testingEventVector->end()) < Int_t(cls+1) ) {
-	       itTarget = testingEventVector->end();
-	       testingEventVector->insert( itTarget, itEvent, itEventEnd ); // fill in the rest without mixing
-	       break;
-	    }else{ 
-	       itTarget += cls+1;
-	       testingEventVector->insert( itTarget, (*itEvent) ); // fill event
-	    }
-	 }
+         Log() << kDEBUG << "insert class " << cls << Endl;
+         // training vector
+         itTarget = trainingEventVector->begin() - 1; // start one before begin
+         // loop over source 
+         for( itEvent = tmpEventVector[Types::kTraining].at(cls).begin(), itEventEnd = tmpEventVector[Types::kTraining].at(cls).end(); itEvent != itEventEnd; ++itEvent ){
+            if( std::distance( itTarget, trainingEventVector->end()) < Int_t(cls+1) ) {
+               itTarget = trainingEventVector->end();
+               trainingEventVector->insert( itTarget, itEvent, itEventEnd ); // fill in the rest without mixing
+               break;
+            }else{ 
+               itTarget += cls+1;
+               trainingEventVector->insert( itTarget, (*itEvent) ); // fill event
+            }
+         }
+         // testing vector
+         itTarget = testingEventVector->begin() - 1;
+         // loop over source 
+         for( itEvent = tmpEventVector[Types::kTesting].at(cls).begin(), itEventEnd = tmpEventVector[Types::kTesting].at(cls).end(); itEvent != itEventEnd; ++itEvent ){
+            if( std::distance( itTarget, testingEventVector->end()) < Int_t(cls+1) ) {
+               itTarget = testingEventVector->end();
+               testingEventVector->insert( itTarget, itEvent, itEventEnd ); // fill in the rest without mixing
+               break;
+            }else{ 
+               itTarget += cls+1;
+               testingEventVector->insert( itTarget, (*itEvent) ); // fill event
+            }
+         }
       }
 
       // debugging output: classnumbers of all events in training and testing vectors
