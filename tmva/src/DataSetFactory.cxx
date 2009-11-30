@@ -1612,18 +1612,12 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
 						 UInt_t splitSeed)
 {
    // Select and distribute unassigned events to kTraining and kTesting
-   Bool_t emptyTraining   = kTRUE;
-   Bool_t emptyTesting    = kTRUE;
    Bool_t emptyUndefined  = kTRUE;
 
-   // check if the vectors of all classes are empty
-   //Int_t n = 0;
-   emptyTraining  = dsi.GetNClasses()  <= UInt_t(std::count_if( tmpEventVector[Types::kTraining].begin(), tmpEventVector[Types::kTraining].end(), 
-                                                                std::mem_fun_ref(&EventVector::empty)) );
-   emptyTesting   = dsi.GetNClasses()  <= UInt_t(std::count_if( tmpEventVector[Types::kTesting].begin(), tmpEventVector[Types::kTesting].end(), 
-                                                                std::mem_fun_ref(&EventVector::empty)) );
-   emptyUndefined = dsi.GetNClasses()  <= UInt_t(std::count_if( tmpEventVector[Types::kMaxTreeType].begin(), tmpEventVector[Types::kMaxTreeType].end(), 
-                                                                std::mem_fun_ref(&EventVector::empty)) );
+//    // check if the vectors of all classes are empty
+   for( Int_t cls = 0, clsEnd = dsi.GetNClasses(); cls < clsEnd; ++cls ){
+      emptyUndefined |= tmpEventVector[Types::kMaxTreeType].at(cls).empty();
+   }
 
    TMVA::RandomGenerator rndm( splitSeed );
    
