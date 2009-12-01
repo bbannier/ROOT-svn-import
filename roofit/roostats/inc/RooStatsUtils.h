@@ -28,7 +28,12 @@
 #include <iostream>
 using namespace std ;
 
+static bool fVerbose = false;
+
 namespace RooStats {
+
+  inline void SetVerbose( bool verbose ) { fVerbose = verbose; }
+  inline bool isVerbose() { return fVerbose; }
 
   // returns one-sided significance corresponding to a p-value
   inline Double_t PValueToSignificance(Double_t pvalue){
