@@ -32,21 +32,21 @@
 #include "DataInputTest.h"
 
 //_______________________________________________________________________
-void PrepareVector(TTree* tree, std::vector<Float_t>& event)
+void PrepareVector( TTree* tree, std::vector<Float_t>& event )
 {
-  event.resize(7);
-  tree->SetBranchAddress("var1",&event[0]);
-  tree->SetBranchAddress("var2",&event[1]);
-  tree->SetBranchAddress("var3",&event[2]);
-  tree->SetBranchAddress("var4",&event[3]);
-  tree->SetBranchAddress("issig",&event[4]);
-  tree->SetBranchAddress("istest",&event[5]);
-  tree->SetBranchAddress("isfake",&event[6]);
+   event.resize(7);
+   tree->SetBranchAddress("var1",&event[0]);
+   tree->SetBranchAddress("var2",&event[1]);
+   tree->SetBranchAddress("var3",&event[2]);
+   tree->SetBranchAddress("var4",&event[3]);
+   tree->SetBranchAddress("issig",&event[4]);
+   tree->SetBranchAddress("istest",&event[5]);
+   tree->SetBranchAddress("isfake",&event[6]);
 }
 
 //_______________________________________________________________________
 void CopyToDouble(std::vector<Float_t>& fevent, std::vector<Double_t>& devent)
-{
+{ // ToDo make this function obsolete at some point
    devent.resize(fevent.size());
    for (int i=0;i<fevent.size();i++) devent[i]=fevent[i];
 }
