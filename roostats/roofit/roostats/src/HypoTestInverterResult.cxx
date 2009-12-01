@@ -97,6 +97,16 @@ double HypoTestInverterResult::GetYError( int index ) const
     return ((HybridResult*)fYObjects.At(index))->CLsplusbError();
 }
 
+HypoTestResult* HypoTestInverterResult::GetResult( int index ) const
+{
+  if ( index >= ArraySize() || index<0 ) {
+    std::cout << "Problem: You are asking for an impossible array index value\n";
+    return 0;
+  }
+
+  return ((HypoTestResult*) fYObjects.At(index));
+}
+
 double HypoTestInverterResult::FindInterpolatedLimit(double target)
 {
   std::cout << "Interpolate the upper limit between the 2 results closest to the target confidence level" << endl;
