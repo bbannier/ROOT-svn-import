@@ -10,11 +10,11 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-# define REFLEX_BUILD
+#define REFLEX_BUILD
 #endif
 
 #ifndef REFLEX_BUILD
-# define REFLEX_BUILD
+#define REFLEX_BUILD
 #endif
 
 #include "Reflex/PluginService.h"
@@ -31,96 +31,97 @@ using namespace std;
 //
 //                 The Plugin Service
 //
-//  This classes have been developed to enhance Reflex with plugin capabilities.
+//  This classes have been developed to enhance Reflex with plugin capabilities. 
 //  The main goals have been:
 //
 //  - Simplification of the code. Replace existing factories
-//  - Compatibility with other plugins and dictionary systems since they are based
+//  - Compatibility with other plugins and dictionary systems since they are based 
 //    also on roopmap files
 //  - Dependent exclusively on Reflex
-//  - Possible replacement for the SEAL plugin manager that could be of interest
+//  - Possible replacement for the SEAL plugin manager that could be of interest 
 //    for CORAL, POOL, COOL, etc.
 //
 //
 //  Using the package
 //
-//  There is not predefined model on what a plugin/component can be. Any class
-//  can be a plugin. The plugin factory is declared in the user code with the exact
-//  signature of the constructor and the type returned (base class or interface) by
+//  There is not predefined model on what a plugin/component can be. Any class 
+//  can be a plugin. The plugin factory is declared in the user code with the exact 
+//  signature of the constructor and the type returned (base class or interface) by 
 //  the factory.
 //
 // Begin_Html
 
 /*
-   // <pre>
-   //  class MyClass : public ICommon {
-   //    MyClass(int, ISvc*);
-   //    ...
-   //  };
-   //
-   //  PLUGINSVC_FACTORY(MyClass,ICommon*(int,ISvc*));
-   //  PLUGINSVC_FACTORY_WITH_ID(MyClass, 666, ICommon*(int,ISvc*));
-   // </pre>
- */
+// <pre>
+//  class MyClass : public ICommon {
+//    MyClass(int, ISvc*);
+//    ...
+//  };
+//
+//  PLUGINSVC_FACTORY(MyClass,ICommon*(int,ISvc*));
+//  PLUGINSVC_FACTORY_WITH_ID(MyClass, 666, ICommon*(int,ISvc*));
+// </pre>
+*/
 // End_Html
 //
 //
 //  Implementation
 //
-//  The rootmap file, which is a text file containing the association between the
-//  plugins and the libraries that implements them, is generated automatically at
-//  build time with the help of the genmap utility program. This program loads each
-//  library and discovers what plugins it contains. The plugin can be easily
-//  instantiated in the user code by using the class name or an ID class with strong
-//  type checking on the constructor arguments. An ID class can be any class that
-//  defined operator==() and ostream& operator<<(). The library containing the plugin
-//  will be loaded if needed. The classes are almost standalone with an exclusive
-//  dependency on Reflex.
+//  The rootmap file, which is a text file containing the association between the 
+//  plugins and the libraries that implements them, is generated automatically at 
+//  build time with the help of the genmap utility program. This program loads each 
+//  library and discovers what plugins it contains. The plugin can be easily 
+//  instantiated in the user code by using the class name or an ID class with strong 
+//  type checking on the constructor arguments. An ID class can be any class that 
+//  defined operator==() and ostream& operator<<(). The library containing the plugin 
+//  will be loaded if needed. The classes are almost standalone with an exclusive 
+//  dependency on Reflex. 
 //
 // Begin_Html
 
 /*
-   // <pre>
-   //  ISvc* svc = ...
-   //  ICommon* myc;
-   //  myc = PluginSvc::create<ICommon*>(“MyClass”,10, svc);
-   //  // or PluginSvc::createWithId<ICommon*>(666,10, svc);
-   //  if ( myc ) {
-   //    myc->doSomething();
-   //  }
-   // </pre>
- */
+// <pre>
+//  ISvc* svc = ...
+//  ICommon* myc;
+//  myc = PluginSvc::create<ICommon*>(“MyClass”,10, svc);
+//  // or PluginSvc::createWithId<ICommon*>(666,10, svc);
+//  if ( myc ) {
+//    myc->doSomething();
+//  }
+// </pre>
+*/
 // End_Html
 
 
 //-------------------------------------------------------------------------------
 void*
 Reflex::PluginService::Create(const string& name,
-                              const Type& ret,
-                              const vector<ValueObject>& arg) {
+                                       const Type & ret, 
+                                       const vector<ValueObject> & arg,
+                                       const Reflex::Dictionary& dictionary) {
 //-------------------------------------------------------------------------------
 // Create a Plugin. Pass ownership of created object (i.e. returned value) to caller,
 // UNLESS it's a pointer or a reference - then it's up to the plugin creator function
 // and the caller to define the ownership.
 
-   static Object dummy;
+   static Object dummy; 
    vector<void*> argv;
    vector<Type> argt;
 
-   for (vector<ValueObject>::const_iterator i = arg.begin(); i != arg.end(); i++) {
+   for ( vector<ValueObject>::const_iterator i = arg.begin(); i != arg.end(); i++ ){
       argv.push_back(i->Address());
-      argt.push_back(Type(i->TypeOf(), 0));  // Ignore argument CV qualifiers
+      argt.push_back(Type(i->TypeOf(),0));  // Ignore argument CV qualifiers
    }
-   Type signature = FunctionTypeBuilder(ret, argt);
+   Type signature = FunctionTypeBuilder(dictionary, ret, argt);
    string factoryname = FactoryName(name);
 
    //---Look first is the member exists ----
-   if (!Instance().fFactories.FunctionMemberByName(factoryname)) {
+   if( ! Instance().fFactories.FunctionMemberByName(factoryname) ) {
       string mapname = string(PLUGINSVC_FACTORY_NS) + "@@" + factoryname;
-
+      
       int rett = Instance().LoadFactoryLib(mapname);
 
-      if (!rett) {
+      if ( ! rett ) {
          if (Debug()) {
             cout << "PluginService: Could not load library associated to plugin " << name << endl;
          }
@@ -129,11 +130,11 @@ Reflex::PluginService::Create(const string& name,
    }
    Member m = Instance().fFactories.FunctionMemberByName(FactoryName(name), signature);
 
-   if (!m) {
+   if ( !m ) {
       if (Debug() > 1) {
          cout << "PluginService: Could not find factory for " << name << " with signature " << signature.Name() << endl;
       }
-      return 0;
+      return 0; 
    } else {
       Type retType = m.TypeOf().ReturnType();
 
@@ -155,44 +156,45 @@ Reflex::PluginService::Create(const string& name,
 //-------------------------------------------------------------------------------
 void*
 Reflex::PluginService::CreateWithId(const Any& id,
-                                    std::string (* str)(const Any&),
+                                                std::string (*str)(const Any&),  
                                     bool (* cmp)(const Any&,
                                                  const Any&),
-                                    const Type& ret,
-                                    const vector<ValueObject>& arg) {
+                                                const Type& ret, 
+                                                const vector<ValueObject>& arg,
+                                                const Reflex::Dictionary& dictionary) {
 //-------------------------------------------------------------------------------
 // Create plugin with Id.
-   static Object dummy;
+   static Object dummy; 
    vector<void*> argv;
    vector<Type> argt;
 
-   for (vector<ValueObject>::const_iterator i = arg.begin(); i != arg.end(); i++) {
+   for ( vector<ValueObject>::const_iterator i = arg.begin(); i != arg.end(); i++ ){
       argv.push_back(i->Address());
-      argt.push_back(Type(i->TypeOf(), 0));  // Ignore argument CV qualifiers
+      argt.push_back(Type(i->TypeOf(),0));  // Ignore argument CV qualifiers
    }
-   Type signature = FunctionTypeBuilder(ret, argt);
+   Type signature = FunctionTypeBuilder(dictionary, ret, argt);
 
    string factoryname = FactoryName(str(id));
-
-   if (!Instance().fFactories.FunctionMemberByName(factoryname)) {
+   
+   if( ! Instance().fFactories.FunctionMemberByName(factoryname) ) {
       string mapname = string(PLUGINSVC_FACTORY_NS) + "@@" + factoryname;
       int rett = Instance().LoadFactoryLib(mapname);
 
-      if (!rett) {
+      if ( ! rett ) {
          if (Debug()) {
             cout << "PluginSvc: Could not load library associated to plugin with ID" << str(id) << endl;
          }
          return 0;
       }
    }
-
+   
    //--- loop over members
    Member m;
 
-   for (Member_Iterator it = Instance().fFactories.FunctionMember_Begin();
-        it != Instance().fFactories.FunctionMember_End(); ++it) {
+   for (Member_Iterator it = Instance().fFactories.FunctionMember_Begin(); 
+        it != Instance().fFactories.FunctionMember_End(); ++it ) {
       if (it->Properties().HasProperty("id")) {
-         if (cmp(it->Properties().PropertyValue("id"), id)) {
+         if ( cmp(it->Properties().PropertyValue("id"),id) ) {
             if (signature.IsEquivalentTo(it->TypeOf())) {
                m = *it;
                break;
@@ -200,12 +202,12 @@ Reflex::PluginService::CreateWithId(const Any& id,
          }
       }
    }
-
-   if (!m) {
+   
+   if ( !m ) {
       if (Debug() > 1) {
          cout << "PluginService: Could not find factory for " << str(id) << " with signature " << signature.Name() << endl;
       }
-      return 0;
+      return 0; 
    } else {
       Type retType = m.TypeOf().ReturnType();
 
@@ -230,7 +232,7 @@ Reflex::PluginService::FactoryName(const string& name) {
    static string chars(":<> *&, ");
    string::size_type pos1 = name.find_first_not_of(' ');
    string::size_type pos2 = name.find_last_not_of(' ');
-   string res = name.substr(pos1 == string::npos ? 0 : pos1,
+   string res = name.substr(pos1 == string::npos ? 0 : pos1, 
                             pos2 == string::npos ? name.length() - 1 : pos2 - pos1 + 1);
 
    for (string::iterator i = res.begin(); i != res.end(); i++) {
@@ -243,11 +245,11 @@ Reflex::PluginService::FactoryName(const string& name) {
 
 
 //-------------------------------------------------------------------------------
-Reflex::PluginService::PluginService(): fDebugLevel(0) {
+Reflex::PluginService::PluginService() : fDebugLevel(0) {
 //-------------------------------------------------------------------------------
 // Constructor.
-   NamespaceBuilder(PLUGINSVC_FACTORY_NS);
-   fFactories = Scope::ByName(PLUGINSVC_FACTORY_NS);
+   NamespaceBuilder(Dictionary::Main(), PLUGINSVC_FACTORY_NS);
+   fFactories = Scope::ByName(PLUGINSVC_FACTORY_NS, Dictionary::Main());
    fFactoryMap = new PluginFactoryMap();
 }
 
@@ -277,7 +279,7 @@ Reflex::PluginService::Debug() {
 // Get debug level.
    return Instance().fDebugLevel;
 }
-
+ 
 
 //-------------------------------------------------------------------------------
 void
@@ -287,19 +289,19 @@ Reflex::PluginService::SetDebug(int l) {
    PluginFactoryMap::SetDebug(l);
    Instance().fDebugLevel = l;
 }
-
-
+    
+ 
 //-------------------------------------------------------------------------------
 int
 Reflex::PluginService::LoadFactoryLib(const string& name) {
 //-------------------------------------------------------------------------------
-// Load libraries needed for a plugin to instantiate.
+// Load libraries needed for a plugin to instantiate. 
    list<string> libs = Instance().fFactoryMap->GetLibraries(name);
 
-   for (list<string>::reverse_iterator i = libs.rbegin(); i != libs.rend(); i++) {
+   for ( list<string>::reverse_iterator i = libs.rbegin(); i != libs.rend(); i++ ) {
       SharedLibrary sl(*i);
 
-      if (sl.Load()) {
+      if ( sl.Load() ) {
          if (Debug()) {
             cout << "PluginService: Loaded library  " << *i << endl;
          }

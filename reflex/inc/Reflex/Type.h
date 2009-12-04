@@ -14,6 +14,7 @@
 
 // Include files
 #include "Reflex/Kernel.h"
+#include "Reflex/Dictionary.h"
 #include <vector>
 #include <string>
 #include <typeinfo>
@@ -214,7 +215,7 @@ public:
     * @param  key fully qualified name of the type as string
     * @return reflection type information
     */
-   static Type ByName(const std::string& key);
+   static Type ByName(const std::string& key, const Dictionary& dictionary = Dictionary::Current());
 
 
    /**
@@ -223,7 +224,7 @@ public:
     * @param  tid std::type_info to look for
     * @return reflection information of type
     */
-   static Type ByTypeInfo(const std::type_info& tid);
+   static Type ByTypeInfo(const std::type_info& tid, const Dictionary& dictionary = Dictionary::Current());
 
 
    /**
@@ -1211,6 +1212,12 @@ public:
 
    /** */
    const TypeBase* ToTypeBase() const;
+
+
+   /**
+    * Dictionary into which this type is registered
+    */
+   Dictionary DictionaryGet() const;
 
    REPRESTYPE RepresType() const;
 
@@ -2284,7 +2291,8 @@ inline void
 Reflex::Type::AddSubScope(const char* scop,
                           TYPE scopeTyp) const {
 //-------------------------------------------------------------------------------
-   return operator Scope().AddSubScope(scop, scopeTyp);
+   Scope thisScope = operator Scope();
+   return thisScope.AddSubScope(thisScope.DictionaryGet(), scop, scopeTyp);
 }
 
 
@@ -2304,7 +2312,8 @@ Reflex::Type::AddSubType(const char* typ,
                          const std::type_info& ti,
                          unsigned int modifiers) const {
 //-------------------------------------------------------------------------------
-   return operator Scope().AddSubType(typ, size, typeTyp, ti, modifiers);
+   Scope thisScope = operator Scope();
+   return thisScope.AddSubType(thisScope.DictionaryGet(), typ, size, typeTyp, ti, modifiers);
 }
 
 
@@ -2359,6 +2368,14 @@ Reflex::Type::SetTypeInfo(const std::type_info& ti) const {
    }
 }
 
+//-------------------------------------------------------------------------------
+inline Reflex::Dictionary Reflex::Type::DictionaryGet() const {
+//-------------------------------------------------------------------------------
+   if (* this)
+      return fTypeName->NamesGet();
+   else
+      return Dictionary::Main();
+}
 
 #ifdef REFLEX_CINT_MERGE
 inline bool

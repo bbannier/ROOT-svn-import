@@ -17,6 +17,10 @@
 #include "ScopedType.h"
 
 namespace Reflex {
+
+   class Dictionary;
+
+
 /**
  * @class Union Union.h Reflex/Union.h
  * @author Stefan Roiser
@@ -26,7 +30,7 @@ namespace Reflex {
 class Union: public ScopedType {
 public:
    /** constructor */
-   Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, TYPE unionType = UNION);
+   Union( const Reflex::Dictionary& dictionary, const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, TYPE unionType = UNION);
 
    /** destructor */
    virtual ~Union();

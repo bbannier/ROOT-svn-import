@@ -10,7 +10,7 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-# define REFLEX_BUILD
+#define REFLEX_BUILD
 #endif
 
 #include "Pointer.h"
@@ -22,11 +22,12 @@
 using namespace std;
 
 //-------------------------------------------------------------------------------
-Reflex::Pointer::Pointer(const Type& pointerType,
-                         const std::type_info& ti)
+Reflex::Pointer::Pointer( const Reflex::Dictionary& dictionary, 
+                          const Type & pointerType,
+                                const std::type_info & ti )
 //-------------------------------------------------------------------------------
-   : TypeBase(BuildTypeName(pointerType).c_str(), sizeof(void*), POINTER, ti, Type(), (REPRESTYPE) toupper(pointerType.RepresType() ? pointerType.RepresType(): Reflex::REPRES_CLASS)),
-   fPointerType(pointerType) {
+   : TypeBase(dictionary, BuildTypeName(pointerType).c_str(), sizeof(void*), POINTER, ti, Type(), (REPRESTYPE) toupper(pointerType.RepresType() ? pointerType.RepresType(): Reflex::REPRES_CLASS)),
+     fPointerType( pointerType ) { 
    // Construct the dictionary info for a pointer type.
 }
 
@@ -36,14 +37,14 @@ std::string
 Reflex::Pointer::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the pointer type.
-   return BuildTypeName(fPointerType, mod);
+   return BuildTypeName( fPointerType, mod );
 }
 
 
 //-------------------------------------------------------------------------------
 std::string
 Reflex::Pointer::BuildTypeName(const Type& pointerType,
-                               unsigned int mod) {
+                                                  unsigned int mod ) {
 //-------------------------------------------------------------------------------
 // Build the pointer type name.
    if (!pointerType.IsFunction()) {
@@ -53,19 +54,19 @@ Reflex::Pointer::BuildTypeName(const Type& pointerType,
    else {
       std::string s = pointerType.ReturnType().Name(mod);
       s += " (";
-      const Scope& decl = pointerType.DeclaringScope();
+      const Scope & decl = pointerType.DeclaringScope();
 
       if (decl) {
          s += decl.Name(SCOPED) + ":: ";
       }
       s += "*)(";
 
-      if (pointerType.FunctionParameterSize()) {
+      if ( pointerType.FunctionParameterSize() ) {
          Type_Iterator pend = pointerType.FunctionParameter_End();
 
-         for (Type_Iterator ti = pointerType.FunctionParameter_Begin();
-              ti != pend;) {
-            s += ti->Name(mod);
+         for ( Type_Iterator ti = pointerType.FunctionParameter_Begin();
+               ti != pend; ) {
+            s += ti->Name( mod );
 
             if (++ti != pend) {
                s += ",";

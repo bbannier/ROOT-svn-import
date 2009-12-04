@@ -78,22 +78,22 @@ Tools::GetBaseName(const std::string& name,
 EFUNDAMENTALTYPE
 Tools::FundamentalType(const Type& typ) {
    // Return an enum representing the fundamental type passed in.
-   static const TypeBase* stb_Char = Type::ByName("char").ToTypeBase();
-   static const TypeBase* stb_SigChar = Type::ByName("signed char").ToTypeBase();
-   static const TypeBase* stb_ShoInt = Type::ByName("short int").ToTypeBase();
-   static const TypeBase* stb_Int = Type::ByName("int").ToTypeBase();
-   static const TypeBase* stb_LonInt = Type::ByName("long int").ToTypeBase();
-   static const TypeBase* stb_UnsChar = Type::ByName("unsigned char").ToTypeBase();
-   static const TypeBase* stb_UnsShoInt = Type::ByName("unsigned short int").ToTypeBase();
-   static const TypeBase* stb_UnsInt = Type::ByName("unsigned int").ToTypeBase();
-   static const TypeBase* stb_UnsLonInt = Type::ByName("unsigned long int").ToTypeBase();
-   static const TypeBase* stb_Bool = Type::ByName("bool").ToTypeBase();
-   static const TypeBase* stb_Float = Type::ByName("float").ToTypeBase();
-   static const TypeBase* stb_Double = Type::ByName("double").ToTypeBase();
-   static const TypeBase* stb_LonDouble = Type::ByName("long double").ToTypeBase();
-   static const TypeBase* stb_Void = Type::ByName("void").ToTypeBase();
-   static const TypeBase* stb_LonLong = Type::ByName("long long").ToTypeBase();
-   static const TypeBase* stb_UnsLonLong = Type::ByName("unsigned long long").ToTypeBase();
+   static const TypeBase* stb_Char = Type::ByName("char", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_SigChar = Type::ByName("signed char", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_ShoInt = Type::ByName("short int", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_Int = Type::ByName("int", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_LonInt = Type::ByName("long int", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_UnsChar = Type::ByName("unsigned char", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_UnsShoInt = Type::ByName("unsigned short int", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_UnsInt = Type::ByName("unsigned int", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_UnsLonInt = Type::ByName("unsigned long int", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_Bool = Type::ByName("bool", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_Float = Type::ByName("float", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_Double = Type::ByName("double", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_LonDouble = Type::ByName("long double", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_Void = Type::ByName("void", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_LonLong = Type::ByName("long long", Dictionary::Main()).ToTypeBase();
+   static const TypeBase* stb_UnsLonLong = Type::ByName("unsigned long long", Dictionary::Main()).ToTypeBase();
 
    const TypeBase* tbType = typ.FinalType().ToTypeBase();
 

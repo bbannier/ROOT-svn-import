@@ -38,6 +38,7 @@ class MemberTemplate;
 class OwnedMemberTemplate;
 class Type;
 class DictionaryGenerator;
+class Dictionary;
 class OnDemandBuilder;
 
 /**
@@ -56,7 +57,8 @@ public:
    };
 
    /** constructor within a At*/
-   ScopeBase(const char* scope,
+   ScopeBase(const Dictionary& dictionary,
+             const char* scope,
              TYPE scopeType);
 
 
@@ -206,9 +208,10 @@ public:
 
    /**
     * GlobalScope will return the global scope representation\
+    * @param dictionary the dictionary from which to get the global scope
     * @return global scope
     */
-   static Scope GlobalScope();
+   static Scope GlobalScope(const Dictionary& dictionary);
 
 
    /**
@@ -268,30 +271,42 @@ public:
     * LookupMember will lookup a member in the current scope
     * @param nam the string representation of the member to lookup
     * @param current the current scope
+    * @param dictionary the dictionary into which to search, by default, the dictionary of this
     * @return if a matching member is found return it, otherwise return empty member
     */
    Member LookupMember(const std::string& nam,
                        const Scope& current) const;
+   Member LookupMember(const std::string& nam,
+                       const Scope& current,
+                       const Dictionary& dictionary) const;
 
 
    /**
     * LookupType will lookup a type in the current scope
     * @param nam the string representation of the type to lookup
     * @param current the current scope
+    * @param dictionary the dictionary into which to search, by default, the dictionary of this
     * @return if a matching type is found return it, otherwise return empty type
     */
    Type LookupType(const std::string& nam,
                    const Scope& current) const;
+   Type LookupType(const std::string& nam,
+                   const Scope& current,
+                   const Dictionary& dictionary) const;
 
 
    /**
     * LookupType will lookup a scope in the current scope
     * @param nam the string representation of the scope to lookup
     * @param current the current scope
+    * @param dictionary the dictionary into which to search, by default, the dictionary of this
     * @return if a matching scope is found return it, otherwise return empty scope
     */
    Scope LookupScope(const std::string& nam,
                      const Scope& current) const;
+   Scope LookupScope(const std::string& nam,
+                     const Scope& current,
+                     const Dictionary& dictionary) const;
 
 
    /**
@@ -367,7 +382,7 @@ public:
     * SimpleName returns the name of the type as a reference. It provides a
     * simplified but faster generation of a type name. Attention currently it
     * is not guaranteed that Name() and SimpleName() return the same character
-    * layout of a name (ie. spacing, commas, etc. )
+    * layout of a name (ie. spacing, commas, etc.)
     * @param pos will indicate where in the returned reference the requested name starts
     * @param mod The only 'mod' support is SCOPED
     * @return name of type
@@ -435,7 +450,8 @@ public:
     * @param unscoped name of the sub scope to look for
     * @return Scope representation of the sub scope
     */
-   Scope SubScopeByName(const std::string& nam) const;
+   Scope SubScopeByName(const std::string& nam,
+                        const Dictionary& dictionary) const;
 
 
    Scope_Iterator SubScope_Begin() const;
@@ -464,7 +480,8 @@ public:
     * @param string of the unscoped sub type to look for
     * @return Type representation of the sub type
     */
-   Type SubTypeByName(const std::string& nam) const;
+   Type SubTypeByName(const std::string& nam,
+                      const Dictionary& dictionary) const;
 
 
    Type_Iterator SubType_Begin() const;
@@ -525,6 +542,9 @@ public:
 
 protected:
    /** protected constructor for initialisation of the global namespace */
+   ScopeBase(const Dictionary& dictionary);
+
+   /** forbidden */
    ScopeBase();
 
 public:
@@ -579,7 +599,8 @@ public:
     * @param sc pointer to Scope
     */
    virtual void AddSubScope(const Scope& sc) const;
-   virtual void AddSubScope(const char* scope,
+   virtual void AddSubScope(const Dictionary& dictionary,
+                            const char* scope,
                             TYPE scopeType) const;
 
 
@@ -588,7 +609,8 @@ public:
     * @param sc pointer to Type
     */
    virtual void AddSubType(const Type& ty) const;
-   virtual void AddSubType(const char* type,
+   virtual void AddSubType(const Dictionary& dictionary,
+                           const char* type,
                            size_t size,
                            TYPE typeType,
                            const std::type_info& ti,
@@ -649,7 +671,8 @@ public:
    virtual void UnhideName() const;
 
    /** Initialize the vector of inherited members.
-       Returns false if one of the bases is not complete. */
+    * Returns false if one of the bases is not complete.
+    */
    virtual bool UpdateMembers() const;
 
    void RegisterOnDemandBuilder(OnDemandBuilder* builder,
@@ -657,8 +680,9 @@ public:
 
 protected:
    /** The MemberByName work-horse: find a member called name in members,
-       if signature also compare its signature, and if matchReturnType
-       also compare the signature's return types. */
+    * if signature also compare its signature, and if matchReturnType
+    * also compare the signature's return types.
+    */
    Member MemberByName2(const std::vector<Member>& members,
                         const std::string& name,
                         const Type* signature = 0,

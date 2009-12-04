@@ -10,7 +10,7 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-# define REFLEX_BUILD
+#define REFLEX_BUILD
 #endif
 
 #include "Union.h"
@@ -18,9 +18,8 @@
 #include "Reflex/Tools.h"
 
 //______________________________________________________________________________
-Reflex::Union::Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, TYPE unionType /*=UNION*/):
-   ScopedType(typ, size, unionType, ti, Type(), modifiers, REPRES_STRUCT)
-   ,
+Reflex::Union::Union(const Reflex::Dictionary& dictionary, const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, TYPE unionType /*=UNION*/):
+   ScopedType(dictionary, typ, size, unionType, ti, Type(), modifiers, REPRES_STRUCT),
    fCompleteType(false) {
 // Construct union info.
 }
@@ -66,13 +65,13 @@ Reflex::Union::AddFunctionMember(const char* nam,
                                  void* stubCtx,
                                  const char* params,
                                  unsigned int modifiers) const {
-   // Add function member to this union.
+// Add function member to this union.
    Member fm(ScopeBase::AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
 
    if (fm.IsConstructor()) {
       fConstructors.push_back(fm);
    } else if (fm.IsDestructor()) {
       fDestructor = fm;
-   }
+}
    return fm;
 }

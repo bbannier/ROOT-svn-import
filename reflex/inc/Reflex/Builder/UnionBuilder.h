@@ -20,6 +20,7 @@ namespace Reflex {
 // forward declarations
 class Union;
 class Type;
+class Dictionary;
 
 /**
  * @class UnionBuilderImpl UnionBuilder.h Reflex/Builder/UnionBuilder.h
@@ -30,7 +31,7 @@ class Type;
 class RFLX_API UnionBuilderImpl {
 public:
    /** constructor */
-   UnionBuilderImpl(const char* nam, size_t size, const std::type_info & ti, unsigned int modifiers = 0, TYPE typ = UNION);
+   UnionBuilderImpl( const Reflex::Dictionary& dictionary, const char* nam, size_t size, const std::type_info& ti, unsigned int modifiers = 0, TYPE typ = UNION);
 
    /** destructor */
    virtual ~UnionBuilderImpl();
@@ -42,6 +43,13 @@ public:
     */
    void AddItem(const char* nam,
                 const Type& typ);
+
+   /**
+    * AddItem will add one union item
+    * @param Name the Name of the union item
+    * @param At the At of the union item
+    */
+   void AddItem(const char* nam, const char* typ);
 
    /** AddDataMember will add the information about one data
     * MemberAt of the union
@@ -130,7 +138,7 @@ private:
 class RFLX_API UnionBuilder {
 public:
    /** constructor */
-   UnionBuilder(const char* nam, const std::type_info & ti, size_t size, unsigned int modifiers = 0, TYPE typ = UNION);
+   UnionBuilder(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, TYPE typ = UNION);
 
    /** destructor */
    virtual ~UnionBuilder();

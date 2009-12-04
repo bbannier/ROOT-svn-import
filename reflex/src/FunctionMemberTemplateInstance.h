@@ -17,10 +17,10 @@
 #include "TemplateInstance.h"
 
 namespace Reflex {
-// forward declarations
-class Type;
+   // forward declarations
+   class Type;
 
-/**
+   /**
  * @class FunctionMemberTemplateInstance FunctionMemberTemplateInstance.h Reflex/FunctionMemberTemplateInstance.h
  * @author Stefan Roiser
  * @date 13/1/2004
@@ -28,15 +28,16 @@ class Type;
  */
 class FunctionMemberTemplateInstance: public FunctionMember,
    public TemplateInstance {
-public:
+   public:
    /** default constructor */
-   FunctionMemberTemplateInstance(const char* nam,
-                                  const Type& typ,
+      FunctionMemberTemplateInstance( const Reflex::Dictionary& dictionary, 
+                                      const char * nam,
+         const Type & typ,
                                   StubFunction stubFP,
-                                  void* stubCtx = 0,
-                                  const char* params = 0,
+         void * stubCtx = 0,
+         const char * params = 0, 
                                   unsigned int modifiers = 0,
-                                  const Scope& scop = Scope());
+         const Scope & scop = Scope());
 
 
    /** destructor */
@@ -49,7 +50,7 @@ public:
     * @param  typedefexp expand typedefs or not
     * @return fully qualified Name of templated function
     */
-   std::string Name(unsigned int mod = 0) const;
+      std::string Name( unsigned int mod = 0 ) const;
 
 
    /**
@@ -57,7 +58,7 @@ public:
     * @param  nth nth template argument
     * @return pointer to nth template argument
     */
-   Type TemplateArgumentAt(size_t nth) const;
+      Type TemplateArgumentAt( size_t nth ) const;
 
 
    /**
@@ -79,17 +80,17 @@ public:
     */
    MemberTemplate TemplateFamily() const;
 
-private:
-   /**
+   private:
+      /** 
     * The template type (family)
     * @label template family
     * @link aggregation
     * @clientCardinality 1
     * @supplierCardinality 1
     */
-   MemberTemplate fTemplateFamily;
+      MemberTemplate fTemplateFamily;      
 
-};    // class FunctionMemberTemplateInstance
+   }; // class FunctionMemberTemplateInstance
 } // namespace Reflex
 
 //-------------------------------------------------------------------------------

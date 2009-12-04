@@ -10,11 +10,12 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-# define REFLEX_BUILD
+#define REFLEX_BUILD
 #endif
 
 #include "Reflex/Type.h"
 
+#include "Reflex/Dictionary.h"
 #include "Reflex/Object.h"
 #include "Reflex/Scope.h"
 #include "Reflex/Base.h"
@@ -79,26 +80,26 @@ Reflex::Type::BaseAt(size_t nth) const {
 
 //-------------------------------------------------------------------------------
 Reflex::Type
-Reflex::Type::ByName(const std::string& key) {
+Reflex::Type::ByName( const std::string & key, const Reflex::Dictionary& dictionary ) {
 //-------------------------------------------------------------------------------
 // Lookup a type by its fully qualified name.
-   return TypeName::ByName(key);
+   return TypeName::ByName( key, *dictionary.fNames );
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Type
-Reflex::Type::ByTypeInfo(const std::type_info& tid) {
+Reflex::Type::ByTypeInfo( const std::type_info & tid, const Reflex::Dictionary& dictionary ) {
 //-------------------------------------------------------------------------------
 // Lookup a type by its type_info.
-   return TypeName::ByTypeInfo(tid);
+   return TypeName::ByTypeInfo( tid, *dictionary.fNames );
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Object
-Reflex::Type::CastObject(const Type& to,
-                         const Object& obj) const {
+Reflex::Type::CastObject( const Type & to,
+                                const Object & obj ) const {
 //-------------------------------------------------------------------------------
 // Cast the current type to "to" using the object obj.
    if (*this) {
@@ -109,32 +110,32 @@ Reflex::Type::CastObject(const Type& to,
 
 
 /*/-------------------------------------------------------------------------------
-   Reflex::Object
+  Reflex::Object 
    Reflex::Type::Construct( const Type & signature,
-   const std::vector < Object > & values,
+  const std::vector < Object > & values, 
    void * mem ) const {
    //-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->Construct( signature,
-   values,
-   mem );
+  if ( * this ) return fTypeName->fTypeBase->Construct( signature, 
+  values, 
+  mem ); 
    return Object();
    }
- */
+*/
 
 
 //-------------------------------------------------------------------------------
 Reflex::Object
-Reflex::Type::Construct(const Type& signature,
-                        const std::vector<void*>& values,
-                        void* mem) const {
+Reflex::Type::Construct( const Type & signature,
+                               const std::vector < void * > & values, 
+                               void * mem ) const {
 //-------------------------------------------------------------------------------
 // Construct this type and return it as an object. Signature can be used for overloaded
 // constructors. Values is a collection of memory addresses of paramters. Mem the memory
 // address for in place construction.
    if (*this) {
       return fTypeName->fTypeBase->Construct(signature,
-                                             values,
-                                             mem);
+                                                         values, 
+                                                         mem ); 
    }
    return Dummy::Object();
 }
@@ -185,7 +186,7 @@ Reflex::Type::FunctionMemberAt(size_t nth,
 //-------------------------------------------------------------------------------
 Reflex::Member
 Reflex::Type::FunctionMemberByName(const std::string& nam,
-                                   const Type& signature,
+                                                   const Type & signature,
                                    unsigned int modifiers_mask /*= 0*/,
                                    EMEMBERQUERY inh,
                                    EDELAYEDLOADSETTING allowDelayedLoad) const {
@@ -199,7 +200,7 @@ Reflex::Type::FunctionMemberByName(const std::string& nam,
 bool
 Reflex::Type::HasBase(const Type& cl) const {
 //-------------------------------------------------------------------------------
-// Return base info if type has base cl.
+   // Return base info if type has base cl.
    return operator Scope().HasBase(cl);
 }
 
@@ -221,18 +222,18 @@ Reflex::Type::IsEquivalentTo(const Type& typ,
    unsigned int mod1 = t1.fModifiers | modifiers_mask;
    unsigned int mod2 = t2.fModifiers | modifiers_mask;
 
-   while (t1.IsTypedef()) {
+   while (t1.IsTypedef()) { 
       t1 = t1.ToType();
       mod1 |= t1.fModifiers;
    }
 
-   while (t2.IsTypedef()) {
+   while ( t2.IsTypedef()) {
       t2 = t2.ToType();
       mod2 |= t2.fModifiers;
    }
 
    if (mod1 == mod2) {
-      switch (t1.TypeType()) {
+      switch ( t1.TypeType() ) {
       case CLASS:
       case STRUCT:
       case TYPETEMPLATEINSTANCE:
@@ -272,15 +273,15 @@ Reflex::Type::IsEquivalentTo(const Type& typ,
          }
       case FUNCTION:
 
-         if (t2.IsFunction()) {
-            if (t1.ReturnType().IsEquivalentTo(t2.ReturnType(), modifiers_mask)) {
-               if (t1.FunctionParameterSize() == t2.FunctionParameterSize()) {
+         if ( t2.IsFunction() ) {
+            if ( t1.ReturnType().IsEquivalentTo(t2.ReturnType(),modifiers_mask)) {
+               if ( t1.FunctionParameterSize() == t2.FunctionParameterSize() ) {
                   Type_Iterator pi1;
                   Type_Iterator pi2;
 
-                  for (pi1 = t1.FunctionParameter_Begin(), pi2 = t2.FunctionParameter_Begin();
-                       pi1 != t1.FunctionParameter_End(), pi2 != t2.FunctionParameter_End();
-                       ++pi1, ++pi2) {
+                  for ( pi1 = t1.FunctionParameter_Begin(), pi2 = t2.FunctionParameter_Begin(); 
+                        pi1 != t1.FunctionParameter_End(),  pi2 != t2.FunctionParameter_End(); 
+                        ++pi1, ++pi2 ) {
                      if (!pi1->IsEquivalentTo(*pi2, modifiers_mask)) {
                         return false;
                      }
@@ -318,18 +319,18 @@ Reflex::Type::IsSignatureEquivalentTo(const Type& typ,
    unsigned int mod1 = t1.fModifiers | modifiers_mask;
    unsigned int mod2 = t2.fModifiers | modifiers_mask;
 
-   while (t1.IsTypedef()) {
+   while (t1.IsTypedef()) { 
       t1 = t1.ToType();
       mod1 |= t1.fModifiers;
    }
 
-   while (t2.IsTypedef()) {
+   while ( t2.IsTypedef()) {
       t2 = t2.ToType();
       mod2 |= t2.fModifiers;
    }
 
    if (mod1 == mod2) {
-      switch (t1.TypeType()) {
+      switch ( t1.TypeType() ) {
       case CLASS:
       case STRUCT:
       case TYPETEMPLATEINSTANCE:
@@ -369,14 +370,14 @@ Reflex::Type::IsSignatureEquivalentTo(const Type& typ,
          }
       case FUNCTION:
 
-         if (t2.IsFunction()) {
-            if (t1.FunctionParameterSize() == t2.FunctionParameterSize()) {
+         if ( t2.IsFunction() ) {
+            if ( t1.FunctionParameterSize() == t2.FunctionParameterSize() ) {
                Type_Iterator pi1;
                Type_Iterator pi2;
 
-               for (pi1 = t1.FunctionParameter_Begin(), pi2 = t2.FunctionParameter_Begin();
-                    pi1 != t1.FunctionParameter_End(), pi2 != t2.FunctionParameter_End();
-                    ++pi1, ++pi2) {
+               for ( pi1 = t1.FunctionParameter_Begin(), pi2 = t2.FunctionParameter_Begin(); 
+                     pi1 != t1.FunctionParameter_End(),  pi2 != t2.FunctionParameter_End(); 
+                     ++pi1, ++pi2 ) {
                   if (!pi1->IsEquivalentTo(*pi2, modifiers_mask)) {
                      return false;
                   }
@@ -431,16 +432,16 @@ Reflex::Type::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the type (qualified and scoped if requested)
 
-   if ((mod & (QUALIFIED | Q)) == 0 && (*this)) {
+   if (( mod & ( QUALIFIED | Q ))==0 && (* this) ) { 
       // most common case
-      return fTypeName->fTypeBase->Name(mod);
+      return fTypeName->fTypeBase->Name( mod );
    }
 
    std::string s = "";
    std::string cv = "";
 
    /** apply qualifications if wanted */
-   if (0 != (mod & (QUALIFIED | Q))) {
+   if ( 0 != ( mod & ( QUALIFIED | Q ))) {
       if (IsConst() && IsVolatile()) {
          cv = "const volatile";
       } else if (IsConst()) {
@@ -454,20 +455,20 @@ Reflex::Type::Name(unsigned int mod) const {
    if (cv.length() && TypeType() != POINTER && TypeType() != FUNCTION) {
       s += cv + " ";
    }
-
+  
    /** use implemented names if available */
    if (*this) {
       s += fTypeName->fTypeBase->Name(mod);
    }
    /** otherwise use the TypeName */
    else {
-      if (fTypeName) {
+      if ( fTypeName ) {
          /** unscoped At Name */
          if (0 != (mod & (SCOPED | S))) {
             s += fTypeName->Name();
          } else { s += Tools::GetBaseName(fTypeName->Name()); }
       } else {
-         return "";
+         return ""; 
       }
    }
 
@@ -489,7 +490,7 @@ Reflex::Type::Name(unsigned int mod) const {
 Reflex::Scope
 Reflex::Type::PointerToMemberScope() const {
 //-------------------------------------------------------------------------------
-// Return the scope of the pointer to member type
+   // Return the scope of the pointer to member type
    if (*this) {
       return fTypeName->fTypeBase->PointerToMemberScope();
    }
@@ -520,7 +521,7 @@ Reflex::Type
 Reflex::Type::TypeAt(size_t nth) {
 //-------------------------------------------------------------------------------
 // Return the nth type defined in Reflex.
-   return TypeName::TypeAt(nth);
+   return TypeName::TypeAt( nth );
 }
 
 
@@ -567,26 +568,26 @@ Reflex::Type::Unload() const {
 #ifdef REFLEX_CINT_MERGE
 bool
 Reflex::Type::operator &&(const Scope& right) const
-{ return operator bool() && (bool) right; }
+{ return operator bool() && (bool)right; }
 
 bool
 Reflex::Type::operator &&(const Type& right) const
-{ return operator bool() && (bool) right; }
+{ return operator bool() && (bool)right; }
 
 bool
 Reflex::Type::operator &&(const Member& right) const
-{ return operator bool() && (bool) right; }
+{ return operator bool() && (bool)right; }
 
 bool
 Reflex::Type::operator ||(const Scope& right) const
-{ return operator bool() && (bool) right; }
+{ return operator bool() && (bool)right; }
 
 bool
 Reflex::Type::operator ||(const Type& right) const
-{ return operator bool() && (bool) right; }
+{ return operator bool() && (bool)right; }
 
 bool
 Reflex::Type::operator ||(const Member& right) const
-{ return operator bool() || (bool) right; }
+{ return operator bool() || (bool)right; }
 
 #endif

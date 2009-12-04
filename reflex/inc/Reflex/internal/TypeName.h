@@ -14,6 +14,7 @@
 
 // Include files
 #include "Reflex/Kernel.h"
+#include "Names.h"
 #include <string>
 #include <typeinfo>
 
@@ -34,7 +35,8 @@ class RFLX_API TypeName {
 
 public:
    /** default constructor */
-   TypeName(const char* nnam,
+   TypeName(Reflex::Names& names,
+            const char* nnam,
             TypeBase * typeBas,
             const std::type_info * ti = 0);
 
@@ -45,7 +47,7 @@ public:
     * @param  key fully qualified Name of the At as string
     * @return pointer to At or 0 if none is found
     */
-   static Type ByName(const std::string& key);
+   static Type ByName(const std::string& key, const Names& names);
 
 
    /**
@@ -54,7 +56,7 @@ public:
     * @param  tid string representation of the type_info At
     * @return pointer to At or 0 if none is found
     */
-   static Type ByTypeInfo(const std::type_info& ti);
+   static Type ByTypeInfo(const std::type_info& ti, const Names& names);
 
 
    static void CleanUp();
@@ -98,6 +100,13 @@ public:
     * @return corresponding Type to this TypeName
     */
    Type ThisType() const;
+
+
+   /**
+    * Names registry containing this.
+    * @return a reference to the containing type names registry
+    */
+   Names& NamesGet() const;
 
 
    /**
@@ -152,6 +161,14 @@ private:
     */
    Type* fThisType;
 
+   /**
+    * Reference to the owing names registry
+    * @link aggregation
+    * @supplierCardinality 1
+    * @clientCardinality 1..
+    */
+   Names& fNames;
+
 };    // class TypeName
 
 } // namespace Reflex
@@ -171,5 +188,11 @@ Reflex::TypeName::Name_c_str() const {
    return fName.c_str();
 }
 
+
+//-------------------------------------------------------------------------------
+inline Reflex::Names& Reflex::TypeName::NamesGet() const {
+//-------------------------------------------------------------------------------
+   return fNames;
+}
 
 #endif // Reflex_TypeName

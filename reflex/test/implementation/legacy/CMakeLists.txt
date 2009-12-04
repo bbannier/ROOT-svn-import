@@ -13,6 +13,7 @@ REFLEX_ADD_TEST("test_Reflex_generate" test_Reflex_generate
                 DICTIONARIES test_Class2DictRflx)
 
 REFLEX_ADD_EXECUTABLE(test_Reflex_unit TEST test_Reflex_unit.cxx)
+ADD_DEPENDENCIES(test_Reflex_unit Reflex)
 TARGET_LINK_LIBRARIES(test_Reflex_unit Reflex ${CPPUNIT_LIBRARY})
 REFLEX_ADD_TEST("test_Reflex_unit" test_Reflex_unit)
 

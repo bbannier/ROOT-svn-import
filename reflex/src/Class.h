@@ -26,18 +26,19 @@ class Member;
 class MemberTemplate;
 class TypeTemplate;
 class DictionaryGenerator;
+class Dictionary;
 
 
 /**
- * @class Class Class.h Reflex/Class.h
- * @author Stefan Roiser
- * @date 24/11/2003
- * @ingroup Ref
- */
+* @class Class Class.h Reflex/Class.h
+* @author Stefan Roiser
+* @date 24/11/2003
+* @ingroup Ref
+*/
 class Class: public ScopedType {
 public:
    /** constructor */
-   Class(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers = 0, TYPE classType = CLASS);
+   Class( const Reflex::Dictionary& dictionary, const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers = 0, TYPE classType = CLASS);
 
    /** destructor */
    virtual ~Class();
@@ -81,8 +82,8 @@ public:
    virtual Object Construct(const Type& signature = Type(),
                             const std::vector<void*>& values = std::vector<void*>(),
                             void* mem = 0) const;
-
-
+   
+   
    /**
     * nthDataMember will return the nth data MemberAt of the At
     * @param  nth data MemberAt
@@ -327,7 +328,7 @@ private:
    /** map with the class as a key and the path to it as the value
       the key (void*) is a pointer to the unique ScopeName */
    typedef std::vector<OffsetFunction> BasePath_t;
-   typedef std::map<void*, std::vector<OffsetFunction>*> PathsToBase;
+   typedef std::map<void*, std::vector<OffsetFunction>* > PathsToBase;
 
    struct InheritedMembersInfo_t {
       InheritedMembersInfo_t(size_t ndata, size_t nfunc):
@@ -431,7 +432,7 @@ inline Reflex::Base
 Reflex::Class::BaseAt(size_t nth) const {
 //-------------------------------------------------------------------------------
    if (nth < fBases.size()) {
-      return fBases[nth];
+      return fBases[ nth ];
    }
    return Dummy::Base();
 }
@@ -465,7 +466,7 @@ Reflex::Class::Base_End() const {
 inline Reflex::Reverse_Base_Iterator
 Reflex::Class::Base_RBegin() const {
 //-------------------------------------------------------------------------------
-   return ((const std::vector<Base> &)fBases).rbegin();
+   return ((const std::vector<Base>&)fBases).rbegin();
 }
 
 
@@ -473,7 +474,7 @@ Reflex::Class::Base_RBegin() const {
 inline Reflex::Reverse_Base_Iterator
 Reflex::Class::Base_REnd() const {
 //-------------------------------------------------------------------------------
-   return ((const std::vector<Base> &)fBases).rend();
+   return ((const std::vector<Base>&)fBases).rend();
 }
 
 
@@ -486,7 +487,7 @@ Reflex::Class::DataMember_Begin(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return fInherited->fDataMembers.begin();
       } else { return Dummy::MemberCont().begin(); }
-   }
+}
    return fDataMembers.begin();
 }
 
@@ -500,7 +501,7 @@ Reflex::Class::DataMember_End(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return fInherited->fDataMembers.end();
       } else { return Dummy::MemberCont().end(); }
-   }
+}
    return fDataMembers.end();
 }
 
@@ -514,7 +515,7 @@ Reflex::Class::DataMember_RBegin(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fDataMembers).rbegin();
       } else { return Dummy::MemberCont().rbegin(); }
-   }
+}
    return ((const std::vector<Member> &)fDataMembers).rbegin();
 }
 
@@ -528,7 +529,7 @@ Reflex::Class::DataMember_REnd(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fDataMembers).rend();
       } else { return Dummy::MemberCont().rend(); }
-   }
+}
    return ((const std::vector<Member> &)fDataMembers).rend();
 }
 
@@ -544,11 +545,11 @@ Reflex::Class::DataMemberAt(size_t nth,
       if (Class::UpdateMembers() && nth < fInherited->fDataMembers.size()) {
          return fInherited->fDataMembers[nth];
       } else { return Dummy::Member(); }
-   }
+}
 
    if (nth < fDataMembers.size()) {
       return fDataMembers[nth];
-   }
+}
    return Dummy::Member();
 }
 
@@ -564,7 +565,7 @@ Reflex::Class::DataMemberByName(const std::string& nam,
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fDataMembers, nam);
       } else { return Dummy::Member(); }
-   }
+}
    return MemberByName2(fDataMembers, nam);
 }
 
@@ -579,7 +580,7 @@ Reflex::Class::DataMemberSize(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return fInherited->fDataMembers.size();
       } else { return 0; }
-   }
+}
    return fDataMembers.size();
 }
 
@@ -587,13 +588,13 @@ Reflex::Class::DataMemberSize(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 inline Reflex::Member_Iterator
 Reflex::Class::FunctionMember_Begin(EMEMBERQUERY inh) const {
-//-------------------------------------------------------------------------------
+   //-------------------------------------------------------------------------------
    ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return fInherited->fFunctionMembers.begin();
       } else { return Dummy::MemberCont().begin(); }
-   }
+}
    return fFunctionMembers.begin();
 }
 
@@ -607,7 +608,7 @@ Reflex::Class::FunctionMember_End(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return fInherited->fFunctionMembers.end();
       } else { return Dummy::MemberCont().end(); }
-   }
+}
    return fFunctionMembers.end();
 }
 
@@ -621,7 +622,7 @@ Reflex::Class::FunctionMember_RBegin(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fFunctionMembers).rbegin();
       } else { return Dummy::MemberCont().rbegin(); }
-   }
+}
    return ((const std::vector<Member> &)fFunctionMembers).rbegin();
 }
 
@@ -635,7 +636,7 @@ Reflex::Class::FunctionMember_REnd(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fFunctionMembers).rend();
       } else { return Dummy::MemberCont().rend(); }
-   }
+}
    return ((const std::vector<Member> &)fFunctionMembers).rend();
 }
 
@@ -651,11 +652,11 @@ Reflex::Class::FunctionMemberAt(size_t nth,
       if (Class::UpdateMembers() && nth < fInherited->fFunctionMembers.size()) {
          return fInherited->fFunctionMembers[nth];
       } else { return Dummy::Member(); }
-   }
+}
 
    if (nth < fFunctionMembers.size()) {
       return fFunctionMembers[nth];
-   }
+}
    return Dummy::Member();
 }
 
@@ -675,7 +676,7 @@ Reflex::Class::FunctionMemberByName(const std::string& nam,
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fFunctionMembers, nam, &signature, modifiers_mask);
       } else { return Dummy::Member(); }
-   }
+}
    return MemberByName2(fFunctionMembers, nam, &signature, modifiers_mask);
 }
 
@@ -695,7 +696,7 @@ Reflex::Class::FunctionMemberByNameAndSignature(const std::string& nam,
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fFunctionMembers, nam, &signature, modifiers_mask, false);
       } else { return Dummy::Member(); }
-   }
+}
    return MemberByName2(fFunctionMembers, nam, &signature, modifiers_mask, false);
 }
 
@@ -710,7 +711,7 @@ Reflex::Class::FunctionMemberSize(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return fInherited->fFunctionMembers.size();
       } else { return 0; }
-   }
+}
    return fFunctionMembers.size();
 }
 
@@ -725,7 +726,7 @@ Reflex::Class::Member_Begin(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return fInherited->fMembers.begin();
       } else { return Dummy::MemberCont().begin(); }
-   }
+}
    return ScopeBase::Member_Begin(inh);
 }
 
@@ -740,7 +741,7 @@ Reflex::Class::Member_End(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return fInherited->fMembers.end();
       } else { return Dummy::MemberCont().end(); }
-   }
+}
    return ScopeBase::Member_End(inh);
 }
 
@@ -755,7 +756,7 @@ Reflex::Class::Member_RBegin(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fMembers).rbegin();
       } else { return Dummy::MemberCont().rbegin(); }
-   }
+}
    return ScopeBase::Member_RBegin(inh);
 }
 
@@ -770,7 +771,7 @@ Reflex::Class::Member_REnd(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fMembers).rend();
       } else { return Dummy::MemberCont().rend(); }
-   }
+}
    return ScopeBase::Member_REnd(inh);
 }
 
@@ -787,11 +788,11 @@ Reflex::Class::MemberAt(size_t nth,
       if (Class::UpdateMembers() && nth < fInherited->fMembers.size()) {
          return fInherited->fMembers[nth];
       } else { return Dummy::Member(); }
-   }
+}
 
    if (nth < fMembers.size()) {
       return fMembers[nth];
-   }
+}
    return Dummy::Member();
 }
 
@@ -809,7 +810,7 @@ Reflex::Class::MemberByName(const std::string& nam,
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fMembers, nam, &signature);
       } else { return Dummy::Member(); }
-   }
+}
    return ScopeBase::MemberByName(nam, signature, inh);
 }
 
@@ -825,7 +826,7 @@ Reflex::Class::MemberSize(EMEMBERQUERY inh) const {
       if (Class::UpdateMembers()) {
          return fInherited->fMembers.size();
       } else { return 0; }
-   }
+}
    return fMembers.size();
 }
 
