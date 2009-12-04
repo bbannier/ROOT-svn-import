@@ -145,7 +145,7 @@ MACRO (_REFLEX_GET_DICTIONARIES_PATH dictionaries _path)
 
       GET_TARGET_PROPERTY(_type ${_d} TYPE)
 
-      IF (${_type} STREQUAL "MODULE_LIBRARY")
+      IF (${_type} STREQUAL "SHARED_LIBRARY")
 
          MACRO_GET_TARGET_DIRECTORY(${_d} _location)
          IF (UNIX)
@@ -154,7 +154,7 @@ MACRO (_REFLEX_GET_DICTIONARIES_PATH dictionaries _path)
             SET(${_path} "${_location}\;${${_path}}")
          ENDIF (UNIX)
 
-      ENDIF (${_type} STREQUAL "MODULE_LIBRARY")
+      ENDIF (${_type} STREQUAL "SHARED_LIBRARY")
 
    ENDFOREACH (_d ${dictionaries})
 
@@ -215,9 +215,10 @@ ENDMACRO (REFLEX_ADD_LIBRARY name)
 
 MACRO (REFLEX_ADD_DICTIONARY name)
 
-   MACRO_PARSE_ARGUMENTS(ADD_DICTIONARY "SELECTION;OPTIONS" "WITH_PREFIX;TEST" "${ARGN}")
+   MACRO_PARSE_ARGUMENTS(ADD_DICTIONARY "SELECTION;OPTIONS;EXTRA_FILES" "WITH_PREFIX;TEST" "${ARGN}")
 
    SET(_genreflex_files ${ADD_DICTIONARY_DEFAULT_ARGS})
+   SET(_genreflex_extra_files ${ADD_DICTIONARY_EXTRA_FILES})
    SET(_genreflex_options ${ADD_DICTIONARY_OPTIONS})
    SET(_genreflex_selection ${ADD_DICTIONARY_SELECTION})
 
@@ -226,13 +227,13 @@ MACRO (REFLEX_ADD_DICTIONARY name)
                                 SELECTION ${_genreflex_selection}
                                 OPTIONS ${_genreflex_options})
 
-   SET(_add_library_params MODULE)
+   SET(_add_library_params SHARED)
 
    IF (ADD_DICTIONARY_TEST)
       SET(_add_library_params ${_add_library_params} TEST)
    ENDIF (ADD_DICTIONARY_TEST)
 
-   REFLEX_ADD_LIBRARY(${name} ${_add_library_params} ${_dict_files})
+   REFLEX_ADD_LIBRARY(${name} ${_add_library_params} ${_dict_files} ${_genreflex_extra_files})
    TARGET_LINK_LIBRARIES(${name} Reflex)
 
    IF (ADD_DICTIONARY_WITH_PREFIX)

@@ -25,73 +25,88 @@
 #endif
 
 namespace Reflex {
-RFLX_API Type TypeBuilder(const char* n,
+RFLX_API Type TypeBuilder(const Reflex::Dictionary& dictionary,
+                          const char* n,
                           unsigned int modifiers = 0);
 
 
-RFLX_API Type ConstBuilder(const Type& t);
+RFLX_API Type ConstBuilder(const Reflex::Dictionary& dictionary,
+                           const Type& t);
 
 
-RFLX_API Type VolatileBuilder(const Type& t);
+RFLX_API Type VolatileBuilder(const Reflex::Dictionary& dictionary,
+                              const Type& t);
 
 
-RFLX_API Type PointerBuilder(const Type& t,
+RFLX_API Type PointerBuilder(const Reflex::Dictionary& dictionary,
+                             const Type& t,
                              const std::type_info& ti = typeid(UnknownType));
 
 
-RFLX_API Type PointerToMemberBuilder(const Type& t,
+RFLX_API Type PointerToMemberBuilder(const Reflex::Dictionary& dictionary,
+                                     const Type& t,
                                      const Scope& s,
                                      const std::type_info& ti = typeid(UnknownType));
 
 
-RFLX_API Type ReferenceBuilder(const Type& t);
+RFLX_API Type ReferenceBuilder(const Reflex::Dictionary& dictionary,
+                               const Type& t);
 
 
-RFLX_API Type ArrayBuilder(const Type& t,
-                           size_t n,
+RFLX_API Type ArrayBuilder(const Reflex::Dictionary& dictionary,
+                           const Type& t, size_t n,
                            const std::type_info& ti = typeid(UnknownType));
 
-RFLX_API Type EnumTypeBuilder(const char*,
+RFLX_API Type EnumTypeBuilder(const Reflex::Dictionary& dictionary,
+                              const char*,
                               const char* items = "",
                               const std::type_info& ti = typeid(UnknownType),
                               unsigned int modifiers = 0);
 
-RFLX_API Type TypedefTypeBuilder(const char* Name,
+RFLX_API Type TypedefTypeBuilder(const Reflex::Dictionary& dictionary,
+                                 const char* Name,
                                  const Type& t,
                                  REPRESTYPE represType = REPRES_NOTYPE);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const std::vector<Reflex::Type>& p,
                                   const std::type_info& ti = typeid(UnknownType));
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r);
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
                                   const Type& t3);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -99,7 +114,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t4);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -108,7 +124,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t5);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -118,7 +135,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t6);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -129,7 +147,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t7);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -141,7 +160,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t8);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -154,7 +174,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t9);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -168,7 +189,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t10);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -183,7 +205,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t11);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -199,7 +222,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t12);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -216,7 +240,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t13);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -234,7 +259,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t14);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -253,7 +279,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t15);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -273,7 +300,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t16);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -294,7 +322,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t17);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -316,7 +345,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t18);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -339,7 +369,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t19);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -363,7 +394,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t20);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -388,7 +420,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t21);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -414,7 +447,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t22);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -441,7 +475,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t23);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -469,7 +504,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t24);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -498,7 +534,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t25);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -528,7 +565,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t26);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -559,7 +597,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t27);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -591,7 +630,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t28);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -624,7 +664,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t29);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -658,7 +699,8 @@ RFLX_API Type FunctionTypeBuilder(const Type& r,
                                   const Type& t30);
 
 
-RFLX_API Type FunctionTypeBuilder(const Type& r,
+RFLX_API Type FunctionTypeBuilder(const Reflex::Dictionary& dictionary,
+                                  const Type& r,
                                   const Type& t0,
                                   const Type& t1,
                                   const Type& t2,
@@ -731,12 +773,12 @@ public:
 template <typename T> class TypeDistiller {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(T));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(T), dictionary);
 
-      if (!t.Id()) { t = Type::ByName(Tools::Demangle(typeid(T))); }
+      if (! t.Id()) { t = Type::ByName(Tools::Demangle(typeid(T)), dictionary); }
 
-      if (t.Id()) { return t; } else { return TypeBuilder(Tools::Demangle(typeid(T)).c_str()); }
+      if (t.Id()) { return t; } else { return TypeBuilder(dictionary, Tools::Demangle(typeid(T)).c_str()); }
    }
 
 
@@ -747,10 +789,10 @@ public:
 template <typename T> class TypeDistiller<T*> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(T*));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(T*), dictionary);
 
-      if (t) { return t; } else { return PointerBuilder(TypeDistiller<T>::Get(), typeid(T*)); }
+      if (t) { return t; } else { return PointerBuilder(dictionary, TypeDistiller<T>::Get(dictionary),typeid(T *)); }
    }
 
 
@@ -761,10 +803,10 @@ public:
 template <typename T, size_t N> class TypeDistiller<T[N]> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(T*));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(T*), dictionary);
 
-      if (t) { return t; } else { return ArrayBuilder(TypeDistiller<T>::Get(), N, typeid(NullType)); }
+      if (t) { return t; } else { return ArrayBuilder(dictionary, TypeDistiller<T>::Get(dictionary),N,typeid(NullType)); }
    }
 
 
@@ -775,10 +817,10 @@ public:
 template <typename T> class TypeDistiller<const T> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(T));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(T), dictionary);
 
-      if (t) { return Type(t, CONST); } else { return Type(TypeDistiller<T>::Get(), CONST); }
+      if (t) { return Type(t, CONST); } else { return Type(TypeDistiller<T>::Get(dictionary),CONST); }
    }
 
 
@@ -789,10 +831,10 @@ public:
 template <typename T> class TypeDistiller<volatile T> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(T));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(T), dictionary);
 
-      if (t) { return Type(t, VOLATILE); } else { return Type(TypeDistiller<T>::Get(), VOLATILE); }
+      if (t) { return Type(t, VOLATILE); } else { return Type(TypeDistiller<T>::Get(dictionary),VOLATILE); }
    }
 
 
@@ -803,10 +845,10 @@ public:
 template <typename T> class TypeDistiller<const volatile T> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(T));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(T), dictionary);
 
-      if (t) { return Type(t, CONST | VOLATILE); } else { return Type(TypeDistiller<T>::Get(), CONST | VOLATILE); }
+      if (t) { return Type(t, CONST | VOLATILE); } else { return Type(TypeDistiller<T>::Get(dictionary),CONST|VOLATILE); }
    }
 
 
@@ -817,10 +859,10 @@ public:
 template <typename T> class TypeDistiller<T&> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(T));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(T), dictionary);
 
-      if (t) { return Type(t, REFERENCE); } else { return Type(TypeDistiller<T>::Get(), REFERENCE); }
+      if (t) { return Type(t, REFERENCE); } else { return Type(TypeDistiller<T>::Get(dictionary),REFERENCE); }
    }
 
 
@@ -831,10 +873,10 @@ public:
 template <typename T> class TypeDistiller<const T&> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(T));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(T), dictionary);
 
-      if (t) { return Type(t, CONST | REFERENCE); } else { return Type(TypeDistiller<T>::Get(), CONST | REFERENCE); }
+      if (t) { return Type(t, CONST | REFERENCE); } else { return Type(TypeDistiller<T>::Get(dictionary),CONST|REFERENCE); }
    }
 
 
@@ -845,10 +887,10 @@ public:
 template <typename T> class TypeDistiller<volatile T&> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(T));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(T), dictionary);
 
-      if (t) { return Type(t, VOLATILE | REFERENCE); } else { return Type(TypeDistiller<T>::Get(), VOLATILE | REFERENCE); }
+      if (t) { return Type(t, VOLATILE | REFERENCE); } else { return Type(TypeDistiller<T>::Get(dictionary),VOLATILE|REFERENCE); }
    }
 
 
@@ -859,10 +901,10 @@ public:
 template <typename T> class TypeDistiller<const volatile T&> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(T));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(T), dictionary);
 
-      if (t) { return Type(t, CONST | VOLATILE | REFERENCE); } else { return Type(TypeDistiller<T>::Get(), CONST | VOLATILE | REFERENCE); }
+      if (t) { return Type(t, CONST | VOLATILE | REFERENCE); } else { return Type(TypeDistiller<T>::Get(dictionary),CONST|VOLATILE|REFERENCE); }
    }
 
 
@@ -873,8 +915,8 @@ public:
 template <> class TypeDistiller<std::string> {
 public:
    static Type
-   Get() {
-      return TypeBuilder("std::basic_string<char>");
+   Get(const Reflex::Dictionary& dictionary) {
+      return TypeBuilder(dictionary, "std::basic_string<char>");
    }
 
 
@@ -888,8 +930,8 @@ public:
  */
 template <typename T>
 const Type&
-GetType() {
-   static Type t = TypeDistiller<T>::Get();
+GetType(const Reflex::Dictionary& dictionary) {
+   static Type t = TypeDistiller<T>::Get(dictionary);
    return t;
 }
 
@@ -914,10 +956,11 @@ template <typename R>
 class FunctionDistiller<R(void)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(void)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(void)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
                                                              std::vector<Type>(),
                                                              typeid(R(void))); }
    }
@@ -929,12 +972,13 @@ public:
 template <typename R, typename T0>
 class FunctionDistiller<__R_TN__ R(__R_TN__ T0)> {
 public:
-   static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0)));
+static Type
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary)),
                                                              typeid(R(T0))); }
    }
 
@@ -946,12 +990,13 @@ template <typename R, typename T0, typename T1>
 class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary)),
                                                              typeid(R(T0, T1))); }
    }
 
@@ -963,13 +1008,14 @@ template <typename R, typename T0, typename T1, typename T2>
 class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2))); }
    }
 
@@ -982,14 +1028,15 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T3)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3))); }
    }
 
@@ -1003,15 +1050,16 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T3, __R_TN__ T4)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4))); }
    }
 
@@ -1025,16 +1073,17 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T3, __R_TN__ T4, __R_TN__ T5)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5))); }
    }
 
@@ -1049,17 +1098,18 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T6)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get(),
-                                                                               TypeDistiller<T6>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary),
+                                                                               TypeDistiller<T6>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5, T6))); }
    }
 
@@ -1074,18 +1124,19 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T6, __R_TN__ T7)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get(),
-                                                                               TypeDistiller<T6>::Get(),
-                                                                               TypeDistiller<T7>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary),
+                                                                               TypeDistiller<T6>::Get(dictionary),
+                                                                               TypeDistiller<T7>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5, T6, T7))); }
    }
 
@@ -1101,19 +1152,20 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T6, __R_TN__ T7, __R_TN__ T8)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get(),
-                                                                               TypeDistiller<T6>::Get(),
-                                                                               TypeDistiller<T7>::Get(),
-                                                                               TypeDistiller<T8>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary),
+                                                                               TypeDistiller<T6>::Get(dictionary),
+                                                                               TypeDistiller<T7>::Get(dictionary),
+                                                                               TypeDistiller<T8>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8))); }
    }
 
@@ -1130,20 +1182,21 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T9)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get(),
-                                                                               TypeDistiller<T6>::Get(),
-                                                                               TypeDistiller<T7>::Get(),
-                                                                               TypeDistiller<T8>::Get(),
-                                                                               TypeDistiller<T9>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary),
+                                                                               TypeDistiller<T6>::Get(dictionary),
+                                                                               TypeDistiller<T7>::Get(dictionary),
+                                                                               TypeDistiller<T8>::Get(dictionary),
+                                                                               TypeDistiller<T9>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9))); }
    }
 
@@ -1160,21 +1213,22 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T9, __R_TN__ T10)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get(),
-                                                                               TypeDistiller<T6>::Get(),
-                                                                               TypeDistiller<T7>::Get(),
-                                                                               TypeDistiller<T8>::Get(),
-                                                                               TypeDistiller<T9>::Get(),
-                                                                               TypeDistiller<T10>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary),
+                                                                               TypeDistiller<T6>::Get(dictionary),
+                                                                               TypeDistiller<T7>::Get(dictionary),
+                                                                               TypeDistiller<T8>::Get(dictionary),
+                                                                               TypeDistiller<T9>::Get(dictionary),
+                                                                               TypeDistiller<T10>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10))); }
    } // Get
 
@@ -1191,22 +1245,23 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T9, __R_TN__ T10, __R_TN__ T11)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get(),
-                                                                               TypeDistiller<T6>::Get(),
-                                                                               TypeDistiller<T7>::Get(),
-                                                                               TypeDistiller<T8>::Get(),
-                                                                               TypeDistiller<T9>::Get(),
-                                                                               TypeDistiller<T10>::Get(),
-                                                                               TypeDistiller<T11>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary),
+                                                                               TypeDistiller<T6>::Get(dictionary),
+                                                                               TypeDistiller<T7>::Get(dictionary),
+                                                                               TypeDistiller<T8>::Get(dictionary),
+                                                                               TypeDistiller<T9>::Get(dictionary),
+                                                                               TypeDistiller<T10>::Get(dictionary),
+                                                                               TypeDistiller<T11>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11))); }
    } // Get
 
@@ -1225,23 +1280,24 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T12)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get(),
-                                                                               TypeDistiller<T6>::Get(),
-                                                                               TypeDistiller<T7>::Get(),
-                                                                               TypeDistiller<T8>::Get(),
-                                                                               TypeDistiller<T9>::Get(),
-                                                                               TypeDistiller<T10>::Get(),
-                                                                               TypeDistiller<T11>::Get(),
-                                                                               TypeDistiller<T12>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary),
+                                                                               TypeDistiller<T6>::Get(dictionary),
+                                                                               TypeDistiller<T7>::Get(dictionary),
+                                                                               TypeDistiller<T8>::Get(dictionary),
+                                                                               TypeDistiller<T9>::Get(dictionary),
+                                                                               TypeDistiller<T10>::Get(dictionary),
+                                                                               TypeDistiller<T11>::Get(dictionary),
+                                                                               TypeDistiller<T12>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12))); }
    } // Get
 
@@ -1260,24 +1316,25 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T12, __R_TN__ T13)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get(),
-                                                                               TypeDistiller<T6>::Get(),
-                                                                               TypeDistiller<T7>::Get(),
-                                                                               TypeDistiller<T8>::Get(),
-                                                                               TypeDistiller<T9>::Get(),
-                                                                               TypeDistiller<T10>::Get(),
-                                                                               TypeDistiller<T11>::Get(),
-                                                                               TypeDistiller<T12>::Get(),
-                                                                               TypeDistiller<T13>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary),
+                                                                               TypeDistiller<T6>::Get(dictionary),
+                                                                               TypeDistiller<T7>::Get(dictionary),
+                                                                               TypeDistiller<T8>::Get(dictionary),
+                                                                               TypeDistiller<T9>::Get(dictionary),
+                                                                               TypeDistiller<T10>::Get(dictionary),
+                                                                               TypeDistiller<T11>::Get(dictionary),
+                                                                               TypeDistiller<T12>::Get(dictionary),
+                                                                               TypeDistiller<T13>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13))); }
    } // Get
 
@@ -1296,25 +1353,26 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T12, __R_TN__ T13, __R_TN__ T14)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get(),
-                                                                               TypeDistiller<T6>::Get(),
-                                                                               TypeDistiller<T7>::Get(),
-                                                                               TypeDistiller<T8>::Get(),
-                                                                               TypeDistiller<T9>::Get(),
-                                                                               TypeDistiller<T10>::Get(),
-                                                                               TypeDistiller<T11>::Get(),
-                                                                               TypeDistiller<T12>::Get(),
-                                                                               TypeDistiller<T13>::Get(),
-                                                                               TypeDistiller<T14>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary),
+                                                                               TypeDistiller<T6>::Get(dictionary),
+                                                                               TypeDistiller<T7>::Get(dictionary),
+                                                                               TypeDistiller<T8>::Get(dictionary),
+                                                                               TypeDistiller<T9>::Get(dictionary),
+                                                                               TypeDistiller<T10>::Get(dictionary),
+                                                                               TypeDistiller<T11>::Get(dictionary),
+                                                                               TypeDistiller<T12>::Get(dictionary),
+                                                                               TypeDistiller<T13>::Get(dictionary),
+                                                                               TypeDistiller<T14>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14))); }
    } // Get
 
@@ -1334,26 +1392,27 @@ class FunctionDistiller<__R_TN__ R(__R_TN__ T0, __R_TN__ T1, __R_TN__ T2,
                                    __R_TN__ T15)> {
 public:
    static Type
-   Get() {
-      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15)));
+   Get(const Reflex::Dictionary& dictionary) {
+      Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15)), dictionary);
 
-      if (t) { return t; } else { return FunctionTypeBuilder(TypeDistiller<R>::Get(),
-                                                             Tools::MakeVector(TypeDistiller<T0>::Get(),
-                                                                               TypeDistiller<T1>::Get(),
-                                                                               TypeDistiller<T2>::Get(),
-                                                                               TypeDistiller<T3>::Get(),
-                                                                               TypeDistiller<T4>::Get(),
-                                                                               TypeDistiller<T5>::Get(),
-                                                                               TypeDistiller<T6>::Get(),
-                                                                               TypeDistiller<T7>::Get(),
-                                                                               TypeDistiller<T8>::Get(),
-                                                                               TypeDistiller<T9>::Get(),
-                                                                               TypeDistiller<T10>::Get(),
-                                                                               TypeDistiller<T11>::Get(),
-                                                                               TypeDistiller<T12>::Get(),
-                                                                               TypeDistiller<T13>::Get(),
-                                                                               TypeDistiller<T14>::Get(),
-                                                                               TypeDistiller<T15>::Get()),
+      if (t) { return t; } else { return FunctionTypeBuilder(dictionary,
+                                                             TypeDistiller<R>::Get(dictionary),
+                                                             Tools::MakeVector(TypeDistiller<T0>::Get(dictionary),
+                                                                               TypeDistiller<T1>::Get(dictionary),
+                                                                               TypeDistiller<T2>::Get(dictionary),
+                                                                               TypeDistiller<T3>::Get(dictionary),
+                                                                               TypeDistiller<T4>::Get(dictionary),
+                                                                               TypeDistiller<T5>::Get(dictionary),
+                                                                               TypeDistiller<T6>::Get(dictionary),
+                                                                               TypeDistiller<T7>::Get(dictionary),
+                                                                               TypeDistiller<T8>::Get(dictionary),
+                                                                               TypeDistiller<T9>::Get(dictionary),
+                                                                               TypeDistiller<T10>::Get(dictionary),
+                                                                               TypeDistiller<T11>::Get(dictionary),
+                                                                               TypeDistiller<T12>::Get(dictionary),
+                                                                               TypeDistiller<T13>::Get(dictionary),
+                                                                               TypeDistiller<T14>::Get(dictionary),
+                                                                               TypeDistiller<T15>::Get(dictionary)),
                                                              typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15))); }
    } // Get
 

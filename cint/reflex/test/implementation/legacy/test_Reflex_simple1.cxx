@@ -6,35 +6,31 @@
 
 // Seal include files
 #include "Reflex/Reflex.h"
+#include "Reflex/SharedLibrary.h"
 
 // Standard C++ include files
 #include <iostream>
 #include <iomanip>
 #include <limits>
-#ifdef _WIN32
-  # include <windows.h>
-#else
-  # include <dlfcn.h>
-#endif
 
 using namespace Reflex;
 
 /**
  * test_Reflex_simple1.cpp
- * testing Reflex with the dictionary of Reflex itself
+ * testing Reflex with the dictionary of Reflex itself 
  */
 
-class ReflexSimple1Test: public CppUnit::TestFixture {
-   CPPUNIT_TEST_SUITE(ReflexSimple1Test);
+class ReflexSimple1Test : public CppUnit::TestFixture {
+  CPPUNIT_TEST_SUITE( ReflexSimple1Test );
 
-   CPPUNIT_TEST(loadLibrary);
-   CPPUNIT_TEST(testSizeT);
-   CPPUNIT_TEST(testBase);
-   CPPUNIT_TEST(testTypeCount);
-   CPPUNIT_TEST(testMembers);
-   CPPUNIT_TEST(testVirtual);
-   CPPUNIT_TEST(unloadLibrary);
-   CPPUNIT_TEST(shutdown);
+  CPPUNIT_TEST( loadLibrary );
+  CPPUNIT_TEST( testSizeT );
+  CPPUNIT_TEST( testBase );
+  CPPUNIT_TEST( testTypeCount );
+  CPPUNIT_TEST( testMembers );
+  CPPUNIT_TEST( testVirtual );
+  CPPUNIT_TEST( unloadLibrary );
+  CPPUNIT_TEST( shutdown );
 
    CPPUNIT_TEST_SUITE_END();
 
@@ -57,24 +53,20 @@ public:
 
 }; // class ReflesSimple1Test
 
-#if defined(_WIN32)
-static HMODULE s_libInstance = 0;
+#if defined (_WIN32) 
+SharedLibrary s_libInstance("libtest_ReflexRflx.dll");
 #else
-static void* s_libInstance = 0;
-#endif
+SharedLibrary s_libInstance("libtest_ReflexRflx.so");
+#endif 
 
 void
 ReflexSimple1Test::loadLibrary() {
-#if defined(_WIN32)
-   s_libInstance = LoadLibrary("libtest_ReflexRflx.dll");
-#else
-   s_libInstance = dlopen("libtest_ReflexRflx.so", RTLD_NOW);
 
-   if (!s_libInstance) {
-      std::cout << dlerror() << std::endl;
+   bool libLoaded = s_libInstance.Load();
+   if ( ! libLoaded ) {
+      std::cout << s_libInstance.Error() << std::endl;
    }
-#endif
-   CPPUNIT_ASSERT(s_libInstance);
+   CPPUNIT_ASSERT( libLoaded );
 }
 
 
@@ -83,16 +75,16 @@ ReflexSimple1Test::testSizeT() {
    Type t = Type::ByName("size_t");
    CPPUNIT_ASSERT(t);
 #if defined(__GNUC__)
-# if (__GNUC__ <= 3) && (!__x86_64__)
+#if (__GNUC__ <= 3) && (!__x86_64__)
    std::string size_t_T = "j";
-# else
+#else 
    std::string size_t_T = "m";
-# endif
+#endif
 #elif defined(_WIN32)
    std::string size_t_T = "unsigned int";
 #endif
-   CPPUNIT_ASSERT_EQUAL(size_t_T, std::string(t.TypeInfo().name()));
-   CPPUNIT_ASSERT_EQUAL(size_t_T, std::string(t.ToType().TypeInfo().name()));
+  CPPUNIT_ASSERT_EQUAL(size_t_T,std::string(t.TypeInfo().name()));
+  CPPUNIT_ASSERT_EQUAL(size_t_T,std::string(t.ToType().TypeInfo().name()));
 }
 
 
@@ -111,7 +103,7 @@ ReflexSimple1Test::testBase() {
    CPPUNIT_ASSERT(!t1.HasBase(t2));
    CPPUNIT_ASSERT(!t2.HasBase(t1));
 }
-
+  
 
 void
 ReflexSimple1Test::testTypeCount() {
@@ -127,21 +119,21 @@ ReflexSimple1Test::testMembers() {
    CPPUNIT_ASSERT(t);
    CPPUNIT_ASSERT(t.Id());
    CPPUNIT_ASSERT(t.IsClass());
-   CPPUNIT_ASSERT_EQUAL(std::string("PropertyList"), t.Name());
+  CPPUNIT_ASSERT_EQUAL(std::string("PropertyList"),t.Name());
    CPPUNIT_ASSERT_EQUAL(std::string("Reflex::PropertyList"), t.Name(SCOPED));
-
+  
    Object o = t.Construct();
 
    CPPUNIT_ASSERT(o);
    CPPUNIT_ASSERT(o.Address());
 
-   CPPUNIT_ASSERT_EQUAL(1, int (t.DataMemberSize()));
+  CPPUNIT_ASSERT_EQUAL(1, int(t.DataMemberSize()));
    CPPUNIT_ASSERT_EQUAL(31, int (t.FunctionMemberSize()));
    CPPUNIT_ASSERT_EQUAL(32, int (t.MemberSize()));
 
    t.UpdateMembers();
 
-   CPPUNIT_ASSERT_EQUAL(1, int (t.DataMemberSize()));
+  CPPUNIT_ASSERT_EQUAL(1, int(t.DataMemberSize()));
    CPPUNIT_ASSERT_EQUAL(31, int (t.FunctionMemberSize()));
    CPPUNIT_ASSERT_EQUAL(32, int (t.MemberSize()));
    Member_Iterator iM = t.DataMember_Begin();
@@ -150,7 +142,7 @@ ReflexSimple1Test::testMembers() {
    CPPUNIT_ASSERT(m);
    CPPUNIT_ASSERT_EQUAL(std::string("fPropertyListImpl"), m.Name());
    CPPUNIT_ASSERT_EQUAL(std::string("Reflex::PropertyList::fPropertyListImpl"), m.Name(SCOPED));
-   CPPUNIT_ASSERT_EQUAL((void*) 0, Object_Cast<void*>(m.Get(o)));
+  CPPUNIT_ASSERT_EQUAL((void*)0, Object_Cast<void*>(m.Get(o)));
 
    iM = t.FunctionMember_Begin();
    m = *iM++;
@@ -287,14 +279,14 @@ ReflexSimple1Test::testVirtual() {
    Type t2 = Type::ByName("Reflex::TypeBase");
 
    CPPUNIT_ASSERT(t1);
-   CPPUNIT_ASSERT_EQUAL(std::string("Type"), t1.Name());
+  CPPUNIT_ASSERT_EQUAL(std::string("Type"),t1.Name());
    CPPUNIT_ASSERT_EQUAL(std::string("Reflex::Type"), t1.Name(SCOPED));
-   CPPUNIT_ASSERT_EQUAL(std::string("Reflex::Type"), t1.Name(SCOPED | QUALIFIED | FINAL));
+  CPPUNIT_ASSERT_EQUAL(std::string("Reflex::Type"), t1.Name(SCOPED|QUALIFIED|FINAL));
    CPPUNIT_ASSERT(!t1.IsVirtual());
    CPPUNIT_ASSERT(t2);
-   CPPUNIT_ASSERT_EQUAL(std::string("TypeBase"), t2.Name());
+  CPPUNIT_ASSERT_EQUAL(std::string("TypeBase"),t2.Name());
    CPPUNIT_ASSERT_EQUAL(std::string("Reflex::TypeBase"), t2.Name(SCOPED));
-   CPPUNIT_ASSERT_EQUAL(std::string("Reflex::TypeBase"), t2.Name(SCOPED | QUALIFIED | FINAL));
+  CPPUNIT_ASSERT_EQUAL(std::string("Reflex::TypeBase"), t2.Name(SCOPED|QUALIFIED|FINAL));
    CPPUNIT_ASSERT(t2.IsVirtual());
 
 }
@@ -302,21 +294,13 @@ ReflexSimple1Test::testVirtual() {
 
 void
 ReflexSimple1Test::unloadLibrary() {
-#if defined(_WIN32)
-   int ret = FreeLibrary(s_libInstance);
 
-   if (ret == 0) {
-      std::cout << "Unload of dictionary library failed. Reason: " << GetLastError() << std::endl;
+  bool libUnloaded = s_libInstance.Unload();
+  if (!libUnloaded) {
+     std::cout << "Unload of dictionary library failed. Reason: " << s_libInstance.Error() << std::endl;
    }
-   CPPUNIT_ASSERT(ret);
-#else
-   int ret = dlclose(s_libInstance);
+  CPPUNIT_ASSERT( libUnloaded );
 
-   if (ret == -1) {
-      std::cout << "Unload of dictionary library failed. Reason: " << dlerror() << std::endl;
-   }
-   CPPUNIT_ASSERT(!ret);
-#endif
    //std::cout << "Endless" << std::endl;
    //while (true) {}
 
@@ -326,5 +310,5 @@ ReflexSimple1Test::unloadLibrary() {
 // Class registration on cppunit framework
 CPPUNIT_TEST_SUITE_REGISTRATION(ReflexSimple1Test);
 
-// CppUnit test-driver common for all the cppunit test classes
-#include <CppUnit_testdriver.cpp>
+// CppUnit test-driver common for all the cppunit test classes 
+#include<CppUnit_testdriver.cpp>

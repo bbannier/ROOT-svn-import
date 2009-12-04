@@ -17,19 +17,21 @@
 #include "Reflex/Type.h"
 
 namespace Reflex {
-// forward declarations
+   // forward declarations
+   class Dictionary;
 
-/**
+   /**
  * @class Pointer Pointer.h Reflex/Pointer.h
  * @author Stefan Roiser
  * @date 24/11/2003
  * @ingroup Ref
  */
-class Pointer: public TypeBase {
-public:
+   class Pointer : public TypeBase {
+   public:
    /** default constructor */
-   Pointer(const Type& pointerType,
-           const std::type_info& ti);
+      Pointer( const Reflex::Dictionary& dictionary,
+               const Type & pointerType, 
+         const std::type_info & ti );
 
    /** destructor */
    virtual ~Pointer() {}
@@ -40,7 +42,7 @@ public:
     * @param  typedefexp expand typedefs or not
     * @return fully qualified Name of pointer At
     */
-   std::string Name(unsigned int mod = 0) const;
+      std::string Name( unsigned int mod = 0 ) const;
 
 
    /**
@@ -51,10 +53,10 @@ public:
 
 
    /** static function that composes the typename */
-   static std::string BuildTypeName(const Type& pointerType,
-                                    unsigned int mod = SCOPED | QUALIFIED);
+      static std::string BuildTypeName( const Type & pointerType,
+         unsigned int mod = SCOPED | QUALIFIED );
 
-private:
+   private:
    /**
     * The Type the Pointer points to
     * @label pointer type
@@ -64,7 +66,7 @@ private:
     */
    Type fPointerType;
 
-};    // class Pointer
+   }; // class Pointer
 } //namespace Reflex
 
 

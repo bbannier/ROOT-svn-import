@@ -35,17 +35,21 @@ class RFLX_API PluginService {
 public:
    template <typename R>
    static R
-   Create(const std::string& name) {
-      return (R) Create(name, GetType<R>(), std::vector<ValueObject>());
+   Create(const std::string& name,
+          const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
+      return (R) Create(name, GetType<R>(), std::vector<ValueObject>(), dictionary);
    }
 
 
    template <typename R, typename A0>
    static R
    Create(const std::string& name,
-          const A0& a0) {
-      return (R) Create(name, GetType<R>(),
-                        Tools::MakeVector(ValueObject::Create(a0)));
+          const A0& a0,
+          const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
+         return (R) Create(name,
+                           GetType<R>(),
+                           Tools::MakeVector(ValueObject::Create(a0)),
+                           dictionary);
    }
 
 
@@ -53,10 +57,13 @@ public:
    static R
    Create(const std::string& name,
           const A0& a0,
-          const A1& a1) {
-      return (R) Create(name, GetType<R>(),
+          const A1& a1,
+          const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
+         return (R) Create(name,
+                           GetType<R>(),
                         Tools::MakeVector(ValueObject::Create(a0),
-                                          ValueObject::Create(a1)));
+                                             ValueObject::Create(a1)),
+                           dictionary);
    }
 
 
@@ -65,11 +72,14 @@ public:
    Create(const std::string& name,
           const A0& a0,
           const A1& a1,
-          const A2& a2) {
-      return (R) Create(name, GetType<R>(),
+          const A2& a2,
+          const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
+         return (R) Create(name,
+                           GetType<R>(),
                         Tools::MakeVector(ValueObject::Create(a0),
                                           ValueObject::Create(a1),
-                                          ValueObject::Create(a2)));
+                                             ValueObject::Create(a2)),
+                           dictionary);
    }
 
 
@@ -79,12 +89,15 @@ public:
           const A0& a0,
           const A1& a1,
           const A2& a2,
-          const A3& a3) {
-      return (R) Create(name, GetType<R>(),
+      const A3& a3,
+      const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
+         return (R) Create(name, 
+                           GetType<R>(),
                         Tools::MakeVector(ValueObject::Create(a0),
                                           ValueObject::Create(a1),
                                           ValueObject::Create(a2),
-                                          ValueObject::Create(a3)));
+                                             ValueObject::Create(a3)),
+                           dictionary);
    }
 
 
@@ -96,13 +109,16 @@ public:
           const A1& a1,
           const A2& a2,
           const A3& a3,
-          const A4& a4) {
-      return (R) Create(name, GetType<R>(),
+      const A4& a4,
+      const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
+         return (R) Create(name,
+                           GetType<R>(),
                         Tools::MakeVector(ValueObject::Create(a0),
                                           ValueObject::Create(a1),
                                           ValueObject::Create(a2),
                                           ValueObject::Create(a3),
-                                          ValueObject::Create(a4)));
+                                             ValueObject::Create(a4)),
+                           dictionary);
    }
 
 
@@ -115,14 +131,17 @@ public:
           const A2& a2,
           const A3& a3,
           const A4& a4,
-          const A5& a5) {
-      return (R) Create(name, GetType<R>(),
+             const A5& a5,
+             const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
+         return (R) Create(name, 
+                           GetType<R>(),
                         Tools::MakeVector(ValueObject::Create(a0),
                                           ValueObject::Create(a1),
                                           ValueObject::Create(a2),
                                           ValueObject::Create(a3),
                                           ValueObject::Create(a4),
-                                          ValueObject::Create(a5)));
+                                             ValueObject::Create(a5)),
+                           dictionary);
    }
 
 
@@ -136,15 +155,18 @@ public:
           const A3& a3,
           const A4& a4,
           const A5& a5,
-          const A6& a6) {
-      return (R) Create(name, GetType<R>(),
+             const A6& a6,
+             const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
+         return (R) Create(name, 
+                           GetType<R>(),
                         Tools::MakeVector(ValueObject::Create(a0),
                                           ValueObject::Create(a1),
                                           ValueObject::Create(a2),
                                           ValueObject::Create(a3),
                                           ValueObject::Create(a4),
                                           ValueObject::Create(a5),
-                                          ValueObject::Create(a6)));
+                                             ValueObject::Create(a6)),
+                           dictionary);
    }
 
 
@@ -159,8 +181,10 @@ public:
           const A4& a4,
           const A5& a5,
           const A6& a6,
-          const A7& a7) {
-      return (R) Create(name, GetType<R>(),
+             const A7& a7,
+             const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
+         return (R) Create(name,
+                           GetType<R>(),
                         Tools::MakeVector(ValueObject::Create(a0),
                                           ValueObject::Create(a1),
                                           ValueObject::Create(a2),
@@ -168,13 +192,15 @@ public:
                                           ValueObject::Create(a4),
                                           ValueObject::Create(a5),
                                           ValueObject::Create(a6),
-                                          ValueObject::Create(a7)));
+                                             ValueObject::Create(a7)),
+                           dictionary);
    }
 
 
    static void* Create(const std::string& name,
                        const Type& ret,
-                       const std::vector<ValueObject>& arg);
+                       const std::vector<ValueObject>& arg,
+                       const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main());
 
 
    template <typename T>
@@ -198,18 +224,22 @@ public:
 
    template <typename R, typename T>
    static R
-   CreateWithId(const T& id) {
+   CreateWithId(const T& id,
+                const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
       return (R) CreateWithId(id, StringId<T>, CompareId<T>, GetType<R>(),
-                              std::vector<ValueObject>());
+                                 std::vector<ValueObject>(),
+                                 dictionary);
    }
 
 
    template <typename R, typename T, typename A0>
    static R
    CreateWithId(const T& id,
-                const A0& a0) {
+                const A0& a0,
+                const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
       return (R) CreateWithId(id, StringId<T>, CompareId<T>, GetType<R>(),
-                              Tools::MakeVector(ValueObject::Create(a0)));
+                                 Tools::MakeVector(ValueObject::Create(a0)),
+                                 dictionary);
    }
 
 
@@ -217,9 +247,12 @@ public:
    static R
    CreateWithId(const T& id,
                 const A0& a0,
-                const A1& a1) {
+                const A1& a1,
+                const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
       return (R) CreateWithId(id, StringId<T>, CompareId<T>, GetType<R>(),
-                              Tools::MakeVector(ValueObject::Create(a0), ValueObject::Create(a1)));
+                                 Tools::MakeVector(ValueObject::Create(a0),
+                                                   ValueObject::Create(a1)),
+                                 dictionary);
    }
 
 
@@ -228,10 +261,13 @@ public:
    CreateWithId(const T& id,
                 const A0& a0,
                 const A1& a1,
-                const A2& a2) {
+                   const A2& a2,
+                   const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
       return (R) CreateWithId(id, StringId<T>, CompareId<T>, GetType<R>(),
-                              Tools::MakeVector(ValueObject::Create(a0), ValueObject::Create(a1),
-                                                ValueObject::Create(a2)));
+                                 Tools::MakeVector(ValueObject::Create(a0),
+                                                   ValueObject::Create(a1),
+                                                   ValueObject::Create(a2)),
+                                 dictionary);
    }
 
 
@@ -241,10 +277,14 @@ public:
                 const A0& a0,
                 const A1& a1,
                 const A2& a2,
-                const A3& a3) {
+                const A3& a3,
+                const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main()) {
       return (R) CreateWithId(id, StringId<T>, CompareId<T>, GetType<R>(),
-                              Tools::MakeVector(ValueObject::Create(a0), ValueObject::Create(a1),
-                                                ValueObject::Create(a2), ValueObject::Create(a3)));
+                                 Tools::MakeVector(ValueObject::Create(a0),
+                                                   ValueObject::Create(a1),
+                                                   ValueObject::Create(a2),
+                                                   ValueObject::Create(a3)),
+                                 dictionary);
    }
 
 
@@ -253,7 +293,8 @@ public:
                              bool (* cmp)(const Any&,
                                           const Any&),
                              const Type &ret,
-                             const std::vector<ValueObject> &arg);
+                             const std::vector<ValueObject> &arg,
+                             const Reflex::Dictionary& dictionary = Reflex::Dictionary::Main());
 
 
    static std::string FactoryName(const std::string& n);

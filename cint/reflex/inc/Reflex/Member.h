@@ -641,7 +641,7 @@ Reflex::Member::Invoke(const Object& obj,
                        T& ret,
                        const std::vector<void*>& paramList) const {
 //-------------------------------------------------------------------------------
-   Object retO(Type::ByTypeInfo(typeid(T)), &ret);
+   Object retO(Type::ByTypeInfo(typeid(T), obj.TypeOf().DictionaryGet()), &ret);
    Invoke(obj, &retO, paramList);
 }
 

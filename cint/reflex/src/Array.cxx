@@ -21,12 +21,13 @@
 #include <sstream>
 
 //-------------------------------------------------------------------------------
-Reflex::Array::Array(const Type& arrayType,
+Reflex::Array::Array(const Reflex::Dictionary& dictionary, 
+                     const Type& arrayType,
                      size_t len,
                      const std::type_info& typeinfo)
 //-------------------------------------------------------------------------------
 // Constructs an array type.
-   : TypeBase(BuildTypeName(arrayType, len).c_str(), arrayType.SizeOf() * len, ARRAY, typeinfo, Type(), arrayType.RepresType()),
+   : TypeBase(dictionary, BuildTypeName(arrayType, len).c_str(), arrayType.SizeOf() * len, ARRAY, typeinfo, Type(), arrayType.RepresType()),
    fArrayType(arrayType),
    fLength(len) {
 }
