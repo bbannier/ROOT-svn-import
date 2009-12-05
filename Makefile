@@ -34,25 +34,25 @@ DICTO3       := $(OBJDIR)/$(PACKAGE)_Dict3.o
 DICTO4       := $(OBJDIR)/$(PACKAGE)_Dict4.o
 DICTO        := $(DICTO1) $(DICTO2) $(DICTO3) $(DICTO4)
 DICTH1       := Configurable.h Event.h Factory.h MethodBase.h MethodCompositeBase.h \
-								MethodANNBase.h MethodTMlpANN.h MethodRuleFit.h MethodCuts.h MethodFisher.h \
-								MethodKNN.h MethodCFMlpANN.h MethodCFMlpANN_Utils.h MethodLikelihood.h \
-								MethodHMatrix.h MethodPDERS.h MethodBDT.h MethodDT.h MethodSVM.h MethodBayesClassifier.h \
-								MethodFDA.h MethodMLP.h MethodCommittee.h MethodSeedDistance.h MethodBoost.h \
-								MethodPDEFoam.h MethodLD.h MethodCategory.h
+		MethodANNBase.h MethodTMlpANN.h MethodRuleFit.h MethodCuts.h MethodFisher.h \
+		MethodKNN.h MethodCFMlpANN.h MethodCFMlpANN_Utils.h MethodLikelihood.h \
+		MethodHMatrix.h MethodPDERS.h MethodBDT.h MethodDT.h MethodSVM.h MethodBayesClassifier.h \
+		MethodFDA.h MethodMLP.h MethodCommittee.h MethodSeedDistance.h MethodBoost.h \
+		MethodPDEFoam.h MethodLD.h MethodCategory.h
 DICTH2       := TSpline2.h TSpline1.h PDF.h BinaryTree.h BinarySearchTreeNode.h BinarySearchTree.h \
-								Timer.h RootFinder.h CrossEntropy.h DecisionTree.h DecisionTreeNode.h MisClassificationError.h \
-								Node.h SdivSqrtSplusB.h SeparationBase.h RegressionVariance.h Tools.h Reader.h \
-								GeneticAlgorithm.h GeneticGenes.h GeneticPopulation.h GeneticRange.h GiniIndex.h \
-								GiniIndexWithLaplace.h SimulatedAnnealing.h
+		Timer.h RootFinder.h CrossEntropy.h DecisionTree.h DecisionTreeNode.h MisClassificationError.h \
+		Node.h SdivSqrtSplusB.h SeparationBase.h RegressionVariance.h Tools.h Reader.h \
+		GeneticAlgorithm.h GeneticGenes.h GeneticPopulation.h GeneticRange.h GiniIndex.h \
+		GiniIndexWithLaplace.h SimulatedAnnealing.h
 DICTH3       := Config.h KDEKernel.h Interval.h FitterBase.h MCFitter.h GeneticFitter.h SimulatedAnnealingFitter.h \
-								MinuitFitter.h MinuitWrapper.h IFitterTarget.h IMetric.h MetricEuler.h MetricManhattan.h \
-								SeedDistance.h PDEFoam.h PDEFoamDistr.h PDEFoamVect.h PDEFoamCell.h BDTEventWrapper.h CCTreeWrapper.h \
-								CCPruner.h CostComplexityPruneTool.h SVEvent.h
+		MinuitFitter.h MinuitWrapper.h IFitterTarget.h IMetric.h MetricEuler.h MetricManhattan.h \
+		SeedDistance.h PDEFoam.h PDEFoamDistr.h PDEFoamVect.h PDEFoamCell.h BDTEventWrapper.h CCTreeWrapper.h \
+		CCPruner.h CostComplexityPruneTool.h SVEvent.h
 DICTH4       := TNeuron.h TSynapse.h TActivationChooser.h TActivation.h TActivationSigmoid.h TActivationIdentity.h \
-								TActivationTanh.h TActivationRadial.h TNeuronInputChooser.h TNeuronInput.h TNeuronInputSum.h \
-								TNeuronInputSqSum.h TNeuronInputAbs.h Types.h Ranking.h RuleFit.h RuleFitAPI.h IMethod.h MsgLogger.h \
-								VariableTransformBase.h VariableIdentityTransform.h VariableDecorrTransform.h VariablePCATransform.h \
-								VariableGaussTransform.h VariableNormalizeTransform.h
+		TActivationTanh.h TActivationRadial.h TNeuronInputChooser.h TNeuronInput.h TNeuronInputSum.h \
+		TNeuronInputSqSum.h TNeuronInputAbs.h Types.h Ranking.h RuleFit.h RuleFitAPI.h IMethod.h MsgLogger.h \
+		VariableTransformBase.h VariableIdentityTransform.h VariableDecorrTransform.h VariablePCATransform.h \
+		VariableGaussTransform.h VariableNormalizeTransform.h
 DICTH1       := $(patsubst %,inc/%,$(DICTH1))
 DICTH2       := $(patsubst %,inc/%,$(DICTH2))
 DICTH3       := $(patsubst %,inc/%,$(DICTH3))
@@ -77,6 +77,7 @@ CPPLIST = $(filter-out $(SKIPCPPLIST),$(patsubst src/%,%,$(wildcard src/*.$(SrcS
 
 # List of all object files to build
 OLIST=$(patsubst %.cxx,%.o,$(CPPLIST))
+OLIST=$(CPPLIST:.$(SrcSuf)=.o)
 DEPLIST=$(foreach var,$(CPPLIST:.$(SrcSuf)=.d),$(DEPDIR)/$(var))
 
 # Implicit rule to compile all classes
@@ -85,13 +86,13 @@ sl:
 		ln -sf inc TMVA; \
 	fi
 
-%.o : src/%.cxx 
+$(OBJDIR)/%.o : src/%.cxx 
 	if [[ ( ! -e TMVA ) ]]; then \
 		ln -sf inc TMVA; \
 	fi
 	@printf "Compiling $< ... "
 	@mkdir -p $(OBJDIR)
-	@$(CXX) $(INCLUDES) $(CXXFLAGS) -ggdb -c $< -o $(OBJDIR)/$(notdir $@)
+	@$(CXX) $(INCLUDES) $(CXXFLAGS) -ggdb -c $< -o $@
 	@echo "Done"
 
 # Rule to make the dictionary
@@ -161,9 +162,12 @@ endif
 
 $(DEPDIR)/%.d: src/%.$(SrcSuf)
 	@mkdir -p $(DEPDIR)
+	if [[ ( ! -e TMVA ) ]]; then \
+		ln -sf inc TMVA; \
+	fi
 	if test -f $< ; then \
 		printf "Building $(@F) ... "; \
-		$(SHELL) -ec '`root-config --exec-prefix`/bin/rmkdepend -f- -Y -w 3000 -- -I../include -- $< 2> /dev/null 1| sed -e "s-\(.*\).o: .*-$(DEPDIR)\/\1.d &-" > $@'; \
+		$(SHELL) -ec '`root-config --exec-prefix`/bin/rmkdepend -f- -Y -w 3000 -- -I./ -- $< 2> /dev/null 1| sed -e "s-src/\(.*\).o\(: .*\)-$(DEPDIR)\/\1.d $(OBJDIR)/\1.o\2-" > $@'; \
 		rm -f $@.bak; \
 		echo "Done"; \
 	fi
@@ -208,7 +212,7 @@ winlib: $(DLLIBFILE)
 
 vars:
 	#echo $(patsubst src/%,%,$(wildcard src/*.$(SrcSuf)))
-	echo $(DICTS)
+	echo $(OLIST) $(DICTO)
 
 clean:
 	rm -rf obj
@@ -237,3 +241,4 @@ distclean:
 
 .PHONY : winlib shlib lib default clean
 
+# DO NOT DELETE

@@ -5,8 +5,8 @@
 
 MAKEFLAGS = --no-print-directory -r -s
 
-INCLUDE = -I../include $(shell root-config --cflags)
-LIBS    = -L../lib/ $(shell root-config --libs) -lTMVA.1 -lMLP -lTreePlayer -lMinuit
+INCLUDE = -I../ $(shell root-config --cflags)
+LIBS    = -L../lib -lTMVA.1 $(shell root-config --libs) -lMLP -lTreePlayer -lMinuit
 
 BINS = TMVAClassification TMVAClassificationCategory TMVAClassificationApplication TMVAClassificationCategoryApplication TMVARegression TMVARegressionApplication
 
