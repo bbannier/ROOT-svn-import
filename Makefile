@@ -208,13 +208,13 @@ winlib: $(DLLIBFILE)
 
 vars:
 	#echo $(patsubst src/%,%,$(wildcard src/*.$(SrcSuf)))
-	echo $(DICTH)
+	echo $(DICTS)
 
 clean:
 	rm -rf obj
 	rm -rf lib
 	rm -f TMVA 
-	rm -f $(DICTS)
+	rm -f $(DICTS) $(DICTS:.C=.h)
 	rm -f $(OBJDIR)/*.o
 	rm -f $(DEPDIR)/*.d
 	rm -f $(LIBFILE)
