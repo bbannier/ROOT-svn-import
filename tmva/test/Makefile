@@ -45,7 +45,7 @@ clean:
 	rm -f $(BINS)
 
 $(TMVALIB): ../src/*.cxx ../inc/*.h
-	$(MAKE) -C ../src/
+	$(MAKE) -C ..
 
 install:
 	@mkdir -p $(PUBLISH)
@@ -79,7 +79,7 @@ $(PUBLISH)/uptodate: install TMVApp.root ../test/CompareHistsTrainAndApplied.C
 
 
 
-$(BINS): % : %.cxx ../inc/*.h
+$(BINS): % : %.cxx $(TMVALIB)
 	@echo -n "Building $@ ... "
 	$(CXX) $(CCFLAGS) $< $(INCLUDE) $(LIBS) -g -o $@
 	@echo "Done"
