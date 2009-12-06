@@ -190,10 +190,10 @@ $(LIBDIR)/$(SHLIBFILE): $(OLIST) $(DICTO)
 	@echo "Done"
 
 # Rule to combine objects into a unix shared library
-$(ROOTMAP): $(DICTLDEF)
+$(ROOTMAP): $(DICTL)
 	@printf "Building $(ROOTMAP) ... "
 	@mkdir -p $(LIBDIR)
-	rlibmap -f -o $@ -l lib$(PACKAGE).1.$(DllSuf) -d libMinuit.so libMLP.so libMatrix.so libTree.so libGraf.so libTreePlayer.so libXMLIO.so -c $<
+	rlibmap -f -o $@ -l lib$(PACKAGE).1.$(DllSuf) -d libMinuit.so libMLP.so libMatrix.so libTree.so libGraf.so libTreePlayer.so libXMLIO.so -c $^
 	@echo "Done"
 
 # Rule to combine objects into a windows shared library
