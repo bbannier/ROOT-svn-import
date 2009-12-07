@@ -60,6 +60,17 @@ HypoTestInverterResult::~HypoTestInverterResult()
    // no need to delete explictly the objects in the TList since the TList owns the objects
 }
 
+
+bool HypoTestInverterResult::Add( HypoTestInverterResult otherResult )
+{
+  /// Merge this HypoTestInverterResult with another
+  /// HypoTestInverterResult passed as argument
+
+  std::cout << "Sorry, this function is not yet implemented\n";
+
+  return true;
+}
+
  
 double HypoTestInverterResult::GetXValue( int index ) const
 {
