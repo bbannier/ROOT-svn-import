@@ -19,6 +19,7 @@
 #include "RooAbsPdf.h"
 #include "RooAbsData.h"
 #include "RooRealVar.h"
+#include "TMath.h"
 
 #include "RooStats/HybridCalculator.h"
 #include "RooStats/HybridResult.h"
@@ -80,31 +81,63 @@ void  HypoTestInverter::CreateResults() {
    fResults->UseCLs(fUseCLs);
 }
 
-
 bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, double epsilon, int numAlgorithm  )
 {
+  /// Search for the value of the parameter of interest (vary the
+  /// hypothesis being tested) in the specified range [xMin,xMax]
+  /// until the confidence level is compatible with the target value
+  /// within one time the estimated error (and the estimated error
+  /// should also become smaller than the specified parameter epsilon)
+
+  // various sanity checks on the input parameters
+  if ( xMin>=xMax || xMin< fScannedVariable->getMin() || xMax>fScannedVariable->getMax() ) {
+    std::cout << "Error: problem with the specified range\n";
+    return false;
+  }
+  if ( target<=0 || target>=1 ) {
+    std::cout << "Error: problem with target value\n";
+    return false;
+  }
+  if ( epsilon>0.5-fabs(0.5-target) ) {
+    std::cout << "Error: problem with error value\n";
+    return false;
+  }
 
   CreateResults();
+
   if ( target==Size()/2 ) fResults->fInterpolateLowerLimit = false;
   if ( target==(1-Size()/2) ) fResults->fInterpolateUpperLimit = false;
+  /*
+  if ( TMath::AreEqualRel(target,Size()/2,DBL_EPSILON) ) fResults->fInterpolateLowerLimit = false;
+  if ( TMath::AreEqualRel(target,1-Size()/2,DBL_EPSILON) ) fResults->fInterpolateUpperLimit = false;
+  */
 
   if (numAlgorithm==0) {
 
-    // Search for the value of the searched variable where the CL is within
-    // 1 sigma of the desired level and sigma smaller than epsilon.  This is done by consecutively replacing
-    // the worst value of the interval with one that has been interpolated
+    // Search for the value of the searched variable where the CL is
+    // within 1 sigma of the desired level and sigma smaller than
+    // epsilon.  This is done by consecutively replacing the worst
+    // value of the interval with one that has been interpolated
     // exponentially.
 
-    double nSigma = 1;
+    // parameters of the algorithm that are hard-coded
+    const double nSigma = 1; // number of times the estimated error the final p-value should be from the target
 
+    // backup some values to be restored at the end 
+    const unsigned int nToys_backup = ((HybridCalculator*)fCalculator0)->GetNumberOfToys();
+
+    // check the 2 hypothesis tests specified as extrema in the constructor
     double leftX = xMin;
-    double rightX = xMax;
-    if (!RunOnePoint(leftX)) return false;
+    if (!RunOnePoint(leftX)) return false;  // TO DO CLEAN QUIT
     double leftCL = fResults->GetYValue(fResults->ArraySize()-1);
     double leftCLError = fResults->GetYError(fResults->ArraySize()-1);
-    if (!RunOnePoint(rightX)) return false;
+
+    double rightX = xMax;
+    if (!RunOnePoint(rightX)) return false;  // TO DO CLEAN QUIT
     double rightCL = fResults->GetYValue(fResults->ArraySize()-1);
     double rightCLError = fResults->GetYError(fResults->ArraySize()-1);
+
+    unsigned int nIteration = 2;  // number of iteration performed by the algorithm
     double centerCL;
     double centerCLError;
 
@@ -115,12 +148,16 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, dou
       double a = (log(leftCL) - log(rightCL)) / (leftX - rightX);
       double b = leftCL / exp(a * leftX);
       double x = (log(target) - log(b)) / a;
+    // to do: do not allow next iteration outside the xMin,xMax interval
       if (isnan(x)) {
 	std::cout << "ERROR: Failed the auto run for finding target\n";
 	return false;
       }
 
-      if (!RunOnePoint(x)) return false;
+      // perform another hypothesis-test for value x
+      if (!RunOnePoint(x)) return false; // TO DO: quick the loop and restore before quitting
+      nIteration++;
+
       centerCL = fResults->GetYValue(fResults->ArraySize()-1);
       centerCLError = fResults->GetYError(fResults->ArraySize()-1);
 
@@ -165,10 +202,20 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, dou
        }
 
     } while ( fabs(centerCL-target) > nSigma*centerCLError || centerCLError > epsilon );
+
+    // to do fix number of iteration
     std::cout << "Converged in " << fResults->ArraySize() << " iterations\n";
+
+    // restore some parameters that might have been changed by the algorithm
+    ((HybridCalculator*)fCalculator0)->SetNumberOfToys(nToys_backup);
+
+    // finished: return 'true' for success status
     return true;
+
+
   } else if ( numAlgorithm==1 ) {
-    // Newton search
+    // alternative search algorithm: Newton search
+    // this one is deemed to disappear sooner or later
 
     double xLow = xMin;
     bool status = RunOnePoint(xMin);
@@ -199,7 +246,7 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, dou
     std::cout << "Converged in " << fResults->ArraySize() << " iterations\n";
     return true;
   } else {
-    std::cout << "not valid algorithm option specified\n";
+    std::cout << "Error: invalid algorithm option specified\n";
     return false;
   }
 }
