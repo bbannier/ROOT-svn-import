@@ -5,7 +5,7 @@
 
 MAKEFLAGS = --no-print-directory -r -s
 
-INCLUDE = -I../../../tmva/include $(shell root-config --cflags)
+INCLUDE = -I../../../tmva $(shell root-config --cflags)
 
 BINS = TMVATestDataInput
 
