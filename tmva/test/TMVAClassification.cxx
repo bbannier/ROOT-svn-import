@@ -29,7 +29,7 @@
  * macros (simply say: root -l <../macros/macro.C>), which can be conveniently    *
  * invoked through a GUI launched by the command                                  *
  *                                                                                *
- *    root -l ../macros/TMVAGui.C                                                 *
+ *    root -l ./TMVAGui.C                                                        *
  **********************************************************************************/
 
 #include <cstdlib>
@@ -447,7 +447,7 @@ int main( int argc, char** argv )
    std::cout << "==> Wrote root file: " << outputFile->GetName() << std::endl
              << "==> TMVAClassification is done!" << std::endl
              << std::endl
-             << "==> To view the results, launch the GUI: \"root -l ../macros/TMVAGui.C\"" << std::endl
+             << "==> To view the results, launch the GUI: \"root -l ./TMVAGui.C\"" << std::endl
              << std::endl;
 
    // Clean up
