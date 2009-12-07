@@ -115,6 +115,10 @@ void BayesianCalculator::SetModel(const ModelConfig & model) {
    ClearAll(); 
 }
 
+RooArgSet* BayesianCalculator::GetMode(RooArgSet* parameters) const
+{
+  return 0;
+}
 
 RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
 {
