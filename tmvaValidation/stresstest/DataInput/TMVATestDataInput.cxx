@@ -62,7 +62,7 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
    TString fname = "./TMVAInputData.root";
    input = TFile::Open( fname );
    assert(input);
-
+   
    TTree* TreeS1Train   =(TTree*)input->Get( "TreeS1Train");
    TTree* TreeS2Train   =(TTree*)input->Get( "TreeS2Train");
    TTree* TreeSSumTrain =(TTree*)input->Get( "TreeSSumTrain");
@@ -188,7 +188,7 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
       std::cout << "strict separation of testing and training, 8000 train 8000 test total, using Nevts=0, splitmode=block"<<std::endl;
       thetest->RegisterAssertion(4000,4000,4000,4000);
    }
-    else if (index==10) {
+   else if (index==10) {
       std::cout << "strict separation, 3000 train, 2000 test total"<<std::endl;
       factory->AddSignalTree    ( TreeSSumTrain, 1.0, TMVA::Types::kTraining );
       factory->AddBackgroundTree( TreeBSumTrain, 1.0, TMVA::Types::kTraining );
@@ -305,6 +305,50 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
       thetest->RegisterAssertion(1000,4000,500,4000);
    }
    // index= 30+ devoted to AddTree(TTree* tree, const TString& className, Double_t weight,const TCut& cut, const TString& treetype )
+   else if (index==21){ 
+      factory->AddSignalTree    ( TreeSSumTrain, 1.0, TMVA::Types::kTraining );
+      factory->AddBackgroundTree( TreeBSumTrain, 1.0, TMVA::Types::kTraining );
+      factory->AddSignalTree    ( TreeSSumTest,  1.0, TMVA::Types::kTesting  );
+      factory->AddBackgroundTree( TreeBSumTest, 1.0 , TMVA::Types::kTesting  );
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTrain_Signal=4001:nTrain_Background=4000:SplitMode=Random:NormMode=NumEvents:!V" );      
+      std::cout << "requesting more events than available, should cause a fatal, using Nevts_test=0, splitmode=random"<<std::endl;
+      thetest->RegisterAssertion(4001,4000,4000,4000);
+   }
+   else if (index==22){ 
+      factory->AddSignalTree    ( TreeSSumTrain, 1.0, TMVA::Types::kTraining );
+      factory->AddBackgroundTree( TreeBSumTrain, 1.0, TMVA::Types::kTraining );
+      factory->AddSignalTree    ( TreeSSumTest,  1.0, TMVA::Types::kTesting  );
+      factory->AddBackgroundTree( TreeBSumTest, 1.0 , TMVA::Types::kTesting  );
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTest_Signal=4001:nTest_Background=4000:SplitMode=Random:NormMode=NumEvents:!V" );      
+      std::cout << "requesting more events than available, should cause a fatal, using Nevts_train=0, splitmode=random"<<std::endl;
+      thetest->RegisterAssertion(4000,4000,4001,4000);
+   }
+   else if (index==23){ 
+      factory->AddSignalTree    ( TreeSSumTrain, 1.0, TMVA::Types::kTraining );
+      factory->AddBackgroundTree( TreeBSumTrain, 1.0, TMVA::Types::kTraining );
+      factory->AddSignalTree    ( TreeSSumTest,  1.0, TMVA::Types::kTesting  );
+      factory->AddBackgroundTree( TreeBSumTest, 1.0 , TMVA::Types::kTesting  );
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTest_Signal=4001:nTest_Background=4001:SplitMode=Random:NormMode=NumEvents:!V" );      
+      std::cout << "requesting more events than available, should cause a fatal, using Nevts_train=0, splitmode=random"<<std::endl;
+      thetest->RegisterAssertion(4000,4000,4001,4000);
+   }
+   else if (index==24){ 
+      factory->AddSignalTree    ( TreeSSumTrain, 1.0, TMVA::Types::kTraining );
+      factory->AddBackgroundTree( TreeBSumTrain, 1.0, TMVA::Types::kTraining );
+      factory->AddSignalTree    ( TreeSSumTest,  1.0, TMVA::Types::kTesting  );
+      factory->AddBackgroundTree( TreeBSumTest, 1.0 , TMVA::Types::kTesting  );
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTrain_Signal=4000:nTrain_Background=4000:nTest_Signal=6000:nTest_Background=6000:SplitMode=Random:NormMode=NumEvents:!V" );      
+      std::cout << "requesting more events than available, should cause a fatal, not a broken assertion"<<std::endl;
+      thetest->RegisterAssertion(4000,4000,6000,6000);
+   }
    else if (index==30) {
       std::cout << "strict separation, 3000 train, 2000 test total, using AddTree(TTree* tree, const TString& className, Double_t weight,const TCut& cut, const TString& treetype )"<<std::endl;
       factory->AddTree( TreeSSumTrain, "Signal", 1.0, "", "Training" );
