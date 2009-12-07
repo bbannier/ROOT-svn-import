@@ -13,20 +13,20 @@ public:
    int     fNTrainSig, fNTrainBg, fNTestSig, fNTestBg, fNTrain, fNTest;
    double  fFracTrain, fFracTest;
    TString fFake;
-
+   
    TestItem(){ }
    TestItem(int NTrainSig, int NTrainBg, int NTestSig, int NTestBg, const char* Fake) 
-  : fNTrainSig(NTrainSig), fNTrainBg(NTrainBg), fNTestSig(NTestSig), 
-    fNTestBg(NTestBg), fFake(Fake), fNTrain(NTrainSig+NTrainBg),
-    fNTest(NTestSig+NTestBg)
+      : fNTrainSig(NTrainSig), fNTrainBg(NTrainBg), fNTestSig(NTestSig), 
+        fNTestBg(NTestBg), fFake(Fake), fNTrain(NTrainSig+NTrainBg),
+        fNTest(NTestSig+NTestBg)
    {
       fFracTrain = ((double) fNTrainSig)/fNTrain;
       fFracTest  = ((double) fNTestSig )/fNTest;
       fFake.ToLower();
    } 
-
+   
    ~TestItem(){ }
-
+   
 };
 
 class DataInputTest {
@@ -38,24 +38,24 @@ private:
    //static const TString fSigName("issig");
    //static const TString fTestName("istest");
    static const double fEps = 1.e-4;
-
+   
 public:
    DataInputTest() : fTrainTree(0), fTestTree(0) {}
-
+   
    ~DataInputTest(){fList.clear();}
-
+   
    void SetTrees(TTree* ttrain, TTree* ttest)
    {
       fTrainTree=ttrain; 
       fTestTree=ttest;
    }
-
+   
    void RegisterAssertion(int ntrainSig, int ntrainBg, int ntestSig, 
                           int ntestBg, const char* fakes="hasnofakes")
    {
       fList.push_back(TestItem(ntrainSig, ntrainBg, ntestSig, ntestBg, fakes));
    }
-
+   
    void CheckAssertions()
    {
       assert(fList.size()==1);
@@ -65,8 +65,8 @@ public:
          assert(GetTreeValue(fTestTree,"","ENTRIES") == fList[i].fNTest);
          assert(TMath::Abs(GetTreeValue(fTestTree, "issig","MEAN")-fList[i].fFracTest)<fEps);
          if (fList[i].fFake!=TString("testtrainmixed")){
-               assert(GetTreeValue(fTrainTree,"istest","MAX") < fEps);
-               assert(GetTreeValue(fTestTree ,"istest","MIN") > 1.-fEps);
+            assert(GetTreeValue(fTrainTree,"istest","MAX") < fEps);
+            assert(GetTreeValue(fTestTree ,"istest","MIN") > 1.-fEps);
          }
          if (fList[i].fFake==TString("hasnofakes") || 
              fList[i].fFake==TString("testtrainmixed")){
@@ -90,7 +90,7 @@ public:
          }
       }
    }
-
+   
    double GetTreeValue(TTree* tree, const char* varname, const char* type)
    {
       TString typ(type);
@@ -111,5 +111,5 @@ public:
       delete htemp;
       return val;
    }
-
+   
 };
