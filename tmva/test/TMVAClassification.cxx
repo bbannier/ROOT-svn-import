@@ -192,7 +192,7 @@ int main( int argc, char** argv )
 
       // load the signal and background event samples from ROOT trees
       TFile *input(0);
-      TString fname = "../macros/tmva_example.root";
+      TString fname = "./tmva_example.root";
       if (!gSystem->AccessPathName( fname )) {
          // first we try to find tmva_example.root in the local directory
          std::cout << "--- TMVAClassification       : Accessing " << fname << std::endl;
