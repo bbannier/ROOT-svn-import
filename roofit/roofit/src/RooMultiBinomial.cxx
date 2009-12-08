@@ -36,6 +36,9 @@
 #include "RooAbsCategory.h"
 #include "RooMsgService.h"
 #include <string>
+#include <vector>
+
+using namespace std ;
 
 ClassImp(RooMultiBinomial)
   ;
@@ -97,26 +100,26 @@ Double_t RooMultiBinomial::evaluate() const
 
   // Get efficiency function for category i
 
-  Double_t _effFuncVal[effFuncListSize];
+  vector<Double_t> effFuncVal(effFuncListSize);
   for (int i=0; i<effFuncListSize; ++i) {
-    _effFuncVal[i] = ((RooAbsReal&)_effFuncList[i]).getVal() ;
+    effFuncVal[i] = ((RooAbsReal&)_effFuncList[i]).getVal() ;
   }
 
   // Truncate efficiency functions in range 0.0-1.0
 
   for (int i=0; i<effFuncListSize; ++i) {
-    if (_effFuncVal[i]>1) {
-      coutW(Eval) << "WARNING: Efficency >1 (equal to " << _effFuncVal[i] 
+    if (effFuncVal[i]>1) {
+      coutW(Eval) << "WARNING: Efficency >1 (equal to " << effFuncVal[i] 
 		  << " ), for i = " << i << "...TRUNCATED" << endl;
-      _effFuncVal[i] = 1.0 ;
-    } else if (_effFuncVal[i]<0) {
-      _effFuncVal[i] = 0.0 ;
-      coutW(Eval) << "WARNING: Efficency <0 (equal to " << _effFuncVal[i] 
+      effFuncVal[i] = 1.0 ;
+    } else if (effFuncVal[i]<0) {
+      effFuncVal[i] = 0.0 ;
+      coutW(Eval) << "WARNING: Efficency <0 (equal to " << effFuncVal[i] 
 		  << " ), for i = " << i << "...TRUNCATED" << endl;
     }
   }
 
-  Double_t _effValue[effFuncListSize];
+  vector<Double_t> effValue(effFuncListSize);
   Bool_t notVisible = true;
 
   // Calculate efficiency per accept/reject decision
@@ -124,14 +127,14 @@ Double_t RooMultiBinomial::evaluate() const
   for (int i=0; i<effFuncListSize; ++i) {
     if ( ((RooAbsCategory&)_catList[i]).getIndex() == 1) {
       // Accept case
-      _effValue[i] = _effFuncVal[i] ;
+      effValue[i] = effFuncVal[i] ;
       notVisible = false;
     } else if ( ((RooAbsCategory&)_catList[i]).getIndex() == 0){
       // Reject case
-      _effValue[i] = 1 - _effFuncVal[i] ;
+      effValue[i] = 1 - effFuncVal[i] ;
     } else {
       coutW(Eval) << "WARNING: WRONG CATEGORY NAMES GIVEN!, label = " << ((RooAbsCategory&)_catList[i]).getIndex() << endl;
-      _effValue[i] = 0;
+      effValue[i] = 0;
     }
   }
 
@@ -141,7 +144,7 @@ Double_t RooMultiBinomial::evaluate() const
   // put equal to zero if combination of only zeros AND chosen to be invisible
 
   for (int i=0; i<effFuncListSize; ++i) {
-    _effVal=_effVal*_effValue[i];
+    _effVal=_effVal*effValue[i];
     if (notVisible && _ignoreNonVisible){
       _effVal=0;
     }
