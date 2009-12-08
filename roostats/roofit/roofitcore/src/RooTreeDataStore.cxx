@@ -593,9 +593,10 @@ void RooTreeDataStore::loadValues(const RooAbsDataStore *ads, const RooFormulaVa
     if (selectClone && selectClone->getVal()==0) {
       continue ; 
     }
+
     
-    _varsww.assignFast(((RooTreeDataStore*)ads)->_varsww) ;
-    
+    _varsww.assignValueOnly(((RooTreeDataStore*)ads)->_varsww) ;
+
     _iterator->Reset() ;
     // Check that all copied values are valid
     allValid=kTRUE ;
@@ -906,6 +907,7 @@ RooAbsArg* RooTreeDataStore::addColumn(RooAbsArg& newVar, Bool_t adjustRange)
   // Attach value place holder to this tree
   ((RooAbsArg*)valHolder)->attachToTree(*_tree,_defTreeBufSize) ;
   _vars.add(*valHolder) ;
+  _varsww.add(*valHolder) ;
 
   // Fill values of of placeholder
   for (int i=0 ; i<GetEntries() ; i++) {
