@@ -59,7 +59,10 @@ class TGNumberEntryField;
 class TGStatusBar;
 class TAxis;
 class TF1;
+class TGHProgressBar;
+class TGTextButton;
 
+class RooWorkspace;
 
 class TFitEditor : public TGMainFrame {
 
@@ -122,6 +125,11 @@ protected:
    TAxis               *fYaxis;            // y-axis
    TAxis               *fZaxis;            // z-axis
 
+   TGTextEntry         *fExpRoo;           // RooFit expression 
+   TGHProgressBar      *fProgRoo;          // shows the progression of the TF1 creation
+   TGTextButton        *fGenRoo;           // starts the TF1 generation
+   RooWorkspace        *fWorkspace;        // RooWorkspace of the FitPanel session
+
    // structure holding parameter value and limits
    struct FuncParamData_t { 
       FuncParamData_t() {
@@ -153,6 +161,7 @@ protected:
    void        GetFunctionsFromSystem();
    void        ProcessTreeInput(TObject* objSelected, Int_t selected,
                                 TString variables, TString cuts);
+   TF1 *       CreateRooFitPdf(const char * expr, bool norm = false);
    TF1*        FindFunction();
    void        FillDataSetList();
    TGComboBox* BuildMethodList(TGFrame *parent, Int_t id);
@@ -212,6 +221,7 @@ public:
    virtual void   DoEmptyBinsAllWeights1();
    virtual void   DoEnteredFunction();
    virtual void   DoUpdate();
+   virtual void   DoGenerateRooFit();
    virtual void   DoFit();
    virtual void   DoMaxIterations();
    virtual void   DoDataSet(Int_t sel);

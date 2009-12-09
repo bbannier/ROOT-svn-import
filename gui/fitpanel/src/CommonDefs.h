@@ -25,7 +25,8 @@ enum EFitPanel {
 
    // New GUI elements from here!
    kFP_TLIST, kFP_PRED1D, kFP_PRED2D, kFP_PRED3D, kFP_UFUNC, kFP_PREVFIT, kFP_ROOFIT,
-   kFP_DATAS,
+   kFP_DATAS, 
+   kFP_NAMEROO, kFP_EXPROO, kFP_GENROO, 
 
    kFP_NOSEL = 8000,
    kFP_ALTFUNC = 10000
