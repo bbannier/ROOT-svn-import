@@ -133,6 +133,7 @@
 #include "TGButtonGroup.h"
 #include "TGNumberEntry.h"
 #include "TGDoubleSlider.h"
+#include "TGProgressBar.h"
 #include "TGStatusBar.h"
 #include "TFitParametersDialog.h"
 #include "TGMsgBox.h"
@@ -156,6 +157,11 @@
 #include "TTreePlayer.h"
 #include "TTreeInput.h"
 #include "TAdvancedGraphicsDialog.h"
+
+#include "RooWorkspace.h"
+#include "RooAbsPdf.h"
+#include "RooRealVar.h"
+#include "RooDataSet.h"
 
 #include "RConfigure.h"
 #include "TPluginManager.h"
@@ -502,6 +508,8 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    ChangeOptions(GetOptions() | kFixedSize);
    SetWMSize(size.fWidth, size.fHeight);
    SetWMSizeHints(size.fWidth, size.fHeight, size.fWidth, size.fHeight, 0, 0);
+
+   fWorkspace = new RooWorkspace(); 
 }
 
 //______________________________________________________________________________
@@ -527,6 +535,9 @@ TFitEditor::~TFitEditor()
 
    // Set the singleton reference to null
    fgFitDialog = 0;
+
+   delete fWorkspace;
+   fWorkspace = 0;
 }
 
 //______________________________________________________________________________
@@ -534,7 +545,11 @@ void TFitEditor::CreateFunctionGroup()
 {
    // Creates the Frame that contains oll the information about the
    // function.
-   TGGroupFrame *gf1 = new TGGroupFrame(this, "Fit Function", kFitWidth);
+   
+   TGTab* functionTab = new TGTab(this, 10,10);
+   fTabContainer = functionTab->AddTab("Fit Function");
+
+   TGVerticalFrame *gf1 = new TGVerticalFrame(fTabContainer);
       
    TGCompositeFrame *tf0 = new TGCompositeFrame(gf1, 350, 26,
                                                 kHorizontalFrame);
@@ -634,7 +649,46 @@ void TFitEditor::CreateFunctionGroup()
    gf1->AddFrame(tf4, new TGLayoutHints(kLHintsNormal |
                                              kLHintsExpandX, 5, 0, 0, 0));
 
-   this->AddFrame(gf1, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 0));
+   fTabContainer->AddFrame(gf1, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 0));
+
+   fTabContainer = functionTab->AddTab("RooFit");
+   TGVerticalFrame *gf2 = new TGVerticalFrame(fTabContainer);
+
+   TGHorizontalFrame *tmpFrame = new TGHorizontalFrame(gf2);
+   TGLabel* tmpLabel = new TGLabel(tmpFrame, "Name:");
+   tmpFrame->AddFrame(tmpLabel,new TGLayoutHints(kLHintsNormal, 0, 0, 2, 0));
+   TGComboBox* fNameRoo = new TGComboBox(tmpFrame, kFP_NAMEROO);
+   fNameRoo->Resize(190, 20);
+   tmpFrame->AddFrame(fNameRoo, new TGLayoutHints(kLHintsExpandX, 23, 0, 0, 0));
+   gf2->AddFrame(tmpFrame, new TGLayoutHints(kLHintsExpandX, 5, 5, 10, 0));
+
+   tmpFrame = new TGHorizontalFrame(gf2);
+   tmpLabel = new TGLabel(tmpFrame, "Formula:");
+   tmpFrame->AddFrame(tmpLabel,new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
+   fExpRoo = new TGTextEntry(tmpFrame, new TGTextBuffer(0), kFP_EXPROO);
+   fExpRoo->SetToolTipText("Enter a RooFit formula expression");
+   fExpRoo->Resize(190,fExpRoo->GetDefaultHeight());
+   tmpFrame->AddFrame(fExpRoo,new TGLayoutHints(kLHintsExpandX, 10, 0, 2, 2));
+   gf2->AddFrame(tmpFrame, new TGLayoutHints(kLHintsExpandX, 5, 5, 10, 0));
+
+   tmpFrame = new TGHorizontalFrame(gf2);
+   fProgRoo = new TGHProgressBar(tmpFrame,TGProgressBar::kStandard,300 );
+   fProgRoo->SetFillType(TGProgressBar::kBlockFill);
+   fProgRoo->Resize(190,20);
+   //fProgRoo->Increment(30);
+   tmpFrame->AddFrame(fProgRoo,new TGLayoutHints(kLHintsExpandX, 10, 0, 2, 2));
+   gf2->AddFrame(tmpFrame, new TGLayoutHints(kLHintsExpandX, 5, 5, 10, 0));
+
+   tmpFrame = new TGHorizontalFrame(gf2);
+   fGenRoo = new TGTextButton(tmpFrame, "&Generate", kFP_GENROO);
+   fGenRoo->Resize(200,20);
+   fGenRoo->SetToolTipText("Generates a TF1 from the RooFit expression");
+   tmpFrame->AddFrame(fGenRoo,new TGLayoutHints(kLHintsRight | kLHintsCenterY | kLHintsExpandX));
+   gf2->AddFrame(tmpFrame, new TGLayoutHints(kLHintsNormal | kLHintsExpandX, 250, 5, 10, 0));
+
+   fTabContainer->AddFrame(gf2, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 0));
+
+   this->AddFrame(functionTab, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 0));
 
 }
 
@@ -1100,6 +1154,9 @@ void TFitEditor::ConnectSlots()
    fOptVerbose->Connect("Toggled(Bool_t)","TFitEditor",this,"DoPrintOpt(Bool_t)");
    fOptQuiet->Connect("Toggled(Bool_t)","TFitEditor",this,"DoPrintOpt(Bool_t)");
 
+   // roofit section
+   fGenRoo->Connect("Clicked()", "TFitEditor", this, "DoGenerateRooFit()");
+
 }
 
 //______________________________________________________________________________
@@ -1163,6 +1220,9 @@ void TFitEditor::DisconnectSlots()
    fOptDefault->Disconnect("Toggled(Bool_t)");
    fOptVerbose->Disconnect("Toggled(Bool_t)");
    fOptQuiet->Disconnect("Toggled(Bool_t)");
+
+   // roofit options
+   fGenRoo->Disconnect("Clicked()");
 
 }
 
@@ -3043,6 +3103,104 @@ void TFitEditor::DoMaxIterations()
 }
 
 //______________________________________________________________________________
+TF1 * TFitEditor::CreateRooFitPdf(const char * expr, bool norm) { 
+
+   RooAbsArg * arg = fWorkspace->factory(expr);
+   if (!arg) { 
+      std::cerr << "Error: creating RooFit model - invalid expression" << std::endl;
+      return 0; 
+   }
+   TString modelName = arg->GetName();
+   RooAbsReal * pdf = 0; 
+
+   // add normalization term as an extra parmeters
+   TString fname = TString("N_") + modelName; 
+   if (!norm) { 
+      // construct normalize functions 
+      //TString fullexpr = TString("prod::") + fname + TString("(N[1,0,1e10],") + modelName + TString(")");
+      TString fullexpr = Form("prod::fN_%s(N_%s[1,0,1e10],%s)",modelName.Data(), modelName.Data(), modelName.Data());
+      RooAbsArg * tmp = fWorkspace->factory(fullexpr);
+      pdf = dynamic_cast<RooAbsReal *>(tmp);
+      if (!pdf) { 
+         std::cerr << "Error creating Unnormalized RooFit funciton : " << fullexpr << std::endl;
+         return 0; 
+      }
+   }
+
+
+
+   // assume observables are x (or y, z ) for multi-dimensional functions
+
+   RooRealVar * x = fWorkspace->var("x");
+   if (!x) { 
+      std::cerr << "Error: variable x not present in pdf" << std::endl;
+      return 0; 
+   }
+   RooArgSet obs(*x);
+
+   RooRealVar * y = fWorkspace->var("y");
+   if (y) obs.add(*y);
+
+   RooRealVar * z = fWorkspace->var("z");
+   if (z) obs.add(*z);
+
+   // in case of multi dimension needs to add also y and z
+   RooArgSet * params = pdf->getParameters(obs); 
+
+   if (!params) {
+      std::cerr << "Error: no parameters present in pdf" << std::endl;
+      return 0; 
+   }
+   params->Print();
+   // adding *x as thirs parameter will ensure x is normalized with respect to x 
+   TF1 * f1 = pdf->asTF(obs,RooArgList(*params),obs);
+   f1->SetName(modelName);
+  
+
+   f1->SetTitle(expr);
+   return f1; 
+}
+
+//______________________________________________________________________________
+void TFitEditor::DoGenerateRooFit()
+{
+   TH1* histo = 0;
+   switch (fType) {
+      case kObjectHisto:
+         histo = static_cast<TH1*>(fFitObject);
+         break;
+      case kObjectGraph:
+         histo = ((TGraph*)fFitObject)->GetHistogram();
+         break;
+      case kObjectGraph2D:
+         histo = ((TGraph2D*)fFitObject)->GetHistogram("empty");
+         break;
+      case kObjectHStack:
+         histo = (TH1 *)((THStack *)fFitObject)->GetHists()->First();
+         break;
+      case kObjectMultiGraph:
+         histo = ((TMultiGraph*)fFitObject)->GetHistogram();
+         break;
+
+      case kObjectTree:
+         new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
+                      "Error...", "RooFit not yet supported in the FitPanel with TTree objects!",
+                      kMBIconStop,kMBOk, 0);
+         return;
+   };
+
+   fWorkspace->factory(Form("x[%f,%f]",histo->GetXaxis()->GetXmin(),histo->GetXaxis()->GetXmax())) ;   
+   if (histo->GetDimension() > 1)
+      fWorkspace->factory(Form("y[%f,%f]",histo->GetYaxis()->GetXmin(),histo->GetYaxis()->GetXmax())) ;   
+   if (histo->GetDimension() > 2)
+      fWorkspace->factory(Form("z[%f,%f]",histo->GetZaxis()->GetXmin(),histo->GetZaxis()->GetXmax())) ;   
+   
+   CreateRooFitPdf(fExpRoo->GetText());
+
+   return;
+}
+
+//______________________________________________________________________________
 void TFitEditor::MakeTitle(TGCompositeFrame *parent, const char *title)
 {
    // Create section title in the GUI.
@@ -3214,6 +3372,7 @@ void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, ROOT::Ma
    minOpts.SetMaxFunctionCalls(fIterations->GetIntNumber());
 }
 
+//______________________________________________________________________________
 void TFitEditor::SetEditable(Bool_t state)
 {
    // Set the state of some input widgets depending on whether the fit
@@ -3231,6 +3390,7 @@ void TFitEditor::SetEditable(Bool_t state)
    }
 }
 
+//______________________________________________________________________________
 void TFitEditor::GetRanges(ROOT::Fit::DataRange& drange)
 {
    // Return the ranges selected by the sliders.
@@ -3264,6 +3424,7 @@ void TFitEditor::GetRanges(ROOT::Fit::DataRange& drange)
    }
 }
 
+//______________________________________________________________________________
 TList* TFitEditor::GetFitObjectListOfFunctions()
 {
    // Get the list of functions previously used in the fitobject.
@@ -3297,6 +3458,7 @@ TList* TFitEditor::GetFitObjectListOfFunctions()
    return listOfFunctions;
 }
 
+//______________________________________________________________________________
 void TFitEditor::GetFunctionsFromSystem()
 {
    // Looks for all the functions registered in the current ROOT
@@ -3341,6 +3503,7 @@ void TFitEditor::GetFunctionsFromSystem()
    }
 }
 
+//______________________________________________________________________________
 TList* TFitEditor::GetListOfFittingFunctions(TObject* obj)
 {
    // This function returns a TList with all the functions used in the
@@ -3363,6 +3526,7 @@ TList* TFitEditor::GetListOfFittingFunctions(TObject* obj)
    return retList;
 }
 
+//______________________________________________________________________________
 TF1* TFitEditor::GetFitFunction() 
 {
    // Get the fit function selected or declared in the fiteditor
