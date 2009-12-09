@@ -345,7 +345,10 @@ bool HypoTestInverter::RunOnePoint( double thisX )
    // compute the results
    HypoTestResult* myHybridResult = fCalculator0->GetHypoTest(); 
    
-   double lastXtested = fResults->GetXValue(fResults->ArraySize()-1);   
+   double lastXtested;
+   if ( fResults->ArraySize()!=0 ) lastXtested = fResults->GetXValue(fResults->ArraySize()-1);
+   else lastXtested = -999;
+
    if ( lastXtested==thisX ) {
      
      std::cout << "Merge with previous result\n";

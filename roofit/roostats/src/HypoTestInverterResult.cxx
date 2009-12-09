@@ -170,20 +170,22 @@ int HypoTestInverterResult::FindClosestPointIndex(double target)
 
 Double_t HypoTestInverterResult::LowerLimit()
 {
+  std::cout << "finding point with cl = " << 1-(1-ConfidenceLevel())/2 << endl;
   if ( fInterpolateLowerLimit ){
-    fLowerLimit = FindInterpolatedLimit(ConfidenceLevel()/2);
+    fLowerLimit = FindInterpolatedLimit(1-(1-ConfidenceLevel())/2);
   } else {
-    fLowerLimit = GetXValue( FindClosestPointIndex(ConfidenceLevel()/2) );
+    fLowerLimit = GetXValue( FindClosestPointIndex(1-(1-ConfidenceLevel())/2) );
   }
   return fLowerLimit;
 }
 
 Double_t HypoTestInverterResult::UpperLimit()
 {
+  std::cout << "finding point with cl = " << ConfidenceLevel()/2 << endl;
   if ( fInterpolateUpperLimit ) {
-    fUpperLimit = FindInterpolatedLimit(1-ConfidenceLevel()/2);
+    fUpperLimit = FindInterpolatedLimit(ConfidenceLevel()/2);
   } else {
-    fUpperLimit = GetXValue( FindClosestPointIndex(1-ConfidenceLevel()/2) );
+    fUpperLimit = GetXValue( FindClosestPointIndex(ConfidenceLevel()/2) );
   }
   return fUpperLimit;
 }
