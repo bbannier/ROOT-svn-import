@@ -103,7 +103,7 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, dou
     std::cout << "Error: problem with error value\n";
     return false;
   }
-  if ( numAlgorithm==0 && numAlgorithm!=1 ) {
+  if ( numAlgorithm!=0 && numAlgorithm!=1 ) {
     std::cout << "Error: invalid interpolation algorithm\n";
     return false;
   }
