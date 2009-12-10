@@ -181,11 +181,11 @@ Double_t HypoTestInverterResult::LowerLimit()
 
 Double_t HypoTestInverterResult::UpperLimit()
 {
-  std::cout << "finding point with cl = " << ConfidenceLevel()/2 << endl;
+  std::cout << "finding point with cl = " << 1-ConfidenceLevel()/2 << endl;
   if ( fInterpolateUpperLimit ) {
-    fUpperLimit = FindInterpolatedLimit(ConfidenceLevel()/2);
+    fUpperLimit = FindInterpolatedLimit(1-ConfidenceLevel()/2);
   } else {
-    fUpperLimit = GetXValue( FindClosestPointIndex(ConfidenceLevel()/2) );
+    fUpperLimit = GetXValue( FindClosestPointIndex(1-ConfidenceLevel()/2) );
   }
   return fUpperLimit;
 }
