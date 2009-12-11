@@ -16,8 +16,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
 
-    infile  = file("src/Version.h","r")
-    outfile = file("src/Version.new.h","w")
+    infile  = file("inc/Version.h","r")
+    outfile = file("inc/Version.new.h","w")
         
     lines = infile.readlines()
 
@@ -43,9 +43,9 @@ if __name__ == "__main__":
     infile.close()
     outfile.close()
 
-    os.system('mv src/Version.new.h src/Version.h')
+    os.system('mv inc/Version.new.h inc/Version.h')
 
-    print "I have just modified the file 'src/Version.h'. Next steps to be taken are: "
+    print "I have just modified the file 'inc/Version.h'. Next steps to be taken are: "
     cmds = ["svn up", 'svn ci -m "new release %s"' % sys.argv[1],
            'svn copy -m "new release %s"' % sys.argv[1] + ' https://tmva.svn.sourceforge.net/svnroot/tmva/trunk/ https://tmva.svn.sourceforge.net/svnroot/tmva/tags/V%02d-%02d-%02d' % tuple([int(x) for x in sys.argv[1].split('.')]) ]
     for cmd in cmds:
