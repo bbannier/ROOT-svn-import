@@ -787,6 +787,7 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
                case '\0': /* no op */
                   defined->ref = expressionin.ref;
                   defined->obj.reftype.reftype = expressionin.obj.reftype.reftype;
+                  break;
                case '+': /* add */
                   defined->obj.i = defined->obj.i + expressionin.obj.i * G__sizeof(defined);
                   defined->ref = 0;
@@ -2517,14 +2518,18 @@ int G__overloadopr(int operatortag, G__value expressionin, G__value* defined)
          // This part must be fixed when reference to pointer type is supported.
          if (expressionin.ref && (expressionin.ref != 1)) {
             pos = strchr(arg2, ')');
-            *pos = '\0';
-            if (expressionin.ref < 0) {
-               expr.Format("*%s*)(%ld)", arg2(), expressionin.ref);
+            if (pos) {
+               *pos = '\0';
+               if (expressionin.ref < 0) {
+                  expr.Format("*%s*)(%ld)", arg2(), expressionin.ref);
+               }   
+               else {
+                  expr.Format("*%s*)%ld", arg2(), expressionin.ref);
+               }
+               strcpy(arg2, expr);
+            } else {
+               G__fprinterr(G__serr, "G__overloadopr: expected ')' in %s\n", arg2());
             }
-            else {
-               expr.Format("*%s*)%ld", arg2(), expressionin.ref);
-            }
-            strcpy(arg2, expr);
          } else if (expressionin.type == 'm') {
             strcat(arg2, "ULL");
          }
@@ -2691,7 +2696,7 @@ int G__parenthesisovldobj(G__value* result3, G__value* result, const char* realn
 #endif
 )
 {
-   int known;
+   int known = 0;
    long store_struct_offset;
    int store_tagnum;
    int funcmatch;
@@ -3251,6 +3256,7 @@ long G__op2_operator_detail(int opr, G__value* lval, G__value* rval)
                      case G__OPR_DIVASSIGN:
                         return(G__OPR_DIVASSIGN_DD);
                   }
+                  break;
                case 'f':
                   switch (opr) {
                      case G__OPR_ADDASSIGN:

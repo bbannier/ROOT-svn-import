@@ -810,8 +810,7 @@ void TGFrame::StartGuiBuilding(Bool_t on)
    } else if (fParent->InheritsFrom(TGCompositeFrame::Class())) {
       comp = (TGCompositeFrame*)fParent;
    }
-
-   comp->SetEditable(on);
+   if (comp) comp->SetEditable(on);
 }
 
 //______________________________________________________________________________
@@ -1438,7 +1437,7 @@ TGMainFrame::TGMainFrame(const TGWindow *p, UInt_t w, UInt_t h,
    // if parent is editing/embedable add this frame to the parent
    if (fClient->IsEditable() && (p == fClient->GetRoot())) {
       TGCompositeFrame *frame;
-      if (p->InheritsFrom(TGCompositeFrame::Class())) {
+      if (p && p->InheritsFrom(TGCompositeFrame::Class())) {
          frame = (TGCompositeFrame*)p;
          frame->AddFrame(this, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
@@ -2272,6 +2271,7 @@ TGHeaderFrame::TGHeaderFrame(const TGWindow *p, UInt_t w, UInt_t h,
    fOverSplitter = false;
    fOverButton = -1;
    fLastButton = -1;
+   fNColumns   = 1;
 
    gVirtualX->GrabButton(fId, kAnyButton, kAnyModifier,
                          kButtonPressMask | kButtonReleaseMask,
@@ -2809,6 +2809,7 @@ void TGMainFrame::SaveSource(const char *filename, Option_t *option)
    out.open(ff.Data(), ios::out);
    if (!out.good()) {
       Error("SaveSource", "cannot open file: %s", ff.Data());
+      delete [] sname;
       return;
    }
 
@@ -2968,11 +2969,10 @@ void TGMainFrame::SaveSource(const char *filename, Option_t *option)
             }
          out << "}" << endl;
       }
+      gROOT->GetListOfSpecials()->Remove(sl);
+      sl->Delete();
+      delete sl;
    }
-   gROOT->GetListOfSpecials()->Remove(sl);
-   sl->Delete();
-   delete sl;
-
    out.close();
 
    if (!opt.Contains("quiet"))
@@ -3294,6 +3294,7 @@ void TGTransientFrame::SaveSource(const char *filename, Option_t *option)
    out.open(ff.Data(), ios::out);
    if (!out.good()) {
       Error("SaveSource", "cannot open file: %s", ff.Data());
+      delete [] sname;
       return;
    }
 
@@ -3456,10 +3457,10 @@ void TGTransientFrame::SaveSource(const char *filename, Option_t *option)
             }
          out << "}" << endl;
       }
+      gROOT->GetListOfSpecials()->Remove(sl);
+      sl->Delete();
+      delete sl;
    }
-   gROOT->GetListOfSpecials()->Remove(sl);
-   sl->Delete();
-   delete sl;
 
    out.close();
 

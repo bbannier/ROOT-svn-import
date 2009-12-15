@@ -429,6 +429,7 @@ const char *TASImage::TypeFromMagicNumber(const char *file)
          break;
       case 0x89:
          ret = "png";
+         break;
       case 0xff:
          ret = "jpg";
          break;
@@ -2211,6 +2212,7 @@ Pixmap_t TASImage::GetMask()
    ASImageDecoder *imdec = start_image_decoding(fgVisual, img, SCL_DO_ALPHA,
                                                 0, 0, ww, 0, 0);
    if(!imdec) {
+      delete [] bits;
       return 0;
    }
 
@@ -3320,6 +3322,7 @@ void TASImage::Crop(Int_t x, Int_t y, UInt_t width, UInt_t height)
    ASImage *img = create_asimage(width, height, 0);
 
    if (!img) {
+      delete [] imdec;
       Warning("Crop", "Failed to create image");
       return;
    }
@@ -3555,6 +3558,7 @@ UInt_t *TASImage::GetScanline(UInt_t y)
                                                 0, y, img->width, 1, 0);
 
    if (!imdec) {
+      delete [] ret;
       Warning("GetScanline", "Failed to start image decoding");
       return 0;
    }
@@ -5191,6 +5195,7 @@ Bool_t TASImage::GetPolygonSpans(UInt_t npt, TPoint *ppt, UInt_t *nspans,
 
       // in case of non-convex polygon
       if (i < 0) {
+         delete [] firstWidth;
          return kTRUE;
       }
 
@@ -6061,7 +6066,7 @@ void TASImage::Streamer(TBuffer &b)
          buffer = new char[size];
          b.ReadFastArray(buffer, size);
          SetImageBuffer(&buffer, TImage::kPng);
-         delete buffer;
+         delete [] buffer;
       } else {                   // read vector with palette
          TAttImage::Streamer(b);
          b >> w;
@@ -6445,6 +6450,7 @@ void TASImage::Gray(Bool_t on)
          Warning("ToGray", "Failed to start image output");
          delete fScaledImage;
          fScaledImage = 0;
+         delete [] imdec;
          return;
       }
 
@@ -6660,7 +6666,7 @@ Bool_t TASImage::SetJpegDpi(const char *name, UInt_t set)
       }
    }
 
-   if (i == 20) { // jpeg maker was not found
+   if (i == 20 || dpi+4 >= 20) { // jpeg maker was not found
       fclose(fp);
       printf("file %s : wrong JPEG format\n", name);
       return kFALSE;

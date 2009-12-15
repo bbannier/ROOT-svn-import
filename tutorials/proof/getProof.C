@@ -56,6 +56,21 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    //                [kFALSE].
    //     'tutords'  This flag can be used to force a dataset dir under the tutorial dir [kFALSE]
    //
+   // It is possible to trigger the automatic valgrind setup by defining the env GETPROOF_VALGRIND.
+   // E.g. to run the master in valgrind do
+   //
+   //     $ export GETPROOF_VALGRIND="valgrind=master"
+   //
+   // before running getProof. Note that 'getProof' is also called by 'stressProof', so this holds
+   // for 'stressProof' runs too.
+
+#ifdef __CINT__
+   Printf("getProof: this script can only be executed via ACliC:");
+   Printf("getProof:      root [] .x <path>/getProof.C+");
+   Printf("getProof: or   root [] .L <path>/getProof.C+");
+   Printf("getProof:      root [] getProof(...)");
+   return;
+#endif
 
    TProof *p = 0;
 
@@ -175,14 +190,14 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
       Printf("getProof: daemon found listening on dedicated ports {%d,%d} (pid: %d)",
               lportx, lportp, pid);
       if (isatty(0) == 0 || isatty(1) == 0) {
+         // Cannot ask: always restart
+         restart = kTRUE;
+      } else {
          if (!strcmp(opt,"ask")) {
             char *answer = Getline("getProof: would you like to restart it (N,Y)? [N] ");
             if (answer && (answer[0] == 'Y' || answer[0] == 'y'))
                restart = kTRUE;
          }
-      } else {
-         // Cannot ask: always restart
-         restart = kTRUE;
       }
       if (!strcmp(opt,"force"))
          // Always restart
@@ -277,7 +292,22 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    Printf("getProof: start / attach the PROOF session ...");
 
    // Start / attach the session now
-   p = TProof::Open(lurl);
+   if (gSystem->Getenv("GETPROOF_VALGRIND")) {
+      TString s(gSystem->Getenv("GETPROOF_VALGRIND")), t;
+      Int_t from = 0;
+      TString vopt, vopts;
+      while (s.Tokenize(t, from , " ")) {
+         if (t.BeginsWith("valgrind_opts:"))
+            vopts = t;
+         else
+            vopt = t;
+      }
+      if (vopts.IsNull()) vopts = "valgrind_opts:--leak-check=full --track-origins=yes";
+      TProof::AddEnvVar("PROOF_WRAPPERCMD", vopts.Data());
+      p = TProof::Open(lurl, vopt.Data());
+   } else {
+      p = TProof::Open(lurl);
+   }
    if (!p || !(p->IsValid())) {
       Printf("getProof: starting local session failed");
       if (p) delete p;

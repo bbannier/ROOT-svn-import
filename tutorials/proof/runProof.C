@@ -97,15 +97,24 @@
 //   The following arguments are valid for all examples (the ones specific to each
 //   tutorial have been explained above)
 //
+//   0. ACLiC mode
+//      By default all processing is done with ACLiC mode '+', i.e. compile if changed.
+//      However, this may lead to problems if the available selector libs were compiled
+//      in previous sessions with a different set of loaded libraries (this is a
+//      general problem in ROOT). When this happens the best solution is to force
+//      recompilation (ACLiC mode '++'). To do this just add one or more '+' to the name
+//      of the tutorial, e.g.
+//                             runProof("simple+")  // forcing recompilation
+//
 //   1. nevt=N
 //
 //      Set the number of entries to N
-//      E.g. runProof("simple(nevt=1000000000)") runs simple with 1000000000
+//      e.g. runProof("simple(nevt=1000000000)") runs simple with 1000000000
 //
 //   2. asyn
 //
 //      Run in non blocking mode
-//      E.g. root[] runProof("h1(asyn)")
+//      e.g. root[] runProof("h1(asyn)")
 //
 //   3. nwrk=N
 //
@@ -116,13 +125,18 @@
 //   4. punzip
 //
 //      Use parallel unzipping in reading files where relevant
-//      E.g. root[] runProof("eventproc(punzip)")
+//      e.g. root[] runProof("eventproc(punzip)")
 //
 //   5. cache=<bytes> (or <kbytes>K or <mbytes>M) 
 //
 //      Change the size of the tree cache; 0 or <0 disables the cache; value cane be in
 //      bytes (no suffix), kilobytes (suffix 'K') or megabytes (suffix 'M')
-//      E.g. root[] runProof("eventproc(cache=0)") 
+//      e.g. root[] runProof("eventproc(cache=0)") 
+//
+//   6. submergers[=S]
+//
+//      Enabling merging via S submergers or the optimal number if S is not specified,
+//      e.g. root[] runProof("simple(hist=1000,submergers)") 
 //
 //
 //
@@ -177,6 +191,13 @@ void runProof(const char *what = "simple",
               const char *url = "proof://localhost:11093",
               Int_t nwrks = -1)
 {
+#ifdef __CINT__
+   Printf("runProof: this script can only be executed via ACliC:");
+   Printf("runProof:      root [] .x <path>/runProof.C+");
+   Printf("runProof: or   root [] .L <path>/runProof.C+");
+   Printf("runProof:      root [] runProof(...)");
+   return;
+#endif
    gEnv->SetValue("Proof.StatsHist",1);
 
    // Temp dir for PROOF tutorials
@@ -312,10 +333,18 @@ void runProof(const char *what = "simple",
       Printf("runProof: action not found: check your arguments (%s)", what);
       return;
    }
+   // Extract ACLiC mode
+   TString aMode = "+";
+   if (act.EndsWith("+")) {
+      aMode += "+";
+      while (act.EndsWith("+")) { act.Remove(TString::kTrailing,'+'); }
+   }
+   Printf("runProof: %s: ACLiC mode: '%s'", act.Data(), aMode.Data());
 
    // Parse out number of events and  'asyn' option, used almost by every test
    TString aNevt, aNwrk, opt, sel, punzip("off"), aCache;
    Long64_t suf = 1;
+   Int_t aSubMg = -1;
    while (args.Tokenize(tok, from, " ")) {
       // Number of events
       if (tok.BeginsWith("nevt=")) {
@@ -351,6 +380,15 @@ void runProof(const char *what = "simple",
          if (!aCache.IsDigit()) {
             Printf("runProof: %s: error parsing the 'cache=' option (%s) - ignoring", act.Data(), tok.Data());
             aCache = "";
+         }
+      }
+      // Use submergers?
+      if (tok.BeginsWith("submergers")) {
+         tok.ReplaceAll("submergers","");
+         aSubMg = 0;
+         if (tok.BeginsWith("=")) {
+            tok.ReplaceAll("=","");
+            if (tok.IsDigit()) aSubMg = tok.Atoi();
          }
       }
    }
@@ -392,6 +430,18 @@ void runProof(const char *what = "simple",
       proof->DeleteParameters("PROOF_CacheSize");
    }
 
+   // Enable submergers, if required
+   if (aSubMg >= 0) {
+      gProof->SetParameter("PROOF_UseMergers", aSubMg);
+      if (aSubMg > 0) {
+         Printf("runProof: %s: enabling merging via %d sub-mergers", act.Data(), aSubMg);
+      } else {
+         Printf("runProof: %s: enabling merging via sub-mergers (optimal number)", act.Data());
+      }
+   } else {
+      gProof->DeleteParameters("PROOF_UseMergers");
+   }
+
    // Action
    if (act == "simple") {
       // ProofSimple is an example of non-data driven analysis; it
@@ -418,7 +468,7 @@ void runProof(const char *what = "simple",
       // The number of histograms is added as parameter in the input list
       proof->SetParameter("ProofSimple_NHist", (Long_t)nhist);
       // The selector string
-      sel.Form("%s/proof/ProofSimple.C+", tutorials.Data());
+      sel.Form("%s/proof/ProofSimple.C%s", tutorials.Data(), aMode.Data());
       //
       // Run it for nevt times
       proof->Process(sel.Data(), nevt, opt);
@@ -436,7 +486,7 @@ void runProof(const char *what = "simple",
       // We run on Proof
       chain->SetProof();
       // The selector
-      sel.Form("%s/tree/h1analysis.C+", tutorials.Data());
+      sel.Form("%s/tree/h1analysis.C%s", tutorials.Data(), aMode.Data());
       // Run it 
       Printf("\nrunProof: running \"h1\"\n");
       chain->Process(sel.Data(),opt);
@@ -450,14 +500,10 @@ void runProof(const char *what = "simple",
                 " contain the Index.xml file !", pythia8data);
          return;
       }
-      TString pythia8par("proof/pythia8");
-      if (gSystem->AccessPathName(Form("%s.par", pythia8par.Data()))) {
-         pythia8par = "pythia8";
-         if (gSystem->AccessPathName(Form("%s.par", pythia8par.Data()))) {
-            Printf("runProof: pythia8: par file not found: tried 'proof/pythia8.par'"
-                   " and 'pythia8.par'");
-            return;
-         }
+      TString pythia8par = TString::Format("%s/proof/pythia8.par", tutorials.Data());
+      if (gSystem->AccessPathName(pythia8par.Data())) {
+         Printf("runProof: pythia8: par file not found (tried %s)", pythia8par.Data());
+         return;
       }
       proof->UploadPackage(pythia8par);
       proof->EnablePackage("pythia8");
@@ -478,20 +524,16 @@ void runProof(const char *what = "simple",
       nevt = (nevt < 0) ? 100 : nevt;
       Printf("\nrunProof: running \"Pythia01\" nevt= %d\n", nevt);
       // The selector string
-      sel.Form("%s/proof/ProofPythia.C+", tutorials.Data());
+      sel.Form("%s/proof/ProofPythia.C%s", tutorials.Data(), aMode.Data());
       // Run it for nevt times
       proof->Process(sel.Data(), nevt);
 
   } else if (act == "event") {
 
-      TString eventpar("proof/event");
-      if (gSystem->AccessPathName(Form("%s.par", eventpar.Data()))) {
-         eventpar = "event";
-         if (gSystem->AccessPathName(Form("%s.par", eventpar.Data()))) {
-            Printf("runProof: event: par file not found: tried 'proof/event.par'"
-                   " and 'event.par'");
-            return;
-         }
+      TString eventpar = TString::Format("%s/proof/event.par", tutorials.Data());
+      if (gSystem->AccessPathName(eventpar.Data())) {
+         Printf("runProof: event: par file not found (tried %s)", eventpar.Data());
+         return;
       }
 
       proof->UploadPackage(eventpar);
@@ -503,7 +545,7 @@ void runProof(const char *what = "simple",
       nevt = (nevt < 0) ? 100 : nevt;
       Printf("\nrunProof: running \"event\" nevt= %d\n", nevt);
       // The selector string
-      sel.Form("%s/proof/ProofEvent.C+", tutorials.Data());
+      sel.Form("%s/proof/ProofEvent.C%s", tutorials.Data(), aMode.Data());
       // Run it for nevt times
       proof->Process(sel.Data(), nevt);
 
@@ -512,12 +554,8 @@ void runProof(const char *what = "simple",
       TString eventpar = TString::Format("%s/proof/event.par", tutorials.Data());
       gSystem->ExpandPathName(eventpar);
       if (gSystem->AccessPathName(eventpar.Data())) {
-         eventpar = gSystem->BaseName(eventpar.Data());
-         if (gSystem->AccessPathName(eventpar.Data())) {
-            Printf("runProof: event: par file not found: tried 'proof/event.par'"
-                   " and 'event.par'");
-            return;
-         }
+         Printf("runProof: event: par file not found (tried %s)", eventpar.Data());
+         return;
       }
 
       proof->UploadPackage(eventpar);
@@ -569,7 +607,7 @@ void runProof(const char *what = "simple",
       c->SetProof();
 
       // The selector
-      sel.Form("%s/proof/ProofEventProc.C+", tutorials.Data());
+      sel.Form("%s/proof/ProofEventProc.C%s", tutorials.Data(), aMode.Data());
       // Run it
       Printf("\nrunProof: running \"eventproc\"\n");
       c->Process(sel.Data(), opt);
@@ -612,7 +650,7 @@ void runProof(const char *what = "simple",
       proof->AddInput(new TNamed("PROOF_OUTPUTFILE", fout.Data()));
 
       // The selector string
-      sel.Form("%s/proof/ProofNtuple.C+", tutorials.Data());
+      sel.Form("%s/proof/ProofNtuple.C%s", tutorials.Data(), aMode.Data());
 
       // Run it for nevt times
       proof->Process(sel.Data(), nevt, opt);
@@ -635,7 +673,7 @@ void runProof(const char *what = "simple",
       proof->SetParameter("PROOF_NTUPLE_DONT_PLOT", "");
 
       // The selector string
-      sel.Form("%s/proof/ProofNtuple.C+", tutorials.Data());
+      sel.Form("%s/proof/ProofNtuple.C%s", tutorials.Data(), aMode.Data());
       //
       // Run it for nevt times
       proof->Process(sel.Data(), nevt, opt);

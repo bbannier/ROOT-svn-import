@@ -17,6 +17,8 @@
 #include "RooStats/SimpleInterval.h"
 #endif
 
+#include "RooStats/HypoTestResult.h"
+
 class RooRealVar;
 
 namespace RooStats {
@@ -44,6 +46,9 @@ namespace RooStats {
 
     // function to return the estimated error on the value of the confidence level for the i^th entry in the results
     double GetYError( int index ) const ;
+    
+    // return a pointer to the i^th result object
+    HypoTestResult* GetResult( int index ) const ;   
 
     // number of entries in the results array
     int ArraySize() const { return fXValues.size(); };
@@ -62,10 +67,18 @@ namespace RooStats {
     Double_t UpperLimit();
 
     // rough estimation of the error on the computed bound of the confidence interval 
+    // Estimate of lower limit error
+    //function evaluates only a rought error on the lower limit. Be careful when using this estimation
     Double_t LowerLimitEstimatedError();
+
+    // Estimate of lower limit error
+    //function evaluates only a rought error on the lower limit. Be careful when using this estimation
     Double_t UpperLimitEstimatedError();
 
   private:
+
+    // merge with the content of another HypoTestInverterResult object
+    bool Add( HypoTestInverterResult otherResult );
 
     double CalculateEstimatedError(double target);
     int FindClosestPointIndex(double target);

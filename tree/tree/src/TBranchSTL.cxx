@@ -27,8 +27,10 @@ ClassImp(TBranchSTL)
 //------------------------------------------------------------------------------
 TBranchSTL::TBranchSTL():
    fCollProxy( 0 ),
-   fParent(0),
+   fParent( 0 ),
    fIndArrayCl( 0 ),
+   fClassVersion( 0 ),
+   fClCheckSum( 0 ),
    fInfo( 0 ),
    fObject( 0 ),
    fID( -2 )
@@ -98,7 +100,7 @@ TBranchSTL::TBranchSTL( TBranch* parent, const char* name,
    fClCheckSum   = info->GetClass()->GetCheckSum();
    fInfo         = info;
    fID           = id;
-   fMother = parent ? parent->GetMother() : this;
+   fMother = parent->GetMother();
    fParent = parent;
    fDirectory = fTree->GetDirectory();
    fFileName = "";

@@ -24,12 +24,15 @@
 // ROOT
 #include "TString.h"
 // API
+#if defined(R__MACOSX)
 #if defined(MAC_OS_X_VERSION_10_5)
 #include <malloc/malloc.h>
+#include <execinfo.h>
+#endif
 #else
 #include <malloc.h>
-#endif
 #include <execinfo.h>
+#endif
 #include <cxxabi.h>
 // MemStat
 #include "TMemStatDepend.h"
@@ -162,10 +165,21 @@ size_t TMemStatDepend::Backtrace(void **trace, size_t dsize, Bool_t _bUseGNUBuil
 #if defined(SUPPORTS_MEMSTAT)
       // Initialize the stack end variable.
       return builtin_return_address(trace, dsize);
-#endif
+#else
+      if (trace || dsize) { }
       return 0;
+#endif
    }
+#if defined(R__MACOSX)
+#if defined(MAC_OS_X_VERSION_10_5)
    return backtrace(trace, dsize);
+#else
+   if (trace || dsize) { }
+   return 0;
+#endif
+#else
+   return backtrace(trace, dsize);
+#endif
 }
 
 //______________________________________________________________________________

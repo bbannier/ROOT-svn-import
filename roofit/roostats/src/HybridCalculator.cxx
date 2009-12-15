@@ -27,10 +27,11 @@ The basic idea is the following:
 - Perform toy MC experiments to know the distributions of -2lnQ 
 - Calculate the CLsb and CLs values as "integrals" of these distributions.
 
-The class allows the user to input models as RooAbsPdf or TH1 object 
-pointers (the pdfs must be "extended": for more information please refer to 
+The class allows the user to input models as RooAbsPdf ( TH1 object could be used 
+by using the RooHistPdf class)
+The pdfs must be "extended": for more information please refer to 
 http://roofit.sourceforge.net). The dataset can be entered as a 
-RooAbsData or TH1 object pointer.  
+RooAbsData objects.  
 
 Unlike the TLimit Class a complete MC generation is performed at each step 
 and not a simple Poisson fluctuation of the contents of the bins.
@@ -39,10 +40,18 @@ can input in the constructor nuisance parameters.
 To include the information that we have about the nuisance parameters a prior
 PDF (RooAbsPdf) should be specified
 
+Different test statistic can be used (likelihood ratio, number of events or 
+profile likelihood ratio. The default is the likelihood ratio. 
+See the method SetTestStatistic.
+
+The number of toys to be generated is controlled by SetNumberOfToys(n).
+
 The result of the calculations is returned as a HybridResult object pointer.
 
 see also the following interesting references:
-- Alex Read, "Presentation of search results: the CLs technique" Journal of Physics G: Nucl. // Part. Phys. 28 2693-2704 (2002). http://www.iop.org/EJ/abstract/0954-3899/28/10/313/
+- Alex Read, "Presentation of search results: the CLs technique",
+  Journal of Physics G: Nucl. Part. Phys. 28 2693-2704 (2002).
+  see http://www.iop.org/EJ/abstract/0954-3899/28/10/313/
 
 - Alex Read, "Modified Frequentist Analysis of Search Results (The CLs Method)" CERN 2000-005 (30 May 2000)
 
@@ -77,13 +86,13 @@ HybridCalculator::HybridCalculator(const char *name) :
    fObservables(0),
    fNuisanceParameters(0),
    fPriorPdf(0),
-   fData(0)
+   fData(0),
+   fUsePriorPdf(false)
 {
    // constructor with name and title
    // set default parameters
    SetTestStatistic(1); 
    SetNumberOfToys(1000); 
-   UseNuisance(false); 
 }
 
 
@@ -101,10 +110,10 @@ HybridCalculator::HybridCalculator( RooAbsPdf& sbModel,
    fNuisanceParameters(nuisance_parameters),
    fPriorPdf(priorPdf),
    fData(0),
-   //fWS(0),
-   fGenerateBinned(GenerateBinned)
+   fGenerateBinned(GenerateBinned),
+   fUsePriorPdf(false)
 {
-   /// specific HybridCalculator constructor:
+   /// HybridCalculator constructor without specifying a data set
    /// the user need to specify the models in the S+B case and B-only case,
    /// the list of observables of the model(s) (for MC-generation), the list of parameters 
    /// that are marginalised and the prior distribution of those parameters
@@ -119,6 +128,7 @@ HybridCalculator::HybridCalculator( RooAbsPdf& sbModel,
 
   SetTestStatistic(testStatistics); 
   SetNumberOfToys(numToys); 
+
   if (priorPdf) UseNuisance(true); 
   
    // this->Print();
@@ -140,7 +150,8 @@ HybridCalculator::HybridCalculator( RooAbsData & data,
    fNuisanceParameters(nuisance_parameters),
    fPriorPdf(priorPdf),
    fData(&data),
-   fGenerateBinned(GenerateBinned)
+   fGenerateBinned(GenerateBinned),
+   fUsePriorPdf(false)
 {
    /// HybridCalculator constructor for performing hypotesis test 
    /// the user need to specify the data set, the models in the S+B case and B-only case. 
@@ -150,6 +161,7 @@ HybridCalculator::HybridCalculator( RooAbsData & data,
 
    SetTestStatistic(testStatistics);
    SetNumberOfToys(numToys); 
+
    if (priorPdf) UseNuisance(true); 
 }
 
@@ -167,15 +179,15 @@ HybridCalculator::HybridCalculator( RooAbsData& data,
    fNuisanceParameters((sbModel.GetNuisanceParameters()) ? sbModel.GetNuisanceParameters()  :  bModel.GetNuisanceParameters()),
    fPriorPdf((sbModel.GetPriorPdf()) ? sbModel.GetPriorPdf()  :  bModel.GetPriorPdf()),
    fData(&data),
-   fGenerateBinned(GenerateBinned)
+   fGenerateBinned(GenerateBinned),
+   fUsePriorPdf(false)
 {
   /// Constructor with a ModelConfig object representing the signal + background model and 
   /// another model config representig the background only model
   /// a Prior pdf for the nuiscane parameter of the signal and background can be specified in 
   /// the s+b model or the b model. If it is specified in the s+b model, the one of the s+b model will be used 
 
-   if (fPriorPdf) 
-      UseNuisance(true);
+  if (fPriorPdf) UseNuisance(true);
 
   SetTestStatistic(testStatistics);
   SetNumberOfToys(numToys); 
@@ -193,6 +205,7 @@ HybridCalculator::~HybridCalculator()
 
 void HybridCalculator::SetNullModel(const ModelConfig& model)
 {
+   // Set the model describing the null hypothesis
    fBModel = model.GetPdf();
    // only if it has not been set before
    if (!fPriorPdf) fPriorPdf = model.GetPriorPdf(); 
@@ -201,6 +214,7 @@ void HybridCalculator::SetNullModel(const ModelConfig& model)
 
 void HybridCalculator::SetAlternateModel(const ModelConfig& model)
 {
+   // Set the model describing the alternate hypothesis
    fSbModel = model.GetPdf();
    fPriorPdf = model.GetPriorPdf(); 
    fNuisanceParameters = model.GetNuisanceParameters(); 
@@ -209,7 +223,7 @@ void HybridCalculator::SetAlternateModel(const ModelConfig& model)
 void HybridCalculator::SetTestStatistic(int index)
 {
    /// set the desired test statistics:
-   /// index=1 : 2 * log( L_sb / L_b )  (DEFAULT)
+   /// index=1 : likelihood ratio: 2 * log( L_sb / L_b )  (DEFAULT)
    /// index=2 : number of generated events
    /// index=3 : profiled likelihood ratio
    /// if the index is different to any of those values, the default is used
@@ -323,10 +337,10 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
    for (unsigned int iToy=0; iToy<nToys; iToy++) {
 
       /// prints a progress report every 500 iterations
-      /// TO DO: add a verbose flag inherited from HypoTestCalculator
-      if ( /* _verbose && */ iToy>0 && iToy%500==0) {
-         std::cout << "Running toy number " << iToy << " / " << nToys << std::endl;
-      }
+      /// TO DO: add a global verbose flag
+     if ( /*verbose && */ iToy%500==0 ) {
+       std::cout << "....... toy number " << iToy << " / " << nToys << std::endl;
+     }
 
       /// vary the value of the integrated parameters according to the prior pdf
       if (usePriors && nParameters>0) {

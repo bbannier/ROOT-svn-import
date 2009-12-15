@@ -92,10 +92,7 @@ void TGLAxisPainter::FormAxisValue(Double_t  val, TString &s) const
 {
    // Returns formatted text suitable for display of value.
 
-   static char label[256];
-
-   sprintf(label, &fFormat[0], val);
-   s = label;
+   s.Form(fFormat, val);
    s = s.Strip(TString::kLeading);
 
    if (s == "-." || s == "-0")
@@ -183,15 +180,15 @@ void TGLAxisPainter::SetTextFormat(Double_t min, Double_t max, Double_t bw1)
    }
    if (if1 > 14) if1 = 14;
    if (if2 > 14) if2 = 14;
-   if (if2) sprintf(fFormat, "%%%d.%df", if1, if2);
-   else     sprintf(fFormat, "%%%d.%df", if1 + 1, 1);
+   if (if2) fFormat.Form("%%%d.%df", if1, if2);
+   else     fFormat.Form("%%%d.%df", if1 + 1, 1);
 
    // get decimal number
-   char chtemp[8];
-   sprintf(chtemp, "%g", dwlabel);
+   TString chtemp;
+   chtemp.Form("%g", dwlabel);
    fDecimals = 0;
-   char *dot = strchr(chtemp, '.');
-   if (dot) fDecimals = chtemp + strlen(chtemp) - dot;
+   if (chtemp.First('.') != kNPOS)
+      fDecimals = chtemp.Length() - chtemp.First('.') - 1;
 }
 
 /**************************************************************************/

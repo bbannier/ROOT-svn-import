@@ -571,7 +571,9 @@ Bool_t RooMinuit::synchronize(Bool_t verbose)
   // information in RooAbsReal function parameters
   
   Int_t oldPrint = setPrintLevel(-1) ;
+  gMinuit->fNwrmes[0] = 0;  // to clear buffer 
   Int_t oldWarn = setWarnLevel(-1) ;
+
   Bool_t constValChange(kFALSE) ;
   Bool_t constStatChange(kFALSE) ;
 
@@ -756,8 +758,7 @@ Bool_t RooMinuit::synchronize(Bool_t verbose)
   }
 
 
-
-
+  gMinuit->fNwrmes[0] = 0;  // to clear buffer 
   oldWarn = setWarnLevel(oldWarn) ;
   oldPrint = setPrintLevel(oldPrint) ;
 
