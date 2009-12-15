@@ -8,8 +8,6 @@
 #include "Math/SVector.h"
 #include <limits>
 
-#include "Math/Null.h"
-
 
 // inversion algorithms for matrices
 // taken  from CLHEP (L. Moneta May 2006)
@@ -484,7 +482,8 @@ int Inverter<idim,n>::DfactMatrix(MatRepStd<T,idim,n> & rhs, T &det, unsigned in
          }
          if (k==j) {
             if (p <= epsilon) {
-               det = Null<T>::value();
+               // use 0.0 instead of 0 if T is an object like double_v 
+               det = 0.0;  
                ifail = imposs;
                jfail = jrange;
                return ifail;
