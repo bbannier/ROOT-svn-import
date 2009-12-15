@@ -49,7 +49,7 @@ namespace Math {
 template <class T, unsigned int D>
 SVector<T,D>::SVector() {
    for(unsigned int i=0; i<D; ++i)
-      fArray[i] = 0;
+      fArray[i] = 0.0;  // use 0.0 to avoid pointer conversion when using special types for T 
 }
 
 template <class T, unsigned int D>

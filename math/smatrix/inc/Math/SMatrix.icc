@@ -76,7 +76,7 @@ namespace Math {
 template <class T, unsigned int D1, unsigned int D2, class R>
 SMatrix<T,D1,D2,R>::SMatrix() {
    // operator=(0);   // if operator=(T ) is defined
-   for(unsigned int i=0; i<R::kSize; ++i) fRep.Array()[i] = 0;
+   for(unsigned int i=0; i<R::kSize; ++i) fRep.Array()[i] = 0.0;
 }
 
 //identity
