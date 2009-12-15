@@ -1,5 +1,5 @@
 // @(#)root/hist:$Id$
-
+// Author: D. Piparo, G. Schott
 //___________________________________
 /**
 Class HybridPlot

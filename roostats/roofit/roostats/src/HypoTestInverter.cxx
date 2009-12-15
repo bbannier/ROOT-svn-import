@@ -10,7 +10,7 @@
 
 /**
    HypoTestInverter class
-
+   Originally developed by Danilo Piparo.
    New contributions to this class have been written by Matthias Wolf (advanced AutoRun algorithm)
 **/
 
