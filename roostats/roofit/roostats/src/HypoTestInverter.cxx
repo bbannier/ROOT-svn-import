@@ -1,5 +1,5 @@
 // @(#)root/roostats:$Id$
-// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
+// Author: Gregory Schott, Danilo Piparo, Matthias Wolf
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *

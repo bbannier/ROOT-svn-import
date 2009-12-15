@@ -1,7 +1,6 @@
 // @(#)root/roostats:$Id$
 // Author: Danilo Piparo   25/08/2009
 
-
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
