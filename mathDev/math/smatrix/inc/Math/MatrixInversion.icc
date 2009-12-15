@@ -8,6 +8,8 @@
 #include "Math/SVector.h"
 #include <limits>
 
+#include "Math/Null.h"
+
 
 // inversion algorithms for matrices
 // taken  from CLHEP (L. Moneta May 2006)
@@ -445,11 +447,12 @@ int Inverter<idim,n>::DfactMatrix(MatRepStd<T,idim,n> & rhs, T &det, unsigned in
    typedef T* mIter; 
 
 
-   double tf;
+   T tf;
    double g1 = 1.0e-19, g2 = 1.0e19;
 
-   double p, q, t;
-   double s11, s12;
+   T p, q;
+   T t;
+   T s11, s12;
 
    // LM (04.09) : remove useless check on epsilon and set it to zero
    const double epsilon = 0.0;
@@ -481,7 +484,7 @@ int Inverter<idim,n>::DfactMatrix(MatRepStd<T,idim,n> & rhs, T &det, unsigned in
          }
          if (k==j) {
             if (p <= epsilon) {
-               det = 0;
+               det = Null<T>::value();
                ifail = imposs;
                jfail = jrange;
                return ifail;
@@ -571,8 +574,8 @@ int Inverter<idim,n>::DfinvMatrix(MatRepStd<T,idim,n> & rhs,unsigned int * ir) {
    if (idim != n) return   -1; 
 
 
-   double s31, s32;
-   register double s33, s34;
+   T s31, s32;
+   register T s33, s34;
 
    mIter m11 = rhs.Array();
    mIter m12 = m11 + 1;
