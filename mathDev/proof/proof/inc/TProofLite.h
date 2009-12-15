@@ -56,6 +56,8 @@ private:
 
    TDataSetManager* fDataSetManager; // dataset manager
 
+   static Int_t fgWrksMax; // Max number of workers
+
    TProofLite(const TProofLite &);        // not implemented
    void operator=(const TProofLite &);   // idem
 
@@ -64,6 +66,7 @@ private:
    void  NotifyStartUp(const char *action, Int_t done, Int_t tot);
    Int_t SetProofServEnv(const char *ord);
    Int_t InitDataSetManager();
+   void  ResolveKeywords(TString &s, const char *logfile);
 
    void SendInputDataFile();
 
@@ -71,7 +74,6 @@ protected:
    TProofLite() : TProof() { } // For derived classes to use
 
    Int_t  CreateSymLinks(TList *files);
-   TList *GetDataSet(const char *name);
    Int_t Init(const char *masterurl, const char *conffile,
                const char *confdir, Int_t loglevel,
                const char *alias = 0);

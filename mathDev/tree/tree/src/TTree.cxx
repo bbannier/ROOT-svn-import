@@ -418,10 +418,12 @@ TTree::TFriendLock::TFriendLock(TTree* tree, UInt_t methodbit)
 
    // We could also add some code to acquire an actual
    // lock to prevent multi-thread issues
+   fMethodBit = methodbit;
    if (fTree) {
-      fMethodBit = methodbit;
       fPrevious = fTree->fFriendLockStatus & fMethodBit;
       fTree->fFriendLockStatus |= fMethodBit;
+   } else {
+      fPrevious = 0;
    }
 }
 
@@ -1064,7 +1066,7 @@ TBranch* TTree::BranchImp(const char* branchname, const char* classname, TClass*
          }
       }
    }
-   if (claim->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(claim->GetCollectionProxy())) {
+   if (claim && claim->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(claim->GetCollectionProxy())) {
       Error("Branch", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
             "Please generate the dictionary for this class (%s)",
             claim->GetName(), branchname, claim->GetName());
@@ -3622,7 +3624,7 @@ static TBranch *R__FindBranchHelper(TObjArray *list, const char *branchname) {
    // Search in the array for a branch matching the branch name,
    // with the branch possibly expressed as a 'full' path name (with dots).
 
-   if (list==0) return 0;
+   if (list==0 || branchname == 0 || branchname[0] == '\0') return 0;
 
    Int_t nbranches = list->GetEntries();
 
@@ -3643,7 +3645,7 @@ static TBranch *R__FindBranchHelper(TObjArray *list, const char *branchname) {
          return where;
       }
       TBranch *next = 0;
-      if (branchname && (brlen >= len) && (branchname[len] == '.')
+      if ((brlen >= len) && (branchname[len] == '.')
           && strncmp(name, branchname, len) == 0) {
          // The prefix subbranch name match the branch name.
 
@@ -3870,7 +3872,7 @@ TLeaf* TTree::FindLeaf(const char* searchname)
 }
 
 //______________________________________________________________________________
-TFitResultPtr TTree::Fit(const char* funcname, const char* varexp, const char* selection, Option_t* option, Option_t* goption, Long64_t nentries, Long64_t firstentry)
+Int_t TTree::Fit(const char* funcname, const char* varexp, const char* selection, Option_t* option, Option_t* goption, Long64_t nentries, Long64_t firstentry)
 {
    // Fit  a projected item(s) from a tree.
    //
@@ -5215,10 +5217,11 @@ void TTree::OptimizeBaskets(Int_t maxMemory, Float_t minComp, Option_t *option)
             newBaskets += 1+Int_t(totBytes/oldBsize);
             continue;
          }
-         Int_t newBsize = Int_t(oldBsize*idealFactor*memFactor);
+         Double_t bsize = oldBsize*idealFactor*memFactor; //bsize can be very large !
+         if (bsize > bmax) bsize = bmax;
+         Int_t newBsize = Int_t(bsize);
          newBsize = newBsize - newBsize%512;
          if (newBsize < bmin) newBsize = bmin;
-         if (newBsize > bmax) newBsize = bmax;
          if (pass) {
             if (pDebug) printf("Changing buffer size from %6d to %6d bytes for %s\n",oldBsize,newBsize,branch->GetName());
             branch->SetBasketSize(newBsize);
@@ -5500,21 +5503,13 @@ Long64_t TTree::Project(const char* hname, const char* varexp, const char* selec
    // Note that the dimension of hname must match with the dimension of varexp.
    //
 
-   Int_t nch = strlen(hname) + strlen(varexp);
-   char* var = new char[nch+5];
-   sprintf(var, "%s>>%s", varexp, hname);
-   nch = strlen(option) + 10;
-   char* opt = new char[nch];
+   TString var;
+   var.Form("%s>>%s", varexp, hname);
+   TString opt("goff");   
    if (option) {
-      sprintf(opt, "%sgoff", option);
-   } else {
-      strcpy(opt, "goff");
+      opt.Form("%sgoff", option);
    }
    Long64_t nsel = Draw(var, selection, opt, nentries, firstentry);
-   delete[] var;
-   var = 0;
-   delete[] opt;
-   opt = 0;
    return nsel;
 }
 
@@ -6561,12 +6556,17 @@ void TTree::SetObject(const char* name, const char* title)
 }
 
 //______________________________________________________________________________
-void TTree::SetParallelUnzip(Bool_t opt)
+void TTree::SetParallelUnzip(Bool_t opt, Float_t RelSize)
 {
    //enable or disable parallel unzipping of Tree buffers
 
    if (opt) TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kEnable);
    else     TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kDisable);
+
+   if (RelSize > 0)
+     TTreeCacheUnzip::SetUnzipRelBufferSize(RelSize);
+
+
 
 }
 
@@ -6622,7 +6622,12 @@ void TTree::Show(Long64_t entry, Int_t lenmax)
    // if a leaf is an array, a maximum of lenmax elements is printed.
    //
    if (entry != -1) {
-      GetEntry(entry);
+      Int_t ret = GetEntry(entry);
+      if (ret == -1 || ret == 0) {
+         Error("Show()", "Cannot read entry %lld (%s)",
+               entry, ret == -1 ? "I/O error" : "entry does not exist");
+         return;
+      }
    }
    printf("======> EVENT:%lld\n", fReadEntry);
    TObjArray* leaves  = GetListOfLeaves();
@@ -6763,7 +6768,7 @@ void TTree::Streamer(TBuffer& b)
 }
 
 //______________________________________________________________________________
-TFitResultPtr TTree::UnbinnedFit(const char* funcname, const char* varexp, const char* selection, Option_t* option, Long64_t nentries, Long64_t firstentry)
+Int_t TTree::UnbinnedFit(const char* funcname, const char* varexp, const char* selection, Option_t* option, Long64_t nentries, Long64_t firstentry)
 {
    // Unbinned fit of one or more variable(s) from a tree.
    //
@@ -6896,17 +6901,19 @@ TTreeFriendLeafIter::TTreeFriendLeafIter(const TTree* tree, Bool_t dir)
 //______________________________________________________________________________
 TTreeFriendLeafIter::TTreeFriendLeafIter(const TTreeFriendLeafIter& iter)
 : TIterator(iter)
+, fTree(iter.fTree)
+, fLeafIter(0)
+, fTreeIter(0)
+, fDirection(iter.fDirection)
 {
-   // Copy constructor
+   // Copy constructor.  Does NOT copy the 'cursor' location!
 
-   fTree = iter.fTree;
-   fDirection = iter.fDirection;
 }
 
 //______________________________________________________________________________
 TIterator& TTreeFriendLeafIter::operator=(const TIterator& rhs)
 {
-   // Overridden assignment operator.
+   // Overridden assignment operator. Does NOT copy the 'cursor' location!
 
    if (this != &rhs && rhs.IsA() == TTreeFriendLeafIter::Class()) {
       const TTreeFriendLeafIter &rhs1 = (const TTreeFriendLeafIter &)rhs;
@@ -6918,7 +6925,7 @@ TIterator& TTreeFriendLeafIter::operator=(const TIterator& rhs)
 //______________________________________________________________________________
 TTreeFriendLeafIter& TTreeFriendLeafIter::operator=(const TTreeFriendLeafIter& rhs)
 {
-   // Overridden assignment operator.
+   // Overridden assignment operator.  Does NOT copy the 'cursor' location!
 
    if (this != &rhs) {
       fDirection = rhs.fDirection;

@@ -1247,7 +1247,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* thi
       // 20-11-07
       // This means we have to return a given object (i.e) a new object..
       // This will be a temporary object for the compiles
-      // and it used to llok like:
+      // and it used to look like:
       //
       // /////////////////////////
       // const Track* pobj;
@@ -3451,7 +3451,7 @@ int G__get_linked_tagnum_with_param(G__linked_taginfo *p,void* param)
 **************************************************************************/
 void* G__get_linked_user_param(int tag_num)
 {
-  if ( tag_num<0 || tag_num>G__MAXSTRUCT ) return 0;
+  if ( tag_num<0 || tag_num>=G__MAXSTRUCT ) return 0;
   return G__struct.userparam[tag_num];
 }
 
@@ -6048,6 +6048,7 @@ static void G__x8664_vararg(FILE *fp, int ifn, G__ifunc_table_internal *ifunc,
    fprintf(fp, "  __asm__ __volatile__(\"movl $8, %%eax\");  // number of used xmm registers\n");
    fprintf(fp, "  __asm__ __volatile__(\"call *%%r10\");\n");
    fprintf(fp, "  __asm__ __volatile__(\"movq %%%%rax, %%0\" : \"=m\" (u[0].lval) :: \"memory\");  // get return value\n");
+   fprintf(fp, "  __asm__ __volatile__(\"movq %%%%rdi, %%0\" : \"=m\" (u[1].lval) :: \"memory\");  // get return value (icc C++ object)\n");
    fprintf(fp, "  __asm__ __volatile__(\"addq %%0, %%%%rsp\" :: \"i\" ((umax+2)*8));\n");
 }
 
@@ -6114,8 +6115,12 @@ static void G__x8664_vararg_epilog(FILE *fp, int ifn, G__ifunc_table_internal *i
                if (reftype) {
                   fprintf(fp, "(%s&) u[0].lval", typestring);
                } else {
-                 if (G__globalcomp == G__CPPLINK) {
+                  if (G__globalcomp == G__CPPLINK) {
+#if defined(__INTEL_COMPILER)
+                     fprintf(fp, "*(%s*) u[1].lval", typestring);
+#else
                      fprintf(fp, "*(%s*) u[0].lval", typestring);
+#endif
                   } else {
                      fprintf(fp, "(%s*) u[0].lval", typestring);
                   }
@@ -10905,7 +10910,7 @@ int G__memfunc_setup_imp(const char *funcname,int hash
           // Method's stub pointer
           basefuncp = found->entry[base].p;
 
-          G__value ptr;
+          G__value ptr = G__null;
 
           ptr.tagnum = G__p_ifunc->tagnum;
           ptr.type = 'C';

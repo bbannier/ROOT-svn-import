@@ -16,6 +16,7 @@
 #include "TEveManager.h"
 #include "TEveSelection.h"
 
+#include "TGLFormat.h"
 #include "TGLSAViewer.h"
 #include "TGLEmbeddedViewer.h"
 #include "TGLScenePad.h"
@@ -24,6 +25,7 @@
 #include "TGLLogicalShape.h"  // For handling OnMouseIdle signal
 #include "TGLEventHandler.h"
 
+#include "TApplication.h"
 #include "TSystem.h"
 
 //==============================================================================
@@ -155,7 +157,7 @@ void TEveViewer::SetGLViewer(TGLViewer* viewer, TGFrame* frame)
 }
 
 //______________________________________________________________________________
-TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged)
+TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged, Bool_t stereo)
 {
    // Spawn new GLViewer and adopt it.
 
@@ -163,13 +165,32 @@ TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged)
 
    TGCompositeFrame* cf = GetGUICompositeFrame();
 
+   TGLFormat *form = 0;
+   if (stereo)
+   {
+      form = new TGLFormat;
+      form->SetStereo(kTRUE);
+   }
+
    cf->SetEditable(kTRUE);
-   TGLSAViewer* v = new TGLSAViewer(cf, 0, ged);
+   TGLSAViewer* v = 0;
+   try
+   {
+      v = new TGLSAViewer(cf, 0, ged, form);
+   }
+   catch (std::exception&)
+   {
+      Error("SpawnGLViewer", "Insufficient support from the graphics hardware. Aborting.");
+      gApplication->Terminate(1);
+   }
    cf->SetEditable(kFALSE);
    v->ToggleEditObject();
    v->DisableCloseMenuEntries();
    v->EnableMenuBarHiding();
    SetGLViewer(v, v->GetFrame());
+
+   if (stereo)
+      v->SetStereo(kTRUE);
 
    if (fEveFrame == 0)
       PreUndock();
@@ -206,6 +227,36 @@ void TEveViewer::Redraw(Bool_t resetCameras)
 
    if (resetCameras) fGLViewer->PostSceneBuildSetup(kTRUE);
    fGLViewer->RequestDraw(TGLRnrCtx::kLODHigh);
+}
+
+//______________________________________________________________________________
+void TEveViewer::SwitchStereo()
+{
+   // Switch stereo mode.
+   // This only works TGLSAViewers and, of course, with stereo support
+   // provided by the OpenGL driver.
+
+   TGLSAViewer *v = dynamic_cast<TGLSAViewer*>(fGLViewer);
+
+   if (!v) {
+      Warning("SwitchStereo", "Only supported for TGLSAViewer.");
+      return;
+   }
+
+   v->DestroyGLWidget();
+   TGLFormat *f = v->GetFormat();
+switch_stereo:
+   f->SetStereo(!f->IsStereo());
+   v->SetStereo(f->IsStereo());
+   try
+   {
+      v->CreateGLWidget();
+   }
+   catch (std::exception&)
+   {
+      Error("SwitchStereo", "Insufficient support from the graphics hardware. Reverting.");
+      goto switch_stereo;
+   }
 }
 
 /******************************************************************************/

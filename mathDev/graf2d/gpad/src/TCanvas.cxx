@@ -591,15 +591,6 @@ void TCanvas::Build()
 
 
 //______________________________________________________________________________
-TCanvas::TCanvas(const TCanvas &) : TPad(), fDoubleBuffer(0)
-{
-   // Intentionally not implemented
-
-   fPainter = 0;
-}
-
-
-//______________________________________________________________________________
 TCanvas::~TCanvas()
 {
    // Canvas destructor
@@ -848,7 +839,9 @@ TObject *TCanvas::DrawClonePad()
    TPad *pad = padsav;
    if (pad == this) pad = selpad;
    if (padsav == 0 || pad == 0 || pad == this) {
-      return DrawClone();
+      TCanvas *newCanvas = (TCanvas*)DrawClone();
+      newCanvas->SetWindowSize(GetWindowWidth(),GetWindowHeight());
+      return newCanvas;
    }
    if (fCanvasID == -1) {
       fCanvasImp = gGuiFactory->CreateCanvasImp(this, GetName(), fWindowTopX, fWindowTopY,
@@ -1615,8 +1608,6 @@ void TCanvas::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitives in this canvas in C++ macro file with GUI.
 
-   Bool_t invalid = kFALSE;
-
    // Write canvas options (in $TROOT or $TStyle)
    if (gStyle->GetOptFit()) {
       out<<"   gStyle->SetOptFit(1);"<<endl;
@@ -1649,9 +1640,7 @@ void TCanvas::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 
    // Now recursively scan all pads of this canvas
    cd();
-   if (invalid) SetName("c1");
    TPad::SavePrimitive(out,option);
-   if (invalid) SetName(" ");
 }
 
 

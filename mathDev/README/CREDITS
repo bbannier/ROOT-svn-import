@@ -346,7 +346,7 @@ D: contributions to the thread classes, SapDB interface
 
 N: Andreas Hoecker
 E: Andreas.Hoecker@cern.ch
-D: contribution to the TMVA package
+D: author of the TMVA package
 
 N: Carsten Hof
 E: Carsten_Hof@web.de
@@ -631,10 +631,6 @@ N: Miha Puc
 E: miha.puc@marvin.fmf.uni-lj.si
 D: contributed to TMath::Voigt
 
-N: Xavier Prudent
-E: prudent@lapp.in2p3.fr
-D: contributed to TMVA classes
-
 N: Gilles Quemener
 E: quemener@lpsc.in2p3.fr
 D: contributed to TMultiDimFit::EvalError function
@@ -695,13 +691,17 @@ N: Tomasz Sosnicki
 E: tom.sosnicki@gmail.com
 D: contribution to gviz3d/TStructViewer
 
+N: Peter Speckmayer
+E: Peter.Speckmayer@cern.ch
+D: author of the TMVA package
+
 N: Abdelhalim Ssadik
 E: abdelhalim.ssadik@cern.ch
 D: contribution to GUI classes (TGDockableFrame)
 
 N: Joerg Stelzer
 E: Joerz.Stelzer@cern.ch
-D: contribution to the TMVA package
+D: author of the TMVA package
 
 N: Matthew Strait
 E: strait@physics.umn.edu
@@ -714,6 +714,10 @@ D: development of class TGraphSmooth + many suggestions
 N: Matevz Tadel
 E: Matevz.Tadel@cern.ch
 D: Several contributions to the 3-d graphics and GL interface
+
+N: Jan Therhaag
+E: therhaag@users.sourceforge.net
+D: author of the TMVA package
 
 N: Tim Tran
 E: timtran@jlab.org
@@ -747,13 +751,13 @@ N: Guido Volpi
 E: guido.volpi@pi.infn.it
 D: class TPie
 
+N: Eckhard von Toerne
+E: evt@physik.uni-bonn.de
+D: author of the TMVA package
+
 N: Helge Voss
 E: Helge.Voss@cern.ch
-D: contribution to the TMVA package
-
-N: Kai Voss
-E: Kai.Voss@cern.ch
-D: contribution to the TMVA package
+D: author of the TMVA package
 
 N: Shaowen Wang
 E: shaowen-wang@uiowa.edu

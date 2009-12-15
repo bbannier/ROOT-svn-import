@@ -39,14 +39,15 @@ namespace RooStats {
 
 
     // constructor
-    HypoTestInverter( const char* name, 
-		      HypoTestCalculator* myhc0,
-		      RooRealVar* scannedVariable, 
+    HypoTestInverter( HypoTestCalculator& myhc0,
+		      RooRealVar& scannedVariable, 
                       double size = 0.05) ;
+
+     
 
     virtual HypoTestInverterResult* GetInterval() const { return fResults; } ;
 
-    bool RunAutoScan( double xMin, double xMax, double target, double epsilon=0.005, int numAlgorithm=0 );
+    bool RunAutoScan( double xMin, double xMax, double target, double epsilon=0.005, unsigned int numAlgorithm=0 );
 
     bool RunFixedScan( int nBins, double xMin, double xMax );
 

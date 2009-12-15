@@ -118,6 +118,7 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		macosxicc:*)     xopt="--ccflavour=icc";; \
 		macosx*:*)       xopt="--ccflavour=macos";; \
 		solaris64*:*:i86pc:*) xopt="--ccflavour=sunCCamd --use-xrd-strlcpy";; \
+                solaris*:5.11:i86pc:*) xopt="--ccflavour=sunCCi86pc --use-xrd-strlcpy";; \
                 solaris*:5.1*:i86pc:*) xopt="--use-xrd-strlcpy";; \
                 solaris*:*:i86pc:*) xopt="--ccflavour=sunCCi86pc --use-xrd-strlcpy";; \
 		solarisgcc:5.8)  xopt="--ccflavour=gcc";; \
@@ -145,6 +146,9 @@ $(XROOTDMAKE): $(XROOTDCFGD)
                 if [ ! "x$(KRB5INCDIR)" = "x" ] ; then \
                    xinc=`echo $(KRB5INCDIR)`; \
                    xopt="$$xopt --with-krb5-incdir=$$xinc"; \
+                fi; \
+                if [ "x$(BUILDKRB5)" = "xno" ] ; then \
+                   xopt="$$xopt --disable-krb5"; \
                 fi; \
 		if [ "x$(BUILDXRDGSI)" = "x" ] ; then \
 		   xopt="$$xopt --disable-gsi"; \
@@ -275,12 +279,12 @@ else
 		nmake -f Makefile.msc CFG=$(XRDDBG))
 endif
 
+### Rules for xrootd plugins
+$(LPATH)/libXrd%.$(XRDSOEXT):    $(XROOTDDIRL)/libXrd%.$(XRDSOEXT)
+		cp -rp $< $@
+
 ### Rules for single components
-#
-$(LPATH)/libXrdClient.$(XRDSOEXT): $(XROOTDDIRL)/libXrdClient.$(XRDSOEXT)
 $(XROOTDDIRL)/libXrdClient.$(XRDSOEXT): $(XROOTDBUILD)
-#
-$(LPATH)/libXrdSut.$(XRDSOEXT): $(XROOTDDIRL)/libXrdSut.$(XRDSOEXT)
 $(XROOTDDIRL)/libXrdSut.$(XRDSOEXT): $(XROOTDBUILD)
 #
 $(XROOTDDIRL)/libXrdOuc.a: $(XROOTDBUILD)
@@ -296,8 +300,8 @@ all-$(MODNAME): $(TARGETS)
 
 clean-$(MODNAME):
 ifneq ($(PLATFORM),win32)
-		@(if [ -f $(XROOTDMAKE) ]; then \
-		   $(MAKE) clean-netx;  \
+	 @(if [ -f $(XROOTDMAKE) ]; then \
+                   $(MAKE) clean-netx;  \
 		   $(MAKE) clean-proofx;  \
 		   cd $(XROOTDDIRD); \
 		   $(MAKE) clean; \

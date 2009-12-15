@@ -60,6 +60,17 @@ HypoTestInverterResult::~HypoTestInverterResult()
    // no need to delete explictly the objects in the TList since the TList owns the objects
 }
 
+
+bool HypoTestInverterResult::Add( HypoTestInverterResult /* otherResult */  )
+{
+  /// Merge this HypoTestInverterResult with another
+  /// HypoTestInverterResult passed as argument
+
+  std::cout << "Sorry, this function is not yet implemented\n";
+
+  return true;
+}
+
  
 double HypoTestInverterResult::GetXValue( int index ) const
 {
@@ -95,6 +106,16 @@ double HypoTestInverterResult::GetYError( int index ) const
     return ((HybridResult*)fYObjects.At(index))->CLsError();
   else 
     return ((HybridResult*)fYObjects.At(index))->CLsplusbError();
+}
+
+HypoTestResult* HypoTestInverterResult::GetResult( int index ) const
+{
+  if ( index >= ArraySize() || index<0 ) {
+    std::cout << "Problem: You are asking for an impossible array index value\n";
+    return 0;
+  }
+
+  return ((HypoTestResult*) fYObjects.At(index));
 }
 
 double HypoTestInverterResult::FindInterpolatedLimit(double target)
@@ -149,20 +170,22 @@ int HypoTestInverterResult::FindClosestPointIndex(double target)
 
 Double_t HypoTestInverterResult::LowerLimit()
 {
+   //std::cout << "finding point with cl = " << 1-(1-ConfidenceLevel())/2 << endl;
   if ( fInterpolateLowerLimit ){
-    fLowerLimit = FindInterpolatedLimit(ConfidenceLevel()/2);
+    fLowerLimit = FindInterpolatedLimit(1-(1-ConfidenceLevel())/2);
   } else {
-    fLowerLimit = GetXValue( FindClosestPointIndex(ConfidenceLevel()/2) );
+    fLowerLimit = GetXValue( FindClosestPointIndex(1-(1-ConfidenceLevel())/2) );
   }
   return fLowerLimit;
 }
 
 Double_t HypoTestInverterResult::UpperLimit()
 {
+   //std::cout << "finding point with cl = " << (1-ConfidenceLevel())/2 << endl;
   if ( fInterpolateUpperLimit ) {
-    fUpperLimit = FindInterpolatedLimit(1-ConfidenceLevel()/2);
+     fUpperLimit = FindInterpolatedLimit((1-ConfidenceLevel())/2);
   } else {
-    fUpperLimit = GetXValue( FindClosestPointIndex(1-ConfidenceLevel()/2) );
+     fUpperLimit = GetXValue( FindClosestPointIndex((1-ConfidenceLevel())/2) );
   }
   return fUpperLimit;
 }
@@ -199,7 +222,7 @@ Double_t HypoTestInverterResult::CalculateEstimatedError(double target)
 
 Double_t HypoTestInverterResult::LowerLimitEstimatedError()
 {
-  std::cout << "The HypoTestInverterResult::LowerLimitEstimatedError() function evaluates only a rought error on the upper limit. Be careful when using this estimation\n";
+   //std::cout << "The HypoTestInverterResult::LowerLimitEstimatedError() function evaluates only a rought error on the upper limit. Be careful when using this estimation\n";
   if (fInterpolateLowerLimit) std::cout << "The lower limit was an interpolated results... in this case the error is even less reliable (the Y-error bars are currently not used in the interpolation)\n";
 
   return CalculateEstimatedError(ConfidenceLevel()/2);
@@ -208,7 +231,7 @@ Double_t HypoTestInverterResult::LowerLimitEstimatedError()
 
 Double_t HypoTestInverterResult::UpperLimitEstimatedError()
 {
-  std::cout << "The HypoTestInverterResult::UpperLimitEstimatedError() function evaluates only a rought error on the upper limit. Be careful when using this estimation\n";
+   //std::cout << "The HypoTestInverterResult::UpperLimitEstimatedError() function evaluates only a rought error on the upper limit. Be careful when using this estimation\n";
   if (fInterpolateUpperLimit) std::cout << "The upper limit was an interpolated results... in this case the error is even less reliable (the Y-error bars are currently not used in the interpolation)\n";
 
   return CalculateEstimatedError(1-ConfidenceLevel()/2);

@@ -132,13 +132,14 @@ TTreeFormula::TTreeFormula(): TFormula(), fQuickLoad(kFALSE), fNeedLoading(kTRUE
 {
    // Tree Formula default constructor
 
-   fTree       = 0;
-   fLookupType = 0;
-   fNindex     = 0;
-   fNcodes     = 0;
-   fAxis       = 0;
-   fHasCast    = 0;
-   fManager    = 0;
+   fTree         = 0;
+   fLookupType   = 0;
+   fNindex       = 0;
+   fNcodes       = 0;
+   fAxis         = 0;
+   fHasCast      = 0;
+   fManager      = 0;
+   fMultiplicity = 0;
 
    Int_t j,k;
    for (j=0; j<kMAXCODES; j++) {
@@ -4573,6 +4574,7 @@ Bool_t  TTreeFormula::IsLeafString(Int_t code) const
                   return kTRUE;
                }
             }
+            return kFALSE;
          } else if (leaf->InheritsFrom("TLeafElement")) {
             TBranchElement * br = (TBranchElement*)leaf->GetBranch();
             Int_t bid = br->GetID();

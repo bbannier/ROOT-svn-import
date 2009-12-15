@@ -368,6 +368,23 @@ TRecorderReplaying::TRecorderReplaying(const char *filename)
    // Allocates all necessary data structures used for replaying
    // What is allocated here is deleted in destructor
 
+   fCanv = 0;
+   fCmdTree = 0;
+   fCmdTreeCounter = 0;
+   fEventReplayed = kTRUE;
+   fExtraTree = 0;
+   fExtraTreeCounter = 0;
+   fFilterStatusBar = kFALSE;
+   fGuiTree = 0;
+   fGuiTreeCounter = 0;
+   fNextEvent = 0;
+   fRecorder = 0;
+   fRegWinCounter = 0;
+   fShowMouseCursor = kTRUE;
+   fWaitingForWindow = kFALSE;
+   fWin = 0;
+   fWinTree = 0;
+   fWinTreeEntries = 0;
    fFile       = TFile::Open(filename);
    fCmdEvent   = new TRecCmdEvent();
    fGuiEvent   = new TRecGuiEvent();
@@ -547,7 +564,7 @@ void TRecorderReplaying::RegisterWindow(Window_t w)
 
    if ((gDebug > 0) && (fWaitingForWindow)) {
       cout << " Window registered: new ID: " << hex << w <<
-              "  previous ID: " << fWin << endl;
+              "  previous ID: " << fWin << dec << endl;
    }
 
    // Lock mutex for guarding access to fWindowList
@@ -567,7 +584,7 @@ void TRecorderReplaying::RegisterWindow(Window_t w)
 
       if (gDebug > 0)
          cout << " Window " << hex << fGuiEvent->fWindow <<
-                 " registered." << endl;
+                 " registered." << dec << endl;
 
       fNextEvent = fGuiEvent;
       // Sets that we do not wait for this window anymore
@@ -713,7 +730,7 @@ Bool_t TRecorderReplaying::PrepareNextEvent()
    // Skips GUI events that should not be replayed (FilterEvent call)
    while (fGuiTree->GetEntries() > fGuiTreeCounter) {
       fGuiTree->GetEntry(fGuiTreeCounter);
-      if (!FilterEvent(fGuiEvent))
+      if (!fGuiEvent || !FilterEvent(fGuiEvent))
          break;
       fGuiTreeCounter++;
    }
@@ -1626,18 +1643,6 @@ void TRecorderRecording::CopyEvent(Event_t *e, Window_t wid)
 {
    // Copies all items of given event to fGuiEvent
 
-#ifndef R__WIN32
-   if (gDecorWidth == 0 && gDecorHeight == 0) {
-      TGWindow *main = gClient->GetWindowById(e->fWindow);
-      if (main && main->InheritsFrom("TGMainFrame") &&
-          main->GetParent() == gClient->GetDefaultRoot()) {
-         WindowAttributes_t attr;
-         gVirtualX->GetWindowAttributes(e->fWindow, attr);
-         gDecorWidth  = attr.fX;
-         gDecorHeight = attr.fY;
-      }
-   }
-#endif
    fGuiEvent->fType     = e->fType;
    fGuiEvent->fWindow   = e->fWindow;
    fGuiEvent->fTime     = e->fTime;
@@ -2061,13 +2066,17 @@ void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
 {
    // Replays stored GUI event
 
+   Int_t    px, py, dx, dy;
+   Window_t wtarget;
    Event_t *e = CreateEvent(this);
 
    // don't try to replay any copy/paste event, as event->fUser[x]
    // parameters are invalid on different OSes
    if (e->fType == kSelectionClear || e->fType == kSelectionRequest ||
-       e->fType == kSelectionNotify)
+       e->fType == kSelectionNotify) {
+      delete e;
       return;
+   }
 
    // Replays movement/resize event
    if (e->fType == kConfigureNotify) {
@@ -2113,22 +2122,19 @@ void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
             Error("TRecGuiEvent::ReplayEvent",
                   "kConfigureNotify: Window %x does not exist anymore ");
       }
+      delete e;
       return;
 
    } // kConfigureNotify
 
-#ifndef R__WIN32
-   if (gDecorWidth == 0 && gDecorHeight == 0) {
-      TGWindow *main = gClient->GetWindowById(e->fWindow);
-      if (main && main->InheritsFrom("TGMainFrame") &&
-          main->GetParent() == gClient->GetDefaultRoot()) {
-         WindowAttributes_t attr;
-         gVirtualX->GetWindowAttributes(e->fWindow, attr);
-         gDecorWidth  = attr.fX;
-         gDecorHeight = attr.fY;
-      }
+   if (showMouseCursor && e->fType == kButtonPress) {
+      gVirtualX->TranslateCoordinates(e->fWindow, gVirtualX->GetDefaultRootWindow(),
+                                      e->fX, e->fY, px, py, wtarget);
+      dx = px - gCursorWin->GetX();
+      dy = py - gCursorWin->GetY();
+      if (TMath::Abs(dx) > 5) gDecorWidth += dx;
+      if (TMath::Abs(dy) > 5) gDecorHeight += dy;
    }
-#endif
    // Displays fake mouse cursor for MotionNotify event
    if (showMouseCursor && e->fType == kMotionNotify) {
       if (gCursorWin && e->fWindow == gVirtualX->GetDefaultRootWindow()) {
@@ -2136,6 +2142,10 @@ void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
             gCursorWin->MapRaised();
          }
          if (gVirtualX->GetDrawMode() == TVirtualX::kCopy) {
+//#ifdef R__MACOSX
+            // this may have side effects (e.g. stealing focus)
+            gCursorWin->RaiseWindow();
+//#endif
             gCursorWin->Move(e->fXRoot + gDecorWidth, e->fYRoot + gDecorHeight);
          }
       }
@@ -2149,6 +2159,7 @@ void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
       e->fType = (EGEventType)e->fFormat;
       if (gDragManager)
          gDragManager->HandleTimerEvent(e, 0);
+      delete e;
       return;
    }
    else { // then the normal cases
@@ -2157,6 +2168,7 @@ void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
       else
          gClient->HandleMaskEvent(e, fMasked);
    }
+   delete e;
 }
 
 //______________________________________________________________________________

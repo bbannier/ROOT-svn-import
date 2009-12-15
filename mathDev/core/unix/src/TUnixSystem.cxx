@@ -1560,7 +1560,8 @@ Bool_t TUnixSystem::ExpandPathName(TString &path)
    // Expand a pathname getting rid of special shell characters like ~.$, etc.
    // For Unix/Win32 compatibility use $(XXX) instead of $XXX when using
    // environment variables in a pathname. If compatibility is not an issue
-   // you can use on Unix directly $XXX.
+   // you can use on Unix directly $XXX. Returns kFALSE in case of success
+   // or kTRUE in case of error.
 
    const char *p, *patbuf = (const char *)path;
 
@@ -1580,8 +1581,11 @@ expand:
    path.ReplaceAll("$(","$");
    path.ReplaceAll(")","");
 
-   path = ExpandFileName(path.Data());
-   return kFALSE;
+   if ((p = ExpandFileName(path))) {
+      path = p;
+      return kFALSE;
+   }
+   return kTRUE;
 }
 #endif
 
@@ -1592,7 +1596,8 @@ Bool_t TUnixSystem::ExpandPathName(TString &patbuf0)
    // Expand a pathname getting rid of special shell characters like ~.$, etc.
    // For Unix/Win32 compatibility use $(XXX) instead of $XXX when using
    // environment variables in a pathname. If compatibility is not an issue
-   // you can use on Unix directly $XXX.
+   // you can use on Unix directly $XXX. Returns kFALSE in case of success
+   // or kTRUE in case of error.
 
    const char *patbuf = (const char *)patbuf0;
    const char *hd, *p;
@@ -1696,6 +1701,7 @@ char *TUnixSystem::ExpandPathName(const char *path)
    // For Unix/Win32 compatibility use $(XXX) instead of $XXX when using
    // environment variables in a pathname. If compatibility is not an issue
    // you can use on Unix directly $XXX. The user must delete returned string.
+   // Returns the expanded pathname or 0 in case of error.
 
    TString patbuf = path;
    if (ExpandPathName(patbuf))
@@ -2030,6 +2036,27 @@ void TUnixSystem::StackTrace()
    if (!gEnv->GetValue("Root.Stacktrace", 1))
       return;
 
+   TString gdbscript = gEnv->GetValue("Root.StacktraceScript", "");
+   gdbscript = gdbscript.Strip();
+   if (gdbscript != "") {
+      if (AccessPathName(gdbscript, kReadPermission)) {
+         fprintf(stderr, "Root.StacktraceScript %s does not exist\n", gdbscript.Data());
+         gdbscript = "";
+      } else {
+         gdbscript += " ";
+      }
+   }
+   if (gdbscript == "") {
+#ifdef ROOTETCDIR
+      gdbscript.Form("%s/gdb-backtrace.sh ", ROOTETCDIR);
+#else
+      gdbscript.Form("%s/etc/gdb-backtrace.sh ", gSystem->Getenv("ROOTSYS"));
+#endif
+   }
+
+   TString gdbmess = gEnv->GetValue("Root.StacktraceMessage", "");
+   gdbmess = gdbmess.Strip();
+
    cout.flush();
    fflush(stdout);
 
@@ -2052,16 +2079,22 @@ void TUnixSystem::StackTrace()
       return;
    }
 
+   // write custom message file
+   TString gdbmessf = "gdb-message";
+   if (gdbmess != "") {
+      FILE *f = TempFileName(gdbmessf);
+      fprintf(f, "%s\n", gdbmess.Data());
+      fclose(f);
+   }
+
    // use gdb to get stack trace
-   TString gdbscript;
-# ifdef ROOTETCDIR
-   gdbscript.Form("%s/gdb-backtrace.sh ", ROOTETCDIR);
-# else
-   gdbscript.Form("%s/etc/gdb-backtrace.sh ", gSystem->Getenv("ROOTSYS"));
-# endif
    gdbscript += GetExePath();
    gdbscript += " ";
    gdbscript += GetPid();
+   if (gdbmess != "") {
+      gdbscript += " ";
+      gdbscript += gdbmessf;
+   }
    gdbscript += " 1>&2";
    Exec(gdbscript);
    delete [] gdb;
@@ -2137,14 +2170,20 @@ void TUnixSystem::StackTrace()
    // If it is, use it. If not proceed as before.
    char *gdb = Which(Getenv("PATH"), "gdb", kExecutePermission);
    if (gdb) {
+      // write custom message file
+      TString gdbmessf = "gdb-message";
+      if (gdbmess != "") {
+         FILE *f = TempFileName(gdbmessf);
+         fprintf(f, "%s\n", gdbmess.Data());
+         fclose(f);
+      }
+
       // use gdb to get stack trace
-      TString gdbscript;
-# ifdef ROOTETCDIR
-      gdbscript.Form("%s/gdb-backtrace.sh ", ROOTETCDIR);
-# else
-      gdbscript.Form("%s/etc/gdb-backtrace.sh ", gSystem->Getenv("ROOTSYS"));
-# endif
       gdbscript += GetPid();
+      if (gdbmess != "") {
+         gdbscript += " ";
+         gdbscript += gdbmessf;
+      }
       gdbscript += " 1>&2";
       Exec(gdbscript);
       delete [] gdb;

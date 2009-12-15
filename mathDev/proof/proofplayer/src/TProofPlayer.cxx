@@ -498,9 +498,10 @@ Int_t TProofPlayer::ReinitSelector(TQueryResult *qr)
          md5icur = TMD5::FileChecksum(selc);
          md5iold = qr->GetSelecImp()->Checksum();
          // Header files
-         char *selh = StrDup(selc);
-         char *p = (char *) strrchr(selh,'.');
-         if (p) strcpy(p+1,"h");
+         TString selh(selc);
+         Int_t dot = selh.Last('.');
+         if (dot != kNPOS) selh.Remove(dot);
+         selh += ".h";
          if (!gSystem->AccessPathName(selh, kReadPermission))
             md5hcur = TMD5::FileChecksum(selh);
          md5hold = qr->GetSelecHdr()->Checksum();
@@ -514,7 +515,6 @@ Int_t TProofPlayer::ReinitSelector(TQueryResult *qr)
          SafeDelete(md5iold);
          SafeDelete(md5hold);
          if (selc) delete [] selc;
-         if (selh) delete [] selh;
       }
 
       Bool_t ok = kTRUE;
@@ -736,8 +736,10 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    Int_t version = -1;
    TRY {
       // Get selector files from cache
-      if (gProofServ)
+      if (gProofServ) {
+         gProofServ->GetCacheLock()->Lock();
          gProofServ->CopyFromCache(selector_file, 1);
+      }
 
       if (!(fSelector = TSelector::GetSelector(selector_file))) {
          Error("Process", "cannot load: %s", selector_file );
@@ -745,8 +747,10 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       }
 
       // Save binaries to cache, if any
-      if (gProofServ)
+      if (gProofServ) {
          gProofServ->CopyToCache(selector_file, 1);
+         gProofServ->GetCacheLock()->Unlock();
+      }
 
       fSelectorClass = fSelector->IsA();
       version = fSelector->Version();
@@ -849,12 +853,25 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
    TRY {
 
+      TPair *currentElem = 0;
       // The event loop on the worker
       while ((entry = fEvIter->GetNextEvent()) >= 0 && fSelStatus->IsOk()) {
 
          // This is needed by the inflate infrastructure to calculate
          // sleeping times
          SetProcessing(kTRUE);
+
+         // Give the possibility to the selector to access additional info in the
+         // incoming packet
+         if (dset->Current()) {
+            if (!currentElem) {
+               currentElem = new TPair(new TObjString("PROOF_CurrentElement"), dset->Current());
+               fInput->Add(currentElem);
+            } else {
+               if (currentElem->Value() != dset->Current())
+                  currentElem->SetValue(dset->Current());
+            }
+         }
 
          if (version == 0) {
             PDB(kLoop,3)
@@ -936,6 +953,14 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       SetProcessing(kFALSE);
    } ENDTRY;
 
+   // Clean-up the envelop for the current element
+   TPair *currentElem = 0;
+   if ((currentElem = (TPair *) fInput->FindObject("PROOF_CurrentElement"))) {
+      fInput->Remove(currentElem);
+      delete currentElem->Key();
+      delete currentElem;
+   }
+
    PDB(kGlobal,2)
       Info("Process","%lld events processed", fProgressStatus->GetEntries());
 
@@ -1013,7 +1038,14 @@ Long64_t TProofPlayer::Finalize(TQueryResult *)
    MayNotUse("Finalize");
    return -1;
 }
+//______________________________________________________________________________
+void TProofPlayer::MergeOutput()
+{
+   // Merge output (may not be used in this class).
 
+   MayNotUse("MergeOutput");
+   return;
+}
 //______________________________________________________________________________
 void TProofPlayer::UpdateAutoBin(const char *name,
                                  Double_t& xmin, Double_t& xmax,
@@ -1684,6 +1716,11 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
                   Error("MergeOutputFiles", "cannot open the output file");
                   continue;
                }
+               // If only one instance the list in the merger is not yet created: do it now
+               if (!pf->IsMerged()) {
+                  TString fileLoc = TString::Format("%s/%s", pf->GetDir(), pf->GetFileName());
+                  filemerger->AddFile(fileLoc);
+               }
                // Merge
                if (!filemerger->Merge()) {
                   Error("MergeOutputFiles", "cannot merge the output files");
@@ -1753,6 +1790,7 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
 //______________________________________________________________________________
 Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
 {
+
    // Finalize a query.
    // Returns -1 in case of an error, 0 otherwise.
 
@@ -1768,7 +1806,7 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
          MergeOutput();
       }
    }
-
+   
    Long64_t rv = 0;
    if (fProof->IsMaster()) {
       TPerfStats::Stop();
@@ -1859,6 +1897,12 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
       }
    }
    PDB(kGlobal,1) Info("Process","exit");
+   
+   if (!IsClient()) {
+      Info("Finalize", "finalization on %s finished", gProofServ->GetPrefix());
+   }
+   fProof->FinalizationDone();
+   
    return rv;
 }
 
@@ -1999,7 +2043,7 @@ Bool_t TProofPlayerRemote::SendSelector(const char* selector_file)
    }
 
    // Send files now
-   if (fProof->SendFile(selec, (TProof::kBinary | TProof::kForward | TProof::kCp)) == -1) {
+   if (fProof->SendFile(selec, (TProof::kBinary | TProof::kForward | TProof::kCp | TProof::kCpBin)) == -1) {
       Info("SendSelector", "problems sending implementation file %s", selec.Data());
       return kFALSE;
    }
@@ -2156,7 +2200,7 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
    // otherwise.
 
    PDB(kOutput,1)
-      Info("AddOutputObject","Enter: %p", obj);
+      Info("AddOutputObject","Enter: %p (%s)", obj, obj ? obj->ClassName() : "undef");
 
    // We must something to process
    if (!obj) {
@@ -2385,7 +2429,9 @@ Int_t TProofPlayerRemote::Incorporate(TObject *newobj, TList *outlist, Bool_t &m
 
    merged = kTRUE;
 
-   PDB(kOutput,1) Info("Incorporate", "enter: obj: %p, list: %p", newobj, outlist);
+   PDB(kOutput,1)
+      Info("Incorporate", "enter: obj: %p (%s), list: %p",
+                          newobj, newobj ? newobj->ClassName() : "undef", outlist);
 
    // The object and list must exist
    if (!newobj || !outlist) {
@@ -2394,7 +2440,8 @@ Int_t TProofPlayerRemote::Incorporate(TObject *newobj, TList *outlist, Bool_t &m
    }
 
    // Special treatment for histograms in autobin mode
-   Bool_t specialH = !fProof->TestBit(TProof::kIsClient) || fProof->IsLite();
+   Bool_t specialH =
+      (!fProof || !fProof->TestBit(TProof::kIsClient) || fProof->IsLite()) ? kTRUE : kFALSE;
    if (specialH && newobj->InheritsFrom("TH1")) {
       if (!HandleHistogram(newobj)) {
          PDB(kOutput,1) Info("Incorporate", "histogram object '%s' added to the"

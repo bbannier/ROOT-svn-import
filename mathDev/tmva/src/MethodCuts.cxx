@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$ 
-// Author: Andreas Hoecker, Matt Jachowski, Peter Speckmayer, Helge Voss, Kai Voss 
+// Author: Andreas Hoecker, Matt Jachowski, Peter Speckmayer, Eckhard von Toerne, Helge Voss, Kai Voss 
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate Data analysis       *
@@ -14,6 +14,7 @@
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
  *      Matt Jachowski  <jachowski@stanford.edu> - Stanford University, USA       *
  *      Peter Speckmayer <speckmay@mail.cern.ch> - CERN, Switzerland              *
+ *      Eckhard von Toerne <evt@physik.uni-bonn.de> - U. of Bonn, Germany         *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
  *                                                                                *
@@ -327,7 +328,6 @@ void TMVA::MethodCuts::DeclareOptions()
    AddPreDefVal(TString("FMax"));
    AddPreDefVal(TString("FMin"));
    AddPreDefVal(TString("FSmart"));
-   AddPreDefVal(TString("FVerySmart"));
 }
 
 //_______________________________________________________________________
@@ -388,7 +388,6 @@ void TMVA::MethodCuts::ProcessOptions()
       else if (fAllVarsI[ivar] == "FMax" )                           theFitP = kForceMax;
       else if (fAllVarsI[ivar] == "FMin" )                           theFitP = kForceMin;
       else if (fAllVarsI[ivar] == "FSmart" )                         theFitP = kForceSmart;
-      else if (fAllVarsI[ivar] == "FVerySmart" )                     theFitP = kForceVerySmart;
       else {
          Log() << kFATAL << "unknown value \'" << fAllVarsI[ivar]
                  << "\' for fit parameter option " << Form("VarProp[%i]",ivar) << Endl;
@@ -426,8 +425,8 @@ Double_t TMVA::MethodCuts::GetMvaValue( Double_t* err )
     
       Bool_t passed = kTRUE;
       for (UInt_t ivar=0; ivar<GetNvar(); ivar++)
-         passed &= ( (ev->GetVal(ivar) >  fCutMin[ivar][ibin]) && 
-                     (ev->GetVal(ivar) <= fCutMax[ivar][ibin]) );
+         passed &= ( (ev->GetValue(ivar) >  fCutMin[ivar][ibin]) && 
+                     (ev->GetValue(ivar) <= fCutMax[ivar][ibin]) );
 
       return passed ? 1. : 0. ;
    }
@@ -725,11 +724,11 @@ void  TMVA::MethodCuts::Train( void )
 
                const Event *ev1 = GetEvent(ievt1);
                isSignal = DataInfo().IsSignal(ev1);
-               evt1 = ev1->GetVal( ivar );
+               evt1 = ev1->GetValue( ivar );
 
                const Event *ev2 = GetEvent(ievt2);
                isSignal &= DataInfo().IsSignal(ev2);
-               evt2 = ev2->GetVal( ivar );
+               evt2 = ev2->GetValue( ivar );
                
                if (nbreak++ > 10000) Log() << kFATAL << "<MCEvents>: could not find signal events" 
                                              << " after 10000 trials - do you have signal events in your sample ?" 
@@ -795,11 +794,11 @@ Double_t TMVA::MethodCuts::EstimatorFunction( Int_t ievt1, Int_t ievt2 )
    
    const Event *ev1 = GetEvent(ievt1);
    if (!DataInfo().IsSignal(ev1)) return -1;
-   for (Int_t ivar=0; ivar<nvar; ivar++) evt1[ivar] = ev1->GetVal( ivar );
+   for (Int_t ivar=0; ivar<nvar; ivar++) evt1[ivar] = ev1->GetValue( ivar );
 
    const Event *ev2 = GetEvent(ievt2);
    if (!DataInfo().IsSignal(ev2)) return -1;
-   for (Int_t ivar=0; ivar<nvar; ivar++) evt2[ivar] = ev2->GetVal( ivar );
+   for (Int_t ivar=0; ivar<nvar; ivar++) evt2[ivar] = ev2->GetValue( ivar );
 
    // determine cuts
    std::vector<Double_t> pars;
@@ -881,6 +880,9 @@ Double_t TMVA::MethodCuts::ComputeEstimator( std::vector<Double_t>& pars )
    // if the average of the bin right and left is larger than this one, add the difference to 
    // the current value of the estimator (because you can do at least so much better)
    eta = ( -TMath::Abs(effBH-average) + (1.0 - (effBH - effB))) / (1.0 + effS); 
+   // alternative idea
+   //if (effBH<0) eta = (1.e-6+effB)/(1.0 + effS);
+   //else eta =  (effB - effBH) * (1.0 + 10.* effS);
 
    // if a point is found which is better than an existing one, ... replace it. 
    // preliminary best event -> backup
@@ -896,6 +898,22 @@ Double_t TMVA::MethodCuts::ComputeEstimator( std::vector<Double_t>& pars )
    // but .. it doesn't matter, as MC samplings are independent from the former ones
    // and the replacement of the best variables by better ones is done about 10 lines above. 
    // ( if (effBH < 0 || effBH > effB) { .... )
+
+   if (ibinS<=1) {
+      // add penalty for effS=0 bin 
+      // to avoid that the minimizer gets stuck in the zero-bin
+      // force it towards higher efficiency
+      Double_t penalty=0.,diff=0.;
+      for (UInt_t ivar=0; ivar<GetNvar(); ivar++) {
+         diff=(fCutRange[ivar]->GetMax()-fTmpCutMax[ivar])/(fCutRange[ivar]->GetMax()-fCutRange[ivar]->GetMin());
+         penalty+=diff*diff;
+         diff=(fCutRange[ivar]->GetMin()-fTmpCutMin[ivar])/(fCutRange[ivar]->GetMax()-fCutRange[ivar]->GetMin());
+         penalty+=4.*diff*diff;
+      }
+      //Log() << kINFO<<"special treatment of "<<ibinS<<" bin penalty="<< penalty<<" effS="<<effS<<Endl;
+      if (effS<1.e-4) return 10.0+penalty;
+      else return 10.*(1.-10.*effS);
+   }
    return eta;
 }
 
@@ -1046,7 +1064,7 @@ void TMVA::MethodCuts::CreateVariablePDFs( void )
    Double_t maxVal = -DBL_MAX;
    for( UInt_t ievt=0; ievt<Data()->GetNEvents(); ievt++ ){
       const Event *ev = GetEvent(ievt);
-      Float_t val = ev->GetVal(ievt);
+      Float_t val = ev->GetValue(ievt);
       if( val > minVal ) minVal = val;
       if( val < maxVal ) maxVal = val;
    }
@@ -1085,7 +1103,7 @@ void TMVA::MethodCuts::CreateVariablePDFs( void )
       
       for( UInt_t ievt=0; ievt<Data()->GetNEvents(); ievt++ ){
          const Event *ev = GetEvent(ievt);
-         Float_t val = ev->GetVal(ievt);
+         Float_t val = ev->GetValue(ievt);
          if( DataInfo().IsSignal(ev) ){
             (*fVarHistS)[ivar]->Fill( val );
          }else{
@@ -1136,44 +1154,6 @@ void TMVA::MethodCuts::CreateVariablePDFs( void )
       (*fVarPdfB)[ivar] = new PDF( TString(GetName()) + " PDF Var Bkg " + GetInputVar( ivar ), (*fVarHistB_smooth)[ivar], PDF::kSpline2 );
    }
 }
-
-//_______________________________________________________________________
-void  TMVA::MethodCuts::WriteWeightsToStream( ostream & o ) const
-{
-   // write all necessary information to the stream
-   std::vector<Double_t> cutsMin;
-   std::vector<Double_t> cutsMax;
-
-   // first the dimensions
-   o << "OptimisationMethod " << "nbins:" << endl;
-   o << ((fEffMethod == kUseEventSelection) ? "Fit-EventSelection" : 
-         (fEffMethod == kUsePDFs) ? "Fit-PDF" : "Monte-Carlo") << "  " ;
-   o << fNbins << endl;
-
-   o << "Below are the optimised cuts for " << GetNvar() << " variables:"  << endl;
-   o << "Format: ibin(hist) effS effB cutMin[ivar=0] cutMax[ivar=0]"
-     << " ... cutMin[ivar=n-1] cutMax[ivar=n-1]" << endl;
-
-   // NOTE: The signal efficiency written out into 
-   //       the weight file does not correspond to the center of the bin within which the 
-   //       background rejection is maximised (as before) but to the lower left edge of it. 
-   //       This is because the cut optimisation algorithm determines the best background 
-   //       rejection for all signal efficiencies belonging into a bin. Since the best background 
-   //       rejection is in general obtained for the lowest possible signal efficiency, the 
-   //       reference signal efficeincy is the lowest value in the bin.
-   for (Int_t ibin=0; ibin<fNbins; ibin++) {
-      Double_t effS = fEffBvsSLocal->GetBinCenter ( ibin + 1 );
-      Double_t trueEffS = GetCuts( effS, cutsMin, cutsMax );
-      if (TMath::Abs(trueEffS) < 1e-10) trueEffS = 0;
-      o << setw(4) << ibin+1 << "  "    
-        << setw(8)<< trueEffS  << "  " 
-        << setw(8)<< fEffBvsSLocal->GetBinContent( ibin + 1 ) << "  ";  
-      for (UInt_t ivar=0; ivar<GetNvar(); ivar++)
-         o <<setw(10)<< cutsMin[ivar] << "  " << setw(10) << cutsMax[ivar] << "  ";
-      o << endl;
-   }
-}
-
 
 //_______________________________________________________________________
 void  TMVA::MethodCuts::ReadWeightsFromStream( istream& istr )
