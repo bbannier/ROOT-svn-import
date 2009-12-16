@@ -12,8 +12,12 @@
 #ifndef ROOT_TGLUtil
 #define ROOT_TGLUtil
 
+#ifndef ROOT_Rtypes
 #include "Rtypes.h"
+#endif
+#ifndef ROOT_TError
 #include "TError.h"
+#endif
 
 class TString;
 class TGLBoundingBox;
@@ -74,6 +78,7 @@ enum EGLPlotType {
    kGLParametricPlot,
    kGLIsoPlot,
    kGL5D,
+   kGLTH3Composition,
    kGLDefaultPlot
 };
 
@@ -119,6 +124,7 @@ public:
    // Manipulators
    void Fill(Double_t val);
    void Set(Double_t x, Double_t y, Double_t z);
+   void Set(const Double_t* xyz);
    void Set(const TGLVertex3 & other);
    void Shift(TGLVector3 & shift);
    void Shift(Double_t xDelta, Double_t yDelta, Double_t zDelta);
@@ -226,6 +232,14 @@ inline void TGLVertex3::Set(Double_t x, Double_t y, Double_t z)
    fVals[0]=x;
    fVals[1]=y;
    fVals[2]=z;
+}
+
+//______________________________________________________________________________
+inline void TGLVertex3::Set(const Double_t* xyz)
+{
+   fVals[0]=xyz[0];
+   fVals[1]=xyz[1];
+   fVals[2]=xyz[2];
 }
 
 //______________________________________________________________________________
@@ -955,6 +969,11 @@ private:
 
    static UInt_t fgColorLockCount;
 
+   static Float_t fgPointSize;
+   static Float_t fgLineWidth;
+   static Float_t fgPointSizeScale;
+   static Float_t fgLineWidthScale;
+
    TGLUtil(const TGLUtil&);            // Not implemented.
    TGLUtil& operator=(const TGLUtil&); // Not implemented.
 
@@ -998,6 +1017,17 @@ public:
    static void Color3fv(const Float_t* rgb);
    static void Color4fv(const Float_t* rgba);
 
+   static Float_t GetPointSizeScale();
+   static void    SetPointSizeScale(Float_t scale);
+   static Float_t GetLineWidthScale();
+   static void    SetLineWidthScale(Float_t scale);
+
+   static void    PointSize(Float_t point_size);
+   static void    LineWidth(Float_t line_width);
+
+   static Float_t PointSize();
+   static Float_t LineWidth();
+
    static void BeginExtendPickRegion(Float_t scale);
    static void EndExtendPickRegion();
 
@@ -1009,8 +1039,11 @@ public:
                             Bool_t sec_selection=kFALSE);
    static void RenderCrosses(const TAttMarker& marker, Float_t* p, Int_t n,
                              Bool_t sec_selection=kFALSE);
-   static void RenderPolyLine(const TAttLine& al, Float_t* p, Int_t n,
+   static void RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
                               Int_t pick_radius=0, Bool_t selection=kFALSE);
+
+   static void BeginAttLine(const TAttLine& aline, Int_t pick_radius=0, Bool_t selection=kFALSE);
+   static void EndAttLine(Int_t pick_radius=0, Bool_t selection=kFALSE);
 
    // TODO: These draw routines should take LOD hints
    static void SetDrawColors(const Float_t rgba[4]);

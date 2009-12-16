@@ -17,6 +17,14 @@
 
 #include <math.h>
 
+//#define DEBUG 
+
+#if defined(DEBUG) || defined(WARNINGMSG)
+#include "Minuit2/MnPrint.h" 
+#endif
+
+
+
 namespace ROOT {
 
    namespace Minuit2 {
@@ -29,6 +37,10 @@ FunctionGradient InitialGradientCalculator::operator()(const MinimumParameters& 
    
    unsigned int n = Trafo().VariableParameters();
    assert(n == par.Vec().size());
+
+#ifdef DEBUG
+   std::cout << "Initial gradient calculator - params " << par.Vec() << std::endl;
+#endif
    
    MnAlgebraicVector gr(n), gr2(n), gst(n);
    
@@ -54,9 +66,10 @@ FunctionGradient InitialGradientCalculator::operator()(const MinimumParameters& 
       }
       var2 = Trafo().Ext2int(exOfIn, sav2);
       double vmin = var2 - var;
-      double dirin = 0.5*(fabs(vplu) + fabs(vmin));
-      double g2 = 2.0*fFcn.ErrorDef()/(dirin*dirin);
       double gsmin = 8.*Precision().Eps2()*(fabs(var) + Precision().Eps2());
+      // protect against very small step sizes which can cause dirin to zero and then nan values in grd
+      double dirin = std::max(0.5*(fabs(vplu) + fabs(vmin)),  gsmin );
+      double g2 = 2.0*fFcn.ErrorDef()/(dirin*dirin);
       double gstep = std::max(gsmin, 0.1*dirin);
       double grd = g2*dirin;
       if(Trafo().Parameter(exOfIn).HasLimits()) {

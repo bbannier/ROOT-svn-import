@@ -10,6 +10,8 @@
 
 //       $Id$
 
+const char *XrdClientReadCacheCVSID = "$Id$";
+
 #include "XrdClient/XrdClientReadCache.hh"
 #include "XrdSys/XrdSysPthread.hh"
 #include "XrdClient/XrdClientDebug.hh"
@@ -57,7 +59,7 @@ long long XrdClientReadCache::GetTimestampTick()
 }
   
 //________________________________________________________________________
-XrdClientReadCache::XrdClientReadCache() : fItems(16384)
+XrdClientReadCache::XrdClientReadCache() : fItems(4096)
 {
     // Constructor
 
@@ -80,7 +82,6 @@ XrdClientReadCache::XrdClientReadCache() : fItems(16384)
 XrdClientReadCache::~XrdClientReadCache()
 {
   // Destructor
-
   RemoveItems(false);
 
 }
@@ -123,6 +124,7 @@ bool XrdClientReadCache::SubmitRawData(const void *buffer, long long begin_offs,
 	if (pos < 0) pos = 0;
 
 	for (; pos < fItems.GetSize(); pos++) {
+           // Don't add this block if it is contained in a bigger one
 	    if (!fItems[pos]->IsPlaceholder() && fItems[pos]->ContainsInterval(begin_offs, end_offs)) {
 		pos = -1;
 		break;
@@ -474,7 +476,7 @@ void XrdClientReadCache::PrintCache() {
     XrdSysMutexHelper mtx(fMutex);
     int it;
 
-    Info(XrdClientDebug::kHIDEBUG, "Cache",
+    Info(XrdClientDebug::kUSERDEBUG, "Cache",
 	 "Cache Status --------------------------");
 
     for (it = 0; it < fItems.GetSize(); it++) {
@@ -483,13 +485,13 @@ void XrdClientReadCache::PrintCache() {
 
 	    if (fItems[it]->IsPlaceholder()) {
 		
-		Info(XrdClientDebug::kHIDEBUG,
+		Info(XrdClientDebug::kUSERDEBUG,
 		     "Cache blk", it << "Placeholder " <<
 		     fItems[it]->BeginOffset() << "->" << fItems[it]->EndOffset() );
 
 	    }
 	    else
-		Info(XrdClientDebug::kHIDEBUG,
+		Info(XrdClientDebug::kUSERDEBUG,
 		     "Cache blk", it << "Data block  " <<
 		     fItems[it]->BeginOffset() << "->" << fItems[it]->EndOffset() <<
 		     (fItems[it]->Pinned ? " (pinned) " : "" ) );
@@ -497,7 +499,7 @@ void XrdClientReadCache::PrintCache() {
 	}
     }
     
-    Info(XrdClientDebug::kHIDEBUG, "Cache",
+    Info(XrdClientDebug::kUSERDEBUG, "Cache",
 	 "-------------------------------------- fTotalByteCount = " << fTotalByteCount );
 
 }
@@ -710,13 +712,13 @@ void XrdClientReadCache::RemoveItems(bool leavepinned)
       if (!fItems[it]->Pinned) {
 	fTotalByteCount -= fItems[it]->Size();
 	delete fItems[it];
-	fItems.Erase(it);
+	fItems.Erase(it, true);
 	continue;
       }
 
       if (fItems[it]->Pinned && !leavepinned) {
 	delete fItems[it];
-	fItems.Erase(it);
+	fItems.Erase(it, true);
 	continue;
       }
     }

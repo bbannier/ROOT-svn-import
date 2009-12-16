@@ -1,5 +1,5 @@
 // @(#)root/eve:$Id$
-// Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
+// Authors: Matevz Tadel & Alja Mrak-Tadel: 2006 - 2009
 
 /*************************************************************************
  * Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
@@ -16,9 +16,6 @@
 //==============================================================================
 // LinkDef2.h - Visualization elements and helper classes.
 //==============================================================================
-
-//______________________________________________________________________________
-// Visualization elements
 
 // TEveTrack
 #pragma link C++ class TEveTrack+;
@@ -79,6 +76,7 @@
 #pragma link C++ class TEveGeoNodeEditor+;
 #pragma link C++ class TEveGeoTopNodeEditor+;
 #pragma link C++ class TEveGeoShape+;
+#pragma link C++ class TEveGeoShapeProjected+;
 
 // TEveGeoShapeExtract
 #pragma link C++ class TEveGeoShapeExtract+;
@@ -123,14 +121,14 @@
 // TEveLegoEventHandler
 #pragma link C++ class TEveLegoEventHandler+;
 
-
 // TEveJetCone
 #pragma link C++ class TEveJetCone+;
 #pragma link C++ class TEveJetConeEditor+;
 #pragma link C++ class TEveJetConeGL+;
 
-//______________________________________________________________________________
-// Helper classes
+// TEvePlots
+#pragma link C++ class TEvePlot3D+;
+#pragma link C++ class TEvePlot3DGL+;
 
 // TEveFrameBox
 #pragma link C++ class TEveFrameBox+;

@@ -30,6 +30,9 @@
 #ifndef ROOT_TUrl
 #include "TUrl.h"
 #endif
+#ifndef ROOT_TSystem
+#include "TSystem.h"
+#endif
 
 class TList;
 class TObjString;
@@ -37,6 +40,7 @@ class TProof;
 class TProofDesc;
 class TProofLog;
 class TProofMgr;
+class TSignalHandler;
 
 typedef TProofMgr *(*TProofMgr_t)(const char *, Int_t, const char *);
 
@@ -58,10 +62,12 @@ protected:
    TList         *fSessions;       // PROOF session managed by this server
    TUrl           fUrl;            // Server URL
 
+   TSignalHandler *fIntHandler;    // Interrupt signal handler (ctrl-c)
+
    static TList   fgListOfManagers; // Sub-list of TROOT::ListOfProofs for managers
 
    TProofMgr() : fRemoteProtocol(-1),
-                        fServType(kXProofd), fSessions(0), fUrl() { }
+                        fServType(kXProofd), fSessions(0), fUrl(), fIntHandler(0) { }
 
 public:
    TProofMgr(const char *url, Int_t loglevel = -1, const char *alias = "");
@@ -98,6 +104,20 @@ public:
    virtual void        ShowROOTVersions() { }
    virtual void        ShutdownSession(Int_t id) { DetachSession(id,"S"); }
    virtual void        ShutdownSession(TProof *p) { DetachSession(p,"S"); }
+
+   // Remote file system actions
+   virtual Int_t       Cp(const char *, const char * = 0, const char * = 0) { return -1; }
+   virtual void        Find(const char * = "~/", const char * = 0, const char * = 0) { }
+   virtual void        Grep(const char *, const char * = 0, const char * = 0) { }
+   virtual void        Ls(const char * = "~/", const char * = 0, const char * = 0) { }
+   virtual void        More(const char *, const char * = 0, const char * = 0) { }
+   virtual Int_t       Rm(const char *, const char * = 0, const char * = 0) { return -1; }
+   virtual void        Tail(const char *, const char * = 0, const char * = 0) { }
+   virtual Int_t       Md5sum(const char *, TString &, const char * = 0) { return -1; }
+   virtual Int_t       Stat(const char *, FileStat_t &, const char * = 0) { return -1; }
+
+   virtual Int_t       GetFile(const char *, const char *, const char * = 0) { return -1; }
+   virtual Int_t       PutFile(const char *, const char *, const char * = 0) { return -1; }
 
    static TList       *GetListOfManagers();
 

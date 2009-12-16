@@ -47,7 +47,8 @@ const char *XrdProofdAux::AdminMsgType(int type)
    static const char *msgtypes[] = { "Undef",
      "QuerySessions", "SessionTag", "SessionAlias", "GetWorkers", "QueryWorkers",
      "CleanupSessions", "QueryLogPaths", "ReadBuffer", "QueryROOTVersions",
-     "ROOTVersion", "GroupProperties", "SendMsgToUser", "ReleaseWorker" };
+     "ROOTVersion", "GroupProperties", "SendMsgToUser", "ReleaseWorker",
+     "Exec", "GetFile", "PutFile", "CpFile"};
 
    if (type < 1000 || type >= kUndef) {
       return msgtypes[0];
@@ -68,7 +69,7 @@ const char *XrdProofdAux::ProofRequestTypes(int type)
       "XP_login", "XP_auth", "XP_create", "XP_destroy", "XP_attach", "XP_detach",
       "XP_3107", "XP_3108", "XP_3109", "XP_3110",
       "XP_urgent", "XP_sendmsg", "XP_admin", "XP_interrupt", "XP_ping",
-      "XP_cleanup", "XP_readbuf", "XP_touch" };
+      "XP_cleanup", "XP_readbuf", "XP_touch", "XP_ctrlc" };
 
    if (type < 3101 || type >= kXP_Undef) {
       return reqtypes[0];
@@ -1422,36 +1423,50 @@ int XrdProofdAux::ReadMsg(int fd, XrdOucString &msg)
 }
 
 //______________________________________________________________________________
-int XrdProofdAux::ParsePidPath(const char *path, XrdOucString &rest)
+int XrdProofdAux::ParsePidPath(const char *path,
+                               XrdOucString &before, XrdOucString &after)
 {
-   // Parse a path in the form of "<rest>[.<pid>]", filling 'rest' and returning
-   // 'pid'.
-   // Return 0 if pid is not defined; rest is filled with 'path'.
+   // Parse a path in the form of "<before>[.<pid>][.<after>]", filling 'rest'
+   // and returning 'pid'.
+   // Return 0 if pid is not defined; 'before' is filled with the string preceeding
+   // <pid>, <after> with the string following <pid>.
+   XPDLOC(AUX, "ParsePidPath")
 
    long int pid = -1;
    if (path && strlen(path)) {
-      // Fill 'rest'
-      rest = path;
-      int id = rest.rfind('.');
-      if (id != STR_NPOS) {
-         pid = 0;
-         XrdOucString spid(rest, id+1);
-         if (spid.isdigit()) {
-            // Get pid
-            pid = (int) spid.atoi();
-            if (!XPD_LONGOK(pid)) {
-               // Substring is not a PID
-               pid = 0;
+      pid = 0;
+      int from = 0;
+      XrdOucString spid, s(path);
+      bool nopid = 1;
+      while ((from = s.tokenize(spid, from, '.')) != -1) {
+         if (spid.length() > 0) {
+            if (spid.isdigit()) {
+               // Get pid
+               pid = (int) spid.atoi();
+               if (!XPD_LONGOK(pid)) {
+                  // Substring is not a PID
+                  pid = 0;
+               }
+            }
+            if (nopid && pid > 0) {
+               nopid = 0;
+            } else if (nopid) {
+               if (before.length() > 0) before += ".";
+               before += spid;
+            } else {
+               if (after.length() > 0) after += ".";
+               after += spid;
             }
          }
-         if (pid > 0) {
-            // Remove from rest
-            rest.erase(id);
-         }
-      } else {
-         pid = 0;
+      }
+      if (pid == 0 && before.length() == 0) {
+         before = after;
+         after = "";
       }
    }
+
+   TRACE(HDBG,"path: "<<path<<" --> before: '"<<before<<"', pid: "<<pid<<", after: '"<<after<<"'");
+
    // Done
    return pid;
 }
@@ -1462,11 +1477,11 @@ int XrdProofdAux::ParseUsrGrp(const char *path, XrdOucString &usr, XrdOucString 
    // Parse a path in the form of "<usr>[.<grp>][.<pid>]", filling 'usr' and 'grp'.
    // Returns -1 on failure, 0 if the pid is not defined or the pid.
 
-   XrdOucString rest;
-   int pid = ParsePidPath(path, rest);
+   XrdOucString rest, after;
+   int pid = ParsePidPath(path, rest, after);
 
    if (pid >= 0 && rest.length() > 0) {
-      // Fill 'usr' (everything auntil the last dot)
+      // Fill 'usr' (everything until the last dot)
       usr = rest;
       int ip = STR_NPOS;
       if ((ip = rest.rfind('.')) != STR_NPOS) {
@@ -1585,10 +1600,20 @@ XrdProofdPipe::~XrdProofdPipe()
 {
    // Destructor
 
-   // Close pipe descriptors
+   // Close the pipe
+   Close();
+}
+
+//__________________________________________________________________________
+void XrdProofdPipe::Close()
+{
+   // If open, close and invalidated the pipe descriptors
+
    if (IsValid()) {
       close(fPipe[0]);
       close(fPipe[1]);
+      fPipe[0] = -1;
+      fPipe[1] = -1;
    }
 }
 

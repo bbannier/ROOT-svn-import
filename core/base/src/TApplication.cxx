@@ -396,6 +396,7 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
          char *arg = strchr(argv[i], '(');
          if (arg) *arg = '\0';
          char *dir = gSystem->ExpandPathName(argv[i]);
+         TUrl udir(dir, kTRUE);
          if (arg) *arg = '(';
          if (!gSystem->GetPathInfo(dir, &id, &size, &flags, &modtime)) {
             if ((flags & 2)) {
@@ -408,19 +409,30 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
                } else if (!strcmp(gROOT->GetName(), "Rint")) {
                   Warning("GetOptions", "only one directory argument can be specified (%s)", dir);
                }
-            } else if (flags == 0 || flags == 1) {
+            } else if (size > 0) {
                // if file add to list of files to be processed
                if (!fFiles) fFiles = new TObjArray;
                fFiles->Add(new TObjString(argv[i]));
                argv[i] = null;
+            } else {
+               Warning("GetOptions", "file %s has size 0, skipping", dir);
             }
          } else {
-            if (TString(dir).EndsWith(".root") && !strcmp(gROOT->GetName(), "Rint")) {
+            if (TString(udir.GetFile()).EndsWith(".root") && !strcmp(gROOT->GetName(), "Rint")) {
                // file ending on .root but does not exist, likely a typo, warn user...
-               Warning("GetOptions", "file %s not found", dir);
+               if (!strcmp(udir.GetProtocol(), "file"))
+                  Warning("GetOptions", "file %s not found", dir);
+               else {
+                  // remote file, give it the benefit of the doubt and add it to list of files
+                  if (!fFiles) fFiles = new TObjArray;
+                  fFiles->Add(new TObjString(argv[i]));
+                  argv[i] = null;
+               }
             } else {
-               char *mac, *s = Strip(dir, '+');
-               if ((mac = gSystem->Which(TROOT::GetMacroPath(), s,
+               TString mode,fargs,io;
+               TString fname = gSystem->SplitAclicMode(dir,mode,fargs,io);
+               char *mac;
+               if ((mac = gSystem->Which(TROOT::GetMacroPath(), fname,
                                          kReadPermission))) {
                   // if file add to list of files to be processed
                   if (!fFiles) fFiles = new TObjArray;
@@ -431,9 +443,8 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
                   // only warn if we're plain root,
                   // other progs might have their own params
                   if (!strcmp(gROOT->GetName(), "Rint"))
-                     Warning("GetOptions", "macro %s not found", s);
+                     Warning("GetOptions", "macro %s not found", fname.Data());
                }
-               delete [] s;
             }
          }
          delete [] dir;
@@ -510,7 +521,8 @@ void TApplication::LoadGraphicsLibs()
 
    TPluginHandler *h;
    if ((h = gROOT->GetPluginManager()->FindHandler("TVirtualPad")))
-      h->LoadPlugin();
+      if (h->LoadPlugin() == -1)
+         return;
 
    TString name;
    TString title1 = "ROOT interface to ";
@@ -847,7 +859,7 @@ Long_t TApplication::ExecuteFile(const char *file, Int_t *error, Bool_t keep)
    // Execute a file containing a C++ macro (static method). Can be used
    // while TApplication is not yet created.
 
-   const Int_t kBufSize = 1024;
+   static const Int_t kBufSize = 1024;
 
    if (!file || !*file) return 0;
 
@@ -872,6 +884,7 @@ Long_t TApplication::ExecuteFile(const char *file, Int_t *error, Bool_t keep)
    }
 
    char currentline[kBufSize];
+   char dummyline[kBufSize];
    int tempfile = 0;
    int comment  = 0;
    int ifndefc  = 0;
@@ -881,8 +894,16 @@ Long_t TApplication::ExecuteFile(const char *file, Int_t *error, Bool_t keep)
    Long_t retval = 0;
 
    while (1) {
-      macro.getline(currentline, kBufSize);
+      bool res = macro.getline(currentline, kBufSize);
       if (macro.eof()) break;
+      if (!res) {
+         // Probably only read kBufSize, let's ignore the remainder of
+         // the line.
+         macro.clear();
+         while (!macro.getline(dummyline, kBufSize) && !macro.eof()) {
+            macro.clear();
+         }
+      }
       s = currentline;
       while (s && (*s == ' ' || *s == '\t')) s++;   // strip-off leading blanks
 

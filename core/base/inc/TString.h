@@ -274,19 +274,12 @@ public:
    // Indexing operators
    char         &operator[](Ssiz_t i);         // Indexing with bounds checking
    char         &operator()(Ssiz_t i);         // Indexing with optional bounds checking
-   TSubString    operator()(Ssiz_t start, Ssiz_t len);   // Sub-string operator
-   TSubString    operator()(const TRegexp &re);          // Match the RE
-   TSubString    operator()(const TRegexp &re, Ssiz_t start);
-   TSubString    operator()(TPRegexp &re);               // Match the Perl compatible Regular Expression
-   TSubString    operator()(TPRegexp &re, Ssiz_t start);
-   TSubString    SubString(const char *pat, Ssiz_t start = 0,
-                           ECaseCompare cmp = kExact);
    char          operator[](Ssiz_t i) const;
    char          operator()(Ssiz_t i) const;
-   TSubString    operator()(Ssiz_t start, Ssiz_t len) const;
-   TSubString    operator()(const TRegexp &re) const;   // Match the RE
+   TSubString    operator()(Ssiz_t start, Ssiz_t len) const;   // Sub-string operator
+   TSubString    operator()(const TRegexp &re) const;          // Match the RE
    TSubString    operator()(const TRegexp &re, Ssiz_t start) const;
-   TSubString    operator()(TPRegexp &re) const;        // Match the Perl compatible Regular Expression
+   TSubString    operator()(TPRegexp &re) const;               // Match the Perl compatible Regular Expression
    TSubString    operator()(TPRegexp &re, Ssiz_t start) const;
    TSubString    SubString(const char *pat, Ssiz_t start = 0,
                            ECaseCompare cmp = kExact) const;
@@ -372,7 +365,6 @@ public:
    TString     &ReplaceAll(const char *s1, const char *s2);       // Find&Replace all s1 with s2 if any
    TString     &ReplaceAll(const char *s1, Ssiz_t ls1, const char *s2, Ssiz_t ls2);  // Find&Replace all s1 with s2 if any
    void         Resize(Ssiz_t n);                       // Truncate or add blanks as necessary
-   TSubString   Strip(EStripType s = kTrailing, char c = ' ');
    TSubString   Strip(EStripType s = kTrailing, char c = ' ') const;
    void         ToLower();                              // Change self to lower-case
    void         ToUpper();                              // Change self to upper-case
@@ -582,7 +574,23 @@ inline char TString::operator()(Ssiz_t i) const
 { return fData[i]; }
 
 inline const char *TSubString::Data() const
-{ return fStr.Data() + fBegin; }
+{ 
+   // Return a pointer to the beginning of the substring. Note that the
+   // terminating null is in the same place as for the original
+   // TString, so this method is not appropriate for converting the
+   // TSubString to a string. To do that, construct a TString from the
+   // TSubString. For example:
+   //
+   //   root [0] TString s("hello world")
+   //   root [1] TSubString sub=s(0, 5)
+   //   root [2] sub.Data()
+   //   (const char* 0x857c8b8)"hello world"
+   //   root [3] TString substr(sub)
+   //   root [4] substr
+   //   (class TString)"hello"
+   
+   return fStr.Data() + fBegin; 
+}
 
 // Access to elements of sub-string with bounds checking
 inline char TSubString::operator[](Ssiz_t i) const

@@ -175,6 +175,7 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
             int hash = G__struct.hash[itag];
             char* libname = G__struct.libname[itag];
             int parent_tagnum = G__struct.parent_tagnum[itag];
+            G__struct.namerange->Remove(G__struct.name[itag], itag);
             G__struct.name[itag] = 0; // autoload entry - must not delete it, just set it to 0
             G__struct.libname[itag] = 0; // same here
             int alltag = G__struct.alltag;
@@ -183,6 +184,7 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
             G__struct.alltag = alltag;
             --G__struct.nactives;
             G__struct.name[itag] = name;
+            G__struct.namerange->Insert(G__struct.name[itag], itag);
             G__struct.libname[itag] = libname;
             G__struct.type[itag] = 'a';
             G__struct.hash[itag] = hash;
@@ -373,6 +375,7 @@ static int G__free_typedef_upto(int typenum)
    for (--G__newtype.alltype; G__newtype.alltype >= typenum; --G__newtype.alltype) {
       // -- Free a typedef definition.
       // Free the typedef name.
+      G__newtype.namerange->Remove(G__newtype.name[G__newtype.alltype], G__newtype.alltype);
       free((void*) G__newtype.name[G__newtype.alltype]);
       G__newtype.name[G__newtype.alltype] = 0;
       //
@@ -419,8 +422,8 @@ static int G__free_struct_upto(int tagnum)
                   // -- Call the destructor and free the variable value storage.
                   if ((var->type[i] == 'u') && var->p[i]) {
                      // -- Static class object member try destructor.
-                     char com[G__ONELINE];
-                     sprintf(com, "~%s()", G__struct.name[var->p_tagtable[i]]);
+                     G__FastAllocString com(G__ONELINE);
+                     com.Format("~%s()", G__struct.name[var->p_tagtable[i]]);
                      long store_struct_offset = G__store_struct_offset;
                      int store_tagnum = G__tagnum;
                      G__store_struct_offset = var->p[i];
@@ -534,6 +537,7 @@ static int G__free_struct_upto(int tagnum)
          G__struct.incsetup_memfunc[G__struct.alltag] = 0;
       }
       // freeing tagname
+      G__struct.namerange->Remove(G__struct.name[G__struct.alltag], G__struct.alltag);
       free((void*) G__struct.name[G__struct.alltag]);
       G__struct.name[G__struct.alltag] = 0;
    }
@@ -595,24 +599,21 @@ static int G__destroy_upto_vararray(G__var_array* var, int global, int ig15)
          if (
             (var->type[idx] == 'u') && // Variable is of class, enum, namespace, struct, or union type, and
             (var->reftype[idx] == G__PARANORMAL) && // Is not a reference, and
+            !var->is_init_aggregate_array[idx] && // Is not an initialized aggregate array, and
             !G__ansiheader && // We are not in function header scope, and
             !G__prerun // We are executing.
          ) {
             // -- Variable is of class type, we must call a destructor.
-            char vv[G__BUFLEN];
-            char* temp = vv;
+            G__FastAllocString temp(G__BUFLEN);
             long store_struct_offset = G__store_struct_offset;
             G__store_struct_offset = var->p[idx];
             int store_tagnum = G__tagnum;
             G__tagnum = var->p_tagtable[idx];
             int store_return = G__return;
             G__return = G__RETURN_NON;
-            if (strlen(G__struct.name[G__tagnum]) > (G__BUFLEN - 5)) {
-               temp = (char*) malloc(strlen(G__struct.name[G__tagnum]) + 5);
-            }
-            sprintf(temp, "~%s()", G__struct.name[G__tagnum]);
+            temp.Format("~%s()", G__struct.name[G__tagnum]);
             if (G__dispsource) {
-               G__fprinterr(G__serr, "\n!!!Calling destructor 0x%lx.%s for %s ary%d:link%d", G__store_struct_offset, temp, var->varnamebuf[idx], var->varlabel[idx][1] /* number of elements */, G__struct.iscpplink[G__tagnum]);
+               G__fprinterr(G__serr, "\n!!!Calling destructor 0x%lx.%s for %s ary%d:link%d", G__store_struct_offset, temp(), var->varnamebuf[idx], var->varlabel[idx][1] /* number of elements */, G__struct.iscpplink[G__tagnum]);
             }
             int store_prerun = G__prerun;
             G__prerun = 0;
@@ -664,7 +665,7 @@ static int G__destroy_upto_vararray(G__var_array* var, int global, int ig15)
                for (int i = num_of_elements - 1; i >= 0; --i) {
                   G__store_struct_offset = var->p[idx] + (i * size);
                   if (G__dispsource) {
-                     G__fprinterr(G__serr, "\n0x%lx.%s", G__store_struct_offset, temp);
+                     G__fprinterr(G__serr, "\n0x%lx.%s", G__store_struct_offset, temp());
                   }
                   int known = 0;
                   G__getfunction(temp, &known, G__TRYDESTRUCTOR);
@@ -673,10 +674,6 @@ static int G__destroy_upto_vararray(G__var_array* var, int global, int ig15)
                      break;
                   }
                }
-            }
-            if (vv != temp) {
-               free(temp);
-               temp = 0;
             }
             G__prerun = store_prerun;
             G__store_struct_offset = store_struct_offset;
@@ -715,7 +712,10 @@ static int G__destroy_upto_vararray(G__var_array* var, int global, int ig15)
          fprintf(G__memhist, "Free(%s)\n", var->varnamebuf[idx]);
 #endif // G__MEMTEST
          if (
-            (cpplink == G__NOLINK) && // Variable is not of precompiled class type, and
+            (
+               (cpplink == G__NOLINK) || // Variable is not of precompiled class type, or
+               var->is_init_aggregate_array[idx] // Variable is an initialized aggregate array
+            ) && // and,
             var->p[idx] && // We have value storage allocated, and
             (var->p[idx] != -1) // FIXME: This probably is not needed.
          ) {
@@ -1229,6 +1229,11 @@ int G__close_inputfiles()
 void G__scratch_all()
 {
    // -- Erase all of the interpreter state.
+   if (!G__struct.namerange)
+      G__struct.namerange = new NameMap;
+   if (!G__newtype.namerange)
+      G__newtype.namerange = new NameMap;
+
    G__scratch_upto_work(0, 1);
 }
 

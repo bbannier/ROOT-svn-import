@@ -36,6 +36,7 @@ class TTreeCache : public TFileCacheRead {
 protected:
    Long64_t        fEntryMin;    //! first entry in the cache
    Long64_t        fEntryMax;    //! last entry in the cache
+   Long64_t        fEntryCurrent;//! current lowest entry number in the cache
    Long64_t        fEntryNext;   //! next entry number where cache must be filled
    Long64_t        fZipBytes;    //! Total compressed size of branches in cache
    Int_t           fNbranches;   //! Number of branches in the cache
@@ -63,16 +64,15 @@ public:
    Double_t            GetEfficiency();
    Double_t            GetEfficiencyRel();
    static Int_t        GetLearnEntries();
-   virtual Bool_t      GetSkipZip() { return kFALSE; } // This function is only used by TTreeCacheUnzip (ignore it)
+
    virtual Bool_t      FillBuffer();
    TTree              *GetOwner() const;
    TTree              *GetTree() const;
-   Bool_t              IsLearning() const {return fIsLearning;}
+   virtual Bool_t      IsLearning() const {return fIsLearning;}
    virtual Int_t       ReadBuffer(char *buf, Long64_t pos, Int_t len);
    virtual void        ResetCache();
    virtual void        SetEntryRange(Long64_t emin,   Long64_t emax);
-   static void         SetLearnEntries(Int_t n = 100);
-   virtual void        SetSkipZip(Bool_t skip = kTRUE) { (void)skip; return; } // This function is only used by TTreeCacheUnzip (ignore it)
+   static void         SetLearnEntries(Int_t n = 10);
    void                StartLearningPhase();
    virtual void        StopLearningPhase();
    virtual void        UpdateBranches(TTree *tree, Bool_t owner = kFALSE);

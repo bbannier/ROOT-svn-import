@@ -188,16 +188,12 @@ void TDSetElement::Print(Option_t *opt) const
    // Print a TDSetElement. When option="a" print full data.
 
    if (opt && opt[0] == 'a') {
-      cout << IsA()->GetName()
-           << " file=\"" << GetName()
-           << "\" dir=\"" << fDirectory
-           << "\" obj=\"" << GetTitle()
-           << "\" first=" << fFirst
-           << " num=" << fNum
-           << " msd=\"" << fMsd
-           << "\"" << endl;
-   } else
-      cout << "\tLFN: " << GetName() << endl;
+      Printf("%s file=\"%s\" dir=\"%s\" obj=\"%s\" first=%lld num=%lld msd=\"%s\"",
+             IsA()->GetName(), GetName(), fDirectory.Data(), GetTitle(),
+             fFirst, fNum, fMsd.Data());
+   } else {
+      Printf("\tLFN: %s", GetName());
+   }
 }
 
 //______________________________________________________________________________
@@ -359,7 +355,7 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree, Bool_t openfile)
       return fEntries;
 
    Double_t start = 0;
-   if (gPerfStats != 0) start = TTimeStamp();
+   if (gPerfStats) start = TTimeStamp();
 
    // Take into account possible prefixes
    TFile::EFileType typ = TFile::kDefault;
@@ -370,9 +366,8 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree, Bool_t openfile)
       fname = GetName();
    TFile *file = TFile::Open(fname);
 
-   if (gPerfStats != 0) {
-      gPerfStats->FileOpenEvent(file, GetName(), double(TTimeStamp())-start);
-   }
+   if (gPerfStats)
+      gPerfStats->FileOpenEvent(file, GetName(), start);
 
    if (file == 0) {
       ::SysError("TDSet::GetEntries", "cannot open file %s", GetName());
@@ -464,7 +459,6 @@ Int_t TDSetElement::Lookup(Bool_t force)
    // Resolve end-point URL for this element
    // Return 0 on success and -1 otherwise
    static Int_t xNetPluginOK = -1;
-   static TString xNotRedir;
    static TFileStager *xStager = 0;
    Int_t retVal = 0;
 
@@ -472,9 +466,8 @@ Int_t TDSetElement::Lookup(Bool_t force)
    if (!force && HasBeenLookedUp())
       return retVal;
 
-   // Open the file as raw to avoid the (slow) initialization
    TUrl url(GetName());
-   // Save current options and anchor
+   // Save current options and anchor to be set ofthe final end URL
    TString anch = url.GetAnchor();
    TString opts = url.GetOptions();
    // The full path
@@ -494,20 +487,9 @@ Int_t TDSetElement::Lookup(Bool_t force)
             xNetPluginOK = 1;
       }
       doit = (xNetPluginOK == 1) ? kTRUE : kFALSE;
-
-      // The server may not be redirector: we might know this from the past
-      // experience, if any
-      if (xNotRedir.Length() > 0) {
-         TUrl u(GetName());
-         TString hp(Form("|%s:%d|", u.GetHostFQDN(), u.GetPort()));
-         if (xNotRedir.Contains(hp))
-            doit = kFALSE;
-      }
    }
 
-   // Do it by opening and closing the file. Ideally we could just
-   // AccessPathName the path, but the TXNetSystem implementation is very
-   // slow. To be fixed.
+   // Locate the file
    if (doit) {
       if (!xStager || !xStager->Matches(name)) {
          SafeDelete(xStager);
@@ -689,7 +671,8 @@ TDSet::TDSet(const TChain &chain, Bool_t withfriends)
 
    // First fill elements without friends()
    TIter next(chain.GetListOfFiles());
-   TChainElement *elem;
+   TChainElement *elem = 0;
+   TString key;
    while ((elem = (TChainElement *)next())) {
       TString file(elem->GetTitle());
       TString tree(elem->GetName());
@@ -703,12 +686,20 @@ TDSet::TDSet(const TChain &chain, Bool_t withfriends)
          dir = tree;
          tree = behindSlash;
       }
-      if (Add(file, tree, dir)) {
+      // Find MSD if any
+      TString msd(TUrl(file).GetOptions());
+      Int_t imsd = kNPOS;
+      if ((imsd = msd.Index("msd=")) != kNPOS) {
+         msd.Remove(0, imsd+4);
+      } else {
+         // Not an MSD option
+         msd = "";
+      }
+      if (Add(file, tree, dir, 0, -1, ((msd.IsNull()) ? 0 : msd.Data()))) {
          if (elem->HasBeenLookedUp()) {
             // Save lookup information, if any
             TDSetElement *dse = (TDSetElement *) fElements->Last();
-            if (dse)
-               dse->SetLookedUp();
+            if (dse) dse->SetLookedUp();
          }
       }
    }
@@ -827,9 +818,8 @@ void TDSet::Print(const Option_t *opt) const
 {
    // Print TDSet basic or full data. When option="a" print full data.
 
-   cout <<"OBJ: " << IsA()->GetName() << "\ttype " << GetName() << "\t"
-        << fObjName << "\tin " << GetTitle()
-        << "\telements " << GetListOfElements()->GetSize() << endl;
+   Printf("OBJ: %s\ttype %s\t%s\tin %s\telements %d", IsA()->GetName(), GetName(),
+          fObjName.Data(), GetTitle(), GetListOfElements()->GetSize());
 
    if (opt && opt[0] == 'a') {
       TIter next(GetListOfElements());
@@ -883,16 +873,21 @@ Bool_t TDSet::Add(const char *file, const char *objname, const char *dir,
 
    // check, if it already exists in the TDSet
    TDSetElement *el = (TDSetElement *) fElements->FindObject(fn);
-   if (el) {
-      Warning("Add", "duplicate, %40s is already in dataset, ignored", fn.Data());
-      return kFALSE;
+   if (!el) {
+      if (!objname)
+         objname = GetObjName();
+      if (!dir)
+         dir = GetDirectory();
+      fElements->Add(new TDSetElement(fn, objname, dir, first, num, msd));
+   } else {
+      TString msg;
+      msg.Form("duplication detected: %40s is already in dataset - ignored", fn.Data());
+      Warning("Add", msg.Data());
+      if (gProofServ) {
+         msg.Insert(0, "WARNING: ");
+         gProofServ->SendAsynMessage(msg);
+      }
    }
-   if (!objname)
-      objname = GetObjName();
-   if (!dir)
-      dir = GetDirectory();
-
-   fElements->Add(new TDSetElement(fn, objname, dir, first, num, msd));
 
    return kTRUE;
 }
@@ -947,9 +942,11 @@ Bool_t TDSet::Add(TCollection *filelist, const char *meta, Bool_t availableOnly,
          if (!availableOnly ||
             (fi->TestBit(TFileInfo::kStaged) &&
             !fi->TestBit(TFileInfo::kCorrupted))) {
-            if (!Add(fi, meta))
-               return kFALSE;
-         } else if (badlist && fi) {
+            Int_t nf = fElements->GetSize();
+            if (!Add(fi, meta)) return kFALSE;
+            // Duplications count as bad files
+            if (fElements->GetSize() <= nf) badlist->Add(fi);
+         } else if (badlist) {
             // Return list of non-usable files
             badlist->Add(fi);
          }
@@ -977,6 +974,7 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
       Error("Add", "TFileInfo object name must be specified");
       return kFALSE;
    }
+   TString msg;
 
    // Element to be added
    TDSetElement *el = 0;
@@ -984,8 +982,13 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
    // Check if it already exists in the TDSet
    const char *file = fi->GetFirstUrl()->GetUrl();
    if ((el = (TDSetElement *) fElements->FindObject(file))) {
-      Warning("Add", "duplicate, %40s is already in dataset, ignored", file);
-      return kFALSE;
+      msg.Form("duplication detected: %40s is already in dataset - ignored", file);
+      Warning("Add", msg.Data());
+      if (gProofServ) {
+         msg.Insert(0, "WARNING: ");
+         gProofServ->SendAsynMessage(msg);
+      }
+      return kTRUE;
    }
 
    // If more than one metadata info require the specification of the objpath;
@@ -995,7 +998,7 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
    if (!meta || strlen(meta) <= 0 || !strcmp(meta, "/")) {
       TList *fil = 0;
       if ((fil = fi->GetMetaDataList()) && fil->GetSize() > 1) {
-         TString msg = Form("\n  Object name unspecified and several objects available.\n");
+         msg.Form("\n  Object name unspecified and several objects available.\n");
          msg += "  Please choose one from the list below:\n";
          TIter nx(fil);
          while ((m = (TFileInfoMeta *) nx())) {
@@ -1160,7 +1163,7 @@ Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path
    // case of error.
 
    Double_t start = 0;
-   if (gPerfStats != 0) start = TTimeStamp();
+   if (gPerfStats) start = TTimeStamp();
 
    // Take into acoount possible prefixes
    TFile::EFileType typ = TFile::kDefault;
@@ -1171,9 +1174,8 @@ Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path
       fname = filename;
    TFile *file = TFile::Open(fname);
 
-   if (gPerfStats != 0) {
-      gPerfStats->FileOpenEvent(file, filename, double(TTimeStamp())-start);
-   }
+   if (gPerfStats)
+      gPerfStats->FileOpenEvent(file, filename, start);
 
    if (file == 0) {
       ::SysError("TDSet::GetEntries", "cannot open file %s", filename);
@@ -1458,11 +1460,13 @@ void TDSet::Validate(TDSet* dset)
       TPair *p = dynamic_cast<TPair*>(bestElements.FindObject(dir_file_obj));
       if (p) {
          TDSetElement *prevelem = dynamic_cast<TDSetElement*>(p->Value());
-         Long64_t entries = prevelem->GetFirst()+prevelem->GetNum();
-         if (entries<elem->GetFirst()+elem->GetNum()) {
-            bestElements.Remove(p);
-            bestElements.Add(new TPair(p->Key(), elem));
-            delete p;
+         if (prevelem) {
+            Long64_t entries = prevelem->GetFirst()+prevelem->GetNum();
+            if (entries<elem->GetFirst()+elem->GetNum()) {
+               bestElements.Remove(p);
+               bestElements.Add(new TPair(p->Key(), elem));
+               delete p;
+            }
          }
       } else {
          TNamed* named = new TNamed(dir_file_obj, dir_file_obj);

@@ -740,11 +740,11 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    if (fIsEmbedded && gEve) {
       fViewer[0]->AddScene(gEve->GetGlobalScene());
       fViewer[0]->AddScene(gEve->GetEventScene());
-      gEve->AddElement(fViewer[0], gEve->GetViewers());
+      gEve->GetViewers()->AddElement(fViewer[0]);
       s = gEve->SpawnNewScene("Rho-Z Projection");
       // projections
-      fRhoZMgr = new TEveProjectionManager();
-      gEve->AddElement(fRhoZMgr, (TEveElement *)s);
+      fRhoZMgr = new TEveProjectionManager(TEveProjection::kPT_RhoZ);
+      s->AddElement(fRhoZMgr);
       gEve->AddToListTree(fRhoZMgr, kTRUE);
       TEveProjectionAxes* a = new TEveProjectionAxes(fRhoZMgr);
       s->AddElement(a);
@@ -781,15 +781,14 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    if (fIsEmbedded && gEve) {
       fRhoZMgr->ImportElements((TEveElement *)gEve->GetGlobalScene());
       fRhoZMgr->ImportElements((TEveElement *)gEve->GetEventScene());
-      fRhoZMgr->SetProjection(TEveProjection::kPT_RhoZ);
       fViewer[1]->AddScene(s);
-      gEve->AddElement(fViewer[1], gEve->GetViewers());
+      gEve->GetViewers()->AddElement(fViewer[1]);
       gRhoZMgr = fRhoZMgr;
 
       s = gEve->SpawnNewScene("R-Phi Projection");
       // projections
-      fRPhiMgr = new TEveProjectionManager();
-      gEve->AddElement(fRPhiMgr, (TEveElement *)s);
+      fRPhiMgr = new TEveProjectionManager(TEveProjection::kPT_RPhi);
+      s->AddElement(fRPhiMgr);
       gEve->AddToListTree(fRPhiMgr, kTRUE);
       TEveProjectionAxes* a = new TEveProjectionAxes(fRPhiMgr);
       s->AddElement(a);
@@ -826,9 +825,8 @@ SplitGLView::SplitGLView(const TGWindow *p, UInt_t w, UInt_t h, Bool_t embed) :
    if (fIsEmbedded && gEve) {
       fRPhiMgr->ImportElements((TEveElement *)gEve->GetGlobalScene());
       fRPhiMgr->ImportElements((TEveElement *)gEve->GetEventScene());
-      fRPhiMgr->SetProjection(TEveProjection::kPT_RPhi);
       fViewer[2]->AddScene(s);
-      gEve->AddElement(fViewer[2], gEve->GetViewers());
+      gEve->GetViewers()->AddElement(fViewer[2]);
       gRPhiMgr = fRPhiMgr;
    }
 

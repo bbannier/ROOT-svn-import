@@ -46,12 +46,16 @@
 #include "TVirtualGL.h"
 
 #include "TGLWidget.h"
+#include "TGLFBO.h"
 #include "TGLViewerEditor.h"
+#include "TGedEditor.h"
+#include "TGLPShapeObj.h"
 
 #include "KeySymbols.h"
 #include "TContextMenu.h"
 #include "TImage.h"
 
+#include <stdexcept>
 
 #ifndef GL_BGRA
 #define GL_BGRA GL_BGRA_EXT
@@ -108,6 +112,11 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fOrthoZnOYCamera(TGLOrthoCamera::kZnOY, TGLVector3( 1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down  X axis, -Z horz, Y vert
    fCurrentCamera(&fPerspectiveCameraXOZ),
 
+   fStereo               (kFALSE),
+   fStereoZeroParallax   (0.03f),
+   fStereoEyeOffsetFac   (1.0f),
+   fStereoFrustumAsymFac (1.0f),
+
    fLightSet          (0),
    fClipSet           (0),
    fClipAutoUpdate    (kTRUE),
@@ -115,10 +124,13 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fCurrentOvlElm     (0),
 
    fEventHandler(0),
+   fGedEditor(0),
+   fPShapeWrap(0),
    fPushAction(kPushStd), fDragAction(kDragNone),
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
+   fPointScale (1), fLineScale(1), fSmoothPoints(kFALSE), fSmoothLines(kFALSE),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -136,8 +148,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fGLCtxId(0),
    fIgnoreSizesOnUpdate(kFALSE),
    fResetCamerasOnUpdate(kTRUE),
-   fResetCamerasOnNextUpdate(kFALSE),
-   fResetCameraOnDoubleClick(kTRUE)
+   fResetCamerasOnNextUpdate(kFALSE)
 {
    // Construct the viewer object, with following arguments:
    //    'pad' - external pad viewer is bound to
@@ -164,6 +175,11 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fOrthoZnOYCamera(TGLOrthoCamera::kZnOY, TGLVector3( 1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down  X axis, -Z horz, Y vert
    fCurrentCamera(&fPerspectiveCameraXOZ),
 
+   fStereo               (kFALSE),
+   fStereoZeroParallax   (0.03f),
+   fStereoEyeOffsetFac   (1.0f),
+   fStereoFrustumAsymFac (1.0f),
+
    fLightSet          (0),
    fClipSet           (0),
    fClipAutoUpdate    (kTRUE),
@@ -171,10 +187,13 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fCurrentOvlElm     (0),
 
    fEventHandler(0),
+   fGedEditor(0),
+   fPShapeWrap(0),
    fPushAction(kPushStd), fDragAction(kDragNone),
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
+   fPointScale (1), fLineScale(1), fSmoothPoints(kFALSE), fSmoothLines(kFALSE),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -192,8 +211,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fGLCtxId(0),
    fIgnoreSizesOnUpdate(kFALSE),
    fResetCamerasOnUpdate(kTRUE),
-   fResetCamerasOnNextUpdate(kFALSE),
-   fResetCameraOnDoubleClick(kTRUE)
+   fResetCamerasOnNextUpdate(kFALSE)
 {
    //gl-embedded viewer's ctor
    // Construct the viewer object, with following arguments:
@@ -225,6 +243,8 @@ void TGLViewer::InitSecondaryObjects()
    fSelectedPShapeRef = new TGLManipSet;
    fSelectedPShapeRef->SetDrawBBox(kTRUE);
    AddOverlayElement(fSelectedPShapeRef);
+
+   fPShapeWrap = new TGLPShapeObj(0, this);
 
    fLightColorSet.StdLightBackground();
    if (fgUseDefaultColorSetForNewViewers) {
@@ -464,6 +484,12 @@ void TGLViewer::PreRender()
       fGLCtxId->DeleteGLResources();
    }
 
+   TGLUtil::SetPointSizeScale(fPointScale * fRnrCtx->GetRenderScale());
+   TGLUtil::SetLineWidthScale(fLineScale  * fRnrCtx->GetRenderScale());
+
+   if (fSmoothPoints) glEnable(GL_POINT_SMOOTH); else glDisable(GL_POINT_SMOOTH);
+   if (fSmoothLines)  glEnable(GL_LINE_SMOOTH);  else glDisable(GL_LINE_SMOOTH);
+
    TGLViewerBase::PreRender();
 
    // Setup lighting
@@ -476,9 +502,21 @@ void TGLViewer::PreRender()
 }
 
 //______________________________________________________________________________
+void TGLViewer::PostRender()
+{
+   // Restore state set in PreRender().
+   // Called after every render.
+
+   TGLUtil::SetPointSizeScale(1);
+   TGLUtil::SetLineWidthScale(1);
+
+   TGLViewerBase::PostRender();
+}
+
+//______________________________________________________________________________
 void TGLViewer::DoDraw()
 {
-   // Draw out the the current viewer/scene
+   // Draw out the viewer.
 
    // Locking mainly for Win32 multi thread safety - but no harm in all using it
    // During normal draws a draw lock is taken in other thread (Win32) in RequestDraw()
@@ -517,35 +555,16 @@ void TGLViewer::DoDraw()
    fRnrCtx->SetRenderTimeOut(fLOD == TGLRnrCtx::kLODHigh ?
                              fMaxSceneDrawTimeHQ :
                              fMaxSceneDrawTimeLQ);
-   fRnrCtx->StartStopwatch();
 
-   // GL pre draw setup
-   if (!fIsPrinting) PreDraw();
-
-   PreRender();
-
-   if (fFader < 1)
+   if (fStereo && fCurrentCamera->IsPerspective() && !fRnrCtx->GetGrabImage() &&
+       !fIsPrinting)
    {
-      RenderNonSelected();
-      DrawGuides();
-      glClear(GL_DEPTH_BUFFER_BIT);
-      RenderSelected();
-
-      glClear(GL_DEPTH_BUFFER_BIT);
-      RenderOverlay();
-      DrawDebugInfo();
+      DoDrawStereo();
    }
-
-   PostRender();
-
-   if (fFader > 0)
+   else
    {
-      FadeView(fFader);
+      DoDrawMono();
    }
-
-   PostDraw();
-
-   fRnrCtx->StopStopwatch();
 
    ReleaseLock(kDrawLock);
 
@@ -570,57 +589,154 @@ void TGLViewer::DoDraw()
 }
 
 //______________________________________________________________________________
-Bool_t TGLViewer::SavePicture(const TString &fileName)
+void TGLViewer::DoDrawMono()
 {
-   // Save current image in various formats (gif, gif+, jpg, png, eps, pdf).
-   // 'gif+' will append image to an existng file (animated gif).
-   // 'eps' and 'pdf' do not fully support transparency and texturing.
-   // The viewer window most be fully contained within the desktop but
-   // can be covered by other windows.
-   // Returns false if something obvious goes wrong, true otherwise.
+   // Draw out in monoscopic mode.
 
-   if (fileName.EndsWith(".gif") || fileName.EndsWith(".gif+") ||
-       fileName.EndsWith(".jpg") || fileName.EndsWith(".png"))
+   MakeCurrent();
+
+   glDrawBuffer(GL_BACK);
+   if (!fIsPrinting) PreDraw();
+   PreRender();
+
+   fRnrCtx->StartStopwatch();
+   if (fFader < 1)
    {
-      if ( ! TakeLock(kDrawLock)) {
-         Error("TGLViewer::SavePicture", "viewer locked - try later.");
-         return kFALSE;
-      }
+      RenderNonSelected();
+      RenderSelected();
+      DrawGuides();
+      RenderOverlay();
 
-      std::auto_ptr<TImage> image(TImage::Create());
-
-      fRnrCtx->SetGrabImage(kTRUE);
-
-      fLOD = TGLRnrCtx::kLODHigh;
-
-      if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoDraw()", this));
-      else
-         DoDraw();
-
-      image->FromGLBuffer(fRnrCtx->GetGrabbedImage(), fViewport.Width(), fViewport.Height());
-
-      fRnrCtx->SetGrabImage(kFALSE);
-      delete [] fRnrCtx->GetGrabbedImage();
-      fRnrCtx->SetGrabbedImage(0);
-
-      image->WriteImage(fileName.Data());
+      glClear(GL_DEPTH_BUFFER_BIT);
+      fRnrCtx->SetHighlight(kTRUE);
+      RenderSelected();
+      fRnrCtx->SetHighlight(kFALSE);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      DrawDebugInfo();
    }
-   else if (fileName.EndsWith(".eps"))
+   fRnrCtx->StopStopwatch();
+
+   PostRender();
+
+   if (fFader > 0)
    {
-      TGLOutput::Capture(*this, TGLOutput::kEPS_BSP, fileName.Data());
+      FadeView(fFader);
    }
-   else if (fileName.EndsWith(".pdf"))
+
+   PostDraw();
+
+   SwapBuffers();
+}
+
+//______________________________________________________________________________
+void TGLViewer::DoDrawStereo()
+{
+   // Draw out in stereoscopic mode.
+
+   TGLPerspectiveCamera &c = *dynamic_cast<TGLPerspectiveCamera*>(fCurrentCamera);
+
+   Float_t gl_near, gl_far, zero_p_dist;
+   Float_t h_half, w_half;
+   Float_t x_len_at_zero_parallax;
+   Float_t stereo_offset;
+   Float_t frustum_asym;
+
+   MakeCurrent();
+
+   // Draw left
+   glDrawBuffer(GL_BACK_LEFT);
+   PreDraw();
+   PreRender();
+
+   gl_near = c.GetNearClip();
+   gl_far  = c.GetFarClip();
+   zero_p_dist = gl_near + fStereoZeroParallax*(gl_far-gl_near);
+
+   h_half = TMath::Tan(0.5*TMath::DegToRad()*c.GetFOV()) * gl_near;
+   w_half = h_half * fViewport.Aspect();
+
+   x_len_at_zero_parallax = 2.0f * w_half * zero_p_dist / gl_near;
+   stereo_offset = 0.035f * x_len_at_zero_parallax * fStereoEyeOffsetFac;
+
+   frustum_asym = stereo_offset * gl_near / zero_p_dist * fStereoFrustumAsymFac;
+
+   TGLMatrix  abs_trans(c.RefCamBase());
+   abs_trans *= c.RefCamTrans();
+   TGLVector3 left_vec = abs_trans.GetBaseVec(2);
+
+   glTranslatef(stereo_offset*left_vec[0], stereo_offset*left_vec[1], stereo_offset*left_vec[2]);
+
+   glMatrixMode(GL_PROJECTION);
+   glLoadIdentity();
+   glFrustum(-w_half + frustum_asym, w_half + frustum_asym,
+             -h_half, h_half, gl_near, gl_far);
+   glMatrixMode(GL_MODELVIEW);
+
+   fRnrCtx->StartStopwatch();
+   if (fFader < 1)
    {
-      TGLOutput::Capture(*this, TGLOutput::kPDF_BSP, fileName.Data());
+      RenderNonSelected();
+      RenderSelected();
+      DrawGuides();
+      RenderOverlay();
+
+      glClear(GL_DEPTH_BUFFER_BIT);
+      fRnrCtx->SetHighlight(kTRUE);
+      RenderSelected();
+      fRnrCtx->SetHighlight(kFALSE);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      DrawDebugInfo();
    }
-   else
+   fRnrCtx->StopStopwatch();
+
+   PostRender();
+
+   if (fFader > 0)
    {
-      Warning("TGLViewer::SavePicture",
-              "file %s cannot be saved with this extension.", fileName.Data());
-      return kFALSE;
+      FadeView(fFader);
    }
-   return kTRUE;
+   PostDraw();
+
+   // Draw right
+   glDrawBuffer(GL_BACK_RIGHT);
+   PreDraw();
+   PreRender();
+
+   glTranslatef(-stereo_offset*left_vec[0], -stereo_offset*left_vec[1], -stereo_offset*left_vec[2]);
+
+   glMatrixMode(GL_PROJECTION);
+   glLoadIdentity();
+   glFrustum(-w_half - frustum_asym, w_half - frustum_asym,
+             -h_half, h_half, gl_near, gl_far);
+   glMatrixMode(GL_MODELVIEW);
+
+   fRnrCtx->StartStopwatch();
+   if (fFader < 1)
+   {
+      RenderNonSelected();
+      RenderSelected();
+      DrawGuides();
+      RenderOverlay();
+
+      glClear(GL_DEPTH_BUFFER_BIT);
+      fRnrCtx->SetHighlight(kTRUE);
+      RenderSelected();
+      fRnrCtx->SetHighlight(kFALSE);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      DrawDebugInfo();
+   }
+   fRnrCtx->StopStopwatch();
+
+   PostRender();
+
+   if (fFader > 0)
+   {
+      FadeView(fFader);
+   }
+   PostDraw();
+
+   // End
+   SwapBuffers();
 }
 
 //______________________________________________________________________________
@@ -631,6 +747,212 @@ Bool_t TGLViewer::SavePicture()
    // Really useful for the files ending with 'gif+'.
 
    return SavePicture(fPictureFileName);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::SavePicture(const TString &fileName)
+{
+   // Save current image in various formats (gif, gif+, jpg, png, eps, pdf).
+   // 'gif+' will append image to an existng file (animated gif).
+   // 'eps' and 'pdf' do not fully support transparency and texturing.
+   // The viewer window most be fully contained within the desktop but
+   // can be covered by other windows.
+   // Returns false if something obvious goes wrong, true otherwise.
+
+   if (fileName.EndsWith(".eps"))
+   {
+      return TGLOutput::Capture(*this, TGLOutput::kEPS_BSP, fileName.Data());
+   }
+   else if (fileName.EndsWith(".pdf"))
+   {
+      return TGLOutput::Capture(*this, TGLOutput::kPDF_BSP, fileName.Data());
+   }
+   else
+   {
+      if (GLEW_VERSION_1_5)
+      {
+         return SavePictureUsingFBO(fileName, fViewport.Width(), fViewport.Height(), kFALSE);
+      }
+      else
+      {
+         return SavePictureUsingBB(fileName);
+      }
+   }
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::SavePictureUsingBB(const TString &fileName)
+{
+   // Save current image in various formats (gif, gif+, jpg, png).
+   // 'gif+' will append image to an existng file (animated gif).
+   // Back-Buffer is used for capturing of the image.
+   // The viewer window most be fully contained within the desktop but
+   // can be covered by other windows.
+   // Returns false if something obvious goes wrong, true otherwise.
+
+   static const TString eh("TGLViewer::SavePictureUsingBB");
+
+   if (! fileName.EndsWith(".gif") && ! fileName.Contains(".gif+") &&
+       ! fileName.EndsWith(".jpg") && ! fileName.EndsWith(".png"))
+   {
+      Warning(eh, "file %s cannot be saved with this extension.", fileName.Data());
+      return kFALSE;
+   }
+
+   if ( ! TakeLock(kDrawLock)) {
+      Error(eh, "viewer locked - try later.");
+      return kFALSE;
+   }
+
+   std::auto_ptr<TImage> image(TImage::Create());
+
+   fRnrCtx->SetGrabImage(kTRUE, GL_BACK);
+
+   fLOD = TGLRnrCtx::kLODHigh;
+
+   if (!gVirtualX->IsCmdThread())
+      gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoDraw()", this));
+   else
+      DoDraw();
+
+   image->FromGLBuffer(fRnrCtx->GetGrabbedImage(), fViewport.Width(), fViewport.Height());
+
+   fRnrCtx->SetGrabImage(kFALSE);
+   delete [] fRnrCtx->GetGrabbedImage();
+   fRnrCtx->SetGrabbedImage(0);
+
+   image->WriteImage(fileName.Data());
+
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::SavePictureUsingFBO(const TString &fileName, Int_t w, Int_t h,
+                                      Float_t pixel_object_scale)
+{
+   // Save current image in various formats (gif, gif+, jpg, png).
+   // 'gif+' will append image to an existng file (animated gif).
+   // Frame-Buffer-Object is used for capturing of the image - OpenGL
+   // 1.5 is required.
+   // The viewer window does not have to be visible at all.
+   // Returns false if something obvious goes wrong, true otherwise.
+   //
+   // pixel_object_scale is used to scale (as much as possible) the
+   // objects whose representation size is pixel based (point-sizes,
+   // line-widths, bitmap/pixmap font-sizes).
+   // If set to 0 (default) no scaling is applied.
+
+   static const TString eh("TGLViewer::SavePictureUsingFBO");
+
+   if (! fileName.EndsWith(".gif") && ! fileName.Contains(".gif+") &&
+       ! fileName.EndsWith(".jpg") && ! fileName.EndsWith(".png"))
+   {
+      Warning(eh, "file %s cannot be saved with this extension.", fileName.Data());
+      return kFALSE;
+   }
+
+   if ( ! TakeLock(kDrawLock)) {
+      Error(eh, "viewer locked - try later.");
+      return kFALSE;
+   }
+
+   std::auto_ptr<TImage> image(TImage::Create());
+
+   MakeCurrent();
+
+   TGLFBO *fbo = new TGLFBO();
+   try
+   {
+      fbo->Init(w, h);
+   }
+   catch (std::runtime_error& exc)
+   {
+      Error(eh, exc.what());
+      return kFALSE;
+   }
+
+   TGLRect old_vp(fViewport);
+   SetViewport(0, 0, w, h);
+
+   Float_t old_scale = 1;
+   if (pixel_object_scale != 0)
+   {
+      old_scale = fRnrCtx->GetRenderScale();
+      fRnrCtx->SetRenderScale(old_scale * pixel_object_scale);
+   }
+
+   fRnrCtx->SetGrabImage(kTRUE, 0);
+
+   fLOD = TGLRnrCtx::kLODHigh;
+
+   fbo->Bind();
+
+   if (!gVirtualX->IsCmdThread())
+      gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoDraw()", this));
+   else
+      DoDraw();
+
+   fbo->Unbind();
+   delete fbo;
+
+   image->FromGLBuffer(fRnrCtx->GetGrabbedImage(), fViewport.Width(), fViewport.Height());
+
+   fRnrCtx->SetGrabImage(kFALSE);
+   delete [] fRnrCtx->GetGrabbedImage();
+   fRnrCtx->SetGrabbedImage(0);
+
+   image->WriteImage(fileName.Data());
+
+   if (pixel_object_scale != 0)
+   {
+      fRnrCtx->SetRenderScale(old_scale);
+   }
+
+   SetViewport(old_vp);
+
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::SavePictureWidth(const TString &fileName, Int_t width,
+                                   Bool_t pixel_object_scale)
+{
+   // Save picture with given width (height scaled proportinally).
+   // If pixel_object_scale is true (default), the corresponding
+   // scaling gets calculated from the current window size.
+
+   Float_t scale  = Float_t(width) / fViewport.Width();
+   Int_t   height = TMath::Nint(scale*fViewport.Height());
+
+   return SavePictureUsingFBO(fileName, width, height, pixel_object_scale ? scale : 0);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::SavePictureHeight(const TString &fileName, Int_t height,
+                                    Bool_t pixel_object_scale)
+{
+   // Save picture with given height (width scaled proportinally).
+   // If pixel_object_scale is true (default), the corresponding
+   // scaling gets calculated from the current window size.
+
+   Float_t scale = Float_t(height) / fViewport.Height();
+   Int_t   width = TMath::Nint(scale*fViewport.Width());
+
+   return SavePictureUsingFBO(fileName, width, height, pixel_object_scale ? scale : 0);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::SavePictureScale (const TString &fileName, Float_t scale,
+                                    Bool_t pixel_object_scale)
+{
+   // Save picture with given scale to current window size.
+   // If pixel_object_scale is true (default), the same scaling is
+   // used.
+
+   Int_t w = TMath::Nint(scale*fViewport.Width());
+   Int_t h = TMath::Nint(scale*fViewport.Height());
+
+   return SavePictureUsingFBO(fileName, w, h, pixel_object_scale ? scale : 0);
 }
 
 //______________________________________________________________________________
@@ -699,8 +1021,8 @@ void TGLViewer::DrawDebugInfo()
 //______________________________________________________________________________
 void TGLViewer::PreDraw()
 {
-   // Perform GL work which must be done before each draw of scene
-   MakeCurrent();
+   // Perform GL work which must be done before each draw.
+
    // Initialise GL if not done
    if (!fInitGL) {
       InitGL();
@@ -727,19 +1049,22 @@ void TGLViewer::PreDraw()
 //______________________________________________________________________________
 void TGLViewer::PostDraw()
 {
-   // Perform GL work which must be done after each draw of scene
+   // Perform GL work which must be done after each draw.
+
    glFlush();
    if (fRnrCtx->GetGrabImage())
    {
       UChar_t* xx = new UChar_t[4 * fViewport.Width() * fViewport.Height()];
-      glReadBuffer(GL_BACK);
+      if (fRnrCtx->GetGrabBuffer() != 0)
+      {
+         glReadBuffer(fRnrCtx->GetGrabBuffer());
+      }
       glPixelStorei(GL_PACK_ALIGNMENT,1);
       glReadPixels(0, 0, fViewport.Width(), fViewport.Height(),
                    GL_BGRA, GL_UNSIGNED_BYTE, xx);
 
       fRnrCtx->SetGrabbedImage(xx);
    }
-   SwapBuffers();
 
    TGLUtil::CheckError("TGLViewer::PostDraw");
 }
@@ -797,28 +1122,26 @@ void TGLViewer::SwapBuffers() const
 }
 
 //______________________________________________________________________________
-Bool_t TGLViewer::RequestSelect(Int_t x, Int_t y, Bool_t trySecSel)
+Bool_t TGLViewer::RequestSelect(Int_t x, Int_t y)
 {
-   // Post request for select draw of viewer, picking objects round the WINDOW
-   // point (x,y).
-   // Request is directed via cross thread gVirtualGL object
+   // Post request for selection render pass viewer, picking objects
+   // around the window point (x,y).
 
    // Take select lock on scene immediately we enter here - it is released
-   // in the other (drawing) thread - see TGLViewer::Select()
-   // Removed when gVirtualGL removed
+   // in the other (drawing) thread - see TGLViewer::DoSelect()
 
    if ( ! TakeLock(kSelectLock)) {
       return kFALSE;
    }
 
    if (!gVirtualX->IsCmdThread())
-      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSelect(%d, %d, %s)", this, x, y, trySecSel ? "kTRUE" : "kFALSE")));
+      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSelect(%d, %d, %s)", this, x, y)));
    else
-      return DoSelect(x, y, trySecSel);
+      return DoSelect(x, y);
 }
 
 //______________________________________________________________________________
-Bool_t TGLViewer::DoSelect(Int_t x, Int_t y, Bool_t trySecSel)
+Bool_t TGLViewer::DoSelect(Int_t x, Int_t y)
 {
    // Perform GL selection, picking objects overlapping WINDOW
    // area described by 'rect'. Return kTRUE if selection should be
@@ -863,68 +1186,81 @@ Bool_t TGLViewer::DoSelect(Int_t x, Int_t y, Bool_t trySecSel)
       fSelRec.Reset();
    }
 
-   if ( ! trySecSel)
+   ReleaseLock(kSelectLock);
+   return ! TGLSelectRecord::AreSameSelectionWise(fSelRec, fCurrentSelRec);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::RequestSecondarySelect(Int_t x, Int_t y)
+{
+   // 
+   if (!gVirtualX->IsCmdThread())
+      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSecondarySelect(%d, %d, %s)", this, x, y)));
+   else
+      return DoSecondarySelect(x, y);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::DoSecondarySelect(Int_t x, Int_t y)
+{
+   // Secondary selection.
+
+   GLint nHits = 1;
+   //glGetIntegerv(GL_RENDER, &nHits);
+   if ( nHits < 1 || ! fSelRec.GetSceneInfo() || ! fSelRec.GetPhysShape() ||
+         ! fSelRec.GetPhysShape()->GetLogical()->SupportsSecondarySelect())
    {
-      ReleaseLock(kSelectLock);
-      return ! TGLSelectRecord::AreSameSelectionWise(fSelRec, fCurrentSelRec);
+      if (gDebug > 0)
+         Info("TGLViewer::SecondarySelect", "Skipping secondary selection "
+              "(nPrimHits=%d, sinfo=0x%lx, pshape=0x%lx).\n",
+              nHits, fSelRec.GetSceneInfo(), fSelRec.GetPhysShape());
+      fSecSelRec.Reset();
+      return kFALSE;
    }
 
-   //  Secondary selection.
+   TakeLock(kSelectLock);
+
+   TGLSceneInfo*    sinfo = fSelRec.GetSceneInfo();
+   TGLSceneBase*    scene = sinfo->GetScene();
+   TGLPhysicalShape* pshp = fSelRec.GetPhysShape();
+
+   SceneInfoList_t foo;
+   foo.push_back(sinfo);
+   fScenes.swap(foo);
+   fRnrCtx->BeginSelection(x, y, 3);
+   fRnrCtx->SetSecSelection(kTRUE);
+   glRenderMode(GL_SELECT);
+
+   PreRender();
+   fRnrCtx->SetSceneInfo(sinfo);
+   scene->PreRender(*fRnrCtx);
+   fRnrCtx->SetDrawPass(TGLRnrCtx::kPassFill);
+   fRnrCtx->SetShapeLOD(TGLRnrCtx::kLODHigh);
+   glPushName(pshp->ID());
+   // !!! Hack: does not use clipping and proper draw-pass settings.
+   pshp->Draw(*fRnrCtx);
+   glPopName();
+   scene->PostRender(*fRnrCtx);
+   fRnrCtx->SetSceneInfo(0);
+   PostRender();
+
+   Int_t nSecHits = glRenderMode(GL_RENDER);
+   fRnrCtx->EndSelection(nSecHits);
+   fScenes.swap(foo);
+
+   if (gDebug > 0) Info("TGLViewer::DoSelect", "Secondary select nSecHits=%d.", nSecHits);
+
+   ReleaseLock(kSelectLock);
+
+   if (nSecHits > 0)
    {
-      if ( nHits < 1 || ! fSelRec.GetSceneInfo() || ! fSelRec.GetPhysShape() ||
-           ! fSelRec.GetPhysShape()->GetLogical()->SupportsSecondarySelect())
-      {
-         if (gDebug > 0)
-            Info("TGLViewer::DoSelect", "Skipping secondary selection "
-                 "(nPrimHits=%d, sinfo=0x%lx, pshape=0x%lx).\n",
-                 nHits, fSelRec.GetSceneInfo(), fSelRec.GetPhysShape());
-         ReleaseLock(kSelectLock);
-         fSecSelRec.Reset();
-         return kFALSE;
-      }
-
-      TGLSceneInfo*    sinfo = fSelRec.GetSceneInfo();
-      TGLSceneBase*    scene = sinfo->GetScene();
-      TGLPhysicalShape* pshp = fSelRec.GetPhysShape();
-
-      SceneInfoList_t foo;
-      foo.push_back(sinfo);
-      fScenes.swap(foo);
-      fRnrCtx->BeginSelection(x, y, 3);
-      fRnrCtx->SetSecSelection(kTRUE);
-      glRenderMode(GL_SELECT);
-
-      PreRender();
-      fRnrCtx->SetSceneInfo(sinfo);
-      scene->PreRender(*fRnrCtx);
-      fRnrCtx->SetDrawPass(TGLRnrCtx::kPassFill);
-      fRnrCtx->SetShapeLOD(TGLRnrCtx::kLODHigh);
-      glPushName(pshp->ID());
-      // !!! Hack: does not use clipping and proper draw-pass settings.
-      pshp->Draw(*fRnrCtx);
-      glPopName();
-      scene->PostRender(*fRnrCtx);
-      fRnrCtx->SetSceneInfo(0);
-      PostRender();
-
-      Int_t nSecHits = glRenderMode(GL_RENDER);
-      fRnrCtx->EndSelection(nSecHits);
-      fScenes.swap(foo);
-
-      if (gDebug > 0) Info("TGLViewer::DoSelect", "Secondary select nSecHits=%d.", nSecHits);
-
-      ReleaseLock(kSelectLock);
-
-      if (nSecHits > 0)
-      {
-         fSecSelRec = fSelRec;
-         fSecSelRec.SetRawOnly(fRnrCtx->GetSelectBuffer()->RawRecord(0));
-         if (gDebug > 1) fSecSelRec.Print();
-         return kTRUE;
-      } else {
-         fSecSelRec.Reset();
-         return kFALSE;
-      }
+      fSecSelRec = fSelRec;
+      fSecSelRec.SetRawOnly(fRnrCtx->GetSelectBuffer()->RawRecord(0));
+      if (gDebug > 1) fSecSelRec.Print();
+      return kTRUE;
+   } else {
+      fSecSelRec.Reset();
+      return kFALSE;
    }
 }
 
@@ -949,20 +1285,18 @@ void TGLViewer::ApplySelection()
 //______________________________________________________________________________
 Bool_t TGLViewer::RequestOverlaySelect(Int_t x, Int_t y)
 {
-   // Post request for select draw of viewer, picking objects round the WINDOW
-   // point (x,y).
-   // Request is directed via cross thread gVirtualGL object
+   // Post request for secondary selection rendering of selected object
+   // around the window point (x,y).
 
    // Take select lock on viewer immediately - it is released
-   // in the other (drawing) thread - see TGLViewer::Select().
-   // Removed when gVirtualGL removed
+   // in the other (drawing) thread - see TGLViewer::DoSecondarySelect().
 
    if ( ! TakeLock(kSelectLock)) {
       return kFALSE;
    }
 
    if (!gVirtualX->IsCmdThread())
-      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSelect(%d, %d)", this, x, y)));
+      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoOverlaySelect(%d, %d)", this, x, y)));
    else
       return DoOverlaySelect(x, y);
 }
@@ -1163,6 +1497,13 @@ Bool_t TGLViewer::IsUsingDefaultColorSetForNewViewers()
    return fgUseDefaultColorSetForNewViewers;
 }
 
+//______________________________________________________________________________
+Bool_t TGLViewer::IsColorSetDark() const
+{
+   // Returns true if curremt color set is dark.
+
+   return fRnrCtx->GetBaseColorSet() == &fDarkColorSet;
+}
 
 /**************************************************************************/
 // Viewport
@@ -1174,10 +1515,6 @@ void TGLViewer::SetViewport(Int_t x, Int_t y, Int_t width, Int_t height)
    // Set viewer viewport (window area) with bottom/left at (x,y), with
    // dimensions 'width'/'height'
 
-   if (IsLocked() && fGLDevice == -1) {
-      Error("TGLViewer::SetViewport", "expected kUnlocked, found %s", LockName(CurrentLock()));
-      return;
-   }
    // Only process if changed
    if (fViewport.X() == x && fViewport.Y() == y &&
        fViewport.Width() == width && fViewport.Height() == height) {
@@ -1192,6 +1529,12 @@ void TGLViewer::SetViewport(Int_t x, Int_t y, Int_t width, Int_t height)
    }
 }
 
+void TGLViewer::SetViewport(const TGLRect& vp)
+{
+   // Set viewr viewport from TGLRect.
+
+   SetViewport(vp.X(), vp.Y(), vp.Width(), vp.Height());
+}
 
 /**************************************************************************/
 // Camera methods
@@ -1232,8 +1575,9 @@ TGLCamera& TGLViewer::RefCamera(ECameraType cameraType)
 void TGLViewer::SetCurrentCamera(ECameraType cameraType)
 {
    // Set current active camera - 'cameraType' one of:
-   // kCameraPerspX, kCameraPerspY, kCameraPerspZ
-   // kCameraOrthoXOY, kCameraOrthoXOZ, kCameraOrthoZOY
+   //   kCameraPerspX,    kCameraPerspY,    kCameraPerspZ,
+   //   kCameraOrthoXOY,  kCameraOrthoXOZ,  kCameraOrthoZOY,
+   //   kCameraOrthoXnOY, kCameraOrthoXnOZ, kCameraOrthoZnOY
 
    if (IsLocked()) {
       Error("TGLViewer::SetCurrentCamera", "expected kUnlocked, found %s", LockName(CurrentLock()));
@@ -1445,22 +1789,6 @@ const TGLPhysicalShape * TGLViewer::GetSelected() const
 /**************************************************************************/
 
 //______________________________________________________________________________
-void TGLViewer::SelectionChanged()
-{
-   // Emit signal indicating selection has changed.
-
-   Emit("SelectionChanged()");
-}
-
-//______________________________________________________________________________
-void TGLViewer::OverlayDragFinished()
-{
-   // Emit signal indicating that an overlay drag has finished.
-
-   Emit("OverlayDragFinished()");
-}
-
-//______________________________________________________________________________
 void TGLViewer::MouseOver(TGLPhysicalShape *shape)
 {
    // Emit MouseOver signal.
@@ -1497,6 +1825,31 @@ void TGLViewer::Clicked(TObject *obj, UInt_t button, UInt_t state)
    args[1] = button;
    args[2] = state;
    Emit("Clicked(TObject*,UInt_t,UInt_t)", args);
+}
+
+
+//______________________________________________________________________________
+void TGLViewer::ReClicked(TObject *obj, UInt_t button, UInt_t state)
+{
+   // Emit ReClicked signal with button id and modifier state.
+
+   Long_t args[3];
+   args[0] = (Long_t)obj;
+   args[1] = button;
+   args[2] = state;
+   Emit("ReClicked(TObject*,UInt_t,UInt_t)", args);
+}
+
+//______________________________________________________________________________
+void TGLViewer::UnClicked(TObject *obj, UInt_t button, UInt_t state)
+{
+   // Emit UnClicked signal with button id and modifier state.
+
+   Long_t args[3];
+   args[0] = (Long_t)obj;
+   args[1] = button;
+   args[2] = state;
+   Emit("UnClicked(TObject*,UInt_t,UInt_t)", args);
 }
 
 //______________________________________________________________________________
@@ -1552,10 +1905,55 @@ void TGLViewer::PrintObjects()
 }
 
 //______________________________________________________________________________
+void TGLViewer::SelectionChanged()
+{
+   // Update GUI components for embedded viewer selection change.
+
+   if (!fGedEditor)
+      return;
+
+   TGLPhysicalShape *selected = const_cast<TGLPhysicalShape*>(GetSelected());
+
+   if (selected) {
+      fPShapeWrap->fPShape = selected;
+      fGedEditor->SetModel(fPad, fPShapeWrap, kButton1Down);
+   } else {
+      fPShapeWrap->fPShape = 0;
+      fGedEditor->SetModel(fPad, this, kButton1Down);
+   }
+}
+
+//______________________________________________________________________________
+void TGLViewer::OverlayDragFinished()
+{
+   // An overlay operation can result in change to an object.
+   // Refresh geditor.
+
+   if (fGedEditor)
+   {
+      fGedEditor->SetModel(fPad, fGedEditor->GetModel(), kButton1Down);
+   }
+}
+
+//______________________________________________________________________________
+void TGLViewer::RefreshPadEditor(TObject* obj)
+{
+   // Update GED editor if it is set.
+
+   if (fGedEditor && (obj == 0 || fGedEditor->GetModel() == obj))
+   {
+      fGedEditor->SetModel(fPad, fGedEditor->GetModel(), kButton1Down);
+   }
+}
+
+//______________________________________________________________________________
 void TGLViewer::SetEventHandler(TGEventHandler *handler)
 {
    // Set the event-handler. The event-handler is owned by the viewer.
    // If GLWidget is set, the handler is propagated to it.
+   //
+   // If called with handler=0, the current handler will be deleted
+   // (also from TGLWidget).
 
    if (fEventHandler)
       delete fEventHandler;

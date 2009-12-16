@@ -71,6 +71,7 @@ TProfile2D::TProfile2D() : TH2D()
 //*-*        ============================================
    fTsumwz = fTsumwz2 = 0;
    fScaling = kFALSE;
+   BuildOptions(0,0,"");
 }
 
 //______________________________________________________________________________
@@ -1384,7 +1385,7 @@ void TProfile2D::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       }
    }
 
-   TH1::SavePrimitiveHelp(out, option);
+   TH1::SavePrimitiveHelp(out, GetName(), option);
 }
 
 //______________________________________________________________________________

@@ -21,7 +21,6 @@
 #include "TROOT.h"
 #include "TClass.h"
 #include "TVirtualX.h"
-#include "Getline.h"
 #include "TStyle.h"
 #include "TObjectTable.h"
 #include "TClassTable.h"
@@ -41,6 +40,12 @@
 #include "TError.h"
 #include "snprintf.h"
 #include <stdlib.h>
+
+#ifdef R__BUILDEDITLINE
+#include "Getline_el.h"
+#else
+#include "Getline.h"
+#endif
 
 #ifdef R__UNIX
 #include <signal.h>
@@ -207,8 +212,16 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
    char defhist[kMAXPATHLEN];
    sprintf(defhist, "%s/.root_hist", gSystem->HomeDirectory());
    logon = gEnv->GetValue("Rint.History", defhist);
+   // In the code we had HistorySize and HistorySave, in the rootrc and doc
+   // we have HistSize and HistSave. Keep the doc as it is and check
+   // now also for HistSize and HistSave in case the user did not use
+   // the History versions
    int hist_size = gEnv->GetValue("Rint.HistorySize", 500);
+   if (hist_size == 500)
+      hist_size = gEnv->GetValue("Rint.HistSize", 500);
    int hist_save = gEnv->GetValue("Rint.HistorySave", 400);
+   if (hist_save == 400)
+      hist_save = gEnv->GetValue("Rint.HistSave", 400);
    const char *envHist = gSystem->Getenv("ROOT_HIST");
    if (envHist) {
       hist_size = atoi(envHist);
@@ -218,6 +231,29 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
    }
    Gl_histsize(hist_size, hist_save);
    Gl_histinit((char *)logon);
+     
+#ifdef R__BUILDEDITLINE
+   // black on white or white on black?
+   static const char* defaultColorsBW[] = {
+      "bold blue", "magenta", "bold green", "bold red underlined", "default"
+   };
+   static const char* defaultColorsWB[] = {
+      "yellow", "magenta", "bold green", "bold red underlined", "default"
+   };
+
+   const char** defaultColors = defaultColorsBW;
+   TString revColor = gEnv->GetValue("Rint.ReverseColor", "no");
+   if (revColor.Contains("yes", TString::kIgnoreCase)) {
+      defaultColors = defaultColorsWB;
+   }
+   TString colorType = gEnv->GetValue("Rint.TypeColor", defaultColors[0]);
+   TString colorTabCom = gEnv->GetValue("Rint.TabComColor", defaultColors[1]);
+   TString colorBracket = gEnv->GetValue("Rint.BracketColor", defaultColors[2]);
+   TString colorBadBracket = gEnv->GetValue("Rint.BadBracketColor", defaultColors[3]);
+   TString colorPrompt = gEnv->GetValue("Rint.PromptColor", defaultColors[4]);
+   Gl_setColors(colorType, colorTabCom, colorBracket, colorBadBracket, colorPrompt);
+#endif
+
    Gl_windowchanged();
 
    atexit(ResetTermAtExit);
@@ -226,13 +262,16 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
    gTabCom      = new TTabCom;
    Gl_in_key    = &Key_Pressed;
    Gl_beep_hook = &BeepHook;
+
+   // tell CINT to use our getline
+   gCint->SetGetline(Getline, Gl_histadd);
 }
 
 //______________________________________________________________________________
 TRint::~TRint()
 {
    // Destructor.
-   
+
    delete gTabCom;
    gTabCom = 0;
    Gl_in_key = 0;

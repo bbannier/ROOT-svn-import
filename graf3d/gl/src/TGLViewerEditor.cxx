@@ -35,11 +35,14 @@ TGLViewerEditor::TGLViewerEditor(const TGWindow *p,  Int_t width, Int_t height, 
    fClearColor(0),
    fIgnoreSizesOnUpdate(0),
    fResetCamerasOnUpdate(0),
-   fResetCameraOnDoubleClick(0),
    fUpdateScene(0),
    fCameraHome(0),
    fMaxSceneDrawTimeHQ(0),
    fMaxSceneDrawTimeLQ(0),
+   fPointSizeScale(0),  fLineWidthScale(0),
+   fPointSmooth(0),     fLineSmooth(0),
+   fWFLineWidth(0),     fOLLineWidth(0),
+
    fCameraCenterExt(0),
    fCaptureCenter(0),
    fCameraCenterX(0),
@@ -60,6 +63,10 @@ TGLViewerEditor::TGLViewerEditor(const TGWindow *p,  Int_t width, Int_t height, 
    fCamContainer(0),
    fCamMode(0),
    fCamOverlayOn(0),
+   fClipSet(0),
+   fStereoZeroParallax(0),
+   fStereoEyeOffsetFac(0),
+   fStereoFrustumAsymFac(0),
    fViewer(0),
    fIsInPad(kTRUE)
 {
@@ -68,6 +75,7 @@ TGLViewerEditor::TGLViewerEditor(const TGWindow *p,  Int_t width, Int_t height, 
    CreateStyleTab();
    CreateGuidesTab();
    CreateClippingTab();
+   CreateStereoTab();
 }
 
 //______________________________________________________________________________
@@ -86,11 +94,17 @@ void TGLViewerEditor::ConnectSignals2Slots()
    fClearColor->Connect("ColorSelected(Pixel_t)", "TGLViewerEditor", this, "DoClearColor(Pixel_t)");
    fIgnoreSizesOnUpdate->Connect("Toggled(Bool_t)", "TGLViewerEditor", this, "DoIgnoreSizesOnUpdate()");
    fResetCamerasOnUpdate->Connect("Toggled(Bool_t)", "TGLViewerEditor", this, "DoResetCamerasOnUpdate()");
-   fResetCameraOnDoubleClick->Connect("Toggled(Bool_t)", "TGLViewerEditor", this, "DoResetCameraOnDoubleClick()");
    fUpdateScene->Connect("Pressed()", "TGLViewerEditor", this, "DoUpdateScene()");
    fCameraHome->Connect("Pressed()", "TGLViewerEditor", this, "DoCameraHome()");
    fMaxSceneDrawTimeHQ->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdateMaxDrawTimes()");
    fMaxSceneDrawTimeLQ->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdateMaxDrawTimes()");
+   fPointSizeScale->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+   fLineWidthScale->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+   fPointSmooth->Connect("Clicked()", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+   fLineSmooth ->Connect("Clicked()", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+   fWFLineWidth->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+   fOLLineWidth->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdatePointLineStuff()");
+
    fCameraCenterExt->Connect("Clicked()", "TGLViewerEditor", this, "DoCameraCenterExt()");
    fCaptureCenter->Connect("Clicked()", "TGLViewerEditor", this, "DoCaptureCenter()");
    fDrawCameraCenter->Connect("Clicked()", "TGLViewerEditor", this, "DoDrawCameraCenter()");
@@ -109,6 +123,13 @@ void TGLViewerEditor::ConnectSignals2Slots()
 
    fCamMode->Connect("Selected(Int_t)", "TGLViewerEditor", this, "DoCameraOverlay()");
    fCamOverlayOn->Connect("Clicked()", "TGLViewerEditor", this, "DoCameraOverlay()");
+
+   fStereoZeroParallax  ->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdateStereo()");
+   fStereoEyeOffsetFac  ->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdateStereo()");
+   fStereoFrustumAsymFac->Connect("ValueSet(Long_t)", "TGLViewerEditor", this, "UpdateStereo()");
+   fStereoZeroParallax  ->Connect("ValueChanged(Long_t)", "TGLViewerEditor", this, "UpdateStereo()");
+   fStereoEyeOffsetFac  ->Connect("ValueChanged(Long_t)", "TGLViewerEditor", this, "UpdateStereo()");
+   fStereoFrustumAsymFac->Connect("ValueChanged(Long_t)", "TGLViewerEditor", this, "UpdateStereo()");
 
    fInit = kFALSE;
 }
@@ -146,9 +167,14 @@ void TGLViewerEditor::SetModel(TObject* obj)
    fClearColor->Enable(!fViewer->IsUsingDefaultColorSet());
    fIgnoreSizesOnUpdate->SetState(fViewer->GetIgnoreSizesOnUpdate() ? kButtonDown : kButtonUp);
    fResetCamerasOnUpdate->SetState(fViewer->GetResetCamerasOnUpdate() ? kButtonDown : kButtonUp);
-   fResetCameraOnDoubleClick->SetState(fViewer->GetResetCameraOnDoubleClick() ? kButtonDown : kButtonUp);
    fMaxSceneDrawTimeHQ->SetNumber(fViewer->GetMaxSceneDrawTimeHQ());
    fMaxSceneDrawTimeLQ->SetNumber(fViewer->GetMaxSceneDrawTimeLQ());
+   fPointSizeScale->SetNumber(fViewer->GetPointScale());
+   fLineWidthScale->SetNumber(fViewer->GetLineScale ());
+   fPointSmooth->SetState(fViewer->GetSmoothPoints() ? kButtonDown : kButtonUp);
+   fLineSmooth ->SetState(fViewer->GetSmoothLines () ? kButtonDown : kButtonUp);
+   fWFLineWidth->SetNumber(fViewer->WFLineW());
+   fOLLineWidth->SetNumber(fViewer->OLLineW());
    //camera look at
    TGLCamera & cam = fViewer->CurrentCamera();
    fCameraCenterExt->SetDown(cam.GetExternalCenter());
@@ -164,6 +190,18 @@ void TGLViewerEditor::SetModel(TObject* obj)
    // push action
    fCaptureCenter->SetTextColor((fViewer->GetPushAction() == TGLViewer::kPushCamCenter) ? 0xa03060 : 0x000000);
    fCaptureAnnotate->SetDown( (fViewer->GetPushAction() == TGLViewer::kPushAnnotate), kFALSE);
+
+   if (fViewer->GetStereo())
+   {
+      fStereoZeroParallax  ->SetNumber(fViewer->GetStereoZeroParallax());
+      fStereoEyeOffsetFac  ->SetNumber(fViewer->GetStereoEyeOffsetFac());
+      fStereoFrustumAsymFac->SetNumber(fViewer->GetStereoFrustumAsymFac());
+      fStereoFrame->MapWindow();
+   }
+   else
+   {
+      fStereoFrame->UnmapWindow();
+   }
 }
 
 //______________________________________________________________________________
@@ -194,17 +232,9 @@ void TGLViewerEditor::DoResetCamerasOnUpdate()
 }
 
 //______________________________________________________________________________
-void TGLViewerEditor::DoResetCameraOnDoubleClick()
-{
-   // ResetCameraOnDoubleClick was toggled.
-
-   fViewer->SetResetCameraOnDoubleClick(fResetCameraOnDoubleClick->IsOn());
-}
-
-//______________________________________________________________________________
 void TGLViewerEditor::DoUpdateScene()
 {
-   // ResetCameraOnDoubleClick was toggled.
+   // UpdateScene was clicked.
 
    fViewer->UpdateScene();
 }
@@ -212,7 +242,7 @@ void TGLViewerEditor::DoUpdateScene()
 //______________________________________________________________________________
 void TGLViewerEditor::DoCameraHome()
 {
-   // ResetCameraOnDoubleClick was toggled.
+   // CameraHome was clicked.
 
    fViewer->ResetCurrentCamera();
    ViewerRedraw();
@@ -225,6 +255,20 @@ void TGLViewerEditor::UpdateMaxDrawTimes()
 
    fViewer->SetMaxSceneDrawTimeHQ(fMaxSceneDrawTimeHQ->GetNumber());
    fViewer->SetMaxSceneDrawTimeLQ(fMaxSceneDrawTimeLQ->GetNumber());
+}
+
+//______________________________________________________________________________
+void TGLViewerEditor::UpdatePointLineStuff()
+{
+   // Slot for point-sizes and line-widths.
+
+   fViewer->SetPointScale(fPointSizeScale->GetNumber());
+   fViewer->SetLineScale (fLineWidthScale->GetNumber());
+   fViewer->SetSmoothPoints(fPointSmooth->IsDown());
+   fViewer->SetSmoothLines (fLineSmooth->IsDown());
+   fViewer->SetWFLineW(fWFLineWidth->GetNumber());
+   fViewer->SetOLLineW(fOLLineWidth->GetNumber());
+   ViewerRedraw();
 }
 
 //______________________________________________________________________________
@@ -361,9 +405,6 @@ void TGLViewerEditor::CreateStyleTab()
    fResetCamerasOnUpdate = new TGCheckButton(this, "Reset on update");
    fResetCamerasOnUpdate->SetToolTipText("Reset camera on scene update");
    AddFrame(fResetCamerasOnUpdate, new TGLayoutHints(kLHintsLeft, 4, 1, 1, 1));
-   fResetCameraOnDoubleClick = new TGCheckButton(this, "Reset on dbl-click");
-   fResetCameraOnDoubleClick->SetToolTipText("Reset cameras on double-click");
-   AddFrame(fResetCameraOnDoubleClick, new TGLayoutHints(kLHintsLeft, 4, 1, 1, 1));
 
    TGCompositeFrame* af = this;
    fUpdateScene = new TGTextButton(af, "Update Scene", 130);
@@ -372,7 +413,7 @@ void TGLViewerEditor::CreateStyleTab()
    af->AddFrame(fCameraHome, new TGLayoutHints(kLHintsLeft | kLHintsExpandX, 1, 1, 1, 3));
    fMaxSceneDrawTimeHQ = MakeLabeledNEntry(af, "Max HQ draw time:", 120, 6, TGNumberFormat::kNESInteger);
    fMaxSceneDrawTimeHQ->SetLimits(TGNumberFormat::kNELLimitMin, 0, 1e6);
-   fMaxSceneDrawTimeHQ->GetNumberEntry()->SetToolTipText("Maximum time spent in scene drawing\nin high-quality mode.");
+   fMaxSceneDrawTimeHQ->GetNumberEntry()->SetToolTipText("Maximum time spent in scene drawing\nin high-quality mode [ms].");
    fMaxSceneDrawTimeLQ = MakeLabeledNEntry(af, "Max LQ draw time:", 120, 6, TGNumberFormat::kNESInteger);
    fMaxSceneDrawTimeLQ->SetLimits(TGNumberFormat::kNELLimitMin, 0, 1e6);
    fMaxSceneDrawTimeLQ->GetNumberEntry()->SetToolTipText("Maximum time spent in scene drawing\nin low-quality mode (during rotation etc).");
@@ -388,6 +429,26 @@ void TGLViewerEditor::CreateStyleTab()
    fLightSet = new TGLLightSetSubEditor(this);
    fLightSet->Connect("Changed()", "TGLViewerEditor", this, "ViewerRedraw()");
    AddFrame(fLightSet, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
+
+   // Point-sizes / line-widths.
+   hf = new TGHorizontalFrame(af);
+   fPointSizeScale = MakeLabeledNEntry(hf, "Point-size scale:", 116, 4, TGNumberFormat::kNESRealOne);
+   fPointSizeScale->SetLimits(TGNumberFormat::kNELLimitMinMax, 0.1, 16);
+   fPointSmooth = new TGCheckButton(hf);
+   fPointSmooth->SetToolTipText("Use smooth points.");
+   hf->AddFrame(fPointSmooth, new TGLayoutHints(kLHintsNormal, 3, 0, 3, 0));
+   af->AddFrame(hf);
+   hf = new TGHorizontalFrame(af);
+   fLineWidthScale = MakeLabeledNEntry(hf, "Line-width scale:", 116, 4, TGNumberFormat::kNESRealOne);
+   fLineWidthScale->SetLimits(TGNumberFormat::kNELLimitMinMax, 0.1, 16);
+   fLineSmooth = new TGCheckButton(hf);
+   fLineSmooth->SetToolTipText("Use smooth lines.");
+   hf->AddFrame(fLineSmooth, new TGLayoutHints(kLHintsNormal, 3, 0, 3, 0));
+   af->AddFrame(hf);
+   fWFLineWidth = MakeLabeledNEntry(af, "Wireframe line-width:", 116, 4, TGNumberFormat::kNESRealOne);
+   fWFLineWidth->SetLimits(TGNumberFormat::kNELLimitMinMax, 0.1, 16);
+   fOLLineWidth = MakeLabeledNEntry(af, "Outline line-width:", 116, 4, TGNumberFormat::kNESRealOne);
+   fOLLineWidth->SetLimits(TGNumberFormat::kNELLimitMinMax, 0.1, 16);
 }
 
 //______________________________________________________________________________
@@ -445,6 +506,8 @@ void TGLViewerEditor::CreateGuidesTab()
    fCamMode->AddEntry("Plane", TGLCameraOverlay::kPlaneIntersect);
    fCamMode->AddEntry("Bar", TGLCameraOverlay::kBar);
    fCamMode->AddEntry("Axis", TGLCameraOverlay::kAxis);
+   fCamMode->AddEntry("Grid Front", TGLCameraOverlay::kGridFront);
+   fCamMode->AddEntry("Grid Back", TGLCameraOverlay::kGridBack);
    TGListBox* lb = fCamMode->GetListBox();
    lb->Resize(lb->GetWidth(), 5*18);
    fCamMode->Resize(90, 20);
@@ -463,6 +526,27 @@ void TGLViewerEditor::CreateClippingTab()
    fClipSet->Connect("Changed()", "TGLViewerEditor", this, "ViewerRedraw()");
    fClipFrame->AddFrame(fClipSet, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 0, 0, 0));
 }
+
+//______________________________________________________________________________
+void TGLViewerEditor::CreateStereoTab()
+{
+   // Create GUI controls - clip type (none/plane/box) and plane/box properties.
+
+   fStereoFrame = CreateEditorTabSubFrame("Stereo");
+
+   Int_t labw = 80;
+   TGCompositeFrame *p = fStereoFrame;
+
+   fStereoZeroParallax = MakeLabeledNEntry(p, "Zero parallax:", labw, 5, TGNumberFormat::kNESRealThree);
+   fStereoZeroParallax->SetLimits(TGNumberFormat::kNELLimitMinMax, 0, 1);
+
+   fStereoEyeOffsetFac = MakeLabeledNEntry(p, "Eye offset:", labw, 5, TGNumberFormat::kNESRealTwo);
+   fStereoEyeOffsetFac->SetLimits(TGNumberFormat::kNELLimitMinMax, 0, 2);
+
+   fStereoFrustumAsymFac = MakeLabeledNEntry(p, "Asymetry:", labw, 5, TGNumberFormat::kNESRealTwo);
+   fStereoFrustumAsymFac->SetLimits(TGNumberFormat::kNELLimitMinMax, 0, 2);
+}
+
 
 //______________________________________________________________________________
 void TGLViewerEditor::UpdateReferencePosState()
@@ -528,4 +612,15 @@ void TGLViewerEditor::SetGuides()
       if (fr->IsMapped())
          fr->UnmapWindow();
    }
+}
+
+//______________________________________________________________________________
+void TGLViewerEditor::UpdateStereo()
+{
+   // Update stereo related variables.
+
+   fViewer->SetStereoZeroParallax  (fStereoZeroParallax->GetNumber());
+   fViewer->SetStereoEyeOffsetFac  (fStereoEyeOffsetFac->GetNumber());
+   fViewer->SetStereoFrustumAsymFac(fStereoFrustumAsymFac->GetNumber());
+   ViewerRedraw(); 
 }

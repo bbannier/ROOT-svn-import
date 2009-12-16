@@ -210,21 +210,22 @@ void stressGeometry(const char *exp="*", Bool_t generate_ref=kFALSE) {
       if (opt.Contains(exps[i])) iexp[i] = 1;
       else                       iexp[i] = 0;
    }       
-   char fname[24];
+   TFile::SetCacheFileDir(".");
+   TString fname;
    for (i=0; i<NG; i++) {
       if (!iexp[i]) continue;
-      sprintf(fname, "%s.root", exps[i]);
+      fname = TString::Format("%s.root", exps[i]);
       if (gGeoManager) {
          delete gGeoManager;
          gGeoManager = 0;
       }   
-      TGeoManager::Import(Form("http://root.cern.ch/files/%s",fname));
+      TGeoManager::Import(Form("http://root.cern.ch/files/%s",fname.Data()));
          
-      sprintf(fname, "%s_ref.root", exps[i]);
+      fname = TString::Format("files/%s_ref_3.root", exps[i]);
       
-      if (gen_ref || !TFile::Open(Form("http://root.cern.ch/files/%s_ref_3.root",exps[i]))) {
-         if (!gen_ref) fprintf(stderr,"File: %s does not exist, generating it\n", fname);
-         else               fprintf(stderr,"Generating reference file %s\n", fname);
+      if (gen_ref || !TFile::Open(Form("http://root.cern.ch/files/%s_ref_3.root",exps[i])),"CACHEREAD") {
+         if (!gen_ref) fprintf(stderr,"File: %s does not exist, generating it\n", fname.Data());
+         else               fprintf(stderr,"Generating reference file %s\n", fname.Data());
          WriteRef(i);
       }
    
@@ -234,11 +235,18 @@ void stressGeometry(const char *exp="*", Bool_t generate_ref=kFALSE) {
       Float_t rootmarks = 800*tpsref/tpstot;
       Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
       if (UNIX) {
-         FILE *fp = gSystem->OpenPipe("uname -a", "r");
-         char line[60];
-         fgets(line,60,fp); line[59] = 0;
-         fprintf(stderr,"*  SYS: %s\n",line);
-         gSystem->ClosePipe(fp);
+         TString sp = gSystem->GetFromPipe("uname -a");
+         sp.Resize(60);
+         printf("*  SYS: %s\n",sp.Data());
+         if (strstr(gSystem->GetBuildNode(),"Linux")) {
+            sp = gSystem->GetFromPipe("lsb_release -d -s");
+            printf("*  SYS: %s\n",sp.Data());
+         }
+         if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+            sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+            sp += " Mac OS X ";
+            printf("*  SYS: %s\n",sp.Data());
+         }
       } else {
          const char *os = gSystem->Getenv("OS");
          if (!os) fprintf(stderr,"*  SYS: Windows 95\n");
@@ -256,21 +264,21 @@ void stressGeometry(const char *exp="*", Bool_t generate_ref=kFALSE) {
 
 void ReadRef(Int_t kexp) {
    TStopwatch sw;
-   char fname[100];
+   TString fname;
    TFile *f = 0;
    //use ref_3 files from version 5.23/01
    if (!gen_ref)
-      sprintf(fname, "http://root.cern.ch/files/%s_ref_3.root", exps[kexp]);
+      fname = TString::Format("http://root.cern.ch/files/%s_ref_3.root", exps[kexp]);
    else
-      sprintf(fname, "%s_ref.root", exps[kexp]);
+      fname.Format("files/%s_ref_3.root", exps[kexp]);
    
-   f = TFile::Open(fname);
+   f = TFile::Open(fname,"CACHEREAD");
    if (!f) {
-      fprintf(stderr,"Reference file %s not found ! Skipping.\n", fname);
+      fprintf(stderr,"Reference file %s not found ! Skipping.\n", fname.Data());
       return;
    }   
-   fprintf(stderr,"Reference file %s found\n", fname);
-   sprintf(fname, "%s_diff.root", exps[kexp]);
+   fprintf(stderr,"Reference file %s found\n", fname.Data());
+   fname = TString::Format("%s_diff.root", exps[kexp]);
    TFile fdiff(fname,"RECREATE");
    TTree *TD = new TTree("TD","TGeo stress diff");
    TD->Branch("p",&p.x,"x/D:y/D:z/D:theta/D:phi/D:rad[4]/F");
@@ -304,7 +312,8 @@ void ReadRef(Int_t kexp) {
       diff += TMath::Abs(length-p.length);
       diff += TMath::Abs(safe-p.safe);
       diff += TMath::Abs(rad-p.rad);
-      if ((TMath::Abs(rad-p.rad)/p.rad)>diffmax || TMath::Abs(nbound-p.nbound)>100) {
+      if (((p.rad>0) && (TMath::Abs(rad-p.rad)/p.rad)>diffmax) || 
+           TMath::Abs(nbound-p.nbound)>100) {
          nbad++;
          if (nbad < 10) {
             fprintf(stderr," ==>Point %lld differs with diff = %g, x=%g, y=%g, z=%g\n",i,diff,p.x,p.y,p.z);
@@ -356,8 +365,7 @@ void WriteRef(Int_t kexp) {
    Double_t xmax = boxes[kexp][0]; //box->GetDX(); // 300;
    Double_t ymax = boxes[kexp][1]; //box->GetDY(); // 300;
    Double_t zmax = boxes[kexp][2]; //box->GetDZ(); // 500;
-   char fname[24];
-   sprintf(fname, "%s_ref.root", exps[kexp]);
+   TString fname(TString::Format("files/%s_ref_3.root", exps[kexp]));
    TFile f(fname,"recreate");
    TTree *T = new TTree("T","TGeo stress");
    T->Branch("p",&p.x,"x/D:y/D:z/D:theta/D:phi/D:nbound/I:length/F:safe/F:rad/F");
@@ -394,7 +402,7 @@ void FindRad(Double_t x, Double_t y, Double_t z,Double_t theta, Double_t phi, In
    Double_t yp  = TMath::Sin(theta)*TMath::Sin(phi);
    Double_t zp  = TMath::Cos(theta);
    Double_t snext;
-   char path[256];
+   TString path;
    Double_t pt[3];
    Double_t loc[3];
    Double_t epsil = 1.E-2;
@@ -411,7 +419,7 @@ void FindRad(Double_t x, Double_t y, Double_t z,Double_t theta, Double_t phi, In
    if (verbose) {
       fprintf(stderr,"Track: (%15.10f,%15.10f,%15.10f,%15.10f,%15.10f,%15.10f)\n",
                        x,y,z,xp,yp,zp);
-      sprintf(path, "%s", gGeoManager->GetPath());
+      path = gGeoManager->GetPath();
    }                    
    TGeoNode *nextnode = gGeoManager->GetCurrentNode();
    safe = gGeoManager->Safety();
@@ -471,28 +479,27 @@ void FindRad(Double_t x, Double_t y, Double_t z,Double_t theta, Double_t phi, In
             lastrad = 0.;
          }      
          if (verbose) {
-            fprintf(stderr," STEP #%d: %s\n",nbound, path);
+            fprintf(stderr," STEP #%d: %s\n",nbound, path.Data());
             fprintf(stderr,"    step=%g  length=%g  rad=%g %s\n", snext,length,
                    med->GetMaterial()->GetDensity()*snext/med->GetMaterial()->GetRadLen(),med->GetName());
-            sprintf(path, "%s", gGeoManager->GetPath());
+            path =  gGeoManager->GetPath();
          }   
       }
    }   
 }
   
 void InspectDiff(const char* exp="alice",Long64_t ientry=-1) {
-   char fname[100];
    Int_t nbound = 0;   
    Float_t length = 0.;
    Float_t safe   = 0.;
    Float_t rad    = 0.;
-   sprintf(fname, "%s.root",exp);
+   TString fname(TString::Format("%s.root",exp));
    if (gSystem->AccessPathName(fname)) {
-      TGeoManager::Import(Form("http://root.cern.ch/files/%s",fname));
+      TGeoManager::Import(Form("http://root.cern.ch/files/%s",fname.Data()));
    } else {
       TGeoManager::Import(fname);
    }
-   sprintf(fname, "%s_diff.root",exp);   
+   fname = TString::Format("%s_diff.root",exp);   
    TFile f(fname);
    if (f.IsZombie()) return;
    TTree *TD = (TTree*)f.Get("TD");
@@ -520,17 +527,16 @@ void InspectDiff(const char* exp="alice",Long64_t ientry=-1) {
 
 void InspectRef(const char *exp) {
 // Inspect current reference.
-   char fname[64];
-   sprintf(fname, "%s_ref_2.root", exp);
+   TString fname(TString::Format("%s_ref_3.root", exp));
    if (gSystem->AccessPathName(fname)) {
-      fprintf(stderr,"ERROR: file %s does not exist\n", fname);
+      fprintf(stderr,"ERROR: file %s does not exist\n", fname.Data());
       return;
    }
    TFile f(fname);
    if (f.IsZombie()) return;
    TTree *T = (TTree*)f.Get("T");
    Long64_t nentries = T->GetEntries();
-   sprintf(fname, "Stress test for %s geometry", exp);
+   fname.Format("Stress test for %s geometry", exp);
    TCanvas *c = new TCanvas("stress", fname,700,800);
    c->Divide(2,2,0.005,0.005);
    c->cd(1);

@@ -53,9 +53,10 @@ ClassImp(TMVA::TNeuron)
 
 //______________________________________________________________________________
 TMVA::TNeuron::TNeuron()
-   : fLogger( new MsgLogger(this, kDEBUG) )
+   : fLogger( 0 )
 {
    // standard constructor
+   fLogger = new MsgLogger(this, kDEBUG);
    InitNeuron();
 }
 
@@ -295,7 +296,7 @@ void TMVA::TNeuron::InitSynapseDeltas()
 }
 
 //______________________________________________________________________________
-void TMVA::TNeuron::PrintLinks(TObjArray* links)
+void TMVA::TNeuron::PrintLinks(TObjArray* links) const 
 {
    // print an array of TSynapses, for debugging
 

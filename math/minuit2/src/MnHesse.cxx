@@ -301,7 +301,7 @@ L30:
          tmpsym(j,j) = tmp < prec.Eps2() ? 1. : tmp;
       }
       
-      return MinimumState(st.Parameters(), MinimumError(tmpsym, MinimumError::MnHesseFailed()), st.Gradient(), st.Edm(), mfcn.NumOfCalls());
+      return MinimumState(st.Parameters(), MinimumError(tmpsym, MinimumError::MnInvertFailed()), st.Gradient(), st.Edm(), mfcn.NumOfCalls());
    }
    
    FunctionGradient gr(grd, g2, gst);
@@ -311,7 +311,9 @@ L30:
    if(tmpErr.IsMadePosDef()) {
       MinimumError err(vhmat, MinimumError::MnMadePosDef() );
       double edm = estim.Estimate(gr, err);
+#ifdef WARNINGMSG
       MN_INFO_MSG("MnHesse: matrix was forced pos. def. ");
+#endif
       return MinimumState(st.Parameters(), err, gr, edm, mfcn.NumOfCalls());
    }
    

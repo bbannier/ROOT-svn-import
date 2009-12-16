@@ -65,7 +65,6 @@ class XrdProofdClient {
    XrdProofdProofServ     *GetServer(XrdProofdProtocol *p);
    void                    EraseServer(int psid);
    int                     GetTopServers();
-   void                    CheckServerSlots();
 
    int                     ResetClientSlot(int ic);
    XrdProofdProtocol      *GetProtocol(int ic);
@@ -95,6 +94,8 @@ class XrdProofdClient {
    int                     Size() const { return fClients.size(); }
 
    int                     Touch(bool reset = 0);
+
+   int                     TrimSessionDirs() { return fSandbox.TrimSessionDirs(); }
 
    const char             *AdminPath() const { return fAdminPath.c_str(); }
 

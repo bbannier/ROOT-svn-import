@@ -91,7 +91,6 @@
 #include "TBranch.h"
 #include "TClonesArray.h"
 #include "TStopwatch.h"
-#include "TTreeCacheUnzip.h"
 
 #include "Event.h"
 
@@ -147,24 +146,26 @@ int main(int argc, char **argv)
    if (arg5 < 100) printev = 1000;
    if (arg5 < 10)  printev = 10000;
 
-   //Authorize Trees up to 2 Terabytes (if the system can do it)
-   TTree::SetMaxTreeSize(1000*Long64_t(2000000000));
-
 //         Read case
    if (read) {
       if (netf) {
          hfile = new TNetFile("root://localhost/root/test/EventNet.root");
       } else
          hfile = new TFile("Event.root");
-      if(punzip) TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kEnable);
       tree = (TTree*)hfile->Get("T");
-      tree->SetCacheSize(10000000); //this is the default value: 10 MBytes
       TBranch *branch = tree->GetBranch("event");
       branch->SetAddress(&event);
       Int_t nentries = (Int_t)tree->GetEntries();
-      nevent = TMath::Max(nevent,nentries);
+      nevent = TMath::Min(nevent,nentries);
       if (read == 1) {  //read sequential
+         //by setting the read cache to -1 we set it to the AutoFlush value when writing
+         Int_t cachesize = -1; 
+         tree->SetCacheSize(cachesize);
+         tree->SetCacheLearnEntries(1); //one entry is sufficient to learn
+         tree->SetCacheEntryRange(0,nevent);
+         if(punzip) tree->SetParallelUnzip();
          for (ev = 0; ev < nevent; ev++) {
+            tree->LoadTree(ev);  //this call is required when using the cache
             if (ev%printev == 0) {
                tnew = timer.RealTime();
                printf("event:%d, rtime=%f s\n",ev,tnew-told);
@@ -249,6 +250,7 @@ int main(int argc, char **argv)
    printf("\n%d events and %lld bytes processed.\n",nevent,nb);
    printf("RealTime=%f seconds, CpuTime=%f seconds\n",rtime,ctime);
    if (read) {
+      tree->PrintCacheStats();
       printf("You read %f Mbytes/Realtime seconds\n",mbytes/rtime);
       printf("You read %f Mbytes/Cputime seconds\n",mbytes/ctime);
    } else {

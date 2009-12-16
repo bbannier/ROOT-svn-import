@@ -3,13 +3,35 @@
 // If no existing PROOF session is found and no URL is given, the macro
 // tries to start a local PROOF session.
 
+#include "Bytes.h"
 #include "Getline.h"
 #include "TEnv.h"
 #include "TProof.h"
+#include "TSocket.h"
 #include "TString.h"
 #include "TSystem.h"
 
-Int_t getXrootdPid(Int_t port);
+// Auxilliary functions
+Int_t getXrootdPid(Int_t port, const char *subdir = "xpd-tutorial");
+Int_t checkXrootdAt(Int_t port, const char *host = "localhost");
+Int_t checkXproofdAt(Int_t port, const char *host = "localhost");
+Int_t startXrootdAt(Int_t port, const char *exportdirs = 0, Bool_t force = kFALSE);
+
+// Auxilliary structures for Xrootd/Xproofd pinging ...
+// The client request
+typedef struct {
+   int first;
+   int second;
+   int third;
+   int fourth;
+   int fifth;
+} clnt_HS_t;
+// The body received after the first handshake's header
+typedef struct {
+   int msglen;
+   int protover;
+   int msgval;
+} srv_HS_t;
 
 // By default we start a cluster on the local machine
 const char *refloc = "proof://localhost:11093";
@@ -34,6 +56,21 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    //                [kFALSE].
    //     'tutords'  This flag can be used to force a dataset dir under the tutorial dir [kFALSE]
    //
+   // It is possible to trigger the automatic valgrind setup by defining the env GETPROOF_VALGRIND.
+   // E.g. to run the master in valgrind do
+   //
+   //     $ export GETPROOF_VALGRIND="valgrind=master"
+   //
+   // before running getProof. Note that 'getProof' is also called by 'stressProof', so this holds
+   // for 'stressProof' runs too.
+
+#ifdef __CINT__
+   Printf("getProof: this script can only be executed via ACliC:");
+   Printf("getProof:      root [] .x <path>/getProof.C+");
+   Printf("getProof: or   root [] .L <path>/getProof.C+");
+   Printf("getProof:      root [] getProof(...)");
+   return;
+#endif
 
    TProof *p = 0;
 
@@ -42,8 +79,10 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    Bool_t ext = (strcmp(uu.GetHost(), uref.GetHost()) ||
                  (uu.GetPort() != uref.GetPort())) ? kTRUE : kFALSE;
    if (ext && url && strlen(url) > 0) {
-      if (!strcmp(url, "lite") && nwrks > 0)
-         uu.SetOptions(Form("workers=%d", nwrks));
+      if (!strcmp(url, "lite")) {
+         if (dir && strlen(dir) > 0) gEnv->SetValue("Proof.Sandbox", dir);
+         if (nwrks > 0) uu.SetOptions(Form("workers=%d", nwrks));
+      }
       p = TProof::Open(uu.GetUrl());
       if (p && p->IsValid()) {
          // Check consistency
@@ -83,11 +122,13 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    TString tutdir = dir;
    if (tutdir.IsNull() || gSystem->AccessPathName(dir, kWritePermission)) {
       Printf("getProof: tutorial dir missing or not writable - try temp ");
-      tutdir = gSystem->TempDirectory();
+      // Force "/tmp/<user>" whenever possible to avoid length problems on MacOsX
+      tutdir="/tmp"; 
+      if (gSystem->AccessPathName(tutdir, kWritePermission)) tutdir = gSystem->TempDirectory();
       TString us;
       UserGroup_t *ug = gSystem->GetUserInfo(gSystem->GetUid());
       if (!ug) {
-         printf("getProof: could not get user info");
+         Printf("getProof: could not get user info");
          return p;
       }
       us.Form("/%s", ug->fUser.Data());
@@ -98,8 +139,8 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
                 " - cannot continue", tutdir.Data());
          return p;
       }
-      Printf("getProof: tutorial dir: %s", tutdir.Data());
    }
+   Printf("getProof: tutorial dir: %s", tutdir.Data());
 
    // Dataset dir
    TString datasetdir;
@@ -115,7 +156,7 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
          Printf("getProof: dataset dir: %s", datasetdir.Data());
       }
    }
-   
+
    // Local url (use a special port to try to not disturb running daemons)
    TUrl u(refloc);
    u.SetProtocol("proof");
@@ -136,20 +177,27 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    // Is there something listening already ?
    Int_t pid = -1;
    Bool_t restart = kTRUE;
-   gEnv->SetValue("XProof.FirstConnectMaxCnt",1);
-   Printf("getProof: checking for an existing daemon ...");
-   TProofMgr *mgr = TProof::Mgr(lurl);
-   if (mgr && mgr->IsValid()) {
+   if ((rc = checkXproofdAt(lportp)) == 1) {
+      Printf("getProof: something else the a XProofd service is running on"
+             " port %d - cannot continue", lportp);
+      return p;
+
+   } else if (rc == 0) {
 
       restart = kFALSE;
 
       pid = getXrootdPid(lportx);
       Printf("getProof: daemon found listening on dedicated ports {%d,%d} (pid: %d)",
               lportx, lportp, pid);
-      if (!strcmp(opt,"ask")) {
-         char *answer = Getline("getProof: would you like to restart it (N,Y)? [N] ");
-         if (answer && (answer[0] == 'Y' || answer[0] == 'y'))
-            restart = kTRUE;
+      if (isatty(0) == 0 || isatty(1) == 0) {
+         // Cannot ask: always restart
+         restart = kTRUE;
+      } else {
+         if (!strcmp(opt,"ask")) {
+            char *answer = Getline("getProof: would you like to restart it (N,Y)? [N] ");
+            if (answer && (answer[0] == 'Y' || answer[0] == 'y'))
+               restart = kTRUE;
+         }
       }
       if (!strcmp(opt,"force"))
          // Always restart
@@ -159,10 +207,6 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
       if (restart) {
 
          Printf("getProof: cleaning existing instance ...");
-
-         // Disconnect the manager
-         delete mgr;
-
          // Cleanimg up existing daemon
          cmd = Form("kill -9 %d", pid);
          if ((rc = gSystem->Exec(cmd)) != 0)
@@ -213,6 +257,8 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
          fprintf(fcf,"### Use dynamic, per-job scheduling\n");
          fprintf(fcf,"xpd.putrc Proof.DynamicStartup 1\n");
       }
+      fprintf(fcf,"### Local data server for the temporary output files\n");
+      fprintf(fcf,"xpd.putenv LOCALDATASERVER=root://%s:%d\n", gSystem->HostName(), lportx);
       fclose(fcf);
       Printf("getProof: xrootd config file at %s", xpdcf.Data());
 
@@ -246,7 +292,22 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    Printf("getProof: start / attach the PROOF session ...");
 
    // Start / attach the session now
-   p = TProof::Open(lurl);
+   if (gSystem->Getenv("GETPROOF_VALGRIND")) {
+      TString s(gSystem->Getenv("GETPROOF_VALGRIND")), t;
+      Int_t from = 0;
+      TString vopt, vopts;
+      while (s.Tokenize(t, from , " ")) {
+         if (t.BeginsWith("valgrind_opts:"))
+            vopts = t;
+         else
+            vopt = t;
+      }
+      if (vopts.IsNull()) vopts = "valgrind_opts:--leak-check=full --track-origins=yes";
+      TProof::AddEnvVar("PROOF_WRAPPERCMD", vopts.Data());
+      p = TProof::Open(lurl, vopt.Data());
+   } else {
+      p = TProof::Open(lurl);
+   }
    if (!p || !(p->IsValid())) {
       Printf("getProof: starting local session failed");
       if (p) delete p;
@@ -259,8 +320,13 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
 #endif
 }
 
-Int_t getXrootdPid(Int_t port)
+Int_t getXrootdPid(Int_t port, const char *subdir)
 {
+#ifdef WIN32
+   // No support for Xrootd/Proof on Win32 (yet; the optimized local Proof will work there too)
+   Printf("getXrootdPid: Xrootd/Proof not supported on Windows, sorry!");
+   return -1;
+#else
    // Get the pid of the started xrootd process
    Int_t pid = -1;
 #if defined(__sun)
@@ -270,7 +336,12 @@ Int_t getXrootdPid(Int_t port)
 #else
    const char *com = "-w -w -eo pid,command";
 #endif
-   TString cmd = Form("ps %s | grep xrootd | grep \"\\-p %d\" | grep xpd-tutorial", com, port);
+   TString cmd;
+   if (subdir && strlen(subdir) > 0) {
+      cmd.Form("ps %s | grep xrootd | grep \"\\-p %d\" | grep %s", com, port, subdir);
+   } else {
+      cmd.Form("ps %s | grep xrootd | grep \"\\-p %d\"", com, port);
+   }
    FILE *fp = gSystem->OpenPipe(cmd.Data(), "r");
    if (fp) {
       char line[2048], rest[2048];
@@ -282,4 +353,225 @@ Int_t getXrootdPid(Int_t port)
    }
    // Done
    return pid;
+#endif
 }
+
+Int_t checkXrootdAt(Int_t port, const char *host)
+{
+   // Check if a XrdXrootd service is running on 'port' at 'host'
+   // Return
+   //        0 if OK
+   //       -1 if nothing is listening on the port (connection cannot be open)
+   //        1 if something is listening but not XROOTD
+
+   // Open the connection
+   TSocket s(host, port);
+   if (!(s.IsValid())) {
+      if (gDebug > 0)
+         Printf("checkXrootdAt: could not open connection to %s:%d", host, port);
+      return -1;
+   }
+   // Send the first bytes
+   clnt_HS_t initHS;
+   memset(&initHS, 0, sizeof(initHS));
+   initHS.fourth = host2net((int)4);
+   initHS.fifth  = host2net((int)2012);
+   int len = sizeof(initHS);
+   s.SendRaw(&initHS, len);
+   // Read first server response
+   int type;
+   len = sizeof(type);
+   int readCount = s.RecvRaw(&type, len); // 4(2+2) bytes
+   if (readCount != len) {
+      if (gDebug > 0)
+         Printf("checkXrootdAt: 1st: wrong number of bytes read: %d (expected: %d)",
+                                readCount, len);
+      return 1;
+   }
+   // to host byte order
+   type = net2host(type);
+   // Check if the server is the eXtended proofd
+   if (type == 0) {
+      srv_HS_t xbody;
+      len = sizeof(xbody);
+      readCount = s.RecvRaw(&xbody, len); // 12(4+4+4) bytes
+      if (readCount != len) {
+         if (gDebug > 0)
+            Printf("checkXrootdAt: 2nd: wrong number of bytes read: %d (expected: %d)",
+                                   readCount, len);
+         return 1;
+      }
+
+   } else if (type == 8) {
+      // Standard proofd
+      if (gDebug > 0)
+         Printf("checkXrootdAt: server is ROOTD");
+      return 1;
+   } else {
+      // We don't know the server type
+      if (gDebug > 0)
+         Printf("checkXrootdAt: unknown server type: %d", type);
+      return 1;
+   }
+   // Done
+   return 0;
+}
+
+Int_t checkXproofdAt(Int_t port, const char *host)
+{
+   // Check if a XrdProofd service is running on 'port' at 'host'
+   // Return
+   //        0 if OK
+   //       -1 if nothing is listening on the port (connection cannot be open)
+   //        1 if something is listening but not XPROOFD
+
+   // Open the connection
+   TSocket s(host, port);
+   if (!(s.IsValid())) {
+      if (gDebug > 0)
+         Printf("checkXproofdAt: could not open connection to %s:%d", host, port);
+      return -1;
+   }
+   // Send the first bytes
+   clnt_HS_t initHS;
+   memset(&initHS, 0, sizeof(initHS));
+   initHS.third  = (int)host2net((int)1);
+   int len = sizeof(initHS);
+   s.SendRaw(&initHS, len);
+   // These 8 bytes are need by 'proofd' and discarded by XPD
+   int dum[2];
+   dum[0] = (int)host2net((int)4);
+   dum[1] = (int)host2net((int)2012);
+   s.SendRaw(&dum[0], sizeof(dum));
+   // Read first server response
+   int type;
+   len = sizeof(type);
+   int readCount = s.RecvRaw(&type, len); // 4(2+2) bytes
+   if (readCount != len) {
+      if (gDebug > 0)
+         Printf("checkXproofdAt: 1st: wrong number of bytes read: %d (expected: %d)",
+                                 readCount, len);
+      return 1;
+   }
+   // to host byte order
+   type = net2host(type);
+   // Check if the server is the eXtended proofd
+   if (type == 0) {
+      srv_HS_t xbody;
+      len = sizeof(xbody);
+      readCount = s.RecvRaw(&xbody, len); // 12(4+4+4) bytes
+      if (readCount != len) {
+         if (gDebug > 0)
+            Printf("checkXproofdAt: 2nd: wrong number of bytes read: %d (expected: %d)",
+                                    readCount, len);
+         return 1;
+      }
+      xbody.protover = net2host(xbody.protover);
+      xbody.msgval = net2host(xbody.msglen);
+      xbody.msglen = net2host(xbody.msgval);
+
+   } else if (type == 8) {
+      // Standard proofd
+      if (gDebug > 0)
+         Printf("checkXproofdAt: server is PROOFD");
+      return 1;
+   } else {
+      // We don't know the server type
+      if (gDebug > 0)
+         Printf("checkXproofdAt: unknown server type: %d", type);
+      return 1;
+   }
+   // Done
+   return 0;
+}
+
+Int_t startXrootdAt(Int_t port, const char *exportdirs, Bool_t force)
+{
+   // Start a basic xrootd service on 'port' exporting the dirs in 'exportdirs'
+   // (blank separated list)
+
+#ifdef WIN32
+   // No support for Xrootd on Win32 (yet; the optimized local Proof will work there too)
+   Printf("startXrootdAt: Xrootd not supported on Windows, sorry!");
+   return -1;
+#else
+   Bool_t restart = kTRUE;
+
+   // Already there?
+   Int_t rc = 0;
+   if ((rc = checkXrootdAt(port)) == 1) {
+
+      Printf("startXrootdAt: some other service running on port %d - cannot proceed ", port);
+      return -1;
+
+   } else if (rc == 0) {
+
+      restart = kFALSE;
+
+      if (force) {
+         // Always restart
+         restart = kTRUE;
+      } else {
+         Printf("startXrootdAt: xrootd service already available on port %d: ", port);
+         char *answer = Getline("startXrootdAt: would you like to restart it (N,Y)? [N] ");
+         if (answer && (answer[0] == 'Y' || answer[0] == 'y')) {
+            restart = kTRUE;
+         }
+      }
+
+      // Cleanup, if required
+      if (restart) {
+         Printf("startXrootdAt: cleaning existing instance ...");
+
+         // Get the Pid
+         Int_t pid = getXrootdPid(port, "xrd-basic");
+
+         // Cleanimg up existing daemon
+         TString cmd = Form("kill -9 %d", pid);
+         if ((rc = gSystem->Exec(cmd)) != 0)
+            Printf("startXrootdAt: problems stopping xrootd process %p (%d)", pid, rc);
+      }
+   }
+
+   if (restart) {
+      if (gSystem->AccessPathName("/tmp/xrd-basic")) {
+         gSystem->mkdir("/tmp/xrd-basic");
+         if (gSystem->AccessPathName("/tmp/xrd-basic")) {
+            Printf("startXrootdAt: could not assert dir for log file");
+            return -1;
+         }
+      }
+      TString cmd;
+      cmd.Form("xrootd -d -p %d -b -l /tmp/xrd-basic/xrootd.log", port);
+      if (exportdirs && strlen(exportdirs) > 0) {
+         TString dirs(exportdirs), d;
+         Int_t from = 0;
+         while (dirs.Tokenize(d, from, " ")) {
+            if (!d.IsNull()) {
+               cmd += " ";
+               cmd += d;
+            }
+         }
+      }
+      Printf("cmd: %s", cmd.Data());
+      if ((rc = gSystem->Exec(cmd)) != 0) {
+         Printf("startXrootdAt: problems executing starting command (%d)", rc);
+         return -1;
+      }
+      // Wait a bit
+      Printf("getProof: waiting for xrootd to start ...");
+      gSystem->Sleep(2000);
+      // Check the result
+      if ((rc = checkXrootdAt(port)) != 0) {
+         Printf("startXrootdAt: xrootd service not available at %d (rc = %d) - startup failed",
+                                port, rc);
+         return -1;
+      }
+      Printf("getProof: basic xrootd started!");
+   }
+
+   // Done
+   return 0;
+#endif
+}
+

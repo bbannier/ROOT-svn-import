@@ -76,13 +76,17 @@ protected:
       kDirect, kDataMember, kMethod, 
       kIndexOfEntry, kEntries, kLength, kIteration, kLengthFunc, kSum, kEntryList,
       kTreeMember,
-      kIndexOfLocalEntry
+      kIndexOfLocalEntry,
+      kMin, kMax
+
    };
    enum { 
       kAlias           = 200,
       kAliasString     = 201,
       kAlternate       = 202,
-      kAlternateString = 203
+      kAlternateString = 203,
+      kMinIf           = 204,
+      kMaxIf           = 205
    };
 
    TTree       *fTree;            //! pointer to Tree
@@ -147,6 +151,7 @@ protected:
    virtual Bool_t    IsString(Int_t oper) const;
    virtual Bool_t    IsLeafString(Int_t code) const;
    virtual Bool_t    SwitchToFormLeafInfo(Int_t code);
+   virtual Bool_t    StringToNumber(Int_t code);
 
    void              Convert(UInt_t fromVersion);
 

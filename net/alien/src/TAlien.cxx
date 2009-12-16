@@ -61,8 +61,9 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include <stdlib.h>
-#include "TUrl.h"
 #include "TAlien.h"
+#include "TUrl.h"
+#include "Riostream.h"
 #include "TString.h"
 #include "TObjString.h"
 #include "TObjArray.h"
@@ -116,6 +117,14 @@ TAlien::TAlien(const char *gridurl, const char *uid, const char * passwd,
    if (!strlen(uid)) {
       if (gSystem->Getenv("alien_API_USER")) {
          fUser = gSystem->Getenv("alien_API_USER");
+      } else {
+         if (gSystem->Getenv("LOGNAME")) {
+            // we try the LOGNAME env
+            fUser = gSystem->Getenv("LOGNAME");
+         } else {
+            // we set the USER env
+            fUser = gSystem->Getenv("USER");
+         }
       }
    } else {
       fUser = uid;
@@ -766,3 +775,4 @@ TGridResult* TAlien::ListPackages(const char* alienpackagedir)
    }
    return gr;
 }
+

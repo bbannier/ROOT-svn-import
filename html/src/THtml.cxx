@@ -722,7 +722,7 @@ void THtml::TFileSysDB::Fill()
       gSystem->GetPathInfo(dir, buf);
       if (R_ISDIR(buf.fMode)) {
 #ifndef R__WIN32
-         TFileSysRoot* prevroot = (TFileSysRoot*) GetMapIno().GetValue(buf.fIno);
+         TFileSysRoot* prevroot = (TFileSysRoot*) (Long_t)GetMapIno().GetValue(buf.fIno);
          if (prevroot != 0) {
             Warning("Fill", "InputPath \"%s\" already present as \"%s\"!", dir.Data(), prevroot->GetName());
             continue;
@@ -1586,6 +1586,11 @@ void THtml::CreateListOfClasses(const char* filter)
       const char *cname = 0;
       if (i < 0) cname = "TObject";
       else cname = gClassTable->Next();
+
+      if (i >= 0 && !strcmp(cname, "TObject")) {
+         // skip the second iteration on TObject
+         continue;
+      }
 
       // This is a hack for until after Cint and Reflex are one.
       if (strstr(cname, "__gnu_cxx::")) continue;

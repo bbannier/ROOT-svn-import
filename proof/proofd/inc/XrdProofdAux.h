@@ -210,14 +210,13 @@ public:
    XrdProofdPipe();
    virtual ~XrdProofdPipe();
 
+   void Close();
    bool IsValid() const { return (fPipe[0] > 0 && fPipe[1] > 0) ? 1 : 0; }
 
    int Poll(int to = -1);
 
    int Post(int type, const char *msg);
    int Recv(XpdMsg &msg);
-
-   void SetFd(void *fds);
 };
 
 //
@@ -306,7 +305,7 @@ public:
    static bool HasToken(const char *s, const char *tokens);
    static int KillProcess(int pid, bool forcekill, XrdProofUI ui, bool changeown);
    static int MvDir(const char *oldpath, const char *newpath);
-   static int ParsePidPath(const char *path, XrdOucString &rest);
+   static int ParsePidPath(const char *path, XrdOucString &before, XrdOucString &after);
    static int ParseUsrGrp(const char *path, XrdOucString &usr, XrdOucString &grp);
    static const char *ProofRequestTypes(int type);
    static int ReadMsg(int fd, XrdOucString &msg);

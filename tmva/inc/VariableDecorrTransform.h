@@ -40,6 +40,10 @@
 #include "TMatrixDfwd.h"
 #endif
 
+#ifndef ROOT_TMatrixDSymfwd
+#include "TMatrixDSymfwd.h"
+#endif
+
 #ifndef ROOT_TMVA_VariableTransformBase
 #include "TMVA/VariableTransformBase.h"
 #endif
@@ -49,7 +53,7 @@ namespace TMVA {
    class VariableDecorrTransform : public VariableTransformBase {
 
    public:
-  
+
       VariableDecorrTransform( DataSetInfo& dsi );
       virtual ~VariableDecorrTransform( void );
 
@@ -61,7 +65,7 @@ namespace TMVA {
       virtual const Event* InverseTransform(const Event* const, Int_t cls ) const;
 
       void WriteTransformationToStream ( std::ostream& ) const;
-      void ReadTransformationFromStream( std::istream& );
+      void ReadTransformationFromStream( std::istream&, const TString& );
 
       virtual void AttachXMLTo(void* parent);
       virtual void ReadFromXML( void* trfnode );
@@ -87,5 +91,5 @@ namespace TMVA {
 
 } // namespace TMVA
 
-#endif 
+#endif
 

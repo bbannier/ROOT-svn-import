@@ -435,6 +435,7 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
 
             isPreAlloc = kTRUE;
 
+            // Intentional fallthrough now that isPreAlloc is set.
          case TStreamerInfo::kAnyP:         // Class*   Class not derived from TObject and no comment
          case TStreamerInfo::kAnyP    + TStreamerInfo::kOffsetL:
 
@@ -506,7 +507,7 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
                TClass *cl                 = fComp[i].fClass;
                TMemberStreamer *pstreamer = fComp[i].fStreamer;
 
-               if (thisVar->GetStreamMemberWise() && cl->CanSplit()) {
+               if (!b.TestBit(TBuffer::kCannotHandleMemberWiseStreaming) && thisVar->GetStreamMemberWise() && cl->CanSplit()) {
                   // Let's save the collection member-wise.
 
                   UInt_t pos = b.WriteVersionMemberWise(thisVar->IsA(),kTRUE);
@@ -546,7 +547,7 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
             {
                TClass *cl                 = fComp[i].fClass;
                TMemberStreamer *pstreamer = fComp[i].fStreamer;
-               if (thisVar->GetStreamMemberWise() && cl->CanSplit()) {
+               if (!b.TestBit(TBuffer::kCannotHandleMemberWiseStreaming) && thisVar->GetStreamMemberWise() && cl->CanSplit()) {
                   // Let's save the collection in member-wise order.
 
                   UInt_t pos = b.WriteVersionMemberWise(thisVar->IsA(),kTRUE);

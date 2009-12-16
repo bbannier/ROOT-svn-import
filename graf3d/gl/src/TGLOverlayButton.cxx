@@ -11,6 +11,7 @@
 
 #include "TGLOverlayButton.h"
 #include "TColor.h"
+#include "TMath.h"
 
 #include <TGLRnrCtx.h>
 #include <TGLIncludes.h>
@@ -83,17 +84,7 @@ void TGLOverlayButton::Render(TGLRnrCtx& rnrCtx)
    glPushName(0);
 
    // Text rendering
-   Float_t cfs = fHeight*0.8;
-   Int_t fs = TGLFontManager::GetFontSize(cfs);
-   if (fFont.GetMode() == TGLFont::kUndef)
-   {
-      rnrCtx.RegisterFont(fs, "arial",  TGLFont::kPixmap, fFont);
-   }
-   else if (fFont.GetSize() != fs)
-   {
-      rnrCtx.ReleaseFont(fFont);
-      rnrCtx.RegisterFont(fs, "arial",  TGLFont::kPixmap, fFont);
-   }
+   rnrCtx.RegisterFontNoScale(TMath::Nint(fHeight*0.8), "arial",  TGLFont::kPixmap, fFont);
    fFont.PreRender(kFALSE);
 
    TColor::Pixel2RGB(fTextColor, r, g, b);
@@ -115,7 +106,7 @@ void TGLOverlayButton::Render(TGLRnrCtx& rnrCtx)
    // First the border, same color as text
    TColor::Pixel2RGB(fTextColor, r, g, b);
    (fActiveID == 1) ? TGLUtil::Color4f(r, g, b, fHighAlpha):TGLUtil::Color4f(r, g, b, fNormAlpha);
-   glLineWidth(1);
+   TGLUtil::LineWidth(1);
    glBegin(GL_LINE_LOOP);
    glVertex2f(0.0, 0.0);
    glVertex2f(0.0, fHeight);

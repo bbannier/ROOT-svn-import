@@ -10,6 +10,8 @@
 
 //         $Id$
 
+const char *XrdOucMsubsCVSID = "$Id$";
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -186,7 +188,7 @@ char *XrdOucMsubs::getVal(XrdOucMsubsInfo &Info, int vNum)
                   Info.rfn2buff = strdup(buff);
                   return Info.rfn2buff;
 
-      case vFM:   sprintf(Info.mbuff, "%o", Info.Mode);
+      case vFM:   sprintf(Info.mbuff, "%o", static_cast<int>(Info.Mode));
                   return Info.mbuff;
 
       case vOFL:  op = Info.obuff;
@@ -202,7 +204,7 @@ char *XrdOucMsubs::getVal(XrdOucMsubsInfo &Info, int vNum)
       case vOPT:  if (Info.misc) return (char *)Info.misc;
                   break;
 
-      case vPTY:  sprintf(Info.mbuff, "%d", Info.Mode);
+      case vPTY:  sprintf(Info.mbuff, "%d", static_cast<int>(Info.Mode));
                   return Info.mbuff;
 
       case vHST:  if ((op = Info.Env->Get(SEC_HOST))) return op;

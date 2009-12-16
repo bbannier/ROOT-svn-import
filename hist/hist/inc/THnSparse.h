@@ -52,10 +52,14 @@
 
 class TAxis;
 class TCollection;
+class TFitResultPtr;
 class TH1;
 class TH1D;
 class TH2D;
 class TH3D;
+class TF1;
+
+#include "TFitResultPtr.h"
 
 class THnSparseArrayChunk: public TObject {
  private:
@@ -164,6 +168,9 @@ class THnSparse: public TNamed {
  public:
    virtual ~THnSparse();
 
+   static THnSparse* CreateSparse(const char* name, const char* title,
+                                  const TH1* h1, Int_t ChunkSize = 1024 * 16);
+
    Int_t  GetNChunks() const { return fBinContent.GetEntriesFast(); }
    TObjArray* GetListOfAxes() { return &fAxes; }
    TAxis* GetAxis(Int_t dim) const { return (TAxis*)fAxes[dim]; }
@@ -181,6 +188,9 @@ class THnSparse: public TNamed {
    Long_t Fill(const char* name[], Double_t w = 1.) {
       return Fill(GetBin(name), w);
    }
+
+   TFitResultPtr Fit(TF1 *f1 ,Option_t *option = "", Option_t *goption = "");
+   TList* GetListOfFunctions() { return 0; }
 
    Double_t GetEntries() const { return fEntries; }
    Double_t GetWeightSum() const { return fTsumw; }
@@ -202,6 +212,7 @@ class THnSparse: public TNamed {
    void SetBinError(const Int_t* x, Double_t e);
    void AddBinContent(const Int_t* x, Double_t v = 1.);
    void SetEntries(Double_t entries) { fEntries = entries; }
+   void SetTitle(const char *title);
 
    Double_t GetBinContent(const Int_t *idx) const;
    Double_t GetBinContent(Long64_t bin, Int_t* idx = 0) const;
@@ -232,6 +243,7 @@ class THnSparse: public TNamed {
    void Scale(Double_t c);
    void Add(const THnSparse* h, Double_t c=1.);
    void Multiply(const THnSparse* h);
+   void Multiply(TF1* f, Double_t c = 1.);
    void Divide(const THnSparse* h);
    void Divide(const THnSparse* h1, const THnSparse* h2, Double_t c1 = 1., Double_t c2 = 1., Option_t* option="");
    void RebinnedAdd(const THnSparse* h, Double_t c=1.);

@@ -64,7 +64,7 @@ public:
    /** 
       Constructor from unbin data set and model function (pdf)
    */ 
-   PoissonLikelihoodFCN (const BinData & data, IModelFunction & func) : 
+   PoissonLikelihoodFCN (const BinData & data, const IModelFunction & func) : 
       BaseObjFunction(func.NPar(), data.Size() ),
       fData(data), 
       fFunc(func), 
@@ -143,12 +143,9 @@ private:
       //data member
 
    const BinData & fData; 
-   mutable IModelFunction & fFunc; 
+   const IModelFunction & fFunc; 
 
-   unsigned int fNDim; 
-   unsigned int fNPoints;   // size of the data
    mutable unsigned int fNEffPoints;  // number of effective points used in the fit 
-   mutable unsigned int fNCalls;
 
    mutable std::vector<double> fGrad; // for derivatives
 

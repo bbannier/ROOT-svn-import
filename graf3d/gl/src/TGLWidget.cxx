@@ -406,6 +406,9 @@ namespace {
          format.push_back(1);
       }
 
+      if (request.IsStereo())
+        format.push_back(GLX_STEREO);
+
       format.push_back(None);
    }
 }
@@ -428,7 +431,7 @@ Window_t TGLWidget::CreateWindow(const TGWindow* parent, const TGLFormat &format
    XVisualInfo *visInfo = glXChooseVisual(dpy, DefaultScreen(dpy), &glxfmt[0]);
 
    if (!visInfo) {
-      ::Error("TGLWidget::CreateGLContainer", "No good visual found!");
+      ::Error("TGLWidget::CreateWindow", "No good visual found!");
       throw std::runtime_error("No good visual found!");
    }
 

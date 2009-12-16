@@ -36,7 +36,7 @@ TEveStraightLineSetGL::TEveStraightLineSetGL() : TGLObject(), fM(0)
    fMultiColor = kTRUE;
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 Bool_t TEveStraightLineSetGL::SetModel(TObject* obj, const Option_t* /*opt*/)
@@ -55,7 +55,6 @@ void TEveStraightLineSetGL::SetBBox()
 {
    // Setup bounding box information.
 
-   // !! This ok if master sub-classed from TAttBBox
    SetAxisAlignedBBox(((TEveStraightLineSet*)fExternalObj)->AssertBBox());
 }
 
@@ -88,7 +87,7 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
 {
    // Render the line-set with GL.
 
-   // printf("TEveStraightLineSetGL::DirectDraw Style %d, LOD %d\n", flags.Style(), flags.LOD());
+   // printf("TEveStraightLineSetGL::DirectDraw LOD %d\n", rnrCtx.ShapeLOD());
 
    TEveStraightLineSet& mL = * fM;
 
@@ -103,7 +102,7 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    if (mL.GetRnrLines() && mL.GetLinePlex().Size() > 0)
    {
       glPushAttrib(GL_LINE_BIT | GL_ENABLE_BIT);
-      glLineWidth(mL.GetLineWidth());
+      TGLUtil::LineWidth(mL.GetLineWidth());
       if (mL.GetLineStyle() > 1) {
          Int_t    fac = 1;
          UShort_t pat = 0xffff;
@@ -181,7 +180,7 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          TEveStraightLineSet::Line_t& l = * (TEveStraightLineSet::Line_t*) mL.GetLinePlex().Atom(lidx);
          pnt[0] = l.fV1[0] + (l.fV2[0] - l.fV1[0])*m.fPos;
          pnt[1] = l.fV1[1] + (l.fV2[1] - l.fV1[1])*m.fPos;
-         pnt[2] = l.fV1[2] + (l.fV2[2] - l.fV1[2])*m.fPos;;
+         pnt[2] = l.fV1[2] + (l.fV2[2] - l.fV1[2])*m.fPos;
          pnt   += 3;
       }
       if (rnrCtx.SecSelection()) glPushName(2);
@@ -198,7 +197,7 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       glPopAttrib();
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveStraightLineSetGL::ProcessSelection(TGLRnrCtx& /*rnrCtx*/,

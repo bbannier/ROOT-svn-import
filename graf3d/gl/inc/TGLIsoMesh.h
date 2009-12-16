@@ -6,6 +6,11 @@
 #ifndef ROOT_Rtypes
 #include "Rtypes.h"
 #endif
+#ifndef ROOT_TAxis
+#include "TAxis.h"
+#endif
+
+class TGLBoxCut;
 
 namespace Rgl {
 namespace Mc {
@@ -71,7 +76,113 @@ public:
    std::vector<UInt_t> fTris;
 };
 
+/*
+TGridGeometry describes ranges and cell steps (scales are 
+already in steps and ranges).
+*/
+template<class V>
+class TGridGeometry {
+public:
+   enum EVertexPosition{
+      kBinCenter,
+      kBinEdge
+   };
+
+   TGridGeometry() : fMinX(0),  fStepX(0),
+                     fMinY(0),  fStepY(0),
+                     fMinZ(0),  fStepZ(0),
+                     fXScaleInverted(1.),
+                     fYScaleInverted(1.),
+                     fZScaleInverted(1.)
+   {
+      //Default constructor.
+   }
+   
+   TGridGeometry(const TAxis *x, const TAxis *y, const TAxis *z,
+                 Double_t xs = 1., Double_t ys = 1., Double_t zs = 1.,
+                 EVertexPosition pos = kBinCenter)
+         : fMinX(0),  fStepX(0),
+           fMinY(0),  fStepY(0),
+           fMinZ(0),  fStepZ(0),
+           fXScaleInverted(1.),
+           fYScaleInverted(1.),
+           fZScaleInverted(1.)
+   {
+      //Define geometry using TAxis.
+      if (pos == kBinCenter) {
+         fMinX  = V(x->GetBinCenter(x->GetFirst()));
+         fStepX = V((x->GetBinCenter(x->GetLast()) - fMinX) / (x->GetNbins() - 1));
+         fMinY  = V(y->GetBinCenter(y->GetFirst()));
+         fStepY = V((y->GetBinCenter(y->GetLast()) - fMinY) / (y->GetNbins() - 1));
+         fMinZ  = V(z->GetBinCenter(z->GetFirst()));
+         fStepZ = V((z->GetBinCenter(z->GetLast()) - fMinZ) / (z->GetNbins() - 1));
+
+         fMinX *= xs, fStepX *= xs;
+         fMinY *= ys, fStepY *= ys;
+         fMinZ *= zs, fStepZ *= zs;
+      } else if (pos == kBinEdge) {
+         fMinX  = V(x->GetBinLowEdge(x->GetFirst()));
+         fStepX = V((x->GetBinUpEdge(x->GetLast()) - fMinX) / (x->GetNbins()));
+         fMinY  = V(y->GetBinLowEdge(y->GetFirst()));
+         fStepY = V((y->GetBinUpEdge(y->GetLast()) - fMinY) / (y->GetNbins()));
+         fMinZ  = V(z->GetBinLowEdge(z->GetFirst()));
+         fStepZ = V((z->GetBinUpEdge(z->GetLast()) - fMinZ) / (z->GetNbins()));
+
+         fMinX *= xs, fStepX *= xs;
+         fMinY *= ys, fStepY *= ys;
+         fMinZ *= zs, fStepZ *= zs;
+      }
+
+      fXScaleInverted = 1. / xs;
+      fYScaleInverted = 1. / ys;
+      fZScaleInverted = 1. / zs;
+   }
+   
+   V fMinX;
+   V fStepX;
+
+   V fMinY;
+   V fStepY;
+
+   V fMinZ;
+   V fStepZ;
+
+   V fXScaleInverted;
+   V fYScaleInverted;
+   V fZScaleInverted;
+};
+
 }//namespace Mc
+
+//Auxilary functions to draw an iso mesh in different modes.
+void DrawMesh(const std::vector<Float_t> &vs, const std::vector<Float_t> &ns, 
+              const std::vector<UInt_t> &ts);
+void DrawMesh(const std::vector<Double_t> &vs, const std::vector<Double_t> &ns, 
+              const std::vector<UInt_t> &ts);
+
+void DrawMesh(const std::vector<Float_t> &vs, const std::vector<UInt_t> &fTS);
+void DrawMesh(const std::vector<Double_t> &vs, const std::vector<UInt_t> &fTS);
+
+void DrawMesh(const std::vector<Float_t> &vs, const std::vector<Float_t> &ns, 
+              const std::vector<UInt_t> &ts, const TGLBoxCut &box);
+void DrawMesh(const std::vector<Double_t> &vs, const std::vector<Double_t> &ns, 
+              const std::vector<UInt_t> &ts, const TGLBoxCut &box);
+
+void DrawMesh(const std::vector<Float_t> &vs, const std::vector<UInt_t> &ts,
+              const TGLBoxCut &box);
+void DrawMesh(const std::vector<Double_t> &vs, const std::vector<UInt_t> &ts,
+              const TGLBoxCut &box);
+
+void DrawMesh(const std::vector<Double_t> &vs, const std::vector<UInt_t> &ts, 
+              const TGLBoxCut &box);
+void DrawMesh(const std::vector<Float_t> &vs, const std::vector<UInt_t> &ts, 
+              const TGLBoxCut &box);
+
+void DrawMapleMesh(const std::vector<Double_t> &vs, const std::vector<Double_t> &ns,
+                   const std::vector<UInt_t> &ts);
+void DrawMapleMesh(const std::vector<Double_t> &vs, const std::vector<Double_t> &ns,
+                   const std::vector<UInt_t> &ts, const TGLBoxCut & box);
+
 }//namespace Rgl
 
 #endif

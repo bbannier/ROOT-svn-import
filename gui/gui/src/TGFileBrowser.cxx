@@ -34,6 +34,7 @@
 #include "TImage.h"
 #include "TBrowser.h"
 #include "TRemoteObject.h"
+#include "TVirtualPad.h"
 #include "Getline.h"
 #include <time.h>
 #include <string.h>
@@ -192,8 +193,14 @@ void TGFileBrowser::CreateBrowser()
    else
       fShowHidden = kFALSE;
 
+   fDblClick = kFALSE;
+
    TQObject::Connect("TGHtmlBrowser", "Clicked(char*)",
                      "TGFileBrowser", this, "Selected(char*)");
+
+   TQObject::Connect("TPad", "Modified()",
+                     "TGFileBrowser", this, "PadModified()");
+
    fListLevel = 0;
    MapSubwindows();
    Resize(GetDefaultSize());
@@ -204,6 +211,9 @@ void TGFileBrowser::CreateBrowser()
 TGFileBrowser::~TGFileBrowser()
 {
    // Destructor.
+
+   TQObject::Disconnect("TGHtmlBrowser", "Clicked(char*)");
+   TQObject::Disconnect("TPad", "Modified()");
 
    delete fContextMenu;
    delete fListTree;
@@ -243,9 +253,10 @@ void TGFileBrowser::Add(TObject *obj, const char *name, Int_t check)
    else if (obj) {
       GetObjPicture(&pic, obj);
       if (!name) name = obj->GetName();
-      if(check > -1) {
+      if (check > -1) {
          if (!fListTree->FindChildByName(fListLevel, name)) {
-            TGListTreeItem *item = fListTree->AddItem(fListLevel, name, obj, pic, pic, kTRUE);
+            TGListTreeItem *item = fListTree->AddItem(fListLevel, name, obj,
+                                                      pic, pic, kTRUE);
             if ((pic != fFileIcon) && (pic != fCachedPic))
                fClient->FreePicture(pic);
             fListTree->CheckItem(item, (Bool_t)check);
@@ -354,6 +365,18 @@ void TGFileBrowser::BrowseObj(TObject *obj)
 
    if (fNewBrowser)
       fNewBrowser->SetActBrowser(this);
+   if (obj != gROOT) {
+      if (!fListTree->FindItemByObj(fListTree->GetFirstItem(), obj)) {
+         fListLevel = 0;
+         Add(obj);
+         fListLevel = fListTree->FindItemByObj(fListTree->GetFirstItem(), obj);
+         fListTree->HighlightItem(fListLevel);
+         if (obj->IsFolder())
+            fListTree->OpenItem(fListLevel);
+         fListTree->ClearViewPort();
+         fListTree->AdjustPosition(fListLevel);
+      }
+   }
    obj->Browse(fBrowser);
    if (obj == gROOT) {
       TList *volumes = gSystem->GetVolumes("all");
@@ -507,16 +530,29 @@ void TGFileBrowser::Update()
 {
    // Update content of the list tree.
 
+   Long64_t size = 0;
+   Long_t id = 0, flags = 0, modtime = 0;
+   char path[1024];
    TGListTreeItem *item = fCurrentDir;
    if (!item) item = fRootDir;
    //fListTree->DeleteChildren(item);
    TGListTreeItem *curr = fListTree->GetSelected(); // GetCurrent() ??
    if (curr) {
       TObject *obj = (TObject *) curr->GetUserData();
-      if (obj && obj->InheritsFrom("TObjString")) {
-         TString fullpath = FullPathName(curr);
-         if (gSystem->AccessPathName(fullpath.Data())) {
-            fListTree->DeleteItem(curr);
+      if (obj && !obj->TestBit(kNotDeleted)) {
+         fListTree->DeleteItem(curr);
+      }
+      else if (obj && obj->TestBit(kNotDeleted) &&
+               obj->InheritsFrom("TObjString") && curr->GetParent()) {
+         fListTree->GetPathnameFromItem(curr->GetParent(), path);
+         if (strlen(path) > 1) {
+            TString dirpath = FullPathName(curr->GetParent());
+            gSystem->GetPathInfo(dirpath.Data(), &id, &size, &flags, &modtime);
+            if (flags & 2) {
+               TString fullpath = FullPathName(curr);
+               if (gSystem->AccessPathName(fullpath.Data()))
+                  fListTree->DeleteItem(curr);
+            }
          }
       }
    }
@@ -609,6 +645,7 @@ void TGFileBrowser::AddKey(TGListTreeItem *itm, TObject *obj, const char *name)
       if (pic && (pic != fFileIcon) && (pic != fCachedPic))
          fClient->FreePicture(pic);
       it->SetDNDSource(kTRUE);
+      it->SetTipText(TString::Format("%s\n%s", obj->GetName(), obj->GetTitle()));
    }
    fCnt++;
 }
@@ -657,6 +694,7 @@ void TGFileBrowser::CheckRemote(TGListTreeItem *item)
 {
    // Check if the current list tree item points to a remote object.
 
+   if (!item) return;
    TObject *obj = (TObject *) item->GetUserData();
    if (obj) {
       if (obj->InheritsFrom("TApplicationRemote")) {
@@ -726,16 +764,22 @@ void TGFileBrowser::Clicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
    Long64_t size = 0;
    Long_t id = 0, flags = 0, modtime = 0;
    fListLevel = item;
+   if (!item) return;
    CheckRemote(item);
    if (item && btn == kButton3) {
+      TString fullpath = FullPathName(item);
       TObject *obj = (TObject *) item->GetUserData();
-      if (obj && !obj->InheritsFrom("TObjString")) {
+      if (obj && (!obj->InheritsFrom("TObjString") ||
+          gSystem->AccessPathName(fullpath.Data()))) {
          if (obj->InheritsFrom("TKey") && (obj->IsA() != TClass::Class())) {
             Chdir(item);
             const char *clname = (const char *)gROOT->ProcessLine(TString::Format("((TKey *)0x%lx)->GetClassName();", obj));
             if (clname) {
                TClass *cl = TClass::GetClass(clname);
-               void *add = gROOT->FindObject((char *) obj->GetName());
+               TString name = (const char *)gROOT->ProcessLine(TString::Format("((TKey *)0x%lx)->GetName();", obj));
+               name += ";";
+               name += (Short_t)gROOT->ProcessLine(TString::Format("((TKey *)0x%lx)->GetCycle();", obj));
+               void *add = gDirectory->FindObjectAny((char *) name.Data());
                if (add && cl->IsTObject()) {
                   obj = (TObject*)add;
                   item->SetUserData(obj);
@@ -751,19 +795,19 @@ void TGFileBrowser::Clicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
       else {
          fListTree->GetPathnameFromItem(item, path);
          if (strlen(path) > 3) {
-            TString fullpath = FullPathName(item);
-            gSystem->GetPathInfo(fullpath.Data(), &id, &size, &flags, &modtime);
-            if (flags & 2) {
-               fCurrentDir = item;
-               if (fDir) delete fDir;
-               fDir = new TSystemDirectory(item->GetText(), fullpath.Data());
-               fContextMenu->Popup(x, y, fDir, fBrowser);
-            }
-            else {
-               fCurrentDir = item->GetParent();
-               if (fFile) delete fFile;
-               fFile = new TSystemFile(item->GetText(), fullpath.Data());
-               fContextMenu->Popup(x, y, fFile, fBrowser);
+            if (gSystem->GetPathInfo(fullpath.Data(), &id, &size, &flags, &modtime) == 0) {
+               if (flags & 2) {
+                  fCurrentDir = item;
+                  if (fDir) delete fDir;
+                  fDir = new TSystemDirectory(item->GetText(), fullpath.Data());
+                  fContextMenu->Popup(x, y, fDir, fBrowser);
+               }
+               else {
+                  fCurrentDir = item->GetParent();
+                  if (fFile) delete fFile;
+                  fFile = new TSystemFile(item->GetText(), fullpath.Data());
+                  fContextMenu->Popup(x, y, fFile, fBrowser);
+               }
             }
          }
       }
@@ -779,11 +823,12 @@ void TGFileBrowser::Clicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
          fListTree->GetPathnameFromItem(item, path);
          if (strlen(path) > 1) {
             TString fullpath = FullPathName(item);
-            gSystem->GetPathInfo(fullpath.Data(), &id, &size, &flags, &modtime);
-            if (flags & 2)
-               fCurrentDir = item;
-            else
-               fCurrentDir = item->GetParent();
+            if (gSystem->GetPathInfo(fullpath.Data(), &id, &size, &flags, &modtime) == 0) {
+               if (flags & 2)
+                  fCurrentDir = item;
+               else
+                  fCurrentDir = item->GetParent();
+            }
          }
       }
    }
@@ -899,7 +944,10 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
          const char *clname = (const char *)gROOT->ProcessLine(TString::Format("((TKey *)0x%lx)->GetClassName();", obj));
          if (clname) {
             TClass *cl = TClass::GetClass(clname);
-            void *add = gROOT->FindObject((char *) obj->GetName());
+            TString name = (const char *)gROOT->ProcessLine(TString::Format("((TKey *)0x%lx)->GetName();", obj));
+            name += ";";
+            name += (Short_t)gROOT->ProcessLine(TString::Format("((TKey *)0x%lx)->GetCycle();", obj));
+            void *add = gDirectory->FindObjectAny((char *) name.Data());
             if (add && cl->IsTObject()) {
                obj = (TObject*)add;
                item->SetUserData(obj);
@@ -944,8 +992,11 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
             gApplication->ProcessLine("((TApplicationServer *)gApplication)->BrowseFile(0);");
          }
       }
-      if (!obj->InheritsFrom("TObjString")) {
+      if (!obj->InheritsFrom("TObjString") ||
+          gSystem->AccessPathName(fullpath.Data())) {
+         fDblClick = kTRUE;
          obj->Browse(fBrowser);
+         fDblClick = kFALSE;
          fNKeys = 0;
          fCnt = 0;
          fListTree->ClearViewPort();
@@ -953,7 +1004,8 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
       }
    }
    flags = id = size = modtime = 0;
-   gSystem->GetPathInfo(fullpath.Data(), &id, &size, &flags, &modtime);
+   if (gSystem->GetPathInfo(fullpath.Data(), &id, &size, &flags, &modtime) != 0)
+      return;
    Int_t isdir = (Int_t)flags & 2;
 
    TString savdir = gSystem->WorkingDirectory();
@@ -1291,6 +1343,37 @@ void TGFileBrowser::GotoDir(const char *path)
    delete tokens;
    fListTree->ClearViewPort();
    fListTree->AdjustPosition(item);
+}
+
+//______________________________________________________________________________
+void TGFileBrowser::PadModified()
+{
+   // Slot used to switch to the tab containing the current pad/canvas (gPad)
+   // used e.g. when drawing a histogram by double-clicking on its list tree 
+   // item in a root file.
+
+   if (fDblClick && fNewBrowser) {
+      Int_t i;
+      TGTab *tabRight = fNewBrowser->GetTabRight();
+      for (i=0;i<tabRight->GetNumberOfTabs();++i) {
+         TGFrameElement *fe = 0;
+         TGCompositeFrame *embed = 0;
+         TGCompositeFrame *frame = tabRight->GetTabContainer(i);
+         if (frame)
+            fe = (TGFrameElement *)frame->GetList()->First();
+         if (fe)
+            embed = (TGCompositeFrame *)fe->fFrame;
+         if (embed && embed->InheritsFrom("TRootCanvas")) {
+            ULong_t canvas = gROOT->ProcessLine(TString::Format("((TRootCanvas *)0x%lx)->Canvas();",
+                                                embed));
+            if ((canvas) && (canvas == (ULong_t)gPad || 
+                canvas == (ULong_t)gPad->GetCanvas())) {
+               tabRight->SetTab(i, kTRUE);
+               break;
+            }
+         }
+      }
+   }
 }
 
 //______________________________________________________________________________

@@ -109,6 +109,8 @@ char            cxid[4];
 /*                              o o s s _ S y s                               */
 /******************************************************************************/
   
+class XrdOssCache_Group;
+class XrdOssCache_Space;
 class XrdOucMsubs;
 class XrdOucName2Name;
 class XrdOucProg;
@@ -143,14 +145,17 @@ int       Rename(const char *, const char *);
 virtual 
 int       Stage(const char *, const char *, XrdOucEnv &, int, mode_t, unsigned long long );
 void     *Stage_In(void *carg);
-int       Stat(const char *, struct stat *, int resonly=0);
+int       Stat(const char *, struct stat *, int opts=0);
 int       StatFS(const char *path, char *buff, int &blen);
 int       StatFS(const char *path, int &Opt, long long &fSize, long long &fSpace);
 int       StatLS(XrdOucEnv &env, const char *path, char *buff, int &blen);
+int       StatVS(XrdOssVSInfo *sP, const char *sname=0, int updt=0);
 int       StatXA(const char *path, char *buff, int &blen);
 int       StatXP(const char *path, unsigned long long &attr);
 int       Truncate(const char *, unsigned long long Size);
 int       Unlink(const char *, int Opts=0);
+
+int       Stats(char *bp, int bl);
 
 static int   AioInit();
 static int   AioAllOk;
@@ -209,6 +214,10 @@ XrdOucName2Name  *lcl_N2N;   // -> File mapper for local  files
 XrdOucName2Name  *rmt_N2N;   // -> File mapper for remote files
 XrdOucName2Name  *the_N2N;   // -> File mapper object
 XrdOucPListAnchor RPList;    //    The real path list
+OssDPath         *DPList;    //    The stat path list
+int               lenDP;
+short             numDP;
+short             numCG;
    
          XrdOssSys();
 virtual ~XrdOssSys() {}
@@ -246,6 +255,7 @@ int                CalcTime(XrdOssStage_Req *req);
 void               doScrub();
 int                Find(XrdOssStage_Req *req, void *carg);
 int                getCname(const char *path, struct stat *sbuff, char *cgbuff);
+int                getStats(char *buff, int blen);
 int                GetFile(XrdOssStage_Req *req);
 int                getID(const char *, XrdOucEnv &, char *, int);
 time_t             HasFile(const char *fn, const char *sfx);
@@ -258,7 +268,11 @@ int    chkDep(const char *var);
 void   ConfigMio(XrdSysError &Eroute);
 int    ConfigN2N(XrdSysError &Eroute);
 int    ConfigProc(XrdSysError &Eroute);
+void   ConfigSpace();
+void   ConfigSpace(const char *Lfn);
 int    ConfigStage(XrdSysError &Eroute);
+void   ConfigStats(XrdSysError &Eroute);
+void   ConfigStats(dev_t Devnum, char *lP);
 int    ConfigXeq(char *, XrdOucStream &, XrdSysError &);
 void   List_Path(const char *, const char *, unsigned long long, XrdSysError &);
 int    xalloc(XrdOucStream &Config, XrdSysError &Eroute);

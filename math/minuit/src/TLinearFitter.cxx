@@ -186,23 +186,24 @@ ClassImp(TLinearFitter)
 
 
 //______________________________________________________________________________
-TLinearFitter::TLinearFitter()
-   :TVirtualFitter(),
-    fParams(),
-    fParCovar(),
-    fTValues(),
-    fDesign(),
-    fDesignTemp(),
-    fDesignTemp2(),
-    fDesignTemp3(),
-    fAtb(),
-    fAtbTemp(),
-    fAtbTemp2(),
-    fAtbTemp3(),
-    fFunctions(),
-    fY(),
-    fX(),
-    fE()
+TLinearFitter::TLinearFitter() :
+TVirtualFitter(),
+   fParams(),
+   fParCovar(),
+   fTValues(),
+   fDesign(),
+   fDesignTemp(),
+   fDesignTemp2(),
+   fDesignTemp3(),
+   fAtb(),
+   fAtbTemp(),
+   fAtbTemp2(),
+   fAtbTemp3(),
+   fFunctions(),
+   fY(),
+   fX(),
+   fE(),
+   fVal()
 {
    //default c-tor, input data is stored
    //If you don't want to store the input data,
@@ -222,10 +223,13 @@ TLinearFitter::TLinearFitter()
    fStoreData =kTRUE;
    fRobust    =kFALSE;
    fNfunctions = 0;
+   fFormulaSize = 0;
+   fH = 0; 
 }
 
 //______________________________________________________________________________
-TLinearFitter::TLinearFitter(Int_t ndim)
+TLinearFitter::TLinearFitter(Int_t ndim) : 
+   fVal() 
 {
    //The parameter stands for number of dimensions in the fitting formula
    //The input data is stored. If you don't want to store the input data,
@@ -245,6 +249,8 @@ TLinearFitter::TLinearFitter(Int_t ndim)
    fStoreData=kTRUE;
    fRobust = kFALSE;
    fNfunctions = 0;
+   fFormulaSize = 0;
+   fH = 0; 
 }
 
 //______________________________________________________________________________
@@ -330,32 +336,42 @@ TLinearFitter::TLinearFitter(const TLinearFitter& tlf) :
    fAtbTemp(tlf.fAtbTemp),
    fAtbTemp2(tlf.fAtbTemp2),
    fAtbTemp3(tlf.fAtbTemp3),
-   fFunctions(tlf.fFunctions),
+   fFunctions( * (TObjArray *)tlf.fFunctions.Clone()), 
    fY(tlf.fY),
    fY2(tlf.fY2),
    fY2Temp(tlf.fY2Temp),
    fX(tlf.fX),
    fE(tlf.fE),
-   fInputFunction((TFormula*)tlf.fInputFunction->Clone()),
+   fInputFunction(tlf.fInputFunction), 
    fNpoints(tlf.fNpoints),
    fNfunctions(tlf.fNfunctions),
    fFormulaSize(tlf.fFormulaSize),
    fNdim(tlf.fNdim),
    fNfixed(tlf.fNfixed),
    fSpecial(tlf.fSpecial),
+   fFormula(0),
    fIsSet(tlf.fIsSet),
    fStoreData(tlf.fStoreData),
    fChisquare(tlf.fChisquare),
    fH(tlf.fH),
    fRobust(tlf.fRobust),
-   fFitsample(tlf.fFitsample)
+   fFitsample(tlf.fFitsample), 
+   fFixedParams(0)
 {
    // Copy ctor
 
-   fFixedParams=new Bool_t[fNfixed];
-   for(Int_t i=0; i<fNfixed; ++i) 
-      fFixedParams[i]=tlf.fFixedParams[i];
-   strcpy(fFormula,tlf.fFormula);
+   // make a deep  copy of managed objects
+   // fFormula, fFixedParams and fFunctions
+
+   if ( tlf.fFixedParams && fNfixed > 0 ) {
+      fFixedParams=new Bool_t[fNfixed];
+      for(Int_t i=0; i<fNfixed; ++i) 
+         fFixedParams[i]=tlf.fFixedParams[i];
+   }
+   if (tlf.fFormula) { 
+      fFormula = new char[fFormulaSize+1]; 
+      strcpy(fFormula,tlf.fFormula);
+   }
 
 }
 
@@ -365,15 +381,16 @@ TLinearFitter::~TLinearFitter()
 {
    // Linear fitter cleanup.
 
-   if (fFormula)
+   if (fFormula) { 
       delete [] fFormula;
-
-   fFormula = 0;
-   if (fFixedParams) delete [] fFixedParams;
-   fFixedParams = 0;
+      fFormula = 0;
+   }
+   if (fFixedParams) { 
+      delete [] fFixedParams;
+      fFixedParams = 0;
+   }
    fInputFunction = 0;
    fFunctions.Delete();
-   //delete fFunctions;
 
 }
 
@@ -384,28 +401,42 @@ TLinearFitter& TLinearFitter::operator=(const TLinearFitter& tlf)
 
    if(this!=&tlf) {
       TVirtualFitter::operator=(tlf);
-      fParams=tlf.fParams;
-      fParCovar=tlf.fParCovar;
-      fTValues=tlf.fTValues;
-      fParSign=tlf.fParSign;
-      fDesign=tlf.fDesign;
-      fDesignTemp=tlf.fDesignTemp;
-      fDesignTemp2=tlf.fDesignTemp2;
-      fDesignTemp3=tlf.fDesignTemp3;
-      fAtb=tlf.fAtb;
-      fAtbTemp=tlf.fAtbTemp;
-      fAtbTemp2=tlf.fAtbTemp2;
-      fAtbTemp3=tlf.fAtbTemp3;
-      fFixedParams=new Bool_t[tlf.fNfixed];
-      for(Int_t i=0; i<tlf.fNfixed; ++i) 
-         fFixedParams[i]=tlf.fFixedParams[i];
-      fFunctions=tlf.fFunctions;
+      fParams.ResizeTo(tlf.fParams);      fParams=tlf.fParams;
+      fParCovar.ResizeTo(tlf.fParCovar);  fParCovar=tlf.fParCovar;
+      fTValues.ResizeTo(tlf.fTValues);    fTValues=tlf.fTValues;
+      fParSign.ResizeTo(tlf.fParSign);    fParSign=tlf.fParSign;
+      fDesign.ResizeTo(tlf.fDesign);                fDesign=tlf.fDesign;
+      fDesignTemp.ResizeTo(tlf.fDesignTemp);        fDesignTemp=tlf.fDesignTemp;
+      fDesignTemp2.ResizeTo(tlf.fDesignTemp2);      fDesignTemp2=tlf.fDesignTemp2;
+      fDesignTemp3.ResizeTo(tlf.fDesignTemp3);      fDesignTemp3=tlf.fDesignTemp3;
+      fAtb.ResizeTo(tlf.fAtb);            fAtb=tlf.fAtb;
+      fAtbTemp.ResizeTo(tlf.fAtbTemp);    fAtbTemp=tlf.fAtbTemp;
+      fAtbTemp2.ResizeTo(tlf.fAtbTemp2);    fAtbTemp2=tlf.fAtbTemp2;
+      fAtbTemp3.ResizeTo(tlf.fAtbTemp3);    fAtbTemp3=tlf.fAtbTemp3;
+      
+      if (fFormula) delete [] fFormula;  
+      fFormula = 0; 
+      if (tlf.fFormula) { 
+         fFormula = new char[fFormulaSize+1]; 
+         strcpy(fFormula,tlf.fFormula);
+      }
+
+      if (fFixedParams)   delete [] fFixedParams;
+      fFixedParams = 0; 
+      if ( tlf.fFixedParams && fNfixed > 0 ) {
+         fFixedParams=new Bool_t[tlf.fNfixed];
+         for(Int_t i=0; i<tlf.fNfixed; ++i) 
+            fFixedParams[i]=tlf.fFixedParams[i];
+      }
+
+      fFunctions.Delete(); 
+      fFunctions= *(TObjArray*) tlf.fFunctions.Clone();
       fY=tlf.fY;
       fY2=tlf.fY2;
       fY2Temp=tlf.fY2Temp;
       fX=tlf.fX;
       fE=tlf.fE;
-      fInputFunction=(TFormula*)tlf.fInputFunction->Clone();
+      fInputFunction=(TFormula*)tlf.fInputFunction;
       fNpoints=tlf.fNpoints;
       fNfunctions=tlf.fNfunctions;
       fFormulaSize=tlf.fFormulaSize;
@@ -666,10 +697,10 @@ void TLinearFitter::Clear(Option_t * /*option*/)
    fNfunctions=0;
    fFormulaSize=0;
    fNdim=0;
-   delete [] fFormula;
+   if (fFormula) delete [] fFormula;
    fFormula=0;
    fIsSet=0;
-   delete [] fFixedParams;
+   if (fFixedParams) delete [] fFixedParams;
    fFixedParams=0;
 
    fChisquare=0;
@@ -1368,6 +1399,8 @@ void TLinearFitter::SetBasisFunctions(TObjArray * functions)
 {
    //set the basis functions in case the fitting function is not 
    // set directly
+   // The TLinearFitter will manage and delete the functions contained in the list
+
    fFunctions = *(functions);
    int size = fFunctions.GetEntries();
 

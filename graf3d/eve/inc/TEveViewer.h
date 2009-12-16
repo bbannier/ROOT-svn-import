@@ -35,8 +35,12 @@ private:
    TEveViewer& operator=(const TEveViewer&); // Not implemented
 
 protected:
-   TGLViewer *fGLViewer;
-   TGFrame   *fGLViewerFrame;
+   TGLViewer    *fGLViewer;
+   TGFrame      *fGLViewerFrame;
+
+   static Bool_t fgInitInternal;
+   static Bool_t fgRecreateGlOnDockOps;
+   static void   InitInternal();
 
 public:
    TEveViewer(const char* n="TEveViewer", const char* t="");
@@ -48,10 +52,11 @@ public:
    TGLViewer* GetGLViewer() const { return fGLViewer; }
    void SetGLViewer(TGLViewer* viewer, TGFrame* frame);
 
-   TGLSAViewer*       SpawnGLViewer(TGedEditor* ged);
-   TGLEmbeddedViewer* SpawnGLEmbeddedViewer(Int_t border=0);
+   TGLSAViewer*       SpawnGLViewer(TGedEditor* ged=0, Bool_t stereo=kFALSE);
+   TGLEmbeddedViewer* SpawnGLEmbeddedViewer(TGedEditor* ged=0, Int_t border=0);
 
    void Redraw(Bool_t resetCameras=kFALSE);
+   void SwitchStereo();
 
    virtual void AddScene(TEveScene* scene);
 
@@ -79,10 +84,10 @@ private:
    TEveViewerList& operator=(const TEveViewerList&); // Not implemented
 
 protected:
-   Bool_t       fShowTooltip;
+   Bool_t        fShowTooltip;
 
-   Float_t     fBrightness;
-   Bool_t      fUseLightColorSet;
+   Float_t       fBrightness;
+   Bool_t        fUseLightColorSet;
 
 public:
    TEveViewerList(const char* n="TEveViewerList", const char* t="");
@@ -106,16 +111,18 @@ public:
 
    void OnMouseOver(TGLPhysicalShape* shape, UInt_t state);
    void OnClicked(TObject *obj, UInt_t button, UInt_t state);
+   void OnReClicked(TObject *obj, UInt_t button, UInt_t state);
+   void OnUnClicked(TObject *obj, UInt_t button, UInt_t state);
 
    // --------------------------------
 
-   Bool_t GetShowTooltip()   const { return fShowTooltip; }
-   void   SetShowTooltip(Bool_t x) { fShowTooltip = x; }
+   Bool_t  GetShowTooltip()     const { return fShowTooltip; }
+   void    SetShowTooltip(Bool_t x)   { fShowTooltip = x; }
 
    Float_t GetColorBrightness() const { return fBrightness; }
-   void     SetColorBrightness(Float_t b);
+   void    SetColorBrightness(Float_t b);
   
-   Bool_t UseLightColorSet() const { return fUseLightColorSet; }
+   Bool_t  UseLightColorSet()   const { return fUseLightColorSet; }
    void    SwitchColorSet();
 
    ClassDef(TEveViewerList, 0); // List of Viewers providing common operations on TEveViewer collections.

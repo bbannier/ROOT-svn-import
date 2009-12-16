@@ -23,6 +23,7 @@
 
 #include "TError.h"
 #include "TMathBase.h"
+#include "TMath.h"
 
 #include <list>
 #include <algorithm>
@@ -64,6 +65,11 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
    fViewerStyle  (kStyleUndef),
    fSceneStyle   (kStyleUndef),
 
+   fViewerWFLineW (0),
+   fSceneWFLineW  (0),
+   fViewerOLLineW (0),
+   fSceneOLLineW  (0),
+
    fViewerClip   (0),
    fSceneClip    (0),
    fClip         (0),
@@ -81,12 +87,16 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
    fSelectBuffer (0),
 
    fColorSetStack(0),
+   fRenderScale  (1),
+
+   fEventKeySym  (0),
 
    fDLCaptureOpen (kFALSE),
    fGLCtxIdentity (0),
    fQuadric       (0),
 
    fGrabImage     (kFALSE),
+   fGrabBuffer    (-1),
    fGrabbedImage  (0)
 {
    // Constructor.
@@ -345,22 +355,6 @@ void TGLRnrCtx::CloseDLCapture()
 /******************************************************************************/
 // TGLFont interface
 /******************************************************************************/
-
-//______________________________________________________________________
-void TGLRnrCtx::RegisterFont(Int_t size, Int_t file, Int_t mode, TGLFont& out)
-{
-   // Get font in the GL rendering context.
-
-   fGLCtxIdentity->GetFontManager()->RegisterFont(size, file, (TGLFont::EMode)mode, out);
-}
-
-//______________________________________________________________________
-void TGLRnrCtx::RegisterFont(Int_t size, const char* name, Int_t mode, TGLFont& out)
-{
-   // Get font in the GL rendering context.
-
-   fGLCtxIdentity->GetFontManager()->RegisterFont(size, name, (TGLFont::EMode)mode, out);
-}
 //______________________________________________________________________
 void TGLRnrCtx::ReleaseFont(TGLFont& font)
 {
@@ -369,6 +363,39 @@ void TGLRnrCtx::ReleaseFont(TGLFont& font)
    fGLCtxIdentity->GetFontManager()->ReleaseFont(font);
 }
 
+//______________________________________________________________________
+void TGLRnrCtx::RegisterFontNoScale(Int_t size, Int_t file, Int_t mode, TGLFont& out)
+{
+   // Get font in the GL rendering context.
+
+   fGLCtxIdentity->GetFontManager()->RegisterFont( size, file, (TGLFont::EMode)mode, out);
+}
+
+//______________________________________________________________________
+void TGLRnrCtx::RegisterFontNoScale(Int_t size, const char* name, Int_t mode, TGLFont& out)
+{
+   // Get font in the GL rendering context.
+
+   fGLCtxIdentity->GetFontManager()->RegisterFont(size, name, (TGLFont::EMode)mode, out);
+}
+
+//______________________________________________________________________
+void TGLRnrCtx::RegisterFont(Int_t size, Int_t file, Int_t mode, TGLFont& out)
+{
+   // Get font in the GL rendering context.
+   // The font is scaled relative to current render scale.
+
+  RegisterFontNoScale(TMath::Nint(size*fRenderScale), file, mode, out);
+}
+
+//______________________________________________________________________
+void TGLRnrCtx::RegisterFont(Int_t size, const char* name, Int_t mode, TGLFont& out)
+{
+   // Get font in the GL rendering context.
+   // The font is scaled relative to current render scale.
+
+  RegisterFontNoScale(TMath::Nint(size*fRenderScale), name, mode, out);
+}
 
 /**************************************************************************/
 // Static helpers

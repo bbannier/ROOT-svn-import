@@ -68,7 +68,7 @@ static void G__castclass(G__value* result3, int tagnum, int castflag, int* ptype
       else {
          int store_tagnum = G__tagnum;
          G__tagnum = result3->tagnum;
-         offset = -G__find_virtualoffset(tagnum);
+         offset = -G__find_virtualoffset(tagnum, result3->obj.i);
          G__tagnum = store_tagnum;
       }
 #else // G__VIRTUALBASE
@@ -91,12 +91,13 @@ static void G__castclass(G__value* result3, int tagnum, int castflag, int* ptype
                       , "G__ulonglong") == 0 ||
                strcmp(G__struct.name[G__newtype.tagnum[result3->typenum]]
                       , "G__longdouble") == 0)))) {
-      char com[G__ONELINE], buf2[G__ONELINE];
+      G__FastAllocString com(G__ONELINE);
+      G__FastAllocString buf2(G__ONELINE);
       int known = 0;
       int store_typenum = result3->typenum;
       result3->typenum = -1;
       G__valuemonitor(*result3, buf2);
-      sprintf(com, "%s(%s)", G__fulltagname(tagnum, 1), buf2);
+      com.Format("%s(%s)", G__fulltagname(tagnum, 1), buf2());
       *result3 = G__getfunction(com, &known, G__TRYNORMAL);
       result3->typenum = store_typenum;
       return;
@@ -170,6 +171,7 @@ void G__asm_cast(int type, G__value* buf, int tagnum, int reftype)
       case 'U': {
          int offset = G__ispublicbase(buf->tagnum, tagnum, buf->obj.i);
          if (-1 != offset) buf->obj.i += offset;
+         break;
       }
       case 'u':
          if (G__PARAREFERENCE == reftype) {
@@ -179,6 +181,7 @@ void G__asm_cast(int type, G__value* buf, int tagnum, int reftype)
                buf->ref += offset;
             }
          }
+         break;
       default:
          G__letint(buf, (char)type , G__int(*buf));
          buf->ref = buf->obj.i;
@@ -298,7 +301,12 @@ G__value G__castvalue_bc(char* casttype, G__value result3, int bc)
                else {
                   int store_tagnum = G__tagnum;
                   G__tagnum = result3.tagnum;
+#ifdef G__VIRTUALBASE
+                  offset = G__find_virtualoffset(tagnum, result3.obj.i);
+
+#else // G__VIRTUALBASE
                   offset = G__find_virtualoffset(tagnum);
+#endif // G__VIRTUALBASE
                   G__tagnum = store_tagnum;
                   if (offset) {
                      result3.obj.i -= offset;
@@ -490,13 +498,13 @@ G__value G__castvalue_bc(char* casttype, G__value result3, int bc)
          --type;
    }
    if (type && 'u' == store_result.type) {
-      char ttt[G__ONELINE];
+      G__FastAllocString ttt(G__ONELINE);
       G__fundamental_conversion_operator(type , -1 , -1 , reftype, isconst
                                          , &store_result, ttt);
       return(store_result);
    }
    else if ('u' == store_result.type && strcmp(casttype, "bool") == 0) {
-      char ttt[G__ONELINE];
+      G__FastAllocString ttt(G__ONELINE);
       G__fundamental_conversion_operator(type , G__defined_tagname("bool", 2)
                                          , -1 , reftype, isconst
                                          , &store_result, ttt);
@@ -572,7 +580,7 @@ G__value G__castvalue_bc(char* casttype, G__value result3, int bc)
                }
             }
             else if ('u' == store_result.type) {
-               char ttt[G__ONELINE];
+               G__FastAllocString ttt(G__ONELINE);
                G__fundamental_conversion_operator(type, -1, result3.typenum
                                                   , reftype, isconst
                                                   , &store_result, ttt);

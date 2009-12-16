@@ -33,6 +33,27 @@
 #include "TLeafI.h"
 #include "TLeafL.h"
 
+#include <algorithm>
+
+bool TTreeCloner::CompareSeek::operator()(UInt_t i1, UInt_t i2)
+{
+   if (fObject->fBasketSeek[i1] ==  fObject->fBasketSeek[i2]) {
+      if (fObject->fBasketEntry[i1] ==  fObject->fBasketEntry[i2]) {
+         return i1 < i2;         
+      }
+      return  fObject->fBasketEntry[i1] <  fObject->fBasketEntry[i2];
+   }
+   return fObject->fBasketSeek[i1] <  fObject->fBasketSeek[i2];
+}
+
+bool TTreeCloner::CompareEntry::operator()(UInt_t i1, UInt_t i2)
+{
+   if (fObject->fBasketEntry[i1] ==  fObject->fBasketEntry[i2]) {
+      return i1 < i2;         
+   }
+   return  fObject->fBasketEntry[i1] <  fObject->fBasketEntry[i2];
+}
+
 TTreeCloner::TTreeCloner(TTree *from, TTree *to, Option_t *method, UInt_t options) :
    fWarningMsg(),
    fIsValid(kTRUE),
@@ -287,7 +308,7 @@ UInt_t TTreeCloner::CollectBranches(TObjArray *from, TObjArray *to)
            fi = 0;
          }
       } else {
-         fWarningMsg.Form("One of the export branch (%s) is not present in the import TTree.",
+         fWarningMsg.Form("One of the export branches (%s) is not present in the import TTree.",
                           tb->GetName());
          if (!(fOptions & kNoWarnings)) {
             Error("TTreeCloner::CollectBranches",fWarningMsg.Data());
@@ -307,6 +328,9 @@ UInt_t TTreeCloner::CollectBranches()
 
    // Since this is called from the constructor, this can not be a virtual function
 
+   if (!fFromTree || !fToTree) {
+      return 0;
+   }
    UInt_t numBasket = CollectBranches(fFromTree->GetListOfBranches(),
                                       fToTree->GetListOfBranches());
 
@@ -330,6 +354,7 @@ void TTreeCloner::CollectBaskets()
          fBasketBranchNum[bi] = i;
          fBasketNum[bi] = b;
          fBasketSeek[bi] = from->GetBasketSeek(b);
+         //fprintf(stderr,"For %s %d %lld\n",from->GetName(),bi,fBasketSeek[bi]);
          fBasketEntry[bi] = from->GetBasketEntry()[b];
          fBasketIndex[bi] = bi;
       }
@@ -362,14 +387,14 @@ void TTreeCloner::CopyStreamerInfos()
                curInfo = matchInfo;
             }
          }
-         curInfo->TagFile(toFile);
+         curInfo->ForceWriteInfo(toFile);
       } else {
          // If there is no default constructor the GetStreamerInfo
          // will not work. It also means (hopefully) that an
          // inheriting class has a streamerInfo in the list (which
          // will induces the setting of this streamerInfo)
 
-         oldInfo->TagFile(toFile);
+         oldInfo->ForceWriteInfo(toFile);
       }
    }
    delete l;
@@ -463,13 +488,17 @@ void TTreeCloner::SortBaskets()
       case kSortBasketsByBranch:
          // nothing to do, it is already sorted.
          break;
-      case kSortBasketsByEntry:
-         TMath::Sort( fMaxBaskets, fBasketEntry, fBasketIndex, kFALSE );
+      case kSortBasketsByEntry: {
+         for(UInt_t i = 0; i < fMaxBaskets; ++i) { fBasketIndex[i] = i; }
+         std::sort(fBasketIndex, fBasketIndex+fMaxBaskets, CompareEntry( this) );
          break;
+      }
       case kSortBasketsByOffset:
-      default:
-         TMath::Sort( fMaxBaskets, fBasketSeek, fBasketIndex, kFALSE );
+      default: {
+         for(UInt_t i = 0; i < fMaxBaskets; ++i) { fBasketIndex[i] = i; }
+         std::sort(fBasketIndex, fBasketIndex+fMaxBaskets, CompareSeek( this) );
          break;
+      }
    }
 }
 

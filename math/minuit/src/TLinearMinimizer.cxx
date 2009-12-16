@@ -68,6 +68,8 @@ ClassImp(TLinearMinimizer)
 TLinearMinimizer::TLinearMinimizer(int ) : 
    fRobust(false), 
    fDim(0),
+   fNFree(0),
+   fMinVal(0),
    fObjFunc(0),
    fFitter(0)
 {
@@ -78,6 +80,8 @@ TLinearMinimizer::TLinearMinimizer(int ) :
 TLinearMinimizer::TLinearMinimizer ( const char * type ) : 
    fRobust(false),
    fDim(0),
+   fNFree(0),
+   fMinVal(0),
    fObjFunc(0),
    fFitter(0)
 {
@@ -114,7 +118,7 @@ TLinearMinimizer & TLinearMinimizer::operator = (const TLinearMinimizer &rhs)
 void TLinearMinimizer::SetFunction(const  ROOT::Math::IMultiGenFunction & ) { 
    // Set function to be minimized. Flag an error since only support Gradient objective functions
 
-   Error("SetFunction1","Wrong type of function used for Linear fitter");
+   Error("TLinearMinimizer::SetFunction(IMultiGenFunction)","Wrong type of function used for Linear fitter");
 }
 
 
@@ -125,7 +129,7 @@ void TLinearMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & objfu
    typedef ROOT::Fit::Chi2FCN<ROOT::Math::IMultiGradFunction> Chi2Func; 
    const Chi2Func * chi2func = dynamic_cast<const Chi2Func *>(&objfunc); 
    if (chi2func ==0) { 
-      Error("SetFunction2","Wrong type of function used for Linear fitter");
+      Error("TLinearMinimizer::SetFunction(IMultiGradFunction)","Wrong type of function used for Linear fitter");
       return; 
    }
    fObjFunc = chi2func;
@@ -141,7 +145,7 @@ void TLinearMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & objfu
    for (unsigned int i = 0; i < fDim; ++i) { 
       // t.b.f: should not create TF1 classes
       // when creating TF1 (if onother function with same name exists it is 
-      // deleted since it is added in funciton list in gROOT 
+      // deleted since it is added in function list in gROOT 
       // fix the problem using meaniful names (difficult to re-produce)
       BasisFunction<const ModelFunc> bf(modfunc,i); 
       TUUID u; 

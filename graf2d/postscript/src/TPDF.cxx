@@ -70,10 +70,23 @@ TPDF::TPDF() : TVirtualPS()
 {
    // Default PDF constructor
 
-   fStream    = 0;
-   fType      = 0;
-   fCompress  = kFALSE;
-   gVirtualPS = this;
+   fStream          = 0;
+   fCompress        = kFALSE;
+   gVirtualPS       = this;
+   fRed             = 0.;
+   fGreen           = 0.;
+   fBlue            = 0.;
+   fXsize           = 0.;
+   fYsize           = 0.;
+   fType            = 0;
+   fPageFormat      = 0;
+   fPageOrientation = 0;
+   fStartStream     = 0;
+   fLineScale       = 0.;
+   fObjPosSize      = 0;
+   fNbObj           = 0;
+   fNbPage          = 0;
+   fRange           = kFALSE;
 }
 
 
@@ -88,8 +101,22 @@ TPDF::TPDF(const char *fname, Int_t wtype) : TVirtualPS(fname, wtype)
    //          necessary to specify this parameter at creation time because it
    //          has a default value (which is ignore in the PDF case).
 
-   fStream   = 0;
-   fCompress = kFALSE;
+   fStream          = 0;
+   fCompress        = kFALSE;
+   fRed             = 0.;
+   fGreen           = 0.;
+   fBlue            = 0.;
+   fXsize           = 0.;
+   fYsize           = 0.;
+   fType            = 0;
+   fPageFormat      = 0;
+   fPageOrientation = 0;
+   fStartStream     = 0;
+   fLineScale       = 0.;
+   fObjPosSize      = 0;
+   fNbObj           = 0;
+   fNbPage          = 0;
+   fRange           = kFALSE;
    Open(fname, wtype);
 }
 
@@ -2009,8 +2036,16 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
       t.SetTextSize(fTextSize);
       t.SetTextFont(fTextFont);
       t.GetTextExtent(w, h, chars);
-      if(txalh == 2) x = x - (gPad->AbsPixeltoX(w)-gPad->AbsPixeltoX(0))/2;
-      if(txalh == 3) x = x - (gPad->AbsPixeltoX(w)-gPad->AbsPixeltoX(0));
+      Double_t twx = gPad->AbsPixeltoX(w)-gPad->AbsPixeltoX(0);
+      Double_t twy = gPad->AbsPixeltoY(0)-gPad->AbsPixeltoY(w);
+      if(txalh == 2){
+         x = x-(twx/2)*TMath::Cos(kDEGRAD*fTextAngle);
+         y = y-(twy/2)*TMath::Sin(kDEGRAD*fTextAngle);
+      }
+      if(txalh == 3){
+         x = x-twx*TMath::Cos(kDEGRAD*fTextAngle);
+         y = y-twy*TMath::Sin(kDEGRAD*fTextAngle);
+      }
    }
 
    // Text angle

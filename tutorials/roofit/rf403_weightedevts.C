@@ -17,12 +17,14 @@
 #include "RooDataSet.h"
 #include "RooDataHist.h"
 #include "RooGaussian.h"
+#include "RooConstVar.h"
 #include "RooFormulaVar.h"
 #include "RooGenericPdf.h"
 #include "RooPolynomial.h"
 #include "RooChi2Var.h"
 #include "RooMinuit.h"
 #include "TCanvas.h"
+#include "TAxis.h"
 #include "RooPlot.h"
 #include "RooFitResult.h"
 using namespace RooFit ;
@@ -57,11 +59,11 @@ void rf403_weightedevts()
   // Dataset d is now a dataset with two observable (x,w) with 1000 entries
   data->Print() ;
 
-  // Instruct dataset d in interpret w as event weight rather than as observable
-  data->setWeightVar(*w) ;
+  // Instruct dataset wdata in interpret w as event weight rather than as observable
+  RooDataSet wdata(data->GetName(),data->GetTitle(),data,*data->get(),0,w->GetName()) ;
 
   // Dataset d is now a dataset with one observable (x) with 1000 entries and a sum of weights of ~430K
-  data->Print() ;
+  wdata.Print() ;
 
 
 
@@ -76,12 +78,27 @@ void rf403_weightedevts()
 
   // Fit quadratic polynomial to weighted data
 
-  // NOTE: Maximum likelihood fit to weighted data does in general 
+  // NOTE: A plain Maximum likelihood fit to weighted data does in general 
   //       NOT result in correct error estimates, unless individual
   //       event weights represent Poisson statistics themselves.
-  //       In general, parameter error reflect precision of SumOfWeights
-  //       events rather than NumEvents events. See comparisons below
-  RooFitResult* r_ml_wgt = p2.fitTo(*data,Save()) ;
+  //       
+  // Fit with 'wrong' errors
+  RooFitResult* r_ml_wgt = p2.fitTo(wdata,Save()) ;
+  
+  // A first order correction to estimated parameter errors in an 
+  // (unbinned) ML fit can be obtained by calculating the
+  // covariance matrix as
+  //
+  //    V' = V C-1 V
+  //
+  // where V is the covariance matrix calculated from a fit
+  // to -logL = - sum [ w_i log f(x_i) ] and C is the covariance
+  // matrix calculated from -logL' = -sum [ w_i^2 log f(x_i) ] 
+  // (i.e. the weights are applied squared)
+  //
+  // A fit in this mode can be performed as follows:
+
+  RooFitResult* r_ml_wgt_corr = p2.fitTo(wdata,Save(),SumW2Error(kTRUE)) ;
 
 
 
@@ -92,7 +109,7 @@ void rf403_weightedevts()
   RooPlot* frame = x.frame(Title("Unbinned ML fit, binned chi^2 fit to weighted data")) ;
 
   // Plot data using sum-of-weights-squared error rather than Poisson errors
-  data->plotOn(frame,DataError(RooAbsData::SumW2)) ;
+  wdata.plotOn(frame,DataError(RooAbsData::SumW2)) ;
 
   // Overlay result of 2nd order polynomial fit to weighted data
   p2.plotOn(frame) ;
@@ -120,7 +137,7 @@ void rf403_weightedevts()
   // ------------------------------------------------------------------------------------
 
   // Construct binned clone of unbinned weighted dataset
-  RooDataHist* binnedData = data->binnedClone() ;
+  RooDataHist* binnedData = wdata.binnedClone() ;
   binnedData->Print("v") ;
 
   // Perform chi2 fit to binned weighted dataset using sum-of-weights errors
@@ -152,12 +169,14 @@ void rf403_weightedevts()
   r_ml_unw43->Print() ;
   cout << "==> ML Fit results on 1K weighted events with a summed weight of 43K" << endl ;
   r_ml_wgt->Print() ;
+  cout << "==> Corrected ML Fit results on 1K weighted events with a summed weight of 43K" << endl ;
+  r_ml_wgt_corr->Print() ;
   cout << "==> Chi2 Fit results on 1K weighted events with a summed weight of 43K" << endl ;
   r_chi2_wgt->Print() ;
 
 
   new TCanvas("rf403_weightedevts","rf403_weightedevts",600,600) ;
-  frame->Draw() ;
+  gPad->SetLeftMargin(0.15) ; frame->GetYaxis()->SetTitleOffset(1.8) ; frame->Draw() ;
 
 
 }

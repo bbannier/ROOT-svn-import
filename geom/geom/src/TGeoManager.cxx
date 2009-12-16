@@ -771,7 +771,7 @@ TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
 //_____________________________________________________________________________
 TGeoManager::~TGeoManager()
 {
-// Destructor
+//   Destructor
    if (gGeoManager != this) gGeoManager = this;
 
    if (gROOT->GetListOfFiles()) { //in case this function is called from TROOT destructor
@@ -784,29 +784,28 @@ TGeoManager::~TGeoManager()
 //   while ((browser=(TBrowser*)next())) browser->RecursiveRemove(this);
    delete TGeoBuilder::Instance(this);
    if (fBits)  delete [] fBits;
-   if (fNodes) delete fNodes;
-   if (fTopNode) delete fTopNode;
-   if (fOverlaps) {fOverlaps->Delete(); delete fOverlaps;}
-   if (fMaterials) {fMaterials->Delete(); delete fMaterials;}
-   if (fElementTable) delete fElementTable;
-   if (fMedia) {fMedia->Delete(); delete fMedia;}
-   if (fHashVolumes) delete fHashVolumes;
-   if (fHashGVolumes) delete fHashGVolumes;
-   if (fHashPNE) {fHashPNE->Delete(); delete fHashPNE;}
-   if (fVolumes) {fVolumes->Delete(); delete fVolumes;}
-   fVolumes = 0;
-   if (fShapes) {fShapes->Delete(); delete fShapes;}
-   if (fPhysicalNodes) {fPhysicalNodes->Delete(); delete fPhysicalNodes;}
-   if (fMatrices) {fMatrices->Delete(); delete fMatrices;}
-   if (fTracks) {fTracks->Delete(); delete fTracks;}
-   if (fUniqueVolumes) delete fUniqueVolumes;
-   if (fPdgNames) {fPdgNames->Delete(); delete fPdgNames;}
-   if (fNavigators) {fNavigators->Delete(); delete fNavigators;}
+   SafeDelete(fNodes);
+   SafeDelete(fTopNode);
+   if (fOverlaps) {fOverlaps->Delete(); SafeDelete(fOverlaps);}
+   if (fMaterials) {fMaterials->Delete(); SafeDelete(fMaterials);}
+   SafeDelete(fElementTable);
+   if (fMedia) {fMedia->Delete(); SafeDelete(fMedia);}
+   SafeDelete(fHashVolumes);
+   SafeDelete(fHashGVolumes);
+   if (fHashPNE) {fHashPNE->Delete(); SafeDelete(fHashPNE);}
+   if (fVolumes) {fVolumes->Delete(); SafeDelete(fVolumes);}
+   if (fShapes) {fShapes->Delete(); SafeDelete( fShapes );}
+   if (fPhysicalNodes) {fPhysicalNodes->Delete(); SafeDelete( fPhysicalNodes );}
+   if (fMatrices) {fMatrices->Delete(); SafeDelete( fMatrices );}
+   if (fTracks) {fTracks->Delete(); SafeDelete( fTracks );}
+   SafeDelete( fUniqueVolumes );
+   if (fPdgNames) {fPdgNames->Delete(); SafeDelete( fPdgNames );}
+   if (fNavigators) {fNavigators->Delete(); SafeDelete( fNavigators );}
    CleanGarbage();
-   if (fPainter) delete fPainter;
+   SafeDelete( fPainter ); 
    delete [] fDblBuffer;
    delete [] fIntBuffer;
-   delete fGLMatrix;
+   SafeDelete( fGLMatrix ); 
    if (fSizePNEId) {
       delete [] fKeyPNEId;
       delete [] fValuePNEId;
@@ -3480,17 +3479,11 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
    } else {
       // import from a root file
       TFile *old = gFile;
-      Bool_t modified_cachedir = kFALSE;
-      TString cachedir = TFile::GetCacheFileDir();
       // in case a web file is specified, use the cacheread option to cache
-      // this file in the local directory
+      // this file in the cache directory
       TFile *f = 0;
-      if (strstr(filename,"http://")) {
-         TFile::SetCacheFileDir(".");
-         modified_cachedir = kTRUE;
-         f = TFile::Open(filename,"CACHEREAD");
-      } else
-         f = TFile::Open(filename);
+      if (strstr(filename,"http")) f = TFile::Open(filename,"CACHEREAD");
+      else                         f = TFile::Open(filename);
       if (!f || f->IsZombie()) {
          if (old) old->cd();
          ::Error("TGeoManager::Import", "Cannot open file");
@@ -3508,7 +3501,6 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
          }
       }
       if (old) old->cd();
-      if (modified_cachedir) TFile::SetCacheFileDir(cachedir.Data());
       delete f;
    }
    if (!gGeoManager) return 0;

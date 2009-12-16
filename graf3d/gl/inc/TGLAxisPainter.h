@@ -41,7 +41,7 @@ private:
    Int_t fExp;
    Int_t fMaxDigits;
    Int_t fDecimals;
-   char  fFormat[8];
+   TString fFormat;
 
    // Font derived from axis attributes.
    TGLFont fLabelFont;
@@ -53,6 +53,7 @@ private:
 
 protected:
    TAttAxis        *fAttAxis;    // Model.
+   Bool_t           fUseAxisColors; // Use colors from axes or from GL-rnr-ctx.
    TGLFont::EMode   fFontMode;   // To be put into TAttAxis
    LabVec_t         fLabVec;     // List of Labels position-value pairs
    TMVec_t          fTMVec;      // List of tick-mark position-value pairs
@@ -72,7 +73,8 @@ protected:
    Double_t fTitle3DFontSize;
 
    // Labels options. Allready exist in TAttAxis, but can't be set.
-   TGLFont::ETextAlign_e fLabelAlign;
+   TGLFont::ETextAlignH_e fLabelAlignH;
+   TGLFont::ETextAlignV_e fLabelAlignV;
    TGLVector3 fTitlePos;
 
 public:
@@ -98,14 +100,16 @@ public:
    TGLVector3&  RefTitlePos() { return fTitlePos; }
 
 
-   TGLFont::ETextAlign_e GetLabelAlign() const { return fLabelAlign; }
-   void         SetLabelAlign(TGLFont::ETextAlign_e x) { fLabelAlign = x; }
+   void         SetLabelAlign(TGLFont::ETextAlignH_e, TGLFont::ETextAlignV_e);
 
    LabVec_t& RefLabVec() { return fLabVec; }
    TMVec_t&  RefTMVec()  { return fTMVec; }
 
    void      SetAttAxis(TAttAxis* a) { fAttAxis = a; }
    TAttAxis* GetAttAxis() { return fAttAxis; }
+
+   void   SetUseAxisColors(Bool_t x) { fUseAxisColors = x;    }
+   Bool_t GetUseAxisColors() const   { return fUseAxisColors; }
 
    // Utility.
    void SetLabelFont(TGLRnrCtx &rnrCtx, const char* fontName, Int_t pixelSize = 64, Double_t font3DSize = -1);
@@ -114,8 +118,8 @@ public:
    void SetTextFormat(Double_t min, Double_t max, Double_t binWidth);
 
    // Renderers.
-   void RnrText (const char* txt, const TGLVector3 &pos, const TGLFont::ETextAlign_e align, const TGLFont &font) const;
-   void RnrTitle(const char* title, TGLVector3 &pos, TGLFont::ETextAlign_e align) const;
+   void RnrText (const TString &txt, const TGLVector3 &pos, TGLFont::ETextAlignH_e aH, TGLFont::ETextAlignV_e aV, const TGLFont &font) const;
+   void RnrTitle(const TString &title, TGLVector3 &pos, TGLFont::ETextAlignH_e aH, TGLFont::ETextAlignV_e aV) const;
    void RnrLabels() const;
    void RnrLines() const;
 

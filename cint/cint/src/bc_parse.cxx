@@ -63,15 +63,38 @@ void G__gototable::resolve(G__bc_inst& inst) {
 /***********************************************************************
  * G__blockscope::G__blockscope()
  ***********************************************************************/
-G__blockscope::G__blockscope() {
+G__blockscope::G__blockscope():
+   m_ifunc(0),
+   m_iexist(-1),
+   m_var(0),
+   store_p_local(0),
+   m_preader(0),
+   isvirtual(0),
+   isstatic(0),
+   m_pcasetable(0),
+   m_pbreaktable(0),
+   m_pcontinuetable(0),
+   m_pgototable(0)
+{
   // do nothing, should be initialized later by Init()
-  m_var = 0;
 }
 
 /***********************************************************************
  * G__blockscope::G__blockscope()
  ***********************************************************************/
-G__blockscope::G__blockscope(G__blockscope* enclosing) {
+G__blockscope::G__blockscope(G__blockscope* enclosing):
+   m_ifunc(0),
+   m_iexist(-1),
+   m_var(0),
+   store_p_local(0),
+   m_preader(0),
+   isvirtual(0),
+   isstatic(0),
+   m_pcasetable(0),
+   m_pbreaktable(0),
+   m_pcontinuetable(0),
+   m_pgototable(0)
+{
   Init(enclosing);
 }
 
@@ -315,7 +338,7 @@ G__value G__blockscope::compile_expression(string& expr) {
   G__currentscope = store_scope;
   G__var_type = store_var_type;
   stdclear(expr);
-  delete buf;
+  delete [] buf;
   return(x);
 }
 
@@ -358,7 +381,7 @@ int G__blockscope::getstaticvalue(string& expr) {
   G__asm_noverflow = 0;
   G__no_exec_compile = 0;
   int result = G__int(G__getexpr(buf)); // legacy
-  delete buf;
+  delete [] buf;
   G__no_exec_compile = store_no_exec_compile;
   G__asm_noverflow = store_asm_noverflow;
   return(result);
@@ -1774,13 +1797,13 @@ int G__blockscope::initstruct(G__TypeReader& type, struct G__var_array* var, int
     //        of the data members should be tested for example.
     G__fprinterr(G__serr, "Error: %s must be initialized by constructor", type.Name());
     G__genericerror(0);
-    int c = G__fignorestream("}");
+    int c1 = G__fignorestream("}");
     //  type var1[N] = { 0, 1, 2.. }  , ... ;
     // came to                      ^
-    c = G__fignorestream(",;");
+    c1 = G__fignorestream(",;");
     //  type var1[N] = { 0, 1, 2.. } , ... ;
     // came to                        ^  or ^
-    return c;
+    return c1;
   }
   int number_of_dimensions = var->paran[varid];
   int& num_of_elements = var->varlabel[varid][1];
@@ -1827,10 +1850,10 @@ int G__blockscope::initstruct(G__TypeReader& type, struct G__var_array* var, int
   int mparen = 1;
   int linear_index = -1;
   buf.obj.i = var->p[varid] + memvar->p[memindex];
-  char expr[G__ONELINE];
+  G__FastAllocString expr(G__ONELINE);
   while (mparen) {
     // -- Read the next initializer value.
-    int c = G__fgetstream(expr, ",{}");
+    int c1 = G__fgetstream(expr, 0, ",{}");
     if (expr[0]) {
       // -- We have an initializer expression.
       // FIXME: Do we handle a string literal correctly here?
@@ -1847,13 +1870,13 @@ int G__blockscope::initstruct(G__TypeReader& type, struct G__var_array* var, int
           // -- Fixed-size array, error, array index out of range.
 	  G__fprinterr(G__serr, "Error: %s: %d: Array initialization out of range *(%s+%d), upto %d ", __FILE__, __LINE__, type.Name(), linear_index, num_of_elements);
 	  G__genericerror(0);
-          while (mparen-- && (c != ';')) {
-            c = G__fignorestream("};");
+          while (mparen-- && (c1 != ';')) {
+            c1 = G__fignorestream("};");
           }
-          if (c != ';') {
-            c = G__fignorestream(";");
+          if (c1 != ';') {
+            c1 = G__fignorestream(";");
           }
-          return c;
+          return c1;
 	}
       }
       // Loop over the data members and initialize them.
@@ -1871,20 +1894,20 @@ int G__blockscope::initstruct(G__TypeReader& type, struct G__var_array* var, int
         m_bc_inst.LETNEWVAL();
         // Move to next data member.
 	memvar = G__incmemvar(memvar, &memindex, &buf);
-        if ((c == '}') || !memvar) {
+        if ((c1 == '}') || !memvar) {
           // -- All done if no more data members, or end of list.
           // FIXME: We are not handling nesting of braces properly.
           //        We need to default initialize the rest of the members.
           break;
         }
         // Get next initializer expression.
-        c = G__fgetstream(expr, ",{}");
+        c1 = G__fgetstream(expr, 0, ",{}");
       } while (memvar);
       // Reset back to the beginning of the data member list.
       memvar = G__initmemvar(var->p_tagtable[varid], &memindex, &buf);
     }
     // Change parser state for next initializer expression.
-    switch (c) {
+    switch (c1) {
       case '{':
         // -- Increment nesting level.
         ++mparen;
@@ -1924,7 +1947,7 @@ int G__blockscope::initscalarary(G__TypeReader& /*type*/, struct G__var_array* v
   // int   ary[]  = { 1,2,3 };
   // int   ary[n] = { 1,2,3 };
   //               ^
-  char expr[G__ONELINE];
+  G__FastAllocString expr(G__ONELINE);
   int& num_of_elements = var->varlabel[ig15][1];
   const int& stride = var->varlabel[ig15][0];
   // Check for an unspecified length array declaration.
@@ -1972,7 +1995,7 @@ int G__blockscope::initscalarary(G__TypeReader& /*type*/, struct G__var_array* v
   //
   // Read initialization list.
   //
-  c = G__fgetstream(expr, ",;{}");
+  c = G__fgetstream(expr, 0, ",;{}");
   if (c == ';') {
     // -- Should be a one-dimensional character array.
     // char  ary[] =  "abc";  
@@ -2002,7 +2025,7 @@ int G__blockscope::initscalarary(G__TypeReader& /*type*/, struct G__var_array* v
   int stringflag = 0;
   while (mparen) {
     // -- Get next initializer expression.
-    c = G__fgetstream(expr, ",{}");
+     c = G__fgetstream(expr, 0, ",{}");
     if (expr[0]) {
       // -- We got an initializer expression.
       if ((var->type[ig15] == 'c') && (expr[0] == '"')) {
@@ -2558,7 +2581,7 @@ int G__blockscope::Istypename(const string& name) {
     G__genericerror((char*)NULL);
   }
   int result=G__istypename(buf); // legacy
-  delete buf;
+  delete [] buf;
  return(result);
 }
 
@@ -2579,14 +2602,14 @@ long G__blockscope::getstaticobject(const string& varname
 				    ,int noerror) {
   // todo, This implementation is not exactly correct in a sense that
   // static objects do not have block scope.
-  char temp[G__ONELINE];
+  G__FastAllocString temp(G__ONELINE);
   int hash,i;
   struct G__var_array *var;
 
   if(-1!=ifunc->tagnum) 
-    sprintf(temp,"%s\\%x\\%x\\%x",varname.c_str(),ifunc->page,ifn,ifunc->tagnum);
+     temp.Format("%s\\%x\\%x\\%x",varname.c_str(),ifunc->page,ifn,ifunc->tagnum);
   else
-    sprintf(temp,"%s\\%x\\%x" ,varname.c_str(),ifunc->page,ifn);
+     temp.Format("%s\\%x\\%x" ,varname.c_str(),ifunc->page,ifn);
 
   G__hash(temp,hash,i)
   var = &G__global;
@@ -2602,7 +2625,7 @@ long G__blockscope::getstaticobject(const string& varname
   } while(var);
 
   if(!noerror) {
-    G__fprinterr(G__serr,"Error: No memory for static object %s ",temp);
+     G__fprinterr(G__serr,"Error: No memory for static object %s ",temp());
     G__genericerror((char*)NULL); //legacy
   }
   return(0);
@@ -2644,7 +2667,7 @@ int G__blockscope::conversionopr(G__value& result,struct G__var_array* var
 				 ,int ig15,int vartype,int paran) {
   if('u'==result.type) {
     // look for result_type::operator[target_type]();
-    G__value target;
+    G__value target = G__null;
     target.type = var->type[ig15];
     target.tagnum = var->p_tagtable[ig15];
     target.typenum = -1;

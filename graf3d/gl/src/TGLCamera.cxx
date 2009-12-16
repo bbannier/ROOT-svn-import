@@ -570,7 +570,7 @@ Bool_t TGLCamera::OfInterest(const TGLBoundingBox & box, Bool_t ignoreSize) cons
    // interest box, made from a properly setup camera frustum - catch
    // 22.
    //
-   // To overcome this we track the largest box volume seen so far and
+   // To overcome this we track the largest box diagonal seen so far and
    // regard anything over 0.001 of this as 'of interest'. This enables
    // us to get a roughly populated scene with largest objects, setup
    // the camera, and do first draw.  We then do a
@@ -579,9 +579,9 @@ Bool_t TGLCamera::OfInterest(const TGLBoundingBox & box, Bool_t ignoreSize) cons
    // finally setup camera properly.
 
    if (fInterestBox.IsEmpty()) {
-      if (box.Volume() >= fLargestSeen * 0.001) {
-         if (box.Volume() > fLargestSeen) {
-            fLargestSeen = box.Volume();
+      if (box.Diagonal() >= fLargestSeen * 0.001) {
+         if (box.Diagonal() > fLargestSeen) {
+            fLargestSeen = box.Diagonal();
          }
          interest = kTRUE;
       }
@@ -673,7 +673,8 @@ void TGLCamera::ResetInterest()
    // Clear out the existing interest box
    fInterestBox.SetEmpty();
 
-   // We also reset the bootstrapping variable - see TGLCamera::OfInterest comments
+   // We also reset the bootstrapping variable - see
+   // TGLCamera::OfInterest comments.
    fLargestSeen = 0.0;
 }
 
@@ -826,6 +827,23 @@ void TGLCamera::SetCenterVec(Double_t x, Double_t y, Double_t z)
    fCamBase.SetBaseVec(4, *fCenter);
    TGLMatrix binv = fCamBase; binv.Invert();
    fCamTrans = binv * bt;
+
+   IncTimeStamp();
+}
+
+//______________________________________________________________________________
+void TGLCamera::SetCenterVecWarp(Double_t x, Double_t y, Double_t z)
+{
+   // Set camera center vector and do not keep the same combined
+   // camera transformation matrix.
+   // It appears as if the camera warped to the new center.
+
+   if (fExternalCenter)
+      fExtCenter.Set(x, y, z);
+   else
+      fDefCenter.Set(x, y, z);
+
+   fCamBase.SetBaseVec(4, *fCenter);
 
    IncTimeStamp();
 }

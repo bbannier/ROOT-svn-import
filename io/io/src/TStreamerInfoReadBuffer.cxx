@@ -102,12 +102,14 @@
    {                                             \
       name dummy;                                \
       DOLOOP { b.ReadFloat16(&dummy,aElement); } \
+      break;                                     \
    }
 
 #define SkipCDouble32(name)                      \
    {                                             \
       name dummy;                                \
       DOLOOP { b.ReadDouble32(&dummy,aElement); }\
+      break;                                     \
    }
 
 #define SkipCBasicArray(name,ReadArrayFunc)              \
@@ -133,7 +135,8 @@
          Char_t isArray;                                                  \
          DOLOOP {                                                         \
             b >> isArray;                                                 \
-            Int_t *l = (addCounter==-1) ? (Int_t*)(arr[k]+imethod) : &addCounter;  \
+            char *arr_k = arr[k];                                         \
+            Int_t *l = (addCounter==-1 && arr_k) ? (Int_t*)(arr_k+imethod) : &addCounter;  \
             if (*l>0) {                                                   \
                name* readbuf = new name[*l];                              \
                for (int j=0;j<len;j++)                                    \
@@ -989,7 +992,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
          case TStreamerInfo::kObjectp: // Class*      derived from TObject with    comment field  //->
          case TStreamerInfo::kObjectp+TStreamerInfo::kOffsetL:
             isPreAlloc = 1;
-
+            // Intentional fallthrough now that isPreAlloc is set.
          case TStreamerInfo::kObjectP: // Class* derived from TObject with no comment field NOTE: Re-added by Phil
          case TStreamerInfo::kObjectP+TStreamerInfo::kOffsetL:
          case TStreamerInfo::kAnyP:    // Class*  not derived from TObject with no comment field NOTE:: Re-added by Phil
@@ -1709,7 +1712,7 @@ template Int_t TStreamerInfo::ReadBufferSkip<char**>(TBuffer &b, char** const &a
 template Int_t TStreamerInfo::ReadBufferSkip<TVirtualCollectionProxy>(TBuffer &b, const TVirtualCollectionProxy &arr, Int_t i, Int_t kase,
                                        TStreamerElement *aElement, Int_t narr,
                                        Int_t eoffset);
-   template Int_t TStreamerInfo::ReadBufferSkip<TStreamerInfo::TPointerCollectionAdapter>(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t i, Int_t kase,
+template Int_t TStreamerInfo::ReadBufferSkip<TStreamerInfo::TPointerCollectionAdapter>(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t i, Int_t kase,
                                        TStreamerElement *aElement, Int_t narr,
                                        Int_t eoffset);
 template Int_t TStreamerInfo::ReadBufferSkip<TVirtualArray>(TBuffer &b, const TVirtualArray &arr, Int_t i, Int_t kase,

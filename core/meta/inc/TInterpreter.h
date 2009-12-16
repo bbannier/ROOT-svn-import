@@ -83,6 +83,8 @@ public:
    virtual Long_t   ProcessLine(const char *line, EErrorCode *error = 0) = 0;
    virtual Long_t   ProcessLineSynch(const char *line, EErrorCode *error = 0) = 0;
    virtual void     PrintIntro() = 0;
+   virtual void     SetGetline(char*(*getlineFunc)(const char* prompt),
+                               void (*histaddFunc)(char* line)) = 0;
    virtual void     Reset() = 0;
    virtual void     ResetAll() = 0;
    virtual void     ResetGlobals() = 0;
@@ -94,7 +96,7 @@ public:
    virtual void     UpdateListOfGlobalFunctions() = 0;
    virtual void     UpdateListOfTypes() = 0;
    virtual void     SetClassInfo(TClass *cl, Bool_t reload = kFALSE) = 0;
-   virtual Bool_t   CheckClassInfo(const char *name) = 0;
+   virtual Bool_t   CheckClassInfo(const char *name, Bool_t autoload = kTRUE) = 0;
    virtual Long_t   Calc(const char *line, EErrorCode* error = 0) = 0;
    virtual void     CreateListOfBaseClasses(TClass *cl) = 0;
    virtual void     CreateListOfDataMembers(TClass *cl) = 0;

@@ -261,6 +261,21 @@ void TGLBoundingBox::MergeAligned(const TGLBoundingBox & other)
 }
 
 //______________________________________________________________________________
+void TGLBoundingBox::ExpandAligned(const TGLVertex3 & point)
+{
+   // Expand current bbox so that it includes the point.
+   // This make the bbox axis-aligned.
+
+   TGLVertex3 low (MinAAVertex());
+   TGLVertex3 high(MaxAAVertex());
+
+   low .Minimum(point);
+   high.Maximum(point);
+
+   SetAligned(low, high);
+}
+
+//______________________________________________________________________________
 void TGLBoundingBox::Scale(Double_t factor)
 {
    // Isotropically scale bounding box along it's LOCAL axes, preserving center
@@ -724,6 +739,7 @@ Double_t TGLBoundingBox::Max(UInt_t index) const
    return max;
 }
 
+//______________________________________________________________________________
 TGLVertex3 TGLBoundingBox::MinAAVertex() const
 {
    // Find minimum vertex values.
@@ -731,6 +747,7 @@ TGLVertex3 TGLBoundingBox::MinAAVertex() const
    return TGLVertex3(Min(0), Min(1), Min(2));
 }
 
+//______________________________________________________________________________
 TGLVertex3 TGLBoundingBox::MaxAAVertex() const
 {
    // Find maximum vertex values.
@@ -745,8 +762,8 @@ void TGLBoundingBox::Dump() const
    for (UInt_t i = 0; i<8; i++) {
       std::cout << "[" << i << "] (" << fVertex[i].X() << "," << fVertex[i].Y() << "," << fVertex[i].Z() << ")" << std::endl;
    }
-   std::cout << "Center ";
-   Center().Dump();
-   std::cout << " Volume " << Volume() << std::endl;
+   std::cout << "Center:  ";   Center().Dump();
+   std::cout << "Extents: ";   Extents().Dump();
+   std::cout << "Volume:  " << Volume() << std::endl;
 }
 

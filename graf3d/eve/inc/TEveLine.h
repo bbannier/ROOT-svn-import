@@ -12,8 +12,8 @@
 #ifndef ROOT_TEveLine
 #define ROOT_TEveLine
 
-#include "TEveUtil.h"
 #include "TEvePointSet.h"
+#include "TEveVector.h"
 
 #include "TAttLine.h"
 
@@ -43,8 +43,11 @@ public:
    TEveLine(const char* name, Int_t n_points=0, ETreeVarType_e tv_type=kTVT_XYZ);
    virtual ~TEveLine() {}
 
-   virtual void SetLineColor(Color_t col)   { SetMainColor(col); }
    virtual void SetMarkerColor(Color_t col);
+
+   virtual void SetLineColor(Color_t col)   { SetMainColor(col); }
+   virtual void SetLineStyle(Style_t lstyle);
+   virtual void SetLineWidth(Width_t lwidth);
 
    Bool_t GetRnrLine() const     { return fRnrLine;   }
    Bool_t GetRnrPoints() const   { return fRnrPoints; }
@@ -55,10 +58,13 @@ public:
 
    void   ReduceSegmentLengths(Float_t max);
 
+   TEveVector GetLineStart() const;
+   TEveVector GetLineEnd()   const;
+
    virtual void CopyVizParams(const TEveElement* el);
    virtual void WriteVizParams(ostream& out, const TString& var);
 
-   virtual TClass* ProjectedClass() const;
+   virtual TClass* ProjectedClass(const TEveProjection* p) const;
 
    static Bool_t GetDefaultSmooth()       { return fgDefaultSmooth; }
    static void SetDefaultSmooth(Bool_t r) { fgDefaultSmooth = r;    }
@@ -78,12 +84,14 @@ private:
    TEveLineProjected(const TEveLineProjected&);            // Not implemented
    TEveLineProjected& operator=(const TEveLineProjected&); // Not implemented
 
+protected:
+   virtual void SetDepthLocal(Float_t d);
+
 public:
    TEveLineProjected();
    virtual ~TEveLineProjected() {}
 
    virtual void SetProjection(TEveProjectionManager* mng, TEveProjectable* model);
-   virtual void SetDepth(Float_t d);
    virtual void UpdateProjection();
 
    ClassDef(TEveLineProjected, 0); // Projected replica of a TEveLine.

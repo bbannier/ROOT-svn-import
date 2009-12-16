@@ -479,6 +479,7 @@ void TCanvas::Init()
    SetBit(kMoveOpaque,   gEnv->GetValue("Canvas.MoveOpaque", 0));
    SetBit(kResizeOpaque, gEnv->GetValue("Canvas.ResizeOpaque", 0));
    if (gEnv->GetValue("Canvas.ShowEventStatus", kFALSE)) SetBit(kShowEventStatus);
+   if (gEnv->GetValue("Canvas.ShowToolTips", kFALSE)) SetBit(kShowToolTips);
    if (gEnv->GetValue("Canvas.ShowToolBar", kFALSE)) SetBit(kShowToolBar);
    if (gEnv->GetValue("Canvas.ShowEditor", kFALSE)) SetBit(kShowEditor);
    if (gEnv->GetValue("Canvas.AutoExec", kTRUE)) SetBit(kAutoExec);
@@ -584,16 +585,8 @@ void TCanvas::Build()
       // ... and toolbar + editor
       if (TestBit(kShowToolBar))     fCanvasImp->ShowToolBar(kTRUE);
       if (TestBit(kShowEditor))      fCanvasImp->ShowEditor(kTRUE);
+      if (TestBit(kShowToolTips))    fCanvasImp->ShowToolTips(kTRUE);
    }
-}
-
-
-//______________________________________________________________________________
-TCanvas::TCanvas(const TCanvas &) : TPad(), fDoubleBuffer(0)
-{
-   // Intentionally not implemented
-
-   fPainter = 0;
 }
 
 
@@ -736,6 +729,7 @@ void TCanvas::Close(Option_t *option)
 
    FeedbackMode(kFALSE);
 
+   cd();
    TPad::Close(option);
 
    if (!IsBatch()) {
@@ -845,7 +839,9 @@ TObject *TCanvas::DrawClonePad()
    TPad *pad = padsav;
    if (pad == this) pad = selpad;
    if (padsav == 0 || pad == 0 || pad == this) {
-      return DrawClone();
+      TCanvas *newCanvas = (TCanvas*)DrawClone();
+      newCanvas->SetWindowSize(GetWindowWidth(),GetWindowHeight());
+      return newCanvas;
    }
    if (fCanvasID == -1) {
       fCanvasImp = gGuiFactory->CreateCanvasImp(this, GetName(), fWindowTopX, fWindowTopY,
@@ -1309,7 +1305,7 @@ void TCanvas::HandleInput(EEventType event, Int_t px, Int_t py)
       RunAutoExec();
 
       break;
-   case 7:
+   case kButton1Shift:
       // Try to select
       pad = Pick(px, py, prevSelObj);
 
@@ -1324,17 +1320,16 @@ void TCanvas::HandleInput(EEventType event, Int_t px, Int_t py)
       RunAutoExec();
 
       break;
-   default:
-      //kButton4/kButton5 for embedded gl/ glhistpainter
-      //5 and 6
-      if (event == 5 || event == 6)
-      {
-         pad = Pick(px, py, prevSelObj);
-         if (!pad) return;
+   case kWheelUp:
+   case kWheelDown:
+      pad = Pick(px, py, prevSelObj);
+      if (!pad) return;
 
-         gPad = pad;
-         fSelected->ExecuteEvent(event, px, py);
-      }
+      gPad = pad;
+      fSelected->ExecuteEvent(event, px, py);
+      break;
+   default:
+      break;
    }
 
    if (fPadSave && event != kButton2Down)
@@ -1613,8 +1608,6 @@ void TCanvas::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitives in this canvas in C++ macro file with GUI.
 
-   Bool_t invalid = kFALSE;
-
    // Write canvas options (in $TROOT or $TStyle)
    if (gStyle->GetOptFit()) {
       out<<"   gStyle->SetOptFit(1);"<<endl;
@@ -1631,6 +1624,9 @@ void TCanvas::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    if (GetShowEventStatus()) {
       out<<"   "<<GetName()<<"->ToggleEventStatus();"<<endl;
    }
+   if (GetShowToolTips()) {
+      out<<"   "<<GetName()<<"->ToggleToolTips();"<<endl;
+   }
    if (GetShowToolBar()) {
       out<<"   "<<GetName()<<"->ToggleToolBar();"<<endl;
    }
@@ -1644,9 +1640,7 @@ void TCanvas::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 
    // Now recursively scan all pads of this canvas
    cd();
-   if (invalid) SetName("c1");
    TPad::SavePrimitive(out,option);
-   if (invalid) SetName(" ");
 }
 
 
@@ -1753,6 +1747,9 @@ void TCanvas::SaveSource(const char *filename, Option_t *option)
    }
    if (GetShowEventStatus()) {
       out<<"   "<<GetName()<<"->ToggleEventStatus();"<<endl;
+   }
+   if (GetShowToolTips()) {
+      out<<"   "<<GetName()<<"->ToggleToolTips();"<<endl;
    }
    if (GetHighLightColor() != 5) {
       if (GetHighLightColor() > 228) {
@@ -2081,6 +2078,16 @@ void TCanvas::ToggleEditor()
    if (fCanvasImp) fCanvasImp->ShowEditor(showEditor);
 }
 
+//______________________________________________________________________________
+void TCanvas::ToggleToolTips()
+{
+   // Toggle tooltip display.
+
+   Bool_t showToolTips = !TestBit(kShowToolTips);
+   SetBit(kShowToolTips, showToolTips);
+
+   if (fCanvasImp) fCanvasImp->ShowToolTips(showToolTips);
+}
 
 //______________________________________________________________________________
 void TCanvas::Update()

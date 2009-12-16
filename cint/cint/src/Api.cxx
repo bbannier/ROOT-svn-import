@@ -18,6 +18,7 @@
 
 #include "bc_eh.h"
 #include <string>
+#include <stdexcept>
 
 /*********************************************************************
 * $xxx object resolution function Generic form
@@ -390,59 +391,60 @@ int Cint::G__ExceptionWrapper(G__InterfaceMethod funcp
   }
 #ifdef G__STD_EXCEPTION
   catch(std::exception& x) {
-    char buf[G__LONGLINE];
+    G__FastAllocString buf(G__LONGLINE);
 #ifdef G__VISUAL
     // VC++ has problem in typeid(x).name(), so every thrown exception is
     // translated to G__exception.
-    sprintf(buf,"new G__exception(\"%s\")",x.what());
+    buf.Format("new G__exception(\"%s\")",x.what());
     G__fprinterr(G__serr,"Exception: %s\n",x.what());
 #else
-    char buf2[G__ONELINE];
+    G__FastAllocString buf2(G__ONELINE);
     if(G__DemangleClassname(buf2,typeid(x).name())) {
-      sprintf(buf,"new %s(*(%s*)%ld)",buf2,buf2,(long)(&x));
-      G__fprinterr(G__serr,"Exception %s: %s\n", buf2, x.what());
+       buf.Format("new %s(*(%s*)%ld)",buf2(),buf2(),(long)(&x));
+       G__fprinterr(G__serr,"Exception %s: %s\n", buf2(), x.what());
     }
     else {
-      // why buf2?!
-      sprintf(buf,"new G__exception(\"%s\",\"%s\")",x.what(),buf2);
+       G__getexpr("#include <exception>");
+       buf.Format("new G__exception(\"%s\",\"CINT forwarded std::exception\")",x.what());
     }
 #endif
     G__exceptionbuffer = G__getexpr(buf);
     G__exceptionbuffer.ref = G__exceptionbuffer.obj.i;
     G__return = G__RETURN_TRY;
     G__no_exec = 1;
+
+    // change from pointer to reference
+    if (isupper(G__exceptionbuffer.type)) {
+       G__exceptionbuffer.type = tolower(G__exceptionbuffer.type);
+    }
   }
-#endif 
-  catch(int x) {
-    G__letint(&G__exceptionbuffer,'i',(long)x);
-    G__exceptionbuffer.ref = (long)(&x);
-    G__return = G__RETURN_TRY;
-    G__no_exec = 1;
+#endif
+
+#define G__SETEXCPBUF_INT(TYPE, CTYPE)          \
+  catch(TYPE x) { \
+    TYPE* exc_x = new TYPE(x); \
+    G__letint(&G__exceptionbuffer,CTYPE,(long)x);     \
+    G__exceptionbuffer.ref = (long)(exc_x); \
+    G__return = G__RETURN_TRY; \
+    G__no_exec = 1; \
   }
-  catch(long x) {
-    G__letint(&G__exceptionbuffer,'l',(long)x);
-    G__exceptionbuffer.ref = (long)(&x);
-    G__return = G__RETURN_TRY;
-    G__no_exec = 1;
+  G__SETEXCPBUF_INT(int,   'i')
+  G__SETEXCPBUF_INT(long,  'l')
+  G__SETEXCPBUF_INT(void*, 'Y')
+#undef G__SETEXCPBUF_INT
+
+#define G__SETEXCPBUF_DBL(TYPE, CTYPE)          \
+  catch(TYPE x) { \
+    TYPE* exc_x = new TYPE(x); \
+    G__letdouble(&G__exceptionbuffer,CTYPE,x);     \
+    G__exceptionbuffer.ref = (long)(exc_x); \
+    G__return = G__RETURN_TRY; \
+    G__no_exec = 1; \
   }
-  catch(void *x) {
-    G__letint(&G__exceptionbuffer,'Y',(long)x);
-    G__exceptionbuffer.ref = (long)(&x);
-    G__return = G__RETURN_TRY;
-    G__no_exec = 1;
-  }
-  catch(float x) {
-    G__letdouble(&G__exceptionbuffer,'f',(double)x);
-    G__exceptionbuffer.ref = (long)(&x);
-    G__return = G__RETURN_TRY;
-    G__no_exec = 1;
-  }
-  catch(double x) {
-    G__letdouble(&G__exceptionbuffer,'d',x);
-    G__exceptionbuffer.ref = (long)(&x);
-    G__return = G__RETURN_TRY;
-    G__no_exec = 1;
-  }
+  G__SETEXCPBUF_DBL(float,  'f')
+  G__SETEXCPBUF_DBL(double, 'd')
+#undef G__SETEXCPBUF_DBL
+
   catch(std::string x) {
     G__fprinterr(G__serr,"Exception: %s\n",x.c_str());
     G__genericerror((char*)NULL);
@@ -452,9 +454,15 @@ int Cint::G__ExceptionWrapper(G__InterfaceMethod funcp
   catch(...) {
     if(2==G__catchexception) {
       G__fprinterr(G__serr,"Error: Exception caught in compiled code\n");
-      exit(EXIT_FAILURE);
+      throw std::runtime_error("CINT: Exception caught in compiled code");
     }
-    G__genericerror("Error: C++ exception caught");
+    //G__genericerror("Error: C++ exception caught");
+    G__getexpr("#include <exception>");
+    G__FastAllocString buf("new G__exception(\"G__exception\",\"CINT forwarded exception in compiled code\")");
+    G__exceptionbuffer = G__getexpr(buf);
+    G__exceptionbuffer.ref = G__exceptionbuffer.obj.i;
+    G__return = G__RETURN_TRY;
+    G__no_exec = 1;
   }
  return 0;
 #endif //ENABLE_CPP_EXCEPTIONS
@@ -521,29 +529,29 @@ extern "C" const char* G__saveconststring(const char* s)
 extern "C" void G__initcxx() 
 {
 #if defined(__HP_aCC)||defined(__SUNPRO_CC)||defined(__BCPLUSPLUS__)||defined(__KCC)||defined(__INTEL_COMPILER)
-  char temp[G__ONELINE];
+  G__FastAllocString temp(G__ONELINE);
 #endif
 #ifdef __HP_aCC     /* HP aCC C++ compiler */
-  sprintf(temp,"G__HP_aCC=%ld",(long)__HP_aCC); G__add_macro(temp);
+  temp.Format("G__HP_aCC=%ld",(long)__HP_aCC); G__add_macro(temp);
 #if __HP_aCC > 15000
-  sprintf(temp,"G__ANSIISOLIB=1"); G__add_macro(temp);
+  temp.Format("G__ANSIISOLIB=1"); G__add_macro(temp);
 #endif
 #endif
 #ifdef __SUNPRO_CC  /* Sun C++ compiler */
-  sprintf(temp,"G__SUNPRO_CC=%ld",(long)__SUNPRO_CC); G__add_macro(temp);
+  temp.Format("G__SUNPRO_CC=%ld",(long)__SUNPRO_CC); G__add_macro(temp);
 #endif
 #ifdef __BCPLUSPLUS__  /* Borland C++ compiler */
-  sprintf(temp,"G__BCPLUSPLUS=%ld",(long)__BCPLUSPLUS__); G__add_macro(temp);
+  temp.Format("G__BCPLUSPLUS=%ld",(long)__BCPLUSPLUS__); G__add_macro(temp);
 #endif
 #ifdef __KCC        /* KCC  C++ compiler */
-  sprintf(temp,"G__KCC=%ld",(long)__KCC); G__add_macro(temp);
+  temp.Format("G__KCC=%ld",(long)__KCC); G__add_macro(temp);
 #endif
 #if defined(__INTEL_COMPILER) && (__INTEL_COMPILER<810) /* icc and ecc C++ compilers */
-  sprintf(temp,"G__INTEL_COMPILER=%ld",(long)__INTEL_COMPILER); G__add_macro(temp);
+  temp.Format("G__INTEL_COMPILER=%ld",(long)__INTEL_COMPILER); G__add_macro(temp);
 #endif
   /*
 #ifdef __cplusplus 
-  sprintf(temp,"G__CPLUSPLUS=%ld",(long)__cplusplus); G__add_macro(temp);
+  temp.Format("G__CPLUSPLUS=%ld",(long)__cplusplus); G__add_macro(temp);
 #endif
   */
 }
@@ -613,10 +621,10 @@ extern "C" const char* G__replacesymbol(const char* s) {
 ******************************************************************/
 int G__display_replacesymbol_body(FILE *fout,const char* name) {
   map<string,string>::iterator i;
-  char msg[G__LONGLINE];
+  G__FastAllocString msg(G__LONGLINE);
   for(i=G__get_symbolmacro().begin();i!=G__get_symbolmacro().end();++i) {
     if(!name || !name[0] || strcmp(name,(*i).first.c_str())==0) {
-      sprintf(msg,"#define %s %s\n",(*i).first.c_str(),(*i).second.c_str());
+       msg.Format("#define %s %s\n",(*i).first.c_str(),(*i).second.c_str());
       G__more(fout,msg);
       if(name && name[0]) return(1);
     }

@@ -469,7 +469,8 @@ void TSessionServerFrame::OnBtnConnectClicked()
 
    TProofDesc *desc;
    fViewer->GetActDesc()->fProofMgr = TProofMgr::Create(url);
-   if (!fViewer->GetActDesc()->fProofMgr->IsValid()) {
+   if (!fViewer->GetActDesc()->fProofMgr || 
+       !fViewer->GetActDesc()->fProofMgr->IsValid()) {
       // hide connection progress bar from status bar
       fViewer->GetStatusBar()->GetBarPart(0)->HideFrame(fViewer->GetConnectProg());
       // release busy flag
@@ -545,7 +546,10 @@ void TSessionServerFrame::OnBtnConnectClicked()
       fViewer->GetActDesc()->fLogLevel   = fViewer->GetActDesc()->fProof->GetLogLevel();
       if (fViewer->GetActDesc()->fLogLevel < 0)
          fViewer->GetActDesc()->fLogLevel = 0;
-      fViewer->GetActDesc()->fAddress    = fViewer->GetActDesc()->fProof->GetMaster();
+      if (fViewer->GetActDesc()->fProof->IsLite())
+         fViewer->GetActDesc()->fAddress = "lite";
+      else
+         fViewer->GetActDesc()->fAddress = fViewer->GetActDesc()->fProof->GetMaster();
       fViewer->GetActDesc()->fConnected = kTRUE;
       fViewer->GetActDesc()->fProof->SetBit(TProof::kUsingSessionGui);
    }
@@ -2104,7 +2108,8 @@ void TEditQueryFrame::Build(TSessionViewer *gui)
    fFrmMore->AddFrame(fTxtOptions = new TGTextEntry(fFrmMore,
          (const char *)0, 4), new TGTableLayoutHints(1, 2, 0, 1, 0, 17,
          0, 0, 8));
-   fTxtOptions->SetText("ASYN");
+   //fTxtOptions->SetText("ASYN");
+   fTxtOptions->SetText("");
 
    // add "Nb Entries" label and number entry
    fFrmMore->AddFrame(new TGLabel(fFrmMore, "Nb Entries :"),
@@ -2328,6 +2333,14 @@ TSessionQueryFrame::TSessionQueryFrame(TGWindow* p, Int_t w, Int_t h) :
    TGCompositeFrame(p, w, h)
 {
    // Constructor
+
+   fEntries = 0;
+   fFiles = 0;
+   fFirst = 0;
+   fModified = 0;
+   fPrevProcessed = 0;
+   fPrevTotal = 0;
+   fStatus = kStopped;
 }
 
 //______________________________________________________________________________
@@ -3078,6 +3091,13 @@ void TSessionQueryFrame::OnBtnSubmit()
       fViewer->GetActDesc()->fProof->cd();
       // check if parameter file has been specified
       if (newquery->fChain) {
+         if (fViewer->GetActDesc()->fProof->IsLite()) {
+            newquery->fOptions = "";
+         }
+         // set query reference id
+         newquery->fReference= TString::Format("session-%s:q%d",
+                            fViewer->GetActDesc()->fProof->GetSessionTag(),
+                            fViewer->GetActDesc()->fProof->GetSeqNum()+1);
          if (newquery->fChain->IsA() == TChain::Class()) {
             // TChain case
             newquery->fStatus = TQueryDescription::kSessionQuerySubmitted;
@@ -3385,7 +3405,7 @@ void TSessionQueryFrame::UpdateInfos()
    }
 
    if (result->GetOutputList() && result->GetOutputList()->GetSize() > 0) {
-      buffer += TString::Format("%s Outlist   : %d objects\n",
+      buffer += TString::Format(" Outlist   : %d objects\n",
                                 result->GetOutputList()->GetSize());
       buffer += TString::Format("------------------------------------------------------\n");
    }
@@ -3650,7 +3670,7 @@ void TSessionViewer::ReadConfiguration(const char *filename)
             fBaseIcon);
    // add local session description
    TGListTreeItem *item = fSessionHierarchy->AddItem(fSessionItem, "Local",
-            fLocal, fLocal);
+                                                     fLocal, fLocal);
    fSessionHierarchy->SetToolTipItem(item, "Local Session");
    TSessionDescription *localdesc = new TSessionDescription();
    localdesc->fTag = "";
@@ -3675,6 +3695,38 @@ void TSessionViewer::ReadConfiguration(const char *filename)
    fSessions->Add((TObject *)localdesc);
    fActDesc = localdesc;
 
+   SysInfo_t info;
+   gSystem->GetSysInfo(&info);
+   // if the machine has more than one CPU, add one PROOF lite session
+   // (not supported on Windows yet)
+   if (!info.fOS.Contains("Microsoft") && info.fCpus > 1) {
+      // add proof lite session description
+      item = fSessionHierarchy->AddItem(fSessionItem, "Lite",
+                                        fProofDiscon, fProofDiscon);
+      fSessionHierarchy->SetToolTipItem(item, "PROOF Lite");
+      TSessionDescription *litedesc = new TSessionDescription();
+      litedesc->fTag = "";
+      litedesc->fName = "PROOF Lite";
+      litedesc->fAddress = "lite";
+      litedesc->fPort = 0;
+      litedesc->fConfigFile = "";
+      litedesc->fLogLevel = 0;
+      litedesc->fUserName = "";
+      litedesc->fQueries = new TList();
+      litedesc->fPackages = new TList();
+      litedesc->fActQuery = 0;
+      litedesc->fProof = 0;
+      litedesc->fProofMgr = 0;
+      litedesc->fAttached = kFALSE;
+      litedesc->fConnected = kFALSE;
+      litedesc->fLocal = kFALSE;
+      litedesc->fSync = kTRUE;
+      litedesc->fAutoEnable = kFALSE;
+      litedesc->fNbHistos = 0;
+      item->SetUserData(litedesc);
+      fSessions->Add((TObject *)litedesc);
+      fActDesc = litedesc;
+   }   
    TIter next(fViewerEnv->GetTable());
    TEnvRec *er;
    while ((er = (TEnvRec*) next())) {
@@ -3813,7 +3865,7 @@ void TSessionViewer::UpdateListOfProofs()
       TObject *o = proofs->First();
       if (o && dynamic_cast<TProofMgr *>(o)) {
          TProofMgr *mgr = dynamic_cast<TProofMgr *>(o);
-         if (mgr->QuerySessions("L")) {
+         if (mgr && mgr->QuerySessions("L")) {
             TIter nxd(mgr->QuerySessions("L"));
             TProofDesc *d = 0;
             TProof *p = 0;
@@ -3912,7 +3964,10 @@ void TSessionViewer::UpdateListOfProofs()
                if (p) {
                   newdesc->fConnected  = kTRUE;
                   newdesc->fAttached   = kTRUE;
-                  newdesc->fAddress    = p->GetMaster();
+                  if (p->IsLite())
+                     newdesc->fAddress = "lite";
+                  else
+                     newdesc->fAddress = p->GetMaster();
                   newdesc->fConfigFile = p->GetConfFile();
                   newdesc->fUserName   = p->GetUser();
                   newdesc->fPort       = p->GetPort();
@@ -3991,7 +4046,10 @@ void TSessionViewer::UpdateListOfProofs()
          newdesc->fLogLevel   = proof->GetLogLevel();
          if (newdesc->fLogLevel < 0)
             newdesc->fLogLevel = 0;
-         newdesc->fAddress    = proof->GetMaster();
+         if (proof->IsLite())
+            newdesc->fAddress = "lite";
+         else
+            newdesc->fAddress = proof->GetMaster();
          newdesc->fQueries    = new TList();
          newdesc->fPackages   = new TList();
          newdesc->fProof      = proof;
@@ -4054,7 +4112,10 @@ void TSessionViewer::UpdateListOfSessions()
             newdesc->fLogLevel   = proof->GetLogLevel();
             if (newdesc->fLogLevel < 0)
                newdesc->fLogLevel = 0;
-            newdesc->fAddress    = proof->GetMaster();
+            if (proof->IsLite())
+               newdesc->fAddress = "lite";
+            else
+               newdesc->fAddress = proof->GetMaster();
             newdesc->fProof      = proof;
          }
          else {
@@ -4192,6 +4253,9 @@ void TSessionViewer::Build()
    fLogWindow = 0;
    fBusy = kFALSE;
    fAutoSave = kTRUE;
+   fChangePic = kFALSE;
+   fStart = fElapsed = 0;
+
    SetCleanup(kDeepCleanup);
    // set minimun size
    SetWMSizeHints(400 + 200, 370+50, 2000, 1000, 1, 1);
@@ -5139,6 +5203,7 @@ void TSessionViewer::StartViewer()
       (obj = query->fResult->GetInputObject("TDSet"))) {
       query->fChain = (TDSet *) obj;
    }
+   if (!query->fChain) return;
    if (query->fChain->IsA() == TChain::Class())
       ((TChain *)query->fChain)->StartViewer();
    else if (query->fChain->IsA() == TDSet::Class())

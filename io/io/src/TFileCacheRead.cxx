@@ -58,9 +58,6 @@ TFileCacheRead::TFileCacheRead() : TObject()
    fIsSorted    = kFALSE;
    fIsTransferred = kFALSE;
 
-   // Asynchronous reading
-   fBytesToPrefetch = 0;
-   fFirstIndexToPrefetch = 0;
    fAsyncReading = kFALSE;
 }
 
@@ -90,8 +87,7 @@ TFileCacheRead::TFileCacheRead(TFile *file, Int_t buffersize)
    fFile        = file;
 
    fBuffer = 0;
-   fBytesToPrefetch = 0;
-   fFirstIndexToPrefetch = 0;
+
    fAsyncReading = gEnv->GetValue("TFile.AsyncReading", 1);
    if (fAsyncReading) {
       // Check if asynchronous reading is supported by this TFile specialization
@@ -186,11 +182,21 @@ void TFileCacheRead::Prefetch(Long64_t pos, Int_t len)
 //_____________________________________________________________________________
 void TFileCacheRead::Print(Option_t *option) const
 {
-   // Print class internal structure.
-
+   // Print cache statistics, like
+   //   ******TreeCache statistics for file: cms2.root ******
+   //   Reading 73921562 bytes in 716 transactions
+   //   Average transaction = 103.242405 Kbytes
+   //   Number of blocks in current cache: 202, total size : 6001193
+   //
+   // if option = "a" the list of blocks in the cache is printed
+   
    TString opt = option;
    opt.ToLower();
-   printf("Number of blocks: %d, total size : %d\n",fNseek,fNtot);
+   printf("******TreeCache statistics for file: %s ******\n",fFile->GetName());
+   printf("Reading %lld bytes in %d transactions\n",fFile->GetBytesRead(),  fFile->GetReadCalls());
+   printf("Readahead = %d bytes with overhead = %lld bytes\n",TFile::GetReadaheadSize(),fFile->GetBytesReadExtra());
+   printf("Average transaction = %f Kbytes\n",0.001*Double_t(fFile->GetBytesRead())/Double_t(fFile->GetReadCalls()));
+   printf("Number of blocks in current cache: %d, total size : %d\n",fNseek,fNtot);
    if (!opt.Contains("a")) return;
    for (Int_t i=0;i<fNseek;i++) {
       if (fIsSorted && !opt.Contains("s")) {
@@ -212,10 +218,21 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
    // If pos is in the list of prefetched blocks read from fBuffer,
    // otherwise need to make a normal read from file. Returns -1 in case of
    // read error, 0 in case not in cache, 1 in case read from cache.
-   Int_t i = 0;
+
+   Int_t loc = -1;
+   return ReadBufferExt(buf, pos, len, loc);
+}
+
+//_____________________________________________________________________________
+Int_t TFileCacheRead::ReadBufferExt(char *buf, Long64_t pos, Int_t len, Int_t &loc)
+{
+   // Base function for ReadBuffer. Also gives out the position
+   // of the block in the internal buffer. This helps TTreeCacheUnzip to avoid
+   // doing twice the binary search
 
    if (fNseek > 0 && !fIsSorted) {
       Sort();
+      loc = -1;
 
       // If ReadBufferAsync is not supported by this implementation...
       if (!fAsyncReading) {
@@ -229,8 +246,14 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
          // This implementation simply reads all the chunks in advance
          // in the async way.
 
-         fBytesToPrefetch = fFile->GetBytesToPrefetch();
-         fFirstIndexToPrefetch = 0;
+
+         // Use the async readv instead of single reads
+         fFile->ReadBuffers(0, 0, 0, 0); //Clear the XrdClient cache
+         if (fFile->ReadBuffers(0,fPos,fLen,fNb)) {
+            return -1;
+         }
+         fIsTransferred = kTRUE;
+
       }
    }
 
@@ -246,51 +269,46 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
    // If asynchronous reading is supported by this implementation...
    if (fAsyncReading) {
 
+         // Now we dont have to look for it in the local buffer
+         // if it's async, we expect that the communication library
+         // will handle it more efficiently than we can do here
+
       Int_t retval;
-      Int_t loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
-
-      // Now we dont have to look for it in the local buffer
-      // if it's async, we expect that the communication library
-      // will handle it more efficiently than we can do here
-
+      if (loc < 0)
+         loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
+      
       // We use the internal list just to notify if the list is to be reconstructed
       if (loc >= 0 && loc < fNseek && pos == fSeekSort[loc]) {
          // Block found, the caller will get it
-
-         // A speculative forward read of our chunks list
-         for (i = fFirstIndexToPrefetch; i < fNb; i++) {
-            if (!fLen[i])
-               continue;
-            if (fLen[i] > fBytesToPrefetch)
-               break;
-            // If we run out of parallel streamids in XrdClient, we'll continue later
-            if (fFile->ReadBufferAsync(fPos[i], fLen[i]))
-               break;
-            fBytesToPrefetch -= fLen[i];
-            fLen[i] = 0;
-         }
-         fFirstIndexToPrefetch = i;
-
+         
          if (buf) {
-            fFile->Seek(pos);
-            // Notify if troubles arise
-            if (fFile->ReadBuffer(buf, len))
+            fFile->Seek(pos);               
+            if (fFile->ReadBuffer(buf, len)) {
                return -1;
+            }
             fFile->Seek(pos+len);
          }
-         fBytesToPrefetch += len;
+         
          retval = 1;
       } else {
          // Block not found in the list, we report it as a miss
          retval = 0;
       }
-
+      
+      
+      
+      
+      
+      
       if (gDebug > 0)
-         Info("ReadBuffer","pos=%lld, len=%d, retval=%d", pos, len, retval);
-
+         Info("ReadBuffer","pos=%lld, len=%d, retval=%d, loc=%d, fseekSort[loc]=%d, fSeekLen[loc]=%d", pos, len, retval, loc, fSeekSort[loc], fSeekLen[loc]);
+      
       return retval;
    } else {
-      Int_t loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
+
+      if (loc < 0)
+         loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
+
       if (loc >= 0 && loc <fNseek && pos == fSeekSort[loc]) {
          if (buf) {
             memcpy(buf,&fBuffer[fSeekPos[loc]],len);
@@ -316,8 +334,7 @@ void TFileCacheRead::SetFile(TFile *file)
       if (file && file->ReadBufferAsync(0, 0)) {
          fAsyncReading = kFALSE;
          fBuffer    = new char[fBufferSize];
-         fBytesToPrefetch = 0;
-         fFirstIndexToPrefetch = 0;
+
       }
    }
 

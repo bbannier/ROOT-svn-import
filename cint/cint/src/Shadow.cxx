@@ -8,6 +8,8 @@
 //$Id: Shadow.cxx,v 1.14 2007/03/15 17:59:30 axel Exp $
 
 #include "Shadow.h"
+#include "common.h"
+#include "global.h"
 #include <ostream>
 #include <string>
 #include <list>
@@ -20,6 +22,7 @@ Cint::G__ShadowMaker::G__ShadowMaker(std::ostream& out, const char* nsprefix,
       fOut(out), fNSPrefix(nsprefix), fNeedTypedefShadow(needTypedefShadow)
 {
 
+   memset(fCacheNeedShadow, 0, sizeof(fCacheNeedShadow));
    G__ClassInfo cl;
    // loop over all classes, deciding whether they need a shadow by themselves
    cl.Init();
@@ -520,18 +523,18 @@ void Cint::G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
 
                size_t posTemplArg = typenameOriginal.find('<');
                while (posTemplArg != std::string::npos) {
-                  int level = 0;
+                  int tlevel = 0;
                   size_t posArgEnd = posTemplArg;
                   do {
                      posArgEnd = typenameOriginal.find_first_of("<,>", posArgEnd + 1);
                      if (posArgEnd !=  std::string::npos) {
                         if (typenameOriginal[posArgEnd] == '<')
-                           ++level;
+                           ++tlevel;
                         if (typenameOriginal[posArgEnd] == '>') {
-                           --level;
-                           if (level == -1) break;
+                           --tlevel;
+                           if (tlevel == -1) break;
                         }
-                        if (typenameOriginal[posArgEnd] == ',' && level == 0)
+                        if (typenameOriginal[posArgEnd] == ',' && tlevel == 0)
                            break;
                      }
                   } while (posArgEnd != std::string::npos);
@@ -610,6 +613,58 @@ void Cint::G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
                typenameOriginal += typedefedTypename + ")()";
                typedefedTypename = "";
                nsprefixOriginal = "";
+            }
+
+            // convert T<A> into T< ::A> to ensure that we pick up a non-shadow A.
+            // Major problem here: "::int" doesn't exist, so revert those.
+            size_t posArg = typenameOriginal.find_first_of("<,");
+            size_t lenType = typenameOriginal.length();
+            while (posArg != std::string::npos) {
+               ++posArg;
+               size_t lenArg = 0;
+               do {
+                  lenArg = 0;
+                  while (isspace(typenameOriginal[posArg]))
+                     ++posArg;
+                  while (lenType > posArg + lenArg) {
+                     char c = typenameOriginal[posArg + lenArg];
+                     if ((lenArg && isalnum(c))
+                         || (!lenArg
+                             && ((c >= 'A' && c <= 'Z')
+                                 || (c >= 'a' && c <= 'z'))
+                             )
+                         || c == '_')
+                        ++lenArg;
+                     else break;
+                  }
+               } while (lenArg == 5
+                        && !typenameOriginal.compare(posArg, lenArg, "const")
+                        && lenType > (posArg += 5) );
+               bool builtinType = false;
+               if (lenArg) {
+                  switch (lenArg) {
+                  case 3: builtinType = !typenameOriginal.compare(posArg, lenArg, "int");
+                     break;
+                  case 4: builtinType = !typenameOriginal.compare(posArg, lenArg, "long")
+                        || !typenameOriginal.compare(posArg, lenArg, "char")
+                        || !typenameOriginal.compare(posArg, lenArg, "void");
+                     break;
+                  case 5: builtinType = !typenameOriginal.compare(posArg, lenArg, "short")
+                        || !typenameOriginal.compare(posArg, lenArg, "float");
+                     break;
+                  case 6: builtinType = !typenameOriginal.compare(posArg, lenArg, "double");
+                     break;
+                  case 8: builtinType = !typenameOriginal.compare(posArg, lenArg, "unsigned");
+                     break;
+                  default:;
+                  }
+                  if (!builtinType) {
+                     typenameOriginal.insert(posArg, " ::");
+                     lenArg += 3;
+                     lenType += 3;
+                  }
+               }
+               posArg = typenameOriginal.find_first_of("<,", posArg + lenArg + 1);
             }
 
             fOut << indent << "         typedef "
@@ -716,10 +771,16 @@ void Cint::G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
    fOut << std::endl;
 }
 
-
 void Cint::G__ShadowMaker::WriteAllShadowClasses()
 {
    if (fgVetoShadow) return;
+
+   // In some case, WriteShadowClass will induce (via calls to G__ClassInfo) template instantiation,
+   // if the a function has a default value, we do not want to execute it.
+   // Setting G__globalcomp to something else then G__NOLINK is the only way 
+   // to accomplish this.
+   int store_G__globalcomp = G__globalcomp;
+   G__globalcomp = 7; // Intentionally not a valid value.
 
    fOut << "// START OF SHADOWS" << std::endl << std::endl;
 
@@ -757,4 +818,6 @@ void Cint::G__ShadowMaker::WriteAllShadowClasses()
       namespaceParts.pop_back();
    }
    fOut << "// END OF SHADOWS" << std::endl << std::endl;
+   
+   G__globalcomp = store_G__globalcomp;
 }

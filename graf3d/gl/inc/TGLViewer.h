@@ -44,7 +44,8 @@ class TGLContextIdentity;
 class TTimer;
 
 class TContextMenu;
-
+class TGedEditor;
+class TGLPShapeObj;
 
 class TGLViewer : public TVirtualViewer3D,
                   public TGLViewerBase,
@@ -58,6 +59,8 @@ public:
    enum ECameraType { kCameraPerspXOZ,  kCameraPerspYOZ,  kCameraPerspXOY,
                       kCameraOrthoXOY,  kCameraOrthoXOZ,  kCameraOrthoZOY,
                       kCameraOrthoXnOY, kCameraOrthoXnOZ, kCameraOrthoZnOY };
+
+   enum ESecSelType { kOnRequest, kOnKeyMod1 };
 
 private:
    TGLViewer(const TGLViewer &);             // Not implemented
@@ -80,10 +83,16 @@ protected:
    TGLOrthoCamera       fOrthoXOYCamera;       //!
    TGLOrthoCamera       fOrthoXOZCamera;       //!
    TGLOrthoCamera       fOrthoZOYCamera;       //!
-   TGLOrthoCamera       fOrthoXnOYCamera;       //!
-   TGLOrthoCamera       fOrthoXnOZCamera;       //!
-   TGLOrthoCamera       fOrthoZnOYCamera;       //!
+   TGLOrthoCamera       fOrthoXnOYCamera;      //!
+   TGLOrthoCamera       fOrthoXnOZCamera;      //!
+   TGLOrthoCamera       fOrthoZnOYCamera;      //!
    TGLCamera           *fCurrentCamera;        //!
+
+   // Stereo
+   Bool_t               fStereo;               //! use stereo rendering
+   Float_t              fStereoZeroParallax;   //! position of zero-parallax plane: 0 - near clipping plane, 1 - far clipping plane
+   Float_t              fStereoEyeOffsetFac;   //!
+   Float_t              fStereoFrustumAsymFac; //!
 
    // Lights
    TGLLightSet         *fLightSet;             //!
@@ -100,6 +109,8 @@ protected:
    TGLOvlSelectRecord   fOvlSelRec;            //! select record from last overlay select
 
    TGEventHandler      *fEventHandler;         //! event handler
+   TGedEditor          *fGedEditor;            //! GED editor
+   TGLPShapeObj        *fPShapeWrap;
 
    // Mouse ineraction
 public:
@@ -119,7 +130,11 @@ protected:
 
    TGLRect        fViewport;       //! viewport - drawn area
    TGLColorSet    fDarkColorSet;   //! color-set with dark background
-   TGLColorSet    fLightColorSet;  //! color-set with dark background
+   TGLColorSet    fLightColorSet;  //! color-set with light background
+   Float_t        fPointScale;     //! size scale for points
+   Float_t        fLineScale;      //! width scale for lines
+   Bool_t         fSmoothPoints;   //! smooth point edge rendering
+   Bool_t         fSmoothLines;    //! smooth line edge rendering
    Int_t          fAxesType;       //! axes type
    Bool_t         fAxesDepthTest;  //! remove guides hidden-lines
    Bool_t         fReferenceOn;    //! reference marker on?
@@ -153,6 +168,7 @@ protected:
 
    // Cameras
    void        SetViewport(Int_t x, Int_t y, Int_t width, Int_t height);
+   void        SetViewport(const TGLRect& vp);
    void        SetupCameras(Bool_t reset);
 
 protected:
@@ -164,7 +180,6 @@ protected:
    Bool_t           fIgnoreSizesOnUpdate;      // ignore sizes of bounding-boxes on update
    Bool_t           fResetCamerasOnUpdate;     // reposition camera on each update
    Bool_t           fResetCamerasOnNextUpdate; // reposition camera on next update
-   Bool_t           fResetCameraOnDoubleClick; // reposition camera on double-click
 
 public:
    TGLViewer(TVirtualPad* pad, Int_t x, Int_t y, Int_t width, Int_t height);
@@ -197,8 +212,6 @@ public:
    virtual void   ResetCameras()                { SetupCameras(kTRUE); }
    virtual void   ResetCamerasAfterNextUpdate() { fResetCamerasOnNextUpdate = kTRUE; }
 
-   virtual void   RefreshPadEditor(TObject* = 0) {}
-
    TGLWidget* GetGLWidget() { return fGLWidget; }
 
    virtual void  CreateGLWidget()  {}
@@ -217,12 +230,22 @@ public:
 
    void         UseDefaultColorSet(Bool_t x);
    Bool_t       IsUsingDefaultColorSet() const;
+   Bool_t       IsColorSetDark() const;
 
    void         SetClearColor(Color_t col);
 
    static TGLColorSet& GetDefaultColorSet();
    static void         UseDefaultColorSetForNewViewers(Bool_t x);
    static Bool_t       IsUsingDefaultColorSetForNewViewers();
+
+   Float_t GetPointScale()    const { return fPointScale; }
+   Float_t GetLineScale()     const { return fLineScale; }
+   void    SetPointScale(Float_t s) { fPointScale = s; }
+   void    SetLineScale (Float_t s) { fLineScale  = s; }
+   Bool_t  GetSmoothPoints()  const { return fSmoothPoints; }
+   Bool_t  GetSmoothLines()   const { return fSmoothLines; }
+   void    SetSmoothPoints(Bool_t s){ fSmoothPoints = s; }
+   void    SetSmoothLines(Bool_t s) { fSmoothLines  = s; }
 
    TGLLightSet* GetLightSet() const { return fLightSet; }
    TGLClipSet * GetClipSet()  const { return fClipSet; }
@@ -246,6 +269,18 @@ public:
    TGLCameraOverlay* GetCameraOverlay() const { return fCameraOverlay; }
    void SetCameraOverlay(TGLCameraOverlay* m) { fCameraOverlay = m; }
 
+   // Stereo
+   Bool_t  GetStereo()               const { return fStereo; }
+   Float_t GetStereoZeroParallax()   const { return fStereoZeroParallax;   }
+   Float_t GetStereoEyeOffsetFac()   const { return fStereoEyeOffsetFac;   }
+   Float_t GetStereoFrustumAsymFac() const { return fStereoFrustumAsymFac; }
+
+   void SetStereo(Bool_t s)                { fStereo = s; }
+   void SetStereoZeroParallax(Float_t f)   { fStereoZeroParallax   = f; }
+   void SetStereoEyeOffsetFac(Float_t f)   { fStereoEyeOffsetFac   = f; }
+   void SetStereoFrustumAsymFac(Float_t f) { fStereoFrustumAsymFac = f; }
+
+   // Push / drag action
    EPushAction GetPushAction() const { return fPushAction; }
    EDragAction GetDragAction() const { return fDragAction; }
 
@@ -263,21 +298,32 @@ public:
    // Request methods post cross thread request via TROOT::ProcessLineFast().
    void RequestDraw(Short_t LOD = TGLRnrCtx::kLODMed); // Cross thread draw request
    virtual void PreRender();
+   virtual void PostRender();
    void DoDraw();
+   void DoDrawMono();
+   void DoDrawStereo();
 
    void DrawGuides();
    void DrawDebugInfo();
 
-   Bool_t RequestSelect(Int_t x, Int_t y, Bool_t trySecSel=kFALSE); // Cross thread select request
-   Bool_t DoSelect(Int_t x, Int_t y, Bool_t trySecSel=kFALSE);      // Window coords origin top left
+   Bool_t RequestSelect(Int_t x, Int_t y);          // Cross thread select request
+   Bool_t DoSelect(Int_t x, Int_t y);               // First level selecton (shapes/objects).
+   Bool_t RequestSecondarySelect(Int_t x, Int_t y); // Cross thread secondary select request
+   Bool_t DoSecondarySelect(Int_t x, Int_t y);      // Second level selecton (inner structure).
    void   ApplySelection();
 
    Bool_t RequestOverlaySelect(Int_t x, Int_t y); // Cross thread select request
    Bool_t DoOverlaySelect(Int_t x, Int_t y);      // Window coords origin top left
 
-   // Saveing of screen image
-   Bool_t       SavePicture(const TString &fileName);
-   Bool_t       SavePicture();
+   // Saving of screen image
+   Bool_t SavePicture();
+   Bool_t SavePicture(const TString &fileName);
+   Bool_t SavePictureUsingBB (const TString &fileName);
+   Bool_t SavePictureUsingFBO(const TString &fileName, Int_t w, Int_t h, Float_t pixel_object_scale=0);
+   Bool_t SavePictureWidth (const TString &fileName, Int_t width, Bool_t pixel_object_scale=kTRUE);
+   Bool_t SavePictureHeight(const TString &fileName, Int_t height, Bool_t pixel_object_scale=kTRUE);
+   Bool_t SavePictureScale (const TString &fileName, Float_t scale, Bool_t pixel_object_scale=kTRUE);
+
    const char*  GetPictureFileName() const { return fPictureFileName.Data(); }
    void         SetPictureFileName(const TString& f) { fPictureFileName = f; }
    Float_t      GetFader() const { return fFader; }
@@ -291,23 +337,28 @@ public:
    void   ResetCurrentCamera();
    Bool_t GetResetCamerasOnUpdate() const       { return fResetCamerasOnUpdate; }
    void   SetResetCamerasOnUpdate(Bool_t v)     { fResetCamerasOnUpdate = v; }
-   Bool_t GetResetCameraOnDoubleClick() const   { return fResetCameraOnDoubleClick; }
-   void   SetResetCameraOnDoubleClick(Bool_t v) { fResetCameraOnDoubleClick = v; }
 
    virtual void PostSceneBuildSetup(Bool_t resetCameras);
 
-   virtual void SelectionChanged();    // *SIGNAL*
-   virtual void OverlayDragFinished(); // *SIGNAL*
    virtual void MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t); // *SIGNAL*
    virtual void MouseOver(TGLPhysicalShape*); // *SIGNAL*
    virtual void MouseOver(TGLPhysicalShape*, UInt_t state); // *SIGNAL*
    virtual void Activated() { Emit("Activated()"); } // *SIGNAL*
    virtual void Clicked(TObject *obj); //*SIGNAL*
    virtual void Clicked(TObject *obj, UInt_t button, UInt_t state); //*SIGNAL*
+   virtual void ReClicked(TObject *obj, UInt_t button, UInt_t state); //*SIGNAL*
+   virtual void UnClicked(TObject *obj, UInt_t button, UInt_t state); //*SIGNAL*
    virtual void DoubleClicked() { Emit("DoubleClicked()"); } // *SIGNAL*
 
    TGEventHandler *GetEventHandler() const { return fEventHandler; }
    virtual void    SetEventHandler(TGEventHandler *handler);
+
+   TGedEditor*  GetGedEditor() const { return fGedEditor; }
+   virtual void SetGedEditor(TGedEditor* ed) { fGedEditor = ed; }
+
+   virtual void SelectionChanged();
+   virtual void OverlayDragFinished();
+   virtual void RefreshPadEditor(TObject* obj=0);
 
    virtual void RemoveOverlayElement(TGLOverlayElement* el);
 

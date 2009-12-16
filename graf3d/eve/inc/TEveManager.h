@@ -61,8 +61,10 @@ public:
    public:
       TRedrawDisabler(TEveManager* m) : fMgr(m)
       { if (fMgr) fMgr->DisableRedraw(); }
-      ~TRedrawDisabler()
+      virtual ~TRedrawDisabler()
       { if (fMgr) fMgr->EnableRedraw(); }
+
+      ClassDef(TRedrawDisabler, 0); // Exception-safe EVE redraw-disabler.
    };
 
    class TExceptionHandler : public TStdExceptionHandler
@@ -88,8 +90,6 @@ private:
 
    TEveBrowser              *fBrowser;
    TEveGListTreeEditorFrame *fLTEFrame;
-   TEveGedEditor            *fEditor;
-   TGStatusBar              *fStatusBar;
 
    TFolder                  *fMacroFolder;
 
@@ -136,8 +136,8 @@ public:
 
    TEveBrowser*      GetBrowser()   const { return fBrowser;   }
    TEveGListTreeEditorFrame* GetLTEFrame()  const { return fLTEFrame;  }
-   TEveGedEditor*    GetEditor()    const { return fEditor;    }
-   TGStatusBar*      GetStatusBar() const { return fStatusBar; }
+   TEveGedEditor*    GetEditor()    const;
+   TGStatusBar*      GetStatusBar() const;
 
    TEveWindowManager* GetWindowManager() const { return fWindowManager; }
 

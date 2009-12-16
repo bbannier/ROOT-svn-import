@@ -35,7 +35,7 @@ struct MultiView
    TEveScene             *fRPhiEventScene;
    TEveScene             *fRhoZEventScene;
 
-   //-------------------------------------------------------------------------
+   //---------------------------------------------------------------------------
 
    MultiView()
    {
@@ -58,8 +58,7 @@ struct MultiView
       // Projection managers
       //=====================
 
-      fRPhiMgr = new TEveProjectionManager();
-      fRPhiMgr->SetProjection(TEveProjection::kPT_RPhi);
+      fRPhiMgr = new TEveProjectionManager(TEveProjection::kPT_RPhi);
       gEve->AddToListTree(fRPhiMgr, kFALSE);
       {
          TEveProjectionAxes* a = new TEveProjectionAxes(fRPhiMgr);
@@ -72,8 +71,7 @@ struct MultiView
          fRPhiGeomScene->AddElement(a);
       }
 
-      fRhoZMgr = new TEveProjectionManager();
-      fRhoZMgr->SetProjection(TEveProjection::kPT_RhoZ);
+      fRhoZMgr = new TEveProjectionManager(TEveProjection::kPT_RhoZ);
       gEve->AddToListTree(fRhoZMgr, kFALSE);
       {
          TEveProjectionAxes* a = new TEveProjectionAxes(fRhoZMgr);
@@ -118,6 +116,18 @@ struct MultiView
       fRhoZView->AddScene(fRhoZEventScene);
    }
 
+   //---------------------------------------------------------------------------
+
+   void SetDepth(Float_t d)
+   {
+      // Set current depth on all projection managers.
+
+      fRPhiMgr->SetCurrentDepth(d);
+      fRhoZMgr->SetCurrentDepth(d);
+   }
+
+   //---------------------------------------------------------------------------
+
    void ImportGeomRPhi(TEveElement* el)
    { 
       fRPhiMgr->ImportElements(el, fRPhiGeomScene);
@@ -137,6 +147,8 @@ struct MultiView
    { 
       fRhoZMgr->ImportElements(el, fRhoZEventScene);
    }
+
+   //---------------------------------------------------------------------------
 
    void DestroyEventRPhi()
    {

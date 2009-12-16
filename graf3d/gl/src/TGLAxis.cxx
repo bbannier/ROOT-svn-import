@@ -12,6 +12,7 @@
 #include "TROOT.h"
 
 #include "TGLIncludes.h"
+#include "TGLUtil.h"
 #include "TGLAxis.h"
 #include "TGLText.h"
 #include "TColor.h"
@@ -41,6 +42,8 @@ void TGLAxis::Init()
 {
    // Default initialization.
 
+   fNDiv = fNDiv1 = fNDiv2 = fNDiv3 = 0;
+   fNTicks1 = fNTicks2 = 0;
    fTicks1          = 0;
    fTicks2          = 0;
    fLabels          = 0;
@@ -49,6 +52,7 @@ void TGLAxis::Init()
    fAngle2          = 0.;
    fAngle3          = 0.;
    fAxisLength      = 0.;
+   fWmin = fWmax    = 0.;
    fTickMarksLength = 0.04; // % of fAxisLength
    fTickMarksOrientation = 2; // can be 0, 1, 2, or 3
    fLabelsOffset    = 0.09; // % of fAxisLength
@@ -171,7 +175,7 @@ void TGLAxis::PaintGLAxisBody()
    col = gROOT->GetColor(GetLineColor());
    col->GetRGB(red, green, blue);
    glColor3d(red, green, blue);
-   glLineWidth(GetLineWidth());
+   TGLUtil::LineWidth(GetLineWidth());
    glBegin(GL_LINES);
    glVertex3d(0., 0., 0.);
    glVertex3d(fAxisLength, 0., 0.);

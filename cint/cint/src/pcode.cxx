@@ -1419,10 +1419,11 @@ void G__OP2_multiply_dd(G__value *bufm1,G__value *bufm2)
 *************************************************************************/
 void G__OP2_divide_dd(G__value *bufm1,G__value *bufm2)
 {
-  if(0==bufm1->obj.d) {
-    G__genericerror("Error: operator '/' divided by zero");
-    return;
-  }
+//  IEEE 754 defines that NaN inf has to be the output in cases where division by 0 occurs.
+//  if(0==bufm1->obj.d) {
+//    G__genericerror("Error: operator '/' divided by zero");
+//    return;
+//  }
   bufm2->obj.d = bufm2->obj.d / bufm1->obj.d;
   bufm2->type = 'd';
   bufm2->tagnum = bufm2->typenum = -1;
@@ -1457,10 +1458,11 @@ void G__OP2_mulassign_dd(G__value *bufm1,G__value *bufm2)
 *************************************************************************/
 void G__OP2_divassign_dd(G__value *bufm1,G__value *bufm2)
 {
-  if(0==bufm1->obj.d) {
-    G__genericerror("Error: operator '/' divided by zero");
-    return;
-  }
+//  IEEE 754 defines that NaN inf has to be the output in cases where division by 0 occurs.
+//  if(0==bufm1->obj.d) {
+//    G__genericerror("Error: operator '/' divided by zero");
+//    return;
+//  }
   bufm2->obj.d /= bufm1->obj.d;
   *(double*)bufm2->ref=bufm2->obj.d;
 }
@@ -1498,10 +1500,11 @@ void G__OP2_mulassign_fd(G__value *bufm1,G__value *bufm2)
 *************************************************************************/
 void G__OP2_divassign_fd(G__value *bufm1,G__value *bufm2)
 {
-  if(0==bufm1->obj.d) {
-    G__genericerror("Error: operator '/' divided by zero");
-    return;
-  }
+//  IEEE 754 defines that NaN inf has to be the output in cases where division by 0 occurs.
+//  if(0==bufm1->obj.d) {
+//    G__genericerror("Error: operator '/' divided by zero");
+//    return;
+//  }
   bufm2->obj.d /= bufm1->obj.d;
   *(float*)bufm2->ref=(float)bufm2->obj.d;
 }
@@ -1754,10 +1757,11 @@ void G__OP2_divide(G__value *bufm1,G__value *bufm2)
   if(G__isdoubleM(bufm2)) {
     if(G__isdoubleM(bufm1)) {
 #ifdef G__TUNEUP_W_SECURITY
-      if(0==bufm1->obj.d) {
-        G__genericerror("Error: operator '/' divided by zero");
-        return;
-      }
+//  IEEE 754 defines that NaN inf has to be the output in cases where division by 0 occurs.
+//      if(0==bufm1->obj.d) {
+//        G__genericerror("Error: operator '/' divided by zero");
+//        return;
+//      }
 #endif
       bufm2->obj.d = bufm2->obj.d / bufm1->obj.d;
     }
@@ -1774,10 +1778,11 @@ void G__OP2_divide(G__value *bufm1,G__value *bufm2)
   }
   else if(G__isdoubleM(bufm1)) {
 #ifdef G__TUNEUP_W_SECURITY
-    if(0==bufm1->obj.d) {
-      G__genericerror("Error: operator '/' divided by zero");
-      return;
-    }
+//  IEEE 754 defines that NaN inf has to be the output in cases where division by 0 occurs.
+//     if(0==bufm1->obj.d) {
+//      G__genericerror("Error: operator '/' divided by zero");
+//      return;
+//    }
 #endif
     bufm2->obj.d = G__convertT<double>(bufm2) / bufm1->obj.d;
     bufm2->type = 'd';
@@ -2172,10 +2177,11 @@ void G__OP2_divassign(G__value *bufm1,G__value *bufm2)
   if(G__isdoubleM(bufm2)) {
     if(G__isdoubleM(bufm1)) {
 #ifdef G__TUNEUP_W_SECURITY
-      if(0==bufm1->obj.d) {
-        G__genericerror("Error: operator '/' divided by zero");
-        return;
-      }
+//  IEEE 754 defines that NaN inf has to be the output in cases where division by 0 occurs.
+//      if(0==bufm1->obj.d) {
+//        G__genericerror("Error: operator '/' divided by zero");
+//        return;
+//      }
 #endif
       bufm2->obj.d /= bufm1->obj.d;
     }
@@ -2193,10 +2199,11 @@ void G__OP2_divassign(G__value *bufm1,G__value *bufm2)
   else {
     if(G__isdoubleM(bufm1)) {
 #ifdef G__TUNEUP_W_SECURITY
-      if(0==bufm1->obj.d) {
-        G__genericerror("Error: operator '/' divided by zero");
-        return;
-      }
+//  IEEE 754 defines that NaN inf has to be the output in cases where division by 0 occurs.
+//      if(0==bufm1->obj.d) {
+//        G__genericerror("Error: operator '/' divided by zero");
+//        return;
+//      }
 #endif
       G__DivAssign(bufm2, G__convertT<long>(bufm1));
     }
@@ -2597,7 +2604,7 @@ int G__asm_putint(int i)
 **************************************************************************/
 G__value G__getreserved(const char *item ,void ** /* ptr */,void ** /* ppdict */)
 {
-  G__value buf;
+  G__value buf = G__null;
   int i;
 
   G__abortbytecode();
@@ -2675,7 +2682,7 @@ void G__get__tm__(char *buf)
 char* G__get__date__()
 {
   int i=0,j=0;
-  char buf[80];
+  G__FastAllocString buf(80);
   static char result[80];
   G__get__tm__(buf);
   while(buf[i] && !isspace(buf[i])) ++i; /* skip 'Sun' */
@@ -2696,7 +2703,7 @@ char* G__get__date__()
 char* G__get__time__()
 {
   int i=0,j=0;
-  char buf[80];
+  G__FastAllocString buf(80);
   static char result[80];
   G__get__tm__(buf);
   while(buf[i] && !isspace(buf[i])) ++i; /* skip 'Sun' */
@@ -7431,7 +7438,7 @@ int G__dasm(FILE *fout,int isthrow)
       else {
         fpos_t store_pos;
         struct G__input_file store_ifile = G__ifile;
-        char statement[G__LONGLINE];
+        G__FastAllocString statement(G__LONGLINE);
 #if defined(G__NONSCALARFPOS2)
         fpos_t pos;
         pos.__pos = (off_t)G__asm_inst[pc+3];

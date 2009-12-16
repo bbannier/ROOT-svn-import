@@ -500,7 +500,7 @@ static void GetNumbers(const char *s, Int_t & Sign,
       Sign = -1;
       s++;
    }
-   if (!isdigit(*s)) {
+   if (!isdigit(*s) && !strchr(Delimiters, *s)) {
       return;
    }
    while ((*s != 0) && ((strchr(Delimiters, *s) == 0) || (maxd2 == 0))) {
@@ -1813,7 +1813,8 @@ public:
    TGRepeatFireButton(const TGWindow *p, const TGPicture *pic,
                       Int_t id, Bool_t logstep)
     : TGPictureButton(p, pic, id), fTimer(0), fIgnoreNextFire(0),
-       fStep(TGNumberFormat::kNSSSmall), fStepLog(logstep) { fEditDisabled = kEditDisable | kEditDisableGrab; }
+       fStep(TGNumberFormat::kNSSSmall), fStepLog(logstep), fDoLogStep(logstep) 
+       { fEditDisabled = kEditDisable | kEditDisableGrab; }
    virtual ~TGRepeatFireButton() { delete fTimer; }
 
    virtual  Bool_t HandleButton(Event_t *event);

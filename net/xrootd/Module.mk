@@ -62,7 +62,6 @@ XRDLIBS     := $(XROOTDDIRL)/libXrdOuc.a $(XROOTDDIRL)/libXrdNet.a \
 XRDNETXD    := $(XROOTDDIRL)/libXrdOuc.a $(XROOTDDIRL)/libXrdSys.a \
                $(LPATH)/libXrdClient.$(XRDSOEXT)
 XRDPROOFXD  := $(XRDLIBS) $(XROOTDDIRL)/libXrd.a
-XROOTDDIRP  := $(LPATH)
 ifeq ($(ARCH),win32gcc)
 XRDLIBS     := $(patsubst $(LPATH)/%.$(XRDSOEXT),bin/%.$(XRDSOEXT),$(XRDLIBS))
 endif
@@ -91,6 +90,11 @@ ifeq ($(PLATFORM),win32)
 TARGETS    += $(XRDEXECS)
 endif
 
+# Make sure that PWD is defined (it may not be for example when running 'make' via 'sudo')
+ifeq ($(PWD),)
+PWD := $(shell pwd)
+endif
+
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
@@ -113,8 +117,10 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		macosx64:*)      xopt="--ccflavour=macos64";; \
 		macosxicc:*)     xopt="--ccflavour=icc";; \
 		macosx*:*)       xopt="--ccflavour=macos";; \
-		solaris*:*:i86pc:x86*) xopt="--ccflavour=sunCCamd --use-xrd-strlcpy";; \
-		solaris*:*:i86pc:*) xopt="--ccflavour=sunCCi86pc --use-xrd-strlcpy";; \
+		solaris64*:*:i86pc:*) xopt="--ccflavour=sunCCamd --use-xrd-strlcpy";; \
+                solaris*:5.11:i86pc:*) xopt="--ccflavour=sunCCi86pc --use-xrd-strlcpy";; \
+                solaris*:5.1*:i86pc:*) xopt="--use-xrd-strlcpy";; \
+                solaris*:*:i86pc:*) xopt="--ccflavour=sunCCi86pc --use-xrd-strlcpy";; \
 		solarisgcc:5.8)  xopt="--ccflavour=gcc";; \
 		solaris*:5.8)    xopt="--ccflavour=sunCC";; \
 		solarisgcc:5.9)  xopt="--ccflavour=gcc";; \
@@ -124,9 +130,26 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		win32gcc:*)      xopt="win32gcc";; \
 		*)               xopt="";; \
 		esac; \
-		if [ "x$(KRB5LIB)" = "x" ] ; then \
-		   xopt="$$xopt --disable-krb5"; \
-		fi; \
+                if [ ! "x$(KRB5LIBDIR)" = "x" ] ; then \
+                   xlib=`echo $(KRB5LIBDIR) | cut -c3-`; \
+                   xopt="$$xopt --with-krb5-libdir=$$xlib"; \
+                elif [ ! "x$(KRB5LIB)" = "x" ] ; then \
+                   xlibs=`echo $(KRB5LIB)`; \
+                   for l in $$xlibs; do \
+                      if [ ! "x$$l" = "x-lkrb5" ] && [ ! "x$$l" = "x-lk5crypto" ]  ; then \
+                         xlib=`dirname $$l`; \
+                         xopt="$$xopt --with-krb5-libdir=$$xlib"; \
+                         break; \
+                      fi; \
+                   done; \
+                fi; \
+                if [ ! "x$(KRB5INCDIR)" = "x" ] ; then \
+                   xinc=`echo $(KRB5INCDIR)`; \
+                   xopt="$$xopt --with-krb5-incdir=$$xinc"; \
+                fi; \
+                if [ "x$(BUILDKRB5)" = "xno" ] ; then \
+                   xopt="$$xopt --disable-krb5"; \
+                fi; \
 		if [ "x$(BUILDXRDGSI)" = "x" ] ; then \
 		   xopt="$$xopt --disable-gsi"; \
 		fi; \
@@ -213,10 +236,10 @@ ifneq ($(PLATFORM),win32)
 		$(MAKE); \
 		rc=$$? ; \
 		if [ $$rc != "0" ] ; then \
-		   echo "*** Error condition reported by make (rc = $$rc):" \
-		   rm -f $(XROOTDMAKE) \
+		   echo "*** Error condition reported by make (rc = $$rc):"; \
+		   rm -f $(XROOTDMAKE); \
 	 	   exit 1; \
-		fi ; \
+      fi; \
 		cd $$topdir ; \
 		if [ -d $(XROOTDDIRL) ]; then \
 		   lsplug=`find $(XROOTDDIRL) -name "libXrd*.$(XRDSOEXT)"` ;\
@@ -256,12 +279,12 @@ else
 		nmake -f Makefile.msc CFG=$(XRDDBG))
 endif
 
+### Rules for xrootd plugins
+$(LPATH)/libXrd%.$(XRDSOEXT):    $(XROOTDDIRL)/libXrd%.$(XRDSOEXT)
+		cp -rp $< $@
+
 ### Rules for single components
-#
-$(LPATH)/libXrdClient.$(XRDSOEXT): $(XROOTDDIRL)/libXrdClient.$(XRDSOEXT)
 $(XROOTDDIRL)/libXrdClient.$(XRDSOEXT): $(XROOTDBUILD)
-#
-$(LPATH)/libXrdSut.$(XRDSOEXT): $(XROOTDDIRL)/libXrdSut.$(XRDSOEXT)
 $(XROOTDDIRL)/libXrdSut.$(XRDSOEXT): $(XROOTDBUILD)
 #
 $(XROOTDDIRL)/libXrdOuc.a: $(XROOTDBUILD)
@@ -277,8 +300,8 @@ all-$(MODNAME): $(TARGETS)
 
 clean-$(MODNAME):
 ifneq ($(PLATFORM),win32)
-		@(if [ -f $(XROOTDMAKE) ]; then \
-		   $(MAKE) clean-netx;  \
+	 @(if [ -f $(XROOTDMAKE) ]; then \
+                   $(MAKE) clean-netx;  \
 		   $(MAKE) clean-proofx;  \
 		   cd $(XROOTDDIRD); \
 		   $(MAKE) clean; \
@@ -290,6 +313,7 @@ else
 		   nmake -f Makefile.msc clean; \
 		fi)
 endif
+		@rm -f $(XROOTDBUILD)
 
 clean::         clean-$(MODNAME)
 
@@ -310,5 +334,6 @@ else
 		   rm -f GNUmakefile; \
 		fi)
 endif
+		@rm -f $(XROOTDMAKE)
 
 distclean::     distclean-$(MODNAME)

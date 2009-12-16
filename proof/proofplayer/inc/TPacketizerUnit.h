@@ -27,12 +27,14 @@
 #ifndef ROOT_TVirtualPacketizer
 #include "TVirtualPacketizer.h"
 #endif
+#ifndef ROOT_TMap
+#include "TMap.h"
+#endif
 
 
 class TMessage;
 class TTimer;
 class TTree;
-class TMap;
 class TProofStats;
 class TStopwatch;
 
@@ -45,15 +47,6 @@ public:              // public because of Sun CC bug
 private:
    TList    *fPackets;           // all processed packets
    TMap     *fSlaveStats;        // Slave status, keyed by correspondig TSlave
-   Long64_t  fPacketSize;        // Global base packet size
-                                 // It can be set with PROOF_PacketSize
-                                 // parameter, in the input list.
-   Int_t     fPacketAsAFraction; // Used to calculate the packet size
-                                 // fPacketSize = fTotalEntries / (fPacketAsAFraction * nslaves)
-                                 // fPacketAsAFraction can be interpreted as follows:
-                                 // assuming all slaves have equal processing rate, packet size
-                                 // is (#events processed by 1 slave) / fPacketSizeAsAFraction.
-                                 // It can be set with PROOF_PacketAsAFraction in input list.
    TStopwatch *fStopwatch;       // For measuring the start time of each packet
    Long64_t    fProcessing;      // Event being processed
    Long64_t    fAssigned;        // no. entries processed or being processed.
@@ -70,6 +63,9 @@ public:
    TDSetElement *GetNextPacket(TSlave *sl, TMessage *r);
 
    Double_t      GetCurrentTime();
+
+   Float_t       GetCurrentRate(Bool_t &all);
+   Int_t         GetActiveWorkers() { return fSlaveStats->GetSize(); }
 
    ClassDef(TPacketizerUnit,0)  //Generate work packets for parallel processing
 };

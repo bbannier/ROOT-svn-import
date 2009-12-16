@@ -50,9 +50,8 @@
 ClassImp(TGLEventHandler);
 
 //______________________________________________________________________________
-TGLEventHandler::TGLEventHandler(const char *name, TGWindow *w, TObject *obj,
-                                 const char *title) :
-   TGEventHandler(name, w, obj, title),
+TGLEventHandler::TGLEventHandler(TGWindow *w, TObject *obj) :
+   TGEventHandler      ("TGLEventHandler", w, obj),
    fGLViewer           ((TGLViewer *)obj),
    fMouseTimer         (0),
    fLastPos            (-1, -1),
@@ -61,10 +60,12 @@ TGLEventHandler::TGLEventHandler(const char *name, TGWindow *w, TObject *obj,
    fTooltip            (0),
    fActiveButtonID     (0),
    fLastEventState     (0),
+   fIgnoreButtonUp     (kFALSE),
    fInPointerGrab      (kFALSE),
    fMouseTimerRunning  (kFALSE),
    fTooltipShown       (kFALSE),
-   fTooltipPixelTolerance (3)
+   fTooltipPixelTolerance (3),
+   fSecSelType(TGLViewer::kOnRequest)
 {
    // Constructor.
 
@@ -80,6 +81,32 @@ TGLEventHandler::~TGLEventHandler()
 
    delete fMouseTimer;
    delete fTooltip;
+}
+
+//______________________________________________________________________________
+void TGLEventHandler::GrabMouse()
+{
+   // Acquire mouse grab.
+
+   if (!fInPointerGrab)
+   {
+      gVirtualX->GrabPointer(fGLViewer->GetGLWidget()->GetId(),
+                             kButtonPressMask | kButtonReleaseMask | kPointerMotionMask,
+                             kNone, kNone, kTRUE, kFALSE);
+      fInPointerGrab = kTRUE;
+   }
+}
+
+//______________________________________________________________________________
+void TGLEventHandler::UnGrabMouse()
+{
+   // Release mouse grab.
+
+   if (fInPointerGrab)
+   {
+      gVirtualX->GrabPointer(0, 0, 0, 0, kFALSE);
+      fInPointerGrab = kFALSE;
+   }
 }
 
 //______________________________________________________________________________
@@ -300,7 +327,6 @@ Bool_t TGLEventHandler::HandleCrossing(Event_t *event)
 Bool_t TGLEventHandler::HandleButton(Event_t * event)
 {
    // Handle mouse button 'event'.
-   static Event_t eventSt = {kOtherEvent, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, kFALSE, 0, 0, {0,0,0,0,0}};
 
    if (fGLViewer->IsLocked()) {
       if (gDebug>2) {
@@ -310,19 +336,62 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       return kFALSE;
    }
 
-   // Button DOWN
-   if (event->fType == kButtonPress && event->fCode <= kButton3)
+   // Handle mouse-wheel events first.
+   if (event->fCode > kButton3)
    {
-      // Allow a single action/button down/up pairing - block others
-      fGLViewer->MouseIdle(0, 0, 0);
-      fGLViewer->Activated();
-      if (fGLViewer->fDragAction != TGLViewer::kDragNone)
-         return kFALSE;
-      eventSt.fX = event->fX;
-      eventSt.fY = event->fY;
-      eventSt.fCode = event->fCode;
+      // On Win32 only button release events come for mouse wheel.
+      // Note: Modifiers (ctrl/shift) disabled as fState doesn't seem to
+      // have correct modifier flags with mouse wheel under Windows.
+      // TODO: Put '50' into some static const.
 
-      if ( fGLViewer->GetPushAction() != TGLViewer::kPushStd )
+      if (event->fType == kButtonRelease)
+      {
+         Bool_t redraw = kFALSE;
+
+         switch(event->fCode)
+         {
+            case kButton5: // Zoom out (dolly or adjust camera FOV).
+               redraw = fGLViewer->CurrentCamera().Zoom(50, kFALSE, kFALSE);
+               break;
+
+            case kButton4: // Zoom in (dolly or adjust camera FOV).
+               redraw = fGLViewer->CurrentCamera().Zoom(-50, kFALSE, kFALSE);
+               break;
+
+            case kButton6:
+            case kButton7: // Ignore for now.
+               break;
+         }
+
+         if (redraw)
+            fGLViewer->fRedrawTimer->RequestDraw(10, TGLRnrCtx::kLODMed);
+      }
+      return kTRUE;
+   }
+
+   // Now we know we have Button 1 -> 3.
+   // Allow a single action/button down/up pairing - block others
+   if (fActiveButtonID && event->fCode != fActiveButtonID)
+   {
+      return kTRUE;
+   }
+   else
+   {
+      fActiveButtonID = event->fCode;
+   }
+
+
+   // Button DOWN
+   if (event->fType == kButtonPress)
+   {
+      GrabMouse();
+
+      fGLViewer->MouseIdle(0, 0, 0);
+
+      fButtonPushPos.fX = event->fX;
+      fButtonPushPos.fY = event->fY;
+
+      if (fGLViewer->GetPushAction() != TGLViewer::kPushStd)
       {
          fGLViewer->RequestSelect(event->fX, event->fY);
          if (fGLViewer->fSelRec.GetN() > 0)
@@ -336,11 +405,13 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                fGLViewer->CurrentCamera().SetCenterVec(v.X(), v.Y(), v.Z());
             }
             else
-            { 
+            {
                TGLSelectRecord& rec = fGLViewer->GetSelRec();
                TObject* obj = rec.GetObject();
                TGLRect& vp = fGLViewer->CurrentCamera().RefViewport();
-               new TGLAnnotation(fGLViewer, obj->GetTitle(),  eventSt.fX*1.f/vp.Width(),  1 - eventSt.fY*1.f/vp.Height(), v);
+               new TGLAnnotation(fGLViewer, obj->GetTitle(),
+                                 event->fX * 1.0f/vp.Width(),
+                                 1 - event->fY * 1.0f/vp.Height(), v);
             }
 
             fGLViewer->RequestDraw();
@@ -348,18 +419,13 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
          return kTRUE;
       }
 
-      Bool_t grabPointer = kFALSE;
-      Bool_t handled     = kFALSE;
-
-      // Record active button for release
-      fActiveButtonID = event->fCode;
+      Bool_t handled = kFALSE;
 
       if (fGLViewer->fDragAction == TGLViewer::kDragNone && fGLViewer->fCurrentOvlElm)
       {
          if (fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event))
          {
             handled     = kTRUE;
-            grabPointer = kTRUE;
             fGLViewer->fDragAction = TGLViewer::kDragOverlay;
             fGLViewer->RequestDraw();
          }
@@ -371,27 +437,37 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
             // LEFT mouse button
             case kButton1:
             {
-               if (event->fState & kKeyShiftMask) {
-                  if (fGLViewer->RequestSelect(event->fX, event->fY)) {
+               if (event->fState & kKeyShiftMask)
+               {
+                  if (fGLViewer->RequestSelect(event->fX, event->fY))
+                  {
                      fGLViewer->ApplySelection();
                      handled = kTRUE;
-                  } else {
-                     fGLViewer->SelectionChanged(); // Just notify clients.
+                     fIgnoreButtonUp = kTRUE;
                   }
-               } else if (event->fState & kKeyMod1Mask) {
-                  fGLViewer->RequestSelect(event->fX, event->fY, kTRUE);
+               }
+               else if ((fSecSelType == TGLViewer::kOnRequest ||
+                         fSecSelType == TGLViewer::kOnKeyMod1) &&
+                        event->fState & kKeyMod1Mask)
+               {
+                  fGLViewer->RequestSelect(event->fX, event->fY);
+                  fGLViewer->RequestSecondarySelect(event->fX, event->fY);
+
                   if (fGLViewer->fSecSelRec.GetPhysShape() != 0)
                   {
                      TGLLogicalShape& lshape = const_cast<TGLLogicalShape&>
                         (*fGLViewer->fSecSelRec.GetPhysShape()->GetLogical());
                      lshape.ProcessSelection(*fGLViewer->fRnrCtx, fGLViewer->fSecSelRec);
-                     handled = kTRUE;
                   }
+                  handled = kTRUE;
+                  fIgnoreButtonUp = kTRUE;
                }
-               if ( ! handled) {
+
+               if ( ! handled)
+               {
                   fGLViewer->fDragAction = TGLViewer::kDragCameraRotate;
-                  grabPointer = kTRUE;
-                  if (fMouseTimer) {
+                  if (fMouseTimer)
+                  {
                      fMouseTimer->TurnOff();
                      fMouseTimer->Reset();
                   }
@@ -402,7 +478,6 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
             case kButton2:
             {
                fGLViewer->fDragAction = TGLViewer::kDragCameraTruck;
-               grabPointer = kTRUE;
                break;
             }
             // RIGHT mouse button
@@ -412,45 +487,58 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                if (event->fState & kKeyShiftMask)
                {
                   fGLViewer->RequestSelect(event->fX, event->fY);
+                  if (!fGLViewer->fContextMenu) {
+                     fGLViewer->fContextMenu = new TContextMenu("glcm", "GL Viewer Context Menu");
+                  }
+                  Int_t    x, y;
+                  Window_t childdum;
+                  gVirtualX->TranslateCoordinates(fGLViewer->fGLWidget->GetId(),
+                                                  gClient->GetDefaultRoot()->GetId(),
+                                                  event->fX, event->fY, x, y, childdum);
                   const TGLPhysicalShape * selected = fGLViewer->fSelRec.GetPhysShape();
-                  if (selected) {
-                     if (!fGLViewer->fContextMenu) {
-                        fGLViewer->fContextMenu = new TContextMenu("glcm", "GL Viewer Context Menu");
-                     }
-                     Int_t    x, y;
-                     Window_t childdum;
-                     gVirtualX->TranslateCoordinates(fGLViewer->fGLWidget->GetId(),
-                                                     gClient->GetDefaultRoot()->GetId(),
-                                                     event->fX, event->fY, x, y, childdum);
+                  if (selected)
+                  {
+                     fActiveButtonID = 0;
+                     UnGrabMouse();
+
                      selected->InvokeContextMenu(*fGLViewer->fContextMenu, x, y);
                   }
-               } else {
+                  // This is dangerous ... should have special menu.
+                  // else 
+                  // {
+                  //    fGLViewer->fContextMenu->Popup(x, y, fGLViewer);
+                  // }
+               }
+               else
+               {
                   fGLViewer->fDragAction = TGLViewer::kDragCameraDolly;
-                  grabPointer = kTRUE;
                }
                break;
             }
          }
       }
-
-      if (grabPointer)
-      {
-         gVirtualX->GrabPointer(fGLViewer->GetGLWidget()->GetId(),
-                                kButtonPressMask | kButtonReleaseMask | kPointerMotionMask,
-                                kNone, kNone, kTRUE, kFALSE);
-         fInPointerGrab = kTRUE;
-      }
    }
    // Button UP
    else if (event->fType == kButtonRelease)
    {
+      fActiveButtonID = 0;
+
       if (fInPointerGrab)
       {
-         gVirtualX->GrabPointer(0, 0, 0, 0, kFALSE);
-         fInPointerGrab = kFALSE;
+         UnGrabMouse();
+      }
+      else
+      {
+         Warning("TGLEventHandler::HandleButton", "Unexpected button-release.");
       }
 
-      if (fGLViewer->GetPushAction() !=  TGLViewer::kPushStd)
+      if (fIgnoreButtonUp)
+      {
+         fIgnoreButtonUp = kFALSE;
+         return kTRUE;
+      }
+
+      if (fGLViewer->GetPushAction() != TGLViewer::kPushStd)
       {
          // This should be 'tool' dependant.
          fGLViewer->fPushAction = TGLViewer::kPushStd;
@@ -470,48 +558,55 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
          fGLViewer->RequestDraw(TGLRnrCtx::kLODHigh);
       }
 
-      // TODO: Check on Linux - on Win32 only see button release events
-      // for mouse wheel
-      switch(event->fCode) {
-         // Buttons 4/5 are mouse wheel
-         // Note: Modifiers (ctrl/shift) disabled as fState doesn't seem to
-         // have correct modifier flags with mouse wheel under Windows.
-         case kButton5: {
-            // Zoom out (dolly or adjust camera FOV). TODO : val static const somewhere
-            if (fGLViewer->CurrentCamera().Zoom(50, kFALSE, kFALSE))
-               fGLViewer->fRedrawTimer->RequestDraw(10, TGLRnrCtx::kLODMed);
-            return kTRUE;
-            break;
-         }
-         case kButton4: {
-            // Zoom in - adjust camera FOV. TODO : val static const somewhere
-            if (fGLViewer->CurrentCamera().Zoom(-50, kFALSE, kFALSE))
-               fGLViewer->fRedrawTimer->RequestDraw(10, TGLRnrCtx::kLODMed);
-            return kTRUE;
-            break;
-         }
-      }
       fGLViewer->fDragAction = TGLViewer::kDragNone;
+
       if (fGLViewer->fGLDevice != -1)
       {
          gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kFALSE);
       }
-      if ((event->fX == eventSt.fX) &&
-          (event->fY == eventSt.fY) &&
-          (eventSt.fCode == event->fCode))
+
+      if (event->fX == fButtonPushPos.fX && event->fY == fButtonPushPos.fY)
       {
          TObject *obj = 0;
-         fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
+         fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY);
          TGLPhysicalShape *phys_shape = fGLViewer->fSelRec.GetPhysShape();
-         if (phys_shape) {
-            obj = phys_shape->GetLogical()->GetExternal();
+
+         if (phys_shape) obj = phys_shape->GetLogical()->GetExternal();
+      
+         // secondary selection
+         if (phys_shape && fSecSelType == TGLViewer::kOnRequest &&
+             phys_shape->GetLogical()->AlwaysSecondarySelect())
+         {
+            fGLViewer->RequestSecondarySelect(fLastPos.fX, fLastPos.fY);
+            fGLViewer->fSecSelRec.SetMultiple(event->fState & kKeyControlMask);
+
+            if (fGLViewer->fSecSelRec.GetPhysShape() != 0)
+            {
+               TGLLogicalShape& lshape = const_cast<TGLLogicalShape&>
+                  (*fGLViewer->fSecSelRec.GetPhysShape()->GetLogical());
+
+               lshape.ProcessSelection(*fGLViewer->fRnrCtx, fGLViewer->fSecSelRec);
+               switch (fGLViewer->fSecSelRec.GetSecSelResult())
+               {
+                  case TGLSelectRecord::kEnteringSelection:
+                     fGLViewer->Clicked(obj, event->fCode, event->fState);
+                     break;
+                  case TGLSelectRecord::kLeavingSelection:
+                     fGLViewer->UnClicked(obj, event->fCode, event->fState);
+                     break;
+                  case TGLSelectRecord::kModifyingInternalSelection:
+                     fGLViewer->ReClicked(obj, event->fCode, event->fState);
+                     break;
+                  default:
+                     break;
+               };
+            }
          }
-         fGLViewer->Clicked(obj);
-         fGLViewer->Clicked(obj, event->fCode, event->fState);
-         eventSt.fX = 0;
-         eventSt.fY = 0;
-         eventSt.fCode = 0;
-         eventSt.fState = 0;
+         else
+         {
+            fGLViewer->Clicked(obj);
+            fGLViewer->Clicked(obj, event->fCode, event->fState);
+         }
       }
       if (event->fCode == kButton1 && fMouseTimer)
       {
@@ -535,15 +630,21 @@ Bool_t TGLEventHandler::HandleDoubleClick(Event_t *event)
       return kFALSE;
    }
 
+   if (event->fCode > 3)
+      return kTRUE;
+
+   if (fActiveButtonID)
+      return kTRUE;
+
+   fActiveButtonID = event->fCode;
+   GrabMouse();
+
    fGLViewer->MouseIdle(0, 0, 0);
-   // Reset interactive camera mode on button double
-   // click (unless mouse wheel)
-   if (event->fCode != kButton4 && event->fCode != kButton5) {
-      if (fGLViewer->fResetCameraOnDoubleClick) {
-         fGLViewer->ResetCurrentCamera();
-         fGLViewer->RequestDraw();
-      }
+   if (event->fCode == kButton1)
+   {
       fGLViewer->DoubleClicked();
+      if (fGLViewer->GetSelected() == 0)
+         fGLViewer->SelectionChanged();
    }
    return kTRUE;
 }
@@ -648,7 +749,7 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
             break;
 
          case kKey_F1:
-            fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
+            fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY);
             fGLViewer->MouseIdle(fGLViewer->fSelRec.GetPhysShape(), (UInt_t)fLastPos.fX, (UInt_t)fLastPos.fY);
             break;
 
@@ -762,11 +863,12 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    }
    else if (fGLViewer->fDragAction == TGLViewer::kDragCameraDolly)
    {
-      processed = fGLViewer->CurrentCamera().Dolly(xDelta, mod1, mod2);
+      processed = fGLViewer->CurrentCamera().Dolly(xDelta - yDelta, mod1, mod2);
    }
    else if (fGLViewer->fDragAction == TGLViewer::kDragOverlay)
    {
-      processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
+      if (fGLViewer->fCurrentOvlElm)
+         processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
    }
 
    fLastPos.fX = event->fX;
@@ -814,7 +916,7 @@ Bool_t TGLEventHandler::HandleTimer(TTimer *t)
    {
       if (fLastMouseOverPos != fLastPos)
       {
-         fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
+         fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY);
          if (fLastMouseOverShape != fGLViewer->fSelRec.GetPhysShape())
          {
             fLastMouseOverShape = fGLViewer->fSelRec.GetPhysShape();

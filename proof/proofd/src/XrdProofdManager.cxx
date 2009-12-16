@@ -106,7 +106,7 @@ XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
 {
    // Constructor
 
-   fSrvType  = kXPD_AnyServer;
+   fSrvType = kXPD_AnyServer;
    fEffectiveUser = "";
    fHost = "";
    fPort = XPD_DEF_PORT;
@@ -126,6 +126,7 @@ XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
    fAdminPath += "/.xproofd.";
 
    // Services
+   fSched = pi->Sched;
    fAdmin = 0;
    fClientMgr = 0;
    fGroupsMgr = 0;
@@ -138,7 +139,7 @@ XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
    RegisterDirectives();
 
    // Admin request handler
-   fAdmin = new XrdProofdAdmin(this);
+   fAdmin = new XrdProofdAdmin(this, pi, edest);
 
    // Client manager
    fClientMgr = new XrdProofdClientMgr(this, pi, edest);
@@ -236,7 +237,7 @@ int XrdProofdManager::CheckUser(const char *usr,
    // Return 0 if OK, -1 if not.
 
    su = 0;
-   // No 'root' logins
+   // User must be defined
    if (!usr || strlen(usr) <= 0) {
       e = "CheckUser: 'usr' string is undefined ";
       return -1;
@@ -297,17 +298,17 @@ int XrdProofdManager::CheckUser(const char *usr,
       // accepts connections from all group 'z2' except user 'jgrosseo' and from user 'ganis'
       // even if not belonging to group 'z2'.
 
-      bool usrok = 1;
+      bool grpok = 1;
       // Check unix group
       if (fAllowedGroups.Num() > 0) {
          // Reset the flag
-         usrok = 0;
+         grpok = 0;
          // Get full group info
          XrdProofGI gi;
          if (XrdProofdAux::GetGroupInfo(ui.fGid, gi) == 0) {
             int *st = fAllowedGroups.Find(gi.fGroup.c_str());
             if (st) {
-               usrok = 1;
+               grpok = 1;
             } else {
                e = "CheckUser: group '";
                e += gi.fGroup;
@@ -316,17 +317,18 @@ int XrdProofdManager::CheckUser(const char *usr,
          }
       }
       // Check username
+      bool usrok = grpok;
       if (fAllowedUsers.Num() > 0) {
          // Look into the hash
          int *st = fAllowedUsers.Find(usr);
          if (st) {
-            if (usrok && (*st == 0)) {
-               usrok = 0;
+            if ((*st == 1)) {
+               usrok = 1;
+            } else {
                e = "CheckUser: user '";
                e += usr;
                e += "' is not allowed to connect";
-            } else if (!usrok && (*st == 1)) {
-               usrok = 1;
+               usrok = 0;
             }
          }
       }
@@ -708,6 +710,12 @@ int XrdProofdManager::Config(bool rcf)
 
    if (fGroupsMgr)
       fGroupsMgr->Print(0);
+
+   // Config the admin handler
+   if (fAdmin && fAdmin->Config(rcf) != 0) {
+      XPDERR("problems configuring the admin handler");
+      return -1;
+   }
 
    // Config the network manager
    if (fNetMgr && fNetMgr->Config(rcf) != 0) {
@@ -1169,6 +1177,8 @@ int XrdProofdManager::DoDirectiveRole(char *val, XrdOucStream *cfg, bool)
       fSrvType = kXPD_Master;
    } else if (tval == "worker") {
       fSrvType = kXPD_Worker;
+   } else if (tval == "any") {
+      fSrvType = kXPD_AnyServer;
    }
 
    return 0;

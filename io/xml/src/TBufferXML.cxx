@@ -38,6 +38,7 @@
 #include "TFile.h"
 #include "TMemberStreamer.h"
 #include "TStreamer.h"
+#include "snprintf.h"
 
 extern "C" void R__zip(int cxlevel, int *srcsize, char *src, int *tgtsize, char *tgt, int *irep);
 
@@ -60,7 +61,17 @@ const char* TBufferXML::fgFloatFmt = "%e";
 TBufferXML::TBufferXML() :
    TBufferFile(),
    TXMLSetup(),
-   fXML(0)
+   fXML(0),
+   fStack(),
+   fVersionBuf(-111),
+   fObjMap(0),
+   fIdArray(0),
+   fErrorFlag(0),
+   fCanUseCompact(kFALSE),
+   fExpectedChain(kFALSE),
+   fExpectedBaseClass(0),
+   fCompressLevel(0)
+
 {
    // Default constructor
 }
@@ -499,7 +510,7 @@ Bool_t TBufferXML::ProcessPointer(const void* ptr, XMLNodePointer_t node)
 
       ULong_t hash = TString::Hash(&ptr, sizeof(void*));
 
-      XMLNodePointer_t refnode = (XMLNodePointer_t) fObjMap->GetValue(hash, (Long_t) ptr);
+      XMLNodePointer_t refnode = (XMLNodePointer_t) (Long_t)fObjMap->GetValue(hash, (Long_t) ptr);
       if (refnode==0) return kFALSE;
 
       if (fXML->HasAttr(refnode, xmlio::Ref))
@@ -561,7 +572,7 @@ Bool_t TBufferXML::ExtractPointer(XMLNodePointer_t node, void* &ptr, TClass* &cl
 
    TNamed* obj = (TNamed*) fIdArray->FindObject(ptrid);
    if (obj) {
-      ptr = (void*) fObjMap->GetValue((Long_t) fIdArray->IndexOf(obj));
+      ptr = (void*) (Long_t)fObjMap->GetValue((Long_t) fIdArray->IndexOf(obj));
       cl = TClass::GetClass(obj->GetTitle());
       return kTRUE;
    }
@@ -1219,7 +1230,7 @@ void TBufferXML::PerformPostProcessing()
       sscanf(str.Data(),"%u", &bits);
 
       char sbuf[20];
-      sprintf(sbuf,"%x",bits);
+      snprintf(sbuf, sizeof(sbuf), "%x",bits);
       fXML->NewAttr(elemnode, 0, "fBits", sbuf);
 
       if (prnode!=0) {
@@ -1253,7 +1264,7 @@ void TBufferXML::PerformPreProcessing(const TStreamerElement* elem, XMLNodePoint
       XMLNodePointer_t ucharnode = fXML->NewChild(elemnode, 0, xmlio::UChar,0);
 
       char sbuf[20];
-      sprintf(sbuf,"%d", len);
+      snprintf(sbuf, sizeof(sbuf), "%d", len);
       if (len<255)
          fXML->NewAttr(ucharnode,0,xmlio::v,sbuf);
       else {
@@ -1287,7 +1298,7 @@ void TBufferXML::PerformPreProcessing(const TStreamerElement* elem, XMLNodePoint
       UInt_t bits;
       sscanf(bitsstr.Data(),"%x", &bits);
       char sbuf[20];
-      sprintf(sbuf,"%u", bits);
+      snprintf(sbuf, sizeof(sbuf), "%u", bits);
 
       node = fXML->NewChild(elemnode, 0, xmlio::UInt, 0);
       fXML->NewAttr(node, 0, xmlio::v, sbuf);
@@ -1384,7 +1395,7 @@ void TBufferXML::CheckVersionBuf()
 
    if (IsWriting() && (fVersionBuf>=-100)) {
       char sbuf[20];
-      sprintf(sbuf, "%d", fVersionBuf);
+      snprintf(sbuf, sizeof(sbuf), "%d", fVersionBuf);
       XmlWriteValue(sbuf, xmlio::OnlyVersion);
       fVersionBuf = -111;
    }
@@ -2614,7 +2625,7 @@ XMLNodePointer_t TBufferXML::XmlWriteBasic(Char_t value)
    // converts Char_t to string and add xml node to buffer
 
    char buf[50];
-   sprintf(buf,"%d",value);
+   snprintf(buf, sizeof(buf), "%d",value);
    return XmlWriteValue(buf, xmlio::Char);
 }
 
@@ -2624,7 +2635,7 @@ XMLNodePointer_t  TBufferXML::XmlWriteBasic(Short_t value)
    // converts Short_t to string and add xml node to buffer
 
    char buf[50];
-   sprintf(buf,"%hd", value);
+   snprintf(buf, sizeof(buf), "%hd", value);
    return XmlWriteValue(buf, xmlio::Short);
 }
 
@@ -2634,7 +2645,7 @@ XMLNodePointer_t TBufferXML::XmlWriteBasic(Int_t value)
    // converts Int_t to string and add xml node to buffer
 
    char buf[50];
-   sprintf(buf,"%d", value);
+   snprintf(buf, sizeof(buf), "%d", value);
    return XmlWriteValue(buf, xmlio::Int);
 }
 
@@ -2644,7 +2655,7 @@ XMLNodePointer_t TBufferXML::XmlWriteBasic(Long_t value)
    // converts Long_t to string and add xml node to buffer
 
    char buf[50];
-   sprintf(buf,"%ld", value);
+   snprintf(buf, sizeof(buf), "%ld", value);
    return XmlWriteValue(buf, xmlio::Long);
 }
 
@@ -2654,7 +2665,7 @@ XMLNodePointer_t TBufferXML::XmlWriteBasic(Long64_t value)
    // converts Long64_t to string and add xml node to buffer
 
    char buf[50];
-   sprintf(buf, FLong64, value);
+   snprintf(buf, sizeof(buf), FLong64, value);
    return XmlWriteValue(buf, xmlio::Long64);
 }
 
@@ -2664,7 +2675,7 @@ XMLNodePointer_t  TBufferXML::XmlWriteBasic(Float_t value)
    // converts Float_t to string and add xml node to buffer
 
    char buf[200];
-   sprintf(buf, fgFloatFmt, value);
+   snprintf(buf, sizeof(buf), fgFloatFmt, value);
    return XmlWriteValue(buf, xmlio::Float);
 }
 
@@ -2674,7 +2685,7 @@ XMLNodePointer_t TBufferXML::XmlWriteBasic(Double_t value)
    // converts Double_t to string and add xml node to buffer
 
    char buf[1000];
-   sprintf(buf, fgFloatFmt, value);
+   snprintf(buf, sizeof(buf), fgFloatFmt, value);
    return XmlWriteValue(buf, xmlio::Double);
 }
 
@@ -2692,7 +2703,7 @@ XMLNodePointer_t TBufferXML::XmlWriteBasic(UChar_t value)
    // converts UChar_t to string and add xml node to buffer
 
    char buf[50];
-   sprintf(buf,"%u", value);
+   snprintf(buf, sizeof(buf), "%u", value);
    return XmlWriteValue(buf, xmlio::UChar);
 }
 
@@ -2702,7 +2713,7 @@ XMLNodePointer_t TBufferXML::XmlWriteBasic(UShort_t value)
    // converts UShort_t to string and add xml node to buffer
 
    char buf[50];
-   sprintf(buf,"%hu", value);
+   snprintf(buf, sizeof(buf), "%hu", value);
    return XmlWriteValue(buf, xmlio::UShort);
 }
 
@@ -2712,7 +2723,7 @@ XMLNodePointer_t TBufferXML::XmlWriteBasic(UInt_t value)
    // converts UInt_t to string and add xml node to buffer
 
    char buf[50];
-   sprintf(buf,"%u", value);
+   snprintf(buf, sizeof(buf), "%u", value);
    return XmlWriteValue(buf, xmlio::UInt);
 }
 
@@ -2722,7 +2733,7 @@ XMLNodePointer_t TBufferXML::XmlWriteBasic(ULong_t value)
    // converts ULong_t to string and add xml node to buffer
 
    char buf[50];
-   sprintf(buf,"%lu", value);
+   snprintf(buf, sizeof(buf), "%lu", value);
    return XmlWriteValue(buf, xmlio::ULong);
 }
 
@@ -2732,7 +2743,7 @@ XMLNodePointer_t TBufferXML::XmlWriteBasic(ULong64_t value)
    // converts ULong64_t to string and add xml node to buffer
 
    char buf[50];
-   sprintf(buf, FULong64, value);
+   snprintf(buf, sizeof(buf), FULong64, value);
    return XmlWriteValue(buf, xmlio::ULong64);
 }
 
@@ -2949,7 +2960,8 @@ const char* TBufferXML::XmlReadValue(const char* name)
 void TBufferXML::SetFloatFormat(const char* fmt)
 {
    // set printf format for float/double members, default "%e"
-   
+
+   if (fmt==0) fmt = "%e";
    fgFloatFmt = fmt;
 }
     

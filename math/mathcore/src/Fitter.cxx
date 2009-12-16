@@ -17,7 +17,6 @@
 #include "Fit/LogLikelihoodFCN.h"
 #include "Math/Minimizer.h"
 #include "Math/MinimizerOptions.h"
-#include "Fit/MinimizerControlParams.h"
 #include "Fit/BinData.h"
 #include "Fit/UnBinData.h"
 #include "Fit/FcnAdapter.h"
@@ -84,7 +83,8 @@ void Fitter::SetFunction(const IModelFunction & func)
    //  set the fit model function (clone the given one and keep a copy ) 
    //std::cout << "set a non-grad function" << std::endl; 
 
-   fFunc = dynamic_cast<IModelFunction *> ( func.Clone() ); 
+   fFunc = dynamic_cast<IModelFunction *>(func.Clone() ); 
+   assert(fFunc != 0);
    
    // creates the parameter  settings 
    fConfig.CreateParamsSettings(*fFunc); 

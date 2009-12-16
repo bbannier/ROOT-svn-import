@@ -135,9 +135,15 @@ namespace ROOT { namespace Cintex {
 
    void ROOTClassEnhancer::Setup() {
       // Enhance root class info.
-      ROOTClassEnhancerInfo* p = new ROOTClassEnhancerInfo(fClass);
-      fEnhancerinfo = p;
-      p->Setup();
+      VoidFuncPtr_t dict_func = TClassTable::GetDict(fName.c_str());
+      if (dict_func) {
+         fEnhancerinfo = 0; // Prevent adding the TClass to root twice.
+      }
+      else {
+         ROOTClassEnhancerInfo* p = new ROOTClassEnhancerInfo(fClass);
+         fEnhancerinfo = p;
+         p->Setup();
+      }
    }
 
    void ROOTClassEnhancer::CreateInfo() {
@@ -208,26 +214,34 @@ namespace ROOT { namespace Cintex {
          return;
       }
       else    {
-         Type int_t  = Type::ByName("int");
          Type void_t = Type::ByName("void");
          Type char_t = Type::ByName("char");
          Type signature;
          void* ctxt = this;
 
-         //--- adding TClass* IsA()
-         signature = FunctionTypeBuilder( PointerBuilder(TypeBuilder("TClass")));
-         AddFunction("IsA", signature, Stub_IsA, ctxt, 0);
-         //--- adding void Data_ShowMembers(void *, TMemberInspector&, char*)
-         signature = FunctionTypeBuilder( void_t,
-                                          ReferenceBuilder(TypeBuilder("TMemberInspector")),
-                                          PointerBuilder(char_t));
-         AddFunction("ShowMembers", signature, Stub_ShowMembers, ctxt, VIRTUAL);
          signature = FunctionTypeBuilder( void_t, ReferenceBuilder(TypeBuilder("TBuffer")));
-         AddFunction("Streamer", signature, Stub_Streamer, ctxt, VIRTUAL);
-         AddFunction("StreamerNVirtual", signature, Stub_StreamerNVirtual, ctxt, 0);
+         Member exists = fType.FunctionMemberByName("StreamerNVirtual", signature,
+                                                    0, INHERITEDMEMBERS_NO, DELAYEDLOAD_OFF);
+         if (!exists) {
+            //AddFunction("Streamer", signature, Stub_Streamer, ctxt, VIRTUAL);
+            //AddFunction("StreamerNVirtual", signature, Stub_StreamerNVirtual, ctxt, 0);
+
+            //--- adding TClass* IsA()
+            signature = FunctionTypeBuilder( PointerBuilder(TypeBuilder("TClass")));
+            AddFunction("IsA", signature, Stub_IsA, ctxt, 0);
+            //--- adding void Data_ShowMembers(void *, TMemberInspector&, char*)
+            signature = FunctionTypeBuilder( void_t,
+                                             ReferenceBuilder(TypeBuilder("TMemberInspector")),
+                                             PointerBuilder(char_t));
+            
+            AddFunction("ShowMembers", signature, Stub_ShowMembers, ctxt,
+                        /*should be VIRTUAL but avoid vtable creation:*/
+                        fType.IsVirtual() ? VIRTUAL : 0);
+
+            //--- create TGenericClassInfo Instance
+            //createInfo();
+         }
       }
-      //--- create TGenericClassInfo Instance
-      //createInfo();
    }
 
    void ROOTClassEnhancerInfo::CreateInfo() {
@@ -260,7 +274,8 @@ namespace ROOT { namespace Cintex {
 
       if (info) info->SetImplFile("", 1);
       //----Fill the New and Deletete functions
-      Member getfuncs = TypeGet().MemberByName("__getNewDelFunctions", Reflex::Type(), INHERITEDMEMBERS_NO);
+      Member getfuncs = TypeGet().FunctionMemberByName("__getNewDelFunctions", Reflex::Type(),
+                                                       0, INHERITEDMEMBERS_NO, DELAYEDLOAD_OFF);
       if( getfuncs ) {
          NewDelFunctions_t* newdelfunc = 0;
          getfuncs.Invoke(newdelfunc);
@@ -381,29 +396,6 @@ namespace ROOT { namespace Cintex {
       std::string Name = typ.Name(SCOPED);
       int kind = TClassEdit::IsSTLCont(Name.c_str());
       if ( kind < 0 ) kind = -kind;
-      const char* tagname = Name.c_str();
-      int tagnum = ::G__defined_tagname(tagname, 2);
-      G__ClassInfo cl_info(tagnum);
-      if ( cl_info.IsValid() )  {
-         switch(kind)  {
-         case TClassEdit::kVector:
-         case TClassEdit::kList:
-         case TClassEdit::kDeque:
-         case TClassEdit::kMap:
-         case TClassEdit::kMultiMap:
-         case TClassEdit::kSet:
-         case TClassEdit::kMultiSet:
-            cl_info.SetVersion(4);
-            break;
-         case TClassEdit::kBitSet:
-            cl_info.SetVersion(2);
-            break;
-         case TClassEdit::kNotSTL:
-         case TClassEdit::kEnd:
-            cl_info.SetVersion(1);
-            break;
-         }
-      }
 
       const std::type_info& tid = typ.TypeInfo();
       root_class = info->GetClass();
@@ -422,7 +414,8 @@ namespace ROOT { namespace Cintex {
          case TClassEdit::kMultiSet:
          case TClassEdit::kBitSet:
             {
-               Member method = typ.MemberByName("createCollFuncTable", Reflex::Type(), INHERITEDMEMBERS_NO);
+               Member method = typ.FunctionMemberByName("createCollFuncTable", Reflex::Type(), 0,
+                                                        INHERITEDMEMBERS_NO, DELAYEDLOAD_OFF);
                if ( !method )   {
                   if ( Cintex::Debug() )  {
                      cout << "Cintex: " << Name << "' Setup failed to create this class! "
@@ -532,7 +525,7 @@ namespace ROOT { namespace Cintex {
       if ( IsSTL(cl.Name(SCOPED)) || cl.IsArray() ) return;
       for ( size_t m = 0; m < cl.DataMemberSize(INHERITEDMEMBERS_NO); m++) {
          Member mem = cl.DataMemberAt(m, INHERITEDMEMBERS_NO);
-         if ( ! mem.IsTransient() ) {
+         if ( ! mem.IsStatic() ) {
             Type typ = mem.TypeOf();
             string nam = mem.Properties().HasProperty("ioname") ?
                mem.Properties().PropertyAsString("ioname") : mem.Name();
@@ -550,11 +543,11 @@ namespace ROOT { namespace Cintex {
             insp.Inspect(tcl, par, nam.c_str(), add);
             if ( !typ.IsFundamental() && !typ.IsPointer() ) {
                string tnam  = mem.Properties().HasProperty("iotype") ? CintName(mem.Properties().PropertyAsString("iotype")) : CintName(typ);
-               TClass* tmcl = ROOT::GetROOT()->GetClass(tnam.c_str());
+               TClass* tmcl = ROOT::GetROOT()->GetClass(tnam.c_str(), kTRUE, mem.IsTransient());
                if ( tmcl ) {
                   ::strcat(par,nam.c_str());
                   ::strcat(par,".");
-                  Stub_ShowMembers(tmcl, typ, add, insp, par);
+                  tmcl->CallShowMembers(add, insp, par);
                   par[ncp] = 0;
                }
             }

@@ -74,6 +74,7 @@ TProfile3D::TProfile3D() : TH3D()
 //*-*        ============================================
    fTsumwt = fTsumwt2 = 0;
    fScaling = kFALSE;
+   BuildOptions(0,0,"");
 }
 
 //______________________________________________________________________________
@@ -1237,7 +1238,7 @@ void TProfile3D::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       }
    }
 
-   TH1::SavePrimitiveHelp(out, option);
+   TH1::SavePrimitiveHelp(out, GetName(), option);
 }
 
 //______________________________________________________________________________

@@ -336,11 +336,18 @@ void stressGraphics(Int_t verbose = 0)
       //Print table with results
       Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
       if (UNIX) {
-         FILE *fp = gSystem->OpenPipe("uname -a", "r");
-         Char_t line[60];
-         fgets(line,60,fp); line[59] = 0;
-         printf("*  SYS: %s\n",line);
-         gSystem->ClosePipe(fp);
+         TString sp = gSystem->GetFromPipe("uname -a");
+         sp.Resize(60);
+         printf("*  SYS: %s\n",sp.Data());
+         if (strstr(gSystem->GetBuildNode(),"Linux")) {
+            sp = gSystem->GetFromPipe("lsb_release -d -s");
+            printf("*  SYS: %s\n",sp.Data());
+         }
+         if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+            sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+            sp += " Mac OS X ";
+            printf("*  SYS: %s\n",sp.Data());
+         }
       } else {
          const Char_t *os = gSystem->Getenv("OS");
          if (!os) printf("*  SYS: Windows 95\n");
@@ -384,12 +391,15 @@ Int_t StatusPrint(TString &filename, Int_t id, const TString &title,
          if (!gOptionK) gSystem->Unlink(filename.Data());
       } else {
          cout << gLine;
-         for (Int_t i = nch; i < 63; i++) cout << ".";
-         cout << " FAILED" << endl;
+	 Int_t ndots = 60;
+	 Int_t w = 3;
+	 if (gTestNum < 10) { ndots++; w--;}
+         for (Int_t i = nch; i < ndots; i++) cout << ".";
+         cout << setw(w) << gTestNum << " FAILED" << endl;
          cout << "         Result    = "  << res << endl;
          cout << "         Reference = "  << ref << endl;
          cout << "         Error     = "  << TMath::Abs(res-ref)
-                                           << " (was " << err << ")"<< endl;
+                                          << " (was " << err << ")"<< endl;
          return 1;
       }
    } else {
@@ -2475,12 +2485,11 @@ void waves()
    Int_t palette[colNum];
    Int_t color_offset = 1001;
    for (Int_t i=0;i<colNum;i++) {
-      TColor *color = new TColor(color_offset+i
+      new TColor(color_offset+i
       ,    pow(i/((colNum)*1.0),0.3)
       ,    pow(i/((colNum)*1.0),0.3)
       ,0.5*(i/((colNum)*1.0)),"");
       palette[i] = color_offset+i;
-      if(color);
    }
    gStyle->SetPalette(colNum,palette);
    C->cd();

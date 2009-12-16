@@ -747,7 +747,7 @@ const TSeqCollection *TTabCom::GetListOfUsers()
 
 // ----------------------------------------------------------------------------
 //
-//                           static utility funcitons
+//                           static utility functions
 //
 
 //______________________________________________________________________________
@@ -1225,7 +1225,7 @@ void TTabCom::NoMsg(Int_t errorLevel)
 }
 
 //
-//                           static utility funcitons
+//                           static utility functions
 //
 // ----------------------------------------------------------------------------
 
@@ -1239,7 +1239,8 @@ void TTabCom::NoMsg(Int_t errorLevel)
 //______________________________________________________________________________
 Int_t TTabCom::Complete(const TRegexp & re,
                         const TSeqCollection * pListOfCandidates,
-                        const char appendage[])
+                        const char appendage[],
+                        TString::ECaseCompare cmp)
 {
    // [private]
 
@@ -1255,7 +1256,7 @@ Int_t TTabCom::Complete(const TRegexp & re,
    assert(fpLoc != 0);
    assert(pListOfCandidates != 0);
 
-   Int_t pos;                   // position of first change
+   Int_t pos = 0;               // position of first change
    const int loc = *fpLoc;      // location where TAB was pressed
 
    // -----------------------------------------
@@ -1309,15 +1310,26 @@ Int_t TTabCom::Complete(const TRegexp & re,
       else
          s5 += 1;               // advance past '/'
 
-      // check for match
-      if (strstr(s5, s3) == s5) {
+      // if case sensitive (normal behaviour), check for match
+      // if case insensitive, convert to TString and compare case insensitively
+      if ((cmp == TString::kExact) && (strstr(s5, s3) == s5)) {
          nMatches += 1;
          listOfMatches.Add(new TObjString(s5));
          listOfFullPaths.Add(new TObjString(s4));
          IfDebug(cerr << "adding " << s5 << '\t' << s4 << endl);
+      } else if (cmp == TString::kIgnoreCase) { 
+         TString ts5(s5);
+         if (ts5.BeginsWith(s3, cmp))
+         {
+            nMatches += 1;
+            listOfMatches.Add(new TObjString(s5));
+            listOfFullPaths.Add(new TObjString(s4));
+            IfDebug(cerr << "adding " << s5 << '\t' << s4 << endl);
+         }
       } else {
 //rdm         IfDebug(cerr << "considered " << s5 << '\t' << s4 << endl);
       }
+
    }
 
    // -----------------------------------------
@@ -1411,7 +1423,13 @@ Int_t TTabCom::Complete(const TRegexp & re,
                }
             }
             pos = -2;
-            goto done;          //* RETURN *//
+            if (cmp == TString::kExact || partialMatch.Length() < s3.Length()) {
+               goto done;          //* RETURN *//
+            } // else:
+            // update the matching part, will have changed
+            // capitalization because only cmp == TString::kIgnoreCase
+            // matches.
+            CopyMatch(match, partialMatch.Data());
          }
       }
    }
@@ -1443,7 +1461,17 @@ Int_t TTabCom::Complete(const TRegexp & re,
       // insert match
       strncpy(fBuf + start, match, strlen(match));
 
-      pos = loc;                // position of first change in "fBuf"
+      // the "get"->"Get" case of TString::kIgnore sets pos to -2
+      // and falls through to update the buffer; we need to return
+      // -2 in that case, so check here:
+      if (pos != -2) {
+         pos = loc;                // position of first change in "fBuf"
+         if (cmp == TString::kIgnoreCase && pos < 0) {
+            // We might have changed somthing before loc, due to differences in
+            // capitalization. So return start:
+            pos = start;
+         }
+      }
       *fpLoc = loc + l;         // new cursor position
    }
 
@@ -1540,7 +1568,8 @@ TString TTabCom::DeterminePath(const TString & fileName,
    if (PathIsSpecifiedInFileName(fileName)) {
       TString path = fileName;
       gSystem->ExpandPathName(path);
-      if (path.Length()>0 && path[path.Length()-1]!='/' && path[path.Length()-1]!='\\') {
+      Int_t end = path.Length()-1;
+      if (end>0 && path[end]!='/' && path[end]!='\\') {
          path = gSystem->DirName(path);
       }
       return path;
@@ -1548,7 +1577,12 @@ TString TTabCom::DeterminePath(const TString & fileName,
       TString newBase;
       TString extendedPath;
       if (fileName.Contains("/")) {
-         newBase = gSystem->DirName(fileName);
+         Int_t end = fileName.Length()-1;
+         if (fileName[end] != '/' && fileName[end] != '\\') {
+            newBase = gSystem->DirName(fileName);
+         } else {
+            newBase = fileName;
+         }
 	 Int_t n = fileName.Length();
          if (fileName[n-1] != '/' && fileName[n-1] != '\\') {
 	    newBase = gSystem->DirName(fileName);
@@ -1654,9 +1688,8 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
    case kCINT_stderr:
    case kCINT_stdin:
       {
-         TString fileName = s3("[^ ><]*$");
-         gSystem->ExpandPathName(fileName);
-         const TString filePath = gSystem->DirName(fileName);
+         const TString fileName = s3("[^ ><]*$");
+         const TString filePath = DeterminePath(fileName,0);
          const TSeqCollection *pListOfFiles =
              GetListOfFilesInPath(filePath.Data());
 
@@ -1726,11 +1759,7 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
       {
          const TString fileName = s3("[^\"]*$");
 //             const TString  dynamicPath  = DeterminePath( fileName, TROOT::GetDynamicPath() ); /* should use this one */
-         const TString dynamicPath = DeterminePath(fileName,
-                                                   gEnv->
-                                                   GetValue
-                                                   ("Root.DynamicPath",
-                                                    (char *) 0));
+         const TString dynamicPath = DeterminePath(fileName,gEnv->GetValue("Root.DynamicPath",(char *) 0));
          const TSeqCollection *pListOfFiles = GetListOfFilesInPath(dynamicPath);
 
 //             pos = Complete( "[^\"/]*$", pListOfFiles, "\");" );
@@ -1740,13 +1769,10 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
 
    case kSYS_FileName:
       {
-         TString fileName = s3("[^ \"]*$");
-         gSystem->ExpandPathName(fileName);
-         const TString filePath = gSystem->DirName(fileName);
-         const TSeqCollection *pListOfFiles =
-             GetListOfFilesInPath(filePath.Data());
+         const TString fileName = s3("[^ \"]*$");
+         const TString filePath = DeterminePath(fileName,".");
+         const TSeqCollection *pListOfFiles = GetListOfFilesInPath(filePath.Data());
 
-//             pos = Complete( "[^\" /]*$", pListOfFiles, "\"" );
          pos = Complete("[^\" /]*$", pListOfFiles, "filename\"");
       }
       break;
@@ -1928,8 +1954,17 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
 
          switch (context) {
          case kCXX_DirectMember:
-            pos = Complete("[^. ]*$", pList, "(");
-            break;
+            {
+               int* store_fpLoc = fpLoc;
+               char* store_fBuf = fBuf;
+               pos = Complete("[^. ]*$", pList, "(");
+               if (pos == -1) {
+                  fpLoc = store_fpLoc;
+                  fBuf = store_fBuf;
+                  pos = Complete("[^. ]*$", pList, "(", TString::kIgnoreCase);
+               }
+               break;
+            }
          case kCXX_IndirectMember:
             pos = Complete("[^> ]*$", pList, "(");
             break;
@@ -2408,13 +2443,19 @@ TClass *TTabCom::MakeClassFromVarName(const char varName[],
          }
       }
 
+      TClass *pclass;
       // Can be "." or "->"
-      if (varName[cut] == '.') memberName = varName+cut+1;
-      else memberName = varName+cut+2;
-
-      if (0) printf("Member/method is [%s]\n", memberName.Data());
-
-      TClass *pclass = MakeClassFromVarName(parentName.Data(), context, iter+1);
+      if (varName[cut] == '.') {
+         memberName = varName+cut+1;
+         if (0) printf("Member/method is [%s]\n", memberName.Data());
+         EContext_t subcontext = kCXX_DirectMember;
+         pclass = MakeClassFromVarName(parentName.Data(), subcontext, iter+1);
+      } else {
+         memberName = varName+cut+2;
+         if (0) printf("Member/method is [%s]\n", memberName.Data());         
+         EContext_t subcontext = kCXX_IndirectMember;
+         pclass = MakeClassFromVarName(parentName.Data(), subcontext, iter+1);
+      }
 
       if (0) printf("I got [%s] from MakeClassFromVarName()\n", pclass->GetName());
 
