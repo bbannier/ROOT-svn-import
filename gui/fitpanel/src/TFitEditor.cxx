@@ -158,12 +158,18 @@
 #include "TTreeInput.h"
 #include "TAdvancedGraphicsDialog.h"
 
+#include "RConfigure.h"
+
+#ifdef R__HAS_ROOFIT
 #include "RooWorkspace.h"
 #include "RooAbsPdf.h"
 #include "RooRealVar.h"
 #include "RooDataSet.h"
+#else
+struct RooWorkspace { };
+#endif
 
-#include "RConfigure.h"
+
 #include "TPluginManager.h"
 
 #include <sstream>
@@ -3107,8 +3113,11 @@ void TFitEditor::DoMaxIterations()
    fStatusBar->SetText(Form("Itr: %ld",itr),2);
 }
 
+
 //______________________________________________________________________________
 TF1 * TFitEditor::CreateRooFitPdf(const char * expr, bool norm) { 
+
+#ifdef R__HAS_ROOFIT
 
    RooAbsArg * arg = fWorkspace->factory(expr);
    if (!arg) { 
@@ -3164,11 +3173,20 @@ TF1 * TFitEditor::CreateRooFitPdf(const char * expr, bool norm) {
 
    f1->SetTitle(expr);
    return f1; 
+
+#else
+   std::cerr << "Error: ROOFIT not enable - cannot create pdf " 
+             << expr << std::endl;
+   if (norm) std::cerr << std::endl;
+   return 0; 
+#endif   
 }
 
 //______________________________________________________________________________
 void TFitEditor::DoGenerateRooFit()
 {
+#ifdef R__HAS_ROOFIT
+
    TH1* histo = 0;
    switch (fType) {
       case kObjectHisto:
@@ -3202,6 +3220,12 @@ void TFitEditor::DoGenerateRooFit()
    
    CreateRooFitPdf(fExpRoo->GetText());
 
+#else
+   new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
+                "Error...", "RooFit not yet supported in the FitPanel with TTree objects!",
+                kMBIconStop,kMBOk, 0);
+   return;
+#endif
    return;
 }
 

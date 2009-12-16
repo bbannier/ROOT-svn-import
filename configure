@@ -4906,9 +4906,11 @@ fi
 message "Checking whether to build libRooFit"
 if test "x$enable_roofit" = "xyes" || test ! "x$ROOFIT" = "x"; then
     enable_roofit="yes"
+    hasroofit="define"
     result "yes"
 else
     enable_roofit=""
+    hasroofit="undef"
     result "no"
 fi
 
@@ -5810,6 +5812,7 @@ sed \
     -e "s|@setresuid@|$setresuid|"         \
     -e "s|@hasmathmore@|$hasmathmore|"     \
     -e "s|@hasminuit2@|$hasminuit2|"     \
+    -e "s|@hasroofit@|$hasroofit|"     \
     -e "s|@haspthread@|$haspthread|"       \
     -e "s|@hasxft@|$hasxft|"               \
     < RConfigure.tmp > RConfigure-out.tmp
