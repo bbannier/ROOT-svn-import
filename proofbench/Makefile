@@ -82,7 +82,7 @@ MODULES       = build cint/cint core/metautils core/pcre core/utils core/base \
                 math/fumili math/mlp math/quadp net/auth gui/guibuilder io/xml \
                 math/foam math/splot math/smatrix io/sql \
                 geom/geombuilder hist/spectrum hist/spectrumpainter \
-                gui/fitpanel proof/proof proof/proofplayer \
+                gui/fitpanel proof/proof proof/proofplayer proof/proofbench \
                 gui/sessionviewer gui/guihtml gui/recorder
 
 ifeq ($(ARCH),win32)
