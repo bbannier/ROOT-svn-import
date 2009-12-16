@@ -151,10 +151,10 @@ void testMM(const A & a, const B & b, const C & c, double & time, C & result) {
 
 //smatrix
 template<class V> 
-double testDot_S(const V & v1, const V & v2, double & time) {  
+typename V::value_type testDot_S(const V & v1, const V & v2, double & time) {  
   V vtmp = v2; 
   test::Timer t(time,"dot ");
-  double result=0; 
+  typename V::value_type result = 0.;
   for (int l = 0; l < 10*NLOOP; l++) 	
     {
       vtmp[0] = gV[l];
@@ -177,10 +177,10 @@ double testDot_S(const V & v1, const V & v2, double & time) {
 // }
 
 template<class M, class V> 
-double testInnerProd_S(const M & a, const V & v, double & time) {  
+typename V::value_type testInnerProd_S(const M & a, const V & v, double & time) {  
   V vtmp = v; 
   test::Timer t(time,"prod");
-  double result=0; 
+  typename V::value_type result = 0.;
   for (int l = 0; l < NLOOP; l++) 	
     {
       vtmp[0] =  gV[l];
