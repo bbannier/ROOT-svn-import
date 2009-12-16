@@ -13,26 +13,23 @@
 #define ROOT_TEveCaloData
 
 #include <vector>
-#include "Rtypes.h"
-#include "TEveUtil.h"
+#include "TEveElement.h"
 
 class TH2F;
 class TAxis;
 class THStack;
 
-class TEveCaloData: public TEveRefBackPtr
+class TEveCaloData: public TEveElement,
+                    public TNamed
 {
 public:
    struct SliceInfo_t
    {
-      TString  fName;
-      Float_t  fThreshold;
-      Int_t    fID;
-      Color_t  fColor;
-      TH2F    *fHist;
-
-      SliceInfo_t(): fName(""), fThreshold(0), fID(-1), fColor(Color_t(4)), fHist(0){}
-      SliceInfo_t(TH2F* h): fName(""), fThreshold(0), fID(-1), fColor(Color_t(4)), fHist(h) {}
+      TString  fName;      // Name of the slice, eg. ECAL, HCAL.
+      Float_t  fThreshold; // Only display towers with higher energy.
+      Color_t  fColor;     // Color used to draw this longitudinal slice.
+      
+      SliceInfo_t(): fName(""), fThreshold(0), fColor(kRed) {}
 
       virtual ~SliceInfo_t() {}
 
@@ -141,7 +138,7 @@ protected:
 
    TAxis*       fEtaAxis;
    TAxis*       fPhiAxis;
-   
+
    Bool_t       fWrapTwoPi;
 
    Float_t      fMaxValEt; // cached
@@ -149,13 +146,21 @@ protected:
 
    Float_t      fEps;
 
+   vCellId_t    fCellsSelected;
+
 public:
-   TEveCaloData();
+   TEveCaloData(const char* n="TEveCalData", const char* t="");
    virtual ~TEveCaloData() {}
+
+   virtual void    SelectElement(Bool_t state);
+   virtual void    FillImpliedSelectedSet(Set_t& impSelSet);
 
    virtual void    GetCellList(Float_t etaMin, Float_t etaMax,
                                Float_t phi,    Float_t phiRng,
                                vCellId_t &out) const = 0;
+
+   vCellId_t&      GetCellsSelected() { return fCellsSelected; }
+   void            PrintCellsSelected();
 
    virtual void    Rebin(TAxis *ax, TAxis *ay, vCellId_t &in, Bool_t et, RebinData_t &out) const = 0;
 
@@ -164,6 +169,7 @@ public:
 
    virtual void    InvalidateUsersCellIdCache();
    virtual void    DataChanged();
+   virtual void    CellSelectionChanged();
 
    Int_t           GetNSlices()    const { return fSliceInfos.size(); }
    SliceInfo_t&    RefSliceInfo(Int_t s) { return fSliceInfos[s]; }
@@ -187,11 +193,12 @@ public:
 
    virtual Float_t GetEps()      const { return fEps; }
    virtual void    SetEps(Float_t eps) { fEps=eps; }
-   
+
    Bool_t   GetWrapTwoPi() const { return fWrapTwoPi; }
    void     SetWrapTwoPi(Bool_t w) { fWrapTwoPi=w; }
 
    static  Float_t EtaToTheta(Float_t eta);
+
 
    ClassDef(TEveCaloData, 0); // Manages calorimeter event data.
 };
@@ -282,6 +289,8 @@ public:
 
    THStack* GetStack() { return fHStack; }
 
+   TH2F*    GetHist(Int_t slice) const;
+   
    Int_t   AddHistogram(TH2F* hist);
 
    ClassDef(TEveCaloDataHist, 0); // Manages calorimeter TH2F event data.

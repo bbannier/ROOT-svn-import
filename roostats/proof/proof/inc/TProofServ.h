@@ -59,6 +59,8 @@ class TMutex;
 class TFileCollection;
 class TDataSetManager;
 class TFileHandler;
+class TMonitor;
+class TServerSocket;
 
 // Hook to external function setting up authentication related stuff
 // for old versions.
@@ -91,6 +93,7 @@ private:
    TString       fCacheDir;         //directory containing cache of user files
    TString       fQueryDir;         //directory containing query results and status
    TString       fDataSetDir;       //directory containing info about known data sets
+   TString       fDataDir;          //directory containing data files produced during queries
    TString       fAdminPath;        //admin path for this session
    TProofLockPath *fPackageLock;    //package dir locker
    TProofLockPath *fCacheLock;      //cache dir locker
@@ -116,6 +119,11 @@ private:
    Float_t       fCpuTime;          //CPU time spent executing commands
    TStopwatch    fLatency;          //measures latency of packet requests
    TStopwatch    fCompute;          //measures time spend processing a packet
+   Int_t         fQuerySeqNum;      //sequential number of the current or last query
+
+   Int_t         fTotSessions;      //Total number of PROOF sessions on the cluster 
+   Int_t         fActSessions;      //Total number of active PROOF sessions on the cluster 
+   Float_t       fEffSessions;      //Effective Number of PROOF sessions on the assigned machines
 
    TFileHandler *fInputHandler;     //Input socket handler
 
@@ -123,6 +131,7 @@ private:
 
    TList        *fWaitingQueries;   //list of TProofQueryResult waiting to be processed
    Bool_t        fIdle;             //TRUE if idle
+   TMutex       *fQMtx;             // To protect async msg queue
 
    TList        *fQueuedMsg;        //list of messages waiting to be processed
 
@@ -141,6 +150,10 @@ private:
 
    Bool_t        fLogToSysLog;     //true if logs should be sent to syslog too
    Bool_t        fSendLogToMaster; // On workers, controls logs sending to master
+
+   TServerSocket *fMergingSocket;  // Socket used for merging outputs if submerger
+   TMonitor      *fMergingMonitor; // Monitor for merging sockets
+   Int_t          fMergedWorkers;  // Number of workers merged
 
    // Quotas (-1 to disable)
    Int_t         fMaxQueries;       //Max number of queries fully kept
@@ -171,13 +184,25 @@ private:
    void          SetQueryRunning(TProofQueryResult *pq);
 
    // Results handling
-   void          SendResults(TSocket *sock, TList *outlist = 0, TQueryResult *pq = 0);
+   Int_t         SendResults(TSocket *sock, TList *outlist = 0, TQueryResult *pq = 0);
+   Bool_t        AcceptResults(Int_t connections, TVirtualProofPlayer *mergerPlayer);
+   
+   Int_t         RegisterDataSets(TList *in, TList *out);
+
+   // Waiting queries handlers
+   void          SetIdle(Bool_t st = kTRUE);
+   Bool_t        IsWaiting();
+   Int_t         WaitingQueries();
+   Int_t         QueueQuery(TProofQueryResult *pq);
+   TProofQueryResult *NextQuery();
+   Int_t         CleanupWaitingQueries(Bool_t del = kTRUE, TList *qls = 0);
 
 protected:
    virtual void  HandleArchive(TMessage *mess);
    virtual Int_t HandleCache(TMessage *mess);
    virtual void  HandleCheckFile(TMessage *mess);
    virtual Int_t HandleDataSets(TMessage *mess);
+   virtual void  HandleSubmerger(TMessage *mess);
    virtual void  HandleFork(TMessage *mess);
    virtual void  HandleLibIncPath(TMessage *mess);
    virtual void  HandleProcess(TMessage *mess);
@@ -193,6 +218,8 @@ protected:
    virtual void  DeletePlayer();
 
    virtual Int_t Fork();
+   Int_t         GetSessionStatus();
+   Bool_t        IsIdle();
 
 public:
    TProofServ(Int_t *argc, char **argv, FILE *flog = 0);
@@ -211,6 +238,7 @@ public:
    const char    *GetSessionTag() const { return fTopSessionTag; }
    const char    *GetSessionDir() const { return fSessionDir; }
    const char    *GetPackageDir() const { return fPackageDir; }
+   const char    *GetDataDir()    const { return fDataDir; }
    Int_t          GetProtocol()   const { return fProtocol; }
    const char    *GetOrdinal()    const { return fOrdinal; }
    Int_t          GetGroupId()    const { return fGroupId; }
@@ -219,6 +247,12 @@ public:
    TSocket       *GetSocket()     const { return fSocket; }
    Float_t        GetRealTime()   const { return fRealTime; }
    Float_t        GetCpuTime()    const { return fCpuTime; }
+   Int_t          GetQuerySeqNum() const { return fQuerySeqNum; }
+
+   Int_t          GetTotSessions() const { return fTotSessions; }
+   Int_t          GetActSessions() const { return fActSessions; }
+   Float_t        GetEffSessions() const { return fEffSessions; }
+
    void           GetOptions(Int_t *argc, char **argv);
    TList         *GetEnabledPackages() const { return fEnabledPackages; }
 
@@ -232,6 +266,7 @@ public:
 
    void           FlushLogFile();
 
+   TProofLockPath *GetCacheLock() { return fCacheLock; }      //cache dir locker; used by TProofPlayer
    Int_t          CopyFromCache(const char *name, Bool_t cpbin);
    Int_t          CopyToCache(const char *name, Int_t opt = 0);
 
@@ -252,6 +287,8 @@ public:
    void           Run(Bool_t retrn = kFALSE);
 
    void           Print(Option_t *option="") const;
+
+   void           RestartComputeTime();
 
    TObject       *Get(const char *namecycle);
    TDSetElement  *GetNextPacket(Long64_t totalEntries = -1);
@@ -276,6 +313,8 @@ public:
    static FILE   *SetErrorHandlerFile(FILE *ferr);
    static void    ErrorHandler(Int_t level, Bool_t abort, const char *location,
                                const char *msg);
+
+   static void    ResolveKeywords(TString &fname, const char *path = 0);
 
    static Bool_t      IsActive();
    static TProofServ *This();

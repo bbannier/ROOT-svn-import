@@ -12,10 +12,9 @@
 #ifndef ROOT_TH3GL
 #define ROOT_TH3GL
 
-#include "TGLObject.h"
+#include "TGLPlot3D.h"
 #include <TGLUtil.h>
 #include <TGLAxisPainter.h>
-#include "TGLPlotPainter.h"
 
 class TGLRnrCtx;
 class TH3;
@@ -23,7 +22,7 @@ class TAxis;
 
 class TH3;
 
-class TH3GL : public TGLObject
+class TH3GL : public TGLPlot3D
 {
 private:
    TH3GL(const TH3GL&);            // Not implemented
@@ -31,9 +30,6 @@ private:
 
 protected:
    TH3                *fM;  // Model object dynamic-casted to TH2.
-
-   TGLPlotPainter     *fPlotPainter;
-   TGLPlotCoordinates  fCoord;
 
 public:
    TH3GL();

@@ -30,6 +30,7 @@ TLeafB::TLeafB()
 , fPointer(0)
 {
    // -- Default constructor.
+   fLenType = 1;
 }
 
 //______________________________________________________________________________
@@ -115,8 +116,13 @@ void TLeafB::PrintValue(Int_t l) const
 {
    // -- Prints leaf value.
 
-   char* value = (char*) GetValuePointer();
-   printf("%d", (Int_t) value[l]);
+   if (fIsUnsigned) {
+      UChar_t *uvalue = (UChar_t*) GetValuePointer();
+      printf("%u", uvalue[l]);
+   } else {
+      Char_t *value = (Char_t*) GetValuePointer();
+      printf("%d", value[l]);
+   }
 }
 
 //______________________________________________________________________________
@@ -128,6 +134,10 @@ void TLeafB::ReadBasket(TBuffer &b)
       b >> fValue[0];
    } else {
       if (fLeafCount) {
+         Long64_t entry = fBranch->GetReadEntry();
+         if (fLeafCount->GetBranch()->GetReadEntry() != entry) {
+            fLeafCount->GetBranch()->GetEntry(entry);
+         }
          Int_t len = Int_t(fLeafCount->GetValue());
          if (len > fLeafCount->GetMaximum()) {
             Error("ReadBasket", "leaf: '%s' len: %d max: %d", GetName(), len, fLeafCount->GetMaximum());

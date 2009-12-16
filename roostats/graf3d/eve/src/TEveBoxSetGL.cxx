@@ -11,12 +11,11 @@
 
 #include "TEveBoxSetGL.h"
 #include "TEveBoxSet.h"
+#include "TEveFrameBoxGL.h"
 
 #include "TGLIncludes.h"
 #include "TGLRnrCtx.h"
-#include "TGLScene.h"
 #include "TGLSelectRecord.h"
-#include "TGLContext.h"
 #include "TGLQuadric.h"
 
 //==============================================================================
@@ -241,37 +240,11 @@ void TEveBoxSetGL::SetBBox()
 }
 
 //______________________________________________________________________________
-void TEveBoxSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
+void TEveBoxSetGL::RenderBoxes(TGLRnrCtx & rnrCtx) const
 {
-   // Actual rendering code.
-   // Virtual from TGLLogicalShape.
+   // GL rendering for all box-types.
 
-   static const TEveException eH("TEveBoxSetGL::DirectDraw ");
-
-   TEveBoxSet& mB = * fM;
-   // printf("TEveBoxSetGL::DirectDraw N boxes %d\n", mB.fPlex.Size());
-
-   if(mB.fPlex.Size() == 0)
-      return;
-   if ( ! mB.fValueIsColor && mB.fPalette == 0)
-   {
-      mB.AssertPalette();
-   }
-
-   glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
-
-   if (mB.fRenderMode == TEveDigitSet::kRM_Fill)
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-   else if (mB.fRenderMode == TEveDigitSet::kRM_Line)
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-   if (mB.fBoxType == TEveBoxSet::kBT_Cone ||
-       mB.fBoxType == TEveBoxSet::kBT_EllipticCone)
-   {
-      glDisable(GL_CULL_FACE);
-   }
-
-   if (mB.fDisableLigting) glDisable(GL_LIGHTING);
+   static const TEveException eH("TEveBoxSetGL::RenderBoxes ");
 
    if (rnrCtx.SecSelection()) glPushName(0);
 
@@ -279,9 +252,9 @@ void TEveBoxSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    if (rnrCtx.ShapeLOD() < 50)
       boxSkip = 6 - (rnrCtx.ShapeLOD()+1)/10;
 
-   TEveChunkManager::iterator bi(mB.fPlex);
+   TEveChunkManager::iterator bi(fM->fPlex);
 
-   switch (mB.fBoxType)
+   switch (fM->fBoxType)
    {
 
       case TEveBoxSet::kBT_FreeBox:
@@ -404,8 +377,48 @@ void TEveBoxSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    } // end switch box-type
 
    if (rnrCtx.SecSelection()) glPopName();
+}
 
-   glPopAttrib();
+//______________________________________________________________________________
+void TEveBoxSetGL::DirectDraw(TGLRnrCtx & rnrCtx) const
+{
+   // Actual rendering code.
+   // Virtual from TGLLogicalShape.
+
+   TEveBoxSet& mB = * fM;
+   // printf("TEveBoxSetGL::DirectDraw N boxes %d\n", mB.fPlex.Size());
+
+   if (mB.fPlex.Size() > 0)
+   {
+      if ( ! mB.fValueIsColor && mB.fPalette == 0)
+      {
+         mB.AssertPalette();
+      }
+
+      glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
+
+      if (mB.fRenderMode == TEveDigitSet::kRM_Fill)
+         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      else if (mB.fRenderMode == TEveDigitSet::kRM_Line)
+         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+      if (mB.fBoxType == TEveBoxSet::kBT_Cone ||
+          mB.fBoxType == TEveBoxSet::kBT_EllipticCone)
+      {
+         glDisable(GL_CULL_FACE);
+      }
+
+      if (mB.fDisableLigting) glDisable(GL_LIGHTING);
+
+      RenderBoxes(rnrCtx);
+
+      glPopAttrib();
+   }
+
+   if (mB.fFrame != 0 && ! rnrCtx.SecSelection())
+   {
+      TEveFrameBoxGL::Render(mB.fFrame);
+   }
 }
 
 /******************************************************************************/

@@ -12,6 +12,7 @@
 #include "TEveTrack.h"
 #include "TEveTrackPropagator.h"
 #include "TEvePointSet.h"
+#include "TEveVSDStructs.h"
 
 #include "TPolyLine3D.h"
 #include "TMarker.h"
@@ -55,6 +56,7 @@ TEveTrack::TEveTrack() :
    fCharge(0),
    fLabel(kMinInt),
    fIndex(kMinInt),
+   fStatus(0),
    fLockPoints(kFALSE),
    fPathMarks(),
    fPropagator(0),
@@ -64,7 +66,7 @@ TEveTrack::TEveTrack() :
 }
 
 //______________________________________________________________________________
-TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* rs):
+TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* prop):
    TEveLine(),
 
    fV(t->Vx(), t->Vy(), t->Vz()),
@@ -75,6 +77,7 @@ TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* rs):
    fCharge(0),
    fLabel(label),
    fIndex(kMinInt),
+   fStatus(t->GetStatusCode()),
    fLockPoints(kFALSE),
    fPathMarks(),
    fPropagator(0),
@@ -82,7 +85,7 @@ TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* rs):
 {
    // Constructor from TParticle.
 
-   SetPropagator(rs);
+   SetPropagator(prop);
    fMainColorPtr = &fLineColor;
 
    TParticlePDG* pdgp = t->GetPDG();
@@ -95,7 +98,7 @@ TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* rs):
 }
 
 //______________________________________________________________________________
-TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
+TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* prop):
    TEveLine(),
 
    fV(t->Vx(), t->Vy(), t->Vz()),
@@ -106,6 +109,7 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
    fCharge(0),
    fLabel(t->fLabel),
    fIndex(t->fIndex),
+   fStatus(t->GetStatusCode()),
    fLockPoints(kFALSE),
    fPathMarks(),
    fPropagator(0),
@@ -113,7 +117,7 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
 {
    // Constructor from TEveUtil Monte Carlo track.
 
-   SetPropagator(rs);
+   SetPropagator(prop);
    fMainColorPtr = &fLineColor;
 
    TParticlePDG* pdgp = t->GetPDG();
@@ -126,7 +130,7 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* rs):
 }
 
 //______________________________________________________________________________
-TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* rs) :
+TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* prop) :
    TEveLine(),
 
    fV(t->fV),
@@ -137,6 +141,7 @@ TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* rs) :
    fCharge(t->fSign),
    fLabel(t->fLabel),
    fIndex(t->fIndex),
+   fStatus(t->fStatus),
    fLockPoints(kFALSE),
    fPathMarks(),
    fPropagator(0),
@@ -144,7 +149,7 @@ TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* rs) :
 {
    // Constructor from TEveUtil reconstructed track.
 
-   SetPropagator(rs);
+   SetPropagator(prop);
    fMainColorPtr = &fLineColor;
 
    SetName(t->GetName());
@@ -161,6 +166,7 @@ TEveTrack::TEveTrack(const TEveTrack& t) :
    fCharge(t.fCharge),
    fLabel(t.fLabel),
    fIndex(t.fIndex),
+   fStatus(t.fStatus),
    fLockPoints(t.fLockPoints),
    fPathMarks(),
    fPropagator(0),
@@ -265,15 +271,15 @@ void TEveTrack::SetPathMarks(const TEveTrack& t)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrack::SetPropagator(TEveTrackPropagator* rs)
+void TEveTrack::SetPropagator(TEveTrackPropagator* prop)
 {
    // Set track's render style.
-   // Reference counts of old and new render-style are updated.
+   // Reference counts of old and new propagator are updated.
 
-   if (fPropagator == rs) return;
+   if (fPropagator == prop) return;
    if (fPropagator) fPropagator->DecRefCount(this);
-   fPropagator = rs;
-   if (fPropagator) rs->IncRefCount(this);
+   fPropagator = prop;
+   if (fPropagator) prop->IncRefCount(this);
 }
 
 /******************************************************************************/
@@ -300,14 +306,14 @@ void TEveTrack::SetAttLineAttMarker(TEveTrackList* tl)
 void TEveTrack::MakeTrack(Bool_t recurse)
 {
    // Calculate track representation based on track data and current
-   // settings of the render-style.
+   // settings of the propagator.
    // If recurse is true, descend into children.
 
    if (!fLockPoints)
    {
       Reset(0);
 
-      TEveTrackPropagator& rTP((fPropagator != 0) ? *fPropagator : TEveTrackPropagator::fgDefStyle);
+      TEveTrackPropagator& rTP((fPropagator != 0) ? *fPropagator : TEveTrackPropagator::fgDefault);
 
       const Float_t maxRsq = rTP.GetMaxR() * rTP.GetMaxR();
       const Float_t maxZ   = rTP.GetMaxZ();
@@ -426,7 +432,7 @@ void TEveTrack::WriteVizParams(ostream& out, const TString& var)
 }
 
 //______________________________________________________________________________
-TClass* TEveTrack::ProjectedClass() const
+TClass* TEveTrack::ProjectedClass(const TEveProjection*) const
 {
    // Virtual from TEveProjectable, return TEveTrackProjected class.
 
@@ -498,26 +504,6 @@ void TEveTrack::SecSelected(TEveTrack* track)
    Emit("SecSelected(TEveTrack*)", (Long_t)track);
 }
 
-//______________________________________________________________________________
-void TEveTrack::SetLineStyle(Style_t lstyle)
-{
-   // Set line-style of the track.
-   // The style is propagated to projected tracks.
-
-   TAttLine::SetLineStyle(lstyle);
-   std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
-   while (pi != fProjectedList.end())
-   {
-      TEveTrack* pt = dynamic_cast<TEveTrack*>(*pi);
-      if (pt)
-      {
-         pt->SetLineStyle(lstyle);
-         pt->ElementChanged();
-      }
-      ++pi;
-   }
-}
-
 
 //==============================================================================
 //==============================================================================
@@ -532,7 +518,7 @@ void TEveTrack::SetLineStyle(Style_t lstyle)
 ClassImp(TEveTrackList);
 
 //______________________________________________________________________________
-TEveTrackList::TEveTrackList(TEveTrackPropagator* rs) :
+TEveTrackList::TEveTrackList(TEveTrackPropagator* prop) :
    TEveElementList(),
    TAttMarker(1, 20, 1),
    TAttLine(1,1,1),
@@ -552,12 +538,12 @@ TEveTrackList::TEveTrackList(TEveTrackPropagator* rs) :
 
    fMainColorPtr = &fLineColor;
 
-   if (rs == 0) rs = new TEveTrackPropagator;
-   SetPropagator(rs);
+   if (prop == 0) prop = new TEveTrackPropagator;
+   SetPropagator(prop);
 }
 
 //______________________________________________________________________________
-TEveTrackList::TEveTrackList(const char* name, TEveTrackPropagator* rs) :
+TEveTrackList::TEveTrackList(const char* name, TEveTrackPropagator* prop) :
    TEveElementList(name),
    TAttMarker(1, 20, 1),
    TAttLine(1,1,1),
@@ -577,8 +563,8 @@ TEveTrackList::TEveTrackList(const char* name, TEveTrackPropagator* rs) :
 
    fMainColorPtr = &fLineColor;
 
-   if (rs == 0) rs = new TEveTrackPropagator;
-   SetPropagator(rs);
+   if (prop == 0) prop = new TEveTrackPropagator;
+   SetPropagator(prop);
 }
 
 //______________________________________________________________________________
@@ -592,16 +578,16 @@ TEveTrackList::~TEveTrackList()
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveTrackList::SetPropagator(TEveTrackPropagator* rs)
+void TEveTrackList::SetPropagator(TEveTrackPropagator* prop)
 {
-   // Set default render-style for tracks.
+   // Set default propagator for tracks.
    // This is not enforced onto the tracks themselves but this is the
-   // render-style that is show in the TEveTrackListEditor.
+   // propagator that is shown in the TEveTrackListEditor.
 
-   if (fPropagator == rs) return;
+   if (fPropagator == prop) return;
    if (fPropagator) fPropagator->DecRefCount();
-   fPropagator = rs;
-   if (fPropagator) rs->IncRefCount();
+   fPropagator = prop;
+   if (fPropagator) prop->IncRefCount();
 }
 
 /******************************************************************************/
@@ -821,7 +807,7 @@ void TEveTrackList::SetLineWidth(Width_t width)
       if (fRecurse)
          SetLineWidth(width, *i);
    }
-   fLineWidth=width;
+   fLineWidth = width;
 }
 
 //______________________________________________________________________________
@@ -855,7 +841,7 @@ void TEveTrackList::SetLineStyle(Style_t style)
       if (fRecurse)
          SetLineStyle(style, *i);
    }
-   fLineStyle=style;
+   fLineStyle = style;
 }
 
 //______________________________________________________________________________
@@ -889,7 +875,7 @@ void TEveTrackList::SetMarkerStyle(Style_t style)
       if (fRecurse)
          SetMarkerStyle(style, *i);
    }
-   fMarkerStyle=style;
+   fMarkerStyle = style;
 }
 
 //______________________________________________________________________________
@@ -923,7 +909,7 @@ void TEveTrackList::SetMarkerColor(Color_t col)
       if (fRecurse)
          SetMarkerColor(col, *i);
    }
-   fMarkerColor=col;
+   fMarkerColor = col;
 }
 
 //______________________________________________________________________________
@@ -957,7 +943,7 @@ void TEveTrackList::SetMarkerSize(Size_t size)
       if (fRecurse)
          SetMarkerSize(size, *i);
    }
-   fMarkerSize=size;
+   fMarkerSize = size;
 }
 
 //______________________________________________________________________________
@@ -1130,6 +1116,7 @@ void TEveTrackList::CopyVizParams(const TEveElement* el)
       TAttLine::operator=(*m);
       fRecurse = m->fRecurse;
       fRnrLine = m->fRnrLine;
+      fRnrPoints = m->fRnrPoints;
       fMinPt   = m->fMinPt;
       fMaxPt   = m->fMaxPt;
       fLimPt   = m->fLimPt;
@@ -1151,18 +1138,20 @@ void TEveTrackList::WriteVizParams(ostream& out, const TString& var)
    TString t = "   " + var + "->";
    TAttMarker::SaveMarkerAttributes(out, var);
    TAttLine  ::SaveLineAttributes  (out, var);
-   out << t << "SetRecurse(" << fRecurse << ");\n";
-   out << t << "SetRnrLine(" << fRnrLine << ");\n";
-   out << t << "SetMinPt("   << fMinPt   << ");\n";
-   out << t << "SetMaxPt("   << fMaxPt   << ");\n";
-   out << t << "SetLimPt("   << fLimPt   << ");\n";
-   out << t << "SetMinP("    << fMinP    << ");\n";
-   out << t << "SetMaxP("    << fMaxP    << ");\n";
-   out << t << "SetLimP("    << fLimP    << ");\n";
+   out << t << "SetRecurse("   << ToString(fRecurse)   << ");\n";
+   out << t << "SetRnrLine("   << ToString(fRnrLine)   << ");\n";
+   out << t << "SetRnrPoints(" << ToString(fRnrPoints) << ");\n";
+   // These setters are not available -- need proper AND/OR mode.
+   // out << t << "SetMinPt(" << fMinPt << ");\n";
+   // out << t << "SetMaxPt(" << fMaxPt << ");\n";
+   // out << t << "SetLimPt(" << fLimPt << ");\n";
+   // out << t << "SetMinP("  << fMinP  << ");\n";
+   // out << t << "SetMaxP("  << fMaxP  << ");\n";
+   // out << t << "SetLimP("  << fLimP  << ");\n";
 }
 
 //______________________________________________________________________________
-TClass* TEveTrackList::ProjectedClass() const
+TClass* TEveTrackList::ProjectedClass(const TEveProjection*) const
 {
    // Virtual from TEveProjectable, returns TEveTrackListProjected class.
 

@@ -33,7 +33,7 @@
 
 
 // silence warning about some cast operations
-#if defined(__GNUC__) && __GNUC__ >= 4 && ((__GNUC_MINOR__ == 2 && __GNUC_PATCHLEVEL__ >= 1) || (__GNUC_MINOR__ >= 3))
+#if defined(__GNUC__) && __GNUC__ >= 4 && ((__GNUC_MINOR__ == 2 && __GNUC_PATCHLEVEL__ >= 1) || (__GNUC_MINOR__ >= 3)) && !__INTEL_COMPILER
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 
@@ -246,71 +246,75 @@ void TContextMenu::Action(TObject *object, TToggle *toggle)
 }
 
 //______________________________________________________________________________
-char *TContextMenu::CreateArgumentTitle(TMethodArg *argument)
+const char *TContextMenu::CreateArgumentTitle(TMethodArg *argument)
 {
    // Create string describing argument (for use in dialog box).
 
-   static char argTitle[128];
+   static TString argTitle;
 
    if (argument) {
-      sprintf(argTitle, "(%s)  %s", argument->GetTitle(), argument->GetName());
+      argTitle.Form("(%s)  %s", argument->GetTitle(), argument->GetName());
       if (argument->GetDefault() && *(argument->GetDefault())) {
-         strcat(argTitle, "  [default: ");
-         strcat(argTitle, argument->GetDefault());
-         strcat(argTitle, "]");
+         argTitle += "  [default: ";
+         argTitle += argument->GetDefault();
+         argTitle += "]";
       }
    } else
-      *argTitle = 0;
+      argTitle.Clear();
 
-   return argTitle;
+   return argTitle.Data();
 }
 
 //______________________________________________________________________________
-char *TContextMenu::CreateDialogTitle(TObject *object, TFunction *method)
+const char *TContextMenu::CreateDialogTitle(TObject *object, TFunction *method)
 {
    // Create title for dialog box retrieving argument values.
 
-   static char methodTitle[128];
+   static TString methodTitle;
 
    if (object && method)
-      sprintf(methodTitle, "%s::%s", object->ClassName(), method->GetName());
+      methodTitle.Form("%s::%s", object->ClassName(), method->GetName());
    else if (!object && method)
-      sprintf(methodTitle, "%s", method->GetName());
+      methodTitle.Form("%s", method->GetName());
    else
-      *methodTitle = 0;
+      methodTitle.Clear();
 
-   return methodTitle;
+   return methodTitle.Data();
 }
 
 //______________________________________________________________________________
-char *TContextMenu::CreatePopupTitle(TObject *object)
+const char *TContextMenu::CreatePopupTitle(TObject *object)
 {
    // Create title for popup menu.
 
-   static char popupTitle[128];
+   static TString popupTitle;
 
    if (object) {
       if (!*(object->GetName()) || !strcmp(object->GetName(), object->ClassName())) {
          TGlobal *global = (TGlobal *) gROOT->GetGlobal(object);
          if (global && *(global->GetName()))
-            sprintf(popupTitle, "  %s::%s  ", object->ClassName(), global->GetName());
+            popupTitle.Form("  %s::%s  ", object->ClassName(), global->GetName());
          else {
             if (!strcmp(object->IsA()->GetContextMenuTitle(), ""))
-               sprintf(popupTitle, "  %s  ", object->ClassName());
+               popupTitle.Form("  %s  ", object->ClassName());
             else
-               sprintf(popupTitle, "  %s  ", object->IsA()->GetContextMenuTitle());
+               popupTitle.Form("  %s  ", object->IsA()->GetContextMenuTitle());
          }
       } else {
          if (!strcmp(object->IsA()->GetContextMenuTitle(), ""))
-            sprintf(popupTitle, "  %s::%s  ", object->ClassName(), object->GetName());
+            popupTitle.Form("  %s::%s  ", object->ClassName(), object->GetName());
          else
-            sprintf(popupTitle, "  %s::%s  ", object->IsA()->GetContextMenuTitle(),
-                    object->GetName());
+            popupTitle.Form("  %s::%s  ", object->IsA()->GetContextMenuTitle(),
+                            object->GetName());
+      }
+      if (popupTitle.Length() > 60) {
+         popupTitle.Remove(60);
+         popupTitle += "...";
       }
    } else
-      *popupTitle = 0;
+      popupTitle.Clear();
 
-   return popupTitle;
+   return popupTitle.Data();
 }
 
 //______________________________________________________________________________

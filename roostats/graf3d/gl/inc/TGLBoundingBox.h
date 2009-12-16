@@ -86,6 +86,7 @@ public:
    void SetAligned(const TGLVertex3 & lowVertex, const TGLVertex3 & highVertex); // axis aligned
    void SetAligned(UInt_t nbPnts, const Double_t * pnts); // axis aligned
    void MergeAligned(const TGLBoundingBox & other);
+   void ExpandAligned(const TGLVertex3 & point);
 
    // Manipulation
    void Transform(const TGLMatrix & matrix);
@@ -203,10 +204,10 @@ inline const TGLVector3 & TGLBoundingBox::Axis(UInt_t i, Bool_t normalised) cons
 //______________________________________________________________________________
 inline Bool_t TGLBoundingBox::IsEmpty() const
 {
-   // Return kTRUE if box has zero volume - kFALSE otherwise
+   // Return kTRUE if box has zero diagonal - kFALSE otherwise
 
    // TODO: Round errors - should have epsilon test
-   return (Volume() == 0.0);
+   return (Diagonal() == 0.0);
 }
 
 #endif // ROOT_TGLBoundingBox

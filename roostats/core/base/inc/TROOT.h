@@ -69,8 +69,8 @@ private:
    TROOT& operator=(const TROOT&);        //Not implemented
 
 protected:
-
-   TString         fConfigOptions;        //ROOT ./configure build options
+   TString         fConfigOptions;        //ROOT ./configure set build options
+   TString         fConfigFeatures;       //ROOT ./configure detected build features
    TString         fVersion;              //ROOT version (from CMZ VERSQQ) ex 0.05/01
    Int_t           fVersionInt;           //ROOT version in integer format (501)
    Int_t           fVersionCode;          //ROOT version code as used in RVersion.h
@@ -145,16 +145,17 @@ public:
    TObject          *FindSpecialObject(const char *name, void *&where);
    const char       *FindObjectClassName(const char *name) const;
    const char       *FindObjectPathName(const TObject *obj) const;
-   TClass           *FindSTLClass(const char *name, Bool_t load) const;
+   TClass           *FindSTLClass(const char *name, Bool_t load, Bool_t silent = kFALSE) const;
    void              ForceStyle(Bool_t force = kTRUE) { fForceStyle = force; }
    Bool_t            FromPopUp() const { return fFromPopUp; }
    TPluginManager   *GetPluginManager() const { return fPluginManager; }
    TApplication     *GetApplication() const { return fApplication; }
    TInterpreter     *GetInterpreter() const { return fInterpreter; }
-   TClass           *GetClass(const char *name, Bool_t load = kTRUE) const;
-   TClass           *GetClass(const type_info &typeinfo, Bool_t load = kTRUE) const;
+   TClass           *GetClass(const char *name, Bool_t load = kTRUE, Bool_t silent = kFALSE) const;
+   TClass           *GetClass(const type_info &typeinfo, Bool_t load = kTRUE, Bool_t silent = kFALSE) const;
    TColor           *GetColor(Int_t color) const;
    const char       *GetConfigOptions() const { return fConfigOptions; }
+   const char       *GetConfigFeatures() const { return fConfigFeatures; }
    const char       *GetCutClassName() const { return fCutClassName; }
    const char       *GetDefCanvasName() const { return fDefCanvasName; }
    Bool_t            GetEditHistograms() const { return fEditHistograms; }
@@ -221,7 +222,7 @@ public:
    Bool_t            IsProofServ() const { return fName == "proofserv" ? kTRUE : kFALSE; }
    void              ls(Option_t *option = "") const;
    Int_t             LoadClass(const char *classname, const char *libname, Bool_t check = kFALSE);
-   TClass           *LoadClass(const char *name) const;
+   TClass           *LoadClass(const char *name, Bool_t silent = kFALSE) const;
    Int_t             LoadMacro(const char *filename, Int_t *error = 0, Bool_t check = kFALSE);
    Long_t            Macro(const char *filename, Int_t *error = 0, Bool_t padUpdate = kTRUE);
    TCanvas          *MakeDefCanvas() const;
@@ -278,4 +279,3 @@ namespace ROOT {
    TROOT *GetROOT();
 }
 #endif
-

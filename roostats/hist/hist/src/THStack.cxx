@@ -399,14 +399,6 @@ void THStack::Draw(Option_t *option)
       }
    }
    AppendPad(opt.Data());
-
-   // For stacks of 1D histograms the axis need to be redrawn because the
-   // tick marks have been very likely erased.
-   if (fHists->GetSize()) {
-      TH1* h = (TH1*)fHists->At(0);
-      if (h->GetDimension()==1 && !strstr(opt.Data(),"lego"))
-         gPad->RedrawAxis();
-   }
 }
 
 //______________________________________________________________________________
@@ -438,23 +430,39 @@ Double_t THStack::GetMaximum(Option_t *option)
 
    TString opt = option;
    opt.ToLower();
-   Double_t them=0, themax = -1e300;
+   Bool_t lerr = kFALSE;
+   if (opt.Contains("e")) lerr = kTRUE;
+   Double_t them=0, themax = -1e300, c1, e1;
    if (!fHists) return 0;
    Int_t nhists = fHists->GetSize();
    TH1 *h;
+   Int_t first,last;
+
    if (!opt.Contains("nostack")) {
       BuildStack();
       h = (TH1*)fStack->At(nhists-1);
       themax = h->GetMaximum();
-      if (strstr(opt.Data(),"e1")) themax += TMath::Sqrt(TMath::Abs(themax));
    } else {
       for (Int_t i=0;i<nhists;i++) {
          h = (TH1*)fHists->At(i);
          them = h->GetMaximum();
-         if (strstr(opt.Data(),"e1")) them += TMath::Sqrt(TMath::Abs(them));
          if (them > themax) themax = them;
       }
    }
+
+   if (lerr) {
+      for (Int_t i=0;i<nhists;i++) {
+         h = (TH1*)fHists->At(i);
+         first = h->GetXaxis()->GetFirst();
+         last  = h->GetXaxis()->GetLast();
+         for (Int_t j=first; j<=last;j++) {
+            e1     = h->GetBinError(j);
+            c1     = h->GetBinContent(j);
+            themax = TMath::Max(themax,c1+e1);
+         }
+      }
+   }
+
    return themax;
 }
 
@@ -466,10 +474,14 @@ Double_t THStack::GetMinimum(Option_t *option)
 
    TString opt = option;
    opt.ToLower();
-   Double_t them=0, themin = 1e300;
+   Bool_t lerr = kFALSE;
+   if (opt.Contains("e")) lerr = kTRUE;
+   Double_t them=0, themin = 1e300, c1, e1;
    if (!fHists) return 0;
    Int_t nhists = fHists->GetSize();
+   Int_t first,last;
    TH1 *h;
+
    if (!opt.Contains("nostack")) {
       BuildStack();
       h = (TH1*)fStack->At(nhists-1);
@@ -482,6 +494,20 @@ Double_t THStack::GetMinimum(Option_t *option)
          if (them < themin) themin = them;
       }
    }
+
+   if (lerr) {
+      for (Int_t i=0;i<nhists;i++) {
+         h = (TH1*)fHists->At(i);
+         first = h->GetXaxis()->GetFirst();
+         last  = h->GetXaxis()->GetLast();
+         for (Int_t j=first; j<=last;j++) {
+             e1     = h->GetBinError(j);
+             c1     = h->GetBinContent(j);
+             themin = TMath::Min(themin,c1-e1);
+         }
+      }
+   }
+
    return themin;
 }
 
@@ -762,6 +788,7 @@ void THStack::Paint(Option_t *option)
          lnk = (TObjOptLink*)lnk->Prev();
       }
    }
+   if (!lsame) fHistogram->Paint("axissame");
 }
 
 //______________________________________________________________________________

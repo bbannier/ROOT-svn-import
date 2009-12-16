@@ -8,7 +8,7 @@
 
 /*
 Implementation of "marching cubes" algortihm for GL module. Used by 
-TF3GLPainter and TGLIsoPainter. 
+TF3GLPainter, TGLIsoPainter, TGL5DPainter. 
 Good and clear algorithm explanation can be found here: 
 http://local.wasp.uwa.edu.au/~pbourke/geometry/polygonise/
 */
@@ -111,19 +111,19 @@ void TF3Adapter::SetDataSource(const TF3 *f3)
 //______________________________________________________________________
 Double_t TF3Adapter::GetData(UInt_t i, UInt_t j, UInt_t k)const
 {
-   return fTF3->Eval(fMinX + i * fStepX, 
-                     fMinY + j * fStepY, 
-                     fMinZ + k * fStepZ);
+   return fTF3->Eval(fMinX * fXScaleInverted + i * fStepX * fXScaleInverted, 
+                     fMinY * fYScaleInverted + j * fStepY * fYScaleInverted, 
+                     fMinZ * fZScaleInverted + k * fStepZ * fZScaleInverted);
 }
 
 /*
-TH3 split edge implementation.
-"this->" is used with type-dependant names
+TH3/KDE split edge implementation.
+"this->" is used with type-dependent names
 in templates.
 */
 //______________________________________________________________________
 template<class H, class E, typename V>
-void TH3EdgeSplitter<H, E, V>::SplitEdge(TCell<E> & cell, TIsoMesh<V> * mesh, UInt_t i, 
+void TDefaultSplitter<H, E, V>::SplitEdge(TCell<E> & cell, TIsoMesh<V> * mesh, UInt_t i, 
                                          V x, V y, V z, V iso)const
 {
    V v[3];
@@ -144,20 +144,32 @@ void TF3EdgeSplitter::SplitEdge(TCell<Double_t> & cell, TIsoMesh<Double_t> * mes
                                 Double_t x, Double_t y, Double_t z, Double_t iso)const
 {
    //Split the edge and find normal in a new vertex.
-   Double_t v[3];
+   Double_t v[3] = {};
    const Double_t ofst = GetOffset(cell.fVals[eConn[i][0]], cell.fVals[eConn[i][1]], iso);
    v[0] = x + (vOff[eConn[i][0]][0] + ofst * eDir[i][0]) * fStepX;
    v[1] = y + (vOff[eConn[i][0]][1] + ofst * eDir[i][1]) * fStepY;
    v[2] = z + (vOff[eConn[i][0]][2] + ofst * eDir[i][2]) * fStepZ;
    cell.fIds[i] = mesh->AddVertex(v);
+
+   const Double_t stepXU = fStepX * fXScaleInverted;
+   const Double_t xU     = x * fXScaleInverted;
+   const Double_t stepYU = fStepY * fYScaleInverted;
+   const Double_t yU     = y * fYScaleInverted;
+   const Double_t stepZU = fStepZ * fZScaleInverted;
+   const Double_t zU     = z * fZScaleInverted;
+
+   Double_t vU[3] = {};//U - unscaled.
+   vU[0] = xU + (vOff[eConn[i][0]][0] + ofst * eDir[i][0]) * stepXU;
+   vU[1] = yU + (vOff[eConn[i][0]][1] + ofst * eDir[i][1]) * stepYU;
+   vU[2] = zU + (vOff[eConn[i][0]][2] + ofst * eDir[i][2]) * stepZU;
    //Find normals.
    Double_t n[3];
-   n[0] = fTF3->Eval(v[0] - 0.1 * fStepX, v[1], v[2]) -
-          fTF3->Eval(v[0] + 0.1 * fStepX, v[1], v[2]);
-   n[1] = fTF3->Eval(v[0], v[1] - 0.1 * fStepY, v[2]) -
-          fTF3->Eval(v[0], v[1] + 0.1 * fStepY, v[2]);
-   n[2] = fTF3->Eval(v[0], v[1], v[2] - 0.1 * fStepZ) -
-          fTF3->Eval(v[0], v[1], v[2] + 0.1 * fStepZ);
+   n[0] = fTF3->Eval(vU[0] - 0.1 * stepXU, vU[1], vU[2]) -
+          fTF3->Eval(vU[0] + 0.1 * stepXU, vU[1], vU[2]);
+   n[1] = fTF3->Eval(vU[0], vU[1] - 0.1 * stepYU, vU[2]) -
+          fTF3->Eval(vU[0], vU[1] + 0.1 * stepYU, vU[2]);
+   n[2] = fTF3->Eval(vU[0], vU[1], vU[2] - 0.1 * stepZU) -
+          fTF3->Eval(vU[0], vU[1], vU[2] + 0.1 * stepZU);
 
    const Double_t len = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
    if (len > 1e-7) {
@@ -200,6 +212,7 @@ void TMeshBuilder<D, V>::BuildMesh(const D *s, const TGridGeometry<V> &g,
    SliceType_t *slice1 = fSlices;
    SliceType_t *slice2 = fSlices + 1;
 
+   this->FetchDensities();
    NextStep(0, 0, slice1);
 
    for (UInt_t i = 1, e = GetD(); i < e - 1; ++i) {
@@ -1151,6 +1164,10 @@ template class TMeshBuilder<TH3I, Float_t>;
 template class TMeshBuilder<TH3F, Float_t>;
 template class TMeshBuilder<TH3D, Float_t>;
 template class TMeshBuilder<TF3, Double_t>;
+//TMeshBuilder does not need any detail from TKDEFGT.
+//TKDEFGT only helps to select correct implementation.
+//Forward class declaration is enough for TKDEFGT.
+template class TMeshBuilder<TKDEFGT, Float_t>;
 
 }//namespace Mc
 }//namespace Rgl

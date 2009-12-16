@@ -14,6 +14,7 @@
 #include "TMath.h"
 #include "TF1.h"
 #include "TH1.h"
+#include "TGraph.h"
 #include "TVirtualPad.h"
 #include "TStyle.h"
 #include "TRandom.h"
@@ -1170,6 +1171,10 @@ Double_t TF1::Derivative(Double_t x, Double_t *params, Double_t eps) const
    // interpolation error is decreased by making the step size h smaller.
    //
    // Author: Anna Kreshuk
+   
+   if (GetNdim() > 1) { 
+      Warning("Derivative","Function dimension is larger than one");
+   }
 
    ROOT::Math::RichardsonDerivator rd;
    double xmin, xmax;
@@ -1230,6 +1235,9 @@ Double_t TF1::Derivative2(Double_t x, Double_t *params, Double_t eps) const
    //
    // Author: Anna Kreshuk
 
+   if (GetNdim() > 1) { 
+      Warning("Derivative2","Function dimension is larger than one");
+   }
 
    ROOT::Math::RichardsonDerivator rd;
    double xmin, xmax;
@@ -1290,6 +1298,10 @@ Double_t TF1::Derivative3(Double_t x, Double_t *params, Double_t eps) const
    //
    // Author: Anna Kreshuk
 
+   if (GetNdim() > 1) { 
+      Warning("Derivative3","Function dimension is larger than one");
+   }
+
    ROOT::Math::RichardsonDerivator rd;
    double xmin, xmax;
    GetRange(xmin, xmax);
@@ -1318,7 +1330,7 @@ Double_t TF1::Derivative3(Double_t x, Double_t *params, Double_t eps) const
 //______________________________________________________________________________
 Double_t TF1::DerivativeError()
 {
-   // Static function returning the error of the last call to the Derivative
+   // Static function returning the error of the last call to the of Derivative's
    // functions
 
    return gErrorTF1;
@@ -1408,11 +1420,13 @@ TF1 *TF1::DrawCopy(Option_t *option) const
 
 
 //______________________________________________________________________________
-void TF1::DrawDerivative(Option_t *option)
+TObject *TF1::DrawDerivative(Option_t *option)
 {
    // Draw derivative of this function
    //
    // An intermediate TGraph object is built and drawn with option.
+   // The function returns a pointer to the TGraph object. Do:
+   //    TGraph *g = (TGraph*)myfunc.DrawDerivative(option);
    //
    // The resulting graph will be drawn into the current pad.
    // If this function is used via the context menu, it recommended
@@ -1422,19 +1436,21 @@ void TF1::DrawDerivative(Option_t *option)
    TVirtualPad *padsav = gPad;
    if (pad) pad->cd();
 
-   char cmd[512];
-   sprintf(cmd,"{TGraph *R__%s_Derivative = new TGraph((TF1*)0x%lx,\"d\");R__%s_Derivative->Draw(\"%s\");}",GetName(),(Long_t)this,GetName(),option);
-   gROOT->ProcessLine(cmd);
+   TGraph *gr = new TGraph(this,"d");
+   gr->Draw(option);
    if (padsav) padsav->cd();
+   return gr;
 }
 
 
 //______________________________________________________________________________
-void TF1::DrawIntegral(Option_t *option)
+TObject *TF1::DrawIntegral(Option_t *option)
 {
    // Draw integral of this function
    //
    // An intermediate TGraph object is built and drawn with option.
+   // The function returns a pointer to the TGraph object. Do:
+   //    TGraph *g = (TGraph*)myfunc.DrawIntegral(option);
    //
    // The resulting graph will be drawn into the current pad.
    // If this function is used via the context menu, it recommended
@@ -1444,10 +1460,10 @@ void TF1::DrawIntegral(Option_t *option)
    TVirtualPad *padsav = gPad;
    if (pad) pad->cd();
 
-   char cmd[512];
-   sprintf(cmd,"{TGraph *R__%s_Integral = new TGraph((TF1*)0x%lx,\"i\");R__%s_Integral->Draw(\"%s\");}",GetName(),(Long_t)this,GetName(),option);
-   gROOT->ProcessLine(cmd);
+   TGraph *gr = new TGraph(this,"i");
+   gr->Draw(option);
    if (padsav) padsav->cd();
+   return gr;
 }
 
 
@@ -2131,20 +2147,48 @@ Double_t TF1::GetSave(const Double_t *xx)
 
    if (fNsave <= 0) return 0;
    if (fSave == 0) return 0;
-   Int_t np = fNsave - 3;
-   Double_t xmin = Double_t(fSave[np+1]);
-   Double_t xmax = Double_t(fSave[np+2]);
    Double_t x    = Double_t(xx[0]);
-   Double_t dx   = (xmax-xmin)/np;
+   Double_t y,dx,xmin,xmax,xlow,xup,ylow,yup;
+   if (fParent && fParent->InheritsFrom(TH1::Class())) {
+      //if parent is a histogram the function had been savedat the center of the bins
+      //we make a linear interpolation between the saved values
+      xmin = fSave[fNsave-3];
+      xmax = fSave[fNsave-2];
+      if (fSave[fNsave-1] == xmax) {
+         TH1 *h = (TH1*)fParent;
+         TAxis *xaxis = h->GetXaxis();
+         Int_t bin1  = xaxis->FindBin(xmin);
+         Int_t binup = xaxis->FindBin(xmax);
+         Int_t bin   = xaxis->FindBin(x);
+         if (bin < binup) {
+            xlow = xaxis->GetBinCenter(bin);
+            xup  = xaxis->GetBinCenter(bin+1);
+            ylow = fSave[bin-bin1];
+            yup  = fSave[bin-bin1+1];
+         } else {
+            xlow = xaxis->GetBinCenter(bin-1);
+            xup  = xaxis->GetBinCenter(bin);
+            ylow = fSave[bin-bin1-1];
+            yup  = fSave[bin-bin1];
+         }
+         dx = xup-xlow;
+         y  = ((xup*ylow-xlow*yup) + x*(yup-ylow))/dx;
+         return y;
+      }
+   }
+   Int_t np = fNsave - 3;
+   xmin = Double_t(fSave[np+1]);
+   xmax = Double_t(fSave[np+2]);
+   dx   = (xmax-xmin)/np;
    if (x < xmin || x > xmax) return 0;
    if (dx <= 0) return 0;
 
    Int_t bin     = Int_t((x-xmin)/dx);
-   Double_t xlow = xmin + bin*dx;
-   Double_t xup  = xlow + dx;
-   Double_t ylow = fSave[bin];
-   Double_t yup  = fSave[bin+1];
-   Double_t y    = ((xup*ylow-xlow*yup) + x*(yup-ylow))/dx;
+   xlow = xmin + bin*dx;
+   xup  = xlow + dx;
+   ylow = fSave[bin];
+   yup  = fSave[bin+1];
+   y    = ((xup*ylow-xlow*yup) + x*(yup-ylow))/dx;
    return y;
 }
 
@@ -2468,7 +2512,28 @@ Double_t TF1::IntegralError(Double_t a, Double_t b, Double_t epsilon)
    // are resulting from the latest fit. If in the meantime a fit is done 
    // using another function, the routine will signal an error and return zero.
 
-   return ROOT::TF1Helper::IntegralError(this,a,b,epsilon);
+   Double_t x1[1]; 
+   Double_t x2[1]; 
+   x1[0] = a, x2[0] = b;
+   return ROOT::TF1Helper::IntegralError(this,1,x1,x2,epsilon);
+}
+
+//______________________________________________________________________________
+Double_t TF1::IntegralError(Int_t n, const Double_t * a, const Double_t * b, Double_t epsilon)
+{
+   // Return Error on Integral of a parameteric function with dimension larger tan one 
+   // between a[] and b[]  due to the parameters uncertainties.
+   // It is assumed the parameters are estimated from a fit and the covariance
+   // matrix resulting from the fit is used in estimating this error.
+   // For a TF1 with dimension larger than 1 (for example a TF2 or TF3) 
+   // TF1::IntegralMultiple is used for the integral calculation
+   //
+   //
+   // IMPORTANT NOTE: The calculation is valid assuming the parameters 
+   // are resulting from the latest fit. If in the meantime a fit is done 
+   // using another function, the routine will signal an error and return zero.
+
+   return ROOT::TF1Helper::IntegralError(this,n,a,b,epsilon);
 }
 
 #ifdef INTHEFUTURE
@@ -2773,10 +2838,29 @@ void TF1::Save(Double_t xmin, Double_t xmax, Double_t, Double_t, Double_t, Doubl
    // Save values of function in array fSave
 
    if (fSave != 0) {delete [] fSave; fSave = 0;}
+   if (fParent && fParent->InheritsFrom(TH1::Class())) {
+      //if parent is a histogram save the function at the center of the bins
+      if ((xmin >0 && xmax > 0) && TMath::Abs(TMath::Log10(xmax/xmin) > TMath::Log10(fNpx))) {
+         TH1 *h = (TH1*)fParent;
+         Int_t bin1 = h->GetXaxis()->FindBin(xmin);
+         Int_t bin2 = h->GetXaxis()->FindBin(xmax);
+         fNsave = bin2-bin1+4;
+         fSave  = new Double_t[fNsave];
+         Double_t xv[1];
+         InitArgs(xv,fParams);
+         for (Int_t i=bin1;i<=bin2;i++) {
+            xv[0]    = h->GetXaxis()->GetBinCenter(i);
+            fSave[i-bin1] = EvalPar(xv,fParams);
+         }
+         fSave[fNsave-3] = xmin;
+         fSave[fNsave-2] = xmax;
+         fSave[fNsave-1] = xmax;
+         return;
+      }
+   }
    fNsave = fNpx+3;
    if (fNsave <= 3) {fNsave=0; return;}
    fSave  = new Double_t[fNsave];
-   Int_t i;
    Double_t dx = (xmax-xmin)/fNpx;
    if (dx <= 0) {
       dx = (fXmax-fXmin)/fNpx;
@@ -2786,7 +2870,7 @@ void TF1::Save(Double_t xmin, Double_t xmax, Double_t, Double_t, Double_t, Doubl
    }
    Double_t xv[1];
    InitArgs(xv,fParams);
-   for (i=0;i<=fNpx;i++) {
+   for (Int_t i=0;i<=fNpx;i++) {
       xv[0]    = xmin + dx*i;
       fSave[i] = EvalPar(xv,fParams);
    }

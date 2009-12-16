@@ -22,10 +22,11 @@ class TEveVSD : public TObject
    TEveVSD& operator=(const TEveVSD&); // Not implemented
 
 protected:
-   Int_t        fBuffSize;
+   TFile             *fFile;        //!
+   TDirectory        *fDirectory;   //!
 
-   TFile*       fFile;        //!
-   TDirectory*  fDirectory;   //!
+   Int_t              fBuffSize;    //!
+   Int_t              fVerbose;     //!
 
 public:
    TTree*             fTreeK;       //! Kinematics.
@@ -48,6 +49,7 @@ public:
 
 public:
    TEveVSD(const char* name="TEveVSD", const char* title="");
+   virtual ~TEveVSD();
 
    virtual void SetDirectory(TDirectory* dir);
 
@@ -55,13 +57,10 @@ public:
    virtual void DeleteTrees();
 
    virtual void CreateBranches();
-   virtual void SetBranchAddresses();
-
    virtual void WriteTrees();
-   virtual void LoadTrees();
 
-   virtual void LoadVSD(const char* vsd_file_name,
-                        const char* dir_name="Event0");
+   virtual void LoadTrees();
+   virtual void SetBranchAddresses();
 
    static void DisableTObjectStreamersForVSDStruct();
 

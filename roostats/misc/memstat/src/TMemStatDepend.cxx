@@ -14,7 +14,7 @@
 //  TMemStatDepend - non standard C++ functions - Needed to make
 //  memory statistic (Used by TMemStatManager)
 //
-//  To be implemented for differnt platoforms.
+//  To be implemented for differnt platforms.
 //______________________________________________________________________________
 
 
@@ -24,17 +24,28 @@
 // ROOT
 #include "TString.h"
 // API
+#if defined(R__MACOSX)
+#if defined(MAC_OS_X_VERSION_10_5)
+#include <malloc/malloc.h>
+#include <execinfo.h>
+#endif
+#else
 #include <malloc.h>
 #include <execinfo.h>
+#endif
 #include <cxxabi.h>
 // MemStat
 #include "TMemStatDepend.h"
+
+#if defined(R__GNU) && (defined(R__LINUX) || defined(R__HURD)) && !defined(__alpha__)
+#define SUPPORTS_MEMSTAT
+#endif
 
 // This is a global variable set at MSManager init time.
 // It marks the highest used stack address.
 void *g_global_stack_end = NULL;
 
-#if defined(R__GNU) && (defined(R__LINUX) || defined(R__HURD)) && !defined(__alpha__)
+#if defined(SUPPORTS_MEMSTAT)
 // Comment from Anar:
 // HACK: there is an ugly bug in gcc (Bug#8743): http://gcc.gnu.org/bugzilla/show_bug.cgi?id=8743
 // "receiving result from __builtin_return_address() beyond stack top causes segfault"
@@ -66,6 +77,8 @@ ClassImp(TMemStatDepend)
 static void *return_address(int _frame)
 {
    // we have a limit on the depth = 35
+
+#if defined(SUPPORTS_MEMSTAT)
    switch (_frame) {
       _RET_ADDR(0);_RET_ADDR(1);_RET_ADDR(2);_RET_ADDR(3);_RET_ADDR(4);_RET_ADDR(5);_RET_ADDR(6);_RET_ADDR(7);
       _RET_ADDR(8);_RET_ADDR(9);_RET_ADDR(10);_RET_ADDR(11);_RET_ADDR(12);_RET_ADDR(13);_RET_ADDR(14);
@@ -73,8 +86,12 @@ static void *return_address(int _frame)
       _RET_ADDR(22);_RET_ADDR(23);_RET_ADDR(24);_RET_ADDR(25);_RET_ADDR(26);_RET_ADDR(27);_RET_ADDR(28);
       _RET_ADDR(29);_RET_ADDR(30);_RET_ADDR(31);_RET_ADDR(32);_RET_ADDR(33);_RET_ADDR(34);_RET_ADDR(35);
    default:
-      return NULL;
+      return 0;
    }
+#else
+   if (_frame) { }
+   return 0;
+#endif
 }
 
 //______________________________________________________________________________
@@ -92,7 +109,11 @@ TMemStatDepend::MallocHookFunc_t TMemStatDepend::GetMallocHook()
 {
    //malloc function getter
 
+#if defined(SUPPORTS_MEMSTAT)
    return __malloc_hook;
+#else
+   return 0;
+#endif
 }
 
 //______________________________________________________________________________
@@ -100,7 +121,11 @@ TMemStatDepend::FreeHookFunc_t TMemStatDepend::GetFreeHook()
 {
    //free function   getter
 
+#if defined(SUPPORTS_MEMSTAT)
    return __free_hook;
+#else
+   return 0;
+#endif
 }
 
 //______________________________________________________________________________
@@ -108,7 +133,11 @@ void TMemStatDepend::SetMallocHook(MallocHookFunc_t p)
 {
    // Set pointer to function replacing alloc function
 
+#if defined(SUPPORTS_MEMSTAT)
    __malloc_hook = p;
+#else
+   if (p) { }
+#endif
 }
 
 //______________________________________________________________________________
@@ -116,7 +145,11 @@ void TMemStatDepend::SetFreeHook(FreeHookFunc_t p)
 {
    // Set pointer to function replacing free function
 
+#if defined(SUPPORTS_MEMSTAT)
    __free_hook = p;
+#else
+   if (p) { }
+#endif
 }
 
 //______________________________________________________________________________
@@ -129,13 +162,24 @@ size_t TMemStatDepend::Backtrace(void **trace, size_t dsize, Bool_t _bUseGNUBuil
 
    if ( _bUseGNUBuildinBacktrace )
    {
-#if defined(R__GNU) && (defined(R__LINUX) || defined(R__HURD)) && !defined(__alpha__)
+#if defined(SUPPORTS_MEMSTAT)
       // Initialize the stack end variable.
       return builtin_return_address(trace, dsize);
-#endif
+#else
+      if (trace || dsize) { }
       return 0;
+#endif
    }
+#if defined(R__MACOSX)
+#if defined(MAC_OS_X_VERSION_10_5)
    return backtrace(trace, dsize);
+#else
+   if (trace || dsize) { }
+   return 0;
+#endif
+#else
+   return backtrace(trace, dsize);
+#endif
 }
 
 //______________________________________________________________________________
@@ -143,8 +187,10 @@ char** TMemStatDepend::BacktraceSymbols(void **trace, size_t size)
 {
    // TODO: Comment me
 
-#if defined(R__GNU) && (defined(R__LINUX) || defined(R__HURD)) && !defined(__alpha__)
+#if defined(SUPPORTS_MEMSTAT)
    return backtrace_symbols(trace, size);
+#else
+   if (trace || size) { }
 #endif
    return 0;
 }
@@ -155,7 +201,7 @@ void TMemStatDepend::GetSymbols(void *_pFunction,
 {
    // get the name of the function and library
 
-#if defined(R__GNU) && (defined(R__LINUX) || defined(R__HURD)) && !defined(__alpha__)
+#if defined(SUPPORTS_MEMSTAT)
    char ** code = backtrace_symbols(&_pFunction, 1);
    if (!code || !code[0])
       return;
@@ -191,6 +237,8 @@ void TMemStatDepend::GetSymbols(void *_pFunction,
    _strFun = (!status) ? ch : func.c_str();
    // it is the responsibility of the caller to free that pointer
    free(ch);
+#else
+   if (!_pFunction) { _strInfo = ""; _strLib = ""; _strFun = ""; }
 #endif
 }
 
@@ -199,7 +247,7 @@ void TMemStatDepend::Demangle(char *codeInfo, TString &str)
 {
    //    get the name of the function and library
 
-#if defined(R__GNU) && (defined(R__LINUX) || defined(R__HURD)) && !defined(__alpha__)
+#if defined(SUPPORTS_MEMSTAT)
    int status = 0;
    char *ch = abi::__cxa_demangle(codeInfo, 0, 0, &status);
    if (ch) {
@@ -208,5 +256,7 @@ void TMemStatDepend::Demangle(char *codeInfo, TString &str)
    } else {
       str = "unknown";
    }
+#else
+   if (!codeInfo) { str = ""; }
 #endif
 }

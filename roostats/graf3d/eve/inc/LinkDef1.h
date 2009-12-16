@@ -1,5 +1,5 @@
 // @(#)root/eve:$Id$
-// Authors: Matevz Tadel & Alja Mrak-Tadel: 2006, 2007
+// Authors: Matevz Tadel & Alja Mrak-Tadel: 2006 - 2009
 
 /*************************************************************************
  * Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
@@ -28,13 +28,11 @@
 // TEveManager
 #pragma link C++ class TEveManager+;
 #pragma link C++ global gEve;
+#pragma link C++ class TEveManager::TRedrawDisabler+;
 #pragma link C++ class TEveManager::TExceptionHandler+;
 
 // TEveVSD
 #pragma link C++ class TEveVSD+;
-#pragma link C++ class TEveVector+;
-#pragma link C++ class TEveVector4+;
-#pragma link C++ class TEvePathMark+;
 #pragma link C++ class TEveMCTrack+;
 #pragma link C++ class TEveHit+;
 #pragma link C++ class TEveCluster+;
@@ -43,6 +41,11 @@
 #pragma link C++ class TEveRecV0+;
 #pragma link C++ class TEveRecCascade+;
 #pragma link C++ class TEveMCRecCrossRef+;
+
+// TEveVector
+#pragma link C++ class TEveVector+;
+#pragma link C++ class TEveVector4+;
+#pragma link C++ class TEvePathMark+;
 
 // TEveTrans
 #pragma link C++ class TEveTrans-;
@@ -66,6 +69,7 @@
 #pragma link C++ class TEveElement::TEveListTreeInfo+;
 #pragma link C++ class TEveElementObjectPtr+;
 #pragma link C++ class TEveElementList+;
+#pragma link C++ class TEveElementListProjected+;
 #pragma link C++ class TEveElementEditor+;
 
 #pragma link C++ class std::list<TEveElement*>;
@@ -118,6 +122,8 @@
 
 // TEveGedEditor
 #pragma link C++ class TEveGedEditor+;
+#pragma link C++ class TEveGedNameFrame+;
+#pragma link C++ class TEveGedNameTextButton+;
 
 // TEveMacro
 #pragma link C++ class TEveMacro+;
@@ -135,10 +141,12 @@
 #pragma link C++ class TEveProjection::PreScaleEntry_t+;
 #pragma link C++ class std::vector<TEveProjection::PreScaleEntry_t>;
 #pragma link C++ class std::vector<TEveProjection::PreScaleEntry_t>::iterator;
+#pragma link C++ operators std::vector<TEveProjection::PreScaleEntry_t>::iterator;
 #pragma link C++ typedef TEveProjection::vPreScale_t;
 #pragma link C++ typedef TEveProjection::vPreScale_i;
 #pragma link C++ class TEveRhoZProjection+;
 #pragma link C++ class TEveRPhiProjection+;
+#pragma link C++ class TEve3DProjection+;
 
 #pragma link C++ class TEveProjectionManager+;
 #pragma link C++ class TEveProjectionManagerEditor+;

@@ -53,14 +53,16 @@ in this Software without prior written authorization from the X Consortium.
 #include <io.h>
 #endif
 #if !defined(__hpux)
-#if defined(__APPLE__)
-#include <AvailabilityMacros.h>
-#if !defined(MAC_OS_X_VERSION_10_4)
-extern int fchmod();
-#endif
+# if defined(__APPLE__)
+#  include <AvailabilityMacros.h>
+#  if !defined(MAC_OS_X_VERSION_10_4)
+extern int fchmod(int, int);
+#  endif
+# elif defined(__CYGWIN__)
+extern int fchmod(int, mode_t);
 #else
-extern int fchmod();
-#endif
+extern int fchmod(int, int);
+# endif
 #endif
 
 #ifdef MINIX
@@ -114,8 +116,8 @@ boolean	verbose = FALSE;
 boolean	show_where_not = FALSE;
 boolean warn_multiple = FALSE;	/* Warn on multiple includes of same file */
 
-void freefile();
-void redirect();
+void freefile(struct filepointer*);
+void redirect(char*, char*);
 
 static
 #ifdef SIGNALRETURNSINT

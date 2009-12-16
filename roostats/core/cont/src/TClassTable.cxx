@@ -193,7 +193,9 @@ void TClassTable::Print(Option_t *option) const
    Printf("class                                 version  bits  initialized");
    Printf("================================================================");
    for (int i = 0; i < fgTally; i++) {
+      if (!fgTable[i]) continue;
       TClassRec *r = fgSortedTable[i];
+      if (!r) break;
       n++;
       TString s = r->fName;
       if (nch && strcmp(option,r->fName) && s.Index(re) == kNPOS) continue;
@@ -436,7 +438,9 @@ void TClassTable::PrintTable()
    Printf("class                                 version  bits  initialized");
    Printf("================================================================");
    for (int i = 0; i < fgTally; i++) {
+      if (!fgTable[i]) continue;
       TClassRec *r = fgSortedTable[i];
+      if (!r) break;
       n++;
       if (TClass::GetClass(r->fName, kFALSE)) {
          ninit++;

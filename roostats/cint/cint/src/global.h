@@ -163,8 +163,8 @@ extern fpos_t G__nextmacro;
 extern int G__mline;
 extern const char *G__macro;
 extern struct G__Deffuncmacro G__deffuncmacro;
-extern char G__macros[G__LONGLINE];
-extern char G__ppopt[G__ONELINE];
+extern char G__macros[16*G__LONGLINE];
+extern char G__ppopt[16*G__ONELINE];
 extern char *G__allincludepath;
 extern const char *G__undeflist;
 struct G__funcmacro_stackelt;
@@ -666,7 +666,9 @@ extern int G__dynconst;
 
 /*extern std::list<G__DLLINIT>* G__initpermanentsl;*/
 extern int G__ispermanentsl;
-
+extern int G__nlibs;
+extern int G__nlibs_highwatermark;
+   
 /**************************************************************************
 * Incremented every time the cint dictionary is rewound in scrupto.
 * Can be used to see if cached information derived from the dictionary

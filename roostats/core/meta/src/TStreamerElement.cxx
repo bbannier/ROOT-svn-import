@@ -20,6 +20,7 @@
 #include "TVirtualStreamerInfo.h"
 #include "TClass.h"
 #include "TClassEdit.h"
+#include "TClassStreamer.h"
 #include "TBaseClass.h"
 #include "TDataMember.h"
 #include "TDataType.h"
@@ -593,12 +594,28 @@ Int_t TStreamerBase::ReadBuffer (TBuffer &b, char *pointer)
       fMethod->SetParamPtrs(args);
       fMethod->Execute((void*)(pointer+fOffset));
    } else {
-     // printf("Reading baseclass:%s via ReadBuffer\n",fBaseClass->GetName());
-      //fBaseClass->ReadBuffer(b,pointer+fOffset);
-      if( fNewBaseClass )
-         b.ReadClassBuffer( fNewBaseClass, pointer+fOffset, fBaseClass );
-      else
-         b.ReadClassBuffer( fBaseClass, pointer+fOffset );
+      // We don't have a StreamerNVirtual(). That still doesn't mean
+      // that there is no streamer - it could be an external one:
+      // If the old base class has an adopted streamer we take that
+      // one instead of the new base class:
+      if( fNewBaseClass ) {
+         TClassStreamer* extstrm = fNewBaseClass->GetStreamer();                  
+         if (extstrm) {
+            // The new base class has an adopted streamer:
+            extstrm->SetOnFileClass(fBaseClass);
+            (*extstrm)(b, pointer);
+         } else {
+            b.ReadClassBuffer( fNewBaseClass, pointer+fOffset, fBaseClass ); 
+         }
+      } else {
+         TClassStreamer* extstrm = fBaseClass->GetStreamer();         
+         if (extstrm) {
+            // The class has an adopted streamer:
+            (*extstrm)(b, pointer);
+         } else {
+            b.ReadClassBuffer( fBaseClass, pointer+fOffset );
+         }
+      }
    }
    return 0;
 }
@@ -665,11 +682,31 @@ Int_t TStreamerBase::WriteBuffer (TBuffer &b, char *pointer)
    // Write the base class into the buffer.
 
    if (!fMethod) {
-      //      if (fBaseClass->GetClassInfo()) fBaseClass->WriteBuffer(b,pointer);
-      // now always write ... the previous implementation did not even match
-      // the ReadBuffer?
-      fBaseClass->WriteBuffer(b,pointer+fOffset);
-      return 0;
+      // We don't have a StreamerNVirtual(). That still doesn't mean
+      // that there is no streamer - it could be an external one:
+      // If the old base class has an adopted streamer we take that
+      // one instead of the new base class:
+      if (fNewBaseClass) {
+         TClassStreamer* extstrm = fNewBaseClass->GetStreamer();
+         if (extstrm) {
+            // The new base class has an adopted streamer:
+            extstrm->SetOnFileClass(fBaseClass);
+            (*extstrm)(b, pointer);
+            return 0;
+         } else {
+            fNewBaseClass->WriteBuffer(b,pointer+fOffset);
+            return 0;
+         }
+      } else {
+         TClassStreamer* extstrm = fBaseClass->GetStreamer();
+         if (extstrm) {
+            (*extstrm)(b, pointer);
+            return 0;
+         } else {
+            fBaseClass->WriteBuffer(b,pointer+fOffset);
+            return 0;
+         }
+      }
    }
    ULong_t args[1];
    args[0] = (ULong_t)&b;
@@ -1397,6 +1434,15 @@ TStreamerString::~TStreamerString()
 }
 
 //______________________________________________________________________________
+const char *TStreamerString::GetInclude() const
+{
+   // Return the proper include for this element.
+   
+   sprintf(gIncludeName,"<%s>","TString.h");
+   return gIncludeName;
+}
+
+//______________________________________________________________________________
 Int_t TStreamerString::GetSize() const
 {
    // Returns size of anyclass in bytes.
@@ -1602,8 +1648,18 @@ Int_t TStreamerSTL::GetSize() const
    // Since the STL collection might or might not be emulated and that the
    // sizeof the object depends on this, let's just always retrieve the
    // current size!
-   UInt_t size = GetClassPointer()->Size();
-
+   TClass *cl = GetClassPointer();
+   UInt_t size = 0;
+   if (cl==0) {
+      if (!TestBit(kWarned)) {
+         Error("GetSize","Could not find the TClass for %s.\n"
+               "This is likely to have been a typedef, if possible please declare it in CINT to work around the issue\n",fTypeName.Data());
+         const_cast<TStreamerSTL*>(this)->SetBit(kWarned);
+      }
+   } else {
+      size = cl->Size();
+   }
+   
    if (fArrayLength) return fArrayLength*size;
    return size;
 }

@@ -45,7 +45,6 @@ R__EXTERN TTree* gTree;
 
 Int_t TBranch::fgCount = 0;
 
-const Int_t kMaxRAM = 10;
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
@@ -86,8 +85,6 @@ TBranch::TBranch()
 , fBranches()
 , fLeaves()
 , fBaskets(fMaxBaskets)
-, fNBasketRAM(kMaxRAM+1)
-, fBasketRAM(0)
 , fBasketBytes(0)
 , fBasketEntry(0)
 , fBasketSeek(0)
@@ -102,10 +99,7 @@ TBranch::TBranch()
 , fSkipZip(kFALSE)
 {
    // Default constructor.  Used for I/O by default.
-   fBasketRAM = new Int_t[kMaxRAM];
-   for (Int_t i = 0; i < kMaxRAM; ++i) {
-      fBasketRAM[i] = -1;
-   }
+   
 }
 
 //______________________________________________________________________________
@@ -130,8 +124,6 @@ TBranch::TBranch(TTree *tree, const char* name, void* address, const char* leafl
 , fBranches()
 , fLeaves()
 , fBaskets(fMaxBaskets)
-, fNBasketRAM(kMaxRAM+1)
-, fBasketRAM(0)
 , fBasketBytes(0)
 , fBasketEntry(0)
 , fBasketSeek(0)
@@ -177,6 +169,18 @@ TBranch::TBranch(TTree *tree, const char* name, void* address, const char* leafl
    //             Y/I       : variable Y, type Int_t
    //             Y/I2      ; variable Y, type Int_t converted to a 16 bits integer
    //
+   //    Note that the TTree will assume that all the item are contiguous in memory.
+   //    On some platform, this is not always true of the member of a struct or a class,
+   //    due to padding and alignment.  Sorting your data member in order of decreasing
+   //    sizeof usually leads to their being contiguous in memory.
+   //
+   //       * bufsize is the buffer size in bytes for this branch
+   //         The default value is 32000 bytes and should be ok for most cases.
+   //         You can specify a larger value (eg 256000) if your Tree is not split
+   //         and each entry is large (Megabytes)
+   //         A small value for bufsize is optimum if you intend to access
+   //         the entries in the Tree randomly and your Tree is in split mode.
+   //   
    //   See an example of a Branch definition in the TTree constructor.
    //
    //   Note that in case the data type is an object, this branch can contain
@@ -211,8 +215,6 @@ TBranch::TBranch(TBranch *parent, const char* name, void* address, const char* l
 , fBranches()
 , fLeaves()
 , fBaskets(fMaxBaskets)
-, fNBasketRAM(kMaxRAM+1)
-, fBasketRAM(0)
 , fBasketBytes(0)
 , fBasketEntry(0)
 , fBasketSeek(0)
@@ -282,14 +284,9 @@ void TBranch::Init(const char* name, const char* leaflist, Int_t compress)
       }
    }
 
-   fBasketRAM = new Int_t[kMaxRAM];
-   for (Int_t i = 0; i < kMaxRAM; ++i) {
-      fBasketRAM[i] = -1;
-   }
-
    fBasketBytes = new Int_t[fMaxBaskets];
    fBasketEntry = new Long64_t[fMaxBaskets];
-   fBasketSeek = new Long64_t[fMaxBaskets];
+   fBasketSeek  = new Long64_t[fMaxBaskets];
 
    for (Int_t i = 0; i < fMaxBaskets; ++i) {
       fBasketBytes[i] = 0;
@@ -424,15 +421,12 @@ TBranch::~TBranch()
    delete [] fBasketBytes;
    fBasketBytes = 0;
 
-   delete [] fBasketRAM;
-   fBasketRAM = 0;
-
    fBaskets.Delete();
 
    // Remove our leaves from our tree's list of leaves.
    if (fTree) {
       TObjArray* lst = fTree->GetListOfLeaves();
-      if (lst) {
+      if (lst && lst->GetLast()!=-1) {
          lst->RemoveAll(&fLeaves);
       }
    }
@@ -624,62 +618,38 @@ void TBranch::DropBaskets(Option_t* option)
    Bool_t all = kFALSE;
    TString opt = option;
    opt.ToLower();
-   if (opt.Contains("all"))
-      all = kTRUE;
+   if (opt.Contains("all")) all = kTRUE;
 
-   Int_t i,j;
    TBasket *basket;
-   // fast algorithm in case of only a few baskets in memory
-   if (fNBasketRAM < kMaxRAM) {
-      for (i=0;i<kMaxRAM;i++) {
-         j = fBasketRAM[i];
-         if (j < 0) continue;
-         if ((j == fReadBasket || j == fWriteBasket) && !all) continue;
-         basket = (TBasket*)fBaskets.UncheckedAt(j);
-         fBasketRAM[i] = -1;
-         fNBasketRAM--;
-         if (!basket) {
-            continue;
-         }
+   Int_t nbaskets = fBaskets.GetEntriesFast();
+   
+   if ((fWriteBasket >=0 && fWriteBasket < nbaskets) || all) {
+      //slow case
+      for (Int_t i=0;i<nbaskets;i++) {
+         basket = (TBasket*)fBaskets.UncheckedAt(i);
+         if (!basket) continue;
+         if ((i == fReadBasket || i == fWriteBasket) && !all) continue;
          basket->DropBuffers();
-         GetListOfBaskets()->RemoveAt(j);
+         fBaskets.RemoveAt(i);
          delete basket;
       }
-      if (fNBasketRAM < 0) {
-         //Error("DropBaskets", "fNBasketRAM =%d",fNBasketRAM);
-         fNBasketRAM = 0;
+   }  else {
+      //fast case
+      if (nbaskets > 0) {
+         basket = (TBasket*)fBaskets.UncheckedAt(nbaskets-1);
+         if (basket) {
+            basket->DropBuffers();
+            delete basket;
+         }
+         fBaskets.Clear();
       }
-      i = 0;
-      for (j=0;j<kMaxRAM;j++) {
-         if (fBasketRAM[j] < 0) continue;
-         fBasketRAM[i] = fBasketRAM[j];
-         i++;
-      }
-      return;
-   }
-
-   //general algorithm looping on the full baskets table.
-   Int_t nbaskets = GetListOfBaskets()->GetEntriesFast();
-   fNBasketRAM = 0;
-   for (j=0;j<nbaskets-1;j++)  {
-      basket = (TBasket*)fBaskets.UncheckedAt(j);
-      if (!basket) continue;
-      if (fNBasketRAM < kMaxRAM) fBasketRAM[fNBasketRAM] = j;
-      fNBasketRAM++;
-      if ((j == fReadBasket || j == fWriteBasket) && !all) continue;
-      basket->DropBuffers();
-      GetListOfBaskets()->RemoveAt(j);
-      delete basket;
-      fNBasketRAM--;
-      fBasketRAM[fNBasketRAM] = -1;
-      if (!fTree->MemoryFull(0)) break;
    }
 
    // process subbranches
    if (all) {
       TObjArray *lb = GetListOfBranches();
       Int_t nb = lb->GetEntriesFast();
-      for (j = 0; j < nb; j++) {
+      for (Int_t j = 0; j < nb; j++) {
          TBranch* branch = (TBranch*) lb->UncheckedAt(j);
          if (!branch) continue;
          branch->DropBaskets("all");
@@ -855,12 +825,18 @@ Int_t TBranch::Fill()
    }
 
    // Should we create a new basket?
-   // fSkipZip force one entry per buffer
+   // fSkipZip force one entry per buffer (old stuff still maintained for CDF)
    // Transfer full compressed buffer only
 
    if ((fSkipZip && (lnew >= TBuffer::kMinimalSize)) || (buf->TestBit(TBufferFile::kNotDecompressed)) || ((lnew + (2 * nsize) + nbytes) >= fBasketSize)) {
       if (fTree->TestBit(TTree::kCircular)) {
          return nbytes;
+      }
+      Int_t nevbuf = basket->GetNevBuf();
+      if (fEntryOffsetLen > 10 &&  (4*nevbuf) < fEntryOffsetLen ) {
+         fEntryOffsetLen = nevbuf < 3 ? 10 : 4*nevbuf; // assume some fluctuations.
+      } else if (fEntryOffsetLen && nevbuf > fEntryOffsetLen) {
+         fEntryOffsetLen = 2*nevbuf; // assume some fluctuations.         
       }
       Int_t nout = WriteBasket(basket,fWriteBasket);
       return (nout >= 0) ? nbytes : -1;
@@ -1075,6 +1051,7 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
    // create/decode basket parameters from buffer
    TFile *file = GetFile(0);
    basket = new TBasket(file);
+   // fSkipZip is old stuff still maintained for CDF
    if (fSkipZip) basket->SetBit(TBufferFile::kNotDecompressed);
    basket->SetBranch(this);
    if (fBasketBytes[basketnumber] == 0) {
@@ -1082,10 +1059,9 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
    }
    //add branch to cache (if any)
    TFileCacheRead *pf = file ? file->GetCacheRead() : 0;
-   if (pf && pf->InheritsFrom(TTreeCache::Class())){
-      TTreeCache *tpf = (TTreeCache*)pf;
-      tpf->AddBranch(this);
-      if (fSkipZip) tpf->SetSkipZip();
+   if (pf){
+      if (pf->IsLearning()) pf->AddBranch(this);
+      if (fSkipZip) pf->SetSkipZip();
    }
 
    //now read basket
@@ -1110,8 +1086,6 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
    }
 
    fBaskets.AddAt(basket,basketnumber);
-   if (fNBasketRAM < kMaxRAM) fBasketRAM[fNBasketRAM] = basketnumber;
-   fNBasketRAM++;
    return basket;
 }
 
@@ -1429,7 +1403,9 @@ TBranch* TBranch::GetSubBranch(const TBranch* child) const
       }
       if (branch == child) {
          // We are the direct parent of child.
+         const_cast<TBranch*>(child)->fParent = (TBranch*)this; // We can not yet use the 'mutable' keyword
          // Note: We cast away any const-ness of "this".
+         const_cast<TBranch*>(child)->fParent = (TBranch*)this; // We can not yet use the 'mutable' keyword
          return (TBranch*) this;
       }
       // FIXME: This is a tail-recursion!
@@ -1558,7 +1534,6 @@ Int_t TBranch::LoadBaskets()
       fBaskets.AddAt(basket,i);
       nimported++;
    }
-   fNBasketRAM = nimported;
    return nimported;
 }
 
@@ -1672,7 +1647,6 @@ void TBranch::Refresh(TBranch* b)
    fTotBytes       = b->fTotBytes;
    fZipBytes       = b->fZipBytes;
    fReadBasket     = 0;
-   fNBasketRAM     = 0;
    delete [] fBasketBytes;
    delete [] fBasketEntry;
    delete [] fBasketSeek;
@@ -1742,6 +1716,9 @@ void TBranch::ResetAddress()
    // Reset the address of the branch.
 
    fAddress = 0;
+   
+   //  Reset last read entry number, we have will had new user object now.
+   fReadEntry = -1;   
 
    for (Int_t i = 0; i < fNleaves; ++i) {
       TLeaf* leaf = (TLeaf*) fLeaves.UncheckedAt(i);
@@ -1847,6 +1824,25 @@ void TBranch::SetCompressionLevel(Int_t level)
    for (Int_t i=0;i<nb;i++) {
       TBranch *branch = (TBranch*)fBranches.UncheckedAt(i);
       branch->SetCompressionLevel(level);
+   }
+}
+
+//______________________________________________________________________________
+void TBranch::SetEntryOffsetLen(Int_t newdefault, Bool_t updateExisting) 
+{
+   // Update the default value for the branch's fEntryOffsetLen if and only if 
+   // it was already non zero (and the new value is not zero)
+   // If updateExisting is true, also update all the existing branches.
+   
+   if (fEntryOffsetLen && newdefault) {
+      fEntryOffsetLen = newdefault;
+   }
+   if (updateExisting) {
+      TIter next( GetListOfBranches() );
+      TBranch *b;
+      while ( ( b = (TBranch*)next() ) ) {
+         b->SetEntryOffsetLen( newdefault, kTRUE );
+      }
    }
 }
 

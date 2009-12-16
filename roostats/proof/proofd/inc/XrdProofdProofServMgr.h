@@ -41,7 +41,6 @@ class XrdOucStream;
 class XrdProtocol_Config;
 class XrdProofdManager;
 class XrdROOTMgr;
-class XrdScheduler;
 class XrdSysLogger;
 
 #define PSMMAXCNTS  3
@@ -103,7 +102,6 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
    XrdSysRecMutex     fRecoverMutex;
    XrdSysSemWait      fForkSem;   // To serialize fork requests
    XrdSysSemWait      fProcessSem;   // To serialize process requests
-   XrdScheduler      *fSched;     // System scheduler
    XrdSysLogger      *fLogger;    // Error logger
    int                fInternalWait;   // Timeout on replies from proofsrv
    XrdOucString       fProofPlugin;    // String identifying the plug-in to be loaded, e.g. "condor:"
@@ -153,12 +151,13 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
    int                VerifySession(const char *fpid, int to = -1, const char *path = 0);
 
    void               ResolveKeywords(XrdOucString &s, ProofServEnv_t *in);
+   int                SetUserOwnerships(XrdProofdProtocol *p);
 
 public:
    XrdProofdProofServMgr(XrdProofdManager *mgr, XrdProtocol_Config *pi, XrdSysError *e);
    virtual ~XrdProofdProofServMgr() { }
 
-   enum PSMProtocol { kSessionRemoval = 0, kClientDisconnect = 1, kCleanSessions = 2, kProcessReq = 3} ;
+   enum PSMProtocol { kSessionRemoval = 0, kClientDisconnect = 1, kCleanSessions = 2, kProcessReq = 3, kChgSessionSt = 4} ;
    enum PSMCounters { kCreateCnt = 0, kCleanSessionsCnt = 1, kProcessCnt = 2} ;
 
    XrdSysRecMutex   *Mutex() { return &fMutex; }
@@ -198,6 +197,7 @@ public:
                                  XrdSysMutexHelper mhp(fMutex); cnt = fCounters[t];}
                                  return cnt; }
 
+   void              BroadcastClusterInfo();
    int               BroadcastPriorities();
    int               CurrentSessions(bool recalculate = 0);
    void              DisconnectFromProofServ(int pid);

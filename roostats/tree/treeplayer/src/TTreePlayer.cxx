@@ -397,7 +397,11 @@ TTree *TTreePlayer::CopyTree(const char *selection, Option_t *, Long64_t nentrie
                              // UpdateFormulaLeaves ourselves.
    if (strlen(selection)) {
       select = new TTreeFormula("Selection",selection,fTree);
-      if (!select || !select->GetNdim()) { delete select; }
+      if (!select || !select->GetNdim()) { 
+         delete select; 
+         delete tree;
+         return 0;
+      }
       fFormulaList->Add(select);
    }
 
@@ -779,6 +783,19 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
 //                    as a parameter.  For example the mean for all the elements in
 //                    one entry can be calculated with:
 //                Sum$(formula)/Length$(formula)
+//  Min$(formula): return the minimun (within one TTree entry) of the value of the
+//                    elements of the formula given as a parameter.
+//  Max$(formula): return the maximum (within one TTree entry) of the value of the
+//                    elements of the formula given as a parameter.
+//  MinIf$(formula,condition)
+//  MaxIf$(formula,condition): return the minimum (maximum) (within one TTree entry)
+//                    of the value of the elements of the formula given as a parameter
+//                    if they match the condition. If not element match the condition, the result is zero.  To avoid the
+//                    the result is zero.  To avoid the consequent peak a zero, use the 
+//                    pattern: 
+//    tree->Draw("MinIf$(formula,condition)","condition");
+//                    which will avoid calculation MinIf$ for the entries that have no match 
+//                    for the condition.
 //
 //  Alt$(primary,alternate) : return the value of "primary" if it is available
 //                 for the current iteration otherwise return the value of "alternate".
@@ -990,6 +1007,8 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
        && possibleFilename.Index("Alt$")<0 && possibleFilename.Index("Entries$")<0
        && possibleFilename.Index("Length$")<0  && possibleFilename.Index("Entry$")<0
        && possibleFilename.Index("LocalEntry$")<0
+       && possibleFilename.Index("Min$")<0 && possibleFilename.Index("Max$")<0
+       && possibleFilename.Index("MinIf$")<0 && possibleFilename.Index("MaxIf$")<0
        && possibleFilename.Index("Iteration$")<0 && possibleFilename.Index("Sum$")<0
        && gSystem->IsFileInIncludePath(possibleFilename.Data())) {
 
@@ -1006,6 +1025,8 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
       if (possibleFilename.Index("Alt$")<0 && possibleFilename.Index("Entries$")<0
           && possibleFilename.Index("Length$")<0  && possibleFilename.Index("Entry$")<0
           && possibleFilename.Index("LocalEntry$")<0
+          && possibleFilename.Index("Min$")<0 && possibleFilename.Index("Max$")<0
+          && possibleFilename.Index("MinIf$")<0 && possibleFilename.Index("MaxIf$")<0
           && possibleFilename.Index("Iteration$")<0 && possibleFilename.Index("Sum$")<0
           && gSystem->IsFileInIncludePath(possibleFilename.Data())) {
 
@@ -1071,7 +1092,7 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
    if (!drawflag && !opt.Contains("goff")) draw = kTRUE;
    if (!optcandle && !optpara) fHistogram = (TH1*)fSelector->GetObject();
 
-   if (!nrows && drawflag && !opt.Contains("same")) {
+   if (!nrows && draw && drawflag && !opt.Contains("same")) {
       if (gPad) gPad->Clear();
       return 0;
    }
@@ -1133,8 +1154,9 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
    } else if (optpara || optcandle) {
       if (draw) {
          TObject* para = fSelector->GetObject();
+         TObject *enlist = gDirectory->FindObject("enlist");
          fTree->Draw(">>enlist",selection,"entrylist",nentries,firstentry);
-         gROOT->ProcessLineFast(Form("TParallelCoord::SetEntryList((TParallelCoord*)0x%lx,enlist)",para));
+         gROOT->ProcessLineFast(Form("TParallelCoord::SetEntryList((TParallelCoord*)0x%lx,(TEntryList*)0x%lx)",para,enlist));
       }
    //*-*- 5d with gl
    } else if (optgl5d) {
@@ -1636,7 +1658,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
                               branchname,blen,dimensions,leafcountName);
             else      fprintf(fp,"   %-14s %s%s[%d]%s;   //[%s]\n",leaf->GetTypeName(), stars,
                               branchname,len,dimensions,leafcountName);
-            delete dimensions;
+            delete [] dimensions;
          } else {
             if (kmax) fprintf(fp,"   %-14s %s%s[kMax%s];   //[%s]\n",leaf->GetTypeName(), stars, branchname,blen,leafcountName);
             else      fprintf(fp,"   %-14s %s%s[%d];   //[%s]\n",leaf->GetTypeName(), stars, branchname,len,leafcountName);
@@ -2253,7 +2275,7 @@ Int_t TTreePlayer::MakeCode(const char *filename)
          }
          if (dimensions) {
             fprintf(fp,"   %-15s %s[%d]%s;\n",leaf->GetTypeName(), branchname,len,dimensions);
-            delete dimensions;
+            delete [] dimensions;
          } else {
             fprintf(fp,"   %-15s %s[%d];\n",leaf->GetTypeName(), branchname,len);
          }
@@ -2487,14 +2509,12 @@ TPrincipal *TTreePlayer::Principal(const char *varexp, const char *selection, Op
 //   See TTreePlayer::DrawSelect for explanation of the other parameters.
 
    TTreeFormula **var;
-   TString *cnames;
-   TString onerow;
+   std::vector<TString> cnames;
    TString opt = option;
    opt.ToLower();
    TPrincipal *principal = 0;
    Long64_t entry,entryNumber;
    Int_t i,nch;
-   Int_t *index = 0;
    Int_t ncols = 8;   // by default first 8 columns are printed only
    TObjArray *leaves = fTree->GetListOfLeaves();
    Int_t nleaves = leaves->GetEntriesFast();
@@ -2515,21 +2535,12 @@ TPrincipal *TTreePlayer::Principal(const char *varexp, const char *selection, Op
    int allvar = 0;
    if (!strcmp(varexp, "*")) { ncols = nleaves; allvar = 1; }
    if (nch == 0 || allvar) {
-      cnames = new TString[ncols];
       for (i=0;i<ncols;i++) {
-         cnames[i] = ((TLeaf*)leaves->At(i))->GetName();
+         cnames.push_back( ((TLeaf*)leaves->At(i))->GetName() );
       }
 //*-*- otherwise select only the specified columns
    } else {
-      ncols = 1;
-      onerow = varexp;
-      for (i=0;i<onerow.Length();i++)  if (onerow[i] == ':') ncols++;
-      cnames = new TString[ncols];
-      index  = new Int_t[ncols+1];
-      fSelector->MakeIndex(onerow,index);
-      for (i=0;i<ncols;i++) {
-         cnames[i] = fSelector->GetNameByIndex(onerow,index,i);
-      }
+      ncols = fSelector->SplitNames(varexp,cnames);
    }
    var = new TTreeFormula* [ncols];
    Double_t *xvars = new Double_t[ncols];
@@ -2607,8 +2618,6 @@ TPrincipal *TTreePlayer::Principal(const char *varexp, const char *selection, Op
 //*-*- delete temporary objects
    fFormulaList->Clear();
    delete [] var;
-   delete [] cnames;
-   delete [] index;
    delete [] xvars;
 
    return principal;
@@ -2761,7 +2770,7 @@ Long64_t TTreePlayer::Process(TSelector *selector,Option_t *option, Long64_t nen
          timer = new TProcessEventTimer(interval);
 
       //loop on entries (elist or all entries)
-      Long_t entry, entryNumber, localEntry;
+      Long64_t entry, entryNumber, localEntry;
 
       Bool_t useCutFill = selector->Version() == 0;
 
@@ -2985,11 +2994,10 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
    }
 
    TTreeFormula **var;
-   TString *cnames;
+   std::vector<TString> cnames;
    TString onerow;
    Long64_t entry,entryNumber;
    Int_t i,nch;
-   Int_t *index = 0;
    UInt_t ncols = 8;   // by default first 8 columns are printed only
    ofstream out;
    Int_t lenfile = 0;
@@ -3032,13 +3040,12 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
    int allvar = 0;
    if (!strcmp(varexp, "*")) { ncols = nleaves; allvar = 1; }
    if (nch == 0 || allvar) {
-      cnames = new TString[ncols];
       UInt_t ncs = ncols;
       ncols = 0;
       for (ui=0;ui<ncs;++ui) {
          TLeaf *lf = (TLeaf*)leaves->At(ui);
          if (lf->GetBranch()->GetListOfBranches()->GetEntries() > 0) continue;
-         cnames[ncols] = lf->GetBranch()->GetMother()->GetName();
+         cnames.push_back( lf->GetBranch()->GetMother()->GetName() );
          if (cnames[ncols] == lf->GetName() ) {
             // Already complete, let move on.
          } else if (cnames[ncols][cnames[ncols].Length()-1]=='.') {
@@ -3064,20 +3071,9 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
       }
 //*-*- otherwise select only the specified columns
    } else {
-      ncols = 1;
-      onerow = varexp;
-      for (i=0;i<onerow.Length();i++) {
-         if (onerow[i] == ':') {
-            if (onerow[i+1] == ':') ++i;
-            else ncols++;
-         }
-      }
-      cnames = new TString[ncols];
-      index  = new Int_t[ncols+1];
-      fSelector->MakeIndex(onerow,index);
-      for (ui=0;ui<ncols;ui++) {
-         cnames[ui] = fSelector->GetNameByIndex(onerow,index,ui);
-      }
+      
+      ncols = fSelector->SplitNames(varexp, cnames);
+
    }
    var = new TTreeFormula* [ncols];
 
@@ -3112,6 +3108,8 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
             case  1:
             case  2:
                hasArray = kTRUE;
+               forceDim = kTRUE;
+               break;
             case -1:
                forceDim = kTRUE;
                break;
@@ -3262,8 +3260,6 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
    fFormulaList->Clear();
    // The TTreeFormulaManager is deleted by the last TTreeFormula.
    delete [] var;
-   delete [] cnames;
-   delete [] index;
    return fSelectedRows;
 }
 
@@ -3278,11 +3274,10 @@ TSQLResult *TTreePlayer::Query(const char *varexp, const char *selection,
    // a TSQLResult object which must be deleted by the user.
 
    TTreeFormula **var;
-   TString *cnames;
+   std::vector<TString> cnames;
    TString onerow;
    Long64_t entry,entryNumber;
    Int_t i,nch;
-   Int_t *index = 0;
    Int_t ncols = 8;   // by default first 8 columns are printed only
    TObjArray *leaves = fTree->GetListOfLeaves();
    Int_t nleaves = leaves->GetEntriesFast();
@@ -3304,21 +3299,12 @@ TSQLResult *TTreePlayer::Query(const char *varexp, const char *selection,
    int allvar = 0;
    if (!strcmp(varexp, "*")) { ncols = nleaves; allvar = 1; }
    if (nch == 0 || allvar) {
-      cnames = new TString[ncols];
       for (i=0;i<ncols;i++) {
-         cnames[i] = ((TLeaf*)leaves->At(i))->GetName();
+         cnames.push_back( ((TLeaf*)leaves->At(i))->GetName() );
       }
    } else {
       // otherwise select only the specified columns
-      ncols = 1;
-      onerow = varexp;
-      for (i=0;i<onerow.Length();i++)  if (onerow[i] == ':') ncols++;
-      cnames = new TString[ncols];
-      index  = new Int_t[ncols+1];
-      fSelector->MakeIndex(onerow,index);
-      for (i=0;i<ncols;i++) {
-         cnames[i] = fSelector->GetNameByIndex(onerow,index,i);
-      }
+      ncols = fSelector->SplitNames(varexp,cnames);
    }
    var = new TTreeFormula* [ncols];
 
@@ -3375,8 +3361,6 @@ TSQLResult *TTreePlayer::Query(const char *varexp, const char *selection,
    delete [] fields;
    delete [] arow;
    delete [] var;
-   delete [] cnames;
-   delete [] index;
 
    return res;
 }
@@ -3528,10 +3512,29 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
    Long64_t nent = fTree->GetEntriesFriend();
    fTree->SetEstimate(TMath::Min(nent,nentries));
 
-   Long64_t nsel = DrawSelect(varexp, selection, "goff para", nentries, firstentry);
+   // build FitOptions
+   TString opt = option;
+   opt.ToUpper();
+   Foption_t fitOption;
+   if (opt.Contains("Q")) fitOption.Quiet   = 1;
+   if (opt.Contains("V")){fitOption.Verbose = 1; fitOption.Quiet   = 0;}
+   if (opt.Contains("E")) fitOption.Errors  = 1;
+   if (opt.Contains("M")) fitOption.More    = 1;
+   if (!opt.Contains("D")) fitOption.Nograph    = 1;  // what about 0
+   // could add range and automatic normalization of functions and gradient
 
+   TString drawOpt = "goff para";
+   if (!fitOption.Nograph) drawOpt = "";
+   Long64_t nsel = DrawSelect(varexp, selection,drawOpt, nentries, firstentry);
+
+   if (!fitOption.Nograph  && GetSelectedRows() <= 0 && GetDimension() > 4) { 
+      Info("UnbinnedFit","Ignore option D with more than 4 variables");
+      nsel = DrawSelect(varexp, selection,"goff para", nentries, firstentry);
+   }
+   
    //if no selected entries return
    Long64_t nrows = GetSelectedRows();
+
    if (nrows <= 0) {
       Error("UnbinnedFit", "Cannot fit: no entries selected");
       return -1;
@@ -3551,20 +3554,10 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
    // fill the data 
    ROOT::Fit::UnBinData * fitdata = new ROOT::Fit::UnBinData(nrows, ndim, vlist.begin());
 
-   // build FitOptions
-   TString opt = option;
-   opt.ToUpper();
-   Foption_t fitOption;
-   if (opt.Contains("Q")) fitOption.Quiet   = 1;
-   if (opt.Contains("V")){fitOption.Verbose = 1; fitOption.Quiet   = 0;}
-   if (opt.Contains("E")) fitOption.Errors  = 1;
-   if (opt.Contains("M")) fitOption.More    = 1;
-   if (!opt.Contains("D")) fitOption.Nograph    = 1;  // what about 0
-   // could add range and automatic normalization of functions and gradient
    
 
    ROOT::Math::MinimizerOptions minOption;
-   int iret = ROOT::Fit::UnBinFit(fitdata,fitfunc, fitOption, minOption); 
+   TFitResultPtr ret = ROOT::Fit::UnBinFit(fitdata,fitfunc, fitOption, minOption); 
 
    //reset estimate
    fTree->SetEstimate(oldEstimate);
@@ -3572,7 +3565,7 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
    //if option "D" is specified, draw the projected histogram
    //with the fitted function normalized to the number of selected rows
    //and multiplied by the bin width
-   if (!fitOption.Nograph) {
+   if (!fitOption.Nograph && fHistogram) {
       if (fHistogram->GetDimension() < 2) {
          TH1 *hf = (TH1*)fHistogram->Clone("unbinnedFit");
          hf->SetLineWidth(3);
@@ -3589,7 +3582,7 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
    }
 
 
-   return iret;
+   return int(ret);
 
 }
 

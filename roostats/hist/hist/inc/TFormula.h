@@ -32,7 +32,8 @@
 #ifndef ROOT_TObjArray
 #include "TObjArray.h"
 #endif
-#include "TFormulaPrimitive.h"
+
+class TFormulaPrimitive;
 
 const Int_t kMAXFOUND = 500;
 const Int_t kTFOperMask = 0x7fffff;
@@ -65,6 +66,8 @@ class TFormula : public TNamed {
 
 protected:
 
+   typedef Double_t (TObject::*TFuncG)(const Double_t*,const Double_t*) const;
+
    Int_t      fNdim;            //Dimension of function (1=1-Dim, 2=2-Dim,etc)
    Int_t      fNpar;            //Number of parameters
    Int_t      fNoper;           //Number of operators
@@ -89,9 +92,13 @@ protected:
    TString             *fExprOptimized;  //![fNOperOptimized] List of expressions
    Int_t               *fOperOptimized;  //![fNOperOptimized] List of operators. (See documentation for changes made at version 7)
    TOperOffset         *fOperOffset;     //![fNOperOptimized]         Offsets of operrands
-   TFormulaPrimitive **fPredefined;      //![fNPar] predefined function  
+   TFormulaPrimitive  **fPredefined;      //![fNPar] predefined function  
+   TFuncG               fOptimal; //!pointer to optimal function
 
-   Int_t             PreCompile();   
+   Int_t             PreCompile();
+   virtual Bool_t    CheckOperands(Int_t operation, Int_t &err);
+   virtual Bool_t    CheckOperands(Int_t leftoperand, Int_t rightoperartion, Int_t &err);
+   virtual Bool_t    StringToNumber(Int_t code);
    void              MakePrimitive(const char *expr, Int_t pos);
    inline Int_t     *GetOper() const { return fOper; }
    inline Short_t    GetAction(Int_t code) const { return fOper[code] >> kTFOperShift; }
@@ -164,6 +171,8 @@ protected:
 
       kBitAnd    = 78, kBitOr     = 79,
       kLeftShift = 80, kRightShift = 81,
+
+      kJumpIf = 82, kJump = 83,
       
       kexpo   = 100 , kxexpo   = 100, kyexpo   = 101, kzexpo   = 102, kxyexpo   = 105,
       kgaus   = 110 , kxgaus   = 110, kygaus   = 111, kzgaus   = 112, kxygaus   = 115,
@@ -204,7 +213,7 @@ public:
       kNormalized    = BIT(14),   // set to true if the function (ex gausn) is normalized
       kLinear        = BIT(16)    //set to true if the function is for linear fitting
    };
- 
+   
                TFormula();
                TFormula(const char *name,const char *formula);
                TFormula(const TFormula &formula);
@@ -212,8 +221,7 @@ public:
    virtual    ~TFormula();
 
  public:
-   TFormulaPrimitive::TFuncG              fOptimal; //!pointer to optimal function
-   void              Optimize();
+   void                Optimize();
    virtual void        Analyze(const char *schain, Int_t &err, Int_t offset=0);
    virtual Bool_t      AnalyzeFunction(TString &chaine, Int_t &err, Int_t offset=0);
    virtual Int_t       Compile(const char *expression="");

@@ -870,7 +870,7 @@ Int_t TBufferFile::ReadArrayFloat16(Float_t *&f, TStreamerElement *ele)
    Int_t n;
    *this >> n;
 
-   if (n <= 0 || 4*n > fBufSize) return 0;
+   if (n <= 0 || 3*n > fBufSize) return 0;
 
    if (!f) f = new Float_t[n];
 
@@ -892,7 +892,7 @@ Int_t TBufferFile::ReadArrayDouble32(Double_t *&d, TStreamerElement *ele)
    Int_t n;
    *this >> n;
 
-   if (n <= 0 || 4*n > fBufSize) return 0;
+   if (n <= 0 || 3*n > fBufSize) return 0;
 
    if (!d) d = new Double_t[n];
 
@@ -1137,7 +1137,7 @@ Int_t TBufferFile::ReadStaticArrayFloat16(Float_t *f, TStreamerElement *ele)
    Int_t n;
    *this >> n;
 
-   if (n <= 0 || 4*n > fBufSize) return 0;
+   if (n <= 0 || 3*n > fBufSize) return 0;
 
    if (!f) return 0;
 
@@ -1158,7 +1158,7 @@ Int_t TBufferFile::ReadStaticArrayDouble32(Double_t *d, TStreamerElement *ele)
    Int_t n;
    *this >> n;
 
-   if (n <= 0 || 4*n > fBufSize) return 0;
+   if (n <= 0 || 3*n > fBufSize) return 0;
 
    if (!d) return 0;
 
@@ -1346,7 +1346,7 @@ void TBufferFile::ReadFastArrayFloat16(Float_t *f, Int_t n, TStreamerElement *el
    // Read array of n floats (written as truncated float) from the I/O buffer.
    // see comments about Float16_t encoding at TBufferFile::WriteFloat16
 
-   if (n <= 0 || 4*n > fBufSize) return;
+   if (n <= 0 || 3*n > fBufSize) return;
 
    if (ele && ele->GetFactor() != 0) {
       //a range was specified. We read an integer and convert it back to a float
@@ -1386,7 +1386,7 @@ void TBufferFile::ReadFastArrayDouble32(Double_t *d, Int_t n, TStreamerElement *
    // Read array of n doubles (written as float) from the I/O buffer.
    // see comments about Double32_t encoding at TBufferFile::WriteDouble32
 
-   if (n <= 0 || 4*n > fBufSize) return;
+   if (n <= 0 || 3*n > fBufSize) return;
 
    if (ele && ele->GetFactor() != 0) {
       //a range was specified. We read an integer and convert it back to a double.
@@ -2225,7 +2225,7 @@ void *TBufferFile::ReadObjectAny(const TClass *clCast)
    // (this can only happen when called via CheckObject())
    char *obj;
    if (fVersion > 0) {
-      obj = (char *) fMap->GetValue(startpos+kMapOffset);
+      obj = (char *) (Long_t)fMap->GetValue(startpos+kMapOffset);
       if (obj == (void*) -1) obj = 0;
       if (obj) {
          CheckByteCount(startpos, tag, (TClass*)0);
@@ -2257,8 +2257,8 @@ void *TBufferFile::ReadObjectAny(const TClass *clCast)
             // exception
          }
       }
-      obj = (char *) fMap->GetValue(tag);
-      clRef = (TClass*) fClassMap->GetValue(tag);
+      obj = (char *) (Long_t)fMap->GetValue(tag);
+      clRef = (TClass*) (Long_t)fClassMap->GetValue(tag);
 
       if (clRef && (clRef!=(TClass*)(-1)) && clCast) {
          //baseOffset will be -1 if clRef does not inherit from clCast.
@@ -2484,7 +2484,7 @@ TClass *TBufferFile::ReadClass(const TClass *clReq, UInt_t *objTag)
       // add class to fMap for later reference
       if (fVersion > 0) {
          // check if class was already read
-         TClass *cl1 = (TClass *)fMap->GetValue(startpos+kMapOffset);
+         TClass *cl1 = (TClass *)(Long_t)fMap->GetValue(startpos+kMapOffset);
          if (cl1 != cl)
             MapObject(cl ? cl : (TObject*) -1, startpos+kMapOffset);
       } else
@@ -2507,7 +2507,7 @@ TClass *TBufferFile::ReadClass(const TClass *clReq, UInt_t *objTag)
       }
 
       // class can be 0 if dictionary was not found
-      cl = (TClass *)fMap->GetValue(clTag);
+      cl = (TClass *)(Long_t)fMap->GetValue(clTag);
    }
 
    if (cl && clReq &&
@@ -2586,12 +2586,12 @@ Version_t TBufferFile::ReadVersion(UInt_t *startpos, UInt_t *bcnt, const TClass 
          Version_t  vers[2];
       } v;
 #ifdef R__BYTESWAP
-      *this >> v.vers[1];
-      *this >> v.vers[0];
+      frombuf(this->fBufCur,&v.vers[1]);
+      frombuf(this->fBufCur,&v.vers[0]);
 #else
-      *this >> v.vers[0];
-      *this >> v.vers[1];
-#endif
+      frombuf(this->fBufCur,&v.vers[0]);
+      frombuf(this->fBufCur,&v.vers[1]);
+#endif      
 
       // no bytecount, backup and read version
       if (!(v.cnt & kByteCountMask)) {
@@ -2599,7 +2599,7 @@ Version_t TBufferFile::ReadVersion(UInt_t *startpos, UInt_t *bcnt, const TClass 
          v.cnt = 0;
       }
       *bcnt = (v.cnt & ~kByteCountMask);
-      *this >> version;
+      frombuf(this->fBufCur,&version);
 
    } else {
 
@@ -2615,10 +2615,11 @@ Version_t TBufferFile::ReadVersion(UInt_t *startpos, UInt_t *bcnt, const TClass 
    if (cl && cl->GetClassVersion() != 0) {
       if (version <= 0)  {
          UInt_t checksum = 0;
-         *this >> checksum;
+         //*this >> checksum;
+         frombuf(this->fBufCur,&checksum);
          TStreamerInfo *vinfo = (TStreamerInfo*)cl->FindStreamerInfo(checksum);
          if (vinfo) {
-            version = vinfo->GetClassVersion();
+            return vinfo->TStreamerInfo::GetClassVersion(); // Try to get inlining.
          } else {
             // There are some cases (for example when the buffer was stored outside of
             // a ROOT file) where we do not have a TStreamerInfo.  If the checksum is
@@ -2910,8 +2911,8 @@ void TBufferFile::GetMappedObject(UInt_t tag, void* &ptr, TClass* &ClassPtr) con
       ptr = 0;
       ClassPtr = 0;
    } else {
-      ptr = (void*)fMap->GetValue(tag);
-      ClassPtr = (TClass*) fClassMap->GetValue(tag);
+      ptr = (void*)(Long_t)fMap->GetValue(tag);
+      ClassPtr = (TClass*) (Long_t)fClassMap->GetValue(tag);
    }
 }
 
@@ -3283,11 +3284,11 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, Int_t versio
    //   count    is the number of bytes for this object in the buffer
    //
 
-   // The StreamerInfo should exist at this point.
    TObjArray *infos = cl->GetStreamerInfos();
    Int_t ninfos = infos->GetSize();
    if (version < -1 || version >= ninfos) {
-      Error("ReadBuffer1", "class: %s, attempting to access a wrong version: %d",cl->GetName(),version);
+      Error("ReadBuffer1", "class: %s, attempting to access a wrong version: %d, object skipped at offset %d",
+            cl->GetName(), version, Length() );
       CheckByteCount(start, count, cl);
       return 0;
    }
@@ -3298,7 +3299,9 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, Int_t versio
    if( onFileClass ) {
       sinfo = (TStreamerInfo*)cl->GetConversionStreamerInfo( onFileClass, version );
       if( !sinfo ) {
-         Error( "ReadClassBuffer", "Could not find the right streamer info" );
+         Error("ReadClassBuffer",
+               "Could not find the right streamer info to convert %s version %d into a %d, object skipped at offset %d", 
+               onFileClass->GetName(), version, cl->GetName(), Length() );
          CheckByteCount(start, count, onFileClass);
          return 0;
       }
@@ -3307,14 +3310,26 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, Int_t versio
    // Get local streamer info
    //---------------------------------------------------------------------------
    else {
+      // The StreamerInfo should exist at this point.
       sinfo = (TStreamerInfo*)infos->At(version);
       if (sinfo == 0) {
-         const_cast<TClass*>(cl)->BuildRealData(pointer);
-         sinfo = new TStreamerInfo(const_cast<TClass*>(cl));
-         infos->AddAtAndExpand(sinfo, version);
-         if (gDebug > 0) printf("Creating StreamerInfo for class: %s, version: %d\n", cl->GetName(), version);
-         sinfo->Build();
-         //} else if (!fRealData) {
+         // Unless the data is coming via a socket connection from with schema evolution
+         // (tracking) was not enabled.  So let's create the StreamerInfo if it is the
+         // one for the current version, otherwise let's complain ...
+         // We could also get here if there old class version was '1' and the new class version is higher than 1
+         // AND the checksum is the same.
+         if ( version == cl->GetClassVersion() || version == 1 ) {
+            const_cast<TClass*>(cl)->BuildRealData(pointer);
+            sinfo = new TStreamerInfo(const_cast<TClass*>(cl));
+            infos->AddAtAndExpand(sinfo, version);
+            if (gDebug > 0) printf("Creating StreamerInfo for class: %s, version: %d\n", cl->GetName(), version);
+            sinfo->Build();
+         } else {
+            Error("ReadClassBuffer", "Could not find the StreamerInfo for version %d of the class %s, object skipped at offset %d",
+                  version, cl->GetName(), Length() );
+            CheckByteCount(start, count, cl);
+            return 0;            
+         }
       } else if (!sinfo->GetOffsets()) {
          const_cast<TClass*>(cl)->BuildRealData(pointer);
          sinfo->BuildOld();
@@ -3357,8 +3372,6 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, const TClass
       v2file = kTRUE;
    }
 
-   // The StreamerInfo should exist at this point.
-
    //---------------------------------------------------------------------------
    // The ondisk class has been specified so get foreign streamer info
    //---------------------------------------------------------------------------
@@ -3366,7 +3379,9 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, const TClass
    if( onFileClass ) {
       sinfo = (TStreamerInfo*)cl->GetConversionStreamerInfo( onFileClass, version );
       if( !sinfo ) {
-         Error( "ReadClassBuffer", "Could not find the right streamer info" );
+         Error("ReadClassBuffer",
+               "Could not find the right streamer info to convert %s version %d into a %d, object skipped at offset %d",
+               onFileClass->GetName(), version, cl->GetName(), Length() );
          CheckByteCount(R__s, R__c, onFileClass);
          return 0;
       }
@@ -3375,25 +3390,42 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, const TClass
    // Get local streamer info
    //---------------------------------------------------------------------------
    else {
+      // The StreamerInfo should exist at this point.
       TObjArray *infos = cl->GetStreamerInfos();
-      Int_t ninfos = infos->GetSize();
-      if (version < -1 || version >= ninfos) {
-         Error("ReadClassBuffer","class: %s, attempting to access a wrong version: %d, object skipped at offset %d",
-            cl->GetName(), version,Length());
-         CheckByteCount(R__s, R__c, cl);
-         return 0;
+      Int_t infocapacity = infos->Capacity();
+      if (infocapacity) {
+         if (version < -1 || version >= infocapacity) {
+            Error("ReadClassBuffer","class: %s, attempting to access a wrong version: %d, object skipped at offset %d",
+                  cl->GetName(), version, Length());
+            CheckByteCount(R__s, R__c, cl);
+            return 0;
+         }
+         sinfo = (TStreamerInfo*) infos->UncheckedAt(version);
       }
-      sinfo = (TStreamerInfo*) infos->At(version);
       if (sinfo == 0) {
-         const_cast<TClass*>(cl)->BuildRealData(pointer);
-         sinfo = new TStreamerInfo(const_cast<TClass*>(cl));
-         infos->AddAtAndExpand(sinfo,version);
-         if (gDebug > 0) printf("Creating StreamerInfo for class: %s, version: %d\n", cl->GetName(), version);
-         sinfo->Build();
+         // Unless the data is coming via a socket connection from with schema evolution
+         // (tracking) was not enabled.  So let's create the StreamerInfo if it is the
+         // one for the current version, otherwise let's complain ...
+         // We could also get here when reading a file prior to the introduction of StreamerInfo.
+         // We could also get here if there old class version was '1' and the new class version is higher than 1
+         // AND the checksum is the same.
+         if (v2file || version == cl->GetClassVersion() || version == 1 ) {
+            const_cast<TClass*>(cl)->BuildRealData(pointer);
+            sinfo = new TStreamerInfo(const_cast<TClass*>(cl));
+            infos->AddAtAndExpand(sinfo,version);
+            if (gDebug > 0) printf("Creating StreamerInfo for class: %s, version: %d\n", cl->GetName(), version);
+            sinfo->Build();
 
-         if (v2file) sinfo->BuildEmulated(file);
-
-      } else if (!sinfo->GetOffsets()) {
+            if (v2file) sinfo->BuildEmulated(file);
+         } else {
+            Error( "ReadClassBuffer", "Could not find the StreamerInfo for version %d of the class %s, object skipped at offset %d",
+                  version, cl->GetName(), Length() );
+            CheckByteCount(R__s, R__c, cl);
+            return 0;            
+         }
+      } 
+      else if (!sinfo->TStreamerInfo::GetOffsets())  // 'TStreamerInfo::' avoids going via a virtual function.
+      { 
          const_cast<TClass*>(cl)->BuildRealData(pointer);
          sinfo->BuildOld();
       }
@@ -3402,7 +3434,7 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, const TClass
    //deserialize the object
    void *ptr = &pointer;
    sinfo->ReadBuffer(*this, (char**)ptr,-1);
-   if (sinfo->IsRecovered()) R__c=0;
+   if (sinfo->TStreamerInfo::IsRecovered()) R__c=0; // 'TStreamerInfo::' avoids going via a virtual function.
 
    // Check that the buffer position corresponds to the byte count.
    CheckByteCount(R__s, R__c, cl);

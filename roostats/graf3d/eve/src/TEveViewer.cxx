@@ -16,6 +16,7 @@
 #include "TEveManager.h"
 #include "TEveSelection.h"
 
+#include "TGLFormat.h"
 #include "TGLSAViewer.h"
 #include "TGLEmbeddedViewer.h"
 #include "TGLScenePad.h"
@@ -23,6 +24,9 @@
 #include "TGLPhysicalShape.h" // For handling OnMouseIdle signal
 #include "TGLLogicalShape.h"  // For handling OnMouseIdle signal
 #include "TGLEventHandler.h"
+
+#include "TApplication.h"
+#include "TSystem.h"
 
 //==============================================================================
 //==============================================================================
@@ -42,6 +46,9 @@
 
 ClassImp(TEveViewer);
 
+Bool_t TEveViewer::fgInitInternal        = kFALSE;
+Bool_t TEveViewer::fgRecreateGlOnDockOps = kFALSE;
+
 //______________________________________________________________________________
 TEveViewer::TEveViewer(const char* n, const char* t) :
    TEveWindowFrame(0, n, t),
@@ -56,12 +63,19 @@ TEveViewer::TEveViewer(const char* n, const char* t) :
 
    SetChildClass(TEveSceneInfo::Class());
    fGUIFrame->SetCleanup(kNoCleanup); // the gl-viewer's frame deleted elsewhere.
+
+   if (!fgInitInternal)
+   {
+      InitInternal();
+   }
 }
 
 //______________________________________________________________________________
 TEveViewer::~TEveViewer()
 {
    // Destructor.
+
+   fGLViewer->SetEventHandler(0);
 
    fGLViewerFrame->UnmapWindow();
    GetGUICompositeFrame()->RemoveFrame(fGLViewerFrame);
@@ -72,27 +86,51 @@ TEveViewer::~TEveViewer()
 /******************************************************************************/
 
 //______________________________________________________________________________
+void TEveViewer::InitInternal()
+{
+   // Initialize static data-members according to running conditions.
+
+   // Determine if display is running on a mac.
+   // This is also works for ssh connection mac->linux.
+#ifndef WIN32
+   TString s = gSystem->GetFromPipe("xdpyinfo");
+   if (s.Index("Apple-WM") != kNPOS)
+   {
+      fgRecreateGlOnDockOps = kTRUE;
+   }
+#endif
+
+   fgInitInternal = kTRUE;
+}
+
+//______________________________________________________________________________
 void TEveViewer::PreUndock()
 {
    // Virtual function called before a window is undocked.
    // On mac we have to force recreation of gl-context.
 
    TEveWindowFrame::PreUndock();
-#ifdef R__MACOSX
-   fGLViewer->DestroyGLWidget();
-#endif
+   if (fgRecreateGlOnDockOps)
+   {
+      // Mac only: TGLWidget can be already deleted
+      // in case of recursive delete
+      if (fGLViewer->GetGLWidget())
+      {
+         fGLViewer->DestroyGLWidget();
+      }
+   }
 }
 
 //______________________________________________________________________________
 void TEveViewer::PostDock()
 {
-   // Virtual function called before a window is undocked.
+   // Virtual function called after a window is docked.
    // On mac we have to force recreation of gl-context.
 
-#ifdef R__MACOSX
-   fGLViewer->CreateGLWidget();
-#endif
-   TEveWindowFrame::PreUndock();
+   if (fgRecreateGlOnDockOps) {
+      fGLViewer->CreateGLWidget();
+   }
+   TEveWindowFrame::PostDock();
 }
 
 /******************************************************************************/
@@ -116,11 +154,10 @@ void TEveViewer::SetGLViewer(TGLViewer* viewer, TGFrame* frame)
    fGLViewerFrame = frame;
 
    fGLViewer->SetSmartRefresh(kTRUE);
-   fGLViewer->SetResetCameraOnDoubleClick(kFALSE);
 }
 
 //______________________________________________________________________________
-TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged)
+TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged, Bool_t stereo)
 {
    // Spawn new GLViewer and adopt it.
 
@@ -128,11 +165,32 @@ TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged)
 
    TGCompositeFrame* cf = GetGUICompositeFrame();
 
+   TGLFormat *form = 0;
+   if (stereo)
+   {
+      form = new TGLFormat;
+      form->SetStereo(kTRUE);
+   }
+
    cf->SetEditable(kTRUE);
-   TGLSAViewer* v = new TGLSAViewer(cf, 0, ged);
+   TGLSAViewer* v = 0;
+   try
+   {
+      v = new TGLSAViewer(cf, 0, ged, form);
+   }
+   catch (std::exception&)
+   {
+      Error("SpawnGLViewer", "Insufficient support from the graphics hardware. Aborting.");
+      gApplication->Terminate(1);
+   }
    cf->SetEditable(kFALSE);
    v->ToggleEditObject();
+   v->DisableCloseMenuEntries();
+   v->EnableMenuBarHiding();
    SetGLViewer(v, v->GetFrame());
+
+   if (stereo)
+      v->SetStereo(kTRUE);
 
    if (fEveFrame == 0)
       PreUndock();
@@ -141,7 +199,7 @@ TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged)
 }
 
 //______________________________________________________________________________
-TGLEmbeddedViewer* TEveViewer::SpawnGLEmbeddedViewer(Int_t border)
+TGLEmbeddedViewer* TEveViewer::SpawnGLEmbeddedViewer(TGedEditor* ged, Int_t border)
 {
    // Spawn new GLViewer and adopt it.
 
@@ -149,7 +207,7 @@ TGLEmbeddedViewer* TEveViewer::SpawnGLEmbeddedViewer(Int_t border)
 
    TGCompositeFrame* cf = GetGUICompositeFrame();
 
-   TGLEmbeddedViewer* v = new TGLEmbeddedViewer(cf, 0, border);
+   TGLEmbeddedViewer* v = new TGLEmbeddedViewer(cf, 0, ged, border);
    SetGLViewer(v, v->GetFrame());
 
    cf->AddFrame(fGLViewerFrame, new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY));
@@ -169,6 +227,36 @@ void TEveViewer::Redraw(Bool_t resetCameras)
 
    if (resetCameras) fGLViewer->PostSceneBuildSetup(kTRUE);
    fGLViewer->RequestDraw(TGLRnrCtx::kLODHigh);
+}
+
+//______________________________________________________________________________
+void TEveViewer::SwitchStereo()
+{
+   // Switch stereo mode.
+   // This only works TGLSAViewers and, of course, with stereo support
+   // provided by the OpenGL driver.
+
+   TGLSAViewer *v = dynamic_cast<TGLSAViewer*>(fGLViewer);
+
+   if (!v) {
+      Warning("SwitchStereo", "Only supported for TGLSAViewer.");
+      return;
+   }
+
+   v->DestroyGLWidget();
+   TGLFormat *f = v->GetFormat();
+switch_stereo:
+   f->SetStereo(!f->IsStereo());
+   v->SetStereo(f->IsStereo());
+   try
+   {
+      v->CreateGLWidget();
+   }
+   catch (std::exception&)
+   {
+      Error("SwitchStereo", "Insufficient support from the graphics hardware. Reverting.");
+      goto switch_stereo;
+   }
 }
 
 /******************************************************************************/
@@ -256,7 +344,7 @@ TEveViewerList::TEveViewerList(const char* n, const char* t) :
    fShowTooltip   (kTRUE),
 
    fBrightness(0),
-  fUseLightColorSet(kFALSE)
+   fUseLightColorSet(kFALSE)
 {
    // Constructor.
 
@@ -307,8 +395,15 @@ void TEveViewerList::Connect()
 
    TQObject::Connect("TGLViewer", "MouseOver(TGLPhysicalShape*,UInt_t)",
                      "TEveViewerList", this, "OnMouseOver(TGLPhysicalShape*,UInt_t)");
+
    TQObject::Connect("TGLViewer", "Clicked(TObject*,UInt_t,UInt_t)",
                      "TEveViewerList", this, "OnClicked(TObject*,UInt_t,UInt_t)");
+
+   TQObject::Connect("TGLViewer", "ReClicked(TObject*,UInt_t,UInt_t)",
+                     "TEveViewerList", this, "OnReClicked(TObject*,UInt_t,UInt_t)");
+
+   TQObject::Connect("TGLViewer", "UnClicked(TObject*,UInt_t,UInt_t)",
+                     "TEveViewerList", this, "OnUnClicked(TObject*,UInt_t,UInt_t)");
 }
 
 /******************************************************************************/
@@ -442,7 +537,7 @@ void TEveViewerList::OnMouseOver(TGLPhysicalShape *pshape, UInt_t state)
 }
 
 //______________________________________________________________________________
-void TEveViewerList::OnClicked(TObject *obj, UInt_t button, UInt_t state)
+void TEveViewerList::OnClicked(TObject *obj, UInt_t /*button*/, UInt_t state)
 {
    // Slot for global TGLViewer::Clicked().
    //
@@ -452,13 +547,45 @@ void TEveViewerList::OnClicked(TObject *obj, UInt_t button, UInt_t state)
    // If TEveElement::IsPickable() returns false, the element is not
    // selected.
 
-   if (button != kButton1 || state & kKeyShiftMask || state & kKeyMod1Mask)
-      return;
-
    TEveElement* el = dynamic_cast<TEveElement*>(obj);
    if (el && !el->IsPickable())
       el = 0;
    gEve->GetSelection()->UserPickedElement(el, state & kKeyControlMask);
+}
+
+//______________________________________________________________________________
+void TEveViewerList::OnReClicked(TObject *obj, UInt_t /*button*/, UInt_t /*state*/)
+{
+   // Slot for global TGLViewer::ReClicked().
+   //
+   // The obj is dyn-casted to the TEveElement and global selection is
+   // updated accordingly.
+   //
+   // If TEveElement::IsPickable() returns false, the element is not
+   // selected.
+
+   TEveElement* el = dynamic_cast<TEveElement*>(obj);
+   if (el && !el->IsPickable())
+      el = 0;
+
+   gEve->GetSelection()->UserRePickedElement(el);
+}
+
+//______________________________________________________________________________
+void TEveViewerList::OnUnClicked(TObject *obj, UInt_t /*button*/, UInt_t /*state*/)
+{
+   // Slot for global TGLViewer::UnClicked().
+   //
+   // The obj is dyn-casted to the TEveElement and global selection is
+   // updated accordingly.
+   //
+   // If TEveElement::IsPickable() returns false, the element is not
+   // selected.
+
+   TEveElement* el = dynamic_cast<TEveElement*>(obj);
+   if (el && !el->IsPickable())
+      el = 0;
+   gEve->GetSelection()->UserUnPickedElement(el);
 }
 
 //______________________________________________________________________________

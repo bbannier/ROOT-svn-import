@@ -210,10 +210,13 @@ TClass* TVirtualBranchBrowsable::GetCollectionContainedType(const TBranch* branc
       // branch...
       if (branch->GetReadEntry()==-1) branchNonCost->GetEntry(0);
       // now get element
-      TLeafObject* lo=(TLeafObject*)branchNonCost->GetListOfLeaves()->First();
-      TObject* objContainer=lo->GetObject();
-      if (lo && objContainer && objContainer->IsA()==TClonesArray::Class())
-         contained=((TClonesArray*)objContainer)->GetClass();
+      TLeafObject* lo = (TLeafObject*)branchNonCost->GetListOfLeaves()->First();
+      if (lo) {
+         TObject* objContainer = lo->GetObject();
+         if (objContainer && objContainer->IsA()==TClonesArray::Class()) {
+            contained = ((TClonesArray*)objContainer)->GetClass();
+         }
+      }
       return type;
    } else    if (type->InheritsFrom(TClonesArray::Class()) 
       && branch->IsA()==TBranchElement::Class()
@@ -421,15 +424,26 @@ void TMethodBrowsable::GetBrowsableMethodsForClass(TClass* cl, TList& li)
    TList allClasses;
    allClasses.Add(cl);
    
-   for(TObjLink* lnk=allClasses.FirstLink();
-       lnk; lnk=lnk->Next()){
-      cl=(TClass*)lnk->GetObject();
-      TList* bases=cl->GetListOfBases();
-      TBaseClass* base;
-      TIter iB(bases);
-      while ((base=(TBaseClass*)iB())) {
-         TClass* bc=base->GetClassPointer();
-         if (bc) allClasses.Add(bc);
+   if (cl->IsLoaded()) {
+      for(TObjLink* lnk=allClasses.FirstLink();
+          lnk; lnk=lnk->Next()) {
+         cl=(TClass*)lnk->GetObject();
+         TList* bases=cl->GetListOfBases();
+         TBaseClass* base;
+         TIter iB(bases);
+         while ((base=(TBaseClass*)iB())) {
+            TClass* bc=base->GetClassPointer();
+            if (bc) allClasses.Add(bc);
+         }
+      }
+   } else {
+      TVirtualStreamerInfo *info = cl->GetStreamerInfo();
+      for(int el = 0; el < info->GetElements()->GetEntries(); ++el) {
+         TStreamerElement *element = (TStreamerElement *)info->GetElements()->UncheckedAt(el);
+         if (element->IsBase()) {
+            TClass *bc = element->GetClassPointer();
+            if (bc) allClasses.Add(bc);
+         }
       }
    }
 
@@ -780,10 +794,20 @@ Int_t TCollectionPropertyBrowsable::GetBrowsables(TList& li, const TBranch* bran
    if (clCollection->GetCollectionProxy() || clCollection==TClonesArray::Class()) {
    // the collection is one for which TTree::Draw supports @coll.size()
 
+      TCollectionPropertyBrowsable* cpb;
+      if ( clCollection->GetCollectionProxy() && 
+           ( (clCollection->GetCollectionProxy()->GetValueClass()==0) 
+           ||(clCollection->GetCollectionProxy()->GetValueClass()->GetCollectionProxy()!=0 
+              && clCollection->GetCollectionProxy()->GetValueClass()->GetCollectionProxy()->GetValueClass()==0)
+            )) {
+         // If the contained type is not a class, we need an explitcit handle to get to the data.
+         cpb = new TCollectionPropertyBrowsable("values", "values in the container", 
+                                                scope, branch, parent);
+         li.Add(cpb);
+      }
       scope.Insert(lastPart, "@");
-      TCollectionPropertyBrowsable* cpb=
-         new TCollectionPropertyBrowsable("@size", size_title, 
-         scope+".size()", branch, parent);
+      cpb = new TCollectionPropertyBrowsable("@size", size_title, 
+                                            scope+".size()", branch, parent);
       li.Add(cpb);
       return 1;
    } // if a collection proxy or TClonesArray

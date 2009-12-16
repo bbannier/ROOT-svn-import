@@ -13,6 +13,7 @@
 #include "TEveViewer.h"
 #include "TEveManager.h"
 #include "TEveTrans.h"
+#include "TEvePad.h"
 
 #include "TList.h"
 #include "TGLScenePad.h"
@@ -29,6 +30,10 @@
 // Eve representation of TGLScene.
 // The GLScene is owned by this class - it is created on construction
 // time and deleted at destruction.
+//
+// Normally all objects are positioned directly in global scene-space.
+// By setting the fHierarchical flag, positions of children get
+// calculated by multiplying the transformation matrices of all parents.
 
 ClassImp(TEveScene);
 
@@ -38,7 +43,8 @@ TEveScene::TEveScene(const char* n, const char* t) :
    fPad    (0),
    fGLScene(0),
    fChanged      (kFALSE),
-   fSmartRefresh (kTRUE)
+   fSmartRefresh (kTRUE),
+   fHierarchical (kFALSE)
 {
    // Constructor.
 
@@ -86,7 +92,6 @@ void TEveScene::Repaint(Bool_t dropLogicals)
    if (dropLogicals) fGLScene->SetSmartRefresh(kTRUE);
    fChanged = kFALSE;
 
-
    // Hack to propagate selection state to physical shapes.
    //
    // Should actually be published in PadPaint() following a direct
@@ -103,6 +108,50 @@ void TEveScene::Repaint(Bool_t dropLogicals)
       {
          TGLPhysicalShape* pshp = const_cast<TGLPhysicalShape*>(li->second->GetFirstPhysical());
          pshp->Select(elm->GetSelectedLevel());
+      }
+   }
+
+   // Fix positions for hierarchical scenes.
+   if (fHierarchical)
+   {
+      RetransHierarchically();
+   }
+}
+
+//______________________________________________________________________________
+void TEveScene::RetransHierarchically()
+{
+   // Entry point for hierarchical transformation update.
+   // Calls the recursive variant on all children.
+
+   fGLScene->BeginUpdate();
+
+   RetransHierarchicallyRecurse(this, RefMainTrans());
+
+   fGLScene->EndUpdate();
+}
+
+//______________________________________________________________________________
+void TEveScene::RetransHierarchicallyRecurse(TEveElement* el, const TEveTrans& tp)
+{
+   // Set transformation matrix for physical shape of element el in
+   // the GL-scene and recursively descend into children (if enabled).
+
+   TEveTrans t(tp);
+   if (el->HasMainTrans())
+      t *= el->RefMainTrans();
+
+   if (el->GetRnrSelf() && el != this)
+   {
+      fGLScene->UpdatePhysioLogical(el->GetRenderObject(), t.Array(), 0);
+   }
+
+   if (el->GetRnrChildren())
+   {
+      for (List_i i = el->BeginChildren(); i != el->EndChildren(); ++i)
+      {
+         if ((*i)->GetRnrAnything())
+            RetransHierarchicallyRecurse(*i, t);
       }
    }
 }
@@ -123,7 +172,7 @@ void TEveScene::Paint(Option_t* option)
 {
    // Paint the scene. Iterate over children and calls PadPaint().
 
-   if (fRnrChildren)
+   if (GetRnrState())
    {
       for(List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
          (*i)->PadPaint(option);
@@ -264,6 +313,7 @@ void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
       {
          Bool_t updateViewers = kFALSE;
          Bool_t incTimeStamp  = kFALSE;
+         Bool_t transbboxChg  = kFALSE;
 
          s->GetGLScene()->BeginUpdate();
 
@@ -303,6 +353,7 @@ void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
                      pshp->SetTransform(el->PtrMainTrans()->Array());
                   lshp->UpdateBoundingBox();
                   incTimeStamp = kTRUE;
+                  transbboxChg = kTRUE;
                }
 
                if (bits & kCBObjProps)
@@ -324,6 +375,12 @@ void TEveSceneList::ProcessSceneChanges(Bool_t dropLogicals, Set_t& stampSet)
          }
 
          s->GetGLScene()->EndUpdate(updateViewers, incTimeStamp, updateViewers);
+
+         // Fix positions for hierarchical scenes.
+         if (s->GetHierarchical() && transbboxChg)
+         {
+            s->RetransHierarchically();
+         }
       }
    }
 }

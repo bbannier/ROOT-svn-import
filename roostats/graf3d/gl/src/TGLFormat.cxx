@@ -22,6 +22,7 @@ ClassImp(TGLFormat)
 //______________________________________________________________________________
 TGLFormat::TGLFormat() :
    fDoubleBuffered(kTRUE),
+   fStereo(kFALSE),
 #ifdef WIN32
    fDepthSize(32),
 #else
@@ -39,6 +40,7 @@ TGLFormat::TGLFormat() :
 //______________________________________________________________________________
 TGLFormat::TGLFormat(EFormatOptions opt) :
    fDoubleBuffered(opt & kDoubleBuffer),
+   fStereo(kFALSE),
 #ifdef WIN32
    fDepthSize(opt & kDepth ? 32 : 0),
 #else
@@ -149,4 +151,18 @@ void TGLFormat::SetDoubleBuffered(Bool_t db)
 {
    //Set the surface as double/single buffered.
    fDoubleBuffered = db;
+}
+
+//______________________________________________________________________________
+Bool_t TGLFormat::IsStereo()const
+{
+   //Check, if the surface is stereo buffered.
+   return fStereo;
+}
+
+//______________________________________________________________________________
+void TGLFormat::SetStereo(Bool_t db)
+{
+   //Set the surface as stereo/non-stereo buffered.
+   fStereo = db;
 }

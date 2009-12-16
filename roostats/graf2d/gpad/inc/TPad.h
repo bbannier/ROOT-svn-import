@@ -130,7 +130,6 @@ protected:
    virtual void  SavePrimitive(ostream &out, Option_t *option = "");
    virtual void  SetBatch(Bool_t batch=kTRUE);
 
-   TVirtualPadPainter *GetPainter();
 private:
    TPad(const TPad &pad);  // cannot copy pads, use TObject::Clone()
    TPad &operator=(const TPad &rhs);  // idem
@@ -191,6 +190,7 @@ public:
    virtual Short_t   GetBorderSize() const { return fBorderSize;}
    Int_t             GetCrosshair() const;
    virtual Int_t     GetCanvasID() const;
+   virtual TCanvasImp *GetCanvasImp() const;
    TFrame           *GetFrame();
    virtual Int_t     GetEvent() const;
    virtual Int_t     GetEventX() const;
@@ -245,6 +245,7 @@ public:
    const char       *GetTitle() const {return fTitle.Data();}
    virtual TCanvas  *GetCanvas() const { return fCanvas; }
    virtual TVirtualPad *GetVirtCanvas() const ;
+   virtual TVirtualPadPainter *GetPainter();
    Int_t             GetPadPaint() const {return fPadPaint;}
    Int_t             GetPixmapID() const {return fPixmapID;}
    ULong_t           Hash() const { return fName.Hash(); }

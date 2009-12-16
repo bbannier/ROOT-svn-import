@@ -1,11 +1,11 @@
 *-------------------------------------------------------------------------------
 *
 * This file contains the hbook's package subset needed to build h2root.
-* It cannot be used by any hbook application because many hbook functionnalities
+* It cannot be used by any hbook application because many hbook functionalities
 * are missing.
 *
 *-------------------------------------------------------------------------------
-
+      
       SUBROUTINE HNTVAR2(ID1,IVAR,CHTAG,CHFULL,BLOCK,NSUB,ITYPE,ISIZE
      +                  ,NBITS,IELEM)
       INTEGER   ZBITS,  ZNDIM,  ZNOENT, ZNPRIM, ZNRZB,  ZIFCON,
@@ -25,6 +25,8 @@
      +       NCHAR ,NRHIST,IERR  ,NV
       INTEGER     NWPAW,IXPAWC,IHDIV,IXHIGZ,IXKU,        LMAIN
       REAL                                       FENC   ,      HCV
+      COMMON/BIGBUF/BIGB(4000000)
+      character BIGB
       COMMON/PAWC/NWPAW,IXPAWC,IHDIV,IXHIGZ,IXKU,FENC(5),LMAIN,
      +HCV(4000000-11)
       INTEGER   IQ        ,LQ

@@ -76,6 +76,7 @@
 
 // Browser menu command ids
 enum ERootBrowserCommands {
+   kFileNewBrowserLite,
    kFileNewBrowser,
    kFileNewCanvas,
    kFileNewBuilder,
@@ -742,7 +743,7 @@ void TRootIconList::Browse(TBrowser *)
 
       name = obj->GetName();
 
-      if (obj->IsA() == TKey::Class()) {
+      if (key && obj->IsA() == TKey::Class()) {
          name += ";";
          name +=  key->GetCycle();
       }
@@ -977,12 +978,13 @@ void TRootBrowserLite::CreateBrowser(const char *name)
    // Create menus
    fFileMenu = new TGPopupMenu(fClient->GetDefaultRoot());
    fFileMenu->AddEntry("&New Browser",        kFileNewBrowser);
+   fFileMenu->AddEntry("New Browser &Lite",   kFileNewBrowserLite);
    fFileMenu->AddEntry("New Canvas",          kFileNewCanvas);
-   fFileMenu->AddEntry("Gui &Builder",        kFileNewBuilder);
+   fFileMenu->AddEntry("&Gui Builder",        kFileNewBuilder);
    fFileMenu->AddEntry("&Open...",            kFileOpen);
    fFileMenu->AddSeparator();
    fFileMenu->AddEntry("&Save",               kFileSave);
-   fFileMenu->AddEntry("Save As...",          kFileSaveAs);
+   fFileMenu->AddEntry("Save &As...",         kFileSaveAs);
    fFileMenu->AddSeparator();
    fFileMenu->AddEntry("&Print...",           kFilePrint);
    fFileMenu->AddSeparator();
@@ -1205,13 +1207,14 @@ void TRootBrowserLite::CreateBrowser(const char *name)
    fTextEdit = 0;
 
    // Misc
-   SetWindowName(name);
-   SetIconName(name);
+   TString bname(name);
+   bname.Prepend("Old ");
+   SetWindowName(bname.Data());
+   SetIconName(bname.Data());
    fIconPic = SetIconPixmap("rootdb_s.xpm");
    SetClassHints("Browser", "Browser");
 
    SetWMSizeHints(600, 350, 10000, 10000, 2, 2);
-   SetIconName("ROOT Browser");
 
    fListLevel = 0;
    fTreeLock  = kFALSE;
@@ -1228,6 +1231,10 @@ void TRootBrowserLite::CreateBrowser(const char *name)
    SetDefaults();
    Resize();
    ShowMacroButtons(kFALSE);
+
+   printf("\n You are using the old ROOT browser! A new version is available. To use it:\n");
+   printf(" Select the \"New Browser\" entry from the \"File\" menu in the browser, or change\n");
+   printf(" \"Browser.Name:\" from \"TRootBrowserLite\" to \"TRootBrowser\" in system.rootrc\n\n");
 
    Connect(fLt, "Checked(TObject*, Bool_t)", "TRootBrowserLite",
            this, "Checked(TObject *,Bool_t)");
@@ -1411,15 +1418,17 @@ void TRootBrowserLite::AddToTree(TObject *obj, const char *name, Int_t check)
 {
    // Add items to the current TGListTree of the browser.
 
+   if (!obj)
+      return;
    if (obj->InheritsFrom("TApplication"))
       fListLevel = 0;
-   if (obj && !fTreeLock) {
+   if (!fTreeLock) {
       if (!name) name = obj->GetName();
       if (name[0] == '.' && name[1] == '.')
          Info("AddToTree", "up one level %s", name);
       if(check > -1) {
          TGListTreeItem *item = fLt->AddItem(fListLevel, name, obj, 0, 0, kTRUE);
-         fLt->CheckItem(item, (Bool_t)check);
+         if (item) fLt->CheckItem(item, (Bool_t)check);
          TString tip(obj->ClassName());
          if (obj->GetTitle()) {
             tip += " ";
@@ -1462,6 +1471,19 @@ void TRootBrowserLite::BrowseObj(TObject *obj)
 
    TGPosition pos = fIconBox->GetPagePosition();
    Emit("BrowseObj(TObject*)", (Long_t)obj);
+
+   if (obj != gROOT) {
+      if (!fLt->FindItemByObj(fLt->GetFirstItem(), obj)) {
+         fListLevel = 0;
+         Add(obj);
+         fListLevel = fLt->FindItemByObj(fLt->GetFirstItem(), obj);
+         fLt->HighlightItem(fListLevel);
+         if (obj->IsFolder())
+            fLt->OpenItem(fListLevel);
+         fLt->ClearViewPort();
+         fLt->AdjustPosition(fListLevel);
+      }
+   }
 
    if (obj->IsFolder()) fIconBox->RemoveAll();
    obj->Browse(fBrowser);
@@ -1735,8 +1757,13 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
 
                switch (parm1) {
                   // Handle File menu items...
-                  case kFileNewBrowser:
+                  case kFileNewBrowserLite:
                      new TBrowser("Browser", "ROOT Object Browser");
+                     break;
+                  case kFileNewBrowser:
+                     gEnv->SetValue("Browser.Name", "TRootBrowser");
+                     new TBrowser();
+                     gEnv->SetValue("Browser.Name", "TRootBrowserLite");
                      break;
                   case kFileNewCanvas:
                      gROOT->MakeDefCanvas();
@@ -2081,9 +2108,14 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                            if (obj2->IsA() == TKey::Class()) {
                               TKey *key = (TKey*)obj2;
                               TClass *cl = TClass::GetClass(key->GetClassName());
-                              void *add = gROOT->FindObject((char *) key->GetName());
+                              TString name = key->GetName();
+                              name += ";";
+                              name += key->GetCycle();
+                              //void *add = gROOT->FindObject((char *) name.Data());//key->GetName());
+                              void *add = gDirectory->FindObjectAny((char *) name.Data());
                               if (cl->IsTObject()) {
                                  obj2 = (TObject*)add; // cl->DynamicCast(TObject::Class(),startadd);
+                                 item2->SetUserData(obj2);
                               } else {
                                  Error("ProcessMessage","do not support non TObject (like %s) yet",
                                        cl->GetName());
@@ -2107,6 +2139,7 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                            DoubleClicked(obj2);
                            IconBoxAction(obj2);
                         }
+                        delete cursorSwitcher;
                         return kTRUE; //
                      }
                   }
@@ -2307,7 +2340,8 @@ void TRootBrowserLite::ListTreeHighlight(TGListTreeItem *item)
             name += ";";
             name += key->GetCycle();
             Chdir(item->GetParent());
-            TObject *k_obj = gROOT->FindObject(name);
+            //TObject *k_obj = gROOT->FindObject(name);
+            TObject *k_obj = gDirectory->FindObjectAny(name);
 
             if (k_obj) {
                item->SetUserData(k_obj);
@@ -2503,7 +2537,7 @@ void TRootBrowserLite::IconBoxAction(TObject *obj)
 
       if (obj->InheritsFrom("TKey")) {
          TKey *key = dynamic_cast<TKey*>(obj);
-         if (key->GetClassName() && (!strcmp(key->GetClassName(), "TFormula")))
+         if (key && key->GetClassName() && (!strcmp(key->GetClassName(), "TFormula")))
             browsable = kFALSE;
       }
 
@@ -2590,7 +2624,8 @@ void TRootBrowserLite::IconBoxAction(TObject *obj)
 
             if (kobj->IsA() == TKey::Class()) {
                Chdir(fListLevel->GetParent());
-               kobj = gROOT->FindObject(kobj->GetName());
+               //kobj = gROOT->FindObject(kobj->GetName());
+               kobj = gDirectory->FindObjectAny(kobj->GetName());
 
                if (kobj) {
                   TGListTreeItem *parent = fListLevel->GetParent();
@@ -2788,6 +2823,7 @@ void TRootBrowserLite::SetViewMode(Int_t new_mode, Bool_t force)
                return;
             else
                new_mode = kViewLargeIcons;
+            // intentionally no break
          case kViewLargeIcons:
             bnum = 2;
             lv = kLVLargeIcons;
@@ -2840,6 +2876,7 @@ void TRootBrowserLite::SetSortMode(Int_t new_mode)
    switch (new_mode) {
       default:
          new_mode = kViewArrangeByName;
+         // intentionally no break
       case kViewArrangeByName:
          smode = kSortByName;
          break;

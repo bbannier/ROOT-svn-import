@@ -151,7 +151,6 @@ public:
    inline XrdProofdProtocol *Protocol() const { XrdSysMutexHelper mhp(fMutex); return fProtocol; }
    inline std::list<XrdProofQuery *> *Queries() const
                        { return (std::list<XrdProofQuery *> *)&fQueries; }
-   inline XrdSrvBuffer *QueryNum() const { XrdSysMutexHelper mhp(fMutex); return fQueryNum; }
    void                RemoveQuery(const char *tag);
    void                RemoveWorker(const char *o);
    void                Reset();
@@ -162,7 +161,8 @@ public:
    inline XrdProofdResponse *Response() const { XrdSysMutexHelper mhp(fMutex); return fResponse; }
    int                 SendData(int cid, void *buff, int len);
    int                 SendDataN(void *buff, int len);
-   int                 SetAdminPath(const char *a);
+   void                SendClusterInfo(int nsess, int nacti);
+   int                 SetAdminPath(const char *a, bool assert);
    void                SetAlias(const char *a) { XrdSysMutexHelper mhp(fMutex); fAlias = a; }
    void                SetClient(const char *c) { XrdSysMutexHelper mhp(fMutex); fClient = c; }
    inline void         SetConnection(XrdProofdResponse *r) { XrdSysMutexHelper mhp(fMutex); fResponse = r;}
@@ -181,7 +181,7 @@ public:
    inline void         SetSkipCheck() { XrdSysMutexHelper mhp(fMutex); fSkipCheck = true; }
    void                SetSrvPID(int pid) { XrdSysMutexHelper mhp(fMutex); fSrvPID = pid; }
    inline void         SetSrvType(int id) { XrdSysMutexHelper mhp(fMutex); fSrvType = id; }
-   inline void         SetStartMsg(XrdSrvBuffer *sm) { XrdSysMutexHelper mhp(fMutex); fStartMsg = sm; }
+   inline void         SetStartMsg(XrdSrvBuffer *sm) { XrdSysMutexHelper mhp(fMutex); delete fStartMsg; fStartMsg = sm; }
    inline void         SetStatus(int st) { XrdSysMutexHelper mhp(fMutex); fStatus = st; }
    void                SetTag(const char *t) { XrdSysMutexHelper mhp(fMutex); fTag = t; }
    void                SetUNIXSockPath(const char *s) { XrdSysMutexHelper mhp(fMutex); fUNIXSockPath = s; };
@@ -218,7 +218,6 @@ public:
 
    XrdSysSemWait            *fPingSem;   // To sychronize ping requests
 
-   XrdSrvBuffer             *fQueryNum;  // Msg with sequential number of currebt query
    XrdSrvBuffer             *fStartMsg;  // Msg with start processing info
 
    time_t                    fDisconnectTime; // Time at which all clients disconnected

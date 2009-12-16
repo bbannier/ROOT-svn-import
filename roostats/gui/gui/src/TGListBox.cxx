@@ -379,7 +379,7 @@ TGIconLBEntry::TGIconLBEntry(const TGWindow *p, Int_t id, const char *str,
    gVirtualX->GetFontProperties(GetDefaultFontStruct(),
                                 max_ascent, max_descent);
    fTHeight = max_ascent + max_descent;
-   if (fPicture->GetHeight() > fTHeight)
+   if (fPicture && fPicture->GetHeight() > fTHeight)
       fTHeight = fPicture->GetHeight();
 
    Resize(fTWidth, fTHeight + 1);
@@ -520,7 +520,8 @@ void TGLBContainer::AddEntry(TGLBEntry *lbe, TGLayoutHints *lhints)
    // Add listbox entry with hints to container. To show entry call
    // MapSubwindows() and Layout().
 
-   lbe->SetBackgroundColor(fgWhitePixel);
+   // DEPRECATED: the color should always be set in the TGLBEntry ctor
+   //lbe->SetBackgroundColor(fgWhitePixel);
 
    TGLBFrameElement *nw = new TGLBFrameElement(lbe, lhints ? lhints : fgDefaultHints);
    fList->Add(nw);
@@ -534,7 +535,8 @@ void TGLBContainer::InsertEntry(TGLBEntry *lbe, TGLayoutHints *lhints, Int_t aft
    // then add entry at head of list. To show entry call MapSubwindows() and
    // Layout().
 
-   lbe->SetBackgroundColor(fgWhitePixel);
+   // DEPRECATED: the color should always be set in the TGLBEntry ctor
+   //lbe->SetBackgroundColor(fgWhitePixel);
 
    TGLBEntry      *e;
    TGFrameElement *el, *nw;
@@ -569,7 +571,8 @@ void TGLBContainer::AddEntrySort(TGLBEntry *lbe, TGLayoutHints *lhints)
    // Insert listbox entry before the list box entry with a higher id.
    // To show entry call MapSubwindows() and Layout().
 
-   lbe->SetBackgroundColor(fgWhitePixel);
+   // DEPRECATED: the color should always be set in the TGLBEntry ctor
+   //lbe->SetBackgroundColor(fgWhitePixel);
 
    TGLBEntry      *e;
    TGFrameElement *el, *nw;
@@ -692,7 +695,7 @@ TGLBEntry *TGLBContainer::Select(Int_t id, Bool_t sel)
    TGLBEntry      *f;
    TGFrameElement *el;
 
-   if (fLastActive) {
+   if (!fMultiSelect && fLastActive) {
       fLastActive->Activate(kFALSE);
       fLastActive = 0;
    }
@@ -763,7 +766,7 @@ void TGLBContainer::GetSelectedEntries(TList *selected)
 //______________________________________________________________________________
 void TGLBContainer::SetMultipleSelections(Bool_t multi)
 {
-   // Enables and disables multible selections of entries.
+   // Enables and disables multiple selections of entries.
 
    TGFrameElement *el;
 

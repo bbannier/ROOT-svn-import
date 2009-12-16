@@ -38,6 +38,7 @@
 #include <TParameter.h>
 #include "TClonesArray.h"
 #include "TParticle.h"
+#include "TDatabasePDG.h"
 
 #include "ProofPythia.h"
 #include "TPythia8.h"
@@ -152,8 +153,6 @@ void ProofPythia::Terminate()
    // The Terminate() function is the last function to be called during
    // a query. It always runs on the client, it can be used to present
    // the results graphically or save the results to file.
-
-   fOutput->ls();
 
    //
    // Create canvas

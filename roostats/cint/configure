@@ -56,21 +56,17 @@ INPUTMODE=cint
 COMP=-c
 INCP=-I
 
-function config_GCC_defaults {
-    CC=gcc
-    CPP="gcc -E -C"
+function config_unix_defaults {
     COUT="-o "
     COUTEXE="-o "
     CDBGFLAGS=-g
     COPTFLAGS=-O2
     CMACROS="$CMACROS -DG__SHAREDLIB -DG__OSFDLL -DG__ANSI -DG__ERRORCALLBACK -DG__SIGNEDCHAR -DG__NEWSTDHEADER -DG__CINT_VER6 -DG__NATIVELONGLONG -DG__P2FCAST -DG__STD_EXCEPTION"
 
-    CXX="g++ "
     CXXDBGFLAGS="$CDBGFLAGS"
     CXXOPTFLAGS="$COPTFLAGS"
     CXXMACROS="$CXXMACROS $CMACROS"
 
-    LD="g++ "
     DEFAULTLIBS="-lm -ldl"
     LDOUT="-o "
     SOOUT="$LDOUT"
@@ -91,6 +87,15 @@ function config_GCC_defaults {
     IMPLIBEXT=.a
     AR="ar qcs "
     [ "x$TAILOPT" = "x" ] && TAILOPT=-n
+
+}
+
+function config_GCC_defaults {
+    config_unix_defaults
+    CC=gcc
+    CPP="gcc -E -C"
+    CXX="g++ "
+    LD="g++ "
 
     GCCVER=`echo __GNUC__ __GNUC_MINOR__ __GNUC_PATCHLEVEL__|$CC -E -|tail ${TAILOPT}1`
     if [ ${GCCVER%% *} -gt 3 ]; then 
@@ -189,6 +194,7 @@ function config_cygwin {
     CMACROS="-DG__SHAREDLIB -DG__OSFDLL -DG__NEWSTDHEADER -DG__CYGWIN -DG__NATIVELONGLONG -DG__STD_EXCEPTION"
     CXXMACROS="$CMACROS"
     EXPLLINK=1
+    LDFLAGS="$LDFLAGS -Wl,--enable-auto-import"
     SOFLAGS="$SOFLAGS --export-all-symbols"
 }
 
@@ -294,7 +300,7 @@ function config_solarisgcc {
 
 function config_solaris {
     TAILOPT=-
-    config_GCC_defaults
+    config_unix_defaults
     CXX=CC
     CC=cc
     LD=CC
@@ -329,7 +335,7 @@ function add_opt {
 
 add_opt "--help -h" 'Show this help.'
 add_opt "--arch=" "Architecture, one of ${ARCHS[*]}"
-add_opt "--coreversion=" "CINT core version, one of old, new [new]"
+add_opt "--coreversion=" "CINT core version, one of old, current, new [current]"
 add_opt "--with-prefix" 'Prefix-based build (instead of using CINTSYSDIR)'
 add_opt "--prefix=" 'Topdir for architecture-independent files [/usr/local]'
 add_opt "--exec-prefix=" 'Topdir for architecture-dependent files [$PREFIX]'
@@ -464,8 +470,10 @@ function processflag_coreversion {
         COREVERSION=cint7
     elif [ "x$COREVERSION" = "xold" ]; then
         COREVERSION=cint
+    elif [ "x$COREVERSION" = "xcurrent" ]; then
+        COREVERSION=cint
     else
-        echo "Error: --coreversion must be one of old, new, not \"$1\"."
+        echo "Error: --coreversion must be one of old, current, new, not \"$1\"."
         exit 1
     fi
 }
@@ -603,8 +611,8 @@ if [ "$ARCH" = "" ]; then
 fi
 
 if [ "$COREVERSION" = "" ]; then
-    COREVERSION=cint7
-    echo Using new CINT core
+    COREVERSION=cint
+    echo Using current CINT core
 fi
 
 if [ "$DEBUG" = "1" ]; then
@@ -690,13 +698,15 @@ EXPORTS=(${EXPORTS[*]} HAVE_CONFIG)
 if [ "x$WITHPREFIX" = "x1" ]; then
   # prefix based build
     [ "$PREFIX" = "" ] && PREFIX=/usr/local
-    if [ -d "$PREFIX" -a "`cd \"$PREFIX\"; pwd`" = "`cd \"$PWD\"; pwd`" ]; then
-        echo ' '
-        echo ' '
-        echo 'ERROR: Cannot build within install location!'
-        echo 'Directory '$PREFIX' set as --prefix is the same as the current directory!'
-        echo ' '
-        exit 1
+    if [ -d "$PREFIX" ]; then
+        if [ "`cd \"$PREFIX\"; pwd`" = "`cd \"$PWD\"; pwd`" ]; then
+            echo ' '
+            echo ' '
+            echo 'ERROR: Cannot build within install location!'
+            echo 'Directory '$PREFIX' set as --prefix is the same as the current directory!'
+            echo ' '
+            exit 1
+        fi
     fi
     [ "$EPREFIX" = "" ] && EPREFIX=$PREFIX
     [ "$BINDIR" = "" ]  && BINDIR=$EPREFIX/bin
@@ -713,6 +723,8 @@ if [ "x${COREVERSION}" = "xcint" ]; then
   CINTVERSIONTAG=G__CINTVERSIONSTR_V5
 else
   CINTVERSIONTAG=G__CINTVERSIONSTR
+  LREFLEX=-lReflex
+  IREFLEX=${INCP}$CINTSYSDIR/reflex/inc
 fi
 
 CINTVERSION=`grep '#define *'${CINTVERSIONTAG}' ' ${COREVERSION}/inc/G__ci.h | sed 's/^.*"\([^,]*\),.*$/\1/'`
@@ -770,7 +782,7 @@ echo Writing bin/cint-config...
 [ "x$LIBDIR" = "x" ] && LIBDIR='$CINTSYSDIR/lib'
 [ "x$DATADIR" = "x" ] && DATADIR='$CINTSYSDIR/'${COREVERSION}'/'
 
-cat >> bin/cint-config << ___EOF
+cat > bin/cint-config << ___EOF
 
 printhelp() {
 cat <<_EOF
@@ -803,9 +815,9 @@ while [ \$# -gt 0 ] ; do
   case \$1 in
     --unix|-u) pathconvert="$MANGLEPATHSU" ;;
     --bindir)  \$pathconvert "${BINDIR}" ;;
-    --incdir)  \$pathconvert "${INCLUDEDIR}" ;;
-    --cflags)  \$pathconvert "${INCP}${INCLUDEDIR} ${INCP}$CINTSYSDIR/reflex/inc" ;;
-    --libs)    \$pathconvert "${LIBP}${LIBDIR} -lCint -lReflex" ;;
+    --incdir)  \$pathconvert "${INCLUDEDIRCINT}" ;;
+    --cflags)  \$pathconvert "${INCP}${INCLUDEDIRCINT} ${IREFLEX}" ;;
+    --libs)    \$pathconvert "${LIBP}${LIBDIR} -lCint ${LREFLEX}" ;;
     --libdir)  \$pathconvert "${LIBDIR}" ;;
     --datadir) \$pathconvert "${DATADIR}/cint" ;;
     --version|-v) echo "$CINTVERSION" ;;

@@ -14,6 +14,9 @@
  ************************************************************************/
 
 #include "common.h"
+#include "Api.h"
+
+using namespace Cint;
 
 extern "C" {
 
@@ -21,6 +24,44 @@ int G__quiet=0;
 
 static int G__history_size_max = 51;
 static int G__history_size_min = 30;
+
+} // extern "C"
+
+
+namespace Cint {
+
+/************************************************************
+* External getline facility
+*************************************************************/
+static G__pGetline_t&
+G__GetGetlineFuncInternal() {
+   static G__pGetline_t sGetlineFunc = 0;
+   return sGetlineFunc;
+}
+
+static G__pHistadd_t&
+G__GetHistaddFuncInternal() {
+   static G__pHistadd_t sHistaddFunc = 0;
+   return sHistaddFunc;
+}
+
+G__pGetline_t G__GetGetlineFunc() {
+   return G__GetGetlineFuncInternal();
+}
+
+G__pHistadd_t G__GetHistaddFunc() {
+   return G__GetHistaddFuncInternal();
+}
+
+void G__SetGetlineFunc(G__pGetline_t glfcn, G__pHistadd_t hafcn) {
+   G__GetGetlineFuncInternal() = glfcn;
+   G__GetHistaddFuncInternal() = hafcn;
+}
+} // namespace Cint
+
+
+extern "C" {
+
 /************************************************************
 * G__set_history_size()
 *************************************************************/
@@ -46,16 +87,17 @@ extern int add_history(const char* str);
 *************************************************************/
 void G__input_history(int *state,const char *string)
 {
-  char G__oneline[G__LONGLINE*2];
-  char G__argbuf[G__LONGLINE*2];
+  G__FastAllocString G__oneline(G__LONGLINE*2);
+  G__FastAllocString G__argbuf(G__LONGLINE*2);
   /* int  G__null_fgets=1; */
   char *arg[G__LONGLINE];
   int argn;
 #ifdef G__TMPFILE
-  char tname[G__MAXFILENAME];
+  G__FastAllocString tname_sb(G__MAXFILENAME);
 #else
-  char tname[L_tmpnam+10];
+  G__FastAllocString tname_sb(L_tmpnam+10);
 #endif
+  char* tname = tname_sb;
   int istmpnam=0;
   
   static char prevstring[G__LONGLINE];
@@ -77,7 +119,7 @@ void G__input_history(int *state,const char *string)
       sprintf(histfile,"./%s",homehist);
     fp=fopen(histfile,"r");
     if(fp) {
-      while(G__readline(fp,G__oneline,G__argbuf,&argn,arg)!=0){
+      while(G__readline_FastAlloc(fp,G__oneline,G__argbuf,&argn,arg)!=0){
         add_history(arg[0]);
         strcpy(prevstring,arg[0]);
         *state = (*state)+1;
@@ -121,7 +163,7 @@ void G__input_history(int *state,const char *string)
     }
   } while((FILE*)NULL==tmp && G__setTMPDIR(tname));
   if(tmp&&fp) {
-    while(G__readline(fp,G__oneline,G__argbuf,&argn,arg)!=0){
+    while(G__readline_FastAlloc(fp,G__oneline,G__argbuf,&argn,arg)!=0){
       ++line;
       if(line>G__history_size_max-G__history_size_min) fprintf(tmp,"%s\n",arg[0]);
     }
@@ -138,7 +180,7 @@ void G__input_history(int *state,const char *string)
   fp=fopen(histfile,"w");
   if(istmpnam) tmp=fopen(tname,"r");
   if(tmp&&fp) {
-    while(G__readline(tmp,G__oneline,G__argbuf,&argn,arg)!=0){
+    while(G__readline_FastAlloc(tmp,G__oneline,G__argbuf,&argn,arg)!=0){
       fprintf(fp,"%s\n",arg[0]);
     }
   }
@@ -200,9 +242,19 @@ char *G__input(const char *prompt)
       strcpy(line,pchar);
     }
     else {
-      fprintf(G__stdout,"%s",prompt);
-      /* scanf("%s",line); */
-      fgets(line,G__LONGLINE-5,G__stdin);
+      if (G__GetGetlineFuncInternal()) {
+	 pchar = G__GetGetlineFuncInternal()(prompt);
+	 if (pchar) {
+	    strcpy(line, pchar);
+	    if (G__GetHistaddFuncInternal()) {
+	       G__GetHistaddFuncInternal()(pchar);
+	    }
+	 }
+      } else {
+	 fprintf(G__stdout,"%s",prompt);
+	 /* scanf("%s",line); */
+	 fgets(line,G__LONGLINE-5,G__stdin);
+      }
     }
     
 #endif /* of G__GNUREADLINE */

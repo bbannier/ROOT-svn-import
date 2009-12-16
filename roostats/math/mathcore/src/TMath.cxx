@@ -49,26 +49,6 @@ namespace TMath {
 }
 
 //______________________________________________________________________________
-#if defined(R__KCC)
-static Double_t hypot(Double_t x, Double_t y)
-{
-   Double_t ax = TMath::Abs(x), ay = TMath::Abs(y);
-   Double_t amax, amin;
-   if(ax > ay){
-      amax = ax;
-      amin = ay;
-   } else {
-      amin = ax;
-      amax = ay;
-   }
-   if(amin == 0.0) return amax;
-
-   Double_t f = amin/amax;
-   return amax*sqrt(1.0 + f*f);
-}
-#endif
-
-//______________________________________________________________________________
 Long_t TMath::Hypot(Long_t x, Long_t y)
 {
    return (Long_t) (hypot((Double_t)x, (Double_t)y) + 0.5);
@@ -83,7 +63,7 @@ Double_t TMath::Hypot(Double_t x, Double_t y)
 //______________________________________________________________________________
 Double_t TMath::ASinH(Double_t x)
 {
-#if defined(WIN32) || defined(R__KCC)
+#if defined(WIN32)
    if(x==0.0) return 0.0;
    Double_t ax = Abs(x);
    return log(x+ax*sqrt(1.+1./(ax*ax)));
@@ -95,7 +75,7 @@ Double_t TMath::ASinH(Double_t x)
 //______________________________________________________________________________
 Double_t TMath::ACosH(Double_t x)
 {
-#if defined(WIN32) || defined(R__KCC)
+#if defined(WIN32)
    if(x==0.0) return 0.0;
    Double_t ax = Abs(x);
    return log(x+ax*sqrt(1.-1./(ax*ax)));
@@ -107,7 +87,7 @@ Double_t TMath::ACosH(Double_t x)
 //______________________________________________________________________________
 Double_t TMath::ATanH(Double_t x)
 {
-#if defined(WIN32) || defined(R__KCC)
+#if defined(WIN32)
    return log((1+x)/(1-x))/2;
 #else
    return atanh(x);
@@ -2318,7 +2298,7 @@ Double_t TMath::GammaDist(Double_t x, Double_t gamma, Double_t mu, Double_t beta
 //______________________________________________________________________________
 Double_t TMath::LaplaceDist(Double_t x, Double_t alpha, Double_t beta)
 {
-   // Computes the probability density funciton of Laplace distribution
+   // Computes the probability density function of Laplace distribution
    // at point x, with location parameter alpha and shape parameter beta.
    // By default, alpha=0, beta=1
    // This distribution is known under different names, most common is
@@ -2333,7 +2313,7 @@ Double_t TMath::LaplaceDist(Double_t x, Double_t alpha, Double_t beta)
 //______________________________________________________________________________
 Double_t TMath::LaplaceDistI(Double_t x, Double_t alpha, Double_t beta)
 {
-   // Computes the distribution funciton of Laplace distribution
+   // Computes the distribution function of Laplace distribution
    // at point x, with location parameter alpha and shape parameter beta.
    // By default, alpha=0, beta=1
    // This distribution is known under different names, most common is

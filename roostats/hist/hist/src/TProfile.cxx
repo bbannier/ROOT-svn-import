@@ -112,7 +112,6 @@ TProfile::TProfile(const char *name,const char *title,Int_t nbins,Double_t xlow,
 // see also comments in the TH1 base class constructors
 
    BuildOptions(0,0,option);
-   if (fgDefaultSumw2) Sumw2();    // optionally create sum of squares of weights
 }
 
 //______________________________________________________________________________
@@ -127,7 +126,6 @@ TProfile::TProfile(const char *name,const char *title,Int_t nbins,const Float_t 
 // see also comments in the TH1 base class constructors
 
    BuildOptions(0,0,option);
-   if (fgDefaultSumw2) Sumw2();    // optionally create sum of squares of weights
 }
 
 //______________________________________________________________________________
@@ -142,7 +140,6 @@ TProfile::TProfile(const char *name,const char *title,Int_t nbins,const Double_t
 // see also comments in the TH1 base class constructors
 
    BuildOptions(0,0,option);
-   if (fgDefaultSumw2) Sumw2();    // optionally create sum of squares of weights
 }
 
 //______________________________________________________________________________
@@ -157,7 +154,6 @@ TProfile::TProfile(const char *name,const char *title,Int_t nbins,const Double_t
 // see also comments in the TH1 base class constructors
 
    BuildOptions(ylow,yup,option);
-   if (fgDefaultSumw2) Sumw2();    // optionally create sum of squares of weights
 }
 
 //______________________________________________________________________________
@@ -176,7 +172,6 @@ TProfile::TProfile(const char *name,const char *title,Int_t nbins,Double_t xlow,
 // see also comments in the TH1 base class constructors
 
    BuildOptions(ylow,yup,option);
-   if (fgDefaultSumw2) Sumw2();    // optionally create sum of squares of weights
 }
 
 
@@ -233,12 +228,16 @@ void TProfile::BuildOptions(Double_t ymin, Double_t ymax, Option_t *option)
 
    fBinEntries.Set(fNcells);  //*-* create number of entries per bin array
 
+   // TH1::Sumw2 create sum of square of weights array times y (fSumw2) . This is always created for a TProfile
    TH1::Sumw2();                   //*-* create sum of squares of weights array times y
+   // TProfile::Sumw2 create sum of square of weight2 (fBinSumw2). This is needed only for profile filled with weights not 1
+   if (fgDefaultSumw2) Sumw2();    // optionally create sum of squares of weights / bin 
 
    fYmin = ymin;
    fYmax = ymax;
    fScaling = kFALSE;
    fTsumwy = fTsumwy2 = 0;
+
 }
 
 //______________________________________________________________________________
@@ -1529,7 +1528,18 @@ void TProfile::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    out<<"   "<<endl;
    out<<"   "<<ClassName()<<" *";
 
-   out<<GetName()<<" = new "<<ClassName()<<"("<<quote<<GetName()<<quote<<","<<quote<<GetTitle()<<quote
+   //histogram pointer has by default teh histogram name.
+   //however, in case histogram has no directory, it is safer to add a incremental suffix
+   static Int_t hcounter = 0;
+   TString histName = GetName();
+   if (!fDirectory) {
+      hcounter++;
+      histName += "__";
+      histName += hcounter;
+   }
+   const char *hname = histName.Data();
+   
+   out<<hname<<" = new "<<ClassName()<<"("<<quote<<GetName()<<quote<<","<<quote<<GetTitle()<<quote
                  <<","<<GetXaxis()->GetNbins();
    if (nonEqiX)
       out << ", xAxis";
@@ -1543,14 +1553,14 @@ void TProfile::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    for (bin=0;bin<fNcells;bin++) {
       Double_t bi = GetBinEntries(bin);
       if (bi) {
-         out<<"   "<<GetName()<<"->SetBinEntries("<<bin<<","<<bi<<");"<<endl;
+         out<<"   "<<hname<<"->SetBinEntries("<<bin<<","<<bi<<");"<<endl;
       }
    }
    //save bin contents
    for (bin=0;bin<fNcells;bin++) {
       Double_t bc = fArray[bin];
       if (bc) {
-         out<<"   "<<GetName()<<"->SetBinContent("<<bin<<","<<bc<<");"<<endl;
+         out<<"   "<<hname<<"->SetBinContent("<<bin<<","<<bc<<");"<<endl;
       }
    }
    // save bin errors
@@ -1558,12 +1568,12 @@ void TProfile::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       for (bin=0;bin<fNcells;bin++) {
          Double_t be = TMath::Sqrt(fSumw2.fArray[bin]);
          if (be) {
-            out<<"   "<<GetName()<<"->SetBinError("<<bin<<","<<be<<");"<<endl;
+            out<<"   "<<hname<<"->SetBinError("<<bin<<","<<be<<");"<<endl;
          }
       }
    }
 
-   TH1::SavePrimitiveHelp(out, option);
+   TH1::SavePrimitiveHelp(out, hname, option);
 }
 
 //______________________________________________________________________________

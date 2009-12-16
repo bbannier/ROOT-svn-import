@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # -*- sh-indentation: 3 -*-
 # This script returns the machine dependent compile options needed
 # to compile and link applications using the ROOT libraries.
@@ -9,11 +9,16 @@
 fullpath1=`readlink $0`
 if [ "$?" -ne "0" ]; then
    fullpath1=$0
+else
+   if [ ${fullpath1##/} = $fullpath1 ] && [ ${fullpath1##~} = $fullpath1 ]; then
+      # relative path, prepend directory where executable was found
+      lpath=`dirname $0`
+      fullpath1=$lpath/$fullpath1
+   fi
 fi
 progdir=`dirname $fullpath1`
 runningdir=`pwd`
-if echo $progdir | grep "^/" > /dev/null 2>& 1 || \
-   echo $progdir | grep "^~" > /dev/null 2>& 1; then
+if [ ${progdir##/} != $progdir ] || [ ${progdir##~} != $progdir ]; then
    # absolute path
    fullpath=$progdir
 else
@@ -163,18 +168,20 @@ solarisgcc)
    ;;
 solarisCC5)
    # Solaris CC 5.0
-   auxcflags=
+   if [ `uname -p` = "i386" ]; then
+      auxcflags="-library=stlport4"
+      auxldflags="-library=stlport4"
+   else
+      auxcflags=
+      auxldflags=
+   fi
    auxlibs="-lm -ldl -lnsl -lsocket"
    ;;
-solariskcc)
-   # Solaris KCC
-   auxcflags=
-   auxlibs="-L/usr/ccs/lib -lgen -lm -ldl -lsocket -lnsl"
-   ;;
-solarisx86)
-   # Solaris CC on Intel
-   auxcflags=
-   auxlibs="-L/usr/ccs/lib -lm -lsocket -lgen -ldl"
+solaris64CC5)
+   # Solaris CC 5.0 x86-64
+   auxcflags="-m64 -library=stlport4"
+   auxldflags="-m64 -library=stlport4"
+   auxlibs="-lm -ldl -lnsl -lsocket"
    ;;
 sgicc)
    # SGI
@@ -196,12 +203,6 @@ sgin32gcc)
    auxcflags="-fsigned-char"
    auxlibs="-lm -ldl"
    ;;
-sgikcc)
-   # SGI with KCC
-   auxcflags="--signed_chars --display_error_number \
-              --diag_suppress 68 --diag_suppress 191 --diag_suppress 837"
-   auxlibs="-lm -ldl"
-   ;;
 alphagcc)
    # Alpha/OSF with g++
    auxcflags=
@@ -209,11 +210,6 @@ alphagcc)
    ;;
 alphagcc)
    # Alpha/OSF with gcc
-   auxcflags="-mcpu=ev5 -D__osf__ -D__alpha"
-   auxlibs="-ltermcap -lm"
-   ;;
-alphakcc)
-   # Alpha/OSF with kai compiler (not yet valid)
    auxcflags="-mcpu=ev5 -D__osf__ -D__alpha"
    auxlibs="-ltermcap -lm"
    ;;
@@ -244,21 +240,6 @@ linuxmips)
    auxldflags="-mapi=32"
    auxlibs="-lm -ldl -rdynamic"
    ;;
-linuxdeb | linuxsuse6)
-   # Linux with gcc on Debian and SuSE
-   auxcflags=
-   auxlibs="-lm -ldl -rdynamic"
-   ;;
-linuxdeb2ppc)
-   # Debian/Linux on PPC
-   auxcflags=-fsigned-char
-   auxlibs="-lnsl -lm -ldl -rdynamic"
-   ;;
-linuxkcc)
-   # Linux with the KAI compiler
-   auxcflags="--signed_chars -D_EXTERN_INLINE=inline --diag_suppress 191"
-   auxlibs="-lm -ldl -rdynamic"
-   ;;
 linuxhppa)
    # Linux on hppa with the GCC compiler
    auxcflags=
@@ -268,7 +249,7 @@ linuxhppa)
 linuxicc)
    # Linux with the Intel icc compiler
    auxcflags=
-   auxlibs="-lm -ldl"
+   auxlibs="-limf -lm -ldl"
    ;;
 linuxppcgcc)
    # PPC Linux with gcc
@@ -286,11 +267,6 @@ linuxia64gcc)
    auxcflags=
    auxlibs="-lm -ldl -rdynamic"
    ;;
-linuxia64sgi)
-   # Itanium Linux with SGI compiler
-   auxcflags=
-   auxlibs="-lm -ldl"
-   ;;
 linuxia64ecc)
    # Itanium Linux with Intel ecc compiler
    auxcflags=
@@ -305,7 +281,7 @@ linuxx8664gcc)
 linuxx8664icc)
    # AMD Opteron and Intel EM64T (64 bit mode) Linux with Intel icc
    auxcflags=
-   auxlibs="-lm -ldl"
+   auxlibs="-limf -lm -ldl"
    ;;
 linuxalphagcc)
    # Alpha Linux with gcc
@@ -355,7 +331,8 @@ macosx)
       forcelibs=$rootulibs
       forceglibs=$rootuglibs
    else
-      auxcflags=
+      auxcflags="-m32"
+      auxldflags="-m32"
       auxlibs="-lm -ldl"
    fi
    ;;
@@ -431,25 +408,6 @@ esac
 ### compiler dependent settings ###
 
 case $arch in
-*kcc)
-   ex=""
-   for f in $features ; do
-      if test "x$f" = "xthread" ; then
-	 auxcflags="--thread_safe $auxcflags"
-	 auxldflags="--thread_safe $auxldflags"
-      fi
-      if test "x$f" = "xexceptions" ; then
-	 ex="yes"
-      fi
-   done
-   if test "x$ex" = "x" ; then
-      auxcflags="--no_exceptions $auxcflags"
-      auxldflags="--no_exceptions $auxldflags"
-   else
-      auxcflags="--exceptions $auxcflags"
-      auxldflags="--exceptions $auxldflags"
-   fi
-   ;;
 freebsd* | openbsd* | linux*)
    for f in $features ; do
       if test "x$f" = "xthread" ; then

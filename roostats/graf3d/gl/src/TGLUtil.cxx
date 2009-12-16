@@ -1316,7 +1316,7 @@ void TGLColorSet::StdLightBackground()
    fBackground .SetColor(255, 255, 255);
    fForeground .SetColor(0,   0,   0);
    fOutline    .SetColor(0,   0,   0);
-   fMarkup     .SetColor(100, 100, 100);
+   fMarkup     .SetColor(55,  55,  55);
 
    fSelection[0].SetColor(0,   0,   0);
    fSelection[1].SetColor(200, 100, 100);
@@ -1341,6 +1341,11 @@ ClassImp(TGLUtil);
 UInt_t TGLUtil::fgDefaultDrawQuality = 10;
 UInt_t TGLUtil::fgDrawQuality        = fgDefaultDrawQuality;
 UInt_t TGLUtil::fgColorLockCount     = 0;
+
+Float_t TGLUtil::fgPointSize      = 1.0f;
+Float_t TGLUtil::fgLineWidth      = 1.0f;
+Float_t TGLUtil::fgPointSizeScale = 1.0f;
+Float_t TGLUtil::fgLineWidthScale = 1.0f;
 
 #ifndef CALLBACK
 #define CALLBACK
@@ -1578,28 +1583,28 @@ void TGLUtil::ColorTransparency(Color_t color_index, Char_t transparency)
 //______________________________________________________________________________
 void TGLUtil::Color3ub(UChar_t r, UChar_t g, UChar_t b)
 {
-   // Wrapper for glColor3f.
+   // Wrapper for glColor3ub.
    if (fgColorLockCount == 0) glColor3ub(r, g, b);
 }
 
 //______________________________________________________________________________
 void TGLUtil::Color4ub(UChar_t r, UChar_t g, UChar_t b, UChar_t a)
 {
-   // Wrapper for glColor4f.
+   // Wrapper for glColor4ub.
    if (fgColorLockCount == 0) glColor4ub(r, g, b, a);
 }
 
 //______________________________________________________________________________
 void TGLUtil::Color3ubv(const UChar_t* rgb)
 {
-   // Wrapper for glColor3fv.
+   // Wrapper for glColor3ubv.
    if (fgColorLockCount == 0) glColor3ubv(rgb);
 }
 
 //______________________________________________________________________________
 void TGLUtil::Color4ubv(const UChar_t* rgba)
 {
-   // Wrapper for glColor4fv.
+   // Wrapper for glColor4ubv.
    if (fgColorLockCount == 0) glColor4ubv(rgba);
 }
 
@@ -1629,6 +1634,78 @@ void TGLUtil::Color4fv(const Float_t* rgba)
 {
    // Wrapper for glColor4fv.
    if (fgColorLockCount == 0) glColor4fv(rgba);
+}
+
+/******************************************************************************/
+// Control for scaling of point-size and line-width.
+/******************************************************************************/
+
+//______________________________________________________________________________
+Float_t TGLUtil::GetPointSizeScale()
+{
+   // Get global point-size scale.
+
+   return fgPointSizeScale;
+}
+
+//______________________________________________________________________________
+void TGLUtil::SetPointSizeScale(Float_t scale)
+{
+   // Set global point-size scale.
+
+   fgPointSizeScale = scale;
+}
+
+//______________________________________________________________________________
+Float_t TGLUtil::GetLineWidthScale()
+{
+   // Returns global line-width scale.
+
+   return fgLineWidthScale;
+}
+
+//______________________________________________________________________________
+void TGLUtil::SetLineWidthScale(Float_t scale)
+{
+   // Set global line-width scale.
+
+   fgLineWidthScale = scale;
+}
+
+//______________________________________________________________________________
+void TGLUtil::PointSize(Float_t point_size)
+{
+   // Set the point-size, taking the global scaling into account.
+   // Wrapper for glPointSize.
+
+   fgPointSize = point_size * fgPointSizeScale;
+   glPointSize(fgPointSize);
+}
+
+//______________________________________________________________________________
+void TGLUtil::LineWidth(Float_t line_width)
+{
+   // Set the line-width, taking the global scaling into account.
+   // Wrapper for glLineWidth.
+
+   fgLineWidth = line_width * fgLineWidthScale;
+   glLineWidth(fgLineWidth);
+}
+
+//______________________________________________________________________________
+Float_t TGLUtil::PointSize()
+{
+   // Get the point-size, taking the global scaling into account.
+
+   return fgPointSize;
+}
+
+//______________________________________________________________________________
+Float_t TGLUtil::LineWidth()
+{
+   // Get the line-width, taking the global scaling into account.
+
+   return fgLineWidth;
 }
 
 /******************************************************************************/
@@ -1709,12 +1786,12 @@ void TGLUtil::RenderPoints(const TAttMarker& marker, Float_t* op, Int_t n,
       else if (style == 6) size = 2;
       else if (style == 7) size = 3;
    }
-   glPointSize(size);
+   TGLUtil::PointSize(size);
 
    // During selection extend picking region for large point-sizes.
-   Bool_t changePM = selection && size > pick_radius;
+   Bool_t changePM = selection && PointSize() > pick_radius;
    if (changePM)
-      BeginExtendPickRegion((Float_t) pick_radius / size);
+      BeginExtendPickRegion((Float_t) pick_radius / PointSize());
 
    Float_t* p = op;
    if (sec_selection)
@@ -1764,11 +1841,12 @@ void TGLUtil::RenderCrosses(const TAttMarker& marker, Float_t* op, Int_t n,
    {
       glEnable(GL_BLEND);
       glEnable(GL_LINE_SMOOTH);
-      glLineWidth(2);
+      TGLUtil::LineWidth(2);
    }
    else
    {
       glDisable(GL_LINE_SMOOTH);
+      TGLUtil::LineWidth(1);
    }
 
    // cross dim
@@ -1799,22 +1877,63 @@ void TGLUtil::RenderCrosses(const TAttMarker& marker, Float_t* op, Int_t n,
       }
       glEnd();
    }
+
+   // Anti-flickering -- when crosses get too small they
+   // appear / disappear randomly.
+   {
+      glDisable(GL_POINT_SMOOTH);
+      TGLUtil::PointSize(1);
+
+      glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
+      glVertexPointer(3, GL_FLOAT, 0, op);
+      glEnableClientState(GL_VERTEX_ARRAY);
+      { // Circumvent bug in ATI's linux drivers.
+         Int_t nleft = n;
+         Int_t ndone = 0;
+         const Int_t maxChunk = 8192;
+         while (nleft > maxChunk)
+         {
+            glDrawArrays(GL_POINTS, ndone, maxChunk);
+            nleft -= maxChunk;
+            ndone += maxChunk;
+         }
+         glDrawArrays(GL_POINTS, ndone, nleft);
+      }
+      glPopClientAttrib();
+   }
 }
 
 //______________________________________________________________________________
 void TGLUtil::RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
-                                 Int_t pick_radius, Bool_t selection)
+                             Int_t pick_radius, Bool_t selection)
 {
    // Render poly-line as specified by the p-array.
 
    if (n == 0) return;
 
+   BeginAttLine(aline, pick_radius, selection);
+
+   Float_t* tp = p;
+   glBegin(GL_LINE_STRIP);
+   for (Int_t i=0; i<n; ++i, tp+=3)
+      glVertex3fv(tp);
+   glEnd();
+
+   EndAttLine(pick_radius, selection);
+}
+
+//______________________________________________________________________________
+void TGLUtil::BeginAttLine(const TAttLine& aline, Int_t pick_radius, Bool_t selection)
+{
+   // Setup drawing parrameters according to passed TAttLine.
+
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
    TGLUtil::Color(aline.GetLineColor());
-   glLineWidth(aline.GetLineWidth());
-   if (aline.GetLineStyle() > 1) {
+   TGLUtil::LineWidth(aline.GetLineWidth());
+   if (aline.GetLineStyle() > 1)
+   {
       Int_t    fac = 1;
       UShort_t pat = 0xffff;
       switch (aline.GetLineStyle()) {
@@ -1834,20 +1953,19 @@ void TGLUtil::RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
    }
 
    // During selection extend picking region for large line-widths.
-   Bool_t changePM = selection && aline.GetLineWidth() > pick_radius;
-   if (changePM)
-      BeginExtendPickRegion((Float_t) pick_radius / aline.GetLineWidth());
+   if (selection && TGLUtil::LineWidth() > pick_radius)
+      BeginExtendPickRegion((Float_t) pick_radius / TGLUtil::LineWidth());
+}
 
-   Float_t* tp = p;
-   glBegin(GL_LINE_STRIP);
-   for (Int_t i=0; i<n; ++i, tp+=3)
-      glVertex3fv(tp);
-   glEnd();
+//______________________________________________________________________________
+void TGLUtil::EndAttLine(Int_t pick_radius, Bool_t selection)
+{
+   // Restore previous line drawing state.
 
-   if (changePM)
-      EndExtendPickRegion();
+   if (selection && TGLUtil::LineWidth() > pick_radius)
+     EndExtendPickRegion();
 
-   glPopAttrib();
+   glPopAttrib(); 
 }
 
 /******************************************************************************/
@@ -2290,7 +2408,7 @@ ClassImp(TGLSelectionBuffer);
 
 //______________________________________________________________________________
 TGLSelectionBuffer::TGLSelectionBuffer()
-                        : fWidth(0)
+                        : fWidth(0), fHeight(0)
 {
    // TGLSelectionBuffer constructor.
 }

@@ -27,6 +27,7 @@
 #ifdef WIN32
    #include <io.h>
    typedef long off_t;
+   #include <snprintf.h>
 #else
 #include <netinet/in.h>
 #endif
@@ -332,9 +333,9 @@ Int_t TProofServLite::Setup()
    char str[512];
 
    if (IsMaster()) {
-      sprintf(str, "**** Welcome to the PROOF server @ %s ****", gSystem->HostName());
+      snprintf(str, 512, "**** Welcome to the PROOF server @ %s ****", gSystem->HostName());
    } else {
-      sprintf(str, "**** PROOF worker server @ %s started ****", gSystem->HostName());
+      snprintf(str, 512, "**** PROOF worker server @ %s started ****", gSystem->HostName());
    }
 
    if (fSocket->Send(str) != 1+static_cast<Int_t>(strlen(str))) {
@@ -358,12 +359,13 @@ Int_t TProofServLite::Setup()
    // Work dir and ...
    fWorkDir = gEnv->GetValue("ProofServ.Sandbox", Form("~/%s", kPROOF_WorkDir));
 
-   // Get Session tag
-   if ((fSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1")
-      fSessionTag = Form("%s-%s-%d-%d", fOrdinal.Data(), gSystem->HostName(),
-                                        TTimeStamp().GetSec(), gSystem->GetPid());
+   // Get Session tags
+   fTopSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1");
+   fSessionTag = Form("%s-%s-%d-%d", fOrdinal.Data(), gSystem->HostName(),
+                                     TTimeStamp().GetSec(), gSystem->GetPid());
    if (gProofDebugLevel > 0)
       Info("Setup", "session tag is %s", fSessionTag.Data());
+   if (fTopSessionTag.IsNull()) fTopSessionTag = fSessionTag;
 
    // Send session tag to client
    TMessage m(kPROOF_SESSIONTAG);

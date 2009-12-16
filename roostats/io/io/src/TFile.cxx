@@ -85,6 +85,7 @@
 #include "TFree.h"
 #include "TInterpreter.h"
 #include "TKey.h"
+#include "TMakeProject.h"
 #include "TPluginManager.h"
 #include "TProcessUUID.h"
 #include "TRegexp.h"
@@ -109,6 +110,7 @@ TFile *gFile;                 //Pointer to current file
 Long64_t TFile::fgBytesRead  = 0;
 Long64_t TFile::fgBytesWrite = 0;
 Long64_t TFile::fgFileCounter = 0;
+Int_t    TFile::fgReadaheadSize = 256000;
 Int_t    TFile::fgReadCalls = 0;
 Bool_t   TFile::fgReadInfo = kTRUE;
 TList   *TFile::fgAsyncOpenRequests = 0;
@@ -295,6 +297,7 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    fSumBuffer    = 0;
    fSum2Buffer   = 0;
    fBytesRead    = 0;
+   fBytesReadExtra = 0;
    fBytesWrite   = 0;
    fClassIndex   = 0;
    fSeekInfo     = 0;
@@ -446,7 +449,7 @@ TFile::TFile(const TFile &) : TDirectoryFile(), fInfoCache(0)
 {
    // TFile objects can not be copied.
 
-   MayNotUse("TFile::TFile(const TFile &)"); 
+   MayNotUse("TFile::TFile(const TFile &)");
 }
 
 //______________________________________________________________________________
@@ -600,8 +603,9 @@ void TFile::Init(Bool_t create)
          }
       }
       //*-*-------------Read directory info
-      Int_t nk = sizeof(Int_t) +sizeof(Version_t) +2*sizeof(Int_t)+2*sizeof(Short_t)
-                +2*sizeof(Int_t);
+      // buffer_keyloc is the start of the key record.
+      char *buffer_keyloc = 0;
+
       Int_t nbytes = fNbytesName + TDirectoryFile::Sizeof();
       if (nbytes+fBEGIN > kBEGIN+200) {
          delete [] header;
@@ -610,9 +614,10 @@ void TFile::Init(Bool_t create)
          Seek(fBEGIN);
          ReadBuffer(buffer,nbytes);
          buffer = header+fNbytesName;
+         buffer_keyloc = header;
       } else {
          buffer = header+fBEGIN+fNbytesName;
-         nk += kBEGIN;
+         buffer_keyloc = header+fBEGIN;
       }
       Version_t version,versiondir;
       frombuf(buffer,&version); versiondir = version%1000;
@@ -633,11 +638,20 @@ void TFile::Init(Bool_t create)
       if (versiondir > 1) fUUID.ReadBuffer(buffer);
 
       //*-*---------read TKey::FillBuffer info
-      buffer = header+nk;
+      buffer_keyloc += sizeof(Int_t); // Skip NBytes;
+      Version_t keyversion;
+      frombuf(buffer_keyloc, &keyversion);
+      // Skip ObjLen, DateTime, KeyLen, Cycle, SeekKey, SeekPdir
+      if (keyversion > 1000) {
+         // Large files
+         buffer_keyloc += 2*sizeof(Int_t)+2*sizeof(Short_t)+2*sizeof(Long64_t);
+      } else {
+         buffer_keyloc += 2*sizeof(Int_t)+2*sizeof(Short_t)+2*sizeof(Int_t);
+      }
       TString cname;
-      cname.ReadBuffer(buffer);
-      cname.ReadBuffer(buffer); // fName.ReadBuffer(buffer); file may have been renamed
-      fTitle.ReadBuffer(buffer);
+      cname.ReadBuffer(buffer_keyloc);
+      cname.ReadBuffer(buffer_keyloc); // fName.ReadBuffer(buffer); file may have been renamed
+      fTitle.ReadBuffer(buffer_keyloc);
       delete [] header;
       if (fNbytesName < 10 || fNbytesName > 10000) {
          Error("Init","cannot read directory info of file %s", GetName());
@@ -706,8 +720,10 @@ void TFile::Init(Bool_t create)
       R__LOCKGUARD2(gROOTMutex);
       gROOT->GetListOfFiles()->Add(this);
       gROOT->GetUUIDs()->AddUUID(fUUID,this);
+   }
 
-      // Create StreamerInfo index
+   // Create StreamerInfo index
+   {
       Int_t lenIndex = gROOT->GetListOfStreamerInfo()->GetSize()+1;
       if (lenIndex < 5000) lenIndex = 5000;
       fClassIndex = new TArrayC(lenIndex);
@@ -1326,7 +1342,7 @@ Bool_t TFile::ReadBuffer(char *buf, Int_t len)
       if (gMonitoringWriter)
          gMonitoringWriter->SendFileReadProgress(this);
       if (gPerfStats != 0) {
-         gPerfStats->FileReadEvent(this, len, double(TTimeStamp())-start);
+         gPerfStats->FileReadEvent(this, len, start);
       }
       return kFALSE;
    }
@@ -1341,17 +1357,53 @@ Bool_t TFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
    // Note that for nbuf=1, this call is equivalent to TFile::ReafBuffer.
    // This function is overloaded by TNetFile, TWebFile, etc.
    // Returns kTRUE in case of failure.
-
+   
    Int_t k = 0;
    Bool_t result = kTRUE;
    TFileCacheRead *old = fCacheRead;
    fCacheRead = 0;
-   for (Int_t i = 0; i < nbuf; i++) {
-      Seek(pos[i]);
-      result = ReadBuffer(&buf[k], len[i]);
-      if (result) break;
-      k += len[i];
-   }
+   Long64_t curbegin = pos[0];
+   Long64_t cur;
+   char *buf2 = 0;
+   Int_t i = 0, n = 0;
+   while (i < nbuf) {
+      cur = pos[i]+len[i];
+      Bool_t bigRead = kTRUE;
+      if (cur -curbegin < fgReadaheadSize) {n++; i++; bigRead = kFALSE;}
+      if (bigRead || (i>=nbuf)) {
+         if (n == 0) {
+            //if the block to read is about the same size as the read-ahead buffer
+            //we read the block directly
+            Seek(pos[i]);
+            result = ReadBuffer(&buf[k], len[i]);
+            if (result) break;
+            k += len[i];
+            i++;
+         } else {
+            //otherwise we read all blocks that fit in the read-ahead buffer
+            Seek(curbegin);
+            if (buf2 == 0) buf2 = new char[fgReadaheadSize];
+            //we read ahead
+            Long64_t nahead = pos[i-1]+len[i-1]-curbegin;
+            result = ReadBuffer(buf2, nahead);
+            if (result) break;
+            //now copy from the read-ahead buffer to the cache
+            Int_t kold = k;
+            for (Int_t j=0;j<n;j++) {
+               memcpy(&buf[k],&buf2[pos[i-n+j]-curbegin],len[i-n+j]);
+               k += len[i-n+j];
+            }
+            Int_t nok = k-kold;
+            Long64_t extra = nahead-nok;
+            fBytesReadExtra += extra;
+            fBytesRead      -= extra;
+            fgBytesRead     -= extra;
+            n = 0;
+         }
+         curbegin = pos[i];
+      }
+   } 
+   if (buf2) delete [] buf2;
    fCacheRead = old;
    return result;
 }
@@ -1555,7 +1607,8 @@ Int_t TFile::Recover()
       for (i = 0;i < nwhc; i++) frombuf(buffer, &classname[i]);
       classname[nwhci] = '\0';
       TDatime::GetDateTime(datime, date, time);
-      if (seekpdir == fSeekDir && !TClass::GetClass(classname)->InheritsFrom("TFile")
+      TClass *tclass = TClass::GetClass(classname);
+      if (seekpdir == fSeekDir && tclass && !tclass->InheritsFrom("TFile")
                                && strcmp(classname,"TBasket")) {
          key = new TKey(this);
          key->ReadKeyBuffer(bufread);
@@ -1833,7 +1886,11 @@ Int_t TFile::Write(const char *, Int_t opt, Int_t bufsiz)
    WriteHeader();                     // Now write file header
    fMustFlush = kTRUE;
 
-   cursav->cd();
+   if (cursav) {
+      cursav->cd();
+   } else {
+      gDirectory = 0;
+   }
    return nbytes;
 }
 
@@ -1969,7 +2026,7 @@ void TFile::WriteHeader()
    Int_t nfree  = fFree->GetSize();
    memcpy(buffer, root, 4); buffer += 4;
    Int_t version = fVersion;
-   if (fEND > kStartBigFile) {version += 1000000; fUnits = 8;}
+   if (version <1000000 && fEND > kStartBigFile) {version += 1000000; fUnits = 8;}
    tobuf(buffer, version);
    tobuf(buffer, (Int_t)fBEGIN);
    if (version < 1000000) {
@@ -2044,6 +2101,8 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    //   - a shared lib dirname.so will be created.
    // If the option "++" is specified, the generated shared lib is dynamically
    // linked with the current executable module.
+   // If the option "+" and "nocompile" are specified, the utility files are generated
+   // as in the option "+" but they are not executed.
    // Example:
    //  file.MakeProject("demo","*","recreate++");
    //  - creates a new directory demo unless it already exist
@@ -2133,20 +2192,46 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    fprintf(sfp, "#include \"%sProjectDict.cxx\"\n\n",dirname );
    fclose( sfp );
 
-   // loop on all TStreamerInfo classes
+   // loop on all TStreamerInfo classes to check for empty classes
+   // and enums listed either as data member or template parameters.
    TStreamerInfo *info;
    TIter next(list);
+   TList extrainfos;
+   while ((info = (TStreamerInfo*)next())) {
+      TClass *cl = TClass::GetClass(info->GetName());
+      if (cl) {
+         if (cl->GetClassInfo()) continue; // skip known classes
+      }
+      TMakeProject::GenerateMissingStreamerInfos(&extrainfos, info->GetName() );
+      TIter enext( info->GetElements() );
+      TStreamerElement *el;
+      while( (el=(TStreamerElement*)enext()) ) {
+         TMakeProject::GenerateMissingStreamerInfos(&extrainfos, el);
+      }
+   }
+   // Now transfer the new StreamerInfo onto the main list.
+   TIter nextextra(&extrainfos);
+   while ((info = (TStreamerInfo*)nextextra())) {
+      list->Add(info);
+   }
+
+   // loop on all TStreamerInfo classes
+   next.Reset();
    Int_t ngener = 0;
    while ((info = (TStreamerInfo*)next())) {
-      fprintf(stdout,"RUNNING: %s\n",info->GetName());
+      if (info->GetClassVersion()==-4) continue; // Skip outer level namespace
       TIter subnext(list);
       TStreamerInfo *subinfo;
       TList subClasses;
       Int_t len = strlen(info->GetName());
       while ((subinfo = (TStreamerInfo*)subnext())) {
          if (strncmp(info->GetName(),subinfo->GetName(),len)==0) {
+            // The 'sub' StreamerInfo start with the main StreamerInfo name,
+            // it subinfo is likely to be a nested class.
             const Int_t sublen = strlen(subinfo->GetName());
-            if ( (sublen > len) && subinfo->GetName()[len+1]==':') {
+            if ( (sublen > len) && subinfo->GetName()[len+1]==':'
+               && !subClasses.FindObject(subinfo->GetName()) /* We need to insure uniqueness */) 
+            {
                subClasses.Add(subinfo);
             }
          }
@@ -2219,9 +2304,9 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
             case TClassEdit::kMultiMap:
                {
                   what = "pair<";
-                  what += inside[1];
+                  what += TMakeProject::UpdateAssociativeToVector( inside[1].c_str() );
                   what += ",";
-                  what += inside[2];
+                  what += TMakeProject::UpdateAssociativeToVector( inside[2].c_str() );
                   what += " >";
                   fprintf(fp,"#pragma link C++ class %s+;\n",what.c_str());
                   break;
@@ -2269,26 +2354,29 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    fclose(fpMAKE);
    printf("%s/MAKEP file has been generated\n",dirname);
 
-   // now execute the generated script compiling and generating the shared lib
-   strcpy(path,gSystem->WorkingDirectory());
-   gSystem->ChangeDirectory(dirname);
+   if (!opt.Contains("nocompilation")) {
+      // now execute the generated script compiling and generating the shared lib
+      strcpy(path,gSystem->WorkingDirectory());
+      gSystem->ChangeDirectory(dirname);
 #ifndef WIN32
-   gSystem->Exec("chmod +x MAKEP");
-   int res = !gSystem->Exec("./MAKEP");
+      gSystem->Exec("chmod +x MAKEP");
+      int res = !gSystem->Exec("./MAKEP");
 #else
-   // not really needed for Windows but it would work both both Unix and NT
-   chmod("makep.cmd",00700);
-   int res = !gSystem->Exec("MAKEP");
+      // not really needed for Windows but it would work both both Unix and NT
+      chmod("makep.cmd",00700);
+      int res = !gSystem->Exec("MAKEP");
 #endif
-   gSystem->ChangeDirectory(path);
-   sprintf(path,"%s/%s.%s",dirname,dirname,gSystem->GetSoExt());
-   if (res) printf("Shared lib %s has been generated\n",path);
+      gSystem->ChangeDirectory(path);
+      sprintf(path,"%s/%s.%s",dirname,dirname,gSystem->GetSoExt());
+      if (res) printf("Shared lib %s has been generated\n",path);
 
-   //dynamically link the generated shared lib
-   if (opt.Contains("++")) {
-      res = !gSystem->Load(path);
-      if (res) printf("Shared lib %s has been dynamically linked\n",path);
+      //dynamically link the generated shared lib
+      if (opt.Contains("++")) {
+         res = !gSystem->Load(path);
+         if (res) printf("Shared lib %s has been dynamically linked\n",path);
+      }
    }
+
    list->Delete();
    delete list;
    delete [] path;
@@ -2434,8 +2522,10 @@ void TFile::WriteStreamerInfo()
 
    while ((info = (TStreamerInfo*)next())) {
       Int_t uid = info->GetNumber();
-      if (fClassIndex->fArray[uid]) list.Add(info);
-      if (gDebug > 0) printf(" -class: %s info number %d saved\n",info->GetName(),uid);
+      if (fClassIndex->fArray[uid]) {
+         list.Add(info);
+         if (gDebug > 0) printf(" -class: %s info number %d saved\n",info->GetName(),uid);
+      }
    }
    if (list.GetSize() == 0) return;
    fClassIndex->fArray[0] = 2; //to prevent adding classes in TStreamerInfo::TagFile
@@ -2730,14 +2820,18 @@ TFile *TFile::Open(const char *url, Option_t *option, const char *ftitle,
       }
 
       // Resolve the file type; this also adjusts names
-      type = GetType(name, option);
+      TString lfname = gEnv->GetValue("Path.Localroot", "");
+      type = GetType(name, option, &lfname);
 
       if (type == kLocal) {
 
          // Local files
-         urlname.SetHost("");
-         urlname.SetProtocol("file");
-         f = new TFile(urlname.GetUrl(), option, ftitle, compress);
+         if (lfname.IsNull()) {
+            urlname.SetHost("");
+            urlname.SetProtocol("file");
+            lfname = urlname.GetUrl();
+         }
+         f = new TFile(lfname.Data(), option, ftitle, compress);
 
       } else if (type == kNet) {
 
@@ -3077,6 +3171,17 @@ Int_t TFile::GetFileReadCalls()
 
    return fgReadCalls;
 }
+
+//______________________________________________________________________________
+Int_t TFile::GetReadaheadSize()
+{
+   // Static function returning the readahead buffer size.
+   
+   return fgReadaheadSize;
+}
+
+//______________________________________________________________________________
+void TFile::SetReadaheadSize(Int_t bytes) { fgReadaheadSize = bytes; }
 
 //______________________________________________________________________________
 void TFile::SetFileBytesRead(Long64_t bytes) { fgBytesRead = bytes; }

@@ -28,13 +28,16 @@ TLeafO::TLeafO(): TLeaf()
 //*-*-*-*-*-*Default constructor for LeafB*-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*        ============================
 
-   fValue = 0;
+   fValue   = 0;
    fPointer = 0;
+   fMinimum = 0;
+   fMaximum = 0;
+   fLenType = sizeof(bool);
 }
 
 //______________________________________________________________________________
 TLeafO::TLeafO(TBranch *parent, const char *name, const char *type)
-   :TLeaf(parent,name,type)
+   : TLeaf(parent,name,type)
 {
 //*-*-*-*-*-*-*-*-*-*-*-*-*Create a LeafB*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                      ==============
@@ -125,6 +128,10 @@ void TLeafO::ReadBasket(TBuffer &b)
       b >> fValue[0];
    }else {
       if (fLeafCount) {
+         Long64_t entry = fBranch->GetReadEntry();
+         if (fLeafCount->GetBranch()->GetReadEntry() != entry) {
+            fLeafCount->GetBranch()->GetEntry(entry);
+         }
          Int_t len = Int_t(fLeafCount->GetValue());
          if (len > fLeafCount->GetMaximum()) {
             printf("ERROR leaf:%s, len=%d and max=%d\n",GetName(),len,fLeafCount->GetMaximum());

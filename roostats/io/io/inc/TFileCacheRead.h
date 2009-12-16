@@ -26,6 +26,7 @@
 #endif
 
 class TFile;
+class TBranch;
 
 class TFileCacheRead : public TObject {
 
@@ -34,8 +35,6 @@ protected:
    Int_t         fBufferSize;     //Allocated size of fBuffer (at a given time)
    Int_t         fBufferLen;      //Current buffer length (<= fBufferSize)
 
-   Int_t         fBytesToPrefetch;// Helpers to allow the incremental async prefetch
-   Int_t         fFirstIndexToPrefetch;
    Bool_t        fAsyncReading;
 
    Int_t         fNseek;          //Number of blocks to be prefetched
@@ -63,12 +62,18 @@ public:
    TFileCacheRead();
    TFileCacheRead(TFile *file, Int_t buffersize);
    virtual ~TFileCacheRead();
+   virtual void        AddBranch(TBranch * /*b*/, Bool_t /*subbranches*/ = kFALSE) {}
+   virtual void        AddBranch(const char * /*branch*/, Bool_t /*subbranches*/ = kFALSE) {}
    virtual Int_t       GetBufferSize() const { return fBufferSize; };
+   virtual Int_t       GetUnzipBuffer(char ** /*buf*/, Long64_t /*pos*/, Int_t /*len*/, Bool_t * /*free*/) { return -1; }
    virtual Bool_t      IsAsyncReading() const { return fAsyncReading; };
+   virtual Bool_t      IsLearning() const {return kFALSE;}
    virtual void        Prefetch(Long64_t pos, Int_t len);
    virtual void        Print(Option_t *option="") const;
+   virtual Int_t       ReadBufferExt(char *buf, Long64_t pos, Int_t len, Int_t &loc);
    virtual Int_t       ReadBuffer(char *buf, Long64_t pos, Int_t len);
    virtual void        SetFile(TFile *file);
+   virtual void        SetSkipZip(Bool_t /*skip*/ = kTRUE) {} // This function is only used by TTreeCacheUnzip (ignore it)
    virtual void        Sort();
 
    ClassDef(TFileCacheRead,1)  //TFile cache when reading

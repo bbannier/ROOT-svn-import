@@ -12,7 +12,7 @@
 #ifndef ROOT_TEveTrackPropagator
 #define ROOT_TEveTrackPropagator
 
-#include "TEveVSDStructs.h"
+#include "TEveVector.h"
 #include "TEveUtil.h"
 #include "TEveElement.h"
 #include "TMarker.h"
@@ -131,17 +131,19 @@ public:
       TEveVector fB;        // Current magnetic field, cached.
       TEveVector fE1, fE2, fE3; // Base vectors: E1 -> B dir, E2->pT dir, E3 = E1xE2.
       TEveVector fPt, fPl;  // Transverse and longitudinal momentum.
-      Float_t fPtMag;       // Magnitude of pT
-      Float_t fPlDir;       // Momentum parallel to mag field.
+      Float_t fPtMag;       // Magnitude of pT.
+      Float_t fPlMag;       // Momentum parallel to mag field.
       Float_t fLStep;       // Transverse step arc-length in cm.
 
       // ----------------------------------------------------------------
 
       Helix_t();
 
+      void UpdateCommon(const TEveVector & p, const TEveVector& b);
       void UpdateHelix(const TEveVector & p, const TEveVector& b, Bool_t fullUpdate);
       void UpdateRK   (const TEveVector & p, const TEveVector& b);
-      void Step  (const TEveVector4& v, const TEveVector& p, TEveVector4& vOut, TEveVector& pOut);
+
+      void Step(const TEveVector4& v, const TEveVector& p, TEveVector4& vOut, TEveVector& pOut);
 
       Float_t GetStep()  { return fLStep * TMath::Sqrt(1 + fLam*fLam); }
       Float_t GetStep2() { return fLStep * fLStep * (1 + fLam*fLam);   }
@@ -186,7 +188,8 @@ protected:
    Helix_t                  fH;             // Helix.
 
    void    RebuildTracks();
-   void    Step(TEveVector4 &v, TEveVector &p, TEveVector4 &vOut, TEveVector &pOut);
+   void    Update(const TEveVector4& v, const TEveVector& p, Bool_t full_update=kFALSE);
+   void    Step(const TEveVector4 &v, const TEveVector &p, TEveVector4 &vOut, TEveVector &pOut);
 
    Bool_t  LoopToVertex(TEveVector& v, TEveVector& p);
    void    LoopToBounds(TEveVector& p);
@@ -201,7 +204,7 @@ protected:
    Bool_t  LineIntersectPlane(const TEveVector& p, const TEveVector& point, const TEveVector& normal,
                               TEveVector& itsect);
 
-   Bool_t PointOverVertex(const TEveVector4& v0, const TEveVector4& v);
+   Bool_t PointOverVertex(const TEveVector4& v0, const TEveVector4& v, Float_t* p=0);
 
 public:
    TEveTrackPropagator(const char* n="TEveTrackPropagator", const char* t="",
@@ -279,7 +282,10 @@ public:
 
    static Float_t             fgDefMagField; // Default value for constant solenoid magnetic field.
    static const Float_t       fgkB2C;        // Constant for conversion of momentum to curvature.
-   static TEveTrackPropagator fgDefStyle;    // Default track render-style.
+   static TEveTrackPropagator fgDefault;     // Default track propagator.
+
+   static Float_t             fgEditorMaxR;  // Max R that can be set in GUI editor.
+   static Float_t             fgEditorMaxZ;  // Max Z that can be set in GUI editor.
 
    ClassDef(TEveTrackPropagator, 0); // Calculates path of a particle taking into account special path-marks and imposed boundaries.
 };
@@ -298,13 +304,35 @@ inline Bool_t TEveTrackPropagator::IsOutsideBounds(const TEveVector& point,
 
 //______________________________________________________________________________
 inline Bool_t TEveTrackPropagator::PointOverVertex(const TEveVector4 &v0,
-                                                   const TEveVector4 &v)
+                                                   const TEveVector4 &v,
+                                                   Float_t           *p)
 {
-   Float_t dotV = fH.fB.fX*(v0.fX-v.fX)
-                + fH.fB.fY*(v0.fY-v.fY)
-                + fH.fB.fZ*(v0.fZ-v.fZ);
+   static const Float_t kMinPl = 1e-5;
 
-   return (fH.fPlDir > 0 && dotV < 0) || (fH.fPlDir < 0 && dotV >0);
+   TEveVector dv; dv.Sub(v0, v);
+
+   Float_t dotV;
+
+   if (TMath::Abs(fH.fPlMag) > kMinPl)
+   {
+      // Use longitudinal momentum to determine crossing point.
+      // Works ok for spiraling helices, also for loopers.
+
+      dotV = fH.fE1.Dot(dv);
+      if (fH.fPlMag < 0)
+         dotV = -dotV;
+   }
+   else
+   {
+      // Use full momentum, which is pT, under this conditions.
+
+      dotV = fH.fE2.Dot(dv);
+   }
+
+   if (p)
+      *p = dotV;
+
+   return dotV < 0;
 }
 
 #endif

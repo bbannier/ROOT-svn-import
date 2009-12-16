@@ -244,7 +244,8 @@ void TDirectoryFile::Browse(TBrowser *b)
             if (obj) {
                sprintf(name, "%s", obj->GetName());
                b->Add(obj, name);
-               if (obj->IsFolder()) skip = 1;
+               if (obj->IsFolder() && !obj->InheritsFrom("TTree"))
+                  skip = 1;
             }
          }
 
@@ -549,7 +550,12 @@ void TDirectoryFile::Delete(const char *namecycle)
 //     *;2   : delete all objects on file having the cycle 2
 //     *;*   : delete all objects from memory and file
 //    T*;*   : delete all objects from memory and file and all subdirectories
-//
+//          WARNING
+//    If the key to be deleted contains special characters ("+","^","?", etc
+//    that have a special meaning for the regular expression parser (see TRegexp)
+//    then you must specify 2 backslash characters to escape teh regular expression.
+//    For example, if the key to be deleted is namecycle = "C++", you must call
+//       mydir.Delete("C\\+\\+")).
 
    if (gDebug)
      Info("Delete","Call for this = %s namecycle = %s",
@@ -1641,7 +1647,10 @@ Int_t TDirectoryFile::WriteTObject(const TObject *obj, const char *name, Option_
    //
    //  The function returns the total number of bytes written to the directory.
    //  It returns 0 if the object cannot be written.
-
+   //
+   //  WARNING: in name avoid special characters like '^','$','.' that are used 
+   //  by the regular expression parser (see TRegexp).
+    
    TDirectory::TContext ctxt(this);
 
    if (fFile==0) {
@@ -1729,7 +1738,7 @@ Int_t TDirectoryFile::WriteObjectAny(const void *obj, const char *classname, con
 {
    // Write object from pointer of class classname in this directory
    // obj may not derive from TObject
-   // see TDirectoryFile::WriteObject for comments
+   // see TDirectoryFile::WriteTObject for comments
    //
    // VERY IMPORTANT NOTE:
    //    The value passed as 'obj' needs to be from a pointer to the type described by classname
@@ -1746,7 +1755,9 @@ Int_t TDirectoryFile::WriteObjectAny(const void *obj, const char *classname, con
    // We STRONGLY recommend to use
    //      TopClass *top = ....;
    //      directory->WriteObject(top,"name of object")
-
+   //
+   //   see laso remarks in TDirectoryFile::WriteTObject
+   
    TClass *cl = TClass::GetClass(classname);
    if (!cl) {
       Error("WriteObjectAny","Unknown class: %s",classname);
@@ -1763,7 +1774,7 @@ Int_t TDirectoryFile::WriteObjectAny(const void *obj, const TClass *cl, const ch
    // To get the TClass* cl pointer, one can use
    //    TClass *cl = TClass::GetClass("classname");
    // An alternative is to call the function WriteObjectAny above.
-   // see TDirectoryFile::WriteObject for comments
+   // see TDirectoryFile::WriteTObject for comments
 
    TDirectory::TContext ctxt(this);
 

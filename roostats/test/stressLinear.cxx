@@ -278,8 +278,7 @@ void stressLinear(Int_t maxSizeReq,Int_t verbose)
     cout << "******************************************************************" <<endl;
   }
 
-  //Backward Compatibilty of Streamers
-  if (gROOT->GetVersionInt() > 40800)
+  //Backward Compatibility of Streamers
   {
     cout << "*  Starting  Backward IO compatibility - S T R E S S             *" <<endl;
     cout << "******************************************************************" <<endl;
@@ -293,11 +292,18 @@ void stressLinear(Int_t maxSizeReq,Int_t verbose)
   Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
   printf("******************************************************************\n");
   if (UNIX) {
-    FILE *fp = gSystem->OpenPipe("uname -a", "r");
-    Char_t line[60];
-    fgets(line,60,fp); line[59] = 0;
-    printf("*  SYS: %s\n",line);
-    gSystem->ClosePipe(fp);
+     TString sp = gSystem->GetFromPipe("uname -a");
+     sp.Resize(60);
+     printf("*  SYS: %s\n",sp.Data());
+     if (strstr(gSystem->GetBuildNode(),"Linux")) {
+        sp = gSystem->GetFromPipe("lsb_release -d -s");
+        printf("*  SYS: %s\n",sp.Data());
+     }
+     if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+        sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+        sp += " Mac OS X ";
+        printf("*  SYS: %s\n",sp.Data());
+     }
   } else {
     const Char_t *os = gSystem->Getenv("OS");
     if (!os) printf("*  SYS: Windows 95\n");
@@ -2258,7 +2264,9 @@ void spstress_matrix_fill(Int_t rsize,Int_t csize)
   TMatrixD m_d(-1,rsize-2,1,csize);
   for (Int_t i = m_d.GetRowLwb(); i <= m_d.GetRowUpb(); i++)
     for (Int_t j = m_d.GetColLwb(); j <= m_d.GetColUpb(); j++)
-      m_d(i,j) = TMath::Pi()*i+TMath::E()*j;
+      // Keep column 2 on zero
+      if (j != 2)
+        m_d(i,j) = TMath::Pi()*i+TMath::E()*j;
   TMatrixDSparse m(m_d);
 
   {
@@ -2268,7 +2276,8 @@ void spstress_matrix_fill(Int_t rsize,Int_t csize)
 
     for (Int_t i = m1.GetRowLwb(); i <= m1.GetRowUpb(); i++)
       for (Int_t j = m1.GetColLwb(); j <= m1.GetColUpb(); j++)
-        m1(i,j) = TMath::Pi()*i+TMath::E()*j;
+        if (j != 2)
+          m1(i,j) = TMath::Pi()*i+TMath::E()*j;
     ok &= VerifyMatrixIdentity(m1,m,gVerbose,EPSILON);
   }
 
@@ -2280,7 +2289,8 @@ void spstress_matrix_fill(Int_t rsize,Int_t csize)
 
     for (Int_t i = m2.GetRowLwb(); i <= m2.GetRowUpb(); i++)
       for (Int_t j = m2.GetColLwb(); j <= m2.GetColUpb(); j++)
-        m2(i,j) = TMath::Pi()*i+TMath::E()*j;
+        if (j != 2)
+          m2(i,j) = TMath::Pi()*i+TMath::E()*j;
     ok &= VerifyMatrixIdentity(m2,m,gVerbose,EPSILON);
   }
 
@@ -2744,7 +2754,7 @@ void spstress_norms(Int_t rsize_req,Int_t csize_req)
 void spstress_mm_multiplications()
 {
   Bool_t ok = kTRUE;
-  Int_t i,j;
+  Int_t i;
 
   Int_t iloop = 0;
   Int_t nr    = 0;
@@ -2874,40 +2884,29 @@ void spstress_mm_multiplications()
     TMatrixDSparse haar_sub = TMatrixD(THaarMatrixD(order,no_sub_cols));
     TMatrixDSparse haar_sub_t(TMatrixDSparse::kTransposed,haar_sub);
     TMatrixDSparse hsths(haar_sub_t,TMatrixDSparse::kMult,haar_sub);
-    for (i = hsths.GetRowLwb(); i <= hsths.GetRowLwb()+hsths.GetNrows()-1; i++)
-      for (j = hsths.GetColLwb(); j <= hsths.GetColLwb()+hsths.GetNcols()-1; j++)
-        if (i == j) hsths(i,i) -= 1;
+
+    TMatrixDSparse square(no_sub_cols,no_sub_cols);
+    TMatrixDSparse units(TMatrixDSparse::kUnit,square);
     ok &= ( hsths.GetNrows() == no_sub_cols && hsths.GetNcols() == no_sub_cols );
-    ok &= (hsths.Abs() < EPSILON);
+    ok &= VerifyMatrixIdentity(hsths,units,gVerbose,EPSILON);
 
     TMatrixDSparse haar = TMatrixD(THaarMatrixD(order));
     TMatrixDSparse haar_t(TMatrixDSparse::kTransposed,haar);
+    TMatrixDSparse unit(TMatrixDSparse::kUnit,haar);
 
     TMatrixDSparse hth(haar_t,TMatrixDSparse::kMult,haar);
-    for (i = hth.GetRowLwb(); i <= hth.GetRowLwb()+hth.GetNrows()-1; i++)
-      for (j = hth.GetColLwb(); j <= hth.GetColLwb()+hth.GetNcols()-1; j++)
-        if (i == j) hth(i,i) -= 1;
-    ok &= (hth.Abs() < EPSILON);
+    ok &= VerifyMatrixIdentity(hth,unit,gVerbose,EPSILON);
 
     TMatrixDSparse hht(haar,TMatrixDSparse::kMultTranspose,haar);
-    for (i = hht.GetRowLwb(); i <= hht.GetRowLwb()+hht.GetNrows()-1; i++)
-      for (j = hht.GetColLwb(); j <= hht.GetColLwb()+hht.GetNcols()-1; j++)
-        if (i == j) hht(i,i) -= 1;
-    ok &= (hht.Abs() < EPSILON);
+    ok &= VerifyMatrixIdentity(hht,unit,gVerbose,EPSILON);
 
     TMatrixDSparse hht1 = haar; hht1 *= haar_t;
-    for (i = hht1.GetRowLwb(); i <= hht1.GetRowLwb()+hht1.GetNrows()-1; i++)
-      for (j = hht1.GetColLwb(); j <= hht1.GetColLwb()+hht1.GetNcols()-1; j++)
-        if (i == j) hht1(i,i) -= 1;
-    ok &= (hht1.Abs() < EPSILON);
+    ok &= VerifyMatrixIdentity(hht1,unit,gVerbose,EPSILON);
 
     TMatrixDSparse hht2(TMatrixDSparse::kZero,haar);
     hht2.SetSparseIndex(hht1);
     hht2.Mult(haar,haar_t);
-    for (i = hht2.GetRowLwb(); i <= hht2.GetRowLwb()+hht2.GetNrows()-1; i++)
-      for (j = hht2.GetColLwb(); j <= hht2.GetColLwb()+hht2.GetNcols()-1; j++)
-        if (i == j) hht2(i,i) -= 1;
-    ok &= (hht2.Abs() < EPSILON);
+    ok &= VerifyMatrixIdentity(hht2,unit,gVerbose,EPSILON);
   }
 
   if (gVerbose)
@@ -2979,7 +2978,10 @@ void spstress_vm_multiplications()
         vb(i) = TMath::Pi()+i;
       TMatrixD vm(msize,1);
       TMatrixDColumn(vm,0) = vb;
-      TMatrixDSparse m = TMatrixD(THilbertMatrixD(0,msize,0,msize-1));
+      TMatrixD hilbert_with_zeros = THilbertMatrixD(0,msize,0,msize-1);
+      TMatrixDRow   (hilbert_with_zeros,3) = 0.0;
+      TMatrixDColumn(hilbert_with_zeros,3) = 0.0;
+      const TMatrixDSparse m = hilbert_with_zeros;
       vb *= m;
       ok &= ( vb.GetLwb() == 0 ) ? kTRUE : kFALSE;
       TMatrixDSparse mvm(m,TMatrixDSparse::kMult,vm);
@@ -4373,7 +4375,8 @@ void astress_decomp_io(Int_t msize)
 
 void stress_backward_io()
 {
-  TFile *f = new TFile("linearIO.root");
+  TFile::SetCacheFileDir(".");
+  TFile *f = TFile::Open("http://root.cern.ch/files/linearIO.root","CACHEREAD");
 
   TMatrixF mf1 = THilbertMatrixF(-5,5,-5,5);
   mf1[1][2] = TMath::Pi();

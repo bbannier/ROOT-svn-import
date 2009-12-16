@@ -35,6 +35,7 @@ class TGLEventHandler : public TGEventHandler
 protected:
    TGLViewer        *fGLViewer;
    TTimer           *fMouseTimer;     // mouse delay timer
+   TPoint            fButtonPushPos;
    TPoint            fLastPos;
    TPoint            fLastMouseOverPos;
    TGLPhysicalShape *fLastMouseOverShape;
@@ -43,15 +44,20 @@ protected:
    TPoint            fTooltipPos;
    UInt_t            fActiveButtonID;
    UInt_t            fLastEventState;
+   Bool_t            fIgnoreButtonUp;
    Bool_t            fInPointerGrab;
    Bool_t            fMouseTimerRunning;
    Bool_t            fTooltipShown;
    Int_t             fTooltipPixelTolerance;
+   Int_t             fSecSelType; // secondary selection type
 
    virtual Bool_t Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2);
 
+   virtual void   GrabMouse();
+   virtual void   UnGrabMouse();
+
 public:
-   TGLEventHandler(const char *name, TGWindow *w, TObject *obj, const char *title="");
+   TGLEventHandler(TGWindow *w, TObject *obj);
    virtual ~TGLEventHandler();
 
    virtual void   ExecuteEvent(Int_t event, Int_t px, Int_t py);
@@ -78,6 +84,9 @@ public:
 
    Int_t GetTooltipPixelTolerance()  const { return fTooltipPixelTolerance; }
    void  SetTooltipPixelTolerance(Int_t t) { fTooltipPixelTolerance = t; }
+
+   Int_t GetSecSelType()  const { return fSecSelType; }
+   void  SetSecSelType(Int_t t) { fSecSelType = t; }
 
    ClassDef(TGLEventHandler, 0); // Base-class and default implementation of event-handler for TGLViewer.
 };

@@ -220,7 +220,7 @@ void TRootContextMenu::CreateMenu(TObject *object)
 {
    // Create the context menu depending on the selected object.
 
-   if (fClient->IsEditable()) return;
+   if (!object || fClient->IsEditable()) return;
 
    int entry = 0, toggle = kToggleStart, togglelist = kToggleListStart;
    int userfunction = kUserFunctionStart;
@@ -427,7 +427,7 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
    while ((argument = (TMethodArg *) next())) {
       // Do not input argument for self object
       if (selfobjpos != argpos) {
-         char       *argname    = fContextMenu->CreateArgumentTitle(argument);
+         const char *argname    = fContextMenu->CreateArgumentTitle(argument);
          const char *type       = argument->GetTypeName();
          TDataType  *datatype   = gROOT->GetType(type);
          const char *charstar   = "char*";

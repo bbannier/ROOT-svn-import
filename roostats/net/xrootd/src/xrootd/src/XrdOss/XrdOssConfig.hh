@@ -25,4 +25,14 @@
 #define XrdOss_ROOTDIR   0x00000001
 #define XrdOss_USRPRTY   0x00000002
 #define XrdOss_EXPORT    0x00000004
+#define XrdOss_CacheFS   0x00000008
+
+// Small structure to hold dual paths
+//
+struct  OssDPath
+       {OssDPath *Next;
+        char     *Path1;
+        char     *Path2;
+        OssDPath(OssDPath *dP,char *p1,char *p2) : Next(dP),Path1(p1),Path2(p2) {}
+       };
 #endif

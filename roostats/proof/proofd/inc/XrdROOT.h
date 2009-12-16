@@ -30,7 +30,6 @@
 #include "XrdProofdConfig.h"
 
 class XrdProofdManager;
-class XrdScheduler;
 class XrdSysLogger;
 
 class XrdROOT {
@@ -47,8 +46,16 @@ private:
    XrdOucString fPrgmSrv;
    kXR_int16    fSrvProtVers;
 
+   XrdOucString fRelease;
+   int          fSvnRevision;
+   int          fVersionCode;
+
+   int          fVrsMajor;
+   int          fVrsMinor;
+   int          fVrsPatch;
+
    int          CheckDir(const char *dir);
-   int          GetROOTVersion(XrdOucString &version);
+   int          ParseROOTVersionInfo();
 
 public:
    XrdROOT(const char *dir, const char *tag, const char *bindir = 0,
@@ -69,9 +76,19 @@ public:
    bool        MatchTag(const char *tag) { return ((fTag == tag) ? 1 : 0); }
    void        Park() { fStatus = 2; }
    const char *PrgmSrv() const { return fPrgmSrv.c_str(); }
+   const char *Release() const { return fRelease.c_str(); }
    void        SetValid(kXR_int16 vers = -1);
    kXR_int16   SrvProtVers() const { return fSrvProtVers; }
+   int         SvnRevision() const { return fSvnRevision; }
    const char *Tag() const { return fTag.c_str(); }
+   int         VersionCode() const { return fVersionCode; }
+   int         VrsMajor() const { return fVrsMajor; }
+   int         VrsMinor() const { return fVrsMinor; }
+   int         VrsPatch() const { return fVrsPatch; }
+
+   static int  GetVersionCode(const char *release);
+   static int  GetVersionCode(int maj, int min, int patch);
+   static int  ParseReleaseString(const char *release, int &maj, int &min, int &patch);
 };
 
 //
@@ -80,7 +97,6 @@ public:
 class XrdROOTMgr : public XrdProofdConfig {
 
    XrdProofdManager  *fMgr;
-   XrdScheduler      *fSched;     // System scheduler
    XrdSysLogger      *fLogger;    // Error logger
    XrdOucString      fLogDir;     // Path to dir with validation logs
 

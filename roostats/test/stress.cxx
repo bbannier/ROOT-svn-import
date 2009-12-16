@@ -85,6 +85,7 @@
 #include <TRandom.h>
 #include <TPostScript.h>
 #include <TNtuple.h>
+#include <TTreeCache.h>
 #include <TChain.h>
 #include <TCut.h>
 #include <TCutG.h>
@@ -187,11 +188,18 @@ void stress(Int_t nevent, Int_t style = 1,
    Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
    printf("******************************************************************\n");
    if (UNIX) {
-      FILE *fp = gSystem->OpenPipe("uname -a", "r");
-      char line[60];
-      fgets(line,60,fp); line[59] = 0;
-      printf("*  SYS: %s\n",line);
-      gSystem->ClosePipe(fp);
+      TString sp = gSystem->GetFromPipe("uname -a");
+      sp.Resize(60);
+      printf("*  SYS: %s\n",sp.Data());
+      if (strstr(gSystem->GetBuildNode(),"Linux")) {
+         sp = gSystem->GetFromPipe("lsb_release -d -s");
+         printf("*  SYS: %s\n",sp.Data());
+      }
+      if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+         sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+         sp += " Mac OS X ";
+         printf("*  SYS: %s\n",sp.Data());
+      }
    } else {
       const char *os = gSystem->Getenv("OS");
       if (!os) printf("*  SYS: Windows 95\n");
@@ -723,6 +731,12 @@ Int_t stress8read(Int_t nevent)
    tree->SetBranchAddress("event",&event);
    Int_t nentries = (Int_t)tree->GetEntries();
    Int_t nev = TMath::Max(nevent,nentries);
+   //activate the treeCache
+   Int_t cachesize = 10000000; //this is the default value: 10 MBytes
+   tree->SetCacheSize(cachesize);
+   TTreeCache::SetLearnEntries(1); //one entry is sufficient to learn
+   TTreeCache *tc = (TTreeCache*)hfile->GetCacheRead();
+   tc->SetEntryRange(0,nevent);
    Int_t nb = 0;
    for (Int_t ev = 0; ev < nev; ev++) {
       nb += tree->GetEntry(ev);        //read complete event in memory

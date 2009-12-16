@@ -131,7 +131,7 @@ void TEventList::Add(const TEventList *alist)
          newpos++;
          alpos++;
       }
-      if (fList[i] == alst[alpos]) alpos++;
+      if (alpos < an && fList[i] == alst[alpos]) alpos++;
       newlist[newpos] = fList[i];
       newpos++;
    }
@@ -191,12 +191,12 @@ void TEventList::Enter(Long64_t entry)
       fN = 1;
       return;
    }
-   if (entry==fList[fN-1]) return;
+   if (fN>0 && entry==fList[fN-1]) return;
    if (fN >= fSize) {
       Int_t newsize = TMath::Max(2*fSize,fN+fDelta);
       Resize(newsize-fSize);
    }
-   if(entry>fList[fN-1]) {
+   if(fN==0 || entry>fList[fN-1]) {
       fList[fN] = entry;
       ++fN;
    } else {

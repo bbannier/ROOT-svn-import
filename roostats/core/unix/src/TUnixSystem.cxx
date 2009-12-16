@@ -420,8 +420,14 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
 
 #ifndef ROOTPREFIX
    if (lib.EndsWith("libCore.dylib") || lib.EndsWith("libCore.so")) {
-      TString rs = gSystem->DirName(lib);
-      gSystem->Setenv("ROOTSYS", gSystem->DirName(rs));
+      char respath[kMAXPATHLEN];
+      if (!realpath(lib, respath)) {
+         if (!gSystem->Getenv("ROOTSYS"))
+            ::SysError("TUnixSystem::DylibAdded", "error getting realpath of libCore, please set ROOTSYS in the shell");
+      } else {
+         TString rs = gSystem->DirName(respath);
+         gSystem->Setenv("ROOTSYS", gSystem->DirName(rs));
+      }
    }
 #endif
 
@@ -604,7 +610,7 @@ const char *TUnixSystem::HostName()
 
    if (fHostname == "") {
       char hn[64];
-#if defined(R__SOLARIS) && !defined(R__KCC)
+#if defined(R__SOLARIS)
       sysinfo(SI_HOSTNAME, hn, sizeof(hn));
 #else
       gethostname(hn, sizeof(hn));
@@ -946,10 +952,10 @@ void TUnixSystem::DispatchOneEvent(Bool_t pendingOnly)
       *fWriteready = *fWritemask;
 
       int mxfd = TMath::Max(fMaxrfd, fMaxwfd);
-      if (mxfd > -1) mxfd++;
+      mxfd++;
 
       // if nothing to select (socket or timer) return
-      if (mxfd == -1 && nextto == -1)
+      if (mxfd == 0 && nextto == -1)
          return;
 
       fNfd = UnixSelect(mxfd, fReadready, fWriteready, nextto);
@@ -1446,6 +1452,19 @@ int TUnixSystem::Rename(const char *f, const char *t)
 }
 
 //______________________________________________________________________________
+Bool_t TUnixSystem::IsPathLocal(const char *path)
+{
+   // Returns TRUE if the url in 'path' points to the local file system.
+   // This is used to avoid going through the NIC card for local operations.
+
+   TSystem *helper = FindHelper(path);
+   if (helper)
+      return helper->IsPathLocal(path);
+
+   return TSystem::IsPathLocal(path);
+}
+
+//______________________________________________________________________________
 int TUnixSystem::GetPathInfo(const char *path, FileStat_t &buf)
 {
    // Get info about a file. Info is returned in the form of a FileStat_t
@@ -1541,7 +1560,8 @@ Bool_t TUnixSystem::ExpandPathName(TString &path)
    // Expand a pathname getting rid of special shell characters like ~.$, etc.
    // For Unix/Win32 compatibility use $(XXX) instead of $XXX when using
    // environment variables in a pathname. If compatibility is not an issue
-   // you can use on Unix directly $XXX.
+   // you can use on Unix directly $XXX. Returns kFALSE in case of success
+   // or kTRUE in case of error.
 
    const char *p, *patbuf = (const char *)path;
 
@@ -1561,8 +1581,11 @@ expand:
    path.ReplaceAll("$(","$");
    path.ReplaceAll(")","");
 
-   path = ExpandFileName(path.Data());
-   return kFALSE;
+   if ((p = ExpandFileName(path))) {
+      path = p;
+      return kFALSE;
+   }
+   return kTRUE;
 }
 #endif
 
@@ -1573,7 +1596,8 @@ Bool_t TUnixSystem::ExpandPathName(TString &patbuf0)
    // Expand a pathname getting rid of special shell characters like ~.$, etc.
    // For Unix/Win32 compatibility use $(XXX) instead of $XXX when using
    // environment variables in a pathname. If compatibility is not an issue
-   // you can use on Unix directly $XXX.
+   // you can use on Unix directly $XXX. Returns kFALSE in case of success
+   // or kTRUE in case of error.
 
    const char *patbuf = (const char *)patbuf0;
    const char *hd, *p;
@@ -1677,6 +1701,7 @@ char *TUnixSystem::ExpandPathName(const char *path)
    // For Unix/Win32 compatibility use $(XXX) instead of $XXX when using
    // environment variables in a pathname. If compatibility is not an issue
    // you can use on Unix directly $XXX. The user must delete returned string.
+   // Returns the expanded pathname or 0 in case of error.
 
    TString patbuf = path;
    if (ExpandPathName(patbuf))
@@ -2011,6 +2036,27 @@ void TUnixSystem::StackTrace()
    if (!gEnv->GetValue("Root.Stacktrace", 1))
       return;
 
+   TString gdbscript = gEnv->GetValue("Root.StacktraceScript", "");
+   gdbscript = gdbscript.Strip();
+   if (gdbscript != "") {
+      if (AccessPathName(gdbscript, kReadPermission)) {
+         fprintf(stderr, "Root.StacktraceScript %s does not exist\n", gdbscript.Data());
+         gdbscript = "";
+      } else {
+         gdbscript += " ";
+      }
+   }
+   if (gdbscript == "") {
+#ifdef ROOTETCDIR
+      gdbscript.Form("%s/gdb-backtrace.sh ", ROOTETCDIR);
+#else
+      gdbscript.Form("%s/etc/gdb-backtrace.sh ", gSystem->Getenv("ROOTSYS"));
+#endif
+   }
+
+   TString gdbmess = gEnv->GetValue("Root.StacktraceMessage", "");
+   gdbmess = gdbmess.Strip();
+
    cout.flush();
    fflush(stdout);
 
@@ -2023,6 +2069,9 @@ void TUnixSystem::StackTrace()
 
    if (fd && message) { }  // remove unused warning (remove later)
 
+   if (!strcmp(gApplication->GetName(), "TRint"))
+      Getlinem(kCleanUp, 0);
+
 #if defined(USE_GDB_STACK_TRACE)
    char *gdb = Which(Getenv("PATH"), "gdb", kExecutePermission);
    if (!gdb) {
@@ -2030,25 +2079,24 @@ void TUnixSystem::StackTrace()
       return;
    }
 
-   // use gdb to get stack trace
-   TString gdbscript;
-# ifdef ROOTETCDIR
-   gdbscript.Form("%s/gdb-backtrace-script", ROOTETCDIR);
-# else
-   gdbscript.Form("%s/etc/gdb-backtrace-script", gSystem->Getenv("ROOTSYS"));
-# endif
-   TString tracefile, tracecmd;
-   tracefile.Form("/tmp/rootstack.%d", GetPid());
-   tracecmd.Form("%s -batch -n -x %s -p %d > %s 2>&1",
-                 gdb, gdbscript.Data(), GetPid(), tracefile.Data());
-   Exec(tracecmd);
-   FILE *p = fopen(tracefile, "r");
-   TString gdbout;
-   while (gdbout.Gets(p)) {
-      fprintf(stderr, "%s\n", gdbout.Data());
+   // write custom message file
+   TString gdbmessf = "gdb-message";
+   if (gdbmess != "") {
+      FILE *f = TempFileName(gdbmessf);
+      fprintf(f, "%s\n", gdbmess.Data());
+      fclose(f);
    }
-   fclose(p);
-   Unlink(tracefile);
+
+   // use gdb to get stack trace
+   gdbscript += GetExePath();
+   gdbscript += " ";
+   gdbscript += GetPid();
+   if (gdbmess != "") {
+      gdbscript += " ";
+      gdbscript += gdbmessf;
+   }
+   gdbscript += " 1>&2";
+   Exec(gdbscript);
    delete [] gdb;
    return;
 
@@ -2122,14 +2170,21 @@ void TUnixSystem::StackTrace()
    // If it is, use it. If not proceed as before.
    char *gdb = Which(Getenv("PATH"), "gdb", kExecutePermission);
    if (gdb) {
+      // write custom message file
+      TString gdbmessf = "gdb-message";
+      if (gdbmess != "") {
+         FILE *f = TempFileName(gdbmessf);
+         fprintf(f, "%s\n", gdbmess.Data());
+         fclose(f);
+      }
+
       // use gdb to get stack trace
-      TString gdbscript;
-# ifdef ROOTETCDIR
-      gdbscript.Form("%s/gdb-backtrace.sh ", ROOTETCDIR);
-# else
-      gdbscript.Form("%s/etc/gdb-backtrace.sh ", gSystem->Getenv("ROOTSYS"));
-# endif
       gdbscript += GetPid();
+      if (gdbmess != "") {
+         gdbscript += " ";
+         gdbscript += gdbmessf;
+      }
+      gdbscript += " 1>&2";
       Exec(gdbscript);
       delete [] gdb;
    } else {
@@ -2641,7 +2696,9 @@ const char *TUnixSystem::GetLinkedLibraries()
       }
       delete tok;
    }
-   ClosePipe(p);
+   if (p) {
+      ClosePipe(p);
+   }
 #endif
 #elif defined(R__LINUX) || defined(R__SOLARIS)
 #if defined(R__WINGCC )
@@ -2675,7 +2732,9 @@ const char *TUnixSystem::GetLinkedLibraries()
       }
       delete tok;
    }
-   ClosePipe(p);
+   if (p) {
+      ClosePipe(p);
+   }
 #endif
 
    delete [] exe;
@@ -3372,12 +3431,6 @@ static void sighandler(int sig)
    }
 }
 
-#if defined(R__KCC)
-   extern "C" {
-      typedef void (*sighandlerFunc_t)(int);
-   }
-#endif
-
 //______________________________________________________________________________
 void TUnixSystem::UnixSignal(ESignals sig, SigHandler_t handler)
 {
@@ -3393,9 +3446,7 @@ void TUnixSystem::UnixSignal(ESignals sig, SigHandler_t handler)
       sigact.sa_handler = (void (*)())sighandler;
 #elif defined(R__SOLARIS)
       sigact.sa_handler = sighandler;
-#elif defined(R__KCC)
-      sigact.sa_handler = (sighandlerFunc_t)sighandler;
-#elif (defined(R__SGI) && !defined(R__KCC)) || defined(R__LYNXOS)
+#elif defined(R__SGI) || defined(R__LYNXOS)
 #  if defined(R__SGI64) || (__GNUG__>=3)
       sigact.sa_handler = sighandler;
 #  else
@@ -3462,9 +3513,7 @@ void TUnixSystem::UnixSigAlarmInterruptsSyscalls(Bool_t set)
       sigact.sa_handler = (void (*)())sighandler;
 #elif defined(R__SOLARIS)
       sigact.sa_handler = sighandler;
-#elif defined(R__KCC)
-      sigact.sa_handler = (sighandlerFunc_t)sighandler;
-#elif (defined(R__SGI) && !defined(R__KCC)) || defined(R__LYNXOS)
+#elif defined(R__SGI) || defined(R__LYNXOS)
 #  if defined(R__SGI64) || (__GNUG__>=3)
       sigact.sa_handler = sighandler;
 #  else
@@ -4079,6 +4128,8 @@ int TUnixSystem::UnixRecv(int sock, void *buffer, int length, int flag)
       flag = 0;
       once = 1;
    }
+   if (flag == MSG_PEEK)
+      once = 1;
 
    int n, nrecv = 0;
    char *buf = (char *)buffer;
@@ -4189,7 +4240,7 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
       if (ldpath.IsNull())
          dynpath = rdynpath;
       else {
-         dynpath = rdynpath; dynpath += ":"; dynpath += ldpath;
+         dynpath = ldpath; dynpath += ":"; dynpath += rdynpath;
       }
 
 #ifdef ROOTLIBDIR
@@ -4896,14 +4947,18 @@ static void GetLinuxProcInfo(ProcInfo_t *procinfo)
                            ((Float_t)(ru.ru_stime.tv_usec) / 1000000.);
    }
 
+   procinfo->fMemVirtual  = -1;
+   procinfo->fMemResident = -1;
    TString s;
    FILE *f = fopen(TString::Format("/proc/%d/statm", gSystem->GetPid()), "r");
-   s.Gets(f);
-   Long_t total, rss;
-   sscanf(s.Data(), "%ld %ld", &total, &rss);
-   procinfo->fMemVirtual  = total * (getpagesize() / 1024);
-   procinfo->fMemResident = rss * (getpagesize() / 1024);
-   fclose(f);
+   if (f) {
+      s.Gets(f);
+      fclose(f);
+      Long_t total, rss;
+      sscanf(s.Data(), "%ld %ld", &total, &rss);
+      procinfo->fMemVirtual  = total * (getpagesize() / 1024);
+      procinfo->fMemResident = rss * (getpagesize() / 1024);
+   }
 }
 #endif
 

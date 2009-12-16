@@ -87,6 +87,7 @@ class TBranchRef;
 class TBasket;
 class TStreamerInfo;
 
+
 class TTree : public TNamed, public TAttLine, public TAttFill, public TAttMarker {
 
 protected:
@@ -94,14 +95,17 @@ protected:
    Long64_t       fTotBytes;          //  Total number of bytes in all branches before compression
    Long64_t       fZipBytes;          //  Total number of bytes in all branches after compression
    Long64_t       fSavedBytes;        //  Number of autosaved bytes
+   Long64_t       fFlushedBytes;      //  Number of autoflushed bytes
    Double_t       fWeight;            //  Tree weight (see TTree::SetWeight)
    Int_t          fTimerInterval;     //  Timer interval in milliseconds
    Int_t          fScanField;         //  Number of runs before prompting in Scan
    Int_t          fUpdate;            //  Update frequency for EntryLoop
+   Int_t          fDefaultEntryOffsetLen;  //  Initial Length of fEntryOffset table in the basket buffers
    Long64_t       fMaxEntries;        //  Maximum number of entries in case of circular buffers
    Long64_t       fMaxEntryLoop;      //  Maximum number of entries to process
    Long64_t       fMaxVirtualSize;    //  Maximum total size of buffers kept in memory
    Long64_t       fAutoSave;          //  Autosave tree when fAutoSave bytes produced
+   Long64_t       fAutoFlush;         //  Autoflush tree when fAutoFlush entries written
    Long64_t       fEstimate;          //  Number of entries to estimate histogram limits
    Long64_t       fCacheSize;         //! Maximum size of file buffers
    Long64_t       fChainOffset;       //! Offset of 1st entry of this Tree in a TChain
@@ -140,15 +144,13 @@ private:
 
 protected:
    void             AddClone(TTree*);
-   const   char    *GetNameByIndex(TString& varexp, Int_t* index, Int_t colindex) const;
    virtual void     KeepCircular();
-   virtual void     MakeIndex(TString& varexp, Int_t* index);
    virtual TBranch *BranchImp(const char* branchname, const char* classname, TClass* ptrClass, void* addobj, Int_t bufsize, Int_t splitlevel);
    virtual TBranch *BranchImp(const char* branchname, TClass* ptrClass, void* addobj, Int_t bufsize, Int_t splitlevel);
    virtual TBranch *BranchImpRef(const char* branchname, TClass* ptrClass, EDataType datatype, void* addobj, Int_t bufsize, Int_t splitlevel);
-   virtual Bool_t   CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType datatype, Bool_t ptr);
+   virtual Int_t    CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType datatype, Bool_t ptr);
    virtual TBranch *BronchExec(const char* name, const char* classname, void* addobj, Bool_t isptrptr, Int_t bufsize, Int_t splitlevel);
-   friend TBranch *TTreeBranchImpRef(TTree *tree, const char* branchname, TClass* ptrClass, EDataType datatype, void* addobj, Int_t bufsize, Int_t splitlevel);
+   friend  TBranch *TTreeBranchImpRef(TTree *tree, const char* branchname, TClass* ptrClass, EDataType datatype, void* addobj, Int_t bufsize, Int_t splitlevel);
 
    class TFriendLock {
       // Helper class to prevent infinite recursion in the
@@ -183,6 +185,20 @@ protected:
       kRemoveFriend      = BIT(12),
       kSetBranchStatus   = BIT(12)
    };
+   
+   enum SetBranchAddressStatus {
+      kMissingBranch = -5,
+      kInternalError = -4,
+      kMissingCompiledCollectionProxy = -3,
+      kMismatch = -2,
+      kClassMismatch = -1,
+      kMatch = 0,
+      kMatchConversion = 1,
+      kMatchConversionCollection = 2,
+      kMakeClass = 3,
+      kVoidPtr = 4,
+      kNoCheck = 5
+   };
 
 public:
    // TTree status bits
@@ -195,6 +211,8 @@ public:
    TTree(const char* name, const char* title, Int_t splitlevel = 99);
    virtual ~TTree();
 
+   virtual void            AddBranchToCache(const char *bname, Bool_t subbranches = kFALSE);
+   virtual void            AddBranchToCache(TBranch *branch,   Bool_t subbranches = kFALSE);
    virtual TFriendElement *AddFriend(const char* treename, const char* filename = "");
    virtual TFriendElement *AddFriend(const char* treename, TFile* file);
    virtual TFriendElement *AddFriend(TTree* tree, const char* alias = "", Bool_t warn = kFALSE);
@@ -249,6 +267,8 @@ public:
    virtual Int_t           Fit(const char* funcname, const char* varexp, const char* selection = "", Option_t* option = "", Option_t* goption = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0); // *MENU*
    virtual Int_t           FlushBaskets() const;
    virtual const char     *GetAlias(const char* aliasName) const;
+   virtual Long64_t        GetAutoFlush() const {return fAutoFlush;}
+   virtual Long64_t        GetAutoSave()  const {return fAutoSave;}
    virtual TBranch        *GetBranch(const char* name);
    virtual TBranchRef     *GetBranchRef() const { return fBranchRef; };
    virtual Bool_t          GetBranchStatus(const char* branchname) const;
@@ -257,6 +277,7 @@ public:
    virtual Long64_t        GetChainEntryNumber(Long64_t entry) const { return entry; }
    virtual Long64_t        GetChainOffset() const { return fChainOffset; }
    TFile                  *GetCurrentFile() const;
+           Int_t           GetDefaultEntryOffsetLen() const {return fDefaultEntryOffsetLen;}
            Long64_t        GetDebugMax()  const { return fDebugMax; }
            Long64_t        GetDebugMin()  const { return fDebugMin; }
    TDirectory             *GetDirectory() const { return fDirectory; }
@@ -338,8 +359,10 @@ public:
    virtual Long64_t        Merge(TCollection* list, Option_t* option = "");
    static  TTree          *MergeTrees(TList* list, Option_t* option = "");
    virtual Bool_t          Notify();
+   virtual void            OptimizeBaskets(Int_t maxMemory=10000000, Float_t minComp=1.1, Option_t *option=""); 
    TPrincipal             *Principal(const char* varexp = "", const char* selection = "", Option_t* option = "np", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    virtual void            Print(Option_t* option = "") const; // *MENU*
+   virtual void            PrintCacheStats(Option_t* option = "") const;
    virtual Long64_t        Process(const char* filename, Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0); // *MENU*
 #if defined(__CINT__)
 #if defined(R__MANUAL_DICT)
@@ -359,29 +382,33 @@ public:
    virtual void            ResetBranchAddresses();
    virtual Long64_t        Scan(const char* varexp = "", const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0); // *MENU*
    virtual Bool_t          SetAlias(const char* aliasName, const char* aliasFormula);
-   virtual void            SetAutoSave(Long64_t autos = 10000000) { fAutoSave=autos; }
+   virtual void            SetAutoSave(Long64_t autos = 300000000);
+   virtual void            SetAutoFlush(Long64_t autof = 30000000);
    virtual void            SetBasketSize(const char* bname, Int_t buffsize = 16000);
 #if !defined(__CINT__)
-   virtual void         SetBranchAddress(const char *bname,void *add, TBranch **ptr = 0);
+   virtual Int_t           SetBranchAddress(const char *bname,void *add, TBranch **ptr = 0);
 #endif
-   virtual void         SetBranchAddress(const char *bname,void *add, TClass *realClass, EDataType datatype, Bool_t isptr);
-   virtual void         SetBranchAddress(const char *bname,void *add, TBranch **ptr, TClass *realClass, EDataType datatype, Bool_t isptr);
-   template <class T> void SetBranchAddress(const char *bname, T **add, TBranch **ptr = 0) {
-      SetBranchAddress(bname,add,ptr,TClass::GetClass(typeid(T)),TDataType::GetType(typeid(T)),true);
+   virtual Int_t           SetBranchAddress(const char *bname,void *add, TClass *realClass, EDataType datatype, Bool_t isptr);
+   virtual Int_t           SetBranchAddress(const char *bname,void *add, TBranch **ptr, TClass *realClass, EDataType datatype, Bool_t isptr);
+   template <class T> Int_t SetBranchAddress(const char *bname, T **add, TBranch **ptr = 0) {
+      return SetBranchAddress(bname,add,ptr,TClass::GetClass(typeid(T)),TDataType::GetType(typeid(T)),true);
    }
 #ifndef R__NO_CLASS_TEMPLATE_SPECIALIZATION
    // This can only be used when the template overload resolution can distringuish between
    // T* and T**
-   template <class T> void SetBranchAddress(const char *bname, T *add, TBranch **ptr = 0) {
-      SetBranchAddress(bname,add,ptr,TClass::GetClass(typeid(T)),TDataType::GetType(typeid(T)),false);
+   template <class T> Int_t SetBranchAddress(const char *bname, T *add, TBranch **ptr = 0) {
+      return SetBranchAddress(bname,add,ptr,TClass::GetClass(typeid(T)),TDataType::GetType(typeid(T)),false);
    }
 #endif
    virtual void            SetBranchStatus(const char* bname, Bool_t status = 1, UInt_t* found = 0);
    static  void            SetBranchStyle(Int_t style = 1);  //style=0 for old branch, =1 for new branch style
-   virtual void            SetCacheSize(Long64_t cachesize = 10000000);
+   virtual void            SetCacheSize(Long64_t cachesize = -1);
+   virtual void            SetCacheEntryRange(Long64_t first, Long64_t last);
+   virtual void            SetCacheLearnEntries(Int_t n=10);
    virtual void            SetChainOffset(Long64_t offset = 0) { fChainOffset=offset; }
    virtual void            SetCircular(Long64_t maxEntries);
    virtual void            SetDebug(Int_t level = 1, Long64_t min = 0, Long64_t max = 9999999); // *MENU*
+   virtual void            SetDefaultEntryOffsetLen(Int_t newdefault, Bool_t updateExisting = kFALSE);
    virtual void            SetDirectory(TDirectory* dir);
    virtual Long64_t        SetEntries(Long64_t n = -1);
    virtual void            SetEstimate(Long64_t nentries = 10000);
@@ -395,6 +422,7 @@ public:
    virtual void            SetName(const char* name); // *MENU*
    virtual void            SetNotify(TObject* obj) { fNotify = obj; }
    virtual void            SetObject(const char* name, const char* title);
+   virtual void            SetParallelUnzip(Bool_t opt=kTRUE, Float_t RelSize=-1);
    virtual void            SetScanField(Int_t n = 50) { fScanField = n; } // *MENU*
    virtual void            SetTimerInterval(Int_t msec = 333) { fTimerInterval=msec; }
    virtual void            SetTreeIndex(TVirtualIndex*index);
@@ -402,12 +430,13 @@ public:
    virtual void            SetUpdate(Int_t freq = 0) { fUpdate = freq; }
    virtual void            Show(Long64_t entry = -1, Int_t lenmax = 20);
    virtual void            StartViewer(); // *MENU*
+   virtual void            StopCacheLearningPhase();
    virtual Int_t           UnbinnedFit(const char* funcname, const char* varexp, const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    void                    UseCurrentStyle();
    virtual Int_t           Write(const char *name=0, Int_t option=0, Int_t bufsize=0);
    virtual Int_t           Write(const char *name=0, Int_t option=0, Int_t bufsize=0) const;
 
-   ClassDef(TTree,16)  //Tree descriptor (the main ROOT I/O class)
+   ClassDef(TTree,18)  //Tree descriptor (the main ROOT I/O class)
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -111,7 +111,8 @@ TLeaf::~TLeaf()
       TTree* tree = fBranch->GetTree();
       fBranch = 0;
       if (tree) {
-         tree->GetListOfLeaves()->Remove(this);
+         TObjArray *lst = tree->GetListOfLeaves();
+         if (lst->GetLast()!=-1) lst->Remove(this);
       }
    }
    fLeafCount = 0;
@@ -197,7 +198,7 @@ TLeaf* TLeaf::GetLeafCounter(Int_t& countval) const
    TLeaf* leaf = (TLeaf*) pTree->GetListOfLeaves()->FindObject(countname);
    //if not found, make one more trial in case the leaf name has a "."
    if (!leaf && strchr(GetName(), '.')) {
-      char* withdot = new char[1000];
+      char* withdot = new char[strlen(GetName())+strlen(countname)+1];
       strcpy(withdot, GetName());
       char* lastdot = strrchr(withdot, '.');
       strcpy(lastdot, countname);

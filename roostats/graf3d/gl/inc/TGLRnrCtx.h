@@ -100,6 +100,11 @@ protected:
    Short_t         fViewerStyle;
    Short_t         fSceneStyle;
 
+   Float_t         fViewerWFLineW;
+   Float_t         fSceneWFLineW;
+   Float_t         fViewerOLLineW;
+   Float_t         fSceneOLLineW;
+
    TGLClip        *fViewerClip;
    TGLClip        *fSceneClip;
    TGLClip        *fClip;
@@ -121,6 +126,7 @@ protected:
    TGLSelectBuffer*fSelectBuffer;
 
    lpTGLColorSet_t*fColorSetStack;
+   Float_t         fRenderScale;
 
    UInt_t          fEventKeySym;
 
@@ -132,6 +138,7 @@ protected:
 
    // Picture grabbing
    Bool_t           fGrabImage;    // Set to true to store the image.
+   Int_t            fGrabBuffer;   // Which buffer to grab after render.
    UChar_t         *fGrabbedImage; // Buffer where image was stored after rendering.
 
 public:
@@ -170,6 +177,15 @@ public:
    void    SetViewerStyle(Short_t sty) { fViewerStyle = sty;  }
    Short_t SceneStyle()  const         { return fSceneStyle; }
    void    SetSceneStyle(Short_t sty)  { fSceneStyle = sty;  }
+
+   Float_t ViewerWFLineW()       const { return fViewerWFLineW; }
+   void    SetViewerWFLineW(Float_t w) { fViewerWFLineW = w;    }
+   Float_t SceneWFLineW()        const { return fSceneWFLineW;  }
+   void    SetSceneWFLineW(Float_t w)  { fSceneWFLineW = w;     }
+   Float_t ViewerOLLineW()       const { return fViewerOLLineW; }
+   void    SetViewerOLLineW(Float_t w) { fViewerOLLineW = w;    }
+   Float_t SceneOLLineW()        const { return fSceneOLLineW;  }
+   void    SetSceneOLLineW(Float_t w)  { fSceneOLLineW = w;     }
 
    TGLClip* ViewerClip()         const { return fViewerClip; }
    void     SetViewerClip(TGLClip *p)  { fViewerClip = p;    }
@@ -218,6 +234,9 @@ public:
 
    void         ColorOrForeground(Color_t col);
 
+   Float_t GetRenderScale()    const { return fRenderScale; }
+   void    SetRenderScale(Float_t s) { fRenderScale = s; }
+
    UInt_t GetEventKeySym()   const { return fEventKeySym; }
    void   SetEventKeySym(UInt_t k) { fEventKeySym = k; }
 
@@ -230,13 +249,16 @@ public:
 
    void  RegisterFont(Int_t size, Int_t file, Int_t mode, TGLFont& out);
    void  RegisterFont(Int_t size, const char* name, Int_t mode, TGLFont& out);
+   void  RegisterFontNoScale(Int_t size, Int_t file, Int_t mode, TGLFont& out);
+   void  RegisterFontNoScale(Int_t size, const char* name, Int_t mode, TGLFont& out);
    void  ReleaseFont(TGLFont& font);
 
    GLUquadric* GetGluQuadric() { return fQuadric; }
 
    // Picture grabbing
-   void     SetGrabImage(Bool_t gi) { fGrabImage = gi; }
+   void     SetGrabImage(Bool_t gi, Int_t buf=-1) { fGrabImage = gi; fGrabBuffer = buf; }
    Bool_t   GetGrabImage()    const { return fGrabImage; }
+   Int_t    GetGrabBuffer()   const { return fGrabBuffer; }
    UChar_t* GetGrabbedImage() const { return fGrabbedImage; }
    void     SetGrabbedImage(UChar_t* img) { fGrabbedImage = img; }
 

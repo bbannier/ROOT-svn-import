@@ -58,6 +58,10 @@ VOID_METHOD_ARG2(Interpreter,LoadMacro,const char*,filename,TInterpreter::EError
 RETURN_METHOD_ARG2(Interpreter,Long_t,ProcessLine,const char*,line,TInterpreter::EErrorCode*,error)
 RETURN_METHOD_ARG2(Interpreter,Long_t,ProcessLineSynch,const char*,line,TInterpreter::EErrorCode*,error)
 VOID_METHOD_ARG0(Interpreter,PrintIntro,1)
+typedef char* (*GetlineFunc_t)(const char* prompt);
+typedef void (*HistaddFunc_t)(char* line);
+VOID_METHOD_ARG2(Interpreter,SetGetline,GetlineFunc_t, getlineFunc,\
+		 HistaddFunc_t, histaddFunc, 1)
 VOID_METHOD_ARG0(Interpreter,Reset,1)
 VOID_METHOD_ARG0(Interpreter,ResetAll,1)
 VOID_METHOD_ARG0(Interpreter,ResetGlobals,1)
@@ -69,7 +73,7 @@ VOID_METHOD_ARG0_LOCK(Interpreter,UpdateListOfGlobals)
 VOID_METHOD_ARG0_LOCK(Interpreter,UpdateListOfGlobalFunctions)
 VOID_METHOD_ARG0_LOCK(Interpreter,UpdateListOfTypes)
 VOID_METHOD_ARG2_LOCK(Interpreter,SetClassInfo,TClass*,cl,Bool_t,reload)
-RETURN_METHOD_ARG1(Interpreter,Bool_t,CheckClassInfo,const char*,name)
+RETURN_METHOD_ARG2(Interpreter,Bool_t,CheckClassInfo,const char*,name,Bool_t,autoload)
 RETURN_METHOD_ARG2(Interpreter,Long_t,Calc,const char*,line,TInterpreter::EErrorCode*,error)
 VOID_METHOD_ARG1_LOCK(Interpreter,CreateListOfBaseClasses,TClass*,cl)
 VOID_METHOD_ARG1_LOCK(Interpreter,CreateListOfDataMembers,TClass*,cl)

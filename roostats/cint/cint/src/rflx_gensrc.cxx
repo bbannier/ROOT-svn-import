@@ -40,6 +40,17 @@
 * These different parts are generated in the file below and then put on a filestream
 * together in the dictionary file 
 */
+
+// Fix for C2039 SDK61 bug
+#if defined(MSVCVER9) && defined(WSDK61)
+namespace std {
+ // TEMPLATE FUNCTION _Swap_adl
+ template<class _Ty> inline void _Swap_adl(_Ty& _Left, _Ty& _Right) {	// exchange values stored at _Left and _Right, using ADL
+  swap(_Left, _Right);
+ }
+}
+#endif
+
 void rflx_gensrc::gen_file()
 {
 
@@ -570,7 +581,8 @@ void rflx_gensrc::gen_datamemberdefs(G__ClassInfo & ci)
             m_cd << "OffsetOf" << offnum << "(" << fclname << ", " << dm.Name() << "), ";
          m_cd << dm_modifiers << ")";
          // comment
-         char buf[16*1024]; buf[0] = 0;
+         G__FastAllocString buf(16*1024);
+         buf[0] = 0;
          G__var_array* va = (G__var_array*)dm.Handle();
          G__getcomment(buf,&va->comment[dm.Index()],va->tagnum);
          if (buf[0]) {
@@ -1072,12 +1084,12 @@ void rflx_gensrc::gen_classdictdecls(std::ostringstream & s,
          int myAccess=ciBase.Property() & 
             (G__BIT_ISVIRTUALBASE | G__BIT_ISPRIVATE | G__BIT_ISPROTECTED | G__BIT_ISPUBLIC);
          if ((myAccess & G__BIT_ISPROTECTED) && (accessBase & G__BIT_ISPRIVATE))
-            myAccess=(myAccess & !G__BIT_ISPROTECTED) | G__BIT_ISPRIVATE;
+            myAccess=(myAccess & ~G__BIT_ISPROTECTED) | G__BIT_ISPRIVATE;
          else if (myAccess & G__BIT_ISPUBLIC) {
             if (accessBase & G__BIT_ISPRIVATE) 
-               myAccess=(myAccess & !G__BIT_ISPUBLIC) | G__BIT_ISPRIVATE;
+               myAccess=(myAccess & ~G__BIT_ISPUBLIC) | G__BIT_ISPRIVATE;
             else if (accessBase & G__BIT_ISPROTECTED) 
-               myAccess=(myAccess & !G__BIT_ISPUBLIC) | G__BIT_ISPROTECTED;
+               myAccess=(myAccess & ~G__BIT_ISPUBLIC) | G__BIT_ISPROTECTED;
          }
 
          baseClassesToSearch.push_back(std::make_pair(ciBaseClass, std::make_pair(myAccess,inhlevel+1)));

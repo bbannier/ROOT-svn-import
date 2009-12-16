@@ -5,7 +5,7 @@
 ## Initial version: 17.3.2009
 ##
 ## Version info: $Id$
-## Checked in by $Author: dfeich $
+## Checked in by $Author: abh $
 #######################################################################
 
 #Note: xrdadler32 unfortunately has a dependency on the XrdPosix library
@@ -18,7 +18,7 @@
 #############################################################################
 ## deliverables
 
-bin_PROGRAMS = xrdadler32
+bin_PROGRAMS = xrdadler32 mpxstats wait41
 
 
 #############################################################################
@@ -35,3 +35,20 @@ xrdadler32_LDADD = \
                        ../XrdSys/libXrdSys.la
 
 xrdadler32_LDFLAGS = -static -export-dynamic -ldl -lz
+
+mpxstats_SOURCES = XrdMpxStats.cc
+
+mpxstats_LDADD = \
+                       ../XrdNet/libXrdNet.la   \
+                       ../XrdOuc/libXrdOuc.la     \
+                       ../XrdSys/libXrdSys.la
+
+mpxstats_LDFLAGS = -static -export-dynamic
+
+wait41_SOURCES = XrdWait41.cc
+
+wait41_LDADD = \
+                       ../XrdOuc/libXrdOuc.la     \
+                       ../XrdSys/libXrdSys.la
+
+wait41_LDFLAGS = -static -export-dynamic

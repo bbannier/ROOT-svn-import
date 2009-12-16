@@ -652,6 +652,10 @@ void TRootBrowser::HandleMenu(Int_t id)
                gROOT->ProcessLine(Form("new TFile(\"%s\");",
                                   gSystem->UnixPathName(fi.fFilename)));
             }
+            if (fActBrowser) {
+               TGFileBrowser *fb = dynamic_cast<TGFileBrowser *>(fActBrowser);
+               if (fb) fb->Selected(0);
+            }
          }
          break;
                   // Handle Help menu items...
@@ -916,7 +920,7 @@ void TRootBrowser::RemoveTab(Int_t pos, Int_t subpos)
          edit = fTabBottom;
          break;
    }
-   if (!edit->GetTabTab(subpos))
+   if (!edit || !edit->GetTabTab(subpos))
       return;
    const char *tabName = edit->GetTabTab(subpos)->GetString();
    TObject *obj = 0;

@@ -40,6 +40,192 @@
 //   if the Tree or TChain has a TEventlist, only the buffers           //
 //   referenced by the list are put in the cache.                       //
 //                                                                      //
+//  The learning period is started or restarted when:
+//     - TTree::SetCache is called for the first time.
+//     - TTree::SetCache is called a second time with a different size.
+//     - TTreeCache::StartLearningPhase is called.
+//     - TTree[Cache]::SetEntryRange is called
+//          * and the learning is not yet finished
+//          * and has not been set to manual
+//          * and the new minimun entry is different.
+//
+//  The learning period is stopped (and prefetching is actually started) when:
+//     - TTree[Cache]::StopLearningPhase is called.
+//     - An entry outside the 'learning' range is requested
+//       The 'learning range is from fEntryMin (default to 0) to
+//       fEntryMin + fgLearnEntries (default to 100).
+//     - A 'cached' TChain switches over to a new file.
+//
+//     WHY DO WE NEED the TreeCache when doing data analysis?
+//     ======================================================
+//
+//  When writing a TTree, the branch buffers are kept in memory.
+//  A typical branch buffersize (before compression) is typically 32 KBytes.
+//  After compression, the zipped buffer may be just a few Kbytes.
+//  The branch buffers cannot be much larger in case of Trees with several
+//  hundred or thousand branches.
+//  When writing, this does not generate a performance problem because branch
+//  buffers are always written sequentially and the OS is in general clever enough
+//  to flush the data to the output file when a few MBytes of data have to be written.
+//  When reading at the contrary, one may hit a performance problem when reading
+//  across a network (LAN or WAN) and the network latency is high.
+//  For example in a WAN with 10ms latency, reading 1000 buffers of 10 KBytes each
+//  with no cache will imply 10s penalty where a local read of the 10 MBytes would
+//  take about 1 second.
+//  The TreeCache will try to prefetch all the buffers for the selected branches
+//  such that instead of transfering 1000 buffers of 10 Kbytes, it will be able
+//  to transfer one single large buffer of 10 Mbytes in one single transaction.
+//  Not only the TreeCache minimizes the number of transfers, but in addition
+//  it can sort the blocks to be read in increasing order such that the file
+//  is read sequentially.
+//  Systems like xrootd, dCache or httpd take advantage of the TreeCache in
+//  reading ahead as much data as they can and return to the application
+//  the maximum data specified in the cache and have the next chunk of data ready
+//  when the next request comes.
+//
+//
+//     HOW TO USE the TreeCache
+//     =========================
+//
+//  A few use cases are discussed below. It is not simple to activate the cache
+//  by default (except case1 below) because there are many possible configurations.
+//  In some applications you know a priori the list of branches to read.
+//  In other applications the analysis loop calls several layers of user functions
+//  where it is impossible to predict a priori which branches will be used. This
+//  is probably the most frequent case. In this case ROOT I/O will flag used
+//  branches automatically when a branch buffer is read during the learning phase.
+//  The TreeCache interface provides functions to instruct the cache about the used
+//  branches if they are known a priori. In the examples below, portions of analysis
+//  code are shown. The few statements involving the TreeCache are marked with //<<<
+//
+//  -------------------
+//  1- with TTree::Draw
+//  -------------------
+//  the TreeCache is automatically used by TTree::Draw. The function knows
+//  which branches are used in the query and it puts automatically these branches
+//  in the cache. The entry range is also known automatically.
+//
+//  -------------------------------------
+//  2- with TTree::Process and TSelectors
+//  -------------------------------------
+//  You must enable the cache and tell the system which branches to cache
+//  and also specify the entry range. It is important to specify the entry range
+//  in case you process only a subset of the events, otherwise you run the risk
+//  to store in the cache entries that you do not need.
+//
+//      --example 2a 
+//--
+//   TTree *T = (TTree*)f->Get("mytree");
+//   Long64_t nentries = T->GetEntries();
+//   Int_t cachesize = 10000000; //10 MBytes
+//   T->SetCacheSize(cachesize); //<<<
+//   T->AddBranch("*",kTRUE);    //<<< add all branches to the cache
+//   T->Process('myselector.C+");
+//   //in the TSelector::Process function we read all branches
+//   T->GetEntry(i);
+//--      ... here you process your entry
+//
+//
+//      --example 2b 
+//  in the Process function we read a subset of the branches.
+//  Only the branches used in the first entry will be put in the cache
+//--
+//   TTree *T = (TTree*)f->Get("mytree");
+//   //we want to process only the 200 first entries
+//   Long64_t nentries=200;
+//   int efirst= 0;
+//   int elast = efirst+nentries;
+//   Int_t cachesize = 10000000; //10 MBytes
+//   TTreeCache::SetLearnEntries(1);  //<<< we can take the decision after 1 entry
+//   T->SetCacheSize(cachesize);      //<<<
+//   T->SetCacheEntryRange(efirst,elast); //<<<
+//   T->Process('myselector.C+","",nentries,efirst);
+//   // in the TSelector::Process we read only 2 branches
+//   TBranch *b1 = T->GetBranch("branch1");
+//   b1->GetEntry(i);
+//   if (somecondition) return;
+//   TBranch *b2 = T->GetBranch("branch2");
+//   b2->GetEntry(i);
+//      ... here you process your entry
+//--
+//  ----------------------------
+//  3- with your own event loop
+//  ----------------------------
+//    --example 3a
+//      in your analysis loop, you always use 2 branches. You want to prefetch
+//      the branch buffers for these 2 branches only.
+//--
+//   TTree *T = (TTree*)f->Get("mytree");
+//   TBranch *b1 = T->GetBranch("branch1");
+//   TBranch *b2 = T->GetBranch("branch2");
+//   Long64_t nentries = T->GetEntries();
+//   Int_t cachesize = 10000000; //10 MBytes
+//   T->SetCacheSize(cachesize);     //<<<
+//   T->AddBranchToCache(b1,kTRUE);  //<<<add branch1 and branch2 to the cache
+//   T->AddBranchToCache(b2,kTRUE);  //<<<
+//   T->StopCacheLearningPhase();    //<<<
+//   for (Long64_t i=0;i<nentries;i++) {
+//      T->LoadTree(i); //<<< important call when calling TBranch::GetEntry after
+//      b1->GetEntry(i);
+//      if (some condition not met) continue;
+//      b2->GetEntry(i);
+//      if (some condition not met) continue;
+//      //here we read the full event only in some rare cases.
+//      //there is no point in caching the other branches as it might be
+//      //more economical to read only the branch buffers really used.
+//      T->GetEntry(i);
+//      .. process the rare but interesting cases.
+//      ... here you process your entry
+//   }
+//--
+//   --example 3b
+//      in your analysis loop, you always use 2 branches in the main loop.
+//      you also call some analysis functions where a few more branches will be read.
+//      but you do not know a priori which ones. There is no point in prefetching 
+//      branches that will be used very rarely. 
+//--
+//   TTree *T = (TTree*)f->Get("mytree");
+//   Long64_t nentries = T->GetEntries();
+//   Int_t cachesize = 10000000;   //10 MBytes
+//   T->SetCacheSize(cachesize);   //<<<
+//   T->SetCacheLearnEntries(5);   //<<< we can take the decision after 5 entries
+//   TBranch *b1 = T->GetBranch("branch1");
+//   TBranch *b2 = T->GetBranch("branch2");
+//   for (Long64_t i=0;i<nentries;i++) {
+//      T->LoadTree(i);
+//      b1->GetEntry(i);
+//      if (some condition not met) continue;
+//      b2->GetEntry(i);
+//      //at this point we may call a user function where a few more branches
+//      //will be read conditionally. These branches will be put in the cache
+//      //if they have been used in the first 10 entries
+//      if (some condition not met) continue;
+//      //here we read the full event only in some rare cases.
+//      //there is no point in caching the other branches as it might be
+//      //more economical to read only the branch buffers really used.
+//      T->GetEntry(i);
+//      .. process the rare but interesting cases.
+//      ... here you process your entry
+//   }
+//--
+//
+//
+//     SPECIAL CASES WHERE TreeCache should not be activated
+//     =====================================================
+//
+//   When reading only a small fraction of all entries such that not all branch
+//   buffers are read, it might be faster to run without a cache.
+//
+//
+//   HOW TO VERIFY That the TreeCache has been used and check its performance
+//   ========================================================================
+//
+//  Once your analysis loop has terminated, you can access/print the number
+//  of effective system reads for a given file with a code like
+//  (where TFile* f is a pointer to your file)
+//
+//   printf("Reading %lld bytes in %d transactions\n",f->GetBytesRead(),  f->GetReadCalls());
+//
 //////////////////////////////////////////////////////////////////////////
 
 #include "TTreeCache.h"
@@ -61,7 +247,8 @@ ClassImp(TTreeCache)
 TTreeCache::TTreeCache() : TFileCacheRead(),
    fEntryMin(0),
    fEntryMax(1),
-   fEntryNext(1),
+   fEntryCurrent(-1),
+   fEntryNext(-1),
    fZipBytes(0),
    fNbranches(0),
    fNReadOk(0),
@@ -81,6 +268,7 @@ TTreeCache::TTreeCache() : TFileCacheRead(),
 TTreeCache::TTreeCache(TTree *tree, Int_t buffersize) : TFileCacheRead(tree->GetCurrentFile(),buffersize),
    fEntryMin(0),
    fEntryMax(tree->GetEntriesFast()),
+   fEntryCurrent(-1),
    fEntryNext(0),
    fZipBytes(0),
    fNbranches(0),
@@ -158,6 +346,7 @@ void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
    // with regular expresions.
    // The branches are taken with respect to the Owner of this TTreeCache
    // (i.e. the original Tree)
+   // NB: if bname="*" all branches are put in the cache and the learning phase stopped
    
    TBranch *branch, *bcount;
    TLeaf *leaf, *leafcount;
@@ -169,11 +358,13 @@ void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
 
    // first pass, loop on all branches
    // for leafcount branches activate/deactivate in function of status
+   Bool_t all = kFALSE;
+   if (!strcmp(bname,"*")) all = kTRUE;
    for (i=0;i<nleaves;i++)  {
       leaf = (TLeaf*)(fOwner->GetListOfLeaves())->UncheckedAt(i);
       branch = (TBranch*)leaf->GetBranch();
       TString s = branch->GetName();
-      if (strcmp(bname,"*")) { //Regexp gives wrong result for [] in name
+      if (!all) { //Regexp gives wrong result for [] in name
          TString longname; 
          longname.Form("%s.%s",fOwner->GetName(),branch->GetName());
          if (strcmp(bname,branch->GetName()) 
@@ -183,7 +374,7 @@ void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
       nb++;
       AddBranch(branch, subbranches);
       leafcount = leaf->GetLeafCount();
-      if (leafcount) {
+      if (leafcount && !all) {
          bcount = leafcount->GetBranch();
          AddBranch(bcount, subbranches);
       }
@@ -226,6 +417,8 @@ void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
       if (gDebug > 0) printf("AddBranch: unknown branch -> %s \n", bname);
       return;
    }
+   //if all branches are selected stop the learning phase
+   if (*bname == '*') StopLearningPhase();
 }
 
 //_____________________________________________________________________________
@@ -238,21 +431,37 @@ Bool_t TTreeCache::FillBuffer()
    TTree *tree = ((TBranch*)fBranches->UncheckedAt(0))->GetTree();
    Long64_t entry = tree->GetReadEntry();
    
-   if (!fIsManual && fIsLearning && entry < fEntryNext) return kFALSE;
+   // If the entry is in the range we previously prefetched, there is 
+   // no point in retrying.   Note that this will also return false
+   // during the training phase (fEntryNext is then set intentional to 
+   // the end of the training phase).
+   if (fEntryCurrent <= entry && entry < fEntryNext) return kFALSE;
    
    // Triggered by the user, not the learning phase
-   if (entry == -1)  entry=0;
+   if (entry == -1)  entry = 0;
 
    // Estimate number of entries that can fit in the cache compare it
    // to the original value of fBufferSize not to the real one
-   if (fZipBytes==0) {
-      fEntryNext = entry + tree->GetEntries();;    
-   } else {
-      fEntryNext = entry + tree->GetEntries()*fBufferSizeMin/fZipBytes;
+   Long64_t autoFlush = tree->GetAutoFlush();
+   if (autoFlush > 0) {
+      //case when the tree autoflush has been set
+      Int_t averageEntrySize = tree->GetZipBytes()/tree->GetEntries();
+      Int_t nauto = fBufferSizeMin/(averageEntrySize*autoFlush);
+      if (nauto < 1) nauto = 1;
+      fEntryNext = entry - entry%autoFlush + nauto*autoFlush;
+   } else { 
+      //case of old files before November 9 2009
+      if (fZipBytes==0) {
+         fEntryNext = entry + tree->GetEntries();;    
+      } else {
+         fEntryNext = entry + tree->GetEntries()*fBufferSizeMin/fZipBytes;
+      }
    }
    if (fEntryMax <= 0) fEntryMax = tree->GetEntries();
    if (fEntryNext > fEntryMax) fEntryNext = fEntryMax+1;
 
+   fEntryCurrent = entry;
+   
    // Check if owner has a TEventList set. If yes we optimize for this
    // Special case reading only the baskets containing entries in the
    // list.
@@ -289,18 +498,25 @@ Bool_t TTreeCache::FillBuffer()
          Long64_t pos = b->GetBasketSeek(j);
          Int_t len = lbaskets[j];
          if (pos <= 0 || len <= 0) continue;
-         if (entries[j] > fEntryNext) continue;
-         if (entries[j] < entry && (j<nb-1 && entries[j+1] < entry)) continue;
+         //important: do not try to read fEntryNext, otherwise you jump to the next autoflush
+         if (entries[j] >= fEntryNext) continue;
+         if (entries[j] < entry && (j<nb-1 && entries[j+1] <= entry)) continue;
          if (elist) {
             Long64_t emax = fEntryMax;
             if (j<nb-1) emax = entries[j+1]-1;
             if (!elist->ContainsRange(entries[j]+chainOffset,emax+chainOffset)) continue;
          }
          fNReadPref++;
+
          TFileCacheRead::Prefetch(pos,len);
          //we allow up to twice the default buffer size. When using eventlist in particular
          //it may happen that the evaluation of fEntryNext is bad, hence this protection
-         if (fNtot > 2*fBufferSizeMin) {TFileCacheRead::Prefetch(0,0);mustBreak = kTRUE; break;}
+         //if (fNtot > 2*fBufferSizeMin) {
+            //printf("entry=%lld, fEntryNext=%lld, fNtot=%lld, fBufferSizeMin=%d\n",entry,fEntryNext,fNtot,fBufferSizeMin);
+            //TFileCacheRead::Prefetch(0,0);
+            //mustBreak = kTRUE; 
+            //break;
+         //}
       }
       if (gDebug > 0) printf("Entry: %lld, registering baskets branch %s, fEntryNext=%lld, fNseek=%d, fNtot=%d\n",entry,((TBranch*)fBranches->UncheckedAt(i))->GetName(),fEntryNext,fNseek,fNtot);
    }
@@ -403,6 +619,7 @@ void TTreeCache::ResetCache()
 {
    // This will simply clear the cache
    TFileCacheRead::Prefetch(0,0);
+
 }
 
 //_____________________________________________________________________________
@@ -413,17 +630,17 @@ void TTreeCache::SetEntryRange(Long64_t emin, Long64_t emax)
    // when prefetching the branch buffers.
 
    // This is called by TTreePlayer::Process in an automatic way...
-   // don't do it if the user has specified the branches.
-   if(fIsManual)
-      return;
-
+   // don't restart it if the user has specified the branches.
+   Bool_t needLearningStart = (fEntryMin != emin) && fIsLearning && !fIsManual;
+   
    fEntryMin  = emin;
    fEntryMax  = emax;
    fEntryNext  = fEntryMin + fgLearnEntries;
    if (gDebug > 0)
       Info("SetEntryRange", "fEntryMin=%lld, fEntryMax=%lld, fEntryNext=%lld",
                              fEntryMin, fEntryMax, fEntryNext);
-   if (fIsLearning) {
+
+   if (needLearningStart) {
       // Restart learning
       fIsLearning = kTRUE;
       fIsManual = kFALSE;
@@ -459,7 +676,7 @@ void TTreeCache::StartLearningPhase()
 }
 
 //_____________________________________________________________________________
-void TTreeCache::StopLearningPhase()
+void TTreeCache::StopLearningPhase() 
 {
    // This is the counterpart of StartLearningPhase() and can be used to stop
    // the learning phase. It's useful when the user knows exactly what branches
@@ -467,26 +684,20 @@ void TTreeCache::StopLearningPhase()
    // For the moment it's just a call to FillBuffer() since that method
    // will create the buffer lists from the specified branches.
    
-   fIsLearning = kFALSE;
+   if (fIsLearning) {
+      // This will force FillBuffer to read the buffers.
+      fEntryNext = -1;
+      fIsLearning = kFALSE;
+   }
    fIsManual = kTRUE;
    FillBuffer();
 
-   // If this is the first time we get here since the last FillBuffer
-   // it's probable that the information about the prefetched buffers is there
-   // but it hasn't actually been transfered... Is this the best place to put it??
-   if (fNseek > 0 && !fIsSorted) {
-      Sort();
-
-      // Then we use the vectored read to read everything now
-      fFile->ReadBuffers(fBuffer,fPos,fLen,fNb);
-      fIsTransferred = kTRUE;
-   }
 }
 
 //_____________________________________________________________________________
 void TTreeCache::UpdateBranches(TTree *tree, Bool_t owner)
 {
-   //update pointer to current Tree and recompute pointers to the branches in the cache
+   // Update pointer to current Tree and recompute pointers to the branches in the cache.
 
    if (owner) {
       fOwner = tree;
@@ -496,9 +707,16 @@ void TTreeCache::UpdateBranches(TTree *tree, Bool_t owner)
 
    fEntryMin  = 0;
    fEntryMax  = fTree->GetEntries();
-   fEntryNext = fEntryMin + fgLearnEntries;
-   if (fBrNames->GetEntries() > 0) {
+   
+   fEntryCurrent = -1;
+   
+   if (fBrNames->GetEntries() == 0 && fIsLearning) {
+      // We still need to learn.
+      fEntryNext = fEntryMin + fgLearnEntries;
+   } else {      
+      // We learnt from a previous file.
       fIsLearning = kFALSE;
+      fEntryNext = -1;
    }
    fZipBytes  = 0;
    fNbranches = 0;

@@ -20,18 +20,23 @@
 #include <string>
 #include <utility>
 
+#include "TError.h"
+
 ClassImp(TBranchSTL)
 
 //------------------------------------------------------------------------------
 TBranchSTL::TBranchSTL():
    fCollProxy( 0 ),
-   fParent(0),
+   fParent( 0 ),
    fIndArrayCl( 0 ),
+   fClassVersion( 0 ),
+   fClCheckSum( 0 ),
    fInfo( 0 ),
    fObject( 0 ),
    fID( -2 )
 {
-   // default constructor
+   // Default constructor.
+   
    fIndArrayCl = TClass::GetClass( "TIndArray" );
    fBranchVector.reserve( 25 );
    fNleaves = 0;
@@ -39,11 +44,11 @@ TBranchSTL::TBranchSTL():
 
 //------------------------------------------------------------------------------
 TBranchSTL::TBranchSTL( TTree *tree, const char *name,
-                          TVirtualCollectionProxy *collProxy,
-                          Int_t buffsize, Int_t splitlevel )
+                        TVirtualCollectionProxy *collProxy,
+                        Int_t buffsize, Int_t splitlevel )
 {
-   //normal constructor
-   
+   // Normal constructor, called from TTree.
+
    fTree         = tree;
    fCollProxy    = collProxy;
    fBasketSize   = buffsize;
@@ -79,12 +84,12 @@ TBranchSTL::TBranchSTL( TTree *tree, const char *name,
 
 //------------------------------------------------------------------------------
 TBranchSTL::TBranchSTL( TBranch* parent, const char* name,
-                          TVirtualCollectionProxy* collProxy,
-                          Int_t buffsize, Int_t splitlevel,
-                          TStreamerInfo* info, Int_t id )
+                        TVirtualCollectionProxy* collProxy,
+                        Int_t buffsize, Int_t splitlevel,
+                        TStreamerInfo* info, Int_t id )
 {
-   //TO BE DOCUMENTED
-   
+   // Normal constructor, called from another branch.
+
    fTree         = parent->GetTree();
    fCollProxy    = collProxy;
    fBasketSize   = buffsize;
@@ -95,7 +100,7 @@ TBranchSTL::TBranchSTL( TBranch* parent, const char* name,
    fClCheckSum   = info->GetClass()->GetCheckSum();
    fInfo         = info;
    fID           = id;
-   fMother = parent ? parent->GetMother() : this;
+   fMother = parent->GetMother();
    fParent = parent;
    fDirectory = fTree->GetDirectory();
    fFileName = "";
@@ -128,6 +133,21 @@ TBranchSTL::~TBranchSTL()
    for( brIter = fBranchMap.begin(); brIter != fBranchMap.end(); ++brIter ) {
       (*brIter).second.fPointers->clear();
       delete (*brIter).second.fPointers;
+   }
+}
+
+//------------------------------------------------------------------------------
+void TBranchSTL::Browse( TBrowser *b )
+{
+   //browse a STL branch
+   Int_t nbranches = fBranches.GetEntriesFast();
+   if (nbranches > 0) {
+      TList persistentBranches;
+      TBranch* branch=0;
+      TIter iB(&fBranches);
+      while( (branch = (TBranch*)iB()) )
+         persistentBranches.Add(branch);
+      persistentBranches.Browse( b );
    }
 }
 
@@ -373,7 +393,7 @@ Int_t TBranchSTL::GetEntry( Long64_t entry, Int_t getall )
       fObject = *(char**)fAddress;
    }
    TVirtualCollectionProxy::TPushPop helper( fCollProxy, fObject );
-   fCollProxy->Allocate( size, kTRUE );
+   void* env = fCollProxy->Allocate( size, kTRUE );
 
    //---------------------------------------------------------------------------
    // Process entries
@@ -435,9 +455,21 @@ Int_t TBranchSTL::GetEntry( Long64_t entry, Int_t getall )
          //---------------------------------------------------------------------
          // Calculate the base class offset
          //---------------------------------------------------------------------
-         tmpClass = elemBranch->GetCollectionProxy()->GetValueClass();
-         fBranchVector[index].fBaseOffset = tmpClass->GetBaseClassOffset( elClass );
-         fBranchVector[index].fPosition = 0;
+         TVirtualCollectionProxy *proxy = elemBranch->GetCollectionProxy();
+         if (!proxy) {
+            proxy =  TClass::GetClass(elemBranch->GetClassName())->GetCollectionProxy();
+         }
+         if (proxy) {
+            tmpClass = proxy->GetValueClass();
+            if (tmpClass) {
+               fBranchVector[index].fBaseOffset = tmpClass->GetBaseClassOffset( elClass );
+               fBranchVector[index].fPosition = 0;
+            } else {
+               Error("GetEntry","Missing TClass for %s (%s)",elemBranch->GetName(),elemBranch->GetClassName());
+            }
+         } else {
+            Error("GetEntry","Missing CollectionProxy for %s (%s)",elemBranch->GetName(),elemBranch->GetClassName());
+         }
       }
 
       //------------------------------------------------------------------------
@@ -447,6 +479,8 @@ Int_t TBranchSTL::GetEntry( Long64_t entry, Int_t getall )
         - fBranchVector[index].fBaseOffset;
 
    }
+
+   fCollProxy->Commit(env);
 
    //---------------------------------------------------------------------------
    // Cleanup
@@ -460,20 +494,51 @@ Int_t TBranchSTL::GetEntry( Long64_t entry, Int_t getall )
 }
 
 //------------------------------------------------------------------------------
-void TBranchSTL::Browse( TBrowser *b )
+TStreamerInfo* TBranchSTL::GetInfo() const
 {
-   //browse a STL branch
-   Int_t nbranches = fBranches.GetEntriesFast();
-   if (nbranches > 0) {
-      TList persistentBranches;
-      TBranch* branch=0;
-      TIter iB(&fBranches);
-      while( (branch = (TBranch*)iB()) )
-         persistentBranches.Add(branch);
-      persistentBranches.Browse( b );
+   //---------------------------------------------------------------------------
+   // Check if we don't have the streamer info
+   //---------------------------------------------------------------------------
+   if( !fInfo ) {
+      //------------------------------------------------------------------------
+      // Get the class info
+      //------------------------------------------------------------------------
+      TClass *cl = TClass::GetClass( fClassName );
+      
+      //------------------------------------------------------------------------
+      // Get unoptimized streamer info
+      //------------------------------------------------------------------------
+      Bool_t optim = TVirtualStreamerInfo::CanOptimize();
+      TVirtualStreamerInfo::Optimize( kFALSE );
+      fInfo = (TStreamerInfo*)cl->GetStreamerInfo( fClassVersion );
+      
+      //------------------------------------------------------------------------
+      // If the checksum is there and we're dealing with the foreign class
+      //------------------------------------------------------------------------
+      if( fClCheckSum && cl->IsForeign() ) {
+         //---------------------------------------------------------------------
+         // Loop over the infos
+         //---------------------------------------------------------------------
+         Int_t ninfos = cl->GetStreamerInfos()->GetEntriesFast() - 1;
+         for( Int_t i = -1; i < ninfos; ++i ) {
+            TVirtualStreamerInfo* info = (TVirtualStreamerInfo*) cl->GetStreamerInfos()->UncheckedAt(i);
+            if( !info )
+               continue;
+            
+            //------------------------------------------------------------------
+            // If the checksum matches then retriev the info
+            //------------------------------------------------------------------
+            if( info->GetCheckSum() == fClCheckSum ) {
+               fClassVersion = i;
+               fInfo = (TStreamerInfo*)cl->GetStreamerInfo( fClassVersion );
+            }
+         }
+      }
+      TVirtualStreamerInfo::Optimize( optim );
+      fInfo->BuildOld();
    }
+   return fInfo;
 }
-
 
 //------------------------------------------------------------------------------
 Bool_t TBranchSTL::IsFolder() const
@@ -488,9 +553,52 @@ Bool_t TBranchSTL::IsFolder() const
 //------------------------------------------------------------------------------
 void TBranchSTL::FillLeaves( TBuffer& b )
 {
-      //TO BE DOCUMENTED
+   //TO BE DOCUMENTED
    
    b.WriteClassBuffer( fIndArrayCl, &fInd );
+}
+
+//------------------------------------------------------------------------------
+void TBranchSTL::Print(const char *option) const
+{
+   // Print the branch parameters.
+   
+   if (strncmp(option,"debugAddress",strlen("debugAddress"))==0) {
+      if (strlen(GetName())>24) Printf("%-24s\n%-24s ", GetName(),"");
+      else Printf("%-24s ", GetName());
+
+      TBranchElement *parent = dynamic_cast<TBranchElement*>(GetMother()->GetSubBranch(this));
+      Int_t ind = parent ? parent->GetListOfBranches()->IndexOf(this) : -1;
+      TVirtualStreamerInfo *info = GetInfo();
+      Int_t *branchOffset = parent ? parent->GetBranchOffset() : 0;
+      
+      Printf("%-16s %2d SplitCollPtr %-16s %-16s %8x %8x n/a\n",
+             info ? info->GetName() : "StreamerInfo unvailable", fID,
+             GetClassName(), fParent ? fParent->GetName() : "n/a",
+             (branchOffset && parent && ind>=0) ? branchOffset[ind] : 0,
+             fObject);
+      for( Int_t i = 0; i < fBranches.GetEntriesFast(); ++i ) {
+         TBranch *br = (TBranch *)fBranches.UncheckedAt(i);
+         br->Print("debugAddressSub");
+      }
+   } else if (strncmp(option,"debugInfo",strlen("debugInfo"))==0)  {
+      Printf("Branch %s uses:\n",GetName());
+      if (fID>=0) {
+         ULong_t* elems = GetInfo()->GetElems();
+         ((TStreamerElement*) elems[fID])->ls();
+      }
+      for (Int_t i = 0; i < fBranches.GetEntriesFast(); ++i) {
+         TBranchElement* subbranch = (TBranchElement*)fBranches.At(i);
+         subbranch->Print("debugInfoSub");
+      }
+      return;
+   } else {
+      TBranch::Print(option);
+      for( Int_t i = 0; i < fBranches.GetEntriesFast(); ++i ) {
+         TBranch *br = (TBranch *)fBranches.UncheckedAt(i);
+         br->Print(option);
+      }
+   }
 }
 
 //------------------------------------------------------------------------------
@@ -533,51 +641,3 @@ void TBranchSTL::SetAddress( void* addr )
       }
    }
 }
-
-//------------------------------------------------------------------------------
-TStreamerInfo* TBranchSTL::GetInfo()
-{
-   //---------------------------------------------------------------------------
-   // Check if we don't have the streamer info
-   //---------------------------------------------------------------------------
-   if( !fInfo ) {
-      //------------------------------------------------------------------------
-      // Get the class info
-      //------------------------------------------------------------------------
-      TClass *cl = TClass::GetClass( fClassName );
-
-      //------------------------------------------------------------------------
-      // Get unoptimized streamer info
-      //------------------------------------------------------------------------
-      Bool_t optim = TVirtualStreamerInfo::CanOptimize();
-      TVirtualStreamerInfo::Optimize( kFALSE );
-      fInfo = (TStreamerInfo*)cl->GetStreamerInfo( fClassVersion );
-
-      //------------------------------------------------------------------------
-      // If the checksum is there and we're dealing with the foreign class
-      //------------------------------------------------------------------------
-      if( fClCheckSum && cl->IsForeign() ) {
-         //---------------------------------------------------------------------
-         // Loop over the infos
-         //---------------------------------------------------------------------
-         Int_t ninfos = cl->GetStreamerInfos()->GetEntriesFast() - 1;
-         for( Int_t i = -1; i < ninfos; ++i ) {
-            TVirtualStreamerInfo* info = (TVirtualStreamerInfo*) cl->GetStreamerInfos()->UncheckedAt(i);
-            if( !info )
-               continue;
-
-            //------------------------------------------------------------------
-            // If the checksum matches then retriev the info
-            //------------------------------------------------------------------
-            if( info->GetCheckSum() == fClCheckSum ) {
-               fClassVersion = i;
-               fInfo = (TStreamerInfo*)cl->GetStreamerInfo( fClassVersion );
-            }
-         }
-      }
-      TVirtualStreamerInfo::Optimize( optim );
-      fInfo->BuildOld();
-   }
-   return fInfo;
-}
-

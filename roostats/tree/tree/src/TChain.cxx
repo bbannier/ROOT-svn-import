@@ -195,6 +195,8 @@ Int_t TChain::Add(TChain* chain)
    // -- Add all files referenced by the passed chain to this chain.
    // The function returns the total number of files connected.
 
+   if (!chain) return 0;
+
    // Check for enough space in fTreeOffset.
    if ((fNtrees + chain->GetNtrees()) >= fTreeOffsetLen) {
       fTreeOffsetLen += 2 * chain->GetNtrees();
@@ -205,6 +207,7 @@ Int_t TChain::Add(TChain* chain)
       delete[] fTreeOffset;
       fTreeOffset = trees;
    }
+   chain->GetEntries(); //to force the computation of nentries
    TIter next(chain->GetListOfFiles());
    Int_t nf = 0;
    TChainElement* element = 0;
@@ -951,17 +954,12 @@ Int_t TChain::GetEntryWithIndex(Int_t major, Int_t minor)
 {
    // -- Return entry corresponding to major and minor number.
    //
-   // For example:
-   //
-   //      Int_t run = 1234;
-   //      Int_t event = 345;
-   //      Long64_t serial = chain.GetEntryNumberWithIndex(run, event);
-   //
-   // Now the variable serial is in the range [0,nentries] and one can do
-   // chain.GetEntry(serial);
-   //
-   // WARNING: This function will not work if teh chain has friend chains.
-
+   //  The function returns the total number of bytes read.
+   //  If the Tree has friend trees, the corresponding entry with
+   //  the index values (major,minor) is read. Note that the master Tree
+   //  and its friend may have different entry serial numbers corresponding
+   //  to (major,minor).
+   
    Long64_t serial = GetEntryNumberWithIndex(major, minor);
    if (serial < 0) return -1;
    return GetEntry(serial);
@@ -1521,7 +1519,7 @@ void TChain::Lookup(Bool_t force)
       // Count
       nlook++;
       // Get the Url
-      TUrl elemurl(element->GetTitle());
+      TUrl elemurl(element->GetTitle(), kTRUE);
       // Save current options and anchor
       TString anchor = elemurl.GetAnchor();
       TString options = elemurl.GetOptions();
@@ -1843,6 +1841,9 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
    // Copy the entries.
    if (fastClone) {
       // For each tree in the chain.
+      // disable the read and write cache
+      GetTree()->GetCurrentFile()->SetCacheRead(0);
+      newTree->GetCurrentFile()->SetCacheWrite(0);
       for (Long64_t i = 0; i < nentries; i += GetTree()->GetEntries()) {
          if (LoadTree(i) < 0) {
             break;
@@ -2046,7 +2047,7 @@ void TChain::ResetBranchAddress(TBranch *branch)
 //______________________________________________________________________________
 void TChain::ResetBranchAddresses()
 {
-   // -- Reset the addresses of the branches.
+   // Reset the addresses of the branches.
 
    TIter next(fStatus);
    TChainElement* element = 0;
@@ -2059,9 +2060,9 @@ void TChain::ResetBranchAddresses()
 }
 
 //_______________________________________________________________________
-void TChain::SetBranchAddress(const char *bname, void* add, TBranch** ptr)
+Int_t TChain::SetBranchAddress(const char *bname, void* add, TBranch** ptr)
 {
-   // -- Set branch address.
+   // Set branch address.
    //
    //      bname is the name of a branch.
    //      add is the address of the branch.
@@ -2073,6 +2074,9 @@ void TChain::SetBranchAddress(const char *bname, void* add, TBranch** ptr)
    // In case TChain::SetBranchStatus is called, it must be called
    // BEFORE calling this function.
    //
+   // See TTree::CheckBranchAddressType for the semantic of the return value.
+
+   Int_t res = kNoCheck;
 
    // Check if bname is already in the status list.
    // If not, create a TChainElement object and set its address.
@@ -2091,7 +2095,7 @@ void TChain::SetBranchAddress(const char *bname, void* add, TBranch** ptr)
          *ptr = branch;
       }
       if (branch) {
-         CheckBranchAddressType(branch, TClass::GetClass(element->GetBaddressClassName()), (EDataType) element->GetBaddressType(), element->GetBaddressIsPtr());
+         res = CheckBranchAddressType(branch, TClass::GetClass(element->GetBaddressClassName()), (EDataType) element->GetBaddressType(), element->GetBaddressIsPtr());
          if (fClones) {
             void* oldAdd = branch->GetAddress();
             for (TObjLink* lnk = fClones->FirstLink(); lnk; lnk = lnk->Next()) {
@@ -2110,12 +2114,14 @@ void TChain::SetBranchAddress(const char *bname, void* add, TBranch** ptr)
          *ptr = 0;
       }
    }
+   return res;
 }
 
 //_______________________________________________________________________
-void TChain::SetBranchAddress(const char* bname, void* add, TClass* realClass, EDataType datatype, Bool_t isptr)
+Int_t TChain::SetBranchAddress(const char* bname, void* add, TClass* realClass, EDataType datatype, Bool_t isptr)
 {
    // Check if bname is already in the status list, and if not, create a TChainElement object and set its address.
+   // See TTree::CheckBranchAddressType for the semantic of the return value.
    //
    //    Note: See the comments in TBranchElement::SetAddress() for a more
    //          detailed discussion of the meaning of the add parameter.
@@ -2124,9 +2130,10 @@ void TChain::SetBranchAddress(const char* bname, void* add, TClass* realClass, E
 }
 
 //_______________________________________________________________________
-void TChain::SetBranchAddress(const char* bname, void* add, TBranch** ptr, TClass* realClass, EDataType datatype, Bool_t isptr)
+Int_t TChain::SetBranchAddress(const char* bname, void* add, TBranch** ptr, TClass* realClass, EDataType datatype, Bool_t isptr)
 {
    // Check if bname is already in the status list, and if not, create a TChainElement object and set its address.
+   // See TTree::CheckBranchAddressType for the semantic of the return value.
    //
    //    Note: See the comments in TBranchElement::SetAddress() for a more
    //          detailed discussion of the meaning of the add parameter.
@@ -2143,7 +2150,7 @@ void TChain::SetBranchAddress(const char* bname, void* add, TBranch** ptr, TClas
    element->SetBaddressType((UInt_t) datatype);
    element->SetBaddressIsPtr(isptr);
    element->SetBranchPtr(ptr);
-   SetBranchAddress(bname, add, ptr);
+   return SetBranchAddress(bname, add, ptr);
 }
 
 //_______________________________________________________________________

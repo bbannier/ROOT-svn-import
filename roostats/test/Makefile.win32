@@ -158,7 +158,6 @@ STRESSGS      = stressGraphics.$(SrcSuf)
 STRESSG       = stressGraphics$(ExeSuf)
 
 !if exist("$(ROOTSYS)\lib\libGenVector.lib")
-
 STRESSVECO   = stressVector.$(ObjSuf)
 STRESSVECS   = stressVector.$(SrcSuf)
 STRESSVEC    = stressVector$(ExeSuf)
@@ -172,16 +171,13 @@ TRACKMATHOBJ = TrackMathCoreDict.$(ObjSuf)
 TRACKMATHLIB = libTrackMathCoreDict.$(DllSuf)
  
 STRESSMATH    = stressMathCore$(ExeSuf)
-
 !endif
 
 !if exist("$(ROOTSYS)\lib\libMathMore.lib")
-
 STRESSMATHMOREO   = stressMathMore.$(ObjSuf) 
 STRESSMATHMORES   = stressMathMore.$(SrcSuf)  
 STRESSMATHMORELIBS = $(ROOTSYS)\lib\libMathMore.lib  
 STRESSMATHMORE    = stressMathMore$(ExeSuf)
-
 !endif
 
 VLAZYO        = vlazy.$(ObjSuf)
@@ -220,17 +216,23 @@ STRESSSHAPESO   = stressShapes.$(ObjSuf)
 STRESSSHAPESS   = stressShapes.$(SrcSuf)
 STRESSSHAPES    = stressShapes$(ExeSuf)
 
+!if exist("$(ROOTSYS)\lib\libRooFit.lib")
 STRESSROOFITO  = stressRooFit.$(ObjSuf)
 STRESSROOFITS  = stressRooFit.$(SrcSuf)
 STRESSROOFIT   = stressRooFit$(ExeSuf)
+!endif
 
 STRESSFITO    = stressFit.$(ObjSuf)
 STRESSFITS    = stressFit.$(SrcSuf)
 STRESSFIT     = stressFit$(ExeSuf)
 
-STRESSTMVAO    = stressTMVA.$(ObjSuf)
-STRESSTMVAS    = stressTMVA.$(SrcSuf)
-STRESSTMVA     = stressTMVA$(ExeSuf)
+!if exist("$(ROOTSYS)\lib\libUnuran.lib")
+!if exist("$(ROOTSYS)\lib\libminuit2.lib")
+STRESSHISTOFITO    = stressHistoFit.$(ObjSuf)
+STRESSHISTOFITS    = stressHistoFit.$(SrcSuf)
+STRESSHISTOFIT     = stressHistoFit$(ExeSuf)
+!endif
+!endif
 
 STRESSENTRYLISTO = stressEntryList.$(ObjSuf)
 STRESSENTRYLISTS = stressEntryList.$(SrcSuf)
@@ -281,9 +283,9 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(TSTRINGO) $(TCOLLEXO) $(VVECTORO) $(VMATRIXO) $(VLAZYO) \
                 $(HELLOO) $(ACLOCKO) $(STRESSO) $(TBENCHO) $(BENCHO) \
                 $(STRESSSHAPESO) $(TCOLLBMO) $(STRESSGEOMETRYO) $(STRESSLO) \
-                $(STRESSGO) $(STRESSSPO) $(TESTBITSO) $(STRESSTMVAO) \
+                $(STRESSGO) $(STRESSSPO) $(TESTBITSO) \
                 $(CTORTUREO) $(QPRANDOMO) $(THREADSO) $(STRESSVECO) \
-                $(STRESSMATHO) $(STRESSFITO) $(STRESSHEPIXO) \
+                $(STRESSMATHO) $(STRESSFITO) $(STRESSHISTOFITO) $(STRESSHEPIXO) \
                 $(STRESSENTRYLISTO) $(STRESSROOFITO) $(STRESSPROOFO) \
                 $(STRESSMATHMOREO) $(STRESSITERO) $(STRESSHISTO) \
                 $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
@@ -293,8 +295,8 @@ PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(HELLOSO) $(ACLOCKSO) $(STRESS) $(TBENCHSO) $(BENCH) \
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
-                $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) \
-                $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH) $(STRESSTMVA) \
+                $(STRESSVEC) $(STRESSFIT) $(STRESSHISTOFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) \
+                $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH) \
                 $(STRESSMATHMORE) $(STRESSITER) $(STRESSHIST) \
                 $(GUITEST) $(GUIVIEWER) $(TETRISSO)
 
@@ -453,10 +455,14 @@ $(STRESSFIT):   $(STRESSFITO)
                 $(MT_EXE)
                 @echo "$@ done"
 
-$(STRESSTMVA): $(STRESSTMVAO)
-               $(LD) $(LDFLAGS) $(STRESSTMVAO) $(LIBS) $(ROOTSYS)\lib\libTMVA.lib $(ROOTSYS)\lib\libMinuit.lib $(ROOTSYS)\lib\libMLP.lib $(ROOTSYS)\lib\libTreePlayer.lib $(OutPutOpt)$@
-               $(MT_EXE)
-               @echo "$@ done"
+!if exist("$(ROOTSYS)\lib\libUnuran.lib")
+!if exist("$(ROOTSYS)\lib\libminuit2.lib")
+$(STRESSHISTOFIT): $(STRESSHISTOFITO)
+                   $(LD) $(LDFLAGS) $(STRESSHISTOFITO) $(LIBS) $(ROOTSYS)\lib\libUnuran.lib $(OutPutOpt)$@
+                   $(MT_EXE)
+                   @echo "$@ done"
+!endif
+!endif
 
 $(STRESSENTRYLIST): $(STRESSENTRYLISTO)
                     $(LD) $(LDFLAGS) $(STRESSENTRYLISTO) $(LIBS) $(OutPutOpt)$@
@@ -467,13 +473,6 @@ $(STRESSHEPIX): $(STRESSHEPIXO) $(STRESSGEOMETRY) $(STRESSFIT) $(STRESSL) \
                 $(LD) $(LDFLAGS) $(STRESSHEPIXO) $(LIBS) $(OutPutOpt)$@
                 $(MT_EXE)
                 @echo "$@ done"
-
-!if exist("$(ROOTSYS)\lib\libRooFit.lib")
-$(STRESSROOFIT): $(STRESSROOFITO)
-                 $(LD) $(LDFLAGS) $(STRESSROOFITO) $(LIBS) $(ROOTSYS)\lib\libRooFit.lib $(ROOTSYS)\lib\libRooFitCore.lib $(ROOTSYS)\lib\libHtml.lib $(ROOTSYS)\lib\libThread.lib $(ROOTSYS)\lib\libMinuit.lib $(OutPutOpt)$@
-                 $(MT_EXE)
-                 @echo "$@ done"
-!endif
 
 $(STRESSPROOF): $(STRESSPROOFO)
                 $(LD) $(LDFLAGS) $(STRESSPROOFO) $(LIBS) $(ROOTSYS)\lib\libProof.lib $(ROOTSYS)\lib\libThread.lib $(OutPutOpt)$@
@@ -515,10 +514,10 @@ $(STRESSHIST):  $(STRESSHISTO)
                 @echo "$@ done"
 
 clean:
-                @del *.obj *Dict.* *.def *.exp *.d *.log .def *.pdb *.ilk *.manifest
+      @del *.obj *Dict.* *.def *.exp *.d *.log .def *.pdb *.ilk *.manifest >nul 2>&1
 
 distclean:      clean
-       @del *.exe *.root *.ps *.lib *.dll
+      @del /q *.exe *.root *.ps *.lib *.dll >nul 2>&1
 
 ###
 Event.$(ObjSuf): Event.h

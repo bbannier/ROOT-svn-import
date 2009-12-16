@@ -16,7 +16,6 @@
 #include "Math/Util.h"
 
 #include "Math/Minimizer.h"
-#include "Math/MinimizerOptions.h"
 #include "Math/Factory.h"
 
 #include <cmath> 
@@ -28,8 +27,8 @@
 
 //#define DEBUG
 #ifdef DEBUG
-#include <iostream>
 #endif
+#include <iostream>
 
 namespace ROOT { 
 
@@ -44,10 +43,6 @@ FitConfig::FitConfig(unsigned int npar) :
    fSettings(std::vector<ParameterSettings>(npar) )  
 {
    // constructor implementation
-
-   // default minimizer type (use static default values) 
-   fMinimizerType = ROOT::Math::MinimizerOptions::DefaultMinimizerType(); 
-   fMinimAlgoType = ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo();; 
 }
 
 
@@ -72,8 +67,6 @@ FitConfig & FitConfig::operator = (const FitConfig &rhs) {
    fSettings = rhs.fSettings; 
    fMinosParams = rhs.fMinosParams; 
 
-   fMinimizerType = rhs.fMinimizerType; 
-   fMinimAlgoType = rhs.fMinimAlgoType; 
    fMinimizerOpts = rhs.fMinimizerOpts;
 
    return *this;
@@ -149,22 +142,31 @@ ROOT::Math::Minimizer * FitConfig::CreateMinimizer() {
    // create minimizer according to the chosen configuration using the 
    // plug-in manager
 
-   ROOT::Math::Minimizer * min = ROOT::Math::Factory::CreateMinimizer(fMinimizerType, fMinimAlgoType); 
+   const std::string & minimType = fMinimizerOpts.MinimizerType(); 
+   const std::string & algoType  = fMinimizerOpts.MinimizerAlgorithm(); 
 
+   std::string  defaultMinim = ROOT::Math::MinimizerOptions::DefaultMinimizerType(); 
+   ROOT::Math::Minimizer * min = ROOT::Math::Factory::CreateMinimizer(minimType, algoType); 
+   // check if a different minimizer is used (in case a default value is passed, then set correctly in FitConfig)
+   const std::string & minim_newDefault = ROOT::Math::MinimizerOptions::DefaultMinimizerType();
+   if (defaultMinim != minim_newDefault )  fMinimizerOpts.SetMinimizerType(minim_newDefault.c_str());
+      
    if (min == 0) { 
-      std::string minim2 = "Minuit2";
-      if (fMinimizerType != minim2 ) {
-         std::string msg = "Could not create the " + fMinimizerType + " minimizer. Try using the minimizer " + minim2; 
+      // if creation of minimizer failed force the use by default of Minuit
+      std::string minim2 = "Minuit"; 
+      if (minimType == "Minuit") minim2 = "Minuit2";
+      if (minimType != minim2 ) {
+         std::string msg = "Could not create the " + minimType + " minimizer. Try using the minimizer " + minim2; 
          MATH_WARN_MSG("FitConfig::CreateMinimizer",msg.c_str());
          min = ROOT::Math::Factory::CreateMinimizer(minim2,"Migrad"); 
          if (min == 0) { 
             MATH_ERROR_MSG("FitConfig::CreateMinimizer","Could not create the Minuit2 minimizer");
             return 0; 
          }
-         fMinimizerType = "Minuit2"; fMinimAlgoType = "Migrad"; 
+         SetMinimizer( minim2.c_str(),"Migrad"); 
       }
       else {
-         std::string msg = "Could not create the Minimizer " + fMinimizerType; 
+         std::string msg = "Could not create the Minimizer " + minimType; 
          MATH_ERROR_MSG("FitConfig::CreateMinimizer",msg.c_str());
          return 0;
       }
@@ -184,6 +186,7 @@ ROOT::Math::Minimizer * FitConfig::CreateMinimizer() {
    min->SetMaxFunctionCalls( fMinimizerOpts.MaxFunctionCalls() ); 
    min->SetMaxIterations( fMinimizerOpts.MaxIterations() ); 
    min->SetTolerance( fMinimizerOpts.Tolerance() ); 
+   min->SetPrecision( fMinimizerOpts.Precision() ); 
    min->SetValidError( fParabErrors );
    min->SetStrategy( fMinimizerOpts.Strategy() );
    min->SetErrorDef( fMinimizerOpts.ErrorDef() );
@@ -198,16 +201,8 @@ void FitConfig::SetDefaultMinimizer(const char * type, const char *algo ) {
 } 
 
 void FitConfig::SetMinimizerOptions(const ROOT::Math::MinimizerOptions & minopt) {  
-   // set minimizer options
-   fMinimizerType = minopt.MinimizerType(); 
-   fMinimAlgoType = minopt.MinimizerAlgorithm(); 
-   fMinimizerOpts.SetTolerance(minopt.Tolerance() ); 
-   fMinimizerOpts.SetMaxFunctionCalls(minopt.MaxFunctionCalls() ); 
-   fMinimizerOpts.SetMaxIterations(minopt.MaxIterations() ); 
-   fMinimizerOpts.SetStrategy(minopt.Strategy() ); 
-   fMinimizerOpts.SetPrintLevel(minopt.PrintLevel() ); 
-   fMinimizerOpts.SetErrorDef(minopt.ErrorDef() ); 
-
+   // set all the minimizer options
+   fMinimizerOpts = minopt; 
 }
 
 

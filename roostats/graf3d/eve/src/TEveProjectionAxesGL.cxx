@@ -231,8 +231,8 @@ void TEveProjectionAxesGL::SplitIntervalByVal(Float_t p1, Float_t p2, Int_t ax) 
    Int_t n1a = TMath::FloorNint(fM->GetNdivisions() / 100);
    Int_t n2a = fM->GetNdivisions() - n1a * 100;
    Int_t bn1, bn2;
-   Double_t bw1, bw2; // bin with first second order
-   Double_t bl1, bh1, bl2, bh2; // bin low, high first second order
+   Double_t bw1, bw2;           // bin width first / second order
+   Double_t bl1, bh1, bl2, bh2; // bin low, high first / second order
    THLimitsFinder::Optimize(v1, v2, n1a, bl1, bh1, bn1, bw1);
    THLimitsFinder::Optimize(bl1, bl1+bw1, n2a, bl2, bh2, bn2, bw2);
 
@@ -327,6 +327,12 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    Float_t t =  camera.FrustumPlane(TGLCamera::kTop).D();
    Float_t b = -camera.FrustumPlane(TGLCamera::kBottom).D();
 
+   if (fM->fUseColorSet)
+   {
+       TGLUtil::Color(rnrCtx.ColorSet().Markup());
+       fAxisPainter.SetUseAxisColors(kFALSE);
+   }
+
    fProjection = fM->GetManager()->GetProjection();
    glDisable(GL_LIGHTING);
    // Projection center and origin marker.
@@ -336,7 +342,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       if (fM->GetDrawCenter())
       {
          Float_t* c = fProjection->GetProjectedCenter();
-         TGLUtil::Color3f(1., 0., 0.);
+         TGLUtil::LineWidth(1);
          glBegin(GL_LINES);
          glVertex3f(c[0] + d, c[1], c[2]); glVertex3f(c[0] - d, c[1], c[2]);
          glVertex3f(c[0], c[1] + d, c[2]); glVertex3f(c[0], c[1] - d, c[2]);
@@ -346,8 +352,8 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       if (fM->GetDrawOrigin())
       {
          TEveVector zero;
-         fProjection->ProjectVector(zero);
-         TGLUtil::Color3f(1., 1., 1.);
+         fProjection->ProjectVector(zero, 0);
+         TGLUtil::LineWidth(1);
          glBegin(GL_LINES);
          glVertex3f(zero[0] + d, zero[1], zero[2]); glVertex3f(zero[0] - d, zero[1], zero[2]);
          glVertex3f(zero[0], zero[1] + d, zero[2]); glVertex3f(zero[0], zero[1] - d, zero[2]);
@@ -364,6 +370,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       glGetIntegerv(GL_VIEWPORT, vp);
       Float_t refLength =  TMath::Sqrt((TMath::Power(vp[2]-vp[0], 2) + TMath::Power(vp[3]-vp[1], 2)));
       Float_t tickLength = TMath::Sqrt((TMath::Power(r-l, 2) + TMath::Power(t-b, 2)));
+      fAxisPainter.SetFontMode(TGLFont::kPixmap);
       fAxisPainter.SetLabelFont(rnrCtx, TGLFontManager::GetFontNameFromId(fM->GetLabelFont()),  TMath::CeilNint(refLength*0.02), tickLength*fM->GetLabelSize());
 
       Float_t min, max;
@@ -380,7 +387,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          // Bottom.
          glPushMatrix();
          glTranslatef( 0, b, 0);
-         fAxisPainter.SetLabelAlign(TGLFont::kCenterDown);
+         fAxisPainter.SetLabelAlign(TGLFont::kCenterH, TGLFont::kTop);
          fAxisPainter.RnrLabels();
          fAxisPainter.RnrLines();
          glPopMatrix();
@@ -388,13 +395,13 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          // Top.
          glPushMatrix();
          glTranslatef( 0, t, 0);
-         fAxisPainter.SetLabelAlign(TGLFont::kCenterUp);
+         fAxisPainter.SetLabelAlign(TGLFont::kCenterH, TGLFont::kBottom);
          fAxisPainter.RefTMOff(0).Negate();
          fAxisPainter.RnrLabels();
          fAxisPainter.RnrLines();
          glPopMatrix();
       }
-     
+
       // Y-axis.
       if (fM->fAxesMode == TEveProjectionAxes::kAll ||
           fM->fAxesMode == TEveProjectionAxes::kVertical)
@@ -408,7 +415,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          // Left.
          glPushMatrix();
          glTranslatef(l, 0, 0);
-         fAxisPainter.SetLabelAlign(TGLFont::kLeft);
+         fAxisPainter.SetLabelAlign(TGLFont::kLeft, TGLFont::kCenterV);
          fAxisPainter.RnrLabels();
          fAxisPainter.RnrLines();
          glPopMatrix();
@@ -416,7 +423,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          // Right.
          glPushMatrix();
          glTranslatef(r, 0, 0);
-         fAxisPainter.SetLabelAlign(TGLFont::kRight);
+         fAxisPainter.SetLabelAlign(TGLFont::kRight, TGLFont::kCenterV);
          fAxisPainter.RefTMOff(0).Negate();
          fAxisPainter.RnrLabels();
          fAxisPainter.RnrLines();

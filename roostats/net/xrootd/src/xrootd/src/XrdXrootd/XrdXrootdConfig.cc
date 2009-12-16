@@ -115,8 +115,8 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    extern int optind, opterr;
 
    XrdXrootdXPath *xp;
-   char *adminp, *fsver, *rdf, c, buff[1024];
-   int deper = 0;
+   char *adminp, *fsver, *rdf, *bP, *tmp, c, buff[1024];
+   int i, n, deper = 0;
 
 // Copy out the special info we want to use at top level
 //
@@ -159,12 +159,12 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
      { switch(c)
        {
        case 'r': deper = 1;
-       case 'm': putenv((char *)"XRDREDIRECT=R");
+       case 'm': putenv((char *)"XRDREDIRECT=R"); // XrdOucEnv::Export()
                  break;
        case 't': deper = 1;
-       case 's': putenv((char *)"XRDRETARGET=1");
+       case 's': putenv((char *)"XRDRETARGET=1"); // XrdOucEnv::Export()
                  break;
-       case 'y': putenv((char *)"XRDREDPROXY=1");
+       case 'y': putenv((char *)"XRDREDPROXY=1"); // XrdOucEnv::Export()
                  break;
        default:  eDest.Say("Config warning: ignoring invalid option '",pi->argv[optind-1],"'.");
        }
@@ -188,6 +188,26 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    rdf = (parms && *parms ? parms : pi->ConfigFN);
    if (rdf && Config(rdf)) return 0;
    if (pi->DebugON) XrdXrootdTrace->What = TRACE_ALL;
+
+// Check if we are exporting anything
+//
+   if (!(xp = XPList.Next()))
+      {XPList.Insert("/tmp"); n = 8;
+       eDest.Say("Config warning: only '/tmp' will be exported.");
+      } else {
+       n = 0;
+       while(xp) {eDest.Say("Config exporting ", xp->Path(i));
+                  n += i+2; xp = xp->Next();
+                 }
+      }
+
+// Export the exports
+//
+   bP = tmp = (char *)malloc(n);
+   xp = XPList.Next();
+   while(xp) {strcpy(bP, xp->Path(i)); bP += i; *bP++ = ' '; xp = xp->Next();}
+   *(bP-1) = '\0';
+   XrdOucEnv::Export("XRDEXPORTS", tmp); free(tmp);
 
 // Initialiaze for AIO
 //
@@ -217,7 +237,7 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    if (!osFS)
       {eDest.Emsg("Config", "Unable to load file system.");
        return 0;
-      }
+      } else SI->setFS(osFS);
 
 // Check if the file system version matches our version
 //
@@ -261,16 +281,6 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
            xp = xp->Next();
           } while(xp);
       }
-
-// Check if we are exporting anything
-//
-   if (!(xp = XPList.Next()))
-      {XPList.Insert("/tmp");
-       eDest.Say("Config warning: only '/tmp' will be exported.");
-      } else while(xp)
-                  {eDest.Say("Config exporting ", xp->Path());
-                   xp = xp->Next();
-                  }
 
 // Set the redirect flag if we are a pure redirector
 //

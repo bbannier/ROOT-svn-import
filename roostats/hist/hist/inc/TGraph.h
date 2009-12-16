@@ -48,6 +48,8 @@ class TCollection;
 class TF1;
 class TSpline;
 
+#include "TFitResultPtr.h"
+
 class TGraph : public TNamed, public TAttLine, public TAttFill, public TAttMarker {
 
 protected:
@@ -72,8 +74,6 @@ protected:
    Double_t         **ExpandAndCopy(Int_t size, Int_t iend);
    virtual void       FillZero(Int_t begin, Int_t end, Bool_t from_ctor = kTRUE);
    Double_t         **ShrinkAndCopy(Int_t size, Int_t iend);
-
-   virtual Int_t      DoFit(TF1 *f1,Option_t *option,Option_t *goption, Axis_t xmin, Axis_t xmax);
 
 public:
    // TGraph status bits
@@ -116,8 +116,8 @@ public:
    virtual void          Expand(Int_t newsize, Int_t step);
    virtual TObject      *FindObject(const char *name) const;
    virtual TObject      *FindObject(const TObject *obj) const;
-   virtual Int_t         Fit(const char *formula ,Option_t *option="" ,Option_t *goption="", Axis_t xmin=0, Axis_t xmax=0); // *MENU*
-   virtual Int_t         Fit(TF1 *f1 ,Option_t *option="" ,Option_t *goption="", Axis_t xmin=0, Axis_t xmax=0); // *MENU*
+   virtual TFitResultPtr Fit(const char *formula ,Option_t *option="" ,Option_t *goption="", Axis_t xmin=0, Axis_t xmax=0); // *MENU*
+   virtual TFitResultPtr Fit(TF1 *f1 ,Option_t *option="" ,Option_t *goption="", Axis_t xmin=0, Axis_t xmax=0);
    virtual void          FitPanel(); // *MENU*
    Bool_t                GetEditable() const;
    TF1                  *GetFunction(const char *name) const;
@@ -157,6 +157,7 @@ public:
    virtual void          InitGaus(Double_t xmin=0, Double_t xmax=0);
    virtual void          InitPolynom(Double_t xmin=0, Double_t xmax=0);
    virtual Int_t         InsertPoint(); // *MENU*
+   virtual Double_t      Integral(Int_t first=0, Int_t last=-1) const;
    virtual Bool_t        IsEditable() const {return !TestBit(kNotEditable);}
    virtual void          LeastSquareFit(Int_t m, Double_t *a, Double_t xmin=0, Double_t xmax=0);
    virtual void          LeastSquareLinearFit(Int_t n, Double_t &a0, Double_t &a1, Int_t &ifail, Double_t xmin=0, Double_t xmax=0);

@@ -32,6 +32,7 @@
 
 class TGLPlotCoordinates;
 class TGLPlotCamera;
+class TGL5DDataSet;
 class TString;
 class TColor;
 class TAxis;
@@ -67,6 +68,8 @@ public:
    void   TurnOnOff();
    Bool_t IsActive()const{return fActive;}
    void   SetActive(Bool_t a);
+
+   void   ResetBoxGeometry();
    
    void   SetFactor(Double_t f){fFactor = f;}
 
@@ -164,10 +167,30 @@ private:
    TGLPlotPainter class defines interface to different plot painters.
 */
 
-class TGLPlotPainter : public TVirtualGLPainter {
+class TGLPlotPainter;
+
+/*
+Object of this class, created on stack in DrawPlot member-functions,
+saves modelview matrix, moves plot to (0; 0; 0), and
+restores modelview matrix in dtor.
+*/
+
+namespace Rgl {
+
+class PlotTranslation {
+public:
+   PlotTranslation(const TGLPlotPainter *painter);
+   ~PlotTranslation();
+
 private:
-   //Int_t                 fGLContext;
-   //TGLPaintDevice       *fGLDevice;
+   const TGLPlotPainter *fPainter;
+};
+
+}
+
+class TGLPlotPainter : public TVirtualGLPainter {
+   friend class Rgl::PlotTranslation;
+private:
    const TColor         *fPadColor;
 
 protected:
@@ -209,6 +232,7 @@ public:
    TGLPlotPainter(TGLPlotCamera *camera, Int_t context);*/
    TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordinates *coord,
                   Bool_t xoySelectable, Bool_t xozSelectable, Bool_t yozSelectable);
+   TGLPlotPainter(TGL5DDataSet *data, TGLPlotCamera *camera, TGLPlotCoordinates *coord);
    TGLPlotPainter(TGLPlotCamera *camera);
 
    const TGLPlotBox& RefBackBox() const { return fBackBox; }
@@ -270,7 +294,6 @@ protected:
    
    void             RestoreModelviewMatrix()const;
    void             RestoreProjectionMatrix()const;
-   //
 
    ClassDef(TGLPlotPainter, 0) //Base for gl plots
 };
@@ -327,6 +350,8 @@ public:
    Bool_t Modified()const;
 
    Bool_t SetRanges(const TH1 *hist, Bool_t errors = kFALSE, Bool_t zBins = kFALSE);
+   //
+   Bool_t SetRanges(const TAxis *xAxis, const TAxis *yAxis, const TAxis *zAxis);
 
    Int_t  GetNXBins()const;
    Int_t  GetNYBins()const;
@@ -361,10 +386,11 @@ public:
    Double_t GetFactor()const;
 
 private:
-   Bool_t SetRangesCartesian(const TH1 *hist, Bool_t errors, Bool_t zBins);
    Bool_t SetRangesPolar(const TH1 *hist);
    Bool_t SetRangesCylindrical(const TH1 *hist);
    Bool_t SetRangesSpherical(const TH1 *hist);
+
+   Bool_t SetRangesCartesian(const TH1 *hist, Bool_t errors = kFALSE, Bool_t zBins = kFALSE);
 
    TGLPlotCoordinates(const TGLPlotCoordinates &);
    TGLPlotCoordinates &operator = (const TGLPlotCoordinates &);
@@ -376,8 +402,8 @@ class TGLLevelPalette;
 
 namespace Rgl {
 
-   void DrawPalette(const TGLPlotCamera * camera, const TGLLevelPalette & palette);
-   void DrawPaletteAxis(const TGLPlotCamera * camera, const Range_t & minMax, Bool_t logZ);
+void DrawPalette(const TGLPlotCamera * camera, const TGLLevelPalette & palette);
+void DrawPaletteAxis(const TGLPlotCamera * camera, const Range_t & minMax, Bool_t logZ);
 
 }
 

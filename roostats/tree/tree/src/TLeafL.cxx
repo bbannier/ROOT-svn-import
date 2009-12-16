@@ -27,7 +27,10 @@ TLeafL::TLeafL(): TLeaf()
 //*-*-*-*-*-*Default constructor for LeafI*-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*        ============================
 
-   fValue = 0;
+   fLenType = sizeof(Long64_t);
+   fMinimum = 0;
+   fMaximum = 0;
+   fValue   = 0;
    fPointer = 0;
 }
 
@@ -159,6 +162,10 @@ void TLeafL::ReadBasket(TBuffer &b)
       b >> fValue[0];
    } else {
       if (fLeafCount) {
+         Long64_t entry = fBranch->GetReadEntry();
+         if (fLeafCount->GetBranch()->GetReadEntry() != entry) {
+            fLeafCount->GetBranch()->GetEntry(entry);
+         }
          Int_t len = Int_t(fLeafCount->GetValue());
          if (len > fLeafCount->GetMaximum()) {
             printf("ERROR leaf:%s, len=%d and max=%d\n",GetName(),len,fLeafCount->GetMaximum());

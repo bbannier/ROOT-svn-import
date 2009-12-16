@@ -24,6 +24,7 @@
 
 #ifdef WIN32
 #   include <io.h>
+#   include "snprintf.h"
 #endif
 #include "TDSet.h"
 #include "TEnv.h"
@@ -50,6 +51,8 @@
 #include "TH3F.h"
 
 ClassImp(TProofLite)
+
+Int_t TProofLite::fgWrksMax = -2; // Unitialized max number of workers
 
 //______________________________________________________________________________
 TProofLite::TProofLite(const char *url, const char *conffile, const char *confdir,
@@ -101,11 +104,12 @@ TProofLite::TProofLite(const char *url, const char *conffile, const char *confdi
    // Determine the number of workers giving priority to users request.
    // Otherwise use the system information, if available, or just start
    // the minimal number, i.e. 2 .
-   fNWorkers = GetNumberOfWorkers(url);
-   Printf(" +++ Starting PROOF-Lite with %d workers +++", fNWorkers);
+   if ((fNWorkers = GetNumberOfWorkers(url)) > 0) {
 
-   // Init the session now
-   Init(url, conffile, confdir, loglevel, alias);
+      Printf(" +++ Starting PROOF-Lite with %d workers +++", fNWorkers);
+      // Init the session now
+      Init(url, conffile, confdir, loglevel, alias);
+   }
 
    // For final cleanup
    if (!gROOT->GetListOfProofs()->FindObject(this))
@@ -140,6 +144,9 @@ Int_t TProofLite::Init(const char *, const char *conffile,
       fConfDir     = confdir;
       fConfFile    = conffile;
    }
+
+   // Analysise the conffile field
+   ParseConfigField(conffile);
 
    // The sandbox for this session
    if (CreateSandbox() != 0) {
@@ -352,6 +359,33 @@ Int_t TProofLite::GetNumberOfWorkers(const char *url)
    // Otherwise use the system information, if available, or just start
    // the minimal number, i.e. 2 .
 
+   Bool_t notify = kFALSE;
+   if (fgWrksMax == -2) {
+      // Find the max number of workers, if any
+      TString sysname = "system.rootrc";
+#ifdef ROOTETCDIR
+      char *s = gSystem->ConcatFileName(ROOTETCDIR, sname);
+#else
+      TString etc = gRootDir;
+#ifdef WIN32
+      etc += "\\etc";
+#else
+      etc += "/etc";
+#endif
+      char *s = gSystem->ConcatFileName(etc, sysname);
+#endif
+      TEnv sysenv(0);
+      sysenv.ReadFile(s, kEnvGlobal);
+      fgWrksMax = sysenv.GetValue("ProofLite.MaxWorkers", -1);
+      // Notify once the user if its will is changed
+      notify = kTRUE;
+   }
+   if (fgWrksMax == 0) {
+      ::Error("TProofLite::GetNumberOfWorkers",
+              "PROOF-Lite disabled by the system administrator: sorry!");
+      return 0;
+   }
+
    Int_t nWorkers = -1;
    if (url && strlen(url)) {
       TString o(url);
@@ -373,7 +407,15 @@ Int_t TProofLite::GetNumberOfWorkers(const char *url)
             // Two workers by default
             nWorkers = 2;
          }
+         if (notify) notify = kFALSE;
       }
+   }
+   // Apply the max, if any
+   if (fgWrksMax > 0 && fgWrksMax < nWorkers) {
+      if (notify)
+         ::Warning("TProofLite::GetNumberOfWorkers", "number of PROOF-Lite workers limited by"
+                                                     " the system administrator to %d", fgWrksMax);
+      nWorkers = fgWrksMax;
    }
 
    // Done
@@ -553,10 +595,10 @@ void TProofLite::NotifyStartUp(const char *action, Int_t done, Int_t tot)
    Int_t frac = (Int_t) (done*100.)/tot;
    char msg[512] = {0};
    if (frac >= 100) {
-      sprintf(msg, "%s: OK (%d workers)                 \n",
+      snprintf(msg, 512, "%s: OK (%d workers)                 \n",
                    action, tot);
    } else {
-      sprintf(msg, "%s: %d out of %d (%d %%)\r",
+      snprintf(msg, 512, "%s: %d out of %d (%d %%)\r",
                    action, done, tot, frac);
    }
    fprintf(stderr,"%s", msg);
@@ -584,6 +626,10 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
    // The session working dir depends on the role
    fprintf(frc,"# The session working dir\n");
    fprintf(frc,"ProofServ.SessionDir: %s/worker-%s\n", fWorkDir.Data(), ord);
+
+   // The session unique tag
+   fprintf(frc,"# Session tag\n");
+   fprintf(frc,"ProofServ.SessionTag: %s\n", GetName());
 
    // Log / Debug level
    fprintf(frc,"# Proof Log/Debug level\n");
@@ -634,30 +680,32 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
       return -1;
    }
    // ROOTSYS
-   fprintf(fenv, "ROOTSYS=%s\n", gSystem->Getenv("ROOTSYS"));
+   fprintf(fenv, "export ROOTSYS=%s\n", gSystem->Getenv("ROOTSYS"));
    // Conf dir
-   fprintf(fenv, "ROOTCONFDIR=%s\n", gSystem->Getenv("ROOTSYS"));
+   fprintf(fenv, "export ROOTCONFDIR=%s\n", gSystem->Getenv("ROOTSYS"));
    // TMPDIR
-   fprintf(fenv, "TMPDIR=%s\n", gSystem->TempDirectory());
+   fprintf(fenv, "export TMPDIR=%s\n", gSystem->TempDirectory());
    // Log file in the log dir
    TString logfile(Form("%s/worker-%s.log", fWorkDir.Data(), ord));
-   fprintf(fenv, "ROOTPROOFLOGFILE=%s\n", logfile.Data());
+   fprintf(fenv, "export ROOTPROOFLOGFILE=%s\n", logfile.Data());
    // RC file
-   fprintf(fenv, "ROOTRCFILE=%s\n", rcfile.Data());
+   fprintf(fenv, "export ROOTRCFILE=%s\n", rcfile.Data());
    // ROOT version tag (needed in building packages)
-   fprintf(fenv, "ROOTVERSIONTAG=%s\n", gROOT->GetVersion());
+   fprintf(fenv, "export ROOTVERSIONTAG=%s\n", gROOT->GetVersion());
    // Set the user envs
    if (fgProofEnvList) {
       TString namelist;
       TIter nxenv(fgProofEnvList);
       TNamed *env = 0;
       while ((env = (TNamed *)nxenv())) {
-         fprintf(fenv, "%s=%s\n", env->GetName(), env->GetTitle());
+         TString senv(env->GetTitle());
+         ResolveKeywords(senv, logfile.Data());
+         fprintf(fenv, "export %s=%s\n", env->GetName(), senv.Data());
          if (namelist.Length() > 0)
             namelist += ',';
          namelist += env->GetName();
       }
-      fprintf(fenv, "PROOF_ALLVARS=%s\n", namelist.Data());
+      fprintf(fenv, "export PROOF_ALLVARS=%s\n", namelist.Data());
    }
 
    // System env file created
@@ -665,6 +713,32 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
 
    // Done
    return 0;
+}
+
+//__________________________________________________________________________
+void TProofLite::ResolveKeywords(TString &s, const char *logfile)
+{
+   // Resolve some keywords in 's'
+   //    <logfileroot>, <user>, <rootsys>
+
+   if (!logfile) return;
+
+   // Log file
+   if (s.Contains("<logfilewrk>") && logfile) {
+      TString lfr(logfile);
+      if (lfr.EndsWith(".log")) lfr.Remove(lfr.Last('.'));
+      s.ReplaceAll("<logfilewrk>", lfr.Data());
+   }
+
+   // user
+   if (gSystem->Getenv("USER") && s.Contains("<user>")) {
+      s.ReplaceAll("<user>", gSystem->Getenv("USER"));
+   }
+
+   // rootsys
+   if (gSystem->Getenv("ROOTSYS") && s.Contains("<rootsys>")) {
+      s.ReplaceAll("<rootsys>", gSystem->Getenv("ROOTSYS"));
+   }
 }
 
 //______________________________________________________________________________
@@ -783,10 +857,14 @@ TProofQueryResult *TProofLite::MakeQueryResult(Long64_t nent, const char *opt,
    // Create a TProofQueryResult instance for this query.
 
    // Increment sequential number
-   if (fQMgr) fQMgr->IncrementSeqNum();
+   Int_t seqnum = -1;
+   if (fQMgr) {
+      fQMgr->IncrementSeqNum();
+      seqnum = fQMgr->SeqNum();
+   }
 
    // Create the instance and add it to the list
-   TProofQueryResult *pqr = new TProofQueryResult(fQMgr->SeqNum(), opt,
+   TProofQueryResult *pqr = new TProofQueryResult(seqnum, opt,
                                                   fPlayer->GetInputList(), nent,
                                                   fst, dset, selec,
                                                   (dset ? dset->GetEntryList() : 0));
@@ -825,39 +903,6 @@ void TProofLite::SetQueryRunning(TProofQueryResult *pq)
 
    // Bytes and CPU at start (we will calculate the differential at end)
    pq->SetProcessInfo(pq->GetEntries(), GetCpuTime(), GetBytesRead());
-}
-
-//______________________________________________________________________________
-TList *TProofLite::GetDataSet(const char *name)
-{
-   // Utility function used in various methods for user dataset upload.
-
-   TString fileListPath;
-   if (strchr(name, '~') == name) {
-      char *nameCopy = new char[strlen(name)];
-      strcpy(nameCopy, name + 1);
-      char *userName = strtok(nameCopy, "/");
-      if (strcmp(strtok(0, "/"), "public"))
-         return 0;
-      fileListPath = fWorkDir + "/../" + userName + "/"
-                     + kPROOF_DataSetDir + "/public/";
-      delete[] nameCopy;
-   } else if (strchr(name, '/') && strstr(name, "public") != name) {
-      Printf("Dataset name should be of form [[~user/]public/]dataset");
-      return 0;
-   } else
-      fileListPath = fDataSetDir + "/" + name + ".root";
-   TList *fileList = 0;
-   if (gSystem->AccessPathName(fileListPath.Data(), kFileExists) == kFALSE) {
-      TFile *f = TFile::Open(fileListPath);
-      f->cd();
-      fileList = (TList *) f->Get("fileList");
-      f->Close();
-      delete f;
-      if (strchr(name, '~') == name)  // not when allocated with Form
-         delete[] fileListPath;
-   }
-   return fileList;
 }
 
 //______________________________________________________________________________
@@ -921,7 +966,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
       fRunningDSets->Delete();
    }
 
-   if (!IsValid() || !fQMgr) {
+   if (!IsValid() || !fQMgr || !fPlayer) {
       Error("Process", "invalid sesion or query-result manager undefined!");
       return -1;
    }
@@ -931,7 +976,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    if (!fPlayer->GetInputList()->FindObject("PROOF_MaxSlavesPerNode"))
       SetParameter("PROOF_MaxSlavesPerNode", (Long_t)fNWorkers);
 
-   Bool_t hasNoData = (dset->TestBit(TDSet::kEmpty)) ? kTRUE : kFALSE;
+   Bool_t hasNoData = (!dset || dset->TestBit(TDSet::kEmpty)) ? kTRUE : kFALSE;
 
    // If just a name was given to identify the dataset, retrieve it from the
    // local files
@@ -1019,6 +1064,8 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    if (qtag) {
       qtag->SetTitle(Form("%s:%s",pq->GetTitle(),pq->GetName()));
    } else {
+      TObject *o = fPlayer->GetInputList()->FindObject("PROOF_QueryTag");
+      if (o) fPlayer->GetInputList()->Remove(o);
       fPlayer->AddInput(new TNamed("PROOF_QueryTag",
                                    Form("%s:%s",pq->GetTitle(),pq->GetName())));
    }
@@ -1103,9 +1150,6 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
          // Keep in memory only light infor about a query
          if (!(pq->IsDraw())) {
             if (fQMgr->Queries()) {
-               TQueryResult *pqr = pq->CloneInfo();
-               if (pqr)
-                  fQMgr->Queries()->Add(pqr);
                // Remove from the fQueries list
                fQMgr->Queries()->Remove(pq);
             }
@@ -1191,7 +1235,7 @@ Int_t TProofLite::InitDataSetManager()
 
    // If no valid dataset manager has been created we instantiate the default one
    if (!fDataSetManager) {
-      TString opts("As:");
+      TString opts("Av:");
       TString dsetdir = gEnv->GetValue("ProofServ.DataSetDir", "");
       if (dsetdir.IsNull()) {
          // Use the default in the sandbox
@@ -1216,11 +1260,11 @@ Int_t TProofLite::InitDataSetManager()
    }
 
    if (gDebug > 0 && fDataSetManager) {
-      Info("InitDataSetManager", "datasetmgr Cq: %d, Ar: %d, Av: %d, As: %d, Sb: %d",
+      Info("InitDataSetManager", "datasetmgr Cq: %d, Ar: %d, Av: %d, Ti: %d, Sb: %d",
             fDataSetManager->TestBit(TDataSetManager::kCheckQuota),
             fDataSetManager->TestBit(TDataSetManager::kAllowRegister),
             fDataSetManager->TestBit(TDataSetManager::kAllowVerify),
-            fDataSetManager->TestBit(TDataSetManager::kAllowStaging),
+            fDataSetManager->TestBit(TDataSetManager::kTrustInfo),
             fDataSetManager->TestBit(TDataSetManager::kIsSandbox));
    }
 

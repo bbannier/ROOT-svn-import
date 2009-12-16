@@ -144,17 +144,34 @@ TGX11::TGX11()
 {
    // Default constructor.
 
-   fDisplay      = 0;
-   fScreenNumber = 0;
-   fVisual       = 0;
-   fRootWin      = 0;
-   fVisRootWin   = 0;
-   fColormap     = 0;
-   fBlackPixel   = 0;
-   fWhitePixel   = 0;
-   fWindows      = 0;
-   fColors       = 0;
-   fXEvent       = new XEvent;
+   int i;
+   fDisplay            = 0;
+   fScreenNumber       = 0;
+   fVisual             = 0;
+   fRootWin            = 0;
+   fVisRootWin         = 0;
+   fColormap           = 0;
+   fBlackPixel         = 0;
+   fWhitePixel         = 0;
+   fWindows            = 0;
+   fColors             = 0;
+   fXEvent             = new XEvent;
+   fRedDiv             = -1;
+   fGreenDiv           = -1;
+   fBlueDiv            = -1;
+   fRedShift           = -1;
+   fGreenShift         = -1;
+   fBlueShift          = -1;
+   fCharacterUpX       = 1;
+   fCharacterUpY       = 1;
+   fDepth              = 0;
+   fHasTTFonts         = kFALSE;
+   fMaxNumberOfWindows = 10;
+   fTextAlignH         = 1;
+   fTextAlignV         = 1;
+   fTextAlign          = 7;
+   fTextMagnitude      = 1;
+   for (i = 0; i < kNumCursors; i++) fCursors[i] = 0;
 }
 
 //______________________________________________________________________________
@@ -162,28 +179,37 @@ TGX11::TGX11(const char *name, const char *title) : TVirtualX(name, title)
 {
    // Normal Constructor.
 
-   fDisplay         = 0;
-   fScreenNumber    = 0;
-   fVisual          = 0;
-   fRootWin         = 0;
-   fVisRootWin      = 0;
-   fColormap        = 0;
-   fBlackPixel      = 0;
-   fWhitePixel      = 0;
-   fHasTTFonts      = kFALSE;
-   fTextAlignH      = 1;
-   fTextAlignV      = 1;
-   fTextAlign       = 7;
-   fTextMagnitude   = 1;
-   fCharacterUpX    = 1;
-   fCharacterUpY    = 1;
-   fDrawMode        = kCopy;
-   fXEvent          = new XEvent;
-
+   int i;
+   fDisplay            = 0;
+   fScreenNumber       = 0;
+   fVisual             = 0;
+   fRootWin            = 0;
+   fVisRootWin         = 0;
+   fColormap           = 0;
+   fBlackPixel         = 0;
+   fWhitePixel         = 0;
+   fDrawMode           = kCopy;
+   fXEvent             = new XEvent;
+   fRedDiv             = -1;
+   fGreenDiv           = -1;
+   fBlueDiv            = -1;
+   fRedShift           = -1;
+   fGreenShift         = -1;
+   fBlueShift          = -1;
+   fCharacterUpX       = 1;
+   fCharacterUpY       = 1;
+   fDepth              = 0;
+   fHasTTFonts         = kFALSE;
    fMaxNumberOfWindows = 10;
+   fTextAlignH         = 1;
+   fTextAlignV         = 1;
+   fTextAlign          = 7;
+   fTextMagnitude      = 1;
+   for (i = 0; i < kNumCursors; i++) fCursors[i] = 0;
+
    //fWindows = new XWindow_t[fMaxNumberOfWindows];
    fWindows = (XWindow_t*) TStorage::Alloc(fMaxNumberOfWindows*sizeof(XWindow_t));
-   for (int i = 0; i < fMaxNumberOfWindows; i++)
+   for (i = 0; i < fMaxNumberOfWindows; i++)
       fWindows[i].fOpen = 0;
 
    fColors = new TExMap;
@@ -247,10 +273,10 @@ TGX11::TGX11(const TGX11 &org) : TVirtualX(org)
       fCursors[i] = org.fCursors[i];
 
    fColors = new TExMap;
-   Long_t     key, value;
+   Long64_t key, value;
    TExMapIter it(org.fColors);
    while (it.Next(key, value)) {
-      XColor_t *colo = (XColor_t *) value;
+      XColor_t *colo = (XColor_t *) (Long_t)value;
       XColor_t *col  = new XColor_t;
       col->fPixel   = colo->fPixel;
       col->fRed     = colo->fRed;
@@ -270,10 +296,10 @@ TGX11::~TGX11()
    if (fWindows) TStorage::Dealloc(fWindows);
 
    if (!fColors) return;
-   Long_t     key, value;
+   Long64_t key, value;
    TExMapIter it(fColors);
    while (it.Next(key, value)) {
-      XColor_t *col = (XColor_t *) value;
+      XColor_t *col = (XColor_t *) (Long_t)value;
       delete col;
    }
    delete fColors;
@@ -842,7 +868,7 @@ XColor_t &TGX11::GetColor(Int_t cid)
    // Return reference to internal color structure associated
    // to color index cid.
 
-   XColor_t *col = (XColor_t*) fColors->GetValue(cid);
+   XColor_t *col = (XColor_t*) (Long_t)fColors->GetValue(cid);
    if (!col) {
       col = new XColor_t;
       fColors->Add(cid, (Long_t) col);
@@ -2190,7 +2216,7 @@ void TGX11::SetLineColor(Color_t cindex)
    if (cindex < 0) return;
 
    TAttLine::SetLineColor(cindex);
-   
+
    SetColor(*gGCline, Int_t(cindex));
    SetColor(*gGCdash, Int_t(cindex));
 }
@@ -2289,7 +2315,7 @@ void TGX11::SetMarkerColor(Color_t cindex)
    // Set color index for markers.
 
    if (cindex < 0) return;
-   
+
    TAttMarker::SetMarkerColor(cindex);
 
    SetColor(*gGCmark, Int_t(cindex));
@@ -2741,7 +2767,7 @@ void TGX11::SetTextAlign(Short_t talign)
          }
          break;
    }
-   
+
    TAttText::SetTextAlign(fTextAlign);
 }
 
@@ -2753,7 +2779,7 @@ void TGX11::SetTextColor(Color_t cindex)
    if (cindex < 0) return;
 
    TAttText::SetTextColor(cindex);
-   
+
    SetColor(*gGCtext, Int_t(cindex));
 
    XGCValues values;
@@ -3220,10 +3246,10 @@ Pixmap_t TGX11::ReadGIF(int x0, int y0, const char *file, Window_t id)
 }
 
 //______________________________________________________________________________
-unsigned char *TGX11::GetColorBits(Drawable_t /*wid*/, Int_t /*x*/, Int_t /*y*/, 
+unsigned char *TGX11::GetColorBits(Drawable_t /*wid*/, Int_t /*x*/, Int_t /*y*/,
                                        UInt_t /*w*/, UInt_t /*h*/)
 {
-   // Returns an array of pixels created from a part of drawable (defined by x, y, w, h) 
+   // Returns an array of pixels created from a part of drawable (defined by x, y, w, h)
    // in format:
    // b1, g1, r1, 0,  b2, g2, r2, 0 ... bn, gn, rn, 0 ..
    //
@@ -3236,7 +3262,7 @@ unsigned char *TGX11::GetColorBits(Drawable_t /*wid*/, Int_t /*x*/, Int_t /*y*/,
 }
 
 //______________________________________________________________________________
-Pixmap_t TGX11::CreatePixmapFromData(unsigned char * /*bits*/, UInt_t /*width*/, 
+Pixmap_t TGX11::CreatePixmapFromData(unsigned char * /*bits*/, UInt_t /*width*/,
                                        UInt_t /*height*/)
 {
    // create pixmap from RGB data. RGB data is in format :
@@ -3257,23 +3283,23 @@ Int_t TGX11::AddPixmap(ULong_t pixid, UInt_t w, UInt_t h)
    Int_t wid = 0;
 
    // Select next free window number
-   for (; wid < fMaxNumberOfWindows; ++wid) 
+   for (; wid < fMaxNumberOfWindows; ++wid)
       if (!fWindows[wid].fOpen)
          break;
-      
+
    if (wid == fMaxNumberOfWindows) {
       Int_t newsize = fMaxNumberOfWindows + 10;
       fWindows = (XWindow_t*) TStorage::ReAlloc(
                                                 fWindows, newsize * sizeof(XWindow_t),
                                                 fMaxNumberOfWindows*sizeof(XWindow_t)
                                                );
-                                                  
+
       for (Int_t i = fMaxNumberOfWindows; i < newsize; ++i)
          fWindows[i].fOpen = 0;
-         
+
       fMaxNumberOfWindows = newsize;
    }
-      
+
    fWindows[wid].fOpen = 1;
    gCws = fWindows + wid;
    gCws->fWindow = pixid;
@@ -3286,6 +3312,6 @@ Int_t TGX11::AddPixmap(ULong_t pixid, UInt_t w, UInt_t h)
    gCws->fHeight = h;
    gCws->fNewColors = 0;
    gCws->fShared = kFALSE;
-      
+
    return wid;
 }

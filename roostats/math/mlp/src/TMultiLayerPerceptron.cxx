@@ -34,7 +34,7 @@
 //   * in TMultilayerPerceptron, there is no limitation on the number of 
 //     layers/neurons, while MLPFIT was limited to 2 hidden layers
 //   * TMultilayerPerceptron allows you to save the network in a root file, and 
-//     provides more export functionnalities
+//     provides more export functionalities
 //   * TMultilayerPerceptron gives more flexibility regarding the normalization of 
 //     inputs/outputs
 //   * TMultilayerPerceptron provides, thanks to Andrea Bocci, the possibility to 
@@ -598,7 +598,7 @@ void TMultiLayerPerceptron::SetTestDataSet(const char * test)
    // Sets the Test dataset.
    // Those events will not be used for the minimization but for control.
    // Note that the tree must be already defined.
-   if(fTest && fTestOwner) delete fTest;
+   if(fTest && fTestOwner) {delete fTest; fTest=0;}
    if(fTest) if(strncmp(fTest->GetName(),Form("fTestList_%i",this),10)) delete fTest;
    fTest = new TEventList(Form("fTestList_%i",this));
    fTestOwner = true;
@@ -961,7 +961,7 @@ Double_t TMultiLayerPerceptron::GetError(Int_t event) const
    // Error on the output for a given event
    GetEntry(event);
    Double_t error = 0;
-   // look at 1st output neruon to determine type and error fnuction
+   // look at 1st output neruon to determine type and error function
    Int_t nEntries = fLastLayer.GetEntriesFast();
    if (nEntries == 0) return 0.0;
    switch (fOutType) {
@@ -1319,43 +1319,53 @@ void TMultiLayerPerceptron::BuildHiddenLayers(TString & hidden)
    Int_t prevStart = 0;
    Int_t prevStop = fNetwork.GetEntriesFast();
    Int_t layer = 1;
+   while (end != -1) {
+      BuildOneHiddenLayer(hidden(beg, end - beg), layer, prevStart, prevStop, false);
+      beg = end + 1;
+      end = hidden.Index(":", beg + 1);
+   }
+
+   BuildOneHiddenLayer(hidden(beg, hidden.Length() - beg), layer, prevStart, prevStop, true);
+}
+
+//______________________________________________________________________________
+void TMultiLayerPerceptron::BuildOneHiddenLayer(const TString& sNumNodes, Int_t& layer,
+                                                  Int_t& prevStart, Int_t& prevStop,
+                                                  Bool_t lastLayer)
+{
+   // Builds a hidden layer, updates the number of layers.
    TNeuron *neuron = 0;
    TSynapse *synapse = 0;
    TString name;
-   Int_t i,j;
-   while (end != -1) {
-      Int_t num = atoi(TString(hidden(beg, end - beg)).Data());
-      for (i = 0; i < num; i++) {
+   if (!sNumNodes.IsAlnum() || sNumNodes.IsAlpha()) {
+      Error("BuildOneHiddenLayer",
+            "The specification '%s' for hidden layer %d must contain only numbers!",
+            sNumNodes.Data(), layer - 1);
+   } else {
+      Int_t num = atoi(sNumNodes.Data());
+      for (Int_t i = 0; i < num; i++) {
          name.Form("HiddenL%d:N%d",layer,i);
          neuron = new TNeuron(fType, name, "", (const char*)fextF, (const char*)fextD);
          fNetwork.AddLast(neuron);
-         for (j = prevStart; j < prevStop; j++) {
+         for (Int_t j = prevStart; j < prevStop; j++) {
             synapse = new TSynapse((TNeuron *) fNetwork[j], neuron);
             fSynapses.AddLast(synapse);
          }
       }
-      // tell each neuron which ones are in its own layer (for Softmax)
-      Int_t nEntries = fNetwork.GetEntriesFast();
-      for (i = prevStop; i < nEntries; i++) {
-         neuron = (TNeuron *) fNetwork[i];
-         for (j = prevStop; j < nEntries; j++)
-            neuron->AddInLayer((TNeuron *) fNetwork[j]);
+
+      if (!lastLayer) {
+         // tell each neuron which ones are in its own layer (for Softmax)
+         Int_t nEntries = fNetwork.GetEntriesFast();
+         for (Int_t i = prevStop; i < nEntries; i++) {
+            neuron = (TNeuron *) fNetwork[i];
+            for (Int_t j = prevStop; j < nEntries; j++)
+               neuron->AddInLayer((TNeuron *) fNetwork[j]);
+         }
       }
-      beg = end + 1;
-      end = hidden.Index(":", beg + 1);
+
       prevStart = prevStop;
       prevStop = fNetwork.GetEntriesFast();
       layer++;
-   }
-   Int_t num = atoi(TString(hidden(beg, hidden.Length() - beg)).Data());
-   for (i = 0; i < num; i++) {
-      name.Form("HiddenL%d:N%d",layer,i);
-      neuron = new TNeuron(fType, name);
-      fNetwork.AddLast(neuron);
-      for (j = prevStart; j < prevStop; j++) {
-         synapse = new TSynapse((TNeuron *) fNetwork[j], neuron);
-         fSynapses.AddLast(synapse);
-      }
    }
 }
 
