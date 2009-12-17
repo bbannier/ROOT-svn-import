@@ -40,6 +40,26 @@
 
 ClassImp(TSelEvent)
 
+TSelEvent::TSelEvent(TTree *)
+   :fRunType(TProofBench::kRunNotSpecified), 
+   fNTries(10),
+   fNEvents(10000),
+   fDraw(kFALSE),
+   fCHist(0), 
+   fPtHist(0),
+   fNTracksHist(0)
+{}
+
+TSelEvent::TSelEvent()
+   :fRunType(TProofBench::kRunNotSpecified),
+   fNTries(10),
+   fNEvents(10000),
+   fDraw(kFALSE),
+   fCHist(0),
+   fPtHist(0),
+   fNTracksHist(0)
+{}
+
 void TSelEvent::Begin(TTree *)
 {
    // The Begin() function is called at the start of the query.
@@ -86,14 +106,14 @@ void TSelEvent::Begin(TTree *)
          } 
          continue;
       }*/
-      if (sinput.Contains("fNFiles")){
+      if (sinput.Contains("fNTries")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fNFiles= a->GetVal();
-            Info("Begin", "fNFiles=%d", fNFiles);
+            fNTries= a->GetVal();
+            Info("Begin", "fNTries=%d", fNTries);
          }
          else{
-            Error("Begin", "fNFiles not type TParameter<Int_t>*"); 
+            Error("Begin", "fNTries not type TParameter<Int_t>*"); 
          } 
          continue;
       }
@@ -186,14 +206,14 @@ void TSelEvent::SlaveBegin(TTree *tree)
          } 
          continue;
       }*/
-      if (sinput.Contains("fNFiles")){
+      if (sinput.Contains("fNTries")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fNFiles= a->GetVal();
-            Info("SlaveBegin", "fNFiles=%d", fNFiles);
+            fNTries= a->GetVal();
+            Info("SlaveBegin", "fNTries=%d", fNTries);
          }
          else{
-            Error("SlaveBegin", "fNFiles not type TParameter<Int_t>*"); 
+            Error("SlaveBegin", "fNTries not type TParameter<Int_t>*"); 
          } 
          continue;
       }
@@ -244,6 +264,10 @@ Bool_t TSelEvent::Process(Long64_t entry)
 
    switch (fRunType){
 
+   case TProofBench::kRunNotSpecified://full read
+      Info("Process", "Runtype (%d) not specified, doing nothing");
+      return kTRUE; 
+      break;
    case TProofBench::kRunFullDataRead://full read
    case TProofBench::kRunCleanup:
 

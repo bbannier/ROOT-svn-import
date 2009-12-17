@@ -48,52 +48,93 @@
 
 ClassImp(TProofBench)
 
-TProofBench::TProofBench(TProof* proof, 
+TProofBench::TProofBench(
                          TString fFilename, 
+                         TProof* proof, 
                          TString basedir, 
-                         ERunType whattorun, 
+                         ERunType runtype, 
                          Long_t nhists, 
+                         EHistType histtype,
                          Int_t maxnworkers, 
                          Int_t nnodes, 
-                         Int_t nfiles, 
+                         Int_t ntries, 
                          Long64_t nevents, 
-                         //Int_t niter, 
                          Int_t stepsize, 
                          Int_t start, 
+                         Int_t ntracksbench,
+                         Int_t ntrackscleanup,
                          Int_t draw,
                          Int_t debug):
+fFile(0), 
 fProof(proof), 
-fBaseDir(basedir), 
-fRunType(whattorun), 
-fNHists(nhists),
+fBaseDir(""),
+fRunType(kRunNotSpecified),
+fNameStem(""),
+fNHists(16),
 fHistType(kHistAll),
-fMaxNWorkers(maxnworkers), 
-fNNodes(nnodes), 
-fNFiles(nfiles),
-fNEvents(nevents), 
-//fNIterations(niter), 
-fStepSize(stepsize),
-fStart(start), 
-fNFilesGenerated(0), 
-fNEventsGenerated(0),
-fFilesGeneratedCleanup(kFALSE),
-fNTracksBench(3),
+fMaxNWorkers(-1), 
+fNNodes(-1), 
+fNTries(10),
+fNEvents(10000), 
+fStepSize(1),
+fStart(1), 
+fNTracksBench(10),
 fNTracksCleanup(100),
-fDraw(draw), 
+fDraw(0), 
+fDebug(0),
+fNEventsGenerated(0),
+fNFilesGeneratedBench(0), 
+fFilesGeneratedCleanup(kFALSE),
 fDataSet(0), 
 fDataSetGeneratedBench(0), 
 fDataSetGeneratedCleanup(0), 
-fFile(0), 
 fCPerfProfiles(0), 
 fDirProofBench(0),
-fDebug(debug)
+fProfCPUTestEvent(0),
+fProfOptDataReadEvent(0),
+fProfOptDataReadIO(0),
+fProfFullDataReadEvent(0),
+fProfFullDataReadIO(0)
+//fListRunType(0)
 {
 
-//Default constructor
+   //Default constructor
    
    FileOpen(fFilename, "new");
+   SetBaseDir(basedir);
+   SetRunType("TProofBench", runtype);
+   SetNHists(nhists);
+   SetHistType(histtype);
+
+   if (maxnworkers>0){ 
+      SetMaxNWorkers(maxnworkers);
+   }
+   else{
+      SetMaxNWorkers("2x");
+   }
+
+   SetNNodes(nnodes);
+   SetNTries(ntries);
+   SetNEvents(nevents);
+   SetStepSize(stepsize);
+   SetStart(start);
+   SetNTracksBench(ntracksbench);
+   SetNTracksCleanup(ntrackscleanup);
    SetDraw(draw);
-   SetParameters(basedir, nhists, maxnworkers, nnodes, nfiles, nevents, stepsize, start);
+   SetDebug(debug);
+
+   //fListRunType=new TList;
+   //fListRunType->Add(new TParameter<Int_t>("kRunNotSpecified", Int_t(kRunNotSpecified))); 
+   ////fListRunType->Add(new TParameter<Int_t>("kRunNothing", Int_t(kRunNothing))); 
+   //fListRunType->Add(new TParameter<Int_t>("kRunCPUTest", Int_t(kRunCPUTest))); 
+   //fListRunType->Add(new TParameter<Int_t>("kRunFullDataRead", Int_t(kRunFullDataRead))); 
+   //fListRunType->Add(new TParameter<Int_t>("kRunOptDataRead", Int_t(kRunOptDataRead))); 
+   //fListRunType->Add(new TParameter<Int_t>("kRunNoDataRead", Int_t(kRunNoDataRead))); 
+   //fListRunType->Add(new TParameter<Int_t>("kRunGenerateFileBench", Int_t(kRunGenerateFileBench))); 
+   //fListRunType->Add(new TParameter<Int_t>("kRunGenerateFileCleanup",Int_t(kRunGenerateFileCleanup))); 
+   //fListRunType->Add(new TParameter<Int_t>("kRunCleanup", Int_t(kRunCleanup))); 
+
+   //SetParameters(basedir, nhists, maxnworkers, nnodes, ntries, nevents, stepsize, start);
    // switch logging on
    // Probably changing environment variable is not a good idea. This should be fixed
    gEnv->SetValue("Proof.StatsHist",0);
@@ -101,15 +142,142 @@ fDebug(debug)
    gEnv->SetValue("Proof.SlaveStatsTrace",0);
 }
 
+void TProofBench::SetBaseDir(TString basedir)
+{
+   basedir.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
+   basedir.Remove(TString::kBoth, '\t');//remove leading and trailing tab character(s)
+   basedir.Remove(TString::kTrailing, '/'); //remove trailing /
+
+   //see if files were already generated
+   //if ((basedir.Length()<=0 || basedir==fBaseDir) //no base directory change
+   //number of files requested is smaller than files already generated
+   //&& ((ntries<=0 && fNTriesGenerated>0) || (ntries>0 && ntries<=fNTriesGenerated))
+   //number of events/file is smaller than that in files already generated
+   //&& ((nevents<=0 && fNEventsGenerated>0) || (nevents>0 && nevents<=fNEventsGenerated))){
+   //}
+   //else{ //file generation is needed)
+   //returnval=1;
+   //}
+   fBaseDir=basedir.Length()>0?basedir:fBaseDir;
+}
+
+void TProofBench::SetRunType(TString where, ERunType runtype)
+{
+   switch (runtype){
+   case kRunNotSpecified:
+      fRunType=runtype;
+      fNameStem="RunNotSpecified";
+      break;
+   //case kRunNothing:
+   //   fRunType=runtype;
+   //   fNameStem="RunNothing";
+   //   return;
+   //   break;
+   case kRunCPUTest:
+      fRunType=runtype;
+      fNameStem="CPUTest";
+      break;
+   case kRunGenerateFileBench:
+      fRunType=runtype;
+      fNameStem="GenerateFileBench";
+      break;
+   case kRunGenerateFileCleanup:
+      fRunType=runtype;
+      fNameStem="GenerateFileCleanup";
+      break;
+   case kRunCleanup:
+      fRunType=runtype;
+      fNameStem="Cleanup";
+      break;
+   case kRunFullDataRead:
+      fRunType=runtype;
+      fNameStem="FullDataRead";
+      break;
+   case kRunOptDataRead:
+      fRunType=runtype;
+      fNameStem="OptDataRead";
+      break;
+   case kRunNoDataRead:
+      fRunType=runtype;
+      fNameStem="NoDataRead";
+      break;
+   default:
+      Error(where.Data(), "Invalid run type: use one of (" //TProofBench::kRunNothing,"
+                   "TProofBench::kRunCPUTest, TProofBench::kRunGenerateFileBench,"
+                   "TProofBench::kRunGenerateFileCleanup, TProofBench::kRunCleanup,"
+                   "TProofBench::kRunFullDataRead, TProofBench::kRunOptDataRead,"
+                   " or TProofBench::kRunNoDataRead)");
+      return;
+      break;
+   }
+
+}
+
+void TProofBench::SetNHists(Long_t nhists)
+{
+   fNHists=nhists>-1?nhists: fNHists;
+}
+
+void TProofBench::SetMaxNWorkers(Int_t maxnworkers)
+{
+  fMaxNWorkers=maxnworkers>-1?maxnworkers:fMaxNWorkers;
+}
+
+void TProofBench::SetMaxNWorkers(TString sworkers)
+{
+   sworkers.ToLower();
+   sworkers.Remove(TString::kTrailing, ' ');
+   if (fProof){
+      if (sworkers.Contains("x")){//nx
+         TList* lslave=fProof->GetListOfSlaveInfos();
+         Int_t nslaves=lslave->GetSize();  //number of slave workers regardless of its status, active or inactive
+         sworkers.Remove(TString::kTrailing, 'x');
+         Int_t mult=sworkers.Atoi();
+         fMaxNWorkers=mult*nslaves; //this number to be parameterized in the future
+      }
+   }
+   else{
+      Error("SetMaxNWorkers", "Proof not set, doing nothing");
+   }
+   return;
+}
+
+void TProofBench::SetNTries(Int_t ntries)
+{
+   fNTries=ntries>-1?ntries:fNTries;
+}
+
+void TProofBench::SetNEvents(Long64_t nevents)
+{
+   fNEvents=nevents>-1?nevents:fNEvents;
+}
+
+void TProofBench::SetStepSize(Int_t stepsize)
+{
+   fStepSize=stepsize>-1?stepsize:fStepSize;
+}
+
+void TProofBench::SetStart(Int_t start)
+{
+   fStart=start>-1?start:fStart;
+}
+
+void TProofBench::SetNTracksBench(Int_t ntracksbench){
+   fNTracksBench=ntracksbench>-1?ntracksbench:fNTracksBench;
+}
+
+void TProofBench::SetNTracksCleanup(Int_t ntrackscleanup){
+   fNTracksCleanup=ntrackscleanup>-1?ntrackscleanup:fNTracksCleanup;
+}
+
 void TProofBench::SetDraw(Int_t draw)
 {
+   fDraw=draw>-1?draw:fDraw;
+}
 
-   fDraw=draw;
-
-   if (!fProof){
-      Error("SetDraw", "Proof not set");
-      return;
-   }
+void TProofBench::SetDebug(Int_t debug)
+{
+   fDebug=debug>-1?debug:fDebug;
 }
 
 TProofBench::~TProofBench()
@@ -129,17 +297,13 @@ TProofBench::~TProofBench()
       delete fFile;
    }
    fProof=0;
+   //if (fListRunType){
+   //   delete fListRunType;
+   //   fListRunType=0;
+   //}
 } 
 
-void TProofBench::RunBenchmarkAll(TString basedir, 
-                                  Long_t nhists, 
-                                  Int_t maxnworkers, 
-                                  Int_t nnodes, 
-                                  Int_t nfiles, 
-                                  Long64_t nevents, 
-                                  //Int_t niter, 
-                                  Int_t stepsize, 
-                                  Int_t start)
+void TProofBench::RunBenchmarkAll()
 {
 
    if (!fProof){
@@ -147,97 +311,39 @@ void TProofBench::RunBenchmarkAll(TString basedir,
       return;
    }
 
-   /*RunBenchmark(kRunCPUTest, basedir, nhists, maxnworkers, nnodes, nfiles, nevents, niter, stepsize, start);
-   RunBenchmark(kRunFullDataRead, basedir, nhists, maxnworkers, nnodes, nfiles, nevents, niter, stepsize, start);
-   RunBenchmark(kRunOptDataRead, basedir, nhists, maxnworkers, nnodes, nfiles, nevents, niter, stepsize, start);
-   */
-   RunBenchmark(kRunCPUTest, basedir, nhists, maxnworkers, nnodes, nfiles, nevents, stepsize, start);
-   RunBenchmark(kRunFullDataRead, basedir, nhists, maxnworkers, nnodes, nfiles, nevents, stepsize, start);
-   RunBenchmark(kRunOptDataRead, basedir, nhists, maxnworkers, nnodes, nfiles, nevents, stepsize, start);
-
-   DrawPerfProfiles("", fDraw);
+   RunBenchmark(kRunCPUTest);
+   BuildPerfProfiles(kRunCPUTest);
+   RunBenchmark(kRunOptDataRead);
+   BuildPerfProfiles(kRunOptDataRead);
+   RunBenchmark(kRunFullDataRead);
+   BuildPerfProfiles(kRunFullDataRead);
 }
 
-void TProofBench::RunBenchmark(ERunType whattorun, 
-                               TString basedir, 
-                               Long_t nhists, 
-                               Int_t maxnworkers, 
-                               Int_t nnodes, 
-                               Int_t nfiles, 
-                               Long64_t nevents, 
-                               //Int_t niter, 
-                               Int_t stepsize, 
-                               Int_t start)
+void TProofBench::RunBenchmark(ERunType whattorun)
 {
    if (!fProof){
       Error("RunBenchmark", "Proof not set");
       return;
    }
 
-   //SetParameters(basedir, nhists, maxnworkers, nnodes, nfiles, nevents, niter, stepsize, start);
-   SetParameters(basedir, nhists, maxnworkers, nnodes, nfiles, nevents, stepsize, start);
-
    TString perfstats_name = "PROOF_PerfStats";
-   TString name_stem;
 
    switch (whattorun){
-   case kRunNotSpecified:
-      Info("RunBenchmark", "Run not specified, returning");
-      return;
-      break;
-   case kRunNothing:
-      Info("RunBenchmark", "kRunNothing requested; doing nothing and returning");
-      return;
-      break;
+   //case kRunNothing:
+   //   Info("RunBenchmark", "kRunNothing requested; doing nothing and returning");
+   //   SetRunType("RunBenchmark", kRunNothing);
+   //   return;
+   //   break;
    case kRunCPUTest:
-      name_stem="CPUTest";
-      break;
-   case kRunGenerateFileBench:
-      name_stem="GenerateFileBench";
-      break;
-   case kRunGenerateFileCleanup:
-      name_stem="GenerateFileCleanup";
-      break;
-   case kRunCleanup:
-      name_stem="Cleanup";
-      break;
-   case kRunFullDataRead:
-      name_stem="FullDataRead";
-      break;
-   case kRunOptDataRead:
-      name_stem="OptDataRead";
-      break;
-   case kRunNoDataRead:
-      name_stem="NoDataRead";
-      break;
-   default:
-      Error("RunBenchmark", "Invalid run type: use one of (TProofBench::kRunNothing,"
-                           "TProofBench::kRunCPUTest, TProofBench::kRunGenerateFileBench,"
-                           "TProofBench::kRunGenerateFileCleanup, TProofBench::kRunCleanup,"
-                           "TProofBench::kRunFullDataRead, TProofBench::kRunOptDataRead,"
-                           " or TProofBench::kRunNoDataRead)");
-      return;
-      break;
-   }
-
-   switch (whattorun){
-   case kRunNothing:
-      Info("RunBenchmark", "kRunNothing requested; doing nothing and returning");
-      return;
-      break;
-   case kRunCPUTest:
-      fRunType=kRunCPUTest;
+ 
+      SetRunType("RunBenchmark", kRunCPUTest);
+      if (CheckParameters("RunBenchMark")) return;
+      SetInputParameters();
 
       for (Int_t nactive=fStart; nactive<=fMaxNWorkers; nactive+=fStepSize) {
          fProof->SetParallel(nactive);
-         for (Int_t j=0; j<fNFiles; j++) {
+         for (Int_t j=0; j<fNTries; j++) {
 
-            fProof->SetParameter("fRunType", fRunType);
-            fProof->SetParameter("fNHists", fNHists);
-            fProof->SetParameter("fHistType", fHistType);
-            fProof->SetParameter("fNEvents", fNEvents);
-            fProof->SetParameter("fDraw", Int_t(fDraw));
-         
             TTime starttime = gSystem->Now();
             fProof->Process("TSelHist", fNEvents);
             TTime endtime = gSystem->Now();
@@ -258,7 +364,7 @@ void TProofBench::RunBenchmark(ERunType whattorun,
                //build up new name
                TString newname = perfstats_name;
                newname+="_";
-               newname+=name_stem;
+               newname+=fNameStem;
                newname+="_";
                newname+=nactive;
                newname+="slaves_run";
@@ -283,24 +389,26 @@ void TProofBench::RunBenchmark(ERunType whattorun,
 
       break;
    case kRunGenerateFileBench:
-      fRunType=whattorun;
-      GenerateFiles(fRunType, fBaseDir,fMaxNWorkers, fNFiles, fNEvents);
+      SetRunType("RunBenchmark", kRunGenerateFileBench);
+      if (CheckParameters("RunBenchMark")) return;
+      GenerateFiles();
       break;
    case kRunGenerateFileCleanup:
-      fRunType=whattorun;
-      GenerateFiles(fRunType, fBaseDir,fMaxNWorkers, fNFiles, fNEvents);
+      SetRunType("RunBenchmark", kRunGenerateFileCleanup);
+      if (CheckParameters("RunBenchMark")) return;
+      GenerateFiles();
       break;
    case kRunCleanup:
       {
+         //make sure files are generated
+         RunBenchmark(kRunGenerateFileCleanup);
+
+         SetRunType("RunBenchmark", kRunCleanup);
+         if (CheckParameters("RunBenchMark")) return;
          Int_t nactive_sav=fProof->GetParallel();
          fProof->SetParallel(fMaxNWorkers);
 
-         fProof->SetParameter("fRunType", fRunType);
-         fProof->SetParameter("fNFiles", fNFiles);
-         fProof->SetParameter("fNEvents", fNEvents);
-         //fProof->SetParameter("fBaseDir", fBaseDir.Data());
-         fProof->SetParameter("fDraw", Int_t(fDraw));
-
+         SetInputParameters();
          fDataSetGeneratedCleanup->Print("a");
 
          TTime starttime = gSystem->Now();
@@ -329,7 +437,7 @@ void TProofBench::RunBenchmark(ERunType whattorun,
                //build up new name
                TString newname = perfstats_name;
                newname+="_";
-               newname+=name_stem;
+               newname+=fNameStem;
                newname+=Form("%d", ncalls);
                t->SetName(newname);
 
@@ -357,7 +465,7 @@ void TProofBench::RunBenchmark(ERunType whattorun,
                TString origname = h->GetName();
                TString newname = ptdist_name;
                newname+="_";
-               newname+=name_stem;
+               newname+=fNameStem;
                newname+=Form("%d", ncalls);
                hnew->SetName(newname);
 
@@ -381,7 +489,7 @@ void TProofBench::RunBenchmark(ERunType whattorun,
                //TString origname = h2->GetName();
                TString newname = tracksdist_name;
                newname+="_";
-               newname+=name_stem;
+               newname+=fNameStem;
                newname+=Form("%d", ncalls);
                hnew->SetName(newname);
                if (fFile && !fFile->IsZombie()) {
@@ -402,35 +510,30 @@ void TProofBench::RunBenchmark(ERunType whattorun,
    case kRunOptDataRead:
    case kRunNoDataRead:
 
-      fRunType=whattorun;
+      SetRunType("RunBenchmark", kRunGenerateFileCleanup);
+      if (CheckParameters("RunBenchMark")) return;
+      GenerateFiles();
 
-      GenerateFiles(kRunGenerateFileCleanup, fBaseDir, fMaxNWorkers, fNFiles, fNEvents);
-      GenerateFiles(kRunGenerateFileBench, fBaseDir, fMaxNWorkers, fNFiles, fNEvents);
+      SetRunType("RunBenchmark", kRunGenerateFileBench);
+      if (CheckParameters("RunBenchMark")) return;
+      GenerateFiles();
 
       for (Int_t nactive=fStart; nactive<=fMaxNWorkers; nactive+=fStepSize) {
-         for (Int_t j=0; j<fNFiles; j++) {
+         for (Int_t j=0; j<fNTries; j++) {
 
             //cleanup run
-            fProof->SetParallel(fMaxNWorkers);
-
             RunBenchmark(kRunCleanup);
+
+            SetRunType("RunBenchmark", whattorun);
+            if (CheckParameters("RunBenchMark")) return;
+
+            MakeDataSet(j);
+            fDataSet->Print("a");
 
             fProof->SetParallel(nactive);
 
-            fProof->SetParameter("fRunType", fRunType);
-            fProof->SetParameter("fNFiles", fNFiles);
-            fProof->SetParameter("fNEvents", fNEvents);
-            //fProof->SetParameter("fBaseDir", fBaseDir.Data());
-            fProof->SetParameter("fDraw", Int_t(fDraw));
-
-            //MakeDataSet(fBaseDir, nactive, fNNodes, j, name_stem);
-            //MakeDataSet(fBaseDir, nactive, j, name_stem);
-            MakeDataSet(fBaseDir, j, name_stem);
-
-            fDataSet->Print("a");
-
+            SetInputParameters();
             TTime starttime = gSystem->Now();
-
             fProof->Process(fDataSet, "TSelEvent", "", -1);
 
             TTime endtime = gSystem->Now();
@@ -453,7 +556,7 @@ void TProofBench::RunBenchmark(ERunType whattorun,
                //build up new name
                TString newname = perfstats_name;
                newname+="_";
-               newname+=name_stem;
+               newname+=fNameStem;
                newname+="_";
                newname+=nactive;
                newname+="slaves_run";
@@ -487,7 +590,7 @@ void TProofBench::RunBenchmark(ERunType whattorun,
                   TString origname = h->GetName();
                   TString newname = ptdist_name;
                   newname+="_";
-                  newname+=name_stem;
+                  newname+=fNameStem;
                   newname+="_";
                   newname+=nactive;
                   newname+="slaves_run";
@@ -517,7 +620,7 @@ void TProofBench::RunBenchmark(ERunType whattorun,
                   //TString origname = h2->GetName();
                   TString newname = tracksdist_name;
                   newname+="_";
-                  newname+=name_stem;
+                  newname+=fNameStem;
                   newname+="_";
                   newname+=nactive;
                   newname+="slaves_run";
@@ -536,7 +639,7 @@ void TProofBench::RunBenchmark(ERunType whattorun,
                   Error("RunBenchmark", "histogram %s not found", tracksdist_name.Data());
                }
             }
-         }//for nfiles
+         }//for ntries
       }//for number of workers
       break;
    default:
@@ -546,34 +649,18 @@ void TProofBench::RunBenchmark(ERunType whattorun,
    }
 }
 
-Int_t TProofBench::GenerateFiles(ERunType runtype,
-                                 TString basedir, 
-                                 Int_t maxnworkers, 
-                                 Int_t nfiles, 
-                                 Long64_t nevents)
+Int_t TProofBench::GenerateFiles()
 {
 
 //Generate files on worker nodes for I/O test or for cleanup run
 //basedir: base directory for the files to be generated on the worker node. 
 //Use "" (empty string) not to change the current base directory
-//nfiles: number of files per node to be generated. Use negative number not to change the current number
+//ntries: number of files per node to be generated. Use negative number not to change the current number
 //nevents: number of events to generate per file. Use negative number not to change the current number
 //Returns number of successfully generated files
 
-   if (!fProof){
-      Error("GenerateFiles", "Proof not set");
-      return 0;
-   }
-
-   Long_t nhists=-1;
-   //Int_t niter=-1;
-   Int_t nnodes=-1;
-   Int_t stepsize=-1;
-   Int_t start=-1;
-
-   if (runtype==kRunGenerateFileBench){
-      //if (!SetParameters(basedir, nhists, maxnworkers, nnodes, nfiles, nevents, niter, stepsize, start)){
-      if (!SetParameters(basedir, nhists, maxnworkers, nnodes, nfiles, nevents, stepsize, start)){
+   if (fRunType==kRunGenerateFileBench){
+      if (fNFilesGeneratedBench){
          Info("GenerateFiles", "Files already generated, returning");
          return 0;
       }
@@ -581,7 +668,7 @@ Int_t TProofBench::GenerateFiles(ERunType runtype,
       if (fDataSetGeneratedBench) delete fDataSetGeneratedBench;
       fDataSetGeneratedBench = new TDSet("TTree","EventTree");
    }
-   else if (runtype==kRunGenerateFileCleanup){
+   else if (fRunType==kRunGenerateFileCleanup){
       if (fFilesGeneratedCleanup){
          return 0;  
       }
@@ -595,30 +682,18 @@ Int_t TProofBench::GenerateFiles(ERunType runtype,
    nactive_sav=fProof->GetParallel();
    fProof->SetParallel(99999);
 
-   if (runtype==kRunGenerateFileBench){
-      fProof->SetParameter("fRunType", kRunGenerateFileBench);
-   }
-   else if (runtype==kRunGenerateFileCleanup){
-      fProof->SetParameter("fRunType", kRunGenerateFileCleanup);
-   }
-
-   fProof->SetParameter("fBaseDir", fBaseDir.Data());
-   fProof->SetParameter("fMaxNWorkers", fMaxNWorkers);
-   fProof->SetParameter("fNFiles", fNFiles);
-   fProof->SetParameter("fNEvents", fNEvents);
-   fProof->SetParameter("fNTracksBench", fNTracksBench);
-   fProof->SetParameter("fNTracksCleanup", fNTracksCleanup);
+   SetInputParameters();
 
    TList* wl=fProof->GetListOfSlaveInfos();
    wl->SetName("listofslaveinfos");
    fProof->AddInputData(wl, kTRUE);
 
-   if (runtype==kRunGenerateFileBench){
+   if (fRunType==kRunGenerateFileBench){
       Info("GenerateFiles", "Generating %d * %d file(s) with %lld event(s)/file at %s on the cluster. "
            "It may take a while...", 
-        fMaxNWorkers, fNFiles, fNEvents, fBaseDir.Data());
+        fMaxNWorkers, fNTries, fNEvents, fBaseDir.Data());
    }
-   else if (runtype==kRunGenerateFileCleanup){
+   else if (fRunType==kRunGenerateFileCleanup){
       Info("GenerateFiles", "Generating file(s) at each node for cleaning up memory. "
            "It may take a while...");
    }
@@ -666,10 +741,10 @@ Int_t TProofBench::GenerateFiles(ERunType runtype,
                tdelement->SetName(newfilename.Data());
             }
             //tdset->Print("a");
-            if (runtype==kRunGenerateFileBench){
+            if (fRunType==kRunGenerateFileBench){
                fDataSetGeneratedBench->Add(tdset);  
             }
-            else if (runtype==kRunGenerateFileCleanup){
+            else if (fRunType==kRunGenerateFileCleanup){
                fDataSetGeneratedCleanup->Add(tdset);  
             }
          }
@@ -680,45 +755,41 @@ Int_t TProofBench::GenerateFiles(ERunType runtype,
       }
    }
 
-   if (runtype==kRunGenerateFileBench){
+   if (fRunType==kRunGenerateFileBench){
       //fDataSetGenerated->Validate();
-      fDataSetGeneratedBench->Print("a"); 
-      fNFilesGenerated=fNFiles;
+      fNFilesGeneratedBench=fNTries;
       fNEventsGenerated=fNEvents;
+      fDataSetGeneratedBench->Print("a"); 
    }
-   else if (runtype==kRunGenerateFileCleanup){
-      fDataSetGeneratedCleanup->Print("a"); 
+   else if (fRunType==kRunGenerateFileCleanup){
       fFilesGeneratedCleanup=kTRUE;
+      fDataSetGeneratedCleanup->Print("a"); 
    }
 
    //Put it back to old configuration
    fProof->SetParallel(nactive_sav);
 
-   return fNFilesGenerated;
+   return fNFilesGeneratedBench;
 }
 
-void TProofBench::MakeDataSet(TString basedir, 
-                              //Int_t nworkers, 
-                              //Int_t nnodes, 
-                              Int_t nfile, 
-                              TString name_stem)
+void TProofBench::MakeDataSet(Int_t ntry)
 {
-// Create a TDSet object that will be used to process
+// Build a TDSet object out of the dataset of all generated files (fDataSetGeneratedBench)
+// The built dataset will be used for the IO-bound test
 // the files generated with GenerateFiles function.
-// basedir: location of files local to proof slaves
-// nfile: file number
+// ntry: file number
+// Typical data file looks like this: 
+// event_tree_pcalice166.cern.ch_FullDataRead_0_1.root
 
    if (!fProof){
       Error("MakeDataSet", "Proof not set");
       return;
    }
 
-   basedir.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
-   basedir.Remove(TString::kBoth, '\t');//remove leading and trailing tab character(s)
-   basedir.Remove(TString::kTrailing, '/'); //remove trailing /
-
-   if (basedir.Length()>0) {
-     fBaseDir=basedir; 
+   TList* l = fProof->GetListOfSlaveInfos();
+   if (!l) {
+      Error("MakeDataSet", "No list of workers received!");
+      return;
    }
 
    if (fDataSet){
@@ -727,12 +798,6 @@ void TProofBench::MakeDataSet(TString basedir,
    }
 
    fDataSet = new TDSet("TTree","EventTree");
-
-   TList* l = fProof->GetListOfSlaveInfos();
-   if (!l) {
-      cout << "No list of workers received!" << endl;
-      return;
-   }
 
    TIter nxw(l);
    //TSlaveInfo *si = 0;
@@ -746,7 +811,7 @@ void TProofBench::MakeDataSet(TString basedir,
    //Int_t ntotalworkers=l->GetSize();
 
    //Int_t nodenumber=0;
-   Int_t nfilesadded=0;
+   Int_t ntriesadded=0;
 
    TList* lelement=fDataSetGeneratedBench->GetListOfElements();
    TIter nxtelement(lelement);
@@ -762,20 +827,21 @@ void TProofBench::MakeDataSet(TString basedir,
       hostname=url->GetHost();
       filename=url->GetFile();
 
-      //printf("filename=%s\n", filename.Data());
+      printf("filename=%s\n", filename.Data());
 
-      if (!filename.Contains(name_stem)) continue;
+      if (!filename.Contains(fNameStem)) continue;
 
+      //filename=...namestem_nworkers_ntries.root
       //remove upto name_stem and leading "_"
       tmpstring=filename;
 
-      tmpstring.Remove(0, filename.Index(name_stem)+name_stem.Length()+1);
+      tmpstring.Remove(0, filename.Index(fNameStem)+fNameStem.Length()+1);
       //printf("tmpstring=%s\n", tmpstring.Data());
 
-      TObjArray* token=tmpstring.Tokenize("_"); //filename=...namestem_nworkers_nfiles.root
+      TObjArray* token=tmpstring.Tokenize("_"); 
 
       //printf("token[%d]=%s\n", 0, (*token)[0]->GetName()); //should be nworkers
-      //printf("token[%d]=%s\n", 1, (*token)[1]->GetName()); //should be nfiles.root
+      //printf("token[%d]=%s\n", 1, (*token)[1]->GetName()); //should be ntries.root
       
       nworkers_file=TString((*token)[0]->GetName()).Atoi();
       //printf("nworkers_file=%d\n", nworkers_file);
@@ -785,23 +851,23 @@ void TProofBench::MakeDataSet(TString basedir,
       //}
 
       token=TString((*token)[1]->GetName()).Tokenize(".");
-      Int_t nfile_file=TString((*token)[0]->GetName()).Atoi();
-      //printf("nfile_tmp=%d\n", nfile_tmp);
+      Int_t ntry_file=TString((*token)[0]->GetName()).Atoi();
+      //printf("ntry_file=%d\n", ntry_file);
 
-      if (nfile_file!=nfile){
+      if (ntry_file!=ntry){
          continue;
       }
 
       //found
       fDataSet->Add(fileinfo);
-      nfilesadded++;
+      ntriesadded++;
    }
    fDataSet->Lookup();
    fDataSet->Validate();
    return;
 }
 
-void TProofBench::DrawPerfProfiles(TString filename, Int_t draw) {
+/* void TProofBench::DrawPerfProfiles(TString filename, Int_t draw) {
 // Plots total processing time as a function of number of slaves
 // using each of the 3 selectors.
 // filename: input file name with performance statistics
@@ -830,13 +896,8 @@ void TProofBench::DrawPerfProfiles(TString filename, Int_t draw) {
 
    Int_t procmax_slaves = 0;
 
-#if 0
    TTree* tt_cpu    = BuildTimingTree(perfstats_name+"_CPUTest",
                                       procmax_slaves);
-#else
-   TTree* tt_cpu    = BuildTimingTree(TString("PROOF_PerfStats_CPUTest"),
-                                      procmax_slaves);
-#endif
    //tt_proc->SetMarkerStyle(4);
    //set branch addresses
    tt_cpu->GetBranch("perfproctime")->GetLeaf("nslaves")->SetAddress(&ns_holder);
@@ -890,9 +951,6 @@ void TProofBench::DrawPerfProfiles(TString filename, Int_t draw) {
    cpuprof_event->GetYaxis()->SetTitle("Events/sec");
 
    cpuprof_event->SetMarkerStyle(20);
-
-   TProfile* procprof_event = new TProfile("procprof_event", "Event Rate", nslaves, 0.5, nslaves+0.5);
-   TProfile* procprof_IO = new TProfile("procprof_IO", "I/O Rate", nslaves, 0.5, nslaves+0.5);
 
    entries=tt_proc->GetEntries();
    for (int i=0; i<entries; i++){
@@ -955,12 +1013,12 @@ void TProofBench::DrawPerfProfiles(TString filename, Int_t draw) {
       //save current pad
       //TVirtualPad* pad_sav=gPad;
 
-      /*if (!fCPerfProfiles){
-         fCPerfProfiles=new TCanvas("Performance_Profiles", "Performance Profiles");
-      }
-      else{
-         fCPerfProfiles->cd();
-      }*/
+      //if (!fCPerfProfiles){
+      //   fCPerfProfiles=new TCanvas("Performance_Profiles", "Performance Profiles");
+      //}
+      //else{
+      //   fCPerfProfiles->cd();
+      //}
 
       fCPerfProfiles=dynamic_cast<TCanvas*>(gROOT->FindObject("Performance_Profiles"));
 
@@ -1043,28 +1101,66 @@ void TProofBench::DrawPerfProfiles(TString filename, Int_t draw) {
    
       fCPerfProfiles->Update();
 
-/*      TPaveText* titlepave = dynamic_cast<TPaveText*>(gPad->GetListOfPrimitives()->FindObject("title"));
-
-      if (titlepave) {
-         Double_t x1ndc = titlepave->GetX1NDC();
-         Double_t x2ndc = titlepave->GetX2NDC();
-         titlepave->SetX1NDC((1.0-x2ndc+x1ndc)/2.);
-         titlepave->SetX2NDC((1.0+x2ndc-x1ndc)/2.);
-         titlepave->SetBorderSize(0);
-
-         gPad->Update();
-      }
-      gPad->Modified();
-      fCPerfProfiles->Update();
-      //pad_sav->cd();
-*/
+//      TPaveText* titlepave = dynamic_cast<TPaveText*>(gPad->GetListOfPrimitives()->FindObject("title"));
+//
+//      if (titlepave) {
+//         Double_t x1ndc = titlepave->GetX1NDC();
+//         Double_t x2ndc = titlepave->GetX2NDC();
+//         titlepave->SetX1NDC((1.0-x2ndc+x1ndc)/2.);
+//         titlepave->SetX2NDC((1.0+x2ndc-x1ndc)/2.);
+//         titlepave->SetBorderSize(0);
+//
+//         gPad->Update();
+//      }
+//      gPad->Modified();
+//      fCPerfProfiles->Update();
+//      //pad_sav->cd();
 
       gStyle=style_sav;
    }
    dirsav->cd();
-}
+}*/
 
-TTree* TProofBench::BuildTimingTree(TString pattern, Int_t& max_slaves) {
+TTree* TProofBench::BuildPerfProfiles(ERunType runtype) {
+
+   if (!(runtype==kRunNotSpecified
+      || runtype==kRunCPUTest
+      || runtype==kRunFullDataRead
+      || runtype==kRunOptDataRead
+      || runtype==kRunNoDataRead
+      || runtype==kRunAll)){
+      Error("BuildPerfProfiles", "Invalid run request");
+      return 0; 
+   }
+
+   if (runtype==kRunAll){
+      BuildPerfProfiles(kRunCPUTest);
+      BuildPerfProfiles(kRunFullDataRead);
+      BuildPerfProfiles(kRunOptDataRead);
+   }
+
+   //assume fRunType if runtype is not specified
+   if (runtype==kRunNotSpecified){
+      runtype=fRunType;
+   }
+
+   TString pattern;
+   switch (runtype){
+   case kRunCPUTest:
+      pattern="CPUTest"; 
+      break;
+   case kRunFullDataRead:
+      pattern="FullDataRead"; 
+      break;
+   case kRunOptDataRead:
+      pattern="OptDataRead"; 
+      break;
+   case kRunNoDataRead:
+      pattern="NoDataRead"; 
+      break;
+   default:
+      break; //we should never get here
+   }
 
    fDirProofBench->cd();
 
@@ -1086,7 +1182,6 @@ TTree* TProofBench::BuildTimingTree(TString pattern, Int_t& max_slaves) {
    br->GetLeaf("time")->SetAddress(&time_holder);
 
    // extract timing info
-   max_slaves = 0;
 /*   TIter NextKey(fDirProofBench->GetListOfKeys());
    TKey* key = 0;
    while ((key = dynamic_cast<TKey*>(NextKey()))) {
@@ -1118,6 +1213,9 @@ TTree* TProofBench::BuildTimingTree(TString pattern, Int_t& max_slaves) {
    TIter nxt(list);
    TObject* obj; 
    TKey* key;
+
+   Int_t max_slaves=0;
+
    while ((obj=nxt())){
        if (TString(obj->GetName()).Contains(TRegexp(pattern))){
           printf("key in the list: %s\n", obj->GetName());
@@ -1254,42 +1352,84 @@ TTree* TProofBench::BuildTimingTree(TString pattern, Int_t& max_slaves) {
 //printf("printing gDirectory, done\n");
    }
 
+   Double_t event_rate, IO_rate;
+   Int_t entries=timing_tree->GetEntries();
+
+   if (runtype & kRunCPUTest){
+      if (fProfCPUTestEvent) delete fProfCPUTestEvent;
+      fProfCPUTestEvent = new TProfile("hProfCPUTestEvent", "CPU Test (Event Rate)", max_slaves, 0.5, max_slaves+0.5);
+      for (int i=0; i<entries; i++){
+         timing_tree->GetEntry(i); 
+         //printf("ns_holder=%d, run_holder=%d time_holder=%f\n", ns_holder, run_holder, time_holder);
+         event_rate=nevents_holder/time_holder; 
+         fProfCPUTestEvent->Fill(Double_t(ns_holder), event_rate);
+      }
+      fProfCPUTestEvent->GetXaxis()->SetTitle("Number of Slaves");
+      fProfCPUTestEvent->GetYaxis()->SetTitle("Events/sec");
+      fProfCPUTestEvent->SetMarkerStyle(20);
+   }
+
+   if(runtype & kRunOptDataRead){
+      if (fProfOptDataReadEvent) delete fProfOptDataReadEvent;
+      if (fProfOptDataReadIO) delete fProfOptDataReadIO;
+      fProfOptDataReadEvent= new TProfile("hProfOptDataReadEvent", "Opt Data Read (Event Rate)", max_slaves, 0.5, max_slaves+0.5);
+      fProfOptDataReadIO= new TProfile("hProfOptDataReadIO", "Opt Data Read (I/O Rate)", max_slaves, 0.5, max_slaves+0.5);
+      for (int i=0; i<entries; i++){
+         timing_tree->GetEntry(i); 
+         //printf("ns_holder=%d, run_holder=%d time_holder=%f\n", ns_holder, run_holder, time_holder);
+         event_rate=nevents_holder/time_holder; 
+         IO_rate=bytes_holder/time_holder/(1024.*1024.); 
+         fProfOptDataReadEvent->Fill(Double_t(ns_holder), event_rate);
+         fProfOptDataReadIO->Fill(Double_t(ns_holder), IO_rate);
+      }
+      fProfOptDataReadEvent->GetXaxis()->SetTitle("Number of Slaves");
+      fProfOptDataReadEvent->GetYaxis()->SetTitle("Events/sec");
+      fProfOptDataReadIO->GetXaxis()->SetTitle("Number of Slaves");
+      fProfOptDataReadIO->GetYaxis()->SetTitle("MB/sec");
+
+      fProfOptDataReadEvent->SetMarkerStyle(21);
+      fProfOptDataReadIO->SetMarkerStyle(22);
+
+   }
+
+   if (runtype & kRunFullDataRead){
+      if (fProfFullDataReadEvent) delete fProfFullDataReadEvent;
+      if (fProfFullDataReadIO) delete fProfFullDataReadIO;
+      fProfFullDataReadEvent= new TProfile("hProcFullDataReadEvent", "Full Data Read (Event Rate)", max_slaves, 0.5, max_slaves+0.5);
+      fProfFullDataReadIO= new TProfile("hProcFullDataReadIO", "Full Data Read (I/O Rate)", max_slaves, 0.5, max_slaves+0.5);
+      for (int i=0; i<entries; i++){
+         timing_tree->GetEntry(i); 
+         //printf("ns_holder=%d, run_holder=%d time_holder=%f\n", ns_holder, run_holder, time_holder);
+         event_rate=nevents_holder/time_holder; 
+         IO_rate=bytes_holder/time_holder/(1024.*1024.); 
+         fProfFullDataReadEvent->Fill(Double_t(ns_holder), event_rate);
+         fProfFullDataReadIO->Fill(Double_t(ns_holder), IO_rate);
+      }
+      fProfFullDataReadEvent->GetXaxis()->SetTitle("Number of Slaves");
+      fProfFullDataReadEvent->GetYaxis()->SetTitle("Events/sec");
+      fProfFullDataReadIO->GetXaxis()->SetTitle("Number of Slaves");
+      fProfFullDataReadIO->GetYaxis()->SetTitle("MB/sec");
+
+      fProfFullDataReadEvent->SetMarkerStyle(23);
+      fProfFullDataReadIO->SetMarkerStyle(24);
+   }
+
    return timing_tree;
 }
 
 void TProofBench::Print(Option_t* option)const{
 
-   printf("fBaseDir=%s\n", fBaseDir.Data()); 
-
-   TString sbenchruntype;
-   switch (fRunType) {
-   case kRunNotSpecified:
-      sbenchruntype="kRunNotSpecified";
-      break;
-   case kRunNothing:
-      sbenchruntype="kRunNothing";
-      break;
-   case kRunCPUTest:
-      sbenchruntype="kRunCPUTest";
-      break;
-   case kRunGenerateFileBench:
-      sbenchruntype="kRunGenerateFileBench";
-      break;
-   case kRunGenerateFileCleanup:
-      sbenchruntype="kRunGenerateFileCleanup";
-      break;
-   case kRunFullDataRead:
-      sbenchruntype="kRunFullDataRead";
-      break;
-   case kRunOptDataRead:
-      sbenchruntype="kRunOptDataRead";
-      break;
-   case kRunNoDataRead:
-      sbenchruntype="kRunNoDataRead";
-      break;
-   default:
-      break;
+   if (fFile){
+       fFile->Print(option);
+       fFile->ls(option);
    }
+   else{
+      printf("no file open\n"); 
+   }
+
+   if (fProof) fProof->Print(option);
+   printf("fBaseDir=%s\n", fBaseDir.Data()); 
+   printf("fRunType=%s%s\n", "k",fNameStem.Data());
 
    TString sbenchhisttype;
    switch (fHistType) {
@@ -1305,40 +1445,37 @@ void TProofBench::Print(Option_t* option)const{
    case kHist3D:
       sbenchhisttype="kHist3D";
       break;
+   case kHistAll:
+      sbenchhisttype="kHistAll";
+      break;
    default:
       break;
    }
 
-   printf("fRunType=%s\n", sbenchruntype.Data());
    printf("fNHists=%ld\n", fNHists);
    printf("fHistType=%s\n", sbenchhisttype.Data());
    printf("fMaxNWorkers=%d\n", fMaxNWorkers);
    printf("fNNodes=%d\n", fNNodes);
-   printf("fNFiles=%d\n", fNFiles);
+   printf("fNTries=%d\n", fNTries);
    printf("fNEvents=%lld\n", fNEvents);
-   //printf("fNIterations=%d\n", fNIterations);
    printf("fStepSize=%d\n", fStepSize);
    printf("fStart=%d\n", fStart);
-   printf("fNFilesGenerated=%d\n", fNFilesGenerated);
-   printf("fNEventsGenerated=%lld\n", fNEventsGenerated);
+   printf("fNTracksBench=%d\n", fNTracksBench);
+   printf("fNTracksCleanup=%d\n", fNTracksCleanup);
    printf("fDraw=%d\n", fDraw);
+   printf("fDebug=%d\n", fDebug);
+   printf("fNEventsGenerated=%lld\n", fNEventsGenerated);
+   printf("fNFilesGeneratedBench=%d\n", fNFilesGeneratedBench);
+   printf("fFilesGenenratedCleanup=%d\n", fFilesGeneratedCleanup);
 
-   printf("fDirProofBench=%s\n", fDirProofBench->GetPath());
-
-   if (fFile){
-       fFile->Print(option);
-       fFile->ls(option);
-   }
-   else{
-      printf("no file open\n"); 
-   }
    if (fDataSet) fDataSet->Print(option);
+   if (fDataSetGeneratedBench) fDataSetGeneratedBench->Print(option);
+   if (fDataSetGeneratedCleanup) fDataSetGeneratedCleanup->Print(option);
    if (fCPerfProfiles){
       printf("Performance Profiles Canvas: Name=%s Title=%s\n", 
               fCPerfProfiles->GetName(), fCPerfProfiles->GetTitle());
    }
-   if (fProof) fProof->Print(option);
-   printf("pwd=%s\n", gDirectory->GetPath());
+   printf("fDirProofBench=%s\n", fDirProofBench->GetPath());
 }
 
 TFile* TProofBench::FileOpen(const char* filename, 
@@ -1478,15 +1615,15 @@ TFile* TProofBench::SetFile(TFile* ftmp){
    return fFile;
 }
 
-Int_t TProofBench::SetParameters(TString &basedir, 
-                                      Long_t &nhists, 
-                                      Int_t& maxnworkers, 
-                                      Int_t& nnodes, 
-                                      Int_t &nfiles, 
-                                      Long64_t &nevents, 
-                                      //Int_t &niter, 
-                                      Int_t &stepsize, 
-                                      Int_t& start)
+/*
+Int_t TProofBench::SetParameters(TString basedir, 
+                                      Long_t nhists, 
+                                      Int_t maxnworkers, 
+                                      Int_t nnodes, 
+                                      Int_t ntries, 
+                                      Long64_t nevents, 
+                                      Int_t stepsize, 
+                                      Int_t start)
 {
 
    Int_t returnval=0;
@@ -1498,7 +1635,7 @@ Int_t TProofBench::SetParameters(TString &basedir,
    //see if files were already generated
    if ((basedir.Length()<=0 || basedir==fBaseDir) //no base directory change
     //number of files requested is smaller than files already generated
-    && ((nfiles<=0 && fNFilesGenerated>0) || (nfiles>0 && nfiles<=fNFilesGenerated)) 
+    && ((ntries<=0 && fNTriesGenerated>0) || (ntries>0 && ntries<=fNTriesGenerated)) 
     //number of events/file is smaller than that in files already generated
     && ((nevents<=0 && fNEventsGenerated>0) || (nevents>0 && nevents<=fNEventsGenerated))){    
    }
@@ -1519,9 +1656,8 @@ Int_t TProofBench::SetParameters(TString &basedir,
       fMaxNWorkers=maxnworkers>-1?maxnworkers:fMaxNWorkers;
    }
 
-   fNFiles=nfiles>-1?nfiles: fNFiles;
+   fNTries=ntries>-1?ntries: fNTries;
    fNEvents=nevents>-1?nevents: fNEvents;
-
    fStepSize=stepsize>-1?stepsize:fStepSize;
 
    if (start>-1 && start>fMaxNWorkers){
@@ -1534,4 +1670,175 @@ Int_t TProofBench::SetParameters(TString &basedir,
    }
 
    return returnval;
+}*/
+ 
+void TProofBench::SetInputParameters(){
+
+   if (fProof){
+      fProof->SetParameter("fBaseDir", fBaseDir.Data());
+      fProof->SetParameter("fRunType", fRunType);
+      fProof->SetParameter("fNHists", fNHists);
+      fProof->SetParameter("fHistType", fHistType);
+      fProof->SetParameter("fNTries", fNTries);
+      fProof->SetParameter("fNEvents", fNEvents);
+      fProof->SetParameter("fDraw", Int_t(fDraw));
+   }
+   else{
+      Error("SetParameters", "Proof not set, doing noting");
+   }
+   return;
+}
+
+Int_t TProofBench::CheckParameters(TString where){
+   //TString fFilename,
+   //TString basedir,
+
+   Int_t val=0; //return value
+   
+   if(!fProof){
+      Error(where.Data(), "Proof not set");
+      return 1;
+   }
+
+   if ( fRunType==kRunCPUTest
+     || fRunType==kRunGenerateFileBench 
+     || fRunType==kRunGenerateFileCleanup 
+     || fRunType==kRunCleanup
+     || fRunType==kRunFullDataRead
+     || fRunType==kRunOptDataRead
+     || fRunType==kRunNoDataRead){
+   }
+   else{
+      Error(where.Data(), "fRunType not set; fRunType=%d",fRunType);
+      val=1;
+   }
+
+   if (fRunType==kRunCPUTest){
+      if (fNHists<=0){
+         Error(where.Data(), "fNHists not set; fNHists=%d",fNHists);
+         val=1;
+      }
+      if (!(fHistType & kHistAll)){
+         Error(where.Data(), "fHistType not set: fHistType=%d",fHistType);
+         val=1;
+      }
+      if (fMaxNWorkers<=0){
+         Error(where.Data(), "fMaxNWorkers not set: fMaxNWorkers=%d",fMaxNWorkers); 
+         val=1;
+      }
+      if (fNTries<=0){
+         Error(where.Data(), "fNTries not set: fNTries=%d",fNTries);
+         val=1;
+      }
+      if (fNEvents<=0){
+         Error(where.Data(), "fNEvents not set: fNEvents=%d",fNEvents);
+         val=1;
+      }
+      if (fStepSize<=0){
+         Error(where.Data(), "fStepSize not set: fStepSize=%d",fStepSize);
+         val=1;
+      }
+      if (fStart<=0){
+         Error(where.Data(), "fStart not set: fStart=%d",fStart);
+         val=1;
+      }
+      return val;
+   }
+
+   if (fRunType==kRunGenerateFileBench){
+      if (fNTracksBench<=0){
+         Error(where.Data(), "fNTracksBench not set: fNTracksBench=%d",fNTracksBench);
+         val=1;
+      }
+      if (fMaxNWorkers<=0){
+         Error(where.Data(), "fMaxNWorkers not set: fMaxNWorkers=%d",fMaxNWorkers); 
+         val=1;
+      }
+      if (fNTries<=0){
+         Error(where.Data(), "fNTries not set: fNTries=%d",fNTries);
+         val=1;
+      }
+      if (fNEvents<=0){
+         Error(where.Data(), "fNEvents not set: fNEvents=%d",fNEvents);
+         val=1;
+      }
+      if (fStepSize<=0){
+         Error(where.Data(), "fStepSize not set: fStepSize=%d",fStepSize);
+         val=1;
+      }
+      if (fStart<=0){
+         Error(where.Data(), "fStart not set: fStart=%d",fStart);
+         val=1;
+      }
+      return val;
+   }
+
+   if (fRunType==kRunGenerateFileCleanup){
+      if (fNTracksCleanup<=0){
+         Error(where.Data(), "fNTracksCleanup not set: fNTracksCleanup=%d",fNTracksCleanup);
+         val=1;
+      }
+      if (fNTries<=0){
+         Error(where.Data(), "fNTries not set: fNTries=%d",fNTries);
+         val=1;
+      }
+      if (fNEvents<=0){
+         Error(where.Data(), "fNEvents not set: fNEvents=%d",fNEvents);
+         val=1;
+      }
+      if (fStepSize<=0){
+         Error(where.Data(), "fStepSize not set: fStepSize=%d",fStepSize);
+         val=1;
+      }
+      if (fStart<=0){
+         Error(where.Data(), "fStart not set: fStart=%d",fStart);
+         val=1;
+      }
+      return val;
+   }
+
+   if (fRunType==kRunCleanup){
+      if (!fFilesGeneratedCleanup){
+         Error(where.Data(), "Cleanup files not generated");
+         val=1;
+      }
+      if (fStepSize<=0){
+         Error(where.Data(), "fStepSize not set: fStepSize=%d",fStepSize);
+         val=1;
+      }
+      if (fStart<=0){
+         Error(where.Data(), "fStart not set: fStart=%d",fStart);
+         val=1;
+      }
+      return val;
+   }
+
+   if (fRunType==kRunFullDataRead
+    || fRunType==kRunOptDataRead
+    || fRunType==kRunNoDataRead){
+
+      if (!fNFilesGeneratedBench){
+         Error(where.Data(), "Files not generated");
+         val=1;
+      }
+      if (fNTries<=0){
+         Error(where.Data(), "fNTries not set: fNTries=%d",fNTries);
+         val=1;
+      }
+      if (fNEvents<=0){
+         Error(where.Data(), "fNEvents not set: fNEvents=%d",fNEvents);
+         val=1;
+      }
+      if (fStepSize<=0){
+         Error(where.Data(), "fStepSize not set: fStepSize=%d",fStepSize);
+         val=1;
+      }
+      if (fStart<=0){
+         Error(where.Data(), "fStart not set: fStart=%d",fStart);
+         val=1;
+      }
+      return val;
+   }
+
+   return 0;
 }

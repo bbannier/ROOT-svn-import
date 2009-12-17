@@ -45,6 +45,7 @@ public :
    virtual TList  *GetOutputList() const { return fOutput; }
    virtual void    SlaveTerminate();
    virtual void    Terminate();
+   virtual void    Print(Option_t* option = "") const;
 
    ClassDef(TSelHist,0);
 };
