@@ -288,9 +288,9 @@ void TSelEventGen::SlaveBegin(TTree *tree)
       }
       Info("SlaveBegin", "Total memory on this node: %d MB", meminfo.fMemTotal);
 
-      //Long64_t memorytotal=(Long64_t)(meminfo.fMemTotal)*1024*1024;
+      Long64_t memorytotal=(Long64_t)(meminfo.fMemTotal)*1024*1024;
       //Long64_t memorytotal=4.5*1024*1024*1024;
-      Long64_t memorytotal=(Long64_t)10*1024*1024;
+      // Long64_t memorytotal=(Long64_t)10*1024*1024;
   
       Long64_t memorythisworker=memorytotal/fNWorkersPerNode+1;
 
