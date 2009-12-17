@@ -39,6 +39,44 @@
 
 ClassImp(TSelEventGen)
 
+TSelEventGen::TSelEventGen()
+   :fRunType(TProofBench::kRunNotSpecified),
+   fMaxNWorkers(0),
+   fNTries(10),
+   fNEvents(10000),
+   fNWorkersPerNode(0),
+   fWorkerNumber(0),
+   fNTracksBench(10),
+   fNTracksCleanup(100)
+{
+   if (gProofServ){
+      fBaseDir=gProofServ->GetDataDir();
+      fBaseDir.Remove(fBaseDir.Last('/'));
+   }
+   else{
+      fBaseDir="";
+   }
+}
+
+TSelEventGen::TSelEventGen(TTree*)
+   :fRunType(TProofBench::kRunNotSpecified),
+   fMaxNWorkers(0),
+   fNTries(10),
+   fNEvents(10000),
+   fNWorkersPerNode(0),
+   fWorkerNumber(0),
+   fNTracksBench(10),
+   fNTracksCleanup(100)
+{
+   if (gProofServ){
+      fBaseDir=gProofServ->GetDataDir();
+      fBaseDir.Remove(fBaseDir.Last('/'));
+   }
+   else{
+      fBaseDir="";
+   }
+}
+
 void TSelEventGen::Begin(TTree *)
 {
    // The Begin() function is called at the start of the query.
@@ -92,10 +130,10 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          }
          continue;
       }
-      if (sinput.Contains("fNFiles")){
+      if (sinput.Contains("fNTries")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fNFiles= a->GetVal();
+            fNTries= a->GetVal();
          }
          continue;
       }
@@ -192,8 +230,8 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    //generate files
    if (fRunType==TProofBench::kRunGenerateFileBench){
       //for (Int_t i=fWorkerNumber; i<fMaxNWorkers; i+=fNWorkersPerNode){
-         //for (Int_t j=0; j<fNFiles; j++){
-         for (Int_t j=fWorkerNumber; j<fNFiles; j+=fNWorkersPerNode){
+         //for (Int_t j=0; j<fNTries; j++){
+         for (Int_t j=fWorkerNumber; j<fNTries; j+=fNWorkersPerNode){
             
             TString seed = hostname;
             seed += "_FullDataRead_";   
@@ -250,9 +288,9 @@ void TSelEventGen::SlaveBegin(TTree *tree)
       }
       Info("SlaveBegin", "Total memory on this node: %d MB", meminfo.fMemTotal);
 
-      Long64_t memorytotal=Long64_t(meminfo.fMemTotal)*1024*1024;
+      //Long64_t memorytotal=(Long64_t)(meminfo.fMemTotal)*1024*1024;
       //Long64_t memorytotal=4.5*1024*1024*1024;
-      //Long64_t memorytotal=10*1024*1024;
+      Long64_t memorytotal=(Long64_t)10*1024*1024;
   
       Long64_t memorythisworker=memorytotal/fNWorkersPerNode+1;
 
@@ -293,10 +331,20 @@ void TSelEventGen::SlaveBegin(TTree *tree)
 
 Long64_t TSelEventGen::GenerateFiles(TProofBench::ERunType runtype, TString filename, Long64_t size)
 {
-//returns number of entries in the file for runtype==TProofBench::kRunGenerateFileBench
-//returns bytes rewritten for runtype==TProofBench::kRunGenerateFileCleanup
+//runtype is run type either TProofBench::kRunGenerateFileBench or TProofBench::kRunGenerateFileCleanup
+//filename is the name of the file to be generated
+//size is number of events to generate when runtype==TProofBench::kRunGenerateFileBench
+// and size of the file to generate when runtype==TProofBench::kRunGenerateFileCleanup
+//returns number of entries in the file when runtype==TProofBench::kRunGenerateFileBench
+//returns bytes rewritten when runtype==TProofBench::kRunGenerateFileCleanup
 //return 0 in case error
- 
+
+   if (!(runtype==TProofBench::kRunGenerateFileCleanup 
+      || runtype==TProofBench::kRunGenerateFileBench)){
+      Error("GenerateFiles", "Run type not supported");
+      return 0;
+   }
+    
    Long64_t nentries=0;
    TDirectory* savedir = gDirectory;
    //printf("current dir=%s\n", gDirectory->GetPath());
@@ -332,10 +380,10 @@ Long64_t TSelEventGen::GenerateFiles(TProofBench::ERunType runtype, TString file
 
       //const Long64_t maxtreesize=TTree::GetMaxTreeSize();
       const Long64_t maxtreesize=Long64_t(1024+512)*1024*1024; //hard limit 1.5 GB
-      //const Long64_t maxtreesize=1024*1024; //
-
+      //const Long64_t maxtreesize=1024*1024; //hard limit for quick test
+      printf("fileend=%lld size=%lld maxtreesize=%lld\n", fileend, size, maxtreesize);
       while (fileend<size && (fileend+buffersize)<maxtreesize){
-         event->Build(i++,fNTracksCleanup,0);
+         event->Build(i++, fNTracksCleanup,0);
          eventtree->Fill();
          fileend=f->GetEND();
       }

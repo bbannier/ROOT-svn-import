@@ -45,19 +45,18 @@ ClassImp(TSelHist)
 
 //_____________________________________________________________________________
 TSelHist::TSelHist()
-{
    // Constructor
-
-   fNhist = 16;
-   fHist1D = 0;
-   fHist2D = 0;
-   fHist3D = 0;
-   fHistType=TProofBench::kHistAll;
-   fRandom = 0;
-   fCHist1D=0;
-   fCHist2D=0;
-   fCHist3D=0;
-}
+   :fNhist(16),
+   fHist1D(0),
+   fHist2D(0),
+   fHist3D(0),
+   fRandom(0),
+   fDraw(0),
+   fHistType(TProofBench::kHistAll),
+   fCHist1D(0),
+   fCHist2D(0),
+   fCHist3D(0)
+{ }
 
 //_____________________________________________________________________________
 TSelHist::~TSelHist()
@@ -347,11 +346,14 @@ void TSelHist::Terminate()
          fHist3D[i] = dynamic_cast<TH3F *>(fOutput->FindObject(Form("h3d_%d",i)));
          fCHist3D->cd(i+1);
       if (fHist3D[i]) printf("fHist3D[%d] found\n", i);
-         if (fHist3D[i]) fHist3D[i]->Draw("LEGO");
+         if (fHist3D[i]) fHist3D[i]->Draw();
       }
       // Final update
       fCHist3D->cd();
       fCHist3D->Update();
    }
 
+}
+
+void TSelHist::Print(Option_t* option) const{
 }

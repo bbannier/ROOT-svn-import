@@ -40,10 +40,6 @@ public :
    TBits           fTriggerBits;
    Bool_t          fIsValid;
 
-   //Output hist
-   TH1F* fPtHist;
-   TH1I* fNTracksHist;
-
    // List of branches
    TBranch        *b_event_fType;   //!
    TBranch        *b_fEventName;   //!
@@ -65,8 +61,8 @@ public :
    TBranch        *b_event_fTriggerBits;   //!
    TBranch        *b_event_fIsValid;   //!
 
-   TSelEvent(TTree *):fCHist(0) { }
-   TSelEvent():fCHist(0){ }
+   TSelEvent(TTree *);
+   TSelEvent();
    //virtual ~TSelEvent() {if (fCHist) delete fCHist;}
    virtual ~TSelEvent() {}
    virtual Int_t   Version() const {return 1;}
@@ -85,12 +81,16 @@ public :
 private:
 
    Int_t fRunType;
-   Int_t fNFiles;
+   Int_t fNTries;
    Long64_t fNEvents;
    //TString fBaseDir;
 
    Bool_t fDraw; //when true, display output
    TCanvas* fCHist; //canvas to display histograms
+
+   //Output hists
+   TH1F* fPtHist;
+   TH1I* fNTracksHist;
 
    ClassDef(TSelEvent,0);
 };
@@ -112,7 +112,7 @@ void TSelEvent::Init(TTree *tree)
    fHighPt=0;
    fMuons=0;
    fH=0;
-   fCHist=0;
+   //fCHist=0;
 
    /* if (gProofServ){
       fBaseDir=gProofServ->GetDataDir();

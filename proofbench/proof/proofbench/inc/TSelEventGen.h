@@ -72,8 +72,8 @@ public :
    TBranch        *b_event_fTriggerBits;   //!
    TBranch        *b_event_fIsValid;   //!
 
-   TSelEventGen(TTree *) { }
-   TSelEventGen() { }
+   TSelEventGen(TTree *);
+   TSelEventGen();
    virtual ~TSelEventGen() { }
    virtual Int_t   Version() const {return 1;}
    virtual void    Begin(TTree *);
@@ -95,9 +95,8 @@ private:
    TProofBench::ERunType fRunType;
    TString fBaseDir;
    Int_t fMaxNWorkers;
-   Int_t fNFiles;
+   Int_t fNTries;
    Long64_t fNEvents;
-   Int_t fNIterations;
    Int_t fNWorkersPerNode; //total number of workers on this node
    Int_t fWorkerNumber; //worker number on this node
    Int_t fNTracksBench; //number of tracks in an event for benchmark files
@@ -116,26 +115,6 @@ void TSelEventGen::Init(TTree *tree)
    // will be set. It is normaly not necessary to make changes to the
    // generated code, but the routine can be extended by the user if needed.
    // Init() will be called many times when running with PROOF.
-
-   fRunType=TProofBench::kRunNotSpecified;
-
-   if (gProofServ){
-      fBaseDir=gProofServ->GetDataDir();
-      fBaseDir.Remove(fBaseDir.Last('/')); 
-   }
-   else{
-      fBaseDir="";
-   }
-
-   fMaxNWorkers=0;
-   fNFiles=0;
-   fNEvents=0;
-   fNIterations=0;
-   //listofslaveinfos=0;
-   fNWorkersPerNode=0; //total number of workers on this node
-   fWorkerNumber=0; //worker number on this node
-   fNTracksBench=3;
-   fNTracksCleanup=100;
 
    // Set branch addresses
    fEventName=0;
