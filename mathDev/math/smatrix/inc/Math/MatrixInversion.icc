@@ -63,9 +63,9 @@ void Inverter<idim,N>::InvertBunchKaufman(MatRepSym<T,idim> & rhs, int &ifail) {
    pivIter piv = pivv.begin();
    // piv[i] is used to store details of exchanges
       
-   double temp1, temp2;
+   T temp1, temp2;
    mIter ip, mjj, iq;
-   double lambda, sigma;
+   T lambda, sigma;
    const double alpha = .6404; // = (1+sqrt(17))/8
    // LM (04/2009) remove this useless check (it is not in LAPACK) which fails inversion of 
    // a matrix with  values < epsilon in the diagonal
