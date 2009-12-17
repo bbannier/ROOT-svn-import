@@ -123,6 +123,8 @@ protected:
 
 public:
 
+   typedef Element Element_t;
+
    TMatrixTBase():
      fNrows(0), fNcols(0), fRowLwb(0), fColLwb(0), fNelems(0), fNrowIndex(0),
      fTol(0), fIsOwner(kTRUE) { }
