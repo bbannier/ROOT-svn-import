@@ -56,6 +56,8 @@ protected:
 
 public:
 
+   typedef Element Element_t;
+
    TVectorT() : fNrows(0), fRowLwb(0), fElements(0), fIsOwner(kTRUE) { }
    explicit TVectorT(Int_t n);
    TVectorT(Int_t lwb,Int_t upb);

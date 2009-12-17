@@ -61,6 +61,9 @@ private:
    virtual void FillIn(TMatrixT<Element> &m) const = 0;
 
 public:
+
+   typedef Element Element_t;
+
    TMatrixTLazy() { fRowUpb = fRowLwb = fColUpb = fColLwb = 0; }
    TMatrixTLazy(Int_t nrows, Int_t ncols)
        : fRowUpb(nrows-1),fRowLwb(0),fColUpb(ncols-1),fColLwb(0) { }
@@ -102,6 +105,9 @@ private:
    virtual void FillIn(TMatrixTSym<Element> &m) const = 0;
 
 public:
+
+   typedef Element Element_t;
+
    TMatrixTSymLazy() { fRowUpb = fRowLwb = 0; }
    TMatrixTSymLazy(Int_t nrows)
        : fRowUpb(nrows-1),fRowLwb(0) { }
