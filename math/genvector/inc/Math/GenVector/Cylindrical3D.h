@@ -50,7 +50,7 @@ public :
    /**
       Default constructor with rho=z=phi=0
    */
-   Cylindrical3D() : fRho(0), fZ(0), fPhi(0) {  }
+   Cylindrical3D() : fRho(0.), fZ(0.), fPhi(0.) {  }
 
    /**
       Construct from rho eta and phi values

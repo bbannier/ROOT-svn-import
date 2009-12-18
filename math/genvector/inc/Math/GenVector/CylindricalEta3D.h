@@ -57,7 +57,7 @@ public :
   /**
      Default constructor with rho=eta=phi=0
    */
-  CylindricalEta3D() : fRho(0), fEta(0), fPhi(0) {  }
+  CylindricalEta3D() : fRho(0.), fEta(0.), fPhi(0.) {  }
 
   /**
      Construct from rho eta and phi values

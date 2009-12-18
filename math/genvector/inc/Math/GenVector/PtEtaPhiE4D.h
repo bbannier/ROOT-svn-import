@@ -66,7 +66,7 @@ public :
    /**
       Default constructor gives zero 4-vector  
    */
-   PtEtaPhiE4D() : fPt(0), fEta(0), fPhi(0), fE(0) { }
+   PtEtaPhiE4D() : fPt(0.), fEta(0.), fPhi(0.), fE(0.) { }
 
    /**
       Constructor  from pt, eta, phi, e values
