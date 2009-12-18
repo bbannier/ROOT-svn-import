@@ -1,11 +1,32 @@
 #define  ENABLE_TEMPORARIES
 
+//for selecting the inversion type
+//#define INVERT_CHOL
+//#define INVERT_CRAMER
+
+
+
+#ifdef HAVE_VC
+#include "Vc_smatrix.h"
+#endif
+
+#ifdef USE_VC
+#define SMATRIX_TYPE Vc::double_v
+#else
+#define SMATRIX_TYPE double
+#endif
+
+
+#define TMATRIX_TYPE double
+
+
 #include "Math/SVector.h"
 #include "Math/SMatrix.h"
 
 
 #include "TMatrixD.h"
 #include "TVectorD.h"
+#include "TDecompChol.h"
 
 #include "TRandom3.h"
 #include "TH1D.h" 
@@ -57,18 +78,18 @@ int NLOOP;
 
 
 
-template<unsigned int NDIM1, unsigned int NDIM2> 
+template<typename ValueType, unsigned int NDIM1, unsigned int NDIM2> 
 int test_smatrix_op() {
     
   // need to write explicitly the dimensions
    
 
-  typedef SMatrix<double, NDIM1, NDIM1> MnMatrixNN;
-  typedef SMatrix<double, NDIM2, NDIM2> MnMatrixMM;
-  typedef SMatrix<double, NDIM1, NDIM2> MnMatrixNM;
-  typedef SMatrix<double, NDIM2 , NDIM1> MnMatrixMN;
-  typedef SVector<double, NDIM1> MnVectorN;
-  typedef SVector<double, NDIM2> MnVectorM;
+  typedef SMatrix<ValueType, NDIM1, NDIM1> MnMatrixNN;
+  typedef SMatrix<ValueType, NDIM2, NDIM2> MnMatrixMM;
+  typedef SMatrix<ValueType, NDIM1, NDIM2> MnMatrixNM;
+  typedef SMatrix<ValueType, NDIM2 , NDIM1> MnMatrixMN;
+  typedef SVector<ValueType, NDIM1> MnVectorN;
+  typedef SVector<ValueType, NDIM2> MnVectorM;
   
 
 
@@ -86,7 +107,7 @@ int test_smatrix_op() {
   
   
    
-  double r1,r2;
+  ValueType r1,r2;
   int npass = NITER; 
   TRandom3 r(111);
   for (int k = 0; k < npass; k++) {
@@ -144,7 +165,12 @@ int test_smatrix_op() {
     //if (k == 0) C0.Print(std::cout);
     MnMatrixNN  C1;  testATBA_S(B,C0,t_ama,C1);
     //if (k == 0) C1.Print(std::cout);
+#ifdef INVERT_CRAMER
+    MnMatrixNN  C2;  testInvFast_S(C1,t_inv,C2);
+#else
     MnMatrixNN  C2;  testInv_S(C1,t_inv,C2);
+#endif
+    //if (k == 0) C2.Print(std::cout);
     MnVectorN   v3;  testVeq(v,t_veq,v3);
     MnVectorN   v4;  testVad(v2,v3,t_vad,v4);
     MnVectorN   v5;  testVscale(v4,2.0,t_vsc,v5);
@@ -182,15 +208,15 @@ int test_smatrix_op() {
 
 
 #ifdef TEST_SYM
-template<unsigned int NDIM1, unsigned int NDIM2> 
+template<typename ValueType, unsigned int NDIM1, unsigned int NDIM2> 
 int test_smatrix_sym_op() {
     
   // need to write explicitly the dimensions
    
 
-  typedef SMatrix<double, NDIM1, NDIM1, MatRepSym<double,NDIM1> > MnSymMatrixNN;
-  typedef SMatrix<double, NDIM1, NDIM1 > MnMatrixNN;
-  typedef SVector<double, NDIM1> MnVectorN;
+  typedef SMatrix<ValueType, NDIM1, NDIM1, MatRepSym<ValueType,NDIM1> > MnSymMatrixNN;
+  typedef SMatrix<ValueType, NDIM1, NDIM1 > MnMatrixNN;
+  typedef SVector<ValueType, NDIM1> MnVectorN;
   
 
 
@@ -207,7 +233,7 @@ int test_smatrix_sym_op() {
   
   
    
-  double r1;
+  ValueType r1;
   int npass = NITER; 
   TRandom3 r(111);
   for (int k = 0; k < npass; k++) {
@@ -247,7 +273,15 @@ int test_smatrix_sym_op() {
     MnVectorN   v2;  testGMV(A,v,v1,t_gmv,v2);
     MnMatrixNN  C0;  testMM(A,B,C,t_mm,C0);
     MnSymMatrixNN  C1;  testATBA_S2(C0,B,t_ama,C1);
-    MnSymMatrixNN  C2;  testInv_S(A,t_inv,C2);
+#ifdef INVERT_CHOL
+    MnSymMatrixNN  C2;  testInvChol_S(C1,t_inv,C2);
+#else
+#ifdef INVERT_CRAMER
+    MnSymMatrixNN  C2;  testInvFast_S(C1,t_inv,C2);
+#else    
+    MnSymMatrixNN  C2;  testInv_S(C1,t_inv,C2);
+#endif
+#endif
     MnSymMatrixNN  C3;  testMeq(C2,t_meq,C3);
     MnSymMatrixNN  C4;  testMad(A,C3,t_mad,C4);
     MnSymMatrixNN  C5;  testMscale(C4,0.5,t_msc,C5);
@@ -286,14 +320,14 @@ int test_smatrix_sym_op() {
 // ROOT test 
 
 
-template<unsigned int NDIM1, unsigned int NDIM2> 
+template<typename ValueType, unsigned int NDIM1, unsigned int NDIM2> 
 int test_tmatrix_op() {
 
 
     
 
-  typedef TMatrixD MnMatrix;
-  typedef TVectorD MnVector;
+  typedef TMatrixT<ValueType> MnMatrix;
+  typedef TVectorT<ValueType> MnVector;
   
 //   typedef boost::numeric::ublas::matrix<double>  MnMatrix;  
   //typedef HepSymMatrix MnSymMatrixHep; 
@@ -310,7 +344,7 @@ int test_tmatrix_op() {
   double t_veq, t_meq, t_vad, t_mad, t_dot, t_mv, t_gmv, t_mm, t_prd, t_inv, t_vsc, t_msc, t_ama, t_tra = 0;
   double totTime1, totTime2; 
    
-  double r1,r2;
+  ValueType r1,r2;
   int npass = NITER; 
   TRandom3 r(111);
   gMatrixCheck = 0;
@@ -356,7 +390,11 @@ int test_tmatrix_op() {
     //if (k == 0) C0.Print();
     MnMatrix C1(NDIM1,NDIM1);  testATBA_T(B,C0,t_ama,C1);
     //if (k == 0) C1.Print();
+#ifdef INVERT_CRAMER
+    MnMatrix C2(NDIM1,NDIM1);  testInvFast_T(C1,t_inv,C2);
+#else
     MnMatrix C2(NDIM1,NDIM1);  testInv_T(C1,t_inv,C2);
+#endif
     //if (k == 0) C2.Print();
     MnVector v3(NDIM1);        testVeq(v,t_veq,v3);
     MnVector v4(NDIM1);        testVad_T(v2,v3,t_vad,v4);
@@ -386,7 +424,7 @@ int test_tmatrix_op() {
     totTime1 = w.RealTime();
     totTime2 = w.CpuTime();
   }
-  //  tr.dump();
+  //tr.dump();
 
   //double totTime = t_veq + t_meq + t_vad + t_mad + t_dot + t_mv + t_gmv + t_mm + t_prd + t_inv + t_inv2 + t_vsc + t_msc + t_ama + t_tra; 
   std::cout << "Total Time = " << totTime1 << "  (s)  -  cpu " <<  totTime2 << "  (s) " << std::endl; 
@@ -399,15 +437,15 @@ int test_tmatrix_op() {
 
 
 #ifdef TEST_SYM
-template<unsigned int NDIM1, unsigned int NDIM2> 
+template<typename ValueType, unsigned int NDIM1, unsigned int NDIM2> 
 int test_tmatrix_sym_op() {
     
   // need to write explicitly the dimensions
    
 
-  typedef TMatrixDSym MnSymMatrix;
-  typedef TMatrixD    MnMatrix;
-  typedef TVectorD MnVector;
+  typedef TMatrixTSym<ValueType>  MnSymMatrix;
+  typedef TMatrixT<ValueType>      MnMatrix;
+  typedef TVectorT<ValueType>      MnVector;
   
 
 
@@ -424,7 +462,7 @@ int test_tmatrix_sym_op() {
   
   
    
-  double r1;
+  ValueType r1;
   int npass = NITER; 
   TRandom3 r(111);
   for (int k = 0; k < npass; k++) {
@@ -462,7 +500,15 @@ int test_tmatrix_sym_op() {
     MnVector   v2(N);  testGMV_T(A,v,v1,t_gmv,v2);
     MnMatrix   C0(N,N);  testMM_T(A,B,C,t_mm,C0);
     MnSymMatrix  C1(N);  testATBA_T2(C0,B,t_ama,C1);
+#ifdef INVERT_CHOL
+    MnSymMatrix  C2(N);  testInvChol_T(A,t_inv,C2);
+#else
+#ifdef INVERT_CRAMER
+    MnSymMatrix  C2(N);  testInvFast_T(A,t_inv,C2);
+#else
     MnSymMatrix  C2(N);  testInv_T(A,t_inv,C2);
+#endif
+#endif
     MnSymMatrix  C3(N);  testMeq(C2,t_meq,C3);
     MnSymMatrix  C4(N);  testMad_T(A,C3,t_mad,C4);
     MnSymMatrix  C5(N);  testMscale_T(C4,0.5,t_msc,C5);
@@ -694,36 +740,37 @@ int test_hepmatrix_sym_op() {
 #endif  // HAVE_CLHEP
 
 
+
 #if defined(HAVE_CLHEP) && defined (TEST_SYM)
 #define NTYPES 6
 #define TEST(N) \
    MATRIX_SIZE=N;  \
-   TEST_TYPE=0; test_smatrix_op<N,N>(); \
-   TEST_TYPE=1; test_tmatrix_op<N,N>();     \
-   TEST_TYPE=2; test_hepmatrix_op<N,N>();   \
-   TEST_TYPE=3; test_smatrix_sym_op<N,N>(); \
-   TEST_TYPE=4; test_tmatrix_sym_op<N,N>();     \
+   TEST_TYPE=0; test_smatrix_op<SMATRIX_TYPE,N,N>();  \
+   TEST_TYPE=1; test_tmatrix_op<TMATRIX_TYPE,N,N>();  \
+   TEST_TYPE=2; test_hepmatrix_op<N,N>();        \
+   TEST_TYPE=3; test_smatrix_sym_op<SMATRIX_TYPE,N,N>();      \
+   TEST_TYPE=4; test_tmatrix_sym_op<TMATRIX_TYPE,N,N>();      \
    TEST_TYPE=5; test_hepmatrix_sym_op<N,N>();
 #elif !defined(HAVE_CLHEP) && defined (TEST_SYM)
 #define NTYPES 4
 #define TEST(N) \
    MATRIX_SIZE=N;  \
-   TEST_TYPE=0; test_smatrix_op<N,N>(); \
-   TEST_TYPE=1; test_tmatrix_op<N,N>();     \
-   TEST_TYPE=2; test_smatrix_sym_op<N,N>(); \
-   TEST_TYPE=3; test_tmatrix_sym_op<N,N>();     
+   TEST_TYPE=0; test_smatrix_op<SMATRIX_TYPE,N,N>(); \
+   TEST_TYPE=1; test_tmatrix_op<TMATRIX_TYPE,N,N>();     \
+   TEST_TYPE=2; test_smatrix_sym_op<SMATRIX_TYPE,N,N>(); \
+   TEST_TYPE=3; test_tmatrix_sym_op<TMATRIX_TYPE,N,N>();     
 #elif defined(HAVE_CLHEP) && !defined (TEST_SYM)
 #define NTYPES 3
 #define TEST(N) \
    MATRIX_SIZE=N;  \
-   TEST_TYPE=0; test_smatrix_op<N,N>(); \
-   TEST_TYPE=1; test_tmatrix_op<N,N>();     \
+   TEST_TYPE=0; test_smatrix_op<SMATRIX_TYPE,N,N>();  \
+   TEST_TYPE=1; test_tmatrix_op<TMATRIX_TYPE,N,N>();  \
    TEST_TYPE=2; test_hepmatrix_op<N,N>();
 #else 
 #define NTYPES 2
 #define TEST(N) \
-   TEST_TYPE=0; test_smatrix_op<N,N>(); \
-   TEST_TYPE=1; test_tmatrix_op<N,N>();     
+   TEST_TYPE=0; test_smatrix_op<SMATRIX_TYPE,N,N>(); \
+   TEST_TYPE=1; test_tmatrix_op<TMATRIX_TYPE,N,N>();     
 #endif
 
 
@@ -795,10 +842,11 @@ int main(int argc , char *argv[] ) {
 #ifndef TEST_ALL_MATRIX_SIZES
   NLOOP = 1000*NLOOP_MIN 
   initValues();
-
+  
+  // set here the matrix dimension
   TEST(5)
-//   NLOOP = 50*NLOOP_MIN;
-//   TEST(30);
+//    NLOOP = 50*NLOOP_MIN;
+//    TEST(30);
 #else
   NLOOP = 5000*NLOOP_MIN; 
   initValues();
