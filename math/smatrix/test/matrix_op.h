@@ -198,8 +198,34 @@ void  testInv_S( const M & m,  double & time, M& result){
   for (int l = 0; l < NLOOP; l++) 	
     {
       mtmp(0,0) = gV[l]; 
-      //result = mtmp.InverseFast(ifail);
       result = mtmp.Inverse(ifail);
+      // assert(ifail == 0);
+    }
+}
+//cramer inversion (for small matrices)
+template<class M> 
+void  testInvFast_S( const M & m,  double & time, M& result){
+  M mtmp = m;
+  test::Timer t(time,"invF");
+  int ifail = 0;
+  for (int l = 0; l < NLOOP; l++) 	
+    {
+      mtmp(0,0) = gV[l]; 
+      result = mtmp.InverseFast(ifail);
+      // assert(ifail == 0);
+    }
+}
+
+//choleski inversion (for symmetric matrices)
+template<class M> 
+void  testInvChol_S( const M & m,  double & time, M& result){
+  M mtmp = m;
+  test::Timer t(time,"invC");
+  int ifail = 0;
+  for (int l = 0; l < NLOOP; l++) 	
+    {
+      mtmp(0,0) = gV[l]; 
+      result = mtmp.InverseChol(ifail);
       // assert(ifail == 0);
     }
 }
@@ -261,24 +287,26 @@ void testMT_S(const A & a, double & time, C & result) {
 template<class M, class V> 
 void testMV_T(const M & mat, const V & v, double & time, V & result) {
   V vtmp = v; 
+  typedef typename V::Element_t T;
   test::Timer t(time,"M*V ");
   for (int l = 0; l < NLOOP; l++)
     {
       vtmp[0] = gV[l];
-      Add(result,0.0,mat,vtmp);
+      Add<T>(result,0.0,mat,vtmp);
     }
 } 
   
 // general matrix vector op
 template<class M, class V> 
 void testGMV_T(const M & mat, const V & v1, const V & v2, double & time, V & result) {
+  typedef typename V::Element_t T;
   V vtmp = v1;
   test::Timer t(time,"M*V+");
   for (int l = 0; l < NLOOP; l++)
     {
       vtmp[0] = gV[l];
       memcpy(result.GetMatrixArray(),v2.GetMatrixArray(),v2.GetNoElements()*sizeof(Double_t));
-      Add(result,1.0,mat,vtmp);
+      Add<T>(result,1.0,mat,vtmp);
     }
 }
 
@@ -321,10 +349,11 @@ void testATBA_T(const A & a, const B & b, double & time, C & result) {
 }
 
 template<class V> 
-double testDot_T(const V & v1, const V & v2, double & time) {  
+typename V::Element_t testDot_T(const V & v1, const V & v2, double & time) {  
+  typedef typename V::Element_t T;
   V vtmp = v2;
   test::Timer t(time,"dot ");
-  double result=0; 
+  T result=0.0; 
   for (int l = 0; l < 10*NLOOP; l++) 	
     {
       vtmp[0] = gV[l];
@@ -334,10 +363,11 @@ double testDot_T(const V & v1, const V & v2, double & time) {
 }
 
 template<class M, class V> 
-double testInnerProd_T(const M & a, const V & v, double & time) {  
+typename V::Element_t testInnerProd_T(const M & a, const V & v, double & time) {  
+  typedef typename V::Element_t T;
   V vtmp = v; 
   test::Timer t(time,"prod");
-  double result=0; 
+  T result=0.0; 
   for (int l = 0; l < NLOOP; l++) { 
     vtmp[0] =  gV[l];
     result = a.Similarity(vtmp);
@@ -354,7 +384,35 @@ void  testInv_T(const M & m,  double & time, M& result){
     {
       mtmp(0,0) = gV[l]; 
       memcpy(result.GetMatrixArray(),mtmp.GetMatrixArray(),mtmp.GetNoElements()*sizeof(Double_t));
+      result.Invert(); 
+    }
+}
+
+//fast inversion 
+template<class M> 
+void  testInvFast_T(const M & m,  double & time, M& result){ 
+  M mtmp = m;
+  test::Timer t(time,"invFast ");
+  for (int l = 0; l < NLOOP; l++) 	
+    {
+      mtmp(0,0) = gV[l]; 
+      memcpy(result.GetMatrixArray(),mtmp.GetMatrixArray(),mtmp.GetNoElements()*sizeof(Double_t));
       result.InvertFast(); 
+    }
+}
+
+//choleski inversion 
+template<class M> 
+void  testInvChol_T(const M & m,  double & time, M& result){ 
+  M mtmp = m;
+  test::Timer t(time,"invChol ");
+  for (int l = 0; l < NLOOP; l++) 	
+    {
+      mtmp(0,0) = gV[l]; 
+      TDecompChol chol(mtmp);
+      chol.Invert(result);
+//      memcpy(result.GetMatrixArray(),mtmp.GetMatrixArray(),mtmp.GetNoElements()*sizeof(Double_t));
+//      result.InvertFast(); 
     }
 }
 
@@ -385,6 +443,7 @@ void testVad_T(const V & v1, const V & v2, double & time, V & result) {
 // vector * constant
 template<class V> 
 void testVscale_T(const V & v1, double a, double & time, V & result) {
+  typedef typename V::Element_t T;
   V vtmp = v1; 
   test::Timer t(time,"a*V ");;
   for (int l = 0; l < NLOOP; l++)
@@ -392,7 +451,7 @@ void testVscale_T(const V & v1, double a, double & time, V & result) {
       // result = a * v1;
       result.Zero();
       vtmp[0] = gV[l];
-      Add(result,a,vtmp);
+      Add<T>(result,a,vtmp);
     }
 }
 
@@ -412,6 +471,7 @@ void testATBA_T2(const A & a, const B & b, double & time, C & result) {
 // matrix * constant
 template<class M>
 void testMscale_T(const M & m1, double a, double & time, M & result) {
+  typedef typename M::Element_t T;
   M mtmp = m1;
   test::Timer t(time,"a*M ");;
   for (int l = 0; l < NLOOP; l++)
@@ -419,7 +479,7 @@ void testMscale_T(const M & m1, double a, double & time, M & result) {
       //result = a * m1;
       result.Zero();
       mtmp(0,0) = gV[l];
-      Add(result,a,mtmp);
+      Add<T>(result,a,mtmp);
     }
 }
 

@@ -18,6 +18,11 @@ include $(ROOTSYS)/config/Makefile.config
 # endif
 
 
+#for usingVc
+ifneq ($(VCBASE),)
+CXXFLAGS += -I$(VCBASE)/include -DHAVE_VC
+EXTRALIBS += $(VCBASE)/lib/libVc.a
+endif
 
 # if have clhep
 #CLHEPBASE=/Users/moneta/mathlibs/CLHEP-1.9.2.2
@@ -51,6 +56,10 @@ TESTSMATRIXOBJ     = testSMatrix.$(ObjSuf)
 TESTSMATRIXSRC     = testSMatrix.$(SrcSuf)
 TESTSMATRIX        = testSMatrix$(ExeSuf)
 
+TESTSIMILARITYOBJ     = testSimilarity.$(ObjSuf)
+TESTSIMILARITYSRC     = testSimilarity.$(SrcSuf)
+TESTSIMILARITY        = testSimilarity$(ExeSuf)
+
 TESTOPERATIONSOBJ     = testOperations.$(ObjSuf)
 TESTOPERATIONSSRC     = testOperations.$(SrcSuf)  
 TESTOPERATIONS        = testOperations$(ExeSuf)
@@ -78,10 +87,10 @@ STRESSKALMANSRC     = stressKalman.$(SrcSuf)
 STRESSKALMAN        = stressKalman$(ExeSuf)
 
 
-OBJS          = $(TESTSMATRIXOBJ) $(TESTOPERATIONSOBJ) $(TESTKALMANOBJ) $(TESTINVERSIONOBJ) $(TESTIOOBJ)  $(STRESSOPERATIONSOBJ) $(STRESSKALMANOBJ) 
+OBJS          = $(TESTSMATRIXOBJ) $(TESTOPERATIONSOBJ) $(TESTKALMANOBJ) $(TESTINVERSIONOBJ) $(TESTIOOBJ)  $(STRESSOPERATIONSOBJ) $(STRESSKALMANOBJ) $(TESTSIMILARITYOBJ)
 
 
-PROGRAMS      = $(TESTSMATRIX)  $(TESTOPERATIONS) $(TESTKALMAN) $(TESTINVERSION) $(TESTIO) $(STRESSOPERATIONS) $(STRESSKALMAN) 
+PROGRAMS      = $(TESTSMATRIX)  $(TESTOPERATIONS) $(TESTKALMAN) $(TESTINVERSION) $(TESTIO) $(STRESSOPERATIONS) $(STRESSKALMAN) $(TESTSIMILARITY)
 
 
 .SUFFIXES: .$(SrcSuf) .$(ObjSuf) $(ExeSuf)
@@ -101,6 +110,10 @@ $(TESTSMATRIX):   $(TESTSMATRIXOBJ)
 		    @echo "$@ done"
 
 $(TESTOPERATIONS):   $(TESTOPERATIONSOBJ) 
+		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
+		    @echo "$@ done"
+
+$(TESTSIMILARITY):   $(TESTSIMILARITYOBJ) 
 		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@
 		    @echo "$@ done"
 

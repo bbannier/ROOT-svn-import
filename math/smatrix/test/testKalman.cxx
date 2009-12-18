@@ -1,5 +1,16 @@
 
 
+#ifdef HAVE_VC
+#include "Vc_smatrix.h"
+#endif
+
+#ifdef USE_VC
+#define SMATRIX_TYPE Vc::double_v
+#else
+#define SMATRIX_TYPE double
+#endif
+
+
 #include "Math/SVector.h"
 #include "Math/SMatrix.h"
 
@@ -12,6 +23,7 @@
 
 
 #define TEST_SYM
+
 
 //#define HAVE_CLHEP
 #ifdef HAVE_CLHEP
@@ -41,19 +53,23 @@ using namespace ROOT::Math;
 
 #include "TestTimer.h"
 
+// define the smatrix type
+typedef SMATRIX_TYPE T;
+
 int test_smatrix_kalman() {
     
+
   // need to write explicitly the dimensions
    
 
-  typedef SMatrix<double, NDIM1, NDIM1>  MnMatrixNN;
-  typedef SMatrix<double, NDIM2, NDIM2>  MnMatrixMM;
-  typedef SMatrix<double, NDIM1, NDIM2>  MnMatrixNM;
-  typedef SMatrix<double, NDIM2 , NDIM1> MnMatrixMN;
-  typedef SMatrix<double, NDIM1 >        MnSymMatrixNN;
-  typedef SMatrix<double, NDIM2 >        MnSymMatrixMM;
-  typedef SVector<double, NDIM1>         MnVectorN;
-  typedef SVector<double, NDIM2>         MnVectorM;
+  typedef SMatrix<T, NDIM1, NDIM1>  MnMatrixNN;
+  typedef SMatrix<T, NDIM2, NDIM2>  MnMatrixMM;
+  typedef SMatrix<T, NDIM1, NDIM2>  MnMatrixNM;
+  typedef SMatrix<T, NDIM2 , NDIM1> MnMatrixMN;
+  typedef SMatrix<T, NDIM1 >        MnSymMatrixNN;
+  typedef SMatrix<T, NDIM2 >        MnSymMatrixMM;
+  typedef SVector<T, NDIM1>         MnVectorN;
+  typedef SVector<T, NDIM2>         MnVectorM;
   
 
 
@@ -70,7 +86,7 @@ int test_smatrix_kalman() {
    
   int npass = NITER; 
   TRandom3 r(111);
-  double x2sum = 0, c2sum = 0;
+  T x2sum = 0, c2sum = 0;
   for (int k = 0; k < npass; k++) {
 
 
@@ -112,7 +128,7 @@ int test_smatrix_kalman() {
 	
     
     {
-      double x2 = 0,c2 = 0;
+      T x2 = 0,c2 = 0;
       test::Timer t("SMatrix Kalman ");
 
       MnVectorM x; 
@@ -170,16 +186,16 @@ int test_smatrix_sym_kalman() {
   // need to write explicitly the dimensions
    
 
-  typedef SMatrix<double, NDIM1, NDIM1>  MnMatrixNN;
-  typedef SMatrix<double, NDIM2, NDIM2>  MnMatrixMM;
-  typedef SMatrix<double, NDIM1, NDIM2>  MnMatrixNM;
-  typedef SMatrix<double, NDIM2 , NDIM1> MnMatrixMN;
-  typedef SMatrix<double, NDIM1, NDIM1, MatRepSym<double, NDIM1> >        MnSymMatrixNN;
-  typedef SMatrix<double, NDIM2, NDIM2, MatRepSym<double, NDIM2> >        MnSymMatrixMM;
-  typedef SVector<double, NDIM1>         MnVectorN;
-  typedef SVector<double, NDIM2>         MnVectorM;
-  typedef SVector<double, NDIM1*(NDIM1+1)/2>   MnVectorN2;
-  typedef SVector<double, NDIM2*(NDIM2+1)/2>   MnVectorM2;
+  typedef SMatrix<T, NDIM1, NDIM1>  MnMatrixNN;
+  typedef SMatrix<T, NDIM2, NDIM2>  MnMatrixMM;
+  typedef SMatrix<T, NDIM1, NDIM2>  MnMatrixNM;
+  typedef SMatrix<T, NDIM2 , NDIM1> MnMatrixMN;
+  typedef SMatrix<T, NDIM1, NDIM1, MatRepSym<T, NDIM1> >        MnSymMatrixNN;
+  typedef SMatrix<T, NDIM2, NDIM2, MatRepSym<T, NDIM2> >        MnSymMatrixMM;
+  typedef SVector<T, NDIM1>         MnVectorN;
+  typedef SVector<T, NDIM2>         MnVectorM;
+  typedef SVector<T, NDIM1*(NDIM1+1)/2>   MnVectorN2;
+  typedef SVector<T, NDIM2*(NDIM2+1)/2>   MnVectorM2;
   
 
 
@@ -196,7 +212,7 @@ int test_smatrix_sym_kalman() {
    
   int npass = NITER; 
   TRandom3 r(111);
-  double x2sum = 0, c2sum = 0;
+  T x2sum = 0, c2sum = 0;
   for (int k = 0; k < npass; k++) {
 
 
@@ -238,7 +254,7 @@ int test_smatrix_sym_kalman() {
 	
     
     {
-      double x2 = 0,c2 = 0;
+      T x2 = 0,c2 = 0;
       test::Timer t("SMatrix Kalman ");
 
       MnVectorM x; 
