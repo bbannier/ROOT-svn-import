@@ -52,7 +52,7 @@ public :
    /**
       Default constructor with r=theta=phi=0
    */
-   Polar3D() : fR(0), fTheta(0), fPhi(0) {  }
+   Polar3D() : fR(0.), fTheta(0.), fPhi(0.) {  }
 
    /**
       Construct from the polar coordinates:  r, theta and phi

@@ -53,7 +53,7 @@ public :
    /**
       Default constructor with r=1,phi=0
    */
-   Polar2D() : fR(1.), fPhi(0) {  }
+   Polar2D() : fR(1.), fPhi(0.) {  }
 
    /**
       Construct from the polar coordinates:  r and phi
