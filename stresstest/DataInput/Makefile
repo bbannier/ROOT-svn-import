@@ -9,7 +9,7 @@ INCLUDE = -I../../../tmva $(shell root-config --cflags)
 
 BINS = TMVATestDataInput
 
-ROOTFILES = TMVAInputData.root
+ROOTFILES = TMVAInputData.root 
 
 TMVALIB =../../../tmva/lib/libTMVA.1.so
 LIBS    = -L../../../tmva/lib $(shell root-config --libs) -lTMVA.1 -lMLP -lTreePlayer -lMinuit
@@ -23,7 +23,7 @@ tests:
 	python runTestDataInput.py
 
 clean:
-	rm -f $(BINS) $(ROOTFILES)
+	rm -f $(BINS) $(ROOTFILES) file*.dat
 
 fullclean: clean
 	rm -rf results weights
