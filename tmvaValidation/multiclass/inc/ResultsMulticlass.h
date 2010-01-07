@@ -80,7 +80,6 @@ namespace TMVA {
       void     MakeHistograms();
 
 
-
    private:
 
       mutable std::vector<std::vector< Float_t> >  fMultiClassValues;        //! mva values (Results)

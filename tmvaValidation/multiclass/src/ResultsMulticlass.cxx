@@ -31,6 +31,8 @@
 #include "TMVA/MsgLogger.h"
 #include "TMVA/DataSet.h"
 
+#include "TMVA/VectorSortHelper.h"
+
 //_______________________________________________________________________
 TMVA::ResultsMulticlass::ResultsMulticlass( const DataSetInfo* dsi ) 
    : Results( dsi ),
@@ -52,6 +54,8 @@ void TMVA::ResultsMulticlass::SetValue( std::vector<Float_t>& value, Int_t ievt 
    if (ievt >= (Int_t)fMultiClassValues.size()) fMultiClassValues.resize( ievt+1 );
    fMultiClassValues[ievt] = value; 
 }
+
+
 
 
 //_______________________________________________________________________

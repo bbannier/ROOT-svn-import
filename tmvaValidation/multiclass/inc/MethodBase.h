@@ -316,7 +316,7 @@ namespace TMVA {
       const Event*     GetEvent        ( Long64_t ievt , Types::ETreeType type ) const;
       const Event*     GetTrainingEvent( Long64_t ievt ) const;
       const Event*     GetTestingEvent ( Long64_t ievt ) const;
-      const std::vector<Event*>& GetEventCollection( Types::ETreeType type );
+      const std::vector<TMVA::Event*>& GetEventCollection( Types::ETreeType type );
 
       // ---------- public auxiliary methods ---------------------------------------
 
@@ -561,7 +561,7 @@ namespace TMVA {
       TSpline1*        fSplTrainRefS;        // helper splines for RootFinder (signal)
       TSpline1*        fSplTrainRefB;        // helper splines for RootFinder (background)
 
-      mutable std::vector<const std::vector<Event*>*> fEventCollections; // if the method needs the complete event-collection, the transformed event coll. ist stored here.    
+      mutable std::vector<const std::vector<TMVA::Event*>*> fEventCollections; // if the method needs the complete event-collection, the transformed event coll. ist stored here.
 
    public:
       Bool_t           fSetupCompleted;      // is method setup
@@ -572,7 +572,7 @@ namespace TMVA {
       static MethodBase* fgThisBase;         // this pointer
 
 
-      // ===== depriciated options, kept for backward compatibility  =====
+      // ===== depreciated options, kept for backward compatibility  =====
    private:
 
       Bool_t           fNormalise;                   // normalise input variables

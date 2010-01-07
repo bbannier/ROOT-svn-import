@@ -35,7 +35,6 @@
 #pragma link C++ class TMVA::MethodFDA+;
 #pragma link C++ class TMVA::MethodMLP+;
 #pragma link C++ class TMVA::MethodCommittee+;
-#pragma link C++ class TMVA::MethodSeedDistance+;
 #pragma link C++ class TMVA::MethodBoost+; 
 #pragma link C++ class TMVA::MethodPDEFoam+; 
 #pragma link C++ class TMVA::MethodLD+; 
@@ -104,10 +103,6 @@
 #pragma link C++ class TMVA::MinuitFitter+;
 #pragma link C++ class TMVA::MinuitWrapper+;
 #pragma link C++ class TMVA::IFitterTarget+;
-#pragma link C++ class TMVA::IMetric+;
-#pragma link C++ class TMVA::MetricEuler+;
-#pragma link C++ class TMVA::MetricManhattan+;
-#pragma link C++ class TMVA::SeedDistance+;
 #pragma link C++ class TMVA::PDEFoam+;
 #pragma link C++ class TMVA::PDEFoamDistr+;
 #pragma link C++ class TMVA::PDEFoamVect+;
