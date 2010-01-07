@@ -44,6 +44,7 @@
 #include "TTreeFormula.h"
 #include "TXMLEngine.h"
 #include "TROOT.h"
+#include "TMatrixDSymEigen.h"
 
 #ifndef ROOT_TMVA_Tools
 #include "TMVA/Tools.h"
