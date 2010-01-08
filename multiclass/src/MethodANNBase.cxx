@@ -40,6 +40,7 @@
 
 #include <vector>
 #include <cstdlib>
+#include <stdexcept>
 
 #include "TString.h"
 #include "TTree.h"
@@ -111,6 +112,12 @@ void TMVA::MethodANNBase::DeclareOptions()
    DeclareOptionRef( fLayerSpec  = "N,N-1",   "HiddenLayers",    "Specification of hidden layer architecture" );
    DeclareOptionRef( fNeuronType = "sigmoid", "NeuronType",      "Neuron activation function type" );
 
+   DeclareOptionRef(fEstimatorS="MSE", "EstimatorType",
+                    "MSE (Mean Square Estimator) for Gaussian Likelihood or CE(Cross-Entropy) for Bernoulli Likelihood" ); //zjh
+   AddPreDefVal(TString("MSE"));  //zjh
+   AddPreDefVal(TString("CE"));   //zjh
+
+
    TActivationChooser aChooser;
    vector<TString>* names = aChooser.GetAllActivationNames();
    Int_t nTypes = names->size();
@@ -131,6 +138,8 @@ void TMVA::MethodANNBase::DeclareOptions()
 void TMVA::MethodANNBase::ProcessOptions()
 {
    // do nothing specific at this moment
+	if      (fEstimatorS == "MSE")  fEstimator = kMSE;    //zjh
+	else if (fEstimatorS == "CE")    fEstimator = kCE;      //zjh
    vector<Int_t>* layout = ParseLayoutString(fLayerSpec);
    BuildNetwork(layout);
 }
@@ -179,6 +188,7 @@ void TMVA::MethodANNBase::InitANNBase()
    fNetwork         = NULL;
    frgen            = NULL;
    fActivation      = NULL;
+   fOutput          = NULL; //zjh
    fIdentity        = NULL;
    fInputCalculator = NULL;
    fSynapses        = NULL;
@@ -224,6 +234,7 @@ void TMVA::MethodANNBase::DeleteNetwork()
 
    if (frgen != NULL)            delete frgen;
    if (fActivation != NULL)      delete fActivation;
+   if (fOutput != NULL)          delete fOutput;  //zjh
    if (fIdentity != NULL)        delete fIdentity;
    if (fInputCalculator != NULL) delete fInputCalculator;
    if (fSynapses != NULL)        delete fSynapses;
@@ -231,6 +242,7 @@ void TMVA::MethodANNBase::DeleteNetwork()
    fNetwork         = NULL;
    frgen            = NULL;
    fActivation      = NULL;
+   fOutput          = NULL; //zjh
    fIdentity        = NULL;
    fInputCalculator = NULL;
    fSynapses        = NULL;
@@ -256,6 +268,14 @@ void TMVA::MethodANNBase::BuildNetwork( vector<Int_t>* layout, vector<Double_t>*
    // build network given a layout (number of neurons in each layer)
    // and optional weights array
 
+	if (fEstimator!=kMSE && fEstimator!=kCE) {
+		if		(fEstimatorS == "MSE")  fEstimator = kMSE;    //zjh
+		else if (fEstimatorS == "CE")    fEstimator = kCE;      //zjh
+	}
+	if (fEstimator!=kMSE && fEstimator!=kCE) Log()<<kWARNING<<"Estimator type unspecified \t"<<Endl; //zjh
+
+
+
    Log() << kINFO << "Building Network" << Endl;
 
    DeleteNetwork();
@@ -265,10 +285,14 @@ void TMVA::MethodANNBase::BuildNetwork( vector<Int_t>* layout, vector<Double_t>*
    TActivationChooser aChooser;
    fActivation = aChooser.CreateActivation(fNeuronType);
    fIdentity   = aChooser.CreateActivation("linear");
+   if (fEstimator==kMSE)  fOutput = aChooser.CreateActivation("linear");  //zjh
+   if (fEstimator==kCE)   fOutput = aChooser.CreateActivation("sigmoid"); //zjh
    TNeuronInputChooser iChooser;
    fInputCalculator = iChooser.CreateNeuronInput(fNeuronInputType);
 
    fNetwork = new TObjArray();
+   fRegulatorIdx.clear();		//zjh
+   fRegulators.clear();			//zjh
    BuildLayers( layout, fromFile );
 
    // cache input layer and output neuron for fast access
@@ -301,18 +325,21 @@ void TMVA::MethodANNBase::BuildLayers( vector<Int_t>* layout, Bool_t fromFile )
    }
 
    // cache pointers to synapses for fast access, the order matters
-   for (Int_t i = 0; i < numLayers; i++) {                                       
-      TObjArray* layer = (TObjArray*)fNetwork->At(i);                             
-      Int_t numNeurons = layer->GetEntriesFast();                                 
-      for (Int_t j = 0; j < numNeurons; j++) {                                    
-         TNeuron* neuron = (TNeuron*)layer->At(j);                                 
-         Int_t numSynapses = neuron->NumPostLinks();                               
-         for (Int_t k = 0; k < numSynapses; k++) {                                 
-            TSynapse* synapse = neuron->PostLinkAt(k);                              
-            fSynapses->Add(synapse);                                   
-         }                                                                         
-      }                                                                           
-   }  
+   for (Int_t i = 0; i < numLayers; i++) {
+      TObjArray* layer = (TObjArray*)fNetwork->At(i);
+      Int_t numNeurons = layer->GetEntriesFast();
+      if (i!=0 && i!=numLayers-1) fRegulators.push_back(0.);  //zjh
+      for (Int_t j = 0; j < numNeurons; j++) {
+         if (i==0) fRegulators.push_back(0.);			//zjh
+         TNeuron* neuron = (TNeuron*)layer->At(j);
+         Int_t numSynapses = neuron->NumPostLinks();
+         for (Int_t k = 0; k < numSynapses; k++) {
+            TSynapse* synapse = neuron->PostLinkAt(k);
+            fSynapses->Add(synapse);
+            fRegulatorIdx.push_back(fRegulators.size()-1);	//zjh
+         }
+      }
+   }
 }
 
 //______________________________________________________________________________
@@ -345,7 +372,7 @@ void TMVA::MethodANNBase::BuildLayer( Int_t numNeurons, TObjArray* curLayer,
             // output layer
             if (layerIndex == numLayers-1) {
                neuron->SetOutputNeuron();
-               neuron->SetActivationEqn(fIdentity);
+               neuron->SetActivationEqn(fOutput);     //zjh
          }
             // hidden layers
             else neuron->SetActivationEqn(fActivation);
@@ -634,12 +661,13 @@ void TMVA::MethodANNBase::AddWeightsXMLTo( void* parent ) const
    // create XML description of ANN classifier
    Int_t numLayers = fNetwork->GetEntriesFast();
    void* wght = gTools().xmlengine().NewChild(parent, 0, "Weights");
-   gTools().xmlengine().NewAttr(wght, 0, "NLayers", gTools().StringFromInt(fNetwork->GetEntriesFast()) );
+   void* xmlLayout = gTools().xmlengine().NewChild(wght, 0, "Layout");
+   gTools().xmlengine().NewAttr(xmlLayout, 0, "NLayers", gTools().StringFromInt(fNetwork->GetEntriesFast()) );
    TString weights = "";
    for (Int_t i = 0; i < numLayers; i++) {
       TObjArray* layer = (TObjArray*)fNetwork->At(i);
       Int_t numNeurons = layer->GetEntriesFast();
-      void* layerxml = gTools().xmlengine().NewChild(wght, 0, "Layer");
+      void* layerxml = gTools().xmlengine().NewChild(xmlLayout, 0, "Layer");
       gTools().xmlengine().NewAttr(layerxml, 0, "Index",    gTools().StringFromInt(i) );
       gTools().xmlengine().NewAttr(layerxml, 0, "NNeurons", gTools().StringFromInt(numNeurons) );
       for (Int_t j = 0; j < numNeurons; j++) {
@@ -657,6 +685,40 @@ void TMVA::MethodANNBase::AddWeightsXMLTo( void* parent ) const
          gTools().xmlengine().AddRawLine( neuronxml, s.str().c_str() );
       }
    }
+
+   // if regulator used, write inverse hessian to weight file
+   if( fUseRegulator ){
+      void* xmlInvHessian = gTools().xmlengine().NewChild(wght, 0, "InverseHessian");
+
+      // get the matrix dimensions
+      Int_t nElements = fInvHessian.GetNoElements();
+      Int_t nRows     = fInvHessian.GetNrows();
+      Int_t nCols     = fInvHessian.GetNcols();
+      gTools().xmlengine().NewAttr(xmlInvHessian, 0, "NElements", gTools().StringFromInt(nElements) );
+      gTools().xmlengine().NewAttr(xmlInvHessian, 0, "NRows", gTools().StringFromInt(nRows) );
+      gTools().xmlengine().NewAttr(xmlInvHessian, 0, "NCols", gTools().StringFromInt(nCols) );
+
+      // read in the matrix elements
+      Double_t* elements = new Double_t[nElements+10];
+      fInvHessian.GetMatrix2Array( elements );
+
+      // store the matrix elements row-wise
+      Int_t index = 0;
+      for( Int_t row = 0; row < nRows; ++row ){
+	 void* xmlRow = gTools().xmlengine().NewChild(xmlInvHessian, 0, "Row");
+	 gTools().xmlengine().NewAttr(xmlRow, 0, "Index", gTools().StringFromInt(row) );
+
+	 // create the rows
+         stringstream s("");
+         s.precision( 16 );
+	 for( Int_t col = 0; col < nCols; ++col ){
+            s << std::scientific << (*(elements+index)) << " ";
+	    ++index;
+	 }
+         gTools().xmlengine().AddRawLine( xmlRow, s.str().c_str() );
+      }
+      delete[] elements;
+   }
 }
 
 
@@ -669,11 +731,22 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
    Bool_t fromFile = kTRUE;
    vector<Int_t>* layout = new vector<Int_t>();
 
+   void* xmlLayout = NULL;
+   try{
+      xmlLayout = gTools().GetChild(wghtnode, "Layout");
+   }catch( std::logic_error& excpt ){
+      xmlLayout = wghtnode;
+   }
+   if( !xmlLayout ){
+      Log() << kFATAL << "xml node if layout is empty" << Endl;
+   }
+   
+
    UInt_t nLayers;
-   gTools().ReadAttr( wghtnode, "NLayers", nLayers );
+   gTools().ReadAttr( xmlLayout, "NLayers", nLayers );
    layout->resize( nLayers );
 
-   void* ch = gTools().xmlengine().GetChild(wghtnode);
+   void* ch = gTools().xmlengine().GetChild(xmlLayout);
    UInt_t index;
    UInt_t nNeurons;
    while (ch) {
@@ -687,7 +760,7 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
    // fill the weights of the synapses
    UInt_t nSyn;
    Float_t weight;
-   ch = gTools().xmlengine().GetChild(wghtnode);
+   ch = gTools().xmlengine().GetChild(xmlLayout);
    UInt_t iLayer = 0;
    while (ch) {  // layers
       TObjArray* layer = (TObjArray*)fNetwork->At(iLayer);
@@ -716,6 +789,57 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
       ch = gTools().xmlengine().GetNext(ch);
       iLayer++;
    }
+
+
+
+   void* xmlInvHessian = NULL;
+   try{
+      xmlInvHessian = gTools().GetChild(wghtnode, "InverseHessian");
+   }catch( std::logic_error& excpt ){
+      // no inverse hessian available
+      return;  // ------------------ return from subroutine
+   }
+   if( !xmlInvHessian ){
+      Log() << kFATAL << "xml node of inverse hessian is empty" << Endl;
+   }
+
+   fUseRegulator = kTRUE;
+
+   Int_t nElements = 0;
+   Int_t nRows     = 0;
+   Int_t nCols     = 0;
+   gTools().ReadAttr( xmlInvHessian, "NElements", nElements );
+   gTools().ReadAttr( xmlInvHessian, "NRows", nRows );
+   gTools().ReadAttr( xmlInvHessian, "NCols", nCols );
+
+   // adjust the matrix dimensions
+   fInvHessian.ResizeTo( nRows, nCols );
+
+   // prepare an array to read in the values
+   Double_t* elements = new Double_t[nElements+10];
+
+
+
+   void* xmlRow = gTools().xmlengine().GetChild(xmlInvHessian);
+   Int_t row = 0;
+   index = 0;
+   while (xmlRow) {  // rows
+      gTools().ReadAttr( xmlRow, "Index",   row   );
+
+      const char* content = gTools().xmlengine().GetNodeContent(xmlRow);
+
+      std::stringstream s(content);
+      for (Int_t iCol = 0; iCol<nCols; iCol++) { // columns
+	 s >> (*(elements+index));
+	 ++index;
+      }
+      xmlRow = gTools().xmlengine().GetNext(xmlRow);
+      ++row;
+   }
+
+   fInvHessian.SetMatrixArray( elements );
+
+   delete[] elements;
 }
 
 
@@ -858,6 +982,7 @@ void TMVA::MethodANNBase::MakeClassSpecific( std::ostream& fout, const TString& 
 
    fout << endl;
    fout << "   double ActivationFnc(double x) const;" << endl;
+   fout << "   double OutputActivationFnc(double x) const;" << endl;     //zjh
    fout << endl;
    fout << "   int fLayers;" << endl;
    fout << "   int fLayerSize["<<numLayers<<"];" << endl;
@@ -942,6 +1067,7 @@ void TMVA::MethodANNBase::MakeClassSpecific( std::ostream& fout, const TString& 
       fout << "      }" << endl;
       if (i+1 != numLayers-1) // in the last layer no activation function is applied
          fout << "      fWeights[" << i+1 << "][o] = ActivationFnc(fWeights[" << i+1 << "][o]);" << endl;
+      else	fout << "      fWeights[" << i+1 << "][o] = OutputActivationFnc(fWeights[" << i+1 << "][o]);" << endl; //zjh
       fout << "   }" << endl;
    }
    fout << endl;
@@ -951,6 +1077,8 @@ void TMVA::MethodANNBase::MakeClassSpecific( std::ostream& fout, const TString& 
    fout << endl;
    TString fncName = className+"::ActivationFnc";
    fActivation->MakeFunction(fout, fncName);
+   fncName = className+"::OutputActivationFnc";  	//zjh
+   fOutput->MakeFunction(fout, fncName); 			//zjh
 
    fout << "   " << endl;
    fout << "// Clean up" << endl;
