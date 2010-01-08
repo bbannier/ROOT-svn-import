@@ -137,7 +137,9 @@ namespace TMVA {
       virtual void ProcessOptions();
       
       Bool_t Debug() const { return fgDEBUG; }
-      
+
+      enum EEstimator      { kMSE=0,kCE};         //zjh
+
    protected:
 
       virtual void MakeClassSpecific( std::ostream&, const TString& ) const;
@@ -162,9 +164,15 @@ namespace TMVA {
       TObjArray*    fNetwork;         // TObjArray of TObjArrays representing network
       TObjArray*    fSynapses;        // array of pointers to synapses, no structural data
       TActivation*  fActivation;      // activation function to be used for hidden layers
+      TActivation*  fOutput;      // activation function to be used for output layers, depending on estimator //zjh
       TActivation*  fIdentity;        // activation for input and output layers
       TRandom3*     frgen;            // random number generator for various uses
       TNeuronInput* fInputCalculator; // input calculator for all neurons
+
+      std::vector<Int_t>        fRegulatorIdx;  //index to different priors from every synapses  //zjh
+      std::vector<Double_t>     fRegulators;    //the priors as regulator         //zjh
+      EEstimator                fEstimator;  //zjh
+      TString                   fEstimatorS; //zjh
 
       // monitoring histograms
       TH1F* fEstimatorHistTrain; // monitors convergence of training sample
@@ -175,6 +183,12 @@ namespace TMVA {
       std::vector<TH1*> fEpochMonHistS; // epoch monitoring hitograms for signal
       std::vector<TH1*> fEpochMonHistB; // epoch monitoring hitograms for background
       std::vector<TH1*> fEpochMonHistW; // epoch monitoring hitograms for weights
+
+      
+      // general
+      TMatrixD           fInvHessian;           // zjh
+      bool               fUseRegulator;         // zjh
+
 
    private:
       
@@ -207,7 +221,7 @@ namespace TMVA {
       // some static flags
       static const Bool_t fgDEBUG      = kTRUE;  // debug flag
       static const Bool_t fgFIXED_SEED = kFALSE;  // fix rand generator seed
-          
+    
       ClassDef(MethodANNBase,0) // Base class for TMVA ANNs
    };
    

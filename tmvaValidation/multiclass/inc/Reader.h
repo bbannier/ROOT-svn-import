@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$ 
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss 
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss, Kai Voss 
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -97,10 +97,12 @@ namespace TMVA {
       Double_t EvaluateMVA( const std::vector<Double_t>&, const TString& methodTag, Double_t aux = 0 );    
       Double_t EvaluateMVA( MethodBase* method,           Double_t aux = 0 );    
       Double_t EvaluateMVA( const TString& methodTag,     Double_t aux = 0 );    
+//      Double_t EvaluateMVA( const TString& methodTag,     Double_t upper, Double_t lower );   //zjh
 
       // returns error on MVA response for given event
       // NOTE: must be called AFTER "EvaluateMVA(...)" call !
       Double_t GetMVAError() const { return fMvaEventError; }
+      Double_t GetMVAError2() const { return fMvaEventError2; }	//zjh
 
       const std::vector< Float_t >& EvaluateRegression( const TString& methodTag, Double_t aux = 0 );
       const std::vector< Float_t >& EvaluateRegression( MethodBase* method, Double_t aux = 0 );
@@ -151,6 +153,7 @@ namespace TMVA {
       Bool_t    fColor;      // color mode
 
       Double_t  fMvaEventError; // per-event error returned by MVA (unless: -1)
+      Double_t  fMvaEventError2; // per-event error returned by MVA (unless: -1)  //zjh
 
       std::map<TString, IMethod*> fMethodMap; // map of methods
 

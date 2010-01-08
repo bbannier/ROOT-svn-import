@@ -111,6 +111,8 @@ namespace TMVA {
       enum ETrainingMethod { kBP=0, kBFGS, kGA };
       enum EBPTrainingMode { kSequential=0, kBatch };
 
+      Double_t GetMvaValues( Double_t& errUpper, Double_t& errLower );          //zjh
+
    protected:
 
       // make ROOT-independent C++ class for classifier response (classifier-specific implementation)
@@ -141,12 +143,13 @@ namespace TMVA {
       Bool_t   GetHessian( TMatrixD &Hessian, TMatrixD &Gamma, TMatrixD &Delta );
       void     SetDir( TMatrixD &Hessian, TMatrixD &Dir );
       Double_t DerivDir( TMatrixD &Dir );
-      Bool_t   LineSearch( TMatrixD &Dir, std::vector<Double_t> &Buffer );
+      Bool_t   LineSearch( TMatrixD &Dir, std::vector<Double_t> &Buffer, Double_t* dError=0 ); //zjh
       void     ComputeDEDw();
       void     SimulateEvent( const Event* ev );
       void     SetDirWeights( std::vector<Double_t> &Origin, TMatrixD &Dir, Double_t alpha );
       Double_t GetError();
-      Double_t GetSqrErr( const Event* ev, UInt_t index = 0 );
+      Double_t GetMSEErr( const Event* ev, UInt_t index = 0 );   //zjh
+      Double_t GetCEErr( const Event* ev, UInt_t index = 0 );   //zjh
 
       // backpropagation functions
       void     BackPropagationMinimize( Int_t nEpochs );
@@ -177,6 +180,14 @@ namespace TMVA {
 #endif
 
       // general
+      bool               fUseRegulator;         // zjh
+      Double_t           fPrior;                // zjh
+      std::vector<Double_t> fPriorDev;          // zjh
+      void               GetApproxInvHessian ( TMatrixD& InvHessian, bool regulate=true );   //rank-1 approximation, neglect 2nd derivatives. //zjh
+      void               UpdateRegulators();    // zjh
+      void               UpdatePriors();        // zjh
+      Int_t				 fUpdateLimit;          // zjh
+
       ETrainingMethod fTrainingMethod; // method of training, BP or GA
       TString         fTrainMethodS;   // training method option param
 

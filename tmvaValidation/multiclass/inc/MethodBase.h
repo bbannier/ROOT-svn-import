@@ -146,6 +146,11 @@ namespace TMVA {
       // classifier response - some methods may return a per-event error estimate (unless: *err = -1)
       virtual Double_t GetMvaValue( Double_t* err = 0 ) = 0;
 
+      //zjh=>
+      virtual Double_t GetMvaValues( Double_t& errUpper, Double_t& errLower)
+		  {Double_t mva=GetMvaValue(&errUpper); errLower=errUpper;return mva;}
+      //<=zjh
+
       // signal/background classification response
       Double_t GetMvaValue( const TMVA::Event* const ev, Double_t* err = 0 );
 
