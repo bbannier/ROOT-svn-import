@@ -31,8 +31,6 @@
 #include "TMVA/MsgLogger.h"
 #include "TMVA/DataSet.h"
 
-#include "TMVA/VectorSortHelper.h"
-
 //_______________________________________________________________________
 TMVA::ResultsMulticlass::ResultsMulticlass( const DataSetInfo* dsi ) 
    : Results( dsi ),
