@@ -20,7 +20,7 @@
 
 
 namespace Reflex {
-   /**
+/**
  * @class ClassTemplateInstance ClassTemplateInstance.h Reflex/ClassTemplateInstance.h
  * @author Stefan Roiser
  * @date 13/1/2004
@@ -28,13 +28,12 @@ namespace Reflex {
  */
 class ClassTemplateInstance: public Class,
    public TemplateInstance {
-   public:
+public:
    /** default constructor */
-      ClassTemplateInstance( const Reflex::Dictionary& dictionary,
-                             const char * typ, 
-         size_t size, 
-         const std::type_info & ti, 
-         unsigned int modifiers );
+   ClassTemplateInstance(const char* typ,
+                         size_t size,
+                         const std::type_info& ti,
+                         unsigned int modifiers);
 
 
    /** destructor */
@@ -46,20 +45,20 @@ class ClassTemplateInstance: public Class,
     * @param  typedefexp expand typedefs or not
     * @return fully qualified Name of templated class
     */
-      std::string Name( unsigned int mod = 0 ) const;
+   std::string Name(unsigned int mod = 0) const;
 
 
    /**
-      * SimpleName returns the name of the type as a reference. It provides a 
+    * SimpleName returns the name of the type as a reference. It provides a
     * simplified but faster generation of a type name. Attention currently it
-      * is not guaranteed that Name() and SimpleName() return the same character 
+    * is not guaranteed that Name() and SimpleName() return the same character
     * layout of a name (ie. spacing, commas, etc. )
     * @param pos will indicate where in the returned reference the requested name starts
     * @param mod The only 'mod' support is SCOPED
     * @return name of type
     */
-      virtual const std::string & SimpleName( size_t & pos, 
-         unsigned int mod = 0 ) const;
+   virtual const std::string& SimpleName(size_t& pos,
+                                         unsigned int mod = 0) const;
 
 
    /**
@@ -67,7 +66,7 @@ class ClassTemplateInstance: public Class,
     * @param  nth nth template argument
     * @return pointer to nth template argument
     */
-      Type TemplateArgumentAt( size_t nth ) const;
+   Type TemplateArgumentAt(size_t nth) const;
 
 
    /**
@@ -89,17 +88,17 @@ class ClassTemplateInstance: public Class,
     */
    TypeTemplate TemplateFamily() const;
 
-   private:
-      /** 
+private:
+   /**
     * The template type (family)
     * @label template type
     * @link aggregation
     * @clientCardinality 1
     * @supplierCardinality 1
     */
-      TypeTemplate fTemplateFamily;      
+   TypeTemplate fTemplateFamily;
 
-   }; // class ClassTemplateInstance
+};    // class ClassTemplateInstance
 } // namespace Reflex
 
 

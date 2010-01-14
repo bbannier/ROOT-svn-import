@@ -14,7 +14,6 @@
 
 // Include files
 #include "Reflex/Kernel.h"
-#include "Reflex/Dictionary.h"
 #include <string>
 #include <typeinfo>
 
@@ -155,15 +154,8 @@ public:
     * @param  name fully qualified name of the scope
     * @return reflection information of the scope
     */
-   static Scope ByName(const std::string& name, const Dictionary& dictionary = Dictionary::Current());
+   static Scope ByName(const std::string& name);
 
-   /**
-    * ByName will return reflection information of the scope passed as argument.
-    * Only searches in dictionary, and not in its dependencies
-    * @param  name fully qualified name of the scope
-    * @return reflection information of the scope
-    */
-   static Scope ByNameShallow(const std::string& name, const Dictionary& dictionary);
 
    /**
     * DataMemberAt will return the nth data member of the type
@@ -322,10 +314,9 @@ public:
 
    /**
     * GlobalScope will return the global scope representation\
-    * @param dictionary the dictionary from which to get the global scope
     * @return global scope
     */
-   static Scope GlobalScope(const Dictionary& dictionary = Dictionary::Current());
+   static Scope GlobalScope();
 
 
    /**
@@ -410,31 +401,25 @@ public:
    /**
     * LookupMember will lookup a member in the current scope
     * @param nam the string representation of the member to lookup
-    * @param dictionary the dictionary into which to search, by default the same as this
     * @return if a matching member is found return it, otherwise return empty member
     */
    Member LookupMember(const std::string& nam) const;
-   Member LookupMember(const std::string& nam, const Dictionary& dictionary) const;
 
 
    /**
     * LookupType will lookup a type in the current scope
     * @param nam the string representation of the type to lookup
-    * @param dictionary the dictionary into which to search, by default the same as this
     * @return if a matching type is found return it, otherwise return empty type
     */
    Type LookupType(const std::string& nam) const;
-   Type LookupType(const std::string& nam, const Dictionary& dictionary) const;
 
 
    /**
     * LookupScope will lookup a scope in the current scope
     * @param nam the string representation of the scope to lookup
-    * @param dictionary the dictionary into which to search, by default the same as this
     * @return if a matching scope is found return it, otherwise return empty scope
     */
    Scope LookupScope(const std::string& nam) const;
-   Scope LookupScope(const std::string& nam, const Dictionary& dictionary) const;
 
 
    /**
@@ -663,11 +648,9 @@ public:
     * SubScopeByName will return a sub scope representing the unscoped name passed
     * as argument
     * @param unscoped name of the sub scope to look for
-    * @param dictionary the dictionary into which to search, by default the same as this
     * @return Scope representation of the sub scope
     */
    Scope SubScopeByName(const std::string& nam) const;
-   Scope SubScopeByName(const std::string& nam, const Dictionary& dictionary) const;
 
 
    /**
@@ -716,11 +699,9 @@ public:
    /**
     * SubTypeByName will return the Type representing the sub type
     * @param string of the unscoped sub type to look for
-    * @param dictionary the dictionary into which to search, by default the same as this
     * @return Type representation of the sub type
     */
    Type SubTypeByName(const std::string& nam) const;
-   Type SubTypeByName(const std::string& nam, const Reflex::Dictionary& dictionary) const;
 
 
    /**
@@ -968,8 +949,7 @@ public:
     * @param scop the name of the sub scope
     * @param scopeType enum value of the scope type
     */
-   void AddSubScope(const Dictionary& dictionary,
-                    const char* scope,
+   void AddSubScope(const char* scope,
                     TYPE scopeType = NAMESPACE) const;
 
 
@@ -988,8 +968,7 @@ public:
     * @param ti the type_info of the sub type
     * @param modifiers of the sub type
     */
-   void AddSubType(const Reflex::Dictionary& dictionary,
-                   const char* type,
+   void AddSubType(const char* type,
                    size_t size,
                    TYPE typeType,
                    const std::type_info& typeInfo,
@@ -1061,13 +1040,6 @@ public:
 
    /** */
    const ScopeBase* ToScopeBase() const;
-
-
-   /**
-    * Dictionary into which this scope is registered
-    */
-   Dictionary DictionaryGet() const;
-
 
 public:
    /**
@@ -1304,9 +1276,9 @@ Reflex::Scope::FunctionMember_REnd(EMEMBERQUERY inh) const {
 
 //-------------------------------------------------------------------------------
 inline Reflex::Scope
-Reflex::Scope::GlobalScope(const Dictionary& dictionary) {
+Reflex::Scope::GlobalScope() {
 //-------------------------------------------------------------------------------
-  return ScopeBase::GlobalScope(dictionary);
+   return ScopeBase::GlobalScope();
 }
 
 
@@ -1550,10 +1522,10 @@ Reflex::Scope::SubScopeSize() const {
 
 //-------------------------------------------------------------------------------
 inline Reflex::Scope
-Reflex::Scope::SubScopeByName(const std::string& nam, const Reflex::Dictionary& dictionary) const {
+Reflex::Scope::SubScopeByName(const std::string& nam) const {
 //-------------------------------------------------------------------------------
    if (*this) {
-      return fScopeName->fScopeBase->SubScopeByName(nam, dictionary);
+      return fScopeName->fScopeBase->SubScopeByName(nam);
    }
    return Dummy::Scope();
 }
@@ -1601,6 +1573,7 @@ Reflex::Scope::SubScope_REnd() const {
    }
    return Dummy::ScopeCont().rend();
 }
+
 
 //-------------------------------------------------------------------------------
 inline Reflex::Type_Iterator
@@ -1801,12 +1774,11 @@ Reflex::Scope::AddSubScope(const Scope& sc) const {
 
 //-------------------------------------------------------------------------------
 inline void
-Reflex::Scope::AddSubScope(const Reflex::Dictionary& dictionary,
-                           const char* scope,
+Reflex::Scope::AddSubScope(const char* scope,
                            TYPE scopeType) const {
 //-------------------------------------------------------------------------------
    if (*this) {
-      fScopeName->fScopeBase->AddSubScope(dictionary, scope, scopeType);
+      fScopeName->fScopeBase->AddSubScope(scope, scopeType);
    }
 }
 
@@ -1840,14 +1812,6 @@ Reflex::Scope::RemoveUsingDirective(const Scope& ud) const {
    }
 }
 
-//-------------------------------------------------------------------------------
-inline Reflex::Dictionary Reflex::Scope::DictionaryGet() const {
-//-------------------------------------------------------------------------------
-   if (* this)
-      return fScopeName->NamesGet();
-   else
-      return Dictionary::Main();
-}
 
 #ifdef REFLEX_CINT_MERGE
 inline bool

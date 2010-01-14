@@ -17,9 +17,6 @@
 
 
 namespace Reflex {
-// forward declaration
-class Dictionary;
-
 /**
  * @class NamespaceBuilder NamespaceBuilder.h Reflex/Builder/NamespaceBuilder.h
  * @author Stefan Roiser
@@ -27,10 +24,9 @@ class Dictionary;
  * @date 30/3/2004
  */
 class RFLX_API NamespaceBuilder  {
-public:            
+public:
    /** constructor */
-   NamespaceBuilder(const Dictionary& dictionary,
-                    const char * nam );
+   NamespaceBuilder(const char* nam);
 
 
    /** destructor */

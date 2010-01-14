@@ -19,7 +19,6 @@
 namespace Reflex {
 // forward declarations
 class Enum;
-class Dictionary;
 
 /**
  * @class EnumBuilder EnumBuilder.h Reflex/Builder/EnumBuilder.h
@@ -30,9 +29,8 @@ class Dictionary;
 class RFLX_API EnumBuilder {
 public:
    /** constructor */
-   EnumBuilder(const Reflex::Dictionary& dictionary,
-               const char* name,
-               const std::type_info& ti,
+   EnumBuilder(const char* name,
+               const std::type_info & ti,
                unsigned int modifiers = 0);
 
 
@@ -95,13 +93,11 @@ template <typename T>
 class EnumBuilderT  {
 public:
    /** constructor */
-   EnumBuilderT(const Reflex::Dictionary& dictionary,
-                unsigned int modifiers = 0);
+   EnumBuilderT(unsigned int modifiers = 0);
 
 
    /** constructor */
-   EnumBuilderT(const Reflex::Dictionary& dictionary,
-                const char* nam,
+   EnumBuilderT(const char* nam,
                 unsigned int modifiers = 0);
 
 
@@ -147,11 +143,9 @@ private:
 
 //-------------------------------------------------------------------------------
 template <typename T>
-inline Reflex::EnumBuilderT<T>::EnumBuilderT(const Reflex::Dictionary& dictionary,
-                                             unsigned int modifiers)
+inline Reflex::EnumBuilderT<T>::EnumBuilderT(unsigned int modifiers)
 //-------------------------------------------------------------------------------
-   : fEnumBuilderImpl(dictionary,
-                      Tools::Demangle(typeid(T)).c_str(),
+   : fEnumBuilderImpl(Tools::Demangle(typeid(T)).c_str(),
                       typeid(T),
                       modifiers) {
 }
@@ -159,12 +153,10 @@ inline Reflex::EnumBuilderT<T>::EnumBuilderT(const Reflex::Dictionary& dictionar
 
 //-------------------------------------------------------------------------------
 template <typename T>
-inline Reflex::EnumBuilderT<T>::EnumBuilderT(const Reflex::Dictionary& dictionary,
-                                             const char* nam,
+inline Reflex::EnumBuilderT<T>::EnumBuilderT(const char* nam,
                                              unsigned int modifiers)
 //-------------------------------------------------------------------------------
-   : fEnumBuilderImpl(dictionary,
-                      nam,
+   : fEnumBuilderImpl(nam,
                       typeid(UnknownType),
                       modifiers) {
 }
@@ -172,7 +164,9 @@ inline Reflex::EnumBuilderT<T>::EnumBuilderT(const Reflex::Dictionary& dictionar
 
 //-------------------------------------------------------------------------------
 template <typename T>
-inline Reflex::EnumBuilderT<T>& Reflex::EnumBuilderT<T>::AddItem(const char* nam,
+inline Reflex::EnumBuilderT<T>&
+Reflex::EnumBuilderT<T
+>::AddItem(const char* nam,
            long value) {
 //-------------------------------------------------------------------------------
    fEnumBuilderImpl.AddItem(nam, value);
@@ -182,7 +176,9 @@ inline Reflex::EnumBuilderT<T>& Reflex::EnumBuilderT<T>::AddItem(const char* nam
 
 //-------------------------------------------------------------------------------
 template <typename T> template <typename P>
-inline Reflex::EnumBuilderT<T>& Reflex::EnumBuilderT<T>::AddProperty(const char* key,
+inline Reflex::EnumBuilderT<T>&
+Reflex::EnumBuilderT<T
+>::AddProperty(const char* key,
                P value) {
 //-------------------------------------------------------------------------------
    fEnumBuilderImpl.AddProperty(key, value);
@@ -191,8 +187,9 @@ inline Reflex::EnumBuilderT<T>& Reflex::EnumBuilderT<T>::AddProperty(const char*
 
 
 //-------------------------------------------------------------------------------
-template <typename T>
-inline Reflex::Type Reflex::EnumBuilderT<T>::ToType() {
+template <typename T> inline Reflex::Type
+Reflex::EnumBuilderT<T
+>::ToType() {
 //-------------------------------------------------------------------------------
    return fEnumBuilderImpl.ToType();
 }

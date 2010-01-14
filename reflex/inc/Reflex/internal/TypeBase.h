@@ -26,7 +26,6 @@ class Object;
 class TypeTemplate;
 class TypeName;
 class DictionaryGenerator;
-class Dictionary;
 
 /**
  * @class TypeBase TypeBase.h Reflex/TypeBase.h
@@ -37,8 +36,7 @@ class Dictionary;
 class RFLX_API TypeBase {
 public:
    /** default constructor */
-   TypeBase(const Reflex::Dictionary& dictionary,
-            const char* nam,
+   TypeBase(const char* nam,
             size_t size,
             TYPE typeTyp,
             const std::type_info & ti,

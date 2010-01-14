@@ -17,24 +17,22 @@
 #include "Reflex/Type.h"
 
 namespace Reflex {
-   // forward declarations
-   class Dictionary;
+// forward declarations
 
 
-   /** 
+/**
  * @class Function Function.h Reflex/Function.h
  * @author Stefan Roiser
-   * @date 24/11/2003 
+ * @date 24/11/2003
  * @ingroup Ref
  */
-   class Function : public TypeBase {
-   public:
+class Function: public TypeBase {
+public:
    /** default constructor */
-      Function( const Reflex::Dictionary& dictionary,
-         const Type & retType,
-         const std::vector< Type > & parameters,
-         const std::type_info & ti,
-         TYPE functionType = FUNCTION );
+   Function(const Type& retType,
+            const std::vector<Type>& parameters,
+            const std::type_info& ti,
+            TYPE functionType = FUNCTION);
 
 
    /** destructor */
@@ -53,7 +51,7 @@ namespace Reflex {
     * @param  mod modifiers to be applied when generating the Name
     * @return Name of function
     */
-      virtual std::string Name( unsigned int mod = 0 ) const;
+   virtual std::string Name(unsigned int mod = 0) const;
 
 
    /**
@@ -61,7 +59,7 @@ namespace Reflex {
     * @param  nth nth FunctionParameterAt
     * @return pointer to nth FunctionParameterAt At
     */
-      virtual Type FunctionParameterAt( size_t nth ) const;
+   virtual Type FunctionParameterAt(size_t nth) const;
 
 
    /**
@@ -85,20 +83,20 @@ namespace Reflex {
 
 
    /** static function that composes the At Name */
-      static std::string BuildTypeName( const Type & ret, 
-         const std::vector< Type > & param,
-         unsigned int mod = SCOPED | QUALIFIED );
+   static std::string BuildTypeName(const Type& ret,
+                                    const std::vector<Type>& param,
+                                    unsigned int mod = SCOPED | QUALIFIED);
 
-   private:
-      /** 
-      * container of parameter types 
+private:
+   /**
+    * container of parameter types
     * @label function parameter types
     * @link aggregation
     * @clientCardinality 1
     * @supplierCardinality 0..*
     */
    mutable
-         std::vector < Type > fParameters;
+   std::vector<Type> fParameters;
 
 
    /**
@@ -114,7 +112,7 @@ namespace Reflex {
    /** modifiers of function and return At */
    unsigned int fModifiers;
 
-   }; // class Function
+};    // class Function
 } // namespace Reflex
 
 
@@ -154,7 +152,7 @@ Reflex::Function::FunctionParameter_End() const {
 inline Reflex::Reverse_Type_Iterator
 Reflex::Function::FunctionParameter_RBegin() const {
 //-------------------------------------------------------------------------------
-   return ((const std::vector<Type>&)fParameters).rbegin();
+   return ((const std::vector<Type> &)fParameters).rbegin();
 }
 
 
@@ -162,14 +160,14 @@ Reflex::Function::FunctionParameter_RBegin() const {
 inline Reflex::Reverse_Type_Iterator
 Reflex::Function::FunctionParameter_REnd() const {
 //-------------------------------------------------------------------------------
-   return ((const std::vector<Type>&)fParameters).rend();
+   return ((const std::vector<Type> &)fParameters).rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type 
-Reflex::Function::FunctionParameterAt( size_t nth ) const {
-//------------------------------------------------------------------------------- 
+inline Reflex::Type
+Reflex::Function::FunctionParameterAt(size_t nth) const {
+//-------------------------------------------------------------------------------
    if (nth < fParameters.size()) {
       return fParameters[nth];
    }

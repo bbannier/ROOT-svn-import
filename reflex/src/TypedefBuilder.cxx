@@ -10,7 +10,7 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-#define REFLEX_BUILD
+# define REFLEX_BUILD
 #endif
 
 #include "Reflex/Builder/TypedefBuilder.h"
@@ -22,32 +22,31 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypedefBuilderImpl::TypedefBuilderImpl( const Reflex::Dictionary& dictionary,
-                                                const char * typ,
-                                                      const Type & typedefType ) {
+Reflex::TypedefBuilderImpl::TypedefBuilderImpl(const char* typ,
+                                               const Type& typedefType) {
 //-------------------------------------------------------------------------------
 // Construct typedef info.
-   fTypedef = TypedefTypeBuilder(dictionary, typ, typedefType );
+   fTypedef = TypedefTypeBuilder(typ, typedefType);
 }
 
 
 //-------------------------------------------------------------------------------
 void
 Reflex::TypedefBuilderImpl::AddProperty(const char* key,
-                                                    Any value ) {
+                                        Any value) {
 //-------------------------------------------------------------------------------
 // Attach a property to this typedef as Any object.
-   fTypedef.Properties().AddProperty( key, value );
+   fTypedef.Properties().AddProperty(key, value);
 }
 
 
 //-------------------------------------------------------------------------------
 void
 Reflex::TypedefBuilderImpl::AddProperty(const char* key,
-                                                    const char * value ) {
+                                        const char* value) {
 //-------------------------------------------------------------------------------
 // Attach a property to this typedef as string.
-   AddProperty( key, Any(value));
+   AddProperty(key, Any(value));
 }
 
 

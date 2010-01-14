@@ -10,7 +10,7 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-#define REFLEX_BUILD
+# define REFLEX_BUILD
 #endif
 
 #include "Reflex/Kernel.h"
@@ -25,7 +25,6 @@
 #include "Reflex/PropertyList.h"
 #include "Reflex/MemberTemplate.h"
 #include "Reflex/Any.h"
-#include "Reflex/Dictionary.h"
 
 #include "Fundamental.h"
 #include "Namespace.h"
@@ -39,7 +38,7 @@ class FundamentalDeclarator {
 public:
    FundamentalDeclarator(const char* name, size_t size, const std::type_info& ti,
                          Reflex::REPRESTYPE repres) {
-      Reflex::TypeBase* tb = new Reflex::TypeBase(Reflex::Dictionary::Main(), name, size, Reflex::FUNDAMENTAL,
+      Reflex::TypeBase* tb = new Reflex::TypeBase(name, size, Reflex::FUNDAMENTAL,
                                                   ti, Reflex::Type(), repres);
       tb->Properties().AddProperty("Description", "fundamental type");
       fType = tb->ThisType();
@@ -48,7 +47,7 @@ public:
 
    FundamentalDeclarator&
    Typedef(const char* name) {
-      new Reflex::Typedef(Reflex::Dictionary::Main(), name, fType, Reflex::FUNDAMENTAL, fType);
+      new Reflex::Typedef(name, fType, Reflex::FUNDAMENTAL, fType);
       return *this;
    }
 
@@ -125,8 +124,8 @@ Reflex::Instance::Instance(Instance*) {
 
    fgSingleton = this;
 
-   /** initialisation of the main dictionary*/
-   Dictionary::Main();
+   /** initialisation of the global namespace */
+   Namespace::GlobalScope();
 
    // initialising fundamental types
    // char [3.9.1.1]
@@ -237,7 +236,7 @@ const Reflex::StdString_Cont_Type_t&
 Reflex::Dummy::StdStringCont() {
 //-------------------------------------------------------------------------------
 // static wrapper for an empty container of std strings.
-   return Get< StdString_Cont_Type_t >();
+   return Get<StdString_Cont_Type_t>();
 }
 
 
@@ -246,7 +245,7 @@ const Reflex::Type_Cont_Type_t&
 Reflex::Dummy::TypeCont() {
 //-------------------------------------------------------------------------------
 // static wrapper for an empty container of Types.
-   return Get< Type_Cont_Type_t >();
+   return Get<Type_Cont_Type_t>();
 }
 
 
@@ -255,7 +254,7 @@ const Reflex::Base_Cont_Type_t&
 Reflex::Dummy::BaseCont() {
 //-------------------------------------------------------------------------------
 // static wrapper for an empty container of Bases.
-   return Get< Base_Cont_Type_t >();
+   return Get<Base_Cont_Type_t>();
 }
 
 
@@ -264,7 +263,7 @@ const Reflex::Scope_Cont_Type_t&
 Reflex::Dummy::ScopeCont() {
 //-------------------------------------------------------------------------------
 // static wrapper for an empty container of Scopes.
-   return Get< Scope_Cont_Type_t >();
+   return Get<Scope_Cont_Type_t>();
 }
 
 
@@ -273,7 +272,7 @@ const Reflex::Object_Cont_Type_t&
 Reflex::Dummy::ObjectCont() {
 //-------------------------------------------------------------------------------
 // static wrapper for an empty container of Objects.
-   return Get< Object_Cont_Type_t >();
+   return Get<Object_Cont_Type_t>();
 }
 
 
@@ -282,7 +281,7 @@ const Reflex::Member_Cont_Type_t&
 Reflex::Dummy::MemberCont() {
 //-------------------------------------------------------------------------------
 // static wrapper for an empty container of Members.
-   return Get< Member_Cont_Type_t >();
+   return Get<Member_Cont_Type_t>();
 }
 
 
@@ -291,7 +290,7 @@ const Reflex::TypeTemplate_Cont_Type_t&
 Reflex::Dummy::TypeTemplateCont() {
 //-------------------------------------------------------------------------------
 // static wrapper for an empty container of TypeTemplates.
-   return Get< TypeTemplate_Cont_Type_t >();
+   return Get<TypeTemplate_Cont_Type_t>();
 }
 
 
@@ -300,7 +299,7 @@ const Reflex::MemberTemplate_Cont_Type_t&
 Reflex::Dummy::MemberTemplateCont() {
 //-------------------------------------------------------------------------------
 // static wrapper for an empty container of MemberTemplates.
-   return Get< MemberTemplate_Cont_Type_t >();
+   return Get<MemberTemplate_Cont_Type_t>();
 }
 
 
@@ -308,7 +307,7 @@ Reflex::Dummy::MemberTemplateCont() {
 Reflex::Any&
 Reflex::Dummy::Any() {
 //-------------------------------------------------------------------------------
-   // static wrapper for an empty Any object 
+// static wrapper for an empty Any object
    static Reflex::Any i;
 
    if (i) {
@@ -322,8 +321,8 @@ Reflex::Dummy::Any() {
 const Reflex::Object&
 Reflex::Dummy::Object() {
 //-------------------------------------------------------------------------------
-   // static wrapper for an empty Object 
-   return Get< Reflex::Object >();
+// static wrapper for an empty Object
+   return Get<Reflex::Object>();
 }
 
 
@@ -331,8 +330,8 @@ Reflex::Dummy::Object() {
 const Reflex::Type&
 Reflex::Dummy::Type() {
 //-------------------------------------------------------------------------------
-   // static wrapper for an empty Type 
-   return Get< Reflex::Type >();
+// static wrapper for an empty Type
+   return Get<Reflex::Type>();
 }
 
 
@@ -340,8 +339,8 @@ Reflex::Dummy::Type() {
 const Reflex::TypeTemplate&
 Reflex::Dummy::TypeTemplate() {
 //-------------------------------------------------------------------------------
-   // static wrapper for an empty TypeTemplate 
-   return Get< Reflex::TypeTemplate >();
+// static wrapper for an empty TypeTemplate
+   return Get<Reflex::TypeTemplate>();
 }
 
 
@@ -349,8 +348,8 @@ Reflex::Dummy::TypeTemplate() {
 const Reflex::Base&
 Reflex::Dummy::Base() {
 //-------------------------------------------------------------------------------
-   // static wrapper for an empty Base 
-   return Get< Reflex::Base >();
+// static wrapper for an empty Base
+   return Get<Reflex::Base>();
 }
 
 
@@ -358,8 +357,8 @@ Reflex::Dummy::Base() {
 const Reflex::PropertyList&
 Reflex::Dummy::PropertyList() {
 //-------------------------------------------------------------------------------
-   // static wrapper for an empty PropertyList 
-   return Get< Reflex::PropertyList >();
+// static wrapper for an empty PropertyList
+   return Get<Reflex::PropertyList>();
 }
 
 
@@ -367,8 +366,8 @@ Reflex::Dummy::PropertyList() {
 const Reflex::Member&
 Reflex::Dummy::Member() {
 //-------------------------------------------------------------------------------
-   // static wrapper for an empty Member 
-   return Get< Reflex::Member >();
+// static wrapper for an empty Member
+   return Get<Reflex::Member>();
 }
 
 
@@ -376,8 +375,8 @@ Reflex::Dummy::Member() {
 const Reflex::MemberTemplate&
 Reflex::Dummy::MemberTemplate() {
 //-------------------------------------------------------------------------------
-   // static wrapper for an empty MemberTemplate 
-   return Get< Reflex::MemberTemplate >();
+// static wrapper for an empty MemberTemplate
+   return Get<Reflex::MemberTemplate>();
 }
 
 
@@ -385,8 +384,8 @@ Reflex::Dummy::MemberTemplate() {
 const Reflex::Scope&
 Reflex::Dummy::Scope() {
 //-------------------------------------------------------------------------------
-   // static wrapper for an empty Scope 
-   return Get< Reflex::Scope >();
+// static wrapper for an empty Scope
+   return Get<Reflex::Scope>();
 }
 
 

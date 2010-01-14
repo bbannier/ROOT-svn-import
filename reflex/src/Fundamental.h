@@ -16,27 +16,23 @@
 #include "Reflex/internal/TypeBase.h"
 
 namespace Reflex {
-   // Forward declarations
-   class Dictionary;
-
-   /**
+/**
  * @class Fundamental Fundamental.h Reflex/Fundamental.h
  *  @author Stefan Roiser
  *  @date 24/11/2003
  */
-   class Fundamental : public TypeBase {
-   public:
+class Fundamental: public TypeBase {
+public:
    /** default constructor */
-      Fundamental( const Reflex::Dictionary& dictionary,
-                   const char * typ,
+   Fundamental(const char* typ,
                size_t size,
-         const std::type_info & ti ) ;
+               const std::type_info& ti);
 
 
    /** destructor */
    virtual ~Fundamental() {}
 
-   }; // class Fundamental
+};    // class Fundamental
 } //namespace Reflex
 
 #endif // Reflex_Fundamental

@@ -25,7 +25,6 @@ namespace Cint { namespace Internal {} }
 namespace Reflex {
 // forward declarations
 class Class;
-class Dictionary;
 class ClassBuilder;
 class OnDemandBuilderForScope;
 
@@ -40,7 +39,7 @@ template <typename C> class ClassBuilderT;
 class RFLX_API ClassBuilderImpl {
 public:
    /** constructor */
-   ClassBuilderImpl(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, TYPE typ = CLASS);
+   ClassBuilderImpl(const char* nam, const std::type_info & ti, size_t size, unsigned int modifiers = 0, TYPE typ = CLASS);
    ClassBuilderImpl(Class* cl);
 
    /** destructor */
@@ -87,9 +86,6 @@ public:
                           unsigned int modifiers = 0);
 
    void AddTypedef(const Type& typ,
-                   const char* def);
-
-   void AddTypedef(const char* typ,
                    const char* def);
 
    void AddEnum(const char* nam,
@@ -171,7 +167,7 @@ private:
 class RFLX_API ClassBuilder {
 public:
    /** constructor */
-   ClassBuilder(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, TYPE typ = CLASS);
+   ClassBuilder(const char* nam, const std::type_info & ti, size_t size, unsigned int modifiers = 0, TYPE typ = CLASS);
    ClassBuilder(Class* cl);
 
    /** destructor */
@@ -290,8 +286,6 @@ protected:
    ClassBuilder& EnableCallback(bool enable = true);
 
 private:
-   Dictionary fDictionary;
-
    ClassBuilderImpl fClassBuilderImpl;
 
 };    // class ClassBuilder
@@ -307,14 +301,12 @@ template <class C>
 class ClassBuilderT {
 public:
    /** constructor */
-   ClassBuilderT(const Reflex::Dictionary& dictionary,
-                 unsigned int modifiers = 0,
+   ClassBuilderT(unsigned int modifiers = 0,
                  TYPE typ = CLASS);
 
 
    /** constructor */
-   ClassBuilderT(const Reflex::Dictionary& dictionary,
-                 const char* nam,
+   ClassBuilderT(const char* nam,
                  unsigned int modifiers = 0,
                  TYPE typ = CLASS);
 
@@ -437,8 +429,6 @@ protected:
    ClassBuilderT& EnableCallback(bool enable = true);
 
 private:
-   Dictionary fDictionary;
-
    ClassBuilderImpl fClassBuilderImpl;
 
 };    // class ClassBuilderT
@@ -458,7 +448,7 @@ template <typename T> inline Reflex::ClassBuilder&
 Reflex::ClassBuilder::AddDataMember(const char* nam,
                                     size_t offs,
                                     unsigned int modifiers) {
-   fClassBuilderImpl.AddDataMember(nam, TypeDistiller<T>::Get(fDictionary), offs, modifiers);
+   fClassBuilderImpl.AddDataMember(nam, TypeDistiller<T>::Get(), offs, modifiers);
    return *this;
 }
 
@@ -470,7 +460,7 @@ Reflex::ClassBuilder::AddFunctionMember(const char* nam,
                                         void* stubCtx,
                                         const char* params,
                                         unsigned int modifiers) {
-   fClassBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(fDictionary), stubFP, stubCtx, params, modifiers);
+   fClassBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(), stubFP, stubCtx, params, modifiers);
    return *this;
 }
 
@@ -478,7 +468,7 @@ Reflex::ClassBuilder::AddFunctionMember(const char* nam,
 //______________________________________________________________________________
 template <typename TD> inline Reflex::ClassBuilder&
 Reflex::ClassBuilder::AddTypedef(const char* def) {
-   fClassBuilderImpl.AddTypedef(TypeDistiller<TD>::Get(fDictionary), def);
+   fClassBuilderImpl.AddTypedef(TypeDistiller<TD>::Get(), def);
    return *this;
 }
 
@@ -503,25 +493,23 @@ Reflex::ClassBuilder::AddProperty(const char* key,
 
 //______________________________________________________________________________
 template <typename C> inline
-Reflex::ClassBuilderT<C>::ClassBuilderT(const Reflex::Dictionary& dictionary, unsigned int modifiers, TYPE typ):
-   fClassBuilderImpl(dictionary, Tools::Demangle(typeid(C)).c_str(), typeid(C), sizeof(C), modifiers, typ),
-   fDictionary(dictionary) {
+Reflex::ClassBuilderT<C>::ClassBuilderT(unsigned int modifiers, TYPE typ):
+   fClassBuilderImpl(Tools::Demangle(typeid(C)).c_str(), typeid(C), sizeof(C), modifiers, typ) {
 }
 
 
 //______________________________________________________________________________
 template <class C> inline
-Reflex::ClassBuilderT<C>::ClassBuilderT(const Reflex::Dictionary& dictionary, const char* nam, unsigned int modifiers, TYPE typ):
-   fClassBuilderImpl(dictionary, nam, typeid(C), sizeof(C), modifiers, typ),
-   fDictionary(dictionary) {
+Reflex::ClassBuilderT<C>::ClassBuilderT(const char* nam, unsigned int modifiers, TYPE typ):
+   fClassBuilderImpl(nam, typeid(C), sizeof(C), modifiers, typ) {
 }
-   
+
 
 //______________________________________________________________________________
 template <typename C> template <typename B> inline
 Reflex::ClassBuilderT<C>&
 Reflex::ClassBuilderT<C>::AddBase(unsigned int modifiers) {
-   fClassBuilderImpl.AddBase(GetType<B>(fDictionary), BaseOffset<C, B>::Get(), modifiers);
+   fClassBuilderImpl.AddBase(GetType<B>(), BaseOffset<C, B>::Get(), modifiers);
    return *this;
 }
 
@@ -543,7 +531,7 @@ Reflex::ClassBuilderT<C>&
 Reflex::ClassBuilderT<C>::AddDataMember(const char* nam,
                  size_t offs,
                  unsigned int modifiers) {
-   fClassBuilderImpl.AddDataMember(nam, TypeDistiller<T>::Get(fDictionary), offs, modifiers);
+   fClassBuilderImpl.AddDataMember(nam, TypeDistiller<T>::Get(), offs, modifiers);
    return *this;
 }
 
@@ -561,14 +549,14 @@ Reflex::ClassBuilderT<C>::AddDataMember(const Type& typ,
 
 
 //______________________________________________________________________________
-template <typename C> template <typename F> inline
+template <typename C> template <typename F> inline 
 Reflex::ClassBuilderT<C>&
 Reflex::ClassBuilderT<C>::AddFunctionMember(const char* nam,
                      StubFunction stubFP,
                      void* stubCtx,
                      const char* params,
                      unsigned int modifiers) {
-   fClassBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(fDictionary), stubFP, stubCtx, params, modifiers);
+   fClassBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(), stubFP, stubCtx, params, modifiers);
    return *this;
 }
 
@@ -598,7 +586,7 @@ template <class C> template <typename TD>
 inline Reflex::ClassBuilderT<C>&
 Reflex::ClassBuilderT<C>::AddTypedef(const char* def) {
 //-------------------------------------------------------------------------------
-   fClassBuilderImpl.AddTypedef(TypeDistiller<TD>::Get(fDictionary),
+   fClassBuilderImpl.AddTypedef(TypeDistiller<TD>::Get(),
                                 def);
    return *this;
 }
@@ -610,7 +598,7 @@ inline Reflex::ClassBuilderT<C>&
 Reflex::ClassBuilderT<C>::AddTypedef(const char* typ,
               const char* def) {
 //-------------------------------------------------------------------------------
-   fClassBuilderImpl.AddTypedef(TypeBuilder(fDictionary, typ),
+   fClassBuilderImpl.AddTypedef(TypeBuilder(typ),
                                 def);
    return *this;
 }
@@ -636,7 +624,7 @@ Reflex::ClassBuilderT<C>::AddEnum(const char* values,
 //-------------------------------------------------------------------------------
    fClassBuilderImpl.AddEnum(Tools::Demangle(typeid(E)).c_str(),
                              values,
-                             & typeid(E),
+                             &typeid(E),
                              modifiers);
    return *this;
 }

@@ -560,13 +560,6 @@ class genDictionary(object) :
         f.write( '#include <%s>\n' % (inc,) )
       f.write( '\n' )
 
-    #------------------------------------------------------------------------------
-    # Declare a dictionary into which to register reflected data
-    #------------------------------------------------------------------------------
-    f.write( 'namespace {\n' )
-    f.write( '  Reflex::Dictionary dictionary = ::Reflex::DictionaryBuilder();\n' )
-    f.write( '} // unamed namespace\n' )
-    f.write( '\n' )
   
     #------------------------------------------------------------------------------
     # Process ClassDef implementation before writing: sets 'extra' properties
@@ -1161,16 +1154,16 @@ class genDictionary(object) :
     notAccessibleType = self.checkAccessibleType(self.xref[attrs['id']])
     
     if self.isUnnamedType(clf) : 
-      sc += '  ::Reflex::ClassBuilder(dictionary, "%s", typeid(::Reflex::Unnamed%s), sizeof(%s), %s, %s)' % ( cls, self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
+      sc += '  ::Reflex::ClassBuilder("%s", typeid(::Reflex::Unnamed%s), sizeof(%s), %s, %s)' % ( cls, self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
     elif notAccessibleType :
-      sc += '  ::Reflex::ClassBuilder(dictionary, "%s", typeid(%s%s), sizeof(%s), %s, %s)' % ( cls, '::Reflex::' + self.xref[notAccessibleType]['attrs']['access'].title(), self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
+      sc += '  ::Reflex::ClassBuilder("%s", typeid(%s%s), sizeof(%s), %s, %s)' % ( cls, '::Reflex::' + self.xref[notAccessibleType]['attrs']['access'].title(), self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
     else :
       typeidtype = '::' + cls
       # a funny bug in MSVC7.1: sizeof(::namesp::cl) doesn't work
       if sys.platform == 'win32':
          typeidtype = 'MSVC71_typeid_bug_workaround'
          sc += '  typedef ::%s %s;\n' % (cls, typeidtype)
-      sc += '  ::Reflex::ClassBuilder(dictionary, "%s", typeid(%s), sizeof(::%s), %s, %s)' \
+      sc += '  ::Reflex::ClassBuilder("%s", typeid(%s), sizeof(::%s), %s, %s)' \
             % (cls, typeidtype, cls, mod, typ)
     if 'extra' in attrs :
       for pname, pval in attrs['extra'].items() :
@@ -1567,8 +1560,8 @@ class genDictionary(object) :
         for a in args : self.genTypeID(a['type'])
       elif elem in ('OperatorMethod', 'Method', 'Constructor', 'Converter', 'Destructor', 
                     'Function', 'OperatorFunction' ) :
-        if 'returns' in attrs : c = '::Reflex::FunctionTypeBuilder(dictionary, ' + self.genTypeID(attrs['returns'])
-        else                  : c = '::Reflex::FunctionTypeBuilder(dictionary, type_void'
+        if 'returns' in attrs : c = '::Reflex::FunctionTypeBuilder(' + self.genTypeID(attrs['returns'])
+        else                  : c = '::Reflex::FunctionTypeBuilder(type_void'
         args = self.xref[id]['subelems']
         for a in args : c += ', '+ self.genTypeID(a['type'])
         c += ')'
@@ -1583,40 +1576,40 @@ class genDictionary(object) :
 #----------------------------------------------------------------------------------
   def genAllTypes(self) :
     self.typeids += self.fktypeids
-    c = '  ::Reflex::Type type_void = ::Reflex::TypeBuilder(dictionary, "void");\n'
+    c = '  ::Reflex::Type type_void = ::Reflex::TypeBuilder("void");\n'
     for id in self.typeids :      
       c += '  ::Reflex::Type type%s = ' % id
       if id[-1] == 'c':
-        c += '::Reflex::ConstBuilder(dictionary, type'+id[:-1]+');\n'
+        c += '::Reflex::ConstBuilder(type'+id[:-1]+');\n'
       elif id[-1] == 'v':
-        c += '::Reflex::VolatileBuilder(dictionary, type'+id[:-1]+');\n'
+        c += '::Reflex::VolatileBuilder(type'+id[:-1]+');\n'
       else : 
         elem  = self.xref[id]['elem']
         attrs = self.xref[id]['attrs']
         if elem == 'PointerType' :
-          c += '::Reflex::PointerBuilder(dictionary, type'+attrs['type']+');\n'
+          c += '::Reflex::PointerBuilder(type'+attrs['type']+');\n'
         elif elem == 'ReferenceType' :
-          c += '::Reflex::ReferenceBuilder(dictionary, type'+attrs['type']+');\n'
+          c += '::Reflex::ReferenceBuilder(type'+attrs['type']+');\n'
         elif elem == 'ArrayType' :
           mx = attrs['max'].rstrip('u')
           # check if array is bound (max='fff...' for unbound arrays)
           if mx.isdigit() : len = str(int(mx)+1)
           else            : len = '0' 
-          c += '::Reflex::ArrayBuilder(dictionary, type'+attrs['type']+', '+ len +');\n'
+          c += '::Reflex::ArrayBuilder(type'+attrs['type']+', '+ len +');\n'
         elif elem == 'Typedef' :
           sc = self.genTypeName(attrs['context'])
           if sc : sc += '::'
-          c += '::Reflex::TypedefTypeBuilder(dictionary, "'+sc+attrs['name']+'", type'+ attrs['type']+');\n'
+          c += '::Reflex::TypedefTypeBuilder("'+sc+attrs['name']+'", type'+ attrs['type']+');\n'
         elif elem == 'OffsetType' :
-          c += '::Reflex::TypeBuilder(dictionary, "%s");\n' % self.genTypeName(attrs['id'])
+          c += '::Reflex::TypeBuilder("%s");\n' % self.genTypeName(attrs['id'])
         elif elem == 'FunctionType' :
-          if 'returns' in attrs : c += '::Reflex::FunctionTypeBuilder(dictionary, type'+attrs['returns']
-          else                  : c += '::Reflex::FunctionTypeBuilder(dictionary, type_void'
+          if 'returns' in attrs : c += '::Reflex::FunctionTypeBuilder(type'+attrs['returns']
+          else                  : c += '::Reflex::FunctionTypeBuilder(type_void'
           args = self.xref[id]['subelems']
           for a in args : c += ', type'+ a['type']
           c += ');\n'
         elif elem == 'MethodType' :
-          c += '::Reflex::TypeBuilder(dictionary, "%s");\n' % self.genTypeName(attrs['id'])
+          c += '::Reflex::TypeBuilder("%s");\n' % self.genTypeName(attrs['id'])
         elif elem in ('OperatorMethod', 'Method', 'Constructor', 'Converter', 'Destructor',
                       'Function', 'OperatorFunction') :
           pass
@@ -1625,8 +1618,8 @@ class genDictionary(object) :
           if sc : sc += '::'
           # items = self.xref[id]['subelems']
           # values = string.join([ item['name'] + '=' + item['init'] for item in items],';"\n  "')          
-          #c += 'EnumTypeBuilder(dictionary, "' + sc + attrs['name'] + '", "' + values + '");\n'
-          c += '::Reflex::EnumTypeBuilder(dictionary, "' + sc + attrs['name'] + '");\n'
+          #c += 'EnumTypeBuilder("' + sc + attrs['name'] + '", "' + values + '");\n'
+          c += '::Reflex::EnumTypeBuilder("' + sc + attrs['name'] + '");\n'
         else :
          name = ''
          if 'name' not in attrs and 'demangled' in attrs : name = attrs.get('demangled')
@@ -1637,7 +1630,7 @@ class genDictionary(object) :
            if 'name' in attrs :
              name += attrs['name']
          name = normalizeClass(name,False)
-         c += '::Reflex::TypeBuilder(dictionary, "'+name+'");\n'
+         c += '::Reflex::TypeBuilder("'+name+'");\n'
     return c 
 #----------------------------------------------------------------------------------
   def genNamespaces(self, selected ) :
@@ -1648,7 +1641,7 @@ class genDictionary(object) :
     idx = 0
     for ns in self.namespaces :
       if ns['id'] in used_context and 'name' in ns and  ns['name'] != '::' :
-        s += '  ::Reflex::NamespaceBuilder nsb%d( dictionary, "%s" );\n' % (idx, self.genTypeName(ns['id']))
+        s += '  ::Reflex::NamespaceBuilder nsb%d( "%s" );\n' % (idx, self.genTypeName(ns['id']))
         idx += 1
     return s
 #----------------------------------------------------------------------------------
@@ -1731,7 +1724,7 @@ class genDictionary(object) :
       else    : params  = '0'
       mod = self.genModifier(f, None)
       s += '      ::Reflex::Type t%s = %s;' % (i, self.genTypeID(id))
-      s += '      ::Reflex::FunctionBuilder(dictionary, t%s, "%s", function%s, 0, %s, %s);\n' % (i, name, id, params, mod)
+      s += '      ::Reflex::FunctionBuilder(t%s, "%s", function%s, 0, %s, %s);\n' % (i, name, id, params, mod)
       i += 1;
     return s
 #----------------------------------------------------------------------------------
@@ -1747,7 +1740,7 @@ class genDictionary(object) :
       name  = self.genTypeName(id)
       mod = self.genModifier(self.xref[id]['attrs'], None)
       if not self.quiet : print 'enum ' + name
-      s += '      ::Reflex::EnumBuilder(dictionary, "%s",typeid(%s), %s)' % (name, cname, mod)
+      s += '      ::Reflex::EnumBuilder("%s",typeid(%s), %s)' % (name, cname, mod)
       items = self.xref[id]['subelems']
       for item in items :
         s += '\n        .AddItem("%s",%s)' % (item['name'], item['init'])
@@ -1763,7 +1756,7 @@ class genDictionary(object) :
       name  = self.genTypeName(id)
       mod   = self.genModifier(v, None)
       if not self.quiet : print 'variable ' + name 
-      s += '      ::Reflex::VariableBuilder(dictionary, "%s", %s, (size_t)&%s, %s );\n' % (name, self.genTypeID(v['type']),self.genTypeName(id), mod)
+      s += '      ::Reflex::VariableBuilder("%s", %s, (size_t)&%s, %s );\n' % (name, self.genTypeID(v['type']),self.genTypeName(id), mod)
     return s
  #----------------------------------------------------------------------------------
   def countColonsForOffset(self, name) :
@@ -2240,7 +2233,7 @@ class genDictionary(object) :
     for b in bases :
       bname = self.genTypeName(b[0],colon=True)
       bname2 = self.genTypeName(b[0])
-      s += '    s_bases.push_back(std::make_pair(::Reflex::Base( ::Reflex::TypeBuilder(dictionary, "%s"), ::Reflex::BaseOffset< %s,%s >::Get(),%s), %d));\n' % (bname2, cl, bname, b[1], b[2])
+      s += '    s_bases.push_back(std::make_pair(::Reflex::Base( ::Reflex::TypeBuilder("%s"), ::Reflex::BaseOffset< %s,%s >::Get(),%s), %d));\n' % (bname2, cl, bname, b[1], b[2])
     s += '  }\n  if (retaddr) *(Bases_t**)retaddr = &s_bases;\n' 
     s += '}\n'
     return s
