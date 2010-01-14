@@ -34,6 +34,7 @@
 #include <llvm/LLVMContext.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/GlobalVariable.h>
 
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/SourceManager.h>
@@ -62,6 +63,55 @@
 
 #include <iostream>
 #include <stdexcept>
+
+//-------------------------------------------------------------------------
+// Copy the execution engine memory mappings for the global
+// variables in the source module to the destination module.
+//-------------------------------------------------------------------------
+static void copyGlobalMappings(llvm::ExecutionEngine* ee, llvm::Module* src
+			       llvm::Module* dst)
+{
+   // Loop over all the global variables in the destination module.
+   llvm::Module::global_iterator dst_iter = dst->global_begin();
+   llvm::Module::global_iterator dst_end = dst->global_end();
+   for (; dst_iter != dst_end; ++dst_iter) {
+      // Skip definitions.
+      if (!dst_iter->isDeclaration()) {
+	 continue;
+      }
+      // Find the same variable (by name) in the source module.
+      GlobalVariable* src_gv = src->getGlobalVariable(dst_iter->getName());
+      // Skip it if there is none.
+      if (!src_gv) {
+	 continue;
+      }
+      // Get the mapping from the execution engine for the source
+      // global variable and create a new mapping to the same
+      // address for the destination global variable.  Now they
+      // share the same allocated memory (and so have the same value).
+      // FIXME: We should compare src var and dst var types here!
+      void* p = ee->getPointerToGlobal(src_gv);
+      ee->addGlobalMapping(&*dst_iter, p);
+   }
+   // This example block copies the global variable and the mapping.
+   //GlobalVariable* src_gv = &*src_global_iter;
+   //void* p = ee->getPointerToGlobal(src_gv);
+   //string name = src_gv->getName();
+   //// New global variable is owned by destination module.
+   //GlobalVariable* dst_gv = new GlobalVariable(
+   //  *dest_module, // Module&
+   //  src_gv->getType(), // const Type*
+   //  src_gv->isConstant(), // bool, isConstant
+   //  src_gv->getLinkage(), // LinkageTypes
+   //  src_gv->getInitializer(), // Constant*, Initializer
+   //  "" // const Twine&, Name
+   //);
+   //dst_gv->copyAttributesFrom(src_gv);
+   //++src_global_iter;
+   //src_gv->eraseFromParent();
+   //dst_gv->setName(name);
+   //ee->addGlobalMapping(dst_gv, p);
+}
 
 namespace cling
 {
