@@ -17,28 +17,27 @@
 #include "Reflex/Type.h"
 
 namespace Reflex {
-   // forward declarations
-   class Base;
-   class Object;
-   class Member;
-   class MemberTemplate;
-   class Scope;
-   class TypeTemplate;
+// forward declarations
+class Base;
+class Object;
+class Member;
+class MemberTemplate;
+class Scope;
+class TypeTemplate;
 
-   /**
+/**
  * @class Typedef Typedef.h Reflex/Typedef.h
  * @author Stefan Roiser
  * @date 24/11/2003
  * @ingroup Ref
  */
-   class Typedef : public TypeBase {
-   public:
+class Typedef: public TypeBase {
+public:
    /** constructor */
-      Typedef( const Reflex::Dictionary& dictionary, 
-               const char * typ,
-         const Type & typedefType,
+   Typedef(const char* typ,
+           const Type& typedefType,
            TYPE typeTyp = TYPEDEF,
-         const Type & finalType = Dummy::Type(),
+           const Type& finalType = Dummy::Type(),
            REPRESTYPE represType = REPRES_NOTYPE);
 
 
@@ -51,7 +50,7 @@ namespace Reflex {
     * @param  nth nth BaseAt class
     * @return pointer to BaseAt class information
     */
-      virtual Base BaseAt( size_t nth ) const;
+   virtual Base BaseAt(size_t nth) const;
 
 
    /**
@@ -72,8 +71,8 @@ namespace Reflex {
     * @param  to is the class At to cast into
     * @param  obj the memory AddressGet of the object to be casted
     */
-      virtual Object CastObject( const Type & to, 
-         const Object & obj ) const;
+   virtual Object CastObject(const Type& to,
+                             const Object& obj) const;
 
 
    /**
@@ -81,7 +80,7 @@ namespace Reflex {
     * @param  nth data MemberAt
     * @return pointer to data MemberAt
     */
-      virtual Member DataMemberAt( size_t nth ) const;
+   virtual Member DataMemberAt(size_t nth) const;
 
 
    /**
@@ -89,7 +88,7 @@ namespace Reflex {
     * @param  Name of data MemberAt
     * @return data MemberAt
     */
-      virtual Member DataMemberByName( const std::string & Name ) const;
+   virtual Member DataMemberByName(const std::string& Name) const;
 
 
    /**
@@ -111,8 +110,8 @@ namespace Reflex {
     * @param  instance of the At in memory
     * @param  dealloc for also deallacoting the memory
     */
-      virtual void Destruct( void * instance, 
-         bool dealloc = true ) const;
+   virtual void Destruct(void* instance,
+                         bool dealloc = true) const;
 
 
    /**
@@ -121,7 +120,7 @@ namespace Reflex {
     * @param  mem is the memory AddressGet of the object to checked
     * @return the actual class of the object
     */
-      virtual Type DynamicType( const Object & obj ) const;
+   virtual Type DynamicType(const Object& obj) const;
 
 
    /**
@@ -129,18 +128,18 @@ namespace Reflex {
     * @param  nth function MemberAt
     * @return pointer to function MemberAt
     */
-      virtual Member FunctionMemberAt( size_t nth ) const;
+   virtual Member FunctionMemberAt(size_t nth) const;
 
 
    /**
-      * FunctionMemberByName will return the MemberAt with the Name, 
+    * FunctionMemberByName will return the MemberAt with the Name,
     * optionally the signature of the function may be given
     * @param  Name of function MemberAt
-      * @param  signature of the MemberAt function 
+    * @param  signature of the MemberAt function
     * @return function MemberAt
     */
-      virtual Member FunctionMemberByName( const std::string & nam,
-         const Type & signature,
+   virtual Member FunctionMemberByName(const std::string& nam,
+                                       const Type& signature,
                                        unsigned int modifiers_mask = 0) const;
 
 
@@ -164,7 +163,7 @@ namespace Reflex {
     * @param  cl the BaseAt-class to check for
     * @return true if this class has a BaseAt-class cl, false otherwise
     */
-      virtual bool HasBase( const Type & cl ) const;
+   virtual bool HasBase(const Type& cl) const;
 
 
    /**
@@ -174,8 +173,8 @@ namespace Reflex {
    virtual bool IsAbstract() const;
 
 
-      /** 
-      * IsComplete will return true if all classes and BaseAt classes of this 
+   /**
+    * IsComplete will return true if all classes and BaseAt classes of this
     * class are resolved and fully known in the system
     */
    virtual bool IsComplete() const;
@@ -193,8 +192,8 @@ namespace Reflex {
     * @param  MemberAt Name
     * @return pointer to MemberAt
     */
-      virtual Member MemberByName( const std::string & Name,
-         const Type & signature ) const;
+   virtual Member MemberByName(const std::string& Name,
+                               const Type& signature) const;
 
 
    /**
@@ -202,7 +201,7 @@ namespace Reflex {
     * @param  nth MemberAt
     * @return pointer to nth MemberAt
     */
-      virtual Member MemberAt( size_t nth ) const;
+   virtual Member MemberAt(size_t nth) const;
 
 
    /**
@@ -218,15 +217,15 @@ namespace Reflex {
    virtual Reverse_Member_Iterator Member_REnd() const;
 
 
-      /** 
+   /**
     * MemberTemplateAt will return the nth MemberAt template of this At
     * @param nth MemberAt template
     * @return nth MemberAt template
     */
-      virtual MemberTemplate MemberTemplateAt( size_t nth ) const;
+   virtual MemberTemplate MemberTemplateAt(size_t nth) const;
 
 
-      /** 
+   /**
     * MemberTemplateSize will return the number of MemberAt templates in this socpe
     * @return number of defined MemberAt templates
     */
@@ -244,20 +243,20 @@ namespace Reflex {
     * @param  typedefexp expand typedefs or not
     * @return fully expanded Name of typedef
     */
-      virtual std::string Name( unsigned int mod = 0 ) const;
+   virtual std::string Name(unsigned int mod = 0) const;
 
 
    /**
-      * SimpleName returns the name of the type as a reference. It provides a 
+    * SimpleName returns the name of the type as a reference. It provides a
     * simplified but faster generation of a type name. Attention currently it
-      * is not guaranteed that Name() and SimpleName() return the same character 
+    * is not guaranteed that Name() and SimpleName() return the same character
     * layout of a name (ie. spacing, commas, etc. )
     * @param pos will indicate where in the returned reference the requested name starts
     * @param mod The only 'mod' support is SCOPED
     * @return name of type
     */
-      virtual const std::string & SimpleName( size_t & pos, 
-         unsigned int mod = 0 ) const;
+   virtual const std::string& SimpleName(size_t& pos,
+                                         unsigned int mod = 0) const;
 
 
    virtual Type_Iterator FunctionParameter_Begin() const;
@@ -271,7 +270,7 @@ namespace Reflex {
     * @param  nth sub-At
     * @return pointer to nth sub-At
     */
-      virtual Scope SubScopeAt( size_t nth ) const;
+   virtual Scope SubScopeAt(size_t nth) const;
 
 
    /**
@@ -292,7 +291,7 @@ namespace Reflex {
     * @param  nth sub-At
     * @return pointer to nth sub-At
     */
-      virtual Type SubTypeAt( size_t nth ) const;
+   virtual Type SubTypeAt(size_t nth) const;
 
 
    /**
@@ -313,7 +312,7 @@ namespace Reflex {
     * @param  nth nth template argument
     * @return pointer to nth template argument
     */
-      virtual Type TemplateArgumentAt( size_t nth ) const;
+   virtual Type TemplateArgumentAt(size_t nth) const;
 
 
    /**
@@ -336,15 +335,15 @@ namespace Reflex {
    virtual TypeTemplate TemplateFamily() const;
 
 
-      /** 
+   /**
     * SubTypeTemplateAt will return the nth At template of this At
     * @param nth At template
     * @return nth At template
     */
-      virtual TypeTemplate SubTypeTemplateAt( size_t nth ) const;
+   virtual TypeTemplate SubTypeTemplateAt(size_t nth) const;
 
 
-      /** 
+   /**
     * SubTypeTemplateSize will return the number of At templates in this socpe
     * @return number of defined At templates
     */
@@ -361,7 +360,7 @@ namespace Reflex {
     * TypeInfo will return the c++ type_info object of the At
     * @return type_info object of At
     */
-      virtual const std::type_info & TypeInfo() const;
+   virtual const std::type_info& TypeInfo() const;
 
 
    /**
@@ -378,12 +377,12 @@ namespace Reflex {
     */
    size_t CalculateSize() const;
 
-   private:  
+private:
    bool ForwardStruct() const;
    bool ForwardTemplate() const;
    bool ForwardFunction() const;
 
-   private:
+private:
    /**
     * pointer to the type of the typedef
     * @label typedef type
@@ -393,7 +392,7 @@ namespace Reflex {
     */
    Type fTypedefType;
 
-   }; // class Typedef
+};    // class Typedef
 } //namespace Reflex
 
 #include "Reflex/Base.h"
@@ -410,7 +409,7 @@ Reflex::Typedef::BaseAt(size_t nth) const {
    if (ForwardStruct()) {
       return fTypedefType.BaseAt(nth);
    }
-   return Dummy::Base();  
+   return Dummy::Base();
 }
 
 
@@ -421,7 +420,7 @@ Reflex::Typedef::BaseSize() const {
    if (ForwardStruct()) {
       return fTypedefType.BaseSize();
    }
-   return 0;  
+   return 0;
 }
 
 
@@ -480,7 +479,7 @@ Reflex::Typedef::CalculateSize() const {
 //-------------------------------------------------------------------------------
 inline Reflex::Object
 Reflex::Typedef::CastObject(const Type& to,
-                                                               const Object & obj ) const {
+                            const Object& obj) const {
 //-------------------------------------------------------------------------------
    if (ForwardStruct()) {
       return fTypedefType.CastObject(to, obj);
@@ -569,7 +568,7 @@ Reflex::Typedef::DataMember_REnd() const {
 //-------------------------------------------------------------------------------
 inline void
 Reflex::Typedef::Destruct(void* instance,
-                                             bool dealloc ) const {
+                          bool dealloc) const {
 //-------------------------------------------------------------------------------
    if (ForwardStruct()) {
       fTypedefType.Destruct(instance, dealloc);
@@ -602,8 +601,8 @@ Reflex::Typedef::FunctionMemberAt(size_t nth) const {
 //-------------------------------------------------------------------------------
 inline Reflex::Member
 Reflex::Typedef::FunctionMemberByName(const std::string& name,
-                                                             const Type & signature,
-                                                             unsigned int modifiers_mask ) const {
+                                      const Type& signature,
+                                      unsigned int modifiers_mask) const {
 //-------------------------------------------------------------------------------
    if (ForwardStruct()) {
       return fTypedefType.FunctionMemberByName(name, signature, modifiers_mask);
@@ -714,7 +713,7 @@ Reflex::Typedef::IsVirtual() const {
 //-------------------------------------------------------------------------------
 inline Reflex::Member
 Reflex::Typedef::MemberByName(const std::string& name,
-                                                                         const Type & signature ) const {
+                              const Type& signature) const {
 //-------------------------------------------------------------------------------
    if (ForwardStruct()) {
       return fTypedefType.MemberByName(name, signature);
@@ -785,7 +784,7 @@ Reflex::Typedef::Member_REnd() const {
    if (ForwardStruct()) {
       return fTypedefType.Member_REnd();
    }
-   return Dummy::MemberCont().rend();  
+   return Dummy::MemberCont().rend();
 }
 
 
@@ -912,9 +911,9 @@ Reflex::Typedef::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
 inline const std::string&
 Reflex::Typedef::SimpleName(size_t& pos,
-                                                              unsigned int mod ) const {
+                            unsigned int mod) const {
 //-------------------------------------------------------------------------------
-   return TypeBase::SimpleName( pos, mod );
+   return TypeBase::SimpleName(pos, mod);
 }
 
 
@@ -1224,7 +1223,7 @@ Reflex::Typedef::ToType() const {
 inline bool
 Reflex::Typedef::ForwardStruct() const {
 //-------------------------------------------------------------------------------
-   switch ( fTypedefType.TypeType()) {
+   switch (fTypedefType.TypeType()) {
    case TYPEDEF:
    case CLASS:
    case STRUCT:
@@ -1240,7 +1239,7 @@ Reflex::Typedef::ForwardStruct() const {
 inline bool
 Reflex::Typedef::ForwardTemplate() const {
 //-------------------------------------------------------------------------------
-   switch ( fTypedefType.TypeType()) {
+   switch (fTypedefType.TypeType()) {
    case TYPEDEF:
    case TYPETEMPLATEINSTANCE:
    case MEMBERTEMPLATEINSTANCE:
@@ -1255,7 +1254,7 @@ Reflex::Typedef::ForwardTemplate() const {
 inline bool
 Reflex::Typedef::ForwardFunction() const {
 //-------------------------------------------------------------------------------
-   switch ( fTypedefType.TypeType()) {
+   switch (fTypedefType.TypeType()) {
    case TYPEDEF:
    case FUNCTION:
       return true;

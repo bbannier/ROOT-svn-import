@@ -19,8 +19,6 @@
 
 namespace Reflex {
 // forward declarations
-class Dictionary;
-
 
 /** @class VariableBuilder VariableBuilder.h Reflex/Builder/VariableBuilder.h
  *  @author Stefan Roiser
@@ -30,9 +28,8 @@ class Dictionary;
 class RFLX_API VariableBuilder {
 public:
    /** constructor */
-   VariableBuilder(const Dictionary& dictionary,
-                   const char* nam,
-                   const Type& typ,
+   VariableBuilder(const char* nam,
+                   const Type &typ,
                    size_t offs,
                    unsigned int modifiers = 0);
 
@@ -75,9 +72,8 @@ private:
 class RFLX_API VariableBuilderImpl {
 public:
    /** constructor */
-   VariableBuilderImpl(const Dictionary& dictionary,
-                       const char* nam,
-                       const Type& typ,
+   VariableBuilderImpl(const char* nam,
+                       const Type &typ,
                        size_t offs,
                        unsigned int modifiers = 0);
 
@@ -119,8 +115,7 @@ private:
 template <typename D> class VariableBuilderT {
 public:
    /** constructor */
-   VariableBuilderT(const Dictionary& dictionary,
-                    const char* nam,
+   VariableBuilderT(const char* nam,
                     size_t offs,
                     unsigned int modifiers = 0);
 
@@ -158,14 +153,12 @@ private:
 
 //-------------------------------------------------------------------------------
 template <typename D>
-inline Reflex::VariableBuilderT<D>::VariableBuilderT(const Reflex::Dictionary& dictionary,
-                                                     const char* nam,
+inline Reflex::VariableBuilderT<D>::VariableBuilderT(const char* nam,
                                                      size_t offs,
                                                      unsigned int modifiers)
 //-------------------------------------------------------------------------------
-   : fDataMemberBuilderImpl(dictionary,
-                            nam,
-                            TypeDistiller<D>::Get(dictionary),
+   : fDataMemberBuilderImpl(nam,
+                            TypeDistiller<D>::Get(),
                             offs,
                             modifiers) {
 }
@@ -173,7 +166,9 @@ inline Reflex::VariableBuilderT<D>::VariableBuilderT(const Reflex::Dictionary& d
 
 //-------------------------------------------------------------------------------
 template <typename D> template <typename P>
-inline Reflex::VariableBuilderT<D>& Reflex::VariableBuilderT<D>::AddProperty(const char* key,
+inline Reflex::VariableBuilderT<D>&
+Reflex::VariableBuilderT<D
+>::AddProperty(const char* key,
                P value) {
 //-------------------------------------------------------------------------------
    fDataMemberBuilderImpl.AddProperty(key, value);
@@ -182,8 +177,9 @@ inline Reflex::VariableBuilderT<D>& Reflex::VariableBuilderT<D>::AddProperty(con
 
 
 //-------------------------------------------------------------------------------
-template <typename D>
-inline Reflex::Member Reflex::VariableBuilderT<D>::ToMember() {
+template <typename D> inline Reflex::Member
+Reflex::VariableBuilderT<D
+>::ToMember() {
 //-------------------------------------------------------------------------------
    return fDataMemberBuilderImpl.ToMember();
 }

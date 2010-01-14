@@ -18,22 +18,20 @@
 #include "Reflex/Scope.h"
 
 namespace Reflex {
-   // forward declarations
-   class Dictionary;
+// forward declarations
 
-   /** 
+/**
  * @class PointerToMember PointerToMember.h Reflex/PointerToMember.h
  * @author Stefan Roiser
  * @date   2004-01-28
  * @ingroup Ref
  */
-   class PointerToMember : public TypeBase {
-   public:
+class PointerToMember: public TypeBase {
+public:
    /** default constructor */
-      PointerToMember( const Reflex::Dictionary& dictionary,
-                       const Type & pointerToMemberType,
-         const Scope & pointerToMemberScope,
-         const std::type_info & ti );
+   PointerToMember(const Type& pointerToMemberType,
+                   const Scope& pointerToMemberScope,
+                   const std::type_info& ti);
 
 
    /** destructor */
@@ -45,7 +43,7 @@ namespace Reflex {
     * @param  typedefexp expand typedefs or not
     * @return fully qualified Name of pointer At
     */
-      std::string Name( unsigned int mod = 0 ) const;
+   std::string Name(unsigned int mod = 0) const;
 
 
    /**
@@ -63,11 +61,11 @@ namespace Reflex {
 
 
    /** static function that composes the At Name */
-      static std::string BuildTypeName( const Type & pointerToMemberType,
-         const Scope & pointerToMemberScope,
-         unsigned int mod = SCOPED | QUALIFIED );
+   static std::string BuildTypeName(const Type& pointerToMemberType,
+                                    const Scope& pointerToMemberScope,
+                                    unsigned int mod = SCOPED | QUALIFIED);
 
-   private:
+private:
    /**
     * The type of the pointer to member type
     * @link aggregation
@@ -78,7 +76,7 @@ namespace Reflex {
    Type fPointerToMemberType;
 
 
-      /** 
+   /**
     * The scope of the pointer to member type
     * @link aggregation
     * @label pointer to member scope
@@ -88,7 +86,7 @@ namespace Reflex {
    Scope fPointerToMemberScope;
 
 
-   }; // class PointerToMember
+};    // class PointerToMember
 } // namespace Reflex
 
 

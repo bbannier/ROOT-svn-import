@@ -10,7 +10,7 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-#define REFLEX_BUILD
+# define REFLEX_BUILD
 #endif
 
 #include "Class.h"
@@ -27,21 +27,20 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
-#if defined (__linux) || defined (__APPLE__)
-#include <cxxabi.h>
+#if defined(__linux) || defined(__APPLE__)
+# include <cxxabi.h>
 #endif
 
 
 //-------------------------------------------------------------------------------
-Reflex::Class::Class(const Reflex::Dictionary& dictionary, 
-                     const char *              typ,
+Reflex::Class::Class(const char* typ,
                      size_t size,
-                     const std::type_info & ti,
+                     const std::type_info& ti,
                      unsigned int modifiers,
                      TYPE classType)
 //-------------------------------------------------------------------------------
 // Construct a Class instance.
-   : ScopedType(dictionary, typ, size, classType, ti, Type(), modifiers,
+   : ScopedType(typ, size, classType, ti, Type(), modifiers,
                 (typ && (typ[0] == 'F') && !strcmp(typ, "FILE")) ? (REPRESTYPE) 'e': REPRES_STRUCT),
    fAllBases(0),
    fCompleteType(false),
@@ -77,34 +76,34 @@ Reflex::Class::CastObject(const Type& to,
                           const Object& obj) const {
 //-------------------------------------------------------------------------------
 // Cast an object. Will do up and down cast. Cross cast missing.
-   std::vector< Base > path = std::vector< Base >();
+   std::vector<Base> path = std::vector<Base>();
 
    if (HasBase(to, path)) {    // up cast
       // in case of up cast the Offset has to be calculated by Reflex
-      size_t obj2 = (size_t)obj.Address();
+      size_t obj2 = (size_t) obj.Address();
 
-      for (std::vector< Base >::reverse_iterator bIter = path.rbegin();
+      for (std::vector<Base>::reverse_iterator bIter = path.rbegin();
            bIter != path.rend(); ++bIter) {
-         obj2 += bIter->Offset((void*)obj2);
+         obj2 += bIter->Offset((void*) obj2);
       }
-      return Object(to, (void*)obj2);
+      return Object(to, (void*) obj2);
    }
    path.clear();
    Type t = *this;
 
    if (to.HasBase(t)) {      // down cast
       // use the internal dynamic casting of the compiler (e.g. libstdc++.so)
-      void * obj3 = 0;
-#if defined (__linux) || defined (__APPLE__)
+      void* obj3 = 0;
+#if defined(__linux) || defined(__APPLE__)
       obj3 = abi::__dynamic_cast(obj.Address(),
-                                 (const abi::__class_type_info*) & this->TypeInfo(),
-                                 (const abi::__class_type_info*) & to.TypeInfo(),
+                                 (const abi::__class_type_info*) &this->TypeInfo(),
+                                 (const abi::__class_type_info*) &to.TypeInfo(),
                                  -1);
-#elif defined (_WIN32)
+#elif defined(_WIN32)
       obj3 = __RTDynamicCast(obj.Address(),
                              0,
-                             (void*) & this->TypeInfo(),
-                             (void*) & to.TypeInfo(),
+                             (void*) &this->TypeInfo(),
+                             (void*) &to.TypeInfo(),
                              0);
 #endif
       return Object(to, obj3);
@@ -125,7 +124,7 @@ Reflex::Class::CastObject(const Type& to,
    Reflex::Object Reflex::Class::Construct( const Type & signature,
                                                        const std::vector < Object > & args,
                                                        void * mem ) const {
-//-------------------------------------------------------------------------------
+   //-------------------------------------------------------------------------------
    static Type defSignature = Type::ByName("void (void)");
    Type signature2 = signature;
 
@@ -151,29 +150,25 @@ Reflex::Class::CastObject(const Type& to,
    throw RuntimeError("No suitable constructor found");
    }
    }
-*/
+ */
 
 
 //-------------------------------------------------------------------------------
 Reflex::Object
 Reflex::Class::Construct(const Type& sig,
-                                        const std::vector < void * > & args,
+                         const std::vector<void*>& args,
                          void* mem) const {
 //-------------------------------------------------------------------------------
 // Construct an object of this class type. The signature of the constructor function
 // can be given as the first argument. Furhter arguments are a vector of memory
 // addresses for non default constructors and a memory address for in place construction.
-   Type signature;
+   static Type defSignature = Type::ByName("void (void)");
 
    // trigger setup of function members for constructor
    ExecuteFunctionMemberDelayLoad();
+   Type signature = (!sig && fConstructors.size() > 1) ? defSignature : sig;
 
-   if (!sig &&  fConstructors.size() > 1)
-      signature = Type::ByName("void (void)", fTypeName->NamesGet());
-   else
-      signature = sig;
-
-   for (size_t i = 0; i < fConstructors.size(); ++ i) {
+   for (size_t i = 0; i < fConstructors.size(); ++i) {
       if (!signature || fConstructors[i].TypeOf().Id() == signature.Id()) {
          Member constructor = fConstructors[i];
 
@@ -201,7 +196,7 @@ Reflex::Class::Destruct(void* instance,
 
    // trigger setup of function members for constructor
    ExecuteFunctionMemberDelayLoad();
-   if (! fDestructor.TypeOf()) {
+   if (!fDestructor.TypeOf()) {
       // destructor for this class not yet revealed
       for (size_t i = 0; i < ScopeBase::FunctionMemberSize(); ++i) {
          Member fm = ScopeBase::FunctionMemberAt(i);
@@ -217,7 +212,7 @@ Reflex::Class::Destruct(void* instance,
    if (fDestructor.TypeOf()) {
       // we found a destructor -> Invoke it
       Object dummy = Object(Type(), instance);
-      fDestructor.Invoke(dummy, (Object*)0);
+      fDestructor.Invoke(dummy, (Object*) 0);
    }
 
    // if deallocation of memory wanted
@@ -243,16 +238,16 @@ Reflex::Type
 Reflex::Class::DynamicType(const Object& obj) const {
 //-------------------------------------------------------------------------------
 // Discover the dynamic type of a class object and return it.
-   // If no virtual_function_table return itself
+// If no virtual_function_table return itself
    if (IsVirtual()) {
       // Avoid the case that the first word is a virtual_base_offset_table instead of
       // a virtual_function_table
-      long int offset = **(long**)obj.Address();
+      long int offset = **(long**) obj.Address();
 
       if (offset == 0) {
          return ThisType();
       } else {
-         const Type & dytype = Type::ByTypeInfo(typeid(*(DynType_t*)obj.Address()), fTypeName->NamesGet());
+         const Type& dytype = Type::ByTypeInfo(typeid(*(DynType_t*) obj.Address()));
 
          if (dytype && dytype.IsClass()) {
             return dytype;
@@ -362,8 +357,8 @@ Reflex::Class::UpdateMembers() const {
                   // duplicate virtual base, skip this.
                   duplicateVirtualBase = true;
                }
-}
             }
+         }
          basesToProcess.pop_front();
 
          if (!duplicateVirtualBase) {
@@ -489,7 +484,7 @@ bool
 Reflex::Class::NewBases() const {
 //-------------------------------------------------------------------------------
 // Check if information for new base classes has been added.
-   if (! fCompleteType) {
+   if (!fCompleteType) {
       size_t numBases = AllBases();
 
       if (fAllBases != numBases) {
@@ -503,13 +498,13 @@ Reflex::Class::NewBases() const {
 
 
 //-------------------------------------------------------------------------------
-const std::vector < Reflex::OffsetFunction > &
+const std::vector<Reflex::OffsetFunction>&
 Reflex::Class::PathToBase(const Scope& bas) const {
 //-------------------------------------------------------------------------------
 // Return a vector of offset functions from the current class to the base class.
    const BasePath_t* pathToBase = fPathsToBase[bas.Id()];
 
-   if (! pathToBase) {
+   if (!pathToBase) {
       static const BasePath_t sEmptyBasePath;
       // if bas is a base, it muts be one of our direct bases,
       // or one of them must have it as a base:
@@ -562,7 +557,7 @@ Reflex::Class::AddDataMember(const Member& dm) const {
 //-------------------------------------------------------------------------------
 Reflex::Member
 Reflex::Class::AddDataMember(const char* nam,
-                                  const Type & typ,
+                             const Type& typ,
                              size_t offs,
                              unsigned int modifiers /* = 0 */,
                              char* interpreterOffset /* = 0 */) const {
@@ -599,10 +594,10 @@ Reflex::Class::AddFunctionMember(const Member& fm) const {
 //-------------------------------------------------------------------------------
 Reflex::Member
 Reflex::Class::AddFunctionMember(const char* nam,
-                                      const Type & typ,
+                                 const Type& typ,
                                  StubFunction stubFP,
-                                      void * stubCtx,
-                                      const char * params,
+                                 void* stubCtx,
+                                 const char* params,
                                  unsigned int modifiers) const {
 //-------------------------------------------------------------------------------
 // Add function member to this class
@@ -630,7 +625,7 @@ Reflex::Class::RemoveFunctionMember(const Member& fm) const {
 void
 Reflex::Class::GenerateDict(DictionaryGenerator& generator) const {
 //-------------------------------------------------------------------------------
-   // Generate Dictionary information about itself.
+// Generate Dictionary information about itself.
 
    // Selection file usage
    bool selected = true;
@@ -639,7 +634,7 @@ Reflex::Class::GenerateDict(DictionaryGenerator& generator) const {
       // selection file used
       if (generator.fSelections.size() != 0 || generator.fPattern_selections.size() != 0) {
       selected = false;
-      
+
       // normal selection
       for (unsigned i = 0; i < generator.fSelections.size(); ++i) {
          if (generator.fSelections.at(i) == (*this).Name(SCOPED)) {
@@ -760,5 +755,5 @@ Reflex::Class::GenerateDict(DictionaryGenerator& generator) const {
          generator.AddIntoFree(";\n}\n");
       }
 
-   }//new type
+   } //new type
 } // GenerateDict

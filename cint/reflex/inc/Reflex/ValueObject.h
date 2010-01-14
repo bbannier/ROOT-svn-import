@@ -87,7 +87,7 @@ inline Reflex::ValueObject&
 Reflex::ValueObject::Assign(const T& v) {
 //-------------------------------------------------------------------------------
    fValue = Any(v);
-   fType = GetType<T>(Dictionary::Current());
+   fType = GetType<T>();
 
    if (TypeOf().IsPointer()) {
       fAddress = *(void**) fValue.Address();

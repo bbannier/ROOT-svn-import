@@ -16,26 +16,22 @@
 #include "Reflex/Scope.h"
 
 namespace Reflex {
-   // forward declarations
-   class Member;
-   class Scope;
-   class DictionaryGenerator;
-   class Dictionary;
-   class Names;
+// forward declarations
+class Member;
+class Scope;
+class DictionaryGenerator;
 
 
-   /**
+/**
  * @class Namespace Namespace.h Reflex/Namespace.h
  * @author Stefan Roiser
  * @date 24/11/2003
  * @ingroup Ref
  */
-   class Namespace : public ScopeBase {
-      friend class Names;
-
-   public:
+class Namespace: public ScopeBase {
+public:
    /** default constructor */
-      Namespace( const Dictionary& dictionary, const char * scop );
+   Namespace(const char* scop);
 
 
    /** destructor */
@@ -46,8 +42,13 @@ namespace Reflex {
     * GenerateDict will produce the dictionary information of this type
     * @param generator a reference to the dictionary generator instance
     */
-      virtual void GenerateDict(DictionaryGenerator &generator) const;
+   virtual void GenerateDict(DictionaryGenerator& generator) const;
 
+
+   /**
+    * function for initialisation of the global namespace
+    */
+   static const Scope& GlobalScope();
 
 
    /**
@@ -57,11 +58,8 @@ namespace Reflex {
     */
    virtual PropertyList Properties() const;
 
-   private:
+private:
    /** constructor for initialisation of the global namespace */
-      Namespace(const Dictionary& dictionary);
-
-      /** forbidden */
    Namespace();
 
 private:
@@ -74,7 +72,7 @@ private:
     */
    OwnedPropertyList fPropertyList;
 
-   }; // class Namespace
+};    // class Namespace
 } //namespace Reflex
 
 //-------------------------------------------------------------------------------

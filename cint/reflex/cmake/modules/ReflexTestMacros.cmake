@@ -73,13 +73,13 @@ MACRO (REFLEX_ADD_MACRO_TEST _name)
 
       IF (NOT EXISTS ${_script_file_name})
 
-         MESSAGE(STATUS "Writing out project files for ${_script_file_name} from ${CMAKE_CURRENT_LIST_FILE}.")
+         MESSAGE(STATUS "Writing out project files for ${_scoped_name}")
 
          FILE(MAKE_DIRECTORY ${_test_source_dir})
 
          FILE(WRITE ${_script_file_name} "INCLUDE(MacroLibrary)\n")
          FILE(APPEND ${_script_file_name} "INCLUDE(ReflexMacros)\n")
-         FILE(APPEND ${_script_file_name} "INCLUDE(\"${CMAKE_CURRENT_LIST_FILE}\")\n")
+         FILE(APPEND ${_script_file_name} "INCLUDE(${CMAKE_CURRENT_LIST_FILE})\n")
          FILE(APPEND ${_script_file_name} "\n")
          FILE(APPEND ${_script_file_name} "_REFLEX_SCRUB_DIR(\"${_test_output_dir}\")\n")
          FILE(APPEND ${_script_file_name} "${_name}()")

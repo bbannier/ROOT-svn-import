@@ -19,7 +19,6 @@ namespace Reflex {
 // forward declarations
 class FunctionMember;
 class Type;
-class Dictionary;
 
 /**
  * @class FunctionBuilder FunctionBuilder.h Reflex/Builder/FunctionBuilder.h
@@ -30,8 +29,7 @@ class Dictionary;
 class RFLX_API FunctionBuilder {
 public:
    /** constructor */
-   FunctionBuilder(const Reflex::Dictionary& dictionary,
-                   const Type& typ,
+   FunctionBuilder(const Type &typ,
                    const char* nam,
                    StubFunction stubFP,
                    void* stubCtx,
@@ -76,9 +74,8 @@ private:
 class RFLX_API FunctionBuilderImpl {
 public:
    /** constructor */
-   FunctionBuilderImpl(const Reflex::Dictionary& dictionary,
-                       const char* nam,
-                       const Type& typ,
+   FunctionBuilderImpl(const char* nam,
+                       const Type &typ,
                        StubFunction stubFP,
                        void* stubCtx,
                        const char* params,
@@ -122,8 +119,7 @@ private:
 template <typename F> class FunctionBuilderT {
 public:
    /** constructor */
-   FunctionBuilderT(const Dictionary& dictionary,
-                    const char* nam,
+   FunctionBuilderT(const char* nam,
                     StubFunction stubFP,
                     void* stubCtx,
                     const char* params,
@@ -161,16 +157,14 @@ private:
 
 //-------------------------------------------------------------------------------
 template <typename  F>
-inline Reflex::FunctionBuilderT<F>::FunctionBuilderT(const Dictionary& dictionary,
-                                                     const char* nam,
+inline Reflex::FunctionBuilderT<F>::FunctionBuilderT(const char* nam,
                                                      StubFunction stubFP,
                                                      void* stubCtx,
                                                      const char* params,
                                                      unsigned char modifiers)
 //-------------------------------------------------------------------------------
-   : fFunctionBuilderImpl(dictionary,
-                          nam,
-                          FunctionDistiller<F>::Get(dictionary),
+   : fFunctionBuilderImpl(nam,
+                          FunctionDistiller<F>::Get(),
                           stubFP,
                           stubCtx,
                           params,
@@ -180,7 +174,9 @@ inline Reflex::FunctionBuilderT<F>::FunctionBuilderT(const Dictionary& dictionar
 
 //-------------------------------------------------------------------------------
 template <typename F> template <typename P>
-inline Reflex::FunctionBuilderT<F>& Reflex::FunctionBuilderT<F>::AddProperty(const char* key,
+inline Reflex::FunctionBuilderT<F>&
+Reflex::FunctionBuilderT<F
+>::AddProperty(const char* key,
                P value) {
 //-------------------------------------------------------------------------------
    fFunctionBuilderImpl.AddProperty(key, value);
@@ -189,8 +185,9 @@ inline Reflex::FunctionBuilderT<F>& Reflex::FunctionBuilderT<F>::AddProperty(con
 
 
 //-------------------------------------------------------------------------------
-template <typename F>
-inline Reflex::Member Reflex::FunctionBuilderT<F>::ToMember() {
+template <typename F> inline Reflex::Member
+Reflex::FunctionBuilderT<F
+>::ToMember() {
 //-------------------------------------------------------------------------------
    return fFunctionBuilderImpl.ToMember();
 }

@@ -20,8 +20,6 @@ namespace Reflex {
 // forward declarations
 class ScopeBase;
 class Scope;
-class Dictionary;
-class Names;
 
 /**
  * @class ScopeName ScopeName.h Reflex/ScopeName.h
@@ -35,9 +33,8 @@ class RFLX_API ScopeName {
 
 public:
    /** constructor */
-   ScopeName(Names& names,
-             const char* name,
-             ScopeBase* scopeBase);
+   ScopeName(const char* name,
+             ScopeBase * scopeBase);
 
 
    /**
@@ -46,17 +43,7 @@ public:
     * @param  Name fully qualified Name of At
     * @return pointer to At or 0 if none is found
     */
-   static Scope ByName(const std::string& name, const Names& names);
-
-
-   /**
-    * ByName will return a pointer to a At which is given as an argument
-    * or 0 if none is found
-    * Does not search recursively in inherited names registries
-    * @param  Name fully qualified Name of At
-    * @return pointer to At or 0 if none is found
-    */
-   static Scope ByNameShallow(const std::string& name, const Names& names);
+   static Scope ByName(const std::string& name);
 
 
    static void CleanUp();
@@ -93,13 +80,6 @@ public:
     * @return c string to unqualified Scope Name
     */
    const char* Name_c_str() const;
-
-
-   /**
-    * Names registry containing this.
-    * @return a reference to the containing type names registry
-    */
-   Names& NamesGet() const;
 
 
    /**
@@ -146,20 +126,12 @@ private:
     * @clientCardinality 1
     */
    mutable
-   ScopeBase* fScopeBase;
+   ScopeBase * fScopeBase;
 
    /**
     * This scope
     */
    Scope* fThisScope;
-
-   /**
-    * Reference to the owing names registry
-    * @link aggregation
-    * @supplierCardinality 1
-    * @clientCardinality 1..
-    */
-   Names& fNames;
 
 };    // class ScopeName
 } // namespace Reflex
@@ -180,11 +152,5 @@ Reflex::ScopeName::Name_c_str() const {
    return fName.c_str();
 }
 
-
-//-------------------------------------------------------------------------------
-inline Reflex::Names& Reflex::ScopeName::NamesGet() const {
-//-------------------------------------------------------------------------------
-   return fNames;
-}
 
 #endif //Reflex_ScopeName

@@ -18,7 +18,6 @@
 
 namespace Reflex {
 // forward declarations
-class Dictionary;
 
 /**
  * @class Array Array.h Reflex/Array.h
@@ -29,8 +28,7 @@ class Dictionary;
 class Array: public TypeBase {
 public:
    /** default constructor */
-   Array(const Reflex::Dictionary& dictionary, 
-         const Type& arrayType,
+   Array(const Type& arrayType,
          size_t len,
          const std::type_info& typeinfo);
 

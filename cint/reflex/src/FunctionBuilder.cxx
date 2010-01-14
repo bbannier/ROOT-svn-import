@@ -10,7 +10,7 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-#define REFLEX_BUILD
+# define REFLEX_BUILD
 #endif
 
 #include "Reflex/Builder/FunctionBuilder.h"
@@ -31,29 +31,29 @@
 Reflex::FunctionBuilder::~FunctionBuilder() {
 //-------------------------------------------------------------------------------
 // Functionbuilder destructor used for call backs.
-   FireFunctionCallback( fFunction );
+   FireFunctionCallback(fFunction);
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::FunctionBuilder & 
-Reflex::FunctionBuilder::AddProperty( const char * key, 
-                                            const char * value ) {
+Reflex::FunctionBuilder&
+Reflex::FunctionBuilder::AddProperty(const char* key,
+                                     const char* value) {
 //-------------------------------------------------------------------------------
 // Add property info to this function as string.
-   fFunction.Properties().AddProperty( key , value );
-   return * this;
+   fFunction.Properties().AddProperty(key, value);
+   return *this;
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::FunctionBuilder & 
-Reflex::FunctionBuilder::AddProperty( const char * key, 
-                                            Any value ) {
+Reflex::FunctionBuilder&
+Reflex::FunctionBuilder::AddProperty(const char* key,
+                                     Any value) {
 //-------------------------------------------------------------------------------
 // Add property info to this function as Any object.
-   fFunction.Properties().AddProperty( key , value );
-   return * this;
+   fFunction.Properties().AddProperty(key, value);
+   return *this;
 }
 
 
@@ -61,41 +61,40 @@ Reflex::FunctionBuilder::AddProperty( const char * key,
 Reflex::Member
 Reflex::FunctionBuilder::ToMember() {
 //-------------------------------------------------------------------------------
-   // Return the function currently being built.
+// Return the function currently being built.
    return fFunction;
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::FunctionBuilderImpl::FunctionBuilderImpl( const Reflex::Dictionary& dictionary,
-                                                  const char * nam, 
-                                                        const Type & typ,
+Reflex::FunctionBuilderImpl::FunctionBuilderImpl(const char* nam,
+                                                 const Type& typ,
                                                  StubFunction stubFP,
-                                                        void * stubCtx,
-                                                        const char * params, 
+                                                 void* stubCtx,
+                                                 const char* params,
                                                  unsigned char modifiers):
    fFunction(Member(0)) {
 //-------------------------------------------------------------------------------
 // Create function type dictionary info (internal).
-   std::string fullname( nam );
+   std::string fullname(nam);
    std::string declScope;
    std::string funcName;
-   size_t pos = Tools::GetTemplateName(nam).rfind( "::" );
+   size_t pos = Tools::GetTemplateName(nam).rfind("::");
 
    // Name contains declaring At
-   if ( pos != std::string::npos ) {   
-      funcName  = fullname.substr( pos + 2 );
-      declScope = fullname.substr( 0, pos ); 
+   if (pos != std::string::npos) {
+      funcName = fullname.substr(pos + 2);
+      declScope = fullname.substr(0, pos);
    } else {
       funcName = nam;
       declScope = "";
    }
 
-   Scope sc = Scope::ByName(declScope, dictionary);
+   Scope sc = Scope::ByName(declScope);
 
-   if ( ! sc ) {
+   if (!sc) {
       // Let's create the namespace here
-      sc = (new Namespace(dictionary, declScope.c_str()))->ThisScope();
+      sc = (new Namespace(declScope.c_str()))->ThisScope();
    }
 
    if (!sc.IsNamespace()) {
@@ -103,19 +102,18 @@ Reflex::FunctionBuilderImpl::FunctionBuilderImpl( const Reflex::Dictionary& dict
    }
 
    if (Tools::IsTemplated(funcName.c_str())) {
-      fFunction = Member( new FunctionMemberTemplateInstance( dictionary, 
-                                                              funcName.c_str(),
+      fFunction = Member(new FunctionMemberTemplateInstance(funcName.c_str(),
                                                             typ,
                                                             stubFP,
                                                             stubCtx,
                                                             params,
                                                             modifiers,
-                                                              sc ));
+                                                            sc));
    } else { fFunction = Member(new FunctionMember(funcName.c_str(),
-                                              typ, 
-                                              stubFP, 
-                                              stubCtx, 
-                                              params, 
+                                                  typ,
+                                                  stubFP,
+                                                  stubCtx,
+                                                  params,
                                                   modifiers)); }
    sc.AddFunctionMember(fFunction);
 }
@@ -125,27 +123,27 @@ Reflex::FunctionBuilderImpl::FunctionBuilderImpl( const Reflex::Dictionary& dict
 Reflex::FunctionBuilderImpl::~FunctionBuilderImpl() {
 //-------------------------------------------------------------------------------
 // FunctionBuilder destructor.
-   FireFunctionCallback( fFunction );
-}
- 
-
-//-------------------------------------------------------------------------------
-void
-Reflex::FunctionBuilderImpl::AddProperty(const char* key,
-                                                     const char * value ) {
-//-------------------------------------------------------------------------------
-// Add property info to this function type.
-   fFunction.Properties().AddProperty( key , value );
+   FireFunctionCallback(fFunction);
 }
 
 
 //-------------------------------------------------------------------------------
 void
 Reflex::FunctionBuilderImpl::AddProperty(const char* key,
-                                                     Any value ) {
+                                         const char* value) {
 //-------------------------------------------------------------------------------
 // Add property info to this function type.
-   fFunction.Properties().AddProperty( key , value );
+   fFunction.Properties().AddProperty(key, value);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::FunctionBuilderImpl::AddProperty(const char* key,
+                                         Any value) {
+//-------------------------------------------------------------------------------
+// Add property info to this function type.
+   fFunction.Properties().AddProperty(key, value);
 }
 
 
@@ -153,21 +151,21 @@ Reflex::FunctionBuilderImpl::AddProperty(const char* key,
 Reflex::Member
 Reflex::FunctionBuilderImpl::ToMember() {
 //-------------------------------------------------------------------------------
-   // Return the function member currently being built.
+// Return the function member currently being built.
    return fFunction;
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::FunctionBuilder::FunctionBuilder(const Reflex::Dictionary& dictionary, const Type& typ, const char* nam, StubFunction stubFP, void* stubCtx, const char* params, unsigned char modifiers): fFunction(Member(0)) {
+Reflex::FunctionBuilder::FunctionBuilder(const Type& typ, const char* nam, StubFunction stubFP, void* stubCtx, const char* params, unsigned char modifiers): fFunction(Member(0)) {
    // Create function dictionary type information.
    std::string declScope(Tools::GetScopeName(nam));
    std::string funcName(Tools::GetBaseName(nam));
-   Scope sc = Scope::ByName(declScope, dictionary);
+   Scope sc = Scope::ByName(declScope);
 
    if (!sc) {
       // Let's create the namespace here
-      sc = (new Namespace(dictionary, declScope.c_str()))->ThisScope();
+      sc = (new Namespace(declScope.c_str()))->ThisScope();
    }
 
    if (!sc.IsNamespace()) {
@@ -175,7 +173,7 @@ Reflex::FunctionBuilder::FunctionBuilder(const Reflex::Dictionary& dictionary, c
    }
 
    if (Tools::IsTemplated(funcName.c_str())) {
-      fFunction = Member(new FunctionMemberTemplateInstance(dictionary, funcName.c_str(), typ, stubFP, stubCtx, params, modifiers, sc));
+      fFunction = Member(new FunctionMemberTemplateInstance(funcName.c_str(), typ, stubFP, stubCtx, params, modifiers, sc));
    } else {
       fFunction = Member(new FunctionMember(funcName.c_str(), typ, stubFP, stubCtx, params, modifiers));
    }

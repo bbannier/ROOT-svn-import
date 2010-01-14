@@ -14,7 +14,6 @@
 
 /** \defgroup RefBld ReflexBuilder */
 
-#include "Reflex/Builder/DictionaryBuilder.h"
 #include "Reflex/Builder/ClassBuilder.h"
 #include "Reflex/Builder/NamespaceBuilder.h"
 #include "Reflex/Builder/TypeBuilder.h"
