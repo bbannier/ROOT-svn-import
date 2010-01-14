@@ -54,19 +54,10 @@ SET(DL_LIBRARY ${CMAKE_DL_LIBS})
 
 #####################   install   ####################
 
-IF (WIN32)
-
-   SET(BIN_INSTALL_DIR      "bin"     ) # The install dir for executables (default ${EXEC_INSTALL_PREFIX}/bin)
-   SET(LIB_INSTALL_DIR      "lib"     ) # The subdirectory relative to the install prefix where libraries will be installed (default is ${EXEC_INSTALL_PREFIX}/lib${LIB_SUFFIX})
-   SET(INCLUDE_INSTALL_DIR  "include" ) # The subdirectory to the header prefix
-
-ELSE (WIN32)
-
-   SET(BIN_INSTALL_DIR      "bin"     ) # The install dir for executables (default ${EXEC_INSTALL_PREFIX}/bin)
-   SET(LIB_INSTALL_DIR      "lib"     ) # The subdirectory relative to the install prefix where libraries will be installed (default is ${EXEC_INSTALL_PREFIX}/lib${LIB_SUFFIX})
-   SET(INCLUDE_INSTALL_DIR  "include" ) # The subdirectory to the header prefix
-
-ENDIF (WIN32)
+SET(BIN_INSTALL_DIR        "bin"      ) # The install dir for executables (default ${EXEC_INSTALL_PREFIX}/bin)
+SET(LIB_INSTALL_DIR        "lib"      ) # The subdirectory relative to the install prefix where libraries will be installed (default is ${EXEC_INSTALL_PREFIX}/lib${LIB_SUFFIX})
+SET(INCLUDE_INSTALL_DIR    "include"  ) # The subdirectory to the header prefix
+SET(TEMPLATES_INSTALL_DIR  "templates") # The subdirectory to the header prefix
 
 # The INSTALL_TARGETS_DEFAULT_ARGS variable should be used when libraries are installed.
 # The arguments are also ok for regular executables, i.e. executables which don't go
@@ -111,6 +102,8 @@ ADD_SUBDIRECTORY(doc)
 ADD_SUBDIRECTORY(inc)
 ADD_SUBDIRECTORY(python)
 ADD_SUBDIRECTORY(src)
+ADD_SUBDIRECTORY(templates)
+ADD_SUBDIRECTORY(reflex-ldd)
 
 # enable tests only if specified
 IF (REFLEX_ENABLE_TESTS)

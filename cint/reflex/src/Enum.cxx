@@ -10,7 +10,7 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-# define REFLEX_BUILD
+#define REFLEX_BUILD
 #endif
 
 #include "Enum.h"
@@ -23,12 +23,13 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::Enum::Enum(const char* enumType,
-                   const std::type_info& ti,
-                   unsigned int modifiers)
+Reflex::Enum::Enum( const Reflex::Dictionary& dictionary, 
+                    const char * enumType,
+                          const std::type_info & ti,
+                          unsigned int modifiers )
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for an enum
-   : ScopedType(enumType, sizeof(int), ENUM, ti, Type(), modifiers, REPRES_ENUM) {
+   : ScopedType(dictionary, enumType, sizeof(int), ENUM, ti, Type(), modifiers, REPRES_ENUM) {
 }
 
 
@@ -44,13 +45,13 @@ void
 Reflex::Enum::GenerateDict(DictionaryGenerator& generator) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
+         
+   size_t lastMember = DataMemberSize()-1;
 
-   size_t lastMember = DataMemberSize() - 1;
-
-   if (!(DeclaringScope().IsNamespace())) {
+   if( !(DeclaringScope().IsNamespace()) ) {  
       generator.AddIntoFree("\n.AddEnum(\"" + Name() + "\", \"");
 
-      for (size_t i = 0; i < DataMemberSize(); ++i) {
+      for ( size_t i = 0; i < DataMemberSize(); ++i ) {
          DataMemberAt(i).GenerateDict(generator);
 
          if (i < lastMember) {
@@ -66,7 +67,7 @@ Reflex::Enum::GenerateDict(DictionaryGenerator& generator) const {
          generator.AddIntoFree("typeid(Reflex::ProtectedEnum), PROTECTED)");
       } else if (IsPrivate()) {
          generator.AddIntoFree("typeid(Reflex::PrivateEnum), PRIVATE)");
-      }
+   }
    } else {
       generator.AddIntoInstances("      EnumBuilder(\"" + Name(SCOPED) + "\", typeid(" + Name(SCOPED) + "), PUBLIC)");
 
@@ -75,5 +76,5 @@ Reflex::Enum::GenerateDict(DictionaryGenerator& generator) const {
       }
       generator.AddIntoInstances(";\n");
 
-   }
+   }   
 } // GenerateDict

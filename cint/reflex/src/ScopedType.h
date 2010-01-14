@@ -20,6 +20,9 @@
 #include <vector>
 
 namespace Reflex {
+
+class Dictionary;
+
 /**
  * @class Class Class.h Reflex/Class.h
  * @author Stefan Roiser
@@ -30,7 +33,8 @@ class ScopedType: public TypeBase,
    public ScopeBase {
 public:
    /** constructor */
-   ScopedType(const char* name, size_t size, TYPE typeType,
+   ScopedType(const Dictionary& dictionary, 
+              const char* name, size_t size, TYPE typeType,
               const std::type_info& ti, const Type& finalType = Dummy::Type(),
               unsigned int modifiers = 0, REPRESTYPE represType = REPRES_NOTYPE);
 

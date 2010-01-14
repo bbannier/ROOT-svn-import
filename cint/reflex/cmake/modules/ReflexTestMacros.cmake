@@ -73,13 +73,13 @@ MACRO (REFLEX_ADD_MACRO_TEST _name)
 
       IF (NOT EXISTS ${_script_file_name})
 
-         MESSAGE(STATUS "Writing out project files for ${_scoped_name}")
+         MESSAGE(STATUS "Writing out project files for ${_script_file_name} from ${CMAKE_CURRENT_LIST_FILE}.")
 
          FILE(MAKE_DIRECTORY ${_test_source_dir})
 
          FILE(WRITE ${_script_file_name} "INCLUDE(MacroLibrary)\n")
          FILE(APPEND ${_script_file_name} "INCLUDE(ReflexMacros)\n")
-         FILE(APPEND ${_script_file_name} "INCLUDE(${CMAKE_CURRENT_LIST_FILE})\n")
+         FILE(APPEND ${_script_file_name} "INCLUDE(\"${CMAKE_CURRENT_LIST_FILE}\")\n")
          FILE(APPEND ${_script_file_name} "\n")
          FILE(APPEND ${_script_file_name} "_REFLEX_SCRUB_DIR(\"${_test_output_dir}\")\n")
          FILE(APPEND ${_script_file_name} "${_name}()")
@@ -100,6 +100,7 @@ MACRO (REFLEX_ADD_MACRO_TEST _name)
                              "-DCPPUNIT_LIBRARY:PATH=${CPPUNIT_LIBRARY}"
                              "-DPYTHON_EXECUTABLE:PATH=${PYTHON_EXECUTABLE}"
                              "-DGCCXML:PATH=${GCCXML}"
+                             "-DGCCXML_COMPILER:STRING=${GCCXML_COMPILER}"
                              "-DGENREFLEX_SCRIPT:PATH=${GENREFLEX_SCRIPT}"
                              -P ${_script_file_name})
 
@@ -124,9 +125,16 @@ ENDMACRO (_REFLEX_GET_TEST_ARGS _list _prefix _match_type _expected)
 
 MACRO (_REFLEX_ASSERT _message _actual _match_type _expected)
 
-   IF (NOT "${_actual}" ${_match_type} "${_expected}")
-      MESSAGE(FATAL_ERROR "${_message}:\nExpected (${_match_type}):\n${_expected}\nActual:\n${_actual}")
-   ENDIF (NOT "${_actual}" ${_match_type} "${_expected}")
+   IF(${_match_type} MATCHES "^NOT_")
+      STRING(REGEX REPLACE "^NOT_" "" PREDICATE ${_match_type})
+      SET(ASSERTION "${_actual}" ${PREDICATE} "${_expected}")
+   ELSE(${_match_type} MATCHES "^NOT_")
+      SET(ASSERTION NOT "${_actual}" ${_match_type} "${_expected}")
+   ENDIF(${_match_type} MATCHES "^NOT_")
+
+   IF (${ASSERTION})
+      MESSAGE(FATAL_ERROR "${_message}:\n-- Expected (${_match_type}) --------------------------\n${_expected}\n-- Actual ---------------------------------------------\n${_actual}\n-------------------------------------------------------")
+   ENDIF (${ASSERTION})
 
 ENDMACRO (_REFLEX_ASSERT _message _actual _match_type _expected)
 
@@ -166,6 +174,10 @@ MACRO (REFLEX_ASSERT_GENREFLEX_CLI)
    # create a the executed command line message for debugging
    MACRO_JOIN_ARGUMENTS(_test_args_msg ${_test_args})
    MESSAGE(STATUS "Running ${PYTHON_EXECUTABLE} ${GENREFLEX_SCRIPT} ${_test_args_msg}")
+
+   IF(GCCXML_COMPILER)
+      SET(ENV{GCCXML_COMPILER} ${GCCXML_COMPILER})
+   ENDIF(GCCXML_COMPILER)
 
    # run genreflex and collect all output
    EXECUTE_PROCESS(COMMAND ${PYTHON_EXECUTABLE} ${GENREFLEX_SCRIPT};${_test_args}

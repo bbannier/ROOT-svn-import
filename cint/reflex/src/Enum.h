@@ -16,36 +16,38 @@
 #include "ScopedType.h"
 
 namespace Reflex {
-// forward declarations
-class DictionaryGenerator;
-
-
-/**
- * @class Enum Enum.h Reflex/Enum.h
- * @author Stefan Roiser
- * @date 24/11/2003
- * @ingroup Ref
- */
-class Enum: public ScopedType {
-public:
-   /** default constructor */
-   Enum(const char* enumType,
-        const std::type_info& ti,
-        unsigned int modifiers);
-
-
-   /** destructor */
-   virtual ~Enum();
+   // forward declarations
+   class DictionaryGenerator;
+   class Dictionary;
 
 
    /**
-    * GenerateDict will produce the dictionary information of this type
-    * @param generator a reference to the dictionary generator instance
-    */
-   virtual void GenerateDict(DictionaryGenerator& generator) const;
+   * @class Enum Enum.h Reflex/Enum.h
+   * @author Stefan Roiser
+   * @date 24/11/2003
+   * @ingroup Ref
+   */
+class Enum: public ScopedType {
+   public:
+      /** default constructor */
+      Enum( const Reflex::Dictionary& dictionary,
+            const char * enumType,
+         const std::type_info & ti,
+         unsigned int modifiers );
 
-private:
-};    // class Enum
+
+      /** destructor */
+      virtual ~Enum();
+
+
+      /**
+      * GenerateDict will produce the dictionary information of this type
+      * @param generator a reference to the dictionary generator instance
+      */
+      virtual void GenerateDict(DictionaryGenerator &generator) const;
+
+   private:
+   }; // class Enum
 } //namespace Reflex
 
 #endif // Reflex_Enum

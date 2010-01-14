@@ -21,7 +21,7 @@ MACRO (test001)
 
    REFLEX_ASSERT_GENREFLEX_CLI(ARGS X.h --quiet
                                RESULT EQUAL 0
-                               STDOUT MATCHES "^$"
+                               STDOUT NOT_MATCHES "ERROR"
                                STDERR MATCHES "^$")
 
    MACRO_ASSERT_TEST_FILE_EXISTS("X_rflx.cpp")

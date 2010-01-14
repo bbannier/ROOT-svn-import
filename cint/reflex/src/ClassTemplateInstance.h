@@ -20,85 +20,86 @@
 
 
 namespace Reflex {
-/**
- * @class ClassTemplateInstance ClassTemplateInstance.h Reflex/ClassTemplateInstance.h
- * @author Stefan Roiser
- * @date 13/1/2004
- * @ingroup Ref
- */
+   /**
+   * @class ClassTemplateInstance ClassTemplateInstance.h Reflex/ClassTemplateInstance.h
+   * @author Stefan Roiser
+   * @date 13/1/2004
+   * @ingroup Ref
+   */
 class ClassTemplateInstance: public Class,
    public TemplateInstance {
-public:
-   /** default constructor */
-   ClassTemplateInstance(const char* typ,
-                         size_t size,
-                         const std::type_info& ti,
-                         unsigned int modifiers);
+   public:
+      /** default constructor */
+      ClassTemplateInstance( const Reflex::Dictionary& dictionary,
+                             const char * typ, 
+         size_t size, 
+         const std::type_info & ti, 
+         unsigned int modifiers );
 
 
-   /** destructor */
-   virtual ~ClassTemplateInstance();
+      /** destructor */
+      virtual ~ClassTemplateInstance();
 
 
-   /**
-    * Name returns the fully qualified Name of the templated class
-    * @param  typedefexp expand typedefs or not
-    * @return fully qualified Name of templated class
-    */
-   std::string Name(unsigned int mod = 0) const;
+      /**
+      * Name returns the fully qualified Name of the templated class
+      * @param  typedefexp expand typedefs or not
+      * @return fully qualified Name of templated class
+      */
+      std::string Name( unsigned int mod = 0 ) const;
 
 
-   /**
-    * SimpleName returns the name of the type as a reference. It provides a
-    * simplified but faster generation of a type name. Attention currently it
-    * is not guaranteed that Name() and SimpleName() return the same character
-    * layout of a name (ie. spacing, commas, etc. )
-    * @param pos will indicate where in the returned reference the requested name starts
-    * @param mod The only 'mod' support is SCOPED
-    * @return name of type
-    */
-   virtual const std::string& SimpleName(size_t& pos,
-                                         unsigned int mod = 0) const;
+      /**
+      * SimpleName returns the name of the type as a reference. It provides a 
+      * simplified but faster generation of a type name. Attention currently it
+      * is not guaranteed that Name() and SimpleName() return the same character 
+      * layout of a name (ie. spacing, commas, etc. )
+      * @param pos will indicate where in the returned reference the requested name starts
+      * @param mod The only 'mod' support is SCOPED
+      * @return name of type
+      */
+      virtual const std::string & SimpleName( size_t & pos, 
+         unsigned int mod = 0 ) const;
 
 
-   /**
-    * TemplateArgumentAt will return a pointer to the nth template argument
-    * @param  nth nth template argument
-    * @return pointer to nth template argument
-    */
-   Type TemplateArgumentAt(size_t nth) const;
+      /**
+      * TemplateArgumentAt will return a pointer to the nth template argument
+      * @param  nth nth template argument
+      * @return pointer to nth template argument
+      */
+      Type TemplateArgumentAt( size_t nth ) const;
 
 
-   /**
-    * templateArgSize will return the number of template arguments
-    * @return number of template arguments
-    */
-   size_t TemplateArgumentSize() const;
+      /**
+      * templateArgSize will return the number of template arguments
+      * @return number of template arguments
+      */
+      size_t TemplateArgumentSize() const;
 
 
-   virtual Type_Iterator TemplateArgument_Begin() const;
-   virtual Type_Iterator TemplateArgument_End() const;
-   virtual Reverse_Type_Iterator TemplateArgument_RBegin() const;
-   virtual Reverse_Type_Iterator TemplateArgument_REnd() const;
+      virtual Type_Iterator TemplateArgument_Begin() const;
+      virtual Type_Iterator TemplateArgument_End() const;
+      virtual Reverse_Type_Iterator TemplateArgument_RBegin() const;
+      virtual Reverse_Type_Iterator TemplateArgument_REnd() const;
 
 
-   /**
-    * TemplateFamily returns the corresponding TypeTemplate if any
-    * @return corresponding TypeTemplate
-    */
-   TypeTemplate TemplateFamily() const;
+      /**
+      * TemplateFamily returns the corresponding TypeTemplate if any
+      * @return corresponding TypeTemplate
+      */
+      TypeTemplate TemplateFamily() const;
 
-private:
-   /**
-    * The template type (family)
-    * @label template type
-    * @link aggregation
-    * @clientCardinality 1
-    * @supplierCardinality 1
-    */
-   TypeTemplate fTemplateFamily;
+   private:
+      /** 
+      * The template type (family)
+      * @label template type
+      * @link aggregation
+      * @clientCardinality 1
+      * @supplierCardinality 1
+      */
+      TypeTemplate fTemplateFamily;      
 
-};    // class ClassTemplateInstance
+   }; // class ClassTemplateInstance
 } // namespace Reflex
 
 

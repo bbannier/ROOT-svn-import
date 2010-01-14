@@ -25,7 +25,7 @@ MACRO (test002)
 
    REFLEX_ASSERT_GENREFLEX_CLI(ARGS X.h Y.h --quiet
                                RESULT EQUAL 1
-                               STDOUT STREQUAL "\n--->> genreflex: ERROR: processing file with gccxml. genreflex command failed.\n"
+                               STDOUT MATCHES "\n--->> genreflex: ERROR: processing file with gccxml. genreflex command failed.\n"
                                STDERR MATCHES "X.h:1: error: .*\n")
 
    MACRO_ASSERT_TEST_FILE_NOT_EXISTS("X_rflx.cpp")
@@ -43,7 +43,7 @@ MACRO (test003)
 
    REFLEX_ASSERT_GENREFLEX_CLI(ARGS X.h Y.h --quiet
                                RESULT EQUAL 0
-                               STDOUT STREQUAL "--->> genreflex: WARNING: References are not supported as data members (int& X::y)\n"
+                               STDOUT MATCHES "--->> genreflex: WARNING: References are not supported as data members \\(int\\& X::y\\)"
                                STDERR MATCHES "^$")
 
    MACRO_ASSERT_TEST_FILE_EXISTS("X_rflx.cpp")
@@ -61,7 +61,7 @@ MACRO (test004)
 
    REFLEX_ASSERT_GENREFLEX_CLI(ARGS X.h Y.h --quiet --fail_on_warnings
                                RESULT EQUAL 1
-                               STDOUT STREQUAL "--->> genreflex: WARNING: References are not supported as data members (int& X::y)\n--->> genreflex: ERROR: Exiting with error due to 1 warnings ( --fail_on_warnings enabled )\n"
+                               STDOUT MATCHES ".*--->> genreflex: WARNING: References are not supported as data members \\(int\\& X::y\\).*--->> genreflex: ERROR: Exiting with error due to 1 warnings \\( --fail_on_warnings enabled \\)"
                                STDERR MATCHES "^$")
 
    MACRO_ASSERT_TEST_FILE_NOT_EXISTS("X_rflx.cpp")

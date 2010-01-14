@@ -17,74 +17,75 @@
 #include "Reflex/Type.h"
 
 namespace Reflex {
-// forward declarations
-
-/**
- * @class TemplateInstance TemplateInstance.h Reflex/TemplateInstance.h
- * @author Stefan Roiser
- * @date   2004-01-28
- * @ingroup Ref
- */
-class TemplateInstance {
-public:
-   /** default constructor */
-   TemplateInstance();
-
-
-   /** constructor */
-   TemplateInstance(const std::string& templateArguments);
-
-
-   /** destructor */
-   virtual ~TemplateInstance() {}
-
+   // forward declarations
+   class Dictionary;
 
    /**
-    * Name returns the full Name of the templated collection
-    * @param  typedefexp expand typedefs or not
-    * @return full Name of template collection
-    */
-   std::string Name(unsigned int mod = 0) const;
+   * @class TemplateInstance TemplateInstance.h Reflex/TemplateInstance.h
+   * @author Stefan Roiser
+   * @date   2004-01-28
+   * @ingroup Ref
+   */
+   class TemplateInstance {
+   public:
+      /** default constructor */
+      TemplateInstance();
 
 
-   /**
-    * TemplateArgumentAt will return a pointer to the nth template argument
-    * @param  nth nth template argument
-    * @return pointer to nth template argument
-    */
-   Type TemplateArgumentAt(size_t nth) const;
+      /** constructor */
+      TemplateInstance( const Reflex::Dictionary& dictionary, const std::string & templateArguments );
 
 
-   /**
-    * templateArgSize will return the number of template arguments
-    * @return number of template arguments
-    */
-   size_t TemplateArgumentSize() const;
+      /** destructor */
+      virtual ~TemplateInstance() {}
 
 
-   Type_Iterator TemplateArgument_Begin() const;
-   Type_Iterator TemplateArgument_End() const;
-   Reverse_Type_Iterator TemplateArgument_RBegin() const;
-   Reverse_Type_Iterator TemplateArgument_REnd() const;
+      /**
+      * Name returns the full Name of the templated collection
+      * @param  typedefexp expand typedefs or not
+      * @return full Name of template collection
+      */
+      std::string Name( unsigned int mod = 0 ) const;
 
-private:
-   /**
-    * vector of template arguments
-    * @link aggregation
-    * @label template arguments
-    * @supplierCardinality 1
-    * @clientCardinality 1..*
-    */
-   mutable
-   std::vector<Type> fTemplateArguments;
 
-};    // class TemplateInstance
+      /**
+      * TemplateArgumentAt will return a pointer to the nth template argument
+      * @param  nth nth template argument
+      * @return pointer to nth template argument
+      */
+      Type TemplateArgumentAt( size_t nth ) const;
+
+
+      /**
+      * templateArgSize will return the number of template arguments
+      * @return number of template arguments
+      */
+      size_t TemplateArgumentSize() const;
+
+
+      Type_Iterator TemplateArgument_Begin() const;
+      Type_Iterator TemplateArgument_End() const;
+      Reverse_Type_Iterator TemplateArgument_RBegin() const;
+      Reverse_Type_Iterator TemplateArgument_REnd() const;
+
+   private:
+      /** 
+      * vector of template arguments 
+      * @link aggregation
+      * @label template arguments
+      * @supplierCardinality 1
+      * @clientCardinality 1..*
+      */
+      mutable
+         std::vector < Type > fTemplateArguments;
+
+   }; // class TemplateInstance
 
 } // namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TemplateInstance::TemplateInstance()
+inline Reflex::TemplateInstance::TemplateInstance() 
 //-------------------------------------------------------------------------------
    : fTemplateArguments(std::vector<Type>()) {
 }
@@ -92,7 +93,7 @@ inline Reflex::TemplateInstance::TemplateInstance()
 
 //-------------------------------------------------------------------------------
 inline Reflex::Type
-Reflex::TemplateInstance::TemplateArgumentAt(size_t nth) const {
+Reflex::TemplateInstance::TemplateArgumentAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if (nth < fTemplateArguments.size()) {
       return fTemplateArguments[nth];
@@ -129,7 +130,7 @@ Reflex::TemplateInstance::TemplateArgument_End() const {
 inline Reflex::Reverse_Type_Iterator
 Reflex::TemplateInstance::TemplateArgument_RBegin() const {
 //-------------------------------------------------------------------------------
-   return ((const std::vector<Type> &)fTemplateArguments).rbegin();
+   return ((const std::vector<Type>&)fTemplateArguments).rbegin();
 }
 
 
@@ -137,7 +138,7 @@ Reflex::TemplateInstance::TemplateArgument_RBegin() const {
 inline Reflex::Reverse_Type_Iterator
 Reflex::TemplateInstance::TemplateArgument_REnd() const {
 //-------------------------------------------------------------------------------
-   return ((const std::vector<Type> &)fTemplateArguments).rend();
+   return ((const std::vector<Type>&)fTemplateArguments).rend();
 }
 
 

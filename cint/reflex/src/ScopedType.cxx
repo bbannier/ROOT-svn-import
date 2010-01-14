@@ -16,13 +16,13 @@
 #include "ScopedType.h"
 
 //-------------------------------------------------------------------------------
-Reflex::ScopedType::ScopedType(const char* name, size_t size,
+Reflex::ScopedType::ScopedType(const Reflex::Dictionary& dictionary, const char* name, size_t size,
                                TYPE typeType, const std::type_info& ti,
                                const Type& finalType, unsigned int modifiers,
                                REPRESTYPE represType)
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for an enum
-   : TypeBase(name, size, typeType, ti, finalType, represType),
-   ScopeBase(name, typeType),
+   : TypeBase(dictionary, name, size, typeType, ti, finalType, represType),
+   ScopeBase(dictionary, name, typeType),
    fModifiers(modifiers) {
 }
