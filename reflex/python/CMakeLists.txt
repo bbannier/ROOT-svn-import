@@ -41,6 +41,7 @@ PYTHON_COMPILE(GENREFLEX_OBJS ${GENREFLEX_SRCS})
 SET(_genreflex_main ${CMAKE_CURRENT_BINARY_DIR}/genreflex/Main.cxx)
 ADD_CUSTOM_COMMAND(OUTPUT ${_genreflex_main}
                    COMMAND ${CMAKE_COMMAND} -E copy ${REFLEX_TEMPLATE_DIR}/Main.cxx ${_genreflex_main}
+                   COMMAND ${MAKE_WRITABLE_CMD} ${_genreflex_main}
                    DEPENDS ${GENREFLEX_OBJS} ${REFLEX_TEMPLATE_DIR}/Main.cxx)
 REFLEX_ADD_EXECUTABLE(genreflex EXCLUDE_FROM_ALL ${_genreflex_main})
 

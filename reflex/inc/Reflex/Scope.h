@@ -14,56 +14,57 @@
 
 // Include files
 #include "Reflex/Kernel.h"
+#include "Reflex/Dictionary.h"
 #include <string>
 #include <typeinfo>
 
 namespace Reflex {
-// forward declarations
-class Base;
-class Member;
-class PropertyList;
-class Type;
-class ScopeBase;
-class ScopeName;
-class TypeTemplate;
-class MemberTemplate;
-class DictionaryGenerator;
-
-
-/**
- * @class Scope Scope.h Reflex/Scope.h
- * @author Stefan Roiser
- * @date 24/11/2003
- * @ingroup Ref
- */
-class RFLX_API Scope {
-public:
-   /** constructor */
-   Scope(const ScopeName * scopeName = 0);
-
-
-   /** copy constructor */
-   Scope(const Scope &rh);
-
-
-   /** destructor */
-   ~Scope();
+   // forward declarations
+   class Base;
+   class Member;
+   class PropertyList;
+   class Type;
+   class ScopeBase;
+   class ScopeName;
+   class TypeTemplate;
+   class MemberTemplate;
+   class DictionaryGenerator;
 
 
    /**
-    * inequal operator
-    */
-   bool operator !=(const Scope& rh) const;
+   * @class Scope Scope.h Reflex/Scope.h
+   * @author Stefan Roiser
+   * @date 24/11/2003
+   * @ingroup Ref
+   */
+   class RFLX_API Scope {
+   public:
+      /** constructor */
+      Scope( const ScopeName * scopeName = 0 );
 
 
-   /**
-    * the bool operator will return true if the Scope is resolved (implemented)
-    * @return true if Scope is implemented
-    */
-   operator bool() const;
+      /** copy constructor */
+      Scope( const Scope & rh );
+
+
+      /** destructor */
+      ~Scope();
+
+
+      /**
+      * inequal operator 
+      */
+      bool operator != ( const Scope & rh ) const;
+
+
+      /**
+      * the bool operator will return true if the Scope is resolved (implemented)
+      * @return true if Scope is implemented
+      */
+      operator bool () const;
 
 #if defined(REFLEX_CINT_MERGE)
-   // To prevent any un-authorized use as the old type
+      // To prevent any un-authorized use as the old type
    bool
    operator !() const { return !operator bool(); }
 
@@ -76,9 +77,9 @@ public:
    bool
    operator &&(long right) const { return operator bool() && right; }
 
-   bool operator &&(const Scope& right) const;
-   bool operator &&(const Type& right) const;
-   bool operator &&(const Member& right) const;
+      bool operator&&(const Scope &right) const;
+      bool operator&&(const Type &right) const;
+      bool operator&&(const Member &right) const;
    bool
    operator ||(bool right) const { return operator bool() || right; }
 
@@ -88,238 +89,246 @@ public:
    bool
    operator ||(long right) const { return operator bool() || right; }
 
-   bool operator ||(const Scope& right) const;
-   bool operator ||(const Type& right) const;
-   bool operator ||(const Member& right) const;
+      bool operator||(const Scope &right) const;
+      bool operator||(const Type &right) const;
+      bool operator||(const Member &right) const;
 
-private:
-   operator int() const;
+   private:
+      operator int () const;
 
-public:
+   public:
 #endif
 
 
-   /**
-    * the operator Type will return a corresponding type object to the scope if
-    * applicable (i.e. if the Scope is also a Type e.g. Class, Union, Enum)
-    */
-   operator Type() const;
+      /** 
+      * the operator Type will return a corresponding type object to the scope if
+      * applicable (i.e. if the Scope is also a Type e.g. Class, Union, Enum)
+      */
+      operator Type () const;
 
 
-   /**
-    * BaseAt will return the nth base class information
-    * @param  nth base class
-    * @return pointer to base class information
-    */
-   Base BaseAt(size_t nth) const;
+      /**
+      * BaseAt will return the nth base class information
+      * @param  nth base class
+      * @return pointer to base class information
+      */
+      Base BaseAt( size_t nth ) const;
 
 
-   /**
-    * BaseSize will return the number of base classes
-    * @return number of base classes
-    */
-   size_t BaseSize() const;
+      /**
+      * BaseSize will return the number of base classes
+      * @return number of base classes
+      */
+      size_t BaseSize() const;
 
 
-   /**
-    * Base_Begin returns the begin of the container of bases
-    * @return begin of container of bases
-    */
-   Base_Iterator Base_Begin() const;
+      /**
+      * Base_Begin returns the begin of the container of bases
+      * @return begin of container of bases
+      */
+      Base_Iterator Base_Begin() const;
 
 
-   /**
-    * Base_End returns the end of the container of bases
-    * @return end of container of bases
-    */
-   Base_Iterator Base_End() const;
+      /**
+      * Base_End returns the end of the container of bases
+      * @return end of container of bases
+      */
+      Base_Iterator Base_End() const;
 
 
-   /**
-    * Base_RBegin returns the reverse begin of the container of bases
-    * @return reverse begin of container of bases
-    */
-   Reverse_Base_Iterator Base_RBegin() const;
+      /**
+      * Base_RBegin returns the reverse begin of the container of bases
+      * @return reverse begin of container of bases
+      */
+      Reverse_Base_Iterator Base_RBegin() const;
 
 
-   /**
-    * Base_REnd returns the reverse end of the container of bases
-    * @return reverse end of container of bases
-    */
-   Reverse_Base_Iterator Base_REnd() const;
+      /**
+      * Base_REnd returns the reverse end of the container of bases
+      * @return reverse end of container of bases
+      */
+      Reverse_Base_Iterator Base_REnd() const;
 
 
-   /**
-    * ByName will return reflection information of the scope passed as argument
-    * @param  name fully qualified name of the scope
-    * @return reflection information of the scope
-    */
-   static Scope ByName(const std::string& name);
+      /**
+      * ByName will return reflection information of the scope passed as argument
+      * @param  name fully qualified name of the scope
+      * @return reflection information of the scope
+      */
+      static Scope ByName( const std::string & name, const Dictionary& dictionary = DictionaryExe() );
 
+      /**
+      * ByName will return reflection information of the scope passed as argument.
+      * Only searches in dictionary, and not in its dependencies
+      * @param  name fully qualified name of the scope
+      * @return reflection information of the scope
+      */
+      static Scope ByNameShallow( const std::string & name, const Dictionary& dictionary);
 
-   /**
-    * DataMemberAt will return the nth data member of the type
-    * @param  nth the nth data member
-    * @return nth data member
-    */
+      /**
+      * DataMemberAt will return the nth data member of the type
+      * @param  nth the nth data member
+      * @return nth data member 
+      */
    Member DataMemberAt(size_t nth,
                        EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * DataMemberByName will lookup a data member by name
-    * @param  name of data member
-    * @return data member
-    */
+      /**
+      * DataMemberByName will lookup a data member by name
+      * @param  name of data member
+      * @return data member
+      */
    Member DataMemberByName(const std::string& name,
                            EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * DataMemberSize will return the number of data members of this type
-    * @return number of data members
-    */
+      /**
+      * DataMemberSize will return the number of data members of this type
+      * @return number of data members
+      */
    size_t DataMemberSize(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * Member_Begin returns the begin of the container of members
-    * @return begin of container of members
-    */
+      /**
+      * Member_Begin returns the begin of the container of members
+      * @return begin of container of members
+      */
    Member_Iterator DataMember_Begin(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * Member_End returns the end of the container of members
-    * @return end of container of members
-    */
+      /**
+      * Member_End returns the end of the container of members
+      * @return end of container of members
+      */
    Member_Iterator DataMember_End(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * Member_RBegin returns the reverse begin of the container of members
-    * @return reverse begin of container of members
-    */
+      /**
+      * Member_RBegin returns the reverse begin of the container of members
+      * @return reverse begin of container of members
+      */
    Reverse_Member_Iterator DataMember_RBegin(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * Member_REnd returns the reverse end of the container of members
-    * @return reverse end of container of members
-    */
+      /**
+      * Member_REnd returns the reverse end of the container of members
+      * @return reverse end of container of members
+      */
    Reverse_Member_Iterator DataMember_REnd(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * DeclaringScope will return the declaring socpe of this type
-    * @return declaring scope of this type
-    */
-   Scope DeclaringScope() const;
+      /**
+      * DeclaringScope will return the declaring socpe of this type
+      * @return declaring scope of this type
+      */
+      Scope DeclaringScope() const;
 
 
-   /**
-    * FunctionMemberAt will return the nth function member of the type
-    * @param  nth function member
-    * @return reflection information of nth function member
-    */
+      /**
+      * FunctionMemberAt will return the nth function member of the type
+      * @param  nth function member
+      * @return reflection information of nth function member
+      */
    Member FunctionMemberAt(size_t nth,
                            EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * FunctionMemberByName will return the member with the name,
-    * optionally the signature of the function may be given as a type
-    * @param  name of function member
-    * @return reflection information of the function member
-    */
+      /**
+      * FunctionMemberByName will return the member with the name, 
+      * optionally the signature of the function may be given as a type
+      * @param  name of function member
+      * @return reflection information of the function member
+      */
    Member FunctionMemberByName(const std::string& name,
                                EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT,
                                EDELAYEDLOADSETTING allowDelayedLoad = DELAYEDLOAD_ON) const;
 
 
-   /**
-    * FunctionMemberByName will return the member with the name,
-    * optionally the signature of the function may be given as a type
-    * @param  name of function member
-    * @param  signature of the member function
-    * @modifiers_mask When matching, do not compare the listed modifiers
-    * @return reflection information of the function member
-    */
-   // this overloading is unfortunate but I can't include Type.h here
-   Member FunctionMemberByName(const std::string& name,
-                               const Type& signature,
+      /**
+      * FunctionMemberByName will return the member with the name, 
+      * optionally the signature of the function may be given as a type
+      * @param  name of function member
+      * @param  signature of the member function 
+      * @modifiers_mask When matching, do not compare the listed modifiers
+      * @return reflection information of the function member
+      */
+      // this overloading is unfortunate but I can't include Type.h here
+      Member FunctionMemberByName( const std::string & name,
+         const Type & signature,
                                unsigned int modifers_mask = 0,
                                EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT,
                                EDELAYEDLOADSETTING allowDelayedLoad = DELAYEDLOAD_ON) const;
 
 
-   /**
-    * FunctionMemberByNameAndSignature will return the member with the name,
-    * optionally the signature of the function may be given as a type
-    * @param  name of function member
-    * @param  signature of the member function
-    * @modifiers_mask When matching, do not compare the listed modifiers
-    * @return reflection information of the function member
-    */
-   // this overloading is unfortunate but I can't include Type.h here
-   Member FunctionMemberByNameAndSignature(const std::string& name,
-                                           const Type& signature,
+      /**
+      * FunctionMemberByNameAndSignature will return the member with the name, 
+      * optionally the signature of the function may be given as a type
+      * @param  name of function member
+      * @param  signature of the member function 
+      * @modifiers_mask When matching, do not compare the listed modifiers
+      * @return reflection information of the function member
+      */
+      // this overloading is unfortunate but I can't include Type.h here
+      Member FunctionMemberByNameAndSignature( const std::string & name,
+         const Type & signature,
                                            unsigned int modifers_mask = 0,
                                            EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT,
                                            EDELAYEDLOADSETTING allowDelayedLoad = DELAYEDLOAD_ON) const;
 
 
-   /**
-    * FunctionMemberSize will return the number of function members of
-    * this type
-    * @return number of function members
-    */
+      /**
+      * FunctionMemberSize will return the number of function members of
+      * this type
+      * @return number of function members
+      */
    size_t FunctionMemberSize(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * FunctionMember_Begin returns the begin of the container of function members
-    * @return begin of container of function members
-    */
+      /**
+      * FunctionMember_Begin returns the begin of the container of function members
+      * @return begin of container of function members
+      */
    Member_Iterator FunctionMember_Begin(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * FunctionMember_End returns the end of the container of function members
-    * @return end of container of function members
-    */
+      /**
+      * FunctionMember_End returns the end of the container of function members
+      * @return end of container of function members
+      */
    Member_Iterator FunctionMember_End(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * FunctionMember_RBegin returns the reverse begin of the container of function members
-    * @return reverse begin of container of function members
-    */
+      /**
+      * FunctionMember_RBegin returns the reverse begin of the container of function members
+      * @return reverse begin of container of function members
+      */
    Reverse_Member_Iterator FunctionMember_RBegin(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * FunctionMember_RBegin returns the reverse begin of the container of function members
-    * @return reverse begin of container of function members
-    */
+      /**
+      * FunctionMember_RBegin returns the reverse begin of the container of function members
+      * @return reverse begin of container of function members
+      */
    Reverse_Member_Iterator FunctionMember_REnd(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * GenerateDict will produce the dictionary information of this type
-    * @param generator a reference to the dictionary generator instance
-    */
-   void GenerateDict(DictionaryGenerator& generator) const;
+      /**
+      * GenerateDict will produce the dictionary information of this type
+      * @param generator a reference to the dictionary generator instance
+      */
+      void GenerateDict(DictionaryGenerator & generator) const;
 
 
-   /**
-    * GlobalScope will return the global scope representation\
-    * @return global scope
-    */
-   static Scope GlobalScope();
+      /**
+      * GlobalScope will return the global scope representation\
+      * @param dictionary the dictionary from which to get the global scope
+      * @return global scope
+      */
+      static Scope GlobalScope(const Dictionary& dictionary = DictionaryExe());
 
 
-   /**
+      /**
     * HasBase will check whether this class has a base class given
     * as argument
     * @param  cl the base-class to check for
@@ -329,518 +338,528 @@ public:
 
 
    /**
-    * Id returns a unique identifier of the type in the system
-    * @return unique identifier
-    */
-   void* Id() const;
+      * Id returns a unique identifier of the type in the system
+      * @return unique identifier
+      */
+      void * Id() const;
 
 
-   /**
-    * IsClass returns true if the type represents a class
-    * @return true if type represents a class
-    */
-   bool IsClass() const;
+      /** 
+      * IsClass returns true if the type represents a class
+      * @return true if type represents a class
+      */
+      bool IsClass() const;
 
 
-   /**
-    * IsEnum returns true if the type represents a enum
-    * @return true if type represents a enum
-    */
-   bool IsEnum() const;
+      /** 
+      * IsEnum returns true if the type represents a enum
+      * @return true if type represents a enum
+      */
+      bool IsEnum() const;
 
 
-   /**
-    * IsNamespace returns true if the scope represents a namespace
-    * @return true if scope represents a namespace
-    */
-   bool IsNamespace() const;
+      /** 
+      * IsNamespace returns true if the scope represents a namespace
+      * @return true if scope represents a namespace
+      */
+      bool IsNamespace() const;
 
 
-   /**
-    * IsPrivate will check if the scope access is private
-    * @return true if scope access is private
-    */
-   bool IsPrivate() const;
+      /** 
+      * IsPrivate will check if the scope access is private
+      * @return true if scope access is private
+      */
+      bool IsPrivate() const;
 
 
-   /**
-    * IsProtected will check if the scope access is protected
-    * @return true if scope access is protected
-    */
-   bool IsProtected() const;
+      /** 
+      * IsProtected will check if the scope access is protected
+      * @return true if scope access is protected
+      */
+      bool IsProtected() const;
 
 
-   /**
-    * IsPublic will check if the scope access is public
-    * @return true if scope access is public
-    */
-   bool IsPublic() const;
+      /** 
+      * IsPublic will check if the scope access is public
+      * @return true if scope access is public
+      */
+      bool IsPublic() const;
 
 
-   /**
-    * IsTemplateInstance will return true if the the class is templated
-    * @return true if the class is templated
-    */
-   bool IsTemplateInstance() const;
+      /**
+      * IsTemplateInstance will return true if the the class is templated
+      * @return true if the class is templated
+      */
+      bool IsTemplateInstance() const;
 
 
-   /**
-    * IsTopScope returns true if this scope is the top scope
-    * @return true if this scope is the top scope
-    */
-   bool IsTopScope() const;
+      /** 
+      * IsTopScope returns true if this scope is the top scope
+      * @return true if this scope is the top scope
+      */
+      bool IsTopScope() const;
 
 
-   /**
-    * IsUnion returns true if the type represents a union
-    * @return true if type represents a union
-    */
-   bool IsUnion() const;
+      /** 
+      * IsUnion returns true if the type represents a union
+      * @return true if type represents a union
+      */
+      bool IsUnion() const;
 
 
-   /**
-    * LookupMember will lookup a member in the current scope
-    * @param nam the string representation of the member to lookup
-    * @return if a matching member is found return it, otherwise return empty member
-    */
-   Member LookupMember(const std::string& nam) const;
+      /**
+      * LookupMember will lookup a member in the current scope
+      * @param nam the string representation of the member to lookup
+      * @param dictionary the dictionary into which to search, by default the same as this
+      * @return if a matching member is found return it, otherwise return empty member
+      */
+      Member LookupMember( const std::string & nam) const;
+      Member LookupMember( const std::string & nam, const Dictionary& dictionary) const;
 
 
-   /**
-    * LookupType will lookup a type in the current scope
-    * @param nam the string representation of the type to lookup
-    * @return if a matching type is found return it, otherwise return empty type
-    */
-   Type LookupType(const std::string& nam) const;
+      /**
+      * LookupType will lookup a type in the current scope
+      * @param nam the string representation of the type to lookup
+      * @param dictionary the dictionary into which to search, by default the same as this
+      * @return if a matching type is found return it, otherwise return empty type
+      */
+      Type LookupType( const std::string & nam) const;
+      Type LookupType( const std::string & nam, const Dictionary& dictionary ) const;
 
 
-   /**
-    * LookupScope will lookup a scope in the current scope
-    * @param nam the string representation of the scope to lookup
-    * @return if a matching scope is found return it, otherwise return empty scope
-    */
-   Scope LookupScope(const std::string& nam) const;
+      /**
+      * LookupScope will lookup a scope in the current scope
+      * @param nam the string representation of the scope to lookup
+      * @param dictionary the dictionary into which to search, by default the same as this
+      * @return if a matching scope is found return it, otherwise return empty scope
+      */
+      Scope LookupScope( const std::string & nam) const;
+      Scope LookupScope( const std::string & nam, const Dictionary& dictionary ) const;
 
 
-   /**
-    * MemberAt will return the nth member of the type
-    * @param  nth member
-    * @return reflection information nth member
-    */
+      /**
+      * MemberAt will return the nth member of the type
+      * @param  nth member
+      * @return reflection information nth member
+      */
    Member MemberAt(size_t nth,
                    EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * MemberByName will return the first member with a given Name
-    * @param  member name
-    * @return reflection information of the member
-    */
+      /**
+      * MemberByName will return the first member with a given Name
+      * @param  member name
+      * @return reflection information of the member
+      */
    Member MemberByName(const std::string& name,
                        EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * MemberByName will return the first member with a given Name
-    * @param  member name
-    * @param  signature of the (function) member
-    * @return reflection information of the member
-    */
-   // this overloading is unfortunate but I can't include Type.h here
-   Member MemberByName(const std::string& name,
+      /**
+      * MemberByName will return the first member with a given Name
+      * @param  member name
+      * @param  signature of the (function) member 
+      * @return reflection information of the member
+      */
+      // this overloading is unfortunate but I can't include Type.h here
+      Member MemberByName( const std::string & name,
                        const Type& signature,
                        EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * MemberSize will return the number of members
-    * @return number of members
-    */
+      /**
+      * MemberSize will return the number of members
+      * @return number of members
+      */
    size_t MemberSize(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * Member_Begin returns the begin of the container of members
-    * @return begin of container of members
-    */
+      /**
+      * Member_Begin returns the begin of the container of members
+      * @return begin of container of members
+      */
    Member_Iterator Member_Begin(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * Member_End returns the end of the container of members
-    * @return end of container of members
-    */
+      /**
+      * Member_End returns the end of the container of members
+      * @return end of container of members
+      */
    Member_Iterator Member_End(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * Member_RBegin returns the reverse begin of the container of members
-    * @return reverse begin of container of members
-    */
+      /**
+      * Member_RBegin returns the reverse begin of the container of members
+      * @return reverse begin of container of members
+      */
    Reverse_Member_Iterator Member_RBegin(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * Member_REnd returns the reverse end of the container of members
-    * @return reverse end of container of members
-    */
+      /**
+      * Member_REnd returns the reverse end of the container of members
+      * @return reverse end of container of members
+      */
    Reverse_Member_Iterator Member_REnd(EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
 
 
-   /**
-    * MemberTemplateAt will return the nth member template of this type
-    * @param nth member template
-    * @return nth member template
-    */
-   MemberTemplate MemberTemplateAt(size_t nth) const;
+      /** 
+      * MemberTemplateAt will return the nth member template of this type
+      * @param nth member template
+      * @return nth member template
+      */
+      MemberTemplate MemberTemplateAt( size_t nth ) const;
 
 
-   /**
-    * MemberTemplateSize will return the number of member templates in this scope
-    * @return number of defined member templates
-    */
-   size_t MemberTemplateSize() const;
+      /** 
+      * MemberTemplateSize will return the number of member templates in this scope
+      * @return number of defined member templates
+      */
+      size_t MemberTemplateSize() const;
 
 
-   /**
-    * MemberTemplateByName will return the member template representation in this
-    * scope
-    * @param string representing the member template to look for
-    * @return member template representation of the looked up member
-    */
-   MemberTemplate MemberTemplateByName(const std::string& nam) const;
+      /**
+      * MemberTemplateByName will return the member template representation in this 
+      * scope
+      * @param string representing the member template to look for
+      * @return member template representation of the looked up member
+      */
+      MemberTemplate MemberTemplateByName( const std::string & nam ) const;
 
 
-   /**
-    * MemberTemplate_Begin returns the begin of the container of member templates
-    * @return begin of container of member templates
-    */
-   MemberTemplate_Iterator MemberTemplate_Begin() const;
+      /**
+      * MemberTemplate_Begin returns the begin of the container of member templates
+      * @return begin of container of member templates
+      */
+      MemberTemplate_Iterator MemberTemplate_Begin() const;
 
 
-   /**
-    * MemberTemplate_End returns the end of the container of member templates
-    * @return end of container of member templates
-    */
-   MemberTemplate_Iterator MemberTemplate_End() const;
+      /**
+      * MemberTemplate_End returns the end of the container of member templates
+      * @return end of container of member templates
+      */
+      MemberTemplate_Iterator MemberTemplate_End() const;
 
 
-   /**
-    * MemberTemplate_End returns the end of the container of member templates
-    * @return end of container of member templates
-    */
-   Reverse_MemberTemplate_Iterator MemberTemplate_RBegin() const;
+      /**
+      * MemberTemplate_End returns the end of the container of member templates
+      * @return end of container of member templates
+      */
+      Reverse_MemberTemplate_Iterator MemberTemplate_RBegin() const;
 
 
-   /**
-    * MemberTemplate_REnd returns the reverse end of the container of member templates
-    * @return reverse end of container of member templates
-    */
-   Reverse_MemberTemplate_Iterator MemberTemplate_REnd() const;
+      /**
+      * MemberTemplate_REnd returns the reverse end of the container of member templates
+      * @return reverse end of container of member templates
+      */
+      Reverse_MemberTemplate_Iterator MemberTemplate_REnd() const;
 
 
-   /**
-    * Name returns the name of the type
-    * @param  mod qualifiers can be or'ed
-    *   FINAL     - resolve typedefs
-    *   SCOPED    - fully scoped name
-    *   QUALIFIED - cv, reference qualification
-    * @return name of the type
-    */
-   std::string Name(unsigned int mod = 0) const;
+      /**
+      * Name returns the name of the type 
+      * @param  mod qualifiers can be or'ed 
+      *   FINAL     - resolve typedefs
+      *   SCOPED    - fully scoped name 
+      *   QUALIFIED - cv, reference qualification 
+      * @return name of the type
+      */
+      std::string Name( unsigned int mod = 0 ) const;
 
 
-   /**
-    * Name_c_str returns a char* pointer to the qualified type name
-    * @return c string to unqualified type name
-    */
-   const char* Name_c_str() const;
+      /**
+      * Name_c_str returns a char* pointer to the qualified type name
+      * @return c string to unqualified type name
+      */
+      const char * Name_c_str() const;
 
-   /**
-    * Properties will return a PropertyList attached to this item
-    * @return PropertyList of this type
-    */
-   PropertyList Properties() const;
+      /**
+      * Properties will return a PropertyList attached to this item
+      * @return PropertyList of this type
+      */
+      PropertyList Properties() const;
 
 
-   /**
-    * ScopeAt will return the nth scope defined in the system
-    * @param  nth scope defined in the system
-    * @return nth scope defined in the system
-    */
-   static Scope ScopeAt(size_t nth);
+      /**
+      * ScopeAt will return the nth scope defined in the system
+      * @param  nth scope defined in the system
+      * @return nth scope defined in the system
+      */
+      static Scope ScopeAt( size_t nth );
 
 
-   /**
-    * ScopeSize will return the number of currently defined scopes
-    * @return number of currently defined scopes
-    */
-   static size_t ScopeSize();
+      /**
+      * ScopeSize will return the number of currently defined scopes
+      * @return number of currently defined scopes
+      */
+      static size_t ScopeSize();
 
 
-   /**
-    * Scope_Begin returns the begin of the container of scopes defined in the systems
-    * @return begin of container of scopes defined in the systems
-    */
-   static Scope_Iterator Scope_Begin();
+      /**
+      * Scope_Begin returns the begin of the container of scopes defined in the systems
+      * @return begin of container of scopes defined in the systems
+      */
+      static Scope_Iterator Scope_Begin();
 
 
-   /**
-    * Scope_End returns the end of the container of scopes defined in the systems
-    * @return end of container of scopes defined in the systems
-    */
-   static Scope_Iterator Scope_End();
+      /**
+      * Scope_End returns the end of the container of scopes defined in the systems
+      * @return end of container of scopes defined in the systems
+      */
+      static Scope_Iterator Scope_End();
 
 
-   /**
-    * Scope_RBegin returns the reverse begin of the container of scopes defined in the systems
-    * @return reverse begin of container of scopes defined in the systems
-    */
-   static Reverse_Scope_Iterator Scope_RBegin();
+      /**
+      * Scope_RBegin returns the reverse begin of the container of scopes defined in the systems
+      * @return reverse begin of container of scopes defined in the systems
+      */
+      static Reverse_Scope_Iterator Scope_RBegin();
 
 
-   /**
-    * Scope_REnd returns the reverse end of the container of scopes defined in the systems
-    * @return reverse end of container of scopes defined in the systems
-    */
-   static Reverse_Scope_Iterator Scope_REnd();
+      /**
+      * Scope_REnd returns the reverse end of the container of scopes defined in the systems
+      * @return reverse end of container of scopes defined in the systems
+      */
+      static Reverse_Scope_Iterator Scope_REnd();
 
 
-   /**
-    * ScopeType will return the enum information about this scope
-    * @return enum information of this scope
-    */
-   TYPE ScopeType() const;
+      /**
+      * ScopeType will return the enum information about this scope
+      * @return enum information of this scope
+      */
+      TYPE ScopeType() const;
 
 
-   /**
-    * ScopeTypeAsString will return the string representation of the ENUM
-    * representing the real type of the scope (e.g. "CLASS")
-    * @return string representation of the TYPE enum of the scope
-    */
-   std::string ScopeTypeAsString() const;
+      /**
+      * ScopeTypeAsString will return the string representation of the ENUM
+      * representing the real type of the scope (e.g. "CLASS")
+      * @return string representation of the TYPE enum of the scope
+      */
+      std::string ScopeTypeAsString() const;
 
 
-   /**
-    * SubScopeAt will return a pointer to a sub scopes
-    * @param  nth sub scope
-    * @return reflection information of nth sub scope
-    */
-   Scope SubScopeAt(size_t nth) const;
+      /**
+      * SubScopeAt will return a pointer to a sub scopes
+      * @param  nth sub scope
+      * @return reflection information of nth sub scope
+      */
+      Scope SubScopeAt( size_t nth ) const;
 
 
-   /**
-    * SubScopeLevel will return the number of declaring scopes
-    * this scope lives in.
-    * @return number of declaring scopes above this scope.
-    */
-   size_t SubScopeLevel() const;
+      /**
+      * SubScopeLevel will return the number of declaring scopes
+      * this scope lives in.
+      * @return number of declaring scopes above this scope.
+      */ 
+      size_t SubScopeLevel() const;
 
 
-   /**
-    * SubScopeSize will return the number of sub scopes
-    * @return number of sub scopes
-    */
-   size_t SubScopeSize() const;
+      /**
+      * SubScopeSize will return the number of sub scopes
+      * @return number of sub scopes
+      */
+      size_t SubScopeSize() const;
 
 
-   /**
-    * SubScopeByName will return a sub scope representing the unscoped name passed
-    * as argument
-    * @param unscoped name of the sub scope to look for
-    * @return Scope representation of the sub scope
-    */
-   Scope SubScopeByName(const std::string& nam) const;
+      /** 
+      * SubScopeByName will return a sub scope representing the unscoped name passed
+      * as argument
+      * @param unscoped name of the sub scope to look for
+      * @param dictionary the dictionary into which to search, by default the same as this
+      * @return Scope representation of the sub scope
+      */
+      Scope SubScopeByName( const std::string & nam) const;
+      Scope SubScopeByName( const std::string & nam, const Dictionary& dictionary ) const;
 
 
-   /**
-    * SubScope_Begin returns the begin of the container of sub scopes
-    * @return begin of container of sub scopes
-    */
-   Scope_Iterator SubScope_Begin() const;
+      /**
+      * SubScope_Begin returns the begin of the container of sub scopes
+      * @return begin of container of sub scopes
+      */
+      Scope_Iterator SubScope_Begin() const;
 
 
-   /**
-    * SubScope_End returns the end of the container of sub scopes
-    * @return end of container of sub scopes
-    */
-   Scope_Iterator SubScope_End() const;
+      /**
+      * SubScope_End returns the end of the container of sub scopes
+      * @return end of container of sub scopes
+      */
+      Scope_Iterator SubScope_End() const;
 
 
-   /**
-    * SubScope_RBegin returns the reverse begin of the container of sub scopes
-    * @return reverse begin of container of sub scopes
-    */
-   Reverse_Scope_Iterator SubScope_RBegin() const;
+      /**
+      * SubScope_RBegin returns the reverse begin of the container of sub scopes
+      * @return reverse begin of container of sub scopes
+      */
+      Reverse_Scope_Iterator SubScope_RBegin() const;
 
 
-   /**
-    * SubScope_REnd returns the reverse end of the container of sub scopes
-    * @return reverse end of container of sub scopes
-    */
-   Reverse_Scope_Iterator SubScope_REnd() const;
+      /**
+      * SubScope_REnd returns the reverse end of the container of sub scopes
+      * @return reverse end of container of sub scopes
+      */
+      Reverse_Scope_Iterator SubScope_REnd() const;
 
 
-   /**
-    * SubTypeAt will return the nth sub type
-    * @param  nth sub type
-    * @return reflection information of nth sub type
-    */
-   Type SubTypeAt(size_t nth) const;
+      /**
+      * SubTypeAt will return the nth sub type
+      * @param  nth sub type
+      * @return reflection information of nth sub type
+      */
+      Type SubTypeAt( size_t nth ) const;
 
 
-   /**
-    * SubTypeSize will return he number of sub types
-    * @return number of sub types
-    */
-   size_t SubTypeSize() const;
+      /**
+      * SubTypeSize will return he number of sub types
+      * @return number of sub types
+      */
+      size_t SubTypeSize() const;
 
 
-   /**
-    * SubTypeByName will return the Type representing the sub type
-    * @param string of the unscoped sub type to look for
-    * @return Type representation of the sub type
-    */
-   Type SubTypeByName(const std::string& nam) const;
+      /**
+      * SubTypeByName will return the Type representing the sub type 
+      * @param string of the unscoped sub type to look for
+      * @param dictionary the dictionary into which to search, by default the same as this
+      * @return Type representation of the sub type
+      */
+      Type SubTypeByName( const std::string & nam) const;
+      Type SubTypeByName( const std::string & nam, const Reflex::Dictionary& dictionary ) const;
 
 
-   /**
-    * SubType_Begin returns the begin of the container of sub types
-    * @return begin of container of sub types
-    */
-   Type_Iterator SubType_Begin() const;
+      /**
+      * SubType_Begin returns the begin of the container of sub types
+      * @return begin of container of sub types
+      */
+      Type_Iterator SubType_Begin() const;
 
 
-   /**
-    * SubType_End returns the end of the container of sub types
-    * @return end of container of sub types
-    */
-   Type_Iterator SubType_End() const;
+      /**
+      * SubType_End returns the end of the container of sub types
+      * @return end of container of sub types
+      */
+      Type_Iterator SubType_End() const;
 
 
-   /**
-    * SubType_RBegin returns the reverse begin of the container of sub types
-    * @return reverse begin of container of sub types
-    */
-   Reverse_Type_Iterator SubType_RBegin() const;
+      /**
+      * SubType_RBegin returns the reverse begin of the container of sub types
+      * @return reverse begin of container of sub types
+      */
+      Reverse_Type_Iterator SubType_RBegin() const;
 
 
-   /**
-    * SubType_REnd returns the reverse end of the container of sub types
-    * @return reverse end of container of sub types
-    */
-   Reverse_Type_Iterator SubType_REnd() const;
+      /**
+      * SubType_REnd returns the reverse end of the container of sub types
+      * @return reverse end of container of sub types
+      */
+      Reverse_Type_Iterator SubType_REnd() const;
 
 
-   /**
-    * SubTypeTemplateAt will return the nth type template of this type
-    * @param nth type template
-    * @return nth type template
-    */
-   TypeTemplate SubTypeTemplateAt(size_t nth) const;
+      /** 
+      * SubTypeTemplateAt will return the nth type template of this type
+      * @param nth type template
+      * @return nth type template
+      */
+      TypeTemplate SubTypeTemplateAt( size_t nth ) const;
 
 
-   /**
-    * SubTypeTemplateSize will return the number of type templates in this scope
-    * @return number of defined type templates
-    */
-   size_t SubTypeTemplateSize() const;
+      /** 
+      * SubTypeTemplateSize will return the number of type templates in this scope
+      * @return number of defined type templates
+      */
+      size_t SubTypeTemplateSize() const;
 
 
-   /**
-    * SubTypeTemplateByName will return a type template defined in this scope looked up by
-    * it's unscoped name
-    * @param unscoped name of the type template to look for
-    * @return TypeTemplate representation of the sub type template
-    */
-   TypeTemplate SubTypeTemplateByName(const std::string& nam) const;
+      /**
+      * SubTypeTemplateByName will return a type template defined in this scope looked up by 
+      * it's unscoped name
+      * @param unscoped name of the type template to look for
+      * @return TypeTemplate representation of the sub type template
+      */
+      TypeTemplate SubTypeTemplateByName( const std::string & nam ) const;
 
 
-   /**
-    * SubTypeTemplate_Begin returns the begin of the container of sub type templates
-    * @return begin of container of sub type templates
-    */
-   TypeTemplate_Iterator SubTypeTemplate_Begin() const;
+      /**
+      * SubTypeTemplate_Begin returns the begin of the container of sub type templates
+      * @return begin of container of sub type templates
+      */
+      TypeTemplate_Iterator SubTypeTemplate_Begin() const;
 
 
-   /**
-    * SubTypeTemplate_End returns the end of the container of sub type templates
-    * @return end of container of sub type templates
-    */
-   TypeTemplate_Iterator SubTypeTemplate_End() const;
+      /**
+      * SubTypeTemplate_End returns the end of the container of sub type templates
+      * @return end of container of sub type templates
+      */
+      TypeTemplate_Iterator SubTypeTemplate_End() const;
 
 
-   /**
-    * SubTypeTemplate_RBegin returns the reverse begin of the container of sub type templates
-    * @return reverse begin of container of sub type templates
-    */
-   Reverse_TypeTemplate_Iterator SubTypeTemplate_RBegin() const;
+      /**
+      * SubTypeTemplate_RBegin returns the reverse begin of the container of sub type templates
+      * @return reverse begin of container of sub type templates
+      */
+      Reverse_TypeTemplate_Iterator SubTypeTemplate_RBegin() const;
 
 
-   /**
-    * SubTypeTemplate_REnd returns the reverse end of the container of sub type templates
-    * @return reverse end of container of sub type templates
-    */
-   Reverse_TypeTemplate_Iterator SubTypeTemplate_REnd() const;
+      /**
+      * SubTypeTemplate_REnd returns the reverse end of the container of sub type templates
+      * @return reverse end of container of sub type templates
+      */
+      Reverse_TypeTemplate_Iterator SubTypeTemplate_REnd() const;
 
 
-   /**
-    * TemplateArgumentAt will return a pointer to the nth template argument
-    * @param  nth nth template argument
-    * @return reflection information of nth template argument
-    */
-   Type TemplateArgumentAt(size_t nth) const;
+      /**
+      * TemplateArgumentAt will return a pointer to the nth template argument
+      * @param  nth nth template argument
+      * @return reflection information of nth template argument
+      */
+      Type TemplateArgumentAt( size_t nth ) const;
 
 
-   /**
-    * TemplateArgumentSize will return the number of template arguments
-    * @return number of template arguments
-    */
-   size_t TemplateArgumentSize() const;
+      /**
+      * TemplateArgumentSize will return the number of template arguments
+      * @return number of template arguments
+      */
+      size_t TemplateArgumentSize() const;
 
 
-   /**
-    * TemplateArgument_Begin returns the begin of the container of template arguments
-    * @return begin of container of template arguments
-    */
-   Type_Iterator TemplateArgument_Begin() const;
+      /**
+      * TemplateArgument_Begin returns the begin of the container of template arguments
+      * @return begin of container of template arguments
+      */
+      Type_Iterator TemplateArgument_Begin() const;
 
 
-   /**
-    * TemplateArgument_End returns the end of the container of template arguments
-    * @return end of container of template arguments
-    */
-   Type_Iterator TemplateArgument_End() const;
+      /**
+      * TemplateArgument_End returns the end of the container of template arguments
+      * @return end of container of template arguments
+      */
+      Type_Iterator TemplateArgument_End() const;
 
 
-   /**
-    * TemplateArgument_RBegin returns the reverse begin of the container of template arguments
-    * @return reverse begin of container of template arguments
-    */
-   Reverse_Type_Iterator TemplateArgument_RBegin() const;
+      /**
+      * TemplateArgument_RBegin returns the reverse begin of the container of template arguments
+      * @return reverse begin of container of template arguments
+      */
+      Reverse_Type_Iterator TemplateArgument_RBegin() const;
 
 
-   /**
-    * TemplateArgument_REnd returns the reverse end of the container of template arguments
-    * @return reverse end of container of template arguments
-    */
-   Reverse_Type_Iterator TemplateArgument_REnd() const;
+      /**
+      * TemplateArgument_REnd returns the reverse end of the container of template arguments
+      * @return reverse end of container of template arguments
+      */
+      Reverse_Type_Iterator TemplateArgument_REnd() const;
 
 
-   /**
-    * TemplateFamily returns the corresponding TypeTemplate if any
-    * @return corresponding TypeTemplate
-    */
-   TypeTemplate TemplateFamily() const;
+      /**
+      * TemplateFamily returns the corresponding TypeTemplate if any
+      * @return corresponding TypeTemplate
+      */
+      TypeTemplate TemplateFamily() const;
 
 
-   /**
-    * Unload will unload the dictionary information of a scope
-    */
-   void Unload() const;
+      /**
+      * Unload will unload the dictionary information of a scope
+      */
+      void Unload() const;
 
 
-   /**
+      /**
     * UpdateMembers will update the list of Function/Data/Members with all
     * members of base classes currently availabe in the system, switching
     * INHERITEDMEMBERS_DEFAULT to INHERITEDMEMBERS_ALSO.
@@ -848,26 +867,26 @@ public:
    void UpdateMembers() const;
 
    /**
-    * UsingDirectiveAt will return the nth using directive
-    * @param  nth using directive
-    * @return nth using directive
-    */
-   Scope UsingDirectiveAt(size_t nth) const;
+      * UsingDirectiveAt will return the nth using directive
+      * @param  nth using directive
+      * @return nth using directive
+      */
+      Scope UsingDirectiveAt( size_t nth ) const;
 
 
-   /**
-    * UsingDirectiveSize will return the number of using directives of this scope
-    * @return number of using directives declared in this scope
-    */
-   size_t UsingDirectiveSize() const;
+      /**
+      * UsingDirectiveSize will return the number of using directives of this scope
+      * @return number of using directives declared in this scope
+      */
+      size_t UsingDirectiveSize() const;
 
 
-   Scope_Iterator UsingDirective_Begin() const;
-   Scope_Iterator UsingDirective_End() const;
-   Reverse_Scope_Iterator UsingDirective_RBegin() const;
-   Reverse_Scope_Iterator UsingDirective_REnd() const;
+      Scope_Iterator UsingDirective_Begin() const;
+      Scope_Iterator UsingDirective_End() const;
+      Reverse_Scope_Iterator UsingDirective_RBegin() const;
+      Reverse_Scope_Iterator UsingDirective_REnd() const;
 
-public:
+   public:
    /**
     * AddBase will add information about a Base class
     * @param base type of the base class
@@ -879,7 +898,7 @@ public:
                 unsigned int modifiers = 0) const;
 
 
-   /**
+      /**
     * AddBase will add the information about a Base class
     * @param b pointer to the base class
     */
@@ -887,184 +906,193 @@ public:
 
 
    /**
-    * AddDataMember will add the information about a data member
-    * @param dm data member to add
-    */
-   void AddDataMember(const Member& dm) const;
+      * AddDataMember will add the information about a data member
+      * @param dm data member to add
+      */
+      void AddDataMember( const Member & dm ) const;
 
 
-   /**
-    * AddDataMember will add the information about a data member
-    * @param nam the name of the data member
-    * @param typ the type of the data member
-    * @param offs the offset of the data member relative to the beginning of the scope
-    * @param modifiers of the data member
-    */
+      /**
+      * AddDataMember will add the information about a data member
+      * @param nam the name of the data member
+      * @param typ the type of the data member
+      * @param offs the offset of the data member relative to the beginning of the scope
+      * @param modifiers of the data member
+      */
    Member AddDataMember(const char* name,
-                        const Type& type,
-                        size_t offset,
+         const Type & type,
+         size_t offset,
                         unsigned int modifiers = 0,
                         char* interpreterOffset = 0) const;
 
-   /**
-    * AddFunctionMember will add the information about a function member
-    * @param fm function member to add
-    */
-   void AddFunctionMember(const Member& fm) const;
+      /**
+      * AddFunctionMember will add the information about a function member
+      * @param fm function member to add
+      */
+      void AddFunctionMember( const Member & fm ) const;
 
 
-   /**
-    * AddFunctionMember will add the information about a function member
-    * @param nam the name of the function member
-    * @param typ the type of the function member
-    * @param stubFP a pointer to the stub function
-    * @param stubCtx a pointer to the context of the function member
-    * @param params a semi colon separated list of parameters
-    * @param modifiers of the function member
-    */
+      /**
+      * AddFunctionMember will add the information about a function member
+      * @param nam the name of the function member
+      * @param typ the type of the function member
+      * @param stubFP a pointer to the stub function
+      * @param stubCtx a pointer to the context of the function member
+      * @param params a semi colon separated list of parameters 
+      * @param modifiers of the function member
+      */ 
    Member AddFunctionMember(const char* name,
-                            const Type& type,
-                            StubFunction stubFP,
-                            void* stubCtx = 0,
-                            const char* params = 0,
-                            unsigned int modifiers = 0) const;
+         const Type & type,
+         StubFunction stubFP,
+         void * stubCtx = 0,
+         const char * params = 0,
+         unsigned int modifiers = 0 ) const;
 
 
-   /**
-    * AddMemberTemplate will add a member template to this scope
-    * @param mt member template to add
-    */
-   void AddMemberTemplate(const MemberTemplate& mt) const;
+      /** 
+      * AddMemberTemplate will add a member template to this scope
+      * @param mt member template to add
+      */
+      void AddMemberTemplate( const MemberTemplate & mt ) const ;
 
 
-   /**
-    * AddSubScope will add a sub scope to this one
-    * @param sc sub scope to add
-    */
-   void AddSubScope(const Scope& sc) const;
+      /**
+      * AddSubScope will add a sub scope to this one
+      * @param sc sub scope to add
+      */
+      void AddSubScope( const Scope & sc ) const;
 
 
-   /**
-    * AddSubScope will add a sub scope to this one
-    * @param scop the name of the sub scope
-    * @param scopeType enum value of the scope type
-    */
-   void AddSubScope(const char* scope,
-                    TYPE scopeType = NAMESPACE) const;
+      /**
+      * AddSubScope will add a sub scope to this one
+      * @param scop the name of the sub scope
+      * @param scopeType enum value of the scope type
+      */
+      void AddSubScope( const Dictionary& dictionary,
+         const char * scope,
+         TYPE scopeType = NAMESPACE ) const;
 
 
-   /**
-    * AddSubType will add a sub type to this type
-    * @param ty sub type to add
-    */
-   void AddSubType(const Type& ty) const;
+      /**
+      * AddSubType will add a sub type to this type
+      * @param ty sub type to add
+      */
+      void AddSubType( const Type & ty ) const;
 
 
-   /**
-    * AddSubType will add a sub type to this type
-    * @param typ the name of the sub type
-    * @param size the sizeof of the sub type
-    * @param typeType the enum specifying the sub type
-    * @param ti the type_info of the sub type
-    * @param modifiers of the sub type
-    */
-   void AddSubType(const char* type,
-                   size_t size,
-                   TYPE typeType,
-                   const std::type_info& typeInfo,
-                   unsigned int modifiers = 0) const;
+      /**
+      * AddSubType will add a sub type to this type
+      * @param typ the name of the sub type
+      * @param size the sizeof of the sub type
+      * @param typeType the enum specifying the sub type
+      * @param ti the type_info of the sub type
+      * @param modifiers of the sub type
+      */
+      void AddSubType( const Reflex::Dictionary& dictionary,
+         const char * type,
+         size_t size,
+         TYPE typeType,
+         const std::type_info & typeInfo,
+         unsigned int modifiers = 0 ) const;
 
 
-   /**
-    * AddTypeTemplate will add a sub type template to this scope
-    * @param tt type template to add
-    */
-   void AddSubTypeTemplate(const TypeTemplate& mt) const;
+      /** 
+      * AddTypeTemplate will add a sub type template to this scope
+      * @param tt type template to add
+      */
+      void AddSubTypeTemplate( const TypeTemplate & mt ) const ;
 
 
-   /**
-    * AddUsingDirective will add a using namespace directive to this scope
-    * @param ud using directive to add
-    */
-   void AddUsingDirective(const Scope& ud) const;
+      /**
+      * AddUsingDirective will add a using namespace directive to this scope
+      * @param ud using directive to add
+      */
+      void AddUsingDirective( const Scope & ud ) const;
 
 
-   /**
-    * RemoveDataMember will remove the information about a data member
-    * @param dm data member to remove
-    */
-   void RemoveDataMember(const Member& dm) const;
+      /**
+      * RemoveDataMember will remove the information about a data member
+      * @param dm data member to remove
+      */
+      void RemoveDataMember( const Member & dm ) const;
 
 
-   /**
-    * RemoveFunctionMember will remove the information about a function member
-    * @param fm function member to remove
-    */
-   void RemoveFunctionMember(const Member& fm) const;
+      /**
+      * RemoveFunctionMember will remove the information about a function member
+      * @param fm function member to remove
+      */
+      void RemoveFunctionMember( const Member & fm ) const;
 
 
-   /**
-    * RemoveMemberTemplate will remove a member template from this scope
-    * @param mt member template to remove
-    */
-   void RemoveMemberTemplate(const MemberTemplate& mt) const;
+      /** 
+      * RemoveMemberTemplate will remove a member template from this scope
+      * @param mt member template to remove
+      */
+      void RemoveMemberTemplate( const MemberTemplate & mt ) const;
 
 
-   /**
-    * RemoveSubScope will remove a sub scope from this type
-    * @param sc sub scope to remove
-    */
-   void RemoveSubScope(const Scope& sc) const;
+      /**
+      * RemoveSubScope will remove a sub scope from this type
+      * @param sc sub scope to remove
+      */
+      void RemoveSubScope( const Scope & sc ) const;
 
 
-   /**
-    * RemoveSubType will remove a sub type from this type
-    * @param sc sub type to remove
-    */
-   void RemoveSubType(const Type& ty) const;
+      /**
+      * RemoveSubType will remove a sub type from this type
+      * @param sc sub type to remove
+      */
+      void RemoveSubType( const Type & ty ) const;     
 
 
-   /**
-    * RemoveSubTypeTemplate will remove a sub type template from this scope
-    * @param tt sub type template to remove
-    */
-   void RemoveSubTypeTemplate(const TypeTemplate& tt) const;
+      /**
+      * RemoveSubTypeTemplate will remove a sub type template from this scope
+      * @param tt sub type template to remove
+      */
+      void RemoveSubTypeTemplate( const TypeTemplate & tt ) const;
 
 
-   /**
-    * RemoveUsingDirective will remove a using namespace directive from this scope
-    * @param ud using namespace directive to remove
-    */
-   void RemoveUsingDirective(const Scope& ud) const;
+      /** 
+      * RemoveUsingDirective will remove a using namespace directive from this scope
+      * @param ud using namespace directive to remove
+      */
+      void RemoveUsingDirective( const Scope & ud ) const;
 
 
-   /** */
-   const ScopeBase* ToScopeBase() const;
+      /** */
+      const ScopeBase * ToScopeBase() const;
 
-public:
-   /**
-    * @label __NIRVANA__
-    * @link association
-    */
-   static Scope& __NIRVANA__();
 
-private:
-   /**
-    * pointer to the resolved scope
-    * @label scope name
-    * @link aggregation
-    * @supplierCardinality 1
-    * @clientCardinality 1
-    */
-   const ScopeName* fScopeName;
+      /**
+      * Dictionary into which this scope is registered
+      */
+      Dictionary DictionaryGet() const;
 
-};    // class Scope
 
-bool operator <(const Scope& lh,
-                const Scope& rh);
+   public:
+      /**
+      * @label __NIRVANA__
+      * @link association 
+      */
+      static Scope & __NIRVANA__();
 
-bool operator ==(const Scope& lh,
-                 const Scope& rh);
+   private:
+      /**
+      * pointer to the resolved scope
+      * @label scope name
+      * @link aggregation
+      * @supplierCardinality 1
+      * @clientCardinality 1
+      */
+      const ScopeName * fScopeName;
+
+   }; // class Scope
+
+   bool operator < ( const Scope & lh, 
+      const Scope & rh); 
+
+   bool operator == ( const Scope & lh,
+      const Scope & rh );
 
 } // namespace Reflex
 
@@ -1084,7 +1112,7 @@ Reflex::Scope::operator !=(const Scope& rh) const {
 //-------------------------------------------------------------------------------
 inline bool
 Reflex::operator <(const Scope& lh,
-                   const Scope& rh) {
+                                       const Scope & rh ) {
 //-------------------------------------------------------------------------------
    return const_cast<Scope*>(&lh)->Id() < const_cast<Scope*>(&rh)->Id();
 }
@@ -1093,21 +1121,21 @@ Reflex::operator <(const Scope& lh,
 //-------------------------------------------------------------------------------
 inline bool
 Reflex::operator ==(const Scope& lh,
-                    const Scope& rh) {
+                                        const Scope & rh ) {
 //-------------------------------------------------------------------------------
    return const_cast<Scope*>(&lh)->Id() == const_cast<Scope*>(&rh)->Id();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope::Scope(const ScopeName* scopeName)
+inline Reflex::Scope::Scope( const ScopeName * scopeName ) 
 //-------------------------------------------------------------------------------
    : fScopeName(scopeName) {
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope::Scope(const Scope& rh)
+inline Reflex::Scope::Scope( const Scope & rh ) 
 //-------------------------------------------------------------------------------
    : fScopeName(rh.fScopeName) {
 }
@@ -1276,9 +1304,9 @@ Reflex::Scope::FunctionMember_REnd(EMEMBERQUERY inh) const {
 
 //-------------------------------------------------------------------------------
 inline Reflex::Scope
-Reflex::Scope::GlobalScope() {
+Reflex::Scope::GlobalScope(const Dictionary& dictionary) {
 //-------------------------------------------------------------------------------
-   return ScopeBase::GlobalScope();
+  return ScopeBase::GlobalScope(dictionary);
 }
 
 
@@ -1286,7 +1314,7 @@ Reflex::Scope::GlobalScope() {
 inline void*
 Reflex::Scope::Id() const {
 //-------------------------------------------------------------------------------
-   return (void*) fScopeName;
+   return (void*)fScopeName;
 }
 
 
@@ -1340,7 +1368,7 @@ Reflex::Scope::IsTopScope() const {
 //-------------------------------------------------------------------------------
    if (*this) {
       return fScopeName->fScopeBase->IsTopScope();
-   }
+}
    return false;
 }
 
@@ -1351,7 +1379,7 @@ Reflex::Scope::IsUnion() const {
 //-------------------------------------------------------------------------------
    if (*this) {
       return fScopeName->fScopeBase->IsUnion();
-   }
+}
    return false;
 }
 
@@ -1362,7 +1390,7 @@ Reflex::Scope::MemberSize(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
    if (*this) {
       return fScopeName->fScopeBase->MemberSize(inh);
-   }
+}
    return 0;
 }
 
@@ -1522,10 +1550,10 @@ Reflex::Scope::SubScopeSize() const {
 
 //-------------------------------------------------------------------------------
 inline Reflex::Scope
-Reflex::Scope::SubScopeByName(const std::string& nam) const {
+Reflex::Scope::SubScopeByName(const std::string& nam, const Reflex::Dictionary& dictionary) const {
 //-------------------------------------------------------------------------------
    if (*this) {
-      return fScopeName->fScopeBase->SubScopeByName(nam);
+      return fScopeName->fScopeBase->SubScopeByName(nam, dictionary);
    }
    return Dummy::Scope();
 }
@@ -1573,7 +1601,6 @@ Reflex::Scope::SubScope_REnd() const {
    }
    return Dummy::ScopeCont().rend();
 }
-
 
 //-------------------------------------------------------------------------------
 inline Reflex::Type_Iterator
@@ -1774,11 +1801,12 @@ Reflex::Scope::AddSubScope(const Scope& sc) const {
 
 //-------------------------------------------------------------------------------
 inline void
-Reflex::Scope::AddSubScope(const char* scope,
+Reflex::Scope::AddSubScope(const Reflex::Dictionary& dictionary,
+                           const char* scope,
                            TYPE scopeType) const {
 //-------------------------------------------------------------------------------
    if (*this) {
-      fScopeName->fScopeBase->AddSubScope(scope, scopeType);
+      fScopeName->fScopeBase->AddSubScope(dictionary, scope, scopeType);
    }
 }
 
@@ -1799,7 +1827,7 @@ Reflex::Scope::AddUsingDirective(const Scope& ud) const {
 //-------------------------------------------------------------------------------
    if (*this) {
       fScopeName->fScopeBase->AddUsingDirective(ud);
-   }
+}
 }
 
 
@@ -1809,9 +1837,17 @@ Reflex::Scope::RemoveUsingDirective(const Scope& ud) const {
 //-------------------------------------------------------------------------------
    if (*this) {
       fScopeName->fScopeBase->RemoveUsingDirective(ud);
-   }
+}
 }
 
+//-------------------------------------------------------------------------------
+inline Reflex::Dictionary Reflex::Scope::DictionaryGet() const {
+//-------------------------------------------------------------------------------
+   if (* this)
+      return fScopeName->NamesGet();
+   else
+      return Dictionary::Main();
+}
 
 #ifdef REFLEX_CINT_MERGE
 inline bool
@@ -1852,7 +1888,7 @@ operator &&(char* c,
 inline bool
 operator ||(char* c,
             const Reflex::Scope& rh) {
-   return c || rh.operator bool();
+   return c ||rh.operator bool();
 }
 
 #endif

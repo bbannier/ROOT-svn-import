@@ -123,7 +123,7 @@ Reflex::FunctionMember::Invoke(const Object& obj,
       throw RuntimeError("Not enough parameters given to function ");
    }
    void* mem = CalculateBaseObject(obj);
-   static Type tVoid = Type::ByName("void");
+   static Type tVoid = Type::ByName("void", Dictionary::Main());
    void* retaddr = 0;
 
    if (ret && TypeOf().ReturnType() != tVoid) {
@@ -154,7 +154,7 @@ Reflex::FunctionMember::Invoke(Object* ret,
 //-------------------------------------------------------------------------------
 // Call static function, return value (it it exists) goes into Object ret.
 
-   static Type tVoid = Type::ByName("void");
+   static Type tVoid = Type::ByName("void", Dictionary::Main());
    void* retaddr = 0;
 
    if (ret && TypeOf().ReturnType() != tVoid) {

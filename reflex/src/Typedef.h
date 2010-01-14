@@ -17,382 +17,383 @@
 #include "Reflex/Type.h"
 
 namespace Reflex {
-// forward declarations
-class Base;
-class Object;
-class Member;
-class MemberTemplate;
-class Scope;
-class TypeTemplate;
+   // forward declarations
+   class Base;
+   class Object;
+   class Member;
+   class MemberTemplate;
+   class Scope;
+   class TypeTemplate;
 
-/**
- * @class Typedef Typedef.h Reflex/Typedef.h
- * @author Stefan Roiser
- * @date 24/11/2003
- * @ingroup Ref
- */
-class Typedef: public TypeBase {
-public:
-   /** constructor */
-   Typedef(const char* typ,
-           const Type& typedefType,
-           TYPE typeTyp = TYPEDEF,
-           const Type& finalType = Dummy::Type(),
+   /**
+   * @class Typedef Typedef.h Reflex/Typedef.h
+   * @author Stefan Roiser
+   * @date 24/11/2003
+   * @ingroup Ref
+   */
+   class Typedef : public TypeBase {
+   public:
+      /** constructor */
+      Typedef( const Reflex::Dictionary& dictionary, 
+               const char * typ,
+         const Type & typedefType,
+         TYPE typeTyp = TYPEDEF,
+         const Type & finalType = Dummy::Type(),
            REPRESTYPE represType = REPRES_NOTYPE);
 
 
-   /** destructor */
-   virtual ~Typedef();
+      /** destructor */
+      virtual ~Typedef();
 
 
-   /**
-    * nthBase will return the nth BaseAt class information
-    * @param  nth nth BaseAt class
-    * @return pointer to BaseAt class information
-    */
-   virtual Base BaseAt(size_t nth) const;
+      /**
+      * nthBase will return the nth BaseAt class information
+      * @param  nth nth BaseAt class
+      * @return pointer to BaseAt class information
+      */
+      virtual Base BaseAt( size_t nth ) const;
 
 
-   /**
-    * BaseSize will return the number of BaseAt classes
-    * @return number of BaseAt classes
-    */
-   virtual size_t BaseSize() const;
+      /**
+      * BaseSize will return the number of BaseAt classes
+      * @return number of BaseAt classes
+      */
+      virtual size_t BaseSize() const;
 
 
-   virtual Base_Iterator Base_Begin() const;
-   virtual Base_Iterator Base_End() const;
-   virtual Reverse_Base_Iterator Base_RBegin() const;
-   virtual Reverse_Base_Iterator Base_REnd() const;
-
+      virtual Base_Iterator Base_Begin() const;
+      virtual Base_Iterator Base_End() const;
+      virtual Reverse_Base_Iterator Base_RBegin() const;
+      virtual Reverse_Base_Iterator Base_REnd() const;
+
 
-   /**
-    * CastObject an object from this class At to another one
-    * @param  to is the class At to cast into
-    * @param  obj the memory AddressGet of the object to be casted
-    */
-   virtual Object CastObject(const Type& to,
-                             const Object& obj) const;
+      /**
+      * CastObject an object from this class At to another one
+      * @param  to is the class At to cast into
+      * @param  obj the memory AddressGet of the object to be casted
+      */
+      virtual Object CastObject( const Type & to, 
+         const Object & obj ) const;
 
 
-   /**
-    * DataMemberAt will return the nth data MemberAt of the At
-    * @param  nth data MemberAt
-    * @return pointer to data MemberAt
-    */
-   virtual Member DataMemberAt(size_t nth) const;
+      /**
+      * DataMemberAt will return the nth data MemberAt of the At
+      * @param  nth data MemberAt
+      * @return pointer to data MemberAt
+      */
+      virtual Member DataMemberAt( size_t nth ) const;
 
 
-   /**
-    * DataMemberByName will return the MemberAt with Name
-    * @param  Name of data MemberAt
-    * @return data MemberAt
-    */
-   virtual Member DataMemberByName(const std::string& Name) const;
+      /**
+      * DataMemberByName will return the MemberAt with Name
+      * @param  Name of data MemberAt
+      * @return data MemberAt
+      */
+      virtual Member DataMemberByName( const std::string & Name ) const;
 
 
-   /**
-    * DataMemberSize will return the number of data members of this At
-    * @return number of data members
-    */
-   virtual size_t DataMemberSize() const;
+      /**
+      * DataMemberSize will return the number of data members of this At
+      * @return number of data members
+      */
+      virtual size_t DataMemberSize() const;
 
 
-   virtual Member_Iterator DataMember_Begin() const;
-   virtual Member_Iterator DataMember_End() const;
-   virtual Reverse_Member_Iterator DataMember_RBegin() const;
-   virtual Reverse_Member_Iterator DataMember_REnd() const;
-
+      virtual Member_Iterator DataMember_Begin() const;
+      virtual Member_Iterator DataMember_End() const;
+      virtual Reverse_Member_Iterator DataMember_RBegin() const;
+      virtual Reverse_Member_Iterator DataMember_REnd() const;
+
 
-   /**
-    * Destruct will call the destructor of a At and remove its memory
-    * allocation if desired
-    * @param  instance of the At in memory
-    * @param  dealloc for also deallacoting the memory
-    */
-   virtual void Destruct(void* instance,
-                         bool dealloc = true) const;
+      /**
+      * Destruct will call the destructor of a At and remove its memory
+      * allocation if desired
+      * @param  instance of the At in memory
+      * @param  dealloc for also deallacoting the memory
+      */
+      virtual void Destruct( void * instance, 
+         bool dealloc = true ) const;
 
 
-   /**
-    * DynamicType is used to discover whether an object represents the
-    * current class At or not
-    * @param  mem is the memory AddressGet of the object to checked
-    * @return the actual class of the object
-    */
-   virtual Type DynamicType(const Object& obj) const;
+      /**
+      * DynamicType is used to discover whether an object represents the
+      * current class At or not
+      * @param  mem is the memory AddressGet of the object to checked
+      * @return the actual class of the object
+      */
+      virtual Type DynamicType( const Object & obj ) const;
 
 
-   /**
-    * FunctionMemberAt will return the nth function MemberAt of the At
-    * @param  nth function MemberAt
-    * @return pointer to function MemberAt
-    */
-   virtual Member FunctionMemberAt(size_t nth) const;
+      /**
+      * FunctionMemberAt will return the nth function MemberAt of the At
+      * @param  nth function MemberAt
+      * @return pointer to function MemberAt
+      */
+      virtual Member FunctionMemberAt( size_t nth ) const;
 
 
-   /**
-    * FunctionMemberByName will return the MemberAt with the Name,
-    * optionally the signature of the function may be given
-    * @param  Name of function MemberAt
-    * @param  signature of the MemberAt function
-    * @return function MemberAt
-    */
-   virtual Member FunctionMemberByName(const std::string& nam,
-                                       const Type& signature,
-                                       unsigned int modifiers_mask = 0) const;
+      /**
+      * FunctionMemberByName will return the MemberAt with the Name, 
+      * optionally the signature of the function may be given
+      * @param  Name of function MemberAt
+      * @param  signature of the MemberAt function 
+      * @return function MemberAt
+      */
+      virtual Member FunctionMemberByName( const std::string & nam,
+         const Type & signature,
+         unsigned int modifiers_mask = 0) const;
 
 
-   /**
-    * FunctionMemberSize will return the number of function members of
-    * this At
-    * @return number of function members
-    */
-   virtual size_t FunctionMemberSize() const;
+      /**
+      * FunctionMemberSize will return the number of function members of
+      * this At
+      * @return number of function members
+      */
+      virtual size_t FunctionMemberSize() const;
 
 
-   virtual Member_Iterator FunctionMember_Begin() const;
-   virtual Member_Iterator FunctionMember_End() const;
-   virtual Reverse_Member_Iterator FunctionMember_RBegin() const;
-   virtual Reverse_Member_Iterator FunctionMember_REnd() const;
+      virtual Member_Iterator FunctionMember_Begin() const;
+      virtual Member_Iterator FunctionMember_End() const;
+      virtual Reverse_Member_Iterator FunctionMember_RBegin() const;
+      virtual Reverse_Member_Iterator FunctionMember_REnd() const;
 
 
-   /**
-    * HasBase will check whether this class has a BaseAt class given
-    * as argument
-    * @param  cl the BaseAt-class to check for
-    * @return true if this class has a BaseAt-class cl, false otherwise
-    */
-   virtual bool HasBase(const Type& cl) const;
+      /**
+      * HasBase will check whether this class has a BaseAt class given
+      * as argument
+      * @param  cl the BaseAt-class to check for
+      * @return true if this class has a BaseAt-class cl, false otherwise
+      */
+      virtual bool HasBase( const Type & cl ) const;
 
 
-   /**
-    * IsAbstract will return true if the the class is abstract
-    * @return true if the class is abstract
-    */
-   virtual bool IsAbstract() const;
+      /**
+      * IsAbstract will return true if the the class is abstract
+      * @return true if the class is abstract
+      */
+      virtual bool IsAbstract() const;
 
 
-   /**
-    * IsComplete will return true if all classes and BaseAt classes of this
-    * class are resolved and fully known in the system
-    */
-   virtual bool IsComplete() const;
+      /** 
+      * IsComplete will return true if all classes and BaseAt classes of this 
+      * class are resolved and fully known in the system
+      */
+      virtual bool IsComplete() const;
 
 
-   /**
-    * IsVirtual will return true if the class contains a virtual table
-    * @return true if the class contains a virtual table
-    */
-   virtual bool IsVirtual() const;
+      /**
+      * IsVirtual will return true if the class contains a virtual table
+      * @return true if the class contains a virtual table
+      */
+      virtual bool IsVirtual() const;
 
 
-   /**
-    * MemberByName will return the first MemberAt with a given Name
-    * @param  MemberAt Name
-    * @return pointer to MemberAt
-    */
-   virtual Member MemberByName(const std::string& Name,
-                               const Type& signature) const;
+      /**
+      * MemberByName will return the first MemberAt with a given Name
+      * @param  MemberAt Name
+      * @return pointer to MemberAt
+      */
+      virtual Member MemberByName( const std::string & Name,
+         const Type & signature ) const;
 
 
-   /**
-    * MemberAt will return the nth MemberAt of the At
-    * @param  nth MemberAt
-    * @return pointer to nth MemberAt
-    */
-   virtual Member MemberAt(size_t nth) const;
+      /**
+      * MemberAt will return the nth MemberAt of the At
+      * @param  nth MemberAt
+      * @return pointer to nth MemberAt
+      */
+      virtual Member MemberAt( size_t nth ) const;
 
 
-   /**
-    * MemberSize will return the number of members
-    * @return number of members
-    */
-   virtual size_t MemberSize() const;
+      /**
+      * MemberSize will return the number of members
+      * @return number of members
+      */
+      virtual size_t MemberSize() const;
 
 
-   virtual Member_Iterator Member_Begin() const;
-   virtual Member_Iterator Member_End() const;
-   virtual Reverse_Member_Iterator Member_RBegin() const;
-   virtual Reverse_Member_Iterator Member_REnd() const;
+      virtual Member_Iterator Member_Begin() const;
+      virtual Member_Iterator Member_End() const;
+      virtual Reverse_Member_Iterator Member_RBegin() const;
+      virtual Reverse_Member_Iterator Member_REnd() const;
 
 
-   /**
-    * MemberTemplateAt will return the nth MemberAt template of this At
-    * @param nth MemberAt template
-    * @return nth MemberAt template
-    */
-   virtual MemberTemplate MemberTemplateAt(size_t nth) const;
+      /** 
+      * MemberTemplateAt will return the nth MemberAt template of this At
+      * @param nth MemberAt template
+      * @return nth MemberAt template
+      */
+      virtual MemberTemplate MemberTemplateAt( size_t nth ) const;
 
 
-   /**
-    * MemberTemplateSize will return the number of MemberAt templates in this socpe
-    * @return number of defined MemberAt templates
-    */
-   virtual size_t MemberTemplateSize() const;
+      /** 
+      * MemberTemplateSize will return the number of MemberAt templates in this socpe
+      * @return number of defined MemberAt templates
+      */
+      virtual size_t MemberTemplateSize() const;
 
 
-   virtual MemberTemplate_Iterator MemberTemplate_Begin() const;
-   virtual MemberTemplate_Iterator MemberTemplate_End() const;
-   virtual Reverse_MemberTemplate_Iterator MemberTemplate_RBegin() const;
-   virtual Reverse_MemberTemplate_Iterator MemberTemplate_REnd() const;
+      virtual MemberTemplate_Iterator MemberTemplate_Begin() const;
+      virtual MemberTemplate_Iterator MemberTemplate_End() const;
+      virtual Reverse_MemberTemplate_Iterator MemberTemplate_RBegin() const;
+      virtual Reverse_MemberTemplate_Iterator MemberTemplate_REnd() const;
 
 
-   /**
-    * Name will return the fully qualified Name of the Typedef
-    * @param  typedefexp expand typedefs or not
-    * @return fully expanded Name of typedef
-    */
-   virtual std::string Name(unsigned int mod = 0) const;
+      /**
+      * Name will return the fully qualified Name of the Typedef
+      * @param  typedefexp expand typedefs or not
+      * @return fully expanded Name of typedef
+      */
+      virtual std::string Name( unsigned int mod = 0 ) const;
 
 
-   /**
-    * SimpleName returns the name of the type as a reference. It provides a
-    * simplified but faster generation of a type name. Attention currently it
-    * is not guaranteed that Name() and SimpleName() return the same character
-    * layout of a name (ie. spacing, commas, etc. )
-    * @param pos will indicate where in the returned reference the requested name starts
-    * @param mod The only 'mod' support is SCOPED
-    * @return name of type
-    */
-   virtual const std::string& SimpleName(size_t& pos,
-                                         unsigned int mod = 0) const;
+      /**
+      * SimpleName returns the name of the type as a reference. It provides a 
+      * simplified but faster generation of a type name. Attention currently it
+      * is not guaranteed that Name() and SimpleName() return the same character 
+      * layout of a name (ie. spacing, commas, etc. )
+      * @param pos will indicate where in the returned reference the requested name starts
+      * @param mod The only 'mod' support is SCOPED
+      * @return name of type
+      */
+      virtual const std::string & SimpleName( size_t & pos, 
+         unsigned int mod = 0 ) const;
 
 
-   virtual Type_Iterator FunctionParameter_Begin() const;
-   virtual Type_Iterator FunctionParameter_End() const;
-   virtual Reverse_Type_Iterator FunctionParameter_RBegin() const;
-   virtual Reverse_Type_Iterator FunctionParameter_REnd() const;
+      virtual Type_Iterator FunctionParameter_Begin() const;
+      virtual Type_Iterator FunctionParameter_End() const;
+      virtual Reverse_Type_Iterator FunctionParameter_RBegin() const;
+      virtual Reverse_Type_Iterator FunctionParameter_REnd() const;
 
 
-   /**
-    * SubScopeAt will return a pointer to a sub-scopes
-    * @param  nth sub-At
-    * @return pointer to nth sub-At
-    */
-   virtual Scope SubScopeAt(size_t nth) const;
+      /**
+      * SubScopeAt will return a pointer to a sub-scopes
+      * @param  nth sub-At
+      * @return pointer to nth sub-At
+      */
+      virtual Scope SubScopeAt( size_t nth ) const;
 
 
-   /**
-    * ScopeSize will return the number of sub-scopes
-    * @return number of sub-scopes
-    */
-   virtual size_t SubScopeSize() const;
+      /**
+      * ScopeSize will return the number of sub-scopes
+      * @return number of sub-scopes
+      */
+      virtual size_t SubScopeSize() const;
 
 
-   virtual Scope_Iterator SubScope_Begin() const;
-   virtual Scope_Iterator SubScope_End() const;
-   virtual Reverse_Scope_Iterator SubScope_RBegin() const;
-   virtual Reverse_Scope_Iterator SubScope_REnd() const;
+      virtual Scope_Iterator SubScope_Begin() const;
+      virtual Scope_Iterator SubScope_End() const;
+      virtual Reverse_Scope_Iterator SubScope_RBegin() const;
+      virtual Reverse_Scope_Iterator SubScope_REnd() const;
 
 
-   /**
-    * nthType will return a pointer to the nth sub-At
-    * @param  nth sub-At
-    * @return pointer to nth sub-At
-    */
-   virtual Type SubTypeAt(size_t nth) const;
+      /**
+      * nthType will return a pointer to the nth sub-At
+      * @param  nth sub-At
+      * @return pointer to nth sub-At
+      */
+      virtual Type SubTypeAt( size_t nth ) const;
 
 
-   /**
-    * TypeSize will returnt he number of sub-types
-    * @return number of sub-types
-    */
-   virtual size_t SubTypeSize() const;
+      /**
+      * TypeSize will returnt he number of sub-types
+      * @return number of sub-types
+      */
+      virtual size_t SubTypeSize() const;
 
 
-   virtual Type_Iterator SubType_Begin() const;
-   virtual Type_Iterator SubType_End() const;
-   virtual Reverse_Type_Iterator SubType_RBegin() const;
-   virtual Reverse_Type_Iterator SubType_REnd() const;
+      virtual Type_Iterator SubType_Begin() const;
+      virtual Type_Iterator SubType_End() const;
+      virtual Reverse_Type_Iterator SubType_RBegin() const;
+      virtual Reverse_Type_Iterator SubType_REnd() const;
 
 
-   /**
-    * TemplateArgumentAt will return a pointer to the nth template argument
-    * @param  nth nth template argument
-    * @return pointer to nth template argument
-    */
-   virtual Type TemplateArgumentAt(size_t nth) const;
+      /**
+      * TemplateArgumentAt will return a pointer to the nth template argument
+      * @param  nth nth template argument
+      * @return pointer to nth template argument
+      */
+      virtual Type TemplateArgumentAt( size_t nth ) const;
 
 
-   /**
-    * templateArgSize will return the number of template arguments
-    * @return number of template arguments
-    */
-   virtual size_t TemplateArgumentSize() const;
+      /**
+      * templateArgSize will return the number of template arguments
+      * @return number of template arguments
+      */
+      virtual size_t TemplateArgumentSize() const;
 
 
-   virtual Type_Iterator TemplateArgument_Begin() const;
-   virtual Type_Iterator TemplateArgument_End() const;
-   virtual Reverse_Type_Iterator TemplateArgument_RBegin() const;
-   virtual Reverse_Type_Iterator TemplateArgument_REnd() const;
+      virtual Type_Iterator TemplateArgument_Begin() const;
+      virtual Type_Iterator TemplateArgument_End() const;
+      virtual Reverse_Type_Iterator TemplateArgument_RBegin() const;
+      virtual Reverse_Type_Iterator TemplateArgument_REnd() const;
 
 
-   /**
-    * TemplateFamily returns the corresponding TypeTemplate if any
-    * @return corresponding TypeTemplate
-    */
-   virtual TypeTemplate TemplateFamily() const;
+      /**
+      * TemplateFamily returns the corresponding TypeTemplate if any
+      * @return corresponding TypeTemplate
+      */
+      virtual TypeTemplate TemplateFamily() const;
 
 
-   /**
-    * SubTypeTemplateAt will return the nth At template of this At
-    * @param nth At template
-    * @return nth At template
-    */
-   virtual TypeTemplate SubTypeTemplateAt(size_t nth) const;
+      /** 
+      * SubTypeTemplateAt will return the nth At template of this At
+      * @param nth At template
+      * @return nth At template
+      */
+      virtual TypeTemplate SubTypeTemplateAt( size_t nth ) const;
 
 
-   /**
-    * SubTypeTemplateSize will return the number of At templates in this socpe
-    * @return number of defined At templates
-    */
-   virtual size_t SubTypeTemplateSize() const;
+      /** 
+      * SubTypeTemplateSize will return the number of At templates in this socpe
+      * @return number of defined At templates
+      */
+      virtual size_t SubTypeTemplateSize() const;
 
 
-   virtual TypeTemplate_Iterator SubTypeTemplate_Begin() const;
-   virtual TypeTemplate_Iterator SubTypeTemplate_End() const;
-   virtual Reverse_TypeTemplate_Iterator SubTypeTemplate_RBegin() const;
-   virtual Reverse_TypeTemplate_Iterator SubTypeTemplate_REnd() const;
+      virtual TypeTemplate_Iterator SubTypeTemplate_Begin() const;
+      virtual TypeTemplate_Iterator SubTypeTemplate_End() const;
+      virtual Reverse_TypeTemplate_Iterator SubTypeTemplate_RBegin() const;
+      virtual Reverse_TypeTemplate_Iterator SubTypeTemplate_REnd() const;
 
 
-   /**
-    * TypeInfo will return the c++ type_info object of the At
-    * @return type_info object of At
-    */
-   virtual const std::type_info& TypeInfo() const;
+      /**
+      * TypeInfo will return the c++ type_info object of the At
+      * @return type_info object of At
+      */
+      virtual const std::type_info & TypeInfo() const;
 
 
-   /**
-    * typedefType will return a pointer to the At of the typedef.
-    * @return pointer to Type of MemberAt et. al.
-    */
-   virtual Type ToType() const;
+      /**
+      * typedefType will return a pointer to the At of the typedef.
+      * @return pointer to Type of MemberAt et. al.
+      */
+      virtual Type ToType() const;
 
-   /**
-    * Calculate the size for types based on other types,
-    * if the other type was not yet available to calculate the
-    * size at construction time.
-    * @return The calculated size, 0 if the underlying size is unknown.
-    */
-   size_t CalculateSize() const;
+      /**
+      * Calculate the size for types based on other types,
+      * if the other type was not yet available to calculate the
+      * size at construction time.
+      * @return The calculated size, 0 if the underlying size is unknown.
+      */
+      size_t CalculateSize() const;
 
-private:
-   bool ForwardStruct() const;
-   bool ForwardTemplate() const;
-   bool ForwardFunction() const;
+   private:  
+      bool ForwardStruct() const;
+      bool ForwardTemplate() const;
+      bool ForwardFunction() const;
 
-private:
-   /**
-    * pointer to the type of the typedef
-    * @label typedef type
-    * @link aggregation
-    * @supplierCardinality 1
-    * @clientCardinality 1
-    */
-   Type fTypedefType;
+   private:
+      /**
+      * pointer to the type of the typedef
+      * @label typedef type
+      * @link aggregation
+      * @supplierCardinality 1
+      * @clientCardinality 1
+      */
+      Type fTypedefType;
 
-};    // class Typedef
+   }; // class Typedef
 } //namespace Reflex
 
 #include "Reflex/Base.h"
@@ -409,7 +410,7 @@ Reflex::Typedef::BaseAt(size_t nth) const {
    if (ForwardStruct()) {
       return fTypedefType.BaseAt(nth);
    }
-   return Dummy::Base();
+   return Dummy::Base();  
 }
 
 
@@ -420,7 +421,7 @@ Reflex::Typedef::BaseSize() const {
    if (ForwardStruct()) {
       return fTypedefType.BaseSize();
    }
-   return 0;
+   return 0;  
 }
 
 
@@ -479,7 +480,7 @@ Reflex::Typedef::CalculateSize() const {
 //-------------------------------------------------------------------------------
 inline Reflex::Object
 Reflex::Typedef::CastObject(const Type& to,
-                            const Object& obj) const {
+                                                               const Object & obj ) const {
 //-------------------------------------------------------------------------------
    if (ForwardStruct()) {
       return fTypedefType.CastObject(to, obj);
@@ -568,7 +569,7 @@ Reflex::Typedef::DataMember_REnd() const {
 //-------------------------------------------------------------------------------
 inline void
 Reflex::Typedef::Destruct(void* instance,
-                          bool dealloc) const {
+                                             bool dealloc ) const {
 //-------------------------------------------------------------------------------
    if (ForwardStruct()) {
       fTypedefType.Destruct(instance, dealloc);
@@ -601,8 +602,8 @@ Reflex::Typedef::FunctionMemberAt(size_t nth) const {
 //-------------------------------------------------------------------------------
 inline Reflex::Member
 Reflex::Typedef::FunctionMemberByName(const std::string& name,
-                                      const Type& signature,
-                                      unsigned int modifiers_mask) const {
+                                                             const Type & signature,
+                                                             unsigned int modifiers_mask ) const {
 //-------------------------------------------------------------------------------
    if (ForwardStruct()) {
       return fTypedefType.FunctionMemberByName(name, signature, modifiers_mask);
@@ -713,7 +714,7 @@ Reflex::Typedef::IsVirtual() const {
 //-------------------------------------------------------------------------------
 inline Reflex::Member
 Reflex::Typedef::MemberByName(const std::string& name,
-                              const Type& signature) const {
+                                                                         const Type & signature ) const {
 //-------------------------------------------------------------------------------
    if (ForwardStruct()) {
       return fTypedefType.MemberByName(name, signature);
@@ -784,7 +785,7 @@ Reflex::Typedef::Member_REnd() const {
    if (ForwardStruct()) {
       return fTypedefType.Member_REnd();
    }
-   return Dummy::MemberCont().rend();
+   return Dummy::MemberCont().rend();  
 }
 
 
@@ -911,9 +912,9 @@ Reflex::Typedef::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
 inline const std::string&
 Reflex::Typedef::SimpleName(size_t& pos,
-                            unsigned int mod) const {
+                                                              unsigned int mod ) const {
 //-------------------------------------------------------------------------------
-   return TypeBase::SimpleName(pos, mod);
+   return TypeBase::SimpleName( pos, mod );
 }
 
 
@@ -1223,7 +1224,7 @@ Reflex::Typedef::ToType() const {
 inline bool
 Reflex::Typedef::ForwardStruct() const {
 //-------------------------------------------------------------------------------
-   switch (fTypedefType.TypeType()) {
+   switch ( fTypedefType.TypeType()) {
    case TYPEDEF:
    case CLASS:
    case STRUCT:
@@ -1239,7 +1240,7 @@ Reflex::Typedef::ForwardStruct() const {
 inline bool
 Reflex::Typedef::ForwardTemplate() const {
 //-------------------------------------------------------------------------------
-   switch (fTypedefType.TypeType()) {
+   switch ( fTypedefType.TypeType()) {
    case TYPEDEF:
    case TYPETEMPLATEINSTANCE:
    case MEMBERTEMPLATEINSTANCE:
@@ -1254,7 +1255,7 @@ Reflex::Typedef::ForwardTemplate() const {
 inline bool
 Reflex::Typedef::ForwardFunction() const {
 //-------------------------------------------------------------------------------
-   switch (fTypedefType.TypeType()) {
+   switch ( fTypedefType.TypeType()) {
    case TYPEDEF:
    case FUNCTION:
       return true;

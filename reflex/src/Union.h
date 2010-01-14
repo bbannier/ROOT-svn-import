@@ -17,6 +17,10 @@
 #include "ScopedType.h"
 
 namespace Reflex {
+
+   class Dictionary;
+
+
 /**
  * @class Union Union.h Reflex/Union.h
  * @author Stefan Roiser
@@ -26,22 +30,22 @@ namespace Reflex {
 class Union: public ScopedType {
 public:
    /** constructor */
-   Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, TYPE unionType = UNION);
+   Union( const Reflex::Dictionary& dictionary, const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, TYPE unionType = UNION);
 
    /** destructor */
    virtual ~Union();
 
    /**
-    * IsComplete will return true if all classes and BaseAt classes of this
-    * class are resolved and fully known in the system
-    */
+   * IsComplete will return true if all classes and BaseAt classes of this
+   * class are resolved and fully known in the system
+   */
    virtual bool IsComplete() const;
 
 public:
    /**
-    * AddFunctionMember will add the information about a function MemberAt
-    * @param fm pointer to function MemberAt
-    */
+   * AddFunctionMember will add the information about a function MemberAt
+   * @param fm pointer to function MemberAt
+   */
    virtual void AddFunctionMember(const Member& fm) const;
    virtual Member AddFunctionMember(const char* nam,
                                     const Type& typ,
@@ -55,21 +59,21 @@ private:
    mutable bool fCompleteType;
 
    /**
-    * short cut to constructors
-    * @label constructors
-    * @link aggregation
-    * @clientCardinality 1
-    * @supplierCardinality 1..*
-    */
+   * short cut to constructors
+   * @label constructors
+   * @link aggregation
+   * @clientCardinality 1
+   * @supplierCardinality 1..*
+   */
    mutable std::vector<Member> fConstructors;
 
    /**
-    * short cut to destructor
-    * @label destructor
-    * @link aggregation
-    * @clientCardinality 1
-    * @supplierCardinality 1
-    */
+   * short cut to destructor
+   * @label destructor
+   * @link aggregation
+   * @clientCardinality 1
+   * @supplierCardinality 1
+   */
    mutable Member fDestructor;
 
 }; // class Union

@@ -10,7 +10,7 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-# define REFLEX_BUILD
+#define REFLEX_BUILD
 #endif
 
 #include "Reflex/internal/TypeBase.h"
@@ -20,9 +20,11 @@
 #include "Reflex/Object.h"
 #include "Reflex/Scope.h"
 #include "Reflex/internal/TypeName.h"
+#include "Reflex/internal/Names.h"
 #include "Reflex/Base.h"
 #include "Reflex/TypeTemplate.h"
 #include "Reflex/DictionaryGenerator.h"
+#include "Reflex/Dictionary.h"
 
 
 #include "Array.h"
@@ -42,27 +44,29 @@
 #include "Reflex/Builder/TypeBuilder.h"
 
 //-------------------------------------------------------------------------------
-Reflex::TypeBase::TypeBase(const char* nam,
-                           size_t size,
-                           TYPE typeTyp,
-                           const std::type_info& ti,
-                           const Type& finalType,
+Reflex::TypeBase::TypeBase( const Reflex::Dictionary& dictionary,
+                            const char * nam, 
+                                  size_t size,
+                                  TYPE typeTyp, 
+                                  const std::type_info & ti,
+                                  const Type & finalType,
                            REPRESTYPE represType /*= REPRES_NOTYPE */):
    fTypeInfo(&ti),
    fRepresType(represType),
-   fScope(Scope::__NIRVANA__()),
-   fSize(size),
-   fTypeType(typeTyp),
-   fPropertyList(OwnedPropertyList(new PropertyListImpl())),
-   fBasePosition(Tools::GetBasePosition(nam)),
-   fFinalType(finalType.Id() ? new Type(finalType): 0),
-   fRawType(0) {
+     fScope( Scope::__NIRVANA__() ),
+     fSize( size ),
+     fTypeType( typeTyp ),
+     fPropertyList( OwnedPropertyList( new PropertyListImpl())),
+     fBasePosition(Tools::GetBasePosition( nam)),
+     fFinalType(finalType.Id() ? new Type(finalType) : 0 ),
+     fRawType(0) {
 //-------------------------------------------------------------------------------
 // Construct the dictinary info for a type.
-   Type t = TypeName::ByName(nam);
+   Names& names = Names::FromDictionary(dictionary);
 
-   if (t.Id() == 0) {
-      fTypeName = new TypeName(nam, this, &ti);
+   Type t = TypeName::ByName( nam, names );
+   if ( t.Id() == 0 ) { 
+      fTypeName = new TypeName(names, nam, this, &ti);
    } else {
       fTypeName = (TypeName*) t.Id();
 
@@ -72,20 +76,20 @@ Reflex::TypeBase::TypeBase(const char* nam,
 
       if (fTypeName->fTypeBase) {
          delete fTypeName->fTypeBase;
-      }
+   }
       fTypeName->fTypeBase = this;
    }
 
-   if (typeTyp != FUNDAMENTAL &&
-       typeTyp != FUNCTION &&
-       typeTyp != POINTER) {
+   if ( typeTyp != FUNDAMENTAL && 
+        typeTyp != FUNCTION &&
+        typeTyp != POINTER  ) {
       std::string sname = Tools::GetScopeName(nam);
-      fScope = Scope::ByName(sname);
+      fScope = Scope::ByName(sname, dictionary);
 
       if (fScope.Id() == 0) {
-         fScope = (new ScopeName(sname.c_str(), 0))->ThisScope();
+         fScope = (new ScopeName(Names::FromDictionary(dictionary), sname.c_str(), 0))->ThisScope();
       }
-
+    
       // Set declaring At
       if (fScope) {
          fScope.AddSubType(ThisType());
@@ -95,7 +99,7 @@ Reflex::TypeBase::TypeBase(const char* nam,
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeBase::~TypeBase() {
+Reflex::TypeBase::~TypeBase( ) {
 //-------------------------------------------------------------------------------
 // Destructor.
    fPropertyList.Delete();
@@ -119,8 +123,8 @@ Reflex::TypeBase::operator
 Reflex::Scope() const {
 //-------------------------------------------------------------------------------
 // Conversion operator to Scope.
-   switch (fTypeType) {
-   case CLASS :
+   switch ( fTypeType ) {
+   case CLASS:
    case STRUCT:
    case TYPETEMPLATEINSTANCE:
    case UNION:
@@ -182,7 +186,7 @@ Reflex::TypeBase::DeclaringScope() const {
 //-------------------------------------------------------------------------------
 Reflex::Object
 Reflex::TypeBase::CastObject(const Type& /* to */,
-                             const Object& /* obj */) const {
+                                                         const Object & /* obj */ ) const {
 //-------------------------------------------------------------------------------
 // Cast this type into "to" using object "obj"
    throw RuntimeError("This function can only be called on Class/Struct");
@@ -191,9 +195,9 @@ Reflex::TypeBase::CastObject(const Type& /* to */,
 
 
 //-------------------------------------------------------------------------------
-//const Reflex::Object &
+//const Reflex::Object & 
 //Reflex::TypeBase::Construct( const Type &  /*signature*/,
-//                                   const std::vector < Object > & /*values*/,
+//                                   const std::vector < Object > & /*values*/, 
 //                                   void * /*mem*/ ) const {
 //-------------------------------------------------------------------------------
 //  return Object(ThisType(), Allocate());
@@ -202,9 +206,9 @@ Reflex::TypeBase::CastObject(const Type& /* to */,
 
 //-------------------------------------------------------------------------------
 Reflex::Object
-Reflex::TypeBase::Construct(const Type& /*signature*/,
-                            const std::vector<void*>& /*values*/,
-                            void* /*mem*/) const {
+Reflex::TypeBase::Construct( const Type &  /*signature*/,
+                                   const std::vector < void * > & /*values*/, 
+                                   void * /*mem*/ ) const {
 //-------------------------------------------------------------------------------
 // Construct this type.
    return Object(ThisType(), Allocate());
@@ -214,7 +218,7 @@ Reflex::TypeBase::Construct(const Type& /*signature*/,
 //-------------------------------------------------------------------------------
 void
 Reflex::TypeBase::Destruct(void* instance,
-                           bool dealloc) const {
+                                       bool dealloc ) const {
 //-------------------------------------------------------------------------------
 // Destruct this type.
    if (dealloc) {
@@ -252,32 +256,32 @@ Reflex::Type
 Reflex::TypeBase::DetermineFinalType(const Type& t) const {
 //-------------------------------------------------------------------------------
 // Return the type t without typedefs information.
-
+   
    Type retType(t);
 
-   switch (t.TypeType()) {
+   switch ( t.TypeType()) {
    case TYPEDEF:
       retType = t.ToType().FinalType();
       break;
    case POINTER:
-      retType = PointerBuilder(t.ToType().FinalType(), t.TypeInfo());
+      retType = PointerBuilder(fTypeName->NamesGet(), t.ToType().FinalType(), t.TypeInfo());
       break;
    case POINTERTOMEMBER:
-      retType = PointerToMemberBuilder(t.ToType().FinalType(), t.PointerToMemberScope(), t.TypeInfo());
+      retType = PointerToMemberBuilder(fTypeName->NamesGet(), t.ToType().FinalType(), t.PointerToMemberScope(), t.TypeInfo());
       break;
    case ARRAY:
-      retType = ArrayBuilder(t.ToType().FinalType(), t.ArrayLength(), t.TypeInfo());
+      retType = ArrayBuilder(fTypeName->NamesGet(), t.ToType().FinalType(), t.ArrayLength(), t.TypeInfo());
       break;
    case FUNCTION:
-   {
-      std::vector<Type> vecParFinal(t.FunctionParameterSize());
+      {
+         std::vector<Type> vecParFinal(t.FunctionParameterSize());
 
       for (size_t iPar = 0; iPar < t.FunctionParameterSize(); ++iPar) {
-         vecParFinal[iPar] = t.FunctionParameterAt(iPar).FinalType();
+            vecParFinal[iPar] = t.FunctionParameterAt(iPar).FinalType();
       }
-      retType = FunctionTypeBuilder(t.ReturnType().FinalType(), vecParFinal, t.TypeInfo());
-      break;
-   }
+      retType = FunctionTypeBuilder(fTypeName->NamesGet(), t.ReturnType().FinalType(), vecParFinal, t.TypeInfo());
+         break;
+      }
    case UNRESOLVED:
       return Dummy::Type();
    default:
@@ -286,16 +290,16 @@ Reflex::TypeBase::DetermineFinalType(const Type& t) const {
 
    // copy fModifiers
    if (t.IsConst()) {
-      retType = ConstBuilder(retType);
-   }
+      retType = ConstBuilder(fTypeName->NamesGet(), retType);
+}
 
    if (t.IsReference()) {
-      retType = ReferenceBuilder(retType);
-   }
+      retType = ReferenceBuilder(fTypeName->NamesGet(), retType);
+}
 
    if (t.IsVolatile()) {
-      retType = VolatileBuilder(retType);
-   }
+      retType = VolatileBuilder(fTypeName->NamesGet(), retType);
+}
 
    return retType;
 } // DetermineFinalType
@@ -326,7 +330,7 @@ Reflex::TypeBase::Name(unsigned int mod) const {
 // Return the name of the type.
    if (0 != (mod & (SCOPED | S))) {
       return fTypeName->Name();
-   }
+}
    return std::string(fTypeName->Name(), fBasePosition);
 }
 
@@ -334,10 +338,10 @@ Reflex::TypeBase::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
 const std::string&
 Reflex::TypeBase::SimpleName(size_t& pos,
-                             unsigned int mod) const {
+                                                        unsigned int mod ) const {
 //-------------------------------------------------------------------------------
 // Return the name of the type.
-   if (0 != (mod & (SCOPED | S))) {
+   if ( 0 != ( mod & ( SCOPED | S ))) {
       pos = 0;
       return fTypeName->Name();
    }
@@ -390,10 +394,10 @@ Reflex::TypeBase::RawType() const {
    if (fRawType) {
       return *fRawType;
    }
-
+   
    Type rawType = ThisType();
-
-   while (true) {
+   
+   while ( true ) {
       switch (rawType.TypeType()) {
       case POINTER:
       case POINTERTOMEMBER:
@@ -404,9 +408,9 @@ Reflex::TypeBase::RawType() const {
       case UNRESOLVED:
          return Dummy::Type();
       default:
-         fRawType = new Type(*rawType.ToTypeBase());
+         fRawType = new Type(* rawType.ToTypeBase());
          return *fRawType;
-      }
+      }     
    }
 } // RawType
 
@@ -452,7 +456,7 @@ std::string
 Reflex::TypeBase::TypeTypeAsString() const {
 //-------------------------------------------------------------------------------
 // Return the kind of type as a string.
-   switch (fTypeType) {
+   switch ( fTypeType ) {
    case CLASS:
       return "CLASS";
       break;

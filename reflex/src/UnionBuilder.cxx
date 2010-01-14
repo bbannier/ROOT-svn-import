@@ -10,13 +10,14 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-# define REFLEX_BUILD
+#define REFLEX_BUILD
 #endif
 
 #include "Reflex/Builder/UnionBuilder.h"
 
 #include "Reflex/Any.h"
 #include "Reflex/Callback.h"
+#include "Reflex/Dictionary.h"
 #include "Reflex/Member.h"
 #include "DataMember.h"
 #include "FunctionMemberTemplateInstance.h"
@@ -31,7 +32,7 @@
 //
 
 //______________________________________________________________________________
-Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const std::type_info& ti, unsigned int modifiers /*= 0*/, TYPE typ /*=UNION*/):
+Reflex::UnionBuilderImpl::UnionBuilderImpl(const Reflex::Dictionary& dictionary, const char* nam, size_t size, const std::type_info& ti, unsigned int modifiers /*= 0*/, TYPE typ /*=UNION*/):
    fUnion(0)
    ,
    fLastMember()
@@ -39,7 +40,7 @@ Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const s
    fCallbackEnabled(true) {
 // Construct union info.
    std::string nam2(nam);
-   const Type& c = Type::ByName(nam2);
+   const Type& c = Type::ByName(nam2, dictionary);
 
    if (c) {
       // We found a typedef to a class with the same name
@@ -51,7 +52,7 @@ Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const s
          throw RuntimeError("Attempt to replace a non-class type with a union"); // FIXME: We should not throw!
       }
    }
-   fUnion = new Union(nam2.c_str(), size, ti, modifiers, typ);
+   fUnion = new Union(dictionary, nam2.c_str(), size, ti, modifiers, typ);
 }
 
 
@@ -59,8 +60,8 @@ Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const s
 Reflex::UnionBuilderImpl::~UnionBuilderImpl() {
 // UnionBuilderImpl destructor. Used for call back functions (e.g. Cintex).
    if (fCallbackEnabled) {
-      FireClassCallback(fUnion->ThisType());
-   }
+   FireClassCallback(fUnion->ThisType());
+}
 }
 
 
@@ -73,6 +74,12 @@ Reflex::UnionBuilderImpl::AddItem(const char* nam,
    fUnion->AddDataMember(fLastMember);
 }
 
+//______________________________________________________________________________
+void Reflex::UnionBuilderImpl::AddItem(const char* nam, const char* typ)
+{
+// !!! Obsolete, do not use.
+   AddItem(nam, TypeBuilder(fUnion->TypeNameGet()->NamesGet(), typ));
+}
 
 //______________________________________________________________________________
 void
@@ -96,7 +103,7 @@ Reflex::UnionBuilderImpl::AddFunctionMember(const char* nam,
                                             unsigned int modifiers /*= 0*/) {
 // Add function member info (internal).
    if (Tools::IsTemplated(nam)) {
-      fLastMember = Member(new FunctionMemberTemplateInstance(nam, typ, stubFP, stubCtx, params, modifiers, *(dynamic_cast<ScopeBase*>(fUnion))));
+      fLastMember = Member(new FunctionMemberTemplateInstance(fUnion->TypeNameGet()->NamesGet(), nam, typ, stubFP, stubCtx, params, modifiers, *(dynamic_cast<ScopeBase*>(fUnion))));
    } else {
       fLastMember = Member(new FunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
    }
@@ -159,8 +166,8 @@ Reflex::UnionBuilderImpl::ToType() {
 //
 
 //______________________________________________________________________________
-Reflex::UnionBuilder::UnionBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers /*= 0*/, TYPE typ /*= UNION*/):
-   fUnionBuilderImpl(nam, size, ti, modifiers, typ) {
+Reflex::UnionBuilder::UnionBuilder(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers /*= 0*/, TYPE typ /*= UNION*/):
+   fUnionBuilderImpl(dictionary, nam, size, ti, modifiers, typ) {
 // Constructor.
 }
 
@@ -176,7 +183,7 @@ Reflex::UnionBuilder&
 Reflex::UnionBuilder::AddItem(const char* nam,
                               const char* typ) {
 // !!! Obsolete, do not use.
-   fUnionBuilderImpl.AddItem(nam, TypeBuilder(typ));
+   fUnionBuilderImpl.AddItem(nam, typ);
    return *this;
 }
 

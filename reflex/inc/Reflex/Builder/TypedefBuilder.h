@@ -18,6 +18,7 @@
 
 namespace Reflex {
 // forward declarations
+class Dictionary;
 
 /**
  * @class TypedefBuilderImpl TypedefBuilder.h Reflex/Builder/TypedefBuilderImpl.h
@@ -28,8 +29,9 @@ namespace Reflex {
 class RFLX_API TypedefBuilderImpl {
 public:
    /** constructor */
-   TypedefBuilderImpl(const char* typ,
-                      const Type &typedefType);
+   TypedefBuilderImpl(const Reflex::Dictionary& dictionary,
+                      const char* typ,
+                      const Type& typedefType);
 
 
    /** destructor */
@@ -77,7 +79,8 @@ template <typename T>
 class TypedefBuilder  {
 public:
    /** constructor */
-   TypedefBuilder(const char* nam);
+   TypedefBuilder(const Reflex::Dictionary& dictionary,
+                  const char* nam);
 
 
    /** destructor */
@@ -111,18 +114,17 @@ private:
 
 //-------------------------------------------------------------------------------
 template <typename T>
-inline Reflex::TypedefBuilder<T>::TypedefBuilder(const char* nam)
+inline Reflex::TypedefBuilder<T>::TypedefBuilder(const Reflex::Dictionary& dictionary,
+                                                 const char* nam)
 //-------------------------------------------------------------------------------
-   : fTypedefBuilderImpl(nam, TypeDistiller<T>::Get()) {
+   : fTypedefBuilderImpl(dictionary, nam, TypeDistiller<T>::Get(dictionary)) {
 }
 
 
 //-------------------------------------------------------------------------------
 template <typename T> template <typename P>
-inline Reflex::TypedefBuilder<T>&
-Reflex::TypedefBuilder<T
->::AddProperty(const char* key,
-               P value) {
+inline Reflex::TypedefBuilder<T>& Reflex::TypedefBuilder<T>::AddProperty(const char* key,
+                                                                         P value) {
 //-------------------------------------------------------------------------------
    fTypedefBuilderImpl.AddProperty(key, value);
    return *this;
@@ -131,8 +133,7 @@ Reflex::TypedefBuilder<T
 
 //-------------------------------------------------------------------------------
 template <typename T> inline Reflex::Type
-Reflex::TypedefBuilder<T
->::ToType() {
+Reflex::TypedefBuilder<T>::ToType() {
 //-------------------------------------------------------------------------------
    return fTypedefBuilderImpl.ToType();
 }

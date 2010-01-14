@@ -10,7 +10,7 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-# define REFLEX_BUILD
+#define REFLEX_BUILD
 #endif
 
 #include "Reflex/Builder/ClassBuilder.h"
@@ -37,14 +37,14 @@
 //
 
 //______________________________________________________________________________
-Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ):
+Reflex::ClassBuilderImpl::ClassBuilderImpl(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ):
    fClass(0),
    fLastMember(),
    fNewClass(true),
    fCallbackEnabled(true) {
    // -- Construct a class information (internal).
    std::string nam2(nam);
-   Type c = Type::ByName(nam2);
+   Type c = Type::ByName(nam2, dictionary);
 
    if (c) {
       // We found a typedef to a class with the same name
@@ -59,10 +59,10 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
    }
 
    if (!c) {
-      if (Tools::IsTemplated(nam)) {
-         fClass = new ClassTemplateInstance(nam2.c_str(), size, ti, modifiers);
+   if (Tools::IsTemplated(nam)) {
+         fClass = new ClassTemplateInstance(dictionary, nam2.c_str(), size, ti, modifiers);
       } else {
-         fClass = new Class(nam2.c_str(), size, ti, modifiers, typ);
+         fClass = new Class(dictionary, nam2.c_str(), size, ti, modifiers, typ);
       }
    } else {
       fNewClass = false;
@@ -90,7 +90,7 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
          } else if (fClass->Modifiers() != modifiers) {
             throw RuntimeError(std::string("Attempt to change the modifiers of the class ") + std::string(nam));
          }
-      }
+   }
    }
 }
 
@@ -107,9 +107,9 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(Class* cl):
 Reflex::ClassBuilderImpl::~ClassBuilderImpl() {
    // -- ClassBuilderImpl destructor. Used for call back functions (e.g. Cintex).
    if (fCallbackEnabled) {
-      FireClassCallback(fClass->ThisType());
-   }
-   
+   FireClassCallback(fClass->ThisType());
+}
+
 }
 
 
@@ -178,7 +178,7 @@ Reflex::ClassBuilderImpl::AddFunctionMember(const char* nam,
    }
 
    if (Tools::IsTemplated(nam)) {
-      fLastMember = Member(new FunctionMemberTemplateInstance(nam, typ, stubFP, stubCtx, params, modifiers, *(dynamic_cast<ScopeBase*>(fClass))));
+      fLastMember = Member(new FunctionMemberTemplateInstance(fClass->TypeNameGet()->NamesGet(), nam, typ, stubFP, stubCtx, params, modifiers, *(dynamic_cast<ScopeBase*>(fClass))));
    } else {
       fLastMember = Member(new FunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
    }
@@ -191,14 +191,14 @@ void
 Reflex::ClassBuilderImpl::AddTypedef(const Type& typ,
                                      const char* def) {
    // -- Add typedef info (internal).
-   Type ret = Type::ByName(def);
+   Type ret = Type::ByName(def, fClass->TypeNameGet()->NamesGet());
 
    // Check for typedef AA AA;
-   if (ret == typ && !typ.IsTypedef()) {
+   if (ret == typ && ! typ.IsTypedef()) {
       if (typ) {
          typ.ToTypeBase()->HideName();
       } else {
-         ((TypeName*) typ.Id())->HideName();
+         ((TypeName*)typ.Id())->HideName();
       }
    }
    // We found the typedef type
@@ -207,10 +207,15 @@ Reflex::ClassBuilderImpl::AddTypedef(const Type& typ,
    }
    // Create a new typedef
    else {
-      new Typedef(def, typ);
+      new Typedef(fClass->TypeNameGet()->NamesGet(), def , typ);
    }
 } // AddTypedef
 
+//______________________________________________________________________________
+void Reflex::ClassBuilderImpl::AddTypedef(const char* typ, const char* def)
+{
+   AddTypedef(TypeBuilder(fClass->TypeNameGet()->NamesGet(), typ), def);
+}
 
 //______________________________________________________________________________
 void
@@ -224,7 +229,7 @@ Reflex::ClassBuilderImpl::AddEnum(const char* nam,
    // not only a declaration. (It is called in the dictionary header already)
    //   EnumTypeBuilder(nam, values, *ti, modifiers);
 
-   Enum* e = new Enum(nam, *ti, modifiers);
+   Enum* e = new Enum(fClass->TypeNameGet()->NamesGet(), nam, *ti, modifiers);
 
    std::vector<std::string> valVec = std::vector<std::string>();
    Tools::StringSplit(valVec, values, ";");
@@ -238,7 +243,7 @@ Reflex::ClassBuilderImpl::AddEnum(const char* nam,
       std::string value;
       Tools::StringSplitPair(name, value, *it, "=");
       unsigned long int valInt = atol(value.c_str());
-      e->AddDataMember(Member(new DataMember(name.c_str(), Type::ByName("int"), valInt, 0)));
+      e->AddDataMember(Member(new DataMember(name.c_str(), Type::ByName("int", fClass->TypeNameGet()->NamesGet()), valInt, 0)));
    }
 } // AddEnum
 
@@ -262,7 +267,7 @@ Reflex::ClassBuilderImpl::AddProperty(const char* key,
    } else {
       fClass->Properties().AddProperty(key, value);
    }
-}
+   }
 
 
 //______________________________________________________________________________
@@ -284,7 +289,7 @@ Reflex::ClassBuilderImpl::AddOnDemandFunctionMemberBuilder(OnDemandBuilderForSco
 // specified by kind.
    fClass->RegisterOnDemandBuilder(odb, ScopeBase::kBuildFunctionMembers);
    odb->SetContext(fClass);
-}
+   }
 
 
 //-------------------------------------------------------------------------------
@@ -324,8 +329,9 @@ Reflex::ClassBuilderImpl::ToType() {
 //
 
 //______________________________________________________________________________
-Reflex::ClassBuilder::ClassBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ):
-   fClassBuilderImpl(nam, ti, size, modifiers, typ) {
+Reflex::ClassBuilder::ClassBuilder(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ):
+   fClassBuilderImpl(dictionary, nam, ti, size, modifiers, typ),
+   fDictionary(dictionary) {
    // -- Constructor
 }
 
@@ -385,7 +391,7 @@ Reflex::ClassBuilder&
 Reflex::ClassBuilder::AddTypedef(const char* typ,
                                  const char* def) {
    // -- Add typedef info to this class.
-   fClassBuilderImpl.AddTypedef(TypeBuilder(typ), def);
+   fClassBuilderImpl.AddTypedef(typ, def);
    return *this;
 }
 
@@ -413,13 +419,13 @@ Reflex::ClassBuilder::AddEnum(const char* nam,
 
 
 /*
-   //______________________________________________________________________________
-   Reflex::ClassBuilder& Reflex::ClassBuilder::addUnion(const char* nam, const char* values, unsigned int modifiers)
-   {
-   fClassBuilderImpl.addUnion(nam, values, modifiers);
-   return *this;
-   }
- */
+//______________________________________________________________________________
+Reflex::ClassBuilder& Reflex::ClassBuilder::addUnion(const char* nam, const char* values, unsigned int modifiers)
+{
+  fClassBuilderImpl.addUnion(nam, values, modifiers);
+  return *this;
+}
+*/
 
 //-------------------------------------------------------------------------------
 Reflex::ClassBuilder&

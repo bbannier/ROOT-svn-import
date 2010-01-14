@@ -72,15 +72,24 @@ MACRO (_REFLEX_ADD_GENREFLEX_COMMAND infile outfile genreflex_includes genreflex
       LIST(APPEND _genreflex_options -s "${genreflex_selection}")
    ENDIF (NOT "${genreflex_selection}" STREQUAL "")
 
+   # fix the _DEBUG NDEBUG issue with visual studio
+   IF (MSVC)
+      SET(PREPARE_GENREFLEX_COMMAND COMMAND if Debug==${CMAKE_CFG_INTDIR} \(set GENREFLEX_DBG=-D_DEBUG\) else  \(set GENREFLEX_DBG=-DNDEBUG\))
+      SET(genreflex_definitions_ex ${genreflex_definitions} %GENREFLEX_DBG%)
+      SET(PREPARE_GENREFLEX_COMMAND ${PREPARE_GENREFLEX_COMMAND} COMMAND set GCCXML_COMPILER=${GCCXML_COMPILER})
+   ELSE (MSVC)
+      SET(PREPARE_GENREFLEX_COMMAND COMMAND)
+   ENDIF (MSVC)
+
    # link src to target through a genreflex command
    ADD_CUSTOM_COMMAND(OUTPUT ${outfile}
+                      ${PREPARE_GENREFLEX_COMMAND}
                       COMMAND ${PYTHON_EXECUTABLE}
-                      ARGS "${GENREFLEX_SCRIPT}" "${infile}" -o "${outfile}" ${_genreflex_options} ${genreflex_includes} ${genreflex_definitions}
+                      ARGS "${GENREFLEX_SCRIPT}" "${infile}" -o "${outfile}" ${_genreflex_options} ${genreflex_includes} ${genreflex_definitions_ex}
                       IMPLICIT_DEPENDS CXX ${infile}
                       DEPENDS genreflex ${infile} ${genreflex_selection}
                       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                      COMMENT "Generating Reflex dictionary ${_out_rel}"
-                      VERBATIM)
+                      COMMENT "Generating Reflex dictionary ${_out_rel}")
 
    MACRO_ADDITIONAL_CLEAN_FILES(${outfile})
 
@@ -145,7 +154,7 @@ MACRO (_REFLEX_GET_DICTIONARIES_PATH dictionaries _path)
 
       GET_TARGET_PROPERTY(_type ${_d} TYPE)
 
-      IF (${_type} STREQUAL "MODULE_LIBRARY")
+      IF (${_type} STREQUAL "SHARED_LIBRARY")
 
          MACRO_GET_TARGET_DIRECTORY(${_d} _location)
          IF (UNIX)
@@ -154,7 +163,7 @@ MACRO (_REFLEX_GET_DICTIONARIES_PATH dictionaries _path)
             SET(${_path} "${_location}\;${${_path}}")
          ENDIF (UNIX)
 
-      ENDIF (${_type} STREQUAL "MODULE_LIBRARY")
+      ENDIF (${_type} STREQUAL "SHARED_LIBRARY")
 
    ENDFOREACH (_d ${dictionaries})
 
@@ -215,9 +224,10 @@ ENDMACRO (REFLEX_ADD_LIBRARY name)
 
 MACRO (REFLEX_ADD_DICTIONARY name)
 
-   MACRO_PARSE_ARGUMENTS(ADD_DICTIONARY "SELECTION;OPTIONS" "WITH_PREFIX;TEST" "${ARGN}")
+   MACRO_PARSE_ARGUMENTS(ADD_DICTIONARY "SELECTION;OPTIONS;EXTRA_FILES" "WITH_PREFIX;TEST" "${ARGN}")
 
    SET(_genreflex_files ${ADD_DICTIONARY_DEFAULT_ARGS})
+   SET(_genreflex_extra_files ${ADD_DICTIONARY_EXTRA_FILES})
    SET(_genreflex_options ${ADD_DICTIONARY_OPTIONS})
    SET(_genreflex_selection ${ADD_DICTIONARY_SELECTION})
 
@@ -226,13 +236,13 @@ MACRO (REFLEX_ADD_DICTIONARY name)
                                 SELECTION ${_genreflex_selection}
                                 OPTIONS ${_genreflex_options})
 
-   SET(_add_library_params MODULE)
+   SET(_add_library_params SHARED)
 
    IF (ADD_DICTIONARY_TEST)
       SET(_add_library_params ${_add_library_params} TEST)
    ENDIF (ADD_DICTIONARY_TEST)
 
-   REFLEX_ADD_LIBRARY(${name} ${_add_library_params} ${_dict_files})
+   REFLEX_ADD_LIBRARY(${name} ${_add_library_params} ${_dict_files} ${_genreflex_extra_files})
    TARGET_LINK_LIBRARIES(${name} Reflex)
 
    IF (ADD_DICTIONARY_WITH_PREFIX)

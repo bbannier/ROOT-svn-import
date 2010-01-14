@@ -10,7 +10,7 @@
 // This software is provided "as is" without express or implied warranty.
 
 #ifndef REFLEX_BUILD
-# define REFLEX_BUILD
+#define REFLEX_BUILD
 #endif
 
 #include "NameLookup.h"
@@ -24,11 +24,12 @@
 #include <string.h>
 
 //______________________________________________________________________________
-Reflex::NameLookup::NameLookup(const std::string& name, const Scope& current):
+Reflex::NameLookup::NameLookup(const std::string& name, const Scope& current, const Dictionary& dictionary):
    fLookupName(name),
    fPosNamePart(0),
    fPosNamePartLen(std::string::npos),
    fCurrentScope(current),
+   fDictionary(dictionary),
    fPartialSuccess(false) {
    // Initialize a NameLookup object used internally to keep track of lookup
    // states.
@@ -38,10 +39,11 @@ Reflex::NameLookup::NameLookup(const std::string& name, const Scope& current):
 //______________________________________________________________________________
 Reflex::Type
 Reflex::NameLookup::LookupType(const std::string& nam,
-                               const Scope& current) {
+                               const Scope& current,
+                               const Dictionary& dictionary) {
    // Lookup up a (possibly scoped) type name appearing in the scope context
    // current. This is the public interface for type lookup.
-   NameLookup lookup(nam, current);
+   NameLookup lookup(nam, current, dictionary);
    return lookup.Lookup<Type>();
 }
 
@@ -49,25 +51,26 @@ Reflex::NameLookup::LookupType(const std::string& nam,
 //______________________________________________________________________________
 Reflex::Scope
 Reflex::NameLookup::LookupScope(const std::string& nam,
-                                const Scope& current) {
+                                const Scope& current,
+                                const Dictionary& dictionary) {
    // Lookup up a (possibly scoped) scope name appearing in the scope context
    // current. This is the public interface for scope lookup.
-   NameLookup lookup(nam, current);
+   NameLookup lookup(nam, current, dictionary);
    return lookup.Lookup<Scope>();
 }
 
 
 /*
-   //______________________________________________________________________________
-   Reflex::Member LookupMember(const std::string& nam, const Scope& current )
-   {
+//______________________________________________________________________________
+Reflex::Member LookupMember(const std::string& nam, const Scope& current )
+{
    // Lookup up a (possibly scoped) member name appearing in the scope context
    // current. This is the public interface for member lookup.
    NameLookup lookup(nam, current);
    // this will not work, member lookup is too different from type lookup...
    return lookup.Lookup<Member>();
-   }
- */
+}
+*/
 
 //______________________________________________________________________________
 template <class T> T
@@ -96,65 +99,65 @@ Reflex::NameLookup::Lookup(bool isTemplateExpanded /* = false */) {
       // We need to replace the template argument both of this type
       // and any of it enclosing type:
       //    myspace::mytop<A,B>::mytype<C>
-
+      
       std::ostringstream tmp;
 
-      for (size_t i = 0, level = 0, sofar = 0; i < fLookupName.size(); ++i) {
-         if (level == 0) {
-            tmp << fLookupName.substr(sofar, i + 1 - sofar);
-            sofar = i + 1;
+      for(size_t i = 0, level = 0, sofar = 0; i < fLookupName.size(); ++i) {
+         if (level==0) {
+            tmp << fLookupName.substr( sofar, i+1 - sofar );
+            sofar = i+1;
          }
 
-         switch (fLookupName[i]) {
-         case '<': ++level; break;
-         case '>': --level;    // intentional fall through to the ',' case
-         case ',':
+         switch( fLookupName[i] ) {
+            case '<': ++level; break;
+            case '>': --level; // intentional fall through to the ',' case
+            case ',':
 
-            if (level == (1 - (int) (fLookupName[i] == '>'))) {
-               std::string arg(fLookupName.substr(sofar, i - sofar));
+               if (level == (1 - (int)(fLookupName[i]=='>'))) {
+                  std::string arg( fLookupName.substr( sofar, i-sofar) );
+                  
+                  size_t p = arg.size();
+         
+                  while (p > 0 && (arg[p-1] == '*' || arg[p-1] == '&' || arg[p-1] == ' ') )
+                     --p;
+                  
+                  std::string end( arg.substr( p ) );
+                  arg.erase( p  );
 
-               size_t p = arg.size();
-
-               while (p > 0 && (arg[p - 1] == '*' || arg[p - 1] == '&' || arg[p - 1] == ' '))
-                  --p;
-
-               std::string end(arg.substr(p));
-               arg.erase(p);
-
-               const char* start = arg.c_str();
+                  const char *start = arg.c_str();
 
                while (strncmp(start, "const ", 6) == 0)
                   start += 6;
 
-               tmp << arg.substr(0, start - arg.c_str());
+                  tmp << arg.substr( 0, start - arg.c_str() );
 
                while (strncmp(start, "std::", 5) == 0)
                   start += 5;
 
-               arg.erase(0, start - arg.c_str());
+                  arg.erase(0, start - arg.c_str() ); 
 
-               Reflex::Type type(LookupType(arg, startScope));
+                  Reflex::Type type( LookupType(arg , startScope, fDictionary) );
 
-               if (type) {
-                  if (type.Name() != "Double32_t" && type.Name() != "Float16_t") {
-                     // Use the real type rather than the typedef unless
-                     // this is Double32_t or Float16_t
-                     type = type.FinalType();
+                  if (type) {
+                     if (type.Name()!="Double32_t" && type.Name()!="Float16_t") {
+                        // Use the real type rather than the typedef unless
+                        // this is Double32_t or Float16_t
+                        type = type.FinalType();
+                     }
+                     tmp << type.Name(Reflex::SCOPED|Reflex::QUALIFIED);
+                  } else {
+                     tmp << arg;
                   }
-                  tmp << type.Name(Reflex::SCOPED | Reflex::QUALIFIED);
-               } else {
-                  tmp << arg;
-               }
-               tmp << end;
+                  tmp << end;
+                  
+                  tmp << fLookupName[i];
 
-               tmp << fLookupName[i];
-
-               sofar = i + 1;
-            }
-            break;
+                  sofar = i+1;
+               } 
+               break;
          } // switch
       }
-      NameLookup next(tmp.str(), startScope);
+      NameLookup next( tmp.str(), startScope, fDictionary );
       return next.Lookup<T>(true);
    }
 
@@ -193,8 +196,7 @@ Reflex::NameLookup::LookupInScope() {
 
    // global scope can use hashed containers:
    if (fCurrentScope == Scope::GlobalScope()) {
-      Type freeType(Type::ByName(fLookupName.c_str() + fPosNamePart));
-
+      Type freeType(Type::ByName(fLookupName.c_str() + fPosNamePart, fDictionary));
       if (freeType.Id()) {
          //fprintf(stderr, "Reflex::NameLookup::LookupInScope<T>: lookup up '%s', partial success with subscope '%s' ...\n", fLookupName.c_str(), name.c_str());
          fPartialSuccess = true;
@@ -210,10 +212,10 @@ Reflex::NameLookup::LookupInScope() {
          } else {
             fCurrentScope = freeType;
          }
-         return LookupInScope<T>();
+         return LookupInScope< T >();
       }
 
-      Scope freeScope(Scope::ByName(fLookupName.c_str() + fPosNamePart));
+      Scope freeScope(Scope::ByName(fLookupName.c_str() + fPosNamePart, fDictionary));
 
       // only take namespaces into account - classes were checked as part of SubType
       if (freeScope.Id() && freeScope.IsNamespace()) {
@@ -240,13 +242,13 @@ Reflex::NameLookup::LookupInScope() {
 
          if (base) {
             size_t pos;
-            const std::string& name(base->SimpleName(pos));
+            const std::string &name(base->SimpleName(pos));
 
             //fprintf(stderr, "Reflex::NameLookup::LookupInScope<T>: looking up '%s', considering subscope '%s' ...\n", fLookupName.c_str(), name.c_str());
             if (
-               (fLookupName[fPosNamePart] == name[pos]) &&
-               !fLookupName.compare(fPosNamePart, fPosNamePartLen, name, pos, name.length())
-            ) {
+                (fLookupName[fPosNamePart] == name[pos]) &&
+                !fLookupName.compare(fPosNamePart, fPosNamePartLen, name, pos, name.length())
+                ) {
                //fprintf(stderr, "Reflex::NameLookup::LookupInScope<T>: lookup up '%s', partial success with subscope '%s' ...\n", fLookupName.c_str(), name.c_str());
                fPartialSuccess = true;
                fLookedAtUsingDir.clear();
@@ -261,7 +263,7 @@ Reflex::NameLookup::LookupInScope() {
                } else {
                   fCurrentScope = type;
                }
-               return LookupInScope<T>();
+               return LookupInScope< T >();
             }
          }
       }
@@ -279,9 +281,9 @@ Reflex::NameLookup::LookupInScope() {
                const std::string& name(base->SimpleName(pos));
 
                if (
-                  (fLookupName[fPosNamePart] == name[pos]) &&
-                  !fLookupName.compare(fPosNamePart, fPosNamePartLen, name, pos, name.length())
-               ) {
+                   (fLookupName[fPosNamePart] == name[pos]) &&
+                   !fLookupName.compare(fPosNamePart, fPosNamePartLen, name, pos, name.length())
+                   ) {
                   fPartialSuccess = true;
                   fLookedAtUsingDir.clear();
                   FindNextScopePos();
@@ -326,7 +328,7 @@ Reflex::NameLookup::LookupInScope() {
                return bi->ToType();
             }
             fCurrentScope = bi->ToType().FinalType();
-            return LookupInScope<T>();
+            return LookupInScope< T >();
          }
       }
    }
@@ -373,23 +375,25 @@ Reflex::NameLookup::LookupInUnknownScope() {
 //______________________________________________________________________________
 Reflex::Member
 Reflex::NameLookup::LookupMember(const std::string& nam,
-                                 const Scope& current) {
+                                 const Scope& current,
+                                 const Dictionary& dictionary) {
    // Lookup a member.
    if (Tools::GetBasePosition(nam)) {
-      return LookupMemberQualified(nam);
+      return LookupMemberQualified(nam, dictionary);
    }
-   return LookupMemberUnqualified(nam, current);
+   return LookupMemberUnqualified(nam, current, dictionary);
 }
 
 
 //______________________________________________________________________________
 Reflex::Member
-Reflex::NameLookup::LookupMemberQualified(const std::string& nam) {
+Reflex::NameLookup::LookupMemberQualified(const std::string& nam,
+                                          const Dictionary& dictionary) {
    // Lookup of a qualified member.
-   Scope bscope = Scope::ByName(Tools::GetScopeName(nam));
+   Scope bscope = Scope::ByName(Tools::GetScopeName(nam), dictionary);
 
    if (bscope) {
-      return LookupMemberUnqualified(Tools::GetBaseName(nam), bscope);
+      return LookupMemberUnqualified(Tools::GetBaseName(nam), bscope, dictionary);
    }
    return Dummy::Member();
 }
@@ -398,7 +402,8 @@ Reflex::NameLookup::LookupMemberQualified(const std::string& nam) {
 //______________________________________________________________________________
 Reflex::Member
 Reflex::NameLookup::LookupMemberUnqualified(const std::string& nam,
-                                            const Scope& current) {
+                                            const Scope& current,
+                                            const Dictionary& dictionary) {
    // Lookup of an unqualified member.
    {
       Member m = current.MemberByName(nam);
@@ -409,7 +414,7 @@ Reflex::NameLookup::LookupMemberUnqualified(const std::string& nam,
    }
 
    for (Scope_Iterator si = current.UsingDirective_Begin(); si != current.UsingDirective_End(); ++si) {
-      Member m = LookupMember(nam, *si);
+      Member m = LookupMember(nam, *si, dictionary);
 
       if (m) {
          return m;
@@ -417,7 +422,7 @@ Reflex::NameLookup::LookupMemberUnqualified(const std::string& nam,
    }
 
    for (Base_Iterator bi = current.Base_Begin(); bi != current.Base_End(); ++bi) {
-      Member m = LookupMember(nam, bi->ToScope());
+      Member m = LookupMember(nam, bi->ToScope(), dictionary);
 
       if (m) {
          return m;
@@ -425,7 +430,7 @@ Reflex::NameLookup::LookupMemberUnqualified(const std::string& nam,
    }
 
    if (!current.IsTopScope()) {
-      return LookupMember(nam, current.DeclaringScope());
+      return LookupMember(nam, current.DeclaringScope(), dictionary);
    }
    return Dummy::Member();
 } // LookupMemberUnqualified
@@ -480,3 +485,24 @@ Reflex::NameLookup::FindNextScopePos() {
       fPosNamePartLen -= 2;
    }
 } // FindNextScopePos
+
+//______________________________________________________________________________
+Reflex::Type Reflex::NameLookup::LookupType(const std::string& nam, const Scope& current) {
+   return LookupType(nam, current, current.DictionaryGet());
+}
+
+//______________________________________________________________________________
+Reflex::Scope Reflex::NameLookup::LookupScope(const std::string& nam, const Scope& current) {
+   return LookupScope(nam, current, current.DictionaryGet());
+}
+
+//______________________________________________________________________________
+Reflex::Member Reflex::NameLookup::LookupMember(const std::string& nam, const Scope& current) {
+   return LookupMember(nam, current, current.DictionaryGet());
+}
+
+//______________________________________________________________________________
+Reflex::Member Reflex::NameLookup::LookupMemberUnqualified(const std::string& nam, const Scope& current) {
+   return LookupMemberUnqualified(nam, current, current.DictionaryGet());
+}
+

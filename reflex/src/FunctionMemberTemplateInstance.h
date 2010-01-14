@@ -17,79 +17,80 @@
 #include "TemplateInstance.h"
 
 namespace Reflex {
-// forward declarations
-class Type;
+   // forward declarations
+   class Type;
 
-/**
- * @class FunctionMemberTemplateInstance FunctionMemberTemplateInstance.h Reflex/FunctionMemberTemplateInstance.h
- * @author Stefan Roiser
- * @date 13/1/2004
- * @ingroup Ref
- */
+   /**
+   * @class FunctionMemberTemplateInstance FunctionMemberTemplateInstance.h Reflex/FunctionMemberTemplateInstance.h
+   * @author Stefan Roiser
+   * @date 13/1/2004
+   * @ingroup Ref
+   */
 class FunctionMemberTemplateInstance: public FunctionMember,
    public TemplateInstance {
-public:
-   /** default constructor */
-   FunctionMemberTemplateInstance(const char* nam,
-                                  const Type& typ,
-                                  StubFunction stubFP,
-                                  void* stubCtx = 0,
-                                  const char* params = 0,
-                                  unsigned int modifiers = 0,
-                                  const Scope& scop = Scope());
+   public:
+      /** default constructor */
+      FunctionMemberTemplateInstance( const Reflex::Dictionary& dictionary, 
+                                      const char * nam,
+         const Type & typ,
+         StubFunction stubFP,
+         void * stubCtx = 0,
+         const char * params = 0, 
+         unsigned int modifiers = 0,
+         const Scope & scop = Scope());
 
 
-   /** destructor */
-   virtual ~FunctionMemberTemplateInstance();
+      /** destructor */
+      virtual ~FunctionMemberTemplateInstance();
 
 
-   /**
-    * Name returns the fully qualified Name of the
-    * templated function
-    * @param  typedefexp expand typedefs or not
-    * @return fully qualified Name of templated function
-    */
-   std::string Name(unsigned int mod = 0) const;
+      /**
+      * Name returns the fully qualified Name of the
+      * templated function
+      * @param  typedefexp expand typedefs or not
+      * @return fully qualified Name of templated function
+      */
+      std::string Name( unsigned int mod = 0 ) const;
 
 
-   /**
-    * TemplateArgumentAt will return a pointer to the nth template argument
-    * @param  nth nth template argument
-    * @return pointer to nth template argument
-    */
-   Type TemplateArgumentAt(size_t nth) const;
+      /**
+      * TemplateArgumentAt will return a pointer to the nth template argument
+      * @param  nth nth template argument
+      * @return pointer to nth template argument
+      */
+      Type TemplateArgumentAt( size_t nth ) const;
 
 
-   /**
-    * templateArgSize will return the number of template arguments
-    * @return number of template arguments
-    */
-   size_t TemplateArgumentSize() const;
+      /**
+      * templateArgSize will return the number of template arguments
+      * @return number of template arguments
+      */
+      size_t TemplateArgumentSize() const;
 
 
-   virtual Type_Iterator TemplateArgument_Begin() const;
-   virtual Type_Iterator TemplateArgument_End() const;
-   virtual Reverse_Type_Iterator TemplateArgument_RBegin() const;
-   virtual Reverse_Type_Iterator TemplateArgument_REnd() const;
+      virtual Type_Iterator TemplateArgument_Begin() const;
+      virtual Type_Iterator TemplateArgument_End() const;
+      virtual Reverse_Type_Iterator TemplateArgument_RBegin() const;
+      virtual Reverse_Type_Iterator TemplateArgument_REnd() const;
 
 
-   /**
-    * TemplateFamily returns the corresponding MemberTemplate if any
-    * @return corresponding MemberTemplate
-    */
-   MemberTemplate TemplateFamily() const;
+      /**
+      * TemplateFamily returns the corresponding MemberTemplate if any
+      * @return corresponding MemberTemplate
+      */
+      MemberTemplate TemplateFamily() const;
 
-private:
-   /**
-    * The template type (family)
-    * @label template family
-    * @link aggregation
-    * @clientCardinality 1
-    * @supplierCardinality 1
-    */
-   MemberTemplate fTemplateFamily;
+   private:
+      /** 
+      * The template type (family)
+      * @label template family
+      * @link aggregation
+      * @clientCardinality 1
+      * @supplierCardinality 1
+      */
+      MemberTemplate fTemplateFamily;      
 
-};    // class FunctionMemberTemplateInstance
+   }; // class FunctionMemberTemplateInstance
 } // namespace Reflex
 
 //-------------------------------------------------------------------------------

@@ -17,54 +17,56 @@
 #include "Reflex/Type.h"
 
 namespace Reflex {
-// forward declarations
-
-/**
- * @class Pointer Pointer.h Reflex/Pointer.h
- * @author Stefan Roiser
- * @date 24/11/2003
- * @ingroup Ref
- */
-class Pointer: public TypeBase {
-public:
-   /** default constructor */
-   Pointer(const Type& pointerType,
-           const std::type_info& ti);
-
-   /** destructor */
-   virtual ~Pointer() {}
-
+   // forward declarations
+   class Dictionary;
 
    /**
-    * Name will return the fully qualified Name of the pointer At
-    * @param  typedefexp expand typedefs or not
-    * @return fully qualified Name of pointer At
-    */
-   std::string Name(unsigned int mod = 0) const;
+   * @class Pointer Pointer.h Reflex/Pointer.h
+   * @author Stefan Roiser
+   * @date 24/11/2003
+   * @ingroup Ref
+   */
+   class Pointer : public TypeBase {
+   public:
+      /** default constructor */
+      Pointer( const Reflex::Dictionary& dictionary,
+               const Type & pointerType, 
+         const std::type_info & ti );
+
+      /** destructor */
+      virtual ~Pointer() {}
 
 
-   /**
-    * ToType will return a pointer to the type the pointer points to.
-    * @return pointer to Type of MemberAt et. al.
-    */
-   Type ToType() const;
+      /**
+      * Name will return the fully qualified Name of the pointer At
+      * @param  typedefexp expand typedefs or not
+      * @return fully qualified Name of pointer At
+      */
+      std::string Name( unsigned int mod = 0 ) const;
+
+
+      /**
+      * ToType will return a pointer to the type the pointer points to.
+      * @return pointer to Type of MemberAt et. al.
+      */
+      Type ToType() const;
 
 
    /** static function that composes the typename */
-   static std::string BuildTypeName(const Type& pointerType,
-                                    unsigned int mod = SCOPED | QUALIFIED);
+      static std::string BuildTypeName( const Type & pointerType,
+         unsigned int mod = SCOPED | QUALIFIED );
 
-private:
-   /**
-    * The Type the Pointer points to
-    * @label pointer type
-    * @link aggregation
-    * @supplierCardinality 1
-    * @clientCardinality 1
-    */
-   Type fPointerType;
+   private:
+      /**
+      * The Type the Pointer points to
+      * @label pointer type
+      * @link aggregation
+      * @supplierCardinality 1
+      * @clientCardinality 1
+      */
+      Type fPointerType;
 
-};    // class Pointer
+   }; // class Pointer
 } //namespace Reflex
 
 
