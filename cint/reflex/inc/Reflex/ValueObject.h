@@ -1,7 +1,7 @@
 // @(#)root/reflex:$Id$
 // Author: Pere Mato 2006
 
-// Copyright CERN, CH-1211 Geneva 23, 2004-2005, All rights reserved.
+// Copyright CERN, CH-1211 Geneva 23, 2004-2010, All rights reserved.
 //
 // Permission to use, copy, modify, and distribute this software for any
 // purpose is hereby granted without fee, provided that this copyright and
