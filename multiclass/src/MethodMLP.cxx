@@ -825,9 +825,9 @@ Double_t TMVA::MethodMLP::GetMSEErr( const Event* ev, UInt_t index )
    Double_t error = 0;
    Double_t output = GetOutputNeuron( index )->GetActivationValue();
    Double_t target = 0;
-   if (DoRegression()) target = ev->GetTarget( index );
-   if (DoMulticlass()) target = (ev->GetClass() == index ? 1.0 : 0.0 );
-   else                target = GetDesiredOutput( ev );  
+   if      (DoRegression()) target = ev->GetTarget( index );
+   else if (DoMulticlass()) target = (ev->GetClass() == index ? 1.0 : 0.0 );
+   else                     target = GetDesiredOutput( ev );  
 
    error = 0.5*(output-target)*(output-target); //zjh
 
@@ -841,8 +841,9 @@ Double_t TMVA::MethodMLP::GetCEErr( const Event* ev, UInt_t index )  //zjh
    Double_t error = 0;
    Double_t output = GetOutputNeuron( index )->GetActivationValue();
    Double_t target = 0;
-   if (DoRegression()) target = ev->GetTarget( index );
-   else                target = GetDesiredOutput( ev );
+   if      (DoRegression()) target = ev->GetTarget( index );
+   else if (DoMulticlass()) target = (ev->GetClass() == index ? 1.0 : 0.0 );
+   else                     target = GetDesiredOutput( ev );
 
    error = -(target*TMath::Log(output)+(1-target)*TMath::Log(1-output));
 
