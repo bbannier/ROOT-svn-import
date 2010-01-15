@@ -18,7 +18,7 @@
 #include "TBranch.h"
 #include <vector>
 
-void CreateDataForInputTests(Int_t nmax = 10000){
+void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000){
    // create testtreeS1, S2, SSum, treeSFalse  var1 --> -var1, all effis should be zero
    // create traintreeS1, S2, SSum, 
    // same for Background tree labelling S-->B
@@ -51,6 +51,7 @@ void CreateDataForInputTests(Int_t nmax = 10000){
 
    TTree* treeSBSumTest = new TTree( "TreeSBSumTest", "TreeSBSumTest", 1 );
    TTree* treeSBSumTrain = new TTree( "TreeSBSumTrain", "TreeSBSumTrain", 1 );
+   TTree* treeSBLarge = new TTree( "TreeSBLarge", "TreeSBLarge", 1 );
 
    vector<TTree*> trees;
    trees.push_back(treeS1Train); //0
@@ -71,6 +72,7 @@ void CreateDataForInputTests(Int_t nmax = 10000){
 
    trees.push_back(treeSBSumTest); //14
    trees.push_back(treeSBSumTrain); //15
+   trees.push_back(treeSBLarge); //16
 
    ofstream fileSSumTrain,fileSSumTest,fileBSumTrain,fileBSumTest;
    fileSSumTrain.open("fileSSumTrain.dat");
@@ -109,7 +111,7 @@ void CreateDataForInputTests(Int_t nmax = 10000){
       else          xvar[3]= xgaus[3]+0.5;
       if (isSignal) xvar[4]= xgaus[4];         
       else          xvar[4]= xgaus[4]+0.5;
-      //-----------------------
+      //-----------------------     
       if (isSignal && nsig < nmax){
          isfake=0.;
          if (nsig<n1){ // train 1
@@ -150,6 +152,13 @@ void CreateDataForInputTests(Int_t nmax = 10000){
          }
          nsig++;
       }
+      else if (isSignal && nsig < nmax2){
+         isfake=0.;
+         istest=0.;
+         treeSBLarge->Fill();
+         nsig++;
+      }
+
       if (!isSignal && nbgd < nmax){
          isfake=0.;
          if (nbgd<n1){ // train 1
@@ -188,8 +197,15 @@ void CreateDataForInputTests(Int_t nmax = 10000){
          }
          nbgd++;
       }
+      else if (!isSignal && nbgd < nmax2){
+         isfake=0.;
+         istest=0.;
+         treeSBLarge->Fill();
+         nbgd++;
+      }
+
       if ((nsig+nbgd)%100==0) cout << "event="<<nsig <<" " <<nbgd<<endl;
-   } while ( nsig < nmax || nbgd < nmax);
+   } while ( nsig < nmax2 || nbgd < nmax2);
    dataFile->Write();
    dataFile->Close();
    fileSSumTrain.close();
