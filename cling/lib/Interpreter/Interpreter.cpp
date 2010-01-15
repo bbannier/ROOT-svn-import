@@ -41,11 +41,12 @@
 #include <clang/Basic/Version.h>
 #include <clang/Lex/HeaderSearch.h>
 #include <clang/Lex/Preprocessor.h>
-#include <clang/Frontend/InitHeaderSearch.h>
-#include <clang/Frontend/TextDiagnosticPrinter.h>
-#include <clang/Frontend/CompileOptions.h>
-#include "clang/Frontend/InitPreprocessor.h"
-#include "clang/Frontend/ASTConsumers.h"
+#include <clang/Frontend/CompilerInstance.h>
+//#include <clang/Frontend/HeaderSearchOptions.h>
+//#include <clang/Frontend/TextDiagnosticPrinter.h>
+#include <clang/CodeGen/CodeGenOptions.h>
+#include <clang/Frontend/PreprocessorOptions.h>
+#include <clang/Frontend/ASTConsumers.h>
 #include <clang/CodeGen/ModuleBuilder.h>
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/ASTConsumer.h>
@@ -64,11 +65,13 @@
 #include <iostream>
 #include <stdexcept>
 
+namespace {
+
 //-------------------------------------------------------------------------
 // Copy the execution engine memory mappings for the global
 // variables in the source module to the destination module.
 //-------------------------------------------------------------------------
-static void copyGlobalMappings(llvm::ExecutionEngine* ee, llvm::Module* src
+static void copyGlobalMappings(llvm::ExecutionEngine* ee, llvm::Module* src,
 			       llvm::Module* dst)
 {
    // Loop over all the global variables in the destination module.
@@ -80,7 +83,7 @@ static void copyGlobalMappings(llvm::ExecutionEngine* ee, llvm::Module* src
 	 continue;
       }
       // Find the same variable (by name) in the source module.
-      GlobalVariable* src_gv = src->getGlobalVariable(dst_iter->getName());
+      llvm::GlobalVariable* src_gv = src->getGlobalVariable(dst_iter->getName());
       // Skip it if there is none.
       if (!src_gv) {
 	 continue;
@@ -112,6 +115,8 @@ static void copyGlobalMappings(llvm::ExecutionEngine* ee, llvm::Module* src
    //dst_gv->setName(name);
    //ee->addGlobalMapping(dst_gv, p);
 }
+
+} // unnamed namespace
 
 namespace cling
 {
@@ -177,37 +182,12 @@ namespace cling
    //---------------------------------------------------------------------------
    // Constructor
    //---------------------------------------------------------------------------
-   Interpreter::Interpreter(clang::LangOptions language):
-      m_lang( language ), m_module( 0 ), m_inclPaths(0)
+   Interpreter::Interpreter(const clang::LangOptions& language):
+      m_module( 0 ), m_inclPaths(0)
    {
-      m_llvmContext = &llvm::getGlobalContext();
-      m_fileMgr    = new clang::FileManager();
-
-      // target:
-      llvm::InitializeNativeTarget();
-      m_target = clang::TargetInfo::CreateTargetInfo(llvm::sys::getHostTriple());
-      {
-         llvm::StringMap<bool> Features;
-         m_target->getDefaultFeatures("", Features);
-         m_target->HandleTargetFeatures(Features);
-      }
-      m_target->getDefaultLangOptions(language);
-
-      // diagostics:
-      m_diagClient
-         = new clang::TextDiagnosticPrinter( llvm::errs(),
-                                             true,
-                                             true,
-                                             true,
-                                             false,
-                                             false,
-                                             true,
-                                             llvm::sys::Process::StandardErrColumns(),
-                                             true);
-      m_diagClient->setLangOptions(&language);
-      
+      m_compiler.reset(new clang::CompilerInstance());
+      m_compiler->getLangOpts() = language;
       m_globalDeclarations = "#include <stdio.h>\n";
-
    }
 
    //---------------------------------------------------------------------------
@@ -215,9 +195,6 @@ namespace cling
    //---------------------------------------------------------------------------
    Interpreter::~Interpreter()
    {
-      delete m_fileMgr;
-      delete m_diagClient;
-      delete m_target;
       delete m_inclPaths;
    }
 
@@ -353,7 +330,7 @@ namespace cling
       } else {
          // preprocessor statement; nothing to wrap
          pEnv = parseSource( source );
-         m_globalDeclarations.append( source );
+         m_globalDeclarations.append( source + '\n' );
       }
 
       if (pEnv) {
@@ -438,7 +415,7 @@ namespace cling
       //------------------------------------------------------------------------
       // Feed in the file
       //------------------------------------------------------------------------
-      const clang::FileEntry *file = m_fileMgr->getFile( fileName );
+      const clang::FileEntry *file = m_compiler->getFileManager().getFile( fileName );
       if( file )
          srcMgr->createMainFileID( file, clang::SourceLocation() );
 
@@ -456,13 +433,19 @@ namespace cling
       //-------------------------------------------------------------------------
       // Create diagnostics
       //-------------------------------------------------------------------------
-      clang::Diagnostic diag( m_diagClient );
+      clang::Diagnostic diag( &m_compiler->getDiagnosticClient() );
       diag.setSuppressSystemWarnings( true );
 
       //------------------------------------------------------------------------
       // Setup a parse environement
       //------------------------------------------------------------------------
-      ParseEnvironment *pEnv = new ParseEnvironment(m_lang, *m_target, &diag, m_fileMgr, srcMgr, m_inclPaths);
+      //FIXME: pass a CompilerInstance instead! 
+      ParseEnvironment *pEnv = new ParseEnvironment(m_compiler->getLangOpts(),
+                                                    m_compiler->getTarget(),
+                                                    &m_compiler->getDiagnostics(),
+                                                    &m_compiler->getFileManager(),
+                                                    &m_compiler->getSourceManager(),
+                                                    m_inclPaths);
       
       //clang::ASTConsumer dummyConsumer;
       llvm::raw_stdout_ostream out;
@@ -506,16 +489,16 @@ namespace cling
       //-------------------------------------------------------------------------
       // Create diagnostics
       //-------------------------------------------------------------------------
-      clang::Diagnostic diag( m_diagClient );
+      clang::Diagnostic diag( &m_compiler->getDiagnosticClient() );
       diag.setSuppressSystemWarnings( true );
 
       //-------------------------------------------------------------------------
       // Create the code generator
       //-------------------------------------------------------------------------
       llvm::OwningPtr<clang::CodeGenerator> codeGen;
-      clang::CompileOptions options;
+      clang::CodeGenOptions options;
       codeGen.reset(CreateLLVMCodeGen(diag, "SOME NAME [Interpreter::compile()]",
-                                      options, *m_llvmContext));
+                                      options, m_compiler->getLLVMContext()));
 
       //-------------------------------------------------------------------------
       // Loop over the AST
@@ -688,7 +671,8 @@ namespace cling
                                              sourceContext,
                                              targetContext );
          clang::QualType result = targetContext.getPointerType( pointee );
-         result.setFastQualifiers( source.getFastQualifiers() );
+         // FIXME: which source qualifiers? Maybe local? or fast?
+         result.setLocalFastQualifiers( source.getLocalFastQualifiers() );
          return result;
       }
 
@@ -816,6 +800,18 @@ namespace cling
          //---------------------------------------------------------------------------
          llvm::Function* func( module->getFunction( name ) );
          if( !func ) {
+            // try C++:
+            for (llvm::Module::iterator iFunc = module->begin(),
+                    eFunc = module->end(); iFunc != eFunc; ++iFunc) {
+               // The function name matching is a complete hack - I don't know how to demangle etc.
+               if (iFunc->hasName() && strstr(iFunc->getNameStr().c_str(), name.c_str())) {
+                  if (iFunc->getArgumentList().empty())
+                     func = &(*iFunc);
+               }
+            }
+         }
+
+         if( !func ) {
             std::cerr << "[!] Cannot find the entry function " << name << "!" << std::endl;
             return 1;
          }
@@ -824,7 +820,7 @@ namespace cling
          // Create argv
          //---------------------------------------------------------------------------
          std::vector<std::string> params;
-         params.push_back( "executable" );
+         //params.push_back( "executable" );
 
          return engine->runFunctionAsMain( func,  params, 0 );   
 
@@ -882,8 +878,13 @@ namespace cling
       //------------------------------------------------------------------------
       // Setup a parse environement
       //------------------------------------------------------------------------
-      ParseEnvironment pEnv(m_lang, *m_target, &tokdiag, m_fileMgr, 0, m_inclPaths);
-      
+      ParseEnvironment pEnv(m_compiler->getLangOpts(),
+                            m_compiler->getTarget(),
+                            &tokdiag,
+                            &m_compiler->getFileManager(),
+                            0,
+                            m_inclPaths);
+            
       //------------------------------------------------------------------------
       // Register with the source manager
       //------------------------------------------------------------------------
@@ -948,7 +949,12 @@ namespace cling
             }
          } consumer;
          // Need to reset the preprocessor.
-         ParseEnvironment pEnvCheck(m_lang, *m_target, &diag, m_fileMgr, 0, m_inclPaths);
+         ParseEnvironment pEnvCheck(m_compiler->getLangOpts(),
+                                    m_compiler->getTarget(),
+                                    &diag,
+                                    &m_compiler->getFileManager(),
+                                    0,
+                                    m_inclPaths);
          consumer.hadIncludedDecls = false;
          consumer.pos = contextSource.length();
          consumer.maxPos = consumer.pos + buffer->getBuffer().size();
@@ -1038,6 +1044,7 @@ namespace cling
       // Also try to match preprocessor conditionals...
       if (result == 0) {
          clang::Lexer Lexer(PP.getSourceManager().getMainFileID(),
+                            0, // FIXME: which const llvm::MemoryBuffer*?
                             PP.getSourceManager(),
                             PP.getLangOptions());
          Lexer.LexFromRawLexer(Tok);
@@ -1118,20 +1125,24 @@ namespace cling
  
       fprintf(stderr,"code:\n%s\n",src.c_str());
       
-      clang::Diagnostic diag( m_diagClient );
+      clang::Diagnostic diag( &m_compiler->getDiagnosticClient() );
       diag.setSuppressSystemWarnings( true );
       // Set offset on the diagnostics provider.
       // diag.setOffset(pos);
       
       std::vector<clang::Stmt*> stmts;
       
-      MacroDetector* macros = new MacroDetector(m_lang, newpos, 0);
-      ParseEnvironment pEnv(m_lang, *m_target, &diag, m_fileMgr, 0,
-                            m_inclPaths, macros);
-
+      MacroDetector* macros = new MacroDetector(m_compiler->getLangOpts(), newpos, 0);
+      ParseEnvironment pEnv(m_compiler->getLangOpts(),
+                            m_compiler->getTarget(),
+                            &diag,
+                            &m_compiler->getFileManager(),
+                            0,
+                            m_inclPaths,
+                            macros);
       clang::SourceManager *sm = pEnv.getSourceManager();
       macros->setSourceManager( sm );
-      StmtSplitter splitter(src, *sm, m_lang, &stmts);
+      StmtSplitter splitter(src, *sm, m_compiler->getLangOpts(), &stmts);
       FunctionBodyConsumer<StmtSplitter> consumer(&splitter, "__cling_internal");
 
       fprintf(stderr, "Parsing in splitInput()...\n");
@@ -1161,7 +1172,7 @@ namespace cling
       } else {
          clang::QualType QT;
          for (unsigned i = 0; i < stmts.size(); i++) {
-            SrcRange range = getStmtRangeWithSemicolon(stmts[i], *sm, m_lang);
+            SrcRange range = getStmtRangeWithSemicolon(stmts[i], *sm, m_compiler->getLangOpts());
             std::string s = src.substr(range.first, range.second - range.first);
 
             fprintf(stderr, "Split %d is: %s\n", i, s.c_str());
@@ -1187,7 +1198,7 @@ namespace cling
       fprintf(stderr,"Code to execute: %s\n",processedCode.c_str());
       
       processedCode = m_globalDeclarations + processedCode;
-      m_globalDeclarations.append(newGlobalDecls);
+      m_globalDeclarations.append(newGlobalDecls + '\n');
       return processedCode;
    }
    
@@ -1203,11 +1214,11 @@ namespace cling
       for (clang::DeclStmt::const_decl_iterator D = DS->decl_begin(),
            E = DS->decl_end(); D != E; ++D) {
          if (const clang::VarDecl *VD = dyn_cast<clang::VarDecl>(*D)) {
-            std::string decl = genVarDecl(clang::PrintingPolicy(m_lang),
+            std::string decl = genVarDecl(clang::PrintingPolicy(m_compiler->getLangOpts()),
                                           VD->getType(), VD->getNameAsCString());
             const clang::Expr *I = VD->getInit();
             if ( I && 0==dyn_cast<clang::CXXConstructExpr>(I)) {
-               SrcRange range = getStmtRange(I, *sm, m_lang);
+               SrcRange range = getStmtRange(I, *sm, m_compiler->getLangOpts());
                if (I->isConstantInitializer(*context)) {
                   // Keep the whole thing in the global context.
                   processedCode.append( decl + "=" + src.substr(range.first, range.second - range.first) + ";\n" );
@@ -1221,7 +1232,7 @@ namespace cling
                      std::string stmt;
                      llvm::raw_string_ostream stmtstream(stmt);
                      stmtstream << VD->getNameAsCString() << "[" << i << "] = ";
-                     range = getStmtRange(ILE->getInit(i), *sm, m_lang);
+                     range = getStmtRange(ILE->getInit(i), *sm, m_compiler->getLangOpts());
                      stmtstream << src.substr(range.first, range.second - range.first) << ";";
                      stmts.push_back(stmtstream.str());
                   }
@@ -1242,7 +1253,7 @@ namespace cling
          } else {
             clang::SourceLocation SLoc = sm->getInstantiationLoc((*D)->getLocStart());
             clang::SourceLocation ELoc = sm->getInstantiationLoc((*D)->getLocEnd());
-            SrcRange range = getRangeWithSemicolon(SLoc, ELoc, *sm, m_lang);
+            SrcRange range = getRangeWithSemicolon(SLoc, ELoc, *sm, m_compiler->getLangOpts());
             std::string decl = src.substr(range.first, range.second - range.first);
             processedCode.append( decl + ";\n" );
             globalDecls.append( decl + ";\n");
