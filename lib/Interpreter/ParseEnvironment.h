@@ -18,16 +18,16 @@
 #include <llvm/ADT/OwningPtr.h>
 
 namespace clang {
-	class LangOptions;
-	class TargetInfo;
-	class Diagnostic;
-	class ASTContext;
-	class Preprocessor;
-	class PPCallbacks;
-	class SourceManager;
-	class HeaderSearch;
+   class LangOptions;
+   class TargetInfo;
+   class Diagnostic;
+   class ASTContext;
+   class Preprocessor;
+   class PPCallbacks;
+   class SourceManager;
+   class HeaderSearch;
    class FileManager;
-	class Token;
+   class Token;
 } // namespace clang
 
 
@@ -40,7 +40,7 @@ namespace cling {
    class ParseEnvironment {
       
    public:
-      
+      //FIXME: take a CompilerInstance instead! 
       ParseEnvironment(const clang::LangOptions& options,
                        clang::TargetInfo& target,
                        clang::Diagnostic *diag,
