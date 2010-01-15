@@ -7,8 +7,6 @@
 #ifndef CLING_COMPILER_H
 #define CLING_COMPILER_H
 
-#include <clang/Basic/LangOptions.h>
-#include <clang/Basic/Diagnostic.h>
 #include <clang/AST/Type.h>
 #include <llvm/ADT/OwningPtr.h>
 
@@ -33,19 +31,18 @@ namespace llvm
 //------------------------------------------------------------------------------
 namespace clang
 {
+   class CompilerInstance;
    class TranslationUnitDecl;
    class DeclContext;
    class Decl;
    class SourceManager;
-   class FileManager;
-   class TargetInfo;
    class Sema;
    class ASTContext;
    class FunctionDecl;
    class Preprocessor;
    class Token;
-   class HeaderSearch;
    class DeclStmt;
+   class LangOptions;
 }
 
 namespace cling
@@ -75,7 +72,7 @@ namespace cling
       //!
       //! param language the language definition
       //---------------------------------------------------------------------
-      Interpreter(clang::LangOptions language);
+      Interpreter(const clang::LangOptions& language);
 
       //---------------------------------------------------------------------
       // Destructor
@@ -186,42 +183,12 @@ namespace cling
                        const std::string& funcname = "()" );
 
       //---------------------------------------------------------------------
-      //! Set the diagnostic client (deletes 
-      //!
-      //! @param clinet      the new client
-      //! @param freeCurrent if true the current client will be deleted
-      //---------------------------------------------------------------------
-      virtual void setDiagnosticClient( clang::DiagnosticClient* client,
-                                        bool freeCurrent )
-      {
-         if( freeCurrent )
-            delete m_diagClient;
-         m_diagClient = client;
-      }
-
-      //---------------------------------------------------------------------
-      //! Get the diagnostic client
-      //---------------------------------------------------------------------
-      virtual const clang::DiagnosticClient* getDiagnosticClient() const
-      {
-         return m_diagClient;
-      }
-
-      //---------------------------------------------------------------------
-      //! Get the diagnostic client
-      //---------------------------------------------------------------------
-      virtual clang::DiagnosticClient* getDiagnosticClient()
-      {
-         return m_diagClient;
-      }
-
-      //---------------------------------------------------------------------
       //! Add an entry to the interpreter's include path
       //---------------------------------------------------------------------
       void addIncludePath(const llvm::StringRef& dir);
 
       //---------------------------------------------------------------------
-      //! Get the niterpreter's include paths; can be NULL
+      //! Get the interpreter's include paths; can be NULL
       //---------------------------------------------------------------------
       const std::vector<std::string>* getIncludePaths() const {
          return m_inclPaths;
@@ -235,14 +202,11 @@ namespace cling
          std::vector<clang::Decl*>     decls;  //!< function declarations
       };
 
+      llvm::OwningPtr<clang::CompilerInstance> m_compiler; //!< compiler context
+
       std::map<UnitID_t, UnitInfo_t> m_units;
-      clang::LangOptions             m_lang;
-      clang::TargetInfo*             m_target;
-      clang::FileManager*            m_fileMgr;
-      clang::DiagnosticClient*       m_diagClient;
       std::vector<std::pair<clang::Decl*, const clang::ASTContext*> >      m_decls;
       llvm::Module*                  m_module;
-      llvm::LLVMContext*             m_llvmContext;
       std::vector<std::string>*      m_inclPaths;
 
       std::string                    m_globalDeclarations;
