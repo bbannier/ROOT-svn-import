@@ -31,6 +31,7 @@
 // *               location; by default the files are read directly from   * //
 // *               the ROOT http server; however this may give failures if * //
 // *               the connection is slow                                  * //
+// *   -punzip     use parallel unzipping for data-driven processing       * //
 // *                                                                       * //
 // * To run interactively:                                                 * //
 // * $ root                                                                * //
@@ -64,6 +65,7 @@
 // *   Test 11 : Input data propagation ........................... OK *   * //
 // *   Test 12 : H1, Simple: async mode :.......................... OK *   * //
 // *   Test 13 : Admin functionality .............................. OK *   * //
+// *   Test 14 : Dynamic sub-mergers functionality ................ OK *   * //
 // *  * All registered tests have been passed  :-)                     *   * //
 // *  ******************************************************************   * //
 // *                                                                       * //
@@ -78,6 +80,18 @@
 // * New tests can be easily added by providing a function performing the  * //
 // * test and a name for the test; see examples below.                     * //
 // *                                                                       * //
+// * It is also possible to trigger the automatic PROOF valgrind setup by  * //
+// * means of the env GETPROOF_VALGRIND.                                   * //
+// * E.g. to run the master in valgrind do                                 * //
+// *                                                                       * //
+// *     $ export GETPROOF_VALGRIND="valgrind=master"                      * //
+// * or                                                                    * //
+// *     $ export GETPROOF_VALGRIND="valgrind=workers"                     * //
+// *                                                                       * //
+// * before running stressProof. The syntax is the same as for standard    * //
+// * PROOF valgrind runs. See                                              * //
+// *   http://root.cern.ch/drupal/content/running-proof-query-valgrind     * //
+// *                                                                       * //
 // ************************************************************************* //
 
 #include <stdio.h>
@@ -90,9 +104,11 @@
 #include "TFileInfo.h"
 #include "TH1F.h"
 #include "TH2F.h"
+#include "TList.h"
 #include "TMacro.h"
 #include "TMap.h"
 #include "TMath.h"
+#include "TNamed.h"
 #include "TParameter.h"
 #include "TProof.h"
 #include "TProofLog.h"
@@ -122,9 +138,11 @@ static TStopwatch gTimer;
 static Bool_t gTimedOut = kFALSE;
 static Bool_t gDynamicStartup = kFALSE;
 static Bool_t gSkipDataSetTest = kTRUE;
+static Bool_t gUseParallelUnzip = kFALSE;
 static TString gh1src("http://root.cern.ch/files/h1");
 static Bool_t gh1ok = kTRUE;
 static const char *gh1file[] = { "dstarmb.root", "dstarp1a.root", "dstarp1b.root", "dstarp2.root" };
+static TList gSelectors;
 
 void stressProof(const char *url = "proof://localhost:11093",
                  Int_t nwrks = -1, Int_t verbose = 0,
@@ -162,6 +180,7 @@ int main(int argc,const char *argv[])
       printf("   -h1 h1src     specify a location for the H1 files; use h1src=\"download\" to download\n");
       printf("                 to a temporary location; by default the files are read directly from the\n");
       printf("                 ROOT http server; however this may give failures if the connection is slow\n");
+      printf("   -punzip       use parallel unzipping for data-driven processing.\n");
       printf(" \n");
       gSystem->Exit(0);
    }
@@ -204,6 +223,9 @@ int main(int argc,const char *argv[])
          i++;
       } else if (!strncmp(argv[i],"-ds",3)) {
          gSkipDataSetTest = kFALSE;
+         i++;
+      } else if (!strncmp(argv[i],"-punzip",7)) {
+         gUseParallelUnzip = kTRUE;
          i++;
       } else if (!strcmp(argv[i],"-t")) {
          if (i+1 == argc || argv[i+1][0] == '-') {
@@ -264,6 +286,42 @@ void PrintStressProgress(Long64_t total, Long64_t processed, Float_t)
    gSystem->RedirectOutput(glogfile, "a", &gRH);
 }
 
+//______________________________________________________________________________
+void CleanupSelector(const char *selpath)
+{
+   // Remove all non source files associated with seletor at path 'selpath'
+
+   if (!selpath) return;
+
+   TString dirpath(gSystem->DirName(selpath));
+   if (gSystem->AccessPathName(dirpath)) return;
+   TString selname(gSystem->BaseName(selpath));
+   selname.ReplaceAll(".C", "_C");
+   void *dirp = gSystem->OpenDirectory(dirpath);
+   if (!dirp) return;
+   TString fn;
+   const char *e = 0;
+   while ((e = gSystem->GetDirEntry(dirp))) {
+      if (!strncmp(e, selname.Data(), selname.Length())) {
+         // Cleanup this entry
+         fn.Form("%s/%s", dirpath.Data(), e);
+         gSystem->Unlink(fn);
+      }
+   }
+}
+
+//_____________________________________________________________________________
+void AssertParallelUnzip()
+{
+   // Set the parallel unzip option
+
+   if (gUseParallelUnzip) {
+      gProof->SetParameter("PROOF_UseParallelUnzip", (Int_t)1);
+   } else {
+      gProof->SetParameter("PROOF_UseParallelUnzip", (Int_t)0);
+   }
+}
+
 //
 // Auxilliary classes for testing
 //
@@ -274,13 +332,15 @@ private:
    ProofTestFun_t  fFun;  // Function to be executed for the test
    void           *fArgs; // Arguments to be passed to the function
    TString         fDeps;  // Test dependencies, e.g. "1,3"
+   TString         fSels;  // Selectors used, e.g. "h1analysis,ProofSimple"
    Int_t           fDepFrom; // Index for looping over deps
+   Int_t           fSelFrom; // Index for looping over selectors
    Bool_t          fEnabled; // kTRUE if this test is enabled
 
 public:
-   ProofTest(const char *n, Int_t seq, ProofTestFun_t f, void *a = 0, const char *d = "")
+   ProofTest(const char *n, Int_t seq, ProofTestFun_t f, void *a = 0, const char *d = "", const char *sel = "")
            : TNamed(n,""), fSeq(seq), fFun(f), fArgs(a),
-             fDeps(d), fDepFrom(0), fEnabled(kTRUE) { }
+             fDeps(d), fSels(sel), fDepFrom(0), fSelFrom(0), fEnabled(kTRUE) { }
    virtual ~ProofTest() { }
 
    void   Disable() { fEnabled = kFALSE; }
@@ -288,6 +348,7 @@ public:
    Bool_t IsEnabled() const { return fEnabled; }
 
    Int_t  NextDep(Bool_t reset = kFALSE);
+   Int_t  NextSel(TString &sel, Bool_t reset = kFALSE);
    Int_t  Num() const { return fSeq; }
 
    Int_t  Run();
@@ -332,6 +393,19 @@ Int_t ProofTest::NextDep(Bool_t reset)
    // Not found
    return -1;
 }
+//_____________________________________________________________________________
+Int_t ProofTest::NextSel(TString &sel, Bool_t reset)
+{
+   // Return index of next dependency or -1 if none (or no more)
+   // If reset is kTRUE, reset the internal counter before acting.
+
+   if (reset) fSelFrom = 0;
+   if (fSels.Tokenize(sel, fSelFrom, ",")) {
+      if (!sel.IsNull()) return 0;
+   }
+   // Not found
+   return -1;
+}
 
 //_____________________________________________________________________________
 Int_t ProofTest::Run()
@@ -365,7 +439,7 @@ Int_t ProofTest::Run()
 // Test functions
 Int_t PT_Open(void *);
 Int_t PT_GetLogs(void *);
-Int_t PT_Simple(void *);
+Int_t PT_Simple(void *smg = 0);
 Int_t PT_H1Http(void *);
 Int_t PT_H1FileCollection(void *);
 Int_t PT_H1DataSet(void *);
@@ -461,12 +535,16 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
       printf("*  Test for dataset handling (#4, #8) skipped                   **\n");
       printf("******************************************************************\n");
    }
+   if (gUseParallelUnzip) {
+      printf("*  Using parallel unzip where relevant                          **\n");
+      printf("******************************************************************\n");
+   }
    if (!strcmp(url,"lite")) {
-      printf("*  PROOF-Lite session (tests #12 skipped)                       **\n");
+      printf("*  PROOF-Lite session (tests #12 and #13 skipped)               **\n");
       printf("******************************************************************\n");
    }
    if (test > 0) {
-      if (test < 14) {
+      if (test < 15) {
          printf("*  Running only test %2d (and related tests)                     **\n", test);
          printf("******************************************************************\n");
       } else {
@@ -501,27 +579,37 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
    // Get logs
    testList->Add(new ProofTest("Get session logs", 2, &PT_GetLogs, (void *)&PToa, "1"));
    // Simple histogram generation
-   testList->Add(new ProofTest("Simple random number generation", 3, &PT_Simple, 0, "1"));
+   testList->Add(new ProofTest("Simple random number generation", 3, &PT_Simple, 0, "1", "ProofSimple"));
    // Test of data set handling with the H1 http files
    testList->Add(new ProofTest("Dataset handling with H1 files", 4, &PT_DataSets, 0, "1"));
    // H1 analysis over HTTP (chain)
-   testList->Add(new ProofTest("H1: chain processing", 5, &PT_H1Http, 0, "1"));
+   testList->Add(new ProofTest("H1: chain processing", 5, &PT_H1Http, 0, "1", "h1analysis"));
    // H1 analysis over HTTP (file collection)
-   testList->Add(new ProofTest("H1: file collection processing", 6, &PT_H1FileCollection, 0, "1"));
+   testList->Add(new ProofTest("H1: file collection processing", 6, &PT_H1FileCollection, 0, "1", "h1analysis"));
    // H1 analysis over HTTP: classic packetizer
-   testList->Add(new ProofTest("H1: file collection, TPacketizer", 7, &PT_H1FileCollection, (void *)&gStd_Old, "1"));
+   testList->Add(new ProofTest("H1: file collection, TPacketizer", 7, &PT_H1FileCollection, (void *)&gStd_Old, "1", "h1analysis"));
    // H1 analysis over HTTP by dataset name
-   testList->Add(new ProofTest("H1: by-name processing", 8, &PT_H1DataSet, 0, "1,4"));
+   testList->Add(new ProofTest("H1: by-name processing", 8, &PT_H1DataSet, 0, "1,4", "h1analysis"));
    // Test of data set handling with the H1 http files
    testList->Add(new ProofTest("Package management with 'event'", 9, &PT_Packages, 0, "1"));
    // Simple event analysis
-   testList->Add(new ProofTest("Simple 'event' generation", 10, &PT_Event, 0, "1"));
+   testList->Add(new ProofTest("Simple 'event' generation", 10, &PT_Event, 0, "1", "ProofEvent"));
    // Test input data propagation (it only works in the static startup mode)
-   testList->Add(new ProofTest("Input data propagation", 11, &PT_InputData, 0, "1"));
+   testList->Add(new ProofTest("Input data propagation", 11, &PT_InputData, 0, "1", "ProofTests"));
    // Test asynchronous running
-   testList->Add(new ProofTest("H1, Simple: async mode", 12, &PT_H1SimpleAsync, 0, "1,3,5"));
+   testList->Add(new ProofTest("H1, Simple: async mode", 12, &PT_H1SimpleAsync, 0, "1,3,5", "h1analysis,ProofSimple"));
    // Test admin functionality
    testList->Add(new ProofTest("Admin functionality", 13, &PT_AdminFunc, 0, "1"));
+   // Test merging via submergers
+   Bool_t useMergers = kTRUE;
+   testList->Add(new ProofTest("Dynamic sub-mergers functionality", 14, &PT_Simple, (void *)&useMergers, "1", "ProofSimple"));
+
+   // The selectors
+   gSelectors.Add(new TNamed("h1analysis", "../tutorials/tree/h1analysis.C"));
+   gSelectors.Add(new TNamed("ProofEvent", "../tutorials/proof/ProofEvent.C"));
+   gSelectors.Add(new TNamed("ProofSimple", "../tutorials/proof/ProofSimple.C"));
+   gSelectors.Add(new TNamed("ProofTests", "../tutorials/proof/ProofTests.C"));
+   printf("*  Cleaning all non-source files associated to:\n");
 
    // Check what to run
    ProofTest *t = 0, *treq = 0;
@@ -548,9 +636,27 @@ void stressProof(const char *url, Int_t nwrks, Int_t verbose, const char *logfil
             }
          }
       }
+      // Reset associated selectors
+      TString sel;
+      while ((treq->NextSel(sel)) == 0) {
+         TNamed *nm = (TNamed *) gSelectors.FindObject(sel.Data());
+         if (nm) {
+            CleanupSelector(nm->GetTitle());
+            printf("*     %s   \t in %s\n", nm->GetName(), gSystem->DirName(nm->GetTitle()));
+         }
+      }
       // Enable the required test
       treq->Enable();
+   } else {
+      // Clean all the selectors
+      TIter nxs(&gSelectors);
+      TNamed *nm = 0;
+      while ((nm = (TNamed *)nxs())) {
+         CleanupSelector(nm->GetTitle());
+         printf("*     %s   \t in %s\n", nm->GetName(), gSystem->DirName(nm->GetTitle()));
+      }
    }
+   printf("******************************************************************\n");
 
    //
    // Run the tests
@@ -819,30 +925,30 @@ Int_t PT_Open(void *args)
       return -1;
    }
 
+   // Clear Cache
+   p->ClearCache();
+
    // Get some useful info about the cluster (the sandbox dir ...)
-   if (gProof->IsLite()) {
-      gsandbox = gSystem->DirName(gProof->GetWorkDir());
-   } else {
-      gSystem->RedirectOutput(0, 0, &gRH);
-      TString testPrint(TString::Format("%s/testPrint.log", gtutdir.Data()));
-      gSystem->RedirectOutput(testPrint, "w", &gRHAdmin);
-      gProof->Print();
-      gSystem->RedirectOutput(0, 0, &gRHAdmin);
-      gSystem->RedirectOutput(glogfile, "a", &gRH);
-      TMacro macroPrint(testPrint);
-      TObjString *os = macroPrint.GetLineWith("Working directory:");
-      if (!os) {
-         printf("\n >>> Test failure: problem parsing output from Print()\n");
-         return -1;
-      }
-      Int_t from = strlen("Working directory:") + 1;
-      if (!os->GetString().Tokenize(gsandbox, from, " ")) {
-         printf("\n >>> Test failure: no sandbox dir found\n");
-         return -1;
-      }
-      gsandbox = gSystem->DirName(gsandbox);
-      gsandbox = gSystem->DirName(gsandbox);
+   gSystem->RedirectOutput(0, 0, &gRH);
+   TString testPrint(TString::Format("%s/testPrint.log", gtutdir.Data()));
+   gSystem->RedirectOutput(testPrint, "w", &gRHAdmin);
+   gProof->Print();
+   gSystem->RedirectOutput(0, 0, &gRHAdmin);
+   gSystem->RedirectOutput(glogfile, "a", &gRH);
+   TMacro macroPrint(testPrint);
+   TObjString *os = macroPrint.GetLineWith("Working directory:");
+   if (!os) {
+      printf("\n >>> Test failure: problem parsing output from Print()\n");
+      return -1;
    }
+   Int_t from = strlen("Working directory:") + 1;
+   if (!os->GetString().Tokenize(gsandbox, from, " ")) {
+      printf("\n >>> Test failure: no sandbox dir found\n");
+      return -1;
+   }
+   gsandbox = gSystem->DirName(gsandbox);
+   gsandbox = gSystem->DirName(gsandbox);
+   PutPoint();
 
    // Done
    PutPoint();
@@ -881,7 +987,7 @@ Int_t PT_GetLogs(void *args)
 }
 
 //_____________________________________________________________________________
-Int_t PT_Simple(void *)
+Int_t PT_Simple(void *submergers)
 {
    // Test run for the ProofSimple analysis (see tutorials)
 
@@ -890,6 +996,11 @@ Int_t PT_Simple(void *)
    if (!gProof) {
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
+   }
+
+   // Setup submergers if required
+   if (submergers) {
+      gProof->SetParameter("PROOF_UseMergers", 0);
    }
 
    // Define the number of events and histos
@@ -905,13 +1016,16 @@ Int_t PT_Simple(void *)
    PutPoint();
    gProof->SetPrintProgress(&PrintStressProgress);
    gTimer.Start();
-   gProof->Process("../tutorials/proof/ProofSimple.C++", nevt);
+   gProof->Process("../tutorials/proof/ProofSimple.C+", nevt);
    gTimer.Stop();
    gProof->SetPrintProgress(0);
 
    // Count
    gSimpleCnt++;
    gSimpleTime += gTimer.RealTime();
+
+   // Remove any setting related to submergers
+   gProof->DeleteParameters("PROOF_UseMergers");
 
    // Check the results
    PutPoint();
@@ -929,6 +1043,9 @@ Int_t PT_H1Http(void *)
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
    }
+
+   // Set/unset the parallel unzip flag
+   AssertParallelUnzip();
 
    // Create the chain
    PutPoint();
@@ -956,7 +1073,7 @@ Int_t PT_H1Http(void *)
    PutPoint();
    gProof->SetPrintProgress(&PrintStressProgress);
    gTimer.Start();
-   chain->Process("../tutorials/tree/h1analysis.C++");
+   chain->Process("../tutorials/tree/h1analysis.C+");
    gTimer.Stop();
    gProof->SetPrintProgress(0);
    gProof->RemoveChain(chain);
@@ -981,6 +1098,9 @@ Int_t PT_H1FileCollection(void *arg)
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
    }
+
+   // Set/unset the parallel unzip flag
+   AssertParallelUnzip();
 
    // Are we asked to change the packetizer strategy?
    if (arg) {
@@ -1016,7 +1136,7 @@ Int_t PT_H1FileCollection(void *arg)
    PutPoint();
    gProof->SetPrintProgress(&PrintStressProgress);
    gTimer.Start();
-   gProof->Process(fc, "../tutorials/tree/h1analysis.C++");
+   gProof->Process(fc, "../tutorials/tree/h1analysis.C+");
    gTimer.Stop();
    gProof->SetPrintProgress(0);
 
@@ -1049,6 +1169,9 @@ Int_t PT_H1DataSet(void *)
    }
    PutPoint();
 
+   // Set/unset the parallel unzip flag
+   AssertParallelUnzip();
+
    // Name for the target dataset
    const char *dsname = "h1http";
 
@@ -1059,7 +1182,7 @@ Int_t PT_H1DataSet(void *)
    PutPoint();
    gProof->SetPrintProgress(&PrintStressProgress);
    gTimer.Start();
-   gProof->Process(dsname, "../tutorials/tree/h1analysis.C++");
+   gProof->Process(dsname, "../tutorials/tree/h1analysis.C+");
    gTimer.Stop();
    gProof->SetPrintProgress(0);
 
@@ -1198,12 +1321,7 @@ Int_t PT_Packages(void *)
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
    }
-#ifdef WIN32
-   // Not yet supported by PROOF-Lite on Windows
-   if (gProof->IsLite()) {
-      return 1;
-   }
-#endif
+
    // Cleanup the area
    PutPoint();
    TList *packs = gProof->GetListOfPackages();
@@ -1282,12 +1400,7 @@ Int_t PT_Event(void *)
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
    }
-#ifdef WIN32
-   // Not yet supported by PROOF-Lite on Windows
-   if (gProof->IsLite()) {
-      return 1;
-   }
-#endif
+
    // Define the number of events
    Long64_t nevt = 100000;
 
@@ -1297,7 +1410,7 @@ Int_t PT_Event(void *)
    // Process
    PutPoint();
    gProof->SetPrintProgress(&PrintStressProgress);
-   gProof->Process("../tutorials/proof/ProofEvent.C++", nevt);
+   gProof->Process("../tutorials/proof/ProofEvent.C+", nevt);
    gProof->SetPrintProgress(0);
 
    // Make sure the query result is there
@@ -1403,7 +1516,7 @@ Int_t PT_InputData(void *)
    // Process
    PutPoint();
    gProof->SetPrintProgress(&PrintStressProgress);
-   gProof->Process("../tutorials/proof/ProofTests.C++", nevt);
+   gProof->Process("../tutorials/proof/ProofTests.C+", nevt);
    gProof->SetPrintProgress(0);
 
    // Cleanup
@@ -1477,6 +1590,9 @@ Int_t PT_H1SimpleAsync(void *arg)
    }
    PutPoint();
 
+   // Set/unset the parallel unzip flag
+   AssertParallelUnzip();
+
    // Are we asked to change the packetizer strategy?
    if (arg) {
       PT_Packetizer_t *strategy = (PT_Packetizer_t *)arg;
@@ -1514,14 +1630,14 @@ Int_t PT_H1SimpleAsync(void *arg)
    // Submit the processing requests
    PutPoint();
    gProof->SetPrintProgress(&PrintStressProgress);
-   gProof->Process(fc, "../tutorials/tree/h1analysis.C++", "ASYN");
+   gProof->Process(fc, "../tutorials/tree/h1analysis.C+", "ASYN");
 
    // Define the number of events and histos
    Long64_t nevt = 1000000;
    Int_t nhist = 16;
    // The number of histograms is added as parameter in the input list
    gProof->SetParameter("ProofSimple_NHist", (Long_t)nhist);
-   gProof->Process("../tutorials/proof/ProofSimple.C++", nevt, "ASYN");
+   gProof->Process("../tutorials/proof/ProofSimple.C+", nevt, "ASYN");
 
    // Wait a bit as a function of previous runnings
    Double_t dtw = 10;
@@ -1588,6 +1704,10 @@ Int_t PT_AdminFunc(void *)
    if (!gProof) {
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
+   }
+   // Not yet supported for PROOF-Lite
+   if (gProof->IsLite()) {
+      return 1;
    }
    PutPoint();
    // Attach to the manager
@@ -1666,7 +1786,7 @@ Int_t PT_AdminFunc(void *)
    gSystem->RedirectOutput(glogfile, "a", &gRH);
    TMacro macroLs(testLs);
    TString testLsLine = TString::Format("%s/testMacro.C", gsandbox.Data());
-   testLsLine.Remove(0, testLsLine.Index(".proof-tutorial")); // the first pat or <tmp> maybe sligthly different
+   testLsLine.Remove(0, testLsLine.Index(".proof-tutorial")); // the first part of <tmp> maybe sligthly different
    if (!macroLs.GetLineWith(testLsLine)) {
       printf("\n >>> Test failure: Ls: output not consistent (line: '%s')\n", testLsLine.Data());
       return -1;
@@ -1710,19 +1830,19 @@ Int_t PT_AdminFunc(void *)
    }
    if (strem.fSize != stloc.fSize) {
       // Stat failure
-      printf("\n >>> Test failure: stat sizes inconsistent\n");
+      printf("\n >>> Test failure: stat sizes inconsistent: %lld vs %lld (bytes)\n", strem.fSize, stloc.fSize);
       return -1;
    }
    PutPoint();
 
    // Test 'cp' and 'md5sum;
-   if (mgr->Cp("http://root.cern.ch/files/h1/dstarmb.root", "") != 0) {
+   if (mgr->Cp("http://root.cern.ch/files/h1/dstarmb.root", "~/") != 0) {
       // Cp failure
       printf("\n >>> Test failure: could not retrieve remotely dstarmb.root from the Root Web server\n");
       return -1;
    }
    TString sum;
-   if (mgr->Md5sum("dstarmb.root", sum) != 0) {
+   if (mgr->Md5sum("~/dstarmb.root", sum) != 0) {
       // MD5
       printf("\n >>> Test failure: calculating the md5sum of dstarmb.root\n");
       return -1;

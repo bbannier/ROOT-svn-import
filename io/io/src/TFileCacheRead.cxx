@@ -182,11 +182,21 @@ void TFileCacheRead::Prefetch(Long64_t pos, Int_t len)
 //_____________________________________________________________________________
 void TFileCacheRead::Print(Option_t *option) const
 {
-   // Print class internal structure.
-
+   // Print cache statistics, like
+   //   ******TreeCache statistics for file: cms2.root ******
+   //   Reading 73921562 bytes in 716 transactions
+   //   Average transaction = 103.242405 Kbytes
+   //   Number of blocks in current cache: 202, total size : 6001193
+   //
+   // if option = "a" the list of blocks in the cache is printed
+   
    TString opt = option;
    opt.ToLower();
-   printf("Number of blocks: %d, total size : %d\n",fNseek,fNtot);
+   printf("******TreeCache statistics for file: %s ******\n",fFile->GetName());
+   printf("Reading %lld bytes in %d transactions\n",fFile->GetBytesRead(),  fFile->GetReadCalls());
+   printf("Readahead = %d bytes with overhead = %lld bytes\n",TFile::GetReadaheadSize(),fFile->GetBytesReadExtra());
+   printf("Average transaction = %f Kbytes\n",0.001*Double_t(fFile->GetBytesRead())/Double_t(fFile->GetReadCalls()));
+   printf("Number of blocks in current cache: %d, total size : %d\n",fNseek,fNtot);
    if (!opt.Contains("a")) return;
    for (Int_t i=0;i<fNseek;i++) {
       if (fIsSorted && !opt.Contains("s")) {
@@ -209,7 +219,7 @@ Int_t TFileCacheRead::ReadBuffer(char *buf, Long64_t pos, Int_t len)
    // otherwise need to make a normal read from file. Returns -1 in case of
    // read error, 0 in case not in cache, 1 in case read from cache.
 
-   Int_t loc = 0;
+   Int_t loc = -1;
    return ReadBufferExt(buf, pos, len, loc);
 }
 
@@ -222,6 +232,7 @@ Int_t TFileCacheRead::ReadBufferExt(char *buf, Long64_t pos, Int_t len, Int_t &l
 
    if (fNseek > 0 && !fIsSorted) {
       Sort();
+      loc = -1;
 
       // If ReadBufferAsync is not supported by this implementation...
       if (!fAsyncReading) {
@@ -258,39 +269,46 @@ Int_t TFileCacheRead::ReadBufferExt(char *buf, Long64_t pos, Int_t len, Int_t &l
    // If asynchronous reading is supported by this implementation...
    if (fAsyncReading) {
 
+         // Now we dont have to look for it in the local buffer
+         // if it's async, we expect that the communication library
+         // will handle it more efficiently than we can do here
+
       Int_t retval;
-      loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
-
-      // Now we dont have to look for it in the local buffer
-      // if it's async, we expect that the communication library
-      // will handle it more efficiently than we can do here
-
+      if (loc < 0)
+         loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
+      
       // We use the internal list just to notify if the list is to be reconstructed
       if (loc >= 0 && loc < fNseek && pos == fSeekSort[loc]) {
          // Block found, the caller will get it
-
+         
          if (buf) {
-            fFile->Seek(pos);
-
+            fFile->Seek(pos);               
             if (fFile->ReadBuffer(buf, len)) {
                return -1;
             }
             fFile->Seek(pos+len);
          }
-
+         
          retval = 1;
       } else {
          // Block not found in the list, we report it as a miss
          retval = 0;
       }
-
+      
+      
+      
+      
+      
+      
       if (gDebug > 0)
-         Info("ReadBuffer","pos=%lld, len=%d, retval=%d", pos, len, retval);
-
+         Info("ReadBuffer","pos=%lld, len=%d, retval=%d, loc=%d, fseekSort[loc]=%d, fSeekLen[loc]=%d", pos, len, retval, loc, fSeekSort[loc], fSeekLen[loc]);
+      
       return retval;
    } else {
 
-      loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
+      if (loc < 0)
+         loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
+
       if (loc >= 0 && loc <fNseek && pos == fSeekSort[loc]) {
          if (buf) {
             memcpy(buf,&fBuffer[fSeekPos[loc]],len);

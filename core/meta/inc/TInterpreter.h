@@ -60,7 +60,6 @@ public:
    virtual void     ClearStack() = 0; // Delete existing temporary values
    virtual void     EnableAutoLoading() = 0;
    virtual void     EndOfLineAction() = 0;
-   virtual void     EnableWrappers(bool value) = 0;
    virtual Int_t    GetExitCode() const = 0;
    virtual TEnv    *GetMapfile() const { return 0; }
    virtual Int_t    GetMore() const = 0;
@@ -83,6 +82,8 @@ public:
    virtual Long_t   ProcessLine(const char *line, EErrorCode *error = 0) = 0;
    virtual Long_t   ProcessLineSynch(const char *line, EErrorCode *error = 0) = 0;
    virtual void     PrintIntro() = 0;
+   virtual void     SetGetline(char*(*getlineFunc)(const char* prompt),
+                               void (*histaddFunc)(char* line)) = 0;
    virtual void     Reset() = 0;
    virtual void     ResetAll() = 0;
    virtual void     ResetGlobals() = 0;

@@ -290,7 +290,11 @@ public:
    /**
       negate the 4-vector
    */
-   void Negate( ) { fPhi = - fPhi; fEta = - fEta; fE = - fE; }
+   void Negate( ) { 
+      fPhi = ( fPhi > 0 ? fPhi - pi() : fPhi + pi()  );
+      fEta = - fEta; 
+      fE = - fE; 
+   }
 
    /**
       Scale coordinate values by a scalar quantity a
@@ -367,9 +371,14 @@ private:
 
 
 // move implementations here to avoid circle dependencies
-
+#ifndef ROOT_Math_GenVector_PxPyPzE4D 
 #include "Math/GenVector/PxPyPzE4D.h"
+#endif
+#if defined(__MAKECINT__) || defined(G__DICTIONARY) 
+#ifndef ROOT_Math_GenVector_PtEtaPhiM4D 
 #include "Math/GenVector/PtEtaPhiM4D.h"
+#endif
+#endif
 
 namespace ROOT { 
 

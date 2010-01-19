@@ -31,12 +31,16 @@ public:
   void setAlwaysStartFromMin(Bool_t flag) { _startFromMin = flag ; }
   Bool_t alwaysStartFromMin() const { return _startFromMin ; }
 
+  RooMinuit* minuit() { return _minuit ; }
   RooAbsReal& nll() { return const_cast<RooAbsReal&>(_nll.arg()) ; }
   const RooArgSet& bestFitParams() const ;
+  const RooArgSet& bestFitObs() const ;
 
   virtual RooAbsReal* createProfile(const RooArgSet& paramsOfInterest) ;
   
   virtual Bool_t redirectServersHook(const RooAbsCollection& /*newServerList*/, Bool_t /*mustReplaceAll*/, Bool_t /*nameChange*/, Bool_t /*isRecursive*/) ;
+
+  void clearAbsMin() { _absMinValid = kFALSE ; }
 
 
 protected:
@@ -56,6 +60,7 @@ protected:
   mutable Bool_t _absMinValid ; // flag if absmin is up-to-date
   mutable Double_t _absMin ; // absolute minimum of -log(L)
   mutable RooArgSet _paramAbsMin ; // Parameter values at absolute minimum
+  mutable RooArgSet _obsAbsMin ; // Observable values at absolute minimum
   mutable std::map<std::string,bool> _paramFixed ; // Parameter constant status at last time of use
   
   Double_t evaluate() const ;

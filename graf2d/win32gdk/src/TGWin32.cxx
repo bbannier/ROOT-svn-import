@@ -878,7 +878,8 @@ Bool_t TGWin32::IsCmdThread() const
 {
    // returns kTRUE if we are inside cmd/server thread
 
-   return (::GetCurrentThreadId() == TGWin32ProxyBase::fgMainThreadId);
+   return ((::GetCurrentThreadId() == TGWin32ProxyBase::fgMainThreadId) ||
+           (::GetCurrentThreadId() == TGWin32ProxyBase::fgUserThreadId));
 }
 
 //______________________________________________________________________________
@@ -7033,8 +7034,9 @@ unsigned char *TGWin32::GetColorBits(Drawable_t wid,  Int_t x, Int_t y,
    BITMAPINFO bmi;
    HGDIOBJ oldbitmap1, oldbitmap2;
    BITMAP bm;
-   HBITMAP ximage;
-   VOID  *bmbits;
+   HBITMAP ximage = 0;
+   VOID  *bmbits = 0;
+   unsigned char *ret = 0;
 
    if (GDK_DRAWABLE_TYPE(wid) == GDK_DRAWABLE_PIXMAP) {
       hdc = ::CreateCompatibleDC(NULL);
@@ -7043,7 +7045,6 @@ unsigned char *TGWin32::GetColorBits(Drawable_t wid,  Int_t x, Int_t y,
    } else {
       hdc = ::GetDC((HWND)GDK_DRAWABLE_XID(wid));
    }
-
    memdc = ::CreateCompatibleDC(hdc);
 
    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -7059,10 +7060,11 @@ unsigned char *TGWin32::GetColorBits(Drawable_t wid,  Int_t x, Int_t y,
 
    ximage = ::CreateDIBSection(hdc, (BITMAPINFO *) &bmi, DIB_RGB_COLORS, &bmbits, NULL, 0);
 
-   oldbitmap2 = ::SelectObject(memdc, ximage);
-
-   ::BitBlt(memdc, x, y, width, height, hdc, 0, 0, SRCCOPY);
-   ::SelectObject(memdc, oldbitmap2);
+   if (ximage && bmbits) {
+      oldbitmap2 = ::SelectObject(memdc, ximage);
+      ::BitBlt(memdc, x, y, width, height, hdc, 0, 0, SRCCOPY);
+      ::SelectObject(memdc, oldbitmap2);
+   }
    ::DeleteDC(memdc);
    if (GDK_DRAWABLE_TYPE(wid) == GDK_DRAWABLE_PIXMAP) {
       ::SelectObject(hdc, oldbitmap1);
@@ -7070,9 +7072,12 @@ unsigned char *TGWin32::GetColorBits(Drawable_t wid,  Int_t x, Int_t y,
    } else {
       ::ReleaseDC((HWND)GDK_DRAWABLE_XID(wid), hdc);
    }
-   ULong_t sz = width*height*4;
-   unsigned char *ret = new unsigned char[sz];
-   memcpy(ret, bmbits, sz);
+   if (ximage && bmbits) {
+      ULong_t sz = width*height*4;
+      ret = new unsigned char[sz];
+      memcpy(ret, bmbits, sz);
+      ::DeleteObject(ximage);
+   }
    return ret;
 }
 
@@ -7517,6 +7522,17 @@ void TGWin32::SetDNDAware(Window_t id, Atom_t *typelist)
 
 }
 
+//______________________________________________________________________________
+void TGWin32::SetUserThreadId(ULong_t id)
+{
+   // Set user thread id. This is used when an extra thread is created
+   // to process events.
 
-
+   if (id == 0) {
+      TGWin32ProxyBase::fgMainThreadId = ((TWinNTSystem*)gSystem)->GetGUIThreadId();
+   }
+   else {
+      TGWin32ProxyBase::fgUserThreadId = id;
+   }
+}
 

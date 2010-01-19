@@ -22,6 +22,10 @@
 #include "TSystem.h"
 #include <stdlib.h>
 
+#include "HFitInterface.h"
+#include "Fit/DataRange.h"
+#include "Math/MinimizerOptions.h"
+
 #include <ctype.h>
 
 extern void H1LeastSquareSeqnd(Int_t n, Double_t *a, Int_t idim, Int_t &ifail, Int_t k, Double_t *b);
@@ -236,7 +240,7 @@ void TMultiGraph::Draw(Option_t *option)
 
 
 //______________________________________________________________________________
-Int_t TMultiGraph::Fit(const char *fname, Option_t *option, Option_t *, Axis_t xmin, Axis_t xmax)
+TFitResultPtr TMultiGraph::Fit(const char *fname, Option_t *option, Option_t *, Axis_t xmin, Axis_t xmax)
 {
    // Fit this graph with function with name fname.
    //
@@ -257,7 +261,7 @@ Int_t TMultiGraph::Fit(const char *fname, Option_t *option, Option_t *, Axis_t x
 
 
 //______________________________________________________________________________
-Int_t TMultiGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axis_t rxmin, Axis_t rxmax)
+TFitResultPtr TMultiGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axis_t rxmin, Axis_t rxmax)
 {
    // Fit this multigraph with function f1.
    //
@@ -401,7 +405,14 @@ Int_t TMultiGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axis_t rxmi
    //  Root > st->SetX1NDC(newx1); //new x start position
    //  Root > st->SetX2NDC(newx2); //new x end position
 
-   return DoFit(f1,option,goption,rxmin,rxmax);  // implemented in HFitImpl.cxx
+   // internal multigraph fitting methods
+   Foption_t fitOption;
+   ROOT::Fit::FitOptionsMake(option,fitOption);
+
+   // create range and minimizer options with default values 
+   ROOT::Fit::DataRange range(rxmin,rxmax); 
+   ROOT::Math::MinimizerOptions minOption; 
+   return ROOT::Fit::FitObject(this, f1 , fitOption , minOption, goption, range); 
 
 }
 

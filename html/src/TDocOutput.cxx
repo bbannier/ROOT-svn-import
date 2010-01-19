@@ -23,6 +23,7 @@
 #include "THtml.h"
 #include "TInterpreter.h"
 #include "TMethod.h"
+#include "TPRegexp.h"
 #include "TROOT.h"
 #include "TSystem.h"
 #include "TUrl.h"
@@ -293,9 +294,10 @@ void TDocOutput::AdjustSourcePath(TString& line, const char* relpath /*= "../"*/
    // adjust the path of links for source files, which are in src/, but need
    // to point to relpath (usually "../"). Simply replaces "=\"./" by "=\"../"
 
-   TString replWithRelPath("=\"");
-   replWithRelPath += relpath;
-   line.ReplaceAll("=\"./", replWithRelPath);
+   TString replWithRelPath("=\"@!@");
+   line.ReplaceAll("=\"../", replWithRelPath + "../" + relpath);
+   line.ReplaceAll("=\"./", replWithRelPath + relpath);
+   line.ReplaceAll("=\"@!@","=\"");
 }
 
 //______________________________________________________________________________
@@ -403,11 +405,40 @@ void TDocOutput::Convert(std::istream& in, const char* infilename,
       if (!numReuseCanvases) {
          // need to run the script
          if (includeOutput & THtml::kSeparateProcessOutput) {
+            TString baseInFileName = gSystem->BaseName(infilename);
+            TPMERegexp reOutFile(baseInFileName + "_[[:digit:]]+\\.png");
+
+            // remove all files matching what saveScriptOutput.C could produce:
+            void* outdirH = gSystem->OpenDirectory(gSystem->DirName(outfilename));
+            if (outdirH) {
+               // the directory exists.
+               const char* outdirE = 0;
+               while ((outdirE = gSystem->GetDirEntry(outdirH))) {
+                  if (reOutFile.Match(outdirE)) {
+                     gSystem->Unlink(outdirE);
+                  }
+               }
+               gSystem->FreeDirectory(outdirH);
+            }
+
             gSystem->Exec(TString::Format("ROOT_HIST=0 root.exe -l -q %s $ROOTSYS/etc/html/saveScriptOutput.C\\(\\\"%s\\\",\\\"%s\\\",%d\\)",
                           gROOT->IsBatch() ? "-b" : "",
                           infilename,
                           gSystem->DirName(outfilename),
                           includeOutput & THtml::kCompiledOutput));
+
+            // determine how many output files were created:
+            outdirH = gSystem->OpenDirectory(gSystem->DirName(outfilename));
+            if (outdirH) {
+               // the directory exists.
+               const char* outdirE = 0;
+               while ((outdirE = gSystem->GetDirEntry(outdirH))) {
+                  if (reOutFile.Match(outdirE)) {
+                     ++nCanvases;
+                  }
+               }
+               gSystem->FreeDirectory(outdirH);
+            }
          } else {
             // run in this ROOT process
             TString pwd(gSystem->pwd());
@@ -1067,7 +1098,7 @@ void TDocOutput::CreateModuleIndex()
 
    RunDot(dotfilename, &out, kFdp);
 
-   out << "<img alt=\"Library Dependencies\" class=\"classcharts\" usemap=\"#Map" << title << "\" src=\"" << title << ".gif\"/>" << endl;
+   out << "<img alt=\"Library Dependencies\" class=\"classcharts\" usemap=\"#Map" << title << "\" src=\"" << title << ".png\"/>" << endl;
 
    // write out footer
    WriteHtmlFooter(out);
@@ -1949,7 +1980,7 @@ void TDocOutput::ReplaceSpecialChars(std::ostream& out, const char *string)
 //______________________________________________________________________________
 Bool_t TDocOutput::RunDot(const char* filename, std::ostream* outMap /* =0 */,
                           EGraphvizTool gvwhat /*= kDot*/) {
-// Run filename".dot", creating filename".gif", and - if outMap is !=0,
+// Run filename".dot", creating filename".png", and - if outMap is !=0,
 // filename".map", which gets then included literally into outMap.
 
    if (!fHtml->HaveDot())
@@ -1964,9 +1995,9 @@ Bool_t TDocOutput::RunDot(const char* filename, std::ostream* outMap /* =0 */,
    };
    if (fHtml->GetDotDir() && *fHtml->GetDotDir())
       gSystem->PrependPathName(fHtml->GetDotDir(), runDot);
-   runDot += " -q1 -Tgif -o";
+   runDot += " -q1 -Tpng -o";
    runDot += filename;
-   runDot += ".gif ";
+   runDot += ".png ";
    if (outMap) {
       runDot += "-Tcmap -o";
       runDot += filename;

@@ -743,7 +743,7 @@ void TRootIconList::Browse(TBrowser *)
 
       name = obj->GetName();
 
-      if (obj->IsA() == TKey::Class()) {
+      if (key && obj->IsA() == TKey::Class()) {
          name += ";";
          name +=  key->GetCycle();
       }
@@ -1418,15 +1418,17 @@ void TRootBrowserLite::AddToTree(TObject *obj, const char *name, Int_t check)
 {
    // Add items to the current TGListTree of the browser.
 
+   if (!obj)
+      return;
    if (obj->InheritsFrom("TApplication"))
       fListLevel = 0;
-   if (obj && !fTreeLock) {
+   if (!fTreeLock) {
       if (!name) name = obj->GetName();
       if (name[0] == '.' && name[1] == '.')
          Info("AddToTree", "up one level %s", name);
       if(check > -1) {
          TGListTreeItem *item = fLt->AddItem(fListLevel, name, obj, 0, 0, kTRUE);
-         fLt->CheckItem(item, (Bool_t)check);
+         if (item) fLt->CheckItem(item, (Bool_t)check);
          TString tip(obj->ClassName());
          if (obj->GetTitle()) {
             tip += " ";
@@ -2137,6 +2139,7 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                            DoubleClicked(obj2);
                            IconBoxAction(obj2);
                         }
+                        delete cursorSwitcher;
                         return kTRUE; //
                      }
                   }
@@ -2534,7 +2537,7 @@ void TRootBrowserLite::IconBoxAction(TObject *obj)
 
       if (obj->InheritsFrom("TKey")) {
          TKey *key = dynamic_cast<TKey*>(obj);
-         if (key->GetClassName() && (!strcmp(key->GetClassName(), "TFormula")))
+         if (key && key->GetClassName() && (!strcmp(key->GetClassName(), "TFormula")))
             browsable = kFALSE;
       }
 
@@ -2820,6 +2823,7 @@ void TRootBrowserLite::SetViewMode(Int_t new_mode, Bool_t force)
                return;
             else
                new_mode = kViewLargeIcons;
+            // intentionally no break
          case kViewLargeIcons:
             bnum = 2;
             lv = kLVLargeIcons;
@@ -2872,6 +2876,7 @@ void TRootBrowserLite::SetSortMode(Int_t new_mode)
    switch (new_mode) {
       default:
          new_mode = kViewArrangeByName;
+         // intentionally no break
       case kViewArrangeByName:
          smode = kSortByName;
          break;

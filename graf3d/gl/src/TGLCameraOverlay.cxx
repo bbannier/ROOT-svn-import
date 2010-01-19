@@ -48,6 +48,8 @@ TGLCameraOverlay::TGLCameraOverlay(Bool_t showOrtho, Bool_t showPersp) :
 {
    // Constructor.
 
+   fFrustum[0] = fFrustum[1] = fFrustum[2] = fFrustum[3] = 0;
+
    fAxis = new TAxis();
    fAxis->SetNdivisions(710);
    fAxis->SetLabelSize(0.018);
@@ -57,6 +59,7 @@ TGLCameraOverlay::TGLCameraOverlay(Bool_t showOrtho, Bool_t showPersp) :
 
    fAxisPainter = new TGLAxisPainter();
    fAxisPainter->SetFontMode(TGLFont::kBitmap);
+   fAxisPainter->SetUseAxisColors(kFALSE);
 }
 
 //______________________________________________________________________________
@@ -105,14 +108,11 @@ void TGLCameraOverlay::RenderPlaneIntersect(TGLRnrCtx& rnrCtx)
 
       TGLRect &vp = rnrCtx.GetCamera()->RefViewport();
       TGLFont font;
-      Int_t fs = TGLFontManager::GetFontSize((vp.Width()+vp.Height())*0.01);
-      rnrCtx.RegisterFont(fs, "arial", TGLFont::kPixmap, font);
-      Float_t bb[6];
+      Int_t fs = TMath::Nint(TMath::Sqrt(vp.Width()*vp.Width() + vp.Height()*vp.Height())*0.02);
+      rnrCtx.RegisterFontNoScale(fs, "arial", TGLFont::kPixmap, font);
       const char* txt = Form("(%f, %f, %f)", v[0], v[1], v[2]);
-      font.BBox(txt, bb[0], bb[1], bb[2], bb[3], bb[4], bb[5]);
-      Float_t off = 1.5*bb[4];
-      off /= vp.Height() ;
-      font.RenderBitmap(txt, 1 -off, 1-off, 0,TGLFont::kRight);
+      TGLUtil::Color(rnrCtx.ColorSet().Markup());
+      font.Render(txt, 0.98, 0.98, 0, TGLFont::kRight, TGLFont::kBottom);
 
       // render cross
       TGLUtil::Color(kRed);
@@ -148,7 +148,7 @@ void TGLCameraOverlay::RenderAxis(TGLRnrCtx& rnrCtx, Bool_t grid)
    fAxisPainter->SetAttAxis(fAxis);
    fAxisPainter->SetUseAxisColors(fUseAxisColors);
 
-   Color_t lineColor = fUseAxisColors ? fAxis->GetAxisColor() : rnrCtx.ColorSet().Foreground().GetColorIndex();
+   Color_t lineColor = fUseAxisColors ? fAxis->GetAxisColor() : rnrCtx.ColorSet().Markup().GetColorIndex();
 
    // font size calculated relative to viewport diagonal
    GLint   vp[4]; glGetIntegerv(GL_VIEWPORT, vp);
@@ -173,8 +173,8 @@ void TGLCameraOverlay::RenderAxis(TGLRnrCtx& rnrCtx, Bool_t grid)
    Double_t minY = fFrustum[1] + off;
    Double_t maxY = fFrustum[3] - off;
    // grid lines
-   Char_t alpha = 70; //primary
-   Char_t alpha2 = 80; //seconndary
+   Char_t alpha = 80; //primary
+   Char_t alpha2 = 90; //seconndary
    Int_t secSteps = fAxis->GetNdivisions() % 100;
    GLushort stipple =  0x5555; // 33333 more rare
 
@@ -189,19 +189,20 @@ void TGLCameraOverlay::RenderAxis(TGLRnrCtx& rnrCtx, Bool_t grid)
    // bottom
    glPushMatrix();
    glTranslated(vy1.X(), vy1.Y(), vy1.Z());
-   fAxisPainter->SetLabelAlign(TGLFont::kCenterDown);
+   fAxisPainter->SetLabelAlign(TGLFont::kCenterH, TGLFont::kTop);
    fAxisPainter->PaintAxis(rnrCtx, fAxis);
    glPopMatrix();
 
    // top
    glPushMatrix();
    glTranslated(vy2.X(), vy2.Y(), vy2.Z());
-   fAxisPainter->SetLabelAlign(TGLFont::kCenterUp);
+   fAxisPainter->SetLabelAlign(TGLFont::kCenterH, TGLFont::kBottom);
    fAxisPainter->RefTMOff(0).Negate();
    fAxisPainter->RnrLabels();
    fAxisPainter->RnrLines();
    glPopMatrix();
 
+   TGLUtil::LineWidth(1);
    if (grid)
    {
       TGLAxisPainter::LabVec_t& labs = fAxisPainter->RefLabVec();
@@ -268,13 +269,13 @@ void TGLCameraOverlay::RenderAxis(TGLRnrCtx& rnrCtx, Bool_t grid)
    // left
    glPushMatrix();
    glTranslated(vx1.X(), vx1.Y(), vx1.Z());
-   fAxisPainter->SetLabelAlign(TGLFont::kLeft);
+   fAxisPainter->SetLabelAlign(TGLFont::kLeft, TGLFont::kCenterV);
    fAxisPainter->PaintAxis(rnrCtx, fAxis);
    glPopMatrix();
    // right
    glPushMatrix();
    glTranslated(vx2.X(), vx2.Y(), vx2.Z());
-   fAxisPainter->SetLabelAlign(TGLFont::kRight);
+   fAxisPainter->SetLabelAlign(TGLFont::kRight, TGLFont::kCenterV);
    fAxisPainter->RefTMOff(0).Negate();
    fAxisPainter->RnrLabels();
    fAxisPainter->RnrLines();
@@ -366,6 +367,8 @@ void TGLCameraOverlay::RenderBar(TGLRnrCtx&  rnrCtx)
    xdir.Normalise();
    ydir.Normalise();
 
+   TGLUtil::Color(rnrCtx.ColorSet().Foreground());
+
    const char* txt = Form("%.*f", (exp < 0) ? -exp : 0, red);
    Float_t bb[6];
    TGLFont font;
@@ -377,7 +380,6 @@ void TGLCameraOverlay::RenderBar(TGLRnrCtx&  rnrCtx)
    v = xdir*(fFrustum[2]-barsize) + ydir*(fFrustum[3] - mH*1.5);
    glTranslated(v.X(), v.Y(), v.Z());
    glRasterPos2i(0,0);
-   TGLUtil::Color(kGray);
    font.Render(txt);
    glPopMatrix();
 
@@ -451,16 +453,18 @@ void TGLCameraOverlay::Render(TGLRnrCtx& rnrCtx)
    Float_t old_depth_range[2];
    glGetFloatv(GL_DEPTH_RANGE, old_depth_range);
 
-   TGLUtil::Color(rnrCtx.ColorSet().Foreground());
+   TGLUtil::Color(rnrCtx.ColorSet().Markup());
 
    if (cam.IsOrthographic())
    {
       switch (fOrthographicMode)
       {
          case kBar:
+            glDepthRange(0, 0.1);
             RenderBar(rnrCtx);
             break;
          case kAxis:
+            glDepthRange(0, 0.1);
             RenderAxis(rnrCtx, kFALSE);
             break;
          case kGridFront:

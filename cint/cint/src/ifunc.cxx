@@ -3983,6 +3983,7 @@ int G__convert_param(G__param* libp, G__ifunc_table_internal* p_ifunc, int ifn, 
                      param->type = formal_type;
                      param->ref = 0;
                   }
+                  break;
                case 'l':
                case 'i':
                case 's':
@@ -4209,6 +4210,7 @@ int G__convert_param(G__param* libp, G__ifunc_table_internal* p_ifunc, int ifn, 
                   }
                   break;
             }
+            break;
 #ifndef G__OLDIMPLEMENTATION2191
          case '1':
 #else
@@ -5485,7 +5487,11 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
             }
             p_ifunc = ifunc;
             ifn = iexist;
-            G__store_struct_offset -= G__find_virtualoffset(virtualtag);
+            G__store_struct_offset -= G__find_virtualoffset(virtualtag
+#ifdef G__VIRTUALBASE
+                                                            ,G__store_struct_offset
+#endif
+                                                            );
             G__tagnum = virtualtag;
             if ('~' == funcname[0]) {
                //strcpy(funcname + 1, G__struct.name[G__tagnum]);
@@ -6272,7 +6278,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
                   }
 #ifdef G__ASM
                   /* It is not needed to explicitly create STORETEMP instruction
-                   * because it is preincluded in the compiled funciton call
+                   * because it is preincluded in the compiled function call
                    * interface */
 #endif
                   if (G__dispsource) {

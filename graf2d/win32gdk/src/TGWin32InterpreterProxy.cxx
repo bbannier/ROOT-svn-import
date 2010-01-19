@@ -43,7 +43,6 @@ VOID_METHOD_ARG0(Interpreter,ClearFileBusy,1)
 VOID_METHOD_ARG0(Interpreter,ClearStack,1)
 VOID_METHOD_ARG0(Interpreter,EndOfLineAction,1)
 VOID_METHOD_ARG0(Interpreter,EnableAutoLoading,1)
-VOID_METHOD_ARG1(Interpreter,EnableWrappers,bool,value,1)
 RETURN_METHOD_ARG0(Interpreter,Int_t,InitializeDictionaries)
 RETURN_METHOD_ARG0(Interpreter,char*,GetPrompt)
 RETURN_METHOD_ARG0(Interpreter,const char*,GetSharedLibs)
@@ -58,6 +57,10 @@ VOID_METHOD_ARG2(Interpreter,LoadMacro,const char*,filename,TInterpreter::EError
 RETURN_METHOD_ARG2(Interpreter,Long_t,ProcessLine,const char*,line,TInterpreter::EErrorCode*,error)
 RETURN_METHOD_ARG2(Interpreter,Long_t,ProcessLineSynch,const char*,line,TInterpreter::EErrorCode*,error)
 VOID_METHOD_ARG0(Interpreter,PrintIntro,1)
+typedef char* (*GetlineFunc_t)(const char* prompt);
+typedef void (*HistaddFunc_t)(char* line);
+VOID_METHOD_ARG2(Interpreter,SetGetline,GetlineFunc_t, getlineFunc,\
+		 HistaddFunc_t, histaddFunc, 1)
 VOID_METHOD_ARG0(Interpreter,Reset,1)
 VOID_METHOD_ARG0(Interpreter,ResetAll,1)
 VOID_METHOD_ARG0(Interpreter,ResetGlobals,1)

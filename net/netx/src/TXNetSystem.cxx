@@ -35,6 +35,7 @@
 
 #include "XrdClient/XrdClientAdmin.hh"
 #include "XrdClient/XrdClientConn.hh"
+#include <XrdClient/XrdClientConst.hh>
 #include "XrdClient/XrdClientEnv.hh"
 #include "XProtocol/XProtocol.hh"
 
@@ -118,10 +119,17 @@ XrdClientAdmin *TXNetSystem::Connect(const char *url)
       return cadm;
    }
 
+   // Do not block: restore old value after
+   Int_t maxOld = EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
+
    // Try to connect to the server
+   gEnv->SetValue("XNet.FirstConnectMaxCnt", 1);
+   EnvPutInt(NAME_FIRSTCONNECTMAXCNT, 1);
    if (cadm->Connect()) {
       fIsXRootd = kTRUE;
+      EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxOld);
    } else {
+      EnvPutInt(NAME_FIRSTCONNECTMAXCNT, maxOld);
       if (fgRootdBC) {
          Bool_t isRootd =
             (cadm->GetClientConn()->GetServerType() == kSTRootd);
@@ -474,41 +482,20 @@ Bool_t TXNetSystem::IsOnline(const char *path)
 {
    // Check if the file defined by 'path' is ready to be used
 
-   TXNetSystemConnectGuard cg(this, path);
-   if (cg.IsValid()) {
-      vecBool vb;
-      vecString vs;
-      XrdOucString pathname = TUrl(path).GetFileAndOptions();
-      pathname.replace("\n","\r");
-      vs.Push_back(pathname);
-      if (gDebug > 1 )
-         Info("IsOnline", "Checking %s\n",path);
-      cg.ClientAdmin()->IsFileOnline(vs,vb);
-      cg.ClientAdmin()->GoBackToRedirector();
-      if (!cg.ClientAdmin()->LastServerResp()) {
-         return kFALSE;
-      }
-
-      switch (cg.ClientAdmin()->LastServerResp()->status) {
-         case kXR_ok:
-            if (vb[0]) {
-               return kTRUE;
-            } else {
-               return kFALSE;
-         }
-         case kXR_error:
-            if (gDebug > 0)
-               Info("IsOnline", "error %d : %s", cg.ClientAdmin()->LastServerError()->errnum,
-                                 cg.ClientAdmin()->LastServerError()->errmsg);
-            return kFALSE;
-         default:
-            if (gDebug > 0)
-               Info("IsOnline", "unidentified response: %d; check XProtocol.hh",
-                                 cg.ClientAdmin()->LastServerResp()->status);
-            return kFALSE;
-      }
+   // This is most efficiently done using GetPathInfo
+   FileStat_t st;
+   if (GetPathInfo(path, st) != 0) {
+      if (gDebug > 0)
+         Info("IsOnline", "path '%s' cannot be stat'ed", path);
+      return kFALSE;
    }
-   return kFALSE;
+   if (R_ISOFF(st.fMode)) {
+      if (gDebug > 0)
+         Info("IsOnline", "path '%s' is offline", path);
+      return kFALSE;
+   }
+   // Done
+   return kTRUE;
 }
 
 //_____________________________________________________________________________

@@ -80,7 +80,7 @@ MODULES       = build cint/cint core/metautils core/pcre core/utils core/base \
                 core/rint html montecarlo/eg \
                 geom/geom geom/geompainter montecarlo/vmc \
                 math/fumili math/mlp math/quadp net/auth gui/guibuilder io/xml \
-                math/foam math/splot math/smatrix io/sql tmva \
+                math/foam math/splot math/smatrix io/sql \
                 geom/geombuilder hist/spectrum hist/spectrumpainter \
                 gui/fitpanel proof/proof proof/proofplayer \
                 gui/sessionviewer gui/guihtml gui/recorder
@@ -152,6 +152,9 @@ endif
 ifeq ($(BUILDCHIRP),yes)
 MODULES      += io/chirp
 endif
+ifeq ($(BUILDHDFS),yes)
+MODULES      += io/hdfs
+endif
 ifeq ($(BUILDMEMSTAT),yes)
 MODULES      += misc/memstat
 endif
@@ -201,21 +204,8 @@ endif
 ifeq ($(BUILDUNURAN),yes)
 MODULES      += math/unuran
 endif
-ifeq ($(BUILDCINT7),yes)
-ifeq ($(BUILDCINT5),yes)
-MODULES      := $(subst cint/cint,cint/cint cint/cint7,$(MODULES))
-else
-MODULES      := $(subst cint/cint,cint/cint7,$(MODULES))
-endif
-endif
 ifeq ($(BUILDCINTEX),yes)
-   ifeq ($(BUILDCINT5),yes)
    MODULES      += cint/cintex
-   else
-     ifneq ($(BUILDBOTH),yes)
-     MODULES      += cint/cintexcompat
-     endif
-   endif
 endif
 ifeq ($(BUILDROOFIT),yes)
 MODULES      += roofit/roofitcore roofit/roofit roofit/roostats
@@ -245,7 +235,7 @@ ifneq ($(F77),)
 MODULES      += misc/minicern hist/hbook
 endif
 ifeq ($(BUILDXRD),yes)
-ifneq ($(XROOTDDIR),)
+ifneq ($(XRDLIBDIR),)
 MODULES      += net/netx
 else
 MODULES      += net/xrootd net/netx
@@ -265,6 +255,9 @@ MODULES      += net/rpdutils net/rootd proof/proofd
 endif
 ifeq ($(BUILDEDITLINE),yes)
 MODULES      += core/editline
+endif
+ifeq ($(BUILDTMVA),yes)
+MODULES      += tmva
 endif
 ifeq ($(BUILDXRD),yes)
 ifeq ($(ARCH),win32)
@@ -286,8 +279,8 @@ MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
                 graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
                 proof/proofd proof/proofx proof/clarens proof/peac \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
-                cint/cintexcompat \
-                cint/cint7 roofit/roofitcore roofit/roofit roofit/roostats \
+                tmva io/hdfs \
+                roofit/roofitcore roofit/roofit roofit/roostats \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve montecarlo/g4root net/glite misc/memstat \
                 math/genvector net/bonjour graf3d/gviz3d graf2d/gviz
@@ -303,7 +296,6 @@ LPATH         = lib
 ifneq ($(PLATFORM),win32)
 RPATH        := -L$(LPATH)
 CINTLIBS     := -lCint
-CINT7LIBS    := -lCint7 -lReflex
 NEWLIBS      := -lNew
 ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
                 -lTree -lMatrix -lMathCore -lThread
@@ -315,7 +307,6 @@ endif
 RINTLIBS     := -lRint
 else
 CINTLIBS     := $(LPATH)/libCint.lib
-CINT7LIBS    := $(LPATH)/libCint7.lib $(LPATH)/libReflex.lib
 NEWLIBS      := $(LPATH)/libNew.lib
 ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
                 $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
@@ -393,30 +384,6 @@ GCC_MINOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
 GCC_PATCH     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f3)
 GCC_VERS      := gcc-$(GCC_MAJOR).$(GCC_MINOR)
 GCC_VERS_FULL := gcc-$(GCC_MAJOR).$(GCC_MINOR).$(GCC_PATCH)
-
-##### CINT Stub Functions Generation #####
-ifeq ($(NOSTUBS),yes)
-ROOTCINTTMP   = export CXXFLAGS="$(CXXFLAGS)"; core/utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
-CXXFLAGS     += -DG__NOSTUBS
-CINTCXXFLAGS += -DG__NOSTUBS
-ifeq ($(NOSTUBSTEST),yes)
-CXXFLAGS     += -DG__NOSTUBSTEST
-CINTCXXFLAGS += -DG__NOSTUBSTEST
-endif
-endif
-
-
-# Precompiled headers for gcc
-ifeq ($(GCC_MAJOR),4)
-PCHSUPPORTED  := $(ENABLEPCH)
-endif
-ifeq ($(PCHSUPPORTED),yes)
-PCHFILE        = include/precompile.h.gch
-PCHCXXFLAGS    = -DUSEPCH -include precompile.h
-PCHEXTRAOBJBUILD = $(CXX) $(CXXFLAGS) -DUSEPCH $(OPT) -x c++-header \
-                   -c include/precompile.h $(CXXOUT)$(PCHFILE) \
-                   && touch $(PCHEXTRAOBJ)
-endif
 endif
 
 ##### f77 options #####
@@ -518,12 +485,6 @@ else
 MAINLIBS      =
 endif
 
-##### pre-compiled header support #####
-
-ifeq ($(PCHSUPPORTED),yes)
-include config/Makefile.precomp
-endif
-
 ##### all #####
 
 ALLHDRS      :=
@@ -558,14 +519,6 @@ cint/cint/%.o: cint/cint/%.c
 	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -I. -- $<
 	$(CC) $(OPT) $(CINTCFLAGS) -I. $(CXXOUT)$@ -c $<
 
-cint/cint7/%.o: cint/cint7/%.cxx
-	$(MAKEDEP) -R -fcint/cint7/$*.d -Y -w 1000 -- $(CINT7CXXFLAGS) -I. -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINT7CXXFLAGS) -I. $(CXXOUT)$@ -c $<
-
-cint/cint7/%.o: cint/cint7/%.c
-	$(MAKEDEP) -R -fcint/cint7/$*.d -Y -w 1000 -- $(CINT7CFLAGS) -I. -- $<
-	$(CC) $(OPT) $(CINT7CFLAGS) -I. $(CXXOUT)$@ -c $<
-
 build/%.o: build/%.cxx
 	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
 
@@ -574,7 +527,7 @@ build/%.o: build/%.c
 
 %.o: %.cxx
 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CXXFLAGS) $(PCHCXXFLAGS) $(CXXOUT)$@ -c $<
+	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
 
 %.o: %.c
 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
@@ -608,6 +561,7 @@ skip:
 -include $(patsubst %,%/ModuleVars.mk,$(MODULES))
 include $(patsubst %,%/Module.mk,$(MODULES))
 
+-include cint/cling/Module.mk  # irrelevant except for LLVM dev
 -include MyRules.mk            # allow local rules
 
 ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist \
@@ -616,10 +570,6 @@ ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist \
 ifeq ($(findstring clean-,$(MAKECMDGOALS)),)
 ifeq ($(findstring skip,$(MAKECMDGOALS))$(findstring fast,$(MAKECMDGOALS)),)
 -include $(INCLUDEFILES)
-endif
-ifeq ($(PCHSUPPORTED),yes)
-INCLUDEPCHRULES = yes
-include config/Makefile.precomp
 endif
 -include build/dummy.d          # must be last include
 endif
@@ -675,7 +625,7 @@ $(COMPILEDATA): config/Makefile.$(ARCH) config/Makefile.comp $(MAKECOMPDATA)
 	   "$(LIBDIR)" "$(BOOTLIBS)" "$(RINTLIBS)" "$(INCDIR)" \
 	   "$(MAKESHAREDLIB)" "$(MAKEEXE)" "$(ARCH)" "$(ROOTBUILD)" "$(EXPLICITLINK)"
 
-build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP) $(PCHDEP)
+build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP)
 	@(if [ ! -f $@ ] ; then \
 	   touch $@; \
 	fi)
@@ -853,7 +803,7 @@ rootdrpm:
 	fi
 
 clean::
-	@rm -f __compiledata *~ core.* include/precompile.*
+	@rm -f __compiledata *~ core.*
 
 ifeq ($(CXX),KCC)
 clean::
@@ -978,11 +928,6 @@ install: all
 	   $(INSTALLDATA) cint/cint/include     $(DESTDIR)$(CINTINCDIR)/cint; \
 	   $(INSTALLDATA) cint/cint/lib         $(DESTDIR)$(CINTINCDIR)/cint; \
 	   $(INSTALLDATA) cint/cint/stl         $(DESTDIR)$(CINTINCDIR)/cint; \
-	   echo "Installing cint/cint7/include cint/cint7/lib and cint/cint7/stl in $(DESTDIR)$(CINTINCDIR)"; \
-	   $(INSTALLDIR)                        $(DESTDIR)$(CINTINCDIR)/cint7; \
-	   $(INSTALLDATA) cint/cint7/include    $(DESTDIR)$(CINTINCDIR)/cint7; \
-	   $(INSTALLDATA) cint/cint7/lib        $(DESTDIR)$(CINTINCDIR)/cint7; \
-	   $(INSTALLDATA) cint/cint7/stl        $(DESTDIR)$(CINTINCDIR)/cint7; \
 	   find $(DESTDIR)$(CINTINCDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
 	   find $(DESTDIR)$(CINTINCDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing icons in $(DESTDIR)$(ICONPATH)"; \

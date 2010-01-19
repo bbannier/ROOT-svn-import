@@ -337,7 +337,7 @@ Int_t TSpectrum::Search(const TH1 * hin, Double_t sigma, Option_t * option,
       Float_t * source = new float[size];
       Float_t * dest   = new float[size];
       for (i = 0; i < size; i++) source[i] = hin->GetBinContent(i + first);
-      if (sigma <= 1) {
+      if (sigma < 1) {
          sigma = size/fMaxPeaks;
          if (sigma < 1) sigma = 1;
          if (sigma > 8) sigma = 8;
@@ -2643,7 +2643,7 @@ Int_t TSpectrum::SearchHighRes(float *source,float *destVector, int ssize,
    <p>
    <b>Peaks searching:</b>
    <p>
-   The goal of this funstion is to identify automatically the peaks in spectrum
+   The goal of this function is to identify automatically the peaks in spectrum
    with the presence of the continuous background and statistical
    fluctuations - noise.
    <p>

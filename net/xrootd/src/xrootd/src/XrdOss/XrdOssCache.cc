@@ -43,6 +43,9 @@ XrdOssCache_Group  *XrdOssCache_Group::fsgroups = 0;
 long long           XrdOssCache_Group::PubQuota = -1;
 
 XrdSysMutex         XrdOssCache::Mutex;
+long long           XrdOssCache::fsTotal = 0;
+long long           XrdOssCache::fsLarge = 0;
+long long           XrdOssCache::fsTotFr = 0;
 long long           XrdOssCache::fsFree  = 0;
 long long           XrdOssCache::fsSize  = 0;
 XrdOssCache_FS     *XrdOssCache::fsfirst = 0;
@@ -50,6 +53,7 @@ XrdOssCache_FS     *XrdOssCache::fslast  = 0;
 XrdOssCache_FSData *XrdOssCache::fsdata  = 0;
 double              XrdOssCache::fuzAlloc= 0.0;
 long long           XrdOssCache::minAlloc= 0;
+int                 XrdOssCache::fsCount = 0;
 int                 XrdOssCache::ovhAlloc= 0;
 int                 XrdOssCache::Quotas  = 0;
 int                 XrdOssCache::Usage   = 0;
@@ -68,7 +72,11 @@ XrdOssCache_FSData::XrdOssCache_FSData(const char *fsp,
           * static_cast<long long>(fsbuff.FS_BLKSZ);
      frsz = static_cast<long long>(fsbuff.f_bavail)
           * static_cast<long long>(fsbuff.FS_BLKSZ);
-     if (frsz > XrdOssCache::fsFree) XrdOssCache::fsFree = frsz;
+     XrdOssCache::fsTotal += size;
+     XrdOssCache::fsTotFr += frsz;
+     XrdOssCache::fsCount++;
+     if (size > XrdOssCache::fsLarge) XrdOssCache::fsLarge= size;
+     if (frsz > XrdOssCache::fsFree)  XrdOssCache::fsFree = frsz;
      fsid = fsID;
      updt = time(0);
      next = 0;
@@ -158,6 +166,38 @@ XrdOssCache_FS::XrdOssCache_FS(int &retc,
 }
 
 /******************************************************************************/
+/*                                   A d d                                    */
+/******************************************************************************/
+
+// Add is only called during configuration. No locks are needed. It merely
+// adds an unnamed file system partition. This allows us to track space.
+  
+int XrdOssCache_FS::Add(const char *fsPath)
+{
+   STATFS_t fsbuff;
+   struct stat sfbuff;
+   XrdOssCache_FSData *fdp;
+
+// Find the filesystem for this object
+//
+   if (FS_Stat(fsPath, &fsbuff) || stat(fsPath, &sfbuff)) return -errno;
+
+// Find the matching filesystem data
+//
+   fdp = XrdOssCache::fsdata;
+   while(fdp) {if (fdp->fsid == sfbuff.st_dev) break; fdp = fdp->next;}
+   if (fdp) return 0;
+
+// Create new filesystem data that will not be linked to any filesystem
+//
+   if (!(fdp = new XrdOssCache_FSData(fsPath,fsbuff,sfbuff.st_dev)))
+      return -ENOMEM;
+   fdp->next = XrdOssCache::fsdata;
+   XrdOssCache::fsdata = fdp;
+   return 0;
+}
+  
+/******************************************************************************/
 /*                             f r e e S p a c e                              */
 /******************************************************************************/
 
@@ -203,6 +243,57 @@ long long XrdOssCache_FS::freeSpace(XrdOssCache_Space &Space, const char *path)
    Space.Inleft= static_cast<long long>(fsbuff.FS_FFREE);
 
    return Space.Free;
+}
+
+/******************************************************************************/
+/*                              g e t S p a c e                               */
+/******************************************************************************/
+  
+int XrdOssCache_FS::getSpace(XrdOssCache_Space &Space, const char *sname)
+{
+   XrdOssCache_Group  *fsg = XrdOssCache_Group::fsgroups;
+
+// Try to find the space group name
+//
+   while(fsg && strcmp(sname, fsg->group)) fsg = fsg->next;
+   if (!fsg) return 0;
+
+// Return the space
+//
+   return getSpace(Space, fsg);
+}
+
+/******************************************************************************/
+  
+int XrdOssCache_FS::getSpace(XrdOssCache_Space &Space, XrdOssCache_Group *fsg)
+{
+   XrdOssCache_FS     *fsp;
+   XrdOssCache_FSData *fsd;
+   int pnum = 0;
+
+// Initialize some fields
+//
+   Space.Total = 0;
+   Space.Free  = 0;
+
+// Prepare to accumulate the stats
+//
+   XrdOssCache::Mutex.Lock();
+   Space.Usage = fsg->Usage; Space.Quota = fsg->Quota;
+   if ((fsp = XrdOssCache::fsfirst)) do
+      {if (fsp->fsgroup == fsg)
+          {fsd = fsp->fsdata; pnum++;
+           Space.Total += fsd->size;      Space.Free   += fsd->frsz;
+           if (fsd->frsz > Space.Maxfree) Space.Maxfree = fsd->frsz;
+           if (fsd->size > Space.Largest) Space.Largest = fsd->size;
+          }
+       fsp = fsp->next;
+      } while(fsp != XrdOssCache::fsfirst);
+   XrdOssCache::Mutex.UnLock();
+
+// All done
+//
+   return pnum;
 }
 
 /******************************************************************************/
@@ -516,6 +607,7 @@ void *XrdOssCache::Scan(int cscanint)
 {
    EPNAME("CacheScan")
    XrdOssCache_FSData *fsdp;
+   XrdOssCache_Group  *fsgp;
    STATFS_t fsbuff;
    const struct timespec naptime = {cscanint, 0};
    long long llT; // A dummy temporary
@@ -524,7 +616,7 @@ void *XrdOssCache::Scan(int cscanint)
 // Loop scanning the cache
 //
    while(1)
-        {nanosleep(&naptime, 0);
+        {if (cscanint > 0) nanosleep(&naptime, 0);
 
         // Get the cache context lock
         //
@@ -534,6 +626,7 @@ void *XrdOssCache::Scan(int cscanint)
         // recently adjusted to avoid fs statstics latency problems.
         //
            fsSize =  0;
+           fsTotFr=  0;
            fsdp = fsdata;
            while(fsdp)
                 {retc = 0;
@@ -548,18 +641,31 @@ void *XrdOssCache::Scan(int cscanint)
                                DEBUG("New free=" <<fsdp->frsz <<" path=" <<fsdp->path);
                                }
                      } else fsdp->stat |= XrdOssFSData_REFRESH;
-                 if (!retc && fsdp->frsz > fsFree)
-                    {fsFree = fsdp->frsz;
-                     fsSize = fsdp->size;
+                 if (!retc)
+                    {if (fsdp->frsz > fsFree)
+                        {fsFree = fsdp->frsz; fsSize = fsdp->size;}
+                     fsTotFr += fsdp->frsz;
                     }
                  fsdp = fsdp->next;
                 }
 
-         // Unlock the cache and if we have quotas check them out
-         //
-            Mutex.UnLock();
-            if (Quotas) XrdOssSpace::Quotas();
-         }
+        // Unlock the cache and if we have quotas check them out
+        //
+           Mutex.UnLock();
+           if (cscanint <= 0) return (void *)0;
+           if (Quotas) XrdOssSpace::Quotas();
+
+        // Update usage information if we are keeping track of it
+           if (Usage && XrdOssSpace::Readjust())
+              {fsgp = XrdOssCache_Group::fsgroups;
+               Mutex.Lock();
+               while(fsgp)
+                    {fsgp->Usage = XrdOssSpace::Usage(fsgp->GRPid);
+                     fsgp = fsgp->next;
+                    }
+               Mutex.UnLock();
+              }
+        }
 
 // Keep the compiler happy
 //

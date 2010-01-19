@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: SamplingDistribution.h 26427 2009-01-13 15:45:36Z cranmer $
+// @(#)root/roostats:$Id: SamplingDistribution.cxx 31276 2009-11-18 15:06:42Z moneta $
 
 /*************************************************************************
  * Project: RooStats                                                     *

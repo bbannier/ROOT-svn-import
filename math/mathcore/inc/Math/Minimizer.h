@@ -93,6 +93,7 @@ public:
       fMaxCalls(0), 
       fMaxIter(0),
       fTol(1.E-6), 
+      fPrec(-1),
       fUp(1.)
    {} 
 
@@ -239,7 +240,8 @@ public:
 
    ///return status of covariance matrix 
    /// using Minuit convention {0 not calculated 1 approximated 2 made pos def , 3 accurate}
-   virtual int CovMatrixStatus() const {  return ( (fValidError) ? 3 : 1); }
+   /// Minimizer who implements covariance matrix calculation will re-implement the method
+   virtual int CovMatrixStatus() const {  return 0; }
 
    /**
       return correlation coefficient between variable i and j.
@@ -261,8 +263,11 @@ public:
 
    /**
       minos error for variable i, return false if Minos failed or not supported 
+      and the lower and upper errors are returned in errLow and errUp
+      An extra flag  specifies if only the lower (runopt=-1) or the upper (runopt=+1) error calculation is run
+      (This feature isnot yet implemented)
    */
-   virtual bool GetMinosError(unsigned int /* i */, double & errLow, double & errUp) { 
+   virtual bool GetMinosError(unsigned int /* i */, double & errLow, double & errUp, int  = 0) { 
       errLow = 0; errUp = 0; 
       return false; 
    }  
@@ -273,8 +278,8 @@ public:
    virtual bool Hesse() { return false; }
 
    /**
-      scan function minimum for variable i. Variable and funciton must be set before using Scan 
-      Return false if an error or if minimizer does not support this funcitonality
+      scan function minimum for variable i. Variable and function must be set before using Scan 
+      Return false if an error or if minimizer does not support this functionality
     */
    virtual bool Scan(unsigned int /* i */, unsigned int & /* nstep */, double * /* x */, double * /* y */, 
                      double /*xmin */ = 0, double /*xmax*/ = 0) {
@@ -296,9 +301,14 @@ public:
    /// print the result according to set level (implemented for TMinuit for mantaining Minuit-style printing)
    virtual void PrintResults() {}
 
-   // get name of variables (override if minimizer support storing of variable names)
-   //virtual std::string VariableName(unsigned int ivar) const { return "x_" + ROOT::Math::Util::ToString(ivar); }
+   /// get name of variables (override if minimizer support storing of variable names)
+   /// return an empty string if variable is not found
+   virtual std::string VariableName(unsigned int ) const { return std::string();}  // return empty string 
 
+   /// get index of variable given a variable given a name
+   /// return -1 if variable is not found
+   virtual int VariableIndex(const std::string &) const { return -1; }
+      
    /** minimizer configuration parameters **/
 
    /// set print level
@@ -313,6 +323,10 @@ public:
    /// absolute tolerance 
    double Tolerance() const { return  fTol; }
 
+   /// precision of minimizer in the evaluation of the objective function
+   /// ( a value <=0 corresponds to the let the minimizer choose its default one)
+   double Precision() const { return fPrec; }
+   
    /// strategy 
    int Strategy() const { return fStrategy; }
 
@@ -338,6 +352,10 @@ public:
    /// set the tolerance
    void SetTolerance(double tol) { fTol = tol; }
 
+   /// set in the minimizer the objective function evaluation precision 
+   /// ( a value <=0 means the minimizer will choose its optimal value automatically, i.e. default case)
+   void SetPrecision(double prec) { fPrec = prec; }
+
    ///set the strategy 
    void SetStrategy(int strategyLevel) { fStrategy = strategyLevel; }  
 
@@ -362,9 +380,10 @@ protected:
    int fDebug;                  // print level
    int fStrategy;               // minimizer strategy
    int fStatus;                 // status of minimizer    
-   unsigned int fMaxCalls;      // max number of funciton calls 
+   unsigned int fMaxCalls;      // max number of function calls 
    unsigned int fMaxIter;       // max number or iterations used to find the minimum
    double fTol;                 // tolerance (absolute)
+   double fPrec;                // precision
    double fUp;                  // error scale 
 
 }; 

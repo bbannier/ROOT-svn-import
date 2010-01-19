@@ -38,6 +38,7 @@ GSLMCIntegrator::GSLMCIntegrator(MCIntegration::Type type, double absTol, double
    fDim(0),
    //fr(r),
    fCalls(calls),
+   fResult(0),fError(0),fStatus(-1),
    fWorkspace(0),
    fFunction(0)
 {
@@ -57,6 +58,7 @@ GSLMCIntegrator::GSLMCIntegrator(const char * type, double absTol, double relTol
    fDim(0),
    //fr(r),
    fCalls(calls),
+   fResult(0),fError(0),fStatus(-1),
    fWorkspace(0),
    fFunction(0)
 {
@@ -313,6 +315,7 @@ double GSLMCIntegrator::Sigma()
    if(fType == MCIntegration::kVEGAS)
    {
       GSLVegasIntegrationWorkspace * ws = dynamic_cast<GSLVegasIntegrationWorkspace *>(fWorkspace);
+      assert (ws != 0);
       return ws->GetWS()->sigma;
    }
    else 
@@ -332,6 +335,7 @@ double GSLMCIntegrator::ChiSqr()
    if(fType == MCIntegration::kVEGAS)
    {
       GSLVegasIntegrationWorkspace * ws = dynamic_cast<GSLVegasIntegrationWorkspace *>(fWorkspace);
+      assert(ws != 0);
       return ws->GetWS()->chisq;
    }
    else 

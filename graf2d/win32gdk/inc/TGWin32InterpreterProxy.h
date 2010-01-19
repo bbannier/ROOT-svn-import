@@ -47,7 +47,6 @@ public:
    void     ClearFileBusy();
    void     ClearStack();
    void     EnableAutoLoading();
-   void     EnableWrappers(bool value);
    void     EndOfLineAction();
    Int_t    InitializeDictionaries();
    Int_t    Load(const char *filenam, Bool_t system = kFALSE);
@@ -60,6 +59,8 @@ public:
    Long_t   ProcessLine(const char *line, EErrorCode *error = 0);
    Long_t   ProcessLineSynch(const char *line, EErrorCode *error = 0);
    void     PrintIntro();
+   void     SetGetline(char*(*getlineFunc)(const char* prompt),
+		       void (*histaddFunc)(char* line));
    void     Reset();
    void     ResetAll();
    void     ResetGlobals();

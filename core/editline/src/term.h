@@ -110,9 +110,10 @@ el_protected int term_set(EditLine_t*, const char*);
 el_protected int term_settc(EditLine_t*, int, const char**);
 el_protected int term_telltc(EditLine_t*, int, const char**);
 el_protected int term_echotc(EditLine_t*, int, const char**);
-el_protected int term__putc(int);
+el_protected extern "C" int term__putc(int);
 el_protected int term__putcolorch(int, ElColor_t*);
 el_protected void term__setcolor(int fgcol);
+el_protected int  term__atocolor(const char* name);
 el_protected void term__resetcolor(void);
 el_protected void term__repaint(EditLine_t* el, int index);
 el_protected void term__flush(void);
@@ -122,6 +123,7 @@ el_protected void term__flush(void);
  */
 #define EL_FLAGS (el)->fTerm.fFlags
 
+#define EL_CAN_UP (EL_FLAGS & TERM_CAN_UP)
 #define EL_CAN_INSERT (EL_FLAGS & TERM_CAN_INSERT)
 #define EL_CAN_DELETE (EL_FLAGS & TERM_CAN_DELETE)
 #define EL_CAN_CEOL (EL_FLAGS & TERM_CAN_CEOL)

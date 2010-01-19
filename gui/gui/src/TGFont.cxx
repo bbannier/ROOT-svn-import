@@ -1092,7 +1092,7 @@ Int_t TGTextLayout::CharBbox(Int_t index, Int_t *x, Int_t *y, Int_t *w, Int_t *h
    //           character specified by index, if non-NULL.
 
    LayoutChunk_t *chunk;
-   Int_t i, xx, ww;
+   Int_t i, xx = 0, ww = 0;
 
    if (index < 0) {
       return 0;
@@ -2610,7 +2610,8 @@ TGFont *TGFontPool::MakeFont(TGFont *font, FontStruct_t fontStruct,
    lastChar = 0xff; //fontStruct->max_char_or_byte2;
 
    for (i = 0; i < 256; i++) {
-      if ((i == 0177) || (i < firstChar) || (i > lastChar)) {
+      if ((i == 160) || (i == 173) || (i == 177) || 
+          (i < firstChar) || (i > lastChar)) {
          newFont->fTypes[i] = kCharReplace;
       } else {
          newFont->fTypes[i] = kCharNormal;

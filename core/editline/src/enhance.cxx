@@ -9,13 +9,13 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#include "TROOT.h"
 #include "el.h"
-#include "TRegexp.h"
-#include "TClassTable.h"
-#include "TInterpreter.h"
 #include <stack>
 #include <set>
+#include <string>
+
+#include "TROOT.h"
+#include "TInterpreter.h"
 
 using namespace std;
 
@@ -26,17 +26,6 @@ int matchParentheses(EditLine_t* el);
 void colorWord(EditLine_t* el, int first, int num, int color);
 void colorBrackets(EditLine_t* el, int open, int close, int color);
 char** rl_complete2ROOT(const char*, int, int);
-
-struct KeywordInLine_t {
-   KeywordInLine_t(const TString& w, Long64_t hash, Ssiz_t pos):
-      fWord(w),
-      fHash(hash),
-      fPosBegin(pos) {}
-
-   TString fWord;
-   Long64_t fHash;
-   Ssiz_t fPosBegin;
-};
 
 // int values for colour highlighting
 int color_class = 4;           // NCurses COLOR_BLUE
@@ -53,62 +42,12 @@ int color_badbracket = 1;      // NCurses COLOR_RED
  *   bad bracket:   1 (red)
  */
 void
-setKeywordColors(const char* colorType, const char* colorBracket, const char* colorBadBracket) {
-   int col = -1;
-
-   col = selectColor(TString(colorType));
-
-   if (col > -1) {
-      color_class = col;
-   }
-   color_type = color_class;
-
-   col = selectColor(TString(colorBracket));
-
-   if (col > -1) {
-      color_bracket = col;
-   }
-
-   col = selectColor(TString(colorBadBracket));
-
-   if (col > -1) {
-      color_badbracket = col;
-   }
+setKeywordColors(int colorType, int colorBracket, int colorBadBracket) {
+   color_class = colorType;
+   color_type = colorType;
+   color_bracket = colorBracket;
+   color_badbracket = colorBadBracket;
 } // setKeywordColors
-
-
-/*
- * Return an ncurses colour integer based on the colour specified in the string.
- */
-int
-selectColor(const char* s) {
-   TString str(s);
-   int ret = 0;
-   if (str.Contains("bold", TString::kIgnoreCase)
-       || str.Contains("light", TString::kIgnoreCase))
-      ret = 0x20;
-   if (str.Contains("under", TString::kIgnoreCase))
-      ret += 0x40;
-   if (str.Contains("black", TString::kIgnoreCase)) {
-      return ret;      // nCurses COLOR_BLACK
-   } else if (str.Contains("red", TString::kIgnoreCase)) {
-      return ret + 1;      // nCurses COLOR_RED
-   } else if (str.Contains("green", TString::kIgnoreCase)) {
-      return ret + 2;      // nCurses COLOR_GREEN
-   } else if (str.Contains("yellow", TString::kIgnoreCase)) {
-      return ret + 3;      // nCurses COLOR_YELLOW
-   } else if (str.Contains("blue", TString::kIgnoreCase)) {
-      return ret + 4;      // nCurses COLOR_BLUE
-   } else if (str.Contains("magenta", TString::kIgnoreCase)) {
-      return ret + 5;      // nCurses COLOR_MAGENTA
-   } else if (str.Contains("cyan", TString::kIgnoreCase)) {
-      return ret + 6;      // nCurses COLOR_CYAN
-   } else if (str.Contains("white", TString::kIgnoreCase)) {
-      return ret + 7;      // nCurses COLOR_WHITE
-   } else {
-      return -1;
-   }
-} // selectColor
 
 
 /*
@@ -173,10 +112,10 @@ matchParentheses(EditLine_t* el) {
 
    // CURRENT STUFF
    // create a string of the buffer contents
-   TString sBuffer = "";
+   std::string sBuffer = "";
 
    for (char* c = el->fLine.fBuffer; c < el->fLine.fLastChar; c++) {
-      sBuffer.Append(*c);
+      sBuffer += *c;
    }
 
    // check whole buffer for any highlighted brackets and remove colour info
@@ -190,7 +129,7 @@ matchParentheses(EditLine_t* el) {
    // char* stack for pointers to locations of brackets
    stack<int> locBrackets;
 
-   if (sBuffer.Length() > 0) {
+   if (!sBuffer.empty()) {
       int cursorPos = el->fLine.fCursor - el->fLine.fBuffer;
       bracketPos = cursorPos;
 
@@ -241,7 +180,7 @@ matchParentheses(EditLine_t* el) {
          step = -1;
       }
 
-      for (int i = bracketPos + step; i >= 0 && i < sBuffer.Length(); i += step) {
+      for (int i = bracketPos + step; i >= 0 && i < (int)sBuffer.size(); i += step) {
          //if current char is equal to another opening bracket, push onto stack
          if (sBuffer[i] == bTypes[bIndex][foundParenIdx]) {
             // push index of bracket

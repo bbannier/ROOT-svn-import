@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: UniformProposal.h 26805 2009-06-17 14:31:02Z kbelasco $
+// @(#)root/roostats:$Id: UniformProposal.h 31276 2009-11-18 15:06:42Z moneta $
 // Authors: Kevin Belasco        17/06/2009
 // Authors: Kyle Cranmer         17/06/2009
 /*************************************************************************
@@ -16,14 +16,22 @@
 #include "Rtypes.h"
 #endif
 
-#ifndef RooStats_ProposalFunction
+#ifndef ROOSTATS_ProposalFunction
 #include "RooStats/ProposalFunction.h"
 #endif
 
+#ifndef ROO_ARG_SET
 #include "RooArgSet.h"
+#endif
+#ifndef ROO_MSG_SERVICE
 #include "RooMsgService.h"
+#endif
+#ifndef ROO_REAL_VAR
 #include "RooRealVar.h"
+#endif
+#ifndef ROOT_TIterator
 #include "TIterator.h"
+#endif
 
 namespace RooStats {
 
@@ -40,9 +48,9 @@ namespace RooStats {
       // from x1 is equal to the probability of reaching x1 from x2
       virtual Bool_t IsSymmetric(RooArgSet& x1, RooArgSet& x2);
 
-      // Return the probability of proposing the point xPrime given the starting
-      // point x
-      virtual Double_t GetProposalDensity(RooArgSet& xPrime, RooArgSet& x);
+      // Return the probability of proposing the point x1 given the starting
+      // point x2
+      virtual Double_t GetProposalDensity(RooArgSet& x1, RooArgSet& x2);
 
       virtual ~UniformProposal() {}
 

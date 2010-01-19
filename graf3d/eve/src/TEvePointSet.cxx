@@ -167,8 +167,10 @@ void TEvePointSet::Reset(Int_t n_points, Int_t n_int_ids)
 
    delete [] fP; fP = 0;
    fN = n_points;
-   if (fN) fP = new Float_t [3*fN];
-   memset(fP, 0, 3*fN*sizeof(Float_t));
+   if (fN) {
+      fP = new Float_t [3*fN];
+      memset(fP, 0, 3*fN*sizeof(Float_t));
+   }
    fLastPoint = -1;
    ClearIds();
    delete fIntIds; fIntIds = 0;
@@ -251,6 +253,50 @@ void TEvePointSet::SetPointIntIds(Int_t n, Int_t* ids)
    Int_t* x = fIntIds->GetArray() + n*fIntIdsPerPoint;
    for (Int_t i=0; i<fIntIdsPerPoint; ++i)
       x[i] = ids[i];
+}
+
+/******************************************************************************/
+
+//______________________________________________________________________________
+void TEvePointSet::SetMarkerStyle(Style_t mstyle)
+{
+   // Set marker style, propagate to projecteds.
+
+   static const TEveException eh("TEvePointSet::SetMarkerStyle ");
+
+   std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
+   while (pi != fProjectedList.end())
+   {
+      TEvePointSet* pt = dynamic_cast<TEvePointSet*>(*pi);
+      if (pt)
+      {
+         pt->SetMarkerStyle(mstyle);
+         pt->StampObjProps();
+      }
+      ++pi;
+   }
+   TAttMarker::SetMarkerStyle(mstyle);
+}
+
+//______________________________________________________________________________
+void TEvePointSet::SetMarkerSize(Size_t msize)
+{
+   // Set marker size, propagate to projecteds.
+
+   static const TEveException eh("TEvePointSet::SetMarkerSize ");
+
+   std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
+   while (pi != fProjectedList.end())
+   {
+      TEvePointSet* pt = dynamic_cast<TEvePointSet*>(*pi);
+      if (pt)
+      {
+         pt->SetMarkerSize(msize);
+         pt->StampObjProps();
+      }
+      ++pi;
+   }
+   TAttMarker::SetMarkerSize(msize);
 }
 
 /******************************************************************************/
@@ -390,7 +436,7 @@ void TEvePointSet::WriteVizParams(ostream& out, const TString& var)
 //******************************************************************************
 
 //______________________________________________________________________________
-TClass* TEvePointSet::ProjectedClass() const
+TClass* TEvePointSet::ProjectedClass(const TEveProjection*) const
 {
    // Virtual from TEveProjectable, returns TEvePointSetProjected class.
 
@@ -400,7 +446,7 @@ TClass* TEvePointSet::ProjectedClass() const
 //______________________________________________________________________________
 void TEvePointSet::PointSelected(Int_t id)
 {
-   // Virtual method of base class TPointSet3D. The fuction call is
+   // Virtual method of base class TPointSet3D. The function call is
    // invoked with secondary selection in TPointSet3DGL.
 
    Emit("PointSelected(Int_t)", id);
@@ -538,7 +584,7 @@ void TEvePointSetArray::TakeAction(TEvePointSelector* sel)
    static const TEveException eh("TEvePointSetArray::TakeAction ");
 
    if (sel == 0)
-      throw(eh + "selector is <null>.");
+      throw eh + "selector is <null>.";
 
    Int_t n = sel->GetNfill();
 
@@ -547,24 +593,33 @@ void TEvePointSetArray::TakeAction(TEvePointSelector* sel)
    Double_t *vx = sel->GetV1(), *vy = sel->GetV2(), *vz = sel->GetV3();
    Double_t *qq = sel->GetV4();
 
-   if(qq == 0)
-      throw(eh + "requires 4-d varexp.");
+   if (qq == 0)
+      throw eh + "requires 4-d varexp.";
 
-   switch(fSourceCS) {
+   switch (fSourceCS)
+   {
       case kTVT_XYZ:
-         while(n-- > 0) {
+      {
+         while (n-- > 0)
+         {
             Fill(*vx, *vy, *vz, *qq);
             ++vx; ++vy; ++vz; ++qq;
          }
          break;
+      }
       case kTVT_RPhiZ:
-         while(n-- > 0) {
+      {
+         while (n-- > 0)
+         {
             Fill(*vx * TMath::Cos(*vy), *vx * TMath::Sin(*vy), *vz, *qq);
             ++vx; ++vy; ++vz; ++qq;
          }
          break;
+      }
       default:
-         throw(eh + "unknown tree variable type.");
+      {
+         throw eh + "unknown tree variable type.";
+      }
    }
 }
 
@@ -573,7 +628,7 @@ void TEvePointSetArray::TakeAction(TEvePointSelector* sel)
 //______________________________________________________________________________
 Int_t TEvePointSetArray::Size(Bool_t under, Bool_t over) const
 {
-   // Get the total of filled points.
+   // Get the total number of filled points.
    // 'under' and 'over' flags specify if under/overflow channels
    // should be added to the sum.
 
@@ -598,8 +653,8 @@ void TEvePointSetArray::InitBins(const char* quant_name,
 
    static const TEveException eh("TEvePointSetArray::InitBins ");
 
-   if (nbins < 1) throw(eh + "nbins < 1.");
-   if (min > max) throw(eh + "min > max.");
+   if (nbins < 1) throw eh + "nbins < 1.";
+   if (min > max) throw eh + "min > max.";
 
    RemoveElements();
 
@@ -615,7 +670,7 @@ void TEvePointSetArray::InitBins(const char* quant_name,
    for (Int_t i = 0; i < fNBins; ++i)
    {
       fBins[i] = new TEvePointSet
-         (Form("Slice %d [%4.3lf, %4.3lf]", i, fMin + i*fBinWidth, fMin + (i+1)*fBinWidth),
+         (Form("Slice %d [%4.3lf, %4.3lf]", i, fMin + (i-1)*fBinWidth, fMin + i*fBinWidth),
           fDefPointSetCapacity);
       fBins[i]->SetMarkerColor(fMarkerColor);
       fBins[i]->SetMarkerStyle(fMarkerStyle);
@@ -638,7 +693,7 @@ Bool_t TEvePointSetArray::Fill(Double_t x, Double_t y, Double_t z, Double_t quan
    // If the selected bin does not have an associated TEvePointSet
    // the point is discarded and false is returned.
 
-   fLastBin =TMath::FloorNint((quant - fMin)/fBinWidth) + 1;
+   fLastBin = TMath::FloorNint((quant - fMin)/fBinWidth) + 1;
 
    if (fLastBin < 0)
    {
@@ -676,8 +731,10 @@ void TEvePointSetArray::CloseBins()
    // At this point we can calculate bounding-boxes of individual
    // point-sets.
 
-   for (Int_t i=0; i<fNBins; ++i) {
-      if (fBins[i] != 0) {
+   for (Int_t i=0; i<fNBins; ++i)
+   {
+      if (fBins[i] != 0)
+      {
          fBins[i]->SetTitle(Form("N=%d", fBins[i]->Size()));
          fBins[i]->ComputeBBox();
       }
@@ -711,8 +768,9 @@ void TEvePointSetArray::SetRange(Double_t min, Double_t max)
    using namespace TMath;
 
    fCurMin = min; fCurMax = max;
-   Int_t  low_b = (Int_t) Max(Double_t(0),       Floor((min-fMin)/fBinWidth));
-   Int_t high_b = (Int_t) Min(Double_t(fNBins-1), Ceil((max-fMin)/fBinWidth));
+   Int_t  low_b = Max(0,        FloorNint((min-fMin)/fBinWidth)) + 1;
+   Int_t high_b = Min(fNBins-2, CeilNint ((max-fMin)/fBinWidth));
+
    for (Int_t i = 1; i < fNBins - 1; ++i)
    {
       if (fBins[i] != 0)
@@ -752,16 +810,16 @@ void TEvePointSetProjected::SetProjection(TEveProjectionManager* proj,
 }
 
 //______________________________________________________________________________
-void TEvePointSetProjected::SetDepth(Float_t d)
+void TEvePointSetProjected::SetDepthLocal(Float_t d)
 {
    // Set depth (z-coordinate) of the projected points.
 
    SetDepthCommon(d, this, fBBox);
 
    Int_t    n = Size();
-   Float_t *p = GetP();
+   Float_t *p = GetP() + 2;
    for (Int_t i = 0; i < n; ++i, p+=3)
-      p[2] = fDepth;
+      *p = fDepth;
 }
 
 //______________________________________________________________________________
@@ -780,7 +838,16 @@ void TEvePointSetProjected::UpdateProjection()
    for (Int_t i = 0; i < n; ++i, o+=3, p+=3)
    {
       p[0] = o[0]; p[1] = o[1]; p[2] = o[2];
-      proj.ProjectPoint(p[0], p[1], p[2]);
-      p[2] = fDepth;
+      proj.ProjectPoint(p[0], p[1], p[2], fDepth);
    }
+}
+
+//______________________________________________________________________________
+void TEvePointSetProjected::PointSelected(Int_t id)
+{
+   // Virtual method of base class TPointSet3D.
+   // Forward to projectable.
+
+   TEvePointSet *ps = dynamic_cast<TEvePointSet*>(fProjectable);
+   ps->PointSelected(id);
 }

@@ -63,7 +63,17 @@ el_private const int sighdl[] = {
    - 1
 };
 
-el_private void sig_handler(int);
+el_private extern "C" void sig_handler(int);
+
+/* R__CanOutput():
+ *   Indicate whether we are connected or not to the tty.
+ *   In particular returns false if the process is in the background.
+ */
+static int
+R__CanOutput(void)
+{
+   return (getpgrp() == tcgetpgrp(STDOUT_FILENO));
+}
 
 /* sig_handler():
  *	This is the handler called for all signals
@@ -72,21 +82,25 @@ el_private void sig_handler(int);
  */
 el_private void
 sig_handler(int signo) {
-   int i;
-   sigset_t nset, oset;
 
+   sigset_t nset, oset;
    (void) sigemptyset(&nset);
    (void) sigaddset(&nset, signo);
+   /* not needed; a signal is always blocked before invoking
+      the signal handler for that signal.
    (void) sigprocmask(SIG_BLOCK, &nset, &oset);
+   */
 
    switch (signo) {
    case SIGCONT:
-      tty_rawmode(sel);
-      //if (ed_redisplay(sel, 0) == CC_REFRESH) {
-      re_clear_display(sel);
-      re_refresh(sel);
-      //}
-      term__flush();
+      if (R__CanOutput()) {
+         tty_rawmode(sel);
+         //if (ed_redisplay(sel, 0) == CC_REFRESH) {
+         re_clear_display(sel);
+         re_refresh(sel);
+         //}
+         term__flush();
+      }
       break;
 
    case SIGWINCH:
@@ -98,15 +112,30 @@ sig_handler(int signo) {
       break;
    } // switch
 
-   for (i = 0; sighdl[i] != -1; i++) {
+   int i = 0;
+   for (; sighdl[i] != -1; i++) {
       if (signo == sighdl[i]) {
          break;
       }
    }
+   if (sighdl[i] == -1)
+      i = -1;
+   else {
+      (void) sigprocmask(SIG_UNBLOCK, &nset, &oset);
+      (void) signal(signo, sel->fSignal[i]);
+      // forward to previous signal handler:
+      (void) kill(0, signo);
+      (void) sigprocmask(SIG_SETMASK, &oset, NULL);
 
-   (void) signal(signo, sel->fSignal[i]);
-   (void) sigprocmask(SIG_SETMASK, &oset, NULL);
-   (void) kill(0, signo);
+      // re-enable us
+      sig_t s;
+      /* This could happen if we get interrupted */
+      if (i != -1 ) {
+         if ((s = signal(signo, sig_handler)) != sig_handler) {
+            sel->fSignal[i] = s;
+         }
+      }
+   }
 } // sig_handler
 
 

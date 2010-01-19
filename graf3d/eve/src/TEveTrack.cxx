@@ -12,6 +12,7 @@
 #include "TEveTrack.h"
 #include "TEveTrackPropagator.h"
 #include "TEvePointSet.h"
+#include "TEveVSDStructs.h"
 
 #include "TPolyLine3D.h"
 #include "TMarker.h"
@@ -431,7 +432,7 @@ void TEveTrack::WriteVizParams(ostream& out, const TString& var)
 }
 
 //______________________________________________________________________________
-TClass* TEveTrack::ProjectedClass() const
+TClass* TEveTrack::ProjectedClass(const TEveProjection*) const
 {
    // Virtual from TEveProjectable, return TEveTrackProjected class.
 
@@ -501,26 +502,6 @@ void TEveTrack::SecSelected(TEveTrack* track)
    // Called from TEveTrackGL on secondary-selection.
 
    Emit("SecSelected(TEveTrack*)", (Long_t)track);
-}
-
-//______________________________________________________________________________
-void TEveTrack::SetLineStyle(Style_t lstyle)
-{
-   // Set line-style of the track.
-   // The style is propagated to projected tracks.
-
-   TAttLine::SetLineStyle(lstyle);
-   std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
-   while (pi != fProjectedList.end())
-   {
-      TEveTrack* pt = dynamic_cast<TEveTrack*>(*pi);
-      if (pt)
-      {
-         pt->SetLineStyle(lstyle);
-         pt->ElementChanged();
-      }
-      ++pi;
-   }
 }
 
 
@@ -826,7 +807,7 @@ void TEveTrackList::SetLineWidth(Width_t width)
       if (fRecurse)
          SetLineWidth(width, *i);
    }
-   fLineWidth=width;
+   fLineWidth = width;
 }
 
 //______________________________________________________________________________
@@ -860,7 +841,7 @@ void TEveTrackList::SetLineStyle(Style_t style)
       if (fRecurse)
          SetLineStyle(style, *i);
    }
-   fLineStyle=style;
+   fLineStyle = style;
 }
 
 //______________________________________________________________________________
@@ -894,7 +875,7 @@ void TEveTrackList::SetMarkerStyle(Style_t style)
       if (fRecurse)
          SetMarkerStyle(style, *i);
    }
-   fMarkerStyle=style;
+   fMarkerStyle = style;
 }
 
 //______________________________________________________________________________
@@ -928,7 +909,7 @@ void TEveTrackList::SetMarkerColor(Color_t col)
       if (fRecurse)
          SetMarkerColor(col, *i);
    }
-   fMarkerColor=col;
+   fMarkerColor = col;
 }
 
 //______________________________________________________________________________
@@ -962,7 +943,7 @@ void TEveTrackList::SetMarkerSize(Size_t size)
       if (fRecurse)
          SetMarkerSize(size, *i);
    }
-   fMarkerSize=size;
+   fMarkerSize = size;
 }
 
 //______________________________________________________________________________
@@ -1135,6 +1116,7 @@ void TEveTrackList::CopyVizParams(const TEveElement* el)
       TAttLine::operator=(*m);
       fRecurse = m->fRecurse;
       fRnrLine = m->fRnrLine;
+      fRnrPoints = m->fRnrPoints;
       fMinPt   = m->fMinPt;
       fMaxPt   = m->fMaxPt;
       fLimPt   = m->fLimPt;
@@ -1156,18 +1138,20 @@ void TEveTrackList::WriteVizParams(ostream& out, const TString& var)
    TString t = "   " + var + "->";
    TAttMarker::SaveMarkerAttributes(out, var);
    TAttLine  ::SaveLineAttributes  (out, var);
-   out << t << "SetRecurse(" << fRecurse << ");\n";
-   out << t << "SetRnrLine(" << fRnrLine << ");\n";
-   out << t << "SetMinPt("   << fMinPt   << ");\n";
-   out << t << "SetMaxPt("   << fMaxPt   << ");\n";
-   out << t << "SetLimPt("   << fLimPt   << ");\n";
-   out << t << "SetMinP("    << fMinP    << ");\n";
-   out << t << "SetMaxP("    << fMaxP    << ");\n";
-   out << t << "SetLimP("    << fLimP    << ");\n";
+   out << t << "SetRecurse("   << ToString(fRecurse)   << ");\n";
+   out << t << "SetRnrLine("   << ToString(fRnrLine)   << ");\n";
+   out << t << "SetRnrPoints(" << ToString(fRnrPoints) << ");\n";
+   // These setters are not available -- need proper AND/OR mode.
+   // out << t << "SetMinPt(" << fMinPt << ");\n";
+   // out << t << "SetMaxPt(" << fMaxPt << ");\n";
+   // out << t << "SetLimPt(" << fLimPt << ");\n";
+   // out << t << "SetMinP("  << fMinP  << ");\n";
+   // out << t << "SetMaxP("  << fMaxP  << ");\n";
+   // out << t << "SetLimP("  << fLimP  << ");\n";
 }
 
 //______________________________________________________________________________
-TClass* TEveTrackList::ProjectedClass() const
+TClass* TEveTrackList::ProjectedClass(const TEveProjection*) const
 {
    // Virtual from TEveProjectable, returns TEveTrackListProjected class.
 

@@ -51,18 +51,31 @@ FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, con
    fNdf(0),
    fNCalls(min.NCalls()),
    fStatus(min.Status() ),
+   fCovStatus(min.CovMatrixStatus() ),
    fVal (min.MinValue()),  
    fEdm (min.Edm()), 
    fChi2(-1),
    fFitFunc(0), 
    fParams(std::vector<double>( min.NDim() ) )
 {
+
+   // set minimizer type 
+   fMinimType = fconfig.MinimizerType();
+
+   // append algorithm name for minimizer that support it  
+   if ( (fMinimType.find("Fumili") == std::string::npos) &&
+        (fMinimType.find("GSLMultiFit") == std::string::npos) 
+      ) { 
+      if (fconfig.MinimizerAlgoType() != "") fMinimType += " / " + fconfig.MinimizerAlgoType(); 
+   }
+
    // replace ncalls if minimizer does not support it (they are taken then from the FitMethodFunction)
    if (fNCalls == 0) fNCalls = ncalls;
 
    // Constructor from a minimizer, fill the data. ModelFunction  is passed as non const 
    // since it will be managed by the FitResult
    const unsigned int npar = fParams.size();
+   if (npar == 0) return;
 
    if (min.X() ) std::copy(min.X(), min.X() + npar, fParams.begin());
    else { 
@@ -77,7 +90,7 @@ FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, con
 
    // set right parameters in function (in case minimizer did not do before)
    // do also when fit is not valid
-   if (func) { 
+   if (func ) { 
       fFitFunc = dynamic_cast<IModelFunction *>( func->Clone() ); 
       assert(fFitFunc);
       fFitFunc->SetParameters(&fParams.front());
@@ -90,8 +103,6 @@ FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, con
       }
    }
 
-   if (min.Errors() != 0) 
-      fErrors = std::vector<double>(min.Errors(), min.Errors() + npar ) ; 
 
    // check for fixed or limited parameters
    for (unsigned int ipar = 0; ipar < npar; ++ipar) { 
@@ -104,25 +115,27 @@ FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, con
       if (chi2func == 0) 
          fChi2 = fVal;
       else { 
-         // compute chi2 equivalent
+         // compute chi2 equivalent for likelihood fits
          fChi2 = (*chi2func)(&fParams[0]); 
       }
    }
       
-   // fill error matrix
-   // cov matrix rank 
-   if (fValid) { 
+   // fill error matrix 
+   // if minimizer provides error provides also error matrix
+   if (min.Errors() != 0) {
 
-      unsigned int r = npar * (  npar + 1 )/2;  
-      fCovMatrix.reserve(r);
-      for (unsigned int i = 0; i < npar; ++i) 
-         for (unsigned int j = 0; j <= i; ++j)
-            fCovMatrix.push_back(min.CovMatrix(i,j) );
-      
-      assert (fCovMatrix.size() == r ); 
+      fErrors = std::vector<double>(min.Errors(), min.Errors() + npar ) ; 
+
+      if (fCovStatus != 0) { 
+         unsigned int r = npar * (  npar + 1 )/2;  
+         fCovMatrix.reserve(r);
+         for (unsigned int i = 0; i < npar; ++i) 
+            for (unsigned int j = 0; j <= i; ++j)
+               fCovMatrix.push_back(min.CovMatrix(i,j) );
+      }
 
       // minos errors 
-      if (fconfig.MinosErrors()) { 
+      if (fValid && fconfig.MinosErrors()) { 
          const std::vector<unsigned int> & ipars = fconfig.MinosParams(); 
          unsigned int n = (ipars.size() > 0) ? ipars.size() : npar; 
          for (unsigned int i = 0; i < n; ++i) {
@@ -143,15 +156,6 @@ FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, con
       
    }
 
-   fMinimType = fconfig.MinimizerType();
-
-   // append algorithm name for minimizer that support it  
-   if ( (fMinimType.find("Fumili") == std::string::npos) &&
-        (fMinimType.find("GSLMultiFit") == std::string::npos) 
-      ) { 
-      if (fconfig.MinimizerAlgoType() != "") fMinimType += " / " + fconfig.MinimizerAlgoType(); 
-   }
-
 }
 
 FitResult::~FitResult() { 
@@ -159,7 +163,9 @@ FitResult::~FitResult() {
    if (fFitFunc) delete fFitFunc;   
 }
 
-FitResult::FitResult(const FitResult &rhs) { 
+FitResult::FitResult(const FitResult &rhs) : 
+   fFitFunc(0) 
+{ 
    // Implementation of copy constructor
    (*this) = rhs; 
 }
@@ -182,6 +188,7 @@ FitResult & FitResult::operator = (const FitResult &rhs) {
    fNFree = rhs.fNFree; 
    fNdf = rhs.fNdf; 
    fNCalls = rhs.fNCalls; 
+   fCovStatus = rhs.fCovStatus;
    fStatus = rhs.fStatus; 
    fVal = rhs.fVal;  
    fEdm = rhs.fEdm; 
@@ -226,6 +233,7 @@ bool FitResult::Update(const ROOT::Math::Minimizer & min, bool isValid, unsigned
    fVal = min.MinValue(); 
    fEdm = min.Edm(); 
    fStatus = min.Status(); 
+   fCovStatus = min.CovMatrixStatus();
 
    // update number of function calls
    if ( min.NCalls() > 0)   fNCalls += min.NCalls();
@@ -234,20 +242,24 @@ bool FitResult::Update(const ROOT::Math::Minimizer & min, bool isValid, unsigned
    // copy parameter value and errors 
    std::copy(min.X(), min.X() + npar, fParams.begin());
 
-   if (min.Errors() != 0)  std::copy(min.Errors(), min.Errors() + npar, fErrors.begin() ) ; 
 
    // set parameters  in fit model function 
    if (fFitFunc) fFitFunc->SetParameters(&fParams.front());
    
-   if (fValid) { 
+   if (min.Errors() != 0)  { 
+   
+      std::copy(min.Errors(), min.Errors() + npar, fErrors.begin() ) ; 
 
-      // update error matrix
-      unsigned int r = npar * (  npar + 1 )/2;  
-      if (fCovMatrix.size() != r) fCovMatrix.resize(r);
-      unsigned int l = 0; 
-      for (unsigned int i = 0; i < npar; ++i) {
-         for (unsigned int j = 0; j <= i; ++j)  
-            fCovMatrix[l++] = min.CovMatrix(i,j);
+      if (fCovStatus != 0) { 
+
+         // update error matrix
+         unsigned int r = npar * (  npar + 1 )/2;  
+         if (fCovMatrix.size() != r) fCovMatrix.resize(r);
+         unsigned int l = 0; 
+         for (unsigned int i = 0; i < npar; ++i) {
+            for (unsigned int j = 0; j <= i; ++j)  
+               fCovMatrix[l++] = min.CovMatrix(i,j);
+         }
       }
                
       // update global CC       
@@ -255,8 +267,8 @@ bool FitResult::Update(const ROOT::Math::Minimizer & min, bool isValid, unsigned
       for (unsigned int i = 0; i < npar; ++i) { 
          double globcc = min.GlobalCC(i); 
          if (globcc < 0) { 
-            break; // it is not supported by that minimizer
             fGlobalCC.clear(); 
+            break; // it is not supported by that minimizer
          }
          fGlobalCC[i] = globcc; 
       }
@@ -333,18 +345,20 @@ std::string FitResult::GetParameterName(unsigned int ipar) const {
 
 void FitResult::Print(std::ostream & os, bool doCovMatrix) const { 
    // print the result in the given stream 
-   // need to add minos errors , globalCC, etc..
+   // need to add also minos errors , globalCC, etc..
+   unsigned int npar = fParams.size(); 
+   if (npar == 0) { 
+      std::cout << "Error: Empty  FitResult  ! " << std::endl;
+      return;
+   }
+   os << "\n****************************************\n";
    if (!fValid) { 
-      os << "\n****************************************\n";
       os << "            Invalid FitResult            ";
       os << "\n****************************************\n";
-      return; 
    }
-
-   os << "\n****************************************\n";
+   
    //os << "            FitResult                   \n\n";
    os << "Minimizer is " << fMinimType << std::endl;
-   unsigned int npar = fParams.size(); 
    const unsigned int nw = 25; 
    if (fVal != fChi2 || fChi2 < 0) 
       os << std::setw(nw) << std::left << "LogLikelihood" << " =\t" << fVal << std::endl;

@@ -204,10 +204,14 @@ UInt_t TDatime::Convert(Bool_t toGMT) const
       return 0;
    }
    if (toGMT) {
-      struct tm *tg;
-      tg = gmtime(&t);
-      tg->tm_isdst = -1;
-      t  = mktime(tg);
+#ifdef _REENTRANT
+      struct tm tg;
+      struct tm *tgp = gmtime_r(&t, &tg);
+#else
+      struct tm *tgp = gmtime(&t);
+#endif
+      tgp->tm_isdst = -1;
+      t  = mktime(tgp);
    }
    return (UInt_t)t;
 }
@@ -226,6 +230,17 @@ void TDatime::FillBuffer(char *&buffer)
    // Encode Date/Time into buffer, used by I/O system.
 
    tobuf(buffer, fDatime);
+}
+
+//______________________________________________________________________________
+UInt_t TDatime::Get() const
+{
+   // Return raw date/time as encoded by TDatime. Note, this value cannot
+   // be used to e.g. calculate time differences, as it is an encoded value.
+   // To calculate time differences use the Convert() method to get a time
+   // in seconds and then subtract the values.
+
+   return fDatime;
 }
 
 //______________________________________________________________________________
@@ -276,14 +291,18 @@ void TDatime::Set()
 
 #ifndef WIN32
    time_t tloc   = time(0);
-   struct tm tp;
-   localtime_r(&tloc, &tp);
-   UInt_t year   = tp.tm_year;
-   UInt_t month  = tp.tm_mon + 1;
-   UInt_t day    = tp.tm_mday;
-   UInt_t hour   = tp.tm_hour;
-   UInt_t min    = tp.tm_min;
-   UInt_t sec    = tp.tm_sec;
+#ifdef _REENTRANT
+   struct tm tpa;
+   struct tm *tp = localtime_r(&tloc, &tpa);
+#else
+   struct tm *tp = localtime(&tloc);
+#endif
+   UInt_t year   = tp->tm_year;
+   UInt_t month  = tp->tm_mon + 1;
+   UInt_t day    = tp->tm_mday;
+   UInt_t hour   = tp->tm_hour;
+   UInt_t min    = tp->tm_min;
+   UInt_t sec    = tp->tm_sec;
 #else
    SYSTEMTIME tp;
    GetLocalTime(&tp);
@@ -317,7 +336,12 @@ void TDatime::Set(UInt_t tloc, Bool_t dosDate)
       sec   = (tloc & 0x1f) * 2;
    } else {
       time_t t = (time_t) tloc;
+#ifdef _REENTRANT
+      struct tm tpa;
+      struct tm *tp = localtime_r(&t, &tpa);
+#else
       struct tm *tp = localtime(&t);
+#endif
       year   = tp->tm_year;
       month  = tp->tm_mon + 1;
       day    = tp->tm_mday;

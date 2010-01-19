@@ -31,13 +31,13 @@ private:
    //Pointers to manipulate with tabs
    TGCompositeFrame *fGuidesFrame;
    TGCompositeFrame *fClipFrame;
+   TGCompositeFrame *fStereoFrame;
 
    TGLLightSetSubEditor *fLightSet;
 
    TGColorSelect    *fClearColor;
    TGCheckButton    *fIgnoreSizesOnUpdate;
    TGCheckButton    *fResetCamerasOnUpdate;
-   TGCheckButton    *fResetCameraOnDoubleClick;
    TGTextButton     *fUpdateScene;
    TGTextButton     *fCameraHome;
 
@@ -80,6 +80,10 @@ private:
 
    TGLClipSetSubEditor *fClipSet;
 
+   TGNumberEntry    *fStereoZeroParallax;
+   TGNumberEntry    *fStereoEyeOffsetFac;
+   TGNumberEntry    *fStereoFrustumAsymFac;
+
    //Model
    TGLViewer        *fViewer;
    Bool_t	     fIsInPad;
@@ -92,6 +96,7 @@ private:
    void CreateStyleTab();
    void CreateGuidesTab();
    void CreateClippingTab();
+   void CreateStereoTab();
 
    void UpdateReferencePosState();
 
@@ -108,7 +113,6 @@ public:
    void DoClearColor(Pixel_t color);
    void DoIgnoreSizesOnUpdate();
    void DoResetCamerasOnUpdate();
-   void DoResetCameraOnDoubleClick();
    void DoUpdateScene();
    void DoCameraHome();
    void UpdateMaxDrawTimes();
@@ -122,6 +126,8 @@ public:
    void UpdateViewerAxes(Int_t id);
    void UpdateViewerReference();
    void DoCameraOverlay();
+   // Stereo
+   void UpdateStereo();
 
    void DetachFromPad(){fIsInPad = kFALSE;}
 

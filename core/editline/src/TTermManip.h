@@ -16,6 +16,8 @@
 #include <cstring>
 #include <stdio.h>
 
+extern "C" typedef int (*PutcFunc_t)(int);
+
 // setupterm must be called before TTermManip can be created!
 class TTermManip {
 public:
@@ -23,6 +25,9 @@ public:
    ~TTermManip() { ResetTerm(); }
 
    bool SetColor(unsigned char r, unsigned char g, unsigned char b);
+   bool SetColor(int idx);
+
+   int GetColorIndex(unsigned char r, unsigned char g, unsigned char b);
 
    void
    StartUnderline() {
@@ -40,6 +45,9 @@ public:
          fCurrentlyUnderlined = false;
       }
    }
+
+   void StartBold();
+   void StopBold();
 
 
    bool ResetTerm();
@@ -64,16 +72,15 @@ private:
       }
 
 
-      unsigned char fR, fG, fB;
+      int fR, fG, fB;
    };
 
    char* GetTermStr(const char* cap);
+   int GetTermNum(const char* cap);
 
    bool WriteTerm(char* termstr);
 
    bool WriteTerm(char* termstr, int i);
-
-   int AllocColor(const Color& col);
 
    static int
    DefaultPutchar(int c) {
@@ -82,28 +89,17 @@ private:
    }
 
 
-   bool fColorCapable;
-   bool fUsePairs;
+   int fNumColors; // number of available colors
    bool fAnsiColors; // whether fSetFg, Bg use ANSI
-   bool fCanChangeColors; // whether the terminal can redefine existing colors
-   char* fOrigColors; // reset colors
-   char* fInitColor; // initialize a color
-   char* fInitPair; // initialize pair
-   char* fSetPair; // set color to a pair
    char* fSetFg; // set foreground color
    char* fSetBold; // set bold color
    char* fSetDefault; // set normal color
    char* fStartUnderline; // start underline;
    char* fStopUnderline; // stop underline;
-   typedef int (*PutcFunc_t)(int);
    PutcFunc_t fPutc;
    int fCurrentColorIdx;   // index if the currently active color
    bool fCurrentlyBold;  // whether bold is active
    bool fCurrentlyUnderlined;  // whether underlining is active
-
-   static const int fgStartColIdx = 5;
-   typedef std::map<Color, int> ColorMap_t;
-   ColorMap_t fColors;
 };
 
 #endif // INCLUDE_TTERMMANIP_H

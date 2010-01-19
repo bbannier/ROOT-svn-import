@@ -591,15 +591,6 @@ void TCanvas::Build()
 
 
 //______________________________________________________________________________
-TCanvas::TCanvas(const TCanvas &) : TPad(), fDoubleBuffer(0)
-{
-   // Intentionally not implemented
-
-   fPainter = 0;
-}
-
-
-//______________________________________________________________________________
 TCanvas::~TCanvas()
 {
    // Canvas destructor
@@ -848,7 +839,9 @@ TObject *TCanvas::DrawClonePad()
    TPad *pad = padsav;
    if (pad == this) pad = selpad;
    if (padsav == 0 || pad == 0 || pad == this) {
-      return DrawClone();
+      TCanvas *newCanvas = (TCanvas*)DrawClone();
+      newCanvas->SetWindowSize(GetWindowWidth(),GetWindowHeight());
+      return newCanvas;
    }
    if (fCanvasID == -1) {
       fCanvasImp = gGuiFactory->CreateCanvasImp(this, GetName(), fWindowTopX, fWindowTopY,
@@ -1312,7 +1305,7 @@ void TCanvas::HandleInput(EEventType event, Int_t px, Int_t py)
       RunAutoExec();
 
       break;
-   case 7:
+   case kButton1Shift:
       // Try to select
       pad = Pick(px, py, prevSelObj);
 
@@ -1327,17 +1320,16 @@ void TCanvas::HandleInput(EEventType event, Int_t px, Int_t py)
       RunAutoExec();
 
       break;
-   default:
-      //kButton4/kButton5 for embedded gl/ glhistpainter
-      //5 and 6
-      if (event == 5 || event == 6)
-      {
-         pad = Pick(px, py, prevSelObj);
-         if (!pad) return;
+   case kWheelUp:
+   case kWheelDown:
+      pad = Pick(px, py, prevSelObj);
+      if (!pad) return;
 
-         gPad = pad;
-         fSelected->ExecuteEvent(event, px, py);
-      }
+      gPad = pad;
+      fSelected->ExecuteEvent(event, px, py);
+      break;
+   default:
+      break;
    }
 
    if (fPadSave && event != kButton2Down)
@@ -1616,8 +1608,6 @@ void TCanvas::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitives in this canvas in C++ macro file with GUI.
 
-   Bool_t invalid = kFALSE;
-
    // Write canvas options (in $TROOT or $TStyle)
    if (gStyle->GetOptFit()) {
       out<<"   gStyle->SetOptFit(1);"<<endl;
@@ -1650,9 +1640,7 @@ void TCanvas::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 
    // Now recursively scan all pads of this canvas
    cd();
-   if (invalid) SetName("c1");
    TPad::SavePrimitive(out,option);
-   if (invalid) SetName(" ");
 }
 
 

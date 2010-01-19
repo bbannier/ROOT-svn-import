@@ -6747,7 +6747,6 @@ void TMinuit::mnscan()
    if (fAmin == fUndefi) mnamin();
    iparwd  = Int_t((fWord7[0] + .1));
    ipar    = TMath::Max(iparwd,0);
-   iint    = fNiofex[ipar-1];
    fCstatu = "NO CHANGE";
    if (iparwd > 0) goto L200;
 
@@ -6759,6 +6758,7 @@ L100:
    if (iint <= 0) goto L100;
 //*-*-        set up range for parameter IPAR
 L200:
+   iint    = fNiofex[ipar-1];
    ubest    = fU[ipar-1];
    fXpt[0]  = ubest;
    fYpt[0]  = fAmin;
@@ -6816,6 +6816,7 @@ L500:
 //*-*-        finished with scan of parameter IPAR
    fU[ipar-1] = ubest;
    mnexin(fX);
+   if (fISW[4] >= 1)
    Printf("%dSCAN OF PARAMETER NO. %d,  %s"
          ,fNewpag,ipar,(const char*)fCpnam[ipar-1]);
    mnplot(fXpt, fYpt, fChpt, nxypt, fNpagwd, fNpagln);
@@ -6826,7 +6827,7 @@ L800:
    if (iparwd <= 0) goto L100;
 //*-*-        finished with all parameters
 L900:
-   mnprin(5, fAmin);
+   if (fISW[4] >= 0) mnprin(5, fAmin);
 } /* mnscan_ */
 
 //______________________________________________________________________________

@@ -866,6 +866,7 @@ int G__shl_load(char *shlfile)
     }
     else {
       G__shl_load_error(shlfile,"Load Error");
+      G__sl_handle.pop_back();
       --G__allsl;
       return(-1);
     }
@@ -1034,21 +1035,19 @@ int G__shl_load(char *shlfile)
   G__setdebugcond();
   G__globalcomp=store_globalcomp;
 
-  if(G__ispermanentsl) {
-    G__DLLINIT initsl = 0;
-    //if(!G__initpermanentsl)
-      initsl = 
-        (void (*)())G__shl_findsym(&G__sl_handle[allsl].handle,"G__cpp_setup"
-                                   ,TYPE_PROCEDURE); 
-    if(!initsl) {
-       dllid.Format("G__cpp_setup%s",dllidheader());
-      initsl =
-         (void (*)())G__shl_findsym(&G__sl_handle[allsl].handle,dllid,TYPE_PROCEDURE); 
-    }
-    if (initsl) G__initpermanentsl->push_back(initsl);
-    G__sl_handle[allsl].ispermanent = true;
-  }
-
+   if(G__ispermanentsl) {
+      G__DLLINIT initsl = 0;
+      //if(!G__initpermanentsl)
+      initsl = (void (*)())G__shl_findsym(&G__sl_handle[allsl].handle,"G__cpp_setup"
+                                          ,TYPE_PROCEDURE); 
+      if(!initsl) {
+         dllid.Format("G__cpp_setup%s",dllidheader());
+         initsl = (void (*)())G__shl_findsym(&G__sl_handle[allsl].handle,dllid,TYPE_PROCEDURE); 
+      }
+      if (initsl) G__initpermanentsl->push_back(initsl);
+      G__sl_handle[allsl].ispermanent = true;
+   }
+   
   strcpy(G__ifile.name,"");
   return(allsl);
 }
@@ -1165,7 +1164,7 @@ int G__isinterpretedp2f(void *p2f)
 * Called by
 *   G__getvariable()
 *
-* Calling fucntion by pointer to function
+* Calling function by pointer to function
 ******************************************************************/
 G__value G__pointer2func(G__value *obj_p2f,char *parameter0 ,char *parameter1,int *known3)
 {

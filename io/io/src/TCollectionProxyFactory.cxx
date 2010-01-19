@@ -17,7 +17,7 @@
 // functionality and iteration. The purpose of this implementation
 // is to shield any generated dictionary implementation from the
 // underlying streamer/proxy implementation and only expose
-// the creation fucntions.
+// the creation functions.
 //
 // In particular this is used to implement splitting and abstract
 // element access of any container. Access to compiled code is necessary
@@ -57,14 +57,19 @@ namespace {
             cl.replace(3,10,"::");
          if ( cl.find("__gnu_cxx::hash_") != std::string::npos )
             cl.replace(0,16,"std::");
+         TEmulatedCollectionProxy * result = 0;
          switch ( stl_type(cl) )  {
             case TClassEdit::kNotSTL:
                return 0;
             case TClassEdit::kMap:
             case TClassEdit::kMultiMap:
-               return new TEmulatedMapProxy(class_name);
+               result = new TEmulatedMapProxy(class_name);
+               break;
             default:
-               return new TEmulatedCollectionProxy(class_name);
+               result = new TEmulatedCollectionProxy(class_name);
+         }
+         if ( result->IsValid() ) { 
+            return result;
          }
       }
       return 0;
@@ -141,7 +146,7 @@ TCollectionStreamer::TCollectionStreamer() : fStreamer(0)
    // Initializing constructor.
 }
 
-TCollectionStreamer::TCollectionStreamer(const TCollectionStreamer& c)
+TCollectionStreamer::TCollectionStreamer(const TCollectionStreamer& c) : fStreamer(0)
 {
    // Copy constructor.
    if ( c.fStreamer )  {

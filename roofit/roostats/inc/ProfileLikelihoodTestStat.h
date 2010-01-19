@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: ProfileLikelihoodTestStat.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: ProfileLikelihoodTestStat.h 31529 2009-12-03 14:57:25Z moneta $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -136,8 +136,11 @@ namespace RooStats {
 	   // store original values, since minimization will change them.
 	   RooArgSet* origParamVals = (RooArgSet*) paramsOfInterest.snapshot();
 
-	   // find minimum
+	   // find minimum - add these extra lines to avoid calling first SET WARN in RooMinuit constructor
+           Bool_t smode = RooMsgService::instance().silentMode() ;
+           RooMsgService::instance().setSilentMode(kTRUE) ;
 	   RooMinuit minuit(*nll);
+           if (!smode) RooMsgService::instance().setSilentMode(kFALSE) ;
 	   minuit.setPrintLevel(-999);
 	   minuit.setNoWarn();
 	   minuit.migrad();

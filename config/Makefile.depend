@@ -78,12 +78,8 @@ ROOFITCORELIBDEPM      = $(HISTLIB) $(GRAFLIB) $(MATRIXLIB) $(TREELIB) \
 ROOFITLIBDEPM          = $(ROOFITCORELIB) $(TREELIB) $(IOLIB) $(MATRIXLIB) \
                          $(MATHCORELIB) 
 ROOSTATSLIBDEPM        = $(ROOFITLIB) $(ROOFITCORELIB) $(TREELIB) $(IOLIB) \
-                         $(MATRIXLIB) $(HISTLIB) $(MATHCORELIB) $(GRAFLIB) $(GPADLIB)
-ifneq ($(BUILDBOTHCINT),)
-PYTHONLIBDEPM          = $(METATCINTLIB)
-endif
-CINT7LIBDEPM           = $(REFLEXLIB)
-METATCINT7LIBDEPM      = $(REFLEXLIB)
+                         $(MATRIXLIB) $(HISTLIB) $(MATHCORELIB) $(GRAFLIB) \
+                         $(GPADLIB)
 CINTEXLIBDEPM          = $(REFLEXLIB)
 REFLEXDICTLIBDEPM      = $(REFLEXLIB)
 RAUTHLIBDEPM           = $(NETLIB) $(IOLIB)
@@ -96,6 +92,7 @@ RFIOLIBDEPM            = $(IOLIB)
 DCACHELIBDEPM          = $(IOLIB)
 CHIRPLIBDEPM           = $(IOLIB)
 GFALLIBDEPM            = $(IOLIB)
+HDFSLIBDEPM            = $(IOLIB)
 SQLLIBDEPM             = $(NETLIB) $(IOLIB)
 ODBCLIBDEPM            = $(NETLIB) $(IOLIB)
 NETXLIBDEPM            = $(NETLIB) $(IOLIB) $(THREADLIB)
@@ -180,11 +177,6 @@ ALIENLIBDEP            = $(ALIENLIBDEPM)
 ROOFITCORELIBDEP       = $(ROOFITCORELIBDEPM)
 ROOFITLIBDEP           = $(ROOFITLIBDEPM)
 ROOSTATSLIBDEP         = $(ROOSTATSLIBDEPM)
-ifneq ($(BUILDBOTHCINT),)
-PYTHONLIBDEP           = $(PYTHONLIBDEPM)
-endif
-CINT7LIBDEP            = $(CINT7LIBDEPM)
-METATCINT7LIBDEP       = $(METATCINT7LIBDEPM)
 CINTEXLIBDEP           = $(CINTEXLIBDEPM)
 REFEXDICTLIBDEP        = $(REFLEXDICTLIBDEPM)
 RAUTHLIBDEP            = $(RAUTHLIBDEPM)
@@ -196,6 +188,7 @@ RFIOLIBDEP             = $(RFIOLIBDEPM)
 DCACHELIBDEP           = $(DCACHELIBDEPM)
 CHIRPLIBDEP            = $(CHIRPLIBDEPM)
 GFALLIBDEP             = $(GFALLIBDEPM)
+HDFSLIBDEP             = $(HDFSLIBDEPM)
 SQLLIBDEP              = $(SQLLIBDEPM)
 ODBCLIBDEP             = $(ODBCLIBDEPM)
 NETXLIBDEP             = $(NETXLIBDEPM)
@@ -323,11 +316,6 @@ ROOSTATSLIBEXTRA        = lib/libRooFit.lib lib/libRooFitCore.lib \
                           lib/libTree.lib lib/libRIO.lib lib/libHist.lib \
                           lib/libMatrix.lib lib/libMathCore.lib \
                           lib/libGraf.lib lib/libGpad.lib
-ifneq ($(BUILDBOTHCINT),)
-PYTHONLIBEXTRA          = lib/libMetaTCint.lib
-endif
-CINT7LIBEXTRA           = lib/libReflex.lib
-METATCINT7LIBEXTRA      = lib/libReflex.lib
 CINTEXLIBEXTRA          = lib/libReflex.lib
 REFLEXDICTLIBEXTRA      = lib/libReflex.lib
 RAUTHLIBEXTRA           = lib/libNet.lib lib/libRIO.lib
@@ -340,6 +328,7 @@ RFIOLIBEXTRA            = lib/libRIO.lib
 DCACHELIBEXTRA          = lib/libRIO.lib
 CHIRPLIBEXTRA           = lib/libRIO.lib
 GFALLIBEXTRA            = lib/libRIO.lib
+HDFSLIBEXTRA            = lib/libRIO.lib
 SQLLIBEXTRA             = lib/libNet.lib lib/libRIO.lib
 ODBCLIBEXTRA            = lib/libNet.lib lib/libRIO.lib
 NETXLIBEXTRA            = lib/libNet.lib lib/libRIO.lib lib/libThread.lib
@@ -443,11 +432,6 @@ ROOFITCORELIBEXTRA      = -Llib -lHist -lGraf -lMatrix -lTree -lMinuit -lRIO \
 ROOFITLIBEXTRA          = -Llib -lRooFitCore -lTree -lRIO -lMatrix -lMathCore
 ROOSTATSLIBEXTRA        = -Llib -lRooFit -lRooFitCore -lTree -lRIO -lMatrix \
                           -lHist -lMathCore -lGraf -lGpad
-ifneq ($(BUILDBOTHCINT),)
-PYTHONLIBEXTRA          = -Llib -lMetaTCint
-endif
-CINT7LIBEXTRA           = -Llib -lReflex
-METATCINT7LIBEXTRA      = -Llib -lReflex
 CINTEXLIBEXTRA          = -Llib -lReflex
 REFLEXDICTLIBEXTRA      = -Llib -lReflex
 RAUTHLIBEXTRA           = -Llib -lNet -lRIO
@@ -459,6 +443,7 @@ RFIOLIBEXTRA            = -Llib -lRIO
 DCACHELIBEXTRA          = -Llib -lRIO
 CHIRPLIBEXTRA           = -Llib -lRIO
 GFALLIBEXTRA            = -Llib -lRIO
+HDFSLIBEXTRA            = -Llib -lRIO
 SQLLIBEXTRA             = -Llib -lNet -lRIO
 ODBCLIBEXTRA            = -Llib -lNet -lRIO
 NETXLIBEXTRA            = -Llib -lNet -lRIO -lThread

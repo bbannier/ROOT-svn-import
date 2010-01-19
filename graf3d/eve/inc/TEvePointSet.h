@@ -12,7 +12,6 @@
 #ifndef ROOT_TEvePointSet
 #define ROOT_TEvePointSet
 
-#include "TEveVSDStructs.h"
 #include "TEveElement.h"
 #include "TEveProjectionBases.h"
 #include "TEveTreeTools.h"
@@ -79,6 +78,8 @@ public:
    void   SetPointIntIds(Int_t n, Int_t* ids);
 
    virtual void SetMarkerColor(Color_t col) { SetMainColor(col); }
+   virtual void SetMarkerStyle(Style_t mstyle=1);
+   virtual void SetMarkerSize(Size_t msize=1);
 
    virtual void Paint(Option_t* option="");
 
@@ -92,7 +93,7 @@ public:
    virtual void CopyVizParams(const TEveElement* el);
    virtual void WriteVizParams(ostream& out, const TString& var);
 
-   virtual TClass* ProjectedClass() const;
+   virtual TClass* ProjectedClass(const TEveProjection* p) const;
 
    ClassDef(TEvePointSet, 1); // Set of 3D points with same marker attributes; optionally each point can be assigned an external TRef or a number of integer indices.
 };
@@ -113,7 +114,7 @@ class TEvePointSetArray : public TEveElement,
    TEvePointSetArray& operator=(const TEvePointSetArray&); // Not implemented
 
 protected:
-   TEvePointSet**   fBins;                 //  Pointers to subjugated TEvePointSet's.
+   TEvePointSet **fBins;               //  Pointers to subjugated TEvePointSet's.
    Int_t        fDefPointSetCapacity;  //  Default capacity of subjugated TEvePointSet's.
    Int_t        fNBins;                //  Number of subjugated TEvePointSet's.
    Int_t        fLastBin;              //! Index of the last filled TEvePointSet.
@@ -172,13 +173,17 @@ private:
    TEvePointSetProjected(const TEvePointSetProjected&);            // Not implemented
    TEvePointSetProjected& operator=(const TEvePointSetProjected&); // Not implemented
 
+protected:
+   virtual void SetDepthLocal(Float_t d);
+
 public:
    TEvePointSetProjected();
    virtual ~TEvePointSetProjected() {}
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
-   virtual void SetDepth(Float_t d);
    virtual void UpdateProjection();
+
+   virtual void PointSelected(Int_t id);
 
    ClassDef(TEvePointSetProjected, 1); // Projected copy of a TEvePointSet.
 };

@@ -48,6 +48,7 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const char* n, const char* t) :
    TEveProjectable(),
 
    fData(0),
+   fCellIdCacheOK(kFALSE),
 
    fEtaMin(-10),
    fEtaMax(10),
@@ -67,12 +68,11 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const char* n, const char* t) :
    fMaxValAbs(100),
 
    fValueIsColor(kFALSE),
-   fPalette(0),
-
-   fCellIdCacheOK(kFALSE)
+   fPalette(0)
 {
    // Constructor.
 
+   fPickable = kTRUE;
    SetElementNameTitle(n, t);
    SetData(data);
 }
@@ -83,7 +83,6 @@ TEveCaloViz::~TEveCaloViz()
    // Destructor.
 
    if (fPalette) fPalette->DecRefCount();
-   if (fData) fData->DecRefCount(this);
 }
 
 //______________________________________________________________________________
@@ -92,6 +91,25 @@ Float_t TEveCaloViz::GetDataSliceThreshold(Int_t slice) const
    // Get threshold for given slice.
 
    return fData->RefSliceInfo(slice).fThreshold;
+}
+
+//______________________________________________________________________________
+TEveElement* TEveCaloViz::ForwardSelection()
+{
+   // Management of selection state and ownership of selected cell list
+   // is done in TEveCaloData. This is a reason selection is forwared to it.
+
+   return fData;
+}
+
+//______________________________________________________________________________
+TEveElement* TEveCaloViz::ForwardEdit()
+{
+   // Management of selection state and ownership of selected cell list
+   // is done in TEveCaloData. We still want GUI editor to disply
+   // concrete calo-viz object.
+
+   return this;
 }
 
 //______________________________________________________________________________
@@ -190,12 +208,13 @@ void TEveCaloViz::SetData(TEveCaloData* data)
 {
    // Set calorimeter event data.
 
+
    if (data == fData) return;
-   if (fData) fData->DecRefCount(this);
+   if (fData) fData->RemoveElement(this);
    fData = data;
    if (fData)
    {
-      fData->IncRefCount(this);
+      fData->AddElement(this);
       DataChanged();
    }
 }
@@ -235,6 +254,30 @@ void TEveCaloViz::DataChanged()
    }
 
    InvalidateCellIdCache();
+}
+
+//______________________________________________________________________________
+void TEveCaloViz::AssertCellIdCache() const
+{
+   // Assert cell id cache is ok.
+ 
+   TEveCaloViz* cv = const_cast<TEveCaloViz*>(this);
+   if (!fCellIdCacheOK)
+      cv->BuildCellIdCache();
+}
+
+//______________________________________________________________________________
+Bool_t TEveCaloViz::CellInEtaPhiRng(TEveCaloData::CellData_t& cellData) const
+{
+   // Returns true if given cell is in the ceta phi range.
+
+   if (cellData.EtaMin() >= fEtaMin && cellData.EtaMax() <= fEtaMax)
+   {
+      if (TEveUtil::IsU1IntervalContainedByMinMax
+          (fPhi-fPhiOffset, fPhi+fPhiOffset, cellData.PhiMin(), cellData.PhiMax()))
+         return kTRUE;
+   }
+   return kFALSE;
 }
 
 //______________________________________________________________________________
@@ -337,7 +380,7 @@ void TEveCaloViz::Paint(Option_t* /*option*/)
 }
 
 //______________________________________________________________________________
-TClass* TEveCaloViz::ProjectedClass() const
+TClass* TEveCaloViz::ProjectedClass(const TEveProjection*) const
 {
    // Virtual from TEveProjectable, returns TEveCalo2D class.
 
@@ -375,7 +418,7 @@ void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t& outH) co
 ClassImp(TEveCalo3D);
 
 
-TEveCalo3D::TEveCalo3D(TEveCaloData* d, const char* n, const char* t): 
+TEveCalo3D::TEveCalo3D(TEveCaloData* d, const char* n, const char* t):
    TEveCaloViz(d, n, t),
 
    fRnrEndCapFrame    (kTRUE),
@@ -433,7 +476,9 @@ ClassImp(TEveCalo2D);
 TEveCalo2D::TEveCalo2D(const char* n, const char* t):
    TEveCaloViz(0, n, t),
    TEveProjected(),
-   fOldProjectionType(TEveProjection::kPT_Unknown)
+   fOldProjectionType(TEveProjection::kPT_Unknown),
+   fMaxESumBin( 0),
+   fMaxEtSumBin(0)
 {
    // Constructor.
 }
@@ -443,12 +488,28 @@ TEveCalo2D::~TEveCalo2D()
 {
    // Destructor.
 
-   for(UInt_t vi = 0; vi < fCellLists.size(); ++vi)
-   {
-      TEveCaloData::vCellId_t* cids = fCellLists[vi];
-      cids->clear();
-      delete cids;
+   TEveCaloData::vCellId_t* cids;
+   UInt_t n;
+
+   // clear selected cell ids
+   n = fCellListsSelected.size();
+   for(UInt_t i = 0; i < n; ++i) {
+      cids = fCellListsSelected[i];
+      if (cids) {
+         cids->clear(); delete cids;
+      }
    }
+   fCellListsSelected.clear();
+
+   // clear all cell dds
+   n = fCellLists.size();
+   for(UInt_t i = 0; i < n; ++i) {
+      cids = fCellLists[i];
+      if (cids) {
+         cids->clear(); delete cids;
+      }
+   }
+   fCellLists.clear();
 }
 
 //______________________________________________________________________________
@@ -480,63 +541,164 @@ void TEveCalo2D::BuildCellIdCache()
    // Build lists of drawn cell IDs. See TEveCalo2DGL::DirecDraw().
 
    // clear old cache
-   for (std::vector<TEveCaloData::vCellId_t*>::iterator it = fCellLists.begin(); it != fCellLists.end(); it++)
-      delete *it;
-
-   fCellLists.clear();
-   fBinIds.clear();
-
-   TEveProjection::EPType_e pt = fManager->GetProjection()->GetType();
-   TEveCaloData::vCellId_t*  clv; // ids per phi bin in r-phi projection else ids per eta bins in rho-z projection
-
-   if (pt == TEveProjection::kPT_RPhi)
+   for (vBinCells_i it = fCellLists.begin(); it != fCellLists.end(); it++)
    {
-      // build list on basis of phi bins
-      const TAxis* ay = fData->GetPhiBins();
-      assert(ay);
-      Int_t nBins = ay->GetNbins();
-      for (Int_t ibin = 1; ibin <= nBins; ++ibin)
+      if (*it)
       {
-         if ( TEveUtil::IsU1IntervalOverlappingByMinMax
-              (GetPhiMin(), GetPhiMax(), ay->GetBinLowEdge(ibin), ay->GetBinUpEdge(ibin)))
-         {
-            clv = new TEveCaloData::vCellId_t();
-            fData->GetCellList(GetEta(), GetEtaRng(), ay->GetBinCenter(ibin), ay->GetBinWidth(ibin),*clv);
-
-            if (clv->size())
-            {
-               fCellLists.push_back(clv);
-               fBinIds.push_back(ibin);
-            }
-            else
-               delete clv;
-         }
+         (*it)->clear();
+         delete *it;
       }
    }
-   else if (pt == TEveProjection::kPT_RhoZ)
+   fCellLists.clear();
+   fCellLists.push_back(0);
+
+   TEveProjection::EPType_e pt = fManager->GetProjection()->GetType();
+   TEveCaloData::vCellId_t* clv; // ids per phi bin in r-phi projection else ids per eta bins in rho-z projection
+
+   Bool_t isRPhi = (pt == TEveProjection::kPT_RPhi);
+
+   const TAxis* axis = isRPhi ? fData->GetPhiBins() :  fData->GetEtaBins();
+   Int_t nBins = axis->GetNbins();
+
+   Float_t min, max;
+   if (isRPhi)
    {
-      // build list on basis of eta bins
-      const TAxis *ax    = fData->GetEtaBins();
-      assert(ax);
-      const Int_t  nBins = ax->GetNbins();
-      for (Int_t ibin = 1; ibin <= nBins; ++ibin)
-      {
-         if (ax->GetBinLowEdge(ibin) > fEtaMin && ax->GetBinUpEdge(ibin) <= fEtaMax)
+      min = GetPhiMin() - fData->GetEps();
+      max = GetPhiMax() + fData->GetEps();
+      for (Int_t ibin = 1; ibin <= nBins; ++ibin) {
+         clv = 0;
+         if ( TEveUtil::IsU1IntervalOverlappingByMinMax
+              (min, max, axis->GetBinLowEdge(ibin), axis->GetBinUpEdge(ibin)))
          {
             clv = new TEveCaloData::vCellId_t();
-            fData->GetCellList(ax->GetBinCenter(ibin), ax->GetBinWidth(ibin), fPhi, GetPhiRng(), *clv);
-            if (clv->size())
-            {
-               fCellLists.push_back(clv);
-               fBinIds.push_back(ibin);
+            fData->GetCellList(GetEta(), GetEtaRng(), axis->GetBinCenter(ibin), axis->GetBinWidth(ibin), *clv);
+            if (!clv->size()) {
+               delete clv; clv = 0;
             }
-            else
-               delete clv;
+         }
+         fCellLists.push_back(clv);
+      }
+   }
+   else
+   {
+      min = GetEtaMin() - fData->GetEps();
+      max = GetEtaMax() + fData->GetEps();
+      for (Int_t ibin = 1; ibin <= nBins; ++ibin) {
+         clv = 0;
+         Float_t low = axis->GetBinLowEdge(ibin);
+         Float_t up = axis->GetBinUpEdge(ibin) ;
+         if (low >= min && up <= max)
+         {
+            clv = new TEveCaloData::vCellId_t();
+            fData->GetCellList(axis->GetBinCenter(ibin), axis->GetBinWidth(ibin), fPhi, GetPhiRng(), *clv);
+            if (!clv->size()) {
+               delete clv; clv = 0;
+            }
+         }
+         fCellLists.push_back(clv);
+      }
+   }
+
+   // cache max bin sum for auto scale
+   if (!fScaleAbs)
+   {
+      fMaxESumBin  = 0;
+      fMaxEtSumBin = 0;
+      Float_t sumE  = 0;
+      Float_t sumEt = 0;
+      TEveCaloData::CellData_t  cellData;
+      for (Int_t ibin = 1; ibin <= nBins; ++ibin) {
+         TEveCaloData::vCellId_t* cids = fCellLists[ibin];
+         if (cids)
+         {
+            sumE = 0; sumEt = 0;
+            for (TEveCaloData::vCellId_i it = cids->begin(); it != cids->end(); it++)
+            {  
+               fData->GetCellData(*it, cellData);
+               sumE  += cellData.Value(kFALSE);
+               sumEt += cellData.Value(kTRUE);
+            }
+            fMaxESumBin  = TMath::Max(fMaxESumBin,  sumE);
+            fMaxEtSumBin = TMath::Max(fMaxEtSumBin, sumEt);  
          }
       }
+      ComputeBBox();
    }
 
    fCellIdCacheOK= kTRUE;
+}
+
+//______________________________________________________________________________
+void TEveCalo2D::CellSelectionChanged()
+{
+   // Sort slected cells in eta or phi bins.
+
+   // clear old cache
+   for (vBinCells_i it = fCellListsSelected.begin(); it != fCellListsSelected.end(); it++)
+   {
+      if (*it)
+      {
+         (*it)->clear();
+         delete *it;
+      }
+   }
+   fCellListsSelected.clear();
+
+   TEveCaloData::vCellId_t&  cells = fData->GetCellsSelected();
+   TEveCaloData::CellData_t  cellData;
+   if (cells.size())
+   {
+      Bool_t rPhi  = fManager->GetProjection()->GetType() == TEveProjection::kPT_RPhi;
+      UInt_t nBins = rPhi ? fData->GetPhiBins()->GetNbins() : fData->GetEtaBins()->GetNbins();
+
+      fCellListsSelected.resize(nBins+1);
+      for (UInt_t b = 0; b <= nBins; ++b)
+         fCellListsSelected[b] = 0;
+
+      Int_t bin;
+      for (TEveCaloData::vCellId_i i=cells.begin(); i!=cells.end(); i++)
+      {
+         fData->GetCellData(*i, cellData);
+         if (CellInEtaPhiRng(cellData))
+         {
+            if (rPhi)
+            {
+               bin = fData->GetPhiBins()->FindBin(cellData.Phi());
+            }
+            else {
+               bin = fData->GetEtaBins()->FindBin(cellData.Eta());
+            }
+            if (fCellListsSelected[bin] == 0)
+               fCellListsSelected[bin] = new TEveCaloData::vCellId_t();
+
+            fCellListsSelected[bin]->push_back(*i);
+         }
+      }
+   }
+}
+
+//______________________________________________________________________________
+Float_t TEveCalo2D::GetValToHeight() const
+{
+   // Virtual function of TEveCaloViz.
+   // Get transformation factor from E/Et to height.
+
+   AssertCellIdCache();
+
+   if (fScaleAbs)
+   {
+      return fMaxTowerH/fMaxValAbs;
+   }
+   else
+   {
+     if (fData->Empty())
+       return 1;
+
+     if (fPlotEt)
+      return fMaxTowerH/fMaxEtSumBin;
+     else
+      return fMaxTowerH/fMaxESumBin;
+   }
 }
 
 //______________________________________________________________________________
@@ -548,29 +710,29 @@ void TEveCalo2D::ComputeBBox()
    BBoxZero();
 
    Float_t x, y, z;
-   Float_t th = fData ? GetValToHeight()*fData->GetMaxVal(fPlotEt) :0;
+   Float_t th = fMaxTowerH                                           ;
    Float_t r  = fBarrelRadius + th;
    Float_t ze = fEndCapPos + th;
 
    x = r,  y = 0, z = 0;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
    x = -r, y = 0, z = 0;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
 
    x = 0, y = 0, z = ze;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
    x = 0, y = 0, z = -ze;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
 
    x = 0, y = r,  z = 0;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
    x = 0, y = -r, z = 0;
-   fManager->GetProjection()->ProjectPoint(x, y, z);
+   fManager->GetProjection()->ProjectPoint(x, y, z, fDepth);
    BBoxCheckPoint(x, y, z);
 }
 
@@ -589,10 +751,8 @@ ClassImp(TEveCaloLego);
 TEveCaloLego::TEveCaloLego(TEveCaloData* d, const char* n, const char* t):
    TEveCaloViz(d, n, t),
 
-   fTopViewUseMaxColor(kTRUE),
-   fTopViewTowerColor(kGreen),
-   fFontColor(0),
-   fGridColor(kGray+2),
+   fFontColor(-1),
+   fGridColor(-1),
    fPlaneColor(kRed-5),
    fPlaneTransparency(60),
 
@@ -600,17 +760,20 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* d, const char* n, const char* t):
    fZAxisStep(0.f),
 
    fAutoRebin(kTRUE),
-   fPixelsPerBin(4),
+
+   fPixelsPerBin(12),
    fNormalizeRebin(kTRUE),
 
    fProjection(kAuto),
-   f2DMode(kValColor),
+   f2DMode(kValSize),
    fBoxMode(kBack),
 
    fDrawHPlane(kFALSE),
    fHPlaneVal(0),
 
-   fTowerPicked(-1)
+   fBinStep(-1),
+   fDrawNumberCellPixels(18), // draw numbers on cell above 30 pixels
+   fCellPixelFontSize(12) // size of cell fonts in pixels
 {
    // Constructor.
 
@@ -622,7 +785,6 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* d, const char* n, const char* t):
 void TEveCaloLego::SetData(TEveCaloData* data)
 {
    TEveCaloViz::SetData(data);
-   fTowerPicked = -1;
 }
 
 //______________________________________________________________________________
@@ -642,10 +804,10 @@ void TEveCaloLego::ComputeBBox()
    // Fill bounding-box information of the base-class TAttBBox (virtual method).
    // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
 
+
+   // fBBox = Float_t[6] X(min,max), Y(min,max), Z(min,max)
+
    BBoxZero();
-
-   // Float_t[6] X(min,max), Y(min,max), Z(min,max)
-
 
    Float_t ex = 1.2;
 
@@ -675,6 +837,6 @@ void TEveCaloLego::ComputeBBox()
    fBBox[4] =  0;
    if (fScaleAbs)
       fBBox[5] = fMaxTowerH;
-   else 
+   else
       fBBox[5] = 1;
 }

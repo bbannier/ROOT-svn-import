@@ -23,11 +23,12 @@ An example plot is available here:
 #include "TF1.h"
 #include "TAxis.h"
 #include "TH1.h"
-#include "TCanvas.h"
 #include "TLine.h"
 #include "TLegend.h"
 #include "TFile.h"
+#include "TVirtualPad.h"
 
+#include <algorithm>
 
 /// To build the THtml documentation
 ClassImp(RooStats::HybridPlot)
@@ -38,122 +39,106 @@ using namespace RooStats;
 
 HybridPlot::HybridPlot(const char* name,
                        const  char* title,
-                       std::vector<double> sb_vals,
-                       std::vector<double> b_vals,
-                       double m2lnQ_data,
+                       const std::vector<double> & sb_vals,
+                       const std::vector<double> & b_vals,
+                       double testStat_data,
                        int n_bins,
                        bool verbosity):
-   TNamed(name,title),
-   fSb_histo_shaded(NULL),
-   fB_histo_shaded(NULL),
-   fVerbose(verbosity)
+  TNamed(name,title),
+  fSb_histo(NULL),
+  fSb_histo_shaded(NULL),
+  fB_histo(NULL),
+  fB_histo_shaded(NULL),
+  fData_testStat_line(0),
+  fLegend(0),
+  fPad(0),
+  fVerbose(verbosity)
 {
-   // HybridPlot constructor
+  // HybridPlot constructor
 
-   // Get the max and the min of the plots
-   int n_toys=sb_vals.size();
+  int nToysSB = sb_vals.size();
+  int nToysB = sb_vals.size();
+  assert (nToysSB >0);
+  assert (nToysB >0);
 
-   assert (n_toys >0);
+  // Get the max and the min of the plots
+  double min = *std::min_element(sb_vals.begin(), sb_vals.end());
+  double max = *std::max_element(sb_vals.begin(), sb_vals.end());
 
-   double max=-1e40;
-   double min=1e40;
+  double min_b = *std::min_element(b_vals.begin(), b_vals.end());
+  double max_b = *std::max_element(b_vals.begin(), b_vals.end());
+  
 
-   // Extremes of the plot
-   for (int i=0;i<n_toys;++i){
-      if (sb_vals[i]>max)
-         max=sb_vals[i];
-      if (b_vals[i]>max)
-         max=b_vals[i];
-      if (sb_vals[i]<min)
-         min=sb_vals[i];
-      if (b_vals[i]<min)
-         min=b_vals[i];
-   }
+  if ( min_b < min) min = min_b; 
+  if ( max_b > max) max = max_b; 
 
-   if (m2lnQ_data<min)
-      min=m2lnQ_data;
+  if (testStat_data<min) min = testStat_data;
+  if (testStat_data>max) max = testStat_data;
 
-   if (m2lnQ_data>max)
-      max=m2lnQ_data;
+  min *= 1.1;
+  max *= 1.1;
 
-   min*=1.1;
-   max*=1.1;
+  // Build the histos
 
-   // Build the histos
-   //int n_bins=100;
+  fSb_histo = new TH1F ("SB_model",title,n_bins,min,max);
+  fSb_histo->SetTitle(fSb_histo->GetTitle());
+  fSb_histo->SetLineColor(kBlue);
+  fSb_histo->GetXaxis()->SetTitle("test statistics");
+  fSb_histo->SetLineWidth(2);
 
-   fSb_histo = new TH1F ("SB_model",title,n_bins,min,max);
-   fSb_histo->SetTitle(fSb_histo->GetTitle());
-   fSb_histo->SetLineColor(kBlue);
-   fSb_histo->GetXaxis()->SetTitle("test statistics");
-   //fSb_histo->GetYaxis()->SetTitle("Entries");
-   fSb_histo->SetLineWidth(2);
+  fB_histo = new TH1F ("B_model",title,n_bins,min,max);
+  fB_histo->SetTitle(fB_histo->GetTitle());
+  fB_histo->SetLineColor(kRed);
+  fB_histo->GetXaxis()->SetTitle("test statistics");
+  fB_histo->SetLineWidth(2);
 
-   fB_histo = new TH1F ("B_model",title,n_bins,min,max);
-   fB_histo->SetTitle(fB_histo->GetTitle());
-   fB_histo->SetLineColor(kRed);
-   fB_histo->GetXaxis()->SetTitle("test statistics");
-   //fB_histo->GetYaxis()->SetTitle("Entries");
-   fB_histo->SetLineWidth(2);
+  for (int i=0;i<nToysSB;++i) fSb_histo->Fill(sb_vals[i]);
+  for (int i=0;i<nToysB;++i) fB_histo->Fill(b_vals[i]);
 
+  double histos_max_y = fSb_histo->GetMaximum();
+  double line_hight = histos_max_y/nToysSB;
+  if (histos_max_y<fB_histo->GetMaximum()) histos_max_y = fB_histo->GetMaximum()/nToysB;
 
-   for (int i=0;i<n_toys;++i){
-      fSb_histo->Fill(sb_vals[i]);
-      fB_histo->Fill(b_vals[i]);
-   }
+  // Build the line of the measured -2lnQ
+  fData_testStat_line = new TLine(testStat_data,0,testStat_data,line_hight);
+  fData_testStat_line->SetLineWidth(3);
+  fData_testStat_line->SetLineColor(kBlack);
 
-   double histos_max_y=fSb_histo->GetMaximum();
-   if (histos_max_y<fB_histo->GetMaximum())
-      histos_max_y=fB_histo->GetMaximum();
+  // The legend
+  double golden_section = (std::sqrt(5.)-1)/2;
 
-   double line_hight=histos_max_y/n_toys;
-
-   // Build the line of the measured -2lnQ
-   fData_m2lnQ_line = new TLine(m2lnQ_data,0,m2lnQ_data,line_hight);
-   fData_m2lnQ_line->SetLineWidth(3);
-   fData_m2lnQ_line->SetLineColor(kBlack);
-
-   // The legend
-   double golden_section=(std::sqrt(5.)-1)/2;
-
-   fLegend = new TLegend(0.75,0.95-0.2*golden_section,0.95,0.95);
-   TString title_leg="test statistics distributions ";
-   title_leg+=sb_vals.size();
-   title_leg+=" toys";
-   fLegend->SetName(title_leg.Data());
-   fLegend->AddEntry(fSb_histo,"SB toy datasets");
-   fLegend->AddEntry(fB_histo,"B toy datasets");
-   fLegend->AddEntry((TLine*)fData_m2lnQ_line,"test statistics on Data","L");
-   fLegend->SetFillColor(0);
+  fLegend = new TLegend(0.75,0.95-0.2*golden_section,0.95,0.95);
+  TString title_leg="test statistics distributions ";
+  title_leg+=sb_vals.size();
+  title_leg+=" toys";
+  fLegend->SetName(title_leg.Data());
+  fLegend->AddEntry(fSb_histo,"SB toy datasets");
+  fLegend->AddEntry(fB_histo,"B toy datasets");
+  fLegend->AddEntry((TLine*)fData_testStat_line,"test statistics on data","L");
+  fLegend->SetFillColor(0);
 
 }
 
 /*----------------------------------------------------------------------------*/
 
-HybridPlot::~HybridPlot(){
-   // destructor 
-
-   if (fSb_histo)
-      delete fSb_histo;
-
-   if (fB_histo)
-      delete fB_histo;
-
-   if (fData_m2lnQ_line)
-      delete fData_m2lnQ_line;
-
-   if (fLegend)
-      delete fLegend;
+HybridPlot::~HybridPlot()
+{
+  // destructor 
+  
+  if (fSb_histo) delete fSb_histo;
+  if (fB_histo) delete fB_histo;
+  if (fSb_histo_shaded) delete fSb_histo;
+  if (fB_histo_shaded) delete fB_histo;
+  if (fData_testStat_line) delete fData_testStat_line;
+  if (fLegend) delete fLegend;
 }
 
 /*----------------------------------------------------------------------------*/
 
-void HybridPlot::Draw(const char* options){
-   // draw on canvas
+void HybridPlot::Draw(const char* )
+{
+  // draw the S+B and B histogram in the current canvas
 
-   SetCanvas(new TCanvas(GetName(),GetTitle()));
-   GetCanvas()->cd();
-   GetCanvas()->Draw(options);
 
    // We don't want the statistics of the histos
    gStyle->SetOptStat(0);
@@ -178,9 +163,8 @@ void HybridPlot::Draw(const char* options){
    fSb_histo_shaded->SetFillStyle(3004);
    fSb_histo_shaded->SetFillColor(kBlue);
 
-
    // Empty the bins according to the data -2lnQ
-   double data_m2lnq= fData_m2lnQ_line->GetX1();
+   double data_m2lnq= fData_testStat_line->GetX1();
    for (int i=0;i<fSb_histo->GetNbinsX();++i){
       if (fSb_histo->GetBinCenter(i)<data_m2lnq){
          fSb_histo_shaded->SetBinContent(i,0);
@@ -197,18 +181,25 @@ void HybridPlot::Draw(const char* options){
    fSb_histo_shaded->Draw("same");
 
    // The line 
-   fData_m2lnQ_line->Draw("same");
+   fData_testStat_line->Draw("same");
 
    // The legend
    fLegend->Draw("same");
 
+   if (gPad) { 
+      gPad->SetName(GetName()); 
+      gPad->SetTitle(GetTitle() ); 
+   }
+
+   fPad = gPad; 
 
 }
 
 /*----------------------------------------------------------------------------*/
 
-void HybridPlot::DumpToFile (const char* RootFileName, const char* options){
-   // All the objects are written to rootfile
+void HybridPlot::DumpToFile (const char* RootFileName, const char* options)
+{
+  // All the objects are written to rootfile
 
    TFile ofile(RootFileName,options);
    ofile.cd();
@@ -224,13 +215,21 @@ void HybridPlot::DumpToFile (const char* RootFileName, const char* options){
    }
 
    // The line 
-   fData_m2lnQ_line->Write("Measured test statistics line tag");
+   fData_testStat_line->Write("Measured test statistics line tag");
 
    // The legend
    fLegend->Write();
 
    ofile.Close();
 
+}
+
+void HybridPlot::DumpToImage(const char * filename) { 
+   if (!fPad) { 
+      Error("HybridPlot","Hybrid plot has not yet been drawn "); 
+      return;
+   }
+   fPad->Print(filename); 
 }
 
 /*----------------------------------------------------------------------------*/
@@ -246,8 +245,8 @@ void HybridPlot::DumpToFile (const char* RootFileName, const char* options){
 double HybridPlot::GetHistoCenter(TH1* histo_orig, double n_rms, bool display_result){
    // Get the center of the histo
    
-   TCanvas* c = new TCanvas();
-   c->cd();
+   TString optfit = "Q0";
+   if (display_result) optfit = "Q";
 
    TH1F* histo = (TH1F*)histo_orig->Clone();
 
@@ -263,7 +262,7 @@ double HybridPlot::GetHistoCenter(TH1* histo_orig, double n_rms, bool display_re
    gaus->SetParameter("Mean",histo->GetMean());
    gaus->SetParameter("Sigma",histo->GetRMS());
 
-   histo->Fit(gaus);
+   histo->Fit(gaus,optfit);
 
    // Second fit!
    double sigma = gaus->GetParameter("Sigma");
@@ -281,18 +280,21 @@ double HybridPlot::GetHistoCenter(TH1* histo_orig, double n_rms, bool display_re
    TF1* gaus2 = new TF1("mygaus2", "gaus", x_min, x_max);
    gaus2->SetParameter("Mean",mean);
 
-   histo->Fit(gaus2,"L","", x_min, x_max);
+   // second fit : likelihood fit
+   optfit += "L";
+   histo->Fit(gaus2,optfit,"", x_min, x_max);
 
-   histo->Draw();
-   gaus2->Draw("same");
 
    double center = gaus2->GetParameter("Mean");
 
-
-   delete gaus2;
-   delete histo;
-   if (! display_result)
-      delete c;
+   if (display_result) { 
+      histo->Draw();
+      gaus2->Draw("same");
+   }
+   else { 
+      delete histo;
+   }
+   delete gaus2; 
 
    return center;
 

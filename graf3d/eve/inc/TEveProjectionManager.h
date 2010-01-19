@@ -15,7 +15,6 @@
 #include "TEveElement.h"
 #include "TAttBBox.h"
 #include "TEveProjections.h"
-#include "TEveVSDStructs.h"
 
 
 class TEveProjectionManager : public TEveElementList,
@@ -40,7 +39,7 @@ protected:
    virtual void    UpdateDependentElsAndScenes(TEveElement* root);
 
 public:
-   TEveProjectionManager();
+   TEveProjectionManager(TEveProjection::EPType_e type=TEveProjection::kPT_Unknown);
    virtual ~TEveProjectionManager();
 
    void AddDependent(TEveElement* el);

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # -*- sh-indentation: 3 -*-
 # This script returns the machine dependent compile options needed
 # to compile and link applications using the ROOT libraries.
@@ -9,11 +9,16 @@
 fullpath1=`readlink $0`
 if [ "$?" -ne "0" ]; then
    fullpath1=$0
+else
+   if [ ${fullpath1##/} = $fullpath1 ] && [ ${fullpath1##~} = $fullpath1 ]; then
+      # relative path, prepend directory where executable was found
+      lpath=`dirname $0`
+      fullpath1=$lpath/$fullpath1
+   fi
 fi
 progdir=`dirname $fullpath1`
 runningdir=`pwd`
-if echo $progdir | grep "^/" > /dev/null 2>& 1 || \
-   echo $progdir | grep "^~" > /dev/null 2>& 1; then
+if [ ${progdir##/} != $progdir ] || [ ${progdir##~} != $progdir ]; then
    # absolute path
    fullpath=$progdir
 else
@@ -58,17 +63,11 @@ fi
 
 newlib="-lNew"
 rootglibs="-lGui"
-if [ "cint5=@cint5enabled" = "cint5=yes" ] ; then
-   rootlibs="-lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree \
-             -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread $zliblib"
-   if test "$dicttype" = "reflex" || test "$dicttype" = "gccxml"; then
-      rootlibs="$rootlibs -lReflex"
-   fi
-else 
-   rootlibs="-lCore -lCint -lReflex -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree \
-             -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread $zliblib"
+rootlibs="-lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree \
+-lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread $zliblib"
+if test "$dicttype" = "reflex" || test "$dicttype" = "gccxml"; then
+    rootlibs="$rootlibs -lReflex"
 fi
-
 
 if test "$platform" = "win32"; then
    rootulibs="-include:_G__cpp_setupG__Net        \
@@ -244,7 +243,7 @@ linuxhppa)
 linuxicc)
    # Linux with the Intel icc compiler
    auxcflags=
-   auxlibs="-lm -ldl"
+   auxlibs="-limf -lm -ldl"
    ;;
 linuxppcgcc)
    # PPC Linux with gcc
@@ -276,7 +275,7 @@ linuxx8664gcc)
 linuxx8664icc)
    # AMD Opteron and Intel EM64T (64 bit mode) Linux with Intel icc
    auxcflags=
-   auxlibs="-lm -ldl"
+   auxlibs="-limf -lm -ldl"
    ;;
 linuxalphagcc)
    # Alpha Linux with gcc
@@ -453,9 +452,6 @@ win32)
 esac
 
 ### end of machine and compiler dependent settings ###
-nostubs=@no_stubs@
-nostubstest=@no_stubs_test@
-
 
 prefix=@prefix@
 if test "$platform" = "win32" && test "$prefix" != ""; then
@@ -475,7 +471,7 @@ Usage: root-config [--prefix[=DIR]] [--exec-prefix[=DIR]] [--version]\
  [--glibs] [--bindir] [--libdir] [--incdir] [--etcdir] [--noauxcflags]\
  [--noauxlibs] [--noldflags] [--has-<feature>] [--arch] [--platform]\
  [--dicttype] [--config] [--features] [--svn-revision] [--python-version]\
- [--cc] [--cxx] [--f77] [--ld ] [--nostubs] [--nostubstest] [--help]"
+ [--cc] [--cxx] [--f77] [--ld ] [--help]"
 
 if test $# -eq 0; then
    echo "${usage}" 1>&2
@@ -733,14 +729,6 @@ while test $# -gt 0; do
       ### output used Linker
       out="$out $altld"
       ;;
-    --nostubs)
-      ### Output the prefix
-      out="$out $nostubs"
-      ;;
-    --nostubstest)
-      ### Output the prefix
-      out="$out $nostubstest"
-      ;;
     --help)
       ### Print a help message
       echo "Usage: `basename $0` [options]"
@@ -774,8 +762,6 @@ while test $# -gt 0; do
       echo "  --cxx                 Print alternative C++ compiler specified when ROOT was built"
       echo "  --f77                 Print alternative Fortran compiler specified when ROOT was built"
       echo "  --ld                  Print alternative Linker specified when ROOT was built"
-      echo "  --nostubs             Print yes if we are using the stubless calls"
-      echo "  --nostubstest         Print yes if we are using the stubless calls (in test mode)"
       echo "  --help                Print this message"
       exit 0
       ;;

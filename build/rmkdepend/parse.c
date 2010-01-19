@@ -190,7 +190,7 @@ int deftype (line, filep, file_red, file, parse_it)
 		/*
 		 * separate the name of a single symbol.
 		 */
-		while (isalnum(*p) || *p == '_')
+                while (isalnum((int)*p) || *p == '_')
 			*line++ = *p++;
 		*line = '\0';
 		break;
@@ -416,7 +416,7 @@ define(def, file)
 
     /* Separate symbol name and its value */
     val = def;
-    while (isalnum(*val) || *val == '_')
+    while (isalnum((int)*val) || *val == '_')
 	val++;
     if (*val)
 	*val++ = '\0';
@@ -596,8 +596,8 @@ find_includes(filep, file, file_red, recursion, failOK)
 			break;
 		case IFDEF:
 		case IFNDEF:
-			if ((type == IFDEF && isdefined(line, file_red, NULL))
-			 || (type == IFNDEF && !isdefined(line, file_red, NULL))) {
+			if ((type == IFDEF && isdefined(line, file_red, (struct inclist**)0))
+			 || (type == IFNDEF && !isdefined(line, file_red, (struct inclist **)0))) {
 				debug(1,(type == IFNDEF ?
 				    "line %d: %s !def'd in %s via %s%s\n" : "",
 				    filep->f_line, line,

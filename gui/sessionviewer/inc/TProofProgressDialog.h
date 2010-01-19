@@ -40,7 +40,7 @@ class TProofProgressLog;
 class TProofProgressMemoryPlot;
 class TNtuple;
 class TGraph;
-
+class TGSpeedo;
 
 class TProofProgressDialog {
 
@@ -65,12 +65,16 @@ private:
    TGTextEntry        *fEntry;
    TGLabel            *fTitleLab;
    TGLabel            *fFilesEvents;
+   TGLabel            *fTimeLab;
    TGLabel            *fProcessed;
+   TGLabel            *fEstim;
    TGLabel            *fTotal;
    TGLabel            *fRate;
    TGLabel            *fInit;
    TGLabel            *fSelector;
-   TProofProgressLog  *fLogWindow;       // transient frame for logs
+   TGSpeedo           *fSpeedo;           // speedometer
+   TGCheckButton      *fSmoothSpeedo;     // use smooth speedometer update
+   TProofProgressLog  *fLogWindow;        // transient frame for logs
    TProofProgressMemoryPlot *fMemWindow;  // transient frame for memory plots
    TProof             *fProof;
    TTime               fStartTime;
@@ -85,12 +89,20 @@ private:
    Bool_t              fLogQuery;
    TNtuple            *fRatePoints;
    TGraph             *fRateGraph;
+   TGraph             *fMBRtGraph;
+   TGraph             *fActWGraph;
+   TGraph             *fTotSGraph;
+   TGraph             *fEffSGraph;
+   Float_t             fInitTime;
    Float_t             fProcTime;
    Double_t            fAvgRate;
    Double_t            fAvgMBRate;
    Int_t               fSVNRev;
+   Int_t               fRightInfo;
 
    TString             fSessionUrl;
+
+   Float_t             AdjustBytes(Float_t mbs, TString &sf);
 
    static Bool_t       fgKeepDefault;
    static Bool_t       fgLogQueryDefault;
@@ -105,7 +117,12 @@ public:
    void Progress(Long64_t total, Long64_t processed);
    void Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
                  Float_t initTime, Float_t procTime,
-                 Float_t evtrti, Float_t mbrti);
+                 Float_t evtrti, Float_t mbrti) {
+                 Progress(total, processed, bytesread, initTime, procTime,
+                          evtrti, mbrti, -1, -1, -1.); }
+   void Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
+                 Float_t initTime, Float_t procTime,
+                 Float_t evtrti, Float_t mbrti, Int_t actw, Int_t tses, Float_t eses);
    void DisableAsyn();
    void IndicateStop(Bool_t aborted);
    void LogMessage(const char *msg, Bool_t all);
@@ -120,6 +137,8 @@ public:
    void DoAsyn();
    void DoPlotRateGraph();
    void DoMemoryPlot();
+   void ToggleOdometerInfos();
+   void ToggleThreshold();
 
    ClassDef(TProofProgressDialog,0)  //PROOF progress dialog
 };

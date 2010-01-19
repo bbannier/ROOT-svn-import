@@ -8,6 +8,8 @@
 /*              DE-AC02-76-SFO0515 with the Department of Energy              */
 /******************************************************************************/
 
+//           $Id$
+
 const char *XrdPosixCVSID = "$Id$";
 
 #include <stdarg.h>
@@ -457,7 +459,8 @@ extern "C"
 {
 size_t XrdPosix_Fread(void *ptr, size_t size, size_t nitems, FILE *stream)
 {
-   size_t bytes, rc = 0;
+   ssize_t bytes;
+   size_t rc = 0;
    int fd = fileno(stream);
 
    if (!Xroot.myFD(fd)) return Xunix.Fread(ptr, size, nitems, stream);

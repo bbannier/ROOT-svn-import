@@ -12,7 +12,7 @@
 #ifndef ROOT_TEveTrackPropagator
 #define ROOT_TEveTrackPropagator
 
-#include "TEveVSDStructs.h"
+#include "TEveVector.h"
 #include "TEveUtil.h"
 #include "TEveElement.h"
 #include "TMarker.h"
@@ -283,6 +283,9 @@ public:
    static Float_t             fgDefMagField; // Default value for constant solenoid magnetic field.
    static const Float_t       fgkB2C;        // Constant for conversion of momentum to curvature.
    static TEveTrackPropagator fgDefault;     // Default track propagator.
+
+   static Float_t             fgEditorMaxR;  // Max R that can be set in GUI editor.
+   static Float_t             fgEditorMaxZ;  // Max Z that can be set in GUI editor.
 
    ClassDef(TEveTrackPropagator, 0); // Calculates path of a particle taking into account special path-marks and imposed boundaries.
 };

@@ -327,7 +327,7 @@ Bool_t TNetFile::ReadBuffer(char *buf, Int_t len)
       gApplication->GetSignalHandler()->Delay();
 
    Double_t start = 0;
-   if (gPerfStats != 0) start = TTimeStamp();
+   if (gPerfStats) start = TTimeStamp();
 
    if (fSocket->Send(Form("%lld %d", fOffset, len), kROOTD_GET) < 0) {
       Error("ReadBuffer", "error sending kROOTD_GET command");
@@ -368,9 +368,8 @@ Bool_t TNetFile::ReadBuffer(char *buf, Int_t len)
 
 end:
 
-   if (gPerfStats != 0) {
-      gPerfStats->FileReadEvent(this, len, double(TTimeStamp())-start);
-   }
+   if (gPerfStats)
+      gPerfStats->FileReadEvent(this, len, start);
 
    if (gApplication && gApplication->GetSignalHandler())
       gApplication->GetSignalHandler()->HandleDelayedSignal();
@@ -401,7 +400,7 @@ Bool_t TNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
       gApplication->GetSignalHandler()->Delay();
 
    Double_t start = 0;
-   if (gPerfStats != 0) start = TTimeStamp();
+   if (gPerfStats) start = TTimeStamp();
 
    // Make the string with a list of offsets and lenghts
    Long64_t total_len = 0;
@@ -467,9 +466,8 @@ Bool_t TNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
 
 end:
 
-   if (gPerfStats != 0) {
-      gPerfStats->FileReadEvent(this, total_len, double(TTimeStamp())-start);
-   }
+   if (gPerfStats)
+      gPerfStats->FileReadEvent(this, total_len, start);
 
    if (gApplication && gApplication->GetSignalHandler())
       gApplication->GetSignalHandler()->HandleDelayedSignal();
@@ -901,7 +899,7 @@ void TNetSystem::Create(const char *url, TSocket *sock)
    else if (opts.Contains("remote=0"))
       forceRemote = kFALSE;
    if (!forceRemote) {
-      if ((fIsLocal = gSystem->IsPathLocal(url))) {
+      if ((fIsLocal = TSystem::IsPathLocal(url))) {
          fLocalPrefix = gEnv->GetValue("Path.Localroot","");
          // Nothing more to do
          return;
@@ -1176,6 +1174,6 @@ Int_t TNetSystem::Unlink(const char *path)
    }
 
    // Not implemented for rootd
-   Warning("Unlink", "funtionality not implemented - ignored (path: %s)", path);
+   Warning("Unlink", "functionality not implemented - ignored (path: %s)", path);
    return -1;
 }

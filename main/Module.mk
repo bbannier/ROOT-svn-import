@@ -22,9 +22,6 @@ ROOTEXE      := bin/root_exe.exe
 else
 ROOTEXE      := bin/root.exe
 endif
-ifneq ($(BUILDBOTHCINT),)
-ROOT7EXE     := $(subst root,rootc7,$(ROOTEXE))
-endif
 ifneq ($(PLATFORM),win32)
 ROOTNEXE     := bin/rootn.exe
 endif
@@ -121,12 +118,6 @@ $(ROOTEXE):     $(ROOTEXEO) $(BOOTLIBSDEP) $(RINTLIB)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTEXEO) $(ROOTICON) $(BOOTULIBS) \
 		   $(RPATH) $(BOOTLIBS) $(RINTLIBS) $(SYSLIBS)
 
-ifneq ($(BUILDBOTHCINT),)
-$(ROOT7EXE):    $(ROOTEXEO) $(subst Cint,Cint7,$(BOOTLIBSDEP)) $(RINTLIB) $(REFLEXLIB)
-		$(LD) $(LDFLAGS) -o $@ $(ROOTEXEO) $(ROOTICON) $(BOOTULIBS) \
-		   $(RPATH) $(subst Cint,Cint7,$(BOOTLIBS)) $(RINTLIBS) $(RFLX_REFLEXLL) $(SYSLIBS)
-endif
-
 ifneq ($(PLATFORM),win32)
 $(ROOTNEXE):    $(ROOTEXEO) $(NEWLIB) $(BOOTLIBSDEP) $(RINTLIB)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTEXEO) $(ROOTICON) $(BOOTULIBS) \
@@ -193,4 +184,4 @@ distclean-$(MODNAME): clean-$(MODNAME)
 distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
-$(SSH2RPDO): PCHCXXFLAGS =
+$(PROOFSERVO): CXXFLAGS += $(AFSEXTRACFLAGS)

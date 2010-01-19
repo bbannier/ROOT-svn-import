@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: SamplingDistPlot.h 26427 2009-05-20 15:45:36Z pellicci $
+// @(#)root/roostats:$Id: SamplingDistPlot.cxx 31276 2009-11-18 15:06:42Z moneta $
 
 /*************************************************************************
  * Project: RooStats                                                     *

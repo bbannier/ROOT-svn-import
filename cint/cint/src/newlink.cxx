@@ -1247,7 +1247,7 @@ int G__stub_method_asm_x86_64(G__ifunc_table_internal *ifunc, int ifn, void* thi
       // 20-11-07
       // This means we have to return a given object (i.e) a new object..
       // This will be a temporary object for the compiles
-      // and it used to llok like:
+      // and it used to look like:
       //
       // /////////////////////////
       // const Track* pobj;
@@ -3451,7 +3451,7 @@ int G__get_linked_tagnum_with_param(G__linked_taginfo *p,void* param)
 **************************************************************************/
 void* G__get_linked_user_param(int tag_num)
 {
-  if ( tag_num<0 || tag_num>G__MAXSTRUCT ) return 0;
+  if ( tag_num<0 || tag_num>=G__MAXSTRUCT ) return 0;
   return G__struct.userparam[tag_num];
 }
 
@@ -3759,11 +3759,20 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
       fprintf(fp,"#endif\n");
       fprintf(fp,"\n");
 
-#ifdef __GNUC__
-      fprintf(fp,"#if defined(__GNUC__) && (__GNUC__ > 3) && (__GNUC_MINOR__ > 1)\n");
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+      fprintf(fp,"#if defined(__GNUC__) && __GNUC__ >= 4 && ((__GNUC_MINOR__ == 2 && __GNUC_PATCHLEVEL__ >= 1) || (__GNUC_MINOR__ >= 3))\n");
       fprintf(fp,"#pragma GCC diagnostic ignored \"-Wstrict-aliasing\"\n");
       fprintf(fp,"#endif\n");
       fprintf(fp,"\n");
+#endif
+
+#ifdef __INTEL_COMPILER
+      fprintf(fp,"#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1100)\n");
+      fprintf(fp,"# pragma warning (disable 21)\n");
+      fprintf(fp,"# pragma warning (disable 191)\n");
+      fprintf(fp,"#endif\n");
+      fprintf(fp,"\n");
+      
 #endif
 
       if(G__dicttype!=kFunctionSymbols)
@@ -4476,7 +4485,7 @@ bool G__is_tagnum_safe(int i)
  * in the file. For this, we create a pointer to a function when we have 
  * non-virtual functions a function call when we do have virtual functions.
  * For the latter, it's easier if we have just one object and then we call
- * all the functions with it, so what we need is a big funtion doing that
+ * all the functions with it, so what we need is a big function doing that
  * for every class.
  *
  * This preface will try to create the declaration of this function
@@ -4486,7 +4495,7 @@ bool G__is_tagnum_safe(int i)
 void G__write_preface(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
 {
   // Write the prototype of the function
-  // Let's keep it simple G__funtion_class
+  // Let's keep it simple G__function_class
   const char *dllid;
   if(G__DLLID[0]) dllid=G__DLLID;
   else if(G__PROJNAME[0]) dllid=G__PROJNAME;
@@ -4524,7 +4533,7 @@ void G__write_dummy_ptr(FILE *fp, struct G__ifunc_table_internal *ifunc, int i)
  * in the file. For this we create a pointer to a function when we have 
  * non-virtual functions a function call when we do have virtual functions.
  * For the latter, it's easier if we have just one object and then we call
- * all the functions with it, so what we need is a big funtion doing that
+ * all the functions with it, so what we need is a big function doing that
  * for every class.
  *
  * This postface just has to finish what we started in G__write_preface
@@ -6039,6 +6048,7 @@ static void G__x8664_vararg(FILE *fp, int ifn, G__ifunc_table_internal *ifunc,
    fprintf(fp, "  __asm__ __volatile__(\"movl $8, %%eax\");  // number of used xmm registers\n");
    fprintf(fp, "  __asm__ __volatile__(\"call *%%r10\");\n");
    fprintf(fp, "  __asm__ __volatile__(\"movq %%%%rax, %%0\" : \"=m\" (u[0].lval) :: \"memory\");  // get return value\n");
+   fprintf(fp, "  __asm__ __volatile__(\"movq %%%%rdi, %%0\" : \"=m\" (u[1].lval) :: \"memory\");  // get return value (icc C++ object)\n");
    fprintf(fp, "  __asm__ __volatile__(\"addq %%0, %%%%rsp\" :: \"i\" ((umax+2)*8));\n");
 }
 
@@ -6105,8 +6115,12 @@ static void G__x8664_vararg_epilog(FILE *fp, int ifn, G__ifunc_table_internal *i
                if (reftype) {
                   fprintf(fp, "(%s&) u[0].lval", typestring);
                } else {
-                 if (G__globalcomp == G__CPPLINK) {
+                  if (G__globalcomp == G__CPPLINK) {
+#if defined(__INTEL_COMPILER)
+                     fprintf(fp, "*(%s*) u[1].lval", typestring);
+#else
                      fprintf(fp, "*(%s*) u[0].lval", typestring);
+#endif
                   } else {
                      fprintf(fp, "(%s*) u[0].lval", typestring);
                   }
@@ -10896,7 +10910,7 @@ int G__memfunc_setup_imp(const char *funcname,int hash
           // Method's stub pointer
           basefuncp = found->entry[base].p;
 
-          G__value ptr;
+          G__value ptr = G__null;
 
           ptr.tagnum = G__p_ifunc->tagnum;
           ptr.type = 'C';
@@ -12313,7 +12327,7 @@ void G__specify_link(int link_stub)
         }
 #else
         if(G__dispmsg>=G__DISPNOTE) {
-           G__fprinterr(G__serr,"Note: link requested for unknown class %s",buf);
+           G__fprinterr(G__serr,"Note: link requested for unknown class %s",buf());
            G__printlinenum();
         }
 #endif

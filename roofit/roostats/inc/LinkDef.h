@@ -42,12 +42,18 @@
 
 #pragma link C++ class RooStats::MCMCCalculator+; 
 #pragma link C++ class RooStats::MCMCInterval+; 
+#pragma link C++ class RooStats::MCMCIntervalPlot+; 
+#pragma link C++ class RooStats::MetropolisHastings+; 
+#pragma link C++ class RooStats::MarkovChain+; 
 #pragma link C++ class RooStats::ProposalFunction+; 
+#pragma link C++ class RooStats::ProposalHelper+; 
 #pragma link C++ class RooStats::UniformProposal+; 
+#pragma link C++ class RooStats::PdfProposal+; 
+#pragma link C++ class RooStats::Heavyside+; 
 
 #pragma link C++ class RooStats::HybridCalculator+;
 #pragma link C++ class RooStats::HybridPlot+;
-#pragma link C++ class RooStats::HybridResult+;
+#pragma link C++ class RooStats::HybridResult+;				 
 
 #pragma link C++ class RooStats::TestStatSampler+; // interface, not concrete
 #pragma link C++ class RooStats::DebuggingSampler+;
@@ -62,6 +68,12 @@
 #pragma link C++ class RooStats::NeymanConstruction+;
 #pragma link C++ class RooStats::FeldmanCousins+;
 
+#pragma link C++ class RooStats::BayesianCalculator+;
+#pragma link C++ class RooStats::HypoTestInverter+;
+#pragma link C++ class RooStats::HypoTestInverterResult+;
+#pragma link C++ class RooStats::HypoTestInverterPlot+;
+#pragma link C++ class RooStats::HLFactory+;
+
 // in progress
 #pragma link C++ class RooStats::ConfidenceBelt+; 
 #pragma link C++ class RooStats::AcceptanceRegion+; 
@@ -72,6 +84,8 @@
 
 #pragma link C++ class RooStats::SamplingDistPlot+;
 #pragma link C++ class RooStats::LikelihoodIntervalPlot+;
+
+#pragma link C++ class RooStats::UpperLimitMCSModule+;
 
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t , Double_t ,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauExpZ(Double_t,Double_t,Double_t);
@@ -86,5 +100,10 @@
 #pragma link C++ function RooStats::SignificanceToPValue(Double_t);
 #pragma link C++ function RooStats::RemoveConstantParameters(RooArgSet* set);
 #pragma link C++ function RooStats::SetParameters(const RooArgSet* , RooArgSet* );
+
+// need for auto_ptr object in Likelihoodinterval since they are forwd declared
+#pragma extra_include "Math/IFunction.h";
+#pragma extra_include "Math/Minimizer.h";
+#pragma extra_include "RooFunctor.h";
 
 #endif

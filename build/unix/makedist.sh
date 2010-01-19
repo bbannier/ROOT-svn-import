@@ -7,7 +7,12 @@
 
 ROOTVERS=`cat build/version_number | sed -e 's/\//\./'`
 TYPE=`bin/root-config --arch`
-if [ "x$TYPE" = "xmacosx" ]; then
+if [ "x`bin/root-config --platform`" = "xmacosx" ]; then
+   TYPE=$TYPE-`sw_vers -productVersion | cut -d . -f1 -f2`
+   TYPE=$TYPE-`uname -p`
+fi
+if [ "x`bin/root-config --platform`" = "xsolaris" ]; then
+   TYPE=$TYPE-`uname -r`
    TYPE=$TYPE-`uname -p`
 fi
 
@@ -48,7 +53,7 @@ else
       TARFILE=${TARFILE}".gz"
       TARCMD="${TAR} zcvf ${TARFILE} -T ${TARFILE}.filelist"
    else
-      TARCMD="tar cvf ${TARFILE} `cat ${TARFILE}.filelist`"
+      TARCMD="tar cvf ${TARFILE}"
       DOGZIP="y"
    fi
 fi

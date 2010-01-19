@@ -63,11 +63,51 @@ void TEveLine::SetMarkerColor(Color_t col)
       if (l && fMarkerColor == l->GetMarkerColor())
       {
          l->SetMarkerColor(col);
-         l->ElementChanged();
+         l->StampObjProps();
       }
       ++pi;
    }
    TAttMarker::SetMarkerColor(col);
+}
+
+//______________________________________________________________________________
+void TEveLine::SetLineStyle(Style_t lstyle)
+{
+   // Set line-style of the line.
+   // The style is propagated to projecteds.
+
+   std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
+   while (pi != fProjectedList.end())
+   {
+      TEveLine* pt = dynamic_cast<TEveLine*>(*pi);
+      if (pt)
+      {
+         pt->SetLineStyle(lstyle);
+         pt->StampObjProps();
+      }
+      ++pi;
+   }
+   TAttLine::SetLineStyle(lstyle);
+}
+
+//______________________________________________________________________________
+void TEveLine::SetLineWidth(Width_t lwidth)
+{
+   // Set line-style of the line.
+   // The style is propagated to projecteds.
+
+   std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
+   while (pi != fProjectedList.end())
+   {
+      TEveLine* pt = dynamic_cast<TEveLine*>(*pi);
+      if (pt)
+      {
+         pt->SetLineWidth(lwidth);
+         pt->StampObjProps();
+      }
+      ++pi;
+   }
+   TAttLine::SetLineWidth(lwidth);
 }
 
 //______________________________________________________________________________
@@ -112,6 +152,7 @@ void TEveLine::SetRnrPoints(Bool_t r)
 void TEveLine::SetSmooth(Bool_t r)
 {
    // Set smooth rendering. Propagate to projected lines.
+
    fSmooth = r;
    std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
    while (pi != fProjectedList.end())
@@ -218,13 +259,13 @@ void TEveLine::WriteVizParams(ostream& out, const TString& var)
 
    TString t = "   " + var + "->";
    TAttLine::SaveLineAttributes(out, var);
-   out << t << "SetRnrLine("   << fRnrLine   << ");\n";
-   out << t << "SetRnrPoints(" << fRnrPoints << ");\n";
-   out << t << "SetSmooth("    << fSmooth    << ");\n";
+   out << t << "SetRnrLine("   << ToString(fRnrLine)   << ");\n";
+   out << t << "SetRnrPoints(" << ToString(fRnrPoints) << ");\n";
+   out << t << "SetSmooth("    << ToString(fSmooth)    << ");\n";
 }
 
 //______________________________________________________________________________
-TClass* TEveLine::ProjectedClass() const
+TClass* TEveLine::ProjectedClass(const TEveProjection*) const
 {
    // Virtual from TEveProjectable, returns TEvePointSetProjected class.
 
@@ -263,16 +304,16 @@ void TEveLineProjected::SetProjection(TEveProjectionManager* mng,
 }
 
 //______________________________________________________________________________
-void TEveLineProjected::SetDepth(Float_t d)
+void TEveLineProjected::SetDepthLocal(Float_t d)
 {
    // Set depth (z-coordinate) of the projected points.
 
    SetDepthCommon(d, this, fBBox);
 
    Int_t    n = Size();
-   Float_t *p = GetP();
+   Float_t *p = GetP() + 2;
    for (Int_t i = 0; i < n; ++i, p+=3)
-      p[2] = fDepth;
+      *p = fDepth;
 }
 
 //______________________________________________________________________________
@@ -291,7 +332,6 @@ void TEveLineProjected::UpdateProjection()
    for (Int_t i = 0; i < n; ++i, o+=3, p+=3)
    {
       p[0] = o[0]; p[1] = o[1]; p[2] = o[2];
-      proj.ProjectPoint(p[0], p[1], p[2]);
-      p[2] = fDepth;
+      proj.ProjectPointfv(p, fDepth);
    }
 }

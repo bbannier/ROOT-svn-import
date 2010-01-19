@@ -201,6 +201,15 @@ void TEveElement::PreDeleteElement()
 }
 
 //______________________________________________________________________________
+TEveElement* TEveElement::CloneElement() const
+{
+   // Clone the element via copy constructor.
+   // Should be implemented for all classes that require cloning support.
+
+   return new TEveElement(*this);
+}
+
+//______________________________________________________________________________
 TEveElement* TEveElement::CloneElementRecurse(Int_t level) const
 {
    // Clone elements and recurse 'level' deep over children.
@@ -228,7 +237,11 @@ void TEveElement::CloneChildrenRecurse(TEveElement* dest, Int_t level) const
    }
 }
 
-/******************************************************************************/
+//==============================================================================
+
+
+
+//==============================================================================
 
 //______________________________________________________________________________
 const char* TEveElement::GetElementName() const
@@ -328,13 +341,13 @@ void TEveElement::SetVizModel(TEveElement* model)
    // viz-model.
 
    if (fVizModel) {
-      fVizModel->RemoveElement(this);
       --fParentIgnoreCnt;
+      fVizModel->RemoveElement(this);
    }
    fVizModel = model;
    if (fVizModel) {
-      ++fParentIgnoreCnt;
       fVizModel->AddElement(this);
+      ++fParentIgnoreCnt;
    }
 }
 
@@ -497,8 +510,11 @@ void TEveElement::VizDB_Apply(const char* tag)
 {
    // Set visual parameters for this object for given tag.
 
-   ApplyVizTag(tag);
-   gEve->Redraw3D();
+   if (ApplyVizTag(tag))
+   {
+      PropagateVizParamsToProjecteds();
+      gEve->Redraw3D();
+   }
 }
 
 //______________________________________________________________________________
@@ -507,8 +523,12 @@ void TEveElement::VizDB_Reapply()
    // Reset visual parameters for this object from VizDB.
    // The model object must be already set.
 
-   CopyVizParamsFromDB();
-   gEve->Redraw3D();
+   if (fVizModel)
+   {
+      CopyVizParamsFromDB();
+      PropagateVizParamsToProjecteds();
+      gEve->Redraw3D();
+   }
 }
 
 //______________________________________________________________________________
@@ -1410,7 +1430,24 @@ Int_t TEveElement::FindChildren(List_t& matches,
    return count;
 }
 
-/******************************************************************************/
+//______________________________________________________________________________
+TEveElement* TEveElement::FirstChild() const
+{
+   // Returns the first child element or 0 if the list is empty.
+
+   return fChildren.empty() ? 0 : fChildren.front();
+}
+
+//______________________________________________________________________________
+TEveElement* TEveElement::LastChild () const
+{
+   // Returns the last child element or 0 if the list is empty.
+
+   return fChildren.empty() ? 0 : fChildren.back();
+}
+
+
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveElement::EnableListElements(Bool_t rnr_self,  Bool_t rnr_children)
@@ -1511,7 +1548,85 @@ void TEveElement::DestroyElements()
    gEve->Redraw3D();
 }
 
-/******************************************************************************/
+//______________________________________________________________________________
+Bool_t TEveElement::GetDestroyOnZeroRefCnt() const
+{
+   // Returns state of flag determining if the element will be
+   // destroyed when reference count reaches zero.
+   // This is true by default.
+
+   return fDestroyOnZeroRefCnt;
+}
+
+//______________________________________________________________________________
+void TEveElement::SetDestroyOnZeroRefCnt(Bool_t d)
+{
+   // Sets the state of flag determining if the element will be
+   // destroyed when reference count reaches zero.
+   // This is true by default.
+
+   fDestroyOnZeroRefCnt = d;
+}
+
+//______________________________________________________________________________
+Int_t TEveElement::GetDenyDestroy() const
+{
+   // Returns the number of times deny-destroy has been requested on
+   // the element.
+
+   return fDenyDestroy;
+}
+
+//______________________________________________________________________________
+void TEveElement::IncDenyDestroy()
+{
+   // Increases the deny-destroy count of the element.
+   // Call this if you store an external pointer to the element.
+
+   ++fDenyDestroy;
+}
+
+//______________________________________________________________________________
+void TEveElement::DecDenyDestroy()
+{
+   // Decreases the deny-destroy count of the element.
+   // Call this after releasing an external pointer to the element.
+
+   if (--fDenyDestroy <= 0)
+      CheckReferenceCount("TEveElement::DecDenyDestroy ");
+}
+
+//______________________________________________________________________________
+Int_t TEveElement::GetParentIgnoreCnt() const
+{
+   // Get number of parents that should be ignored in doing
+   // reference-counting.
+   //
+   // For example, this is used when subscribing an element to a
+   // visualization-database model object.
+
+   return fParentIgnoreCnt;
+}
+
+//______________________________________________________________________________
+void TEveElement::IncParentIgnoreCnt()
+{
+   // Increase number of parents ignored in reference-counting.
+
+   ++fParentIgnoreCnt;
+}
+
+//______________________________________________________________________________
+void TEveElement::DecParentIgnoreCnt()
+{
+   // Decrease number of parents ignored in reference-counting.
+
+   if (--fParentIgnoreCnt <= 0)
+      CheckReferenceCount("TEveElement::DecParentIgnoreCnt ");
+}
+
+
+//==============================================================================
 
 //______________________________________________________________________________
 Bool_t TEveElement::HandleElementPaste(TEveElement* el)
@@ -1535,6 +1650,26 @@ void TEveElement::ElementChanged(Bool_t update_scenes, Bool_t redraw)
 /******************************************************************************/
 // Select/hilite
 /******************************************************************************/
+
+//______________________________________________________________________________
+TEveElement* TEveElement::ForwardSelection()
+{
+   // Returns element to be selected on click.
+   // If value is zero the selected object will follow rules in
+   // TEveSelection.
+
+   return 0;
+}
+
+//______________________________________________________________________________
+TEveElement* TEveElement::ForwardEdit()
+{
+   // Returns element to be displayed in GUI editor on click.
+   // If value is zero the displayed object will follow rules in
+   // TEveSelection.
+
+   return 0;
+}
 
 //______________________________________________________________________________
 void TEveElement::SelectElement(Bool_t state)
@@ -1671,6 +1806,15 @@ const TGPicture* TEveElement::GetListTreeCheckBoxIcon()
    return fgRnrIcons[idx];
 }
 
+//______________________________________________________________________________
+const char* TEveElement::ToString(Bool_t b)
+{
+   // Convert Bool_t to string - kTRUE or kFALSE.
+   // Needed in WriteVizParams().
+
+   return b ? "kTRUE" : "kFALSE";
+}
+
 
 /******************************************************************************/
 /******************************************************************************/
@@ -1724,6 +1868,15 @@ TEveElementObjectPtr::TEveElementObjectPtr(const TEveElementObjectPtr& e) :
    {
       SetMainColorPtr(e.GetMainColorPtr());
    }
+}
+
+//______________________________________________________________________________
+TEveElementObjectPtr* TEveElementObjectPtr::CloneElement() const
+{
+   // Clone the element via copy constructor.
+   // Virtual from TEveElement.
+
+   return new TEveElementObjectPtr(*this);
 }
 
 //______________________________________________________________________________
@@ -1782,6 +1935,7 @@ ClassImp(TEveElementList);
 TEveElementList::TEveElementList(const char* n, const char* t, Bool_t doColor) :
    TEveElement(),
    TNamed(n, t),
+   TEveProjectable(),
    fColor(0),
    fDoColor(doColor),
    fChildClass(0)
@@ -1797,11 +1951,21 @@ TEveElementList::TEveElementList(const char* n, const char* t, Bool_t doColor) :
 TEveElementList::TEveElementList(const TEveElementList& e) :
    TEveElement (e),
    TNamed      (e),
+   TEveProjectable(),
    fColor      (e.fColor),
    fDoColor    (e.fDoColor),
    fChildClass (e.fChildClass)
 {
    // Copy constructor.
+}
+
+//______________________________________________________________________________
+TEveElementList* TEveElementList::CloneElement() const
+{
+   // Clone the element via copy constructor.
+   // Virtual from TEveElement.
+
+   return new TEveElementList(*this);
 }
 
 //______________________________________________________________________________
@@ -1813,4 +1977,46 @@ Bool_t TEveElementList::AcceptElement(TEveElement* el)
    if (fChildClass && ! el->IsA()->InheritsFrom(fChildClass))
       return kFALSE;
    return kTRUE;
+}
+
+//______________________________________________________________________________
+TClass* TEveElementList::ProjectedClass(const TEveProjection*) const
+{
+   // Virtual from TEveProjectable, returns TEveCompoundProjected class.
+
+   return TEveElementListProjected::Class();
+}
+
+
+/******************************************************************************/
+/******************************************************************************/
+// TEveElementListProjected
+/******************************************************************************/
+
+//______________________________________________________________________________
+//
+// A projected element list -- required for proper propagation
+// of render state to projected views.
+
+ClassImp(TEveElementListProjected);
+
+//______________________________________________________________________________
+TEveElementListProjected::TEveElementListProjected() :
+   TEveElementList("TEveElementListProjected")
+{
+   // Constructor.
+}
+
+//______________________________________________________________________________
+void TEveElementListProjected::SetDepthLocal(Float_t /*d*/)
+{
+   // This is abstract method from base-class TEveProjected.
+   // No implementation.
+}
+
+//______________________________________________________________________________
+void TEveElementListProjected::UpdateProjection()
+{
+   // This is abstract method from base-class TEveProjected.
+   // No implementation.
 }

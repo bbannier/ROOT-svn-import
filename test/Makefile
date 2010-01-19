@@ -162,9 +162,13 @@ STRESSFITO    = stressFit.$(ObjSuf)
 STRESSFITS    = stressFit.$(SrcSuf)
 STRESSFIT     = stressFit$(ExeSuf)
 
-STRESSTMVAO    = stressTMVA.$(ObjSuf)
-STRESSTMVAS    = stressTMVA.$(SrcSuf)
-STRESSTMVA     = stressTMVA$(ExeSuf)
+ifeq ($(shell $(ROOTCONFIG) --has-unuran),yes)
+ifeq ($(shell $(ROOTCONFIG) --has-minuit2),yes)
+STRESSHISTOFITO    = stressHistoFit.$(ObjSuf)
+STRESSHISTOFITS    = stressHistoFit.$(SrcSuf)
+STRESSHISTOFIT     = stressHistoFit$(ExeSuf)
+endif
+endif
 
 STRESSENTRYLISTO = stressEntryList.$(ObjSuf)
 STRESSENTRYLISTS = stressEntryList.$(SrcSuf)
@@ -215,9 +219,9 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(TSTRINGO) $(TCOLLEXO) $(VVECTORO) $(VMATRIXO) $(VLAZYO) \
                 $(HELLOO) $(ACLOCKO) $(STRESSO) $(TBENCHO) $(BENCHO) \
                 $(STRESSSHAPESO) $(TCOLLBMO) $(STRESSGEOMETRYO) $(STRESSLO) \
-                $(STRESSGO) $(STRESSSPO) $(TESTBITSO) $(STRESSTMVAO) \
+                $(STRESSGO) $(STRESSSPO) $(TESTBITSO)  \
                 $(CTORTUREO) $(QPRANDOMO) $(THREADSO) $(STRESSVECO) \
-                $(STRESSMATHO) $(STRESSFITO) $(STRESSHEPIXO) \
+                $(STRESSMATHO) $(STRESSFITO) $(STRESSHISTOFITO) $(STRESSHEPIXO) \
                 $(STRESSENTRYLISTO) $(STRESSROOFITO) $(STRESSPROOFO) \
                 $(STRESSMATHMOREO) $(STRESSITERO) $(STRESSHISTO)
 
@@ -226,8 +230,8 @@ PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(HELLOSO) $(ACLOCKSO) $(STRESS) $(TBENCHSO) $(BENCH) \
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
-                $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) \
-                $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH) $(STRESSTMVA) \
+                $(STRESSVEC) $(STRESSFIT) $(STRESSHISTOFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) \
+                $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH)  \
                 $(STRESSMATHMORE) $(STRESSITER) $(STRESSHIST)
 
 
@@ -276,7 +280,7 @@ endif
 		@echo "$@ done"
 
 $(EVENT):       $(EVENTSO) $(MAINEVENTO)
-		$(LD) $(LDFLAGS) $(MAINEVENTO) $(EVENTLIB) $(LIBS) $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $(MAINEVENTO) $(EVENTO) $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"
 
@@ -448,7 +452,7 @@ $(GUIVIEWER):   $(GUIVIEWERO)
 		@echo "$@ done"
 
 $(STRESS):      $(STRESSO) $(EVENT)
-		$(LD) $(LDFLAGS) $(STRESSO) $(EVENTLIB) $(LIBS) $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $(STRESSO) $(EVENTO) $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"
 
@@ -475,12 +479,12 @@ $(STRESSFIT):   $(STRESSFITO)
 		$(MT_EXE)
 		@echo "$@ done"
 
-$(STRESSTMVA): $(STRESSTMVAO)
+$(STRESSHISTOFIT):   $(STRESSHISTOFITO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libTMVA.lib'   '$(ROOTSYS)/lib/libMinuit.lib' '$(ROOTSYS)/lib/libMLP.lib' '$(ROOTSYS)/lib/libTreePlayer.lib' '$(ROOTSYS)/lib/libXMLIO.lib' $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libUnuran.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
-		$(LD) $(LDFLAGS) $^ $(LIBS) -lTMVA -lMinuit -lMLP -lTreePlayer -lXMLIO $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) -lUnuran $(OutPutOpt)$@
 endif
 		@echo "$@ done"
 
@@ -498,7 +502,7 @@ $(STRESSROOFITO): stressRooFit_tests.cxx
 
 $(STRESSROOFIT): $(STRESSROOFITO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libRooFit.lib' '$(ROOTSYS)/lib/libRooFitCore.lib' '$(ROOTSYS)/lib/libHtml.lib' '$(ROOTSYS)/lib/libThread.lib' '$(ROOTSYS)/lib/libMinuit.lib' '$(ROOTSYS)/lib/libFoam.lib' $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libRooFit.lib' '$(ROOTSYS)/lib/libRooFitCore.lib' '$(ROOTSYS)/lib/libHtml.lib' '$(ROOTSYS)/lib/libThread.lib' '$(ROOTSYS)/lib/libMinuit.lib' '$(ROOTSYS)/lib/libFoam.lib' '$(ROOTSYS)/lib/libProof.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
 		$(LD) $(LDFLAGS) $^ $(LIBS) -lRooFit -lRooFitCore -lHtml -lThread -lMinuit -lFoam $(OutPutOpt)$@
@@ -637,11 +641,10 @@ clean:
 		@rm -f $(OBJS) $(TRACKMATHSRC) core
 
 distclean:      clean
-		-@mv -f linearIO.root linearIO.roott
 		@rm -f $(PROGRAMS) $(EVENTSO) $(EVENTLIB) *Dict.* *.def *.exp \
-		   *.root *.ps *.so *.lib *.dll *.d *.log .def so_locations
-		@rm -rf cxx_repository files
-		-@mv -f linearIO.roott linearIO.root
+		   *.root *.ps *.so *.lib *.dll *.d *.log .def so_locations \
+		   files/*
+		@rm -rf cxx_repository
 		-@cd RootShower && $(MAKE) distclean
 		-@cd rhtml && $(MAKE) distclean
 		-@cd RootIDE && $(MAKE) distclean

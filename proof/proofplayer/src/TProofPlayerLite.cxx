@@ -184,11 +184,11 @@ Int_t TProofPlayerLite::MakeSelector(const char *selfile)
                      docp = kFALSE;
                   // Copy the file, if needed
                   if (docp) {
-                     gSystem->Unlink(e);
+                     gSystem->Exec(Form("%s %s", kRM, e));
                      PDB(kGlobal,2)
                         Info("MakeSelector",
                            "retrieving %s from cache", fncache.Data());
-                     gSystem->CopyFile(fncache.Data(), e, kTRUE);
+                     gSystem->Exec(Form("%s %s %s", kCP, fncache.Data(), e));
                   }
                }
             }
@@ -220,10 +220,10 @@ Int_t TProofPlayerLite::MakeSelector(const char *selfile)
                   docp = kFALSE;
                // Copy the file, if needed
                if (docp) {
-                  gSystem->Unlink(fncache.Data());
+                  gSystem->Exec(Form("%s %s", kRM, fncache.Data()));
                   PDB(kGlobal,2)
                      Info("MakeSelector","caching %s ...", e);
-                  gSystem->CopyFile(e, fncache.Data(), kTRUE);
+                  gSystem->Exec(Form("%s %s %s", kCP, e, fncache.Data()));
                   savever = kTRUE;
                }
                cachedFiles->Add(new TObjString(fncache.Data()));
@@ -244,14 +244,14 @@ Int_t TProofPlayerLite::MakeSelector(const char *selfile)
 
    // Save also the selector info, if needed
    if (!useCacheBinaries) {
+      gSystem->Exec(Form("%s %s", kRM, cachedname.Data()));
       PDB(kGlobal,2)
          Info("MakeSelector","caching %s ...", name.Data());
-      gSystem->Unlink(cachedname.Data());
-      gSystem->CopyFile(name.Data(), cachedname.Data(), kTRUE);
+      gSystem->Exec(Form("%s %s %s", kCP, name.Data(), cachedname.Data()));
+      gSystem->Exec(Form("%s %s", kRM, cachedhname.Data()));
       PDB(kGlobal,2)
          Info("MakeSelector","caching %s ...", hname.Data());
-      gSystem->Unlink(cachedhname.Data());
-      gSystem->CopyFile(hname.Data(), cachedhname.Data(), kTRUE);
+      gSystem->Exec(Form("%s %s %s", kCP, hname.Data(), cachedhname.Data()));
    }
    cachedFiles->Add(new TObjString(cachedname.Data()));
    cachedFiles->Add(new TObjString(cachedhname.Data()));
@@ -337,7 +337,7 @@ Long64_t TProofPlayerLite::Process(TDSet *dset, const char *selector_file,
    if (dset->TestBit(TDSet::kEmpty))
       set->SetBit(TDSet::kEmpty);
    fProof->SetParameter("PROOF_MaxSlavesPerNode", (Long_t) ((TProofLite *)fProof)->fNWorkers);
-   if (InitPacketizer(dset, nentries, first, "TPacketizerUnit", "TPacketizer") != 0) {
+   if (InitPacketizer(dset, nentries, first, "TPacketizerUnit", "TPacketizerAdaptive") != 0) {
       Error("Process", "cannot init the packetizer");
       fExitStatus = kAborted;
       return -1;
@@ -350,6 +350,12 @@ Long64_t TProofPlayerLite::Process(TDSet *dset, const char *selector_file,
       memlogfreq = (memlogfreq > 0) ? memlogfreq : 1;
       fProof->SetParameter("PROOF_MemLogFreq", memlogfreq);
    }
+
+   // Add the unique query tag as TNamed object to the input list
+   // so that it is available in TSelectors for monitoring
+   fProof->SetParameter("PROOF_QueryTag", fProof->GetName());
+   //  ... and the sequential number
+   fProof->SetParameter("PROOF_QuerySeqNum", fProof->fSeqNum);
 
    if (!sync)
       gSystem->RedirectOutput(0);

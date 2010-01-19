@@ -420,8 +420,14 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
 
 #ifndef ROOTPREFIX
    if (lib.EndsWith("libCore.dylib") || lib.EndsWith("libCore.so")) {
-      TString rs = gSystem->DirName(lib);
-      gSystem->Setenv("ROOTSYS", gSystem->DirName(rs));
+      char respath[kMAXPATHLEN];
+      if (!realpath(lib, respath)) {
+         if (!gSystem->Getenv("ROOTSYS"))
+            ::SysError("TUnixSystem::DylibAdded", "error getting realpath of libCore, please set ROOTSYS in the shell");
+      } else {
+         TString rs = gSystem->DirName(respath);
+         gSystem->Setenv("ROOTSYS", gSystem->DirName(rs));
+      }
    }
 #endif
 
@@ -946,10 +952,10 @@ void TUnixSystem::DispatchOneEvent(Bool_t pendingOnly)
       *fWriteready = *fWritemask;
 
       int mxfd = TMath::Max(fMaxrfd, fMaxwfd);
-      if (mxfd > -1) mxfd++;
+      mxfd++;
 
       // if nothing to select (socket or timer) return
-      if (mxfd == -1 && nextto == -1)
+      if (mxfd == 0 && nextto == -1)
          return;
 
       fNfd = UnixSelect(mxfd, fReadready, fWriteready, nextto);
@@ -1554,7 +1560,8 @@ Bool_t TUnixSystem::ExpandPathName(TString &path)
    // Expand a pathname getting rid of special shell characters like ~.$, etc.
    // For Unix/Win32 compatibility use $(XXX) instead of $XXX when using
    // environment variables in a pathname. If compatibility is not an issue
-   // you can use on Unix directly $XXX.
+   // you can use on Unix directly $XXX. Returns kFALSE in case of success
+   // or kTRUE in case of error.
 
    const char *p, *patbuf = (const char *)path;
 
@@ -1574,8 +1581,11 @@ expand:
    path.ReplaceAll("$(","$");
    path.ReplaceAll(")","");
 
-   path = ExpandFileName(path.Data());
-   return kFALSE;
+   if ((p = ExpandFileName(path))) {
+      path = p;
+      return kFALSE;
+   }
+   return kTRUE;
 }
 #endif
 
@@ -1586,7 +1596,8 @@ Bool_t TUnixSystem::ExpandPathName(TString &patbuf0)
    // Expand a pathname getting rid of special shell characters like ~.$, etc.
    // For Unix/Win32 compatibility use $(XXX) instead of $XXX when using
    // environment variables in a pathname. If compatibility is not an issue
-   // you can use on Unix directly $XXX.
+   // you can use on Unix directly $XXX. Returns kFALSE in case of success
+   // or kTRUE in case of error.
 
    const char *patbuf = (const char *)patbuf0;
    const char *hd, *p;
@@ -1690,6 +1701,7 @@ char *TUnixSystem::ExpandPathName(const char *path)
    // For Unix/Win32 compatibility use $(XXX) instead of $XXX when using
    // environment variables in a pathname. If compatibility is not an issue
    // you can use on Unix directly $XXX. The user must delete returned string.
+   // Returns the expanded pathname or 0 in case of error.
 
    TString patbuf = path;
    if (ExpandPathName(patbuf))
@@ -2024,6 +2036,27 @@ void TUnixSystem::StackTrace()
    if (!gEnv->GetValue("Root.Stacktrace", 1))
       return;
 
+   TString gdbscript = gEnv->GetValue("Root.StacktraceScript", "");
+   gdbscript = gdbscript.Strip();
+   if (gdbscript != "") {
+      if (AccessPathName(gdbscript, kReadPermission)) {
+         fprintf(stderr, "Root.StacktraceScript %s does not exist\n", gdbscript.Data());
+         gdbscript = "";
+      } else {
+         gdbscript += " ";
+      }
+   }
+   if (gdbscript == "") {
+#ifdef ROOTETCDIR
+      gdbscript.Form("%s/gdb-backtrace.sh ", ROOTETCDIR);
+#else
+      gdbscript.Form("%s/etc/gdb-backtrace.sh ", gSystem->Getenv("ROOTSYS"));
+#endif
+   }
+
+   TString gdbmess = gEnv->GetValue("Root.StacktraceMessage", "");
+   gdbmess = gdbmess.Strip();
+
    cout.flush();
    fflush(stdout);
 
@@ -2046,16 +2079,23 @@ void TUnixSystem::StackTrace()
       return;
    }
 
+   // write custom message file
+   TString gdbmessf = "gdb-message";
+   if (gdbmess != "") {
+      FILE *f = TempFileName(gdbmessf);
+      fprintf(f, "%s\n", gdbmess.Data());
+      fclose(f);
+   }
+
    // use gdb to get stack trace
-   TString gdbscript;
-# ifdef ROOTETCDIR
-   gdbscript.Form("%s/gdb-backtrace.sh ", ROOTETCDIR);
-# else
-   gdbscript.Form("%s/etc/gdb-backtrace.sh ", gSystem->Getenv("ROOTSYS"));
-# endif
    gdbscript += GetExePath();
    gdbscript += " ";
    gdbscript += GetPid();
+   if (gdbmess != "") {
+      gdbscript += " ";
+      gdbscript += gdbmessf;
+   }
+   gdbscript += " 1>&2";
    Exec(gdbscript);
    delete [] gdb;
    return;
@@ -2130,14 +2170,21 @@ void TUnixSystem::StackTrace()
    // If it is, use it. If not proceed as before.
    char *gdb = Which(Getenv("PATH"), "gdb", kExecutePermission);
    if (gdb) {
+      // write custom message file
+      TString gdbmessf = "gdb-message";
+      if (gdbmess != "") {
+         FILE *f = TempFileName(gdbmessf);
+         fprintf(f, "%s\n", gdbmess.Data());
+         fclose(f);
+      }
+
       // use gdb to get stack trace
-      TString gdbscript;
-# ifdef ROOTETCDIR
-      gdbscript.Form("%s/gdb-backtrace.sh ", ROOTETCDIR);
-# else
-      gdbscript.Form("%s/etc/gdb-backtrace.sh ", gSystem->Getenv("ROOTSYS"));
-# endif
       gdbscript += GetPid();
+      if (gdbmess != "") {
+         gdbscript += " ";
+         gdbscript += gdbmessf;
+      }
+      gdbscript += " 1>&2";
       Exec(gdbscript);
       delete [] gdb;
    } else {
@@ -2657,6 +2704,17 @@ const char *TUnixSystem::GetLinkedLibraries()
 #if defined(R__WINGCC )
    const char *cLDD="cygcheck";
    const char *cSOEXT=".dll";
+   size_t lenexe = strlen(exe);
+   if (strcmp(exe + lenexe - 4, ".exe")
+       && strcmp(exe + lenexe - 4, ".dll")) {
+      // it's not a dll and exe doesn't end on ".exe";
+      // need to add it for cygcheck to find it:
+      char* longerexe = new char[lenexe + 5];
+      strcpy(longerexe, exe);
+      strcat(longerexe, ".exe");
+      delete [] exe;
+      exe = longerexe;
+   }
 #else
    const char *cLDD="ldd";
    const char *cSOEXT=".so";
@@ -4081,6 +4139,8 @@ int TUnixSystem::UnixRecv(int sock, void *buffer, int length, int flag)
       flag = 0;
       once = 1;
    }
+   if (flag == MSG_PEEK)
+      once = 1;
 
    int n, nrecv = 0;
    char *buf = (char *)buffer;
@@ -4191,7 +4251,7 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
       if (ldpath.IsNull())
          dynpath = rdynpath;
       else {
-         dynpath = rdynpath; dynpath += ":"; dynpath += ldpath;
+         dynpath = ldpath; dynpath += ":"; dynpath += rdynpath;
       }
 
 #ifdef ROOTLIBDIR

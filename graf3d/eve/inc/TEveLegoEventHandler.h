@@ -28,22 +28,24 @@ protected:
    enum EMode_e   { kLocked, kFree };
 
    EMode_e  fMode;       // current rotation mode
-   Float_t  fTransTheta; // transition theta
+   Float_t  fTransTheta; // transition theta in radians
    Float_t  fTheta;
-
-   TEveCaloLego*  fLastPickedLego;
 
    virtual Bool_t Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2);
 
 public:
-   TEveLegoEventHandler(const char *name, TGWindow *w, TObject *obj, const char *title="");
+   TEveCaloLego*  fLego;
+
+   TEveLegoEventHandler(TGWindow *w, TObject *obj, TEveCaloLego* lego = 0);
    virtual ~TEveLegoEventHandler() {}
 
    virtual Bool_t HandleKey(Event_t *event);
-   virtual Bool_t HandleDoubleClick(Event_t *event);
 
    Float_t GetTransTheta() {return fTransTheta;}
    void    SetTransTheta(Float_t h) {fTransTheta=h;}
+
+   TEveCaloLego* GetLego() { return fLego; }
+   void          SetLego( TEveCaloLego* x) { fLego = x; }
 
    ClassDef(TEveLegoEventHandler, 0); // A GL event handler class. Swiches perspective or orthographic camera.
 };

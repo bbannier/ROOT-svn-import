@@ -56,25 +56,6 @@ void TEveTextGL::SetBBox()
    fBoundingBox.SetEmpty();
 }
 
-//______________________________________________________________________________
-void TEveTextGL::SetFont(TGLRnrCtx & rnrCtx) const
-{
-   // Set FTGL font according to TEveText font attributes.
-
-   if (fFont.GetMode() == TGLFont::kUndef)
-   {
-      rnrCtx.RegisterFont(fM->GetFontSize(), fM->GetFontFile(), fM->GetFontMode(), fFont);
-   }
-   else if (fFont.GetSize() != fM->GetFontSize() ||
-            fFont.GetFile() != fM->GetFontFile() ||
-            fFont.GetMode() != fM->GetFontMode())
-   {
-      rnrCtx.ReleaseFont(fFont);
-      rnrCtx.RegisterFont(fM->GetFontSize(), fM->GetFontFile(), fM->GetFontMode(), fFont);
-   }
-   fFont.SetDepth(fM->GetExtrude());
-}
-
 /******************************************************************************/
 
 //______________________________________________________________________________
@@ -85,7 +66,13 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    static const TEveException eH("TEveTextGL::DirectDraw ");
 
-   SetFont(rnrCtx);
+   Int_t fm = fM->GetFontMode();
+   if (fm == TGLFont::kBitmap || fm == TGLFont::kPixmap || fm == TGLFont::kTexture)
+      rnrCtx.RegisterFont(fM->GetFontSize(), fM->GetFontFile(), fM->GetFontMode(), fFont);
+   else
+      rnrCtx.RegisterFontNoScale(fM->GetFontSize(), fM->GetFontFile(), fM->GetFontMode(), fFont);
+
+   fFont.SetDepth(fM->GetExtrude());
 
    //  bbox initialisation
    if (fBoundingBox.IsEmpty() && fFont.GetMode() > TGLFont::kPixmap)
@@ -152,6 +139,7 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
       case TGLFont::kOutline:
       case TGLFont::kExtrude:
       case TGLFont::kPolygon:
+         glPolygonOffset(fM->GetPolygonOffset(0), fM->GetPolygonOffset(1));
          if (fM->GetExtrude() != 1.0) {
             glPushMatrix();
             glScalef(1.0f, 1.0f, fM->GetExtrude());
@@ -162,6 +150,7 @@ void TEveTextGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          }
          break;
       case TGLFont::kTexture:
+         glPolygonOffset(fM->GetPolygonOffset(0), fM->GetPolygonOffset(1));
          fFont.Render(fM->GetText());
          break;
       default:

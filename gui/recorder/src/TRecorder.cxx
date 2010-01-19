@@ -131,6 +131,8 @@
 #include "TPaveLabel.h"
 #include "TLatex.h"
 #include "TVirtualDragManager.h"
+#include "TGPicture.h"
+#include "KeySymbols.h"
 
 // Names of ROOT GUI events. Used for listing event logs.
 const char *kRecEventNames[] = {
@@ -165,6 +167,58 @@ const char *kExtraEventTree = "ExtraEvents"; // Name of TTree with extra events 
 const char *kBranchName     = "MainBranch";  // Name of the main branch in all TTress
 
 ClassImp(TRecorder)
+
+
+//_____________________________________________________________________________
+//
+// TGCursorWindow
+//
+// Window used as fake mouse cursor wile replaying events.
+//_____________________________________________________________________________
+
+class TGCursorWindow : public TGFrame {
+
+protected:
+   Pixmap_t fPic, fMask;            // Pixmaps used as Window shape
+
+public:
+   TGCursorWindow();
+   virtual ~TGCursorWindow();
+};
+
+static TGCursorWindow *gCursorWin = 0;
+static Int_t gDecorWidth  = 0;
+static Int_t gDecorHeight = 0;
+
+//______________________________________________________________________________
+TGCursorWindow::TGCursorWindow() : 
+      TGFrame(gClient->GetDefaultRoot(), 32, 32, kTempFrame)
+{
+   // TGCursorWindow constructor.
+
+   SetWindowAttributes_t wattr;
+   const TGPicture *pbg = fClient->GetPicture("recursor.png");
+   fPic  = pbg->GetPicture();
+   fMask = pbg->GetMask();
+
+   gVirtualX->ShapeCombineMask(fId, 0, 0, fMask);
+   SetBackgroundPixmap(fPic);
+
+   wattr.fMask = kWAOverrideRedirect | kWASaveUnder;
+   wattr.fSaveUnder = kTRUE;
+   wattr.fOverrideRedirect = kTRUE;
+
+   gVirtualX->ChangeWindowAttributes(fId, &wattr);
+}
+
+//______________________________________________________________________________
+TGCursorWindow::~TGCursorWindow()
+{
+   // Destructor.
+
+   if (fPic != kNone) gVirtualX->DeletePixmap(fPic);
+   if (fMask != kNone) gVirtualX->DeletePixmap(fMask);
+}
 
 //______________________________________________________________________________
 TRecorder::TRecorder()
@@ -314,6 +368,23 @@ TRecorderReplaying::TRecorderReplaying(const char *filename)
    // Allocates all necessary data structures used for replaying
    // What is allocated here is deleted in destructor
 
+   fCanv = 0;
+   fCmdTree = 0;
+   fCmdTreeCounter = 0;
+   fEventReplayed = kTRUE;
+   fExtraTree = 0;
+   fExtraTreeCounter = 0;
+   fFilterStatusBar = kFALSE;
+   fGuiTree = 0;
+   fGuiTreeCounter = 0;
+   fNextEvent = 0;
+   fRecorder = 0;
+   fRegWinCounter = 0;
+   fShowMouseCursor = kTRUE;
+   fWaitingForWindow = kFALSE;
+   fWin = 0;
+   fWinTree = 0;
+   fWinTreeEntries = 0;
    fFile       = TFile::Open(filename);
    fCmdEvent   = new TRecCmdEvent();
    fGuiEvent   = new TRecGuiEvent();
@@ -321,6 +392,8 @@ TRecorderReplaying::TRecorderReplaying(const char *filename)
    fWindowList = new TList();
    fTimer      = new TTimer();
    fMutex      = new TMutex(kFALSE);
+   if (!gCursorWin)
+      gCursorWin  = new TGCursorWindow();
 }
 
 //______________________________________________________________________________
@@ -334,8 +407,6 @@ TRecorderReplaying::~TRecorderReplaying()
    // delete fTimer;
 
    gClient->Disconnect(gClient, "RegisteredWindow(Window_t)", this,
-                       "WaitForWindow(Window_t)");
-   gClient->Disconnect(gClient, "RegisteredWindow(Window_t)", this,
                        "RegisterWindow(Window_t)");
 
    if (fFile) {
@@ -348,6 +419,9 @@ TRecorderReplaying::~TRecorderReplaying()
    delete fGuiEvent;
    delete fExtraEvent;
    delete fMutex;
+   if (gCursorWin)
+      gCursorWin->DeleteWindow();
+   gCursorWin = 0;
 }
 
 //______________________________________________________________________________
@@ -490,7 +564,7 @@ void TRecorderReplaying::RegisterWindow(Window_t w)
 
    if ((gDebug > 0) && (fWaitingForWindow)) {
       cout << " Window registered: new ID: " << hex << w <<
-              "  previous ID: " << fWin << endl;
+              "  previous ID: " << fWin << dec << endl;
    }
 
    // Lock mutex for guarding access to fWindowList
@@ -510,7 +584,7 @@ void TRecorderReplaying::RegisterWindow(Window_t w)
 
       if (gDebug > 0)
          cout << " Window " << hex << fGuiEvent->fWindow <<
-                 " registered." << endl;
+                 " registered." << dec << endl;
 
       fNextEvent = fGuiEvent;
       // Sets that we do not wait for this window anymore
@@ -539,22 +613,21 @@ Bool_t TRecorderReplaying::RemapWindowReferences()
    // Iterates through the whole list of mappings
    while ((ids = (TRecWinPair*)it.Next())) {
       // Window that the event belongs to
-      if (fGuiEvent->fWindow == 0) {
+      if (!found && fGuiEvent->fWindow == 0) {
          fGuiEvent->fWindow = gVirtualX->GetDefaultRootWindow();
          found = kTRUE;
       }
-      else if (ids->fKey == fGuiEvent->fWindow) {
+      else if (!found && ids->fKey == fGuiEvent->fWindow) {
          fGuiEvent->fWindow = ids->fValue;
          found = kTRUE;
       }
-
       for (Int_t i = 0; i < 5; ++i) {
          if ((Long_t) ids->fKey == fGuiEvent->fUser[i])
             fGuiEvent->fUser[i] = ids->fValue;
       }
-
-      if (fGuiEvent->fMasked && ids->fKey == fGuiEvent->fMasked)
+      if (fGuiEvent->fMasked && ids->fKey == fGuiEvent->fMasked) {
          fGuiEvent->fMasked = ids->fValue;
+      }
    }
 
    if (!found && fGuiEvent->fWindow == 0) {
@@ -597,11 +670,11 @@ Bool_t TRecorderReplaying::FilterEvent(TRecGuiEvent *e)
 
    // We do not replay any client messages except closing of windows
    if (e->fType == kClientMessage) {
-      if (!((e->fFormat == 32) && ((Atom_t)e->fUser[0] == gWM_DELETE_WINDOW) &&
-            (e->fHandle != gROOT_MESSAGE)))
-         return kTRUE;
-      else
+      if ((e->fFormat == 32) && (e->fHandle != TRecGuiEvent::kROOT_MESSAGE)
+          && ((Atom_t)e->fUser[0] == TRecGuiEvent::kWM_DELETE_WINDOW))
          return kFALSE;
+      else
+         return kTRUE;
    }
 
    // See TRecorderRecording::SetTypeOfConfigureNotify to get know
@@ -657,7 +730,7 @@ Bool_t TRecorderReplaying::PrepareNextEvent()
    // Skips GUI events that should not be replayed (FilterEvent call)
    while (fGuiTree->GetEntries() > fGuiTreeCounter) {
       fGuiTree->GetEntry(fGuiTreeCounter);
-      if (!FilterEvent(fGuiEvent))
+      if (!fGuiEvent || !FilterEvent(fGuiEvent))
          break;
       fGuiTreeCounter++;
    }
@@ -750,9 +823,8 @@ Bool_t TRecorderReplaying::CanOverlap()
       return kFALSE;
    }
 
-   // Commandline events.
-   // Overlapping not allowed
-   if (fNextEvent->GetType() == TRecEvent::kCmdEvent)
+   // only GUI events overlapping is allowed
+   if (fNextEvent->GetType() != TRecEvent::kGuiEvent)
       return kFALSE;
 
 
@@ -765,12 +837,9 @@ Bool_t TRecorderReplaying::CanOverlap()
    // GUI event
    TRecGuiEvent *e  = (TRecGuiEvent*) fNextEvent;
 
-   // Overlapping allowed only for ButtonPress
-   if (e->fType == kButtonPress)
-      return kTRUE;
-
-   // and ButtonRelease events
-   if (e->fType == kButtonRelease)
+   // Overlapping allowed for ButtonPress, ButtonRelease and MotionNotify
+   if (e->fType == kButtonPress || e->fType == kButtonRelease ||
+       e->fType == kMotionNotify)
       return kTRUE;
 
    return kFALSE;
@@ -793,6 +862,9 @@ void TRecorderReplaying::ReplayRealtime()
    // The excpetions are determined by TRecorderReplaying::CanOverlap()
    //
 
+   UInt_t keysym;
+   char str[2];
+
    if ((gROOT->GetEditorMode() == kText) ||
        (gROOT->GetEditorMode() == kPaveLabel)){
       gROOT->SetEditorMode();
@@ -800,8 +872,10 @@ void TRecorderReplaying::ReplayRealtime()
 
    // If there are automatically generated ROOT events in the queue, they
    // are let to be handled first
-   if (gVirtualX->EventsPending())
+   if (gVirtualX->EventsPending()) {
+      gSystem->ProcessEvents();
       return;
+   }
 
    // Previous event has not been replayed yet and it is not allowed for
    // this event to be replayed more times
@@ -816,6 +890,22 @@ void TRecorderReplaying::ReplayRealtime()
       // Remembers its execution time to compute time difference with
       // the next event
       fPreviousEventTime = fNextEvent->GetTime();
+
+      // Special execution of events causing potential deadlocks
+      if (fNextEvent->GetType() == TRecEvent::kGuiEvent) {
+         TRecGuiEvent *ev = (TRecGuiEvent *)fNextEvent;
+         if (ev->fType == kGKeyPress && ev->fState & kKeyControlMask) {
+            Event_t *e = ev->CreateEvent(ev);
+            gVirtualX->LookupString(e, str, sizeof(str), keysym);
+            // catch the ctrl-s event
+            if ((keysym & ~0x20) == kKey_S) {
+               fEventReplayed = 1;
+               PrepareNextEvent();
+               ev->ReplayEvent(fShowMouseCursor);
+               return;
+            }
+         }
+      }
 
       // REPLAYS CURRENT EVENT
       fNextEvent->ReplayEvent(fShowMouseCursor);
@@ -1126,7 +1216,7 @@ TRecorderRecording::TRecorderRecording(TRecorder *r, const char *filename,
    // New timer for recording
    fTimer      = new TTimer(25, kTRUE);
 
-   fMouseTimer = new TTimer(25, kTRUE);
+   fMouseTimer = new TTimer(50, kTRUE);
    fMouseTimer->Connect("Timeout()", "TRecorderRecording", this,
                         "RecordMousePosition()");
 
@@ -1247,8 +1337,8 @@ Bool_t TRecorderRecording::StartRecording()
    // Starts the timer for recording
    fTimer->TurnOn();
 
-   // side effects (and not really cross-platform...): disable it for now
-   // fMouseTimer->Start(25);
+   // start mouse events recording timer
+   fMouseTimer->Start(50);
 
    Info("TRecorderRecording::StartRecording", "Recording started. Log file: %s",
         fFile->GetName());
@@ -1354,11 +1444,11 @@ void TRecorderRecording::RecordGuiEvent(Event_t *e, Window_t wid)
    }
    fFilterEventPave = kFALSE;
 
-   // don't record any copy/paste event, as event->fUser[x] parameters 
+   // don't record any copy/paste event, as event->fUser[x] parameters
    // will be invalid when replaying on a different OS
    if (e->fType == kSelectionClear || e->fType == kSelectionRequest ||
        e->fType == kSelectionNotify)
-       return;
+      return;
 
    // Copies all items of e to fGuiEvent
    CopyEvent(e, wid);
@@ -1403,11 +1493,11 @@ void TRecorderRecording::RecordMousePosition()
 
    gVirtualX->QueryPointer(gVirtualX->GetDefaultRootWindow(), dum, dum,
                            ev.fXRoot, ev.fYRoot, ev.fX, ev.fY, ev.fState);
+   ev.fXRoot -= gDecorWidth;
+   ev.fYRoot -= gDecorHeight;
 
-   // side effects (and not really cross-platform...): disable it for now
-   // and this should be done with a fake mouse cursor anyway...
-   // RecordGuiEvent(&ev, 0);
-   // fMouseTimer->Reset();
+   RecordGuiEvent(&ev, 0);
+   fMouseTimer->Reset();
 }
 
 //______________________________________________________________________________
@@ -1573,8 +1663,14 @@ void TRecorderRecording::CopyEvent(Event_t *e, Window_t wid)
    fGuiEvent->fHandle      = e->fHandle;
    fGuiEvent->fFormat      = e->fFormat;
 
+   if (fGuiEvent->fHandle == gROOT_MESSAGE)
+      fGuiEvent->fHandle = TRecGuiEvent::kROOT_MESSAGE;
+
    for(Int_t i=0; i<5; ++i)
       fGuiEvent->fUser[i] = e->fUser[i];
+
+   if (fGuiEvent->fUser[0] == (Int_t)gWM_DELETE_WINDOW)
+      fGuiEvent->fUser[0] = TRecGuiEvent::kWM_DELETE_WINDOW;
 
    if (e->fType == kGKeyPress || e->fType == kKeyRelease) {
       char tmp[10] = {0};
@@ -1969,13 +2065,18 @@ ClassImp(TRecGuiEvent)
 void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
 {
    // Replays stored GUI event
+
+   Int_t    px, py, dx, dy;
+   Window_t wtarget;
    Event_t *e = CreateEvent(this);
 
-   // don't try to replay any copy/paste event, as event->fUser[x] 
+   // don't try to replay any copy/paste event, as event->fUser[x]
    // parameters are invalid on different OSes
    if (e->fType == kSelectionClear || e->fType == kSelectionRequest ||
-       e->fType == kSelectionNotify)
-       return;
+       e->fType == kSelectionNotify) {
+      delete e;
+      return;
+   }
 
    // Replays movement/resize event
    if (e->fType == kConfigureNotify) {
@@ -1993,7 +2094,8 @@ void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
             // Linux: movement of the window
             // first get window attribute to compensate the border size
             gVirtualX->GetWindowAttributes(e->fWindow, attr);
-            w->Move(e->fX - attr.fX, e->fY - attr.fY);
+            if ((e->fX - attr.fX > 0) && (e->fY - attr.fY > 0))
+               w->Move(e->fX - attr.fX, e->fY - attr.fY);
          }
          else {
             if (e->fUser[4] == TRecGuiEvent::kCNResize) {
@@ -2020,30 +2122,34 @@ void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
             Error("TRecGuiEvent::ReplayEvent",
                   "kConfigureNotify: Window %x does not exist anymore ");
       }
+      delete e;
       return;
 
    } // kConfigureNotify
 
-   // All these events should be done with a fake mouse cursor 
-   // instead of gVirtualX->Warp()...
-
-   // Displays mouse cursor for MotionNotify event
-   if (showMouseCursor && (e->fType == kMotionNotify ||
-       e->fType == kButtonPress || e->fType == kButtonRelease)) {
-      TGWindow *w = gClient->GetWindowById(e->fWindow);
-      if (w)
-         gVirtualX->Warp(e->fX, e->fY, w->GetId());
+   if (showMouseCursor && e->fType == kButtonPress) {
+      gVirtualX->TranslateCoordinates(e->fWindow, gVirtualX->GetDefaultRootWindow(),
+                                      e->fX, e->fY, px, py, wtarget);
+      dx = px - gCursorWin->GetX();
+      dy = py - gCursorWin->GetY();
+      if (TMath::Abs(dx) > 5) gDecorWidth += dx;
+      if (TMath::Abs(dy) > 5) gDecorHeight += dy;
    }
-
-#if 0
-   // Displays mouse cursor for EnterNotify or LeaveNotify event
-   if (showMouseCursor && (e->fType == kEnterNotify ||
-       e->fType == kLeaveNotify)) {
-      TGWindow *w = gClient->GetWindowById(e->fWindow);
-      if (w)
-         gVirtualX->Warp(e->fX, e->fY, w->GetId());
+   // Displays fake mouse cursor for MotionNotify event
+   if (showMouseCursor && e->fType == kMotionNotify) {
+      if (gCursorWin && e->fWindow == gVirtualX->GetDefaultRootWindow()) {
+         if (!gCursorWin->IsMapped()) {
+            gCursorWin->MapRaised();
+         }
+         if (gVirtualX->GetDrawMode() == TVirtualX::kCopy) {
+//#ifdef R__MACOSX
+            // this may have side effects (e.g. stealing focus)
+            gCursorWin->RaiseWindow();
+//#endif
+            gCursorWin->Move(e->fXRoot + gDecorWidth, e->fYRoot + gDecorHeight);
+         }
+      }
    }
-#endif
 
    // Lets all the other events to be handled the same way as when recording
    // first, special case for the gui builder, having a timer handling
@@ -2053,6 +2159,7 @@ void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
       e->fType = (EGEventType)e->fFormat;
       if (gDragManager)
          gDragManager->HandleTimerEvent(e, 0);
+      delete e;
       return;
    }
    else { // then the normal cases
@@ -2061,6 +2168,7 @@ void TRecGuiEvent::ReplayEvent(Bool_t showMouseCursor)
       else
          gClient->HandleMaskEvent(e, fMasked);
    }
+   delete e;
 }
 
 //______________________________________________________________________________
@@ -2093,8 +2201,14 @@ Event_t *TRecGuiEvent::CreateEvent(TRecGuiEvent *ge)
    e->fHandle = ge->fHandle;
    e->fFormat = ge->fFormat;
 
+   if (e->fHandle == TRecGuiEvent::kROOT_MESSAGE)
+      e->fHandle = gROOT_MESSAGE;
+
    for(Int_t i=0; i<5; ++i)
       e->fUser[i] = ge->fUser[i];
+
+   if (e->fUser[0] == TRecGuiEvent::kWM_DELETE_WINDOW)
+      e->fUser[0] = gWM_DELETE_WINDOW;
 
    if (ge->fType == kGKeyPress || ge->fType == kKeyRelease) {
       e->fCode    = gVirtualX->KeysymToKeycode(ge->fCode);

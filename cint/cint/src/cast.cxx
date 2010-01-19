@@ -68,7 +68,7 @@ static void G__castclass(G__value* result3, int tagnum, int castflag, int* ptype
       else {
          int store_tagnum = G__tagnum;
          G__tagnum = result3->tagnum;
-         offset = -G__find_virtualoffset(tagnum);
+         offset = -G__find_virtualoffset(tagnum, result3->obj.i);
          G__tagnum = store_tagnum;
       }
 #else // G__VIRTUALBASE
@@ -171,6 +171,7 @@ void G__asm_cast(int type, G__value* buf, int tagnum, int reftype)
       case 'U': {
          int offset = G__ispublicbase(buf->tagnum, tagnum, buf->obj.i);
          if (-1 != offset) buf->obj.i += offset;
+         break;
       }
       case 'u':
          if (G__PARAREFERENCE == reftype) {
@@ -180,6 +181,7 @@ void G__asm_cast(int type, G__value* buf, int tagnum, int reftype)
                buf->ref += offset;
             }
          }
+         break;
       default:
          G__letint(buf, (char)type , G__int(*buf));
          buf->ref = buf->obj.i;
@@ -299,7 +301,12 @@ G__value G__castvalue_bc(char* casttype, G__value result3, int bc)
                else {
                   int store_tagnum = G__tagnum;
                   G__tagnum = result3.tagnum;
+#ifdef G__VIRTUALBASE
+                  offset = G__find_virtualoffset(tagnum, result3.obj.i);
+
+#else // G__VIRTUALBASE
                   offset = G__find_virtualoffset(tagnum);
+#endif // G__VIRTUALBASE
                   G__tagnum = store_tagnum;
                   if (offset) {
                      result3.obj.i -= offset;

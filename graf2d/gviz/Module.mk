@@ -44,7 +44,7 @@ include/%.h:    $(GVIZDIRI)/%.h
 $(GVIZLIB):     $(GVIZO) $(GVIZDO) $(ORDER_) $(MAINLIBS) $(GVIZLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libGviz.$(SOEXT) $@ "$(GVIZO) $(GVIZDO)" \
-		   "$(GVIZLIBEXTRA) $(GRAPHVIZLIBDIR) $(GRAPHVIZLIB)"
+		   "$(GVIZLIBEXTRA) $(GRAPHVIZLIB)"
 
 $(GVIZDS):      $(GVIZH) $(GVIZL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
@@ -67,4 +67,4 @@ distclean-$(MODNAME): clean-$(MODNAME)
 distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
-$(GVIZO): CXXFLAGS += $(GRAPHVIZINCDIR:%=-I%)
+$(GVIZO): CXXFLAGS += $(GRAPHVIZINCDIR:%=-I%) $(GRAPHVIZCFLAGS)

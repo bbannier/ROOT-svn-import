@@ -154,7 +154,7 @@ public:
    virtual double GlobalCC(unsigned int ) const; 
 
    /// minos error for variable i, return false if Minos failed
-   virtual bool GetMinosError(unsigned int i, double & errLow, double & errUp); 
+   virtual bool GetMinosError(unsigned int i, double & errLow, double & errUp, int = 0); 
 
    /**
       perform a full calculation of the Hessian matrix for error calculation
@@ -178,6 +178,13 @@ public:
 
    /// return reference to the objective function
    ///virtual const ROOT::Math::IGenFunction & Function() const; 
+
+   /// get name of variables (override if minimizer support storing of variable names)
+   virtual std::string VariableName(unsigned int ivar) const;
+
+   /// get index of variable given a variable given a name
+   /// return always -1 . (It is Not implemented)
+   virtual int VariableIndex(const std::string & name) const;
    
 
 protected: 

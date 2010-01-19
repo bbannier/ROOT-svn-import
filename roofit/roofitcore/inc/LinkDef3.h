@@ -43,6 +43,8 @@
 #pragma link C++ class RooWorkspace- ;
 #pragma link C++ class RooWorkspace::CodeRepo- ;
 #pragma link C++ class RooWorkspace::WSDir+ ;
+#pragma link C++ class list<TObject*>+ ;
+#pragma link C++ class list<RooAbsData*>+ ;
 #pragma link C++ class RooProfileLL+ ;
 #pragma link C++ class RooAbsCachedPdf+ ;
 #pragma link C++ class RooAbsSelfCachedPdf+ ;
@@ -68,7 +70,6 @@
 #pragma link C++ class RooSimWSTool::ObjSplitRule+ ;
 #pragma link C++ class RooSimWSTool::ObjBuildConfig+ ;
 #pragma link C++ class RooFracRemainder+ ;
-#pragma link C++ class RooLinearMorph+ ;
 #pragma link C++ class RooAbsCachedReal+ ;
 #pragma link C++ class RooAbsSelfCachedReal+ ;
 #pragma link C++ class RooCachedReal+ ;
@@ -78,7 +79,9 @@
 #pragma link C++ class RooHistFunc+ ;
 #pragma link C++ class RooExpensiveObjectCache+ ;
 #pragma link C++ class RooExpensiveObjectCache::ExpensiveObject+ ;
+#pragma link C++ class std::map<std::string,RooAbsPdf*>+ ;
 #pragma link C++ class std::map<std::string,TH1*>+ ;
+#pragma link C++ class std::map<std::string,RooAbsDataStore*>+ ;
 #pragma link C++ class RooFactoryWSTool+ ;
 #pragma link C++ class RooBinningCategory+ ;
 #pragma link C++ class RooDerivative+ ;
@@ -92,12 +95,24 @@
 #pragma link C++ class RooNumGenConfig+ ;
 #pragma link C++ class RooNumGenFactory+ ;
 #pragma link C++ class RooMultiVarGaussian+ ;
+#pragma link C++ class RooMultiVarGaussian::AnaIntData+ ;
+#pragma link C++ class RooMultiVarGaussian::GenData+ ;
 #pragma link C++ class RooXYChi2Var+ ;
 #pragma link C++ class RooAbsDataStore+ ;
-#pragma link C++ class RooTreeDataStore+ ;
+#pragma link C++ class RooTreeDataStore- ;
+#pragma link C++ class RooCompositeDataStore+ ;
 #pragma link C++ class RooTreeData+ ;
+#ifndef __ROOFIT_NOROOMINIMIZER
 #pragma link C++ class RooMinimizer+ ;
 #pragma link C++ class RooMinimizerFcn+ ;
+#endif
+#pragma link C++ class RooMoment+ ;
+#pragma link C++ class RooStudyManager+ ;
+#pragma link C++ class RooStudyPackage+ ;
+#pragma link C++ class RooAbsStudy+ ;
+#pragma link C++ class RooGenFitStudy+ ;
+#pragma link C++ class RooProofDriverSelector+ ;
+#pragma link C++ class list<RooAbsStudy*>+ ;
 #pragma link C++ namespace RooCintUtils+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;

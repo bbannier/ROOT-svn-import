@@ -87,6 +87,7 @@ class TBranchRef;
 class TBasket;
 class TStreamerInfo;
 
+
 class TTree : public TNamed, public TAttLine, public TAttFill, public TAttMarker {
 
 protected:
@@ -94,6 +95,7 @@ protected:
    Long64_t       fTotBytes;          //  Total number of bytes in all branches before compression
    Long64_t       fZipBytes;          //  Total number of bytes in all branches after compression
    Long64_t       fSavedBytes;        //  Number of autosaved bytes
+   Long64_t       fFlushedBytes;      //  Number of autoflushed bytes
    Double_t       fWeight;            //  Tree weight (see TTree::SetWeight)
    Int_t          fTimerInterval;     //  Timer interval in milliseconds
    Int_t          fScanField;         //  Number of runs before prompting in Scan
@@ -103,6 +105,7 @@ protected:
    Long64_t       fMaxEntryLoop;      //  Maximum number of entries to process
    Long64_t       fMaxVirtualSize;    //  Maximum total size of buffers kept in memory
    Long64_t       fAutoSave;          //  Autosave tree when fAutoSave bytes produced
+   Long64_t       fAutoFlush;         //  Autoflush tree when fAutoFlush entries written
    Long64_t       fEstimate;          //  Number of entries to estimate histogram limits
    Long64_t       fCacheSize;         //! Maximum size of file buffers
    Long64_t       fChainOffset;       //! Offset of 1st entry of this Tree in a TChain
@@ -208,6 +211,8 @@ public:
    TTree(const char* name, const char* title, Int_t splitlevel = 99);
    virtual ~TTree();
 
+   virtual void            AddBranchToCache(const char *bname, Bool_t subbranches = kFALSE);
+   virtual void            AddBranchToCache(TBranch *branch,   Bool_t subbranches = kFALSE);
    virtual TFriendElement *AddFriend(const char* treename, const char* filename = "");
    virtual TFriendElement *AddFriend(const char* treename, TFile* file);
    virtual TFriendElement *AddFriend(TTree* tree, const char* alias = "", Bool_t warn = kFALSE);
@@ -262,6 +267,8 @@ public:
    virtual Int_t           Fit(const char* funcname, const char* varexp, const char* selection = "", Option_t* option = "", Option_t* goption = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0); // *MENU*
    virtual Int_t           FlushBaskets() const;
    virtual const char     *GetAlias(const char* aliasName) const;
+   virtual Long64_t        GetAutoFlush() const {return fAutoFlush;}
+   virtual Long64_t        GetAutoSave()  const {return fAutoSave;}
    virtual TBranch        *GetBranch(const char* name);
    virtual TBranchRef     *GetBranchRef() const { return fBranchRef; };
    virtual Bool_t          GetBranchStatus(const char* branchname) const;
@@ -355,6 +362,7 @@ public:
    virtual void            OptimizeBaskets(Int_t maxMemory=10000000, Float_t minComp=1.1, Option_t *option=""); 
    TPrincipal             *Principal(const char* varexp = "", const char* selection = "", Option_t* option = "np", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    virtual void            Print(Option_t* option = "") const; // *MENU*
+   virtual void            PrintCacheStats(Option_t* option = "") const;
    virtual Long64_t        Process(const char* filename, Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0); // *MENU*
 #if defined(__CINT__)
 #if defined(R__MANUAL_DICT)
@@ -374,7 +382,8 @@ public:
    virtual void            ResetBranchAddresses();
    virtual Long64_t        Scan(const char* varexp = "", const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0); // *MENU*
    virtual Bool_t          SetAlias(const char* aliasName, const char* aliasFormula);
-   virtual void            SetAutoSave(Long64_t autos = 10000000) { fAutoSave=autos; }
+   virtual void            SetAutoSave(Long64_t autos = 300000000);
+   virtual void            SetAutoFlush(Long64_t autof = 30000000);
    virtual void            SetBasketSize(const char* bname, Int_t buffsize = 16000);
 #if !defined(__CINT__)
    virtual Int_t           SetBranchAddress(const char *bname,void *add, TBranch **ptr = 0);
@@ -393,7 +402,9 @@ public:
 #endif
    virtual void            SetBranchStatus(const char* bname, Bool_t status = 1, UInt_t* found = 0);
    static  void            SetBranchStyle(Int_t style = 1);  //style=0 for old branch, =1 for new branch style
-   virtual void            SetCacheSize(Long64_t cachesize = 10000000);
+   virtual void            SetCacheSize(Long64_t cachesize = -1);
+   virtual void            SetCacheEntryRange(Long64_t first, Long64_t last);
+   virtual void            SetCacheLearnEntries(Int_t n=10);
    virtual void            SetChainOffset(Long64_t offset = 0) { fChainOffset=offset; }
    virtual void            SetCircular(Long64_t maxEntries);
    virtual void            SetDebug(Int_t level = 1, Long64_t min = 0, Long64_t max = 9999999); // *MENU*
@@ -411,6 +422,7 @@ public:
    virtual void            SetName(const char* name); // *MENU*
    virtual void            SetNotify(TObject* obj) { fNotify = obj; }
    virtual void            SetObject(const char* name, const char* title);
+   virtual void            SetParallelUnzip(Bool_t opt=kTRUE, Float_t RelSize=-1);
    virtual void            SetScanField(Int_t n = 50) { fScanField = n; } // *MENU*
    virtual void            SetTimerInterval(Int_t msec = 333) { fTimerInterval=msec; }
    virtual void            SetTreeIndex(TVirtualIndex*index);
@@ -418,12 +430,13 @@ public:
    virtual void            SetUpdate(Int_t freq = 0) { fUpdate = freq; }
    virtual void            Show(Long64_t entry = -1, Int_t lenmax = 20);
    virtual void            StartViewer(); // *MENU*
+   virtual void            StopCacheLearningPhase();
    virtual Int_t           UnbinnedFit(const char* funcname, const char* varexp, const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    void                    UseCurrentStyle();
    virtual Int_t           Write(const char *name=0, Int_t option=0, Int_t bufsize=0);
    virtual Int_t           Write(const char *name=0, Int_t option=0, Int_t bufsize=0) const;
 
-   ClassDef(TTree,17)  //Tree descriptor (the main ROOT I/O class)
+   ClassDef(TTree,18)  //Tree descriptor (the main ROOT I/O class)
 };
 
 //////////////////////////////////////////////////////////////////////////

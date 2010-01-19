@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: FeldmanCousins.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: FeldmanCousins.cxx 31276 2009-11-18 15:06:42Z moneta $
 // Author: Kyle Cranmer   January 2009
 
 /*************************************************************************
@@ -41,6 +41,8 @@ END_HTML
 #include "RooStats/PointSetInterval.h"
 #endif
 
+#include "RooStats/ModelConfig.h"
+
 #include "RooStats/SamplingDistribution.h"
 
 #include "RooStats/ProfileLikelihoodTestStat.h"
@@ -61,25 +63,41 @@ using namespace RooStats;
 
 
 //_______________________________________________________
-FeldmanCousins::FeldmanCousins() {
+FeldmanCousins::FeldmanCousins() : 
+   fPdf(0),
+   fData(0),
+   fTestStatSampler(0),
+   fPointsToTest(0),
+   fAdaptiveSampling(false), 
+   fNbins(10), 
+   fFluctuateData(true),
+   fDoProfileConstruction(true),
+   fSaveBeltToFile(false),
+   fCreateBelt(false)
+{
    // default constructor
-  fWS = new RooWorkspace("FeldmanCousinsWS");
-  fOwnsWorkspace = true;
-  fDataName = "";
-  fPdfName = "";
-  fAdaptiveSampling=false;
-  fPointsToTest = 0;
-  fNbins = 10;
-  fFluctuateData=true;
-  fDoProfileConstruction=true;
+//   fWS = new RooWorkspace("FeldmanCousinsWS");
+//   fOwnsWorkspace = true;
+//   fDataName = "";
+//   fPdfName = "";
 }
 
 //_______________________________________________________
 FeldmanCousins::~FeldmanCousins() {
    // destructor
-  if(fOwnsWorkspace && fWS) delete fWS;
+   //if(fOwnsWorkspace && fWS) delete fWS;
   if(fPointsToTest) delete fPointsToTest;
   if(fTestStatSampler) delete fTestStatSampler;
+}
+
+//_______________________________________________________
+void FeldmanCousins::SetModel(const ModelConfig & model) { 
+   // set the model
+   fPdf = model.GetPdf();
+   fPOI.removeAll();
+   fNuisParams.removeAll();
+   if (model.GetParametersOfInterest() ) fPOI.add(*model.GetParametersOfInterest());
+   if (model.GetNuisanceParameters() )   fNuisParams.add(*model.GetNuisanceParameters());
 }
 
 //_______________________________________________________
@@ -87,8 +105,8 @@ void FeldmanCousins::CreateTestStatSampler() const{
   // specify the Test Statistic and create a ToyMC test statistic sampler
 
   // get ingredients
-  RooAbsPdf* pdf   = fWS->pdf(fPdfName);
-  RooAbsData* data = fWS->data(fDataName);
+   RooAbsPdf* pdf   = fPdf; //fWS->pdf(fPdfName);
+   RooAbsData* data = fData; //fWS->data(fDataName);
   if (data && pdf ) {
 
     // get parameters (params of interest + nuisance)
@@ -126,8 +144,8 @@ void FeldmanCousins::CreateParameterPoints() const{
   // allow ability to profile on some nuisance paramters
 
   // get ingredients
-  RooAbsPdf* pdf   = fWS->pdf(fPdfName);
-  RooAbsData* data = fWS->data(fDataName);
+  RooAbsPdf* pdf   = fPdf; //fWS->pdf(fPdfName);
+  RooAbsData* data = fData;//fWS->data(fDataName);
   if (data && pdf ){
 
     // get parameters (params of interest + nuisance)
@@ -144,18 +162,18 @@ void FeldmanCousins::CreateParameterPoints() const{
     //    fPointsToTest= new RooDataHist("parameterScan", "", *fPOI);
 
 
-    if( ! fPOI->equals(*parameters) && fDoProfileConstruction ) {
+    if( ! fPOI.equals(*parameters) && fDoProfileConstruction ) {
       // if parameters include nuisance parameters, do profile construction
       cout << " nuisance parameters, will do profile construction" << endl;
 
-      TIter it2 = fPOI->createIterator();
+      TIter it2 = fPOI.createIterator();
       RooRealVar *myarg2; 
       while ((myarg2 = (RooRealVar *)it2.Next())) { 
 	if(!myarg2) continue;
 	myarg2->setBins(fNbins);
       }
 
-      RooDataHist* parameterScan = new RooDataHist("parameterScan", "", *fPOI);
+      RooDataHist* parameterScan = new RooDataHist("parameterScan", "", fPOI);
       cout << "# points to test = " << parameterScan->numEntries() << endl;
       // make profile construction
       RooArgSet* tmpPoint;
@@ -163,7 +181,7 @@ void FeldmanCousins::CreateParameterPoints() const{
       RooFit::MsgLevel previous  = RooMsgService::instance().globalKillBelow();
       RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL) ;
       RooAbsReal* nll = pdf->createNLL(*data, Constrain(*parameters));
-      RooAbsReal* profile = nll->createProfile(*fPOI);
+      RooAbsReal* profile = nll->createProfile(fPOI);
       
       RooDataSet* profileConstructionPoints = new RooDataSet("profileConstruction",
 							     "profileConstruction",
@@ -207,7 +225,7 @@ ConfInterval* FeldmanCousins::GetInterval() const {
   // It constructs a RooStats::PointSetInterval.
 
   // local variables
-  RooAbsData* data = fWS->data(fDataName);
+  RooAbsData* data = fData; //fWS->data(fDataName);
   if(!data) {
     cout << "Data is not set, FeldmanCousins not initialized" << endl;
     return 0;
@@ -222,6 +240,7 @@ ConfInterval* FeldmanCousins::GetInterval() const {
   // Create a Neyman Construction
   RooStats::NeymanConstruction nc;
   // configure it
+  nc.SetName( GetName() );
   nc.SetTestStatSampler(*fTestStatSampler);
   nc.SetTestSize(fSize); // set size of test
   nc.SetParameterPointsToTest( *fPointsToTest );
