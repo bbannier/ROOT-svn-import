@@ -79,7 +79,7 @@ namespace RooStats {
     void addObject(TObject *obj, Option_t *drawOptions=0);
     void GetAbsoluteInterval(Float_t &theMin, Float_t &theMax, Float_t &theYMax) const;
 
-    ClassDef(SamplingDistPlot,1)  // Class containing the results of the HybridCalculator
+    ClassDef(SamplingDistPlot,1)  // Class providing utilities to plot SamplingDistribution objects
   };
 }
 
