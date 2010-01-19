@@ -184,11 +184,11 @@ Int_t TProofPlayerLite::MakeSelector(const char *selfile)
                      docp = kFALSE;
                   // Copy the file, if needed
                   if (docp) {
-                     gSystem->Exec(Form("%s %s", kRM, e));
+                     gSystem->Unlink(e);
                      PDB(kGlobal,2)
                         Info("MakeSelector",
                            "retrieving %s from cache", fncache.Data());
-                     gSystem->Exec(Form("%s %s %s", kCP, fncache.Data(), e));
+                     gSystem->CopyFile(fncache.Data(), e, kTRUE);
                   }
                }
             }
@@ -220,10 +220,10 @@ Int_t TProofPlayerLite::MakeSelector(const char *selfile)
                   docp = kFALSE;
                // Copy the file, if needed
                if (docp) {
-                  gSystem->Exec(Form("%s %s", kRM, fncache.Data()));
+                  gSystem->Unlink(fncache.Data());
                   PDB(kGlobal,2)
                      Info("MakeSelector","caching %s ...", e);
-                  gSystem->Exec(Form("%s %s %s", kCP, e, fncache.Data()));
+                  gSystem->CopyFile(e, fncache.Data(), kTRUE);
                   savever = kTRUE;
                }
                cachedFiles->Add(new TObjString(fncache.Data()));
@@ -244,14 +244,14 @@ Int_t TProofPlayerLite::MakeSelector(const char *selfile)
 
    // Save also the selector info, if needed
    if (!useCacheBinaries) {
-      gSystem->Exec(Form("%s %s", kRM, cachedname.Data()));
       PDB(kGlobal,2)
          Info("MakeSelector","caching %s ...", name.Data());
-      gSystem->Exec(Form("%s %s %s", kCP, name.Data(), cachedname.Data()));
-      gSystem->Exec(Form("%s %s", kRM, cachedhname.Data()));
+      gSystem->Unlink(cachedname.Data());
+      gSystem->CopyFile(name.Data(), cachedname.Data(), kTRUE);
       PDB(kGlobal,2)
          Info("MakeSelector","caching %s ...", hname.Data());
-      gSystem->Exec(Form("%s %s %s", kCP, hname.Data(), cachedhname.Data()));
+      gSystem->Unlink(cachedhname.Data());
+      gSystem->CopyFile(hname.Data(), cachedhname.Data(), kTRUE);
    }
    cachedFiles->Add(new TObjString(cachedname.Data()));
    cachedFiles->Add(new TObjString(cachedhname.Data()));

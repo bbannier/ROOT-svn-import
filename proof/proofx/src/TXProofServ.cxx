@@ -1015,7 +1015,7 @@ void TXProofServ::Terminate(Int_t status)
       gSystem->ChangeDirectory("/");
       // needed in case fSessionDir is on NFS ?!
       gSystem->MakeDirectory(fSessionDir+"/.delete");
-      gSystem->Exec(Form("%s %s", kRM, fSessionDir.Data()));
+      TProof::Unlink(fSessionDir.Data(), kTRUE);
    }
 
    // Cleanup queries directory if empty
@@ -1025,7 +1025,7 @@ void TXProofServ::Terminate(Int_t status)
          gSystem->ChangeDirectory("/");
          // needed in case fQueryDir is on NFS ?!
          gSystem->MakeDirectory(fQueryDir+"/.delete");
-         gSystem->Exec(Form("%s %s", kRM, fQueryDir.Data()));
+         TProof::Unlink(fQueryDir.Data(), kTRUE);
          // Remove lock file
          if (fQueryLock)
             gSystem->Unlink(fQueryLock->GetName());

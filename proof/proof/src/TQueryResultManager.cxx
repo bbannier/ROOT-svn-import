@@ -131,7 +131,7 @@ Int_t TQueryResultManager::CleanupQueriesDir()
       qdir.Form("%s/%s", queriesdir.Data(), sess);
       PDB(kGlobal, 1)
          Info("RemoveQuery", "removing directory: %s", qdir.Data());
-      gSystem->Exec(Form("%s %s", kRM, qdir.Data()));
+      TProof::Unlink(qdir.Data(), kTRUE);
       nd++;
    }
 
@@ -269,7 +269,7 @@ Int_t TQueryResultManager::ApplyMaxQueries(Int_t mxq)
          if (gSystem->GetPathInfo(fn, st)) {
             PDB(kGlobal, 1)
                Info("ApplyMaxQueries","file '%s' cannot be stated: remove it", fn.Data());
-            gSystem->Unlink(gSystem->DirName(fn));
+            TProof::Unlink(gSystem->DirName(fn), kTRUE);
             continue;
          }
 
@@ -284,7 +284,7 @@ Int_t TQueryResultManager::ApplyMaxQueries(Int_t mxq)
          dl->Add(new TParameter<Int_t>(Form("%s/%s", dir.Data(), sess), nq));
       else
          // Remove it
-         gSystem->Exec(Form("%s -fr %s/%s", kRM, dir.Data(), sess));
+         TProof::Unlink(TString::Format("%s/%s", dir.Data(), sess), kTRUE);
    }
    gSystem->FreeDirectory(dirs);
 
@@ -310,7 +310,7 @@ Int_t TQueryResultManager::ApplyMaxQueries(Int_t mxq)
                nq->SetVal(--val);
                if (nq->GetVal() <= 0)
                   // Remove the directory if empty
-                  gSystem->Exec(Form("%s -fr %s", kRM, tdir.Data()));
+                  TProof::Unlink(tdir.Data(), kTRUE);
             }
          }
       }
@@ -411,7 +411,7 @@ Int_t TQueryResultManager::CleanupSession(const char *sessiontag)
    if (LockSession(sessiontag, &lck) == 0) {
 
       // Cleanup now
-      gSystem->Exec(Form("%s %s", kRM, qdir.Data()));
+      TProof::Unlink(qdir.Data(), kTRUE);
 
       // Unlock and remove the lock file
       if (lck) {
@@ -484,7 +484,7 @@ void TQueryResultManager::RemoveQuery(const char *queryref, TList *otherlist)
    // Remove the directory
    PDB(kGlobal, 1)
       Info("RemoveQuery", "removing directory: %s", qdir.Data());
-   gSystem->Exec(Form("%s %s", kRM, qdir.Data()));
+   TProof::Unlink(qdir.Data(), kTRUE);
 
    // Done
    return;
@@ -508,7 +508,7 @@ void TQueryResultManager::RemoveQuery(TQueryResult *qr, Bool_t soft)
    qdir = Form("%s/%s/%d", qdir.Data(), qr->GetTitle(), qr->GetSeqNum());
    PDB(kGlobal, 1)
       Info("RemoveQuery", "removing directory: %s", qdir.Data());
-   gSystem->Exec(Form("%s %s", kRM, qdir.Data()));
+   TProof::Unlink(qdir.Data(), kTRUE);
 
    // Remove from memory lists
    if (soft) {

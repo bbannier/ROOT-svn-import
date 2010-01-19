@@ -148,7 +148,7 @@ const char* const kUNTAR3 = "%s -c %s | (tar xf -)";
 const char* const kGUNZIP = "gunzip";
 #else
 const char* const kCP     = "copy";
-const char* const kRM     = "delete";
+const char* const kRM     = "del /F /Q";
 const char* const kLS     = "dir";
 const char* const kUNTAR  = "...";
 const char* const kUNTAR2 = "...";
@@ -566,6 +566,8 @@ protected:
    Bool_t          fDynamicStartup; // are the workers started dynamically?
 
    static TSemaphore *fgSemaphore;   //semaphore to control no of parallel startup threads
+
+   static TList   *fgUnlinkPaths;   // List of paths which support unlink operations
 
 private:
    TProof(const TProof &);           // not implemented
@@ -986,6 +988,11 @@ public:
    static Int_t         GetParameter(TCollection *c, const char *par, Long_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Long64_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Double_t &value);
+
+   // Recursive unlink
+   static void          AddUnlinkPath(const char *path);
+   static Bool_t        CanUnlink(const char *path, Bool_t isdir);
+   static Int_t         Unlink(const char *path, Bool_t recursive);
 
    ClassDef(TProof,0)  //PROOF control class
 };

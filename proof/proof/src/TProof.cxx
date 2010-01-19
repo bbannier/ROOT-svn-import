@@ -86,6 +86,7 @@ char TProofMergePrg::fgCr[4] = {'-', '\\', '|', '/'};
 
 TList   *TProof::fgProofEnvList = 0;  // List of env vars for proofserv
 TPluginHandler *TProof::fgLogViewer = 0;      // Log viewer handler
+TList   *TProof::fgUnlinkPaths = 0;  // List of paths that can be unlinked
 
 ClassImp(TProof)
 
@@ -784,6 +785,7 @@ Int_t TProof::Init(const char *, const char *conffile,
          sandbox.Form("~/%s", kPROOF_WorkDir);
       }
       gSystem->ExpandPathName(sandbox);
+      sandbox = gSystem->UnixPathName(sandbox);
       if (AssertPath(sandbox, kTRUE) != 0) {
          Error("Init", "failure asserting directory %s", sandbox.Data());
          return 0;
@@ -830,6 +832,10 @@ Int_t TProof::Init(const char *, const char *conffile,
       fEnabledPackagesOnClient = new TList;
       fEnabledPackagesOnClient->SetOwner();
    }
+
+   // List of paths wher we can unlink
+   TProof::AddUnlinkPath(fWorkDir);
+   TProof::AddUnlinkPath(fPackageDir);
 
    // Master may want dynamic startup
    if (fDynamicStartup) {
@@ -6053,14 +6059,16 @@ Int_t TProof::DisablePackageOnClient(const char *package)
 
    if (TestBit(TProof::kIsClient)) {
       // Remove the package directory and the par file locally
+      TString pdir = TString::Format("%s/%s", fPackageDir.Data(), package);
+      TString ppar = TString::Format("%s/%s.par", fPackageDir.Data(), package);
       fPackageLock->Lock();
-      gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(), package));
-      gSystem->Exec(Form("%s %s/%s.par", kRM, fPackageDir.Data(), package));
+      if (TProof::Unlink(pdir, kTRUE) != 0)
+         if (!gSystem->AccessPathName(pdir))
+            Warning("DisablePackageOnClient", "unable to remove package directory for %s", package);
+      if (TProof::Unlink(ppar, kTRUE) != 0)
+         if (!gSystem->AccessPathName(ppar))
+            Warning("DisablePackageOnClient", "unable to remove package PAR file for %s", package);
       fPackageLock->Unlock();
-      if (!gSystem->AccessPathName(Form("%s/%s.par", fPackageDir.Data(), package)))
-         Warning("DisablePackageOnClient", "unable to remove package PAR file for %s", package);
-      if (!gSystem->AccessPathName(Form("%s/%s", fPackageDir.Data(), package)))
-         Warning("DisablePackageOnClient", "unable to remove package directory for %s", package);
    }
 
    return 0;
@@ -6077,7 +6085,7 @@ Int_t TProof::DisablePackages()
    // remove all packages on client
    if (TestBit(TProof::kIsClient)) {
       fPackageLock->Lock();
-      gSystem->Exec(Form("%s %s/*", kRM, fPackageDir.Data()));
+      TProof::Unlink(TString::Format("%s/*", fPackageDir.Data()), kTRUE);
       fPackageLock->Unlock();
    }
 
@@ -6233,7 +6241,7 @@ Int_t TProof::BuildPackageOnClient(const TString &package)
             // Hard cleanup: go up the dir tree
             gSystem->ChangeDirectory(fPackageDir);
             // remove package directory
-            gSystem->Exec(Form("%s %s", kRM, pdir.Data()));
+            TProof::Unlink(pdir.Data(), kTRUE);
             // find gunzip...
             char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP, kExecutePermission);
             if (gunzip) {
@@ -6759,12 +6767,20 @@ Int_t TProof::UploadPackageOnClient(const TString &par, EUploadPackageOpt opt, T
          fPackageLock->Unlock();
          return -1;
       }
+#ifndef WIN32
       if (!gSystem->IsAbsoluteFileName(par)) {
          TString fpar = par;
          gSystem->Symlink(gSystem->PrependPathName(gSystem->WorkingDirectory(), fpar), lpar);
       } else
          gSystem->Symlink(par, lpar);
-      // TODO: On Windows need to copy instead of symlink
+#else
+      // On Windows need to copy instead of symlink
+      if (!gSystem->IsAbsoluteFileName(par)) {
+         TString fpar = par;
+         gSystem->CopyFile(gSystem->PrependPathName(gSystem->WorkingDirectory(),fpar), lpar, kTRUE);
+      } else
+         gSystem->CopyFile(par, lpar, kTRUE);
+#endif
 
       // compare md5
       TString packnam = par(0, par.Length() - 4);  // strip off ".par"
@@ -6775,8 +6791,8 @@ Int_t TProof::UploadPackageOnClient(const TString &par, EUploadPackageOpt opt, T
          // if not, unzip and untar package in package directory
          if ((opt & TProof::kRemoveOld)) {
             // remove any previous package directory with same name
-            if (gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(),
-                                   packnam.Data())))
+            if (TProof::Unlink(TString::Format("%s/%s", fPackageDir.Data(),
+                                                         packnam.Data()), kTRUE) != 0)
                Error("UploadPackageOnClient", "failure executing: %s %s/%s",
                      kRM, fPackageDir.Data(), packnam.Data());
          }
@@ -10070,5 +10086,123 @@ void TProof::LogViewer(const char *url, Int_t idx)
    }
    // Done
    return;
+}
+
+//______________________________________________________________________________
+void TProof::AddUnlinkPath(const char *path)
+{
+   // Add 'path' to the list of paths for which unlink is allowed
+
+   if (path && strlen(path) > 0 && strcmp(path, "/")) {
+      if (!fgUnlinkPaths) {
+         fgUnlinkPaths = new TList;
+         fgUnlinkPaths->SetOwner();
+      }
+      if (!fgUnlinkPaths->FindObject(path)) {
+         fgUnlinkPaths->Add(new TObjString(path));
+      }
+   }
+}
+
+//______________________________________________________________________________
+Bool_t TProof::CanUnlink(const char *path, Bool_t isdir)
+{
+   // Check if path is in the allowed list of those which can be unlinked
+
+   if (!path || strlen(path) <= 0) return kFALSE;
+
+   if (!fgUnlinkPaths || fgUnlinkPaths->GetSize() <= 0) return kFALSE;
+
+   TString p(path);
+   if (isdir) {
+      if (p.EndsWith("/")) p.Strip(TString::kTrailing, '/');
+   } else {
+      p = gSystem->DirName(p);
+   }
+
+   TIter nxp(fgUnlinkPaths);
+   TObjString *os = 0;
+   while ((os = (TObjString *)nxp())) {
+      if (p.BeginsWith(os->GetName())) return kTRUE;
+   }
+   // Not allowed
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Int_t TProof::Unlink(const char *path, Bool_t recursive)
+{
+   // Unlink path.
+   // When path is a directory, if recursive is kTRUE, an attempt to empty the
+   // directory is done before removing it.
+   // Returns 0 on success, -1 on error
+
+   if (!path || strlen(path) <= 0)
+      return -1;
+
+   // If the path contains wild cards '*', separate it in three parts:
+   // <path>=<path-w/o-wildcard>/<first-word-w/-wildcard>[/<rest>];
+   // <rest> may be empty
+   Bool_t haswild = kFALSE;
+   TString nowild(path), word, rest;
+   while (nowild.Contains("*")) {
+      haswild = kTRUE;
+      if (!word.IsNull()) {
+         if (!rest.IsNull()) rest.Insert(0, "/");
+         rest.Insert(0, word);
+      }
+      word = gSystem->BaseName(nowild);
+      nowild = gSystem->DirName(nowild);
+   }
+
+   if (haswild) {
+      // Regular expression
+      TRegexp re(word, kTRUE);
+      // Directory: cycle through the files / dirs
+      void *dirp = gSystem->OpenDirectory(nowild);
+      if (!dirp) return -1;
+      TString e, dir(nowild), rst(rest);
+      if (!dir.EndsWith("/")) dir += "/";
+      if (!rst.IsNull()) rst.Insert(0, "/");
+      Int_t rc = 0;
+      const char *ent = 0;
+      while ((ent = gSystem->GetDirEntry(dirp))) {
+         if (!strcmp(ent,".") || !strcmp(ent,"..")) continue;
+         e = ent;
+         if (e.Index(re) != kNPOS) {
+            e.Form("%s%s%s", dir.Data(), ent, rst.Data());
+            if ((rc = TProof::Unlink(e, recursive)) != 0) break;
+         }
+      }
+      gSystem->FreeDirectory(dirp);
+      // Done
+      return rc;
+   }
+
+   if (recursive) {
+      // Cleanup the sub-dirs, if needed
+      FileStat_t st;
+      if (gSystem->GetPathInfo(path, st) == 0 && R_ISDIR(st.fMode) && !st.fIsLink) {
+         // Make sure that we can act on this path
+         if (!CanUnlink(path, kTRUE)) return -1;
+         // Directory: cycle through the files / dirs
+         void *dirp = gSystem->OpenDirectory(path);
+         if (!dirp) return -1;
+         TString e, dir(path);
+         if (!dir.EndsWith("/")) dir += "/";
+         Int_t rc = 0;
+         const char *ent = 0;
+         while ((ent = gSystem->GetDirEntry(dirp))) {
+            if (!strcmp(ent,".") || !strcmp(ent,"..")) continue;
+            e.Form("%s%s", dir.Data(), ent);
+            if ((rc = TProof::Unlink(e, kTRUE)) != 0) break;
+         }
+         gSystem->FreeDirectory(dirp);
+      }
+   }
+   // Make sure that we can act on this path
+   if (!CanUnlink(path, kFALSE)) return -1;
+   // Unlink
+   return gSystem->Unlink(path);
 }
 
