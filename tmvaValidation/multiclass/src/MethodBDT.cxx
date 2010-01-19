@@ -63,13 +63,19 @@
 //
 // Boosting:
 //
-// The idea behind the boosting is, that signal events from the training
-// sample, that end up in a background node (and vice versa) are given a
-// larger weight than events that are in the correct leave node. This
-// results in a re-weighed training event sample, with which then a new
-// decision tree can be developed. The boosting can be applied several
-// times (typically 100-500 times) and one ends up with a set of decision
-// trees (a forest).
+// The idea behind adaptive boosting (AdaBoost) is, that signal events
+// from the training sample, that end up in a background node
+// (and vice versa) are given a larger weight than events that are in
+// the correct leave node. This results in a re-weighed training event
+// sample, with which then a new decision tree can be developed.
+// The boosting can be applied several times (typically 100-500 times)
+// and one ends up with a set of decision trees (a forest).
+// Gradient boosting works more like a function expansion approach, where
+// each tree corresponds to a summand. The parameters for each summand (tree)
+// are determined by the minimization of a error function (binomial log-
+// likelihood for classification and Huber loss for regression).
+// A greedy algorithm is used, which means, that only one tree is modified
+// at a time, while the other trees stay fixed.
 //
 // Bagging:
 //
@@ -121,6 +127,7 @@
 #include "TMVA/CrossEntropy.h"
 #include "TMVA/MisClassificationError.h"
 #include "TMVA/Results.h"
+#include "TMVA/ResultsMulticlass.h"
 
 using std::vector;
 
@@ -157,12 +164,12 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
 //_______________________________________________________________________
 Bool_t TMVA::MethodBDT::HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t numberTargets )
 {
-   // BDT can handle classification with 2 classes and regression with one regression-target
-   if( type == Types::kClassification && numberClasses == 2 ) return kTRUE;
+   // BDT can handle classification with multiple classes and regression with one regression-target
+   if (type == Types::kClassification && numberClasses == 2) return kTRUE;
+   if (type == Types::kMulticlass ) return kTRUE;
    if( type == Types::kRegression && numberTargets == 1 ) return kTRUE;
    return kFALSE;
 }
-
 
 //_______________________________________________________________________
 void TMVA::MethodBDT::DeclareOptions()
@@ -456,11 +463,7 @@ void TMVA::MethodBDT::Train()
 
    Log() << kINFO << "Training "<< fNTrees << " Decision Trees ... patience please" << Endl;
 
-   Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
-
-   // book monitoring histograms (currently for AdaBost, only)
-
-   
+ 
    // weights applied in boosting
    Int_t nBins;
    Double_t xMin,xMax;
@@ -476,35 +479,42 @@ void TMVA::MethodBDT::Train()
       xMax = 1;
       hname="Boost event weights distribution";
    }
-      
+
+   // book monitoring histograms (for AdaBost only)   
+
    TH1* h = new TH1F("BoostWeight",hname,nBins,xMin,xMax);
-   h->SetXTitle("boost weight");
-   results->Store(h, "BoostWeights");
-
-   // weights applied in boosting vs tree number
-   h = new TH1F("BoostWeightVsTree","Boost weights vs tree",fNTrees,0,fNTrees);
-   h->SetXTitle("#tree");
-   h->SetYTitle("boost weight");
-   results->Store(h, "BoostWeightsVsTree");
-
-   // error fraction vs tree number
-   h = new TH1F("ErrFractHist","error fraction vs tree number",fNTrees,0,fNTrees);
-   h->SetXTitle("#tree");
-   h->SetYTitle("error fraction");
-   results->Store(h, "ErrorFrac");
-
-   // nNodesBeforePruning vs tree number
    TH1* nodesBeforePruningVsTree = new TH1I("NodesBeforePruning","nodes before pruning",fNTrees,0,fNTrees);
-   nodesBeforePruningVsTree->SetXTitle("#tree");
-   nodesBeforePruningVsTree->SetYTitle("#tree nodes");
-   results->Store(nodesBeforePruningVsTree);
-
-   // nNodesAfterPruning vs tree number
    TH1* nodesAfterPruningVsTree = new TH1I("NodesAfterPruning","nodes after pruning",fNTrees,0,fNTrees);
-   nodesAfterPruningVsTree->SetXTitle("#tree");
-   nodesAfterPruningVsTree->SetYTitle("#tree nodes");
-   results->Store(nodesAfterPruningVsTree);
 
+   if(!DoMulticlass()){
+      Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
+
+      h->SetXTitle("boost weight");
+      results->Store(h, "BoostWeights");
+      
+      // weights applied in boosting vs tree number
+      h = new TH1F("BoostWeightVsTree","Boost weights vs tree",fNTrees,0,fNTrees);
+      h->SetXTitle("#tree");
+      h->SetYTitle("boost weight");
+      results->Store(h, "BoostWeightsVsTree");
+      
+      // error fraction vs tree number
+      h = new TH1F("ErrFractHist","error fraction vs tree number",fNTrees,0,fNTrees);
+      h->SetXTitle("#tree");
+      h->SetYTitle("error fraction");
+      results->Store(h, "ErrorFrac");
+      
+      // nNodesBeforePruning vs tree number
+      nodesBeforePruningVsTree->SetXTitle("#tree");
+      nodesBeforePruningVsTree->SetYTitle("#tree nodes");
+      results->Store(nodesBeforePruningVsTree);
+      
+      // nNodesAfterPruning vs tree number
+      nodesAfterPruningVsTree->SetXTitle("#tree");
+      nodesAfterPruningVsTree->SetYTitle("#tree nodes");
+      results->Store(nodesAfterPruningVsTree);
+   }
+   
    fMonitorNtuple= new TTree("MonitorNtuple","BDT variables");
    fMonitorNtuple->Branch("iTree",&fITree,"iTree/I");
    fMonitorNtuple->Branch("boostWeight",&fBoostWeight,"boostWeight/D");
@@ -527,56 +537,73 @@ void TMVA::MethodBDT::Train()
 
    for (int itree=0; itree<fNTrees; itree++) {
       timer.DrawProgressBar( itree );
-
-      fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts,
-                                           fRandomisedTrees, fUseNvars, fNNodesMax, fMaxDepth,
-                                           itree, fNodePurityLimit, itree));
-      if (fBaggedGradBoost) nNodesBeforePruning = fForest.back()->BuildTree(fSubSample);
-      else                  nNodesBeforePruning = fForest.back()->BuildTree(fEventSample);
-
-      if (fBoostType!="Grad")
-         if (fUseYesNoLeaf && !DoRegression() ){ // remove leaf nodes where both daughter nodes are of same type
-            nNodesBeforePruning = fForest.back()->CleanTree();
+      if(DoMulticlass()){
+         if (fBoostType!="Grad"){
+            Log() << kFATAL << "Multiclass is currently only supported by gradient boost. "
+                  << "Please change boost option accordingly (GradBoost)."
+                  << Endl;
          }
-      nNodesBeforePruningCount += nNodesBeforePruning;
-      nodesBeforePruningVsTree->SetBinContent(itree+1,nNodesBeforePruning);
-
-      fForest.back()->SetPruneMethod(fPruneMethod); // set the pruning method for the tree
-      fForest.back()->SetPruneStrength(fPruneStrength); // set the strength parameter
-
-      std::vector<Event*> * validationSample = NULL;
-      if(fAutomatic) validationSample = &fValidationSample;
-
-      if(fBoostType=="Grad"){
-         this->Boost(fEventSample, fForest.back(), itree);
+         UInt_t nClasses = DataInfo().GetNClasses();
+         for (UInt_t i=0;i<nClasses;i++){
+            fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts,
+                                                 fRandomisedTrees, fUseNvars, fNNodesMax, fMaxDepth,
+                                                 itree*nClasses+i, fNodePurityLimit, itree*nClasses+i));
+            if (fBaggedGradBoost) nNodesBeforePruning = fForest.back()->BuildTree(fSubSample, NULL, i);
+            else                  nNodesBeforePruning = fForest.back()->BuildTree(fEventSample, NULL, i);  
+            fBoostWeights.push_back(this->Boost(fEventSample, fForest.back(), itree, i));
+         }
       }
-      else {
-         if(!fPruneBeforeBoost) { // only prune after boosting
-            fBoostWeights.push_back( this->Boost(fEventSample, fForest.back(), itree) );
-            // if fAutomatic == true, pruneStrength will be the optimal pruning strength
-            // determined by the pruning algorithm; otherwise, it is simply the strength parameter
-            // set by the user
-            Double_t pruneStrength = fForest.back()->PruneTree(validationSample);
-            alpha->SetBinContent(itree+1,pruneStrength);
-         }
-         else { // prune first, then apply a boosting cycle
-            Double_t pruneStrength = fForest.back()->PruneTree(validationSample);
-            alpha->SetBinContent(itree+1,pruneStrength);
-            fBoostWeights.push_back( this->Boost(fEventSample, fForest.back(), itree) );
-         }
+      else{
          
-         if (fUseYesNoLeaf && !DoRegression() ){ // remove leaf nodes where both daughter nodes are of same type
-            fForest.back()->CleanTree();
+         fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts,
+                                              fRandomisedTrees, fUseNvars, fNNodesMax, fMaxDepth,
+                                              itree, fNodePurityLimit, itree));
+         if (fBaggedGradBoost) nNodesBeforePruning = fForest.back()->BuildTree(fSubSample);
+         else                  nNodesBeforePruning = fForest.back()->BuildTree(fEventSample);
+         
+         if (fBoostType!="Grad")
+            if (fUseYesNoLeaf && !DoRegression() ){ // remove leaf nodes where both daughter nodes are of same type
+               nNodesBeforePruning = fForest.back()->CleanTree();
+            }
+         nNodesBeforePruningCount += nNodesBeforePruning;
+         nodesBeforePruningVsTree->SetBinContent(itree+1,nNodesBeforePruning);
+         
+         fForest.back()->SetPruneMethod(fPruneMethod); // set the pruning method for the tree
+         fForest.back()->SetPruneStrength(fPruneStrength); // set the strength parameter
+         
+         std::vector<Event*> * validationSample = NULL;
+         if(fAutomatic) validationSample = &fValidationSample;
+         
+         if(fBoostType=="Grad"){
+            fBoostWeights.push_back(this->Boost(fEventSample, fForest.back(), itree));
          }
+         else {
+            if(!fPruneBeforeBoost) { // only prune after boosting
+               fBoostWeights.push_back( this->Boost(fEventSample, fForest.back(), itree) );
+               // if fAutomatic == true, pruneStrength will be the optimal pruning strength
+               // determined by the pruning algorithm; otherwise, it is simply the strength parameter
+               // set by the user
+               Double_t pruneStrength = fForest.back()->PruneTree(validationSample);
+               alpha->SetBinContent(itree+1,pruneStrength);
+            }
+            else { // prune first, then apply a boosting cycle
+               Double_t pruneStrength = fForest.back()->PruneTree(validationSample);
+               alpha->SetBinContent(itree+1,pruneStrength);
+               fBoostWeights.push_back( this->Boost(fEventSample, fForest.back(), itree) );
+         }
+            
+            if (fUseYesNoLeaf && !DoRegression() ){ // remove leaf nodes where both daughter nodes are of same type
+               fForest.back()->CleanTree();
+            }
+         }
+         nNodesAfterPruning = fForest.back()->GetNNodes();
+         nNodesAfterPruningCount += nNodesAfterPruning;
+         nodesAfterPruningVsTree->SetBinContent(itree+1,nNodesAfterPruning);
+         
+         fITree = itree;
+         fMonitorNtuple->Fill();
       }
-      nNodesAfterPruning = fForest.back()->GetNNodes();
-      nNodesAfterPruningCount += nNodesAfterPruning;
-      nodesAfterPruningVsTree->SetBinContent(itree+1,nNodesAfterPruning);
-
-      fITree = itree;
-      fMonitorNtuple->Fill();
    }
-
    alpha->Write();
 
    // get elapsed time
@@ -601,7 +628,6 @@ void TMVA::MethodBDT::GetRandomSubSample()
    UInt_t nevents = fEventSample.size();
    UInt_t nfraction = static_cast<UInt_t>(fSampleFraction*Data()->GetNTrainingEvents());
 
-   //for (UInt_t i=0; i<fSubSample.size();i++)
    if (fSubSample.size()!=0) fSubSample.clear();
    TRandom3 *trandom   = new TRandom3(fForest.size());
 
@@ -623,18 +649,36 @@ Double_t TMVA::MethodBDT::GetGradBoostMVA(TMVA::Event& e, UInt_t nTrees)
    return 2.0/(1.0+exp(-2.0*sum))-1; //MVA output between -1 and 1
 }
 
-
 //_______________________________________________________________________
-void TMVA::MethodBDT::UpdateTargets(vector<TMVA::Event*> eventSample)
+void TMVA::MethodBDT::UpdateTargets(vector<TMVA::Event*> eventSample, UInt_t cls)
 {
    //Calculate residua for all events;
-   UInt_t iValue=0;
-   for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      fBoostWeights[iValue]+=fForest.back()->CheckEvent(*(*e),kFALSE);
-      Double_t p_sig=1.0/(1.0+exp(-2.0*fBoostWeights[iValue]));
-      Double_t res = ((*e)->IsSignal()?1:0)-p_sig;
-      (*e)->SetTarget(0,res);
-      iValue++;
+
+   if(DoMulticlass()){
+      UInt_t nClasses = DataInfo().GetNClasses();
+      for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
+         fResiduals[*e].at(cls)+=fForest.back()->CheckEvent(*(*e),kFALSE);
+         if(cls == nClasses-1){
+            for(UInt_t i=0;i<nClasses;i++){
+               Double_t norm = 0.0;
+               for(UInt_t j=0;j<nClasses;j++){
+                  if(i!=j)
+                     norm+=exp(fResiduals[*e].at(j)-fResiduals[*e].at(i));
+               }
+               Double_t p_cls = 1.0/(1.0+norm);
+               Double_t res = ((*e)->GetClass()==i)?(1.0-p_cls):(-p_cls);
+               (*e)->SetTarget(i,res);
+            }
+         }
+      }
+   }
+   else{
+      for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
+         fResiduals[*e].at(0)+=fForest.back()->CheckEvent(*(*e),kFALSE);
+         Double_t p_sig=1.0/(1.0+exp(-2.0*fResiduals[*e].at(0)));
+         Double_t res = ((*e)->IsSignal()?1:0)-p_sig;
+         (*e)->SetTarget(0,res);
+      }
    }   
 }
 
@@ -686,30 +730,33 @@ Double_t TMVA::MethodBDT::GetWeightedQuantile(vector<  vector<Double_t> > &vec, 
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBDT::GradBoost( vector<TMVA::Event*> eventSample, DecisionTree *dt )
+Double_t TMVA::MethodBDT::GradBoost( vector<TMVA::Event*> eventSample, DecisionTree *dt, UInt_t cls)
 {
-   //Calculate the desired response value for each region (line search)
+   //Calculate the desired response value for each region
    std::map<TMVA::DecisionTreeNode*,vector<Double_t> > leaves;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
+      Double_t weight = (*e)->GetWeight();
       TMVA::DecisionTreeNode* node = dt->GetEventNode(*(*e));
       if ((leaves[node]).size()==0){
-         (leaves[node]).push_back((*e)->GetTarget(0) * (*e)->GetWeight());
-         (leaves[node]).push_back(fabs((*e)->GetTarget(0))*(1.0-fabs((*e)->GetTarget(0))) * (*e)->GetWeight() * (*e)->GetWeight());
+         (leaves[node]).push_back((*e)->GetTarget(cls)* weight);
+         (leaves[node]).push_back(fabs((*e)->GetTarget(cls))*(1.0-fabs((*e)->GetTarget(cls))) * weight* weight);
       }
       else {
-         (leaves[node])[0]+=((*e)->GetTarget(0) * (*e)->GetWeight());
-         (leaves[node])[1]+=fabs((*e)->GetTarget(0))*(1.0-fabs((*e)->GetTarget(0))) *
-            ((*e)->GetWeight()) * ((*e)->GetWeight());
+         (leaves[node])[0]+=((*e)->GetTarget(cls)* weight);
+         (leaves[node])[1]+=fabs((*e)->GetTarget(cls))*(1.0-fabs((*e)->GetTarget(cls))) * weight* weight;
       }
    }
    for (std::map<TMVA::DecisionTreeNode*,vector<Double_t> >::iterator iLeave=leaves.begin();
         iLeave!=leaves.end();++iLeave){
       if ((iLeave->second)[1]<1e-30) (iLeave->second)[1]=1e-30;
 
-      (iLeave->first)->SetResponse(fShrinkage*0.5*(iLeave->second)[0]/((iLeave->second)[1]));
+      (iLeave->first)->SetResponse(fShrinkage/DataInfo().GetNClasses()*(iLeave->second)[0]/((iLeave->second)[1]));
    }
    //call UpdateTargets before next tree is grown
-   UpdateTargets(eventSample);
+   if(DoMulticlass())
+      UpdateTargets(eventSample, cls);
+   else
+      UpdateTargets(eventSample);
    if (fBaggedGradBoost) GetRandomSubSample();
    return 1; //trees all have the same weight
 }
@@ -772,11 +819,22 @@ void TMVA::MethodBDT::InitGradBoost( vector<TMVA::Event*> eventSample)
       }
       UpdateTargetsRegression(eventSample,kTRUE);
    }
+   else if(DoMulticlass()){
+      UInt_t nClasses = DataInfo().GetNClasses();
+      for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
+         for (UInt_t i=0;i<nClasses;i++){
+            //Calculate initial residua, assuming equal probability for all classes
+            Double_t r = (*e)->GetClass()==i?(1-1.0/nClasses):(-1.0/nClasses);
+            (*e)->SetTarget(i,r);
+            fResiduals[*e].push_back(0);   
+         }
+      }
+   }
    else{
       for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
          Double_t r = ((*e)->IsSignal()?1:0)-0.5; //Calculate initial residua
          (*e)->SetTarget(0,r);
-         fBoostWeights.push_back(0);
+         fResiduals[*e].push_back(0);         
       }
    }
    if (fBaggedGradBoost) GetRandomSubSample(); 
@@ -802,7 +860,7 @@ Double_t TMVA::MethodBDT::TestTreeQuality( DecisionTree *dt )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBDT::Boost( vector<TMVA::Event*> eventSample, DecisionTree *dt, Int_t iTree )
+ Double_t TMVA::MethodBDT::Boost( vector<TMVA::Event*> eventSample, DecisionTree *dt, Int_t iTree, UInt_t cls )
 {
    // apply the boosting alogrithim (the algorithm is selecte via the the "option" given
    // in the constructor. The return value is the boosting weight
@@ -814,6 +872,8 @@ Double_t TMVA::MethodBDT::Boost( vector<TMVA::Event*> eventSample, DecisionTree 
    else if (fBoostType=="Grad"){
       if(DoRegression())
          return this->GradBoostRegression(eventSample, dt);
+      else if(DoMulticlass())
+         return this->GradBoost (eventSample, dt, cls);
       else
          return this->GradBoost (eventSample, dt);
    }
@@ -1180,6 +1240,42 @@ Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, UInt_t useNTrees )
    }
    return myMVA /= norm;
 }
+
+//_______________________________________________________________________
+const std::vector<Float_t>& TMVA::MethodBDT::GetMulticlassValues()
+{
+   // get the multiclass MVA response for the BDT classifier
+
+   const TMVA::Event& e = *GetEvent();
+   if (fMulticlassReturnVal == NULL) fMulticlassReturnVal = new std::vector<Float_t>();
+   fMulticlassReturnVal->clear();
+
+   std::vector<double> temp;
+
+   UInt_t nClasses = DataInfo().GetNClasses();
+   for(UInt_t iClass=0; iClass<nClasses; iClass++){
+      temp.push_back(0.0);
+      for(UInt_t itree = iClass; itree<fForest.size(); itree+=nClasses){
+         temp[iClass] += fForest[itree]->CheckEvent(e,kFALSE);
+      }
+   }    
+
+   for(UInt_t iClass=0; iClass<nClasses; iClass++){
+      Double_t norm = 0.0;
+      for(UInt_t j=0;j<nClasses;j++){
+         if(iClass!=j)
+            norm+=exp(temp[j]-temp[iClass]);
+      }
+      (*fMulticlassReturnVal).push_back(1.0/(1.0+norm));
+   }
+
+   
+   return *fMulticlassReturnVal;
+}
+
+
+
+
 //_______________________________________________________________________
 const std::vector<Float_t> & TMVA::MethodBDT::GetRegressionValues()
 {
