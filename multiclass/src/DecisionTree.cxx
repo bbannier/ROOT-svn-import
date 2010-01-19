@@ -222,7 +222,7 @@ void TMVA::DecisionTree::SetParentTreeInNodes( DecisionTreeNode *n )
 
 //_______________________________________________________________________
 UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
-                                      TMVA::DecisionTreeNode *node ) 
+                                      TMVA::DecisionTreeNode *node, UInt_t cls ) 
 {
    // building the decision tree by recursively calling the splitting of 
    // one (root-) node into two daughter nodes (returns the number of nodes)

@@ -101,12 +101,13 @@ namespace TMVA {
       // calculate the MVA value
       Double_t GetMvaValue( Double_t* err = 0);
       Double_t GetMvaValue( Double_t* err , UInt_t useNTrees );
+      const std::vector<Float_t>& GetMulticlassValues();
 
       // regression response
       const std::vector<Float_t>& GetRegressionValues();
 
       // apply the boost algorithm to a tree in the collection
-      Double_t Boost( std::vector<TMVA::Event*>, DecisionTree *dt, Int_t iTree );
+      Double_t Boost( std::vector<TMVA::Event*>, DecisionTree *dt, Int_t iTree, UInt_t cls = 0);
 
       // ranking of input variables
       const Ranking* CreateRanking();
@@ -162,11 +163,11 @@ namespace TMVA {
       // binomial likelihood gradient boost for classification
       // (see Friedman: "Greedy Function Approximation: a Gradient Boosting Machine"
       // Technical report, Dept. of Statistics, Stanford University)
-      Double_t GradBoost( std::vector<TMVA::Event*>, DecisionTree *dt );
+      Double_t GradBoost( std::vector<TMVA::Event*>, DecisionTree *dt, UInt_t cls = 0);
       Double_t GradBoostRegression(std::vector<TMVA::Event*>, DecisionTree *dt );
       void InitGradBoost( std::vector<TMVA::Event*>);
-      void UpdateTargets( std::vector<TMVA::Event*>);
-      void UpdateTargetsRegression( std::vector<TMVA::Event*>,Bool_t first=kFALSE);
+      void UpdateTargets( std::vector<TMVA::Event*>, UInt_t cls = 0);
+      void UpdateTargetsRegression( std::vector<TMVA::Event*>,Bool_t first=kFALSE);    
       Double_t GetGradBoostMVA(TMVA::Event& e, UInt_t nTrees);
       void GetRandomSubSample();
       Double_t GetWeightedQuantile(std::vector<std::vector<Double_t> > &vec, const Double_t quantile, const Double_t SumOfWeights = 0.0);
@@ -188,6 +189,7 @@ namespace TMVA {
       Double_t                        fShrinkage;       // learning rate for gradient boost;
       Bool_t                          fBaggedGradBoost; // turn bagging in combination with grad boost on/off
       Double_t                        fSampleFraction;  // fraction of events used for bagged grad boost
+      std::map< TMVA::Event*,std::vector<double> > fResiduals; // individual event residuals for gradient boost
 
       //options for the decision Tree
       SeparationBase                 *fSepType;         // the separation used in node splitting
