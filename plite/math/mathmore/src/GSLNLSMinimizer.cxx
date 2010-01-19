@@ -34,7 +34,7 @@ namespace ROOT {
 
 
 // class to implement transformation of chi2 function
-// in general could make template on the fit method funciton type
+// in general could make template on the fit method function type
 
 class FitTransformFunction : public FitMethodFunction { 
 
@@ -48,7 +48,7 @@ public:
       fGrad( std::vector<double>(f.NDim() ) )
    {
       // constructor
-      // need to pass to MinimTransformFunciton a new pointer which will be managed by the class itself
+      // need to pass to MinimTransformFunction a new pointer which will be managed by the class itself
       // pass a gradient pointer although it will not be used byb the class 
    }
 
@@ -214,7 +214,7 @@ bool GSLNLSMinimizer::SetVariableValues( const double * x) {
       
 void GSLNLSMinimizer::SetFunction(const ROOT::Math::IMultiGenFunction & func) { 
    // set the function to minimizer 
-   // need to create vector of funcitons to be passed to GSL multifit
+   // need to create vector of functions to be passed to GSL multifit
    // support now only CHi2 implementation
    
    const ROOT::Math::FitMethodFunction * chi2Func = dynamic_cast<const ROOT::Math::FitMethodFunction *>(&func); 
@@ -381,7 +381,7 @@ bool GSLNLSMinimizer::Minimize() {
    fErrors.resize(fDim);
 
    // get errors from cov matrix 
-   fCovMatrix.resize(fDim*fDim);
+   if (fGSLMultiFit->CovarMatrix() ) fCovMatrix.resize(fDim*fDim);
       
    if (minFound) { 
 
@@ -429,10 +429,21 @@ const double * GSLNLSMinimizer::MinGradient() const {
 
 
 double GSLNLSMinimizer::CovMatrix(unsigned int i , unsigned int j ) const { 
+   // return covariance matrix element
    if ( fCovMatrix.size() == 0) return 0;  
    if (i > fDim || j > fDim) return 0; 
    return fCovMatrix[i*fDim + j];
 }
+
+int GSLNLSMinimizer::CovMatrixStatus( ) const { 
+   // return covariance  matrix status = 0 not computed,
+   // 1 computed but is approximate because minimum is not valid, 3 is fine
+   if ( fCovMatrix.size() == 0) return 0;  
+   // case minimization did not finished correctly
+   if (fStatus != GSL_SUCCESS) return 1;
+   return 3;
+}
+
 
    } // end namespace Math
 

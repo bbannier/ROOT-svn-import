@@ -39,6 +39,10 @@
 #include "TVirtualFFT.h"
 #include "TSystem.h"
 
+#include "HFitInterface.h"
+#include "Fit/DataRange.h"
+#include "Math/MinimizerOptions.h"
+
 //______________________________________________________________________________
 /* Begin_Html
 <center><h2>The Histogram classes</h2></center>
@@ -429,7 +433,9 @@ All histogram classes are derived from the base class TH1
      affecting the aspect of the clone.
 <p>
      One can use TH1::SetMaximum() and TH1::SetMinimum() to force a particular
-     value for the maximum or the minimum scale on the plot.
+     value for the maximum or the minimum scale on the plot. (For 1-D 
+     histograms this means the y-axis, while for 2-D histograms these 
+     functions affect the z-axis).
 <p>
      TH1::UseCurrentStyle() can be used to change all histogram graphics
      attributes to correspond to the current selected style.
@@ -526,6 +532,11 @@ extern void H1InitPolynom();
 extern void H1LeastSquareFit(Int_t n, Int_t m, Double_t *a);
 extern void H1LeastSquareLinearFit(Int_t ndata, Double_t &a0, Double_t &a1, Int_t &ifail);
 extern void H1LeastSquareSeqnd(Int_t n, Double_t *a, Int_t idim, Int_t &ifail, Int_t k, Double_t *b);
+
+// Internal exceptions for the CheckConsistency method
+class DifferentNumberOfBins: public std::exception {};
+class DifferentAxisLimits: public std::exception {};
+class DifferentBinLimits: public std::exception {};
 
 ClassImp(TH1)
 
@@ -651,7 +662,6 @@ TH1::TH1(const char *name,const char *title,Int_t nbins,const Float_t *xbins)
    if (xbins) fXaxis.Set(nbins,xbins);
    else       fXaxis.Set(nbins,0,1);
    fNcells = fXaxis.GetNbins()+2;
-   if (fgDefaultSumw2) Sumw2();
 }
 
 //______________________________________________________________________________
@@ -677,7 +687,6 @@ TH1::TH1(const char *name,const char *title,Int_t nbins,const Double_t *xbins)
    if (xbins) fXaxis.Set(nbins,xbins);
    else       fXaxis.Set(nbins,0,1);
    fNcells = fXaxis.GetNbins()+2;
-   if (fgDefaultSumw2) Sumw2();
 }
 
 //______________________________________________________________________________
@@ -849,20 +858,18 @@ void TH1::Add(const TH1 *h1, Double_t c1)
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
    Int_t nbinsz = GetNbinsZ();
-//   - Check histogram compatibility
-   if (nbinsx != h1->GetNbinsX() || nbinsy != h1->GetNbinsY() || nbinsz != h1->GetNbinsZ()) {
+
+   try {
+      CheckConsistency(this,h1);
+   } catch(DifferentNumberOfBins&) {
       Error("Add","Attempt to add histograms with different number of bins");
       return;
+   } catch(DifferentAxisLimits&) {
+      Warning("Add","Attempt to add histograms with different axis limits");
+   } catch(DifferentBinLimits&) {
+      Warning("Add","Attempt to add histograms with different bin limits");
    }
-   //   - Issue a Warning if histogram limits are different
-   if (fXaxis.GetXmin() != h1->fXaxis.GetXmin() ||
-      fXaxis.GetXmax() != h1->fXaxis.GetXmax() ||
-      fYaxis.GetXmin() != h1->fYaxis.GetXmin() ||
-      fYaxis.GetXmax() != h1->fYaxis.GetXmax() ||
-      fZaxis.GetXmin() != h1->fZaxis.GetXmin() ||
-      fZaxis.GetXmax() != h1->fZaxis.GetXmax()) {
-         Warning("Add","Attempt to add histograms with different axis limits");
-   }
+
    if (fDimension < 2) nbinsy = -1;
    if (fDimension < 3) nbinsz = -1;
 
@@ -870,15 +877,18 @@ void TH1::Add(const TH1 *h1, Double_t c1)
    if (fSumw2.fN == 0 && h1->GetSumw2N() != 0) Sumw2();
 
 //   - Add statistics
-   fEntries += c1*h1->GetEntries();
+   Double_t entries = TMath::Abs( GetEntries() + c1 * h1->GetEntries() ); 
    Double_t s1[kNstat], s2[kNstat];
-   Int_t i;
-   for (i=0;i<kNstat;i++) {s1[i] = s2[i] = 0;}
-   GetStats(s1);
-   h1->GetStats(s2);
-   for (i=0;i<kNstat;i++) {
-      if (i == 1) s1[i] += c1*c1*s2[i];
-      else        s1[i] += TMath::Abs(c1)*s2[i];
+// statistics can be preserbed only in case of positive coefficients
+// otherwise with negative c1 (histogram subtraction) one risks to get negative variances   
+   Bool_t resetStats = (c1 < 0);
+   if (!resetStats) { 
+      GetStats(s1);
+      h1->GetStats(s2);
+      for (Int_t i=0;i<kNstat;i++) {
+         if (i == 1) s1[i] += c1*c1*s2[i];
+         else        s1[i] += c1*s2[i];
+      }
    }
 
    SetMinimum();
@@ -917,7 +927,14 @@ void TH1::Add(const TH1 *h1, Double_t c1)
    }
 
    // update statistics (do here to avoid changes by SetBinContent)
-   PutStats(s1);
+   if (resetStats)  { 
+      // statistics need to be reset in case coefficient are negative
+      ResetStats(); 
+   }
+   else { 
+      PutStats(s1);
+      SetEntries(entries);
+   }
 }
 
 //______________________________________________________________________________
@@ -952,29 +969,19 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
    Int_t nbinsz = GetNbinsZ();
-//   - Check histogram compatibility
-   if (nbinsx != h1->GetNbinsX() || nbinsy != h1->GetNbinsY() || nbinsz != h1->GetNbinsZ()
-    || nbinsx != h2->GetNbinsX() || nbinsy != h2->GetNbinsY() || nbinsz != h2->GetNbinsZ()) {
+
+   try {
+      CheckConsistency(h1,h2);
+      CheckConsistency(this,h1);
+   } catch(DifferentNumberOfBins&) {
       Error("Add","Attempt to add histograms with different number of bins");
       return;
-   }
-//   - Issue a Warning if histogram limits are different
-   if (fXaxis.GetXmin() != h1->fXaxis.GetXmin() ||
-       fXaxis.GetXmax() != h1->fXaxis.GetXmax() ||
-       fYaxis.GetXmin() != h1->fYaxis.GetXmin() ||
-       fYaxis.GetXmax() != h1->fYaxis.GetXmax() ||
-       fZaxis.GetXmin() != h1->fZaxis.GetXmin() ||
-       fZaxis.GetXmax() != h1->fZaxis.GetXmax()) {
+   } catch(DifferentAxisLimits&) {
       Warning("Add","Attempt to add histograms with different axis limits");
+   } catch(DifferentBinLimits&) {
+      Warning("Add","Attempt to add histograms with different bin limits");
    }
-   if (fXaxis.GetXmin() != h2->fXaxis.GetXmin() ||
-       fXaxis.GetXmax() != h2->fXaxis.GetXmax() ||
-       fYaxis.GetXmin() != h2->fYaxis.GetXmin() ||
-       fYaxis.GetXmax() != h2->fYaxis.GetXmax() ||
-       fZaxis.GetXmin() != h2->fZaxis.GetXmin() ||
-       fZaxis.GetXmax() != h2->fZaxis.GetXmax()) {
-      Warning("Add","Attempt to add histograms::Add with different axis limits");
-   }
+
    if (fDimension < 2) nbinsy = -1;
    if (fDimension < 3) nbinsz = -1;
    if (fDimension < 3) nbinsz = -1;
@@ -983,15 +990,19 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
    if (fSumw2.fN == 0 && (h1->GetSumw2N() != 0 || h2->GetSumw2N() != 0)) Sumw2();
 
 //   - Add statistics
-   Double_t nEntries = c1*h1->GetEntries() + c2*h2->GetEntries();
+   Double_t nEntries = TMath::Abs( c1*h1->GetEntries() + c2*h2->GetEntries() );
    Double_t s1[kNstat], s2[kNstat], s3[kNstat];
-   Int_t i;
-   for (i=0;i<kNstat;i++) {s1[i] = s2[i] = s3[i] = 0;}
-   h1->GetStats(s1);
-   h2->GetStats(s2);
-   for (i=0;i<kNstat;i++) {
-      if (i == 1) s3[i] = c1*c1*s1[i] + c2*c2*s2[i];
-      else        s3[i] = TMath::Abs(c1)*s1[i] + TMath::Abs(c2)*s2[i];
+   
+// statistics can be preserbed only in case of positive coefficients
+// otherwise with negative c1 (histogram subtraction) one risks to get negative variances   
+   Bool_t resetStats = (c1*c2 < 0);   
+   if (!resetStats) { 
+      h1->GetStats(s1);
+      h2->GetStats(s2);
+      for (Int_t i=0;i<kNstat;i++) {
+         if (i == 1) s3[i] = c1*c1*s1[i] + c2*c2*s2[i];
+         else        s3[i] = TMath::Abs(c1)*s1[i] + TMath::Abs(c2)*s2[i];
+      }
    }
 
    SetMinimum();
@@ -1045,9 +1056,15 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
          }
       }
    }
-   // update statistics (do here to avoid changes by SetBinContent)
-   PutStats(s3);
-   SetEntries(nEntries);
+   if (resetStats)  { 
+      // statistics need to be reset in case coefficient are negative
+      ResetStats(); 
+   }
+   else { 
+      // update statistics (do here to avoid changes by SetBinContent)
+      PutStats(s3);
+      SetEntries(nEntries);
+   }
 }
 
 
@@ -1165,6 +1182,60 @@ Int_t TH1::BufferFill(Double_t x, Double_t w)
    fBuffer[2*nbentries+2] = x;
    fBuffer[0] += 1;
    return -2;
+}
+
+bool CheckBinLimits(const TArrayD* h1Array, const TArrayD* h2Array)
+{
+   Int_t fN = h1Array->fN;
+   if ( fN != 0 ) {
+      if ( h2Array->fN != fN ) {
+         throw DifferentBinLimits();
+         return false;
+      }
+      else {
+         for ( int i = 0; i < fN; ++i ) {
+            if ( ! TMath::AreEqualAbs( h1Array->GetAt(i), h2Array->GetAt(i), 1E-10 ) ) {
+               throw DifferentBinLimits();
+               return false;
+            }
+         }
+      }
+   }
+
+   return true;
+}
+
+//___________________________________________________________________________
+bool TH1::CheckConsistency(const TH1* h1, const TH1* h2)
+{
+   // Check histogram compatibility   Int_t nbinsx = h1->GetNbinsX();
+   Int_t nbinsx = h1->GetNbinsX();
+   Int_t nbinsy = h1->GetNbinsY();
+   Int_t nbinsz = h1->GetNbinsZ();
+
+   // Check whether the histograms have the same number of bins.
+   if (nbinsx != h2->GetNbinsX() || nbinsy != h2->GetNbinsY() || nbinsz != h2->GetNbinsZ()) {
+      throw DifferentNumberOfBins();
+      return false;
+   }
+   // Check that the axis limits of the histograms are the same
+   if (h1->fXaxis.GetXmin() != h2->fXaxis.GetXmin() ||
+       h1->fXaxis.GetXmax() != h2->fXaxis.GetXmax() ||
+       h1->fYaxis.GetXmin() != h2->fYaxis.GetXmin() ||
+       h1->fYaxis.GetXmax() != h2->fYaxis.GetXmax() ||
+       h1->fZaxis.GetXmin() != h2->fZaxis.GetXmin() ||
+       h1->fZaxis.GetXmax() != h2->fZaxis.GetXmax()) {
+      throw DifferentAxisLimits();
+      return false;
+   }
+
+   bool ret = true;
+
+   ret &= CheckBinLimits(h1->GetXaxis()->GetXbins(), h2->GetXaxis()->GetXbins());
+   ret &= CheckBinLimits(h1->GetYaxis()->GetXbins(), h2->GetYaxis()->GetXbins());
+   ret &= CheckBinLimits(h1->GetZaxis()->GetXbins(), h2->GetZaxis()->GetXbins());
+
+   return ret;
 }
 
 //___________________________________________________________________________
@@ -1677,7 +1748,7 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
          }
       }
       if (sumw1 <= 0 || sumw2 <= 0) {
-         Error("Chi2TestX","Cannot use option NORM when one histogram has all errors zero");
+         Error("Chi2TestX","Cannot use option NORM when one histogram has all zero errors");
          return 0;
       }
 
@@ -1706,7 +1777,7 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
    }
 
    if ( comparisonWW  && ( sumw1 <= 0 && sumw2 <=0 ) ){
-      Error("Chi2TestX","Hist1 and Hist2 have both all errors zero\n");
+      Error("Chi2TestX","Hist1 and Hist2 have both all zero errors\n");
       return 0;
    }
 
@@ -1783,11 +1854,11 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
       // flag error only when of the two histogram is zero
       if (m) {
          igood += 1;
-         Info("Chi2TestX","There is bin in Hist1 with less than 1 number of events.\n");
+         Info("Chi2TestX","There is a bin in h1 with less than 1 event.\n");
       }
       if (n) {
          igood += 2;
-         Info("Chi2TestX","There is bin in Hist2 with less than 1 number of events.\n");
+         Info("Chi2TestX","There is a bin in h2 with less than 1 event.\n");
       }
 
       Double_t prob = TMath::Prob(chi2,ndf);
@@ -1824,7 +1895,7 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                   else { 
                      // return error because infinite discrepancy here: 
                      // bin1 != 0 and bin2 =0 in a histogram with all errors zero 
-                     Error("Chi2TestX","Hist2 has in bin %d,%d,%d zero content and all errors e zero\n", i,j,k);
+                     Error("Chi2TestX","Hist2 has in bin %d,%d,%d zero content and all zero errors\n", i,j,k);
                      chi2 = 0; return 0;
                   }
                }
@@ -1899,11 +1970,11 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
 
       if (m) {
          igood += 1;
-         Info("Chi2TestX","There is bin in Hist1 with less than 1 number of events.\n");
+         Info("Chi2TestX","There is a bin in h1 with less than 1 event.\n");
       }
       if (n) {
          igood += 2;
-         Info("Chi2TestX","There is bin in Hist2 with less than 10 effective number of events.\n");
+         Info("Chi2TestX","There is a bin in h2 with less than 10 effective events.\n");
       }
 
       Double_t prob = TMath::Prob(chi2,ndf);
@@ -1930,7 +2001,7 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                } 
                if ( (err1 == 0) && (err2 == 0) ) { 
                   // case of zero errors but non zero bin content
-                  Error("Chi2TestX","Hist1 and Hist2 have both in bin %d,%d,%d errors zero\n", i,j,k);
+                  Error("Chi2TestX","h1 and h2 both have bin %d,%d,%d with all zero errors\n", i,j,k);
                   chi2 = 0; return 0; 
                }
                
@@ -1965,11 +2036,11 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
       }
       if (m) {
          igood += 1;
-         Info("Chi2TestX","There is bin in Hist1 with less than 10 effective number of events.\n");
+         Info("Chi2TestX","There is a bin in h1 with less than 10 effective events.\n");
       }
       if (n) {
          igood += 2;
-         Info("Chi2TestX","There is bin in Hist2 with less than 10 effective number of events.\n");
+         Info("Chi2TestX","There is a bin in h2 with less than 10 effective events.\n");
       }
       Double_t prob = TMath::Prob(chi2,ndf);
       return prob;
@@ -2191,7 +2262,6 @@ void TH1::Divide(TF1 *f1, Double_t c1)
       }
    }
    ResetStats(); 
-   SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -2220,22 +2290,20 @@ void TH1::Divide(const TH1 *h1)
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
    Int_t nbinsz = GetNbinsZ();
-//   - Check histogram compatibility
-   if (nbinsx != h1->GetNbinsX() || nbinsy != h1->GetNbinsY() || nbinsz != h1->GetNbinsZ()) {
+
+
+   try {
+      CheckConsistency(this,h1);
+   } catch(DifferentNumberOfBins&) {
       Error("Divide","Attempt to divide histograms with different number of bins");
       return;
-   }
-//   - Issue a Warning if histogram limits are different
-   if (fXaxis.GetXmin() != h1->fXaxis.GetXmin() ||
-       fXaxis.GetXmax() != h1->fXaxis.GetXmax() ||
-       fYaxis.GetXmin() != h1->fYaxis.GetXmin() ||
-       fYaxis.GetXmax() != h1->fYaxis.GetXmax() ||
-       fZaxis.GetXmin() != h1->fZaxis.GetXmin() ||
-       fZaxis.GetXmax() != h1->fZaxis.GetXmax()) {
+   } catch(DifferentAxisLimits&) {
       Warning("Divide","Attempt to divide histograms with different axis limits");
+   } catch(DifferentBinLimits&) {
+      Warning("Divide","Attempt to divide histograms with different bin limits");
    }
+
    if (fDimension < 2) nbinsy = -1;
-   if (fDimension < 3) nbinsz = -1;
    if (fDimension < 3) nbinsz = -1;
 
 //    Create Sumw2 if h1 has Sumw2 set
@@ -2269,7 +2337,6 @@ void TH1::Divide(const TH1 *h1)
       }
    }
    ResetStats(); 
-   SetEntries( GetEffectiveEntries() );
 }
 
 
@@ -2310,33 +2377,24 @@ void TH1::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Option_
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
    Int_t nbinsz = GetNbinsZ();
-//   - Check histogram compatibility
-   if (nbinsx != h1->GetNbinsX() || nbinsy != h1->GetNbinsY() || nbinsz != h1->GetNbinsZ()
-    || nbinsx != h2->GetNbinsX() || nbinsy != h2->GetNbinsY() || nbinsz != h2->GetNbinsZ()) {
+
+   try {
+      CheckConsistency(h1,h2);
+      CheckConsistency(this,h1);
+   } catch(DifferentNumberOfBins&) {
       Error("Divide","Attempt to divide histograms with different number of bins");
       return;
+   } catch(DifferentAxisLimits&) {
+      Warning("Divide","Attempt to divide histograms with different axis limits");
+   } catch(DifferentBinLimits&) {
+      Warning("Divide","Attempt to divide histograms with different bin limits");
    }
+
    if (!c2) {
       Error("Divide","Coefficient of dividing histogram cannot be zero");
       return;
    }
-//   - Issue a Warning if histogram limits are different
-   if (fXaxis.GetXmin() != h1->fXaxis.GetXmin() ||
-       fXaxis.GetXmax() != h1->fXaxis.GetXmax() ||
-       fYaxis.GetXmin() != h1->fYaxis.GetXmin() ||
-       fYaxis.GetXmax() != h1->fYaxis.GetXmax() ||
-       fZaxis.GetXmin() != h1->fZaxis.GetXmin() ||
-       fZaxis.GetXmax() != h1->fZaxis.GetXmax()) {
-      Warning("Divide","Attempt to divide histograms with different axis limits");
-   }
-   if (fXaxis.GetXmin() != h2->fXaxis.GetXmin() ||
-       fXaxis.GetXmax() != h2->fXaxis.GetXmax() ||
-       fYaxis.GetXmin() != h2->fYaxis.GetXmin() ||
-       fYaxis.GetXmax() != h2->fYaxis.GetXmax() ||
-       fZaxis.GetXmin() != h2->fZaxis.GetXmin() ||
-       fZaxis.GetXmax() != h2->fZaxis.GetXmax()) {
-      Warning("Divide","Attempt to divide histograms with different axis limits");
-   }
+
    if (fDimension < 2) nbinsy = -1;
    if (fDimension < 3) nbinsz = -1;
 
@@ -2393,8 +2451,6 @@ void TH1::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Option_
    if (binomial)  
       // in case of binomial division use denominator for number of entries
       SetEntries ( h2->GetEntries() ); 
-   else 
-      SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -2493,7 +2549,7 @@ TH1 *TH1::DrawNormalized(Option_t *option, Double_t norm) const
 
    Double_t sum = GetSumOfWeights();
    if (sum == 0) {
-      Error("DrawNormalized","Sum of weights is null. Cannot normalized histogram: %s",GetName());
+      Error("DrawNormalized","Sum of weights is null. Cannot normalize histogram: %s",GetName());
       return 0;
    }
    Bool_t addStatus = TH1::AddDirectoryStatus();
@@ -2501,6 +2557,8 @@ TH1 *TH1::DrawNormalized(Option_t *option, Double_t norm) const
    TH1 *h = (TH1*)Clone();
    h->SetBit(kCanDelete);
    h->Scale(norm/sum);
+   if (TMath::Abs(fMaximum+1111) > 1e-3) h->SetMaximum(fMaximum*norm/sum);
+   if (TMath::Abs(fMinimum+1111) > 1e-3) h->SetMinimum(fMinimum*norm/sum);
    h->Draw(option);
    TH1::AddDirectory(addStatus);
    return h;
@@ -2905,14 +2963,14 @@ void TH1::FillRandom(TH1 *h, Int_t ntimes)
 //______________________________________________________________________________
 Int_t TH1::FindBin(Double_t x, Double_t y, Double_t z)
 {
-//   -*-*-*-*Return Global bin number corresponding to x,y,z*-*-*-*-*-*-*
-//           ===============================================
+//   Return Global bin number corresponding to x,y,z
+//   ===============================================
 //
 //      2-D and 3-D histograms are represented with a one dimensional
 //      structure.
 //      This has the advantage that all existing functions, such as
 //        GetBinContent, GetBinError, GetBinFunction work for all dimensions.
-//     See also TH1::GetBin
+//     See also TH1::GetBin, TAxis::FindBin and TAxis::FindFixBin
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    if (GetDimension() < 2) {
@@ -2990,7 +3048,7 @@ TObject *TH1::FindObject(const TObject *obj) const
 }
 
 //______________________________________________________________________________
-Int_t TH1::Fit(const char *fname ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
+TFitResultPtr TH1::Fit(const char *fname ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
 {
 //                     Fit histogram with function fname
 //                     =================================
@@ -3032,7 +3090,7 @@ Int_t TH1::Fit(const char *fname ,Option_t *option ,Option_t *goption, Double_t 
 }
 
 //______________________________________________________________________________
-Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
+TFitResultPtr TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax)
 {
 //                     Fit histogram with function f1
 //                     ==============================
@@ -3049,9 +3107,13 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //                = "Q"  Quiet mode (minimum printing)
 //                = "V"  Verbose mode (default is between Q and V)
 //                = "E"  Perform better Errors estimation using Minos technique
-//                = "B"  Use this option when you want to fix one or more parameters
-//                       and the fitting function is like "gaus", "expo", "poln", "landau".
-//                = "M"  More. Improve fit results
+//                = "B"  User defined parameter settings are used for predefined functions 
+//                       like "gaus", "expo", "poln", "landau".  
+//                       Use this option when you want to fix one or more parameters for these functions.
+//                = "M"  More. Improve fit results. 
+//                       It uses the IMPROVE command of TMinuit (see TMinuit::mnimpr). 
+//                       This algorithm attempts to improve the found local minimum by searching for a
+//                       better one.
 //                = "R"  Use the Range specified in the function range
 //                = "N"  Do not store the graphics function, do not draw
 //                = "0"  Do not plot the result of the fit. By default the fitted function
@@ -3061,6 +3123,8 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //                = "C"  In case of linear fitting, don't calculate the chisquare
 //                       (saves time)
 //                = "F"  If fitting a polN, switch to minuit fitter
+//                = "S"  The result of the fit is returned in the TFitResultPtr 
+//                       (see below Access to the Fit Result) 
 //
 //      When the fit is drawn (by default), the parameter goption may be used
 //      to specify a list of graphics options. See TH1::Draw for a complete
@@ -3105,8 +3169,9 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //      =============================
 //     By default a chi square function is used for fitting. When option "L" (or "LL") is used 
 //     a Poisson likelihood function (see note below) is used. 
-//     The functions are defined in the header Fit/Chi2Func.h or Fit/PoissonLikelihoodFCN and they are implemented 
-//     using the routines FitUtil::EvaluateChi2 or FitUtil::EvaluatePoissonLogL in the file math/mathcore/src/FitUtil.cxx.
+//     The functions are defined in the header Fit/Chi2Func.h or Fit/PoissonLikelihoodFCN and they
+//     are implemented using the routines FitUtil::EvaluateChi2 or FitUtil::EvaluatePoissonLogL in
+//     the file math/mathcore/src/FitUtil.cxx.
 //     To specify a User defined fitting function, specify option "U" and
 //     call the following functions:
 //       TVirtualFitter::Fitter(myhist)->SetFCN(MyFittingFunction)
@@ -3117,11 +3182,12 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //     =================
 //     When using option "L" a likelihood fit is used instead of the default chi2 square fit.
 //     The likelihood is built assuming a Poisson probability density function for each bin.
-//     This method can then be used only when the bin content represents counts (i.e. errors are  = sqrt(N) ).
-//     The likelihood method has the advantage of treating correctly the empty bins and use them in the fit procedure.
+//     This method can then be used only when the bin content represents counts (i.e. errors are sqrt(N) ).
+//     The likelihood method has the advantage of treating correctly the empty bins and use them in the
+//     fit procedure.
 //     In the chi2 method the empty bins are skipped and not considered in the fit.
-//     The likelihood method, although a bit slower, it is the recommended method in case of low bin statistics, where 
-//     the chi2 method may give incorrect results. 
+//     The likelihood method, although a bit slower, it is the recommended method in case of low
+//     bin statistics, where the chi2 method may give incorrect results. 
 //     
 //      Fitting a histogram of dimension N with a function of dimension N-1
 //      ===================================================================
@@ -3137,15 +3203,25 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //     Given an histogram h, one can retrieve an associated function
 //     with:  TF1 *myfunc = h->GetFunction("myfunc");
 //
-//      Access to the fit status
+//      Access to the fit result 
 //      ========================
-//     The function return the status of the fit (fitResult) in the following form
-//       fitResult = migradResult + 10*minosResult + 100*hesseResult + 1000*improveResult
-//     The fitResult is 0 is the fit is OK.
-//     The fitResult is negative in case of an error not connected with the fit.
+//     The function returns a TFitResultPtr which can hold a  pointer to a TFitResult object.
+//     By default the TFitResultPtr contains only the status of the fit which is return by an 
+//     automatic conversion of the TFitResultPtr to an integer. One can write in this case directly: 
+//     Int_t fitStatus =  h->Fit(myFunc)  
 //
-//      Access to the fit results
-//      =========================
+//     If the option "S" is instead used, TFitResultPtr contains the TFitResult and behaves as a smart 
+//     pointer to it. For example one can do: 
+//     TFitResultPtr r = h->Fit(myFunc,"S");
+//     TMatrixDSym cov = r->GetCovarianceMatrix();  //  to access the covariance matrix
+//     Double_t chi2   = r->Chi2(); // to retrieve the fit chi2 
+//     Double_t par0   = r->Value(0); // retrieve the value for the parameter 0 
+//     Double_t err0   = r->Error(0); // retrieve the error for the parameter 0 
+//     r->Print("V");     // print full information of fit including covariance matrix
+//     r->Write();        // store the result in a file
+//
+//     The fit parameters, error and chi2 (but not covariance matrix) can be retrieved also 
+//     from the fitted function. 
 //     If the histogram is made persistent, the list of
 //     associated functions is also persistent. Given a pointer (see above)
 //     to an associated function myfunc, one can retrieve the function/fit
@@ -3154,28 +3230,29 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //       Double_t par0 = myfunc->GetParameter(0); //value of 1st parameter
 //       Double_t err0 = myfunc->GetParError(0);  //error on first parameter
 //
-//      Access to the fit covariance matrix
-//      ===================================
-//      Example1:
-//         TH1F h("h", "test", 100, -2, 2);
-//         h.FillRandom("gaus", 1000);
-//         h.Fit("gaus");
-//         Double_t matrix[3][3];
-//         gMinuit->mnemat(&matrix[0][0], 3);
-//      Example2:
-//         TH1F h("h", "test", 100, -2, 2);
-//         h.FillRandom("gaus", 1000);
-//         h.Fit("gaus");
-//         TVirtualFitter *fitter = TVirtualFitter::GetFitter();
-//         TMatrixD matrix(npar, npar, fitter->GetCovarianceMatrix());
-//         Double_t errorFirstPar = fitter->GetCovarianceMatrixElement(0, 0);
 //
+//     Access to the fit status
+//     =====================
+//     The status of the fit can be obtained converting the TFitResultPtr to an integer 
+//     indipendently if the fit option "S" is used or not: 
+//     TFitResultPtr r = h=>Fit(myFunc,opt);
+//     Int_t fitStatus = r; 
 //
-//      Changing the maximum number of parameters
-//      =========================================
-//     By default, the fitter TMinuit is initialized with a maximum of 25 parameters.
-//     You can redefine this default value by calling :
-//       TVirtualFitter::Fitter(0, 150); //to get a maximum of 150 parameters
+//     The fitStatus is 0 if the fit is OK (i.e no error occurred). 
+//     The value of the fit status code is negative in case of an error not connected with the
+//     minimization procedure, for example  when a wrong function is used. 
+//     Otherwise the return value is the one returned from the minimization procedure.
+//     When TMinuit (default case) or Minuit2 are used as minimizer the status returned is :
+//     fitStatus =  migradResult + 10*minosResult + 100*hesseResult + 1000*improveResult.
+//     TMinuit will return 0 (for migrad, minos, hesse or improve) in case of success and 4 in
+//     case of error (see the documentation of TMinuit::mnexcm). So for example, for an error
+//     only in Minos but not in Migrad a fitStatus of 40 will be returned. 
+//     Minuit2 will return also 0 in case of success and different values in migrad minos or
+//     hesse depending on the error. See in this case the documentation of
+//     Minuit2Minimizer::Minimize for the migradResult, Minuit2Minimizer::GetMinosError for the 
+//     minosResult and Minuit2Minimizer::Hesse for the hesseResult.
+//     If other minimizers are used see their specific documentation for the status code returned. 
+//     For example in the case of Fumili, for the status returned see TFumili::Minimize.   
 //
 //      Excluding points
 //      ================
@@ -3211,34 +3288,37 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //       h.GetFunction("myFunction")->ResetBit(kNotDraw);
 //       h.Draw();  // function is visible again
 //
-//      Access to the Fitter information during fitting
+//      Access to the Minimizer information during fitting
 //      ===============================================
-//     This function calls only the abstract fitter TVirtualFitter.
-//     The default fitter is TFitter (calls TMinuit).
-//     The default fitter can be set in the resource file in etc/system.rootrc
-//     Root.Fitter:      Fumili
-//     A different fitter can also be set via TVirtualFitter::SetDefaultFitter.
-//     For example, to call the "Fumili" fitter instead of "Minuit", do
-//          TVirtualFitter::SetDefaultFitter("Fumili");
-//     During the fitting process, the objective function:
-//       chisquare, likelihood or any user defined algorithm
-//     is called (see eg in the TFitter class, the static functions
-//       H1FitChisquare, H1FitLikelihood).
-//     This objective function, in turn, calls the user theoretical function.
-//     This user function is a static function called from the TF1 *f1 function.
-//     Inside this user defined theoretical function , one can access:
-//       TVirtualFitter *fitter = TVirtualFitter::GetFitter();  //the current fitter
-//       TH1 *hist = (TH1*)fitter->GetObjectFit(); //the histogram being fitted
-//       TF1 +f1 = (TF1*)fitter->GetUserFunction(); //the user theoretical function
+//     This function calls, the ROOT::Fit::FitObject function implemented in HFitImpl.cxx
+//     which uses the ROOT::Fit::Fitter class. The Fitter class creates the objective fuction
+//     (e.g. chi2 or likelihood) and uses an implementation of the  Minimizer interface for minimizing 
+//     the function. 
+//     The default minimizer is Minuit (class TMinuitMinimizer which calls TMinuit).
+//     The default  can be set in the resource file in etc/system.rootrc. For example
+//     Root.Fitter:      Minuit2
+//     A different fitter can also be set via ROOT::Math::MinimizerOptions::SetDefaultMinimizer
+//     (or TVirtualFitter::SetDefaultFitter). 
+//     For example ROOT::Math::MinimizerOptions::SetDefaultMinimizer("GSLMultiMin","BFGS"); 
+//     will set the usdage of the BFGS algorithm of the GSL multi-dimensional minimization
+//     (implemented in libMathMore). ROOT::Math::MinimizerOptions can be used also to set other
+//     default options, like maximum number of function calls, minimization tolerance or print
+//     level. See the documentation of this class.  
 //
-//     By default, the fitter TMinuit is initialized with a maximum of 25 parameters.
 //     For fitting linear functions (containing the "++" sign" and polN functions,
-//     the linear fitter is initialized.
+//     the linear fitter is automatically initialized.
 //
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    // implementation of Fit method is in file hist/src/HFitImpl.cxx
-   return DoFit( f1 , option , goption, xxmin, xxmax); 
+   Foption_t fitOption;
+
+   if (!FitOptionsMake(option,fitOption)) return 0;
+   // create range and minimizer options with default values 
+   ROOT::Fit::DataRange range(xxmin,xxmax); 
+   ROOT::Math::MinimizerOptions minOption; 
+   
+   return ROOT::Fit::FitObject(this, f1 , fitOption , minOption, goption, range); 
 }
 
 //______________________________________________________________________________
@@ -3262,7 +3342,7 @@ void TH1::FitPanel()
    TPluginHandler *handler = gROOT->GetPluginManager()->FindHandler("TFitEditor");
    if (handler && handler->LoadPlugin() != -1) {
       if (handler->ExecPlugin(2, gPad, this) == 0)
-         Error("FitPanel", "Unable to crate the FitPanel");
+         Error("FitPanel", "Unable to create the FitPanel");
    }
    else 
          Error("FitPanel", "Unable to find the FitPanel plug-in");
@@ -3390,7 +3470,7 @@ Double_t TH1::GetEffectiveEntries() const
 
    Stat_t s[kNstat];
    this->GetStats(s);// s[1] sum of squares of weights, s[0] sum of weights
-   return (s[1] ? s[0]*s[0]/s[1] : 0.);
+   return (s[1] ? s[0]*s[0]/s[1] : TMath::Abs(s[0]) );
 }
 
 //______________________________________________________________________________
@@ -3545,6 +3625,7 @@ Int_t TH1::FitOptionsMake(Option_t *choptin, Foption_t &fitOption)
 
    if (strstr(chopt,"Q"))  fitOption.Quiet   = 1;
    if (strstr(chopt,"V")) {fitOption.Verbose = 1; fitOption.Quiet = 0;}
+   if (strstr(chopt,"X"))  fitOption.Chi2    = 1;
    if (strstr(chopt,"L"))  fitOption.Like    = 1;
    if (strstr(chopt,"LL")) fitOption.Like    = 2;
    if (strstr(chopt,"W"))  fitOption.W1      = 1;
@@ -3561,6 +3642,7 @@ Int_t TH1::FitOptionsMake(Option_t *choptin, Foption_t &fitOption)
    if (strstr(chopt,"U")) {fitOption.User    = 1; fitOption.Like = 0;}
    if (strstr(chopt,"F"))  fitOption.Minuit = 1;
    if (strstr(chopt,"C"))  fitOption.Nochisq = 1;
+   if (strstr(chopt,"S"))  fitOption.StoreResult = 1;
    return 1;
 }
 
@@ -4863,7 +4945,6 @@ void TH1::Multiply(TF1 *f1, Double_t c1)
       }
    }
    ResetStats(); 
-   SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -4890,22 +4971,19 @@ void TH1::Multiply(const TH1 *h1)
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
    Int_t nbinsz = GetNbinsZ();
-   //   - Check histogram compatibility
-   if (nbinsx != h1->GetNbinsX() || nbinsy != h1->GetNbinsY() || nbinsz != h1->GetNbinsZ()) {
+
+   try {
+      CheckConsistency(this,h1);
+   } catch(DifferentNumberOfBins&) {
       Error("Multiply","Attempt to multiply histograms with different number of bins");
       return;
+   } catch(DifferentAxisLimits&) {
+      Warning("Multiply","Attempt to multiply histograms with different axis limits");
+   } catch(DifferentBinLimits&) {
+      Warning("Multiply","Attempt to multiply histograms with different bin limits");
    }
-   //   - Issue a Warning if histogram limits are different
-   if (fXaxis.GetXmin() != h1->fXaxis.GetXmin() ||
-      fXaxis.GetXmax() != h1->fXaxis.GetXmax() ||
-      fYaxis.GetXmin() != h1->fYaxis.GetXmin() ||
-      fYaxis.GetXmax() != h1->fYaxis.GetXmax() ||
-      fZaxis.GetXmin() != h1->fZaxis.GetXmin() ||
-      fZaxis.GetXmax() != h1->fZaxis.GetXmax()) {
-         Warning("Multiply","Attempt to multiply histograms with different axis limits");
-   }
+
    if (fDimension < 2) nbinsy = -1;
-   if (fDimension < 3) nbinsz = -1;
    if (fDimension < 3) nbinsz = -1;
 
    //    Create Sumw2 if h1 has Sumw2 set
@@ -4939,7 +5017,6 @@ void TH1::Multiply(const TH1 *h1)
       }
    }
    ResetStats(); 
-   SetEntries( GetEffectiveEntries() );
 }
 
 
@@ -4971,29 +5048,19 @@ void TH1::Multiply(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Optio
    Int_t nbinsx = GetNbinsX();
    Int_t nbinsy = GetNbinsY();
    Int_t nbinsz = GetNbinsZ();
-   //   - Check histogram compatibility
-   if (nbinsx != h1->GetNbinsX() || nbinsy != h1->GetNbinsY() || nbinsz != h1->GetNbinsZ()
-      || nbinsx != h2->GetNbinsX() || nbinsy != h2->GetNbinsY() || nbinsz != h2->GetNbinsZ()) {
-         Error("Multiply","Attempt to multiply histograms with different number of bins");
-         return;
+
+   try {
+      CheckConsistency(h1,h2);
+      CheckConsistency(this,h1);
+   } catch(DifferentNumberOfBins&) {
+      Error("Multiply","Attempt to multiply histograms with different number of bins");
+      return;
+   } catch(DifferentAxisLimits&) {
+      Warning("Multiply","Attempt to multiply histograms with different axis limits");
+   } catch(DifferentBinLimits&) {
+      Warning("Multiply","Attempt to multiply histograms with different bin limits");
    }
-   //   - Issue a Warning if histogram limits are different
-   if (fXaxis.GetXmin() != h1->fXaxis.GetXmin() ||
-      fXaxis.GetXmax() != h1->fXaxis.GetXmax() ||
-      fYaxis.GetXmin() != h1->fYaxis.GetXmin() ||
-      fYaxis.GetXmax() != h1->fYaxis.GetXmax() ||
-      fZaxis.GetXmin() != h1->fZaxis.GetXmin() ||
-      fZaxis.GetXmax() != h1->fZaxis.GetXmax()) {
-         Warning("Multiply","Attempt to multiply histograms with different axis limits");
-   }
-   if (fXaxis.GetXmin() != h2->fXaxis.GetXmin() ||
-      fXaxis.GetXmax() != h2->fXaxis.GetXmax() ||
-      fYaxis.GetXmin() != h2->fYaxis.GetXmin() ||
-      fYaxis.GetXmax() != h2->fYaxis.GetXmax() ||
-      fZaxis.GetXmin() != h2->fZaxis.GetXmin() ||
-      fZaxis.GetXmax() != h2->fZaxis.GetXmax()) {
-         Warning("Multiply","Attempt to multiply histograms with different axis limits");
-   }
+
    if (fDimension < 2) nbinsy = -1;
    if (fDimension < 3) nbinsz = -1;
 
@@ -5030,7 +5097,6 @@ void TH1::Multiply(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Optio
       }
    }
    ResetStats(); 
-   SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -5709,11 +5775,16 @@ void TH1::Streamer(TBuffer &b)
       if (R__v > 2) {
          b.ReadClassBuffer(TH1::Class(), this, R__v, R__s, R__c);
 
+         ResetBit(kCanDelete);
+         ResetBit(kMustCleanup);
          fXaxis.SetParent(this);
          fYaxis.SetParent(this);
          fZaxis.SetParent(this);
-         ResetBit(kCanDelete);
-         ResetBit(kMustCleanup);
+         TIter next(fFunctions);
+         TObject *obj;
+         while ((obj=next())) {
+            if (obj->InheritsFrom(TF1::Class())) ((TF1*)obj)->SetParent(this);
+         }
          return;
       }
       //process old versions before automatic schema evolution
@@ -6472,6 +6543,23 @@ void TH1::PutStats(Double_t *stats)
 }
 
 //______________________________________________________________________________
+void TH1::ResetStats() 
+{ 
+   // Reset the statistics including the number of entries 
+   // and replace with values calculates from bin content
+   // The number of entries is set to the total bin content or (in case of weighted histogram) 
+   // to number of effective entries 
+   Double_t stats[kNstat]; 
+   fTsumw = 0; 
+   fEntries = 1; // to force re-calculation of the statistics in TH1::GetStats 
+   GetStats(stats);
+   PutStats(stats);
+   fEntries = TMath::Abs(fTsumw);
+   // use effective entries for weighted histograms:  (sum_w) ^2 / sum_w2 
+   if (fSumw2.fN > 0 && fTsumw > 0 && stats[1] > 0 ) fEntries = stats[0]*stats[0]/ stats[1];
+}
+
+//______________________________________________________________________________
 Double_t TH1::GetSumOfWeights() const
 {
    //   -*-*-*-*-*-*Return the sum of weights excluding under/overflows*-*-*-*-*
@@ -6528,8 +6616,8 @@ Double_t TH1::IntegralAndError(Int_t binx1, Int_t binx2, Double_t & error, Optio
 Double_t TH1::DoIntegral(Int_t binx1, Int_t binx2, Int_t biny1, Int_t biny2, Int_t binz1, Int_t binz2, Double_t & error , 
                           Option_t *option, Bool_t doError) const
 {
-   // internal function compute integral and optionally the error  between the limits specified by the bin number values 
-   // working for all histograms (1D, 2D and 3D)
+   // internal function compute integral and optionally the error  between the limits
+   // specified by the bin number values working for all histograms (1D, 2D and 3D)
 
    Int_t nbinsx = GetNbinsX();
    if (binx1 < 0) binx1 = 0;
@@ -6947,7 +7035,14 @@ void TH1::SetContourLevel(Int_t level, Double_t value)
 //______________________________________________________________________________
 Double_t TH1::GetMaximum(Double_t maxval) const
 {
-   //  Return maximum value smaller than maxval of bins in the range*-*-*-*-*-*
+   //  Return maximum value smaller than maxval of bins in the range, 
+   //  unless the value has been overridden by TH1::SetMaximum,
+   //  in which case it returns that value. (This happens, for example, 
+   //  when the histogram is drawn and the y or z axis limits are changed
+   // 
+   //  To get the maximum value of bins in the histogram regardless of
+   //  whether the value has been overridden, use
+   //      h->GetBinContent(h->GetMaximumBin())
 
    if (fMaximum != -1111) return fMaximum;
    Int_t bin, binx, biny, binz;
@@ -7015,7 +7110,14 @@ Int_t TH1::GetMaximumBin(Int_t &locmax, Int_t &locmay, Int_t &locmaz) const
 //______________________________________________________________________________
 Double_t TH1::GetMinimum(Double_t minval) const
 {
-   //  Return minimum value greater than minval of bins in the range
+   //  Return minimum value smaller than maxval of bins in the range, 
+   //  unless the value has been overridden by TH1::SetMinimum,
+   //  in which case it returns that value. (This happens, for example, 
+   //  when the histogram is drawn and the y or z axis limits are changed
+   // 
+   //  To get the minimum value of bins in the histogram regardless of
+   //  whether the value has been overridden, use
+   //     h->GetBinContent(h->GetMinimumBin())
 
    if (fMinimum != -1111) return fMinimum;
    Int_t bin, binx, biny, binz;
@@ -7219,11 +7321,15 @@ void TH1::SetBins(Int_t nx, Double_t xmin, Double_t xmax, Int_t ny, Double_t ymi
 //______________________________________________________________________________
 void TH1::SetMaximum(Double_t maximum)
 {
-   //   -*-*-*-*-*-*-*Set the maximum value for the Y axis*-*-*-*-*-*-*-*-*-*-*-*
-   //                 ====================================
-   // By default the maximum value is automatically set to the maximum
-   // bin content plus a margin of 10 per cent.
-   // Use TH1::GetMaximum to find the maximum value of an histogram
+   // Set the maximum value for the Y axis, in case of 1-D histograms, 
+   // or the Z axis in case of 2-D histograms
+   //
+   // By default the maximum value used in drawing is the maximum value of the histogram plus
+   // a margin of 10 per cent. If this function has been called, the value of 'maximum' is
+   // used, with no extra margin.
+   //
+   // TH1::GetMaximum returns the maximum value of the bins in the histogram, unless the
+   // maximum has been set manually by this function or by altering the y/z axis limits.
    // Use TH1::GetMaximumBin to find the bin with the maximum value of an histogram
    //
    fMaximum = maximum;
@@ -7233,11 +7339,15 @@ void TH1::SetMaximum(Double_t maximum)
 //______________________________________________________________________________
 void TH1::SetMinimum(Double_t minimum)
 {
-   //   -*-*-*-*-*-*-*Set the minimum value for the Y axis*-*-*-*-*-*-*-*-*-*-*-*
-   //                 ====================================
-   // By default the minimum value is automatically set to zero if all bin contents
-   // are positive or the minimum - 10 per cent otherwise.
-   // Use TH1::GetMinimum to find the minimum value of an histogram
+   // Set the minimum value for the Y axis, in case of 1-D histograms, 
+   // or the Z axis in case of 2-D histograms
+   //
+   // By default the minimum value used in drawing is the minimum value of the histogram plus
+   // a margin of 10 per cent. If this function has been called, the value of 'minimum' is
+   // used, with no extra margin.
+   //
+   // TH1::GetMinimum returns the minimum value of the bins in the histogram, unless the
+   // minimum has been set manually by this function or by altering the y/z axis limits.
    // Use TH1::GetMinimumBin to find the bin with the minimum value of an histogram
    //
    fMinimum = minimum;
@@ -8232,6 +8342,7 @@ TH1I::TH1I(const char *name,const char *title,Int_t nbins,const Double_t *xbins)
    //
    fDimension = 1;
    TArrayI::Set(fNcells);
+   if (fgDefaultSumw2) Sumw2();
 }
 
 //______________________________________________________________________________

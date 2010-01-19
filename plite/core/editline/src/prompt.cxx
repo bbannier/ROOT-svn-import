@@ -97,14 +97,65 @@ prompt_print(EditLine_t* el, int op) {
    } else {
       elp = &el->fRPrompt;
    }
-   p = (elp->p_func)(el);
-   ElColor_t col;
+   p = (elp->fFunc)(el);
 
-   while (*p)
-      re_putc(el, *p++, 1, &prompt_color);
+   ElColor_t col(prompt_color);
 
-   elp->p_pos.fV = el->fRefresh.r_cursor.fV;
-   elp->p_pos.fH = el->fRefresh.r_cursor.fH;
+   while (*p) {
+      if (*p == '\033' && p[1] == '[') {
+         // escape sequence?
+         // we support up to 3 numbers separated by ';'
+         int num[3] = {0};
+         int i = 2;
+         int n = 0;
+         while(n < 3) {
+            while (isdigit(p[i])) {
+               num[n] *= 10;
+               num[n] += p[i] - '0';
+               ++i;
+            };
+            ++n;
+            if (p[i] != ';') {
+               // ';' is number separator
+               break;
+            }
+         }
+         if (p[i] == 'm') {
+            // color / bold / ...
+            const char* strColor = 0;
+            if (n < 2) {
+               if (num[0] == 0) {
+                  strColor = "default";
+               } else if (num[0] == 1) {
+                  strColor = "bold default";
+               } else if (num[0] == '4') {
+                  strColor = "under default";
+               } else if (num[0] == '5') {
+                  strColor = "bold default";
+               } else if (num[0] == '7') {
+                  // reverse, not supported
+                  // strColor = "reverse";
+               }
+            } else if (num[0] == '3') {
+               const char* colors[] = {
+                  "black", "red", "green", "yellow", "blue",
+                  "magenta" , "cyan", "white", "default"
+               };
+               strColor = colors[num[1]];
+            } else if (num[0] == '4') {
+               // bg color, not supported
+            }
+
+            col.fForeColor = term__atocolor(strColor);
+            p += i + 1; // skip escape
+            continue;
+         }
+      }
+      re_putc(el, *p++, 1, &col);
+   }
+
+   elp->fPos.fV = el->fRefresh.r_cursor.fV;
+   elp->fPos.fH = el->fRefresh.r_cursor.fH;
 } // prompt_print
 
 
@@ -113,12 +164,12 @@ prompt_print(EditLine_t* el, int op) {
  */
 el_protected int
 prompt_init(EditLine_t* el) {
-   el->fPrompt.p_func = prompt_default;
-   el->fPrompt.p_pos.fV = 0;
-   el->fPrompt.p_pos.fH = 0;
-   el->fRPrompt.p_func = prompt_default_r;
-   el->fRPrompt.p_pos.fV = 0;
-   el->fRPrompt.p_pos.fH = 0;
+   el->fPrompt.fFunc = prompt_default;
+   el->fPrompt.fPos.fV = 0;
+   el->fPrompt.fPos.fH = 0;
+   el->fRPrompt.fFunc = prompt_default_r;
+   el->fRPrompt.fPos.fV = 0;
+   el->fRPrompt.fPos.fH = 0;
    return 0;
 }
 
@@ -147,15 +198,15 @@ prompt_set(EditLine_t* el, ElPFunc_t prf, int op) {
 
    if (prf == NULL) {
       if (op == EL_PROMPT) {
-         p->p_func = prompt_default;
+         p->fFunc = prompt_default;
       } else {
-         p->p_func = prompt_default_r;
+         p->fFunc = prompt_default_r;
       }
    } else {
-      p->p_func = prf;
+      p->fFunc = prf;
    }
-   p->p_pos.fV = 0;
-   p->p_pos.fH = 0;
+   p->fPos.fV = 0;
+   p->fPos.fH = 0;
    return 0;
 } // prompt_set
 
@@ -170,9 +221,9 @@ prompt_get(EditLine_t* el, ElPFunc_t* prf, int op) {
    }
 
    if (op == EL_PROMPT) {
-      *prf = el->fPrompt.p_func;
+      *prf = el->fPrompt.fFunc;
    } else {
-      *prf = el->fRPrompt.p_func;
+      *prf = el->fRPrompt.fFunc;
    }
    return 0;
 }

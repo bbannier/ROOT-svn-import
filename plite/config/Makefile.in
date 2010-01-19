@@ -11,9 +11,6 @@ EXTRA_CFLAGS   := -Iinclude @cflags@
 EXTRA_CXXFLAGS := -Iinclude @cflags@
 EXTRA_LDFLAGS  := @ldflags@
 WINRTDEBUG     := @winrtdebug@
-ENABLEPCH      := @enable_pch@
-NOSTUBS        := @no_stubs@
-NOSTUBSTEST    := @no_stubs_test@
 
 GLBPATCHFLAGS  := @glbpatchcflags@
 EXTRA_AUTHFLAGS:= @srpextracflags@ @krb5extracflags@ @glbextracflags@ @sslextracflags@
@@ -161,6 +158,14 @@ CHIRPLIBDIR    := @chirplibdir@
 CHIRPCLILIB    := @chirplib@
 CHIRPINCDIR    := $(filter-out /usr/include, @chirpincdir@)
 
+BUILDHDFS     := @buildhdfs@
+HDFSLIBDIR    := @hdfslibdir@
+HDFSCLILIB    := @hdfslib@
+HDFSINCDIR    := $(filter-out /usr/include, @hdfsincdir@)
+JNIINCDIR     := $(filter-out /usr/include, @jniincdir@) $(filter-out /usr/include, @jniincdir@/linux)
+JVMCLILIB     := @jvmlib@
+JVMLIBDIR     := @jvmlibdir@
+
 BUILDALIEN     := @buildalien@
 ALIENLIBDIR    := @alienlibdir@
 ALIENCLILIB    := @alienlib@
@@ -197,6 +202,7 @@ BUILDGVIZ      := @buildgviz@
 GRAPHVIZLIBDIR := @gvizlibdir@
 GRAPHVIZLIB    := @gvizlib@
 GRAPHVIZINCDIR := $(filter-out /usr/include, @gvizincdir@)
+GRAPHVIZCFLAGS := @gvizcflags@
 
 BUILDPYTHON    := @buildpython@
 PYTHONLIBDIR   := @pythonlibdir@
@@ -215,7 +221,8 @@ XMLCLILIB      := @xmllib@
 XMLINCDIR      := $(filter-out /usr/include, @xmlincdir@)
 
 BUILDXRD       := @buildxrd@
-XROOTDDIR      := @xrootddir@
+XRDINCDIR      := @xrdincdir@
+XRDLIBDIR      := @xrdlibdir@
 XRDADDOPTS     := @xrdaddopts@
 EXTRA_XRDFLAGS := @extraxrdflags@
 
@@ -276,14 +283,6 @@ GSLLIBDIR      := @gsllibdir@
 GSLLIBS        := @gsllibs@
 GSLVERSION     := @gslversion@
 
-BUILDCINT5     := @buildcint5@
-BUILDCINT7     := @buildcint7@
-ifeq ($(BUILDCINT5)_$(BUILDCINT7),yes_yes)
-BUILDBOTHCINT  := yes
-else
-BUILDBOTHCINT  :=
-endif
-
 BUILDCINTEX    := @buildcintex@
 
 BUILDREFLEX    := @buildreflex@
@@ -297,6 +296,8 @@ BUILDUNURAN    := @buildunuran@
 BUILDGDML      := @buildgdml@
 
 BUILDTABLE     := @buildtable@
+
+BUILDTMVA      := @buildtmva@
 
 BUILDCLARENS   := @buildclarens@
 CLARENSINC     := $(filter-out -I/usr/include, @clarensincdir@)

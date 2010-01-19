@@ -7,7 +7,9 @@ void geom_atlas()
 {
    TEveManager::Create();
 
+   TFile::SetCacheFileDir(".");
    gGeoManager = gEve->GetGeometry("http://root.cern.ch/files/atlas.root");
+   gGeoManager->DefaultColors();
 
    TGeoNode* node1 = gGeoManager->GetTopVolume()->FindNode("INNE_1");
    TEveGeoTopNode* inn = new TEveGeoTopNode(gGeoManager, node1);

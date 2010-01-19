@@ -56,12 +56,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "rlcurses.h"
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <string>
 
 #include "el.h"
 #include "TTermManip.h"
+
+// termcap.h an be extremely "dirty", polluting with CPP macros,
+// so #include last!
+#include "rlcurses.h"
 
 /*
  * IMPORTANT NOTE: these routines are allowed to look at the current screen
@@ -568,7 +572,7 @@ term_alloc_display(EditLine_t* el) {                      // LOUISE COLOUR : dup
  *	Free the display buffers
  */
 el_private void
-term_free_display(EditLine_t* el) {               // LOUISE COLOUR : duplicated all display funcionality for colour
+term_free_display(EditLine_t* el) {               // LOUISE COLOUR : duplicated all display functionality for colour
    char** b;
    char** bufp;
    ElColor_t** c;
@@ -643,12 +647,12 @@ term_move_to_line(EditLine_t* el, int where) {
    if ((del = where - el->fCursor.fV) > 0) {
       while (del > 0) {
          if (EL_HAS_AUTO_MARGINS &&
-             el->fDisplay[el->fCursor.fV][0] != '\0') {                                      // LOUISE COLOUR no change made
+             el->fDisplay[el->fCursor.fV][0] != '\0') {
             /* move without newline */
             term_move_to_char(el, el->fTerm.fSize.fH - 1);
             term_overwrite(el,
                            &el->fDisplay[el->fCursor.fV][el->fCursor.fH],
-                           0,                     // color irrelevant
+                           &el->fDispColor[el->fCursor.fV][el->fCursor.fH],
                            1);
             /* updates Cursor */
             del--;
@@ -1038,11 +1042,14 @@ term_set(EditLine_t* el, const char* term) {
       term = getenv("TERM");
    }
 
-   if (!term || !term[0]) {
+   if (!term || !term[0]
+       || !isatty(0)
+       || !isatty(1)) {
       term = "dumb";
    }
 
-   if (strcmp(term, "emacs") == 0) {
+   if (strcmp(term, "emacs") == 0
+       || !isatty(0)) {
       el->fFlags |= EDIT_DISABLED;
    }
 
@@ -1389,30 +1396,39 @@ term_bind_arrow(EditLine_t* el) {
  *	Initialize the color handling
  */
 el_private void
-term_init_color(EditLine_t* /*el*/) {
+term_init_color(EditLine_t* el) {
    int errcode;
+
+   if ((el->fFlags & NO_TTY) || !isatty(1)) {
+      // no TTY, no color.
+      return;
+   }
+
    if (ERR == setupterm(0, 1, &errcode)) {
-      fprintf(stderr, "ERROR initializing the terminal:\n");
-      switch (errcode) {
-      case 1:
-         fprintf(stderr,
-                 "  Your terminal cannot be used for curses applications [code 1].\n"
-                 "  Please reconfigure ROOT with --disable-editline, or get a better terminal.\n");
-         break;
-      case 0:
-         fprintf(stderr,
-                 "  the terminal could not be found, or it is a generic type [code 0].\n"
-                 "  Please reconfigure ROOT with --disable-editline, or get a better terminal.\n");
-         break;
-      case -1:
-         fprintf(stderr,
-                 "  the terminfo database could not be found [code -1].\n"
-                 "  Please make sure that it is accessible.\n");
-         break;
-      default:
-         fprintf(stderr,
-                 "  unknown curses error while setting up the terminal [code %d].\n",
-                 errcode);
+      char* eldebug = getenv("EDITLINEDEBUG");
+      if (eldebug != 0 && eldebug[0]) {
+         fprintf(stderr, "ERROR initializing the terminal [TERM=%s]:\n", getenv("TERM"));
+         switch (errcode) {
+         case 1:
+            fprintf(stderr,
+                    "  Your terminal cannot be used for curses applications [code 1].\n"
+                    "  Please reconfigure ROOT with --disable-editline, or get a better terminal.\n\n");
+            break;
+         case 0:
+            fprintf(stderr,
+                    "  the terminal could not be found, or it is a generic type [code 0].\n"
+                    "  Please reconfigure ROOT with --disable-editline, or get a better terminal.\n\n");
+            break;
+         case -1:
+            fprintf(stderr,
+                    "  the terminfo database could not be found [code -1].\n"
+                    "  Please make sure that it is accessible.\n\n");
+            break;
+         default:
+            fprintf(stderr,
+                    "  unknown curses error while setting up the terminal [code %d].\n\n",
+                    errcode);
+         }
       }
    }
 }
@@ -1447,6 +1463,90 @@ term__putc(int c) {
    return term__putcolorch(c, NULL);
 }
 
+/* term__atocolor():
+ *      Get the color index for a color name.
+ *      Name can be black, gray, blue,...
+ *      or #rrbbgg or #rgb
+ */
+el_public int
+term__atocolor(const char* name) {
+   int attr = 0;
+   std::string lowname(name);
+   size_t lenname = strlen(name);
+   for (size_t i = 0; i < lenname; ++i)
+      lowname[i] = tolower(lowname[i]);
+
+   if (lowname.find("bold") != std::string::npos
+       || lowname.find("light") != std::string::npos)
+      attr |= 0x2000;
+   if (lowname.find("under") != std::string::npos)
+      attr |= 0x4000;
+
+   TTermManip& tm = term__gettermmanip();
+   size_t poshash = lowname.find('#');
+   size_t lenrgb = 0;
+   if (poshash != std::string::npos) {
+      int endrgb = poshash + 1;
+      while ((lowname[endrgb] >= '0' && lowname[endrgb] <= '9')
+              || (lowname[endrgb] >= 'a' && lowname[endrgb] <= 'f')) {
+         ++endrgb;
+      }
+      lenrgb = endrgb - poshash - 1;
+   }
+
+   if (lenrgb == 3) {
+      int rgb[3] = {0};
+      for (int i = 0; i < 3; ++i) {
+         rgb[i] = lowname[poshash + 1 + i] - '0';
+         if (rgb[i] > 9) {
+            rgb[i] = rgb[i] + '0' - 'a' + 10;
+         }
+         rgb[i] *= 16; // only upper 4 bits are set.
+      }
+      return attr | tm.GetColorIndex(rgb[0], rgb[1], rgb[2]);
+   } else if (lenrgb == 6) {
+      int rgb[3] = {0};
+      for (int i = 0; i < 6; ++i) {
+         int v = lowname[poshash + 1 + i] - '0';
+         if (v > 9) {
+            v = v + '0' - 'a' + 10;
+         }
+         if (i % 2 == 0) {
+            v *= 16;
+         }
+         rgb[i / 2] += v;
+      }
+      return attr | tm.GetColorIndex(rgb[0], rgb[1], rgb[2]);
+   } else {
+      if (lowname.find("default") != std::string::npos) {
+         return attr | 0xff;
+      }
+
+      static const char* colornames[] = {
+         "black", "red", "green", "yellow",
+         "blue", "magenta", "cyan", "white", 0
+      };
+      static const unsigned char colorrgb[][3] = {
+         {0,0,0}, {127,0,0}, {0,127,0}, {127,127,0},
+         {0,0,127}, {127,0,127}, {0,127,127}, {127,127,127},
+         {0}
+      };
+
+      for (int i = 0; colornames[i]; ++i) {
+         if (lowname.find(colornames[i]) != std::string::npos) {
+            int boldify = 0;
+            if (attr & 0x2000)
+               boldify = 64;
+            return attr | tm.GetColorIndex(colorrgb[i][0] + boldify,
+                                           colorrgb[i][1] + boldify,
+                                           colorrgb[i][2] + boldify);
+         }
+      }
+   }
+   fprintf(stderr, "editline / term__atocolor: cannot parse color %s!\n", name);
+   return -1;
+}
+
 
 /* term__setcolor():
  *	Set terminal to a given foreground colour
@@ -1455,49 +1555,25 @@ el_protected void
 term__setcolor(int fgcol) {
    TTermManip& tm = term__gettermmanip();
 
-   int boldify = 0;
+   int idx = (fgcol & 0xff);
+   if (idx == 0xff) {
+      tm.SetDefaultColor();
+   } else {
+      tm.SetColor(idx);
+   }
+
    if (fgcol != -1) {
-      if (fgcol & 0x20) {
-         boldify = 128;
-         fgcol &= ~0x20;
+      if (fgcol & 0x2000) {
+         tm.StartBold();
+      } else {
+         tm.StopBold();
       }
-      if (fgcol & 0x40) {
+      if (fgcol & 0x4000) {
          tm.StartUnderline();
-         fgcol &= ~0x40;
       } else {
          tm.StopUnderline();
       }
    }
-
-   switch (fgcol) {
-   case -1:
-      tm.SetDefaultColor();
-      break;
-   case 0: // nCurses COLOR_BLACK
-      tm.SetColor(0, 0, 0);               // black
-      break;
-   case 1: // nCurses COLOR_RED
-      tm.SetColor(127 + boldify, 0, 0);             // red
-      break;
-   case 2: // nCurses COLOR_GREEN
-      tm.SetColor(0, 127 + boldify, 0);             // green
-      break;
-   case 3: // nCurses COLOR_YELLOW
-      tm.SetColor(127 + boldify, 127 + boldify, 0);           // yellow
-      break;
-   case 4: // nCurses COLOR_BLUE
-      tm.SetColor(0, 0, 127 + boldify);             // blue
-      break;
-   case 5: // nCurses COLOR_MAGENTA
-      tm.SetColor(127 + boldify, 0, 127 + boldify);           // magenta
-      break;
-   case 6: // nCurses COLOR_CYAN
-      tm.SetColor(0, 127 + boldify, 127 + boldify);           // cyan
-      break;
-   case 7: // nCurses COLOR_WHITE
-      tm.SetColor(127 + boldify, 127 + boldify, 127 + boldify); // white
-      break;
-   } // switch
 
 } // term__setcolor
 
@@ -1525,7 +1601,7 @@ term__repaint(EditLine_t* el, int index) {
    // store where cursor is currently (involves el)
    char* cursor = el->fLine.fCursor;
 
-   int promptSize = el->fPrompt.p_pos.fH;
+   int promptSize = el->fPrompt.fPos.fH;
    int oriCursor = el->fCursor.fH;
    int oriLine = el->fCursor.fV;
 

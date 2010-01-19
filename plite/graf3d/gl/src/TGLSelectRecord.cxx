@@ -156,7 +156,9 @@ TGLSelectRecord::TGLSelectRecord() :
    fSceneInfo   (0),
    fPhysShape   (0),
    fObject      (0),
-   fSpecific    (0)
+   fSpecific    (0),
+   fMultiple    (0),
+   fSecSelRes   (kNone)
 {
    // Default constructor.
 }
@@ -168,7 +170,9 @@ TGLSelectRecord::TGLSelectRecord(UInt_t* data) :
    fSceneInfo   (0),
    fPhysShape   (0),
    fObject      (0),
-   fSpecific    (0)
+   fSpecific    (0),
+   fMultiple    (0),
+   fSecSelRes   (kNone)
 {
    // Constructor from raw GL-select record.
 }
@@ -180,7 +184,9 @@ TGLSelectRecord::TGLSelectRecord(const TGLSelectRecord& rec) :
    fSceneInfo   (rec.fSceneInfo),
    fPhysShape   (rec.fPhysShape),
    fObject      (rec.fObject),
-   fSpecific    (rec.fSpecific)
+   fSpecific    (rec.fSpecific),
+   fMultiple    (rec.fMultiple),
+   fSecSelRes   (kNone)
 {
    // Copy constructor.
 }
@@ -204,6 +210,8 @@ TGLSelectRecord& TGLSelectRecord::operator=(const TGLSelectRecord& rec)
       fPhysShape   = rec.fPhysShape;
       fObject      = rec.fObject;
       fSpecific    = rec.fSpecific;
+      fMultiple    = rec.fMultiple;
+      fSecSelRes   = rec.fSecSelRes;
    }
    return *this;
 }
@@ -220,6 +228,8 @@ void TGLSelectRecord::Set(UInt_t* data)
    fPhysShape   = 0;
    fObject      = 0;
    fSpecific    = 0;
+   fMultiple    = 0;
+   fSecSelRes   = kNone;
 }
 
 //______________________________________________________________________________
@@ -233,6 +243,8 @@ void TGLSelectRecord::Reset()
    fPhysShape   = 0;
    fObject      = 0;
    fSpecific    = 0;
+   fMultiple    = 0;
+   fSecSelRes   = kNone;
 }
 
 //______________________________________________________________________________

@@ -114,6 +114,7 @@ else
 		ACFLAGS="-O"; \
 		if [ "$(CC)" = "icc" ]; then \
 			ACC="icc"; \
+			ACFLAGS+=" -wd188 -wd869 -wd2259 -wd1418 -wd1419 -wd593 -wd981 -wd1599 -wd181 -wd177 -wd1572"; \
 		fi; \
 		if [ "$(ARCH)" = "solarisCC5" ]; then \
 			ACFLAGS+=" -erroff=E_WHITE_SPACE_IN_DIRECTIVE"; \
@@ -144,6 +145,12 @@ else
 		if [ "$(ARCH)" = "linuxx8664gcc" ]; then \
 			ACC="gcc -m64"; \
 			MMX="--enable-mmx-optimization=no"; \
+		fi; \
+		if [ "$(ARCH)" = "linuxicc" ]; then \
+			ACC="icc -m32"; \
+		fi; \
+		if [ "$(ARCH)" = "linuxx8664icc" ]; then \
+			ACC="icc -m64"; \
 		fi; \
 		if [ "$(ASJPEGINCDIR)" != "" ]; then \
 			JPEGINCDIR="--with-jpeg-includes=$(ASJPEGINCDIR)"; \

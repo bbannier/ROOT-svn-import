@@ -97,7 +97,12 @@ read_debug(EditLine_t* el) {
  */
 /* ARGSUSED */
 el_private int
-read__fixio(int /*fd*/, int e) {
+read__fixio(int 
+# if (defined(F_SETFL) && defined(O_NDELAY)) \
+     || defined(FIONBIO)
+            fd
+#endif
+            , int e) {
    switch (e) {
    case - 1:                    /* Make sure that the code is reachable */
 
@@ -508,6 +513,9 @@ el_gets(EditLine_t* el, int* nread) {
    /* save the last command here */
    el->fState.fLastCmd = cmdnum;
 
+   if (el->fMap.fFunc[cmdnum] != ed_replay_hist) {
+      el->fState.fReplayHist = -1;
+   }
    /* use any return value */
    switch (retval) {
    case CC_CURSOR:
@@ -654,6 +662,12 @@ el_gets_newline(EditLine_t* el, int* nread) {
    } else {
       // Only reset the buffer if we edit a whole new line
       ch_reset(el);
+      if (el->fState.fReplayHist >= 0) {
+	 el->fHistory.fEventNo = el->fState.fReplayHist;
+	 // load the entry
+	 ed_prev_history(el, 0);
+      }
+
    }
 
    if (!(el->fFlags & NO_TTY)) {

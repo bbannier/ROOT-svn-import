@@ -114,6 +114,7 @@ RooSimultaneous::RooSimultaneous(const char *name, const char *title,
   RooAbsPdf* pdf ;
   RooCatType* type(0) ;
   while ((pdf=(RooAbsPdf*)pIter->Next())) {
+    type = (RooCatType*) cIter->Next() ;
     pdfMap[string(type->GetName())] = pdf ;
   }
   delete pIter ;
@@ -183,8 +184,8 @@ void RooSimultaneous::initialize(RooAbsCategoryLValue& inIndexCat, std::map<std:
     RooSimultaneous* simComp = dynamic_cast<RooSimultaneous*>(iter->second) ;
     if (simComp) {
       ci.simPdf = simComp ;
-      ci.subIndex = &simComp->indexCat() ;
-      ci.subIndexComps = simComp->indexCat().getVariables() ;
+      ci.subIndex = &simComp->indexCat() ;      
+      ci.subIndexComps = simComp->indexCat().isFundamental() ? new RooArgSet(simComp->indexCat()) : simComp->indexCat().getVariables() ;
       allAuxCats.add(*(ci.subIndexComps),kTRUE) ;
     } else {
       ci.simPdf = 0 ;
@@ -396,21 +397,33 @@ Bool_t RooSimultaneous::addPdf(const RooAbsPdf& pdf, const char* catLabel)
 //_____________________________________________________________________________
 RooAbsPdf::ExtendMode RooSimultaneous::extendMode() const 
 { 
+  // WVE NEEDS FIX
   Bool_t allCanExtend(kTRUE) ;
   Bool_t anyMustExtend(kFALSE) ;
 
   for (Int_t i=0 ; i<_numPdf ; i++) {
     RooRealProxy* proxy = (RooRealProxy*) _pdfProxyList.FindObject(_indexCat.label()) ;
-    RooAbsPdf* pdf = (RooAbsPdf*) proxy->absArg() ;
-    if (!pdf->canBeExtended()) {
-      allCanExtend=kFALSE ;
-    }
-    if (pdf->mustBeExtended()) {
-      anyMustExtend=kTRUE;
+    if (proxy) {
+//       cout << " now processing pdf " << pdf->GetName() << endl ;
+      RooAbsPdf* pdf = (RooAbsPdf*) proxy->absArg() ;
+      if (!pdf->canBeExtended()) {
+// 	cout << "RooSim::extendedMode(" << GetName() << ") component " << pdf->GetName() << " cannot be extended" << endl ;
+	allCanExtend=kFALSE ;
+      }
+      if (pdf->mustBeExtended()) {
+	anyMustExtend=kTRUE;
+      }
     }
   }
-  if (anyMustExtend) return MustBeExtended ;
-  if (allCanExtend) return CanBeExtended ;
+  if (anyMustExtend) {
+//     cout << "RooSim::extendedMode(" << GetName() << ") returning MustBeExtended" << endl ;
+    return MustBeExtended ;
+  }
+  if (allCanExtend) {
+//     cout << "RooSim::extendedMode(" << GetName() << ") returning CanBeExtended" << endl ;
+    return CanBeExtended ;
+  }
+//   cout << "RooSim::extendedMode(" << GetName() << ") returning CanNotBeExtended" << endl ;
   return CanNotBeExtended ; 
 }
 

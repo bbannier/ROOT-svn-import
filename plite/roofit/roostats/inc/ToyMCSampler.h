@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: ToyMCSampler.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: ToyMCSampler.h 31276 2009-11-18 15:06:42Z moneta $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 // Additions and modifications by Mario Pelliccioni
 /*************************************************************************
@@ -46,9 +46,6 @@ END_HTML
 #include "RooStats/TestStatistic.h"
 #include "RooStats/RooStatsUtils.h"
 
-#ifndef __CINT__
-#include "RooGlobalFunc.h"
-#endif
 #include "RooWorkspace.h"
 #include "RooMsgService.h"
 #include "RooAbsPdf.h"

@@ -118,9 +118,11 @@ class TDataSetManager;
 // 22 -> 23: New dataset features (default tree name; classification per fileserver)
 // 23 -> 24: Merging optimization
 // 24 -> 25: Handling of 'data' dir; group information
+// 25 -> 26: Use new TProofProgressInfo class
+// 26 -> 27: Use new file for updating the session status
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 25;            // protocol version number
+const Int_t       kPROOF_Protocol        = 27;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -146,7 +148,7 @@ const char* const kUNTAR3 = "%s -c %s | (tar xf -)";
 const char* const kGUNZIP = "gunzip";
 #else
 const char* const kCP     = "copy";
-const char* const kRM     = "del /F /Q";
+const char* const kRM     = "delete";
 const char* const kLS     = "dir";
 const char* const kUNTAR  = "...";
 const char* const kUNTAR2 = "...";
@@ -157,6 +159,30 @@ const char* const kGUNZIP = "gunzip";
 R__EXTERN TVirtualMutex *gProofMutex;
 
 typedef void (*PrintProgress_t)(Long64_t tot, Long64_t proc, Float_t proctime);
+
+// Structure for the progress information
+class TProofProgressInfo : public TObject {
+public:
+   Long64_t  fTotal;       // Total number of events to process
+   Long64_t  fProcessed;   // Number of events processed
+   Long64_t  fBytesRead;   // Number of bytes read
+   Float_t   fInitTime;    // Time for initialization
+   Float_t   fProcTime;    // Time for processing
+   Float_t   fEvtRateI;    // Instantaneous event rate
+   Float_t   fMBRateI;     // Instantaneous byte read rate
+   Int_t     fActWorkers;  // Numebr of workers still active
+   Int_t     fTotSessions; // Numebr of PROOF sessions running currently on the clusters
+   Float_t   fEffSessions; // Number of effective sessions running on the machines allocated to this session
+   TProofProgressInfo(Long64_t tot = 0, Long64_t proc = 0, Long64_t bytes = 0,
+                      Float_t initt = -1., Float_t proct = -1.,
+                      Float_t evts = -1., Float_t mbs = -1.,
+                      Int_t actw = 0, Int_t tsess = 0, Float_t esess = 0.) :
+                      fTotal(tot), fProcessed(proc), fBytesRead(bytes),
+                      fInitTime(initt), fProcTime(proct), fEvtRateI(evts), fMBRateI(mbs),
+                      fActWorkers(actw), fTotSessions(tsess), fEffSessions(esess) { }
+   virtual ~TProofProgressInfo() { }
+   ClassDef(TProofProgressInfo, 1); // Progress information
+};
 
 // PROOF Interrupt signal handler
 class TProofInterruptHandler : public TSignalHandler {
@@ -194,23 +220,71 @@ public:
    TString      fHostName;     //hostname this slave is running on
    TString      fMsd;          //mass storage domain slave is in
    Int_t        fPerfIndex;    //relative performance of this slave
+   SysInfo_t    fSysInfo;      //Infomation about its hardware
    ESlaveStatus fStatus;       //slave status
 
    TSlaveInfo(const char *ordinal = "", const char *host = "", Int_t perfidx = 0,
               const char *msd = "") :
               fOrdinal(ordinal), fHostName(host), fMsd(msd),
-              fPerfIndex(perfidx), fStatus(kNotActive) { }
+              fPerfIndex(perfidx), fSysInfo(), fStatus(kNotActive) { }
 
    const char *GetMsd() const { return fMsd; }
    const char *GetName() const { return fHostName; }
    const char *GetOrdinal() const { return fOrdinal; }
+   SysInfo_t   GetSysInfo() const { return fSysInfo; }
    void        SetStatus(ESlaveStatus stat) { fStatus = stat; }
+   void        SetSysInfo(SysInfo_t si);
 
    Int_t  Compare(const TObject *obj) const;
    Bool_t IsSortable() const { return kTRUE; }
    void   Print(Option_t *option="") const;
 
-   ClassDef(TSlaveInfo,2) //basic info on slave
+   ClassDef(TSlaveInfo,3) //basic info on slave
+};
+
+// Merger info class
+class TMergerInfo : public TObject {
+private:
+
+   TSlave      *fMerger;         // Slave that acts as merger
+   Int_t        fPort;           // Port number, on which it accepts outputs from other workers
+   Int_t        fMergedObjects;  // Total number of objects it must accept from other workers 
+                                 // (-1 == not set yet)
+   Int_t        fWorkersToMerge; // Number of workers that are merged on this merger 
+                                 // (does not change during time)
+   Int_t        fMergedWorkers;  // Current number of already merged workers
+                                 // (does change during time as workers are being merged)
+
+   TList       *fWorkers;        // List of already assigned workers
+   Bool_t       fIsActive;       // Merger state
+
+public:
+
+   TMergerInfo(TSlave *t, Int_t port, Int_t forHowManyWorkers) :
+               fMerger(t), fPort(port), fMergedObjects(0), fWorkersToMerge(forHowManyWorkers),
+               fMergedWorkers(0), fWorkers(0), fIsActive(kTRUE) { }
+   virtual ~TMergerInfo();
+
+   void        AddWorker(TSlave *sl);
+   TList      *GetWorkers() { return fWorkers; }
+
+   TSlave     *GetMerger() { return fMerger; }
+   Int_t       GetPort() { return fPort; }
+
+   Int_t       GetWorkersToMerge() { return fWorkersToMerge; }
+   Int_t       GetMergedWorkers() { return fMergedWorkers; }
+   Int_t       GetMergedObjects() { return fMergedObjects; }
+
+   void        SetMergedWorker();
+   void        AddMergedObjects(Int_t objects) { fMergedObjects += objects; }
+
+   Bool_t      AreAllWorkersAssigned();
+   Bool_t      AreAllWorkersMerged();	
+
+   void Deactivate() { fIsActive = kFALSE; }
+   Bool_t      IsActive() { return fIsActive; }
+
+   ClassDef(TMergerInfo,0)          // Basic info on merger, i.e. worker serving as merger
 };
 
 // Small auxilliary class for merging progress notification
@@ -221,7 +295,7 @@ private:
    Int_t        fNWrks;
    static char  fgCr[4];
 public:
-   TProofMergePrg() : fIdx(-1), fNWrks(-1) { }
+   TProofMergePrg() : fExp(), fIdx(-1), fNWrks(-1) { }
 
    const char  *Export() { fExp.Form("%c (%d workers still sending)   ", fgCr[fIdx], fNWrks);
                            return fExp.Data(); }
@@ -230,7 +304,6 @@ public:
    void         Reset(Int_t n = -1) { fIdx = -1; SetNWrks(n); }
    void         SetNWrks(Int_t n) { fNWrks = n; }
 };
-
 
 class TProof : public TNamed, public TQObject {
 
@@ -261,7 +334,8 @@ public:
       kUsingSessionGui     = BIT(14),
       kNewInputData        = BIT(15),
       kIsClient            = BIT(16),
-      kIsMaster            = BIT(17)
+      kIsMaster            = BIT(17),
+      kIsTopMaster         = BIT(18)
    };
    enum EQueryMode {
       kSync                = 0,
@@ -283,7 +357,7 @@ public:
    enum EUploadDataSetAnswer {
       kError               = -1,
       kDataSetExists       = -2,
-      kFail		   = -3
+      kFail                = -3
    };
    enum EUploadPackageOpt {
       kUntar               = 0x0,  //Untar over existing dir [default]
@@ -294,6 +368,15 @@ public:
       kStopped             = 1,    // After the stop button has been pressed
       kAborted             = 2     // After the abort button has been pressed
    };
+
+   enum ESubMerger {
+      kOutputSize     = 1,         //Number of objects in worker's output list
+      kSendOutput     = 2,         //Naster asks worker for its output list
+      kBeMerger       = 3,         //Master tells worker to be a merger
+      kMergerDown     = 4,         //Merger cannot serve
+      kStopMerging    = 5,         //Master tells worker to stop merging (and return output)
+      kOutputSent     = 6          //Worker reports sending its output to given worker
+  };
 
 private:
    enum EUrgent {
@@ -444,6 +527,15 @@ private:
    TList          *fLoadedMacros;    // List of loaded macros (just file names)
    static TList   *fgProofEnvList;   // List of TNameds defining environment
                                      // variables to pass to proofserv
+
+   Bool_t          fMergersSet;      // Indicates, if the following variables have been initialized properly                               
+   Int_t           fMergersCount;
+   Int_t           fWorkersToMerge;  // Current total number of workers, which have not been yet assigned to any merger
+   Int_t           fLastAssignedMerger;
+   TList          *fMergers;
+   Bool_t          fFinalizationRunning;
+   Int_t           fRedirectNext;
+
    static TPluginHandler *fgLogViewer;  // Log dialog box plugin
 
 protected:
@@ -474,8 +566,6 @@ protected:
    Bool_t          fDynamicStartup; // are the workers started dynamically?
 
    static TSemaphore *fgSemaphore;   //semaphore to control no of parallel startup threads
-
-   static TList   *fgUnlinkPaths;   // List of paths which support unlink operations
 
 private:
    TProof(const TProof &);           // not implemented
@@ -532,6 +622,7 @@ private:
    Int_t    Collect(TMonitor *mon, Long_t timeout = -1, Int_t endtype = -1);
    Int_t    CollectInputFrom(TSocket *s, Int_t endtype = -1);
    Int_t    HandleInputMessage(TSlave *wrk, TMessage *m);
+   void     HandleSubmerger(TMessage *mess, TSlave *sl);
    void     SetMonitor(TMonitor *mon = 0, Bool_t on = kTRUE);
 
    void     ReleaseMonitor(TMonitor *mon);
@@ -565,11 +656,19 @@ private:
    void     DeActivateAsyncInput();
 
    Int_t    GetQueryReference(Int_t qry, TString &ref);
-
    void     PrintProgress(Long64_t total, Long64_t processed, Float_t procTime = -1.);
 
-   void     ResetMergePrg();
+   // Managing mergers
+   Bool_t   CreateMerger(TSlave *sl, Int_t port);
+   void     RedirectWorker(TSocket *s, TSlave * sl, Int_t output_size);
+   Int_t    GetActiveMergersCount();
+   Int_t    FindNextFreeMerger();
+   void     ResetMergers() { fMergersSet = kFALSE; }
+   void     AskForOutput(TSlave *sl);
 
+   void     FinalizationDone() { fFinalizationRunning = kFALSE; }
+
+   void     ResetMergePrg();
    void     ParseConfigField(const char *config);
 
    Bool_t   Prompt(const char *p);
@@ -748,6 +847,7 @@ public:
    Int_t       GetStatus() const { return fStatus; }
    Int_t       GetLogLevel() const { return fLogLevel; }
    Int_t       GetParallel() const;
+   Int_t       GetSeqNum() const { return fSeqNum; }
    Int_t       GetSessionID() const { return fSessionID; }
    TList      *GetListOfSlaveInfos();
    Bool_t      UseDynamicStartup() const { return fDynamicStartup; }
@@ -772,8 +872,6 @@ public:
 
    ERunStatus  GetRunStatus() const { return fRunStatus; }
    TList      *GetLoadedMacros() const { return fLoadedMacros; }
-
-   Int_t       GetSeqNum() const { return fSeqNum; }
 
    //-- input list parameter handling
    void        SetParameter(const char *par, const char *value);
@@ -820,6 +918,10 @@ public:
    void        Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
                         Float_t initTime, Float_t procTime,
                         Float_t evtrti, Float_t mbrti); // *SIGNAL*
+   void        Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
+                        Float_t initTime, Float_t procTime,
+                        Float_t evtrti, Float_t mbrti,
+                        Int_t actw, Int_t tses, Float_t eses); // *SIGNAL*
    void        Feedback(TList *objs); //*SIGNAL*
    void        QueryResultReady(const char *ref); //*SIGNAL*
    void        CloseProgressDialog(); //*SIGNAL*
@@ -884,11 +986,6 @@ public:
    static Int_t         GetParameter(TCollection *c, const char *par, Long_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Long64_t &value);
    static Int_t         GetParameter(TCollection *c, const char *par, Double_t &value);
-
-   // Recursive unlink
-   static void          AddUnlinkPath(const char *path);
-   static Bool_t        CanUnlink(const char *path, Bool_t isdir);
-   static Int_t         Unlink(const char *path, Bool_t recursive);
 
    ClassDef(TProof,0)  //PROOF control class
 };

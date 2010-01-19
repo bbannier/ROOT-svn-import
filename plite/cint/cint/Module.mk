@@ -45,7 +45,6 @@ CINTS2       := $(filter-out $(MODDIRS)/macos.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/winnt.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/newsos.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/loadfile_tmp.%,$(CINTS2))
-CINTS2       := $(filter-out $(MODDIRS)/symbols.%,$(CINTS2))
 
 # strip off possible leading path from compiler command name
 CXXCMD       := $(shell echo $(CXX) | sed s/".*\/"//)
@@ -174,10 +173,6 @@ CINTS2       += $(MODDIRSD)/longif3.cxx
 endif
 endif
 
-ifneq ($(findstring -DG__NOSTUBS,$(CINTCXXFLAGS)),)
-CINTS2       += $(MODDIRS)/symbols.cxx
-endif
-
 CINTS        := $(CINTS1) $(CINTS2)
 CINTO        := $(CINTS1:.c=.o) $(CINTS2:.cxx=.o)
 CINTTMPO     := $(subst loadfile.o,loadfile_tmp.o,$(CINTO))
@@ -218,13 +213,6 @@ ALLHDRS     += $(CINTHT)
 
 CINTCXXFLAGS += -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY -I$(CINTDIRI) -I$(CINTDIRS) -I$(CINTDIRSD)
 CINTCFLAGS += -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY -I$(CINTDIRI) -I$(CINTDIRS) -I$(CINTDIRSD)
-
-##### used by configcint.mk #####
-G__CFG_CXXFLAGS := $(CINTCXXFLAGS)
-G__CFG_CFLAGS   := $(CINTCFLAGS)
-G__CFG_DIR      := $(CINTDIR)
-G__CFG_CONF     := $(CINTCONF)
-G__CFG_CONFMK   := $(CINTCONFMK)
 
 ##### used by cintdlls.mk #####
 CINTDLLDIRSTL    := $(CINTDIRSTL)
@@ -310,9 +298,9 @@ $(CINTDIRS)/loadfile_tmp.cxx: $(CINTDIRS)/loadfile.cxx
 
 $(CINTDIRS)/loadfile_tmp.o $(CINTO): OPT:=$(filter-out -Wshadow,$(OPT))
 $(CINTDIRS)/loadfile_tmp.o $(CINTO): CXXFLAGS:=$(filter-out -Wshadow,$(CXXFLAGS))
-
-ifneq ($(findstring -DG__NOSTUBS,$(CINTCXXFLAGS)),)
-$(CINTDIRS)/newlink.o: OPT = $(NOOPT)
+ifneq ($(subst -ftest-coverage,,$(OPT)),$(OPT))
+# we have coverage on - not interesting for dictionaries
+$(subst .cxx,.o,$(wildcard $(CINTDIRSD)/*.cxx)): override OPT:= $(subst -fprofile-arcs,,$(subst -ftest-coverage,,$(OPT)))
 endif
 
 ##### configcint.h

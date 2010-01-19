@@ -65,7 +65,7 @@ G__value G__castvalue_bc(char *casttype,G__value result3, int i);
   void G__this_adjustment(struct G__ifunc_table_internal *ifunc, int ifn);
 void G__asm_cast(int type,G__value *buf,int tagnum,int reftype);
   /* void G__setdebugcond(void); */
-int G__findposition(const char *string,struct G__input_file view,int *pline,int *pfnum);
+int G__findposition(const char *string,struct G__input_file* view,int *pline,int *pfnum);
 int G__beforelargestep(char *statement,int *piout,int *plargestep);
 void G__afterlargestep(int *plargestep);
 void G__EOFfgetc(void);
@@ -196,7 +196,11 @@ long G__getvirtualbaseoffset(long pobject,int tagnum,struct G__inheritance *base
 int G__ispublicbase(int basetagnum,int derivedtagnum);
 int G__isanybase(int basetagnum,int derivedtagnum);
 #endif
+#ifdef G__VIRTUALBASE
+int G__find_virtualoffset(int virtualtag, long pobject);
+#else
 int G__find_virtualoffset(int virtualtag);
+#endif
   /* int G__main(int argc,char **argv); */
 int G__init_globals(void);
 void G__set_stdio(void);

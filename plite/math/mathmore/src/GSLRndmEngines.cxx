@@ -62,6 +62,11 @@ namespace Math {
   } 
 
 
+   GSLRandomEngine::~GSLRandomEngine() {
+      // destructor : call terminate
+      if (fRng) Terminate();
+   }
+
    void GSLRandomEngine::Initialize() { 
       //----------------------------------------------------
       assert(fRng != 0);
@@ -253,9 +258,8 @@ namespace Math {
    std::vector<unsigned int>  GSLRandomEngine::Multinomial( unsigned int ntot, const std::vector<double> & p ) const
    { 
       // Multinomial distribution  return vector of integers which sum is ntot
-      unsigned int * narray = new unsigned int(p.size() ); 
-      gsl_ran_multinomial(  fRng->Rng(), p.size(), ntot, &p.front(), narray);
-      std::vector<unsigned int> ival( narray, narray+p.size()); 
+      std::vector<unsigned int> ival( p.size()); 
+      gsl_ran_multinomial(  fRng->Rng(), p.size(), ntot, &p.front(), &ival[0]);
       return ival; 
    }
 

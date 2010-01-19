@@ -40,8 +40,6 @@ CXXFLAGS     += -wd1572
 CFLAGS       += -wd1572
 CINTCXXFLAGS += -wd1572
 CINTCFLAGS   += -wd1572
-USE_PCH       = -use_pch
-CREATE_PCH    = -create_pch
 endif
 endif
 
@@ -50,8 +48,6 @@ CXXFLAGS     += -wd1572 -wd873 -wd672
 CFLAGS       += -wd1572
 CINTCXXFLAGS += -wd1572 -wd873
 CINTCFLAGS   += -wd1572
-USE_PCH       = -use_pch
-CREATE_PCH    = -create_pch
 ICC_GE_9      = 9
 endif
 
@@ -60,8 +56,6 @@ CXXFLAGS     += -wd1572 -wd873 -wd672
 CFLAGS       += -wd1572
 CINTCXXFLAGS += -wd1572 -wd873
 CINTCFLAGS   += -wd1572
-USE_PCH       = -pch-use
-CREATE_PCH    = -pch-create
 ICC_GE_9      = 10
 ifneq ($(ICC_MINOR),0)
 ICC_GE_101    = 101
@@ -69,12 +63,10 @@ endif
 endif
 
 ifeq ($(ICC_MAJOR),11)
-CXXFLAGS     += -wd1572 -wd873 -wd672
-CFLAGS       += -wd1572
-CINTCXXFLAGS += -wd1572 -wd873
-CINTCFLAGS   += -wd1572
-USE_PCH       = -pch-use
-CREATE_PCH    = -pch-create
+CXXFLAGS     += -wd1572 -wd873 -wd672 -wd279
+CFLAGS       += -wd1572 -wd279
+CINTCXXFLAGS += -wd1572 -wd873 -wd279
+CINTCFLAGS   += -wd1572 -wd279
 ICC_GE_9      = 11
 ICC_GE_101    = 110
 endif
@@ -103,12 +95,16 @@ SOFLAGS       = -dynamiclib -single_module \
                 -undefined dynamic_lookup -install_name $(LIBDIR)/
 endif
 endif
-#ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
-# not yet supported by icc 10.1 xilibtool
-#SOEXT         = so
-#else
+ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
+ifeq ($(ICC_MAJOR),11)
+SOEXT         = so
+# not yet supported by icc 10.x xilibtool
+else
 SOEXT         = dylib
-#endif
+endif
+else
+SOEXT         = dylib
+endif
 
 # System libraries:
 SYSLIBS       = -lm $(EXTRA_LDFLAGS) $(OSTHREADLIBDIR) \
@@ -120,18 +116,18 @@ CILIBS        = -lm $(EXTRA_LDFLAGS) -ldl
 ifeq ($(F77),ifort)
 F77           = ifort
 F77FLAGS      = -fPIC
+ifeq ($(ICC_MAJOR),11)
+ifneq ($(subst ia32,,$(shell which ifort)),$(shell which ifort))
+F77LIBS      := -L$(shell which ifort | sed -e 's|bin/ia32/ifort|lib/ia32|') \
+                -lifcore
+else
+F77LIBS      := -L$(shell which ifort | sed -e 's|bin/intel64/ifort|lib/intel64|') \
+                -lifcore
+endif
+else
 F77LIBS      := -L$(shell which ifort | sed -e 's|bin/ifort|lib|') \
                 -lifcore
 endif
-
-# Precompiled headers:
-PCHSUPPORTED := $(ENABLEPCH)
-ifeq ($(PCHSUPPORTED),yes)
-  PCHFILE          = include/precompile.pchi
-  PCHCXXFLAGS      = -DUSEPCH -include precompile.h $(USE_PCH) $(PCHFILE)
-  PCHEXTRAOBJBUILD = $(LD) $(OPT) $(CXXFLAGS) -DUSEPCH \
-                     -include precompile.h $(CREATE_PCH) $(PCHFILE) \
-                     -c $(PCHEXTRASRC) -o $(PCHEXTRAOBJ)
 endif
 
 # Override default in Makefile.config

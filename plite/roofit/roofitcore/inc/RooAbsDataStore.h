@@ -18,12 +18,15 @@
 
 #include "Rtypes.h"
 #include "RooArgSet.h" 
+#include "RooAbsData.h"
 #include "TNamed.h"
 #include <list>
+
 
 class RooAbsArg ;
 class RooArgList ;
 class TIterator ;
+class TTree ;
 
 class RooAbsDataStore : public TNamed, public RooPrintable {
 public:
@@ -37,10 +40,18 @@ public:
 
   // Write current row
   virtual Int_t fill() = 0 ;
-
+  
   // Retrieve a row
   virtual const RooArgSet* get(Int_t index) const = 0 ;
   virtual const RooArgSet* get() const { return &_vars ; } 
+  virtual Double_t weight() const = 0 ;
+
+  virtual Double_t weightError(RooAbsData::ErrorType etype=RooAbsData::Poisson) const = 0 ;
+  virtual void weightError(Double_t& lo, Double_t& hi, RooAbsData::ErrorType etype=RooAbsData::Poisson) const = 0 ; 
+
+  virtual Double_t weight(Int_t index) const = 0 ;
+
+  virtual Bool_t isWeighted() const = 0 ;
 
   // Change observable name
   virtual Bool_t changeObservableName(const char* from, const char* to) =0 ;
@@ -78,14 +89,20 @@ public:
    
 
   // Constant term  optimizer interface
-  virtual void initCache(const RooArgSet& cachedVars) = 0 ;
-  virtual void cacheArgs(RooArgSet& varSet, const RooArgSet* nset=0) = 0 ;
+  virtual void cacheArgs(const RooAbsArg* cacheOwner, RooArgSet& varSet, const RooArgSet* nset=0) = 0 ;
+  virtual const RooAbsArg* cacheOwner() = 0 ;
+  virtual void attachCache(const RooAbsArg* newOwner, const RooArgSet& cachedVars) = 0 ;
   virtual void setArgStatus(const RooArgSet& set, Bool_t active) = 0 ;
+  const RooArgSet& cachedVars() const { return _cachedVars ; }
   virtual void resetCache() = 0 ;
 
   virtual void setDirtyProp(Bool_t flag) { _doDirtyProp = flag ; }
 
   virtual void checkInit() const {} ;
+  
+  Bool_t hasFilledCache() const { return _cachedVars.getSize()>0 ; }
+
+  virtual const TTree* tree() const { return 0 ; }
 
  protected:
 

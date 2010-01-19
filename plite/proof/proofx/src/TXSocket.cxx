@@ -673,8 +673,8 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
 
             // Signal it and release the mutex
             if (gDebug > 2)
-               Info("ProcessUnsolicitedMsg","%p: posting semaphore: %p (%d bytes)",
-                    this,&fASem,len);
+               Info("ProcessUnsolicitedMsg","%p: %s: posting semaphore: %p (%d bytes)",
+                                            this, GetTitle(), &fASem, len);
             fASem.Post();
          }
 
@@ -798,6 +798,40 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
          //
          // process the next query (in the TXProofServ)
          PostMsg(kPROOF_STARTPROCESS);
+         break;
+      case kXPD_clusterinfo:
+         //
+         // Broadcast cluster information
+         {
+            kXR_int32 nsess = -1, nacti = -1, neffs = -1;
+            if (len > 0) {
+               // Total sessions
+               memcpy(&nsess, pdata, sizeof(kXR_int32));
+               nsess = net2host(nsess);
+               pdata = (void *)((char *)pdata + sizeof(kXR_int32));
+               len -= sizeof(kXR_int32);
+               // Active sessions
+               memcpy(&nacti, pdata, sizeof(kXR_int32));
+               nacti = net2host(nacti);
+               pdata = (void *)((char *)pdata + sizeof(kXR_int32));
+               len -= sizeof(kXR_int32);
+               // Effective sessions
+               memcpy(&neffs, pdata, sizeof(kXR_int32));
+               neffs = net2host(neffs);
+               pdata = (void *)((char *)pdata + sizeof(kXR_int32));
+               len -= sizeof(kXR_int32);
+            }
+            if (gDebug > 1)
+               Info("ProcessUnsolicitedMsg","kXPD_clusterinfo: # sessions: %d,"
+                    " # active: %d, # effective: %f", nsess, nacti, neffs/1000.);
+            // Handle this input in this thread to avoid queuing on the
+            // main thread
+            XHandleIn_t hin = {acod, nsess, nacti, neffs};
+            if (fHandler)
+               fHandler->HandleInput((const void *)&hin);
+            else
+               Error("ProcessUnsolicitedMsg","handler undefined");
+         }
          break;
      default:
          Error("ProcessUnsolicitedMsg","%p: unknown action code: %d received from '%s' - disabling",
@@ -1316,7 +1350,7 @@ Int_t TXSocket::PickUpReady()
    fByteLeft = 0;
    fByteCur = 0;
    if (gDebug > 2)
-      Info("PickUpReady","%p: going to sleep", this);
+      Info("PickUpReady", "%p: %s: going to sleep", this, GetTitle());
 
    // User can choose whether to wait forever or for a fixed amount of time
    if (!fDontTimeout) {
@@ -1331,7 +1365,8 @@ Int_t TXSocket::PickUpReady()
                return -1;
             } else {
                if (gDebug > 0)
-                  Info("PickUpReady","%p: got timeout: retring (%d secs)", this, to/1000);
+                  Info("PickUpReady", "%p: %s: got timeout: retring (%d secs)",
+                                      this, GetTitle(), to/1000);
             }
          } else
             break;
@@ -1350,7 +1385,7 @@ Int_t TXSocket::PickUpReady()
       }
    }
    if (gDebug > 2)
-      Info("PickUpReady","%p: waken up", this);
+      Info("PickUpReady", "%p: %s: waken up", this, GetTitle());
 
    R__LOCKGUARD(fAMtx);
 
@@ -1367,7 +1402,8 @@ Int_t TXSocket::PickUpReady()
       fByteLeft = fBufCur->fLen;
 
    if (gDebug > 2)
-      Info("PickUpReady","%p: got message (%d bytes)", this, (Int_t)(fBufCur ? fBufCur->fLen : 0));
+      Info("PickUpReady", "%p: %s: got message (%d bytes)",
+                          this, GetTitle(), (Int_t)(fBufCur ? fBufCur->fLen : 0));
 
    // Update counters
    fBytesRecv += fBufCur->fLen;
@@ -1876,19 +1912,19 @@ void TXSocket::InitEnvs()
    Int_t connTO = gEnv->GetValue("XProof.ConnectTimeout", 2);
    EnvPutInt(NAME_CONNECTTIMEOUT, connTO);
 
-   // Reconnect Timeout
-   Int_t recoTO = gEnv->GetValue("XProof.ReconnectTimeout",
-                                  DFLT_RECONNECTTIMEOUT);
-   EnvPutInt(NAME_RECONNECTTIMEOUT, recoTO);
+   // Reconnect Wait
+   Int_t recoTO = gEnv->GetValue("XProof.ReconnectWait",
+                                  DFLT_RECONNECTWAIT);
+   if (recoTO == DFLT_RECONNECTWAIT) {
+      // Check also the old variable name
+      recoTO = gEnv->GetValue("XProof.ReconnectTimeout",
+                                  DFLT_RECONNECTWAIT);
+   }
+   EnvPutInt(NAME_RECONNECTWAIT, recoTO);
 
    // Request Timeout
    Int_t requTO = gEnv->GetValue("XProof.RequestTimeout", 150);
    EnvPutInt(NAME_REQUESTTIMEOUT, requTO);
-
-   // Whether to use a separate thread for garbage collection
-   Int_t garbCollTh = gEnv->GetValue("XProof.StartGarbageCollectorThread",
-                                      DFLT_STARTGARBAGECOLLECTORTHREAD);
-   EnvPutInt(NAME_STARTGARBAGECOLLECTORTHREAD, garbCollTh);
 
    // No automatic proofd backward-compatibility
    EnvPutInt(NAME_KEEPSOCKOPENIFNOTXRD, 0);
@@ -2154,7 +2190,7 @@ Int_t TXSockPipe::Post(TSocket *s)
 
    if (gDebug > 2)
       Printf("TXSockPipe::Post: %s: %p: pipe posted (pending %d)",
-                                   fLoc.Data(), s, sz);
+                               fLoc.Data(), s, sz);
    // We are done
    return 0;
 }

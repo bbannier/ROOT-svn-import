@@ -16,7 +16,7 @@
 #include "TGLAxisPainter.h"
 
 #include "TEveCaloData.h"
-#include "TEveVSDStructs.h"
+#include "TEveVector.h"
 #include "TEveCalo.h"
 
 #include <map>
@@ -26,16 +26,46 @@ class TEveCaloLego;
 class TEveCaloLegoGL : public TGLObject
 {
 private:
-   TEveCaloLegoGL(const TEveCaloLegoGL&);            // Not implemented
-   TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Not implemented
+   struct Cell2D_t
+   {
+      Int_t   fId;
+      Float_t fSumVal;
+      Int_t   fMaxSlice;
 
-   mutable Float_t   fDataMax; // cached
+      Float_t  fX0, fX1, fY0, fY1;
 
-   // axis
-   mutable TAxis    *fEtaAxis;
-   mutable TAxis    *fPhiAxis;
-   mutable TAxis    *fZAxis;
+      Cell2D_t(Int_t id, Float_t sumVal, Int_t maxSlice)
+      {
+         fId       = id;
+         fSumVal   = sumVal;
+         fMaxSlice = maxSlice;
+      }
 
+      void SetGeom(Float_t x0, Float_t x1, Float_t y0, Float_t y1)
+      {
+         fX0 = x0; fX1 = x1;
+         fY0 = y0; fY1 = y1;
+      }
+
+      Float_t MinSize() { return TMath::Min(fX1- fX0, fY1 - fY0); }
+      Float_t X()       { return 0.5*(fX0 + fX1); }
+      Float_t Y()       { return 0.5*(fY0 + fY1); }
+   };
+
+   typedef std::vector<Cell2D_t>             vCell2D_t;
+   typedef std::vector<Cell2D_t>::iterator   vCell2D_i;
+
+   typedef std::map<Int_t, UInt_t>           SliceDLMap_t;
+   typedef std::map<Int_t, UInt_t>::iterator SliceDLMap_i;
+
+   // histogram base
+   mutable Float_t                   fDataMax;
+   mutable Color_t                   fGridColor;
+   mutable Color_t                   fFontColor;
+
+   mutable TAxis      *fEtaAxis;
+   mutable TAxis      *fPhiAxis;
+   mutable TAxis      *fZAxis;
    mutable TEveVector  fXAxisTitlePos;
    mutable TEveVector  fYAxisTitlePos;
    mutable TEveVector  fZAxisTitlePos;
@@ -43,8 +73,22 @@ private:
    mutable TEveVector  fBackPlaneYConst[2];
 
    mutable TGLAxisPainter fAxisPainter;
-   mutable Int_t          fBinStep;
 
+   // cached
+   TEveCaloLego                     *fM;
+   mutable Bool_t                    fDLCacheOK;
+   mutable vCell2D_t                 fCells2D;
+
+   mutable TEveCaloData::RebinData_t fRebinData;
+   mutable Float_t                   fMaxValRebin;
+   mutable Float_t                   fValToPixel; // top logaritmic viewview
+   mutable Int_t                     fCurrentPixelsPerBin;
+
+   mutable SliceDLMap_t              fDLMap;
+   mutable Bool_t                    fCells3D;
+
+   TEveCaloLegoGL(const TEveCaloLegoGL&);            // Stop default
+   TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Stop default
 
 protected:
    Int_t   GetGridStep(TGLRnrCtx &rnrCtx) const;
@@ -55,24 +99,18 @@ protected:
    void    DrawAxis2D(TGLRnrCtx &rnrCtx) const;
    void    DrawHistBase(TGLRnrCtx &rnrCtx) const;
 
-   void    DrawCells2D() const;
+   // top view
+   void    PrepareCell2DData(TEveCaloData::vCellId_t& cellList, vCell2D_t& cells2D) const;
+   void    PrepareCell2DDataRebin(TEveCaloData::RebinData_t& rebinData, vCell2D_t& cells2D) const;
+   void    DrawCells2D(TGLRnrCtx & rnrCtx, vCell2D_t& cells2D) const;
 
+   // 3D view
    void    DrawCells3D(TGLRnrCtx & rnrCtx) const;
    void    MakeQuad(Float_t x, Float_t y, Float_t z, Float_t xw, Float_t yw, Float_t zh) const;
-   void    MakeDisplayList() const;
+   void    Make3DDisplayList(TEveCaloData::vCellId_t& cellList, SliceDLMap_t& map, Bool_t select) const;
+   void    Make3DDisplayListRebin(TEveCaloData::RebinData_t& rebinData, SliceDLMap_t& map, Bool_t select) const;
 
    void    WrapTwoPi(Float_t &min, Float_t &max) const;
-
-   TEveCaloLego                     *fM;  // Model object.
-   mutable Bool_t                    fDLCacheOK;
-
-   typedef std::map<Int_t, UInt_t>           SliceDLMap_t;
-   typedef std::map<Int_t, UInt_t>::iterator SliceDLMap_i;
-
-   mutable SliceDLMap_t              fDLMap;
-   mutable TEveCaloData::RebinData_t fRebinData;
-
-   mutable Bool_t                    fCells3D;
 
 public:
    TEveCaloLegoGL();
@@ -86,7 +124,10 @@ public:
    virtual void   DLCachePurge();
 
    virtual void   DirectDraw(TGLRnrCtx & rnrCtx) const;
+   virtual void   DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* ps) const;
+
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
+   virtual Bool_t AlwaysSecondarySelect()   const { return kTRUE; }
    virtual void   ProcessSelection(TGLRnrCtx & rnrCtx, TGLSelectRecord & rec);
 
    ClassDef(TEveCaloLegoGL, 0); // GL renderer class for TEveCaloLego.

@@ -426,7 +426,7 @@ TBranch::~TBranch()
    // Remove our leaves from our tree's list of leaves.
    if (fTree) {
       TObjArray* lst = fTree->GetListOfLeaves();
-      if (lst) {
+      if (lst && lst->GetLast()!=-1) {
          lst->RemoveAll(&fLeaves);
       }
    }
@@ -825,7 +825,7 @@ Int_t TBranch::Fill()
    }
 
    // Should we create a new basket?
-   // fSkipZip force one entry per buffer
+   // fSkipZip force one entry per buffer (old stuff still maintained for CDF)
    // Transfer full compressed buffer only
 
    if ((fSkipZip && (lnew >= TBuffer::kMinimalSize)) || (buf->TestBit(TBufferFile::kNotDecompressed)) || ((lnew + (2 * nsize) + nbytes) >= fBasketSize)) {
@@ -1051,6 +1051,7 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
    // create/decode basket parameters from buffer
    TFile *file = GetFile(0);
    basket = new TBasket(file);
+   // fSkipZip is old stuff still maintained for CDF
    if (fSkipZip) basket->SetBit(TBufferFile::kNotDecompressed);
    basket->SetBranch(this);
    if (fBasketBytes[basketnumber] == 0) {
@@ -1058,10 +1059,9 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
    }
    //add branch to cache (if any)
    TFileCacheRead *pf = file ? file->GetCacheRead() : 0;
-   if (pf && pf->InheritsFrom(TTreeCache::Class())){
-      TTreeCache *tpf = (TTreeCache*)pf;
-      tpf->AddBranch(this);
-      if (fSkipZip) tpf->SetSkipZip();
+   if (pf){
+      if (pf->IsLearning()) pf->AddBranch(this);
+      if (fSkipZip) pf->SetSkipZip();
    }
 
    //now read basket
@@ -1403,7 +1403,9 @@ TBranch* TBranch::GetSubBranch(const TBranch* child) const
       }
       if (branch == child) {
          // We are the direct parent of child.
+         const_cast<TBranch*>(child)->fParent = (TBranch*)this; // We can not yet use the 'mutable' keyword
          // Note: We cast away any const-ness of "this".
+         const_cast<TBranch*>(child)->fParent = (TBranch*)this; // We can not yet use the 'mutable' keyword
          return (TBranch*) this;
       }
       // FIXME: This is a tail-recursion!
@@ -1714,6 +1716,9 @@ void TBranch::ResetAddress()
    // Reset the address of the branch.
 
    fAddress = 0;
+   
+   //  Reset last read entry number, we have will had new user object now.
+   fReadEntry = -1;   
 
    for (Int_t i = 0; i < fNleaves; ++i) {
       TLeaf* leaf = (TLeaf*) fLeaves.UncheckedAt(i);

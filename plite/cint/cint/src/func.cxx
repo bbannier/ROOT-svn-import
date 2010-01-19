@@ -1795,8 +1795,10 @@ G__value G__getfunction_libp(const char* item, char* funcname, G__param* libp, i
       result7.Format("*%s", funcname);
       *known3 = 0;
       pfparam = (char*)strchr(item, '(');
-      p2ffpara = libp;
-      result3 = G__pointer2func((G__value*)NULL, result7, pfparam, known3);
+      if (pfparam) {
+         p2ffpara = libp;
+         result3 = G__pointer2func((G__value*)NULL, result7, pfparam, known3);
+      }
       p2ffpara = (struct G__param*)NULL;
       if (*known3) {
          G__exec_memberfunc = store_exec_memberfunc;
@@ -3081,8 +3083,10 @@ G__value G__getfunction(const char* item, int* known3, int memfunc_flag)
       sprintf(result7, "*%s", funcname());
       *known3 = 0;
       pfparam = (char*)strchr(item, '(');
-      p2ffpara = &fpara;
-      result3 = G__pointer2func((G__value*)NULL, result7, pfparam, known3);
+      if (pfparam) {
+         p2ffpara = &fpara;
+         result3 = G__pointer2func((G__value*)NULL, result7, pfparam, known3);
+      }
       p2ffpara = (struct G__param*)NULL;
       if (*known3) {
          G__exec_memberfunc = store_exec_memberfunc;
@@ -3384,9 +3388,8 @@ int G__library_func(G__value *result7, char *funcname, G__param *libp, int hash)
       if (G__checkscanfarg("sscanf", libp, 2)) return(1);
       switch (libp->paran) {
          case 2:
-            G__letint(result7, 'i'
-                  , sscanf((char *)G__int(libp->para[0])
-                     , (char *)G__int(libp->para[1]))) ;
+            G__fprinterr(G__serr, "sscanf: no target variable given!");
+            G__genericerror((char*)NULL);
             break;
          case 3:
             G__letint(result7, 'i'
@@ -3510,9 +3513,8 @@ int G__library_func(G__value *result7, char *funcname, G__param *libp, int hash)
       if (G__checkscanfarg("fscanf", libp, 2)) return(1);
       switch (libp->paran) {
          case 2:
-            G__letint(result7, 'i'
-                  , fscanf((FILE *)G__int(libp->para[0])
-                     , (char *)G__int(libp->para[1]))) ;
+            G__fprinterr(G__serr, "fscanf: no target variable given!");
+            G__genericerror((char*)NULL);
             break;
          case 3:
             G__letint(result7, 'i'
@@ -3635,8 +3637,8 @@ int G__library_func(G__value *result7, char *funcname, G__param *libp, int hash)
       if (G__checkscanfarg("scanf", libp, 1)) return(1);
       switch (libp->paran) {
          case 1:
-            G__letint(result7, 'i'
-                  , fscanf(G__intp_sin, (char *)G__int(libp->para[0]))) ;
+            G__fprinterr(G__serr, "scanf: no target variable given!");
+            G__genericerror((char*)NULL);
             break;
          case 2:
             G__letint(result7, 'i'
@@ -5024,6 +5026,7 @@ char *G__charformatter(int ifmt, G__param *libp, char *result)
          case '8':
          case '9':
             dig = dig * 10 + pformat[ichar] - '0';
+            // intentional fall-through, need to put digit into onefmt.
       case '#': // "alternate form"
          case '.':
          case '-':

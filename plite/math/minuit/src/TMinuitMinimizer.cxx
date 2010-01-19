@@ -47,6 +47,7 @@ ClassImp(TMinuitMinimizer)
 
 TMinuitMinimizer::TMinuitMinimizer(ROOT::Minuit::EMinimizerType type ) : 
    fUsed(false),
+   fMinosRun(false),
    fDim(0),
    fStrategy(1),
    fType(type), 
@@ -60,6 +61,7 @@ TMinuitMinimizer::TMinuitMinimizer(ROOT::Minuit::EMinimizerType type ) :
 
 TMinuitMinimizer::TMinuitMinimizer(const char *  type ) : 
    fUsed(false),
+   fMinosRun(false),
    fDim(0),
    fStrategy(1),
    fMinuit(fgMinuit)
@@ -149,6 +151,8 @@ void TMinuitMinimizer::SetFunction(const  ROOT::Math::IMultiGenFunction & func) 
 
    fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
 
+   // switch off gradient calculations
+   fMinuit->mnexcm("SET NOGrad",arglist,0,ierr);
 }
 
 void TMinuitMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & func) { 
@@ -194,7 +198,6 @@ void TMinuitMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & func)
    // it cannot be done here, check can be done only after having defined the parameters
    arglist[0] = 1; 
    fMinuit->mnexcm("SET GRAD",arglist,1,ierr);
-
 }
 
 void TMinuitMinimizer::Fcn( int &, double * , double & f, double * x , int /* iflag */) { 
@@ -205,7 +208,7 @@ void TMinuitMinimizer::Fcn( int &, double * , double & f, double * x , int /* if
 
 void TMinuitMinimizer::FcnGrad( int &, double * g, double & f, double * x , int iflag ) { 
    // implementation of FCN static function used internally by TMinuit.
-   // Adapt IMultiGradFunciton interface to TMinuit FCN static function in the case of user 
+   // Adapt IMultiGradFunction interface to TMinuit FCN static function in the case of user 
    // provided gradient.
    ROOT::Math::IMultiGradFunction * gFunc = dynamic_cast<ROOT::Math::IMultiGradFunction *> ( fgFunc); 
 
@@ -317,6 +320,18 @@ bool TMinuitMinimizer::SetVariableValue(unsigned int ivar, double val) {
    return (ierr==0);
 }
 
+std::string TMinuitMinimizer::VariableName(unsigned int ivar) const { 
+   // return the variable name
+   if (!fMinuit || (int) ivar > fMinuit->fNu) return std::string();
+return std::string(fMinuit->fCpnam[ivar]);
+}
+
+int TMinuitMinimizer::VariableIndex(const std::string & ) const { 
+   // return variable index
+   Error("TMinuitMinimizer::VariableIndex"," find index of a variable from its name  is not implemented in TMinuit");
+   return -1;
+}
+
 bool TMinuitMinimizer::Minimize() { 
    // perform the minimization using the algorithm chosen previously by the user  
    // By default Migrad is used. 
@@ -353,6 +368,11 @@ bool TMinuitMinimizer::Minimize() {
    // suppress warning in case Printlevel() == 0 
    if (printlevel == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
 
+   // set precision if needed
+   if (Precision() > 0)  { 
+      arglist[0] = Precision();
+      fMinuit->mnexcm("SET EPS",arglist,1,ierr);
+   }
 
    arglist[0] = MaxFunctionCalls(); 
    arglist[1] = Tolerance(); 
@@ -537,7 +557,7 @@ double TMinuitMinimizer::GlobalCC(unsigned int i) const {
    return fMinuit->fGlobcc[iin-1];   
 }
 
-bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & errUp) { 
+bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & errUp, int ) { 
    // Perform Minos analysis for the given parameter  i 
 
    if (fMinuit == 0) { 
@@ -560,6 +580,13 @@ bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & e
 
       // suppress warning in case Printlevel() == 0 
       if (PrintLevel() == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
+
+      // set precision if needed
+      if (Precision() > 0)  { 
+         arglist[0] = Precision();
+         fMinuit->mnexcm("SET EPS",arglist,1,ierr);
+      }
+
    }
 
    // syntax of MINOS is MINOS [maxcalls] [parno]
@@ -616,7 +643,7 @@ void TMinuitMinimizer::PrintResults() {
 
 bool TMinuitMinimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned int &npoints, double * x, double * y) {
    // contour plot for parameter i and j
-   // need a valid FuncitonMinimum otherwise exits
+   // need a valid FunctionMinimum otherwise exits
    if (fMinuit == 0) { 
       Error("TMinuitMinimizer::Contour"," invalid TMinuit instance");
       return false;
@@ -630,8 +657,16 @@ bool TMinuitMinimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
       
    arglist[0] = PrintLevel()-1; 
    fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
+
    // suppress warning in case Printlevel() == 0 
    if (PrintLevel() == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
+
+   // set precision if needed
+   if (Precision() > 0)  { 
+      arglist[0] = Precision();
+      fMinuit->mnexcm("SET EPS",arglist,1,ierr);
+   }
+
 
    if (npoints < 4) { 
       Error("Contour","Cannot make contour with so few points");
@@ -692,6 +727,11 @@ bool TMinuitMinimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
    // suppress warning in case Printlevel() == 0 
    if (PrintLevel() == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
 
+   // set precision if needed
+   if (Precision() > 0)  { 
+      arglist[0] = Precision();
+      fMinuit->mnexcm("SET EPS",arglist,1,ierr);
+   }
 
    if (nstep == 0) return false; 
    arglist[0] = ipar+1;  // TMinuit starts from 1 
@@ -744,6 +784,12 @@ bool TMinuitMinimizer::Hesse() {
 
    // suppress warning in case Printlevel() == 0 
    if (printlevel == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
+
+   // set precision if needed
+   if (Precision() > 0)  { 
+      arglist[0] = Precision();
+      fMinuit->mnexcm("SET EPS",arglist,1,ierr);
+   }
 
    arglist[0] = MaxFunctionCalls(); 
 

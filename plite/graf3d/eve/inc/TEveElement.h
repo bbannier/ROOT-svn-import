@@ -13,6 +13,7 @@
 #define ROOT_TEveElement
 
 #include "TEveUtil.h"
+#include "TEveProjectionBases.h"
 
 #include "TNamed.h"
 #include "TRef.h"
@@ -101,13 +102,15 @@ protected:
    virtual void PreDeleteElement();
    virtual void RemoveElementsInternal();
 
+   static const char* ToString(Bool_t b);
+
 public:
    TEveElement();
    TEveElement(Color_t& main_color);
    TEveElement(const TEveElement& e);
    virtual ~TEveElement();
 
-   virtual TEveElement* CloneElement() const { return new TEveElement(*this); }
+   virtual TEveElement* CloneElement() const;
    virtual TEveElement* CloneElementRecurse(Int_t level=0) const;
    virtual void         CloneChildrenRecurse(TEveElement* dest, Int_t level=0) const;
 
@@ -164,22 +167,22 @@ public:
    TEveElement* FindChild(TPRegexp& regexp, const TClass* cls=0);
    Int_t        FindChildren(List_t& matches, const TString&  name, const TClass* cls=0);
    Int_t        FindChildren(List_t& matches, TPRegexp& regexp, const TClass* cls=0);
-   TEveElement* FirstChild() const { return fChildren.front(); }
-   TEveElement* LastChild () const { return fChildren.back();  }
+   TEveElement* FirstChild() const;
+   TEveElement* LastChild () const;
 
    void EnableListElements (Bool_t rnr_self=kTRUE,  Bool_t rnr_children=kTRUE);  // *MENU*
    void DisableListElements(Bool_t rnr_self=kFALSE, Bool_t rnr_children=kFALSE); // *MENU*
 
-   Bool_t GetDestroyOnZeroRefCnt() const   { return fDestroyOnZeroRefCnt; }
-   void   SetDestroyOnZeroRefCnt(Bool_t d) { fDestroyOnZeroRefCnt = d; }
+   Bool_t GetDestroyOnZeroRefCnt() const;
+   void   SetDestroyOnZeroRefCnt(Bool_t d);
 
-   Int_t  GetDenyDestroy() const { return fDenyDestroy; }
-   void   IncDenyDestroy()       { ++fDenyDestroy; }
-   void   DecDenyDestroy()       { if (--fDenyDestroy <= 0) CheckReferenceCount("TEveElement::DecDenyDestroy "); }
+   Int_t  GetDenyDestroy() const;
+   void   IncDenyDestroy();
+   void   DecDenyDestroy();
 
-   Int_t  GetParentIgnoreCnt() const { return fParentIgnoreCnt; }
-   void   IncParentIgnoreCnt()       { ++fParentIgnoreCnt; }
-   void   DecParentIgnoreCnt()       { if (--fParentIgnoreCnt <= 0) CheckReferenceCount("TEveElement::DecParentIgnoreCnt "); }
+   Int_t  GetParentIgnoreCnt() const;
+   void   IncParentIgnoreCnt();
+   void   DecParentIgnoreCnt();
 
    virtual void PadPaint(Option_t* option);
 
@@ -298,14 +301,17 @@ public:
 
    Bool_t IsPickable()    const { return fPickable; }
    void   SetPickable(Bool_t p) { fPickable = p; }
+   
+   virtual TEveElement* ForwardSelection();
+   virtual TEveElement* ForwardEdit();
 
-   void SelectElement(Bool_t state);
-   void IncImpliedSelected();
-   void DecImpliedSelected();
+   virtual void SelectElement(Bool_t state);
+   virtual void IncImpliedSelected();
+   virtual void DecImpliedSelected();
 
-   void HighlightElement(Bool_t state);
-   void IncImpliedHighlighted();
-   void DecImpliedHighlighted();
+   virtual void HighlightElement(Bool_t state);
+   virtual void IncImpliedHighlighted();
+   virtual void DecImpliedHighlighted();
 
    virtual void FillImpliedSelectedSet(Set_t& impSelSet);
 
@@ -379,7 +385,7 @@ public:
    TEveElementObjectPtr(const TEveElementObjectPtr& e);
    virtual ~TEveElementObjectPtr();
 
-   virtual TEveElementObjectPtr* CloneElement() const { return new TEveElementObjectPtr(*this); }
+   virtual TEveElementObjectPtr* CloneElement() const;
 
    virtual TObject* GetObject(const TEveException& eh="TEveElementObjectPtr::GetObject ") const;
    virtual void     ExportToCINT(char* var_name);
@@ -396,7 +402,8 @@ public:
 /******************************************************************************/
 
 class TEveElementList : public TEveElement,
-                        public TNamed
+                        public TNamed,
+                        public TEveProjectable
 {
 private:
    TEveElementList& operator=(const TEveElementList&); // Not implemented
@@ -412,7 +419,7 @@ public:
    TEveElementList(const TEveElementList& e);
    virtual ~TEveElementList() {}
 
-   virtual TEveElementList* CloneElement() const { return new TEveElementList(*this); }
+   virtual TEveElementList* CloneElement() const;
 
    virtual const char* GetElementName()  const { return GetName();  }
    virtual const char* GetElementTitle() const { return GetTitle(); }
@@ -433,7 +440,34 @@ public:
 
    virtual Bool_t AcceptElement(TEveElement* el);
 
+   virtual TClass* ProjectedClass(const TEveProjection* p) const;
+
    ClassDef(TEveElementList, 0); // List of TEveElement objects with a possibility to limit the class of accepted elements.
+};
+
+
+/******************************************************************************/
+// TEveElementListProjected
+/******************************************************************************/
+
+class TEveElementListProjected : public TEveElementList,
+                                 public TEveProjected
+{
+private:
+   TEveElementListProjected(const TEveElementListProjected&);            // Not implemented
+   TEveElementListProjected& operator=(const TEveElementListProjected&); // Not implemented
+
+
+protected:
+   virtual void SetDepthLocal(Float_t d);
+
+public:
+   TEveElementListProjected();
+   virtual ~TEveElementListProjected() {}
+
+   virtual void UpdateProjection();
+
+   ClassDef(TEveElementListProjected, 0); // Projected TEveElementList.
 };
 
 #endif

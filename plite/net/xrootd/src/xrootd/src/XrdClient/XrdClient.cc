@@ -1,4 +1,4 @@
-//////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // XrdClient                                                            //
 //                                                                      //
@@ -13,6 +13,8 @@
 
 //         $Id$
 
+const char *XrdClientCVSID = "$Id$";
+
 #include "XrdClient/XrdClient.hh"
 #include "XrdClient/XrdClientDebug.hh"
 #include "XrdClient/XrdClientUrlSet.hh"
@@ -23,6 +25,7 @@
 #include "XrdClient/XrdClientMStream.hh"
 #include "XrdClient/XrdClientReadV.hh"
 #include "XrdOuc/XrdOucCRC.hh"
+#include "XrdClient/XrdClientReadAhead.hh"
 
 #include <stdio.h>
 #ifndef WIN32
@@ -55,43 +58,50 @@ void *FileOpenerThread(void *arg, XrdClientThread *thr) {
 
 //_____________________________________________________________________________
 XrdClient::XrdClient(const char *url) {
-    fReadAheadLast = 0;
-    fOpenerTh = 0;
-    fOpenProgCnd = new XrdSysCondVar(0);
-    fReadWaitData = new XrdSysCondVar(0);
-
-    memset(&fStatInfo, 0, sizeof(fStatInfo));
-    memset(&fOpenPars, 0, sizeof(fOpenPars));
-
-    // Pick-up the latest setting of the debug level
-    DebugSetLevel(EnvGetLong(NAME_DEBUG));
-
-    if (!ConnectionManager)
-	Info(XrdClientDebug::kUSERDEBUG,
-	     "Create",
-	     "(C) 2004-2010 by the Xrootd group. XrdClient $Revision: 1.142 $ - Xrootd version: " << XrdVSTRING);
-
+   fReadAheadMgr = 0;
+   fReadTrimBlockSize = 0;
+   fOpenerTh = 0;
+   fOpenProgCnd = new XrdSysCondVar(0);
+   fReadWaitData = new XrdSysCondVar(0);
+   
+   memset(&fStatInfo, 0, sizeof(fStatInfo));
+   memset(&fOpenPars, 0, sizeof(fOpenPars));
+   memset(&fCounters, 0, sizeof(fCounters));
+   
+   // Pick-up the latest setting of the debug level
+   DebugSetLevel(EnvGetLong(NAME_DEBUG));
+   
+   if (!ConnectionManager)
+      Info(XrdClientDebug::kUSERDEBUG,
+           "Create",
+           "(C) 2004-2010 by the Xrootd group. XrdClient $Revision: 1.152 $ - Xrootd version: " << XrdVSTRING);
+   
 #ifndef WIN32
-    signal(SIGPIPE, SIG_IGN);
+   signal(SIGPIPE, SIG_IGN);
 #endif
+   
+   fInitialUrl = url;
+   
+   fConnModule = new XrdClientConn();
+   
+   
+   if (!fConnModule) {
+      Error("Create","Object creation failed.");
+      abort();
+   }
+   
+   fConnModule->SetRedirHandler(this);
+   
+   int CacheSize = EnvGetLong(NAME_READCACHESIZE);
+   int RaSize = EnvGetLong(NAME_READAHEADSIZE);
+   int RmPolicy = EnvGetLong(NAME_READCACHEBLKREMPOLICY);
+   int ReadAheadStrategy = EnvGetLong(NAME_READAHEADSTRATEGY);
 
-    fInitialUrl = url;
+   SetReadAheadStrategy(ReadAheadStrategy);
+   SetBlockReadTrimming(EnvGetLong(NAME_READTRIMBLKSZ));
 
-    fConnModule = new XrdClientConn();
-
-
-    if (!fConnModule) {
-	Error("Create","Object creation failed.");
-	abort();
-    }
-
-    fConnModule->SetRedirHandler(this);
-
-    int CacheSize = EnvGetLong(NAME_READCACHESIZE);
-    int RaSize = EnvGetLong(NAME_READAHEADSIZE);
-    int RmPolicy = EnvGetLong(NAME_READCACHEBLKREMPOLICY);
-    fUseCache = (CacheSize > 0);
-    SetCacheParameters(CacheSize, RaSize, RmPolicy);
+   fUseCache = (CacheSize > 0);
+   SetCacheParameters(CacheSize, RaSize, RmPolicy);
 }
 
 //_____________________________________________________________________________
@@ -115,8 +125,13 @@ XrdClient::~XrdClient()
    if (fConnModule)
       delete fConnModule;
 
+   if (fReadAheadMgr) delete fReadAheadMgr;
+   fReadAheadMgr = 0;
+
    delete fReadWaitData;
    delete fOpenProgCnd;
+
+   PrintCounters();
 }
 
 //_____________________________________________________________________________
@@ -184,7 +199,9 @@ bool XrdClient::Open(kXR_unt16 mode, kXR_unt16 options, bool doitparallel) {
 
     // Max number of tries
     int connectMaxTry = EnvGetLong(NAME_FIRSTCONNECTMAXCNT);
-  
+
+    fConnModule->SetOpTimeLimit(EnvGetLong(NAME_TRANSACTIONTIMEOUT));
+
     // Construction of the url set coming from the resolution of the hosts given
     XrdClientUrlSet urlArray(fInitialUrl);
     if (!urlArray.IsValid()) {
@@ -211,6 +228,13 @@ bool XrdClient::Open(kXR_unt16 mode, kXR_unt16 options, bool doitparallel) {
 
 	XrdClientUrlInfo *thisUrl = 0;
 	urlstried = (urlstried == urlArray.Size()) ? 0 : urlstried;
+
+        if ( fConnModule->IsOpTimeLimitElapsed(time(0)) ) {
+           // We have been so unlucky and wasted too much time in connecting and being redirected
+           fConnModule->Disconnect(TRUE);
+           Error("Open", "Access to server failed: Too much time elapsed without success.");
+           break;
+        }
 
 	bool nogoodurl = TRUE;
 	while (urlArray.Size() > 0) {
@@ -306,9 +330,9 @@ bool XrdClient::Open(kXR_unt16 mode, kXR_unt16 options, bool doitparallel) {
 	    if (DebugLevel() >= XrdClientDebug::kUSERDEBUG)
 		Info(XrdClientDebug::kUSERDEBUG, "Open",
 		     "Connection attempt failed. Sleeping " <<
-		     EnvGetLong(NAME_RECONNECTTIMEOUT) << " seconds.");
+		     EnvGetLong(NAME_RECONNECTWAIT) << " seconds.");
      
-	    sleep(EnvGetLong(NAME_RECONNECTTIMEOUT));
+	    sleep(EnvGetLong(NAME_RECONNECTWAIT));
 
 	}
 
@@ -379,6 +403,10 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 	return 0;
     }
 
+    // Set the max transaction duration
+    fConnModule->SetOpTimeLimit(EnvGetLong(NAME_TRANSACTIONTIMEOUT));
+
+    fCounters.ReadRequests++;
 
     int cachesize = 0;
     long long cachebytessubmitted = 0;
@@ -411,14 +439,34 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 	readFileRequest.read.rlen = len;
 	readFileRequest.read.dlen = 0;
 
-	fConnModule->SendGenCommand(&readFileRequest, 0, 0, (void *)buf,
-				    FALSE, (char *)"ReadBuffer");
+	if (!fConnModule->SendGenCommand(&readFileRequest, 0, 0, (void *)buf,
+                                         FALSE, (char *)"ReadBuffer")) return 0;
 
+        fCounters.ReadBytes += fConnModule->LastServerResp.dlen;
 	return fConnModule->LastServerResp.dlen;
     }
 
 
     // Ok, from now on we are sure that we have to deal with the cache
+
+    // Do the read ahead
+    long long araoffset;
+    long aralen;
+    if (fReadAheadMgr && fUseCache &&
+        !fReadAheadMgr->GetReadAheadHint(offset, len, araoffset, aralen, fReadTrimBlockSize) &&
+        fConnModule->CacheWillFit(aralen)) {
+
+       long long o = araoffset;
+       long l = aralen;
+
+       while (l > 0) {
+          long ll = xrdmin(1048576, l);
+          Read_Async(o, ll, true);
+          l -= ll;
+          o += ll;
+       }
+
+    }
 
     struct XrdClientStatInfo stinfo;
     Stat(&stinfo);
@@ -426,9 +474,7 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 
     bool retrysync = false;
     long totbytes = 0;
-
-    
-	
+    bool cachehit = true;
 
 	// we cycle until we get all the needed data
 	do {
@@ -469,90 +515,36 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 			 "Found data in cache. len=" << len <<
 			 " offset=" << offset);
 
-		    // Are we using read ahead?
-		    // We read ahead only if (offs+len) lies in an interval of fReadAheadLast not bigger than the readahead size
-		    if ( (fReadAheadLast - (offset+len) < fReadAheadSize) &&
-			 (fReadAheadLast - (offset+len) > -fReadAheadSize) &&
-			 (fReadAheadSize > 0) ) {
-
-			kXR_int64 araoffset;
-			kXR_int32 aralen;
-
-			// This is a HIT case. Async readahead will try to put some data
-			// in advance into the cache. The higher the araoffset will be,
-			// the best chances we have not to cause overhead
-			araoffset = xrdmax(fReadAheadLast, offset + len);
-			aralen = xrdmin(fReadAheadSize,
-					offset + len + fReadAheadSize -
-					xrdmax(offset + len, fReadAheadLast));
-
-			if (aralen > 0) {
-			    TrimReadRequest(araoffset, aralen, fReadAheadSize);
-			    fReadAheadLast = araoffset + aralen;
-			    Read_Async(araoffset, aralen);
-			}
-		    }
-
 		    fReadWaitData->UnLock();
+
+                    if (cachehit) fCounters.ReadHits++;
+                    fCounters.ReadBytes += len;
 		    return len;
 		}
 
 
-
-	
-
 		// We are here if the cache did not give all the data to us
 		// We should have a list of blocks to request
 		for (int i = 0; i < cacheholes.GetSize(); i++) {
-		    kXR_int64 offs;
-		    kXR_int32 len;
+		    long long o;
+		    long l;
 	    
-		    offs = cacheholes[i].beginoffs;
-		    len = cacheholes[i].endoffs - offs + 1;
+		    o = cacheholes[i].beginoffs;
+		    l = cacheholes[i].endoffs - o + 1;
 
 
-		    Info( XrdClientDebug::kHIDEBUG, "Read",
-			  "Hole in the cache: offs=" << offs <<
-			  ", len=" << len );
-	    
-		    Read_Async(offs, len);
+		    Info( XrdClientDebug::kUSERDEBUG, "Read",
+			  "Hole in the cache: offs=" << o <<
+			  ", len=" << l );
+
+
+                    XrdClientReadAheadMgr::TrimReadRequest(o, l, 0, fReadTrimBlockSize);
+
+		    Read_Async(o, l, false);
+
+                    cachehit = false;
 		}
 	
-	
-		// Here we forget to have read in advance if the last byte taken is
-		// too much before the first read ahead byte
-		// if ( fReadAheadLast - 2*fReadAheadSize > (offset+len) ) fReadAheadLast = offset+len-1;
-
-		// Are we using read ahead?
-		// We read ahead only if (offs+len) lies in an interval of fReadAheadLast not bigger than the readahead size
-		// in advance. But not too much over.
-		if ( (fReadAheadLast - (offset+len) < fReadAheadSize) &&
-		     (fReadAheadLast - (offset+len) > -fReadAheadSize) &&
-		     (fReadAheadSize > 0) ) {
-
-		    kXR_int64 araoffset;
-		    kXR_int32 aralen;
-
-		    // This is a HIT case. Async readahead will try to put some data
-		    // in advance into the cache. The higher the araoffset will be,
-		    // the best chances we have not to cause overhead
-                    //if (!bytesgot && !blkstowait && !cacheholes.GetSize()) {
-		    //  araoffset = xrdmax(fReadAheadLast, offset);
-                    //  blkstowait++;
-                    //}
-                    //else
-		     araoffset = xrdmax(fReadAheadLast, offset + len);
-
-		    aralen = xrdmin(fReadAheadSize,
-				    offset + len + fReadAheadSize -
-				    xrdmax(offset + len, fReadAheadLast));
-
-		    if (aralen > 0) {
-			TrimReadRequest(araoffset, aralen, fReadAheadSize);
-			fReadAheadLast = araoffset + aralen;
-			Read_Async(araoffset, aralen);
-		    }
-		}
 
 	    }
 
@@ -564,34 +556,45 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 	    //  written into the application-given buffer
 	    if (retrysync || (!bytesgot && !blkstowait && !cacheholes.GetSize())) {
 
+                cachehit = false;
+
  	        fReadWaitData->UnLock();
 
-		// We might be here for a suspect comm trouble
-		// In this case the outstanding readahead blocks may have been lost
-		if (retrysync) fReadAheadLast = offset+len;
-
-		retrysync = false;
                 memset(&fConnModule->LastServerError, 0, sizeof(fConnModule->LastServerError));
+                fConnModule->LastServerError.errnum = kXR_noErrorYet;
 
 		Info( XrdClientDebug::kHIDEBUG, "Read",
 		      "Read(offs=" << offset <<
 		      ", len=" << len << "). Going sync." );
 
-		// Prepare a request header 
-		ClientRequest readFileRequest;
-		memset( &readFileRequest, 0, sizeof(readFileRequest) );
-		fConnModule->SetSID(readFileRequest.header.streamid);
-		readFileRequest.read.requestid = kXR_read;
-		memcpy( readFileRequest.read.fhandle, fHandle, sizeof(fHandle) );
-		readFileRequest.read.offset = offset;
-		readFileRequest.read.rlen = len;
-		readFileRequest.read.dlen = 0;
+                if ((fReadTrimBlockSize > 0) && !retrysync) {
+                   long long offs = offset;
+                   long l = len;
 
-		if (!fConnModule->SendGenCommand(&readFileRequest, 0, 0, (void *)buf,
-                                                 FALSE, (char *)"ReadBuffer"))
-                   return 0;
+                   XrdClientReadAheadMgr::TrimReadRequest(offs, l, 0, fReadTrimBlockSize);
+                   Read_Async(offs, l, false);
+                   blkstowait++;
+                } else {
 
-		return fConnModule->LastServerResp.dlen;
+                   // Prepare a request header 
+                   ClientRequest readFileRequest;
+                   memset( &readFileRequest, 0, sizeof(readFileRequest) );
+                   fConnModule->SetSID(readFileRequest.header.streamid);
+                   readFileRequest.read.requestid = kXR_read;
+                   memcpy( readFileRequest.read.fhandle, fHandle, sizeof(fHandle) );
+                   readFileRequest.read.offset = offset;
+                   readFileRequest.read.rlen = len;
+                   readFileRequest.read.dlen = 0;
+
+                   if (!fConnModule->SendGenCommand(&readFileRequest, 0, 0, (void *)buf,
+                                                    FALSE, (char *)"ReadBuffer"))
+                      return 0;
+
+                   fCounters.ReadBytes += len;
+                   return len;
+                }
+
+                retrysync = false;
 	    }
 
 	    // Now it's time to sleep
@@ -627,10 +630,16 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 
 	} while ((blkstowait > 0) || cacheholes.GetSize());
 
-    // To lower caching overhead in copy-like applications
-    if (EnvGetLong(NAME_REMUSEDCACHEBLKS))
-       fConnModule->RemoveDataFromCache(0, offset);
+        // To lower caching overhead in copy-like applications
+        if (EnvGetLong(NAME_REMUSEDCACHEBLKS)) {
+           Info(XrdClientDebug::kHIDEBUG, "Read",
+                "Removing used blocks " << 0 << "->" << offset );
+           fConnModule->RemoveDataFromCache(0, offset);
+        }
 
+
+    if (cachehit) fCounters.ReadHits++;
+    fCounters.ReadBytes += len;
     return len;
 }
 
@@ -638,6 +647,8 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 kXR_int64 XrdClient::ReadV(char *buf, kXR_int64 *offsets, int *lens, int nbuf)
 {
     // If buf==0 then the request is considered as asynchronous
+
+   if (!nbuf) return 0;
 
     if (!IsOpen_wait()) {
        Error("ReadV", "File not opened.");
@@ -660,6 +671,10 @@ kXR_int64 XrdClient::ReadV(char *buf, kXR_int64 *offsets, int *lens, int nbuf)
     }
 
     Stat(0);
+
+
+    // Set the max transaction duration
+    fConnModule->SetOpTimeLimit(EnvGetLong(NAME_TRANSACTIONTIMEOUT));
 
     // We pre-process the request list in order to make it compliant
     //  with the restrictions imposed by the server
@@ -689,6 +704,12 @@ kXR_int64 XrdClient::ReadV(char *buf, kXR_int64 *offsets, int *lens, int nbuf)
     int i = 0, startitem = 0;
     kXR_int64 res = 0, bytesread = 0;
 
+    if (buf)
+       fCounters.ReadVRequests++;
+    else
+       fCounters.ReadVAsyncRequests++;
+    
+
     while ( i < reqvect.GetSize() ) {
 
       // Here we have the sequence of fixed blocks to request
@@ -717,21 +738,36 @@ kXR_int64 XrdClient::ReadV(char *buf, kXR_int64 *offsets, int *lens, int nbuf)
       if (i-startitem == 1) {
          if (buf) {
             // Synchronous
+            fCounters.ReadVSubRequests++;
+            fCounters.ReadVSubChunks++;
+            fCounters.ReadVBytes += reqvect[startitem].len;
             res = Read(buf, reqvect[startitem].offset, reqvect[startitem].len);
             
          } else {
             // Asynchronous, res stays the same
-            Read_Async(reqvect[startitem].offset, reqvect[startitem].len);
+            fCounters.ReadVAsyncSubRequests++;
+            fCounters.ReadVAsyncSubChunks++;
+            fCounters.ReadVAsyncBytes += reqvect[startitem].len;
+            Read_Async(reqvect[startitem].offset, reqvect[startitem].len, false);
          }
       } else {
-         if (buf)
+         if (buf) {
+
             res = XrdClientReadV::ReqReadV(fConnModule, fHandle, buf+bytesread,
                                            reqvect, startitem, i-startitem,
                                            fConnModule->GetParallelStreamToUse(reqsperstream) );
-         else
+            fCounters.ReadVSubRequests++;
+            fCounters.ReadVSubChunks += i-startitem;
+            fCounters.ReadVBytes += res;
+         }
+         else {
             res = XrdClientReadV::ReqReadV(fConnModule, fHandle, 0,
                                            reqvect, startitem, i-startitem,
                                            fConnModule->GetParallelStreamToUse(reqsperstream) );
+            fCounters.ReadVAsyncSubRequests++;
+            fCounters.ReadVAsyncSubChunks += i-startitem;
+            fCounters.ReadVAsyncBytes += res;
+         }
       }
 
       // The next bunch of chunks to request starts from here
@@ -743,7 +779,13 @@ kXR_int64 XrdClient::ReadV(char *buf, kXR_int64 *offsets, int *lens, int nbuf)
       bytesread += res;
 
     }
-    
+
+    if (!buf && !fConnModule->CacheWillFit(bytesread+bytesread/4)) {
+       Info(XrdClientDebug::kUSERDEBUG, "ReadV",
+         "Excessive async readv size " << bytesread+bytesread/4 << ". Fixing cache size." );
+       SetCacheParameters(bytesread, -1, -1);
+    }
+
     // pos will indicate the size of the data read
     // Even if we were able to read only a part of the buffer !!!
     return bytesread;
@@ -758,6 +800,12 @@ bool XrdClient::Write(const void *buf, long long offset, int len) {
 	return FALSE;
     }
 
+
+    // Set the max transaction duration
+    fConnModule->SetOpTimeLimit(EnvGetLong(NAME_TRANSACTIONTIMEOUT));
+
+    fCounters.WrittenBytes += len;
+    fCounters.WriteRequests++;
 
     // Prepare request
     ClientRequest writeFileRequest;
@@ -851,6 +899,10 @@ bool XrdClient::Sync()
     }
 
     if (!fConnModule->DoWriteHardCheckPoint()) return false;
+
+
+    // Set the max transaction duration
+    fConnModule->SetOpTimeLimit(EnvGetLong(NAME_TRANSACTIONTIMEOUT));
 
     // Prepare request
     ClientRequest flushFileRequest;
@@ -1572,7 +1624,7 @@ UnsolRespProcResult XrdClient::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *se
     return kUNSOL_CONTINUE;
 }
 
-XReqErrorType XrdClient::Read_Async(long long offset, int len) {
+XReqErrorType XrdClient::Read_Async(long long offset, int len, bool updatecounters) {
 
     if (!IsOpen_wait()) {
 	Error("Read", "File not opened.");
@@ -1587,6 +1639,11 @@ XReqErrorType XrdClient::Read_Async(long long offset, int len) {
     if (fUseCache)
 	fConnModule->SubmitPlaceholderToCache(offset, offset+len-1);
     else return kOK;
+
+    if (updatecounters) {
+       fCounters.ReadAsyncRequests++;
+       fCounters.ReadAsyncBytes += len;
+    }
 
     // Prepare request
     ClientRequest readFileRequest;
@@ -1646,40 +1703,6 @@ XReqErrorType XrdClient::Read_Async(long long offset, int len) {
 	return (fConnModule->WriteToServer_Async(&readFileRequest, 0));
 
     return ok;
-
-}
-
-
-bool XrdClient::TrimReadRequest(kXR_int64 &offs, kXR_int32 &len, kXR_int32 rasize) {
-
-    kXR_int64 newoffs;
-    kXR_int32 newlen, blksz;
-
-    if (!fUseCache ) return false;
-
-//    blksz = xrdmax(rasize, 16384);
-
-//     kXR_int64 minlen;
-//     newoffs = offs / blksz * blksz;
-//     minlen = (offs + len - newoffs);
-//     newlen = ((minlen / blksz + 1) * blksz);
-//     newlen = xrdmax(rasize, newlen);
-
-    blksz = 128*1024;
-    kXR_int64 lastbyte;
-    newoffs = offs;
-    lastbyte = offs+len+blksz-1;
-    lastbyte = (lastbyte / blksz) * blksz - 1;
-    
-    newlen = lastbyte-newoffs+1;
-
-    if (fConnModule->CacheWillFit(newlen)) {
-	offs = newoffs;
-	len = newlen;
-	return true;
-    }
-
-    return false;
 
 }
 
@@ -1747,4 +1770,127 @@ bool XrdClient::UseCache(bool u)
   // Return the previous setting
   return r;
 }
+
+
+// To set at run time the cache/readahead parameters for this instance only
+// If a parameter is < 0 then it's left untouched.
+// To simply enable/disable the caching, just use UseCache(), not this function
+void XrdClient::SetCacheParameters(int CacheSize, int ReadAheadSize, int RmPolicy) {
+   if (fConnModule) {
+      if (CacheSize >= 0) fConnModule->SetCacheSize(CacheSize);
+      if (RmPolicy >= 0) fConnModule->SetCacheRmPolicy(RmPolicy);
+   }
+   
+   if ((ReadAheadSize >= 0) && fReadAheadMgr) fReadAheadMgr->SetRASize(ReadAheadSize);
+}
+
+// To enable/disable different read ahead strategies. Defined in XrdClientReadAhead.hh
+void XrdClient::SetReadAheadStrategy(int strategy) {
+   if (!fConnModule) return;
+
+   if (fReadAheadMgr && fReadAheadMgr->GetCurrentStrategy() != (XrdClientReadAheadMgr::XrdClient_RAStrategy)strategy) {
+
+      delete fReadAheadMgr;
+      fReadAheadMgr = 0;
+   }
+
+   if (!fReadAheadMgr)
+      fReadAheadMgr = XrdClientReadAheadMgr::CreateReadAheadMgr((XrdClientReadAheadMgr::XrdClient_RAStrategy)strategy);
+}
+    
+// To enable the trimming of the blocks to read. Blocksize will be rounded to a multiple of 512.
+// Each read request will have the offset and length aligned with a multiple of blocksize
+// This strategy is similar to a read ahead, but not quite. It anyway needs to have the cache enabled to work.
+// Here we see it as a transformation of the stream of the read accesses to request.
+void XrdClient::SetBlockReadTrimming(int blocksize) {
+   blocksize = blocksize >> 9;
+   blocksize = blocksize << 9;
+   if (blocksize < 512) blocksize = 512;
+
+   fReadTrimBlockSize = blocksize;
+}
+
+
+bool XrdClient::GetCacheInfo(
+   // The actual cache size
+   int &size,
+   
+   // The number of bytes submitted since the beginning
+   long long &bytessubmitted,
+   
+   // The number of bytes found in the cache (estimate)
+   long long &byteshit,
+   
+   // The number of reads which did not find their data
+   // (estimate)
+   long long &misscount,
+   
+   // miss/totalreads ratio (estimate)
+   float &missrate,
+   
+   // number of read requests towards the cache
+   long long &readreqcnt,
+   
+   // ratio between bytes found / bytes submitted
+   float &bytesusefulness
+   ) {
+   if (!fConnModule) return false;
+
+   
+   if (!fConnModule->GetCacheInfo(size,
+                                  bytessubmitted,
+                                  byteshit,
+                                  misscount,
+                                  missrate,
+                                  readreqcnt,
+                                  bytesusefulness))
+      return false;
+   
+   return true;
+}
+
+// Returns client-level information about the activity performed up to now
+bool XrdClient::GetCounters( XrdClientCounters *cnt ) {
+
+   fCounters.ReadMisses = fCounters.ReadRequests-fCounters.ReadHits;
+   fCounters.ReadMissRate = ( fCounters.ReadRequests ? (float)fCounters.ReadMisses / fCounters.ReadRequests : 0 );
+
+   memcpy( cnt, &fCounters, sizeof(fCounters));
+   return true;
+}
+
+
+
+void XrdClient::PrintCounters() {
+
+   if (DebugLevel() < XrdClientDebug::kUSERDEBUG) return;
+
+   XrdClientCounters cnt;
+   GetCounters(&cnt);
+
+   printf("XrdClient counters:\n");;
+   printf(" ReadBytes:                 %lld\n", cnt.ReadBytes );
+   printf(" WrittenBytes:              %lld\n", cnt.WrittenBytes );
+   printf(" WriteRequests:             %lld\n", cnt.WriteRequests );
+   
+   printf(" ReadRequests:              %lld\n", cnt.ReadRequests );
+   printf(" ReadMisses:                %lld\n", cnt.ReadMisses );
+   printf(" ReadHits:                  %lld\n", cnt.ReadHits );
+   printf(" ReadMissRate:              %f\n",   cnt.ReadMissRate );
+   
+   printf(" ReadVRequests:             %lld\n", cnt.ReadVRequests );
+   printf(" ReadVSubRequests:          %lld\n", cnt.ReadVSubRequests );
+   printf(" ReadVSubChunks:            %lld\n", cnt.ReadVSubChunks );
+   printf(" ReadVBytes:                %lld\n", cnt.ReadVBytes );
+   
+   printf(" ReadVAsyncRequests:        %lld\n", cnt.ReadVAsyncRequests );
+   printf(" ReadVAsyncSubRequests:     %lld\n", cnt.ReadVAsyncSubRequests );
+   printf(" ReadVAsyncSubChunks:       %lld\n", cnt.ReadVAsyncSubChunks );
+   printf(" ReadVAsyncBytes:           %lld\n", cnt.ReadVAsyncBytes );
+   
+   printf(" ReadAsyncRequests:         %lld\n", cnt.ReadAsyncRequests );
+   printf(" ReadAsyncBytes:            %lld\n\n", cnt.ReadAsyncBytes );
+
+}
+
 

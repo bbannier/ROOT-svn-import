@@ -11,7 +11,7 @@
 #undef free
 #endif
 
-#if defined(__GNUC__) && (__GNUC__ > 3) && (__GNUC_MINOR__ > 1)
+#if defined(__GNUC__) && __GNUC__ >= 4 && ((__GNUC_MINOR__ == 2 && __GNUC_PATCHLEVEL__ >= 1) || (__GNUC_MINOR__ >= 3)) && !__INTEL_COMPILER
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 
@@ -637,7 +637,7 @@ static int G__G__stream_11_0_13(G__value* result7, G__CONST char* funcname, stru
 static int G__G__stream_11_0_14(G__value* result7, G__CONST char* funcname, struct G__param* libp, int hash)
 {
       G__letint(result7, 67, (long) char_traits<char>::assign((char_traits<char>::char_type*) G__int(libp->para[0]), (size_t) G__int(libp->para[1])
-, (const char_traits<char>::char_type) G__int(libp->para[2])));
+, (char_traits<char>::char_type) G__int(libp->para[2])));
    return(1 || funcname || hash || result7 || libp) ;
 }
 

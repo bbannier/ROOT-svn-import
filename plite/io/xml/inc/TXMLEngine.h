@@ -30,8 +30,9 @@ class TXMLEngine : public TObject {
 protected:
    char*             Makestr(const char* str);
    char*             Makenstr(const char* start, int len);
-   XMLNodePointer_t  AllocateNode(int namelen, XMLNodePointer_t parent);
-   XMLAttrPointer_t  AllocateAttr(int namelen, int valuelen, XMLNodePointer_t xmlnode);
+   XMLNodePointer_t  AllocateNode(const char *name, XMLNodePointer_t parent);
+   XMLAttrPointer_t  AllocateAttr(const char *name, const char *value, XMLNodePointer_t xmlnode);
+   XMLAttrPointer_t  AllocateAttr(Ssiz_t namelen, Ssiz_t valuelen, XMLNodePointer_t xmlnode);
    XMLNsPointer_t    FindNs(XMLNodePointer_t xmlnode, const char* nsname);
    void              TruncateNsExtension(XMLNodePointer_t xmlnode);
    void              UnpackSpecialCharacters(char* target, const char* source, int srclen);
@@ -40,9 +41,14 @@ protected:
    XMLNodePointer_t  ReadNode(XMLNodePointer_t xmlparent, TXMLInputStream* inp, Int_t& resvalue);
    void              DisplayError(Int_t error, Int_t linenumber);
 
+   Bool_t            fSkipComments;    //! if true, do not create comments nodes in document during parsing
+
 public:
    TXMLEngine();
    virtual ~TXMLEngine();
+
+   void              SetSkipComments(bool on = kTRUE) { fSkipComments = on; }
+   Bool_t            GetSkipComments() const { return fSkipComments; }
 
    Bool_t            HasAttr(XMLNodePointer_t xmlnode, const char* name);
    const char*       GetAttr(XMLNodePointer_t xmlnode, const char* name);

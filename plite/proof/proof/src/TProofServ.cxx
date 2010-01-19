@@ -25,19 +25,11 @@
 #include "Riostream.h"
 
 #ifdef WIN32
-#include <process.h>
-#include <io.h>
-#include <sys/locking.h>
-typedef long off_t;
-#ifndef F_LOCK
-#define F_LOCK   _LK_LOCK
+   #include <process.h>
+   #include <io.h>
+   #include "snprintf.h"
+   typedef long off_t;
 #endif
-#ifndef F_ULOCK
-#define F_ULOCK  _LK_UNLCK
-#endif
-#define lockf(fd, op, sz) _locking(fd, op, sz)
-#endif // WIN32
-
 #include <errno.h>
 #include <time.h>
 #include <fcntl.h>
@@ -106,6 +98,8 @@ typedef long off_t;
 #include "TLockFile.h"
 #include "TDataSetManagerFile.h"
 #include "TProofProgressStatus.h"
+#include "TServerSocket.h"
+#include "TMonitor.h"
 
 // global proofserv handle
 TProofServ *gProofServ = 0;
@@ -438,7 +432,7 @@ Bool_t TReaperTimer::Notify()
    }
 
    // Stop the timer if no children
-   if (fChildren->GetSize() <= 0) {
+   if (!fChildren || fChildren->GetSize() <= 0) {
       Stop();
    } else {
       // Needed for the next shot
@@ -531,19 +525,23 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fEnabledPackages = new TList;
    fEnabledPackages->SetOwner();
 
+   fTotSessions     = -1;
+   fActSessions     = -1;
+   fEffSessions     = -1.;
+
    fGlobalPackageDirList = 0;
 
    fLogFile         = flog;
    fLogFileDes      = -1;
 
    fArchivePath     = "";
-
    // Init lockers
    fPackageLock     = 0;
    fCacheLock       = 0;
    fQueryLock       = 0;
 
    fQMgr            = 0;
+   fQMtx            = new TMutex(kTRUE);
    fWaitingQueries  = new TList;
    fIdle            = kTRUE;
    fQuerySeqNum     = -1;
@@ -565,6 +563,11 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fMaxQueries      = -1;
    fMaxBoxSize      = -1;
    fHWMBoxSize      = -1;
+
+   // Submerger quantities
+   fMergingSocket   = 0;
+   fMergingMonitor  = 0;
+   fMergedWorkers   = 0;
 
    // Max message size
    fMsgSizeHWM = gEnv->GetValue("ProofServ.MsgSizeHWM", 1000000);
@@ -812,6 +815,7 @@ TProofServ::~TProofServ()
    // live anyway.
 
    SafeDelete(fWaitingQueries);
+   SafeDelete(fQMtx);
    SafeDelete(fEnabledPackages);
    SafeDelete(fSocket);
    SafeDelete(fPackageLock);
@@ -890,7 +894,7 @@ Int_t TProofServ::CatMotd()
    if (lasttime)
       gSystem->Unlink(last);
    Int_t fd = creat(last, 0600);
-   close(fd);
+   if (fd >= 0) close(fd);
    delete [] last;
 
    return 0;
@@ -931,13 +935,28 @@ TObject *TProofServ::Get(const char *namecycle)
 }
 
 //______________________________________________________________________________
+void TProofServ::RestartComputeTime()
+{
+   // Reset the compute time
+
+   fCompute.Stop();
+   if (fPlayer) {
+      TProofProgressStatus *status = fPlayer->GetProgressStatus();
+      if (status) status->SetLearnTime(fCompute.RealTime());
+      Info("RestartComputeTime", "compute time restarted after %f secs (%lld entries)",
+                                 fCompute.RealTime(), fPlayer->GetLearnEntries());
+   }
+   fCompute.Start(kFALSE);
+}
+
+//______________________________________________________________________________
 TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
 {
    // Get next range of entries to be processed on this server.
 
    Long64_t bytesRead = 0;
 
-   if (gPerfStats != 0) bytesRead = gPerfStats->GetBytesRead();
+   if (gPerfStats) bytesRead = gPerfStats->GetBytesRead();
 
    if (fCompute.Counter() > 0)
       fCompute.Stop();
@@ -975,9 +994,21 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
       }
       // the CPU and wallclock proc times are kept in the TProofServ and here
       // added to the status object in the fPlayer.
-      status->IncProcTime(realtime);
-      status->IncCPUTime(cputime);
+      if (status->GetEntries() > 0) {
+         PDB(kLoop, 2) status->Print(GetOrdinal());
+         status->IncProcTime(realtime);
+         status->IncCPUTime(cputime);
+      }
       req << status;
+      // Send tree cache information
+      Long64_t cacheSize = (fPlayer) ? fPlayer->GetCacheSize() : -1;
+      Int_t learnent = (fPlayer) ? fPlayer->GetLearnEntries() : -1;
+      req << cacheSize << learnent;
+
+      PDB(kLoop, 1) {
+         PDB(kLoop, 2) status->Print();
+         Info("GetNextPacket","cacheSize: %lld, learnent: %d", cacheSize, learnent);
+      }
       status = 0; // status is owned by the player.
    } else {
       req << fLatency.RealTime() << realtime << cputime
@@ -1132,7 +1163,7 @@ void TProofServ::HandleSocketInput()
          fQueuedMsg->Add(mess);
          PDB(kGlobal, 1)
             Info("HandleSocketInput", "message of type %d enqueued; sz: %d",
-                                       mess->What(), fQueuedMsg->GetSize());
+                                       what, fQueuedMsg->GetSize());
          mess = 0;
       }
 
@@ -1142,11 +1173,11 @@ void TProofServ::HandleSocketInput()
          // Add to the queue
          PDB(kCollect, 1)
             Info("HandleSocketInput", "processing enqueued message of type %d; left: %d",
-                                      mess->What(), fQueuedMsg->GetSize());
+                                       what, fQueuedMsg->GetSize());
          all = 1;
          SafeDelete(mess);
          mess = (TMessage *) fQueuedMsg->First();
-         fQueuedMsg->Remove(mess);
+         if (mess) fQueuedMsg->Remove(mess);
          doit = 1;
       }
    }
@@ -1338,8 +1369,9 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
             PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_PROCESS","enter");
             HandleProcess(mess);
-            // Notify
-            SendLogFile();
+            // The log file is send either in HandleProcess or HandleSubmergers.
+            // The reason is that the order of various messages depend on the
+            // processing mode (sync/async) and/or merging mode
          }
          break;
 
@@ -1479,7 +1511,9 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                   opt |= TProof::kBinary;
                PDB(kGlobal, 1)
                   Info("HandleSocketInput","forwarding file: %s", fnam.Data());
-               fProof->SendFile(fnam, opt, (copytocache ? "cache" : ""));
+               if (fProof->SendFile(fnam, opt, (copytocache ? "cache" : "")) < 0) {
+                  Error("HandleSocketInput", "forwarding file: %s", fnam.Data());
+               }
             }
             if (fProtocol > 19) fSocket->Send(kPROOF_SENDFILE);
          }
@@ -1553,8 +1587,16 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                fSocket->Send(answ);
             } else {
                TMessage answ(kPROOF_GETSLAVEINFO);
-               answ << (TList *)0;
+               TList *info = new TList;
+               TSlaveInfo *wi = new TSlaveInfo(GetOrdinal(), gSystem->HostName(), 0);
+               SysInfo_t si;
+               gSystem->GetSysInfo(&si);
+               wi->SetSysInfo(si);
+               info->Add(wi);
+               answ << (TList *)info;
                fSocket->Send(answ);
+               info->SetOwner(kTRUE);
+               delete info;
             }
 
             PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_GETSLAVEINFO", "Done");
@@ -1670,6 +1712,11 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          }
          break;
 
+      case kPROOF_SUBMERGER:
+         {  HandleSubmerger(mess);
+         }
+         break;
+
       case kPROOF_LIB_INC_PATH:
          if (all) {
             HandleLibIncPath(mess);
@@ -1707,7 +1754,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          if (all) {
             // This message resumes the session; should not come during processing.
 
-            if (fWaitingQueries->IsEmpty()) {
+            if (WaitingQueries() == 0) {
                Error("HandleSocketInput", "no queries enqueued");
                break;
             }
@@ -1725,10 +1772,10 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                } else {
                   ProcessNext();
                   // Set idle
-                  fIdle = kTRUE;
+                  SetIdle(kTRUE);
                   // Signal the client that we are idle
                   TMessage m(kPROOF_SETIDLE);
-                  Bool_t waiting = (fWaitingQueries->GetSize() > 0) ? kTRUE : kFALSE;
+                  Bool_t waiting = (WaitingQueries() > 0) ? kTRUE : kFALSE;
                   m << waiting;
                   fSocket->Send(m);
                }
@@ -1750,7 +1797,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          {  // The client requested to switch to asynchronous mode:
             // communicate the sequential number of the running query for later
             // identification, if any
-            if (!fIdle && fPlayer) {
+            if (!IsIdle() && fPlayer) {
                // Get query currently being processed
                TProofQueryResult *pq = (TProofQueryResult *) fPlayer->GetCurrentQuery();
                TMessage m(kPROOF_QUERYSUBMITTED);
@@ -1775,6 +1822,91 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
 
    // Done
    return rc;
+}
+
+//______________________________________________________________________________
+Bool_t TProofServ::AcceptResults(Int_t connections, TVirtualProofPlayer *mergerPlayer)
+{
+   // Accept and merge results from a set of workers
+
+   TMessage *mess = new TMessage();
+   Int_t mergedWorkers = 0;
+
+   PDB(kSubmerger, 1)  Info("AcceptResults", "enter");
+
+   // Overall result of this procedure
+   Bool_t result = kTRUE;
+
+   fMergingMonitor = new TMonitor();
+   fMergingMonitor->Add(fMergingSocket);
+
+   Int_t numworkers = 0;
+   while (fMergingMonitor->GetActive() > 0 && mergedWorkers <  connections) {
+
+      TSocket *s = fMergingMonitor->Select();
+      if (!s) {
+         result = kFALSE;
+         break;
+      }
+
+      if (s == fMergingSocket) {
+         // New incoming connection
+         TSocket *sw = fMergingSocket->Accept();
+         fMergingMonitor->Add(sw);
+
+         PDB(kSubmerger, 2)
+            Info("AcceptResults", "connection from a worker accepted on merger %s ",
+                                  fOrdinal.Data()); 
+         // All assigned workers are connected
+         if (++numworkers >= connections)
+            fMergingMonitor->Remove(fMergingSocket);
+      } else {
+         s->Recv(mess);
+         PDB(kSubmerger, 2)
+            Info("AcceptResults", "message received: %d ", (mess ? mess->What() : 0));
+         if (!mess) {
+            Error("AcceptResults", "message received: %p ", mess);
+            continue;
+         }
+         Int_t type = 0;
+
+         // Read output objec(s) from the received message
+         while ((mess->BufferSize() > mess->Length())) {
+            (*mess) >> type;
+
+            PDB(kSubmerger, 2) Info("AcceptResults", " type %d ", type); 
+            if (type == 2) {
+               mergedWorkers++;
+               PDB(kSubmerger, 2)
+                  Info("AcceptResults",
+                       "a new worker has been mergerd. Total merged workers: %d",
+                       mergedWorkers);
+            }
+            TObject *o = mess->ReadObject(TObject::Class());
+            if (mergerPlayer->AddOutputObject(o) == 1) {
+               // Remove the object if it has been merged
+               PDB(kSubmerger, 2)  Info("AcceptResults", "removing %p (has been merged)", o);
+               SafeDelete(o);
+            } else
+               PDB(kSubmerger, 2) Info("AcceptResults", "%p not merged yet", o);
+         }
+      }
+   }
+   fMergingMonitor->DeActivateAll();
+
+   TList* sockets = fMergingMonitor->GetListOfDeActives();
+   Int_t size = sockets->GetSize();
+   for (Int_t i =0; i< size; ++i){
+      ((TSocket*)(sockets->At(i)))->Close();
+      PDB(kSubmerger, 2) Info("AcceptResults", "closing socket");
+      delete ((TSocket*)(sockets->At(i)));
+   }
+
+   fMergingMonitor->RemoveAll();
+   delete fMergingMonitor;
+
+   PDB(kSubmerger, 2) Info("AcceptResults", "exit: %d", result);
+   return result;
 }
 
 //______________________________________________________________________________
@@ -1971,9 +2103,9 @@ void TProofServ::RedirectOutput(const char *dir, const char *mode)
 
    TString sdir = (dir && strlen(dir) > 0) ? dir : fSessionDir.Data();
    if (IsMaster()) {
-      sprintf(logfile, "%s/master-%s.log", sdir.Data(), fOrdinal.Data());
+      snprintf(logfile, 512, "%s/master-%s.log", sdir.Data(), fOrdinal.Data());
    } else {
-      sprintf(logfile, "%s/worker-%s.log", sdir.Data(), fOrdinal.Data());
+      snprintf(logfile, 512, "%s/worker-%s.log", sdir.Data(), fOrdinal.Data());
    }
 
    if ((freopen(logfile, mode, stdout)) == 0)
@@ -2128,16 +2260,18 @@ void TProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
       ltot = lseek(fileno(stdout),   (off_t) 0, SEEK_END);
       lnow = lseek(fLogFileDes, (off_t) 0, SEEK_CUR);
 
-      if (start > -1) {
-         lseek(fLogFileDes, (off_t) start, SEEK_SET);
-         if (end <= start || end > ltot)
-            end = ltot;
-         left = (Int_t)(end - start);
-         if (end < ltot)
-            left++;
-         adhoc = kTRUE;
-      } else {
-         left = (Int_t)(ltot - lnow);
+      if (ltot >= 0 && lnow >= 0) {
+         if (start > -1) {
+            lseek(fLogFileDes, (off_t) start, SEEK_SET);
+            if (end <= start || end > ltot)
+               end = ltot;
+            left = (Int_t)(end - start);
+            if (end < ltot)
+               left++;
+            adhoc = kTRUE;
+         } else {
+            left = (Int_t)(ltot - lnow);
+         }
       }
    }
 
@@ -2174,7 +2308,7 @@ void TProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
    }
 
    // Restore initial position if partial send
-   if (adhoc)
+   if (adhoc && lnow >=0 )
       lseek(fLogFileDes, lnow, SEEK_SET);
 
    TMessage mess(kPROOF_LOGDONE);
@@ -2184,6 +2318,8 @@ void TProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
       mess << status << (Int_t) 1;
 
    fSocket->Send(mess);
+
+   PDB(kGlobal, 1) Info("SendLogFile", "kPROOF_LOGDONE sent");
 }
 
 //______________________________________________________________________________
@@ -2289,9 +2425,9 @@ Int_t TProofServ::Setup()
    char str[512];
 
    if (IsMaster()) {
-      sprintf(str, "**** Welcome to the PROOF server @ %s ****", gSystem->HostName());
+      snprintf(str, 512, "**** Welcome to the PROOF server @ %s ****", gSystem->HostName());
    } else {
-      sprintf(str, "**** PROOF slave server @ %s started ****", gSystem->HostName());
+      snprintf(str, 512, "**** PROOF slave server @ %s started ****", gSystem->HostName());
    }
 
    if (fSocket->Send(str) != 1+static_cast<Int_t>(strlen(str))) {
@@ -2485,6 +2621,9 @@ Int_t TProofServ::SetupCommon()
       }
    }
 
+   // Set group
+   fGroup = gEnv->GetValue("ProofServ.ProofGroup", "default");
+
    // Check and make sure "cache" directory exists
    fCacheDir = gEnv->GetValue("ProofServ.CacheDir",
                                TString::Format("%s/%s", fWorkDir.Data(), kPROOF_CacheDir));
@@ -2549,7 +2688,7 @@ Int_t TProofServ::SetupCommon()
    }
 
    // Check the session dir
-   if (fSessionDir != gSystem->UnixPathName(gSystem->WorkingDirectory())) {
+   if (fSessionDir != gSystem->WorkingDirectory()) {
       ResolveKeywords(fSessionDir);
       if (gSystem->AccessPathName(fSessionDir))
          gSystem->mkdir(fSessionDir, kTRUE);
@@ -2593,8 +2732,7 @@ Int_t TProofServ::SetupCommon()
    // Server image
    fImage = gEnv->GetValue("ProofServ.Image", "");
 
-   // Set group and get the group priority
-   fGroup = gEnv->GetValue("ProofServ.ProofGroup", "");
+   // Get the group priority
    if (IsMaster()) {
       // Send session tag to client
       TMessage m(kPROOF_SESSIONTAG);
@@ -2629,7 +2767,7 @@ Int_t TProofServ::SetupCommon()
 
       // If no valid dataset manager has been created we instantiate the default one
       if (!fDataSetManager) {
-         TString opts("As:");
+         TString opts("Av:");
          TString dsetdir = gEnv->GetValue("ProofServ.DataSetDir", "");
          if (dsetdir.IsNull()) {
             // Use the default in the sandbox
@@ -2738,14 +2876,6 @@ Int_t TProofServ::SetupCommon()
       }
    }
 
-   // Directories that we can unlink
-   TProof::AddUnlinkPath(gSystem->WorkingDirectory());
-   TProof::AddUnlinkPath(fWorkDir);
-   TProof::AddUnlinkPath(fSessionDir);
-   TProof::AddUnlinkPath(fCacheDir);
-   TProof::AddUnlinkPath(fPackageDir);
-   if (IsMaster()) TProof::AddUnlinkPath(fQueryDir);
-
    if (gProofDebugLevel > 0)
       Info("SetupCommon", "successfully completed");
 
@@ -2775,7 +2905,7 @@ void TProofServ::Terminate(Int_t status)
       gSystem->ChangeDirectory("/");
       // needed in case fSessionDir is on NFS ?!
       gSystem->MakeDirectory(fSessionDir+"/.delete");
-      TProof::Unlink(fSessionDir.Data(), kTRUE);
+      gSystem->Exec(TString::Format("%s %s", kRM, fSessionDir.Data()));
    }
 
    // Cleanup queries directory if empty
@@ -2785,7 +2915,7 @@ void TProofServ::Terminate(Int_t status)
          gSystem->ChangeDirectory("/");
          // needed in case fQueryDir is on NFS ?!
          gSystem->MakeDirectory(fQueryDir+"/.delete");
-         TProof::Unlink(fQueryDir.Data(), kTRUE);
+         gSystem->Exec(TString::Format("%s %s", kRM, fQueryDir.Data()));
          // Remove lock file
          if (fQueryLock)
             gSystem->Unlink(fQueryLock->GetName());
@@ -2865,14 +2995,8 @@ Int_t TProofServ::OldAuthSetup(TString &conf)
    }
    //
    // Setup
-   if (oldAuthSetupHook) {
-      return (*oldAuthSetupHook)(fSocket, IsMaster(), fProtocol,
-                                 fUser, fOrdinal, conf);
-   } else {
-      Error("OldAuthSetup",
-            "hook to method OldProofServAuthSetup is undefined");
-      return -1;
-   }
+   return (*oldAuthSetupHook)(fSocket, IsMaster(), fProtocol,
+                              fUser, fOrdinal, conf);
 }
 
 //______________________________________________________________________________
@@ -2885,7 +3009,11 @@ TProofQueryResult *TProofServ::MakeQueryResult(Long64_t nent,
    // Create a TProofQueryResult instance for this query.
 
    // Increment sequential number
-   if (fQMgr) fQMgr->IncrementSeqNum();
+   Int_t seqnum = -1;
+   if (fQMgr) {
+      fQMgr->IncrementSeqNum();
+      seqnum = fQMgr->SeqNum();
+   }
 
    // Locally we always use the current streamer
    Bool_t olds = (dset && dset->TestBit(TDSet::kWriteV3)) ? kTRUE : kFALSE;
@@ -2893,7 +3021,7 @@ TProofQueryResult *TProofServ::MakeQueryResult(Long64_t nent,
       dset->SetWriteV3(kFALSE);
 
    // Create the instance and add it to the list
-   TProofQueryResult *pqr = new TProofQueryResult(fQMgr->SeqNum(), opt, inlist, nent,
+   TProofQueryResult *pqr = new TProofQueryResult(seqnum, opt, inlist, nent,
                                                   fst, dset, selec, elist);
    // Title is the session identifier
    pqr->SetTitle(gSystem->BaseName(fQueryDir));
@@ -3054,7 +3182,7 @@ void TProofServ::HandleProcess(TMessage *mess)
       Info("HandleProcess", "Enter");
 
    // Nothing to do for slaves if we are not idle
-   if (!IsTopMaster() && !fIdle)
+   if (!IsTopMaster() && !IsIdle())
       return;
 
    TDSet *dset;
@@ -3069,7 +3197,7 @@ void TProofServ::HandleProcess(TMessage *mess)
    // Get entry list information, if any (support started with fProtocol == 15)
    if ((mess->BufferSize() > mess->Length()) && fProtocol > 14)
       (*mess) >> enl;
-   Bool_t hasNoData = (dset->TestBit(TDSet::kEmpty)) ? kTRUE : kFALSE;
+   Bool_t hasNoData = (!dset || dset->TestBit(TDSet::kEmpty)) ? kTRUE : kFALSE;
 
    // Priority to the entry list
    TObject *elist = (enl) ? (TObject *)enl : (TObject *)evl;
@@ -3123,7 +3251,7 @@ void TProofServ::HandleProcess(TMessage *mess)
       }
 
       // Add anyhow to the waiting lists
-      fWaitingQueries->Add(pq);
+      QueueQuery(pq);
 
       // Call get Workers
       // if we are not idle the scheduler will just enqueue the query and
@@ -3173,7 +3301,7 @@ void TProofServ::HandleProcess(TMessage *mess)
       }
 
       // Nothing more to do if we are not idle
-      if (!fIdle) {
+      if (!IsIdle()) {
          // Notify submission
          Info("HandleProcess",
               "query \"%s:%s\" submitted", pq->GetTitle(), pq->GetName());
@@ -3185,7 +3313,7 @@ void TProofServ::HandleProcess(TMessage *mess)
       // (there is no way to enqueue if idle).
       // in the dynamic mode we will process here only if the session was idle and got workers!
       Bool_t doprocess = kFALSE;
-      while (fWaitingQueries->GetSize() > 0 && !enqueued) {
+      while (WaitingQueries() > 0 && !enqueued) {
          doprocess = kTRUE;
          //
          ProcessNext();
@@ -3196,21 +3324,39 @@ void TProofServ::HandleProcess(TMessage *mess)
       } // Loop on submitted queries
 
       // Set idle
-      fIdle = kTRUE;
+      SetIdle(kTRUE);
+
+      // Reset mergers
+      fProof->ResetMergers();
+
+      // kPROOF_SETIDLE sets the client to idle; in asynchronous mode clients monitor
+      // TProof::IsIdle for to check the readiness of a query, so we need to send this
+      // before to be sure thatn everything about a query is received by the client
+      if (!sync) SendLogFile();
 
       // Signal the client that we are idle
       if (doprocess) {
          m.Reset(kPROOF_SETIDLE);
-         Bool_t waiting = (fWaitingQueries->GetSize() > 0) ? kTRUE : kFALSE;
+         Bool_t waiting = (WaitingQueries() > 0) ? kTRUE : kFALSE;
          m << waiting;
          fSocket->Send(m);
       }
 
+      // In synchronous mode TProof::Collect is terminated by the reception of the
+      // log file and subsequent submissions are controlled by TProof::IsIdle(), so
+      // this must be last one to be sent
+      if (sync) SendLogFile();
+
+      // Set idle
+      SetIdle(kTRUE);
+
    } else {
 
       // Set not idle
-      fIdle = kFALSE;
+      SetIdle(kFALSE);
 
+      // Cleanup the player
+      Bool_t deleteplayer = kTRUE;
       MakePlayer();
 
       // Setup data set
@@ -3227,6 +3373,9 @@ void TProofServ::HandleProcess(TMessage *mess)
          Warning("HandleProcess", "could not get query sequential number!");
 
       // Make the ordinal number available in the selector
+      TObject *nord = 0;
+      while ((nord = input->FindObject("PROOF_Ordinal")))
+         input->Remove(nord);
       input->Add(new TNamed("PROOF_Ordinal", GetOrdinal()));
 
       // Set input
@@ -3257,44 +3406,101 @@ void TProofServ::HandleProcess(TMessage *mess)
       } else {
          m << fPlayer->GetEventsProcessed() << abort;
       }
-      fSocket->Send(m);
 
-      // Send back the results
-      if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted && fPlayer->GetOutputList()) {
-         // Send results to the master
-         SendResults(fSocket, fPlayer->GetOutputList());
-      } else {
-         // Signal the failure
-         SendResults(fSocket);
-      }
+      fSocket->Send(m);
+      PDB(kGlobal, 2) 
+         Info("TProofServ::Handleprocess",
+              "worker %s has finished processing with %d objects in output list",
+              GetOrdinal(), fPlayer->GetOutputList()->GetEntries());
 
       // Cleanup the input data set info
       SafeDelete(dset);
       SafeDelete(enl);
       SafeDelete(evl);
 
+      // Check if we are in merging mode (i.e. parameter PROOF_UseMergers exists)
+      Bool_t isInMergingMode = kFALSE;
+      Int_t nm = 0;
+      if (TProof::GetParameter(input, "PROOF_UseMergers", nm) == 0) {
+         isInMergingMode = kTRUE;
+      }
+      PDB(kGlobal, 2) Info("HandleProcess", "merging mode check: %d", isInMergingMode);
+
+      if (!IsMaster() && isInMergingMode &&
+          fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted && fPlayer->GetOutputList()) {
+         // Worker in merging mode.
+         //----------------------------
+         // First, it reports only the size of its output to the master 
+         // + port on which it can possibly accept outputs from other workers if it becomes a merger
+         // Master will later tell it where it should send the output (either to the master or to some merger)	
+         // or if it should become a merger
+
+         TMessage msg_osize(kPROOF_SUBMERGER);
+         msg_osize << Int_t(TProof::kOutputSize);
+         msg_osize << fPlayer->GetOutputList()->GetEntries();
+
+         fMergingSocket = new TServerSocket(0);
+         Int_t merge_port = 0;
+         if (fMergingSocket) {
+            PDB(kGlobal, 2)
+               Info("HandleProcess", "possible port for merging connections: %d",
+                                     fMergingSocket->GetLocalPort());
+            merge_port = fMergingSocket->GetLocalPort();
+         }
+         msg_osize << merge_port;
+         fSocket->Send(msg_osize);
+
+         // Set idle
+         SetIdle(kTRUE);
+
+         // Do not leanup the player yet: it will be used in sub-merging activities
+         deleteplayer = kFALSE;
+
+         PDB(kSubmerger, 2) Info("HandleProcess", "worker %s has finished", fOrdinal.Data());
+
+      } else {
+         // Sub-master OR worker not in merging mode
+         // ---------------------------------------------
+         if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted && fPlayer->GetOutputList()) {
+            PDB(kGlobal, 2)  Info("HandleProcess", "sending result directly to master");
+            if (SendResults(fSocket, fPlayer->GetOutputList()) != 0)
+               Warning("HandleProcess","problems sending output list");
+         } else {
+            if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted)
+               Warning("HandleProcess","the output list is empty!");
+            if (SendResults(fSocket) != 0)
+               Warning("HandleProcess", "problems sending output list");
+         }
+
+         // Masters reset the mergers, if any
+         if (IsMaster()) fProof->ResetMergers();
+
+         // Signal the master that we are idle
+         fSocket->Send(kPROOF_SETIDLE);
+
+         // Set idle
+         SetIdle(kTRUE);
+
+         // Notify the user
+         SendLogFile();
+      }
       // Make also sure the input list objects are deleted
       fPlayer->GetInputList()->SetOwner(0);
       input->SetOwner();
       SafeDelete(input);
 
-      // Signal the master that we are idle
-      fSocket->Send(kPROOF_SETIDLE);
-
-      DeletePlayer();
+      // Cleanup if required
+      if (deleteplayer) DeletePlayer();
    }
 
-   // Set idle
-   fIdle = kTRUE;
-
-   PDB(kGlobal, 1) Info("HandleProcess", "Done");
+   PDB(kGlobal, 1) Info("HandleProcess", "done");
 
    // Done
    return;
 }
 
 //______________________________________________________________________________
-void TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
+Int_t TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
 {
    // Sends all objects from the given list to the specified socket
 
@@ -3318,7 +3524,7 @@ void TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
          // Send light query info
          mbuf << (Int_t) 0;
          mbuf.WriteObject(pq);
-         sock->Send(mbuf);
+         if (sock->Send(mbuf) < 0) return -1;
       }
       // Objects in the output list
       Int_t ns = 0, np = 0;
@@ -3347,7 +3553,7 @@ void TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
                               fPrefix.Data(), ns, olsz, objsz);
                SendAsynMessage(msg.Data(), kFALSE);
             }
-            sock->Send(mbuf);
+            if (sock->Send(mbuf) < 0) return -1;
             // Reset the message
             mbuf.Reset();
             np = 0;
@@ -3373,7 +3579,7 @@ void TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
                            fPrefix.Data(), ns, olsz, objsz);
             SendAsynMessage(msg.Data(), kFALSE);
          }
-         sock->Send(mbuf);
+         if (sock->Send(mbuf) < 0) return -1;
       }
       if (IsTopMaster()) {
          // Send total size
@@ -3398,7 +3604,7 @@ void TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
          // Send light query info
          mbuf << (Int_t) 0;
          mbuf.WriteObject(pq);
-         sock->Send(mbuf);
+         if (sock->Send(mbuf) < 0) return -1;
       }
 
       Int_t ns = 0;
@@ -3426,7 +3632,7 @@ void TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
                            fPrefix.Data(), ns, olsz, objsz);
             SendAsynMessage(msg.Data(), kFALSE);
          }
-         fSocket->Send(mbuf);
+         if (sock->Send(mbuf) < 0) return -1;
       }
       // Total size
       if (IsTopMaster()) {
@@ -3447,7 +3653,7 @@ void TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
       // Message for the client
       msg.Form("%s: sending output: %d objs, %d bytes", fPrefix.Data(), olsz, blen);
       SendAsynMessage(msg.Data(), kFALSE);
-      sock->Send(mbuf);
+      if (sock->Send(mbuf) < 0) return -1;
 
    } else {
       if (outlist) {
@@ -3455,13 +3661,13 @@ void TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
       } else {
          PDB(kGlobal, 2) Info("SendResults", "notifying failure or abort");
       }
-      sock->SendObject(outlist, kPROOF_OUTPUTLIST);
+      if (sock->SendObject(outlist, kPROOF_OUTPUTLIST) < 0) return -1;
    }
 
-   // DeletePlayer();
    PDB(kOutput,2) Info("SendResults", "done");
 
-   return;
+   // Done
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -3480,12 +3686,12 @@ void TProofServ::ProcessNext()
 
    // Process
 
-   // Get query info
-   pq = (TProofQueryResult *)(fWaitingQueries->First());
+   // Get next query info (also removes query from the list)
+   pq = NextQuery();
    if (pq) {
 
       // Set not idle
-      fIdle = kFALSE;
+      SetIdle(kFALSE);
       opt      = pq->GetOptions();
       input    = pq->GetInputList();
       nentries = pq->GetEntries();
@@ -3511,20 +3717,17 @@ void TProofServ::ProcessNext()
       //
       // Expand selector files
       if (pq->GetSelecImp()) {
-         gSystem->Unlink(pq->GetSelecImp()->GetName());
+         gSystem->Exec(TString::Format("%s %s", kRM, pq->GetSelecImp()->GetName()));
          pq->GetSelecImp()->SaveSource(pq->GetSelecImp()->GetName());
       }
       if (pq->GetSelecHdr() &&
           !strstr(pq->GetSelecHdr()->GetName(), "TProofDrawHist")) {
-         gSystem->Unlink(pq->GetSelecHdr()->GetName());
+         gSystem->Exec(TString::Format("%s %s", kRM, pq->GetSelecHdr()->GetName()));
          pq->GetSelecHdr()->SaveSource(pq->GetSelecHdr()->GetName());
       }
-      //
-      // Remove processed query from the list
-      fWaitingQueries->Remove(pq);
    } else {
       // Should never get here
-      Error("ProcessNext", "empty fWaitingQueries queue!");
+      Error("ProcessNext", "empty waiting queries list!");
       return;
    }
 
@@ -3537,8 +3740,8 @@ void TProofServ::ProcessNext()
          fQMgr->SaveQuery(pq);
       else
          fQMgr->IncrementDrawQueries();
+      fQMgr->ResetTime();
    }
-   fQMgr->ResetTime();
 
    // Signal the client that we are starting a new query
    TMessage m(kPROOF_STARTPROCESS);
@@ -3623,14 +3826,16 @@ void TProofServ::ProcessNext()
    TQueryResult *pqr = pq->CloneInfo();
    if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted && fPlayer->GetOutputList()) {
       PDB(kGlobal, 2)
-         Info("ProcessNext","Sending results");
+         Info("ProcessNext", "sending results");
       TQueryResult *xpq = (fProtocol > 10) ? pqr : pq;
-      SendResults(fSocket, fPlayer->GetOutputList(), xpq);
+      if (SendResults(fSocket, fPlayer->GetOutputList(), xpq) != 0)
+         Warning("ProcessNext", "problems sending output list");
 
    } else {
       if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted)
-         Warning("ProcessNext","The output list is empty!");
-      SendResults(fSocket);
+         Warning("ProcessNext","the output list is empty!");
+      if (SendResults(fSocket) != 0)
+         Warning("ProcessNext", "problems sending output list");
    }
 
    // Remove aborted queries from the list
@@ -3808,9 +4013,8 @@ void TProofServ::HandleRemove(TMessage *mess)
    (*mess) >> queryref;
 
    if (queryref == "cleanupqueue") {
-      Int_t pend = fWaitingQueries->GetSize();
       // Remove pending requests
-      fWaitingQueries->Delete();
+      Int_t pend = CleanupWaitingQueries();
       // Notify
       Info("HandleRemove", "%d queries removed from the waiting list", pend);
       // We are done
@@ -3834,7 +4038,9 @@ void TProofServ::HandleRemove(TMessage *mess)
       if (fQMgr->LockSession(queryref, &lck) == 0) {
 
          // Remove query
-         fQMgr->RemoveQuery(queryref, fWaitingQueries);
+         TList qtorm;
+         fQMgr->RemoveQuery(queryref, &qtorm);
+         CleanupWaitingQueries(kFALSE, &qtorm);
 
          // Unlock and remove the lock file
          if (lck) {
@@ -4088,8 +4294,8 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       if (md5local && md5 == (*md5local)) {
          if ((opt & TProof::kRemoveOld)) {
             // remove any previous package directory with same name
-            st = TProof::Unlink(TString::Format("%s/%s", fPackageDir.Data(),
-                                                          packnam.Data()), kTRUE);
+            st = gSystem->Exec(TString::Format("%s %s/%s", kRM, fPackageDir.Data(),
+                               packnam.Data()));
             if (st)
                Error("HandleCheckFile", "failure executing: %s %s/%s",
                      kRM, fPackageDir.Data(), packnam.Data());
@@ -4143,8 +4349,8 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       // be released below before the call to fProof->UploadPackage().
       if (err) {
          // delete par file in case of error
-         TProof::Unlink(TString::Format("%s/%s", fPackageDir.Data(),
-                                                  filenam.Data()), kTRUE);
+         gSystem->Exec(TString::Format("%s %s/%s", kRM, fPackageDir.Data(),
+                       filenam.Data()));
          fPackageLock->Unlock();
       } else if (IsMaster()) {
          // forward to workers
@@ -4280,10 +4486,9 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          if ((mess->BufferSize() > mess->Length())) (*mess) >> file;
          fCacheLock->Lock();
          if (file.IsNull() || file == "*") {
-            TProof::Unlink(TString::Format("%s/*", fCacheDir.Data()), kTRUE);
-            TProof::Unlink(TString::Format("%s/.*.binversion", fCacheDir.Data()), kTRUE);
+            gSystem->Exec(TString::Format("%s %s/* %s/.*.binversion", kRM, fCacheDir.Data(), fCacheDir.Data()));
          } else {
-            TProof::Unlink(TString::Format("%s/%s", fCacheDir.Data(), file.Data()), kTRUE);
+            gSystem->Exec(TString::Format("%s %s/%s", kRM, fCacheDir.Data(), file.Data()));
          }
          fCacheLock->Unlock();
          if (IsMaster())
@@ -4316,7 +4521,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          status = UnloadPackages();
          if (status == 0) {
             fPackageLock->Lock();
-            TProof::Unlink(TString::Format("%s/*", fPackageDir.Data()), kTRUE);
+            gSystem->Exec(TString::Format("%s %s/*", kRM, fPackageDir.Data()));
             fPackageLock->Unlock();
             if (IsMaster())
                status = fProof->ClearPackages();
@@ -4328,11 +4533,11 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          if (status == 0) {
             fPackageLock->Lock();
             // remove package directory and par file
-            TProof::Unlink(TString::Format("%s/%s", fPackageDir.Data(),
-                            package.Data()), kTRUE);
+            gSystem->Exec(TString::Format("%s %s/%s", kRM, fPackageDir.Data(),
+                          package.Data()));
             if (IsMaster())
-               TProof::Unlink(TString::Format("%s/%s.par", fPackageDir.Data(),
-                               package.Data()), kTRUE);
+               gSystem->Exec(TString::Format("%s %s/%s.par", kRM, fPackageDir.Data(),
+                             package.Data()));
             fPackageLock->Unlock();
             if (IsMaster())
                status = fProof->ClearPackage(package);
@@ -4422,7 +4627,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                      // Hard cleanup: go up the dir tree
                      gSystem->ChangeDirectory(fPackageDir);
                      // remove package directory
-                     TProof::Unlink(pdir.Data(), kTRUE);
+                     gSystem->Exec(TString::Format("%s %s", kRM, pdir.Data()));
                      // find gunzip...
                      char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP,
                                                    kExecutePermission);
@@ -4442,6 +4647,8 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                            TMD5::WriteChecksum(md5f, md5local);
                            // Go down to the package directory
                            gSystem->ChangeDirectory(pdir);
+                           // Cleanup
+                           SafeDelete(md5local);
                         }
                         delete [] gunzip;
                      } else
@@ -4638,10 +4845,10 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          (*mess) >> package;
          fPackageLock->Lock();
          // remove package directory and par file
-         TProof::Unlink(TString::Format("%s/%s", fPackageDir.Data(),
-                                                  package.Data()), kTRUE);
-         TProof::Unlink(TString::Format("%s/%s.par", fPackageDir.Data(),
-                                                      package.Data()), kTRUE);
+         gSystem->Exec(TString::Format("%s %s/%s", kRM, fPackageDir.Data(),
+                       package.Data()));
+         gSystem->Exec(TString::Format("%s %s/%s.par", kRM, fPackageDir.Data(),
+                       package.Data()));
          fPackageLock->Unlock();
          if (IsMaster())
             fProof->DisablePackage(package);
@@ -4653,7 +4860,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          break;
       case TProof::kDisablePackages:
          fPackageLock->Lock();
-         TProof::Unlink(TString::Format("%s/*", fPackageDir.Data()), kTRUE);
+         gSystem->Exec(TString::Format("%s %s/*", kRM, fPackageDir.Data()));
          fPackageLock->Unlock();
          if (IsMaster())
             fProof->DisablePackages();
@@ -4928,7 +5135,7 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    }
    if (level >= kInfo) {
       loglevel = kLogInfo;
-      char *ps = (char *) strrchr(location, '|');
+      char *ps = location ? (char *) strrchr(location, '|') : (char *)0;
       if (ps) {
          ipos = (int)(ps - (char *)location);
          type = "SvcMsg";
@@ -5088,6 +5295,7 @@ Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
    // Check binary version
    TString v;
    Int_t rev = -1;
+   Bool_t okfil = kFALSE;
    FILE *f = fopen(TString::Format("%s/%s", fCacheDir.Data(), vername.Data()), "r");
    if (f) {
       TString r;
@@ -5095,20 +5303,21 @@ Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
       r.Gets(f);
       rev = (!r.IsNull() && r.IsDigit()) ? r.Atoi() : -1;
       fclose(f);
+      okfil = kTRUE;
    }
 
    Bool_t okver = (v != gROOT->GetVersion()) ? kFALSE : kTRUE;
    Bool_t okrev = (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision()) ? kFALSE : kTRUE;
-   if (!f || !okver || !okrev) {
+   if (!okfil || !okver || !okrev) {
    PDB(kCache,1)
       Info("CopyFromCache",
-           "removing binaries: 'f': %p, 'ROOT version': %s, 'ROOT revision': %s",
-           f, (okver ? "OK" : "not OK"), (okrev ? "OK" : "not OK") );
+           "removing binaries: 'file': %s, 'ROOT version': %s, 'ROOT revision': %s",
+           (okfil ? "OK" : "not OK"), (okver ? "OK" : "not OK"), (okrev ? "OK" : "not OK") );
       // Remove all existing binaries
       binname += "*";
-      TProof::Unlink(TString::Format("%s/%s", fCacheDir.Data(), binname.Data()), kTRUE);
+      gSystem->Exec(TString::Format("%s %s/%s", kRM, fCacheDir.Data(), binname.Data()));
       // ... and the binary version file
-      TProof::Unlink(TString::Format("%s/%s", fCacheDir.Data(), vername.Data()), kTRUE);
+      gSystem->Exec(TString::Format("%s %s/%s", kRM, fCacheDir.Data(), vername.Data()));
       // Done
       if (!locked) fCacheLock->Unlock();
       return 0;
@@ -5128,13 +5337,21 @@ Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
                Int_t rc = gSystem->GetPathInfo(e, stlocal);
                if (rc == 0 && (stlocal.fMtime >= stcache.fMtime))
                   docp = kFALSE;
+               // If a copy candidate, check also the MD5
+               if (docp) {
+                  TMD5 *md5local = TMD5::FileChecksum(e);
+                  TMD5 *md5cache = TMD5::FileChecksum(fncache);
+                  if (md5local && md5cache && md5local == md5cache) docp = kFALSE;
+                  SafeDelete(md5local);
+                  SafeDelete(md5cache);
+               }
                // Copy the file, if needed
                if (docp) {
-                  gSystem->Unlink(e);
+                  gSystem->Exec(TString::Format("%s %s", kRM, e));
                   PDB(kCache,1)
                      Info("CopyFromCache",
                           "retrieving %s from cache", fncache.Data());
-                  gSystem->CopyFile(fncache.Data(), e, kTRUE);
+                  gSystem->Exec(TString::Format("%s %s %s", kCP, fncache.Data(), e));
                }
             }
          }
@@ -5199,14 +5416,14 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
       PDB(kCache,1)
          Info("CopyToCache",
               "caching %s/%s ...", fCacheDir.Data(), name.Data());
-      gSystem->CopyFile(name.Data(), fCacheDir.Data(), kTRUE);
+      gSystem->Exec(TString::Format("%s %s %s", kCP, name.Data(), fCacheDir.Data()));
       // If needed, remove from the cache any existing binary related to 'name'
       if (dot != kNPOS) {
          binname += ".*";
          PDB(kCache,1)
             Info("CopyToCache", "opt = 0: removing binaries '%s'", binname.Data());
-         TProof::Unlink(TString::Format("%s/%s", fCacheDir.Data(), binname.Data()), kTRUE);
-         TProof::Unlink(TString::Format("%s/%s", fCacheDir.Data(), vername.Data()), kTRUE);
+         gSystem->Exec(TString::Format("%s %s/%s", kRM, fCacheDir.Data(), binname.Data()));
+         gSystem->Exec(TString::Format("%s %s/%s", kRM, fCacheDir.Data(), vername.Data()));
       }
    } else if (opt == 1) {
       // If needed, copy to the cache any existing binary related to 'name'.
@@ -5223,14 +5440,25 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
                      TString fncache;
                      fncache.Form("%s/%s", fCacheDir.Data(), e);
                      Int_t rc = gSystem->GetPathInfo(fncache, stcache);
-                     if (rc == 0 && (stlocal.fMtime <= stcache.fMtime))
+                     if (rc == 0 && (stlocal.fMtime <= stcache.fMtime)) {
                         docp = kFALSE;
+                        if (rc == 0) rc = -1;
+                     }
+                     // If a copy candidate, check also the MD5
+                     if (docp) {
+                        TMD5 *md5local = TMD5::FileChecksum(e);
+                        TMD5 *md5cache = TMD5::FileChecksum(fncache);
+                        if (md5local && md5cache && md5local == md5cache) docp = kFALSE;
+                        SafeDelete(md5local);
+                        SafeDelete(md5cache);
+                        if (!docp) rc = -2;
+                     }
                      // Copy the file, if needed
                      if (docp) {
-                        gSystem->Unlink(fncache.Data());
+                        gSystem->Exec(TString::Format("%s %s", kRM, fncache.Data()));
                         PDB(kCache,1)
-                           Info("CopyToCache","caching %s ...", e);
-                        gSystem->CopyFile(e, fncache.Data(), kTRUE);
+                           Info("CopyToCache","caching %s ... (reason: %d)", e, rc);
+                        gSystem->Exec(TString::Format("%s %s %s", kCP, e, fncache.Data()));
                         savever = kTRUE;
                      }
                   }
@@ -5266,6 +5494,9 @@ void TProofServ::MakePlayer()
 
    TVirtualProofPlayer *p = 0;
 
+   // Cleanup first
+   DeletePlayer();
+
    if (IsParallel()) {
       // remote mode
       p = fProof->MakePlayer();
@@ -5288,7 +5519,7 @@ void TProofServ::DeletePlayer()
    if (IsMaster()) {
       if (fProof) fProof->SetPlayer(0);
    } else {
-      delete fPlayer;
+      SafeDelete(fPlayer);
    }
    fPlayer = 0;
 }
@@ -5381,7 +5612,8 @@ void TProofServ::FlushLogFile()
    // This allows to "hide" useful debug messages during normal operations
    // while preserving the possibility to have them in case of problems.
 
-   lseek(fLogFileDes, lseek(fileno(stdout), (off_t)0, SEEK_END), SEEK_SET);
+   off_t lend = lseek(fileno(stdout), (off_t)0, SEEK_END);
+   if (lend >= 0) lseek(fLogFileDes, lend, SEEK_SET);
 }
 
 //______________________________________________________________________________
@@ -5585,6 +5817,169 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
 }
 
 //______________________________________________________________________________
+void TProofServ::HandleSubmerger(TMessage *mess)
+{
+   // Handle a message of type kPROOF_SUBMERGER
+
+   // Message type
+   Int_t type = 0;
+   (*mess) >> type;
+
+   switch (type) {
+      case TProof::kOutputSize:
+         break;
+
+      case TProof::kSendOutput:
+         {
+            if (!IsMaster()) {
+               PDB(kSubmerger, 1)
+                  Info("HandleSubmerger","worker %s redirected to merger", fOrdinal.Data()); 
+               if (fMergingSocket) {
+                  fMergingSocket->Close();
+                  SafeDelete(fMergingSocket);
+               }
+
+               TString name;
+               Int_t port = 0;
+               Int_t merger_id = -1;
+               (*mess) >> merger_id >> name >> port;
+
+               TSocket *t = 0;
+               if (name.Length() > 0 && port > 0 && (t = new TSocket(name, port)) && t->IsValid()) {
+
+                  PDB(kSubmerger, 2) Info("HandleSubmerger",
+                                          "%f kSendOutput: worker asked for sending output to merger #%d %s:%d",
+                                          merger_id, name.Data(), port);
+
+                  if (SendResults(t, fPlayer->GetOutputList()) != 0) {
+                     // Results not send	
+                     TMessage answ(kPROOF_SUBMERGER);
+                     answ << Int_t(TProof::kMergerDown);
+                     answ << merger_id;
+                     fSocket->Send(answ);
+                  } else {
+                     // Worker informs master that it had sent its output to the merger
+                     TMessage answ(kPROOF_SUBMERGER);
+                     answ << Int_t(TProof::kOutputSent);
+                     answ << merger_id;
+                     fSocket->Send(answ);
+
+                     PDB(kSubmerger, 2) Info("HandleSubmerger",
+                                             "kSendOutput: worker sent its output", name.Data(), port);
+                     fSocket->Send(kPROOF_SETIDLE);
+                     SetIdle(kTRUE);
+                     SendLogFile();
+                  }
+               } else {
+
+                  if (t) SafeDelete(t);
+
+                  PDB(kSubmerger, 2) Info("HandleSubmerger",
+                                          "kSendOutput: worker was asked for sending output to master");
+                  SendResults(fSocket, fPlayer->GetOutputList());
+                  SendLogFile();
+               }
+
+            } else {
+               Error("HandleSubmerger", "kSendOutput: received not on worker");	
+            }
+
+            // Cleanup
+            DeletePlayer();
+         }
+         break;
+      case TProof::kBeMerger:
+         {
+            if (!IsMaster()) {
+               Int_t merger_id = -1;
+               //Int_t merger_port = 0;
+               Int_t connections = 0;
+               (*mess) >> merger_id  >> connections;
+               PDB(kSubmerger, 2)
+                  Info("HandleSubmerger", "worker %s established as merger", fOrdinal.Data()); 
+
+               PDB(kSubmerger, 2)
+                  Info("HandleSubmerger",
+                       "kBeMerger: worker asked for being merger #%d for %d connections",
+                       merger_id, connections);
+
+               TVirtualProofPlayer *mergerPlayer =  TVirtualProofPlayer::Create("remote",fProof,0);
+               PDB(kSubmerger, 2) Info("HandleSubmerger",
+                                       "kBeMerger: mergerPlayer created (%p) ", mergerPlayer);
+
+               // Accept results from assigned workers
+               if (AcceptResults(connections, mergerPlayer)) {
+                  PDB(kSubmerger, 2)
+                     Info("HandleSubmerger", "kBeMerger: all outputs from workers accepted");
+
+                  PDB(kSubmerger, 2)
+                     Info("","adding own output to the list on %s", fOrdinal.Data());
+
+                  // Add own results to the output list
+                  // On workers the player does not own the output list, which is owned
+                  // by the selector and deleted in there
+                  TIter nxo(fPlayer->GetOutputList());
+                  TObject * o = 0;
+                  while ((o = nxo())) {
+                     if ((mergerPlayer->AddOutputObject(o) != 1)) {
+                        // Remove the object if it has not been merged: it is owned
+                        // now by the merger player (in its output list)
+                        PDB(kSubmerger, 2) Info("HandleSocketInput", "removing merged object (%p)", o);
+                        fPlayer->GetOutputList()->Remove(o);
+                     } 
+                  }
+                  PDB(kSubmerger, 2) Info("HandleSubmerger","kBeMerger: own outputs added");
+                  PDB(kSubmerger, 2) Info("HandleSubmerger","starting delayed merging on %s", fOrdinal.Data());
+
+                  // Delayed merging if neccessary
+                  mergerPlayer->MergeOutput();
+
+                  PDB(kSubmerger, 2) Info("HandleSubmerger", "delayed merging on %s finished ", fOrdinal.Data());
+                  PDB(kSubmerger, 2) Info("HandleSubmerger", "%s sending results to master ", fOrdinal.Data());
+                  // Send merged results to master
+                  if (SendResults(fSocket, mergerPlayer->GetOutputList()) != 0)
+                     Warning("HandleSubmerger","kBeMerger: problems sending output list");
+                  delete mergerPlayer;
+
+                  PDB(kSubmerger, 2) Info("HandleSubmerger","kBeMerger: results sent to master");
+                  // Signal the master that we are idle
+                  fSocket->Send(kPROOF_SETIDLE);
+                  SetIdle(kTRUE);
+                  SendLogFile();
+               } else {
+                  // Results from all assigned workers not accepted
+                  TMessage answ(kPROOF_SUBMERGER);
+                  answ << Int_t(TProof::kMergerDown);
+                  answ << merger_id;
+                  fSocket->Send(answ);
+               }
+            } else {
+               Error("HandleSubmerger","kSendOutput: received not on worker");	
+            }
+
+            // Cleanup
+            DeletePlayer();
+         }
+         break;
+
+      case TProof::kMergerDown:
+         break;
+
+      case TProof::kStopMerging:
+         {
+            // Received only in case of forced termination of merger by master
+            PDB(kSubmerger, 2)  Info("HandleSubmerger", "kStopMerging");
+            if (fMergingMonitor)
+               fMergingMonitor->DeActivateAll();
+         }
+         break;
+
+      case TProof::kOutputSent:
+         break;
+   }
+}
+
+//______________________________________________________________________________
 void TProofServ::HandleFork(TMessage *)
 {
    // Cloning itself via fork. Not implemented
@@ -5684,6 +6079,100 @@ void TProofServ::ResolveKeywords(TString &fname, const char *path)
    }
 }
 
+//______________________________________________________________________________
+Int_t TProofServ::GetSessionStatus()
+{
+   // Return the status of this session:
+   //     0     idle
+   //     1     running
+   //     2     being terminated  (currently unused)
+   //     3     queued
+   // This is typically run in the reader thread, so access needs to be protected
+
+   R__LOCKGUARD(fQMtx);
+   Int_t st = (fIdle) ? 0 : 1;
+   if (fIdle && fWaitingQueries->GetSize() > 0) st = 3;
+   return st;
+}
+
+//______________________________________________________________________________
+Bool_t TProofServ::IsIdle()
+{
+   // Return the idle status
+   R__LOCKGUARD(fQMtx);
+   return fIdle;
+}
+
+//______________________________________________________________________________
+void TProofServ::SetIdle(Bool_t st)
+{
+   // Change the idle status
+   R__LOCKGUARD(fQMtx);
+   fIdle = st;
+}
+
+//______________________________________________________________________________
+Bool_t TProofServ::IsWaiting()
+{
+   // Return kTRUE if the session is waiting for the OK to start processing
+   R__LOCKGUARD(fQMtx);
+   if (fIdle && fWaitingQueries->GetSize() > 0) return kTRUE;
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::WaitingQueries()
+{
+   // Return the number of waiting queries
+   R__LOCKGUARD(fQMtx);
+   return fWaitingQueries->GetSize();
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::QueueQuery(TProofQueryResult *pq)
+{
+   // Add a query to the waiting list
+   // Returns the number of queries in the list
+   R__LOCKGUARD(fQMtx);
+   fWaitingQueries->Add(pq);
+   return fWaitingQueries->GetSize();
+}
+
+//______________________________________________________________________________
+TProofQueryResult *TProofServ::NextQuery()
+{
+   // Get the next query from the waiting list.
+   // The query is removed from the list.
+   R__LOCKGUARD(fQMtx);
+   TProofQueryResult *pq = (TProofQueryResult *) fWaitingQueries->First();
+   fWaitingQueries->Remove(pq);
+   return pq;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::CleanupWaitingQueries(Bool_t del, TList *qls)
+{
+   // Cleanup the waiting queries list. The objects are deleted if 'del' is true.
+   // If 'qls' is non null, only objects in 'qls' are removed.
+   // Returns the number of cleanup queries
+   R__LOCKGUARD(fQMtx);
+   Int_t ncq = 0;
+   if (qls) {
+      TIter nxq(qls);
+      TObject *o = 0;
+      while ((o = nxq())) {
+         if (fWaitingQueries->FindObject(o)) ncq++;
+         fWaitingQueries->Remove(o);
+         if (del) delete o;
+      }
+   } else {
+      ncq = fWaitingQueries->GetSize();
+      fWaitingQueries->SetOwner(del);
+      fWaitingQueries->Delete();
+   }
+   // Done
+   return ncq;
+}
 
 //______________________________________________________________________________
 Int_t TProofLockPath::Lock()
@@ -5706,12 +6195,14 @@ Int_t TProofLockPath::Lock()
    PDB(kPackage, 2)
       Info("Lock", "%d: locking file %s ...", gSystem->GetPid(), pname);
    // lock the file
+#if !defined(R__WIN32) && !defined(R__WINGCC)
    if (lockf(fLockId, F_LOCK, (off_t) 1) == -1) {
       SysError("Lock", "error locking %s", pname);
       close(fLockId);
       fLockId = -1;
       return -1;
    }
+#endif
 
    PDB(kPackage, 2)
       Info("Lock", "%d: file %s locked", gSystem->GetPid(), pname);
@@ -5732,12 +6223,14 @@ Int_t TProofLockPath::Unlock()
       Info("Lock", "%d: unlocking file %s ...", gSystem->GetPid(), GetName());
    // unlock the file
    lseek(fLockId, 0, SEEK_SET);
+#if !defined(R__WIN32) && !defined(R__WINGCC)
    if (lockf(fLockId, F_ULOCK, (off_t)1) == -1) {
       SysError("Unlock", "error unlocking %s", GetName());
       close(fLockId);
       fLockId = -1;
       return -1;
    }
+#endif
 
    PDB(kPackage, 2)
       Info("Unlock", "%d: file %s unlocked", gSystem->GetPid(), GetName());

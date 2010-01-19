@@ -405,7 +405,7 @@ void TProofChain::ConnectProof()
    // Connects the proof - creates a "DrawFeedback" and connects the
    // "Progress" signal.
 
-   if (gProof && !fDrawFeedback && !gProof->TestBit(TProof::kUsingSessionGui)) {
+   if (gProof && !fDrawFeedback) {
       fDrawFeedback = gProof->CreateDrawFeedback();
 
       gProof->Connect("Progress(Long64_t,Long64_t)", "TProofChain",

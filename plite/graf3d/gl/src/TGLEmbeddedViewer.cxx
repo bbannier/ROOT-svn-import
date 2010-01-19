@@ -31,7 +31,8 @@
 ClassImp(TGLEmbeddedViewer);
 
 //______________________________________________________________________________
-TGLEmbeddedViewer::TGLEmbeddedViewer(const TGWindow *parent, TVirtualPad *pad, Int_t border) :
+TGLEmbeddedViewer::TGLEmbeddedViewer(const TGWindow *parent, TVirtualPad *pad,
+                                     Int_t border) :
    TGLViewer(pad, 0, 0, 400, 300),
    fFrame(0),
    fBorder(border)
@@ -40,13 +41,22 @@ TGLEmbeddedViewer::TGLEmbeddedViewer(const TGWindow *parent, TVirtualPad *pad, I
    // Argument 'border' specifies how many pixels to pad on each side of the
    // viewer. This area can be used for highlightning of the active viewer.
 
-   fFrame = new TGCompositeFrame(parent);
+   Init(parent);
+}
 
-   CreateFrames();
+//______________________________________________________________________________
+TGLEmbeddedViewer::TGLEmbeddedViewer(const TGWindow *parent, TVirtualPad *pad,
+                                     TGedEditor *ged, Int_t border) :
+   TGLViewer(pad, 0, 0, 400, 300),
+   fFrame(0),
+   fBorder(border)
+{
+   // Constructor allowing to also specify an GED editor to use.
+   // Argument 'border' specifies how many pixels to pad on each side of the
+   // viewer. This area can be used for highlightning of the active viewer.
 
-   fFrame->MapSubwindows();
-   fFrame->Resize(fFrame->GetDefaultSize());
-   fFrame->Resize(400, 300);
+   fGedEditor = ged;
+   Init(parent);
 }
 
 //______________________________________________________________________________
@@ -56,6 +66,35 @@ TGLEmbeddedViewer::~TGLEmbeddedViewer()
 
    delete fFrame;
    fGLWidget = 0;
+}
+
+//______________________________________________________________________________
+void TGLEmbeddedViewer::Init(const TGWindow *parent)
+{
+   // Common initialization from all constructors.
+
+   fFrame = new TGCompositeFrame(parent);
+
+   CreateFrames();
+
+   fFrame->MapSubwindows();
+   fFrame->Resize(fFrame->GetDefaultSize());
+   fFrame->Resize(400, 300);
+}
+ 
+//______________________________________________________________________________
+void TGLEmbeddedViewer::CreateFrames()
+{
+   // Internal frames creation.
+
+   fGLWidget = TGLWidget::Create(fFrame, kTRUE, kTRUE, 0, 10, 10);
+
+   // Direct events from the TGWindow directly to the base viewer
+   fEventHandler = new TGLEventHandler(0, this);
+   fGLWidget->SetEventHandler(fEventHandler);
+
+   fFrame->AddFrame(fGLWidget, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY,
+                                                 fBorder, fBorder, fBorder, fBorder));
 }
 
 //______________________________________________________________________________
@@ -100,19 +139,4 @@ void TGLEmbeddedViewer::DestroyGLWidget()
    fFrame->RemoveFrame(fGLWidget);
    fGLWidget->DeleteWindow();
    fGLWidget = 0;
-}
-
-//______________________________________________________________________________
-void TGLEmbeddedViewer::CreateFrames()
-{
-   // Internal frames creation.
-
-   fGLWidget = TGLWidget::Create(fFrame, kTRUE, kTRUE, 0, 10, 10);
-
-   // Direct events from the TGWindow directly to the base viewer
-   fEventHandler = new TGLEventHandler("Default", 0, this);
-   fGLWidget->SetEventHandler(fEventHandler);
-
-   fFrame->AddFrame(fGLWidget, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY,
-                                                 fBorder, fBorder, fBorder, fBorder));
 }

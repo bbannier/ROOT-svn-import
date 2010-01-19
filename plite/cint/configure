@@ -723,6 +723,8 @@ if [ "x${COREVERSION}" = "xcint" ]; then
   CINTVERSIONTAG=G__CINTVERSIONSTR_V5
 else
   CINTVERSIONTAG=G__CINTVERSIONSTR
+  LREFLEX=-lReflex
+  IREFLEX=${INCP}$CINTSYSDIR/reflex/inc
 fi
 
 CINTVERSION=`grep '#define *'${CINTVERSIONTAG}' ' ${COREVERSION}/inc/G__ci.h | sed 's/^.*"\([^,]*\),.*$/\1/'`
@@ -780,7 +782,7 @@ echo Writing bin/cint-config...
 [ "x$LIBDIR" = "x" ] && LIBDIR='$CINTSYSDIR/lib'
 [ "x$DATADIR" = "x" ] && DATADIR='$CINTSYSDIR/'${COREVERSION}'/'
 
-cat >> bin/cint-config << ___EOF
+cat > bin/cint-config << ___EOF
 
 printhelp() {
 cat <<_EOF
@@ -813,9 +815,9 @@ while [ \$# -gt 0 ] ; do
   case \$1 in
     --unix|-u) pathconvert="$MANGLEPATHSU" ;;
     --bindir)  \$pathconvert "${BINDIR}" ;;
-    --incdir)  \$pathconvert "${INCLUDEDIR}" ;;
-    --cflags)  \$pathconvert "${INCP}${INCLUDEDIR} ${INCP}$CINTSYSDIR/reflex/inc" ;;
-    --libs)    \$pathconvert "${LIBP}${LIBDIR} -lCint -lReflex" ;;
+    --incdir)  \$pathconvert "${INCLUDEDIRCINT}" ;;
+    --cflags)  \$pathconvert "${INCP}${INCLUDEDIRCINT} ${IREFLEX}" ;;
+    --libs)    \$pathconvert "${LIBP}${LIBDIR} -lCint ${LREFLEX}" ;;
     --libdir)  \$pathconvert "${LIBDIR}" ;;
     --datadir) \$pathconvert "${DATADIR}/cint" ;;
     --version|-v) echo "$CINTVERSION" ;;

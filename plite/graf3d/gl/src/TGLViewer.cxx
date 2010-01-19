@@ -48,6 +48,8 @@
 #include "TGLWidget.h"
 #include "TGLFBO.h"
 #include "TGLViewerEditor.h"
+#include "TGedEditor.h"
+#include "TGLPShapeObj.h"
 
 #include "KeySymbols.h"
 #include "TContextMenu.h"
@@ -110,6 +112,11 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fOrthoZnOYCamera(TGLOrthoCamera::kZnOY, TGLVector3( 1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down  X axis, -Z horz, Y vert
    fCurrentCamera(&fPerspectiveCameraXOZ),
 
+   fStereo               (kFALSE),
+   fStereoZeroParallax   (0.03f),
+   fStereoEyeOffsetFac   (1.0f),
+   fStereoFrustumAsymFac (1.0f),
+
    fLightSet          (0),
    fClipSet           (0),
    fClipAutoUpdate    (kTRUE),
@@ -117,11 +124,13 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fCurrentOvlElm     (0),
 
    fEventHandler(0),
+   fGedEditor(0),
+   fPShapeWrap(0),
    fPushAction(kPushStd), fDragAction(kDragNone),
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
-   fPointScale (1), fLineScale(1), fSmoothPoints(kTRUE), fSmoothLines(kTRUE),
+   fPointScale (1), fLineScale(1), fSmoothPoints(kFALSE), fSmoothLines(kFALSE),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -139,8 +148,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fGLCtxId(0),
    fIgnoreSizesOnUpdate(kFALSE),
    fResetCamerasOnUpdate(kTRUE),
-   fResetCamerasOnNextUpdate(kFALSE),
-   fResetCameraOnDoubleClick(kTRUE)
+   fResetCamerasOnNextUpdate(kFALSE)
 {
    // Construct the viewer object, with following arguments:
    //    'pad' - external pad viewer is bound to
@@ -167,6 +175,11 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fOrthoZnOYCamera(TGLOrthoCamera::kZnOY, TGLVector3( 1.0, 0.0, 0.0), TGLVector3(0.0, 1.0, 0.0)), // Looking down  X axis, -Z horz, Y vert
    fCurrentCamera(&fPerspectiveCameraXOZ),
 
+   fStereo               (kFALSE),
+   fStereoZeroParallax   (0.03f),
+   fStereoEyeOffsetFac   (1.0f),
+   fStereoFrustumAsymFac (1.0f),
+
    fLightSet          (0),
    fClipSet           (0),
    fClipAutoUpdate    (kTRUE),
@@ -174,11 +187,13 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fCurrentOvlElm     (0),
 
    fEventHandler(0),
+   fGedEditor(0),
+   fPShapeWrap(0),
    fPushAction(kPushStd), fDragAction(kDragNone),
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
-   fPointScale (1), fLineScale(1), fSmoothPoints(kTRUE), fSmoothLines(kTRUE),
+   fPointScale (1), fLineScale(1), fSmoothPoints(kFALSE), fSmoothLines(kFALSE),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -196,8 +211,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fGLCtxId(0),
    fIgnoreSizesOnUpdate(kFALSE),
    fResetCamerasOnUpdate(kTRUE),
-   fResetCamerasOnNextUpdate(kFALSE),
-   fResetCameraOnDoubleClick(kTRUE)
+   fResetCamerasOnNextUpdate(kFALSE)
 {
    //gl-embedded viewer's ctor
    // Construct the viewer object, with following arguments:
@@ -229,6 +243,8 @@ void TGLViewer::InitSecondaryObjects()
    fSelectedPShapeRef = new TGLManipSet;
    fSelectedPShapeRef->SetDrawBBox(kTRUE);
    AddOverlayElement(fSelectedPShapeRef);
+
+   fPShapeWrap = new TGLPShapeObj(0, this);
 
    fLightColorSet.StdLightBackground();
    if (fgUseDefaultColorSetForNewViewers) {
@@ -500,7 +516,7 @@ void TGLViewer::PostRender()
 //______________________________________________________________________________
 void TGLViewer::DoDraw()
 {
-   // Draw out the the current viewer/scene
+   // Draw out the viewer.
 
    // Locking mainly for Win32 multi thread safety - but no harm in all using it
    // During normal draws a draw lock is taken in other thread (Win32) in RequestDraw()
@@ -516,8 +532,9 @@ void TGLViewer::DoDraw()
       }
    }
 
+   TUnlocker ulck(this);
+
    if (fGLDevice == -1 && (fViewport.Width() <= 1 || fViewport.Height() <= 1)) {
-      ReleaseLock(kDrawLock);
       if (gDebug > 2) {
 	 Info("TGLViewer::DoDraw()", "zero surface area, draw skipped.");
       }
@@ -539,36 +556,16 @@ void TGLViewer::DoDraw()
    fRnrCtx->SetRenderTimeOut(fLOD == TGLRnrCtx::kLODHigh ?
                              fMaxSceneDrawTimeHQ :
                              fMaxSceneDrawTimeLQ);
-   fRnrCtx->StartStopwatch();
 
-   // GL pre draw setup
-   if (!fIsPrinting) PreDraw();
-
-   PreRender();
-
-   if (fFader < 1)
+   if (fStereo && fCurrentCamera->IsPerspective() && !fRnrCtx->GetGrabImage() &&
+       !fIsPrinting)
    {
-      RenderNonSelected();
-      DrawGuides();
-      RenderOverlay();
-
-      glClear(GL_DEPTH_BUFFER_BIT);
-      RenderSelected();
-
-      glClear(GL_DEPTH_BUFFER_BIT);
-      DrawDebugInfo();
+      DoDrawStereo();
    }
-
-   PostRender();
-
-   if (fFader > 0)
+   else
    {
-      FadeView(fFader);
+      DoDrawMono();
    }
-
-   PostDraw();
-
-   fRnrCtx->StopStopwatch();
 
    ReleaseLock(kDrawLock);
 
@@ -590,6 +587,157 @@ void TGLViewer::DoDraw()
       // Request final draw pass.
       fRedrawTimer->RequestDraw(100, TGLRnrCtx::kLODHigh);
    }
+}
+
+//______________________________________________________________________________
+void TGLViewer::DoDrawMono()
+{
+   // Draw out in monoscopic mode.
+
+   MakeCurrent();
+
+   glDrawBuffer(GL_BACK);
+   if (!fIsPrinting) PreDraw();
+   PreRender();
+
+   fRnrCtx->StartStopwatch();
+   if (fFader < 1)
+   {
+      RenderNonSelected();
+      RenderSelected();
+      DrawGuides();
+      RenderOverlay();
+
+      glClear(GL_DEPTH_BUFFER_BIT);
+      fRnrCtx->SetHighlight(kTRUE);
+      RenderSelected();
+      fRnrCtx->SetHighlight(kFALSE);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      DrawDebugInfo();
+   }
+   fRnrCtx->StopStopwatch();
+
+   PostRender();
+
+   if (fFader > 0)
+   {
+      FadeView(fFader);
+   }
+
+   PostDraw();
+
+   SwapBuffers();
+}
+
+//______________________________________________________________________________
+void TGLViewer::DoDrawStereo()
+{
+   // Draw out in stereoscopic mode.
+
+   TGLPerspectiveCamera &c = *dynamic_cast<TGLPerspectiveCamera*>(fCurrentCamera);
+
+   Float_t gl_near, gl_far, zero_p_dist;
+   Float_t h_half, w_half;
+   Float_t x_len_at_zero_parallax;
+   Float_t stereo_offset;
+   Float_t frustum_asym;
+
+   MakeCurrent();
+
+   // Draw left
+   glDrawBuffer(GL_BACK_LEFT);
+   PreDraw();
+   PreRender();
+
+   gl_near = c.GetNearClip();
+   gl_far  = c.GetFarClip();
+   zero_p_dist = gl_near + fStereoZeroParallax*(gl_far-gl_near);
+
+   h_half = TMath::Tan(0.5*TMath::DegToRad()*c.GetFOV()) * gl_near;
+   w_half = h_half * fViewport.Aspect();
+
+   x_len_at_zero_parallax = 2.0f * w_half * zero_p_dist / gl_near;
+   stereo_offset = 0.035f * x_len_at_zero_parallax * fStereoEyeOffsetFac;
+
+   frustum_asym = stereo_offset * gl_near / zero_p_dist * fStereoFrustumAsymFac;
+
+   TGLMatrix  abs_trans(c.RefCamBase());
+   abs_trans *= c.RefCamTrans();
+   TGLVector3 left_vec = abs_trans.GetBaseVec(2);
+
+   glTranslatef(stereo_offset*left_vec[0], stereo_offset*left_vec[1], stereo_offset*left_vec[2]);
+
+   glMatrixMode(GL_PROJECTION);
+   glLoadIdentity();
+   glFrustum(-w_half + frustum_asym, w_half + frustum_asym,
+             -h_half, h_half, gl_near, gl_far);
+   glMatrixMode(GL_MODELVIEW);
+
+   fRnrCtx->StartStopwatch();
+   if (fFader < 1)
+   {
+      RenderNonSelected();
+      RenderSelected();
+      DrawGuides();
+      RenderOverlay();
+
+      glClear(GL_DEPTH_BUFFER_BIT);
+      fRnrCtx->SetHighlight(kTRUE);
+      RenderSelected();
+      fRnrCtx->SetHighlight(kFALSE);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      DrawDebugInfo();
+   }
+   fRnrCtx->StopStopwatch();
+
+   PostRender();
+
+   if (fFader > 0)
+   {
+      FadeView(fFader);
+   }
+   PostDraw();
+
+   // Draw right
+   glDrawBuffer(GL_BACK_RIGHT);
+   PreDraw();
+   PreRender();
+
+   glTranslatef(-stereo_offset*left_vec[0], -stereo_offset*left_vec[1], -stereo_offset*left_vec[2]);
+
+   glMatrixMode(GL_PROJECTION);
+   glLoadIdentity();
+   glFrustum(-w_half - frustum_asym, w_half - frustum_asym,
+             -h_half, h_half, gl_near, gl_far);
+   glMatrixMode(GL_MODELVIEW);
+
+   fRnrCtx->StartStopwatch();
+   if (fFader < 1)
+   {
+      RenderNonSelected();
+      RenderSelected();
+      DrawGuides();
+      RenderOverlay();
+
+      glClear(GL_DEPTH_BUFFER_BIT);
+      fRnrCtx->SetHighlight(kTRUE);
+      RenderSelected();
+      fRnrCtx->SetHighlight(kFALSE);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      DrawDebugInfo();
+   }
+   fRnrCtx->StopStopwatch();
+
+   PostRender();
+
+   if (fFader > 0)
+   {
+      FadeView(fFader);
+   }
+   PostDraw();
+
+   // End
+   SwapBuffers();
 }
 
 //______________________________________________________________________________
@@ -874,8 +1022,8 @@ void TGLViewer::DrawDebugInfo()
 //______________________________________________________________________________
 void TGLViewer::PreDraw()
 {
-   // Perform GL work which must be done before each draw of scene
-   MakeCurrent();
+   // Perform GL work which must be done before each draw.
+
    // Initialise GL if not done
    if (!fInitGL) {
       InitGL();
@@ -902,7 +1050,8 @@ void TGLViewer::PreDraw()
 //______________________________________________________________________________
 void TGLViewer::PostDraw()
 {
-   // Perform GL work which must be done after each draw of scene
+   // Perform GL work which must be done after each draw.
+
    glFlush();
    if (fRnrCtx->GetGrabImage())
    {
@@ -917,7 +1066,6 @@ void TGLViewer::PostDraw()
 
       fRnrCtx->SetGrabbedImage(xx);
    }
-   SwapBuffers();
 
    TGLUtil::CheckError("TGLViewer::PostDraw");
 }
@@ -975,28 +1123,26 @@ void TGLViewer::SwapBuffers() const
 }
 
 //______________________________________________________________________________
-Bool_t TGLViewer::RequestSelect(Int_t x, Int_t y, Bool_t trySecSel)
+Bool_t TGLViewer::RequestSelect(Int_t x, Int_t y)
 {
-   // Post request for select draw of viewer, picking objects round the WINDOW
-   // point (x,y).
-   // Request is directed via cross thread gVirtualGL object
+   // Post request for selection render pass viewer, picking objects
+   // around the window point (x,y).
 
    // Take select lock on scene immediately we enter here - it is released
-   // in the other (drawing) thread - see TGLViewer::Select()
-   // Removed when gVirtualGL removed
+   // in the other (drawing) thread - see TGLViewer::DoSelect()
 
    if ( ! TakeLock(kSelectLock)) {
       return kFALSE;
    }
 
    if (!gVirtualX->IsCmdThread())
-      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSelect(%d, %d, %s)", this, x, y, trySecSel ? "kTRUE" : "kFALSE")));
+      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSelect(%d, %d, %s)", this, x, y)));
    else
-      return DoSelect(x, y, trySecSel);
+      return DoSelect(x, y);
 }
 
 //______________________________________________________________________________
-Bool_t TGLViewer::DoSelect(Int_t x, Int_t y, Bool_t trySecSel)
+Bool_t TGLViewer::DoSelect(Int_t x, Int_t y)
 {
    // Perform GL selection, picking objects overlapping WINDOW
    // area described by 'rect'. Return kTRUE if selection should be
@@ -1008,6 +1154,8 @@ Bool_t TGLViewer::DoSelect(Int_t x, Int_t y, Bool_t trySecSel)
       Error("TGLViewer::DoSelect", "expected kSelectLock, found %s", LockName(CurrentLock()));
       return kFALSE;
    }
+
+   TUnlocker ulck(this);
 
    MakeCurrent();
 
@@ -1041,68 +1189,91 @@ Bool_t TGLViewer::DoSelect(Int_t x, Int_t y, Bool_t trySecSel)
       fSelRec.Reset();
    }
 
-   if ( ! trySecSel)
-   {
-      ReleaseLock(kSelectLock);
-      return ! TGLSelectRecord::AreSameSelectionWise(fSelRec, fCurrentSelRec);
+   ReleaseLock(kSelectLock);
+   return ! TGLSelectRecord::AreSameSelectionWise(fSelRec, fCurrentSelRec);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::RequestSecondarySelect(Int_t x, Int_t y)
+{
+   // Request secondary select.
+
+   if ( ! TakeLock(kSelectLock)) {
+      return kFALSE;
    }
 
-   //  Secondary selection.
+   if (!gVirtualX->IsCmdThread())
+      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSecondarySelect(%d, %d, %s)", this, x, y)));
+   else
+      return DoSecondarySelect(x, y);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::DoSecondarySelect(Int_t x, Int_t y)
+{
+   // Secondary selection.
+
+   if (CurrentLock() != kSelectLock) {
+      Error("TGLViewer::DoSecondarySelect", "expected kSelectLock, found %s", LockName(CurrentLock()));
+      return kFALSE;
+   }
+
+   TUnlocker ulck(this);
+
+   if (! fSelRec.GetSceneInfo() || ! fSelRec.GetPhysShape() ||
+       ! fSelRec.GetPhysShape()->GetLogical()->SupportsSecondarySelect())
    {
-      if ( nHits < 1 || ! fSelRec.GetSceneInfo() || ! fSelRec.GetPhysShape() ||
-           ! fSelRec.GetPhysShape()->GetLogical()->SupportsSecondarySelect())
-      {
-         if (gDebug > 0)
-            Info("TGLViewer::DoSelect", "Skipping secondary selection "
-                 "(nPrimHits=%d, sinfo=0x%lx, pshape=0x%lx).\n",
-                 nHits, fSelRec.GetSceneInfo(), fSelRec.GetPhysShape());
-         ReleaseLock(kSelectLock);
-         fSecSelRec.Reset();
-         return kFALSE;
-      }
+      if (gDebug > 0)
+         Info("TGLViewer::SecondarySelect", "Skipping secondary selection "
+              "(sinfo=0x%lx, pshape=0x%lx).\n",
+              fSelRec.GetSceneInfo(), fSelRec.GetPhysShape());
+      fSecSelRec.Reset();
+      return kFALSE;
+   }
 
-      TGLSceneInfo*    sinfo = fSelRec.GetSceneInfo();
-      TGLSceneBase*    scene = sinfo->GetScene();
-      TGLPhysicalShape* pshp = fSelRec.GetPhysShape();
+   MakeCurrent();
 
-      SceneInfoList_t foo;
-      foo.push_back(sinfo);
-      fScenes.swap(foo);
-      fRnrCtx->BeginSelection(x, y, 3);
-      fRnrCtx->SetSecSelection(kTRUE);
-      glRenderMode(GL_SELECT);
+   TGLSceneInfo*    sinfo = fSelRec.GetSceneInfo();
+   TGLSceneBase*    scene = sinfo->GetScene();
+   TGLPhysicalShape* pshp = fSelRec.GetPhysShape();
 
-      PreRender();
-      fRnrCtx->SetSceneInfo(sinfo);
-      scene->PreRender(*fRnrCtx);
-      fRnrCtx->SetDrawPass(TGLRnrCtx::kPassFill);
-      fRnrCtx->SetShapeLOD(TGLRnrCtx::kLODHigh);
-      glPushName(pshp->ID());
-      // !!! Hack: does not use clipping and proper draw-pass settings.
-      pshp->Draw(*fRnrCtx);
-      glPopName();
-      scene->PostRender(*fRnrCtx);
-      fRnrCtx->SetSceneInfo(0);
-      PostRender();
+   SceneInfoList_t foo;
+   foo.push_back(sinfo);
+   fScenes.swap(foo);
+   fRnrCtx->BeginSelection(x, y, 3);
+   fRnrCtx->SetSecSelection(kTRUE);
+   glRenderMode(GL_SELECT);
 
-      Int_t nSecHits = glRenderMode(GL_RENDER);
-      fRnrCtx->EndSelection(nSecHits);
-      fScenes.swap(foo);
+   PreRender();
+   fRnrCtx->SetSceneInfo(sinfo);
+   scene->PreRender(*fRnrCtx);
+   fRnrCtx->SetDrawPass(TGLRnrCtx::kPassFill);
+   fRnrCtx->SetShapeLOD(TGLRnrCtx::kLODHigh);
+   glPushName(pshp->ID());
+   // !!! Hack: does not use clipping and proper draw-pass settings.
+   pshp->Draw(*fRnrCtx);
+   glPopName();
+   scene->PostRender(*fRnrCtx);
+   fRnrCtx->SetSceneInfo(0);
+   PostRender();
 
-      if (gDebug > 0) Info("TGLViewer::DoSelect", "Secondary select nSecHits=%d.", nSecHits);
+   Int_t nSecHits = glRenderMode(GL_RENDER);
+   fRnrCtx->EndSelection(nSecHits);
+   fScenes.swap(foo);
 
-      ReleaseLock(kSelectLock);
+   if (gDebug > 0) Info("TGLViewer::DoSelect", "Secondary select nSecHits=%d.", nSecHits);
 
-      if (nSecHits > 0)
-      {
-         fSecSelRec = fSelRec;
-         fSecSelRec.SetRawOnly(fRnrCtx->GetSelectBuffer()->RawRecord(0));
-         if (gDebug > 1) fSecSelRec.Print();
-         return kTRUE;
-      } else {
-         fSecSelRec.Reset();
-         return kFALSE;
-      }
+   ReleaseLock(kSelectLock);
+
+   if (nSecHits > 0)
+   {
+      fSecSelRec = fSelRec;
+      fSecSelRec.SetRawOnly(fRnrCtx->GetSelectBuffer()->RawRecord(0));
+      if (gDebug > 1) fSecSelRec.Print();
+      return kTRUE;
+   } else {
+      fSecSelRec.Reset();
+      return kFALSE;
    }
 }
 
@@ -1127,20 +1298,18 @@ void TGLViewer::ApplySelection()
 //______________________________________________________________________________
 Bool_t TGLViewer::RequestOverlaySelect(Int_t x, Int_t y)
 {
-   // Post request for select draw of viewer, picking objects round the WINDOW
-   // point (x,y).
-   // Request is directed via cross thread gVirtualGL object
+   // Post request for secondary selection rendering of selected object
+   // around the window point (x,y).
 
    // Take select lock on viewer immediately - it is released
-   // in the other (drawing) thread - see TGLViewer::Select().
-   // Removed when gVirtualGL removed
+   // in the other (drawing) thread - see TGLViewer::DoSecondarySelect().
 
    if ( ! TakeLock(kSelectLock)) {
       return kFALSE;
    }
 
    if (!gVirtualX->IsCmdThread())
-      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSelect(%d, %d)", this, x, y)));
+      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoOverlaySelect(%d, %d)", this, x, y)));
    else
       return DoOverlaySelect(x, y);
 }
@@ -1155,6 +1324,8 @@ Bool_t TGLViewer::DoOverlaySelect(Int_t x, Int_t y)
       Error("TGLViewer::DoOverlaySelect", "expected kSelectLock, found %s", LockName(CurrentLock()));
       return kFALSE;
    }
+
+   TUnlocker ulck(this);
 
    MakeCurrent();
 
@@ -1341,6 +1512,13 @@ Bool_t TGLViewer::IsUsingDefaultColorSetForNewViewers()
    return fgUseDefaultColorSetForNewViewers;
 }
 
+//______________________________________________________________________________
+Bool_t TGLViewer::IsColorSetDark() const
+{
+   // Returns true if curremt color set is dark.
+
+   return fRnrCtx->GetBaseColorSet() == &fDarkColorSet;
+}
 
 /**************************************************************************/
 // Viewport
@@ -1626,22 +1804,6 @@ const TGLPhysicalShape * TGLViewer::GetSelected() const
 /**************************************************************************/
 
 //______________________________________________________________________________
-void TGLViewer::SelectionChanged()
-{
-   // Emit signal indicating selection has changed.
-
-   Emit("SelectionChanged()");
-}
-
-//______________________________________________________________________________
-void TGLViewer::OverlayDragFinished()
-{
-   // Emit signal indicating that an overlay drag has finished.
-
-   Emit("OverlayDragFinished()");
-}
-
-//______________________________________________________________________________
 void TGLViewer::MouseOver(TGLPhysicalShape *shape)
 {
    // Emit MouseOver signal.
@@ -1678,6 +1840,31 @@ void TGLViewer::Clicked(TObject *obj, UInt_t button, UInt_t state)
    args[1] = button;
    args[2] = state;
    Emit("Clicked(TObject*,UInt_t,UInt_t)", args);
+}
+
+
+//______________________________________________________________________________
+void TGLViewer::ReClicked(TObject *obj, UInt_t button, UInt_t state)
+{
+   // Emit ReClicked signal with button id and modifier state.
+
+   Long_t args[3];
+   args[0] = (Long_t)obj;
+   args[1] = button;
+   args[2] = state;
+   Emit("ReClicked(TObject*,UInt_t,UInt_t)", args);
+}
+
+//______________________________________________________________________________
+void TGLViewer::UnClicked(TObject *obj, UInt_t button, UInt_t state)
+{
+   // Emit UnClicked signal with button id and modifier state.
+
+   Long_t args[3];
+   args[0] = (Long_t)obj;
+   args[1] = button;
+   args[2] = state;
+   Emit("UnClicked(TObject*,UInt_t,UInt_t)", args);
 }
 
 //______________________________________________________________________________
@@ -1733,10 +1920,55 @@ void TGLViewer::PrintObjects()
 }
 
 //______________________________________________________________________________
+void TGLViewer::SelectionChanged()
+{
+   // Update GUI components for embedded viewer selection change.
+
+   if (!fGedEditor)
+      return;
+
+   TGLPhysicalShape *selected = const_cast<TGLPhysicalShape*>(GetSelected());
+
+   if (selected) {
+      fPShapeWrap->fPShape = selected;
+      fGedEditor->SetModel(fPad, fPShapeWrap, kButton1Down);
+   } else {
+      fPShapeWrap->fPShape = 0;
+      fGedEditor->SetModel(fPad, this, kButton1Down);
+   }
+}
+
+//______________________________________________________________________________
+void TGLViewer::OverlayDragFinished()
+{
+   // An overlay operation can result in change to an object.
+   // Refresh geditor.
+
+   if (fGedEditor)
+   {
+      fGedEditor->SetModel(fPad, fGedEditor->GetModel(), kButton1Down);
+   }
+}
+
+//______________________________________________________________________________
+void TGLViewer::RefreshPadEditor(TObject* obj)
+{
+   // Update GED editor if it is set.
+
+   if (fGedEditor && (obj == 0 || fGedEditor->GetModel() == obj))
+   {
+      fGedEditor->SetModel(fPad, fGedEditor->GetModel(), kButton1Down);
+   }
+}
+
+//______________________________________________________________________________
 void TGLViewer::SetEventHandler(TGEventHandler *handler)
 {
    // Set the event-handler. The event-handler is owned by the viewer.
    // If GLWidget is set, the handler is propagated to it.
+   //
+   // If called with handler=0, the current handler will be deleted
+   // (also from TGLWidget).
 
    if (fEventHandler)
       delete fEventHandler;

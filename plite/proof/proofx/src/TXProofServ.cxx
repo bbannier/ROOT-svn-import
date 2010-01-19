@@ -37,6 +37,7 @@
 #include "TException.h"
 #include "THashList.h"
 #include "TInterpreter.h"
+#include "TParameter.h"
 #include "TProofDebug.h"
 #include "TProof.h"
 #include "TProofPlayer.h"
@@ -462,7 +463,7 @@ void TXProofServ::HandleUrgentData()
       return;
    }
 
-   PDB(kGlobal, 5)
+   PDB(kGlobal, 2)
       Info("HandleUrgentData", "got interrupt: %d\n", iLev);
 
    if (fProof)
@@ -471,7 +472,7 @@ void TXProofServ::HandleUrgentData()
    switch (iLev) {
 
       case TProof::kPing:
-         PDB(kGlobal, 5)
+         PDB(kGlobal, 2)
             Info("HandleUrgentData", "*** Ping");
 
          // If master server, propagate interrupt to slaves
@@ -485,18 +486,29 @@ void TXProofServ::HandleUrgentData()
          // Touch the admin path to show we are alive
          if (fAdminPath.IsNull()) {
             fAdminPath = gEnv->GetValue("ProofServ.AdminPath", "");
-            TString spid = Form(".%d", getpid());
-            if (!fAdminPath.IsNull() && !fAdminPath.EndsWith(spid))
-               fAdminPath += spid;
          }
 
          if (!fAdminPath.IsNull()) {
-            // Update file time stamps
-            if (utime(fAdminPath.Data(), 0) != 0)
-               Info("HandleUrgentData", "problems touching path: %s", fAdminPath.Data());
-            else
-               if (gDebug > 0)
-                  Info("HandleUrgentData", "touching path: %s", fAdminPath.Data());
+            if (!fAdminPath.EndsWith(".status")) {
+               // Update file time stamps
+               if (utime(fAdminPath.Data(), 0) != 0)
+                  Info("HandleUrgentData", "problems touching path: %s", fAdminPath.Data());
+               else
+                  PDB(kGlobal, 2)
+                     Info("HandleUrgentData", "touching path: %s", fAdminPath.Data());
+            } else {
+               // Update the status in the file
+               FILE *fs = fopen(fAdminPath.Data(), "w");
+               if (fs) {
+                  Int_t st = GetSessionStatus();
+                  fprintf(fs, "%d", st);
+                  fclose(fs);
+                  PDB(kGlobal, 2)
+                     Info("HandleUrgentData", "status (=%d) update in path: %s", st, fAdminPath.Data());
+               } else {
+                  Error("HandleUrgentData", "problems opening status path: %s (errno: %d)", fAdminPath.Data(), errno);
+               }
+            }
          } else {
             Info("HandleUrgentData", "admin path undefined");
          }
@@ -746,21 +758,37 @@ TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
          return kQueryEnqueued;
       }
 
-      // Honour a max number of workers request (typically when running in valgrind
+      // Honour a max number of workers request (typically when running in valgrind)
       Int_t nwrks = -1;
+      Bool_t pernode = kFALSE;
       if (gSystem->Getenv("PROOF_NWORKERS")) {
          TString s(gSystem->Getenv("PROOF_NWORKERS"));
+         if (s.EndsWith("x")) {
+            pernode = kTRUE;
+            s.ReplaceAll("x", "");
+         }
          if (s.IsDigit()) {
             nwrks = s.Atoi();
-            // Notify
-            TString msg;
-            msg.Form("+++ Starting max %d workers following the setting of PROOF_NWORKERS", nwrks);
-            SendAsynMessage(msg);
+            if (nwrks > 0) {
+               // Notify
+               TString msg;
+               if (pernode) {
+                  msg.Form("+++ Starting max %d workers per node following the setting of PROOF_NWORKERS", nwrks);
+               } else {
+                  msg.Form("+++ Starting max %d workers following the setting of PROOF_NWORKERS", nwrks);
+               }
+               SendAsynMessage(msg);
+            } else {
+               nwrks = -1;
+            }
+         } else {
+            pernode = kFALSE;
          }
       }
 
       TString tok;
       Ssiz_t from = 0;
+      TList *nodecnt = (pernode) ? new TList : 0 ;
       if (fl.Tokenize(tok, from, "&")) {
          if (!tok.IsNull()) {
             TProofNodeInfo *master = new TProofNodeInfo(tok);
@@ -776,15 +804,42 @@ TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
             // Now the workers
             while (fl.Tokenize(tok, from, "&") && (nwrks == -1 || nwrks > 0)) {
                if (!tok.IsNull()) {
-                  if (workers)
-                     workers->Add(new TProofNodeInfo(tok));
                   // We have the minimal set of information to start
                   rc = kQueryOK;
-                  // Count down
-                  if (nwrks != -1) nwrks--;
+                  if (pernode && nodecnt) {
+                     TProofNodeInfo *ni = new TProofNodeInfo(tok);
+                     TParameter<Int_t> *p = 0;
+                     Int_t nw = 0;
+                     if (!(p = (TParameter<Int_t> *) nodecnt->FindObject(ni->GetNodeName().Data()))) {
+                        p = new TParameter<Int_t>(ni->GetNodeName().Data(), nw);
+                        nodecnt->Add(p);
+                     }
+                     nw = p->GetVal();
+                     if (gDebug > 0)
+                        Info("GetWorkers","%p: name: %s (%s) val: %d (nwrks: %d)",
+                                          p, p->GetName(), ni->GetNodeName().Data(),  nw, nwrks);
+                     if (nw < nwrks) {
+                        if (workers) workers->Add(ni);
+                        nw++;
+                        p->SetVal(nw);
+                     } else {
+                        // Two many workers on this machine already
+                        SafeDelete(ni);
+                     }
+                  } else {
+                     if (workers)
+                        workers->Add(new TProofNodeInfo(tok));
+                     // Count down
+                     if (nwrks != -1) nwrks--;
+                  }
                }
             }
          }
+      }
+      // Cleanup
+      if (nodecnt) {
+         nodecnt->SetOwner(kTRUE);
+         SafeDelete(nodecnt);
       }
    }
 
@@ -888,6 +943,16 @@ Bool_t TXProofServ::HandleInput(const void *in)
       Info("HandleInput", "kXPD_priority: group %s priority set to %f",
            fGroup.Data(), (Float_t) fGroupPriority / 100.);
 
+   } else if (acod == kXPD_clusterinfo) {
+
+      // Information about the cluster status
+      fTotSessions     = hin->fInt2;
+      fActSessions     = hin->fInt3;
+      fEffSessions     = (hin->fInt4)/1000.;
+      // Notify
+      Info("HandleInput", "kXPD_clusterinfo: tot: %d, act: %d, eff: %f",
+           fTotSessions, fActSessions, fEffSessions);
+
    } else {
       // Standard socket input
       HandleSocketInput();
@@ -950,7 +1015,7 @@ void TXProofServ::Terminate(Int_t status)
       gSystem->ChangeDirectory("/");
       // needed in case fSessionDir is on NFS ?!
       gSystem->MakeDirectory(fSessionDir+"/.delete");
-      TProof::Unlink(fSessionDir.Data(), kTRUE);
+      gSystem->Exec(Form("%s %s", kRM, fSessionDir.Data()));
    }
 
    // Cleanup queries directory if empty
@@ -960,7 +1025,7 @@ void TXProofServ::Terminate(Int_t status)
          gSystem->ChangeDirectory("/");
          // needed in case fQueryDir is on NFS ?!
          gSystem->MakeDirectory(fQueryDir+"/.delete");
-         TProof::Unlink(fQueryDir.Data(), kTRUE);
+         gSystem->Exec(Form("%s %s", kRM, fQueryDir.Data()));
          // Remove lock file
          if (fQueryLock)
             gSystem->Unlink(fQueryLock->GetName());

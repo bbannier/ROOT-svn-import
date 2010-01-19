@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: TestStatSampler.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: TestStatSampler.h 31276 2009-11-18 15:06:42Z moneta $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -27,6 +27,9 @@ END_HTML
 #endif
 
 class RooAbsArg; 
+class RooAbsData; 
+class RooArgSet; 
+class RooAbsPdf;
 
 namespace RooStats {
 

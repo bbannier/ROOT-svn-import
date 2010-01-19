@@ -49,7 +49,7 @@ selection expression when drawing TTrees expressions of 1-d, 2-d or
 3-dimensions. The expressions used in TTree::Draw can reference the variables in
 the fVarX, fVarY of the graphical cut plus other variables.
 <p>
-When the TCutG object is created, it is added to the list of special objects in
+When the TCutG object is created by TTree::Draw, it is added to the list of special objects in
 the main TROOT object pointed by gROOT. To retrieve a pointer to this object
 from the code or command line, do:
 <pre>
@@ -57,6 +57,21 @@ from the code or command line, do:
     mycutg = (TCutG*)gROOT->GetListOfSpecials()->FindObject("CUTG")
     mycutg->SetName("mycutg");
 </pre>
+<p>
+When the TCutG is not created via TTree::Draw, one must set the variable names
+corresponding to x,y if one wants to use the cut as input to TTree::Draw,eg
+<pre>
+   TCutG *cutg = new TCutG("mycut",5);
+   cutg->SetVarX("y");
+   cutg->SetVarY("x");
+   cutg->SetPoint(0,-0.3586207,1.509534);
+   cutg->SetPoint(1,-1.894181,-0.529661);
+   cutg->SetPoint(2,0.07780173,-1.21822);
+   cutg->SetPoint(3,-1.0375,-0.07944915);
+   cutg->SetPoint(4,0.756681,0.1853814);
+   cutg->SetPoint(5,-0.3586207,1.509534);
+</pre>
+   
 Example of use of a TCutG in TTree::Draw:
 <pre>
        tree.Draw("x:y","mycutg && z>0 %% sqrt(x)>1")
@@ -241,6 +256,43 @@ TCutG::~TCutG()
    gROOT->GetListOfSpecials()->Remove(this);
 }
 
+//______________________________________________________________________________
+Double_t TCutG::Area() const
+{
+   // Compute the area inside this TCutG
+   // The algorithm uses Stoke's theorem over the border of the closed polygon.
+   // Just as a reminder: Stoke's theorem reduces a surface integral
+   // to a line integral over the border of the surface integral.
+   Double_t a = 0;
+   Int_t n = GetN();
+   for (Int_t i=0;i<n-1;i++) {
+      a += (fX[i]-fX[i+1])*(fY[i]+fY[i+1]);
+   }
+   a *= 0.5;
+   return a;   
+}
+
+//______________________________________________________________________________
+void TCutG::Center(Double_t &cx, Double_t &cy) const
+{
+   // Compute the center x,y of this TCutG
+   // The algorithm uses Stoke's theorem over the border of the closed polygon.
+   // Just as a reminder: Stoke's theorem reduces a surface integral
+   // to a line integral over the border of the surface integral.
+   Int_t n = GetN();
+   Double_t a  = 0;
+   cx = cy = 0;
+   Double_t t;
+   for (Int_t i=0;i<n-1;i++) {
+      t   = 2*fX[i]*fY[i] + fY[i]*fX[i+1] + fX[i]*fY[i+1] + 2*fX[i+1]*fY[i+1];
+      cx += (fX[i]-fX[i+1])*t;
+      cy += (-fY[i]+fY[i+1])*t;
+      a  += (fX[i]-fX[i+1])*(fY[i]+fY[i+1]);
+   }
+   a  *= 0.5;
+   cx *= 1./(6*a);
+   cy *= 1./(6*a);
+}
 
 //______________________________________________________________________________
 Double_t TCutG::IntegralHist(TH2 *h, Option_t *option) const

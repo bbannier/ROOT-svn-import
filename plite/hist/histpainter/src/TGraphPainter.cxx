@@ -304,8 +304,8 @@ Begin_Html
 
 The option "4" is similar to the option "3" except that the band is smoothed.
 As the following picture shows, this option should be used carefuly because
-the smoothing algorithm may show some (huge) "bouncing" effects. In some case 
-looks nicer than the option "3" (because it is smooth) but it can be 
+the smoothing algorithm may show some (huge) "bouncing" effects. In some case
+looks nicer than the option "3" (because it is smooth) but it can be
 misleading.
 
 End_Html
@@ -326,7 +326,7 @@ End_Macro
 Begin_Html
 
 The following example shows how the option "[]" can be used to superimpose
-systematic errors on top of a graph with statistical errors. 
+systematic errors on top of a graph with statistical errors.
 
 End_Html
 Begin_Macro(source)
@@ -1268,8 +1268,8 @@ void TGraphPainter::PaintGraph(TGraph *theGraph, Int_t npoints, const Double_t *
             xlow  = x[i-1] - dbar;
             xhigh = x[i-1] + dbar;
             yhigh = y[i-1];
-            if (xlow  < uxmin) continue;
-            if (xhigh > uxmax) continue;
+            if (xlow  < uxmin) xlow = uxmin;
+            if (xhigh > uxmax) xhigh = uxmax;
             if (!optionOne) ylow = TMath::Max((Double_t)0,gPad->GetUymin());
             else            ylow = gPad->GetUymin();
             gxwork[0] = xlow;
@@ -2283,6 +2283,7 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
    arrow.SetFillColor(theGraph->GetFillColor());
 
    TBox box;
+   Double_t x1b,y1b,x2b,y2b;
    box.SetLineWidth(theGraph->GetLineWidth());
    box.SetLineColor(theGraph->GetLineColor());
    box.SetFillColor(theGraph->GetFillColor());
@@ -2310,19 +2311,35 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
    for (Int_t i=0;i<theNpoints;i++) {
       x  = gPad->XtoPad(theX[i]);
       y  = gPad->YtoPad(theY[i]);
-      if (x < gPad->GetUxmin()) continue;
-      if (x > gPad->GetUxmax()) continue;
-      if (y < gPad->GetUymin()) continue;
-      if (y > gPad->GetUymax()) continue;
+      if (option3) {
+         if (x < gPad->GetUxmin()) x = gPad->GetUxmin();
+         if (x > gPad->GetUxmax()) x = gPad->GetUxmax();
+         if (y < gPad->GetUymin()) y = gPad->GetUymin();
+         if (y > gPad->GetUymax()) y = gPad->GetUymax();
+      } else {
+         if (x < gPad->GetUxmin()) continue;
+         if (x > gPad->GetUxmax()) continue;
+         if (y < gPad->GetUymin()) continue;
+         if (y > gPad->GetUymax()) continue;
+      }
       xl1 = x - s2x*cx;
       xl2 = gPad->XtoPad(theX[i] - theEXlow[i]);
 
       //  draw the error rectangles
       if (option2) {
-         box.PaintBox(gPad->XtoPad(theX[i] - theEXlow[i]),
-                      gPad->YtoPad(theY[i] - theEYlow[i]),
-                      gPad->XtoPad(theX[i] + theEXhigh[i]),
-                      gPad->YtoPad(theY[i] + theEYhigh[i]));
+         x1b = gPad->XtoPad(theX[i] - theEXlow[i]);
+         y1b = gPad->YtoPad(theY[i] - theEYlow[i]);
+         x2b = gPad->XtoPad(theX[i] + theEXhigh[i]);
+         y2b = gPad->YtoPad(theY[i] + theEYhigh[i]);
+         if (x1b < gPad->GetUxmin()) x1b = gPad->GetUxmin();
+         if (x1b > gPad->GetUxmax()) x1b = gPad->GetUxmax();
+         if (y1b < gPad->GetUymin()) y1b = gPad->GetUymin();
+         if (y1b > gPad->GetUymax()) y1b = gPad->GetUymax();
+         if (x2b < gPad->GetUxmin()) x2b = gPad->GetUxmin();
+         if (x2b > gPad->GetUxmax()) x2b = gPad->GetUxmax();
+         if (y2b < gPad->GetUymin()) y2b = gPad->GetUymin();
+         if (y2b > gPad->GetUymax()) y2b = gPad->GetUymax();
+         box.PaintBox(x1b, y1b, x2b, y2b);
          continue;
       }
 
@@ -2495,9 +2512,11 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
    arrow.SetFillColor(theGraph->GetFillColor());
 
    TBox box;
+   Double_t x1b,y1b,x2b,y2b;
    box.SetLineWidth(theGraph->GetLineWidth());
    box.SetLineColor(theGraph->GetLineColor());
    box.SetFillColor(theGraph->GetFillColor());
+   box.SetFillStyle(theGraph->GetFillStyle());
 
    symbolsize  = theGraph->GetMarkerSize();
    sbase       = symbolsize*kBASEMARKER;
@@ -2525,17 +2544,33 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
       bxh = gPad->YtoPad(theY[i]+theEXhighd[i]);
       byl = gPad->XtoPad(theX[i]+theEYlowd[i]);
       byh = gPad->XtoPad(theX[i]+theEYhighd[i]);
-      if (x < gPad->GetUxmin()) continue;
-      if (x > gPad->GetUxmax()) continue;
-      if (y < gPad->GetUymin()) continue;
-      if (y > gPad->GetUymax()) continue;
+      if (option3) {
+         if (x < gPad->GetUxmin()) x = gPad->GetUxmin();
+         if (x > gPad->GetUxmax()) x = gPad->GetUxmax();
+         if (y < gPad->GetUymin()) y = gPad->GetUymin();
+         if (y > gPad->GetUymax()) y = gPad->GetUymax();
+      } else {
+         if (x < gPad->GetUxmin()) continue;
+         if (x > gPad->GetUxmax()) continue;
+         if (y < gPad->GetUymin()) continue;
+         if (y > gPad->GetUymax()) continue;
+      }
 
       //  draw the error rectangles
       if (option2) {
-         box.PaintBox(gPad->XtoPad(theX[i] - theEXlow[i]),
-                      gPad->YtoPad(theY[i] - theEYlow[i]),
-                      gPad->XtoPad(theX[i] + theEXhigh[i]),
-                      gPad->YtoPad(theY[i] + theEYhigh[i]));
+         x1b = gPad->XtoPad(theX[i] - theEXlow[i]);
+         y1b = gPad->YtoPad(theY[i] - theEYlow[i]);
+         x2b = gPad->XtoPad(theX[i] + theEXhigh[i]);
+         y2b = gPad->YtoPad(theY[i] + theEYhigh[i]);
+         if (x1b < gPad->GetUxmin()) x1b = gPad->GetUxmin();
+         if (x1b > gPad->GetUxmax()) x1b = gPad->GetUxmax();
+         if (y1b < gPad->GetUymin()) y1b = gPad->GetUymin();
+         if (y1b > gPad->GetUymax()) y1b = gPad->GetUymax();
+         if (x2b < gPad->GetUxmin()) x2b = gPad->GetUxmin();
+         if (x2b > gPad->GetUxmax()) x2b = gPad->GetUxmax();
+         if (y2b < gPad->GetUymin()) y2b = gPad->GetUymin();
+         if (y2b > gPad->GetUymax()) y2b = gPad->GetUymax();
+         box.PaintBox(x1b, y1b, x2b, y2b);
          continue;
       }
 
@@ -2703,6 +2738,7 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
    arrow.SetFillColor(theGraph->GetFillColor());
 
    TBox box;
+   Double_t x1b,y1b,x2b,y2b;
    box.SetLineWidth(theGraph->GetLineWidth());
    box.SetLineColor(theGraph->GetLineColor());
    box.SetFillColor(theGraph->GetFillColor());
@@ -2746,10 +2782,19 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
 
       //  draw the error rectangles
       if (option2) {
-         box.PaintBox(gPad->XtoPad(theX[i] - ex),
-                      gPad->YtoPad(theY[i] - ey),
-                      gPad->XtoPad(theX[i] + ex),
-                      gPad->YtoPad(theY[i] + ey));
+         x1b = gPad->XtoPad(theX[i] - ex);
+         y1b = gPad->YtoPad(theY[i] - ey);
+         x2b = gPad->XtoPad(theX[i] + ex);
+         y2b = gPad->YtoPad(theY[i] + ey);
+         if (x1b < gPad->GetUxmin()) x1b = gPad->GetUxmin();
+         if (x1b > gPad->GetUxmax()) x1b = gPad->GetUxmax();
+         if (y1b < gPad->GetUymin()) y1b = gPad->GetUymin();
+         if (y1b > gPad->GetUymax()) y1b = gPad->GetUymax();
+         if (x2b < gPad->GetUxmin()) x2b = gPad->GetUxmin();
+         if (x2b > gPad->GetUxmax()) x2b = gPad->GetUxmax();
+         if (y2b < gPad->GetUymin()) y2b = gPad->GetUymin();
+         if (y2b > gPad->GetUymax()) y2b = gPad->GetUymax();
+         box.PaintBox(x1b, y1b, x2b, y2b);
          continue;
       }
 

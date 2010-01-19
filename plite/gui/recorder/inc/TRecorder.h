@@ -329,6 +329,11 @@ public:
       kCNMoveResize = 2,      // Movement, resize or both (Windows)
       kCNFilter     = 3       // Not replaybale (filtered event).
    };
+   //---- Aliases for non cross-platform atoms.
+   enum ERootAtoms {
+      kWM_DELETE_WINDOW = 10001,
+      kROOT_MESSAGE     = 10002
+   };
 
    virtual ERecEventType GetType() const {
       // Returns what kind of event it stores (GUI event)
@@ -375,9 +380,9 @@ public:
 //  TRecorder                                                           //
 //                                                                      //
 //  Class provides direct recorder/replayer interface for a user.       //
-//  See 'ROOT EVENT RECORDING SYSTEM' for more information abou usage.  //
+//  See 'ROOT EVENT RECORDING SYSTEM' for more information about usage. //
 //                                                                      //
-//  Implementation uses C++ design pattern State. Funcionality of       //
+//  Implementation uses C++ design pattern State. Functionality of      //
 //  recorder is divided into 4 classes according to the current         //
 //  state of recorder.                                                  //
 //                                                                      //

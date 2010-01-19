@@ -44,13 +44,14 @@ protected:
    static TTask *fgBeginTask;    //pointer to task initiator
    static TTask *fgBreakPoint;   //pointer to current break point
 
-   TTask& operator=(const TTask& tt);
+private:
 
 public:
    TTask();
    TTask(const char* name, const char *title);
-   TTask(const TTask &task);
    virtual ~TTask();
+   TTask(const TTask &task);          
+   TTask& operator=(const TTask& tt); 
 
    virtual void  Abort();  // *MENU*
    virtual void  Add(TTask *task) {fTasks->Add(task);}

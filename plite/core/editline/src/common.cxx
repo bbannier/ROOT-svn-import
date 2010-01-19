@@ -715,11 +715,18 @@ ed_next_history(EditLine_t* el, int /*c*/) {
    el->fCharEd.fUndo.fAction = NOP;
    *el->fLine.fLastChar = '\0';        /* just in case */
 
-   el->fHistory.fEventNo -= el->fState.fArgument;
+   if (el->fHistory.fEventNo == 0 && el->fState.fArgument == 1) {
+      /* ROOT special treatment: kill the current buffer,
+         it's used as workaround for ^C which is caught by CINT */
+      el->fLine.fCursor = el->fLine.fBuffer;
+      return ed_kill_line(el, 0);
+   } else {
+      el->fHistory.fEventNo -= el->fState.fArgument;
 
-   if (el->fHistory.fEventNo < 0) {
-      el->fHistory.fEventNo = 0;
-      return CC_ERROR;            /* make it beep */
+      if (el->fHistory.fEventNo < 0) {
+         el->fHistory.fEventNo = 0;
+         return CC_ERROR;            /* make it beep */
+      }
    }
    return hist_get(el);
 }
@@ -990,3 +997,24 @@ ed_command(EditLine_t* el, int /*c*/) {
       return CC_REFRESH;
    }
 } // ed_command
+
+
+/* ed_replay_hist():
+ *	Replay n-th history entry
+ *	[^O]
+ */
+el_protected ElAction_t
+/*ARGSUSED*/
+ed_replay_hist(EditLine_t* el, int /*c*/) {
+   static const char newline[] = "\n";
+   // current history idx:
+   if (el->fState.fReplayHist < 0) {
+      // store the hist idx for repeated ^O
+      el->fState.fReplayHist = el->fHistory.fEventNo - 1;
+   }
+   // execute the line as if the user pressed enter
+   el_push(el, newline);
+
+   // run whatever would be run if was entered
+   return ed_newline(el, '\n');
+}

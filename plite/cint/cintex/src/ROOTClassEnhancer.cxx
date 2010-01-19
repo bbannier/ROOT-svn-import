@@ -214,7 +214,6 @@ namespace ROOT { namespace Cintex {
          return;
       }
       else    {
-         Type int_t  = Type::ByName("int");
          Type void_t = Type::ByName("void");
          Type char_t = Type::ByName("char");
          Type signature;
@@ -224,8 +223,8 @@ namespace ROOT { namespace Cintex {
          Member exists = fType.FunctionMemberByName("StreamerNVirtual", signature,
                                                     0, INHERITEDMEMBERS_NO, DELAYEDLOAD_OFF);
          if (!exists) {
-            AddFunction("Streamer", signature, Stub_Streamer, ctxt, VIRTUAL);
-            AddFunction("StreamerNVirtual", signature, Stub_StreamerNVirtual, ctxt, 0);
+            //AddFunction("Streamer", signature, Stub_Streamer, ctxt, VIRTUAL);
+            //AddFunction("StreamerNVirtual", signature, Stub_StreamerNVirtual, ctxt, 0);
 
             //--- adding TClass* IsA()
             signature = FunctionTypeBuilder( PointerBuilder(TypeBuilder("TClass")));
@@ -234,7 +233,10 @@ namespace ROOT { namespace Cintex {
             signature = FunctionTypeBuilder( void_t,
                                              ReferenceBuilder(TypeBuilder("TMemberInspector")),
                                              PointerBuilder(char_t));
-            AddFunction("ShowMembers", signature, Stub_ShowMembers, ctxt, VIRTUAL);
+            
+            AddFunction("ShowMembers", signature, Stub_ShowMembers, ctxt,
+                        /*should be VIRTUAL but avoid vtable creation:*/
+                        fType.IsVirtual() ? VIRTUAL : 0);
 
             //--- create TGenericClassInfo Instance
             //createInfo();
@@ -523,7 +525,7 @@ namespace ROOT { namespace Cintex {
       if ( IsSTL(cl.Name(SCOPED)) || cl.IsArray() ) return;
       for ( size_t m = 0; m < cl.DataMemberSize(INHERITEDMEMBERS_NO); m++) {
          Member mem = cl.DataMemberAt(m, INHERITEDMEMBERS_NO);
-         if ( ! mem.IsTransient()  && ! mem.IsStatic() ) {
+         if ( ! mem.IsStatic() ) {
             Type typ = mem.TypeOf();
             string nam = mem.Properties().HasProperty("ioname") ?
                mem.Properties().PropertyAsString("ioname") : mem.Name();
@@ -541,7 +543,7 @@ namespace ROOT { namespace Cintex {
             insp.Inspect(tcl, par, nam.c_str(), add);
             if ( !typ.IsFundamental() && !typ.IsPointer() ) {
                string tnam  = mem.Properties().HasProperty("iotype") ? CintName(mem.Properties().PropertyAsString("iotype")) : CintName(typ);
-               TClass* tmcl = ROOT::GetROOT()->GetClass(tnam.c_str());
+               TClass* tmcl = ROOT::GetROOT()->GetClass(tnam.c_str(), kTRUE, mem.IsTransient());
                if ( tmcl ) {
                   ::strcat(par,nam.c_str());
                   ::strcat(par,".");

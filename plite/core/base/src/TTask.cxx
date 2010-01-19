@@ -96,9 +96,9 @@ TTask::TTask()
 
    fHasExecuted = kFALSE;
    fActive      = kTRUE;
-   fBreakin  = 0;
-   fBreakout = 0;
-   fTasks    = 0;
+   fBreakin     = 0;
+   fBreakout    = 0;
+   fTasks       = 0;
 }
 
 //______________________________________________________________________________
@@ -109,42 +109,56 @@ TTask::TTask(const char* name, const char *title)
 
    fHasExecuted = kFALSE;
    fActive      = kTRUE;
-   fBreakin  = 0;
-   fBreakout = 0;
-   fTasks = new TList();
+   fBreakin     = 0;
+   fBreakout    = 0;
+   fTasks       = new TList();
 }
-
 //______________________________________________________________________________
-TTask& TTask::operator=(const TTask& tt) 
-{
-   //assignment operator
-   if(this!=&tt) {
-      TNamed::operator=(tt);
-      fTasks=tt.fTasks;
-      fOption=tt.fOption;
-      fBreakin=tt.fBreakin;
-      fBreakout=tt.fBreakout;
-      fHasExecuted=tt.fHasExecuted;
-      fActive=tt.fActive;
-   } 
-   return *this;
-}
+
+TTask& TTask::operator=(const TTask& tt)	 
+{	 
+   //assignment operator (PLEASE DO NOT USE THIS IS WRONG)	 
+   if(this!=&tt) {	 
+      TNamed::operator=(tt);	 
+      fTasks->Delete();
+      TIter next(tt.fTasks);
+      TTask *task;
+      while ((task = (TTask*)next())) {
+         fTasks->Add(new TTask(*task));
+      }      
+      fOption=tt.fOption;	 
+      fBreakin=tt.fBreakin;	 
+      fBreakout=tt.fBreakout;	 
+      fHasExecuted=tt.fHasExecuted;	 
+      fActive=tt.fActive;	 
+   }	 
+   return *this;	 
+}	 
+
+//______________________________________________________________________________	 //______________________________________________________________________________
+TTask::TTask(const TTask &other) : TNamed(other)	 
+{	 
+   // Copy constructor. 
+   fTasks = new TList();	 
+   TIter next(other.fTasks);
+   TTask *task;
+   while ((task = (TTask*)next())) {
+      fTasks->Add(new TTask(*task));
+   }
+   fOption = other.fOption;
+   fBreakin = other.fBreakin;
+   fBreakout = other.fBreakout;
+   fHasExecuted = kFALSE;
+   fActive = other.fActive;   
+}	 
 
 //______________________________________________________________________________
 TTask::~TTask()
 {
    // Delete a task and its subtasks.
-
    if (!fTasks) return;
    fTasks->Delete();
    delete fTasks;
-}
-
-//______________________________________________________________________________
-TTask::TTask(const TTask &task) : TNamed(task)
-{
-   // Copy constructos.
-   fTasks = new TList();
 }
 
 //______________________________________________________________________________

@@ -61,8 +61,9 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include <stdlib.h>
-#include "TUrl.h"
 #include "TAlien.h"
+#include "TUrl.h"
+#include "Riostream.h"
 #include "TString.h"
 #include "TObjString.h"
 #include "TObjArray.h"
@@ -116,6 +117,14 @@ TAlien::TAlien(const char *gridurl, const char *uid, const char * passwd,
    if (!strlen(uid)) {
       if (gSystem->Getenv("alien_API_USER")) {
          fUser = gSystem->Getenv("alien_API_USER");
+      } else {
+         if (gSystem->Getenv("LOGNAME")) {
+            // we try the LOGNAME env
+            fUser = gSystem->Getenv("LOGNAME");
+         } else {
+            // we set the USER env
+            fUser = gSystem->Getenv("USER");
+         }
       }
    } else {
       fUser = uid;
@@ -495,7 +504,7 @@ const char* TAlien::Pwd(Bool_t verbose)
 }
 
 //______________________________________________________________________________
-Bool_t TAlien::Mkdir(const char* ldn, Option_t* options, Bool_t verbose)
+Int_t TAlien::Mkdir(const char* ldn, Option_t* options, Bool_t verbose)
 {
    TString cmdline = TString("mkdir");
    if (strlen(options)) {
@@ -514,15 +523,15 @@ Bool_t TAlien::Mkdir(const char* ldn, Option_t* options, Bool_t verbose)
    const char* result = (GetStreamFieldValue(kOUTPUT,0,0));
    if (result) {
       if (strlen(result) > 0) {
-         if (atoi(result) == 1) {
-            return kTRUE;
+         if (atoi(result) > 0) {
+            return atoi(result);
          }
       }
    }
 
    Error("Mkdir","Cannot create directory %s\n",ldn);
    if (!verbose) Stdout();
-   return kFALSE;
+   return 0;
 }
 
 //______________________________________________________________________________

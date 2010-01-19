@@ -308,7 +308,7 @@ UInt_t TTreeCloner::CollectBranches(TObjArray *from, TObjArray *to)
            fi = 0;
          }
       } else {
-         fWarningMsg.Form("One of the export branch (%s) is not present in the import TTree.",
+         fWarningMsg.Form("One of the export branches (%s) is not present in the import TTree.",
                           tb->GetName());
          if (!(fOptions & kNoWarnings)) {
             Error("TTreeCloner::CollectBranches",fWarningMsg.Data());
@@ -328,6 +328,9 @@ UInt_t TTreeCloner::CollectBranches()
 
    // Since this is called from the constructor, this can not be a virtual function
 
+   if (!fFromTree || !fToTree) {
+      return 0;
+   }
    UInt_t numBasket = CollectBranches(fFromTree->GetListOfBranches(),
                                       fToTree->GetListOfBranches());
 

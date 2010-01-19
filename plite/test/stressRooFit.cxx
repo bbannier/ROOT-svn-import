@@ -23,6 +23,7 @@
 #include "RooHist.h"
 #include "RooRandom.h"
 #include "RooTrace.h"
+#include "RooMath.h"
 #include <string>
 #include <list>
 #include <iostream>
@@ -739,11 +740,18 @@ Int_t stressRooFit(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t 
   Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
   printf("******************************************************************\n");
   if (UNIX) {
-    FILE *fp = gSystem->OpenPipe("uname -a", "r");
-    Char_t line[60];
-    fgets(line,60,fp); line[59] = 0;
-    printf("*  SYS: %s\n",line);
-    gSystem->ClosePipe(fp);
+     TString sp = gSystem->GetFromPipe("uname -a");
+     sp.Resize(60);
+     printf("*  SYS: %s\n",sp.Data());
+     if (strstr(gSystem->GetBuildNode(),"Linux")) {
+        sp = gSystem->GetFromPipe("lsb_release -d -s");
+        printf("*  SYS: %s\n",sp.Data());
+     }
+     if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+        sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+        sp += " Mac OS X ";
+        printf("*  SYS: %s\n",sp.Data());
+     }
   } else {
     const Char_t *os = gSystem->Getenv("OS");
     if (!os) printf("*  SYS: Windows 95\n");
@@ -788,7 +796,7 @@ int main(int argc,const char *argv[])
   Int_t dryRun    = kFALSE ;
   Bool_t doDump   = kFALSE ;
 
-  string refFileName = "http://root.cern.ch/files/stressRooFit_v524_ref.root" ;
+  string refFileName = "http://root.cern.ch/files/stressRooFit_v526_ref.root" ;
 
   // Parse command line arguments 
   for (Int_t i=1 ;  i<argc ; i++) {
@@ -865,6 +873,10 @@ int main(int argc,const char *argv[])
 
     cout << "stressRooFit: WARNING running in write mode, but reference file is web file, writing local file instead: " << refFileName << endl ;
   }
+
+  // Disable caching of complex error function calculation, as we don't 
+  // want to write out the cache file as part of the validation procedure
+  RooMath::cacheCERF(kFALSE) ;
 
   gBenchmark = new TBenchmark();
   stressRooFit(refFileName.c_str(),doWrite,doVerbose,oneTest,dryRun,doDump);  

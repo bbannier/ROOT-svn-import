@@ -195,6 +195,8 @@ Int_t TChain::Add(TChain* chain)
    // -- Add all files referenced by the passed chain to this chain.
    // The function returns the total number of files connected.
 
+   if (!chain) return 0;
+
    // Check for enough space in fTreeOffset.
    if ((fNtrees + chain->GetNtrees()) >= fTreeOffsetLen) {
       fTreeOffsetLen += 2 * chain->GetNtrees();
@@ -205,6 +207,7 @@ Int_t TChain::Add(TChain* chain)
       delete[] fTreeOffset;
       fTreeOffset = trees;
    }
+   chain->GetEntries(); //to force the computation of nentries
    TIter next(chain->GetListOfFiles());
    Int_t nf = 0;
    TChainElement* element = 0;
@@ -951,17 +954,12 @@ Int_t TChain::GetEntryWithIndex(Int_t major, Int_t minor)
 {
    // -- Return entry corresponding to major and minor number.
    //
-   // For example:
-   //
-   //      Int_t run = 1234;
-   //      Int_t event = 345;
-   //      Long64_t serial = chain.GetEntryNumberWithIndex(run, event);
-   //
-   // Now the variable serial is in the range [0,nentries] and one can do
-   // chain.GetEntry(serial);
-   //
-   // WARNING: This function will not work if teh chain has friend chains.
-
+   //  The function returns the total number of bytes read.
+   //  If the Tree has friend trees, the corresponding entry with
+   //  the index values (major,minor) is read. Note that the master Tree
+   //  and its friend may have different entry serial numbers corresponding
+   //  to (major,minor).
+   
    Long64_t serial = GetEntryNumberWithIndex(major, minor);
    if (serial < 0) return -1;
    return GetEntry(serial);
@@ -1843,6 +1841,9 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
    // Copy the entries.
    if (fastClone) {
       // For each tree in the chain.
+      // disable the read and write cache
+      GetTree()->GetCurrentFile()->SetCacheRead(0);
+      newTree->GetCurrentFile()->SetCacheWrite(0);
       for (Long64_t i = 0; i < nentries; i += GetTree()->GetEntries()) {
          if (LoadTree(i) < 0) {
             break;
@@ -2254,7 +2255,7 @@ void TChain::SetEntryList(TEntryList *elist, Option_t *opt)
 
    TEntryList *templist = 0;
    for (Int_t ie = 0; ie<ne; ie++){
-      treename =((TChainElement*)fFiles->UncheckedAt(ie))->GetName();
+      treename = gSystem->BaseName( ((TChainElement*)fFiles->UncheckedAt(ie))->GetName() );
       filename = ((TChainElement*)fFiles->UncheckedAt(ie))->GetTitle();
       templist = elist->GetEntryList(treename.Data(), filename.Data(), opt);
       if (templist) {

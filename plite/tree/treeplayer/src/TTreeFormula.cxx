@@ -132,13 +132,14 @@ TTreeFormula::TTreeFormula(): TFormula(), fQuickLoad(kFALSE), fNeedLoading(kTRUE
 {
    // Tree Formula default constructor
 
-   fTree       = 0;
-   fLookupType = 0;
-   fNindex     = 0;
-   fNcodes     = 0;
-   fAxis       = 0;
-   fHasCast    = 0;
-   fManager    = 0;
+   fTree         = 0;
+   fLookupType   = 0;
+   fNindex       = 0;
+   fNcodes       = 0;
+   fAxis         = 0;
+   fHasCast      = 0;
+   fManager      = 0;
+   fMultiplicity = 0;
 
    Int_t j,k;
    for (j=0; j<kMAXCODES; j++) {
@@ -846,7 +847,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
    // be in the case where some entry do not exist.
    if (tleaf != realtree && tleaf->GetTreeIndex()) {
       // reset the multiplicity
-      if (fMultiplicity == 0) fMultiplicity = 1;
+      if (fMultiplicity >= 0) fMultiplicity = 1;
    }
 
    // Analyze the content of 'right'
@@ -1987,8 +1988,10 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
       const char *funcname = 0;
       if (objClass == TString::Class()) {
          funcname = "Data";
+         //tobetested: numberOfVarDim += RegisterDimensions(code,1,0); // Register the dim of the implied char*
       } else if (objClass == stdStringClass) {
          funcname = "c_str";
+         //tobetested: numberOfVarDim += RegisterDimensions(code,1,0); // Register the dim of the implied char*
       }
       if (funcname) {
          TMethodCall *method = new TMethodCall(objClass, funcname, "");
@@ -2051,6 +2054,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
             else fLookupType[code] = kTreeMember;
          }            
 
+         //tobetested: numberOfVarDim += RegisterDimensions(code,1,0); // Register the dim of the implied char*
          return kDefinedString;
       }
       if (method->IsValid()
@@ -2552,9 +2556,9 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
 
       // Check for an alias.
       const char *aliasValue = fTree->GetAlias(left);
-      if (aliasValue && strcspn(aliasValue,"+*/-%&!=<>|")==strlen(aliasValue)) {
+      if (aliasValue && strcspn(aliasValue,"[]+*/-%&!=<>|")==strlen(aliasValue)) {
          // First check whether we are using this alias recursively (this would
-         // lead to an infinite recursion.
+         // lead to an infinite recursion).
          if (find(aliasUsed.begin(),
                   aliasUsed.end(),
                   left) != aliasUsed.end()) {
@@ -2780,27 +2784,58 @@ Int_t TTreeFormula::DefinedVariable(TString &name, Int_t &action)
             return -3;
          }
 
-         std::vector<std::string> aliasSofar = fAliasesUsed;
-         aliasSofar.push_back( cname );
 
-         // Need to check the aliases used so far
-         TTreeFormula *subform = new TTreeFormula(cname,aliasValue,fTree,aliasSofar); // Need to pass the aliases used so far.
+         if (strcspn(aliasValue,"+*/-%&!=<>|")!=strlen(aliasValue)) {
+            // If the alias contains an operator, we need to use a nested formula
+            // (since DefinedVariable must only add one entry to the operation's list).
+            
+            // Need to check the aliases used so far
+            std::vector<std::string> aliasSofar = fAliasesUsed;
+            aliasSofar.push_back( cname );
 
-         if (subform->GetNdim()==0) {
-            Error("DefinedVariable",
-                  "The substitution of the alias \"%s\" by \"%s\" failed.",cname,aliasValue);
-            return -3;
-         }
+            TString subValue( aliasValue );
+            if (dims[0]) {
+               subValue += dims;
+            }
 
-         fManager->Add(subform);
-         fAliases.AddAtAndExpand(subform,fNoper);
+            TTreeFormula *subform = new TTreeFormula(cname,subValue,fTree,aliasSofar); // Need to pass the aliases used so far.
 
-         if (subform->IsString()) {
-            action = kAliasString;
-            return 0;
-         } else {
-            action = kAlias;
-            return 0;
+            if (subform->GetNdim()==0) {
+               delete subform;
+               Error("DefinedVariable",
+                     "The substitution of the alias \"%s\" by \"%s\" failed.",cname,aliasValue);
+               return -3;
+            }
+
+            fManager->Add(subform);
+            fAliases.AddAtAndExpand(subform,fNoper);
+
+            if (subform->IsString()) {
+               action = kAliasString;
+               return 0;
+            } else {
+               action = kAlias;
+               return 0;
+            }
+         } else { /* assumes strcspn(aliasValue,"[]")!=strlen(aliasValue) */
+            TString thisAlias( aliasValue );
+            thisAlias += dims;
+            Int_t aliasRes = DefinedVariable(thisAlias,action);
+            if (aliasRes<0) {
+               // We failed but DefinedVariable has not printed why yet.
+               // and because we want thoses to be printed _before_ the notice
+               // of the failure of the substitution, we need to print them here.
+               if (aliasRes==-1) {
+                  Error("Compile", " Bad numerical expression : \"%s\"",thisAlias.Data()); 
+               } else if (aliasRes==-2) {
+                  Error("Compile", " Part of the Variable \"%s\" exists but some of it is not accessible or useable",thisAlias.Data()); 
+                  
+               }
+               Error("DefinedVariable",
+                     "The substitution of the alias \"%s\" by \"%s\" failed.",cname,aliasValue);
+               return -3;               
+            }
+            return aliasRes;
          }
       }
    }
@@ -4392,7 +4427,7 @@ Bool_t TTreeFormula::IsInteger(Bool_t fast) const
 {
    // return TRUE if the formula corresponds to one single Tree leaf
    // and this leaf is short, int or unsigned short, int
-   // When a leaf is of type integer, the generated histogram is forced
+   // When a leaf is of type integer or string, the generated histogram is forced
    // to have an integer bin width
 
    if (fast) {
@@ -4438,7 +4473,8 @@ Bool_t TTreeFormula::IsInteger(Bool_t fast) const
 
    if (EvalClass()==TBits::Class()) return kTRUE;
 
-   return IsLeafInteger(0);
+   if (IsLeafInteger(0) || IsLeafString(0)) return kTRUE;
+   return kFALSE;
 }
 
 //______________________________________________________________________________
@@ -4484,6 +4520,7 @@ Bool_t TTreeFormula::IsLeafInteger(Int_t code) const
    if (!strcmp(leaf->GetTypeName(),"Bool_t"))   return kTRUE;
    if (!strcmp(leaf->GetTypeName(),"Char_t"))   return kTRUE;
    if (!strcmp(leaf->GetTypeName(),"UChar_t"))  return kTRUE;
+   if (!strcmp(leaf->GetTypeName(),"string"))   return kTRUE;
    return kFALSE;
 }
 
@@ -4539,6 +4576,7 @@ Bool_t  TTreeFormula::IsLeafString(Int_t code) const
                   return kTRUE;
                }
             }
+            return kFALSE;
          } else if (leaf->InheritsFrom("TLeafElement")) {
             TBranchElement * br = (TBranchElement*)leaf->GetBranch();
             Int_t bid = br->GetID();
@@ -4747,7 +4785,7 @@ void TTreeFormula::ResetLoading()
    if ( fNoper < n ) {
       n = fNoper;
    }
-   for(Int_t k=0; k<n; ++k) {
+   for(Int_t k=0; k <= n; ++k) {
       TTreeFormula *f = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(k));
       if (f) {
          f->ResetLoading();
@@ -5050,19 +5088,18 @@ void TTreeFormula::ResetDimensions() {
             else if (leaf->GetLenStatic()>1) fMultiplicity = 2;
          }
       } else {
-        if (leaf->GetLenStatic()>1 && fMultiplicity!=1) fMultiplicity = 2;
-        else {
-           // If the leaf belongs to a friend tree which has an index, we might
-           // be in the case where some entry do not exist.
-
-           TTree *realtree = fTree->GetTree();
-           TTree *tleaf = leaf->GetBranch()->GetTree();
-           if (tleaf && tleaf != realtree && tleaf->GetTreeIndex()) {
-              // reset the multiplicity
-              fMultiplicity = 1;
-           }
-
-        }
+         if (leaf->GetLenStatic()>1 && fMultiplicity!=1) fMultiplicity = 2;
+      }
+      if (fMultiplicity!=1) {
+         // If the leaf belongs to a friend tree which has an index, we might
+         // be in the case where some entry do not exist.
+            
+         TTree *realtree = fTree ? fTree->GetTree() : 0;
+         TTree *tleaf = leaf->GetBranch()->GetTree();
+         if (tleaf && tleaf != realtree && tleaf->GetTreeIndex()) {
+            // Reset the multiplicity if we have a friend tree with an index.
+            fMultiplicity = 1;
+         }
       }
 
       Int_t virt_dim2 = 0;
@@ -5152,7 +5189,7 @@ Bool_t TTreeFormula::LoadCurrentDim() {
             outofbounds = kTRUE;
             continue;
          } else {
-            fNdata[i] = 1;
+            fNdata[i] = fCumulSizes[i][0];
          }
       }
       Bool_t hasBranchCount2 = kFALSE;

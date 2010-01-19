@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: ConfidenceBelt.cxx 26317 2009-01-13 15:31:05Z cranmer $
+// @(#)root/roostats:$Id: ConfidenceBelt.h 31276 2009-11-18 15:06:42Z moneta $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *

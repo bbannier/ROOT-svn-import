@@ -53,7 +53,7 @@ N: Daniel Barna
 E: daniel.barna@cern.ch
 D: CINT install target
 
-N: Jean-Francois Bastien 
+N: Jean-Francois Bastien
 E: jfbastien@cae.com
 D: contribution to Reflex
 
@@ -85,6 +85,10 @@ D: TMath::BubbleHigh, TMath::BubbleLow
 N: Marek Biskup
 E: Marek.Biskup@cern.ch
 D: PROOF contributions
+
+N: Brian Bockelman
+E: bbockelm@math.unl.edu
+D: THDFSFile for accessing the Hadoop file system
 
 N: Sebastian Boeser
 E: sboeser@ifh.de
@@ -293,10 +297,6 @@ N: Piotr Golonka
 E: Piotr.Golonka@cern.ch
 D: class TMCParticle
 
-N: Piotr Golonka
-E: Piotr.Golonka@cern.ch
-D: class TMCParticle
-
 N: Masaharu Goto
 E: MXJ02154@niftyserve.or.jp
 D: CINT C/C++ interpreter
@@ -342,7 +342,7 @@ D: contributions to the thread classes, SapDB interface
 
 N: Andreas Hoecker
 E: Andreas.Hoecker@cern.ch
-D: contribution to the TMVA package
+D: author of the TMVA package
 
 N: Carsten Hof
 E: Carsten_Hof@web.de
@@ -382,6 +382,10 @@ D: split vector<T*> and schema evolution
 N: Luke Jones
 E: jones@netoffice.com
 D: class TGraphDelaunay
+
+N: Pierre Juillot
+E: juillot@in2p3.fr
+D: various contributions to the postscript driver
 
 N: Michal Kapalka
 E: kapalka@icslab.agh.edu.pl
@@ -447,6 +451,10 @@ D: SAX and DOM XML parser interfaces
 N: Constantin Loizides
 E: loizides@MIT.EDU
 D: PROOF testing and debugging
+
+N: Johan Lundberg
+E: johan.lundberg@cern.ch
+D: Additions to the TRolke class
 
 N: Elaine Lyons
 E: unknown
@@ -595,6 +603,10 @@ E: Andreas.Joachim.Peters@cern.ch
 D: TGrid extension and TAlien plugin
 D: TMonaLisa monitoring plugin
 
+N: Danilo Piparo
+E: Danilo.Piparo@cern.ch
+D: contribution in RooStats
+
 N: Filip Pizlo
 E: pizlo@purdue.edu
 D: TBits extension and test program testbits.cxx
@@ -618,10 +630,6 @@ D: contributed to styles Bold, Video, Pub
 N: Miha Puc
 E: miha.puc@marvin.fmf.uni-lj.si
 D: contributed to TMath::Voigt
-
-N: Xavier Prudent
-E: prudent@lapp.in2p3.fr
-D: contributed to TMVA classes
 
 N: Gilles Quemener
 E: quemener@lpsc.in2p3.fr
@@ -683,13 +691,17 @@ N: Tomasz Sosnicki
 E: tom.sosnicki@gmail.com
 D: contribution to gviz3d/TStructViewer
 
+N: Peter Speckmayer
+E: Peter.Speckmayer@cern.ch
+D: author of the TMVA package
+
 N: Abdelhalim Ssadik
 E: abdelhalim.ssadik@cern.ch
 D: contribution to GUI classes (TGDockableFrame)
 
 N: Joerg Stelzer
 E: Joerz.Stelzer@cern.ch
-D: contribution to the TMVA package
+D: author of the TMVA package
 
 N: Matthew Strait
 E: strait@physics.umn.edu
@@ -702,6 +714,10 @@ D: development of class TGraphSmooth + many suggestions
 N: Matevz Tadel
 E: Matevz.Tadel@cern.ch
 D: Several contributions to the 3-d graphics and GL interface
+
+N: Jan Therhaag
+E: therhaag@users.sourceforge.net
+D: author of the TMVA package
 
 N: Tim Tran
 E: timtran@jlab.org
@@ -735,16 +751,16 @@ N: Guido Volpi
 E: guido.volpi@pi.infn.it
 D: class TPie
 
+N: Eckhard von Toerne
+E: evt@physik.uni-bonn.de
+D: author of the TMVA package
+
 N: Helge Voss
 E: Helge.Voss@cern.ch
-D: contribution to the TMVA package
-
-N: Kai Voss
-E: Kai.Voss@cern.ch
-D: contribution to the TMVA package
+D: author of the TMVA package
 
 N: Shaowen Wang
-E: shaowen-wang@uiowa.edu 
+E: shaowen-wang@uiowa.edu
 D: TOracleResult
 
 N: Hady Zalek

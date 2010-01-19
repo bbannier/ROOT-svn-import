@@ -34,7 +34,7 @@
 //   * in TMultilayerPerceptron, there is no limitation on the number of 
 //     layers/neurons, while MLPFIT was limited to 2 hidden layers
 //   * TMultilayerPerceptron allows you to save the network in a root file, and 
-//     provides more export functionnalities
+//     provides more export functionalities
 //   * TMultilayerPerceptron gives more flexibility regarding the normalization of 
 //     inputs/outputs
 //   * TMultilayerPerceptron provides, thanks to Andrea Bocci, the possibility to 
@@ -598,7 +598,7 @@ void TMultiLayerPerceptron::SetTestDataSet(const char * test)
    // Sets the Test dataset.
    // Those events will not be used for the minimization but for control.
    // Note that the tree must be already defined.
-   if(fTest && fTestOwner) delete fTest;
+   if(fTest && fTestOwner) {delete fTest; fTest=0;}
    if(fTest) if(strncmp(fTest->GetName(),Form("fTestList_%i",this),10)) delete fTest;
    fTest = new TEventList(Form("fTestList_%i",this));
    fTestOwner = true;
@@ -961,7 +961,7 @@ Double_t TMultiLayerPerceptron::GetError(Int_t event) const
    // Error on the output for a given event
    GetEntry(event);
    Double_t error = 0;
-   // look at 1st output neruon to determine type and error fnuction
+   // look at 1st output neruon to determine type and error function
    Int_t nEntries = fLastLayer.GetEntriesFast();
    if (nEntries == 0) return 0.0;
    switch (fOutType) {

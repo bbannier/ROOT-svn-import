@@ -22,6 +22,7 @@
 
 class TGLRenderArea;
 class TGLEventHandler;
+class TGedEditor;
 
 class TGLEmbeddedViewer : public TGLViewer
 {
@@ -30,6 +31,7 @@ private:
    TGCompositeFrame  *fFrame;
    Int_t              fBorder;
 
+   void Init(const TGWindow *parent);
    void CreateFrames();
 
    TGLEmbeddedViewer(const TGLEmbeddedViewer&); // Not implemented
@@ -37,6 +39,7 @@ private:
 
 public:
    TGLEmbeddedViewer(const TGWindow *parent, TVirtualPad *pad=0, Int_t border=2);
+   TGLEmbeddedViewer(const TGWindow *parent, TVirtualPad *pad, TGedEditor *ged, Int_t border=2);
    ~TGLEmbeddedViewer();
 
    virtual void CreateGLWidget();

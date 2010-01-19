@@ -20,6 +20,8 @@
 
 extern "C" {
 
+extern G__pMethodUpdateClassInfo G__UserSpecificUpdateClassInfo;
+
 // Static functions.
 static G__var_array* G__alloc_var_array(G__var_array* var, int* pig15);
 static void G__copy_unionmember(G__var_array* var, int ig15, G__var_array* envvar, int envig15, long offset, int access, int statictype);
@@ -1343,7 +1345,6 @@ int G__calldtor(void* p, int tagnum, int isheap)
    int stat;
    G__value result;
    struct G__ifunc_table_internal* ifunc;
-   struct G__param para;
    int ifn = 0;
    long store_gvp;
    if (tagnum == -1) {
@@ -1362,10 +1363,12 @@ int G__calldtor(void* p, int tagnum, int isheap)
       G__setgvp((long) p);
    }
    // Call destructor.
-   para.paran = 0;
-   para.parameter[0][0] = 0;
-   para.para[0] = G__null;
-   stat = G__callfunc0(&result, G__get_ifunc_ref(ifunc), ifn, &para, p, G__TRYDESTRUCTOR);
+   struct G__param* para = new G__param();
+   para->paran = 0;
+   para->parameter[0][0] = 0;
+   para->para[0] = G__null;
+   stat = G__callfunc0(&result, G__get_ifunc_ref(ifunc), ifn, para, p, G__TRYDESTRUCTOR);
+   delete para;
    G__setgvp(store_gvp);
    if (isheap && (ifunc->pentry[ifn]->size != -1)) {
       // -- Interpreted class.
@@ -1938,6 +1941,12 @@ int G__search_tagname(const char* tagname, int type)
       G__struct.type[i] = type;
       ++G__struct.nactives;
    }
+   if (G__struct.type[i] != 'a'
+       && G__struct.type[i] != 0
+       && G__UserSpecificUpdateClassInfo) {
+      (*G__UserSpecificUpdateClassInfo)(G__struct.name[i],i);
+   }
+
    // Return tagnum.
    return i;
 }

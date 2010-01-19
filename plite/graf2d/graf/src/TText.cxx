@@ -38,6 +38,9 @@ ClassImp(TText)
 TText::TText(): TNamed(), TAttText()
 {
    // Text default constructor.
+
+   fX = 0.;
+   fY = 0.;
 }
 
 
@@ -46,7 +49,8 @@ TText::TText(Double_t x, Double_t y, const char *text) : TNamed("",text), TAttTe
 {
    // Text normal constructor.
 
-   fX=x; fY=y;
+   fX = x;
+   fY = y;
 }
 
 
@@ -313,7 +317,7 @@ void TText::ExecuteEvent(Int_t event, Int_t px, Int_t py)
 
 
 //______________________________________________________________________________
-void TText::GetControlBox(Int_t x, Int_t y, Double_t theta, 
+void TText::GetControlBox(Int_t x, Int_t y, Double_t theta,
                           Int_t cBoxX[4], Int_t cBoxY[4])
 {
    // Return the text control box. The text position coordinates is (x,y) and
@@ -394,7 +398,7 @@ void TText::GetBoundingBox(UInt_t &w, UInt_t &h, Bool_t angle)
       w = x2-x1;
       h = y2-y1;
    } else {
-      if (TTF::IsInitialized() || gPad->IsBatch()) {
+      if ((gVirtualX->HasTTFonts() && TTF::IsInitialized()) || gPad->IsBatch()) {
          TTF::GetTextExtent(w, h, (char*)GetTitle());
       } else {
          gVirtualX->GetTextExtent(w, h, (char*)GetTitle());
@@ -422,10 +426,13 @@ void TText::GetTextAscentDescent(UInt_t &a, UInt_t &d, const char *text) const
       a = TTF::GetBox().yMax;
       d = TMath::Abs(TTF::GetBox().yMin);
    } else {
-      UInt_t w;
       gVirtualX->SetTextSize((int)tsize);
-      gVirtualX->GetTextExtent(w, a, (char*)text);
-      d = 0;
+      a = gVirtualX->GetFontAscent();
+      if (!a) {
+         UInt_t w;
+         gVirtualX->GetTextExtent(w, a, (char*)text);
+      }
+      d = gVirtualX->GetFontDescent();
    }
 }
 

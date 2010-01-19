@@ -495,10 +495,15 @@ TProofMgr *TProofMgr::Create(const char *uin, Int_t loglevel,
          u.SetUrl("localhost");
    }
    if (host == "lite" || host == "__lite__") {
+#ifndef WIN32
       isLite = kTRUE;
       u.SetHost("__lite__");
       u.SetProtocol("proof");
       u.SetPort(1093);
+#else
+      ::Info("TProofMgr::Create","'lite' not yet supported on Windows");
+      return m;
+#endif
    }
 
    if (!isLite) {
