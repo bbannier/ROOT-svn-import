@@ -33,6 +33,9 @@
 #include "TSysEvtHandler.h"
 #include "TVirtualMutex.h"
 #include "TThread.h"
+#ifdef WIN32
+#include <process.h>
+#endif
 
 ClassImp(TSlaveLite)
 
@@ -77,6 +80,25 @@ void TSlaveLite::Init()
    // Init a PROOF worker object. Called via the TSlaveLite ctor.
 
    // Command to be executed
+#ifdef WIN32
+   char *args[7];
+   const char *cmd = "proofserv";
+   args[0] = StrDup(cmd);
+   args[1] = "proofslave";
+   args[2] = "lite";
+   args[3] = Form("%d", gSystem->GetPid());
+   args[4] = Form("%d", gDebug);
+   args[5] = Form("%s/worker-%s.env", fWorkDir.Data(), fOrdinal.Data());
+   args[6] = NULL;
+   _flushall();
+   if (_spawnvp(_P_NOWAIT, cmd, args) == -1) {
+      Info("Init", "an error occured while executing 'proofserv'");
+      SetBit(kInvalidObject);
+      return;
+   }
+   // sleep a bit to let start the process...
+   gSystem->Sleep(100);
+#else
    TString cmd;
 #ifdef R__HAVE_CONFIG
    cmd.Form(". %s/worker-%s.env; export ROOTBINDIR=\"%s\"; %s/proofserv proofslave lite %d %d &",
@@ -92,6 +114,7 @@ void TSlaveLite::Init()
       SetBit(kInvalidObject);
       return;
    }
+#endif
 }
 
 //______________________________________________________________________________

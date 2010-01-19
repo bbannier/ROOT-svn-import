@@ -434,7 +434,7 @@ void TProofServLite::Terminate(Int_t status)
       gSystem->ChangeDirectory("/");
       // needed in case fSessionDir is on NFS ?!
       gSystem->MakeDirectory(fSessionDir+"/.delete");
-      gSystem->Exec(Form("%s %s", kRM, fSessionDir.Data()));
+      TProof::Unlink(fSessionDir.Data(), kTRUE);
    }
 
    // Remove input and signal handlers to avoid spurious "signals"

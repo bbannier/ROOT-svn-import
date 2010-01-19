@@ -337,7 +337,11 @@ void TProofProgressLog::BuildLogList(Bool_t create)
    TGLBEntry *ent = 0;
    TString buf;
    while ((pe=(TProofLogElem*)next())){
-      TUrl url(pe->GetTitle());
+      TString lpath = pe->GetTitle();
+#ifdef WIN32
+      lpath.Prepend("file://");
+#endif
+      TUrl url(lpath.Data());
       buf.Form("%s %s", pe->GetName(), url.GetHost());
       fLogList->AddEntry(buf.Data(), is);
       if ((ent = fLogList->FindEntry(buf.Data()))) {

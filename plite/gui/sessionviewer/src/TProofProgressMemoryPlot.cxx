@@ -161,7 +161,11 @@ TGListBox* TProofProgressMemoryPlot::BuildLogList(TGFrame *parent)
    TString buf;
    Int_t is = 1;
    while ((pe=(TProofLogElem*)next())){
-      TUrl url(pe->GetTitle());
+      TString lpath = pe->GetTitle();
+#ifdef WIN32
+      lpath.Prepend("file://");
+#endif
+      TUrl url(lpath.Data());
       buf = TString::Format("%s %s", pe->GetName(), url.GetHost());
       c->AddEntry(buf.Data(), is);
       is++;
