@@ -384,30 +384,6 @@ GCC_MINOR     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f2)
 GCC_PATCH     := $(shell $(CXX) -dumpversion 2>&1 | cut -d'.' -f3)
 GCC_VERS      := gcc-$(GCC_MAJOR).$(GCC_MINOR)
 GCC_VERS_FULL := gcc-$(GCC_MAJOR).$(GCC_MINOR).$(GCC_PATCH)
-
-##### CINT Stub Functions Generation #####
-ifeq ($(NOSTUBS),yes)
-ROOTCINTTMP   = export CXXFLAGS="$(CXXFLAGS)"; core/utils/src/rootcint_nostubs_tmp.sh -$(ROOTDICTTYPE)
-CXXFLAGS     += -DG__NOSTUBS
-CINTCXXFLAGS += -DG__NOSTUBS
-ifeq ($(NOSTUBSTEST),yes)
-CXXFLAGS     += -DG__NOSTUBSTEST
-CINTCXXFLAGS += -DG__NOSTUBSTEST
-endif
-endif
-
-
-# Precompiled headers for gcc
-ifeq ($(GCC_MAJOR),4)
-PCHSUPPORTED  := $(ENABLEPCH)
-endif
-ifeq ($(PCHSUPPORTED),yes)
-PCHFILE        = include/precompile.h.gch
-PCHCXXFLAGS    = -DUSEPCH -include precompile.h
-PCHEXTRAOBJBUILD = $(CXX) $(CXXFLAGS) -DUSEPCH $(OPT) -x c++-header \
-                   -c include/precompile.h $(CXXOUT)$(PCHFILE) \
-                   && touch $(PCHEXTRAOBJ)
-endif
 endif
 
 ##### f77 options #####
@@ -509,12 +485,6 @@ else
 MAINLIBS      =
 endif
 
-##### pre-compiled header support #####
-
-ifeq ($(PCHSUPPORTED),yes)
-include config/Makefile.precomp
-endif
-
 ##### all #####
 
 ALLHDRS      :=
@@ -557,7 +527,7 @@ build/%.o: build/%.c
 
 %.o: %.cxx
 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CXXFLAGS) $(PCHCXXFLAGS) $(CXXOUT)$@ -c $<
+	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
 
 %.o: %.c
 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
@@ -600,10 +570,6 @@ ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist \
 ifeq ($(findstring clean-,$(MAKECMDGOALS)),)
 ifeq ($(findstring skip,$(MAKECMDGOALS))$(findstring fast,$(MAKECMDGOALS)),)
 -include $(INCLUDEFILES)
-endif
-ifeq ($(PCHSUPPORTED),yes)
-INCLUDEPCHRULES = yes
-include config/Makefile.precomp
 endif
 -include build/dummy.d          # must be last include
 endif
@@ -659,7 +625,7 @@ $(COMPILEDATA): config/Makefile.$(ARCH) config/Makefile.comp $(MAKECOMPDATA)
 	   "$(LIBDIR)" "$(BOOTLIBS)" "$(RINTLIBS)" "$(INCDIR)" \
 	   "$(MAKESHAREDLIB)" "$(MAKEEXE)" "$(ARCH)" "$(ROOTBUILD)" "$(EXPLICITLINK)"
 
-build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP) $(PCHDEP)
+build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP)
 	@(if [ ! -f $@ ] ; then \
 	   touch $@; \
 	fi)
@@ -837,7 +803,7 @@ rootdrpm:
 	fi
 
 clean::
-	@rm -f __compiledata *~ core.* include/precompile.*
+	@rm -f __compiledata *~ core.*
 
 ifeq ($(CXX),KCC)
 clean::

@@ -272,7 +272,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
    case TProofBench::kRunCleanup:
 
       fChain->GetTree()->GetEntry(entry);
-
+#if 0
       fNTracksHist->Fill(fNtrack);
 
       for(Int_t j=0;j<fTracks->GetEntries();j++){
@@ -280,6 +280,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
          fPtHist->Fill(curtrack->GetPt(),1./curtrack->GetPt());
       }
       fTracks->Clear("C");
+#endif
       break;
 
    case TProofBench::kRunOptDataRead: //partial read
