@@ -66,6 +66,8 @@ TSelHist::~TSelHist()
    //if (fRandom) delete fRandom;
    SafeDelete(fRandom);
 
+   Info("TSelHist","destroying ...");
+   
    for (Int_t i=0; i < fNhist; i++) {
       if (fHist1D && fHist1D[i] && !fOutput->FindObject(fHist1D[i])) {
          SafeDelete(fHist1D[i]);

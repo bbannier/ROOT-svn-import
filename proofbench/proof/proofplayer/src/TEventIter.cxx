@@ -231,6 +231,7 @@ Long64_t TEventIterUnit::GetNextEvent()
 
    while (fElem == 0 || fCurrent == 0) {
 
+      SafeDelete(fElem);
       if (!(fElem = fDSet->Next()))
          return -1;
 
@@ -304,6 +305,7 @@ Long64_t TEventIterObj::GetNextEvent()
          fOldBytesRead = bytesRead;
       }
 
+      SafeDelete(fElem);
       fElem = fDSet->Next(fKeys->GetSize());
       if (fElem && fElem->GetEntryList()) {
          Error("GetNextEvent", "Entry- or event-list not available");
@@ -399,7 +401,7 @@ TEventIterTree::TFileTree::~TFileTree()
    // Default cdtor.
 
    // Avoid destroying the cache; must be placed before deleting the trees
-   fFile->SetCacheRead(0);
+//   fFile->SetCacheRead(0);
    SafeDelete(fTrees);
    SafeDelete(fFile);
 }
@@ -444,7 +446,9 @@ TEventIterTree::~TEventIterTree()
 {
    // Destructor
 
-   // The cache is deleted in here
+   // Delete the tree cache ...
+   SafeDelete(fTreeCache);
+   // ... and the remaining open files
    SafeDelete(fFileTrees);
 }
 

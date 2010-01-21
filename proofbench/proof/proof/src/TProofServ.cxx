@@ -3355,6 +3355,8 @@ void TProofServ::HandleProcess(TMessage *mess)
       // Set not idle
       SetIdle(kFALSE);
 
+      // Cleanup the player
+      Bool_t deleteplayer = kTRUE;
       MakePlayer();
 
       // Setup data set
@@ -3451,6 +3453,9 @@ void TProofServ::HandleProcess(TMessage *mess)
          // Set idle
          SetIdle(kTRUE);
 
+         // Do not leanup the player yet: it will be used in sub-merging activities
+         deleteplayer = kFALSE;
+
          PDB(kSubmerger, 2) Info("HandleProcess", "worker %s has finished", fOrdinal.Data());
 
       } else {
@@ -3483,6 +3488,9 @@ void TProofServ::HandleProcess(TMessage *mess)
       fPlayer->GetInputList()->SetOwner(0);
       input->SetOwner();
       SafeDelete(input);
+
+      // Cleanup if required
+      if (deleteplayer) DeletePlayer();
    }
 
    PDB(kGlobal, 1) Info("HandleProcess", "done");
@@ -5486,6 +5494,9 @@ void TProofServ::MakePlayer()
 
    TVirtualProofPlayer *p = 0;
 
+   // Cleanup first
+   DeletePlayer();
+
    if (IsParallel()) {
       // remote mode
       p = fProof->MakePlayer();
@@ -5508,7 +5519,7 @@ void TProofServ::DeletePlayer()
    if (IsMaster()) {
       if (fProof) fProof->SetPlayer(0);
    } else {
-      delete fPlayer;
+      SafeDelete(fPlayer);
    }
    fPlayer = 0;
 }
@@ -5873,6 +5884,8 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                Error("HandleSubmerger", "kSendOutput: received not on worker");	
             }
 
+            // Cleanup
+            DeletePlayer();
          }
          break;
       case TProof::kBeMerger:
@@ -5903,17 +5916,19 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                      Info("","adding own output to the list on %s", fOrdinal.Data());
 
                   // Add own results to the output list
+                  // On workers the player does not own the output list, which is owned
+                  // by the selector and deleted in there
                   TIter nxo(fPlayer->GetOutputList());
                   TObject * o = 0;
                   while ((o = nxo())) {
-                     if ((mergerPlayer->AddOutputObject(o) == 1)) {
-                        // Remove the object if it has been merged
-                        PDB(kSubmerger, 2) Info("HandleSocketInput", "removing sent object (%p)", o);
-                        SafeDelete(o);
-                     }
+                     if ((mergerPlayer->AddOutputObject(o) != 1)) {
+                        // Remove the object if it has not been merged: it is owned
+                        // now by the merger player (in its output list)
+                        PDB(kSubmerger, 2) Info("HandleSocketInput", "removing merged object (%p)", o);
+                        fPlayer->GetOutputList()->Remove(o);
+                     } 
                   }
                   PDB(kSubmerger, 2) Info("HandleSubmerger","kBeMerger: own outputs added");
-
                   PDB(kSubmerger, 2) Info("HandleSubmerger","starting delayed merging on %s", fOrdinal.Data());
 
                   // Delayed merging if neccessary
@@ -5942,6 +5957,8 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                Error("HandleSubmerger","kSendOutput: received not on worker");	
             }
 
+            // Cleanup
+            DeletePlayer();
          }
          break;
 

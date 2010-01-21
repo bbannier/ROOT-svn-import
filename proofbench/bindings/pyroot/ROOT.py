@@ -304,6 +304,10 @@ def _processRootEvents( controller ):
    import time
    gSystemProcessEvents = _root.gSystem.ProcessEvents
 
+   if sys.platform == 'win32':
+      import thread
+      _root.gROOT.ProcessLineSync('((TGWin32 *)gVirtualX)->SetUserThreadId(%ld)' % (thread.get_ident()))
+
    while controller.keeppolling:
       try:
          gSystemProcessEvents()

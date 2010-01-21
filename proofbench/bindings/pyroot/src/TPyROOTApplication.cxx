@@ -13,6 +13,7 @@
 #include "TStyle.h"
 #include "TError.h"
 #include "Getline.h"
+#include "TVirtualX.h"
 
 // CINT
 #include "Api.h"
@@ -77,6 +78,12 @@ PyROOT::TPyROOTApplication::TPyROOTApplication(
    //      gROOT->LoadClass("TPostScript", "Postscript");
    //      gROOT->LoadClass("THtml",       "Html");
    }
+
+#ifdef WIN32
+   // switch win32 proxy main thread id
+   if (gVirtualX)
+      ProcessLine("((TGWin32 *)gVirtualX)->SetUserThreadId(0);", kTRUE);
+#endif
 
 // save current interpreter context
    gInterpreter->SaveContext();

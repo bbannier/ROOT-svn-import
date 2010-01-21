@@ -14,8 +14,18 @@
 #include "CINTdefs.h"
 #include "Api.h"
 #include "CINTFunctional.h"
+#include "RConfig.h"
 
-#ifdef __linux
+#ifndef CINTEX_USE_MMAP
+# if (defined(__linux) || defined(R__MACOSX)) && ! defined(DATA_EXECUTABLE)
+#  define CINTEX_USE_MMAP 1
+# else
+#  define CINTEX_USE_MMAP 0
+# endif
+#endif
+
+
+#if CINTEX_USE_MMAP
 #include <sys/mman.h>
 #endif
 
@@ -380,9 +390,9 @@ namespace ROOT { namespace Cintex {
    //------ Support for functions a state -------------------------------------------------------
 
    char* Allocate_code(const void* src, size_t len)  {
-#if defined(__linux) && ! defined(DATA_EXECUTABLE)
+#if CINTEX_USE_MMAP
       char* code = (char*) ::mmap(NULL, len + sizeof(size_t), PROT_READ | PROT_WRITE | PROT_EXEC,
-                                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                                  MAP_PRIVATE | MAP_ANON, -1, 0);
       if (!code || code == ((void *) -1)) return 0;
       // write the size of the allocation into the first few bytes; we need
       // it for munmap.
@@ -397,7 +407,7 @@ namespace ROOT { namespace Cintex {
    }
 
    //------ Function models-------------------------------------------------------------------
-#if INT_MAX < LONG_MAX
+#ifdef R__B64
 #define FUNCPATTERN 0xFAFAFAFAFAFAFAFAL
 #define DATAPATTERN 0xDADADADADADADADAL
 #else
@@ -428,7 +438,7 @@ namespace ROOT { namespace Cintex {
             if ( *(size_t*)b == DATAPATTERN ) fa_offset = o;
             if ( *(size_t*)b == FUNCPATTERN ) f_offset = o;
             if ( f_offset && fa_offset ) {
-               fSize = (o + 32) & ~0xF;
+               fSize = (o + 256) & ~0xF;
                break;
             }
          }
@@ -479,7 +489,7 @@ namespace ROOT { namespace Cintex {
    {
       // Free function code.
       char* scode = (char*)code;
-#if defined(__linux) && ! defined(DATA_EXECUTABLE)
+#if CINTEX_USE_MMAP
       if (!code) return;
       scode -= sizeof(size_t);
       munmap(scode, *((size_t*)scode));

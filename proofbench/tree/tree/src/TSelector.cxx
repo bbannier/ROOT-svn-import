@@ -95,6 +95,7 @@ TSelector::~TSelector()
 {
    // Selector destructor.
 
+   Info("TSelector","destroying ...");
    delete fOutput;
 }
 

@@ -194,9 +194,6 @@ extern "C" {
    int   G__main(int argc, char **argv);
    void  G__exit(int rtn);
    struct G__includepath *G__getipathentry();
-#ifdef G__NOSTUBS
-   void  G__setisfilebundled(int isfilebundled);
-#endif
 }
 const char *ShortTypeName(const char *typeDesc);
 
@@ -586,7 +583,8 @@ namespace {
 }
 
 #ifndef R__USE_MKSTEMP
-# if defined(R__GLIBC) || defined(__FreeBSD__)
+# if defined(R__GLIBC) || defined(__FreeBSD__) || \
+    (defined(__APPLE__) && defined(MAC_OS_X_VERSION_10_5))
 #  define R__USE_MKSTEMP 1
 # endif
 #endif
@@ -4080,6 +4078,7 @@ void StrcpyArgWithEsc(char *escaped, const char *original)
    StrcpyWithEsc(escaped,original);
 }
 
+//______________________________________________________________________________
 void ReplaceFile(const char *tmpdictname, const char *dictname)
 {
    // Unlink dictname and move tmpdictname into dictname
@@ -4168,9 +4167,8 @@ void ReplaceBundleInDict(const char *dictname, const string &bundlename)
                s++;
                char *s1 = strrchr(s, '"');
                if (((strstr(s,"LinkDef") || strstr(s,"Linkdef") ||
-                     strstr(s,"linkdef")) && strstr(s,".h"))) {
-                  s1 = 0;
-               }
+                     strstr(s,"linkdef")) && strstr(s,".h")))
+                  continue;
                if (s1) {
                   *s1 = 0;
                   fprintf(tmpdict, "  G__add_compiledheader(\"%s\");\n", s);
@@ -4195,10 +4193,10 @@ void ReplaceBundleInDict(const char *dictname, const string &bundlename)
    // make dict.h
    char dictnameh[kMaxLen];
    strcpy(dictnameh, dictname);
-   char *s = strrchr(dictnameh, '.');
-   if (s) {
-      *(s+1) = 'h';
-      *(s+2) = 0;
+   char *dh = strrchr(dictnameh, '.');
+   if (dh) {
+      *(dh+1) = 'h';
+      *(dh+2) = 0;
    } else {
       Error(0, "rootcint: failed create dict.h in ReplaceBundleInDict()\n");
       return;
@@ -4232,10 +4230,19 @@ void ReplaceBundleInDict(const char *dictname, const string &bundlename)
                fclose(fpd);
                return;
             }
-            while (fgets(line, BUFSIZ, fb))
-               if (!((strstr(line,"LinkDef") || strstr(line,"Linkdef") || strstr(line,"linkdef")) &&
-                     strstr(line,".h")))
-                  fprintf(tmpdict, "%s", line);
+            while (fgets(line, BUFSIZ, fb)) {
+               char *s = strchr(line, '<');
+               if (!s) continue;
+               s++;
+               char *s1 = strrchr(s, '>');
+               if (((strstr(s,"LinkDef") || strstr(s,"Linkdef") ||
+                     strstr(s,"linkdef")) && strstr(s,".h")))
+                  continue;
+               if (s1) {
+                  *s1 = 0;
+                  fprintf(tmpdict, "#include \"%s\"\n", s);
+               }
+            }
             fclose(fb);
          } else
             fprintf(tmpdict, "%s", line);
@@ -4253,8 +4260,10 @@ string tname;
 string dictsrc;
 
 //______________________________________________________________________________
-void CleanupOnExit(int code) {
-   // removes tmp files, and (if code!=0) output files
+void CleanupOnExit(int code)
+{
+   // Removes tmp files, and (if code!=0) output files.
+
    if (!bundlename.empty()) unlink(bundlename.c_str());
    if (!tname.empty()) unlink(tname.c_str());
    if (autold[0]) unlink(autold);
@@ -4286,7 +4295,6 @@ void CleanupOnExit(int code) {
          }
       }
    }
-
 }
 
 
@@ -4310,9 +4318,6 @@ int main(int argc, char **argv)
    string libfilename;
    const char *env_dict_type=getenv("ROOTDICTTYPE");
    int dicttype = 0; // 09-07-07 -- 0 for dict, 1 for ShowMembers
-#ifdef G__NOSTUBS
-   G__setisfilebundled(0);
-#endif
 
    if (env_dict_type) {
       if (!strcmp(env_dict_type, "cint"))
@@ -4685,8 +4690,7 @@ int main(int argc, char **argv)
          Error(0, "%s: option -c can only be used when an output file has been specified\n", argv[0]);
          return 1;
       }
-   }
-   else{
+   } else {
       // 09-07-07
       // We want to separate the generation of the dictionary
       // source.
@@ -4706,12 +4710,12 @@ int main(int argc, char **argv)
       // 03-07-07
       // We need the library path in the dictionary generation
       // the easiest way is to get it as a parameter
-      if (!strcmp(argv[ic], "-L") ||  !strcmp(argv[ic], "--symbols-file")) {
+      if (!strcmp(argv[ic], "-L") || !strcmp(argv[ic], "--symbols-file")) {
 
          FILE *fpsym = fopen(argv[ic],"r");
          if (fpsym) // File exists
             fclose(fpsym);
-         else{ // File doesn't exist
+         else { // File doesn't exist
             Error(0, "--symbols-file: %s: No such file\n", argv[ic]);
             return 1;
          }
@@ -4738,32 +4742,12 @@ int main(int argc, char **argv)
                argv[0], bundlename.c_str());
          use_preprocessor = 0;
       } else {
-#if defined (G__NOSTUBS) && !defined(ROOTBUILD)
-         char *header_c = (char*) header.c_str(); // basename shouldnt change the content (it looks safe)
-         const char *basen = basename(header_c);
-         string headerb(basen);
-         string::size_type idx = headerb.rfind("Tmp");
-
-         int l;
-         if(idx != string::npos) {
-            l = idx;
-            headerb[l] = '\0';
-         }
-         else{
-            idx = headerb.rfind(".");
-            if(idx != string::npos) {
-               l = idx;
-               headerb[l] = '\0';
-            }
-         }
-
-         // 12-11-07
-         // put protection against multiple includes of dictionaries' .h
-         fprintf(bundle,"#ifndef G__includes_dict_%s\n", headerb.c_str());
-         fprintf(bundle,"#define G__includes_dict_%s\n", headerb.c_str());
-#endif
-         fprintf(bundle,"#include \"TObject.h\"\n");
-         fprintf(bundle,"#include \"TMemberInspector.h\"\n");
+         // use <> instead of "" otherwise the CPP will search first
+         // for these files in /tmp (location of the bundle.h) where
+         // it might not find the files (if starting with ./ or ../)
+         // or, even worse, pick up a wrong version placed in /tmp.
+         fprintf(bundle,"#include <TObject.h>\n");
+         fprintf(bundle,"#include <TMemberInspector.h>\n");
       }
    }
    for (i = ic; i < argc; i++) {
@@ -4790,7 +4774,8 @@ int main(int argc, char **argv)
       }
       if (use_preprocessor && *argv[i] != '-' && *argv[i] != '+') {
          StrcpyArgWithEsc(esc_arg, argv[i]);
-         fprintf(bundle,"#include \"%s\"\n", esc_arg);
+         // see comment about <> and "" above
+         fprintf(bundle,"#include <%s>\n", esc_arg);
          includedFilesForBundle.push_back(argv[i]);
          if (!insertedBundle) {
             argvv[argcc++] = (char*)bundlename.c_str();
@@ -4805,9 +4790,6 @@ int main(int argc, char **argv)
       }
    }
    if (use_preprocessor) {
-#if defined (G__NOSTUBS) && !defined(ROOTBUILD)
-      fprintf(bundle,"#endif\n");
-#endif
       fclose(bundle);
    }
 
@@ -4837,10 +4819,6 @@ int main(int argc, char **argv)
 
       argvv[argcc++] = autold;
    }
-
-#ifdef G__NOSTUBS
-   if(insertedBundle) G__setisfilebundled(1);
-#endif
 
    G__ShadowMaker::VetoShadow(); // we create them ourselves
    G__setothermain(2);
@@ -5292,12 +5270,12 @@ int main(int argc, char **argv)
 
             // In some case, G__ClassInfo will induce template instantiation,
             // if the a function has a default value, we do not want to execute it.
-            // Setting G__globalcomp to something else then G__NOLINK is the only way 
+            // Setting G__globalcomp to something else then G__NOLINK is the only way
             // to accomplish this.
             int store_G__globalcomp = G__setglobalcomp(7); // Intentionally not a valid value.
-            
+
             G__ClassInfo clRequest(request);
-            
+
             G__setglobalcomp(store_G__globalcomp);
 
             string fullname;

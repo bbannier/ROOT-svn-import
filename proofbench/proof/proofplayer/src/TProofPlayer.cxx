@@ -223,6 +223,7 @@ TProofPlayer::~TProofPlayer()
 
    fInput->Clear("nodelete");
    SafeDelete(fInput);
+   // The output list is owned by fSelector and destroyed in there
    SafeDelete(fSelector);
    SafeDelete(fFeedbackTimer);
    SafeDelete(fEvIter);
@@ -555,6 +556,7 @@ Int_t TProofPlayer::ReinitSelector(TQueryResult *qr)
    }
 
    // Cleanup previous stuff
+   Info("ReinitSelector","destroying ... %p", fSelector);
    SafeDelete(fSelector);
    fSelectorClass = 0;
 
@@ -731,6 +733,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
    TCleanup clean(this);
 
+   Info("Process","destroying ... %p", fSelector);
    SafeDelete(fSelector);
    fSelectorClass = 0;
    Int_t version = -1;
@@ -822,6 +825,8 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       return -1;
    } ENDTRY;
 
+   Info("Process","1: fSelector ... %p", fSelector);
+
    // Create feedback lists, if required
    SetupFeedback();
 
@@ -852,6 +857,8 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    volatile Long_t memlim = (gProofServ) ? gProofServ->GetVirtMemHWM() : -1;
 
    TRY {
+
+      Info("Process","2: fSelector ... %p", fSelector);
 
       TPair *currentElem = 0;
       // The event loop on the worker
@@ -961,6 +968,8 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       delete currentElem;
    }
 
+   Info("Process","3: fSelector ... %p", fSelector);
+
    PDB(kGlobal,2)
       Info("Process","%lld events processed", fProgressStatus->GetEntries());
 
@@ -1017,6 +1026,8 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
    if (gProofServ)
       TPerfStats::Stop();
+
+   Info("Process","4: fSelector ... %p", fSelector);
 
    return 0;
 }
@@ -1568,6 +1579,7 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          Info("Process","starting new query");
       }
 
+      Info("Process","destroying ... %p", fSelector);
       SafeDelete(fSelector);
       fSelectorClass = 0;
       if (!(fSelector = TSelector::GetSelector(selector_file))) {
@@ -1820,6 +1832,7 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
       MergeOutputFiles();
 
       fOutput->SetOwner();
+      Info("Finalize","destroying ... %p", fSelector);
       SafeDelete(fSelector);
    } else {
       if (fExitStatus != kAborted) {
@@ -1888,6 +1901,7 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
          // so now we can cleanup the selector, making sure that we do not
          // touch the output objects
          output->SetOwner(kFALSE);
+         Info("Finalize","destroying ... %p", fSelector);
          SafeDelete(fSelector);
 
          // Delete fOutput (not needed anymore, cannot be finalized twice),
