@@ -103,7 +103,7 @@ Bool_t TMVA::MethodMLP::HasAnalysisType( Types::EAnalysisType type, UInt_t numbe
 {
    // MLP can handle classification with 2 classes and regression with one regression-target
    if (type == Types::kClassification && numberClasses == 2 ) return kTRUE;
-   if (type == Types::kMulticlass     && numberClasses > 1 )  return kTRUE;
+   if (type == Types::kMulticlass ) return kTRUE;
    if (type == Types::kRegression ) return kTRUE;
 
    return kFALSE;
@@ -297,7 +297,7 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
    if (histS != 0) fEpochMonHistS.push_back( histS );
    if (histB != 0) fEpochMonHistB.push_back( histB );
 
-   if (DoRegression())      estimator = TMath::Sqrt(estimator/Float_t(nEvents));
+   if      (DoRegression()) estimator = TMath::Sqrt(estimator/Float_t(nEvents));
    else if (DoMulticlass()) estimator = TMath::Sqrt(estimator/Float_t(nEvents));
    else                     estimator = estimator*0.5/Float_t(nEvents);
 
@@ -335,9 +335,6 @@ void TMVA::MethodMLP::Train(Int_t nEpochs)
    Int_t numSynapses=fSynapses->GetEntriesFast();
    fInvHessian.ResizeTo(numSynapses,numSynapses);
    GetApproxInvHessian( fInvHessian ,false);
-//    TFile *f1=new TFile("Hessian.root","RECREATE");
-//    fInvHessian.Write("Hessian");
-//    f1->Close();
    //zjh
 
 }
@@ -449,11 +446,11 @@ void TMVA::MethodMLP::BFGSMinimize( Int_t nEpochs )
       //zjh+
       if ( fUseRegulator && dError<0.05 && RegUpdateCD>3 && i<(nEpochs-10) ) {
     	  if ((RegUpdateTimes++)<fUpdateLimit) {
-    		  Log()<<Endl;
-    		  Log()<<kDEBUG<<"Update regulators "<<RegUpdateTimes<<" on epoch "<<i<<"\tdError="<<dError<<Endl;
-    		  UpdateRegulators();
-    		  Hessian.UnitMatrix();
-    		  RegUpdateCD=0;
+	     Log()<<kDEBUG <<Endl;
+	     Log()<<kDEBUG<<"Update regulators "<<RegUpdateTimes<<" on epoch "<<i<<"\tdError="<<dError<<Endl;
+	     UpdateRegulators();
+	     Hessian.UnitMatrix();
+	     RegUpdateCD=0;
     	  }
     	  else if (RegUpdateCD>10) break;
       }
@@ -1264,6 +1261,7 @@ void TMVA::MethodMLP::UpdateRegulators()  //zjh
 		trace[idx]+=InvH[i][i];
 		weightSum[idx]+=(synapses->GetWeight())*(synapses->GetWeight());
 	}
+	Log() << kINFO << Endl;
 	for (int i=0;i<numRegulators;i++)
 	{
 		fRegulators[i]=(nWDP[i]-fRegulators[i]*trace[i])/weightSum[i];
@@ -1297,7 +1295,7 @@ void TMVA::MethodMLP::GetApproxInvHessian(TMatrixD& InvHessian, bool regulate)  
 		else if (fEstimator==kCE) InvHessian+=(outputValue*(1-outputValue))*sens*sensT;
 	}
 
-	TVectorD eValue(numSynapses);
+// 	TVectorD eValue(numSynapses);
 	if (regulate) {
 	  for (Int_t i = 0; i < numSynapses; i++){
 	    InvHessian[i][i]+=fRegulators[fRegulatorIdx[i]];
@@ -1307,14 +1305,14 @@ void TMVA::MethodMLP::GetApproxInvHessian(TMatrixD& InvHessian, bool regulate)  
 	  for (Int_t i = 0; i < numSynapses; i++){
 	    InvHessian[i][i]+=1e-9; //to avoid precision problem that will destroy the pos-def
 	  }
-	  InvHessian.EigenVectors(eValue);
-	  eValue.Print();
+// 	  InvHessian.EigenVectors(eValue);
+// 	  eValue.Print();
 	}
 
 	InvHessian.Invert();
 	if (!regulate) {
-		InvHessian.EigenVectors(eValue);
-		eValue.Print();
+// 		InvHessian.EigenVectors(eValue);
+// 		eValue.Print();
 	}
 
 }
