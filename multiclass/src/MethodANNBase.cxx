@@ -512,7 +512,7 @@ void TMVA::MethodANNBase::PrintNetwork() const
    // print network representation, for debugging
    if (!Debug()) return;
 
-   Log() << Endl;
+   Log() << kINFO << Endl;
    PrintMessage( "printing network " );
    Log() << kINFO << "-------------------------------------------------------------------" << Endl;
 
@@ -686,8 +686,8 @@ void TMVA::MethodANNBase::AddWeightsXMLTo( void* parent ) const
       }
    }
 
-   // if regulator used, write inverse hessian to weight file
-   if( fUseRegulator ){
+   // if inverse hessian exists, write inverse hessian to weight file
+   if( fInvHessian.GetNcols()>0 ){
       void* xmlInvHessian = gTools().xmlengine().NewChild(wght, 0, "InverseHessian");
 
       // get the matrix dimensions
@@ -800,7 +800,7 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
       return;  // ------------------ return from subroutine
    }
    if( !xmlInvHessian ){
-      Log() << kFATAL << "xml node of inverse hessian is empty" << Endl;
+      Log() << kINFO << "xml node of inverse hessian is empty" << Endl;
    }
 
    fUseRegulator = kTRUE;
