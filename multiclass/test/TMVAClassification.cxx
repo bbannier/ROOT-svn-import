@@ -29,7 +29,7 @@
  * macros (simply say: root -l <../macros/macro.C>), which can be conveniently    *
  * invoked through a GUI launched by the command                                  *
  *                                                                                *
- *    root -l ../macros/TMVAGui.C                                                 *
+ *    root -l ./TMVAGui.C                                                        *
  **********************************************************************************/
 
 #include <cstdlib>
@@ -151,7 +151,7 @@ int main( int argc, char** argv )
    // The second argument is the output file for the training results
    // All TMVA output can be suppressed by removing the "!" (not) in 
    // front of the "Silent" argument in the option string
-   std::string factoryOptions( "!V:!Silent:Transformations=I;D;P;G,D:AnalysisType=Multiclass" );
+   std::string factoryOptions( "!V:!Silent:Transformations=I;D;P;G,D:AnalysisType=Classification" );
    if (batchMode) factoryOptions += ":!Color:!DrawProgressBar";
 
    TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification", outputFile, factoryOptions );
@@ -192,7 +192,7 @@ int main( int argc, char** argv )
 
       // load the signal and background event samples from ROOT trees
       TFile *input(0);
-      TString fname = "../macros/tmva_example.root";
+      TString fname = "./tmva_example.root";
       if (!gSystem->AccessPathName( fname )) {
          // first we try to find tmva_example.root in the local directory
          std::cout << "--- TMVAClassification       : Accessing " << fname << std::endl;
@@ -447,7 +447,7 @@ int main( int argc, char** argv )
    std::cout << "==> Wrote root file: " << outputFile->GetName() << std::endl
              << "==> TMVAClassification is done!" << std::endl
              << std::endl
-             << "==> To view the results, launch the GUI: \"root -l ../macros/TMVAGui.C\"" << std::endl
+             << "==> To view the results, launch the GUI: \"root -l ./TMVAGui.C\"" << std::endl
              << std::endl;
 
    // Clean up
