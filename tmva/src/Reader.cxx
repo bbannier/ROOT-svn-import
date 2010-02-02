@@ -270,6 +270,7 @@ void TMVA::Reader::AddVariable( const TString& expression, Float_t* datalink )
 //_______________________________________________________________________
 void TMVA::Reader::AddVariable( const TString& expression, Int_t* datalink )
 {
+   Log() << kFATAL << "Reader::AddVariable( const TString& expression, Int_t* datalink ), this function is deprecated, please provide all variables to the reader as floats" << Endl;
    // Add an integer variable or expression to the reader
    DataInfo().AddVariable(expression, "", "", 0, 0, 'I', kFALSE, (void*)datalink ); // <= should this be F or rather T?
 }
