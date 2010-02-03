@@ -1,4 +1,4 @@
-// @(#)root/tmva $Id$   
+// @(#)root/tmva $Id$
 // Author: Andreas Hoecker, Joerg Stelzer, Helge Voss
 
 /**********************************************************************************
@@ -77,11 +77,11 @@ TMVA::Tools::Tools() :
    fLogger(new MsgLogger("Tools")),
    fXMLEngine(new TXMLEngine())
 {
-   // constructor   
+   // constructor
 }
 
 //_______________________________________________________________________
-TMVA::Tools::~Tools() 
+TMVA::Tools::~Tools()
 {
    // destructor
    delete fLogger;
@@ -101,7 +101,7 @@ Double_t TMVA::Tools::GetSeparation( TH1* S, TH1* B ) const
    // compute "separation" defined as
    // <s2> = (1/2) Int_-oo..+oo { (S^2(x) - B^2(x))/(S(x) + B(x)) dx }
    Double_t separation = 0;
-   
+
    // sanity checks
    // signal and background histograms must have same number of bins and 
    // same limits
@@ -974,7 +974,7 @@ TString TMVA::Tools::GetYTitleWithUnit( const TH1& h, const TString& unit, Bool_
 }
 
 //_______________________________________________________________________
-void TMVA::Tools::WriteFloatArbitraryPrecision( Float_t val, ostream& os ) 
+void TMVA::Tools::WriteFloatArbitraryPrecision( Float_t val, ostream& os )
 {
    // writes a float value with the available precision to a stream
    os << val << " :: ";
@@ -988,7 +988,7 @@ void TMVA::Tools::WriteFloatArbitraryPrecision( Float_t val, ostream& os )
 }
 
 //_______________________________________________________________________
-void TMVA::Tools::ReadFloatArbitraryPrecision( Float_t& val, istream& is ) 
+void TMVA::Tools::ReadFloatArbitraryPrecision( Float_t& val, istream& is )
 {
    // reads a float value with the available precision from a stream
    Float_t a = 0;
@@ -1005,14 +1005,44 @@ void TMVA::Tools::ReadFloatArbitraryPrecision( Float_t& val, istream& is )
    val = a;
 }
 
+
+// XML file reading/writing helper functions
+
+//_______________________________________________________________________
+Bool_t TMVA::Tools::HasAttr( void* node, const char* attrname )
+{
+   // add attribute from xml
+   return xmlengine().HasAttr(node, attrname);
+}
+
+//_______________________________________________________________________
+void TMVA::Tools::ReadAttr( void* node, const char* attrname, TString& value )
+{
+   // add attribute from xml
+   const char* val = xmlengine().GetAttr(node, attrname);
+   value = TString(val);
+}
+
+//_______________________________________________________________________
+void TMVA::Tools::AddAttr( void* node, const char* attrname, const char* value )
+{
+   // add attribute to node
+   gTools().xmlengine().NewAttr(node, 0, attrname, value );
+}
+
 //_______________________________________________________________________
 void* TMVA::Tools::AddChild( void* parent, const char* childname, const char* content ) {
    return gTools().xmlengine().NewChild(parent, 0, childname, content);
 }
 
+//_______________________________________________________________________
+Bool_t TMVA::Tools::AddComment( void* node, const char* comment ) {
+   return gTools().xmlengine().AddComment(node, comment);
+}
+
 
 //_______________________________________________________________________
-void* TMVA::Tools::GetChild( void* parent, const char* childname ) 
+void* TMVA::Tools::GetChild( void* parent, const char* childname )
 {
    void* ch = xmlengine().GetChild(parent);
    if (childname != 0) {
@@ -1022,7 +1052,7 @@ void* TMVA::Tools::GetChild( void* parent, const char* childname )
 }
 
 //_______________________________________________________________________
-void* TMVA::Tools::GetNextChild( void* prevchild, const char* childname ) 
+void* TMVA::Tools::GetNextChild( void* prevchild, const char* childname )
 {
    // XML helpers
    void* ch = xmlengine().GetNext(prevchild);
@@ -1033,10 +1063,24 @@ void* TMVA::Tools::GetNextChild( void* prevchild, const char* childname )
 }
 
 //_______________________________________________________________________
-const char* TMVA::Tools::GetContent( void* node ) 
+const char* TMVA::Tools::GetContent( void* node )
 {
    // XML helpers
    return xmlengine().GetNodeContent(node);
+}
+
+//_______________________________________________________________________
+const char* TMVA::Tools::GetName( void* node )
+{
+   // XML helpers
+   return xmlengine().GetNodeName(node);
+}
+
+//_______________________________________________________________________
+Bool_t TMVA::Tools::AddRawLine( void* node, const char * raw )
+{
+   // XML helpers
+   return xmlengine().AddRawLine( node, raw );
 }
 
 //_______________________________________________________________________
@@ -1052,7 +1096,7 @@ std::vector<TString> TMVA::Tools::SplitString(const TString& theOpt, const char 
       if ( !splitOpt.Contains(separator) ) {
          splitV.push_back(splitOpt);
          break;
-      } 
+      }
       else {
          TString toSave = splitOpt(0,splitOpt.First(separator));
          splitV.push_back(toSave);

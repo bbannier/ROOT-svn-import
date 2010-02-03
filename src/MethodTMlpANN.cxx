@@ -330,8 +330,8 @@ void TMVA::MethodTMlpANN::AddWeightsXMLTo( void* parent ) const
    // write weights to xml file
    
    // first the architecture
-   void *wght = gTools().xmlengine().NewChild(parent, 0, "Weights");
-   void* arch = gTools().xmlengine().NewChild( wght, 0, "Architecture" );
+   void *wght = gTools().AddChild(parent, "Weights");
+   void* arch = gTools().AddChild( wght, "Architecture" );
    gTools().AddAttr( arch, "BuildOptions", fMLPBuildOptions.Data() );
 
    // dump weights first in temporary txt file, read from there into xml
@@ -343,16 +343,16 @@ void TMVA::MethodTMlpANN::AddWeightsXMLTo( void* parent ) const
    while (inf.getline(temp,256)) {
       TString dummy(temp);
       if (dummy.BeginsWith('#')) {
-         if (ch!=0) gTools().xmlengine().AddRawLine( ch, data.Data() );
+         if (ch!=0) gTools().AddRawLine( ch, data.Data() );
          dummy = dummy.Strip(TString::kLeading, '#');
          dummy = dummy(0,dummy.First(' '));
-         ch = gTools().xmlengine().NewChild(wght, 0, dummy);
+         ch = gTools().AddChild(wght, 0, dummy);
          data.Resize(0);
          continue;
       }
       data += (dummy + " ");
    }
-   if (ch != 0) gTools().xmlengine().AddRawLine( ch, data.Data() );
+   if (ch != 0) gTools().AddRawLine( ch, data.Data() );
    inf.close();
 }
 
@@ -361,41 +361,41 @@ void  TMVA::MethodTMlpANN::ReadWeightsFromXML( void* wghtnode )
 {
    // rebuild temporary textfile from xml weightfile and load this
    // file into MLP
-   void* ch = gTools().xmlengine().GetChild(wghtnode);
+   void* ch = gTools().GetChild(wghtnode);
    gTools().ReadAttr( ch, "BuildOptions", fMLPBuildOptions );
 
-   ch = gTools().xmlengine().GetNext(ch);
+   ch = gTools().GetNextChild(ch);
    const char* fname = "weights/TMlp.nn.weights.temp";
    std::ofstream fout( fname );
    double temp1=0,temp2=0;
    while (ch) {
-      const char* nodecontent = gTools().xmlengine().GetNodeContent(ch);
+      const char* nodecontent = gTools().GetContent(ch);
       std::stringstream content(nodecontent);
-      if (strcmp(gTools().xmlengine().GetNodeName(ch),"input")==0) {
+      if (strcmp(gTools().GetName(ch),"input")==0) {
          fout << "#input normalization" << std::endl;         
          while ((content >> temp1) &&(content >> temp2)) {
             fout << temp1 << " " << temp2 << std::endl;
          }
       }
-      if (strcmp(gTools().xmlengine().GetNodeName(ch),"output")==0) {
+      if (strcmp(gTools().GetName(ch),"output")==0) {
          fout << "#output normalization" << std::endl;         
          while ((content >> temp1) &&(content >> temp2)) {
             fout << temp1 << " " << temp2 << std::endl;
          }
       }
-      if (strcmp(gTools().xmlengine().GetNodeName(ch),"neurons")==0) {
+      if (strcmp(gTools().GetName(ch),"neurons")==0) {
          fout << "#neurons weights" << std::endl;         
          while (content >> temp1) {
             fout << temp1 << std::endl;
          }
       }
-      if (strcmp(gTools().xmlengine().GetNodeName(ch),"synapses")==0) {
+      if (strcmp(gTools().GetName(ch),"synapses")==0) {
          fout << "#synapses weights" ;         
          while (content >> temp1) {
             fout << std::endl << temp1 ;                
          }
       }
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
    fout.close();;
 
