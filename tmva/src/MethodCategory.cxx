@@ -431,7 +431,7 @@ void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode )
    TString theVariables;
    Int_t titleLength;
    gTools().ReadAttr( wghtnode, "NSubMethods",  nSubMethods );
-   void* subMethodNode = gTools().xmlengine().GetChild(wghtnode);
+   void* subMethodNode = gTools().GetChild(wghtnode);
 
    Log() << kINFO << "Recreating sub-classifiers from XML-file " << Endl;
 
@@ -481,7 +481,7 @@ void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode )
          }
       }
 
-      subMethodNode = gTools().xmlengine().GetNext(subMethodNode);
+      subMethodNode = gTools().GetNextChild(subMethodNode);
    }
 
    InitCircularTree(DataInfo());

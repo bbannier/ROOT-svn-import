@@ -17,9 +17,9 @@
  *      Helge Voss         <Helge.Voss@cern.ch>         - MPI-KP Heidelberg, GER  *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
- *      CERN, Switzerland                                                         * 
+ *      CERN, Switzerland                                                         *
  *      Iowa State U.                                                             *
- *      MPI-K Heidelberg, Germany                                                 * 
+ *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -1080,13 +1080,13 @@ void TMVA::RuleEnsemble::ReadFromXML( void* wghtnode )
 
    UInt_t i = 0;
    fRules.resize( nrules  );
-   void* ch = gTools().xmlengine().GetChild( wghtnode );
+   void* ch = gTools().GetChild( wghtnode );
    for (i=0; i<nrules; i++) {
       fRules[i] = new Rule();
       fRules[i]->SetRuleEnsemble( this );
       fRules[i]->ReadFromXML( ch );
 
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 
    // read linear classifier (Fisher)
@@ -1109,7 +1109,7 @@ void TMVA::RuleEnsemble::ReadFromXML( void* wghtnode )
       gTools().ReadAttr( ch, "Importance", fLinImportance[i]    );
 
       i++;
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 }
 

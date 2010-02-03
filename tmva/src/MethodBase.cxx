@@ -957,9 +957,9 @@ void TMVA::MethodBase::WriteStateToStream( std::ostream& tf ) const
 void TMVA::MethodBase::AddInfoItem( void* gi, const TString& name, const TString& value) const 
 {
    // xml writing
-   void* it = gTools().xmlengine().NewChild(gi,0,"Info");
-   gTools().xmlengine().NewAttr(it,0,"name", name);
-   gTools().xmlengine().NewAttr(it,0,"value", value);
+   void* it = gTools().AddChild(gi,"Info");
+   gTools().AddAttr(it,"name", name);
+   gTools().AddAttr(it,"value", value);
 }
 
 //_______________________________________________________________________
@@ -983,7 +983,7 @@ void TMVA::MethodBase::WriteStateToXML( void* parent ) const
 
    UserGroup_t* userInfo = gSystem->GetUserInfo();
 
-   void* gi = gTools().xmlengine().NewChild(parent, 0, "GeneralInfo");
+   void* gi = gTools().AddChild(parent, "GeneralInfo");
    AddInfoItem( gi, "TMVA Release", GetTrainingTMVAVersionString() + " [" + gTools().StringFromInt(GetTrainingTMVAVersionCode()) + "]" );
    AddInfoItem( gi, "ROOT Release", GetTrainingROOTVersionString() + " [" + gTools().StringFromInt(GetTrainingROOTVersionCode()) + "]");
    AddInfoItem( gi, "Creator", userInfo->fUser);
@@ -1016,7 +1016,7 @@ void TMVA::MethodBase::WriteStateToXML( void* parent ) const
    GetTransformationHandler().AddXMLTo( parent );
    
    // write MVA variable distributions
-   void* pdfs = gTools().xmlengine().NewChild(parent, 0, "MVAPdfs");
+   void* pdfs = gTools().AddChild(parent, "MVAPdfs");
    if (fMVAPdfS) fMVAPdfS->AddXMLTo(pdfs);
    if (fMVAPdfB) fMVAPdfB->AddXMLTo(pdfs);
    
@@ -1057,9 +1057,9 @@ void TMVA::MethodBase::WriteStateToFile() const
    Log() << kINFO << "Creating weight file in xml format: "
          << gTools().Color("lightblue") << xmlfname << gTools().Color("reset") << Endl;
    void* doc      = gTools().xmlengine().NewDoc();
-   void* rootnode = gTools().xmlengine().NewChild(0,0,"MethodSetup");
+   void* rootnode = gTools().AddChild(0,"MethodSetup");
    gTools().xmlengine().DocSetRootElement(doc,rootnode);
-   gTools().xmlengine().NewAttr(rootnode,0,"Method", GetMethodTypeName() + "::" + GetMethodName());
+   gTools().AddAttr(rootnode,"Method", GetMethodTypeName() + "::" + GetMethodName());
    WriteStateToXML(rootnode);
    gTools().xmlengine().SaveDoc(doc,xmlfname);
 }
@@ -1119,15 +1119,15 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
    Log() << kINFO << "Read method \"" << GetMethodName() << "\" of type \"" << GetMethodTypeName() << "\"" << Endl;
 
    TString nodeName("");
-   void* ch = gTools().xmlengine().GetChild(methodNode);
+   void* ch = gTools().GetChild(methodNode);
    while (ch!=0) {
-      nodeName = TString( gTools().xmlengine().GetNodeName(ch) );
+      nodeName = TString( gTools().GetName(ch) );
 
       if (nodeName=="GeneralInfo") {
          // read analysis type
 
          TString name(""),val("");
-         void* antypeNode = gTools().xmlengine().GetChild(ch);
+         void* antypeNode = gTools().GetChild(ch);
          while (antypeNode) {
             gTools().ReadAttr( antypeNode, "name",   name );
             
@@ -1156,7 +1156,7 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
                fROOTTrainingVersion = TString(s(s.Index("[")+1,s.Index("]")-s.Index("[")-1)).Atoi();
                Log() << kINFO << "MVA method was trained with ROOT Version: " << GetTrainingROOTVersionString() << Endl;
             }
-            antypeNode = gTools().xmlengine().GetNext(antypeNode);
+            antypeNode = gTools().GetNextChild(antypeNode);
          }
       } 
       else if (nodeName=="Options") {
@@ -1181,12 +1181,12 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
          TString pdfname;
          if (fMVAPdfS) delete fMVAPdfS;
          if (fMVAPdfB) delete fMVAPdfB;
-         void* pdfnode = gTools().xmlengine().GetChild(ch);
+         void* pdfnode = gTools().GetChild(ch);
          if (pdfnode) {
             gTools().ReadAttr(pdfnode, "Name", pdfname);
             fMVAPdfS = new PDF(pdfname);
             fMVAPdfS->ReadXML(pdfnode);
-            pdfnode = gTools().xmlengine().GetNext(pdfnode);
+            pdfnode = gTools().GetNextChild(pdfnode);
             gTools().ReadAttr(pdfnode, "Name", pdfname);
             fMVAPdfB = new PDF(pdfname);
             fMVAPdfB->ReadXML(pdfnode);
@@ -1198,7 +1198,7 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
       else {
          std::cout << "Unparsed: " << nodeName << std::endl;
       }
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 }
 
@@ -1367,12 +1367,12 @@ void TMVA::MethodBase::ReadVarsFromStream( std::istream& istr )
 void TMVA::MethodBase::AddVarsXMLTo( void* parent ) const 
 {
    // write variable info to XML 
-   void* vars = gTools().xmlengine().NewChild(parent, 0, "Variables");
-   gTools().xmlengine().NewAttr( vars, 0, "NVar", gTools().StringFromInt(DataInfo().GetNVariables()) );
+   void* vars = gTools().AddChild(parent, "Variables");
+   gTools().AddAttr( vars, "NVar", gTools().StringFromInt(DataInfo().GetNVariables()) );
 
    for (UInt_t idx=0; idx<DataInfo().GetVariableInfos().size(); idx++) {
       VariableInfo& vi = DataInfo().GetVariableInfos()[idx];
-      void* var = gTools().xmlengine().NewChild( vars, 0, "Variable" );
+      void* var = gTools().AddChild( vars, "Variable" );
       gTools().AddAttr( var, "VarIndex", idx );
       vi.AddToXML( var );
    }
@@ -1382,7 +1382,7 @@ void TMVA::MethodBase::AddVarsXMLTo( void* parent ) const
 void TMVA::MethodBase::AddSpectatorsXMLTo( void* parent ) const 
 {
    // write spectator info to XML 
-   void* specs = gTools().xmlengine().NewChild(parent, 0, "Spectators");
+   void* specs = gTools().AddChild(parent, "Spectators");
 
    UInt_t writeIdx=0;
    for (UInt_t idx=0; idx<DataInfo().GetSpectatorInfos().size(); idx++) {
@@ -1398,23 +1398,23 @@ void TMVA::MethodBase::AddSpectatorsXMLTo( void* parent ) const
          if(!vi.GetTitle().BeginsWith(GetMethodName()+":") )
             continue;
       }
-      void* spec = gTools().xmlengine().NewChild( specs, 0, "Spectator" );
+      void* spec = gTools().AddChild( specs, "Spectator" );
       gTools().AddAttr( spec, "SpecIndex", writeIdx++ );
       vi.AddToXML( spec );
    }
-   gTools().xmlengine().NewAttr( specs, 0, "NSpec", gTools().StringFromInt(writeIdx) );
+   gTools().AddAttr( specs, "NSpec", gTools().StringFromInt(writeIdx) );
 }
 
 //_______________________________________________________________________
 void TMVA::MethodBase::AddTargetsXMLTo( void* parent ) const 
 {
    // write target info to XML 
-   void* targets = gTools().xmlengine().NewChild(parent, 0, "Targets");
-   gTools().xmlengine().NewAttr( targets, 0, "NTrgt", gTools().StringFromInt(DataInfo().GetNTargets()) );
+   void* targets = gTools().AddChild(parent, "Targets");
+   gTools().AddAttr( targets, "NTrgt", gTools().StringFromInt(DataInfo().GetNTargets()) );
 
    for (UInt_t idx=0; idx<DataInfo().GetTargetInfos().size(); idx++) {
       VariableInfo& vi = DataInfo().GetTargetInfos()[idx];
-      void* tar = gTools().xmlengine().NewChild( targets, 0, "Target" );
+      void* tar = gTools().AddChild( targets, "Target" );
       gTools().AddAttr( tar, "TargetIndex", idx );
       vi.AddToXML( tar );
    }
@@ -1436,7 +1436,7 @@ void TMVA::MethodBase::ReadVariablesFromXML( void* varnode )
    // we want to make sure all variables are read in the order they are defined
    VariableInfo readVarInfo, existingVarInfo;
    int varIdx = 0;
-   void* ch = gTools().xmlengine().GetChild(varnode);
+   void* ch = gTools().GetChild(varnode);
    while (ch) {
       gTools().ReadAttr( ch, "VarIndex", varIdx);
       existingVarInfo = DataInfo().GetVariableInfos()[varIdx];
@@ -1455,7 +1455,7 @@ void TMVA::MethodBase::ReadVariablesFromXML( void* varnode )
          Log() << kINFO << "   var #" << varIdx <<" declared in file  : " << readVarInfo.GetExpression() << Endl;
          Log() << kFATAL << "The expression declared to the Reader needs to be checked (name or order are wrong)" << Endl;
       }
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 }
 
@@ -1475,7 +1475,7 @@ void TMVA::MethodBase::ReadSpectatorsFromXML( void* specnode )
    // we want to make sure all variables are read in the order they are defined
    VariableInfo readSpecInfo, existingSpecInfo;
    int specIdx = 0;
-   void* ch = gTools().xmlengine().GetChild(specnode);
+   void* ch = gTools().GetChild(specnode);
    while (ch) {
       gTools().ReadAttr( ch, "SpecIndex", specIdx);
       existingSpecInfo = DataInfo().GetSpectatorInfos()[specIdx];
@@ -1494,7 +1494,7 @@ void TMVA::MethodBase::ReadSpectatorsFromXML( void* specnode )
          Log() << kINFO << "   var #" << specIdx <<" declared in file  : " << readSpecInfo.GetExpression() << Endl;
          Log() << kFATAL << "The expression declared to the Reader needs to be checked (name or order are wrong)" << Endl;
       }
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 }
 
@@ -1507,13 +1507,13 @@ void TMVA::MethodBase::ReadTargetsFromXML( void* tarnode )
 
    int tarIdx = 0;
    TString expression;
-   void* ch = gTools().xmlengine().GetChild(tarnode);
+   void* ch = gTools().GetChild(tarnode);
    while (ch) {
       gTools().ReadAttr( ch, "TargetIndex", tarIdx);
       gTools().ReadAttr( ch, "Expression", expression);
       DataInfo().AddTarget(expression,"","",0,0);
      
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 }
 

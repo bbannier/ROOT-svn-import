@@ -149,7 +149,7 @@ void TMVA::Node::ReadXML( void* node,  UInt_t tmva_Version_Code )
 {
    // read attributes from XML
    ReadAttributes(node, tmva_Version_Code);
-   const char* content = gTools().xmlengine().GetNodeContent(node);
+   const char* content = gTools().GetContent(node);
    if (content) {
       std::stringstream s(content);
       ReadContent(s);
@@ -157,7 +157,7 @@ void TMVA::Node::ReadXML( void* node,  UInt_t tmva_Version_Code )
    gTools().ReadAttr( node, "pos",   fPos );
    gTools().ReadAttr( node, "depth", fDepth );
 
-   void* ch = gTools().xmlengine().GetChild(node);
+   void* ch = gTools().GetChild(node);
    while (ch) {
       Node* n = CreateNode();
       n->ReadXML(ch, tmva_Version_Code);
@@ -166,6 +166,6 @@ void TMVA::Node::ReadXML( void* node,  UInt_t tmva_Version_Code )
       else { 
          std::cout << "neither left nor right" << std::endl;
       }
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 }
