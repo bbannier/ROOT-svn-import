@@ -36,7 +36,7 @@ namespace Math {
 
 class GaussIntegrator: public VirtualIntegratorOneDim {
 public:
-   /** Destructor. Deletes the function if it was previously copied. */
+   /** Destructor */
    ~GaussIntegrator();
 
    /** Default Constructor. */
@@ -149,9 +149,8 @@ public:
 
    /** Set integration function (flag control if function must be copied inside).
        \@param f Function to be used in the calculations.
-       \@param copy Indicates whether the function has to be copied.
    */
-   void SetFunction (const IGenFunction &, bool copy=false);
+   void SetFunction (const IGenFunction &);
 
    /** This method is not implemented. */
    double Integral ();
@@ -175,7 +174,6 @@ protected:
    double fLastResult;              // Result from the last stimation.
    double fLastError;               // Error from the last stimation.
    const IGenFunction* fFunction;   // Pointer to function used.
-   bool fFunctionCopied;            // Bool value to check if the function was copied when set.
 
 };
 

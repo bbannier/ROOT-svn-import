@@ -96,7 +96,7 @@ private :
 
    
    unsigned int fDim; 
-   mutable Func fFunc; 
+   mutable Func fFunc;  // should here be a reference and pass a non-const ref in ctor 
 
 };
 
@@ -193,7 +193,7 @@ public:
    
    /// constructor from a pointer to the class and a pointer to the function
    MemFunHandler(const PointerToObj& pObj, PointerToMemFn pMemFn) 
-      : fDim(1), fObj(pObj), fMemFn(pMemFn)
+      : fDim(1), fObj(pObj), fMemFn(pMemFn)        // should pass pointer by value ??
    {}
 
    /// constructor from a pointer to the class and a pointer to the function
@@ -391,6 +391,7 @@ public:
    {
       if (rhs.fImpl.get() != 0) 
          fImpl = std::auto_ptr<Impl>( (rhs.fImpl)->Clone() ); 
+      printf("call functor copy ctor\n");
    } 
    // need a specialization in order to call base classes and use  clone
 
@@ -405,6 +406,7 @@ public:
       Impl * p = fImpl.release(); 
       fImpl.reset(copy.fImpl.release());
       copy.fImpl.reset(p);
+      printf("call functor assignment\n");
       return *this;
    }
 
