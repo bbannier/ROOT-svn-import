@@ -391,7 +391,6 @@ public:
    {
       if (rhs.fImpl.get() != 0) 
          fImpl = std::auto_ptr<Impl>( (rhs.fImpl)->Clone() ); 
-      printf("call functor copy ctor\n");
    } 
    // need a specialization in order to call base classes and use  clone
 
@@ -406,7 +405,6 @@ public:
       Impl * p = fImpl.release(); 
       fImpl.reset(copy.fImpl.release());
       copy.fImpl.reset(p);
-      printf("call functor assignment\n");
       return *this;
    }
 
