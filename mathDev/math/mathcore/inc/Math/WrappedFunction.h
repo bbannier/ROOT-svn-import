@@ -51,6 +51,10 @@ typedef double( * FreeMultiFunctionPtr ) (const double *);
    i.e. implementing operator() (double x) in a One-dimensional function interface.
    It provides a ROOT::Math::IGenFunction-like signature
 
+   Note: If you want to wrap just the reference (to avoid copying) you need to use 
+   Func& or const Func & as template parameter.  The former should be used when the 
+   operator() is not a const method of Func
+
    @ingroup  GenFunc
 
  */
@@ -144,6 +148,10 @@ private:
    Template class to wrap any C++ callable object 
    implementing operator() (const double * x) in a multi-dimensional function interface.
    It provides a ROOT::Math::IGenMultiFunction-like signature
+
+   Note: If you want to wrap just the reference (to avoid copying) you need to use 
+   Func& or const Func & as template parameter. The former should be used when the 
+   operator() is not a const method of Func
 
    @ingroup  GenFunc
 

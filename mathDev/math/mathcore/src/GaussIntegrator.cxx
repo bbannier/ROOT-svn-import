@@ -23,16 +23,12 @@ GaussIntegrator::GaussIntegrator()
    fEpsilon = 1e-12;
    fLastResult = fLastError = 0;
    fUsedOnce = false;
-   fFunctionCopied = false;
    fFunction = 0;
 }
 
 GaussIntegrator::~GaussIntegrator()
 {
-   // Destructor.
-
-   if ( fFunctionCopied && fFunction != 0   )
-      delete fFunction;
+   // Destructor. (no - operations)
 }
 
 void GaussIntegrator::AbsValue(bool flag)
@@ -141,16 +137,10 @@ double GaussIntegrator::Error() const
 int GaussIntegrator::Status() const
 {   return 0;  }
 
-void GaussIntegrator::SetFunction (const IGenFunction & function, bool copy)
+void GaussIntegrator::SetFunction (const IGenFunction & function)
 {
    // Set integration function
-
-   if ( copy )
-      fFunction = function.Clone();
-   else
-      fFunction = &function;
-
-   fFunctionCopied = copy;
+   fFunction = &function;
 }
 
 

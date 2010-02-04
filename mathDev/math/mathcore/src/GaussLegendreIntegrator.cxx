@@ -25,7 +25,6 @@ GaussLegendreIntegrator::GaussLegendreIntegrator(int num, double eps)
    fW = 0;
    fLastResult = fLastError = 0;
    fUsedOnce = false;
-   fFunctionCopied = false;
    fFunction = 0;
 
    CalcGaussLegendreSamplingPoints();
@@ -35,8 +34,6 @@ GaussLegendreIntegrator::~GaussLegendreIntegrator()
 {
    // Default Destructor 
 
-   if ( fFunction != 0 && fFunctionCopied )
-      delete fFunction;
 
    delete [] fX;
    delete [] fW;
@@ -115,16 +112,11 @@ int GaussLegendreIntegrator::Status() const
    // TODO
 }
 
-void GaussLegendreIntegrator::SetFunction (const IGenFunction & function, bool copy)
+void GaussLegendreIntegrator::SetFunction (const IGenFunction & function)
 {
    //  Set integration function.
 
-   if ( copy )
-      fFunction = function.Clone();
-   else
-      fFunction = &function;
-
-   fFunctionCopied = copy;
+   fFunction = &function;
 }
 
 

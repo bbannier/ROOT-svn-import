@@ -86,7 +86,7 @@ namespace ROOT {
                   fFunc1Dim = new ROOT::Math::WrappedMemFunction< IntegralEvaluator, double (IntegralEvaluator::*)(double ) const > (*this, &IntegralEvaluator::F1);
                   fIg1Dim = new ROOT::Math::IntegratorOneDim(); 
                   //fIg1Dim->SetFunction( static_cast<const ROOT::Math::IMultiGenFunction & >(*fFunc),false);
-                  fIg1Dim->SetFunction(*fFunc1Dim);
+                  fIg1Dim->SetFunction( static_cast<const ROOT::Math::IGenFunction &>(*fFunc1Dim) );
                } 
                else if (fDim > 1) {
                   fFuncNDim = new ROOT::Math::WrappedMemMultiFunction< IntegralEvaluator, double (IntegralEvaluator::*)(const double *) const >  (*this, &IntegralEvaluator::FN, fDim);
