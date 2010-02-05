@@ -94,7 +94,7 @@ namespace TMVA {
 
       // returns the MVA response for given event
       Double_t EvaluateMVA( const std::vector<Float_t> &, const TString& methodTag, Double_t aux = 0 );    
-      Double_t EvaluateMVA( const std::vector<Double_t>&, const TString& methodTag, Double_t aux = 0 );    
+
       Double_t EvaluateMVA( MethodBase* method,           Double_t aux = 0 );    
       Double_t EvaluateMVA( const TString& methodTag,     Double_t aux = 0 );    
 
