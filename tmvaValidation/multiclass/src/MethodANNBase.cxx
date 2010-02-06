@@ -111,6 +111,7 @@ void TMVA::MethodANNBase::DeclareOptions()
    DeclareOptionRef( fNcycles    = 500,       "NCycles",         "Number of training cycles" );
    DeclareOptionRef( fLayerSpec  = "N,N-1",   "HiddenLayers",    "Specification of hidden layer architecture" );
    DeclareOptionRef( fNeuronType = "sigmoid", "NeuronType",      "Neuron activation function type" );
+   DeclareOptionRef( fRandomSeed = 0, "RandomSeed", "Random seed for initial synapse weights (0 means unique seed for each run)");
 
    DeclareOptionRef(fEstimatorS="MSE", "EstimatorType",
                     "MSE (Mean Square Estimator) for Gaussian Likelihood or CE(Cross-Entropy) for Bernoulli Likelihood" ); //zjh
@@ -204,8 +205,7 @@ void TMVA::MethodANNBase::InitANNBase()
    fInputLayer = NULL;
    fOutputNeurons.clear();
 
-   if (fgFIXED_SEED) frgen = new TRandom3(1);   // fix output for debugging
-   else              frgen = new TRandom3(0);   // seed = 0 means random seed
+   frgen = new TRandom3(fRandomSeed);
 
    fSynapses = new TObjArray();
 }
