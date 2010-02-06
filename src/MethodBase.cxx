@@ -1102,9 +1102,6 @@ void TMVA::MethodBase::ReadStateFromFile()
       rfile->Close();
    }
 
-   // update transformation handler
-   if (GetTransformationHandler().GetCallerName() == "") GetTransformationHandler().SetCallerName( GetName() );
-
 }
 
 //_______________________________________________________________________
@@ -1199,7 +1196,11 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
          std::cout << "Unparsed: " << nodeName << std::endl;
       }
       ch = gTools().GetNextChild(ch);
+
    }
+
+   // update transformation handler
+   if (GetTransformationHandler().GetCallerName() == "") GetTransformationHandler().SetCallerName( GetName() );
 }
 
 //_______________________________________________________________________
@@ -1310,6 +1311,10 @@ void TMVA::MethodBase::ReadStateFromStream( std::istream& fin )
    while (!TString(buf).BeginsWith("#WGT")) fin.getline(buf,512);
    fin.getline(buf,512);
    ReadWeightsFromStream( fin );;
+
+   // update transformation handler
+   if (GetTransformationHandler().GetCallerName() == "") GetTransformationHandler().SetCallerName( GetName() );
+
 }
 
 //_______________________________________________________________________
