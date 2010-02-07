@@ -15,6 +15,7 @@ def getOptions():
     parser.print_help()
     sys.exit(1)
 
+
 def get_patch_paths(patchversion):
     pv = tuple(map(int,patchversion.split('.')))
     pa_tmva = "https://root.cern.ch/svn/root/branches/dev/tmvapatches/v%i-%i-00-patches/tmva" % pv
@@ -22,8 +23,7 @@ def get_patch_paths(patchversion):
     return pa_tmva, pa_root 
 
 
-
-def print_changes(fr, to):
+def has_changes(fr, to):
     #cmd = "svn diff -x -w %s %s" % (fr,to)
     #print go(cmd)
     #print "\nIn Summary"
@@ -43,24 +43,22 @@ def apply_changes(pa_root, pa_tmva, logmessage, dryrun):
     go("rm -rf %s" % tmpdir)
     os.mkdir(tmpdir)
     os.chdir(tmpdir)
-    cmdco = "svn co %s" % pa_root
-    if dryrun:
-        print cmdco
-    else:
+    cmdco = "svn -q co %s" % pa_root
+    print cmdco
+    if not dryrun:
         print go(cmdco)
         os.chdir("tmva")
 
     cmdmg = "svn merge %s %s" % (pa_root, pa_tmva)
-    if dryrun:
-        print cmdmg
-    else:
+    print cmdmg
+    if not dryrun:
         print go(cmdmg)
     
     cmdci = 'svn ci -m "%s"' % logmessage
-    if dryrun:
-        print cmdci
-    else:
+    print cmdci
+    if not dryrun:
         print go(cmdci)
+
 
 def get_last_logentry(pa_tmva):
     cmd = "svn log -l 1 %s" % pa_tmva
@@ -72,14 +70,15 @@ def get_last_logentry(pa_tmva):
     print "No log found"
     sys.exit(0)
 
+
 if __name__ == "__main__":
 
     opts = getOptions()
 
     pa_tmva, pa_root = get_patch_paths(opts.patchrel)
 
-    #if print_changes(pa_root, pa_tmva):
-    #    pass
+    if not has_changes(pa_root, pa_tmva):
+        sys.exit(0)
 
     if opts.logmessage:
         logmessage = opts.logmessage
