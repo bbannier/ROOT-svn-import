@@ -58,7 +58,8 @@ TMVA::DataSet::DataSet(const DataSetInfo& dsi)
      fCurrentTreeIdx(0),
      fCurrentEventIdx(0),
      fHasNegativeEventWeights(kFALSE),
-     fLogger( new MsgLogger(TString(TString("Dataset:")+dsi.GetName()).Data()) )
+     fLogger( new MsgLogger(TString(TString("Dataset:")+dsi.GetName()).Data()) ),
+     fTrainingBlockSize(0)
 {
    // constructor
    for (UInt_t i=0; i<4; i++) fEventCollection[i] = new std::vector<Event*>();
@@ -425,9 +426,9 @@ void TMVA::DataSet::CreateSampling() const
 
    if (!fSampling.at(treeIdx) ) return;
 
-   if (fSamplingRandom == 0 ) 
-      Log() << kWARNING 
-              << "no random generator present for creating a random/importance sampling (initialized?)" << Endl;
+   if (fSamplingRandom == 0 )
+      Log() << kFATAL
+            << "no random generator present for creating a random/importance sampling (initialized?)" << Endl;
 
    // delete the previous selection
    fSamplingSelected.at(treeIdx).clear();

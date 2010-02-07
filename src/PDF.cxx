@@ -494,15 +494,8 @@ void TMVA::PDF::SmoothHistogram()
 //_______________________________________________________________________
 void TMVA::PDF::FillHistToGraph()
 {
+   // Simple conversion
    fGraph=new TGraph(fHist);
-   return;
-   Int_t PointNum = fHist->GetXaxis()->GetNbins();
-   Double_t Factor=PointNum/(fHist->GetBinLowEdge(PointNum)+fHist->GetBinWidth(PointNum)-fHist->GetBinLowEdge(1));
-   fGraph = new TGraph(PointNum+2);
-   fGraph->SetPoint(0,fHist->GetBinLowEdge(1),0);
-   for (Int_t i=0;i<PointNum;i++)
-      fGraph->SetPoint(i+1,fHist->GetBinCenter(i+1), fHist->GetBinContent(i+1) / (fHist->GetBinWidth(i+1) * Factor));
-   fGraph->SetPoint(PointNum+1,fHist->GetBinLowEdge(PointNum)+fHist->GetBinWidth(PointNum),0);
 }
 
 //_______________________________________________________________________

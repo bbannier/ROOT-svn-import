@@ -27,7 +27,7 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  *                                                                                *
  **********************************************************************************/
-      
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // BinarySearchTree                                                     //
@@ -85,6 +85,7 @@ TMVA::BinarySearchTree::BinarySearchTree( void ) :
    fCanNormalize( kFALSE )
 {
    // default constructor
+   fNEventsW[0]=fNEventsW[1]=0.;
    fLogger->SetSource( "BinarySearchTree" );
 }
 
@@ -98,6 +99,7 @@ TMVA::BinarySearchTree::BinarySearchTree( const BinarySearchTree &b)
      fCanNormalize( kFALSE )
 {
    // copy constructor that creates a true copy, i.e. a completely independent tree 
+   fNEventsW[0]=fNEventsW[1]=0.;
    fLogger->SetSource( "BinarySearchTree" );
    Log() << kFATAL << " Copy constructor not implemented yet " << Endl;
 }
