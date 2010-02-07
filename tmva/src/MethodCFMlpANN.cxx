@@ -398,44 +398,44 @@ void TMVA::MethodCFMlpANN::ReadWeightsFromStream( istream & istr )
    // number of output classes must be 2
    if (lclass != 2) // wrong file
       Log() << kFATAL << "<ReadWeightsFromFile> mismatch in number of classes" << Endl;
-          
+
    // check that we are not at the end of the file
    if (istr.eof( ))
       Log() << kFATAL << "<ReadWeightsFromStream> reached EOF prematurely " << Endl;
 
    // read extrema of input variables
-   for (UInt_t ivar=0; ivar<GetNvar(); ivar++) 
+   for (UInt_t ivar=0; ivar<GetNvar(); ivar++)
       istr >> fVarn_1.xmax[ivar] >> fVarn_1.xmin[ivar];
-            
+
    // read number of layers (sum of: input + output + hidden)
    istr >> fParam_1.layerm;
-            
+
    if (fYNN != 0) {
       for (Int_t i=0; i<fNlayers; i++) delete[] fYNN[i];
       delete[] fYNN;
       fYNN = 0;
    }
    fYNN = new Double_t*[fParam_1.layerm];
-   for (Int_t layer=0; layer<fParam_1.layerm; layer++) {              
+   for (Int_t layer=0; layer<fParam_1.layerm; layer++) {
       // read number of neurons for each layer
       istr >> fNeur_1.neuron[layer];
       fYNN[layer] = new Double_t[fNeur_1.neuron[layer]];
    }
-            
+
    // to read dummy lines
    const Int_t nchar( 100 );
    char* dumchar = new char[nchar];
-            
+
    // read weights
    for (Int_t layer=1; layer<=fParam_1.layerm-1; layer++) {
-              
+
       Int_t nq = fNeur_1.neuron[layer]/10;
       Int_t nr = fNeur_1.neuron[layer] - nq*10;
-              
+
       Int_t kk(0);
       if (nr==0) kk = nq;
       else       kk = nq+1;
-              
+
       for (Int_t k=1; k<=kk; k++) {
          Int_t jmin = 10*k - 9;
          Int_t jmax = 10*k;
@@ -454,13 +454,13 @@ void TMVA::MethodCFMlpANN::ReadWeightsFromStream( istream & istr )
    }
 
    for (Int_t layer=0; layer<fParam_1.layerm; layer++) {
-              
+
       // skip 2 empty lines
       istr.getline( dumchar, nchar );
       istr.getline( dumchar, nchar );
-              
+
       istr >> fDel_1.temp[layer];
-   }            
+   }
 
    // sanity check
    if ((Int_t)GetNvar() != fNeur_1.neuron[0]) {
@@ -469,7 +469,7 @@ void TMVA::MethodCFMlpANN::ReadWeightsFromStream( istream & istr )
    }
 
    fNlayers = fParam_1.layerm;
-   delete dumchar;
+   delete[] dumchar;
 }
 
 //_______________________________________________________________________

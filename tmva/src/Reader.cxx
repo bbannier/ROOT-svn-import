@@ -346,8 +346,10 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const TStrin
    // books MVA method from weightfile
    IMethod* im = ClassifierFactory::Instance().Create(std::string(Types::Instance().GetMethodName( methodType )),
                                                       DataInfo(), weightfile );
-   
+
    MethodBase *method = (dynamic_cast<MethodBase*>(im));
+
+   if (method==0) return im;
 
    method->SetupMethod();
 
@@ -400,7 +402,12 @@ Double_t TMVA::Reader::EvaluateMVA( const TString& methodTag, Double_t aux )
 
    else method = it->second;
 
-   return this->EvaluateMVA( dynamic_cast<TMVA::MethodBase*>(method), aux );
+   MethodBase * kl = dynamic_cast<TMVA::MethodBase*>(method);
+
+   if(kl==0)
+      Log() << kFATAL << methodTag << " is not a method" << Endl;
+
+   return this->EvaluateMVA( kl, aux );
 }
 
 //_______________________________________________________________________
@@ -428,9 +435,14 @@ const std::vector< Float_t >& TMVA::Reader::EvaluateRegression( const TString& m
       for (it = fMethodMap.begin(); it!=fMethodMap.end(); it++) Log() << " --> " << it->first << Endl;
       Log() << "Check calling string" << kFATAL << Endl;
    }
-
    else method = it->second;
-   return this->EvaluateRegression( dynamic_cast<TMVA::MethodBase*>(method), aux );
+
+   MethodBase * kl = dynamic_cast<TMVA::MethodBase*>(method);
+
+   if(kl==0)
+      Log() << kFATAL << methodTag << " is not a method" << Endl;
+
+   return this->EvaluateRegression( kl, aux );
 }
 
 //_______________________________________________________________________
@@ -467,7 +479,7 @@ TMVA::IMethod* TMVA::Reader::FindMVA( const TString& methodTag )
 //_______________________________________________________________________
 TMVA::MethodCuts* TMVA::Reader::FindCutsMVA( const TString& methodTag )
 {
-   // special function for Cuts to avoid dynamic_casts in ROOT macros, 
+   // special function for Cuts to avoid dynamic_casts in ROOT macros,
    // which are not properly handled by CINT
    return dynamic_cast<MethodCuts*>(FindMVA(methodTag));
 }
@@ -486,6 +498,8 @@ Double_t TMVA::Reader::GetProba( const TString& methodTag,  Double_t ap_sig, Dou
    else method = it->second;
 
    MethodBase* kl = dynamic_cast<MethodBase*>(method);
+   if(kl==0) return -1;
+
    if (mvaVal == -9999999) mvaVal = kl->GetMvaValue();
 
    return kl->GetProba( mvaVal, ap_sig );
@@ -505,6 +519,8 @@ Double_t TMVA::Reader::GetRarity( const TString& methodTag, Double_t mvaVal )
    else method = it->second;
 
    MethodBase* kl = dynamic_cast<MethodBase*>(method);
+   if(kl==0) return -1;
+
    if (mvaVal == -9999999) mvaVal = kl->GetMvaValue();
 
    return kl->GetRarity( mvaVal );

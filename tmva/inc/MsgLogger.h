@@ -71,7 +71,7 @@ namespace TMVA {
       std::string GetFormattedSource() const;
 
       static UInt_t GetMaxSourceSize()                    { return (UInt_t)fgMaxSourceSize; }
-      
+
       // Needed for copying
       MsgLogger& operator= ( const MsgLogger& parent );
 

@@ -233,9 +233,11 @@ void TMVA::BinarySearchTreeNode::AddAttributesToNode(void* node) const {
 void TMVA::BinarySearchTreeNode::AddContentToNode( std::stringstream& s ) const 
 {
    // adding attributes to tree node
+   std::ios_base::fmtflags ff = s.flags();
    s.precision( 16 );
-   for (UInt_t i=0; i<fEventV.size();  i++) s << std::scientific << " " << fEventV[i];   
+   for (UInt_t i=0; i<fEventV.size();  i++) s << std::scientific << " " << fEventV[i];
    for (UInt_t i=0; i<fTargets.size(); i++) s << std::scientific << " " << fTargets[i];
+   s.flags(ff);
 }
 //_______________________________________________________________________
 void TMVA::BinarySearchTreeNode::ReadContent( std::stringstream& s ) 

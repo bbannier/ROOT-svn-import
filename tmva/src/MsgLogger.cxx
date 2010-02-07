@@ -191,19 +191,19 @@ void TMVA::MsgLogger::WriteMsg( EMsgType type, const std::string& line ) const
    if (!gConfig().IsSilent() || type==kFATAL) {
       if (gConfig().UseColor()) {
          // no text for INFO or VERBOSE
-         if (type == kINFO || type == kVERBOSE) 
+         if (type == kINFO || type == kVERBOSE)
             std::cout << fPrefix << line << std::endl; // no color for info
-         else               
-            std::cout << fColorMap.find( type )->second << fPrefix << "<" 
+         else
+            std::cout << fColorMap.find( type )->second << fPrefix << "<"
                       << stype->second << "> " << line  << "\033[0m" << std::endl;
-      } 
+      }
       else {
          if (type == kINFO) std::cout << fPrefix << line << std::endl;
          else               std::cout << fPrefix << "<" << stype->second << "> " << line << std::endl;
       }
    }
    // take decision to stop if fatal error
-   if (type == kFATAL) { 
+   if (type == kFATAL) {
       std::cout << "***> abort program execution" << std::endl;
       std::exit(1);
    }
