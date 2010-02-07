@@ -67,13 +67,10 @@ def commit_changes(new_release, dry):
 def get_base_path():
     url = go("svn info | grep '^URL'").splitlines()[0]
     p = re.compile("URL: (.*/branches/dev)(.*)/tmva")
-
     m=p.match(url)
-
     if not m:
         print "Must be in a tmva directory under branches/dev/..."
         sys.exit(1)
-
     pkgurl, flavor = m.groups()
     return pkgurl, flavor 
 
