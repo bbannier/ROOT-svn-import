@@ -20,6 +20,7 @@
  *      Maciej Kruk           <mkruk@cern.ch>          - IFJ & AGH, Poland        *
  *      Peter Speckmayer      <peter.speckmayer@cern.ch> - CERN, Switzerland      *
  *      Joerg Stelzer         <stelzer@cern.ch>        - DESY, Germany            *
+ *      Jiahang Zhong         <Jiahang.Zhong@cern.ch>  - Academia Sinica, Taipei  *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
  *      CERN, Switzerland                                                         *
