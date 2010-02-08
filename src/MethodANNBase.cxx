@@ -606,7 +606,7 @@ void TMVA::MethodANNBase::AddWeightsXMLTo( void* parent ) const
    for (Int_t i = 0; i < numLayers; i++) {
       TObjArray* layer = (TObjArray*)fNetwork->At(i);
       Int_t numNeurons = layer->GetEntriesFast();
-      void* layerxml = gTools().AddChild(wght, 0, "Layer");
+      void* layerxml = gTools().AddChild(wght, "Layer");
       gTools().AddAttr(layerxml, "Index",    gTools().StringFromInt(i) );
       gTools().AddAttr(layerxml, "NNeurons", gTools().StringFromInt(numNeurons) );
       for (Int_t j = 0; j < numNeurons; j++) {
