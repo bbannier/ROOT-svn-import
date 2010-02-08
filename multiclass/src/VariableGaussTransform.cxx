@@ -40,7 +40,6 @@
 #include "TVectorD.h"
 #include "TMath.h"
 #include "TCanvas.h"
-#include "TXMLEngine.h"
 
 #include "TMVA/VariableGaussTransform.h"
 #ifndef ROOT_TMVA_MsgLogger
@@ -287,6 +286,8 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
          Float_t sum=0;
          Float_t ev_value=listsForBinning[icl][ivar].begin()->GetValue();
          Float_t lastev_value=ev_value;
+         const Float_t eps = 1.e-4;
+         vsForBinning[icl][ivar].push_back(ev_value-eps);
          vsForBinning[icl][ivar].push_back(ev_value);
 
          for (it=listsForBinning[icl][ivar].begin(); it != listsForBinning[icl][ivar].end(); it++){
@@ -375,7 +376,7 @@ void TMVA::VariableGaussTransform::GetCumulativeDist( const std::vector<Event*>&
             (fCumulativeDist[ivar][icls])->SetBinContent(ibin,sum/total);
          }
          // create PDf
-         fCumulativePDF[ivar].push_back(new PDF( Form("GaussTransform var%d cls%d",ivar,icls),  fCumulativeDist[ivar][icls], PDF::kSpline2, fPdfMinSmooth, fPdfMaxSmooth,kFALSE,kFALSE));
+         fCumulativePDF[ivar].push_back(new PDF( Form("GaussTransform var%d cls%d",ivar,icls),  fCumulativeDist[ivar][icls], PDF::kSpline1, fPdfMinSmooth, fPdfMaxSmooth,kFALSE,kFALSE));
       }
    }
 }
@@ -409,12 +410,12 @@ void TMVA::VariableGaussTransform::CleanUpCumulativeArrays(TString opt) {
 //_______________________________________________________________________
 void TMVA::VariableGaussTransform::AttachXMLTo(void* parent) {
    // create XML description of Gauss transformation
-   void* trfxml = gTools().xmlengine().NewChild(parent, 0, "Transform");
+   void* trfxml = gTools().AddChild(parent, "Transform");
    gTools().AddAttr(trfxml, "Name",        "Gauss");
    gTools().AddAttr(trfxml, "FlatOrGauss", (fFlatNotGaussD?"Flat":"Gauss") );
 
    for (UInt_t ivar=0; ivar<GetNVariables(); ivar++) {
-      void* varxml = gTools().xmlengine().NewChild( trfxml, 0, "Variable");
+      void* varxml = gTools().AddChild( trfxml, "Variable");
       gTools().AddAttr( varxml, "Name",     Variables()[ivar].GetLabel() );
       gTools().AddAttr( varxml, "VarIndex", ivar );
          
@@ -422,7 +423,7 @@ void TMVA::VariableGaussTransform::AttachXMLTo(void* parent) {
          Log() << kFATAL << "Cumulative histograms for variable " << ivar << " don't exist, can't write it to weight file" << Endl;
       
       for (UInt_t icls=0; icls<fCumulativePDF[ivar].size(); icls++){
-         void* pdfxml = gTools().xmlengine().NewChild( varxml, 0, Form("CumulativePDF_cls%d",icls));
+         void* pdfxml = gTools().AddChild( varxml, Form("CumulativePDF_cls%d",icls));
          (fCumulativePDF[ivar][icls])->AddXMLTo(pdfxml);
       }
    }
@@ -438,7 +439,7 @@ void TMVA::VariableGaussTransform::ReadFromXML( void* trfnode ) {
    gTools().ReadAttr(trfnode, "FlatOrGauss", fFlatNotGaussD );
 
    // Read the cumulative distribution
-   void* varnode = gTools().xmlengine().GetChild( trfnode );
+   void* varnode = gTools().GetChild( trfnode );
 
    TString varname, histname, classname;
    UInt_t ivar;
@@ -446,19 +447,19 @@ void TMVA::VariableGaussTransform::ReadFromXML( void* trfnode ) {
       gTools().ReadAttr(varnode, "Name", varname);
       gTools().ReadAttr(varnode, "VarIndex", ivar);
       
-      void* clsnode = gTools().xmlengine().GetChild( varnode);
+      void* clsnode = gTools().GetChild( varnode);
 
       while(clsnode) {
-         void* pdfnode = gTools().xmlengine().GetChild( clsnode);
+         void* pdfnode = gTools().GetChild( clsnode);
          PDF* pdfToRead = new PDF(TString("tempName"),kFALSE);
          pdfToRead->ReadXML(pdfnode); // pdfnode
          // push_back PDF
          fCumulativePDF.resize( ivar+1 );
          fCumulativePDF[ivar].push_back(pdfToRead);
-         clsnode = gTools().xmlengine().GetNext(clsnode);
+         clsnode = gTools().GetNextChild(clsnode);
       }
       
-      varnode = gTools().xmlengine().GetNext(varnode);    
+      varnode = gTools().GetNextChild(varnode);    
    }
    SetCreated();
 }

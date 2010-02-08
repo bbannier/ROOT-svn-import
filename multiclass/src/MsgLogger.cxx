@@ -184,27 +184,27 @@ void TMVA::MsgLogger::WriteMsg( EMsgType type, const std::string& line ) const
    // putting the output string, the message type, and the color
    // switcher together into a single string
 
-   if (type < fMinType || fgInhibitOutput) return; // no output
+   if (type < fMinType || (fgInhibitOutput && type!=kFATAL)) return; // no output
 
    std::map<EMsgType, std::string>::const_iterator stype;
    if ((stype = fTypeMap.find( type )) == fTypeMap.end()) return;
-   if (!gConfig().IsSilent()) {
+   if (!gConfig().IsSilent() || type==kFATAL) {
       if (gConfig().UseColor()) {
          // no text for INFO or VERBOSE
-         if (type == kINFO || type == kVERBOSE) 
+         if (type == kINFO || type == kVERBOSE)
             std::cout << fPrefix << line << std::endl; // no color for info
-         else               
-            std::cout << fColorMap.find( type )->second << fPrefix << "<" 
+         else
+            std::cout << fColorMap.find( type )->second << fPrefix << "<"
                       << stype->second << "> " << line  << "\033[0m" << std::endl;
-      } 
+      }
       else {
          if (type == kINFO) std::cout << fPrefix << line << std::endl;
          else               std::cout << fPrefix << "<" << stype->second << "> " << line << std::endl;
       }
    }
    // take decision to stop if fatal error
-   if (type == kFATAL) { 
-      if (!gConfig().IsSilent()) std::cout << "***> abort program execution" << std::endl;
+   if (type == kFATAL) {
+      std::cout << "***> abort program execution" << std::endl;
       std::exit(1);
    }
 }

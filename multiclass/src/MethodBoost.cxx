@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$   
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss,Or Cohen, Eckhard von Toerne 
+// @(#)root/tmva $Id$
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss,Or Cohen, Eckhard von Toerne
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -19,10 +19,10 @@
  *      Eckhard v. Toerne  <evt@uni-bonn.de>        - U of Bonn, Germany          *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
- *      CERN, Switzerland                                                         * 
- *      U. of Victoria, Canada                    #include "TMVA/Timer.h"                                * 
- *      MPI-K Heidelberg, Germany                                                 * 
- *      U. of Bonn, Germany                                                      *
+ *      CERN, Switzerland                                                         *
+ *      U. of Victoria, Canada                    #include "TMVA/Timer.h"         *
+ *      MPI-K Heidelberg, Germany                                                 *
+ *      U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -71,7 +71,7 @@ TMVA::MethodBoost::MethodBoost( const TString& jobName,
                                 TDirectory* theTargetDir ) :
    TMVA::MethodCompositeBase( jobName, Types::kBoost, methodTitle, theData, theOption, theTargetDir ),
    fBoostedMethodTitle(methodTitle),
-   fBoostedMethodOptions(theOption), 
+   fBoostedMethodOptions(theOption),
    fMonitorHist(0)
 {}
 
@@ -118,7 +118,7 @@ void TMVA::MethodBoost::DeclareOptions()
    
    DeclareOptionRef( fMonitorBoostedMethod = kTRUE, "Boost_MonitorMethod",
                      "Whether to write monitoring histogram for each boosted classifier");
-
+   
    DeclareOptionRef(fBoostType  = "AdaBoost", "Boost_Type", "Boosting type for the classifiers");
    AddPreDefVal(TString("AdaBoost"));
    AddPreDefVal(TString("Bagging"));
@@ -145,7 +145,7 @@ void TMVA::MethodBoost::DeclareOptions()
 }
 
 //_______________________________________________________________________
-Bool_t TMVA::MethodBoost::BookMethod( Types::EMVA theMethod, TString methodTitle, TString theOption ) 
+Bool_t TMVA::MethodBoost::BookMethod( Types::EMVA theMethod, TString methodTitle, TString theOption )
 {
    // just registering the string from which the boosted classifier will be created
    fBoostedMethodName = Types::Instance().GetMethodName( theMethod );
@@ -460,7 +460,7 @@ void TMVA::MethodBoost::WriteEvaluationHistosToFile(Types::ETreeType treetype)
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBoost::ProcessOptions() 
+void TMVA::MethodBoost::ProcessOptions()
 {
    // process user options
 }
@@ -468,7 +468,7 @@ void TMVA::MethodBoost::ProcessOptions()
 //_______________________________________________________________________
 void TMVA::MethodBoost::SingleTrain()
 {
-   // initialization 
+   // initialization
    Data()->SetCurrentType(Types::kTraining);
    MethodBase* meth = dynamic_cast<MethodBase*>(GetLastMethod());
    meth->TrainMethod();
@@ -489,12 +489,12 @@ void TMVA::MethodBoost::FindMVACut()
       Double_t* err=new Double_t[nValBins];
       const Double_t valmin=-1.;
       const Double_t valmax=1.;
-      for (Int_t i=0;i<nValBins;i++) err[i]=0.; 
+      for (Int_t i=0;i<nValBins;i++) err[i]=0.;
       Double_t sum = 0.;
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          Double_t weight = GetEvent(ievt)->GetWeight();
-         sum +=weight; 
-         Double_t val=method->GetMvaValue(); 
+         sum +=weight;
+         Double_t val=method->GetMvaValue();
          Int_t ibin = (Int_t) (((val-valmin)/(valmax-valmin))*nValBins);
          if (ibin>=nValBins) ibin = nValBins-1;
          if (ibin<0) ibin = 0;
@@ -516,7 +516,7 @@ void TMVA::MethodBoost::FindMVACut()
       Double_t sigCutVal = valmin + (valmax-valmin)*minbin/nValBins;
       method->SetSignalReferenceCut(sigCutVal);
       //std::cout << "Setting method cut to " <<method->GetSignalReferenceCut()<< " minerr=" << minerr/sum<<endl;
-      delete err; 
+      delete[] err;
    }
 }
 
@@ -572,8 +572,8 @@ void TMVA::MethodBoost::SingleBoost()
       alphaWeight = -alphaWeight;
    }
    if (fBoostType == "AdaBoost") {
-      // ADA boosting, rescaling the weight of the wrong events according to the error level 
-      // over the entire test sample rescaling all the weights to have the same sum, but without 
+      // ADA boosting, rescaling the weight of the wrong events according to the error level
+      // over the entire test sample rescaling all the weights to have the same sum, but without
       // touching the original weights (changing only the boosted weight of all the events)
       // first reweight
       Double_t Factor=0., FactorOrig=0.;
@@ -584,9 +584,9 @@ void TMVA::MethodBoost::SingleBoost()
          Factor += ev->GetBoostWeight();
       }
       Factor = FactorOrig/Factor;
-      // next normalize the weights 
+      // next normalize the weights
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-         Data()->GetEvent(ievt)->ScaleBoostWeight(Factor); 
+         Data()->GetEvent(ievt)->ScaleBoostWeight(Factor);
       }
 
    }
@@ -598,7 +598,7 @@ void TMVA::MethodBoost::SingleBoost()
          ev->SetBoostWeight(trandom->Rndm());
          sumAll1+=ev->GetWeight();
       }
-      // rescaling all the weights to have the same sum, but without touching the original 
+      // rescaling all the weights to have the same sum, but without touching the original
       // weights (changing only the boosted weight of all the events)
       Double_t Factor=sumAll/sumAll1;
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
@@ -611,7 +611,7 @@ void TMVA::MethodBoost::SingleBoost()
    else if (fMethodWeightType == "Average") fMethodWeight.push_back(1.0);
    else                                     fMethodWeight.push_back(0);
 
-   delete WrongDetection;
+   delete[] WrongDetection;
 }
 
 //_______________________________________________________________________

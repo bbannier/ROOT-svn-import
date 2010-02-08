@@ -206,9 +206,12 @@ namespace TMVA {
       void ReadStateFromXML     ( void* parent );
       void WriteStateToStream   ( std::ostream& tf ) const;   // needed for MakeClass
       void WriteVarsToStream    ( std::ostream& tf, const TString& prefix = "" ) const;  // needed for MakeClass
+
+   public:
       void ReadStateFromStream  ( std::istream& tf );         // backward compatibility
       void ReadStateFromStream  ( TFile&        rf );         // backward compatibility
 
+   private:
       // the variable information
       void AddVarsXMLTo         ( void* parent  ) const;
       void AddSpectatorsXMLTo   ( void* parent  ) const;
@@ -384,7 +387,7 @@ namespace TMVA {
       virtual void     MakeClassSpecificHeader( std::ostream&, const TString& = "" ) const {}
 
       // static pointer to this object - required for ROOT finder (to be solved differently)
-      static MethodBase* GetThisBase() { return fgThisBase; }
+      static MethodBase* GetThisBase();
 
       // some basic statistical analysis
       void Statistics( Types::ETreeType treeType, const TString& theVarName,
@@ -425,7 +428,7 @@ namespace TMVA {
       // ---------- private acccessors ---------------------------------------------
 
       // reset required for RootFinder
-      void             ResetThisBase() { fgThisBase = this; }
+      void             ResetThisBase();
 
       // ---------- private auxiliary methods --------------------------------------
 

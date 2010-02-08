@@ -32,7 +32,6 @@
 #include "TVectorD.h"
 #include "TMatrixD.h"
 #include "TMatrixDBase.h"
-#include "TXMLEngine.h"
 
 #ifndef ROOT_TMVA_MsgLogger
 #include "TMVA/MsgLogger.h"
@@ -305,24 +304,24 @@ void TMVA::VariableNormalizeTransform::AttachXMLTo(void* parent)
    UInt_t nvars = GetNVariables();
    UInt_t ntgts = GetNTargets();
 
-   void* trfxml = gTools().xmlengine().NewChild(parent, 0, "Transform");
+   void* trfxml = gTools().AddChild(parent, "Transform");
    gTools().AddAttr(trfxml, "Name", "Normalize");
    gTools().AddAttr(trfxml, "NVariables", nvars);
    gTools().AddAttr(trfxml, "NTargets",   ntgts);
 
    for( Int_t icls=0; icls<numC; icls++ ) {
-      void* clsxml = gTools().xmlengine().NewChild(trfxml, 0, "Class");
+      void* clsxml = gTools().AddChild(trfxml, "Class");
       gTools().AddAttr(clsxml, "ClassIndex", icls);
-      void* varsxml = gTools().xmlengine().NewChild(clsxml, 0, "Variables");
+      void* varsxml = gTools().AddChild(clsxml, "Variables");
       for (UInt_t ivar=0; ivar<nvars; ivar++) {
-         void* varxml = gTools().xmlengine().NewChild(varsxml, 0, "Variable");
+         void* varxml = gTools().AddChild(varsxml, "Variable");
          gTools().AddAttr(varxml, "VarIndex", ivar);
          gTools().AddAttr(varxml, "Min",      fMin.at(icls).at(ivar) );
          gTools().AddAttr(varxml, "Max",      fMax.at(icls).at(ivar) );
       }
-      void* tgtsxml = gTools().xmlengine().NewChild(clsxml, 0, "Targets");
+      void* tgtsxml = gTools().AddChild(clsxml, "Targets");
       for (UInt_t itgt=0; itgt<ntgts; itgt++) {
-         void* tgtxml = gTools().xmlengine().NewChild(tgtsxml, 0, "Target");
+         void* tgtxml = gTools().AddChild(tgtsxml, "Target");
          gTools().AddAttr(tgtxml, "TargetIndex", itgt);
          gTools().AddAttr(tgtxml, "Min",         fMin.at(icls).at(nvars+itgt) );
          gTools().AddAttr(tgtxml, "Max",         fMax.at(icls).at(nvars+itgt) );
@@ -339,7 +338,7 @@ void TMVA::VariableNormalizeTransform::ReadFromXML( void* trfnode )
    gTools().ReadAttr(trfnode, "NVariables", nvars);
    gTools().ReadAttr(trfnode, "NTargets",   ntgts);
 
-   void* ch = gTools().xmlengine().GetChild( trfnode );
+   void* ch = gTools().GetChild( trfnode );
    while(ch) {
       gTools().ReadAttr(ch, "ClassIndex", classindex);
 
@@ -348,29 +347,29 @@ void TMVA::VariableNormalizeTransform::ReadFromXML( void* trfnode )
       fMin[classindex].resize(nvars+ntgts,Float_t(0));
       fMax[classindex].resize(nvars+ntgts,Float_t(0));
 
-      void* clch = gTools().xmlengine().GetChild( ch );
+      void* clch = gTools().GetChild( ch );
       while(clch) {
-         TString nodeName(gTools().xmlengine().GetNodeName(clch));
+         TString nodeName(gTools().GetName(clch));
          if(nodeName=="Variables") {
-            void* varch = gTools().xmlengine().GetChild( clch );
+            void* varch = gTools().GetChild( clch );
             while(varch) {
                gTools().ReadAttr(varch, "VarIndex", varindex);
                gTools().ReadAttr(varch, "Min",      fMin[classindex][varindex]);
                gTools().ReadAttr(varch, "Max",      fMax[classindex][varindex]);
-               varch = gTools().xmlengine().GetNext( varch );
+               varch = gTools().GetNextChild( varch );
             }
          } else if (nodeName=="Targets") {
-            void* tgtch = gTools().xmlengine().GetChild( clch );
+            void* tgtch = gTools().GetChild( clch );
             while(tgtch) {
                gTools().ReadAttr(tgtch, "TargetIndex", tgtindex);
                gTools().ReadAttr(tgtch, "Min",      fMin[classindex][nvars+tgtindex]);
                gTools().ReadAttr(tgtch, "Max",      fMax[classindex][nvars+tgtindex]);
-               tgtch = gTools().xmlengine().GetNext( tgtch );
+               tgtch = gTools().GetNextChild( tgtch );
             }
          }
-         clch = gTools().xmlengine().GetNext( clch );
+         clch = gTools().GetNextChild( clch );
       }
-      ch = gTools().xmlengine().GetNext( ch );
+      ch = gTools().GetNextChild( ch );
    }
    SetCreated();
 }
@@ -378,7 +377,7 @@ void TMVA::VariableNormalizeTransform::ReadFromXML( void* trfnode )
 //_______________________________________________________________________
 void
 TMVA::VariableNormalizeTransform::BuildTransformationFromVarInfo( const std::vector<TMVA::VariableInfo>& var ) {
-   // this method is only used when building a normalization transformation 
+   // this method is only used when building a normalization transformation
    // from old text files
    // in this case regression didn't exist and there were no targets
 
@@ -389,8 +388,8 @@ TMVA::VariableNormalizeTransform::BuildTransformationFromVarInfo( const std::vec
             << " since the number of variables disagree" << Endl;
 
    UInt_t numC = (GetNClasses()<=1)?1:GetNClasses()+1;
-   fMin.clear();fMin.resize( numC ); 
-   fMax.clear();fMax.resize( numC ); 
+   fMin.clear();fMin.resize( numC );
+   fMax.clear();fMax.resize( numC );
 
 
    for(UInt_t cls=0; cls<numC; ++cls) {

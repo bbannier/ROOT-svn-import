@@ -1,4 +1,4 @@
-// @(#)root/tmva $Id$    
+// @(#)root/tmva $Id$
 // Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer
 
 /**********************************************************************************
@@ -26,7 +26,7 @@
  **********************************************************************************/
 
 //_______________________________________________________________________
-//                                                                      
+//
 // Function discriminant analysis (FDA). This simple classifier         //
 // fits any user-defined TFormula (via option configuration string) to  //
 // the training data by requiring a formula response of 1 (0) to signal //
@@ -577,11 +577,11 @@ void TMVA::MethodFDA::AddWeightsXMLTo( void* parent ) const
    // create XML description for LD classification and regression 
    // (for arbitrary number of output classes/targets)
 
-   void* wght = gTools().xmlengine().NewChild(parent, 0, "Weights");
+   void* wght = gTools().AddChild(parent, "Weights");
    gTools().AddAttr( wght, "NPars",  fNPars );
    gTools().AddAttr( wght, "NDim",   fOutputDimensions );
    for (Int_t ipar=0; ipar<fNPars*fOutputDimensions; ipar++) {
-      void* coeffxml = gTools().xmlengine().NewChild( wght, 0, "Parameter" );
+      void* coeffxml = gTools().AddChild( wght, "Parameter" );
       gTools().AddAttr( coeffxml, "Index", ipar   );
       gTools().AddAttr( coeffxml, "Value", fBestPars[ipar] );
    }
@@ -606,7 +606,7 @@ void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode )
    fBestPars.clear();
    fBestPars.resize( fNPars*fOutputDimensions );
    
-   void* ch = gTools().xmlengine().GetChild(wghtnode);
+   void* ch = gTools().GetChild(wghtnode);
    Double_t par;
    Int_t    ipar;
    while (ch) {
@@ -618,7 +618,7 @@ void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode )
                                   << ipar << " >= " << fNPars << Endl;
       fBestPars[ipar] = par;
 
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 
    // read formula
