@@ -12,6 +12,7 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch>  - CERN, Switzerland          *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *                                                                                *
@@ -73,7 +74,6 @@ namespace TMVA {
       enum EMVA {
          kVariable    = 0,
          kCuts           ,     
-         kSeedDistance   ,     
          kLikelihood     ,
          kPDERS          ,
          kHMatrix        ,

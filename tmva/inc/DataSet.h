@@ -1,29 +1,30 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss
 
-/******************************************************************************
- * Project: TMVA - a Root-integrated toolkit for multivariate data analysis   *
- * Package: TMVA                                                              *
- * Class  : DataSet                                                           *
- * Web    : http://tmva.sourceforge.net                                       *
- *                                                                            *
- * Description:                                                               *
- *      Contains all the data information                                     *
- *                                                                            *
- * Authors (alphabetical):                                                    *
- *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland          *
- *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland          *
- *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany  *
- *                                                                            *
- * Copyright (c) 2006:                                                        *
- *      CERN, Switzerland                                                     *
- *      U. of Victoria, Canada                                                *
- *      MPI-K Heidelberg, Germany                                             *
- *                                                                            *
- * Redistribution and use in source and binary forms, with or without         *
- * modification, are permitted according to the terms listed in LICENSE       *
- * (http://tmva.sourceforge.net/LICENSE)                                      *
- ******************************************************************************/
+/**********************************************************************************
+ * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
+ * Package: TMVA                                                                  *
+ * Class  : DataSet                                                               *
+ * Web    : http://tmva.sourceforge.net                                           *
+ *                                                                                *
+ * Description:                                                                   *
+ *      Contains all the data information                                         *
+ *                                                                                *
+ * Authors (alphabetical):                                                        *
+ *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch>  - CERN, Switzerland          *
+ *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
+ *                                                                                *
+ * Copyright (c) 2006:                                                            *
+ *      CERN, Switzerland                                                         *
+ *      U. of Victoria, Canada                                                    *
+ *      MPI-K Heidelberg, Germany                                                 *
+ *                                                                                *
+ * Redistribution and use in source and binary forms, with or without             *
+ * modification, are permitted according to the terms listed in LICENSE           *
+ * (http://tmva.sourceforge.net/LICENSE)                                          *
+ **********************************************************************************/
 
 #ifndef ROOT_TMVA_DataSet
 #define ROOT_TMVA_DataSet

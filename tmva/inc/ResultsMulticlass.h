@@ -4,20 +4,21 @@
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
  * Package: TMVA                                                                  *
- * Class  : DataSetManager                                                        *
+ * Class  : ResultsMulticlass                                                     *
  * Web    : http://tmva.sourceforge.net                                           *
  *                                                                                *
  * Description:                                                                   *
- *      Singleton class for dataset management                                    *
+ *      Base-class for result-vectors                                             *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
- *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Peter Speckmayer <Peter.Speckmayer@cern.ch>  - CERN, Switzerland          *
+ *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *                                                                                *
  * Copyright (c) 2006:                                                            *
  *      CERN, Switzerland                                                         *
+ *      U. of Victoria, Canada                                                    *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
@@ -25,64 +26,65 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
-#ifndef ROOT_TMVA_DataSetManager
-#define ROOT_TMVA_DataSetManager
+#ifndef ROOT_TMVA_ResultsMulticlass
+#define ROOT_TMVA_ResultsMulticlass
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// DataSetManager                                                       //
+// ResultsMulticlass                                                    //
 //                                                                      //
-// Class that contains all the data information                         //
+// Class which takes the results of a multiclass classification         //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TList
-#include "TList.h"
+#include <vector>
+
+#ifndef ROOT_TH1F
+#include "TH1F.h"
 #endif
-#ifndef ROOT_TString
-#include "TString.h"
+#ifndef ROOT_TH2F
+#include "TH2F.h"
+#endif
+
+#ifndef ROOT_TMVA_Results
+#include "TMVA/Results.h"
+#endif
+#ifndef ROOT_TMVA_Event
+#include "TMVA/Event.h"
 #endif
 
 namespace TMVA {
 
-   class DataSet;
-   class DataSetInfo;
-   class DataInputHandler;
    class MsgLogger;
+   
+   class ResultsMulticlass : public Results {
 
-   class DataSetManager {
-      
    public:
 
-      // singleton class
-      static DataSetManager& Instance();
-      static void            CreateInstance( DataInputHandler& dataInput );
-      static void            DestroyInstance();
+      ResultsMulticlass( const DataSetInfo* dsi );
+      ~ResultsMulticlass();
 
-      // ownership stays with this handler
-      DataSet*     CreateDataSet ( const TString& dsiName );
-      DataSetInfo* GetDataSetInfo( const TString& dsiName );
+      // setters
+      void     SetValue( std::vector<Float_t>& value, Int_t ievt );
+      void     Resize( Int_t entries )  { fMultiClassValues.resize( entries ); }
+      void     Clear()                  { fMultiClassValues.clear(); }
 
-      // makes a local copy of the dataset info object
-      DataSetInfo& AddDataSetInfo( DataSetInfo& dsi );
+      // getters
+      Long64_t GetSize() const        { return fMultiClassValues.size(); }
+      std::vector< Float_t >&              operator [] ( Int_t ievt ) const { return fMultiClassValues.at(ievt); }
+      std::vector<std::vector< Float_t> >* GetValueVector()  { return &fMultiClassValues; }
+
+      Types::EAnalysisType  GetAnalysisType() { return Types::kMulticlass; }
+
+      // histogramming
+      void     MakeHistograms();
+
 
    private:
 
-      ~DataSetManager();
-
-      static DataSetManager* fgDSManager;
-
-      // private default constructor
-      DataSetManager();
-      DataSetManager( DataInputHandler& dataInput );
-
-      // access to input data
-      DataInputHandler& DataInput() { return fDataInput; }
-
-      DataInputHandler&          fDataInput;             //! source of input data
-      TList                      fDataSetInfoCollection; //! all registered dataset definitions
-      mutable MsgLogger*         fLogger;   // message logger
-      MsgLogger& Log() const { return *fLogger; }    
+      mutable std::vector<std::vector< Float_t> >  fMultiClassValues;        //! mva values (Results)
+      mutable MsgLogger* fLogger;                     //! message logger
+      MsgLogger& Log() const { return *fLogger; }
    };
 }
 

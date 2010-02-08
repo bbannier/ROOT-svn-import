@@ -41,12 +41,20 @@
 #include <iostream>
 #include <iomanip>
 
+#ifndef ROOT_TXMLEngine
+#include "TXMLEngine.h"
+#endif
+
 #ifndef ROOT_TMatrixDSymfwd
 #include "TMatrixDSymfwd.h"
 #endif
 
 #ifndef ROOT_TMatrixDfwd
 #include "TMatrixDfwd.h"
+#endif
+
+#ifndef ROOT_TVectorDfwd
+#include "TVectorDfwd.h"
 #endif
 
 #ifndef ROOT_TVectorDfwd

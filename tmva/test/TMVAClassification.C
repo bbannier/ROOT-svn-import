@@ -157,7 +157,7 @@ void TMVAClassification( TString myMethodList = "" )
    // All TMVA output can be suppressed by removing the "!" (not) in 
    // front of the "Silent" argument in the option string
    TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification", outputFile, 
-                                               "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D" );
+                                               "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D:AnalysisType=Classification" );
 
    // If you wish to modify default settings 
    // (please check "src/Config.h" to see all available global options)
@@ -407,7 +407,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    // TMVA ANN: MLP (recommended ANN) -- all ANNs in TMVA are Multilayer Perceptrons
    if (Use["MLP"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=500:HiddenLayers=N+5:TestRate=10:EpochMonitoring" );
+      factory->BookMethod( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=500:HiddenLayers=N+5:TestRate=10:EpochMonitoring:RandomSeed=1" );
 
    if (Use["MLPBFGS"])
       factory->BookMethod( TMVA::Types::kMLP, "MLPBFGS", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=500:HiddenLayers=N+5:TestRate=10:TrainingMethod=BFGS:!EpochMonitoring" );

@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss, Kai Voss
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -104,6 +104,7 @@
 #include "TMVA/Tools.h"
 #include "TMVA/ResultsClassification.h"
 #include "TMVA/ResultsRegression.h"
+#include "TMVA/ResultsMulticlass.h"
 
 ClassImp(TMVA::MethodBase)
 
@@ -132,6 +133,7 @@ TMVA::MethodBase::MethodBase( const TString& jobName,
    fTmpEvent                  ( 0 ),
    fAnalysisType              ( Types::kNoAnalysisType ),
    fRegressionReturnVal       ( 0 ),
+   fMulticlassReturnVal       ( 0 ),
    fDisableWriting            ( kFALSE ),
    fDataSetInfo               ( dsi ),
    fSignalReferenceCut        ( 0.5 ),
@@ -329,6 +331,7 @@ void TMVA::MethodBase::InitBase()
       fInputVars->push_back(DataInfo().GetVariableInfo(ivar).GetLabel());
    }
    fRegressionReturnVal = 0;
+   fMulticlassReturnVal = 0;
 
    fEventCollections.resize( 2 );
    fEventCollections.at(0) = 0;
@@ -605,6 +608,45 @@ void TMVA::MethodBase::AddRegressionOutput(Types::ETreeType type)
 }
 
 //_______________________________________________________________________
+void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
+{
+   // prepare tree branch with the method's discriminating variable
+
+   Data()->SetCurrentType(type);
+
+   Log() << kINFO << "Create results for " << (type==Types::kTraining?"training":"testing") << Endl;
+
+   ResultsMulticlass* regMulti = (ResultsMulticlass*)Data()->GetResults(GetMethodName(), type, Types::kMulticlass);
+
+   Long64_t nEvents = Data()->GetNEvents();
+
+   // use timer
+   Timer timer( nEvents, GetName(), kTRUE );
+
+   Log() << kINFO << "Evaluation of " << GetMethodName() << " on "
+         << (type==Types::kTraining?"training":"testing") << " sample" << Endl;
+
+   regMulti->Resize( nEvents );
+   for (Int_t ievt=0; ievt<nEvents; ievt++) {
+      Data()->SetCurrentEvent(ievt);
+      std::vector< Float_t > vals = GetMulticlassValues();
+      regMulti->SetValue( vals, ievt );
+      timer.DrawProgressBar( ievt );
+   }
+
+   Log() << kINFO << "Elapsed time for evaluation of " << nEvents <<  " events: "
+         << timer.GetElapsedTime() << "       " << Endl;
+
+   // store time used for testing
+   if (type==Types::kTesting)
+      SetTestTime(timer.ElapsedSeconds());
+
+   TString histNamePrefix(GetTestvarName());
+   histNamePrefix += (type==Types::kTraining?"train":"test");
+//   regMulti->CreateDeviationHistograms( histNamePrefix );
+}
+
+//_______________________________________________________________________
 Double_t TMVA::MethodBase::GetMvaValue( const Event* const ev, Double_t* err ) {
    fTmpEvent = ev;
    Double_t val = GetMvaValue(err);
@@ -793,6 +835,106 @@ void TMVA::MethodBase::TestRegression( Double_t& bias, Double_t& biasT,
    Data()->SetCurrentType(savedType);   
 }
 
+
+//_______________________________________________________________________
+void TMVA::MethodBase::TestMulticlass()
+{
+   // test multiclass classification 
+
+   Types::ETreeType savedType = Data()->GetCurrentType();
+   Data()->SetCurrentType(Types::kTesting);
+
+   ResultsMulticlass* mvaRes = dynamic_cast<ResultsMulticlass*>
+      ( Data()->GetResults(GetMethodName(),Types::kTesting, Types::kMulticlass) );
+
+//    bias = 0; biasT = 0; dev = 0; devT = 0; rms = 0; rmsT = 0;
+//    Double_t sumw = 0;
+//    Double_t m1 = 0, m2 = 0, s1 = 0, s2 = 0, s12 = 0; // for correlation
+//    const Int_t nevt = GetNEvents();
+//    Float_t* rV = new Float_t[nevt];
+//    Float_t* tV = new Float_t[nevt];
+//    Float_t* wV = new Float_t[nevt];
+//    Float_t  xmin = 1e30, xmax = -1e30;
+//     for (Long64_t ievt=0; ievt<nevt; ievt++) {
+      
+//       const Event* ev = Data()->GetEvent(ievt); // NOTE: need untransformed event here !
+//       Float_t t = ev->GetTarget(0);
+//       Float_t w = ev->GetWeight();
+//       Float_t r = GetRegressionValues()[0];
+//       Float_t d = (r-t);
+
+//       // find min/max
+//       xmin = TMath::Min(xmin, TMath::Min(t, r));
+//       xmax = TMath::Max(xmax, TMath::Max(t, r));
+
+//       // store for truncated RMS computation
+//       rV[ievt] = r;
+//       tV[ievt] = t;
+//       wV[ievt] = w;
+      
+//       // compute deviation-squared
+//       sumw += w;
+//       bias += w * d;
+//       dev  += w * TMath::Abs(d);
+//       rms  += w * d * d;
+
+//       // compute correlation between target and regression estimate
+//       m1  += t*w; s1 += t*t*w;
+//       m2  += r*w; s2 += r*r*w;
+//       s12 += t*r;
+//    }
+
+//    // standard quantities
+//    bias /= sumw;
+//    dev  /= sumw;
+//    rms  /= sumw;
+//    rms  = TMath::Sqrt(rms - bias*bias);
+
+//    // correlation
+//    m1   /= sumw; 
+//    m2   /= sumw; 
+//    corr  = s12/sumw - m1*m2;
+//    corr /= TMath::Sqrt( (s1/sumw - m1*m1) * (s2/sumw - m2*m2) );
+
+//    // create histogram required for computeation of mutual information
+//    TH2F* hist  = new TH2F( "hist",  "hist",  150, xmin, xmax, 100, xmin, xmax );
+//    TH2F* histT = new TH2F( "histT", "histT", 150, xmin, xmax, 100, xmin, xmax );
+
+//    // compute truncated RMS and fill histogram
+//    Double_t devMax = bias + 2*rms;
+//    Double_t devMin = bias - 2*rms;
+//    sumw = 0;
+//    int ic=0;
+//    for (Long64_t ievt=0; ievt<nevt; ievt++) {
+//       Float_t d = (rV[ievt] - tV[ievt]);
+//       hist->Fill( rV[ievt], tV[ievt], wV[ievt] );
+//       if (d >= devMin && d <= devMax) {
+//          sumw  += wV[ievt];
+//          biasT += wV[ievt] * d;
+//          devT  += wV[ievt] * TMath::Abs(d);
+//          rmsT  += wV[ievt] * d * d;       
+//          histT->Fill( rV[ievt], tV[ievt], wV[ievt] );
+//          ic++;
+//       }
+//    }   
+//    biasT /= sumw;
+//    devT  /= sumw;
+//    rmsT  /= sumw;
+//    rmsT  = TMath::Sqrt(rmsT - biasT*biasT);
+//    mInf  = gTools().GetMutualInformation( *hist );
+//    mInfT = gTools().GetMutualInformation( *histT );
+
+//    delete hist;
+//    delete histT;
+
+//    delete [] rV;
+//    delete [] tV;
+//    delete [] wV;
+
+   Data()->SetCurrentType(savedType);   
+}
+
+
 //_______________________________________________________________________
 void TMVA::MethodBase::TestClassification()
 {
@@ -966,6 +1108,8 @@ void TMVA::MethodBase::AddInfoItem( void* gi, const TString& name, const TString
 void TMVA::MethodBase::AddOutput( Types::ETreeType type, Types::EAnalysisType analysisType ) {
    if (analysisType == Types::kRegression) {
       AddRegressionOutput( type );
+   } else if (analysisType == Types::kMulticlass ){
+      AddMulticlassOutput( type );
    } else {
       AddClassifierOutput( type );
       if (HasMVAPdfs()) 
@@ -993,7 +1137,9 @@ void TMVA::MethodBase::WriteStateToXML( void* parent ) const
    AddInfoItem( gi, "Training events", gTools().StringFromInt(Data()->GetNTrainingEvents()));
    AddInfoItem( gi, "TrainingTime", gTools().StringFromDouble(const_cast<TMVA::MethodBase*>(this)->GetTrainTime()));
 
-   TString analysisType(((const_cast<TMVA::MethodBase*>(this)->GetAnalysisType()==Types::kRegression) ? "Regression" : "Classification"));
+   Types::EAnalysisType aType = const_cast<TMVA::MethodBase*>(this)->GetAnalysisType();
+   TString analysisType((aType==Types::kRegression) ? "Regression" : 
+			(aType==Types::kMulticlass ? "Multiclass" : "Classification"));
    AddInfoItem( gi, "AnalysisType", analysisType );
    delete userInfo;
 
