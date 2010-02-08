@@ -2728,3 +2728,17 @@ TString TMVA::MethodBase::GetTrainingROOTVersionString() const
 
    return TString(Form("%i.%02i/%02i",a,b,c));
 }
+ 
+//_______________________________________________________________________
+TMVA::MethodBase* TMVA::MethodBase::GetThisBase()
+{
+   // return a pointer the base class of this method
+   return fgThisBase; 
+}
+
+//_______________________________________________________________________
+void TMVA::MethodBase::ResetThisBase() 
+{ 
+   // reset required for RootFinder
+   fgThisBase = this; 
+}
