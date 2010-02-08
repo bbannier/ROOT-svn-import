@@ -366,6 +366,35 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const TStrin
    return method;
 }
 
+#if ROOT_SVN_REVISION >= 32259
+//_______________________________________________________________________
+TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const char* xmlstr )
+{
+   // books MVA method from weightfile
+   IMethod* im = ClassifierFactory::Instance().Create(std::string(Types::Instance().GetMethodName( methodType )),
+                                                      DataInfo(), "" );
+   
+   MethodBase *method = (dynamic_cast<MethodBase*>(im));
+
+   method->SetupMethod();
+
+   // when reading older weight files, they could include options
+   // that are not supported any longer
+   method->DeclareCompatibilityOptions();
+
+   // read weight file
+   method->ReadStateFromXMLString( xmlstr );
+
+   // check for unused options
+   method->CheckSetup();
+   
+   Log() << kINFO << "Booked classifier \"" << method->GetMethodName()
+         << "\" of type: \"" << method->GetMethodTypeName() << "\"" << Endl;
+   
+   return method;
+}
+#endif
+
 //_______________________________________________________________________
 Double_t TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, Double_t aux )
 {
