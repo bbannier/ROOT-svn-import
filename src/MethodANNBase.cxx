@@ -138,7 +138,8 @@ void TMVA::MethodANNBase::DeclareOptions()
 void TMVA::MethodANNBase::ProcessOptions()
 {
    // do nothing specific at this moment
-	if      (fEstimatorS == "MSE")  fEstimator = kMSE;    //zjh
+  if      ( DoRegression() || DoMulticlass())  fEstimatorS = "MSE";    //zjh
+  if      (fEstimatorS == "MSE" )  fEstimator = kMSE;    //zjh  (to test all others)
 	else if (fEstimatorS == "CE")    fEstimator = kCE;      //zjh
    vector<Int_t>* layout = ParseLayoutString(fLayerSpec);
    BuildNetwork(layout);
@@ -285,7 +286,7 @@ void TMVA::MethodANNBase::BuildNetwork( vector<Int_t>* layout, vector<Double_t>*
    fActivation = aChooser.CreateActivation(fNeuronType);
    fIdentity   = aChooser.CreateActivation("linear");
    if (fEstimator==kMSE)  fOutput = aChooser.CreateActivation("linear");  //zjh
-   if (fEstimator==kCE)   fOutput = aChooser.CreateActivation("sigmoid"); //zjh
+   else if (fEstimator==kCE)   fOutput = aChooser.CreateActivation("sigmoid"); //zjh
    TNeuronInputChooser iChooser;
    fInputCalculator = iChooser.CreateNeuronInput(fNeuronInputType);
 
