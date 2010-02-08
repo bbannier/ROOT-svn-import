@@ -352,7 +352,7 @@ void TMVA::MethodCategory::Train()
       MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
       if (!mva->HasAnalysisType( analysisType, 
                                  mva->DataInfo().GetNClasses(), 
-				 mva->DataInfo().GetNTargets() ) ) {
+                                 mva->DataInfo().GetNTargets() ) ) {
          Log() << kWARNING << "Method " << mva->GetMethodTypeName() << " is not capable of handling " ;
          if (analysisType == Types::kRegression)
             Log() << "regression with " << mva->DataInfo().GetNTargets() << " targets." << Endl;
@@ -431,7 +431,7 @@ void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode )
    TString theVariables;
    Int_t titleLength;
    gTools().ReadAttr( wghtnode, "NSubMethods",  nSubMethods );
-   void* subMethodNode = gTools().xmlengine().GetChild(wghtnode);
+   void* subMethodNode = gTools().GetChild(wghtnode);
 
    Log() << kINFO << "Recreating sub-classifiers from XML-file " << Endl;
 
@@ -481,7 +481,7 @@ void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode )
          }
       }
 
-      subMethodNode = gTools().xmlengine().GetNext(subMethodNode);
+      subMethodNode = gTools().GetNextChild(subMethodNode);
    }
 
    InitCircularTree(DataInfo());

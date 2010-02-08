@@ -1130,8 +1130,8 @@ Double_t TMVA::MethodBDT::AdaBoostR2( vector<TMVA::Event*> eventSample, Decision
 //_______________________________________________________________________
 void TMVA::MethodBDT::AddWeightsXMLTo( void* parent ) const
 {
-   // write weights to XML 
-   void* wght = gTools().xmlengine().NewChild(parent, 0, "Weights");
+   // write weights to XML
+   void* wght = gTools().AddChild(parent, "Weights");
    gTools().AddAttr( wght, "NTrees", fForest.size() );
    gTools().AddAttr( wght, "TreeType", fForest.back()->GetAnalysisType() );
 
@@ -1158,7 +1158,7 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
    gTools().ReadAttr( parent, "NTrees", ntrees );
    gTools().ReadAttr( parent, "TreeType", analysisType );
 
-   void* ch = gTools().xmlengine().GetChild(parent);
+   void* ch = gTools().GetChild(parent);
    i=0;
    while(ch) {
       fForest.push_back( dynamic_cast<DecisionTree*>( BinaryTree::CreateFromXML(ch, GetTrainingTMVAVersionCode()) ) );
@@ -1166,7 +1166,7 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
       fForest.back()->SetTreeID(i++);
       gTools().ReadAttr(ch,"boostWeight",boostWeight);
       fBoostWeights.push_back(boostWeight);
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 }
 

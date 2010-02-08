@@ -72,7 +72,8 @@ TMVA::PDEFoamDistr::PDEFoamDistr(const PDEFoamDistr &distr)
      fBst             (distr.fBst),
      fDensityCalc     (kEVENT_DENSITY), // default: fill event density to BinarySearchTree
      fSignalClass     (distr.fSignalClass),
-     fBackgroundClass (distr.fBackgroundClass)
+     fBackgroundClass (distr.fBackgroundClass),
+     fLogger( new MsgLogger("PDEFoamDistr"))
 {
    // Copy constructor
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
@@ -91,7 +92,7 @@ void TMVA::PDEFoamDistr::Initialize( Int_t ndim )
 
    if (!fBst){
       Log() << kFATAL << "<PDEFoamDistr::Initialize> "
-	    << "ERROR: an not create binary tree !" << Endl;
+            << "ERROR: an not create binary tree !" << Endl;
    }
 
    fBst->SetPeriode(fDim);

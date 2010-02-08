@@ -45,7 +45,7 @@ DICTH2       := TSpline2.h TSpline1.h PDF.h BinaryTree.h BinarySearchTreeNode.h 
 		GeneticAlgorithm.h GeneticGenes.h GeneticPopulation.h GeneticRange.h GiniIndex.h \
 		GiniIndexWithLaplace.h SimulatedAnnealing.h
 DICTH3       := Config.h KDEKernel.h Interval.h FitterBase.h MCFitter.h GeneticFitter.h SimulatedAnnealingFitter.h \
-		MinuitFitter.h MinuitWrapper.h IFitterTarget.h  \
+		MinuitFitter.h MinuitWrapper.h IFitterTarget.h \
 		PDEFoam.h PDEFoamDistr.h PDEFoamVect.h PDEFoamCell.h BDTEventWrapper.h CCTreeWrapper.h \
 		CCPruner.h CostComplexityPruneTool.h SVEvent.h
 DICTH4       := TNeuron.h TSynapse.h TActivationChooser.h TActivation.h TActivationSigmoid.h TActivationIdentity.h \

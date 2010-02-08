@@ -33,9 +33,9 @@
  **********************************************************************************/
 
 //_______________________________________________________________________
-//                                                                      
-// Base class for all TMVA methods using artificial neural networks      
-//                                                                      
+//
+// Base class for all TMVA methods using artificial neural networks
+//
 //_______________________________________________________________________
 
 #include <vector>
@@ -49,7 +49,6 @@
 #include "TRandom3.h"
 #include "TH2F.h"
 #include "TH1.h"
-#include "TXMLEngine.h"
 
 #include "TMVA/MethodBase.h"
 #include "TMVA/MethodANNBase.h"
@@ -673,8 +672,8 @@ void TMVA::MethodANNBase::AddWeightsXMLTo( void* parent ) const
       for (Int_t j = 0; j < numNeurons; j++) {
          TNeuron* neuron = (TNeuron*)layer->At(j);
          Int_t numSynapses = neuron->NumPostLinks();
-         void* neuronxml = gTools().xmlengine().NewChild(layerxml, 0, "Neuron");
-         gTools().xmlengine().NewAttr(neuronxml, 0, "NSynapses", gTools().StringFromInt(numSynapses) );
+         void* neuronxml = gTools().AddChild(layerxml, "Neuron");
+         gTools().AddAttr(neuronxml, "NSynapses", gTools().StringFromInt(numSynapses) );
          if(numSynapses==0) continue;
          stringstream s("");
          s.precision( 16 );
@@ -682,7 +681,7 @@ void TMVA::MethodANNBase::AddWeightsXMLTo( void* parent ) const
             TSynapse* synapse = neuron->PostLinkAt(k);
             s << std::scientific << synapse->GetWeight() << " ";
          }
-         gTools().xmlengine().AddRawLine( neuronxml, s.str().c_str() );
+         gTools().AddRawLine( neuronxml, s.str().c_str() );
       }
    }
 
@@ -753,7 +752,7 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
       gTools().ReadAttr( ch, "Index",   index   );
       gTools().ReadAttr( ch, "NNeurons", nNeurons );
       layout->at(index) = nNeurons;
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 
    BuildNetwork( layout, NULL, fromFile );
@@ -767,26 +766,26 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
       gTools().ReadAttr( ch, "Index",   index   );
       gTools().ReadAttr( ch, "NNeurons", nNeurons );
 
-      void* nodeN = gTools().xmlengine().GetChild(ch);
+      void* nodeN = gTools().GetChild(ch);
       UInt_t iNeuron = 0;
       while( nodeN ){ // neurons
          TNeuron *neuron = (TNeuron*)layer->At(iNeuron);
          gTools().ReadAttr( nodeN, "NSynapses", nSyn );
          if( nSyn > 0 ){
-            const char* content = gTools().xmlengine().GetNodeContent(nodeN);
+            const char* content = gTools().GetContent(nodeN);
             std::stringstream s(content);
             for (UInt_t iSyn = 0; iSyn<nSyn; iSyn++) { // synapses
-               
+
                TSynapse* synapse = neuron->PostLinkAt(iSyn);
                s >> weight;
                //Log() << kWARNING << neuron << " " << weight <<  Endl;
                synapse->SetWeight(weight);
             }
          }
-         nodeN = gTools().xmlengine().GetNext(nodeN);
+         nodeN = gTools().GetNextChild(nodeN);
          iNeuron++;
       }
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
       iLayer++;
    }
 
@@ -1086,4 +1085,10 @@ void TMVA::MethodANNBase::MakeClassSpecific( std::ostream& fout, const TString& 
    fout << "{" << endl;
    fout << "   // nothing to clear" << endl;
    fout << "}" << endl;
+}
+//_________________________________________________________________________
+Bool_t TMVA::MethodANNBase::Debug() const 
+{ 
+   // who the hell makes such strange Debug flags that even use "global pointers"..
+   return fgDEBUG; 
 }

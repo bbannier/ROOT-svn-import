@@ -28,22 +28,22 @@
 using namespace TMVA;
 
 //_______________________________________________________________________
-TMVA::CCTreeWrapper::CCTreeNode::CCTreeNode( DecisionTreeNode* n ) : fDTNode(n) {
+TMVA::CCTreeWrapper::CCTreeNode::CCTreeNode( DecisionTreeNode* n ) :
+   Node(),
+   fNLeafDaughters(0),
+   fNodeResubstitutionEstimate(-1.0),
+   fResubstitutionEstimate(-1.0),
+   fAlphaC(-1.0),
+   fMinAlphaC(-1.0),
+   fDTNode(n)
+{
    //constructor of the CCTreeNode
-
-   if(((DecisionTreeNode*) n->GetRight()) != NULL &&
-      ((DecisionTreeNode*) n->GetLeft()) != NULL ) {
+   if ( n != NULL && n->GetRight() != NULL && n->GetLeft() != NULL ) {
       SetRight( new CCTreeNode( ((DecisionTreeNode*) n->GetRight()) ) );
       GetRight()->SetParent(this);
       SetLeft( new CCTreeNode( ((DecisionTreeNode*) n->GetLeft()) ) );
       GetLeft()->SetParent(this);
    }
-
-   fNLeafDaughters = 0;
-   fNodeResubstitutionEstimate = -1.0;
-   fResubstitutionEstimate = -1.0;
-   fAlphaC = -1.0;
-   fMinAlphaC = -1.0;
 }
 
 //_______________________________________________________________________
