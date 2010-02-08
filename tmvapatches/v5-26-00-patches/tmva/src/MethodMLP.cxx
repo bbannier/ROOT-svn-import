@@ -112,6 +112,9 @@ void TMVA::MethodMLP::Init()
 
    // the minimum requirement to declare an event signal-like
    SetSignalReferenceCut( 0.5 );
+#ifdef MethodMLP_UseMinuit__
+   fgThis = this;
+#endif
 }
 
 //_______________________________________________________________________
