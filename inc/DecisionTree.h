@@ -99,7 +99,7 @@ namespace TMVA {
       // building of a tree by recursivly splitting the nodes 
 
       UInt_t BuildTree( const EventList & eventSample, 
-                       DecisionTreeNode *node = NULL);
+                        DecisionTreeNode *node = NULL, UInt_t cls = 0);
       // determine the way how a node is split (which variable, which cut value)
 
       Float_t TrainNode( const EventList & eventSample,  DecisionTreeNode *node ) { return TrainNodeFast( eventSample, node ); }

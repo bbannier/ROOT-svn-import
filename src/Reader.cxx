@@ -122,6 +122,7 @@ TMVA::Reader::Reader( const TString& theOption, Bool_t verbose )
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
      fMvaEventError( -1 ),
+     fMvaEventError2( -1 ),   //zjh
      fLogger ( 0 )
 {
    // constructor
@@ -146,6 +147,7 @@ TMVA::Reader::Reader( std::vector<TString>& inputVars, const TString& theOption,
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
      fMvaEventError( -1 ),
+     fMvaEventError2( -1 ),   //zjh
      fLogger ( 0 )
 {
    // constructor
@@ -171,6 +173,7 @@ TMVA::Reader::Reader( std::vector<std::string>& inputVars, const TString& theOpt
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
      fMvaEventError( -1 ),
+     fMvaEventError2( -1 ),   //zjh
      fLogger ( 0 )
 {
    // constructor
@@ -196,6 +199,7 @@ TMVA::Reader::Reader( const std::string& varNames, const TString& theOption, Boo
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
      fMvaEventError( -1 ),
+     fMvaEventError2( -1 ),   //zjh
      fLogger ( 0 )
 {
    // constructor
@@ -218,6 +222,7 @@ TMVA::Reader::Reader( const TString& varNames, const TString& theOption, Bool_t 
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
      fMvaEventError( -1 ),
+     fMvaEventError2( -1 ),   //zjh
      fLogger ( 0 )
 {
    // constructor
@@ -418,8 +423,8 @@ Double_t TMVA::Reader::EvaluateMVA( MethodBase* method, Double_t aux )
    // the aux value is only needed for MethodCuts: it sets the required signal efficiency
    if (method->GetMethodType() == TMVA::Types::kCuts)
       dynamic_cast<TMVA::MethodCuts*>(method)->SetTestSignalEfficiency( aux );
-
-   return method->GetMvaValue( &fMvaEventError ); // attributed MVA response and error
+   if (method->GetMethodType() == TMVA::Types::kMLP) return method->GetMvaValues( fMvaEventError, fMvaEventError2 ); //zjh
+   else  return method->GetMvaValue( &fMvaEventError ); // attributed MVA response and error
 }
 
 //_______________________________________________________________________

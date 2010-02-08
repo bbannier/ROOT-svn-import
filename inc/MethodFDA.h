@@ -19,7 +19,7 @@
  *      Andreas Hoecker  <Andreas.Hocker@cern.ch> - CERN, Switzerland             *
  *      Peter Speckmayer <speckmay@mail.cern.ch>  - CERN, Switzerland             *
  *                                                                                *
- * Copyright (c) 2005-2006:                                                       *
+ * Copyright (c) 2005-2010:                                                       *
  *      CERN, Switzerland                                                         *
  *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
@@ -92,7 +92,8 @@ namespace TMVA {
       // calculate the MVA value
       Double_t GetMvaValue( Double_t* err = 0 );
 
-      std::vector<Float_t>& GetRegressionValues();
+      virtual const std::vector<Float_t>& GetRegressionValues();
+      virtual const std::vector<Float_t>& GetMulticlassValues();
 
       void Init( void );
 
@@ -114,9 +115,13 @@ namespace TMVA {
 
    private:
 
+      // compute multiclass values
+      void CalculateMulticlassValues( const TMVA::Event*& evt, std::vector<Double_t>& parameters, std::vector<Float_t>& values);
+      
+
       // create and interpret formula expression and compute estimator
       void     CreateFormula   ();
-      Double_t InterpretFormula( const Event*, std::vector<Double_t>& pars );
+      Double_t InterpretFormula( const Event*, std::vector<Double_t>::iterator begin, std::vector<Double_t>::iterator end );
 
       // clean up 
       void ClearAll();      
@@ -147,6 +152,9 @@ namespace TMVA {
       Double_t               fSumOfWeightsSig;    // sum of weights (signal)
       Double_t               fSumOfWeightsBkg;    // sum of weights (background)
       Double_t               fSumOfWeights;       // sum of weights 
+
+      // 
+      Int_t                  fOutputDimensions;   // number of output values
 
       ClassDef(MethodFDA,0)  // Function Discriminant Analysis
    };

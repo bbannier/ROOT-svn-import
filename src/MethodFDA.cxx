@@ -46,6 +46,10 @@
 #include "TMath.h"
 #include <sstream>
 
+#include <algorithm>
+#include <iterator>
+#include <stdexcept>
+
 #include "TMVA/ClassifierFactory.h"
 #include "TMVA/MethodFDA.h"
 #include "TMVA/Tools.h"
@@ -108,6 +112,10 @@ void TMVA::MethodFDA::Init( void )
 
    fFitMethod       = "";
    fConverger       = "";
+
+   if( DoMulticlass() )
+      if (fMulticlassReturnVal == NULL) fMulticlassReturnVal = new std::vector<Float_t>();
+
 }
 
 //_______________________________________________________________________
@@ -248,6 +256,21 @@ void TMVA::MethodFDA::ProcessOptions()
    // create formula
    CreateFormula();
 
+
+   // copy parameter ranges for each output dimension ==================
+   fOutputDimensions = 1;
+   if( DoRegression() )
+      fOutputDimensions = DataInfo().GetNTargets();
+   if( DoMulticlass() )
+      fOutputDimensions = DataInfo().GetNClasses();
+
+   for( Int_t dim = 0; dim < fOutputDimensions; ++dim ){
+      for( Int_t par = 0; par < fNPars; ++par ){
+	 fParRange.push_back( fParRange.at(par) );
+      }
+   }
+   // ====================
+
    // create minimiser
    fConvergerFitter = (IFitterTarget*)this;
    if (fConverger == "MINUIT") {
@@ -282,7 +305,8 @@ Bool_t TMVA::MethodFDA::HasAnalysisType( Types::EAnalysisType type, UInt_t numbe
 {
    // FDA can handle classification with 2 classes and regression with one regression-target
    if (type == Types::kClassification && numberClasses == 2) return kTRUE;
-   if (type == Types::kRegression     && numberTargets == 1) return kTRUE;
+   if (type == Types::kMulticlass ) return kTRUE;
+   if (type == Types::kRegression ) return kTRUE;
    return kFALSE;
 }
 
@@ -291,7 +315,11 @@ Bool_t TMVA::MethodFDA::HasAnalysisType( Types::EAnalysisType type, UInt_t numbe
 void TMVA::MethodFDA::ClearAll( void )
 {
    // delete and clear all class members
-   for (UInt_t ipar=0; ipar<fParRange.size(); ipar++) {
+   
+   // if there is more than one output dimension, the paramater ranges are the same again (object has been copied).
+   // hence, ... erase the copied pointers to assure, that they are deleted only once.
+//   fParRange.erase( fParRange.begin()+(fNPars), fParRange.end() );
+   for (UInt_t ipar=0; ipar<fParRange.size() && ipar<fNPars; ipar++) {
       if (fParRange[ipar] != 0) { delete fParRange[ipar]; fParRange[ipar] = 0; }
    }
    fParRange.clear(); 
@@ -381,40 +409,76 @@ Double_t TMVA::MethodFDA::EstimatorFunction( std::vector<Double_t>& pars )
 
    Double_t result, deviation;
    Double_t desired = 0.0;
-   for (UInt_t ievt=0; ievt<GetNEvents(); ievt++) {
 
-      // read the training event 
-      const Event* ev = GetEvent(ievt);
+   // calculate the deviation from the desired value
+   if( DoRegression() ){
+      for (UInt_t ievt=0; ievt<GetNEvents(); ievt++) {
+	 // read the training event 
+	 const TMVA::Event* ev = GetEvent(ievt);
 
-      // calculate the deviation from the desired value
+	 for( Int_t dim = 0; dim < fOutputDimensions; ++dim ){
+	    desired = ev->GetTarget( dim );
+	    result    = InterpretFormula( ev, pars.begin(), pars.end() );
+	    deviation = TMath::Power(result - desired, 2);
+	    estimator[2]  += deviation * ev->GetWeight();
+	 }
+      }
+      estimator[2] /= sumOfWeights[2];
+      // return value is sum over normalised signal and background contributions
+      return estimator[2];
 
-      if (!DoRegression()) desired = (ev->IsSignal() ? 1.0 : 0.0);
-      else                 desired = ev->GetTarget( 0 );
+   }else if( DoMulticlass() ){
+      for (UInt_t ievt=0; ievt<GetNEvents(); ievt++) {
+	 // read the training event 
+	 const TMVA::Event* ev = GetEvent(ievt);
 
-      result    = InterpretFormula( ev, pars );
-      deviation = TMath::Power(result - desired, 2);
+	 CalculateMulticlassValues( ev, pars, *fMulticlassReturnVal );
 
-      if (!DoRegression())  estimator[Int_t(desired)] += deviation * ev->GetWeight();
-      else                  estimator[2]              += deviation * ev->GetWeight();
+	 Double_t crossEntropy = 0.0;
+	 for( Int_t dim = 0; dim < fOutputDimensions; ++dim ){
+	    Double_t y = fMulticlassReturnVal->at(dim);
+	    Double_t t = (ev->GetClass() == static_cast<UInt_t>(dim) ? 1.0 : 0.0 );
+	    crossEntropy += t*log(y);
+	 }
+	 estimator[2] += ev->GetWeight()*crossEntropy; 
+      }
+      estimator[2] /= sumOfWeights[2];
+      // return value is sum over normalised signal and background contributions
+      return estimator[2];
 
+   }else{
+      for (UInt_t ievt=0; ievt<GetNEvents(); ievt++) {
+	 // read the training event 
+	 const TMVA::Event* ev = GetEvent(ievt);
+
+	 desired = (ev->IsSignal() ? 1.0 : 0.0);
+	 result    = InterpretFormula( ev, pars.begin(), pars.end() );
+	 deviation = TMath::Power(result - desired, 2);
+	 estimator[Int_t(desired)] += deviation * ev->GetWeight();
+      }
+      estimator[0] /= sumOfWeights[0];
+      estimator[1] /= sumOfWeights[1];
+      // return value is sum over normalised signal and background contributions
+      return estimator[0] + estimator[1];
    }
-   estimator[0] /= sumOfWeights[0];
-   estimator[1] /= sumOfWeights[1];
-   if (DoRegression()) estimator[2] /= sumOfWeights[2];
-   // return value is sum over normalised signal and background contributions
-
-   if (!DoRegression()) return estimator[0] + estimator[1];
-   else                 return estimator[2];
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodFDA::InterpretFormula( const Event* event, std::vector<Double_t>& pars )
+Double_t TMVA::MethodFDA::InterpretFormula( const Event* event, std::vector<Double_t>::iterator parBegin, std::vector<Double_t>::iterator parEnd )
 {
    // formula interpretation
-   for (UInt_t ipar=0; ipar<pars.size(); ipar++) fFormula->SetParameter( ipar, pars[ipar] );
-   for (UInt_t ivar=0;  ivar<GetNvar();  ivar++) fFormula->SetParameter( fNPars+ivar, event->GetValue(ivar) );
+   Int_t ipar = 0;
+//    std::cout << "pars ";
+   for( std::vector<Double_t>::iterator it = parBegin; it != parEnd; ++it ){
+//       std::cout << " i" << ipar << " val" << (*it);
+      fFormula->SetParameter( ipar, (*it) );
+      ++ipar;
+   }
+   for (UInt_t ivar=0;  ivar<GetNvar();  ivar++) fFormula->SetParameter( ivar+ipar, event->GetValue(ivar) );
 
-   return fFormula->Eval( 0 );
+   Double_t result = fFormula->Eval( 0 );
+//    std::cout << "  result " << result << std::endl;
+   return result;
 }
 
 //_______________________________________________________________________
@@ -426,11 +490,11 @@ Double_t TMVA::MethodFDA::GetMvaValue( Double_t* err )
    // cannot determine error
    if (err != 0) *err = -1;
    
-   return InterpretFormula( ev, fBestPars );
+   return InterpretFormula( ev, fBestPars.begin(), fBestPars.end() );
 }
 
 //_______________________________________________________________________
-std::vector<Float_t>& TMVA::MethodFDA::GetRegressionValues()
+const std::vector<Float_t>& TMVA::MethodFDA::GetRegressionValues()
 {
    if (fRegressionReturnVal == NULL) fRegressionReturnVal = new std::vector<Float_t>();
    fRegressionReturnVal->clear();
@@ -438,7 +502,11 @@ std::vector<Float_t>& TMVA::MethodFDA::GetRegressionValues()
    const Event* ev = GetEvent();
 
    Event* evT = new Event(*ev);
-   evT->SetTarget(0,InterpretFormula( ev, fBestPars ));
+
+   for( Int_t dim = 0; dim < fOutputDimensions; ++dim ){
+      Int_t offset = dim*fNPars;
+      evT->SetTarget(dim,InterpretFormula( ev, fBestPars.begin()+offset, fBestPars.begin()+offset+fNPars ) ); 
+   }
    const Event* evT2 = GetTransformationHandler().InverseTransform( evT );
    fRegressionReturnVal->push_back(evT2->GetTarget(0));
 
@@ -447,6 +515,49 @@ std::vector<Float_t>& TMVA::MethodFDA::GetRegressionValues()
    return (*fRegressionReturnVal);
 }
   
+
+//_______________________________________________________________________
+const std::vector<Float_t>& TMVA::MethodFDA::GetMulticlassValues()
+{
+   if (fMulticlassReturnVal == NULL) fMulticlassReturnVal = new std::vector<Float_t>();
+   fMulticlassReturnVal->clear();
+
+   // returns MVA value for given event
+   const TMVA::Event* evt = GetEvent();
+
+   CalculateMulticlassValues( evt, fBestPars, *fMulticlassReturnVal );
+
+   return (*fMulticlassReturnVal);
+}
+
+
+//_______________________________________________________________________
+void TMVA::MethodFDA::CalculateMulticlassValues( const TMVA::Event*& evt, std::vector<Double_t>& parameters, std::vector<Float_t>& values)
+{
+   // calculate the values for multiclass
+   values.clear();
+
+//    std::copy( parameters.begin(), parameters.end(), std::ostream_iterator<double>( std::cout, " " ) );
+//    std::cout << std::endl;
+
+//    char inp;
+//    std::cin >> inp;
+
+   Double_t sum;
+   for( Int_t dim = 0; dim < fOutputDimensions; ++dim ){ // check for all other dimensions (=classes)
+      Int_t offset = dim*fNPars;
+      Double_t value = InterpretFormula( evt, parameters.begin()+offset, parameters.begin()+offset+fNPars ); 
+//       std::cout << "dim : " << dim << " value " << value << "    offset " << offset << std::endl;
+      values.push_back( value ); 
+      sum += value;
+   }
+
+//    // normalize to sum of value (commented out, .. have to think of how to treat negative classifier values)
+//    std::transform( fMulticlassReturnVal.begin(), fMulticlassReturnVal.end(), fMulticlassReturnVal.begin(), bind2nd( std::divides<float>(), sum) );
+}
+
+
+
 //_______________________________________________________________________
 void  TMVA::MethodFDA::ReadWeightsFromStream( istream& istr )
 {
@@ -468,7 +579,8 @@ void TMVA::MethodFDA::AddWeightsXMLTo( void* parent ) const
 
    void* wght = gTools().AddChild(parent, "Weights");
    gTools().AddAttr( wght, "NPars",  fNPars );
-   for (Int_t ipar=0; ipar<fNPars; ipar++) {
+   gTools().AddAttr( wght, "NDim",   fOutputDimensions );
+   for (Int_t ipar=0; ipar<fNPars*fOutputDimensions; ipar++) {
       void* coeffxml = gTools().AddChild( wght, "Parameter" );
       gTools().AddAttr( coeffxml, "Index", ipar   );
       gTools().AddAttr( coeffxml, "Value", fBestPars[ipar] );
@@ -483,9 +595,16 @@ void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode )
 {
    // read coefficients from xml weight file
    gTools().ReadAttr( wghtnode, "NPars", fNPars );
+   
+   try {
+      gTools().ReadAttr( wghtnode, "NDim" , fOutputDimensions );
+   }catch( std::logic_error& excpt ){
+      // attribute could not be read, it probably does not exist because the weight file has been written with an older version
+      fOutputDimensions = 1;
+   }
 
    fBestPars.clear();
-   fBestPars.resize( fNPars );
+   fBestPars.resize( fNPars*fOutputDimensions );
    
    void* ch = gTools().GetChild(wghtnode);
    Double_t par;
@@ -495,7 +614,7 @@ void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode )
       gTools().ReadAttr( ch, "Value", par  );
 
       // sanity check
-      if (ipar >= fNPars) Log() << kFATAL << "<ReadWeightsFromXML> index out of range: "
+      if (ipar >= fNPars*fOutputDimensions) Log() << kFATAL << "<ReadWeightsFromXML> index out of range: "
                                   << ipar << " >= " << fNPars << Endl;
       fBestPars[ipar] = par;
 
