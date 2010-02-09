@@ -94,7 +94,8 @@ fProfCPUTestEvent(0),
 fProfOptDataReadEvent(0),
 fProfOptDataReadIO(0),
 fProfFullDataReadEvent(0),
-fProfFullDataReadIO(0)
+fProfFullDataReadIO(0),
+fNodes(0)
 //fListRunType(0)
 {
 
@@ -647,6 +648,117 @@ void TProofBench::RunBenchmark(ERunType whattorun)
       return;
       break;
    }
+}
+
+//_________________________________________________________________________________
+Int_t TProofBench::FillNodeInfo()
+{
+   // Re-Generate the list of worker node info (fNodes)
+   // Return 0 if OK, -1 if info could not be retrieved
+   // (the existing info is always removed)
+
+   if (fNodes) {
+      fNodes->SetOwner(kTRUE);
+      SafeDelete(fNodes);
+   }
+   fNodes = new TList;
+
+   // Get info
+   TList *wl = fProof->GetListOfSlaveInfos();
+   if (!wl) {
+      Error("FillNodeInfo", "could not get information about workers!");
+      return -1;
+   }
+
+   TIter nxwi(wl);
+   TSlaveInfo *si = 0;
+   TProofNode *ni = 0;
+   while ((si = (TSlaveInfo *) nxwi())) {
+      if (!(ni = (TProofNode *) fNodes->FindObject(si->GetName()))) {
+         ni = new TProofNode(si->GetName(), si->GetSysInfo().fPhysRam);
+         fNodes->Add(ni);
+      } else {
+         ni->AddWrks(1);
+      }
+   }
+   // Notify
+   Info("FillNodeInfo","%d physically different mahcines found", fNodes->GetSize());
+   // Done
+   return 0;
+}
+
+//_________________________________________________________________________________
+Int_t TProofBench::GenerateFilesN(Int_t nr, Int_t nfw, Long64_t fileent)
+{
+   // Generate the files needed for the test using TPacketizerFile
+   // *** This is only to show how it works ***
+
+   // Find out the number of physically different machines
+   if (FillNodeInfo()) {
+      Error("GenerateFilesN", "could not get information about workers!");
+      return -1;
+   }
+
+   // Number of events per file
+   Long64_t oldNEvents = fNEvents;
+   fNEvents = fileent;
+
+   // Create the file names
+   // Rule of thunmb:
+   //  - 4 runs on each worker such that 4x<size_run> > RAM
+   //  - at least 4 files per worker
+   //  - files size 100MB
+   //  - files regenerated after each test
+   // Naming:
+   //         <basedir>/event_<run>_<file>.root
+   // Create the map {worker,files}
+   TMap *filesmap = new TMap;
+   filesmap->SetName("PROOF_FilesToProcess");
+   Long64_t entries = 0;
+   TIter nxni(fNodes);
+   TProofNode *ni = 0;
+   while ((ni = (TProofNode *) nxni())) {
+      TList *files = new TList;
+      files->SetName(ni->GetName());
+      Int_t j = 0;
+      for (j = 0; j < nr; j++) {
+         Int_t nf = nfw * ni->GetNWrks();
+         Int_t i = 0;
+         for (i = 0; i < nf; i++) {
+            files->Add(new TObjString(TString::Format("%s/event_%d_%d.root", fBaseDir.Data(), j, i)));
+            entries++;
+         }
+      }
+      filesmap->Add(new TObjString(ni->GetName()), files);
+      files->Print();
+//      files->SetOwner(kFALSE);
+//      SafeDelete(files);
+   }
+
+   // Set the relevant input parameters
+   SetInputParameters();
+
+   // Add the file map in the input list
+   fProof->AddInput(filesmap);
+
+   // Set the packetizer to be the one on test
+   fProof->SetParameter("PROOF_Packetizer", "TPacketizerFile");
+
+   // Run
+   fProof->Process("TSelEventGenN", entries);
+
+   // Clear the input parameters
+   ClearInputParameters();
+   fProof->DeleteParameters("PROOF_Packetizer");
+   fProof->GetInputList()->Remove(filesmap);
+   filesmap->SetOwner(kTRUE);
+   SafeDelete(filesmap);
+
+   // Restore previous value
+   fNEvents = oldNEvents;
+
+   // Done
+   return 0;
 }
 
 Int_t TProofBench::GenerateFiles()
@@ -1682,6 +1794,23 @@ void TProofBench::SetInputParameters(){
       fProof->SetParameter("fNTries", fNTries);
       fProof->SetParameter("fNEvents", fNEvents);
       fProof->SetParameter("fDraw", Int_t(fDraw));
+   }
+   else{
+      Error("SetParameters", "Proof not set, doing noting");
+   }
+   return;
+}
+ 
+void TProofBench::ClearInputParameters(){
+
+   if (fProof){
+      fProof->DeleteParameters("fBaseDir");
+      fProof->DeleteParameters("fRunType");
+      fProof->DeleteParameters("fNHists");
+      fProof->DeleteParameters("fHistType");
+      fProof->DeleteParameters("fNTries");
+      fProof->DeleteParameters("fNEvents");
+      fProof->DeleteParameters("fDraw");
    }
    else{
       Error("SetParameters", "Proof not set, doing noting");

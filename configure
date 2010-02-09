@@ -54,7 +54,6 @@ options="                    \
    enable_explicitlink       \
    enable_fftw3              \
    enable_gviz               \
-   enable_g4root             \
    enable_gdml               \
    enable_genvector          \
    enable_gfal               \
@@ -145,7 +144,6 @@ SAPDB            \
 RFIO             \
 CASTOR           \
 GFAL             \
-G4ROOT           \
 GSL              \
 HDFS             \
 PYTHIA6          \
@@ -467,7 +465,7 @@ check_library() {
                             fi
                         fi
                     else
-                        logmsg "  $j not found in $j"
+                        logmsg "  $j not found in $l"
                     fi
                 done
             done
@@ -1085,7 +1083,6 @@ enable/disable options, prefix with either --enable- or --disable-
   gviz               Graphs visualization support, requires graphviz
   gdml               GDML writer and reader
   gfal               GFAL support, requires libgfal
-  g4root             GEANT4 navigator based on TGeo, requires GEANT4 installed
   globus             Globus authentication support, requires Globus toolkit
   glite              gLite support, requires libglite-api-wrapper v.3 from GSI (https://subversion.gsi.de/trac/dgrid/wiki)
   gsl-shared         enable linking against shared libraries for GSL (default no)
@@ -1157,9 +1154,6 @@ with options, prefix with --with-, enables corresponding support
   gfal-libdir        GFAL support, location of libgfal
   glew-incdir        GLEW support, location of glew.h
   glew-libdir        GLEW support, location of libGLEW
-  g4-incdir          GEANT4 support, location of GEANT4 header files
-  g4-libdir          GEANT4 support, location of GEANT4 libraries
-  clhep-incdir       CLHEP support, location of CLHEP header files
   gsl-incdir         GSL support, location of gsl/gsl_version.h
   gsl-libdir         GSL support, location of libgsl
   gccxml             Gccxml support, directory of the gccxml installation
@@ -1216,6 +1210,7 @@ with options, prefix with --with-, enables corresponding support
   xrootd             XROOTD support, path to external XROOTD distribution
   xrootd-incdir      XROOTD support, path to external XROOTD header files (XrdVersion.hh, ...)
   xrootd-libdir      XROOTD support, path to external XROOTD libraries
+  xrootd-opts        XROOTD support, additional options to be passed to XROOTD-configure
 
 with compiler options, prefix with --with-, overrides default value
 
@@ -1384,9 +1379,6 @@ if test $# -gt 0 ; then
       --with-gfal-libdir=*)    gfallibdir=$optarg    ; enable_gfal="yes"    ;;
       --with-glew-incdir=*)    glewincdir=$optarg    ; enable_builtin_glew=no;;
       --with-glew-libdir=*)    glewlibdir=$optarg    ; enable_builtin_glew=no;;
-      --with-g4-incdir=*)      g4incdir=$optarg      ; enable_g4root="yes"  ;;
-      --with-g4-libdir=*)      g4libdir=$optarg      ; enable_g4root="yes"  ;;
-      --with-clhep-incdir=*)   clhepincdir=$optarg   ;;
       --with-gsl-incdir=*)     gslincdir=$optarg     ; enable_gsl="yes"     ;;
       --with-gsl-libdir=*)     gsllibdir=$optarg     ; enable_gsl="yes"     ;;
       --with-globus=*)         globusdir=$optarg     ; enable_globus="yes"  ;;
@@ -1679,6 +1671,16 @@ if test ! "x$platform" = "xwin32"; then
 
     if test "x$found_dir" = "x" ; then
         result "`basename $0`: X11 headers (package x11-devel) MUST be installed"
+        exit 1
+    fi
+
+    check_header "X11/xpm.h" "" \
+        /usr/include /usr/X11R6/include /usr/include/X11 /usr/openwin/include \
+        /usr/local/include /usr/local/include/X11 /usr/local/X11R6/include \
+        /usr/X11/include /usr/include/X11R5
+
+    if test "x$found_dir" = "x" ; then
+        result "`basename $0`: xpm headers (libXpm-devel) MUST be installed"
         exit 1
     fi
 
@@ -1991,14 +1993,22 @@ result "$enable_builtin_zlib"
 # Check for libcurses / libncurses
 #
 if test ! "x$enable_editline" = "xno" ; then
-    check_header "ncurses.h curses.h" "$cursesincdir" \
+    lookforcurseslib="libncurses"
+    check_header "ncurses.h" "$cursesincdir" \
         /usr/include/ncurses /usr/local/include/ncurses \
-        /usr/include/curses /usr/local/include/curses \
         /usr/include /usr/local/include
     cursesincdir=$found_dir
     curseshdr=$found_hdr
+    if test "x$cursesincdir" = "x"; then
+        lookforcurseslib="libcurses"
+        check_header "curses.h" "$cursesincdir" \
+            /usr/include/curses /usr/local/include/curses \
+            /usr/include /usr/local/include
+        cursesincdir=$found_dir
+        curseshdr=$found_hdr
+    fi
 
-    check_library "libncurses libcurses" "$enable_shared" "$curseslibdir" \
+    check_library "$lookforcurseslib" "$enable_shared" "$curseslibdir" \
         /usr/lib /usr/local/lib
     curseslib=$found_lib
     curseslibdir=$found_dir
@@ -2675,46 +2685,6 @@ if test ! "x$enable_gfal" = "xno"; then
 fi
 check_explicit "$enable_gfal" "$enable_gfal_explicit" \
      "Explicitly required GFAL dependencies not fulfilled"
-
-######################################################################
-#
-### echo %%% GEANT4 Support - Third party libraries
-#
-# (See http://geant4.web.cern.ch/geant4/)
-#
-# If the user has set the flags "--disable-g4root", we don't check for
-# GEANT4 at all.
-#
-if test ! "x$enable_g4root" = "xno"; then
-    # Check for GEANT4 include and library
-    check_header "G4Navigator.hh" "$g4incdir" "$g4incdir" \
-        $G4INCLUDE /opt/geant4/include /opt/g4/include \
-        /usr/local/include /usr/include
-    g4rootinc=$found_hdr
-    g4incdir=$found_dir
-
-    if test ! "$G4LIB/$G4SYSTEM" = "/"; then
-        G4SYSLIBDIR=$G4LIB/$G4SYSTEM
-    fi
-    check_library "libG4navigation" "$enable_shared" "$g4libdir" \
-        $G4SYSLIBDIR /opt/geant4/lib /opt/g4/lib /usr/local/lib /usr/lib \
-        /usr/lib/geant4
-
-    g4rootlib=$found_lib
-    g4libdir=$found_dir
-
-    # Check for CLHEP include
-    check_header "CLHEP/Vector/Rotation.h" "$clhepincdir" "$clhepincdir" \
-        $CLHEP_INCLUDE_DIR /usr/include
-    clhepinc=$found_hdr
-    clhepincdir=$found_dir
-
-    if test "x$g4incdir" = "x" || test "x$g4rootlib" = "x" || test "x$clhepincdir" = "x"; then
-        enable_g4root="no"
-    fi
-fi
-check_explicit "$enable_g4root" "$enable_g4root_explicit" \
-     "Explicitly required G4root dependencies not fulfilled"
 
 ######################################################################
 #
@@ -5075,7 +5045,6 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_mathmore" = "xyes" && pl="$pl libroot-math-mathmore"
     test "x$enable_unuran"   = "xyes" && pl="$pl libroot-math-unuran"
     test "x$enable_table"    = "xyes" && pl="$pl libroot-misc-table"
-    test "x$enable_g4root"   = "xyes" && pl="$pl libroot-montecarlo-g4root"
     test "x$enable_ldap"     = "xyes" && pl="$pl libroot-net-ldap"
     test "x$enable_clarens"  = "xyes" && pl="$pl libroot-proof-clarens"
     test "x$enable_roofit"   = "xyes" && pl="$pl libroot-roofit"
@@ -5091,7 +5060,6 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_fftw3"    = "xyes" && pl="$pl root-plugin-math-fftw3"
     test "x$enable_gviz"     = "xyes" && pl="$pl root-plugin-graf2d-gviz"
     test "x$enable_minuit2"  = "xyes" && pl="$pl root-plugin-math-minuit2"
-    test "x$enable_g4root"   = "xyes" && pl="$pl root-plugin-montecarlo-g4root"
     test "x$enable_pythia6"  = "xyes" && pl="$pl root-plugin-montecarlo-pythia6"
     test "x$enable_alien"    = "xyes" && pl="$pl root-plugin-net-alien"
     test "x$enable_bonjour"  = "xyes" && pl="$pl root-plugin-net-bonjour"
@@ -5275,16 +5243,18 @@ fi
 if test ! "x$macosx106" = "x"; then
    rm -f bin/python64 bin/ruby64
 fi
-rm -f lib/libRXML* bin/libRXML* etc/system.rootmap
-rm -f lib/libProofGui* bin/libProofGui*
-rm -f lib/libMySQL* bin/libMySQL* lib/libGedOld* bin/libGedOld*
-rm -f lib/libSQL.* bin/libSQL.*
-rm -f lib/libASPluginGS.* bin/g2rootold*
-rm -f math/mathcore/src/G__MathCore32.*
-rm -f tmva/src/G__TMVA.*
-rm -f xrootd/src/headers.d
-rm -f asimage/src/headers.d asimage/src/G__ASImageGS.*
-rm -f core/utils/src/rootcint7.cxx core/utils/src/RStl7.cxx
+rm -f lib/libRXML* bin/libRXML* etc/system.rootmap \
+ lib/libProofGui* bin/libProofGui* \
+ lib/libMySQL* bin/libMySQL* lib/libGedOld* bin/libGedOld* \
+ lib/libSQL.* bin/libSQL.* \
+ lib/libASPluginGS.* bin/g2rootold* \
+ math/mathcore/src/G__MathCore32.* \
+ tmva/src/G__TMVA.* \
+ xrootd/src/headers.d include/Xpm.h \
+ asimage/src/headers.d asimage/src/G__ASImageGS.* \
+ core/utils/src/rootcint7.cxx core/utils/src/RStl7.cxx \
+ core/metautils/src/TClassEdit7.cxx \
+ core/metautils/src/RConversionRuleParser7.cxx
 
 ######################################################################
 #
@@ -5514,9 +5484,6 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@gfalincdir@|$gfalincdir|"            \
     -e "s|@gfallib@|$gfallib|"                  \
     -e "s|@gfallibdir@|$gfallibdir|"            \
-    -e "s|@g4incdir@|$g4incdir|"                \
-    -e "s|@g4libdir@|$g4libdir|"                \
-    -e "s|@clhepincdir@|$clhepincdir|"          \
     -e "s|@enable_xft@|$enable_xft|"            \
     -e "s|@glitelib@|$glitelib|"                \
     -e "s|@glitelibdir@|$glitelibdir|"          \
@@ -5659,7 +5626,6 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@buildfftw3@|$enable_fftw3|"          \
     -e "s|@buildgviz@|$enable_gviz|"            \
     -e "s|@buildgfal@|$enable_gfal|"            \
-    -e "s|@buildg4root@|$enable_g4root|"        \
     -e "s|@buildbonjour@|$enable_bonjour|"      \
     -e "s|@buildchirp@|$enable_chirp|"          \
     -e "s|@buildhdfs@|$enable_hdfs|"            \

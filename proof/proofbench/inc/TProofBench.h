@@ -31,6 +31,9 @@
 #ifndef ROOT_TObject
 #include "TObject.h"
 #endif
+#ifndef ROOT_TNamed
+#include "TNamed.h"
+#endif
 
 #ifndef ROOT_TString
 #include "TString.h"
@@ -98,6 +101,8 @@ public:
    void RunBenchmark(ERunType whattorun=kRunNotSpecified); //Do a benchmark test
 
    Int_t GenerateFiles();//Generate files for the test or cleanup run
+
+   Int_t GenerateFilesN(Int_t nr = 4, Int_t nfw = 4, Long64_t fileent = 100000); //Generate files for the test or cleanup run
 
    TFile* FileOpen(const char* filename="", 
                    Option_t* option="", 
@@ -173,8 +178,10 @@ protected:
                             Int_t &stepsize, 
                             Int_t& start);
 */
+   void ClearInputParameters(); //clear input parameters to selector
    void SetInputParameters(); //set input parameters to selector
    Int_t CheckParameters(TString where);
+   Int_t FillNodeInfo();
    void MakeDataSet(//Int_t nworkers=-1, 
                     //Int_t nnodes=-1, 
                     Int_t ntries=-1); //make dataset
@@ -217,9 +224,24 @@ private:
    TProfile* fProfFullDataReadEvent;
    TProfile* fProfFullDataReadIO;
 
+   TList    *fNodes;               // List of worker nodes info
    //TList* fListRunType;       //map of <ERunType, namestem>
 
    ClassDef(TProofBench,0)         //PROOF benchmark suite steering
 };
 
+class TProofNode : public TNamed
+{
+private:
+   Int_t   fPhysRam;   // Physical RAM of this worker node
+   Int_t   fNWrks;     // Number of workers on this node
+public:
+   TProofNode(const char *wn, Int_t ram) : TNamed(wn,""), fPhysRam(ram), fNWrks(1) { }
+   virtual ~TProofNode() { }
+
+   void AddWrks(Int_t n = 1) { fNWrks += n; }
+   Int_t GetPhysRam() const { return fPhysRam; }
+   Int_t GetNWrks() const { return fNWrks; }
+   void SetNWrks(Int_t n) { fNWrks = n; }
+ };
 #endif
