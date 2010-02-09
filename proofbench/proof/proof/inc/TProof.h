@@ -24,9 +24,6 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TProof
-#include "TProof.h"
-#endif
 #ifndef ROOT_TProofMgr
 #include "TProofMgr.h"
 #endif
@@ -120,9 +117,10 @@ class TDataSetManager;
 // 24 -> 25: Handling of 'data' dir; group information
 // 25 -> 26: Use new TProofProgressInfo class
 // 26 -> 27: Use new file for updating the session status
+// 27 -> 28: Support for multi-datasets
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 27;            // protocol version number
+const Int_t       kPROOF_Protocol        = 28;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -248,9 +246,9 @@ private:
 
    TSlave      *fMerger;         // Slave that acts as merger
    Int_t        fPort;           // Port number, on which it accepts outputs from other workers
-   Int_t        fMergedObjects;  // Total number of objects it must accept from other workers 
+   Int_t        fMergedObjects;  // Total number of objects it must accept from other workers
                                  // (-1 == not set yet)
-   Int_t        fWorkersToMerge; // Number of workers that are merged on this merger 
+   Int_t        fWorkersToMerge; // Number of workers that are merged on this merger
                                  // (does not change during time)
    Int_t        fMergedWorkers;  // Current number of already merged workers
                                  // (does change during time as workers are being merged)
@@ -279,7 +277,7 @@ public:
    void        AddMergedObjects(Int_t objects) { fMergedObjects += objects; }
 
    Bool_t      AreAllWorkersAssigned();
-   Bool_t      AreAllWorkersMerged();	
+   Bool_t      AreAllWorkersMerged();
 
    void Deactivate() { fIsActive = kFALSE; }
    Bool_t      IsActive() { return fIsActive; }
@@ -300,6 +298,7 @@ public:
    const char  *Export() { fExp.Form("%c (%d workers still sending)   ", fgCr[fIdx], fNWrks);
                            return fExp.Data(); }
    void         DecreaseNWrks() { fNWrks--; }
+   void         IncreaseNWrks() { fNWrks++; }
    void         IncreaseIdx() { fIdx++; if (fIdx == 4) fIdx = 0; }
    void         Reset(Int_t n = -1) { fIdx = -1; SetNWrks(n); }
    void         SetNWrks(Int_t n) { fNWrks = n; }
@@ -528,7 +527,7 @@ private:
    static TList   *fgProofEnvList;   // List of TNameds defining environment
                                      // variables to pass to proofserv
 
-   Bool_t          fMergersSet;      // Indicates, if the following variables have been initialized properly                               
+   Bool_t          fMergersSet;      // Indicates, if the following variables have been initialized properly
    Int_t           fMergersCount;
    Int_t           fWorkersToMerge;  // Current total number of workers, which have not been yet assigned to any merger
    Int_t           fLastAssignedMerger;
@@ -676,9 +675,10 @@ private:
 
 protected:
    TProof(); // For derived classes to use
-   Int_t           Init(const char *masterurl, const char *conffile,
-                        const char *confdir, Int_t loglevel,
-                        const char *alias = 0);
+   void  InitMembers();
+   Int_t Init(const char *masterurl, const char *conffile,
+              const char *confdir, Int_t loglevel,
+              const char *alias = 0);
    virtual Bool_t  StartSlaves(Bool_t attach = kFALSE);
    Int_t AddWorkers(TList *wrks);
    Int_t RemoveWorkers(TList *wrks);

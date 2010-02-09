@@ -22,5 +22,6 @@
 #pragma link C++ class TSelHist+;
 #pragma link C++ class TSelEvent+;
 #pragma link C++ class TSelEventGen+;
+#pragma link C++ class TSelEventGenN+;
 
 #endif

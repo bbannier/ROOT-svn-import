@@ -471,7 +471,9 @@ void TKey::DeleteBuffer()
       delete fBufferRef;
       fBufferRef = 0;
    } else {
-      if (fBuffer) delete [] fBuffer;
+      if (fBuffer) {
+         delete [] fBuffer;
+      }
    }
    fBuffer = 0;
 }

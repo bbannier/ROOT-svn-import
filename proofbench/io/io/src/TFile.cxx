@@ -59,6 +59,12 @@
 
 #include "RConfig.h"
 
+#ifdef R__LINUX
+// for posix_fadvise
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
+#endif
+#endif
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -1357,7 +1363,17 @@ Bool_t TFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
    // Note that for nbuf=1, this call is equivalent to TFile::ReafBuffer.
    // This function is overloaded by TNetFile, TWebFile, etc.
    // Returns kTRUE in case of failure.
-   
+
+   // called with buf=0, from TFileCacheRead to pass list of readahead buffers
+   if (!buf) {
+      for (Int_t j = 0; j < nbuf; j++) {
+         if (ReadBufferAsync(pos[j], len[j])) {
+             return kTRUE;
+         }
+      }
+      return kFALSE;
+   }
+
    Int_t k = 0;
    Bool_t result = kTRUE;
    TFileCacheRead *old = fCacheRead;
@@ -1402,7 +1418,7 @@ Bool_t TFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
          }
          curbegin = pos[i];
       }
-   } 
+   }
    if (buf2) delete [] buf2;
    fCacheRead = old;
    return result;
@@ -2230,7 +2246,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
             // it subinfo is likely to be a nested class.
             const Int_t sublen = strlen(subinfo->GetName());
             if ( (sublen > len) && subinfo->GetName()[len+1]==':'
-               && !subClasses.FindObject(subinfo->GetName()) /* We need to insure uniqueness */) 
+               && !subClasses.FindObject(subinfo->GetName()) /* We need to insure uniqueness */)
             {
                subClasses.Add(subinfo);
             }
@@ -3176,7 +3192,7 @@ Int_t TFile::GetFileReadCalls()
 Int_t TFile::GetReadaheadSize()
 {
    // Static function returning the readahead buffer size.
-   
+
    return fgReadaheadSize;
 }
 
@@ -3722,13 +3738,38 @@ copyout:
 }
 
 //______________________________________________________________________________
-Bool_t TFile::ReadBufferAsync(Long64_t, Int_t)
+#ifdef R__LINUX
+Bool_t TFile::ReadBufferAsync(Long64_t offset, Int_t len)
 {
-   // Not supported for regular (local) files.
-   // See TFile specializations for real implementations.
+   // Read specified byte range asynchronously. Actually we tell the kernel
+   // which blocks we are going to read so it can start loading these blocks
+   // in the buffer cache.
+
+   // Shortcut to avoid having to implement dummy ReadBufferAsync() in all
+   // I/O plugins. Override ReadBufferAsync() in plugins if async is supported.
+   if (IsA() != TFile::Class())
+      return kTRUE;
+
+   int advice = POSIX_FADV_WILLNEED;
+   if (len == 0) {
+      // according POSIX spec if len is zero, all data following offset
+      // is specified. Nevertheless ROOT uses zero to probe readahead
+      // capadilites.
+      advice = POSIX_FADV_NORMAL;
+   }
+   if (posix_fadvise(fD, offset, len, advice)) {
+      return kTRUE;
+   }
+   return kFALSE;
+}
+#else
+Bool_t TFile::ReadBufferAsync(Long64_t , Int_t)
+{
+   // Not supported yet on non Linux systems.
 
    return kTRUE;
 }
+#endif
 
 //______________________________________________________________________________
 Int_t TFile::GetBytesToPrefetch() const
