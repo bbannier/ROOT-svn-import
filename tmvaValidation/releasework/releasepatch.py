@@ -61,7 +61,7 @@ def apply_changes(pa_root, pa_tmva, logmessage, dryrun):
 
 
 def get_last_logentry(pa_tmva):
-    cmd = "svn log -l 1 %s" % pa_tmva
+    cmd = "svn log --limit 1 %s" % pa_tmva
     output = go(cmd).splitlines()
     rec = False
     for x in output:
