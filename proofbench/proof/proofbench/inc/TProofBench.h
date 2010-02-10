@@ -103,7 +103,9 @@ public:
    Int_t GenerateFiles();//Generate files for the test or cleanup run
 
    Int_t GenerateFilesN(Int_t nf, Long64_t fileent = 100000);
-   Int_t CreateDataSetsN(const char *basedir, Int_t np, Int_t *wp, Int_t nr, Int_t nfw);
+   Int_t CreateDataSetsN(const char *basedir, const char *lab,
+                         Int_t np, const Int_t *wp,
+                         Int_t nr, Int_t nfw, Int_t nfmx);
 
    TFile* FileOpen(const char* filename="", 
                    Option_t* option="", 
