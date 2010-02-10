@@ -686,9 +686,43 @@ Int_t TProofBench::FillNodeInfo()
    // Done
    return 0;
 }
+//_________________________________________________________________________________
+Int_t TProofBench::CreateDataSetsN(const char *basedir, Int_t np, Int_t *wp, Int_t nr, Int_t nfw)
+{
+   // Create the datasets for the tests
+
+   // Check inputs
+   if (np <= 0 || !wp || fProof) {
+      Error("CreateDataSetsN", "wrong inputs (%d, %p, %p)", np, wp, fProof);
+      return -1;
+   }
+
+   // There will be 'nr' datasets per point, rotating the files
+   // Dataset naming:
+   //                   ds_event_test_[wrks_point]_[run]
+   //
+   TString dsname;
+   Int_t kp, kr, kf, kk = 0;
+   for (kp = 0; kp < np; kp++) {
+      for (kr = 0; kr < nr; kr++) {
+         // Dataset name
+         dsname.Form("ds_event_test_%d_%d", wp[kp], kr);
+         Info("CreateDataSetsN", "creating dataset '%s' ...", dsname.Data());
+         // Create the TFileCollection
+         TFileCollection *fc = new TFileCollection;
+         Int_t nf = nfw * wp[kp];
+         for (kf = 0; kf < nf; kf++) {
+            fc->Add(TString::Format("%s/event_%d.root", basedir, kk++));
+         }
+         fc->Update();
+         // Register dataset with verification
+         fProof->RegisterDataSet(dsname, fc, "OV");
+      }
+   }
+}
 
 //_________________________________________________________________________________
-Int_t TProofBench::GenerateFilesN(Int_t nr, Int_t nfw, Long64_t fileent)
+Int_t TProofBench::GenerateFilesN(Int_t nf, Long64_t fileent)
 {
    // Generate the files needed for the test using TPacketizerFile
    // *** This is only to show how it works ***
@@ -703,15 +737,9 @@ Int_t TProofBench::GenerateFilesN(Int_t nr, Int_t nfw, Long64_t fileent)
    Long64_t oldNEvents = fNEvents;
    fNEvents = fileent;
 
-   // Create the file names
-   // Rule of thunmb:
-   //  - 4 runs on each worker such that 4x<size_run> > RAM
-   //  - at least 4 files per worker
-   //  - files size 100MB
-   //  - files regenerated after each test
+   // Create the file names and the map {worker,files}
    // Naming:
-   //         <basedir>/event_<run>_<file>.root
-   // Create the map {worker,files}
+   //         <basedir>/event_<file>.root
    TMap *filesmap = new TMap;
    filesmap->SetName("PROOF_FilesToProcess");
    Long64_t entries = 0;
@@ -720,19 +748,13 @@ Int_t TProofBench::GenerateFilesN(Int_t nr, Int_t nfw, Long64_t fileent)
    while ((ni = (TProofNode *) nxni())) {
       TList *files = new TList;
       files->SetName(ni->GetName());
-      Int_t j = 0;
-      for (j = 0; j < nr; j++) {
-         Int_t nf = nfw * ni->GetNWrks();
-         Int_t i = 0;
-         for (i = 0; i < nf; i++) {
-            files->Add(new TObjString(TString::Format("%s/event_%d_%d.root", fBaseDir.Data(), j, i)));
-            entries++;
-         }
+      Int_t i = 0;
+      for (i = 0; i < nf; i++) {
+         files->Add(new TObjString(TString::Format("%s/event_%d.root", fBaseDir.Data(), i)));
+         entries++;
       }
       filesmap->Add(new TObjString(ni->GetName()), files);
       files->Print();
-//      files->SetOwner(kFALSE);
-//      SafeDelete(files);
    }
 
    // Set the relevant input parameters
