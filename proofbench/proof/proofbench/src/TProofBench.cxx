@@ -689,7 +689,8 @@ Int_t TProofBench::FillNodeInfo()
 //_________________________________________________________________________________
 Int_t TProofBench::CreateDataSetsN(const char *basedir, Int_t np, Int_t *wp, Int_t nr, Int_t nfw)
 {
-   // Create the datasets for the tests
+   // Create the datasets for tests wth PROOF-Lite
+   // NB: Should be extended to the case the files are not local
 
    // Check inputs
    if (np <= 0 || !wp || fProof) {
