@@ -417,7 +417,7 @@ TEventIterTree::TFileTree::~TFileTree()
    // Default cdtor.
 
    // Avoid destroying the cache; must be placed before deleting the trees
-//   fFile->SetCacheRead(0);
+   fFile->SetCacheRead(0);
    SafeDelete(fTrees);
    SafeDelete(fFile);
 }
