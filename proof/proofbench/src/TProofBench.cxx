@@ -687,7 +687,9 @@ Int_t TProofBench::FillNodeInfo()
    return 0;
 }
 //_________________________________________________________________________________
-Int_t TProofBench::CreateDataSetsN(const char *basedir, Int_t np, Int_t *wp, Int_t nr, Int_t nfw)
+Int_t TProofBench::CreateDataSetsN(const char *basedir, const char *lab,
+                                   Int_t np, const Int_t *wp,
+                                   Int_t nr, Int_t nfw, Int_t nfmx)
 {
    // Create the datasets for tests wth PROOF-Lite
    // NB: Should be extended to the case the files are not local
@@ -700,26 +702,30 @@ Int_t TProofBench::CreateDataSetsN(const char *basedir, Int_t np, Int_t *wp, Int
 
    // There will be 'nr' datasets per point, rotating the files
    // Dataset naming:
-   //                   ds_event_test_[wrks_point]_[run]
+   //                   ds_event_[lab]_[wrks_point]_[run]
    //
-   TString dsname;
+   TString dsname, slab("");
+   if (lab && strlen(lab) > 0) slab.Form("_%s", lab);
    Int_t kp, kr, kf, kk = 0;
    for (kp = 0; kp < np; kp++) {
       for (kr = 0; kr < nr; kr++) {
          // Dataset name
-         dsname.Form("ds_event_test_%d_%d", wp[kp], kr);
+ 	 dsname.Form("ds_event%s_%d_%d", slab.Data(), wp[kp], kr);
          Info("CreateDataSetsN", "creating dataset '%s' ...", dsname.Data());
          // Create the TFileCollection
          TFileCollection *fc = new TFileCollection;
          Int_t nf = nfw * wp[kp];
          for (kf = 0; kf < nf; kf++) {
             fc->Add(TString::Format("%s/event_%d.root", basedir, kk++));
+            if (kk >= nfmx) kk = 0;
          }
          fc->Update();
          // Register dataset with verification
          fProof->RegisterDataSet(dsname, fc, "OV");
       }
    }
+   // Done
+   return 0;
 }
 
 //_________________________________________________________________________________
