@@ -23,7 +23,7 @@
 TSelEventGenN::TSelEventGenN() : fRunType(TProofBench::kRunNotSpecified),
                                  fNTries(10), fNEvents(10000),
                                  fNWorkersPerNode(0), fWorkerNumber(0),
-                                 fNTracksBench(10), fNTracksCleanup(100),
+                                 fNTracksBench(50), fNTracksCleanup(100),
                                  fTotalGen(0)
 {
    // Constructor
