@@ -66,7 +66,7 @@ TSelHist::~TSelHist()
    //if (fRandom) delete fRandom;
    SafeDelete(fRandom);
 
-   Info("TSelHist","destroying ...");
+   // Info("TSelHist","destroying ...");
    
    for (Int_t i=0; i < fNhist; i++) {
       if (fHist1D && fHist1D[i] && !fOutput->FindObject(fHist1D[i])) {
@@ -108,13 +108,11 @@ void TSelHist::Begin(TTree * /*tree*/)
       TParameter<Int_t> *p = dynamic_cast<TParameter<Int_t>*>(fInput->FindObject("fDraw"));
       if (p){
          fDraw = (Bool_t) p->GetVal();
+      } else { 
+         Warning("Begin", "fDraw not type of Parameter<Int_t> - Ignoring");
       }
-      else{ 
-         Error("Begin", "fDraw not type of Parameter<Int_t>");
-      }
-   }
-   else{
-      Error("Begin", "fDraw not found");
+//   } else {
+//      Error("Begin", "fDraw not found");
    }
 
    fHistType=TProofBench::kHistAll;
@@ -123,13 +121,11 @@ void TSelHist::Begin(TTree * /*tree*/)
       if (p){
          fHistType= (Int_t) p->GetVal();
          Info("Begin", "fHistType=%d", fHistType);
+      } else { 
+         Warning("Begin", "fHistType not type of Parameter<Int_t> - Ignoring");
       }
-      else{ 
-         Error("Begin", "fHistType not type of Parameter<Int_t>");
-      }
-   }
-   else{
-      Error("Begin", "fHistType not found");
+//   } else {
+//      Error("Begin", "fHistType not found");
    }
 
    if (fDraw) {
@@ -161,13 +157,11 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
       fDraw = (p) ? (Bool_t) p->GetVal() : kTRUE;
       if (p){
          Info("SlaveBegin", "fDraw=%d", fDraw);
+      } else { 
+         Warning("SlaveBegin", "fDraw not of type TParameter<Int_t> - Ignoring");
       }
-      else{ 
-         Error("SlaveBegin", "fDraw not of type TParameter<Int_t>");
-      }
-   }
-   else{
-      Error("SlaveBegin", "fDraw not found");
+//   } else {
+//      Error("SlaveBegin", "fDraw not found");
    }
 
    fHistType=TProofBench::kHistAll;
@@ -176,18 +170,16 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
       if (p){
          fHistType=(Int_t) p->GetVal(); 
          Info("SlaveBegin", "fHistType=%d", fHistType);
+      } else {
+         Error("SlaveBegin", "fHistType not type of Parameter<Int_t> - Ignoring");
       }
-      else{ 
-         Error("SlaveBegin", "fHistType not type of Parameter<Int_t>");
-      }
-   }
-   else{
-      Error("SlaveBegin", "fHistType not found");
+//   } else {
+//      Error("SlaveBegin", "fHistType not found");
    }
 
-   printf("fHistType & TProofBench::kHist1D=%d\n", fHistType & TProofBench::kHist1D);
-   printf("fHistType & TProofBench::kHist2D=%d\n", fHistType & TProofBench::kHist2D);
-   printf("fHistType & TProofBench::kHist3D=%d\n", fHistType & TProofBench::kHist3D);
+   Printf("fHistType & TProofBench::kHist1D=%d", fHistType & TProofBench::kHist1D);
+   Printf("fHistType & TProofBench::kHist2D=%d", fHistType & TProofBench::kHist2D);
+   Printf("fHistType & TProofBench::kHist3D=%d", fHistType & TProofBench::kHist3D);
 
    // Create the histogram
    if (fHistType & TProofBench::kHist1D){
@@ -243,7 +235,6 @@ Bool_t TSelHist::Process(Long64_t)
    Double_t x, y, z;
    if (fHistType & TProofBench::kHist1D){
       for (Int_t i=0; i < fNhist; i++) {
-      
          if (fRandom && fHist1D[i]) {
             x = fRandom->Gaus(0.,1.);
             fHist1D[i]->Fill(x);
