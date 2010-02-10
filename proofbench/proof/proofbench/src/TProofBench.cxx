@@ -693,7 +693,7 @@ Int_t TProofBench::CreateDataSetsN(const char *basedir, Int_t np, Int_t *wp, Int
    // NB: Should be extended to the case the files are not local
 
    // Check inputs
-   if (np <= 0 || !wp || fProof) {
+   if (np <= 0 || !wp || !fProof) {
       Error("CreateDataSetsN", "wrong inputs (%d, %p, %p)", np, wp, fProof);
       return -1;
    }
