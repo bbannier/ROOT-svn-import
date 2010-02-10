@@ -2673,8 +2673,6 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                      break;
                   }
                }
-               // Delete the packet
-               SafeDelete(elem);
             } else {
                if (fWaitingSlaves == 0) fWaitingSlaves = new TList;
                fWaitingSlaves->Add(new TPair(s, mess));
