@@ -42,12 +42,13 @@ ClassImp(TSelEventGen)
 TSelEventGen::TSelEventGen()
    :fRunType(TProofBench::kRunNotSpecified),
    fMaxNWorkers(0),
-   fNTries(10),
+   fNFilesAWorker(1),
    fNEvents(10000),
    fNWorkersPerNode(0),
    fWorkerNumber(0),
    fNTracksBench(10),
-   fNTracksCleanup(100)
+   fNTracksCleanup(100),
+   fRegenerate(false)
 {
    if (gProofServ){
       fBaseDir=gProofServ->GetDataDir();
@@ -61,12 +62,13 @@ TSelEventGen::TSelEventGen()
 TSelEventGen::TSelEventGen(TTree*)
    :fRunType(TProofBench::kRunNotSpecified),
    fMaxNWorkers(0),
-   fNTries(10),
+   fNFilesAWorker(1),
    fNEvents(10000),
    fNWorkersPerNode(0),
    fWorkerNumber(0),
    fNTracksBench(10),
-   fNTracksCleanup(100)
+   fNTracksCleanup(100),
+   fRegenerate(false)
 {
    if (gProofServ){
       fBaseDir=gProofServ->GetDataDir();
@@ -130,10 +132,24 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          }
          continue;
       }
-      if (sinput.Contains("fNTries")){
+      if (sinput.Contains("fBenchmarkMode")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fNTries= a->GetVal();
+            fBenchmarkMode=(TProofBench::EBenchmarkMode)a->GetVal();
+         }
+         continue;
+      }
+      if (sinput.Contains("fNFilesAWorker")){
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+         if (a){
+            fNFilesAWorker=a->GetVal();
+         }
+         continue;
+      }
+      if (sinput.Contains("fNFilesANode")){
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+         if (a){
+            fNFilesANode=a->GetVal();
          }
          continue;
       }
@@ -165,7 +181,14 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          }
          continue;
       }
-      if (sinput.Contains("listofslaveinfos")){
+      if (sinput.Contains("fRegenerate")){
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+         if (a){
+            fRegenerate=a->GetVal();
+         }
+         continue;
+      }
+      if (sinput.Contains("PROOF_SlaveInfos")){
          obj->Print("a"); 
          listofslaveinfos=dynamic_cast<TSortedList*>(obj);
          continue;
@@ -213,6 +236,8 @@ void TSelEventGen::SlaveBegin(TTree *tree)
 
       Info("SlaveBegin", "Number of workers on this node (%s) is %d", hostname.Data(), fNWorkersPerNode); 
       Info("SlaveBegin", "Worker number on this node (%s) is %d", hostname.Data(), fWorkerNumber); 
+
+      Print();
    }
    else {
       Error("SlaveBegin", "Slave info empty");
@@ -220,67 +245,98 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    }
 
 
-   TString sfilegenerated="listoffilesgenerated_"+hostname+"_"+thisordinal;
+   TString sfilegenerated="PROOF_FilesGenerated" "_"+hostname+"_"+thisordinal;
 
    TList* lfilegenerated=new TList;
    lfilegenerated->SetName(sfilegenerated);
    TDSet* dataset=new TDSet("TTree","EventTree"); 
 
-   Long64_t nentries;
    //generate files
    if (fRunType==TProofBench::kRunGenerateFileBench){
-      //for (Int_t i=fWorkerNumber; i<fMaxNWorkers; i+=fNWorkersPerNode){
-         //for (Int_t j=0; j<fNTries; j++){
-         for (Int_t j=fWorkerNumber; j<fNTries; j+=fNWorkersPerNode){
-            
-            TString seed = hostname;
-            seed += "_FullDataRead_";   
-            //seed += i+1; 
-            seed += 0;   //0 for all runs
-            seed += "_";
-            seed += j;
-            gRandom->SetSeed(static_cast<UInt_t>(TMath::Hash(seed)));
-   
-            TString filename = fBaseDir;
-            filename += "/event_tree_";
-            filename += seed;
-            filename += ".root";
-   
-            nentries=GenerateFiles(fRunType, filename, fNEvents);
-   
-            dataset->Add(filename);
-   
-            seed = hostname;
-            seed += "_OptDataRead_";  
-            //seed += i+1; 
-            seed += 0;   //0 for all runs
-            seed += "_";
-            seed += j;
-            gRandom->SetSeed(static_cast<UInt_t>(TMath::Hash(seed)));
-   
-            filename = fBaseDir;
-            filename += "/event_tree_";
-            filename += seed;
-            filename += ".root";
-   
-            //printf("filename=%s\n", filename.Data());
-   
-            nentries=GenerateFiles(fRunType, filename, fNEvents);
-   
-            dataset->Add(filename);
+      Int_t from, to, inc;
+      switch (fBenchmarkMode){
+         case TProofBench::kModeStaticNode:
+            //from=fWorkerNumber;
+            from=0;
+            to=fNFilesANode;
+            //inc=fNWorkersPerNode;
+            inc=1;
+         break;
+         case TProofBench::kModeStaticWorkersNode:
+            from=0;
+            to=fNFilesAWorker;
+            inc=1;
+         break;
+         case TProofBench::kModeStaticCluster:
+         break;
+         case TProofBench::kModeDynamicWorkers:
+         break;
+         default:
+         break;
+      } 
+
+         for (Int_t i=from; i*fNWorkersPerNode+fWorkerNumber<to; i+=inc){
+      //for (Int_t i=0; i<fNFilesAWorker; i++){
+            Long64_t neventstogenerate=fNEvents;
+            Int_t k=0; //serial number of file when a file becomes larger 
+                    //than maximum tree size (1.9 GB) limit
+            while(neventstogenerate>0){
+               //TString seed = hostname;
+               TString seed = "_" "Benchmark" "_";   
+               seed += i; 
+               seed += "_";
+               seed += k++;  //serial number
+               gRandom->SetSeed(static_cast<UInt_t>(TMath::Hash(seed)));
+      
+               TString filename = fBaseDir;
+               filename += "/EventTree";
+               filename += seed;
+               filename += ".root";
+      
+               if (!fRegenerate){
+                  //see if a file exists
+                  FileStat_t filestat;
+                  if (!gSystem->GetPathInfo(filename, filestat)){//stat'ed
+                     //Check if file is ok
+                     TFile f(filename);
+                     if (!f.IsZombie()){
+                        Long64_t size=f.GetSize();
+                        TTree* t=(TTree*)f.Get("EventTree");
+                        if (size!=-1 && t){
+                           Long64_t entries_file=t->GetEntries();
+                           Long64_t sizetree=t->GetTotBytes();
+                           //Long64_t maxtreesize=TTree::GetMaxTreeSize();
+                           Long64_t maxtreesize=100*1024*1024;//test
+                           if (entries_file==neventstogenerate
+                          || (entries_file<neventstogenerate && 0.9*maxtreesize<sizetree && sizetree<1.1*maxtreesize)){
+                              //file size seems to be correct, skip generation
+                              Info("SlaveBegin", "Bench file (%s, entries=%lld) exists."
+                                   " Skipping generation", filename.Data(), entries_file);
+                              neventstogenerate-=entries_file;
+                              dataset->Add(filename);
+                              continue;
+                           }
+                        }
+                     }
+                  }
+               }
+               neventstogenerate-=GenerateFiles(fRunType, filename, neventstogenerate);
+               dataset->Add(filename);
+            }
          }
-      //}
-      dataset->Lookup();
-      dataset->Validate();
-
-      lfilegenerated->Add(dataset);
-      lfilegenerated->Print("a");
-
-      fOutput->Add(lfilegenerated);
+         
+         dataset->Lookup();
+         dataset->Validate();
+   
+         lfilegenerated->Add(dataset);
+         lfilegenerated->Print("a");
+   
+         fOutput->Add(lfilegenerated);
       //fOutput->Add(dataset);
    }
    else if (fRunType==TProofBench::kRunGenerateFileCleanup){
 
+      //(re)generate files
       MemInfo_t meminfo;
       if (gSystem->GetMemInfo(&meminfo)){
           Error("SlaveBegin", "Cannot get memory information, returning");
@@ -289,34 +345,61 @@ void TSelEventGen::SlaveBegin(TTree *tree)
       Info("SlaveBegin", "Total memory on this node: %d MB", meminfo.fMemTotal);
 
       //Long64_t memorytotal=(Long64_t)(meminfo.fMemTotal)*1024*1024;
-      //Long64_t memorytotal=4.5*1024*1024*1024;
-//      Long64_t memorytotal=(Long64_t)10*1024*1024;
-      Long64_t memorytotal=(Long64_t)50*1024*1024;
+      Long64_t memorytotal=(Long64_t)200*1024*1024;
   
       Long64_t memorythisworker=memorytotal/fNWorkersPerNode+1;
 
       Long64_t bytestowrite=memorythisworker;
       Long64_t byteswritten=0;
       Int_t i=0;
-      do {
-         TString seed = hostname;
-         seed += "_" "Cleanup";
-         seed += fWorkerNumber;
-         seed += "_";
+      while(bytestowrite>0){
+         //TString seed = hostname;
+         TString seed = "_" "Cleanup" "_";
+//         seed += fWorkerNumber;
          seed += i++; //serial number in case file is larger than TTree::fgMaxTreeSize
+//         seed += "_";
 
          gRandom->SetSeed(static_cast<UInt_t>(TMath::Hash(seed)));
 
          TString filename = fBaseDir;
-         filename += "/event_tree_";
+         filename += "/EventTree";
          filename += seed;
          filename += ".root";
+
+
+         if (!fRegenerate){
+            //see if a file exists
+            FileStat_t filestat;
+            if (!gSystem->GetPathInfo(filename, filestat)){//stat'ed
+               //Check if file is ok
+               //Long64_t size=filestat.fSize;
+               TFile f(filename);
+               if (!f.IsZombie()){
+                  TTree* tree=(TTree*)f.Get("EventTree");
+                  if (tree){
+                     Long64_t sizetree=tree->GetTotBytes();
+                     //Long64_t maxtreesize=TTree::GetMaxTreeSize();
+                     Long64_t maxtreesize=100*1024*1024;//test
+                     if ( ((0.9*maxtreesize<sizetree && sizetree<1.1*maxtreesize)
+                      || (0.9*bytestowrite<sizetree && sizetree<1.1*bytestowrite))){
+                        //file size seems to be correct, skip generation
+                        byteswritten=sizetree;
+                        bytestowrite-=byteswritten;
+                        Info("SlaveBegin", "Cleanup file (%s, tree size=%lld) exists."
+                             " Skipping generation", filename.Data(), sizetree);
+                        dataset->Add(filename);
+                        continue;
+                     }
+                  }
+               }
+            }
+         }
+
 
          byteswritten=GenerateFiles(fRunType, filename, bytestowrite);
          bytestowrite-=byteswritten;
          dataset->Add(filename);
       }
-      while(bytestowrite>0 && byteswritten>0);
 
       dataset->Lookup();
       dataset->Validate();
@@ -326,18 +409,22 @@ void TSelEventGen::SlaveBegin(TTree *tree)
 
       fOutput->Add(lfilegenerated);
    }
+   else{
+      Error("SlaveBegin", "Run type not recognized: fRunType=%d, returning", fRunType);
+      return;
+   }
 
    return;
 }
 
-Long64_t TSelEventGen::GenerateFiles(TProofBench::ERunType runtype, TString filename, Long64_t size)
+Long64_t TSelEventGen::GenerateFiles(TProofBench::ERunType runtype, TString filename, Long64_t sizenevents)
 {
 //runtype is run type either TProofBench::kRunGenerateFileBench or TProofBench::kRunGenerateFileCleanup
 //filename is the name of the file to be generated
-//size is number of events to generate when runtype==TProofBench::kRunGenerateFileBench
+//sizenevents is number of events to generate when runtype==TProofBench::kRunGenerateFileBench
 // and size of the file to generate when runtype==TProofBench::kRunGenerateFileCleanup
 //returns number of entries in the file when runtype==TProofBench::kRunGenerateFileBench
-//returns bytes rewritten when runtype==TProofBench::kRunGenerateFileCleanup
+//returns bytes written when runtype==TProofBench::kRunGenerateFileCleanup
 //return 0 in case error
 
    if (!(runtype==TProofBench::kRunGenerateFileCleanup 
@@ -367,29 +454,36 @@ Long64_t TSelEventGen::GenerateFiles(TProofBench::ERunType runtype, TString file
 
    Long64_t i=0;
    Long64_t fileend=0;
+   Long64_t size_generated=0;
+
+   f->SetCompressionLevel(0); //no compression
+   //take control on file change
+   //const Long64_t maxtreesize_org=TTree::GetMaxTreeSize();
+   const Long64_t maxtreesize_org=100*1024*1024;  //100 MB limit for test
+   TTree::SetMaxTreeSize(10*maxtreesize_org);
 
    if (runtype==TProofBench::kRunGenerateFileBench){
-      Info("GenerateFiles", "Generating %s with %lld event(s)", filename.Data(), size);   
-      for(i=0; i<size; i++) {
-         event->Build(i,fNTracksBench,0);
-         eventtree->Fill();
+      Info("GenerateFiles", "Generating %s", filename.Data());   
+      while (sizenevents-- && size_generated<maxtreesize_org){
+         event->Build(i++,fNTracksBench,0);
+         size_generated+=eventtree->Fill();
       }
+      nentries=eventtree->GetEntries();
+      Info("GenerateFiles", "%s generated with %lld entries", filename.Data(), nentries);
    }
    else if (runtype==TProofBench::kRunGenerateFileCleanup){
       Info("GenerateFiles", "Generating %s", filename.Data());   
-      f->SetCompressionLevel(0); //no compression
-
-      //const Long64_t maxtreesize=TTree::GetMaxTreeSize();
-      const Long64_t maxtreesize=Long64_t(1024+512)*1024*1024; //hard limit 1.5 GB
-      //const Long64_t maxtreesize=1024*1024; //hard limit for quick test
-      printf("fileend=%lld size=%lld maxtreesize=%lld\n", fileend, size, maxtreesize);
-      while (fileend<size && (fileend+buffersize)<maxtreesize){
+      //while (fileend<size && (fileend+buffersize)<fMaxTreeSize){
+      while (size_generated<sizenevents && size_generated<maxtreesize_org){
          event->Build(i++, fNTracksCleanup,0);
-         eventtree->Fill();
-         fileend=f->GetEND();
+         size_generated+=eventtree->Fill();
+         //fileend=f->GetEND();
       }
-      Info("GenerateFiles", "Total bytes of %lld written", fileend);
+      Info("GenerateFiles", "%s generated with %lld bytes", filename.Data(), size_generated);
    }
+   //set it back
+   //TTree::SetMaxTreeSize(maxtreesize_org);
+   TTree::SetMaxTreeSize(1900000000);
 
    savedir = gDirectory;
 
@@ -398,18 +492,18 @@ Long64_t TSelEventGen::GenerateFiles(TProofBench::ERunType runtype, TString file
    eventtree->Write();
    eventtree->SetDirectory(0);
 
-   nentries=eventtree->GetEntries();
+   //nentries=eventtree->GetEntries();
    //f->Write();
    //printf("current dir=%s\n", gDirectory->GetPath());
    f->Close();
    delete f;
    f = 0;
-   event->Delete();
    eventtree->Delete();
+   event->Delete();
    savedir->cd();
 
    if (runtype==TProofBench::kRunGenerateFileBench) return nentries;
-   else if (runtype==TProofBench::kRunGenerateFileCleanup) return fileend;
+   else if (runtype==TProofBench::kRunGenerateFileCleanup) return size_generated;
    else return 0;
 }
 
@@ -450,3 +544,19 @@ void TSelEventGen::Terminate()
    // a query. It always runs on the client, it can be used to present
    // the results graphically or save the results to file.
 }
+
+void TSelEventGen::Print(Option_t *) const
+{
+
+   printf("fMaxNWorkers=%d\n", fMaxNWorkers);
+   Printf("fBenchmarkMode=%d\n", fBenchmarkMode);
+   Printf("fNFilesAWorker=%d\n", fNFilesAWorker);
+   Printf("fNFilesANode=%d\n", fNFilesANode);
+   Printf("fNEvents=%lld\n", fNEvents);
+   Printf("fNWorkersPerNode=%d\n", fNWorkersPerNode);
+   printf("fWorkerNumber=%d\n", fWorkerNumber);
+   printf("fNTracksBench=%d\n", fNTracksBench);
+   printf("fNTracksCleanup=%d\n", fNTracksCleanup);
+   printf("fRegenerate=%d\n", fRegenerate);
+}
+

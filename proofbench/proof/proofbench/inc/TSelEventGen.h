@@ -87,6 +87,7 @@ public :
    virtual TList  *GetOutputList() const { return fOutput; }
    virtual void    SlaveTerminate();
    virtual void    Terminate();
+   virtual void    Print(Option_t *option="") const;
 
 protected:
    Long64_t GenerateFiles(TProofBench::ERunType, TString filename, Long64_t nevents);
@@ -95,12 +96,15 @@ private:
    TProofBench::ERunType fRunType;
    TString fBaseDir;
    Int_t fMaxNWorkers;
-   Int_t fNTries;
+   Int_t fNFilesAWorker;   //number of files a worker
+   Int_t fNFilesANode;     //number of files a node
    Long64_t fNEvents;
    Int_t fNWorkersPerNode; //total number of workers on this node
-   Int_t fWorkerNumber; //worker number on this node
-   Int_t fNTracksBench; //number of tracks in an event for benchmark files
-   Int_t fNTracksCleanup; //number of tracks in an event for cleanup files
+   Int_t fWorkerNumber;    //worker number on this node
+   Int_t fNTracksBench;    //number of tracks in an event for benchmark files
+   Int_t fNTracksCleanup;  //number of tracks in an event for cleanup files
+   Int_t fRegenerate;      //Force generation of cleanup files
+   TProofBench::EBenchmarkMode fBenchmarkMode;   //benchmark mode
 
    ClassDef(TSelEventGen,0);
 };
@@ -108,6 +112,7 @@ private:
 #endif
 
 #ifdef TSelEventGen_cxx
+
 void TSelEventGen::Init(TTree *tree)
 {
    // The Init() function is called when the selector needs to initialize
