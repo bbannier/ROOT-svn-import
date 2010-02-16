@@ -264,7 +264,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
 
    switch (fRunType){
 
-   case TProofBench::kRunNotSpecified://full read
+   case TProofBench::kRunNotSpecified:
       Info("Process", "Runtype (%d) not specified, doing nothing");
       return kTRUE; 
       break;
@@ -298,7 +298,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
       }
  
       break;
-   case TProofBench::kRunNoDataRead: //partial read
+   case TProofBench::kRunNoDataRead: //no read
       break;
    default:
       Error("Process", "Runtype (%d) not supported for this selector (TSelEvent) is requested", fRunType);

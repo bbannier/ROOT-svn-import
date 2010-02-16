@@ -48,6 +48,7 @@ class TTree;
 class TProof;
 class TProofServ;
 class TProfile;
+class TMap;
 
 R__EXTERN TProof *gProof;
 
@@ -74,32 +75,41 @@ public:
                    kHist3D=4,
                    kHistAll=kHist1D | kHist2D | kHist3D}; 
 
+   enum EBenchmarkMode {kModeNotSpecified=0,
+                        kModeStaticNode,          //fixed number of files on each node
+                        kModeStaticWorkersNode,   //files as many as workers on each node
+                        kModeStaticCluster, //fixed number of files per cluster
+                        kModeDynamicWorkers};     //number of files is set as number of workers
+
    TProofBench(TString fFilename="",//output file where benchmark performance plot will be written to, 
                                     //user has to provide one
                TProof* proof=gProof,
                TString basedir="",  //base directory where files to be used during the test are written
                                     //default is not to provide and it will be automatically decided
                ERunType runtype=kRunNotSpecified, //type of run
+               EBenchmarkMode benchmarkmode=kModeStaticNode, //type of mode
                Long_t nhists=10,
                EHistType histtype=kHistAll,
                Int_t maxnworkers=-1,//maximum number of workers to be tested. 
                                     //If not set (default), 2 times the number of total workers in the cluster available
                Int_t nnodes=-1,
                Int_t ntries=10,
+               Int_t nfilesaworker=1,
+               Int_t nfilesanode=-1,
                Long64_t nevents=10000,
                Int_t stepsize=-1,
                Int_t start=1,
                Int_t ntracksbench=3,
                Int_t ntrackscleanup=100,
                Int_t draw=0,
-               Int_t debug=0); //default constructor
+               Int_t debug=0,
+               Int_t regenerate=0); //default constructor
 
    virtual ~TProofBench();     //destructor
 
    void RunBenchmarkAll(); //Do all benchmark tests
 
-   void RunBenchmark(ERunType whattorun=kRunNotSpecified); //Do a benchmark test
-
+   void RunBenchmark(ERunType whattorun=kRunNotSpecified, Bool_t regenerate=false); //Do a benchmark test
    Int_t GenerateFiles();//Generate files for the test or cleanup run
 
    Int_t GenerateFilesN(Int_t nf, Long64_t fileent = 100000);
@@ -128,11 +138,14 @@ public:
    void SetBaseDir(TString basedir);
    void SetRunType(TString where, ERunType runtype);
    void SetNHists(Long_t nhists);
+   void SetBenchmarkMode(EBenchmarkMode benchmarkmode, Int_t par=-1);
    void SetHistType(EHistType histtype) {fHistType=histtype;}
    void SetMaxNWorkers(Int_t maxnworkers);
    void SetMaxNWorkers(TString sworkers);
    void SetNNodes(Int_t nnodes) {fNNodes=nnodes;}
    void SetNTries(Int_t ntries);
+   void SetNFilesAWorker(Int_t nfilesaworker);
+   void SetNFilesANode(Int_t nfilesanode);
    void SetNEvents(Long64_t nevents);
    void SetStepSize(Int_t stepsize);
    void SetStart(Int_t start);
@@ -140,17 +153,21 @@ public:
    void SetNTracksCleanup(Int_t ntracks);
    void SetDraw(Int_t draw);
    void SetDebug(Int_t debug);
+   void SetRegenerate(Int_t regenerate);
 
    //getters
    TFile* GetFile(){return fFile;}
    TString GetBaseDir() const {return fBaseDir;}
    ERunType GetRunType() const {return fRunType;}
    TString GetNameStem()const{return fNameStem;}
+   EBenchmarkMode GetBenchmarkMode()const{return fBenchmarkMode;}
    Long_t GetNHists() const {return fNHists;}
    EHistType GetHistType() const {return fHistType;}
    Int_t GetMaxNWorkers() const {return fMaxNWorkers;}
    Int_t GetNNodes() const {return fNNodes;}
    Int_t GetNTries() const {return fNTries;}
+   Int_t GetNFilesAWorker() const {return fNFilesAWorker;}
+   Int_t GetNFilesANode() const {return fNFilesANode;}
    Long64_t GetNEvents() const {return fNEvents;}
    Int_t GetStepSize() const {return fStepSize;}
    Int_t GetStart() const {return fStart;}
@@ -158,6 +175,7 @@ public:
    Int_t GetNTracksCleanup() const {return fNTracksCleanup;}
    Int_t GetDraw() const {return fDraw;}
    Int_t GetDebug()const{return fDebug;}
+   Int_t GetRegenerate()const{return fRegenerate;}
 
    Long64_t GetNEventsGenerated()const{return fNEventsGenerated;}
    Int_t GetNFilesGeneratedBench()const{return fNFilesGeneratedBench;}
@@ -185,10 +203,8 @@ protected:
    void SetInputParameters(); //set input parameters to selector
    Int_t CheckParameters(TString where);
    Int_t FillNodeInfo();
-   void MakeDataSet(//Int_t nworkers=-1, 
-                    //Int_t nnodes=-1, 
-                    Int_t ntries=-1); //make dataset
-
+   void BuildNodesInfo();
+   void MakeDataSet();        //make dataset
 
 private:
    //TProofBench(const TProofBench&){} //not implemented
@@ -198,12 +214,17 @@ private:
    TString fBaseDir;               //base directory for files
    ERunType fRunType;              //benchmark run type
    TString fNameStem;              //name stem for the run type
+   EBenchmarkMode fBenchmarkMode;  //benchmark mode
    Long_t fNHists;                 //number of histograms for CPU test
    EHistType fHistType;
    Int_t fMaxNWorkers;             //number of maximum processes, 
                                    //this can be more than the number of total workers in the cluster
    Int_t fNNodes;                  //number of nodes to be included in the test 
    Int_t fNTries;                  //number of files for I/O test
+   Int_t fNFilesAWorker;           //number of files a worker for I/O test, 
+                                   //relevant when fBenchmarkMode == kModeStaticWorkersNode
+   Int_t fNFilesANode;             //number of files a node for I/O test
+                                   //relevant when fBenchmarkMode == kModeStaticNode
    Long64_t fNEvents;              //number of events per file for CPU test and/or I/O test
    Int_t fStepSize;                //test to be performed every fStepSize cpu cores
    Int_t fStart;                   //starting number of cpu cores
@@ -211,6 +232,7 @@ private:
    Int_t fNTracksCleanup;          //number of tracks in an event for cleanup files
    Int_t fDraw;                    //when true draw various plots on the canvas
    Int_t fDebug;                   //debug switch, when on various debug plots will be saved to file
+   Int_t fRegenerate;              //when true, regenerate files
 
    Long64_t fNEventsGenerated;     //number of events per file successfully generated
    Int_t fNFilesGeneratedBench;         //number of files successfully generated to be used for the benchmark test
@@ -228,6 +250,7 @@ private:
    TProfile* fProfFullDataReadIO;
 
    TList    *fNodes;               // List of worker nodes info
+   TMap*     fNodeInfo;            //map of <nodename, # workers>
    //TList* fListRunType;       //map of <ERunType, namestem>
 
    ClassDef(TProofBench,0)         //PROOF benchmark suite steering
