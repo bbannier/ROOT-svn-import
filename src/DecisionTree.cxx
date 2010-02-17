@@ -445,7 +445,7 @@ void TMVA::DecisionTree::FillEvent( TMVA::Event & event,
    } 
    else {
       node->IncrementNBkgEvents( event.GetWeight() );
-      node->IncrementNSigEvents_unweighted( );
+      node->IncrementNBkgEvents_unweighted( );
    }
    node->SetSeparationIndex(fSepType->GetSeparationIndex(node->GetNSigEvents(),
                                                          node->GetNBkgEvents()));
