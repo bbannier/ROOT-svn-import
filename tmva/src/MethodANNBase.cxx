@@ -12,17 +12,14 @@
  *      from background.                                                          *
  *                                                                                *
  * Authors (alphabetical):                                                        *
- *      Andreas Hoecker  <Andreas.Hocker@cern.ch>   - CERN, Switzerland           *
- *      Matt Jachowski   <jachowski@stanford.edu>   - Stanford University, USA    *
- *      Joerg Stelzer    <stelzer@cern.ch>          - DESY, Germany               *
- *      Peter Speckmayer <peter.speckmayer@cern.ch> - CERN, Switzerland           *
- *                                                                                *
- * Small changes (regression):                                                    *
- *      Krzysztof Danielowski <danielow@cern.ch>  - IFJ PAN & AGH, Poland         *
- *      Kamil Kraszewski      <kalq@cern.ch>      - IFJ PAN & UJ , Poland         *
- *      Maciej Kruk           <mkruk@cern.ch>     - IFJ PAN & AGH, Poland         *
- *                                                                                *
- *                                                                                *
+ *      Krzysztof Danielowski <danielow@cern.ch>       - IFJ & AGH, Poland        *
+ *      Andreas Hoecker       <Andreas.Hocker@cern.ch> - CERN, Switzerland        *
+ *      Matt Jachowski        <jachowski@stanford.edu> - Stanford University, USA *
+ *      Kamil Kraszewski      <kalq@cern.ch>           - IFJ & UJ, Poland         *
+ *      Maciej Kruk           <mkruk@cern.ch>          - IFJ & AGH, Poland        *
+ *      Peter Speckmayer      <peter.speckmayer@cern.ch> - CERN, Switzerland      *
+ *      Joerg Stelzer         <stelzer@cern.ch>        - DESY, Germany            *
+ *      Jiahang Zhong         <Jiahang.Zhong@cern.ch>  - Academia Sinica, Taipei  *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
  *      CERN, Switzerland                                                         *

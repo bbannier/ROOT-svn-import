@@ -64,17 +64,17 @@ int main( int argc, char** argv )
    // default MVA methods to be trained + tested
    std::map<std::string,int> Use;
 
-   Use["PDERS"]           = 1;
+   Use["PDERS"]           = 0;
    Use["PDERSkNN"]        = 0; // depreciated until further notice
-   Use["PDEFoam"]         = 1; // preparation for new TMVA version "reader". This method is not available in this version of TMVA
+   Use["PDEFoam"]         = 0; // preparation for new TMVA version "reader". This method is not available in this version of TMVA
    // ---
    Use["KNN"]             = 0;
    // ---
-   Use["LD"]		        = 1;
+   Use["LD"]		  = 0;
    // ---
    Use["FDA_GA"]          = 0;
    Use["FDA_MC"]          = 0;
-   Use["FDA_MT"]          = 1;
+   Use["FDA_MT"]          = 0;
    Use["FDA_GAMT"]        = 0;
    // ---
    Use["MLP"]             = 1; // this is the recommended ANN
@@ -180,7 +180,7 @@ int main( int argc, char** argv )
 
    // tell the factory to use all remaining events in the trees after training for testing:
    factory->PrepareTrainingAndTestTree( mycut, 
-                                        "nTrain_Regression=0:nTest_Regression=0:SplitMode=Random:NormMode=NumEvents:!V" );
+                                        "nTrain_Regression=2000:nTest_Regression=2000:SplitMode=Random:NormMode=NumEvents:!V" );
 
    // If no numbers of events are given, half of the events in the tree are used for training, and 
    // the other half for testing:
@@ -240,8 +240,10 @@ int main( int argc, char** argv )
                            "!H:!V:Formula=(0)+(1)*x0+(2)*x1:ParRanges=(-100,100);(-100,100);(-100,100):FitMethod=GA:Converger=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=0:!UseImprove:!UseMinos:SetBatch:Cycles=1:PopSize=5:Steps=5:Trim" );
 
    // Neural network (MLP)
-   if (Use["MLP"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLP", "!H:!V:VarTransform=Norm:NeuronType=tanh:NCycles=20000:HiddenLayers=N+20:TestRate=6:TrainingMethod=BFGS:Sampling=0.3:SamplingEpoch=0.8:ConvergenceImprove=1e-6:ConvergenceTests=15:!UseRegulator" );
+   if (Use["MLP"]){
+//       factory->BookMethod( TMVA::Types::kMLP, "NN", "!H:!V:VarTransform=Norm:NeuronType=tanh:NCycles=20000:HiddenLayers=N+20:TestRate=6:TrainingMethod=BFGS:Sampling=0.3:SamplingEpoch=0.8:ConvergenceImprove=1e-6:ConvergenceTests=15:!UseRegulator" );
+      factory->BookMethod( TMVA::Types::kMLP, "BNN", "!H:!V:VarTransform=Norm:NeuronType=tanh:NCycles=20000:HiddenLayers=N+5:TestRate=6:TrainingMethod=BFGS:Sampling=0.3:SamplingEpoch=0.8:ConvergenceImprove=1e-6:ConvergenceTests=3:UseRegulator" );
+   }
 
    // Support Vector Machine
    if (Use["SVM"])
