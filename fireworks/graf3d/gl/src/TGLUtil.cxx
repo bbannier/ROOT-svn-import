@@ -2404,7 +2404,7 @@ ClassImp(TGLSelectionBuffer);
 
 //______________________________________________________________________________
 TGLSelectionBuffer::TGLSelectionBuffer()
-                        : fWidth(0)
+                        : fWidth(0), fHeight(0)
 {
    // TGLSelectionBuffer constructor.
 }
