@@ -1,9 +1,11 @@
 // @(#)root/eve:$Id$
 // Author: Matevz Tadel
 
-// Shows CMS geometry.
+// Shows CMS geometry in stereo mode.
+// This requires quad-buffer support in the OpenGL hardware / driver,
+// otheriwse a fatal error occurs.
 
-void geom_cms()
+void geom_cms_stereo()
 {
    TEveManager::Create();
 
@@ -25,7 +27,27 @@ void geom_cms()
    muon->SetVisLevel(4);
    gEve->AddGlobalElement(muon);
 
+   // --- Stereo ---
+
+   TEveWindowSlot* slot = 0;
+   slot = TEveWindow::CreateWindowInTab(gEve->GetBrowser()->GetTabRight());
+
+   TEveViewer* sv = new TEveViewer("Stereo GL", "Stereoscopic view");
+   sv->SpawnGLViewer(gEve->GetEditor(), kTRUE);
+   sv->AddScene(gEve->GetGlobalScene());
+
+   slot->ReplaceWindow(sv);
+
+   gEve->GetViewers()->AddElement(sv);
+
+   gEve->GetBrowser()->GetTabRight()->SetTab(1);
+
+   // --- Redraw ---
+
    gEve->FullRedraw3D(kTRUE);
+   gEve->EditElement(sv);
+
+   // --- Fix editor ---
 
    // EClipType not exported to CINT (see TGLUtil.h):
    // 0 - no clip, 1 - clip plane, 2 - clip box

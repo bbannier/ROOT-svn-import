@@ -7,6 +7,7 @@ void geom_atlas()
 {
    TEveManager::Create();
 
+   TFile::SetCacheFileDir(".");
    gGeoManager = gEve->GetGeometry("http://root.cern.ch/files/atlas.root");
 
    TGeoNode* node1 = gGeoManager->GetTopVolume()->FindNode("INNE_1");

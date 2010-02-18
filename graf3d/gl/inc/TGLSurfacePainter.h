@@ -14,6 +14,8 @@
 #include "TGLUtil.h"
 #endif
 
+class TRandom;
+
 class TGLSurfacePainter : public TGLPlotPainter {
 private:
    enum ESurfaceType {
@@ -96,6 +98,8 @@ private:
 
    void   DrawPalette()const;
    void   DrawPaletteAxis()const;
+
+   static TRandom *fgRandom;
 
    ClassDef(TGLSurfacePainter, 0)//Surface painter.
 };

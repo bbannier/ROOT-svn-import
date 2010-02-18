@@ -12,7 +12,6 @@
 #ifndef ROOT_TEvePointSet
 #define ROOT_TEvePointSet
 
-#include "TEveVSDStructs.h"
 #include "TEveElement.h"
 #include "TEveProjectionBases.h"
 #include "TEveTreeTools.h"
@@ -79,6 +78,8 @@ public:
    void   SetPointIntIds(Int_t n, Int_t* ids);
 
    virtual void SetMarkerColor(Color_t col) { SetMainColor(col); }
+   virtual void SetMarkerStyle(Style_t mstyle=1);
+   virtual void SetMarkerSize(Size_t msize=1);
 
    virtual void Paint(Option_t* option="");
 

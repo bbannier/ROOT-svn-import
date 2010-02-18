@@ -12,8 +12,8 @@
 #ifndef ROOT_TEveLine
 #define ROOT_TEveLine
 
-#include "TEveUtil.h"
 #include "TEvePointSet.h"
+#include "TEveVector.h"
 
 #include "TAttLine.h"
 
@@ -43,8 +43,11 @@ public:
    TEveLine(const char* name, Int_t n_points=0, ETreeVarType_e tv_type=kTVT_XYZ);
    virtual ~TEveLine() {}
 
-   virtual void SetLineColor(Color_t col)   { SetMainColor(col); }
    virtual void SetMarkerColor(Color_t col);
+
+   virtual void SetLineColor(Color_t col)   { SetMainColor(col); }
+   virtual void SetLineStyle(Style_t lstyle);
+   virtual void SetLineWidth(Width_t lwidth);
 
    Bool_t GetRnrLine() const     { return fRnrLine;   }
    Bool_t GetRnrPoints() const   { return fRnrPoints; }

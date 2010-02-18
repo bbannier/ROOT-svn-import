@@ -167,8 +167,10 @@ void TEvePointSet::Reset(Int_t n_points, Int_t n_int_ids)
 
    delete [] fP; fP = 0;
    fN = n_points;
-   if (fN) fP = new Float_t [3*fN];
-   memset(fP, 0, 3*fN*sizeof(Float_t));
+   if (fN) {
+      fP = new Float_t [3*fN];
+      memset(fP, 0, 3*fN*sizeof(Float_t));
+   }
    fLastPoint = -1;
    ClearIds();
    delete fIntIds; fIntIds = 0;
@@ -251,6 +253,50 @@ void TEvePointSet::SetPointIntIds(Int_t n, Int_t* ids)
    Int_t* x = fIntIds->GetArray() + n*fIntIdsPerPoint;
    for (Int_t i=0; i<fIntIdsPerPoint; ++i)
       x[i] = ids[i];
+}
+
+/******************************************************************************/
+
+//______________________________________________________________________________
+void TEvePointSet::SetMarkerStyle(Style_t mstyle)
+{
+   // Set marker style, propagate to projecteds.
+
+   static const TEveException eh("TEvePointSet::SetMarkerStyle ");
+
+   std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
+   while (pi != fProjectedList.end())
+   {
+      TEvePointSet* pt = dynamic_cast<TEvePointSet*>(*pi);
+      if (pt)
+      {
+         pt->SetMarkerStyle(mstyle);
+         pt->StampObjProps();
+      }
+      ++pi;
+   }
+   TAttMarker::SetMarkerStyle(mstyle);
+}
+
+//______________________________________________________________________________
+void TEvePointSet::SetMarkerSize(Size_t msize)
+{
+   // Set marker size, propagate to projecteds.
+
+   static const TEveException eh("TEvePointSet::SetMarkerSize ");
+
+   std::list<TEveProjected*>::iterator pi = fProjectedList.begin();
+   while (pi != fProjectedList.end())
+   {
+      TEvePointSet* pt = dynamic_cast<TEvePointSet*>(*pi);
+      if (pt)
+      {
+         pt->SetMarkerSize(msize);
+         pt->StampObjProps();
+      }
+      ++pi;
+   }
+   TAttMarker::SetMarkerSize(msize);
 }
 
 /******************************************************************************/
