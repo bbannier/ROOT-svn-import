@@ -1112,7 +1112,7 @@ void TMVA::MethodBase::AddOutput( Types::ETreeType type, Types::EAnalysisType an
       AddMulticlassOutput( type );
    } else {
       AddClassifierOutput( type );
-      if (HasMVAPdfs()) 
+      if (HasMVAPdfs())
          AddClassifierOutputProb( type );
    }
 }
@@ -1122,7 +1122,7 @@ void TMVA::MethodBase::WriteStateToXML( void* parent ) const
 {
    // general method used in writing the header of the weight files where
    // the used variables, variable transformation type etc. is specified
-   
+
    if (!parent) return;
 
    UserGroup_t* userInfo = gSystem->GetUserInfo();
@@ -1138,8 +1138,8 @@ void TMVA::MethodBase::WriteStateToXML( void* parent ) const
    AddInfoItem( gi, "TrainingTime", gTools().StringFromDouble(const_cast<TMVA::MethodBase*>(this)->GetTrainTime()));
 
    Types::EAnalysisType aType = const_cast<TMVA::MethodBase*>(this)->GetAnalysisType();
-   TString analysisType((aType==Types::kRegression) ? "Regression" : 
-			(aType==Types::kMulticlass ? "Multiclass" : "Classification"));
+   TString analysisType((aType==Types::kRegression) ? "Regression" :
+                        (aType==Types::kMulticlass ? "Multiclass" : "Classification"));
    AddInfoItem( gi, "AnalysisType", analysisType );
    delete userInfo;
 
@@ -1156,16 +1156,15 @@ void TMVA::MethodBase::WriteStateToXML( void* parent ) const
    // write target info if in regression mode
    if(DoRegression())
       AddTargetsXMLTo(parent);
-   
 
    // write transformations
    GetTransformationHandler().AddXMLTo( parent );
-   
+
    // write MVA variable distributions
    void* pdfs = gTools().AddChild(parent, "MVAPdfs");
    if (fMVAPdfS) fMVAPdfS->AddXMLTo(pdfs);
    if (fMVAPdfB) fMVAPdfB->AddXMLTo(pdfs);
-   
+
    // write weights
    AddWeightsXMLTo( parent );
 }
