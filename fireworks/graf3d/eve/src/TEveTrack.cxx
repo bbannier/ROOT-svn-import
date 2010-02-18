@@ -492,7 +492,7 @@ void TEveTrack::PrintPathMarks()
    }
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 
 //______________________________________________________________________________
 void TEveTrack::SecSelected(TEveTrack* track)
@@ -501,6 +501,29 @@ void TEveTrack::SecSelected(TEveTrack* track)
    // Called from TEveTrackGL on secondary-selection.
 
    Emit("SecSelected(TEveTrack*)", (Long_t)track);
+}
+
+//------------------------------------------------------------------------------
+
+//______________________________________________________________________________
+Bool_t TEveTrack::GetDefaultBreakProjectedTracks()
+{
+   // Return true if tracks get broken into several segments when the
+   // projected space consists of separate domains (like Rho-Z).
+   // Static function.
+
+   return fgDefaultBreakProjectedTracks;
+}
+
+//______________________________________________________________________________
+void TEveTrack::SetDefaultBreakProjectedTracks(Bool_t bt)
+{
+   // Specify whether 2D projected tracks get broken into several
+   // segments when the projected space consists of separate domains
+   // (like Rho-Z). This is true by default.
+   // Static function.
+
+   fgDefaultBreakProjectedTracks = bt;
 }
 
 
