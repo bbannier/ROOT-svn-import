@@ -180,7 +180,6 @@ void TEveViewer::SetGLViewer(TGLViewer* viewer, TGFrame* frame)
    fGLViewerFrame = frame;
 
    fGLViewer->SetSmartRefresh(kTRUE);
-   fGLViewer->SetResetCameraOnDoubleClick(kFALSE);
 }
 
 //______________________________________________________________________________
@@ -196,6 +195,8 @@ TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged)
    TGLSAViewer* v = new TGLSAViewer(cf, 0, ged);
    cf->SetEditable(kFALSE);
    v->ToggleEditObject();
+   v->DisableCloseMenuEntries();
+   v->EnableMenuBarHiding();
    SetGLViewer(v, v->GetFrame());
 
    if (fEveFrame == 0)
@@ -205,7 +206,7 @@ TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged)
 }
 
 //______________________________________________________________________________
-TGLEmbeddedViewer* TEveViewer::SpawnGLEmbeddedViewer(Int_t border)
+TGLEmbeddedViewer* TEveViewer::SpawnGLEmbeddedViewer(TGedEditor* ged, Int_t border)
 {
    // Spawn new GLViewer and adopt it.
 
@@ -213,7 +214,7 @@ TGLEmbeddedViewer* TEveViewer::SpawnGLEmbeddedViewer(Int_t border)
 
    TGCompositeFrame* cf = GetGUICompositeFrame();
 
-   TGLEmbeddedViewer* v = new TGLEmbeddedViewer(cf, 0, border);
+   TGLEmbeddedViewer* v = new TGLEmbeddedViewer(cf, 0, ged, border);
    SetGLViewer(v, v->GetFrame());
 
    cf->AddFrame(fGLViewerFrame, new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY));
