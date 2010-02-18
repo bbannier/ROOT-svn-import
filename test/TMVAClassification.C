@@ -413,7 +413,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    // Tmlp(Root)ANN
    if (Use["TMlpANN"])
-      factory->BookMethod( TMVA::Types::kTMlpANN, "TMlpANN", "!H:!V:NCycles=2:HiddenLayers=N+1,N:LearningMethod=BFGS:ValidationFraction=0.3"  ); // n_cycles:#nodes:#nodes:...
+      factory->BookMethod( TMVA::Types::kTMlpANN, "TMlpANN", "!H:!V:NCycles=200:HiddenLayers=N+1,N:LearningMethod=BFGS:ValidationFraction=0.3"  ); // n_cycles:#nodes:#nodes:...
 
    // Support Vector Machine
    if (Use["SVM"])
