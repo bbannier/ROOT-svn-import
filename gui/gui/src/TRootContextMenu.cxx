@@ -65,6 +65,7 @@ TRootContextMenu::TRootContextMenu(TContextMenu *c, const char *)
    fDialog  = 0;
    fTrash = new TList;
 
+   gROOT->GetListOfCleanups()->Add(this);
    // Context menu handles its own messages
    Associate(this);
 }
@@ -74,6 +75,7 @@ TRootContextMenu::~TRootContextMenu()
 {
    // Delete a context menu.
 
+   gROOT->GetListOfCleanups()->Remove(this);
    delete fDialog;
    if (fTrash) fTrash->Delete();
    delete fTrash;
@@ -387,7 +389,7 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
 
    Int_t selfobjpos;
 
-   if (!function) return;
+   if (!function || !object) return;
 
    // Position, if it exists, of the argument that correspond to the object itself
    if (fContextMenu->GetSelectedMenuItem())
@@ -598,3 +600,25 @@ Bool_t TRootContextMenu::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
 
    return kTRUE;
 }
+
+//______________________________________________________________________________
+void TRootContextMenu::RecursiveRemove(TObject *obj)
+{
+   // Close the context menu if the object is deleted in the
+   // RecursiveRemove() operation.
+
+   void *ud;
+   if (obj == fContextMenu->GetSelectedCanvas())
+      fContextMenu->SetCanvas(0);
+   if (obj == fContextMenu->GetSelectedPad())
+      fContextMenu->SetPad(0);
+   if (obj == fContextMenu->GetSelectedObject()) {
+      // if the object being deleted is the one selected,
+      // ungrab the mouse pointer and terminate (close) the menu
+      fContextMenu->SetObject(0);
+      if (fHasGrab) 
+         gVirtualX->GrabPointer(0, 0, 0, 0, kFALSE);
+      EndMenu(ud);
+   }
+}
+

@@ -51,6 +51,7 @@ public:
    virtual void Dialog(TObject *object, TMethod *method);
    virtual void Dialog(TObject *object, TFunction *function);
    TRootDialog *GetDialog() const { return fDialog; };
+   virtual void   RecursiveRemove(TObject *obj);
 
    Bool_t ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2);
 
