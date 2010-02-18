@@ -35,6 +35,7 @@ class TGLEventHandler : public TGEventHandler
 protected:
    TGLViewer        *fGLViewer;
    TTimer           *fMouseTimer;     // mouse delay timer
+   TPoint            fButtonPushPos;
    TPoint            fLastPos;
    TPoint            fLastMouseOverPos;
    TGLPhysicalShape *fLastMouseOverShape;
@@ -51,6 +52,9 @@ protected:
    Int_t             fSecSelType; // secondary selection type
 
    virtual Bool_t Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2);
+
+   virtual void   GrabMouse();
+   virtual void   UnGrabMouse();
 
 public:
    TGLEventHandler(TGWindow *w, TObject *obj);
