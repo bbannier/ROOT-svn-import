@@ -148,7 +148,7 @@ void TMVA::MethodFDA::DeclareOptions()
 }
 
 //_______________________________________________________________________
-void TMVA::MethodFDA::CreateFormula() 
+void TMVA::MethodFDA::CreateFormula()
 {
    // translate formula string into TFormula, and parameter string into par ranges
 
@@ -158,16 +158,16 @@ void TMVA::MethodFDA::CreateFormula()
    // intepret formula string
 
    // replace the parameters "(i)" by the TFormula style "[i]"
-   for (Int_t ipar=0; ipar<fNPars; ipar++) {
+   for (UInt_t ipar=0; ipar<fNPars; ipar++) {
       fFormulaStringT.ReplaceAll( Form("(%i)",ipar), Form("[%i]",ipar) );
    }
 
    // sanity check, there should be no "(i)", with 'i' a number anymore
    for (Int_t ipar=fNPars; ipar<1000; ipar++) {
       if (fFormulaStringT.Contains( Form("(%i)",ipar) ))
-         Log() << kFATAL 
+         Log() << kFATAL
                  << "<CreateFormula> Formula contains expression: \"" << Form("(%i)",ipar) << "\", "
-                 << "which cannot be attributed to a parameter; " 
+               << "which cannot be attributed to a parameter; "
                  << "it may be that the number of variable ranges given via \"ParRanges\" "
                  << "does not match the number of parameters in the formula expression, please verify!"
                  << Endl;
@@ -181,19 +181,19 @@ void TMVA::MethodFDA::CreateFormula()
    // sanity check, there should be no "xi", with 'i' a number anymore
    for (UInt_t ivar=GetNvar(); ivar<1000; ivar++) {
       if (fFormulaStringT.Contains( Form("x%i",ivar) ))
-         Log() << kFATAL 
+         Log() << kFATAL
                  << "<CreateFormula> Formula contains expression: \"" << Form("x%i",ivar) << "\", "
                  << "which cannot be attributed to an input variable" << Endl;
    }
-   
+
    Log() << "User-defined formula string       : \"" << fFormulaStringP << "\"" << Endl;
    Log() << "TFormula-compatible formula string: \"" << fFormulaStringT << "\"" << Endl;
    Log() << "Creating and compiling formula" << Endl;
-   
+
    // create TF1
    if (fFormula) delete fFormula;
    fFormula = new TFormula( "FDA_Formula", fFormulaStringT );
-   
+
 #if ROOT_VERSION_CODE >= ROOT_VERSION(5,2,0)
    fFormula->Optimize();
 #endif
@@ -203,50 +203,50 @@ void TMVA::MethodFDA::CreateFormula()
       Log() << kFATAL << "<ProcessOptions> Formula expression could not be properly compiled" << Endl;
 
    // other sanity checks
-   if (fFormula->GetNpar() > fNPars + (Int_t)GetNvar())
-      Log() << kFATAL << "<ProcessOptions> Dubious number of parameters in formula expression: " 
+   if (fFormula->GetNpar() > (Int_t)(fNPars + GetNvar()))
+      Log() << kFATAL << "<ProcessOptions> Dubious number of parameters in formula expression: "
               << fFormula->GetNpar() << " - compared to maximum allowed: " << fNPars + GetNvar() << Endl;
 }
 
 //_______________________________________________________________________
-void TMVA::MethodFDA::ProcessOptions() 
+void TMVA::MethodFDA::ProcessOptions()
 {
    // the option string is decoded, for availabel options see "DeclareOptions"
 
    // process transient strings
    fParRangeStringT = fParRangeStringP;
 
-   // interpret parameter string   
+   // interpret parameter string
    fParRangeStringT.ReplaceAll( " ", "" );
    fNPars = fParRangeStringT.CountChar( ')' );
 
    TList* parList = gTools().ParseFormatLine( fParRangeStringT, ";" );
-   if (parList->GetSize() != fNPars) {
-      Log() << kFATAL << "<ProcessOptions> Mismatch in parameter string: " 
-              << "the number of parameters: " << fNPars << " != ranges defined: " 
-              << parList->GetSize() << "; the format of the \"ParRanges\" string "
-              << "must be: \"(-1.2,3.4);(-2.3,4.55);...\", "
-              << "where the numbers in \"(a,b)\" correspond to the a=min, b=max parameter ranges; "
-              << "each parameter defined in the function string must have a corresponding rang."
-              << Endl;
+   if ((UInt_t)parList->GetSize() != fNPars) {
+      Log() << kFATAL << "<ProcessOptions> Mismatch in parameter string: "
+            << "the number of parameters: " << fNPars << " != ranges defined: "
+            << parList->GetSize() << "; the format of the \"ParRanges\" string "
+            << "must be: \"(-1.2,3.4);(-2.3,4.55);...\", "
+            << "where the numbers in \"(a,b)\" correspond to the a=min, b=max parameter ranges; "
+            << "each parameter defined in the function string must have a corresponding rang."
+            << Endl;
    }
 
    fParRange.resize( fNPars );
-   for (Int_t ipar=0; ipar<fNPars; ipar++) fParRange[ipar] = 0;
+   for (UInt_t ipar=0; ipar<fNPars; ipar++) fParRange[ipar] = 0;
 
-   for (Int_t ipar=0; ipar<fNPars; ipar++) {
+   for (UInt_t ipar=0; ipar<fNPars; ipar++) {
       // parse (a,b)
       TString str = ((TObjString*)parList->At(ipar))->GetString();
       Ssiz_t istr = str.First( ',' );
       TString pminS(str(1,istr-1));
-      TString pmaxS(str(istr+1,str.Length()-2-istr));      
+      TString pmaxS(str(istr+1,str.Length()-2-istr));
 
-      stringstream stmin; Float_t pmin; stmin << pminS.Data(); stmin >> pmin;       
+      stringstream stmin; Float_t pmin; stmin << pminS.Data(); stmin >> pmin;
       stringstream stmax; Float_t pmax; stmax << pmaxS.Data(); stmax >> pmax;
 
       // sanity check
       if (TMath::Abs(pmax-pmin) < 1.e-30) pmax = pmin;
-      if (pmin > pmax) Log() << kFATAL << "<ProcessOptions> max > min in interval for parameter: [" 
+      if (pmin > pmax) Log() << kFATAL << "<ProcessOptions> max > min in interval for parameter: ["
                                << ipar << "] : [" << pmin  << ", " << pmax << "] " << Endl;
 
       fParRange[ipar] = new Interval( pmin, pmax );
@@ -265,8 +265,8 @@ void TMVA::MethodFDA::ProcessOptions()
       fOutputDimensions = DataInfo().GetNClasses();
 
    for( Int_t dim = 0; dim < fOutputDimensions; ++dim ){
-      for( Int_t par = 0; par < fNPars; ++par ){
-	 fParRange.push_back( fParRange.at(par) );
+      for( UInt_t par = 0; par < fNPars; ++par ){
+         fParRange.push_back( fParRange.at(par) );
       }
    }
    // ====================
@@ -278,18 +278,18 @@ void TMVA::MethodFDA::ProcessOptions()
       SetOptions(dynamic_cast<Configurable*>(fConvergerFitter)->GetOptions());
    }
 
-   if      (fFitMethod == "MC")     
+   if(fFitMethod == "MC")
       fFitter = new MCFitter( *fConvergerFitter, Form("%s_Fitter_MC", GetName()), fParRange, GetOptions() );
-   else if (fFitMethod == "GA")     
+   else if (fFitMethod == "GA")
       fFitter = new GeneticFitter( *fConvergerFitter, Form("%s_Fitter_GA", GetName()), fParRange, GetOptions() );
-   else if (fFitMethod == "SA")     
+   else if (fFitMethod == "SA")
       fFitter = new SimulatedAnnealingFitter( *fConvergerFitter, Form("%s_Fitter_SA", GetName()), fParRange, GetOptions() );
-   else if (fFitMethod == "MINUIT") 
+   else if (fFitMethod == "MINUIT")
       fFitter = new MinuitFitter( *fConvergerFitter, Form("%s_Fitter_Minuit", GetName()), fParRange, GetOptions() );
    else {
       Log() << kFATAL << "<Train> Do not understand fit method:" << fFitMethod << Endl;
    }
-   
+
    fFitter->CheckForUnusedOptions();
 }
 
@@ -301,7 +301,7 @@ TMVA::MethodFDA::~MethodFDA( void )
 }
 
 //_______________________________________________________________________
-Bool_t TMVA::MethodFDA::HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t numberTargets )
+Bool_t TMVA::MethodFDA::HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t /*numberTargets*/ )
 {
    // FDA can handle classification with 2 classes and regression with one regression-target
    if (type == Types::kClassification && numberClasses == 2) return kTRUE;
@@ -546,9 +546,9 @@ void TMVA::MethodFDA::CalculateMulticlassValues( const TMVA::Event*& evt, std::v
    Double_t sum;
    for( Int_t dim = 0; dim < fOutputDimensions; ++dim ){ // check for all other dimensions (=classes)
       Int_t offset = dim*fNPars;
-      Double_t value = InterpretFormula( evt, parameters.begin()+offset, parameters.begin()+offset+fNPars ); 
+      Double_t value = InterpretFormula( evt, parameters.begin()+offset, parameters.begin()+offset+fNPars );
 //       std::cout << "dim : " << dim << " value " << value << "    offset " << offset << std::endl;
-      values.push_back( value ); 
+      values.push_back( value );
       sum += value;
    }
 
@@ -568,19 +568,19 @@ void  TMVA::MethodFDA::ReadWeightsFromStream( istream& istr )
 
    fBestPars.clear();
    fBestPars.resize( fNPars );
-   for (Int_t ipar=0; ipar<fNPars; ipar++) istr >> fBestPars[ipar];
+   for (UInt_t ipar=0; ipar<fNPars; ipar++) istr >> fBestPars[ipar];
 }
 
 //_______________________________________________________________________
-void TMVA::MethodFDA::AddWeightsXMLTo( void* parent ) const 
+void TMVA::MethodFDA::AddWeightsXMLTo( void* parent ) const
 {
-   // create XML description for LD classification and regression 
+   // create XML description for LD classification and regression
    // (for arbitrary number of output classes/targets)
 
    void* wght = gTools().AddChild(parent, "Weights");
    gTools().AddAttr( wght, "NPars",  fNPars );
    gTools().AddAttr( wght, "NDim",   fOutputDimensions );
-   for (Int_t ipar=0; ipar<fNPars*fOutputDimensions; ipar++) {
+   for (UInt_t ipar=0; ipar<fNPars*fOutputDimensions; ipar++) {
       void* coeffxml = gTools().AddChild( wght, "Parameter" );
       gTools().AddAttr( coeffxml, "Index", ipar   );
       gTools().AddAttr( coeffxml, "Value", fBestPars[ipar] );
@@ -589,13 +589,13 @@ void TMVA::MethodFDA::AddWeightsXMLTo( void* parent ) const
    // write formula
    gTools().AddAttr( wght, "Formula", fFormulaStringP );
 }
-  
+
 //_______________________________________________________________________
-void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode ) 
+void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode )
 {
    // read coefficients from xml weight file
    gTools().ReadAttr( wghtnode, "NPars", fNPars );
-   
+
    try {
       gTools().ReadAttr( wghtnode, "NDim" , fOutputDimensions );
    }catch( std::logic_error& excpt ){
@@ -608,7 +608,7 @@ void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode )
    
    void* ch = gTools().GetChild(wghtnode);
    Double_t par;
-   Int_t    ipar;
+   UInt_t    ipar;
    while (ch) {
       gTools().ReadAttr( ch, "Index", ipar );
       gTools().ReadAttr( ch, "Value", par  );
@@ -637,7 +637,7 @@ void TMVA::MethodFDA::MakeClassSpecific( std::ostream& fout, const TString& clas
    fout << "" << endl;
    fout << "inline void " << className << "::Initialize() " << endl;
    fout << "{" << endl;
-   for (Int_t ipar=0; ipar<fNPars; ipar++) {
+   for(UInt_t ipar=0; ipar<fNPars; ipar++) {
       fout << "   fParameter[" << ipar << "] = " << fBestPars[ipar] << ";" << endl;
    }
    fout << "}" << endl;
@@ -648,10 +648,10 @@ void TMVA::MethodFDA::MakeClassSpecific( std::ostream& fout, const TString& clas
 
    // replace parameters
    TString str = fFormulaStringT;
-   for (Int_t ipar=0; ipar<fNPars; ipar++) {
+   for (UInt_t ipar=0; ipar<fNPars; ipar++) {
       str.ReplaceAll( Form("[%i]", ipar), Form("fParameter[%i]", ipar) );
    }
-   
+
    // replace input variables
    for (UInt_t ivar=0; ivar<GetNvar(); ivar++) {
       str.ReplaceAll( Form("[%i]", ivar+fNPars), Form("inputValues[%i]", ivar) );
@@ -674,7 +674,7 @@ void TMVA::MethodFDA::GetHelpMessage() const
 {
    // get help message text
    //
-   // typical length of text line: 
+   // typical length of text line:
    //         "|--------------------------------------------------------------|"
    Log() << Endl;
    Log() << gTools().Color("bold") << "--- Short description:" << gTools().Color("reset") << Endl;
