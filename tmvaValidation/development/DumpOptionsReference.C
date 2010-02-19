@@ -53,7 +53,7 @@ void DumpOptionsReference()
    factory->AddVariable( "var4",      'F' );
 
    TFile *input(0);
-    TString fname = "../macros/tmva_example.root";
+    TString fname = "./tmva_example.root";
     if (!gSystem->AccessPathName( fname )) {
        // first we try to find tmva_example.root in the local directory
        std::cout << "--- DumpOptionsReference    : Accessing " << fname << std::endl;

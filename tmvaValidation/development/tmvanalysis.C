@@ -23,7 +23,7 @@
 #include "TSystem.h"
 #include "TTree.h"
 
-#include "../macros/TMVAGui.C"
+#include "../tmva/test/TMVAGui.C"
 
 // ---------------------------------------------------------------
 // choose MVA methods to be trained + tested
