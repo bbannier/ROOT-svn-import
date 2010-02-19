@@ -946,9 +946,18 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
    if (err >= 0.5) { // sanity check ... should never happen as otherwise there is apparently
       // something odd with the assignement of the leaf nodes (rem: you use the training
       // events for this determination of the error rate)
-      Log() << kWARNING << " The error rate in the BDT boosting is > 0.5. ("<< err
-            << ") That should not happen, please check your code (i.e... the BDT code), I "
-            << " set it to 0.5.. just to continue.." <<  Endl;
+      if (dt->GetNNodes() == 1){
+         Log() << kWARNING << " YOUR tree has only 1 Node... kind of a funny *tree*. I cannot " 
+               << "boost such a thing... if after 1 step the error rate is == 0.5"
+               << Endl
+               << "please check why this happens, maybe too many events per node requested ?"
+               << Endl;
+         
+      }else{
+         Log() << kWARNING << " The error rate in the BDT boosting is > 0.5. ("<< err
+               << ") That should not happen, please check your code (i.e... the BDT code), I "
+               << " set it to 0.5.. just to continue.." <<  Endl;
+      }
       err = 0.5;
    } else if (err < 0) {
       Log() << kWARNING << " The error rate in the BDT boosting is < 0. That can happen"
@@ -1238,7 +1247,7 @@ Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, UInt_t useNTrees )
          norm  += 1;
       }
    }
-   return myMVA /= norm;
+   return ( norm > std::numeric_limits<double>::epsilon() ) ? myMVA /= norm : 0 ;
 }
 
 //_______________________________________________________________________
@@ -1347,7 +1356,7 @@ const std::vector<Float_t> & TMVA::MethodBDT::GetRegressionValues()
             norm  += 1;
          }
       }
-      fRegressionReturnVal->push_back( myMVA/norm );
+      fRegressionReturnVal->push_back( ( norm > std::numeric_limits<double>::epsilon() ) ? myMVA /= norm : 0 );
    }
    return *fRegressionReturnVal;
 }
