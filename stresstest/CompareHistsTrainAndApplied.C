@@ -3,7 +3,8 @@
 
 #include "TPad.h"
 
-#include "../macros/tmvaglob.C"
+//#include "../macros/tmvaglob.C"
+#include "../tmva/test/tmvaglob.C"
 
 void writefile(const char* dir,
                const char* day,

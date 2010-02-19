@@ -14,7 +14,7 @@
 #include "TBranch.h"
 #include <vector>
 
-void plot( TString fname = "data.root" ) 
+void plot( TString fname = "data.root", TString var0="var0", TString var1="var1" ) 
 {
    TFile* dataFile = TFile::Open( fname );
 
@@ -47,10 +47,10 @@ void plot( TString fname = "data.root" )
    TMVAStyle->cd();
 
 
-   Float_t xmin = TMath::Min( treeS->GetMinimum( "var0" ), treeB->GetMinimum( "var0" ) );
-   Float_t xmax = TMath::Max( treeS->GetMaximum( "var0" ), treeB->GetMaximum( "var0" ) );
-   Float_t ymin = TMath::Min( treeS->GetMinimum( "var1" ), treeB->GetMinimum( "var1" ) );
-   Float_t ymax = TMath::Max( treeS->GetMaximum( "var1" ), treeB->GetMaximum( "var1" ) );
+   Float_t xmin = TMath::Min( treeS->GetMinimum( var0 ), treeB->GetMinimum( var0 ) );
+   Float_t xmax = TMath::Max( treeS->GetMaximum( var0 ), treeB->GetMaximum( var0 ) );
+   Float_t ymin = TMath::Min( treeS->GetMinimum( var1 ), treeB->GetMinimum( var1 ) );
+   Float_t ymax = TMath::Max( treeS->GetMaximum( var1 ), treeB->GetMaximum( var1 ) );
 
    Int_t nbin = 500;
    TH2F* frameS = new TH2F( "DataS", "DataS", nbin, xmin, xmax, nbin, ymin, ymax );
@@ -61,16 +61,16 @@ void plot( TString fname = "data.root" )
    treeB->Draw( "var1:var0>>DataB", "", "0" );
 
    // set style
-   frameS->SetMarkerSize( 0.2 );
+   frameS->SetMarkerSize( 1.6 );
    frameS->SetMarkerColor( 4 );
 
-   frameB->SetMarkerSize( 0.2 );
+   frameB->SetMarkerSize( 1.6 );
    frameB->SetMarkerColor( 2 );
 
    // legend
-   frameS->SetTitle( "var1 versus var0 for signal and background" );
-   frameS->GetXaxis()->SetTitle( "var0" );
-   frameS->GetYaxis()->SetTitle( "var1" );
+   frameS->SetTitle( var1+" versus "+var0+" for signal and background" );
+   frameS->GetXaxis()->SetTitle( var0 );
+   frameS->GetYaxis()->SetTitle( var1 );
 
    frameS->SetLabelSize( 0.04, "X" );
    frameS->SetLabelSize( 0.04, "Y" );
@@ -884,7 +884,7 @@ void create_lin_Nvar_discrete()
 void create_ManyVars()
 {
    Int_t N = 20000;
-   const Int_t nvar = 10;
+   const Int_t nvar = 20;
    Float_t xvar[nvar];
 
    // output flie
@@ -906,6 +906,27 @@ void create_ManyVars()
       xB[ivar] = 0 - ivar*0.05;
       dx[ivar] = 1;
    }
+
+   xS[0] =   0.2;
+   xB[0] =  -0.2;
+   dx[0] =   1.0;
+   xS[1] =   0.3;
+   xB[1] =  -0.3;
+   dx[1] =   1.0;
+   xS[2] =   0.4;
+   xB[2] =  -0.4;
+   dx[2] =  1.0 ;
+   xS[3] =   0.8 ;
+   xB[3] =  -0.5 ;
+   dx[3] =   1.0 ;
+   TArrayD* v = new TArrayD( nvar );
+   Float_t rho[20];
+   rho[1*2] = 0.4;
+   rho[1*3] = 0.6;
+   rho[1*4] = 0.9;
+   rho[2*3] = 0.7;
+   rho[2*4] = 0.8;
+   rho[3*4] = 0.93;
 
    TRandom R( 100 );
 
@@ -936,6 +957,7 @@ void create_ManyVars()
    treeB->Show(1);
 
    dataFile->Close();
+   plot();
    cout << "created data file: " << dataFile->GetName() << endl;
 }
 
@@ -943,7 +965,7 @@ void create_ManyVars()
 void create_lin_NvarObsolete()
 {
    Int_t N = 20000;
-   const Int_t nvar = 6;
+   const Int_t nvar = 20;
    Float_t xvar[nvar];
 
    // output flie
@@ -1496,7 +1518,7 @@ void create_schachbrett_3D(Int_t nEvents = 20000) {
 }
 
 
-void create_schachbrett_2D(Int_t nEvents = 100000) {
+void create_schachbrett_2D(Int_t nEvents = 100000, Int_t nbumps=2) {
 
    const Int_t nvar = 2;
    Float_t xvar[nvar];
@@ -1512,12 +1534,12 @@ void create_schachbrett_2D(Int_t nEvents = 100000) {
       treeB->Branch( TString(Form( "var%i", ivar )).Data(), &xvar[ivar], TString(Form( "var%i/F", ivar )).Data() );
    }
 
-   Int_t   nSeed   = 12345;
+   Int_t   nSeed   = 345;
    TRandom *m_rand = new TRandom(nSeed);
-   Double_t sigma=0.3;
+   Double_t sigma=0.35;
    Int_t itype[nvar];
    Int_t iev=0;
-   Int_t m_nDim = 2; // actually the boundary, there is a "bump" for every interger value
+   Int_t m_nDim = nbumps; // actually the boundary, there is a "bump" for every interger value
                      // between in the Inteval [-m_nDim,m_nDim]
 
    int idx[nvar];

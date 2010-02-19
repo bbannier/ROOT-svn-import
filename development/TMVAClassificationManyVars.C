@@ -30,7 +30,7 @@
 #include "TSystem.h"
 #include "TTree.h"
 
-#include "../macros/TMVAGui.C"
+#include "../tmva/test/TMVAGui.C"
 
 #ifndef __CINT__
 #include "TMVA/Tools.h"
