@@ -109,7 +109,9 @@ elif [ $PLATFORM = "macosx" ]; then
    export DYLD_LIBRARY_PATH=`pwd`/lib:$DYLD_LIBRARY_PATH
    if [ $macosx_minor -ge 3 ]; then
       unset LD_PREBIND
-      export MACOSX_DEPLOYMENT_TARGET=10.$macosx_minor
+      if [ "$MACOSX_DEPLOYMENT_TARGET" = "" ]; then
+         export MACOSX_DEPLOYMENT_TARGET=10.$macosx_minor
+      fi
    fi
    # check if in 64 bit mode
    m64=
