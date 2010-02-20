@@ -844,8 +844,8 @@ void TMVA::MethodBase::TestMulticlass()
    Types::ETreeType savedType = Data()->GetCurrentType();
    Data()->SetCurrentType(Types::kTesting);
 
-   ResultsMulticlass* mvaRes = dynamic_cast<ResultsMulticlass*>
-      ( Data()->GetResults(GetMethodName(),Types::kTesting, Types::kMulticlass) );
+//    ResultsMulticlass* mvaRes = dynamic_cast<ResultsMulticlass*>
+//       ( Data()->GetResults(GetMethodName(),Types::kTesting, Types::kMulticlass) );
 
 //    bias = 0; biasT = 0; dev = 0; devT = 0; rms = 0; rmsT = 0;
 //    Double_t sumw = 0;

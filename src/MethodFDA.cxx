@@ -680,7 +680,7 @@ void TMVA::MethodFDA::GetHelpMessage() const
    Log() << gTools().Color("bold") << "--- Short description:" << gTools().Color("reset") << Endl;
    Log() << Endl;
    Log() << "The function discriminant analysis (FDA) is a classifier suitable " << Endl;
-   Log() << "to solve linear or simple nonlinear discrimination problems." << Endl; 
+   Log() << "to solve linear or simple nonlinear discrimination problems." << Endl;
    Log() << Endl;
    Log() << "The user provides the desired function with adjustable parameters" << Endl;
    Log() << "via the configuration option string, and FDA fits the parameters to" << Endl;
@@ -694,8 +694,8 @@ void TMVA::MethodFDA::GetHelpMessage() const
    Log() << "Please consult the Users Guide for the format of the formula string" << Endl;
    Log() << "and the allowed parameter ranges:" << Endl;
    if (gConfig().WriteOptionsReference()) {
-      Log() << "<a href=\"http://tmva.sourceforge.net/docu/TMVAUsersGuide.pdf\">" 
-              << "http://tmva.sourceforge.net/docu/TMVAUsersGuide.pdf</a>" << Endl;
+      Log() << "<a href=\"http://tmva.sourceforge.net/docu/TMVAUsersGuide.pdf\">"
+            << "http://tmva.sourceforge.net/docu/TMVAUsersGuide.pdf</a>" << Endl;
    }
    else Log() << "http://tmva.sourceforge.net/docu/TMVAUsersGuide.pdf" << Endl;
    Log() << Endl;
