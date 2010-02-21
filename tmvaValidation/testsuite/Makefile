@@ -41,8 +41,7 @@ $(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
 
 
 clean:
-		@rm -f $(OBJS)
-		-@cd tmvaut && $(MAKE) distclean
+		@rm -f $(PROGRAMS) $(OBJS) $(TMVAUTOBJECTS)
 
 .$(SrcSuf).$(ObjSuf):
 	$(CXX)  $(CXXFLAGS) -c $<
