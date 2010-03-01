@@ -147,14 +147,6 @@ MACRO (REFLEX_ASSERT_GENREFLEX_CLI)
    SET(_expected_result)
    _REFLEX_GET_TEST_ARGS(RUN_GENREFLEX_TEST_RESULT RESULT _result_match_type _expected_result)
 
-   SET(_out_match_type STREQUAL)
-   SET(_expected_out "")
-   _REFLEX_GET_TEST_ARGS(RUN_GENREFLEX_TEST_STDOUT STDOUT _out_match_type _expected_out)
-
-   SET(_err_match_type STREQUAL)
-   SET(_expected_err "")
-   _REFLEX_GET_TEST_ARGS(RUN_GENREFLEX_TEST_STDERR STDERR _err_match_type _expected_err)
-
    SET(_result -1)
    SET(_out "")
    SET(_err "")
@@ -200,8 +192,21 @@ MACRO (REFLEX_ASSERT_GENREFLEX_CLI)
    ENDIF (NOT ${_result} EQUAL ${_expected_result})
 
    # otherwise, compare the stdout and stderr streams
-   _REFLEX_ASSERT("Unexpected standard output for invocation with arguments [${_test_args}]" "${_out}" "${_out_match_type}" "${_expected_out}")
-   _REFLEX_ASSERT("Unexpected standard error for invocation with arguments [${_test_args}]" "${_err}" "${_err_match_type}" "${_expected_err}")
+   if(RUN_GENREFLEX_TEST_STDOUT)
+      SET(_out_match_type STREQUAL)
+      SET(_expected_out "")
+      _REFLEX_GET_TEST_ARGS(RUN_GENREFLEX_TEST_STDOUT STDOUT _out_match_type _expected_out)
+
+      _REFLEX_ASSERT("Unexpected standard output for invocation with arguments [${_test_args}]" "${_out}" "${_out_match_type}" "${_expected_out}")
+   endif(RUN_GENREFLEX_TEST_STDOUT)
+
+   if(RUN_GENREFLEX_TEST_STDERR)
+      SET(_err_match_type STREQUAL)
+      SET(_expected_err "")
+      _REFLEX_GET_TEST_ARGS(RUN_GENREFLEX_TEST_STDERR STDERR _err_match_type _expected_err)
+
+      _REFLEX_ASSERT("Unexpected standard error for invocation with arguments [${_test_args}]" "${_err}" "${_err_match_type}" "${_expected_err}")
+   endif(RUN_GENREFLEX_TEST_STDERR)
 
 ENDMACRO (REFLEX_ASSERT_GENREFLEX_CLI)
 

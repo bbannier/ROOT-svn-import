@@ -227,8 +227,8 @@ void ReflexVersioningTest::a_shared_dependency_type_should_be_the_same_from_two_
 
 void ReflexVersioningTest::types_should_be_registered_in_the_dictionary_of_their_library() {
 
-   CPPUNIT_ASSERT_EQUAL(sLibV1 ,fLibraryV1Class.DictionaryGet().SharedLibraryName());
-   CPPUNIT_ASSERT_EQUAL(sLibV2 ,fLibraryV2Class.DictionaryGet().SharedLibraryName());
+   CPPUNIT_ASSERT_EQUAL(Reflex::NamePartOfPath(sLibV1) ,fLibraryV1Class.DictionaryGet().SharedLibraryName());
+   CPPUNIT_ASSERT_EQUAL(Reflex::NamePartOfPath(sLibV2) ,fLibraryV2Class.DictionaryGet().SharedLibraryName());
 }
 
 
@@ -238,11 +238,11 @@ void ReflexVersioningTest::types_from_members_should_be_resolved_in_the_correct_
 
    Type valueClassV1 = fLibraryV1Class.FunctionMemberByName("smallName").TypeOf().ReturnType();
    CPPUNIT_ASSERT(valueClassV1);
-   CPPUNIT_ASSERT_EQUAL(sLibV1 ,valueClassV1.DictionaryGet().SharedLibraryName());
+   CPPUNIT_ASSERT_EQUAL(Reflex::NamePartOfPath(sLibV1) ,valueClassV1.DictionaryGet().SharedLibraryName());
 
    Type valueClassV2 = fLibraryV2Class.FunctionMemberByName("smallName").TypeOf().ReturnType();
    CPPUNIT_ASSERT(valueClassV2);
-   CPPUNIT_ASSERT_EQUAL(sLibV2 ,valueClassV2.DictionaryGet().SharedLibraryName());
+   CPPUNIT_ASSERT_EQUAL(Reflex::NamePartOfPath(sLibV2) ,valueClassV2.DictionaryGet().SharedLibraryName());
 
    CPPUNIT_ASSERT(valueClassV1 != valueClassV2);
 }
@@ -349,7 +349,7 @@ namespace
 
 void ReflexVersioningTest::test_current_shared_library()
 {
-   CPPUNIT_ASSERT_EQUAL(std::string(exeName("test_Reflex_versioning")), Reflex::NamePartOfPath(CurrentSharedLibraryPath()));
+   CPPUNIT_ASSERT_EQUAL(Reflex::NamePartOfPath(exeName("test_Reflex_versioning")), Reflex::NamePartOfPath(CurrentSharedLibraryPath()));
 }
 
 void ReflexVersioningTest::test_shared_library_dependencies()

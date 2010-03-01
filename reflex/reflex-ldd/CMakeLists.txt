@@ -12,5 +12,5 @@ ELSE(WIN32)
                      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/reflex-ldd ${REFLEX_OUT_DIR}
                      COMMAND chmod a+x ${REFLEX_OUT_DIR}/reflex-ldd
                      COMMENT "copying reflex-ldd to ${REFLEX_OUT_DIR}")
-   INSTALL(PROGRAMS reflex-ldd RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+   INSTALL(PROGRAMS reflex-ldd DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 ENDIF(WIN32)
