@@ -17,6 +17,7 @@
 #include <Reflex/Builder/DictionaryBuilder.h>
 #include <algorithm>
 #include <fstream>
+#include <sstream>
 #include <stdexcept>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -36,6 +37,16 @@ Reflex::Dictionary CreateGlobalScope(const Reflex::Dictionary& dictionary) {
    return dictionary;
 }
 
+#ifdef WIN32
+std::string os_command(const std::string& command) {
+   return "\""+command+"\"";
+}
+#else
+std::string os_command(const std::string& command) {
+   return command;
+}
+#endif
+
 }
 
 void Reflex::CollectSharedLibraryDependencies(const std::string& sharedLibraryPath, std::vector<std::string>& result) {
@@ -52,9 +63,13 @@ void Reflex::CollectSharedLibraryDependencies(const std::string& sharedLibraryPa
 
    if (depsMTime < binMTime) {
       std::string reflexLibPath = SharedLibraryDefining((void*)&CollectSharedLibraryDependencies);
-      std::string command = DirectoryPartOfPath(reflexLibPath)+"reflex-ldd \""+sharedLibraryPath+"\" \""+depsFile+"\"";
-      if ( system(command.c_str()) < 0)
-         throw std::domain_error("Command failed \""+command+"\"");
+      std::string command = os_command("\""+DirectoryPartOfPath(reflexLibPath)+"reflex-ldd\" \""+sharedLibraryPath+"\" \""+depsFile+"\"");
+      int exitCode = system(command.c_str());
+      if (0 != exitCode) {
+         std::ostringstream message;
+         message << "Command failed \"" << command << "\" with code" << exitCode << '.';
+         throw std::domain_error(message.str());
+      }
    }
 
    std::ifstream deps(depsFile.c_str());

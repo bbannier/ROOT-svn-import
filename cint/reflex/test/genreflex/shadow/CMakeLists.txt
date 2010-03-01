@@ -6,7 +6,6 @@ MACRO (FinalOverrider)
    REFLEX_ASSERT_GENREFLEX_CLI(FILES FinalOverrider.hpp
                                ARGS FinalOverrider.hpp --quiet
                                RESULT EQUAL 0
-                               STDOUT MATCHES ".*"
                                STDERR MATCHES "^$")
 
    MACRO_ASSERT_TEST_FILE_EXISTS("FinalOverrider_rflx.cpp")

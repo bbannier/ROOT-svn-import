@@ -8,7 +8,6 @@ MACRO (test001)
 
    REFLEX_ASSERT_GENREFLEX_CLI(ARGS X.h --quiet
                                RESULT EQUAL 0
-                               STDOUT MATCHES ".*"
                                STDERR MATCHES "^$")
 
    MACRO_ASSERT_TEST_FILE_EXISTS("X_rflx.cpp")
@@ -43,7 +42,7 @@ MACRO (test003)
 
    REFLEX_ASSERT_GENREFLEX_CLI(ARGS X.h Y.h --quiet
                                RESULT EQUAL 0
-                               STDOUT MATCHES "--->> genreflex: WARNING: References are not supported as data members \\(int\\& X::y\\)"
+                               STDOUT MATCHES "--->> genreflex: WARNING: References are not supported as data members.*"
                                STDERR MATCHES "^$")
 
    MACRO_ASSERT_TEST_FILE_EXISTS("X_rflx.cpp")
@@ -61,7 +60,7 @@ MACRO (test004)
 
    REFLEX_ASSERT_GENREFLEX_CLI(ARGS X.h Y.h --quiet --fail_on_warnings
                                RESULT EQUAL 1
-                               STDOUT MATCHES ".*--->> genreflex: WARNING: References are not supported as data members \\(int\\& X::y\\).*--->> genreflex: ERROR: Exiting with error due to 1 warnings \\( --fail_on_warnings enabled \\)"
+                               STDOUT MATCHES ".*--->> genreflex: WARNING: References are not supported as data members.*--->> genreflex: ERROR: Exiting with error due to 1 warnings.*"
                                STDERR MATCHES "^$")
 
    MACRO_ASSERT_TEST_FILE_NOT_EXISTS("X_rflx.cpp")
@@ -79,7 +78,7 @@ MACRO (test005)
 
    REFLEX_ASSERT_GENREFLEX_CLI(ARGS X.h
                                RESULT EQUAL 1
-                               STDOUT STREQUAL "--->> genreflex: INFO: Parsing file X.h with GCC_XML \n--->> genreflex: ERROR: processing file with gccxml. genreflex command failed.\n"
+                               STDOUT MATCHES ".*--->> genreflex: ERROR: processing file with gccxml. genreflex command failed.\n"
                                STDERR STREQUAL "X.h:1: error: declaration does not declare anything\n")
 
    MACRO_ASSERT_TEST_FILE_NOT_EXISTS("X_rflx.cpp")

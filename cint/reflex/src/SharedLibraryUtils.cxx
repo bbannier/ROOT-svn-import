@@ -17,8 +17,21 @@
 #include <assert.h>
 #include <stdio.h>
 
+namespace {
+
+//-------------------------------------------------------------------------------
+std::string Suffix(const std::string& path, char separator) {
+//-------------------------------------------------------------------------------
+
+   size_t split_index = path.rfind(separator);
+   return path.substr(split_index+1);
+}
+
+}
+
 #ifdef WIN32
 
+#include <algorithm>
 #include <Windows.h>
 #include <Psapi.h>
 #pragma comment(lib, "Psapi")
@@ -77,6 +90,14 @@ std::string Reflex::ExecutablePath() {
    return HModulePath(hmodule);
 }
 
+//-------------------------------------------------------------------------------
+std::string Reflex::NamePartOfPath(const std::string& path) {
+//-------------------------------------------------------------------------------
+
+   std::string result = Suffix(path, PATH_SEPARATOR);
+   std::transform(result.begin(), result.end(), result.begin(), tolower);
+   return result;
+}
 
 #else // WIN32
 
@@ -104,15 +125,15 @@ std::string Reflex::ExecutablePath() {
    return result;
 }
 
-#endif //WIN32
-
 //-------------------------------------------------------------------------------
 std::string Reflex::NamePartOfPath(const std::string& path) {
 //-------------------------------------------------------------------------------
 
-   size_t slash_index = path.rfind(PATH_SEPARATOR);
-   return path.substr(slash_index+1);
+   return Suffix(path, PATH_SEPARATOR);
 }
+
+#endif //WIN32
+
 
 //-------------------------------------------------------------------------------
 std::string Reflex::DirectoryPartOfPath(const std::string& path) {
