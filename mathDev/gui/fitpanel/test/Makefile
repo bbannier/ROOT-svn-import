@@ -13,7 +13,7 @@ include $(ROOTSYS)/test/Makefile.arch
 
 CXXFLAGS+=  -I$(ROOTSYS)/gui/fitpanel/src
 
-LDFLAGS+=-lFitPanel -lGui
+LDFLAGS+=-lFitPanel -lGui -lRooFit -lRooFitCore -lFoam -lMinuit
 
 UNITTESTOBJ     = UnitTesting.$(ObjSuf)
 UNITTESTSRC     = UnitTesting.$(SrcSuf)
