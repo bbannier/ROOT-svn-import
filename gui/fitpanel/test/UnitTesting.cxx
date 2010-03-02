@@ -23,7 +23,7 @@ using namespace std;
 // Function that compares to doubles up to an error limit. The error
 // limit can be up to 1.E-10, but it changes depending on the computer
 // architecture
-int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1.E-6)
+int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1.E-10)
 {
    return fabs( n1 - n2 ) > ERRORLIMIT * fabs(n1);
 }
@@ -78,7 +78,7 @@ public:
       TCanvas* c1 = static_cast<TCanvas*>( gROOT->FindObject("c1") );
       TH1*      h = static_cast<TH1*>    ( gROOT->FindObject("histo") );
       
-      f = TFitEditor::GetInstance(c1,h);
+      f = TFitEditor::GetInstance()->Show(c1,h);
    
       if ( f == 0 )
          throw InvalidPointer("In FitEditorUnitTesting constructor");
@@ -175,6 +175,10 @@ public:
    // certain limit, thus the test was succesful.
    int CompareFuncPars(std::vector<TFitEditor::FuncParamData_t>& pars)
    {
+      //Uncomment to see the parameters in the current architecture
+      //(this way the references can be properly set)
+      //PrintFuncPars();
+
       int status = 0;
       for ( unsigned int i = 0; i < f->fFuncPars.size(); ++i ) {
          for ( unsigned int j = 0; j < 3; ++j) {
@@ -197,12 +201,12 @@ public:
       f->DoFit();
 
       std::vector<TFitEditor::FuncParamData_t> pars(6);
-      pars[0][0] = -0.86471376634076801970;  pars[0][1] = pars[0][2] = 0.0;
-      pars[1][0] = 45.84337697060870908672;  pars[1][1] = pars[1][2] = 0.0;
-      pars[2][0] = -13.32141783912906873866; pars[2][1] = pars[2][2] = 0.0;
-      pars[3][0] = 13.80743352672578438955;  pars[3][1] = pars[3][2] = 0.0;
-      pars[4][0] = 0.17230936727526752206;   pars[4][1] = pars[4][2] = 0.0;
-      pars[5][0] = 0.98728095791845293938;   pars[5][1] = pars[5][2] = 0.0;
+      pars[0][0] = -0.86471374181557547622;  pars[0][1] = pars[0][2] = 0.0;
+      pars[1][0] = 45.84337695158775005666;  pars[1][1] = pars[1][2] = 0.0;
+      pars[2][0] = -13.32141785850429549498; pars[2][1] = pars[2][2] = 0.0;
+      pars[3][0] = 13.80743374851078009158;  pars[3][1] = pars[3][2] = 0.0;
+      pars[4][0] = 0.17230937581704022787;   pars[4][1] = pars[4][2] = 0.0;
+      pars[5][0] = 0.98728095739797461228;   pars[5][1] = pars[5][2] = 0.0;
 
       return CompareFuncPars(pars);
    }
@@ -214,12 +218,12 @@ public:
       f->DoFit();
 
       std::vector<TFitEditor::FuncParamData_t> pars(6);
-      pars[0][0] = -0.86471376626133966692;  pars[0][1] = pars[0][2] = 0.0;
-      pars[1][0] = 45.84337697042452219875;  pars[1][1] = pars[1][2] = 0.0;
-      pars[2][0] = -13.32141783972060622432; pars[2][1] = pars[2][2] = 0.0;
-      pars[3][0] = 13.80743352667312962012;  pars[3][1] = pars[3][2] = 0.0;
-      pars[4][0] = 0.17230936776683797307;   pars[4][1] = pars[4][2] = 0.0;
-      pars[5][0] = 0.98728095212777022827;   pars[5][1] = pars[5][2] = 0.0;
+      pars[0][0] = -0.86471374174593529371;  pars[0][1] = pars[0][2] = 0.0;
+      pars[1][0] = 45.84337695142446733598;  pars[1][1] = pars[1][2] = 0.0;
+      pars[2][0] = -13.32141785901991326568; pars[2][1] = pars[2][2] = 0.0;
+      pars[3][0] = 13.80743374846000293132;  pars[3][1] = pars[3][2] = 0.0;
+      pars[4][0] = 0.17230937501266346823;   pars[4][1] = pars[4][2] = 0.0;
+      pars[5][0] = 0.98728095227208689799;   pars[5][1] = pars[5][2] = 0.0;
 
       return CompareFuncPars(pars);
    }
@@ -339,8 +343,8 @@ public:
 
       std::vector<TFitEditor::FuncParamData_t> pars(3);
       pars[0][0] = 1.0;  pars[0][1] = pars[0][2] = 1.0;
-      pars[1][0] = 0.57616222565122654498;  pars[1][1] = pars[1][2] = 0.0;
-      pars[2][0] = 0.90739764318839521984;  pars[2][1] = pars[2][2] = 0.0;
+      pars[1][0] = 0.57616216764976890818;  pars[1][1] = pars[1][2] = 0.0;
+      pars[2][0] = 0.90739778708201823676;  pars[2][1] = pars[2][2] = 0.0;
 
       return CompareFuncPars(pars);
    }
@@ -396,17 +400,17 @@ public:
       f->DoFit();
 
       std::vector<TFitEditor::FuncParamData_t> pars(11);
-      pars[ 0][0] = 1.01010130092504835098;  pars[ 0][1] = pars[ 0][2] = 0;
-      pars[ 1][0] = 2.00223693541403102714;  pars[ 1][1] = pars[ 1][2] = 0;
-      pars[ 2][0] = 0.49142981449519324011;  pars[ 2][1] = pars[ 2][2] = 0;
-      pars[ 3][0] = 0.03058404503876750724;  pars[ 3][1] = pars[ 3][2] = 0;
-      pars[ 4][0] = 2.98217423626109168211;  pars[ 4][1] = pars[ 4][2] = 0;
-      pars[ 5][0] = 0.08458881936812148727;  pars[ 5][1] = pars[ 5][2] = 0;
-      pars[ 6][0] = 3.97659923278031923743;  pars[ 6][1] = pars[ 6][2] = 0;
-      pars[ 7][0] = -0.03584554242634782617; pars[ 7][1] = pars[ 7][2] = 0;
-      pars[ 8][0] = 4.96478032328273499729;  pars[ 8][1] = pars[ 8][2] = 0;
-      pars[ 9][0] = 0.89557700499129078153;  pars[ 9][1] = pars[ 9][2] = 0;
-      pars[10][0] = 9.92938972972320499366;  pars[10][1] = pars[10][2] = 0;
+      pars[ 0][0] = 1.01010131602646668902;  pars[ 0][1] = pars[ 0][2] = 0;
+      pars[ 1][0] = 2.00223695401921686354;  pars[ 1][1] = pars[ 1][2] = 0;
+      pars[ 2][0] = 0.49142982324998213395;  pars[ 2][1] = pars[ 2][2] = 0;
+      pars[ 3][0] = 0.03058394089143435732;  pars[ 3][1] = pars[ 3][2] = 0;
+      pars[ 4][0] = 2.98217419529281224655;  pars[ 4][1] = pars[ 4][2] = 0;
+      pars[ 5][0] = 0.08458900612860828505;  pars[ 5][1] = pars[ 5][2] = 0;
+      pars[ 6][0] = 3.97659922918498898170;  pars[ 6][1] = pars[ 6][2] = 0;
+      pars[ 7][0] = -0.03584550857809707530; pars[ 7][1] = pars[ 7][2] = 0;
+      pars[ 8][0] = 4.96478036967174318761;  pars[ 8][1] = pars[ 8][2] = 0;
+      pars[ 9][0] = 0.89557704563234774575;  pars[ 9][1] = pars[ 9][2] = 0;
+      pars[10][0] = 9.92938948024981371532;  pars[10][1] = pars[10][2] = 0;
 
 
       return CompareFuncPars(pars);
