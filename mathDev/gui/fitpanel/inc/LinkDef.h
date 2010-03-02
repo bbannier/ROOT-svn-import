@@ -18,5 +18,6 @@
 #pragma link C++ class TFitParametersDialog;
 #pragma link C++ class TTreeInput;
 #pragma link C++ class TAdvancedGraphicsDialog;
+#pragma link C++ class TRooFitPanel;
 
 #endif
