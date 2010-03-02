@@ -20,8 +20,10 @@ using namespace std;
 
 #include "CommonDefs.h"
 
-// Function that compares to doubles up to an error limit
-int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1.E-10)
+// Function that compares to doubles up to an error limit. The error
+// limit can be up to 1.E-10, but it changes depending on the computer
+// architecture
+int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1.E-6)
 {
    return fabs( n1 - n2 ) > ERRORLIMIT * fabs(n1);
 }
