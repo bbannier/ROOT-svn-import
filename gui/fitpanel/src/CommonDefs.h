@@ -38,3 +38,4 @@ enum EParStruct {
    PAR_MIN = 1,
    PAR_MAX = 2
 };
+

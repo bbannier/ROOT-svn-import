@@ -45,7 +45,6 @@ enum EObjectType {
    kObjectMultiGraph
 };
 
-
 class TGTab;
 class TVirtualPad;
 class TCanvas;
@@ -59,10 +58,7 @@ class TGNumberEntryField;
 class TGStatusBar;
 class TAxis;
 class TF1;
-class TGHProgressBar;
-class TGTextButton;
-
-class RooWorkspace;
+class TRooFitPanel;
 
 class TFitEditor : public TGMainFrame {
 
@@ -125,10 +121,8 @@ protected:
    TAxis               *fYaxis;            // y-axis
    TAxis               *fZaxis;            // z-axis
 
-   TGTextEntry         *fExpRoo;           // RooFit expression 
-   TGHProgressBar      *fProgRoo;          // shows the progression of the TF1 creation
-   TGTextButton        *fGenRoo;           // starts the TF1 generation
-   RooWorkspace        *fWorkspace;        // RooWorkspace of the FitPanel session
+   //RooFit
+   TRooFitPanel        *fRooFitPanel;      // RooFit panel
 
    // structure holding parameter value and limits
    struct FuncParamData_t { 
@@ -161,7 +155,6 @@ protected:
    void        GetFunctionsFromSystem();
    void        ProcessTreeInput(TObject* objSelected, Int_t selected,
                                 TString variables, TString cuts);
-   TF1 *       CreateRooFitPdf(const char * expr, bool norm = false);
    TF1*        FindFunction();
    void        FillDataSetList();
    TGComboBox* BuildMethodList(TGFrame *parent, Int_t id);
@@ -189,7 +182,8 @@ public:
 
    TList*  GetListOfFittingFunctions(TObject* obj = 0);
 
-   static  TFitEditor *GetInstance(TVirtualPad* pad = 0, TObject *obj = 0);
+   static  TFitEditor *PluginHandler(TVirtualPad* pad, TObject *obj);
+   static  TFitEditor *GetInstance();
    virtual Option_t  *GetDrawOption() const;
    virtual void       Hide();
    virtual void       Show(TVirtualPad* pad, TObject *obj);
@@ -221,7 +215,6 @@ public:
    virtual void   DoEmptyBinsAllWeights1();
    virtual void   DoEnteredFunction();
    virtual void   DoUpdate();
-   virtual void   DoGenerateRooFit();
    virtual void   DoFit();
    virtual void   DoMaxIterations();
    virtual void   DoDataSet(Int_t sel);
@@ -249,6 +242,7 @@ public:
    typedef std::vector<FuncParamData_t > FuncParams_t; 
 
    friend class FitEditorUnitTesting;
+   friend class TRooFitPanel;
    ClassDef(TFitEditor,0)  //Fit Panel interface
 };
 
