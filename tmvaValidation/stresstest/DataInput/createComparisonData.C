@@ -18,7 +18,7 @@
 #include "TBranch.h"
 #include <vector>
 
-void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000){
+void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char* filename = "TMVAInputData.root" ){
    // create testtreeS1, S2, SSum, treeSFalse  var1 --> -var1, all effis should be zero
    // create traintreeS1, S2, SSum, 
    // same for Background tree labelling S-->B
@@ -26,7 +26,7 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000){
    // vars 1,2,3,4, weight, flag I am signal, flag I am training,
    bool debug = false;
    // output file
-   TFile* dataFile = TFile::Open( "TMVAInputData.root", "RECREATE" );
+   TFile* dataFile = TFile::Open( filename, "RECREATE" );
    int nvar = 4+1;
    int nvarInt = 0;
    int nsig = 0, nbgd=0;
