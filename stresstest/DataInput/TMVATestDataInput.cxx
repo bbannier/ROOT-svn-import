@@ -83,6 +83,20 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
    TTree* TreeSBSumTrain=(TTree*)input->Get( "TreeSBSumTrain");
    TTree* TreeSBLarge   =(TTree*)input->Get( "TreeSBLarge");
 
+   TChain TreeSBLargeChain( "TreeSBLarge");
+   if (index==110){
+      TreeSBLargeChain.Add("TMVAInputDataChain2.root");
+      TreeSBLargeChain.Add("TMVAInputDataChain1.root");
+   }
+   else {
+      TreeSBLargeChain.Add("TMVAInputDataChain1.root");
+      TreeSBLargeChain.Add("TMVAInputDataChain2.root");
+   }
+   
+   //TreeSSumTrainChain("TreeSSumTrain");
+   //TreeSSumTrainChain.Add("TMVAInputDataChain1.root")
+   //TreeSSumTrainChain.Add("TMVAInputDataChain2.root");
+
    TCut dummycut = ""; // for example: TCut mycuts = "abs(var1)<0.5 && abs(var2-0.5)<1";
    TCut mycuts = "";
    TCut mycutb = "";
@@ -450,6 +464,42 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
                                            "nTrain_Signal=0:nTrain_Background=2000:nTest_Signal=1000:nTest_Background=1000:SplitMode=Random:NormMode=NumEvents:!V" );  
       thetest->RegisterAssertion(3000,2000,1000,1000,"testtrainmixed");
    }
+   else if (index==52) {
+      std::cout << "no strict separation between test/training, 5000 train, 2000 test total, using block split and mix mode"<<std::endl;
+      factory->AddSignalTree( TreeSSumTest, 1.);
+      factory->AddBackgroundTree( TreeB1Train, 1.);
+      factory->AddBackgroundTree( TreeB1Test, 1.);
+      factory->AddBackgroundTree( TreeB2Test, 1.);
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTrain_Signal=0:nTrain_Background=0:nTest_Signal=0:nTest_Background=0:SplitMode=Block:NormMode=NumEvents:!V" );  
+      thetest->RegisterAssertion(2000,3000,2000,3000,"testtrainmixed");
+   }
+   else if (index==53) {
+      std::cout << "no strict separation between test/training, 2000 train, 2000 test total, using random split and mix mode, event selection should differ from use case 52"<<std::endl;
+      std::cout << "specifically, the test tree should contain also training events, this needs to be checked by hand in the root output file"<<std::endl;
+      factory->AddSignalTree( TreeSSumTest, 1.);
+      factory->AddBackgroundTree( TreeB1Train, 1.);
+      factory->AddBackgroundTree( TreeB1Test, 1.);
+      factory->AddBackgroundTree( TreeB2Test, 1.);
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTrain_Signal=0:nTrain_Background=0:nTest_Signal=0:nTest_Background=0:SplitMode=Random:NormMode=NumEvents:!V" );  
+      thetest->RegisterAssertion(2000,3000,2000,3000,"testtrainmixed");
+   }
+   else if (index==54) {
+      std::cout << "same as 53 but using mixmode=random instead of splitmode"<<std::endl;
+      std::cout << "specifically, the test tree should now contain training events, this needs to be checked by hand in the root output file"<<std::endl;
+      factory->AddSignalTree( TreeSSumTest, 1.);
+      factory->AddBackgroundTree( TreeB1Train, 1.);
+      factory->AddBackgroundTree( TreeB1Test, 1.);
+      factory->AddBackgroundTree( TreeB2Test, 1.);
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTrain_Signal=0:nTrain_Background=0:nTest_Signal=0:nTest_Background=0:MixMode=Random:NormMode=NumEvents:!V" );  
+      thetest->RegisterAssertion(2000,3000,2000,3000,"testtrainmixed");
+   }
+
    // index= 60+ devoted to addition of single events
    else if (index==60) {
       std::cout << "strict separation of test/training, 2000 train, 2000 test total, using  AddEvent        ( const TString& className, Types::ETreeType tt, const std::vector<Double_t>& event, Double_t weight ); for test and training"<<std::endl;
@@ -588,8 +638,15 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
                                            "nTrain_Signal=5000:nTrain_Background=5000:nTest_Signal=5000:nTest_Background=5000:SplitMode=Random:NormMode=NumEvents:!V" );      
       thetest->RegisterAssertion(5000,5000,5000,5000,"testtrainmixed");
    }
-
-   else if (index==110) {
+   else if (index==110 || index==111 ){ 
+      std::cout << "using a large train tree for testing and training, 5000 train 5000 test total, using one S+B TChain and SetInputTrees"<<std::endl;
+      factory->SetInputTrees(&TreeSBLargeChain, "issig>0.5", "issig<0.5"); //tree signalcut, BG cut
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTrain_Signal=5000:nTrain_Background=5000:nTest_Signal=5000:nTest_Background=5000:SplitMode=Random:NormMode=NumEvents:!V" );      
+      thetest->RegisterAssertion(5000,5000,5000,5000,"testtrainmixed");
+   }
+   else if (index==120) {
       std::cout << "strict separation, 8000 train, 8000 test total, adding fake trees to testing which are not used because of block mode"<<std::endl;
       factory->AddSignalTree    ( TreeSSumTrain, 1.0, TMVA::Types::kTraining );
       factory->AddBackgroundTree( TreeBSumTrain, 1.0, TMVA::Types::kTraining );
@@ -602,7 +659,7 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
                                            "nTrain_Signal=4000:nTrain_Background=4000:nTest_Signal=4000:nTest_Background=4000:SplitMode=Block:NormMode=NumEvents:!V" );  
       thetest->RegisterAssertion(4000,4000,4000,4000);
    }
-   else if (index==111) {
+   else if (index==121) {
       std::cout << "strict separation, 8000 train, 9000 test total, adding fake trees to testing"<<std::endl;
       factory->AddSignalTree    ( TreeSSumTrain, 1.0, TMVA::Types::kTraining );
       factory->AddBackgroundTree( TreeBSumTrain, 1.0, TMVA::Types::kTraining );
@@ -615,7 +672,7 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
                                            "nTrain_Signal=4000:nTrain_Background=4000:nTest_Signal=4000:nTest_Background=5000:SplitMode=Random:NormMode=NumEvents:!V" );  
       thetest->RegisterAssertion(4000,4000,4000,5000,"hastestfakes");
    }
-   else if (index==120) {
+   else if (index==122) {
       std::cout << "strict separation, 8000 train, 8000 test total, adding fake trees to testing which diffuse into testing sample via random mixing"<<std::endl;
       factory->AddSignalTree    ( TreeSSumTrain, 1.0, TMVA::Types::kTraining );
       factory->AddBackgroundTree( TreeBSumTrain, 1.0, TMVA::Types::kTraining );
@@ -628,7 +685,7 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
                                            "nTrain_Signal=4000:nTrain_Background=4000:nTest_Signal=4000:nTest_Background=4000:SplitMode=Random:NormMode=NumEvents:!V" );  
       thetest->RegisterAssertion(4000,4000,4000,4000,"hastestfakes");
    }
-   else if (index==121) {
+   else if (index==123) {
       std::cout << "strict separation, 8000 train, 8000 test total, adding fake trees to testing which diffuse into testing sample via random mixing, reverse order of test and train"<<std::endl;
       factory->AddSignalTree    ( TreeSSumTest,  1.0, TMVA::Types::kTesting  );
       factory->AddBackgroundTree( TreeBSumTest,  1.0, TMVA::Types::kTesting  );
@@ -641,7 +698,7 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
                                            "nTrain_Signal=4000:nTrain_Background=4000:nTest_Signal=4000:nTest_Background=4000:SplitMode=Random:NormMode=NumEvents:!V" );  
       thetest->RegisterAssertion(4000,4000,4000,4000,"hastestfakes");
    }
-   else if (index==122) {
+   else if (index==124) {
       std::cout << "strict separation, 8000 train, 8000 test total, adding fake trees to testing which are not used because of alternate mode"<<std::endl;
       factory->AddSignalTree    ( TreeSSumTrain, 1.0, TMVA::Types::kTraining );
       factory->AddBackgroundTree( TreeBSumTrain, 1.0, TMVA::Types::kTraining );
@@ -654,7 +711,7 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
                                            "nTrain_Signal=4000:nTrain_Background=4000:nTest_Signal=4000:nTest_Background=4000:SplitMode=Alternate:NormMode=NumEvents:!V" );  
       thetest->RegisterAssertion(4000,4000,4000,4000);
    }
-   else if (index==123) {
+   else if (index==125) {
       std::cout << "strict separation, 8000 train, 8000 test total, adding fake trees to testing which are not used because of alternate mode, uneven event numbers with alternate mode"<<std::endl;
       factory->AddSignalTree    ( TreeSSumTrain, 1.0, TMVA::Types::kTraining );
       factory->AddBackgroundTree( TreeBSumTrain, 1.0, TMVA::Types::kTraining );
