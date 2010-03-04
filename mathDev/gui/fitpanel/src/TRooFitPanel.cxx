@@ -7,6 +7,8 @@
 #include "TGComboBox.h"
 #include "TGMsgBox.h"
 
+#include "TString.h"
+
 #include "TF1.h"
 #include "TH1.h"
 #include "TH2.h"
@@ -36,7 +38,7 @@ TRooFitPanel::TRooFitPanel(const TGWindow* p)
    TGHorizontalFrame *tmpFrame = new TGHorizontalFrame(this);
    TGLabel* tmpLabel = new TGLabel(tmpFrame, "Name:");
    tmpFrame->AddFrame(tmpLabel,new TGLayoutHints(kLHintsNormal, 0, 0, 2, 0));
-   TGComboBox* fNameRoo = new TGComboBox(tmpFrame, kFP_NAMEROO);
+   fNameRoo = new TGComboBox(tmpFrame, kFP_NAMEROO);
    fNameRoo->Resize(190, 20);
    tmpFrame->AddFrame(fNameRoo, new TGLayoutHints(kLHintsExpandX, 23, 0, 0, 0));
    this->AddFrame(tmpFrame, new TGLayoutHints(kLHintsExpandX, 5, 5, 10, 0));
@@ -68,6 +70,7 @@ TRooFitPanel::TRooFitPanel(const TGWindow* p)
    fWorkspace = new RooWorkspace(); 
 }
 
+//______________________________________________________________________________
 TRooFitPanel::~TRooFitPanel()
 {
    delete fWorkspace;
@@ -150,29 +153,15 @@ void TRooFitPanel::DoGenerateRooFit()
    TFitEditor* fe = TFitEditor::GetInstance();
 
    TH1* histo = 0;
-   switch (fe->fType) {
-      case kObjectHisto:
-         histo = static_cast<TH1*>(fe->fFitObject);
-         break;
-      case kObjectGraph:
-         histo = ((TGraph*)fe->fFitObject)->GetHistogram();
-         break;
-      case kObjectGraph2D:
-         histo = ((TGraph2D*)fe->fFitObject)->GetHistogram("empty");
-         break;
-      case kObjectHStack:
-         histo = (TH1 *)((THStack *)fe->fFitObject)->GetHists()->First();
-         break;
-      case kObjectMultiGraph:
-         histo = ((TMultiGraph*)fe->fFitObject)->GetHistogram();
-         break;
 
-      case kObjectTree:
-         new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
-                      "Error...", "RooFit not yet supported in the FitPanel with TTree objects!",
-                      kMBIconStop,kMBOk, 0);
-         return;
-   };
+   try {
+      histo = fe->GetFitObjectHistogram();
+   } catch (NoHistogramException& ) {
+      new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
+                   "Error...", "RooFit not yet supported in the FitPanel with TTree objects!",
+                   kMBIconStop,kMBOk, 0);
+      return;
+   }
 
    fWorkspace->factory(Form("x[%f,%f]",histo->GetXaxis()->GetXmin(),histo->GetXaxis()->GetXmax())) ;   
    if (histo->GetDimension() > 1)
@@ -182,23 +171,60 @@ void TRooFitPanel::DoGenerateRooFit()
    
    CreateRooFitPdf(fExpRoo->GetText());
 
+   UpdateListOfFunctions();
+
+   fe->DoUpdate();
 #else
    new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
                 "Error...", "RooFit not yet supported in the FitPanel with TTree objects!",
                 kMBIconStop,kMBOk, 0);
-   return;
 #endif
    return;
+
+}
+
+//______________________________________________________________________________
+void TRooFitPanel::UpdateListOfFunctions()
+{
+   TString strName = GetLastCreatedFunctionName();
+   fDefinedFunctions[strName] = fExpRoo->GetText();
+   fNameRoo->NewEntry(strName); 
+   fNameRoo->Select( fNameRoo->FindEntry(strName)->EntryId() , kFALSE);
+}
+
+//______________________________________________________________________________
+const TString TRooFitPanel::GetLastCreatedFunctionName()
+{
+   const char*name = 0;
+
+   //Unfortunately, there is no better way to iterate the RooAbsSet
+   TIterator *iterator= fWorkspace->allFunctions().createIterator();
+   RooAbsArg *next = 0;
+   while((0 != (next= (RooAbsArg*)iterator->Next()))) {
+      name = next->GetName();
+   }
+
+   return name;
+}
+
+//______________________________________________________________________________
+void TRooFitPanel::DoNameSel(Int_t /*selectedEntry*/)
+{
+   TGTextLBEntry* entry = static_cast<TGTextLBEntry*> ( fNameRoo->GetSelectedEntry() );
+   fExpRoo->SetText(fDefinedFunctions[entry->GetTitle()]);
+   cout << entry->GetTitle() << endl;
 }
 
 //______________________________________________________________________________
 void TRooFitPanel::ConnectSlots()
 {
    fGenRoo->Connect("Clicked()", "TRooFitPanel", this, "DoGenerateRooFit()");
+   fNameRoo->Connect("Selected(Int_t)", "TRooFitPanel", this, "DoNameSel(Int_t)");
 }
 
 //______________________________________________________________________________
 void TRooFitPanel::DisconnectSlots()
 {
    fGenRoo->Disconnect("Clicked()");
+   fNameRoo->Disconnect("Selected(Int_t)");
 }

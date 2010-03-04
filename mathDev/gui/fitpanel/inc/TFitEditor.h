@@ -35,6 +35,9 @@
 #include <map>
 #include <utility>
 
+#include <exception>
+#include <stdexcept>
+
 //--- Object types
 enum EObjectType {
    kObjectHisto,
@@ -58,7 +61,11 @@ class TGNumberEntryField;
 class TGStatusBar;
 class TAxis;
 class TF1;
+class TH1;
 class TRooFitPanel;
+class RooWorkspace;
+
+class NoHistogramException: public std::exception {};
 
 class TFitEditor : public TGMainFrame {
 
@@ -175,6 +182,7 @@ private:
    TFitEditor& operator=(const TFitEditor&);   // not implemented
 
    void RetrieveOptions(Foption_t&, TString&, ROOT::Math::MinimizerOptions&, Int_t);
+   TH1* GetFitObjectHistogram() throw (NoHistogramException);  // Get the inheritant histogram of the current fitobject
 
 public:
    TFitEditor(TVirtualPad* pad, TObject *obj);
@@ -182,16 +190,17 @@ public:
 
    TList*  GetListOfFittingFunctions(TObject* obj = 0);
 
-   static  TFitEditor *PluginHandler(TVirtualPad* pad, TObject *obj);
-   static  TFitEditor *GetInstance();
-   virtual Option_t  *GetDrawOption() const;
-   virtual void       Hide();
-   virtual void       Show(TVirtualPad* pad, TObject *obj);
+   static  TFitEditor  *PluginHandler(TVirtualPad* pad, TObject *obj);
+   static  TFitEditor  *GetInstance();
+   virtual Option_t    *GetDrawOption() const;
+   RooWorkspace        *GetRooWorkspace();
+   virtual void         Hide();
+   virtual void         Show(TVirtualPad* pad, TObject *obj);
 
-           void       ShowObjectName(TObject* obj);
-           Bool_t     SetObjectType(TObject* obj);
-   virtual void       Terminate();
-           void       UpdateGUI();
+           void         ShowObjectName(TObject* obj);
+           Bool_t       SetObjectType(TObject* obj);
+   virtual void         Terminate();
+           void         UpdateGUI();
 
    virtual void   CloseWindow();
    virtual void   ConnectSlots();
