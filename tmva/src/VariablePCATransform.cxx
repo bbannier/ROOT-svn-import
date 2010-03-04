@@ -143,7 +143,6 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
    fTransformedEvent->SetWeight     ( ev->GetWeight() );
    fTransformedEvent->SetBoostWeight( ev->GetBoostWeight() );
    fTransformedEvent->SetClass      ( ev->GetClass() );
-   fTransformedEvent->SetSignalClass( ev->GetSignalClass() );
    return fTransformedEvent;
 }
 

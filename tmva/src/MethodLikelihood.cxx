@@ -381,7 +381,7 @@ void TMVA::MethodLikelihood::Train( void )
                  << ", xmax="<<(*fHistSig)[ivar]->GetXaxis()->GetXmax()
                  << Endl;
          }
-         if (ev->IsSignal()) (*fHistSig)[ivar]->Fill( value, weight );
+         if (DataInfo().IsSignal(ev)) (*fHistSig)[ivar]->Fill( value, weight );
          else                (*fHistBgd)[ivar]->Fill( value, weight );
       }
    }
@@ -584,7 +584,7 @@ const TMVA::Ranking* TMVA::MethodLikelihood::CreateRanking()
 
          Double_t lk = this->GetMvaValue();
          Double_t w  = ev->GetWeight();
-         if (ev->IsSignal()) rS->Fill( lk, w );
+         if (DataInfo().IsSignal(ev)) rS->Fill( lk, w );
          else                rB->Fill( lk, w );
       }
 

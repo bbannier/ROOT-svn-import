@@ -253,7 +253,7 @@ void TMVA::MethodLD::GetSumVal( void )
          Double_t val = weight;
 
          if (!DoRegression())
-            val *= ev->IsSignal();
+            val *= DataInfo().IsSignal(ev);
          else //for regression
             val *= ev->GetTarget( ivar ); 
 

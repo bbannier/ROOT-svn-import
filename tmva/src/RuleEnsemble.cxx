@@ -345,7 +345,7 @@ void TMVA::RuleEnsemble::CalcRuleSupport()
             if ((*itrRule)->EvalEvent( *(*itrEvent) )) {
                ew = (*itrEvent)->GetWeight();
                s += ew;
-               if ((*itrEvent)->IsSignal()) ssig += ew;
+               if (GetMethodRuleFit()->DataInfo().IsSignal(*itrEvent)) ssig += ew;
                else                         sbkg += ew;
             }
          }
@@ -818,7 +818,7 @@ void TMVA::RuleEnsemble::RuleResponseStats()
          sigTag = (tagged && sigRule);        // it's tagged as a signal
          bkgTag = (tagged && (!sigRule));     // ... as bkg
          noTag = !(sigTag || bkgTag);         // ... not tagged
-         sigTrue = eveData->IsSignal();       // true if event is true signal
+         sigTrue = (eveData->GetClass() == 0);       // true if event is true signal
          if (tagged) {
             ntag++;
             if (sigTag && sigTrue)  nss++;

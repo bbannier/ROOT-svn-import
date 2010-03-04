@@ -423,7 +423,7 @@ void TMVA::MethodBoost::TestClassification()
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          Event* ev = Data()->GetEvent(ievt);
          Float_t w = ev->GetWeight();
-         if (ev->IsSignal()) {
+         if (DataInfo().IsSignal(ev)) {
             for (UInt_t imtd=0; imtd<nloop; imtd++) {
                fTestSigMVAHist[imtd]->Fill(fMethods[imtd]->GetMvaValue(),w);
             }
@@ -498,7 +498,7 @@ void TMVA::MethodBoost::FindMVACut()
          Int_t ibin = (Int_t) (((val-valmin)/(valmax-valmin))*nValBins);
          if (ibin>=nValBins) ibin = nValBins-1;
          if (ibin<0) ibin = 0;
-         if (Data()->GetEvent(ievt)->IsSignal()){
+         if (DataInfo().IsSignal(Data()->GetEvent(ievt))){
             for (Int_t i=ibin;i<nValBins;i++) err[i]+=weight;
          }
          else {
@@ -534,7 +534,7 @@ void TMVA::MethodBoost::SingleBoost()
    // finding the wrong events and calculating their total weights
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
       ev = Data()->GetEvent(ievt);
-      sig=ev->IsSignal();
+      sig=DataInfo().IsSignal(ev);
       v = method->GetMvaValue();
       w = ev->GetWeight();
       wo = ev->GetOriginalWeight();

@@ -124,11 +124,10 @@ void TMVA::PDEFoamDistr::FillBinarySearchTree( const Event* ev, EFoamType ft, Bo
       return;
 
    TMVA::Event *event = new TMVA::Event(*ev);
-   event->SetSignalClass( fSignalClass );
-
+ 
    // set event class and normalization
    if (ft==kSeparate || ft==kDiscr){
-      event->SetClass(ev->IsSignal() ? fSignalClass : fBackgroundClass);
+      event->SetClass(ev->GetClass()==fSignalClass ? fSignalClass : fBackgroundClass);
    } else if (ft==kMultiTarget){
       // since in multi target regression targets are handled like
       // variables, remove targets and add them to the event variabels

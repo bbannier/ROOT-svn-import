@@ -199,7 +199,7 @@ void TMVA::MethodHMatrix::ComputeCovariance( Bool_t isSignal, TMatrixD* mat )
       // in case event with neg weights are to be ignored
       if (IgnoreEventsWithNegWeightsInTraining() && weight <= 0) continue;
 
-      if (ev->IsSignal() != isSignal) continue;
+      if (DataInfo().IsSignal(ev) != isSignal) continue;
 
       // event is of good type
       sumOfWeights += weight;

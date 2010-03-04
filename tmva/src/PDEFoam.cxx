@@ -1134,7 +1134,7 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev, Bool_t NoNegWeights)
    } else if (ft == kDiscr){
       // 0. Element: Number of signal events
       // 1. Element: Number of background events times normalization
-      if (ev->IsSignal())
+      if (ev->GetClass() == 0)
          SetCellElement(cell, 0, GetCellElement(cell, 0) + weight);
       else
          SetCellElement(cell, 1, GetCellElement(cell, 1) + weight);

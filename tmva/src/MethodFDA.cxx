@@ -347,7 +347,7 @@ void TMVA::MethodFDA::Train( void )
       Float_t w  = GetTWeight(ev);
 
       if (!DoRegression()) {
-         if (ev->IsSignal()) { fSumOfWeightsSig += w; }
+         if (DataInfo().IsSignal(ev)) { fSumOfWeightsSig += w; }
          else                { fSumOfWeightsBkg += w; }
       }
       fSumOfWeights += w;
@@ -451,7 +451,7 @@ Double_t TMVA::MethodFDA::EstimatorFunction( std::vector<Double_t>& pars )
 	 // read the training event 
 	 const TMVA::Event* ev = GetEvent(ievt);
 
-	 desired = (ev->IsSignal() ? 1.0 : 0.0);
+	 desired = (DataInfo().IsSignal(ev) ? 1.0 : 0.0);
 	 result    = InterpretFormula( ev, pars.begin(), pars.end() );
 	 deviation = TMath::Power(result - desired, 2);
 	 estimator[Int_t(desired)] += deviation * ev->GetWeight();
