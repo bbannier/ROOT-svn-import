@@ -1300,37 +1300,14 @@ void TFitEditor::UpdateGUI()
    // sliders
    if (fType != kObjectTree) { // This is as fDim > 0
       TH1* hist = 0;
-      switch (fType) {
-         case kObjectHisto:
-            hist = (TH1*)fFitObject;
-            break;
 
-         case kObjectGraph:
-            hist = ((TGraph*)fFitObject)->GetHistogram();
-            break;
-
-         case kObjectMultiGraph:
-            hist = ((TMultiGraph*)fFitObject)->GetHistogram();
-            break;
-
-         case kObjectGraph2D:
-            hist = ((TGraph2D*)fFitObject)->GetHistogram("empty");
-            break;
-
-         case kObjectHStack: 
-            hist = (TH1 *)((THStack *)fFitObject)->GetHists()->First();
-
-         case kObjectTree:
-         default:
-            break;
-      }
-      
-
-      if (!hist) {
+      try { 
+         hist = GetFitObjectHistogram();
+      } catch (...) {
          Error("UpdateGUI","No hist is present - this should not happen, please report."
                "The FitPanel might be in an inconsistent state");
          //assert(hist);
-         return;
+         return;         
       }
 
       fSliderX->Disconnect("PositionChanged()");
@@ -2949,6 +2926,12 @@ Option_t *TFitEditor::GetDrawOption() const
 }
 
 //______________________________________________________________________________
+RooWorkspace* TFitEditor::GetRooWorkspace()
+{
+   return fRooFitPanel->GetRooWorkspace();
+}
+
+//______________________________________________________________________________
 void TFitEditor::DoLibrary(Bool_t on)
 {
    // Set selected minimization library in use.
@@ -3252,6 +3235,39 @@ void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, ROOT::Ma
    minOpts.SetTolerance( fTolerance->GetNumber() );
    minOpts.SetMaxIterations(fIterations->GetIntNumber());
    minOpts.SetMaxFunctionCalls(fIterations->GetIntNumber());
+}
+
+//______________________________________________________________________________
+TH1* TFitEditor::GetFitObjectHistogram() throw (NoHistogramException)
+{
+   TH1* hist = 0;
+   switch (fType) {
+   case kObjectHisto:
+      hist = (TH1*)fFitObject;
+      break;
+      
+   case kObjectGraph:
+      hist = ((TGraph*)fFitObject)->GetHistogram();
+      break;
+      
+   case kObjectMultiGraph:
+      hist = ((TMultiGraph*)fFitObject)->GetHistogram();
+      break;
+      
+   case kObjectGraph2D:
+      hist = ((TGraph2D*)fFitObject)->GetHistogram("empty");
+      break;
+      
+   case kObjectHStack: 
+      hist = (TH1 *)((THStack *)fFitObject)->GetHists()->First();
+      
+   case kObjectTree:
+   default:
+      throw NoHistogramException();
+      break;
+   }
+
+   return hist;
 }
 
 //______________________________________________________________________________
