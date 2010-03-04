@@ -99,6 +99,7 @@ TMVA::DecisionTree::DecisionTree():
    fMyTrandom  (NULL),
    fNNodesMax(999999),
    fMaxDepth(999999),
+   fClass(0),
    fTreeID(0)
 {
    // default constructor using the GiniIndex as separation criterion, 
@@ -109,9 +110,9 @@ TMVA::DecisionTree::DecisionTree():
 }
 
 //_______________________________________________________________________
-TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType,Int_t minSize, Int_t nCuts, 
+TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType,Int_t minSize, Int_t nCuts, UInt_t cls, 
                                   Bool_t randomisedTree, Int_t useNvars, UInt_t nNodesMax,
-                                  UInt_t nMaxDepth, Int_t iSeed, Float_t purityLimit, Int_t treeID ):
+                                  UInt_t nMaxDepth, Int_t iSeed, Float_t purityLimit, Int_t treeID):
    BinaryTree(),
    fNvars          (0),
    fNCuts          (nCuts),
@@ -124,6 +125,7 @@ TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType,Int_t minSize, I
    fMyTrandom      (new TRandom3(iSeed)),
    fNNodesMax      (nNodesMax),
    fMaxDepth       (nMaxDepth),
+   fClass          (cls),
    fTreeID         (treeID)
 {
    // constructor specifying the separation type, the min number of
@@ -164,6 +166,7 @@ TMVA::DecisionTree::DecisionTree( const DecisionTree &d ):
    fMyTrandom      (new TRandom3(fgRandomSeed)),  // well, that means it's not an identical copy. But I only ever intend to really copy trees that are "outgrown" already. 
    fNNodesMax  (d.fNNodesMax),
    fMaxDepth   (d.fMaxDepth),
+   fClass      (d.fClass),
    fTreeID     (d.fTreeID),
    fAnalysisType(d.fAnalysisType)
 {
@@ -222,7 +225,7 @@ void TMVA::DecisionTree::SetParentTreeInNodes( DecisionTreeNode *n )
 
 //_______________________________________________________________________
 UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
-                                      TMVA::DecisionTreeNode *node, UInt_t /*cls*/ )
+                                      TMVA::DecisionTreeNode *node)
 {
    // building the decision tree by recursively calling the splitting of
    // one (root-) node into two daughter nodes (returns the number of nodes)
@@ -257,7 +260,7 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
    for (UInt_t iev=0; iev<eventSample.size(); iev++) {
       const TMVA::Event* evt = eventSample[iev];
       const Float_t weight = evt->GetWeight();
-      if (evt->IsSignal()) {
+      if (evt->GetClass() == fClass) {
          s += weight;
          suw += 1;
       }
@@ -290,7 +293,7 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
             << "with negative weight in the training." << Endl;
       double nBkg=0.;
       for (UInt_t i=0; i<eventSample.size(); i++) {
-         if (!(eventSample[i]->IsSignal())) {
+         if (eventSample[i]->GetClass() != fClass) {
             nBkg += eventSample[i]->GetWeight();
             std::cout << "Event "<< i<< " has (original) weight: " <<  eventSample[i]->GetWeight()/eventSample[i]->GetBoostWeight() 
                       << " boostWeight: " << eventSample[i]->GetBoostWeight() << std::endl;
@@ -439,7 +442,7 @@ void TMVA::DecisionTree::FillEvent( TMVA::Event & event,
    node->IncrementNEvents( event.GetWeight() );
    node->IncrementNEvents_unweighted( );
   
-   if (event.IsSignal()) {
+   if (event.GetClass() == fClass) {
       node->IncrementNSigEvents( event.GetWeight() );
       node->IncrementNSigEvents_unweighted( );
    } 
@@ -636,7 +639,7 @@ void TMVA::DecisionTree::CheckEventWithPrunedTree( const Event& e ) const
    }
 
    while(current != NULL) {
-      if(e.IsSignal())
+      if(e.GetClass() == fClass)
          current->SetNSValidation(current->GetNSValidation() + e.GetWeight());
       else
          current->SetNBValidation(current->GetNBValidation() + e.GetWeight());
@@ -906,9 +909,8 @@ Float_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSam
    nTotS=0; nTotB=0;
    nTotS_unWeighted=0; nTotB_unWeighted=0;   
    for (UInt_t iev=0; iev<nevents; iev++) {
-      Bool_t eventType = eventSample[iev]->IsSignal();
       Float_t eventWeight =  eventSample[iev]->GetWeight(); 
-      if (eventType) {
+      if (eventSample[iev]->GetClass() == fClass) {
          nTotS+=eventWeight;
          nTotS_unWeighted++;
       }
@@ -925,7 +927,7 @@ Float_t TMVA::DecisionTree::TrainNodeFast( const vector<TMVA::Event*> & eventSam
             Float_t eventData = eventSample[iev]->GetValue(ivar); 
             // "maximum" is nbins-1 (the "-1" because we start counting from 0 !!
             iBin = TMath::Min(Int_t(nBins-1),TMath::Max(0,int (nBins*(eventData-xmin[ivar])/(xmax[ivar]-xmin[ivar]) ) ));
-            if (eventType) {
+            if (eventSample[iev]->GetClass() == fClass) {
                nSelS[ivar][iBin]+=eventWeight;
                nSelS_unWeighted[ivar][iBin]++;
             } 
@@ -1085,7 +1087,7 @@ Float_t TMVA::DecisionTree::TrainNodeFull( const vector<TMVA::Event*> & eventSam
    // Initialize (un)weighted counters for signal & background
    // Construct a list of event wrappers that point to the original data
    for( vector<TMVA::Event*>::const_iterator it = eventSample.begin(); it != eventSample.end(); ++it ) {
-      if( (*it)->IsSignal() ) { // signal or background event
+      if((*it)->GetClass() == fClass) { // signal or background event
          nTotS += (*it)->GetWeight();
          ++nTotS_unWeighted;
       }
@@ -1128,7 +1130,7 @@ Float_t TMVA::DecisionTree::TrainNodeFull( const vector<TMVA::Event*> & eventSam
       Float_t bkgWeightCtr = 0.0, sigWeightCtr = 0.0;
       vector<TMVA::BDTEventWrapper>::iterator it = bdtEventSample.begin(), it_end = bdtEventSample.end();
       for( ; it != it_end; ++it ) {
-         if( (**it)->IsSignal() ) // specify signal or background event
+         if((**it)->GetClass() == fClass ) // specify signal or background event
             sigWeightCtr += (**it)->GetWeight();
          else 
             bkgWeightCtr += (**it)->GetWeight(); 
@@ -1250,8 +1252,8 @@ Float_t  TMVA::DecisionTree::SamplePurity( vector<TMVA::Event*> eventSample )
   
    Float_t sumsig=0, sumbkg=0, sumtot=0;
    for (UInt_t ievt=0; ievt<eventSample.size(); ievt++) {
-      if (!(eventSample[ievt]->IsSignal())) sumbkg+=eventSample[ievt]->GetWeight();
-      if ((eventSample[ievt]->IsSignal())) sumsig+=eventSample[ievt]->GetWeight();
+      if (eventSample[ievt]->GetClass() != fClass) sumbkg+=eventSample[ievt]->GetWeight();
+      else sumsig+=eventSample[ievt]->GetWeight();
       sumtot+=eventSample[ievt]->GetWeight();
    }
    // sanity check

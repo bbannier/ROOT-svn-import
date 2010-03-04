@@ -476,9 +476,9 @@ void TMVA::DataSetFactory::BuildEventVector( TMVA::DataSetInfo& dsi,
                tmpEventVector.at(cl).push_back(new Event(vars, tgts , vis, cl , weight));
 
                // --------------- this is to keep <Event>->IsSignal() working. TODO: this should be removed on the long run
-               ClassInfo* ci = dsi.GetClassInfo("Signal");
-               if( ci == 0 ) tmpEventVector.at(cl).back()->SetSignalClass( 0 );
-               else          tmpEventVector.at(cl).back()->SetSignalClass( ci->GetNumber()   );
+               //ClassInfo* ci = dsi.GetClassInfo("Signal");
+               //if( ci == 0 ) tmpEventVector.at(cl).back()->SetSignalClass( 0 );
+               //else          tmpEventVector.at(cl).back()->SetSignalClass( ci->GetNumber()   );
                // ---------------
 
                // add up weights
@@ -1546,9 +1546,9 @@ void  TMVA::DataSetFactory::BuildEventVector( TMVA::DataSetInfo& dsi,
                tmpEventVector.find(currentInfo.GetTreeType())->second.at(cl).push_back(new Event(vars, tgts , vis, cl , weight));
 
                // --------------- this is to keep <Event>->IsSignal() working. TODO: this should be removed on the long run
-               ClassInfo* ci = dsi.GetClassInfo("Signal");
-               if( ci == 0 ) tmpEventVector[currentInfo.GetTreeType()].at(cl).back()->SetSignalClass( 0 );
-               else          tmpEventVector[currentInfo.GetTreeType()].at(cl).back()->SetSignalClass( ci->GetNumber()   );
+               //ClassInfo* ci = dsi.GetClassInfo("Signal");
+               //if( ci == 0 ) tmpEventVector[currentInfo.GetTreeType()].at(cl).back()->SetSignalClass( 0 );
+               //else          tmpEventVector[currentInfo.GetTreeType()].at(cl).back()->SetSignalClass( ci->GetNumber()   );
                // ---------------
             }
          }

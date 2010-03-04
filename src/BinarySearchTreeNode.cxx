@@ -55,7 +55,7 @@ TMVA::BinarySearchTreeNode::BinarySearchTreeNode( const Event* e )
      fEventV  ( std::vector<Float_t>() ),
      fTargets ( std::vector<Float_t>() ),
      fWeight  ( e==0?0:e->GetWeight()  ),
-     fClass   ( e==0?1:(e->IsSignal()?0:1) ), // see BinarySearchTree.h, line Mean() RMS() Min() and Max()
+     fClass   ( e==0?0:e->GetClass() ), // see BinarySearchTree.h, line Mean() RMS() Min() and Max()
      fSelector( -1 )
 {
    // constructor of a node for the search tree

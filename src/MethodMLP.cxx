@@ -294,7 +294,7 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
       }      
 
       // fill monitoring histograms
-      if (ev->IsSignal() && histS != 0) histS->Fill( float(v), float(w) );
+      if (DataInfo().IsSignal(ev) && histS != 0) histS->Fill( float(v), float(w) );
       else if              (histB != 0) histB->Fill( float(v), float(w) );
    }
 

@@ -545,17 +545,17 @@ void TMVA::MethodBDT::Train()
          }
          UInt_t nClasses = DataInfo().GetNClasses();
          for (UInt_t i=0;i<nClasses;i++){
-            fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts,
+            fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, i,
                                                  fRandomisedTrees, fUseNvars, fNNodesMax, fMaxDepth,
                                                  itree*nClasses+i, fNodePurityLimit, itree*nClasses+i));
-            if (fBaggedGradBoost) nNodesBeforePruning = fForest.back()->BuildTree(fSubSample, NULL, i);
-            else                  nNodesBeforePruning = fForest.back()->BuildTree(fEventSample, NULL, i);  
+            if (fBaggedGradBoost) nNodesBeforePruning = fForest.back()->BuildTree(fSubSample);
+            else                  nNodesBeforePruning = fForest.back()->BuildTree(fEventSample);  
             fBoostWeights.push_back(this->Boost(fEventSample, fForest.back(), itree, i));
          }
       }
       else{
          
-         fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts,
+         fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0,
                                               fRandomisedTrees, fUseNvars, fNNodesMax, fMaxDepth,
                                               itree, fNodePurityLimit, itree));
          if (fBaggedGradBoost) nNodesBeforePruning = fForest.back()->BuildTree(fSubSample);
@@ -676,7 +676,7 @@ void TMVA::MethodBDT::UpdateTargets(vector<TMVA::Event*> eventSample, UInt_t cls
       for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
          fResiduals[*e].at(0)+=fForest.back()->CheckEvent(*(*e),kFALSE);
          Double_t p_sig=1.0/(1.0+exp(-2.0*fResiduals[*e].at(0)));
-         Double_t res = ((*e)->IsSignal()?1:0)-p_sig;
+         Double_t res = (DataInfo().IsSignal(*e)?1:0)-p_sig;
          (*e)->SetTarget(0,res);
       }
    }   
@@ -832,7 +832,7 @@ void TMVA::MethodBDT::InitGradBoost( vector<TMVA::Event*> eventSample)
    }
    else{
       for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-         Double_t r = ((*e)->IsSignal()?1:0)-0.5; //Calculate initial residua
+         Double_t r = (DataInfo().IsSignal(*e)?1:0)-0.5; //Calculate initial residua
          (*e)->SetTarget(0,r);
          fResiduals[*e].push_back(0);         
       }
@@ -848,7 +848,7 @@ Double_t TMVA::MethodBDT::TestTreeQuality( DecisionTree *dt )
    for (UInt_t ievt=0; ievt<fValidationSample.size(); ievt++) {
       Bool_t isSignalType= (dt->CheckEvent(*(fValidationSample[ievt])) > fNodePurityLimit ) ? 1 : 0;
 
-      if (isSignalType == ((fValidationSample[ievt])->IsSignal()) ) {
+      if (isSignalType == (DataInfo().IsSignal(fValidationSample[ievt])) ) {
          ncorrect += fValidationSample[ievt]->GetWeight();
       }
       else{
@@ -910,8 +910,8 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
          if (tmpDev > maxDev) maxDev = tmpDev;
       }else{
          Bool_t isSignalType = (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit );
-         //       if (!(isSignalType == DataInfo().IsSignal((*e)))) {
-         if (!(isSignalType == (*e)->IsSignal())) {
+
+         if (!(isSignalType == DataInfo().IsSignal(*e))) {
             sumwfalse+= w;
          }
       }
@@ -976,8 +976,8 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
    Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
 
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      //       if ((!( (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit ) == DataInfo().IsSignal((*e)))) || DoRegression()) {
-      if ((!( (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit ) == (*e)->IsSignal())) || DoRegression()) {
+ 
+      if ((!( (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit ) == DataInfo().IsSignal(*e))) || DoRegression()) {
          Double_t boostfactor = boostWeight;
          if (DoRegression()) boostfactor = TMath::Power(1/boostWeight,(1.-TMath::Abs(dt->CheckEvent(*(*e),kFALSE) - (*e)->GetTarget(0) )/maxDev ) );
          if ( (*e)->GetWeight() > 0 ){

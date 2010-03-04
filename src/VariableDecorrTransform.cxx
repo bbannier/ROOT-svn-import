@@ -179,7 +179,6 @@ const TMVA::Event* TMVA::VariableDecorrTransform::Transform( const TMVA::Event* 
    fTransformedEvent->SetWeight     ( ev->GetWeight() );
    fTransformedEvent->SetBoostWeight( ev->GetBoostWeight() );
    fTransformedEvent->SetClass      ( ev->GetClass() );
-   fTransformedEvent->SetSignalClass( ev->GetSignalClass() );
    return fTransformedEvent;
 }
 

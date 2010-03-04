@@ -1983,7 +1983,7 @@ Double_t TMVA::MethodBase::GetEfficiency( const TString& theString, Types::ETree
       for (UInt_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
 
          // read the tree
-         Bool_t  isSignal  = GetEvent(ievt)->IsSignal();
+         Bool_t  isSignal  = DataInfo().IsSignal(GetEvent(ievt));
          Float_t theWeight = GetEvent(ievt)->GetWeight();
          Float_t theVal    = (*mvaRes)[ievt];
 

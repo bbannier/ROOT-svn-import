@@ -178,7 +178,7 @@ Double_t TMVA::CCTreeWrapper::TestTreeQuality( const EventList* validationSample
    for (UInt_t ievt=0; ievt < validationSample->size(); ievt++) {
       Bool_t isSignalType = (CheckEvent(*(*validationSample)[ievt]) > fDTParent->GetNodePurityLimit() ) ? 1 : 0;
       
-      if (isSignalType == (*validationSample)[ievt]->IsSignal()) {
+      if (isSignalType == ((*validationSample)[ievt]->GetClass() == 0)) {
          ncorrect += (*validationSample)[ievt]->GetWeight();
       }
       else{
@@ -202,7 +202,7 @@ Double_t TMVA::CCTreeWrapper::TestTreeQuality( const DataSet* validationSample )
 
       Bool_t isSignalType = (CheckEvent(*ev) > fDTParent->GetNodePurityLimit() ) ? 1 : 0;
       
-      if (isSignalType == ev->IsSignal()) {
+      if (isSignalType == (ev->GetClass() == 0)) {
          ncorrect += ev->GetWeight();
       }
       else{

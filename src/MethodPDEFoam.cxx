@@ -343,7 +343,7 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
       // insert event to BinarySearchTree
       for (Long64_t k=0; k<GetNEvents(); k++) {
          const Event* ev = GetEvent(k);
-         if ((i==0 && ev->IsSignal()) || (i==1 && !ev->IsSignal()))
+         if ((i==0 && DataInfo().IsSignal(ev)) || (i==1 && !DataInfo().IsSignal(ev)))
             foam[i]->FillBinarySearchTree(ev, IgnoreEventsWithNegWeightsInTraining());
       }
 
@@ -360,7 +360,7 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
       // loop over all events -> fill foam cells
       for (Long64_t k=0; k<GetNEvents(); k++) {
          const Event* ev = GetEvent(k); 
-         if ((i==0 && ev->IsSignal()) || (i==1 && !ev->IsSignal()))
+         if ((i==0 && DataInfo().IsSignal(ev)) || (i==1 && !DataInfo().IsSignal(ev)))
             foam[i]->FillFoamCells(ev, IgnoreEventsWithNegWeightsInTraining());
       }
 

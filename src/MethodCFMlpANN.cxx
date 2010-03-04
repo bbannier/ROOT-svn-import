@@ -214,7 +214,7 @@ void TMVA::MethodCFMlpANN::ProcessOptions()
          const Event * ev = GetEvent(ievt);
 
          // identify signal and background events  
-         (*fClass)[ievt] = ev->IsSignal() ? 1 : 2;
+         (*fClass)[ievt] = DataInfo().IsSignal(ev) ? 1 : 2;
       
          // use normalized input Data
          for (ivar=0; ivar<GetNvar(); ivar++) {
