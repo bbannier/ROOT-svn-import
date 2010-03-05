@@ -67,8 +67,9 @@ TSelHist::~TSelHist()
    SafeDelete(fRandom);
 
    // Info("TSelHist","destroying ...");
-   
-   for (Int_t i=0; i < fNhist; i++) {
+
+   if (!fDraw) {
+    for (Int_t i=0; i < fNhist; i++) {
       if (fHist1D && fHist1D[i] && !fOutput->FindObject(fHist1D[i])) {
          SafeDelete(fHist1D[i]);
       }
@@ -78,7 +79,9 @@ TSelHist::~TSelHist()
       if (fHist3D && fHist3D[i] && !fOutput->FindObject(fHist3D[i])) {
          SafeDelete(fHist3D[i]);
       }
+    }
    }
+   
    SafeDelete(fHist1D);
    SafeDelete(fHist2D);
    SafeDelete(fHist3D);
@@ -102,6 +105,7 @@ void TSelHist::Begin(TTree * /*tree*/)
       TParameter<Long_t> *p =
          dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("fNHists"));
       fNhist = (p) ? (Int_t) p->GetVal() : fNhist;
+      Info("Begin", "fNhist=%d", fNhist);
    }
 
    if (fInput->FindObject("fDraw")) {
@@ -149,6 +153,7 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
       TParameter<Long_t> *p =
          dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("fNHists"));
       fNhist = (p) ? (Int_t) p->GetVal() : fNhist;
+      Info("SlaveBegin", "fNhist=%d", fNhist);
    }
 
    if (fInput->FindObject("fDraw")) {
