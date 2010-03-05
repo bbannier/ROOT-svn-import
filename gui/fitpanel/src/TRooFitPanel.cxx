@@ -82,7 +82,7 @@ TRooFitPanel::~TRooFitPanel()
 }
 
 //______________________________________________________________________________
-TF1 * TRooFitPanel::CreateRooFitPdf(const char * expr, bool norm) { 
+TF1 * TRooFitPanel::CreateRooFitPdf(const char * expr, bool norm) throw(WrongRooFitExpression) { 
 
    // This method will create a TF1 from the RooFit expression entered
    // by the user.
@@ -91,8 +91,7 @@ TF1 * TRooFitPanel::CreateRooFitPdf(const char * expr, bool norm) {
 
    RooAbsArg * arg = fWorkspace->factory(expr);
    if (!arg) { 
-      std::cerr << "Error: creating RooFit model - invalid expression" << std::endl;
-      return 0; 
+      throw WrongRooFitExpression("Invalid expression");
    }
    TString modelName = arg->GetName();
    RooAbsReal * pdf = 0; 
@@ -106,20 +105,16 @@ TF1 * TRooFitPanel::CreateRooFitPdf(const char * expr, bool norm) {
       RooAbsArg * tmp = fWorkspace->factory(fullexpr);
       pdf = dynamic_cast<RooAbsReal *>(tmp);
       if (!pdf) { 
-         std::cerr << "Error creating Unnormalized RooFit funciton : " << fullexpr << std::endl;
-         return 0; 
+         TString errorString = "Error creating Unnormalized RooFit funciton : ";
+         errorString += fullexpr;
+         throw WrongRooFitExpression(errorString.Data());
       }
    }
-
-
 
    // assume observables are x (or y, z ) for multi-dimensional functions
 
    RooRealVar * x = fWorkspace->var("x");
-   if (!x) { 
-      std::cerr << "Error: variable x not present in pdf" << std::endl;
-      return 0; 
-   }
+   if (!x) { throw WrongRooFitExpression("Variable x not present in pdf"); }
    RooArgSet obs(*x);
 
    RooRealVar * y = fWorkspace->var("y");
@@ -131,10 +126,7 @@ TF1 * TRooFitPanel::CreateRooFitPdf(const char * expr, bool norm) {
    // in case of multi dimension needs to add also y and z
    RooArgSet * params = pdf->getParameters(obs); 
 
-   if (!params) {
-      std::cerr << "Error: no parameters present in pdf" << std::endl;
-      return 0; 
-   }
+   if (!params) {  throw WrongRooFitExpression("No parameters present in pdf"); }
    params->Print();
    // adding *x as thirs parameter will ensure x is normalized with respect to x 
    TF1 * f1 = pdf->asTF(obs,RooArgList(*params),obs);
@@ -181,7 +173,12 @@ void TRooFitPanel::DoGenerateRooFit()
       fWorkspace->factory(Form("z[%f,%f]",histo->GetZaxis()->GetXmin(),histo->GetZaxis()->GetXmax())) ;   
    
    // Call the actual method for the TF1 creation
-   CreateRooFitPdf(fExpRoo->GetText());
+   try {
+      CreateRooFitPdf(fExpRoo->GetText());
+   } catch (WrongRooFitExpression& exp) {
+      cerr << "Error(:S): " << exp.what() << endl;
+      return;
+   }
 
    // Add the new function to the current list.
    UpdateListOfFunctions();
@@ -231,7 +228,6 @@ void TRooFitPanel::DoNameSel(Int_t /*selectedEntry*/)
    // Event processed when a function is selected from the TGComboBox
    TGTextLBEntry* entry = static_cast<TGTextLBEntry*> ( fNameRoo->GetSelectedEntry() );
    fExpRoo->SetText(fDefinedFunctions[entry->GetTitle()]);
-   cout << entry->GetTitle() << endl;
 }
 
 //______________________________________________________________________________
@@ -259,9 +255,7 @@ const char* TRooFitPanel::GetFunctionDefinition(const char* functionName) const
 
    TString searchString("fN_");
    searchString += functionName;
-   cout << "Looking for: " << searchString << endl;
 
    i = fDefinedFunctions.find(searchString.Data());
-   cout << (fDefinedFunctions.end() == i) << endl;
    return ( fDefinedFunctions.end() == i )?0:i->second.Data();
 }

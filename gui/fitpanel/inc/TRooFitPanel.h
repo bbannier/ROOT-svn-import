@@ -12,6 +12,18 @@ class RooWorkspace;
 
 #include <map>
 
+#include <exception>
+#include <stdexcept>
+
+class WrongRooFitExpression: public std::exception 
+{
+private:
+   const char* _exp;
+public:
+   WrongRooFitExpression(const char* exp): _exp(exp) {};
+   const char* what() const throw() { return _exp; };
+};
+
 class TRooFitPanel: public TGVerticalFrame {
 
 public: 
@@ -28,7 +40,7 @@ protected:
    std::map<const TString, TString> fDefinedFunctions;
 
 protected:
-   TF1 *         CreateRooFitPdf(const char * expr, bool norm = false);
+   TF1 *         CreateRooFitPdf(const char * expr, bool norm = false) throw (WrongRooFitExpression);
    const TString GetLastCreatedFunctionName();
    void          UpdateListOfFunctions();
 
