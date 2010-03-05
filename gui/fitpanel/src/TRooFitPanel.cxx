@@ -16,9 +16,6 @@
 #include "THStack.h"
 #include "TMultiGraph.h"
 
-#include <vector>
-#include <map>
-
 #include "CommonDefs.h"
 #include "RConfigure.h"
 
@@ -35,6 +32,11 @@ struct RooWorkspace { };
 TRooFitPanel::TRooFitPanel(const TGWindow* p)
   :TGVerticalFrame(p)
 {
+   // TRooFitPanel Constructor.
+
+   // So far is just builds a Tab panel for the TFitEditor. It might
+   // be upgraded in the future.
+
    TGHorizontalFrame *tmpFrame = new TGHorizontalFrame(this);
    TGLabel* tmpLabel = new TGLabel(tmpFrame, "Name:");
    tmpFrame->AddFrame(tmpLabel,new TGLayoutHints(kLHintsNormal, 0, 0, 2, 0));
@@ -73,12 +75,17 @@ TRooFitPanel::TRooFitPanel(const TGWindow* p)
 //______________________________________________________________________________
 TRooFitPanel::~TRooFitPanel()
 {
+   // Destructor. Just delete the workspace.
+
    delete fWorkspace;
    fWorkspace = 0;
 }
 
 //______________________________________________________________________________
 TF1 * TRooFitPanel::CreateRooFitPdf(const char * expr, bool norm) { 
+
+   // This method will create a TF1 from the RooFit expression entered
+   // by the user.
 
 #ifdef R__HAS_ROOFIT
 
@@ -148,6 +155,9 @@ TF1 * TRooFitPanel::CreateRooFitPdf(const char * expr, bool norm) {
 //______________________________________________________________________________
 void TRooFitPanel::DoGenerateRooFit()
 {
+   // When the user clicks on the button, it will be this event that
+   // will fire the building process.
+
 #ifdef R__HAS_ROOFIT
 
    TFitEditor* fe = TFitEditor::GetInstance();
@@ -163,16 +173,20 @@ void TRooFitPanel::DoGenerateRooFit()
       return;
    }
 
+   // Initialize the variables depending on the dimension of the object's histogram.
    fWorkspace->factory(Form("x[%f,%f]",histo->GetXaxis()->GetXmin(),histo->GetXaxis()->GetXmax())) ;   
    if (histo->GetDimension() > 1)
       fWorkspace->factory(Form("y[%f,%f]",histo->GetYaxis()->GetXmin(),histo->GetYaxis()->GetXmax())) ;   
    if (histo->GetDimension() > 2)
       fWorkspace->factory(Form("z[%f,%f]",histo->GetZaxis()->GetXmin(),histo->GetZaxis()->GetXmax())) ;   
    
+   // Call the actual method for the TF1 creation
    CreateRooFitPdf(fExpRoo->GetText());
 
+   // Add the new function to the current list.
    UpdateListOfFunctions();
 
+   // Update the FitEditor to include the new TF1
    fe->DoUpdate();
 #else
    new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
@@ -186,6 +200,7 @@ void TRooFitPanel::DoGenerateRooFit()
 //______________________________________________________________________________
 void TRooFitPanel::UpdateListOfFunctions()
 {
+   // Adds the new function to the list of functions.
    TString strName = GetLastCreatedFunctionName();
    fDefinedFunctions[strName] = fExpRoo->GetText();
    fNameRoo->NewEntry(strName); 
@@ -195,6 +210,9 @@ void TRooFitPanel::UpdateListOfFunctions()
 //______________________________________________________________________________
 const TString TRooFitPanel::GetLastCreatedFunctionName()
 {
+   // Loops  through the  RooWorkspace to  find out  the  last created
+   // function.
+
    const char*name = 0;
 
    //Unfortunately, there is no better way to iterate the RooAbsSet
@@ -210,6 +228,7 @@ const TString TRooFitPanel::GetLastCreatedFunctionName()
 //______________________________________________________________________________
 void TRooFitPanel::DoNameSel(Int_t /*selectedEntry*/)
 {
+   // Event processed when a function is selected from the TGComboBox
    TGTextLBEntry* entry = static_cast<TGTextLBEntry*> ( fNameRoo->GetSelectedEntry() );
    fExpRoo->SetText(fDefinedFunctions[entry->GetTitle()]);
    cout << entry->GetTitle() << endl;
@@ -218,6 +237,7 @@ void TRooFitPanel::DoNameSel(Int_t /*selectedEntry*/)
 //______________________________________________________________________________
 void TRooFitPanel::ConnectSlots()
 {
+   // To be called from TFitEditor when needed.
    fGenRoo->Connect("Clicked()", "TRooFitPanel", this, "DoGenerateRooFit()");
    fNameRoo->Connect("Selected(Int_t)", "TRooFitPanel", this, "DoNameSel(Int_t)");
 }
@@ -225,6 +245,23 @@ void TRooFitPanel::ConnectSlots()
 //______________________________________________________________________________
 void TRooFitPanel::DisconnectSlots()
 {
+   // To be called from the TFitEditor when needed.
    fGenRoo->Disconnect("Clicked()");
    fNameRoo->Disconnect("Selected(Int_t)");
+}
+
+//______________________________________________________________________________
+const char* TRooFitPanel::GetFunctionDefinition(const char* functionName) const
+{
+   // Given an expression, look if there is a function in the
+   // workspace with such a name and return it's definition.
+   std::map<const TString, TString>::const_iterator i;
+
+   TString searchString("fN_");
+   searchString += functionName;
+   cout << "Looking for: " << searchString << endl;
+
+   i = fDefinedFunctions.find(searchString.Data());
+   cout << (fDefinedFunctions.end() == i) << endl;
+   return ( fDefinedFunctions.end() == i )?0:i->second.Data();
 }
