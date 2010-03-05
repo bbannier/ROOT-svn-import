@@ -116,6 +116,8 @@ public:
    Int_t CreateDataSetsN(const char *basedir, const char *lab,
                          Int_t np, const Int_t *wp,
                          Int_t nr, Int_t nfw, Int_t nfmx);
+   Int_t GenerateDataSetN(const char *dset,
+                          Int_t nw, Int_t nfw, Long64_t fileent);
 
    TFile* FileOpen(const char* filename="", 
                    Option_t* option="", 
