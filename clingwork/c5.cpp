@@ -335,7 +335,7 @@ void doit()
     CI.ClearOutputFiles(/*EraseFiles=*/CI.getDiagnostics().getNumErrors());
     CI.getDiagnosticClient().EndSourceFile();
     unsigned err_count = CI.getDiagnostics().getNumErrors();
-    m_globalDeclarations.append(m_input);
+    m_globalDeclarations.append(m_input + "\n");
     return;
   }
   //
@@ -537,9 +537,10 @@ void doit()
   std::fprintf(stderr, "wrapped_globals:\n%s\n", wrapped_globals.c_str());
   std::fprintf(stderr, "wrapped_stmts:\n%s\n", wrapped_stmts.c_str());
   std::string wrapped;
-  wrapped += m_globalDeclarations + wrapped_globals + wrapped_stmts;
+  wrapped += m_globalDeclarations + wrapped_globals + "\n" +
+    wrapped_stmts + "\n";
   // Accumulate the held global declarations for the next run.
-  m_globalDeclarations.append(held_globals);
+  m_globalDeclarations.append(held_globals + "\n");
   //
   //  Shutdown parse.
   //
