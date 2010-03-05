@@ -838,12 +838,15 @@ Int_t TProofBench::CreateDataSetsN(const char *basedir, const char *lab,
          TFileCollection *fc = new TFileCollection;
          Int_t nf = nfw * wp[kp];
          for (kf = 0; kf < nf; kf++) {
-            fc->Add(TString::Format("%s/event_%d.root", basedir, kk++));
+            Info("CreateDataSetsN", "adding file '%s/event_%d.root' ...", basedir, kk);
+            fc->Add(new TFileInfo(TString::Format("%s/event_%d.root", basedir, kk++)));
             if (kk >= nfmx) kk = 0;
          }
          fc->Update();
          // Register dataset with verification
          fProof->RegisterDataSet(dsname, fc, "OV");
+         // Cleanup
+         delete fc;
       }
    }
    // Done
@@ -907,6 +910,83 @@ Int_t TProofBench::GenerateFilesN(Int_t nf, Long64_t fileent)
 
    // Restore previous value
    fNEvents = oldNEvents;
+
+   // Done
+   return 0;
+}
+
+//_________________________________________________________________________________
+Int_t TProofBench::GenerateDataSetN(const char *dset,
+                                    Int_t nw, Int_t nfw, Long64_t fileent)
+{
+   // Generate the files needed for a test on PROOF-Lite with nw workers.
+   // It will generate nfw files per worker for 'nr' different runs.
+   // Each file will have 'fileent' entries.
+   // A set of datasets 'dset_[nw]_[run]' are automatically registered and verified
+   // Uses TPacketizerFile.
+   // *** This is only to show how it works ***
+
+   // Number of events per file
+   Long64_t oldNEvents = fNEvents;
+   fNEvents = fileent;
+
+   // Create dataset containers
+   Int_t nr = 4;
+   TFileCollection fcs[4];
+   Int_t ir = 0;
+   for (ir = 0; ir < nr ; ir++) {
+     fcs[ir].SetName(TString::Format("%s_%d_%d", dset, nw, ir));
+   }
+
+   // Number of files
+   Int_t nf = nw * nfw;
+
+   // Create the file names and the map {worker,files}
+   // Naming:
+   //         <basedir>/event_<file>.root
+   TMap *filesmap = new TMap;
+   filesmap->SetName("PROOF_FilesToProcess");
+   TList *files = new TList;
+   files->SetName(gSystem->HostName());
+   Long64_t entries = 0;
+   Int_t kk = 0;
+   for (ir = 0; ir < nr ; ir++) {
+      Int_t i = 0;
+      for (i = 0; i < nf; i++) {
+         fcs[ir].Add(new TFileInfo(TString::Format("%s/event_%d.root", fBaseDir.Data(), kk)));
+         files->Add(new TObjString(TString::Format("%s/event_%d.root", fBaseDir.Data(), kk++)));
+         entries++;
+      }
+   }
+   filesmap->Add(new TObjString((gSystem->HostName())), files);
+   files->Print();
+
+   // Set the relevant input parameters
+   SetInputParameters();
+
+   // Add the file map in the input list
+   fProof->AddInput(filesmap);
+
+   // Set the packetizer to be the one on test
+   fProof->SetParameter("PROOF_Packetizer", "TPacketizerFile");
+
+   // Run
+   fProof->Process("TSelEventGenN", entries);
+
+   // Clear the input parameters
+   ClearInputParameters();
+   fProof->DeleteParameters("PROOF_Packetizer");
+   fProof->GetInputList()->Remove(filesmap);
+   filesmap->SetOwner(kTRUE);
+   SafeDelete(filesmap);
+
+   // Restore previous value
+   fNEvents = oldNEvents;
+
+   // Register and verify the datasets
+   for (ir = 0; ir < nr ; ir++) {
+     fProof->RegisterDataSet(fcs[ir].GetName(), &fcs[ir], "OV");
+   }
 
    // Done
    return 0;
