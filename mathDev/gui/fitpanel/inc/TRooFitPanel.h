@@ -37,6 +37,7 @@ public:
    void ConnectSlots();
    void DisconnectSlots();
    inline RooWorkspace* GetRooWorkspace() {return fWorkspace;};
+   const char* GetFunctionDefinition(const char* functionName) const;
 
 // Event controllers
 public:

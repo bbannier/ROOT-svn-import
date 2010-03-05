@@ -2337,7 +2337,14 @@ void TFitEditor::DoFunction(Int_t selected)
             editable = kTRUE;
          else
             editable = kFALSE;
-         fEnteredFunc->SetText(te->GetTitle());
+         // Check if the defined function is in the RooWorkspace
+         const char* tmpRooName = fRooFitPanel->GetFunctionDefinition(te->GetTitle());
+         if ( tmpRooName )
+            // If so, get the definition
+            fEnteredFunc->SetText(tmpRooName);
+         else
+            // Otherwise, put just the title
+            fEnteredFunc->SetText(te->GetTitle());
       }
       // Once you have the function, set the editable.
       SetEditable(editable);
