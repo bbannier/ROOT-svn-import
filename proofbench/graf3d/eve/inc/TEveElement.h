@@ -60,7 +60,7 @@ public:
    };
 
    static const TGPicture*                      fgRnrIcons[4];
-   static const TGPicture*                      fgListTreeIcons[8];
+   static const TGPicture*                      fgListTreeIcons[9];
 
    typedef std::set<TEveListTreeInfo>           sLTI_t;
    typedef sLTI_t::iterator                     sLTI_i;
@@ -229,6 +229,8 @@ public:
    virtual void RemoveElements();
    virtual void RemoveElementsLocal();
 
+   virtual void ProjectChild(TEveElement* el, Bool_t same_depth=kTRUE);
+
    virtual void Destroy();                      // *MENU*
    virtual void DestroyOrWarn();
    virtual void DestroyElements();              // *MENU*
@@ -316,6 +318,8 @@ public:
    virtual void FillImpliedSelectedSet(Set_t& impSelSet);
 
    virtual UChar_t GetSelectedLevel() const;
+
+   void RecheckImpliedSelections();
 
    // Change-stamping and change bits
    //---------------------------------

@@ -15,6 +15,7 @@
 #include "TEveManager.h"
 #include "TEveSelection.h"
 #include "TEveProjectionBases.h"
+#include "TEveProjectionManager.h"
 
 #include "TGeoMatrix.h"
 
@@ -57,7 +58,7 @@ ClassImp(TEveElement);
 
 //______________________________________________________________________________
 const TGPicture* TEveElement::fgRnrIcons[4]      = { 0 };
-const TGPicture* TEveElement::fgListTreeIcons[8] = { 0 };
+const TGPicture* TEveElement::fgListTreeIcons[9] = { 0 };
 
 //______________________________________________________________________________
 TEveElement::TEveElement() :
@@ -726,7 +727,8 @@ TGListTreeItem* TEveElement::AddIntoListTree(TGListTree* ltree,
                                              TGListTreeItem* parent_lti)
 {
    // Add this element into ltree to an already existing item
-   // parent_lti.
+   // parent_lti. Children, if any, are added as below the newly created item.
+   // Returns the newly created list-tree-item.
 
    static const TEveException eh("TEveElement::AddIntoListTree ");
 
@@ -736,6 +738,11 @@ TGListTreeItem* TEveElement::AddIntoListTree(TGListTree* ltree,
 
    if (parent_lti == 0)
       ++fTopItemCnt;
+
+   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      (*i)->AddIntoListTree(ltree, item);
+   }
 
    ltree->ClearViewPort();
 
@@ -1334,7 +1341,41 @@ void TEveElement::RemoveElementsLocal()
    // See comment to RemoveElementlocal(TEveElement*).
 }
 
-/******************************************************************************/
+//==============================================================================
+
+//______________________________________________________________________________
+void TEveElement::ProjectChild(TEveElement* el, Bool_t same_depth)
+{
+   // If this is a projectable, loop over all projected replicas and
+   // add the projected image of child 'el' there. This is supposed to
+   // be called after you add a child to a projectable after it has
+   // already been projected.
+   // You might also want to call RecheckImpliedSelections() on this
+   // element or 'el'.
+   //
+   // If 'same_depth' flag is true, the same depth as for parent object
+   // is used in every projection. Otherwise current depth of each
+   // relevant projection-manager is used.
+
+   TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
+   if (pable && HasChild(el))
+   {
+      for (TEveProjectable::ProjList_i i = pable->BeginProjecteds(); i != pable->EndProjecteds(); ++i)
+      {
+         TEveProjectionManager *pmgr = (*i)->GetManager();
+         Float_t cd = pmgr->GetCurrentDepth();
+         if (same_depth) pmgr->SetCurrentDepth((*i)->GetDepth());
+
+         pmgr->SubImportElements(el, dynamic_cast<TEveElement*>(*i));
+
+         if (same_depth) pmgr->SetCurrentDepth(cd);
+      }
+
+      
+   }
+}
+
+//==============================================================================
 
 //______________________________________________________________________________
 Bool_t TEveElement::HasChild(TEveElement* el)
@@ -1763,6 +1804,24 @@ UChar_t TEveElement::GetSelectedLevel() const
    if (fImpliedHighlighted > 0) return 4;
    return 0;
 }
+
+//______________________________________________________________________________
+void TEveElement::RecheckImpliedSelections()
+{
+   // Call this if it is possible that implied-selection or highlight
+   // has changed for this element or for implied-selection this
+   // element is member of and you want to maintain consistent
+   // selection state.
+   // This can happen if you add elements into compounds in response
+   // to user-interaction.
+
+   if (fSelected || fImpliedSelected)
+      gEve->GetSelection()->RecheckImpliedSetForElement(this);
+
+   if (fHighlighted || fImpliedHighlighted)
+      gEve->GetHighlight()->RecheckImpliedSetForElement(this);
+}
+
 
 /******************************************************************************/
 // Stamping

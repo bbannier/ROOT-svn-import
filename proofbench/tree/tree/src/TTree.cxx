@@ -2995,7 +2995,9 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  arguments. For example:
    //      - "TMath::BreitWigner(fPx,3,2)"
    //      - "event.GetHistogram().GetXaxis().GetXmax()"
-   //      - "event.GetTrack(fMax).GetPx()
+   //  Note: You can only pass expression that depend on the TTree's data
+   //  to static functions and you can only call non-static member function
+   //  with 'fixed' parameters.
    //
    //  selection is an expression with a combination of the columns.
    //  In a selection all the C++ operators are authorized.
@@ -5635,7 +5637,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
    nbranches = fBranches.GetEntries();
    Int_t status = 1;
    Long64_t nlines = 0;
-   while(status > 0) {
+   while(1) {
 
       while (isspace(in.peek())) {
          in.get();
@@ -5646,13 +5648,19 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
             branch = (TBranch*)fBranches.At(i);
             TLeaf *leaf = (TLeaf*)branch->GetListOfLeaves()->At(0);
             leaf->ReadValue(in);
+            if (in.eof()) return nlines;
             status = in.good();
-            if (status <= 0) break;
+            if (status <= 0) {
+               Warning("ReadFile","Illegal value after line %d\n",nlines);
+               in.clear();
+               break;
+            }
          }
-         if (status <= 0) break;
          //we are now ready to fill the tree
-         Fill();
-         nlines++;
+         if (status) {
+            Fill();
+            nlines++;
+         }
       }
       in.ignore(8192,'\n');
    }
