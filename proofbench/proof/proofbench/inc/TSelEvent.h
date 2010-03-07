@@ -4,6 +4,9 @@
 #ifndef ROOT_TChain
 #include <TChain.h>
 #endif
+#ifndef ROOT_TFile
+#include <TFile.h>
+#endif
 #ifndef ROOT_TSelector
 #include <TSelector.h>
 #endif
@@ -160,6 +163,8 @@ Bool_t TSelEvent::Notify()
    // to the generated code, but the routine can be extended by the
    // user if needed.
 
+   Info("Notify","processing file: %s", fChain->GetCurrentFile()->GetName());
+ 
    // Get branch pointers
    b_event_fType = fChain->GetBranch("fType[20]");
    b_fEventName = fChain->GetBranch("fEventName");
