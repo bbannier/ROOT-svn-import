@@ -138,12 +138,16 @@ namespace {
 //____________________________________________________________________________
    inline PyObject* CallSelfIndex( ObjectProxy* self, PyObject* idx, const char* meth )
    {
+      Py_INCREF( (PyObject*)self );
       PyObject* pyindex = PyStyleIndex( (PyObject*)self, idx );
-      if ( ! pyindex )
+      if ( ! pyindex ) {
+         Py_DECREF( (PyObject*)self );
          return 0;
+      }
 
       PyObject* result = CallPyObjMethod( (PyObject*)self, meth, pyindex );
       Py_DECREF( pyindex );
+      Py_DECREF( (PyObject*)self );
       return result;
    }
 
@@ -1866,6 +1870,13 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
 
       return kTRUE;
    }
+
+// Make RooFit 'using' member functions available (not supported by dictionary)
+   if ( name == "RooDataHist" )
+      return Utility::AddUsingToClass( pyclass, "plotOn" );
+
+   if ( name == "RooSimultaneous" )
+      return Utility::AddUsingToClass( pyclass, "plotOn" );
 
 // default (no pythonization) is by definition ok
    return kTRUE;

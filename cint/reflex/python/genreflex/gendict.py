@@ -837,7 +837,7 @@ class genDictionary(object) :
     c += '#ifdef _WIN32\n'
     c += '#pragma warning ( disable : 4786 )\n'
     c += '#pragma warning ( disable : 4345 )\n'
-    c += '#elif defined(__GNUC__) && __GNUC__ >= 4 && ((__GNUC_MINOR__ == 2 && __GNUC_PATCHLEVEL__ >= 1) || (__GNUC_MINOR__ >= 3)) && !__INTEL_COMPILER \n'
+    c += '#elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)) && !defined(__INTEL_COMPILER) \n'
     c += '# pragma GCC diagnostic ignored "-Warray-bounds"\n'
     c += '#endif\n'
     c += '#include "%s"\n' % self.hfile
@@ -2408,7 +2408,10 @@ class genDictionary(object) :
 #---------------------------------------------------------------------------------------
 def getContainerId(c):
   if   c[-8:] == 'iterator' : return ('NOCONTAINER','')
-  if   c[:10] == 'std::deque'   :            return ('DEQUE','list')
+  # MSVC9 templated iterators:
+  elif c[-14:] == 'iterator<true>'  : return ('NOCONTAINER','')
+  elif c[-15:] == 'iterator<false>' : return ('NOCONTAINER','')
+  elif c[:10] == 'std::deque'   :            return ('DEQUE','list')
   elif c[:9]  == 'std::list'    :            return ('LIST','list')
   elif c[:8]  == 'std::map'     :            return ('MAP','map')
   elif c[:13] == 'std::multimap':            return ('MULTIMAP','map')
