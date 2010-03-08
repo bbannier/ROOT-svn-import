@@ -22,13 +22,13 @@ class TSelHist : public TSelector {
 public :
 
    // Specific members
-   Int_t            fNhist;
-   TH1F           **fHist1D;//[fNhist]
-   TH2F           **fHist2D;//[fNhist]
-   TH3F           **fHist3D;//[fNhist]
+   Int_t            fNHists;
+   Int_t	    fHistType;
+   Bool_t 	    fDraw;
+   TH1F           **fHist1D;//[fNHists]
+   TH2F           **fHist2D;//[fNHists]
+   TH3F           **fHist3D;//[fNHists]
    TRandom3        *fRandom;
-   Bool_t 	fDraw;
-   Int_t	fHistType;
    TCanvas	*fCHist1D;
    TCanvas	*fCHist2D;
    TCanvas	*fCHist3D;

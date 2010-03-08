@@ -17,7 +17,7 @@
 class TSelEventGenN : public TSelector {
 
 private:
-   TProofBench::ERunType fRunType;
+   TProofBench::EFileType fFileType;
    TString      fBaseDir;
    Int_t        fNTries;
    Long64_t     fNEvents;
@@ -28,7 +28,7 @@ private:
 
    TObject     *fTotalGen; // Events generated on this worker
 
-   Long64_t GenerateFiles(TProofBench::ERunType, const char *filename, Long64_t nevents);
+   Long64_t GenerateFiles(TProofBench::EFileType, const char *filename, Long64_t nevents);
 
 public :
 

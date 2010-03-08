@@ -20,20 +20,20 @@
 #include <test/Event.h>
 
 //_____________________________________________________________________________
-TSelEventGenN::TSelEventGenN() : fRunType(TProofBench::kRunNotSpecified),
+TSelEventGenN::TSelEventGenN() : fFileType(TProofBench::kFileNotSpecified),
                                  fNTries(10), fNEvents(10000),
                                  fNWorkersPerNode(0), fWorkerNumber(0),
                                  fNTracksBench(50), fNTracksCleanup(100),
                                  fTotalGen(0)
 {
    // Constructor
-   if (gProofServ){
+   /* if (gProofServ){
       fBaseDir=gProofServ->GetDataDir();
       fBaseDir.Remove(fBaseDir.Last('/'));
    }
    else{
       fBaseDir="";
-   }
+   }*/
 }
 
 //_____________________________________________________________________________
@@ -48,7 +48,7 @@ void TSelEventGenN::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
    // When running with PROOF Begin() is only called on the client.
-   // The tree argument is deprecated (on PROOF 0 is passed).
+   // The trPROOF_BenchmarkNTracksCleanupee argument is deprecated (on PROOF 0 is passed).
 
    TString option = GetOption();
 
@@ -85,15 +85,15 @@ void TSelEventGenN::SlaveBegin(TTree * /*tree*/)
       sinput=obj->GetName();
       //Info("SlaveBegin", "Input list: %s", sinput.Data());
 
-      if (sinput.Contains("fRunType")){
+      if (sinput.Contains("PROOF_BenchmarkFileType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fRunType = (TProofBench::ERunType) a->GetVal();
+            fFileType = (TProofBench::EFileType) a->GetVal();
             continue;
          }
          continue;
       }
-      if (sinput.Contains("fBaseDir")){
+      /* if (sinput.Contains("fBaseDir")){
          TNamed *a=dynamic_cast<TNamed*>(obj);
          if (a){
             TString basedir=a->GetTitle();
@@ -112,22 +112,22 @@ void TSelEventGenN::SlaveBegin(TTree * /*tree*/)
             fNTries = a->GetVal();
          }
          continue;
-      }
-      if (sinput.Contains("fNEvents")){
+      }*/
+      if (sinput.Contains("PROOF_BenchmarkNEvents")){
          TParameter<Long64_t>* a=dynamic_cast<TParameter<Long64_t>*>(obj);
          if (a){
             fNEvents = a->GetVal();
          }
          continue;
       }
-      if (sinput.Contains("fNTracksBench")){
+      if (sinput.Contains("PROOF_BenchmarkNTracksBench")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
             fNTracksBench = a->GetVal();
          }
          continue;
       }
-      if (sinput.Contains("fNTracksCleanup")){
+      if (sinput.Contains("PROOF_BenchmarkNTracksCleanup")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
             fNTracksCleanup = a->GetVal();
@@ -185,7 +185,7 @@ Bool_t TSelEventGenN::Process(Long64_t entry)
    totalGen->SetVal(tg);
 #else
    Long64_t tg = 0;
-   tg += GenerateFiles(fRunType, fCurrent->GetName(), fNEvents);
+   tg += GenerateFiles(fFileType, fCurrent->GetName(), fNEvents);
 #endif
 
    return kTRUE;
@@ -210,7 +210,7 @@ void TSelEventGenN::Terminate()
 }
 
 //_____________________________________________________________________________
-Long64_t TSelEventGenN::GenerateFiles(TProofBench::ERunType runtype,
+Long64_t TSelEventGenN::GenerateFiles(TProofBench::EFileType filetype,
                                       const char *filename, Long64_t size)
 {
    // 'runtype' is run type either TProofBench::kRunGenerateFileBench or
@@ -222,9 +222,9 @@ Long64_t TSelEventGenN::GenerateFiles(TProofBench::ERunType runtype,
    // Returns bytes rewritten when runtype==TProofBench::kRunGenerateFileCleanup
    // Return 0 in case error
 
-   if (!(runtype==TProofBench::kRunGenerateFileCleanup 
-      || runtype==TProofBench::kRunGenerateFileBench)){
-      Error("GenerateFiles", "run type '%d' not supported", runtype);
+   if (!(filetype==TProofBench::kFileCleanup 
+      || filetype==TProofBench::kFileBenchmark)){
+      Error("GenerateFiles", "File type '%d' not supported", filetype);
       return 0;
    }
     
@@ -250,13 +250,13 @@ Long64_t TSelEventGenN::GenerateFiles(TProofBench::ERunType runtype,
    Long64_t i=0;
    Long64_t fileend=0;
 
-   if (runtype==TProofBench::kRunGenerateFileBench){
+   if (filetype==TProofBench::kFileBenchmark){
       Info("GenerateFiles", "Generating %s with %lld event(s)", filename, size);
       for(i=0; i<size; i++) {
          event->Build(i,fNTracksBench,0);
          eventtree->Fill();
       }
-   } else if (runtype==TProofBench::kRunGenerateFileCleanup){
+   } else if (filetype==TProofBench::kFileCleanup){
       Info("GenerateFiles", "Generating %s", filename);
       f->SetCompressionLevel(0); //no compression
 
@@ -289,7 +289,7 @@ Long64_t TSelEventGenN::GenerateFiles(TProofBench::ERunType runtype,
    eventtree->Delete();
    savedir->cd();
 
-   if (runtype==TProofBench::kRunGenerateFileBench) return nentries;
-   else if (runtype==TProofBench::kRunGenerateFileCleanup) return fileend;
+   if (filetype==TProofBench::kFileBenchmark) return nentries;
+   else if (filetype==TProofBench::kFileCleanup) return fileend;
    else return 0;
 }

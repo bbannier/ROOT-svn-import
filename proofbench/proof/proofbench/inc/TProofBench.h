@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author: 
+// Author:
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -8,9 +8,6 @@
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
-
-#ifndef ROOT_TProofBench
-#define ROOT_TProofBench
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
@@ -22,11 +19,14 @@
 // cluster. The suite measures the performance of the cluster for a set //
 // of standard tasks as a function of the number of effective processes.//
 // From these results, indications about the optimal number of          //
-// concurrent processes could be derived. for large facilities,         //
+// concurrent processes could be derived. For large facilities,         //
 // the suite should also give indictions about the optimal number of    //
 // of sub-masters into which the cluster should be partitioned.         //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
+
+#ifndef ROOT_TProofBench
+#define ROOT_TProofBench
 
 #ifndef ROOT_TObject
 #include "TObject.h"
@@ -58,14 +58,11 @@ public:
 
    //benchmark run type
    enum ERunType {kRunNotSpecified=0, 
-                  //kRunNothing, 
                   kRunCPUTest=1, 
                   kRunFullDataRead=2, 
                   kRunOptDataRead=4, 
                   kRunNoDataRead=8,
-                  kRunGenerateFileBench=0x10,
-                  kRunGenerateFileCleanup=0x20,
-                  kRunCleanup=0x40,
+                  kRunCleanup=0x10,
                   kRunAll=kRunCPUTest | kRunFullDataRead | kRunOptDataRead | kRunNoDataRead}; 
 
    //histogram types for CPU test
@@ -75,53 +72,84 @@ public:
                    kHist3D=4,
                    kHistAll=kHist1D | kHist2D | kHist3D}; 
 
-   enum EBenchmarkMode {kModeNotSpecified=0,
-                        kModeStaticNode,          //fixed number of files on each node
-                        kModeStaticWorkersNode,   //files as many as workers on each node
-                        kModeStaticCluster, //fixed number of files per cluster
-                        kModeDynamicWorkers};     //number of files is set as number of workers
+   enum EBenchmarkMode {kModeNotSpecified=0,     //Mode not specified
+                        kModeConstNFilesNode,    //Fixed number of files on each node
+                        kModeConstNFilesWorker,  //Number of files on each node 
+                                                 //= fNFilesAWorker * # of workers on the node
+                        kModeVaryingNFilesWorker,//number of files on each node 
+                                                 //=fNFilesAWorker * # of active workers on the node
+                                                 //when 1 worker is active fNFilesAWorker * 1 file is used
+                                                 //wnen 2 workers are active fNFilesAWorker * 2 files are used, etc.
+                        kModeCleanup};           //For clean-up run
 
-   TProofBench(TString fFilename="",//output file where benchmark performance plot will be written to, 
+   //Type of files to generate
+   enum EFileType {kFileNotSpecified=0,  //type not specified
+                   kFileBenchmark,       //file for benchmark test
+                   kFileCleanup};        //file for cleaning up memory between runs
+
+   TProofBench(TString filename="",//output file where benchmark performance plot will be written to, 
                                     //user has to provide one
+               Option_t* foption="", 
                TProof* proof=gProof,
                TString basedir="",  //base directory where files to be used during the test are written
                                     //default is not to provide and it will be automatically decided
-               ERunType runtype=kRunNotSpecified, //type of run
-               EBenchmarkMode benchmarkmode=kModeStaticNode, //type of mode
-               Long_t nhists=10,
-               EHistType histtype=kHistAll,
+               ERunType runtype=kRunNotSpecified,              //type of run
+               EBenchmarkMode benchmarkmode=kModeNotSpecified, //type of mode
+               Long_t nhists=16,
+               EHistType histtype=kHist1D,
                Int_t maxnworkers=-1,//maximum number of workers to be tested. 
                                     //If not set (default), 2 times the number of total workers in the cluster available
-               Int_t nnodes=-1,
                Int_t ntries=10,
                Int_t nfilesaworker=1,
                Int_t nfilesanode=-1,
                Long64_t nevents=10000,
                Int_t stepsize=-1,
                Int_t start=1,
-               Int_t ntracksbench=3,
+               Int_t ntracksbench=10,
                Int_t ntrackscleanup=100,
                Int_t draw=0,
                Int_t debug=0,
                Int_t regenerate=0); //default constructor
 
-   virtual ~TProofBench();     //destructor
+   virtual ~TProofBench();          //destructor
 
-   void RunBenchmarkAll(); //Do all benchmark tests
+   //void RunBenchmarkAll();          //Do all benchmark tests
 
-   void RunBenchmark(ERunType whattorun=kRunNotSpecified, Bool_t regenerate=false); //Do a benchmark test
-   Int_t GenerateFiles();//Generate files for the test or cleanup run
+   void RunBenchmark(ERunType whattorun=kRunNotSpecified, EBenchmarkMode=kModeNotSpecified, Long64_t nevents=-1); //Do a benchmark test
 
    Int_t GenerateFilesN(Int_t nf, Long64_t fileent = 100000);
+
+   Int_t  GenerateFiles(EFileType filetype,
+                        Int_t nf=-1,
+                        Long64_t nevents=-1,
+                        const char* basedir="",
+                        Bool_t regenerate=kFALSE);
+
+
    Int_t CreateDataSetsN(const char *basedir, const char *lab,
                          Int_t np, const Int_t *wp,
                          Int_t nr, Int_t nfw, Int_t nfmx);
+
    Int_t GenerateDataSetN(const char *dset,
                           Int_t nw, Int_t nfw, Long64_t fileent);
 
-   TFile* FileOpen(const char* filename="", 
+   Int_t MakeDataSets(EBenchmarkMode mode=kModeNotSpecified,
+                      const char* option="",
+                      Int_t nfp=-1,   //when <=0, nfp to be determined according to mode
+                      Int_t start=-1, //when <=0, start number of workers is set to 1
+                      Int_t stop=-1,  //when <=0, end number of workers are set to max workers
+                      Int_t step=-1,  //when <=0, step is set to 1
+                      const TDSet* tdset=0);
+
+   Int_t MakeDataSets(EBenchmarkMode mode,
+                      Int_t np,
+                      const Int_t *wp,
+                      const Int_t nf,
+                      const char *opt="",
+                      const TDSet* tdset=0);
+
+   TFile* OpenFile(const char* filename="", 
                    Option_t* option="", 
-                   Bool_t force=kFALSE, 
                    const char* ftitle = "", 
                    Int_t compress = 1);    //open a file for outputs 
 
@@ -136,15 +164,14 @@ public:
     //                     Int_t draw=1);
 
    //setters
-   TFile* SetFile(TFile* ftmp);
+   //TFile* SetFile(TFile* ftmp);
    void SetBaseDir(TString basedir);
    void SetRunType(TString where, ERunType runtype);
    void SetNHists(Long_t nhists);
-   void SetBenchmarkMode(EBenchmarkMode benchmarkmode, Int_t par=-1);
+   Int_t SetBenchmarkMode(EBenchmarkMode benchmarkmode, Int_t par=-1);
    void SetHistType(EHistType histtype) {fHistType=histtype;}
    void SetMaxNWorkers(Int_t maxnworkers);
    void SetMaxNWorkers(TString sworkers);
-   void SetNNodes(Int_t nnodes) {fNNodes=nnodes;}
    void SetNTries(Int_t ntries);
    void SetNFilesAWorker(Int_t nfilesaworker);
    void SetNFilesANode(Int_t nfilesanode);
@@ -166,7 +193,6 @@ public:
    Long_t GetNHists() const {return fNHists;}
    EHistType GetHistType() const {return fHistType;}
    Int_t GetMaxNWorkers() const {return fMaxNWorkers;}
-   Int_t GetNNodes() const {return fNNodes;}
    Int_t GetNTries() const {return fNTries;}
    Int_t GetNFilesAWorker() const {return fNFilesAWorker;}
    Int_t GetNFilesANode() const {return fNFilesANode;}
@@ -179,34 +205,29 @@ public:
    Int_t GetDebug()const{return fDebug;}
    Int_t GetRegenerate()const{return fRegenerate;}
 
-   Long64_t GetNEventsGenerated()const{return fNEventsGenerated;}
-   Int_t GetNFilesGeneratedBench()const{return fNFilesGeneratedBench;}
-   Bool_t GetFilesGeneratedCleanup()const{return fFilesGeneratedCleanup;}
-   const TDSet* GetDataSet() const {return fDataSet;}
    const TDSet* GetDataSetGeneratedBench() const {return fDataSetGeneratedBench;}
    const TDSet* GetDataSetGeneratedCleanup() const {return fDataSetGeneratedCleanup;}
    TCanvas* GetCPerfProfiles() const {return fCPerfProfiles;}
    TDirectory* GetDirProofBench() const {return fDirProofBench;}
 
-   TTree* BuildPerfProfiles(ERunType runtype=kRunNotSpecified);
+   void BuildPerfProfiles(ERunType runtype=kRunNotSpecified, EBenchmarkMode=kModeNotSpecified);
+   void DrawPerfProfiles(ERunType runtype=kRunNotSpecified, EBenchmarkMode=kModeNotSpecified);
+
 protected:
 
 
    /* Int_t SetParameters(TString &basedir, 
                             Long_t &nhists, 
                             Int_t &maxnworkers, 
-                            Int_t& nnodes, 
                             Int_t &ntries, 
                             Long64_t &nevents, 
                             Int_t &stepsize, 
                             Int_t& start);
 */
    void ClearInputParameters(); //clear input parameters to selector
-   void SetInputParameters(); //set input parameters to selector
-   Int_t CheckParameters(TString where);
+   //void SetInputParameters(); //set input parameters to selector
+   //Int_t CheckParameters(TString where);
    Int_t FillNodeInfo();
-   void BuildNodesInfo();
-   void MakeDataSet();        //make dataset
 
 private:
    //TProofBench(const TProofBench&){} //not implemented
@@ -221,12 +242,11 @@ private:
    EHistType fHistType;
    Int_t fMaxNWorkers;             //number of maximum processes, 
                                    //this can be more than the number of total workers in the cluster
-   Int_t fNNodes;                  //number of nodes to be included in the test 
    Int_t fNTries;                  //number of files for I/O test
    Int_t fNFilesAWorker;           //number of files a worker for I/O test, 
-                                   //relevant when fBenchmarkMode == kModeStaticWorkersNode
+                                   //relevant when fBenchmarkMode == kModeConstNFilesWorker
    Int_t fNFilesANode;             //number of files a node for I/O test
-                                   //relevant when fBenchmarkMode == kModeStaticNode
+                                   //relevant when fBenchmarkMode == kModeConstNFilesNode
    Long64_t fNEvents;              //number of events per file for CPU test and/or I/O test
    Int_t fStepSize;                //test to be performed every fStepSize cpu cores
    Int_t fStart;                   //starting number of cpu cores
@@ -236,24 +256,18 @@ private:
    Int_t fDebug;                   //debug switch, when on various debug plots will be saved to file
    Int_t fRegenerate;              //when true, regenerate files
 
-   Long64_t fNEventsGenerated;     //number of events per file successfully generated
-   Int_t fNFilesGeneratedBench;         //number of files successfully generated to be used for the benchmark test
-   Bool_t fFilesGeneratedCleanup;  //true if clean up files generated
-   TDSet* fDataSet;                //Data set to be used for benchmark test
-   TDSet* fDataSetGeneratedBench;  //Data set generated at worker nodes
-   TDSet* fDataSetGeneratedCleanup;//Data set generated at worker nodes
+   TDSet* fDataSetGeneratedBench;  //Data set generated at worker nodes for benchmarking
+   TDSet* fDataSetGeneratedCleanup;//Data set generated at worker nodes for cleaning up memory
    TCanvas *fCPerfProfiles;        //canvas for performance profile histograms
    TDirectory* fDirProofBench;     //directory for proof outputs
 
-   TProfile* fProfCPUTestEvent;
-   TProfile* fProfOptDataReadEvent;
-   TProfile* fProfOptDataReadIO;
-   TProfile* fProfFullDataReadEvent;
-   TProfile* fProfFullDataReadIO;
+//   TProfile* fProfCPUTestEvent;
+//   TProfile* fProfOptDataReadEvent;
+//   TProfile* fProfOptDataReadIO;
+//   TProfile* fProfFullDataReadEvent;
+//   TProfile* fProfFullDataReadIO;
 
    TList    *fNodes;               // List of worker nodes info
-   TMap*     fNodeInfo;            //map of <nodename, # workers>
-   //TList* fListRunType;       //map of <ERunType, namestem>
 
    ClassDef(TProofBench,0)         //PROOF benchmark suite steering
 };

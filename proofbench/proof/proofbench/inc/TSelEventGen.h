@@ -90,21 +90,24 @@ public :
    virtual void    Print(Option_t *option="") const;
 
 protected:
-   Long64_t GenerateFiles(TProofBench::ERunType, TString filename, Long64_t nevents);
+   Long64_t GenerateFiles(TProofBench::EFileType filetype, TString filename, Long64_t sizenevents);
 
 private:
-   TProofBench::ERunType fRunType;
+   TProofBench::EFileType fFileType;
+   Int_t fBenchmarkMode;                     //benchmark mode
    TString fBaseDir;
    Int_t fMaxNWorkers;
-   Int_t fNFilesAWorker;   //number of files a worker
-   Int_t fNFilesANode;     //number of files a node
    Long64_t fNEvents;
-   Int_t fNWorkersPerNode; //total number of workers on this node
-   Int_t fWorkerNumber;    //worker number on this node
-   Int_t fNTracksBench;    //number of tracks in an event for benchmark files
-   Int_t fNTracksCleanup;  //number of tracks in an event for cleanup files
-   Int_t fRegenerate;      //Force generation of cleanup files
-   TProofBench::EBenchmarkMode fBenchmarkMode;   //benchmark mode
+   Int_t fNTracksBench;                       //number of tracks in an event for benchmark files
+   Int_t fNTracksCleanup;                     //number of tracks in an event for cleanup files
+   Int_t fRegenerate;                         //Force generation of cleanup files
+
+   Int_t fNWorkersPerNode;                    //total number of workers on this node
+   Int_t fWorkerNumber;                       //worker number on this node
+   TObject     *fTotalGen;                    // Events generated on this worker
+   //TList* fListOfFilesGenerated;              //list of files generated
+   TDSet* fDataSet;
+
 
    ClassDef(TSelEventGen,0);
 };
