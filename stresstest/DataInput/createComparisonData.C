@@ -76,14 +76,14 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
 
    ofstream fileSSumTrain,fileSSumTest,fileBSumTrain,fileBSumTest;
    fileSSumTrain.open("fileSSumTrain.dat");
-   fileSSumTrain<<"var1/F:var2/F:var3/F:var4/F:weight/F:istest/F:isfake/F:issig/F"<<endl;
+   fileSSumTrain<<"var1/F:var2/F:var3/F:var4/F:weight/F:istest/F:isfake/F:issig/F:evtno/F"<<endl;
    fileSSumTest.open("fileSSumTest.dat");
-   fileSSumTest<<"var1/F:var2/F:var3/F:var4/F:weight/F:istest/F:isfake/F:issig/F"<<endl;
+   fileSSumTest<<"var1/F:var2/F:var3/F:var4/F:weight/F:istest/F:isfake/F:issig/F:evtno/F"<<endl;
    fileBSumTrain.open("fileBSumTrain.dat");
-   fileBSumTrain<<"var1/F:var2/F:var3/F:var4/F:weight/F:istest/F:isfake/F:issig/F"<<endl;
+   fileBSumTrain<<"var1/F:var2/F:var3/F:var4/F:weight/F:istest/F:isfake/F:issig/F:evtno/F"<<endl;
    fileBSumTest.open("fileBSumTest.dat");
-   fileBSumTest<<"var1/F:var2/F:var3/F:var4/F:weight/F:istest/F:isfake/F:issig/F"<<endl;
-   Float_t weight, istest, isfake, issig;
+   fileBSumTest<<"var1/F:var2/F:var3/F:var4/F:weight/F:istest/F:isfake/F:issig/F:evtno/F"<<endl;
+   Float_t weight, istest, isfake, issig, evtno;
    for (Int_t ivar=1; ivar<nvar; ivar++) {
       for (Int_t itree=0; itree<trees.size(); itree++) {
          trees[itree]->Branch( TString(Form( "var%i", ivar )).Data(), &xvar[ivar], TString(Form( "var%i/F", ivar )).Data() );
@@ -91,6 +91,7 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
          trees[itree]->Branch("istest",&istest,"istest/F" ); // 1=true
          trees[itree]->Branch("isfake",&isfake,"isfake/F" );
          trees[itree]->Branch("issig",&issig,"issig/F" );
+         trees[itree]->Branch("evtno",&evtno,"evtno/F" );
       }
    }
    do {
@@ -112,6 +113,9 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
       if (isSignal) xvar[4]= xgaus[4];         
       else          xvar[4]= xgaus[4]+0.5;
       //-----------------------     
+      if (isSignal) evtno=nsig;
+      else evtno = nbgd;
+
       if (isSignal && nsig < nmax){
          isfake=0.;
          if (nsig<n1){ // train 1
@@ -119,14 +123,14 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
             treeS1Train->Fill();
             treeSSumTrain->Fill();
             treeSBSumTrain->Fill();
-            fileSSumTrain << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<endl;  
+            fileSSumTrain << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<" " <<evtno<<endl;  
          }
          else if (nsig<2*n1){ //train2
             istest=0.;
             treeS2Train->Fill();
             treeSSumTrain->Fill();
             treeSBSumTrain->Fill();
-            fileSSumTrain << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<endl;  
+            fileSSumTrain << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<" " <<evtno<<endl;  
          }
          else if (nsig<3*n1){ // test1
             istest=1.;
@@ -134,7 +138,7 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
             treeS1Test->Fill();
             treeSSumTest->Fill();
             treeSBSumTest->Fill();
-            fileSSumTest << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<endl;  
+            fileSSumTest << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<" " <<evtno<<endl;  
          }
          else if (nsig<4*n1){ // test2
             istest=1.;
@@ -142,7 +146,7 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
             treeS2Test->Fill();
             treeSSumTest->Fill();
             treeSBSumTest->Fill();
-            fileSSumTest << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<endl;  
+            fileSSumTest << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<" " <<evtno<<endl;  
          }
          else if (nsig<5*n1){ //fake test
             istest=1.;
@@ -166,28 +170,28 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
             treeB1Train->Fill();
             treeBSumTrain->Fill();
             treeSBSumTrain->Fill();
-            fileBSumTrain << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<endl;  
+            fileBSumTrain << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<" " <<evtno<<endl;  
          }
          else if (nbgd<2*n1){ //train2
             istest=0.;
             treeB2Train->Fill();
             treeBSumTrain->Fill();
             treeSBSumTrain->Fill();
-            fileBSumTrain << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<endl;  
+            fileBSumTrain << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<" " <<evtno<<endl;  
          }
          else if (nbgd<3*n1){ // test1
             istest=1.;
             treeB1Test->Fill();
             treeBSumTest->Fill();
             treeSBSumTest->Fill();
-            fileBSumTest << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<endl;   
+            fileBSumTest << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<" " <<evtno<<endl;   
          }
          else if (nbgd<4*n1){ // test2
             istest=1.;
             treeB2Test->Fill();
             treeBSumTest->Fill();
             treeSBSumTest->Fill();
-            fileBSumTest << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<endl;  
+            fileBSumTest << xvar[1] << " " <<xvar[2] << " " <<xvar[3] << " " <<xvar[4] << " " << weight<< " " << istest<< " " << isfake<<" " <<issig<<" " <<evtno<<endl;  
          }
          else if (nbgd<5*n1){ //fake test
             istest=1.;
