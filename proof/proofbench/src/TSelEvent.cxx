@@ -42,9 +42,8 @@ ClassImp(TSelEvent)
 
 TSelEvent::TSelEvent(TTree *)
    :fRunType(TProofBench::kRunNotSpecified), 
-   fNTries(10),
-   fNEvents(10000),
    fDraw(kFALSE),
+   fDebug(kFALSE),
    fCHist(0), 
    fPtHist(0),
    fNTracksHist(0)
@@ -52,9 +51,8 @@ TSelEvent::TSelEvent(TTree *)
 
 TSelEvent::TSelEvent()
    :fRunType(TProofBench::kRunNotSpecified),
-   fNTries(10),
-   fNEvents(10000),
    fDraw(kFALSE),
+   fDebug(kFALSE),
    fCHist(0),
    fPtHist(0),
    fNTracksHist(0)
@@ -70,75 +68,60 @@ void TSelEvent::Begin(TTree *)
 
    //get parameters
 
+   Bool_t found_runtype=kFALSE;
+   Bool_t found_draw=kFALSE;
+   Bool_t found_debug=kFALSE;
+
    TIter nxt(fInput);
    TString sinput;
    TObject *obj;
    while ((obj = nxt())){
       sinput=obj->GetName();
-      if (sinput.Contains("fRunType")){
+      if (sinput.Contains("PROOF_BenchmarkRunType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
             fRunType= a->GetVal();
-            Info("Begin", "fRunType=%d", fRunType);
+            found_runtype=kTRUE;
+            //Info("Begin", "PROOF_BenchmarkRunType=%d", fRunType);
          }
          else{
-            Error("Begin", "fRunType not type TParameter<Int_t>*"); 
+            Error("Begin", "PROOF_BenchmarkRunType not type TParameter<Int_t>*"); 
          } 
          continue;
       }
-      /* if (sinput.Contains("fBaseDir")){
-         TNamed *a=dynamic_cast<TNamed*>(obj);
-         if (a){
-            TString basedir= a->GetTitle();
-            basedir.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
-            basedir.Remove(TString::kBoth, '\t');//remove leading and trailing tab character(s)
-            basedir.Remove(TString::kTrailing, '/'); //remove trailing /
-
-            if (basedir.Length()>0 && gSystem->AccessPathName(basedir)) {
-               Error("SlaveBegin", "No such file or directory: %s; using default directory: %s",
-                     basedir.Data(), fBaseDir.Data());
-               continue; 
-            }
-            fBaseDir=basedir;
-         }
-         else{
-            Error("SlaveBegin", "fBaseDir not type TNamed *"); 
-         } 
-         continue;
-      }*/
-      if (sinput.Contains("fNTries")){
-         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
-         if (a){
-            fNTries= a->GetVal();
-            Info("Begin", "fNTries=%d", fNTries);
-         }
-         else{
-            Error("Begin", "fNTries not type TParameter<Int_t>*"); 
-         } 
-         continue;
-      }
-      if (sinput.Contains("fNEvents")){
-         TParameter<Long64_t>* a=dynamic_cast<TParameter<Long64_t>*>(obj);
-         if (a){
-            fNEvents= a->GetVal();
-            Info("Begin", "fNEvents=%d", fNEvents);
-         }
-         else{
-            Error("Begin", "fNEvents not type TParameter<Long64_t>*"); 
-         } 
-         continue;
-      }
-      if (sinput.Contains("fDraw")){
+      if (sinput.Contains("PROOF_BenchmarkDraw")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
             fDraw= a->GetVal();
-            Info("Begin", "fDraw=%d", fDraw);
+            found_draw=kTRUE;
+            //Info("Begin", "PROOF_BenchmarkDraw=%d", fDraw);
          }
          else{
-            Error("Begin", "fDraw not type TParameter<Int_t>*"); 
+            Error("Begin", "PROOF_BenchmarkDraw not type TParameter<Int_t>*"); 
          } 
          continue;
       }
+      if (sinput.Contains("PROOF_BenchmarkDebug")){
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+         if (a){
+            fDebug= a->GetVal();
+            found_debug=kTRUE;
+            //Info("Begin", "PROOF_BenchmarkDebug=%d", fDebug);
+         }
+         else{
+            Error("Begin", "PROOF_BenchmarkDebug not type TParameter<Int_t>*"); 
+         } 
+         continue;
+      }
+   }
+   if (!found_runtype){
+      Warning("Begin", "PROOF_BenchmarkRunType not found; using default: %d", fRunType);
+   }
+   if (!found_draw){
+      Warning("Begin", "PROOF_BenchmarkDraw not found; using default: %d", fDraw);
+   }
+   if (!found_debug){
+      Warning("Begin", "PROOF_BenchmarkDebug not found; using default: %d", fDebug);
    }
 }
 
@@ -152,93 +135,88 @@ void TSelEvent::SlaveBegin(TTree *tree)
 
    TString option = GetOption();
 
-   fPtHist = new TH1F("pt_dist","p_{T} Distribution",100,0,5);
-   fPtHist->SetDirectory(0);
-   fPtHist->GetXaxis()->SetTitle("p_{T}");
-   fPtHist->GetYaxis()->SetTitle("dN/p_{T}dp_{T}");
-
-   fOutput->Add(fPtHist);
-
-   fNTracksHist = new TH1I("ntracks_dist","N_{Tracks} per Event Distribution",5,0,5);
-   fNTracksHist->SetDirectory(0);
-   fNTracksHist->GetXaxis()->SetTitle("N_{Tracks}");
-   fNTracksHist->GetYaxis()->SetTitle("N_{Events}");
-
-   fOutput->Add(fNTracksHist);
-
    fRunType=0;
 
    //get parameters
 
+   Bool_t found_runtype=kFALSE;
+   Bool_t found_draw=kFALSE;
+   Bool_t found_debug=kFALSE;
+
+   fInput->Print("A");
    TIter nxt(fInput);
    TString sinput;
    TObject *obj;
    while ((obj = nxt())){
       sinput=obj->GetName();
-      if (sinput.Contains("fRunType")){
+      if (sinput.Contains("PROOF_BenchmarkRunType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
             fRunType= a->GetVal();
-            Info("SlaveBegin", "fRunType=%d", fRunType);
+            found_runtype=kTRUE;
+            Info("SlaveBegin", "PROOF_BenchmarkRunType=%d", fRunType);
          }
          else{
-            Error("SlaveBegin", "fRunType not type TParameter<Int_t>*"); 
+            Error("SlaveBegin", "PROOF_BenchmarkRunType not type TParameter<Int_t>*"); 
          } 
          continue;
       }
-      /* if (sinput.Contains("fBaseDir")){
-         TNamed *a=dynamic_cast<TNamed*>(obj);
-         if (a){
-            TString basedir= a->GetTitle();
-            basedir.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
-            basedir.Remove(TString::kBoth, '\t');//remove leading and trailing tab character(s)
-            basedir.Remove(TString::kTrailing, '/'); //remove trailing /
-
-            if (basedir.Length()>0 && gSystem->AccessPathName(basedir)) {
-               Error("SlaveBegin", "No such file or directory: %s; using default directory: %s",
-                     basedir.Data(), fBaseDir.Data());
-               continue; 
-            }
-            fBaseDir=basedir;
-         }
-         else{
-            Error("SlaveBegin", "fBaseDir not type TNamed *"); 
-         } 
-         continue;
-      }*/
-      if (sinput.Contains("fNTries")){
-         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
-         if (a){
-            fNTries= a->GetVal();
-            Info("SlaveBegin", "fNTries=%d", fNTries);
-         }
-         else{
-            Error("SlaveBegin", "fNTries not type TParameter<Int_t>*"); 
-         } 
-         continue;
-      }
-      if (sinput.Contains("fNEvents")){
-         TParameter<Long64_t>* a=dynamic_cast<TParameter<Long64_t>*>(obj);
-         if (a){
-            fNEvents= a->GetVal();
-            Info("SlaveBegin", "fNEvents=%d", fNEvents);
-         }
-         else{
-            Error("SlaveBegin", "fNEvents not type TParameter<Long64_t>*"); 
-         } 
-         continue;
-      }
-      if (sinput.Contains("fDraw")){
+      if (sinput.Contains("PROOF_BenchmarkDraw")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
             fDraw= a->GetVal();
-            Info("SlaveBegin", "fDraw=%d", fDraw);
+            found_draw=kTRUE;
+            Info("SlaveBegin", "PROOF_BenchmarkDraw=%d", fDraw);
          }
          else{
-            Error("SlaveBegin", "fDraw not type TParameter<Int_t>*"); 
+            Error("SlaveBegin", "PROOF_BenchmarkDraw not type TParameter<Int_t>*"); 
          } 
          continue;
       }
+      if (sinput.Contains("PROOF_BenchmarkDebug")){
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+         if (a){
+            fDebug= a->GetVal();
+            found_debug=kTRUE;
+            Info("SlaveBegin", "PROOF_BenchmarkDebug=%d", fDebug);
+         }
+         else{
+            Error("SlaveBegin", "PROOF_BenchmarkDebug not type TParameter<Int_t>*"); 
+         } 
+         continue;
+      }
+   }
+   if (!found_runtype){
+      Warning("Begin", "PROOF_BenchmarkRunType not found; using default: %d", fRunType);
+   }
+   if (!found_draw){
+      Warning("Begin", "PROOF_BenchmarkDraw not found; using default: %d", fDraw);
+   }
+   if (!found_debug){
+      Warning("Begin", "PROOF_BenchmarkDebug not found; using default: %d", fDebug);
+   }
+
+   if (fDraw || fDebug){
+      fPtHist = new TH1F("pt_dist","p_{T} Distribution", 100, 0, 5);
+      fPtHist->SetDirectory(0);
+      fPtHist->GetXaxis()->SetTitle("p_{T}");
+      fPtHist->GetYaxis()->SetTitle("dN/p_{T}dp_{T}");
+   
+      fOutput->Add(fPtHist);
+   
+      if (fRunType==TProofBench::kRunCleanup){
+         fNTracksHist = new TH1I("ntracks_dist","N_{Tracks} per Event Distribution", 100, 50, 150);
+      }
+      else{
+         fNTracksHist = new TH1I("ntracks_dist","N_{Tracks} per Event Distribution", 100, 5, 15);
+      }
+      //enable rebinning
+      fNTracksHist->SetBit(TH1::kCanRebin);
+      fNTracksHist->SetDirectory(0);
+      fNTracksHist->GetXaxis()->SetTitle("N_{Tracks}");
+      fNTracksHist->GetYaxis()->SetTitle("N_{Events}");
+   
+      fOutput->Add(fNTracksHist);
    }
 }
 
@@ -269,30 +247,35 @@ Bool_t TSelEvent::Process(Long64_t entry)
       return kTRUE; 
       break;
    case TProofBench::kRunFullDataRead://full read
-   case TProofBench::kRunCleanup:
+   case TProofBench::kRunCleanup://cleanup run
 
       fChain->GetTree()->GetEntry(entry);
-#if 0
-      fNTracksHist->Fill(fNtrack);
+      if (fDraw || fDebug){
+         printf("fNtrack=%d\n", fNtrack);
+         fNTracksHist->Fill(fNtrack);
 
-      for(Int_t j=0;j<fTracks->GetEntries();j++){
-         Track* curtrack = dynamic_cast<Track*>(fTracks->At(j));
-         fPtHist->Fill(curtrack->GetPt(),1./curtrack->GetPt());
+         for(Int_t j=0;j<fTracks->GetEntries();j++){
+            Track* curtrack = dynamic_cast<Track*>(fTracks->At(j));
+            fPtHist->Fill(curtrack->GetPt(),1./curtrack->GetPt());
+         }
       }
       fTracks->Clear("C");
-#endif
       break;
-
    case TProofBench::kRunOptDataRead: //partial read
       b_event_fNtrack->GetEntry(entry);
 
-      fNTracksHist->Fill(fNtrack);
+      if (fDraw || fDebug){
+         printf("fNtrack=%d\n", fNtrack);
+         fNTracksHist->Fill(fNtrack);
+      }
    
       if (fNtrack>0) {
          b_fTracks->GetEntry(entry);
-         for(Int_t j=0;j<fTracks->GetEntries();j++){
-           Track* curtrack = dynamic_cast<Track*>(fTracks->At(j));
-           fPtHist->Fill(curtrack->GetPt(),1./curtrack->GetPt());
+         if (fDraw || fDebug){
+            for(Int_t j=0;j<fTracks->GetEntries();j++){
+              Track* curtrack = dynamic_cast<Track*>(fTracks->At(j));
+              fPtHist->Fill(curtrack->GetPt(),1./curtrack->GetPt());
+            }
          }
          fTracks->Clear("C");
       }
@@ -301,7 +284,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
    case TProofBench::kRunNoDataRead: //no read
       break;
    default:
-      Error("Process", "Runtype (%d) not supported for this selector (TSelEvent) is requested", fRunType);
+      Error("Process", "Runtype not supported; %d", fRunType);
       break;
    }
 
@@ -323,6 +306,10 @@ void TSelEvent::Terminate()
    // the results graphically or save the results to file.
 
    if (!fDraw || gROOT->IsBatch()){
+      return;
+   }
+
+   if (!(fRunType==TProofBench::kRunFullDataRead || fRunType==TProofBench::kRunOptDataRead)){
       return;
    }
 

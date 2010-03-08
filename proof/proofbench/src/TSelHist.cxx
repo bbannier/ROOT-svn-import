@@ -46,13 +46,13 @@ ClassImp(TSelHist)
 //_____________________________________________________________________________
 TSelHist::TSelHist()
    // Constructor
-   :fNhist(16),
+   :fNHists(16),
+   fHistType(TProofBench::kHist1D),
+   fDraw(0),
    fHist1D(0),
    fHist2D(0),
    fHist3D(0),
    fRandom(0),
-   fDraw(0),
-   fHistType(TProofBench::kHistAll),
    fCHist1D(0),
    fCHist2D(0),
    fCHist3D(0)
@@ -67,9 +67,9 @@ TSelHist::~TSelHist()
    SafeDelete(fRandom);
 
    // Info("TSelHist","destroying ...");
-
-   if (!fDraw) {
-    for (Int_t i=0; i < fNhist; i++) {
+   
+   if (!fDraw){
+   for (Int_t i=0; i < fNHists; i++) {
       if (fHist1D && fHist1D[i] && !fOutput->FindObject(fHist1D[i])) {
          SafeDelete(fHist1D[i]);
       }
@@ -79,9 +79,8 @@ TSelHist::~TSelHist()
       if (fHist3D && fHist3D[i] && !fOutput->FindObject(fHist3D[i])) {
          SafeDelete(fHist3D[i]);
       }
-    }
    }
-   
+   }
    SafeDelete(fHist1D);
    SafeDelete(fHist2D);
    SafeDelete(fHist3D);
@@ -100,42 +99,68 @@ void TSelHist::Begin(TTree * /*tree*/)
 
    TString option = GetOption();
 
-   // Histos array
-   if (fInput->FindObject("fNHists")) {
-      TParameter<Long_t> *p =
-         dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("fNHists"));
-      fNhist = (p) ? (Int_t) p->GetVal() : fNhist;
-      Info("Begin", "fNhist=%d", fNhist);
+   Bool_t found_histtype=kFALSE;
+   Bool_t found_nhists=kFALSE;
+   Bool_t found_draw=kFALSE;
+
+   TIter nxt(fInput);
+   TString sinput;
+   TObject *obj;
+
+   while ((obj = nxt())){
+      sinput=obj->GetName();
+      if (sinput.Contains("PROOF_BenchmarkHistType")){
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+         if (a){
+            fHistType= a->GetVal();
+            found_histtype=kTRUE;
+            Info("Begin", "PROOF_BenchmarkRunType=%d", fHistType);
+         }
+         else{
+            Error("Begin", "PROOF_BenchmarkHistType not type TParameter<Int_t>*");
+         } 
+         continue;
+      }
+      if (sinput.Contains("PROOF_BenchmarkNHists")){
+         TParameter<Long_t>* a=dynamic_cast<TParameter<Long_t>*>(obj);
+         if (a){
+            fNHists= a->GetVal();
+            found_nhists=kTRUE;
+            Info("Begin", "PROOF_BenchmarkNHists=%d", fNHists);
+         }
+         else{
+            Error("Begin", "PROOF_BenchmarkNHists not type TParameter<Long_t>*");
+         } 
+         continue;
+      }
+      if (sinput.Contains("PROOF_BenchmarkDraw")){
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+         if (a){
+            fDraw= a->GetVal();
+            found_draw=kTRUE;
+            Info("Begin", "PROOF_BenchmarkDraw=%d", fDraw);
+         }
+         else{
+            Error("Begin", "PROOF_BenchmarkDraw not type TParameter<Int_t>*");
+         } 
+         continue;
+      }
    }
 
-   if (fInput->FindObject("fDraw")) {
-      TParameter<Int_t> *p = dynamic_cast<TParameter<Int_t>*>(fInput->FindObject("fDraw"));
-      if (p){
-         fDraw = (Bool_t) p->GetVal();
-      } else { 
-         Warning("Begin", "fDraw not type of Parameter<Int_t> - Ignoring");
-      }
-//   } else {
-//      Error("Begin", "fDraw not found");
+   if (!found_histtype){
+      Warning("Begin", "PROOF_BenchmarkHistType not found; using default: %d", fHistType);
    }
-
-   fHistType=TProofBench::kHistAll;
-   if (fInput->FindObject("fHistType")) {
-      TParameter<Int_t> *p = dynamic_cast<TParameter<Int_t>*>(fInput->FindObject("fHistType"));
-      if (p){
-         fHistType= (Int_t) p->GetVal();
-         Info("Begin", "fHistType=%d", fHistType);
-      } else { 
-         Warning("Begin", "fHistType not type of Parameter<Int_t> - Ignoring");
-      }
-//   } else {
-//      Error("Begin", "fHistType not found");
+   if (!found_nhists){
+      Warning("Begin", "PROOF_BenchmarkNHists not found; using default: %d", fNHists);
+   }
+   if (!found_draw){
+      Warning("Begin", "PROOF_BenchmarkDraw not found; using default: %d", fDraw);
    }
 
    if (fDraw) {
-      if (fHistType & TProofBench::kHist1D) fHist1D = new TH1F*[fNhist];
-      if (fHistType & TProofBench::kHist2D) fHist2D = new TH2F*[fNhist];
-      if (fHistType & TProofBench::kHist3D) fHist3D = new TH3F*[fNhist];
+      if (fHistType & TProofBench::kHist1D) fHist1D = new TH1F*[fNHists];
+      if (fHistType & TProofBench::kHist2D) fHist2D = new TH2F*[fNHists];
+      if (fHistType & TProofBench::kHist3D) fHist3D = new TH3F*[fNHists];
    }
 }
 
@@ -148,64 +173,84 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
 
    TString option = GetOption();
 
-   // Histos array
-   if (fInput->FindObject("fNHists")) {
-      TParameter<Long_t> *p =
-         dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("fNHists"));
-      fNhist = (p) ? (Int_t) p->GetVal() : fNhist;
-      Info("SlaveBegin", "fNhist=%d", fNhist);
-   }
+   Bool_t found_histtype=kFALSE;
+   Bool_t found_nhists=kFALSE;
+   Bool_t found_draw=kFALSE;
 
-   if (fInput->FindObject("fDraw")) {
-      TParameter<Int_t> *p =
-         dynamic_cast<TParameter<Int_t>*>(fInput->FindObject("fDraw"));
-      fDraw = (p) ? (Bool_t) p->GetVal() : kTRUE;
-      if (p){
-         Info("SlaveBegin", "fDraw=%d", fDraw);
-      } else { 
-         Warning("SlaveBegin", "fDraw not of type TParameter<Int_t> - Ignoring");
+   TIter nxt(fInput);
+   TString sinput;
+   TObject *obj;
+
+   while ((obj = nxt())){
+      sinput=obj->GetName();
+      if (sinput.Contains("PROOF_BenchmarkHistType")){
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+         if (a){
+            fHistType= a->GetVal();
+            found_histtype=kTRUE;
+            Info("Begin", "PROOF_BenchmarkRunType=%d", fHistType);
+         }
+         else{
+            Error("Begin", "PROOF_BenchmarkHistType not type TParameter<Int_t>*");
+         } 
+         continue;
       }
-//   } else {
-//      Error("SlaveBegin", "fDraw not found");
-   }
-
-   fHistType=TProofBench::kHistAll;
-   if (fInput->FindObject("fHistType")) {
-      TParameter<Int_t> *p = dynamic_cast<TParameter<Int_t>*>(fInput->FindObject("fHistType"));
-      if (p){
-         fHistType=(Int_t) p->GetVal(); 
-         Info("SlaveBegin", "fHistType=%d", fHistType);
-      } else {
-         Error("SlaveBegin", "fHistType not type of Parameter<Int_t> - Ignoring");
+      if (sinput.Contains("PROOF_BenchmarkNHists")){
+         TParameter<Long_t>* a=dynamic_cast<TParameter<Long_t>*>(obj);
+         if (a){
+            fNHists= a->GetVal();
+            found_nhists=kTRUE;
+            Info("Begin", "PROOF_BenchmarkNHists=%d", fNHists);
+         }
+         else{
+            Error("Begin", "PROOF_BenchmarkNHists not type TParameter<Long_t>*");
+         } 
+         continue;
       }
-//   } else {
-//      Error("SlaveBegin", "fHistType not found");
+      if (sinput.Contains("PROOF_BenchmarkDraw")){
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+         if (a){
+            fDraw= a->GetVal();
+            found_draw=kTRUE;
+            Info("Begin", "PROOF_BenchmarkDraw=%d", fDraw);
+         }
+         else{
+            Error("Begin", "PROOF_BenchmarkDraw not type TParameter<Int_t>*");
+         } 
+         continue;
+      }
    }
 
-   Printf("fHistType & TProofBench::kHist1D=%d", fHistType & TProofBench::kHist1D);
-   Printf("fHistType & TProofBench::kHist2D=%d", fHistType & TProofBench::kHist2D);
-   Printf("fHistType & TProofBench::kHist3D=%d", fHistType & TProofBench::kHist3D);
+   if (!found_histtype){
+      Warning("Begin", "PROOF_BenchmarkHistType not found; using default: %d", fHistType);
+   }
+   if (!found_nhists){
+      Warning("Begin", "PROOF_BenchmarkNHists not found; using default: %d", fNHists);
+   }
+   if (!found_draw){
+      Warning("Begin", "PROOF_BenchmarkDraw not found; using default: %d", fDraw);
+   }
 
    // Create the histogram
    if (fHistType & TProofBench::kHist1D){
-      fHist1D = new TH1F*[fNhist];
-      for (Int_t i=0; i < fNhist; i++) {
+      fHist1D = new TH1F*[fNHists];
+      for (Int_t i=0; i < fNHists; i++) {
          fHist1D[i] = new TH1F(Form("h1d_%d",i), Form("h1d_%d",i), 100, -3., 3.);
          fHist1D[i]->SetFillColor(kRed);
          if (fDraw) fOutput->Add(fHist1D[i]);
       }
    }
    if (fHistType & TProofBench::kHist2D){
-      fHist2D = new TH2F*[fNhist];
-      for (Int_t i=0; i < fNhist; i++) {
+      fHist2D = new TH2F*[fNHists];
+      for (Int_t i=0; i < fNHists; i++) {
          fHist2D[i] = new TH2F(Form("h2d_%d",i), Form("h2d_%d",i), 100, -3., 3., 100, -3., 3.);
          fHist2D[i]->SetFillColor(kRed);
          if (fDraw) fOutput->Add(fHist2D[i]);
       }
    }
    if (fHistType & TProofBench::kHist3D){
-      fHist3D = new TH3F*[fNhist];
-      for (Int_t i=0; i < fNhist; i++) {
+      fHist3D = new TH3F*[fNHists];
+      for (Int_t i=0; i < fNHists; i++) {
          fHist3D[i] = new TH3F(Form("h3d_%d",i), Form("h3d_%d",i), 100, -3., 3., 100, -3., 3., 100, -3., 3.);
          fHist3D[i]->SetFillColor(kRed);
          if (fDraw) fOutput->Add(fHist3D[i]);
@@ -239,7 +284,7 @@ Bool_t TSelHist::Process(Long64_t)
 
    Double_t x, y, z;
    if (fHistType & TProofBench::kHist1D){
-      for (Int_t i=0; i < fNhist; i++) {
+      for (Int_t i=0; i < fNHists; i++) {
          if (fRandom && fHist1D[i]) {
             x = fRandom->Gaus(0.,1.);
             fHist1D[i]->Fill(x);
@@ -247,7 +292,7 @@ Bool_t TSelHist::Process(Long64_t)
       }
    }
    if (fHistType & TProofBench::kHist2D){
-      for (Int_t i=0; i < fNhist; i++) {
+      for (Int_t i=0; i < fNHists; i++) {
          if (fRandom && fHist2D[i]) {
             x = fRandom->Gaus(0.,1.);
             y = fRandom->Gaus(0.,1.);
@@ -256,7 +301,7 @@ Bool_t TSelHist::Process(Long64_t)
       }
    }
    if (fHistType & TProofBench::kHist3D){
-      for (Int_t i=0; i < fNhist; i++) {
+      for (Int_t i=0; i < fNHists; i++) {
          if (fRandom && fHist3D[i]) {
             x = fRandom->Gaus(0.,1.);
             y = fRandom->Gaus(0.,1.);
@@ -298,12 +343,12 @@ void TSelHist::Terminate()
       fCHist1D=dynamic_cast<TCanvas*>(gROOT->FindObject("CHist1D"));
       if (!fCHist1D){
          fCHist1D = new TCanvas("CHist1D","Proof TSelHist Canvas (1D)",200,10,700,700);
-         Int_t nside = (Int_t)TMath::Sqrt((Float_t)fNhist);
-         nside = (nside*nside < fNhist) ? nside+1 : nside;
+         Int_t nside = (Int_t)TMath::Sqrt((Float_t)fNHists);
+         nside = (nside*nside < fNHists) ? nside+1 : nside;
          fCHist1D->Divide(nside,nside,0,0);
       }
 
-      for (Int_t i=0; i < fNhist; i++) {
+      for (Int_t i=0; i < fNHists; i++) {
          fHist1D[i] = dynamic_cast<TH1F *>(fOutput->FindObject(Form("h1d_%d",i)));
          fCHist1D->cd(i+1);
          if (fHist1D[i]) fHist1D[i]->Draw();
@@ -316,11 +361,11 @@ void TSelHist::Terminate()
       fCHist2D=dynamic_cast<TCanvas*>(gROOT->FindObject("CHist2D"));
       if (!fCHist2D){
          fCHist2D = new TCanvas("CHist2D","Proof TSelHist Canvas (2D)",200,10,700,700);
-         Int_t nside = (Int_t)TMath::Sqrt((Float_t)fNhist);
-         nside = (nside*nside < fNhist) ? nside+1 : nside;
+         Int_t nside = (Int_t)TMath::Sqrt((Float_t)fNHists);
+         nside = (nside*nside < fNHists) ? nside+1 : nside;
          fCHist2D->Divide(nside,nside,0,0);
       }
-      for (Int_t i=0; i < fNhist; i++) {
+      for (Int_t i=0; i < fNHists; i++) {
          fHist2D[i] = dynamic_cast<TH2F *>(fOutput->FindObject(Form("h2d_%d",i)));
          fCHist2D->cd(i+1);
          if (fHist2D[i]) fHist2D[i]->Draw("SURF");
@@ -334,13 +379,13 @@ void TSelHist::Terminate()
       fCHist3D=dynamic_cast<TCanvas*>(gROOT->FindObject("CHist3D"));
       if (!fCHist3D){
          fCHist3D = new TCanvas("CHist3D","Proof TSelHist Canvas (3D)",200,10,700,700);
-         Int_t nside = (Int_t)TMath::Sqrt((Float_t)fNhist);
-         nside = (nside*nside < fNhist) ? nside+1 : nside;
+         Int_t nside = (Int_t)TMath::Sqrt((Float_t)fNHists);
+         nside = (nside*nside < fNHists) ? nside+1 : nside;
          fCHist3D->Divide(nside,nside,0,0);
       }
 
      fOutput->Print("a");
-      for (Int_t i=0; i < fNhist; i++) {
+      for (Int_t i=0; i < fNHists; i++) {
          fHist3D[i] = dynamic_cast<TH3F *>(fOutput->FindObject(Form("h3d_%d",i)));
          fCHist3D->cd(i+1);
       if (fHist3D[i]) printf("fHist3D[%d] found\n", i);

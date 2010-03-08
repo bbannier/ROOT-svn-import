@@ -84,11 +84,8 @@ public :
 private:
 
    Int_t fRunType;
-   Int_t fNTries;
-   Long64_t fNEvents;
-   //TString fBaseDir;
-
-   Bool_t fDraw; //when true, display output
+   Bool_t fDraw; //when true, display output histograms
+   Bool_t fDebug; //when true, create and fill in output histograms
    TCanvas* fCHist; //canvas to display histograms
 
    //Output hists
@@ -116,14 +113,6 @@ void TSelEvent::Init(TTree *tree)
    fMuons=0;
    fH=0;
    //fCHist=0;
-
-   /* if (gProofServ){
-      fBaseDir=gProofServ->GetDataDir();
-      fBaseDir.Remove(fBaseDir.Last('/'));
-   }
-   else{
-      fBaseDir="";
-   }*/
 
    if (tree == 0) return;
    fChain = tree;
@@ -164,7 +153,7 @@ Bool_t TSelEvent::Notify()
    // user if needed.
 
    Info("Notify","processing file: %s", fChain->GetCurrentFile()->GetName());
- 
+
    // Get branch pointers
    b_event_fType = fChain->GetBranch("fType[20]");
    b_fEventName = fChain->GetBranch("fEventName");
