@@ -34,7 +34,7 @@
 //_______________________________________________________________________
 void PrepareVector( TTree* tree, std::vector<Float_t>& event )
 {
-   event.resize(7);
+   event.resize(8);
    tree->SetBranchAddress("var1",&event[0]);
    tree->SetBranchAddress("var2",&event[1]);
    tree->SetBranchAddress("var3",&event[2]);
@@ -42,6 +42,7 @@ void PrepareVector( TTree* tree, std::vector<Float_t>& event )
    tree->SetBranchAddress("issig",&event[4]);
    tree->SetBranchAddress("istest",&event[5]);
    tree->SetBranchAddress("isfake",&event[6]);
+   tree->SetBranchAddress("evtno",&event[7]);
 }
 
 //_______________________________________________________________________
@@ -812,6 +813,7 @@ int main( int argc, char** argv )
    factory->AddSpectator( "issig");  // =1 if signal
    factory->AddSpectator( "istest"); // =1 if an event meant for tests
    factory->AddSpectator( "isfake"); // =1 if the event was expected to be excluded from test or training
+   factory->AddSpectator( "evtno");  // =1 if signal
 
    // read training and test data, index number describes method used to pass data to TMVA
    DataInputTest* thetest=new DataInputTest();
