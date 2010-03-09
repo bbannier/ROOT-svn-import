@@ -171,6 +171,7 @@ void  GSLIntegrator::SetFunction( GSLFuncPointer  fp, void * p) {
 void  GSLIntegrator::SetFunction(const IGenFunction &f ) {
    // set function (make a copy of it)
    if (fFunction ==0) fFunction = new GSLFunctionWrapper();
+   fFunction->SetFunction(f);
 }
 
 // evaluation methods
