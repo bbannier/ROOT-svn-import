@@ -14,28 +14,27 @@ namespace llvm {
 }
 
 namespace cling {
+
    class Interpreter;
 
    //---------------------------------------------------------------------------
-   //! Class for the user interaction with the interpreter
+   // Class for the user interaction with the interpreter
    //---------------------------------------------------------------------------
    class MetaProcessor
    {
+   private:
+      Interpreter& m_Interp; // the interpreter
+      int m_contLevel;     // continuation indentation
+      std::string m_input; // pending statement
+      bool m_QuitRequested; // quitting?
+   private:
+      bool ProcessMeta(const std::string& input_line);
    public:
       MetaProcessor(Interpreter& interp);
       ~MetaProcessor();
-
-      int process(const char* code);
+      int process(const char* input_line);
       bool isQuitRequested() const { return m_QuitRequested; }
       void requestQuit(bool req) { m_QuitRequested = req; }
-
-   private:
-      bool ProcessMeta(const std::string& input);
-
-      Interpreter* m_Interp;
-      bool m_QuitRequested; // Whether the event loop has been requested top end
-      int m_contLevel;     // How many continuation level (i.e. open nested blocks)
-      std::string m_input; // Accumulation of the incomplete lines.
    };
 }
 

@@ -19,16 +19,16 @@
 #include <cling/EditLine/EditLine.h>
 
 namespace llvm {
-   class Module;
+class Module;
 }
 
 //---------------------------------------------------------------------------
 // Construct an interface for an interpreter
 //---------------------------------------------------------------------------
 cling::MetaProcessor::MetaProcessor(Interpreter& interp):
-   m_Interp(&interp),
-   m_QuitRequested(false),
-   m_contLevel(-1)
+      m_Interp(interp),
+      m_QuitRequested(false),
+      m_contLevel(-1)
 {
 }
 
@@ -42,54 +42,60 @@ cling::MetaProcessor::~MetaProcessor()
 
 //---------------------------------------------------------------------------
 // Compile and execute some code or process some meta command.
-// Return 0 when successful; 1+indent level when a continuation is needed,
-// and -1 in case an error was encountered.
+//
+// Return:
+//
+//            0: success
+// indent level: prompt for more input
+//
 //---------------------------------------------------------------------------
-int cling::MetaProcessor::process(const char* code)
+int
+cling::MetaProcessor::process(const char* input_text)
 {
-   if (code==0 || code[0]==0 || (code[0]=='\n' && code[1]==0)) return 0;
-   
-   if (ProcessMeta(code)) return 0;
-   
-   //----------------------------------------------------------------------
-   // Check if the statement is complete.  Use the continuation prompt 
-   // otherwise
-   //----------------------------------------------------------------------
-
-   std::string src = ""; // genSource("");     
-   
-   m_input.append( code );
-   
-   int indentLevel;
-   std::vector<clang::FunctionDecl *> fnDecls;
-   bool shouldBeTopLevel = false;
-   switch (m_Interp->analyzeInput(src, m_input, indentLevel, &fnDecls)) {
-      case Interpreter::Incomplete:
-         return 1 + indentLevel;
-      case Interpreter::TopLevel:
-         shouldBeTopLevel = true;
-      case Interpreter::Stmt:
-         break;
+   if (!input_text) { // null pointer, nothing to do.
+      return 0;
    }
-   
-   
-    //----------------------------------------------------------------------
-   // Parse and run it
-   //----------------------------------------------------------------------
-   std::string errMsg;
-   llvm::Module* module = m_Interp->linkSource( m_input, &errMsg );
-
-   if(!module) {
-      m_input.clear();
-      std::cerr << std::endl;
-      std::cerr << "[!] Errors occured while parsing your code!" << std::endl;
-      if (!errMsg.empty())
-         std::cerr << "[!] " << errMsg << std::endl;
-      std::cerr << std::endl;
-      return -1;
+   if (!input_text[0]) { // empty string, nothing to do.
+      return 0;
    }
-   m_Interp->loadModule( module );
-   m_input.clear();
+   std::string input_line(input_text);
+   if (input_line == "\n") { // just a blank line, nothing to do.
+      return 0;
+   }
+   //
+   //  Check for and handle any '.' commands.
+   //
+   bool was_meta = false;
+   if ((input_line[0] == '.') && (input_line.size() > 1)) {
+      was_meta = ProcessMeta(input_line);
+   }
+   if (was_meta) {
+      return 0;
+   }
+   //
+   //  Accumulate the input lines.
+   //
+   m_input.append(input_line);
+   //
+   // Check if the current statement is now complete.
+   // If not, return to prompt for more.
+   //
+   std::string src = "";
+   int indentLevel = 0;
+   std::vector<clang::FunctionDecl*> fnDecls;
+   Interpreter::InputType kind_of_input =
+      m_Interp.analyzeInput(src, m_input, indentLevel, &fnDecls);
+   if (kind_of_input == Interpreter::Incomplete) {
+      return indentLevel + 1;
+   }
+   //
+   //  We have a complete statement, compile and execute it.
+   //
+   m_Interp.processLine(m_input);
+   //
+   //  All done.
+   //
+   m_input.clear(); // reset pending statment
    return 0;
 }
 
@@ -97,66 +103,111 @@ int cling::MetaProcessor::process(const char* code)
 //---------------------------------------------------------------------------
 // Process possible meta commands (.L,...)
 //---------------------------------------------------------------------------
-bool cling::MetaProcessor::ProcessMeta(const std::string& input)
+bool
+cling::MetaProcessor::ProcessMeta(const std::string& input_line)
 {
-   if (input[0] != '.') return false;
-   switch (input[1]) {
-   case 'L':
-      {
-         size_t first = 3;
-         while (isspace(input[first])) ++first;
-         size_t last = input.length();
-         while (last && isspace(input[last - 1])) --last;
-         if (!last) {
-            std::cerr << "[i] Failure: no file name given!" << std::endl;
-         } else {
-            std::string filename = input.substr(first, last - first);
-            llvm::sys::Path path(filename);
-            if (path.isDynamicLibrary()) {
-               std::string errMsg;
-               if (!llvm::sys::DynamicLibrary::LoadLibraryPermanently(filename.c_str(), &errMsg))
-                  std::cerr << "[i] Success!" << std::endl;
-               else
-                  std::cerr << "[i] Failure: " << errMsg << std::endl;
-            } else {
-               // TODO: Need to double check that it is a text file ...
-               if( m_Interp->addUnit( filename ) )
-                  std::cerr << "[i] Success!" << std::endl;
-               else
-                  std::cerr << "[i] Failure" << std::endl;
-            }
-         }
-         break;
-      }
-   case 'x':
-   case 'X':
-      {
-         size_t first = 3;
-         while (isspace(input[first])) ++first;
-         size_t last = input.length();
-         while (last && isspace(input[last - 1])) --last;
-         if (!last) {
-            std::cerr << "[i] Failure: no file name given!" << std::endl;
-         } else {
-            m_Interp->executeFile(input.substr(first, last - first));
-         }
-         break;
-      }
-   case 'U':
-      {
-         llvm::sys::Path path(input.substr(3));
-         if (path.isDynamicLibrary()) {
-            std::cerr << "[i] Failure: cannot unload shared libraries yet!" << std::endl;
-         }
-         m_Interp->removeUnit( input.substr( 3 ) );
-         break;
-      }
-   case 'q':
+   // The command is the char right after the initial '.' char.
+   const char cmd_char = input_line[1];
+   //
+   //  Handle all one character commands.
+   //
+   //--
+   //
+   //  .q
+   //
+   //  Quit.
+   //
+   if (cmd_char == 'q') {
       m_QuitRequested = true;
-      break;
-   default:
+      return true;
+   }
+   //
+   //  Handle all commands with parameters.
+   //
+   //--
+   //  Make sure we have a parameter.
+   if (input_line.size() < 4) { // must have at least ".x <something>"
       return false;
    }
-   return true;
+   // Must have at least one space after the command char.
+   if (input_line[2] != ' ') {
+      return false;
+   }
+   //
+   //  Trim blanks from beginning and ending of parameter.
+   //
+   std::string::size_type first = input_line.find_first_not_of(" ", 3);
+   std::string::size_type last = input_line.find_last_not_of(" ", 3);
+   if (first == std::string::npos) { // all blanks after command char
+      return false;
+   }
+   std::string::size_type len = 0;
+   if (last == std::string::npos) {
+      len = input_line.size() - first;
+   }
+   else {
+      len = (last + 1) - first;
+   }
+   // Construct our parameter.
+   std::string param(input_line, first, len);
+   //
+   //  .L <filename>
+   //
+   //  Load code fragment.
+   //
+   if (cmd_char == 'L') {
+      llvm::sys::Path path(param);
+      if (path.isDynamicLibrary()) {
+         std::string errMsg;
+         bool err =
+            llvm::sys::DynamicLibrary::LoadLibraryPermanently(
+               param.c_str(), &errMsg)
+         if (err) {
+            std::cerr << "[i] Failure: " << errMsg << std::endl;
+         }
+         else {
+            std::cerr << "[i] Success!" << std::endl;
+         }
+         return true;
+      }
+      // TODO: Need to double check that it is a text file ...
+      bool ok = m_Interp.addUnit(param);
+      if (ok) {
+         std::cerr << "[i] Success!" << std::endl;
+      }
+      else {
+         std::cerr << "[i] Failure" << std::endl;
+      }
+      return true;
+   }
+   //
+   //  .x <filename>
+   //  .X <filename>
+   //
+   //  Execute function from file, function name is filename
+   //  without extension.
+   //
+   if ((cmd_char == 'x') || (cmd_char == 'X')) {
+      m_Interp.executeFile(param);
+      return true;
+   }
+   //
+   //  .U <filename>
+   //
+   //  Unload code fragment.
+   //
+   if (cmd_char == 'U') {
+      llvm::sys::Path path(param);
+      if (path.isDynamicLibrary()) {
+         std::cerr << "[i] Failure: cannot unload shared libraries yet!"
+                   << std::endl;
+      }
+      m_Interp.removeUnit(param);
+      return true;
+   }
+   //
+   //  Unrecognized command.
+   //
+   return false;
 }
 
