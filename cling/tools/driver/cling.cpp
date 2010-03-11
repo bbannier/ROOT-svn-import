@@ -62,20 +62,22 @@ int main( int argc, char **argv )
 
    langInfo.POSIXThreads = 1;
 
-   cling::Interpreter interpreter( langInfo );
+   cling::Interpreter interpreter;
 
    //---------------------------------------------------------------------------
    // We're supposed to parse a file
    //---------------------------------------------------------------------------
+#if 0
    if( !interactive ) {
       return interpreter.executeFile(argv[1]);
    }
+#endif // 0
    //----------------------------------------------------------------------------
    // We're interactive
    //----------------------------------------------------------------------------
-   else {
+   //else {
       cling::UserInterface ui(interpreter);
       ui.runInteractively();
-   }
+   //}
    return 0;
 }

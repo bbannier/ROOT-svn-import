@@ -27,8 +27,8 @@ class Module;
 //---------------------------------------------------------------------------
 cling::MetaProcessor::MetaProcessor(Interpreter& interp):
       m_Interp(interp),
-      m_QuitRequested(false),
-      m_contLevel(-1)
+      m_contLevel(-1),
+      m_QuitRequested(false)
 {
 }
 
@@ -150,6 +150,7 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    }
    // Construct our parameter.
    std::string param(input_line, first, len);
+#if 0
    //
    //  .L <filename>
    //
@@ -161,7 +162,7 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
          std::string errMsg;
          bool err =
             llvm::sys::DynamicLibrary::LoadLibraryPermanently(
-               param.c_str(), &errMsg)
+               param.c_str(), &errMsg);
          if (err) {
             std::cerr << "[i] Failure: " << errMsg << std::endl;
          }
@@ -205,6 +206,7 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
       m_Interp.removeUnit(param);
       return true;
    }
+#endif // 0
    //
    //  Unrecognized command.
    //

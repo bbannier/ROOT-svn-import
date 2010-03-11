@@ -39,10 +39,11 @@
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/lib/Sema/Sema.h"
+//#include "clang/lib/Sema/Sema.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/ParseAST.h"
 #include "llvm/ADT/OwningPtr.h"
@@ -79,12 +80,16 @@
 #include <cstdio>
 #include <iostream>
 #include <map>
+#include <stack>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include <limits.h>
 #include <stdint.h>
+
+static const char* fake_argv[] = { "clang", "-x", "c++", 0 };
+static const int fake_argc = (sizeof(fake_argv) / sizeof(const char*)) - 1;
 
 #if 0
 namespace {
@@ -283,6 +288,9 @@ MacroDetector::MacroUndefined(const clang::IdentifierInfo* II,
 Interpreter::Interpreter()
 {
    m_globalDeclarations = "#include <stdio.h>\n";
+   m_llvm_context = 0;
+   m_engine = 0;
+   m_prev_module = 0;
    //
    //  Initialize the llvm library.
    //
@@ -311,6 +319,12 @@ Interpreter::Interpreter()
 //---------------------------------------------------------------------------
 Interpreter::~Interpreter()
 {
+   delete m_prev_module;
+   m_prev_module = 0;
+   delete m_engine;
+   m_engine = 0;
+   delete m_llvm_context;
+   m_llvm_context = 0;
    // Shutdown the llvm library.
    llvm::llvm_shutdown();
 }
@@ -319,30 +333,70 @@ Interpreter::~Interpreter()
 // Note: Used by MetaProcessor.
 Interpreter::InputType
 Interpreter::analyzeInput(const std::string& contextSource,
-                          const std::string& line, int& indentLevel,
-                          std::vector<clang::FunctionDecl*>* fds)
+      const std::string& line, int& indentLevel,
+      std::vector<clang::FunctionDecl*>* fds)
 {
    // Check if there is an explicitation continuation character.
    if (line.length() > 1 && line[line.length() - 2] == '\\') {
       indentLevel = 1;
       return Incomplete;
    }
-   ProxyDiagnosticClient tokpdc(0);
-   clang::Diagnostic tokdiag(&tokpdc);
-   tokdiag.setSuppressSystemWarnings(true);
-   ParseEnvironment pEnv(m_compiler->getLangOpts(), m_compiler->getTarget(),
-                         &tokdiag, &m_compiler->getFileManager(), 0, m_inclPaths);
+   //
+   //  Setup a compiler instance to work with.
+   //
+   clang::CompilerInstance CI;
+   //bool first_time = true;
+   CI.setLLVMContext(m_llvm_context);
+   {
+      clang::TextDiagnosticBuffer DiagsBuffer;
+      clang::Diagnostic Diags(&DiagsBuffer);
+      clang::CompilerInvocation::CreateFromArgs(CI.getInvocation(),
+            fake_argv + 1, fake_argv + fake_argc, Diags);
+      if (
+         CI.getHeaderSearchOpts().UseBuiltinIncludes &&
+         CI.getHeaderSearchOpts().ResourceDir.empty()
+      ) {
+         //CI.getHeaderSearchOpts().ResourceDir =
+         //  clang::CompilerInvocation::GetResourcesPath(argv[0],
+         //    (void*) (intptr_t) GetExecutablePath);
+         CI.getHeaderSearchOpts().ResourceDir =
+            llvm::sys::Path("/local2/russo/llvm/lib/clang/1.1").str();
+      }
+      CI.createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
+      if (!CI.hasDiagnostics()) {
+         CI.takeLLVMContext();
+         return Incomplete;
+      }
+      DiagsBuffer.FlushDiagnostics(CI.getDiagnostics());
+      if (CI.getDiagnostics().getNumErrors()) {
+         CI.takeLLVMContext();
+         return Incomplete;
+      }
+   }
+   CI.setTarget(clang::TargetInfo::CreateTargetInfo(CI.getDiagnostics(),
+      CI.getTargetOpts()));
+   if (!CI.hasTarget()) {
+      CI.takeLLVMContext();
+      return Incomplete;
+   }
+   CI.getTarget().setForcedLangOptions(CI.getLangOpts());
+   CI.createFileManager();
+
+
+
+
+
    llvm::MemoryBuffer* buffer =
       llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(), &*line.end(),
-                                           "CLING");
-   pEnv.getSourceManager()->createMainFileIDForMemBuffer(buffer);
-   if (pEnv.getSourceManager()->getMainFileID().isInvalid()) {
+         "CLING");
+   CI.getSourceManager().createMainFileIDForMemBuffer(buffer);
+   if (CI.getSourceManager().getMainFileID().isInvalid()) {
       return Incomplete;
    }
    clang::Token lastTok;
    bool tokWasDo = false;
-   int stackSize = analyzeTokens(*pEnv.getPreprocessor(), lastTok,
-                                 indentLevel, tokWasDo);
+   int stackSize = analyzeTokens(CI.getPreprocessor(), lastTok,
+      indentLevel, tokWasDo);
    if (stackSize < 0) {
       return TopLevel;
    }
@@ -357,18 +411,15 @@ Interpreter::analyzeInput(const std::string& contextSource,
       if (stackSize > 0) {
          return Incomplete;
       }
-      ProxyDiagnosticClient pdc(0);
-      clang::Diagnostic diag(&pdc);
       // Setting this ensures "foo();" is not a valid top-level declaration.
-      diag.setDiagnosticMapping(clang::diag::ext_missing_type_specifier,
-                                clang::diag::MAP_ERROR);
-      diag.setSuppressSystemWarnings(true);
+      //diag.setDiagnosticMapping(clang::diag::ext_missing_type_specifier,
+      //                          clang::diag::MAP_ERROR);
       std::string src = contextSource + buffer->getBuffer().str();
       struct : public clang::ASTConsumer {
          bool hadIncludedDecls;
          unsigned pos;
          unsigned maxPos;
-         clang::SourceManager *sm;
+         clang::SourceManager* sm;
          std::vector<clang::FunctionDecl*> fds;
          void HandleTopLevelDecl(clang::DeclGroupRef D) {
             for (
@@ -376,9 +427,8 @@ Interpreter::analyzeInput(const std::string& contextSource,
                I != E;
                ++I
             ) {
-               if (
-                  clang::FunctionDecl* FD = dyn_cast<clang::FunctionDecl>(*I)
-               ) {
+               clang::FunctionDecl* FD = dyn_cast<clang::FunctionDecl>(*I);
+               if (FD) {
                   clang::SourceLocation Loc = FD->getTypeSpecStartLoc();
                   if (!Loc.isValid()) {
                      continue;
@@ -409,23 +459,24 @@ Interpreter::analyzeInput(const std::string& contextSource,
             }
          }
       } consumer;
-      ParseEnvironment pEnvCheck(m_compiler->getLangOpts(),
-                                 m_compiler->getTarget(), &diag, &m_compiler->getFileManager(),
-                                 0, m_inclPaths);
       consumer.hadIncludedDecls = false;
       consumer.pos = contextSource.length();
       consumer.maxPos = consumer.pos + buffer->getBuffer().size();
-      consumer.sm = pEnvCheck.getSourceManager();
+      consumer.sm = &CI.getSourceManager();
       buffer = llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(),
-               &*line.end(), "CLING");
-      pEnvCheck.getSourceManager()->createMainFileIDForMemBuffer(buffer);
-      clang::ParseAST(*pEnvCheck.getPreprocessor(), &consumer,
-                      *pEnvCheck.getASTContext());
-      if (pdc.hadError(clang::diag::err_unterminated_block_comment)) {
+         &*line.end(), "CLING");
+      CI.getSourceManager().createMainFileIDForMemBuffer(buffer);
+      clang::ParseAST(CI.getPreprocessor(), &consumer, CI.getASTContext());
+#if 0
+      if (
+         CI.getDiagnostics().hadError(
+            clang::diag::err_unterminated_block_comment)
+      ) {
          return Incomplete;
       }
+#endif // 0
       if (
-         !pdc.hadErrors() &&
+         !CI.getDiagnostics().getNumErrors() &&
          (
             !consumer.fds.empty() ||
             consumer.hadIncludedDecls
@@ -444,7 +495,7 @@ Interpreter::analyzeInput(const std::string& contextSource,
 //---------------------------------------------------------------------------
 // Note: Used only by analyzeInput().
 int Interpreter::analyzeTokens(clang::Preprocessor& PP,
-                               clang::Token& lastTok, int& indentLevel, bool& tokWasDo)
+   clang::Token& lastTok, int& indentLevel, bool& tokWasDo)
 {
    int result;
    std::stack<std::pair<clang::Token, clang::Token> > S; // Tok, PrevTok
@@ -509,8 +560,8 @@ int Interpreter::analyzeTokens(clang::Preprocessor& PP,
    // Also try to match preprocessor conditionals...
    if (result == 0) {
       clang::Lexer Lexer(PP.getSourceManager().getMainFileID(),
-                         0, // FIXME: which const llvm::MemoryBuffer*?
-                         PP.getSourceManager(), PP.getLangOptions());
+         0, // FIXME: which const llvm::MemoryBuffer*?
+         PP.getSourceManager(), PP.getLangOptions());
       Lexer.LexFromRawLexer(Tok);
       while (Tok.isNot(clang::tok::eof)) {
          if (Tok.is(clang::tok::hash)) {
@@ -582,10 +633,8 @@ Interpreter::linkSource(const std::string& source, std::string* errMsg)
 }
 #endif // 0
 
-static const char* fake_argv[] = { "clang", "-x", "c++", 0 };
-static const int fake_argc = (sizeof(fake_argv) / sizeof(const char*)) - 1;
-
-void processLine(const std::string& input_line)
+void
+Interpreter::processLine(const std::string& input_line)
 {
    //
    //  Setup a compiler instance to work with.
@@ -614,7 +663,6 @@ void processLine(const std::string& input_line)
          return;
       }
       DiagsBuffer.FlushDiagnostics(CI.getDiagnostics());
-      bool Success = false;
       if (CI.getDiagnostics().getNumErrors()) {
          CI.takeLLVMContext();
          return;
@@ -1014,7 +1062,7 @@ void processLine(const std::string& input_line)
          // FIXME: Need to compare types here!
          // Get the mapping of the var in the prev module.
          void* p = m_engine->getPointerToGlobal(gv);
-         fprintf(stderr, "Setting mapping for: %s to %x\n",
+         fprintf(stderr, "Setting mapping for: %s to %lx\n",
                  iter->getName().data(), (unsigned long) p);
          // And duplicate it for the new module.
          m_engine->addGlobalMapping(&*iter, p);
