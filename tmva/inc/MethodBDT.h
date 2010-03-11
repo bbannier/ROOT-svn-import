@@ -169,26 +169,24 @@ namespace TMVA {
       void UpdateTargets( std::vector<TMVA::Event*>, UInt_t cls = 0);
       void UpdateTargetsRegression( std::vector<TMVA::Event*>,Bool_t first=kFALSE);    
       Double_t GetGradBoostMVA(TMVA::Event& e, UInt_t nTrees);
-      void GetRandomSubSample();
-      Double_t GetWeightedQuantile(std::vector<std::vector<Double_t> > &vec, const Double_t quantile, const Double_t SumOfWeights = 0.0);
+      void GetRandomSubSample();  
+      Double_t GetWeightedQuantile(std::vector<std::pair<Double_t, Double_t> > vec, const Double_t quantile, const Double_t SumOfWeights = 0.0);
 
       std::vector<TMVA::Event*>       fEventSample;     // the training events
       std::vector<TMVA::Event*>       fValidationSample;// the Validation events
       std::vector<TMVA::Event*>       fSubSample;       // subsample for bagged grad boost
-
       Int_t                           fNTrees;          // number of decision trees requested
       std::vector<DecisionTree*>      fForest;          // the collection of decision trees
       std::vector<double>             fBoostWeights;    // the weights applied in the individual boosts
-      std::vector<double>             fInitialWeights;  // the initial event weights
-      std::vector<double>             fRegResiduals;    // temporary storage for regression residuals
       TString                         fBoostType;       // string specifying the boost type
-      Double_t                        fSumOfWeights;    // total sum of all event weights
       Double_t                        fAdaBoostBeta;    // beta parameter for AdaBoost algorithm
       TString                         fAdaBoostR2Loss;  // loss type used in AdaBoostR2 (Linear,Quadratic or Exponential)
       Double_t                        fTransitionPoint; // break-down point for gradient regression
       Double_t                        fShrinkage;       // learning rate for gradient boost;
       Bool_t                          fBaggedGradBoost; // turn bagging in combination with grad boost on/off
       Double_t                        fSampleFraction;  // fraction of events used for bagged grad boost
+      Double_t                        fSumOfWeights;    // sum of all event weights
+      std::vector<pair<Double_t, Double_t> >       fWeightedResiduals;  // weighted regression residuals      
       std::map< TMVA::Event*,std::vector<double> > fResiduals; // individual event residuals for gradient boost
 
       //options for the decision Tree
