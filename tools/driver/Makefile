@@ -20,6 +20,6 @@ TOOL_NO_EXPORTS = 1
 LDFLAGS += -lcurses
 
 LINK_COMPONENTS := system jit nativecodegen executionengine linker transformutils core
-USEDLIBS = clingUserInterface.a clingMetaProcessor.a clingInterpreter.a clingEditLine.a clangFrontend.a clangSema.a clangLex.a clangParse.a clangCodeGen.a clangAnalysis.a clangAST.a clangBasic.a 
+USEDLIBS = clingUserInterface.a clingMetaProcessor.a clingInterpreter.a clingEditLine.a clangFrontend.a clangDriver.a clangCodeGen.a clangSema.a clangChecker.a clangAnalysis.a clangRewrite.a clangAST.a clangParse.a clangLex.a clangBasic.a LLVMX86AsmPrinter.a
 
 include $(LEVEL)/Makefile.common

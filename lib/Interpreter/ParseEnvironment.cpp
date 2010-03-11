@@ -9,6 +9,7 @@
 // version: $Id: ParseOperation.h 30397 2009-09-24 13:08:16Z axel $
 // author:  Alexei Svitkine
 
+#if 0
 #include "ParseEnvironment.h"
 
 #include <clang/Basic/Version.h>
@@ -100,3 +101,4 @@ namespace cling {
    }
 
 }
+#endif // 0

@@ -16,6 +16,7 @@
 #include <clang/Lex/LexDiagnostic.h>
 #include <clang/Sema/SemaDiagnostic.h>
 
+#if 0
 namespace cling {
 
 //
@@ -91,3 +92,4 @@ bool ProxyDiagnosticClient::hadErrors() const
 
 } // namespace cling
 
+#endif // 0

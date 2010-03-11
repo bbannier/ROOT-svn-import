@@ -47,7 +47,7 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/lib/Sema/Sema.h"
+//#include "clang/lib/Sema/Sema.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/ParseAST.h"
 #include "llvm/ADT/OwningPtr.h"

@@ -12,6 +12,7 @@
 #ifndef CLING_PARSEENVIRONMENT_H
 #define CLING_PARSEENVIRONMENT_H
 
+#if 0
 #include <string>
 #include <vector>
 
@@ -66,4 +67,5 @@ namespace cling {
    
 }
 
+#endif // 0
 #endif // CLING_PARSEENVIRONMENT_H
