@@ -17,6 +17,11 @@
 #include "TEveProjectionBases.h"
 #include "TEveProjectionManager.h"
 
+#include "TBuffer3D.h"
+#include "TBuffer3DTypes.h"
+#include "TVirtualPad.h"
+#include "TVirtualViewer3D.h"
+
 #include "TGeoMatrix.h"
 
 #include "TClass.h"
@@ -1002,6 +1007,34 @@ void TEveElement::PadPaint(Option_t* option)
    }
 }
 
+//______________________________________________________________________________
+void TEveElement::PaintStandard(TObject* id)
+{
+   // Paint object -- a generic implementation for EVE elements.
+   // This supports direct rendering using a dedicated GL class.
+   // Override TObject::Paint() in sub-classes if different behaviour
+   // is required.
+
+   static const TEveException eh("TEveElement::PaintStandard ");
+
+   TBuffer3D buff(TBuffer3DTypes::kGeneric);
+
+   // Section kCore
+   buff.fID           = id;
+   buff.fColor        = GetMainColor();
+   buff.fTransparency = GetMainTransparency();
+   if (HasMainTrans())  RefMainTrans().SetBuffer3D(buff);
+
+   buff.SetSectionsValid(TBuffer3D::kCore);
+
+   Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);
+   if (reqSections != TBuffer3D::kNone)
+   {
+      Warning(eh, "IsA='%s'. Viewer3D requires more sections (%d). Only direct-rendering supported.",
+              id->ClassName(), reqSections);
+   }
+}
+
 /******************************************************************************/
 
 //______________________________________________________________________________
@@ -1180,12 +1213,12 @@ void TEveElement::SetMainAlpha(Float_t alpha)
 /******************************************************************************/
 
 //______________________________________________________________________________
-TEveTrans* TEveElement::PtrMainTrans()
+TEveTrans* TEveElement::PtrMainTrans(Bool_t create)
 {
-   // Return pointer to main transformation. It is created if not yet
-   // existing.
+   // Return pointer to main transformation. If 'create' flag is set (default)
+   // it is created if not yet existing.
 
-   if (!fMainTrans)
+   if (!fMainTrans && create)
       InitMainTrans();
 
    return fMainTrans;
