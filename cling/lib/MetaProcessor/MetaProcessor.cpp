@@ -80,6 +80,7 @@ cling::MetaProcessor::process(const char* input_text)
    // Check if the current statement is now complete.
    // If not, return to prompt for more.
    //
+#if 0
    std::string src = "";
    int indentLevel = 0;
    std::vector<clang::FunctionDecl*> fnDecls;
@@ -88,6 +89,7 @@ cling::MetaProcessor::process(const char* input_text)
    if (kind_of_input == Interpreter::Incomplete) {
       return indentLevel + 1;
    }
+#endif // 0
    //
    //  We have a complete statement, compile and execute it.
    //

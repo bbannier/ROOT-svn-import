@@ -319,8 +319,8 @@ Interpreter::Interpreter()
 //---------------------------------------------------------------------------
 Interpreter::~Interpreter()
 {
-   delete m_prev_module;
-   m_prev_module = 0;
+   //delete m_prev_module;
+   //m_prev_module = 0;
    delete m_engine;
    m_engine = 0;
    delete m_llvm_context;
