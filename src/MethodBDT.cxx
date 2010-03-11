@@ -390,6 +390,7 @@ void TMVA::MethodBDT::Init( void )
    fUseNTrainEvents = Data()->GetNTrainingEvents();
    fNNodesMax       = 1000000;
    fShrinkage       = 1.0;
+   fSumOfWeights    = 0.0;
 
    // reference cut value to distinguish signal-like from background-like events
    SetSignalReferenceCut( 0 );
@@ -686,47 +687,42 @@ void TMVA::MethodBDT::UpdateTargets(vector<TMVA::Event*> eventSample, UInt_t cls
 void TMVA::MethodBDT::UpdateTargetsRegression(vector<TMVA::Event*> eventSample, Bool_t first)
 {
    //Calculate current residuals for all events and update targets for next iteration
-   vector<Double_t> absResiduals;
-   vector< vector<Double_t> > temp;
+   vector< pair<Double_t, Double_t> > temp;
    UInt_t i=0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       if(first){
-         fRegResiduals.push_back((*e)->GetTarget(0)-fBoostWeights[i]);
+         fWeightedResiduals[i].first -= fBoostWeights[i];
       }
       else{
-         fRegResiduals[i]-=fForest.back()->CheckEvent(*(*e),kFALSE);
+         fWeightedResiduals[i].first -= fForest.back()->CheckEvent(*(*e),kFALSE);
       }
-      absResiduals.push_back(fabs(fRegResiduals[i]));
+      temp.push_back(make_pair(fabs(fWeightedResiduals[i].first),fWeightedResiduals[i].second));
       i++;
    }
-   temp.push_back(absResiduals);
-   temp.push_back(fInitialWeights);
-   fTransitionPoint = GetWeightedQuantile(temp,0.9);
+   fTransitionPoint = GetWeightedQuantile(temp,0.7,fSumOfWeights);
    i=0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      if(absResiduals[i]<=fTransitionPoint)
-         (*e)->SetTarget(0,fRegResiduals[i]);
+ 
+      if(temp[i].first<=fTransitionPoint)
+         (*e)->SetTarget(0,fWeightedResiduals[i].first);
       else
-         (*e)->SetTarget(0,fTransitionPoint*(fRegResiduals[i]<0?-1.0:1.0));
+         (*e)->SetTarget(0,fTransitionPoint*(fWeightedResiduals[i].first<0?-1.0:1.0));
       i++;
    }
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBDT::GetWeightedQuantile(vector<  vector<Double_t> > &vec, const Double_t quantile, const Double_t SumOfWeights){
-   //calculates the quantile of the distribution in vec[0] weighted with the values in vec[1]
-   gTools().UsefulSortAscending( vec );
-   Double_t norm = fSumOfWeights;
-   if(SumOfWeights!=0.0) norm = SumOfWeights;
+Double_t TMVA::MethodBDT::GetWeightedQuantile(vector<  pair<Double_t, Double_t> > vec, const Double_t quantile, const Double_t norm){
+   //calculates the quantile of the distribution of the first pair entries weighted with the values in the second pair entries
    Double_t temp = 0.0;
-   
+   std::sort(vec.begin(), vec.end());
    Int_t i = 0;
    while(temp <= norm*quantile){
-      temp += vec[1][i];
+      temp += vec[i].second;
       i++;
    }
       
-   return vec[0][i];
+   return vec[i].first;
 }
 
 //_______________________________________________________________________
@@ -765,30 +761,23 @@ Double_t TMVA::MethodBDT::GradBoost( vector<TMVA::Event*> eventSample, DecisionT
 Double_t TMVA::MethodBDT::GradBoostRegression( vector<TMVA::Event*> eventSample, DecisionTree *dt )
 {
    // Implementation of M_TreeBoost using a Huber loss function as desribed by Friedman 1999
-   std::map<TMVA::DecisionTreeNode*,vector< vector<Double_t> > > leaves;
+   std::map<TMVA::DecisionTreeNode*,Double_t > leaveWeights;
+   std::map<TMVA::DecisionTreeNode*,vector< pair<Double_t, Double_t> > > leaves;
    UInt_t i =0;
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      TMVA::DecisionTreeNode* node = dt->GetEventNode(*(*e));
-      if(leaves[node].size()==0){
-         (leaves[node]).push_back(vector<Double_t>());
-         (leaves[node]).push_back(vector<Double_t>());
-      }
-      (leaves[node])[0].push_back(fRegResiduals[i]);
-      (leaves[node])[1].push_back((*e)->GetWeight());
+      TMVA::DecisionTreeNode* node = dt->GetEventNode(*(*e));      
+      (leaves[node]).push_back(make_pair(fWeightedResiduals[i].first,(*e)->GetWeight()));
+      (leaveWeights[node]) += (*e)->GetWeight();
       i++;
    }
 
-   for (std::map<TMVA::DecisionTreeNode*,vector<vector<Double_t> > >::iterator iLeave=leaves.begin();
+   for (std::map<TMVA::DecisionTreeNode*,vector< pair<Double_t, Double_t> > >::iterator iLeave=leaves.begin();
         iLeave!=leaves.end();++iLeave){
-      Double_t LeaveWeight = 0;
-      for(UInt_t j=0;j<((iLeave->second)[0].size());j++){
-         LeaveWeight+=((iLeave->second)[1][j]);
-      }
       Double_t shift=0,diff= 0;
-      Double_t ResidualMedian = GetWeightedQuantile(iLeave->second,0.5,LeaveWeight);
-      for(UInt_t j=0;j<((iLeave->second)[0].size());j++){
-         diff = (iLeave->second)[0][j]-ResidualMedian;
-         shift+=1.0/((iLeave->second)[0].size())*((diff<0)?-1.0:1.0)*TMath::Min(fTransitionPoint,fabs(diff));
+      Double_t ResidualMedian = GetWeightedQuantile(iLeave->second,0.5,leaveWeights[iLeave->first]);
+      for(UInt_t j=0;j<((iLeave->second).size());j++){
+         diff = (iLeave->second)[j].first-ResidualMedian;
+         shift+=1.0/((iLeave->second).size())*((diff<0)?-1.0:1.0)*TMath::Min(fTransitionPoint,fabs(diff));
       }
       (iLeave->first)->SetResponse(fShrinkage*(ResidualMedian+shift));
    }
@@ -802,17 +791,11 @@ void TMVA::MethodBDT::InitGradBoost( vector<TMVA::Event*> eventSample)
    // initialize targets for first tree
    fSepType=NULL; //set fSepType to NULL (regression trees are used for both classification an regression)
    if(DoRegression()){
-
-      vector< vector<Double_t> > weightedTargetValues;
-      vector<Double_t> targets;
-       for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-         targets.push_back((*e)->GetTarget(0));
-         fInitialWeights.push_back((*e)->GetWeight());
+      for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
+         fWeightedResiduals.push_back(make_pair((*e)->GetTarget(0), (*e)->GetWeight()));
          fSumOfWeights+=(*e)->GetWeight();
       }
-      weightedTargetValues.push_back(targets);
-      weightedTargetValues.push_back(fInitialWeights);
-      Double_t weightedMedian = GetWeightedQuantile(weightedTargetValues,0.5);
+      Double_t weightedMedian = GetWeightedQuantile(fWeightedResiduals,0.5, fSumOfWeights);
  
       for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
          fBoostWeights.push_back(weightedMedian);  

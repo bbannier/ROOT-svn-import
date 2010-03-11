@@ -254,7 +254,7 @@ int main( int argc, char** argv )
 
    if (Use["BDTG"])
      factory->BookMethod( TMVA::Types::kBDT, "BDTG",
-                           "!H:!V:NTrees=200::BoostType=Grad:Shrinkage=1.0:UseBaggedGrad:SeparationType=GiniIndex:nCuts=20:NNodesMax=5" );
+                           "!H:!V:NTrees=1000::BoostType=Grad:Shrinkage=0.3:!UseBaggedGrad:SeparationType=GiniIndex:nCuts=20:NNodesMax=10" );
    // --------------------------------------------------------------------------------------------------
 
    // ---- Now you can tell the factory to train, test, and evaluate the MVAs
