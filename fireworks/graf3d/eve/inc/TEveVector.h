@@ -85,7 +85,7 @@ public:
    TEveVector Orthogonal() const;
    void       OrthoNormBase(TEveVector& a, TEveVector& b) const;
 
-   ClassDefNV(TEveVector, 1); // Float three-vector; a minimal Float_t copy of TVector3 used to represent points and momenta (also used in VSD).
+   ClassDef(TEveVector, 1); // Float three-vector; a minimal Float_t copy of TVector3 used to represent points and momenta (also used in VSD).
 };
 
 //______________________________________________________________________________
@@ -198,7 +198,7 @@ public:
    TEveVector4& operator += (const TEveVector4 & b)
    { fX += b.fX; fY += b.fY; fZ += b.fZ; fT += b.fT; return *this; }
 
-   ClassDefNV(TEveVector4, 1); // Float four-vector.
+   ClassDef(TEveVector4, 1); // Float four-vector.
 };
 
 
@@ -260,7 +260,7 @@ public:
 
    TEvePoint& Mult(const TEvePoint& a, Float_t af);
 
-   ClassDefNV(TEvePoint, 1); // Float two-vector.
+   ClassDef(TEvePoint, 1); // Float two-vector.
 };
 
 //______________________________________________________________________________
@@ -355,7 +355,7 @@ public:
 
    const char* TypeName();
 
-   ClassDefNV(TEvePathMark, 1); // Special-point on track: position/momentum reference, daughter creation or decay (also used in VSD).
+   ClassDef(TEvePathMark, 1); // Special-point on track: position/momentum reference, daughter creation or decay (also used in VSD).
 };
 
 #endif
