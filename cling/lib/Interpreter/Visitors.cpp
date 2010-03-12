@@ -120,7 +120,11 @@ void FunctionBodyConsumer::HandleTopLevelDecl(clang::DeclGroupRef D)
   for (; I != E; ++I) {
     clang::FunctionDecl* FD = dyn_cast<clang::FunctionDecl>(*I);
     if (FD) {
-      if (FD->getNameAsCString() == m_funcName) {
+      // Reject constructor, destructor, operator
+      if (!FD->getDeclName().isIdentifier()) {
+         continue;
+      }
+      if (FD->getName() == m_funcName) {
 	clang::Stmt* S = FD->getBody();
 	if (S) {
 	  m_visitor.VisitChildren(S);
