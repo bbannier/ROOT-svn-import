@@ -88,7 +88,7 @@
 #include <limits.h>
 #include <stdint.h>
 
-static const char* fake_argv[] = { "clang", "-x", "c++", "-v", 0 };
+static const char* fake_argv[] = { "clang", "-x", "c++", 0 };
 static const int fake_argc = (sizeof(fake_argv) / sizeof(const char*)) - 1;
 
 #if 0
@@ -287,7 +287,6 @@ MacroDetector::MacroUndefined(const clang::IdentifierInfo* II,
 //---------------------------------------------------------------------------
 Interpreter::Interpreter()
 {
-   m_globalDeclarations = "#include <stdio.h>\n";
    m_llvm_context = 0;
    m_engine = 0;
    m_prev_module = 0;
@@ -687,8 +686,6 @@ Interpreter::processLine(const std::string& input_line)
    //  Run the input through the frontend.
    //
    if (posHash != std::string::npos) { // input is a preproc directive, do & ret
-      // --
-#if 0
       if (first_time) {
          CI.createSourceManager();
          first_time = false;
@@ -702,27 +699,29 @@ Interpreter::processLine(const std::string& input_line)
       CI.createASTContext();
       //llvm::raw_stdout_ostream out;
       //clang::ASTConsumer* dummyConsumer = clang::CreateASTPrinter(&out);
-      CI.setASTConsumer(new ASTConsumer());
+      CI.setASTConsumer(new clang::ASTConsumer());
       PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-                                             PP.getLangOptions().NoBuiltin);
+         PP.getLangOptions().NoBuiltin);
       llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
-                                  &*input_line.begin(), &*input_line.end(), "CLING");
+         &*input_line.begin(), &*input_line.end(), "CLING");
       if (!SB) {
          // FIXME: We need our own error code.
-         CI.getDiagnostics().Report(clang::diag::err_fe_error_reading)
-         << "could not create memory buffer";
+         //CI.getDiagnostics().Report(clang::diag::err_fe_error_reading)
+         //<< "could not create memory buffer";
          CI.takeLLVMContext();
          return;
       }
       CI.getSourceManager().createMainFileIDForMemBuffer(SB);
       if (CI.getSourceManager().getMainFileID().isInvalid()) {
          // FIXME: We need our own error code.
-         CI.getDiagnostics().Report(clang::diag::err_fe_error_reading)
-         << "<input string>";
+         //CI.getDiagnostics().Report(clang::diag::err_fe_error_reading)
+         //<< "<input string>";
          CI.takeLLVMContext();
          return;
       }
+      std::fprintf(stderr, "Parsing preprocessor directive.\n");
       clang::ParseAST(PP, &CI.getASTConsumer(), CI.getASTContext());
+      std::fprintf(stderr, "Preprocessor directive parse finished.\n");
       //clang::Sema sema(PP, CI.getASTContext(), CI.getASTConsumer());
       //clang::Parser P(PP, sema);
       //PP.EnterMainSourceFile();
@@ -731,8 +730,7 @@ Interpreter::processLine(const std::string& input_line)
       CI.setASTContext(0);
       CI.clearOutputFiles(/*EraseFiles=*/CI.getDiagnostics().getNumErrors());
       CI.getDiagnosticClient().EndSourceFile();
-      unsigned err_count = CI.getDiagnostics().getNumErrors();
-#endif // 0
+      //unsigned err_count = CI.getDiagnostics().getNumErrors();
       m_globalDeclarations.append(input_line);
       m_globalDeclarations.append("\n");
       CI.takeLLVMContext();
@@ -854,7 +852,13 @@ Interpreter::processLine(const std::string& input_line)
             //
             const clang::VarDecl* VD = dyn_cast<clang::VarDecl>(*D);
             if (!VD) {
-               std::fprintf(stderr, "decl, not var decl.\n");
+               if (DS->isSingleDecl()) {
+                 std::fprintf(stderr, "decl, not var decl, single decl.\n");
+                 wrapped_globals.append(stmt_string + '\n');
+                 held_globals.append(stmt_string + '\n');
+                 continue;
+               }
+               std::fprintf(stderr, "decl, not var decl, not single decl.\n");
                clang::SourceLocation SLoc =
                   SM.getInstantiationLoc((*D)->getLocStart());
                clang::SourceLocation ELoc =
@@ -988,8 +992,8 @@ Interpreter::processLine(const std::string& input_line)
          CI.takeLLVMContext();
          return;
       }
-      std::fprintf(stderr, "Parsing wrapped code to make translation unit.\n");
       std::fprintf(stderr, "wrapped code:\n%s\n", wrapped.c_str());
+      std::fprintf(stderr, "Parsing wrapped code to make translation unit.\n");
       clang::ParseAST(PP, &CI.getASTConsumer(), CI.getASTContext());
       std::fprintf(stderr, "Finished parsing wrapped code.\n");
       CI.clearOutputFiles(/*EraseFiles=*/CI.getDiagnostics().getNumErrors());
@@ -1047,11 +1051,29 @@ Interpreter::processLine(const std::string& input_line)
    //  Transfer global mappings from previous module.
    //
    {
+      std::string new_global_name;
       llvm::Module::global_iterator iter = m->global_begin();
       llvm::Module::global_iterator end = m->global_end();
       for (; iter != end; ++iter) {
+         new_global_name = iter->getName();
+         if (new_global_name.size() > 1) {
+            if (new_global_name.substr(0, 5) == "llvm.") {
+               continue;
+            }
+            if (new_global_name[0] == '_') {
+               if (
+                  (new_global_name[1] == '_') ||
+                  std::isupper(new_global_name[1])
+               ) {
+                  continue;
+               }
+            }
+            if (new_global_name[0] == '.') {
+               continue;
+            }
+         }
          fprintf(stderr, "Current module has global: %s\n",
-                 iter->getName().data());
+                 new_global_name.c_str());
          //if (iter->isDeclaration()) {
          fprintf(stderr, "Search previous module for global var: %s\n",
                  iter->getName().data());
@@ -1078,9 +1100,9 @@ Interpreter::processLine(const std::string& input_line)
       if (!ok) {
          fprintf(stderr, "Previous module not found in execution engine!\n");
       }
+      delete m_prev_module;
+      m_prev_module = 0;
    }
-   delete m_prev_module;
-   m_prev_module = 0;
    //
    //  Give new module to the execution engine.
    //
