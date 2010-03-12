@@ -29,7 +29,7 @@ public:
    TEveVector(const Float_t* v)  : fX(v[0]), fY(v[1]), fZ(v[2]) {}
    TEveVector(const Double_t* v) : fX(v[0]), fY(v[1]), fZ(v[2]) {}
    TEveVector(Float_t x, Float_t y, Float_t z) : fX(x), fY(y), fZ(z) {}
-   ~TEveVector() {}
+   virtual ~TEveVector() {}
 
    void Dump() const;
 
@@ -182,7 +182,7 @@ public:
    TEveVector4(const TEveVector& v) : TEveVector(v), fT(0) {}
    TEveVector4(Float_t x, Float_t y, Float_t z, Float_t t=0) :
       TEveVector(x, y, z), fT(t) {}
-   ~TEveVector4() {}
+   virtual ~TEveVector4() {}
 
    void Dump() const;
 
@@ -215,7 +215,7 @@ public:
    TEvePoint(const Float_t* v)  : fX(v[0]), fY(v[1]) {}
    TEvePoint(const Double_t* v) : fX(v[0]), fY(v[1]) {}
    TEvePoint(Float_t x, Float_t y) : fX(x), fY(y)    {}
-   ~TEvePoint() {}
+   virtual ~TEvePoint() {}
 
    void Dump() const;
 
@@ -351,7 +351,7 @@ public:
    TEvePathMark(EType_e type, const TEveVector& v, const TEveVector& p, const TEveVector& e, Float_t time=0) :
       fType(type), fV(v), fP(p), fE(e), fTime(time) {}
 
-   ~TEvePathMark() {}
+   virtual ~TEvePathMark() {}
 
    const char* TypeName();
 
