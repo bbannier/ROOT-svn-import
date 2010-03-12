@@ -322,8 +322,8 @@ Interpreter::~Interpreter()
    //m_prev_module = 0; // Don't do this, the engine does it.
    delete m_engine;
    m_engine = 0;
-   delete m_llvm_context;
-   m_llvm_context = 0;
+   //delete m_llvm_context;
+   //m_llvm_context = 0; // FIXME: Leak this for now.
    // Shutdown the llvm library.
    llvm::llvm_shutdown();
 }
@@ -1144,6 +1144,138 @@ Interpreter::processLine(const std::string& input_line)
    //  Prevent the destruction of our context, we need to
    //  reuse it because it has all our types.
    //
+   CI.takeLLVMContext();
+}
+
+void
+Interpreter::loadFile(const std::string& filename)
+{
+   llvm::sys::Path path(filename);
+   if (path.isDynamicLibrary()) {
+      std::string errMsg;
+      bool err =
+         llvm::sys::DynamicLibrary::LoadLibraryPermanently(
+            filename.c_str(), &errMsg);
+      if (err) {
+         std::cerr << "[i] Failure: " << errMsg << std::endl;
+      }
+      return;
+   }
+   //
+   //  Setup a compiler instance to work with.
+   //
+   clang::CompilerInstance CI;
+   bool first_time = true;
+   CI.setLLVMContext(m_llvm_context);
+   {
+      clang::TextDiagnosticBuffer DiagsBuffer;
+      clang::Diagnostic Diags(&DiagsBuffer);
+      clang::CompilerInvocation::CreateFromArgs(CI.getInvocation(),
+            fake_argv + 1, fake_argv + fake_argc, Diags);
+      if (
+         CI.getHeaderSearchOpts().UseBuiltinIncludes &&
+         CI.getHeaderSearchOpts().ResourceDir.empty()
+      ) {
+         //CI.getHeaderSearchOpts().ResourceDir =
+         //  clang::CompilerInvocation::GetResourcesPath(argv[0],
+         //    (void*) (intptr_t) GetExecutablePath);
+         CI.getHeaderSearchOpts().ResourceDir =
+            llvm::sys::Path("/local2/russo/llvm/lib/clang/1.1").str();
+      }
+      CI.createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
+      if (!CI.hasDiagnostics()) {
+         CI.takeLLVMContext();
+         return;
+      }
+      DiagsBuffer.FlushDiagnostics(CI.getDiagnostics());
+      if (CI.getDiagnostics().getNumErrors()) {
+         CI.takeLLVMContext();
+         return;
+      }
+   }
+   CI.setTarget(clang::TargetInfo::CreateTargetInfo(CI.getDiagnostics(),
+                CI.getTargetOpts()));
+   if (!CI.hasTarget()) {
+      CI.takeLLVMContext();
+      return;
+   }
+   CI.getTarget().setForcedLangOptions(CI.getLangOpts());
+   CI.createFileManager();
+   if (first_time) {
+      CI.createSourceManager();
+      first_time = false;
+   }
+   else {
+      CI.getSourceManager().clearIDTables();
+   }
+   CI.createPreprocessor();
+   clang::Preprocessor& PP = CI.getPreprocessor();
+   CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts(), &PP);
+   CI.createASTContext();
+   //llvm::raw_stdout_ostream out;
+   //clang::ASTConsumer* dummyConsumer = clang::CreateASTPrinter(&out);
+   CI.setASTConsumer(new clang::ASTConsumer());
+   PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
+                                          PP.getLangOptions().NoBuiltin);
+   const clang::FileEntry* file = CI.getFileManager().getFile(filename);
+   if (!file) {
+      return;
+   }
+   CI.getSourceManager().createMainFileID(file, clang::SourceLocation());
+   if (CI.getSourceManager().getMainFileID().isInvalid()) {
+      return;
+   }
+   clang::ParseAST(PP, &CI.getASTConsumer(), CI.getASTContext());
+   CI.clearOutputFiles(/*EraseFiles=*/CI.getDiagnostics().getNumErrors());
+   CI.getDiagnosticClient().EndSourceFile();
+   unsigned err_count = CI.getDiagnostics().getNumErrors();
+   if (err_count) {
+      CI.takeLLVMContext();
+      return;
+   }
+   clang::TranslationUnitDecl* tu =
+      CI.getASTContext().getTranslationUnitDecl();
+   if (!tu) { // Parse failed, return.
+      CI.takeLLVMContext();
+      return;
+   }
+   llvm::Module* m = 0;
+   llvm::OwningPtr<clang::CodeGenerator> codeGen(
+      CreateLLVMCodeGen(CI.getDiagnostics(), filename, CI.getCodeGenOpts(),
+                        CI.getLLVMContext()));
+   codeGen->Initialize(CI.getASTContext());
+   clang::TranslationUnitDecl::decl_iterator iter = tu->decls_begin();
+   clang::TranslationUnitDecl::decl_iterator iter_end = tu->decls_end();
+   std::fprintf(stderr, "Running code generation.\n");
+   for (; iter != iter_end; ++iter) {
+      codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*iter));
+   }
+   codeGen->HandleTranslationUnit(CI.getASTContext());
+   std::fprintf(stderr, "Finished code generation.\n");
+   m = codeGen->ReleaseModule();
+   if (!m) {
+      std::fprintf(stderr, "Error: Backend did not create a module!\n");
+      CI.takeLLVMContext();
+      return;
+   }
+   //
+   //  Verify generated module.
+   //
+   bool mod_has_errs = llvm::verifyModule(*m, llvm::PrintMessageAction);
+   if (mod_has_errs) {
+      CI.takeLLVMContext();
+      return;
+   }
+   //
+   //  Dump generated module.
+   //
+   llvm::PassManager PM;
+   PM.add(llvm::createPrintModulePass(&llvm::outs()));
+   PM.run(*m);
+   //
+   //  Give new module to the execution engine.
+   //
+   m_engine->addModule(m); // Note: The engine takes ownership of the module.
    CI.takeLLVMContext();
 }
 
