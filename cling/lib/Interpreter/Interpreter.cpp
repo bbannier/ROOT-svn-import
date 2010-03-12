@@ -88,7 +88,7 @@
 #include <limits.h>
 #include <stdint.h>
 
-static const char* fake_argv[] = { "clang", "-x", "c++", 0 };
+static const char* fake_argv[] = { "clang", "-x", "c++", "-v", 0 };
 static const int fake_argc = (sizeof(fake_argv) / sizeof(const char*)) - 1;
 
 #if 0
@@ -320,7 +320,7 @@ Interpreter::Interpreter()
 Interpreter::~Interpreter()
 {
    //delete m_prev_module;
-   //m_prev_module = 0;
+   //m_prev_module = 0; // Don't do this, the engine does it.
    delete m_engine;
    m_engine = 0;
    delete m_llvm_context;
