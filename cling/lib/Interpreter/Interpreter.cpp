@@ -989,6 +989,7 @@ Interpreter::processLine(const std::string& input_line)
          return;
       }
       std::fprintf(stderr, "Parsing wrapped code to make translation unit.\n");
+      std::fprintf(stderr, "wrapped code:\n%s\n", wrapped.c_str());
       clang::ParseAST(PP, &CI.getASTConsumer(), CI.getASTContext());
       std::fprintf(stderr, "Finished parsing wrapped code.\n");
       CI.clearOutputFiles(/*EraseFiles=*/CI.getDiagnostics().getNumErrors());
@@ -1039,9 +1040,9 @@ Interpreter::processLine(const std::string& input_line)
    //
    //  Dump generated module.
    //
-   //--llvm::PassManager PM;
-   //--PM.add(llvm::createPrintModulePass(&llvm::outs()));
-   //--PM.run(*m);
+   llvm::PassManager PM;
+   PM.add(llvm::createPrintModulePass(&llvm::outs()));
+   PM.run(*m);
    //
    //  Transfer global mappings from previous module.
    //
