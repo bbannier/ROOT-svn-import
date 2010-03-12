@@ -4,23 +4,16 @@
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
-#include <cling/MetaProcessor/MetaProcessor.h>
+#include "cling/MetaProcessor/MetaProcessor.h"
 
-#include <cling/Interpreter/Interpreter.h>
+#include "cling/EditLine/EditLine.h"
+#include "cling/Interpreter/Interpreter.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/System/DynamicLibrary.h"
+#include "llvm/System/Path.h"
 
-#include <llvm/System/DynamicLibrary.h>
-#include <llvm/System/Path.h>
-#include <llvm/Support/MemoryBuffer.h>
-
+#include <cstdio>
 #include <iostream>
-
-#include <sys/stat.h>
-#include <stdio.h>
-#include <cling/EditLine/EditLine.h>
-
-namespace llvm {
-class Module;
-}
 
 //---------------------------------------------------------------------------
 // Construct an interface for an interpreter
@@ -138,51 +131,31 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //
    //  Trim blanks from beginning and ending of parameter.
    //
-   std::string::size_type first = input_line.find_first_not_of(" ", 3);
-   std::string::size_type last = input_line.find_last_not_of(" ", 3);
+   std::string::size_type first = input_line.find_first_not_of(" \t\n", 3);
+   std::string::size_type last = input_line.find_last_not_of(" \t\n");
    if (first == std::string::npos) { // all blanks after command char
       return false;
    }
-   std::string::size_type len = 0;
-   if (last == std::string::npos) {
-      len = input_line.size() - first;
-   }
-   else {
-      len = (last + 1) - first;
-   }
+   std::string::size_type len = (last + 1) - first;
    // Construct our parameter.
+   std::fprintf(stderr, "input_line: '%s'\n", input_line.c_str());
+   std::fprintf(stderr, "first: %lu\n", first);
+   std::fprintf(stderr, "last: %lu\n", last);
+   std::fprintf(stderr, "len: %lu\n", len);
    std::string param(input_line, first, len);
-#if 0
+   std::fprintf(stderr, "param: '%s'\n", param.c_str());
    //
    //  .L <filename>
    //
    //  Load code fragment.
    //
    if (cmd_char == 'L') {
-      llvm::sys::Path path(param);
-      if (path.isDynamicLibrary()) {
-         std::string errMsg;
-         bool err =
-            llvm::sys::DynamicLibrary::LoadLibraryPermanently(
-               param.c_str(), &errMsg);
-         if (err) {
-            std::cerr << "[i] Failure: " << errMsg << std::endl;
-         }
-         else {
-            std::cerr << "[i] Success!" << std::endl;
-         }
-         return true;
-      }
-      // TODO: Need to double check that it is a text file ...
-      bool ok = m_Interp.addUnit(param);
-      if (ok) {
-         std::cerr << "[i] Success!" << std::endl;
-      }
-      else {
-         std::cerr << "[i] Failure" << std::endl;
-      }
+      std::fprintf(stderr, "Begin load file '%s'.\n", param.c_str());
+      m_Interp.loadFile(param);
+      std::fprintf(stderr, "End load file '%s'.\n", param.c_str());
       return true;
    }
+#if 0
    //
    //  .x <filename>
    //  .X <filename>

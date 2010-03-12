@@ -244,6 +244,9 @@ public:
    void
    processLine(const std::string& input_line);
 
+   void
+   loadFile(const std::string& filename);
+
 private:
    std::string m_globalDeclarations; // All global var decls seen.
    llvm::LLVMContext* m_llvm_context; // We own, our types.
