@@ -14,7 +14,9 @@
 
 const char *XrdCmsCacheCVSID = "$Id$";
   
+#include <stdio.h>
 #include <sys/types.h>
+#include <stdio.h>
 
 #include "XrdCms/XrdCmsCache.hh"
 #include "XrdCms/XrdCmsRRQ.hh"
@@ -334,7 +336,7 @@ void XrdCmsCache::Bounce(SMask_t smask, int SNum)
   
 void XrdCmsCache::Drop(SMask_t smask, int SNum, int xHi)
 {
-   SMask_t nmask = ~smask;
+   SMask_t nmask(~smask);
 
 // Remove the node from the path list
 //
@@ -450,7 +452,7 @@ void XrdCmsCache::Dispatch(XrdCmsKeyItem *iP, short roQ, short rwQ)
 SMask_t XrdCmsCache::getBVec(unsigned int TODa, unsigned int &TODb)
 {
    EPNAME("getBVec");
-   SMask_t BVec = 0;
+   SMask_t BVec(0);
    long long i;
 
 // See if we can use a previously calculated bVec

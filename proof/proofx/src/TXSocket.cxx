@@ -914,11 +914,11 @@ Int_t TXSocket::Flush()
          // Save size for later semaphore cleanup
          Int_t sz = fAQue.size();
          // get the highest interrupt level
-         for (i = fAQue.begin(); i != fAQue.end(); i++) {
+         for (i = fAQue.begin(); i != fAQue.end();) {
             if (*i) {
                splist.push_back(*i);
-               fAQue.erase(i);
                nf += (*i)->fLen;
+               i = fAQue.erase(i);
             }
          }
 
@@ -932,9 +932,9 @@ Int_t TXSocket::Flush()
    // Move spares to the spare queue
    if (splist.size() > 0) {
       R__LOCKGUARD(&fgSMtx);
-      for (i = splist.begin(); i != splist.end(); i++) {
+      for (i = splist.begin(); i != splist.end();) {
          fgSQue.push_back(*i);
-         splist.erase(i);
+         i = splist.erase(i);
       }
    }
 
@@ -1807,19 +1807,19 @@ void TXSocket::InitEnvs()
    Int_t connTO = gEnv->GetValue("XProof.ConnectTimeout", 2);
    EnvPutInt(NAME_CONNECTTIMEOUT, connTO);
 
-   // Reconnect Timeout
-   Int_t recoTO = gEnv->GetValue("XProof.ReconnectTimeout",
-                                  DFLT_RECONNECTTIMEOUT);
-   EnvPutInt(NAME_RECONNECTTIMEOUT, recoTO);
+   // Reconnect Wait
+   Int_t recoTO = gEnv->GetValue("XProof.ReconnectWait",
+                                  DFLT_RECONNECTWAIT);
+   if (recoTO == DFLT_RECONNECTWAIT) {
+      // Check also the old variable name
+      recoTO = gEnv->GetValue("XProof.ReconnectTimeout",
+                                  DFLT_RECONNECTWAIT);
+   }
+   EnvPutInt(NAME_RECONNECTWAIT, recoTO);
 
    // Request Timeout
    Int_t requTO = gEnv->GetValue("XProof.RequestTimeout", 150);
    EnvPutInt(NAME_REQUESTTIMEOUT, requTO);
-
-   // Whether to use a separate thread for garbage collection
-   Int_t garbCollTh = gEnv->GetValue("XProof.StartGarbageCollectorThread",
-                                      DFLT_STARTGARBAGECOLLECTORTHREAD);
-   EnvPutInt(NAME_STARTGARBAGECOLLECTORTHREAD, garbCollTh);
 
    // No automatic proofd backward-compatibility
    EnvPutInt(NAME_KEEPSOCKOPENIFNOTXRD, 0);

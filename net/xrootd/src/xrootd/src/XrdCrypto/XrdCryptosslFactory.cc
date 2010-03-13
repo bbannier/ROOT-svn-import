@@ -1,4 +1,6 @@
 // $Id$
+
+const char *XrdCryptosslFactoryCVSID = "$Id$";
 /******************************************************************************/
 /*                                                                            */
 /*            X r d C r y p t o S s l F a c t o r y . c c                     */
@@ -288,13 +290,27 @@ XrdCryptoX509 *XrdCryptosslFactory::X509(XrdSutBucket *b)
    return (XrdCryptoX509 *)0;
 }
 
-
 //______________________________________________________________________________
-XrdCryptoX509Crl *XrdCryptosslFactory::X509Crl(const char *cf)
+XrdCryptoX509Crl *XrdCryptosslFactory::X509Crl(const char *cf, int opt)
 {
    // Return an instance of a ssl implementation of XrdCryptoX509Crl.
 
-   XrdCryptoX509Crl *x509Crl = new XrdCryptosslX509Crl(cf);
+   XrdCryptoX509Crl *x509Crl = new XrdCryptosslX509Crl(cf, opt);
+   if (x509Crl) {
+      if (x509Crl->Opaque())
+         return x509Crl;
+      else
+         delete x509Crl;
+   }
+   return (XrdCryptoX509Crl *)0;
+}
+
+//______________________________________________________________________________
+XrdCryptoX509Crl *XrdCryptosslFactory::X509Crl(XrdCryptoX509 *ca)
+{
+   // Return an instance of a ssl implementation of XrdCryptoX509Crl.
+
+   XrdCryptoX509Crl *x509Crl = new XrdCryptosslX509Crl(ca);
    if (x509Crl) {
       if (x509Crl->Opaque())
          return x509Crl;
