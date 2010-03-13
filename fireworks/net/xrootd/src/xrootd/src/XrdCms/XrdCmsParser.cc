@@ -12,6 +12,7 @@
 
 const char *XrdCmsParserCVSID = "$Id$";
   
+#include <stdio.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -20,6 +21,7 @@ const char *XrdCmsParserCVSID = "$Id$";
 #include <string.h>
 #include <netinet/in.h>
 #include <sys/types.h>
+#include <stdio.h>
 
 #include "XrdCms/XrdCmsParser.hh"
 #include "XrdCms/XrdCmsRRData.hh"
@@ -88,7 +90,7 @@ XrdCmsParseInit XrdCmsParseArgN(XrdCmsRRData::Arg_Null,    "",
                                 XrdCmsRRData::Arg_theLoad, "load",
                                 XrdCmsRRData::Arg_Info,    "info",
                                 XrdCmsRRData::Arg_Port,    "port",
-                                0,                         0
+                                0,                         (const char *)0
                                );
 
 // The structure that defines the item names to the packer/unpacker
