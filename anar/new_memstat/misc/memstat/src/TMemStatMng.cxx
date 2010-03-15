@@ -1,4 +1,4 @@
-// @(#)root/memstat:$Id: TSocket.h 25863 2008-10-17 18:53:10Z brun $
+// @(#)root/memstat:$Id$
 // Author: Anar Manafov (A.Manafov@gsi.de) 2008-03-02
 
 /*************************************************************************

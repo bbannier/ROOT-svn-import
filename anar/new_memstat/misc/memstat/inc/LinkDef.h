@@ -1,4 +1,4 @@
-// @(#)root/memstat:$Name$:$Id: LinkDef.h 24357 2008-06-18 17:28:01Z anar $
+// @(#)root/memstat:$Name$:$Id$
 // Author: Anar Manafov (A.Manafov@gsi.de) 2008-04-28
 
 /*************************************************************************
