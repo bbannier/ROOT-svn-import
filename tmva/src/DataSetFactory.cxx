@@ -960,7 +960,7 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
 
 //    // check if the vectors of all classes are empty
    for( Int_t cls = 0, clsEnd = dsi.GetNClasses(); cls < clsEnd; ++cls ){
-      emptyUndefined |= tmpEventVector[Types::kMaxTreeType].at(cls).empty();
+      emptyUndefined &= tmpEventVector[Types::kMaxTreeType].at(cls).empty();
    }
 
    TMVA::RandomGenerator rndm( splitSeed );
