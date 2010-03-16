@@ -32,7 +32,7 @@ TMemStat::TMemStat(Option_t* option): fIsActive(kFALSE)
    //                      otherwise glibc backtrace will be used
    //
    // Default: "read"
-   // Note: Currently YAMS uses a hard-coded output file name (for writing) = "yams.root";
+   // Note: Currently YAMS uses a hard-coded output file name (for writing) = "memstat.root";
 
    // It marks the highest used stack address.
    _GET_TO_STECK;
