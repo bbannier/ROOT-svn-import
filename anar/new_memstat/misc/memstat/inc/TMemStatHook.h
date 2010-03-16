@@ -17,14 +17,9 @@
 #define ROOT_TMemStatHook
 
 #if defined(__APPLE__)
-
 #ifndef __CINT__
 #include <malloc/malloc.h>
 #endif
-
-#endif
-
-#if defined(__APPLE__)
 typedef void (*zoneMallocHookFunc_t)(void *ptr, size_t _size);
 typedef void (*zoneFreeHookFunc_t)(void* ptr);
 #endif

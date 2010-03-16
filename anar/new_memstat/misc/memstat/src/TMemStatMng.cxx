@@ -131,7 +131,6 @@ void TMemStatMng::Enable()
 
    if (this != GetInstance())
       return;
-
 #if defined(__APPLE__)
    TMemStatHook::trackZoneMalloc(MacAllocHook, MacFreeHook);
 #else

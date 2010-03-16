@@ -12,6 +12,7 @@
 #include <iostream>
 // MemStat
 #include "TMemStatHook.h"
+#include "RConfig.h"
 
 // TODO: move it to a separate file
 #if defined(__APPLE__)
@@ -30,6 +31,10 @@ static zoneMallocHookFunc_t m_pm;
 static zoneFreeHookFunc_t m_pf;
 #else
 #include <malloc.h>
+#endif
+
+#if defined(R__GNU) && (defined(R__LINUX) || defined(__APPLE__)) && !defined(__alpha__)
+#define SUPPORTS_MEMSTAT
 #endif
 
 
@@ -64,7 +69,6 @@ TMemStatHook::FreeHookFunc_t TMemStatHook::GetFreeHook()
 void TMemStatHook::SetMallocHook(MallocHookFunc_t p)
 {
    // Set pointer to function replacing alloc function
-
 #if defined(SUPPORTS_MEMSTAT) && !defined(__APPLE__)
    __malloc_hook = p;
 #endif

@@ -21,7 +21,6 @@
 // ROOT
 #include "TString.h"
 
-
 #if defined(R__GNU) && (defined(R__LINUX) || defined(R__HURD) || defined(__APPLE__)) && !defined(__alpha__)
 #define SUPPORTS_MEMSTAT
 #endif
@@ -116,7 +115,6 @@ namespace memstat {
          _container[i] = addr;
       return i;
    }
-
 //______________________________________________________________________________
    size_t backtrace(void **_trace, size_t _size, Bool_t _bUseGNUBuiltinBacktrace)
    {
@@ -140,7 +138,7 @@ namespace memstat {
 
 //______________________________________________________________________________
    void getSymbols(void *_pAddr,
-                   TString &_strInfo, TString &_strLib, TString &_strSymbol, TString &/*_strLine*/)
+                   TString &/*_strInfo*/, TString &_strLib, TString &_strSymbol, TString &/*_strLine*/)
    {
       // get the name of the function and library
 

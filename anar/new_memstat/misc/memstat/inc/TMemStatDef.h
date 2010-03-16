@@ -15,6 +15,6 @@ namespace memstat {
    typedef ULong_t pointer_t;
 
    const size_t g_BTStackLevel = 50;
-   const char * const g_cszFileName("yams.root");
+   const char * const g_cszFileName("memstat.root");
 }
 #endif
