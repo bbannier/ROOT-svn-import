@@ -36,7 +36,8 @@ MEMSTATMAP    := $(MEMSTATLIB:.$(SOEXT)=.rootmap)
 # used in the main Makefile
 ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(MEMSTATH))
 ALLLIBS     += $(MEMSTATLIB) $(MEMSTATGUILIB)
-
+ALLMAPS     += $(MEMSTATMAP)
+  
 # include all dependency files
 INCLUDEFILES += $(MEMSTATDEP)
 
