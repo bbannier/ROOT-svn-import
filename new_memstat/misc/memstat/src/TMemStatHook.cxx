@@ -81,6 +81,7 @@ void TMemStatHook::SetFreeHook(FreeHookFunc_t p)
 }
 
 //______________________________________________________________________________
+#if defined (__APPLE__)
 void TMemStatHook::trackZoneMalloc(zoneMallocHookFunc_t _pm, zoneFreeHookFunc_t _pf)
 {
    malloc_zone_t* zone = malloc_default_zone();
@@ -101,7 +102,6 @@ void TMemStatHook::trackZoneMalloc(zoneMallocHookFunc_t _pm, zoneFreeHookFunc_t 
       zone->free_definite_size = &profile_free_definite_size;
 #endif
 }
-
 //______________________________________________________________________________
 void TMemStatHook::untrackZoneMalloc()
 {
@@ -112,7 +112,6 @@ void TMemStatHook::untrackZoneMalloc()
    }
    *zone = original_zone;
 }
-
 //______________________________________________________________________________
 void* profile_malloc(malloc_zone_t* zone, size_t size)
 {
@@ -151,4 +150,5 @@ void profile_free_definite_size(malloc_zone_t *zone, void *ptr, size_t size)
    (*original_zone.free_definite_size)(zone, ptr, size);
    m_pf(ptr);
 }
-#endif
+#endif // defined(MAC_OS_X_VERSION_10_6)
+#endif // defined(__APPLE__)
