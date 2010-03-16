@@ -42,12 +42,13 @@ public:
    static FreeHookFunc_t   GetFreeHook();           // free function getter
    static void SetMallocHook(MallocHookFunc_t p);   // malloc function setter
    static void SetFreeHook(FreeHookFunc_t p);       // free function setter
+#if defined(__APPLE__)
    //
    // Public methods for Mac OS X
    //
    static void trackZoneMalloc(zoneMallocHookFunc_t _pm, zoneFreeHookFunc_t _pf);
    static void untrackZoneMalloc();
-
+#endif
 };
 
 #endif
