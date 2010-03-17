@@ -376,117 +376,138 @@ Interpreter::analyzeInput(const std::string& contextSource,
    bool tokWasDo = false;
    int stackSize = analyzeTokens(CI->getPreprocessor(), lastTok,
                                  indentLevel, tokWasDo);
+   CI->takeLLVMContext();
+   delete CI;
+   CI = 0;
    if (stackSize < 0) {
+      return TopLevel;
+   }
+   // tokWasDo is used for do { ... } while (...); loops
+   if (
+      !lastTok.is(clang::tok::semi) &&
+      (
+         !lastTok.is(clang::tok::r_brace) ||
+         tokWasDo
+      )
+   ) {
+      return Incomplete;
+   }
+   if (stackSize > 0) {
+      return Incomplete;
+   }
+   CI = getCI();
+   if (!CI) {
+      return TopLevel;
+   }
+   clang::Preprocessor& PP = CI->getPreprocessor();
+   // Setting this ensures "foo();" is not a valid top-level declaration.
+   //diag.setDiagnosticMapping(clang::diag::ext_missing_type_specifier,
+   //                          clang::diag::MAP_ERROR);
+   CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
+   CI->createASTContext();
+   // Do this to see the AST printed out:
+   //clang::ASTConsumer* consumer = clang::CreateASTPrinter(&llvm::outs());
+   //CI->setASTConsumer(consumer);
+   CI->setASTConsumer(new clang::ASTConsumer());
+   PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
+                                          PP.getLangOptions().NoBuiltin);
+   //std::string src = contextSource + buffer->getBuffer().str();
+   struct : public clang::ASTConsumer {
+      bool hadIncludedDecls;
+      unsigned pos;
+      unsigned maxPos;
+      clang::SourceManager* sm;
+      std::vector<clang::FunctionDecl*> fds;
+      void HandleTopLevelDecl(clang::DeclGroupRef D) {
+         for (
+            clang::DeclGroupRef::iterator I = D.begin(), E = D.end();
+            I != E;
+            ++I
+         ) {
+            clang::FunctionDecl* FD = dyn_cast<clang::FunctionDecl>(*I);
+            if (FD) {
+               clang::SourceLocation Loc = FD->getTypeSpecStartLoc();
+               if (!Loc.isValid()) {
+                  continue;
+               }
+               if (sm->isFromMainFile(Loc)) {
+                  unsigned offset =
+                     sm->getFileOffset(sm->getInstantiationLoc(Loc));
+                  if (offset >= pos) {
+                     fds.push_back(FD);
+                  }
+               }
+               else {
+                  while (!sm->isFromMainFile(Loc)) {
+                     const clang::SrcMgr::SLocEntry& Entry =
+                        sm->getSLocEntry(
+                           sm->getFileID(sm->getSpellingLoc(Loc)));
+                     if (!Entry.isFile()) {
+                        break;
+                     }
+                     Loc = Entry.getFile().getIncludeLoc();
+                  }
+                  unsigned offset = sm->getFileOffset(Loc);
+                  if (offset >= pos) {
+                     hadIncludedDecls = true;
+                  }
+               }
+            }
+         }
+      }
+   } consumer;
+   consumer.hadIncludedDecls = false;
+   consumer.pos = contextSource.length();
+   consumer.maxPos = consumer.pos + buffer->getBuffer().size();
+   consumer.sm = &CI->getSourceManager();
+   buffer = llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(),
+            &*line.end(), "CLING");
+   if (!buffer) {
       CI->takeLLVMContext();
       delete CI;
       CI = 0;
       return TopLevel;
    }
-   // tokWasDo is used for do { ... } while (...); loops
+   CI->getSourceManager().createMainFileIDForMemBuffer(buffer);
+   if (CI->getSourceManager().getMainFileID().isInvalid()) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return TopLevel;
+   }
+   clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
+   CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
+   CI->getDiagnosticClient().EndSourceFile();
+#if 0
    if (
-      lastTok.is(clang::tok::semi) ||
+      CI->getDiagnostics().hadError(
+         clang::diag::err_unterminated_block_comment)
+   ) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return Incomplete;
+   }
+#endif // 0
+   if (
+      !CI->getDiagnostics().getNumErrors() &&
       (
-         lastTok.is(clang::tok::r_brace) &&
-         !tokWasDo
+         !consumer.fds.empty() ||
+         consumer.hadIncludedDecls
       )
    ) {
-      if (stackSize > 0) {
-         CI->takeLLVMContext();
-         delete CI;
-         CI = 0;
-         return Incomplete;
-      }
-      // Setting this ensures "foo();" is not a valid top-level declaration.
-      //diag.setDiagnosticMapping(clang::diag::ext_missing_type_specifier,
-      //                          clang::diag::MAP_ERROR);
-      std::string src = contextSource + buffer->getBuffer().str();
-      struct : public clang::ASTConsumer {
-         bool hadIncludedDecls;
-         unsigned pos;
-         unsigned maxPos;
-         clang::SourceManager* sm;
-         std::vector<clang::FunctionDecl*> fds;
-         void HandleTopLevelDecl(clang::DeclGroupRef D) {
-            for (
-               clang::DeclGroupRef::iterator I = D.begin(), E = D.end();
-               I != E;
-               ++I
-            ) {
-               clang::FunctionDecl* FD = dyn_cast<clang::FunctionDecl>(*I);
-               if (FD) {
-                  clang::SourceLocation Loc = FD->getTypeSpecStartLoc();
-                  if (!Loc.isValid()) {
-                     continue;
-                  }
-                  if (sm->isFromMainFile(Loc)) {
-                     unsigned offset =
-                        sm->getFileOffset(sm->getInstantiationLoc(Loc));
-                     if (offset >= pos) {
-                        fds.push_back(FD);
-                     }
-                  }
-                  else {
-                     while (!sm->isFromMainFile(Loc)) {
-                        const clang::SrcMgr::SLocEntry& Entry =
-                           sm->getSLocEntry(
-                              sm->getFileID(sm->getSpellingLoc(Loc)));
-                        if (!Entry.isFile()) {
-                           break;
-                        }
-                        Loc = Entry.getFile().getIncludeLoc();
-                     }
-                     unsigned offset = sm->getFileOffset(Loc);
-                     if (offset >= pos) {
-                        hadIncludedDecls = true;
-                     }
-                  }
-               }
-            }
-         }
-      } consumer;
-      consumer.hadIncludedDecls = false;
-      consumer.pos = contextSource.length();
-      consumer.maxPos = consumer.pos + buffer->getBuffer().size();
-      consumer.sm = &CI->getSourceManager();
-      buffer = llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(),
-               &*line.end(), "CLING");
-      CI->getSourceManager().createMainFileIDForMemBuffer(buffer);
-      clang::ParseAST(CI->getPreprocessor(), &consumer, CI->getASTContext());
-#if 0
-      if (
-         CI->getDiagnostics().hadError(
-            clang::diag::err_unterminated_block_comment)
-      ) {
-         CI->takeLLVMContext();
-         delete CI;
-         CI = 0;
-         return Incomplete;
-      }
-#endif // 0
-      if (
-         !CI->getDiagnostics().getNumErrors() &&
-         (
-            !consumer.fds.empty() ||
-            consumer.hadIncludedDecls
-         )
-      ) {
-         if (!consumer.fds.empty()) {
-            fds->swap(consumer.fds);
-         }
-         CI->takeLLVMContext();
-         delete CI;
-         CI = 0;
-         return TopLevel;
+      if (!consumer.fds.empty()) {
+         fds->swap(consumer.fds);
       }
       CI->takeLLVMContext();
       delete CI;
       CI = 0;
-      return Stmt;
+      return TopLevel;
    }
    CI->takeLLVMContext();
    delete CI;
    CI = 0;
-   return Incomplete;
+   return Stmt;
 }
 
 //---------------------------------------------------------------------------
@@ -556,7 +577,8 @@ int Interpreter::analyzeTokens(clang::Preprocessor& PP,
    // Also try to match preprocessor conditionals...
    if (result == 0) {
       clang::Lexer Lexer(PP.getSourceManager().getMainFileID(),
-                         0, // FIXME: which const llvm::MemoryBuffer*?
+                         PP.getSourceManager().getBuffer(
+                            PP.getSourceManager().getMainFileID()),
                          PP.getSourceManager(), PP.getLangOptions());
       Lexer.LexFromRawLexer(Tok);
       while (Tok.isNot(clang::tok::eof)) {
