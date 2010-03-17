@@ -57,6 +57,7 @@
 #include "llvm/GlobalVariable.h"
 #include "llvm/Linker.h"
 #include "llvm/LLVMContext.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/Support/Casting.h"
@@ -69,7 +70,11 @@
 #include "llvm/System/Path.h"
 #include "llvm/System/Process.h"
 #include "llvm/System/Signals.h"
+#include "llvm/Target/Mangler.h"
+#include "llvm/Target/SubtargetFeature.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetSelect.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #include "Diagnostics.h"
@@ -80,6 +85,7 @@
 #include <cstdio>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <stack>
 #include <string>
 #include <utility>
@@ -91,7 +97,6 @@
 static const char* fake_argv[] = { "clang", "-x", "c++", 0 };
 static const int fake_argc = (sizeof(fake_argv) / sizeof(const char*)) - 1;
 
-#if 0
 namespace {
 
 //-------------------------------------------------------------------------
@@ -104,15 +109,36 @@ copyGlobalMappings(llvm::ExecutionEngine* ee, llvm::Module* src,
                    llvm::Module* dst)
 {
    // Loop over all the global variables in the destination module.
+   std::string new_global_name;
    llvm::Module::global_iterator dst_iter = dst->global_begin();
    llvm::Module::global_iterator dst_end = dst->global_end();
    for (; dst_iter != dst_end; ++dst_iter) {
+      new_global_name = dst_iter->getName();
+      if (new_global_name.size() > 1) {
+         if (new_global_name.substr(0, 5) == "llvm.") {
+            continue;
+         }
+         if (new_global_name[0] == '_') {
+            if (
+               (new_global_name[1] == '_') ||
+               std::isupper(new_global_name[1])
+            ) {
+               continue;
+            }
+         }
+         if (new_global_name[0] == '.') {
+            continue;
+         }
+      }
+      //fprintf(stderr, "Destination module has global: %s\n",
+      //        new_global_name.c_str());
+      //fprintf(stderr, "Search source module for global var: %s\n",
+      //        dst_iter->getName().data());
       // Find the same variable (by name) in the source module.
       llvm::GlobalVariable* src_gv =
          src->getGlobalVariable(dst_iter->getName());
-      // Skip it if there is none.
-      if (!src_gv) {
-         continue;
+      if (!src_gv) { // no such global in prev module
+         continue; // skip it
       }
       // Get the mapping from the execution engine for the source
       // global variable and create a new mapping to the same
@@ -120,6 +146,9 @@ copyGlobalMappings(llvm::ExecutionEngine* ee, llvm::Module* src,
       // share the same allocated memory (and so have the same value).
       // FIXME: We should compare src var and dst var types here!
       void* p = ee->getPointerToGlobal(src_gv);
+      //fprintf(stderr, "Setting mapping for: %s to %lx\n",
+      //   dst_iter->getName().data(), (unsigned long) p);
+      // And duplicate it for the destination module.
       ee->addGlobalMapping(&*dst_iter, p);
    }
    // This example block copies the global variable and the mapping.
@@ -142,6 +171,7 @@ copyGlobalMappings(llvm::ExecutionEngine* ee, llvm::Module* src,
    //ee->addGlobalMapping(dst_gv, p);
 }
 
+#if 0
 static
 void
 appendStatement(std::string& processedCode, const std::string& stmt)
@@ -178,11 +208,18 @@ GetExecutablePath(const char* Argv0, bool CanonicalPrefixes)
    void* P = (void*)(intptr_t) GetExecutablePath;
    return llvm::sys::Path::GetMainExecutable(Argv0, P);
 }
-
-} // unnamed namespace
 #endif // 0
 
+} // unnamed namespace
+
 namespace cling {
+
+//
+//  Dummy function so we can use dladdr to find the executable path.
+//
+void locate_cling_executable()
+{
+}
 
 //
 // MacroDetector
@@ -300,7 +337,7 @@ Interpreter::Interpreter()
    //
    //m_llvm_context = &llvm::getGlobalContext();
    m_llvm_context = new llvm::LLVMContext;
-   m_prev_module = new llvm::Module("first", *m_llvm_context);
+   m_prev_module = new llvm::Module("_Clang_first", *m_llvm_context);
    // Note: Engine takes ownership of the module.
    llvm::EngineBuilder builder(m_prev_module);
    std::string errMsg;
@@ -332,8 +369,8 @@ Interpreter::~Interpreter()
 // Note: Used by MetaProcessor.
 Interpreter::InputType
 Interpreter::analyzeInput(const std::string& contextSource,
-      const std::string& line, int& indentLevel,
-      std::vector<clang::FunctionDecl*>* fds)
+                          const std::string& line, int& indentLevel,
+                          std::vector<clang::FunctionDecl*>* fds)
 {
    // Check if there is an explicitation continuation character.
    if (line.length() > 1 && line[line.length() - 2] == '\\') {
@@ -343,60 +380,31 @@ Interpreter::analyzeInput(const std::string& contextSource,
    //
    //  Setup a compiler instance to work with.
    //
-   clang::CompilerInstance CI;
-   //bool first_time = true;
-   CI.setLLVMContext(m_llvm_context);
-   {
-      clang::TextDiagnosticBuffer DiagsBuffer;
-      clang::Diagnostic Diags(&DiagsBuffer);
-      clang::CompilerInvocation::CreateFromArgs(CI.getInvocation(),
-            fake_argv + 1, fake_argv + fake_argc, Diags);
-      if (
-         CI.getHeaderSearchOpts().UseBuiltinIncludes &&
-         CI.getHeaderSearchOpts().ResourceDir.empty()
-      ) {
-         //CI.getHeaderSearchOpts().ResourceDir =
-         //  clang::CompilerInvocation::GetResourcesPath(argv[0],
-         //    (void*) (intptr_t) GetExecutablePath);
-         CI.getHeaderSearchOpts().ResourceDir =
-            llvm::sys::Path("/local2/russo/llvm/lib/clang/1.1").str();
-      }
-      CI.createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
-      if (!CI.hasDiagnostics()) {
-         CI.takeLLVMContext();
-         return Incomplete;
-      }
-      DiagsBuffer.FlushDiagnostics(CI.getDiagnostics());
-      if (CI.getDiagnostics().getNumErrors()) {
-         CI.takeLLVMContext();
-         return Incomplete;
-      }
-   }
-   CI.setTarget(clang::TargetInfo::CreateTargetInfo(CI.getDiagnostics(),
-      CI.getTargetOpts()));
-   if (!CI.hasTarget()) {
-      CI.takeLLVMContext();
+   clang::CompilerInstance* CI = getCI();
+   if (!CI) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
       return Incomplete;
    }
-   CI.getTarget().setForcedLangOptions(CI.getLangOpts());
-   CI.createFileManager();
-
-
-
-
-
    llvm::MemoryBuffer* buffer =
       llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(), &*line.end(),
-         "CLING");
-   CI.getSourceManager().createMainFileIDForMemBuffer(buffer);
-   if (CI.getSourceManager().getMainFileID().isInvalid()) {
+                                           "CLING");
+   CI->getSourceManager().createMainFileIDForMemBuffer(buffer);
+   if (CI->getSourceManager().getMainFileID().isInvalid()) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
       return Incomplete;
    }
    clang::Token lastTok;
    bool tokWasDo = false;
-   int stackSize = analyzeTokens(CI.getPreprocessor(), lastTok,
-      indentLevel, tokWasDo);
+   int stackSize = analyzeTokens(CI->getPreprocessor(), lastTok,
+                                 indentLevel, tokWasDo);
    if (stackSize < 0) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
       return TopLevel;
    }
    // tokWasDo is used for do { ... } while (...); loops
@@ -408,6 +416,9 @@ Interpreter::analyzeInput(const std::string& contextSource,
       )
    ) {
       if (stackSize > 0) {
+         CI->takeLLVMContext();
+         delete CI;
+         CI = 0;
          return Incomplete;
       }
       // Setting this ensures "foo();" is not a valid top-level declaration.
@@ -461,21 +472,24 @@ Interpreter::analyzeInput(const std::string& contextSource,
       consumer.hadIncludedDecls = false;
       consumer.pos = contextSource.length();
       consumer.maxPos = consumer.pos + buffer->getBuffer().size();
-      consumer.sm = &CI.getSourceManager();
+      consumer.sm = &CI->getSourceManager();
       buffer = llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(),
-         &*line.end(), "CLING");
-      CI.getSourceManager().createMainFileIDForMemBuffer(buffer);
-      clang::ParseAST(CI.getPreprocessor(), &consumer, CI.getASTContext());
+               &*line.end(), "CLING");
+      CI->getSourceManager().createMainFileIDForMemBuffer(buffer);
+      clang::ParseAST(CI->getPreprocessor(), &consumer, CI->getASTContext());
 #if 0
       if (
-         CI.getDiagnostics().hadError(
+         CI->getDiagnostics().hadError(
             clang::diag::err_unterminated_block_comment)
       ) {
+         CI->takeLLVMContext();
+         delete CI;
+         CI = 0;
          return Incomplete;
       }
 #endif // 0
       if (
-         !CI.getDiagnostics().getNumErrors() &&
+         !CI->getDiagnostics().getNumErrors() &&
          (
             !consumer.fds.empty() ||
             consumer.hadIncludedDecls
@@ -484,19 +498,27 @@ Interpreter::analyzeInput(const std::string& contextSource,
          if (!consumer.fds.empty()) {
             fds->swap(consumer.fds);
          }
+         CI->takeLLVMContext();
+         delete CI;
+         CI = 0;
          return TopLevel;
       }
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
       return Stmt;
    }
+   CI->takeLLVMContext();
+   delete CI;
+   CI = 0;
    return Incomplete;
 }
 
 //---------------------------------------------------------------------------
 // Note: Used only by analyzeInput().
 int Interpreter::analyzeTokens(clang::Preprocessor& PP,
-   clang::Token& lastTok, int& indentLevel, bool& tokWasDo)
+                               clang::Token& lastTok, int& indentLevel, bool& tokWasDo)
 {
-   int result;
    std::stack<std::pair<clang::Token, clang::Token> > S; // Tok, PrevTok
    indentLevel = 0;
    PP.EnterMainSourceFile();
@@ -541,7 +563,7 @@ int Interpreter::analyzeTokens(clang::Preprocessor& PP,
       lastTok = Tok;
       PP.Lex(Tok);
    }
-   result = S.size();
+   int result = S.size();
    // TODO: We need to properly account for indent-level for blocks that do not
    //       have braces... such as:
    //
@@ -559,8 +581,8 @@ int Interpreter::analyzeTokens(clang::Preprocessor& PP,
    // Also try to match preprocessor conditionals...
    if (result == 0) {
       clang::Lexer Lexer(PP.getSourceManager().getMainFileID(),
-         0, // FIXME: which const llvm::MemoryBuffer*?
-         PP.getSourceManager(), PP.getLangOptions());
+                         0, // FIXME: which const llvm::MemoryBuffer*?
+                         PP.getSourceManager(), PP.getLangOptions());
       Lexer.LexFromRawLexer(Tok);
       while (Tok.isNot(clang::tok::eof)) {
          if (Tok.is(clang::tok::hash)) {
@@ -570,12 +592,12 @@ int Interpreter::analyzeTokens(clang::Preprocessor& PP,
                   case clang::tok::pp_if:
                   case clang::tok::pp_ifdef:
                   case clang::tok::pp_ifndef:
-                     result++;
+                     ++result;
                      break;
                   case clang::tok::pp_endif:
                      if (result == 0)
                         return -1; // Nesting error.
-                     result--;
+                     --result;
                      break;
                   default:
                      break;
@@ -636,179 +658,151 @@ void
 Interpreter::processLine(const std::string& input_line)
 {
    //
-   //  Setup a compiler instance to work with.
+   //  Transform the input line to implement cint
+   //  command line semantics (declarations are global),
+   //  and compile to produce a module.
    //
-   clang::CompilerInstance CI;
-   bool first_time = true;
-   CI.setLLVMContext(m_llvm_context);
-   {
-      clang::TextDiagnosticBuffer DiagsBuffer;
-      clang::Diagnostic Diags(&DiagsBuffer);
-      clang::CompilerInvocation::CreateFromArgs(CI.getInvocation(),
-            fake_argv + 1, fake_argv + fake_argc, Diags);
-      if (
-         CI.getHeaderSearchOpts().UseBuiltinIncludes &&
-         CI.getHeaderSearchOpts().ResourceDir.empty()
-      ) {
-         //CI.getHeaderSearchOpts().ResourceDir =
-         //  clang::CompilerInvocation::GetResourcesPath(argv[0],
-         //    (void*) (intptr_t) GetExecutablePath);
-         CI.getHeaderSearchOpts().ResourceDir =
-            llvm::sys::Path("/local2/russo/llvm/lib/clang/1.1").str();
-      }
-      CI.createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
-      if (!CI.hasDiagnostics()) {
-         CI.takeLLVMContext();
-         return;
-      }
-      DiagsBuffer.FlushDiagnostics(CI.getDiagnostics());
-      if (CI.getDiagnostics().getNumErrors()) {
-         CI.takeLLVMContext();
-         return;
-      }
-   }
-   CI.setTarget(clang::TargetInfo::CreateTargetInfo(CI.getDiagnostics(),
-                CI.getTargetOpts()));
-   if (!CI.hasTarget()) {
-      CI.takeLLVMContext();
+   llvm::Module* m = makeModuleFromCommandLine(input_line);
+   if (!m) {
       return;
    }
-   CI.getTarget().setForcedLangOptions(CI.getLangOpts());
-   CI.createFileManager();
+   //
+   //  Transfer global mappings from previous module.
+   //
+   copyGlobalMappings(m_engine, m_prev_module, m);
+   //
+   //  All done with previous module, delete it.
+   //
+   {
+      bool ok = m_engine->removeModule(m_prev_module);
+      if (!ok) {
+         //fprintf(stderr, "Previous module not found in execution engine!\n");
+      }
+      delete m_prev_module;
+      m_prev_module = 0;
+   }
+   //
+   //  Give new module to the execution engine.
+   //
+   m_engine->addModule(m); // Note: The engine takes ownership of the module.
+   //
+   //  Run it using the JIT.
+   //
+   executeCommandLine();
+   //
+   //  All done, save module to transfer mappings
+   //  on the next run.
+   //
+   m_prev_module = m;
+}
+
+llvm::Module*
+Interpreter::makeModuleFromCommandLine(const std::string& input_line)
+{
    //
    //  Check to see if input is a preprocessor directive.
    //
-   std::string::size_type posHash = input_line.find_first_not_of(' ');
-   if ((posHash != std::string::npos) && (input_line[posHash] != '#')) {
-      posHash = std::string::npos;
+   // FIXME: Not good enough, need to use lexer here to handle comments.
+   bool is_preprocessor_cmd = true;
+   {
+      std::string::size_type pos = input_line.find_first_not_of(" \t\n");
+      if ((pos != std::string::npos) && (input_line[pos] != '#')) {
+         is_preprocessor_cmd = false;
+      }
    }
    //
-   //  Run the input through the frontend.
+   //  If it is a preprocessor directive, just compile,
+   //  otherwise we must rewrite the code, then compile.
    //
-   if (posHash != std::string::npos) { // input is a preproc directive, do & ret
-      if (first_time) {
-         CI.createSourceManager();
-         first_time = false;
+   clang::CompilerInstance* CI = 0;
+   if (is_preprocessor_cmd) {
+      std::string src(m_globalDeclarations);
+      src += input_line;
+      src += "void __cling_internal() {\n";
+      src += "\n} // end __cling_internal()\n";
+      //fprintf(stderr, "input_line:\n%s\n", src.c_str());
+      CI = compileString(src);
+      if (!CI) {
+         return 0;
       }
-      else {
-         CI.getSourceManager().clearIDTables();
-      }
-      CI.createPreprocessor();
-      clang::Preprocessor& PP = CI.getPreprocessor();
-      CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts(), &PP);
-      CI.createASTContext();
-      //llvm::raw_stdout_ostream out;
-      //clang::ASTConsumer* dummyConsumer = clang::CreateASTPrinter(&out);
-      CI.setASTConsumer(new clang::ASTConsumer());
-      PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-         PP.getLangOptions().NoBuiltin);
-      llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
-         &*input_line.begin(), &*input_line.end(), "CLING");
-      if (!SB) {
-         // FIXME: We need our own error code.
-         //CI.getDiagnostics().Report(clang::diag::err_fe_error_reading)
-         //<< "could not create memory buffer";
-         CI.takeLLVMContext();
-         return;
-      }
-      CI.getSourceManager().createMainFileIDForMemBuffer(SB);
-      if (CI.getSourceManager().getMainFileID().isInvalid()) {
-         // FIXME: We need our own error code.
-         //CI.getDiagnostics().Report(clang::diag::err_fe_error_reading)
-         //<< "<input string>";
-         CI.takeLLVMContext();
-         return;
-      }
-      std::fprintf(stderr, "Parsing preprocessor directive.\n");
-      clang::ParseAST(PP, &CI.getASTConsumer(), CI.getASTContext());
-      std::fprintf(stderr, "Preprocessor directive parse finished.\n");
-      //clang::Sema sema(PP, CI.getASTContext(), CI.getASTConsumer());
-      //clang::Parser P(PP, sema);
-      //PP.EnterMainSourceFile();
-      //P.ParseTranslationUnit();
-      CI.setASTConsumer(0);
-      CI.setASTContext(0);
-      CI.clearOutputFiles(/*EraseFiles=*/CI.getDiagnostics().getNumErrors());
-      CI.getDiagnosticClient().EndSourceFile();
-      //unsigned err_count = CI.getDiagnostics().getNumErrors();
       m_globalDeclarations.append(input_line);
       m_globalDeclarations.append("\n");
-      CI.takeLLVMContext();
-      return;
    }
-   //
-   //  Wrap input into a function along with the saved global declarations.
-   //
-   std::vector<clang::Stmt*> stmts;
-   std::string src(m_globalDeclarations);
-   {
+   else {
+      //
+      //  Wrap input into a function along with
+      //  the saved global declarations.
+      //
+      std::string src(m_globalDeclarations);
       src += "void __cling_internal() {\n";
       src += input_line;
       src += "\n} // end __cling_internal()\n";
-      fprintf(stderr, "input_line:\n%s\n", src.c_str());
-      if (first_time) {
-         CI.createSourceManager();
-         first_time = false;
+      //fprintf(stderr, "input_line:\n%s\n", src.c_str());
+      std::string wrapped;
+      createWrappedSrc(src, wrapped);
+      if (!wrapped.size()) {
+         return 0;
       }
-      else {
-         CI.getSourceManager().clearIDTables();
-      }
-      CI.createPreprocessor();
-      clang::Preprocessor& PP = CI.getPreprocessor();
-      PP.addPPCallbacks(new MacroDetector(CI, m_globalDeclarations.size()));
-      CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts(), &PP);
-      CI.createASTContext();
-      // Create an ASTConsumer for this frontend run which
-      // will produce a list of statements seen.
-      StmtSplitter splitter(stmts);
-      FunctionBodyConsumer* consumer =
-         new FunctionBodyConsumer(splitter, "__cling_internal");
-      CI.setASTConsumer(consumer);
-      PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-                                             PP.getLangOptions().NoBuiltin);
-      // Make our input the main source file for the frontend.
-      {
-         llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
-                                     &*src.begin(), &*src.end(), "CLING");
-         if (!SB) {
-            CI.getDiagnostics().Report(clang::diag::err_fe_error_reading)
-            << "could not create memory buffer";
-            CI.takeLLVMContext();
-            return;
-         }
-         CI.getSourceManager().createMainFileIDForMemBuffer(SB);
-         if (CI.getSourceManager().getMainFileID().isInvalid()) {
-            CI.getDiagnostics().Report(clang::diag::err_fe_error_reading)
-            << "<input string>";
-            CI.takeLLVMContext();
-            return;
-         }
-      }
-      // Run the frontend to make the statement list.
-      std::fprintf(stderr, "Parsing to make statement list\n");
-      clang::ParseAST(PP, &CI.getASTConsumer(), CI.getASTContext());
-      std::fprintf(stderr, "Statement list parse finished.\n");
-      // Exit if error.
-      if (CI.getDiagnostics().hasErrorOccurred()) {
-         CI.setASTConsumer(0);
-         CI.setASTContext(0);
-         CI.clearOutputFiles(/*EraseFiles=*/CI.getDiagnostics().getNumErrors());
-         CI.getDiagnosticClient().EndSourceFile();
-         CI.takeLLVMContext();
-         return;
+      //
+      //  Send the wrapped code through the
+      //  frontend to produce a translation unit.
+      //
+      CI = compileString(wrapped);
+      if (!CI) {
+         return 0;
       }
    }
+   // Note: We have a valid compiler instance at this point.
+   clang::TranslationUnitDecl* tu =
+      CI->getASTContext().getTranslationUnitDecl();
+   if (!tu) { // Parse failed, return.
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
    //
-   //  Pull the global declarations out of the statement list, and
-   //  wrap each individual statment into a function and create an
-   //  initialized static global variable to call that function.
+   //  Send the translation unit through the
+   //  llvm code generator to make a module.
+   //
+   llvm::Module* m = doCodegen(CI, "CLING");
+   if (!m) {
+      //fprintf(stderr, "Module creation failed!\n");
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   //
+   //  All done with the compiler instance,
+   //  get rid of it.
+   //
+   CI->takeLLVMContext();
+   delete CI;
+   CI = 0;
+   return m;
+}
+
+void
+Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped)
+{
+   std::vector<clang::Stmt*> stmts;
+   clang::CompilerInstance* CI = createStatementList(src, stmts);
+   if (!CI) {
+      return;
+   }
+   //
+   //  Rewrite the source code to support cint command
+   //  line semantics.  We must move variable declarations
+   //  to the global namespace and change the code so that
+   //  the new global variables are used.
    //
    std::string held_globals;
    std::string wrapped_globals;
    std::string wrapped_stmts;
    {
-      clang::SourceManager& SM = CI.getSourceManager();
-      const clang::LangOptions& LO = CI.getLangOpts();
+      clang::SourceManager& SM = CI->getSourceManager();
+      const clang::LangOptions& LO = CI->getLangOpts();
       wrapped_stmts += "void __cling_internal() {\n";
       std::vector<clang::Stmt*>::iterator stmt_iter = stmts.begin();
       std::vector<clang::Stmt*>::iterator stmt_end = stmts.end();
@@ -819,7 +813,7 @@ Interpreter::processLine(const std::string& input_line)
             std::pair<unsigned, unsigned> r =
                getStmtRangeWithSemicolon(cur_stmt, SM, LO);
             stmt_string = src.substr(r.first, r.second - r.first);
-            std::fprintf(stderr, "stmt: %s\n", stmt_string.c_str());
+            //fprintf(stderr, "stmt: %s\n", stmt_string.c_str());
          }
          //
          //  Handle expression statements.
@@ -827,7 +821,7 @@ Interpreter::processLine(const std::string& input_line)
          {
             const clang::Expr* expr = dyn_cast<clang::Expr>(cur_stmt);
             if (expr) {
-               std::fprintf(stderr, "have expr stmt.\n");
+               //fprintf(stderr, "have expr stmt.\n");
                wrapped_stmts.append(stmt_string + '\n');
                continue;
             }
@@ -837,7 +831,7 @@ Interpreter::processLine(const std::string& input_line)
          //
          const clang::DeclStmt* DS = dyn_cast<clang::DeclStmt>(cur_stmt);
          if (!DS) {
-            std::fprintf(stderr, "not expr, not declaration.\n");
+            //fprintf(stderr, "not expr, not declaration.\n");
             wrapped_stmts.append(stmt_string + '\n');
             continue;
          }
@@ -853,12 +847,12 @@ Interpreter::processLine(const std::string& input_line)
             const clang::VarDecl* VD = dyn_cast<clang::VarDecl>(*D);
             if (!VD) {
                if (DS->isSingleDecl()) {
-                 std::fprintf(stderr, "decl, not var decl, single decl.\n");
-                 wrapped_globals.append(stmt_string + '\n');
-                 held_globals.append(stmt_string + '\n');
-                 continue;
+                  //fprintf(stderr, "decl, not var decl, single decl.\n");
+                  wrapped_globals.append(stmt_string + '\n');
+                  held_globals.append(stmt_string + '\n');
+                  continue;
                }
-               std::fprintf(stderr, "decl, not var decl, not single decl.\n");
+               //fprintf(stderr, "decl, not var decl, not single decl.\n");
                clang::SourceLocation SLoc =
                   SM.getInstantiationLoc((*D)->getLocStart());
                clang::SourceLocation ELoc =
@@ -884,10 +878,10 @@ Interpreter::processLine(const std::string& input_line)
             //
             if (!I || dyn_cast<clang::CXXConstructExpr>(I)) {
                if (!I) {
-                  std::fprintf(stderr, "var decl, no init.\n");
+                  //fprintf(stderr, "var decl, no init.\n");
                }
                else {
-                  std::fprintf(stderr, "var decl, init is constructor.\n");
+                  //fprintf(stderr, "var decl, init is constructor.\n");
                }
                wrapped_globals.append(decl + ";\n"); // FIXME: wrong for constructor
                held_globals.append(decl + ";\n");
@@ -896,8 +890,8 @@ Interpreter::processLine(const std::string& input_line)
             //
             //  Handle variable declarators with a constant initializer.
             //
-            if (I->isConstantInitializer(CI.getASTContext())) {
-               std::fprintf(stderr, "var decl, init is const.\n");
+            if (I->isConstantInitializer(CI->getASTContext())) {
+               //fprintf(stderr, "var decl, init is const.\n");
                std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
                wrapped_globals.append(decl + " = " +
                                       src.substr(r.first, r.second - r.first) + ";\n");
@@ -909,7 +903,7 @@ Interpreter::processLine(const std::string& input_line)
             //
             const clang::InitListExpr* ILE = dyn_cast<clang::InitListExpr>(I);
             if (!ILE) {
-               std::fprintf(stderr, "var decl, init is not list.\n");
+               //fprintf(stderr, "var decl, init is not list.\n");
                std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
                wrapped_stmts.append(std::string(VD->getName())  + " = " +
                                     src.substr(r.first, r.second - r.first) + ";\n");
@@ -920,7 +914,7 @@ Interpreter::processLine(const std::string& input_line)
             //
             //  Handle variable declarators with an initializer list.
             //
-            std::fprintf(stderr, "var decl, init is list.\n");
+            //fprintf(stderr, "var decl, init is list.\n");
             unsigned numInits = ILE->getNumInits();
             for (unsigned j = 0; j < numInits; ++j) {
                std::string stmt;
@@ -938,216 +932,327 @@ Interpreter::processLine(const std::string& input_line)
       wrapped_stmts += "\n} // end __cling_internal()\n";
    }
    //
-   std::fprintf(stderr, "m_globalDeclarations:\n%s\n",
-                m_globalDeclarations.c_str());
-   std::fprintf(stderr, "held_globals:\n%s\n", held_globals.c_str());
-   std::fprintf(stderr, "---\n");
-   std::fprintf(stderr, "wrapped_globals:\n%s\n", wrapped_globals.c_str());
-   std::fprintf(stderr, "wrapped_stmts:\n%s\n", wrapped_stmts.c_str());
-   std::string wrapped;
+   //fprintf(stderr, "m_globalDeclarations:\n%s\n",
+   //   m_globalDeclarations.c_str());
+   //fprintf(stderr, "held_globals:\n%s\n", held_globals.c_str());
+   //fprintf(stderr, "---\n");
+   //fprintf(stderr, "wrapped_globals:\n%s\n", wrapped_globals.c_str());
+   //fprintf(stderr, "wrapped_stmts:\n%s\n", wrapped_stmts.c_str());
    wrapped += m_globalDeclarations + wrapped_globals + wrapped_stmts;
    // Accumulate the held global declarations for the next run.
    m_globalDeclarations.append(held_globals + "\n");
    //
    //  Shutdown parse.
    //
-   CI.setASTConsumer(0);
-   CI.setASTContext(0);
-   CI.clearOutputFiles(/*EraseFiles=*/CI.getDiagnostics().getNumErrors());
-   CI.getDiagnosticClient().EndSourceFile();
+   CI->setASTConsumer(0);
+   CI->setASTContext(0);
+   CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
+   CI->getDiagnosticClient().EndSourceFile();
+   CI->takeLLVMContext();
+   delete CI;
+   CI = 0;
+}
+
+clang::CompilerInstance*
+Interpreter::createStatementList(const std::string& srcCode,
+                                 std::vector<clang::Stmt*>& stmts)
+{
+   clang::CompilerInstance* CI = getCI();
+   if (!CI) {
+      return 0;
+   }
+   clang::Preprocessor& PP = CI->getPreprocessor();
+   PP.addPPCallbacks(new MacroDetector(*CI, m_globalDeclarations.size()));
+   CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
+   CI->createASTContext();
+   // Create an ASTConsumer for this frontend run which
+   // will produce a list of statements seen.
+   StmtSplitter splitter(stmts);
+   FunctionBodyConsumer* consumer =
+      new FunctionBodyConsumer(splitter, "__cling_internal");
+   CI->setASTConsumer(consumer);
+   PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
+                                          PP.getLangOptions().NoBuiltin);
+   llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
+                               &*srcCode.begin(), &*srcCode.end(), "CLING");
+   if (!SB) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   CI->getSourceManager().createMainFileIDForMemBuffer(SB);
+   if (CI->getSourceManager().getMainFileID().isInvalid()) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
+   CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
+   CI->getDiagnosticClient().EndSourceFile();
+   unsigned err_count = CI->getDiagnostics().getNumErrors();
+   if (err_count) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   return CI;
+}
+
+clang::CompilerInstance*
+Interpreter::getCI()
+{
    //
-   //  Now send the wrapped code through the
-   //  frontend to produce a translation unit.
+   //  Create and setup a compiler instance.
    //
-   clang::TranslationUnitDecl* tu = 0;
+   clang::CompilerInstance* CI = new clang::CompilerInstance();
+   //bool first_time = true;
+   CI->setLLVMContext(m_llvm_context);
    {
-      if (first_time) {
-         CI.createSourceManager();
-         first_time = false;
+      //
+      //  Buffer the error messages while we process
+      //  the compiler options.
+      //
+      clang::TextDiagnosticBuffer DiagsBuffer;
+      clang::Diagnostic Diags(&DiagsBuffer);
+      clang::CompilerInvocation::CreateFromArgs(CI->getInvocation(),
+            fake_argv + 1, fake_argv + fake_argc, Diags);
+      if (
+         CI->getHeaderSearchOpts().UseBuiltinIncludes &&
+         CI->getHeaderSearchOpts().ResourceDir.empty()
+      ) {
+         // FIXME: The first arg really does need to be argv[0] on FreeBSD.
+         //
+         // Note: The second arg is not used for Apple, FreeBSD, Linux,
+         //       or cygwin, and can only be used on systems which support
+         //       the use of dladdr().
+         //
+         // Note: On linux and cygwin this uses /proc/self/exe to find the path.
+         //
+         // Note: On Apple it uses _NSGetExecutablePath().
+         //
+         // Note: On FreeBSD it uses getprogpath().
+         //
+         // Note: Otherwise it uses dladdr().
+         //
+         CI->getHeaderSearchOpts().ResourceDir =
+            clang::CompilerInvocation::GetResourcesPath("cling",
+                  (void*)(intptr_t) locate_cling_executable);
+         //CI->getHeaderSearchOpts().ResourceDir =
+         //   llvm::sys::Path("/local2/russo/llvm/lib/clang/1.1").str();
       }
-      else {
-         CI.getSourceManager().clearIDTables();
+      CI->createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
+      if (!CI->hasDiagnostics()) {
+         CI->takeLLVMContext();
+         delete CI;
+         CI = 0;
+         return 0;
       }
-      CI.createPreprocessor();
-      clang::Preprocessor& PP = CI.getPreprocessor();
-      CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts(), &PP);
-      CI.createASTContext();
-      //llvm::raw_stdout_ostream out;
-      //clang::ASTConsumer* dummyConsumer = clang::CreateASTPrinter(&out);
-      CI.setASTConsumer(new clang::ASTConsumer());
-      PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-                                             PP.getLangOptions().NoBuiltin);
-      llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
-                                  &*wrapped.begin(), &*wrapped.end(), "CLING");
-      if (!SB) {
-         CI.getDiagnostics().Report(clang::diag::err_fe_error_reading)
-         << "could not create memory buffer";
-         CI.takeLLVMContext();
-         return;
-      }
-      CI.getSourceManager().createMainFileIDForMemBuffer(SB);
-      if (CI.getSourceManager().getMainFileID().isInvalid()) {
-         CI.getDiagnostics().Report(clang::diag::err_fe_error_reading)
-         << "<input string>";
-         CI.takeLLVMContext();
-         return;
-      }
-      std::fprintf(stderr, "wrapped code:\n%s\n", wrapped.c_str());
-      std::fprintf(stderr, "Parsing wrapped code to make translation unit.\n");
-      clang::ParseAST(PP, &CI.getASTConsumer(), CI.getASTContext());
-      std::fprintf(stderr, "Finished parsing wrapped code.\n");
-      CI.clearOutputFiles(/*EraseFiles=*/CI.getDiagnostics().getNumErrors());
-      CI.getDiagnosticClient().EndSourceFile();
-      unsigned err_count = CI.getDiagnostics().getNumErrors();
-      if (err_count) {
-         CI.takeLLVMContext();
-         return;
-      }
-      tu = CI.getASTContext().getTranslationUnitDecl();
-      if (!tu) { // Parse failed, return.
-         CI.takeLLVMContext();
-         return;
+      // Output the buffered error messages now.
+      DiagsBuffer.FlushDiagnostics(CI->getDiagnostics());
+      if (CI->getDiagnostics().getNumErrors()) {
+         CI->takeLLVMContext();
+         delete CI;
+         CI = 0;
+         return 0;
       }
    }
-   //
-   //  Run the wrapped code through the llvm code generator to make a module.
-   //
-   llvm::Module* m = 0;
-   {
-      llvm::OwningPtr<clang::CodeGenerator> codeGen(
-         CreateLLVMCodeGen(CI.getDiagnostics(), "<FAKE>", CI.getCodeGenOpts(),
-                           CI.getLLVMContext()));
-      codeGen->Initialize(CI.getASTContext());
-      clang::TranslationUnitDecl::decl_iterator iter = tu->decls_begin();
-      clang::TranslationUnitDecl::decl_iterator iter_end = tu->decls_end();
-      std::fprintf(stderr, "Running code generation.\n");
-      for (; iter != iter_end; ++iter) {
-         codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*iter));
-      }
-      codeGen->HandleTranslationUnit(CI.getASTContext());
-      std::fprintf(stderr, "Finished code generation.\n");
-      m = codeGen->ReleaseModule();
-      if (!m) {
-         std::fprintf(stderr, "Error: Backend did not create a module!\n");
-         CI.takeLLVMContext();
-         return;
-      }
+   CI->setTarget(clang::TargetInfo::CreateTargetInfo(CI->getDiagnostics(),
+                 CI->getTargetOpts()));
+   if (!CI->hasTarget()) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
    }
+   CI->getTarget().setForcedLangOptions(CI->getLangOpts());
+   CI->createFileManager();
+   //
+   //  If we are managing a permanent CI,
+   //  the code looks like this:
+   //
+   //if (first_time) {
+   //   CI->createSourceManager();
+   //   first_time = false;
+   //}
+   //else {
+   //   CI->getSourceManager().clearIDTables();
+   //}
+   CI->createSourceManager();
+   CI->createPreprocessor();
+   return CI;
+}
+
+clang::CompilerInstance*
+Interpreter::compileString(const std::string& srcCode)
+{
+   clang::CompilerInstance* CI = getCI();
+   if (!CI) {
+      return 0;
+   }
+   clang::Preprocessor& PP = CI->getPreprocessor();
+   CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
+   CI->createASTContext();
+   // Do this to see the AST printed out:
+   //clang::ASTConsumer* consumer = clang::CreateASTPrinter(&llvm::outs());
+   //CI->setASTConsumer(consumer);
+   CI->setASTConsumer(new clang::ASTConsumer());
+   PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
+                                          PP.getLangOptions().NoBuiltin);
+   llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
+                               &*srcCode.begin(), &*srcCode.end(), "CLING");
+   if (!SB) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   CI->getSourceManager().createMainFileIDForMemBuffer(SB);
+   if (CI->getSourceManager().getMainFileID().isInvalid()) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
+   CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
+   CI->getDiagnosticClient().EndSourceFile();
+   unsigned err_count = CI->getDiagnostics().getNumErrors();
+   if (err_count) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   return CI;
+}
+
+clang::CompilerInstance*
+Interpreter::compileFile(const std::string& filename)
+{
+   llvm::sys::Path path(filename);
+   clang::CompilerInstance* CI = getCI();
+   if (!CI) {
+      return 0;
+   }
+   clang::Preprocessor& PP = CI->getPreprocessor();
+   CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
+   CI->createASTContext();
+   // Do this to see the AST printed out:
+   //clang::ASTConsumer* dummyConsumer = clang::CreateASTPrinter(&llvm::outs());
+   CI->setASTConsumer(new clang::ASTConsumer());
+   PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
+                                          PP.getLangOptions().NoBuiltin);
+   const clang::FileEntry* file = CI->getFileManager().getFile(filename);
+   if (!file) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   CI->getSourceManager().createMainFileID(file, clang::SourceLocation());
+   if (CI->getSourceManager().getMainFileID().isInvalid()) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
+   CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
+   CI->getDiagnosticClient().EndSourceFile();
+   unsigned err_count = CI->getDiagnostics().getNumErrors();
+   if (err_count) {
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 0;
+   }
+   return CI;
+}
+
+llvm::Module*
+Interpreter::doCodegen(clang::CompilerInstance* CI, const std::string& filename)
+{
+   clang::TranslationUnitDecl* tu =
+      CI->getASTContext().getTranslationUnitDecl();
+   if (!tu) {
+      return 0;
+   }
+   llvm::OwningPtr<clang::CodeGenerator> codeGen(
+      CreateLLVMCodeGen(CI->getDiagnostics(), filename, CI->getCodeGenOpts(),
+                        CI->getLLVMContext()));
+   codeGen->Initialize(CI->getASTContext());
+   clang::TranslationUnitDecl::decl_iterator iter = tu->decls_begin();
+   clang::TranslationUnitDecl::decl_iterator iter_end = tu->decls_end();
+   //fprintf(stderr, "Running code generation.\n");
+   for (; iter != iter_end; ++iter) {
+      codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*iter));
+   }
+   codeGen->HandleTranslationUnit(CI->getASTContext());
+   //fprintf(stderr, "Finished code generation.\n");
+   llvm::Module* m = codeGen->ReleaseModule();
+   if (!m) {
+      //fprintf(stderr, "Error: Backend did not create a module!\n");
+      return 0;
+   }
+   return m;
+}
+
+int
+Interpreter::verifyModule(llvm::Module* m)
+{
    //
    //  Verify generated module.
    //
    bool mod_has_errs = llvm::verifyModule(*m, llvm::PrintMessageAction);
    if (mod_has_errs) {
-      CI.takeLLVMContext();
-      return;
+      return 1;
    }
+   return 0;
+}
+
+void
+Interpreter::printModule(llvm::Module* m)
+{
    //
-   //  Dump generated module.
+   //  Print module LLVM code in human-readable form.
    //
    llvm::PassManager PM;
    PM.add(llvm::createPrintModulePass(&llvm::outs()));
    PM.run(*m);
-   //
-   //  Transfer global mappings from previous module.
-   //
-   {
-      std::string new_global_name;
-      llvm::Module::global_iterator iter = m->global_begin();
-      llvm::Module::global_iterator end = m->global_end();
-      for (; iter != end; ++iter) {
-         new_global_name = iter->getName();
-         if (new_global_name.size() > 1) {
-            if (new_global_name.substr(0, 5) == "llvm.") {
-               continue;
-            }
-            if (new_global_name[0] == '_') {
-               if (
-                  (new_global_name[1] == '_') ||
-                  std::isupper(new_global_name[1])
-               ) {
-                  continue;
-               }
-            }
-            if (new_global_name[0] == '.') {
-               continue;
-            }
-         }
-         fprintf(stderr, "Current module has global: %s\n",
-                 new_global_name.c_str());
-         //if (iter->isDeclaration()) {
-         fprintf(stderr, "Search previous module for global var: %s\n",
-                 iter->getName().data());
-         llvm::GlobalVariable* gv =
-            m_prev_module->getGlobalVariable(iter->getName());
-         if (!gv) { // no such global in prev module
-            continue; // skip it
-         }
-         // FIXME: Need to compare types here!
-         // Get the mapping of the var in the prev module.
-         void* p = m_engine->getPointerToGlobal(gv);
-         fprintf(stderr, "Setting mapping for: %s to %lx\n",
-                 iter->getName().data(), (unsigned long) p);
-         // And duplicate it for the new module.
-         m_engine->addGlobalMapping(&*iter, p);
-         //}
-      }
-   }
-   //
-   //  All done with previous module, delete it.
-   //
-   {
-      bool ok = m_engine->removeModule(m_prev_module);
-      if (!ok) {
-         fprintf(stderr, "Previous module not found in execution engine!\n");
-      }
-      delete m_prev_module;
-      m_prev_module = 0;
-   }
-   //
-   //  Give new module to the execution engine.
-   //
-   m_engine->addModule(m); // Note: The engine takes ownership of the module.
-   //
-   //  Run it using the JIT.
-   //
-   {
-      std::fprintf(stderr, "Running generated code with JIT.\n");
-      //
-      //  Run global initialization.
-      //
-      m_engine->runStaticConstructorsDestructors(false);
-      //
-      //  Run the function __cling_internal().
-      //
-      // Create argument list for function.
-      std::vector<llvm::GenericValue> args;
-      //llvm::GenericValue arg1;
-      //arg1.IntVal = llvm::APInt(32, 5);
-      //args.push_back(arg1);
-      llvm::Function* f = m_engine->FindFunctionNamed("_Z16__cling_internalv");
-      llvm::GenericValue ret = m_engine->runFunction(f, args);
-      //
-      std::fprintf(stderr, "Finished running generated code with JIT.\n");
-      //
-      // Print the result.
-      //llvm::outs() << "Result: " << ret.IntVal << "\n";
-      // Run global destruction.
-      //m_engine->runStaticConstructorsDestructors(true);
-      m_engine->freeMachineCodeForFunction(f);
-   }
-   //
-   //  All done, save module to transfer mappings
-   //  on the next run.
-   //
-   m_prev_module = m;
-   //
-   //  Prevent the destruction of our context, we need to
-   //  reuse it because it has all our types.
-   //
-   CI.takeLLVMContext();
 }
 
 void
+Interpreter::executeCommandLine()
+{
+   //fprintf(stderr, "Running generated code with JIT.\n");
+   //
+   //  Run global initialization.
+   //
+   m_engine->runStaticConstructorsDestructors(false);
+   //
+   //  Run the function __cling_internal().
+   //
+   // Create argument list for function.
+   std::vector<llvm::GenericValue> args;
+   //llvm::GenericValue arg1;
+   //arg1.IntVal = llvm::APInt(32, 5);
+   //args.push_back(arg1);
+   llvm::Function* f = m_engine->FindFunctionNamed("_Z16__cling_internalv");
+   llvm::GenericValue ret = m_engine->runFunction(f, args);
+   //
+   //fprintf(stderr, "Finished running generated code with JIT.\n");
+   //
+   // Print the result.
+   //llvm::outs() << "Result: " << ret.IntVal << "\n";
+   // Run global destruction.
+   //m_engine->runStaticConstructorsDestructors(true);
+   m_engine->freeMachineCodeForFunction(f);
+}
+
+int
 Interpreter::loadFile(const std::string& filename)
 {
    llvm::sys::Path path(filename);
@@ -1157,126 +1262,122 @@ Interpreter::loadFile(const std::string& filename)
          llvm::sys::DynamicLibrary::LoadLibraryPermanently(
             filename.c_str(), &errMsg);
       if (err) {
-         std::cerr << "[i] Failure: " << errMsg << std::endl;
+         llvm::errs() << "Could not load shared library: " << errMsg << '\n';
+         return 1;
       }
-      return;
+      return 0;
    }
-   //
-   //  Setup a compiler instance to work with.
-   //
-   clang::CompilerInstance CI;
-   bool first_time = true;
-   CI.setLLVMContext(m_llvm_context);
-   {
-      clang::TextDiagnosticBuffer DiagsBuffer;
-      clang::Diagnostic Diags(&DiagsBuffer);
-      clang::CompilerInvocation::CreateFromArgs(CI.getInvocation(),
-            fake_argv + 1, fake_argv + fake_argc, Diags);
-      if (
-         CI.getHeaderSearchOpts().UseBuiltinIncludes &&
-         CI.getHeaderSearchOpts().ResourceDir.empty()
-      ) {
-         //CI.getHeaderSearchOpts().ResourceDir =
-         //  clang::CompilerInvocation::GetResourcesPath(argv[0],
-         //    (void*) (intptr_t) GetExecutablePath);
-         CI.getHeaderSearchOpts().ResourceDir =
-            llvm::sys::Path("/local2/russo/llvm/lib/clang/1.1").str();
-      }
-      CI.createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
-      if (!CI.hasDiagnostics()) {
-         CI.takeLLVMContext();
-         return;
-      }
-      DiagsBuffer.FlushDiagnostics(CI.getDiagnostics());
-      if (CI.getDiagnostics().getNumErrors()) {
-         CI.takeLLVMContext();
-         return;
-      }
-   }
-   CI.setTarget(clang::TargetInfo::CreateTargetInfo(CI.getDiagnostics(),
-                CI.getTargetOpts()));
-   if (!CI.hasTarget()) {
-      CI.takeLLVMContext();
-      return;
-   }
-   CI.getTarget().setForcedLangOptions(CI.getLangOpts());
-   CI.createFileManager();
-   if (first_time) {
-      CI.createSourceManager();
-      first_time = false;
-   }
-   else {
-      CI.getSourceManager().clearIDTables();
-   }
-   CI.createPreprocessor();
-   clang::Preprocessor& PP = CI.getPreprocessor();
-   CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts(), &PP);
-   CI.createASTContext();
-   //llvm::raw_stdout_ostream out;
-   //clang::ASTConsumer* dummyConsumer = clang::CreateASTPrinter(&out);
-   CI.setASTConsumer(new clang::ASTConsumer());
-   PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-                                          PP.getLangOptions().NoBuiltin);
-   const clang::FileEntry* file = CI.getFileManager().getFile(filename);
-   if (!file) {
-      return;
-   }
-   CI.getSourceManager().createMainFileID(file, clang::SourceLocation());
-   if (CI.getSourceManager().getMainFileID().isInvalid()) {
-      return;
-   }
-   clang::ParseAST(PP, &CI.getASTConsumer(), CI.getASTContext());
-   CI.clearOutputFiles(/*EraseFiles=*/CI.getDiagnostics().getNumErrors());
-   CI.getDiagnosticClient().EndSourceFile();
-   unsigned err_count = CI.getDiagnostics().getNumErrors();
-   if (err_count) {
-      CI.takeLLVMContext();
-      return;
+   clang::CompilerInstance* CI = compileFile(filename);
+   if (!CI) {
+      return 1;
    }
    clang::TranslationUnitDecl* tu =
-      CI.getASTContext().getTranslationUnitDecl();
+      CI->getASTContext().getTranslationUnitDecl();
    if (!tu) { // Parse failed, return.
-      CI.takeLLVMContext();
-      return;
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 1;
    }
-   llvm::Module* m = 0;
-   llvm::OwningPtr<clang::CodeGenerator> codeGen(
-      CreateLLVMCodeGen(CI.getDiagnostics(), filename, CI.getCodeGenOpts(),
-                        CI.getLLVMContext()));
-   codeGen->Initialize(CI.getASTContext());
-   clang::TranslationUnitDecl::decl_iterator iter = tu->decls_begin();
-   clang::TranslationUnitDecl::decl_iterator iter_end = tu->decls_end();
-   std::fprintf(stderr, "Running code generation.\n");
-   for (; iter != iter_end; ++iter) {
-      codeGen->HandleTopLevelDecl(clang::DeclGroupRef(*iter));
-   }
-   codeGen->HandleTranslationUnit(CI.getASTContext());
-   std::fprintf(stderr, "Finished code generation.\n");
-   m = codeGen->ReleaseModule();
+   llvm::Module* m = doCodegen(CI, filename);
    if (!m) {
-      std::fprintf(stderr, "Error: Backend did not create a module!\n");
-      CI.takeLLVMContext();
-      return;
+      //fprintf(stderr, "Error: Backend did not create a module!\n");
+      CI->takeLLVMContext();
+      delete CI;
+      CI = 0;
+      return 1;
    }
-   //
-   //  Verify generated module.
-   //
-   bool mod_has_errs = llvm::verifyModule(*m, llvm::PrintMessageAction);
-   if (mod_has_errs) {
-      CI.takeLLVMContext();
-      return;
-   }
-   //
-   //  Dump generated module.
-   //
-   llvm::PassManager PM;
-   PM.add(llvm::createPrintModulePass(&llvm::outs()));
-   PM.run(*m);
+   //--
+   //llvm::Linker linker("executable", llvm::CloneModule(m_prev_module));
+   //if (linker.LinkInModule(llvm::CloneModule(m), errMsg)) {
+   //   return 0;
+   //}
+   //m = linker.releaseModule();
+   //--
    //
    //  Give new module to the execution engine.
    //
    m_engine->addModule(m); // Note: The engine takes ownership of the module.
-   CI.takeLLVMContext();
+   CI->takeLLVMContext();
+   delete CI;
+   CI = 0;
+   return 0;
+}
+
+int
+Interpreter::executeFile(const std::string& filename)
+{
+   int err = loadFile(filename);
+   if (err) {
+      return err;
+   }
+   std::string::size_type pos = filename.find_last_of('/');
+   if (pos == std::string::npos) {
+      pos = 0;
+   }
+   else {
+      ++pos;
+   }
+   // Note: We are assuming the filename does not end in slash here.
+   std::string funcname(filename, pos);
+   //fprintf(stderr, "funcname: %s\n", funcname.c_str());
+   pos = funcname.find_last_of('.');
+   if (pos != std::string::npos) {
+      funcname.erase(pos);
+      //fprintf(stderr, "funcname: %s\n", funcname.c_str());
+   }
+   executeFunction(funcname);
+   return 0;
+}
+
+void
+Interpreter::executeFunction(const std::string& funcname)
+{
+   // Create argument list for function.
+   std::vector<llvm::GenericValue> args;
+   //llvm::GenericValue arg1;
+   //arg1.IntVal = llvm::APInt(32, 5);
+   //args.push_back(arg1);
+#if 0
+   clang::CompilerInstance* CI = getCI();
+   std::string errMsg;
+   const llvm::Target* target =
+      llvm::TargetRegistry::lookupTarget(CI->getTarget().getTriple().str(),
+                                         errMsg);
+   const llvm::TargetOptions& TO = CI->getTargetOpts();
+   std::string FeaturesStr;
+   if (TO.CPU.size() || TO.Features.size()) {
+      llvm::SubtargetFeatures Features;
+      Features.setCPU(TO.CPU);
+      std::vector<std::string>::const_iterator iter = TO.Features.begin(),
+            std::vector<std::string>::const_iterator iter_end = TO.Features.end();
+      for (; iter != iter_end; ++iter) {
+         Features.AddFeature(*it);
+      }
+      FeaturesStr = Features.getString();
+   }
+   llvm::TargetMachine* TM = target->createTargetMachine(
+                                CI->getTarget().getTriple().str(), FeaturesStr);
+   const llvm::MCAsmInfo* MCAI = TM->getMCAsmInfo();
+   llvm::Mangler* mangler = new llvm::Mangler(MCAI);
+#endif // 0
+   std::ostringstream mangled_name;
+   mangled_name << "_Z" << funcname.size() << funcname << "v";
+   llvm::Function* f = m_engine->FindFunctionNamed(mangled_name.str().c_str());
+   if (!f) {
+      fprintf(stderr, "Could not find function named: %s\n",
+              mangled_name.str().c_str());
+      return;
+   }
+   llvm::GenericValue ret = m_engine->runFunction(f, args);
+   //
+   //fprintf(stderr, "Finished running generated code with JIT.\n");
+   //
+   // Print the result.
+   //llvm::outs() << "Result: " << ret.IntVal << "\n";
+   // Run global destruction.
+   //m_engine->runStaticConstructorsDestructors(true);
+   m_engine->freeMachineCodeForFunction(f);
 }
 
 #if 0
