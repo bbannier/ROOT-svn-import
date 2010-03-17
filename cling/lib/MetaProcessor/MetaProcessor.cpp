@@ -138,24 +138,26 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    }
    std::string::size_type len = (last + 1) - first;
    // Construct our parameter.
-   std::fprintf(stderr, "input_line: '%s'\n", input_line.c_str());
-   std::fprintf(stderr, "first: %lu\n", first);
-   std::fprintf(stderr, "last: %lu\n", last);
-   std::fprintf(stderr, "len: %lu\n", len);
+   //fprintf(stderr, "input_line: '%s'\n", input_line.c_str());
+   //fprintf(stderr, "first: %lu\n", first);
+   //fprintf(stderr, "last: %lu\n", last);
+   //fprintf(stderr, "len: %lu\n", len);
    std::string param(input_line, first, len);
-   std::fprintf(stderr, "param: '%s'\n", param.c_str());
+   //fprintf(stderr, "param: '%s'\n", param.c_str());
    //
    //  .L <filename>
    //
    //  Load code fragment.
    //
    if (cmd_char == 'L') {
-      std::fprintf(stderr, "Begin load file '%s'.\n", param.c_str());
-      m_Interp.loadFile(param);
-      std::fprintf(stderr, "End load file '%s'.\n", param.c_str());
+      //fprintf(stderr, "Begin load file '%s'.\n", param.c_str());
+      int err = m_Interp.loadFile(param);
+      //fprintf(stderr, "End load file '%s'.\n", param.c_str());
+      if (err) {
+         //fprintf(stderr, "Load file failed.\n");
+      }
       return true;
    }
-#if 0
    //
    //  .x <filename>
    //  .X <filename>
@@ -164,7 +166,10 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //  without extension.
    //
    if ((cmd_char == 'x') || (cmd_char == 'X')) {
-      m_Interp.executeFile(param);
+      int err = m_Interp.executeFile(param);
+      if (err) {
+         //fprintf(stderr, "Execute file failed.\n");
+      }
       return true;
    }
    //
@@ -172,19 +177,22 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //
    //  Unload code fragment.
    //
-   if (cmd_char == 'U') {
-      llvm::sys::Path path(param);
-      if (path.isDynamicLibrary()) {
-         std::cerr << "[i] Failure: cannot unload shared libraries yet!"
-                   << std::endl;
-      }
-      m_Interp.removeUnit(param);
-      return true;
-   }
-#endif // 0
+   //if (cmd_char == 'U') {
+   //   llvm::sys::Path path(param);
+   //   if (path.isDynamicLibrary()) {
+   //      std::cerr << "[i] Failure: cannot unload shared libraries yet!"
+   //                << std::endl;
+   //   }
+   //   int err = m_Interp.unloadFile(param);
+   //   if (err) {
+   //      //fprintf(stderr, "Unload file failed.\n");
+   //   }
+   //   return true;
+   //}
    //
    //  Unrecognized command.
    //
+   //fprintf(stderr, "Unrecognized command.\n");
    return false;
 }
 

@@ -115,8 +115,7 @@ class ParseEnvironment;
 //! Class for managing many translation units supporting automatic
 //! forward declarations and linking
 //---------------------------------------------------------------------------
-class Interpreter
-{
+class Interpreter {
 public:
 
    //---------------------------------------------------------------------
@@ -241,11 +240,9 @@ public:
                    const std::string& funcname = "()");
 #endif // 0
 
-   void
-   processLine(const std::string& input_line);
-
-   void
-   loadFile(const std::string& filename);
+   void processLine(const std::string& input_line);
+   int loadFile(const std::string& filename);
+   int executeFile(const std::string& filename);
 
 private:
    std::string m_globalDeclarations; // All global var decls seen.
@@ -254,6 +251,28 @@ private:
    llvm::Module* m_prev_module; // We do *not* own, m_engine owns it.
 
 private:
+
+   int analyzeTokens(clang::Preprocessor& PP, clang::Token& lastTok,
+                     int& indentLevel, bool& tokWasDo);
+
+   llvm::Module* makeModuleFromCommandLine(const std::string& input_line);
+   void createWrappedSrc(const std::string& src, std::string& wrapped);
+
+   clang::CompilerInstance* createStatementList(const std::string& srcCode,
+         std::vector<clang::Stmt*>& stmts);
+
+   clang::CompilerInstance* getCI();
+   clang::CompilerInstance* compileString(const std::string& srcCode);
+   clang::CompilerInstance* compileFile(const std::string& filename);
+
+   llvm::Module* doCodegen(clang::CompilerInstance* CI,
+                           const std::string& filename);
+
+   int verifyModule(llvm::Module* m);
+   void printModule(llvm::Module* m);
+   void executeCommandLine();
+   void executeFunction(const std::string& funcname);
+
 #if 0
    ParseEnvironment* parseSource(const std::string& source);
    ParseEnvironment* parseFile(const std::string& fileName);
@@ -270,11 +289,6 @@ private:
                             clang::ASTContext& targetContext);
    llvm::Module* copyModule(const llvm::Module* src);
 #endif // 0
-
-   int analyzeTokens(clang::Preprocessor& PP,
-                     clang::Token& lastTok,
-                     int& indentLevel,
-                     bool& tokWasDo);
 
 #if 0
    std::string splitInput(const std::string& input, std::vector<std::string>& statements);
