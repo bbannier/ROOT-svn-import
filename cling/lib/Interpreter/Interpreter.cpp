@@ -299,6 +299,7 @@ MacroDetector::MacroUndefined(const clang::IdentifierInfo* II,
 //---------------------------------------------------------------------------
 Interpreter::Interpreter()
 {
+   m_globalDeclarations = "#include <stdio.h>\n";
    m_llvm_context = 0;
    m_engine = 0;
    m_prev_module = 0;
