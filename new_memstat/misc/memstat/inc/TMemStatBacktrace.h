@@ -23,7 +23,7 @@ namespace memstat {
    //
    // Backtrace functions
    //
-   size_t backtrace(void **_trace, size_t _size, Bool_t _bUseGNUBuiltinBacktrace = kFALSE);
+   size_t getBacktrace(void **_trace, size_t _size, Bool_t _bUseGNUBuiltinBacktrace = kFALSE);
    void getSymbols(void *_pAddr,
                    TString &_strInfo, TString &_strLib, TString &_strSymbol, TString &_strLine);
    void getSymbolFullInfo(void *_pAddr, TString *_retInfo, const char *const _seporator = " | ");
