@@ -113,10 +113,11 @@ namespace memstat {
       void *addr;
       for (i = 0; (i < _limit) && (addr = return_address(i)); ++i)
          _container[i] = addr;
+      
       return i;
    }
 //______________________________________________________________________________
-   size_t backtrace(void **_trace, size_t _size, Bool_t _bUseGNUBuiltinBacktrace)
+   size_t getBacktrace(void **_trace, size_t _size, Bool_t _bUseGNUBuiltinBacktrace)
    {
       // Get the backtrace
       // _trace - array of pointers
@@ -132,7 +133,6 @@ namespace memstat {
 #endif
          return 0;
       }
-
       return backtrace(_trace, _size);
    }
 

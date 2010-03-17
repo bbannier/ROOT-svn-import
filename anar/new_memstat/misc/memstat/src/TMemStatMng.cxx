@@ -230,7 +230,7 @@ void TMemStatMng::AddPointer(void *ptr, Int_t size)
    // Add pointer to table.
 
    void *stptr[g_BTStackLevel + 1];
-   const int stackentries = backtrace(stptr, g_BTStackLevel, fUseGNUBuiltinBacktrace);
+   const int stackentries = getBacktrace(stptr, g_BTStackLevel, fUseGNUBuiltinBacktrace);
 
    // save only unique BTs
    const unsigned long crc = CCRC::CalculateDigest(reinterpret_cast<void*>(stptr), sizeof(void*) * stackentries);
