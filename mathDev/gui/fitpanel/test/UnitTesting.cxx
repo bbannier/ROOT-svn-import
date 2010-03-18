@@ -1,16 +1,27 @@
 #include "TFitEditor.h"
+#include "TRooFitPanel.h"
 
 #include "TApplication.h"
 #include "TROOT.h"
 #include "TBenchmark.h"
+#include "TFile.h"
 
 #include "TCanvas.h"
 #include "TH1.h"
+#include "TH2.h"
+#include "TF1.h"
+#include "TF2.h"
 
 #include "TPluginManager.h"
 #include "TError.h"
 
 #include "TGComboBox.h"
+#include "TGTextEntry.h"
+
+#include "RooWorkspace.h"
+#include "RooAbsPdf.h"
+#include "RooRealVar.h"
+#include "RooDataSet.h"
 
 #include <iostream>
 #include <exception>
@@ -78,7 +89,8 @@ public:
       TCanvas* c1 = static_cast<TCanvas*>( gROOT->FindObject("c1") );
       TH1*      h = static_cast<TH1*>    ( gROOT->FindObject("histo") );
       
-      f = TFitEditor::GetInstance()->Show(c1,h);
+      f = TFitEditor::GetInstance();
+      f->Show(c1,h);
    
       if ( f == 0 )
          throw InvalidPointer("In FitEditorUnitTesting constructor");
@@ -90,10 +102,10 @@ public:
    // trying to retrieve the TFitEditor singleton. If the user wants
    // to play a bit with the fitpanel once the tests have finised,
    // then they should comment this method.
-   ~FitEditorUnitTesting() {
-      f->DoClose();
-      gApplication->Terminate();
-   }
+//    ~FitEditorUnitTesting() {
+//       f->DoClose();
+//       gApplication->Terminate();
+//    }
 
    // This is a generic method to make the output of all the tests
    // consistent. T is a function pointer to one of the tests
@@ -151,6 +163,14 @@ public:
 
       result += MakeTest("TestTreeND.........", &FitEditorUnitTesting::TestTreeND); 
 
+      result += MakeTest("TestRooFitTH1......", &FitEditorUnitTesting::TestRooFitTH1); 
+
+      result += MakeTest("TestRooFitTH2......", &FitEditorUnitTesting::TestRooFitTH2); 
+
+//       result += MakeTest("TestRooFitSB.......", &FitEditorUnitTesting::TestRooFitSB); 
+
+//      result += MakeTest("TestRooTree........", &FitEditorUnitTesting::TestRooTree); 
+
       fprintf(out, "\nRemember to also check outputUnitTesting.txt for "
               "more detailed information\n\n");
 
@@ -183,7 +203,8 @@ public:
       for ( unsigned int i = 0; i < f->fFuncPars.size(); ++i ) {
          for ( unsigned int j = 0; j < 3; ++j) {
             int internalStatus = equals(pars[i][j], f->fFuncPars[i][j]);
-            //fprintf(out, "i: %d, j: %d, e: %d\n", i, j, internalStatus);
+//             fprintf(out, "i: %d, j: %d, ref: %30.20f, fun: %30.20f, dif: %f e: %d\n", 
+// 		    i, j, pars[i][j], f->fFuncPars[i][j], TMath::Abs(pars[i][j] - f->fFuncPars[i][j]), internalStatus);
             status += internalStatus;
          }
       }
@@ -415,6 +436,97 @@ public:
 
       return CompareFuncPars(pars);
    }
+
+   int TestRooFitTH1() {
+      TH1D * h1 = new TH1D("h1-gaus","h1-gaus",100,0,100);
+      TF1 * tmp = new TF1("tmp-gaus","gaus");
+      tmp->SetParameters(1,50,10);
+      h1->FillRandom("tmp-gaus");
+      new TCanvas("canvasRooFitTH1", "Test RooFit TH1");
+      h1->Draw();
+      f->DoUpdate();
+      SelectEntry(f->fDataSet, "TH1D::h1-gaus");
+      f->fRooFitPanel->fExpRoo->SetText("Gaussian::grf(x,mu[50,0,100],sigma[10,0.1,100])");
+      f->fRooFitPanel->DoGenerateRooFit();
+      f->fTypeFit->Select(kFP_UFUNC, kTRUE);
+      SelectEntry(f->fFuncList, "grf");
+      f->DoFit();
+
+      std::vector<TFitEditor::FuncParamData_t> pars(3);
+      pars[ 0][0] = 4949.25547494941565673798;  pars[ 0][1] = pars[ 0][2] = 0;
+      pars[ 1][0] = 50.17223488429569044911;    pars[ 1][1] = pars[ 1][2] = 0;
+      pars[ 2][0] = 9.9872578719160127747;      pars[ 2][1] = pars[ 2][2] = 0;
+
+      return CompareFuncPars(pars);
+   }
+
+   int TestRooFitTH2() {
+      TH2D * h2 = new TH2D("h2-gaus2D","h2-gaus2D",50,0,100,50,0,100);
+      TF2 * tmp = new TF2("tmp-gaus2D","xygaus");
+      tmp->SetParameters(1,50,10,30,20);
+      h2->FillRandom("tmp-gaus2D",100000);
+      new TCanvas("canvasRooFitTH2", "Test RooFit TH2");
+      h2->Draw();
+      f->DoUpdate();
+      SelectEntry(f->fDataSet, "TH2D::h2-gaus2D");
+      f->fRooFitPanel->fExpRoo->SetText("PROD::modelrf2d(Gaussian::gx(x,mux[50,0,100],sigmax[10,0.1,100]),Gaussian::gy(y,muy[50,0,100],sigmay[10,0.1,100]))");
+      f->fRooFitPanel->DoGenerateRooFit();
+      f->fTypeFit->Select(kFP_UFUNC, kTRUE);
+      SelectEntry(f->fFuncList, "modelrf2d");
+      f->DoFit();
+
+      std::vector<TFitEditor::FuncParamData_t> pars(5);
+      pars[ 0][0] = 394457.0884414982283487916;  pars[ 0][1] = pars[ 0][2] = 0;
+      pars[ 1][0] = 49.99782848579946659129;     pars[ 1][1] = pars[ 1][2] = 0;
+      pars[ 2][0] = 29.97643505071316383237;     pars[ 2][1] = pars[ 2][2] = 0;
+      pars[ 3][0] = 9.89280774554449848779;      pars[ 3][1] = pars[ 3][2] = 0;
+      pars[ 4][0] = 19.72787235726142895942;     pars[ 4][1] = pars[ 4][2] = 0;
+
+      return CompareFuncPars(pars);
+   }
+
+   int TestRooFitSB() {
+     // This test is disabled until we figure out why the expression
+     // inserted in fExpRoo is invalid. Notice that it perfectly works
+     // in the macro createRooFitPdf.C
+
+      delete f->fRooFitPanel->fWorkspace;
+      f->fRooFitPanel->fWorkspace = new RooWorkspace();
+
+      f->fRooFitPanel->fExpRoo->SetText("SUM::modelSB(S[5,0,100]*Gaussian::g(x[0,100],mu[50,0,100],sigma[10,0.1,100]),B[10,0,100]*Uniform::bpdf(x) )");
+      f->fRooFitPanel->DoGenerateRooFit();
+
+
+      //fprintf(out, "%d\n", f->fRooFitPanel->fWorkspace->factory("SUM::modelSB(S[5,0,100]*Gaussian::g(x[0,100],mu[50,0,100],sigma[10,0.1,100]),B[10,0,100]*Uniform::bpdf(x) )"));
+
+      return 1;
+   }
+
+   int TestRooTree() 
+     // This test is disabled until we figure out why the expression
+     // inserted in fExpRoo is invalid. Notice that it perfectly works
+     // in the macro createRooFitPdf.C
+
+     TFile * file = new TFile("~/tmp/fitpanel/tree_gaus.root");
+     if (!file) {
+       cout << "Unable to open tree_gaus.root" << endl;
+       return 1;
+     }
+
+     TTree * tree = (TTree *) file->Get("tree");
+     if (!tree) { 
+       cout << "Unable to retrieve tree" << endl;
+       return 1;
+     }
+
+     f->DoUpdate();
+     f->fRooFitPanel->fExpRoo->SetText("PROD::model(Gaussian::gx(x,mux[0,-inf,inf],sigmax[1,0.1,10]),Gaussian::gy(y,muy[0,-inf,inf],sigmay[1,0.1,10]))");
+
+
+     
+     return 0;
+   }
+
 };
 
 // Runs the  basic script  and pops  out the fit  panel. Then  it will

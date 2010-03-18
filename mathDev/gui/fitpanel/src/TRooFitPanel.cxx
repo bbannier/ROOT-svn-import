@@ -28,6 +28,8 @@
 struct RooWorkspace { };
 #endif
 
+ClassImp(TRooFitPanel)
+
 //______________________________________________________________________________
 TRooFitPanel::TRooFitPanel(const TGWindow* p)
   :TGVerticalFrame(p)
@@ -130,6 +132,7 @@ TF1 * TRooFitPanel::CreateRooFitPdf(const char * expr, bool norm) throw(WrongRoo
    params->Print();
    // adding *x as thirs parameter will ensure x is normalized with respect to x 
    TF1 * f1 = pdf->asTF(obs,RooArgList(*params),obs);
+   if (!f1) throw WrongRooFitExpression("Unable to create TF1");
    f1->SetName(modelName);
   
 

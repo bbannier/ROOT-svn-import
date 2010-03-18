@@ -55,4 +55,7 @@ public:
 public:
    virtual void   DoNameSel(Int_t);
    virtual void   DoGenerateRooFit();
+
+   friend class FitEditorUnitTesting;
+   ClassDef(TRooFitPanel,0)  //Fit Panel interface
 };
