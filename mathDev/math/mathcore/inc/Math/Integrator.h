@@ -18,8 +18,8 @@
 #include "Math/AllIntegrationTypes.h"
 #endif
 
-#ifndef ROOT_Math_IFunctionfwd
-#include "Math/IFunctionfwd.h"
+#ifndef ROOT_Math_IFunction
+#include "Math/IFunction.h"
 #endif
 
 #ifndef ROOT_Math_VirtualIntegrator
