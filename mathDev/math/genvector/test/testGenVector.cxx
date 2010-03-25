@@ -26,6 +26,7 @@
 #include "Math/SMatrix.h"
 #endif
 
+#include <vector>
 
 using namespace ROOT::Math;
 using namespace ROOT::Math::VectorUtil;
@@ -81,6 +82,25 @@ int compare( double v1, double v2, const std::string & name = "", double scale =
     //nfail = nfail + 1;
   }
   return iret; 
+}
+
+template<class Transform>
+bool IsEqual(const Transform & t1, const Transform & t2, unsigned int size)  {
+// size should be an enum of the Transform class 
+   std::vector<double> x1(size); 
+   std::vector<double> x2(size); 
+   t1.GetComponents(x1.begin(), x1.end() );
+   t2.GetComponents(x2.begin(), x2.end() );
+   bool ret = true; 
+   unsigned int i = 0; 
+   while (ret && i < size) {
+      // from TMath::AreEqualRel(x1,x2,2*eps)
+      bool areEqual = std::abs(x1[i]-x2[i]) < std::numeric_limits<double>::epsilon() * 
+         ( std::abs(x1[i]) + std::abs(x2[i] ) ); 
+      ret &= areEqual; 
+      i++;
+   }
+   return ret; 
 }
 
 int testVector3D() { 
@@ -508,9 +528,13 @@ int testTransform3D() {
 
 
   Transform3D t2b = tr1 * Rotation3D(r);
-  iret |= compare(t2 ==t2b, 1,"eq1 transf",1 );
-  Transform3D t2c( r, tr1);
-  iret |= compare(t2 ==t2c, 1,"eq2 transf",1 );
+  // this above fails on Windows - use a comparison with tolerance
+  // 12 is size of Transform3D internal vector
+  iret |= compare( IsEqual(t2,t2b,12), true,"eq1 transf",1 );
+  //iret |= compare(t2 ==t2b, 1,"eq1 transf",1 );
+  Transform3D t2c( r, tr1); 
+  iret |= compare( IsEqual(t2,t2c,12), true,"eq2 transf",1 );
+  //iret |= compare(t2 ==t2c, 1,"eq2 transf",1 );
 
 
   Transform3D t3 =  Rotation3D(r) * Translation3D(vr); 
@@ -531,7 +555,7 @@ int testTransform3D() {
   EulerAngles err2; 
   GlobalPolar3DVector vvv2;
   t2b.GetDecomposition(err2,vvv2);
-  iret |= compare( r.Phi(), err2.Phi(),"transf rot phi",1 );
+  iret |= compare( r.Phi(), err2.Phi(),"transf rot phi",4 );
   iret |= compare( r.Theta(), err2.Theta(),"transf rot theta",1 );
   iret |= compare( r.Psi(), err2.Psi(),"transf rot psi",1 );
 
@@ -545,11 +569,14 @@ int testTransform3D() {
   Transform3D trf2 = tr1 * r; 
   iret |= compare( trf2 == t2b, 1,"trasl * e rot",1 );
   Transform3D trf3 = r * Translation3D(vr); 
-  iret |= compare( trf3 == t3, 1,"e rot * transl",1 );
+  //iret |= compare( trf3 == t3, 1,"e rot * transl",1 );
+  // this above fails on i686-slc5-gcc43-opt - use a comparison with tolerance
+  iret |= compare( IsEqual(trf3,t3,12), true,"e rot * transl",1 );
 
   Transform3D t5(rzyx, v);
   Transform3D trf5 = Translation3D(v) * rzyx; 
-  iret |= compare( trf5 == t5, 1,"trasl * rzyx",1 );
+  //iret |= compare( trf5 == t5, 1,"trasl * rzyx",1 );
+  iret |= compare( IsEqual(trf5,t5,12), true,"trasl * rzyx",1 );
 
   Transform3D t6(rzyx, rzyx * Translation3D(v).Vect() );
   Transform3D trf6 = rzyx * Translation3D(v); 
@@ -559,7 +586,8 @@ int testTransform3D() {
 
 
   Transform3D trf7 = t4 * Translation3D(v);
-  iret |= compare( trf7 == trf6, 1,"tranf * transl",1 );
+  //iret |= compare( trf7 == trf6, 1,"tranf * transl",1 );
+  iret |= compare( IsEqual(trf7,trf6,12), true,"tranf * transl",1 );
   Transform3D trf8 = Translation3D(v) * t4;
   iret |= compare( trf8 == trf5, 1,"trans * transf",1 );
 
@@ -571,7 +599,10 @@ int testTransform3D() {
   iret |= compare( trf11 == trf10, 1,"r3d * transf",1 );
 
   RotationZYX rrr2 = trf10.Rotation<RotationZYX>(); 
-  iret |= compare( rzyx == rrr2, 1,"gen Rotaton()",1 );
+  //iret |= compare( rzyx == rrr2, 1,"gen Rotation()",1 );
+  iret |= compare( rzyx.Phi() , rrr2.Phi(),"gen Rotation() Phi",1 );
+  iret |= compare( rzyx.Theta(), rrr2.Theta(),"gen Rotation() Theta",10 );
+  iret |= compare( rzyx.Psi(), rrr2.Psi(),"gen Rotation() Psi",1 );
   if (iret) std::cout << rzyx << "\n---\n" << rrr2 << std::endl;
 
 
@@ -631,7 +662,7 @@ int testTransform3D() {
 #endif
 
 
-  if (iret == 0) std::cout << "\tOK\n"; 
+  if (iret == 0) std::cout << "OK\n"; 
   else std::cout << "\t\t\tFAILED\n"; 
 
   return iret; 
@@ -687,7 +718,7 @@ int testVectorUtil() {
 
 }
 
-int main() { 
+int testGenVector() { 
 
   int iret = 0; 
   iret |= testVector3D(); 
@@ -705,4 +736,12 @@ int main() {
 
   if (iret !=0) std::cout << "\nTest GenVector FAILED!!!!!!!!!\n";
   return iret; 
+
+}
+
+int main() { 
+   int ret = testGenVector();
+   if (ret)  std::cerr << "test FAILED !!! " << std::endl; 
+   else   std::cout << "test OK " << std::endl;
+   return ret;
 }

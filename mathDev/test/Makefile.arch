@@ -41,13 +41,7 @@ ROOTLIBS     := $(shell $(ROOTCONFIG) --libs)
 ROOTGLIBS    := $(shell $(ROOTCONFIG) --glibs)
 HASTHREAD    := $(shell $(ROOTCONFIG) --has-thread)
 ROOTDICTTYPE := $(shell $(ROOTCONFIG) --dicttype)
-NOSTUBS      := $(shell $(ROOTCONFIG) --nostubs)
 ROOTCINT     := rootcint
-
-# Stub Functions Generation
-ifeq ($(NOSTUBS),yes)
-   ROOTCINT = export CXXFLAGS="$(CXXFLAGS)"; $(ROOTSYS)/core/utils/src/rootcint_nostubs.sh -$(ROOTDICTTYPE)
-endif
 
 ifeq ($(ARCH),hpuxacc)
 # HP-UX 10.x with aCC
@@ -361,7 +355,11 @@ endif
 ifeq ($(ARCH),macosx)
 # MacOS X with cc (GNU cc 2.95.2 and gcc 3.3)
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
+ifeq ($(MACOSX_DEPLOYMENT_TARGET),)
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
+else
+MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET)
+endif
 CXX           = g++
 CXXFLAGS      = $(OPT2) -pipe -Wall -W -Woverloaded-virtual
 LD            = $(MACOSXTARGET) g++
@@ -384,7 +382,11 @@ endif
 ifeq ($(ARCH),macosxicc)
 # MacOS X with Intel icc compiler
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
+ifeq ($(MACOSX_DEPLOYMENT_TARGET),)
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
+else
+MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET)
+endif
 ifeq ($(MACOSX_MINOR),5)
 MACOSX_MINOR := 4
 endif
@@ -406,7 +408,11 @@ ifeq ($(ARCH),macosx64)
 # MacOS X >= 10.4 with gcc 64 bit mode (GNU gcc 4.*)
 # Only specific option (-m64) comes from root-config
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
+ifeq ($(MACOSX_DEPLOYMENT_TARGET),)
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
+else
+MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET)
+endif
 CXX           = g++
 CXXFLAGS      = $(OPT2) -pipe -Wall -W -Woverloaded-virtual
 LD            = $(MACOSXTARGET) g++
@@ -424,7 +430,11 @@ endif
 ifeq ($(ARCH),macosxxlc)
 # MacOS X with IBM xlC compiler
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
+ifeq ($(MACOSX_DEPLOYMENT_TARGET),)
 MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=10.$(MACOSX_MINOR)
+else
+MACOSXTARGET := MACOSX_DEPLOYMENT_TARGET=$(MACOSX_DEPLOYMENT_TARGET)
+endif
 CXX           = xlC
 CXXFLAGS      = $(OPT)
 LD            = $(MACOSXTARGET) xlC
@@ -442,7 +452,7 @@ endif
 
 ifeq ($(ARCH),win32)
 # Windows with the VC++ compiler
-VC_MAJOR     := $(shell unset VS_UNICODE_OUTPUT; cl.exe 2>&1 | awk '{ if (NR==1) print $$8 }' | \
+VC_MAJOR     := $(shell unset VS_UNICODE_OUTPUT; cl.exe 2>&1 | awk '{ if (NR==1) print $$(NF-2) }' | \
                 cut -d'.' -f1)
 ObjSuf        = obj
 SrcSuf        = cxx

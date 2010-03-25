@@ -21,6 +21,15 @@
 extern "C" void G__exec_alloc_lock();
 extern "C" void G__exec_alloc_unlock();
 
+//______________________________________________________________________________
+namespace {
+static std::map<int /*tagnum*/, std::set<G__ifunc_table> > & G__ifunc_refs()
+{
+   static std::map<int /*tagnum*/, std::set<G__ifunc_table> > ifunc_refs;
+   return ifunc_refs;
+}
+} // unnamed namespace
+
 extern "C" {
 
 static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now);
@@ -150,7 +159,7 @@ void G__asm_storebytecodefunc(G__ifunc_table_internal* ifunc, int ifn, G__var_ar
    bytecode->ifn = ifn;
    /* copy local variable table */
    bytecode->var = var;
-   bytecode->varsize = G__struct.size[G__tagdefining];
+   bytecode->varsize = G__struct.size[G__MAXSTRUCT-1];
    /* copy instruction */
    bytecode->pinst = (long*)malloc(sizeof(long) * instsize + 8);
    memcpy(bytecode->pinst, pinst, sizeof(long)*instsize + 1);
@@ -728,7 +737,7 @@ void G__make_ifunctable(char* funcheader)
    G__rename_templatefunc(funcname);
    
    G__hash(funcname, G__p_ifunc->hash[func_now], iin2);
-   G__paramfunc* param = ifunc->param[func_now][0];
+   G__paramfunc* param = G__p_ifunc->param[func_now][0];
    param->name = 0;
    /*************************************************************
     * check if the function is operator()(), if so, regenerate
@@ -7254,15 +7263,6 @@ struct G__ifunc_table_internal *G__get_methodhandle4(char *funcname
   return ifunc;
 }
 
-
-//______________________________________________________________________________
-namespace {
-static std::map<int /*tagnum*/, std::set<G__ifunc_table> > & G__ifunc_refs()
-{
-   static std::map<int /*tagnum*/, std::set<G__ifunc_table> > ifunc_refs;
-   return ifunc_refs;
-}
-} // unnamed namespace
 
 //______________________________________________________________________________
 struct G__ifunc_table* G__get_ifunc_ref(struct G__ifunc_table_internal* ifunc)

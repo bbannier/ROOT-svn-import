@@ -13,13 +13,8 @@
 #include "TEveManager.h"
 #include "TEveTrans.h"
 
-
 #include "TColor.h"
 
-#include "TBuffer3D.h"
-#include "TBuffer3DTypes.h"
-#include "TVirtualPad.h"
-#include "TVirtualViewer3D.h"
 
 //______________________________________________________________________________
 //
@@ -29,16 +24,30 @@
 //
 // Base-class for displaying a digit collection.
 // Provdies common services for:
-// - specifying signal / color per digit
-// - specifying object reference per digit
-// - controlling palette and thresholds (external object TEveRGBAPalette)
-// - showing a frame around the digits (external object TEveFrameBox)
-// - specifying transformation matrix for the whole collection
+// - specifying signal / color per digit;
+// - specifying object reference per digit;
+// - controlling palette and thresholds (external object TEveRGBAPalette);
+// - showing a frame around the digits (external object TEveFrameBox);
+// - specifying transformation matrix for the whole collection;
 //   by data-member of class TEveTrans.
+//
+// Use method DigitId(TObject* id) to assign additional identification
+// to the last created digit. By calling SetOwnIds(kTRUE) tje
+// digit-set becomes the owner of the assigned objects and deletes
+// them on destruction.
+// Note that TRef is used for referencing the objects and if you
+// instantiate the objects just to pass them to digit-set you should
+// also call  TProcessID::Get/SetObjectCount() at the beginning / end
+// of processing of an event. See documentation for class TRef, in
+// particular section 'ObjectNumber'.
 //
 // If you use value-is-color mode and want to use transparency, set
 // the transparency to non-zero value so that GL-renderer will be
 // properly informed.
+//
+// If you want to use single color for all elements call:
+//   UseSingleColor()
+// Palette controls will not work in this case.
 //
 // See also:
 //   TEveQuadSet: rectangle, hexagon or line per digit
@@ -48,7 +57,7 @@ ClassImp(TEveDigitSet);
 
 //______________________________________________________________________________
 TEveDigitSet::TEveDigitSet(const char* n, const char* t) :
-   TEveElement     (),
+   TEveElement     (fColor),
    TNamed          (n, t),
 
    fDefaultValue   (kMinInt),
@@ -57,6 +66,7 @@ TEveDigitSet::TEveDigitSet(const char* n, const char* t) :
    fPlex           (),
    fLastDigit      (0),
 
+   fColor          (kWhite),
    fFrame          (0),
    fPalette        (0),
    fRenderMode     (kRM_AsIs),
@@ -114,11 +124,25 @@ void TEveDigitSet::ReleaseIds()
 /******************************************************************************/
 
 //______________________________________________________________________________
+void TEveDigitSet::UseSingleColor()
+{
+   // Instruct digit-set to use single color for its digits.
+   // Call SetMainColor/Transparency to initialize it.
+
+   fSingleColor = kTRUE;
+}
+
+//______________________________________________________________________________
 void TEveDigitSet::SetMainColor(Color_t color)
 {
    // Override from TEveElement, forward to Frame.
 
-   if (fFrame) {
+   if (fSingleColor)
+   {
+      TEveElement::SetMainColor(color);
+   }
+   else if (fFrame)
+   {
       fFrame->SetFrameColor(color);
       fFrame->StampBackPtrElements(kCBColorSelection);
    }
@@ -218,24 +242,11 @@ void TEveDigitSet::DigitId(TObject* id)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveDigitSet::Paint(Option_t* /*option*/)
+void TEveDigitSet::Paint(Option_t*)
 {
    // Paint this object. Only direct rendering is supported.
 
-   static const TEveException eH("TEveDigitSet::Paint ");
-
-   TBuffer3D buff(TBuffer3DTypes::kGeneric);
-
-   // Section kCore
-   buff.fID           = this;
-   buff.fColor        = fFrame ? fFrame->GetFrameColor() : 1;
-   buff.fTransparency = GetMainTransparency();
-   RefMainTrans().SetBuffer3D(buff);
-   buff.SetSectionsValid(TBuffer3D::kCore);
-
-   Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);
-   if (reqSections != TBuffer3D::kNone)
-      Error(eH, "only direct GL rendering supported.");
+   PaintStandard(this);
 }
 
 //______________________________________________________________________________
@@ -285,9 +296,11 @@ void TEveDigitSet::SetFrame(TEveFrameBox* b)
    fFrame = b;
    if (fFrame) {
       fFrame->IncRefCount(this);
-      SetMainColorPtr(fFrame->PtrFrameColor());
+      if (!fSingleColor) {
+         SetMainColorPtr(fFrame->PtrFrameColor());
+      }
    } else {
-      SetMainColorPtr(0);
+      SetMainColorPtr(&fColor);
    }
 }
 

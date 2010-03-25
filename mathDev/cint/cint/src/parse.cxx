@@ -1623,7 +1623,9 @@ static G__value G__exec_if()
          // -- Hit end of file, nothing more to do.
          G__genericerror("Error: unexpected if() { } EOF");
          if (G__key) {
-            system("key .cint_key -l execute");
+            if (system("key .cint_key -l execute")) {
+               G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+            }
          }
          G__eof = 2;
 #ifdef G__ASM
@@ -1903,7 +1905,11 @@ static G__value G__exec_else_if()
       }
       if (c == EOF) {
          G__genericerror("Error: unexpected if() { } EOF");
-         if (G__key != 0) system("key .cint_key -l execute");
+         if (G__key != 0) {
+            if (system("key .cint_key -l execute")) {
+               G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+            }
+         }
          G__eof = 2;
          G__ifswitch = store_ifswitch;
          return(G__null);
@@ -3133,6 +3139,15 @@ static G__value G__exec_loop(const char* forinit, char* condition,
          //  finish off bytecode generation and run it, otherwise
          //  print an error message and continue interpreting.
          if (G__asm_noverflow) {
+            // Insure the free-ing of any generated temporaries.
+            store_no_exec_compile = G__no_exec_compile;
+            G__no_exec_compile = 1;
+            if ((G__p_tempbuf->level >= G__templevel) && G__p_tempbuf->prev) {
+               --G__templevel;
+               G__free_tempobject();
+               ++G__templevel;
+            }
+            G__no_exec_compile = store_no_exec_compile;
             //
             //  Generate a G__JMP <dst> bytecode instruction.
             //
@@ -3259,7 +3274,9 @@ static G__value G__exec_loop(const char* forinit, char* condition,
             //fprintf(stderr, "G__exec_loop: Testing condition result: %d.\n", cond);
             // Free any generated temporaries.
             if ((G__p_tempbuf->level >= G__templevel) && G__p_tempbuf->prev) {
+               --G__templevel;
                G__free_tempobject();
+               ++G__templevel;
             }
          }
       }
@@ -5045,7 +5062,9 @@ int G__skip_comment()
    if (c0 == EOF) {
       G__genericerror("Error: File ended unexpectedly while reading a C-style comment.");
       if (G__key) {
-         system("key .cint_key -l execute");
+         if (system("key .cint_key -l execute")) {
+            G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+         }
       }
       G__eof = 2;
       return EOF;
@@ -5054,7 +5073,9 @@ int G__skip_comment()
    if (c1 == EOF) {
       G__genericerror("Error: File ended unexpectedly while reading a C-style comment.");
       if (G__key) {
-         system("key .cint_key -l execute");
+         if (system("key .cint_key -l execute")) {
+            G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+         }
       }
       G__eof = 2;
       return EOF;
@@ -5076,7 +5097,9 @@ int G__skip_comment()
       if (c1 == EOF) {
          G__genericerror("Error: File ended unexpectedly while reading a C-style comment.");
          if (G__key) {
-            system("key .cint_key -l execute");
+            if (system("key .cint_key -l execute")) {
+               G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+            }
          }
          G__eof = 2;
          return EOF;
@@ -5096,7 +5119,9 @@ int G__skip_comment_peek()
    if (c0 == EOF) {
       G__genericerror("Error: File ended unexpectedly while reading a C-style comment.");
       if (G__key) {
-         system("key .cint_key -l execute");
+         if (system("key .cint_key -l execute")) {
+            G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+         }
       }
       G__eof = 2;
       return EOF;
@@ -5105,7 +5130,9 @@ int G__skip_comment_peek()
    if (c1 == EOF) {
       G__genericerror("Error: File ended unexpectedly while reading a C-style comment.");
       if (G__key) {
-         system("key .cint_key -l execute");
+         if (system("key .cint_key -l execute")) {
+            G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+         }
       }
       G__eof = 2;
       return EOF;
@@ -5126,7 +5153,9 @@ int G__skip_comment_peek()
       if (c1 == EOF) {
          G__genericerror("Error: File ended unexpectedly while reading a C-style comment.");
          if (G__key) {
-            system("key .cint_key -l execute");
+            if (system("key .cint_key -l execute")) {
+               G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+            }
          }
          G__eof = 2;
          return EOF;
@@ -6675,7 +6704,9 @@ G__value G__exec_statement(int* mparen)
 #endif // G__ASM
                      result = G__getexpr(statement);
                      if ((G__p_tempbuf->level >= G__templevel) && G__p_tempbuf->prev) {
+                        --G__templevel;
                         G__free_tempobject();
+                        ++G__templevel;
                      }
                   }
                }
@@ -7656,7 +7687,7 @@ void G__free_tempobject()
    /*****************************************************
     * free temp object buffer
     *****************************************************/
-   while (G__p_tempbuf->level >= G__templevel && G__p_tempbuf->prev) {
+   while (G__p_tempbuf->level > G__templevel && G__p_tempbuf->prev) {
       // --
 #ifdef G__ASM_DBG
       if (G__asm_dbg) {

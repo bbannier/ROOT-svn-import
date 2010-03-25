@@ -236,25 +236,6 @@ result only.
 Superimpose on previous picture in the same pad.
 </td></tr>
 
-<tr><th valign=top>"CYL"</th><td>
-Use Cylindrical coordinates. The X coordinate is mapped on the angle and the Y
-coordinate on the cylinder length.
-</td></tr>
-
-<tr><th valign=top>"POL"</th><td>
-Use Polar coordinates. The X coordinate is mapped on the angle and the Y
-coordinate on the radius.
-</td></tr>
-
-<tr><th valign=top>"SPH"</th><td>
-Use Spherical coordinates. The X coordinate is mapped on the latitude and the Y
-coordinate on the longitude.
-</td></tr>
-
-<tr><th valign=top>"PSR"</th><td>
-Use PseudoRapidity/Phi coordinates. The X coordinate is mapped on Phi.
-</td></tr>
-
 <tr><th valign=top>"LEGO"</th><td>
 Draw a lego plot with hidden line removal.
 </td></tr>
@@ -266,32 +247,6 @@ Draw a lego plot with hidden surface removal.
 <tr><th valign=top>"LEGO2"</th><td>
 Draw a lego plot using colors to show the cell contents When the option "0" is
 used with any LEGO option, the empty bins are not drawn.
-</td></tr>
-
-<tr><th valign=top>"SURF"</th><td>
-Draw a surface plot with hidden line removal.
-</td></tr>
-
-<tr><th valign=top>"SURF1"</th><td>
-Draw a surface plot with hidden surface removal.
-</td></tr>
-
-<tr><th valign=top>"SURF2"</th><td>
-Draw a surface plot using colors to show the cell contents.
-</td></tr>
-
-<tr><th valign=top>"SURF3"</th><td>
-Same as SURF with in addition a contour view drawn on the top.
-</td></tr>
-
-<tr><th valign=top>"SURF4"</th><td>
-Draw a surface using Gouraud shading.
-</td></tr>
-
-<tr><th valign=top>"SURF5"</th><td>
-Same as SURF3 but only the colored contour is drawn. Used with option CYL, SPH
-or PSR it allows to draw colored contours on a sphere, a cylinder or a in
-pseudo rapidity space. In cartesian or polar coordinates, option SURF3 is used.
 </td></tr>
 
 <tr><th valign=top>"TEXT"</th><td>
@@ -412,7 +367,8 @@ the histogram contour.
 <tr><th valign=top>"9"</th><td>
 Force histogram to be drawn in high resolution mode. By default, the histogram
 is drawn in low resolution in case the number of bins is greater than the number
-of pixels in the current pad.
+of pixels in the current pad. This option should be combined with a "drawing
+option" like "H" or "L".
 </td></tr>
 
 </table>
@@ -479,6 +435,51 @@ Draw a contour plot using surface colors (SURF option at theta = 0).
 
 <tr><th valign=top>"LIST"</th><td>
 Generate a list of TGraph objects for each contour.
+</td></tr>
+
+<tr><th valign=top>"CYL"</th><td>
+Use Cylindrical coordinates. The X coordinate is mapped on the angle and the Y
+coordinate on the cylinder length.
+</td></tr>
+
+<tr><th valign=top>"POL"</th><td>
+Use Polar coordinates. The X coordinate is mapped on the angle and the Y
+coordinate on the radius.
+</td></tr>
+
+<tr><th valign=top>"SPH"</th><td>
+Use Spherical coordinates. The X coordinate is mapped on the latitude and the Y
+coordinate on the longitude.
+</td></tr>
+
+<tr><th valign=top>"PSR"</th><td>
+Use PseudoRapidity/Phi coordinates. The X coordinate is mapped on Phi.
+</td></tr>
+
+<tr><th valign=top>"SURF"</th><td>
+Draw a surface plot with hidden line removal.
+</td></tr>
+
+<tr><th valign=top>"SURF1"</th><td>
+Draw a surface plot with hidden surface removal.
+</td></tr>
+
+<tr><th valign=top>"SURF2"</th><td>
+Draw a surface plot using colors to show the cell contents.
+</td></tr>
+
+<tr><th valign=top>"SURF3"</th><td>
+Same as SURF with in addition a contour view drawn on the top.
+</td></tr>
+
+<tr><th valign=top>"SURF4"</th><td>
+Draw a surface using Gouraud shading.
+</td></tr>
+
+<tr><th valign=top>"SURF5"</th><td>
+Same as SURF3 but only the colored contour is drawn. Used with option CYL, SPH
+or PSR it allows to draw colored contours on a sphere, a cylinder or a in
+pseudo rapidity space. In cartesian or polar coordinates, option SURF3 is used.
 </td></tr>
 
 <tr><th valign=top>"FB"</th><td>
@@ -3829,7 +3830,8 @@ void THistPainter::PaintBar(Option_t *)
       if (ymax < gPad->GetUymin()) continue;
       if (ymax > gPad->GetUymax()) ymax = gPad->GetUymax();
       if (ymin < gPad->GetUymin()) ymin = gPad->GetUymin();
-      if (gStyle->GetHistMinimumZero() && ymin < 0) ymin=0;
+      if (gStyle->GetHistMinimumZero() && ymin < 0)
+         ymin=TMath::Min(0.,gPad->GetUymax());
       w    = (xmax-xmin)*width;
       xmin += offset*(xmax-xmin);
       xmax = xmin + w;
@@ -4060,10 +4062,10 @@ void THistPainter::PaintBoxes(Option_t *)
             else continue;
          }
 
-         if (xlow < gPad->GetUxmin()) continue;
-         if (ylow < gPad->GetUymin()) continue;
-         if (xup  > gPad->GetUxmax()) continue;
-         if (yup  > gPad->GetUymax()) continue;
+         xlow = TMath::Max(xlow, gPad->GetUxmin());
+         ylow = TMath::Max(ylow, gPad->GetUymin());
+         xup  = TMath::Min(xup , gPad->GetUxmax());
+         yup  = TMath::Min(yup , gPad->GetUymax());
 
          if (Hoption.Box == 1) {
             fH->SetFillColor(color);
@@ -4161,11 +4163,11 @@ void THistPainter::PaintColorLevels(Option_t *)
    for (Int_t j=Hparam.yfirst; j<=Hparam.ylast;j++) {
       yk    = fYaxis->GetBinLowEdge(j);
       ystep = fYaxis->GetBinWidth(j);
-      if (Hoption.System == kPOLAR && yk<0) yk= 2*TMath::Pi()+yk;
       for (Int_t i=Hparam.xfirst; i<=Hparam.xlast;i++) {
          Int_t bin  = j*(fXaxis->GetNbins()+2) + i;
          xk    = fXaxis->GetBinLowEdge(i);
          xstep = fXaxis->GetBinWidth(i);
+         if (Hoption.System == kPOLAR && xk<0) xk= 2*TMath::Pi()+xk;
          if (!IsInside(xk+0.5*xstep,yk+0.5*ystep)) continue;
          z     = fH->GetBinContent(bin);
          if (z == 0 && (zmin >= 0 || Hoption.Logz)) continue; // don't draw the empty bins for histograms with positive content
@@ -4224,7 +4226,7 @@ void THistPainter::PaintColorLevels(Option_t *)
          if (Hoption.System != kPOLAR) {
             gPad->PaintBox(xlow, ylow, xup, yup);
          } else  {
-            TCrown crown(0,0,xlow,xup,ylow*TMath::RadToDeg(),yup*TMath::RadToDeg());
+            TCrown crown(0,0,ylow,yup,xlow*TMath::RadToDeg(),xup*TMath::RadToDeg());
             crown.SetFillColor(gStyle->GetColorPalette(theColor));
             crown.Paint();
          }
@@ -5221,7 +5223,8 @@ void THistPainter::PaintHist(Option_t *)
 
    if (fixbin) { keepx[0] = Hparam.xmin; keepx[1] = Hparam.xmax; }
    else {
-      for (i=0; i<=nbins; i++) keepx[i] = fXaxis->GetBinLowEdge(i+first);
+      for (i=0; i<nbins; i++) keepx[i] = fXaxis->GetBinLowEdge(i+first);
+      keepx[nbins] = fXaxis->GetBinUpEdge(nbins-1+first);
    }
 
    //         Prepare Fill area (systematic with option "Bar").

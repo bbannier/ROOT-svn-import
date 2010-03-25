@@ -47,16 +47,9 @@
 #include <set>
 #include <string>
 
-#if G__CINTVERSION == 70030000
-// Ignore SetGetLineFunc in Cint7
-void G__SetGetlineFunc(char*(*)(const char* prompt),
-                       void (*)(char* line)) {}
-#endif
-
 using namespace std;
 
 R__EXTERN int optind;
-R__EXTERN TInterpreter* (*gInterpreterFactory)(const char* name, const char* title);
 
 extern "C" int ScriptCompiler(const char *filename, const char *opt) {
    return gSystem->CompileMacro(filename, opt);
@@ -83,12 +76,6 @@ extern "C" void *TCint_FindSpecialObject(char *c, G__ClassInfo *ci, void **p1, v
    return TCint::FindSpecialObject(c, ci, p1, p2);
 }
 
-TInterpreter* TCint_Factory(const char* name, const char* title) {
-   return new TCint(name, title);
-}
-
-
-
 int TCint_GenerateDictionary(const std::string &className,
                              const std::vector<std::string> &headers )
 {
@@ -104,7 +91,8 @@ int TCint_GenerateDictionary(const std::string &className,
    for( sIt = className.begin(); sIt != className.end(); sIt++ ) {
       if (*sIt == '<' || *sIt == '>' ||
           *sIt == ' ' || *sIt == '*' ||
-          *sIt == ',' || *sIt == '&')
+          *sIt == ',' || *sIt == '&' ||
+          *sIt == ':')
          fileName += '_';
       else
          fileName += *sIt;
@@ -114,6 +102,38 @@ int TCint_GenerateDictionary(const std::string &className,
    if( gSystem->AccessPathName(fileName) != 0 ) {
       //file does not exist
       //(1) prepare file data
+
+      // If STL, also request iterators' operators.
+      // vector is special: we need to check whether
+      // vector::iterator is a typedef to pointer or a
+      // class.
+
+      static std::set<std::string> sSTLTypes;
+      if (sSTLTypes.empty()) {
+         sSTLTypes.insert("vector");
+         sSTLTypes.insert("list");
+         sSTLTypes.insert("deque");
+         sSTLTypes.insert("map");
+         sSTLTypes.insert("multimap");
+         sSTLTypes.insert("set");
+         sSTLTypes.insert("multiset");
+         sSTLTypes.insert("queue");
+         sSTLTypes.insert("priority_queue");
+         sSTLTypes.insert("stack");
+         sSTLTypes.insert("iterator");
+      }
+
+      std::string n(className);
+      size_t posTemplate = n.find('<');
+      std::set<std::string>::const_iterator iSTLType = sSTLTypes.end();
+      if (posTemplate != std::string::npos) {
+         n.erase(posTemplate, std::string::npos);
+         if (n.compare(0, 5, "std::") == 0) {
+            n.erase(0, 5);
+         }
+         iSTLType = sSTLTypes.find(n);
+      }
+
       std::vector<std::string>::const_iterator it;
       std::string fileContent ("");
 
@@ -121,13 +141,36 @@ int TCint_GenerateDictionary(const std::string &className,
          fileContent += "#include \"" + *it + "\"\n";
 
       fileContent += "#ifdef __CINT__ \n";
-      fileContent += "#pragma link off all class;\n";
-      fileContent += "#pragma link off all function;\n";
-      fileContent += "#pragma link off all global;\n";
-      fileContent += "#pragma link off all typedef;\n";
       fileContent += "#pragma link C++ nestedclasses;\n";
+      fileContent += "#pragma link C++ nestedtypedefs;\n";
       fileContent += "#pragma link C++ class ";
-      fileContent += className + "+;\n" ;
+      fileContent +=    className + "+;\n" ;
+      fileContent += "#pragma link C++ class ";
+      if (iSTLType != sSTLTypes.end()) {
+         // STL class; we cannot (and don't need to) store iterators;
+         // their shadow and the compiler's version don't agree. So
+         // don't ask for the '+'
+         fileContent +=    className + "::*;\n" ;
+      } else {
+         // Not an STL class; we need to allow the I/O of contained
+         // classes (now that we have a dictionary for them).
+         fileContent +=    className + "::*+;\n" ;
+      }
+      std::string oprLink("#pragma link C++ operators ");
+      oprLink += className;
+      // Don't! Requests e.g. op<(const vector<T>&, const vector<T>&):
+      // fileContent += oprLink + ";\n";
+      if (iSTLType != sSTLTypes.end()) {
+         if (n == "vector") {
+            fileContent += "#ifdef G__VECTOR_HAS_CLASS_ITERATOR\n";
+         }
+         fileContent += oprLink + "::iterator;\n";
+         fileContent += oprLink + "::const_iterator;\n";
+         fileContent += oprLink + "::reverse_iterator;\n";
+         if (n == "vector") {
+            fileContent += "#endif\n";
+         }
+      }
       fileContent += "#endif\n";
       //end(1)
 
@@ -157,16 +200,6 @@ int TCint_GenerateDictionary(const std::string &className,
    //end(3)
    return 0;
 }
-
-namespace {
-   static class TInitCintFactory {
-   public:
-      TInitCintFactory() {
-         gInterpreterFactory = TCint_Factory;
-      }
-   } gInitCintFactory;
-}
-
 
 // It is a "fantom" method to synchronize user keyboard input
 // and ROOT prompt line (for WIN32)
@@ -203,16 +236,6 @@ TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
 
 #ifndef R__WIN32
    optind = 1;  // make sure getopt() works in the main program
-#endif
-
-#if defined(G__NOSTUBS)
-# if defined(G__NOSTUBSTEST)
-   EnableWrappers(gEnv->GetValue("Cint.EnableWrappers",1));
-# else
-   EnableWrappers(0);
-# endif
-#else
-   EnableWrappers(1);
 #endif
 
    // Make sure that ALL macros are seen as C++.
@@ -265,15 +288,6 @@ Int_t TCint::InitializeDictionaries()
    R__LOCKGUARD(gCINTMutex);
 
    return G__call_setup_funcs();
-}
-
-//______________________________________________________________________________
-void TCint::EnableWrappers(bool value)
-{
-   // Enable call wrappers (also known as stubs) if value is true;
-   // disable if value is false.
-
-   G__enable_wrappers((int) value);
 }
 
 //______________________________________________________________________________
@@ -426,7 +440,13 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
                *error = (EErrorCode)local_error;
          }
 
-         if (ret == 0) ret = G__int_cast(local_res);
+         if (ret == 0) {
+            // prevent overflow signal
+            double resd = G__double(local_res);
+            if (resd > LONG_MAX) ret = LONG_MAX;
+            else if (resd < LONG_MIN) ret = LONG_MIN;
+            else ret = G__int_cast(local_res);
+         }
 
          gROOT->SetLineHasBeenProcessed();
       } else {
@@ -458,7 +478,13 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
       if (error)
          *error = (EErrorCode)local_error;
 
-      if (ret == 0) ret = G__int_cast(local_res);
+      if (ret == 0) {
+         // prevent overflow signal
+         double resd = G__double(local_res);
+         if (resd > LONG_MAX) ret = LONG_MAX;
+         else if (resd < LONG_MIN) ret = LONG_MIN;
+         else ret = G__int_cast(local_res);
+      }
 
       gROOT->SetLineHasBeenProcessed();
    }
@@ -751,43 +777,50 @@ void TCint::SetClassInfo(TClass *cl, Bool_t reload)
 
       delete (G__ClassInfo*)cl->fClassInfo;
       cl->fClassInfo = 0;
-      if (CheckClassInfo(cl->GetName())) {
 
-         G__ClassInfo *info = new G__ClassInfo(cl->GetName());
-         cl->fClassInfo = info;
+      std::string name( cl->GetName() );
+      if (!CheckClassInfo(name.c_str())) {
+         // Try resolving all the typedefs (even Float_t and Long64_t)
+         name =  TClassEdit::ResolveTypedef(name.c_str(),kTRUE);
+         if (name == cl->GetName() || !CheckClassInfo(name.c_str())) {
 
+            // Nothing found, nothing to do.
+            return;
+         }
+      }
 
-         Bool_t zombieCandidate = kFALSE;
+      G__ClassInfo *info = new G__ClassInfo(name.c_str());
+      cl->fClassInfo = info;
 
-         // In case a class contains an external enum, the enum will be seen as a
-         // class. We must detect this special case and make the class a Zombie.
-         // Here we assume that a class has at least one method.
-         // We can NOT call TClass::Property from here, because this method
-         // assumes that the TClass is well formed to do a lot of information
-         // caching. The method SetClassInfo (i.e. here) is usually called during
-         // the building phase of the TClass, hence it is NOT well formed yet.
-         if (info->IsValid() &&
-             !(info->Property() & (kIsClass|kIsStruct|kIsNamespace))) {
+      Bool_t zombieCandidate = kFALSE;
+
+      // In case a class contains an external enum, the enum will be seen as a
+      // class. We must detect this special case and make the class a Zombie.
+      // Here we assume that a class has at least one method.
+      // We can NOT call TClass::Property from here, because this method
+      // assumes that the TClass is well formed to do a lot of information
+      // caching. The method SetClassInfo (i.e. here) is usually called during
+      // the building phase of the TClass, hence it is NOT well formed yet.
+      if (info->IsValid() &&
+          !(info->Property() & (kIsClass|kIsStruct|kIsNamespace))) {
+         zombieCandidate = kTRUE; // cl->MakeZombie();
+      }
+
+      if (!info->IsLoaded()) {
+         if (info->Property() & (kIsNamespace)) {
+            // Namespace can have a ClassInfo but no CINT dictionary per se
+            // because they are auto-created if one of their contained
+            // classes has a dictionary.
             zombieCandidate = kTRUE; // cl->MakeZombie();
          }
 
-         if (!info->IsLoaded()) {
-            if (info->Property() & (kIsNamespace)) {
-               // Namespace can have a ClassInfo but no CINT dictionary per se
-               // because they are auto-created if one of their contained
-               // classes has a dictionary.
-               zombieCandidate = kTRUE; // cl->MakeZombie();
-            }
+         // this happens when no CINT dictionary is available
+         delete info;
+         cl->fClassInfo = 0;
+      }
 
-            // this happens when no CINT dictionary is available
-            delete info;
-            cl->fClassInfo = 0;
-         }
-
-         if (zombieCandidate && !TClassEdit::IsSTLCont(cl->GetName())) {
-            cl->MakeZombie();
-         }
-
+      if (zombieCandidate && !TClassEdit::IsSTLCont(cl->GetName())) {
+         cl->MakeZombie();
       }
    }
 }
@@ -804,12 +837,6 @@ Bool_t TCint::CheckClassInfo(const char *name, Bool_t autoload /*= kTRUE*/)
    // specifically check that each level of nesting is already loaded.
    // In case of templates the idea is that everything between the outer
    // '<' and '>' has to be skipped, e.g.: aap<pipo<noot>::klaas>::a_class
-
-#if defined(R__BUILDING_CINT7) || defined(R__BUILDING_ONLYCINT7)
-   if (Reflex::Instance::HasShutdown()) {
-      return kFALSE;
-   }
-#endif
 
    R__LOCKGUARD(gCINTMutex);
 
@@ -1361,10 +1388,16 @@ Int_t TCint::LoadLibraryMap(const char *rootmapfile)
                      TString p;
                      p = d + "/" + f;
                      if (!gSystem->AccessPathName(p, kReadPermission)) {
-                        if (gDebug > 4)
-                           Info("LoadLibraryMap", "   rootmap file: %s", p.Data());
-                        fMapfile->ReadFile(p, kEnvGlobal);
-                        fRootmapFiles->Add(new TObjString(p));
+                        if (!fRootmapFiles->FindObject(f) && f != ".rootmap") {
+                           if (gDebug > 4)
+                              Info("LoadLibraryMap", "   rootmap file: %s", p.Data());
+                           fMapfile->ReadFile(p, kEnvGlobal);
+                           fRootmapFiles->Add(new TNamed(f,p));
+                        }
+//                        else {
+//                           fprintf(stderr,"Reject %s because %s is already there\n",p.Data(),f.Data());
+//                           fRootmapFiles->FindObject(f)->ls();
+//                        }
                      }
                   }
                   if (f.BeginsWith("rootmap")) {
@@ -1390,7 +1423,7 @@ Int_t TCint::LoadLibraryMap(const char *rootmapfile)
       // Add content of a specific rootmap file
       Bool_t ignore = fMapfile->IgnoreDuplicates(kFALSE);
       fMapfile->ReadFile(rootmapfile, kEnvGlobal);
-      fRootmapFiles->Add(new TObjString(rootmapfile));
+      fRootmapFiles->Add(new TNamed(gSystem->BaseName(rootmapfile),rootmapfile));
       fMapfile->IgnoreDuplicates(ignore);
    }
 
@@ -1888,8 +1921,7 @@ const char* TCint::GetSharedLibs()
             "exception.dll","stdexcept.dll","complex.dll","climits.dll",
             "libvectorDict.","libvectorboolDict.","liblistDict.","libdequeDict.",
             "libmapDict.", "libmap2Dict.","libsetDict.","libmultimapDict.","libmultimap2Dict.",
-            "libmultisetDict.","libstackDict.","libqueueDict.","libvalarrayDict.",
-            "libMetaTCint.","libMetaTCint7."
+            "libmultisetDict.","libstackDict.","libqueueDict.","libvalarrayDict."
          };
          static const unsigned int excludelistsize = sizeof(excludelist)/sizeof(excludelist[0]);
          static int excludelen[excludelistsize] = {-1};
@@ -2028,14 +2060,6 @@ const char *TCint::GetIncludePath()
       const char *pathname = path.Name();
       fIncludePath.Append(" -I\"").Append(pathname).Append("\" ");
    }
-#ifdef R__BUILDING_CINT7
-# ifdef ROOTINCDIR
-   fIncludePath.Append(" -I\"").Append(ROOTINCDIR);
-# else
-   fIncludePath.Append(" -I\"").Append(gRootDir).Append("/include");
-# endif
-   fIncludePath.Append("/cint7\" ");
-#endif
 
    return fIncludePath;
 }
@@ -2053,12 +2077,7 @@ const char *TCint::GetSTLIncludePath() const
 #endif
       if (!stldir.EndsWith("/"))
          stldir += '/';
-#if defined(R__BUILDING_CINT7) || (R__BUILDING_ONLYCINT7)
-      stldir += "cint7/stl";
-#else
-      // Default to Cint5's directory
       stldir += "cint/stl";
-#endif
    }
    return stldir;
 }

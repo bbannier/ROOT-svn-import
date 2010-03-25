@@ -229,10 +229,14 @@ Long64_t TEventIterUnit::GetNextEvent()
    if (fStop || fNum == 0)
       return -1;
 
+   if (fElem) fElem->ResetBit(TDSetElement::kNewPacket);
+
    while (fElem == 0 || fCurrent == 0) {
 
+      SafeDelete(fElem);
       if (!(fElem = fDSet->Next()))
          return -1;
+      fElem->SetBit(TDSetElement::kNewPacket);
 
       if (!fElem->TestBit(TDSetElement::kEmpty)) {
          Error("GetNextEvent", "data element must be set to kEmtpy");
@@ -296,6 +300,8 @@ Long64_t TEventIterObj::GetNextEvent()
 
    if (fStop || fNum == 0) return -1;
 
+   if (fElem) fElem->ResetBit(TDSetElement::kNewPacket);
+
    while ( fElem == 0 || fElemNum == 0 || fCur < fFirst-1 ) {
 
       if (gPerfStats && fFile) {
@@ -304,6 +310,7 @@ Long64_t TEventIterObj::GetNextEvent()
          fOldBytesRead = bytesRead;
       }
 
+      SafeDelete(fElem);
       fElem = fDSet->Next(fKeys->GetSize());
       if (fElem && fElem->GetEntryList()) {
          Error("GetNextEvent", "Entry- or event-list not available");
@@ -314,6 +321,7 @@ Long64_t TEventIterObj::GetNextEvent()
          fNum = 0;
          return -1;
       }
+      fElem->SetBit(TDSetElement::kNewPacket);
 
       Int_t r = LoadDir();
 
@@ -444,7 +452,9 @@ TEventIterTree::~TEventIterTree()
 {
    // Destructor
 
-   // The cache is deleted in here
+   // Delete the tree cache ...
+   SafeDelete(fTreeCache);
+   // ... and the remaining open files
    SafeDelete(fFileTrees);
 }
 
@@ -671,6 +681,8 @@ Long64_t TEventIterTree::GetNextEvent()
 
    Bool_t attach = kFALSE;
 
+   if (fElem) fElem->ResetBit(TDSetElement::kNewPacket);
+
    while ( fElem == 0 || fElemNum == 0 || fCur < fFirst-1 ) {
 
       if (gPerfStats && fTree) {
@@ -693,6 +705,7 @@ Long64_t TEventIterTree::GetNextEvent()
             fNum = 0;
             return -1;
          }
+         fElem->SetBit(TDSetElement::kNewPacket);
 
          TTree *newTree = GetTrees(fElem);
          if (newTree) {

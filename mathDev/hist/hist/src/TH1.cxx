@@ -1208,7 +1208,8 @@ bool CheckBinLimits(const TArrayD* h1Array, const TArrayD* h2Array)
 //___________________________________________________________________________
 bool TH1::CheckConsistency(const TH1* h1, const TH1* h2)
 {
-   // Check histogram compatibility   Int_t nbinsx = h1->GetNbinsX();
+   // Check histogram compatibility 
+   // returns kTRUE if number of bins and bin limits are identical
    Int_t nbinsx = h1->GetNbinsX();
    Int_t nbinsy = h1->GetNbinsY();
    Int_t nbinsz = h1->GetNbinsZ();
@@ -2557,6 +2558,8 @@ TH1 *TH1::DrawNormalized(Option_t *option, Double_t norm) const
    TH1 *h = (TH1*)Clone();
    h->SetBit(kCanDelete);
    h->Scale(norm/sum);
+   if (TMath::Abs(fMaximum+1111) > 1e-3) h->SetMaximum(fMaximum*norm/sum);
+   if (TMath::Abs(fMinimum+1111) > 1e-3) h->SetMinimum(fMinimum*norm/sum);
    h->Draw(option);
    TH1::AddDirectory(addStatus);
    return h;
@@ -2940,6 +2943,10 @@ void TH1::FillRandom(TH1 *h, Int_t ntimes)
 //        - Fill histogram channel
 //      ntimes random numbers are generated
 //
+//    SPECIAL CASE when the target histogram has the same binning as the source.
+//   in this case we simply use a poisson distribution where
+//   the mean value per bin = bincontent/integral.
+//
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-**-*-*-*-*-*-*-*
 
    if (!h) { Error("FillRandom", "Null histogram"); return; }
@@ -2947,8 +2954,23 @@ void TH1::FillRandom(TH1 *h, Int_t ntimes)
       Error("FillRandom", "Histograms with different dimensions"); return;
    }
 
-   if (h->ComputeIntegral() == 0) return;
-
+   //in case the target histogram has the same binning and ntimes much greater 
+   //than the number of bins we can use a fast method
+   Int_t nbins = GetNbinsX();
+   if (CheckConsistency(this,h) && ntimes > 10*nbins) {
+      Double_t sumw = h->GetSumOfWeights();
+      if (sumw == 0) return;
+      for (Int_t bin=1;bin<=nbins;bin++) {
+         Double_t mean = h->GetBinContent(bin)*ntimes/sumw;
+         Double_t cont = (Double_t)gRandom->Poisson(mean);
+         AddBinContent(bin,cont);
+         if (fSumw2.fN) fSumw2.fArray[bin] += cont;
+      }
+      SetEntries(ntimes);
+      return;
+   }
+      
+   if (h->ComputeIntegral() ==0) return;
    Int_t loop;
    Double_t x;
    for (loop=0;loop<ntimes;loop++) {
@@ -2961,14 +2983,14 @@ void TH1::FillRandom(TH1 *h, Int_t ntimes)
 //______________________________________________________________________________
 Int_t TH1::FindBin(Double_t x, Double_t y, Double_t z)
 {
-//   -*-*-*-*Return Global bin number corresponding to x,y,z*-*-*-*-*-*-*
-//           ===============================================
+//   Return Global bin number corresponding to x,y,z
+//   ===============================================
 //
 //      2-D and 3-D histograms are represented with a one dimensional
 //      structure.
 //      This has the advantage that all existing functions, such as
 //        GetBinContent, GetBinError, GetBinFunction work for all dimensions.
-//     See also TH1::GetBin
+//     See also TH1::GetBin, TAxis::FindBin and TAxis::FindFixBin
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    if (GetDimension() < 2) {
@@ -7945,6 +7967,8 @@ void TH1C::SetBinContent(Int_t bin, Double_t content)
    // the timedisplay option is set or the kCanRebin bit is set,
    // the number of bins is automatically doubled to accomodate the new bin
 
+   fEntries++;
+   fTsumw = 0;
    if (bin < 0) return;
    if (bin >= fNcells-1) {
       if (fXaxis.GetTimeDisplay()) {
@@ -7958,8 +7982,6 @@ void TH1C::SetBinContent(Int_t bin, Double_t content)
       }
    }
    fArray[bin] = Char_t (content);
-   fEntries++;
-   fTsumw = 0;
 }
 
 //______________________________________________________________________________
@@ -8188,6 +8210,8 @@ void TH1S::SetBinContent(Int_t bin, Double_t content)
    // the timedisplay option is set or the kCanRebin bit is set,
    // the number of bins is automatically doubled to accomodate the new bin
 
+   fEntries++;
+   fTsumw = 0;
    if (bin < 0) return;
    if (bin >= fNcells-1) {
       if (fXaxis.GetTimeDisplay()) {
@@ -8201,8 +8225,6 @@ void TH1S::SetBinContent(Int_t bin, Double_t content)
       }
    }
    fArray[bin] = Short_t (content);
-   fEntries++;
-   fTsumw = 0;
 }
 
 //______________________________________________________________________________
@@ -8430,6 +8452,8 @@ void TH1I::SetBinContent(Int_t bin, Double_t content)
    // the timedisplay option is set or the kCanRebin bit is set,
    // the number of bins is automatically doubled to accomodate the new bin
 
+   fEntries++;
+   fTsumw = 0;
    if (bin < 0) return;
    if (bin >= fNcells-1) {
       if (fXaxis.GetTimeDisplay()) {
@@ -8443,8 +8467,6 @@ void TH1I::SetBinContent(Int_t bin, Double_t content)
       }
    }
    fArray[bin] = Int_t (content);
-   fEntries++;
-   fTsumw = 0;
 }
 
 //______________________________________________________________________________
@@ -8668,6 +8690,8 @@ void TH1F::SetBinContent(Int_t bin, Double_t content)
    // the timedisplay option is set or the kCanRebin bit is set,
    // the number of bins is automatically doubled to accomodate the new bin
 
+   fEntries++;
+   fTsumw = 0;
    if (bin < 0) return;
    if (bin >= fNcells-1) {
       if (fXaxis.GetTimeDisplay()) {
@@ -8681,8 +8705,6 @@ void TH1F::SetBinContent(Int_t bin, Double_t content)
       }
    }
    fArray[bin] = Float_t (content);
-   fEntries++;
-   fTsumw = 0;
 }
 
 //______________________________________________________________________________
@@ -8907,6 +8929,8 @@ void TH1D::SetBinContent(Int_t bin, Double_t content)
    // the timedisplay option is set or the kCanRebin bit is set,
    // the number of bins is automatically doubled to accomodate the new bin
 
+   fEntries++;
+   fTsumw = 0;
    if (bin < 0) return;
    if (bin >= fNcells-1) {
       if (fXaxis.GetTimeDisplay()) {
@@ -8920,8 +8944,6 @@ void TH1D::SetBinContent(Int_t bin, Double_t content)
       }
    }
    fArray[bin] = content;
-   fEntries++;
-   fTsumw = 0;
 }
 
 //______________________________________________________________________________

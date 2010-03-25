@@ -485,7 +485,7 @@ TTree::TTree()
 , fMaxEntries(0)
 , fMaxEntryLoop(0)
 , fMaxVirtualSize(0)
-, fAutoSave(300000000)
+, fAutoSave( -300000000)
 , fAutoFlush(-30000000)
 , fEstimate(1000000)
 , fCacheSize(10000000)
@@ -547,7 +547,7 @@ TTree::TTree(const char* name, const char* title, Int_t splitlevel /* = 99 */)
 , fMaxEntries(0)
 , fMaxEntryLoop(0)
 , fMaxVirtualSize(0)
-, fAutoSave(300000000)
+, fAutoSave( -300000000)
 , fAutoFlush(-30000000)
 , fEstimate(1000000)
 , fCacheSize(10000000)
@@ -998,9 +998,12 @@ Long64_t TTree::AutoSave(Option_t* option)
    TString opt = option;
    opt.ToLower();
 
-   if (opt.Contains("flushbaskets")) FlushBaskets();
+   if (opt.Contains("flushbaskets")) {
+      if (gDebug > 0) printf("AutoSave:  calling FlushBaskets \n");
+      FlushBaskets();
+   }
 
-   fSavedBytes = fTotBytes;
+   fSavedBytes = fZipBytes;
 
    TKey *key = (TKey*)fDirectory->GetListOfKeys()->FindObject(GetName());
    Long64_t nbytes;
@@ -1916,12 +1919,7 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
    // is built unoptimized (data members are not combined).
    //
 
-   Bool_t optim = TStreamerInfo::CanOptimize();
-   if (splitlevel > 0) {
-      TStreamerInfo::Optimize(kFALSE);
-   }
-   TStreamerInfo* sinfo = BuildStreamerInfo(cl, objptr);
-   TStreamerInfo::Optimize(optim);
+   TStreamerInfo* sinfo = BuildStreamerInfo(cl, objptr, splitlevel==0);
 
    //
    // Do we have a final dot in our name?
@@ -2090,7 +2088,7 @@ Int_t TTree::BuildIndex(const char* majorname, const char* minorname /* = "0" */
 }
 
 //______________________________________________________________________________
-TStreamerInfo* TTree::BuildStreamerInfo(TClass* cl, void* pointer /* = 0 */)
+TStreamerInfo* TTree::BuildStreamerInfo(TClass* cl, void* pointer /* = 0 */, Bool_t canOptimize /* = kTRUE */ )
 {
    // Build StreamerInfo for class cl.
    // pointer is an optional argument that may contain a pointer to an object of cl.
@@ -2100,6 +2098,15 @@ TStreamerInfo* TTree::BuildStreamerInfo(TClass* cl, void* pointer /* = 0 */)
    }
    cl->BuildRealData(pointer);
    TStreamerInfo* sinfo = (TStreamerInfo*)cl->GetStreamerInfo(cl->GetClassVersion());
+
+   if (!canOptimize && (!sinfo->IsCompiled() || sinfo->IsOptimized()) ) {
+      // Streamer info has not yet been compiled.
+      //
+      // Optimizing does not work with splitting.
+      sinfo->SetBit(TVirtualStreamerInfo::kCannotOptimize);
+      sinfo->Compile();
+   }
+   
    // Create StreamerInfo for all base classes.
    TBaseClass* base = 0;
    TIter nextb(cl->GetListOfBases());
@@ -2108,7 +2115,7 @@ TStreamerInfo* TTree::BuildStreamerInfo(TClass* cl, void* pointer /* = 0 */)
          continue;
       }
       TClass* clm = TClass::GetClass(base->GetName());
-      BuildStreamerInfo(clm, pointer);
+      BuildStreamerInfo(clm, pointer, canOptimize);
    }
    if (fDirectory) {
       sinfo->ForceWriteInfo(fDirectory->GetFile());
@@ -2991,7 +2998,9 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  arguments. For example:
    //      - "TMath::BreitWigner(fPx,3,2)"
    //      - "event.GetHistogram().GetXaxis().GetXmax()"
-   //      - "event.GetTrack(fMax).GetPx()
+   //  Note: You can only pass expression that depend on the TTree's data
+   //  to static functions and you can only call non-static member function
+   //  with 'fixed' parameters.
    //
    //  selection is an expression with a combination of the columns.
    //  In a selection all the C++ operators are authorized.
@@ -3312,15 +3321,20 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  The option=prof is automatically selected in case of y:x>>pf
    //  where pf is an existing TProfile histogram.
    //
-   //     Making a parallel coordinates plot.
-   //     ===========================
+   //     Making a 5D plot using GL
+   //     =========================
+   //  If option GL5D is specified together with 5 variables, a 5D plot is drawn
+   //  using OpenGL. See $ROOTSYS/tutorials/tree/staff.C as example.
+   //
+   //     Making a parallel coordinates plot
+   //     ==================================
    //  In case of a 2-Dim or more expression with the option=para, one can generate
    //  a parallel coordinates plot. With that option, the number of dimensions is
    //  arbitrary. Giving more than 4 variables without the option=para or
    //  option=candle or option=goff will produce an error.
    //
-   //     Making a candle sticks chart.
-   //     ===========================
+   //     Making a candle sticks chart
+   //     ============================
    //  In case of a 2-Dim or more expression with the option=candle, one can generate
    //  a candle sticks chart. With that option, the number of dimensions is
    //  arbitrary. Giving more than 4 variables without the option=para or
@@ -3508,17 +3522,20 @@ Int_t TTree::Fill()
    //
    //        The baskets are flushed and the Tree header saved at regular intervals
    //         ---------------------------------------------------------------------
-   //   At regular intervals, when the amount of data written so far (fTotBytes) is
+   //   At regular intervals, when the amount of data written so far is
    //   greater than fAutoFlush (see SetAutoFlush) all the baskets are flushed to disk.
    //   This makes future reading faster as it guarantees that baskets belonging to nearby
    //   entries will be on the same disk region.
    //   When the first call to flush the baskets happen, we also take this opportunity
    //   to optimize the baskets buffers.
-   //   We also check if the number of bytes written is greater than fAutoSave (see SetAutoSave).
+   //   We also check if the amount of data written is greater than fAutoSave (see SetAutoSave).
    //   In this case we also write the Tree header. This makes the Tree recoverable up to this point
    //   in case the program writing the Tree crashes.
-   //   Note that the user can also decide to call FlushBaskets and AutoSave in her event loop
-   //   on the base of the number of events written instead of the number of bytes written.
+   //   The decisions to FlushBaskets and Auto Save can be made based either on the number
+   //   of bytes written (fAutoFlush and fAutoSave negative) or on the number of entries
+   //   written (fAutoFlush and fAutoSave positive).
+   //   Note that the user can decide to call FlushBaskets and AutoSave in her event loop
+   //   base on the number of events written instead of the number of bytes written.
    //
    //   Note that calling FlushBaskets too often increases the IO time.
    //   Note that calling AutoSave too often increases the IO time and also the file size.
@@ -3544,7 +3561,7 @@ Int_t TTree::Fill()
       Int_t nwrite = branch->Fill();
       if (nwrite < 0)  {
          if (nerror < 2) {
-            Error("Fill", "Failed filling branch:%s.%s, nbytes=%d\n"
+            Error("Fill", "Failed filling branch:%s.%s, nbytes=%d, entry=%lld\n"
                   " This error is symptomatic of a Tree created as a memory-resident Tree\n"
                   " Instead of doing:\n"
                   "    TTree *T = new TTree(...)\n"
@@ -3552,9 +3569,9 @@ Int_t TTree::Fill()
                   " you should do:\n"
                   "    TFile *f = new TFile(...)\n"
                   "    TTree *T = new TTree(...)",
-                  GetName(), branch->GetName(), nwrite);
+                  GetName(), branch->GetName(), nwrite,fEntries+1);
          } else {
-            Error("Fill", "Failed filling branch:%s.%s, nbytes=%d", GetName(), branch->GetName(), nwrite);
+            Error("Fill", "Failed filling branch:%s.%s, nbytes=%d, entry=%lld", GetName(), branch->GetName(), nwrite,fEntries+1);
          }
          ++nerror;
       } else {
@@ -3568,34 +3585,45 @@ Int_t TTree::Fill()
    if (fEntries > fMaxEntries) {
       KeepCircular();
    }
-   if (fAutoFlush < 0) {
-      // Is it time to flush, autosave or optimize baskets?
-      // case when -fAutoFlush is the number of bytes triggering the FlushBaskets
-      if ((fZipBytes - fFlushedBytes) > -fAutoFlush) {
-         if (fFlushedBytes <= 0) {
-            //we take the opportunity to Optimizebaskets at this point (it calls FlushBaskets)
-            OptimizeBaskets(fTotBytes,1,"");
+   if (gDebug > 0) printf("TTree::Fill - A:  %d %lld %lld %lld %lld %lld %lld \n",
+       nbytes, fEntries, fAutoFlush,fAutoSave,fZipBytes,fFlushedBytes,fSavedBytes);
+
+   if (fAutoFlush != 0 || fAutoSave != 0) {
+      // Is it time to flush or autosave baskets?
+      if (fFlushedBytes == 0) {
+         // Decision can be based initially either on the number of bytes
+         // or the number of entries written.
+         if ((fAutoFlush<0 && fZipBytes > -fAutoFlush)  ||
+             (fAutoSave <0 && fZipBytes > -fAutoSave )  ||
+             (fAutoFlush>0 && fEntries%TMath::Max((Long64_t)1,fAutoFlush) == 0) ||
+             (fAutoSave >0 && fEntries%TMath::Max((Long64_t)1,fAutoSave)  == 0) ) {
+
+      	    //we take the opportunity to Optimizebaskets at this point (it calls FlushBaskets)
+      	    OptimizeBaskets(fTotBytes,1,"");
             if (gDebug > 0) printf("OptimizeBaskets called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
+            fFlushedBytes = fZipBytes;
+      	    fAutoFlush    = fEntries;  // Use test on entries rather than bytes
+                                       // subsequently in run
+            if (fAutoSave < 0) {
+      	       // Set fAutoSave to the largest integer multiple of
+      	       // fAutoFlush events such that fAutoSave*fFlushedBytes
+      	       // < (minus the input value of fAutoSave)
+      	       fAutoSave =  TMath::Max( fAutoFlush, fEntries*((-fAutoSave/fZipBytes)/fEntries));
+            } else if(fAutoSave > 0) {
+      	       fAutoSave = fEntries*(fAutoSave/fEntries);
+      	    }
+      	    if (fAutoSave!=0 && fEntries >= fAutoSave) AutoSave();    // FlushBaskets not called in AutoSave
+      	    if (gDebug > 0) printf("TTree::Fill:  First AutoFlush.  fAutoFlush = %lld, fAutoSave = %lld\n", fAutoFlush, fAutoSave);
          }
-         fFlushedBytes = fZipBytes;
-         fAutoFlush    = fEntries;
-      }
-   } else if (fAutoFlush > 0) {
-      // Is it time to flush, autosave or optimize baskets?
-      // case when fAutoFlush is the number of entries triggering the FlushBaskets
-      if (fEntries > 1 && fEntries%fAutoFlush == 0) {
-         if (fFlushedBytes <= 0) {
-            //we take the opportunity to Optimizebaskets at this point (it calls FlushBaskets)
-            OptimizeBaskets(fTotBytes,1,"");
-            if (gDebug > 0) printf("OptimizeBaskets called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
-         } else if ((fZipBytes - fSavedBytes) > fAutoSave) {
-            //we have read an AutoSave point. It flushes baskets and save the Tree header
-            AutoSave();
-            if (gDebug > 0) printf("AutoSave called at entry %lld, fZipBytes=%lld, fSavedBytes=%lld\n",fEntries,fZipBytes,fSavedBytes);
+      } else if (fEntries > 1 && fEntries%fAutoFlush == 0) {
+         if (fEntries%fAutoSave == 0) {
+       	    //We are at an AutoSave point. AutoSave flushes baskets and saves the Tree header
+      	    AutoSave("flushbaskets");
+      	    if (gDebug > 0) printf("AutoSave called at entry %lld, fZipBytes=%lld, fSavedBytes=%lld\n",fEntries,fZipBytes,fSavedBytes);
          } else {
-            //we only FlushBaskets
+      	    //We only FlushBaskets
             FlushBaskets();
-            if (gDebug > 0) printf("FlushBasket called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
+      	    if (gDebug > 0) printf("FlushBasket called at entry %lld, fZipBytes=%lld, fFlushedBytes=%lld\n",fEntries,fZipBytes,fFlushedBytes);
          }
          fFlushedBytes = fZipBytes;
       }
@@ -5187,6 +5215,7 @@ void TTree::OptimizeBaskets(Int_t maxMemory, Float_t minComp, Option_t *option)
    TObjArray *leaves = this->GetListOfLeaves();
    Int_t nleaves = leaves->GetEntries();
    Double_t treeSize = (Double_t)this->GetTotBytes();
+   
    if (nleaves == 0 || treeSize == 0) {
       // We're being called too early, we really have nothing to do ...
       return;
@@ -5218,10 +5247,12 @@ void TTree::OptimizeBaskets(Int_t maxMemory, Float_t minComp, Option_t *option)
             continue;
          }
          Double_t bsize = oldBsize*idealFactor*memFactor; //bsize can be very large !
+         if (bsize < 0) bsize = bmax;
          if (bsize > bmax) bsize = bmax;
          Int_t newBsize = Int_t(bsize);
          newBsize = newBsize - newBsize%512;
          if (newBsize < bmin) newBsize = bmin;
+         if (newBsize > 10000000) newBsize = bmax;
          if (pass) {
             if (pDebug) printf("Changing buffer size from %6d to %6d bytes for %s\n",oldBsize,newBsize,branch->GetName());
             branch->SetBasketSize(newBsize);
@@ -5238,6 +5269,7 @@ void TTree::OptimizeBaskets(Int_t maxMemory, Float_t minComp, Option_t *option)
          }
       }
       memFactor = Double_t(maxMemory)/Double_t(newMemsize);
+      if (memFactor > 100) memFactor = 100;
       bmin = Int_t(bmin*memFactor);
       bmax = Int_t(bmax*memFactor);
    }
@@ -5603,6 +5635,10 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
          } else {
             desc = Form("%s/%s",bdname,olddesc.Data());
          }
+         char *bracket = strchr(bdname,'[');
+         if (bracket) {
+            *bracket = 0;
+         }
          branch = new TBranch(this,bdname,address,desc.Data(),32000);
          if (branch->IsZombie()) {
             delete branch;
@@ -5623,7 +5659,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
    nbranches = fBranches.GetEntries();
    Int_t status = 1;
    Long64_t nlines = 0;
-   while(status > 0) {
+   while(1) {
 
       while (isspace(in.peek())) {
          in.get();
@@ -5634,13 +5670,19 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
             branch = (TBranch*)fBranches.At(i);
             TLeaf *leaf = (TLeaf*)branch->GetListOfLeaves()->At(0);
             leaf->ReadValue(in);
+            if (in.eof()) return nlines;
             status = in.good();
-            if (status <= 0) break;
+            if (status <= 0) {
+               Warning("ReadFile","Illegal value after line %d\n",nlines);
+               in.clear();
+               break;
+            }
          }
-         if (status <= 0) break;
          //we are now ready to fill the tree
-         Fill();
-         nlines++;
+         if (status) {
+            Fill();
+            nlines++;
+         }
       }
       in.ignore(8192,'\n');
    }
@@ -5880,9 +5922,8 @@ void TTree::SetAutoFlush(Long64_t autof)
    // Calling this function with autof<0 is interesting when it is hard to estimate
    // the size of one entry. This value is also independent of the Tree.
    //
-   // When calling SetAutoFlush with no arguments, the
-   // default value is -30000000, ie that the first AutoFlush will be done when
-   // 30 MBytes of data are written to the file.
+   // The Tree is initialized with fAutoFlush=-30000000, ie that, by default,
+   // the first AutoFlush will be done when 30 MBytes of data are written to the file.
    //
    //     CASE 3 : autof = 0
    //     ------------------

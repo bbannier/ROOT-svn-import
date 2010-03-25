@@ -116,6 +116,11 @@ void G__remove_setup_func(const char* libname)
 //______________________________________________________________________________
 int G__call_setup_funcs()
 {
+   if (!G__ifunc.inited) {
+      // Veto any dictionary uploading until at least G__ifunc is initialized
+      // (because it's initialization will be wipe out 'some' of the work done.
+      return 0;
+   }
    int k = 0;
    G__var_array* store_p_local = G__p_local; // changed by setupfuncs
    G__LockCriticalSection();
@@ -840,7 +845,10 @@ int G__main(int argc, char** argv)
             if (
                -1 == G__shl_load(optarg)
             ) {
-               if (G__key != 0) system("key .cint_key -l execute");
+               if (G__key != 0) {
+                  if (system("key .cint_key -l execute"))
+                     G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+               }
                G__scratch_all();
                return(EXIT_FAILURE);
             }
@@ -926,7 +934,9 @@ int G__main(int argc, char** argv)
 #endif
             break;
          case 'k': /* user function key */
-            system("key .cint_key -l pause");
+            if (system("key .cint_key -l pause")) {
+               G__fprinterr(G__serr, "Error running \"key .cint_key -l pause\"\n");
+            }
             G__key = 1;
             break;
          case 'c': /* global compile */
@@ -1015,7 +1025,11 @@ int G__main(int argc, char** argv)
             break;
          case 'r': /* revision */
             G__revprint(G__sout);
-            if (G__key != 0) system("key .cint_key -l execute");
+            if (G__key != 0) {
+               if (system("key .cint_key -l execute")) {
+                  G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+               }
+            }
             return(EXIT_SUCCESS);
             /* break; */
          case '-':
@@ -1096,7 +1110,9 @@ int G__main(int argc, char** argv)
             G__more(G__sout, "  $ cint -S prog.c main.c\n");
             G__more(G__sout, "\n");
             if (G__key) {
-               system("key .cint_key -l execute");
+               if (system("key .cint_key -l execute")) {
+                  G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+               }
             }
 #endif
             return EXIT_FAILURE;
@@ -1648,7 +1664,9 @@ int G__init_globals()
    G__globalcomp = G__NOLINK;  /* make compiled func's global table */
    G__store_globalcomp = G__NOLINK;
    G__globalvarpointer = G__PVOID; /* make compiled func's global table */
-   G__nfile = 0;
+   // This is already set to zero by the compiler __and__ it may already have incremented for
+   // some library load:
+   //    G__nfile = 0;
    G__key = 0;              /* user function key on/off */
 
    G__xfile[0] = '\0';

@@ -24,9 +24,6 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TProof
-#include "TProof.h"
-#endif
 #ifndef ROOT_TProofMgr
 #include "TProofMgr.h"
 #endif
@@ -91,6 +88,7 @@ class TVirtualMutex;
 class TFileCollection;
 class TMap;
 class TDataSetManager;
+class TMacro;
 
 // protocol changes:
 // 1 -> 2: new arguments for Process() command, option added
@@ -120,9 +118,10 @@ class TDataSetManager;
 // 24 -> 25: Handling of 'data' dir; group information
 // 25 -> 26: Use new TProofProgressInfo class
 // 26 -> 27: Use new file for updating the session status
+// 27 -> 28: Support for multi-datasets, fix global package directories, fix AskStatistics,
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 27;            // protocol version number
+const Int_t       kPROOF_Protocol        = 28;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -248,9 +247,9 @@ private:
 
    TSlave      *fMerger;         // Slave that acts as merger
    Int_t        fPort;           // Port number, on which it accepts outputs from other workers
-   Int_t        fMergedObjects;  // Total number of objects it must accept from other workers 
+   Int_t        fMergedObjects;  // Total number of objects it must accept from other workers
                                  // (-1 == not set yet)
-   Int_t        fWorkersToMerge; // Number of workers that are merged on this merger 
+   Int_t        fWorkersToMerge; // Number of workers that are merged on this merger
                                  // (does not change during time)
    Int_t        fMergedWorkers;  // Current number of already merged workers
                                  // (does change during time as workers are being merged)
@@ -258,8 +257,10 @@ private:
    TList       *fWorkers;        // List of already assigned workers
    Bool_t       fIsActive;       // Merger state
 
-public:
+   TMergerInfo(const TMergerInfo&); // Not implemented
+   TMergerInfo& operator=(const TMergerInfo&); // Not implemented
 
+public:
    TMergerInfo(TSlave *t, Int_t port, Int_t forHowManyWorkers) :
                fMerger(t), fPort(port), fMergedObjects(0), fWorkersToMerge(forHowManyWorkers),
                fMergedWorkers(0), fWorkers(0), fIsActive(kTRUE) { }
@@ -279,7 +280,7 @@ public:
    void        AddMergedObjects(Int_t objects) { fMergedObjects += objects; }
 
    Bool_t      AreAllWorkersAssigned();
-   Bool_t      AreAllWorkersMerged();	
+   Bool_t      AreAllWorkersMerged();
 
    void Deactivate() { fIsActive = kFALSE; }
    Bool_t      IsActive() { return fIsActive; }
@@ -300,6 +301,7 @@ public:
    const char  *Export() { fExp.Form("%c (%d workers still sending)   ", fgCr[fIdx], fNWrks);
                            return fExp.Data(); }
    void         DecreaseNWrks() { fNWrks--; }
+   void         IncreaseNWrks() { fNWrks++; }
    void         IncreaseIdx() { fIdx++; if (fIdx == 4) fIdx = 0; }
    void         Reset(Int_t n = -1) { fIdx = -1; SetNWrks(n); }
    void         SetNWrks(Int_t n) { fNWrks = n; }
@@ -528,7 +530,7 @@ private:
    static TList   *fgProofEnvList;   // List of TNameds defining environment
                                      // variables to pass to proofserv
 
-   Bool_t          fMergersSet;      // Indicates, if the following variables have been initialized properly                               
+   Bool_t          fMergersSet;      // Indicates, if the following variables have been initialized properly
    Int_t           fMergersCount;
    Int_t           fWorkersToMerge;  // Current total number of workers, which have not been yet assigned to any merger
    Int_t           fLastAssignedMerger;
@@ -676,9 +678,10 @@ private:
 
 protected:
    TProof(); // For derived classes to use
-   Int_t           Init(const char *masterurl, const char *conffile,
-                        const char *confdir, Int_t loglevel,
-                        const char *alias = 0);
+   void  InitMembers();
+   Int_t Init(const char *masterurl, const char *conffile,
+              const char *confdir, Int_t loglevel,
+              const char *alias = 0);
    virtual Bool_t  StartSlaves(Bool_t attach = kFALSE);
    Int_t AddWorkers(TList *wrks);
    Int_t RemoveWorkers(TList *wrks);
@@ -857,6 +860,7 @@ public:
 
    void        SetRealTimeLog(Bool_t on = kTRUE);
 
+   void        GetStatistics(Bool_t verbose = kFALSE);
    Long64_t    GetBytesRead() const { return fBytesRead; }
    Float_t     GetRealTime() const { return fRealTime; }
    Float_t     GetCpuTime() const { return fCpuTime; }
@@ -935,6 +939,7 @@ public:
    void        SendDataSetStatus(const char *msg, UInt_t n, UInt_t tot, Bool_t st);
 
    void        GetLog(Int_t start = -1, Int_t end = -1);
+   TMacro     *GetLastLog();
    void        PutLog(TQueryResult *qr);
    void        ShowLog(Int_t qry = -1);
    void        ShowLog(const char *queryref);

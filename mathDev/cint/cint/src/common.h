@@ -729,14 +729,6 @@ struct G__ConstStringList {
   struct G__ConstStringList *prev;
 };
 
-#ifdef G__SECURITY
-#ifdef G__64BIT
-typedef unsigned int G__UINT32 ;
-#else
-typedef unsigned long G__UINT32 ;
-#endif
-#endif
-
 typedef void (*G__DLLINIT)();
 #define G__NONCINTHDR   0x01
 #define G__CINTHDR      0x10
@@ -990,8 +982,7 @@ struct G__params {
    : fparams(0)
    {
    }
-   ~G__params()
-   {
+   void reset() {
       struct G__paramfunc* params = fparams;
       struct G__paramfunc* next = 0;
       for (; params; params = next) {
@@ -1013,7 +1004,11 @@ struct G__params {
          params->next = 0;
          free(params);
       }
-      fparams = 0;
+      fparams = 0;      
+   }
+   ~G__params()
+   {
+      reset();
    }
    struct G__paramfunc* operator[](int idx)
    {
@@ -1053,8 +1048,14 @@ struct G__ifunc_table {
    }
 #endif
 };
-
 struct G__ifunc_table_internal {
+#ifdef __cplusplus
+   G__ifunc_table_internal() : inited(true) {};
+#endif
+   
+  /* true if the constructor was run */
+  char inited;
+   
   /* number of interpreted function */
   int allifunc;
 

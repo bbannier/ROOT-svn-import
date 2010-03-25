@@ -19,6 +19,8 @@
 #include "TSchemaRule.h"
 #include "TSchemaRuleSet.h"
 #include "TError.h"
+#include "TVirtualMutex.h"
+#include "TInterpreter.h"
 
 namespace ROOT {
 
@@ -37,7 +39,7 @@ namespace ROOT {
    TGenericClassInfo::TGenericClassInfo(const char *fullClassname,
                                         const char *declFileName, Int_t declFileLine,
                                         const type_info &info, const TInitBehavior  *action,
-                                        void *showmembers, VoidFuncPtr_t dictionary,
+                                        ShowMembersFunc_t showmembers, VoidFuncPtr_t dictionary,
                                         TVirtualIsAProxy *isa, Int_t pragmabits, Int_t sizof)
       : fAction(action), fClass(0), fClassName(fullClassname),
         fDeclFileName(declFileName), fDeclFileLine(declFileLine),
@@ -57,7 +59,7 @@ namespace ROOT {
    TGenericClassInfo::TGenericClassInfo(const char *fullClassname, Int_t version,
                                         const char *declFileName, Int_t declFileLine,
                                         const type_info &info, const TInitBehavior  *action,
-                                        void* showmembers,  VoidFuncPtr_t dictionary,
+                                        ShowMembersFunc_t showmembers,  VoidFuncPtr_t dictionary,
                                         TVirtualIsAProxy *isa, Int_t pragmabits, Int_t sizof)
       : fAction(action), fClass(0), fClassName(fullClassname),
         fDeclFileName(declFileName), fDeclFileLine(declFileLine),
@@ -204,12 +206,13 @@ namespace ROOT {
    TClass *TGenericClassInfo::GetClass()
    {
       // Generate and return the TClass object.
+      R__LOCKGUARD2(gCINTMutex);
       if (!fClass && fAction) {
          fClass = GetAction().CreateClass(GetClassName(),
                                           GetVersion(),
                                           GetInfo(),
                                           GetIsA(),
-                                          (ShowMembersFunc_t)GetShowMembers(),
+                                          GetShowMembers(),
                                           GetDeclFileName(),
                                           GetImplFileName(),
                                           GetDeclFileLine(),
@@ -242,7 +245,7 @@ namespace ROOT {
 
    //---------------------------------------------------------------------------
    void TGenericClassInfo::CreateRuleSet( std::vector<TSchemaHelper>& vect,
-                                              Bool_t ProcessReadRules )
+                                          Bool_t ProcessReadRules )
    {
       // Attach the schema evolution information to TClassObject
 
@@ -263,6 +266,7 @@ namespace ROOT {
       for( it = vect.begin(); it != vect.end(); ++it ) {
          rule = new TSchemaRule();
          rule->SetTarget( it->fTarget );
+         rule->SetTargetClass( fClass->GetName() );
          rule->SetSourceClass( it->fSourceClass );
          rule->SetSource( it->fSource );
          rule->SetCode( it->fCode );
@@ -270,6 +274,7 @@ namespace ROOT {
          rule->SetChecksum( it->fChecksum );
          rule->SetEmbed( it->fEmbed );
          rule->SetInclude( it->fInclude );
+         rule->SetAttributes( it->fAttributes );
 
          if( ProcessReadRules ) {
             rule->SetRuleType( TSchemaRule::kReadRule );
@@ -330,7 +335,7 @@ namespace ROOT {
       return fReadRules;
    }
 
-   void *TGenericClassInfo::GetShowMembers() const
+   ShowMembersFunc_t TGenericClassInfo::GetShowMembers() const
    {
       // Return the point of the ShowMembers function
       return fShowMembers;

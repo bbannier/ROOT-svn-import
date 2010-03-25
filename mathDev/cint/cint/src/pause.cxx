@@ -18,6 +18,8 @@
 #include "DataMemberHandle.h"
 #include "floatutilities.h"
 
+FILE* G__sout_keeper;
+
 extern "C" {
 
 /* 1723 is not needed because freopen deals with both stdout and cout */
@@ -1194,9 +1196,16 @@ static void G__redirectoutput(char *com
             switch (mode) {
                case G__NUM_STDOUT:  /* stdout */
                case G__NUM_STDBOTH:  /* stdout and stderr */
+               {
                   *psout = G__sout;
 #ifndef G__WIN32
-                  if (!strlen(stdoutsav)) strcpy(stdoutsav, ttyname(STDOUT_FILENO));
+                  if (!strlen(stdoutsav)) {
+                     const char *stdout_ttyname = ttyname(STDOUT_FILENO);
+                     if (stdout_ttyname) strcpy(stdoutsav, stdout_ttyname );
+                     else {
+                        G__fprinterr(G__serr, "Error: stdout was already redirected to a file, it will be redirected but we will not be able to undo this redirection!\n");
+                     }
+                  }
 #endif
                   G__sout = freopen(filename, openmode, G__sout);
                   if (!G__sout) {
@@ -1210,10 +1219,18 @@ static void G__redirectoutput(char *com
                      G__redirect_on();
                   if (mode == G__NUM_STDOUT)
                      break;
+               }
                case G__NUM_STDERR: /* stderr */
+               {
                   *pserr = G__serr;
 #ifndef G__WIN32
-                  if (!strlen(stderrsav)) strcpy(stderrsav, ttyname(STDERR_FILENO));
+                  if (!strlen(stderrsav)) {
+                     const char *stderr_ttyname = ttyname(STDERR_FILENO);
+                     if (stderr_ttyname) strcpy(stderrsav, stderr_ttyname);
+                     else {
+                        G__fprinterr(G__serr, "Error: stderr was already redirected to a file, it will be redirected but we will not be able to undo this redirection!\n");
+                     }
+                  }
 #endif
                   G__serr = freopen(filename, openmode, G__serr);
                   if (!G__serr) {
@@ -1225,6 +1242,7 @@ static void G__redirectoutput(char *com
                   }
                   /*DEBUG G__dumpfile = G__serr; */
                   break;
+               }
             }
 #else
             switch (mode) {
@@ -1309,11 +1327,16 @@ static void G__unredirectoutput(FILE **sout, FILE **serr, FILE **sin, const char
 #ifdef G__REDIRECTIO
    G__redirect_off();
    if (*sout) {
+      if (G__sout_keeper) {
+         fclose(G__sout);
+         G__sout = G__sout_keeper;
+      } else {
 #ifdef G__WIN32
       G__sout = freopen("CONOUT$", "w", G__sout);
 #else
       G__sout = freopen(stdoutsav, "w", G__sout);
 #endif
+      }
       *sout = (FILE*)NULL;
    }
    if (*serr) {
@@ -1828,13 +1851,17 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
             strncmp("bash", com, 4) == 0 ||
             strncmp("man", com, 3) == 0 ||
             strncmp("type", com, 4) == 0) {
-      system(com);
+      int ret = system(com);
+      if (rslt) G__letint(rslt, 'i', ret);
    }
    else if (strncmp("rm", com, 2) == 0 ||
             strncmp("del", com, 4) == 0 ||
             strncmp("rmdir", com, 5) == 0) {
       G__FastAllocString localbuf(G__input("Are you sure(y/n)? "));
-      if (tolower(localbuf[0]) == 'y') system(com);
+      if (tolower(localbuf[0]) == 'y') {
+         int ret = system(com);
+         if (rslt) G__letint(rslt, 'i', ret);
+      }
       else fprintf(G__sout, "aborted\n");
    }
    else if (strncmp("set", com, 3) == 0 ||
@@ -1851,7 +1878,8 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
 #endif
       }
       else {
-         system(com);
+         int ret = system(com);
+         if (rslt) G__letint(rslt, 'i', ret);
       }
    }
    else if (strncmp("cd", com, 2) == 0) {
@@ -2625,13 +2653,15 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
        *******************************************************/
       G__FastAllocString combuf(strlen(string) + 30);
       combuf.Format("sh -I -c %s", string);
-      system(combuf);
+      int ret = system(combuf);
+      if (rslt) G__letint(rslt, 'i', ret);
    }
    else if (strncmp("!", com, 1) == 0) {
       /*******************************************************
        * Execute shell command
        *******************************************************/
-      system(string);
+      int ret = system(string);
+      if (rslt) G__letint(rslt, 'i', ret);
    }
    else if (strncmp("a", com, 1) == 0) {
       /*******************************************************
@@ -3091,12 +3121,14 @@ vcommand:
          if (command[temp] == '\0') {
             if ('\0' == G__tempc[0]) G__tmpnam(G__tempc); /* E command, rare case */
             syscom.Format("%s %s", editor(), G__tempc);
-            system(syscom);
+            int ret = system(syscom);
+            if (rslt) G__letint(rslt, 'i', ret);
             syscom = G__tempc;
          }
          else {
             syscom.Format("%s %s", editor(), command + temp);
-            system(syscom);
+            int ret = system(syscom);
+            if (rslt) G__letint(rslt, 'i', ret);
             syscom = command + temp;
          }
       }
