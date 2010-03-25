@@ -416,7 +416,7 @@
 #      define R__PLACEMENTDELETE /* supports overloading placement delete */
 #      define R__ANSISTREAM      /* ANSI C++ Standard Library conformant */
 #   endif
-#   if __GNUC__ > 4 || ( __GNUC__ == 4 && __GNUC_MINOR > 1)
+#   if __GNUC__ > 4 || ( __GNUC__ == 4 && __GNUC_MINOR__ > 1)
 #      define R__PRAGMA_DIAGNOSTIC
 #   endif
 #endif
@@ -545,14 +545,6 @@
 #   define SafeDelete(p) { if (p) { delete p; p = 0; } }
 #else
 #   define SafeDelete(p) { delete p; p = 0; }
-#endif
-
-#if defined(R__WIN32) || defined(__CINT__)
-#define R__LL(longlong) longlong
-#define R__ULL(ulonglong) ulonglong
-#else
-#define R__LL(longlong) _NAME2_(longlong,LL)
-#define R__ULL(ulonglong) _NAME2_(ulonglong,ULL)
 #endif
 
 #endif

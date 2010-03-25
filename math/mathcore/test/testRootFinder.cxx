@@ -82,8 +82,6 @@ int testRootFinder(int testcase = 0) {
    double root;
    int status = 0;
 
-   double tol = 1.E-14;
-   int maxiter = 100;
 
    ROOT::Math::Functor1D    *func = new ROOT::Math::Functor1D (&myfunc);
    
@@ -92,7 +90,7 @@ int testRootFinder(int testcase = 0) {
    for (int i = 0; i < iterTest; ++i)
    {
       //brf.SetFunction( *func, 0, 10 ); // Just to make a fair comparision!
-      root = f1->GetX(0, xmin, xmax,tol,maxiter);
+      root = f1->GetX(0, xmin, xmax);
    }
    timer.Stop();
    std::cout << "\nTF1 Stats:" << std::endl;
@@ -103,7 +101,7 @@ int testRootFinder(int testcase = 0) {
    for (int i = 0; i < iterTest; ++i)
    {
       brf.SetFunction( *func, xmin, xmax );
-      bool ret = brf.Solve(maxiter,tol,tol);
+      bool ret = brf.Solve(100,1E-15,1.E-15);
       if (!ret && i == 0) std::cout << "Error returned from RootFinder::Solve BRENT " << std::endl;
       root = brf.Root();
    }
@@ -116,7 +114,7 @@ int testRootFinder(int testcase = 0) {
    for (int i = 0; i < iterTest; ++i)
    {
       grf.SetFunction( *func, xmin, xmax );
-      bool ret = grf.Solve(maxiter,tol,tol);
+      bool ret = grf.Solve();
       root = grf.Root();
       if (!ret && i == 0) std::cout << "Error returned from RootFinder::Solve GSL_BRENT" << std::endl;
    }

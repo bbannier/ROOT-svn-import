@@ -1181,14 +1181,14 @@ void TCanvas::HandleInput(EEventType event, Int_t px, Int_t py)
       break;
 
    case kButton1Motion:
-   case 8://8 == kButton1Motion + shift modifier
+   case kButton1ShiftMotion: //8 == kButton1Motion + shift modifier
       if (fSelected) {
          gPad = fSelectedPad;
 
          fSelected->ExecuteEvent(event, px, py);
          gVirtualX->Update();
 
-         {
+         if (!fSelected->InheritsFrom("TAxis")) {
             Bool_t resize = kFALSE;
             if (fSelected->InheritsFrom(TBox::Class()))
                resize = ((TBox*)fSelected)->IsBeingResized();

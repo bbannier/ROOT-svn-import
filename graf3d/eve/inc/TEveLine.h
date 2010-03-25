@@ -61,13 +61,15 @@ public:
    TEveVector GetLineStart() const;
    TEveVector GetLineEnd()   const;
 
+   virtual const TGPicture* GetListTreeIcon(Bool_t open=kFALSE);
+
    virtual void CopyVizParams(const TEveElement* el);
    virtual void WriteVizParams(ostream& out, const TString& var);
 
    virtual TClass* ProjectedClass(const TEveProjection* p) const;
 
-   static Bool_t GetDefaultSmooth()       { return fgDefaultSmooth; }
-   static void SetDefaultSmooth(Bool_t r) { fgDefaultSmooth = r;    }
+   static Bool_t GetDefaultSmooth();
+   static void   SetDefaultSmooth(Bool_t r);
 
    ClassDef(TEveLine, 0); // An arbitrary polyline with fixed line and marker attributes.
 };

@@ -59,6 +59,12 @@
 
 #include "RConfig.h"
 
+#ifdef R__LINUX
+// for posix_fadvise
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
+#endif
+#endif
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -91,6 +97,7 @@
 #include "TRegexp.h"
 #include "TROOT.h"
 #include "TStreamerInfo.h"
+#include "TStreamerElement.h"
 #include "TSystem.h"
 #include "TTimeStamp.h"
 #include "TVirtualPerfStats.h"
@@ -103,6 +110,9 @@
 #include "TStopwatch.h"
 #include "compiledata.h"
 #include <cmath>
+#include <set>
+#include "TSchemaRule.h"
+#include "TSchemaRuleSet.h"
 
 TFile *gFile;                 //Pointer to current file
 
@@ -1357,7 +1367,17 @@ Bool_t TFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
    // Note that for nbuf=1, this call is equivalent to TFile::ReafBuffer.
    // This function is overloaded by TNetFile, TWebFile, etc.
    // Returns kTRUE in case of failure.
-   
+
+   // called with buf=0, from TFileCacheRead to pass list of readahead buffers
+   if (!buf) {
+      for (Int_t j = 0; j < nbuf; j++) {
+         if (ReadBufferAsync(pos[j], len[j])) {
+             return kTRUE;
+         }
+      }
+      return kFALSE;
+   }
+
    Int_t k = 0;
    Bool_t result = kTRUE;
    TFileCacheRead *old = fCacheRead;
@@ -1402,7 +1422,7 @@ Bool_t TFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
          }
          curbegin = pos[i];
       }
-   } 
+   }
    if (buf2) delete [] buf2;
    fCacheRead = old;
    return result;
@@ -2092,6 +2112,8 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    //                   Existing classes with the same name are replaced by the
    //                   new definition. If the directory dirname doest not exist,
    //                   same effect as "new".
+   // If option = "genreflex", then use genreflex rather than rootcint to generate
+   //                   the dictionary.
    // If, in addition to one of the 3 above options, the option "+" is specified,
    // the function will generate:
    //   - a script called MAKEP to build the shared lib
@@ -2161,23 +2183,11 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       }
       gSystem->mkdir(dirname);
    }
+   Bool_t genreflex = opt.Contains("genreflex");
 
    // we are now ready to generate the classes
    // loop on all TStreamerInfo
-   TList *list = 0;
-   if (fSeekInfo) {
-      TKey *key = new TKey(this);
-      char *buffer = new char[fNbytesInfo+1];
-      char *buf    = buffer;
-      Seek(fSeekInfo);
-      ReadBuffer(buf,fNbytesInfo);
-      key->ReadKeyBuffer(buf);
-      list = (TList*)key->ReadObj();
-      delete [] buffer;
-      delete key;
-   } else {
-      list = (TList*)Get("StreamerInfo"); //for versions 2.26 (never released)
-   }
+   TList *list = (TList*)GetStreamerInfoCache()->Clone();
    if (list == 0) {
       Error("MakeProject","file %s has no StreamerInfo", GetName());
       delete [] path;
@@ -2188,8 +2198,31 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    TString spath; spath.Form("%s/%sProjectSource.cxx",dirname,dirname);
    FILE *sfp = fopen(spath.Data(),"w");
    fprintf(sfp, "#include \"%sProjectHeaders.h\"\n\n",dirname );
-   fprintf(sfp, "#include \"%sLinkDef.h\"\n\n",dirname );
+   if (!genreflex) fprintf(sfp, "#include \"%sLinkDef.h\"\n\n",dirname );
    fprintf(sfp, "#include \"%sProjectDict.cxx\"\n\n",dirname );
+   fprintf(sfp, "struct DeleteObjectFunctor {\n");
+   fprintf(sfp, "   template <typename T>\n");
+   fprintf(sfp, "   void operator()(const T *ptr) const {\n");
+   fprintf(sfp, "      delete ptr;\n");
+   fprintf(sfp, "   }\n");
+   fprintf(sfp, "   template <typename T, typename Q>\n");
+   fprintf(sfp, "   void operator()(const std::pair<T,Q> &) const {\n");
+   fprintf(sfp, "      // Do nothing\n");
+   fprintf(sfp, "   }\n");
+   fprintf(sfp, "   template <typename T, typename Q>\n");
+   fprintf(sfp, "   void operator()(const std::pair<T,Q*> &ptr) const {\n");
+   fprintf(sfp, "      delete ptr.second;\n");
+   fprintf(sfp, "   }\n");
+   fprintf(sfp, "   template <typename T, typename Q>\n");
+   fprintf(sfp, "   void operator()(const std::pair<T*,Q> &ptr) const {\n");
+   fprintf(sfp, "      delete ptr.first;\n");
+   fprintf(sfp, "   }\n");
+   fprintf(sfp, "   template <typename T, typename Q>\n");
+   fprintf(sfp, "   void operator()(const std::pair<T*,Q*> &ptr) const {\n");
+   fprintf(sfp, "      delete ptr.first;\n");
+   fprintf(sfp, "      delete ptr.second;\n");
+   fprintf(sfp, "   }\n");
+   fprintf(sfp, "};\n\n");
    fclose( sfp );
 
    // loop on all TStreamerInfo classes to check for empty classes
@@ -2198,16 +2231,44 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    TIter next(list);
    TList extrainfos;
    while ((info = (TStreamerInfo*)next())) {
+      if (info->IsA() != TStreamerInfo::Class()) {
+         continue;
+      }
       TClass *cl = TClass::GetClass(info->GetName());
       if (cl) {
          if (cl->GetClassInfo()) continue; // skip known classes
       }
+      // Find and use the proper rules for the TStreamerInfos.
       TMakeProject::GenerateMissingStreamerInfos(&extrainfos, info->GetName() );
       TIter enext( info->GetElements() );
       TStreamerElement *el;
+      const ROOT::TSchemaMatch* rules = 0;
+      if (cl->GetSchemaRules()) {
+         rules = cl->GetSchemaRules()->FindRules(cl->GetName(), info->GetClassVersion());
+      }
       while( (el=(TStreamerElement*)enext()) ) {
+         if (rules) {
+            for(Int_t art = 0; art < rules->GetEntries(); ++art) {
+               ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)rules->At(art);
+               if( rule->IsRenameRule() || rule->IsAliasRule() )
+                  continue;
+               // Check whether this is an 'attribute' rule.
+               if ( rule->HasTarget( el->GetName()) && rule->GetAttributes()[0] != 0 ) {
+                  TString attr( rule->GetAttributes() );
+                  attr.ToLower();
+                  if (attr.Contains("owner")) {
+                     if (attr.Contains("notowner")) {
+                        el->SetBit(TStreamerElement::kDoNotDelete);
+                     } else {
+                        el->ResetBit(TStreamerElement::kDoNotDelete);
+                     }
+                  }
+               }
+            }               
+         }
          TMakeProject::GenerateMissingStreamerInfos(&extrainfos, el);
       }
+      delete rules;
    }
    // Now transfer the new StreamerInfo onto the main list.
    TIter nextextra(&extrainfos);
@@ -2219,25 +2280,41 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    next.Reset();
    Int_t ngener = 0;
    while ((info = (TStreamerInfo*)next())) {
+      if (info->IsA() != TStreamerInfo::Class()) {
+         continue;
+      }
       if (info->GetClassVersion()==-4) continue; // Skip outer level namespace
       TIter subnext(list);
       TStreamerInfo *subinfo;
       TList subClasses;
       Int_t len = strlen(info->GetName());
       while ((subinfo = (TStreamerInfo*)subnext())) {
+         if (subinfo->IsA() != TStreamerInfo::Class()) {
+            continue;
+         }
          if (strncmp(info->GetName(),subinfo->GetName(),len)==0) {
             // The 'sub' StreamerInfo start with the main StreamerInfo name,
             // it subinfo is likely to be a nested class.
             const Int_t sublen = strlen(subinfo->GetName());
             if ( (sublen > len) && subinfo->GetName()[len+1]==':'
-               && !subClasses.FindObject(subinfo->GetName()) /* We need to insure uniqueness */) 
+               && !subClasses.FindObject(subinfo->GetName()) /* We need to insure uniqueness */)
             {
                subClasses.Add(subinfo);
             }
          }
       }
-      ngener += info->GenerateHeaderFile(dirname,&subClasses);
+      ngener += info->GenerateHeaderFile(dirname,&subClasses,&extrainfos);
+      subClasses.Clear("nodelete");
    }
+   sprintf(path,"%s/%sProjectHeaders.h",dirname,dirname);
+   FILE *allfp = fopen(path,"a");
+   if (!allfp) {
+      Error("MakeProject","Cannot open output file:%s\n",path);
+   } else {
+      fprintf(allfp,"#include \"%sProjectInstances.h\"\n", dirname);
+      fclose(allfp);
+   }
+
    printf("MakeProject has generated %d classes in %s\n",ngener,dirname);
 
    // generate the shared lib
@@ -2268,12 +2345,31 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       return;
    }
 
-   // add rootcint statement generating ProjectDict.cxx
-   fprintf(fpMAKE,"rootcint -f %sProjectDict.cxx -c %s ",dirname,gSystem->GetIncludePath());
+   // Add rootcint/genreflex statement generating ProjectDict.cxx
+   FILE *ifp = 0;
+   sprintf(path,"%s/%sProjectInstances.h",dirname,dirname);
+#ifdef R__WINGCC
+   ifp = fopen(path,"wb");
+#else
+   ifp = fopen(path,"w");
+#endif
+   if (!ifp) {
+      Error("MakeProject", "cannot open path file %s", path);
+      list->Delete();
+      delete list;
+      delete [] path;
+      return;
+   }
 
-   // create the LinkDef.h file by looping on all *.h files
-   // delete LinkDef.h if it already exists
-   sprintf(path,"%s/%sLinkDef.h",dirname,dirname);
+   if (genreflex) {
+      fprintf(fpMAKE,"genreflex %sProjectHeaders.h -o %sProjectDict.cxx --comments --iocomments %s ",dirname,dirname,gSystem->GetIncludePath());
+      sprintf(path,"%s/%sSelection.xml",dirname,dirname);
+   } else {
+      fprintf(fpMAKE,"rootcint -f %sProjectDict.cxx -c %s ",dirname,gSystem->GetIncludePath());
+      sprintf(path,"%s/%sLinkDef.h",dirname,dirname);
+   }
+   // Create the LinkDef.h or xml selection file by looping on all *.h files
+   // replace any existing file.
 #ifdef R__WINGCC
    FILE *fp = fopen(path,"wb");
 #else
@@ -2286,11 +2382,51 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       delete [] path;
       return;
    }
-   fprintf(fp,"#ifdef __CINT__\n");
-   fprintf(fp,"\n");
+   if (genreflex) {
+      fprintf(fp,"<lcgdict>\n");
+      fprintf(fp,"\n");
+   } else {
+      fprintf(fp,"#ifdef __CINT__\n");
+      fprintf(fp,"\n");
+   }
 
+   TString tmp;
+   TString instances;
+   TString selections;
    next.Reset();
    while ((info = (TStreamerInfo*)next())) {
+      if (info->IsA() != TStreamerInfo::Class()) {
+         continue;
+      }
+      TClass *cl = TClass::GetClass(info->GetName());
+      if (cl) {
+         if (cl->GetClassInfo()) continue; // skip known classes
+         const ROOT::TSchemaMatch* rules = 0;
+         if (cl->GetSchemaRules()) {
+            rules = cl->GetSchemaRules()->FindRules(cl->GetName(), info->GetClassVersion());
+            TString strrule;
+            for(Int_t art = 0; art < rules->GetEntries(); ++art) {
+               ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)rules->At(art);
+               strrule.Clear();
+               if (genreflex) {
+                  rule->AsString(strrule,"x");
+                  strrule.Append("\n");
+                  if ( selections.Index(strrule) == kNPOS ) {
+                     selections.Append(strrule);
+                  }
+               } else {
+                  rule->AsString(strrule);
+                  if (strncmp(strrule.Data(),"type=",5)==0) {
+                     strrule.Remove(0,5);
+                  }
+                  fprintf(fp,"#pragma %s;\n",strrule.Data());
+               }
+               
+            }
+            delete rules;
+         }
+         
+      }
       if (TClassEdit::IsSTLCont(info->GetName())) {
          std::vector<std::string> inside;
          int nestedLoc;
@@ -2298,33 +2434,94 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
          Int_t stlkind =  TClassEdit::STLKind(inside[0].c_str());
          TClass *key = TClass::GetClass(inside[1].c_str());
          if (key) {
-            std::string what;
+            TString what;
             switch ( stlkind )  {
             case TClassEdit::kMap:
             case TClassEdit::kMultiMap:
-               {
-                  what = "pair<";
+               if (TClass::GetClass(inside[1].c_str())) {
+                  what = "std::pair<";
                   what += TMakeProject::UpdateAssociativeToVector( inside[1].c_str() );
                   what += ",";
                   what += TMakeProject::UpdateAssociativeToVector( inside[2].c_str() );
-                  what += " >";
-                  fprintf(fp,"#pragma link C++ class %s+;\n",what.c_str());
+                  if (what[what.Length()-1]=='>') {
+                     what += " >";
+                  } else {
+                     what += ">";
+                  }
+                  if (genreflex) {
+                     tmp.Form("<class name=\"%s\" />\n",what.Data());
+                     if ( selections.Index(tmp) == kNPOS ) {
+                        selections.Append(tmp);
+                     }
+                     tmp.Form("template class %s;\n",what.Data());
+                     if ( instances.Index(tmp) == kNPOS ) {
+                        instances.Append(tmp);
+                     }
+                  } else {
+                     what.ReplaceAll("std::","");
+                     fprintf(fp,"#pragma link C++ class %s+;\n",what.Data());
+                  }
                   break;
                }
             }
          }
          continue;
       }
-      TClass *cl = TClass::GetClass(info->GetName());
-      if (cl) {
-         if (cl->GetClassInfo()) continue; // skip known classes
+      {
+         TString what(TMakeProject::UpdateAssociativeToVector(info->GetName()).Data());
+         if (genreflex) {
+            tmp.Form("<class name=\"%s\" />\n",what.Data());
+            if ( selections.Index(tmp) == kNPOS ) {
+               selections.Append(tmp);
+            }
+            if (what[what.Length()-1] == '>') {
+               tmp.Form("template class %s;\n",what.Data());
+               if ( instances.Index(tmp) == kNPOS ) {
+                  instances.Append(tmp);
+               }
+            }
+         } else {
+            what.ReplaceAll("std::","");
+            fprintf(fp,"#pragma link C++ class %s+;\n",what.Data());
+         }
       }
-      fprintf(fp,"#pragma link C++ class %s+;\n",info->GetName());
+      if (genreflex) {
+         // Also request the dictionary for the STL container used as members ...
+         TIter eliter( info->GetElements() );
+         TStreamerElement *element;
+         while( (element = (TStreamerElement*)eliter() ) ) {
+            if (element->GetClass() && !element->GetClass()->IsLoaded() && element->GetClass()->GetCollectionProxy()) {
+               TString what( TMakeProject::UpdateAssociativeToVector(element->GetClass()->GetName()) );
+               tmp.Form("<class name=\"%s\" />\n",what.Data());
+               if ( selections.Index(tmp) == kNPOS ) {
+                  selections.Append(tmp);
+               }
+               tmp.Form("template class %s;\n",what.Data());
+               if ( instances.Index(tmp) == kNPOS ) {
+                  instances.Append(tmp);
+               }
+            }
+         }
+      }
    }
-   fprintf(fp,"#endif\n");
+   if (genreflex) {
+      fprintf(ifp,"#ifndef PROJECT_INSTANCES_H\n");
+      fprintf(ifp,"#define PROJECT_INSTANCES_H\n");
+      fprintf(ifp,"%s",instances.Data());
+      fprintf(ifp,"#endif\n");
+      fprintf(fp,"%s",selections.Data());
+      fprintf(fp,"</lcgdict>\n");
+   } else {
+      fprintf(fp,"#endif\n");
+   }
    fclose(fp);
-   fprintf(fpMAKE,"%sProjectHeaders.h ",dirname);
-   fprintf(fpMAKE,"%sLinkDef.h \n",dirname);
+   fclose(ifp);
+   if (genreflex) {
+      fprintf(fpMAKE,"-s %sSelection.xml \n",dirname);
+   } else {
+      fprintf(fpMAKE,"%sProjectHeaders.h ",dirname);
+      fprintf(fpMAKE,"%sLinkDef.h \n",dirname);
+   }
 
    // add compilation line
    TString sdirname(dirname);
@@ -2377,7 +2574,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       }
    }
 
-   list->Delete();
+   extrainfos.Clear("nodelete");
    delete list;
    delete [] path;
 }
@@ -2412,7 +2609,18 @@ void TFile::ReadStreamerInfo()
 
          if (info->IsA() != TStreamerInfo::Class()) {
             if (mode==1) {
-               Warning("ReadStreamerInfo","%s: not a TStreamerInfo object", GetName());
+               TObject *obj = (TObject*)info;
+               if (strcmp(obj->GetName(),"listOfRules")==0) {
+                  TList *listOfRules = (TList*)obj;
+                  TObjLink *rulelnk = listOfRules->FirstLink();
+                  while (rulelnk) {
+                     TObjString *rule = (TObjString*)rulelnk->GetObject();
+                     TClass::AddRule( rule->String().Data() );
+                     rulelnk = rulelnk->Next();
+                  }
+               } else {
+                  Warning("ReadStreamerInfo","%s has a %s in the list of TStreamerInfo.", GetName(), info->IsA()->GetName());
+               }
             }
             lnk = lnk->Next();
             continue;
@@ -2519,17 +2727,41 @@ void TFile::WriteStreamerInfo()
    TIter next(gROOT->GetListOfStreamerInfo());
    TStreamerInfo *info;
    TList list;
+   TList listOfRules;
+   listOfRules.SetName("listOfRules");
+   std::set<TClass*> classSet;
+
 
    while ((info = (TStreamerInfo*)next())) {
       Int_t uid = info->GetNumber();
       if (fClassIndex->fArray[uid]) {
          list.Add(info);
          if (gDebug > 0) printf(" -class: %s info number %d saved\n",info->GetName(),uid);
+         
+         // Add the IO customization rules to the list to be saved for the underlying
+         // class but make sure to add them only once.
+         TClass *clinfo = info->GetClass();
+         if (clinfo && clinfo->GetSchemaRules()) {
+            if ( classSet.find( clinfo ) == classSet.end() ) {
+               if (gDebug > 0) printf(" -class: %s stored the I/O customization rules\n",info->GetName());
+ 
+               TObjArrayIter it( clinfo->GetSchemaRules()->GetRules() );
+               ROOT::TSchemaRule *rule;
+               while( (rule = (ROOT::TSchemaRule*)it.Next()) ) {
+                  TObjString *obj = new TObjString();
+                  rule->AsString(obj->String());
+                  listOfRules.Add(obj);
+               }
+               classSet.insert(clinfo);
+            }
+         }
       }
    }
    if (list.GetSize() == 0) return;
    fClassIndex->fArray[0] = 2; //to prevent adding classes in TStreamerInfo::TagFile
 
+   list.Add(&listOfRules);
+   
    // always write with compression on
    Int_t compress = fCompress;
    fCompress = 1;
@@ -2546,6 +2778,9 @@ void TFile::WriteStreamerInfo()
 
    fClassIndex->fArray[0] = 0;
    fCompress = compress;
+   
+   listOfRules.Delete();
+   list.RemoveLast(); // remove the listOfRules.
 }
 
 //______________________________________________________________________________
@@ -3176,7 +3411,7 @@ Int_t TFile::GetFileReadCalls()
 Int_t TFile::GetReadaheadSize()
 {
    // Static function returning the readahead buffer size.
-   
+
    return fgReadaheadSize;
 }
 
@@ -3722,13 +3957,45 @@ copyout:
 }
 
 //______________________________________________________________________________
+#if defined(R__LINUX) && !defined(R__WINGCC)
+Bool_t TFile::ReadBufferAsync(Long64_t offset, Int_t len)
+{
+   // Read specified byte range asynchronously. Actually we tell the kernel
+   // which blocks we are going to read so it can start loading these blocks
+   // in the buffer cache.
+
+   // Shortcut to avoid having to implement dummy ReadBufferAsync() in all
+   // I/O plugins. Override ReadBufferAsync() in plugins if async is supported.
+   if (IsA() != TFile::Class())
+      return kTRUE;
+
+   int advice = POSIX_FADV_WILLNEED;
+   if (len == 0) {
+      // according POSIX spec if len is zero, all data following offset
+      // is specified. Nevertheless ROOT uses zero to probe readahead
+      // capadilites.
+      advice = POSIX_FADV_NORMAL;
+   }
+   Double_t start = 0;
+   if (gPerfStats != 0) start = TTimeStamp();
+#if defined(R__SEEK64)
+   Int_t result = posix_fadvise64(fD, offset, len, advice);
+#else
+   Int_t result = posix_fadvise(fD, offset, len, advice);
+#endif   
+   if (gPerfStats != 0) {
+      gPerfStats->FileReadEvent(this, len, start);
+   }
+   return (result != 0);
+}
+#else
 Bool_t TFile::ReadBufferAsync(Long64_t, Int_t)
 {
-   // Not supported for regular (local) files.
-   // See TFile specializations for real implementations.
+   // Not supported yet on non Linux systems.
 
    return kTRUE;
 }
+#endif
 
 //______________________________________________________________________________
 Int_t TFile::GetBytesToPrefetch() const

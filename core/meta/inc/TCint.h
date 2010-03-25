@@ -29,13 +29,8 @@
 #endif
 
 #ifndef __CINT__
-# ifdef R__BUILDING_CINT7
-#  include "cint7/G__ci.h"
-#  include "cint7/Api.h"
-# else
-#  include "G__ci.h"
-#  include "Api.h"
-# endif
+# include "G__ci.h"
+# include "Api.h"
 #else
 struct G__dictposition;
 #endif
@@ -85,7 +80,6 @@ public:
    Int_t   AutoLoad(const char *classname);
    void    ClearFileBusy();
    void    ClearStack(); // Delete existing temporary values
-   void    EnableWrappers(bool value=true);
    void    EnableAutoLoading();
    void    EndOfLineAction();
    Int_t   GetExitCode() const { return fExitCode; }

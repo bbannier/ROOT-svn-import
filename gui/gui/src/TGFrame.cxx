@@ -2795,7 +2795,7 @@ void TGMainFrame::SaveSource(const char *filename, Option_t *option)
    // Computes the main method name.
    const char *fname = gSystem->BaseName(ff.Data());
    Int_t lenfname = strlen(fname);
-   char *sname = new char[lenfname];
+   char *sname = new char[lenfname+1];
 
    Int_t i = 0;
    while ((*fname != '.') && (i < lenfname)) {
@@ -2817,7 +2817,10 @@ void TGMainFrame::SaveSource(const char *filename, Option_t *option)
    TObjString *inc;
    ilist = (TList *)gROOT->GetListOfSpecials()->FindObject("ListOfIncludes");
 
-   if (!ilist) return;
+   if (!ilist) {
+      delete [] sname;
+      return;
+   }
 
    // write macro header, date/time stamp as string, and the used Root version
    TDatime t;
@@ -3142,21 +3145,21 @@ void TGGroupFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 
    // font + GC
    option = GetName()+5;         // unique digit id of the name
-   char parGC[50], parFont[50];
-   sprintf(parFont,"%s::GetDefaultFontStruct()",IsA()->GetName());
-   sprintf(parGC,"%s::GetDefaultGC()()",IsA()->GetName());
+   TString parGC, parFont;
+   parFont.Form("%s::GetDefaultFontStruct()",IsA()->GetName());
+   parGC.Form("%s::GetDefaultGC()()",IsA()->GetName());
 
    if ((GetDefaultFontStruct() != fFontStruct) || (GetDefaultGC()() != fNormGC)) {
       TGFont *ufont = gClient->GetResourcePool()->GetFontPool()->FindFont(fFontStruct);
       if (ufont) {
          ufont->SavePrimitive(out, option);
-         sprintf(parFont,"ufont->GetFontStruct()");
+         parFont.Form("ufont->GetFontStruct()");
       }
 
       TGGC *userGC = gClient->GetResourcePool()->GetGCPool()->FindGC(fNormGC);
       if (userGC) {
          userGC->SavePrimitive(out, option);
-         sprintf(parGC,"uGC->GetGC()");
+         parGC.Form("uGC->GetGC()");
       }
    }
 
@@ -3176,13 +3179,13 @@ void TGGroupFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
                out << "," << GetOptionString() <<");" << endl;
             }
          } else {
-            out << "," << GetOptionString() << "," << parGC <<");" << endl;
+            out << "," << GetOptionString() << "," << parGC.Data() <<");" << endl;
          }
       } else {
-         out << "," << GetOptionString() << "," << parGC << "," << parFont << ");" << endl;
+         out << "," << GetOptionString() << "," << parGC.Data() << "," << parFont.Data() << ");" << endl;
       }
    } else {
-      out << "," << GetOptionString() << "," << parGC << "," << parFont << ",ucolor);"  << endl;
+      out << "," << GetOptionString() << "," << parGC.Data() << "," << parFont.Data() << ",ucolor);"  << endl;
    }
 
    if (GetTitlePos() != -1)
@@ -3280,7 +3283,7 @@ void TGTransientFrame::SaveSource(const char *filename, Option_t *option)
    // Computes the main method name.
    const char *fname = gSystem->BaseName(ff.Data());
    Int_t lenfname = strlen(fname);
-   char *sname = new char[lenfname];
+   char *sname = new char[lenfname+1];
 
    Int_t i = 0;
    while ((*fname != '.') && (i < lenfname)) {
@@ -3302,7 +3305,10 @@ void TGTransientFrame::SaveSource(const char *filename, Option_t *option)
    TObjString *inc;
    ilist = (TList *)gROOT->GetListOfSpecials()->FindObject("ListOfIncludes");
 
-   if (!ilist) return;
+   if (!ilist) {
+      delete [] sname;
+      return;
+   }
 
    // write macro header, date/time stamp as string, and the used Root version
    TDatime t;

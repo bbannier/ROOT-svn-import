@@ -23,6 +23,10 @@ N: Eric Anciant
 E: eric.anciant@sodern.fr
 D: TQuaternion class
 
+N: Aberto Annovi
+E: alberto.annovi@lnf.infn.it
+D: speed-up of TH1::FillRandom when source & destination have identical parameters
+
 N: Ilka Antcheva
 E: Ilka.Antcheva@cern.ch
 D: editor of the User's Guide, quality assurance
@@ -215,7 +219,7 @@ N: Denis Favre-Miville
 E: Denis.Favre-Miville@ensimag.imag.fr
 D: contribution to the GUI and graphics editors
 
-N: AndrÈ Felipe
+N: Andr√© Felipe
 E: (felipe.andre@gmail.com)
 D: CINT contributions
 
@@ -297,15 +301,11 @@ N: Piotr Golonka
 E: Piotr.Golonka@cern.ch
 D: class TMCParticle
 
-N: Piotr Golonka
-E: Piotr.Golonka@cern.ch
-D: class TMCParticle
-
 N: Masaharu Goto
 E: MXJ02154@niftyserve.or.jp
 D: CINT C/C++ interpreter
 
-N: Roberto Gracia Del Baño
+N: Roberto Gracia Del Ba√±o
 E: cuboscombro@gmail.com
 D: Event Recorder
 
@@ -339,6 +339,10 @@ D: class TTimeStamp
 N: Miroslav Helbich
 E: helbich@mail.desy.de
 D: apply method in the TGraph classes
+
+N: Bill Heintzelman
+E: billh@hep.upenn.edu
+D: TTree::AutoFlush,Autosave improvements
 
 N: Marc Hemberger
 E: hemberg@clri6a.gsi.de
@@ -606,6 +610,10 @@ N: Andreas Peters
 E: Andreas.Joachim.Peters@cern.ch
 D: TGrid extension and TAlien plugin
 D: TMonaLisa monitoring plugin
+
+N: Danilo Piparo
+E: Danilo.Piparo@cern.ch
+D: contribution in RooStats
 
 N: Filip Pizlo
 E: pizlo@purdue.edu

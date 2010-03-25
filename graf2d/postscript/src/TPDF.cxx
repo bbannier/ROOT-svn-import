@@ -50,11 +50,14 @@ const Int_t kObjOutlines         =  3; // Outlines object
 const Int_t kObjPages            =  4; // Pages object (pages index)
 const Int_t kObjPageResources    =  5; // Pages Resources object
 const Int_t kObjFont             =  6; // First Font object (14 in total)
-const Int_t kObjColorSpace       = 20; // ColorSpace object
-const Int_t kObjPatternResourses = 21; // Pattern Resources object
-const Int_t kObjPatternList      = 22; // Pattern list object
-const Int_t kObjPattern          = 23; // Pattern object
-const Int_t kObjFirstPage        = 48; // First page object
+const Int_t kObjColorSpace       = 21; // ColorSpace object
+const Int_t kObjPatternResourses = 22; // Pattern Resources object
+const Int_t kObjPatternList      = 23; // Pattern list object
+const Int_t kObjPattern          = 24; // Pattern object
+const Int_t kObjFirstPage        = 49; // First page object
+
+// Number of fonts
+const Int_t kNumberOfFonts = 15;
 
 ClassImp(TPDF)
 
@@ -475,9 +478,20 @@ void TPDF::DrawPolyMarker(Int_t n, Float_t *xw, Float_t *yw)
    if (ms == 4) ms = 24;
 
    // Define the marker size
-   Double_t msize = 5.5*fMarkerSize;
-   if (abs(fMarkerStyle) == 6) msize = 1.5;
-   if (abs(fMarkerStyle) == 7) msize = 3.;
+   Float_t msize  = fMarkerSize;
+   if (fMarkerStyle == 1) {
+     msize = 1.;
+   } else if (fMarkerStyle == 6) {
+     msize = 1.5;
+   } else if (fMarkerStyle == 7) {
+     msize = 3.;
+   } else {
+      const Int_t kBASEMARKER = 8;
+      Float_t sbase = msize*kBASEMARKER;
+      Float_t s2x = sbase / Float_t(gPad->GetWw() * gPad->GetAbsWNDC());
+      msize = this->UtoPDF(s2x) - this->UtoPDF(0);
+   }
+
    Double_t m  = msize;
    Double_t m2 = m/2;
    Double_t m3 = m/3;
@@ -605,9 +619,20 @@ void TPDF::DrawPolyMarker(Int_t n, Double_t *xw, Double_t *yw)
    if (ms == 4) ms = 24;
 
    // Define the marker size
-   Double_t msize = 5.5*fMarkerSize;
-   if (abs(fMarkerStyle) == 6) msize = 1.5;
-   if (abs(fMarkerStyle) == 7) msize = 3.;
+   Float_t msize  = fMarkerSize;
+   if (fMarkerStyle == 1) {
+     msize = 1.;
+   } else if (fMarkerStyle == 6) {
+     msize = 1.5;
+   } else if (fMarkerStyle == 7) {
+     msize = 3.;
+   } else {
+      const Int_t kBASEMARKER = 8;
+      Float_t sbase = msize*kBASEMARKER;
+      Float_t s2x = sbase / Float_t(gPad->GetWw() * gPad->GetAbsWNDC());
+      msize = this->UtoPDF(s2x) - this->UtoPDF(0);
+   }
+
    Double_t m  = msize;
    Double_t m2 = m/2;
    Double_t m3 = m/3;
@@ -899,9 +924,9 @@ void TPDF::FontEncode()
    "/Helvetica"            , "/Helvetica-Oblique"  , "/Helvetica-Bold"  ,
    "/Helvetica-BoldOblique", "/Courier"            , "/Courier-Oblique" ,
    "/Courier-Bold"         , "/Courier-BoldOblique", "/Symbol"          ,
-   "/Times-Roman"          , "/ZapfDingbats"};
+   "/Times-Roman"          , "/ZapfDingbats"       , "/Symbol"};
 
-   for (Int_t i=0; i<14; i++) {
+   for (Int_t i=0; i<kNumberOfFonts; i++) {
       NewObject(kObjFont+i);
       PrintStr("<<@");
       PrintStr("/Type /Font@");
@@ -912,7 +937,7 @@ void TPDF::FontEncode()
       PrintStr("/BaseFont ");
       PrintStr(sdtfonts[i]);
       PrintStr("@");
-      if (i!=11 && i!=13) {
+      if (i!=11 && i!=13 && i!=14) {
          PrintStr("/Encoding /WinAnsiEncoding");
          PrintStr("@");
       }
@@ -1254,7 +1279,7 @@ void TPDF::Open(const char *fname, Int_t wtype)
 
    PrintStr("/Font@");
    PrintStr("<<@");
-   for (i=0; i<14; i++) {
+   for (i=0; i<kNumberOfFonts; i++) {
       PrintStr(" /F");
       WriteInteger(i+1,0);
       WriteInteger(kObjFont+i);
@@ -1995,7 +2020,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
 
    // Font and text size
    Int_t font = abs(fTextFont)/10;
-   if( font > 14 || font < 1) font = 1;
+   if( font > kNumberOfFonts || font < 1) font = 1;
 
    sprintf(str," /F%d",font);
    PrintStr(str);
@@ -2073,6 +2098,9 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
       PrintStr(" Tm");
    }
 
+   // Symbol Italic tan(15) = .26794
+   if (font == 15) PrintStr(" q 1 0 .26794 1 0 0 cm");
+
    // Ouput the text. Escape some characters if needed
    PrintStr(" (");
    Int_t len=strlen(chars);
@@ -2087,6 +2115,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
       }
    }
    PrintStr(") Tj ET Q");
+   if (font == 15) PrintStr(" Q");
    if (!fCompress) PrintStr("@");
 }
 

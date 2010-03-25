@@ -53,6 +53,8 @@ protected:
    void DoElementSelect  (SelMap_i entry);
    void DoElementUnselect(SelMap_i entry);
 
+   void RecheckImpliedSet(SelMap_i smi);
+
 public:
    TEveSelection(const char* n="TEveSelection", const char* t="");
    virtual ~TEveSelection() {}
@@ -75,6 +77,8 @@ public:
 
    virtual void RemoveImpliedSelected(TEveElement* el);
 
+   void RecheckImpliedSetForElement(TEveElement* el);
+
    void SelectionAdded(TEveElement* el);    // *SIGNAL*
    void SelectionRemoved(TEveElement* el);  // *SIGNAL*
    void SelectionCleared();                 // *SIGNAL*
@@ -82,7 +86,6 @@ public:
 
    // ----------------------------------------------------------------
    // Interface to make selection active/non-active.
-   // Not used yet, assumed to be active all the time.
 
    virtual void ActivateSelection();
    virtual void DeactivateSelection();

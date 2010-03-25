@@ -766,7 +766,7 @@ int G__free_ifunc_table(G__ifunc_table_internal* passed_ifunc)
          fprintf(G__memhist, "func %s\n", ifunc->funcname[i]);
 #endif // G__MEMTEST
          if (ifunc->funcname[i]) {
-            ifunc->param[i].~G__params();
+            ifunc->param[i].reset();
             free(ifunc->funcname[i]);
             ifunc->funcname[i] = 0;
 #ifdef G__ASM_WHOLEFUNC
@@ -1012,7 +1012,9 @@ int G__scratch_upto_work(G__dictposition* dictpos, int doall)
 #endif // G__DUMPFILE
       // Set function key.
       if (G__key) {
-         system("key .cint_key -l execute");
+         if (system("key .cint_key -l execute")) {
+            G__fprinterr(G__serr, "Error running \"key .cint_key -l execute\"\n");
+         }
       }
       while (G__dumpreadline[0]) {
          fclose(G__dumpreadline[0]);

@@ -16,6 +16,7 @@ Int_t getXrootdPid(Int_t port, const char *subdir = "xpd-tutorial");
 Int_t checkXrootdAt(Int_t port, const char *host = "localhost");
 Int_t checkXproofdAt(Int_t port, const char *host = "localhost");
 Int_t startXrootdAt(Int_t port, const char *exportdirs = 0, Bool_t force = kFALSE);
+Int_t killXrootdAt(Int_t port, const char *id = 0);
 
 // Auxilliary structures for Xrootd/Xproofd pinging ...
 // The client request
@@ -34,9 +35,9 @@ typedef struct {
 } srv_HS_t;
 
 // By default we start a cluster on the local machine
-const char *refloc = "proof://localhost:11093";
+const char *refloc = "proof://localhost:80000";
 
-TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, const char *dir = 0,
+TProof *getProof(const char *url = "proof://localhost:80000", Int_t nwrks = -1, const char *dir = 0,
                  const char *opt = "ask", Bool_t dyn = kFALSE, Bool_t tutords = kFALSE)
 {
    // Arguments:
@@ -61,8 +62,11 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    //
    //     $ export GETPROOF_VALGRIND="valgrind=master"
    //
-   // before running getProof. Note that 'getProof' is also called by 'stressProof', so this holds
-   // for 'stressProof' runs too.
+   // (or
+   //     $ export GETPROOF_VALGRIND="valgrind=master valgrind_opts:--leak-check=full"
+   //
+   // to set some options) before running getProof. Note that 'getProof' is also called by 'stressProof',
+   // so this holds for 'stressProof' runs too.
 
 #ifdef __CINT__
    Printf("getProof: this script can only be executed via ACliC:");
@@ -74,6 +78,24 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
 
    TProof *p = 0;
 
+   // Valgrind options, if any
+   TString vopt, vopts;
+#ifndef WIN32
+   if (gSystem->Getenv("GETPROOF_VALGRIND")) {
+      TString s(gSystem->Getenv("GETPROOF_VALGRIND")), t;
+      Int_t from = 0;
+      while (s.Tokenize(t, from , " ")) {
+         if (t.BeginsWith("valgrind_opts:"))
+            vopts = t;
+         else
+            vopt = t;
+      }
+      if (vopts.IsNull()) vopts = "valgrind_opts:--leak-check=full --track-origins=yes";
+      TProof::AddEnvVar("PROOF_WRAPPERCMD", vopts.Data());
+      Printf("getProof: valgrind run: '%s' (opts: '%s')", vopt.Data(), vopts.Data());
+   }
+#endif
+
    // If an URL has specified get a session there
    TUrl uu(url), uref(refloc);
    Bool_t ext = (strcmp(uu.GetHost(), uref.GetHost()) ||
@@ -83,7 +105,7 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
          if (dir && strlen(dir) > 0) gEnv->SetValue("Proof.Sandbox", dir);
          if (nwrks > 0) uu.SetOptions(Form("workers=%d", nwrks));
       }
-      p = TProof::Open(uu.GetUrl());
+      p = TProof::Open(uu.GetUrl(), vopt);
       if (p && p->IsValid()) {
          // Check consistency
          if (ext && nwrks > 0) {
@@ -160,6 +182,8 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    // Local url (use a special port to try to not disturb running daemons)
    TUrl u(refloc);
    u.SetProtocol("proof");
+   if (!strcmp(uu.GetHost(), uref.GetHost()) && (uu.GetPort() != uref.GetPort()))
+      u.SetPort(uu.GetPort());
    Int_t lportp = u.GetPort();
    Int_t lportx = lportp + 1;
    TString lurl = u.GetUrl();
@@ -207,10 +231,13 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
       if (restart) {
 
          Printf("getProof: cleaning existing instance ...");
-         // Cleanimg up existing daemon
+         // Cleaning up existing daemon
          cmd = Form("kill -9 %d", pid);
          if ((rc = gSystem->Exec(cmd)) != 0)
             Printf("getProof: problems stopping xrootd process %p (%d)", pid, rc);
+         // Wait for all previous connections being cleaned
+         Printf("getProof: wait 5 secs so that previous connections are cleaned ...");
+         gSystem->Sleep(5000);
       }
    }
 
@@ -292,22 +319,7 @@ TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, 
    Printf("getProof: start / attach the PROOF session ...");
 
    // Start / attach the session now
-   if (gSystem->Getenv("GETPROOF_VALGRIND")) {
-      TString s(gSystem->Getenv("GETPROOF_VALGRIND")), t;
-      Int_t from = 0;
-      TString vopt, vopts;
-      while (s.Tokenize(t, from , " ")) {
-         if (t.BeginsWith("valgrind_opts:"))
-            vopts = t;
-         else
-            vopt = t;
-      }
-      if (vopts.IsNull()) vopts = "valgrind_opts:--leak-check=full --track-origins=yes";
-      TProof::AddEnvVar("PROOF_WRAPPERCMD", vopts.Data());
-      p = TProof::Open(lurl, vopt.Data());
-   } else {
-      p = TProof::Open(lurl);
-   }
+   p = TProof::Open(lurl, vopt.Data());
    if (!p || !(p->IsValid())) {
       Printf("getProof: starting local session failed");
       if (p) delete p;
@@ -559,7 +571,7 @@ Int_t startXrootdAt(Int_t port, const char *exportdirs, Bool_t force)
          return -1;
       }
       // Wait a bit
-      Printf("getProof: waiting for xrootd to start ...");
+      Printf("startXrootdAt: waiting for xrootd to start ...");
       gSystem->Sleep(2000);
       // Check the result
       if ((rc = checkXrootdAt(port)) != 0) {
@@ -567,11 +579,35 @@ Int_t startXrootdAt(Int_t port, const char *exportdirs, Bool_t force)
                                 port, rc);
          return -1;
       }
-      Printf("getProof: basic xrootd started!");
+      Printf("startXrootdAt: basic xrootd started!");
    }
 
    // Done
    return 0;
+#endif
+}
+
+Int_t killXrootdAt(Int_t port, const char *id)
+{
+   // Kill running xrootd service on 'port'
+
+#ifdef WIN32
+   // No support for Xrootd on Win32 (yet; the optimized local Proof will work there too)
+   Printf("killXrootdAt: Xrootd not supported on Windows, sorry!");
+   return -1;
+#else
+
+   Int_t pid = -1, rc= 0;
+   if ((pid = getXrootdPid(port, id)) > 0) {
+
+      // Cleanimg up existing daemon
+      TString cmd = Form("kill -9 %d", pid);
+      if ((rc = gSystem->Exec(cmd)) != 0)
+         Printf("killXrootdAt: problems stopping xrootd process %p (%d)", pid, rc);
+   }
+
+   // Done
+   return rc;
 #endif
 }
 

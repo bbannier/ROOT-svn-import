@@ -291,13 +291,13 @@ void TImageDump::DrawPolyMarker(Int_t n, Double_t *xw, Double_t *yw)
    if (ms == 4) ms = 24;
 
    // Define the marker size
-   Double_t msize = 0.23*fMarkerSize*TMath::Max(fImage->GetWidth(), fImage->GetHeight())/20;
+   const Int_t kBASEMARKER = 8;
+   Double_t msize = fMarkerSize * kBASEMARKER;
    if (ms == 6) msize *= 0.2;
    if (ms == 7) msize *= 0.3;
    Double_t m  = msize;
    Double_t m2 = m/2;
    Double_t m3 = m/3;
-//   Double_t m4 = m2*1.333333333333;
    Double_t m6 = m/6;
 
    TColor *col = gROOT->GetColor(fMarkerColor);
@@ -553,7 +553,7 @@ void TImageDump::DrawPS(Int_t nn, Double_t *x, Double_t *y)
    pt[n].fX = pt[0].fX;
    pt[n].fY = pt[0].fY;
 
-   const char *stipple = (fais == 3) && (fasi > 0) && (fasi < 26) ? gStipples[fasi] : 0;
+   const char *stipple = (fais == 3) && (fasi > 0) && (fasi < 26) ? (const char*)gStipples[fasi] : 0;
 
    // filled polygon
    if (!line && fFillStyle && (fFillStyle != 4000)) {

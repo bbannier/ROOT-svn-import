@@ -60,7 +60,7 @@ public:
    };
 
    static const TGPicture*                      fgRnrIcons[4];
-   static const TGPicture*                      fgListTreeIcons[8];
+   static const TGPicture*                      fgListTreeIcons[9];
 
    typedef std::set<TEveListTreeInfo>           sLTI_t;
    typedef sLTI_t::iterator                     sLTI_i;
@@ -185,6 +185,7 @@ public:
    void   DecParentIgnoreCnt();
 
    virtual void PadPaint(Option_t* option);
+   virtual void PaintStandard(TObject* id);
 
    virtual TObject* GetObject      (const TEveException& eh="TEveElement::GetObject ") const;
    virtual TObject* GetEditorObject(const TEveException& eh="TEveElement::GetEditorObject ") const { return GetObject(eh); }
@@ -229,6 +230,8 @@ public:
    virtual void RemoveElements();
    virtual void RemoveElementsLocal();
 
+   virtual void ProjectChild(TEveElement* el, Bool_t same_depth=kTRUE);
+
    virtual void Destroy();                      // *MENU*
    virtual void DestroyOrWarn();
    virtual void DestroyElements();              // *MENU*
@@ -267,7 +270,7 @@ public:
 
    virtual Bool_t     CanEditMainTrans() const { return fCanEditMainTrans; }
    virtual Bool_t     HasMainTrans()     const { return fMainTrans != 0;   }
-   virtual TEveTrans* PtrMainTrans();
+   virtual TEveTrans* PtrMainTrans(Bool_t create=kTRUE);
    virtual TEveTrans& RefMainTrans();
    virtual void       InitMainTrans(Bool_t can_edit=kTRUE);
    virtual void       DestroyMainTrans();
@@ -316,6 +319,8 @@ public:
    virtual void FillImpliedSelectedSet(Set_t& impSelSet);
 
    virtual UChar_t GetSelectedLevel() const;
+
+   void RecheckImpliedSelections();
 
    // Change-stamping and change bits
    //---------------------------------
@@ -436,9 +441,9 @@ public:
    virtual Bool_t CanEditMainColor() const { return fDoColor; }
 
    TClass* GetChildClass() const { return fChildClass; }
-   void SetChildClass(TClass* c) { fChildClass = c; }
+   void    SetChildClass(TClass* c) { fChildClass = c; }
 
-   virtual Bool_t AcceptElement(TEveElement* el);
+   virtual Bool_t  AcceptElement(TEveElement* el);
 
    virtual TClass* ProjectedClass(const TEveProjection* p) const;
 

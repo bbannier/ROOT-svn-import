@@ -17,6 +17,7 @@
 
 #pragma link C++ enum EProperty;
 
+#pragma link C++ class TCint;
 #pragma link C++ class TBaseClass;
 #pragma link C++ class TClass;
 #pragma link C++ class TClassStreamer+;
@@ -55,5 +56,6 @@
 #pragma link C++ class TStreamerElement-;
 #pragma link C++ class TToggle;
 #pragma link C++ class TToggleGroup;
+#pragma link C++ class std::vector<std::pair<Int_t, Int_t> >+;
 
 #endif

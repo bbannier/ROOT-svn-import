@@ -1,7 +1,7 @@
 // @(#)root/reflex:$Id$
 // Author: Stefan Roiser 2006
 
-// Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
+// Copyright CERN, CH-1211 Geneva 23, 2004-2010, All rights reserved.
 //
 // Permission to use, copy, modify, and distribute this software for any
 // purpose is hereby granted without fee, provided that this copyright and
@@ -110,7 +110,7 @@ Reflex::NameLookup::Lookup(bool isTemplateExpanded /* = false */) {
          case '>': --level;    // intentional fall through to the ',' case
          case ',':
 
-            if (level == (1 - (int) (fLookupName[i] == '>'))) {
+            if (level == (1 - (unsigned int) (fLookupName[i] == '>'))) {
                std::string arg(fLookupName.substr(sofar, i - sofar));
 
                size_t p = arg.size();
@@ -472,7 +472,8 @@ Reflex::NameLookup::FindNextScopePos() {
          fPosNamePart = 2;
       }
    }
-   fPosNamePartLen = Tools::GetFirstScopePosition(fLookupName.substr(fPosNamePart));
+   size_t start = 0; // yes, we should use it... Think of "int MyClass::*" where the scope is "MyClass", not "int MyClass"
+   fPosNamePartLen = Tools::GetFirstScopePosition(fLookupName.substr(fPosNamePart), start);
 
    if (!fPosNamePartLen) { // no next "::"
       fPosNamePartLen = fLookupName.length();
