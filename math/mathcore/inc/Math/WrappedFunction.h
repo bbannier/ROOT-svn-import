@@ -29,13 +29,9 @@
 #include "IFunction.h"
 #endif
 
-#include <iostream>
 
 namespace ROOT {
 namespace Math {
-
-
-
 
 
 
