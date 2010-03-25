@@ -52,7 +52,7 @@
 #include "CLHEP/Matrix/Vector.h"
 #endif
 
-//#define DEBUG
+#define DEBUG
 
 #include <iostream>
 
@@ -273,6 +273,7 @@ int test_smatrix_sym_op() {
     MnVectorN   v2;  testGMV(A,v,v1,t_gmv,v2);
     MnMatrixNN  C0;  testMM(A,B,C,t_mm,C0);
     MnSymMatrixNN  C1;  testATBA_S2(C0,B,t_ama,C1);
+#define INVERT_CHOL
 #ifdef INVERT_CHOL
     MnSymMatrixNN  C2;  testInvChol_S(C1,t_inv,C2);
 #else
@@ -293,6 +294,7 @@ int test_smatrix_sym_op() {
     std::cout << "output matrices" << std::endl;
     if (k == 0) { 
       std::cout << " C1 = " << C1 << std::endl;
+      std::cout << " C2 = " << C2 << std::endl;
       std::cout << " C3 = " << C3 << std::endl;
       std::cout << " C4 = " << C4 << std::endl;
       std::cout << " C5 = " << C5 << std::endl;
