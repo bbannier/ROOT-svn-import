@@ -135,9 +135,8 @@ private:
 
    // private member
    bool                              fOneDim;      // flag to indicate if the function is 1 dimension
-   TUnuran *                         fUnuran;      // unuran engine class
    const ROOT::Math::IGenFunction *  fFunc1D;      // 1D function pointer
-   TRandom *                         fRndm;        // random generor pointer (not managed by the class)     
+   TUnuran *                         fUnuran;      // unuran engine class
 
    //ClassDef(TUnuranSampler,1)  //Distribution sampler class based on UNU.RAN
 

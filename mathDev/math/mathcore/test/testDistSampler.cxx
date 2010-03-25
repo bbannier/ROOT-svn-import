@@ -7,12 +7,14 @@
 
 #include "TStopwatch.h"
 #include "TRandom.h"
+#include "TError.h"
 // double Pdf(double x) { 
 // }
 
 using namespace ROOT::Math; 
 
 int testDistSampler(int n = 10000) { 
+
 
    DistSampler * sampler = Factory::CreateDistSampler("Unuran"); 
    if (!sampler) return -1;
@@ -48,11 +50,14 @@ int testDistSampler(int n = 10000) {
    hr->Draw("SAME");
 
    // do a Chi2 test 
+   // switch off printing of  info messages from chi2 test
+   gErrorIgnoreLevel = 1001; 
    double prob = h1->Chi2Test(hr,"UU");
    if (prob < 1.E-6) { 
       std::cerr << "Chi2 test of generated histogram failed" << std::endl;
       return -2;
    }
+   gErrorIgnoreLevel = 0;
 
    return 0;
 }
