@@ -29,6 +29,7 @@ ClassImp(TUnuranSampler)
 
 TUnuranSampler::TUnuranSampler() : ROOT::Math::DistSampler(), 
    fOneDim(false), 
+   fFunc1D(0),
    fUnuran(new TUnuran()  )
 {}
 
