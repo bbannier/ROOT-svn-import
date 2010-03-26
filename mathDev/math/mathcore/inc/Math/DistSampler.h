@@ -144,6 +144,9 @@ public:
       return fData[0];
    }
 
+   /**
+      sample one event and rerturning array x with coordinates
+    */
    const double *  Sample() { 
       Sample(&fData[0]);
       return &fData.front();

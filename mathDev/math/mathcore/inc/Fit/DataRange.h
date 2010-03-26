@@ -77,7 +77,7 @@ public:
       Avoid in case of multi-dim to loop on all the coordinated and ask the size
     */   
    bool IsSet() const { 
-      for (unsigned int icoord; icoord < fRanges.size(); ++icoord) 
+      for (unsigned int icoord = 0; icoord < fRanges.size(); ++icoord) 
          if (fRanges[icoord].size() > 0) return true; 
       return false; 
    }
