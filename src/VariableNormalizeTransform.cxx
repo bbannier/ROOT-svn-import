@@ -112,8 +112,12 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::Transform( const TMVA::Even
    const UInt_t nvars = GetNVariables();
    const UInt_t ntgts = ev->GetNTargets();
    if (nvars != ev->GetNVariables()) {
-      Log() << kFATAL << "Transformation defined for a different number of variables " << GetNVariables() 
-            << "  " << ev->GetNVariables() << Endl;
+      Log() << kFATAL << "Transformation defined for a different number of variables (defined for: " << GetNVariables() 
+            << ", event contains:  " << ev->GetNVariables() << ")" << Endl;
+   }
+   if (ntgts != ev->GetNTargets()) {
+      Log() << kFATAL << "Transformation defined for a different number of targets (defined for: " << GetNTargets() 
+            << ", event contains:  " << ev->GetNTargets() << ")" << Endl;
    }
 
    if (fTransformedEvent==0) fTransformedEvent = new Event();
