@@ -86,7 +86,6 @@ TMVA::BinarySearchTree::BinarySearchTree( void ) :
 {
    // default constructor
    fNEventsW[0]=fNEventsW[1]=0.;
-   fLogger->SetSource( "BinarySearchTree" );
 }
 
 //_______________________________________________________________________
@@ -100,7 +99,6 @@ TMVA::BinarySearchTree::BinarySearchTree( const BinarySearchTree &b)
 {
    // copy constructor that creates a true copy, i.e. a completely independent tree 
    fNEventsW[0]=fNEventsW[1]=0.;
-   fLogger->SetSource( "BinarySearchTree" );
    Log() << kFATAL << " Copy constructor not implemented yet " << Endl;
 }
 
