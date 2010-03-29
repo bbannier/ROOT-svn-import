@@ -16,7 +16,9 @@
 #include "RooStats/HybridResult.h"
 #include "RooStats/HybridPlot.h"
 
-void rs201_hybridcalculator(int ntoys = 3000)
+#include "TStopwatch.h"
+
+void rs201_hybridcalculator(int ntoys = 3000, bool useNuisance = true)// const char * algo1 = 0, const char * algo2 = 0)
 {
   //***********************************************************************//
   // This macro show an example on how to use RooStats/HybridCalculator    //
@@ -28,6 +30,7 @@ void rs201_hybridcalculator(int ntoys = 3000)
 
   using namespace RooFit;
   using namespace RooStats;
+
 
   /// set RooFit random seed
   RooRandom::randomGenerator()->SetSeed(3007);
@@ -73,18 +76,23 @@ void rs201_hybridcalculator(int ntoys = 3000)
   myHybridCalc.SetTestStatistic(1);
 
   myHybridCalc.SetNumberOfToys(ntoys); 
-  //myHybridCalc.UseNuisance(false);                            
+  myHybridCalc.UseNuisance(useNuisance);                            
 
   // for speed up generation (do binned data) 
   myHybridCalc.SetGenerateBinned(false); 
+  //myHybridCalc.SetGenerateMethod("Unuran",algo1,algo2); 
+
 
   // calculate by running ntoys for the S+B and B hypothesis and retrieve the result
+  TStopwatch w; w.Start(); 
   HybridResult* myHybridResult = myHybridCalc.GetHypoTest(); 
+  w.Stop();
 
   if (! myHybridResult) { 
      std::cerr << "\nError returned from Hypothesis test" << std::endl;
      return;
   }
+
 
   /// run 1000 toys without gaussian prior on the background yield
   //HybridResult* myHybridResult = myHybridCalc.Calculate(*data,1000,false);
@@ -129,6 +137,15 @@ void rs201_hybridcalculator(int ntoys = 3000)
   std::cout << " - CL_s  = " << cls_data << std::endl;
   std::cout << " - significance of data  = " << data_significance << std::endl;
   std::cout << " - mean significance of toys  = " << toys_significance << std::endl;
+
+  std::cout << "\nTime for running the calculator  = " << w.RealTime() << "  " << w.CpuTime() << " sec " << std::endl;
+
+  TFile * f = new TFile("hybrid_result.root","RECREATE");
+  myHybridResult->Write(); 
+  gPad->SetName("hybrid_plot");
+  gPad->Write(); 
+  f->Close();
+  
 }
 
 
