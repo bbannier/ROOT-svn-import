@@ -20,8 +20,6 @@
 #include "RooStats/HypoTestCalculator.h"
 #endif
 
-#include <vector>
-
 
 #ifndef ROOSTATS_HybridResult
 #include "RooStats/HybridResult.h"
@@ -136,10 +134,17 @@ namespace RooStats {
       HybridResult* Calculate(unsigned int nToys, bool usePriors) const;
       void PrintMore(const char* options) const;
 
+      void SetGenerateMethod(const char * name, const char * algo1 = 0, const char * algo2 = 0) { 
+         fGenMethod = name; 
+         if (algo1) fGenAlgo1 = algo1; 
+         if (algo2) fGenAlgo2 = algo2; 
+      }
+
 
    private:
 
       void RunToys(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors) const;
+      void RunToysFast(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors) const;
 
       // check input parameters before performing the calculation
       bool DoCheckInputs() const; 
@@ -155,10 +160,9 @@ namespace RooStats {
       bool fGenerateBinned;   //Flag to control binned generation
       bool  fUsePriorPdf;               // use a prior for nuisance parameters  
 
-//       TString fSbModelName;   // name of pdf of the signal+background model
-//       TString fBModelName;   // name of pdf of the background model
-//       TString fPriorPdfName;   // name of pdf of the background model
-//       TString fDataName;      // name of the dataset in the workspace
+      mutable std::string fGenMethod;     // sampling method used  
+      mutable std::string fGenAlgo1;      // algorithm used for S and S+B sampling
+      mutable std::string fGenAlgo2;       // algorithm used for prior sampling
 
    protected:
       ClassDef(HybridCalculator,1)  // Hypothesis test calculator using a Bayesian-frequentist hybrid method
