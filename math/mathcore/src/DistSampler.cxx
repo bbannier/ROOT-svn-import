@@ -55,6 +55,7 @@ void DistSampler::SetRange(const ROOT::Fit::DataRange & range) {
 
 void DistSampler::DoSetFunction(const ROOT::Math::IMultiGenFunction & func, bool copy) { 
    // set the internal function
+   // if a range exists and it is compatible it will be re-used
    if (fOwnFunc && fFunc != 0) delete fFunc; 
    if (copy) {
       fOwnFunc = true; 
@@ -65,8 +66,12 @@ void DistSampler::DoSetFunction(const ROOT::Math::IMultiGenFunction & func, bool
       fFunc = &func; 
    }
    fData = std::vector<double>(func.NDim());
-   if (fRange) delete fRange; 
-   fRange = new ROOT::Fit::DataRange(func.NDim() );
+   // delete a range if exists and it is not compatible
+   if (fRange && fRange->NDim() != fData.size() ) {
+      delete fRange; 
+      fRange = 0; 
+   }
+   if (!fRange) fRange = new ROOT::Fit::DataRange(func.NDim() );
 }
 
 bool DistSampler::IsInitialized()  { 
