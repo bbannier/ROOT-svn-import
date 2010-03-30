@@ -64,6 +64,7 @@
 #include "TMVA/DataSetManager.h"
 #include "TMVA/DataSetInfo.h"
 #include "TMVA/MethodBoost.h"
+#include "TMVA/MethodCategory.h"
 
 #include "TMVA/VariableIdentityTransform.h"
 #include "TMVA/VariableDecorrTransform.h"
@@ -87,6 +88,7 @@ ClassImp(TMVA::Factory)
 //_______________________________________________________________________
 TMVA::Factory::Factory( TString jobName, TFile* theTargetFile, TString theOption )
   : Configurable          ( theOption ),
+    fDataSetManager       ( NULL ), //DSMTEST
     fDataInputHandler     ( new DataInputHandler ),
     fTransformations      ( "" ),
     fVerbose              ( kFALSE ),
@@ -103,7 +105,9 @@ TMVA::Factory::Factory( TString jobName, TFile* theTargetFile, TString theOption
 
    fgTargetFile = theTargetFile;
 
-   DataSetManager::CreateInstance(*fDataInputHandler);
+//   DataSetManager::CreateInstance(*fDataInputHandler); // DSMTEST removed
+   fDataSetManager = new DataSetManager( *fDataInputHandler ); // DSMTEST 
+
 
    // render silent
    if (gTools().CheckForSilentOption( GetOptions() )) Log().InhibitOutput(); // make sure is silent if wanted to
@@ -177,7 +181,9 @@ TMVA::Factory::~Factory( void )
    delete fDataInputHandler;
 
    // destroy singletons
-   DataSetManager::DestroyInstance();
+//   DataSetManager::DestroyInstance(); // DSMTEST replaced by following line
+   delete fDataSetManager; // DSMTEST
+
    // problem with call of REGISTER_METHOD macro ...
    //   ClassifierFactory::DestroyInstance();
    //   Types::DestroyInstance();
@@ -207,17 +213,20 @@ void TMVA::Factory::SetVerbose( Bool_t v )
 //_______________________________________________________________________
 TMVA::DataSetInfo& TMVA::Factory::AddDataSet( DataSetInfo &dsi )
 {
-   return DataSetManager::Instance().AddDataSetInfo(dsi);
+//   return DataSetManager::Instance().AddDataSetInfo(dsi); // DSMTEST replaced by following line
+   return fDataSetManager->AddDataSetInfo(dsi); // DSMTEST
 }
 
 //_______________________________________________________________________
 TMVA::DataSetInfo& TMVA::Factory::AddDataSet( const TString& dsiName )
 {
-   DataSetInfo* dsi = DataSetManager::Instance().GetDataSetInfo(dsiName);
+//   DataSetInfo* dsi = DataSetManager::Instance().GetDataSetInfo(dsiName); // DSMTEST replaced by following line
+   DataSetInfo* dsi = fDataSetManager->GetDataSetInfo(dsiName); // DSMTEST
 
    if (dsi!=0) return *dsi;
    
-   return DataSetManager::Instance().AddDataSetInfo(*(new DataSetInfo(dsiName)));
+//   return DataSetManager::Instance().AddDataSetInfo(*(new DataSetInfo(dsiName))); // DSMTEST replaced by following line
+   return fDataSetManager->AddDataSetInfo(*(new DataSetInfo(dsiName))); // DSMTEST
 }
 
 
@@ -686,6 +695,7 @@ TMVA::MethodBase* TMVA::Factory::BookMethod( TString theMethodName, TString meth
                                                  methodTitle,
                                                  DefaultDataSetInfo(),
                                                  theOption );
+
    }
    else {
       // boosted classifier, requires a specific definition, making it transparent for the user
@@ -695,11 +705,24 @@ TMVA::MethodBase* TMVA::Factory::BookMethod( TString theMethodName, TString meth
                                                  methodTitle,
                                                  DefaultDataSetInfo(),
                                                  theOption );
-      (dynamic_cast<MethodBoost*>(im))->SetBoostedMethodName( theMethodName );
+      MethodBoost* methBoost = dynamic_cast<MethodBoost*>(im); // DSMTEST divided into two lines
+      methBoost->SetBoostedMethodName( theMethodName ); // DSMTEST divided into two lines
+      if( !methBoost ) // DSMTEST
+	 Log() << kERROR << "Method with type kBoost cannot be casted to MethodCategory. /Factory" << Endl; // DSMTEST
+      methBoost->fDataSetManager = fDataSetManager; // DSMTEST
+
    }
 
    MethodBase *method = (dynamic_cast<MethodBase*>(im));
 
+
+   // set fDataSetManager if MethodCategory (to enable Category to create datasetinfo objects) // DSMTEST
+   if( method->GetMethodType() == Types::kCategory ){ // DSMTEST
+      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(im)); // DSMTEST
+      if( !methCat ) // DSMTEST
+	 Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Factory" << Endl; // DSMTEST
+      methCat->fDataSetManager = fDataSetManager; // DSMTEST
+   } // DSMTEST
 
 
    if (!method->HasAnalysisType( fAnalysisType, 

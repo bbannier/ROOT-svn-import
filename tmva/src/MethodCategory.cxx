@@ -68,8 +68,9 @@ TMVA::MethodCategory::MethodCategory( const TString& jobName,
                                       DataSetInfo& theData,
                                       const TString& theOption,
                                       TDirectory* theTargetDir )
-   :  TMVA::MethodCompositeBase( jobName, Types::kCategory, methodTitle, theData, theOption, theTargetDir ),
-   fCatTree(0)
+ : TMVA::MethodCompositeBase( jobName, Types::kCategory, methodTitle, theData, theOption, theTargetDir ),
+   fCatTree(0),
+   fDataSetManager(NULL)
 {
    // standard constructor
 }
@@ -79,7 +80,8 @@ TMVA::MethodCategory::MethodCategory( DataSetInfo& dsi,
                                       const TString& theWeightFile,
                                       TDirectory* theTargetDir )
    : TMVA::MethodCompositeBase( Types::kCategory, dsi, theWeightFile, theTargetDir ),
-   fCatTree(0)
+     fCatTree(0),
+     fDataSetManager(NULL)
 {
    // constructor from weight file
 }
@@ -183,7 +185,8 @@ TMVA::DataSetInfo& TMVA::MethodCategory::CreateCategoryDSI(const TCut& theCut,
    DataSetInfo* dsi = new DataSetInfo(dsiName);
 
    // register the new dsi
-   DataSetManager::Instance().AddDataSetInfo(*dsi);
+//   DataSetManager::Instance().AddDataSetInfo(*dsi); // DSMTEST replaced by following line
+   fDataSetManager->AddDataSetInfo(*dsi);
 
    // copy the targets and spectators from the old dsi to the new dsi
    std::vector<VariableInfo>::iterator itrVarInfo;

@@ -130,6 +130,9 @@ namespace TMVA {
   
    private:
 
+      DataSetManager* fDataSetManager; // DSMTEST
+
+
       TString GetMethodTypeFromFile( const TString& filename );
 
       // this booking method is internal

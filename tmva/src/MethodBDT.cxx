@@ -1086,15 +1086,15 @@ Double_t TMVA::MethodBDT::AdaBoostR2( vector<TMVA::Event*> eventSample, Decision
          Float_t newBoostWeight = (*e)->GetBoostWeight() * boostfactor;
          Float_t newWeight = (*e)->GetWeight() * (*e)->GetBoostWeight() * boostfactor;
          if (newWeight == 0) {
-            std::cout << "Weight=    "   <<   (*e)->GetWeight() << std::endl;
-            std::cout << "BoostWeight= " <<   (*e)->GetBoostWeight() << std::endl;
-            std::cout << "boostweight="<<boostWeight << "  err= " <<err << std::endl; 
-            std::cout << "NewBoostWeight= " <<   newBoostWeight << std::endl;
-            std::cout << "boostfactor= " <<  boostfactor << std::endl;
-            std::cout << "maxDev     = " <<  maxDev << std::endl;
-            std::cout << "tmpDev     = " <<  TMath::Abs(dt->CheckEvent(*(*e),kFALSE) - (*e)->GetTarget(0) ) << std::endl;
-            std::cout << "target     = " <<  (*e)->GetTarget(0)  << std::endl; 
-            std::cout << "estimate   = " <<  dt->CheckEvent(*(*e),kFALSE)  << std::endl;
+            Log() << kINFO << "Weight=    "   <<   (*e)->GetWeight() << Endl;
+            Log() << kINFO  << "BoostWeight= " <<   (*e)->GetBoostWeight() << Endl;
+            Log() << kINFO  << "boostweight="<<boostWeight << "  err= " <<err << Endl; 
+            Log() << kINFO  << "NewBoostWeight= " <<   newBoostWeight << Endl;
+            Log() << kINFO  << "boostfactor= " <<  boostfactor << Endl;
+            Log() << kINFO  << "maxDev     = " <<  maxDev << Endl;
+            Log() << kINFO  << "tmpDev     = " <<  TMath::Abs(dt->CheckEvent(*(*e),kFALSE) - (*e)->GetTarget(0) ) << Endl;
+            Log() << kINFO  << "target     = " <<  (*e)->GetTarget(0)  << Endl; 
+            Log() << kINFO  << "estimate   = " <<  dt->CheckEvent(*(*e),kFALSE)  << Endl;
          }
          (*e)->SetBoostWeight( newBoostWeight );
          //         (*e)->SetBoostWeight( (*e)->GetBoostWeight() * boostfactor);

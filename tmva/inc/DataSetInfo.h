@@ -73,6 +73,7 @@ namespace TMVA {
    class DataSet;
    class VariableTransformBase;
    class MsgLogger;
+   class DataSetManager;
 
    class DataSetInfo : public TObject {
 
@@ -174,6 +175,15 @@ namespace TMVA {
 
    private:
 
+
+
+      TMVA::DataSetManager*            fDataSetManager; // DSMTEST
+      void                       SetDataSetManager( DataSetManager* dsm ) { fDataSetManager = dsm; } // DSMTEST
+      friend class DataSetManager;  // DSMTEST (datasetmanager test)
+
+
+
+
       DataSetInfo( const DataSetInfo& ) : TObject() {}
 
       void PrintCorrelationMatrix( TTree* theTree );
@@ -203,6 +213,7 @@ namespace TMVA {
       
       mutable MsgLogger*         fLogger;            //! message logger
       MsgLogger& Log() const { return *fLogger; }
+
 
    };
 }

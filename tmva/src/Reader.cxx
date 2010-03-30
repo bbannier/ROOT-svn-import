@@ -111,12 +111,14 @@
 #include "TMVA/ClassifierFactory.h"
 #include "TMVA/IMethod.h"
 #include "TMVA/MethodCuts.h"
+#include "TMVA/DataSetManager.h"
 
 ClassImp(TMVA::Reader)
 
 //_______________________________________________________________________
 TMVA::Reader::Reader( const TString& theOption, Bool_t verbose )
    : Configurable( theOption ),
+     fDataSetManager( NULL ), // DSMTEST
      fDataSetInfo(),
      fVerbose( verbose ),
      fSilent ( kFALSE ),
@@ -129,8 +131,12 @@ TMVA::Reader::Reader( const TString& theOption, Bool_t verbose )
 
    fLogger = new MsgLogger(this);
 
-   DataSetManager::CreateInstance(fDataInputHandler);
-   DataSetManager::Instance().AddDataSetInfo(fDataSetInfo);
+//    DataSetManager::CreateInstance(fDataInputHandler); // DSMTEST removed
+//    DataSetManager::Instance().AddDataSetInfo(fDataSetInfo); // DSMTEST removed
+   fDataSetManager = new DataSetManager( fDataInputHandler ); // DSMTEST 
+   fDataSetManager->AddDataSetInfo(fDataSetInfo); // DSMTEST
+   
+
 
    SetConfigName( GetName() );
    DeclareOptions();
@@ -252,6 +258,9 @@ void TMVA::Reader::DeclareOptions()
 TMVA::Reader::~Reader( void )
 {
    // destructor
+
+   delete fDataSetManager; // DSMTEST
+
    delete fLogger;
 }
 

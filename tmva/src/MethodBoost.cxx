@@ -52,6 +52,7 @@
 #include "TMVA/MethodCompositeBase.h"
 #include "TMVA/MethodBase.h"
 #include "TMVA/MethodBoost.h"
+#include "TMVA/MethodCategory.h"
 #include "TMVA/Tools.h"
 #include "TMVA/ClassifierFactory.h"
 #include "TMVA/Timer.h"
@@ -249,6 +250,23 @@ void TMVA::MethodBoost::Train()
 
          // supressing the rest of the classifier output the right way
          MethodBase *meth = (dynamic_cast<MethodBase*>(method));
+
+
+
+
+
+	 // set fDataSetManager if MethodCategory (to enable Category to create datasetinfo objects) // DSMTEST
+	 if( meth->GetMethodType() == Types::kCategory ){ // DSMTEST
+	    MethodCategory *methCat = (dynamic_cast<MethodCategory*>(meth)); // DSMTEST
+	    if( !methCat ) // DSMTEST
+	       Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /MethodBoost" << Endl; // DSMTEST
+	    methCat->fDataSetManager = fDataSetManager; // DSMTEST
+	 } // DSMTEST
+
+
+
+
+
          meth->SetMsgType(kWARNING);
          meth->SetupMethod();
          meth->ParseOptions();
