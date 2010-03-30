@@ -171,7 +171,7 @@ void TMVA::Node::ReadXML( void* node,  UInt_t tmva_Version_Code )
       if (n->GetPos()=='l') { fLeft  = n; }
       else if(n->GetPos()=='r') { fRight = n; }
       else { 
-         std::cout << "neither left nor right" << std::endl;
+	 std::cout << "neither left nor right" << std::endl;
       }
       ch = gTools().GetNextChild(ch);
    }

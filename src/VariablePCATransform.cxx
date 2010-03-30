@@ -375,7 +375,7 @@ void TMVA::VariablePCATransform::ReadTransformationFromStream( std::istream& ist
    fMeanValues.resize(3);
    fEigenVectors.resize(3);
 
-   std::cout << "VariablePCATransform::ReadTransformationFromStream(): " << std::endl;
+   Log() << kINFO << "VariablePCATransform::ReadTransformationFromStream(): " << Endl;
 
    while (!(buf[0]=='#'&& buf[1]=='#')) { // if line starts with ## return
       char* p = buf;

@@ -12,6 +12,7 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch> - CERN, Switzerland           *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *                                                                                *
@@ -224,10 +225,10 @@ const std::vector<Float_t>& TMVA::Event::GetValues() const
       assert(0);
    }
    if (fDynamic) {
-      if (fgValuesDynamic->size()-GetNSpectators() != fValues.size()) {
-         std::cout << "ERROR Event::GetValues() is trying to change the size of the variable vector, exiting ..." << std::endl;
-         assert(0);
-      }
+//       if (fgValuesDynamic->size()-GetNSpectators() != fValues.size()) {
+//          std::cout << "ERROR Event::GetValues() is trying to change the size of the variable vector, exiting ..." << std::endl;
+//          assert(0);
+//       }
       fValues.clear();
       for (std::vector<Float_t*>::const_iterator it = fgValuesDynamic->begin(); 
            it != fgValuesDynamic->end()-GetNSpectators(); it++) { 
