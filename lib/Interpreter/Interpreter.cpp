@@ -253,7 +253,9 @@ MacroDetector::MacroDefined(const clang::IdentifierInfo* II,
    unsigned end = SM.getFileOffset(ELoc);
    const clang::LangOptions& LO = m_CI.getLangOpts();
    end += clang::Lexer::MeasureTokenLength(ELoc, SM, LO);
-   std::pair<const char*, const char*> buf = SM.getBufferData(mainFileID);
+   std::pair<const char*, const char*> buf = std::make_pair(
+      SM.getBuffer(mainFileID)->getBufferStart(),
+      SM.getBuffer(mainFileID)->getBufferEnd());
    std::string str(buf.first + start, end - start);
    m_macros.push_back("#define " + str);
 }
@@ -281,7 +283,9 @@ MacroDetector::MacroUndefined(const clang::IdentifierInfo* II,
    unsigned end = SM.getFileOffset(ELoc);
    const clang::LangOptions& LO = m_CI.getLangOpts();
    end += clang::Lexer::MeasureTokenLength(ELoc, SM, LO);
-   std::pair<const char*, const char*> buf = SM.getBufferData(mainFileID);
+   std::pair<const char*, const char*> buf = std::make_pair(
+      SM.getBuffer(mainFileID)->getBufferStart(),
+      SM.getBuffer(mainFileID)->getBufferEnd());
    std::string str(buf.first + start, end - start);
    std::string::size_type pos = str.find(' ');
    if (pos != std::string::npos) {
@@ -335,8 +339,8 @@ Interpreter::~Interpreter()
    //m_prev_module = 0; // Don't do this, the engine does it.
    delete m_engine;
    m_engine = 0;
-   //delete m_llvm_context;
-   //m_llvm_context = 0; // FIXME: Leak this for now.
+   delete m_llvm_context;
+   m_llvm_context = 0;
    // Shutdown the llvm library.
    llvm::llvm_shutdown();
 }
