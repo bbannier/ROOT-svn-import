@@ -116,7 +116,9 @@ getStmtRange(const clang::Stmt* S,
   else if (SLoc.isValid()) {
     clang::SourceLocation Loc = SM.getInstantiationLoc(SLoc);
     std::pair<clang::FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
-    std::pair<const char*, const char*> BD = SM.getBufferData(LocInfo.first);
+    std::pair<const char*, const char*> BD = std::make_pair(
+       SM.getBuffer(LocInfo.first)->getBufferStart(),
+       SM.getBuffer(LocInfo.first)->getBufferEnd());
     end = BD.second - BD.first;
   }
   return std::pair<unsigned, unsigned>(start, end);
@@ -153,13 +155,17 @@ getRangeWithSemicolon(clang::SourceLocation SLoc,
   if (SLoc.isValid() && !ELoc.isValid()) {
     clang::SourceLocation Loc = SM.getInstantiationLoc(SLoc);
     std::pair<clang::FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
-    std::pair<const char*, const char*> BD = SM.getBufferData(LocInfo.first);
+    std::pair<const char*, const char*> BD = std::make_pair(
+       SM.getBuffer(LocInfo.first)->getBufferStart(),
+       SM.getBuffer(LocInfo.first)->getBufferEnd());
     end = BD.second - BD.first;
   }
   else if (ELoc.isValid()) {
     clang::SourceLocation Loc = SM.getInstantiationLoc(ELoc);
     std::pair<clang::FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
-    std::pair<const char*, const char*> BD = SM.getBufferData(LocInfo.first);
+    std::pair<const char*, const char*> BD = std::make_pair(
+       SM.getBuffer(LocInfo.first)->getBufferStart(),
+       SM.getBuffer(LocInfo.first)->getBufferEnd());
     const char* StrData = BD.first + LocInfo.second;
     clang::Lexer TheLexer(Loc, LO, BD.first, StrData, BD.second);
     clang::Token TheTok;
