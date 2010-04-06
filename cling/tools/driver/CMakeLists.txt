@@ -5,15 +5,20 @@ FIND_PACKAGE(Curses)
 FIND_LIBRARY(READLINE_LIBRARY NAMES readline) 
 
 set( LLVM_USED_LIBS
-  clingInterpreter
   clingUserInterface
-  clingInuit
+  clingMetaProcessor
+  clingInterpreter
+  clingEditLine
+  clangFrontend
   clangDriver
-  clangLex
   clangCodeGen
   clangSema
-  clangParse
+  clangChecker
+  clangAnalysis
+  clangRewrite
   clangAST
+  clangParse
+  clangLex
   clangBasic
   ${CURSES_CURSES_LIBRARY}
   ${READLINE_LIBRARY}
@@ -21,13 +26,7 @@ set( LLVM_USED_LIBS
 
 set( LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
-  bitreader
-  bitwriter
-  codegen
-  ipo
-  selectiondag
-  executionengine
-  linker
+  all
   )
 
 add_clang_executable(cling
