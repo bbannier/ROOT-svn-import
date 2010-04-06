@@ -144,6 +144,7 @@ public:
 private:
    std::string m_globalDeclarations; // All global var decls seen.
    llvm::LLVMContext* m_llvm_context; // We own, our types.
+   clang::CompilerInstance* m_CI; // We own, our compiler instance.
    llvm::ExecutionEngine* m_engine; // We own, our JIT.
    llvm::Module* m_prev_module; // We do *not* own, m_engine owns it.
 
@@ -158,6 +159,7 @@ private:
    clang::CompilerInstance* createStatementList(const std::string& srcCode,
          std::vector<clang::Stmt*>& stmts);
 
+   clang::CompilerInstance* createCI();
    clang::CompilerInstance* getCI();
    clang::CompilerInstance* compileString(const std::string& srcCode);
    clang::CompilerInstance* compileFile(const std::string& filename);
