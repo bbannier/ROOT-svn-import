@@ -317,6 +317,7 @@ Interpreter::Interpreter()
    //
    //m_llvm_context = &llvm::getGlobalContext();
    m_llvm_context = new llvm::LLVMContext;
+   m_CI = createCI();
    m_prev_module = new llvm::Module("_Clang_first", *m_llvm_context);
    // Note: Engine takes ownership of the module.
    llvm::EngineBuilder builder(m_prev_module);
@@ -339,6 +340,9 @@ Interpreter::~Interpreter()
    //m_prev_module = 0; // Don't do this, the engine does it.
    delete m_engine;
    m_engine = 0;
+   m_CI->takeLLVMContext(); // Don't take down the context with the CI.
+   delete m_CI;
+   m_CI = 0;
    delete m_llvm_context;
    m_llvm_context = 0;
    // Shutdown the llvm library.
@@ -362,28 +366,26 @@ Interpreter::analyzeInput(const std::string& contextSource,
    //
    clang::CompilerInstance* CI = getCI();
    if (!CI) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
       return Incomplete;
    }
+   CI->createPreprocessor();
    llvm::MemoryBuffer* buffer =
-      llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(), &*line.end(),
-                                           "CLING");
+      llvm::MemoryBuffer::getMemBufferCopy(line, "CLING");
+   CI->getSourceManager().clearIDTables();
    CI->getSourceManager().createMainFileIDForMemBuffer(buffer);
    if (CI->getSourceManager().getMainFileID().isInvalid()) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return Incomplete;
    }
    clang::Token lastTok;
    bool tokWasDo = false;
    int stackSize = analyzeTokens(CI->getPreprocessor(), lastTok,
                                  indentLevel, tokWasDo);
-   CI->takeLLVMContext();
-   delete CI;
-   CI = 0;
+   ///*reuseCI*/CI->takeLLVMContext();
+   ///*reuseCI*/delete CI;
+   ///*reuseCI*/CI = 0;
    if (stackSize < 0) {
       return TopLevel;
    }
@@ -404,6 +406,7 @@ Interpreter::analyzeInput(const std::string& contextSource,
    if (!CI) {
       return TopLevel;
    }
+   CI->createPreprocessor();
    clang::Preprocessor& PP = CI->getPreprocessor();
    // Setting this ensures "foo();" is not a valid top-level declaration.
    //diag.setDiagnosticMapping(clang::diag::ext_missing_type_specifier,
@@ -465,22 +468,27 @@ Interpreter::analyzeInput(const std::string& contextSource,
    consumer.pos = contextSource.length();
    consumer.maxPos = consumer.pos + buffer->getBuffer().size();
    consumer.sm = &CI->getSourceManager();
-   buffer = llvm::MemoryBuffer::getMemBufferCopy(&*line.begin(),
-            &*line.end(), "CLING");
+   buffer = llvm::MemoryBuffer::getMemBufferCopy(line, "CLING");
    if (!buffer) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return TopLevel;
    }
+   CI->getSourceManager().clearIDTables();
    CI->getSourceManager().createMainFileIDForMemBuffer(buffer);
    if (CI->getSourceManager().getMainFileID().isInvalid()) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return TopLevel;
    }
    clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
+   //CI->setASTConsumer(0);  // We may use the consumer below.
+   //CI->setASTContext(0);  // We may use the consumer below.
+   if (CI->hasPreprocessor()) {
+      CI->getPreprocessor().EndSourceFile();
+   }
    CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
    CI->getDiagnosticClient().EndSourceFile();
 #if 0
@@ -488,9 +496,9 @@ Interpreter::analyzeInput(const std::string& contextSource,
       CI->getDiagnostics().hadError(
          clang::diag::err_unterminated_block_comment)
    ) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return Incomplete;
    }
 #endif // 0
@@ -504,21 +512,22 @@ Interpreter::analyzeInput(const std::string& contextSource,
       if (!consumer.fds.empty()) {
          fds->swap(consumer.fds);
       }
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return TopLevel;
    }
-   CI->takeLLVMContext();
-   delete CI;
-   CI = 0;
+   ///*reuseCI*/CI->takeLLVMContext();
+   ///*reuseCI*/delete CI;
+   ///*reuseCI*/CI = 0;
    return Stmt;
 }
 
 //---------------------------------------------------------------------------
 // Note: Used only by analyzeInput().
 int Interpreter::analyzeTokens(clang::Preprocessor& PP,
-                               clang::Token& lastTok, int& indentLevel, bool& tokWasDo)
+                               clang::Token& lastTok, int& indentLevel,
+                               bool& tokWasDo)
 {
    std::stack<std::pair<clang::Token, clang::Token> > S; // Tok, PrevTok
    indentLevel = 0;
@@ -710,13 +719,18 @@ Interpreter::makeModuleFromCommandLine(const std::string& input_line)
          return 0;
       }
    }
+   ///**/   ///*reuseCI*/CI->takeLLVMContext();
+   ///**/   ///*reuseCI*/delete CI;
+   ///**/   ///*reuseCI*/CI = 0;
+   ///**/   return 0;
    // Note: We have a valid compiler instance at this point.
    clang::TranslationUnitDecl* tu =
       CI->getASTContext().getTranslationUnitDecl();
    if (!tu) { // Parse failed, return.
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Wrapped parse failed, no translation unit!\n");
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
    //
@@ -725,19 +739,20 @@ Interpreter::makeModuleFromCommandLine(const std::string& input_line)
    //
    llvm::Module* m = doCodegen(CI, "CLING");
    if (!m) {
-      //fprintf(stderr, "Module creation failed!\n");
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Module creation failed!\n");
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
    //
    //  All done with the compiler instance,
    //  get rid of it.
    //
-   CI->takeLLVMContext();
-   delete CI;
-   CI = 0;
+   ///*reuseCI*/CI->takeLLVMContext();
+   ///*reuseCI*/delete CI;
+   ///*reuseCI*/CI = 0;
+   //printModule(m);
    return m;
 }
 
@@ -747,6 +762,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped)
    std::vector<clang::Stmt*> stmts;
    clang::CompilerInstance* CI = createStatementList(src, stmts);
    if (!CI) {
+      wrapped.clear();
       return;
    }
    //
@@ -904,11 +920,22 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped)
    //
    CI->setASTConsumer(0);
    CI->setASTContext(0);
-   CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
-   CI->getDiagnosticClient().EndSourceFile();
-   CI->takeLLVMContext();
-   delete CI;
-   CI = 0;
+   //if (CI->hasPreprocessor()) {
+   //   CI->getPreprocessor().EndSourceFile();
+   //}
+   //CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
+   //CI->getDiagnosticClient().EndSourceFile();
+   unsigned err_count = CI->getDiagnostics().getNumErrors();
+   if (err_count) {
+      wrapped.clear();
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
+      return;
+   }
+   ///*reuseCI*/CI->takeLLVMContext();
+   ///*reuseCI*/delete CI;
+   ///*reuseCI*/CI = 0;
 }
 
 clang::CompilerInstance*
@@ -919,6 +946,7 @@ Interpreter::createStatementList(const std::string& srcCode,
    if (!CI) {
       return 0;
    }
+   CI->createPreprocessor();
    clang::Preprocessor& PP = CI->getPreprocessor();
    PP.addPPCallbacks(new MacroDetector(*CI, m_globalDeclarations.size()));
    CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
@@ -931,36 +959,49 @@ Interpreter::createStatementList(const std::string& srcCode,
    CI->setASTConsumer(consumer);
    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
                                           PP.getLangOptions().NoBuiltin);
-   llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
-                               &*srcCode.begin(), &*srcCode.end(), "CLING");
+   llvm::MemoryBuffer* SB =
+      llvm::MemoryBuffer::getMemBufferCopy(srcCode, "CLING");
    if (!SB) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Interpreter::createStatementList: Failed to create "
+                      "memory buffer!\n");
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
+   CI->getSourceManager().clearIDTables();
    CI->getSourceManager().createMainFileIDForMemBuffer(SB);
    if (CI->getSourceManager().getMainFileID().isInvalid()) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Interpreter::createStatementList: Failed to create "
+                      "main file id!\n");
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
    clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
+   //CI->setASTConsumer(0); // We still need these later.
+   //CI->setASTContext(0); // We still need these later.
+   if (CI->hasPreprocessor()) {
+      CI->getPreprocessor().EndSourceFile();
+   }
    CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
    CI->getDiagnosticClient().EndSourceFile();
    unsigned err_count = CI->getDiagnostics().getNumErrors();
    if (err_count) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Interpreter::createStatementList: Parse failed!\n");
+      CI->setASTConsumer(0);
+      CI->setASTContext(0);
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
    return CI;
 }
 
 clang::CompilerInstance*
-Interpreter::getCI()
+Interpreter::createCI()
 {
    //
    //  Create and setup a compiler instance.
@@ -1039,8 +1080,25 @@ Interpreter::getCI()
    //   CI->getSourceManager().clearIDTables();
    //}
    CI->createSourceManager();
-   CI->createPreprocessor();
+   //CI->createPreprocessor(); // Note: This single line takes almost all the time!
    return CI;
+}
+
+clang::CompilerInstance*
+Interpreter::getCI()
+{
+   if (!m_CI) {
+      return 0;
+   }
+   m_CI->createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
+   if (!m_CI->hasDiagnostics()) {
+      m_CI->takeLLVMContext();
+      delete m_CI;
+      m_CI = 0;
+      return 0;
+   }
+   //m_CI->getSourceManager().clearIDTables();
+   return m_CI;
 }
 
 clang::CompilerInstance*
@@ -1050,6 +1108,7 @@ Interpreter::compileString(const std::string& srcCode)
    if (!CI) {
       return 0;
    }
+   CI->createPreprocessor();
    clang::Preprocessor& PP = CI->getPreprocessor();
    CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
    CI->createASTContext();
@@ -1059,29 +1118,40 @@ Interpreter::compileString(const std::string& srcCode)
    CI->setASTConsumer(new clang::ASTConsumer());
    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
                                           PP.getLangOptions().NoBuiltin);
-   llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
-                               &*srcCode.begin(), &*srcCode.end(), "CLING");
+   llvm::MemoryBuffer* SB =
+      llvm::MemoryBuffer::getMemBufferCopy(srcCode, "CLING");
    if (!SB) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Interpreter::compileString: Failed to create memory "
+                      "buffer!\n");
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
+   CI->getSourceManager().clearIDTables();
    CI->getSourceManager().createMainFileIDForMemBuffer(SB);
    if (CI->getSourceManager().getMainFileID().isInvalid()) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Interpreter::compileString: Failed to create main "
+                      "file id!\n");
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
    clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
+   CI->setASTConsumer(0);
+   //CI->setASTContext(0); // Caller still needs this.
+   if (CI->hasPreprocessor()) {
+      CI->getPreprocessor().EndSourceFile();
+   }
    CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
    CI->getDiagnosticClient().EndSourceFile();
    unsigned err_count = CI->getDiagnostics().getNumErrors();
    if (err_count) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Interpreter::compileString: Parse failed!\n");
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
    return CI;
@@ -1095,6 +1165,7 @@ Interpreter::compileFile(const std::string& filename)
    if (!CI) {
       return 0;
    }
+   CI->createPreprocessor();
    clang::Preprocessor& PP = CI->getPreprocessor();
    CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
    CI->createASTContext();
@@ -1105,26 +1176,36 @@ Interpreter::compileFile(const std::string& filename)
                                           PP.getLangOptions().NoBuiltin);
    const clang::FileEntry* file = CI->getFileManager().getFile(filename);
    if (!file) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Interpreter::compileFile: Failed to get file!\n");
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
+   CI->getSourceManager().clearIDTables();
    CI->getSourceManager().createMainFileID(file, clang::SourceLocation());
    if (CI->getSourceManager().getMainFileID().isInvalid()) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Interpreter::compileFile: Failed to create main "
+                      "file id!\n");
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
    clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
+   CI->setASTConsumer(0);
+   //CI->setASTContext(0); // Caller still needs this.
+   if (CI->hasPreprocessor()) {
+      CI->getPreprocessor().EndSourceFile();
+   }
    CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
    CI->getDiagnosticClient().EndSourceFile();
    unsigned err_count = CI->getDiagnostics().getNumErrors();
    if (err_count) {
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(stderr, "Interpreter::compileFile: Parse failed!\n");
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 0;
    }
    return CI;
@@ -1136,6 +1217,11 @@ Interpreter::doCodegen(clang::CompilerInstance* CI, const std::string& filename)
    clang::TranslationUnitDecl* tu =
       CI->getASTContext().getTranslationUnitDecl();
    if (!tu) {
+      fprintf(
+           stderr
+         , "Interpreter::doCodegen: No translation unit decl in passed "
+           "ASTContext!\n"
+      );
       return 0;
    }
    llvm::OwningPtr<clang::CodeGenerator> codeGen(
@@ -1152,7 +1238,10 @@ Interpreter::doCodegen(clang::CompilerInstance* CI, const std::string& filename)
    //fprintf(stderr, "Finished code generation.\n");
    llvm::Module* m = codeGen->ReleaseModule();
    if (!m) {
-      //fprintf(stderr, "Error: Backend did not create a module!\n");
+      fprintf(
+           stderr
+         , "Interpreter::doCodegen: Code generation did not create a module!\n"
+      );
       return 0;
    }
    return m;
@@ -1199,6 +1288,14 @@ Interpreter::executeCommandLine()
    //arg1.IntVal = llvm::APInt(32, 5);
    //args.push_back(arg1);
    llvm::Function* f = m_engine->FindFunctionNamed("_Z16__cling_internalv");
+   if (!f) {
+      fprintf(
+           stderr
+         , "Interpreter::executeCommandLine: Could not find the "
+           "__cling_internal() function!\n"
+      );
+      return;
+   }
    llvm::GenericValue ret = m_engine->runFunction(f, args);
    //
    //fprintf(stderr, "Finished running generated code with JIT.\n");
@@ -1220,7 +1317,12 @@ Interpreter::loadFile(const std::string& filename)
          llvm::sys::DynamicLibrary::LoadLibraryPermanently(
             filename.c_str(), &errMsg);
       if (err) {
-         llvm::errs() << "Could not load shared library: " << errMsg << '\n';
+         //llvm::errs() << "Could not load shared library: " << errMsg << '\n';
+         fprintf(
+              stderr
+            , "Interpreter::loadFile: Could not load shared library!\n"
+         );
+         fprintf(stderr, "%s\n", errMsg.c_str());
          return 1;
       }
       return 0;
@@ -1232,33 +1334,55 @@ Interpreter::loadFile(const std::string& filename)
    clang::TranslationUnitDecl* tu =
       CI->getASTContext().getTranslationUnitDecl();
    if (!tu) { // Parse failed, return.
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      fprintf(
+           stderr
+         , "Interpreter::loadFile: No translation unit decl found!\n"
+      );
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 1;
    }
    llvm::Module* m = doCodegen(CI, filename);
    if (!m) {
       //fprintf(stderr, "Error: Backend did not create a module!\n");
-      CI->takeLLVMContext();
-      delete CI;
-      CI = 0;
+      ///*reuseCI*/CI->takeLLVMContext();
+      ///*reuseCI*/delete CI;
+      ///*reuseCI*/CI = 0;
       return 1;
    }
    //--
    //llvm::Linker linker("executable", llvm::CloneModule(m_prev_module));
-   //if (linker.LinkInModule(llvm::CloneModule(m), errMsg)) {
+   //if (linker.LinkInModule(m, errMsg)) {
+   //   m = linker.releaseModule();
+   //   delete m;
+   //   m = 0;
    //   return 0;
    //}
    //m = linker.releaseModule();
+   //
+   //  Transfer global mappings from previous module.
+   //
+   //copyGlobalMappings(m_engine, m_prev_module, m);
+   //
+   //  All done with previous module, delete it.
+   //
+   //{
+   //   bool ok = m_engine->removeModule(m_prev_module);
+   //   if (!ok) {
+   //      //fprintf(stderr, "Previous module not found in execution engine!\n");
+   //   }
+   //   delete m_prev_module;
+   //   m_prev_module = 0;
+   //}
    //--
    //
    //  Give new module to the execution engine.
    //
    m_engine->addModule(m); // Note: The engine takes ownership of the module.
-   CI->takeLLVMContext();
-   delete CI;
-   CI = 0;
+   ///*reuseCI*/CI->takeLLVMContext();
+   ///*reuseCI*/delete CI;
+   ///*reuseCI*/CI = 0;
    return 0;
 }
 
@@ -1298,6 +1422,7 @@ Interpreter::executeFunction(const std::string& funcname)
    //args.push_back(arg1);
 #if 0
    clang::CompilerInstance* CI = getCI();
+   CI->createPreprocessor();
    std::string errMsg;
    const llvm::Target* target =
       llvm::TargetRegistry::lookupTarget(CI->getTarget().getTriple().str(),
@@ -1323,8 +1448,11 @@ Interpreter::executeFunction(const std::string& funcname)
    mangled_name << "_Z" << funcname.size() << funcname << "v";
    llvm::Function* f = m_engine->FindFunctionNamed(mangled_name.str().c_str());
    if (!f) {
-      fprintf(stderr, "Could not find function named: %s\n",
-              mangled_name.str().c_str());
+      fprintf(
+           stderr
+         , "Interpreter::executeFunction: Could not find function named: %s\n"
+         , mangled_name.str().c_str()
+      );
       return;
    }
    llvm::GenericValue ret = m_engine->runFunction(f, args);
