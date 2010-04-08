@@ -412,7 +412,10 @@ Interpreter::analyzeInput(const std::string& contextSource,
    //diag.setDiagnosticMapping(clang::diag::ext_missing_type_specifier,
    //                          clang::diag::MAP_ERROR);
    CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
-   CI->createASTContext();
+   //CI->createASTContext();
+   CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
+      PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
+      PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
    // Do this to see the AST printed out:
    //clang::ASTConsumer* consumer = clang::CreateASTPrinter(&llvm::outs());
    //CI->setASTConsumer(consumer);
@@ -950,7 +953,10 @@ Interpreter::createStatementList(const std::string& srcCode,
    clang::Preprocessor& PP = CI->getPreprocessor();
    PP.addPPCallbacks(new MacroDetector(*CI, m_globalDeclarations.size()));
    CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
-   CI->createASTContext();
+   //CI->createASTContext();
+   CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
+      PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
+      PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
    // Create an ASTConsumer for this frontend run which
    // will produce a list of statements seen.
    StmtSplitter splitter(stmts);
@@ -1111,7 +1117,10 @@ Interpreter::compileString(const std::string& srcCode)
    CI->createPreprocessor();
    clang::Preprocessor& PP = CI->getPreprocessor();
    CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
-   CI->createASTContext();
+   //CI->createASTContext();
+   CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
+      PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
+      PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
    // Do this to see the AST printed out:
    //clang::ASTConsumer* consumer = clang::CreateASTPrinter(&llvm::outs());
    //CI->setASTConsumer(consumer);
@@ -1168,7 +1177,10 @@ Interpreter::compileFile(const std::string& filename)
    CI->createPreprocessor();
    clang::Preprocessor& PP = CI->getPreprocessor();
    CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
-   CI->createASTContext();
+   //CI->createASTContext();
+   CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
+      PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
+      PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
    // Do this to see the AST printed out:
    //clang::ASTConsumer* dummyConsumer = clang::CreateASTPrinter(&llvm::outs());
    CI->setASTConsumer(new clang::ASTConsumer());
