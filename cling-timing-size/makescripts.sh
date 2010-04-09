@@ -1,8 +1,7 @@
 #!/bin/bash
 
 let i=0
-rm load.in
-rm run.in
+rm -f load.in run.in start.in
 mkdir -p files
 
 # CINT switches to ".Command"
@@ -46,15 +45,18 @@ for what in $runwhat; do
     file=${what}.txt
     echo '===' $what '===' > $file
 
-    for job in start load load run; do
+    for job in run; do # load start load 
         echo '' >> $file
         echo $job ' time:' >> $file
         time ($what < $job.in > /dev/null 2>&1 ) 2>> $file
         echo 'Memory after '$job' (RSS,VSZ [kB]) according to ps:' >> $file
         cat mem.txt >> $file
+        rm -f mem.txt
         echo 'Memory after '$job' (Heap [MB]) according to massif:' >> $file
-        valgrind --tool=massif --massif-out-file=${what}.${job}.massif  $what < $job.in >> /dev/null 2>&1
+        valgrind --tool=massif --depth=1 --massif-out-file=${what}.${job}.massif  $what < $job.in >> /dev/null 2>&1
         ms_print ${what}.${job}.massif| grep -E '^[[:digit:].]+\^'|cut -d^ -f1 >> $file
         echo '' >> $file
     done
 done
+
+rm -f load.in run.in start.in 
