@@ -17,7 +17,7 @@ LIBS    = -L../../../tmva/lib $(shell root-config --libs) -lTMVA.1 -lMLP -lTreeP
 all: $(BINS) TMVAInputData.root
 
 TMVAInputData.root: createComparisonData.C run.C
-	root -l run.C
+	root -q -l run.C
 
 tests:
 	python runTestDataInput.py

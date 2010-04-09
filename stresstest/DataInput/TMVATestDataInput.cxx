@@ -788,7 +788,7 @@ int main( int argc, char** argv )
 
    std::cout << std::endl << "==> Start TMVAClassification" << std::endl;
 
-   bool batchMode(false);
+   bool batchMode(true);
    bool useDefaultMethods(true);
    int indx=0;
    if (argc>1) indx = atoi(argv[1]);
