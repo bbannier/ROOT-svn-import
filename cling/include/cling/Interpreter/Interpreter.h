@@ -160,7 +160,9 @@ private:
          std::vector<clang::Stmt*>& stmts);
 
    clang::CompilerInstance* createCI();
+public:   
    clang::CompilerInstance* getCI();
+private:   
    clang::CompilerInstance* compileString(const std::string& srcCode);
    clang::CompilerInstance* compileFile(const std::string& filename);
 
