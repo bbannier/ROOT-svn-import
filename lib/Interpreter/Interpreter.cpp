@@ -688,6 +688,7 @@ Interpreter::makeModuleFromCommandLine(const std::string& input_line)
    if (is_preprocessor_cmd) {
       std::string src(m_globalDeclarations);
       src += input_line;
+      src += "\n";
       src += "void __cling_internal() {\n";
       src += "\n} // end __cling_internal()\n";
       //fprintf(stderr, "input_line:\n%s\n", src.c_str());
