@@ -1,0 +1,70 @@
+Only in buildbot-0.7.12: build
+diff --exclude '*~' -u -r buildbot-0.7.12-ORIG/buildbot/changes/changes.py buildbot-0.7.12/buildbot/changes/changes.py
+--- buildbot-0.7.12-ORIG/buildbot/changes/changes.py	2010-01-22 04:20:40.000000000 +0100
++++ buildbot-0.7.12/buildbot/changes/changes.py	2010-03-25 15:58:20.000000000 +0100
+@@ -25,6 +25,9 @@
+ 
+ Properties:
+ %(properties)s
++
++Category:
++%(category)s
+ </p>
+ """
+ 
+@@ -92,6 +95,7 @@
+         data += "Changed By: %s\n" % self.who
+         data += "Comments: %s" % self.comments
+         data += "Properties: \n%s\n\n" % self.getProperties()
++        data += "Category: \n%s\n\n" % self.category
+         return data
+ 
+     def asHTML(self):
+@@ -126,7 +130,8 @@
+                    'revision'  : revision,
+                    'branch'    : branch,
+                    'comments'  : html.PRE(self.comments),
+-                   'properties': html.UL(properties) + '\n' }
++                   'properties': html.UL(properties) + '\n',
++                   'category'  : html.escape(self.category)}
+         return html_tmpl % kwargs
+ 
+     def get_HTML_box(self, url):
+@@ -141,10 +146,11 @@
+         pointing at the passed-in 'url'.
+         """
+         who = self.getShortAuthor()
+-        if self.comments is None:
+-            title = ""
+-        else:
+-            title = html.escape(self.comments)
++        title = ""
++        if self.category is not None:
++            title = html.escape(self.category + ': ')
++        if self.comments is not None:
++            title += html.escape(self.comments)
+         return '<a href="%s" title="%s">%s</a>' % (url,
+                                                    title,
+                                                    html.escape(who))
+Only in buildbot-0.7.12/buildbot: __init__.pyc
+diff --exclude '*~' -u -r buildbot-0.7.12-ORIG/buildbot/status/web/grid.py buildbot-0.7.12/buildbot/status/web/grid.py
+--- buildbot-0.7.12-ORIG/buildbot/status/web/grid.py	2010-01-22 04:20:41.000000000 +0100
++++ buildbot-0.7.12/buildbot/status/web/grid.py	2010-03-26 14:45:29.000000000 +0100
+@@ -219,7 +219,7 @@
+         data += '</tr>\n'
+ 
+         sortedBuilderNames = status.getBuilderNames()[:]
+-        sortedBuilderNames.sort()
++        #sortedBuilderNames.sort()
+         for bn in sortedBuilderNames:
+             builds = [None] * len(stamps)
+ 
+@@ -292,7 +292,7 @@
+         data += '</td>\n'
+ 
+         sortedBuilderNames = status.getBuilderNames()[:]
+-        sortedBuilderNames.sort()
++        #sortedBuilderNames.sort()
+ 
+         builder_builds = []
+ 
