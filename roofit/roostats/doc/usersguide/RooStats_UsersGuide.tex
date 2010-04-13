@@ -90,12 +90,12 @@ Document version 0
 
 \vspace{.5in}
 
-{\large Kyle Cranmer, Gr\eacute;gory Schott, Lorenzo Moneta, Wouter Verkerke}
+{\large Kyle Cranmer, Gr\'egory Schott, Lorenzo Moneta, Wouter Verkerke}
 
 \vspace{2in}
 {\em With contributions from:}\\
 
-Danilo Piparo, Giacinto Piacquadio, Maurizio Pierini, George H. Lewis, Alfio Lazzaro, Mario Pelliccioni, Matthias Wolf
+Kevin Belasco, Danilo Piparo, Giacinto Piacquadio, Maurizio Pierini, George H. Lewis, Alfio Lazzaro, Mario Pelliccioni, Matthias Wolf
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -242,8 +242,8 @@ For more information about building ROOT from source, see the ROOT webpage:\\ \u
 \begin{figure}[htbp]
 \begin{center}
 \includegraphics[width=\textwidth]{RooStats_OverviewOfInterfaces.pdf}
-\caption{{\bf default}}
-\label{default}
+\caption{An class diagram of the interfaces for hypothesis testing and confidence interval calculations.  The diagram shows the classes used to return the results of these statistical tests as well.}
+\label{fig:OverviewOfInterfaces}
 \end{center}
 \end{figure}
 
@@ -292,15 +292,37 @@ Graphical Representation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Parameter Estimation}
 
+Parameter estimation, or `point estimation' is the general class of statistical tests in which one wishes to estimate the value of some parameter $\theta$ given some data $x$ and a model $P(x|\theta)$.  In high energy physics, this is usually referred to as ``fitting'', and the estimate that is given is usually the ``maximum likelihood estimate'' (MLE).  The most common tool for providing maximum likelihood estimates in high energy physics is \textsc{minuit}.
+
+In general an \textit{estimator} for $\theta$ can be denoted $\hat{\theta}(x)$ and it has an expected value $E[\hat{\theta}]$.  If the expectation value of the estimator is equal to the true value of the parameter, then the estimator is called \textit{unbiased}.   The \textit{variance} of the estimator is $var[\hat\theta] = E[ (\hat\theta - E[\hat\theta])^2]$.  
+
+Two naturally desirable properties of estimators are for them to be unbiased and have minimal mean squared error (MSE). These cannot in general both be satisfied simultaneously: a biased estimator may have lower mean squared error (MSE) than any unbiased estimator: despite having bias, the estimator variance may be sufficiently smaller than that of any unbiased estimator, and it may be preferable to use, despite the bias; see estimator bias~[Wikipedia].
+
+Among unbiased estimators, there often exists one with the lowest variance, called the minimum variance unbiased estimator (MVUE). In some cases an unbiased efficient estimator exists, which, in addition to having the lowest variance among unbiased estimators, satisfies the Cram\'er-Rao bound, which is an absolute lower bound on variance for statistics of a variable~[Wikipedia].
+
+RooFit provides a general interface to determine the MLE for all probability density functions via: \texttt{RooAbsPdf::fitTo(RooAbsData\& data,...)}.  It is possible to use other minimization algorithms other than \textsc{minuit}, which is outlined in the RooFit documentation.
+
+Currently, RooStats does not provide functionality for point estimation beyond what is found directly in RooFit.  However, RooStats does offer significantly more options when one wants to consider frequentist confidence intervals or Bayesian credible intervals on the parameters.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Test Statistics and Sampling Distributions}
 
+A \textit{test statistic} $T(x)$ is a general term for a numerical summary of the data.  Typically a test statistic is a single number, though it can be have multiple components.  Usually a test statistic is best thought of as a mapping of the data to a real number, and that mapping often depends on the values of the parameters of a model (implicit in the notation $T(x)$.  
+
+For instance, for simple hypothesis testing the Neyman-Pearson lemma states that the likelihood ratio is the most powerful test statistic for testing a null hypothesis against an alternative.  In a simple number counting experiment, the number of events usually serves as the test statistic.  In more complicated cases one might use the profile likelihood ratio as the test statistic to summarize the preference of the data toward one hypothesis or the other.  As will be described below, RooStats provides a general interface and several implementations for the notion of a test statistic.
+
+Note, a \textit{sufficient statistic} is a statistic which has the property of sufficiency with respect to a statistical model and its associated unknown parameter, meaning that "no other statistic which can be calculated from the same sample provides any additional information as to the value of the parameter".  In most situations relevant for high energy physics, the only distributions in the exponential family have sufficient statistics.
+
+A \textit{sampling distribution} is very familiar to high energy physicists, it is the distribution for some quantity that one obtains from sampling some parent distribution $n$ times.  It is most commonly the result of Monte Carlo sampling, and often obtained from ``toy Monte Carlo'' or ``pseudo-experiments''.  In statistical tests, it is common to build the sampling distribution for some test statistic $T$ by first using Monte Carlo techniques to sample $x$ from $P(x|\theta)$ and then evaluating the test statistic $T(x)$.  There are other techniques for building these sampling distributions.
+
+
+
 \begin{figure}[htbp]
 \begin{center}
 \includegraphics[width=\textwidth]{RooStats_TestStatistic.pdf}
-\caption{{\bf default}}
-\label{default}
+\caption{Class diagram showing the relationship between the interface classes TestStatSamler and TestStatistic.  The diagram shows a few concrete implementations of the TestStatistic interface and the TestStatSampler interface.}
+\label{fig:TestStatistic}
 \end{center}
 \end{figure}
 
@@ -308,7 +330,7 @@ Graphical Representation
 	\subsection{TestStatistic interface and implementations}
 
 
-We added a new interface class called TestStatistic. It defines the method Evaluate(data, parameterPoint), which returns a double.  This class can be used in conjunction with the ToyMCSampler class to generate sampling distributions for a user-defined test statistic.  
+We added a new interface class called TestStatistic. It defines the method \texttt{Evaluate(data, parameterPoint)}, which returns a double.  This class can be used in conjunction with the ToyMCSampler class to generate sampling distributions for a user-defined test statistic.  
 
 The following concrete implementations of the TestStatistic interface are currently available
 
@@ -321,7 +343,7 @@ We introduced a ``result'' or data model class called SamplingDistribution, whic
 
 We introduced an interface for any tool that can produce a SamplingDistribution, called TestStatSampler.  The interface is essentially GetSamplingDistribution(parameterPoint) which returns a SamplingDistribution based on a given probability density function.  We foresee a few versions of this tool based on toy Monte Carlo, importance sampling, Fourier transforms, etc.  The following concrete implementation of the TestStatSampler interface are currently available
 
-ToyMCSamplerUses a Toy Monte Carlo approach to build the sampling distribution.  The pdf's generate method to generate is used to generate toy data, and then the test statistic is evaluated at the requested parameter point.
+ToyMCSampler uses a Toy Monte Carlo approach to build the sampling distribution.  The pdf's generate method to generate is used to generate toy data, and then the test statistic is evaluated at the requested parameter point.
 DebuggingSampler Simply returns a uniform distribution between 0,1.  Useful for debugging.
 NeymanConstruction and FeldmanCousins
 
@@ -333,6 +355,37 @@ The FeldmanCousins class is a separate concrete implementation of the IntervalCa
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Hypothesis Testing}
 
+Hypothesis testing is one of the most common procedures in science.  In \textit{simple hypothesis testing} one considers a null hypothesis $H_0$ and an alternate hypothesis $H_1$, both of which are completely specified and provide models for the data.  
+
+Define: Type I \& Type II errors, size, and power.
+
+The Neyman-Pearson lemma states that the likelihood ratio $P(x|H_1)/P(x|H_0)$ provides the most powerful test statistic for testing the alternate against the null.  This is the basis for the ubiquity of the use of teh likelihood ratio; however, it is only the most powerful test in this very limited situation.
+
+More commonly one does not have a fully specified simple hypothesis, but a \textit{composite hypothesis} $P(x|\mu,\nu)$ that is parametrized.  It may be parametrized according to some parameter of interest $\mu$ (e.g., the mass of a particle) or by some nuisance parameter $\nu$ (e.g., an unknown background rate).  In these cases, the Neyman-Pearson lemma is not applicable.  One would like to find a test statistic that is most powerful over the full range of $\mu$ -- which is referred to as Uniformly Most Powerful (UMP).  Unfortunately, UMP tests don't exist in general.  
+
+There is a precise dictionary that relates hypothesis tests to confidence intervals.  In fact, the frequentist method for deriving confidence intervals is referred to as an ``inverted hypothesis test''.
+
+In RooStats we wish to support several different techniques for hypothesis testing.  They mainly differ in the way that they incorporate systematic effects.  There are only very few cases in which hypothesis tests with systematics has a clear ``solution'' from first principles.  In a more general setting the field has developed several techniques, and new ones are being advocated given recent interaction with the professional statistics community.  Some of the techniques included in RooStats are mainly avaialbe for consistency with historical practice in the field.
+
+As denoted in Fig.~\ref{fig:OverviewOfInterfaces}, the interface for tools that peform hypothesis tests in RooStats is called \texttt{HypoTestCalculator}.  After configuring a HypoTestCalculator, one simply requests the result via \texttt{HypoTestCalculator::GetHypoTest()}.
+
+Below we describe three concrete implementatons.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\subsection{Single Channel Number Counting with Background Uncertainty}
+
+Here we describe the ratio of Poisson means.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\subsection{Profile Likelihood Ratio (the method of MINOS)}
+
+The approximate frequentist method based on Wilks' theorem.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\subsection{The Hybrid Calculator}
+
+This is the traditional frequentist ToyMC method; however, because of its Bayesian marginalization of nuisance parameters it is not purely frequentist.  Hence the technique is often referred to as a  ``Bayesian-Frequentist Hybrid''.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Confidence Intervals}
@@ -343,8 +396,13 @@ The FeldmanCousins class is a separate concrete implementation of the IntervalCa
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\subsection{Neyman Construction}
 
+This is the general class for performing a NeymanConstruction.
+Some details in the TestStatsitic section, more to come.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\subsection{Feldman-Cousins}
+
+This is a light weight class that encodes a specific configuration of the more general purpose  Neyman Construction class.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\subsection{Neyman Construction with nuisance parameters}
