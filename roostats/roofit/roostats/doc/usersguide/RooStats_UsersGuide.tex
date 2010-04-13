@@ -381,10 +381,79 @@ Here we describe the ratio of Poisson means.
 
 The approximate frequentist method based on Wilks' theorem.
 
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\subsection{The Hybrid Calculator}
 
-This is the traditional frequentist ToyMC method; however, because of its Bayesian marginalization of nuisance parameters it is not purely frequentist.  Hence the technique is often referred to as a  ``Bayesian-Frequentist Hybrid''.
+This is the traditional frequentist ToyMC method; however, because of
+its Bayesian marginalization of nuisance parameters it is not purely
+frequentist.  Hence the technique is often referred to as a
+``Bayesian-Frequentist Hybrid''.
+ We define $H_b$ as the hypothesis that no signal is
+present over the background and $H_{sb}$ the hypothesis that signal is
+also present. In order to quantify the degree in which each hypotheses
+are favoured or excluded by the experimental observation one chooses a
+test-statistics which ranks the possible experimental outcomes. A
+commonly used test statistics consist as the ratio of the likelihood
+function in both hypotheses: $Q=L_{sb}/L_b$ and the quantity $-2\ln Q$
+may also be used instead of $Q$. The HybridCalculator class of RooStats provides alternative
+choices for the test statistics such as the number of events or the
+profiled likelihood ratio.
+
+
+A comparison of $Q_\mathrm{obs}$ for the data being tested to the
+probability distributions $dP/dQ$ expected in both hypotheses allows
+to compute the confidence levels:
+\begin{eqnarray}
+  CL_{sb} = P_{sb}(Q<Q_\mathrm{obs}), & \mathrm{where} & P_{sb}(Q<Q_\mathrm{obs}) = \int_{-\infty}^{Q_\mathrm{obs}}\frac{dP_{sb}}{dQ} dQ, \\
+  CL_{b} = P_{b}(Q<Q_\mathrm{obs}), & \mathrm{where} & P_{b}(Q<Q_\mathrm{obs}) = \int_{-\infty}^{Q_\mathrm{obs}}\frac{dP_{b}}{dQ} dQ.
+\end{eqnarray}
+Small values of $CL_{sb}$ (resp.~$CL_{b}$) point out poor compatibility with the $H_{sb}$ (resp.~$H_{b}$)
+hypothesis and favour the $H_{b}$ (resp.~$H_{s}$) hypothesis.
+The functional form of the $dP_{sb}/dQ$ and $dP_{b}/dQ$ pdfs not being
+known a priori, a large amount of toy Monte-Carlo experiments are performed
+in order to determine it for
+two families of pseudo datasets: the ones in the signal+background and the ones in 
+the background-only hypothesis (see figure~\ref{m2lnQ}).
+
+
+\begin{figure}[h]
+    \begin{center}
+%%        \includegraphics[width=87mm]{figures/m2lnQsample.png}
+        \caption{The distributions of $-2\ln Q$ in the background-only
+                 (red, on the right) and signal+background (blue,
+                 on the left) hypotheses. The black line represents
+                 the value of $-2\ln Q$ on the tested data.  The
+                 shaded areas represent $1-CL_{b}$ (red) and $CL_{sb}$
+                 (blue).\label{m2lnQ}}
+    \end{center}
+\end{figure}
+
+A significance estimation can be obtained using formula~\ref{nsigmasfromCL2} on
+$CL_{sb}$. Moreover, the tested data can be said to be excluded at a
+given CL if $1-CL_{sb}$ is smaller than this CL (or alternatively the
+$CL_s$ prescription can be used (see below)). By varying the
+hypothesis being tested (for example varying the signal cross-section
+as on figures~\ref{htautau_lim_1}, \ref{htautau_lim_2}, \ref{hww_lim}
+and \ref{combination_plot}) one may also scan for the type of model
+that can be excluded with the given data.
+It should be observed that these confidence intervals do not have the
+same meaning as the ones obtained with the profile likelihood method
+or the Bayesian credibility intervals.
+\par
+Systematics uncertainties are taken into account  using Bayesian
+Monte-Carlo sampling.
+For each toy Monte-Carlo experiment the effective value 
+of the nuisance parameters is varied before generating the toy Monte-Carlo sample itself 
+(that includes in addition the Poisson fluctuations).
+The whole phase space of the nuisance parameters is thus sampled through
+Monte-Carlo integration. The final net effect consist in a broadening
+of the $-\ln Q$ distribution and thus, as expected in presence of
+systematic uncertainties, a degraded separation of the hypotheses.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -392,6 +461,58 @@ This is the traditional frequentist ToyMC method; however, because of its Bayesi
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\subsection{Profile Likelihood Ratio (the method of MINOS)}
+
+Suppose we have, for each of $N$ events in a collection, a set of
+measured quantities \mbox{$\underline{x}=(x_a,\,x_b,\,x_c,\,\ldots)$}
+whose distributions are described by a joint probability density
+function, or pdf, $f(\underline{x},\underline{\theta})$, where
+$\underline{\theta}=(\theta_1,\,\theta_2,\,\theta_3,\,\ldots )$ is a
+set of $K$ parameters. The likelihood function is then defined by
+the equation:
+\begin{equation}
+    \label{likelihood}
+    L(\underline{x},\underline{\theta})=\prod^{N}_{i=1}f({\underline{x}}_{i},\underline{\theta}).
+\end{equation}
+To ease the calculations, the negative of the logarithm of the likelihood
+function $-\ln{L}$ (negative log-likelihood) is often used.
+
+Focussing on a one-dimensional case, the profile likelihood method
+requires to perform a scan over a sensible range of values of the
+parameter of interest $\theta_{0}$. For every point of this scan, the
+value of $\theta_{0}$ is fixed and $-\ln{L(\theta_{0})}$ is minimised
+(i.e.~a fit is performed) with respect to the remaining $K-1$
+parameters. The maximum likelihood estimator of the $\theta_{0}$
+parameter, noted $\hat{\theta}_0$, is the value where the negative
+log-likelihood function is at its minimum
+$-\ln{L(\hat{\theta}_0)}$. 
+
+Figure~\ref{plscan} shows an example of a profiled negative
+log-likelihood curve which has been offset by
+$-\ln{L(\hat{\theta}_0)}$. From this construction, it is possible to
+easily obtain the one- or two-sided confidence interval we are
+interested in. In the assumption of a parabolic shape of the negative
+log-likelihood function\footnote{It can be shown that this approach is
+also valid for a general scan shape \cite{Metzger}.}, the boundaries
+of a confidence intervals correspond to the values of
+$\theta_0$ with
+\begin{equation}
+    \label{parabolicnll}
+    \Delta nll = -(\ln{L(\theta_0)}-\ln{L(\hat{\theta}_0)}) = \frac{n_\sigma^{2}}{2},\ \mathrm{with}\ n_\sigma=\frac{\theta_{0}-\hat{\theta}_{0}}{\sigma}.
+\end{equation}
+where $\sigma$ represent the Gaussian standard deviations. The mapping between the desired 
+confidence level (CL) and the value of $n_\sigma$ is given, in the Gaussian assumption, by the formulae:
+\begin{eqnarray}
+    \label{nsigmasfromCL1}
+    &n_\sigma = \sqrt{2}\cdot \mathrm{Erf}^{-1}(CL) & \mathrm{(two-sided)} \\
+    &n_\sigma = \sqrt{2}\cdot \mathrm{Erf}^{-1}(2 \cdot CL -1) & \mathrm{(one-sided)}
+    \label{nsigmasfromCL2}
+\end{eqnarray}
+where $\mathrm{Erf}^{-1}$ is the Gaussian inverse error function. In
+the later case, an upper limit on the parameter $\theta_0$ would then
+correspond then to the value $\theta_0>\hat{\theta}_0$ obeying
+equations~\ref{parabolicnll} and~\ref{nsigmasfromCL2}.
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\subsection{Neyman Construction}
