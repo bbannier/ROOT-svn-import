@@ -473,41 +473,53 @@ the equation:
     \label{likelihood}
     L(\underline{x},\underline{\theta})=\prod^{N}_{i=1}f({\underline{x}}_{i},\underline{\theta}).
 \end{equation}
-To ease the calculations, the negative of the logarithm of the likelihood
-function $-\ln{L}$ (negative log-likelihood) is often used.
-
-Focussing on a one-dimensional case, the profile likelihood method
-requires to perform a scan over a sensible range of values of the
-parameter of interest $\theta_{0}$. For every point of this scan, the
-value of $\theta_{0}$ is fixed and $-\ln{L(\theta_{0})}$ is minimised
-(i.e.~a fit is performed) with respect to the remaining $K-1$
-parameters. The maximum likelihood estimator of the $\theta_{0}$
-parameter, noted $\hat{\theta}_0$, is the value where the negative
-log-likelihood function is at its minimum
-$-\ln{L(\hat{\theta}_0)}$. 
-
-Figure~\ref{plscan} shows an example of a profiled negative
-log-likelihood curve which has been offset by
-$-\ln{L(\hat{\theta}_0)}$. From this construction, it is possible to
-easily obtain the one- or two-sided confidence interval we are
-interested in. In the assumption of a parabolic shape of the negative
-log-likelihood function\footnote{It can be shown that this approach is
-also valid for a general scan shape \cite{Metzger}.}, the boundaries
-of a confidence intervals correspond to the values of
-$\theta_0$ with
+For semplicity, let's focus on one dimensional case where  we are have
+a parameter of interest,  $\theta_{0}$ and K-1 nuisance parameters. 
+The profile likelihood is a function of $\theta_{0}$ and it is defined as 
+\begin{equation}
+    \label{profile_likelihood}
+\lambda(\theta_{0} ) = \frac{
+  L(\theta_{0},\hat{\hat{\underline{\theta} } }_{i \neq 0}
+     ) } 
+{  L(\hat{\theta}_{0}, \hat{\underline{\theta}}_{i \neq
+      0}   ) }
+\end{equation}
+The numerator, $ L(\hat{\theta}_{0} )$ is the maximum likelihood value,
+obtained from the best fit to the data, while the denominator is the
+maximum value obtained by fixing $\theta_{0}$ and varying the remining
+K-1 parameters.   
+%To ease the calculations, the negative of the logarithm of the likelihood
+%function $-\ln{L}$ (negative log-likelihood) is used.
+It can be shown (Wilks' theorem) that asyntotically
+$-2ln\lambda(\theta_0)$ is distributed as a $\chi^2(1)$ ($\chi^2(n)$
+in the case of n parameter of interest). This is not
+surprising since in the asymptotic limit the Likelihood function
+becomes a Gaussian centered around the ML estimator $\theta^0$, and
+the profile likelihood curve has a parabolica shape: 
 \begin{equation}
     \label{parabolicnll}
-    \Delta nll = -(\ln{L(\theta_0)}-\ln{L(\hat{\theta}_0)}) = \frac{n_\sigma^{2}}{2},\ \mathrm{with}\ n_\sigma=\frac{\theta_{0}-\hat{\theta}_{0}}{\sigma}.
+-2ln\lambda(\theta_0) = -2 (\ln{L(\theta_0)}-\ln{L(\hat{\theta}_0)}) = n_{\sigma}^{2},\ \mathrm{with}\ n_\sigma=\frac{\theta_{0}-\hat{\theta}_{0}}{\sigma}. 
 \end{equation}
-where $\sigma$ represent the Gaussian standard deviations. The mapping between the desired 
-confidence level (CL) and the value of $n_\sigma$ is given, in the Gaussian assumption, by the formulae:
+
+where $\sigma$ represent the Gaussian standard deviations of the
+parameter $\theta_{0}$. From this construction, it is possible to
+easily obtained the one- or two-sided confidenc interval we are
+interested in. Even in case of non parabolic log-likelihood
+functions, it can be shown, due to the invariance property of the
+likelihood ratios, that this approach is also valid. This is a
+method known in the physics community, it has been called the method
+of MINOS since it  has been implemented by the MINOS algorithm of the Minuit
+program\ref{Minuit}. 
+
+The mapping between the desired 
+confidence level (CL) and the value of Gaussian $n_\sigma$ is given by the formulae:
 \begin{eqnarray}
     \label{nsigmasfromCL1}
     &n_\sigma = \sqrt{2}\cdot \mathrm{Erf}^{-1}(CL) & \mathrm{(two-sided)} \\
     &n_\sigma = \sqrt{2}\cdot \mathrm{Erf}^{-1}(2 \cdot CL -1) & \mathrm{(one-sided)}
     \label{nsigmasfromCL2}
 \end{eqnarray}
-where $\mathrm{Erf}^{-1}$ is the Gaussian inverse error function. In
+where $\mathrm{Erf}^{-1}$ is the inverse error function. In
 the later case, an upper limit on the parameter $\theta_0$ would then
 correspond then to the value $\theta_0>\hat{\theta}_0$ obeying
 equations~\ref{parabolicnll} and~\ref{nsigmasfromCL2}.
