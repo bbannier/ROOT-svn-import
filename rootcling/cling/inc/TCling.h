@@ -75,14 +75,13 @@ private:
    TObjArray      *fRootmapFiles;   //list of non-default rootmap files loaded
    Bool_t          fLockProcessLine;//true if ProcessLine should lock gCINTMutex
    static void    *fgSetOfSpecials; //set of TObject*s used in CINT variables
-   clang::LangOptions* fLangInfo;   // language definition / features
    cling::Interpreter* fInterpreter;// cling
    cling::MetaProcessor* fMetaProcessor;//cling's command processor
 
    TCint() : fMore(-1), fExitCode(0), fDictPos(), fDictPosGlobals(),
              fSharedLibs(), fIncludePath(), fRootmapLoadPath(), fMapfile(0),
              fRootmapFiles(0), fLockProcessLine(kFALSE),
-             fLangInfo(0), fInterpreter(0), fMetaProcessor(0)
+             fInterpreter(0), fMetaProcessor(0)
    { }  //for Dictionary() only
    TCint(const TCint&);             // not implemented
    TCint &operator=(const TCint&);  // not implemented
