@@ -43,10 +43,10 @@ INCLUDEFILES += $(CLINGDEP)
 include/%.h:    $(CLINGDIRI)/%.h
 		cp $< $@
 
-$(CLINGLIB):    $(CLINGO) $(CLINGDO) $(ORDER_) $(MAINLIBS)
-		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libRCling.$(SOEXT) $@ "$(CLINGO) $(CLINGDO)" \
-		   "$(CLINGLIBEXTRA)" -L$(LLVMDIR)/lib -lCling
+#$(CLINGLIB):    $(CLINGO) $(CLINGDO) $(ORDER_) $(MAINLIBS)
+#		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
+#		   "$(SOFLAGS)" libRCling.$(SOEXT) $@ "$(CLINGO) $(CLINGDO)" \
+#		   "$(CLINGLIBEXTRA)" -L$(LLVMDIR)/lib -lCling
 
 $(CLINGDS):     $(CLINGH) $(CLINGL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
@@ -67,29 +67,20 @@ distclean-$(MODNAME): clean-$(MODNAME)
 
 distclean::     distclean-$(MODNAME)
 
-$(CLINGO): check-cling-header
-check-cling-header:
-	diff $(CLINGDIRI)/TCint.h include/TCint.h > /dev/null \
-	  || cp $(CLINGDIRI)/TCint.h include/TCint.h
-
 ##### extra rules ######
 $(CLINGO) $(clingdo): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS \
                                   -I$(LLVMDIR)/include
-# remove TCint and its dictionary:
-METAO := $(subst $(METATCINTDO),$(CLINGDO),$(subst $(METATCINTO),$(CLINGO),$(METAO)))
+
 CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
  -lclingInterpreter -lclingMetaProcessor -lclingEditLine \
  -lclangFrontend \
  -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
- -lclangAST -lclangBasic \
+ -lclangAST -lclangBasic -lclangDriver -Llib -lReflex \
  -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
  -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86AsmParser -lLLVMX86AsmPrinter \
  -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86Info -lLLVMAsmPrinter \
  -lLLVMCodeGen -lLLVMScalarOpts -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
- -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC -lLLVMCore \
+ -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMCParser -lLLVMMC -lLLVMCore \
  -lLLVMSupport -lLLVMSystem
 
-# This hack does two things:
-# 1. remove core/meta/inc/TCint.h from the list of files to be copied to include/
-# 2. copy right now cint/cling/inc/TCint.h to include if include/TCint.h differs from cling's
-ALLHEADERS := $(subst include/TCint.h,,$(ALLHEADRS)) $(shell diff $(CLINGDIRI)/TCint.h include/TCint.h > /dev/null || cp $(CLINGDIRI)/TCint.h include/TCint.h)
+$(CLINGO) $(CLINGDO): CXXFLAGS += -Wno-unused-parameter
