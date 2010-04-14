@@ -25,6 +25,7 @@
 #include "Reflex/internal/InternalTools.h"
 #include "Reflex/Tools.h"
 #include "Reflex/DictionaryGenerator.h"
+#include "Reflex/Builder/TypeBuilder.h"
 
 #include "Class.h"
 #include "Namespace.h"
@@ -69,7 +70,21 @@ Reflex::ScopeBase::ScopeBase( const Reflex::Dictionary& dictionary,
    if ( ! declScopePtr ) {
       if (scopeType == NAMESPACE) {
          declScopePtr = (new Namespace(dictionary, declScope.c_str()))->ThisScope();
-      } else { declScopePtr = (new ScopeName(Names::FromDictionary(dictionary), declScope.c_str(), 0))->ThisScope(); }
+      } else {
+         ScopeName* sn = 0;
+         Type scopeType = Type::ByName(declScope, dictionary);
+         if (scopeType.Id()) {
+            TypeName* scopeTypeName = (TypeName*) scopeType.Id();
+            if (scopeTypeName->LiteralName().IsLiteral()) {
+               sn = new ScopeName(Names::FromDictionary(dictionary), Literal(scopeTypeName->Name()), 0);
+            } else {
+               sn = new ScopeName(Names::FromDictionary(dictionary), declScope.c_str(), 0);
+            }
+         } else {
+            sn = new ScopeName(Names::FromDictionary(dictionary), declScope.c_str(), 0);
+         }
+         declScopePtr = sn->ThisScope();
+      }
    }
 
    // Set declaring Scope and sub-scopes
@@ -89,7 +104,7 @@ Reflex::ScopeBase::ScopeBase(const Reflex::Dictionary& dictionary):
      fBasePosition( 0 ) {
 //-------------------------------------------------------------------------------
    // Default constructor for the ScopeBase (used at init time for the global scope)
-   fScopeName = new ScopeName(Names::FromDictionary(dictionary), "", this);
+   fScopeName = new ScopeName(Names::FromDictionary(dictionary), Literal(""), this);
    PropertyList().AddProperty("Description", "global namespace");
 }
 
@@ -543,12 +558,12 @@ Reflex::ScopeBase::Name(unsigned int mod) const {
    if (0 != (mod & (SCOPED | S))) {
       return fScopeName->Name();
    }
-   return std::string(fScopeName->Name(), fBasePosition);
+   return fScopeName->Name() + fBasePosition;
 }
 
 
 //-------------------------------------------------------------------------------
-const std::string&
+const char*
 Reflex::ScopeBase::SimpleName(size_t& pos,
                                                         unsigned int mod ) const {
 //-------------------------------------------------------------------------------

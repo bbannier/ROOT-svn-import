@@ -58,7 +58,7 @@ Reflex::ScopeName::ScopeName( Names& names,
 
    //---Build recursively the declaring scopeNames
    if( fName != "@N@I@R@V@A@N@A@" ) {
-      std::string decl_name = Tools::GetScopeName(fName);
+      std::string decl_name = Tools::GetScopeName(std::string(fName.c_str()));
 
       if (!Scope::ByNameShallow(decl_name, names).Id()) {
          new ScopeName(names, decl_name.c_str(), 0);
@@ -76,7 +76,7 @@ Reflex::ScopeName::~ScopeName() {
 //-------------------------------------------------------------------------------
 Reflex::Scope Reflex::ScopeName::ByNameShallow( const std::string & name, const Names& names ) {
 //-------------------------------------------------------------------------------
-   return names.ByScopeNameShallow(name);
+   return names.ByScopeNameShallow(name.c_str());
 }
 
 //-------------------------------------------------------------------------------
@@ -85,8 +85,8 @@ Reflex::ScopeName::ByName(const std::string& name, const Names& names) {
 //-------------------------------------------------------------------------------
 // Lookup a scope by fully qualified name.
 
-   return names.ByScopeName(name);
-   }
+   return names.ByScopeName(name.c_str());
+}
 
 
 //-------------------------------------------------------------------------------
@@ -213,3 +213,18 @@ Reflex::ScopeName::Scope_REnd() {
 // Return the rend iterator of the scope collection.
    return ((const std::vector<Scope>&)sScopeVec()).rend();
 }
+
+//-------------------------------------------------------------------------------
+void
+Reflex::ScopeName::Unload() {
+//-------------------------------------------------------------------------------
+// Unload reflection information for this type.
+   if (Reflex::Instance::State() != Reflex::Instance::kHasShutDown) {
+      delete fScopeBase;
+      fScopeBase = 0;
+      if (Reflex::Instance::State() != Reflex::Instance::kTearingDown) {
+         fName.ToHeap();
+      }
+   }
+}
+

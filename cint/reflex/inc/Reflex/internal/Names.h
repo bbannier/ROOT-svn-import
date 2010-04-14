@@ -100,7 +100,7 @@ namespace Reflex {
       * @param  key fully qualified Name of the At as string
       * @return pointer to At or 0 if none is found
       */
-      TypeName* ByTypeName( const std::string & key ) const;
+      TypeName* ByTypeName( const std::string& key ) const;
 
 
       /**
@@ -108,14 +108,14 @@ namespace Reflex {
       * @param  key fully qualified Name of the At as string
       * @param  typeName pointer to a type name instance to register
       */
-      void RegisterTypeName( const std::string & key, Reflex::TypeName* typeName );
+      void RegisterTypeName( const LiteralString& key, Reflex::TypeName* typeName );
 
 
       /**
       * unregisters a type name in this registry
       * @param  key fully qualified Name of the At as string
       */
-      void UnregisterTypeName( const std::string & key );
+      void UnregisterTypeName( const LiteralString& key );
 
 
       /**
@@ -181,14 +181,14 @@ namespace Reflex {
       * @param  key fully qualified Name of the At as string
       * @param  scopeName pointer to a type name instance to register
       */
-      void RegisterScopeName( const std::string & key, const Reflex::Scope& scopeName );
+      void RegisterScopeName( const LiteralString& key, const Reflex::Scope& scopeName );
 
 
       /**
       * unregisters a scope name in this registry
       * @param  key fully qualified Name of the At as string
       */
-      void UnregisterScopeName( const std::string & key );
+      void UnregisterScopeName( const LiteralString& key );
 
 
    private:

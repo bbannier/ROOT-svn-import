@@ -559,9 +559,11 @@ void
 Reflex::Type::Unload() const {
 //-------------------------------------------------------------------------------
 //  Unload a type, i.e. delete the TypeName's TypeBase object.
-   if (!Reflex::Instance::HasShutdown() && *this) {
-      delete fTypeName->fTypeBase;
-   }
+   if (fTypeName)
+      const_cast<Reflex::TypeName*>(fTypeName)->Unload();
+   // The scope might have our name, better move it to the heap.
+   ScopeName* sn = (ScopeName*)(operator Scope().Id());
+   if (sn) sn->LiteralName().ToHeap();
 }
 
 

@@ -42,12 +42,12 @@ sTypeVec() {
 
 //-------------------------------------------------------------------------------
 Reflex::TypeName::TypeName(Reflex::Names& names,
-                     const char * nam,
-                                  TypeBase * typeBas,
+                           const char * nam,
+                           TypeBase * typeBas,
                            const std::type_info* ti):
    fName(nam),
-     fTypeBase( typeBas ),
-     fNames(names) {
+   fTypeBase( typeBas ),
+   fNames(names) {
 //-------------------------------------------------------------------------------
 // Construct a type name.
    fThisType = new Type(this);
@@ -221,3 +221,19 @@ Reflex::TypeName::Type_REnd() {
 // Return rend iterator of the type container.
    return ((const std::vector<Type>&)sTypeVec()).rend();
 }
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::TypeName::Unload() {
+//-------------------------------------------------------------------------------
+// Unload reflection information for this type.
+   if (Reflex::Instance::State() != Reflex::Instance::kHasShutDown) {
+      delete fTypeBase;
+      fTypeBase = 0;
+      if (Reflex::Instance::State() != Reflex::Instance::kTearingDown) {
+         fName.ToHeap();
+      }
+   }
+}
+

@@ -1839,7 +1839,7 @@ inline const char*
 Reflex::Type::Name_c_str() const {
 //-------------------------------------------------------------------------------
    if (fTypeName) {
-      return fTypeName->Name_c_str();
+      return fTypeName->Name();
    }
    return "";
 }
