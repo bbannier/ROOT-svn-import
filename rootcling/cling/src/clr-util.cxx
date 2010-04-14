@@ -26,7 +26,7 @@ void show_message (const string msg, const string location)
 
    txt = txt + msg;
 
-   std::cerr << txt << std::endl;
+   std::cerr << "CLR-" << txt << std::endl;
 }
 
 void info (const string msg, const string location)
