@@ -72,9 +72,9 @@ Reflex::ScopeBase::ScopeBase( const Reflex::Dictionary& dictionary,
          declScopePtr = (new Namespace(dictionary, declScope.c_str()))->ThisScope();
       } else {
          ScopeName* sn = 0;
-         Type scopeType = Type::ByName(declScope, dictionary);
-         if (scopeType.Id()) {
-            TypeName* scopeTypeName = (TypeName*) scopeType.Id();
+         Type tScope = Type::ByName(declScope, dictionary);
+         if (tScope.Id()) {
+            TypeName* scopeTypeName = (TypeName*) tScope.Id();
             if (scopeTypeName->LiteralName().IsLiteral()) {
                sn = new ScopeName(Names::FromDictionary(dictionary), Literal(scopeTypeName->Name()), 0);
             } else {
