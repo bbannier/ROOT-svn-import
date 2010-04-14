@@ -103,11 +103,7 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
 {
    // The command is the char right after the initial '.' char.
    const char cmd_char = input_line[1];
-   //
-   //  Handle all one character commands.
-   //
-   //--
-   //
+
    //  .q
    //
    //  Quit.
@@ -116,34 +112,30 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
       m_QuitRequested = true;
       return true;
    }
+
    //
-   //  Handle all commands with parameters.
+   //  Extract command and parameter:
+   //    .command parameter
    //
-   //--
-   //  Make sure we have a parameter.
-   if (input_line.size() < 4) { // must have at least ".x <something>"
-      return false;
+   std::string cmd = input_line.substr(1, std::string::npos);
+   std::string param;
+   std::string::size_type endcmd = input_line.find_first_of(" \t\n", 2);
+   if (endcmd != std::string::npos) { // have a blank after command
+      cmd = input_line.substr(1, endcmd);
+
+      std::string::size_type firstparam = input_line.find_first_not_of(" \t\n", endcmd);
+      std::string::size_type lastparam = input_line.find_last_not_of(" \t\n");
+
+      if (firstparam != std::string::npos) { // have a parameter
+         //
+         //  Trim blanks from beginning and ending of parameter.
+         //
+         std::string::size_type len = (lastparam + 1) - firstparam;
+         // Construct our parameter.
+         param = input_line.substr(firstparam, len);
+      }
    }
-   // Must have at least one space after the command char.
-   if (input_line[2] != ' ') {
-      return false;
-   }
-   //
-   //  Trim blanks from beginning and ending of parameter.
-   //
-   std::string::size_type first = input_line.find_first_not_of(" \t\n", 3);
-   std::string::size_type last = input_line.find_last_not_of(" \t\n");
-   if (first == std::string::npos) { // all blanks after command char
-      return false;
-   }
-   std::string::size_type len = (last + 1) - first;
-   // Construct our parameter.
-   //fprintf(stderr, "input_line: '%s'\n", input_line.c_str());
-   //fprintf(stderr, "first: %lu\n", first);
-   //fprintf(stderr, "last: %lu\n", last);
-   //fprintf(stderr, "len: %lu\n", len);
-   std::string param(input_line, first, len);
-   //fprintf(stderr, "param: '%s'\n", param.c_str());
+
    //
    //  .L <filename>
    //
@@ -172,6 +164,28 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
       }
       return true;
    }
+   //
+   //  .printAST [0|1]
+   //
+   //  Toggle the printing pf the AST or if 1 or 0 is given
+   //  enable or disable it.
+   //
+   if (cmd == "printAST") {
+      if (param.empty()) {
+         // toggle:
+         bool print = !m_Interp.setPrintAST(true);
+         m_Interp.setPrintAST(print);
+         printf("%srinting AST\n", print?"P":"Not p");
+      } else if (param == "1") {
+         m_Interp.setPrintAST(true);
+      } else if (param == "0") {
+         m_Interp.setPrintAST(false);
+      } else {
+         fprintf(stderr, ".printAST: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
+      }
+      return true;
+   }
+
    //
    //  .U <filename>
    //

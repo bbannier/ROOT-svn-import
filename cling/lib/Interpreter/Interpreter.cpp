@@ -93,7 +93,7 @@
 #include <limits.h>
 #include <stdint.h>
 
-static const char* fake_argv[] = { "clang", "-x", "c++", 0 };
+static const char* fake_argv[] = { "clang", "-x", "c++", "-D__CLING__", 0 };
 static const int fake_argc = (sizeof(fake_argv) / sizeof(const char*)) - 1;
 
 namespace {
@@ -301,12 +301,14 @@ MacroDetector::MacroUndefined(const clang::IdentifierInfo* II,
 //---------------------------------------------------------------------------
 // Constructor
 //---------------------------------------------------------------------------
-Interpreter::Interpreter()
+Interpreter::Interpreter(const char* llvmdir /*= 0*/):
+   m_llvm_context(0),
+   m_CI(0),
+   m_engine(0),
+   m_prev_module(0),
+   m_printAST(false)
 {
    m_globalDeclarations = "#include <stdio.h>\n";
-   m_llvm_context = 0;
-   m_engine = 0;
-   m_prev_module = 0;
    //
    //  Initialize the llvm library.
    //
@@ -317,7 +319,7 @@ Interpreter::Interpreter()
    //
    //m_llvm_context = &llvm::getGlobalContext();
    m_llvm_context = new llvm::LLVMContext;
-   m_CI = createCI();
+   m_CI = createCI(llvmdir);
    m_prev_module = new llvm::Module("_Clang_first", *m_llvm_context);
    // Note: Engine takes ownership of the module.
    llvm::EngineBuilder builder(m_prev_module);
@@ -416,10 +418,8 @@ Interpreter::analyzeInput(const std::string& contextSource,
    CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
       PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
       PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
-   // Do this to see the AST printed out:
-   //clang::ASTConsumer* consumer = clang::CreateASTPrinter(&llvm::outs());
-   //CI->setASTConsumer(consumer);
-   CI->setASTConsumer(new clang::ASTConsumer());
+
+   CI->setASTConsumer(maybeGenerateASTPrinter());
    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
                                           PP.getLangOptions().NoBuiltin);
    //std::string src = contextSource + buffer->getBuffer().str();
@@ -1008,7 +1008,7 @@ Interpreter::createStatementList(const std::string& srcCode,
 }
 
 clang::CompilerInstance*
-Interpreter::createCI()
+Interpreter::createCI(const char* llvmdir /*=0*/)
 {
    //
    //  Create and setup a compiler instance.
@@ -1029,25 +1029,32 @@ Interpreter::createCI()
          CI->getHeaderSearchOpts().UseBuiltinIncludes &&
          CI->getHeaderSearchOpts().ResourceDir.empty()
       ) {
-         // FIXME: The first arg really does need to be argv[0] on FreeBSD.
-         //
-         // Note: The second arg is not used for Apple, FreeBSD, Linux,
-         //       or cygwin, and can only be used on systems which support
-         //       the use of dladdr().
-         //
-         // Note: On linux and cygwin this uses /proc/self/exe to find the path.
-         //
-         // Note: On Apple it uses _NSGetExecutablePath().
-         //
-         // Note: On FreeBSD it uses getprogpath().
-         //
-         // Note: Otherwise it uses dladdr().
-         //
-         CI->getHeaderSearchOpts().ResourceDir =
-            clang::CompilerInvocation::GetResourcesPath("cling",
-                  (void*)(intptr_t) locate_cling_executable);
-         //CI->getHeaderSearchOpts().ResourceDir =
-         //   llvm::sys::Path("/local2/russo/llvm/lib/clang/1.1").str();
+         if (llvmdir) {
+            llvm::sys::Path P(llvmdir);
+            P.appendComponent("lib");
+            P.appendComponent("clang");
+            P.appendComponent(CLANG_VERSION_STRING);
+            
+            CI->getHeaderSearchOpts().ResourceDir = P.str();
+         } else {
+            // FIXME: The first arg really does need to be argv[0] on FreeBSD.
+            //
+            // Note: The second arg is not used for Apple, FreeBSD, Linux,
+            //       or cygwin, and can only be used on systems which support
+            //       the use of dladdr().
+            //
+            // Note: On linux and cygwin this uses /proc/self/exe to find the path.
+            //
+            // Note: On Apple it uses _NSGetExecutablePath().
+            //
+            // Note: On FreeBSD it uses getprogpath().
+            //
+            // Note: Otherwise it uses dladdr().
+            //
+            CI->getHeaderSearchOpts().ResourceDir =
+               clang::CompilerInvocation::GetResourcesPath("cling",
+                                                           (void*)(intptr_t) locate_cling_executable);
+         }
       }
       CI->createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
       if (!CI->hasDiagnostics()) {
@@ -1108,6 +1115,15 @@ Interpreter::getCI()
    return m_CI;
 }
 
+clang::ASTConsumer*
+Interpreter::maybeGenerateASTPrinter() const
+{
+   if (m_printAST) {
+      return clang::CreateASTPrinter(&llvm::outs());
+   }
+   return new clang::ASTConsumer();
+}
+
 clang::CompilerInstance*
 Interpreter::compileString(const std::string& srcCode)
 {
@@ -1122,10 +1138,7 @@ Interpreter::compileString(const std::string& srcCode)
    CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
       PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
       PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
-   // Do this to see the AST printed out:
-   //clang::ASTConsumer* consumer = clang::CreateASTPrinter(&llvm::outs());
-   //CI->setASTConsumer(consumer);
-   CI->setASTConsumer(new clang::ASTConsumer());
+   CI->setASTConsumer(maybeGenerateASTPrinter());
    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
                                           PP.getLangOptions().NoBuiltin);
    llvm::MemoryBuffer* SB =
@@ -1182,9 +1195,7 @@ Interpreter::compileFile(const std::string& filename)
    CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
       PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
       PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
-   // Do this to see the AST printed out:
-   //clang::ASTConsumer* dummyConsumer = clang::CreateASTPrinter(&llvm::outs());
-   CI->setASTConsumer(new clang::ASTConsumer());
+   CI->setASTConsumer(maybeGenerateASTPrinter());
    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
                                           PP.getLangOptions().NoBuiltin);
    const clang::FileEntry* file = CI->getFileManager().getFile(filename);
