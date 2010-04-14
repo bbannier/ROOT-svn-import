@@ -50,13 +50,13 @@
 #include <set>
 #include <string>
 
-#define USE_CLR
+#undef USE_CLR
 
 #ifdef USE_CLR
    #include "clr-scan.h"
 #endif
 
-#undef DBG
+#define DBG
 
 #ifdef DBG
    #include <iostream>
@@ -383,7 +383,7 @@ TCint::TCint(const char *name, const char *title) :
    // Make sure that ALL macros are seen as C++.
    G__LockCpp();
 
-   fInterpreter = new cling::Interpreter ();
+   fInterpreter = new cling::Interpreter(gSystem->ExpandPathName("$(LLVMDIR)"));
    clang::CompilerInstance * CI = fInterpreter->getCI ();
 
    clang::LangOptions & langInfo = CI->getLangOpts ();
@@ -405,13 +405,13 @@ TCint::TCint(const char *name, const char *title) :
    langInfo.POSIXThreads = 1;
 
    #ifdef DBG
-      const clang::HeaderSearchOptions & headerOpts = CI->getHeaderSearchOpts ();
-      headerOpts.Verbose = 1;
+   //clang::HeaderSearchOptions & headerOpts = CI->getHeaderSearchOpts ();
+   //headerOpts.Verbose = 1;
    #endif
 
    // addPath (CI, headerOpts.ResourceDir); // llvm/lib/clang/1.5
 
-   gccOptions (CI); // gcc include directories
+   //gccOptions (CI); // gcc include directories
 
    addIncludePath (CI); // include/root
 
