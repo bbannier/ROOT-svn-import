@@ -21,6 +21,7 @@
 #include "Reflex/TypeTemplate.h"
 #include "Reflex/MemberTemplate.h"
 #include "Reflex/Base.h"
+#include "Reflex/Builder/TypeBuilder.h"
 
 #include "Reflex/Tools.h"
 #include "Class.h"
@@ -30,7 +31,7 @@ Reflex::Scope&
 Reflex::Scope::__NIRVANA__() {
 //-------------------------------------------------------------------------------
 // static wraper around NIRVANA, the base of the top scope.
-   static Scope s = Scope( new ScopeName(Names::Main(), "@N@I@R@V@A@N@A@", 0 ));
+   static Scope s = Scope( new ScopeName(Names::Main(), Literal("@N@I@R@V@A@N@A@"), 0 ));
    return s;
 }
 
@@ -778,9 +779,8 @@ void
 Reflex::Scope::Unload() const {
 //-------------------------------------------------------------------------------
 // Unload a scope, i.e. delete the ScopeName's ScopeBase object.
-   if (!Reflex::Instance::HasShutdown() && *this) {
-      delete fScopeName->fScopeBase;
-   }
+   if (fScopeName)
+      const_cast<Reflex::ScopeName*>(fScopeName)->Unload();
 }
 
 

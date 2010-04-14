@@ -87,7 +87,19 @@ Reflex::TypeBase::TypeBase( const Reflex::Dictionary& dictionary,
       fScope = Scope::ByName(sname, dictionary);
 
       if (fScope.Id() == 0) {
-         fScope = (new ScopeName(Names::FromDictionary(dictionary), sname.c_str(), 0))->ThisScope();
+         ScopeName* sn = 0;
+         Type scopeType = Type::ByName(sname, names);
+         if (scopeType.Id()) {
+            TypeName* scopeTypeName = (TypeName*) scopeType.Id();
+            if (scopeTypeName->LiteralName().IsLiteral()) {
+               sn = new ScopeName(names, Literal(scopeTypeName->Name()), 0);
+            } else {
+               sn = new ScopeName(names, sname.c_str(), 0);
+            }
+         } else {
+            sn = new ScopeName(names, sname.c_str(), 0);
+         }
+         fScope = sn->ThisScope();
       }
     
       // Set declaring At
@@ -331,21 +343,21 @@ Reflex::TypeBase::Name(unsigned int mod) const {
    if (0 != (mod & (SCOPED | S))) {
       return fTypeName->Name();
 }
-   return std::string(fTypeName->Name(), fBasePosition);
+   return fTypeName->Name() + fBasePosition;
 }
 
 
 //-------------------------------------------------------------------------------
-const std::string&
+const char*
 Reflex::TypeBase::SimpleName(size_t& pos,
-                                                        unsigned int mod ) const {
+                             unsigned int mod ) const {
 //-------------------------------------------------------------------------------
 // Return the name of the type.
    if ( 0 != ( mod & ( SCOPED | S ))) {
       pos = 0;
-      return fTypeName->Name();
+   } else {
+      pos = fBasePosition;
    }
-   pos = fBasePosition;
    return fTypeName->Name();
 }
 

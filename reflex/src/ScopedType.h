@@ -104,8 +104,8 @@ public:
     * @param mod The only 'mod' support is SCOPED
     * @return name of type
     */
-   virtual const std::string& SimpleName(size_t& pos,
-                                         unsigned int mod = 0) const;
+   virtual const char* SimpleName(size_t& pos,
+                                  unsigned int mod = 0) const;
 
    /**
     * Properties will return a pointer to the PropertyNth list attached
@@ -215,7 +215,7 @@ Reflex::ScopedType::Name(unsigned int mod) const {
 
 
 //-------------------------------------------------------------------------------
-inline const std::string&
+inline const char*
 Reflex::ScopedType::SimpleName(size_t& pos,
                                unsigned int mod) const {
 //-------------------------------------------------------------------------------

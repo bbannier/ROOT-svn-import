@@ -112,6 +112,8 @@ public:
                     Any value);
    void AddProperty(const char* key,
                     const char* value);
+   void AddProperty(const char* key,
+                    const Literal& value) { AddProperty(key, (const char*)value); }
 
 
    /**

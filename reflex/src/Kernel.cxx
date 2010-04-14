@@ -28,6 +28,7 @@
 #include "Reflex/Dictionary.h"
 
 #include "Reflex/Builder/DictionaryBuilder.h"
+#include "Reflex/Builder/TypeBuilder.h"
 
 #include "Fundamental.h"
 #include "Namespace.h"
@@ -50,7 +51,7 @@ public:
 
    TFundamentalDeclarator&
    Typedef(const char* name) {
-      new Reflex::Typedef(Reflex::Dictionary::Main(), name, fType, Reflex::FUNDAMENTAL, fType);
+      new Reflex::Typedef(Reflex::Dictionary::Main(), Reflex::Literal(name), fType, Reflex::FUNDAMENTAL, fType);
       return *this;
    }
 
@@ -79,7 +80,8 @@ template <typename T>
 TFundamentalDeclarator
 DeclFundamental(const char* name,
                 Reflex::REPRESTYPE repres) {
-   return TFundamentalDeclarator(name, GetSizeOf<T>() (), typeid(T), repres);
+   return TFundamentalDeclarator(Reflex::Literal(name),
+                                 GetSizeOf<T>() (), typeid(T), repres);
 }
 
 
@@ -89,7 +91,7 @@ Reflex::Instance instantiate;
 
 //-------------------------------------------------------------------------------
 Reflex::Instance* Reflex::Instance::fgSingleton = 0;
-bool Reflex::Instance::fgHasShutdown = false;
+Reflex::Instance::EState Reflex::Instance::fgState = Reflex::Instance::kUninitialized;
 //-------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------
@@ -116,7 +118,7 @@ bool
 Reflex::Instance::HasShutdown() {
 //-------------------------------------------------------------------------------
 // Return true, if we shutdown Reflex (i.e. delete all the containers)
-   return fgHasShutdown;
+   return fgState == kHasShutDown;
 }
 
 
@@ -126,6 +128,7 @@ Reflex::Instance::Instance(Instance*) {
 // Initialisation of Reflex.Setup of global scope, fundamental types.
 
    fgSingleton = this;
+   fgState = kInitializing;
 
    /** initialisation of the main dictionary*/
    DictionaryBuilderMain();
@@ -204,6 +207,7 @@ Reflex::Instance::Instance(Instance*) {
    .Typedef("unsigned long long int")
    .Typedef("long long unsigned int");
 
+   fgState = kActive;
 }
 
 
@@ -213,12 +217,14 @@ Reflex::Instance::Shutdown() {
 //-------------------------------------------------------------------------------
 // Function to be called at tear down of Reflex, removes all memory allocations.
 
+   fgState = kTearingDown;
+
    MemberTemplateName::CleanUp();
    TypeTemplateName::CleanUp();
    TypeName::CleanUp();
    ScopeName::CleanUp();
 
-   fgHasShutdown = true;
+   fgState = kHasShutDown;
 }
 
 
@@ -232,6 +238,15 @@ Reflex::Instance::~Instance() {
    if (fgSingleton == this) {
       Shutdown();
    }
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Instance::EState
+Reflex::Instance::State() {
+//-------------------------------------------------------------------------------
+// return Reflex instance state.
+   return fgState;
 }
 
 

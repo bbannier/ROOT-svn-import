@@ -21,8 +21,8 @@
 #include "stl_hash.h"
 
 //-------------------------------------------------------------------------------
-typedef __gnu_cxx::hash_map<const std::string *, Reflex::TypeName * > Name2Type_t;
-typedef __gnu_cxx::hash_map<const std::string *, Reflex::Scope > Name2Scope_t;
+typedef __gnu_cxx::hash_map<const char**, Reflex::TypeName * > Name2Type_t;
+typedef __gnu_cxx::hash_map<const char**, Reflex::Scope > Name2Scope_t;
 typedef __gnu_cxx::hash_map<const char *, Reflex::TypeName * > TypeId2Type_t;
 typedef std::map<std::string, Reflex::Names * > SharedLibrary2Names;
 typedef std::vector<Reflex::Names*> NamesVector;
@@ -202,9 +202,11 @@ Reflex::Names::ByTypeName( const std::string & key ) const {
    const Name2Type_t& n2t = fState->fTypes;
    if (key.size()>2 && key[0]==':' && key[1]==':') {
       const std::string & k = key.substr(2);
-      it = n2t.find(&k);
+      const char* kcstr = k.c_str();
+      it = n2t.find(&kcstr);
    } else {
-      it = n2t.find(&key); 
+      const char* kcstr = key.c_str();
+      it = n2t.find(&kcstr);
    }
    if( it != n2t.end() )
       return it->second;
@@ -214,16 +216,16 @@ Reflex::Names::ByTypeName( const std::string & key ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Names::RegisterTypeName(const std::string & key, Reflex::TypeName* typeName) {
+void Reflex::Names::RegisterTypeName(const LiteralString& key, Reflex::TypeName* typeName) {
 //-------------------------------------------------------------------------------
-   fState->fTypes [ &key ] = typeName;
+   fState->fTypes [ key.key() ] = typeName;
 }
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Names::UnregisterTypeName(const std::string & key ) {
+void Reflex::Names::UnregisterTypeName(const LiteralString& key ) {
 //-------------------------------------------------------------------------------
-   fState->fTypes.erase(&key);
+   fState->fTypes.erase(key.key());
 }
 
 //-------------------------------------------------------------------------------
@@ -277,16 +279,18 @@ Reflex::Scope Reflex::Names::GlobalScope() const {
 
 //-------------------------------------------------------------------------------
 Reflex::Scope
-Reflex::Names::ByScopeNameShallow( const std::string & key) const {
+Reflex::Names::ByScopeNameShallow( const std::string& key) const {
 //-------------------------------------------------------------------------------
 // Lookup a scope by fully qualified name.
    Name2Scope_t::const_iterator it;
    const Name2Scope_t& n2t = fState->fScopes;
    if (key.size()>2 && key[0]==':' && key[1]==':') {
       const std::string & k = key.substr(2);
-      it = n2t.find(&k);
+      const char* kcstr = k.c_str();
+      it = n2t.find(&kcstr);
    } else {
-      it = n2t.find(&key);
+      const char* ncstr = key.c_str();
+      it = n2t.find(&ncstr);
    }
    if (it != n2t.end() ) return it->second;
    else {
@@ -319,14 +323,14 @@ Reflex::Names::ByScopeName( const std::string & key ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Names::RegisterScopeName(const std::string & key, const Reflex::Scope& scope) {
+void Reflex::Names::RegisterScopeName(const LiteralString& key, const Reflex::Scope& scope) {
 //-------------------------------------------------------------------------------
-   fState->fScopes [ &key ] = scope;
+   fState->fScopes [ key.key() ] = scope;
 }
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Names::UnregisterScopeName(const std::string & key ) {
+void Reflex::Names::UnregisterScopeName(const LiteralString& key ) {
 //-------------------------------------------------------------------------------
-   fState->fScopes.erase(&key);
+   fState->fScopes.erase(key.key());
 }

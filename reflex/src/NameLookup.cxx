@@ -477,7 +477,8 @@ Reflex::NameLookup::FindNextScopePos() {
          fPosNamePart = 2;
       }
    }
-   fPosNamePartLen = Tools::GetFirstScopePosition(fLookupName.substr(fPosNamePart));
+   size_t start = 0; // yes, we should use it... Think of "int MyClass::*" where the scope is "MyClass", not "int MyClass"
+   fPosNamePartLen = Tools::GetFirstScopePosition(fLookupName.substr(fPosNamePart), start);
 
    if (!fPosNamePartLen) { // no next "::"
       fPosNamePartLen = fLookupName.length();

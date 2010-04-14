@@ -1444,7 +1444,7 @@ inline const char*
 Reflex::Scope::Name_c_str() const {
 //-------------------------------------------------------------------------------
    if (fScopeName) {
-      return fScopeName->Name_c_str();
+      return fScopeName->Name();
    }
    return "";
 }

@@ -14,14 +14,14 @@
 
 // Include files
 #include "Reflex/Kernel.h"
+#include "LiteralString.h"
 #include "Names.h"
-#include <string>
 #include <typeinfo>
 
 namespace Reflex {
    // forward declarations 
-   class TypeBase;
    class Type;
+   class TypeBase;
 
    /** 
    * class TypeName TypeName.h Reflex/TypeName.h
@@ -82,18 +82,13 @@ namespace Reflex {
 
 
       /**
-      * Name will return the string representation of the At (unique)
-      * @return At Name as a string
-      */
-      const std::string & Name() const;
-
-
-      /**
-      * Name_c_str returns a char* pointer to the unqualified At Name
+      * Name returns a char* pointer to the unqualified At Name
       * @ return c string to unqualified At Name
       */
-      const char * Name_c_str() const;
+      const char * Name() const;
 
+
+      const LiteralString& LiteralName() const { return fName; }
 
       /** 
       * At returns the At object of this TypeName
@@ -102,6 +97,11 @@ namespace Reflex {
       Type ThisType() const;
 
 
+      /**
+       * Unload reflection information for this type.
+       */
+      void Unload();
+  
       /** 
       * Names registry containing this.
       * @return a reference to the containing type names registry
@@ -139,7 +139,7 @@ namespace Reflex {
 
    private:
       /** the Name of the At */
-      std::string fName;
+      LiteralString fName;
 
 
       /**
@@ -174,16 +174,8 @@ namespace Reflex {
 } // namespace Reflex
 
 //-------------------------------------------------------------------------------
-inline const std::string&
-Reflex::TypeName::Name() const {
-//-------------------------------------------------------------------------------
-   return fName;
-}
-
-
-//-------------------------------------------------------------------------------
 inline const char*
-Reflex::TypeName::Name_c_str() const {
+Reflex::TypeName::Name() const {
 //-------------------------------------------------------------------------------
    return fName.c_str();
 }

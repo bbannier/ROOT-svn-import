@@ -84,7 +84,7 @@ Reflex::ClassTemplateInstance::Name(unsigned int mod) const {
 
 
 //-------------------------------------------------------------------------------
-const std::string&
+const char*
 Reflex::ClassTemplateInstance::SimpleName(size_t& pos,
                                                                     unsigned int mod ) const {
 //-------------------------------------------------------------------------------

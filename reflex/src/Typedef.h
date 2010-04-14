@@ -256,8 +256,8 @@ namespace Reflex {
       * @param mod The only 'mod' support is SCOPED
       * @return name of type
       */
-      virtual const std::string & SimpleName( size_t & pos, 
-         unsigned int mod = 0 ) const;
+      virtual const char* SimpleName(size_t & pos, 
+                                     unsigned int mod = 0) const;
 
 
       virtual Type_Iterator FunctionParameter_Begin() const;
@@ -910,7 +910,7 @@ Reflex::Typedef::Name(unsigned int mod) const {
 
 
 //-------------------------------------------------------------------------------
-inline const std::string&
+inline const char*
 Reflex::Typedef::SimpleName(size_t& pos,
                                                               unsigned int mod ) const {
 //-------------------------------------------------------------------------------

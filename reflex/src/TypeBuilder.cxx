@@ -25,7 +25,23 @@
 #include "Typedef.h"
 #include "PointerToMember.h"
 #include "Reflex/Tools.h"
+#include "Reflex/internal/LiteralString.h"
 
+//-------------------------------------------------------------------------------
+Reflex::Literal::Literal(const char* s): fPtr(s) {
+//-------------------------------------------------------------------------------
+// Construct a temporary Literal, adding s to LiteralStringSet's list of string
+// literals.
+   LiteralStringSet::Instance().Add(s);
+}
+
+//-------------------------------------------------------------------------------
+Reflex::Literal::~Literal() {
+//-------------------------------------------------------------------------------
+// Destruct a temporary Literal, removing s from LiteralStringSet's list of string
+// literals.
+   LiteralStringSet::Instance().Remove(fPtr);
+}
 
 //-------------------------------------------------------------------------------
 Reflex::Type
@@ -44,7 +60,17 @@ Reflex::TypeBuilder(const Reflex::Dictionary& dictionary,
       std::string sname = Tools::GetScopeName(n);
 
       if (!Scope::ByName(sname, dictionary).Id()) {
-         new ScopeName(Names::FromDictionary(dictionary), sname.c_str(), 0);
+         Type scopeType = Type::ByName(sname, dictionary);
+         if (scopeType.Id()) {
+            TypeName* scopeTypeName = (TypeName*) scopeType.Id();
+            if (scopeTypeName->LiteralName().IsLiteral()) {
+               new ScopeName(Names::FromDictionary(dictionary), Literal(scopeTypeName->Name()), 0);
+            } else {
+               new ScopeName(Names::FromDictionary(dictionary), sname.c_str(), 0);
+            }
+         } else {
+            new ScopeName(Names::FromDictionary(dictionary), sname.c_str(), 0);
+         }
       }
       return Type(tname, modifiers);
    }
@@ -164,10 +190,11 @@ Reflex::EnumTypeBuilder(const Reflex::Dictionary& dictionary,
    if ( ret ) {
       if (ret.IsTypedef()) {
          nam2 += " @HIDDEN@";
+         nam = nam2.c_str();
       } else { return ret; }
    }
 
-   Enum * e = new Enum(dictionary, nam2.c_str(), ti, modifiers );
+   Enum * e = new Enum(dictionary, nam, ti, modifiers );
 
    std::vector<std::string> valVec;
    Tools::StringSplit(valVec, values, ";");

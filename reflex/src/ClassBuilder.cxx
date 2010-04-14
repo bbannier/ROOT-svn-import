@@ -50,6 +50,7 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const Reflex::Dictionary& dictionary,
       // We found a typedef to a class with the same name
       if (c.IsTypedef()) {
          nam2 += " @HIDDEN@";
+         nam = nam2.c_str();
          c = Dummy::Type();
       }
       // Class already exists. Check if it was a class.
@@ -60,9 +61,9 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const Reflex::Dictionary& dictionary,
 
    if (!c) {
    if (Tools::IsTemplated(nam)) {
-         fClass = new ClassTemplateInstance(dictionary, nam2.c_str(), size, ti, modifiers);
+         fClass = new ClassTemplateInstance(dictionary, nam, size, ti, modifiers);
       } else {
-         fClass = new Class(dictionary, nam2.c_str(), size, ti, modifiers, typ);
+         fClass = new Class(dictionary, nam, size, ti, modifiers, typ);
       }
    } else {
       fNewClass = false;
