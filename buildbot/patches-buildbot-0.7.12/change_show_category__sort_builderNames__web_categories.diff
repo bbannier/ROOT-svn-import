@@ -1,5 +1,5 @@
 Only in buildbot-0.7.12: build
-diff --exclude '*~' -u -r buildbot-0.7.12-ORIG/buildbot/changes/changes.py buildbot-0.7.12/buildbot/changes/changes.py
+diff -u -r buildbot-0.7.12-ORIG/buildbot/changes/changes.py buildbot-0.7.12/buildbot/changes/changes.py
 --- buildbot-0.7.12-ORIG/buildbot/changes/changes.py	2010-01-22 04:20:40.000000000 +0100
 +++ buildbot-0.7.12/buildbot/changes/changes.py	2010-03-25 15:58:20.000000000 +0100
 @@ -25,6 +25,9 @@
@@ -46,8 +46,35 @@ diff --exclude '*~' -u -r buildbot-0.7.12-ORIG/buildbot/changes/changes.py build
          return '<a href="%s" title="%s">%s</a>' % (url,
                                                     title,
                                                     html.escape(who))
+Only in buildbot-0.7.12/buildbot/changes: changes.py~
 Only in buildbot-0.7.12/buildbot: __init__.pyc
-diff --exclude '*~' -u -r buildbot-0.7.12-ORIG/buildbot/status/web/grid.py buildbot-0.7.12/buildbot/status/web/grid.py
+Only in buildbot-0.7.12/buildbot/process: buildstep.py~
+Only in buildbot-0.7.12/buildbot/status: builder.py~
+diff -u -r buildbot-0.7.12-ORIG/buildbot/status/web/baseweb.py buildbot-0.7.12/buildbot/status/web/baseweb.py
+--- buildbot-0.7.12-ORIG/buildbot/status/web/baseweb.py	2010-01-22 04:20:41.000000000 +0100
++++ buildbot-0.7.12/buildbot/status/web/baseweb.py	2010-04-13 09:46:10.000000000 +0200
+@@ -115,7 +115,8 @@
+         status = self.getStatus(req)
+         control = self.getControl(req)
+         numbuilds = int(req.args.get("numbuilds", [self.numbuilds])[0])
+-        builders = req.args.get("builder", [])
++        categories = req.args.get("category", None)
++        builders = req.args.get("builder", status.getBuilderNames(categories=categories))
+         branches = [b for b in req.args.get("branch", []) if b]
+ 
+         g = status.generateFinishedBuilds(builders, map_branches(branches),
+@@ -214,7 +215,8 @@
+         status = self.getStatus(req)
+         control = self.getControl(req)
+ 
+-        builders = req.args.get("builder", status.getBuilderNames())
++        categories = req.args.get("category", None)
++        builders = req.args.get("builder", status.getBuilderNames(categories=categories))
+         branches = [b for b in req.args.get("branch", []) if b]
+ 
+         data = ""
+Only in buildbot-0.7.12/buildbot/status/web: baseweb.py~
+diff -u -r buildbot-0.7.12-ORIG/buildbot/status/web/grid.py buildbot-0.7.12/buildbot/status/web/grid.py
 --- buildbot-0.7.12-ORIG/buildbot/status/web/grid.py	2010-01-22 04:20:41.000000000 +0100
 +++ buildbot-0.7.12/buildbot/status/web/grid.py	2010-03-26 14:45:29.000000000 +0100
 @@ -219,7 +219,7 @@
@@ -68,3 +95,4 @@ diff --exclude '*~' -u -r buildbot-0.7.12-ORIG/buildbot/status/web/grid.py build
  
          builder_builds = []
  
+Only in buildbot-0.7.12/buildbot/status/web: grid.py~
