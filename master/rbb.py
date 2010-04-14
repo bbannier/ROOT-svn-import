@@ -204,6 +204,19 @@ class ROOTTestCmd(ShellCommand):
             else :
                 return self.describe(True) + ["failed"]
 
+class ROOTSVN(SVN):
+    def __init(self, category):
+        self.category = category
+        SVN.__init__(self, **kwargs)
+
+    def computeSourceRevision(self, changes):
+        changes = filter(lambda c: c.category == self.category, changes)
+        if not changes or None in [c.revision for c in changes]:
+            return None
+        lastChange = max([int(c.revision) for c in changes])
+        return lastChange
+    
+
 class ROOTBuildBotConfig:
     """Collect configuration options and spread them into buildbot
     in a way consistent for ROOT's build setup."""
@@ -416,16 +429,17 @@ class ROOTBuildBotConfig:
 
         fact = None
         if src.name == 'ROOT':
-            fact = factory.GNUAutoconf(SVN(mode = mode,
+            fact = factory.GNUAutoconf(ROOTSVN(mode = mode,
                                            svnurl = src.svnurl,
-                                           alwaysUseLatest = alwaysUseLatest),
+                                           alwaysUseLatest = alwaysUseLatest,
+                                           retry = (20, 6)),
                                        configure = confLine,
                                        configureFlags = [],
                                        compile = compLine,
                                        test = None)
         else:
             fact = factory.BuildFactory()
-            fact.addStep(SVN(svnurl=src.svnurl,
+            fact.addStep(ROOTSVN(svnurl=src.svnurl,
                              alwaysUseLatest=alwaysUseLatest,
                              mode=mode))
             fact.addStep(ROOTTestCmd(command = compLine))
