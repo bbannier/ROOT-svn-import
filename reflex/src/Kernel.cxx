@@ -37,9 +37,9 @@
 
 namespace {
 // Helper to factor out common code
-class FundamentalDeclarator {
+class TFundamentalDeclarator {
 public:
-   FundamentalDeclarator(const char* name, size_t size, const std::type_info& ti,
+   TFundamentalDeclarator(const char* name, size_t size, const std::type_info& ti,
                          Reflex::REPRESTYPE repres) {
       Reflex::TypeBase* tb = new Reflex::TypeBase(Reflex::Dictionary::Main(), name, size, Reflex::FUNDAMENTAL,
                                                   ti, Reflex::Type(), repres);
@@ -48,7 +48,7 @@ public:
    }
 
 
-   FundamentalDeclarator&
+   TFundamentalDeclarator&
    Typedef(const char* name) {
       new Reflex::Typedef(Reflex::Dictionary::Main(), name, fType, Reflex::FUNDAMENTAL, fType);
       return *this;
@@ -76,10 +76,10 @@ struct GetSizeOf<void> {
 
 // Helper function constructing the declarator
 template <typename T>
-FundamentalDeclarator
+TFundamentalDeclarator
 DeclFundamental(const char* name,
                 Reflex::REPRESTYPE repres) {
-   return FundamentalDeclarator(name, GetSizeOf<T>() (), typeid(T), repres);
+   return TFundamentalDeclarator(name, GetSizeOf<T>() (), typeid(T), repres);
 }
 
 
