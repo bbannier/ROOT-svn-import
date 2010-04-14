@@ -25,6 +25,25 @@
 #endif
 
 namespace Reflex {
+   template<typename FUNC>
+   RFLX_API void* FuncToVoidPtr(FUNC f) {
+      union Cnv_t {
+         Cnv_t(FUNC ff): fFunc(ff) {}
+         FUNC fFunc;
+         void* fPtr;
+      } u(f);
+      return u.fPtr;
+   }
+   template <typename FUNC>
+   RFLX_API FUNC VoidPtrToFunc(void* p) {
+      union Cnv_t {
+         Cnv_t(void* pp): fPtr(pp) {}
+         FUNC fFunc;
+         void* fPtr;
+      } u(p);
+      return u.fFunc;
+   }
+
    RFLX_API Type TypeBuilder( const Reflex::Dictionary& dictionary,
       const char * n, 
       unsigned int modifiers = 0 );
