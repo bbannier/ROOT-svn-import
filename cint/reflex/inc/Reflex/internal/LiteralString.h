@@ -18,7 +18,7 @@
 #include "Reflex/Kernel.h"
 
 namespace Reflex {
-   class LiteralStringSet {
+   class RFLX_API LiteralStringSet {
    public:
       static LiteralStringSet& Instance();
       void Add(const char* s) { fLiterals.insert((void*)s); }
