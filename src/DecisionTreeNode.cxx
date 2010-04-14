@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$    
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss 
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Eckhard von Toerne 
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -14,11 +14,13 @@
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
+ *      Eckhard von Toerne <evt@physik.uni-bonn.de>  - U. of Bonn, Germany        *
  *                                                                                *
- * CopyRight (c) 2005:                                                            *
+ * CopyRight (c) 2009:                                                            *
  *      CERN, Switzerland                                                         * 
  *      U. of Victoria, Canada                                                    * 
  *      MPI-K Heidelberg, Germany                                                 * 
+*       U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -48,7 +50,8 @@ using std::string;
 ClassImp(TMVA::DecisionTreeNode)
 
 TMVA::MsgLogger* TMVA::DecisionTreeNode::fgLogger = 0;
-   
+bool     TMVA::DecisionTreeNode::fgIsTraining = false;
+
 //_______________________________________________________________________
 TMVA::DecisionTreeNode::DecisionTreeNode()
    : TMVA::Node(),
@@ -66,8 +69,7 @@ TMVA::DecisionTreeNode::DecisionTreeNode()
      fResponse(-99 ),
      fNodeType (-99 ),
      fSequence ( 0 ),
-     fIsTerminalNode( kFALSE ),
-     fCC(0)
+     fIsTerminalNode( kFALSE )
 {
    // constructor of an essentially "empty" node floating in space
    if (!fgLogger) fgLogger = new TMVA::MsgLogger( "DecisionTreeNode" );
@@ -79,6 +81,15 @@ TMVA::DecisionTreeNode::DecisionTreeNode()
    fNTerminal  = 0;      // number of terminal nodes in subtree rooted at this node
    fNB  = 0;      // sum of weights of background events from the pruning sample in this node
    fNS  = 0;      // ditto for the signal events
+
+   if (fgIsTraining){
+      fTrainInfo = new DTNodeTrainingInfo();
+      //std::cout << "Node constructor with TrainingINFO"<<std::endl;
+   }
+   else {
+      //std::cout << "**Node constructor WITHOUT TrainingINFO"<<std::endl;
+      fTrainInfo = 0;
+   }
 }
 
 //_______________________________________________________________________
@@ -117,6 +128,15 @@ TMVA::DecisionTreeNode::DecisionTreeNode(TMVA::Node* p, char pos)
    fNTerminal  = 0;      // number of terminal nodes in subtree rooted at this node
    fNB  = 0;      // sum of weights of background events from the pruning sample in this node
    fNS  = 0;      // ditto for the signal events
+
+   if (fgIsTraining){
+      fTrainInfo = new DTNodeTrainingInfo();
+      //std::cout << "Node constructor with TrainingINFO"<<std::endl;
+   }
+   else {
+      //std::cout << "**Node constructor WITHOUT TrainingINFO"<<std::endl;
+      fTrainInfo = 0;
+   }
 }
 
 //_______________________________________________________________________
@@ -157,6 +177,14 @@ TMVA::DecisionTreeNode::DecisionTreeNode(const TMVA::DecisionTreeNode &n,
    fNTerminal  = n.fNTerminal;
    fNB  = n.fNB;
    fNS  = n.fNS;
+   if (fgIsTraining){
+      fTrainInfo = new DTNodeTrainingInfo(*(n.fTrainInfo));
+      //std::cout << "Node constructor with TrainingINFO"<<std::endl;
+   }
+   else {
+      //std::cout << "**Node constructor WITHOUT TrainingINFO"<<std::endl;
+      fTrainInfo = 0;
+   }
 }
 
 
@@ -386,6 +414,13 @@ void TMVA::DecisionTreeNode::PrintRecPrune( ostream& os ) const {
 }
 
 //_______________________________________________________________________
+void TMVA::DecisionTreeNode::SetCC(Double_t cc) 
+{
+   if (fTrainInfo) fTrainInfo->fCC = cc; 
+   else *fgLogger << kFATAL << "call to SetCC without trainingInfo" << Endl;
+}
+
+//_______________________________________________________________________
 Float_t TMVA::DecisionTreeNode::GetSampleMin(UInt_t ivar) const {
    // return the minimum of variable ivar from the training sample 
    // that pass/end up in this node 
@@ -441,7 +476,9 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
    gTools().ReadAttr(node, "res",   fResponse               );
    gTools().ReadAttr(node, "rms",   fRMS                    );
    gTools().ReadAttr(node, "nType", fNodeType               );
-   gTools().ReadAttr(node, "CC",    fCC                     );
+   Double_t tempCC;
+   gTools().ReadAttr(node, "CC",    tempCC                  );
+   if (fTrainInfo) SetCC(tempCC);  
 }
 
 
