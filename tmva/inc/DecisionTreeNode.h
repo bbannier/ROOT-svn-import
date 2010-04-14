@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$    
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss 
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss, Eckhard von Toerne
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -14,11 +14,13 @@
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *      Kai Voss        <Kai.Voss@cern.ch>       - U. of Victoria, Canada         *
+ *      Eckhard von Toerne <evt@physik.uni-bonn.de>  - U. of Bonn, Germany        *
  *                                                                                *
- * Copyright (c) 2005:                                                            *
+ * Copyright (c) 2009:                                                            *
  *      CERN, Switzerland                                                         * 
  *      U. of Victoria, Canada                                                    * 
  *      MPI-K Heidelberg, Germany                                                 * 
+*       U. of Bonn, Germany                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -47,7 +49,21 @@
 #include <vector>
 #include <map>
 namespace TMVA {
-  
+
+   class DTNodeTrainingInfo
+   {
+   public:
+      DTNodeTrainingInfo(){
+         fCC=0;
+      }
+      
+      Double_t fCC;  // debug variable for cost complexity pruning .. 
+      // copy constructor
+      DTNodeTrainingInfo(const DTNodeTrainingInfo& n){
+         fCC=n.fCC;
+      }    
+   };
+
    class Event;
    class MsgLogger;
 
@@ -246,13 +262,15 @@ namespace TMVA {
       void PrintPrune( ostream& os ) const ;
       void PrintRecPrune( ostream& os ) const;
 
-      void     SetCC(Double_t cc) {fCC = cc;};
-      Double_t GetCC() const {return fCC;};
+      void     SetCC(Double_t cc);
+      Double_t GetCC() const {return (fTrainInfo? fTrainInfo->fCC : -1.);}
 
       Float_t GetSampleMin(UInt_t ivar) const;
       Float_t GetSampleMax(UInt_t ivar) const;
       void     SetSampleMin(UInt_t ivar, Float_t xmin);
       void     SetSampleMax(UInt_t ivar, Float_t xmax);
+
+      static bool fgIsTraining; // static variable to flag training phase in which we need fTrainInfo
 
    private:
 
@@ -294,15 +312,14 @@ namespace TMVA {
 
       Bool_t   fIsTerminalNode;    //! flag to set node as terminal (i.e., without deleting its descendants)
 
-      Double_t fCC;              // debug variable for cost complexity pruing .. temporary bla
-
       std::vector< Float_t >  fSampleMin; // the minima for each ivar of the sample on the node during training
       std::vector< Float_t >  fSampleMax; // the maxima for each ivar of the sample on the node during training
 
 
 
       static MsgLogger* fgLogger;    // static because there is a huge number of nodes...
-    
+      mutable DTNodeTrainingInfo* fTrainInfo;
+
       ClassDef(DecisionTreeNode,0) // Node for the Decision Tree 
     
          };

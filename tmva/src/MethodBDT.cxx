@@ -453,6 +453,7 @@ void TMVA::MethodBDT::InitEventSample( void )
 void TMVA::MethodBDT::Train()
 {
    // BDT training
+   TMVA::DecisionTreeNode::fgIsTraining=true;
 
    // fill the STL Vector with the event sample
    InitEventSample();
@@ -620,6 +621,7 @@ void TMVA::MethodBDT::Train()
             << nNodesAfterPruningCount/fNTrees
             << Endl;
    }
+   TMVA::DecisionTreeNode::fgIsTraining=false;
 }
 
 //_______________________________________________________________________
