@@ -14,8 +14,8 @@
 %\usepackage{graphviz}
 \usepackage{dot2texi}
 \usepackage{pgf}
-%\usepackage{tikz}  % commented for compilation (is it needed??)
-%\usetikzlibrary{shapes,arrows,automata}  % commented for compilation (is it needed??)
+\usepackage{tikz}  
+\usetikzlibrary{shapes,arrows,automata}  
 
 \usepackage{amssymb}
 \usepackage{color}
@@ -264,7 +264,7 @@ Representation in RooFit / RooStats code:
 Graphical Representation 
 
 \begin{figure}[htb]
-  \begin{picture}(500, 100)(0,0)
+\begin{picture}(500, 100)(0,0)
 \begin{dot2tex}[dot, options=-tmath,autosize,graphstyle={scale=0.8,transform shape}]
   \input{GaussianModel.dot}
  \end{dot2tex} 

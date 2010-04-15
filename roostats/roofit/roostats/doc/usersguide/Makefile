@@ -1,24 +1,20 @@
-HEADER=header
-PREFOOTER=prefooter
-FOOTER=footer
-CAT=cat
-DATE=date
-#SOURCES = CERNtips.htm atlas.htm group.htm milagro.htm HEPexp.content.htm contact.htm index.htm
-SOURCES = $(wildcard *.C )
-DOTOBJECTS=$(SOURCES:.C=.dot)
-GENFIGURES=$(SOURCES:.C=.pdf)
-FIGURES=$(wildcard *.pdf)
-GUIDE=RooStats_UsersGuilde.pdf
-GENDOT=$(wildcard RooStats_UsersGuide-dot2tex-*.dot)
-GENTEX=$(wildcard RooStats_UsersGuide-dot2tex-*.tex)
-.SUFFIXES : .C .dot .pdf
 
-all:  $(GENFIGURES)
-	latex RooStats_UsersGuide.tex
-	latex RooStats_UsersGuide.tex
+GUIDE	:= RooStats_UsersGuide
+FIGURES	:= $(filter-out $(GUIDE).pdf, $(wildcard *.pdf))
 
+SOURCES 	= $(wildcard *.C)
+DOTOBJECTS	= $(SOURCES:.C=.dot)
 
-.C.pdf:
-	root.exe -b -q $< 
+GENDOT	= $(wildcard $(GUIDE)-dot2tex-*.dot)
+GENTEX	= $(wildcard $(GUIDE)-dot2tex-*.tex)
+
+$(GUIDE).pdf: $(GUIDE).tex $(SOURCES) $(FIGURES) $(DOTOBJECTS)
+	latex --shell-escape $<
+	latex $<
+
+%.dot: %.C
+	root.exe -b -q -l $< 
+
 clean:
-	rm RooStats_UsersGuide.aux RooStats_UsersGuide.log RooStats_UsersGuide.out RooStats_UsersGuide.toc $(GENDOT) $(GENTEX)
+	rm -f $(GUIDE).aux $(GUIDE).log $(GUIDE).out $(GUIDE).toc $(GENDOT) $(GENTEX)
+
