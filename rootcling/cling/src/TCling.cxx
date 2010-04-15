@@ -420,6 +420,9 @@ TCint::TCint(const char *name, const char *title) :
    #endif
 
    fMetaProcessor = new cling::MetaProcessor(*fInterpreter);
+
+   // to pull in gPluginManager
+   fMetaProcessor->process("#include \"TPluginManager.h\"");
 }
 
 //______________________________________________________________________________
