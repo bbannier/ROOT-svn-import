@@ -122,11 +122,12 @@ bool TUnuranSampler::Sample(double * x) {
 } 
 
 
-bool TUnuranSampler::SampleBin(double prob, double & value, double &error) {
+bool TUnuranSampler::SampleBin(double prob, double & value, double *error) {
    // sample a bin according to Poisson statistics
+
    TRandom * r = fUnuran->GetRandom(); 
    if (!r) return false; 
    value = r->Poisson(prob); 
-   error = std::sqrt(value);
+   if (error) *error = std::sqrt(value);
    return true; 
 }

@@ -164,9 +164,9 @@ public:
       divided by the bin width)
       By default do not do random sample, just return the function values
     */
-   virtual bool SampleBin(double prob, double & value, double &error) {
+   virtual bool SampleBin(double prob, double & value, double * error = 0) {
       value = prob; 
-      error = 0; 
+      if (error) *error = 0; 
       return true; 
    }
 
@@ -184,14 +184,17 @@ public:
       bin center values must be present in given data set
       If the sampler is implemented by a random one, the entries 
       will be binned according to the Poisson distribution
+      It is assumed the distribution is normalized, otherwise the nevt must be scaled 
+      accordingly. The expected value/bin nexp  = f(x_i) * binArea/ nevt
    */ 
-   virtual bool Generate(unsigned int nbins, ROOT::Fit::BinData & data);
+   virtual bool Generate(unsigned int nevt, const  int * nbins, ROOT::Fit::BinData & data);
    /**
       same as before but passing the range in case of 1 dim data
     */
-   bool Generate(unsigned int nbins, double xmin, double xmax, ROOT::Fit::BinData & data) { 
+   bool Generate(unsigned int nevt, int nbins, double xmin, double xmax, ROOT::Fit::BinData & data) { 
       SetRange(xmin,xmax); 
-      return Generate(nbins, data); 
+      int nbs[1]; nbs[0] = nbins;
+      return Generate(nevt, nbs, data); 
    }
 
 
