@@ -109,31 +109,50 @@ bool DistSampler::Generate(unsigned int nevt, ROOT::Fit::UnBinData & data) {
 }
 
 
-bool DistSampler::Generate(unsigned int nbins, ROOT::Fit::BinData & data) { 
+bool DistSampler::Generate(unsigned int nevt, const  int * nbins, ROOT::Fit::BinData & data) { 
    // generate a bin data set from given bin center values 
    // bin center values must be present in given data set 
-   if (!IsInitialized()) { 
-         MATH_WARN_MSG("DistSampler::Generate","sampler has not been initialized correctly");
-         return false; 
+   //if (!IsInitialized()) { 
+   if (NDim() == 0 || fFunc == 0 ) {
+      MATH_WARN_MSG("DistSampler::Generate","sampler has not been initialized correctly");
+      return false; 
    }
 
-   data.Initialize(nbins, NDim(), ROOT::Fit::BinData::kValueError);    // store always the error
+   int ntotbins = 1;
+   for (unsigned int j = 0; j < NDim(); ++j) { 
+      ntotbins *= nbins[j];
+   }
+
+   data.Initialize(ntotbins, NDim(), ROOT::Fit::BinData::kValueError);    // store always the error
    // use for the moment bin center (should use bin integral) 
    std::vector<double> dx(NDim() );
    std::vector<double> x(NDim() );
+   double binVolume = 1;
    for (unsigned int j = 0; j < dx.size(); ++j) { 
       double x1 = 0,x2 = 0; 
+      if (!fRange || !fRange->Size(j)) { 
+         MATH_WARN_MSG("DistSampler::Generate","sampler has not a range defined for all coordinates");
+         return false; 
+      }
       fRange->GetRange(j,x1,x2); 
-      dx[j] = x2-x1; 
+      dx[j] =  (x2-x1)/double(nbins[j]); 
+      assert(dx[j] > 0 && 1./dx[j] > 0 ); // avoid dx <= 0 and  not inf
       x[j] = x1 + dx[j]/2;  // use bin centers
-
+      binVolume *= dx[j];
    }
-   for (unsigned int i = 0; i < nbins; ++i) { 
-      //const double * v = Sample(); 
-      double val,eval;
-      double yval = (ParentPdf())(&x.front());
-      SampleBin(yval,val,eval);
-      data.Add(&x.front(), val, eval); 
+   double nnorm = nevt * binVolume; 
+
+   for (int j = NDim()-1; j >=0; --j) { 
+      for (int i = 0; i < nbins[j]; ++i) { 
+         //const double * v = Sample(); 
+         double val = 0; 
+         double eval = 0;
+         double yval = (ParentPdf())(&x.front());
+         double nexp = yval * nnorm;
+         SampleBin(nexp,val,&eval);
+         data.Add(&x.front(), val, eval); 
+         x[j] += dx[j]; // increment x bin the bin
+      }
    }
    return true;
 }
