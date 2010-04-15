@@ -185,10 +185,6 @@ ClassImp(TCint)
 void addPath (clang::CompilerInstance * CI, const TString & path)
 {
     // std::cout << "addPath " << path << std::endl;
-    clang::HeaderSearchOptions & headerOpts = CI->getHeaderSearchOpts ();
-    const bool IsUserSupplied = false;
-    const bool IsFramework = false;
-    headerOpts.AddPath (path.Data (), clang::frontend::Angled, IsUserSupplied, IsFramework);
 }
 
 //______________________________________________________________________________
@@ -413,7 +409,15 @@ TCint::TCint(const char *name, const char *title) :
 
    //gccOptions (CI); // gcc include directories
 
-   addIncludePath (CI); // include/root
+   // Add the root include directory to list searched by default.
+   // Use explicit TCint::AddIncludePath() to avoid vtable: we're in the c'tor!
+#ifndef ROOTINCDIR
+   TString include = gSystem->Getenv("ROOTSYS");
+   include.Append("/include");
+   TCint::AddIncludePath(include);
+#else
+   TCint::AddIncludePath(ROOTINCDIR);
+#endif
 
    #ifdef DBG
       printInfo (CI);
@@ -598,6 +602,9 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
    // (float and double return values will be truncated).
 
    Long_t ret = 0;
+   // Store our line. line is a static buffer in TApplication
+   // and we get called recursively through G__process_cmd.
+   TString sLine(line);
 
    if (gApplication) {
       if (gApplication->IsCmdThread()) {
@@ -615,7 +622,7 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
 
          // It checks whether the input line contains the "fantom" method
          // to synchronize user keyboard input and ROOT prompt line
-         if (strstr(line,fantomline)) {
+         if (sLine == fantomline) {
             G__free_tempobject();
             TCint::UpdateAllCanvases();
          } else {
@@ -623,24 +630,29 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
 
             int prerun = G__getPrerun();
             G__setPrerun(0);
-            if ((line[0] == '#') || (line[0] == '.')) {
+            if ((sLine[0] == '#') || (sLine[0] == '.')) {
                // Preprocessor or special cmd, have cint process it too.
-               ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+               // Do not actually run things, load theminstead:
+               char haveX = sLine[1];
+               if (haveX == 'x' || haveX == 'X')
+                  sLine[1] = 'L';
+               ret = G__process_cmd((char *)sLine.Data(), fPrompt, &fMore, &local_error, &local_res);
+               sLine[1] = haveX;
             }
             TString aclicMode;
             TString arguments;
             TString io;
             TString fname;
-            if (!strncmp(line, ".L", 2)) { // Load cmd, check for use of ACLiC.
-               fname = gSystem->SplitAclicMode(line+3, aclicMode, arguments, io);
+            if (!strncmp(sLine.Data(), ".L", 2)) { // Load cmd, check for use of ACLiC.
+               fname = gSystem->SplitAclicMode(sLine.Data()+3, aclicMode, arguments, io);
             }
             if (aclicMode.Length()) { // ACLiC, pass to cint and not to cling.
-               ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+               ret = G__process_cmd((char *)sLine.Data(), fPrompt, &fMore, &local_error, &local_res);
             }
             else {
-               if (strcmp(line, "#include <iostream>")) { 
-                  // cling cannot parse <iostream>
-                  if (fMetaProcessor->process(line) > 0) {
+               if (true /*sLine != "#include <iostream>"*/) { 
+                  // cling cannot parse <iostream> - REALLY?
+                  if (fMetaProcessor->process(sLine) > 0) {
                      printf("...\n");
                   }
                   else
@@ -670,7 +682,7 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
 
          gROOT->SetLineHasBeenProcessed();
       } else {
-         ret = ProcessLineAsynch(line, error);
+         ret = ProcessLineAsynch(sLine, error);
       }
    } else {
       if (gGlobalMutex && !gCINTMutex && fLockProcessLine) {
@@ -689,22 +701,22 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
 
       int prerun = G__getPrerun();
       G__setPrerun(0);
-      if ((line[0] == '#') || (line[0] == '.')) {
+      if ((sLine[0] == '#') || (sLine[0] == '.')) {
          // Preprocessor or special cmd, have cint process it too.
-         ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+         ret = G__process_cmd((char *)sLine.Data(), fPrompt, &fMore, &local_error, &local_res);
       }
       TString aclicMode;
       TString arguments;
       TString io;
       TString fname;
-      if (!strncmp(line, ".L", 2)) { // Load cmd, check for use of ACLiC.
-         fname = gSystem->SplitAclicMode(line+3, aclicMode, arguments, io);
+      if (!strncmp(sLine, ".L", 2)) { // Load cmd, check for use of ACLiC.
+         fname = gSystem->SplitAclicMode(sLine.Data()+3, aclicMode, arguments, io);
       }
       if (aclicMode.Length()) { // ACLiC, pass to cint and not to cling.
-         ret = G__process_cmd((char *)line, fPrompt, &fMore, &local_error, &local_res);
+         ret = G__process_cmd((char *)sLine.Data(), fPrompt, &fMore, &local_error, &local_res);
       }
       else {
-         if (fMetaProcessor->process(line) > 0) {
+         if (fMetaProcessor->process(sLine) > 0) {
             printf("...\n");
          }
       }
@@ -2277,6 +2289,11 @@ void TCint::AddIncludePath(const char *path)
    char *incpath = gSystem->ExpandPathName(path);
 
    G__add_ipath(incpath);
+   clang::CompilerInstance* CI = fInterpreter->getCI();
+   clang::HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
+   const bool IsUserSupplied = false;
+   const bool IsFramework = false;
+   headerOpts.AddPath (incpath, clang::frontend::Angled, IsUserSupplied, IsFramework);
 
    delete [] incpath;
 }
