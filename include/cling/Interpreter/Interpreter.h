@@ -156,6 +156,7 @@ private:
    clang::CompilerInstance* m_CI; // We own, our compiler instance.
    llvm::ExecutionEngine* m_engine; // We own, our JIT.
    llvm::Module* m_prev_module; // We do *not* own, m_engine owns it.
+   unsigned long long m_numCallWrappers; // number of generated call wrappers
    bool m_printAST; // whether to print the AST to be processed
 
 private:

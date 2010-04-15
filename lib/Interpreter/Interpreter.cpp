@@ -306,6 +306,7 @@ Interpreter::Interpreter(const char* llvmdir /*= 0*/):
    m_CI(0),
    m_engine(0),
    m_prev_module(0),
+   m_numCallWrappers(0),
    m_printAST(false)
 {
    m_globalDeclarations = "#include <stdio.h>\n";
@@ -1374,14 +1375,9 @@ Interpreter::executeFile(const std::string& filename)
    else {
       ++pos;
    }
+
    // Note: We are assuming the filename does not end in slash here.
    std::string funcname(filename, pos);
-   //fprintf(stderr, "funcname: %s\n", funcname.c_str());
-   pos = funcname.find_last_of('.');
-   if (pos != std::string::npos) {
-      funcname.erase(pos);
-      //fprintf(stderr, "funcname: %s\n", funcname.c_str());
-   }
 
    std::string args;
    pos = funcname.find_first_of('(');
@@ -1391,14 +1387,23 @@ Interpreter::executeFile(const std::string& filename)
          args = funcname.substr(pos, posParamsEnd - pos + 1);
       }
    }
-   static const std::string wrappername = "__cling__internal_wrapper";
+
+   //fprintf(stderr, "funcname: %s\n", funcname.c_str());
+   pos = funcname.find_last_of('.');
+   if (pos != std::string::npos) {
+      funcname.erase(pos);
+      //fprintf(stderr, "funcname: %s\n", funcname.c_str());
+   }
+
+   std::ostringstream swrappername;
+   swrappername << "__cling__internal_wrapper" << m_numCallWrappers++;
    std::string wrapper = "extern \"C\" void ";
-   wrapper += wrappername + "() {\n  " + funcname + "(" + args + ");\n }";
+   wrapper += swrappername.str() + "() {\n  " + funcname + "(" + args + ");\n}";
    int err = loadFile(filename, &wrapper);
    if (err) {
       return err;
    }
-   executeFunction(wrappername);
+   executeFunction(swrappername.str());
    return 0;
 }
 
