@@ -240,7 +240,7 @@ TTree* TMVA::Factory::CreateEventAssignTrees( const TString& name )
    // create the data assignment tree (for event-wise data assignment by user)
    TTree * assignTree = new TTree( name, name );
    assignTree->Branch( "type",   &fATreeType,   "ATreeType/I" );
-   assignTree->Branch( "weight", &fATreeWeight, "ATreeWeight/I" );
+   assignTree->Branch( "weight", &fATreeWeight, "ATreeWeight/F" );
 
    std::vector<VariableInfo>& vars = DefaultDataSetInfo().GetVariableInfos();
    std::vector<VariableInfo>& tgts = DefaultDataSetInfo().GetTargetInfos();
