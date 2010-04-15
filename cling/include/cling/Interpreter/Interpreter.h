@@ -138,7 +138,8 @@ public:
                           std::vector<clang::FunctionDecl*> *fds);
 
    void processLine(const std::string& input_line);
-   int loadFile(const std::string& filename);
+   int loadFile(const std::string& filename,
+                const std::string* trailcode = 0);
    int executeFile(const std::string& filename);
 
    bool setPrintAST(bool print = true) {
@@ -171,7 +172,8 @@ private:
    clang::CompilerInstance* createCI(const char* llvmdir = 0);
    clang::ASTConsumer* maybeGenerateASTPrinter() const;
    clang::CompilerInstance* compileString(const std::string& srcCode);
-   clang::CompilerInstance* compileFile(const std::string& filename);
+   clang::CompilerInstance* compileFile(const std::string& filename,
+                                        const std::string* trailcode = 0);
 
    llvm::Module* doCodegen(clang::CompilerInstance* CI,
                            const std::string& filename);

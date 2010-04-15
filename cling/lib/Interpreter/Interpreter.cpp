@@ -1181,58 +1181,12 @@ Interpreter::compileString(const std::string& srcCode)
 }
 
 clang::CompilerInstance*
-Interpreter::compileFile(const std::string& filename)
+Interpreter::compileFile(const std::string& filename, const std::string* trailcode /*=0*/)
 {
-   llvm::sys::Path path(filename);
-   clang::CompilerInstance* CI = getCI();
-   if (!CI) {
-      return 0;
-   }
-   CI->createPreprocessor();
-   clang::Preprocessor& PP = CI->getPreprocessor();
-   CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
-   //CI->createASTContext();
-   CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
-      PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-      PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
-   CI->setASTConsumer(maybeGenerateASTPrinter());
-   PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-                                          PP.getLangOptions().NoBuiltin);
-   const clang::FileEntry* file = CI->getFileManager().getFile(filename);
-   if (!file) {
-      fprintf(stderr, "Interpreter::compileFile: Failed to get file!\n");
-      ///*reuseCI*/CI->takeLLVMContext();
-      ///*reuseCI*/delete CI;
-      ///*reuseCI*/CI = 0;
-      return 0;
-   }
-   CI->getSourceManager().clearIDTables();
-   CI->getSourceManager().createMainFileID(file, clang::SourceLocation());
-   if (CI->getSourceManager().getMainFileID().isInvalid()) {
-      fprintf(stderr, "Interpreter::compileFile: Failed to create main "
-                      "file id!\n");
-      ///*reuseCI*/CI->takeLLVMContext();
-      ///*reuseCI*/delete CI;
-      ///*reuseCI*/CI = 0;
-      return 0;
-   }
-   clang::ParseAST(PP, &CI->getASTConsumer(), CI->getASTContext());
-   CI->setASTConsumer(0);
-   //CI->setASTContext(0); // Caller still needs this.
-   if (CI->hasPreprocessor()) {
-      CI->getPreprocessor().EndSourceFile();
-   }
-   CI->clearOutputFiles(/*EraseFiles=*/CI->getDiagnostics().getNumErrors());
-   CI->getDiagnosticClient().EndSourceFile();
-   unsigned err_count = CI->getDiagnostics().getNumErrors();
-   if (err_count) {
-      fprintf(stderr, "Interpreter::compileFile: Parse failed!\n");
-      ///*reuseCI*/CI->takeLLVMContext();
-      ///*reuseCI*/delete CI;
-      ///*reuseCI*/CI = 0;
-      return 0;
-   }
-   return CI;
+   std::string code(m_globalDeclarations);
+   code += "#include \"" + filename + "\"\n";
+   if (trailcode) code += *trailcode;
+   return compileString(code);
 }
 
 llvm::Module*
@@ -1332,7 +1286,7 @@ Interpreter::executeCommandLine()
 }
 
 int
-Interpreter::loadFile(const std::string& filename)
+Interpreter::loadFile(const std::string& filename, const std::string* trailcode /*=0*/)
 {
    llvm::sys::Path path(filename);
    if (path.isDynamicLibrary()) {
@@ -1351,7 +1305,7 @@ Interpreter::loadFile(const std::string& filename)
       }
       return 0;
    }
-   clang::CompilerInstance* CI = compileFile(filename);
+   clang::CompilerInstance* CI = compileFile(filename, trailcode);
    if (!CI) {
       return 1;
    }
@@ -1413,10 +1367,6 @@ Interpreter::loadFile(const std::string& filename)
 int
 Interpreter::executeFile(const std::string& filename)
 {
-   int err = loadFile(filename);
-   if (err) {
-      return err;
-   }
    std::string::size_type pos = filename.find_last_of('/');
    if (pos == std::string::npos) {
       pos = 0;
@@ -1432,53 +1382,40 @@ Interpreter::executeFile(const std::string& filename)
       funcname.erase(pos);
       //fprintf(stderr, "funcname: %s\n", funcname.c_str());
    }
-   executeFunction(funcname);
+
+   std::string args;
+   pos = funcname.find_first_of('(');
+   if (pos != std::string::npos) {
+      std::string::size_type posParamsEnd = funcname.find_last_of(')');
+      if (posParamsEnd != std::string::npos) {
+         args = funcname.substr(pos, posParamsEnd - pos + 1);
+      }
+   }
+   static const std::string wrappername = "__cling__internal_wrapper";
+   std::string wrapper = "extern \"C\" void ";
+   wrapper += wrappername + "() {\n  " + funcname + "(" + args + ");\n }";
+   int err = loadFile(filename, &wrapper);
+   if (err) {
+      return err;
+   }
+   executeFunction(wrappername);
    return 0;
 }
 
 void
 Interpreter::executeFunction(const std::string& funcname)
 {
-   // Create argument list for function.
-   std::vector<llvm::GenericValue> args;
-   //llvm::GenericValue arg1;
-   //arg1.IntVal = llvm::APInt(32, 5);
-   //args.push_back(arg1);
-#if 0
-   clang::CompilerInstance* CI = getCI();
-   CI->createPreprocessor();
-   std::string errMsg;
-   const llvm::Target* target =
-      llvm::TargetRegistry::lookupTarget(CI->getTarget().getTriple().str(),
-                                         errMsg);
-   const llvm::TargetOptions& TO = CI->getTargetOpts();
-   std::string FeaturesStr;
-   if (TO.CPU.size() || TO.Features.size()) {
-      llvm::SubtargetFeatures Features;
-      Features.setCPU(TO.CPU);
-      std::vector<std::string>::const_iterator iter = TO.Features.begin(),
-            std::vector<std::string>::const_iterator iter_end = TO.Features.end();
-      for (; iter != iter_end; ++iter) {
-         Features.AddFeature(*it);
-      }
-      FeaturesStr = Features.getString();
-   }
-   llvm::TargetMachine* TM = target->createTargetMachine(
-                                CI->getTarget().getTriple().str(), FeaturesStr);
-   const llvm::MCAsmInfo* MCAI = TM->getMCAsmInfo();
-   llvm::Mangler* mangler = new llvm::Mangler(MCAI);
-#endif // 0
-   std::ostringstream mangled_name;
-   mangled_name << "_Z" << funcname.size() << funcname << "v";
-   llvm::Function* f = m_engine->FindFunctionNamed(mangled_name.str().c_str());
+   // Call an extern C function without arguments
+   llvm::Function* f = m_engine->FindFunctionNamed(funcname.c_str());
    if (!f) {
       fprintf(
            stderr
          , "Interpreter::executeFunction: Could not find function named: %s\n"
-         , mangled_name.str().c_str()
+         , funcname.c_str()
       );
       return;
    }
+   std::vector<llvm::GenericValue> args;
    llvm::GenericValue ret = m_engine->runFunction(f, args);
    //
    //fprintf(stderr, "Finished running generated code with JIT.\n");

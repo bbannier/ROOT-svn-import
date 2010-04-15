@@ -121,7 +121,7 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    std::string param;
    std::string::size_type endcmd = input_line.find_first_of(" \t\n", 2);
    if (endcmd != std::string::npos) { // have a blank after command
-      cmd = input_line.substr(1, endcmd);
+      cmd = input_line.substr(1, endcmd - 1);
 
       std::string::size_type firstparam = input_line.find_first_not_of(" \t\n", endcmd);
       std::string::size_type lastparam = input_line.find_last_not_of(" \t\n");
