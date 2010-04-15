@@ -16,4 +16,3 @@ textcomp for styling the code (.sty file included)
 to build the users guide, type 
    make
 
-Note: I get some errors in pdfex, so I have to hit <ENTER> a few times for it to complete.  But it looks fine.  If anyone can fix that, it would be great.  --Kyle

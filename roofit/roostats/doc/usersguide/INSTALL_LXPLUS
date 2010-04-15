@@ -1,0 +1,116 @@
+
+1) Download the guide
+
+svn co https://root.cern.ch/svn/root/branches/dev/roostats/roofit/roostats/doc/usersguide/
+
+
+2) Install dot2tex
+
+Download the package from http://www.fauskes.net/code/dot2tex/download/.
+
+Make a new directory where you install the python modules (locally)
+
+mkdir <py_dest_dir>
+(in my case: mkdir ~/public/RooStats/python)
+
+Unpack the dot2tex file and then inside do:
+
+python setup.py install --home=<py_dest_dir>
+(in my case: python setup.py install --home=~/public/RooStats/python)
+
+Check if inside <py_dest_dir> you have bin and lib directories.
+
+
+3) Install pyparsing
+
+Download from http://pyparsing.wikispaces.com/
+
+Unpack and then inside do:
+
+python setup.py install --home=<py_dest_dir>
+(NOTE home it is the same directory as before)
+(in my case: python setup.py install --home=~/public/RooStats/python)
+
+I got an error, but it seems to work in any case...
+
+
+4) Set the python search directory for the modules:
+
+export PYTHONPATH=<py_dest_dir>/lib/python:$PYTHONHOME
+(in my case: export PYTHONPATH=~/public/RooStats/python/lib/python:$PYTHONHOME)
+
+and add in the path the bin directory:
+
+export PATH=$PATH:<py_dest_dir>/bin
+(in my case export PATH=$PATH:~/public/RooStats/python/bin)
+
+
+5) In lxplus there is an old version of the latex package: xkeyval
+
+You need to update it.
+
+Download it from http://ctan.org/tex-archive/macros/latex/contrib/xkeyval/.
+
+wget http://mirror.ctan.org/macros/latex/contrib/xkeyval.zip
+
+Unpack it and the copy the files  xkeyval/run/xkeyval.* (.sty and .tex) inside the usersguide directory.
+
+
+6) Then it is missing the module: tikz
+
+http://www.texample.net/tikz/
+
+wget http://media.texample.net/pgf/builds/pgfCVS2010-03-28_TDS.zip
+
+Unpack it (it produces a directory tex) and then make a new directory in your home:
+
+mkdir ~/texmf
+
+Inside this directory make a symbolic link:
+
+ln -s <where is the package>/tex
+
+7)
+You need to install preview for latex:
+
+wget http://mirror.ctan.org/macros/latex/contrib/preview.zip
+
+Unzip it and then inside do:
+
+tex preview.ins
+
+It produces a lot of files. 
+Make those files visible to latex, just making a symbolic link inside 
+the texmf directory in your home. 
+Go inside ~/texmf/tex/generic and then do
+
+ln -s <where is preview>/preview
+(in my case ln -s ~/public/RooStats/preview)
+
+
+8)
+
+Now you can run!
+
+NOTE: everytime you open the shell you need JUST to set the env variables:
+
+export PYTHONPATH=~/public/RooStats/python/lib/python:$PYTHONHOME
+export PATH=$PATH:~/public/RooStats/python/bin
+
+You can put them in the shell profile file.
+
+NOTE2: The files of the package xkeyval (point 5 of this guide) 
+can be added inside texmf, removing them from the usersguide directory 
+(in this way you don't need to add other files than the files in svn)
+
+To do that, just make a symbolic link inside ~/texmf/tex/generic:
+
+ln -s <where is xkeyval>/xkeyval
+(in my case ln -s ~/public/RooStats/xkeyval)
+
+and then inside ~/texmf/tex/latex:
+
+ln -s <where is xkeyval>/xkeyval
+(in my case ln -s ~/public/RooStats/xkeyval)
+
+
