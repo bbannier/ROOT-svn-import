@@ -29,7 +29,18 @@
 #include "RooStats/ModelConfig.h"
 #endif
 
+#ifndef ROOT_MATH_IParamFunctionfwd
+#include "Math/IParamFunctionfwd.h"
+#endif
+
+
 class TH1; 
+
+namespace ROOT { 
+   namespace Fit { 
+      class FitData; 
+   }
+}
 
 namespace RooStats {
 
@@ -122,6 +133,9 @@ namespace RooStats {
       // control to use bin data generation 
       void SetGenerateBinned(bool on = true) { fGenerateBinned = on; }
 
+      // control extend log-likelihood evaluation (i.e. add a global Poisson term)
+      void SetExtendLL(bool on = true) { fUseExtendLL = on; }
+
       /// set the desired test statistics:
       /// index=1 : 2 * log( L_sb / L_b )  (DEFAULT)
       /// index=2 : number of generated events
@@ -145,6 +159,7 @@ namespace RooStats {
 
       void RunToys(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors) const;
       void RunToysFast(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors) const;
+      double EvalNLL(const ROOT::Fit::FitData &data, const ROOT::Math::IParamMultiFunction & f) const;
 
       // check input parameters before performing the calculation
       bool DoCheckInputs() const; 
@@ -159,6 +174,7 @@ namespace RooStats {
       RooAbsData * fData;     // pointer to the data sets 
       bool fGenerateBinned;   //Flag to control binned generation
       bool  fUsePriorPdf;               // use a prior for nuisance parameters  
+      mutable bool fUseExtendLL;  // use extend likelihoods
 
       mutable std::string fGenMethod;     // sampling method used  
       mutable std::string fGenAlgo1;      // algorithm used for S and S+B sampling

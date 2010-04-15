@@ -144,14 +144,17 @@ void HybridPlot::Draw(const char* )
    gStyle->SetOptStat(0);
 
    // The histos
+   // to get right errors after normalizing
+   fSb_histo->Sumw2();
+   fB_histo->Sumw2();
 
    if (fSb_histo->GetMaximum()>fB_histo->GetMaximum()){
-      fSb_histo->DrawNormalized();
-      fB_histo->DrawNormalized("same");
+      fSb_histo->DrawNormalized("hist");
+      fB_histo->DrawNormalized("hist same");
    }
    else{
-      fB_histo->DrawNormalized();
-      fSb_histo->DrawNormalized("same");
+      fB_histo->DrawNormalized("hist");
+      fSb_histo->DrawNormalized("hist same");
    }
 
    // Shaded
@@ -177,8 +180,8 @@ void HybridPlot::Draw(const char* )
    }
 
    // Draw the shaded histos
-   fB_histo_shaded->Draw("same");
-   fSb_histo_shaded->Draw("same");
+   fB_histo_shaded->Draw("hist same");
+   fSb_histo_shaded->Draw("hist same");
 
    // The line 
    fData_testStat_line->Draw("same");

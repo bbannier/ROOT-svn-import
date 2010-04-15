@@ -69,6 +69,7 @@ see also the following interesting references:
 #include "RooAbsData.h"
 #include "RooWorkspace.h"
 #include "RooFunctor.h"
+#include "RooRandom.h"
 
 #include "TH1.h"
 
@@ -77,7 +78,9 @@ see also the following interesting references:
 #include "TF3.h"
 #include "TRandom.h"
 #include "Fit/UnBinData.h"
+#include "Fit/BinData.h"
 #include "Fit/LogLikelihoodFCN.h"
+#include "Fit/PoissonLikelihoodFCN.h"
 #include "Math/WrappedParamFunction.h"
 #include "Math/DistSampler.h"
 #include "Math/Factory.h"
@@ -87,9 +90,18 @@ see also the following interesting references:
 #include "TFile.h"
 #include "TCanvas.h"
 
+//#define DEBUG
+
 ClassImp(RooStats::HybridCalculator)
 
 using namespace RooStats;
+
+// template<int N>
+// double EvalLL(ROOT::Fit::UnBinData & data, RooFunctor * model, int dim) { 
+//    ROOT::Math::WrappedParamFunction<RooFunctor *> wf(model,dim);
+//    ROOT::Fit::LogLikelihoodFunction nll(data, wf);
+//    return nll(0);
+// }
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -282,10 +294,20 @@ HybridResult* HybridCalculator::Calculate(RooAbsData& data, unsigned int nToys, 
       testStatData = m2lnQ;
    } else if ( fTestStatisticsIdx==1 ) {
       /// likelihood ratio used as test statistics (default)
-      RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,data,RooFit::Extended());
-      RooNLLVar b_nll("b_nll","b_nll",*fBModel,data,RooFit::Extended());
+      bool extLL = fUseExtendLL; 
+      if (fGenerateBinned) extLL = false; 
+      RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,data,RooFit::Extended(extLL));
+      RooNLLVar b_nll("b_nll","b_nll",*fBModel,data,RooFit::Extended(extLL));
       double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
       testStatData = m2lnQ;
+#ifdef DEBUG
+      double nEvents = data.sumEntries();
+      std::cout << "Test Statistics on the data n = " << nEvents << std::endl;
+      std::cout << "Exp: " << fBModel->extendedTerm( nEvents ) 
+                << "  " << fSbModel->extendedTerm( nEvents ) << std::endl;
+      std::cout << "nll: " << b_nll.getVal() << "  " << sb_nll.getVal() << std::endl;
+      std::cout << "2lr " << m2lnQ << std::endl; 
+#endif
    }
 
    HybridResult* result = Calculate(nToys,usePriors);
@@ -325,8 +347,21 @@ HybridResult* HybridCalculator::Calculate(unsigned int nToys, bool usePriors) co
    return result;
 }
 
+////////////////////////////////////////////////////////////////
+double HybridCalculator::EvalNLL(const ROOT::Fit::FitData & data, const ROOT::Math::IParamMultiFunction & func) const
+{
+   // fast evaluation of nll using ROOT 
+   if (fGenerateBinned) { 
+      ROOT::Fit::PoissonLLFunction nll((const ROOT::Fit::BinData &)data, func);
+      return nll(0); 
+   } 
+   else { 
+      ROOT::Fit::LogLikelihoodFunction nll((const ROOT::Fit::UnBinData &)data, func);
+      return nll(0);
+   }
+         
+}
 ///////////////////////////////////////////////////////////////////////////
-
 void HybridCalculator::RunToysFast(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors) const
 { 
    // new routine to run toys using directly ROOT classes 
@@ -344,13 +379,13 @@ void HybridCalculator::RunToysFast(std::vector<double>& bVals, std::vector<doubl
       assert(fNuisanceParameters);
    }
 
-   std::vector<double> parameterValues; /// array to hold the initial parameter values
+
    /// backup the initial values of the parameters that are varied by the prior MC-integration
    int nParameters = (fNuisanceParameters) ? fNuisanceParameters->getSize() : 0;
    RooArgList parametersList("parametersList");  /// transforms the RooArgSet in a RooArgList (needed for .at())
+   std::vector<double> parameterValues(nParameters); /// array to hold the initial parameter values
    if (usePriors && nParameters>0) {
       parametersList.add(*fNuisanceParameters);
-      parameterValues.resize(nParameters);
       for (int iParameter=0; iParameter<nParameters; iParameter++) {
          RooRealVar* oneParam = (RooRealVar*) parametersList.at(iParameter);
          parameterValues[iParameter] = oneParam->getVal();
@@ -358,53 +393,71 @@ void HybridCalculator::RunToysFast(std::vector<double>& bVals, std::vector<doubl
    }
 
    // generate ntoys values from the prior pdf 
-   // could use functor
-//    fPriorPdf->Print("V");
-//    fNuisanceParameters->Print("V");
 
-//    RooArgSet * nuipar = fPriorPdf->getObservables(*fNuisanceParameters);  
-//    TF1 * fprior = fPriorPdf->asTF(*nuipar);
-
-   RooFunctor * fprior = fPriorPdf->functor(*fNuisanceParameters);
 
    int obsDim = fObservables->getSize(); 
-   //RooRealVar * xobs = (RooRealVar *)  fObservables->first();
 
-//    fprior->Draw(); gPad->Update();
-//    new TCanvas();
+   TRandom & rdm = *RooRandom::randomGenerator();  // needed for Poisson generation
 
-   TRandom & rdm = *gRandom;  
-
-   TH1D * h_nuis = new TH1D("h_nuis","nuis param",100,0,100);
+//    // for debugging
+#ifdef DEBUG
+   std::vector<TH1D*> h_nuis(nParameters);
+   for (int ipar = 0; ipar < nParameters; ++ipar) { 
+      std::string name = "hnuis_" + std::string(parametersList[ipar].GetName() );
+      RooRealVar* oneParam = (RooRealVar*) parametersList.at(ipar);
+      h_nuis[ipar] = new TH1D(name.c_str(),name.c_str(),100,oneParam->getMin(),oneParam->getMax());
+   }
+#endif
 
    if (!fGenMethod.size()) fGenMethod = "Unuran";
    ROOT::Math::DistSampler * bsampler = ROOT::Math::Factory::CreateDistSampler(fGenMethod);
    ROOT::Math::DistSampler * sbsampler = ROOT::Math::Factory::CreateDistSampler(fGenMethod);
-   ROOT::Math::DistSampler * priorsampler = ROOT::Math::Factory::CreateDistSampler(fGenMethod);
-   if (!bsampler || !sbsampler || ! priorsampler) {
+   if (!bsampler || !sbsampler ) {
       std::cerr << "HybridCalculator::RunToys: Error creating dist sampler for " 
                 << fGenMethod << std::endl;
       return;
    }
-   if (!fGenAlgo1.size()) fGenAlgo1 = "NROU";
-   if (!fGenAlgo2.size()) fGenAlgo2 = "NROU";
+   if (!fGenAlgo1.size()) { 
+      //if (obsDim <=1) fGenAlgo1 = "NROU"; // for small statistics
+      if (obsDim <=1) fGenAlgo1 = "PINV";  // for large generations
+      else fGenAlgo1 = "VNROU";     
+   }
+   ROOT::Math::DistSampler * priorsampler = 0; 
 
-   priorsampler->SetFunction<RooFunctor>(*fprior,nParameters);
-   ROOT::Fit::DataRange parRange(nParameters); 
-   for (int i = 0; i < nParameters; ++i) {
-      RooRealVar & p = (RooRealVar&) parametersList[i];
-      parRange.SetRange(i, p.getMin(), p.getMax() );
-   } 
-   priorsampler->SetRange(parRange);
+   if (usePriors && nParameters>0)   { 
+      // build a sampler of the nuisance parameters 
+      priorsampler = ROOT::Math::Factory::CreateDistSampler(fGenMethod);
+      assert(priorsampler);
+      if (!fGenAlgo2.size()) { 
+         if (nParameters <=1) fGenAlgo2 = "NROU";
+         else fGenAlgo2 = "VNROU";
+      }
+      // create a functor class from prior pdf (i.e. a binding to oprerator()(double * p)
+      RooFunctor * fprior = fPriorPdf->functor(*fNuisanceParameters,RooArgSet(),*fNuisanceParameters);
+      priorsampler->SetFunction<RooFunctor>(*fprior,nParameters);
+      ROOT::Fit::DataRange parRange(nParameters); 
+      for (int i = 0; i < nParameters; ++i) {
+         RooRealVar & p = (RooRealVar&) parametersList[i];
+         parRange.SetRange(i, p.getMin(), p.getMax() );
+      } 
+      priorsampler->SetRange(parRange);
 
-   bool ok = priorsampler->Init(fGenAlgo2.c_str());
-   if (!ok) {
-      std::cerr << "HybridCalculator::RunToys: Error initializing priorsampler " 
-                << " using " << fGenAlgo2 << std::endl;
-      return;
+      bool ok = priorsampler->Init(fGenAlgo2.c_str());
+      if (!ok) {
+         std::cerr << "HybridCalculator::RunToys: Error initializing priorsampler " 
+                   << " using " << fGenAlgo2 << std::endl;
+         return;
+      }
+      // reset the parameters (Init function change them)
+      for (int iParameter=0; iParameter<nParameters; iParameter++) {
+         RooRealVar* oneParam = (RooRealVar*) parametersList.at(iParameter);
+         oneParam->setVal(parameterValues[iParameter]);
+      }
+
    }
 
-   double nuis_value; 
+
+
    // loop on toys 
    for (unsigned int iToy=0; iToy<nToys; iToy++) {
       /// prints a progress report every 500 iterations
@@ -418,10 +471,11 @@ void HybridCalculator::RunToysFast(std::vector<double>& bVals, std::vector<doubl
       /// vary the value of the integrated parameters according to the prior pdf
       if (usePriors && nParameters>0) {
          const double * val = priorsampler->Sample();
-         h_nuis->Fill(val[0]);
-         nuis_value = val[0];
          for (int i = 0; i < nParameters; ++i) { 
             ( (RooRealVar*) parametersList.at(i) )->setVal( val[i] );
+#ifdef DEBUG         
+            h_nuis[i]->Fill(val[i]);
+#endif
          }
       }
 
@@ -438,31 +492,61 @@ void HybridCalculator::RunToysFast(std::vector<double>& bVals, std::vector<doubl
       //should not be b_obs and sb_obs be the same ??
       // get observables range (this can be outside the loop )
       ROOT::Fit::DataRange obsRange(obsDim); 
+      std::vector<int> nObsBins(obsDim);
       for (int i = 0; i < obsDim; ++i) {
          RooRealVar & obs = (RooRealVar&) (*fObservables)[i];
          obsRange.SetRange(i, obs.getMin(), obs.getMax() );
+         if (fGenerateBinned) { 
+            nObsBins[i] = obs.getBins();
+         }
       } 
 
+
       // number of expected events will depend also on background fraction 
+      // does need to fluctuate according to systematics - yes ! 
       double nbexp = fBModel->expectedEvents(0);
       double nsbexp = fSbModel->expectedEvents(0);
       
       // generate the poisson fluctuations 
       unsigned int nbevt  = rdm.Poisson(nbexp);
       unsigned int nsbevt = rdm.Poisson(nsbexp);
+#ifdef DEBUG
+      if (iToy%500==0) {
+         std::cout << "generate NB = " << nbevt << "  NSB = " << nsbevt << std::endl;
+         std::cout << "expected NB = " << nbexp << "  NSB = " << nsbexp << std::endl;
+      }
+#endif
+
 
       if (fTestStatisticsIdx == 2) { 
          bVals.push_back(nbevt); 
          sbVals.push_back(nsbevt); 
+         /// restore the parameters to their initial values before evaluating
+         // this should be done or NOT ? 
+         if (usePriors && nParameters>0) {
+            for (int iParameter=0; iParameter<nParameters; iParameter++) {
+               RooRealVar* oneParam = (RooRealVar*) parametersList.at(iParameter);
+               oneParam->setVal(parameterValues[iParameter]);
+            }
+         }
+
          continue; 
       }
      
-      // create here  the data set 
-      ROOT::Fit::UnBinData bdata; 
-      bdata.Initialize(nbevt, obsDim);
+      // create here  the data sets      
+      ROOT::Fit::FitData * bdata = 0; 
+      ROOT::Fit::FitData * sbdata = 0; 
 
-      ROOT::Fit::UnBinData sbdata; 
-      sbdata.Initialize(nsbevt, obsDim);
+      if (fGenerateBinned) { 
+         // bin numbers will be set later when generating
+         bdata = new ROOT::Fit::BinData(0, obsDim, ROOT::Fit::BinData::kNoError);
+         sbdata = new ROOT::Fit::BinData(0, obsDim, ROOT::Fit::BinData::kNoError);
+      } 
+      else {
+         bdata = new ROOT::Fit::UnBinData(nbevt, obsDim);
+         sbdata = new ROOT::Fit::UnBinData(nsbevt, obsDim);
+      }
+
 
 
       bsampler->SetFunction<RooFunctor>(*bmodel, obsDim );
@@ -472,117 +556,143 @@ void HybridCalculator::RunToysFast(std::vector<double>& bVals, std::vector<doubl
       bsampler->SetRange(obsRange);
       sbsampler->SetRange(obsRange);
 
-      ok = bsampler->Init(fGenAlgo1.c_str());
-      if (!ok) {
-         std::cerr << "HybridCalculator::RunToys: Error initializing priorsampler " 
-                   << " using " << fGenAlgo1 << std::endl;
-         return;
+      // generate Events 
+      if (fGenerateBinned) { 
+         // should use expected events since sum will give POisson fluct ? 
+         bsampler->Generate(nbexp,&nObsBins.front(),(ROOT::Fit::BinData&)*bdata); 
+         sbsampler->Generate(nsbexp,&nObsBins.front(),(ROOT::Fit::BinData&)*sbdata); 
       }
-      bsampler->Generate(nbevt,bdata); 
+      else { 
+         // unbin generation (need to initialize)
+         bool ok = bsampler->Init(fGenAlgo1.c_str());
+         if (!ok) {
+            std::cerr << "HybridCalculator::RunToys: Error initializing priorsampler " 
+                      << " using " << fGenAlgo1 << std::endl;
+            return;
+      }
+         
+         ok = sbsampler->Init(fGenAlgo1.c_str());
+         if (!ok) {
+            std::cerr << "HybridCalculator::RunToys: Error initializing priorsampler " 
+                      << " using " << fGenAlgo1 << std::endl;
+            return;
+         }
 
-      ok = sbsampler->Init(fGenAlgo1.c_str());
-      if (!ok) {
-         std::cerr << "HybridCalculator::RunToys: Error initializing priorsampler " 
-                   << " using " << fGenAlgo1 << std::endl;
-         return;
+         bsampler->Generate(nbevt,(ROOT::Fit::UnBinData&)*bdata); 
+         sbsampler->Generate(nsbevt,(ROOT::Fit::UnBinData&)*sbdata); 
       }
-      sbsampler->Generate(nsbevt,sbdata); 
 
       /// restore the parameters to their initial values before evaluating
-      // this hould be done or NOT ? 
+      // since test statistics must be evaluiated at known value of parameters
       if (usePriors && nParameters>0) {
          for (int iParameter=0; iParameter<nParameters; iParameter++) {
             RooRealVar* oneParam = (RooRealVar*) parametersList.at(iParameter);
             oneParam->setVal(parameterValues[iParameter]);
          }
       }
+#ifdef DEBUG
+      if (iToy%500==0) {
+         nbexp = fBModel->expectedEvents(0);
+         nsbexp = fSbModel->expectedEvents(0);
+         std::cout << "expected NB = " << nbexp << "  NSB = " << nsbexp << std::endl;
+      }
+#endif
 
 
       // now evaluate the likelihoods 
       ROOT::Math::WrappedParamFunction<RooFunctor *> wf1(bmodel,obsDim);
       ROOT::Math::WrappedParamFunction<RooFunctor *> wf2(sbmodel,obsDim);
 
-      // evaluate the likelihood's (need to add extended term) 
+      // evaluate the likelihood's (need to add extended term) in case of unbinned data
+      // for binned data (it is used a Poisson likelihood so no need to add it) 
+      //bool extendLL = !fGenerateBinned; 
+      bool extendLL = fUseExtendLL; 
+      if (fGenerateBinned) extendLL = false; 
 
       // evaluate on the s+b data
       {
-      ROOT::Fit::LogLikelihoodFunction bnll(sbdata, wf1);
-      ROOT::Fit::LogLikelihoodFunction sbnll(sbdata, wf2);
-//       double b_nll_val = bnll(0) + nbexp - nsbevt * std::log(nbexp);  // no need to pass parameters
-//       double sb_nll_val = sbnll(0) + nsbexp - nsbevt * std::log(nsbexp);  // no need to pass parameters
+         double b_nll_val = EvalNLL(*sbdata, wf1);
+         double sb_nll_val = EvalNLL(*sbdata, wf2);         
+         if (extendLL) { 
+            b_nll_val += fBModel->extendedTerm( nsbevt );
+            sb_nll_val += fSbModel->extendedTerm( nsbevt );
+         }
+         
+         double m2lnQ = 2*(sb_nll_val-b_nll_val);
+         sbVals.push_back(m2lnQ);
 
-//       std::cout << "SBModel(0,1) " << sbmodel->Eval(0) << "  " << sbmodel->Eval(1) << std::endl; 
-//       std::cout << " BModel(0,1) " << bmodel->Eval(0) << "  " << bmodel->Eval(1) << std::endl; 
-       
+#ifdef DEBUG
+         if (iToy%500==0) {
+            std::cout << "S+B\n";
+            if (extendLL) { 
+               double bnll = b_nll_val-fBModel->extendedTerm( nsbevt );
+               double sbnll = sb_nll_val-fSbModel->extendedTerm( nsbevt );
+               std::cout << "nll0: " << bnll << "  " << sbnll << std::endl;
+               std::cout << "Exp: " << fBModel->extendedTerm( nsbevt ) 
+                         << "  " << fSbModel->extendedTerm( nsbevt ) << std::endl;
+            }
+            std::cout << "nll" << b_nll_val << "  " << sb_nll_val << std::endl;
+            std::cout << "2lr " << m2lnQ << std::endl; 
+         }            
+#endif
 
-       double b_nll_val = bnll(0) + fBModel->extendedTerm( nsbevt );
-       double sb_nll_val = sbnll(0) + fSbModel->extendedTerm( nsbevt );
-
-//       std::cout << "NEW sb data :  sb_nll = " << sb_nll_val << " b_nll = " << b_nll_val << std::endl;
-       
-      double m2lnQ = 2*(sb_nll_val-b_nll_val);
-      sbVals.push_back(m2lnQ);
 
       }
       // evaluate on the b only data
       {
-      ROOT::Fit::LogLikelihoodFunction bnll(bdata, wf1);
-      ROOT::Fit::LogLikelihoodFunction sbnll(bdata, wf2);
-//       double b_nll_val = bnll(0) + nbexp - nbevt * std::log(nbexp);  // no need to pass parameters
-//       double sb_nll_val = sbnll(0) + nsbexp - nbevt * std::log(nsbexp);  // no need to pass parameters
-      double b_nll_val = bnll(0) + fBModel->extendedTerm( nbevt );
-      double sb_nll_val = sbnll(0) + fSbModel->extendedTerm(nbevt);
+         double b_nll_val = EvalNLL(*bdata, wf1);
+         double sb_nll_val = EvalNLL(*bdata, wf2);         
+         if (extendLL) { 
+            b_nll_val += fBModel->extendedTerm( nbevt );
+            sb_nll_val += fSbModel->extendedTerm( nbevt );
+         }
+         double m2lnQ = 2*(sb_nll_val-b_nll_val);
+         bVals.push_back(m2lnQ);
 
-//       std::cout << "NEW  b data :  sb_nll = " << sb_nll_val << " b_nll = " << b_nll_val << std::endl;
-      
-      double m2lnQ = 2*(sb_nll_val-b_nll_val);
-      bVals.push_back(m2lnQ);
+#ifdef DEBUG
+         if (iToy%500==0) {
+            std::cout << "B\n";
+            if (extendLL) { 
+               double bnll = b_nll_val-fBModel->extendedTerm( nbevt );
+               double sbnll = sb_nll_val-fSbModel->extendedTerm( nbevt );
+               std::cout << "nll: " << bnll << "  " << sbnll << std::endl;
+               std::cout << "Exp: " << fBModel->extendedTerm( nbevt ) 
+                         << "  " << fSbModel->extendedTerm( nbevt ) << std::endl;
+            }
+            std::cout << b_nll_val << "  " << sb_nll_val << std::endl;
+            std::cout << "2lr " << m2lnQ << std::endl; 
+         }  
+#endif          
+         
       }
 
       // debug 
-//#define DEBUG
+#undef DEBUG
 #ifdef DEBUG      
-//      if (sbVals.back() < 1E20) { 
-      if (nuis_value < 1.) {
+      // debug every 500 events
+      if (iToy%500==0) {
 
-         std::cout << "nuis parameter value = " << nuis_value << std::endl;
 
 
          TString fileName;
          fileName.Form("hybrid_%d.root",iToy);
          TFile * file = new TFile(fileName,"RECREATE");
+         // create and fill histogram for generate B and S+B data (only for 1D observables)
          RooRealVar * x = (RooRealVar *) fObservables->at(0);
          TH1D * hsb = new TH1D("h_sb","sb data",100,x->getMin(), x->getMax() );
          TH1D * hb  = new TH1D("h_b","b data",100,x->getMin(), x->getMax() );
 
-         RooRealVar * par0 = (RooRealVar *) parameterList->at(0); 
-         TH1D * hp  = new TH1D("prior","prior func",100,par0->getMin(),par0->getMax());
-
-//          x->setVal(0); 
-//          std::cout << "sb(0) = " << fSbModel->getVal() << std::endl;
-//          std::cout << " b(0) = " << fBModel->getVal() << std::endl;
-//          x->setVal(1); 
-//          std::cout << "sb(1) = " << fSbModel->getVal() << std::endl;
-//          std::cout << " b(1) = " << fBModel->getVal() << std::endl;
+//          RooRealVar * par0 = (RooRealVar *) parametersList->at(0); 
+//          TH1D * hp  = new TH1D("prior","prior func",100,par0->getMin(),par0->getMax());
 
 
-
+         
          for (unsigned int i = 0; i < sbdata.Size(); ++ i) {             
             hsb->Fill(*(sbdata.Coords(i)) );
-//             RooRealVar * tmp = (RooRealVar *) (fSbModel->getObservables(fData)->first() );
-//             tmp->setVal(*(sbdata.Coords(i)) );
-//             std::cout << " x = " << tmp->getVal() << " sb(x) = " << fSbModel->getVal() << std::endl;
          }
          for (unsigned int i = 0; i < bdata.Size(); ++ i) 
             hb->Fill(*(bdata.Coords(i)) );
 
-// this will change the nuis param values          
-//          for (int i = 1; i <= 100; ++i)
-//             hp->SetBinContent(1, fprior->Eval(hp->GetBinCenter(i) ) );
-
-//          TF1 * tmp = (TF1*) fprior->Clone();
-//          tmp->SetName("prior");
-//          tmp->Write();
          
          file->Write();
          file->Close();
@@ -607,30 +717,35 @@ void HybridCalculator::RunToysFast(std::vector<double>& bVals, std::vector<doubl
             roo_b.add(RooArgSet(*x) );
          }
 
+         std::cout << "\nNew Values obtained\n";
          std::cout << "s+b Val = " << sbVals.back() 
                    << "\nb Val  = " << bVals.back() << std::endl;
 
          // evaluate now the likelihood
+         std::cout << "RooFit values\n";
          {
          RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,roo_sb,RooFit::Extended());
-//         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,roo_sb);
          RooNLLVar b_nll("b_nll","b_nll",*fBModel,roo_sb,RooFit::Extended());
-         std::cout << "ROO sb data :  sb_nll = " << sb_nll.getVal() << " b_nll = " << b_nll.getVal() << std::endl;
+          std::cout << "ROO sb data :  sb_nll = " << sb_nll.getVal() << " b_nll = " << b_nll.getVal() << std::endl;
          double roo_m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
-         std::cout << " roo sb value = " << roo_m2lnQ << std::endl;
+         std::cout << " Roofit s+b = " << roo_m2lnQ << std::endl;
          }
          {
             //RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,roo_b);
          RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,roo_b,RooFit::Extended());
          RooNLLVar b_nll("b_nll","b_nll",*fBModel,roo_b,RooFit::Extended());
-         std::cout << "ROO b data :  sb_nll = " << sb_nll.getVal() << " b_nll = " << b_nll.getVal() << std::endl;
+          std::cout << "ROO b data :  sb_nll = " << sb_nll.getVal() << " b_nll = " << b_nll.getVal() << std::endl;
          double roo_m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
-         std::cout << " roo  b value = " << roo_m2lnQ << std::endl;
+         std::cout << " Roofit  b  = " << roo_m2lnQ << std::endl;
          }
 
       }
 #endif
 
+
+      // delete data clases 
+      delete bdata; 
+      delete sbdata; 
 
 
    } // end toy loop 
@@ -638,18 +753,13 @@ void HybridCalculator::RunToysFast(std::vector<double>& bVals, std::vector<doubl
    if (bsampler) delete bsampler; 
    if (sbsampler) delete sbsampler;
 
+#ifdef DEBUG
+   TFile * file_nuis = new TFile("hybrid_nuisDistribution.root","RECREATE");
+   for (unsigned int i = 0; i < h_nuis.size(); ++i) 
+      h_nuis[i]->Write();
+   file_nuis->Close();
+#endif
 
-   {h_nuis->Draw(); gPad->Update(); 
-      new TCanvas();
-   }
-
-   /// restore the parameters to their initial values (for safety) and delete the array of values
-   if (usePriors && nParameters>0) {
-      for (int iParameter=0; iParameter<nParameters; iParameter++) {
-         RooRealVar* oneParam = (RooRealVar*) parametersList.at(iParameter);
-         oneParam->setVal(parameterValues[iParameter]);
-      }
-   }
 
    return;
 
@@ -672,13 +782,12 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
       assert(fNuisanceParameters);
    }
 
-   std::vector<double> parameterValues; /// array to hold the initial parameter values
    /// backup the initial values of the parameters that are varied by the prior MC-integration
    int nParameters = (fNuisanceParameters) ? fNuisanceParameters->getSize() : 0;
+   std::vector<double> parameterValues(nParameters); /// array to hold the initial parameter values
    RooArgList parametersList("parametersList");  /// transforms the RooArgSet in a RooArgList (needed for .at())
    if (usePriors && nParameters>0) {
       parametersList.add(*fNuisanceParameters);
-      parameterValues.resize(nParameters);
       for (int iParameter=0; iParameter<nParameters; iParameter++) {
          RooRealVar* oneParam = (RooRealVar*) parametersList.at(iParameter);
          parameterValues[iParameter] = oneParam->getVal();
@@ -798,82 +907,6 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
 
       }
 
-#ifdef DEBUG      
-//      if (sbVals.back() < 1E20) { 
-      if (nuis_value < 1.) {
-
-
-         std::cout << "nuis parameter value = " << nuis_value << std::endl;
-
-
-         TString fileName;
-         fileName.Form("hybrid_%d.root",iToy);
-         TFile * file = new TFile(fileName,"RECREATE");
-         RooRealVar * x = (RooRealVar *) fObservables->at(0);
-         TH1D * hsb = new TH1D("h_sb","sb data",100,x->getMin(), x->getMax() );
-         TH1D * hb  = new TH1D("h_b","b data",100,x->getMin(), x->getMax() );
-
-
-//          x->setVal(0); 
-//          std::cout << "sb(0) = " << fSbModel->getVal() << std::endl;
-//          std::cout << " b(0) = " << fBModel->getVal() << std::endl;
-//          x->setVal(1); 
-//          std::cout << "sb(1) = " << fSbModel->getVal() << std::endl;
-//          std::cout << " b(1) = " << fBModel->getVal() << std::endl;
-
-
-
-//          for (unsigned int i = 0; i < sbdata.Size(); ++ i) {             
-//             hsb->Fill(*(sbdata.Coords(i)) );
-// //             RooRealVar * tmp = (RooRealVar *) (fSbModel->getObservables(fData)->first() );
-// //             tmp->setVal(*(sbdata.Coords(i)) );
-// //             std::cout << " x = " << tmp->getVal() << " sb(x) = " << fSbModel->getVal() << std::endl;
-//          }
-//          for (unsigned int i = 0; i < bdata.Size(); ++ i) 
-//             hb->Fill(*(bdata.Coords(i)) );
-
-// this will change the nuis param values          
-//          for (int i = 1; i <= 100; ++i)
-//             hp->SetBinContent(1, fprior->Eval(hp->GetBinCenter(i) ) );
-
-//          TF1 * tmp = (TF1*) fprior->Clone();
-//          tmp->SetName("prior");
-//          tmp->Write();
-         
-         file->Write();
-         file->Close();
-
-         
-//         std::cout << "S+B parameters , nexp = " << nsbexp << std::endl;
-         fSbModel->getParameters(*fObservables)->Print("v");
-//         std::cout << "B parameters , nexp = " << nbexp  << std::endl;
-         fBModel->getParameters(*fObservables)->Print("v");
-         std::cout << "nuis parameter values " << std::endl;
-         parametersList.Print("v");
-
-
-         std::cout << "s+b Val = " << sbVals.back() 
-                   << "\nb Val  = " << bVals.back() << std::endl;
-
-         // evaluate now the likelihood
-         {
-         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended());
-         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended());
-         std::cout << "ROO sb data :  sb_nll = " << sb_nll.getVal() << " b_nll = " << b_nll.getVal() << std::endl;
-         double roo_m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
-         std::cout << " roo sb value = " << roo_m2lnQ << std::endl;
-         }
-         {
-            //RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,roo_b);
-         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended());
-         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended());
-         std::cout << "ROO b data :  sb_nll = " << sb_nll.getVal() << " b_nll = " << b_nll.getVal() << std::endl;
-         double roo_m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
-         std::cout << " roo  b value = " << roo_m2lnQ << std::endl;
-         }
-
-      }
-#endif
 
 
       /// delete the toy-MC datasets
