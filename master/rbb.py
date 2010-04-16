@@ -189,7 +189,7 @@ class ROOTTestCmd(ShellCommand):
             for failedtest in failedtests:
                 html += '<div class="test"><span class="test">' + failedtest['target'] + '</span>\n'
                 html += '<pre>\n' + failedtest['log'] + '</pre></div>'
-            html += '</div'>
+            html += '</div>'
         return html
 
     def getText(self, cmd, results):
