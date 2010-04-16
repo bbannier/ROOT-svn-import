@@ -41,7 +41,7 @@ namespace RooStats {
      //     TestStatSampler();
      virtual ~TestStatSampler() {}
     
-      // Main interface to get a ConfInterval, pure virtual
+      // Main interface to get a SamplingDistribution, pure virtual
       virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) = 0; 
 
       // Main interface to evaluate the test statistic on a dataset
@@ -76,7 +76,7 @@ namespace RooStats {
       
 
    protected:
-      ClassDef(TestStatSampler,1)   // Interface for tools setting limits (producing confidence intervals)
+      ClassDef(TestStatSampler,1)   // Interface for tools producing SamplingDistribution objects
    };
 }
 
