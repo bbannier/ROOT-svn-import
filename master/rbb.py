@@ -8,12 +8,12 @@ from buildbot.changes.svnpoller import SVNPoller
 from buildbot.process import factory
 from buildbot.scheduler import Scheduler, Try_Jobdir
 from buildbot.status import html
+from buildbot.status.builder import SUCCESS, WARNINGS, FAILURE, SKIPPED, \
+    EXCEPTION
+from buildbot.status.mail import MailNotifier
 from buildbot.steps import trigger
 from buildbot.steps.shell import ShellCommand
 from buildbot.steps.source import SVN
-from buildbot.status.builder import SUCCESS, WARNINGS, FAILURE, SKIPPED, \
-    EXCEPTION
-
 
 class ROOTBuildSource:
     """A set of sources (ROOT, roottest) plus builders."""
@@ -44,7 +44,15 @@ class ROOTBuildSource:
         # check whether the Change is important:
         for name in change.files:
             if name.find('/doc/') != -1: continue
-            if name.find('/test/') != -1: continue
+            if name.find('/README/') != -1: continue
+            if name.find('/tutorials/') != -1: continue
+            if name.find('/build/package/') != -1: continue
+            if name.find('/build/misc/') != -1: continue
+            if name.find('/etc/') != -1: continue
+            if name.find('/fonts/') != -1: continue
+            if name.find('/icons/') != -1: continue
+            if name.find('/macros/') != -1: continue
+            if name.find('/man/') != -1: continue
             if name.endswith('.html'): continue
             if name.endswith('.txt'): continue
             return True
@@ -134,7 +142,7 @@ class ROOTTestCmd(ShellCommand):
                     for test in failedLog['tests']:
                         target = test['target']
                         if target[0:2] == './': target = target[2:]
-                        self.failureDescr.append(dirname + ':' + target)
+                        self.failureDescr.append(dirname + ': ' + target)
                     failedDirLogs.append(failedLog)
 
         if self.numFailures > 0:
@@ -269,6 +277,7 @@ class ROOTBuildBotConfig:
         self.configureSource()
         self.configureSchedulers()
         self.sortBuilders()
+        self.configureNotifications()
 
         return self.c
 
@@ -280,6 +289,7 @@ class ROOTBuildBotConfig:
             self.c['slaves'].append(BuildSlave(slave['name'],
                                                password,
                                                slave['max_builds']))
+
     def configureSource(self):
         self.c['changeHorizon'] = 1000 # up to 1000 changes
         for srcname, src in self.sources.iteritems():
@@ -508,3 +518,14 @@ class ROOTBuildBotConfig:
         # Last chance: if change log references other revision it probably fixes it; merge them:
         if req1.reason.find(str(req2.source.revision)) == -1 and req2.reason.find(str(req1.source.revision)) == -1: return False
         return True
+
+    def configureNotifications(self):
+        mn = MailNotifier(fromaddr="buildbot@root.cern.ch",
+                          lookup="root.cern.ch",
+                          extraRecipients=['rootdev@root.cern.ch'],
+                          mode="failing",
+                          addPatch=False,
+                          categories=['ROOT-incr','roottest-incr','ROOT-hourly','roottest-hourly'])
+        self.c['status'].append(mn)
+
+
