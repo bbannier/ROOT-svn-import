@@ -682,47 +682,48 @@ Interpreter::makeModuleFromCommandLine(const std::string& input_line)
       }
    }
    //
-   //  If it is a preprocessor directive, just compile,
+   //  If it is a preprocessor directive, just add it to the
+   //  collection of global declarations,
    //  otherwise we must rewrite the code, then compile.
    //
-   clang::CompilerInstance* CI = 0;
    if (is_preprocessor_cmd) {
-      std::string src(m_globalDeclarations);
-      src += input_line;
-      src += "\n";
-      src += "void __cling_internal() {\n";
-      src += "\n} // end __cling_internal()\n";
-      //fprintf(stderr, "input_line:\n%s\n", src.c_str());
-      CI = compileString(src);
-      if (!CI) {
-         return 0;
-      }
+      // std::string src(m_globalDeclarations);
+      // src += input_line;
+      // src += "\n";
+      // src += "void __cling_internal() {\n";
+      // src += "\n} // end __cling_internal()\n";
+      // //fprintf(stderr, "input_line:\n%s\n", src.c_str());
+      // CI = compileString(src);
+      // if (!CI) {
+      //    return 0;
+      // }
       m_globalDeclarations.append(input_line);
       m_globalDeclarations.append("\n");
+      return 0;
    }
-   else {
-      //
-      //  Wrap input into a function along with
-      //  the saved global declarations.
-      //
-      std::string src(m_globalDeclarations);
-      src += "void __cling_internal() {\n";
-      src += input_line;
-      src += "\n} // end __cling_internal()\n";
-      //fprintf(stderr, "input_line:\n%s\n", src.c_str());
-      std::string wrapped;
-      createWrappedSrc(src, wrapped);
-      if (!wrapped.size()) {
-         return 0;
-      }
-      //
-      //  Send the wrapped code through the
-      //  frontend to produce a translation unit.
-      //
-      CI = compileString(wrapped);
-      if (!CI) {
-         return 0;
-      }
+
+   clang::CompilerInstance* CI = 0;
+   //
+   //  Wrap input into a function along with
+   //  the saved global declarations.
+   //
+   std::string src(m_globalDeclarations);
+   src += "void __cling_internal() {\n";
+   src += input_line;
+   src += "\n} // end __cling_internal()\n";
+   //fprintf(stderr, "input_line:\n%s\n", src.c_str());
+   std::string wrapped;
+   createWrappedSrc(src, wrapped);
+   if (!wrapped.size()) {
+      return 0;
+   }
+   //
+   //  Send the wrapped code through the
+   //  frontend to produce a translation unit.
+   //
+   CI = compileString(wrapped);
+   if (!CI) {
+      return 0;
    }
    ///**/   ///*reuseCI*/CI->takeLLVMContext();
    ///**/   ///*reuseCI*/delete CI;
