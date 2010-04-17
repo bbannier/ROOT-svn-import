@@ -11,6 +11,7 @@ from buildbot.status import html
 from buildbot.status.builder import SUCCESS, WARNINGS, FAILURE, SKIPPED, \
     EXCEPTION
 from buildbot.status.mail import MailNotifier
+from buildbot.status.web.auth import HTPasswdAuth
 from buildbot.steps import trigger
 from buildbot.steps.shell import ShellCommand
 from buildbot.steps.source import SVN
@@ -263,8 +264,10 @@ class ROOTBuildBotConfig:
             self.sources[triggeredby].addTrigger(name)
 
     def addWebStatus(self, httpPort, allowForce):
+        file = '/var/www/.htpasswd'
         stat = html.WebStatus(http_port = httpPort,
-                              allowForce = allowForce)
+                              allowForce = allowForce,
+                              auth=(HTPasswdAuth(file)))
         self.c['status'].append(stat)
 
     def configureBuildmaster(self):
