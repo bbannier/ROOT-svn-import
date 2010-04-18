@@ -264,16 +264,14 @@ class ROOTBuildBotConfig:
             self.sources[triggeredby].addTrigger(name)
 
     def addWebStatus(self, httpPort, allowForce):
-        file = '/var/www/.htpasswd'
         stat = html.WebStatus(http_port = httpPort,
-                              allowForce = allowForce,
-                              auth=(HTPasswdAuth(file)))
+                              allowForce = allowForce)
         self.c['status'].append(stat)
 
     def configureBuildmaster(self):
         self.c['projectName'] = "ROOT"
         self.c['projectURL'] = "http://root.cern.ch/"
-        self.c['buildbotURL'] = "http://pcphsft61:8010/" # FIXME PCROOT
+        #self.c['buildbotURL'] = "http://lxroot01.cern.ch:8010/" # FIXME PCROOT
         self.c['mergeRequests'] = self.mergeRequests
 
         self.configureSlaves()
