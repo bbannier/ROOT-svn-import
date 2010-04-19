@@ -101,6 +101,9 @@ TProofLite::TProofLite(const char *url, const char *conffile, const char *confdi
    }
    fMaster = gSystem->HostName();
 
+   // Analysise the conffile field
+   ParseConfigField(conffile);
+
    // Determine the number of workers giving priority to users request.
    // Otherwise use the system information, if available, or just start
    // the minimal number, i.e. 2 .
@@ -144,9 +147,6 @@ Int_t TProofLite::Init(const char *, const char *conffile,
       fConfDir     = confdir;
       fConfFile    = conffile;
    }
-
-   // Analysise the conffile field
-   ParseConfigField(conffile);
 
    // The sandbox for this session
    if (CreateSandbox() != 0) {
@@ -1147,7 +1147,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
 
       // Save the data set into the TQueryResult (should be done after Process to avoid
       // improper deletion during collection)
-      if (dset && pq->GetInputList()) {
+      if (rv == 0 && dset && pq->GetInputList()) {
          pq->GetInputList()->Add(dset);
          if (dset->GetEntryList())
             pq->GetInputList()->Add(dset->GetEntryList());
@@ -1165,6 +1165,8 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
 
       // Remove aborted queries from the list
       if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
+         if (fPlayer && fPlayer->GetListOfResults())
+            fPlayer->GetListOfResults()->Remove(pq);
          if (fQMgr) fQMgr->RemoveQuery(pq);
       } else {
          // If the last object, notify the GUI that the result arrived
