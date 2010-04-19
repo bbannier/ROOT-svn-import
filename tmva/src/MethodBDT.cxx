@@ -632,7 +632,7 @@ void TMVA::MethodBDT::GetRandomSubSample()
    UInt_t nfraction = static_cast<UInt_t>(fSampleFraction*Data()->GetNTrainingEvents());
 
    if (fSubSample.size()!=0) fSubSample.clear();
-   TRandom3 *trandom   = new TRandom3(fForest.size());
+   TRandom3 *trandom   = new TRandom3(fForest.size()+1);
 
    for (UInt_t ievt=0; ievt<nfraction; ievt++) { // recreate new random subsample
       fSubSample.push_back(fEventSample[(static_cast<UInt_t>(trandom->Uniform(nevents)-1))]);
