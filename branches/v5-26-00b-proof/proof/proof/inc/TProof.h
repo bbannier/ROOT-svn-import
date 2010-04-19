@@ -24,9 +24,6 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TProof
-#include "TProof.h"
-#endif
 #ifndef ROOT_TProofMgr
 #include "TProofMgr.h"
 #endif
@@ -41,6 +38,9 @@
 #endif
 #ifndef ROOT_TMD5
 #include "TMD5.h"
+#endif
+#ifndef ROOT_TRegexp
+#include "TRegexp.h"
 #endif
 #ifndef ROOT_TSysEvtHandler
 #include "TSysEvtHandler.h"
@@ -91,6 +91,7 @@ class TVirtualMutex;
 class TFileCollection;
 class TMap;
 class TDataSetManager;
+class TMacro;
 
 // protocol changes:
 // 1 -> 2: new arguments for Process() command, option added
@@ -120,15 +121,17 @@ class TDataSetManager;
 // 24 -> 25: Handling of 'data' dir; group information
 // 25 -> 26: Use new TProofProgressInfo class
 // 26 -> 27: Use new file for updating the session status
+// 27 -> 28: Support for multi-datasets, fix global pack dirs, fix AskStatistics, package download
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 27;            // protocol version number
+const Int_t       kPROOF_Protocol        = 28;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
 const char* const kPROOF_WorkDir         = ".proof";      // default working directory
 const char* const kPROOF_CacheDir        = "cache";       // file cache dir, under WorkDir
 const char* const kPROOF_PackDir         = "packages";    // package dir, under WorkDir
+const char* const kPROOF_PackDownloadDir = "downloaded";  // subdir with downloaded PARs, under PackDir
 const char* const kPROOF_QueryDir        = "queries";     // query dir, under WorkDir
 const char* const kPROOF_DataSetDir      = "datasets";    // dataset dir, under WorkDir
 const char* const kPROOF_DataDir         = "data";        // dir for produced data, under WorkDir
@@ -248,9 +251,9 @@ private:
 
    TSlave      *fMerger;         // Slave that acts as merger
    Int_t        fPort;           // Port number, on which it accepts outputs from other workers
-   Int_t        fMergedObjects;  // Total number of objects it must accept from other workers 
+   Int_t        fMergedObjects;  // Total number of objects it must accept from other workers
                                  // (-1 == not set yet)
-   Int_t        fWorkersToMerge; // Number of workers that are merged on this merger 
+   Int_t        fWorkersToMerge; // Number of workers that are merged on this merger
                                  // (does not change during time)
    Int_t        fMergedWorkers;  // Current number of already merged workers
                                  // (does change during time as workers are being merged)
@@ -258,8 +261,10 @@ private:
    TList       *fWorkers;        // List of already assigned workers
    Bool_t       fIsActive;       // Merger state
 
-public:
+   TMergerInfo(const TMergerInfo&); // Not implemented
+   TMergerInfo& operator=(const TMergerInfo&); // Not implemented
 
+public:
    TMergerInfo(TSlave *t, Int_t port, Int_t forHowManyWorkers) :
                fMerger(t), fPort(port), fMergedObjects(0), fWorkersToMerge(forHowManyWorkers),
                fMergedWorkers(0), fWorkers(0), fIsActive(kTRUE) { }
@@ -279,7 +284,7 @@ public:
    void        AddMergedObjects(Int_t objects) { fMergedObjects += objects; }
 
    Bool_t      AreAllWorkersAssigned();
-   Bool_t      AreAllWorkersMerged();	
+   Bool_t      AreAllWorkersMerged();
 
    void Deactivate() { fIsActive = kFALSE; }
    Bool_t      IsActive() { return fIsActive; }
@@ -529,7 +534,7 @@ private:
    static TList   *fgProofEnvList;   // List of TNameds defining environment
                                      // variables to pass to proofserv
 
-   Bool_t          fMergersSet;      // Indicates, if the following variables have been initialized properly                               
+   Bool_t          fMergersSet;      // Indicates, if the following variables have been initialized properly
    Int_t           fMergersCount;
    Int_t           fWorkersToMerge;  // Current total number of workers, which have not been yet assigned to any merger
    Int_t           fLastAssignedMerger;
@@ -593,13 +598,13 @@ private:
    void     RecvLogFile(TSocket *s, Int_t size);
    void     NotifyLogMsg(const char *msg, const char *sfx = "\n");
    Int_t    BuildPackage(const char *package, EBuildPackageOpt opt = kBuildAll);
-   Int_t    BuildPackageOnClient(const TString &package);
+   Int_t    BuildPackageOnClient(const char *package, Int_t opt = 0, TString *path = 0);
    Int_t    LoadPackage(const char *package, Bool_t notOnClient = kFALSE);
-   Int_t    LoadPackageOnClient(const TString &package);
+   Int_t    LoadPackageOnClient(const char *package);
    Int_t    UnloadPackage(const char *package);
    Int_t    UnloadPackageOnClient(const char *package);
    Int_t    UnloadPackages();
-   Int_t    UploadPackageOnClient(const TString &package, EUploadPackageOpt opt, TMD5 *md5);
+   Int_t    UploadPackageOnClient(const char *package, EUploadPackageOpt opt, TMD5 *md5);
    Int_t    DisablePackage(const char *package);
    Int_t    DisablePackageOnClient(const char *package);
    Int_t    DisablePackages();
@@ -675,11 +680,14 @@ private:
    Bool_t   Prompt(const char *p);
    void     ClearDataProgress(Int_t r, Int_t t);
 
+   static TList *GetDataSetSrvMaps(const TString &srvmaps);
+
 protected:
    TProof(); // For derived classes to use
-   Int_t           Init(const char *masterurl, const char *conffile,
-                        const char *confdir, Int_t loglevel,
-                        const char *alias = 0);
+   void  InitMembers();
+   Int_t Init(const char *masterurl, const char *conffile,
+              const char *confdir, Int_t loglevel,
+              const char *alias = 0);
    virtual Bool_t  StartSlaves(Bool_t attach = kFALSE);
    Int_t AddWorkers(TList *wrks);
    Int_t RemoveWorkers(TList *wrks);
@@ -724,6 +732,9 @@ protected:
 
    // Parse CINT commands
    static Bool_t GetFileInCmd(const char *cmd, TString &fn);
+
+   // Pipe execution of commands
+   static void SystemCmd(const char *cmd, Int_t fdout);
 
 public:
    TProof(const char *masterurl, const char *conffile = kPROOF_ConfFile,
@@ -783,10 +794,11 @@ public:
    virtual void ClearCache(const char *file = 0);
    TList      *GetListOfPackages();
    TList      *GetListOfEnabledPackages();
-   void        ShowPackages(Bool_t all = kFALSE);
+   void        ShowPackages(Bool_t all = kFALSE, Bool_t redirlog = kFALSE);
    void        ShowEnabledPackages(Bool_t all = kFALSE);
    Int_t       ClearPackages();
    Int_t       ClearPackage(const char *package);
+   Int_t       DownloadPackage(const char *par, const char *dstdir = 0);
    Int_t       EnablePackage(const char *package, Bool_t notOnClient = kFALSE);
    Int_t       UploadPackage(const char *par, EUploadPackageOpt opt = kUntar);
    Int_t       Load(const char *macro, Bool_t notOnClient = kFALSE, Bool_t uniqueOnly = kTRUE,
@@ -858,6 +870,7 @@ public:
 
    void        SetRealTimeLog(Bool_t on = kTRUE);
 
+   void        GetStatistics(Bool_t verbose = kFALSE);
    Long64_t    GetBytesRead() const { return fBytesRead; }
    Float_t     GetRealTime() const { return fRealTime; }
    Float_t     GetCpuTime() const { return fCpuTime; }
@@ -936,6 +949,7 @@ public:
    void        SendDataSetStatus(const char *msg, UInt_t n, UInt_t tot, Bool_t st);
 
    void        GetLog(Int_t start = -1, Int_t end = -1);
+   TMacro     *GetLastLog();
    void        PutLog(TQueryResult *qr);
    void        ShowLog(Int_t qry = -1);
    void        ShowLog(const char *queryref);
