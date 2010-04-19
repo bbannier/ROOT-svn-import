@@ -72,7 +72,9 @@ public:
       kHasBeenLookedUp = BIT(15),
       kWriteV3         = BIT(16),
       kEmpty           = BIT(17),
-      kCorrupted       = BIT(18)
+      kCorrupted       = BIT(18),
+      kNewRun          = BIT(19),
+      kNewPacket       = BIT(20)
    };
 
 private:
@@ -87,6 +89,10 @@ private:
    Long64_t         fEntries;    // total number of possible entries in file
    TList           *fFriends;    // friend elements
 
+   TString          fDataSet;    // Name of the dataset of which this element is part
+   TList           *fAssocObjList;  // List of objects associated to this element
+                                   // (e.g. TObjString describing associated files)
+
    Bool_t           HasBeenLookedUp() const { return TestBit(kHasBeenLookedUp); }
 
    TDSetElement& operator=(const TDSetElement &); // Not implemented
@@ -95,7 +101,7 @@ public:
    TDSetElement();
    TDSetElement(const char *file, const char *objname = 0,
                 const char *dir = 0, Long64_t first = 0, Long64_t num = -1,
-                const char *msd = 0);
+                const char *msd = 0, const char *dataset = 0);
    TDSetElement(const TDSetElement& elem);
    virtual ~TDSetElement();
 
@@ -113,6 +119,11 @@ public:
    Bool_t           GetValid() const { return fValid; }
    const char      *GetObjName() const { return GetTitle(); }
    const char      *GetDirectory() const;
+   const char      *GetDataSet() const { return fDataSet; }
+   void             SetDataSet(const char *dataset) { fDataSet = dataset; }
+   void             AddAssocObj(TObject *assocobj);
+   TList           *GetListOfAssocObjs() const { return fAssocObjList; }
+   TObject         *GetAssocObj(Long64_t i, Bool_t isentry = kFALSE);
    void             Print(Option_t *options="") const;
    Long64_t         GetTDSetOffset() const { return fTDSetOffset; }
    void             SetTDSetOffset(Long64_t offset) { fTDSetOffset = offset; }
@@ -128,8 +139,7 @@ public:
    void             SetLookedUp() { SetBit(kHasBeenLookedUp); }
    TFileInfo       *GetFileInfo(const char *type = "TTree");
 
-
-   ClassDef(TDSetElement,6)  // A TDSet element
+   ClassDef(TDSetElement,8)  // A TDSet element
 };
 
 
@@ -141,16 +151,12 @@ public:
       kWriteV3         = BIT(16),
       kEmpty           = BIT(17),
       kValidityChecked = BIT(18),  // Set if elements validiy has been checked
-      kSomeInvalid     = BIT(19)   // Set if at least one element is invalid
+      kSomeInvalid     = BIT(19),  // Set if at least one element is invalid
+      kMultiDSet       = BIT(20)   // Set if fElements is a list of datasets
    };
 
 private:
-   TString        fDir;         // name of the directory
-   TString        fType;        // type of objects (e.g. TTree);
-   TString        fObjName;     // name of objects to be analyzed (e.g. TTree name)
-   THashList     *fElements;    //-> list of TDSetElements
    Bool_t         fIsTree;      // true if type is a TTree (or TTree derived)
-   TIter         *fIterator;    //! iterator on fElements
    TObject       *fEntryList;   //! entry (or event) list for processing
    TProofChain   *fProofChain;  //! for browsing purposes
 
@@ -160,7 +166,14 @@ private:
    void operator=(const TDSet &);  // not implemented
 
 protected:
-   TDSetElement  *fCurrent;  //! current element
+   TString        fDir;         // name of the directory
+   TString        fType;        // type of objects (e.g. TTree);
+   TString        fObjName;     // name of objects to be analyzed (e.g. TTree name)
+   THashList     *fElements;    //-> list of TDSetElements (or TDSets, if in multi mode)
+   TIter         *fIterator;    //! iterator on fElements
+   TDSetElement  *fCurrent;     //! current element
+   TList         *fSrvMaps;     //! list for mapping server coordinates for files
+   TIter         *fSrvMapsIter; //! iterator on fSrvMaps
 
 public:
    TDSet();
@@ -204,6 +217,7 @@ public:
    const char           *GetObjName() const { return fObjName; }
    const char           *GetDirectory() const { return fDir; }
    TList                *GetListOfElements() const { return (TList *)fElements; }
+   Int_t                 GetNumOfFiles();
 
    Int_t                 Remove(TDSetElement *elem, Bool_t deleteElem = kTRUE);
 
@@ -229,9 +243,11 @@ public:
    void                  Lookup(Bool_t removeMissing = kFALSE, TList **missingFiles = 0);
    void                  SetLookedUp();
 
+   void                  SetSrvMaps(TList *srvmaps = 0);
+
    void                  SetWriteV3(Bool_t on = kTRUE);
 
-   ClassDef(TDSet,6)  // Data set for remote processing (PROOF)
+   ClassDef(TDSet,8)  // Data set for remote processing (PROOF)
 };
 
 #endif
