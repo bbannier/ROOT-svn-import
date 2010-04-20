@@ -316,10 +316,22 @@ class ROOTMailNotifier(MailNotifier):
             if ss.patch:
                 source += " (plus patch)"
 
-        subject = "Buildbot: %s %s %s" % (master_status.getProjectName(), result.upper(), source)
+        logs = list()
+        for log in build.getLogs():
+            log_name = "%s.%s" % (log.getStep().getName(), log.getName())
+            log_status, dummy = log.getStep().getResults()
+            log_body = log.getText().splitlines() # Note: can be VERY LARGE
+            log_url = '%s/steps/%s/logs/%s' % (master_status.getURLForThing(build),
+                                               log.getStep().getName(),
+                                               log.getName())
+            logs.append((log_name, log_url, log_body, log_status))
+     
+        logname, logurl, logcontent, logstatus = logs[-1]
+     
+        subject = "Buildbot: %s %s %s" % (logname, result.upper(), source)
 
         text = list()
-        text.append('<h4>%s %s</h4>' % (master_status.getProjectName(), result.upper()))
+        text.append('<h4>%s %s</h4>' % (logname, result.upper()))
         text.append("Buildslave for this Build: <b>%s</b> (but I might be suppressing others)" % build.getSlavename())
         text.append('<br>')
         if master_status.getURLForThing(build):
@@ -340,24 +352,12 @@ class ROOTMailNotifier(MailNotifier):
             text.append('<h4>Changes:</h4>')
             text.extend([c.asHTML() for c in ss.changes])
      
-        logs = list()
-        for log in build.getLogs():
-            log_name = "%s.%s" % (log.getStep().getName(), log.getName())
-            log_status, dummy = log.getStep().getResults()
-            log_body = log.getText().splitlines() # Note: can be VERY LARGE
-            log_url = '%s/steps/%s/logs/%s' % (master_status.getURLForThing(build),
-                                               log.getStep().getName(),
-                                               log.getName())
-            logs.append((log_name, log_url, log_body, log_status))
-     
-        name, url, content, logstatus = logs[-1]
-     
         text.append('<i>Detailed log of last build step:</i> <a href="%s">%s</a>'
-                    % (url, url))
+                    % (logurl, logurl))
         text.append('<br>')
-        if name == 'roottest' and len(log_body) and not 'too many' in log_body[0]:
+        if name == 'roottest' and len(logcontent) and not 'too many' in logcontent[0]:
             text.append('<ul>')
-            for l in log_body:
+            for l in logcontent:
                 text.append('<li>%s</li>' % (l))
             text.append('</ul>')
         text.append('<br><br>')
