@@ -215,17 +215,157 @@ class ROOTTestCmd(ShellCommand):
                 return self.describe(True) + ["failed"]
 
 class ROOTSVN(SVN):
-    def __init(self, category):
+    def __init__(self, category="ROOT", svnurl=None, **kwargs):
         self.category = category
-        SVN.__init__(self, **kwargs)
+        SVN.__init__(self, svnurl=svnurl, **kwargs)
 
     def computeSourceRevision(self, changes):
+        # Find the latest change matching our category
         changes = filter(lambda c: c.category == self.category, changes)
         if not changes or None in [c.revision for c in changes]:
             return None
         lastChange = max([int(c.revision) for c in changes])
         return lastChange
-    
+
+    def start(self):
+        # Use HEAD if the build's revision does not belong to our category.
+        forcedHead = False
+        # determine sourcestamp's revision as used by SVN.start():
+        if not self.alwaysUseLatest:
+            s = self.build.getSourceStamp()
+            revision = s.revision
+            # match that number with changes' revisions:
+            categoryChanges = filter(lambda c: c.revision == revision and c.category == self.category, s.changes)
+            if not categoryChanges:
+                # there was no change with that revision number matching our category, so go to HEAD:
+                forcedHead = True
+                self.alwaysUseLatest = True
+        # invoke base class's start():
+        ret = SVN.start(self)
+        if forcedHead: self.alwaysUseLatest = False
+        return ret
+
+class ROOTMailNotifier(MailNotifier):
+    """Overrides when to send emails (only first failing build,
+       only on new roottest failures)"""
+    def __init__(self):
+        MailNotifier.__init__(self, fromaddr="buildbot@root.cern.ch",
+                              lookup="root.cern.ch",
+                              extraRecipients=['rootsvn@root.cern.ch'],
+                              mode="problem",
+                              addPatch=False,
+                              categories=['ROOT-incr','roottest-incr','ROOT-hourly','roottest-hourly'],
+                              messageFormatter = self.messageFormatter
+                              )
+        # Sent email for these revisions (previous 10)
+        self.notifiedRevisions = list()
+
+    def buildFinished(self, name, build, results):
+        # Near-copy from MailNotifier.buildFinished()
+        # here is where we actually do something.
+        builder = build.getBuilder()
+        if self.builders is not None and name not in self.builders:
+            return # ignore this build
+        if self.categories is not None and \
+               builder.category not in self.categories:
+            return # ignore this build
+
+        if results != FAILURE:
+            return
+
+        if build.getSourceStamp() and build.getSourceStamp().revision:
+            revision = build.getSourceStamp().revision
+            if revision in self.notifiedRevisions:
+                return
+
+            prev = build.getPreviousBuild()
+            if prev and prev.getResults() == FAILURE:
+                # We might have the same failures; compare the failing steps' names.
+                if self.getSteps() \
+                        and len(prev.getSteps()) == len(self.getSteps()) \
+                        and ( prev.getSteps()[-1].getText() == self.getSteps()[-1].getText() \
+                                  and name == "roottest"):
+                    # Looks like a similar roottest failure.
+                    # Assume it's still caused by the same error.
+                    return
+
+            self.notifiedRevisions.push(revision)
+            if len(self.notifiedRevisions) > 30: self.notifiedRevisions.pop()
+
+        # for testing purposes, buildMessage returns a Deferred that fires
+        # when the mail has been sent. To help unit tests, we return that
+        # Deferred here even though the normal IStatusReceiver.buildFinished
+        # signature doesn't do anything with it. If that changes (if
+        # .buildFinished's return value becomes significant), we need to
+        # rearrange this.
+        return self.buildMessage(name, build, results)
+
+    def messageFormatter(self, mode, name, build, results, master_status):
+        """Customized email message"""
+        result = Results[results]
+
+        source = ""
+        ss = build.getSourceStamp()
+        if ss:
+            if ss.branch:
+                source += "[branch %s] " % ss.branch
+            if ss.revision:
+                source +=  ss.revision
+            else:
+                source += "HEAD"
+            if ss.patch:
+                source += " (plus patch)"
+
+        subject = "Buildbot: %s %s %s" % (master_status.getProjectName(), result.upper(), source)
+
+        text = list()
+        text.append('<h4>%s %s</h4>' % (master_status.getProjectName(), result.upper()))
+        text.append("Buildslave for this Build: <b>%s</b> (but I might be suppressing others)" % build.getSlavename())
+        text.append('<br>')
+        if master_status.getURLForThing(build):
+            text.append('Logs: <a href="%s">%s</a>'
+                        % (master_status.getURLForThing(build),
+                           master_status.getURLForThing(build))
+                        )
+        text.append('<br>')
+        text.append("Build Reason: %s" % build.getReason())
+        text.append('<br>')
+
+        text.append("Build Source Stamp: <b>%s</b>" % (source,))
+        text.append('<br>')
+        text.append("Blamelist: %s" % ",".join(build.getResponsibleUsers()))
+        text.append('<br>')
+
+        if ss and ss.changes:
+            text.append('<h4>Changes:</h4>')
+            text.extend([c.asHTML() for c in ss.changes])
+     
+        logs = list()
+        for log in build.getLogs():
+            log_name = "%s.%s" % (log.getStep().getName(), log.getName())
+            log_status, dummy = log.getStep().getResults()
+            log_body = log.getText().splitlines() # Note: can be VERY LARGE
+            log_url = '%s/steps/%s/logs/%s' % (master_status.getURLForThing(build),
+                                               log.getStep().getName(),
+                                               log.getName())
+            logs.append((log_name, log_url, log_body, log_status))
+     
+        name, url, content, logstatus = logs[-1]
+     
+        text.append('<i>Detailed log of last build step:</i> <a href="%s">%s</a>'
+                    % (url, url))
+        text.append('<br>')
+        if name == 'roottest' and len(log_body) and not 'too many' in log_body[0]:
+            text.append('<ul>')
+            for l in log_body:
+                text.append('<li>%s</li>' % (l))
+            text.append('</ul>')
+        text.append('<br><br>')
+        text.append('<b>-The BuildBot</b>')
+
+        return {'type': 'html',
+               'body': "\n".join(text),
+               'subject' : subject}
 
 class ROOTBuildBotConfig:
     """Collect configuration options and spread them into buildbot
@@ -398,8 +538,8 @@ class ROOTBuildBotConfig:
         name = src.name + '-' + arch + '-' + buildertype
         if name in self.builders: return name
 
-        mode = 'update'
-        if buildertype != 'incr' : mode = 'copy'
+        mode = 'copy'
+        if buildertype == 'incr' and src.name == 'ROOT': mode = 'update'
 
         # if we are triggered then we need to use the latest revision:
         alwaysUseLatest = False
@@ -440,20 +580,20 @@ class ROOTBuildBotConfig:
             confLine = None
 
         fact = None
+        svn = ROOTSVN(mode = mode,
+                      svnurl = src.svnurl,
+                      alwaysUseLatest = alwaysUseLatest,
+                      retry = (20, 6),
+                      category = src.name)
         if src.name == 'ROOT':
-            fact = factory.GNUAutoconf(ROOTSVN(mode = mode,
-                                           svnurl = src.svnurl,
-                                           alwaysUseLatest = alwaysUseLatest,
-                                           retry = (20, 6)),
+            fact = factory.GNUAutoconf(svn,
                                        configure = confLine,
                                        configureFlags = [],
                                        compile = compLine,
                                        test = None)
         else:
             fact = factory.BuildFactory()
-            fact.addStep(ROOTSVN(svnurl=src.svnurl,
-                             alwaysUseLatest=alwaysUseLatest,
-                             mode=mode))
+            fact.addStep(svn)
             fact.addStep(ROOTTestCmd(command = compLine))
 
         if buildertype == 'incr' and src.name != 'roottest':
@@ -521,12 +661,7 @@ class ROOTBuildBotConfig:
         return True
 
     def configureNotifications(self):
-        mn = MailNotifier(fromaddr="buildbot@root.cern.ch",
-                          lookup="root.cern.ch",
-                          extraRecipients=['rootdev@root.cern.ch'],
-                          mode="failing",
-                          addPatch=False,
-                          categories=['ROOT-incr','roottest-incr','ROOT-hourly','roottest-hourly'])
+        mn = ROOTMailNotifier()
         self.c['status'].append(mn)
 
 
