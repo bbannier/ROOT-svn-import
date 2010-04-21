@@ -1,6 +1,7 @@
 # ROOT BuildBot tools
 
 import re
+from collections import deque
 
 from buildbot import scheduler, locks
 from buildbot.buildslave import BuildSlave
@@ -258,7 +259,7 @@ class ROOTMailNotifier(MailNotifier):
                               messageFormatter = self.messageFormatter
                               )
         # Sent email for these revisions (previous 10)
-        self.notifiedRevisions = list()
+        self.notifiedRevisions = deque()
 
     def buildFinished(self, name, build, results):
         # Near-copy from MailNotifier.buildFinished()
@@ -289,8 +290,8 @@ class ROOTMailNotifier(MailNotifier):
                     # Assume it's still caused by the same error.
                     return
 
-            self.notifiedRevisions.push(revision)
-            if len(self.notifiedRevisions) > 30: self.notifiedRevisions.pop()
+            self.notifiedRevisions.append(revision)
+            if len(self.notifiedRevisions) > 30: self.notifiedRevisions.popleft()
 
         # for testing purposes, buildMessage returns a Deferred that fires
         # when the mail has been sent. To help unit tests, we return that
