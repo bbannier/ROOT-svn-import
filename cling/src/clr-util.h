@@ -1,125 +1,84 @@
-
-/* clr-util.h */
+// @(#)root/cint:$Id$
+// Author: Zdenek Culik   16/04/2010
 
 #ifndef __CLR_UTIL_H__
 #define __CLR_UTIL_H__
 
-#include <string>
-#include <map>
-#include <fstream>
-#include <sstream>
+#include "TString.h"
+#include <fstream> // class ofstream
+#include <sstream> // class ostringstream
 
-namespace clr_util {
+/* -------------------------------------------------------------------------- */
 
-using std::string;
+class TTextHelper {
+private:
+   int  fIndent;
+   bool fStartLine;
 
-/* ---------------------------------------------------------------------- */
+   std::ofstream* fFileStream;
+   std::ostringstream* fStringStream;
+   std::ostream* fStream;
 
-void info    (const string msg, const string location = "");
-void warning (const string msg, const string location = "");
-void error   (const string msg, const string location = "");
+protected:
+   void PutPlainStr(const TString s);
+   void PutPlainChr(char c);
 
-/* ---------------------------------------------------------------------- */
+   virtual void OpenLine();
+   virtual void CloseLine();
 
-string RemoveSuffix (const string value, const string suffix);
+public:
+   void Open(const TString name);
+   void Close();
 
-/* ---------------------------------------------------------------------- */
+   void OpenString();
+   TString CloseString();
 
-class TextOutput
-{
-   private:
-      int  Indent;
-      bool StartLine;
+   void Put(const TString s);
+   void PutChr(char c);
+   void PutEol();
+   void PutLn(const TString s);
 
-      std::ofstream * FileStream;
-      std::ostringstream * StringStream;
-      std::ostream * Stream;
+   void SetIndent(int i);
+   void IncIndent();
+   void DecIndent();
 
-   protected:
-      void PutPlainStr (const string s);
-      void PutPlainChr (char c);
-
-      virtual void OpenLine ();
-      virtual void CloseLine ();
-
-   public:
-      void Open (const string name);
-      void Close ();
-
-      void OpenString ();
-      string CloseString ();
-
-      void Put (const string s);
-      void PutChr (char c);
-      void PutEol ();
-      void PutLn (const string s);
-
-      void SetIndent (int i);
-      void IncIndent ();
-      void DecIndent ();
-
-      TextOutput ();
-      virtual ~ TextOutput ();
+   TTextHelper();
+   virtual ~ TTextHelper();
 };
 
-/* ---------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
-class HtmlOutput : public TextOutput
-{
-   protected:
-      bool use_html;
+class THtmlHelper : public TTextHelper {
+protected:
+   bool fUseHtml;
+   TString fStyleFileName;
 
-   public:
-      void enable_html (bool param_use_html) { use_html = param_use_html; }
-      bool html_enabled () { return use_html; }
+public:
+   void EnableHtml(bool param_use_html) { fUseHtml = param_use_html; }
+   bool HtmlEnabled() { return fUseHtml; }
 
-      void head (const string title, const string style_file_name = "");
-      void tail ();
+   void SetStyleFileName(const TString fileName) { fStyleFileName = fileName; }
 
-      static string fce_html_escape (const string s);
-      void attr (const string name, const string value);
+   void Head(const TString title);
+   void Tail();
 
-      void a_href (const string url, const string style, const string text);
-      void a_name (const string name, const string text);
+   static TString FceHtmlEscape(const TString s);
+   void Attr(const TString name, const TString value);
 
-      void style_begin (const string style);
-      void style_end ();
-      void styled_text (const string text, const string style);
+   void Href(const TString url, const TString style, const TString text);
+   void Name(const TString name, const TString text);
 
-      void put_html_escape (const string s);
+   void StyleBegin(const TString style);
+   void StyleEnd();
+   void StyledText(const TString text, const TString style);
 
-   public:
-      HtmlOutput () : use_html (true) {  }
-      virtual ~ HtmlOutput () { }
+   void PutHtmlEscape(const TString s);
+
+public:
+   THtmlHelper() : fUseHtml(true) {  }
+   virtual ~ THtmlHelper() { }
 };
 
-/* ---------------------------------------------------------------------- */
-
-template <class Key, class Data>
-class Dictionary
-{
-   private:
-      typedef std::map <Key, Data> dict_type; // standard map, not MAP_TYPE, for types without hash<Key>
-      typedef typename dict_type::iterator dict_iter;
-      dict_type dict;
-
-   public:
-      bool contains (Key inx)          { return dict.find (inx) != dict.end (); }
-      void store (Key inx, Data value) { dict [inx] = value; }
-      void clear ()                    { dict.clear (); }
-
-      Data get (Key inx)
-      {
-         dict_iter it = dict.find (inx);
-         if (it == dict.end ())
-            return Data ();
-         else
-            return it->second;
-      }
-};
-
-/* ---------------------------------------------------------------------- */
-
-} // close namespace
+/* -------------------------------------------------------------------------- */
 
 #endif /* __CLR_UTIL_H__ */

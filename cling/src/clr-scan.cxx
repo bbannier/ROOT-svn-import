@@ -1,141 +1,126 @@
-
-/* clr-scan.cc */
-
-#include "clr-scan.h"
-#include "clr-util.h"
-
-#include "clr-print.h"
-
-// #define DUMP
-// #define LIST
-
-#ifdef DUMP
-   #include "clr-dump.h"
-#endif
-
-#ifdef LIST
-   #include "clr-list.h"
-#endif
-
-#ifdef TRACE
-   #include "clr-trace.h"
-#endif
+// @(#)root/cint:$Id$
+// Author: Zdenek Culik   16/04/2010
 
 #include "clang/AST/ASTConsumer.h"
-
-#include <Reflex/Reflex.h>
-#include <Reflex/Builder/ReflexBuilder.h>
-#include <Reflex/DictionaryGenerator.h>
+#include "TObject.h"
+#include "clr-scan.h"
 
 #define TEMPLATES
 
 /* ---------------------------------------------------------------------- */
 
-using std::string;
+const char* kClangKey = "clang"; // property key used for connection with Clang objects
 
-using clr_util::info;
-using clr_util::warning;
-using clr_util::error;
+int TScanner::unknown_class_counter = 0; // global unknown class coubter
+int TScanner::unknown_enum_counter= 0; // global unknown enum counter
 
-using clr_util::RemoveSuffix;
-
-/* ---------------------------------------------------------------------- */
-
-/* global variables */
-
-// context from ClrInit
-clang::ASTContext * Ctx = NULL;
-
-// Reflex class builders
-// clr_util::Dictionary < string, Reflex::ClassBuilder * > class_builders;
-
-// property key used for connection with Clang objects
-const char * clang_key = "clang";
-
-int unknown_class_counter = 0;
-int unknown_enum_counter = 0;
-
-/* ---------------------------------------------------------------------- */
-
-/* forward declarations */
-
-Reflex::Type ScanQualType (clang::QualType qual_type);
-
-void ScanTypedef (clang::TypedefDecl * D);
-void ScanEnum (clang::EnumDecl * D);
-
-void ScanClass (clang::RecordDecl * D, string template_params = "");
-void ScanFunction (clang::FunctionDecl * D, string template_params = "");
-
-void ScanDecl (clang::Decl * D, Reflex::Scope Outer);
-
-/* ---------------------------------------------------------------------- */
-
-/* initialization */
-
-void init_dict_variables ()
+//______________________________________________________________________________
+TScanner::TScanner ()
 {
-   // class_builders.clear ();
+   fCtx = NULL;
+   fReporter = new TObject;
+
    unknown_class_counter = 0;
    unknown_enum_counter = 0;
 }
 
-/* conversion and type check used by AddProperty */
-
-inline void * to_prop_item (clang::Decl * item)
+//______________________________________________________________________________
+TScanner::~TScanner ()
 {
+   delete fReporter;
+}
+
+//______________________________________________________________________________
+inline void* ToPropItem(clang::Decl* item)
+{
+   /* conversion and type check used by AddProperty */
    return item;
 }
 
-/********************************* NUMBERS ********************************/
-
-inline size_t APInt_to_size (const llvm::APInt & num)
+//______________________________________________________________________________
+inline TString Message(const TString msg, const TString location)
 {
-   return * num.getRawData ();
+   if (location == "")
+      return msg;
+   else
+      return location + " " + msg;
 }
 
-inline long APInt_to_long (const llvm::APInt & num)
+//______________________________________________________________________________
+void TScanner::ShowInfo(const TString msg, const TString location)
 {
-   return * num.getRawData ();
+   fReporter->Info("CLR", Message(msg, location));
 }
 
-inline string APInt_to_string (const llvm::APInt & num)
+//______________________________________________________________________________
+void TScanner::ShowWarning(const TString msg, const TString location)
 {
-   return num.toString (10, true);
+   #if 0
+   fReporter->Warning("CLR", Message(msg, location));
+   #endif
 }
 
-inline string IntToStr (int num)
+//______________________________________________________________________________
+void TScanner::ShowError(const TString msg, const TString location)
 {
-   std::ostringstream stream;
-   stream << num;
-   return stream.str ();
+   fReporter->Error("CLR", Message (msg, location));
 }
 
-/******************************** UNKNOWN *********************************/
+/*********************************** NUMBERS **********************************/
 
-string GetLocation (clang::Decl * D)
+//______________________________________________________________________________
+inline size_t APIntTosize(const llvm::APInt& num)
 {
-   string location = "";
-   llvm::raw_string_ostream stream (location);
-   clang::SourceManager & source_manager = Ctx->getSourceManager ();
-   D->getLocation ().print (stream, source_manager);
-   return stream.str ();
+   return *num.getRawData();
 }
 
-string GetName (clang::Decl * D)
+//______________________________________________________________________________
+inline long APIntTolong(const llvm::APInt& num)
 {
-   string name = "";
-   string kind = D->getDeclKindName ();
+   return *num.getRawData();
+}
 
-   if (clang::NamedDecl * ND = dyn_cast <clang::NamedDecl> (D))
-   {
-      name = ND->getQualifiedNameAsString ();
+//______________________________________________________________________________
+inline TString APIntTostring(const llvm::APInt& num)
+{
+   return num.toString(10, true);
+}
+
+//______________________________________________________________________________
+inline TString IntToStr(int num)
+{
+   TString txt = "";
+   txt += num;
+   return txt;
+}
+
+/********************************** UNKNOWN ***********************************/
+
+//______________________________________________________________________________
+TString TScanner::GetLocation(clang::Decl* D)
+{
+   std::string location = "";
+   llvm::raw_string_ostream stream(location);
+   clang::SourceManager& source_manager = fCtx->getSourceManager();
+   D->getLocation().print(stream, source_manager);
+   return stream.str();
+}
+
+//______________________________________________________________________________
+TString TScanner::GetName(clang::Decl* D)
+{
+   TString name = "";
+   TString kind = D->getDeclKindName();
+
+   if (clang::NamedDecl* ND = dyn_cast <clang::NamedDecl> (D)) {
+      name = ND->getQualifiedNameAsString();
    }
 
    return name;
 }
 
-inline string AddSpace (const string txt)
+//______________________________________________________________________________
+inline TString AddSpace(const TString txt)
 {
    if (txt == "")
       return "";
@@ -143,97 +128,101 @@ inline string AddSpace (const string txt)
       return txt + " ";
 }
 
-/* ---------------------------------------------------------------------- */
-
-void ScanInfo (clang::Decl * D)
+//______________________________________________________________________________
+void TScanner::ScanInfo(clang::Decl* D)
 {
-   string location = GetLocation (D);
-   string kind = D->getDeclKindName ();
-   string name = GetName (D);
-   info ("Scan: " + kind + " declaration " + name, location);
+   TString location = GetLocation(D);
+   TString kind = D->getDeclKindName();
+   TString name = GetName(D);
+   ShowInfo("Scan: " + kind + " declaration " + name, location);
 }
 
-void ScanUnknown (clang::Decl * D, string txt = "")
+//______________________________________________________________________________
+void TScanner::ScanUnknown(clang::Decl* D, TString txt)
 // unknown - this kind of declaration was not known to programmer
 {
-   string location = GetLocation (D);
-   string kind = D->getDeclKindName ();
-   string name = GetName (D);
-   warning ("Unknown " + AddSpace (txt) + kind + " declaration " + name, location);
+   TString location = GetLocation(D);
+   TString kind = D->getDeclKindName();
+   TString name = GetName(D);
+   ShowWarning("Unknown " + AddSpace(txt) + kind + " declaration " + name, location);
 }
 
-void ScanUnexpected (clang::Decl * D, string txt = "")
+//______________________________________________________________________________
+void TScanner::ScanUnexpected(clang::Decl* D, TString txt)
 // unexpected - this kind of declaration is unexpected (in this place)
 {
-   string location = GetLocation (D);
-   string kind = D->getDeclKindName ();
-   string name = GetName (D);
-   warning ("Unexpected " + kind + " declaration " + name, location);
+   TString location = GetLocation(D);
+   TString kind = D->getDeclKindName();
+   TString name = GetName(D);
+   ShowWarning("Unexpected " + kind + " declaration " + name, location);
 }
 
-void ScanUnsupported (clang::Decl * D, string txt = "")
+//______________________________________________________________________________
+void TScanner::ScanUnsupported(clang::Decl* D, TString txt)
 // unsupported - this kind of declaration is probably not used
 {
-   string location = GetLocation (D);
-   string kind = D->getDeclKindName ();
-   string name = GetName (D);
-   warning ("Unsupported " + AddSpace (txt) + kind + " declaration " + name, location);
+   TString location = GetLocation(D);
+   TString kind = D->getDeclKindName();
+   TString name = GetName(D);
+   ShowWarning("Unsupported " + AddSpace(txt) + kind + " declaration " + name, location);
 }
 
-void ScanUnimplemented (clang::Decl * D, string txt = "")
+//______________________________________________________________________________
+void TScanner::ScanUnimplemented(clang::Decl* D, TString txt)
 // to be implemented
 {
-   string location = GetLocation (D);
-   string kind = D->getDeclKindName ();
-   string name = GetName (D);
-   warning ("Unimplemented " + AddSpace (txt) + kind + " declaration " + name, location);
+   TString location = GetLocation(D);
+   TString kind = D->getDeclKindName();
+   TString name = GetName(D);
+   ShowWarning("Unimplemented " + AddSpace(txt) + kind + " declaration " + name, location);
 }
 
-/* ---------------------------------------------------------------------- */
-
-void ScanUnknownType (clang::QualType qual_type)
+//______________________________________________________________________________
+void TScanner::ScanUnknownType(clang::QualType qual_type)
 {
-   string kind = qual_type.getTypePtr ()->getTypeClassName ();
-   warning ("Unknown " + kind + " type " + qual_type.getAsString ());
+   TString kind = qual_type.getTypePtr()->getTypeClassName();
+   ShowWarning("Unknown " + kind + " type " + qual_type.getAsString());
 }
 
-void ScanUnsupportedType (clang::QualType qual_type)
+//______________________________________________________________________________
+void TScanner::ScanUnsupportedType(clang::QualType qual_type)
 {
-   string kind = qual_type.getTypePtr ()->getTypeClassName ();
-   warning ("Unsupported" + kind + " type " + qual_type.getAsString ());
+   TString kind = qual_type.getTypePtr()->getTypeClassName();
+   ShowWarning("Unsupported" + kind + " type " + qual_type.getAsString());
 }
 
-void ScanUnimplementedType (clang::QualType qual_type)
+//______________________________________________________________________________
+void TScanner::ScanUnimplementedType(clang::QualType qual_type)
 {
-   string kind = qual_type.getTypePtr ()->getTypeClassName ();
-   warning ("Unimplemented " + kind + " type " + qual_type.getAsString ());
+   TString kind = qual_type.getTypePtr()->getTypeClassName();
+   ShowWarning("Unimplemented " + kind + " type " + qual_type.getAsString());
 }
 
-/*
-void ScanUnimplementedType (clang::Type * T)
+#if 0
+//______________________________________________________________________________
+void TScanner::ScanUnimplementedType (clang::Type* T)
 {
-   string kind = T->getTypeClassName ();
-   warning ("Unimplemented " + kind + " type");
+   TString kind = T->getTypeClassName ();
+   ShowWarning ("Unimplemented " + kind + " type");
 }
-*/
+#endif
 
-/***************************** CLASS BUILDER ******************************/
+/******************************* CLASS BUILDER ********************************/
 
-Reflex::ClassBuilder * GetClassBuilder (clang::RecordDecl * D, string template_params = "")
+//______________________________________________________________________________
+Reflex::ClassBuilder* TScanner::GetClassBuilder(clang::RecordDecl* D, TString template_params)
 {
-   string full_name = D->getQualifiedNameAsString () + template_params;
-   // info ("GetClassBuilder " + full_name);
+   TString full_name = D->getQualifiedNameAsString() + template_params;
+   // ShowInfo ("GetClassBuilder " + full_name);
 
-   if (full_name == "")
-   {
+   if (full_name == "") {
       unknown_class_counter ++;
-      full_name = "_UNKNOWN_CLASS_" + IntToStr (unknown_class_counter) + "_"; // !?
+      full_name = "_UNKNOWN_CLASS_" + IntToStr(unknown_class_counter) + "_";  // !?
    }
 
-   Reflex::ClassBuilder * builder = NULL; // class_builders.get (full_name);
-   if (builder == NULL)
-   {
-      clang::TagDecl::TagKind kind = D->getTagKind ();
+   Reflex::ClassBuilder* builder = NULL; // class_builders.get (full_name);
+   if (builder == NULL) {
+      clang::TagDecl::TagKind kind = D->getTagKind();
 
       int style = 0;
 
@@ -246,19 +235,16 @@ Reflex::ClassBuilder * GetClassBuilder (clang::RecordDecl * D, string template_p
 
       style = style | Reflex::PUBLIC; // !?
 
-      try
-      {
-         builder = new Reflex::ClassBuilder (full_name.c_str (), typeid (Reflex::UnknownType), 0, style);
-      }
-      catch (std::exception & e)
-      {
-         warning (string (e.what ()) + " : class " + full_name);
+      try {
+         builder = new Reflex::ClassBuilder(full_name, typeid(Reflex::UnknownType), 0, style);
+      } catch (std::exception& e) {
+         ShowWarning(TString(e.what()) + " : class " + full_name);
          unknown_class_counter ++;
-         full_name = "_UNKNOWN_CLASS_" + IntToStr (unknown_class_counter) + "_"; // !?
-         builder = new Reflex::ClassBuilder (full_name.c_str (), typeid (Reflex::UnknownType), 0, Reflex::CLASS); // !?
+         full_name = "_UNKNOWN_CLASS_" + IntToStr(unknown_class_counter) + "_";  // !?
+         builder = new Reflex::ClassBuilder(full_name, typeid(Reflex::UnknownType), 0, Reflex::CLASS);    // !?
       }
 
-      builder->AddProperty (clang_key, to_prop_item (D));
+      builder->AddProperty(kClangKey, ToPropItem(D));
 
       // class_builders.store (full_name, builder);
    }
@@ -266,335 +252,285 @@ Reflex::ClassBuilder * GetClassBuilder (clang::RecordDecl * D, string template_p
    return builder;
 }
 
-/********************************** TYPE **********************************/
+/************************************ TYPE ************************************/
 
-Reflex::Type ScanPointerType (clang::PointerType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanPointerType(clang::PointerType* T)
 {
-   Reflex::Type element = ScanQualType (T->getPointeeType ());
-   return PointerBuilder (element);
+   Reflex::Type element = ScanQualType(T->getPointeeType());
+   return PointerBuilder(element);
 }
 
-Reflex::Type ScanLValueReferenceType (clang::LValueReferenceType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanLValueReferenceType(clang::LValueReferenceType* T)
 {
-   Reflex::Type element = ScanQualType (T->getPointeeType ());
-   return ReferenceBuilder (element);
+   Reflex::Type element = ScanQualType(T->getPointeeType());
+   return ReferenceBuilder(element);
 }
 
-Reflex::Type ScanMemberPointerType (clang::MemberPointerType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanMemberPointerType(clang::MemberPointerType* T)
 {
-   Reflex::Type element = ScanQualType (T->getPointeeType ());
+   Reflex::Type element = ScanQualType(T->getPointeeType());
 
    Reflex::Scope base;
 
-   const clang::Type * cls_type = T->getClass ();
-   if (cls_type != NULL)
-   {
-      const clang::RecordType * rec_type = dyn_cast <clang::RecordType> (cls_type);
-      if (rec_type != NULL)
-      {
-         clang::RecordDecl * rec_decl = rec_type->getDecl ();
+   const clang::Type* cls_type = T->getClass();
+   if (cls_type != NULL) {
+      const clang::RecordType* rec_type = dyn_cast <clang::RecordType> (cls_type);
+      if (rec_type != NULL) {
+         clang::RecordDecl* rec_decl = rec_type->getDecl();
 
-         if (rec_decl != NULL)
-         {
-             string rec_name = rec_decl->getQualifiedNameAsString ();
-             base = Reflex::Scope::ByName (rec_name);
+         if (rec_decl != NULL) {
+            std::string rec_name = rec_decl->getQualifiedNameAsString();
+            base = Reflex::Scope::ByName(rec_name);
 
-             // info ("ScanMemberPointerType " + base.Name () + " " + element.Name ());
+            // ShowInfo ("ScanMemberPointerType " + base.Name () + " " + element.Name ());
 
-             return PointerToMemberBuilder (element, base);
-          }
+            return PointerToMemberBuilder(element, base);
+         }
       }
    }
 
    // return PointerBuilder (element); // !? !!
-   return Reflex::Type (); // !? !!
+   return Reflex::Type();  // !? !!
 }
 
-/* ---------------------------------------------------------------------- */
-
-Reflex::Type ScanArrayType (clang::ArrayType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanArrayType(clang::ArrayType* T)
 {
-   Reflex::Type element = ScanQualType (T->getElementType ());
+   Reflex::Type element = ScanQualType(T->getElementType());
 
    size_t size = 0;
-   if (clang::ConstantArrayType * CT = dyn_cast <clang::ConstantArrayType> (T))
-   {
-      size = APInt_to_size (CT->getSize ()) ;
-   }
-   else
-   {
-      warning ("Unknown array size"); // !?
+   if (clang::ConstantArrayType* CT = dyn_cast <clang::ConstantArrayType> (T)) {
+      size = APIntTosize(CT->getSize()) ;
+   } else {
+      ShowWarning("Unknown array size");  // !?
    }
 
-   return ArrayBuilder (element, size);
+   return ArrayBuilder(element, size);
 }
 
-/* ---------------------------------------------------------------------- */
-
-Reflex::Type ScanFunctionType (clang::FunctionType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanFunctionType(clang::FunctionType* T)
 {
    // parameters
    std::vector <Reflex::Type> vec;
 
-   if (clang::FunctionProtoType * FT = dyn_cast <clang::FunctionProtoType> (T))
-   {
-      for (clang::FunctionProtoType::arg_type_iterator I = FT->arg_type_begin (), E = FT->arg_type_end (); I != E; ++I)
-      {
-          Reflex::Type param_type = ScanQualType (*I);
-          vec.push_back (param_type);
+   if (clang::FunctionProtoType* FT = dyn_cast <clang::FunctionProtoType> (T)) {
+      for (clang::FunctionProtoType::arg_type_iterator I = FT->arg_type_begin(), E = FT->arg_type_end(); I != E; ++I) {
+         Reflex::Type param_type = ScanQualType(*I);
+         vec.push_back(param_type);
       }
    }
 
    // result type
-   Reflex::Type type = ScanQualType (T->getResultType ());
+   Reflex::Type type = ScanQualType(T->getResultType());
 
-   return FunctionTypeBuilder (type, vec);
+   return FunctionTypeBuilder(type, vec);
 }
 
-/* ---------------------------------------------------------------------- */
-
-Reflex::Type ScanEnumType (clang::EnumType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanEnumType(clang::EnumType* T)
 {
-   clang::EnumDecl * D = T->getDecl ();
-   string full_name = D->getQualifiedNameAsString ();
+   clang::EnumDecl* D = T->getDecl();
+   TString full_name = D->getQualifiedNameAsString();
 
-   if (full_name == "")
-   {
+   if (full_name == "") {
       unknown_enum_counter ++;
-      full_name = "_UNKNOWN_ENUM_" + IntToStr (unknown_enum_counter) + "_"; // !?
+      full_name = "_UNKNOWN_ENUM_" + IntToStr(unknown_enum_counter) + "_";  // !?
    }
 
-   string items = "";
+   TString items = "";
    bool any = false;
 
-   for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin (), E = D->enumerator_end (); I != E; ++I)
-   {
-      clang::EnumConstantDecl * item = * I;
+   for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
+      clang::EnumConstantDecl* item =* I;
 
       if (! any)
          items += ",";
       any = true;
 
-      items += item->getNameAsString ();
+      items += item->getNameAsString();
 
-      if (item->getInitExpr () != NULL)
-         items += "=" + APInt_to_string (item->getInitVal ());
+      if (item->getInitExpr() != NULL)
+         items += "=" + APIntTostring(item->getInitVal());
    }
 
-   return Reflex::EnumTypeBuilder (full_name.c_str (), items.c_str ());
+   return Reflex::EnumTypeBuilder(full_name, items);
 }
 
-/* ---------------------------------------------------------------------- */
-
-Reflex::Type ScanRecordType (clang::RecordType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanRecordType(clang::RecordType* T)
 {
-   Reflex::ClassBuilder * builder = GetClassBuilder (T->getDecl ()); // !?
-   return builder->ToType ();
+   Reflex::ClassBuilder* builder = GetClassBuilder(T->getDecl());   // !?
+   return builder->ToType();
 }
 
-/* ---------------------------------------------------------------------- */
-
-Reflex::Type ScanElaboratedType (clang::ElaboratedType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanElaboratedType(clang::ElaboratedType* T)
 {
-   return ScanQualType (T->getUnderlyingType ());
+   return ScanQualType(T->getUnderlyingType());
 }
 
-/* ---------------------------------------------------------------------- */
-
-Reflex::Type ScanTypedefType (clang::TypedefType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanTypedefType(clang::TypedefType* T)
 {
-    clang::TypedefDecl * D = T->getDecl ();
-    string name = D->getQualifiedNameAsString ();
+   clang::TypedefDecl* D = T->getDecl();
+   TString name = D->getQualifiedNameAsString();
 
-    // !? !!
-    return Reflex::TypeBuilder (name.c_str ());
+   // !? !!
+   return Reflex::TypeBuilder(name);
 
-    Reflex::Type type = ScanQualType (D->getUnderlyingType ());
+   Reflex::Type type = ScanQualType(D->getUnderlyingType());
 
-    return Reflex::TypedefTypeBuilder (name.c_str (), type);
+   return Reflex::TypedefTypeBuilder(name, type);
 }
 
-/* ---------------------------------------------------------------------- */
-
-Reflex::Type ScanBuiltinType (clang::BuiltinType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanBuiltinType(clang::BuiltinType* T)
 {
    clang::LangOptions lang_opts; // !?
-   const char * name = T->getName (lang_opts);
-   // info ("BuiltinType " + string (name));
-   return Reflex::TypeBuilder (name);
+   const char* name = T->getName(lang_opts);
+   // ShowInfo ("BuiltinType " + TString (name));
+   return Reflex::TypeBuilder(name);
 }
 
-Reflex::Type ScanQualifiedNameType (clang::QualifiedNameType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanQualifiedNameType(clang::QualifiedNameType* T)
 {
    #if 0
-   clang::IdentifierInfo * N = T->getQualifier ()->getAsIdentifier();
-   const char * name = N->getNameStart ();
-   info ("QualifiedNameType " + string (name));
-   return Reflex::TypeBuilder (name);
+      clang::IdentifierInfo* N = T->getQualifier()->getAsIdentifier();
+      const char* name = N->getNameStart();
+      ShowInfo("QualifiedNameType " + TString(name));
+      return Reflex::TypeBuilder(name);
    #endif
 
    #if 1
-   string name = T->getNamedType ().getAsString (); // !?
-   // info ("QualifiedNameType " + name);
-   return Reflex::TypeBuilder (name.c_str ());
+      TString name = T->getNamedType().getAsString();   // !?
+      // ShowInfo ("QualifiedNameType " + name);
+      return Reflex::TypeBuilder(name);
    #endif
 }
 
-Reflex::Type ScanTemplateTypeParmType (clang::TemplateTypeParmType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanTemplateTypeParmType(clang::TemplateTypeParmType* T)
 {
-   clang::IdentifierInfo * N = T->getName ();
-   const char * name = N->getNameStart ();
+   clang::IdentifierInfo* N = T->getName();
+   const char* name = N->getNameStart();
 
-   // info ("TemplateTypeParmType " + string (name));
-   return Reflex::TypeBuilder (name);
+   // ShowInfo ("TemplateTypeParmType " + TString (name));
+   return Reflex::TypeBuilder(name);
 }
 
-Reflex::Type ScanSubstTemplateTypeParmType (clang::SubstTemplateTypeParmType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanSubstTemplateTypeParmType(clang::SubstTemplateTypeParmType* T)
 {
-   const char * name = T->getName ()->getNameStart ();
-   // info ("SubstTemplateTypeParmType " + string (name));
-   return Reflex::TypeBuilder (name);
+   const char* name = T->getName()->getNameStart();
+   // ShowInfo ("SubstTemplateTypeParmType " + TString (name));
+   return Reflex::TypeBuilder(name);
 }
 
-/* ---------------------------------------------------------------------- */
-
-string ConvTemplateName (clang::TemplateName & N)
+//______________________________________________________________________________
+TString TScanner::ConvTemplateName(clang::TemplateName& N)
 {
    clang::LangOptions lang_opts;
-   clang::PrintingPolicy print_opts (lang_opts); // !?
+   clang::PrintingPolicy print_opts(lang_opts);  // !?
 
-   string text = "";
-   llvm::raw_string_ostream stream (text);
+   std::string text = "";
+   llvm::raw_string_ostream stream(text);
 
-   N.print (stream, print_opts);
+   N.print(stream, print_opts);
 
-   return stream.str ();
+   return stream.str();
 }
 
-Reflex::Type ScanTemplateSpecializationType (clang::TemplateSpecializationType * T)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanTemplateSpecializationType(clang::TemplateSpecializationType* T)
 {
-   clang::TemplateName N = T->getTemplateName ();
-   string name = ConvTemplateName (N);
+   clang::TemplateName N = T->getTemplateName();
+   TString name = ConvTemplateName(N);
 
-   // info ("TemplateSpecializationType " + name);
-   return Reflex::TypeBuilder (name.c_str ());
+   // ShowInfo ("TemplateSpecializationType " + name);
+   return Reflex::TypeBuilder(name);
 }
 
-/* ---------------------------------------------------------------------- */
-
-Reflex::Type ScanQualType (clang::QualType qual_type)
+//______________________________________________________________________________
+Reflex::Type TScanner::ScanQualType(clang::QualType qual_type)
 {
    Reflex::Type type;
-   clang::Type * T = qual_type.getTypePtr ();
+   clang::Type* T = qual_type.getTypePtr();
 
-   if (clang::PointerType * S = dyn_cast <clang::PointerType> (T))
-   {
-       type = ScanPointerType (S);
-   }
-   else if (clang::MemberPointerType * S = dyn_cast <clang::MemberPointerType> (T))
-   {
-       type = ScanMemberPointerType (S);
-   }
-   else if (clang::LValueReferenceType * S = dyn_cast <clang::LValueReferenceType> (T))
-   {
-       type = ScanLValueReferenceType (S);
-   }
-   else if (clang::RValueReferenceType * S = dyn_cast <clang::RValueReferenceType> (T))
-   {
-       /* ... */
-       ScanUnsupportedType (qual_type);
-   }
-   else if (clang::ArrayType * S = dyn_cast <clang::ArrayType> (T))
-   {
-       type = ScanArrayType (S);
-   }
-   else if (clang::EnumType * S = dyn_cast <clang::EnumType> (T))
-   {
-       type = ScanEnumType (S);
-   }
-   else if (clang::RecordType * S = dyn_cast <clang::RecordType> (T))
-   {
-       type = ScanRecordType (S);
-   }
-   else if (clang::ElaboratedType * S = dyn_cast <clang::ElaboratedType> (T))
-   {
-       type = ScanElaboratedType (S);
-   }
-   else if (clang::FunctionType * S = dyn_cast <clang::FunctionType> (T))
-   {
-       type = ScanFunctionType (S);
-   }
-   else if (clang::TypedefType * S = dyn_cast <clang::TypedefType> (T))
-   {
-       type = ScanTypedefType (S);
-   }
-   else if (clang::BuiltinType * S = dyn_cast <clang::BuiltinType> (T))
-   {
-       type = ScanBuiltinType (S);
-   }
-   else if (clang::ComplexType * S = dyn_cast <clang::ComplexType> (T))
-   {
-       /* ... */
-       ScanUnsupportedType (qual_type);
-   }
-   else if (clang::QualifiedNameType * S = dyn_cast <clang::QualifiedNameType> (T))
-   {
-       ScanQualifiedNameType (S);
-   }
-   else if (clang::SubstTemplateTypeParmType * S = dyn_cast <clang::SubstTemplateTypeParmType> (T))
-   {
-       ScanSubstTemplateTypeParmType (S);
-   }
-   else if (clang::TemplateSpecializationType * S = dyn_cast <clang::TemplateSpecializationType> (T))
-   {
-       ScanTemplateSpecializationType (S);
-   }
-   else if (clang::TemplateTypeParmType * S = dyn_cast <clang::TemplateTypeParmType> (T))
-   {
-       ScanTemplateTypeParmType (S);
-   }
-   else
-   {
-       ScanUnknownType (qual_type);
+   if (clang::PointerType* S = dyn_cast <clang::PointerType> (T)) {
+      type = ScanPointerType(S);
+   } else if (clang::MemberPointerType* S = dyn_cast <clang::MemberPointerType> (T)) {
+      type = ScanMemberPointerType(S);
+   } else if (clang::LValueReferenceType* S = dyn_cast <clang::LValueReferenceType> (T)) {
+      type = ScanLValueReferenceType(S);
+   } else if (clang::RValueReferenceType* S = dyn_cast <clang::RValueReferenceType> (T)) {
+      /* ... */
+      ScanUnsupportedType(qual_type);
+   } else if (clang::ArrayType* S = dyn_cast <clang::ArrayType> (T)) {
+      type = ScanArrayType(S);
+   } else if (clang::EnumType* S = dyn_cast <clang::EnumType> (T)) {
+      type = ScanEnumType(S);
+   } else if (clang::RecordType* S = dyn_cast <clang::RecordType> (T)) {
+      type = ScanRecordType(S);
+   } else if (clang::ElaboratedType* S = dyn_cast <clang::ElaboratedType> (T)) {
+      type = ScanElaboratedType(S);
+   } else if (clang::FunctionType* S = dyn_cast <clang::FunctionType> (T)) {
+      type = ScanFunctionType(S);
+   } else if (clang::TypedefType* S = dyn_cast <clang::TypedefType> (T)) {
+      type = ScanTypedefType(S);
+   } else if (clang::BuiltinType* S = dyn_cast <clang::BuiltinType> (T)) {
+      type = ScanBuiltinType(S);
+   } else if (clang::ComplexType* S = dyn_cast <clang::ComplexType> (T)) {
+      /* ... */
+      ScanUnsupportedType(qual_type);
+   } else if (clang::QualifiedNameType* S = dyn_cast <clang::QualifiedNameType> (T)) {
+      ScanQualifiedNameType(S);
+   } else if (clang::SubstTemplateTypeParmType* S = dyn_cast <clang::SubstTemplateTypeParmType> (T)) {
+      ScanSubstTemplateTypeParmType(S);
+   } else if (clang::TemplateSpecializationType* S = dyn_cast <clang::TemplateSpecializationType> (T)) {
+      ScanTemplateSpecializationType(S);
+   } else if (clang::TemplateTypeParmType* S = dyn_cast <clang::TemplateTypeParmType> (T)) {
+      ScanTemplateTypeParmType(S);
+   } else {
+      ScanUnknownType(qual_type);
    }
 
    // const and volatile
 
-   if (qual_type.isConstQualified ())
-      type = ConstBuilder (type);
+   if (qual_type.isConstQualified())
+      type = ConstBuilder(type);
 
-   if (qual_type.isVolatileQualified ())
-      type = VolatileBuilder (type);
+   if (qual_type.isVolatileQualified())
+      type = VolatileBuilder(type);
 
    return type;
 }
 
-/******************************* EXPRESSION *******************************/
+/********************************* EXPRESSION *********************************/
 
 #if 0
-string ExprToStr (clang::Expr * expr)
+//______________________________________________________________________________
+TString ExprToStr(clang::Expr* expr)
 {
-   string result = "";
+   TString result = "";
 
-   if (expr->isEvaluatable (*Ctx))
-   {
+   if (expr->isEvaluatable(*fCtx)) {
       clang::Expr::EvalResult answer;
-      expr->Evaluate (answer, *Ctx);
+      expr->Evaluate(answer, *fCtx);
 
-      if (answer.Val.isInt ())
-      {
-         result = APInt_to_string (answer.Val.getInt ());
+      if (answer.Val.isInt()) {
+         result = APIntTostring(answer.Val.getInt());
+      } else {
+         TString text = "";
+         llvm::raw_string_ostream stream(text);
+         answer.Val.print(stream);
+         result = stream.str();
       }
-      else
-      {
-         string text = "";
-         llvm::raw_string_ostream stream (text);
-         answer.Val.print (stream);
-         result = stream.str ();
-      }
-   }
-   else
-   {
+   } else {
       result = "unknown_value"; // !? !!
    }
 
@@ -602,130 +538,122 @@ string ExprToStr (clang::Expr * expr)
 }
 #endif
 
-string ExprToStr (clang::Expr * expr)
+//______________________________________________________________________________
+TString TScanner::ExprToStr(clang::Expr* expr)
 {
    clang::LangOptions lang_opts;
-   clang::PrintingPolicy print_opts (lang_opts); // !?
+   clang::PrintingPolicy print_opts(lang_opts);  // !?
 
-   string text = "";
-   llvm::raw_string_ostream stream (text);
+   std::string text = "";
+   llvm::raw_string_ostream stream(text);
 
-   expr->printPretty (stream, NULL, print_opts);
+   expr->printPretty(stream, NULL, print_opts);
 
-   return stream.str ();
+   return stream.str();
 }
 
-/******************************** TEMPLATE *********************************/
+/********************************** TEMPLATE ***********************************/
 
-string ConvTemplateParameterList (clang::TemplateParameterList * list)
+//______________________________________________________________________________
+TString TScanner::ConvTemplateParameterList(clang::TemplateParameterList* list)
 {
-   string result = "";
+   TString result = "";
    bool any = false;
 
-   for (clang::TemplateParameterList::iterator I = list->begin(), E = list->end(); I != E; ++I)
-   {
+   for (clang::TemplateParameterList::iterator I = list->begin(), E = list->end(); I != E; ++I) {
       if (any)
          result += ",";
       any = true;
 
-      if (clang::TemplateTemplateParmDecl * P = dyn_cast <clang::TemplateTemplateParmDecl> (*I))
-      {
-         ScanUnimplemented (*I, "template template parameter");
-      }
-      else if (clang::TemplateTypeParmDecl * P = dyn_cast <clang::TemplateTypeParmDecl> (*I))
-      {
-         if (P->wasDeclaredWithTypename ())
+      if (clang::TemplateTemplateParmDecl* P = dyn_cast <clang::TemplateTemplateParmDecl> (*I)) {
+         ScanUnimplemented(*I, "template template parameter");
+      } else if (clang::TemplateTypeParmDecl* P = dyn_cast <clang::TemplateTypeParmDecl> (*I)) {
+         if (P->wasDeclaredWithTypename())
             result += "typename ";
          else
             result += "class ";
 
-         if (P->isParameterPack ())
+         if (P->isParameterPack())
             result += "... ";
 
-         result += P->getNameAsString ();
-      }
-      else if (clang::NonTypeTemplateParmDecl * P = dyn_cast <clang::NonTypeTemplateParmDecl> (*I))
-      {
-         result += P->getType().getAsString ();
+         result += P->getNameAsString();
+      } else if (clang::NonTypeTemplateParmDecl* P = dyn_cast <clang::NonTypeTemplateParmDecl> (*I)) {
+         result += P->getType().getAsString();
 
-         if (clang::IdentifierInfo * N = P->getIdentifier())
-         {
+         if (clang::IdentifierInfo* N = P->getIdentifier()) {
             result += " ";
-            result += N->getName();
+            std::string s = N->getName();
+            result += s;
          }
 
-         if (P->hasDefaultArgument ())
-            result += " = " + ExprToStr (P->getDefaultArgument ());
-      }
-      else
-      {
-         ScanUnknown (*I, "template parameter");
+         if (P->hasDefaultArgument())
+            result += " = " + ExprToStr(P->getDefaultArgument());
+      } else {
+         ScanUnknown(*I, "template parameter");
       }
    }
 
-   // info ("template parameters <" + result + ">");
+   // ShowInfo ("template parameters <" + result + ">");
 
    return "<" + result + ">";
 }
 
-string ScanTemplateParams (clang::TemplateDecl * D)
+//______________________________________________________________________________
+TString TScanner::ScanTemplateParams(clang::TemplateDecl* D)
 {
-   return ConvTemplateParameterList (D->getTemplateParameters ());
+   return ConvTemplateParameterList(D->getTemplateParameters());
 }
 
 #if 0
-string ConvTemplateArguments (const clang::TemplateArgumentList & list)
+//______________________________________________________________________________
+TString ConvTemplateArguments(const clang::TemplateArgumentList& list)
 {
-   string result = "";
+   TString result = "";
    bool any = false;
 
-   unsigned list_size = list.size ();
-   for (int inx = 0; inx < list_size; inx ++)
-   {
+   unsigned list_size = list.size();
+   for (int inx = 0; inx < list_size; inx ++) {
       if (any)
          result += ",";
       any = true;
 
-      clang::TemplateArgument D = list.get (inx);
+      clang::TemplateArgument D = list.get(inx);
 
-      switch (D.getKind ())
-      {
+      switch (D.getKind()) {
          case clang::TemplateArgument::Type:
-            result += D.getAsType ().getAsString ();
+            result += D.getAsType().getAsString();
             break;
 
          case clang::TemplateArgument::Declaration:
-            if (clang::NamedDecl * N = dyn_cast <clang::NamedDecl> (D.getAsDecl ()))
+            if (clang::NamedDecl* N = dyn_cast <clang::NamedDecl> (D.getAsDecl()))
                result += N->getNameAsString();
             break;
 
          case clang::TemplateArgument::Integral:
-            result += APInt_to_string (*D.getAsIntegral());
+            result += APIntTostring(*D.getAsIntegral());
             break;
 
-         case clang::TemplateArgument::Template:
-            {
-               clang::LangOptions lang_opts;
-               clang::PrintingPolicy print_opts (lang_opts); // !?
-               string text = "";
-               llvm::raw_string_ostream stream (text);
-               D.getAsTemplate ().print (stream, print_opts);
-               result += stream.str ();
-            }
-            break;
+         case clang::TemplateArgument::Template: {
+            clang::LangOptions lang_opts;
+            clang::PrintingPolicy print_opts(lang_opts);  // !?
+            TString text = "";
+            llvm::raw_string_ostream stream(text);
+            D.getAsTemplate().print(stream, print_opts);
+            result += stream.str();
+         }
+         break;
 
-         case clang::TemplateArgument::Expression:
-            {
-               result += ExprToStr (D.getAsExpr ());
-            }
-            break;
+         case clang::TemplateArgument::Expression: {
+            result += ExprToStr(D.getAsExpr());
+         }
+         break;
 
          case clang::TemplateArgument::Pack:
             result += "..."; // !?
             break;
 
          default:
-            warning ("Unknown template argument");
+            ShowWarning("Unknown template argument");
       }
    }
 
@@ -734,82 +662,82 @@ string ConvTemplateArguments (const clang::TemplateArgumentList & list)
 #endif
 
 #if 1
-string ConvTemplateArguments (const clang::TemplateArgumentList & list)
+//______________________________________________________________________________
+TString TScanner::ConvTemplateArguments(const clang::TemplateArgumentList& list)
 {
    clang::LangOptions lang_opts;
-   clang::PrintingPolicy print_opts (lang_opts); // !?
+   clang::PrintingPolicy print_opts(lang_opts);  // !?
    return clang::TemplateSpecializationType::PrintTemplateArgumentList
-             (list.getFlatArgumentList (), list.flat_size (), print_opts);
+          (list.getFlatArgumentList(), list.flat_size(), print_opts);
 }
-
 #endif
 
-/* ---------------------------------------------------------------------- */
-
-void ScanClassTemplate (clang::ClassTemplateDecl * D)
+//______________________________________________________________________________
+void TScanner::ScanClassTemplate(clang::ClassTemplateDecl* D)
 {
    #ifdef TEMPLATES
-   // info ("ScanClassTemplate " + D->getQualifiedNameAsString ());
-   string template_params = ScanTemplateParams (D);
-   ScanClass (D->getTemplatedDecl (), template_params);
+      // ShowInfo ("ScanClassTemplate " + D->getQualifiedNameAsString ());
+      TString template_params = ScanTemplateParams(D);
+      ScanClass(D->getTemplatedDecl(), template_params);
    #endif
 
    #if 0
-   typedef llvm::FoldingSet < clang::ClassTemplateSpecializationDecl > container_t;
-   container_t & list = D->getSpecializations ();
-   for (container_t::iterator I = list.begin(), E = list.end(); I != E; ++I)
-   {
-      clang::ClassTemplateSpecializationDecl & S = *I;
-      info (S.getSpecializedTemplate ()->getQualifiedNameAsString ());
-   }
+      typedef llvm::FoldingSet < clang::ClassTemplateSpecializationDecl > container_t;
+      container_t& list = D->getSpecializations();
+      for (container_t::iterator I = list.begin(), E = list.end(); I != E; ++I) {
+         clang::ClassTemplateSpecializationDecl& S = *I;
+         ShowInfo(S.getSpecializedTemplate()->getQualifiedNameAsString());
+      }
    #endif
 }
 
-void ScanFunctionTemplate (clang::FunctionTemplateDecl * D)
+//______________________________________________________________________________
+void TScanner::ScanFunctionTemplate(clang::FunctionTemplateDecl* D)
 {
    #ifdef TEMPLATES
-   // info ("ScanFunctionTemplate");
-   string template_params = ScanTemplateParams (D);
-   ScanFunction (D->getTemplatedDecl (), template_params);
+      // ShowInfo ("ScanFunctionTemplate");
+      TString template_params = ScanTemplateParams(D);
+      ScanFunction(D->getTemplatedDecl(), template_params);
    #else
-      ScanUnimplemented (D);
+      ScanUnimplemented(D);
    #endif
 }
 
 #if 0
-void ScanTemplateParm (clang::TemplateTemplateParmDecl * D)
+//______________________________________________________________________________
+void TScanner::ScanTemplateParm(clang::TemplateTemplateParmDecl* D)
 {
-   ScanUnimplemented (D, "template parameter");
+   ScanUnimplemented(D, "template parameter");
 }
 
-void ScanTemplateTypeParmDecl (clang::TemplateTypeParmDecl *D)
+//______________________________________________________________________________
+void TScanner::ScanTemplateTypeParmDecl(clang::TemplateTypeParmDecl *D)
 {
-   ScanUnimplemented (D, "template type parameter");
+   ScanUnimplemented(D, "template type parameter");
 }
 #endif
 
-/******************************** FUNCTION ********************************/
+/********************************** FUNCTION **********************************/
 
-string FuncParameters (clang::FunctionDecl * D)
+//______________________________________________________________________________
+TString TScanner::FuncParameters(clang::FunctionDecl* D)
 {
-   string result = "";
+   TString result = "";
 
-   for (clang::FunctionDecl::param_iterator I = D->param_begin (), E = D->param_end (); I != E; ++I)
-   {
-      clang::ParmVarDecl * P = * I;
+   for (clang::FunctionDecl::param_iterator I = D->param_begin(), E = D->param_end(); I != E; ++I) {
+      clang::ParmVarDecl* P =* I;
 
       if (result != "")
          result += ";";  // semicolon, not comma, important
 
-      string type = P->getType().getAsString ();
-      string name = P->getNameAsString ();
+      TString type = P->getType().getAsString();
+      TString name = P->getNameAsString();
 
       result += type + " " + name;
 
       // NO if (P->hasDefaultArg ()) // check hasUnparsedDefaultArg () and hasUninstantiatedDefaultArg ()
-      if (P->getInit ())
-      {
-         string init_value = ExprToStr (P->getDefaultArg ());
+      if (P->getInit()) {
+         TString init_value = ExprToStr(P->getDefaultArg());
          result += "=" + init_value;
       }
    }
@@ -817,95 +745,89 @@ string FuncParameters (clang::FunctionDecl * D)
    return result;
 }
 
-Reflex::Type FuncType (clang::FunctionDecl * D)
+//______________________________________________________________________________
+Reflex::Type TScanner::FuncType(clang::FunctionDecl* D)
 {
    std::vector <Reflex::Type> vec;
 
-   for (clang::FunctionDecl::param_iterator I = D->param_begin (), E = D->param_end (); I != E; ++I)
-   {
-      clang::ParmVarDecl * P = * I;
-      Reflex::Type type = ScanQualType (P->getType ());
-      vec.push_back (type);
+   for (clang::FunctionDecl::param_iterator I = D->param_begin(), E = D->param_end(); I != E; ++I) {
+      clang::ParmVarDecl* P =* I;
+      Reflex::Type type = ScanQualType(P->getType());
+      vec.push_back(type);
    }
 
-   Reflex::Type type = ScanQualType (D->getResultType());
+   Reflex::Type type = ScanQualType(D->getResultType());
 
-   return Reflex::FunctionTypeBuilder (type, vec);
+   return Reflex::FunctionTypeBuilder(type, vec);
 }
 
-unsigned int FuncModifiers (clang::FunctionDecl * D)
+//______________________________________________________________________________
+unsigned int TScanner::FuncModifiers(clang::FunctionDecl* D)
 {
    unsigned int modifiers = 0;
 
-   switch (D->getStorageClass ())
-   {
-       case clang::FunctionDecl::Extern:
-          modifiers |= Reflex::EXTERN;
-          break;
+   switch (D->getStorageClass()) {
+      case clang::FunctionDecl::Extern:
+         modifiers |= Reflex::EXTERN;
+         break;
 
-       case clang::FunctionDecl::Static:
-          modifiers |= Reflex::STATIC;
-          break;
+      case clang::FunctionDecl::Static:
+         modifiers |= Reflex::STATIC;
+         break;
 
-       case clang::VarDecl::PrivateExtern:
-          // !?
-          break;
+      case clang::VarDecl::PrivateExtern:
+         // !?
+         break;
    }
 
-   if (D->isPure ())
-       modifiers |= Reflex::ABSTRACT;
+   if (D->isPure())
+      modifiers |= Reflex::ABSTRACT;
 
-   if (D->isInlineSpecified ())
-       modifiers |= Reflex::INLINE;
+   if (D->isInlineSpecified())
+      modifiers |= Reflex::INLINE;
 
-   if (D->isInlined ()) // !?
-       modifiers |= Reflex::INLINE;
+   if (D->isInlined())  // !?
+      modifiers |= Reflex::INLINE;
 
-   if (clang::CXXMethodDecl * M = dyn_cast <clang::CXXMethodDecl> (D))
-   {
-       if (M->isVirtual ())
-          modifiers |= Reflex::VIRTUAL;
+   if (clang::CXXMethodDecl* M = dyn_cast <clang::CXXMethodDecl> (D)) {
+      if (M->isVirtual())
+         modifiers |= Reflex::VIRTUAL;
 
-       if (M->isStatic ())
-          modifiers |= Reflex::STATIC;
+      if (M->isStatic())
+         modifiers |= Reflex::STATIC;
 
-       if (clang::CXXConstructorDecl * S = dyn_cast <clang::CXXConstructorDecl> (M))
-       {
-           modifiers |= Reflex::CONSTRUCTOR;
+      if (clang::CXXConstructorDecl* S = dyn_cast <clang::CXXConstructorDecl> (M)) {
+         modifiers |= Reflex::CONSTRUCTOR;
 
-           if (S->isCopyConstructor ())
-              modifiers |= Reflex::COPYCONSTRUCTOR;
+         if (S->isCopyConstructor())
+            modifiers |= Reflex::COPYCONSTRUCTOR;
 
-           if (S->isExplicit ())
-              modifiers |= Reflex::EXPLICIT;
+         if (S->isExplicit())
+            modifiers |= Reflex::EXPLICIT;
 
-           if (S->isConvertingConstructor (false)) // !? parameter allow explicit
-              modifiers |= Reflex::CONVERTER;
-       }
-       else if (clang::CXXDestructorDecl * S = dyn_cast <clang::CXXDestructorDecl> (M))
-       {
-           modifiers |= Reflex::DESTRUCTOR;
-       }
-       else if (clang::CXXConversionDecl * S = dyn_cast <clang::CXXConversionDecl> (M))
-       {
-           modifiers |= Reflex::CONVERTER;
+         if (S->isConvertingConstructor(false))  // !? parameter allow explicit
+            modifiers |= Reflex::CONVERTER;
+      } else if (clang::CXXDestructorDecl* S = dyn_cast <clang::CXXDestructorDecl> (M)) {
+         modifiers |= Reflex::DESTRUCTOR;
+      } else if (clang::CXXConversionDecl* S = dyn_cast <clang::CXXConversionDecl> (M)) {
+         modifiers |= Reflex::CONVERTER;
 
-           if (S->isExplicit ())
-              modifiers |= Reflex::EXPLICIT;
-       }
+         if (S->isExplicit())
+            modifiers |= Reflex::EXPLICIT;
+      }
    }
 
    return modifiers;
 }
 
-/********************************* CLASS **********************************/
+/*********************************** CLASS ************************************/
 
-unsigned int VisibilityModifiers (clang::AccessSpecifier access)
+//______________________________________________________________________________
+unsigned int TScanner::VisibilityModifiers(clang::AccessSpecifier access)
 {
    unsigned int modifiers = 0;
 
-   switch (access)
-   {
+   switch (access) {
       case clang::AS_private:
          modifiers |= Reflex::PRIVATE;
          break;
@@ -922,36 +844,37 @@ unsigned int VisibilityModifiers (clang::AccessSpecifier access)
    return modifiers;
 }
 
-unsigned int Visibility (clang::Decl * D)
+//______________________________________________________________________________
+unsigned int TScanner::Visibility(clang::Decl* D)
 {
-   return VisibilityModifiers (D->getAccess ());
+   return VisibilityModifiers(D->getAccess());
 }
 
-unsigned int VarModifiers (clang::VarDecl * D)
+//______________________________________________________________________________
+unsigned int TScanner::VarModifiers(clang::VarDecl* D)
 {
    unsigned int modifiers = 0;
 
-   switch (D->getStorageClass ())
-   {
-       case clang::VarDecl::Auto:
-          modifiers |= Reflex::AUTO;
-          break;
+   switch (D->getStorageClass()) {
+      case clang::VarDecl::Auto:
+         modifiers |= Reflex::AUTO;
+         break;
 
-       case clang::VarDecl::Register:
-          modifiers |= Reflex::REGISTER;
-          break;
+      case clang::VarDecl::Register:
+         modifiers |= Reflex::REGISTER;
+         break;
 
-       case clang::VarDecl::Extern:
-          modifiers |= Reflex::EXTERN;
-          break;
+      case clang::VarDecl::Extern:
+         modifiers |= Reflex::EXTERN;
+         break;
 
-       case clang::VarDecl::Static:
-          modifiers |= Reflex::STATIC;
-          break;
+      case clang::VarDecl::Static:
+         modifiers |= Reflex::STATIC;
+         break;
 
-       case clang::VarDecl::PrivateExtern:
-          modifiers |= Reflex::EXTERN; // !?
-          break;
+      case clang::VarDecl::PrivateExtern:
+         modifiers |= Reflex::EXTERN; // !?
+         break;
    }
 
    if (D->isStaticDataMember())
@@ -962,21 +885,22 @@ unsigned int VarModifiers (clang::VarDecl * D)
 
 /* ---------------------------------------------------------------------- */
 
-void ScanFieldMember (clang::FieldDecl * D, Reflex::ClassBuilder * builder)
+//______________________________________________________________________________
+void TScanner::ScanFieldMember(clang::FieldDecl* D, Reflex::ClassBuilder* builder)
 {
    // type
 
-   Reflex::Type type = ScanQualType (D->getType());
+   Reflex::Type type = ScanQualType(D->getType());
 
    // name
 
-   string name = D->getNameAsString ();
+   TString name = D->getNameAsString();
 
    // modifiers
 
-   int modifiers = Visibility (D);
+   int modifiers = Visibility(D);
 
-   if (D->isMutable ())
+   if (D->isMutable())
       modifiers |= Reflex::MUTABLE;
 
    // offset
@@ -985,30 +909,28 @@ void ScanFieldMember (clang::FieldDecl * D, Reflex::ClassBuilder * builder)
 
    // add item
 
-   try
-   {
-      builder->AddDataMember (type, name.c_str (), offset, modifiers);
-      builder->AddProperty (clang_key, to_prop_item (D));
-   }
-   catch (std::exception & e)
-   {
-      warning (string (e.what ()) + " : field " + name);
+   try {
+      builder->AddDataMember(type, name, offset, modifiers);
+      builder->AddProperty(kClangKey, ToPropItem(D));
+   } catch (std::exception& e) {
+      ShowWarning(TString(e.what()) + " : field " + name);
    }
 }
 
-void ScanVarMember (clang::VarDecl * D, Reflex::ClassBuilder * builder)
+//______________________________________________________________________________
+void TScanner::ScanVarMember(clang::VarDecl* D, Reflex::ClassBuilder* builder)
 {
    // type
 
-   Reflex::Type type = ScanQualType (D->getType());
+   Reflex::Type type = ScanQualType(D->getType());
 
    // name
 
-   string name = D->getNameAsString ();
+   TString name = D->getNameAsString();
 
    // modifiers
 
-   int modifiers = Visibility (D) | VarModifiers (D);
+   int modifiers = Visibility(D) | VarModifiers(D);
 
    // offset
 
@@ -1016,60 +938,58 @@ void ScanVarMember (clang::VarDecl * D, Reflex::ClassBuilder * builder)
 
    // add item
 
-   try
-   {
-      builder->AddDataMember (type, name.c_str (), offset, modifiers);
-      builder->AddProperty (clang_key, to_prop_item (D));
-   }
-   catch (std::exception & e)
-   {
-      warning (string (e.what ()) + " : var member " + name);
+   try {
+      builder->AddDataMember(type, name, offset, modifiers);
+      builder->AddProperty(kClangKey, ToPropItem(D));
+   } catch (std::exception& e) {
+      ShowWarning(TString(e.what()) + " : var member " + name);
    }
 }
 
-void ScanMethod (clang::CXXMethodDecl * D, Reflex::ClassBuilder * builder, string template_params = "")
+//______________________________________________________________________________
+void TScanner::ScanMethod(clang::CXXMethodDecl* D, Reflex::ClassBuilder* builder, TString template_params)
 {
    // type
 
-   Reflex::Type type = FuncType (D);
+   Reflex::Type type = FuncType(D);
 
    // paramers
 
-   string params = FuncParameters (D);
+   TString params = FuncParameters(D);
 
    // modifiers
 
-   int modifiers = Visibility (D) | FuncModifiers (D);
+   int modifiers = Visibility(D) | FuncModifiers(D);
 
    // stub
 
    Reflex::StubFunction stub = NULL; // !?
-   void * stub_ctx = NULL;
+   void* stub_ctx = NULL;
 
    // add item
 
-   string name = D->getNameAsString () + template_params;
-   builder->AddFunctionMember (type, name.c_str (), stub, stub_ctx, params.c_str(), modifiers);
-   builder->AddProperty (clang_key, to_prop_item (D));
+   TString name = D->getNameAsString() + template_params;
+   builder->AddFunctionMember(type, name, stub, stub_ctx, params, modifiers);
+   builder->AddProperty(kClangKey, ToPropItem(D));
 }
 
-void ScanEnumMember (clang::EnumDecl * D, Reflex::ClassBuilder * builder)
+//______________________________________________________________________________
+void TScanner::ScanEnumMember(clang::EnumDecl* D, Reflex::ClassBuilder* builder)
 {
    // name
 
-   string full_name = D->getQualifiedNameAsString ();
+   TString full_name = D->getQualifiedNameAsString();
 
    // modifiers
 
-   unsigned int modifiers = Visibility (D); // !?
+   unsigned int modifiers = Visibility(D);  // !?
 
    // items
 
-   string items = "";
-   for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin (), E = D->enumerator_end (); I != E; ++I)
-   {
-      string item_name = I->getNameAsString ();
-      long value = APInt_to_long (I->getInitVal ()); // !?
+   TString items = "";
+   for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
+      TString item_name = I->getNameAsString();
+      long value = APIntTolong(I->getInitVal());   // !?
       if (items != "")
          items = items + ";";
       items = items + item_name ;  // !? + "=" + value;
@@ -1077,269 +997,251 @@ void ScanEnumMember (clang::EnumDecl * D, Reflex::ClassBuilder * builder)
 
    // add item
 
-   builder->AddEnum (full_name.c_str (), items.c_str(), & typeid (Reflex::UnknownType), modifiers);
+   builder->AddEnum(full_name, items, & typeid(Reflex::UnknownType), modifiers);
 
    // no property
 }
 
-void ScanTypedefMember (clang::TypedefDecl * D, Reflex::ClassBuilder * builder)
+//______________________________________________________________________________
+void TScanner::ScanTypedefMember(clang::TypedefDecl* D, Reflex::ClassBuilder* builder)
 {
    // !! !?
    return;
 
    // type
 
-   Reflex::Type type = ScanQualType (D->getUnderlyingType ());
+   Reflex::Type type = ScanQualType(D->getUnderlyingType());
 
    // name
 
-   string name = D->getNameAsString ();
+   TString name = D->getNameAsString();
 
    // add item
 
-   info ("AddTypedef " + name);
+   ShowInfo("AddTypedef " + name);
 
-   builder->AddTypedef (type, name.c_str ());
+   builder->AddTypedef(type, name);
 
-   // builder->AddProperty (clang_key, to_prop_item (D));
+   // builder->AddProperty (kClangKey, ToPropItem (D));
 }
 
-void ScanFunctionTemplateMember (clang::FunctionTemplateDecl * D, Reflex::ClassBuilder * builder)
+//______________________________________________________________________________
+void TScanner::ScanFunctionTemplateMember(clang::FunctionTemplateDecl* D, Reflex::ClassBuilder* builder)
 {
    #ifdef TEMPLATES
-   string template_params = ScanTemplateParams (D);
+      TString template_params = ScanTemplateParams(D);
 
-   clang::FunctionDecl * F = D->getTemplatedDecl ();
+      clang::FunctionDecl* F = D->getTemplatedDecl();
 
-   if (clang::CXXMethodDecl * S = dyn_cast <clang::CXXMethodDecl> (F))
-      ScanMethod (S, builder, template_params);
-   else
-      // ScanFunction (F, template_params); // !?
-      ScanFunction (F); // !?
+      if (clang::CXXMethodDecl* S = dyn_cast <clang::CXXMethodDecl> (F))
+         ScanMethod(S, builder, template_params);
+      else
+         // ScanFunction (F, template_params); // !?
+         ScanFunction(F);  // !?
    #else
-      ScanUnimplemented (D);
+      ScanUnimplemented(D);
    #endif
 }
 
-void ScanFriendMember (clang::FriendDecl *D, Reflex::ClassBuilder * builder)
+//______________________________________________________________________________
+void TScanner::ScanFriendMember(clang::FriendDecl *D, Reflex::ClassBuilder* builder)
 {
-   ScanUnimplemented (D, "friend member");
+   ScanUnimplemented(D, "friend member");
 }
 
-/* ---------------------------------------------------------------------- */
-
-void ScanMember (clang::Decl * D, Reflex::ClassBuilder * builder)
+//______________________________________________________________________________
+void TScanner::ScanMember(clang::Decl* D, Reflex::ClassBuilder* builder)
 {
-   if (clang::FieldDecl * S = dyn_cast <clang::FieldDecl> (D))
-   {
-      ScanFieldMember (S, builder);
-   }
-   else if (clang::VarDecl * S = dyn_cast <clang::VarDecl> (D))
-   {
-      ScanVarMember (S, builder);
-   }
-   else if (clang::CXXMethodDecl * S = dyn_cast <clang::CXXMethodDecl> (D))
-   {
-      ScanMethod (S, builder);
-   }
-   else if (clang::TypedefDecl * S = dyn_cast <clang::TypedefDecl> (D)) // before TypeDecl
-   {
-      ScanTypedefMember (S, builder);
-   }
-   else if (clang::EnumDecl * S = dyn_cast <clang::EnumDecl> (D)) // before TagDecl and TypeDecl
-   {
-      ScanEnumMember (S, builder);
-   }
-   else if (clang::RecordDecl * S = dyn_cast <clang::RecordDecl> (D))
-   {
-      ScanClass (S);
-   }
-   else if (clang::FriendDecl * S = dyn_cast <clang::FriendDecl> (D))
-   {
-      ScanFriendMember (S, builder);
-   }
-   else if (clang::ClassTemplateDecl * S = dyn_cast <clang::ClassTemplateDecl> (D))
-   {
-      ScanClassTemplate (S);
-   }
-   else if (clang::FunctionTemplateDecl * S = dyn_cast <clang::FunctionTemplateDecl> (D))
-   {
-      ScanFunctionTemplateMember (S, builder);
-   }
-   else
-   {
-      ScanUnknown (D, "member");
+   if (clang::FieldDecl* S = dyn_cast <clang::FieldDecl> (D)) {
+      ScanFieldMember(S, builder);
+   } else if (clang::VarDecl* S = dyn_cast <clang::VarDecl> (D)) {
+      ScanVarMember(S, builder);
+   } else if (clang::CXXMethodDecl* S = dyn_cast <clang::CXXMethodDecl> (D)) {
+      ScanMethod(S, builder);
+   } else if (clang::TypedefDecl* S = dyn_cast <clang::TypedefDecl> (D)) { // before TypeDecl
+      ScanTypedefMember(S, builder);
+   } else if (clang::EnumDecl* S = dyn_cast <clang::EnumDecl> (D)) { // before TagDecl and TypeDecl
+      ScanEnumMember(S, builder);
+   } else if (clang::RecordDecl* S = dyn_cast <clang::RecordDecl> (D)) {
+      ScanClass(S);
+   } else if (clang::FriendDecl* S = dyn_cast <clang::FriendDecl> (D)) {
+      ScanFriendMember(S, builder);
+   } else if (clang::ClassTemplateDecl* S = dyn_cast <clang::ClassTemplateDecl> (D)) {
+      ScanClassTemplate(S);
+   } else if (clang::FunctionTemplateDecl* S = dyn_cast <clang::FunctionTemplateDecl> (D)) {
+      ScanFunctionTemplateMember(S, builder);
+   } else {
+      ScanUnknown(D, "member");
    }
 }
 
-void ScanClass (clang::RecordDecl * D, string template_params)
+//______________________________________________________________________________
+void TScanner::ScanClass(clang::RecordDecl* D, TString template_params)
 {
-   if (clang::CXXRecordDecl * C = dyn_cast <clang::CXXRecordDecl> (D))
-   {
-      clang::ClassTemplateDecl * template_decl = C->getDescribedClassTemplate ();
-      if (template_decl != NULL)
-      {
-         // info ("getDescribedClassTemplate");
-         template_params += ScanTemplateParams (template_decl); // !? what if already has some template parameters
+   if (clang::CXXRecordDecl* C = dyn_cast <clang::CXXRecordDecl> (D)) {
+      clang::ClassTemplateDecl* template_decl = C->getDescribedClassTemplate();
+      if (template_decl != NULL) {
+         // ShowInfo ("getDescribedClassTemplate");
+         template_params += ScanTemplateParams(template_decl);  // !? what if already has some template parameters
       }
    }
 
-   if (clang::ClassTemplatePartialSpecializationDecl * P = dyn_cast <clang::ClassTemplatePartialSpecializationDecl> (D))
-   {
-      template_params += ConvTemplateParameterList (P->getTemplateParameters ());
-   }
-   else if (clang::ClassTemplateSpecializationDecl * S = dyn_cast <clang::ClassTemplateSpecializationDecl> (D))
-   {
+   if (clang::ClassTemplatePartialSpecializationDecl* P = dyn_cast <clang::ClassTemplatePartialSpecializationDecl> (D)) {
+      template_params += ConvTemplateParameterList(P->getTemplateParameters());
+   } else if (clang::ClassTemplateSpecializationDecl* S = dyn_cast <clang::ClassTemplateSpecializationDecl> (D)) {
       #if 1
-         template_params += ConvTemplateArguments (S->getTemplateArgs ()); // !? !!
+      template_params += ConvTemplateArguments(S->getTemplateArgs());   // !? !!
       #endif
       if (template_params == "")
          template_params = "< >"; // specialization, but not partial specializatiion
    }
 
-   Reflex::ClassBuilder * builder = GetClassBuilder (D, template_params);
+   Reflex::ClassBuilder* builder = GetClassBuilder(D, template_params);
 
-   if (clang::CXXRecordDecl * C = dyn_cast <clang::CXXRecordDecl> (D))
-   {
-      if (C->getDefinition () != NULL) // important
-         for (clang::CXXRecordDecl::base_class_iterator I = C->bases_begin (), E = C->bases_end (); I != E; ++I)
-         {
-             // clang::CXXBaseSpecifier  b = *I;
+   if (clang::CXXRecordDecl* C = dyn_cast <clang::CXXRecordDecl> (D)) {
+      if (C->getDefinition() != NULL)  // important
+         for (clang::CXXRecordDecl::base_class_iterator I = C->bases_begin(), E = C->bases_end(); I != E; ++I) {
+            // clang::CXXBaseSpecifier  b = *I;
 
-             Reflex::Type type = ScanQualType (I->getType ());
+            Reflex::Type type = ScanQualType(I->getType());
 
-             Reflex::OffsetFunction offset = NULL; // !?
+            Reflex::OffsetFunction offset = NULL; // !?
 
-             unsigned int modifiers = VisibilityModifiers (I->getAccessSpecifier ());
+            unsigned int modifiers = VisibilityModifiers(I->getAccessSpecifier());
 
-             if (I->isVirtual ())
-                modifiers |= Reflex::VIRTUAL;
+            if (I->isVirtual())
+               modifiers |= Reflex::VIRTUAL;
 
-             builder->AddBase (type, offset, modifiers);
+            builder->AddBase(type, offset, modifiers);
          }
    }
 
-   for (clang::DeclContext::decl_iterator I = D->decls_begin (), E = D->decls_end (); I != E; ++I)
-      ScanMember (*I, builder);
+   for (clang::DeclContext::decl_iterator I = D->decls_begin(), E = D->decls_end(); I != E; ++I)
+      ScanMember(*I, builder);
 
    // return builder->ToType ();
 }
 
-/********************************** ENUM **********************************/
+/************************************ ENUM ************************************/
 
-void ScanEnum (clang::EnumDecl * D)
+//______________________________________________________________________________
+void TScanner::ScanEnum(clang::EnumDecl* D)
 {
    // name
 
-   string full_name = D->getQualifiedNameAsString ();
+   TString full_name = D->getQualifiedNameAsString();
 
    if (full_name == "")
       full_name = "_UNKNOWN_ENUM_"; // !?
 
    // modifiers
 
-   unsigned int modifiers = Visibility (D); // !?
+   unsigned int modifiers = Visibility(D);  // !?
 
    // add item
 
-   Reflex::EnumBuilder * builder =
-       new Reflex::EnumBuilder (full_name.c_str (), typeid (Reflex::UnknownType), modifiers);
+   Reflex::EnumBuilder* builder =
+      new Reflex::EnumBuilder(full_name, typeid(Reflex::UnknownType), modifiers);
 
-   builder->AddProperty (clang_key, to_prop_item (D));
+   builder->AddProperty(kClangKey, ToPropItem(D));
 
    // items
 
-   for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin (), E = D->enumerator_end (); I != E; ++I)
-   {
-      string item_name = I->getNameAsString ();
-      long value = APInt_to_long (I->getInitVal ()); // !?
-      builder->AddItem (item_name.c_str (), value);
+   for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
+      TString item_name = I->getNameAsString();
+      long value = APIntTolong(I->getInitVal());   // !?
+      builder->AddItem(item_name, value);
    }
 }
 
-/********************************* USING **********************************/
+/*********************************** USING ************************************/
 
-void ScanUsingDecl (clang::UsingDecl * D, Reflex::Scope Outer)
+//______________________________________________________________________________
+void TScanner::ScanUsingDecl(clang::UsingDecl* D, Reflex::Scope Outer)
 {
-   ScanUnimplemented (D);
+   ScanUnimplemented(D);
    #if 0
-   clang::IdentifierInfo * N = D->getTargetNestedNameDecl ()->getAsIdentifier ();
-   Reflex::Scope Inner = Reflex::Scope::ByName (N->getName ());
-   Outer.AddUsingDirective (Inner);
+   clang::IdentifierInfo* N = D->getTargetNestedNameDecl()->getAsIdentifier();
+   Reflex::Scope Inner = Reflex::Scope::ByName(N->getName());
+   Outer.AddUsingDirective(Inner);
    #endif
 }
 
-void ScanUsingShadowDecl (clang::UsingShadowDecl * D, Reflex::Scope Outer)
+//______________________________________________________________________________
+void TScanner::ScanUsingShadowDecl(clang::UsingShadowDecl* D, Reflex::Scope Outer)
 {
-   ScanUnimplemented (D);
+   ScanUnimplemented(D);
 }
 
-/********************************* GLOBAL **********************************/
+/*********************************** GLOBAL ************************************/
 
-void ScanTranslationUnit (clang::TranslationUnitDecl * D, Reflex::Scope Outer)
+//______________________________________________________________________________
+void TScanner::ScanTranslationUnit(clang::TranslationUnitDecl* D, Reflex::Scope Outer)
 {
-     clang::DeclContext * DC = clang::TranslationUnitDecl::castToDeclContext (D);
-     for (clang::DeclContext::decl_iterator I = DC->decls_begin(), E = DC->decls_end (); I != E; ++I )
-     {
-        ScanDecl (*I, Outer);
-     }
-}
-
-void ScanNamespace (clang::NamespaceDecl * D)
-{
-   string full_name = D->getQualifiedNameAsString ();
-
-   Reflex::NamespaceBuilder * builder =
-      new Reflex::NamespaceBuilder (full_name.c_str ());
-
-   builder->AddProperty (clang_key, to_prop_item (D));
-
-   if (clang::DeclContext * DC = dyn_cast <clang::DeclContext> (D))
-   {
-      for (clang::DeclContext::decl_iterator I = DC->decls_begin (), E = DC->decls_end (); I != E; ++I)
-         ScanDecl (*I, builder->ToScope ());
+   clang::DeclContext* DC = clang::TranslationUnitDecl::castToDeclContext(D);
+   for (clang::DeclContext::decl_iterator I = DC->decls_begin(), E = DC->decls_end(); I != E; ++I) {
+      ScanDecl(*I, Outer);
    }
 }
 
-void ScanLinkageSpec (clang::LinkageSpecDecl * D, Reflex::Scope Outer)
+//______________________________________________________________________________
+void TScanner::ScanNamespace(clang::NamespaceDecl* D)
 {
-   for (clang::DeclContext::decl_iterator I = D->decls_begin (), E = D->decls_end (); I != E; ++I)
-      ScanDecl (*I, Outer);
+   TString full_name = D->getQualifiedNameAsString();
+
+   Reflex::NamespaceBuilder* builder =
+      new Reflex::NamespaceBuilder(full_name);
+
+   builder->AddProperty(kClangKey, ToPropItem(D));
+
+   if (clang::DeclContext* DC = dyn_cast <clang::DeclContext> (D)) {
+      for (clang::DeclContext::decl_iterator I = DC->decls_begin(), E = DC->decls_end(); I != E; ++I)
+         ScanDecl(*I, builder->ToScope());
+   }
 }
 
-void ScanTypedef (clang::TypedefDecl * D)
+//______________________________________________________________________________
+void TScanner::ScanLinkageSpec(clang::LinkageSpecDecl* D, Reflex::Scope Outer)
+{
+   for (clang::DeclContext::decl_iterator I = D->decls_begin(), E = D->decls_end(); I != E; ++I)
+      ScanDecl(*I, Outer);
+}
+
+//______________________________________________________________________________
+void TScanner::ScanTypedef(clang::TypedefDecl* D)
 {
    // type
 
-   Reflex::Type type = ScanQualType (D->getUnderlyingType ());
+   Reflex::Type type = ScanQualType(D->getUnderlyingType());
 
    // name
 
-   string full_name = D->getQualifiedNameAsString ();
+   TString full_name = D->getQualifiedNameAsString();
 
    // !? !!
    return;
 
    // add item
 
-   Reflex::Type result = Reflex::TypedefTypeBuilder (full_name.c_str (), type);
+   Reflex::Type result = Reflex::TypedefTypeBuilder(full_name, type);
 
-   result.Properties().AddProperty (clang_key, to_prop_item (D));
+   result.Properties().AddProperty(kClangKey, ToPropItem(D));
 }
 
-void ScanVariable (clang::VarDecl * D)
+//______________________________________________________________________________
+void TScanner::ScanVariable(clang::VarDecl* D)
 {
    // type
 
-   Reflex::Type type = ScanQualType (D->getType());
+   Reflex::Type type = ScanQualType(D->getType());
 
    // name
 
-   string full_name = D->getQualifiedNameAsString ();
+   TString full_name = D->getQualifiedNameAsString();
 
    // modifiers
 
-   unsigned int modifiers = Visibility (D) | VarModifiers (D);
+   unsigned int modifiers = Visibility(D) | VarModifiers(D);
 
    // offset
 
@@ -1347,277 +1249,143 @@ void ScanVariable (clang::VarDecl * D)
 
    // add item
 
-   if (! Reflex::Scope::ByName ("").IsNamespace ())
-      info ("Bug");
+   if (! Reflex::Scope::ByName("").IsNamespace())
+      ShowInfo("Bug");
 
-   try
-   {
+   try {
       Reflex::VariableBuilder builder =
-         Reflex::VariableBuilder (full_name.c_str (), type, offset, modifiers);
+         Reflex::VariableBuilder(full_name, type, offset, modifiers);
 
-      builder.AddProperty (clang_key, to_prop_item (D));
-   }
-   catch (std::exception & e)
-   {
-      warning (string (e.what ()) + " : variable " + full_name);
+      builder.AddProperty(kClangKey, ToPropItem(D));
+   } catch (std::exception& e) {
+      ShowWarning(TString(e.what()) + " : variable " + full_name);
    }
 }
 
-void ScanFunction (clang::FunctionDecl * D, string template_params)
+//______________________________________________________________________________
+void TScanner::ScanFunction(clang::FunctionDecl* D, TString template_params)
 {
-   clang::FunctionTemplateDecl * template_decl = D->getDescribedFunctionTemplate ();
+   clang::FunctionTemplateDecl* template_decl = D->getDescribedFunctionTemplate();
    if (template_decl != NULL)
-      template_params += ScanTemplateParams (template_decl); // !? what if function already has some template parameters
+      template_params += ScanTemplateParams(template_decl);  // !? what if function already has some template parameters
 
    #if 0
-   if (D->isFunctionTemplateSpecialization ())
-      template_params += ConvTemplateArguments (* D->getTemplateSpecializationArgs ());
+   if (D->isFunctionTemplateSpecialization())
+      template_params += ConvTemplateArguments(* D->getTemplateSpecializationArgs());
    #endif
 
    // type
 
-   Reflex::Type type = FuncType (D);
+   Reflex::Type type = FuncType(D);
 
    // name
 
-   string full_name = D->getQualifiedNameAsString () + template_params;
+   TString full_name = D->getQualifiedNameAsString() + template_params;
 
    // paramers
 
-   string params = FuncParameters (D);
+   TString params = FuncParameters(D);
 
    // modifiers
 
-   int modifiers = FuncModifiers (D);
+   int modifiers = FuncModifiers(D);
 
    // stub
 
    Reflex::StubFunction stub = NULL; // !? !!
-   void * stub_ctx = NULL;
+   void* stub_ctx = NULL;
 
    // add item
 
-   try
-   {
+   try {
       Reflex::FunctionBuilder builder =
-         Reflex::FunctionBuilder (type, full_name.c_str (), stub, stub_ctx, params.c_str (), modifiers);
+         Reflex::FunctionBuilder(type, full_name, stub, stub_ctx, params, modifiers);
 
-      builder.AddProperty (clang_key, to_prop_item (D));
-   }
-   catch (std::exception & e)
-   {
-      warning (string (e.what ()) + " : function " + full_name);
+      builder.AddProperty(kClangKey, ToPropItem(D));
+   } catch (std::exception& e) {
+      ShowWarning(TString(e.what()) + " : function " + full_name);
    }
 }
 
-/********************************** DECL **********************************/
+/************************************ DECL ************************************/
 
-void ScanDecl (clang::Decl * D, Reflex::Scope Outer)
+//______________________________________________________________________________
+void TScanner::ScanDecl(clang::Decl* D, Reflex::Scope Outer)
 {
    // ScanInfo (D);
 
-   if (clang::VarDecl * S = dyn_cast <clang::VarDecl> (D))
-   {
-      ScanVariable (S);
-   }
-   else if (clang::FunctionDecl * S = dyn_cast <clang::FunctionDecl> (D))
-   {
-      ScanFunction (S);
-   }
-   else if (clang::EnumDecl * S = dyn_cast <clang::EnumDecl> (D)) // before TagDecl and TypeDecl
-   {
-       ScanEnum (S);
-   }
-   else if (clang::RecordDecl * S = dyn_cast <clang::RecordDecl> (D)) // before TagDecl and TypeDecl
-   {
-      ScanClass (S);
-   }
-   else if (clang::TypedefDecl * S = dyn_cast <clang::TypedefDecl> (D)) // before TypeDecl
-   {
-      ScanTypedef (S);
-   }
-   else if (clang::ClassTemplateDecl * S = dyn_cast <clang::ClassTemplateDecl> (D))
-   {
-      ScanClassTemplate (S);
-   }
-   else if (clang::FunctionTemplateDecl * S = dyn_cast <clang::FunctionTemplateDecl> (D))
-   {
-      ScanFunctionTemplate (S);
-   }
-   else if (clang::LinkageSpecDecl * S = dyn_cast <clang::LinkageSpecDecl> (D))
-   {
-      ScanLinkageSpec (S, Outer);
-   }
-   else if (clang::TranslationUnitDecl * S = dyn_cast <clang::TranslationUnitDecl> (D))
-   {
-      ScanTranslationUnit (S, Outer);
-   }
-   else if (clang::NamespaceDecl * S = dyn_cast <clang::NamespaceDecl> (D))
-   {
-      ScanNamespace (S);
-   }
-   else if (clang::NamespaceAliasDecl * S = dyn_cast <clang::NamespaceAliasDecl> (D))
-   {
+   if (clang::VarDecl* S = dyn_cast <clang::VarDecl> (D)) {
+      ScanVariable(S);
+   } else if (clang::FunctionDecl* S = dyn_cast <clang::FunctionDecl> (D)) {
+      ScanFunction(S);
+   } else if (clang::EnumDecl* S = dyn_cast <clang::EnumDecl> (D)) { // before TagDecl and TypeDecl
+      ScanEnum(S);
+   } else if (clang::RecordDecl* S = dyn_cast <clang::RecordDecl> (D)) { // before TagDecl and TypeDecl
+      ScanClass(S);
+   } else if (clang::TypedefDecl* S = dyn_cast <clang::TypedefDecl> (D)) { // before TypeDecl
+      ScanTypedef(S);
+   } else if (clang::ClassTemplateDecl* S = dyn_cast <clang::ClassTemplateDecl> (D)) {
+      ScanClassTemplate(S);
+   } else if (clang::FunctionTemplateDecl* S = dyn_cast <clang::FunctionTemplateDecl> (D)) {
+      ScanFunctionTemplate(S);
+   } else if (clang::LinkageSpecDecl* S = dyn_cast <clang::LinkageSpecDecl> (D)) {
+      ScanLinkageSpec(S, Outer);
+   } else if (clang::TranslationUnitDecl* S = dyn_cast <clang::TranslationUnitDecl> (D)) {
+      ScanTranslationUnit(S, Outer);
+   } else if (clang::NamespaceDecl* S = dyn_cast <clang::NamespaceDecl> (D)) {
+      ScanNamespace(S);
+   } else if (clang::NamespaceAliasDecl* S = dyn_cast <clang::NamespaceAliasDecl> (D)) {
       /* ... */
-      ScanUnsupported (S);
-   }
-   else if (clang::UsingDecl * S = dyn_cast <clang::UsingDecl> (D))
-   {
-      ScanUsingDecl (S, Outer);
-   }
-   else if (clang::UsingDirectiveDecl * S = dyn_cast <clang::UsingDirectiveDecl> (D))
-   {
+      ScanUnsupported(S);
+   } else if (clang::UsingDecl* S = dyn_cast <clang::UsingDecl> (D)) {
+      ScanUsingDecl(S, Outer);
+   } else if (clang::UsingDirectiveDecl* S = dyn_cast <clang::UsingDirectiveDecl> (D)) {
       /* ... */
-      ScanUnsupported (S);
-   }
-   else if (clang::UsingShadowDecl * S = dyn_cast <clang::UsingShadowDecl> (D))
-   {
-      ScanUsingShadowDecl (S, Outer);
-   }
-   else if (clang::StaticAssertDecl * S = dyn_cast <clang::StaticAssertDecl> (D))
-   {
+      ScanUnsupported(S);
+   } else if (clang::UsingShadowDecl* S = dyn_cast <clang::UsingShadowDecl> (D)) {
+      ScanUsingShadowDecl(S, Outer);
+   } else if (clang::StaticAssertDecl* S = dyn_cast <clang::StaticAssertDecl> (D)) {
       /* ... */
-      ScanUnsupported (S);
-   }
-   else if (clang::FriendDecl * S = dyn_cast <clang::FriendDecl> (D))
-   {
+      ScanUnsupported(S);
+   } else if (clang::FriendDecl* S = dyn_cast <clang::FriendDecl> (D)) {
       // should be used in class declaration
-      ScanUnexpected (S);
-   }
-   else if (clang::FriendTemplateDecl * S = dyn_cast <clang::FriendTemplateDecl> (D))
-   {
+      ScanUnexpected(S);
+   } else if (clang::FriendTemplateDecl* S = dyn_cast <clang::FriendTemplateDecl> (D)) {
       // should be used in class declaration
-      ScanUnexpected (S);
-   }
-   else if (clang::EnumConstantDecl * S = dyn_cast <clang::EnumConstantDecl> (D))
-   {
+      ScanUnexpected(S);
+   } else if (clang::EnumConstantDecl* S = dyn_cast <clang::EnumConstantDecl> (D)) {
       // should be used inside enumeration type declaration
-      ScanUnexpected (S);
-   }
-   else if (clang::TemplateTemplateParmDecl * S = dyn_cast <clang::TemplateTemplateParmDecl> (D))
-   {
+      ScanUnexpected(S);
+   } else if (clang::TemplateTemplateParmDecl* S = dyn_cast <clang::TemplateTemplateParmDecl> (D)) {
       // should be used in template declaration
-      ScanUnexpected (S);
-   }
-   else if (clang::TemplateTypeParmDecl * S = dyn_cast <clang::TemplateTypeParmDecl> (D))
-   {
+      ScanUnexpected(S);
+   } else if (clang::TemplateTypeParmDecl* S = dyn_cast <clang::TemplateTypeParmDecl> (D)) {
       // should be used in template declaration
-      ScanUnexpected (S);
-   }
-   else
-   {
-      ScanUnknown (D);
+      ScanUnexpected(S);
+   } else {
+      ScanUnknown(D);
    }
 }
 
-/********************************** SCAN **********************************/
-
-/* global variables */
-
-bool use_html = false;
-
-string output_print_file_name;
-string input_style_file_name;
-string output_dict_file_name;
-
-void ClrInit (clang::ASTContext * C,
-              std::string print_file_name,
-              std::string style_file_name,
-              std::string dict_file_name)
+//______________________________________________________________________________
+void TScanner::Scan(clang::ASTContext* C,clang::Decl* D)
 {
-   #ifdef TRACE
-      set_error_handlers ();
-   #endif
-
-   Ctx = C;
-
-   output_print_file_name = print_file_name;
-   input_style_file_name = style_file_name;
-   output_dict_file_name = dict_file_name;
-
-   use_html = (input_style_file_name != "");
-
-   init_dict_variables ();
-
-   #ifdef LIST
-      ClrListOpen (RemoveSuffix (output_print_file_name, ".html") + ".list.html", // !?
-                   style_file_name,
-                   use_html);
-   #endif
+   fCtx = C;
+   ScanDecl(D, Reflex::Scope::GlobalScope());
 }
 
-void ClrScan (clang::Decl * D)
-{
-   ScanDecl (D, Reflex::Scope::GlobalScope ());
+/************************************ SCAN ************************************/
 
-   #ifdef LIST
-      ClrListDecl (D);
-   #endif
+void ClrScan(clang::ASTContext* C, clang::Decl* D)
+{
+   TScanner scanner ;
+   scanner.Scan(C, D);
 }
 
-void ClrOutput ()
+void ClrStore(clang::ASTContext* C, clang::Decl* D)
+// old function name, equal to ClrScan
 {
-   if (output_print_file_name != "")
-   {
-      info ("writing " + output_print_file_name);
-      ClrPrint (output_print_file_name, input_style_file_name, use_html); // text or HTML output
-
-      #ifdef DUMP
-         ClrDump (RemoveSuffix (output_print_file_name, ".html") + ".dump.html", // !?
-                  input_style_file_name,
-                  use_html);
-      #endif
-
-      #ifdef LIST
-         ClrListClose ();
-      #endif
-   }
-
-   if (output_dict_file_name != "")
-   {
-      Reflex::DictionaryGenerator generator;
-      Reflex::Scope::GlobalScope().GenerateDict (generator);
-      info ("writing " + output_dict_file_name);
-      generator.Print (output_dict_file_name.c_str ());
-   }
+   ClrScan(C, D);
 }
 
 /* ---------------------------------------------------------------------- */
-
-void ClrStore (clang::ASTContext * C,
-               clang::Decl * D)
-{
-   Ctx = C;
-
-   output_print_file_name = "";
-   input_style_file_name = "";
-   output_dict_file_name = "";
-
-   use_html = (input_style_file_name != "");
-
-   ScanDecl (D, Reflex::Scope::GlobalScope ());
-}
-
-/* ---------------------------------------------------------------------- */
-
-void ClrInfo ()
-{
-   output_print_file_name = "output.html";
-   input_style_file_name = "style.css";
-   output_dict_file_name = "output.code";
-
-   use_html = (input_style_file_name != "");
-
-   info ("writing " + output_print_file_name);
-   ClrPrint (output_print_file_name, input_style_file_name, use_html); // text or HTML output
-}
-
-/* ---------------------------------------------------------------------- */
-
-void ClrTest ()
-{
-   info ("Hello from ClrTest");
-}
-
-/* ---------------------------------------------------------------------- */
-

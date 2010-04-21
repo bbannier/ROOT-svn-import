@@ -58,11 +58,6 @@
 
 #define DBG
 
-#ifdef DBG
-   #include <iostream>
-#endif
-
-
 #if G__CINTVERSION == 70030000
 // Ignore SetGetLineFunc in Cint7
 void G__SetGetlineFunc(char*(*)(const char* prompt),
@@ -182,156 +177,17 @@ void* TCint::fgSetOfSpecials = 0;
 ClassImp(TCint)
 
 //______________________________________________________________________________
-void addPath (clang::CompilerInstance * CI, const TString & path)
-{
-    // std::cout << "addPath " << path << std::endl;
-}
-
-//______________________________________________________________________________
-void addIncludePath (clang::CompilerInstance * CI)
-{
-    TString inclPath = gSystem->GetIncludePath();
-    // std::cout << "IncludePath " << inclPath << std::endl;
-    TObjArray * list = inclPath.Tokenize (" ");
-
-    int cnt = list->GetEntries ();
-    for (int i = 0; i < cnt ; i++)
-    {
-       TObjString * p = dynamic_cast <TObjString*> (list->At (i));
-       TString s = p->GetString ();
-
-       if (s.BeginsWith ("-I"))
-          s = s.Remove (0, 2);
-
-       if (s.BeginsWith ("\"") && s.EndsWith ("\"") && s.Length () != 1)
-       {
-          s = s.Remove (0, 1);
-          s = s.Remove (s.Length()-1, 1);
-       }
-
-       // s = s.Strip (TString::kBoth);
-
-       // std::cout << "IncludeItem " << s << std::endl;
-
-       if (s != "")
-       {
-          gSystem->ExpandPathName (s);
-          addPath (CI, s);
-       }
-    }
-
-    delete list;
-}
-
-//______________________________________________________________________________
-void defineSymbol (clang::PreprocessorOptions & P, const TString & name, const TString & value)
-{
-    // std::cout << "defineSymbol " << name << "=" << value << "!" << std::endl;
-
-    TString s = name;
-    if (value != "")
-       s = s + "=" + value;
-
-    P.addMacroUndef (name.Data ());
-    P.addMacroDef (s.Data ());
-}
-
-//______________________________________________________________________________
-void gccOptions (clang::CompilerInstance * CI, TString gcc = "")
-{
-   if (gcc == "")
-      gcc = "gcc";
-
-   TString cmd = "echo 'int main () { }' | " + gcc + " -v -x c++ -dD -E - 2>&1";
-   TString txt = gSystem->GetFromPipe (cmd);
-
-   // include directories
-
-   {
-      TString pattern = "#include <...> search starts here:";
-      Ssiz_t area_start = txt.Index (pattern);
-      if (area_start != kNPOS)
-         area_start = area_start + pattern.Length ();
-
-      Ssiz_t area_stop = txt.Index ("End of search list");
-
-      if (area_start != kNPOS && area_stop != kNPOS)
-      {
-         Ssiz_t inx = area_start;
-         Ssiz_t len = area_stop;
-
-         while (inx < len)
-         {
-             while (inx < len && txt [inx] <= ' ') inx++;
-             int token_start = inx;
-
-             while (inx < len && txt [inx] > ' ') inx++;
-             int token_stop = inx;
-
-             TString dir = txt (token_start, token_stop-token_start);
-             if (dir != "")
-             {
-                addPath (CI, dir); // system directory
-             }
-         }
-      }
-   }
-
-   // conditional symbols
-
-   {
-      clang::PreprocessorOptions & P = CI->getPreprocessorOpts ();
-
-      Ssiz_t inx = 0;
-      Ssiz_t total = txt.Length ();
-
-      while (inx < total)
-      {
-         // find end of line
-         Ssiz_t lim = inx;
-         while (lim < total && (txt [lim] >= ' ' || txt [lim] == '\t')) lim ++;
-         // std::cout << "line: " << txt (inx, lim-inx) << std::endl;
-
-         // one word
-         while (inx < lim && txt [inx] <= ' ') inx++;
-         int token_start = inx;
-         while (inx < lim && txt [inx] > ' ') inx++;
-         TString key = txt (token_start, inx-token_start);
-
-         if (key == "#define")
-         {
-            // symbol name (only simple identifier)
-            while (inx < lim && txt [inx] <= ' ') inx++;
-            int token_start = inx;
-            while (inx < lim && txt [inx] > ' ') inx++;
-            TString name = txt (token_start, inx-token_start);
-
-            while (inx < lim && txt [inx] <= ' ') inx++;
-            TString value = txt (inx, lim-inx); // rest of line
-            defineSymbol (P, name, value);
-         }
-
-         // next line
-         while (lim < total && (txt [lim] < ' ' && txt [lim] != '\t')) lim ++;
-         inx = lim;
-      }
-   }
-}
-
-//______________________________________________________________________________
 void printInfo (clang::CompilerInstance * CI)
 {
-   #ifdef DBG
       const clang::HeaderSearchOptions & hsOpts = CI->getHeaderSearchOpts ();
-      std::cout << "Sysroot " << hsOpts.Sysroot << std::endl;
+   printf ("Sysroot %s\n", hsOpts.Sysroot.c_str());
       int size = hsOpts.UserEntries.size();
       for (int i = 0; i < size; i++)
-         std::cout << "User entry " << hsOpts.UserEntries[i].Path << std::endl;
-      std::cout << "EnvIncPath " << hsOpts.EnvIncPath << std::endl;
-      std::cout << "CEnvIncPath " << hsOpts.CEnvIncPath << std::endl;
-      std::cout << "CXXEnvIncPath " << hsOpts.CXXEnvIncPath << std::endl;
-      std::cout << "ResourceDir " << hsOpts.ResourceDir << std::endl;
-   #endif
+      printf ("User entry %s\n", hsOpts.UserEntries[i].Path.c_str());
+   printf ("EnvIncPath %s\n", hsOpts.EnvIncPath.c_str());
+   printf ("CEnvIncPath %s\n", hsOpts.CEnvIncPath.c_str());
+   printf ("CXXEnvIncPath %s\n", hsOpts.CXXEnvIncPath.c_str());
+   printf ("ResourceDir %s\n", hsOpts.ResourceDir.c_str());
 }
 
 //______________________________________________________________________________
@@ -659,12 +515,8 @@ Long_t TCint::ProcessLine(const char *line, EErrorCode *error)
                   {
                      #ifdef USE_CLR
                         clang::CompilerInstance * CI = fInterpreter->getCI ();
-
-                        clang::TranslationUnitDecl* tu =
-                           CI->getASTContext().getTranslationUnitDecl();
-
-                        ClrStore (& CI->getASTContext(), tu);
-                        // printf("ClrStore done\n");
+                        clang::TranslationUnitDecl* tu = CI->getASTContext().getTranslationUnitDecl();
+                        ClrScan (& CI->getASTContext(), tu);
                      #endif
                   }
                }

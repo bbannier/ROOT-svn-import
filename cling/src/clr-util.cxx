@@ -1,235 +1,181 @@
-
-/* clr-util.cc */
+// @(#)root/cint:$Id$
+// Author: Zdenek Culik   16/04/2010
 
 #include "clr-util.h"
 
-#ifdef TRACE
-   #include "clr-trace.h"
-#endif
-
-#include <string>
-#include <iostream>
-#include <stdexcept> // class std::runtime_error
-
-using std::string;
-
-namespace clr_util {
-
-/* ---------------------------------------------------------------------- */
-
-void show_message (const string msg, const string location)
-{
-   string txt = location;
-
-   if (txt != "")
-      txt = txt + " ";
-
-   txt = txt + msg;
-
-   std::cerr << "CLR-" << txt << std::endl;
-}
-
-void info (const string msg, const string location)
-{
-   show_message (msg, location);
-}
-
-void warning (const string msg, const string location)
-{
-   show_message ("warning: " + msg, location);
-}
-
-void error (const string msg, const string location)
-{
-   show_message ("error: " + msg, location);
-   #ifdef TRACE
-      trace ();
-   #endif
-   throw new std::runtime_error ("error: " + msg  + ", " +  location);
-}
-
-/* ---------------------------------------------------------------------- */
-
-bool HasSuffix (const string value, const string suffix)
-{
-   int len = value.length ();
-   int suffix_len = suffix.length ();
-
-   return len > suffix_len &&
-          value.substr (len-suffix_len) == suffix;
-}
-
-string RemoveSuffix (const string value, const string suffix)
-{
-   if (HasSuffix (value, suffix))
-      return value.substr (0, value.length () - suffix.length ());
-   else
-      return value;
-}
-
-/****************************** TEXT OUTPUT *******************************/
-
-TextOutput::TextOutput ():
-   FileStream (NULL),
-   StringStream (NULL),
-   Stream (NULL),
-   Indent (0),
-   StartLine (true)
+//______________________________________________________________________________
+TTextHelper::TTextHelper():
+   fFileStream(NULL),
+   fStringStream(NULL),
+   fStream(NULL),
+   fIndent(0),
+   fStartLine(true)
 {
 }
 
-TextOutput::~TextOutput ()
+//______________________________________________________________________________
+TTextHelper::~TTextHelper()
 {
-   if (Stream != NULL)
-      delete Stream;
+   if (fStream != NULL)
+      delete fStream;
 }
 
-void TextOutput::Open (const std::string file_name)
+//______________________________________________________________________________
+void TTextHelper::Open(const TString file_name)
 {
-   FileStream = new std::ofstream ();
-   FileStream->open (file_name.c_str ());
-   Stream = FileStream;
+   fFileStream = new std::ofstream();
+   fFileStream->open(file_name.Data());
+   fStream = fFileStream;
 }
 
-void TextOutput::Close ()
+//______________________________________________________________________________
+void TTextHelper::Close()
 {
-   FileStream->close ();
+   fFileStream->close();
 }
 
-/* ---------------------------------------------------------------------- */
-
-void TextOutput::OpenString ()
+//______________________________________________________________________________
+void TTextHelper::OpenString()
 {
-   StringStream = new std::ostringstream ();
-   Stream = StringStream;
+   fStringStream = new std::ostringstream();
+   fStream = fStringStream;
 }
 
-string TextOutput::CloseString ()
+//______________________________________________________________________________
+TString TTextHelper::CloseString()
 {
-   return StringStream->str ();
+   return fStringStream->str();
 }
 
-/* ---------------------------------------------------------------------- */
-
-void TextOutput::SetIndent (int i)
+//______________________________________________________________________________
+void TTextHelper::SetIndent(int i)
 {
-   Indent = i;
+   fIndent = i;
 }
 
-void TextOutput::IncIndent ()
+//______________________________________________________________________________
+void TTextHelper::IncIndent()
 {
-   Indent += 3;
+   fIndent += 3;
 }
 
-void TextOutput::DecIndent ()
+//______________________________________________________________________________
+void TTextHelper::DecIndent()
 {
-   Indent -= 3;
+   fIndent -= 3;
 }
 
-/* ---------------------------------------------------------------------- */
-
-void TextOutput::PutPlainStr (const string s)
+//______________________________________________________________________________
+void TTextHelper::PutPlainStr(const TString s)
 {
-   (*Stream) << s;
+   (*fStream) << s;
 }
 
-void TextOutput::PutPlainChr (char c)
+//______________________________________________________________________________
+void TTextHelper::PutPlainChr(char c)
 {
-   (*Stream) << c;
+   (*fStream) << c;
 }
 
-/* ---------------------------------------------------------------------- */
-
-void TextOutput::OpenLine ()
+//______________________________________________________________________________
+void TTextHelper::OpenLine()
 {
-   string spaces (Indent, ' ');
-   PutPlainStr (spaces);
-   StartLine = false;
+   TString spaces(' ', fIndent);
+   // TString (character, count)
+   // std::string (count, character)
+   PutPlainStr(spaces);
+   fStartLine = false;
 }
 
-void TextOutput::CloseLine ()
+//______________________________________________________________________________
+void TTextHelper::CloseLine()
 {
-   StartLine = true;
+   fStartLine = true;
 }
 
-/* ---------------------------------------------------------------------- */
-
-void TextOutput::Put (const string s)
+//______________________________________________________________________________
+void TTextHelper::Put(const TString s)
 {
-   if (StartLine)
-      OpenLine ();
+   if (fStartLine)
+      OpenLine();
 
-   PutPlainStr (s);
+   PutPlainStr(s);
 }
 
-void TextOutput::PutChr (char c)
+//______________________________________________________________________________
+void TTextHelper::PutChr(char c)
 {
-   if (StartLine)
-      OpenLine ();
+   if (fStartLine)
+      OpenLine();
 
-   PutPlainChr (c);
+   PutPlainChr(c);
 }
 
-void TextOutput::PutEol ()
+//______________________________________________________________________________
+void TTextHelper::PutEol()
 {
-   PutPlainStr ("\n");
-   CloseLine ();
+   PutPlainStr("\n");
+   CloseLine();
 }
 
-void TextOutput::PutLn (const string s)
+//______________________________________________________________________________
+void TTextHelper::PutLn(const TString s)
 {
-   Put (s);
-   PutEol ();
+   Put(s);
+   PutEol();
 }
 
-
-/****************************** QUOTE STRING ******************************/
-
-string QuoteStrContent (const string value)
+//______________________________________________________________________________
+TString QuoteStrContent(const TString value)
 {
-   int len = value.length ();
+   int len = value.Length();
 
    bool simple = true;
-   for (int i = 0; i < len && simple; i++)
-   {
+   for (int i = 0; i < len && simple; i++) {
       unsigned char ch = value [i];
       if (ch < ' ' || ch == '\\' || ch == '"' || ch == 128 || ch >= 255)
          simple = false;
    }
 
-   if (simple)
-   {
+   if (simple) {
       return value;
-   }
-   else
-   {
-      string result = "";
+   } else {
+      TString result = "";
       const char hex [16+1] = "0123456789abcdef";
 
-      for (int i = 0; i < len; i++)
-      {
+      for (int i = 0; i < len; i++) {
          unsigned char ch = value [i];
 
-         if (ch < ' ' || ch == 128 || ch >= 255)
-         {
+         if (ch < ' ' || ch == 128 || ch >= 255) {
             result = result + '\\';
-            switch (ch)
-            {
-               case '\a': result = result + 'a'; break;
-               case '\b': result = result + 'b'; break;
-               case '\f': result = result + 'f'; break;
-               case '\n': result = result + 'n'; break;
-               case '\r': result = result + 'r'; break;
-               case '\t': result = result + 't'; break;
-               case '\v': result = result + 'v'; break;
+            switch (ch) {
+               case '\a':
+                  result = result + 'a';
+                  break;
+               case '\b':
+                  result = result + 'b';
+                  break;
+               case '\f':
+                  result = result + 'f';
+                  break;
+               case '\n':
+                  result = result + 'n';
+                  break;
+               case '\r':
+                  result = result + 'r';
+                  break;
+               case '\t':
+                  result = result + 't';
+                  break;
+               case '\v':
+                  result = result + 'v';
+                  break;
 
                default:
                   result = result + 'x' + hex [ch >> 4] + hex [ch & 15];
                   break;
             }
-         }
-         else
-         {
+         } else {
             if (ch == '\\' || ch == '"')
                result = result + '\\';
             result = result + value [i]; // variable ch is unsigned char
@@ -242,209 +188,209 @@ string QuoteStrContent (const string value)
 
 const char quote2 = '"';
 
-string QuoteStr (const string value, char quote = quote2)
+//______________________________________________________________________________
+TString QuoteStr(const TString value, char quote = quote2)
 {
-   return quote + QuoteStrContent (value) + quote;
+   return quote + QuoteStrContent(value) + quote;
 }
 
-/****************************** HTML OUTPUT *******************************/
-
-inline string fce_attr (const string name, const string value)
+//______________________________________________________________________________
+inline TString FceAttr(const TString name, const TString value)
 {
-   return name + "=" + quote2 + QuoteStrContent (value) + quote2;
+   return name + "=" + quote2 + QuoteStrContent(value) + quote2;
 }
 
-void HtmlOutput::attr (const string name, const string value)
+//______________________________________________________________________________
+void THtmlHelper::Attr(const TString name, const TString value)
 // name = "value"
 {
-   Put (name);
-   PutChr ('=');
-   PutChr (quote2);
-   Put (QuoteStrContent (value));
-   PutChr (quote2);
+   if (fUseHtml) {
+      Put(name);
+      PutChr('=');
+      PutChr(quote2);
+      Put(QuoteStrContent(value));
+      PutChr(quote2);
+   }
 }
 
-/* ---------------------------------------------------------------------- */
-
-void HtmlOutput::a_href (const string url, const string style, const string text)
+//______________________________________________________________________________
+void THtmlHelper::Href(const TString url, const TString style, const TString text)
 // <a href="url" class="style"> text </a>
 {
-   Put ("<a ");
-   attr ("href", url);
+   if (fUseHtml) {
+      Put("<a ");
+      Attr("href", url);
 
-   if (style != "")
-   {
-      Put (" ");
-      attr ("class", style);
+      if (style != "") {
+         Put(" ");
+         Attr("class", style);
+      }
+
+      Put(">");
+      Put(text);
+      Put("</a>");
    }
-
-   Put (">");
-   Put (text);
-   Put ("</a>");
 }
 
-void HtmlOutput::a_name (const string name, const string text)
+//______________________________________________________________________________
+void THtmlHelper::Name(const TString name, const TString text)
 // <a name="name"> text </a>
 {
-   Put ("<a ");
-   attr ("name", name);
+   if (fUseHtml) {
+      Put("<a ");
+      Attr("name", name);
 
-   if (text == "")
-   {
-      Put ("/>");
-   }
-   else
-   {
-      Put (">");
-      Put (text);
-      Put ("</a>");
-   }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void HtmlOutput::style_begin (const string style)
-{
-   Put ("<span ");
-   attr ("class", style);
-   Put (">");
-}
-
-void HtmlOutput::style_end ()
-{
-   Put ("</span>");
-}
-
-void HtmlOutput::styled_text (const string text, const string style)
-{
-   if (use_html)
-   {
-      Put ("<span ");
-      attr ("class", style);
-      Put (">");
-      Put (text);
-      Put ("</span>");
-   }
-   else
-   {
-      Put (text);
+      if (text == "") {
+         Put("/>");
+      } else {
+         Put(">");
+         Put(text);
+         Put("</a>");
+      }
    }
 }
 
-/* ---------------------------------------------------------------------- */
-
-string HtmlOutput::fce_html_escape (const string s)
+//______________________________________________________________________________
+void THtmlHelper::StyleBegin(const TString style)
 {
-   int len = s.length ();
+   if (fUseHtml) {
+      Put("<span ");
+      Attr("class", style);
+      Put(">");
+   }
+}
+
+//______________________________________________________________________________
+void THtmlHelper::StyleEnd()
+{
+   if (fUseHtml)
+      Put("</span>");
+}
+
+//______________________________________________________________________________
+void THtmlHelper::StyledText(const TString text, const TString style)
+{
+   if (fUseHtml) {
+      Put("<span ");
+      Attr("class", style);
+      Put(">");
+      Put(text);
+      Put("</span>");
+   } else {
+      Put(text);
+   }
+}
+
+//______________________________________________________________________________
+TString THtmlHelper::FceHtmlEscape(const TString s)
+{
+   int len = s.Length();
 
    bool ok = true;
-   for (int i = 0; i < len; i++)
-   {
-       char c = s[i];
-       if (c == '<' || c == '>' || c == '&')
-          ok = false;
+   for (int i = 0; i < len; i++) {
+      char c = s[i];
+      if (c == '<' || c == '>' || c == '&')
+         ok = false;
    }
 
-   if (ok)
-   {
+   if (ok) {
       return s;
-   }
-   else
-   {
-      string result = "";
+   } else {
+      TString result = "";
 
-      for (int i = 0; i < len; i++)
-      {
+      for (int i = 0; i < len; i++) {
          char c = s[i];
          if (c == '<')
-             result += "&lt;";
+            result += "&lt;";
          else if (c == '>')
-             result += "&gt;";
+            result += "&gt;";
          else if (c == '&')
-             result += "&amp;";
+            result += "&amp;";
          else
-             result += c;
+            result += c;
       }
 
       return result;
    }
 }
 
-void HtmlOutput::put_html_escape (const string s)
+//______________________________________________________________________________
+void THtmlHelper::PutHtmlEscape(const TString s)
 // Replace < > & characters
 {
-   int len = s.length ();
+   if (fUseHtml) {
+      int len = s.Length();
 
-   bool ok = true;
-   for (int i = 0; i < len; i++)
-   {
-       char c = s[i];
-       if (c == '<' || c == '>' || c == '&')
-          ok = false;
-   }
-
-   if (ok)
-   {
-       Put (s);
-   }
-   else
-   {
-      for (int i = 0; i < len; i++)
-      {
+      bool ok = true;
+      for (int i = 0; i < len; i++) {
          char c = s[i];
-         if (c == '<')
-             Put ("&lt;");
-         else if (c == '>')
-             Put ("&gt;");
-         else if (c == '&')
-             Put ("&amp;");
-         else
-             PutChr (c);
+         if (c == '<' || c == '>' || c == '&')
+            ok = false;
       }
+
+      if (ok) {
+         Put(s);
+      } else {
+         for (int i = 0; i < len; i++) {
+            char c = s[i];
+            if (c == '<')
+               Put("&lt;");
+            else if (c == '>')
+               Put("&gt;");
+            else if (c == '&')
+               Put("&amp;");
+            else
+               PutChr(c);
+         }
+      }
+   } else {
+      Put (s);
+   }
+
+}
+
+//______________________________________________________________________________
+void THtmlHelper::Head(const TString title)
+{
+   if (fUseHtml) {
+      TString charset = "ISO-8859-1";
+
+      PutLn("<?xml " + FceAttr("version", "1.0") + "?>");
+
+      PutLn("<!DOCTYPE html PUBLIC " +
+            QuoteStr("-//W3C//DTD XHTML 1.0 Transitional//EN") + " " +
+            QuoteStr("http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd") + ">");
+
+      PutLn("<html " + FceAttr("xmlns", "http://www.w3.org/1999/xhtml") + " " +
+            FceAttr("xml:lang", "en") + " " +
+            FceAttr("lang", "en") + ">");
+
+      PutLn("<Head>");
+
+      PutLn("<meta " + FceAttr("http-equiv", "Content-Type") + " " +
+            FceAttr("content", "text/html; charset=" + charset) + " />");
+
+      PutLn("<title>" + title + "</title>");
+
+      if (fStyleFileName != "") {
+         PutLn("<link " + FceAttr("rel", "stylesheet") + " " +
+               FceAttr("type", "text/css") + " " +
+               FceAttr("href", fStyleFileName) + " />");
+      }
+
+      PutLn("</Head>");
+      PutLn("<body>");
    }
 }
 
-/* ---------------------------------------------------------------------- */
-
-void HtmlOutput::head (const string title, const string style_file_name)
+//______________________________________________________________________________
+void THtmlHelper::Tail()
 {
-   string charset = "ISO-8859-1";
-
-   PutLn ("<?xml " + fce_attr ("version", "1.0") + "?>");
-
-   PutLn ("<!DOCTYPE html PUBLIC " +
-          QuoteStr ("-//W3C//DTD XHTML 1.0 Transitional//EN") + " " +
-          QuoteStr ("http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd") + ">");
-
-   PutLn ("<html " + fce_attr ("xmlns", "http://www.w3.org/1999/xhtml") + " " +
-                     fce_attr ("xml:lang", "en") + " " +
-                     fce_attr ("lang", "en") + ">");
-
-   PutLn ("<head>");
-
-   PutLn ("<meta " + fce_attr ("http-equiv", "Content-Type") + " " +
-                     fce_attr ("content", "text/html; charset=" + charset) + " />");
-
-   PutLn ("<title>" + title + "</title>");
-
-   if (style_file_name != "")
-   {
-      PutLn ("<link " + fce_attr ("rel", "stylesheet") + " " +
-                        fce_attr ("type", "text/css") + " " +
-                        fce_attr ("href", style_file_name ) + " />");
+   if (fUseHtml) {
+      PutLn("</body>");
+      PutLn("</html>");
    }
-
-   PutLn ("</head>");
-   PutLn ("<body>");
 }
 
-void HtmlOutput::tail ()
-{
-   PutLn ("</body>");
-   PutLn ("</html>");
-}
-
-/* ---------------------------------------------------------------------- */
-
-} // close namespace
+/* -------------------------------------------------------------------------- */
 
