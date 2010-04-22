@@ -317,50 +317,53 @@ class ROOTMailNotifier(MailNotifier):
             if ss.patch:
                 source += " (plus patch)"
 
+        laststepname = build.getLogs()[-1].getStep().getName()
+        laststeptext = build.getLogs()[-1].getStep().getText()
         logs = list()
-        for log in build.getLogs():
-            log_name = "%s.%s" % (log.getStep().getName(), log.getName())
-            log_status, dummy = log.getStep().getResults()
-            log_body = log.getText().splitlines() # Note: can be VERY LARGE
-            log_url = '%s/steps/%s/logs/%s' % (master_status.getURLForThing(build),
-                                               log.getStep().getName(),
-                                               log.getName())
-            logs.append((log_name, log_url, log_body, log_status))
+        buildurl = master_status.getURLForThing(build)
+        for log in build.getLogs().reverse():
+            step_name = log.getStep().getName()
+            if not laststepname == step_name:
+                break
+            log_name = log.getName()
+            if buildurl:
+                log_url = '%s/steps/%s/logs/%s' % (buildurl, step_name, log_name)
+            else :
+                log_url = None
+            logs.append((log_title, log_url))
      
-        logname, logurl, logcontent, logstatus = logs[-1]
-     
-        subject = "Buildbot: %s %s %s" % (logname, result.upper(), source)
+        subject = "Buildbot: %s %s for %s %s" % (laststepname, result, name, source)
 
         text = list()
-        text.append('<h4>%s %s</h4>' % (logname, result.upper()))
-        text.append("Buildslave for this Build: <b>%s</b> (but I might be suppressing others)" % build.getSlavename())
+        text.append('<h4>%s (and possibly others) %s</h4>' % (name, result))
+        text.append("Step: %s %s" % (laststepname, laststeptext))
         text.append('<br>')
-        if master_status.getURLForThing(build):
-            text.append('Logs: <a href="%s">%s</a>'
-                        % (master_status.getURLForThing(build),
-                           master_status.getURLForThing(build))
-                        )
+        text.append("Running on %s" % build.getSlavename())
+        text.append('<br>')
+        if buildurl:
+            text.append('Logs: <a href="%s">%s</a>' % (buildurl,buildurl))
         text.append('<br>')
         text.append("Build Reason: %s" % build.getReason())
         text.append('<br>')
 
-        text.append("Build Source Stamp: <b>%s</b>" % (source,))
+        text.append("Build Source Stamp: <b>%s</b>" % (source))
         text.append('<br>')
-        text.append("Blamelist: %s" % ",".join(build.getResponsibleUsers()))
-        text.append('<br>')
+        blamelist = ",".join(build.getResponsibleUsers())
+        if len(blamelist):
+            text.append("Blamelist: %s" % blamelist)
+            text.append('<br>')
 
         if ss and ss.changes:
             text.append('<h4>Changes:</h4>')
             text.extend([c.asHTML() for c in ss.changes])
-     
-        text.append('<i>Detailed log of last build step:</i> <a href="%s">%s</a>'
-                    % (logurl, logurl))
-        text.append('<br>')
-        if name == 'roottest' and len(logcontent) and not 'too many' in logcontent[0]:
-            text.append('<ul>')
-            for l in logcontent:
-                text.append('<li>%s</li>' % (l))
-            text.append('</ul>')
+
+        if len(logs):
+            text.append('<h4>Logs:</h4>')
+            for log in logs:
+                text.append('<i>%s:</i> <a href="%s">%s</a>'
+                            % (log[0], log[1], log[1]))
+                text.append('<br>')
+
         text.append('<br><br>')
         text.append('<b>-The BuildBot</b>')
 
