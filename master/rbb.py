@@ -321,7 +321,7 @@ class ROOTMailNotifier(MailNotifier):
         laststeptext = build.getLogs()[-1].getStep().getText()
         logs = list()
         buildurl = master_status.getURLForThing(build)
-        for log in build.getLogs().reverse():
+        for log in reversed(build.getLogs()):
             step_name = log.getStep().getName()
             if not laststepname == step_name:
                 break
