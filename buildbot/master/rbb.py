@@ -10,7 +10,7 @@ from buildbot.process import factory
 from buildbot.scheduler import Scheduler, Try_Jobdir
 from buildbot.status import html
 from buildbot.status.builder import SUCCESS, WARNINGS, FAILURE, SKIPPED, \
-    EXCEPTION
+    EXCEPTION, Results
 from buildbot.status.mail import MailNotifier
 from buildbot.status.web.auth import HTPasswdAuth
 from buildbot.steps import trigger
