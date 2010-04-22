@@ -323,20 +323,18 @@ class ROOTMailNotifier(MailNotifier):
         buildurl = master_status.getURLForThing(build)
         for log in reversed(build.getLogs()):
             step_name = log.getStep().getName()
-            if not laststepname == step_name:
+            if laststepname != step_name:
                 break
             log_name = log.getName()
             if buildurl:
                 log_url = '%s/steps/%s/logs/%s' % (buildurl, step_name, log_name)
-            else :
-                log_url = None
-            logs.append((log_title, log_url))
+                logs.append((log_name, log_url))
      
         subject = "Buildbot: %s %s for %s %s" % (laststepname, result, name, source)
 
         text = list()
         text.append('<h4>%s (and possibly others) %s</h4>' % (name, result))
-        text.append("Step: %s %s" % (laststepname, laststeptext))
+        text.append("Step %s: %s" % (laststepname, " ".join(laststeptext)))
         text.append('<br>')
         text.append("Running on %s" % build.getSlavename())
         text.append('<br>')
@@ -365,7 +363,7 @@ class ROOTMailNotifier(MailNotifier):
                 text.append('<br>')
 
         text.append('<br><br>')
-        text.append('<b>-The BuildBot</b>')
+        text.append('The BuildBot')
 
         return {'type': 'html',
                'body': "\n".join(text),
@@ -415,7 +413,7 @@ class ROOTBuildBotConfig:
     def configureBuildmaster(self):
         self.c['projectName'] = "ROOT"
         self.c['projectURL'] = "http://root.cern.ch/"
-        #self.c['buildbotURL'] = "http://lxroot01.cern.ch:8010/" # FIXME PCROOT
+        self.c['buildbotURL'] = "http://root.cern.ch/buildbot/" # FIXME PCROOT
         self.c['mergeRequests'] = self.mergeRequests
 
         self.configureSlaves()
