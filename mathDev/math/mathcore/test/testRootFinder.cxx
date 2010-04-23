@@ -1,6 +1,7 @@
 #include "TF1.h"
 #include "Math/Functor.h"
 #include "TStopwatch.h"
+#include "RConfigure.h"
 
 #include "Math/RootFinder.h"
 #include "Math/DistFunc.h"
@@ -20,25 +21,32 @@ const double ERRORLIMIT = 1E-8;
 const int iterTest = 10000;
 int myfuncCalls = 0;
 
+const double Y0_P2 = 5.0;   // Y0 for test 1 (parabola)
+// these are value which gave problems in 5.26 for gamma_cdf
+const double Y0_GAMMA = 0.32;  // Y0 for test 2 (gamma cdf)
+const double ALPHA_GAMMA = 16.; // alpha of gamma cdf
+const double THETA_GAMMA = 0.4;  // theta of gamma cdf
+ 
 int gTestCase = 0; 
 
 double myfunc ( double x ) {
    myfuncCalls ++;
    if (gTestCase == 0) // polynomial
-      return x*x - 5;   
+      return x*x - Y0_P2;   
    if (gTestCase == 1) // function showing bug in BrentMethod::
-      return ROOT::Math::gamma_cdf(x,16,0.4)-0.32; 
+      return ROOT::Math::gamma_cdf(x,ALPHA_GAMMA,THETA_GAMMA)-Y0_GAMMA; 
    return 0; 
 }
 
 double ExactResult() { 
-   if (gTestCase == 0) 
-      return sqrt(5); 
+   if (gTestCase == 0) {
+      return std::sqrt(Y0_P2); 
+   }
    if (gTestCase == 1)
 #ifdef R__HAS_MATHMORE  
-      return ROOT::Math::gamma_quantile(0.32,16,0.4);
+      return ROOT::Math::gamma_quantile(Y0_GAMMA,ALPHA_GAMMA,THETA_GAMMA);
 #else
-      return 5.55680381022934800;
+   return 5.55680381022934800;   //result as before if quantile of gamma is not available
 #endif
 
    return 0; 
@@ -63,7 +71,7 @@ int printStats(TStopwatch& timer, double root) {
    return difference > ERRORLIMIT;
 }
 
-int testRootFinder(int testcase = 0) {
+int runTest(int testcase = 0) {
 
    double xmin = 0; 
    double xmax = 10;
@@ -82,6 +90,8 @@ int testRootFinder(int testcase = 0) {
    double root;
    int status = 0;
 
+   double tol = 1.E-14;
+   int maxiter = 100;
 
    ROOT::Math::Functor1D    *func = new ROOT::Math::Functor1D (&myfunc);
    
@@ -90,7 +100,7 @@ int testRootFinder(int testcase = 0) {
    for (int i = 0; i < iterTest; ++i)
    {
       //brf.SetFunction( *func, 0, 10 ); // Just to make a fair comparision!
-      root = f1->GetX(0, xmin, xmax);
+      root = f1->GetX(0, xmin, xmax,tol,maxiter);
    }
    timer.Stop();
    std::cout << "\nTF1 Stats:" << std::endl;
@@ -101,7 +111,7 @@ int testRootFinder(int testcase = 0) {
    for (int i = 0; i < iterTest; ++i)
    {
       brf.SetFunction( *func, xmin, xmax );
-      bool ret = brf.Solve(100,1E-15,1.E-15);
+      bool ret = brf.Solve(maxiter,tol,tol);
       if (!ret && i == 0) std::cout << "Error returned from RootFinder::Solve BRENT " << std::endl;
       root = brf.Root();
    }
@@ -109,35 +119,46 @@ int testRootFinder(int testcase = 0) {
    std::cout << "Brent RootFinder Stats:" << std::endl;
    status += printStats(timer, root);
 
+#ifdef R__HAS_MATHMORE
    ROOT::Math::RootFinder grf(ROOT::Math::RootFinder::kGSL_BRENT);
    timer.Reset(); timer.Start(); myfuncCalls = 0;
    for (int i = 0; i < iterTest; ++i)
    {
       grf.SetFunction( *func, xmin, xmax );
-      bool ret = grf.Solve();
+      bool ret = grf.Solve(maxiter,tol,tol);
       root = grf.Root();
       if (!ret && i == 0) std::cout << "Error returned from RootFinder::Solve GSL_BRENT" << std::endl;
    }
    timer.Stop();
    std::cout << "GSL Brent RootFinder Stats:" << std::endl;
    status += printStats(timer, root);
+#endif
 
+   if (status) std::cout << "Test-case " << testcase << "   FAILED" << std::endl;
 
 
    return status;
 }
 
-int main() {
+int testRootFinder() {
 
    int status = 0; 
-   status |= testRootFinder(0);  // test pol function
-   status |= testRootFinder(1);  // test gamma_cdf
-   std::cout << "*************************************************************\n";
-   std::cout << "\nTest RootFinder :\t";
+   status |= runTest(0);  // test pol function
+   if (status) std::cerr << "Test pol function  FAILED" << std::endl;
+
+   status |= runTest(1);  // test gamma_cdf
+   if (status) std::cerr << "Test gamma function  FAILED" << std::endl;
+
+   std::cerr << "*************************************************************\n";
+   std::cerr << "\nTest RootFinder :\t";
    if (status == 0) 
-      std::cout << "OK " << std::endl;
+      std::cerr << "OK " << std::endl;
   else 
-     std::cout << "Failed !" << std::endl;
+     std::cerr << "Failed !" << std::endl;
 
    return status;
+}
+
+int main() { 
+   return testRootFinder();
 }

@@ -25,6 +25,8 @@ class TEveCaloLego;
 
 class TEveCaloLegoGL : public TGLObject
 {
+   friend class TEveCaloLegoOverlay;
+
 private:
    struct Cell2D_t
    {
@@ -80,12 +82,14 @@ private:
    mutable vCell2D_t                 fCells2D;
 
    mutable TEveCaloData::RebinData_t fRebinData;
-   mutable Float_t                   fMaxValRebin;
+   mutable Float_t                   fMaxVal;
    mutable Float_t                   fValToPixel; // top logaritmic viewview
    mutable Int_t                     fCurrentPixelsPerBin;
 
    mutable SliceDLMap_t              fDLMap;
    mutable Bool_t                    fCells3D;
+
+   mutable Int_t                     fBinStep;
 
    TEveCaloLegoGL(const TEveCaloLegoGL&);            // Stop default
    TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Stop default
@@ -124,7 +128,7 @@ public:
    virtual void   DLCachePurge();
 
    virtual void   DirectDraw(TGLRnrCtx & rnrCtx) const;
-   virtual void   DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* ps) const;
+   virtual void   DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* ps, Int_t lvl=-1) const;
 
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
    virtual Bool_t AlwaysSecondarySelect()   const { return kTRUE; }

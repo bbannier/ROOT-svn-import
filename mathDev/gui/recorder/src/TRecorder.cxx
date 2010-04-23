@@ -216,8 +216,6 @@ TGCursorWindow::~TGCursorWindow()
 {
    // Destructor.
 
-   if (fPic != kNone) gVirtualX->DeletePixmap(fPic);
-   if (fMask != kNone) gVirtualX->DeletePixmap(fMask);
 }
 
 //______________________________________________________________________________
@@ -1708,7 +1706,7 @@ void TRecorderRecording::SetTypeOfConfigureNotify(Event_t *e)
    // On both platforms, we mark the events matching the criteria
    // (automatically generated in ROOT) as events that should be filtered
    // when replaying (TRecGuiEvent::kCNFilter)
-   if ((e->fX == 0 && e->fX == 0) || e->fFormat == 32 ) {
+   if ((e->fX == 0 && e->fX == 0)) { // || e->fFormat == 32 ) {
       e->fUser[4] = TRecGuiEvent::kCNFilter;
       return;
    }

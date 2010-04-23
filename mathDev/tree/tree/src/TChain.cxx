@@ -466,7 +466,7 @@ Int_t TChain::AddFile(const char* name, Long64_t nentries /* = kBigNumber */, co
       // Check that tree with the right name exists in the file.
       // Note: We are not the owner of obj, the file is!
       TObject* obj = file->Get(treename);
-      if (!obj || !obj->InheritsFrom("TTree")) {
+      if (!obj || !obj->InheritsFrom(TTree::Class())) {
          Error("AddFile", "cannot find tree with name %s in file %s", treename, filename);
          delete file;
          file = 0;
@@ -1180,6 +1180,8 @@ Long64_t TChain::LoadTree(Long64_t entry)
 
    if ((entry < 0) || ((entry > 0) && (entry >= fEntries && entry!=(theBigNumber-1) ))) {
       // -- Invalid entry number.
+      if (fTree) fTree->LoadTree(-1);
+      fReadEntry = -1;
       return -2;
    }
 
@@ -1256,9 +1258,40 @@ Long64_t TChain::LoadTree(Long64_t entry)
             }
          }
          if (needUpdate) {
-            // Update list of leaves in all TTreeFormula of the TTreePlayer (if any).
-            if (fPlayer) {
-               fPlayer->UpdateFormulaLeaves();
+	   // Update the branch/leaf addresses and 
+	   // thelist of leaves in all TTreeFormula of the TTreePlayer (if any).
+	   
+	   // Set the branch statuses for the newly opened file.
+	   TChainElement *frelement;
+	   TIter fnext(fStatus);
+	   while ((frelement = (TChainElement*) fnext())) {
+	     Int_t status = frelement->GetStatus();
+	     fTree->SetBranchStatus(frelement->GetName(), status);
+	   }
+	   
+	   // Set the branch addresses for the newly opened file.
+	   fnext.Reset();
+	   while ((frelement = (TChainElement*) fnext())) {
+	     void* addr = frelement->GetBaddress();
+	     if (addr) {
+	       TBranch* br = fTree->GetBranch(frelement->GetName());
+	       TBranch** pp = frelement->GetBranchPtr();
+	       if (pp) {
+		 // FIXME: What if br is zero here?
+            *pp = br;
+	       }
+	       if (br) {
+		 // FIXME: We may have to tell the branch it should
+		 //        not be an owner of the object pointed at.
+		 br->SetAddress(addr);
+		 if (TestBit(kAutoDelete)) {
+		   br->SetAutoDelete(kTRUE);
+		 }
+	       }
+	     }
+	   }        
+	   if (fPlayer) {
+	     fPlayer->UpdateFormulaLeaves();
             }
             // Notify user if requested.
             if (fNotify) {
@@ -1836,76 +1869,14 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
       }
    }
 
-   Long64_t nentries = GetEntriesFast();
-
    // Copy the entries.
    if (fastClone) {
-      // For each tree in the chain.
-      // disable the read and write cache
-      GetTree()->GetCurrentFile()->SetCacheRead(0);
-      newTree->GetCurrentFile()->SetCacheWrite(0);
-      for (Long64_t i = 0; i < nentries; i += GetTree()->GetEntries()) {
-         if (LoadTree(i) < 0) {
-            break;
-         }
-         if (newTree->GetDirectory()) {
-            TFile* file2 = newTree->GetDirectory()->GetFile();
-            if (file2 && (file2->GetEND() > TTree::GetMaxTreeSize())) {
-               if (newTree->GetDirectory() == (TDirectory*) file2) {
-                  newTree->ChangeFile(file2);
-               }
-            }
-         }
-         TTreeCloner cloner(GetTree(), newTree, option, TTreeCloner::kNoWarnings);
-         if (cloner.IsValid()) {
-            newTree->SetEntries(newTree->GetEntries() + GetTree()->GetEntries());
-            cloner.Exec();
-            if (i!=0 && newTree->GetTreeIndex()) {
-               newTree->GetTreeIndex()->Append(GetTree()->GetTreeIndex(),kTRUE);
-            }
-         } else {
-            if (cloner.NeedConversion()) {
-               TTree *localtree = GetTree();
-               Long64_t tentries = localtree->GetEntries();
-               for (Long64_t ii = 0; ii < tentries; ii++) {
-                  if (localtree->GetEntry(ii) <= 0) {
-                     break;
-                  }
-                  newTree->Fill();
-               }
-               if (newTree->GetTreeIndex()) {
-                  newTree->GetTreeIndex()->Append(GetTree()->GetTreeIndex(), kTRUE);
-               }
-            } else {
-               Warning("Merge",cloner.GetWarning());
-               if (GetFile()) {
-                  Warning("Merge", "Skipped file %s\n", GetFile()->GetName());
-               } else {
-                  Warning("Merge", "Skipped file number %d\n", fTreeNumber);
-               }
-            }
-         }
-      }
-      if (newTree->GetTreeIndex()) {
-         newTree->GetTreeIndex()->Append(0,kFALSE); // Force the sorting
+      if ( newTree->CopyEntries( this, -1, option ) < 0 ) {
+         // There was a problem!
+         Error("Merge", "TTree has not been cloned\n");
       }
    } else {
-      Int_t treenumber = 0;
-      for (Long64_t i = 0; i < nentries; i++) {
-         if (GetEntry(i) <= 0) {
-            break;
-         }
-         newTree->Fill();
-         if (treenumber != GetTreeNumber()) {
-            if (newTree->GetTreeIndex()) {
-               newTree->GetTreeIndex()->Append(GetTree()->GetTreeIndex(),kTRUE);
-            }
-            treenumber = GetTreeNumber();
-         }
-      }
-      if (newTree->GetTreeIndex()) {
-         newTree->GetTreeIndex()->Append(0,kFALSE); // Force the sorting
-      }
+      newTree->CopyEntries( this, -1, option );
    }
 
    // Write the new tree header.
@@ -1916,7 +1887,7 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
 
    // Close and delete the current file of the new tree.
    if (!opt.Contains("keep")) {
-      // FIXME: What happens to fDirectory in newTree here?
+      // Delete the currentFile and the TTree object.
       delete newTree->GetCurrentFile();
    }
    return nfiles;

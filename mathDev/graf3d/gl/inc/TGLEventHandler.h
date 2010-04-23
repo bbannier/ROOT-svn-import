@@ -56,6 +56,9 @@ protected:
    virtual void   GrabMouse();
    virtual void   UnGrabMouse();
 
+   virtual void   SelectForClicked(Event_t *event);
+   virtual void   SelectForMouseOver();
+
 public:
    TGLEventHandler(TGWindow *w, TObject *obj);
    virtual ~TGLEventHandler();
@@ -76,11 +79,13 @@ public:
    virtual void   ClearMouseOver();
    virtual void   Repaint();
 
+   virtual void   PopupContextMenu(TGLPhysicalShape* pshp, Event_t *event, Int_t gx, Int_t gy);
+
    virtual void   TriggerTooltip(const char* text);
    virtual void   RemoveTooltip();
 
-   void SetMouseOverSelectDelay(Int_t ms);
-   void SetMouseOverTooltipDelay(Int_t ms);
+   void  SetMouseOverSelectDelay(Int_t ms);
+   void  SetMouseOverTooltipDelay(Int_t ms);
 
    Int_t GetTooltipPixelTolerance()  const { return fTooltipPixelTolerance; }
    void  SetTooltipPixelTolerance(Int_t t) { fTooltipPixelTolerance = t; }

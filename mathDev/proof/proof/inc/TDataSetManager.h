@@ -37,7 +37,9 @@
 
 
 class TFileCollection;
+class TFileInfo;
 class TMD5;
+class TUrl;
 class TVirtualMonitoringWriter;
 
 
@@ -70,6 +72,9 @@ protected:
 
    static TString fgCommonDataSetTag;  // Name for common datasets, default: COMMON
 
+   static TList *fgDataSetSrvMaps; // List of TPair(TRegexp, TObjString) for mapping server coordinates
+                                  // for dataset files (init from DataSet.SrvMap)
+
    virtual TMap *GetGroupUsedMap() { return &fGroupUsed; }
    virtual TMap *GetUserUsedMap() { return &fUserUsed; }
    Int_t    GetNTouchedFiles() const { return fNTouchedFiles; }
@@ -89,21 +94,29 @@ public:
       kAllowRegister = BIT(16),   // allow registration of a new dataset
       kAllowVerify   = BIT(17),   // allow verification of a dataset (requires registration permit)
       kTrustInfo     = BIT(18),   // during registration, trust the available information provided by the user
-      kIsSandbox     = BIT(19)    // dataset dir is in the user sandbox (simplified naming)
+      kIsSandbox     = BIT(19),   // dataset dir is in the user sandbox (simplified naming)
+      kUseCache      = BIT(20),   // force the usage of cache
+      kDoNotUseCache = BIT(21)    // disable the cache
    };
 
    enum EDataSetWorkOpts { // General (bits 1-8)
                            kDebug = 1, kShowDefault = 2, kPrint = 4, kExport = 8,
-                           kQuotaUpdate = 16, kSetDefaultTree = 32,
+                           kQuotaUpdate = 16, kSetDefaultTree = 32, kForceScan = 64,
+                           kNoHeaderPrint = 128,
                            // File-based specific (bits 9-16)
                            kReopen = 256, kTouch = 512, kMaxFiles = 1024, kReadShort = 2048,
-                           kFileMustExist = 4096};
+                           kFileMustExist = 4096,
+                           // Auxilliary bits (bits 17-)
+                           kNoCacheUpdate = 65536, kRefreshLs = 131072
+                           };
 
    TDataSetManager(const char *group = 0, const char *user = 0, const char *options = 0);
    virtual ~TDataSetManager();
 
+   virtual Int_t            ClearCache(const char *uri);
+   virtual Long64_t         GetAvgFileSize() const { return fAvgFileSize; }
    virtual TFileCollection *GetDataSet(const char *uri, const char *server = 0);
-   virtual TMap            *GetDataSets(const char *uri, UInt_t /*option*/ = 0);
+   virtual TMap            *GetDataSets(const char *uri, UInt_t /*option*/ = TDataSetManager::kExport);
    virtual TMap            *GetSubDataSets(const char *uri, const char *excludeservers);
 
    virtual Long64_t         GetGroupQuota(const char *group);
@@ -111,6 +124,8 @@ public:
    virtual Long64_t         GetGroupUsed(const char *group);
    virtual Bool_t           ExistsDataSet(const char *uri);
    virtual void             MonitorUsedSpace(TVirtualMonitoringWriter *monitoring);
+   virtual Int_t            NotifyUpdate(const char *group = 0, const char *user = 0,
+                                         const char *dspath = 0, Long_t mtime = 0, const char *checksum = 0);
    Bool_t                   ParseUri(const char *uri, TString *dsGroup = 0, TString *dsUser = 0,
                                      TString *dsName = 0, TString *dsTree = 0,
                                      Bool_t onlyCurrent = kFALSE, Bool_t wildcards = kFALSE);
@@ -118,12 +133,22 @@ public:
    virtual Bool_t           RemoveDataSet(const char *uri);
    virtual Int_t            RegisterDataSet(const char *uri, TFileCollection *dataSet, const char *opt);
    virtual Int_t            ScanDataSet(const char *uri, UInt_t option = 0);
+   void                     SetScanCounters(Int_t t = -1, Int_t o = -1, Int_t d = -1);
+   virtual Int_t            ShowCache(const char *uri);
    virtual void             ShowQuota(const char *opt);
 
    virtual void             ShowDataSets(const char *uri = "*", const char *opt = "");
 
    static TString           CreateUri(const char *dsGroup = 0, const char *dsUser = 0,
                                       const char *dsName = 0, const char *dsTree = 0);
+   static Bool_t            CheckDataSetSrvMaps(TUrl *furl, TString &fn, TList *srvmaplist = 0);
+   static TList            *GetDataSetSrvMaps();
+   static TList            *ParseDataSetSrvMaps(const TString &srvmaps);
+   static Int_t             ScanDataSet(TFileCollection *dataset, Int_t fopenopt, Bool_t notify = kFALSE,
+                                        Int_t scanfopt = 0, TList *flist = 0, Long64_t avgsize = -1,
+                                        const char *mssurl = 0, Int_t filesmax = -1,
+                                        Int_t *touched = 0, Int_t *opened = 0, Int_t *disappeared = 0);
+   static Int_t             ScanFile(TFileInfo *fileinfo, Bool_t notify);
 
    ClassDef(TDataSetManager, 0)  // Abstract data set manager class
 };

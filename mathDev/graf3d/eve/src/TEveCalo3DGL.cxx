@@ -265,12 +265,12 @@ void TEveCalo3DGL::RenderGrid(TGLRnrCtx & rnrCtx) const
 
    if (transparent_p)
    {
-      TGLUtil::ColorTransparency(fM->fFrameColor, fM->fFrameTransparency);
-
       glPushAttrib(GL_ENABLE_BIT);
 
       glEnable(GL_BLEND);
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+      TGLUtil::ColorTransparency(fM->fFrameColor, fM->fFrameTransparency);
    }
 
    TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
@@ -570,10 +570,12 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
 }
 
 //______________________________________________________________________________
-void TEveCalo3DGL::DrawHighlight(TGLRnrCtx & rnrCtx, const TGLPhysicalShape* pshp) const
+void TEveCalo3DGL::DrawHighlight(TGLRnrCtx & rnrCtx, const TGLPhysicalShape* pshp, Int_t lvl) const
 {
    // Draw polygons in highlight mode.
 
+   // XXXX to support highlight AND selection ...
+   if (lvl < 0) lvl = pshp->GetSelected();
 
    if ((pshp->GetSelected() == 2) && fM->fData->GetCellsSelected().size())
    {

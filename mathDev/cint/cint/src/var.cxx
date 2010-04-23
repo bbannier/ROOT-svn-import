@@ -2070,21 +2070,17 @@ void G__letstruct(G__value* result, int linear_index, G__var_array* var, int ig1
                   if (ig2 && G__asm_noverflow) {
                      G__asm_dt = store_dt;
                      int x;
-                     // 30-05-07
-                     // G__LD_FUNC now has 6 parameters
-                     // 05-06-07 (now 7 with diego's changes)
-                     if (G__LD_FUNC == G__asm_inst[G__asm_cp-7]) {
-                        for (x = 0; x < 7; ++x) {
-                           G__asm_inst[store_cp+x] = G__asm_inst[G__asm_cp-7+x];
+                     if (G__LD_FUNC == G__asm_inst[G__asm_cp-8]) {
+                        for (x = 0; x < 8; ++x) {
+                           G__asm_inst[store_cp+x] = G__asm_inst[G__asm_cp-8+x];
                         }
-                        G__asm_cp = store_cp + 7;
+                        G__asm_cp = store_cp + 8;
                      }
-                     // 23-10-12 (stub-less calls)
-                     // We added one more field... should it be until 9?
-                     else if (G__LD_IFUNC == G__asm_inst[G__asm_cp-9]) {
-                        for (x = 0;x < 9;x++)
-                           G__asm_inst[store_cp+x] = G__asm_inst[G__asm_cp-9+x];
-                        G__asm_cp = store_cp + 9;
+                     else if (G__LD_IFUNC == G__asm_inst[G__asm_cp-8]) {
+                        for (x = 0; x < 8; ++x) {
+                           G__asm_inst[store_cp+x] = G__asm_inst[G__asm_cp-8+x];
+                        }
+                        G__asm_cp = store_cp + 8;
                      }
                   }
                   else if (!ig2 && (result->type == 'U')) {
@@ -3153,6 +3149,50 @@ inline void G__alloc_var_ref(int SIZE, CONVFUNC f, char* item, G__var_array* var
 static G__value G__allocvariable(G__value result, G__value para[], G__var_array* varglobal, G__var_array* varlocal, int paran, int varhash, char* item, char* varname, int parameter00, G__DataMemberHandle &member)
 {
    // -- Allocate memory for a variable and initialize it.
+   if (!varname) {
+      G__fprinterr(G__serr, "Error: Variable name pointer is null!");
+      G__genericerror(0);
+      return result;
+   }
+   //
+   //  Complain if the variable name has a minus or plus in it.
+   //
+   {
+      char* pp = std::strchr(varname, '-');
+      if (!pp) {
+         pp = std::strchr(varname, '+');
+      }
+      if (pp) {
+         G__fprinterr(G__serr,
+            "Error: Variable name has bad character '%s'", varname);
+         G__genericerror(0);
+         return result;
+      }
+   }
+   //
+   //  Complain if the variable name has a space character in it, but
+   //  allow the special " : <bitfield-size>" syntax in the variable name
+   //  of a bitfield when generating a dictionary (What an awful cludge!).
+   //
+   if (std::strchr(varname, ' ')) {
+      // Ok, there is a space in the variable name, this is bad unless
+      // we are generating a dictionary and the name is "name : size"
+      // which is the special hack for bitfields in dictionaries.
+      if (
+         (G__globalcomp == G__NOLINK) || // Not generating a dictionary, or
+         !std::strstr(varname, " : ") // no special bitfield marker.
+      ) {
+         G__fprinterr(
+              G__serr
+            , "Error: Invalid type '%.*s' in declaration of '%s'"
+            , (std::strchr(varname, ' ') - varname)
+            , varname
+            , std::strchr(varname, ' ') + 1
+         );
+         G__genericerror(0);
+         return result;
+      }
+   }
    //
    //  Figure out which variable chain we will use.
    //
@@ -3216,7 +3256,9 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
    //
    //  Find the end of the variable chain.
    //
+   int index_of_var = 0;
    while (var->next) {
+      ++index_of_var;
       var = var->next;
    }
    //
@@ -3339,6 +3381,7 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
       memset(var->next, 0, sizeof(struct G__var_array));
       var->next->tagnum = var->tagnum;
       var = var->next;
+      ++index_of_var;
    }
    int ig15 = var->allvar;
    //
@@ -3725,19 +3768,6 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
    var->filenum[var->allvar] = G__ifile.filenum;
    var->linenum[var->allvar] = G__ifile.line_number;
 #endif // G__VARIABLEFPOS
-   //
-   //  Complain if the variable name has a minus or plus in it.
-   //
-   {
-      char* pp = std::strchr(varname, '-');
-      if (!pp) {
-         pp = std::strchr(varname, '+');
-      }
-      if (pp) {
-         G__fprinterr(G__serr, "Error: Variable name has bad character '%s'", varname);
-         G__genericerror(0);
-      }
-   }
    //--
    //--
    //--
@@ -3794,7 +3824,7 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
    //
    var->allvar++;
    //  Pass the handle back to the caller
-   member.Set(var,ig15);
+   member.Set(var,ig15,index_of_var);
    // FIXME: Why?  This is bizzare.
    var->varlabel[var->allvar][0] = var->varlabel[var->allvar-1][0] + 1;
    //--  1
@@ -4411,7 +4441,8 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
                G__asm_inst[G__asm_cp+4] = (long) G__compiled_func; // pfunc
                G__asm_inst[G__asm_cp+5] = 0; // this ptr adjustment
                G__asm_inst[G__asm_cp+6] = (long) G__p_ifunc; // ifunc, ignored because pfunc is set
-               G__inc_cp_asm(7, 0);
+               G__asm_inst[G__asm_cp+7] = -1; // ifn, for special func
+               G__inc_cp_asm(8, 0);
             }
          }
          break;
@@ -6228,7 +6259,16 @@ G__value G__getvariable(char* item, int* known, G__var_array* varglobal, G__var_
          // -- We are generating bytecode.
 #ifdef G__ASM_DBG
          if (G__asm_dbg) {
-            G__fprinterr(G__serr, "%3x,%3x: LD '%c'  %s:%d\n", G__asm_cp, G__asm_dt, G__int(result), __FILE__, __LINE__);
+            G__fprinterr(
+                 G__serr
+               , "%3x,%3x: LD func ptr '%s': 0x%08lx  %s:%d\n"
+               , G__asm_cp
+               , G__asm_dt
+               , varname()
+               , G__int(result)
+               , __FILE__
+               , __LINE__
+            );
          }
 #endif // G__ASM_DBG
          G__asm_inst[G__asm_cp] = G__LD;

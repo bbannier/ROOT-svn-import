@@ -26,7 +26,6 @@
 #include "Foption.h"
 #include "TRandom.h"
 #include "TSpline.h"
-#include "TPaveStats.h"
 #include "TVirtualFitter.h"
 #include "TVirtualPad.h"
 #include "TVirtualGraphPainter.h"
@@ -358,7 +357,10 @@ TGraph::TGraph(const char *filename, const char *format, Option_t *)
    // the string format is by default "%lg %lg"
 
    Double_t x,y;
-   ifstream infile(filename);
+   TString fname = filename;
+   gSystem->ExpandPathName(fname);
+   
+   ifstream infile(fname.Data());
    if(!infile.good()){
       MakeZombie();
       Error("TGraph", "Cannot open file: %s, TGraph is Zombie",filename);

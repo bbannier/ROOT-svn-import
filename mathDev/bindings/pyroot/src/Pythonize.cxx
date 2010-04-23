@@ -1306,6 +1306,19 @@ namespace {
 // for convenience
    using namespace PyROOT;
 
+//- THN behavior --------------------------------------------------------------
+   PyObject* THNIMul( PyObject* self, PyObject* scale )
+   {
+   // Use THN::Scale to perform *= ... need this stub to return self
+      PyObject* result = CallPyObjMethod( self, "Scale", scale );
+      if ( ! result )
+         return result;
+
+      Py_DECREF( result );
+      Py_INCREF( self );
+      return self;
+   }
+
 //- TFN behavior --------------------------------------------------------------
    int TFNPyCallback( G__value* res, G__CONST char*, struct G__param* libp, int hash )
    {
@@ -1831,11 +1844,19 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
       return kTRUE;
    }
 
+   if ( name == "TChain" ) {
+   // pretend a using
+      return Utility::AddUsingToClass( pyclass, "Process" );
+   }
+
    if ( name == "TStyle" ) {
        MethodProxy* ctor = (MethodProxy*)PyObject_GetAttr( pyclass, PyStrings::gInit );
        ctor->fMethodInfo->fFlags &= ~MethodProxy::MethodInfo_t::kIsCreator;
        Py_DECREF( ctor );
    }
+
+   if ( name == "TH1" )       // allow hist *= scalar
+      return Utility::AddToClass( pyclass, "__imul__", (PyCFunction) THNIMul, METH_O );
 
    if ( name == "TF1" )       // allow instantiation with python callable
       return Utility::AddToClass( pyclass, "__init__", new TF1InitWithPyFunc );

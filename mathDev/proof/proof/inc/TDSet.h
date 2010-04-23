@@ -90,7 +90,8 @@ private:
    TList           *fFriends;    // friend elements
 
    TString          fDataSet;    // Name of the dataset of which this element is part
-   TList           *fAssocFileList;  // list of TObjString describing associated files
+   TList           *fAssocObjList;  // List of objects associated to this element
+                                   // (e.g. TObjString describing associated files)
 
    Bool_t           HasBeenLookedUp() const { return TestBit(kHasBeenLookedUp); }
 
@@ -120,8 +121,9 @@ public:
    const char      *GetDirectory() const;
    const char      *GetDataSet() const { return fDataSet; }
    void             SetDataSet(const char *dataset) { fDataSet = dataset; }
-   void             AddAssocFile(const char *assocfile);
-   TList           *GetListOfAssocFiles() const { return fAssocFileList; }
+   void             AddAssocObj(TObject *assocobj);
+   TList           *GetListOfAssocObjs() const { return fAssocObjList; }
+   TObject         *GetAssocObj(Long64_t i, Bool_t isentry = kFALSE);
    void             Print(Option_t *options="") const;
    Long64_t         GetTDSetOffset() const { return fTDSetOffset; }
    void             SetTDSetOffset(Long64_t offset) { fTDSetOffset = offset; }
@@ -137,7 +139,7 @@ public:
    void             SetLookedUp() { SetBit(kHasBeenLookedUp); }
    TFileInfo       *GetFileInfo(const char *type = "TTree");
 
-   ClassDef(TDSetElement,7)  // A TDSet element
+   ClassDef(TDSetElement,8)  // A TDSet element
 };
 
 
@@ -170,6 +172,8 @@ protected:
    THashList     *fElements;    //-> list of TDSetElements (or TDSets, if in multi mode)
    TIter         *fIterator;    //! iterator on fElements
    TDSetElement  *fCurrent;     //! current element
+   TList         *fSrvMaps;     //! list for mapping server coordinates for files
+   TIter         *fSrvMapsIter; //! iterator on fSrvMaps
 
 public:
    TDSet();
@@ -239,9 +243,11 @@ public:
    void                  Lookup(Bool_t removeMissing = kFALSE, TList **missingFiles = 0);
    void                  SetLookedUp();
 
+   void                  SetSrvMaps(TList *srvmaps = 0);
+
    void                  SetWriteV3(Bool_t on = kTRUE);
 
-   ClassDef(TDSet,7)  // Data set for remote processing (PROOF)
+   ClassDef(TDSet,8)  // Data set for remote processing (PROOF)
 };
 
 #endif

@@ -65,6 +65,7 @@ DIRECT SCENE INTERACTIONS\n\n\
    \tk          --- ZOOM out\n\
    \tArrow Keys --- PAN (TRUCK) across scene\n\
    \tHome       --- reset current camera\n\
+   \tCtrl-Home  --- switch external/automatic camera center\n\
 \n\
    LEFT mouse button -- ROTATE (ORBIT) the scene by holding the mouse button and moving\n\
    the mouse (perspective camera, needs to be enabled in menu for orthograpic cameras).\n\
@@ -304,7 +305,8 @@ TGLSAViewer::~TGLSAViewer()
 
    fGedEditor->DisconnectFromCanvas();
 
-   delete fMenuHidingTimer;
+   DisableMenuBarHiding();
+
    delete fHelpMenu;
    delete fCameraMenu;
    delete fFileSaveMenu;
@@ -546,6 +548,27 @@ void TGLSAViewer::EnableMenuBarHiding()
 
    fMenuHidingTimer = new TTimer;
    fMenuHidingTimer->Connect("Timeout()", "TGLSAViewer", this, "MenuHidingTimeout()");
+}
+
+//______________________________________________________________________________
+void TGLSAViewer::DisableMenuBarHiding()
+{
+   // Disable hiding of menu bar.
+
+   if (!fHideMenuBar)
+      return;
+
+   fHideMenuBar = kFALSE;
+
+   fMenuBar->Disconnect("ProcessedEvent(Event_t*)", this, "HandleMenuBarHiding(Event_t*)");
+   fMenuBut->Disconnect("ProcessedEvent(Event_t*)", this, "HandleMenuBarHiding(Event_t*)");
+
+   fFrame->ShowFrame(fMenuBar);
+   fFrame->HideFrame(fMenuBut);
+   fFrame->Layout();
+
+   delete fMenuHidingTimer;
+   fMenuHidingTimer = 0;
 }
 
 //______________________________________________________________________________

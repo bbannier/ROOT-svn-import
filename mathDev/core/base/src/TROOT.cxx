@@ -104,7 +104,11 @@
 #include "TMap.h"
 #include "TObjString.h"
 #include "TVirtualMutex.h"
-#include "TCint.h"
+#ifdef R__HAS_CLING
+# include "TCling.h"
+#else
+# include "TCint.h"
+#endif
 
 #include <string>
 namespace std {} using namespace std;
@@ -289,16 +293,6 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
 
    // initialize plugin manager early
    fPluginManager->LoadHandlersFromEnv(gEnv);
-
-   // Add the root include directory to list searched by default by
-   // the interpreter (should this be here or somewhere else?)
-#ifndef ROOTINCDIR
-   TString include = gSystem->Getenv("ROOTSYS");
-   include.Append("/include");
-   fInterpreter->AddIncludePath(include);
-#else
-   fInterpreter->AddIncludePath(ROOTINCDIR);
-#endif
 
    TSystemDirectory *workdir = new TSystemDirectory("workdir", gSystem->WorkingDirectory());
 

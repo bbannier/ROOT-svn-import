@@ -1,4 +1,4 @@
-// @(#)root/memstat:$Id$
+// @(#)root/memstat:$Id: TMemStatHelpers.h 32670 2010-03-18 10:54:04Z anar $
 // Author: Anar Manafov (A.Manafov@gsi.de) 2008-03-02
 
 /*************************************************************************
@@ -61,5 +61,5 @@ namespace memstat {
       }
    };
 
-};
+}
 #endif

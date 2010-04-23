@@ -639,7 +639,7 @@ int main(int argc, char** argv)
          }
       }
       else if (!strcmp("-?", argv[i]) || (argv[i][0]=='-')) {
-         if (argv[i][0]=='-') {
+         if (argv[i][1]!='?') {
             fprintf(stderr,"Unknown parameter: %s\n",argv[i]);
          }
          fprintf(stderr,"%s -k <-d [difffile]> <-c [cintoption]> <-m [makecintoption]> <[testcase.cxx]>\n",argv[0]);
@@ -989,6 +989,7 @@ int main(int argc, char** argv)
    ret += ci(kLangCXX, "TException.cxx", difffile);
    ret += mkci(kLangCXX, "enums.cxx", "enums.h", difffile);
    ret += io("classinfo.cxx", "classinfo.ref", difffile);
+   ret += ci(kLangCXX, "iostream_state.cxx", difffile);
 
    printf("Summary==================================================\n");
    cat(stdout, difffile);

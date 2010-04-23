@@ -51,7 +51,8 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
    fZAxis(0),
    fM(0),
    fDLCacheOK(kFALSE),
-   fCells3D(kTRUE)
+   fCells3D(kTRUE),
+   fBinStep(-1)
 {
    // Constructor.
 
@@ -322,7 +323,7 @@ void TEveCaloLegoGL::SetAxis3DTitlePos(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1
          idxLeft = i;
       }
    }
-   fZAxisTitlePos.Set(cornerX[idxLeft], cornerY[idxLeft], fDataMax* 1.05);
+   fZAxisTitlePos.Set(cornerX[idxLeft], cornerY[idxLeft], 1.05 * fDataMax);
 
 
    // XY axis location (closest to eye) first
@@ -573,6 +574,8 @@ void TEveCaloLegoGL::DrawAxis2D(TGLRnrCtx & rnrCtx) const
 {
    // Draw XY axis.
 
+   TGLCamera& cam  = rnrCtx.RefCamera();
+
    TAxis ax;
    ax.SetAxisColor(fGridColor);
    ax.SetLabelColor(fFontColor);
@@ -600,6 +603,10 @@ void TEveCaloLegoGL::DrawAxis2D(TGLRnrCtx & rnrCtx) const
                               + (up[1] - dn[1]) * (up[1] - dn[1])
                               + (up[2] - dn[2]) * (up[2] - dn[2]));
 
+   // lock upper limit to of relative font size relative to viewport diagonal
+   Double_t vpLimit = cam.RefViewport().Diagonal()*0.5/TMath::Sqrt2();
+   len = TMath::Min(len, vpLimit);
+
    // eta
    fAxisPainter.SetLabelPixelFontSize(TMath::Nint(len*fM->GetData()->GetEtaBins()->GetLabelSize()));
    fAxisPainter.SetTitlePixelFontSize(TMath::Nint(len*fM->GetData()->GetEtaBins()->GetTitleSize()));
@@ -608,7 +615,9 @@ void TEveCaloLegoGL::DrawAxis2D(TGLRnrCtx & rnrCtx) const
    ax.SetTitle(fM->GetData()->GetEtaBins()->GetTitle());
    fAxisPainter.RefTitlePos().Set(fM->GetEtaMax(), -fM->GetPhiRng()*(ax.GetTickLength()+ ax.GetLabelOffset()), 0 );
    fAxisPainter.RefDir().Set(1, 0, 0);
-   fAxisPainter.RefTMOff(0).Set(0,  -fM->GetPhiRng(), 0);
+
+   Float_t tmOffFrustX = cam.FrustumPlane(TGLCamera::kRight).D() + cam.FrustumPlane(TGLCamera::kLeft).D();
+   fAxisPainter.RefTMOff(0).Set(0,  -TMath::Min(fM->GetPhiRng(), tmOffFrustX), 0);
    fAxisPainter.SetLabelAlign(TGLFont::kCenterH, TGLFont::kBottom);
 
    glPushMatrix();
@@ -622,7 +631,8 @@ void TEveCaloLegoGL::DrawAxis2D(TGLRnrCtx & rnrCtx) const
    ax.SetTitle(fM->GetData()->GetPhiBins()->GetTitle());
    fAxisPainter.RefTitlePos().Set(-fM->GetEtaRng()*(ax.GetTickLength()+ ax.GetLabelOffset()), fM->GetPhiMax(), 0);
    fAxisPainter.RefDir().Set(0, 1, 0);
-   fAxisPainter.RefTMOff(0).Set(-fM->GetEtaRng(), 0, 0);
+   Float_t tmOffFrustY = cam.FrustumPlane(TGLCamera::kTop).D() + cam.FrustumPlane(TGLCamera::kBottom).D();
+   fAxisPainter.RefTMOff(0).Set(-TMath::Min(fM->GetEtaRng(), tmOffFrustY), 0, 0);
    fAxisPainter.SetLabelAlign(TGLFont::kRight, TGLFont::kCenterV);
 
    glPushMatrix();
@@ -679,18 +689,18 @@ void TEveCaloLegoGL::RebinAxis(TAxis *orig, TAxis *curr) const
    // Rebin eta, phi axis.
 
    Double_t center = 0.5 * (orig->GetXmin() + orig->GetXmax());
-   Int_t idx0 = orig->FindBin(center);
-   Double_t bc = orig->GetBinCenter(idx0);
-   if (bc > center) idx0--;
+   Int_t    idx0   = orig->FindBin(center);
+   Double_t bc     = orig->GetBinCenter(idx0);
+   if (bc > center) --idx0;
 
-   Int_t nbR = TMath::FloorNint(idx0/fM->fBinStep) + TMath::FloorNint((orig->GetNbins() - idx0)/fM->fBinStep);
-   Double_t *bins = new Double_t[nbR+1];
-   Int_t off = idx0 - TMath::FloorNint(idx0/fM->fBinStep)*fM->fBinStep;
-   for(Int_t i = 0; i <= nbR; i++)
-      bins[i] = orig->GetBinUpEdge(off + i*fM->fBinStep);
-
-   curr->Set(nbR, bins);
-   delete [] bins;
+   Int_t nbR = TMath::FloorNint(idx0/fBinStep) + TMath::FloorNint((orig->GetNbins() - idx0)/fBinStep);
+   Int_t off = idx0 - TMath::FloorNint(idx0/fBinStep)*fBinStep;
+   std::vector<Double_t> bins(nbR + 1);
+   for (Int_t i = 0; i <= nbR; ++i)
+   {
+      bins[i] = orig->GetBinUpEdge(off + i*fBinStep);
+   }
+   curr->Set(nbR, &bins[0]);
 }
 
 //______________________________________________________________________________
@@ -1039,11 +1049,14 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx &rnrCtx, vCell2D_t& cells2D) const
 }
 
 //______________________________________________________________________________
-void TEveCaloLegoGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* pshp) const
+void TEveCaloLegoGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* pshp, Int_t lvl) const
 {
    // Draw eta-phi range in highlight mode.
 
    if (!fM->fData->GetCellsSelected().size() || pshp->GetSelected() != 2) return;
+
+   // XXXX to support highlight AND selection ...
+   if (lvl < 0) lvl = pshp->GetSelected();
 
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT | GL_POLYGON_BIT );
    glDisable(GL_LIGHTING);
@@ -1063,7 +1076,7 @@ void TEveCaloLegoGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* ps
    Double_t unit = ((eM - em) < (pM - pm)) ? (eM - em) : (pM - pm);
    Float_t sx = (eM - em) / fM->GetEtaRng();
    Float_t sy = (pM - pm) / fM->GetPhiRng();
-   glScalef(sx / unit, sy / unit, fM->fData->Empty() ? 1 : fM->GetValToHeight());
+   glScalef(sx / unit, sy / unit, fM->fData->Empty() ? 1 : fM->GetMaxTowerH() / fDataMax);
    glTranslatef(-fM->GetEta(), -fM->fPhi, 0);
 
    // check eta&phi range of selected cells
@@ -1078,23 +1091,22 @@ void TEveCaloLegoGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* ps
 
    // prepare rebin for 2D or 3D if necessary
    TEveCaloData::RebinData_t rebinDataSelected;
-   if (fM->fBinStep > 1)
+   if (fBinStep > 1)
    {
       fM->fData->Rebin(fEtaAxis, fPhiAxis, cellsSelected, fM->fPlotEt, rebinDataSelected);
-      Float_t scale = fM->GetMaxVal() / fMaxValRebin;
       if (fM->fNormalizeRebin) {
+         Float_t scale = 1.f / (fBinStep * fBinStep);
          for (std::vector<Float_t>::iterator it = rebinDataSelected.fSliceData.begin(); it != rebinDataSelected.fSliceData.end(); it++)
             (*it) *= scale;
       }
    }
-
 
    if (fCells3D)
    {
       Int_t   prevTower = 0;
       Float_t offset    = 0;
       Int_t   nSlices   = fM->fData->GetNSlices();
-      if (fM->fBinStep == 1)
+      if (fBinStep == 1)
       {
          TEveCaloData::vCellId_i      j = cellsSelected.begin();
          for (TEveCaloData::vCellId_i i = fM->fCellList.begin(); i != fM->fCellList.end(); ++i) {
@@ -1155,7 +1167,7 @@ void TEveCaloLegoGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* ps
    else
    {
       vCell2D_t cells2DSelected;
-      if (fM->fBinStep == 1)
+      if (fBinStep == 1)
       {
          // could be exact and call
          // PrepareCell2DData( fM->fData->GetCellsSelected(), cells2DSelected);
@@ -1204,8 +1216,52 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    else if (fM->fProjection == TEveCaloLego::k3D)
       fCells3D = kTRUE;
 
+   // rebin axsis , check limits, fix TwoPi cycling
+   Int_t new_bin_step = GetGridStep(rnrCtx);
+
+   // rebin data
+   if (fM->AssertCellIdCache() || fBinStep != new_bin_step)
+   {
+      fBinStep = new_bin_step;
+      fDLCacheOK   = kFALSE;
+      fRebinData.Clear();
+
+      RebinAxis(fM->fData->GetEtaBins(), fEtaAxis);
+      RebinAxis(fM->fData->GetPhiBins(), fPhiAxis);
+
+      if (fBinStep > 1)
+      {
+         fM->fData->Rebin(fEtaAxis, fPhiAxis, fM->fCellList, fM->fPlotEt, fRebinData);
+
+         fMaxVal = 0;
+         for (UInt_t i = 0; i < fRebinData.fSliceData.size(); i += fRebinData.fNSlices)
+         {
+            Double_t sum = 0;
+            for (Int_t s = 0; s < fRebinData.fNSlices; s++)
+            {
+               sum += fRebinData.fSliceData[i+s];
+            }
+            if (sum > fMaxVal) fMaxVal = sum;
+         }
+
+         if (fM->fNormalizeRebin)
+         {
+            Float_t scale = 1.f / (fBinStep * fBinStep);
+            for (std::vector<Float_t>::iterator it = fRebinData.fSliceData.begin(); it != fRebinData.fSliceData.end(); it++)
+            {
+               (*it) *= scale;
+            }
+            fMaxVal *= scale;
+         }
+      }
+      else
+      {
+         fMaxVal = fM->GetMaxVal();
+      }
+   }
+
    // cache max val
-   fDataMax = fM->GetMaxVal();
+   fDataMax = (fM->fScaleAbs) ? fM->fMaxValAbs : fMaxVal;
 
    // modelview matrix
    Double_t em, eM, pm, pM;
@@ -1215,48 +1271,9 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    glPushMatrix();
    Float_t sx = (eM - em) / fM->GetEtaRng();
    Float_t sy = (pM - pm) / fM->GetPhiRng();
-   glScalef(sx / unit, sy / unit, fM->fData->Empty() ? 1 : fM->GetValToHeight());
+   glScalef(sx / unit, sy / unit, fM->fData->Empty() ? 1 : fM->GetMaxTowerH() / fDataMax);
    glTranslatef(-fM->GetEta(), -fM->fPhi, 0);
 
-   // rebin axsis , check limits, fix TwoPi cycling
-   Int_t oldBinStep = fM->fBinStep;
-   fM->fBinStep = GetGridStep(rnrCtx);
-   if (oldBinStep != fM->fBinStep) fDLCacheOK=kFALSE;
-
-   RebinAxis(fM->fData->GetEtaBins(), fEtaAxis);
-   RebinAxis(fM->fData->GetPhiBins(), fPhiAxis);
-
-   // cache ids
-   Bool_t idCacheChanged = kFALSE;
-   if (fM->fCellIdCacheOK == kFALSE) {
-      fM->BuildCellIdCache();
-      idCacheChanged = kTRUE;
-   }
-
-   // rebin data
-   if (fDLCacheOK==kFALSE || idCacheChanged ) {
-      fRebinData.fSliceData.clear();
-      fRebinData.fSliceData.clear();
-
-      if (fM->fBinStep > 1) {
-         fM->fData->Rebin(fEtaAxis, fPhiAxis, fM->fCellList, fM->fPlotEt, fRebinData);
-         if (fM->fNormalizeRebin) {
-            //  Double_t maxVal = 0;
-            fMaxValRebin = 0;
-            for (UInt_t i = 0; i < fRebinData.fSliceData.size(); i += fRebinData.fNSlices) {
-               Double_t sum = 0;
-               for (Int_t s = 0; s < fRebinData.fNSlices; s++)
-                  sum += fRebinData.fSliceData[i+s];
-
-               if (sum > fMaxValRebin) fMaxValRebin = sum;
-            }
-
-            Float_t scale = fM->GetMaxVal() / fMaxValRebin;
-            for (std::vector<Float_t>::iterator it = fRebinData.fSliceData.begin(); it != fRebinData.fSliceData.end(); it++)
-               (*it) *= scale;
-         }
-      }
-   }
 
    fFontColor = fM->fFontColor;
    fGridColor = fM->fGridColor;
@@ -1283,13 +1300,15 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    TGLUtil::LineWidth(1);
    glEnable(GL_BLEND);
 
-   if (!fM->fData->Empty()){
+   if (!fM->fData->Empty())
+   {
       glPushName(0);
       glLoadName(0);
-      if (fCells3D) {
-         if (fDLCacheOK == kFALSE || idCacheChanged )
+      if (fCells3D)
+      {
+         if (fDLCacheOK == kFALSE)
          {
-            if (fM->fBinStep == 1)
+            if (fBinStep == 1)
                Make3DDisplayList(fM->fCellList, fDLMap, kTRUE);
             else
                Make3DDisplayListRebin(fRebinData, fDLMap, kTRUE);
@@ -1304,7 +1323,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          glDisable(GL_LIGHTING);
 
          fCells2D.clear();
-         if (fM->fBinStep == 1)
+         if (fBinStep == 1)
             PrepareCell2DData(fM->fCellList, fCells2D);
          else
             PrepareCell2DDataRebin(fRebinData, fCells2D);
@@ -1355,7 +1374,7 @@ void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & 
       cellID = rec.GetItem(2);
       Int_t slice  = rec.GetItem(1);
 
-      if (fM->fBinStep == 1)
+      if (fBinStep == 1)
       {
          Int_t tower = fM->fCellList[cellID].fTower;
          while (cellID > 0 && tower == fM->fCellList[cellID].fTower)

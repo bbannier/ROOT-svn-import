@@ -2181,6 +2181,9 @@ void TH1::DirectoryAutoAdd(TDirectory *dir)
    Bool_t addStatus = TH1::AddDirectoryStatus();
    if (addStatus) {
       SetDirectory(dir);
+      if (dir) {
+         ResetBit(kCanDelete);
+      }
    }  
 }
 
@@ -5181,7 +5184,7 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       return 0;
    }
 
-   if (fDimension > 1 || InheritsFrom("TProfile")) {
+   if (fDimension > 1 || InheritsFrom(TProfile::Class())) {
       Error("Rebin", "Operation valid on 1-D histograms only");
       return 0;
    }
@@ -5795,7 +5798,6 @@ void TH1::Streamer(TBuffer &b)
       if (R__v > 2) {
          b.ReadClassBuffer(TH1::Class(), this, R__v, R__s, R__c);
 
-         ResetBit(kCanDelete);
          ResetBit(kMustCleanup);
          fXaxis.SetParent(this);
          fYaxis.SetParent(this);
@@ -6170,7 +6172,7 @@ void TH1::SavePrimitiveHelp(ostream &out, const char *hname, Option_t *option /*
    while (lnk) {
       obj = lnk->GetObject();
       obj->SavePrimitive(out,"nodraw");
-      if (obj->InheritsFrom("TF1")) {
+      if (obj->InheritsFrom(TF1::Class())) {
          out<<"   "<<hname<<"->GetListOfFunctions()->Add("<<obj->GetName()<<");"<<endl;
       } else if (obj->InheritsFrom("TPaveStats")) {
          out<<"   "<<hname<<"->GetListOfFunctions()->Add(ptstats);"<<endl;
