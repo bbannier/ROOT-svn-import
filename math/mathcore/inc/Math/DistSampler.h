@@ -174,6 +174,7 @@ public:
       sample a set of bins given a vector of probabilities
       Typically multinomial statistics will be used and the sum of the probabilities 
       will be equal to the total number of events to be generated
+      For sampling the bins indipendently, SampleBin should be used
     */
    virtual bool SampleBins(unsigned int n, const double * prob, double * values, double * errors  = 0)  {
       std::copy(prob,prob+n, values);
