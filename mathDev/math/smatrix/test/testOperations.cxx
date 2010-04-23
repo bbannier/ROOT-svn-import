@@ -502,12 +502,12 @@ int test_tmatrix_sym_op() {
     MnMatrix   C0(N,N);  testMM_T(A,B,C,t_mm,C0);
     MnSymMatrix  C1(N);  testATBA_T2(C0,B,t_ama,C1);
 #ifdef INVERT_CHOL
-    MnSymMatrix  C2(N);  testInvChol_T(A,t_inv,C2);
+    MnSymMatrix  C2(N);  testInvChol_T(C1,t_inv,C2);
 #else
 #ifdef INVERT_CRAMER
-    MnSymMatrix  C2(N);  testInvFast_T(A,t_inv,C2);
+    MnSymMatrix  C2(N);  testInvFast_T(C1,t_inv,C2);
 #else
-    MnSymMatrix  C2(N);  testInv_T(A,t_inv,C2);
+    MnSymMatrix  C2(N);  testInv_T(C1,t_inv,C2);
 #endif
 #endif
     MnSymMatrix  C3(N);  testMeq(C2,t_meq,C3);

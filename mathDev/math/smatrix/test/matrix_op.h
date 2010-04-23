@@ -21,7 +21,7 @@ void initValues() {
   std::cout << "init smearing vector ";
   for (int l = 0; l < 10*NLOOP; l++) 	
     {
-      gV.push_back( r.Rndm() );  
+      gV.push_back( 0.01*r.Rndm() );  
     } 
   std::cout << " with size  " << gV.size() << std::endl;
 
@@ -35,7 +35,7 @@ void testVeq(const V & v, double & time, V & result) {
   test::Timer t(time,"V=V ");
   for (int l = 0; l < 10*NLOOP; l++) 	
     {
-      vtmp[0] = gV[l];
+      vtmp[0] += gV[l];
       result = vtmp;  
     }
 }
