@@ -144,6 +144,7 @@ class ROOTTestCmd(ShellCommand):
                     for test in failedLog['tests']:
                         target = test['target']
                         if target[0:2] == './': target = target[2:]
+                        if dirname[0:2] == './': dirname = dirname[2:]
                         self.failureDescr.append(dirname + ': ' + target)
                     failedDirLogs.append(failedLog)
 
@@ -251,11 +252,12 @@ class ROOTMailNotifier(MailNotifier):
        only on new roottest failures)"""
     def __init__(self):
         MailNotifier.__init__(self, fromaddr="buildbot@root.cern.ch",
-                              lookup="root.cern.ch",
-                              extraRecipients=['rootsvn@root.cern.ch'],
-                              mode="problem",
-                              addPatch=False,
-                              categories=['ROOT-incr','roottest-incr','ROOT-hourly','roottest-hourly'],
+                              sendToInterestedUsers = False,
+                              lookup = "root.cern.ch",
+                              extraRecipients = ['rootsvn@root.cern.ch'],
+                              mode = "problem",
+                              addPatch = False,
+                              categories = ['ROOT-incr','roottest-incr','ROOT-hourly','roottest-hourly'],
                               messageFormatter = self.messageFormatter
                               )
         # Sent email for these revisions (previous 10)
@@ -282,9 +284,9 @@ class ROOTMailNotifier(MailNotifier):
             prev = build.getPreviousBuild()
             if prev and prev.getResults() == FAILURE:
                 # We might have the same failures; compare the failing steps' names.
-                if self.getSteps() \
-                        and len(prev.getSteps()) == len(self.getSteps()) \
-                        and ( prev.getSteps()[-1].getText() == self.getSteps()[-1].getText() \
+                if build.getSteps() \
+                        and len(prev.getSteps()) == len(build.getSteps()) \
+                        and (prev.getSteps()[-1].getText() == build.getSteps()[-1].getText() \
                                   and name == "roottest"):
                     # Looks like a similar roottest failure.
                     # Assume it's still caused by the same error.
