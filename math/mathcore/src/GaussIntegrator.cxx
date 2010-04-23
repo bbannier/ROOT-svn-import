@@ -135,12 +135,14 @@ double GaussIntegrator::Error() const
 {   return fLastError;  }
 
 int GaussIntegrator::Status() const
-{   return 0;  }
+{   return (fUsedOnce) ? 0 : -1;  }
 
 void GaussIntegrator::SetFunction (const IGenFunction & function)
 {
    // Set integration function
    fFunction = &function;
+   // reset fUsedOne flag
+   fUsedOnce = false; 
 }
 
 

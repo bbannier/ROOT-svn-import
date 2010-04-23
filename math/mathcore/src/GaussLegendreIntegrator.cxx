@@ -106,10 +106,7 @@ double GaussLegendreIntegrator::Error() const
 
 int GaussLegendreIntegrator::Status() const
 {
-   // This method is not implemented.
-
-   return 0;
-   // TODO
+   return (fUsedOnce) ? 0 :  -1;
 }
 
 void GaussLegendreIntegrator::SetFunction (const IGenFunction & function)
@@ -117,6 +114,7 @@ void GaussLegendreIntegrator::SetFunction (const IGenFunction & function)
    //  Set integration function.
 
    fFunction = &function;
+   fUsedOnce = false; 
 }
 
 
