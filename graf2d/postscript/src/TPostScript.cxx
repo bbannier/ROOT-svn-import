@@ -614,6 +614,12 @@ void TPostScript::DefineMarkers()
    PrintStr("/m31 {mp x y w2 sub m 0 w d x w2 sub y m w 0 d");
    PrintStr(" x w2 sub y w2 add m w w neg d x w2 sub y w2");
    PrintStr(" sub m w w d s} def@");
+   PrintStr("/m32 {mp x y w2 sub m w2 w d w neg 0 d cl s} def@");
+   PrintStr("/m33 {mp x y w2 add m w3 neg w2 neg d w3 w2 neg d w3 w2 d cl f} def@");
+   PrintStr("/m34 {mp x w2 sub y w2 sub w3 add m w3 0 d ");
+   PrintStr(" 0 w3 neg d w3 0 d 0 w3 d w3 0 d ");
+   PrintStr(" 0 w3 d w3 neg 0 d 0 w3 d w3 neg 0 d");
+   PrintStr(" 0 w3 neg d w3 neg 0 d cl f } def@");
    PrintStr("/m2 {mp x y w2 sub m 0 w d x w2 sub y m w 0 d s} def@");
    PrintStr("/m5 {mp x w2 sub y w2 sub m w w d x w2 sub y w2 add m w w neg d s} def@");
 }
@@ -984,8 +990,8 @@ void TPostScript::DrawPolyMarker(Int_t n, Float_t *x, Float_t *y)
    if (markerstyle == 4) strcpy(chtemp, " m24");
    if (markerstyle == 5) strcpy(chtemp, " m5");
    if (markerstyle >= 6 && markerstyle <= 19) strcpy(chtemp, " m20");
-   if (markerstyle >= 20 && markerstyle <= 31 ) sprintf(chtemp, " m%d", markerstyle);
-   if (markerstyle >= 32) strcpy(chtemp, " m20");
+   if (markerstyle >= 20 && markerstyle <= 34 ) sprintf(chtemp, " m%d", markerstyle);
+   if (markerstyle >= 35) strcpy(chtemp, " m20");
 
    // Set the PostScript marker size
    if (markerstyle == 1) {
@@ -1058,8 +1064,8 @@ void TPostScript::DrawPolyMarker(Int_t n, Double_t *x, Double_t *y)
    if (markerstyle == 4) strcpy(chtemp, " m24");
    if (markerstyle == 5) strcpy(chtemp, " m5");
    if (markerstyle >= 6 && markerstyle <= 19) strcpy(chtemp, " m20");
-   if (markerstyle >= 20 && markerstyle <= 31 ) sprintf(chtemp, " m%d", markerstyle);
-   if (markerstyle >= 32) strcpy(chtemp, " m20");
+   if (markerstyle >= 20 && markerstyle <= 34 ) sprintf(chtemp, " m%d", markerstyle);
+   if (markerstyle >= 35) strcpy(chtemp, " m20");
 
    // Set the PostScript marker size
    if (markerstyle == 1) {
@@ -1442,6 +1448,8 @@ void TPostScript::Initialize()
    // +------------+------------------+-----------------------------------+
    // |     ita    |                  | Used to make the symbols italic   |
    // +------------+------------------+-----------------------------------+
+   // |     K      |                  | kshow                             |
+   // +------------+------------------+-----------------------------------+
 
    Double_t rpxmin, rpymin, width, heigth;
    rpxmin = rpymin = width = heigth = 0;
@@ -1533,6 +1541,7 @@ void TPostScript::Initialize()
    PrintStr("/box {m dup 0 exch d exch 0 d 0 exch neg d cl} def@");
    PrintStr("/NC{systemdict begin initclip end}def/C{NC box clip newpath}def@");
    PrintStr("/bl {box s} def /bf {box f} def /Y { 0 exch d} def /X { 0 d} def @");
+   PrintStr("/K {{pop pop 0 moveto} exch kshow} bind def@");
    PrintStr("/ita {/ang 15 def gsave [1 0 ang dup sin exch cos div 1 0 0] concat} def @");
 
    DefineMarkers();
@@ -2353,12 +2362,17 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
       y -= 0.4*tsizey*TMath::Cos(kDEGRAD*fTextAngle);
       x += 0.4*tsizex*TMath::Sin(kDEGRAD*fTextAngle);
    }
-   UInt_t w, h;
 
+   UInt_t w,w0;
+   Bool_t kerning;
    TText t;
    t.SetTextSize(fTextSize);
    t.SetTextFont(fTextFont);
-   t.GetTextExtent(w, h, chars);
+   t.GetTextAdvance(w, chars);
+   t.GetTextAdvance(w0, chars, kFALSE);
+   if (w0-w>0) kerning = kTRUE;
+   else        kerning = kFALSE;
+
    Double_t charsLength = gPad->AbsPixeltoX(w)-gPad->AbsPixeltoX(0);
    Int_t psCharsLength = XtoPS(charsLength)-XtoPS(0);
 
@@ -2388,14 +2402,35 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
    if(txalh == 3) PrintStr(Form(" %d 0 t ", -psCharsLength));
    PrintStr(psfont[font-1]);
    if (font != 15) {
-     PrintStr(Form(" findfont %g sf 0 0 m (",fontsize));
+     PrintStr(Form(" findfont %g sf 0 0 m ",fontsize));
    } else {
-     PrintStr(Form(" findfont %g sf 0 0 m ita (",fontsize));
+     PrintStr(Form(" findfont %g sf 0 0 m ita ",fontsize));
+   }
+
+   Int_t len=strlen(chars);
+
+   if (kerning) {
+      // Calculate the individual character placements.
+      PrintStr("@");
+      Int_t *charWidthsCumul = new Int_t[len];
+      for (Int_t i = len - 1;i >= 0;i--) {
+         UInt_t ww;
+         t.GetTextAdvance(ww, chars + i);
+         Double_t wwl = gPad->AbsPixeltoX(ww)-gPad->AbsPixeltoX(0);
+         charWidthsCumul[i] = XtoPS(wwl) - XtoPS(0);
+      }
+
+      // Output individual character placements
+      for (Int_t i = len-1; i >= 1; i--) {
+         WriteInteger(charWidthsCumul[0] - charWidthsCumul[i]);
+      }
+      delete [] charWidthsCumul;
+      PrintStr("@");
    }
 
    // Output text.
+   PrintStr("(");
    char str[8];
-   Int_t len=strlen(chars);
    for (Int_t i=0; i<len;i++) {
       if (chars[i]!='\n') {
          if (chars[i]=='(' || chars[i]==')') {
@@ -2410,10 +2445,12 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
       }
    }
 
-   if (font != 15) {
-      PrintStr(") show NC");
+   if (kerning) {
+      if (font != 15) PrintStr(") K NC");
+      else            PrintStr(") K gr NC");
    } else {
-      PrintStr(") show gr NC");
+      if (font != 15) PrintStr(") show NC");
+      else            PrintStr(") show gr NC");
    }
 
    SaveRestore(-1);

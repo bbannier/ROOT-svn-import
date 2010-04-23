@@ -2852,7 +2852,6 @@ void TBranchElement::ReadLeaves(TBuffer& b)
    // -- Read leaves into i/o buffers for this branch.
 
    ValidateAddress();
-
    R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
 
    if (fTree->GetMakeClass()) {
@@ -3084,6 +3083,13 @@ void TBranchElement::ReadLeaves(TBuffer& b)
       }
    }
 
+   if (fObject == 0) 
+   {
+      // We have nowhere to copy the data (probably because the data member was
+      // 'dropped' from the current schema) so let's no copy it in a random place.
+      return;
+   }
+   
    // If not a TClonesArray or STL container master branch
    // or sub-branch and branch inherits from tobject,
    // then register with the buffer so that pointers are
@@ -3375,7 +3381,7 @@ void TBranchElement::ResetDeleteObject()
    Int_t nb = fBranches.GetEntriesFast();
    for (Int_t i = 0; i < nb; ++i)  {
       TBranch* br = (TBranch*) fBranches[i];
-      if (br->InheritsFrom("TBranchElement")) {
+      if (br->InheritsFrom(TBranchElement::Class())) {
          ((TBranchElement*) br)->ResetDeleteObject();
       }
    }
@@ -4274,7 +4280,7 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
       if (elem->IsA() == TStreamerBase::Class()) {
          // -- This is a base class of cl.
          TClass* clOfBase = TClass::GetClass(elem->GetName());
-         if ((clOfBase->Property() & kIsAbstract) && cl->InheritsFrom("TCollection")) {
+         if ((clOfBase->Property() & kIsAbstract) && cl->InheritsFrom(TCollection::Class())) {
             // -- Do nothing if we are abstract.
             // FIXME: We should not test for TCollection here.
             return -1;
@@ -4442,3 +4448,16 @@ void TBranchElement::ValidateAddress() const
    }
 }
 
+//______________________________________________________________________________
+void TBranchElement::UpdateFile()
+{
+   // Refresh the value of fDirectory (i.e. where this branch writes/reads its buffers)
+   // with the current value of fTree->GetCurrentFile unless this branch has been
+   // redirected to a different file.  Also update the sub-branches.
+
+   // The BranchCount and BranchCount2 are part of higher level branches' list of
+   // branches.
+   // if (fBranchCount) fBranchCount->UpdateFile();
+   // if (fBranchCount2) fBranchCount2->UpdateFile();
+   TBranch::UpdateFile();
+}

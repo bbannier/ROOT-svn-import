@@ -488,7 +488,7 @@ TTree::TTree()
 , fAutoSave( -300000000)
 , fAutoFlush(-30000000)
 , fEstimate(1000000)
-, fCacheSize(10000000)
+, fCacheSize(0)
 , fChainOffset(0)
 , fReadEntry(-1)
 , fTotalBuffers(0)
@@ -550,7 +550,7 @@ TTree::TTree(const char* name, const char* title, Int_t splitlevel /* = 99 */)
 , fAutoSave( -300000000)
 , fAutoFlush(-30000000)
 , fEstimate(1000000)
-, fCacheSize(10000000)
+, fCacheSize(0)
 , fChainOffset(0)
 , fReadEntry(-1)
 , fTotalBuffers(0)
@@ -722,7 +722,7 @@ void TTree::AddBranchToCache(const char*bname, Bool_t subbranches)
 {
    // Add branch with name bname to the Tree cache.
    // If bname="*" all branches are added to the cache.
-   // if subbranches is true all the branches of the subbranches are 
+   // if subbranches is true all the branches of the subbranches are
    // also put to the cache.
 
    TFile *f = GetCurrentFile();
@@ -735,7 +735,7 @@ void TTree::AddBranchToCache(const char*bname, Bool_t subbranches)
 void TTree::AddBranchToCache(TBranch *b, Bool_t subbranches)
 {
    // Add branch b to the Tree cache.
-   // if subbranches is true all the branches of the subbranches are 
+   // if subbranches is true all the branches of the subbranches are
    // also put to the cache.
 
    TFile *f = GetCurrentFile();
@@ -1547,7 +1547,7 @@ TBranch* TTree::BranchOld(const char* name, const char* classname, void* addobj,
          if (!dm->IsBasic()) {
             clobj = TClass::GetClass(dm->GetTypeName());
          }
-         if (clobj && clobj->InheritsFrom("TClonesArray")) {
+         if (clobj && clobj->InheritsFrom(TClonesArray::Class())) {
             // We have a pointer to a clones array.
             char* cpointer = (char*) pointer;
             char** ppointer = (char**) cpointer;
@@ -2106,7 +2106,7 @@ TStreamerInfo* TTree::BuildStreamerInfo(TClass* cl, void* pointer /* = 0 */, Boo
       sinfo->SetBit(TVirtualStreamerInfo::kCannotOptimize);
       sinfo->Compile();
    }
-   
+
    // Create StreamerInfo for all base classes.
    TBaseClass* base = 0;
    TIter nextb(cl->GetListOfBases());
@@ -2227,7 +2227,7 @@ TFile* TTree::ChangeFile(TFile* file)
          continue;
       }
       // Tree: must save all trees in the old file, reset them.
-      if (obj->InheritsFrom("TTree")) {
+      if (obj->InheritsFrom(TTree::Class())) {
          TTree* t = (TTree*) obj;
          if (t != this) {
             t->AutoSave();
@@ -2417,14 +2417,14 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
    //            that change stays in effect.  When this tree is deleted, all the
    //            addresses of the cloned tree are reset to their default values.
    //
-   // If 'option' contains the word 'fast' and nentries is -1 and no branch
-   // is disabled, the clone will be done without unzipping or unstreaming
-   // the baskets (i.e., a direct copy of the raw bytes on disk).
+   // If 'option' contains the word 'fast' and nentries is -1, the cloning will be
+   // done without unzipping or unstreaming the baskets (i.e., a direct copy of the
+   // raw bytes on disk).
    //
    // When 'fast' is specified, 'option' can also contains a
    // sorting order for the baskets in the output file.
    //
-   // There is currently 3 supported sorting order:
+   // There are currently 3 supported sorting order:
    //    SortBasketsByOffset (the default)
    //    SortBasketsByBranch
    //    SortBasketsByEntry
@@ -2500,7 +2500,7 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
    Int_t nb = branches->GetEntriesFast();
    for (Int_t i = 0; i < nb; ++i) {
       TBranch* br = (TBranch*) branches->UncheckedAt(i);
-      if (br->InheritsFrom("TBranchElement")) {
+      if (br->InheritsFrom(TBranchElement::Class())) {
          ((TBranchElement*) br)->ResetDeleteObject();
       }
    }
@@ -2595,73 +2595,17 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
    // Copy entries if requested.
    //
 
-   if (fastClone && (nentries < 0)) {
-      // Quickly copy the basket without decompression and streaming.
-      nentries = GetEntriesFast();
-      for (Long64_t i = 0; i < nentries; i += this->GetTree()->GetEntries()) {
-         if (LoadTree(i) < 0) {
-            break;
+   if (nentries != 0) {
+      if (fastClone && (nentries < 0)) {
+         if ( newtree->CopyEntries( this, -1, option ) < 0 ) {
+            // There was a problem!
+            Error("Merge", "TTree has not been cloned\n");
+            delete newtree;
+            newtree = 0;
+            return 0;
          }
-         if (newtree->fDirectory) {
-            TFile* file = newtree->fDirectory->GetFile();
-            if (file && (file->GetEND() > fgMaxTreeSize)) {
-               if (newtree->fDirectory == (TDirectory*) file) {
-                  newtree->ChangeFile(file);
-               }
-            }
-         }
-         TTreeCloner cloner(GetTree(), newtree, option, TTreeCloner::kNoWarnings);
-         if (cloner.IsValid()) {
-            newtree->SetEntries(newtree->GetEntries() + GetTree()->GetEntries());
-            cloner.Exec();
-         } else {
-            if (!i) {
-               Error("CloneTree", "Tree has not been cloned\n");
-               delete newtree;
-               newtree = 0;
-               return 0;
-            } else {
-               if (cloner.NeedConversion()) {
-                  TTree *localtree = GetTree();
-                  Long64_t tentries = localtree->GetEntries();
-                  for (Long64_t j = 0; j < tentries; j++) {
-                     if (localtree->GetEntry(j) <= 0) {
-                        break;
-                     }
-                     newtree->Fill();
-                  }
-                  if (newtree->GetTreeIndex()) {
-                     newtree->GetTreeIndex()->Append(GetTree()->GetTreeIndex(), kTRUE);
-                  }
-               } else {
-                  Warning("CloneTree",cloner.GetWarning());
-                  if (GetCurrentFile()) {
-                     Warning("CloneTree", "Skipped file %s\n", GetCurrentFile()->GetName());
-                  } else {
-                     Warning("CloneTree", "Skipped file number %d\n", GetTreeNumber());
-                  }
-               }
-            }
-         }
-      }
-   } else {
-      // Maybe copy some entries.
-      if (nentries < 0) {
-         nentries = fEntries;
-      }
-      if (nentries > fEntries) {
-         nentries = fEntries;
-      }
-      for (Long64_t i = 0; i < nentries; ++i) {
-         // Loop over specified entries and copy.
-         // If we are a chain, we must switch input files as necessary.
-         Long64_t localEntry = LoadTree(i);
-         if (localEntry < 0) {
-            // FIXME: We need an error message here.
-            break;
-         }
-         GetEntry(i);
-         newtree->Fill();
+      } else {
+         newtree->CopyEntries( this, nentries, option );
       }
    }
 
@@ -2699,7 +2643,7 @@ void TTree::CopyAddresses(TTree* tree, Bool_t undo)
          if (br) {
             br->SetAddress(addr);
             // The copy does not own any object allocated by SetAddress().
-            if (br->InheritsFrom("TBranchElement")) {
+            if (br->InheritsFrom(TBranchElement::Class())) {
                ((TBranchElement*) br)->ResetDeleteObject();
             }
          } else {
@@ -2745,7 +2689,7 @@ void TTree::CopyAddresses(TTree* tree, Bool_t undo)
             if (br) {
                // The copy does not own any object allocated by SetAddress().
                // FIXME: We do too much here, br may not be a top-level branch.
-               if (br->InheritsFrom("TBranchElement")) {
+               if (br->InheritsFrom(TBranchElement::Class())) {
                   ((TBranchElement*) br)->ResetDeleteObject();
                }
             } else {
@@ -2764,33 +2708,218 @@ void TTree::CopyAddresses(TTree* tree, Bool_t undo)
    }
 }
 
+namespace {
+
+   enum EOnIndexError { kDrop, kKeep, kBuild };
+
+   static bool R__HandleIndex(EOnIndexError onIndexError, TTree *newtree, TTree *oldtree)
+   {
+      // Return true if we should continue to handle indices, false otherwise.
+
+      bool withIndex = kTRUE;
+
+      if ( newtree->GetTreeIndex() ) {
+         if ( oldtree->GetTree()->GetTreeIndex() == 0 ) {
+            switch (onIndexError) {
+               case kDrop:
+                  delete newtree->GetTreeIndex();
+                  newtree->SetTreeIndex(0);
+                  withIndex = kFALSE;
+                  break;
+               case kKeep:
+                  // Nothing to do really.
+                  break;
+               case kBuild:
+                  // Build the index then copy it
+                  oldtree->GetTree()->BuildIndex(newtree->GetTreeIndex()->GetMajorName(), newtree->GetTreeIndex()->GetMinorName());
+                  newtree->GetTreeIndex()->Append(oldtree->GetTree()->GetTreeIndex(), kTRUE);
+                  // Clean up
+                  delete oldtree->GetTree()->GetTreeIndex();
+                  oldtree->GetTree()->SetTreeIndex(0);
+                  break;
+            }
+         } else {
+            newtree->GetTreeIndex()->Append(oldtree->GetTree()->GetTreeIndex(), kTRUE);
+         }
+      } else if ( oldtree->GetTree()->GetTreeIndex() != 0 ) {
+         // We discover the first index in the middle of the chain.
+         switch (onIndexError) {
+            case kDrop:
+               // Nothing to do really.
+               break;
+            case kKeep: {
+               TVirtualIndex *index = (TVirtualIndex*) oldtree->GetTree()->GetTreeIndex()->Clone();
+               index->SetTree(newtree);
+               newtree->SetTreeIndex(index);
+               break;
+            }
+            case kBuild:
+               if (newtree->GetEntries() == 0) {
+                  // Start an index.
+                  TVirtualIndex *index = (TVirtualIndex*) oldtree->GetTree()->GetTreeIndex()->Clone();
+                  index->SetTree(newtree);
+                  newtree->SetTreeIndex(index);
+               } else {
+                  // Build the index so far.
+                  newtree->BuildIndex(oldtree->GetTree()->GetTreeIndex()->GetMajorName(), oldtree->GetTree()->GetTreeIndex()->GetMinorName());
+                  newtree->GetTreeIndex()->Append(oldtree->GetTree()->GetTreeIndex(), kTRUE);
+               }
+               break;
+         }
+      } else if ( onIndexError == kDrop ) {
+         // There is no index on this or on tree->GetTree(), we know we have to ignore any further
+         // index
+         withIndex = kFALSE;
+      }
+      return withIndex;
+   }
+}
+
 //______________________________________________________________________________
-Long64_t TTree::CopyEntries(TTree* tree, Long64_t nentries /* = -1 */)
+Long64_t TTree::CopyEntries(TTree* tree, Long64_t nentries /* = -1 */, Option_t* option /* = "" */)
 {
    // Copy nentries from given tree to this tree.
+   // This routines assumes that the branches that intended to be copied are
+   // already connected.   The typical case is that this tree was created using
+   // tree->CloneTree(0).
    //
    // By default copy all entries.
    //
    // Returns number of bytes copied to this tree.
    //
+   // If 'option' contains the word 'fast' and nentries is -1, the cloning will be
+   // done without unzipping or unstreaming the baskets (i.e., a direct copy of the
+   // raw bytes on disk).
+   //
+   // When 'fast' is specified, 'option' can also contains a sorting order for the
+   // baskets in the output file.
+   //
+   // There are currently 3 supported sorting order:
+   //    SortBasketsByOffset (the default)
+   //    SortBasketsByBranch
+   //    SortBasketsByEntry
+   //
+   // See TTree::CloneTree for a detailed explanation of the semantics of these 3 options.
+   //
+   // If the tree or any of the underlying tree of the chain has an index, that index and any
+   // index in the subsequent underlying TTree objects will be merged.
+   //
+   // There are currently three 'options' to control this merging:
+   //    NoIndex             : all the TTreeIndex object are dropped.
+   //    DropIndexOnError    : if any of the underlying TTree object do no have a TTreeIndex,
+   //                          they are all dropped.
+   //    AsIsIndexOnError [default]: In case of missing TTreeIndex, the resulting TTree index has gaps.
+   //    BuildIndexOnError : If any of the underlying TTree object do no have a TTreeIndex,
+   //                          all TTreeIndex are 'ignored' and the mising piece are rebuilt.
 
    if (!tree) {
       return 0;
    }
+   // Options
+   TString opt = option;
+   opt.ToLower();
+   Bool_t fastClone = opt.Contains("fast");
+   Bool_t withIndex = !opt.Contains("noindex");
+   EOnIndexError onIndexError;
+   if (opt.Contains("asisindex")) {
+      onIndexError = kKeep;
+   } else if (opt.Contains("buildindex")) {
+      onIndexError = kBuild;
+   } else if (opt.Contains("dropindex")) {
+      onIndexError = kDrop;
+   } else {
+      onIndexError = kBuild;
+   }
+
    Long64_t nbytes = 0;
    Long64_t treeEntries = tree->GetEntriesFast();
    if (nentries < 0) {
       nentries = treeEntries;
-   }
-   if (nentries > treeEntries) {
+   } else if (nentries > treeEntries) {
       nentries = treeEntries;
    }
-   for (Long64_t i = 0; i < nentries; ++i) {
-      if (tree->LoadTree(i) < 0) {
-         break;
+
+   if (fastClone && (nentries < 0 || nentries == tree->GetEntriesFast())) {
+      // Quickly copy the basket without decompression and streaming.
+      Long64_t totbytes = GetTotBytes();
+      for (Long64_t i = 0; i < nentries; i += tree->GetTree()->GetEntries()) {
+         if (tree->LoadTree(i) < 0) {
+            break;
+         }
+         if ( withIndex ) {
+            withIndex = R__HandleIndex( onIndexError, this, tree );
+         }
+         if (this->GetDirectory()) {
+            TFile* file2 = this->GetDirectory()->GetFile();
+            if (file2 && (file2->GetEND() > TTree::GetMaxTreeSize())) {
+               if (this->GetDirectory() == (TDirectory*) file2) {
+                  this->ChangeFile(file2);
+               }
+            }
+         }
+         TTreeCloner cloner(tree->GetTree(), this, option, TTreeCloner::kNoWarnings);
+         if (cloner.IsValid()) {
+            this->SetEntries(this->GetEntries() + tree->GetTree()->GetEntries());
+            cloner.Exec();
+         } else {
+            if (i == 0) {
+               // If the first cloning does not work, something is really wrong
+               // (since apriori the source and target are exactly the same structure!)
+               return -1;
+            } else {
+               if (cloner.NeedConversion()) {
+                  TTree *localtree = tree->GetTree();
+                  Long64_t tentries = localtree->GetEntries();
+                  for (Long64_t ii = 0; ii < tentries; ii++) {
+                     if (localtree->GetEntry(ii) <= 0) {
+                        break;
+                     }
+                     this->Fill();
+                  }
+                  if (this->GetTreeIndex()) {
+                     this->GetTreeIndex()->Append(tree->GetTree()->GetTreeIndex(), kTRUE);
+                  }
+               } else {
+                  Warning("CopyEntries",cloner.GetWarning());
+                  if (tree->GetDirectory() && tree->GetDirectory()->GetFile()) {
+                     Warning("CopyEntries", "Skipped file %s\n", tree->GetDirectory()->GetFile()->GetName());
+                  } else {
+                     Warning("CopyEntries", "Skipped file number %d\n", tree->GetTreeNumber());
+                  }
+               }
+            }
+         }
+
       }
-      tree->GetEntry(i);
-      nbytes += Fill();
+      if (this->GetTreeIndex()) {
+         this->GetTreeIndex()->Append(0,kFALSE); // Force the sorting
+      }
+      nbytes = GetTotBytes() - totbytes;
+   } else {
+      if (nentries < 0) {
+         nentries = treeEntries;
+      } else if (nentries > treeEntries) {
+         nentries = treeEntries;
+      }
+      Int_t treenumber = -1;
+      for (Long64_t i = 0; i < nentries; i++) {
+         if (tree->LoadTree(i) < 0) {
+            break;
+         }
+         if (treenumber != tree->GetTreeNumber()) {
+            if ( withIndex ) {
+               withIndex = R__HandleIndex( onIndexError, this, tree );
+            }
+            treenumber = tree->GetTreeNumber();
+         }
+         if (tree->GetEntry(i) <= 0) {
+            break;
+         }
+         nbytes += this->Fill();
+      }
+      if (this->GetTreeIndex()) {
+         this->GetTreeIndex()->Append(0,kFALSE); // Force the sorting
+      }
    }
    return nbytes;
 }
@@ -2940,6 +3069,14 @@ void TTree::DirectoryAutoAdd(TDirectory* dir)
    if (fDirectory == dir) return;
    if (fDirectory) fDirectory->Remove(this);
    fDirectory = dir;
+   TBranch* b = 0;
+   TIter next(GetListOfBranches());
+   while((b = (TBranch*) next())) {
+      b->UpdateFile();
+   }
+   if (fBranchRef) {
+      fBranchRef->UpdateFile();
+   }
    if (fDirectory) fDirectory->Append(this);
 }
 
@@ -3539,7 +3676,7 @@ Int_t TTree::Fill()
    //
    //   Note that calling FlushBaskets too often increases the IO time.
    //   Note that calling AutoSave too often increases the IO time and also the file size.
-   
+
    Int_t nbytes = 0;
    Int_t nerror = 0;
    Int_t nb = fBranches.GetEntriesFast();
@@ -4504,10 +4641,9 @@ const char* TTree::GetFriendAlias(TTree* tree) const
       if (t == tree) {
          return fe->GetName();
       }
-      if (t->IsA()->InheritsFrom("TChain")) {
-         if (t->GetTree() == tree) {
-            return fe->GetName();
-         }
+      // Case of a chain:
+      if (t->GetTree() == tree) {
+         return fe->GetName();
       }
    }
    // After looking at the first level,
@@ -4567,8 +4703,27 @@ TLeaf* TTree::GetLeaf(const char* aname)
    while ((leaf = (TLeaf*)nextl())) {
       if (strcmp(leaf->GetName(),name)) continue;
       if (slash) {
-         const char* brname = leaf->GetBranch()->GetName();
-         if (strncmp(brname,aname,nbch)) continue;
+         TBranch *br = leaf->GetBranch();
+         const char* brname = br->GetName();
+         TBranch *mother = br->GetMother();
+         if (strncmp(brname,aname,nbch)) {
+            if (mother != br) {
+               const char *mothername = mother->GetName();
+               UInt_t motherlen = strlen(mothername);
+               if (nbch > motherlen && strncmp(mothername,aname,motherlen)==0 && (mothername[motherlen-1]=='.' || aname[motherlen]=='.')) {
+                  // The left part of the requested name match the name of the mother, let's see if the right part match the name of the branch.
+                  if (strncmp(brname,aname+motherlen+1,nbch-motherlen-1)) {
+                     // No it does not
+                     continue;
+                  } // else we have match so we can proceed.
+               } else {
+                  // no match
+                  continue;
+               }
+            } else {
+               continue;
+            }
+         }
          // The start of the branch name is indentical to the content
          // of 'aname' before the first '/'.
          // Let's make sure that it is not longer (we are trying
@@ -4831,6 +4986,7 @@ Long64_t TTree::LoadTree(Long64_t entry)
    }
 
    if ((fReadEntry >= fEntries) && !friendHasEntry) {
+      fReadEntry = -1;
       return -2;
    }
    return fReadEntry;
@@ -5215,7 +5371,7 @@ void TTree::OptimizeBaskets(Int_t maxMemory, Float_t minComp, Option_t *option)
    TObjArray *leaves = this->GetListOfLeaves();
    Int_t nleaves = leaves->GetEntries();
    Double_t treeSize = (Double_t)this->GetTotBytes();
-   
+
    if (nleaves == 0 || treeSize == 0) {
       // We're being called too early, we really have nothing to do ...
       return;
@@ -5537,7 +5693,7 @@ Long64_t TTree::Project(const char* hname, const char* varexp, const char* selec
 
    TString var;
    var.Form("%s>>%s", varexp, hname);
-   TString opt("goff");   
+   TString opt("goff");
    if (option) {
       opt.Form("%sgoff", option);
    }
@@ -5795,6 +5951,9 @@ void TTree::Reset(Option_t* option)
    fTotalBuffers = 0;
    fChainOffset = 0;
    fReadEntry = -1;
+
+   delete fTreeIndex;
+   fTreeIndex = 0;
 
    Int_t nb = fBranches.GetEntriesFast();
    for (Int_t i = 0; i < nb; ++i)  {
@@ -6663,10 +6822,20 @@ void TTree::Show(Long64_t entry, Int_t lenmax)
    // if a leaf is an array, a maximum of lenmax elements is printed.
    //
    if (entry != -1) {
-      Int_t ret = GetEntry(entry);
-      if (ret == -1 || ret == 0) {
-         Error("Show()", "Cannot read entry %lld (%s)",
-               entry, ret == -1 ? "I/O error" : "entry does not exist");
+      Int_t ret = LoadTree(entry);
+      if (ret == -2) {
+         Error("Show()", "Cannot read entry %lld (entry does not exist)", entry);
+         return;
+      } else if (ret == -1) {
+         Error("Show()", "Cannot read entry %lld (I/O error)", entry);
+         return;
+      }
+      ret = GetEntry(entry);
+      if (ret == -1) {
+         Error("Show()", "Cannot read entry %lld (I/O error)", entry);
+         return;
+      } else if (ret == 0) {
+         Error("Show()", "Cannot read entry %lld (no data read)", entry);
          return;
       }
    }

@@ -79,8 +79,10 @@ TProofMgr::TProofMgr(const char *url, Int_t, const char *alias)
    }
 
    // Check and save the host FQDN ...
-   if (strcmp(fUrl.GetHost(), fUrl.GetHostFQDN()))
-      fUrl.SetHost(fUrl.GetHostFQDN());
+   if (strcmp(fUrl.GetHost(), "__lite__")) {
+      if (strcmp(fUrl.GetHost(), fUrl.GetHostFQDN()))
+         fUrl.SetHost(fUrl.GetHostFQDN());
+   }
 
    SetName(fUrl.GetUrl(kTRUE));
    if (alias)
@@ -231,7 +233,7 @@ TList *TProofMgr::QuerySessions(Option_t *opt)
       TProof *p = 0;
       Int_t ns = 0;
       while ((o = nxp())) {
-         if (o->InheritsFrom("TProof")) {
+         if (o->InheritsFrom(TProof::Class())) {
             p = (TProof *)o;
             // Only those belonging to this server
             if (MatchUrl(p->GetUrl())) {
@@ -449,7 +451,7 @@ TList *TProofMgr::GetListOfManagers()
       TIter nxp(gROOT->GetListOfProofs());
       TObject *o = 0;
       while ((o = nxp())) {
-         if (o->InheritsFrom("TProofMgr") && !fgListOfManagers.FindObject(o))
+         if (o->InheritsFrom(TProofMgr::Class()) && !fgListOfManagers.FindObject(o))
             fgListOfManagers.Add(o);
       }
    }

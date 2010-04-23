@@ -19,8 +19,10 @@
 #include "TClass.h"
 #include "TSystem.h"
 #include "THistPainter.h"
-#include "TH3.h"
 #include "TH2.h"
+#include "TH3.h"
+#include "TProfile.h"
+#include "THStack.h"
 #include "TF2.h"
 #include "TF3.h"
 #include "TCutG.h"
@@ -1945,6 +1947,52 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
+This option also works for horizontal plots. The example given in the section 
+<a href="http://root.cern.ch/root/html/THistPainter.html#HP100">
+"The bar chart option"</a> appears as follow:
+
+End_Html
+Begin_Macro(source)
+{
+   int i;
+   const Int_t nx = 8;
+   char *os_X[nx]   = {"8","32","128","512","2048","8192","32768","131072"};
+   float d_35_0[nx] = {0.75, -3.30, -0.92, 0.10, 0.08, -1.69, -1.29, -2.37};
+   float d_35_1[nx] = {1.01, -3.02, -0.65, 0.37, 0.34, -1.42, -1.02, -2.10};
+
+   TCanvas *cb = new TCanvas("cbh","cbh",400,600);
+   cbh->SetGrid();
+
+   gStyle->SetHistMinimumZero();
+
+   TH1F *h1bh = new TH1F("h1bh","Option HBAR centered on 0",nx,0,nx);
+   h1bh->SetFillColor(4);
+   h1bh->SetBarWidth(0.4);
+   h1bh->SetBarOffset(0.1);
+   h1bh->SetStats(0);
+   h1bh->SetMinimum(-5);
+   h1bh->SetMaximum(5);
+
+   for (i=1; i<=nx; i++) {
+      h1bh->Fill(os_X[i-1], d_35_0[i-1]);
+      h1bh->GetXaxis()->SetBinLabel(i,os_X[i-1]);
+   }
+
+   h1bh->Draw("hbar");
+
+   TH1F *h2bh = new TH1F("h2bh","h2bh",nx,0,nx);
+   h2bh->SetFillColor(38);
+   h2bh->SetBarWidth(0.4);
+   h2bh->SetBarOffset(0.5);
+   h2bh->SetStats(0);
+   for (i=1;i<=nx;i++) h2bh->Fill(os_X[i-1], d_35_1[i-1]);
+
+   h2bh->Draw("hbar same");
+
+   return cbh;
+}
+End_Macro
+Begin_Html
 
 
 <a name="HP21"></a><h3>The SPEC option</h3>
@@ -3578,8 +3626,8 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
          TObject *obj;
          // Check if the first TH1 of THStack in the pad is drawn with the option HBAR
          while ((obj = next())) {
-            if (!obj->InheritsFrom("TH1") &&
-                !obj->InheritsFrom("THStack")) continue;
+            if (!obj->InheritsFrom(TH1::Class()) &&
+                !obj->InheritsFrom(THStack::Class())) continue;
             TString opt = obj->GetDrawOption();
             opt.ToLower();
             // if drawn with HBAR, the axis should be inverted and the pad set to horizontal
@@ -3889,6 +3937,8 @@ void THistPainter::PaintBarH(Option_t *)
       if (xmax < gPad->GetUxmin()) continue;
       if (xmax > gPad->GetUxmax()) xmax = gPad->GetUxmax();
       if (xmin < gPad->GetUxmin()) xmin = gPad->GetUxmin();
+      if (gStyle->GetHistMinimumZero() && xmin < 0)
+         xmin=TMath::Min(0.,gPad->GetUxmax());
       w    = (ymax-ymin)*width;
       ymin += offset*(ymax-ymin);
       ymax = ymin + w;
@@ -6465,7 +6515,7 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
       if (print_fval < 2) nlinesf += fit->GetNumberFreeParameters();
       else                nlinesf += fit->GetNpar();
    }
-   if (fH->InheritsFrom("TProfile")) nlinesf += print_mean + print_rms;
+   if (fH->InheritsFrom(TProfile::Class())) nlinesf += print_mean + print_rms;
 
    // Pavetext with statistics
    Bool_t done = kFALSE;
@@ -6524,7 +6574,7 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
          sprintf(t,textstats,fH->GetMean(1),fH->GetMeanError(1));
       }
       stats->AddText(t);
-      if (fH->InheritsFrom("TProfile")) {
+      if (fH->InheritsFrom(TProfile::Class())) {
          if (print_mean == 1) {
             sprintf(textstats,"%s = %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat());
             sprintf(t,textstats,fH->GetMean(2));
@@ -6546,7 +6596,7 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
          sprintf(t,textstats,fH->GetRMS(1),fH->GetRMSError(1));
       }
       stats->AddText(t);
-      if(fH->InheritsFrom("TProfile")) {
+      if(fH->InheritsFrom(TProfile::Class())) {
          if (print_rms == 1) {
             sprintf(textstats,"%s = %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat());
             sprintf(t,textstats,fH->GetRMS(2));

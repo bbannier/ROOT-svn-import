@@ -18,16 +18,28 @@ METADS       := $(MODDIRS)/G__Meta.cxx
 METADO       := $(METADS:.cxx=.o)
 METADH       := $(METADS:.cxx=.h)
 
-METAH        := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
-METAH        := $(METAH)
+ifneq ($(BUILDCLING),yes)
+METACL       := $(MODDIRI)/LinkDef_TCint.h
+METACDS      := $(MODDIRS)/G__TCint.cxx
+else
+METACL       :=
+METACDS      :=
+endif
+METACH       := $(MODDIRI)/TCint.h
+METACDO      := $(METACDS:.cxx=.o)
+METACDH      := $(METACDS:.cxx=.h)
+
+METAH        := $(filter-out $(MODDIRI)/TCint.h,$(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h)))
 METAS        := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-METAS        := $(METAS)
+ifeq ($(BUILDCLING),yes)
+METAS        := $(filter-out $(MODDIRS)/TCint.cxx,$(METAS))
+endif
 METAO        := $(METAS:.cxx=.o)
 
-METADEP      := $(METAO:.o=.d) $(METADO:.o=.d)
+METADEP      := $(METAO:.o=.d) $(METADO:.o=.d) $(METACDO:.o=.d)
 
 # used in the main Makefile
-ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(METAH))
+ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(METAH) $(METACH))
 
 # include all dependency files
 INCLUDEFILES += $(METADEP)
@@ -42,14 +54,18 @@ $(METADS):      $(METAH) $(METAL) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."
 		$(ROOTCINTTMP) -f $@ -c -DG__API $(METAH) $(METAL)
 
-all-$(MODNAME): $(METAO) $(METADO)
+$(METACDS):     $(METACH) $(METACL) $(ROOTCINTTMPDEP)
+		@echo "Generating dictionary $@..."
+		$(ROOTCINTTMP) -f $@ -c -DG__API $(METACH) $(METACL)
+
+all-$(MODNAME): $(METAO) $(METADO) $(METACDO)
 
 clean-$(MODNAME):
-		@rm -f $(METAO) $(METADO)
+		@rm -f $(METAO) $(METADO) $(METACDO)
 
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
-		@rm -f $(METADEP) $(METADS) $(METADH)
+		@rm -f $(METADEP) $(METADS) $(METADH) $(METACDS) $(METACDH)
 
 distclean::     distclean-$(MODNAME)

@@ -165,6 +165,7 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
    }
 #endif // G__DUMPFILE
    int nfile = pos->nfile;
+   ++G__srcfile_serial;
    while (G__nfile > nfile) {
       --G__nfile;
       // reset autoload struct entries
@@ -310,6 +311,7 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
 #ifdef G__SHAREDLIB
    while (nperm) {
       --nperm;
+      ++G__srcfile_serial;  // just in case the re-init of the dictionary triggers some autoloading.
       G__srcfile[G__nfile++] = permanentsl[nperm];
       if (permanentsl[nperm].initsl) {
          G__input_file store_ifile = G__ifile;
@@ -1152,6 +1154,7 @@ int G__close_inputfiles()
       G__dump_tracecoverage(G__dumpfile);
    }
 #endif // G__DUMPFILE
+   ++G__srcfile_serial;
    for (iarg = 0;iarg < G__nfile;iarg++) {
       if (G__srcfile[iarg].dictpos) {
          free((void*)G__srcfile[iarg].dictpos);

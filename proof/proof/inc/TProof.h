@@ -39,6 +39,9 @@
 #ifndef ROOT_TMD5
 #include "TMD5.h"
 #endif
+#ifndef ROOT_TRegexp
+#include "TRegexp.h"
+#endif
 #ifndef ROOT_TSysEvtHandler
 #include "TSysEvtHandler.h"
 #endif
@@ -118,7 +121,7 @@ class TMacro;
 // 24 -> 25: Handling of 'data' dir; group information
 // 25 -> 26: Use new TProofProgressInfo class
 // 26 -> 27: Use new file for updating the session status
-// 27 -> 28: Support for multi-datasets, fix global package directories, fix AskStatistics,
+// 27 -> 28: Support for multi-datasets, fix global pack dirs, fix AskStatistics, package download
 
 // PROOF magic constants
 const Int_t       kPROOF_Protocol        = 28;            // protocol version number
@@ -128,6 +131,7 @@ const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config
 const char* const kPROOF_WorkDir         = ".proof";      // default working directory
 const char* const kPROOF_CacheDir        = "cache";       // file cache dir, under WorkDir
 const char* const kPROOF_PackDir         = "packages";    // package dir, under WorkDir
+const char* const kPROOF_PackDownloadDir = "downloaded";  // subdir with downloaded PARs, under PackDir
 const char* const kPROOF_QueryDir        = "queries";     // query dir, under WorkDir
 const char* const kPROOF_DataSetDir      = "datasets";    // dataset dir, under WorkDir
 const char* const kPROOF_DataDir         = "data";        // dir for produced data, under WorkDir
@@ -594,13 +598,13 @@ private:
    void     RecvLogFile(TSocket *s, Int_t size);
    void     NotifyLogMsg(const char *msg, const char *sfx = "\n");
    Int_t    BuildPackage(const char *package, EBuildPackageOpt opt = kBuildAll);
-   Int_t    BuildPackageOnClient(const TString &package);
+   Int_t    BuildPackageOnClient(const char *package, Int_t opt = 0, TString *path = 0);
    Int_t    LoadPackage(const char *package, Bool_t notOnClient = kFALSE);
-   Int_t    LoadPackageOnClient(const TString &package);
+   Int_t    LoadPackageOnClient(const char *package);
    Int_t    UnloadPackage(const char *package);
    Int_t    UnloadPackageOnClient(const char *package);
    Int_t    UnloadPackages();
-   Int_t    UploadPackageOnClient(const TString &package, EUploadPackageOpt opt, TMD5 *md5);
+   Int_t    UploadPackageOnClient(const char *package, EUploadPackageOpt opt, TMD5 *md5);
    Int_t    DisablePackage(const char *package);
    Int_t    DisablePackageOnClient(const char *package);
    Int_t    DisablePackages();
@@ -676,6 +680,8 @@ private:
    Bool_t   Prompt(const char *p);
    void     ClearDataProgress(Int_t r, Int_t t);
 
+   static TList *GetDataSetSrvMaps(const TString &srvmaps);
+
 protected:
    TProof(); // For derived classes to use
    void  InitMembers();
@@ -726,6 +732,9 @@ protected:
 
    // Parse CINT commands
    static Bool_t GetFileInCmd(const char *cmd, TString &fn);
+
+   // Pipe execution of commands
+   static void SystemCmd(const char *cmd, Int_t fdout);
 
 public:
    TProof(const char *masterurl, const char *conffile = kPROOF_ConfFile,
@@ -785,10 +794,11 @@ public:
    virtual void ClearCache(const char *file = 0);
    TList      *GetListOfPackages();
    TList      *GetListOfEnabledPackages();
-   void        ShowPackages(Bool_t all = kFALSE);
+   void        ShowPackages(Bool_t all = kFALSE, Bool_t redirlog = kFALSE);
    void        ShowEnabledPackages(Bool_t all = kFALSE);
    Int_t       ClearPackages();
    Int_t       ClearPackage(const char *package);
+   Int_t       DownloadPackage(const char *par, const char *dstdir = 0);
    Int_t       EnablePackage(const char *package, Bool_t notOnClient = kFALSE);
    Int_t       UploadPackage(const char *par, EUploadPackageOpt opt = kUntar);
    Int_t       Load(const char *macro, Bool_t notOnClient = kFALSE, Bool_t uniqueOnly = kTRUE,

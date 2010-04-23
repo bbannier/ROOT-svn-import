@@ -1,4 +1,4 @@
-// @(#)root/memstat:$Id$
+// @(#)root/memstat:$Id: TMemStat.h 32666 2010-03-18 07:08:15Z rdm $
 // Author: Anar Manafov (A.Manafov@gsi.de) 2008-03-02
 
 /*************************************************************************
@@ -13,13 +13,13 @@
 
 class TMemStat: public TObject {
 private:
-   Bool_t fIsActive;              // is object attached to MemStat
+   Bool_t fIsActive;    // is object attached to MemStat
 
 public:
    TMemStat(Option_t* option = "read");
    virtual ~TMemStat();
 
-   ClassDef(TMemStat, 0) // a user interface class of yams
+   ClassDef(TMemStat, 0) // a user interface class of MemStat
 };
 
 #endif

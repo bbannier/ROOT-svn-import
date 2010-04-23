@@ -81,6 +81,15 @@ using namespace std;
 TVirtualMutex* gCINTMutex = 0;
 
 void *gMmallocDesc = 0; //is used and set in TMapFile
+namespace {
+   class TMmallocDescTemp {
+   private:
+      void *fSave;
+   public:
+      TMmallocDescTemp(void *value = 0) : fSave(gMmallocDesc) { gMmallocDesc = value; }
+      ~TMmallocDescTemp() { gMmallocDesc = fSave; }
+   };
+}
 
 Int_t TClass::fgClassCount;
 TClass::ENewType TClass::fgCallingNew = kRealNew;
@@ -909,11 +918,10 @@ void TClass::Init(const char *name, Version_t cversion,
    // Advertise ourself as the loading class for this class name
    TClass::AddClass(this);
 
-   Bool_t isStl = kFALSE;
+   Bool_t isStl = TClassEdit::IsSTLCont(fName);
 
    if (!fClassInfo) {
       Bool_t shouldLoad = kFALSE;
-      isStl = TClassEdit::IsSTLCont(fName);
 
       if (gInterpreter->CheckClassInfo(fName)) shouldLoad = kTRUE;
       else if (fImplFileLine>=0) {
@@ -1012,9 +1020,7 @@ void TClass::Init(const char *name, Version_t cversion,
 
    ResetBit(kLoading);
 
-   Int_t stl = TClassEdit::IsSTLCont(GetName(), 0);
-
-   if ( stl || !strncmp(GetName(),"stdext::hash_",13) || !strncmp(GetName(),"__gnu_cxx::hash_",16) ) {
+   if ( isStl || !strncmp(GetName(),"stdext::hash_",13) || !strncmp(GetName(),"__gnu_cxx::hash_",16) ) {
       fCollectionProxy = TVirtualStreamerInfo::Factory()->GenEmulatedProxy( GetName() );
       if (fCollectionProxy) {
          fSizeof = fCollectionProxy->Sizeof();
@@ -1499,6 +1505,10 @@ void TClass::BuildRealData(void* pointer, Bool_t isTransient)
       return;
    }
 
+   // When called via TMapFile (e.g. Update()) make sure that the dictionary
+   // gets allocated on the heap and not in the mapped file.
+   TMmallocDescTemp setreset;
+
    // Handle emulated classes and STL containers specially.
    if (!fClassInfo || TClassEdit::IsSTLCont(GetName(), 0) || TClassEdit::IsSTLBitset(GetName())) {
       // We are an emulated class or an STL container.
@@ -1654,6 +1664,9 @@ void TClass::CalculateStreamerOffset() const
    // Streamer() and ShowMembers().
    R__LOCKGUARD(gCINTMutex);
    if (!fInterStreamer && fClassInfo) {
+      // When called via TMapFile (e.g. Update()) make sure that the dictionary
+      // gets allocated on the heap and not in the mapped file.
+      TMmallocDescTemp setreset;
       CallFunc_t *f  = gCint->CallFunc_Factory();
       gCint->CallFunc_SetFuncProto(f,fClassInfo,"Streamer","TBuffer&",&fOffsetStreamer);
       fInterStreamer = f;
@@ -2289,16 +2302,24 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
    if (!gROOT->GetListOfClasses())    return 0;
 
    TClass *cl = (TClass*)gROOT->GetListOfClasses()->FindObject(name);
+   
+   TClassEdit::TSplitType splitname( name, TClassEdit::kLong64 );
 
    if (!cl) {
       // Try the name where we strip out the STL default template arguments
-      std::string resolvedName( TClassEdit::ShortType(name, TClassEdit::kDropStlDefault) );
+      std::string resolvedName;
+      splitname.ShortType(resolvedName, TClassEdit::kDropStlDefault);
       if (resolvedName != name) cl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedName.c_str());
       if (!cl) {
          // Attempt to resolve typedefs
          resolvedName = TClassEdit::ResolveTypedef(resolvedName.c_str(),kTRUE);
          if (resolvedName != name) cl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedName.c_str());
       }
+      if (!cl) {
+         // Try with Long64_t
+         resolvedName = TClassEdit::GetLong64_Name(resolvedName);
+         if (resolvedName != name) cl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedName.c_str());
+      }         
    }
 
    if (cl) {
@@ -2308,12 +2329,12 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
       //we may pass here in case of a dummy class created by TVirtualStreamerInfo
       load = kTRUE;
 
-      if (TClassEdit::IsSTLCont(name)) {
+      if (splitname.IsSTLCont()) {
 
          const char * itypename = gCint->GetInterpreterTypeName(name);
          if (itypename) {
             std::string altname( TClassEdit::ShortType(itypename, TClassEdit::kDropStlDefault) );
-            if ( altname != name) {
+            if (altname != name) {
 
                // Remove the existing (soon to be invalid) TClass object to
                // avoid an infinite recursion.
@@ -2331,7 +2352,7 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
 
    } else {
 
-      if (!TClassEdit::IsSTLCont(name)) {
+      if (!splitname.IsSTLCont()) {
 
          // If the name is actually an STL container we prefer the
          // short name rather than the true name (at least) in
@@ -2377,7 +2398,7 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
       || ( strncmp(name,"std::",5)==0 && ((strcmp(name+5,"string")==0)||(strcmp(name+5,full_string_name)==0)))) {
       return TClass::GetClass("string");
    }
-   if (TClassEdit::IsSTLCont(name)) {
+   if (splitname.IsSTLCont()) {
 
       return gROOT->FindSTLClass(name,kTRUE,silent);
 
@@ -2784,6 +2805,7 @@ TList *TClass::GetListOfMethods()
       if (!gInterpreter)
          Fatal("GetListOfMethods", "gInterpreter not initialized");
 
+      TMmallocDescTemp setreset;
       gInterpreter->CreateListOfMethods(this);
    } else {
       gInterpreter->UpdateListOfMethods(this);
@@ -3326,6 +3348,7 @@ TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version) const
       version = fClassVersion;
    }
    if (!fStreamerInfo) {
+      TMmallocDescTemp setreset;
       fStreamerInfo = new TObjArray(version + 10, -1);
    } else {
       Int_t ninfos = fStreamerInfo->GetSize();
@@ -3346,6 +3369,7 @@ TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version) const
    }
    if (!sinfo) {
       // We just were not able to find a streamer info, we have to make a new one.
+      TMmallocDescTemp setreset;
       sinfo = TVirtualStreamerInfo::Factory()->NewInfo(const_cast<TClass*>(this));
       fStreamerInfo->AddAtAndExpand(sinfo, fClassVersion);
       if (gDebug > 0) {
@@ -4162,13 +4186,7 @@ TClass *ROOT::CreateClass(const char *cname, Version_t id,
 
    // When called via TMapFile (e.g. Update()) make sure that the dictionary
    // gets allocated on the heap and not in the mapped file.
-   if (gMmallocDesc) {
-      void *msave  = gMmallocDesc;
-      gMmallocDesc = 0;
-      TClass *cl   = new TClass(cname, id, info, isa, show, dfil, ifil, dl, il);
-      gMmallocDesc = msave;
-      return cl;
-   }
+   TMmallocDescTemp setreset;
    return new TClass(cname, id, info, isa, show, dfil, ifil, dl, il);
 }
 
@@ -4182,13 +4200,7 @@ TClass *ROOT::CreateClass(const char *cname, Version_t id,
 
    // When called via TMapFile (e.g. Update()) make sure that the dictionary
    // gets allocated on the heap and not in the mapped file.
-   if (gMmallocDesc) {
-      void *msave  = gMmallocDesc;
-      gMmallocDesc = 0;
-      TClass *cl   = new TClass(cname, id, dfil, ifil, dl, il);
-      gMmallocDesc = msave;
-      return cl;
-   }
+   TMmallocDescTemp setreset;
    return new TClass(cname, id, dfil, ifil, dl, il);
 }
 
@@ -4331,6 +4343,10 @@ Long_t TClass::Property() const
    R__LOCKGUARD(gCINTMutex);
 
    if (fProperty!=(-1)) return fProperty;
+
+   // When called via TMapFile (e.g. Update()) make sure that the dictionary
+   // gets allocated on the heap and not in the mapped file.
+   TMmallocDescTemp setreset;
 
    Long_t dummy;
    TClass *kl = const_cast<TClass*>(this);
@@ -4823,6 +4839,9 @@ void TClass::Streamer(void *object, TBuffer &b, const TClass *onfile_class) cons
          CallFunc_t *func = (CallFunc_t*)fInterStreamer;
 
          if (!func)  {
+            // When called via TMapFile (e.g. Update()) make sure that the dictionary
+            // gets allocated on the heap and not in the mapped file.
+            TMmallocDescTemp setreset;
             func  = gCint->CallFunc_Factory();
             gCint->CallFunc_SetFuncProto(func,fClassInfo,"Streamer","TBuffer&",&fOffsetStreamer);
             fInterStreamer = func;

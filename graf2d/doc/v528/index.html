@@ -8,6 +8,22 @@
 <ul>
 <li> The marker size between the screen output and the output file formats
      was not consistant.
+<li> Implement the text kerning. The effect is clearly illustrated with
+     the following script. Without kerning the red X is overlaped by the
+     the rest of the text. 
+     <pre>
+     {
+        TCanvas *c = new TCanvas;
+        TLatex *l = new TLatex(0.5, 0.5, "AVAVAVAVAVAVAVAVAVA#color[2]{X}");
+        l->Draw();
+        c->SaveAs("c1.eps");
+     } 
+     </pre>
+     The original idea came from Oleksandr Grebenyuk. It has been implemented
+     in a such way that the kerning mechanism is activated only when needed. If
+     not needed the old way of text rendering is used. It was done that way
+     because most of the time kerning is not needed and text rendered using
+     the kerning mechanism takes more space in the PS/PDF files.
 </ul>
 
 <h4>TASImage</h4>
@@ -62,6 +78,16 @@
      Pierre Juillot and Benoit Speckel (IPHC Strasbourg)
 </ul>
 
+<h4>New text font: Symbol italic</h4>
+<ul>
+<li> Three new marker's styles are now available (32, 33, 34). They complement
+     the markers' list making sure each marker has a solid and an hollow
+     version.
+     <center>
+     <img alt="New markers" src="markers.gif">
+     </center>
+</ul>
+
 <h4>TLatex</h4>
 <ul>
 <li> The <tt>#int</tt> and <tt>#sum</tt> symbols had wrong limits placement
@@ -75,6 +101,12 @@
      <br>
      Fix done by: Oleksandr Grebenyuk <tt>&lt;ogrebenyuk@lbl.gov&gt;</tt>.
 </ul>
+
+<h4>TText</h4>
+<ul>
+<li> new method <tt>GetTextAdvance</tt> to return the text advance for string
+     text taking the kerning into account or not.
+<li>
 
 <h4>TGaxis</h4>
 <ul>

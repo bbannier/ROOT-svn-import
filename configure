@@ -48,6 +48,7 @@ options="                    \
    enable_chirp              \
    enable_cintex             \
    enable_clarens            \
+   enable_cling              \
    enable_editline           \
    enable_dcache             \
    enable_exceptions         \
@@ -106,6 +107,7 @@ for c in $options ; do eval ${c}="yes" ; done
 for c in $deprecated_options ; do eval ${c}="yes" ; done
 for c in $options ; do eval ${c}_explicit="" ; done
 
+enable_cling=
 enable_afs=no
 enable_gdml=no
 enable_globus=no
@@ -1235,6 +1237,19 @@ EOF
 
 ######################################################################
 #
+### echo %%% Store invocation and machine info in config.log
+#
+logmsg "Invoked on `hostname 2>/dev/null`"
+logmsg "   with `uname -a 2>/dev/null`"
+logmsg "   at `date 2>/dev/null`:"
+
+logmsg "   $0"
+for argv in "$@"; do
+    logmsg "     \"${argv}\""
+done
+
+######################################################################
+#
 ### echo %%% See if we got the architecture
 #
 if test $# -lt 1 ; then
@@ -1264,6 +1279,7 @@ if `awk '{ print $1 }' $ARCHS | grep "^$arch$" > /dev/null  2>&1` ; then
    echo "Configuring for $arch"
 else
    echo "Invalid architecture. Try $0 --help"
+   logmsg "Invalid architecture \"$arch\"."
    exit 1
 fi
 
@@ -4805,6 +4821,25 @@ check_explicit "$enable_genvector" "$enable_genvector_explicit" \
 
 ######################################################################
 #
+### echo %%% Cling - LLVM/clang based interpreter prototype
+#
+if test ! "x$enable_cling" = "xno"; then
+    if test -d cint/cling; then
+        message "Checking whether to build cling"
+        enable_cling="yes"
+        hascling="define"
+        result "yes"
+    else
+        enable_cling="no"
+        hascling="undef"
+    fi
+else
+    enable_cling="no"
+    hascling="undef"
+fi
+
+######################################################################
+#
 ### echo %%% Cintex Library - Contributed library
 #
 message "Checking whether to build libCintex"
@@ -5497,6 +5532,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@zliblib@|$zliblib|"                  \
     -e "s|@zliblibdir@|$zliblibdir|"            \
     -e "s|@buildcintex@|$enable_cintex|"        \
+    -e "s|@buildcling@|$enable_cling|"        \
     -e "s|@buildreflex@|$enable_reflex|"        \
     -e "s|@buildroofit@|$enable_roofit|"        \
     -e "s|@buildminuit2@|$enable_minuit2|"      \
@@ -5727,6 +5763,7 @@ sed \
     -e "s|@hasroofit@|$hasroofit|"     \
     -e "s|@haspthread@|$haspthread|"       \
     -e "s|@hasxft@|$hasxft|"               \
+    -e "s|@hascling@|$hascling|"               \
     < RConfigure.tmp > RConfigure-out.tmp
 rm -f RConfigure.tmp
 

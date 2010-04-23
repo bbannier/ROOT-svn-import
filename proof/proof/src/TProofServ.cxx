@@ -690,15 +690,7 @@ Int_t TProofServ::CreateServer()
 
    // Everybody expects iostream to be available, so load it...
    ProcessLine("#include <iostream>", kTRUE);
-   ProcessLine("#include <_string>",kTRUE); // for std::string iostream.
-
-   // Allow the usage of ClassDef and ClassImp in interpreted macros
-   ProcessLine("#include <RtypesCint.h>", kTRUE);
-
-   // Disallow the interpretation of Rtypes.h, TError.h and TGenericClassInfo.h
-   ProcessLine("#define ROOT_Rtypes 0", kTRUE);
-   ProcessLine("#define ROOT_TError 0", kTRUE);
-   ProcessLine("#define ROOT_TGenericClassInfo 0", kTRUE);
+   ProcessLine("#include <string>",kTRUE); // for std::string iostream.
 
    // The following libs are also useful to have, make sure they are loaded...
    //gROOT->LoadClass("TMinuit",     "Minuit");
@@ -2130,8 +2122,15 @@ void TProofServ::Reset(const char *dir)
 {
    // Reset PROOF environment to be ready for execution of next command.
 
-   // First go to new directory.
-   gDirectory->cd(dir);
+   // First go to new directory. Check first that we got a reasonable path;
+   // in PROOF-Lite it may not be the case
+   TString dd(dir);
+   if (!dd.BeginsWith("proofserv")) {
+      Int_t ic = dd.Index(":");
+      if (ic != kNPOS)
+         dd.Replace(0, ic, "proofserv");
+   }
+   gDirectory->cd(dd.Data());
 
    // Clear interpreter environment.
    gROOT->Reset();
@@ -4585,14 +4584,11 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                   SendAsynMessage(TString::Format("%s: kBuildPackage: failure locating %s ...",
                                        noth.Data(), package.Data()));
                   break;
-               } else {
-                  // Package is in the global dirs
-                  break;
                }
             }
          }
 
-         if (IsMaster()) {
+         if (IsMaster() && !fromglobal) {
             // make sure package is available on all slaves, even new ones
             fProof->UploadPackage(pdir + ".par");
          }
@@ -5775,6 +5771,12 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
                (*mess) >> uri;
                TProofServLogHandlerGuard hg(fLogFile,  fSocket);
                rc = fDataSetManager->ScanDataSet(uri, TDataSetManager::kReopen | TDataSetManager::kDebug);
+               // TODO: verify in parallel:
+               //  - dataset = GetDataSet(uri)
+               //  - TList flist; TDataSetManager::ScanDataSet(dataset, ..., &flist)
+               //  - fPlayer->Process( ... flist ...) // needs to be developed
+               //  - dataset->Integrate(flist) (perhaps automatic; flist object owned by dataset)
+               //  - RegisterDataSet(uri, dataset, "OT")
             } else {
                Info("HandleDataSets", "dataset verification not allowed");
                return -1;

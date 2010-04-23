@@ -210,7 +210,7 @@ void* TCint::fgSetOfSpecials = 0;
 ClassImp(TCint)
 
 //______________________________________________________________________________
-TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
+TCint::TCint(const char *name, const char *title) : TInterpreter(name, title), fSharedLibs(""), fSharedLibsSerial(-1)
 {
    // Initialize the CINT interpreter interface.
 
@@ -219,6 +219,9 @@ TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
    fMapfile   = 0;
    fRootmapFiles = 0;
    fLockProcessLine = kTRUE;
+
+   // Disable the autoloader until it is explicitly enabled.
+   G__set_class_autoloading(0);
 
    G__RegisterScriptCompiler(&ScriptCompiler);
    G__set_ignoreinclude(&IgnoreInclude);
@@ -240,6 +243,24 @@ TCint::TCint(const char *name, const char *title) : TInterpreter(name, title)
 
    // Make sure that ALL macros are seen as C++.
    G__LockCpp();
+
+   // Initialize for ROOT:
+   // Disallow the interpretation of Rtypes.h, TError.h and TGenericClassInfo.h
+   ProcessLine("#define ROOT_Rtypes 0");
+   ProcessLine("#define ROOT_TError 0");
+   ProcessLine("#define ROOT_TGenericClassInfo 0");   
+
+   // Add the root include directory to list searched by default
+#ifndef ROOTINCDIR
+   TString include = gSystem->Getenv("ROOTSYS");
+   include.Append("/include");
+   TCint::AddIncludePath(include);
+#else
+   TCint::AddIncludePath(ROOTINCDIR);
+#endif
+
+   // Allow the usage of ClassDef and ClassImp in interpreted macros
+   ProcessLine("#include <RtypesCint.h>");
 }
 
 //______________________________________________________________________________
@@ -301,6 +322,7 @@ void TCint::EnableAutoLoading()
    R__LOCKGUARD(gCINTMutex);
 
    G__set_class_autoloading_callback(&TCint_AutoLoadCallback);
+   G__set_class_autoloading(1);
    LoadLibraryMap();
 }
 
@@ -1303,7 +1325,17 @@ const char *TCint::TypeName(const char *typeDesc)
    // E.g.: typeDesc = "class TNamed**", returns "TNamed".
    // You need to use the result immediately before it is being overwritten.
 
-   static char t[1024];
+   static char *t = 0;
+   static unsigned int tlen = 0;
+   
+   R__LOCKGUARD(gCINTMutex); // Because of the static array.
+
+   unsigned int dlen = strlen(typeDesc);
+   if (dlen > tlen) {
+      delete [] t;
+      t = new char[dlen+1];
+      tlen = dlen;
+   }
    char *s, *template_start;
    if (!strstr(typeDesc, "(*)(")) {
       s = (char*)strchr(typeDesc, ' ');
@@ -1320,6 +1352,8 @@ const char *TCint::TypeName(const char *typeDesc)
          strcpy(t, s+1);
       else
          strcpy(t, typeDesc);
+   } else {
+      strcpy(t, typeDesc);
    }
 
    int l = strlen(t);
@@ -1900,9 +1934,13 @@ void TCint::UpdateAllCanvases()
 //______________________________________________________________________________
 const char* TCint::GetSharedLibs()
 {
-   // Refresh the list of shared libraries and return it.
+   // Return the list of shared libraries known to CINT.
 
-   fSharedLibs = "";
+   if (fSharedLibsSerial == G__SourceFileInfo::SerialNumber()) {
+      return fSharedLibs;
+   }
+   fSharedLibsSerial = G__SourceFileInfo::SerialNumber();
+   fSharedLibs.Clear();
 
    G__SourceFileInfo cursor(0);
    while (cursor.IsValid()) {
