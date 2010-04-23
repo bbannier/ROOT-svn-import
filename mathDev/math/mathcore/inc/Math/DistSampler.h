@@ -72,7 +72,7 @@ public:
    template<class Function> 
    void SetFunction(Function & func, unsigned int dim) { 
       ROOT::Math::WrappedMultiFunction<Function &> wf(func, dim); 
-      fData = std::vector<double>(dim);
+      fData.resize(dim);
       // need to clone to avoid temporary
       DoSetFunction(wf,true);
    }
@@ -163,12 +163,24 @@ public:
       (this can be function value at the center or its integral in the bin 
       divided by the bin width)
       By default do not do random sample, just return the function values
+      Typically Poisson statistics will be used 
     */
    virtual bool SampleBin(double prob, double & value, double * error = 0) {
       value = prob; 
       if (error) *error = 0; 
       return true; 
    }
+   /**
+      sample a set of bins given a vector of probabilities
+      Typically multinomial statistics will be used and the sum of the probabilities 
+      will be equal to the total number of events to be generated
+    */
+   virtual bool SampleBins(unsigned int n, const double * prob, double * values, double * errors  = 0)  {
+      std::copy(prob,prob+n, values);
+      if (errors) std::fill(errors,errors+n,0);
+      return true; 
+   }
+
 
    /**
       generate a un-binned data sets (fill the given data set)
@@ -186,15 +198,16 @@ public:
       will be binned according to the Poisson distribution
       It is assumed the distribution is normalized, otherwise the nevt must be scaled 
       accordingly. The expected value/bin nexp  = f(x_i) * binArea/ nevt
+      Extend control if use a fixed (i.e. multinomial statistics) or floating total number of events  
    */ 
-   virtual bool Generate(unsigned int nevt, const  int * nbins, ROOT::Fit::BinData & data);
+   virtual bool Generate(unsigned int nevt, const  int * nbins, ROOT::Fit::BinData & data, bool extend = true);
    /**
       same as before but passing the range in case of 1 dim data
     */
-   bool Generate(unsigned int nevt, int nbins, double xmin, double xmax, ROOT::Fit::BinData & data) { 
+   bool Generate(unsigned int nevt, int nbins, double xmin, double xmax, ROOT::Fit::BinData & data, bool extend = true) { 
       SetRange(xmin,xmax); 
       int nbs[1]; nbs[0] = nbins;
-      return Generate(nevt, nbs, data); 
+      return Generate(nevt, nbs, data, extend); 
    }
 
 

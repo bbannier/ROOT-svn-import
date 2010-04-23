@@ -109,7 +109,7 @@ bool DistSampler::Generate(unsigned int nevt, ROOT::Fit::UnBinData & data) {
 }
 
 
-bool DistSampler::Generate(unsigned int nevt, const  int * nbins, ROOT::Fit::BinData & data) { 
+   bool DistSampler::Generate(unsigned int nevt, const  int * nbins, ROOT::Fit::BinData & data, bool extend) { 
    // generate a bin data set from given bin center values 
    // bin center values must be present in given data set 
    //if (!IsInitialized()) { 
@@ -117,6 +117,7 @@ bool DistSampler::Generate(unsigned int nevt, const  int * nbins, ROOT::Fit::Bin
       MATH_WARN_MSG("DistSampler::Generate","sampler has not been initialized correctly");
       return false; 
    }
+   
 
    int ntotbins = 1;
    for (unsigned int j = 0; j < NDim(); ++j) { 
@@ -142,17 +143,29 @@ bool DistSampler::Generate(unsigned int nevt, const  int * nbins, ROOT::Fit::Bin
    }
    double nnorm = nevt * binVolume; 
 
-   for (int j = NDim()-1; j >=0; --j) { 
-      for (int i = 0; i < nbins[j]; ++i) { 
-         //const double * v = Sample(); 
-         double val = 0; 
-         double eval = 0;
-         double yval = (ParentPdf())(&x.front());
-         double nexp = yval * nnorm;
-         SampleBin(nexp,val,&eval);
-         data.Add(&x.front(), val, eval); 
-         x[j] += dx[j]; // increment x bin the bin
+   if (extend) { 
+
+      bool ret = true;
+      for (int j = NDim()-1; j >=0; --j) { 
+         for (int i = 0; i < nbins[j]; ++i) { 
+            //const double * v = Sample(); 
+            double val = 0; 
+            double eval = 0;
+            double yval = (ParentPdf())(&x.front());
+            double nexp = yval * nnorm;
+            ret &= SampleBin(nexp,val,&eval);
+            data.Add(&x.front(), val, eval); 
+            x[j] += dx[j]; // increment x bin the bin
+         }
+         if (!ret) { 
+            MATH_WARN_MSG("DistSampler::Generate","error returned from SampleBin");
+            return false; 
+         } 
       }
+   }
+   else { 
+      MATH_WARN_MSG("DistSampler::Generate","generation with fixed events not yet impelmented");
+      return false; 
    }
    return true;
 }
