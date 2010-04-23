@@ -65,7 +65,7 @@ public:
    /** Return the estimate of the absolute Error of the last Integral calculation. */
    double Error () const;
 
-   /** This method is not implemented. */
+   /** return the status of the last integration - 0 in case of success */
    int Status () const;
 
    // Implementing VirtualIntegratorOneDim Interface

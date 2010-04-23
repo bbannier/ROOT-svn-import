@@ -100,7 +100,7 @@ public:
        lower rules are indicated for singular functions while higher for smooth functions to get better accuracies
     */
     explicit
-    IntegratorOneDim(IntegrationOneDim::Type type = IntegrationOneDim::kADAPTIVE, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 1000, unsigned int rule = 3) { 
+    IntegratorOneDim(IntegrationOneDim::Type type = IntegrationOneDim::kADAPTIVESINGULAR, double absTol = 1.E-9, double relTol = 1E-6, unsigned int size = 1000, unsigned int rule = 3) { 
        fIntegrator = CreateIntegrator(type, absTol, relTol, size, rule); 
     }
     
