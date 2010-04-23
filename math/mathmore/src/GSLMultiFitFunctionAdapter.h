@@ -113,7 +113,6 @@ public:
       assert ( f->size == n); 
       for (unsigned int i = 0; i < n ; ++i) { 
          assert ( npar == (funcVec[i]).NDim() );
-         const double * xdata = x->data; 
          double fval = 0; 
          double * g = (h->data)+i*npar;   //pointer to start  of i-th row
          (funcVec[i]).FdF(x->data, fval, g); 
