@@ -43,7 +43,8 @@ double ExactResult() {
       return std::sqrt(Y0_P2); 
    }
    if (gTestCase == 1)
-#ifdef R__HAS_MATHMORE  
+#if defined (R__HAS_MATHMORE) && !defined(_WIN32)  
+
       return ROOT::Math::gamma_quantile(Y0_GAMMA,ALPHA_GAMMA,THETA_GAMMA);
 #else
    return 5.55680381022934800;   //result as before if quantile of gamma is not available
