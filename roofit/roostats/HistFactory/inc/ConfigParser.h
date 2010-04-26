@@ -18,6 +18,8 @@
 
 #include "RooStats/HistFactory/EstimateSummary.h"
 
+// KC: Should make this a class and have it do some of what is done in MakeModelAndMeasurements
+
 namespace RooStats{
    namespace HistFactory {
 
