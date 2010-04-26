@@ -4,20 +4,21 @@
 printhelp()
 {
    echo "   "
-   echo "  pq2-ls-files-server"
+   echo "  pq2-cache"
    echo "   "
-   echo "  Purpose: list the file content of a dataset on a given server or list of servers"
+   echo "  Purpose: display or clear the local cache content"
    echo "   "
    echo "  Syntax:"
-   echo "           pq2-ls-files-server [-h|--help] [-v] [-k]"
-   echo "                               (-d datasetname|--dataset=datasetname) (-s servers|--server=servers)"
-   echo "                               [-t tmpdir|--tmp=tmpdir] [-u serviceurl|--url=serviceurl]"
+   echo "           pq2-cache -a show|clear [-h|--help] [-v] [-k]"
+   echo "                     [-d datasets|--dataset=datasets] [-t tmpdir|--tmp=tmpdir]"
+   echo "                     [-t tmpdir|--tmp=tmpdir] [-u serviceurl|--url=serviceurl]"
    echo "   "
+   echo "   show          Display cache content"
+   echo "   clear         Clear cache content"
    echo "   -h | --help   Print this help"
    echo "   -v            Verbose mode"
    echo "   -k            Keep temporary files"
-   echo "   datasetname:  Name of the dataset to be processed "
-   echo "   servers:      Comma-separated list of servers for which the information is wanted"
+   echo "   datasets      Datasets to processed; wildcards are supported"
    echo "   serviceurl:   URL of the PROOF master or data server providing the information;"
    echo "                 for data servers, it must include the directory."
    echo "                 Can be specified via the envs PQ2PROOFURL or PQ2DSSRVURL."
@@ -31,19 +32,17 @@ if test "x$PQ2" = "x" ; then
    exit 1
 fi
 
-# Parse options
 DBGOPT=""
+DSNARG=""
 KEEPOPT=""
 SRVURL=""
-DSNAME=""
-SERVER=""
 TDIR=$TMPDIR
-while getopts -:d:s:t:u:hkv i ; do
+while getopts -:a:d:u:hkv i ; do
    case $i in
-     d) DSNAME="-d $OPTARG" ;;
+     a) ACTION="-o $OPTARG" ;;
+     d) DSNARG="-d $OPTARG" ;;
      h) printhelp ; exit ;;
      k) KEEPOPT="-k" ;;
-     s) SERVER="-s $OPTARG" ;;
      t) TDIR="$OPTARG" ;;
      u) SRVURL="-u $OPTARG" ;;
      v) DBGOPT="-v" ;;
@@ -55,7 +54,6 @@ while getopts -:d:s:t:u:hkv i ; do
           dataset=*) DSNARG="-d $oarg" ;;
           help)      printhelp ; exit ;;
           keep)      KEEPOPT="-k" ;;
-          server=*)  SERVER="-s $oarg" ;;
           tmp=*)     TDIR="$oarg" ;;
           url=*)     SRVURL="-u $oarg" ;;
         esac
@@ -63,11 +61,17 @@ while getopts -:d:s:t:u:hkv i ; do
      \?) printhelp; exit 1 ;;
   esac
 done
-if test "x$DSNAME" = "x" || test "x$SERVER" = "x"; then
-   echo "Some arguments are missing (d:$DSNAME,s:$SERVER)!"
-   printhelp
-   exit
+# Fill empty fileds with any non-prefixed argument
+eval next_arg=\$$OPTIND
+echo "next_arg= $next_arg (OPTIND= $OPTIND)"
+if test ! "x$next_arg" = "x" ; then
+   if test "x$ACTION" = "x" ; then
+      ACTION="-o $next_arg"
+   fi
 fi
 
 # Run
-export TMPDIR="$TDIR"; $PQ2 ls-files-server $DBGOPT $KEEPOPT $DSNAME $SERVER $SRVURL
+export TMPDIR="$TDIR"; $PQ2 cache $ACTION $DBGOPT $KEEPOPT $DSNARG $SRVURL
+
+
+

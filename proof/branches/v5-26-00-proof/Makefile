@@ -264,7 +264,7 @@ ifeq ($(BUILDPEAC),yes)
 MODULES      += proof/peac
 endif
 ifneq ($(ARCH),win32)
-MODULES      += net/rpdutils net/rootd proof/proofd
+MODULES      += net/rpdutils net/rootd proof/proofd proof/pq2
 endif
 ifeq ($(BUILDEDITLINE),yes)
 MODULES      += core/editline
@@ -290,7 +290,7 @@ MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
                 net/ldap net/krb5auth net/rpdutils net/globusauth \
                 bindings/pyroot bindings/ruby io/gfal misc/minicern \
                 graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
-                proof/proofd proof/proofx proof/clarens proof/peac \
+                proof/proofd proof/proofx proof/clarens proof/peac proof/pq2 \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
                 cint/cintexcompat tmva io/hdfs \
                 cint/cint7 roofit/roofitcore roofit/roofit roofit/roostats \
