@@ -114,6 +114,10 @@ int main(int argc, char** argv) {
 
 void topDriver(string input ){
 
+  // TO DO:
+  // would like to fully factorize the XML parsing.  
+  // No clear need to have some here and some in ConfigParser
+
   /*** read in the input xml ***/
   TDOMParser xmlparser;
   Int_t parseError = xmlparser.ParseFile( input.c_str() );
@@ -207,8 +211,8 @@ void topDriver(string input ){
         }
 
         /***
-            Construction of analysis. Only requirement is that they return vector<vector<EstimateSummary> >
-            Combine all analyses. AddSummaries method will combine them into single vector named "summaries"
+            Construction of Model. Only requirement is that they return vector<vector<EstimateSummary> >
+	    This is where we use the factory.
         ***/
 
         vector<vector<EstimateSummary> > summaries;
@@ -223,6 +227,7 @@ void topDriver(string input ){
         TFile* outFile = new TFile(outputFileName.c_str(), "recreate");
         HistoToWorkspaceFactory factory( rowTitle, systToFix, nominalLumi, lumiError, lowBin, highBin , outFile);
 
+
         // for results tables
         fprintf(factory.pFile, " %s &", rowTitle.c_str() );
 
@@ -233,12 +238,12 @@ void topDriver(string input ){
           ReadXmlConfig(*itr, oneChannel, nominalLumi);
           // not really needed anymore
           summaries.push_back(oneChannel);
-          // putting ws together
+          // use factory to create the workspace
           string ch_name=oneChannel[0].channel;
           ch_names.push_back(ch_name);
           RooWorkspace * ws = factory.makeSingleChannelModel(oneChannel, systToFix);
           chs.push_back(ws);
-          // set poi
+          // set poi in ModelConfig
           ModelConfig * proto_config = (ModelConfig *) ws->obj("ModelConfig");
           cout << "Setting Parameter of Interest as :" << POI << endl;
           RooRealVar* poi = (RooRealVar*) ws->var(POI.c_str());
@@ -255,25 +260,21 @@ void topDriver(string input ){
           ws->defineSet("constrainedParams", *constrainedParams);
           proto_config->SetNuisanceParameters(*constrainedParams);
           ws->Print();
-          // fit
+
+	  // TO DO:
+          // Totally factorize the statistical test in "fit Model" to a different area
           factory.fitModel(ws, ch_name, "model_"+ch_name, "expData", false);
           fprintf(factory.pFile, " & " );
         }
+
         /***
+	    Make the combined model:
             If you want output histograms in root format, create and pass it to the combine routine.
             "combine" : will do the individual cross-section measurements plus combination
-            "combine_ratio" : will do individual measurement but extracts systematics from global fit
-                              it then measures the ratio measurement of cross sections.
+
         ***/
 
-        //
-        // This takes the old form EstimateSummary construction. 
-        // The current one is now completely validaed agains this
-        /*
-        vector<vector<EstimateSummary> > summaries_old = DiLepton( nominalLumi, new TFile("/Users/akira/Documents/workspace/LikelihoodRatioFit/data/Histograms.root"), "Jet_N_2_2i_20GeV");
-        //HistoToWorkspaceFactory factory(summaries_old, rowTitle, systToFix, nominalLumi, lumiError, lowBin, highBin , outFile);
-        //EstimateSummaryComparison(summaries, summaries_old);
-        */
+
           
         if(mode.find("comb")!=string::npos){ 
           RooWorkspace* ws=factory.makeCombinedModel(ch_names,chs);
@@ -290,18 +291,20 @@ void topDriver(string input ){
           combined_config->SetParameters(*params);
           ws->Print();
 
+
+	  // TO DO:
+          // Totally factorize the statistical test in "fit Model" to a different area
           factory.fitModel(ws, "combined", "simPdf", "simData", false);
         }
-        //if(mode.find("ratio")!=string::npos) {
-        //  factory.combine_ratio();
-        // }
+
+
         fprintf(factory.pFile, " \\\\ \n");
 
         outFile->Close();
         delete outFile;
 
       }
-      node = node->GetNextNode();
+      node = node->GetNextNode(); // next measurement
     }
   }
 }
