@@ -42,11 +42,6 @@ namespace HistFactory{
     vector<double> _low;
     vector<double> _high;
     
-    // for parabola fit
-    vector<double> _a;
-    vector<double> _b;
-    vector<double> _c;
-
     TIterator* _paramIter ;  //! do not persist
 
     Double_t evaluate() const;
