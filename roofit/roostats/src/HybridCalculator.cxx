@@ -421,13 +421,13 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
          sbVals.push_back(nEvents);
       } else if ( fTestStatisticsIdx==3 ) {
          /// profiled likelihood ratio used as test statistics
-         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended());
+         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended(),RooFit::CloneData(false));
          fSbModel->fitTo(*sbData,RooFit::Extended(),RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
          double sb_nll_val = sb_nll.getVal();
 //          std::cout << "S+B DATA  n = " << sbData->numEntries() << std::endl;
 //          std::cout << "NLL_SB = " << sb_nll_val << "   S+B Best fit params " << std::endl;
 //          fSbModel->getParameters(*sbData)->Print("V");
-         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended());
+         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended(),RooFit::CloneData(false));
          fBModel->fitTo(*sbData,RooFit::Extended(),RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
          double b_nll_val = b_nll.getVal();
 //          std::cout << "NLL_B = " << b_nll_val << "     B Best fit params " << std::endl;
@@ -438,8 +438,8 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
          sbVals.push_back(m2lnQ);
       } else if ( fTestStatisticsIdx==1 ) {
          /// likelihood ratio used as test statistics (default)
-         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended());
-         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended());
+         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended(),RooFit::CloneData(false));
+         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended(),RooFit::CloneData(false));
          double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
          sbVals.push_back(m2lnQ);
       }
@@ -452,18 +452,18 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
          bVals.push_back(nEvents);
       } else if ( fTestStatisticsIdx==3 ) {
          /// profiled likelihood ratio used as test statistics
-         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended());
+         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended(),RooFit::CloneData(false));
          fSbModel->fitTo(*bData,RooFit::Extended(),RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
          double sb_nll_val = sb_nll.getVal();
-         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended());
+         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended(),RooFit::CloneData(false));
          fBModel->fitTo(*bData,RooFit::Extended(),RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
          double b_nll_val = b_nll.getVal();
          double m2lnQ = 2*(sb_nll_val-b_nll_val);
          bVals.push_back(m2lnQ);
       } else if ( fTestStatisticsIdx==1 ) {
          /// likelihood ratio used as test statistics (default)
-         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended());
-         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended());
+         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended(),RooFit::CloneData(false));
+         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended(),RooFit::CloneData(false));
          double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
          bVals.push_back(m2lnQ);
       }
