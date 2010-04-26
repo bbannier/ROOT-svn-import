@@ -107,7 +107,7 @@ public:
                            kReopen = 256, kTouch = 512, kMaxFiles = 1024, kReadShort = 2048,
                            kFileMustExist = 4096,
                            // Auxilliary bits (bits 17-)
-                           kNoCacheUpdate = 65536, kRefreshLs = 131072
+                           kNoCacheUpdate = 65536, kRefreshLs = 131072, kList = 262144
                            };
 
    TDataSetManager(const char *group = 0, const char *user = 0, const char *options = 0);
@@ -116,7 +116,7 @@ public:
    virtual Int_t            ClearCache(const char *uri);
    virtual Long64_t         GetAvgFileSize() const { return fAvgFileSize; }
    virtual TFileCollection *GetDataSet(const char *uri, const char *server = 0);
-   virtual TMap            *GetDataSets(const char *uri, UInt_t /*option*/ = 0);
+   virtual TMap            *GetDataSets(const char *uri, UInt_t /*option*/ = TDataSetManager::kExport);
    virtual TMap            *GetSubDataSets(const char *uri, const char *excludeservers);
 
    virtual Long64_t         GetGroupQuota(const char *group);

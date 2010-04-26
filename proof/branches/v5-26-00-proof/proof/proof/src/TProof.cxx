@@ -647,7 +647,7 @@ Int_t TProof::Init(const char *, const char *conffile,
 
    fValid = kFALSE;
 
-   // If in attach mode, options is filled with additiona info
+   // If in attach mode, options is filled with additional info
    Bool_t attach = kFALSE;
    if (strlen(fUrl.GetOptions()) > 0) {
       attach = kTRUE;
@@ -6388,9 +6388,13 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
    // Prepare the local package
    TString pdir;
    Int_t st = 0;
-   if (buildOnClient)
-      if ((st = BuildPackageOnClient(pac, 1, &pdir) != 0))
+   if (buildOnClient) {
+      if (TestBit(TProof::kIsClient) && fPackageLock) fPackageLock->Lock();
+      if ((st = BuildPackageOnClient(pac, 1, &pdir) != 0)) {
+         if (TestBit(TProof::kIsClient) && fPackageLock) fPackageLock->Unlock();
          return -1;
+      }
+   }
 
    if (opt <= kBuildAll && !IsLite()) {
       TMessage mess(kPROOF_CACHE);
@@ -6405,8 +6409,10 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
    if (opt >= kBuildAll) {
       // by first forwarding the build commands to the master and slaves
       // and only then building locally we build in parallel
-      if (buildOnClient)
+      if (buildOnClient) {
          st = BuildPackageOnClient(pac, 2, &pdir);
+         if (TestBit(TProof::kIsClient) && fPackageLock) fPackageLock->Unlock();
+      }
 
       fStatus = 0;
       if (!IsLite())
@@ -6538,7 +6544,6 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
 
       if (opt == 0 || opt == 2) {
          if (opt == 2) pdir = path->Data();
-         fPackageLock->Lock();
 
          ocwd = gSystem->WorkingDirectory();
          gSystem->ChangeDirectory(pdir);
@@ -6609,8 +6614,6 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
          }
 
          gSystem->ChangeDirectory(ocwd);
-
-         fPackageLock->Unlock();
 
          return status;
       }
@@ -9611,6 +9614,42 @@ Bool_t TProof::ExistsDataSet(const char *dataset)
 }
 
 //______________________________________________________________________________
+void TProof::ClearDataSetCache(const char *dataset)
+{
+   // Clear the content of the dataset cache, if any (matching 'dataset', if defined).
+
+   if (fProtocol < 28) {
+      Info("ClearDataSetCache", "functionality not available on server");
+      return;
+   }
+
+   TMessage msg(kPROOF_DATASETS);
+   msg << Int_t(kCache) << TString(dataset) << TString("clear");
+   Broadcast(msg);
+   Collect(kActive, fCollectTimeout);
+   // Done
+   return;
+}
+
+//______________________________________________________________________________
+void TProof::ShowDataSetCache(const char *dataset)
+{
+   // Display the content of the dataset cache, if any (matching 'dataset', if defined).
+
+   if (fProtocol < 28) {
+      Info("ShowDataSetCache", "functionality not available on server");
+      return;
+   }
+
+   TMessage msg(kPROOF_DATASETS);
+   msg << Int_t(kCache) << TString(dataset) << TString("show");
+   Broadcast(msg);
+   Collect(kActive, fCollectTimeout);
+   // Done
+   return;
+}
+
+//______________________________________________________________________________
 TFileCollection *TProof::GetDataSet(const char *uri, const char *optStr)
 {
    // Get a list of TFileInfo objects describing the files of the specified
@@ -10023,6 +10062,8 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
       if (opts.Length() > 0) {
          if (opts.BeginsWith("N",TString::kIgnoreCase)) {
             create = kTRUE;
+            opts.Remove(0,1);
+            u.SetOptions(opts);
          } else if (opts.IsDigit()) {
             locid = opts.Atoi();
          }
