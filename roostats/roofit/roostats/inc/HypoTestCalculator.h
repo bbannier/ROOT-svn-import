@@ -59,13 +59,12 @@ namespace RooStats {
 
    public:
 
-
       virtual ~HypoTestCalculator() {}
 
       // main interface to get a HypoTestResult, pure virtual
       virtual HypoTestResult* GetHypoTest() const = 0;
 
-      // Set a common model for both the null and alternate, add to the the workspace if not already there
+      // Set a common model for both the null and alternate
       virtual void SetCommonModel(const ModelConfig& model) { 
          SetNullModel(model); 
          SetAlternateModel(model); 
