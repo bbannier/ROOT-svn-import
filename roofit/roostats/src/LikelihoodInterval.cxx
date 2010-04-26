@@ -180,29 +180,32 @@ Bool_t LikelihoodInterval::CheckParameters(const RooArgSet &parameterPoint) cons
 
 
 //____________________________________________________________________
-Double_t LikelihoodInterval::LowerLimit(const RooRealVar& param) 
+Double_t LikelihoodInterval::LowerLimit(const RooRealVar& param, bool & status) 
 {  
-   // compute upper limit, check first if limit has been computed 
+   // Compute lower limit, check first if limit has been computed 
+   // status is a boolean flag which will b set to false in case of error
+   // and is true if calculation is succesfull
+   // in case of error return also a lower limit value of zero
 
-   // otherwise compute limit using MINOS
-   double lower = param.getMin(); 
-   double upper = param.getMax(); 
-   FindLimits(param, lower, upper); 
+   double lower = 0; 
+   double upper = 0; 
+   status = FindLimits(param, lower, upper); 
    return lower; 
 }
 
 //____________________________________________________________________
-Double_t LikelihoodInterval::UpperLimit(const RooRealVar& param) 
+Double_t LikelihoodInterval::UpperLimit(const RooRealVar& param, bool & status) 
 {  
-   // compute upper limit, check first if limit has been computed 
+   // Compute upper limit, check first if limit has been computed 
+   // status is a boolean flag which will b set to false in case of error
+   // and is true if calculation is succesfull
+   // in case of error return also a lower limit value of zero
 
-   // otherwise compute limit using MINOS
-   double lower = param.getMin(); 
-   double upper = param.getMax(); 
-   FindLimits(param, lower, upper); 
+   double lower = 0; 
+   double upper = 0; 
+   status = FindLimits(param, lower, upper); 
    return upper; 
 }
-
 
 
 void LikelihoodInterval::ResetLimits() { 
@@ -281,6 +284,9 @@ bool LikelihoodInterval::CreateMinimizer() {
 bool LikelihoodInterval::FindLimits(const RooRealVar & param, double &lower, double & upper) 
 {
    // find both lower and upper limits using MINOS
+   // check first if limit has been computed 
+   // otherwise compute limit using MINOS
+   // in case of failure lower and upper will mantain previous value (will not be modified)
 
    // check first if cached values exist (limits have been already found) and return them in that case
    std::map<std::string, double>::const_iterator itrl = fLowerLimits.find(param.GetName());
@@ -321,6 +327,11 @@ bool LikelihoodInterval::FindLimits(const RooRealVar & param, double &lower, dou
    double elow = 0; 
    double eup = 0;
    ret = fMinimizer->GetMinosError(ivarX, elow, eup );
+   if (!ret)  {
+      ccoutE(Minimization) << "Error  running Minos for parameter " << param.GetName() << std::endl;
+      return false; 
+   }
+
    // WHEN error is zero normally is at limit
    if (elow == 0) { 
       lower = param.getMin();
@@ -336,16 +347,12 @@ bool LikelihoodInterval::FindLimits(const RooRealVar & param, double &lower, dou
    else 
       upper = fMinimizer->X()[ivarX] + eup;
 
-   if (!ret)  ccoutE(Minimization) << "Error  running Minos for parameter " << param.GetName() << std::endl;
-   else { 
-      // store limits in the map 
-      // minos return error limit = minValue +/- error
-      fLowerLimits[param.GetName()] = lower; 
-      fUpperLimits[param.GetName()] = upper; 
-   }
+   // store limits in the map 
+   // minos return error limit = minValue +/- error
+   fLowerLimits[param.GetName()] = lower; 
+   fUpperLimits[param.GetName()] = upper; 
       
-
-   return ret; 
+   return true; 
 }
 
 
