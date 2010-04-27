@@ -659,6 +659,9 @@ int XrdProofdManager::Config(bool rcf)
       }
       if (fDataSetSrcs.size() > 0) {
          TRACE(ALL, fDataSetSrcs.size() << " dataset sources defined");
+         for (ii = fDataSetSrcs.begin(); ii != fDataSetSrcs.end(); ii++) {
+            TRACE(ALL, " url:"<<(*ii)->fUrl<<", local:"<<(*ii)->fLocal<<", rw:"<<(*ii)->fRW);
+         }
       } else {
          TRACE(ALL, "no dataset sources defined");
       }
@@ -828,7 +831,7 @@ bool XrdProofdManager::ValidateLocalDataSetSrc(XrdOucString &url, bool &local)
          XrdProofdAux::GetUserInfo(XrdProofdProtocol::EUidAtStartup(), ui);
          if (XrdProofdAux::AssertDir(url.c_str(), ui, ChangeOwn()) == 0) {
             goodsrc = 1;
-            if (XrdProofdAux::ChangeMod(url.c_str(), 0777) == 0) {
+            if (XrdProofdAux::ChangeMod(url.c_str(), 0777) != 0) {
                TRACE(XERR,"Problems setting permissions 0777 on path '"<<url<<"'");
             }
          } else {
