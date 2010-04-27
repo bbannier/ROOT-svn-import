@@ -81,43 +81,57 @@ INFILE=""
 OUTFILE=""
 ADD="no"
 TDIR=$TMPDIR
-while getopts -:d:e:f:i:m:s:t:u:hkv i ; do
+#
+# Parse long options first
+short_opts=
+for i in $@ ; do
+   opt=""
    case $i in
-     d) DSNAME="$OPTARG"; DSNARG="-d $OPTARG" ;;
-     e) EXCSRVS="-e $OPTARG" ;;
-     f) FILEMV="$OPTARG" ; FILEOPT="-f $OPTARG" ;;
-     h) printhelp ; exit ;;
-     i) IGNSRVS="-i $OPTARG" ;;
-     k) KEEPOPT="-k" ;;
-     m) METRICS="-m $OPTARG" ;;
-     s) NEWSRVS="-s $OPTARG" ;;
-     t) TDIR="$OPTARG" ;;
-     u) SRVURL="-u $OPTARG" ;;
-     v) DBGOPT="-v" ;;
-     -) case "$OPTARG" in
-          *=*) oarg=`echo "$OPTARG" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
-          *) oarg= ;;
-        esac ;
-        case $OPTARG in
-          dataset=*) DSNAME="$oarg"; DSNARG="-d $oarg" ;;
-          exclude)   EXCSRVS="-e $oarg" ;;
-          filemv=*)  FILEMV="$oarg" ; FILEOPT="-f $oarg" ;;
-          help)      printhelp ; exit ;;
-          ignore=*)  IGNSRVS="-i $oarg" ;;
-          infile=*)  INFILE="--infile $oarg" ;;
-          keep)      KEEPOPT="-k" ;;
-          metrics=*) METRICS="-m $oarg" ;;
-          outfile=*) OUTFILE="--outfile $oarg" ;;
-          plot=*)    PLOT="--plot $oarg" ;;
-          plot)      PLOT="--plot" ;;
-          servers=*) NEWSRVS="-s $oarg" ;;
-          tmp=*)     TDIR="$oarg" ;;
-          url=*)     SRVURL="-u $oarg" ;;
-        esac
-        ;;
-     \?) printhelp; exit 1 ;;
-  esac
+      --*) opt=`echo "$i" | sed 's/--//'` ;;
+      *) short_opts="$short_opts $i" ;;
+   esac
+   if test ! "x$opt" = "x" ; then
+      case "$opt" in
+         *=*) oarg=`echo "$opt" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+         *) oarg= ;;
+      esac ;
+      case $opt in
+         dataset=*) DSNAME="$oarg"; DSNARG="-d $oarg" ;;
+         exclude)   EXCSRVS="-e $oarg" ;;
+         filemv=*)  FILEMV="$oarg" ; FILEOPT="-f $oarg" ;;
+         help)      printhelp ; exit ;;
+         ignore=*)  IGNSRVS="-i $oarg" ;;
+         infile=*)  INFILE="--infile $oarg" ;;
+         keep)      KEEPOPT="-k" ;;
+         metrics=*) METRICS="-m $oarg" ;;
+         outfile=*) OUTFILE="--outfile $oarg" ;;
+         plot=*)    PLOT="--plot $oarg" ;;
+         plot)      PLOT="--plot" ;;
+         servers=*) NEWSRVS="-s $oarg" ;;
+         tmp=*)     TDIR="$oarg" ;;
+         url=*)     SRVURL="-u $oarg" ;;
+      esac
+   fi
 done
+
+if test ! "x$short_opts" = "x" ; then
+   while getopts d:e:f:i:m:s:t:u:hkv i $short_opts ; do
+      case $i in
+      d) DSNAME="$OPTARG"; DSNARG="-d $OPTARG" ;;
+      e) EXCSRVS="-e $OPTARG" ;;
+      f) FILEMV="$OPTARG" ; FILEOPT="-f $OPTARG" ;;
+      h) printhelp ; exit ;;
+      i) IGNSRVS="-i $OPTARG" ;;
+      k) KEEPOPT="-k" ;;
+      m) METRICS="-m $OPTARG" ;;
+      s) NEWSRVS="-s $OPTARG" ;;
+      t) TDIR="$OPTARG" ;;
+      u) SRVURL="-u $OPTARG" ;;
+      v) DBGOPT="-v" ;;
+      \?) printhelp; exit 1 ;;
+   esac
+   done
+fi
 if test "x$TDIR" = "x" || test ! -d $TDIR ; then
    emsg="$TDIR"
    if test ! "x$TDIR" = "x/tmp" ; then

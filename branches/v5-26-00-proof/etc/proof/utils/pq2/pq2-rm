@@ -37,29 +37,43 @@ KEEPOPT=""
 SRVURL=""
 DSNAME=""
 TDIR=$TMPDIR
-while getopts -:d:t:u:hkv i ; do
+#
+# Parse long options first
+short_opts=
+for i in $@ ; do
+   opt=""
    case $i in
-     d) DSNAME="-d $OPTARG" ;;
-     h) printhelp ; exit ;;
-     v) DBGOPT="-v" ;;
-     k) KEEPOPT="-k" ;;
-     t) TDIR="$OPTARG" ;;
-     u) SRVURL="-u $OPTARG" ;;
-     -) case "$OPTARG" in
-          *=*) oarg=`echo "$OPTARG" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
-          *) oarg= ;;
-        esac ;
-        case $OPTARG in
-          dataset=*) DSNAME="-d $oarg" ;;
-          help)      printhelp ; exit ;;
-          keep)      KEEPOPT="-k" ;;
-          tmp=*)     TDIR="$oarg" ;;
-          url=*)     SRVURL="-u $oarg" ;;
-        esac
-        ;;
-     \?) printhelp; exit 1 ;;
-  esac
+      --*) opt=`echo "$i" | sed 's/--//'` ;;
+      *) short_opts="$short_opts $i" ;;
+   esac
+   if test ! "x$opt" = "x" ; then
+      case "$opt" in
+         *=*) oarg=`echo "$opt" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+         *) oarg= ;;
+      esac ;
+      case $opt in
+         dataset=*) DSNAME="-d $oarg" ;;
+         help)      printhelp ; exit ;;
+         keep)      KEEPOPT="-k" ;;
+         tmp=*)     TDIR="$oarg" ;;
+         url=*)     SRVURL="-u $oarg" ;;
+      esac
+   fi
 done
+
+if test ! "x$short_opts" = "x" ; then
+   while getopts d:t:u:hkv i $short_opts ; do
+      case $i in
+      d) DSNAME="-d $OPTARG" ;;
+      h) printhelp ; exit ;;
+      v) DBGOPT="-v" ;;
+      k) KEEPOPT="-k" ;;
+      t) TDIR="$OPTARG" ;;
+      u) SRVURL="-u $OPTARG" ;;
+      \?) printhelp; exit 1 ;;
+   esac
+   done
+fi
 if test "x$DSNAME" = "x"; then
    echo "Some arguments are missing (d:$DSNAME)!"
    printhelp
