@@ -53,7 +53,7 @@ Bool_t  gIsProof = kFALSE;
 extern Int_t gverbose;
 
 //_______________________________________________________________________________________
-Int_t checkUrl(const char *url, const char *flog)
+Int_t checkUrl(const char *url, const char *flog, bool def_proof)
 {
    // Check if something is running at gUrl
    // Return
@@ -81,17 +81,32 @@ Int_t checkUrl(const char *url, const char *flog)
       gUrl.SetOptions("N");
    } else {
       Int_t rc = -1;
-      // Check first generic data server
-      {  redirguard rog(flog, "a", 0);
-         rc = pingServerAt();
-      }
-      if (rc != 0) {
-         // Check also PROOF
-         if (pingXproofdAt() != 0) {
-            Printf("checkUrl: specified URL does not identifies a valid data or PROOF server: %s", url);
-            return -1;
+      if (def_proof) {
+         // Check first PROOF
+         {  redirguard rog(flog, "a", 0);
+            if ((rc = pingXproofdAt()) == 0)
+               gIsProof = kTRUE;
          }
-         gIsProof = kTRUE;
+         if (rc != 0) {
+            // Check also a generic data server
+            if (pingServerAt() != 0) {
+               Printf("checkUrl: specified URL does not identifies a valid PROOF or data server: %s", url);
+               return -1;
+            }
+         }
+      } else {
+         // Check first generic data server
+         {  redirguard rog(flog, "a", 0);
+            rc = pingServerAt();
+         }
+         if (rc != 0) {
+            // Check also PROOF
+            if (pingXproofdAt() != 0) {
+               Printf("checkUrl: specified URL does not identifies a valid data or PROOF server: %s", url);
+               return -1;
+            }
+            gIsProof = kTRUE;
+         }
       }
    }
    if (gverbose > 0) Printf("checkUrl: %s service", (gIsProof ? "PROOF" : "Data"));

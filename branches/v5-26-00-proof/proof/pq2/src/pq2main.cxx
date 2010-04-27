@@ -245,6 +245,7 @@ int main(int argc,const char *argv[])
    if (!gSystem->AccessPathName(fres)) gSystem->Unlink(ferr);
 
    // Check URL
+   bool def_proof= 0;
    if (!url) {
       // List of actions to be done via server
       TString dsmgracts = getenv("PQ2DSSRVACTS") ? getenv("PQ2DSSRVACTS")
@@ -255,12 +256,14 @@ int main(int argc,const char *argv[])
          url = getenv("PQ2DSSRVURL");
       } else if (getenv("PROOFURL") || getenv("PQ2PROOFURL")) {
          url = getenv("PQ2PROOFURL") ? getenv("PQ2PROOFURL") : getenv("PROOFURL");
+         def_proof = 1;
       } else {
          Printf("Specifying a service URL is mandatory - exit");
          gSystem->Exit(1);
       }
    }
-   Int_t urlrc = checkUrl(url, flog.Data());
+   if (gverbose > 0) Printf("Checking URL: %s", url ? url : "--undef--");
+   Int_t urlrc = checkUrl(url, flog.Data(), def_proof);
    if (urlrc < 0) {
       Printf("Specified URL does not identifies a running service: %s", url);
       gSystem->Exit(1);
