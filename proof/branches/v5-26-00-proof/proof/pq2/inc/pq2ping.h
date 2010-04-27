@@ -20,7 +20,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-Int_t checkUrl(const char *url, const char *flog);
+Int_t checkUrl(const char *url, const char *flog, bool def_proof = 0);
 Int_t pingXproofdAt();
 Int_t pingXrootdAt();
 Int_t pingServerAt();
