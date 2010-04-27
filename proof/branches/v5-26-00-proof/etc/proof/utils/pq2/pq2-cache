@@ -32,6 +32,7 @@ if test "x$PQ2" = "x" ; then
    exit 1
 fi
 
+ACTION="-o show"
 DBGOPT=""
 DSNARG=""
 KEEPOPT=""
@@ -48,7 +49,7 @@ for i in $@ ; do
    esac
    if test ! "x$opt" = "x" ; then
       case "$opt" in
-         *=*) oarg=`echo "$OPTARG" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+         *=*) oarg=`echo "$opt" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
          *) oarg= ;;
       esac ;
       case $opt in
@@ -61,25 +62,19 @@ for i in $@ ; do
    fi
 done
 
-while getopts a:d:u:hkv i $short_opts ; do
-   case $i in
-     a) ACTION="-o $OPTARG" ;;
-     d) DSNARG="-d $OPTARG" ;;
-     h) printhelp ; exit ;;
-     k) KEEPOPT="-k" ;;
-     t) TDIR="$OPTARG" ;;
-     u) SRVURL="-u $OPTARG" ;;
-     v) DBGOPT="-v" ;;
-     \?) printhelp; exit 1 ;;
-  esac
-done
-# Fill empty fileds with any non-prefixed argument
-eval next_arg=\$$OPTIND
-echo "next_arg= $next_arg (OPTIND= $OPTIND)"
-if test ! "x$next_arg" = "x" ; then
-   if test "x$ACTION" = "x" ; then
-      ACTION="-o $next_arg"
-   fi
+if test ! "x$short_opts" = "x" ; then
+   while getopts a:d:u:hkv i $short_opts ; do
+      case $i in
+      a) ACTION="-o $OPTARG" ;;
+      d) DSNARG="-d $OPTARG" ;;
+      h) printhelp ; exit ;;
+      k) KEEPOPT="-k" ;;
+      t) TDIR="$OPTARG" ;;
+      u) SRVURL="-u $OPTARG" ;;
+      v) DBGOPT="-v" ;;
+      \?) printhelp; exit 1 ;;
+      esac
+   done
 fi
 
 # Run

@@ -124,32 +124,46 @@ REDIRURL=""
 FILEIO=""
 TMPDIR=""
 BACKEND="xrd"
-while getopts -:b:f:r:t:hvk i ; do
+#
+# Parse long options first
+short_opts=
+for i in $@ ; do
+   opt=""
    case $i in
-     b) BACKEND="$OPTARG" ;;
-     f) FILEIO="$OPTARG" ;;
-     h) printhelp ; exit ;;
-     k) KEEPOPT="-k" ;;
-     r) REDIRURL="$OPTARG" ;;
-     t) TMPDIR="$OPTARG" ;;
-     v) DBGOPT="-v" ;;
-     -) case "$OPTARG" in
-          *=*) oarg=`echo "$OPTARG" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
-          *) oarg= ;;
-        esac ;
-        case $OPTARG in
-          backend=*)  BACKEND="$oarg" ;;
-          dryrun)     DRYRUN="yes" ;;
-          fileio=*)   FILEIO="$oarg" ;;
-          help)       printhelp ; exit ;;
-          keep)       KEEPOPT="-k" ;;
-          redirurl=*) REDIRURL="$oarg" ;;
-          tmp=*)      TMPDIR="$oarg" ;;
-        esac
-        ;;
-     \?) printhelp; exit 1 ;;
-  esac
+      --*) opt=`echo "$i" | sed 's/--//'` ;;
+      *) short_opts="$short_opts $i" ;;
+   esac
+   if test ! "x$opt" = "x" ; then
+      case "$opt" in
+         *=*) oarg=`echo "$opt" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+         *) oarg= ;;
+      esac ;
+      case $opt in
+         backend=*)  BACKEND="$oarg" ;;
+         dryrun)     DRYRUN="yes" ;;
+         fileio=*)   FILEIO="$oarg" ;;
+         help)       printhelp ; exit ;;
+         keep)       KEEPOPT="-k" ;;
+         redirurl=*) REDIRURL="$oarg" ;;
+         tmp=*)      TMPDIR="$oarg" ;;
+      esac
+   fi
 done
+
+if test ! "x$short_opts" = "x" ; then
+   while getopts b:f:r:t:hvk i $short_opts ; do
+      case $i in
+      b) BACKEND="$OPTARG" ;;
+      f) FILEIO="$OPTARG" ;;
+      h) printhelp ; exit ;;
+      k) KEEPOPT="-k" ;;
+      r) REDIRURL="$OPTARG" ;;
+      t) TMPDIR="$OPTARG" ;;
+      v) DBGOPT="-v" ;;
+      \?) printhelp; exit 1 ;;
+   esac
+   done
+fi
 
 # Check backend availability
 HAVEBACKEND="no"
