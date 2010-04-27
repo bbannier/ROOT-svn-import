@@ -10,7 +10,7 @@ printhelp()
    echo "   "
    echo "  Syntax:"
    echo "           pq2-cache -a show|clear [-h|--help] [-v] [-k]"
-   echo "                     [-d datasets|--dataset=datasets] [-t tmpdir|--tmp=tmpdir]"
+   echo "                     [-d datasets|--dataset=datasets]"
    echo "                     [-t tmpdir|--tmp=tmpdir] [-u serviceurl|--url=serviceurl]"
    echo "   "
    echo "   show          Display cache content"
@@ -37,7 +37,31 @@ DSNARG=""
 KEEPOPT=""
 SRVURL=""
 TDIR=$TMPDIR
-while getopts -:a:d:u:hkv i ; do
+#
+# Parse long options first
+short_opts=
+for i in $@ ; do
+   opt=""
+   case $i in
+      --*) opt=`echo "$i" | sed 's/--//'` ;;
+      *) short_opts="$short_opts $i" ;;
+   esac
+   if test ! "x$opt" = "x" ; then
+      case "$opt" in
+         *=*) oarg=`echo "$OPTARG" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+         *) oarg= ;;
+      esac ;
+      case $opt in
+         dataset=*) DSNARG="-d $oarg" ;;
+         help)      printhelp ; exit ;;
+         keep)      KEEPOPT="-k" ;;
+         tmp=*)     TDIR="$oarg" ;;
+         url=*)     SRVURL="-u $oarg" ;;
+      esac
+   fi
+done
+
+while getopts a:d:u:hkv i $short_opts ; do
    case $i in
      a) ACTION="-o $OPTARG" ;;
      d) DSNARG="-d $OPTARG" ;;
@@ -46,18 +70,6 @@ while getopts -:a:d:u:hkv i ; do
      t) TDIR="$OPTARG" ;;
      u) SRVURL="-u $OPTARG" ;;
      v) DBGOPT="-v" ;;
-     -) case "$OPTARG" in
-          *=*) oarg=`echo "$OPTARG" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
-          *) oarg= ;;
-        esac ;
-        case $OPTARG in
-          dataset=*) DSNARG="-d $oarg" ;;
-          help)      printhelp ; exit ;;
-          keep)      KEEPOPT="-k" ;;
-          tmp=*)     TDIR="$oarg" ;;
-          url=*)     SRVURL="-u $oarg" ;;
-        esac
-        ;;
      \?) printhelp; exit 1 ;;
   esac
 done
