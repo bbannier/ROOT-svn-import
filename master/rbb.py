@@ -150,7 +150,7 @@ class ROOTTestCmd(ShellCommand):
 
         if self.numFailures > 0:
             self.addHTMLLog("failures", self.formatFailures(failedDirLogs))
-            if self.numFailures > 3: self.failureDescr = ['(too many)' ]
+            if self.numFailures > 3: self.failureDescr = None
 
     def formatFailures(self, failures):
         html = '''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -212,7 +212,10 @@ class ROOTTestCmd(ShellCommand):
             if self.numFailures > 0:
                 plural = ''
                 if self.numFailures > 1: plural = 's'
-                return self.describe(True) + ["%s failure%s:" % (self.numFailures, plural)] + self.failureDescr
+                if self.failureDescr:
+                    return self.describe(True) + ["%s failure%s:" % (self.numFailures, plural)] + self.failureDescr
+                else:
+                    return self.describe(True) + ["%s failure%s" % (self.numFailures, plural)]
             else :
                 return self.describe(True) + ["failed"]
 
@@ -321,8 +324,16 @@ class ROOTMailNotifier(MailNotifier):
 
         laststepname = build.getLogs()[-1].getStep().getName()
         laststeptext = build.getLogs()[-1].getStep().getText()
+        subject = "Buildbot: %s %s for %s %s" % (laststepname, result, name, source)
+
+        buildbotProblem = False
+        if 'slave lost' in laststeptext:
+            subject = "Buildbot: slave lost for %s %s" % (name, source)
+            buildbotProblem = True
+
         logs = list()
         buildurl = master_status.getURLForThing(build)
+
         for log in reversed(build.getLogs()):
             step_name = log.getStep().getName()
             if laststepname != step_name:
@@ -331,31 +342,42 @@ class ROOTMailNotifier(MailNotifier):
             if buildurl:
                 log_url = '%s/steps/%s/logs/%s' % (buildurl, step_name, log_name)
                 logs.append((log_name, log_url))
+            if not buildbotProblem:
+                for line in log.getText().splitlines()[-10:]:
+                    if 'command timed out:' in line:
+                        subject = "Buildbot: %s timeout for %s %s" % (laststepname, name, source)
+                        buildbotProblem = True
      
-        subject = "Buildbot: %s %s for %s %s" % (laststepname, result, name, source)
-
         text = list()
-        text.append('<h4>%s (and possibly others) %s</h4>' % (name, result))
-        text.append("Step %s: %s" % (laststepname, " ".join(laststeptext)))
-        text.append('<br>')
-        text.append("Running on %s" % build.getSlavename())
-        text.append('<br>')
-        if buildurl:
-            text.append('Logs: <a href="%s">%s</a>' % (buildurl,buildurl))
-        text.append('<br>')
-        text.append("Build Reason: %s" % build.getReason())
-        text.append('<br>')
-
-        text.append("Build Source Stamp: <b>%s</b>" % (source))
-        text.append('<br>')
-        blamelist = ",".join(build.getResponsibleUsers())
-        if len(blamelist):
-            text.append("Blamelist: %s" % blamelist)
+        if buildbotProblem:
+            text.append('<h4>Timeout on %s</h4>' % (name))
+            text.append("Running on %s" % build.getSlavename())
+            text.append('<br>')
+            if buildurl:
+                text.append('Logs: <a href="%s">%s</a>' % (buildurl,buildurl))
+                text.append('<br>')
+        else:
+            text.append('<h4>%s (and possibly others) %s</h4>' % (name, result))
+            text.append("Step %s: %s" % (laststepname, " ".join(laststeptext)))
+            text.append('<br>')
+            text.append("Running on %s" % build.getSlavename())
+            text.append('<br>')
+            if buildurl:
+                text.append('Logs: <a href="%s">%s</a>' % (buildurl,buildurl))
+                text.append('<br>')
+            text.append("Build Reason: %s" % build.getReason())
             text.append('<br>')
 
-        if ss and ss.changes:
-            text.append('<h4>Changes:</h4>')
-            text.extend([c.asHTML() for c in ss.changes])
+            text.append("Build Source Stamp: <b>%s</b>" % (source))
+            text.append('<br>')
+            blamelist = ",".join(build.getResponsibleUsers())
+            if len(blamelist):
+                text.append("Blamelist: %s" % blamelist)
+                text.append('<br>')
+
+            if ss and ss.changes:
+                text.append('<h4>Changes:</h4>')
+                text.extend([c.asHTML() for c in ss.changes])
 
         if len(logs):
             text.append('<h4>Logs:</h4>')
