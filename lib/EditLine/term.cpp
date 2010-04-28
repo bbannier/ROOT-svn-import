@@ -56,13 +56,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "rlcurses.h"
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <string>
 
 #include "el.h"
 #include "TTermManip.h"
+
+// termcap.h an be extremely "dirty", polluting with CPP macros,
+// so #include last!
+#include "rlcurses.h"
 
 /*
  * IMPORTANT NOTE: these routines are allowed to look at the current screen
@@ -569,7 +572,7 @@ term_alloc_display(EditLine_t* el) {                      // LOUISE COLOUR : dup
  *	Free the display buffers
  */
 el_private void
-term_free_display(EditLine_t* el) {               // LOUISE COLOUR : duplicated all display funcionality for colour
+term_free_display(EditLine_t* el) {               // LOUISE COLOUR : duplicated all display functionality for colour
    char** b;
    char** bufp;
    ElColor_t** c;

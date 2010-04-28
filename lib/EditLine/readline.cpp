@@ -54,7 +54,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
+#ifndef __FreeBSD__
 #include <alloca.h>
+#endif // __FreeBSD__
 #include "histedit.h"
 // #include "readline/readline.h"
 #include <cling/EditLine/EditLine.h>
@@ -175,6 +177,11 @@ _move_history(int op) {
 }
 
 
+bool
+rl_isinitialized() {
+   return gEditLine != NULL;
+}
+
 /*
  * READLINE compatibility stuff
  */
@@ -280,10 +287,6 @@ rl_initialize(void) {
    rl_line_buffer = (char*) li->fBuffer;
    rl_point = rl_end = 0;
 
-
-   // AXEL:
-   // switch to RAW mode so ROOT can handle events:
-   tty_rawmode(gEditLine);
    return 0;
 } // rl_initialize
 

@@ -9,11 +9,11 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-/*	$NetBSD: el.c,v 1.21 2001/01/05 22:45:30 christos Exp $	*/
+/*      $NetBSD: el.c,v 1.21 2001/01/05 22:45:30 christos Exp $ */
 
 /*-
  * Copyright (c) 1992, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *      The Regents of the University of California.  All rights reserved.
  *
  * This code is derived from software contributed to Berkeley by
  * Christos Zoulas of Cornell University.
@@ -61,7 +61,7 @@
 #include "el.h"
 
 /* el_init():
- *	Initialize SEditLine_t and set default parameters.
+ *      Initialize SEditLine_t and set default parameters.
  */
 el_public EditLine_t*
 el_init(const char* prog, FILE* fin, FILE* fout, FILE* ferr) {
@@ -104,7 +104,7 @@ el_init(const char* prog, FILE* fin, FILE* fout, FILE* ferr) {
 
 
 /* el_end():
- *	Clean up.
+ *      Clean up.
  */
 el_public void
 el_end(EditLine_t* el) {
@@ -130,7 +130,7 @@ el_end(EditLine_t* el) {
 
 
 /* el_reset():
- *	Reset the tty and the parser
+ *      Reset the tty and the parser
  */
 el_public void
 el_reset(EditLine_t* el) {
@@ -140,7 +140,7 @@ el_reset(EditLine_t* el) {
 
 
 /* el_set():
- *	set the SEditLine_t parameters
+ *      set the SEditLine_t parameters
  */
 el_public int
 el_set(EditLine_t* el, int op, ...) {
@@ -267,8 +267,16 @@ el_set(EditLine_t* el, int op, ...) {
 
 
 /* el_get():
- *	retrieve the SEditLine_t parameters
+ *      retrieve the SEditLine_t parameters
  */
+
+namespace {
+   union funcptr_to_voidptr {
+      void* v;
+      void (*f)();
+   };
+}
+
 el_public int
 el_get(EditLine_t* el, int op, void* ret) {
    int rv;
@@ -280,12 +288,22 @@ el_get(EditLine_t* el, int op, void* ret) {
    switch (op) {
    case EL_PROMPT:
    case EL_RPROMPT:
-      rv = prompt_get(el, (ElPFunc_t*) &ret, op);
-      break;
+      {
+         ElPFunc_t func;
+         rv = prompt_get(el, &func, op);
+         funcptr_to_voidptr converter;
+         converter.f = (void (*)()) func;
+         ret = (void*) converter.v;
+         break;
+      }
 
    case EL_EDITOR:
-      rv = map_get_editor(el, (const char**) &ret);
-      break;
+      {
+         const char* str;
+         rv = map_get_editor(el, &str);
+         ret = (void*)str;
+         break;
+      }
 
    case EL_SIGNAL:
       *((int*) ret) = (el->fFlags & HANDLE_SIGNALS);
@@ -379,7 +397,7 @@ el_get(EditLine_t* el, int op, void* ret) {
 
 
 /* el_line():
- *	Return editing info
+ *      Return editing info
  */
 el_public const LineInfo_t*
 el_line(EditLine_t* el) {
@@ -390,7 +408,7 @@ el_line(EditLine_t* el) {
 static const char elpath[] = "/.editrc";
 
 /* el_source():
- *	Source a file
+ *      Source a file
  */
 el_public int
 el_source(EditLine_t* el, const char* fname) {
@@ -425,7 +443,7 @@ el_source(EditLine_t* el, const char* fname) {
 
 
 /* el_resize():
- *	Called from program when terminal is resized
+ *      Called from program when terminal is resized
  */
 el_public void
 el_resize(EditLine_t* el) {
@@ -468,7 +486,7 @@ el_resize(EditLine_t* el) {
 
 
 /* el_beep():
- *	Called from the program to beep
+ *      Called from the program to beep
  */
 el_public void
 el_beep(EditLine_t* el) {
@@ -477,7 +495,7 @@ el_beep(EditLine_t* el) {
 
 
 /* el_editmode()
- *	Set the state of EDIT_DISABLED from the `edit' command.
+ *      Set the state of EDIT_DISABLED from the `edit' command.
  */
 el_protected int
 /*ARGSUSED*/
