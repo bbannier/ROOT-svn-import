@@ -161,7 +161,7 @@ class ROOTTestCmd(ShellCommand):
  lang="en"
  xml:lang="en">
 <head>'''
-        html += '<title>' + str(self.describe(True)) + ''' failure log</title>
+        html += '<title>' + " ".join(self.describe(True)) + ''' failure log</title>
 <link href="buildbot.css" rel="stylesheet" type="text/css" />
 <style type="text/css">
  div.directory {
@@ -327,7 +327,7 @@ class ROOTMailNotifier(MailNotifier):
         subject = "Buildbot: %s %s for %s %s" % (laststepname, result, name, source)
 
         buildbotProblem = False
-        if 'slave lost' in laststeptext:
+        if 'slave lost' in " ".join(laststeptext):
             subject = "Buildbot: slave lost for %s %s" % (name, source)
             buildbotProblem = True
 
