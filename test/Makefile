@@ -11,24 +11,28 @@ endif
 # 'lit' wants objdir paths, so it will pick up the lit.site.cfg.
 TESTDIRS := $(TESTDIRS:$(PROJ_SRC_DIR)%=$(PROJ_OBJ_DIR)%)
 
+# Allow EXTRA_TESTDIRS to provide additional test directories.
+TESTDIRS += $(EXTRA_TESTDIRS)
+
 ifndef TESTARGS
 ifdef VERBOSE
 TESTARGS = -v
 else
-TESTARGS = -s
+TESTARGS = -s -v
 endif
 endif
 
+# Make sure any extra test suites can find the main site config.
+LIT_ARGS := --param cling_site_config=$(PROJ_OBJ_DIR)/lit.site.cfg
+
 ifdef VG
-  VGARG="--vg"
-else
-  VGARG=
+  LIT_ARGS += "--vg"
 endif
 
 all:: lit.site.cfg
 	@ echo '--- Running cling tests for $(TARGET_TRIPLE) ---'
 	@ $(PYTHON) $(LLVM_SRC_ROOT)/utils/lit/lit.py \
-	  $(TESTARGS) $(TESTDIRS) $(VGARG)
+	  $(LIT_ARGS) $(TESTARGS) $(TESTDIRS)
 
 FORCE:
 
@@ -40,9 +44,10 @@ lit.site.cfg: FORCE
 	     -e "s#@LLVM_LIBS_DIR@#$(LibDir)#g" \
 	     -e "s#@CLING_SOURCE_DIR@#$(PROJ_SRC_DIR)/..#g" \
 	     -e "s#@CLING_BINARY_DIR@#$(PROJ_OBJ_DIR)/..#g" \
+	     -e "s#@TARGET_TRIPLE@#$(TARGET_TRIPLE)#g" \
 	     $(PROJ_SRC_DIR)/lit.site.cfg.in > $@
 
 clean::
-	@ rm -rf Output/
+	@ find . -name Output | xargs rm -fr
 
 .PHONY: all report clean
