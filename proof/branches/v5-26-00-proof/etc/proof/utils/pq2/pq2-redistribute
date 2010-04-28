@@ -200,9 +200,9 @@ fi
 while read -r ff src dst; do
    if test "x$BACKEND" = "xxrd" ; then
       if test "x$DRYRUN" = "xyes" ; then
-         echo ">> $BACKEND: would move $REDIRURL/$ff to $dd/$ff via $TMPDIR"
+         echo ">> $BACKEND: would move $REDIRURL/$ff to $dst/$ff via $TMPDIR"
       else
-         movefilexrd $ff $REDIRURL $dd $TMPDIR
+         movefilexrd $ff $REDIRURL $dst $TMPDIR
       fi
    else
       echo "Backend $BACKEND not supported"
