@@ -1,6 +1,8 @@
 
 #include <stdio.h>
 
+double cos04Pi();
+
 void printAppName( char* name )
 {
    printf( "The appname is %s\n", name );
