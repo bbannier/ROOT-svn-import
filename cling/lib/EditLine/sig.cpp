@@ -63,7 +63,7 @@ el_private const int sighdl[] = {
    - 1
 };
 
-el_private void sig_handler(int);
+el_private extern "C" void sig_handler(int);
 
 /* sig_handler():
  *	This is the handler called for all signals
@@ -83,12 +83,14 @@ sig_handler(int signo) {
 
    switch (signo) {
    case SIGCONT:
-      tty_rawmode(sel);
-      //if (ed_redisplay(sel, 0) == CC_REFRESH) {
-      re_clear_display(sel);
-      re_refresh(sel);
-      //}
-      term__flush();
+      if (tty_can_output()) {
+         tty_rawmode(sel);
+         //if (ed_redisplay(sel, 0) == CC_REFRESH) {
+         re_clear_display(sel);
+         re_refresh(sel);
+         //}
+         term__flush();
+      }
       break;
 
    case SIGWINCH:
