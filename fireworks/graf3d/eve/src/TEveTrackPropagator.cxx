@@ -230,7 +230,10 @@ TEveTrackPropagator::~TEveTrackPropagator()
 {
    // Destructor.
 
-   delete fMagFieldObj;
+   if (fOwnMagFiledObj)
+   {
+      delete fMagFieldObj;
+   }
 }
 
 //______________________________________________________________________________
@@ -760,11 +763,12 @@ void TEveTrackPropagator::SetMagField(Float_t bX, Float_t bY, Float_t bZ)
 }
 
 //______________________________________________________________________________
-void TEveTrackPropagator::SetMagFieldObj(TEveMagField *mff)
+void TEveTrackPropagator::SetMagFieldObj(TEveMagField *mff, Bool_t ownFieldObj)
 {
    // Set constant magnetic field and rebuild tracks.
 
-   if (fMagFieldObj) delete fMagFieldObj;
+   fOwnMagFiledObj = ownFieldObj;
+   if (fMagFieldObj && fOwnMagFiledObj) delete fMagFieldObj;
 
    fMagFieldObj = mff;
    RebuildTracks();
