@@ -216,7 +216,7 @@ protected:
 
 public:
    TEveTrackPropagator(const char* n="TEveTrackPropagator", const char* t="",
-                       TEveMagField* field=0);
+                       TEveMagField* field=0, Bool_t own_field=kTRUE);
    virtual ~TEveTrackPropagator();
 
    virtual void OnZeroRefCount();
@@ -240,7 +240,7 @@ public:
 
    void   SetMagField(Float_t bX, Float_t bY, Float_t bZ);
    void   SetMagField(Float_t b) { SetMagField(0.f, 0.f, b); }
-   void   SetMagFieldObj(TEveMagField * x, Bool_t ownFieldObj=kTRUE);
+   void   SetMagFieldObj(TEveMagField* field, Bool_t own_field=kTRUE);
 
    void   SetMaxR(Float_t x);
    void   SetMaxZ(Float_t x);

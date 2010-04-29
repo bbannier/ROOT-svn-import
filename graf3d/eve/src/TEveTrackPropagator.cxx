@@ -181,12 +181,14 @@ Float_t             TEveTrackPropagator::fgEditorMaxZ  = 4000;
 
 //______________________________________________________________________________
 TEveTrackPropagator::TEveTrackPropagator(const char* n, const char* t,
-                                         TEveMagField *field) :
+                                         TEveMagField *field, Bool_t own_field) :
    TEveElementList(n, t),
    TEveRefBackPtr(),
 
    fStepper(kHelix),
    fMagFieldObj(field),
+   fOwnMagFiledObj(own_field),
+
    fMaxR    (350),
    fMaxZ    (450),
 
@@ -221,8 +223,10 @@ TEveTrackPropagator::TEveTrackPropagator(const char* n, const char* t,
    fFVAtt.SetMarkerSize(1.5);
 
 
-   if (fMagFieldObj == 0)
+   if (fMagFieldObj == 0) {
       fMagFieldObj = new TEveMagFieldConst(0., 0., fgDefMagField);
+      fOwnMagFiledObj = kTRUE;
+   }
 }
 
 //______________________________________________________________________________
@@ -756,21 +760,19 @@ void TEveTrackPropagator::SetMagField(Float_t bX, Float_t bY, Float_t bZ)
 {
    // Set constant magnetic field and rebuild tracks.
 
-   if (fMagFieldObj) delete fMagFieldObj;
-
-   fMagFieldObj = new TEveMagFieldConst(bX, bY, bZ);
-   RebuildTracks();
+   SetMagFieldObj(new TEveMagFieldConst(bX, bY, bZ));
 }
 
 //______________________________________________________________________________
-void TEveTrackPropagator::SetMagFieldObj(TEveMagField *mff, Bool_t ownFieldObj)
+void TEveTrackPropagator::SetMagFieldObj(TEveMagField* field, Bool_t own_field)
 {
    // Set constant magnetic field and rebuild tracks.
 
-   fOwnMagFiledObj = ownFieldObj;
    if (fMagFieldObj && fOwnMagFiledObj) delete fMagFieldObj;
 
-   fMagFieldObj = mff;
+   fMagFieldObj    = field;
+   fOwnMagFiledObj = own_field;
+
    RebuildTracks();
 }
 
