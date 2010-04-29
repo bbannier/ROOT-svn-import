@@ -49,7 +49,7 @@ int main( int argc, char **argv )
    interactive |= argc > 1 && std::string(argv[1]) == "-i";
 
    // for now, -l and -i are mutually exclusive
-   bool nologo = argc < 2 || std::string(argv[1]) == "-l";
+   bool nologo = argc > 1 && std::string(argv[1]) == "-l";
 
    //---------------------------------------------------------------------------
    // Set up the interpreter
