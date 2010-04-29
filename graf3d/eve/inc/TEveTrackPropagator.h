@@ -165,6 +165,7 @@ protected:
    EStepper_e               fStepper;
 
    TEveMagField*            fMagFieldObj;
+   Bool_t                   fOwnMagFiledObj;
 
    // Track extrapolation limits
    Float_t                  fMaxR;          // Max radius for track extrapolation
@@ -239,7 +240,7 @@ public:
 
    void   SetMagField(Float_t bX, Float_t bY, Float_t bZ);
    void   SetMagField(Float_t b) { SetMagField(0.f, 0.f, b); }
-   void   SetMagFieldObj(TEveMagField * x);
+   void   SetMagFieldObj(TEveMagField * x, Bool_t ownFieldObj=kTRUE);
 
    void   SetMaxR(Float_t x);
    void   SetMaxZ(Float_t x);
