@@ -26,7 +26,7 @@ namespace cling {
       UserInterface(Interpreter& interp, const char* prompt = "[cling] $");
       ~UserInterface();
 
-      void runInteractively();
+      void runInteractively(bool nologo = false);
 
    private:
       MetaProcessor* m_MetaProcessor;

@@ -42,13 +42,15 @@ cling::UserInterface::~UserInterface()
 //---------------------------------------------------------------------------
 // Interact with the user using a prompt
 //---------------------------------------------------------------------------
-void cling::UserInterface::runInteractively()
+void cling::UserInterface::runInteractively(bool nologo /* = false */)
 {
-   std::cerr << std::endl;
-   std::cerr << "**** Welcome to the cling prototype! ****" << std::endl;
-   std::cerr << "* Type C code and press enter to run it *" << std::endl;
-   std::cerr << "* Type .q, exit or ctrl+D to quit       *" << std::endl;
-   std::cerr << "*****************************************" << std::endl;
+   if (!nologo) {
+      std::cerr << std::endl;
+      std::cerr << "**** Welcome to the cling prototype! ****" << std::endl;
+      std::cerr << "* Type C code and press enter to run it *" << std::endl;
+      std::cerr << "* Type .q, exit or ctrl+D to quit       *" << std::endl;
+      std::cerr << "*****************************************" << std::endl;
+   }
    struct stat buf;
    static const char* histfile = ".cling_history";
    using_history();
