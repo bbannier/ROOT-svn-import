@@ -31,12 +31,25 @@ int main( int argc, char **argv )
    llvm::sys::PrintStackTraceOnErrorSignal();
    llvm::PrettyStackTraceProgram X(argc, argv);
 
+   // TODO: factor out, use llvm's / clang option parsing tools
+
+   //---------------------------------------------------------------------------
+   // Determine which file to interpret
+   //---------------------------------------------------------------------------
+   int fileArgN = 1;
+   while (fileArgN < argc && argv[fileArgN][0] == '-')
+      ++fileArgN;
+
    //---------------------------------------------------------------------------
    // Check if we should run in the "interactive" mode
    //---------------------------------------------------------------------------
-   bool interactive = (argc == 1);
-   if( !interactive && std::string( argv[1] ) == "-i" )
-      interactive = true;
+   // no file? interactive!
+   bool interactive = (fileArgN == argc);
+
+   interactive |= argc > 1 && std::string(argv[1]) == "-i";
+
+   // for now, -l and -i are mutually exclusive
+   bool nologo = argc < 2 || std::string(argv[1]) == "-l";
 
    //---------------------------------------------------------------------------
    // Set up the interpreter
@@ -63,19 +76,25 @@ int main( int argc, char **argv )
    langInfo.POSIXThreads = 1;
 
    cling::Interpreter interpreter;
+   clang::CompilerInstance* CI = interpreter.getCI();
+   clang::HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
+
+   const bool IsUserSupplied = false;
+   const bool IsFramework = false;
+   headerOpts.AddPath (".", clang::frontend::Angled, IsUserSupplied, IsFramework);   
 
    //---------------------------------------------------------------------------
    // We're supposed to parse a file
    //---------------------------------------------------------------------------
    if( !interactive ) {
-      return interpreter.executeFile(argv[1]);
+      return interpreter.executeFile(argv[fileArgN]);
    }
    //----------------------------------------------------------------------------
    // We're interactive
    //----------------------------------------------------------------------------
    //else {
       cling::UserInterface ui(interpreter);
-      ui.runInteractively();
+      ui.runInteractively(nologo);
    //}
    return 0;
 }
