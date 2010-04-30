@@ -1407,6 +1407,7 @@ Interpreter::executeFile(const std::string& filename)
 
    // Note: We are assuming the filename does not end in slash here.
    std::string funcname(filename, pos);
+   std::string::size_type endFileName = std::string::npos;
 
    std::string args;
    pos = funcname.find_first_of('(');
@@ -1414,6 +1415,7 @@ Interpreter::executeFile(const std::string& filename)
       std::string::size_type posParamsEnd = funcname.find_last_of(')');
       if (posParamsEnd != std::string::npos) {
          args = funcname.substr(pos, posParamsEnd - pos + 1);
+         endFileName = filename.find_first_of('(');
       }
    }
 
@@ -1428,7 +1430,7 @@ Interpreter::executeFile(const std::string& filename)
    swrappername << "__cling__internal_wrapper" << m_numCallWrappers++;
    std::string wrapper = "extern \"C\" void ";
    wrapper += swrappername.str() + "() {\n  " + funcname + "(" + args + ");\n}";
-   int err = loadFile(filename, &wrapper);
+   int err = loadFile(filename.substr(0, endFileName), &wrapper);
    if (err) {
       return err;
    }
