@@ -1,4 +1,5 @@
-// RUN: cat %s | %cling -l && cat %s | %cling -l | FileCheck %s
+// RUN: cat %s | %cling -l
+// RUN: cat %s | %cling -l | FileCheck %s
 
 #include <cstdlib>
 int i;
