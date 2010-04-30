@@ -184,6 +184,10 @@ private:
    void executeCommandLine();
    void executeFunction(const std::string& funcname);
 
+   llvm::sys::Path findDynamicLibrary(const std::string& filename,
+                                      bool addPrefix = true,
+                                      bool addSuffix = true) const;
+
 };
 
 } // namespace cling
