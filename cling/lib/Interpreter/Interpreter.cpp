@@ -1287,21 +1287,57 @@ Interpreter::executeCommandLine()
    m_engine->freeMachineCodeForFunction(f);
 }
 
+llvm::sys::Path
+Interpreter::findDynamicLibrary(const std::string& filename,
+                                bool addPrefix /* = true */,
+                                bool addSuffix /* = true */) const
+{
+   // Check wether filename is a dynamic library, either through absolute path
+   // or in one of the system library paths.
+   {
+      llvm::sys::Path FullPath(filename);
+      if (FullPath.isDynamicLibrary())
+         return FullPath;
+   }
+
+   std::vector<llvm::sys::Path> LibPaths;
+   llvm::sys::Path::GetSystemLibraryPaths(LibPaths);
+   for (unsigned i = 0; i < LibPaths.size(); ++i) {
+      llvm::sys::Path FullPath(LibPaths[i]);
+      FullPath.appendComponent(filename);
+      if (FullPath.isDynamicLibrary())
+         return FullPath;
+   }
+
+   if (addPrefix) {
+      static const std::string prefix("lib");
+      llvm::sys::Path found = findDynamicLibrary(prefix + filename, false, addSuffix);
+      if (found.isDynamicLibrary())
+         return found;
+   }
+
+   if (addSuffix) {
+      llvm::sys::Path found = findDynamicLibrary(filename + LTDL_SHLIB_EXT, false, false);
+      if (found.isDynamicLibrary())
+         return found;
+   }
+
+   return llvm::sys::Path();
+}
+
 int
 Interpreter::loadFile(const std::string& filename, const std::string* trailcode /*=0*/)
 {
-   llvm::sys::Path path(filename);
-   if (path.isDynamicLibrary()) {
+   llvm::sys::Path DynLib = findDynamicLibrary(filename);
+   if (DynLib.isDynamicLibrary()) {
       std::string errMsg;
       bool err =
-         llvm::sys::DynamicLibrary::LoadLibraryPermanently(
-            filename.c_str(), &errMsg);
+         llvm::sys::DynamicLibrary::LoadLibraryPermanently(DynLib.str().c_str(), &errMsg);
       if (err) {
          //llvm::errs() << "Could not load shared library: " << errMsg << '\n';
-         fprintf(
-              stderr
-            , "Interpreter::loadFile: Could not load shared library!\n"
-         );
+         fprintf(stderr
+                 , "Interpreter::loadFile: Could not load shared library!\n"
+                 );
          fprintf(stderr, "%s\n", errMsg.c_str());
          return 1;
       }
