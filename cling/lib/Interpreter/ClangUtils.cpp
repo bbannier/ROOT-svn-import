@@ -88,6 +88,35 @@
 
 namespace cling {
 
+// Get the end source location for a statement, if necessary
+// and possible asking its declaration.
+clang::SourceLocation
+getStmtEndLoc(const clang::Stmt* S)
+{
+   // Get the end source location for a statement, if necessary
+   // and possible asking its declaration.
+  clang::SourceLocation ELoc = S->getLocEnd();
+  if (ELoc.isValid())
+     return ELoc;
+
+  // Is it a decl? Then try via that:
+  const clang::DeclStmt* DS = dyn_cast<clang::DeclStmt>(S);
+  if (!DS) return ELoc;
+
+  if (DS->isSingleDecl()) {
+     return DS->getSingleDecl()->getLocEnd();
+  }
+
+  if (!DS->getDeclGroup().isNull()) {
+     const clang::DeclGroup& DG = DS->getDeclGroup().getDeclGroup();
+     clang::Decl* D = DG[DG.size()-1];
+     if (D) {
+        return D->getLocEnd();
+     }
+  }
+  return ELoc;
+}
+
 // Get the source range of the specified Stmt.
 std::pair<unsigned, unsigned>
 getStmtRange(const clang::Stmt* S,
@@ -96,7 +125,7 @@ getStmtRange(const clang::Stmt* S,
 {
   // Get the source range of the specified Stmt.
   clang::SourceLocation SLoc = SM.getInstantiationLoc(S->getLocStart());
-  clang::SourceLocation ELoc = SM.getInstantiationLoc(S->getLocEnd());
+  clang::SourceLocation ELoc = SM.getInstantiationLoc(getStmtEndLoc(S));
   // This is necessary to get the correct range of function-like macros.
   if ((SLoc == ELoc) && S->getLocEnd().isMacroID()) {
     ELoc = SM.getInstantiationRange(S->getLocEnd()).second;
@@ -134,7 +163,8 @@ getStmtRangeWithSemicolon(const clang::Stmt* S,
   // Get the source range of the specified Stmt, ensuring that a semicolon is
   // included, if necessary - since the clang ranges do not guarantee this.
   clang::SourceLocation SLoc = SM.getInstantiationLoc(S->getLocStart());
-  clang::SourceLocation ELoc = SM.getInstantiationLoc(S->getLocEnd());
+  clang::SourceLocation ELoc = SM.getInstantiationLoc(getStmtEndLoc(S));
+
   return getRangeWithSemicolon(SLoc, ELoc, SM, LO);
 }
 
@@ -150,7 +180,8 @@ getRangeWithSemicolon(clang::SourceLocation SLoc,
     start = SM.getFileOffset(SLoc);
   }
   if (ELoc.isValid()) {
-    end = SM.getFileOffset(ELoc);
+    end = SM.getFileOffset(ELoc) +
+       clang::Lexer::MeasureTokenLength(ELoc, SM, LO);;
   }
   if (SLoc.isValid() && !ELoc.isValid()) {
     clang::SourceLocation Loc = SM.getInstantiationLoc(SLoc);

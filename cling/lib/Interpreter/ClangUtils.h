@@ -111,6 +111,10 @@ namespace cling {
       const clang::SourceManager& SM,
       const clang::LangOptions& LO);
 
-} // namespace ccons
+   // Get the end source location for a statement, if necessary
+   // and possible asking its declaration.
+   clang::SourceLocation getStmtEndLoc(const clang::Stmt* S);
+
+} // namespace cling
 
 #endif // CLING_CLANG_UTILS_H

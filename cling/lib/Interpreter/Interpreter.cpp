@@ -673,12 +673,14 @@ Interpreter::makeModuleFromCommandLine(const std::string& input_line)
    //
    //  Check to see if input is a preprocessor directive.
    //
-   // FIXME: Not good enough, need to use lexer here to handle comments.
-   bool is_preprocessor_cmd = true;
+   // FIXME: Not good enough, need to use lexer here! (comments, extern vs. CPP etc)
+   bool nothingToCompile = true;
    {
       std::string::size_type pos = input_line.find_first_not_of(" \t\n");
-      if ((pos != std::string::npos) && (input_line[pos] != '#')) {
-         is_preprocessor_cmd = false;
+      if ((pos != std::string::npos)
+          && (input_line[pos] != '#')
+          && (input_line.compare(pos, 7, "extern ") != 0)) {
+         nothingToCompile = false;
       }
    }
    //
@@ -686,17 +688,7 @@ Interpreter::makeModuleFromCommandLine(const std::string& input_line)
    //  collection of global declarations,
    //  otherwise we must rewrite the code, then compile.
    //
-   if (is_preprocessor_cmd) {
-      // std::string src(m_globalDeclarations);
-      // src += input_line;
-      // src += "\n";
-      // src += "void __cling_internal() {\n";
-      // src += "\n} // end __cling_internal()\n";
-      // //fprintf(stderr, "input_line:\n%s\n", src.c_str());
-      // CI = compileString(src);
-      // if (!CI) {
-      //    return 0;
-      // }
+   if (nothingToCompile) {
       m_globalDeclarations.append(input_line);
       m_globalDeclarations.append("\n");
       return 0;
