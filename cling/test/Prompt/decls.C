@@ -3,6 +3,7 @@
 #include <cmath>
 
 struct S{int i;};
+S s = {12 };
 struct U{void f() const {};};
 int i = 12;
 float f = sin(12);
