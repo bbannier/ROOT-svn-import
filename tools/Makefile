@@ -8,6 +8,6 @@
 ##===----------------------------------------------------------------------===##
 
 LEVEL := ../../..
-DIRS := driver
+DIRS := driver test-library
 
 include $(LEVEL)/Makefile.common
