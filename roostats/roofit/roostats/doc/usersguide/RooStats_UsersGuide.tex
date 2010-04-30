@@ -131,6 +131,7 @@ The developers of RooStats appreciate that there are many different approaches t
 {\flushleft \textbf{One Model, Many Methods}}
 
 A common scenario that we hope to address with RooStats is the comparison of different statistical approaches for the same statistical problem.  Without a unified framework, these comparisons are complicated by the fact that each method must: a) re-create the model (eg. probability density function(s) for the data) and b) represent the data itself.  Having redundant modeling and data representation is error prone and often complicates the comparison (or makes it practically impossible).\footnote{Of course, these types of cross-checks can also be very useful! }  In that sense, RooStats aims to be like TMVA\footnote{The Toolkit for MultiVariate Analysis is also distributed in ROOT \url{http://tmva.sourceforge.net}.}, providing utilities to easily try and compare multiple statistical techniques.  By relieving the technical overhead associated to these types of comparisons, the hard work can go into improved modeling of the problem at hand and asking better questions.
+\newpage
 
 {\flushleft \textbf{Types of Statistical Questions}}
 
@@ -236,33 +237,34 @@ For more information about building ROOT from source, see the ROOT webpage:\\ \u
 
 \end{description}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Types of Statistical Tools in RooStats}
-
-\begin{figure}[htbp]
-\begin{center}
-\includegraphics[width=\textwidth]{RooStats_OverviewOfInterfaces.pdf}
-\caption{An class diagram of the interfaces for hypothesis testing and confidence interval calculations.  The diagram shows the classes used to return the results of these statistical tests as well.}
-\label{fig:OverviewOfInterfaces}
-\end{center}
-\end{figure}
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Design Philosophy: Mapping Mathematics to Software}
+%\subsection{Types of Statistical Tools in RooStats}
+\section{Fundamental Interfaces in RooStats}
 
-Mathematical representation:
+
+One of the fundamental design philosophies behind RooFit and RooStats is a conceptually clear mapping between mathematics and software.  We have tried to identify fundamental concepts in statistics and assign corresponding C++ classes or interfaces~\footnote{Interfaces is a term used in object-oriented programing for an abstract specification of a C++ class.  It defines what the class can/should/must do, but it does not provide an implementation.  This is done because often there are many possible implementations that can satisfy that interface.  This is especially true in statistics, where there seem to be several ways to do almost everything.}.
+
+\subsection{RooRealVar, RooArgSet,  RooAbsReal, \& RooAbsPdf}
+
+In RooFit even simple real-valued parameters and observables are treated as a C++ objects, instead of just a simple floating point number.  This allows the variable to carry around a name, units, upper- and lower- values for fitting and integration, etc.  For real-valued variables, the class is \textbf{RooRealVar}, but there are equivalent classes for discrete categories etc.  They all inherit from an interface called \textbf{RooAbsArg} (for abstract argument).  
+
+In addition to real-valued variables, one can define real-valued functions, both of which inherit from \textbf{RooAbsReal} (for abstract real-valued thingy).  The most important methods in the interface are listed below.
+
+\lstinputlisting{code_snippits/RooAbsReal.h}
+
+One can create sets and lists of these abstract arguments called \textbf{RooArgSet} and \textbf{RooArgList}, respectively.  They are often used to represent a list of parameters or observables.
+
+Let's consider a basic example of a Gaussian distribution of $x$ with mean $\mu$ and standard deviation $\sigma$.  The mathematical representation is
 \[
   G(x|\mu, \sigma)
 \]
-
-Representation in RooFit / RooStats code:
-  
-\lstinputlisting{GaussianModel.C}
-
-Graphical Representation 
-
+In RooFit / RooStats code, one an construct this via:
+\lstinputlisting[firstline=2,lastline=11]{GaussianModel.C}
+or via
+\lstinputlisting[firstline=2,lastline=5]{GaussianModel_factory.C}
+which both produce a graphical representation (in the form of Bell labs ``graphviz'' format)
 \begin{figure}[htb]
 \begin{picture}(500, 100)(0,0)
 \begin{dot2tex}[dot, options=-tmath,autosize,graphstyle={scale=0.8,transform shape}]
@@ -287,6 +289,95 @@ Graphical Representation
 %\end{picture}
 %\caption{test}
 %\end{figure}
+
+\newpage
+
+\subsection{RooWorkspace \& Model Config}
+
+\textbf{RooWorkspace} is a new core RooFit class that was developed in the context of RooStats.  RooWorkspace brings the ability to save a model with all of its dependecies (variables, data, custom functions, etc.) into a ROOT file.  Thus, RooWorkspace is they primary tool for RooStats digital publishing capabilities.  In addition, the workspace provides a low level factory so that one can script the creation of complicated models.
+
+\lstinputlisting{code_snippits/RooWorkspace.h}
+
+
+
+\textbf{ModelConfig} is a simple class that holds configuration information specifying how a model should be used in the context of various RooStats tools.  A single model can be used in different ways, and this class should carry all that is needed to specify how it should be used.  In particular, it can identify which parameters are parameters of interest and which are nuisance parameters.  It can also identify which PDFs are part of the likelihood function and which are prior PDFs.
+
+\lstinputlisting{code_snippits/ModelConfig.h}
+
+\newpage
+\subsection{ConfInterval \& IntervalCalculator}
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=\textwidth]{RooStats_OverviewOfInterfaces.pdf}
+\caption{An class diagram of the interfaces for hypothesis testing and confidence interval calculations.  The diagram shows the classes used to return the results of these statistical tests as well.}
+\label{fig:OverviewOfInterfaces}
+\end{center}
+\end{figure}
+
+\textbf{ConfInterval} is an interface class for a generic interval in the RooStats framework.
+Any tool inheriting from IntervalCalculator can return a ConfInterval.
+There are many types of intervals, they may be a simple range [a,b] in 1 dimension,
+or they may be disconnected regions in multiple dimensions.
+So the common interface is simply to ask the interval if a given point "IsInInterval".
+The Interval also knows what confidence level it was constructed at and the space of 
+parameters for which it was constructed.
+Note, one could use the same class for a Bayesian "credible interval".
+
+\lstinputlisting{code_snippits/ConfInterval.h}
+
+
+\textbf{IntervalCalculator} is an interface class for a tools which produce RooStats ConfIntervals.  
+The interface currently assumes that any interval calculator can be configured by specifying:
+\begin{itemize}
+ \item a model,
+ \item a data set,
+ \item a set of parameters of interest,
+ \item a set of nuisance parameters (eg. parameters on which the model depends, but are not of interest), and 
+ \item a confidence level or size of the test (eg. rate of Type I error).
+\end{itemize}
+
+The interface allows one to pass the model, data, and parameters via a workspace and then specify them with names.
+The interface will be extended so that one does not need to use a workspace.
+
+After configuring the calculator, one only needs to ask GetInterval, which will return a ConfInterval pointer.
+
+The concrete implementations of this interface should deal with the details of how the nuisance parameters are
+dealt with (eg. integration vs. profiling) and which test-statistic is used (perhaps this should be added to the interface).
+The motivation for this interface is that we hope to be able to specify the problem in a common way for several concrete calculators.
+
+\lstinputlisting{code_snippits/IntervalCalculator.h}
+
+\subsection{HypoTestResult \& HypoTestCalculator}
+\textbf{HypoTestResult} is the class used to hold the results of a hypothesis test.  
+\lstinputlisting{code_snippits/HypoTestResult.h}
+
+\textbf{HypoTestCalculator} is an interface class for a tools which produce RooStats HypoTestResults.  
+The interface currently assumes that any hypothesis test calculator can be configured by specifying:
+\begin{itemize}
+ \item a model,
+ \item a data set,
+ \item a set of parameters of which specify the null (including values and const/non-const status), and 
+ \item a set of parameters of which specify the alternate (including values and const/non-const status).
+\end{itemize}
+
+The interface allows one to pass the model, data, and parameters via a workspace and then specify them with names.
+The interface will be extended so that one does not need to use a workspace.
+
+After configuring the calculator, one only needs to ask GetHypoTest, which will return a HypoTestResult pointer.
+
+The concrete implementations of this interface should deal with the details of how the nuisance parameters are
+dealt with (eg. integration vs. profiling) and which test-statistic is used (perhaps this should be added to the interface).
+
+The motivation for this interface is that we hope to be able to specify the problem in a common way for several concrete calculators.
+
+\lstinputlisting{code_snippits/HypoTestCalculator.h}
+
+
+\subsection{Test Statistic, Sampling Distribution}
+
+See the section devoted to Test Statistic, Sampling Distribution.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -330,18 +421,18 @@ A \textit{sampling distribution} is very familiar to high energy physicists, it 
 	\subsection{TestStatistic interface and implementations}
 
 
-We added a new interface class called TestStatistic. It defines the method \texttt{Evaluate(data, parameterPoint)}, which returns a double.  This class can be used in conjunction with the ToyMCSampler class to generate sampling distributions for a user-defined test statistic.  
+We added a new interface class called \textbf{TestStatistic}. It defines the method \texttt{Evaluate(data, parameterPoint)}, which returns a double.  This class can be used in conjunction with the \textbf{ToyMCSampler} class to generate sampling distributions for a user-defined test statistic.  
 
 The following concrete implementations of the TestStatistic interface are currently available
 
-ProfileLikelihoodTestStatReturns the log of profile likelihood ratio.  Generally a powerful test statistic.
+\textbf{ProfileLikelihoodTestStat} returns the log of profile likelihood ratio.  Generally a powerful test statistic.
 NumEventsTestStatReturns the number of events in the dataset.  Useful for number counting experiments.
 DebuggingTestStat Simply returns a uniform random number between 0,1.  Useful for debugging.
 SamplingDistribution and the TestStatSampler interface and implementations
 
-We introduced a ``result'' or data model class called SamplingDistribution, which holds the sampling distribution of an arbitrary real valued test statistic.  The class also can return the inverse of the cumulative distribution function (with or without interpolation).  
+We introduced a ``result'' or data model class called \textbf{SamplingDistribution}, which holds the sampling distribution of an arbitrary real valued test statistic.  The class also can return the inverse of the cumulative distribution function (with or without interpolation).  
 
-We introduced an interface for any tool that can produce a SamplingDistribution, called TestStatSampler.  The interface is essentially GetSamplingDistribution(parameterPoint) which returns a SamplingDistribution based on a given probability density function.  We foresee a few versions of this tool based on toy Monte Carlo, importance sampling, Fourier transforms, etc.  The following concrete implementation of the TestStatSampler interface are currently available
+We introduced an interface for any tool that can produce a SamplingDistribution, called \textbf{TestStatSampler}.  The interface is essentially GetSamplingDistribution(parameterPoint) which returns a SamplingDistribution based on a given probability density function.  We foresee a few versions of this tool based on toy Monte Carlo, importance sampling, Fourier transforms, etc.  The following concrete implementation of the TestStatSampler interface are currently available
 
 ToyMCSampler uses a Toy Monte Carlo approach to build the sampling distribution.  The pdf's generate method to generate is used to generate toy data, and then the test statistic is evaluated at the requested parameter point.
 DebuggingSampler Simply returns a uniform distribution between 0,1.  Useful for debugging.
@@ -379,7 +470,7 @@ Here we describe the ratio of Poisson means.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\subsection{Profile Likelihood Ratio (the method of MINOS)}
 
-The approximate frequentist method based on Wilks' theorem.
+The approximate frequentist method based on Wilks' theorem.  See section~\ref{S:ProfileLikelihoodRatio}
 
 
 
@@ -460,7 +551,7 @@ systematic uncertainties, a degraded separation of the hypotheses.
 \section{Confidence Intervals}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\subsection{Profile Likelihood Ratio (the method of MINOS)}
+	\subsection{Profile Likelihood Ratio (the method of MINOS)}\label{S:ProfileLikelihoodRatio}
 
 Suppose we have, for each of $N$ events in a collection, a set of
 measured quantities \mbox{$\underline{x}=(x_a,\,x_b,\,x_c,\,\ldots)$}
@@ -637,15 +728,61 @@ This is a light weight class that encodes a specific configuration of the more g
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Utilities}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\subsection{The Number Counting PDF Factory}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\subsection{RooStatsUtils}
+\subsection{Converting between p-values and significance}
+\lstinputlisting{code_snippits/RooStatsUtils.h}
 
-		\subsubsection{Standalone number counting functions}
+\subsection{Standalone number counting hypothesis tests}
+These are  RooStats standalone utilities
+that calculate the p-value or Z value (eg. significance in
+1-sided Gaussian standard deviations) for a number counting experiment.
+This is a hypothesis test between background only and signal-plus-background.
+The background estimate has uncertainty derived from an auxiliary or sideband
+measurement.
 
-		\subsubsection{Converting between p-values and significance}
+This is based on code and comments from Bob Cousins 
+and on the following papers:
+
+Evaluation of three methods for calculating statistical significance when incorporating a systematic uncertainty into a test of the background-only hypothesis for a Poisson process
+Authors: Robert D. Cousins, James T. Linnemann, Jordan Tucker
+http://arxiv.org/abs/physics/0702156
+NIM  A 595 (2008) 480--501
+
+Statistical Challenges for Searches for New Physics at the LHC
+Authors: Kyle Cranmer
+http://arxiv.org/abs/physics/0511028
+
+ Measures of Significance in HEP and Astrophysics
+ Authors: J. T. Linnemann
+ http://arxiv.org/abs/physics/0312059
+
+The problem is treated in a fully frequentist fashion by 
+interpreting the relative background uncertainty as
+being due to an auxiliary or sideband observation 
+that is also Poisson distributed with only background.
+Finally, one considers the test as a ratio of Poisson means
+where an interval is well known based on the conditioning on the total
+number of events and the binomial distribution.
+
+In short, this is an exact frequentist solution to the problem of
+a main measurement $x$ distributed as a Poisson around s+b and a sideband or 
+auxiliary measurement $y$ distributed as a Poisson around $\tau b$.  Eg. 
+\[
+L(x,y|s,b,\tau) = \textrm{Pois}(x|s+b) \textrm{Pois}(y|\tau b)
+\]
+
+Naming conventions:
+Exp = Expected
+Obs = Observed
+P   = p-value
+Z   = Z-value or significance in sigma (one-sided convention)
+
+
+\lstinputlisting{code_snippits/NumberCountingUtils.h}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{The Number Counting PDF Factory}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\subsection{SPlot}
