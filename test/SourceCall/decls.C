@@ -1,5 +1,5 @@
 // RUN: %cling %s | FileCheck %s
-// CHECK:
+// XFAIL: *
 #include <cmath>
 
 struct S{int i;};
@@ -9,4 +9,6 @@ int i = 12;
 float f = sin(12);
 int j = i;
 
-void decls() {}
+void decls() {
+   printf("j=%d\n",j); // CHECK:j=12
+}
