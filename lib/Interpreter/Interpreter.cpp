@@ -205,14 +205,27 @@ private:
    const clang::CompilerInstance& m_CI;
    unsigned int m_minpos;
    std::vector<std::string> m_macros;
+   clang::FileID m_InterpreterFile; // file included by the stub, identified by MacroDefined(), FileChanged()
+   unsigned int m_inclLevel; // level of inclusions below m_InterpreterFile
+
+   // Whether the CPP interpreter file tag was found,
+   // the file is parsed, or has been parsed
+   enum {
+      kNotSeenYet,
+      kIsComingUp,
+      kIsActive,
+      kHasPassed
+   } m_InterpreterFileStatus;
 
 public:
 
    MacroDetector(const clang::CompilerInstance& CI, unsigned int minpos)
-         : clang::PPCallbacks(), m_CI(CI), m_minpos(minpos) {
+      : clang::PPCallbacks(), m_CI(CI), m_minpos(minpos),
+        m_inclLevel(0),
+        m_InterpreterFileStatus(kNotSeenYet) {
    }
 
-   ~MacroDetector();
+   virtual ~MacroDetector();
 
    std::vector<std::string>&
    getMacrosVector() {
@@ -224,6 +237,10 @@ public:
 
    void
    MacroUndefined(const clang::IdentifierInfo* II, const clang::MacroInfo* MI);
+
+   void
+   FileChanged(clang::SourceLocation Loc, clang::PPCallbacks::FileChangeReason Reason,
+               clang::SrcMgr::CharacteristicKind FileType);
 };
 
 MacroDetector::~MacroDetector()
@@ -239,9 +256,23 @@ MacroDetector::MacroDefined(const clang::IdentifierInfo* II,
    }
    clang::SourceManager& SM = m_CI.getSourceManager();
    clang::FileID mainFileID = SM.getMainFileID();
-   if (SM.getFileID(MI->getDefinitionLoc()) != mainFileID) {
+   if (SM.getFileID(MI->getDefinitionLoc()) == mainFileID) {
+      if (II && II->getLength() == 35
+          && II->getName() == "__CLING__MAIN_FILE_INCLUSION_MARKER") {
+         assert(m_InterpreterFileStatus == kNotSeenYet && "Inclusion-buffer already found the interpreter file!");
+         m_InterpreterFileStatus = kIsComingUp;
+      } else if (II && II->getLength() == 25
+          && II->getName() == "__CLING__MAIN_FILE_MARKER") {
+         assert(m_InterpreterFileStatus == kNotSeenYet && "Inclusion-buffer already found the interpreter file!");
+         m_InterpreterFileStatus = kIsActive;
+      }
       return;
    }
+
+   if (m_InterpreterFileStatus != kIsActive || m_InterpreterFile.isInvalid()
+       || SM.getFileID(MI->getDefinitionLoc()) != m_InterpreterFile)
+      return;
+
    clang::SourceLocation SLoc = SM.getInstantiationLoc(
                                    MI->getDefinitionLoc());
    clang::SourceLocation ELoc = SM.getInstantiationLoc(
@@ -254,8 +285,8 @@ MacroDetector::MacroDefined(const clang::IdentifierInfo* II,
    const clang::LangOptions& LO = m_CI.getLangOpts();
    end += clang::Lexer::MeasureTokenLength(ELoc, SM, LO);
    std::pair<const char*, const char*> buf = std::make_pair(
-      SM.getBuffer(mainFileID)->getBufferStart(),
-      SM.getBuffer(mainFileID)->getBufferEnd());
+      SM.getBuffer(m_InterpreterFile)->getBufferStart(),
+      SM.getBuffer(m_InterpreterFile)->getBufferEnd());
    std::string str(buf.first + start, end - start);
    m_macros.push_back("#define " + str);
 }
@@ -269,9 +300,22 @@ MacroDetector::MacroUndefined(const clang::IdentifierInfo* II,
    }
    clang::SourceManager& SM = m_CI.getSourceManager();
    clang::FileID mainFileID = SM.getMainFileID();
-   if (SM.getFileID(MI->getDefinitionLoc()) != mainFileID) {
+   if (SM.getFileID(MI->getDefinitionLoc()) == mainFileID) {
+      if (II
+          && ((II->getLength() == 35
+               && II->getName() == "__CLING__MAIN_FILE_INCLUSION_MARKER")
+              || (II->getLength() == 25
+                  && II->getName() == "__CLING__MAIN_FILE_MARKER"))) {
+         assert(m_InterpreterFileStatus == kIsActive && "Interpreter file is not active!");
+         m_InterpreterFileStatus = kHasPassed;
+      }
       return;
    }
+
+   if (m_InterpreterFileStatus != kIsActive || m_InterpreterFile.isInvalid()
+       || SM.getFileID(MI->getDefinitionLoc()) != m_InterpreterFile)
+      return;
+
    clang::SourceLocation SLoc = SM.getInstantiationLoc(
                                    MI->getDefinitionLoc());
    clang::SourceLocation ELoc = SM.getInstantiationLoc(
@@ -284,14 +328,49 @@ MacroDetector::MacroUndefined(const clang::IdentifierInfo* II,
    const clang::LangOptions& LO = m_CI.getLangOpts();
    end += clang::Lexer::MeasureTokenLength(ELoc, SM, LO);
    std::pair<const char*, const char*> buf = std::make_pair(
-      SM.getBuffer(mainFileID)->getBufferStart(),
-      SM.getBuffer(mainFileID)->getBufferEnd());
+      SM.getBuffer(m_InterpreterFile)->getBufferStart(),
+      SM.getBuffer(m_InterpreterFile)->getBufferEnd());
    std::string str(buf.first + start, end - start);
    std::string::size_type pos = str.find(' ');
    if (pos != std::string::npos) {
       str = str.substr(0, pos);
    }
    m_macros.push_back("#undef " + str);
+}
+
+void
+MacroDetector::FileChanged(clang::SourceLocation Loc, clang::PPCallbacks::FileChangeReason Reason,
+                           clang::SrcMgr::CharacteristicKind /*FileType*/)
+{
+   // This callback is invoked whenever a source file is entered or exited.
+   // The SourceLocation indicates the new location, and EnteringFile indicates
+   // whether this is because we are entering a new include'd file (when true)
+   // or whether we're exiting one because we ran off the end (when false).
+   // It extracts the main file ID - the one requested by the interpreter
+   // and not the string buffer used to prepent the previous global declarations
+   // and to append the execution suffix.
+
+   clang::SourceManager& SM = m_CI.getSourceManager();
+   if (m_InterpreterFileStatus == kIsComingUp) {
+      m_InterpreterFile = SM.getFileID(Loc);
+      m_InterpreterFileStatus = kIsActive;
+   } else if (m_InterpreterFileStatus == kIsActive) {
+      if (Reason == EnterFile) {
+         ++m_inclLevel;
+         if (m_inclLevel == 1) {
+            clang::FileID inclFileID = SM.getFileID(Loc);
+            if (!inclFileID.isInvalid()) {
+               const clang::FileEntry* FE = SM.getFileEntryForID(inclFileID);
+               if (FE) {
+                  std::string filename = FE->getName();
+                  m_macros.push_back("#include \"" + filename + "\"");
+               }
+            }
+         }
+      } else if (Reason == ExitFile) {
+         --m_inclLevel;
+      }
+   }
 }
 
 //
@@ -701,7 +780,9 @@ Interpreter::makeModuleFromCommandLine(const std::string& input_line)
    //
    std::string src(m_globalDeclarations);
    src += "void __cling_internal() {\n";
+   src += "#define __CLING__MAIN_FILE_MARKER __cling__prompt\n";
    src += input_line;
+   src += "#undef __CLING__MAIN_FILE_MARKER\n";
    src += "\n} // end __cling_internal()\n";
    //fprintf(stderr, "input_line:\n%s\n", src.c_str());
    std::string wrapped;
@@ -1178,7 +1259,9 @@ clang::CompilerInstance*
 Interpreter::compileFile(const std::string& filename, const std::string* trailcode /*=0*/)
 {
    std::string code(m_globalDeclarations);
+   code += "#define __CLING__MAIN_FILE_INCLUSION_MARKER \"" + filename + "\"\n";
    code += "#include \"" + filename + "\"\n";
+   code += "#undef __CLING__MAIN_FILE_INCLUSION_MARKER\n";
    if (trailcode) code += *trailcode;
    return compileString(code);
 }
