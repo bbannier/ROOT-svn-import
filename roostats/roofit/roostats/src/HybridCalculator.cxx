@@ -87,7 +87,7 @@ HybridCalculator::HybridCalculator(const char *name) :
    fNuisanceParameters(0),
    fPriorPdf(0),
    fData(0),
-   fUsePriorPdf(false)
+   fUsePriorPdf(false),   fTmpDoExtended(true)
 {
    // constructor with name and title
    // set default parameters
@@ -111,7 +111,8 @@ HybridCalculator::HybridCalculator( RooAbsPdf& sbModel,
    fPriorPdf(priorPdf),
    fData(0),
    fGenerateBinned(GenerateBinned),
-   fUsePriorPdf(false)
+   fUsePriorPdf(false),
+   fTmpDoExtended(true)
 {
    /// HybridCalculator constructor without specifying a data set
    /// the user need to specify the models in the S+B case and B-only case,
@@ -151,7 +152,8 @@ HybridCalculator::HybridCalculator( RooAbsData & data,
    fPriorPdf(priorPdf),
    fData(&data),
    fGenerateBinned(GenerateBinned),
-   fUsePriorPdf(false)
+   fUsePriorPdf(false),
+   fTmpDoExtended(true)
 {
    /// HybridCalculator constructor for performing hypotesis test 
    /// the user need to specify the data set, the models in the S+B case and B-only case. 
@@ -180,7 +182,8 @@ HybridCalculator::HybridCalculator( RooAbsData& data,
    fPriorPdf((sbModel.GetPriorPdf()) ? sbModel.GetPriorPdf()  :  bModel.GetPriorPdf()),
    fData(&data),
    fGenerateBinned(GenerateBinned),
-   fUsePriorPdf(false)
+   fUsePriorPdf(false),
+   fTmpDoExtended(true)
 {
   /// Constructor with a ModelConfig object representing the signal + background model and 
   /// another model config representig the background only model
@@ -258,20 +261,38 @@ HybridResult* HybridCalculator::Calculate(RooAbsData& data, unsigned int nToys, 
       testStatData = nEvents;
    } else if ( fTestStatisticsIdx==3 ) {
       /// profiled likelihood ratio used as test statistics
-      RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,data,RooFit::Extended());
-      fSbModel->fitTo(data,RooFit::Extended());
-      double sb_nll_val = sb_nll.getVal();
-      RooNLLVar b_nll("b_nll","b_nll",*fBModel,data,RooFit::Extended());
-      fBModel->fitTo(data,RooFit::Extended());
-      double b_nll_val = b_nll.getVal();
-      double m2lnQ = 2*(sb_nll_val-b_nll_val);
-      testStatData = m2lnQ;
-   } else if ( fTestStatisticsIdx==1 ) {
+      if ( fTmpDoExtended ) { 
+	RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,data,RooFit::CloneData(false),RooFit::Extended());
+	fSbModel->fitTo(data,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0),RooFit::Extended());
+	double sb_nll_val = sb_nll.getVal();
+	RooNLLVar b_nll("b_nll","b_nll",*fBModel,data,RooFit::CloneData(false),RooFit::Extended());
+	fBModel->fitTo(data,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0),RooFit::Extended());
+	double b_nll_val = b_nll.getVal();
+	double m2lnQ = 2*(sb_nll_val-b_nll_val);
+	testStatData = m2lnQ;
+      } else {
+	RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,data,RooFit::CloneData(false));
+	fSbModel->fitTo(data,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
+	double sb_nll_val = sb_nll.getVal();
+	RooNLLVar b_nll("b_nll","b_nll",*fBModel,data,RooFit::CloneData(false));
+	fBModel->fitTo(data,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
+	double b_nll_val = b_nll.getVal();
+	double m2lnQ = 2*(sb_nll_val-b_nll_val);
+	testStatData = m2lnQ;
+      }
+    } else if ( fTestStatisticsIdx==1 ) {
       /// likelihood ratio used as test statistics (default)
-      RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,data,RooFit::Extended());
-      RooNLLVar b_nll("b_nll","b_nll",*fBModel,data,RooFit::Extended());
-      double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
-      testStatData = m2lnQ;
+      if ( fTmpDoExtended ) { 
+	RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,data,RooFit::Extended());
+	RooNLLVar b_nll("b_nll","b_nll",*fBModel,data,RooFit::Extended());
+	double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
+	testStatData = m2lnQ;
+      } else {
+	RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,data);
+	RooNLLVar b_nll("b_nll","b_nll",*fBModel,data);
+	double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
+	testStatData = m2lnQ;
+      }
    }
 
    HybridResult* result = Calculate(nToys,usePriors);
@@ -357,7 +378,6 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
      if ( /*verbose && */ iToy%500==0 ) {
            std::cout << "....... toy number " << iToy << " / " << nToys << std::endl;
      }
-     
 
       /// vary the value of the integrated parameters according to the prior pdf
       if (usePriors && nParameters>0) {
@@ -375,8 +395,10 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
       RooAbsData* bData;
       if (fGenerateBinned)
 	bData = static_cast<RooAbsData*> (fBModel->generateBinned(*fObservables,RooFit::Extended()));	
-      else 
-	bData = static_cast<RooAbsData*> (fBModel->generate(*fObservables,RooFit::Extended()));
+      else {
+	if ( fTmpDoExtended ) bData = static_cast<RooAbsData*> (fBModel->generate(*fObservables,RooFit::Extended()));
+	else bData = static_cast<RooAbsData*> (fBModel->generate(*fObservables));
+      }
 
       /// work-around in case of an empty dataset (TO DO: need a debug in RooFit?)
       bool bIsEmpty = false;
@@ -392,8 +414,10 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
       RooAbsData* sbData;
       if (fGenerateBinned)    
 	sbData = static_cast<RooAbsData*> (fSbModel->generateBinned(*fObservables,RooFit::Extended()));
-      else
-	sbData = static_cast<RooAbsData*> (fSbModel->generate(*fObservables,RooFit::Extended()));
+      else {
+	if ( fTmpDoExtended ) sbData = static_cast<RooAbsData*> (fSbModel->generate(*fObservables,RooFit::Extended()));
+	else sbData = static_cast<RooAbsData*> (fSbModel->generate(*fObservables));
+      }
 
       /// work-around in case of an empty dataset (TO DO: need a debug in RooFit?)
       bool sbIsEmpty = false;
@@ -413,60 +437,55 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
          }
       }
 
-      /// evaluate the test statistic in the S+B case
-      if ( fTestStatisticsIdx==2 ) {
-         /// number of events used as test statistics
-         double nEvents = 0;
-         if ( !sbIsEmpty ) nEvents = sbData->numEntries();
-         sbVals.push_back(nEvents);
-      } else if ( fTestStatisticsIdx==3 ) {
-         /// profiled likelihood ratio used as test statistics
-         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended(),RooFit::CloneData(false));
-         fSbModel->fitTo(*sbData,RooFit::Extended(),RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
-         double sb_nll_val = sb_nll.getVal();
-//          std::cout << "S+B DATA  n = " << sbData->numEntries() << std::endl;
-//          std::cout << "NLL_SB = " << sb_nll_val << "   S+B Best fit params " << std::endl;
-//          fSbModel->getParameters(*sbData)->Print("V");
-         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended(),RooFit::CloneData(false));
-         fBModel->fitTo(*sbData,RooFit::Extended(),RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
-         double b_nll_val = b_nll.getVal();
-//          std::cout << "NLL_B = " << b_nll_val << "     B Best fit params " << std::endl;
-//          fBModel->getParameters(*sbData)->Print("V");
-         double m2lnQ = 2*(sb_nll_val-b_nll_val);
-//          std::cout << " 2 * LR = " << m2lnQ << std::endl;
-        
-         sbVals.push_back(m2lnQ);
-      } else if ( fTestStatisticsIdx==1 ) {
-         /// likelihood ratio used as test statistics (default)
-         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended(),RooFit::CloneData(false));
-         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended(),RooFit::CloneData(false));
-         double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
-         sbVals.push_back(m2lnQ);
-      }
-
-      /// evaluate the test statistic in the B-only case
-      if ( fTestStatisticsIdx==2 ) {
-         /// number of events used as test statistics
-         double nEvents = 0;
-         if ( !bIsEmpty ) nEvents = bData->numEntries();
-         bVals.push_back(nEvents);
-      } else if ( fTestStatisticsIdx==3 ) {
-         /// profiled likelihood ratio used as test statistics
-         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended(),RooFit::CloneData(false));
-         fSbModel->fitTo(*bData,RooFit::Extended(),RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
-         double sb_nll_val = sb_nll.getVal();
-         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended(),RooFit::CloneData(false));
-         fBModel->fitTo(*bData,RooFit::Extended(),RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
-         double b_nll_val = b_nll.getVal();
-         double m2lnQ = 2*(sb_nll_val-b_nll_val);
-         bVals.push_back(m2lnQ);
-      } else if ( fTestStatisticsIdx==1 ) {
-         /// likelihood ratio used as test statistics (default)
-         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended(),RooFit::CloneData(false));
-         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended(),RooFit::CloneData(false));
-         double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
-         bVals.push_back(m2lnQ);
-      }
+      // test first the S+B hypothesis and the the B-only hypothesis
+      for (int hypoTested=0; hypoTested<=1; hypoTested++) {
+	RooAbsData* dataToTest = sbData;
+	bool dataIsEmpty = sbIsEmpty;
+	if ( hypoTested==1 ) { dataToTest = bData; dataIsEmpty = bIsEmpty; }
+	/// evaluate the test statistic in the tested hypothesis case
+	if ( fTestStatisticsIdx==2 ) {  /// number of events used as test statistics
+	  double nEvents = 0;
+	  if ( !dataIsEmpty ) nEvents = dataToTest->numEntries();
+	  if ( hypoTested==0 ) sbVals.push_back(nEvents);
+	  else bVals.push_back(nEvents);
+	} else if ( fTestStatisticsIdx==3 ) {  /// profiled likelihood ratio used as test statistics
+	  if ( fTmpDoExtended ) { 
+	    RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*dataToTest,RooFit::CloneData(false),RooFit::Extended());
+	    fSbModel->fitTo(*dataToTest,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0),RooFit::Extended());
+	    double sb_nll_val = sb_nll.getVal();
+	    RooNLLVar b_nll("b_nll","b_nll",*fBModel,*dataToTest,RooFit::CloneData(false),RooFit::Extended());
+	    fBModel->fitTo(*dataToTest,RooFit::PrintLevel(-1),RooFit::Hesse(false),RooFit::Strategy(0),RooFit::Extended());
+	    double b_nll_val = b_nll.getVal();
+	    double m2lnQ = -2*(b_nll_val-sb_nll_val);
+	    if ( hypoTested==0 ) sbVals.push_back(m2lnQ);
+	    else bVals.push_back(m2lnQ);
+	  } else {
+	    RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*dataToTest,RooFit::CloneData(false));
+	    fSbModel->fitTo(*dataToTest,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
+	    double sb_nll_val = sb_nll.getVal();
+	    RooNLLVar b_nll("b_nll","b_nll",*fBModel,*dataToTest,RooFit::CloneData(false));
+	    fBModel->fitTo(*dataToTest,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
+	    double b_nll_val = b_nll.getVal();
+	    double m2lnQ = -2*(b_nll_val-sb_nll_val);
+	    if ( hypoTested==0 ) sbVals.push_back(m2lnQ);
+	    else bVals.push_back(m2lnQ);
+	  }
+	} else if ( fTestStatisticsIdx==1 ) {  /// likelihood ratio used as test statistics (default)
+	  if ( fTmpDoExtended ) { 
+	    RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*dataToTest,RooFit::CloneData(false),RooFit::Extended());
+	    RooNLLVar b_nll("b_nll","b_nll",*fBModel,*dataToTest,RooFit::CloneData(false),RooFit::Extended());
+	    double m2lnQ = -2*(b_nll.getVal()-sb_nll.getVal());
+	    if ( hypoTested==0 ) sbVals.push_back(m2lnQ);
+	    else bVals.push_back(m2lnQ);
+	  } else {
+	    RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*dataToTest,RooFit::CloneData(false));
+	    RooNLLVar b_nll("b_nll","b_nll",*fBModel,*dataToTest,RooFit::CloneData(false));
+	    double m2lnQ = -2*(b_nll.getVal()-sb_nll.getVal());
+	    if ( hypoTested==0 ) sbVals.push_back(m2lnQ);
+	    else bVals.push_back(m2lnQ);
+	  }
+	}
+      }  // tested both hypotheses
 
       /// delete the toy-MC datasets
       delete sbData;
