@@ -40,7 +40,9 @@ BayesianCalculator::BayesianCalculator() :
   fPdf(0),
   fPriorPOI(0),
   fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0), 
-  fLower(0), fUpper(0), fValidInterval(false),
+  fLower(0), fUpper(0),
+  fBrfPrecision(0.00005),
+  fValidInterval(false),
   fSize(0.05)
 {
    // default constructor
@@ -58,7 +60,9 @@ BayesianCalculator::BayesianCalculator( /* const char* name,  const char* title,
   fPOI(POI),
   fPriorPOI(&priorPOI),
   fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0),
-  fLower(0), fUpper(0), fValidInterval(false),
+  fLower(0), fUpper(0),
+  fBrfPrecision(0.00005),
+  fValidInterval(false),  
   fSize(0.05)
 {
    // constructor
@@ -71,7 +75,9 @@ BayesianCalculator::BayesianCalculator( RooAbsData& data,
    fPdf(model.GetPdf()),
    fPriorPOI( model.GetPriorPdf()),
    fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0),
-   fLower(0), fUpper(0), fValidInterval(false),
+   fLower(0), fUpper(0),
+   fBrfPrecision(0.00005),
+   fValidInterval(false),
    fSize(0.05)
 {
    // constructor from Model Config
@@ -116,26 +122,38 @@ void BayesianCalculator::SetModel(const ModelConfig & model) {
    ClearAll(); 
 }
 
-   RooArgSet* BayesianCalculator::GetMode(RooArgSet* /* parameters */) const
+
+RooArgSet* BayesianCalculator::GetMode(RooArgSet* /* parameters */) const
 {
+  /// Returns the value of the parameters for the point in
+  /// parameter-space that is the most likely.
+  // Should cover multi-dimensional cases...
+  // How do we do if there are points that are equi-probable?
+
   return 0;
 }
 
+
 RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
 {
-   // get posterior pdf  
+  /// build and return the posterior PDF
 
-   // run some checks
-   if (!fPdf ) return 0; 
+   // run some sanity checks
+   if (!fPdf ) {
+     std::cerr << "BayesianCalculator::GetPosteriorPdf - missing pdf model" << std::endl;
+     return 0;
+   }
    if (!fPriorPOI) { 
       std::cerr << "BayesianCalculator::GetPosteriorPdf - missing prior pdf" << std::endl;
    }
-   if (fPOI.getSize() == 0) return 0; 
+   if (fPOI.getSize() == 0) {
+     std::cerr << "BayesianCalculator::GetPosteriorPdf - missing parameter of interest" << std::endl;
+     return 0;
+   }
    if (fPOI.getSize() > 1) { 
       std::cerr << "BayesianCalculator::GetPosteriorPdf - current implementation works only on 1D intervals" << std::endl;
       return 0; 
    }
-
 
    // create a unique name for the product pdf 
    TString prodName = TString("product_") + TString(fPdf->GetName()) + TString("_") + TString(fPriorPOI->GetName() );   
@@ -187,7 +205,11 @@ RooPlot* BayesianCalculator::GetPosteriorPlot() const
 
 SimpleInterval* BayesianCalculator::GetInterval() const
 {
-   /// computes and returns a SimpleInterval with the lower/upper limit on the scanned variable
+  /// returns a SimpleInterval with lower and upper bounds on the
+  /// parameter of interest. Applies the central ordering rule to
+  /// compute the credibility interval. Covers only the case with one
+  /// single parameter of interest
+
    if (fValidInterval) 
       std::cout << "BayesianCalculator::GetInterval:" 
                 << "Warning : recomputing interval for the same CL and same model" << std::endl;
@@ -197,13 +219,14 @@ SimpleInterval* BayesianCalculator::GetInterval() const
 
    if (!fPosteriorPdf) fPosteriorPdf = (RooAbsPdf*) GetPosteriorPdf();
 
-   RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI);
+   RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI,RooFit::ScanParameters(1000,2));
+   //RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI,RooFit::ScanNoCdf());
 
    RooAbsFunc* cdf_bind = cdf->bindVars(fPOI,&fPOI);
    RooBrentRootFinder brf(*cdf_bind);
-   brf.setTol(0.00005); // precision
+   brf.setTol(fBrfPrecision); // set the brf precision
 
-   double tmpVal = poi->getVal(); // patch because findRoot changes the value of poi
+   double tmpVal = poi->getVal();  // patch used because findRoot changes the value of poi
 
    double y = fSize/2;
    brf.findRoot(fLower,poi->getMin(),poi->getMax(),y);

@@ -80,6 +80,8 @@ namespace RooStats {
       // Get the Confidence level for the test
       virtual Double_t ConfidenceLevel() const { return 1.-fSize; }
 
+      void SetBrfPrecision( double precision ) { fBrfPrecision = precision; }
+
    protected:
 
       void ClearAll() const; 
@@ -106,6 +108,7 @@ namespace RooStats {
       mutable RooAbsPdf* fPosteriorPdf; 
       mutable Double_t  fLower; 
       mutable Double_t  fUpper; 
+      double fBrfPrecision;
       mutable Bool_t    fValidInterval;
 
       double fSize;  // size used for getting the interval
