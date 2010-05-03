@@ -8,19 +8,21 @@
 #include <vector>
 #include <string>
 
-#include <clang/Basic/LangOptions.h>
+#include "clang/Basic/LangOptions.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/HeaderSearchOptions.h"
 
-#include <llvm/ADT/OwningPtr.h>
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/Module.h>
-#include <llvm/Function.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/System/DynamicLibrary.h>
-#include <llvm/System/Signals.h>
-#include <llvm/Support/PrettyStackTrace.h>
+#include "llvm/ADT/OwningPtr.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Module.h"
+#include "llvm/Function.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/System/DynamicLibrary.h"
+#include "llvm/System/Signals.h"
+#include "llvm/Support/PrettyStackTrace.h"
 
-#include <cling/Interpreter/Interpreter.h>
-#include <cling/UserInterface/UserInterface.h>
+#include "cling/Interpreter/Interpreter.h"
+#include "cling/UserInterface/UserInterface.h"
 
 //------------------------------------------------------------------------------
 // Let the show begin
