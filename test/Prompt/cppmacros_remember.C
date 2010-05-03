@@ -3,8 +3,8 @@
 // RUN: cat %s | %cling -l | FileCheck %s
 
 #include <cstdlib>
-#include "cppmacros_1.C"
+.L cppmacros_1.C
 #undef MYMACRO
-#include "cppmacros_2.C"
+.L cppmacros_2.C
 MYMACRO((void*)42); // CHECK: MYMACRO param=42
 .q
