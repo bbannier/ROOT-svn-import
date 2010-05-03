@@ -7,12 +7,6 @@
 #ifndef CLING_USERINTERFACE_H
 #define CLING_USERINTERFACE_H
 
-#include <string>
-
-namespace llvm {
-   class Module;
-}
-
 namespace cling {
    class Interpreter;
    class MetaProcessor;
