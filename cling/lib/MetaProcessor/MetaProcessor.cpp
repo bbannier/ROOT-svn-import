@@ -6,14 +6,9 @@
 
 #include "cling/MetaProcessor/MetaProcessor.h"
 
-#include "cling/EditLine/EditLine.h"
 #include "cling/Interpreter/Interpreter.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/System/DynamicLibrary.h"
-#include "llvm/System/Path.h"
 
 #include <cstdio>
-#include <iostream>
 
 //---------------------------------------------------------------------------
 // Construct an interface for an interpreter

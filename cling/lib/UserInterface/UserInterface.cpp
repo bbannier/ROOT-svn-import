@@ -7,16 +7,10 @@
 #include <cling/UserInterface/UserInterface.h>
 
 #include <cling/MetaProcessor/MetaProcessor.h>
-
-#include <llvm/System/DynamicLibrary.h>
-#include <llvm/System/Path.h>
-#include <llvm/Support/MemoryBuffer.h>
+#include <cling/EditLine/EditLine.h>
 
 #include <iostream>
-
 #include <sys/stat.h>
-#include <stdio.h>
-#include <cling/EditLine/EditLine.h>
 
 namespace llvm {
    class Module;

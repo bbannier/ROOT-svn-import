@@ -15,11 +15,16 @@
 #include <set>
 #include <map>
 
-#include <llvm/Support/raw_os_ostream.h>
-
-#include <clang/Basic/LangOptions.h>
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
+
+namespace llvm {
+   class raw_os_ostream;
+}
+
+namespace clang {
+   class LangOptions;
+}
 
 namespace cling {
    

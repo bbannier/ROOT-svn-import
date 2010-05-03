@@ -12,10 +12,6 @@
 
 #include "Diagnostics.h"
 
-#include <clang/Basic/SourceManager.h>
-#include <clang/Lex/LexDiagnostic.h>
-#include <clang/Sema/SemaDiagnostic.h>
-
 #if 0
 namespace cling {
 
