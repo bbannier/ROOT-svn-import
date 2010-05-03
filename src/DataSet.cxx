@@ -560,7 +560,7 @@ TTree* TMVA::DataSet::GetTree( Types::ETreeType type )
       metVals[i] = new Float_t[fdsi.GetNTargets()+fdsi.GetNClasses()];
 
    // create branches for event-variables
-   tree->Branch( "class", &cls, "class/I" ); 
+   tree->Branch( "classID", &cls, "classID/I" ); 
    classNameBranch = tree->Branch( "className",(void*)className, "className/C" ); 
 
 
