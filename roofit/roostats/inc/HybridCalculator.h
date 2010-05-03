@@ -135,6 +135,7 @@ namespace RooStats {
       HybridResult* Calculate(unsigned int nToys, bool usePriors) const;
       void PrintMore(const char* options) const;
 
+      void PatchSetExtended(bool on = true) { fTmpDoExtended = on; } // patch to test with RooPoisson (or other non-extended models)
 
    private:
 
@@ -153,6 +154,7 @@ namespace RooStats {
       RooAbsData * fData;     // pointer to the data sets 
       bool fGenerateBinned;   //Flag to control binned generation
       bool  fUsePriorPdf;               // use a prior for nuisance parameters  
+      bool fTmpDoExtended;
 
 //       TString fSbModelName;   // name of pdf of the signal+background model
 //       TString fBModelName;   // name of pdf of the background model
