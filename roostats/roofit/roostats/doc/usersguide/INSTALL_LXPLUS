@@ -33,6 +33,28 @@ python setup.py install --home=<py_dest_dir>
 
 I got an error, but it seems to work in any case...
 
+--- GS: I also get an error which is:
+Traceback (most recent call last):
+  File "setup.py", line 6, in ?
+    from pyparsing import __version__
+  File "pyparsing-1.5.2/pyparsing.py", line 2550
+    matchOrder += list(e for e in self.exprs if isinstance(e,Optional) and e.expr in tmpOpt)
+                           ^
+SyntaxError: invalid syntax
+--- I have at this stage:
+python
+python/lib
+python/lib/python
+python/lib/python/dot2tex
+python/lib/python/dot2tex/__init__.py
+python/lib/python/dot2tex/dot2tex.py
+python/lib/python/dot2tex/dotparsing.py
+python/lib/python/dot2tex/__init__.pyc
+python/lib/python/dot2tex/dot2tex.pyc
+python/bin
+python/bin/dot2tex
+---
+
 
 4) Set the python search directory for the modules:
 
@@ -70,8 +92,8 @@ Inside this directory make a symbolic link:
 
 ln -s <where is the package>/tex
 
-7)
-You need to install preview for latex:
+
+7) You need to install preview for latex:
 
 wget http://mirror.ctan.org/macros/latex/contrib/preview.zip
 
@@ -88,14 +110,17 @@ ln -s <where is preview>/preview
 (in my case ln -s ~/public/RooStats/preview)
 
 
-8)
-
-Now you can run!
+8) Now you can run!
 
 NOTE: everytime you open the shell you need JUST to set the env variables:
 
 export PYTHONPATH=~/public/RooStats/python/lib/python:$PYTHONHOME
 export PATH=$PATH:~/public/RooStats/python/bin
+
+--- GS: on C-shell
+setenv PYTHONPATH python/lib/python:$PYTHONHOME
+setenv PATH ${PATH}:python/bin
+---
 
 You can put them in the shell profile file.
 
