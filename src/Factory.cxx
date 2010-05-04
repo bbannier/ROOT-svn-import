@@ -391,6 +391,8 @@ void TMVA::Factory::AddTree( TTree* tree, const TString& className, Double_t wei
    if( fAnalysisType == Types::kNoAnalysisType && DefaultDataSetInfo().GetNClasses() > 2 )
       fAnalysisType = Types::kMulticlass;
 
+   Log() << kINFO << "Add Tree " << tree->GetName() << " of type " << className 
+         << " with " << tree->GetEntries() << " events" << Endl;
    DataInput().AddTree(tree, className, weight, cut, tt );
 }
 
@@ -695,7 +697,6 @@ TMVA::MethodBase* TMVA::Factory::BookMethod( TString theMethodName, TString meth
                                                  methodTitle,
                                                  DefaultDataSetInfo(),
                                                  theOption );
-
    }
    else {
       // boosted classifier, requires a specific definition, making it transparent for the user

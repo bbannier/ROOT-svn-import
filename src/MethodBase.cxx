@@ -561,7 +561,8 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition )
             GetTransformationHandler().AddTransformation( new VariableNormalizeTransform( DataInfo()), idxCls );
          else
             Log() << kFATAL << "<ProcessOptions> Variable transform '"
-                  << trName << "' unknown." << Endl;
+                  << trName << "' unknown." << Endl;         
+         Log() << kINFO << " create Transformation " << trName << " with reference class " << DataInfo().GetClassInfo(idxCls)->GetName() << "=("<< idxCls <<")"<<Endl;
       }
    }
 }
