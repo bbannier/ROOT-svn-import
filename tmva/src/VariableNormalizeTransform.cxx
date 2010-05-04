@@ -13,7 +13,7 @@
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker  <Andreas.Hocker@cern.ch>   - CERN, Switzerland           *
  *      Joerg Stelzer    <Joerg.Stelzer@cern.ch>    - CERN, Switzerland           *
- *      Peter Speckmayer <Peter:Speckmayer@cern.ch> - CERN, Switzerland           *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch> - CERN, Switzerland           *
  *      Helge Voss       <Helge.Voss@cern.ch>       - MPI-K Heidelberg, Germany   *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
@@ -138,11 +138,7 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::Transform( const TMVA::Even
       ++iidx;
    }
 
-   SetOutput( fTransformedEvent, output );
-
-   fTransformedEvent->SetWeight     ( ev->GetWeight() );
-   fTransformedEvent->SetBoostWeight( ev->GetBoostWeight() );
-   fTransformedEvent->SetClass      ( ev->GetClass() );
+   SetOutput( fTransformedEvent, output, ev );
 
    return fTransformedEvent;
 }
@@ -187,11 +183,7 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::InverseTransform( const TMV
       ++iidx;
    }
 
-   SetOutput( fTransformedEvent, output );
-
-   fTransformedEvent->SetWeight     ( ev->GetWeight() );
-   fTransformedEvent->SetBoostWeight( ev->GetBoostWeight() );
-   fTransformedEvent->SetClass      ( ev->GetClass() );
+   SetOutput( fBackTransformedEvent, output, ev );
 
    return fBackTransformedEvent;
 }
@@ -207,8 +199,13 @@ void TMVA::VariableNormalizeTransform::CalcNormalizationParams( const std::vecto
 
    UInt_t inputSize = fGet.size(); // number of input variables
 
-   Int_t numC = GetNClasses()+1;   // prepare the min and max values for each of the classes and additionally for all classes (if more than one)
-   if (GetNClasses() <= 1 ) numC = 1;
+   const UInt_t nCls = GetNClasses();
+   Int_t numC = nCls+1;   // prepare the min and max values for each of the classes and additionally for all classes (if more than one)
+   Int_t all = nCls; // at idx the min and max values for "all" classes are stored
+   if (nCls <= 1 ) {
+      numC = 1;
+      all = 0;
+   }
 
    for (UInt_t iinp=0; iinp<inputSize; ++iinp) {
       for (Int_t ic = 0; ic < numC; ic++) {
@@ -217,7 +214,6 @@ void TMVA::VariableNormalizeTransform::CalcNormalizationParams( const std::vecto
       }
    }
 
-   const Int_t all = GetNClasses(); // at idx the min and max values for "all" classes are stored
    std::vector<Event*>::const_iterator evIt = events.begin();
    for (;evIt!=events.end();evIt++) { // loop over all events
       TMVA::Event* event = (*evIt);   // get the event
@@ -238,7 +234,7 @@ void TMVA::VariableNormalizeTransform::CalcNormalizationParams( const std::vecto
 	 if( minVector.at(iidx) > val ) minVector.at(iidx) = val;
 	 if( maxVector.at(iidx) < val ) maxVector.at(iidx) = val;
 
-	 if (GetNClasses() != 1) { // in case more than one class exists, compute min and max as well for all classes together
+	 if (nCls != 1) { // in case more than one class exists, compute min and max as well for all classes together
             if (minVectorAll.at(iidx) > val) minVectorAll.at(iidx) = val;
             if (maxVectorAll.at(iidx) < val) maxVectorAll.at(iidx) = val;
          }
@@ -575,6 +571,7 @@ void TMVA::VariableNormalizeTransform::MakeFunction( std::ostream& fout, const T
       fout << "//_______________________________________________________________________" << std::endl;
       fout << "inline void " << fcncName << "::InitTransform_"<<trCounter<<"()" << std::endl;
       fout << "{" << std::endl;
+      
       for (UInt_t ivar=0; ivar<GetNVariables(); ivar++) {
          Float_t min = FLT_MAX;
          Float_t max = -FLT_MAX;

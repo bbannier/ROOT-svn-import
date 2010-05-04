@@ -12,6 +12,7 @@
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Andreas Hoecker <Andreas.Hocker@cern.ch> - CERN, Switzerland              *
+ *      Peter Speckmayer <Peter.Speckmayer@cern.ch>  - CERN, Switzerland          *
  *      Joerg Stelzer   <Joerg.Stelzer@cern.ch>  - CERN, Switzerland              *
  *      Helge Voss      <Helge.Voss@cern.ch>     - MPI-K Heidelberg, Germany      *
  *                                                                                *
@@ -225,13 +226,17 @@ void TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Floa
 }
 
 //_______________________________________________________________________
-void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>& output ) const
+void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>& output, const Event* oldEvent ) const
 {
    // select the values from the event
    
    std::vector<Float_t>::iterator itOutput = output.begin();
 
+   if( oldEvent )
+      event->CopyVarValues( *oldEvent );
+
    try {
+
       for( ItVarTypeIdxConst itEntry = fGet.begin(), itEntryEnd = fGet.end(); itEntry != itEntryEnd; ++itEntry ) {
 	 Char_t type = (*itEntry).first;
 	 Int_t  idx  = (*itEntry).second;
@@ -256,6 +261,32 @@ void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>&
    }catch( std::exception& except ){
       Log() << kFATAL << "VariableTransformBase/SetOutput : exception/" << except.what() << Endl;
       throw;
+   }
+}
+
+
+//_______________________________________________________________________
+void TMVA::VariableTransformBase::CountVariableTypes( UInt_t& nvars, UInt_t& ntgts, UInt_t& nspcts )
+{
+   // count variables, targets and spectators
+   nvars = ntgts = nspcts = 0;
+
+   for( ItVarTypeIdxConst itEntry = fGet.begin(), itEntryEnd = fGet.end(); itEntry != itEntryEnd; ++itEntry ) {
+	 Char_t type = (*itEntry).first;
+
+	 switch( type ) {
+	 case 'v':
+	    nvars++;
+	    break;
+	 case 't':
+	    ntgts++;
+	    break;
+	 case 's':
+	    nspcts++;
+	    break;
+	 default:
+	    Log() << kFATAL << "VariableTransformBase/GetVariableTypeNumbers : unknown type '" << type << "'." << Endl;
+	 }
    }
 }
 
@@ -475,7 +506,8 @@ void TMVA::VariableTransformBase::MakeFunction( std::ostream& /*fout*/, const TS
 {
    // getinput and setoutput equivalent
    if( part == 0 ){ // getinput equivalent
-
+//       fout << std::endl;
+//       fout << "   std::vector<double> input; " << std::endl;
 //    // select the values from the event
 //    input.clear();
 //    for( ItVarTypeIdxConst itEntry = fGet.begin(), itEntryEnd = fGet.end(); itEntry != itEntryEnd; ++itEntry ) {
