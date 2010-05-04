@@ -551,18 +551,27 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition )
             }
          }
 
+	 VariableTransformBase* transformation = NULL;
+	 TString variables = "_V_";
          if      (trName == "D" || trName == "Deco" || trName == "Decorrelate")
-            GetTransformationHandler().AddTransformation( new VariableDecorrTransform   ( DataInfo()), idxCls );
+	    transformation = new VariableDecorrTransform( DataInfo());
          else if (trName == "P" || trName == "PCA")
-            GetTransformationHandler().AddTransformation( new VariablePCATransform      ( DataInfo()), idxCls );
+	    transformation = new VariablePCATransform   ( DataInfo());
          else if (trName == "G" || trName == "Gauss")
-            GetTransformationHandler().AddTransformation( new VariableGaussTransform    ( DataInfo()), idxCls );
-         else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize")
-            GetTransformationHandler().AddTransformation( new VariableNormalizeTransform( DataInfo()), idxCls );
+	    transformation = new VariableGaussTransform ( DataInfo());
+         else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize"){
+	    variables = "_V_,_T_";
+	    transformation = new VariableNormalizeTransform( DataInfo());
+	 }
          else
             Log() << kFATAL << "<ProcessOptions> Variable transform '"
                   << trName << "' unknown." << Endl;         
          Log() << kINFO << " create Transformation " << trName << " with reference class " << DataInfo().GetClassInfo(idxCls)->GetName() << "=("<< idxCls <<")"<<Endl;
+
+	 if( transformation ){
+	    transformation->SelectInput( variables );
+	    GetTransformationHandler().AddTransformation(transformation, idxCls);
+	 }
       }
    }
 }
