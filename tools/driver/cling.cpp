@@ -12,12 +12,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/HeaderSearchOptions.h"
 
-#include "llvm/ADT/OwningPtr.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/Module.h"
-#include "llvm/Function.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/System/DynamicLibrary.h"
 #include "llvm/System/Signals.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
