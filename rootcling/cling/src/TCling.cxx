@@ -45,6 +45,8 @@
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/MetaProcessor/MetaProcessor.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Frontend/HeaderSearchOptions.h"
+#include "clang/Frontend/CompilerInstance.h"
 
 #include <vector>
 #include <set>
