@@ -4310,10 +4310,16 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
    //                  named "mydset"
    //   "mydset#adir/" analysis of the first tree in the dir "adir" of the
    //                  dataset named "mydset"
+   // The component 'name' in its more general form contains also the group and
+   // user name following "/<group>/<user>/<dsname>". Each of these components
+   // can contain one or more wildcards '*', in which case all the datasets matching
+   // the expression are added together as a global dataset (wildcard support has
+   // been added in version 5.27/02).
    // The last argument 'elist' specifies an entry- or event-list to be used as
    // event selection.
    // It is also possible (starting w/ version 5.27/02) to run on multiple datasets
-   // at once. There are two possibilities:
+   // at once in a more flexible way that the one provided by wildcarding. There
+   // are three possibilities:
    //    1) specifying the dataset names separated by the OR operator '|', e.g.
    //          dsetname = "<dset1>|<dset2>|<dset3>|..."
    //       in this case the datasets are a seen as a global unique dataset
@@ -4322,8 +4328,15 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
    //       in this case the datasets are processed one after the other and the
    //       selector is notified when switching dataset via a bit in the current
    //       processed element.
-   // Each <dsetj> has the format specified above for the single dataset processing
-   // (the name of the tree and subdirectory must be same for all the datasets).
+   //    3) giving the path of a textfile where the dataset names are specified
+   //       on one or multiple lines; the lines found are joined as in 1), unless
+   //       the filepath is followed by a ',' (i.e. p->Process("datasets.txt,",...)
+   //       with the dataset names listed in 'datasets.txt') in which case they are
+   //       treated as in 2); the file is open in raw mode with TFile::Open and
+   //       therefore it cane be remote, e.g. on a Web server.
+   // Each <dsetj> has the format specified above for the single dataset processing,
+   // included wildcarding (the name of the tree and subdirectory must be same for
+   // all the datasets).
    // In the case of multiple datasets, 'elist' is treated a global entry list.
    // It is possible to specify per-dataset entry lists using the syntax
    //   "mydset[#adir/[T]]?enl=entrylist"
@@ -4343,7 +4356,56 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
       return -1;
    }
 
-   TString dsname(dsetname), names(dsetname), name, enl, newname;
+   TString dsname, fname(dsetname);
+   // If the 'dsetname' corresponds to an existing and readable file we will try to
+   // interpretate its content as names of datasets to be processed. One line can contain
+   // more datasets, separated by ',' or '|'. By default the dataset lines will be added
+   // (i.e. joined as in option '|'); if the file name ends with ',' the dataset lines are
+   // joined with ','.
+   const char *separator = (fname.EndsWith(",")) ? "," : "|";
+   if (!strcmp(separator, ",") || fname.EndsWith("|")) fname.Remove(fname.Length()-1, 1);
+   if (!(gSystem->AccessPathName(fname, kReadPermission))) {
+      TUrl uf(fname, kTRUE);
+      uf.SetOptions(TString::Format("%sfiletype=raw", uf.GetOptions()));
+      TFile *f = TFile::Open(uf.GetUrl());
+      if (f && !(f->IsZombie())) {
+         const Int_t blen = 8192;
+         char buf[blen];
+         Long64_t rest = f->GetSize();
+         while (rest > 0) {
+            Long64_t len = (rest > blen - 1) ? blen - 1 : rest;
+            if (f->ReadBuffer(buf, len)) {
+               Error("Process", "problems reading from file '%s'", fname.Data());
+               dsname = "";
+               break;
+            }
+            buf[len] = '\0';
+            dsname += buf;
+            rest -= len;
+         }
+         f->Close();
+         SafeDelete(f);
+         // We fail if a failure occured
+         if (rest > 0) return -1;
+      } else {
+         Error("Process", "could not open file '%s'", fname.Data());
+         return -1;
+      }
+   }
+   if (dsname.IsNull()) {
+      dsname = dsetname;
+   } else {
+      // Remove trailing '\n'
+      if (dsname.EndsWith("\n")) dsname.Remove(dsname.Length()-1, 1);
+      // Replace all '\n' with the proper separator
+      dsname.ReplaceAll("\n", separator);
+      if (gDebug > 0) {
+         Info("Process", "processing multi-dataset read from file '%s':", fname.Data());
+         Info("Process", "  '%s'", dsname.Data());
+      }
+   }
+
+   TString names(dsname), name, enl, newname;
    // If multi-dataset check if server supports it
    if (fProtocol < 28 && names.Index(TRegexp("[, |]")) != kNPOS) {
       Info("Process", "multi-dataset processing not supported by the server");
@@ -6388,9 +6450,13 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
    // Prepare the local package
    TString pdir;
    Int_t st = 0;
-   if (buildOnClient)
-      if ((st = BuildPackageOnClient(pac, 1, &pdir) != 0))
+   if (buildOnClient) {
+      if (TestBit(TProof::kIsClient) && fPackageLock) fPackageLock->Lock();
+      if ((st = BuildPackageOnClient(pac, 1, &pdir) != 0)) {
+         if (TestBit(TProof::kIsClient) && fPackageLock) fPackageLock->Unlock();
          return -1;
+      }
+   }
 
    if (opt <= kBuildAll && !IsLite()) {
       TMessage mess(kPROOF_CACHE);
@@ -6405,8 +6471,10 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
    if (opt >= kBuildAll) {
       // by first forwarding the build commands to the master and slaves
       // and only then building locally we build in parallel
-      if (buildOnClient)
+      if (buildOnClient) {
          st = BuildPackageOnClient(pac, 2, &pdir);
+         if (TestBit(TProof::kIsClient) && fPackageLock) fPackageLock->Unlock();
+      }
 
       fStatus = 0;
       if (!IsLite())
@@ -6538,7 +6606,6 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
 
       if (opt == 0 || opt == 2) {
          if (opt == 2) pdir = path->Data();
-         fPackageLock->Lock();
 
          ocwd = gSystem->WorkingDirectory();
          gSystem->ChangeDirectory(pdir);
@@ -6609,8 +6676,6 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
          }
 
          gSystem->ChangeDirectory(ocwd);
-
-         fPackageLock->Unlock();
 
          return status;
       }
@@ -9074,12 +9139,8 @@ void TProof::Detach(Option_t *opt)
       }
    }
 
-   // Delete this instance
-   if ((!fProgressDialogStarted) && !TestBit(kUsingSessionGui))
-      delete this;
-   else
-      // ~TProgressDialog will delete this
-      fValid = kFALSE;
+   // Invalidate this instance
+   fValid = kFALSE;
 
    return;
 }
@@ -9608,6 +9669,42 @@ Bool_t TProof::ExistsDataSet(const char *dataset)
    }
    // The dataset does not exists
    return kFALSE;
+}
+
+//______________________________________________________________________________
+void TProof::ClearDataSetCache(const char *dataset)
+{
+   // Clear the content of the dataset cache, if any (matching 'dataset', if defined).
+
+   if (fProtocol < 28) {
+      Info("ClearDataSetCache", "functionality not available on server");
+      return;
+   }
+
+   TMessage msg(kPROOF_DATASETS);
+   msg << Int_t(kCache) << TString(dataset) << TString("clear");
+   Broadcast(msg);
+   Collect(kActive, fCollectTimeout);
+   // Done
+   return;
+}
+
+//______________________________________________________________________________
+void TProof::ShowDataSetCache(const char *dataset)
+{
+   // Display the content of the dataset cache, if any (matching 'dataset', if defined).
+
+   if (fProtocol < 28) {
+      Info("ShowDataSetCache", "functionality not available on server");
+      return;
+   }
+
+   TMessage msg(kPROOF_DATASETS);
+   msg << Int_t(kCache) << TString(dataset) << TString("show");
+   Broadcast(msg);
+   Collect(kActive, fCollectTimeout);
+   // Done
+   return;
 }
 
 //______________________________________________________________________________

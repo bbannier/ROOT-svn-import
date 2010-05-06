@@ -252,7 +252,7 @@ ifeq ($(BUILDPEAC),yes)
 MODULES      += proof/peac
 endif
 ifneq ($(ARCH),win32)
-MODULES      += net/rpdutils net/rootd proof/proofd
+MODULES      += net/rpdutils net/rootd proof/proofd proof/pq2
 endif
 ifeq ($(BUILDEDITLINE),yes)
 MODULES      += core/editline
@@ -278,7 +278,7 @@ MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
                 net/ldap net/krb5auth net/rpdutils net/globusauth \
                 bindings/pyroot bindings/ruby io/gfal misc/minicern \
                 graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
-                proof/proofd proof/proofx proof/clarens proof/peac \
+                proof/proofd proof/proofx proof/clarens proof/peac proof/pq2 \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
                 tmva io/hdfs \
                 roofit/roofitcore roofit/roofit roofit/roostats \
@@ -838,7 +838,7 @@ endif
 	@(find tutorials -name "files" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.root" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.ps" -exec rm -rf {} \; >/dev/null 2>&1;true)
-	@(find tutorials -name "*.gif" -exec rm -rf {} \; >/dev/null 2>&1;true)
+	@(find tutorials -path '*/doc' -prune -o -name "*.gif" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "so_locations" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "pca.C" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.so" -exec rm -rf {} \; >/dev/null 2>&1;true)

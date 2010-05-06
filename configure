@@ -127,7 +127,11 @@ enable_thread=yes        # cannot be disabled (not in above options list)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
+enable_builtin_freetype=no
+enable_builtin_ftgl=no
 enable_builtin_glew=no
+enable_builtin_pcre=no
+enable_builtin_zlib=no
 
 # Remove old log file
 rm -f $logfile
@@ -1190,7 +1194,7 @@ with options, prefix with --with-, enables corresponding support
   sapdb-incdir       SapDB support, location of sql.h
   sapdb-libdir       SapDB support, location of libsqlod
   rfio-incdir        RFIO support, location of rfio_api.h
-  rfio-libdir        RFIO support, location of librfio or libshift
+  rfio-libdir        RFIO support, location of librfio, libdpm or libshift
   srp                Secure Remote Passwd support, location of SRP distribution
   srp-incdir         SRP support, location header of t_server.h
   srp-libdir         SRP support, location header of libsrp.a
@@ -1932,19 +1936,36 @@ if test "x$enable_builtin_ftgl" = "x" || \
    test "x$enable_builtin_ftgl" = "xno" ; then
 
    # check if we have pkg-config
+   checking_msg "pkg-config"
    if `$cwhich pkg-config > /dev/null 2>&1` ; then
+      $cwhich pkg-config
 
       message "Checking for libftgl"
       if pkg-config --exists ftgl ; then
-          result "ok"
-          ftglincdir=`pkg-config --cflags-only-I ftgl | sed 's/-I//g'`
-          ftgllibs=`pkg-config --libs-only-l ftgl`
-          ftgllibdir=`pkg-config --libs-only-L ftgl | sed 's/-L//g'`
-          enable_builtin_ftgl=no
+         result "ok"
+         message "Checking for ftgl version > 2.1.2"
+         ftgl_version=`pkg-config --modversion ftgl | \
+         tr '.' ' ' | \
+         awk 'BEGIN { FS = " "; } \
+            { printf "%d", ($''1 * 1000 + $''2) * 1000 + $''3;}'`
+         # Use FTGL/ftgl.h when > 2.1.2
+         if test $ftgl_version -gt 2001002 ; then
+            result "ok"
+            ftglincdir=`pkg-config --cflags-only-I ftgl | sed 's/-I//g'`
+            ftgllibs=`pkg-config --libs-only-l ftgl`
+            ftgllibdir=`pkg-config --libs-only-L ftgl | sed 's/-L//g'`
+            enable_builtin_ftgl="no"
+         else
+            enable_builtin_ftgl="yes"
+            result "no (`pkg-config --modversion ftgl`)"
+         fi
       else
-          enable_builtin_ftgl=yes
-          result "no"
+         enable_builtin_ftgl="yes"
+         result "no"
       fi
+   else
+      enable_builtin_ftgl="yes"
+      echo "not found"
    fi
 fi
 message "Checking whether to build included libftgl"
@@ -2537,7 +2558,7 @@ check_explicit "$enable_qt" "$enable_qt_explicit" \
 #
 # (See http://savannah.cern.ch/files/?group=castor)
 #
-# Check for rfio_api.h of CASTOR 2 and librfio or libshift
+# Check for rfio_api.h of CASTOR 2 and librfio, libdpm or libshift
 #
 shiftold=""
 if test ! "x$enable_rfio" = "xno" ; then
@@ -2563,7 +2584,7 @@ if test ! "x$enable_rfio" = "xno" ; then
         fi
     fi
 
-    check_library "librfio libshift shiftmd shift" "$enable_shared" \
+    check_library "librfio libdpm libshift shiftmd shift" "$enable_shared" \
         "$shiftlibdir" \
         $RFIO $RFIO/lib /cern/pro/lib /cern/new/lib /cern/old/lib \
         /opt/shift/lib /usr/local/shift/lib /usr/lib/shift \
@@ -5294,6 +5315,9 @@ if test -d math/unuran/src/unuran-1.3.0-root ; then
 fi
 if test -d math/unuran/src/unuran-1.5.0-root ; then
    rm -rf math/unuran/src/unuran-1.5.0-root
+fi
+if test -d math/unuran/src/unuran-1.5.1-root ; then
+   rm -rf math/unuran/src/unuran-1.5.1-root
 fi
 if test -d cint/cint7 ; then
    rm -rf cint/cint7

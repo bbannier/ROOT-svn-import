@@ -2884,7 +2884,7 @@ void TH1::FillRandom(const char *fname, Int_t ntimes)
 //             =======================================================
 //
 //      The distribution contained in the function fname (TF1) is integrated
-//      over the channel contents.
+//      over the channel contents for the bin range of this histogram.
 //      It is normalized to 1.
 //      Getting one random number implies:
 //        - Generating a random number between 0 and 1 (say r1)
@@ -2903,12 +2903,14 @@ void TH1::FillRandom(const char *fname, Int_t ntimes)
    if (!f1) { Error("FillRandom", "Unknown function: %s",fname); return; }
 
 //   - Allocate temporary space to store the integral and compute integral
-   Int_t nbinsx = GetNbinsX();
+   Int_t first  = fXaxis.GetFirst();
+   Int_t last   = fXaxis.GetLast();
+   Int_t nbinsx = last-first+1;
 
    Double_t *integral = new Double_t[nbinsx+1];
    integral[0] = 0;
    for (binx=1;binx<=nbinsx;binx++) {
-      Double_t fint = f1->Integral(fXaxis.GetBinLowEdge(binx),fXaxis.GetBinUpEdge(binx));
+      Double_t fint = f1->Integral(fXaxis.GetBinLowEdge(binx+first-1),fXaxis.GetBinUpEdge(binx+first-1));
       integral[binx] = integral[binx-1] + fint;
    }
 
@@ -2924,8 +2926,8 @@ void TH1::FillRandom(const char *fname, Int_t ntimes)
       ibin = TMath::BinarySearch(nbinsx,&integral[0],r1);
       //binx = 1 + ibin;
       //x    = fXaxis.GetBinCenter(binx); //this is not OK when SetBuffer is used
-      x    = fXaxis.GetBinLowEdge(ibin+1)
-             +fXaxis.GetBinWidth(ibin+1)*(r1-integral[ibin])/(integral[ibin+1] - integral[ibin]);
+      x    = fXaxis.GetBinLowEdge(ibin+first)
+             +fXaxis.GetBinWidth(ibin+first)*(r1-integral[ibin])/(integral[ibin+1] - integral[ibin]);
       Fill(x, 1.);
    }
    delete [] integral;
@@ -2938,7 +2940,7 @@ void TH1::FillRandom(TH1 *h, Int_t ntimes)
 //             ====================================================
 //
 //      The distribution contained in the histogram h (TH1) is integrated
-//      over the channel contents.
+//      over the channel contents for the bin range of this histogram.
 //      It is normalized to 1.
 //      Getting one random number implies:
 //        - Generating a random number between 0 and 1 (say r1)
@@ -2959,17 +2961,49 @@ void TH1::FillRandom(TH1 *h, Int_t ntimes)
 
    //in case the target histogram has the same binning and ntimes much greater 
    //than the number of bins we can use a fast method
-   Int_t nbins = GetNbinsX();
+   Int_t first  = fXaxis.GetFirst();
+   Int_t last   = fXaxis.GetLast();
+   Int_t nbins = last-first+1;
    if (CheckConsistency(this,h) && ntimes > 10*nbins) {
-      Double_t sumw = h->GetSumOfWeights();
+      Double_t sumw = h->Integral(first,last);
       if (sumw == 0) return;
-      for (Int_t bin=1;bin<=nbins;bin++) {
+      Double_t sumgen = 0;
+      for (Int_t bin=first;bin<=last;bin++) {
          Double_t mean = h->GetBinContent(bin)*ntimes/sumw;
          Double_t cont = (Double_t)gRandom->Poisson(mean);
+         sumgen += cont;
          AddBinContent(bin,cont);
          if (fSumw2.fN) fSumw2.fArray[bin] += cont;
       }
-      SetEntries(ntimes);
+
+      // fix for the fluctations in the total number n
+      // since we use Poisson instead of multinomial 
+      // add a correction to have ntimes as generated entries 
+      Int_t i; 
+      if (sumgen < ntimes) { 
+         // add missing entries
+         for (i = Int_t(sumgen+0.5); i < ntimes; ++i) 
+         {
+            Double_t x = h->GetRandom();
+            Fill(x);
+         }
+      }
+      else if (sumgen > ntimes) { 
+         // remove extra entries
+         i =  Int_t(sumgen+0.5);
+         while( i > ntimes) { 
+            Double_t x = h->GetRandom();
+            Int_t ibin = fXaxis.FindBin(x);
+            Double_t y = GetBinContent(ibin); 
+            // skip in case bin is empty
+            if (y > 0) { 
+               SetBinContent(ibin, y-1.);
+               i--;
+            }
+         }
+      }
+            
+      ResetStats();
       return;
    }
       
@@ -7722,8 +7756,7 @@ TH1* TH1::TransformHisto(TVirtualFFT *fft, TH1* h_output,  Option_t *option)
    TH1 *hout=0;
    if (h_output) hout = h_output;
    else {
-      char name[10];
-      sprintf(name, "out_%s", opt.Data());
+      TString name = TString::Format("out_%s", opt.Data());
       if (fft->GetNdim()==1)
          hout = new TH1D(name, name,n[0], 0, n[0]);
       else if (fft->GetNdim()==2)
@@ -9030,9 +9063,9 @@ TH1 *R__H(Int_t hid)
    //   hid if id >=0
    //   h_id if id <0
 
-   char hname[20];
-   if(hid >= 0) sprintf(hname,"h%d",hid);
-   else         sprintf(hname,"h_%d",hid);
+   TString hname;
+   if(hid >= 0) hname.Form("h%d",hid);
+   else         hname.Form("h_%d",hid);
    return (TH1*)gDirectory->Get(hname);
 }
 

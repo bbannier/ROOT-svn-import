@@ -229,7 +229,9 @@ TASImage::TASImage(const char *file, EImageFileTypes) : TImage(file)
    // which is called by this constructor.
 
    SetDefaults();
-   ReadImage(file);
+   TString fname = file;
+   gSystem->ExpandPathName(fname);
+   ReadImage(fname.Data());
 }
 
 
@@ -397,20 +399,20 @@ const char *TASImage::TypeFromMagicNumber(const char *file)
 
    if (!fp) return 0;
 
-   fread(&magic, 1, 1, fp);
+   if (!fread(&magic, 1, 1, fp)) return 0;
 
    switch (magic) {
       case 0x00:
       {
-         fread(&magic, 1, 1, fp);
-         fread(&magic, 1, 1, fp);
+         if (!fread(&magic, 1, 1, fp)) return 0;
+         if (!fread(&magic, 1, 1, fp)) return 0;
 
          ret = (magic == 1) ? "ico" : "cur";
          break;
       }
       case 0x25:
       {
-         fread(&magic, 1, 1, fp);
+         if (!fread(&magic, 1, 1, fp)) return 0;
          if (magic == 0x21) ret = "ps";
          else if (magic == 0x50) ret = "pdf";
          break;
@@ -6653,7 +6655,7 @@ Bool_t TASImage::SetJpegDpi(const char *name, UInt_t set)
       return kFALSE;
    }
 
-   fread(buf, 1, 20, fp);
+   if (!fread(buf, 1, 20, fp)) return kFALSE;
 
    char dpi1 = (set & 0xffff) >> 8;
    char dpi2 = set & 0xff;
