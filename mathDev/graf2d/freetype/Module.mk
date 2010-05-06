@@ -3,15 +3,23 @@
 #
 # Author: Fons Rademakers, 7/1/2003
 
+MODNAME      := freetype
+
 ifneq ($(BUILTINFREETYPE), yes)
+
 FREETYPELIBF    := $(shell freetype-config --libs)
 FREETYPEINC     := $(shell freetype-config --cflags)
 FREETYPELIB     := $(filter -l%,$(FREETYPELIBF))
 FREETYPELDFLAGS := $(filter-out -l%,$(FREETYPELIBF))
 FREETYPEDEP     :=
+
+.PHONY:         distclean-$(MODNAME)
+distclean-$(MODNAME):
+		@rm -f $(LPATH)/libfreetype.lib $(LPATH)/libfreetype.a
+distclean::     distclean-$(MODNAME)
+
 else
 
-MODNAME      := freetype
 MODDIR       := graf2d/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 
@@ -132,7 +140,8 @@ else
 		if [ $(ARCH) = "aixgcc" ]; then \
 			FREEZLIB="--without-zlib"; \
 		fi; \
-		GNUMAKE=$(MAKE) ./configure --with-pic $$FREEZLIB \
+		GNUMAKE=$(MAKE) ./configure --with-pic --disable-shared \
+		 $$FREEZLIB \
 		CC=\'$$FREECC\' CFLAGS=\'$$FREE_CFLAGS -O\'; \
 		$(MAKE))
 endif
