@@ -157,6 +157,9 @@ public:
    };
 
    enum EStepper_e    { kHelix, kRungeKutta };
+
+   enum EProjTrackBreaking_e { kPTB_Break, kPTB_UseFirstPointPos, kPTB_UseLastPointPos };
+
 private:
    TEveTrackPropagator(const TEveTrackPropagator&);            // Not implemented
    TEveTrackPropagator& operator=(const TEveTrackPropagator&); // Not implemented
@@ -187,6 +190,11 @@ protected:
    Bool_t                   fRnrFV;         // Render first vertex.
    TMarker                  fPMAtt;         // Marker attributes for rendering of path-marks.
    TMarker                  fFVAtt;         // Marker attributes for fits vertex.
+
+   // Handling of discontinuities in projections
+   UChar_t                  fProjTrackBreaking; // Handling of projected-track breaking.
+   Bool_t                   fRnrPTBMarkers;     // Render break-points on tracks.
+   TMarker                  fPTBAtt;            // Marker attributes for track break-points.
 
    // ----------------------------------------------------------------
 
@@ -259,7 +267,9 @@ public:
    void   SetFitReferences(Bool_t x);
    void   SetFitDecay(Bool_t x);
    void   SetFitCluster2Ds(Bool_t x);
-   void   SetRnrFV(Bool_t x) { fRnrFV = x; }
+   void   SetRnrFV(Bool_t x)              { fRnrFV = x; }
+   void   SetProjTrackBreaking(UChar_t x) { fProjTrackBreaking = x; }
+   void   SetRnrPTBMarkers(Bool_t x)      { fRnrPTBMarkers = x; }
 
    TEveVector GetMagField(Float_t x, Float_t y, Float_t z) { return fMagFieldObj->GetField(x, y, z); }
    void PrintMagField(Float_t x, Float_t y, Float_t z) const;
@@ -284,9 +294,13 @@ public:
    Bool_t  GetFitDecay()      const { return fFitDecay;      }
    Bool_t  GetFitCluster2Ds() const { return fFitCluster2Ds; }
    Bool_t  GetRnrFV()         const { return fRnrFV;         }
+   UChar_t GetProjTrackBreaking() const { return fProjTrackBreaking; }
+   Bool_t  GetRnrPTBMarkers()     const { return fRnrPTBMarkers; }
 
-   TMarker& RefPMAtt() { return fPMAtt; }
-   TMarker& RefFVAtt() { return fFVAtt; }
+   TMarker& RefPMAtt()  { return fPMAtt; }
+   TMarker& RefFVAtt()  { return fFVAtt; }
+   TMarker& RefPTBAtt() { return fPTBAtt; }
+   
 
    static Bool_t IsOutsideBounds(const TEveVector& point, Float_t maxRsqr, Float_t maxZ);
 

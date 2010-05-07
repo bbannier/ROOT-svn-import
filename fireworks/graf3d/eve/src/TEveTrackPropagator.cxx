@@ -169,6 +169,10 @@ void TEveTrackPropagator::Helix_t::Step(const TEveVector4& v, const TEveVector& 
 //
 // TEveTrackList has Get/Set methods for RnrStlye. TEveTrackEditor and
 // TEveTrackListEditor provide editor access.
+//
+// Specify whether 2D projected tracks get broken into several
+// segments when the projected space consists of separate domains
+// (like Rho-Z). This is true by default.
 
 ClassImp(TEveTrackPropagator);
 
@@ -189,26 +193,18 @@ TEveTrackPropagator::TEveTrackPropagator(const char* n, const char* t,
    fMagFieldObj(field),
    fOwnMagFiledObj(own_field),
 
-   fMaxR    (350),
-   fMaxZ    (450),
-
-   fNMax    (4096),
-   fMaxOrbs (0.5),
+   fMaxR    (350),   fMaxZ    (450),
+   fNMax    (4096),  fMaxOrbs (0.5),
 
    fEditPathMarks (kTRUE),
-   fFitDaughters  (kTRUE),
-   fFitReferences (kTRUE),
-   fFitDecay      (kTRUE),
-   fFitCluster2Ds (kTRUE),
-
-   fRnrDaughters  (kFALSE),
-   fRnrReferences (kFALSE),
-   fRnrDecay      (kFALSE),
-   fRnrCluster2Ds (kFALSE),
+   fFitDaughters  (kTRUE),   fFitReferences (kTRUE),
+   fFitDecay      (kTRUE),   fFitCluster2Ds (kTRUE),
+   fRnrDaughters  (kFALSE),  fRnrReferences (kFALSE),
+   fRnrDecay      (kFALSE),  fRnrCluster2Ds (kFALSE),
    fRnrFV         (kFALSE),
+   fPMAtt(), fFVAtt(),
 
-   fPMAtt(),
-   fFVAtt(),
+   fProjTrackBreaking (kPTB_Break), fRnrPTBMarkers (kTRUE), fPTBAtt(),
 
    fV()
 {
@@ -222,6 +218,9 @@ TEveTrackPropagator::TEveTrackPropagator(const char* n, const char* t,
    fFVAtt.SetMarkerStyle(4);
    fFVAtt.SetMarkerSize(1.5);
 
+   fPTBAtt.SetMarkerColor(kBlue);
+   fPTBAtt.SetMarkerStyle(4);
+   fPTBAtt.SetMarkerSize(1.5);
 
    if (fMagFieldObj == 0) {
       fMagFieldObj = new TEveMagFieldConst(0., 0., fgDefMagField);
