@@ -42,8 +42,6 @@
 
 ClassImp(TEveTrack);
 
-Bool_t TEveTrack::fgDefaultBreakProjectedTracks = kTRUE;
-
 //______________________________________________________________________________
 TEveTrack::TEveTrack() :
    TEveLine(),
@@ -60,8 +58,7 @@ TEveTrack::TEveTrack() :
    fLockPoints(kFALSE),
    fPathMarks(),
    fLastPMIdx(0),
-   fPropagator(0),
-   fBreakProjectedTracks(kBPTDefault)
+   fPropagator(0)
 {
    // Default constructor.
 }
@@ -82,8 +79,7 @@ TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* prop):
    fLockPoints(kFALSE),
    fPathMarks(),
    fLastPMIdx(0),
-   fPropagator(0),
-   fBreakProjectedTracks(kBPTDefault)
+   fPropagator(0)
 {
    // Constructor from TParticle.
 
@@ -115,8 +111,7 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* prop):
    fLockPoints(kFALSE),
    fPathMarks(),
    fLastPMIdx(0),
-   fPropagator(0),
-   fBreakProjectedTracks(kBPTDefault)
+   fPropagator(0)
 {
    // Constructor from TEveUtil Monte Carlo track.
 
@@ -148,8 +143,7 @@ TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* prop) :
    fLockPoints(kFALSE),
    fPathMarks(),
    fLastPMIdx(0),
-   fPropagator(0),
-   fBreakProjectedTracks(kBPTDefault)
+   fPropagator(0)
 {
    // Constructor from TEveUtil reconstructed track.
 
@@ -174,8 +168,7 @@ TEveTrack::TEveTrack(const TEveTrack& t) :
    fLockPoints(t.fLockPoints),
    fPathMarks(),
    fLastPMIdx(t.fLastPMIdx),
-   fPropagator(0),
-   fBreakProjectedTracks(t.fBreakProjectedTracks)
+   fPropagator(0)
 {
    // Copy constructor. Track paremeters are copied but the
    // extrapolation is not perfermed so you should still call
@@ -248,7 +241,6 @@ void TEveTrack::SetTrackParams(const TEveTrack& t)
 
    fPathMarks.clear();
    SetPropagator(t.fPropagator);
-   fBreakProjectedTracks = t.fBreakProjectedTracks;
 
    SetMainColor(t.GetMainColor());
    // TEveLine
@@ -422,11 +414,9 @@ void TEveTrack::CopyVizParams(const TEveElement* el)
 
    // No local parameters.
 
-   const TEveTrack* t = dynamic_cast<const TEveTrack*>(el);
-   if (t)
-   {
-      fBreakProjectedTracks = t->fBreakProjectedTracks;
-   }
+   // const TEveTrack* t = dynamic_cast<const TEveTrack*>(el);
+   // if (t)
+   // {}
 
    TEveLine::CopyVizParams(el);
 }
@@ -438,8 +428,7 @@ void TEveTrack::WriteVizParams(ostream& out, const TString& var)
 
    TEveLine::WriteVizParams(out, var);
 
-   TString t = "   " + var + "->";
-   out << t << "SetBreakProjectedTracks(" << fBreakProjectedTracks << ");\n";
+   // TString t = "   " + var + "->";
 }
 
 //______________________________________________________________________________
@@ -448,20 +437,6 @@ TClass* TEveTrack::ProjectedClass(const TEveProjection*) const
    // Virtual from TEveProjectable, return TEveTrackProjected class.
 
    return TEveTrackProjected::Class();
-}
-
-//______________________________________________________________________________
-Bool_t TEveTrack::ShouldBreakTrack() const
-{
-   // Should this track be broken in projections.
-
-   switch (fBreakProjectedTracks)
-   {
-      default:
-      case kBPTDefault: return fgDefaultBreakProjectedTracks;
-      case kBPTAlways:  return kTRUE;
-      case kBPTNever:   return kFALSE;
-   }
 }
 
 /******************************************************************************/
@@ -518,24 +493,48 @@ void TEveTrack::SecSelected(TEveTrack* track)
 //------------------------------------------------------------------------------
 
 //______________________________________________________________________________
+Bool_t TEveTrack::ShouldBreakTrack() const
+{
+   // Should this track be broken in projections.
+
+   Error("ShouldBreakTrack", "Deprected -- use TEveTrackPropagator functions.");
+   return fPropagator->GetProjTrackBreaking() == TEveTrackPropagator::kPTB_Break;
+}
+
+//______________________________________________________________________________
+UChar_t TEveTrack::GetBreakProjectedTracks() const
+{
+   // Deprected -- use TEveTrackPropagator functions.
+   Error("GetBreakProjectedTracks", "Deprected -- use TEveTrackPropagator functions.");
+   return 0;
+}
+
+//______________________________________________________________________________
+void TEveTrack::SetBreakProjectedTracks(UChar_t)
+{
+   // Deprected -- use TEveTrackPropagator functions.
+
+   Error("SetBreakProjectedTracks", "Deprected -- use TEveTrackPropagator functions.");
+}
+
+//______________________________________________________________________________
 Bool_t TEveTrack::GetDefaultBreakProjectedTracks()
 {
+   // Deprected -- use TEveTrackPropagator functions.
    // Return true if tracks get broken into several segments when the
    // projected space consists of separate domains (like Rho-Z).
    // Static function.
 
-   return fgDefaultBreakProjectedTracks;
+   ::Error("TEveTrack::GetDefaultBreakProjectedTracks", "Deprected -- use TEveTrackPropagator functions.");
+   return kTRUE;
 }
 
 //______________________________________________________________________________
-void TEveTrack::SetDefaultBreakProjectedTracks(Bool_t bt)
+void TEveTrack::SetDefaultBreakProjectedTracks(Bool_t)
 {
-   // Specify whether 2D projected tracks get broken into several
-   // segments when the projected space consists of separate domains
-   // (like Rho-Z). This is true by default.
-   // Static function.
+   // Deprected -- use TEveTrackPropagator functions.
 
-   fgDefaultBreakProjectedTracks = bt;
+   ::Error("TEveTrack::SetDefaultBreakProjectedTracks", "Deprected -- use TEveTrackPropagator functions.");
 }
 
 
