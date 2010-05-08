@@ -88,7 +88,7 @@ void TEveTrackProjected::GetBreakPoint(Int_t idx, Bool_t back,
    TEveVector vL = fOrigPnts[idx];
    TEveVector vR = fOrigPnts[idx+1];
    TEveVector vM, vLP, vMP;
-   while ((vL-vR).Mag() > 0.01)
+   while ((vL-vR).Mag2() > 1e-10f)
    {
       vM.Mult(vL+vR, 0.5f);
       vLP.Set(vL); projection->ProjectPoint(vLP.fX, vLP.fY, vLP.fZ, 0);
@@ -103,7 +103,7 @@ void TEveTrackProjected::GetBreakPoint(Int_t idx, Bool_t back,
       }
    }
 
-   if(back) {
+   if (back) {
       x = vL.fX; y = vL.fY; z = vL.fZ;
    } else {
       x = vR.fX; y = vR.fY; z = vR.fZ;
