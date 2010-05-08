@@ -267,9 +267,9 @@ public:
    void   SetFitReferences(Bool_t x);
    void   SetFitDecay(Bool_t x);
    void   SetFitCluster2Ds(Bool_t x);
-   void   SetRnrFV(Bool_t x)              { fRnrFV = x; }
-   void   SetProjTrackBreaking(UChar_t x) { fProjTrackBreaking = x; }
-   void   SetRnrPTBMarkers(Bool_t x)      { fRnrPTBMarkers = x; }
+   void   SetRnrFV(Bool_t x);
+   void   SetProjTrackBreaking(UChar_t x);
+   void   SetRnrPTBMarkers(Bool_t x);
 
    TEveVector GetMagField(Float_t x, Float_t y, Float_t z) { return fMagFieldObj->GetField(x, y, z); }
    void PrintMagField(Float_t x, Float_t y, Float_t z) const;
