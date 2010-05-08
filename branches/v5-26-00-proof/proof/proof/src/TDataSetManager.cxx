@@ -1455,7 +1455,7 @@ Int_t TDataSetManager::ScanDataSet(TFileCollection *dataset,
          } else if (fullproc) {
             // Full file validation
             rc = -2;
-            if (stager && stager->IsStaged(url.GetUrl())) {
+            if (checkstg || (stager && stager->IsStaged(url.GetUrl()))) {
                if ((rc = TDataSetManager::ScanFile(fileInfo, dbg)) < -1) continue;
                changed = kTRUE;
             } else if (stager) {
@@ -1517,7 +1517,8 @@ Int_t TDataSetManager::ScanFile(TFileInfo *fileinfo, Bool_t dbg)
    TUrl urlNoAnchor(furl);
    urlNoAnchor.SetAnchor("");
    urlNoAnchor.SetOptions("filetype=raw");
-   if (!(file = TFile::Open(urlNoAnchor.GetUrl()))) return rc;
+   // Wait max 5 secs per file
+   if (!(file = TFile::Open(urlNoAnchor.GetUrl(), "TIMEOUT=5"))) return rc;
 
    // OK, set the relevant flags
    rc = -1;
@@ -1541,7 +1542,8 @@ Int_t TDataSetManager::ScanFile(TFileInfo *fileinfo, Bool_t dbg)
    Int_t oldLevel = gErrorIgnoreLevel;
    gErrorIgnoreLevel = kError+1;
 
-   if (!(file = TFile::Open(url->GetUrl()))) {
+   // Wait max 5 secs per file
+   if (!(file = TFile::Open(url->GetUrl(), "TIMEOUT=5"))) {
       // If the file could be opened before, but fails now it is corrupt...
       if (dbg) ::Info("TDataSetManager::ScanFile", "marking %s as corrupt", url->GetUrl());
       fileinfo->SetBit(TFileInfo::kCorrupted);
