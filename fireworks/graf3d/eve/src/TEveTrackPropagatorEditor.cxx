@@ -34,7 +34,7 @@
 //
 // Sub-editor for TEveTrackPropagator class.
 
-ClassImp(TEveTrackPropagatorSubEditor)
+ClassImp(TEveTrackPropagatorSubEditor);
 
 //______________________________________________________________________________
 TEveTrackPropagatorSubEditor::TEveTrackPropagatorSubEditor(const TGWindow *p):

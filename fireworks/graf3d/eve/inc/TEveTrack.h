@@ -119,6 +119,7 @@ public:
    virtual TClass* ProjectedClass(const TEveProjection* p) const;
 
    // These functions are deprecated -- use TEveTrackPropagator functions.
+   // Will be removed after 5.28.
    Bool_t        ShouldBreakTrack() const;
    UChar_t       GetBreakProjectedTracks() const;
    void          SetBreakProjectedTracks(UChar_t bt);
