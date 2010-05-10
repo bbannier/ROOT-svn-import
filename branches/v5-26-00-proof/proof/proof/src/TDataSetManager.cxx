@@ -465,7 +465,7 @@ Int_t TDataSetManager::ScanDataSet(const char *uri, const char *opts)
    //                    marked as non-staged
    //    T, touch:       open and touch the files marked as staged when processing
    //                    only files marked as non-staged
-   //    C, checkstaged: check the actual stage status on selected files
+   //    I, nostagedcheck: do not check the actual stage status on selected files
    //
    //  'process' field:
    //    N, noaction:    do nothing on the selected files
@@ -491,8 +491,8 @@ Int_t TDataSetManager::ScanDataSet(const char *uri, const char *opts)
          o |= kReopen;
       if (strstr(opts, "touch:") || strchr(opts, 'T'))
          o |= kTouch;
-      if (strstr(opts, "checkstaged:") || strchr(opts, 'C'))
-         o |= kCheckStageStatus;
+      if (strstr(opts, "nostagedcheck:") || strchr(opts, 'I'))
+         o |= kNoStagedCheck;
       // Process options
       if (strstr(opts, "noaction:") || strchr(opts, 'N'))
          o |= kNoAction;
