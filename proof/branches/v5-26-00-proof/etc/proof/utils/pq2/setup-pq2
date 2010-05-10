@@ -8,7 +8,6 @@
 # run gSystem->AccessPathName("<path>", kReadPermissions) in a ROOT shell: this command
 # will return 0 is the path is good. 
 # export PQ2DSSRVURL="root://datasrv.doma.in//the/data/set/server/dir
-export PQ2DSSRVURL=root://alicecaf.cern.ch:11094//dataset-xpd
 # setenv PQ2DSSRVURL "root://datasrv.doma.in//the/data/set/server/dir
 #
 # URL of the PROOF master connected to the repository, i.e. the entry point of the
@@ -16,7 +15,6 @@ export PQ2DSSRVURL=root://alicecaf.cern.ch:11094//dataset-xpd
 # shell with TProof::Open("<url>", "masteronly") .
 # NB: PROOFURL is still supported but deprecated .
 # export PQ2PROOFURL="proof://master.doma.in"
-export PQ2PROOFURL="proof://alicecaf.cern.ch:41093"
 # setenv PQ2PROOFURL "proof://master.doma.in"
 #
 # To disable the use of the cache when browsing via a remote server uncomment the following 
