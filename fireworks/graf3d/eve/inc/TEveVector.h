@@ -85,6 +85,9 @@ public:
    TEveVectorT  Orthogonal() const;
    void         OrthoNormBase(TEveVectorT& a, TEveVectorT& b) const;
 
+   // Needed as ClassDefNV not available for 5.22
+   virtual ~TEveVectorT() {}
+
    ClassDef(TEveVectorT, 2); // A three-vector template without TObject inheritance and virtual functions.
 };
 
@@ -234,6 +237,9 @@ public:
    using TP::operator+=;
    using TP::operator-=;
 
+   // Needed as ClassDefNV not available for 5.22
+   virtual ~TEveVector4T() {}
+
    ClassDef(TEveVector4T, 1); // A four-vector template without TObject inheritance and virtual functions.
 };
 
@@ -326,6 +332,9 @@ public:
    TEveVector2T& Sub(const TEveVector2T& p, const TEveVector2T& q);
 
    TEveVector2T& Mult(const TEveVector2T& a, TT af);
+
+   // Needed as ClassDefNV not available for 5.22
+   virtual ~TEveVector2T() {}
 
    ClassDef(TEveVector2T, 1); // // A two-vector template without TObject inheritance and virtual functions.
 };

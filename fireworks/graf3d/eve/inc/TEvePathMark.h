@@ -44,6 +44,9 @@ public:
 
    const char* TypeName();
 
+   // Needed as ClassDefNV not available for 5.22
+   virtual ~TEvePathMarkT() {}
+
    ClassDef(TEvePathMarkT, 1); // Template for a special point on a track: position/momentum reference, daughter creation or decay.
 };
 
