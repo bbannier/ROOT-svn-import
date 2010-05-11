@@ -20,6 +20,7 @@
 #include "TEveBrowser.h"
 #include "TEveGedEditor.h"
 
+#include "TGFrame.h"
 #include "TGStatusBar.h"
 
 #include "TGLSAViewer.h"
@@ -154,7 +155,6 @@ TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window, Option_t* opt) :
 
    fViewers = new TEveViewerList("Viewers");
    fViewers->IncDenyDestroy();
-   fViewers->Connect();
    AddToListTree(fViewers, kFALSE);
 
    fScenes  = new TEveSceneList ("Scenes");
@@ -225,6 +225,12 @@ TEveManager::~TEveManager()
    delete fGeometries;
    delete fVizDB;
    delete fExcHandler;
+
+   fLTEFrame->DeleteWindow();
+
+   fBrowser->Disconnect("CloseWindow()", this, "CloseEveWindow()");
+   fBrowser->DontCallClose();
+   fBrowser->CloseWindow(); 
 }
 
 //______________________________________________________________________________
@@ -939,19 +945,7 @@ void TEveManager::Terminate()
 
    TEveGedEditor::DestroyEditors();
 
-   TEveGListTreeEditorFrame *lf = gEve->fLTEFrame;
-   // TEveBrowser              *b  = gEve->GetBrowser();
-
    delete gEve;
-
-   // We need to wait until all windows are actually closed.
-   gSystem->Sleep(200);
-   gSystem->ProcessEvents();
-
-   delete lf;
-   // Destroying TRootBrowser leads to delayed window destruction errors.
-   // delete b;
-
    gEve = 0;
 }
 
