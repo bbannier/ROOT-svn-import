@@ -11,8 +11,8 @@
 #ifndef ROOT_TProofServ
 #include <TProofServ.h>
 #endif
-#ifndef ROOT_TProofBench
-#include <TProofBench.h>
+#ifndef ROOT_TProofBenchMode
+#include <TProofBenchMode.h>
 #endif
 
 class TH1F;
@@ -90,24 +90,20 @@ public :
    virtual void    Print(Option_t *option="") const;
 
 protected:
-   Long64_t GenerateFiles(TProofBench::EFileType filetype, TString filename, Long64_t sizenevents);
+   Long64_t GenerateFiles(TProofBenchMode::EFileType filetype, TString filename, Long64_t sizenevents);
 
 private:
-   TProofBench::EFileType fFileType;
-   Int_t fBenchmarkMode;                     //benchmark mode
+   TProofBenchMode::EFileType fFileType;
    TString fBaseDir;
-   Int_t fMaxNWorkers;
+   //Int_t fMaxNWorkers;
    Long64_t fNEvents;
-   Int_t fNTracksBench;                       //number of tracks in an event for benchmark files
-   Int_t fNTracksCleanup;                     //number of tracks in an event for cleanup files
+   Int_t fNTracks;                            //number of tracks in an event
    Int_t fRegenerate;                         //Force generation of cleanup files
 
    Int_t fNWorkersPerNode;                    //total number of workers on this node
    Int_t fWorkerNumber;                       //worker number on this node
-   TObject     *fTotalGen;                    // Events generated on this worker
-   //TList* fListOfFilesGenerated;              //list of files generated
+   TObject* fTotalGen;                        // Events generated on this worker
    TDSet* fDataSet;
-
 
    ClassDef(TSelEventGen,0);
 };

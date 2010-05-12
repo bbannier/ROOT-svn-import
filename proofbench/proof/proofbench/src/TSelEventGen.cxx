@@ -25,15 +25,11 @@
 
 #include "TSelEventGen.h"
 #include "TParameter.h"
-#include "TSystem.h"
 #include "TProofNodeInfo.h"
-#include "TRandom.h"
-#include "TProofBench.h"
-#include "TROOT.h"
+#include "TProofBenchMode.h"
 #include "TProof.h"
 #include "TMap.h" 
 #include "TDSet.h"
-#include "TFileInfo.h"
 #include "TFile.h"
 #include "TSortedList.h"
 
@@ -43,13 +39,10 @@ static const Long64_t MaxTreeSizeOrg=TTree::GetMaxTreeSize();
 ClassImp(TSelEventGen)
 
 TSelEventGen::TSelEventGen():
-   fFileType(TProofBench::kFileNotSpecified),
-   fBenchmarkMode(TProofBench::kModeNotSpecified),
+   fFileType(TProofBenchMode::kFileNotSpecified),
    fBaseDir(""),
-   fMaxNWorkers(0),
    fNEvents(10000),
-   fNTracksBench(10),
-   fNTracksCleanup(100),
+   fNTracks(100),
    fRegenerate(kFALSE),
    fNWorkersPerNode(0),
    fWorkerNumber(0),
@@ -95,7 +88,7 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    // When running with PROOF SlaveBegin() is called on each slave server.
    // The tree argument is deprecated (on PROOF 0 is passed).
 
-   printf("MaxTreeSizeOrg=%lld\n", MaxTreeSizeOrg);
+   Printf("MaxTreeSizeOrg=%lld", MaxTreeSizeOrg);
    Init(tree);
 
    TString option = GetOption();
@@ -103,11 +96,9 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    //get parameters
 
    Bool_t found_filetype=kFALSE;
-   Bool_t found_mode=kFALSE;
-   Bool_t found_maxnworkers=kFALSE;
+   Bool_t found_basedir=kFALSE;
    Bool_t found_nevents=kFALSE;
-   Bool_t found_ntracksbench=kFALSE;
-   Bool_t found_ntrackscleanup=kFALSE;
+   Bool_t found_ntracks=kFALSE;
    Bool_t found_regenerate=kFALSE;
    Bool_t found_slaveinfos=kFALSE;
 
@@ -125,7 +116,7 @@ void TSelEventGen::SlaveBegin(TTree *tree)
       if (sinput.Contains("PROOF_BenchmarkFileType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fFileType=(TProofBench::EFileType)a->GetVal();
+            fFileType=(TProofBenchMode::EFileType)a->GetVal();
             found_filetype=kTRUE; 
          }
          else{
@@ -133,25 +124,14 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          }
          continue;
       }
-      if (sinput.Contains("PROOF_BenchmarkMode")){
-         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
+      if (sinput.Contains("PROOF_BenchmarkBaseDir")){
+         TParameter<const char*>* a=dynamic_cast<TParameter<const char*>*>(obj);
          if (a){
-            fBenchmarkMode=a->GetVal();
-            found_mode=kTRUE; 
+            fBaseDir=(const char*)a->GetVal();
+            found_basedir=kTRUE; 
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkMode not type TParameter<Int_t>*");
-         }
-         continue;
-      }
-      if (sinput.Contains("PROOF_BenchmarkMaxNWorkers")){
-         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
-         if (a){
-            fMaxNWorkers=a->GetVal();
-            found_maxnworkers=kTRUE; 
-         }
-         else{
-            Error("SlaveBegin", "PROOF_BenchmarkMaxNWorkers not type TParameter<Int_t>*");
+            Error("SlaveBegin", "PROOF_BenchmarkBaseDir not type TParameter<const char*>*");
          }
          continue;
       }
@@ -166,25 +146,14 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          }
          continue;
       }
-      if (sinput.Contains("PROOF_BenchmarkNTracksBench")){
+      if (sinput.Contains("PROOF_BenchmarkNTracks")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fNTracksBench=a->GetVal();
-            found_ntracksbench=kTRUE; 
+            fNTracks=a->GetVal();
+            found_ntracks=kTRUE; 
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkNTracksBench not type TParameter<Int_t>*");
-         }
-         continue;
-      }
-      if (sinput.Contains("PROOF_BenchmarkNTracksCleanup")){
-         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
-         if (a){
-            fNTracksCleanup=a->GetVal();
-            found_ntrackscleanup=kTRUE; 
-         }
-         else{
-            Error("SlaveBegin", "PROOF_BenchmarkNTracksCleanup not type TParameter<Int_t>*");
+            Error("SlaveBegin", "PROOF_BenchmarkNTracks not type TParameter<Int_t>*");
          }
          continue;
       }
@@ -214,28 +183,22 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    }
    
    if (!found_filetype){
-      Warning("Begin", "PROOF_BenchmarkFileType not found; using default: %d", fFileType);
+      Warning("SlaveBegin", "PROOF_BenchmarkFileType not found; using default: %d", fFileType);
    }
-   if (!found_mode){
-      Warning("Begin", "PROOF_BenchmarkMode not found; using default: %d", fBenchmarkMode);
-   }
-   if (!found_maxnworkers){
-      Warning("Begin", "PROOF_BenchmarkMaxNWorkers not found; using default: %d", fMaxNWorkers);
+   if (!found_basedir){
+      Warning("SlaveBegin", "PROOF_BenchmarkBaseDir not found; using default: %s", fBaseDir.Data());
    }
    if (!found_nevents){
-      Warning("Begin", "PROOF_BenchmarkNEvents not found; using default: %lld", fNEvents);
+      Warning("SlaveBegin", "PROOF_BenchmarkNEvents not found; using default: %lld", fNEvents);
    }
-   if (!found_ntracksbench){
-      Warning("Begin", "PROOF_BenchmarkNTracksBench not found; using default: %d", fNTracksBench);
-   }
-   if (!found_ntrackscleanup){
-      Warning("Begin", "PROOF_BenchmarkNTracksCleanup not found; using default: %d", fNTracksCleanup);
+   if (!found_ntracks){
+      Warning("SlaveBegin", "PROOF_BenchmarkNTracks not found; using default: %d", fNTracks);
    }
    if (!found_regenerate){
-      Warning("Begin", "PROOF_BenchmarkRegenerate not found; using default: %d", fRegenerate);
+      Warning("SlaveBegin", "PROOF_BenchmarkRegenerate not found; using default: %d", fRegenerate);
    }
    if (!found_slaveinfos){
-      Error("Begin", "PROOF_SlaveInfos not found");
+      Error("SlaveBegin", "PROOF_SlaveInfos not found");
       return;
    }
 
@@ -299,7 +262,7 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    TTree::SetMaxTreeSize(10*MaxTreeSizeOrg);
 }
 
-Long64_t TSelEventGen::GenerateFiles(TProofBench::EFileType filetype, TString filename, Long64_t sizenevents)
+Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype, TString filename, Long64_t sizenevents)
 {
 //runtype is run type either TProofBench::kRunGenerateFileBench or TProofBench::kRunGenerateFileCleanup
 //filename is the name of the file to be generated
@@ -309,7 +272,7 @@ Long64_t TSelEventGen::GenerateFiles(TProofBench::EFileType filetype, TString fi
 //returns bytes written when runtype==TProofBench::kRunGenerateFileCleanup
 //return 0 in case error
 
-   if (!(filetype==TProofBench::kFileBenchmark || filetype==TProofBench::kFileCleanup)){
+   if (!(filetype==TProofBenchMode::kFileBenchmark || filetype==TProofBenchMode::kFileCleanup)){
       Error("GenerateFiles", "File type not supported; %d", filetype);
       return 0;
    }
@@ -342,20 +305,21 @@ Long64_t TSelEventGen::GenerateFiles(TProofBench::EFileType filetype, TString fi
    //const Long64_t maxtreesize_org=TTree::GetMaxTreeSize();
    //const Long64_t maxtreesize_org=100*1024*1024;  //100 MB limit for test
 
-   if (filetype==TProofBench::kFileBenchmark){
+   if (filetype==TProofBenchMode::kFileBenchmark){
       Info("GenerateFiles", "Generating %s", filename.Data());   
       while (sizenevents-- && size_generated<MaxTreeSizeOrg){
-         event->Build(i++,fNTracksBench,0);
+         //event->Build(i++,fNTracksBench,0);
+         event->Build(i++, fNTracks, 0);
          size_generated+=eventtree->Fill();
       }
       nentries=eventtree->GetEntries();
       Info("GenerateFiles", "%s generated with %lld entries", filename.Data(), nentries);
    }
-   else if (filetype==TProofBench::kFileCleanup){
+   else if (filetype==TProofBenchMode::kFileCleanup){
       Info("GenerateFiles", "Generating %s", filename.Data());   
       //while (fileend<size && (fileend+buffersize)<fMaxTreeSize){
       while (size_generated<sizenevents && size_generated<MaxTreeSizeOrg){
-         event->Build(i++, fNTracksCleanup,0);
+         event->Build(i++, fNTracks, 0);
          size_generated+=eventtree->Fill();
          //fileend=f->GetEND();
       }
@@ -378,8 +342,8 @@ Long64_t TSelEventGen::GenerateFiles(TProofBench::EFileType filetype, TString fi
    event->Delete();
    savedir->cd();
 
-   if (filetype==TProofBench::kFileBenchmark) return nentries;
-   else if (filetype==TProofBench::kFileCleanup) return size_generated;
+   if (filetype==TProofBenchMode::kFileBenchmark) return nentries;
+   else if (filetype==TProofBenchMode::kFileCleanup) return size_generated;
    else return 0;
 }
 
@@ -435,7 +399,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
    } 
 
    //generate files
-   if (fFileType==TProofBench::kFileBenchmark){
+   if (fFileType==TProofBenchMode::kFileBenchmark){
       Long64_t neventstogenerate=fNEvents;
 
       Int_t serial=0;//serial number of file when a file becomes larger 
@@ -482,7 +446,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
 
       //fOutput->Add(fListOfFilesGenerated);
    }
-   else if (fFileType==TProofBench::kFileCleanup){
+   else if (fFileType==TProofBenchMode::kFileCleanup){
 
       //(re)generate files
       MemInfo_t meminfo;
@@ -581,12 +545,11 @@ void TSelEventGen::Terminate()
 void TSelEventGen::Print(Option_t *) const
 {
 
-   printf("fMaxNWorkers=%d\n", fMaxNWorkers);
-   Printf("fNEvents=%lld\n", fNEvents);
-   printf("fWorkerNumber=%d\n", fWorkerNumber);
-   printf("fNTracksBench=%d\n", fNTracksBench);
-   printf("fNTracksCleanup=%d\n", fNTracksCleanup);
-   printf("fRegenerate=%d\n", fRegenerate);
-   Printf("fNWorkersPerNode=%d\n", fNWorkersPerNode);
+   Printf("fNEvents=%lld", fNEvents);
+   Printf("fBaseDir=%s", fBaseDir.Data());
+   Printf("fWorkerNumber=%d", fWorkerNumber);
+   Printf("fNTracks=%d", fNTracks);
+   Printf("fRegenerate=%d", fRegenerate);
+   Printf("fNWorkersPerNode=%d", fNWorkersPerNode);
 }
 

@@ -12,6 +12,10 @@
 #include <TSelector.h>
 #endif
 
+#ifndef ROOT_TProofBenchRun
+#include "TProofBenchRun.h"
+#endif
+
 class TH1F;
 class TH2F;
 class TH3F;
@@ -22,8 +26,8 @@ class TSelHist : public TSelector {
 public :
 
    // Specific members
+   TProofBenchRun::EHistType	    fHistType;
    Int_t            fNHists;
-   Int_t	    fHistType;
    Bool_t 	    fDraw;
    TH1F           **fHist1D;//[fNHists]
    TH2F           **fHist2D;//[fNHists]

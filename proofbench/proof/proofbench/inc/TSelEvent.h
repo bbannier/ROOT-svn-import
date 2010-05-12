@@ -10,7 +10,12 @@
 #ifndef ROOT_TSelector
 #include <TSelector.h>
 #endif
+#ifndef ROOT_TProofBenchRun
+#include <TProofBenchRun.h>
+#endif
+#ifndef ROOT_Event
 #include <test/Event.h>
+#endif
 
 class TROOT;
 class TFile;
@@ -81,9 +86,18 @@ public :
    virtual void    SlaveTerminate();
    virtual void    Terminate();
 
+   TProofBenchRun::EReadType GetReadType(){return fReadType;}
+   TProofBenchRun::ECleanupType GetCleanupType(){return fCleanupType;}
+   Bool_t GetDraw(){return fDraw;}
+   Bool_t GetDebug(){return fDebug;}
+   TCanvas* GetCHist(){return fCHist;}
+   TH1* GetPtHist(){return fPtHist;}
+   TH1* GetNTracksHist(){return fNTracksHist;}
+
 private:
 
-   Int_t fRunType;
+   TProofBenchRun::EReadType fReadType; //read type
+   TProofBenchRun::ECleanupType fCleanupType; //read type
    Bool_t fDraw; //when true, display output histograms
    Bool_t fDebug; //when true, create and fill in output histograms
    TCanvas* fCHist; //canvas to display histograms
@@ -112,7 +126,6 @@ void TSelEvent::Init(TTree *tree)
    fHighPt=0;
    fMuons=0;
    fH=0;
-   //fCHist=0;
 
    if (tree == 0) return;
    fChain = tree;
@@ -137,10 +150,6 @@ void TSelEvent::Init(TTree *tree)
    fChain->SetBranchAddress("fH",&fH);
    fChain->SetBranchAddress("fTriggerBits",&fTriggerBits);
    fChain->SetBranchAddress("fIsValid",&fIsValid);
-
-   //printf("initializing mypar\n");
-   //mypar=0;
-   
 }
 
 Bool_t TSelEvent::Notify()
