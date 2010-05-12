@@ -33,6 +33,7 @@
 
 //#define DEBUG
 #ifdef DEBUG
+#define NSAMPLE 10
 #include <iostream> 
 #endif
 
@@ -86,7 +87,7 @@ namespace ROOT {
                   fFunc1Dim = new ROOT::Math::WrappedMemFunction< IntegralEvaluator, double (IntegralEvaluator::*)(double ) const > (*this, &IntegralEvaluator::F1);
                   fIg1Dim = new ROOT::Math::IntegratorOneDim(); 
                   //fIg1Dim->SetFunction( static_cast<const ROOT::Math::IMultiGenFunction & >(*fFunc),false);
-                  fIg1Dim->SetFunction(*fFunc1Dim);
+                  fIg1Dim->SetFunction( static_cast<const ROOT::Math::IGenFunction &>(*fFunc1Dim) );
                } 
                else if (fDim > 1) {
                   fFuncNDim = new ROOT::Math::WrappedMemMultiFunction< IntegralEvaluator, double (IntegralEvaluator::*)(const double *) const >  (*this, &IntegralEvaluator::FN, fDim);
@@ -604,35 +605,36 @@ double FitUtil::EvaluateChi2Residual(const IModelFunction & func, const BinData 
    resval = CorrectValue(resval);
    
    // estimate gradient 
-   if (g == 0) return resval; 
+   if (g != 0) {  
 
-   unsigned int npar = func.NPar(); 
-   const IGradModelFunction * gfunc = dynamic_cast<const IGradModelFunction *>( &func); 
+      unsigned int npar = func.NPar(); 
+      const IGradModelFunction * gfunc = dynamic_cast<const IGradModelFunction *>( &func); 
 
-   if (gfunc != 0) { 
-      //case function provides gradient
-      if (!useBinIntegral ) {
-         gfunc->ParameterGradient(  x , p, g );  
+      if (gfunc != 0) { 
+         //case function provides gradient
+         if (!useBinIntegral ) {
+            gfunc->ParameterGradient(  x , p, g );  
+         }
+         else { 
+            // needs to calculate the integral for each partial derivative
+            CalculateGradientIntegral( *gfunc, x1, x2, p, g); 
+         }
       }
       else { 
-         // needs to calculate the integral for each partial derivative
-         CalculateGradientIntegral( *gfunc, x1, x2, p, g); 
+         SimpleGradientCalculator  gc( npar, func); 
+         if (!useBinIntegral ) 
+            gc.ParameterGradient(x, p, fval, g); 
+         else { 
+            // needs to calculate the integral for each partial derivative
+            CalculateGradientIntegral( gc, x1, x2, p, g); 
+         }
       }
+      // mutiply by - 1 * weight
+      for (unsigned int k = 0; k < npar; ++k) {
+         g[k] *= - invError;
+         if (useBinVolume) g[k] *= binVolume;      
+      }       
    }
-   else { 
-      SimpleGradientCalculator  gc( npar, func); 
-      if (!useBinIntegral ) 
-         gc.ParameterGradient(x, p, fval, g); 
-      else { 
-         // needs to calculate the integral for each partial derivative
-         CalculateGradientIntegral( gc, x1, x2, p, g); 
-      }
-   }
-   // mutiply by - 1 * weight
-   for (unsigned int k = 0; k < npar; ++k) {
-      g[k] *= - invError;
-      if (useBinVolume) g[k] *= binVolume;      
-   }       
 
    if (useBinVolume) delete [] xc;
 
@@ -647,7 +649,7 @@ void FitUtil::EvaluateChi2Gradient(const IModelFunction & f, const BinData & dat
    //
    // case of chi2 effective (errors on coordinate) is not supported
 
-   if ( data.GetErrorType() == BinData::kCoordError && data.Opt().fCoordErrors ) {
+   if ( data.HaveCoordErrors() ) {
       MATH_ERROR_MSG("FitUtil::EvaluateChi2Residual","Error on the coordinates are not used in calculating Chi2 gradient");            return; // it will assert otherwise later in GetPoint
    }
 
@@ -1021,13 +1023,13 @@ double FitUtil::EvaluatePoissonBinPdf(const IModelFunction & func, const BinData
 double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData & data, const double * p, unsigned int &   nPoints ) {  
    // evaluate the Poisson Log Likelihood
    // for binned likelihood fits
+   // this is Sum ( f(x_i)  -  y_i * log( f (x_i) ) )
 
    unsigned int n = data.Size();
-
 #ifdef DEBUG
    std::cout << "Evaluate PoissonLogL for params = [ "; 
    for (unsigned int j=0; j < func.NPar(); ++j) std::cout << p[j] << " , ";
-   std::cout << "]\n";
+   std::cout << "]  - data size = " << n << std::endl;
 #endif
    
    double loglike = 0;
@@ -1079,15 +1081,17 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
 
 
 #ifdef DEBUG
-      std::cout << "x1 = [ "; 
-      for (unsigned int j=0; j < func.NDim(); ++j) std::cout << x[j] << " , ";
-      std::cout << "]  ";
-      if (fitOpt.fIntegral) { 
-         std::cout << "x2 = [ "; 
-         for (unsigned int j=0; j < func.NDim(); ++j) std::cout << data.BinUpEdge(i)[j] << " , ";
-         std::cout << "] ";
+      if (i%NSAMPLE == 0) { 
+         std::cout << "evt " << i << " x1 = [ "; 
+         for (unsigned int j=0; j < func.NDim(); ++j) std::cout << x[j] << " , ";
+         std::cout << "]  ";
+         if (fitOpt.fIntegral) { 
+            std::cout << "x2 = [ "; 
+            for (unsigned int j=0; j < func.NDim(); ++j) std::cout << data.BinUpEdge(i)[j] << " , ";
+            std::cout << "] ";
+         }
+         std::cout << "  y = " << y << " fval = " << fval << std::endl;
       }
-      std::cout << "   fval = " << fval << std::endl;
 #endif
 
 

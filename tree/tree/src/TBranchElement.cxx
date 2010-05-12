@@ -846,7 +846,11 @@ TBranchElement::~TBranchElement()
    fBranchCount2 = 0;
    fBranchCount = 0;
 
-   //delete fCollProxy;
+   if (fType == 4) {
+      // Only the top level TBranchElement containing an STL container,
+      // owns the collectionproxy.
+      delete fCollProxy;
+   }
    fCollProxy = 0;
 }
 
@@ -858,7 +862,7 @@ TStreamerInfo* TBranchElement::GetInfo() const
 {
    // -- Get streamer info for the branch class.
 
-   if (!fInfo || (fInfo && (!fInit || !fInfo->GetOffsets()))) {
+   if (!fInfo || (fInfo && (!fInit || !fInfo->IsCompiled()))) {
       const_cast<TBranchElement*>(this)->InitInfo();
    }
    return fInfo;
@@ -1548,17 +1552,14 @@ void TBranchElement::InitInfo()
 
       if (cl) {
          //---------------------------------------------------------------------
-         // Get the streamer info for given verision
+         // Get the streamer info for given version
          //---------------------------------------------------------------------
          {
-            Bool_t optim = TVirtualStreamerInfo::CanOptimize();
-            TVirtualStreamerInfo::Optimize(kFALSE);
             if( targetClass != cl ) {
                fInfo = (TStreamerInfo*)targetClass->GetConversionStreamerInfo( cl, fClassVersion );
             } else {
                fInfo = (TStreamerInfo*)cl->GetStreamerInfo(fClassVersion);
             }
-            TVirtualStreamerInfo::Optimize(optim);
          }
          
          // FIXME: Check that the found streamer info checksum matches our branch class checksum here.
@@ -1570,7 +1571,6 @@ void TBranchElement::InitInfo()
             // and take the first match.
 
             TStreamerInfo* info;
-            Bool_t optim = TVirtualStreamerInfo::CanOptimize();
             if( targetClass != cl )
                info = (TStreamerInfo*)targetClass->GetConversionStreamerInfo( cl, fCheckSum );
             else {
@@ -1587,7 +1587,6 @@ void TBranchElement::InitInfo()
                // StreamerInfo.
                //    fClassVersion = fInfo->GetClassVersion();
             }
-            TVirtualStreamerInfo::Optimize(optim);
          }
       }
    }
@@ -1598,14 +1597,13 @@ void TBranchElement::InitInfo()
    // FIXME:  What if the class code was unloaded/reloaded since we were cached?
 
    if (fInfo) {
-      if (!fInfo->GetOffsets() || (GetID()>-1 && !TestBit(TVirtualStreamerInfo::kCannotOptimize)) ) {
+      
+      if ( GetID()>-1 && (!fInfo->IsCompiled() || fInfo->IsOptimized()) ) {
          // Streamer info has not yet been compiled.
          //
          // Optimizing does not work with splitting.
-         Bool_t optim = TVirtualStreamerInfo::CanOptimize();
-         TVirtualStreamerInfo::Optimize(kFALSE);
+         fInfo->SetBit(TVirtualStreamerInfo::kCannotOptimize);
          fInfo->Compile();
-         TVirtualStreamerInfo::Optimize(optim);
       }
       if (!fInit) {
          // We were read in from a file, figure out what our fID should be,
@@ -2854,7 +2852,6 @@ void TBranchElement::ReadLeaves(TBuffer& b)
    // -- Read leaves into i/o buffers for this branch.
 
    ValidateAddress();
-
    R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
 
    if (fTree->GetMakeClass()) {
@@ -3086,6 +3083,13 @@ void TBranchElement::ReadLeaves(TBuffer& b)
       }
    }
 
+   if (fObject == 0) 
+   {
+      // We have nowhere to copy the data (probably because the data member was
+      // 'dropped' from the current schema) so let's no copy it in a random place.
+      return;
+   }
+   
    // If not a TClonesArray or STL container master branch
    // or sub-branch and branch inherits from tobject,
    // then register with the buffer so that pointers are
@@ -3377,7 +3381,7 @@ void TBranchElement::ResetDeleteObject()
    Int_t nb = fBranches.GetEntriesFast();
    for (Int_t i = 0; i < nb; ++i)  {
       TBranch* br = (TBranch*) fBranches[i];
-      if (br->InheritsFrom("TBranchElement")) {
+      if (br->InheritsFrom(TBranchElement::Class())) {
          ((TBranchElement*) br)->ResetDeleteObject();
       }
    }
@@ -4030,12 +4034,13 @@ void TBranchElement::SetupAddresses()
    {
       TBranchElement *parent = (TBranchElement *)GetMother()->GetSubBranch( this );
 
-      if (GetInfo() && GetInfo()->GetOffsets())
+      TVirtualStreamerInfo *sinfo = GetInfo();
+      if (sinfo && sinfo->IsCompiled())
       {
          // If our streamer info has already been compiled,
          // then we must try to deal with schema evolution here.
          // FIXME: We must not optimize here or InitializeOffsets will crash!
-         GetInfo()->BuildOld();
+         sinfo->BuildOld();
       }
 
       if( !parent->GetAddress() )
@@ -4052,12 +4057,15 @@ void TBranchElement::SetupAddresses()
    }
    TClass* cl = TClass::GetClass(mother->GetClassName());
 
-   // FIXME: Should this go after the mother and cl test?
-   if (GetInfo() && GetInfo()->GetOffsets()) {
-      // If our streamer info has already been compiled,
-      // then we must try to deal with schema evolution here.
-      // FIXME: We must not optimize here or InitializeOffsets will crash!
-      GetInfo()->BuildOld();
+   {
+      TVirtualStreamerInfo *sinfo = GetInfo();
+      // FIXME: Should this go after the mother and cl test?
+      if (sinfo && sinfo->IsCompiled()) {
+         // If our streamer info has already been compiled,
+         // then we must try to deal with schema evolution here.
+         // FIXME: We must not optimize here or InitializeOffsets will crash!
+         sinfo->BuildOld();
+      }
    }
 
    if (!cl) {
@@ -4239,12 +4247,11 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
    //  its own branch and thus be stored and queried
    //  independently in the tree.
    //
-   Bool_t optim = TVirtualStreamerInfo::CanOptimize();
-   if (splitlevel > 0) {
-      TVirtualStreamerInfo::Optimize(kFALSE);
-   }
    TStreamerInfo* sinfo = fTree->BuildStreamerInfo(cl);
-   TVirtualStreamerInfo::Optimize(optim);
+   if (splitlevel > 0) {
+      sinfo->SetBit(TVirtualStreamerInfo::kCannotOptimize);
+      sinfo->Compile();
+   }
 
    //
    //  Do nothing if we couldn't build the streamer info for cl.
@@ -4273,7 +4280,7 @@ Int_t TBranchElement::Unroll(const char* name, TClass* clParent, TClass* cl, cha
       if (elem->IsA() == TStreamerBase::Class()) {
          // -- This is a base class of cl.
          TClass* clOfBase = TClass::GetClass(elem->GetName());
-         if ((clOfBase->Property() & kIsAbstract) && cl->InheritsFrom("TCollection")) {
+         if ((clOfBase->Property() & kIsAbstract) && cl->InheritsFrom(TCollection::Class())) {
             // -- Do nothing if we are abstract.
             // FIXME: We should not test for TCollection here.
             return -1;
@@ -4441,3 +4448,16 @@ void TBranchElement::ValidateAddress() const
    }
 }
 
+//______________________________________________________________________________
+void TBranchElement::UpdateFile()
+{
+   // Refresh the value of fDirectory (i.e. where this branch writes/reads its buffers)
+   // with the current value of fTree->GetCurrentFile unless this branch has been
+   // redirected to a different file.  Also update the sub-branches.
+
+   // The BranchCount and BranchCount2 are part of higher level branches' list of
+   // branches.
+   // if (fBranchCount) fBranchCount->UpdateFile();
+   // if (fBranchCount2) fBranchCount2->UpdateFile();
+   TBranch::UpdateFile();
+}

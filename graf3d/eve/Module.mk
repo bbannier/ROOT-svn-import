@@ -30,11 +30,12 @@ EVEH1     := TEveBrowser TEveChunkManager TEveCompound \
              TEveGedEditor TEveMacro TEveManager TEvePad TEveParamList \
              TEveProjectionAxes TEveProjectionBases TEveProjectionManager \
              TEveProjections TEveScene TEveSelection TEveTrans TEveTreeTools \
-             TEveUtil TEveVector TEveVSD TEveViewer TEveWindow
+             TEveUtil TEveVector TEvePathMark TEveVSD TEveViewer TEveWindow \
+             TEveSecondarySelectable
 
-EVEH2     := TEveArrow TEveBoxSet TEveCalo \
+EVEH2     := TEveArrow TEveBox TEveCalo \
              TEveDigitSet TEveFrameBox TEveGeo \
-             TEveGridStepper TEveLegoEventHandler \
+             TEveGridStepper TEveLegoEventHandler TEveShape \
              TEveLine TEvePointSet TEvePolygonSetProjected TEveQuadSet \
              TEveRGBAPalette TEveScalableStraightLineSet TEveStraightLineSet \
              TEveText TEveTrack TEveTriangleSet TEveJetCone \

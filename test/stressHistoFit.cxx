@@ -21,51 +21,52 @@
 //                                                                               //
 //                                                                               //
 // An example of output when all the tests run OK is shown below:                //
-// ****************************************************************************  //
-// *  Starting  stress  H I S T O F I T                                       *  //
-// ****************************************************************************  //
-//                                                                               //
-// Test 1D and 2D objects                                                        //
-//                                                                               //
-// Test For Object 'Histogram 1D Variable' with 'GAUS'..............OK           //
-// Test For Object 'Histogram 1D' with 'GAUS'.......................OK           //
-// Test For Object 'TGraph 1D' with 'GAUS'..........................OK           //
-// Test For Object 'TGraphErrors 1D' with 'GAUS'....................OK           //
-// Test For Object 'THnSparse 1D' with 'GAUS'.......................OK           //
-// Test For Object 'Histogram 1D Variable' with 'Polynomial'........OK           //
-// Test For Object 'Histogram 1D' with 'Polynomial'.................OK           //
-// Test For Object 'TGraph 1D' with 'Polynomial'....................OK           //
-// Test For Object 'TGraphErrors 1D' with 'Polynomial'..............OK           //
-// Test For Object 'THnSparse 1D' with 'Polynomial'.................OK           //
-// Test For Object 'Histogram 2D Variable' with 'gaus2D'............OK           //
-// Test For Object 'Histogram 2D' with 'gaus2D'.....................OK           //
-// Test For Object 'TGraph 2D' with 'gaus2D'........................OK           //
-// Test For Object 'TGraphErrors 2DGE' with 'gaus2D'................OK           //
-// Test For Object 'THnSparse 2D' with 'gaus2D'.....................OK           //
-//                                                                               //
-// Test Linear fits                                                              //
-//                                                                               //
-// Test For Object 'Histogram 1D Variable' with 'Polynomial'........OK           //
-// Test For Object 'Histogram 1D' with 'Polynomial'.................OK           //
-// Test For Object 'TGraph 1D' with 'Polynomial'....................OK           //
-// Test For Object 'TGraphErrors 1D' with 'Polynomial'..............OK           //
-// Test For Object 'THnSparse 1D' with 'Polynomial'.................OK           //
-// Test For Object 'Histogram 2D Variable' with 'Poly2D'............OK           //
-// Test For Object 'Histogram 2D' with 'Poly2D'.....................OK           //
-// Test For Object 'TGraph 2D' with 'Poly2D'........................OK           //
-// Test For Object 'TGraphErrors 2DGE' with 'Poly2D'................OK           //
-// Test For Object 'THnSparse 2D' with 'Poly2D'.....................OK           //
-//                                                                               //
-// Test unbinned fits                                                            //
-//                                                                               //
-// Test For Object 'tree' with 'gausn'..............................OK           //
-// Test For Object 'tree' with 'gaus2Dn'............................OK           //
-// Test For Object 'tree' with 'gausND'.............................OK           //
-//                                                                               //
-// ****************************************************************************  //
-// stressHistoFit: Real Time =  72.19 seconds Cpu Time =  72.19 seconds          //
-//  ROOTMARKS = 381.216 ROOT version: 5.25/03	branches/dev/mathDev@31176       //
-// ****************************************************************************  //
+// ****************************************************************************
+// *  Starting  stress  H I S T O F I T                                       *
+// ****************************************************************************
+
+// Test 1D and 2D objects
+
+// Test   1:  'Histogram 1D Variable' with 'GAUS'...................OK
+// Test   2:  'Histogram 1D' with 'GAUS'............................OK
+// Test   3:  'TGraph 1D' with 'GAUS'...............................OK
+// Test   4:  'TGraphErrors 1D' with 'GAUS'.........................OK
+// Test   5:  'THnSparse 1D' with 'GAUS'............................OK
+// Test   6:  'Histogram 1D Variable' with 'Polynomial'.............OK
+// Test   7:  'Histogram 1D' with 'Polynomial'......................OK
+// Test   8:  'TGraph 1D' with 'Polynomial'.........................OK
+// Test   9:  'TGraphErrors 1D' with 'Polynomial'...................OK
+// Test  10:  'THnSparse 1D' with 'Polynomial'......................OK
+// Test  11:  'Histogram 2D Variable' with 'gaus2D'.................OK
+// Test  12:  'Histogram 2D' with 'gaus2D'..........................OK
+// Test  13:  'TGraph 2D' with 'gaus2D'.............................OK
+// Test  14:  'TGraphErrors 2DGE' with 'gaus2D'.....................OK
+// Test  15:  'THnSparse 2D' with 'gaus2D'..........................OK
+
+// Test Linear fits
+
+// Test  16:  'Histogram 1D Variable' with 'Polynomial'.............OK
+// Test  17:  'Histogram 1D' with 'Polynomial'......................OK
+// Test  18:  'TGraph 1D' with 'Polynomial'.........................OK
+// Test  19:  'TGraphErrors 1D' with 'Polynomial'...................OK
+// Test  20:  'THnSparse 1D' with 'Polynomial'......................OK
+// Test  21:  'Histogram 2D Variable' with 'Poly2D'.................OK
+// Test  22:  'Histogram 2D' with 'Poly2D'..........................OK
+// Test  23:  'TGraph 2D' with 'Poly2D'.............................OK
+// Test  24:  'TGraphErrors 2DGE' with 'Poly2D'.....................OK
+// Test  25:  'THnSparse 2D' with 'Poly2D'..........................OK
+
+// Test unbinned fits
+
+// Test  26:  'tree' with 'gausn'...................................OK
+// Test  27:  'tree' with 'gaus2Dn'.................................OK
+// Test  28:  'tree' with 'gausND'..................................OK
+
+// ****************************************************************************
+// stressHistoFit: Real Time =  37.49 seconds Cpu Time =  37.24 seconds
+//  ROOTMARKS = 2663.8 ROOT version: 5.27/01	trunk@32822
+// ****************************************************************************
+//
 //                                                                               //
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*//
 
@@ -219,24 +220,24 @@ public:
 };
 
 // Different vectors containing the list of algorithms to be used.
-vector<struct algoType> commonAlgos;
-vector<struct algoType> treeFail;
-vector<struct algoType> specialAlgos;
-vector<struct algoType> noGraphAlgos;
-vector<struct algoType> noGraphErrorAlgos;
-vector<struct algoType> graphErrorAlgos;
-vector<struct algoType> histGaus2D;
-vector<struct algoType> linearAlgos;
+vector<algoType> commonAlgos;
+vector<algoType> treeFail;
+vector<algoType> specialAlgos;
+vector<algoType> noGraphAlgos;
+vector<algoType> noGraphErrorAlgos;
+vector<algoType> graphErrorAlgos;
+vector<algoType> histGaus2D;
+vector<algoType> linearAlgos;
 
-vector< vector<struct algoType> > listTH1DAlgos;
-vector< vector<struct algoType> > listAlgosTGraph;
-vector< vector<struct algoType> > listAlgosTGraphError;
+vector< vector<algoType> > listTH1DAlgos;
+vector< vector<algoType> > listAlgosTGraph;
+vector< vector<algoType> > listAlgosTGraphError;
 
-vector< vector<struct algoType> > listLinearAlgos;
+vector< vector<algoType> > listLinearAlgos;
 
-vector< vector<struct algoType> > listTH2DAlgos;
-vector< vector<struct algoType> > listAlgosTGraph2D;
-vector< vector<struct algoType> > listAlgosTGraph2DError;
+vector< vector<algoType> > listTH2DAlgos;
+vector< vector<algoType> > listAlgosTGraph2D;
+vector< vector<algoType> > listAlgosTGraph2DError;
 
 
 // Class defining the limits in the parameters of a function.
@@ -289,11 +290,11 @@ public:
 };
 
 // List of functions that will be used in the test
-vector<struct fitFunctions> l1DFunctions;
-vector<struct fitFunctions> l2DFunctions;
-vector<struct fitFunctions> treeFunctions;
-vector<struct fitFunctions> l1DLinearFunctions;
-vector<struct fitFunctions> l2DLinearFunctions;
+vector<fitFunctions> l1DFunctions;
+vector<fitFunctions> l2DFunctions;
+vector<fitFunctions> treeFunctions;
+vector<fitFunctions> l1DLinearFunctions;
+vector<fitFunctions> l2DLinearFunctions;
 
 // Gaus 1D implementation
 Double_t gaus1DImpl(Double_t* x, Double_t* p)
@@ -440,10 +441,15 @@ public:
 };
 
 // Print the Name of the test
+int gTestIndex = 0; 
 template <typename T>
 void printTestName(T* object, TF1* func)
 {
-   string str = "Test For Object '";
+   gTestIndex++;
+   string str = "Test  ";
+   if (gTestIndex < 10) str += " ";  // add an extra space
+   str += ROOT::Math::Util::ToString(gTestIndex);
+   str += ":  '";
    str += object->GetName();
    str += "' with '";
    str += func->GetName();
@@ -569,7 +575,7 @@ int testFit(const char* str1, const char* str2, const char* str3,
 //      @listAlgos All the algorithms that should be tested
 //      @fitFunction Parameters of the function used to fill the object
 template <typename T, typename F>
-int testFitters(T* object, F* func, vector< vector<struct algoType> >& listAlgos, struct fitFunctions const& fitFunction)
+int testFitters(T* object, F* func, vector< vector<algoType> >& listAlgos, fitFunctions const& fitFunction)
 {
    // counts the number of parameters wronly calculated
    int status = 0;
@@ -632,10 +638,10 @@ int testFitters(T* object, F* func, vector< vector<struct algoType> >& listAlgos
 }
 
 // Test the diferent objects in 1D
-int test1DObjects(vector< vector<struct algoType> >& listH,
-                  vector< vector<struct algoType> >& listG,
-                  vector< vector<struct algoType> >& listGE,
-                  vector<struct fitFunctions>& listOfFunctions)
+int test1DObjects(vector< vector<algoType> >& listH,
+                  vector< vector<algoType> >& listG,
+                  vector< vector<algoType> >& listGE,
+                  vector<fitFunctions>& listOfFunctions)
 {
    // Counts how many tests failed.
    int globalStatus = 0;
@@ -724,10 +730,10 @@ int test1DObjects(vector< vector<struct algoType> >& listH,
 }
 
 // Test the different objects in 2S
-int test2DObjects(vector< vector<struct algoType> >& listH,
-                  vector< vector<struct algoType> >& listG,
-                  vector< vector<struct algoType> >& listGE,
-                  vector<struct fitFunctions>& listOfFunctions)
+int test2DObjects(vector< vector<algoType> >& listH,
+                  vector< vector<algoType> >& listG,
+                  vector< vector<algoType> >& listGE,
+                  vector<fitFunctions>& listOfFunctions)
 {
    // Counts how many tests failed.
    int globalStatus = 0;
@@ -917,7 +923,7 @@ int testUnBinnedFit(int n = 10000)
 
    delete func;
 
-   vector< vector<struct algoType> > listAlgos(2);
+   vector< vector<algoType> > listAlgos(2);
    listAlgos[0] = commonAlgos;
    listAlgos[1] = treeFail;
 
@@ -930,10 +936,10 @@ int testUnBinnedFit(int n = 10000)
    globalStatus += status = testFitters(&tw, f1, listAlgos, treeFunctions[0]);
    printf("%s\n", (status?"FAILED":"OK"));
 
-   vector<struct algoType> noCompareInTree;
+   vector<algoType> noCompareInTree;
    noCompareInTree.push_back(algoType( "Minuit2",     "Simplex",     "Q0", CompareResult(0)));
 
-   vector< vector<struct algoType> > listAlgosND(2);
+   vector< vector<algoType> > listAlgosND(2);
    listAlgosND[0] = commonAlgos;
    listAlgosND[1] = noCompareInTree;
 

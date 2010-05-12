@@ -13,13 +13,9 @@
 #include "TEveManager.h"
 #include "TEveTrans.h"
 
-
 #include "TColor.h"
+#include "TRefArray.h"
 
-#include "TBuffer3D.h"
-#include "TBuffer3DTypes.h"
-#include "TVirtualPad.h"
-#include "TVirtualViewer3D.h"
 
 //______________________________________________________________________________
 //
@@ -29,16 +25,30 @@
 //
 // Base-class for displaying a digit collection.
 // Provdies common services for:
-// - specifying signal / color per digit
-// - specifying object reference per digit
-// - controlling palette and thresholds (external object TEveRGBAPalette)
-// - showing a frame around the digits (external object TEveFrameBox)
-// - specifying transformation matrix for the whole collection
+// - specifying signal / color per digit;
+// - specifying object reference per digit;
+// - controlling palette and thresholds (external object TEveRGBAPalette);
+// - showing a frame around the digits (external object TEveFrameBox);
+// - specifying transformation matrix for the whole collection;
 //   by data-member of class TEveTrans.
+//
+// Use method DigitId(TObject* id) to assign additional identification
+// to the last created digit. By calling SetOwnIds(kTRUE) tje
+// digit-set becomes the owner of the assigned objects and deletes
+// them on destruction.
+// Note that TRef is used for referencing the objects and if you
+// instantiate the objects just to pass them to digit-set you should
+// also call  TProcessID::Get/SetObjectCount() at the beginning / end
+// of processing of an event. See documentation for class TRef, in
+// particular section 'ObjectNumber'.
 //
 // If you use value-is-color mode and want to use transparency, set
 // the transparency to non-zero value so that GL-renderer will be
 // properly informed.
+//
+// If you want to use single color for all elements call:
+//   UseSingleColor()
+// Palette controls will not work in this case.
 //
 // See also:
 //   TEveQuadSet: rectangle, hexagon or line per digit
@@ -48,22 +58,25 @@ ClassImp(TEveDigitSet);
 
 //______________________________________________________________________________
 TEveDigitSet::TEveDigitSet(const char* n, const char* t) :
-   TEveElement     (),
+   TEveElement     (fColor),
    TNamed          (n, t),
 
+   fDigitIds       (0),
    fDefaultValue   (kMinInt),
    fValueIsColor   (kFALSE),
    fOwnIds         (kFALSE),
    fPlex           (),
    fLastDigit      (0),
 
+   fColor          (kWhite),
    fFrame          (0),
    fPalette        (0),
    fRenderMode     (kRM_AsIs),
    fDisableLigting (kTRUE),
    fHistoButtons   (kTRUE),
    fEmitSignals    (kFALSE),
-   fCallbackFoo    (0)
+   fCallbackFoo    (0),
+   fTooltipCBFoo   (0)
 {
    // Constructor.
 
@@ -81,6 +94,7 @@ TEveDigitSet::~TEveDigitSet()
    SetPalette(0);
    if (fOwnIds)
       ReleaseIds();
+   delete fDigitIds;
 }
 
 /******************************************************************************/
@@ -90,6 +104,7 @@ TEveDigitSet::DigitBase_t* TEveDigitSet::NewDigit()
 {
    // Protected method called whenever a new digit is added.
 
+   fLastIdx   = fPlex.Size();
    fLastDigit = new (fPlex.NewAtom()) DigitBase_t(fDefaultValue);
    return fLastDigit;
 }
@@ -100,29 +115,92 @@ void TEveDigitSet::ReleaseIds()
    // Protected method. Release and delete the referenced objects, the
    // ownership is *NOT* checked.
 
-   TEveChunkManager::iterator qi(fPlex);
-   while (qi.next()) {
-      DigitBase_t& q = * (DigitBase_t*) qi();
-      if (q.fId.GetObject()) {
-         delete q.fId.GetObject();
-         q.fId = 0;
-      }
+   if (fDigitIds)
+   {
+      const Int_t N = fDigitIds->GetSize();
+
+      for (Int_t i = 0; i < N; ++i)
+         delete fDigitIds->At(i);
+
+      fDigitIds->Expand(0);
    }
 }
 
-/******************************************************************************/
-/******************************************************************************/
+//------------------------------------------------------------------------------
+
+//______________________________________________________________________________
+void TEveDigitSet::UseSingleColor()
+{
+   // Instruct digit-set to use single color for its digits.
+   // Call SetMainColor/Transparency to initialize it.
+
+   fSingleColor = kTRUE;
+}
 
 //______________________________________________________________________________
 void TEveDigitSet::SetMainColor(Color_t color)
 {
    // Override from TEveElement, forward to Frame.
 
-   if (fFrame) {
+   if (fSingleColor)
+   {
+      TEveElement::SetMainColor(color);
+   }
+   else if (fFrame)
+   {
       fFrame->SetFrameColor(color);
       fFrame->StampBackPtrElements(kCBColorSelection);
    }
 }
+
+//______________________________________________________________________________
+void TEveDigitSet::UnSelected()
+{
+   // Virtual function called when both fSelected is false and
+   // fImpliedSelected is 0.
+
+   fSelectedSet.clear();
+   TEveElement::UnSelected();
+}
+
+//______________________________________________________________________________
+void TEveDigitSet::UnHighlighted()
+{
+   // Virtual function called when both fHighlighted is false and
+   // fImpliedHighlighted is 0.
+
+   fHighlightedSet.clear();
+   TEveElement::UnHighlighted();
+}
+
+//______________________________________________________________________________
+TString TEveDigitSet::GetHighlightTooltip()
+{
+   // Return tooltip for highlighted element if always-sec-select is set.
+   // Otherwise return the tooltip for this element.
+
+   if (fHighlightedSet.empty()) return "";
+
+   if (GetAlwaysSecSelect())
+   {
+      if (fTooltipCBFoo)
+      {
+         return (fTooltipCBFoo)(this, *fHighlightedSet.begin());
+      }
+      else if (fDigitIds)
+      {
+         TObject *o = GetId(*fHighlightedSet.begin());
+         if (o)
+            return TString(o->GetName());
+      }
+      return TString::Format("%s; idx=%d", GetElementName(), *fHighlightedSet.begin());
+   }
+   else
+   {
+      return TEveElement::GetHighlightTooltip();
+   }
+}
+
 
 /******************************************************************************/
 /******************************************************************************/
@@ -163,6 +241,18 @@ void TEveDigitSet::ScanMinMaxValues(Int_t& min, Int_t& max)
 }
 
 /******************************************************************************/
+
+//______________________________________________________________________________
+void TEveDigitSet::SetCurrentDigit(Int_t idx)
+{
+   // Set current digit -- the one that will receive calls to
+   // DigitValue/Color/Id/UserData() functions.
+   // Note that various AddXyzz() functions set the current digit to the newly
+   // added one.
+
+   fLastIdx   = idx;
+   fLastDigit = GetDigit(idx);
+}
 
 //______________________________________________________________________________
 void TEveDigitSet::DigitValue(Int_t value)
@@ -211,40 +301,74 @@ void TEveDigitSet::DigitId(TObject* id)
 {
    // Set external object reference for the last digit added.
 
-   fLastDigit->fId = id;
+   DigitId(fLastIdx, id);
+}
+
+//______________________________________________________________________________
+void TEveDigitSet::DigitUserData(void* ud)
+{
+   // Set user-data for the last digit added.
+
+   fLastDigit->fUserData = ud;
+}
+
+//______________________________________________________________________________
+void TEveDigitSet::DigitId(Int_t n, TObject* id)
+{
+   // Set external object reference for digit n.
+
+   if (!fDigitIds)
+      fDigitIds = new TRefArray;
+
+   if (fOwnIds && n < fDigitIds->GetSize() && fDigitIds->At(n))
+      delete fDigitIds->At(n);
+
+   fDigitIds->AddAtAndExpand(id, n);
+}
+
+//______________________________________________________________________________
+void TEveDigitSet::DigitUserData(Int_t n, void* ud)
+{
+   // Set user-data for digit n.
+
+   GetDigit(n)->fUserData = ud;
+}
+
+//______________________________________________________________________________
+TObject* TEveDigitSet::GetId(Int_t n) const
+{
+   // Return external TObject associated with digit n.
+
+   return fDigitIds ? fDigitIds->At(n) : 0;
+}
+
+//______________________________________________________________________________
+void* TEveDigitSet::GetUserData(Int_t n) const
+{
+   // Get user-data associated with digit n.
+
+   return GetDigit(n)->fUserData;
 }
 
 /******************************************************************************/
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveDigitSet::Paint(Option_t* /*option*/)
+void TEveDigitSet::Paint(Option_t*)
 {
    // Paint this object. Only direct rendering is supported.
 
-   static const TEveException eH("TEveDigitSet::Paint ");
-
-   TBuffer3D buff(TBuffer3DTypes::kGeneric);
-
-   // Section kCore
-   buff.fID           = this;
-   buff.fColor        = fFrame ? fFrame->GetFrameColor() : 1;
-   buff.fTransparency = GetMainTransparency();
-   RefMainTrans().SetBuffer3D(buff);
-   buff.SetSectionsValid(TBuffer3D::kCore);
-
-   Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);
-   if (reqSections != TBuffer3D::kNone)
-      Error(eH, "only direct GL rendering supported.");
+   PaintStandard(this);
 }
 
 //______________________________________________________________________________
 void TEveDigitSet::DigitSelected(Int_t idx)
 {
    // Called from renderer when a digit with index idx is selected.
+   // This is by-passed when always-secondary-select is active.
 
    DigitBase_t *qb  = GetDigit(idx);
-   TObject     *obj = qb->fId.GetObject();
+   TObject     *obj = GetId(idx);
 
    if (fCallbackFoo) {
       (fCallbackFoo)(this, idx, obj);
@@ -263,6 +387,7 @@ void TEveDigitSet::DigitSelected(Int_t idx)
 void TEveDigitSet::SecSelected(TEveDigitSet* qs, Int_t idx)
 {
    // Emit a SecSelected signal.
+   // This is by-passed when always-secondary-select is active.
 
    Long_t args[2];
    args[0] = (Long_t) qs;
@@ -285,9 +410,11 @@ void TEveDigitSet::SetFrame(TEveFrameBox* b)
    fFrame = b;
    if (fFrame) {
       fFrame->IncRefCount(this);
-      SetMainColorPtr(fFrame->PtrFrameColor());
+      if (!fSingleColor) {
+         SetMainColorPtr(fFrame->PtrFrameColor());
+      }
    } else {
-      SetMainColorPtr(0);
+      SetMainColorPtr(&fColor);
    }
 }
 

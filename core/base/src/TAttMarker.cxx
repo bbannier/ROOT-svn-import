@@ -70,8 +70,8 @@ accessed via a global name (third column).
         3                    *                    kStar
         4                    o                    kCircle
         5                    x                    kMultiply
-        6                    small scalable dot   kFullDotSmall
-        7                    medium scalable dot  kFullDotMedium
+        6                    small dot            kFullDotSmall
+        7                    medium dot           kFullDotMedium
         8                    large scalable dot   kFullDotLarge
         9 -->19              dot
        20                    full circle          kFullCircle
@@ -102,7 +102,9 @@ Various marker sizes are shown in the figure below. The default marker size=1
 is shown in the top left corner. Marker sizes smaller than 1 can be
 specified. The marker size does not refer to any coordinate systems, it is an
 absolute value. Therefore the marker size is not affected by any change 
-in TPad's scale.
+in TPad's scale. A marker size equl to 1 correspond to 8 pixels.
+That is, a square marker with size 1 will be drawn with a side equal to 8
+pixels on the screen.
 The marker size of any class inheriting from <tt>TAttMarker</tt> can 
 be changed using the method <tt>SetMarkerSize</tt> and retrieved using the 
 method <tt>GetMarkerSize</tt>.

@@ -486,7 +486,7 @@ int test12() {
   //int ifail2 = 0; 
   SMatrix<double,2,2,MatRepSym<double,2> > Sinv1 = S.Inverse (ifail1);  
   //SMatrix<double,2,2,MatRepSym<double,2> > Sinv2 = S.Sinverse(ifail2);
-  std::cout << "Inverse:  S-1 " <<  Sinv1 << "\nifail=" << ifail1 << std::endl;
+  //std::cout << "Inverse:  S-1 " <<  Sinv1 << "\nifail=" << ifail1 << std::endl;
   //std::cout << "Sinverse: S-1"  << Sinv2 << "\nifail=" << ifail2 << std::endl;
 
   SMatrix<double,2> IS1 = S*Sinv1;
@@ -506,21 +506,21 @@ int test12() {
   // S2 -= M1*Transpose(M2);  // this should fails to compile
   SMatrix<double,2 > mS2(S2);  
   mS2 -= M1*Transpose(M2);
-  std::cout << "S2=S-M1*M2T\n" << mS2 << std::endl;
+  //std::cout << "S2=S-M1*M2T\n" << mS2 << std::endl;
   iret |= compare( mS2(0,1), S(0,1)-1 ); 
   mS2 += M1*Transpose(M2); 
   iret |= compare( mS2(0,1), S(0,1) ); 
  
-  std::cout << "S2+=M1*M2T\n" << mS2 << std::endl;
+  //std::cout << "S2+=M1*M2T\n" << mS2 << std::endl;
 
 
   SMatrix<float,100,100,MatRepSym<float,100> >  mSym; 
   SMatrix<float,100 >  m; 
-  std::cout << " Symmetric matrix size: " << sizeof(mSym) << std::endl; 
-  std::cout << " Normal    matrix size: " << sizeof( m  ) << std::endl; 
+  //std::cout << " Symmetric matrix size: " << sizeof(mSym) << std::endl; 
+  //std::cout << " Normal    matrix size: " << sizeof( m  ) << std::endl; 
 
   SMatrix<float,100,100,MatRepSym<float,100> >  mSym2; 
-  std::cout << " Symmetric matrix size: " << sizeof(mSym2) << std::endl; 
+  //std::cout << " Symmetric matrix size: " << sizeof(mSym2) << std::endl; 
 
 
   return iret; 
@@ -1386,16 +1386,42 @@ int test23() {
 
 }
 
+int test24() { 
+   // add transpose test
+   // see bug #65531
+   double a[9] = { 1,-2,3,4,-5,6,-7,8,9};
+   double b[9] = { 1,-1,0,0,2,0,-1,0,3};
+
+   SMatrix<double,3> A(a,a+9); 
+   SMatrix<double,3> B(b,b+9); 
+
+   SMatrix<double,3> R = A * B * Transpose(A);
+
+   SMatrix<double,3> temp1 = A * B; 
+   SMatrix<double,3> R1 = temp1 * Transpose(A);
+
+   SMatrix<double,3> temp2 = B * Transpose(A); 
+   SMatrix<double,3> R2 = A * temp2;
+
+   int iret = 0; 
+   iret |= compare(R1 == R2, true);
+   iret |= compare(R == R1,true);
+   return iret; 
+
+}
+
 #define TEST(N)                                                                 \
   itest = N;                                                                    \
-  if (test##N() == 0) std::cout << " Test " << itest << "  OK " << std::endl;   \
-  else  {std::cout << " Test " << itest << "  Failed " << std::endl;             \
-  return -1;}  
+  if (test##N() == 0) std::cerr << " Test " << itest << "  OK " << std::endl; \
+  else { std::cerr << " Test " << itest << "  FAILED " << std::endl;    \
+     iret +=1; };
 
 
 
-int main() {
 
+int testSMatrix() {
+
+  int iret = 0; 
   int itest;
   TEST(1);
   TEST(2);
@@ -1420,7 +1446,14 @@ int main() {
   TEST(21);
   TEST(22);
   TEST(23);
+  TEST(24);
 
+  return iret;
+}
 
-  return 0;
+int main() { 
+   int ret = testSMatrix();
+   if (ret)  std::cerr << "test SMatrix:\t  FAILED !!! " << std::endl; 
+   else   std::cerr << "test SMatrix: \t OK " << std::endl;
+   return ret; 
 }

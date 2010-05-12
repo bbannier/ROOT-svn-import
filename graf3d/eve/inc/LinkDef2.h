@@ -60,7 +60,9 @@
 // TEveDigitSet
 #pragma link C++ class TEveDigitSet+;
 #pragma link C++ class TEveDigitSetEditor+;
+#pragma link C++ class TEveDigitSetGL+;
 #pragma link C++ typedef TEveDigitSet::Callback_foo;
+#pragma link C++ typedef TEveDigitSet::TooltipCB_foo;
 
 // TEveQuadSet
 #pragma link C++ class TEveQuadSet+;
@@ -84,9 +86,16 @@
 // Arbitrary-tesselation TGeoShape.
 #pragma link C++ class TEveGeoPolyShape+;
 
+// Various shapes
+#pragma link C++ class TEveShape+;
+#pragma link C++ class TEveShapeEditor+;
+#pragma link C++ class TEveBox+;
+#pragma link C++ class TEveBoxGL+;
+#pragma link C++ class TEveBoxProjected+;
+#pragma link C++ class TEveBoxProjectedGL+;
+
 // TEvePolygonSetProjected
 #pragma link C++ class TEvePolygonSetProjected+;
-#pragma link C++ class TEvePolygonSetProjectedEditor+;
 #pragma link C++ class TEvePolygonSetProjectedGL+;
 
 // TEveTrianlgeSet

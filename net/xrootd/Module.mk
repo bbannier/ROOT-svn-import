@@ -208,8 +208,8 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		GNUMAKE=$(MAKE) ./configure.classic $$xarch $$xopt $(XRDDBG); \
 		rc=$$? ; \
 		if [ $$rc != "0" ] ; then \
-		   echo "*** Error condition reported by Xrootd-configure (rc = $$rc):" \
-		   rm -f $(XROOTDMAKE) \
+		   echo "*** Error condition reported by Xrootd-configure (rc = $$rc):"; \
+		   rm -f $(XROOTDMAKE); \
 	 	   exit 1; \
 		fi)
 else
@@ -277,6 +277,10 @@ else
 		echo "*** Building xrootd ..."; \
 		unset MAKEFLAGS; \
 		nmake -f Makefile.msc CFG=$(XRDDBG))
+endif
+
+ifeq ($(PLATFORM),win32)
+$(XRDEXECSA): $(XROOTDBUILD)
 endif
 
 ### Rules for xrootd plugins

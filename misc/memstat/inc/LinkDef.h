@@ -1,5 +1,5 @@
 // @(#)root/memstat:$Name$:$Id$
-// Author: M.Ivanov -- Anar Manafov (A.Manafov@gsi.de) 28/04/2008
+// Author: Anar Manafov (A.Manafov@gsi.de) 2008-04-28
 
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -14,21 +14,12 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma extra_include "vector";
-#include <vector>
+#pragma link C++ namespace memstat;
 
-#pragma link C++ typedef UIntVector_t;
-#pragma link C++ typedef IntVector_t;
-
-#pragma link C++ class TMemStatInfoStamp+;
-#pragma link C++ class TMemStatCodeInfo+;
-#pragma link C++ class TMemStatStackInfo+;
-#pragma link C++ class TMemStatManager+;
 #pragma link C++ class TMemStat;
-#pragma link C++ class TMemStatDepend;
+#pragma link C++ class memstat::TMemStatMng;
 
-#pragma link C++ namespace Memstat;
 
-#pragma link C++ function Memstat::dig2bytes(Long64_t);
+//#pragma link C++ function Memstat::dig2bytes(Long64_t);
 
 #endif

@@ -905,20 +905,9 @@ int XrdProofdProofServMgr::CheckActiveSessions(bool verify)
       // If somebody is interested in this session, we give her/him some
       // more time by skipping the connected clients check this time
       int nc = -1;
-      if (!rmsession && (!xps->SkipCheck() || oldvers)) {
-         // Check if we need to shutdown it
-         if (!rmsession) {
-            XrdSysMutexHelper mh(xps->Mutex());
-            if ((nc = xps->GetNClients(1)) <= 0 && (!IsReconnecting() || oldvers)) {
-               if ((xps->SrvType() != kXPD_TopMaster) || 
-                   (fShutdownOpt == 1 && (xps->IdleTime() >= fShutdownDelay)) ||
-                   (fShutdownOpt == 2 && (xps->DisconnectTime() >= fShutdownDelay))) {
-                  xps->TerminateProofServ(fMgr->ChangeOwn());
-                  rmsession = 1;
-               }
-            }
-         }
-      }
+      if (!rmsession)
+         rmsession = xps->CheckSession(oldvers, IsReconnecting(),
+                                       fShutdownOpt, fShutdownDelay, fMgr->ChangeOwn(), nc);
 
       // Verify the session: this just sends a request to the session
       // to touch the session file; all this will be done asynchronously;
@@ -1786,7 +1775,14 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    XrdOucString path, sockpath;
    XPDFORM(path, "%s/%s.%s.%d", fActiAdminPath.c_str(),
                                 p->Client()->User(), p->Client()->Group(), pid);
-   XPDFORM(sockpath, "%s.sock", path.c_str());
+   // Sock path under dedicated directory to avoid problems related to its length
+   XPDFORM(sockpath, "%s/xpd.%d.%d", fMgr->SockPathDir(), fMgr->Port(), pid);
+   if (sockpath.length() > 100) {
+      emsg += ": socket path very long (";
+      emsg += sockpath.length();
+      emsg += "): this may lead to stack corruption!";
+      emsg += " Use xpd.sockpathdir to change it";
+   }
    int pathrc = 0;
    if (!pathrc && !(pathrc = xps->SetAdminPath(path.c_str(), 1))) {
       // Communicate the path to child
@@ -3487,16 +3483,29 @@ int XrdProofdProofServMgr::SetUserOwnerships(XrdProofdProtocol *p)
    // If applicable, make sure that the private dataset dir for this user exists 
    // and has the right permissions
    if (fMgr->DataSetSrcs()->size() > 0) {
+      XrdProofUI ui;
+      XrdProofdAux::GetUserInfo(XrdProofdProtocol::EUidAtStartup(), ui);
       std::list<XrdProofdDSInfo *>::iterator ii;
       for (ii = fMgr->DataSetSrcs()->begin(); ii != fMgr->DataSetSrcs()->end(); ii++) {
          if ((*ii)->fLocal && (*ii)->fRW) {
-            XrdOucString d = (*ii)->fUrl;
-            if (!d.endswith("/")) d += "/";
-            d += p->Client()->UI().fGroup; d += "/";
-            d += p->Client()->UI().fUser;
-            if (XrdProofdAux::AssertDir(d.c_str(), p->Client()->UI(),
-                                                   fMgr->ChangeOwn()) != 0) {
-               TRACE(XERR, "can't assert "<<d);
+            XrdOucString d;
+            XPDFORM(d, "%s/%s", ((*ii)->fUrl).c_str(), p->Client()->UI().fGroup.c_str());
+            if (XrdProofdAux::AssertDir(d.c_str(), ui, fMgr->ChangeOwn()) == 0) {
+               if (XrdProofdAux::ChangeMod(d.c_str(), 0777) == 0) {
+                  XPDFORM(d, "%s/%s/%s", ((*ii)->fUrl).c_str(), p->Client()->UI().fGroup.c_str(),
+                                                                p->Client()->UI().fUser.c_str());
+                  if (XrdProofdAux::AssertDir(d.c_str(), p->Client()->UI(), fMgr->ChangeOwn()) == 0) {
+                     if (XrdProofdAux::ChangeMod(d.c_str(), 0755) != 0) {
+                        TRACE(XERR, "problems setting permissions 0755 on: "<<d);
+                     }
+                  } else {
+                     TRACE(XERR, "problems asserting: "<<d);
+                  }
+               } else {
+                  TRACE(XERR, "problems setting permissions 0777 on: "<<d);
+               }
+            } else {
+               TRACE(XERR, "problems asserting: "<<d);
             }
          }
       }
@@ -4101,6 +4110,8 @@ int XrdProofSessionInfo::ReadFromFile(const char *file)
       if (fgets(line, sizeof(line), fpid)) {
          sscanf(line, "%d", &fStatus);
       }
+      // Done
+      fclose(fpid);
    } else {
       TRACE(DBG,"no session status file for: "<< fs<<"; session was probably terminated");
    }

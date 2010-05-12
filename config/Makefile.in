@@ -11,9 +11,6 @@ EXTRA_CFLAGS   := -Iinclude @cflags@
 EXTRA_CXXFLAGS := -Iinclude @cflags@
 EXTRA_LDFLAGS  := @ldflags@
 WINRTDEBUG     := @winrtdebug@
-ENABLEPCH      := @enable_pch@
-NOSTUBS        := @no_stubs@
-NOSTUBSTEST    := @no_stubs_test@
 
 GLBPATCHFLAGS  := @glbpatchcflags@
 EXTRA_AUTHFLAGS:= @srpextracflags@ @krb5extracflags@ @glbextracflags@ @sslextracflags@
@@ -138,11 +135,6 @@ BUILDGFAL      := @buildgfal@
 GFALLIBDIR     := @gfallibdir@
 GFALCLILIB     := @gfallib@
 GFALINCDIR     := $(filter-out /usr/include, @gfalincdir@)
-
-BUILDG4ROOT    := @buildg4root@
-G4LIBDIR       := @g4libdir@
-G4INCDIR       := $(filter-out /usr/include, @g4incdir@)
-CLHEPINCDIR    := $(filter-out /usr/include, @clhepincdir@)
 
 BUILDGLITE     := @buildglite@
 GLITELIBDIR    := @glitelibdir@
@@ -286,13 +278,7 @@ GSLLIBDIR      := @gsllibdir@
 GSLLIBS        := @gsllibs@
 GSLVERSION     := @gslversion@
 
-BUILDCINT5     := @buildcint5@
-BUILDCINT7     := @buildcint7@
-ifeq ($(BUILDCINT5)_$(BUILDCINT7),yes_yes)
-BUILDBOTHCINT  := yes
-else
-BUILDBOTHCINT  :=
-endif
+BUILDCLING     := @buildcling@
 
 BUILDCINTEX    := @buildcintex@
 

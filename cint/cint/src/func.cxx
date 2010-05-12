@@ -302,15 +302,20 @@ static void G__getindexedvalue(G__value *result3, char *cindex)
    size = G__sizeof(result3);
 #ifdef G__ASM
    if (G__asm_noverflow) {
-      /* size arithmetic is done by OP2 in bytecode execution */
+      // -- We are generating bytecode.
 #ifdef G__ASM_DBG
-      if (G__asm_dbg) G__fprinterr(G__serr, "%3x: OP2  '%c'\n" , G__asm_cp, '+');
-#endif
+      if (G__asm_dbg) {
+	 //G__fprinterr(G__serr, "       : Replace top of data stack by: 0x%x (%d)\n", size * index);
+         G__fprinterr(G__serr, "%3x,%3x: OP2  '%c'\n", G__asm_cp, G__asm_dt, '+');
+      }
+#endif // G__ASM_DBG
+      // Replace index on the data stack by (size * index).
+      //G__letint(&G__asm_stack[G__asm_dt+1], 'i', (long) (size * index));
       G__asm_inst[G__asm_cp] = G__OP2;
-      G__asm_inst[G__asm_cp+1] = (long)('+');
+      G__asm_inst[G__asm_cp+1] = (long) '+';
       G__inc_cp_asm(2, 0);
    }
-#endif
+#endif // G__ASM
    result3->obj.i += (size * index);
    *result3 = G__tovalue(*result3);
 }
@@ -1391,36 +1396,37 @@ G__value G__getfunction_libp(const char* item, char* funcname, G__param* libp, i
              ****************************************/
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
-               G__fprinterr(G__serr, "%3x,%3x: LD_FUNC compiled '%s' paran: %d  %s:%d\n", G__asm_cp, G__asm_dt, funcname, libp->paran, __FILE__, __LINE__);
+               G__fprinterr(
+                    G__serr
+                  , "%3x,%3x: LD_FUNC compiled '%s' paran: %d  %s:%d\n"
+                  , G__asm_cp
+                  , G__asm_dt
+                  , funcname
+                  , libp->paran
+                  , __FILE__
+                  , __LINE__
+               );
             }
 #endif // G__ASM_DBG
             G__asm_inst[G__asm_cp] = G__LD_FUNC;
-            G__asm_inst[G__asm_cp+1] = (long) (&G__asm_name[G__asm_name_p]);
+            G__asm_inst[G__asm_cp+1] = (long) &G__asm_name[G__asm_name_p];
             G__asm_inst[G__asm_cp+2] = hash;
             G__asm_inst[G__asm_cp+3] = libp->paran;
-            G__asm_inst[G__asm_cp+4] = (long)G__compiled_func;
-            G__asm_inst[G__asm_cp+5] = 0; // cos() doesn't have "this->"
-
-            // 30-05-07
-            // The byte code compiler expects the address of the stubs
-            // functions but those addresses dont exist anymore 
-            // so there is no "fast" way to make such calls.
-            // The idea for fixing it is to change all stub addresses
-            // by ifunc pointers, so we add a new parameter to the
-            // stack (rem this may have unexpected and
-            // completely dissapointing consequences but I dont
-            // see any other choice).
-            G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;
-            if(G__asm_name_p+strlen(funcname)+1<G__ASM_FUNCNAMEBUF) {
-               strcpy(G__asm_name+G__asm_name_p,funcname);
-               G__asm_name_p += strlen(funcname)+1;
-               G__inc_cp_asm(7,0); // 30-05-07 add 1 (stub-less calls)
+            G__asm_inst[G__asm_cp+4] = (long) G__compiled_func;
+            G__asm_inst[G__asm_cp+5] = 0;
+            G__asm_inst[G__asm_cp+6] = (long) G__p_ifunc;
+            G__asm_inst[G__asm_cp+7] = -1;
+            if (G__asm_name_p + strlen(funcname) + 1 < G__ASM_FUNCNAMEBUF ) {
+               strcpy(G__asm_name + G__asm_name_p, funcname);
+               G__asm_name_p += strlen(funcname) + 1;
+               G__inc_cp_asm(8, 0);
             }
             else {
                G__abortbytecode();
 #ifdef G__ASM_DBG
                if (G__asm_dbg) {
-                  G__fprinterr(G__serr, "COMPILE ABORT function name buffer overflow");
+                  G__fprinterr(G__serr,
+                     "COMPILE ABORT function name buffer overflow");
                   G__printlinenum();
                }
 #endif // G__ASM_DBG
@@ -1462,21 +1468,17 @@ G__value G__getfunction_libp(const char* item, char* funcname, G__param* libp, i
             }
 #endif // G__ASM_DBG
             G__asm_inst[G__asm_cp] = G__LD_FUNC;
-            G__asm_inst[G__asm_cp+1] = (long) (&G__asm_name[G__asm_name_p]);
+            G__asm_inst[G__asm_cp+1] = (long) &G__asm_name[G__asm_name_p];
             G__asm_inst[G__asm_cp+2] = hash;
             G__asm_inst[G__asm_cp+3] = libp->paran;
             G__asm_inst[G__asm_cp+4] = (long) G__library_func;
             G__asm_inst[G__asm_cp+5] = 0;
-
-            // 30-05-07 (stub-less calls)
-            G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;    
-            
-            if (G__asm_name_p + strlen(funcname) + 1 < G__ASM_FUNCNAMEBUF) {
-
+            G__asm_inst[G__asm_cp+6] = (long) G__p_ifunc;    
+            G__asm_inst[G__asm_cp+7] = -1;
+            if ((G__asm_name_p + strlen(funcname) + 1) < G__ASM_FUNCNAMEBUF) {
                strcpy(G__asm_name + G__asm_name_p, funcname);
                G__asm_name_p += strlen(funcname) + 1;
-               
-               G__inc_cp_asm(7,0); //05-06-07 add 1
+               G__inc_cp_asm(8, 0);
             }
             else {
                G__abortbytecode();
@@ -2687,18 +2689,17 @@ G__value G__getfunction(const char* item, int* known3, int memfunc_flag)
             }
 #endif // G__ASM_DBG
             G__asm_inst[G__asm_cp] = G__LD_FUNC;
-            G__asm_inst[G__asm_cp+1] = (long) (&G__asm_name[G__asm_name_p]);
+            G__asm_inst[G__asm_cp+1] = (long) &G__asm_name[G__asm_name_p];
             G__asm_inst[G__asm_cp+2] = hash;
             G__asm_inst[G__asm_cp+3] = fpara.paran;
             G__asm_inst[G__asm_cp+4] = (long) G__compiled_func;
             G__asm_inst[G__asm_cp+5] = 0;
-            // 30-05-07 (stub-less calls)
-            G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;    
-
+            G__asm_inst[G__asm_cp+6] = (long) G__p_ifunc;    
+            G__asm_inst[G__asm_cp+7] = -1;
             if (G__asm_name_p + strlen(funcname) + 1 < G__ASM_FUNCNAMEBUF) {
                strcpy(G__asm_name + G__asm_name_p, funcname);
                G__asm_name_p += strlen(funcname) + 1;
-               G__inc_cp_asm(7,0); // 05-06-07 add 1+1
+               G__inc_cp_asm(8, 0);
             }
             else {
                G__abortbytecode();
@@ -2750,18 +2751,17 @@ G__value G__getfunction(const char* item, int* known3, int memfunc_flag)
             }
 #endif // G__ASM_DBG
             G__asm_inst[G__asm_cp] = G__LD_FUNC;
-            G__asm_inst[G__asm_cp+1] = (long) (&G__asm_name[G__asm_name_p]);
+            G__asm_inst[G__asm_cp+1] = (long) &G__asm_name[G__asm_name_p];
             G__asm_inst[G__asm_cp+2] = hash;
             G__asm_inst[G__asm_cp+3] = fpara.paran;
             G__asm_inst[G__asm_cp+4] = (long) G__library_func;
             G__asm_inst[G__asm_cp+5] = 0;
-            // 30-05-07 (stub-less calls)
-            G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;
-
-            if (G__asm_name_p + strlen(funcname) + 1 < G__ASM_FUNCNAMEBUF) {
+            G__asm_inst[G__asm_cp+6] = (long) G__p_ifunc;
+            G__asm_inst[G__asm_cp+7] = -1;
+            if ((G__asm_name_p + strlen(funcname) + 1) < G__ASM_FUNCNAMEBUF) {
                strcpy(G__asm_name + G__asm_name_p, funcname);
                G__asm_name_p += strlen(funcname) + 1;
-               G__inc_cp_asm(7,0); // 05-06-07 add 1+1
+               G__inc_cp_asm(8, 0);
             }
             else {
                G__abortbytecode();
@@ -2875,6 +2875,7 @@ G__value G__getfunction(const char* item, int* known3, int memfunc_flag)
 
             store_tagnum = G__tagnum;
             G__tagnum = i;
+            G__class_autoloading(&G__tagnum); // Autoload if necessary.
             if (G__CPPLINK != G__struct.iscpplink[G__tagnum]) {
                G__alloc_tempobject(G__tagnum, -1);
                G__store_struct_offset = G__p_tempbuf->obj.obj.i;
@@ -3305,16 +3306,16 @@ int G__special_func(G__value* result7, char* funcname, G__param* libp, int hash)
          G__asm_inst[G__asm_cp+3] = 1;
          G__asm_inst[G__asm_cp+4] = (long) G__special_func;
          G__asm_inst[G__asm_cp+5] = 0;
+         G__asm_inst[G__asm_cp+6] = (long)G__p_ifunc;
+         G__asm_inst[G__asm_cp+7] = -1;
          G__asm_stack[G__asm_dt] = x;
-
-         // 30-05-07 (stub-less calls)
-         G__asm_inst[G__asm_cp+6]=(long)G__p_ifunc;
-         if(!G__p_ifunc) printf ("Serious trouble func 3519\n");
-
+         if (!G__p_ifunc) {
+            printf ("Serious trouble func 3519\n");
+         }
          if ((G__asm_name_p + strlen(funcname) + 1) < G__ASM_FUNCNAMEBUF) {
             strcpy(G__asm_name + G__asm_name_p, funcname);
             G__asm_name_p += strlen(funcname) + 1;
-            G__inc_cp_asm(7,0); // 05-06-07 add 1+1
+            G__inc_cp_asm(8, 0);
          }
          else {
             G__abortbytecode();
@@ -4137,13 +4138,13 @@ int G__library_func(G__value *result7, char *funcname, G__param *libp, int hash)
          G__printerror("bsearch", 1, libp->paran);
 #endif
       G__CHECKNONULL(3, 'Y');
-      bsearch((void *)G__int(libp->para[0])
+      void* ret = bsearch((void *)G__int(libp->para[0])
             , (void *)G__int(libp->para[1])
             , (size_t)G__int(libp->para[2])
             , (size_t)G__int(libp->para[3])
             , (int(*)(const void*, const void*))G__int(libp->para[4])
             );
-      *result7 = G__null;
+      G__letint(result7, 'Y', (long)ret);
       return(1);
    }
 

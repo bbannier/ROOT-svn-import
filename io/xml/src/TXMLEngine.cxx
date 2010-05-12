@@ -369,21 +369,41 @@ public:
       return -1;
    }
 
-   Int_t LocateAttributeValue(char* start)
+   Int_t LocateAttributeValue(char* start, char* &attr_start, Int_t &attr_len)
    {
       char* curr = start;
-      if (curr>=fMaxAddr)
-         if (!ExpandStream()) return 0;
+
+      // skip spaces before = sign
+      while (1) {
+         if (curr>=fMaxAddr)
+            if (!ExpandStream()) return 0;
+         if (*curr!=' ') break;
+         curr++;
+      };
+
       if (*curr!='=') return 0;
       curr++;
-      if (curr>=fMaxAddr)
-         if (!ExpandStream()) return 0;
+
+      // skip spaces after = sign
+      while (1) {
+         if (curr>=fMaxAddr)
+            if (!ExpandStream()) return 0;
+         if (*curr!=' ') break;
+         curr++;
+      };
+
       if (*curr!='"') return 0;
+
+      attr_start = curr + 1;
+
       do {
          curr++;
          if (curr>=fMaxAddr)
             if (!ExpandStream()) return 0;
-         if (*curr=='"') return curr-start+1;
+         if (*curr=='"') {
+            attr_len = curr - attr_start;
+            return curr-start+1;
+         }
       } while (curr<fMaxAddr);
       return 0;
    }
@@ -1055,7 +1075,26 @@ XMLDocPointer_t TXMLEngine::ParseFile(const char* filename)
 
    if ((filename==0) || (strlen(filename)==0)) return 0;
    TXMLInputStream inp(true, filename, 100000);
+   return ParseStream(&inp);
+}
 
+//______________________________________________________________________________
+XMLDocPointer_t TXMLEngine::ParseString(const char* xmlstring)
+{
+   // parses content of string and tries to produce xml structures
+
+   if ((xmlstring==0) || (strlen(xmlstring)==0)) return 0;
+   TXMLInputStream inp(false, xmlstring, 2*strlen(xmlstring) );
+   return ParseStream(&inp);
+}
+
+//______________________________________________________________________________
+XMLDocPointer_t TXMLEngine::ParseStream(TXMLInputStream* inp)
+{
+   // parses content of the stream and tries to produce xml structures
+
+   if (inp == 0) return 0;
+   
    XMLDocPointer_t xmldoc = NewDoc(0);
    
    bool success = false;
@@ -1063,23 +1102,23 @@ XMLDocPointer_t TXMLEngine::ParseFile(const char* filename)
    Int_t resvalue = 0;
    
    do {
-      ReadNode(((SXmlDoc_t*) xmldoc)->fRootNode, &inp, resvalue);
+      ReadNode(((SXmlDoc_t*) xmldoc)->fRootNode, inp, resvalue);
       
       if (resvalue!=2) break;
 
-      if (!inp.EndOfStream()) {
-         if (!inp.SkipSpaces()) { 
+      if (!inp->EndOfStream()) {
+         if (!inp->SkipSpaces()) { 
             resvalue = -1; break; 
          }
       }
-      if (inp.EndOfStream()) {
+      if (inp->EndOfStream()) {
          success = true; 
          break;
       }
    } while (true);
    
    if (!success) {
-      DisplayError(resvalue, inp.CurrentLine());
+      DisplayError(resvalue, inp->CurrentLine());
       FreeDoc(xmldoc);
       return 0;
    }
@@ -1126,7 +1165,7 @@ void TXMLEngine::SaveSingleNode(XMLNodePointer_t xmlnode, TString* res, Int_t la
 //______________________________________________________________________________
 XMLNodePointer_t TXMLEngine::ReadSingleNode(const char* src)
 {
-   // read snigle xml node from provided string
+   // read single xml node from provided string
     
    if (src==0) return 0;
    
@@ -1414,23 +1453,20 @@ XMLNodePointer_t TXMLEngine::ReadNode(XMLNodePointer_t xmlparent, TXMLInputStrea
       Int_t commentlen = inp->SearchFor("-->");
       if (commentlen<=0) { resvalue = -10; return 0; }
 
-      if (fSkipComments) {
-         if (!inp->ShiftCurrent(commentlen+3)) { resvalue = -1; return 0; }
-         continue;
+      if (!fSkipComments) {
+         node = (SXmlNode_t*) AllocateNode(0, xmlparent);
+         node->fName.Resize(commentlen);
+         char* nameptr = (char*)node->fName.Data();
+         node->fType = kXML_COMMENT;
+         strncpy(nameptr, inp->fCurrent, commentlen);
+         nameptr += commentlen;
+         *nameptr = 0;
       }
-      
-      node = (SXmlNode_t*) AllocateNode(0, xmlparent);
-      node->fName.Resize(commentlen);
-      char* nameptr = (char*)node->fName.Data();
-      node->fType = kXML_COMMENT;
-      strncpy(nameptr, inp->fCurrent, commentlen);
-      nameptr += commentlen;
-      *nameptr = 0;
       
       if (!inp->ShiftCurrent(commentlen+3)) { resvalue = -1; return node; }
       if (!inp->SkipSpaces()) { resvalue = -1; return node; }
+
       resvalue = 2;
-      
       return node;
    }
 
@@ -1545,25 +1581,25 @@ XMLNodePointer_t TXMLEngine::ReadNode(XMLNodePointer_t xmlparent, TXMLInputStrea
             return node;
          } else return 0;
       } else {
-         Int_t attrlen = inp->LocateIdentifier();
-         if (attrlen<=0) { resvalue = -6; return 0; }
+         Int_t attrnamelen = inp->LocateIdentifier();
+         if (attrnamelen<=0) { resvalue = -6; return 0; }
 
-         char* valuestart = inp->fCurrent+attrlen;
+         char* attrvalue(0);
+         Int_t attrvaluelen(0);
 
-         int valuelen = inp->LocateAttributeValue(valuestart);
-         if (valuelen<3) { resvalue = -7; return 0; }
+         int fullvaluelen = inp->LocateAttributeValue(inp->fCurrent + attrnamelen, attrvalue, attrvaluelen);
+         if (fullvaluelen<3) { resvalue = -7; return 0; }
 
-         SXmlAttr_t* attr = (SXmlAttr_t*) AllocateAttr(attrlen, valuelen-3, (XMLNodePointer_t) node);
+         SXmlAttr_t* attr = (SXmlAttr_t*) AllocateAttr(attrnamelen, attrvaluelen, (XMLNodePointer_t) node);
 
-         attr->fName.Resize(attrlen);
+         attr->fName.Resize(attrnamelen);
          char* attrname = (char*)attr->fName.Data();
-         strncpy(attrname, inp->fCurrent, attrlen);
-         attrname[attrlen] = '\0';
-         attr->fValue.Resize(valuelen-3);
-         char* attrvalue = (char*)attr->fValue.Data();
-         UnpackSpecialCharacters(attrvalue, valuestart+2, valuelen-3);
+         strncpy(attrname, inp->fCurrent, attrnamelen);
+         attrname[attrnamelen] = '\0';
+         attr->fValue.Resize(attrvaluelen);
+         UnpackSpecialCharacters((char*)attr->fValue.Data(), attrvalue, attrvaluelen);
 
-         if (!inp->ShiftCurrent(attrlen+valuelen)) return 0;
+         if (!inp->ShiftCurrent(attrnamelen+fullvaluelen)) return 0;
 
          if ((strlen(attrname)>6) && (strstr(attrname,"xmlns:")==attrname)) {
             if (strcmp(node->fName.Data(), attrname + 6)!=0) {

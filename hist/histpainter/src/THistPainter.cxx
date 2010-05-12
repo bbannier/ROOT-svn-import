@@ -19,8 +19,10 @@
 #include "TClass.h"
 #include "TSystem.h"
 #include "THistPainter.h"
-#include "TH3.h"
 #include "TH2.h"
+#include "TH3.h"
+#include "TProfile.h"
+#include "THStack.h"
 #include "TF2.h"
 #include "TF3.h"
 #include "TCutG.h"
@@ -236,25 +238,6 @@ result only.
 Superimpose on previous picture in the same pad.
 </td></tr>
 
-<tr><th valign=top>"CYL"</th><td>
-Use Cylindrical coordinates. The X coordinate is mapped on the angle and the Y
-coordinate on the cylinder length.
-</td></tr>
-
-<tr><th valign=top>"POL"</th><td>
-Use Polar coordinates. The X coordinate is mapped on the angle and the Y
-coordinate on the radius.
-</td></tr>
-
-<tr><th valign=top>"SPH"</th><td>
-Use Spherical coordinates. The X coordinate is mapped on the latitude and the Y
-coordinate on the longitude.
-</td></tr>
-
-<tr><th valign=top>"PSR"</th><td>
-Use PseudoRapidity/Phi coordinates. The X coordinate is mapped on Phi.
-</td></tr>
-
 <tr><th valign=top>"LEGO"</th><td>
 Draw a lego plot with hidden line removal.
 </td></tr>
@@ -266,32 +249,6 @@ Draw a lego plot with hidden surface removal.
 <tr><th valign=top>"LEGO2"</th><td>
 Draw a lego plot using colors to show the cell contents When the option "0" is
 used with any LEGO option, the empty bins are not drawn.
-</td></tr>
-
-<tr><th valign=top>"SURF"</th><td>
-Draw a surface plot with hidden line removal.
-</td></tr>
-
-<tr><th valign=top>"SURF1"</th><td>
-Draw a surface plot with hidden surface removal.
-</td></tr>
-
-<tr><th valign=top>"SURF2"</th><td>
-Draw a surface plot using colors to show the cell contents.
-</td></tr>
-
-<tr><th valign=top>"SURF3"</th><td>
-Same as SURF with in addition a contour view drawn on the top.
-</td></tr>
-
-<tr><th valign=top>"SURF4"</th><td>
-Draw a surface using Gouraud shading.
-</td></tr>
-
-<tr><th valign=top>"SURF5"</th><td>
-Same as SURF3 but only the colored contour is drawn. Used with option CYL, SPH
-or PSR it allows to draw colored contours on a sphere, a cylinder or a in
-pseudo rapidity space. In cartesian or polar coordinates, option SURF3 is used.
 </td></tr>
 
 <tr><th valign=top>"TEXT"</th><td>
@@ -412,7 +369,8 @@ the histogram contour.
 <tr><th valign=top>"9"</th><td>
 Force histogram to be drawn in high resolution mode. By default, the histogram
 is drawn in low resolution in case the number of bins is greater than the number
-of pixels in the current pad.
+of pixels in the current pad. This option should be combined with a "drawing
+option" like "H" or "L".
 </td></tr>
 
 </table>
@@ -479,6 +437,51 @@ Draw a contour plot using surface colors (SURF option at theta = 0).
 
 <tr><th valign=top>"LIST"</th><td>
 Generate a list of TGraph objects for each contour.
+</td></tr>
+
+<tr><th valign=top>"CYL"</th><td>
+Use Cylindrical coordinates. The X coordinate is mapped on the angle and the Y
+coordinate on the cylinder length.
+</td></tr>
+
+<tr><th valign=top>"POL"</th><td>
+Use Polar coordinates. The X coordinate is mapped on the angle and the Y
+coordinate on the radius.
+</td></tr>
+
+<tr><th valign=top>"SPH"</th><td>
+Use Spherical coordinates. The X coordinate is mapped on the latitude and the Y
+coordinate on the longitude.
+</td></tr>
+
+<tr><th valign=top>"PSR"</th><td>
+Use PseudoRapidity/Phi coordinates. The X coordinate is mapped on Phi.
+</td></tr>
+
+<tr><th valign=top>"SURF"</th><td>
+Draw a surface plot with hidden line removal.
+</td></tr>
+
+<tr><th valign=top>"SURF1"</th><td>
+Draw a surface plot with hidden surface removal.
+</td></tr>
+
+<tr><th valign=top>"SURF2"</th><td>
+Draw a surface plot using colors to show the cell contents.
+</td></tr>
+
+<tr><th valign=top>"SURF3"</th><td>
+Same as SURF with in addition a contour view drawn on the top.
+</td></tr>
+
+<tr><th valign=top>"SURF4"</th><td>
+Draw a surface using Gouraud shading.
+</td></tr>
+
+<tr><th valign=top>"SURF5"</th><td>
+Same as SURF3 but only the colored contour is drawn. Used with option CYL, SPH
+or PSR it allows to draw colored contours on a sphere, a cylinder or a in
+pseudo rapidity space. In cartesian or polar coordinates, option SURF3 is used.
 </td></tr>
 
 <tr><th valign=top>"FB"</th><td>
@@ -1944,6 +1947,52 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
+This option also works for horizontal plots. The example given in the section 
+<a href="http://root.cern.ch/root/html/THistPainter.html#HP100">
+"The bar chart option"</a> appears as follow:
+
+End_Html
+Begin_Macro(source)
+{
+   int i;
+   const Int_t nx = 8;
+   char *os_X[nx]   = {"8","32","128","512","2048","8192","32768","131072"};
+   float d_35_0[nx] = {0.75, -3.30, -0.92, 0.10, 0.08, -1.69, -1.29, -2.37};
+   float d_35_1[nx] = {1.01, -3.02, -0.65, 0.37, 0.34, -1.42, -1.02, -2.10};
+
+   TCanvas *cb = new TCanvas("cbh","cbh",400,600);
+   cbh->SetGrid();
+
+   gStyle->SetHistMinimumZero();
+
+   TH1F *h1bh = new TH1F("h1bh","Option HBAR centered on 0",nx,0,nx);
+   h1bh->SetFillColor(4);
+   h1bh->SetBarWidth(0.4);
+   h1bh->SetBarOffset(0.1);
+   h1bh->SetStats(0);
+   h1bh->SetMinimum(-5);
+   h1bh->SetMaximum(5);
+
+   for (i=1; i<=nx; i++) {
+      h1bh->Fill(os_X[i-1], d_35_0[i-1]);
+      h1bh->GetXaxis()->SetBinLabel(i,os_X[i-1]);
+   }
+
+   h1bh->Draw("hbar");
+
+   TH1F *h2bh = new TH1F("h2bh","h2bh",nx,0,nx);
+   h2bh->SetFillColor(38);
+   h2bh->SetBarWidth(0.4);
+   h2bh->SetBarOffset(0.5);
+   h2bh->SetStats(0);
+   for (i=1;i<=nx;i++) h2bh->Fill(os_X[i-1], d_35_1[i-1]);
+
+   h2bh->Draw("hbar same");
+
+   return cbh;
+}
+End_Macro
+Begin_Html
 
 
 <a name="HP21"></a><h3>The SPEC option</h3>
@@ -3577,8 +3626,8 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
          TObject *obj;
          // Check if the first TH1 of THStack in the pad is drawn with the option HBAR
          while ((obj = next())) {
-            if (!obj->InheritsFrom("TH1") &&
-                !obj->InheritsFrom("THStack")) continue;
+            if (!obj->InheritsFrom(TH1::Class()) &&
+                !obj->InheritsFrom(THStack::Class())) continue;
             TString opt = obj->GetDrawOption();
             opt.ToLower();
             // if drawn with HBAR, the axis should be inverted and the pad set to horizontal
@@ -3829,7 +3878,8 @@ void THistPainter::PaintBar(Option_t *)
       if (ymax < gPad->GetUymin()) continue;
       if (ymax > gPad->GetUymax()) ymax = gPad->GetUymax();
       if (ymin < gPad->GetUymin()) ymin = gPad->GetUymin();
-      if (gStyle->GetHistMinimumZero() && ymin < 0) ymin=0;
+      if (gStyle->GetHistMinimumZero() && ymin < 0)
+         ymin=TMath::Min(0.,gPad->GetUymax());
       w    = (xmax-xmin)*width;
       xmin += offset*(xmax-xmin);
       xmax = xmin + w;
@@ -3887,6 +3937,8 @@ void THistPainter::PaintBarH(Option_t *)
       if (xmax < gPad->GetUxmin()) continue;
       if (xmax > gPad->GetUxmax()) xmax = gPad->GetUxmax();
       if (xmin < gPad->GetUxmin()) xmin = gPad->GetUxmin();
+      if (gStyle->GetHistMinimumZero() && xmin < 0)
+         xmin=TMath::Min(0.,gPad->GetUxmax());
       w    = (ymax-ymin)*width;
       ymin += offset*(ymax-ymin);
       ymax = ymin + w;
@@ -4060,10 +4112,10 @@ void THistPainter::PaintBoxes(Option_t *)
             else continue;
          }
 
-         if (xlow < gPad->GetUxmin()) continue;
-         if (ylow < gPad->GetUymin()) continue;
-         if (xup  > gPad->GetUxmax()) continue;
-         if (yup  > gPad->GetUymax()) continue;
+         xlow = TMath::Max(xlow, gPad->GetUxmin());
+         ylow = TMath::Max(ylow, gPad->GetUymin());
+         xup  = TMath::Min(xup , gPad->GetUxmax());
+         yup  = TMath::Min(yup , gPad->GetUymax());
 
          if (Hoption.Box == 1) {
             fH->SetFillColor(color);
@@ -4161,11 +4213,11 @@ void THistPainter::PaintColorLevels(Option_t *)
    for (Int_t j=Hparam.yfirst; j<=Hparam.ylast;j++) {
       yk    = fYaxis->GetBinLowEdge(j);
       ystep = fYaxis->GetBinWidth(j);
-      if (Hoption.System == kPOLAR && yk<0) yk= 2*TMath::Pi()+yk;
       for (Int_t i=Hparam.xfirst; i<=Hparam.xlast;i++) {
          Int_t bin  = j*(fXaxis->GetNbins()+2) + i;
          xk    = fXaxis->GetBinLowEdge(i);
          xstep = fXaxis->GetBinWidth(i);
+         if (Hoption.System == kPOLAR && xk<0) xk= 2*TMath::Pi()+xk;
          if (!IsInside(xk+0.5*xstep,yk+0.5*ystep)) continue;
          z     = fH->GetBinContent(bin);
          if (z == 0 && (zmin >= 0 || Hoption.Logz)) continue; // don't draw the empty bins for histograms with positive content
@@ -4224,7 +4276,7 @@ void THistPainter::PaintColorLevels(Option_t *)
          if (Hoption.System != kPOLAR) {
             gPad->PaintBox(xlow, ylow, xup, yup);
          } else  {
-            TCrown crown(0,0,xlow,xup,ylow*TMath::RadToDeg(),yup*TMath::RadToDeg());
+            TCrown crown(0,0,ylow,yup,xlow*TMath::RadToDeg(),xup*TMath::RadToDeg());
             crown.SetFillColor(gStyle->GetColorPalette(theColor));
             crown.Paint();
          }
@@ -5221,7 +5273,8 @@ void THistPainter::PaintHist(Option_t *)
 
    if (fixbin) { keepx[0] = Hparam.xmin; keepx[1] = Hparam.xmax; }
    else {
-      for (i=0; i<=nbins; i++) keepx[i] = fXaxis->GetBinLowEdge(i+first);
+      for (i=0; i<nbins; i++) keepx[i] = fXaxis->GetBinLowEdge(i+first);
+      keepx[nbins] = fXaxis->GetBinUpEdge(nbins-1+first);
    }
 
    //         Prepare Fill area (systematic with option "Bar").
@@ -6462,7 +6515,7 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
       if (print_fval < 2) nlinesf += fit->GetNumberFreeParameters();
       else                nlinesf += fit->GetNpar();
    }
-   if (fH->InheritsFrom("TProfile")) nlinesf += print_mean + print_rms;
+   if (fH->InheritsFrom(TProfile::Class())) nlinesf += print_mean + print_rms;
 
    // Pavetext with statistics
    Bool_t done = kFALSE;
@@ -6521,7 +6574,7 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
          sprintf(t,textstats,fH->GetMean(1),fH->GetMeanError(1));
       }
       stats->AddText(t);
-      if (fH->InheritsFrom("TProfile")) {
+      if (fH->InheritsFrom(TProfile::Class())) {
          if (print_mean == 1) {
             sprintf(textstats,"%s = %s%s",gStringMeanY.Data(),"%",stats->GetStatFormat());
             sprintf(t,textstats,fH->GetMean(2));
@@ -6543,7 +6596,7 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
          sprintf(t,textstats,fH->GetRMS(1),fH->GetRMSError(1));
       }
       stats->AddText(t);
-      if(fH->InheritsFrom("TProfile")) {
+      if(fH->InheritsFrom(TProfile::Class())) {
          if (print_rms == 1) {
             sprintf(textstats,"%s = %s%s",gStringRMSY.Data(),"%",stats->GetStatFormat());
             sprintf(t,textstats,fH->GetRMS(2));

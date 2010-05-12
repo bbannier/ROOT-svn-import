@@ -97,20 +97,22 @@ private:
    ULong_t          *fElem;              //![fNdata]
    ULong_t          *fMethod;            //![fNdata]
    TCompInfo        *fComp;              //![fNdata] additional info
-   Bool_t            fOptimized;         //! true if has been optimized
    TClass           *fClass;             //!pointer to class
    TObjArray        *fElements;          //Array of TStreamerElements
    Version_t         fOldVersion;        //! Version of the TStreamerInfo object read from the file
-   Bool_t            fIsBuilt;           //! true if the TStreamerInfo has been 'built'
+   Int_t             fNVirtualInfoLoc;   //! Number of virtual info location to update.
+   ULong_t          *fVirtualInfoLoc;    //![fNVirtualInfoLoc] Location of the pointer to the TStreamerInfo inside the object (when emulated)
+   ULong_t           fLiveCount;         //! Number of outstanding pointer to this StreamerInfo.
 
    static  Int_t     fgCount;            //Number of TStreamerInfo instances
    static TStreamerElement *fgElement;   //Pointer to current TStreamerElement
    static Double_t   GetValueAux(Int_t type, void *ladd, int k, Int_t len);
    static void       PrintValueAux(char *ladd, Int_t atype, TStreamerElement * aElement, Int_t aleng, Int_t *count);
 
-   UInt_t            GenerateIncludes(FILE *fp, char *inclist);
+   UInt_t            GenerateIncludes(FILE *fp, char *inclist, const TList *extrainfos);
    void              GenerateDeclaration(FILE *fp, FILE *sfp, const TList *subClasses, Bool_t top = kTRUE);
    void              InsertArtificialElements(const TObjArray *rules);
+   void              DestructorImpl(void* p, Bool_t dtorOnly);
 
 private:
    TStreamerInfo(const TStreamerInfo&);            // TStreamerInfo are copiable.  Not Implemented.
@@ -122,7 +124,8 @@ public:
    enum { kCannotOptimize        = BIT(12),
           kIgnoreTObjectStreamer = BIT(13),  // eventhough BIT(13) is taken up by TObject (to preserverse forward compatibility)
           kRecovered             = BIT(14),
-          kNeedCheck             = BIT(15)
+          kNeedCheck             = BIT(15),
+          kIsCompiled            = BIT(16)
    };
 
    enum EReadWrite {
@@ -180,7 +183,8 @@ public:
    void                Compile();
    void                ComputeSize();
    void                ForceWriteInfo(TFile *file, Bool_t force=kFALSE);
-   Int_t               GenerateHeaderFile(const char *dirname, const TList *subClasses = 0);
+   Int_t               GenerateHeaderFile(const char *dirname, const TList *subClasses = 0, const TList *extrainfos = 0);
+   TClass             *GetActualClass(const void *obj) const;
    TClass             *GetClass() const {return fClass;}
    UInt_t              GetCheckSum() const {return fCheckSum;}
    UInt_t              GetCheckSum(UInt_t code) const;
@@ -206,9 +210,6 @@ public:
    Double_t            GetValueClones(TClonesArray *clones, Int_t i, Int_t j, Int_t k, Int_t eoffset) const;
    Double_t            GetValueSTL(TVirtualCollectionProxy *cont, Int_t i, Int_t j, Int_t k, Int_t eoffset) const;
    Double_t            GetValueSTLP(TVirtualCollectionProxy *cont, Int_t i, Int_t j, Int_t k, Int_t eoffset) const;
-   Bool_t              IsBuilt() const { return fIsBuilt; }
-   Bool_t              IsOptimized() const {return fOptimized;}
-   Int_t               IsRecovered() const {return TestBit(kRecovered);}
    void                ls(Option_t *option="") const;
    TVirtualStreamerInfo *NewInfo(TClass *cl) {return new TStreamerInfo(cl);}
    void               *New(void *obj = 0);
@@ -281,7 +282,7 @@ public:
 #endif
 
    //WARNING this class version must be the same as TVirtualStreamerInfo
-   ClassDef(TStreamerInfo,8)  //Streamer information for one class version
+   ClassDef(TStreamerInfo,9)  //Streamer information for one class version
 };
 
 

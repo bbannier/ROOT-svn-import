@@ -60,7 +60,7 @@ public:
    };
 
    static const TGPicture*                      fgRnrIcons[4];
-   static const TGPicture*                      fgListTreeIcons[8];
+   static const TGPicture*                      fgListTreeIcons[9];
 
    typedef std::set<TEveListTreeInfo>           sLTI_t;
    typedef sLTI_t::iterator                     sLTI_i;
@@ -116,6 +116,7 @@ public:
 
    virtual const char* GetElementName()  const;
    virtual const char* GetElementTitle() const;
+   virtual TString     GetHighlightTooltip() { return TString(GetElementTitle()); }
    virtual void SetElementName (const char* name);
    virtual void SetElementTitle(const char* title);
    virtual void SetElementNameTitle(const char* name, const char* title);
@@ -185,6 +186,7 @@ public:
    void   DecParentIgnoreCnt();
 
    virtual void PadPaint(Option_t* option);
+   virtual void PaintStandard(TObject* id);
 
    virtual TObject* GetObject      (const TEveException& eh="TEveElement::GetObject ") const;
    virtual TObject* GetEditorObject(const TEveException& eh="TEveElement::GetEditorObject ") const { return GetObject(eh); }
@@ -229,6 +231,9 @@ public:
    virtual void RemoveElements();
    virtual void RemoveElementsLocal();
 
+   virtual void ProjectChild(TEveElement* el, Bool_t same_depth=kTRUE);
+   virtual void ProjectAllChildren(Bool_t same_depth=kTRUE);
+
    virtual void Destroy();                      // *MENU*
    virtual void DestroyOrWarn();
    virtual void DestroyElements();              // *MENU*
@@ -267,7 +272,7 @@ public:
 
    virtual Bool_t     CanEditMainTrans() const { return fCanEditMainTrans; }
    virtual Bool_t     HasMainTrans()     const { return fMainTrans != 0;   }
-   virtual TEveTrans* PtrMainTrans();
+   virtual TEveTrans* PtrMainTrans(Bool_t create=kTRUE);
    virtual TEveTrans& RefMainTrans();
    virtual void       InitMainTrans(Bool_t can_edit=kTRUE);
    virtual void       DestroyMainTrans();
@@ -286,14 +291,26 @@ public:
    void* GetUserData() const { return fUserData; }
    void  SetUserData(void* ud) { fUserData = ud; }
 
+
    // Selection state and management
    //--------------------------------
+
 protected:
    Bool_t  fPickable;
    Bool_t  fSelected;             //!
    Bool_t  fHighlighted;          //!
    Short_t fImpliedSelected;      //!
    Short_t fImpliedHighlighted;   //!
+
+   enum ECompoundSelectionColorBits
+   {
+      kCSCBImplySelectAllChildren           = BIT(0), // compound will select all children
+      kCSCBTakeAnyParentAsMaster            = BIT(1), // element will take any compound parent as master
+      kCSCBApplyMainColorToAllChildren      = BIT(2), // compound will apply color change to all children
+      kCSCBApplyMainColorToMatchingChildren = BIT(3)  // compound will apply color change to all children with matching color
+   };
+
+   UChar_t fCSCBits;
 
 public:
    typedef void (TEveElement::* Select_foo)      (Bool_t);
@@ -308,14 +325,29 @@ public:
    virtual void SelectElement(Bool_t state);
    virtual void IncImpliedSelected();
    virtual void DecImpliedSelected();
+   virtual void UnSelected();
 
    virtual void HighlightElement(Bool_t state);
    virtual void IncImpliedHighlighted();
    virtual void DecImpliedHighlighted();
+   virtual void UnHighlighted();
 
    virtual void FillImpliedSelectedSet(Set_t& impSelSet);
 
    virtual UChar_t GetSelectedLevel() const;
+
+   void RecheckImpliedSelections();
+
+   void   SetCSCBits(UChar_t f)   { fCSCBits |=  f; }
+   void   ResetCSCBits(UChar_t f) { fCSCBits &= ~f; }
+   Bool_t TestCSCBits(UChar_t f) const { return (fCSCBits & f) != 0; }
+
+   void   ResetAllCSCBits()                     { fCSCBits  =  0; }
+   void   CSCImplySelectAllChildren()           { fCSCBits |= kCSCBImplySelectAllChildren; }
+   void   CSCTakeAnyParentAsMaster()            { fCSCBits |= kCSCBTakeAnyParentAsMaster;  }
+   void   CSCApplyMainColorToAllChildren()      { fCSCBits |= kCSCBApplyMainColorToAllChildren; }
+   void   CSCApplyMainColorToMatchingChildren() { fCSCBits |= kCSCBApplyMainColorToMatchingChildren; }
+
 
    // Change-stamping and change bits
    //---------------------------------
@@ -436,9 +468,9 @@ public:
    virtual Bool_t CanEditMainColor() const { return fDoColor; }
 
    TClass* GetChildClass() const { return fChildClass; }
-   void SetChildClass(TClass* c) { fChildClass = c; }
+   void    SetChildClass(TClass* c) { fChildClass = c; }
 
-   virtual Bool_t AcceptElement(TEveElement* el);
+   virtual Bool_t  AcceptElement(TEveElement* el);
 
    virtual TClass* ProjectedClass(const TEveProjection* p) const;
 
@@ -456,10 +488,6 @@ class TEveElementListProjected : public TEveElementList,
 private:
    TEveElementListProjected(const TEveElementListProjected&);            // Not implemented
    TEveElementListProjected& operator=(const TEveElementListProjected&); // Not implemented
-
-
-protected:
-   virtual void SetDepthLocal(Float_t d);
 
 public:
    TEveElementListProjected();

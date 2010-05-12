@@ -1,4 +1,4 @@
-# Copyright CERN, CH-1211 Geneva 23, 2004-2006, All rights reserved.
+# Copyright CERN, CH-1211 Geneva 23, 2004-2010, All rights reserved.
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose is hereby granted without fee, provided that this copyright and
@@ -837,7 +837,7 @@ class genDictionary(object) :
     c += '#ifdef _WIN32\n'
     c += '#pragma warning ( disable : 4786 )\n'
     c += '#pragma warning ( disable : 4345 )\n'
-    c += '#elif defined(__GNUC__) && __GNUC__ >= 4 && ((__GNUC_MINOR__ == 2 && __GNUC_PATCHLEVEL__ >= 1) || (__GNUC_MINOR__ >= 3)) && !__INTEL_COMPILER \n'
+    c += '#elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)) && !defined(__INTEL_COMPILER) \n'
     c += '# pragma GCC diagnostic ignored "-Warray-bounds"\n'
     c += '#endif\n'
     c += '#include "%s"\n' % self.hfile
@@ -899,6 +899,9 @@ class genDictionary(object) :
 
       if attrs.has_key( 'include' ):
         sc += '  rule->fInclude     = "%s";\n' % (attrs['include'],)
+
+      if attrs.has_key( 'attributes' ):
+        sc += '  rule->fAttributes     = "%s";\n' % (attrs['attributes'],)
 
     return sc
 #---------------------------------------------------------------------------------
@@ -993,7 +996,7 @@ class genDictionary(object) :
     i = 0;
     sc = ''
     for rule in rules:
-      if rule.has_key( 'code' ) and rule['code'] != '':
+      if rule.has_key( 'code' ) and rule['code'].strip('\n').strip(' ') != '':
         funcname = 'read_%s_%d' % (clt, i)
 
         #--------------------------------------------------------------------------
@@ -1060,7 +1063,7 @@ class genDictionary(object) :
 #---------------------------------------------------------------------------------
   def removeBrokenIoRules( self, cl, rules, members ):
     for rule in rules:
-      if rule.has_key( 'target'):
+      if rule['attrs'].has_key( 'target' ):
         targets = [target.strip() for target in rule['attrs']['target'].split(';')]
         ok = True
         for t in targets:
@@ -1113,9 +1116,9 @@ class genDictionary(object) :
     # Fill the different streams sc: constructor, ss: stub functions
     sc = ''
 
-    #-----------------------------------------------------------------------------
-    # Get the data members infor and write down the schema evolution functions
-    #-----------------------------------------------------------------------------
+    #-------------------------------------------------------------------------------
+    # Get the data members information and write down the schema evolution functions
+    #-------------------------------------------------------------------------------
     memberTypeMap = self.createTypeMap( members )
     if ioReadRules:
       self.removeBrokenIoRules( cls, ioReadRules, memberTypeMap );
@@ -1154,25 +1157,25 @@ class genDictionary(object) :
     notAccessibleType = self.checkAccessibleType(self.xref[attrs['id']])
     
     if self.isUnnamedType(clf) : 
-      sc += '  ::Reflex::ClassBuilder("%s", typeid(::Reflex::Unnamed%s), sizeof(%s), %s, %s)' % ( cls, self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
+      sc += '  ::Reflex::ClassBuilder(Reflex::Literal("%s"), typeid(::Reflex::Unnamed%s), sizeof(%s), %s, %s)' % ( cls, self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
     elif notAccessibleType :
-      sc += '  ::Reflex::ClassBuilder("%s", typeid(%s%s), sizeof(%s), %s, %s)' % ( cls, '::Reflex::' + self.xref[notAccessibleType]['attrs']['access'].title(), self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
+      sc += '  ::Reflex::ClassBuilder(Reflex::Literal("%s"), typeid(%s%s), sizeof(%s), %s, %s)' % ( cls, '::Reflex::' + self.xref[notAccessibleType]['attrs']['access'].title(), self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
     else :
       typeidtype = '::' + cls
       # a funny bug in MSVC7.1: sizeof(::namesp::cl) doesn't work
       if sys.platform == 'win32':
          typeidtype = 'MSVC71_typeid_bug_workaround'
          sc += '  typedef ::%s %s;\n' % (cls, typeidtype)
-      sc += '  ::Reflex::ClassBuilder("%s", typeid(%s), sizeof(::%s), %s, %s)' \
+      sc += '  ::Reflex::ClassBuilder(Reflex::Literal("%s"), typeid(%s), sizeof(::%s), %s, %s)' \
             % (cls, typeidtype, cls, mod, typ)
     if 'extra' in attrs :
       for pname, pval in attrs['extra'].items() :
         if pname not in ('name','pattern','n_name','file_name','file_pattern','fields') :
           if pname == 'id' : pname = 'ClassID'
           if pval[:5] == '!RAW!' :
-            sc += '\n  .AddProperty("%s", %s)' % (pname, pval[5:])
+            sc += '\n  .AddProperty(Reflex::Literal("%s"), %s)' % (pname, pval[5:])
           else :
-            sc += '\n  .AddProperty("%s", "%s")' % (pname, pval)
+            sc += '\n  .AddProperty(Reflex::Literal("%s"), "%s")' % (pname, pval)
 
     if ioReadRules:
       sc += '\n  .AddProperty("ioread", readrules )'
@@ -1423,7 +1426,7 @@ class genDictionary(object) :
     # access selection doesn't work with gccxml0.6 - typedefs don't have it
     if self.interpreter and 'access' in attrs : return ''
     s = ''
-    s += '  .AddTypedef(%s, "%s::%s")' % ( self.genTypeID(attrs['type']), self.genTypeName(attrs['context']), attrs['name']) 
+    s += '  .AddTypedef(%s, Reflex::Literal("%s::%s"))' % ( self.genTypeID(attrs['type']), self.genTypeName(attrs['context']), attrs['name']) 
     return s  
 #----------------------------------------------------------------------------------
   def genEnumerationBuild(self, attrs, childs):
@@ -1434,13 +1437,13 @@ class genDictionary(object) :
     values = values[:-1]
     mod = self.genModifier(attrs, None)
     if self.isUnnamedType(name) :
-      s += '  .AddEnum("%s", "%s", &typeid(::Reflex::UnnamedEnum), %s)' % (name[name.rfind('::')+3:], values, mod) 
+      s += '  .AddEnum(Reflex::Literal("%s"), Reflex::Literal("%s"), &typeid(::Reflex::UnnamedEnum), %s)' % (name[name.rfind('::')+3:], values, mod) 
     else :
       if attrs.get('access') in ('protected','private'):
         if not self.interpreter:
-          s += '  .AddEnum("%s", "%s", &typeid(::Reflex::UnknownType), %s)' % (name, values, mod)        
+          s += '  .AddEnum(Reflex::Literal("%s"), Reflex::Literal("%s"), &typeid(::Reflex::UnknownType), %s)' % (name, values, mod)        
       else:
-        s += '  .AddEnum("%s", "%s", &typeid(%s), %s)' % (name, values, name, mod)
+        s += '  .AddEnum(Reflex::Literal("%s"), Reflex::Literal("%s"), &typeid(%s), %s)' % (name, values, name, mod)
     return s 
 #----------------------------------------------------------------------------------
   def genScopeName(self, attrs, enum=False, const=False, colon=False) :
@@ -1576,40 +1579,42 @@ class genDictionary(object) :
 #----------------------------------------------------------------------------------
   def genAllTypes(self) :
     self.typeids += self.fktypeids
-    c = '  ::Reflex::Type type_void = ::Reflex::TypeBuilder("void");\n'
-    for id in self.typeids :      
-      c += '  ::Reflex::Type type%s = ' % id
+    # l: literals, d: derived
+    l = ['  ::Reflex::Type type_void = ::Reflex::TypeBuilder(Reflex::Literal("void"));\n']
+    d = ''
+    for id in self.typeids :
+      n = '  ::Reflex::Type type%s = ' % id
       if id[-1] == 'c':
-        c += '::Reflex::ConstBuilder(type'+id[:-1]+');\n'
+        d += n + '::Reflex::ConstBuilder(type'+id[:-1]+');\n'
       elif id[-1] == 'v':
-        c += '::Reflex::VolatileBuilder(type'+id[:-1]+');\n'
+        d += n + '::Reflex::VolatileBuilder(type'+id[:-1]+');\n'
       else : 
         elem  = self.xref[id]['elem']
         attrs = self.xref[id]['attrs']
         if elem == 'PointerType' :
-          c += '::Reflex::PointerBuilder(type'+attrs['type']+');\n'
+          d += n + '::Reflex::PointerBuilder(type'+attrs['type']+');\n'
         elif elem == 'ReferenceType' :
-          c += '::Reflex::ReferenceBuilder(type'+attrs['type']+');\n'
+          d += n + '::Reflex::ReferenceBuilder(type'+attrs['type']+');\n'
         elif elem == 'ArrayType' :
           mx = attrs['max'].rstrip('u')
           # check if array is bound (max='fff...' for unbound arrays)
-          if mx.isdigit() : len = str(int(mx)+1)
-          else            : len = '0' 
-          c += '::Reflex::ArrayBuilder(type'+attrs['type']+', '+ len +');\n'
+          if mx.isdigit() : alen = str(int(mx)+1)
+          else            : alen = '0' 
+          d += n + '::Reflex::ArrayBuilder(type'+attrs['type']+', '+ alen +');\n'
         elif elem == 'Typedef' :
           sc = self.genTypeName(attrs['context'])
           if sc : sc += '::'
-          c += '::Reflex::TypedefTypeBuilder("'+sc+attrs['name']+'", type'+ attrs['type']+');\n'
+          d += n + '::Reflex::TypedefTypeBuilder(Reflex::Literal("'+sc+attrs['name']+'"), type'+ attrs['type']+');\n'
         elif elem == 'OffsetType' :
-          c += '::Reflex::TypeBuilder("%s");\n' % self.genTypeName(attrs['id'])
+          l.append(n + '::Reflex::TypeBuilder(Reflex::Literal("%s"));\n' % self.genTypeName(attrs['id']))
         elif elem == 'FunctionType' :
-          if 'returns' in attrs : c += '::Reflex::FunctionTypeBuilder(type'+attrs['returns']
-          else                  : c += '::Reflex::FunctionTypeBuilder(type_void'
+          if 'returns' in attrs : d += n + '::Reflex::FunctionTypeBuilder(type'+attrs['returns']
+          else                  : d += n + '::Reflex::FunctionTypeBuilder(type_void'
           args = self.xref[id]['subelems']
-          for a in args : c += ', type'+ a['type']
-          c += ');\n'
+          for a in args : d += ', type'+ a['type']
+          d += ');\n'
         elif elem == 'MethodType' :
-          c += '::Reflex::TypeBuilder("%s");\n' % self.genTypeName(attrs['id'])
+          l.append(n + '::Reflex::TypeBuilder(Reflex::Literal("%s"));\n' % self.genTypeName(attrs['id']))
         elif elem in ('OperatorMethod', 'Method', 'Constructor', 'Converter', 'Destructor',
                       'Function', 'OperatorFunction') :
           pass
@@ -1619,7 +1624,7 @@ class genDictionary(object) :
           # items = self.xref[id]['subelems']
           # values = string.join([ item['name'] + '=' + item['init'] for item in items],';"\n  "')          
           #c += 'EnumTypeBuilder("' + sc + attrs['name'] + '", "' + values + '");\n'
-          c += '::Reflex::EnumTypeBuilder("' + sc + attrs['name'] + '");\n'
+          l.append(n + '::Reflex::EnumTypeBuilder(Reflex::Literal("' + sc + attrs['name'] + '"));\n')
         else :
          name = ''
          if 'name' not in attrs and 'demangled' in attrs : name = attrs.get('demangled')
@@ -1630,8 +1635,10 @@ class genDictionary(object) :
            if 'name' in attrs :
              name += attrs['name']
          name = normalizeClass(name,False)
-         c += '::Reflex::TypeBuilder("'+name+'");\n'
-    return c 
+         l.append(n + '::Reflex::TypeBuilder(Reflex::Literal("'+name+'"));\n')
+    #def lenCmp(a,b): return cmp(len(str(a)), len(str(b)))
+    l.sort(key=lambda i: len(i))
+    return ''.join(l) + d
 #----------------------------------------------------------------------------------
   def genNamespaces(self, selected ) :
     used_context = []
@@ -1641,7 +1648,7 @@ class genDictionary(object) :
     idx = 0
     for ns in self.namespaces :
       if ns['id'] in used_context and 'name' in ns and  ns['name'] != '::' :
-        s += '  ::Reflex::NamespaceBuilder nsb%d( "%s" );\n' % (idx, self.genTypeName(ns['id']))
+        s += '  ::Reflex::NamespaceBuilder nsb%d( Reflex::Literal("%s") );\n' % (idx, self.genTypeName(ns['id']))
         idx += 1
     return s
 #----------------------------------------------------------------------------------
@@ -1724,7 +1731,7 @@ class genDictionary(object) :
       else    : params  = '0'
       mod = self.genModifier(f, None)
       s += '      ::Reflex::Type t%s = %s;' % (i, self.genTypeID(id))
-      s += '      ::Reflex::FunctionBuilder(t%s, "%s", function%s, 0, %s, %s);\n' % (i, name, id, params, mod)
+      s += '      ::Reflex::FunctionBuilder(t%s, Reflex::Literal("%s"), function%s, 0, Reflex::Literal(%s), %s);\n' % (i, name, id, params, mod)
       i += 1;
     return s
 #----------------------------------------------------------------------------------
@@ -1740,10 +1747,10 @@ class genDictionary(object) :
       name  = self.genTypeName(id)
       mod = self.genModifier(self.xref[id]['attrs'], None)
       if not self.quiet : print 'enum ' + name
-      s += '      ::Reflex::EnumBuilder("%s",typeid(%s), %s)' % (name, cname, mod)
+      s += '      ::Reflex::EnumBuilder(Reflex::Literal("%s"),typeid(%s), %s)' % (name, cname, mod)
       items = self.xref[id]['subelems']
       for item in items :
-        s += '\n        .AddItem("%s",%s)' % (item['name'], item['init'])
+        s += '\n        .AddItem(Reflex::Literal("%s"),%s)' % (item['name'], item['init'])
       s += ';\n'
     return s
 #----------------------------------------------------------------------------------
@@ -1756,7 +1763,7 @@ class genDictionary(object) :
       name  = self.genTypeName(id)
       mod   = self.genModifier(v, None)
       if not self.quiet : print 'variable ' + name 
-      s += '      ::Reflex::VariableBuilder("%s", %s, (size_t)&%s, %s );\n' % (name, self.genTypeID(v['type']),self.genTypeName(id), mod)
+      s += '      ::Reflex::VariableBuilder(Reflex::Literal("%s"), %s, (size_t)&%s, %s );\n' % (name, self.genTypeID(v['type']),self.genTypeName(id), mod)
     return s
  #----------------------------------------------------------------------------------
   def countColonsForOffset(self, name) :
@@ -1802,13 +1809,13 @@ class genDictionary(object) :
       if mod : mod += ' | ::Reflex::VOLATILE'
       else   : mod = '::Reflex::VOLATILE'
     shadow = '__shadow__::' + string.translate( str(cl), self.transtable)
-    c = '  .AddDataMember(%s, "%s", OffsetOf(%s, %s), %s)' % (self.genTypeID(attrs['type']), name, shadow, name, mod)
+    c = '  .AddDataMember(%s, Reflex::Literal("%s"), OffsetOf(%s, %s), %s)' % (self.genTypeID(attrs['type']), name, shadow, name, mod)
     c += self.genCommentProperty(attrs)
     # Other properties
     if xattrs : 
       for pname, pval in xattrs.items() : 
         if pname not in ('name', 'transient', 'pattern') :
-          c += '\n  .AddProperty("%s","%s")' % (pname, pval)     
+          c += '\n  .AddProperty(Reflex::Literal("%s"),Reflex::Literal("%s"))' % (pname, pval)     
     return c
 #----------------------------------------------------------------------------------
   def genVariableBuild(self, attrs, childs):
@@ -1845,13 +1852,13 @@ class genDictionary(object) :
       else   : mod = 'Reflex::VOLATILE'
     c = ''
     if not attrs.has_key('init'):
-      c = '  .AddDataMember(%s, "%s", (size_t)&%s::%s, %s)' % (self.genTypeID(attrs['type']), name, cls, name, mod)
+      c = '  .AddDataMember(%s, Reflex::Literal("%s"), (size_t)&%s::%s, %s)' % (self.genTypeID(attrs['type']), name, cls, name, mod)
       c += self.genCommentProperty(attrs)
       # Other properties
       if xattrs : 
         for pname, pval in xattrs.items() : 
           if pname not in ('name', 'transient', 'pattern') :
-            c += '\n  .AddProperty("%s","%s")' % (pname, pval)     
+            c += '\n  .AddProperty(Reflex::Literal("%s"),Reflex::Literal("%s"))' % (pname, pval)     
     return c
 #----------------------------------------------------------------------------------    
   def genCommentProperty(self, attrs):
@@ -1875,7 +1882,7 @@ class genDictionary(object) :
          and line[poscomment+2] != '[' \
          and line[poscomment+2:poscomment+4] != '->' \
          and line[poscomment+2:poscomment+4] != '||': return ''
-    return '\n  .AddProperty("comment","%s")' %  (line[poscomment+2:-1]).replace('"','\\"')
+    return '\n  .AddProperty("comment",Reflex::Literal("%s"))' %  (line[poscomment+2:-1]).replace('"','\\"')
 #----------------------------------------------------------------------------------
   def genArgument(self, attrs):
     c = self.genTypeName(attrs['type'], enum=True, const=False)
@@ -1908,10 +1915,14 @@ class genDictionary(object) :
       if etrans : etrans = etrans.lower()
     if xtrans == 'true' or etrans == 'true' : mod += ' | ::Reflex::TRANSIENT'
     if 'artificial' in attrs : mod += ' | ::Reflex::ARTIFICIAL' 
+    if 'explicit' in attrs : mod += ' | ::Reflex::EXPLICIT'
+    if 'mutable' in attrs : mod += ' | ::Reflex::MUTABLE' 
     return mod
 #----------------------------------------------------------------------------------
   def genMCODecl( self, type, name, attrs, args ) :
-    return 'static void %s%s(void*, void*, const std::vector<void*>&, void*);' % (type, attrs['id'])
+    static = 'static '
+    if sys.platform == 'win32' and type in ('constructor', 'destructor'): static = ''
+    return static + 'void %s%s(void*, void*, const std::vector<void*>&, void*);' % (type, attrs['id'])
 #----------------------------------------------------------------------------------
   def genMCOBuild(self, type, name, attrs, args):
     id       = attrs['id']
@@ -1926,7 +1937,7 @@ class genDictionary(object) :
     if attrs.get('const')=='1' : mod += ' | ::Reflex::CONST'
     if args : params  = '"'+ string.join( map(self.genParameter, args),';')+'"'
     else    : params  = '0'
-    s = '  .AddFunctionMember(%s, "%s", %s%s, 0, %s, %s)' % (self.genTypeID(id), name, type, id, params, mod)
+    s = '  .AddFunctionMember(%s, Reflex::Literal("%s"), %s%s, 0, %s, %s)' % (self.genTypeID(id), name, type, id, params, mod)
     s += self.genCommentProperty(attrs)
     return s
 #----------------------------------------------------------------------------------
@@ -1950,8 +1961,10 @@ class genDictionary(object) :
       returns = tdfname
 
     if returns != 'void': retaddrpar=' retaddr'
-                
-    head =  'static void %s%s( void*%s, void* o, const std::vector<void*>&%s, void*)\n{\n' %( type, id, retaddrpar, argspar )
+
+    static = 'static '
+    if sys.platform == 'win32' and type in ('constructor', 'destructor'): static = ''
+    head =  '%s void %s%s( void*%s, void* o, const std::vector<void*>&%s, void*)\n{\n' %( static, type, id, retaddrpar, argspar )
     head += tdfdecl
     ndarg = self.getDefaultArgs(args)
     if ndarg : iden = '  '
@@ -1964,17 +1977,17 @@ class genDictionary(object) :
         else               :  body += '  else if ( arg.size() == %d ) { \n' % n
       if returns != 'void' :
         if returns[-1] in ('*',')') and returns.find('::*') == -1 :
-          body += iden + '  if (retaddr) *(void**)retaddr = (void*)(((%s*)o)->%s)(' % ( cl, name )
+          body += iden + '  if (retaddr) *(void**)retaddr = Reflex::FuncToVoidPtr((((%s*)o)->%s)(' % ( cl, name )
           head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
-          body += ');\n' + iden + 'else '
+          body += '));\n' + iden + '  else '
         elif returns[-1] == '&' :
           body += iden + '  if (retaddr) *(void**)retaddr = (void*)&(((%s*)o)->%s)(' % ( cl, name )
           head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
-          body += ');\n' + iden + 'else '
+          body += ');\n' + iden + '  else '
         else :
           body += iden + '  if (retaddr) new (retaddr) (%s)((((%s*)o)->%s)(' % ( returns, cl, name )
           head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
-          body += '));\n' + iden + 'else '
+          body += '));\n' + iden + '  else '
       if returns[-1] == '&' :
         # The seemingly useless '&' below is to work around Microsoft's
         # compiler 7.1-9 odd complaint C2027 if the reference has only
@@ -2033,9 +2046,9 @@ class genDictionary(object) :
         if arg.find('::*') != -1 :  # Pointer to function member
           s += '*(%s)arg[%d]' %(arg.replace('::*','::**'), i)
         elif (len(arg) > 7  and arg[-7:] == ') const') :
-          s += '(%s)arg[%d]' % (arg[:-6].replace('(*)','(* const)'), i) # 2nd part of the hack
+          s += 'Reflex::VoidPtrToFunc< %s >(arg[%d])' % (arg[:-6].replace('(*)','(* const)'), i) # 2nd part of the hack
         else :
-          s += '(%s)arg[%d]' % (arg, i )
+          s += 'Reflex::VoidPtrToFunc< %s >(arg[%d])' % (arg, i )
       elif arg[-1] == '&' :
         s += '*(%s*)arg[%d]' % (arg[:-1], i )
       else :
@@ -2066,7 +2079,9 @@ class genDictionary(object) :
     id  = attrs['id']
     paramargs = ''
     if len(args): paramargs = ' arg'
-    head = 'static void constructor%s( void* retaddr, void* mem, const std::vector<void*>&%s, void*) {\n' %( id, paramargs )
+    head = ''
+    if sys.platform != 'win32': head = 'static '
+    head += 'void constructor%s( void* retaddr, void* mem, const std::vector<void*>&%s, void*) {\n' %( id, paramargs )
     body = ''
     if 'pseudo' in attrs :
       head += '  if (retaddr) *(void**)retaddr =  ::new(mem) %s( *(__void__*)0 );\n' % ( cl )
@@ -2092,14 +2107,19 @@ class genDictionary(object) :
 #----------------------------------------------------------------------------------
   def genDestructorDef(self, attrs, childs):
     cl = self.genTypeName(attrs['context'])
-    return 'static void destructor%s(void*, void * o, const std::vector<void*>&, void *) {\n  (((::%s*)o)->::%s::~%s)();\n}' % ( attrs['id'], cl, cl, attrs['name'] )
+    static = ''
+    dtorscope = ''
+    if sys.platform != 'win32':
+        static = 'static '
+        dtorscope = '::' + cl + '::'
+    return '%svoid destructor%s(void*, void * o, const std::vector<void*>&, void *) {\n  (((::%s*)o)->%s~%s)();\n}' % ( static, attrs['id'], cl, dtorscope, attrs['name'] )
 #----------------------------------------------------------------------------------
   def genDestructorBuild(self, attrs, childs):
     if self.isUnnamedType(self.xref[attrs['context']]['attrs'].get('demangled')) or \
        self.checkAccessibleType(self.xref[attrs['context']]) : return ''
     mod = self.genModifier(attrs,None)
     id       = attrs['id']
-    s = '  .AddFunctionMember(%s, "~%s", destructor%s, 0, 0, %s | ::Reflex::DESTRUCTOR )' % (self.genTypeID(id), attrs['name'], attrs['id'], mod)
+    s = '  .AddFunctionMember(%s, Reflex::Literal("~%s"), destructor%s, 0, 0, %s | ::Reflex::DESTRUCTOR )' % (self.genTypeID(id), attrs['name'], attrs['id'], mod)
     s += self.genCommentProperty(attrs)
     return s
 #----------------------------------------------------------------------------------
@@ -2198,7 +2218,7 @@ class genDictionary(object) :
     return 'static void method%s( void*, void*, const std::vector<void*>&, void* ); ' % (attrs['id'])
   def genCreateCollFuncTableBuild( self, attrs, args ) :
     mod = self.genModifier(attrs, None)
-    return '  .AddFunctionMember<void*(void)>("createCollFuncTable", method%s, 0, 0, %s)' % ( attrs['id'], mod)
+    return '  .AddFunctionMember<void*(void)>(Reflex::Literal("createCollFuncTable"), method%s, 0, 0, %s)' % ( attrs['id'], mod)
   def genCreateCollFuncTableDef( self, attrs, args ) :
     cl       = self.genTypeName(attrs['context'], colon=True)
     clt      = string.translate(str(cl), self.transtable)
@@ -2219,7 +2239,7 @@ class genDictionary(object) :
     return 'static void method%s( void*, void*, const std::vector<void*>&, void* ); ' % (attrs['id'])
   def genGetBasesTableBuild( self, attrs, args ) :
     mod = self.genModifier(attrs, None)
-    return '  .AddFunctionMember<void*(void)>("__getBasesTable", method%s, 0, 0, %s)' % (attrs['id'], mod)
+    return '  .AddFunctionMember<void*(void)>(Reflex::Literal("__getBasesTable"), method%s, 0, 0, %s)' % (attrs['id'], mod)
   def genGetBasesTableDef( self, attrs, args ) :
     cid      = attrs['context']
     cl       = self.genTypeName(cid, colon=True)
@@ -2233,7 +2253,7 @@ class genDictionary(object) :
     for b in bases :
       bname = self.genTypeName(b[0],colon=True)
       bname2 = self.genTypeName(b[0])
-      s += '    s_bases.push_back(std::make_pair(::Reflex::Base( ::Reflex::TypeBuilder("%s"), ::Reflex::BaseOffset< %s,%s >::Get(),%s), %d));\n' % (bname2, cl, bname, b[1], b[2])
+      s += '    s_bases.push_back(std::make_pair(::Reflex::Base( ::Reflex::TypeBuilder(Reflex::Literal("%s")), ::Reflex::BaseOffset< %s,%s >::Get(),%s), %d));\n' % (bname2, cl, bname, b[1], b[2])
     s += '  }\n  if (retaddr) *(Bases_t**)retaddr = &s_bases;\n' 
     s += '}\n'
     return s
@@ -2269,7 +2289,7 @@ class genDictionary(object) :
   def genGetNewDelFunctionsBuild( self, attrs, args ) :
     cid      = attrs['context']
     mod = self.genModifier(attrs, None)  
-    return '  .AddFunctionMember<void*(void)>("__getNewDelFunctions", method_newdel%s, 0, 0, %s)' % (cid, mod)
+    return '  .AddFunctionMember<void*(void)>(Reflex::Literal("__getNewDelFunctions"), method_newdel%s, 0, 0, %s)' % (cid, mod)
   def genGetNewDelFunctionsDef( self, attrs, args ) :
     cid      = attrs['context']
     cl       = self.genTypeName(cid, colon=True)
@@ -2393,7 +2413,10 @@ class genDictionary(object) :
 #---------------------------------------------------------------------------------------
 def getContainerId(c):
   if   c[-8:] == 'iterator' : return ('NOCONTAINER','')
-  if   c[:10] == 'std::deque'   :            return ('DEQUE','list')
+  # MSVC9 templated iterators:
+  elif c[-14:] == 'iterator<true>'  : return ('NOCONTAINER','')
+  elif c[-15:] == 'iterator<false>' : return ('NOCONTAINER','')
+  elif c[:10] == 'std::deque'   :            return ('DEQUE','list')
   elif c[:9]  == 'std::list'    :            return ('LIST','list')
   elif c[:8]  == 'std::map'     :            return ('MAP','map')
   elif c[:13] == 'std::multimap':            return ('MULTIMAP','map')

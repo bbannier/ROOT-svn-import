@@ -1977,8 +1977,11 @@ void TFitEditor::DoFit()
       delete fitFunc;
    fitFunc = GetFitFunction();
    // This assert
-   assert(fitFunc && "This should have never happend, the fitfunc pointer is NULL!"
-          " Please report");
+   if (!fitFunc) { 
+      Error("DoFit","This should have never happend, the fitfunc pointer is NULL! - Please Report" );
+      return;
+   }
+   
    // set parameters from panel in function
    SetParameters(fFuncPars, fitFunc);
    // Get the options stored in the GUI elements.
@@ -2249,7 +2252,7 @@ void TFitEditor::DoDataSet(Int_t selected)
    }
 
    // If it is a tree, and there are no variables selected, show a dialog
-   if ( objSelected->InheritsFrom("TTree") && 
+   if ( objSelected->InheritsFrom(TTree::Class()) && 
         name.First(' ') == kNPOS ) {
       char variables[256] = {0}; char cuts[256] = {0};
       strcpy(variables, "Sin input!");
@@ -2750,7 +2753,7 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
 
    // For each kind of object, set a different status in the fit
    // panel.
-   if (obj->InheritsFrom("TGraph")) {
+   if (obj->InheritsFrom(TGraph::Class())) {
       fType = kObjectGraph;
       set = kTRUE;
       fDim = 1;
@@ -2759,14 +2762,14 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       fMethodList->Select(kFP_MCHIS, kFALSE);
       fRobustValue->SetState(kTRUE);
       fRobustValue->GetNumberEntry()->SetToolTipText("Set robust value");
-   } else if (obj->InheritsFrom("TGraph2D")) {
+   } else if (obj->InheritsFrom(TGraph2D::Class())) {
       fType = kObjectGraph2D;
       set = kTRUE;
       fDim = 2;
       fMethodList->RemoveAll();
       fMethodList->AddEntry("Chi-square", kFP_MCHIS);
       fMethodList->Select(kFP_MCHIS, kFALSE);
-   } else if (obj->InheritsFrom("THStack")) {
+   } else if (obj->InheritsFrom(THStack::Class())) {
       fType = kObjectHStack;
       set = kTRUE;
       TH1 *hist = (TH1 *)((THStack *)obj)->GetHists()->First();
@@ -2774,7 +2777,7 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       fMethodList->RemoveAll();
       fMethodList->AddEntry("Chi-square", kFP_MCHIS);
       fMethodList->Select(kFP_MCHIS, kFALSE);
-   } else if (obj->InheritsFrom("TTree")) {
+   } else if (obj->InheritsFrom(TTree::Class())) {
       fType = kObjectTree;
       set = kTRUE;
       TString variables, cuts;
@@ -2789,7 +2792,7 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       fMethodList->RemoveAll();
       fMethodList->AddEntry("Unbinned Likelihood", kFP_MUBIN);
       fMethodList->Select(kFP_MUBIN, kFALSE);      
-   } else if (obj->InheritsFrom("TH1")){
+   } else if (obj->InheritsFrom(TH1::Class())){
       fType = kObjectHisto;
       set = kTRUE;
       fDim = ((TH1*)obj)->GetDimension();
@@ -2797,7 +2800,7 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       fMethodList->AddEntry("Chi-square", kFP_MCHIS);
       fMethodList->AddEntry("Binned Likelihood", kFP_MBINL);
       fMethodList->Select(kFP_MCHIS, kFALSE);
-   } else if (obj->InheritsFrom("TMultiGraph")) {
+   } else if (obj->InheritsFrom(TMultiGraph::Class())) {
       fType = kObjectMultiGraph;
       set = kTRUE;
       fDim = 1;

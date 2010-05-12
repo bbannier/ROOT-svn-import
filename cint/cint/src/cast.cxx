@@ -49,10 +49,29 @@ static void G__SlideString(char* str, unsigned int slide)
 }
 
 //______________________________________________________________________________
+void* G__dynamiccast(int totagnum, int fromtagnum, void* addr)
+{
+   // Cast addr pointing to an object of class fromtagnum to the class
+   // tottagnum, returning the adjusted object pointer. Similar to
+   //    dynamic_cast<totagnum*>((fromtagnum*)add)
+
+   G__value val = G__null;
+   val.tagnum = fromtagnum;
+   val.obj.i = (long) addr;
+   int type = 'C';
+   G__castclass(&val, totagnum, 'A'-'a', &type, G__PARANORMAL);
+   return (void*) val.obj.i;
+}
+
+//______________________________________________________________________________
 static void G__castclass(G__value* result3, int tagnum, int castflag, int* ptype, int reftype)
 {
    // -- FIXME: Describe this function!
    int offset = 0;
+   if (tagnum < 0) {
+      result3->obj.i = 0;
+      return;
+   }
    if (-1 != result3->tagnum) {
 #ifdef G__VIRTUALBASE
       if (-1 != (offset = G__isanybase(tagnum, result3->tagnum, result3->obj.i)))
@@ -514,22 +533,36 @@ G__value G__castvalue_bc(char* casttype, G__value result3, int bc)
       if (strncmp(casttype, "struct", 6) == 0) {
          if (isspace(casttype[6])) tagnum = G__defined_tagname(casttype + 7, 0);
          else tagnum = G__defined_tagname(casttype + 6, 0);
-         G__castclass(&result3, tagnum, castflag, &type, reftype);
+         if (tagnum >= 0) {
+            G__castclass(&result3, tagnum, castflag, &type, reftype);
+         } else {
+            G__fprinterr(G__serr, "unknown %s, cannot cast\n", casttype);
+         }
       }
       else if (strncmp(casttype, "class", 5) == 0) {
          if (isspace(casttype[5])) tagnum = G__defined_tagname(casttype + 6, 0);
          else tagnum = G__defined_tagname(casttype + 5, 0);
-         G__castclass(&result3, tagnum, castflag, &type, reftype);
+         if (tagnum >= 0) {
+            G__castclass(&result3, tagnum, castflag, &type, reftype);
+         } else {
+            G__fprinterr(G__serr, "unknown %s, cannot cast\n", casttype);
+         }
       }
       else if (strncmp(casttype, "union", 5) == 0) {
          if (isspace(casttype[5])) tagnum = G__defined_tagname(casttype + 6, 0);
          else tagnum = G__defined_tagname(casttype + 5, 0);
+         if (tagnum < 0) {
+            G__fprinterr(G__serr, "unknown %s, cannot cast\n", casttype);
+         }
          result3.typenum = -1;
          type = 'u' + castflag;
       }
       else if (strncmp(casttype, "enum", 4) == 0) {
          if (isspace(casttype[4])) tagnum = G__defined_tagname(casttype + 5, 0);
          else tagnum = G__defined_tagname(casttype + 4, 0);
+         if (tagnum < 0) {
+            G__fprinterr(G__serr, "unknown %s, cannot cast\n", casttype);
+         }
          result3.typenum = -1;
          type = 'i' + castflag;
       }

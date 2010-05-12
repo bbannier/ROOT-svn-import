@@ -119,15 +119,46 @@ TEveCaloData::TEveCaloData(const char* n, const char* t):
 }
 
 //______________________________________________________________________________
-void TEveCaloData::SelectElement(Bool_t s)
+void TEveCaloData::UnSelected()
 {
-   // Virtual method TEveElement::SelectElement.
+   // Virtual method TEveElement::UnSelect.
    // Clear selected towers when deselected.
 
-   if (s == kFALSE)
-      fCellsSelected.clear();
+   fCellsSelected.clear();
+}
 
-   TEveElement::SelectElement(s);
+//______________________________________________________________________________
+void TEveCaloData::UnHighlighted()
+{
+   // Virtual method TEveElement::UnHighlighted.
+
+   fCellsHighlighted.clear();
+}
+
+//______________________________________________________________________________
+TString TEveCaloData::GetHighlightTooltip()
+{
+   if (fCellsHighlighted.empty()) return "";
+
+   CellData_t cellData;
+
+   Bool_t single = fCellsHighlighted.size() == 1;
+   Float_t sum = 0;
+   TString s;
+   for (vCellId_i i = fCellsHighlighted.begin(); i!=fCellsHighlighted.end(); ++i)
+   {
+      GetCellData(*i, cellData);
+      
+      s += TString::Format("%s %.2f (%.3f, %.3f)", 
+                           fSliceInfos[i->fSlice].fName.Data(), cellData.fValue,
+                           cellData.fEtaMin, cellData.fEtaMax, cellData.fPhiMin, cellData.fPhiMax);
+
+      if (single) return s;
+      s += "\n";
+      sum += cellData.fValue;
+   }
+   s += TString::Format("Sum = %.2f", sum);
+   return s;
 }
 
 //______________________________________________________________________________
@@ -237,7 +268,7 @@ void TEveCaloData::CellSelectionChanged()
    {
       calo = dynamic_cast<TEveCaloViz*>(*i);
       calo->CellSelectionChanged();
-      calo->StampObjProps();
+      calo->StampColorSelection();
    }
 }
 
@@ -395,7 +426,6 @@ void TEveCaloDataVec::Rebin(TAxis* ax, TAxis* ay, vCellId_t &ids, Bool_t et, Reb
    rdata.fBinData.assign((ax->GetNbins()+2)*(ay->GetNbins()+2), -1);
 
    CellData_t cd;
-   Float_t left, right, up, down; // cell corners
    for (vCellId_i it = ids.begin(); it != ids.end(); ++it)
    {
       GetCellData(*it, cd);
@@ -406,20 +436,17 @@ void TEveCaloDataVec::Rebin(TAxis* ax, TAxis* ay, vCellId_t &ids, Bool_t et, Reb
       for (Int_t i = iMin; i <= iMax; ++i)
       {
          if (i < 0 || i > ax->GetNbins()) continue;
-         left  = (i == iMin) ? cd.EtaMin() : ax->GetBinLowEdge(i);
-         right = (i == iMax) ? cd.EtaMax() : ax->GetBinUpEdge(i);
-
          for (Int_t j = jMin; j <= jMax; ++j)
          {
             if (j < 0 || j > ay->GetNbins()) continue;
-            down = (j == jMin) ? cd.PhiMin() : ay->GetBinLowEdge(j);
-            up   = (j == jMax) ? cd.PhiMax() : ay->GetBinUpEdge(j);
 
-            Float_t ratio = ((right-left)*(up-down))/(ax->GetBinWidth(i)*ay->GetBinWidth(j));
-            if (ratio > 1e-6)
+            Double_t ratio = TEveUtil::GetFraction(ax->GetBinLowEdge(i), ax->GetBinUpEdge(i), cd.EtaMin(), cd.EtaMax())
+                           * TEveUtil::GetFraction(ay->GetBinLowEdge(j), ay->GetBinUpEdge(j), cd.PhiMin(), cd.PhiMax());
+            
+            if (ratio > 1e-6f)
             {
-               Float_t* slices = rdata.GetSliceVals(i+j*(ax->GetNbins()+2));
-               slices[(*it).fSlice] += ratio* cd.Value(et);
+               Float_t* slices = rdata.GetSliceVals(i + j*(ax->GetNbins()+2));
+               slices[(*it).fSlice] += ratio * cd.Value(et);
             }
          }
       }
@@ -696,7 +723,9 @@ void TEveCaloDataHist::Rebin(TAxis* ax, TAxis* ay, TEveCaloData::vCellId_t &ids,
       biny = ay->FindBin(fPhiAxis->GetBinCenter(j));
       bin = biny*(ax->GetNbins()+2)+binx;
       val = rdata.GetSliceVals(bin);
-      Double_t ratio = (fEtaAxis->GetBinWidth(i)*fPhiAxis->GetBinWidth(j))/(ax->GetBinWidth(binx)*ay->GetBinWidth(biny));
+      Double_t ratio = TEveUtil::GetFraction(ax->GetBinLowEdge(binx), ax->GetBinUpEdge(binx), cd.EtaMin(), cd.EtaMax())
+                     * TEveUtil::GetFraction(ay->GetBinLowEdge(biny), ay->GetBinUpEdge(biny), cd.PhiMin(), cd.PhiMax());
+      
       val[(*it).fSlice] += cd.Value(et)*ratio;
    }
 }

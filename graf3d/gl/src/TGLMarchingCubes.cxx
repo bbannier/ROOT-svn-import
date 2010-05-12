@@ -16,8 +16,6 @@ http://local.wasp.uwa.edu.au/~pbourke/geometry/polygonise/
 namespace Rgl {
 namespace Mc {
 
-namespace {
-
 /*
 Some routines, values and tables for marching cube method.
 */
@@ -26,6 +24,8 @@ extern const Float_t vOff[8][3];
 extern const UChar_t eConn[12][2];
 extern const Float_t eDir[12][3];
 extern const Int_t   conTbl[256][16];
+
+namespace {
 
 enum ECubeBitMasks {
    k0  = 0x1,
@@ -114,26 +114,6 @@ Double_t TF3Adapter::GetData(UInt_t i, UInt_t j, UInt_t k)const
    return fTF3->Eval(fMinX * fXScaleInverted + i * fStepX * fXScaleInverted, 
                      fMinY * fYScaleInverted + j * fStepY * fYScaleInverted, 
                      fMinZ * fZScaleInverted + k * fStepZ * fZScaleInverted);
-}
-
-/*
-TH3/KDE split edge implementation.
-"this->" is used with type-dependent names
-in templates.
-*/
-//______________________________________________________________________
-template<class H, class E, typename V>
-void TDefaultSplitter<H, E, V>::SplitEdge(TCell<E> & cell, TIsoMesh<V> * mesh, UInt_t i, 
-                                         V x, V y, V z, V iso)const
-{
-   V v[3];
-   const V offset = GetOffset(cell.fVals[eConn[i][0]], 
-                              cell.fVals[eConn[i][1]], 
-                              iso);
-   v[0] = x + (vOff[eConn[i][0]][0] + offset * eDir[i][0]) * this->fStepX;
-   v[1] = y + (vOff[eConn[i][0]][1] + offset * eDir[i][1]) * this->fStepY;
-   v[2] = z + (vOff[eConn[i][0]][2] + offset * eDir[i][2]) * this->fStepZ;
-   cell.fIds[i] = mesh->AddVertex(v);
 }
 
 /*
@@ -693,6 +673,7 @@ void TMeshBuilder<D, V>::BuildCol(UInt_t depth, const SliceType_t *prevSlice,
    }
 }
 
+
 //______________________________________________________________________
 template<class D, class V>
 void TMeshBuilder<D, V>::BuildSlice(UInt_t depth, const SliceType_t *prevSlice,
@@ -830,9 +811,6 @@ void TMeshBuilder<D, V>::BuildNormals()const
    }
 }
 
-
-namespace {
-
 /////////////////////////////////////////////////////////////////////////
 //****************************TABLES***********************************//
 /////////////////////////////////////////////////////////////////////////
@@ -894,6 +872,7 @@ const Float_t eDir[12][3] =
    {-1.f,  0.f, 0.f}, {0.f, -1.f, 0.f}, { 0.f, 0.f, 1.f},
    { 0.f,  0.f, 1.f}, {0.f,  0.f, 1.f}, { 0.f, 0.f, 1.f}
 };
+
 
 const Int_t conTbl[256][16] = 
 {
@@ -1154,9 +1133,6 @@ const Int_t conTbl[256][16] =
    {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
    {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 };
-
-}//unnamed namespace
-
 
 template class TMeshBuilder<TH3C, Float_t>;
 template class TMeshBuilder<TH3S, Float_t>;

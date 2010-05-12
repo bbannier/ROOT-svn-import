@@ -28,16 +28,22 @@ private:
    TGLAnnotation(const TGLAnnotation&);            // Not implemented
    TGLAnnotation& operator=(const TGLAnnotation&); // Not implemented
 
-   void MakeEditor();
+protected:
+   enum EDrag        { kMove, kResize, kNone };
+   enum ENameStack   { kMoveID, kEditID, kDeleteID, kResizeID };
 
+   void MakeEditor();
+   Char_t GetLineTransparency() const;
 
    Float_t           fPosX;           // x position [0, 1]
    Float_t           fPosY;           // y position [0, 1]
+   Float_t           fWidth;
+   Float_t           fHeight;
 
    Int_t             fMouseX, fMouseY; //! last mouse position
-   Bool_t            fInDrag;          //!
-   Float_t           fDrawW, fDrawH;   //! width/height of drawn annotation
-   Float_t           fDrawY;           //! y-position of annotation box
+   EDrag             fDrag;            //!
+   Float_t           fDrawW,  fDrawH;  //! width and height when drawing
+   Float_t           fTextSizeDrag;    //! text-size at start of drag
 
    TGLVector3        fPointer;         // picked location in 3D space
    Bool_t            fActive;          // active item identifier
@@ -48,7 +54,6 @@ private:
    static Color_t    fgBackColor;
    static Color_t    fgTextColor;
 
-protected:
    TGLViewer        *fParent;
 
    TString           fText;           // annotation text
@@ -63,22 +68,25 @@ protected:
 
    Bool_t            fDrawRefLine;    // draw 3D refrence line
    Bool_t            fUseColorSet;    // use color set from rnrCtx
+   Bool_t            fAllowClose;     // allow closing via 'X' button
 
 public:
    TGLAnnotation(TGLViewerBase *parent, const char *text, Float_t posx, Float_t posy);
    TGLAnnotation(TGLViewerBase *parent, const char *text, Float_t posx, Float_t posy, TGLVector3 ref);
    virtual ~TGLAnnotation();
 
-   void SetTransparency(Char_t x) { fTransparency = x;}
-   Char_t GetTransparency() const { return fTransparency;}
+   void SetTransparency(Char_t x) { fTransparency = x; }
+   Char_t GetTransparency() const { return fTransparency; }
    void SetUseColorSet(Bool_t x)  { fUseColorSet = x; }
-   Bool_t GetUseColorSet() const  { return fUseColorSet;}
-   void SetBackColor(Color_t x)   { fBackColor = x;}
-   Color_t GetBackColor() const   { return fBackColor;}
-   void SetTextColor(Color_t x)   { fTextColor = x;   }
-   Color_t GetTextColor() const   { return fTextColor;}
-   void SetTextSize(Float_t x)    { fTextSize = x;   }
-   Float_t GetTextSize() const    { return fTextSize;}
+   Bool_t GetUseColorSet() const  { return fUseColorSet; }
+   void SetBackColor(Color_t x)   { fBackColor = x; }
+   Color_t GetBackColor() const   { return fBackColor; }
+   void SetTextColor(Color_t x)   { fTextColor = x; }
+   Color_t GetTextColor() const   { return fTextColor; }
+   void SetTextSize(Float_t x)    { fTextSize = x; }
+   Float_t GetTextSize() const    { return fTextSize; }
+   void SetAllowClose(Bool_t x)   { fAllowClose = x; }
+   Bool_t GetAllowClose() const   { return fAllowClose;}
    TGLFont::ETextAlignH_e GetTextAlign() const { return fTextAlign; }
    void SetTextAlign(TGLFont::ETextAlignH_e a) { fTextAlign = a; }
 

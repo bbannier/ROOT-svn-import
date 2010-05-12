@@ -282,6 +282,73 @@ TEveElement* TEveProjectionManager::ImportElements(TEveElement* el,
 }
 
 //______________________________________________________________________________
+TEveElement* TEveProjectionManager::SubImportElements(TEveElement* el,
+                                                      TEveElement* proj_parent)
+{
+   // Recursively import elements and apply projection to the newly
+   // imported objects.
+   //
+   // The proj_parent argument should be a projected replica of parent
+   // of element 'el'. This allows to insert projected children of
+   // a given element when they are added after the projection has
+   // been already performed on the parent.
+   // This is called from TEveElement::ProjectChild().
+   //
+   // Returns the projected replica of el. Can be 0, if el and none of
+   // its children are projectable.
+
+   TEveElement* new_el = ImportElementsRecurse(el, proj_parent);
+   if (new_el)
+   {
+      AssertBBox();
+      ProjectChildrenRecurse(new_el);
+      AssertBBoxExtents(0.1);
+      StampTransBBox();
+
+      UpdateDependentElsAndScenes(new_el);
+   }
+   return new_el;
+}
+
+//______________________________________________________________________________
+Int_t TEveProjectionManager::SubImportChildren(TEveElement* el, TEveElement* proj_parent)
+{
+   // Recursively import childer elements of el and apply projection
+   // to the newly imported objects.
+   //
+   // The proj_parent argument should be a projected replica of
+   // element 'el'. This allows to insert projected children of
+   // a given element when they are added after the projection has
+   // been already performed on the parent.
+   // This is called from TEveElement::ProjectChild().
+   //
+   // Returns the projected replica of el. Can be 0, if el and none of
+   // its children are projectable.
+
+   List_t new_els;
+   for (List_i i = el->BeginChildren(); i != el->EndChildren(); ++i)
+   {
+      TEveElement* new_el = ImportElementsRecurse(*i, proj_parent);
+      if (new_el)
+         new_els.push_back(new_el);
+   }
+
+   if ( ! new_els.empty())
+   {
+      AssertBBox();
+      for (List_i i = new_els.begin(); i != new_els.end(); ++i)
+      {
+         ProjectChildrenRecurse(*i);
+      }
+      AssertBBoxExtents(0.1);
+      StampTransBBox();
+
+      UpdateDependentElsAndScenes(proj_parent);
+   }
+   return (Int_t) new_els.size();
+}
+
+//______________________________________________________________________________
 void TEveProjectionManager::ProjectChildrenRecurse(TEveElement* el)
 {
    // Project el (via TEveProjected::UpdateProjection()) and recurse

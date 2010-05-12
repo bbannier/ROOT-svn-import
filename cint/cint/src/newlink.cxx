@@ -2415,57 +2415,75 @@ int G__call_cppfunc(G__value *result7,G__param *libp,G__ifunc_table_internal *if
 {
   G__InterfaceMethod cppfunc;
   int result;
-
   cppfunc = (G__InterfaceMethod)ifunc->pentry[ifn]->p;
-
-
 #ifdef G__ASM
-  if(G__asm_noverflow) {
-    /****************************************
-     * LD_FUNC (C++ compiled)
-     ****************************************/
-    if(cppfunc==(G__InterfaceMethod)G__DLL_direct_globalfunc) {
+  if (G__asm_noverflow) {
+    if (cppfunc == (G__InterfaceMethod) G__DLL_direct_globalfunc) {
+      // --
 #ifdef G__ASM_DBG
-      if(G__asm_dbg) G__fprinterr(G__serr,
-                                  "%3x: LD_FUNC direct global function %s paran=%d\n"
-                                  ,G__asm_cp,ifunc->funcname[ifn],libp->paran);
-#endif
-      G__asm_inst[G__asm_cp]=G__LD_FUNC;
-      G__asm_inst[G__asm_cp+1] = (long)ifunc;
-      G__asm_inst[G__asm_cp+2]= ifn;
-      G__asm_inst[G__asm_cp+3]=libp->paran;
-      G__asm_inst[G__asm_cp+4]=(long)cppfunc;
+      if (G__asm_dbg) {
+         G__fprinterr(
+              G__serr
+            , "%3x,%3x: LD_FUNC direct global function '%s' paran: %d  %s:%d\n"
+            , G__asm_cp
+            , G__asm_dt
+            , ifunc->funcname[ifn]
+            , libp->paran
+            , __FILE__
+            , __LINE__
+         );
+      }
+#endif // G__ASM_DBG
+      G__asm_inst[G__asm_cp] = G__LD_FUNC;
+      G__asm_inst[G__asm_cp+1] = (long) ifunc;
+      G__asm_inst[G__asm_cp+2] = ifn;
+      G__asm_inst[G__asm_cp+3] = libp->paran;
+      G__asm_inst[G__asm_cp+4] = (long) cppfunc;
       G__asm_inst[G__asm_cp+5] = 0;
-      if (ifunc && ifunc->pentry[ifn]) G__asm_inst[G__asm_cp+5] = ifunc->pentry[ifn]->ptradjust;
-      G__asm_inst[G__asm_cp+6]=(long)ifunc;
-      G__inc_cp_asm(7,0);
+      if (ifunc && ifunc->pentry[ifn]) {
+         G__asm_inst[G__asm_cp+5] = ifunc->pentry[ifn]->ptradjust;
+      }
+      G__asm_inst[G__asm_cp+6] = (long) ifunc;
+      G__asm_inst[G__asm_cp+6] = (long) ifn;
+      G__inc_cp_asm(8, 0);
     }
     else {
+      // --
 #ifdef G__ASM_DBG
-      if(G__asm_dbg) G__fprinterr(G__serr,
-                                  "%3x: LD_FUNC C++ compiled %s paran=%d\n"
-                                  ,G__asm_cp,ifunc->funcname[ifn],libp->paran);
-#endif
-      G__asm_inst[G__asm_cp]=G__LD_FUNC;
+      if (G__asm_dbg) {
+         G__fprinterr(
+              G__serr
+            , "%3x,%3x: LD_FUNC C++ compiled '%s' paran: %d  %s:%d\n"
+            , G__asm_cp
+            , G__asm_dt
+            , ifunc->funcname[ifn]
+            , libp->paran
+            , __FILE__
+            , __LINE__
+         );
+      }
+#endif // G__ASM_DBG
+      G__asm_inst[G__asm_cp] = G__LD_FUNC;
       G__asm_inst[G__asm_cp+1] = ifunc->p_tagtable[ifn];
-      G__asm_inst[G__asm_cp+2]= - ifunc->type[ifn];
-      G__asm_inst[G__asm_cp+3]=libp->paran;
-      G__asm_inst[G__asm_cp+4]=(long)cppfunc;
+      G__asm_inst[G__asm_cp+2] = -(ifunc->type[ifn]);
+      G__asm_inst[G__asm_cp+3] = libp->paran;
+      G__asm_inst[G__asm_cp+4] = (long) cppfunc;
       G__asm_inst[G__asm_cp+5] = 0;
-      if (ifunc && ifunc->pentry[ifn]) G__asm_inst[G__asm_cp+5] = ifunc->pentry[ifn]->ptradjust;
-      G__asm_inst[G__asm_cp+6]=(long)ifunc;
-      G__inc_cp_asm(7,0);
+      if (ifunc && ifunc->pentry[ifn]) {
+         G__asm_inst[G__asm_cp+5] = ifunc->pentry[ifn]->ptradjust;
+      }
+      G__asm_inst[G__asm_cp+6] = (long) ifunc;
+      G__asm_inst[G__asm_cp+7] = (long) ifn;
+      G__inc_cp_asm(8, 0);
     }
   }
-#endif /* of G__ASM */
-
-  /* compact G__cpplink.C */
+#endif // G__ASM
   *result7 = G__null;
   result7->tagnum = ifunc->p_tagtable[ifn];
   result7->typenum = ifunc->p_typetable[ifn];
 #ifndef G__OLDIMPLEMENTATION1259
   result7->isconst = ifunc->isconst[ifn];
-#endif
+#endif // G__OLDIMPLEMENTATION1259
   if(-1!=result7->tagnum&&'e'!=G__struct.type[result7->tagnum]) {
     if(isupper(ifunc->type[ifn])) result7->type='U';
     else                          result7->type='u';
@@ -3404,12 +3422,6 @@ int G__get_linked_tagnum(G__linked_taginfo *p)
   if(!p) return(-1);
   if(-1==p->tagnum) {
      p->tagnum = G__search_tagname(p->tagname,p->tagtype);
-     if (G__UserSpecificUpdateClassInfo) {
-        long varp = G__globalvarpointer;
-        G__globalvarpointer = G__PVOID;
-        (*G__UserSpecificUpdateClassInfo)((char*)p->tagname,p->tagnum);
-        G__globalvarpointer = varp;
-     }
   }
   return(p->tagnum);
 }
@@ -6115,15 +6127,7 @@ static void G__x8664_vararg_epilog(FILE *fp, int ifn, G__ifunc_table_internal *i
                if (reftype) {
                   fprintf(fp, "(%s&) u[0].lval", typestring);
                } else {
-                  if (G__globalcomp == G__CPPLINK) {
-#if defined(__INTEL_COMPILER)
-                     fprintf(fp, "*(%s*) u[1].lval", typestring);
-#else
-                     fprintf(fp, "*(%s*) u[0].lval", typestring);
-#endif
-                  } else {
-                     fprintf(fp, "(%s*) u[0].lval", typestring);
-                  }
+                  fprintf(fp, "*(%s*) returnValue", typestring);
                }
                break;
             default:
@@ -8354,7 +8358,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
          && (-1==G__struct.parent_tagnum[i]||G__nestedclass)
          ) {
         if('e'==G__struct.type[i])
-          fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),sizeof(%s),%d,%d,%s,NULL,NULL);\n"
+          fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum_fwd(&%s),sizeof(%s),%d,%d,%s,NULL,NULL);\n"
                   ,G__mark_linked_tagnum(i) ,"int" ,G__globalcomp
 #if  !defined(G__OLDIMPLEMENTATION1545)
                   ,G__struct.isabstract[i]+G__struct.funcs[i]*0x100
@@ -8365,7 +8369,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
                   ,buf());
         else if('n'==G__struct.type[i]) {
           mappedtagname = G__map_cpp_name(tagname);
-          fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),0,%d,%d,%s,G__setup_memvar%s,G__setup_memfunc%s);\n"
+          fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum_fwd(&%s),0,%d,%d,%s,G__setup_memvar%s,G__setup_memfunc%s);\n"
                   ,G__mark_linked_tagnum(i)
                   /* ,G__type2string('u',i,-1,0,0) */
                   ,G__globalcomp
@@ -8380,7 +8384,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
         else if(0==G__struct.name[i][0]) {
           mappedtagname = G__map_cpp_name(tagname);
           if(G__CPPLINK==G__globalcomp) {
-            fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),%s,%d,%d,%s,G__setup_memvar%s,G__setup_memfunc%s);\n"
+            fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum_fwd(&%s),%s,%d,%d,%s,G__setup_memvar%s,G__setup_memfunc%s);\n"
                     ,G__mark_linked_tagnum(i)
                     ,"0" /* G__type2string('u',i,-1,0,0) */
                     ,G__globalcomp
@@ -8393,7 +8397,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
                     ,buf() ,mappedtagname(),mappedtagname());
           }
           else {
-            fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),%s,%d,%d,%s,G__setup_memvar%s,NULL);\n"
+            fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum_fwd(&%s),%s,%d,%d,%s,G__setup_memvar%s,NULL);\n"
                     ,G__mark_linked_tagnum(i)
                     ,"0" /* G__type2string('u',i,-1,0,0) */
                     ,G__globalcomp
@@ -8410,7 +8414,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
           mappedtagname = G__map_cpp_name(tagname);
           if(G__CPPLINK==G__globalcomp && '$'!=G__struct.name[i][0]) {
             if(G__ONLYMETHODLINK==G__struct.globalcomp[i])
-              fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),sizeof(%s),%d,%d,%s,NULL,G__setup_memfunc%s);\n"
+              fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum_fwd(&%s),sizeof(%s),%d,%d,%s,NULL,G__setup_memfunc%s);\n"
                       ,G__mark_linked_tagnum(i)
                       ,G__type2string('u',i,-1,0,0)
                       ,G__globalcomp
@@ -8423,7 +8427,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
                       ,buf(),mappedtagname());
             else
             if(G__suppress_methods)
-              fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),sizeof(%s),%d,%d,%s,G__setup_memvar%s,NULL);\n"
+              fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum_fwd(&%s),sizeof(%s),%d,%d,%s,G__setup_memvar%s,NULL);\n"
                       ,G__mark_linked_tagnum(i)
                       ,G__type2string('u',i,-1,0,0)
                       ,G__globalcomp
@@ -8435,7 +8439,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
 #endif
                       ,buf(),mappedtagname());
             else
-              fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),sizeof(%s),%d,%d,%s,G__setup_memvar%s,G__setup_memfunc%s);\n"
+              fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum_fwd(&%s),sizeof(%s),%d,%d,%s,G__setup_memvar%s,G__setup_memfunc%s);\n"
                       ,G__mark_linked_tagnum(i)
                       ,G__type2string('u',i,-1,0,0)
                       ,G__globalcomp
@@ -8449,7 +8453,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
           }
           else if('$'==G__struct.name[i][0]&&
           isupper(G__newtype.type[G__defined_typename(G__struct.name[i]+1)])) {
-            fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),sizeof(%s),%d,%d,%s,NULL,NULL);\n"
+            fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum_fwd(&%s),sizeof(%s),%d,%d,%s,NULL,NULL);\n"
                     ,G__mark_linked_tagnum(i)
                     ,G__type2string('u',i,-1,0,0)
                     ,G__globalcomp
@@ -8462,7 +8466,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
                     ,buf());
           }
           else {
-            fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),sizeof(%s),%d,%d,%s,G__setup_memvar%s,NULL);\n"
+            fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum_fwd(&%s),sizeof(%s),%d,%d,%s,G__setup_memvar%s,NULL);\n"
                     ,G__mark_linked_tagnum(i)
                     ,G__type2string('u',i,-1,0,0)
                     ,G__globalcomp
@@ -8478,7 +8482,7 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
         }
       }
       else {
-        fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum(&%s),0,%d,%d,%s,NULL,NULL);\n"
+        fprintf(fp,"   G__tagtable_setup(G__get_linked_tagnum_fwd(&%s),0,%d,%d,%s,NULL,NULL);\n"
                 ,G__mark_linked_tagnum(i)
                 ,G__globalcomp
 #if  !defined(G__OLDIMPLEMENTATION1545)
@@ -11977,6 +11981,54 @@ void G__specify_link(int link_stub)
     }
     else p=(char*)NULL;
     if(p) {
+       if (p - buf > 2 && p[-1] == ':' && p[-2] == ':') {
+          // pragma link C++ class A::*
+          p[-2] = 0;
+          int scopetag = G__defined_tagname(buf,1);
+          if (scopetag >= 0) {
+             ++done;
+             // A exists. A::B must be after A in G__struct:
+             for (int t = scopetag + 1; t < G__struct.alltag; ++t) {
+                int parenttag = t;
+                while ((parenttag = G__struct.parent_tagnum[parenttag]) > scopetag)
+                   {;}
+                if (parenttag == scopetag) {
+                   if('e'==G__struct.type[scopetag]) {
+                      G__pragmalinkenum(scopetag,globalcomp);
+                   } else {
+                      // t is A::B::C, so set globalcomp
+                      G__struct.globalcomp[t] = globalcomp;
+
+                      G__struct.rootflag[t] = 0;
+                      if (rfNoStreamer == 1) G__struct.rootflag[t] = G__NOSTREAMER;
+                      if (rfNoInputOper == 1) G__struct.rootflag[t] |= G__NOINPUTOPERATOR;
+                      if (rfUseBytecount == 1) {
+                         G__struct.rootflag[t] |= G__USEBYTECOUNT;
+                         if(rfNoStreamer) {
+                            G__struct.rootflag[t] &= ~G__NOSTREAMER;
+                            G__fprinterr(G__serr, "option + mutual exclusive with -, + prevails\n");
+                         }
+                      }
+                      if( rfVersionNumber > -1 ) {
+                         AllocateRootSpecial( t );
+                         G__struct.rootflag[t] |= G__HASVERSION;
+                         G__struct.rootspecial[t]->version = rfVersionNumber;
+                      }
+#if !defined(G__OLDIMPLEMENTATION1955) && defined(G__ROOT)
+                      if (G__NOLINK>G__nestedtypedef) {
+                         G__linknestedtypedef(t, globalcomp);
+                      }
+#endif
+                   } // enum or not
+                   break;
+                } // is within linked parent
+             }
+          } else {
+             G__fprinterr(G__serr,"Error: unknown class %s in \"#pragma link C++ class %s::*\"! Egnoring it.\n", buf.data(), buf.data());
+             c=G__fignorestream(";\n");
+             return;
+          }
+       } else {
 #if defined(G__REGEXP)
 #ifndef G__OLDIKMPLEMENTATION1583
       if('.'!=buf[len-2]) {
@@ -12053,6 +12105,7 @@ void G__specify_link(int link_stub)
         }
       }
 #endif /* G__REGEXP */
+       } // if "A::*"
     } /* if(p) */
     else {
       i = G__defined_tagname(buf,1);

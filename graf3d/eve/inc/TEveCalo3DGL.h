@@ -32,6 +32,8 @@ private:
    Float_t RenderBarrelCell(const TEveCaloData::CellGeom_t &cell, Float_t towerH, Float_t offset) const;
    Float_t RenderEndCapCell(const TEveCaloData::CellGeom_t &cell, Float_t towerH, Float_t offset) const;
 
+   void    DrawSelectedCells(TEveCaloData::vCellId_t cells) const;
+
 protected:
    TEveCalo3D     *fM;  // Model object.
 
@@ -45,7 +47,7 @@ public:
    virtual void   SetBBox();
 
    virtual void   DirectDraw(TGLRnrCtx & rnrCtx) const;
-   virtual void   DrawHighlight(TGLRnrCtx & rnrCtx, const TGLPhysicalShape* ps) const;
+   virtual void   DrawHighlight(TGLRnrCtx & rnrCtx, const TGLPhysicalShape* ps, Int_t lvl=-1) const;
 
    virtual Bool_t ShouldDLCache(const TGLRnrCtx& rnrCtx) const;
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }

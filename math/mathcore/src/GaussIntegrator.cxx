@@ -23,16 +23,12 @@ GaussIntegrator::GaussIntegrator()
    fEpsilon = 1e-12;
    fLastResult = fLastError = 0;
    fUsedOnce = false;
-   fFunctionCopied = false;
    fFunction = 0;
 }
 
 GaussIntegrator::~GaussIntegrator()
 {
-   // Destructor.
-
-   if ( fFunctionCopied && fFunction != 0   )
-      delete fFunction;
+   // Destructor. (no - operations)
 }
 
 void GaussIntegrator::AbsValue(bool flag)
@@ -70,6 +66,7 @@ double GaussIntegrator::Integral(double a, double b)
    }
 
    h = 0;
+   fUsedOnce = true;
    if (b == a) return h;
    aconst = kCST/std::abs(b-a);
    bb = a;
@@ -111,7 +108,6 @@ CASE2:
       h = s8;  //this is a crude approximation (cernlib function returned 0 !)
    }
 
-   fUsedOnce = true;
    fLastResult = h;
    fLastError = std::abs(s16-c2*s8);
 
@@ -139,18 +135,14 @@ double GaussIntegrator::Error() const
 {   return fLastError;  }
 
 int GaussIntegrator::Status() const
-{   return 0;  }
+{   return (fUsedOnce) ? 0 : -1;  }
 
-void GaussIntegrator::SetFunction (const IGenFunction & function, bool copy)
+void GaussIntegrator::SetFunction (const IGenFunction & function)
 {
    // Set integration function
-
-   if ( copy )
-      fFunction = function.Clone();
-   else
-      fFunction = &function;
-
-   fFunctionCopied = copy;
+   fFunction = &function;
+   // reset fUsedOne flag
+   fUsedOnce = false; 
 }
 
 

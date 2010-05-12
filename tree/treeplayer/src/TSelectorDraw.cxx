@@ -428,6 +428,7 @@ void TSelectorDraw::Begin(TTree *tree)
                      // Let's set it aside for now ...
                      Error("Begin", "Input and output lists are the same!\n");
                      SetStatus(-1);
+                     delete [] varexp;
                      return;
                   }
                   evlist->Reset();
@@ -469,11 +470,11 @@ void TSelectorDraw::Begin(TTree *tree)
    if (fOldHistogram) {
       Int_t olddim = fOldHistogram->GetDimension();
       Int_t mustdelete = 0;
-      if (fOldHistogram->InheritsFrom("TProfile")) {
+      if (fOldHistogram->InheritsFrom(TProfile::Class())) {
          profile = kTRUE;
          olddim = 2;
       }
-      if (fOldHistogram->InheritsFrom("TProfile2D")) {
+      if (fOldHistogram->InheritsFrom(TProfile2D::Class())) {
          profile = kTRUE;
          olddim = 3;
       }
@@ -507,7 +508,7 @@ void TSelectorDraw::Begin(TTree *tree)
             TObject *op;
             TH1 *oldhtemp = 0;
             while ((op = np()) && !oldhtemp) {
-               if (op->InheritsFrom("TH1")) oldhtemp = (TH1 *)op;
+               if (op->InheritsFrom(TH1::Class())) oldhtemp = (TH1 *)op;
             }
             if (oldhtemp) {
                fNbins[0] = oldhtemp->GetXaxis()->GetNbins();
@@ -1256,7 +1257,7 @@ void TSelectorDraw::TakeAction()
    else if (fAction ==  4) ((TProfile*)fObject)->FillN(fNfill,fVal[1],fVal[0],fW);
    //__________________________Event List______________________________
    else if (fAction ==  5) {
-      if (fObject->InheritsFrom("TEntryList")){
+      if (fObject->InheritsFrom(TEntryList::Class())){
          TEntryList *enlist = (TEntryList*)fObject;
          Long64_t enumb = fTree->GetTree()->GetReadEntry();
          enlist->Enter(enumb);
@@ -1291,8 +1292,8 @@ void TSelectorDraw::TakeAction()
       pm->SetFillStyle(fTree->GetFillStyle());
 
       if (!fDraw && !strstr(fOption.Data(),"goff")) {
-         if (fOption.Length() == 0 || fOption == "same")  pm->Draw("p");
-         else                                             pm->Draw(fOption.Data());
+         if (fOption.Length() == 0 || strcasecmp(fOption.Data(),"same")==0)  pm->Draw("p");
+         else                                                                pm->Draw(fOption.Data());
       }
       if (!h2->TestBit(kCanDelete)) {
          for (i=0;i<fNfill;i++) h2->Fill(fVal[1][i],fVal[0][i],fW[i]);
@@ -1509,8 +1510,8 @@ void TSelectorDraw::TakeEstimate()
       pm->SetFillColor(fTree->GetFillColor());
       pm->SetFillStyle(fTree->GetFillStyle());
       if (!fDraw && !strstr(fOption.Data(),"goff")) {
-         if (fOption.Length() == 0 || fOption == "same")  pm->Draw("p");
-         else                                             pm->Draw(fOption.Data());
+         if (fOption.Length() == 0 || strcasecmp(fOption.Data(),"same")==0)  pm->Draw("p");
+         else                                                                pm->Draw(fOption.Data());
       }
       if (!h2->TestBit(kCanDelete)) {
          for (i=0;i<fNfill;i++) h2->Fill(fVal[1][i],fVal[0][i],fW[i]);

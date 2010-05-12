@@ -1197,7 +1197,7 @@ TMatrixTBase<Element> &TMatrixTSparse<Element>::SetMatrixArray(Int_t nr,Int_t *r
       }
    }
 
-   DoubleLexSort(nr,row,col,data);
+   TMatrixTBase<Element>::DoubleLexSort(nr,row,col,data);
 
    Int_t nr_nonzeros = 0;
    const Element *ep        = data;
@@ -1366,7 +1366,7 @@ TMatrixTSparse<Element> &TMatrixTSparse<Element>::SetSparseIndexAB(const TMatrix
          }
       }
       while (indexb < eIndexb) {
-         const Int_t icola = (eIndexa > 0) ? pColIndexa[eIndexa-1] : -1;
+         const Int_t icola = (eIndexa > sIndexa && eIndexa > 0) ? pColIndexa[eIndexa-1] : -1;
          if (pColIndexb[indexb++] > icola)
             nc++;
       }
@@ -2010,7 +2010,7 @@ TMatrixTSparse<Element> &TMatrixTSparse<Element>::Transpose(const TMatrixTSparse
 
    R__ASSERT(nr_nonzeros >= ielem);
 
-   DoubleLexSort(nr_nonzeros,rownr,colnr,pData_t);
+   TMatrixTBase<Element>::DoubleLexSort(nr_nonzeros,rownr,colnr,pData_t);
    SetMatrixArray(nr_nonzeros,rownr,colnr,pData_t);
 
    R__ASSERT(this->fNelems == fRowIndex[this->fNrowIndex-1]);

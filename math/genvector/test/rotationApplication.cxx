@@ -54,6 +54,8 @@ using std::cos;
 
 using namespace ROOT::Math;
 
+#ifndef __CINT__
+
 template <typename T1, typename T2 > 
 struct Precision { 
   enum { result = std::numeric_limits<T1>::digits <= std::numeric_limits<T2>::digits   }; 
@@ -155,6 +157,9 @@ correctedTicks< PositionVector3D < CylindricalEta3D<double> > > {
   
 template <class R, class V>
 int testApplication(const R& r,const V& v,const XYZVector &answer,double t) {
+
+  typedef typename V::CoordinateType CoordType;
+
   int ret = 0;
   correctedTicks<V> ct;
   double ticks = ct(t, v, answer);
@@ -171,11 +176,13 @@ int testApplication(const R& r,const V& v,const XYZVector &answer,double t) {
  	#ifdef TRACE2
    	std::cout << "ok ";
 	#endif
-  if ( rv != r*v ) {
-    std::cout << "Inconsistency between R(v) and R*v for R = " 
-    	      << RotationTraits<R>::name() << " " << r 
-              << "\nacting on "   << CoordinateTraits<V>::name() << v << "\n";
-    ret |= 9;
+        // comparison here should be == but need to use 10 ticks to be sure for 32 bits machines
+        // when results are flushed in memory and approximated
+        if ( compare3D(rv, r*v, 10 ) != 0) { 
+     std::cout << "Inconsistency between R(v) and R*v for R = " 
+               << RotationTraits<R>::name() << " " << r 
+               << "\nacting on "  << CoordinateTraits<CoordType>::name() << v << "\n";
+     ret |= 9;
   }
  	#ifdef TRACE2
    	std::cout << "+ also did rv != r*v ";
@@ -184,7 +191,7 @@ int testApplication(const R& r,const V& v,const XYZVector &answer,double t) {
     std::cout << "Radius change  between R(v) and R*v for R = "
               << RotationTraits<R>::name() << " " << r 
               << "\nacting on "   
-	      << CoordinateTraits<typename V::CoordinateType>::name()
+	      << CoordinateTraits<CoordType>::name()
     	      << v << "\n";
     ret |= 17;
   }  
@@ -429,11 +436,11 @@ int doTestL (TestRotation const & testRotation, XYZVector const & testVector,
 }
 
 struct ForeignVector {
-  typedef Cartesian3D<void> CoordinateType;
+  typedef Cartesian3D<> CoordinateType;
   XYZVector v;
   template <class V> 
   explicit ForeignVector (V const & v_) : v(v_) {}
-  ForeignVector (double x, double y, double z) : v(x,y,z) {}
+  ForeignVector (double xx, double yy, double zz) : v(xx,yy,zz) {}
   double x() const { return v.x(); }
   double y() const { return v.y(); }
   double z() const { return v.z(); }
@@ -526,9 +533,10 @@ int exerciseTestCase (TestRotation const & testRotation,
 
   if (ret == 0) 
     std::cout << "\t OK\n"; 
-  else 
+  else {
     std::cout << "\t Failed!\n "; 
-
+    std::cerr << "\n>>>>> Rotation Tests of " << testVector << "\t\t:\t FAILED \n";
+  }
 
   return ret;
 }
@@ -667,19 +675,21 @@ int exerciseAxialTest (XYZVector const & testVector)
 
   if (ret == 0) 
     std::cout << "\t OK\n"; 
-  else 
+  else {
     std::cout << "\t Failed!\n "; 
+    std::cerr << "\n>>>>> Axial Rotation Tests of " << testVector << "\t\t:\t FAILED \n";
+  }
 
   return ret;
 }
 
 
-
+#endif // endif on __CINT__
 
 // ======================================
 
 
-int main () {
+int rotationApplication () {
   int ret = 0;
   std::vector<TestRotation> testRotations = makeTestRotations();
   std::vector<XYZVector>    testVectors   = makeTestVectors();
@@ -694,5 +704,13 @@ int main () {
         vp !=  testVectors.end(); ++vp ) {
     ret |= exerciseAxialTest (*vp);
   }
+
   return ret;
+}
+
+int main() { 
+   int ret =  rotationApplication();
+   if (ret)  std::cerr << "test FAILED !!! " << std::endl; 
+   else   std::cout << "test OK " << std::endl;
+   return ret; 
 }

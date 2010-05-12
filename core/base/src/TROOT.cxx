@@ -104,9 +104,10 @@
 #include "TMap.h"
 #include "TObjString.h"
 #include "TVirtualMutex.h"
-
-#ifndef R__BUILDCINT7
-#include "TCint.h"
+#ifdef R__HAS_CLING
+# include "TCling.h"
+#else
+# include "TCint.h"
 #endif
 
 #include <string>
@@ -118,21 +119,10 @@ namespace std {} using namespace std;
 #include "TWinNTSystem.h"
 #endif
 
-#ifdef R__BUILDCINT7
-#ifndef _WIN32
-#define R__DLOPEN_NOW 2
-extern "C" void* dlopen(const char*, int);
-extern "C" char* dlerror();
-#endif
-#endif
-
-extern "C" const char *G__cint_version();
 extern "C" void R__SetZipMode(int);
 
 // Mutex for protection of concurrent gROOT access
 TVirtualMutex* gROOTMutex = 0;
-
-TInterpreter* (*gInterpreterFactory)(const char* name, const char* title);
 
 //-------- Names of next three routines are a small homage to CMZ --------------
 //______________________________________________________________________________
@@ -175,50 +165,6 @@ static Int_t ITIMQQ(const char *time)
    sscanf(time, "%d:%d:%d", &hh, &mm, &ss);
    return 100*hh + mm;
 }
-//------------------------------------------------------------------------------
-
-#ifdef R__BUILDCINT7
-namespace {
-   static void* OpenTCintLibrary() {
-      TString libMetaTCint("libMetaTCint");
-      TString libMetaTCintDir(gSystem->Getenv("ROOTSYS"));
-      const char* cintVersion = G__cint_version();
-      if (cintVersion && cintVersion[0] == '7')
-         libMetaTCint += "_7";
-
-      void* hLibMetaTCint = 0;
-#ifdef _WIN32
-      libMetaTCint += ".dll";
-      libMetaTCintDir += "\\bin\\";
-      hLibMetaTCint = (void*) ::LoadLibrary((libMetaTCintDir + libMetaTCint).Data());
-#else
-#ifdef ROOTLIBDIR
-      libMetaTCintDir = ROOTLIBDIR"/";
-#else
-      libMetaTCintDir += "/lib/";
-#endif
-# if defined (R__MACOSX)
-      hLibMetaTCint = (void*) dlopen((libMetaTCintDir + libMetaTCint + ".dylib").Data(), R__DLOPEN_NOW);
-      // continue below if failed
-# endif
-      if (!hLibMetaTCint) {
-         libMetaTCint += ".so";
-         hLibMetaTCint = (void*) dlopen((libMetaTCintDir + libMetaTCint).Data(), R__DLOPEN_NOW);
-         if (!hLibMetaTCint) {
-            hLibMetaTCint = (void*) dlopen(libMetaTCint.Data(), R__DLOPEN_NOW);
-         }
-         if (!hLibMetaTCint) {
-            const char* err = dlerror();
-            if (err)
-               printf("Fatal in <TROOT::TROOT>: %s\n", err);
-         }
-      }
-#endif
-      return hLibMetaTCint;
-   }
-}
-#endif
-
 //______________________________________________________________________________
 static void CleanUpROOTAtExit()
 {
@@ -326,20 +272,7 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    fVersionInt      = 0;  // check in TROOT dtor in case TCint fails
    fClasses         = 0;  // might be checked via TCint ctor
 
-#ifdef R__BUILDCINT7
-   if (!gInterpreterFactory) {
-      // Open the library containing TCint
-      if (!OpenTCintLibrary() || !gInterpreterFactory) {
-         fprintf(stderr, "Fatal in <TROOT::TROOT>: Cannot load TCint library!\n");
-         exit(1);
-      }
-   }
-
-   // Let the factory create the TInterpreter object
-   fInterpreter     = gInterpreterFactory("C/C++", "CINT C/C++ Interpreter");
-#else
    fInterpreter     = new TCint("C/C++", "CINT C/C++ Interpreter");
-#endif
 
    fConfigOptions   = R__CONFIGUREOPTIONS;
    fConfigFeatures  = R__CONFIGUREFEATURES;
@@ -360,16 +293,6 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
 
    // initialize plugin manager early
    fPluginManager->LoadHandlersFromEnv(gEnv);
-
-   // Add the root include directory to list searched by default by
-   // the interpreter (should this be here or somewhere else?)
-#ifndef ROOTINCDIR
-   TString include = gSystem->Getenv("ROOTSYS");
-   include.Append("/include");
-   fInterpreter->AddIncludePath(include);
-#else
-   fInterpreter->AddIncludePath(ROOTINCDIR);
-#endif
 
    TSystemDirectory *workdir = new TSystemDirectory("workdir", gSystem->WorkingDirectory());
 
@@ -496,6 +419,8 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    atexit(CleanUpROOTAtExit);
 
    fgRootInit = kTRUE;
+   
+   TClass::ReadRules(); // Read the default customization rules ...
 }
 
 //______________________________________________________________________________
@@ -865,7 +790,7 @@ static TClass *R__FindSTLClass(const char *name, Bool_t load, Bool_t silent, con
 
    if (load && cl==0) {
       // Create an Emulated class for this container.
-      cl = new TClass(name, TClass::GetClass("TVirtualStreamerInfo")->GetClassVersion(), 0, 0, -1, -1, silent );
+      cl = new TClass(defaultname.c_str(), TClass::GetClass("TVirtualStreamerInfo")->GetClassVersion(), 0, 0, -1, -1, silent );
       cl->SetBit(TClass::kIsEmulation);
    }
 
@@ -1265,6 +1190,7 @@ void TROOT::InitSystem()
       fgMemCheck = gEnv->GetValue("Root.MemCheck", 0);
 
       TObject::SetObjectStat(gEnv->GetValue("Root.ObjectStat", 0));
+      
    }
 }
 

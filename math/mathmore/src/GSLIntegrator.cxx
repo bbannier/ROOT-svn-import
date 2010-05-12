@@ -168,13 +168,10 @@ void  GSLIntegrator::SetFunction( GSLFuncPointer  fp, void * p) {
    fFunction->SetParams ( p );
 }
 
-void  GSLIntegrator::SetFunction(const IGenFunction &f ,  bool copyFunc  ) {
+void  GSLIntegrator::SetFunction(const IGenFunction &f ) {
    // set function (make a copy of it)
    if (fFunction ==0) fFunction = new GSLFunctionWrapper();
-   if (copyFunc) 
-      fFunction->SetFunction(*(f.Clone()) );
-   else 
-      fFunction->SetFunction( f );
+   fFunction->SetFunction(f);
 }
 
 // evaluation methods
@@ -391,7 +388,7 @@ bool GSLIntegrator::CheckFunction() {
    // check if a function has been previously set.
    if (fFunction->IsValid()) return true; 
    fStatus = -1; fResult = 0; fError = 0;
-   std::cerr << "GS:Integrator - Error : Function has not been specified " << std::endl; 
+   std::cerr << "GSLIntegrator - Error : Function has not been specified " << std::endl; 
    return false; 
 }
 

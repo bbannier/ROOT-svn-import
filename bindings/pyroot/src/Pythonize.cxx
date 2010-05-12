@@ -74,29 +74,41 @@ namespace {
 // to prevent compiler warnings about const char* -> char*
    inline PyObject* CallPyObjMethod( PyObject* obj, const char* meth )
    {
-      return PyObject_CallMethod( obj, const_cast< char* >( meth ), const_cast< char* >( "" ) );
+      Py_INCREF( obj );
+      PyObject* result = PyObject_CallMethod( obj, const_cast< char* >( meth ), const_cast< char* >( "" ) );
+      Py_DECREF( obj );
+      return result;
    }
 
 //____________________________________________________________________________
    inline PyObject* CallPyObjMethod( PyObject* obj, const char* meth, PyObject* arg1 )
    {
-      return PyObject_CallMethod(
+      Py_INCREF( obj );
+      PyObject* result = PyObject_CallMethod(
          obj, const_cast< char* >( meth ), const_cast< char* >( "O" ), arg1 );
+      Py_DECREF( obj );
+      return result;
    }
 
 //____________________________________________________________________________
    inline PyObject* CallPyObjMethod(
       PyObject* obj, const char* meth, PyObject* arg1, PyObject* arg2 )
    {
-      return PyObject_CallMethod(
+      Py_INCREF( obj );
+      PyObject* result = PyObject_CallMethod(
          obj, const_cast< char* >( meth ), const_cast< char* >( "OO" ), arg1, arg2 );
+      Py_DECREF( obj );
+      return result;
    }
 
 //____________________________________________________________________________
    inline PyObject* CallPyObjMethod( PyObject* obj, const char* meth, PyObject* arg1, int arg2 )
    {
-      return PyObject_CallMethod(
+      Py_INCREF( obj );
+      PyObject* result = PyObject_CallMethod(
          obj, const_cast< char* >( meth ), const_cast< char* >( "Oi" ), arg1, arg2 );
+      Py_DECREF( obj );
+      return result;
    }
 
 
@@ -126,12 +138,16 @@ namespace {
 //____________________________________________________________________________
    inline PyObject* CallSelfIndex( ObjectProxy* self, PyObject* idx, const char* meth )
    {
+      Py_INCREF( (PyObject*)self );
       PyObject* pyindex = PyStyleIndex( (PyObject*)self, idx );
-      if ( ! pyindex )
+      if ( ! pyindex ) {
+         Py_DECREF( (PyObject*)self );
          return 0;
+      }
 
       PyObject* result = CallPyObjMethod( (PyObject*)self, meth, pyindex );
       Py_DECREF( pyindex );
+      Py_DECREF( (PyObject*)self );
       return result;
    }
 
@@ -308,6 +324,7 @@ namespace {
       PyObject* meth = PyObject_GetAttr( (PyObject*)self, PyStrings::gTClassDynCast );
       PyObject* ptr = meth ? PyObject_Call(
          meth, PyTuple_GetSlice( args, 1, PyTuple_GET_SIZE( args ) ), 0 ) : 0;
+      Py_XDECREF( meth );
 
    // simply forward in case of call failure
       if ( ! ptr )
@@ -845,10 +862,20 @@ namespace {
       return PyInt_FromLong( result );                                        \
    }                                                                          \
                                                                               \
-   PyObject* name##StringIsequal( PyObject* self, PyObject* obj )             \
+   PyObject* name##StringIsEqual( PyObject* self, PyObject* obj )             \
    {                                                                          \
       PyObject* data = CallPyObjMethod( self, #func );                        \
       PyObject* result = PyObject_RichCompare( data, obj, Py_EQ );            \
+      Py_DECREF( data );                                                      \
+      if ( ! result )                                                         \
+         return 0;                                                            \
+      return result;                                                          \
+   }                                                                          \
+                                                                              \
+   PyObject* name##StringIsNotEqual( PyObject* self, PyObject* obj )          \
+   {                                                                          \
+      PyObject* data = CallPyObjMethod( self, #func );                        \
+      PyObject* result = PyObject_RichCompare( data, obj, Py_NE );            \
       Py_DECREF( data );                                                      \
       if ( ! result )                                                         \
          return 0;                                                            \
@@ -1279,6 +1306,19 @@ namespace {
 // for convenience
    using namespace PyROOT;
 
+//- THN behavior --------------------------------------------------------------
+   PyObject* THNIMul( PyObject* self, PyObject* scale )
+   {
+   // Use THN::Scale to perform *= ... need this stub to return self
+      PyObject* result = CallPyObjMethod( self, "Scale", scale );
+      if ( ! result )
+         return result;
+
+      Py_DECREF( result );
+      Py_INCREF( self );
+      return self;
+   }
+
 //- TFN behavior --------------------------------------------------------------
    int TFNPyCallback( G__value* res, G__CONST char*, struct G__param* libp, int hash )
    {
@@ -1531,8 +1571,10 @@ namespace {
       // use callable name (if available) as identifier
          PyObject* pyname = PyObject_GetAttr( pyfunc, PyStrings::gName );
          const char* name = "dummy";
-         if ( pyname != 0 )
+         if ( pyname != 0 ) {
             name = PyString_AsString( pyname );
+            Py_DECREF( pyname );
+         }
 
       // registration with CINT (note: CINT style signature for free functions)
          Long_t fid = Utility::InstallMethod( 0, pyfunc, name,
@@ -1557,8 +1599,11 @@ namespace {
       }
    };
 
-//- TMinuit behavior -----------------------------------------------------------
 
+//- TVector behavior -----------------------------------------------------------
+   PyObject* ReturnThree( ObjectProxy*, PyObject* ) {
+      return PyInt_FromLong( 3 );
+   }
 
 } // unnamed namespace
 
@@ -1727,7 +1772,8 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
       Utility::AddToClass( pyclass, "__repr__", (PyCFunction) StlStringRepr, METH_NOARGS );
       Utility::AddToClass( pyclass, "__str__", "c_str" );
       Utility::AddToClass( pyclass, "__cmp__", (PyCFunction) StlStringCompare, METH_O );
-      Utility::AddToClass( pyclass, "__eq__",  (PyCFunction) StlStringIsequal, METH_O );
+      Utility::AddToClass( pyclass, "__eq__",  (PyCFunction) StlStringIsEqual, METH_O );
+      Utility::AddToClass( pyclass, "__ne__",  (PyCFunction) StlStringIsNotEqual, METH_O );
 
       return kTRUE;
    }
@@ -1738,7 +1784,8 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
       Utility::AddToClass( pyclass, "__len__", "Length" );
 
       Utility::AddToClass( pyclass, "__cmp__", "CompareTo" );
-      Utility::AddToClass( pyclass, "__eq__",  (PyCFunction) TStringIsequal, METH_O );
+      Utility::AddToClass( pyclass, "__eq__",  (PyCFunction) TStringIsEqual, METH_O );
+      Utility::AddToClass( pyclass, "__ne__",  (PyCFunction) TStringIsNotEqual, METH_O );
 
       return kTRUE;
    }
@@ -1749,7 +1796,8 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
       Utility::AddToClass( pyclass, "__len__",  (PyCFunction) TObjStringLength, METH_NOARGS );
 
       Utility::AddToClass( pyclass, "__cmp__", (PyCFunction) TObjStringCompare, METH_O );
-      Utility::AddToClass( pyclass, "__eq__",  (PyCFunction) TObjStringIsequal, METH_O );
+      Utility::AddToClass( pyclass, "__eq__",  (PyCFunction) TObjStringIsEqual, METH_O );
+      Utility::AddToClass( pyclass, "__ne__",  (PyCFunction) TObjStringIsNotEqual, METH_O );
 
       return kTRUE;
    }
@@ -1796,6 +1844,20 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
       return kTRUE;
    }
 
+   if ( name == "TChain" ) {
+   // pretend a using
+      return Utility::AddUsingToClass( pyclass, "Process" );
+   }
+
+   if ( name == "TStyle" ) {
+       MethodProxy* ctor = (MethodProxy*)PyObject_GetAttr( pyclass, PyStrings::gInit );
+       ctor->fMethodInfo->fFlags &= ~MethodProxy::MethodInfo_t::kIsCreator;
+       Py_DECREF( ctor );
+   }
+
+   if ( name == "TH1" )       // allow hist *= scalar
+      return Utility::AddToClass( pyclass, "__imul__", (PyCFunction) THNIMul, METH_O );
+
    if ( name == "TF1" )       // allow instantiation with python callable
       return Utility::AddToClass( pyclass, "__init__", new TF1InitWithPyFunc );
 
@@ -1814,11 +1876,28 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
    if ( name == "TFile" )     // allow member-style access to entries in file
       return Utility::AddToClass( pyclass, "__getattr__", "Get" );
 
+   if ( name.substr(0,8) == "TVector3" ) {
+      Utility::AddToClass( pyclass, "__len__", (PyCFunction) ReturnThree, METH_NOARGS );
+      Utility::AddToClass( pyclass, "_getitem__unchecked", "__getitem__" );
+      Utility::AddToClass( pyclass, "__getitem__", (PyCFunction) CheckedGetItem, METH_O );
+
+      return kTRUE;
+   }
+
    if ( name.substr(0,8) == "TVectorT" ) {  // allow proper iteration
       Utility::AddToClass( pyclass, "__len__", "GetNoElements" );
       Utility::AddToClass( pyclass, "_getitem__unchecked", "__getitem__" );
       Utility::AddToClass( pyclass, "__getitem__", (PyCFunction) CheckedGetItem, METH_O );
+
+      return kTRUE;
    }
+
+// Make RooFit 'using' member functions available (not supported by dictionary)
+   if ( name == "RooDataHist" )
+      return Utility::AddUsingToClass( pyclass, "plotOn" );
+
+   if ( name == "RooSimultaneous" )
+      return Utility::AddUsingToClass( pyclass, "plotOn" );
 
 // default (no pythonization) is by definition ok
    return kTRUE;

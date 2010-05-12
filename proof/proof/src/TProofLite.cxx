@@ -101,6 +101,9 @@ TProofLite::TProofLite(const char *url, const char *conffile, const char *confdi
    }
    fMaster = gSystem->HostName();
 
+   // Analysise the conffile field
+   ParseConfigField(conffile);
+
    // Determine the number of workers giving priority to users request.
    // Otherwise use the system information, if available, or just start
    // the minimal number, i.e. 2 .
@@ -145,9 +148,6 @@ Int_t TProofLite::Init(const char *, const char *conffile,
       fConfFile    = conffile;
    }
 
-   // Analysise the conffile field
-   ParseConfigField(conffile);
-
    // The sandbox for this session
    if (CreateSandbox() != 0) {
       Error("Init", "could not create/assert sandbox for this session");
@@ -155,7 +155,18 @@ Int_t TProofLite::Init(const char *, const char *conffile,
    }
 
    // UNIX path for communication with workers
-   fSockPath       = Form("%s/prooflite-sockpath-%s", gSystem->TempDirectory(), GetName());
+   TString sockpathdir = gEnv->GetValue("ProofLite.SockPathDir", gSystem->TempDirectory());
+   if (sockpathdir.IsNull()) sockpathdir = gSystem->TempDirectory();
+   if (sockpathdir(sockpathdir.Length()-1) == '/') sockpathdir.Remove(sockpathdir.Length()-1);
+   fSockPath.Form("%s/plite-%d", sockpathdir.Data(), gSystem->GetPid());
+   if (fSockPath.Length() > 104) {
+      // Sort of hardcoded limit length for Unix systems
+      Error("Init", "Unix socket path '%s' is too long (%d bytes):",
+                    fSockPath.Data(), fSockPath.Length());
+      Error("Init", "use 'ProofLite.SockPathDir' to create it under a directory different"
+                    " from '%s'", sockpathdir.Data());
+      return 0;
+   }
 
    fLogLevel       = loglevel;
    fProtocol       = kPROOF_Protocol;
@@ -326,6 +337,10 @@ Int_t TProofLite::Init(const char *, const char *conffile,
       // Set PROOF to running state
       SetRunStatus(TProof::kRunning);
    }
+   // We register the session as a socket so that cleanup is done properly
+   R__LOCKGUARD2(gROOTMutex);
+   gROOT->GetListOfSockets()->Add(this);
+
    return fActiveSlaves->GetSize();
 }
 //______________________________________________________________________________
@@ -348,6 +363,7 @@ TProofLite::~TProofLite()
       fQueryLock->Unlock();
    }
 
+   // Cleanup the socket
    SafeDelete(fServSock);
    gSystem->Unlink(fSockPath);
 }
@@ -428,7 +444,13 @@ Int_t TProofLite::SetupWorkers(Int_t opt, TList *startedWorkers)
    // Start up PROOF workers.
 
    // Create server socket on the assigned UNIX sock path
-   if (!fServSock) fServSock = new TServerSocket(fSockPath);
+   if (!fServSock) {
+      if ((fServSock = new TServerSocket(fSockPath))) {
+         R__LOCKGUARD2(gROOTMutex);
+         // Remove from the list so that cleanup can be done in the correct order
+         gROOT->GetListOfSockets()->Remove(fServSock);
+      }
+   }
    if (!fServSock || !fServSock->IsValid()) {
       Error("SetupWorkers",
             "unable to create server socket for internal communications");
@@ -1125,7 +1147,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
 
       // Save the data set into the TQueryResult (should be done after Process to avoid
       // improper deletion during collection)
-      if (dset && pq->GetInputList()) {
+      if (rv == 0 && dset && pq->GetInputList()) {
          pq->GetInputList()->Add(dset);
          if (dset->GetEntryList())
             pq->GetInputList()->Add(dset->GetEntryList());
@@ -1143,6 +1165,8 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
 
       // Remove aborted queries from the list
       if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
+         if (fPlayer && fPlayer->GetListOfResults())
+            fPlayer->GetListOfResults()->Remove(pq);
          if (fQMgr) fQMgr->RemoveQuery(pq);
       } else {
          // If the last object, notify the GUI that the result arrived
@@ -1604,6 +1628,27 @@ Int_t TProofLite::VerifyDataSet(const char *uri, const char *)
 
    // Done
    return rc;
+}
+
+//______________________________________________________________________________
+void TProofLite::ClearDataSetCache(const char *dataset)
+{
+   // Clear the content of the dataset cache, if any (matching 'dataset', if defined).
+
+   if (fDataSetManager) fDataSetManager->ClearCache(dataset);
+   // Done
+   return;
+}
+
+//______________________________________________________________________________
+void TProofLite::ShowDataSetCache(const char *dataset)
+{
+   // Display the content of the dataset cache, if any (matching 'dataset', if defined).
+
+   // For PROOF-Lite act locally
+   if (fDataSetManager) fDataSetManager->ShowCache(dataset);
+   // Done
+   return;
 }
 
 //______________________________________________________________________________

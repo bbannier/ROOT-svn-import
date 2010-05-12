@@ -31,6 +31,11 @@
 
 #include <iterator>
 
+#if (__GNUC__ >= 3) && !defined(__INTEL_COMPILER)
+// Prevent -Weffc++ from complaining about the inheritance
+// TListIter from std::iterator.
+#pragma GCC system_header
+#endif
 
 const Bool_t kSortAscending  = kTRUE;
 const Bool_t kSortDescending = !kSortAscending;
@@ -86,6 +91,7 @@ public:
    virtual void      AddBefore(TObjLink *before, TObject *obj);
    virtual TObject  *Remove(TObject *obj);
    virtual TObject  *Remove(TObjLink *lnk);
+   virtual void      RemoveLast();
    virtual void      RecursiveRemove(TObject *obj);
 
    virtual TObject  *At(Int_t idx) const;

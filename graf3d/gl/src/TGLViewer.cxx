@@ -15,7 +15,6 @@
 #include "TGLRnrCtx.h"
 #include "TGLSelectBuffer.h"
 #include "TGLLightSet.h"
-#include "TGLClip.h"
 #include "TGLManipSet.h"
 #include "TGLCameraOverlay.h"
 
@@ -119,7 +118,6 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
 
    fLightSet          (0),
    fClipSet           (0),
-   fClipAutoUpdate    (kTRUE),
    fSelectedPShapeRef (0),
    fCurrentOvlElm     (0),
 
@@ -182,7 +180,6 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
 
    fLightSet          (0),
    fClipSet           (0),
-   fClipAutoUpdate    (kTRUE),
    fSelectedPShapeRef (0),
    fCurrentOvlElm     (0),
 
@@ -471,6 +468,20 @@ void TGLViewer::RequestDraw(Short_t LODInput)
 }
 
 //______________________________________________________________________________
+void TGLViewer::SetupClipObject()
+{
+   // Setup clip-object. Protected virtual method.
+
+   if (GetClipAutoUpdate())
+   {
+      fClipSet->SetupCurrentClip(fOverallBoundingBox);
+   }
+   else
+   {
+      fClipSet->SetupCurrentClipIfInvalid(fOverallBoundingBox);
+   }
+}
+//______________________________________________________________________________
 void TGLViewer::PreRender()
 {
    // Initialize objects that influence rendering.
@@ -494,11 +505,6 @@ void TGLViewer::PreRender()
 
    // Setup lighting
    fLightSet->StdSetupLights(fOverallBoundingBox, *fCamera, fDebugMode);
-   // Setup clip object.
-   if (fClipAutoUpdate)
-      fClipSet->SetupCurrentClip(fOverallBoundingBox);
-   else
-      fClipSet->SetupCurrentClipIfInvalid(fOverallBoundingBox);
 }
 
 //______________________________________________________________________________
@@ -532,8 +538,9 @@ void TGLViewer::DoDraw()
       }
    }
 
+   TUnlocker ulck(this);
+
    if (fGLDevice == -1 && (fViewport.Width() <= 1 || fViewport.Height() <= 1)) {
-      ReleaseLock(kDrawLock);
       if (gDebug > 2) {
 	 Info("TGLViewer::DoDraw()", "zero surface area, draw skipped.");
       }
@@ -595,7 +602,6 @@ void TGLViewer::DoDrawMono()
 
    MakeCurrent();
 
-   glDrawBuffer(GL_BACK);
    if (!fIsPrinting) PreDraw();
    PreRender();
 
@@ -737,6 +743,7 @@ void TGLViewer::DoDrawStereo()
 
    // End
    SwapBuffers();
+   glDrawBuffer(GL_BACK);
 }
 
 //______________________________________________________________________________
@@ -804,6 +811,8 @@ Bool_t TGLViewer::SavePictureUsingBB(const TString &fileName)
       return kFALSE;
    }
 
+   TUnlocker ulck(this);
+
    std::auto_ptr<TImage> image(TImage::Create());
 
    fRnrCtx->SetGrabImage(kTRUE, GL_BACK);
@@ -855,6 +864,8 @@ Bool_t TGLViewer::SavePictureUsingFBO(const TString &fileName, Int_t w, Int_t h,
       Error(eh, "viewer locked - try later.");
       return kFALSE;
    }
+
+   TUnlocker ulck(this);
 
    std::auto_ptr<TImage> image(TImage::Create());
 
@@ -1154,6 +1165,8 @@ Bool_t TGLViewer::DoSelect(Int_t x, Int_t y)
       return kFALSE;
    }
 
+   TUnlocker ulck(this);
+
    MakeCurrent();
 
    fRnrCtx->BeginSelection(x, y, 3);
@@ -1193,7 +1206,12 @@ Bool_t TGLViewer::DoSelect(Int_t x, Int_t y)
 //______________________________________________________________________________
 Bool_t TGLViewer::RequestSecondarySelect(Int_t x, Int_t y)
 {
-   // 
+   // Request secondary select.
+
+   if ( ! TakeLock(kSelectLock)) {
+      return kFALSE;
+   }
+
    if (!gVirtualX->IsCmdThread())
       return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSecondarySelect(%d, %d, %s)", this, x, y)));
    else
@@ -1205,20 +1223,25 @@ Bool_t TGLViewer::DoSecondarySelect(Int_t x, Int_t y)
 {
    // Secondary selection.
 
-   GLint nHits = 1;
-   //glGetIntegerv(GL_RENDER, &nHits);
-   if ( nHits < 1 || ! fSelRec.GetSceneInfo() || ! fSelRec.GetPhysShape() ||
-         ! fSelRec.GetPhysShape()->GetLogical()->SupportsSecondarySelect())
+   if (CurrentLock() != kSelectLock) {
+      Error("TGLViewer::DoSecondarySelect", "expected kSelectLock, found %s", LockName(CurrentLock()));
+      return kFALSE;
+   }
+
+   TUnlocker ulck(this);
+
+   if (! fSelRec.GetSceneInfo() || ! fSelRec.GetPhysShape() ||
+       ! fSelRec.GetPhysShape()->GetLogical()->SupportsSecondarySelect())
    {
       if (gDebug > 0)
          Info("TGLViewer::SecondarySelect", "Skipping secondary selection "
-              "(nPrimHits=%d, sinfo=0x%lx, pshape=0x%lx).\n",
-              nHits, fSelRec.GetSceneInfo(), fSelRec.GetPhysShape());
+              "(sinfo=0x%lx, pshape=0x%lx).\n",
+              fSelRec.GetSceneInfo(), fSelRec.GetPhysShape());
       fSecSelRec.Reset();
       return kFALSE;
    }
 
-   TakeLock(kSelectLock);
+   MakeCurrent();
 
    TGLSceneInfo*    sinfo = fSelRec.GetSceneInfo();
    TGLSceneBase*    scene = sinfo->GetScene();
@@ -1311,6 +1334,8 @@ Bool_t TGLViewer::DoOverlaySelect(Int_t x, Int_t y)
       Error("TGLViewer::DoOverlaySelect", "expected kSelectLock, found %s", LockName(CurrentLock()));
       return kFALSE;
    }
+
+   TUnlocker ulck(this);
 
    MakeCurrent();
 
@@ -1805,6 +1830,40 @@ void TGLViewer::MouseOver(TGLPhysicalShape *shape, UInt_t state)
    args[0] = (Long_t)shape;
    args[1] = state;
    Emit("MouseOver(TGLPhysicalShape*,UInt_t)", args);
+}
+
+//______________________________________________________________________________
+void TGLViewer::MouseOver(TObject *obj, UInt_t state)
+{
+   // Emit MouseOver signal.
+
+   Long_t args[2];
+   args[0] = (Long_t)obj;
+   args[1] = state;
+   Emit("MouseOver(TObject*,UInt_t)", args);
+}
+
+//______________________________________________________________________________
+void TGLViewer::ReMouseOver(TObject *obj, UInt_t state)
+{
+   // Emit MouseOver signal.
+
+   Long_t args[2];
+   args[0] = (Long_t)obj;
+   args[1] = state;
+   Emit("ReMouseOver(TObject*,UInt_t)", args);
+}
+
+
+//______________________________________________________________________________
+void TGLViewer::UnMouseOver(TObject *obj, UInt_t state)
+{
+   // Emit UnMouseOver signal.
+
+   Long_t args[2];
+   args[0] = (Long_t)obj;
+   args[1] = state;
+   Emit("UnMouseOver(TObject*,UInt_t)", args);
 }
 
 //______________________________________________________________________________

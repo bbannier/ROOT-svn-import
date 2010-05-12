@@ -15,6 +15,12 @@
 #include "TEveManager.h"
 #include "TEveSelection.h"
 #include "TEveProjectionBases.h"
+#include "TEveProjectionManager.h"
+
+#include "TBuffer3D.h"
+#include "TBuffer3DTypes.h"
+#include "TVirtualPad.h"
+#include "TVirtualViewer3D.h"
 
 #include "TGeoMatrix.h"
 
@@ -57,7 +63,7 @@ ClassImp(TEveElement);
 
 //______________________________________________________________________________
 const TGPicture* TEveElement::fgRnrIcons[4]      = { 0 };
-const TGPicture* TEveElement::fgListTreeIcons[8] = { 0 };
+const TGPicture* TEveElement::fgListTreeIcons[9] = { 0 };
 
 //______________________________________________________________________________
 TEveElement::TEveElement() :
@@ -84,6 +90,7 @@ TEveElement::TEveElement() :
    fHighlighted         (kFALSE),
    fImpliedSelected     (0),
    fImpliedHighlighted  (0),
+   fCSCBits             (0),
    fChangeBits          (0),
    fDestructing         (kFALSE)
 {
@@ -115,6 +122,7 @@ TEveElement::TEveElement(Color_t& main_color) :
    fHighlighted         (kFALSE),
    fImpliedSelected     (0),
    fImpliedHighlighted  (0),
+   fCSCBits             (0),
    fChangeBits          (0),
    fDestructing         (kFALSE)
 {
@@ -146,6 +154,7 @@ TEveElement::TEveElement(const TEveElement& e) :
    fHighlighted         (kFALSE),
    fImpliedSelected     (0),
    fImpliedHighlighted  (0),
+   fCSCBits             (e.fCSCBits),
    fChangeBits          (0),
    fDestructing         (kFALSE)
 {
@@ -236,9 +245,6 @@ void TEveElement::CloneChildrenRecurse(TEveElement* dest, Int_t level) const
       dest->AddElement((*i)->CloneElementRecurse(level));
    }
 }
-
-//==============================================================================
-
 
 
 //==============================================================================
@@ -578,16 +584,27 @@ void TEveElement::VizDB_Insert(const char* tag, Bool_t replace, Bool_t update)
 //______________________________________________________________________________
 TEveElement* TEveElement::GetMaster()
 {
-   // Return the master element - that is the upwards compound not
-   // inside another compound.
-   // If this element is not in a compound, this is returned.
-   // For a projected object the projectable->GetMaster() is returned.
+   // Returns the master element - that is:
+   // - master of projectable, if this is a projected;
+   // - master of compound, if fCompound is set;
+   // - master of first compound parent, if kSCBTakeAnyParentAsMaster bit is set;
+   // If non of the above is true, *this* is returned.
 
    TEveProjected* proj = dynamic_cast<TEveProjected*>(this);
    if (proj)
+   {
       return dynamic_cast<TEveElement*>(proj->GetProjectable())->GetMaster();
+   }
    if (fCompound)
+   {
       return fCompound->GetMaster();
+   }
+   if (TestCSCBits(kCSCBTakeAnyParentAsMaster))
+   {
+      for (List_i i = fParents.begin(); i != fParents.end(); ++i)
+         if (dynamic_cast<TEveCompound*>(*i))
+            return (*i)->GetMaster();
+   }
    return this;
 }
 
@@ -726,7 +743,8 @@ TGListTreeItem* TEveElement::AddIntoListTree(TGListTree* ltree,
                                              TGListTreeItem* parent_lti)
 {
    // Add this element into ltree to an already existing item
-   // parent_lti.
+   // parent_lti. Children, if any, are added as below the newly created item.
+   // Returns the newly created list-tree-item.
 
    static const TEveException eh("TEveElement::AddIntoListTree ");
 
@@ -736,6 +754,11 @@ TGListTreeItem* TEveElement::AddIntoListTree(TGListTree* ltree,
 
    if (parent_lti == 0)
       ++fTopItemCnt;
+
+   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      (*i)->AddIntoListTree(ltree, item);
+   }
 
    ltree->ClearViewPort();
 
@@ -995,6 +1018,34 @@ void TEveElement::PadPaint(Option_t* option)
    }
 }
 
+//______________________________________________________________________________
+void TEveElement::PaintStandard(TObject* id)
+{
+   // Paint object -- a generic implementation for EVE elements.
+   // This supports direct rendering using a dedicated GL class.
+   // Override TObject::Paint() in sub-classes if different behaviour
+   // is required.
+
+   static const TEveException eh("TEveElement::PaintStandard ");
+
+   TBuffer3D buff(TBuffer3DTypes::kGeneric);
+
+   // Section kCore
+   buff.fID           = id;
+   buff.fColor        = GetMainColor();
+   buff.fTransparency = GetMainTransparency();
+   if (HasMainTrans())  RefMainTrans().SetBuffer3D(buff);
+
+   buff.SetSectionsValid(TBuffer3D::kCore);
+
+   Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);
+   if (reqSections != TBuffer3D::kNone)
+   {
+      Warning(eh, "IsA='%s'. Viewer3D requires more sections (%d). Only direct-rendering supported.",
+              id->ClassName(), reqSections);
+   }
+}
+
 /******************************************************************************/
 
 //______________________________________________________________________________
@@ -1099,11 +1150,14 @@ void TEveElement::PropagateRnrStateToProjecteds()
 void TEveElement::SetMainColor(Color_t color)
 {
    // Set main color of the element.
+   //
+   //
    // List-tree-items are updated.
 
    Color_t old_color = GetMainColor();
 
-   if (fMainColorPtr) {
+   if (fMainColorPtr)
+   {
       *fMainColorPtr = color;
       StampColorSelection();
    }
@@ -1173,12 +1227,12 @@ void TEveElement::SetMainAlpha(Float_t alpha)
 /******************************************************************************/
 
 //______________________________________________________________________________
-TEveTrans* TEveElement::PtrMainTrans()
+TEveTrans* TEveElement::PtrMainTrans(Bool_t create)
 {
-   // Return pointer to main transformation. It is created if not yet
-   // existing.
+   // Return pointer to main transformation. If 'create' flag is set (default)
+   // it is created if not yet existing.
 
-   if (!fMainTrans)
+   if (!fMainTrans && create)
       InitMainTrans();
 
    return fMainTrans;
@@ -1334,7 +1388,69 @@ void TEveElement::RemoveElementsLocal()
    // See comment to RemoveElementlocal(TEveElement*).
 }
 
-/******************************************************************************/
+//==============================================================================
+
+//______________________________________________________________________________
+void TEveElement::ProjectChild(TEveElement* el, Bool_t same_depth)
+{
+   // If this is a projectable, loop over all projected replicas and
+   // add the projected image of child 'el' there. This is supposed to
+   // be called after you add a child to a projectable after it has
+   // already been projected.
+   // You might also want to call RecheckImpliedSelections() on this
+   // element or 'el'.
+   //
+   // If 'same_depth' flag is true, the same depth as for parent object
+   // is used in every projection. Otherwise current depth of each
+   // relevant projection-manager is used.
+
+   TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
+   if (pable && HasChild(el))
+   {
+      for (TEveProjectable::ProjList_i i = pable->BeginProjecteds(); i != pable->EndProjecteds(); ++i)
+      {
+         TEveProjectionManager *pmgr = (*i)->GetManager();
+         Float_t cd = pmgr->GetCurrentDepth();
+         if (same_depth) pmgr->SetCurrentDepth((*i)->GetDepth());
+
+         pmgr->SubImportElements(el, dynamic_cast<TEveElement*>(*i));
+
+         if (same_depth) pmgr->SetCurrentDepth(cd);
+      }
+   }
+}
+
+//______________________________________________________________________________
+void TEveElement::ProjectAllChildren(Bool_t same_depth)
+{
+   // If this is a projectable, loop over all projected replicas and
+   // add the projected image of all children there. This is supposed
+   // to be called after you destroy all children and then add new
+   // ones after this element has already been projected.
+   // You might also want to call RecheckImpliedSelections() on this
+   // element.
+   //
+   // If 'same_depth' flag is true, the same depth as for the
+   // projected element is used in every projection. Otherwise current
+   // depth of each relevant projection-manager is used.
+
+   TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
+   if (pable)
+   {
+      for (TEveProjectable::ProjList_i i = pable->BeginProjecteds(); i != pable->EndProjecteds(); ++i)
+      {
+         TEveProjectionManager *pmgr = (*i)->GetManager();
+         Float_t cd = pmgr->GetCurrentDepth();
+         if (same_depth) pmgr->SetCurrentDepth((*i)->GetDepth());
+
+         pmgr->SubImportChildren(this, dynamic_cast<TEveElement*>(*i));
+
+         if (same_depth) pmgr->SetCurrentDepth(cd);
+      }
+   }
+}
+
+//==============================================================================
 
 //______________________________________________________________________________
 Bool_t TEveElement::HasChild(TEveElement* el)
@@ -1678,6 +1794,8 @@ void TEveElement::SelectElement(Bool_t state)
 
    if (fSelected != state) {
       fSelected = state;
+      if (!fSelected && fImpliedSelected == 0)
+         UnSelected();
       fParentIgnoreCnt += (fSelected) ? 1 : -1;
       StampColorSelection();
    }
@@ -1698,7 +1816,19 @@ void TEveElement::DecImpliedSelected()
    // Decrease element's implied-selection count. Stamp appropriately.
 
    if (--fImpliedSelected == 0)
+   {
+      if (!fSelected)
+         UnSelected();
       StampColorSelection();
+   }
+}
+
+//______________________________________________________________________________
+void TEveElement::UnSelected()
+{
+   // Virtual function called when both fSelected is false and
+   // fImpliedSelected is 0.
+   // Nothing is done in this base-class version
 }
 
 //______________________________________________________________________________
@@ -1708,6 +1838,8 @@ void TEveElement::HighlightElement(Bool_t state)
 
    if (fHighlighted != state) {
       fHighlighted = state;
+      if (!fHighlighted && fImpliedHighlighted == 0)
+         UnHighlighted();
       fParentIgnoreCnt += (fHighlighted) ? 1 : -1;
       StampColorSelection();
    }
@@ -1728,7 +1860,19 @@ void TEveElement::DecImpliedHighlighted()
    // Decrease element's implied-highlight count. Stamp appropriately.
 
    if (--fImpliedHighlighted == 0)
+   {
+      if (!fHighlighted)
+         UnHighlighted();
       StampColorSelection();
+   }
+}
+
+//______________________________________________________________________________
+void TEveElement::UnHighlighted()
+{
+   // Virtual function called when both fHighlighted is false and
+   // fImpliedHighlighted is 0.
+   // Nothing is done in this base-class version
 }
 
 //______________________________________________________________________________
@@ -1736,9 +1880,9 @@ void TEveElement::FillImpliedSelectedSet(Set_t& impSelSet)
 {
    // Populate set impSelSet with derived / dependant elements.
    //
-   // Here we check if class of this is TEveProjectable and add the projected
-   // replicas to the set. Thus it does not have to be reimplemented for
-   // each sub-class of TEveProjected.
+   // If this is a TEveProjectable, the projected replicas are added
+   // to the set. Thus it does not have to be reimplemented for each
+   // sub-class of TEveProjected.
    //
    // Note that this also takes care of projections of TEveCompound
    // class, which is also a projectable.
@@ -1763,6 +1907,24 @@ UChar_t TEveElement::GetSelectedLevel() const
    if (fImpliedHighlighted > 0) return 4;
    return 0;
 }
+
+//______________________________________________________________________________
+void TEveElement::RecheckImpliedSelections()
+{
+   // Call this if it is possible that implied-selection or highlight
+   // has changed for this element or for implied-selection this
+   // element is member of and you want to maintain consistent
+   // selection state.
+   // This can happen if you add elements into compounds in response
+   // to user-interaction.
+
+   if (fSelected || fImpliedSelected)
+      gEve->GetSelection()->RecheckImpliedSetForElement(this);
+
+   if (fHighlighted || fImpliedHighlighted)
+      gEve->GetHighlight()->RecheckImpliedSetForElement(this);
+}
+
 
 /******************************************************************************/
 // Stamping
@@ -2005,13 +2167,6 @@ TEveElementListProjected::TEveElementListProjected() :
    TEveElementList("TEveElementListProjected")
 {
    // Constructor.
-}
-
-//______________________________________________________________________________
-void TEveElementListProjected::SetDepthLocal(Float_t /*d*/)
-{
-   // This is abstract method from base-class TEveProjected.
-   // No implementation.
 }
 
 //______________________________________________________________________________

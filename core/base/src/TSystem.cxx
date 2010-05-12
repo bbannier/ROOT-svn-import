@@ -101,7 +101,7 @@ ClassImp(TSystem)
 TVirtualMutex* gSystemMutex = 0;
 
 //______________________________________________________________________________
-TSystem::TSystem(const char *name, const char *title) : TNamed(name, title)
+TSystem::TSystem(const char *name, const char *title) : TNamed(name, title), fAclicProperties(0)
 {
    // Create a new OS interface.
 
@@ -1709,8 +1709,8 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
    static int recCall = 0;
 
    // don't load libraries that have already been loaded
-   TString libs = GetLibraries();
-   TString moduleBasename = BaseName(module);
+   TString libs( GetLibraries() );
+   TString moduleBasename( BaseName(module) );
    TString l(moduleBasename);
 
    Ssiz_t idx = l.Last('.');
@@ -1803,9 +1803,8 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
 #ifdef ROOTLIBDIR
          TString rootlibdir = ROOTLIBDIR;
 #else
-         const char *libdirname = ConcatFileName(gRootDir,"lib");
-         TString rootlibdir = libdirname;
-         delete [] libdirname;
+         TString rootlibdir = "lib";
+         PrependPathName(gRootDir, rootlibdir);
 #endif
          system = R__MatchFilename(rootlibdir,dirname);
 
@@ -1813,9 +1812,8 @@ int TSystem::Load(const char *module, const char *entry, Bool_t system)
 #ifdef ROOTBINDIR
             TString rootbindir = ROOTBINDIR;
 #else
-            const char *libbinname = ConcatFileName(gRootDir,"bin");
-            TString rootbindir = libbinname;
-            delete [] libbinname;
+            TString rootbindir = "bin";
+            PrependPathName(gRootDir, rootbindir);
 #endif
             system = R__MatchFilename(rootbindir,dirname);
          }
@@ -1967,9 +1965,10 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
    //   L: list the .dylib rather than the .so (this is intended for linking)
    //      This options is not the default
 
-   fListLibs = "";
-   TString libs = "";
-   TString opt = options;
+   fListLibs.Clear();
+
+   TString libs;
+   TString opt(options);
    Bool_t so2dylib = (opt.First('L') != kNPOS);
    if (so2dylib)
       opt.ReplaceAll("L", "");
@@ -2009,31 +2008,41 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
          libs = slinked;
       } else {
          // We need to add the missing linked library
-         TRegexp separator("[^ \\t\\s]+");
-         Ssiz_t start, index, end;
-         start = index = end = 0;
 
-         while ((start < slinked.Length()) && (index != kNPOS)) {
-            index = slinked.Index(separator,&end,start);
-            if (index >= 0) {
-               TString sub = slinked(index,end);
-               if (sub[0]=='-' && sub[1]=='L') {
-                  libs.Prepend(" ");
-                  libs.Prepend(sub);
-               } else {
-                  if (libs.Index(sub) == kNPOS) {
-                     libs.Prepend(" ");
-                     libs.Prepend(sub);
+         static TString lastLinked;
+         static TString lastAddMissing;
+         if ( lastLinked != slinked ) {
+            // Recalculate only if there was a change.
+            static TRegexp separator("[^ \\t\\s]+");
+            lastLinked = slinked;
+            lastAddMissing.Clear();
+
+            Ssiz_t start, index, end;
+            start = index = end = 0;
+            
+            while ((start < slinked.Length()) && (index != kNPOS)) {
+               index = slinked.Index(separator,&end,start);
+               if (index >= 0) {
+                  TString sub = slinked(index,end);
+                  if (sub[0]=='-' && sub[1]=='L') {
+                     lastAddMissing.Prepend(" ");
+                     lastAddMissing.Prepend(sub);
+                  } else {
+                     if (libs.Index(sub) == kNPOS) {
+                        lastAddMissing.Prepend(" ");
+                        lastAddMissing.Prepend(sub);
+                     }
                   }
                }
+               start += end+1;
             }
-            start += end+1;
          }
+         libs.Prepend(lastAddMissing);
       }
    } else if (libs.Length() != 0) {
       // Let remove the statically linked library
       // from the list.
-      TRegexp separator("[^ \\t\\s]+");
+      static TRegexp separator("[^ \\t\\s]+");
       Ssiz_t start, index, end;
       start = index = end = 0;
 
@@ -2052,7 +2061,7 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
 
    // Select according to regexp
    if (regexp && *regexp) {
-      TRegexp separator("[^ \\t\\s]+");
+      static TRegexp separator("[^ \\t\\s]+");
       TRegexp user_re(regexp, kTRUE);
       TString s;
       Ssiz_t start, index, end;
@@ -2079,8 +2088,8 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
       TString libs2 = fListLibs;
       TString maclibs;
 
-      TRegexp separator("[^ \\t\\s]+");
-      TRegexp user_so("\\.so$");
+      static TRegexp separator("[^ \\t\\s]+");
+      static TRegexp user_so("\\.so$");
 
       Ssiz_t start, index, end;
       start = index = end = 0;
@@ -2367,7 +2376,21 @@ static void R__FixLink(TString &cmd)
 #endif
 
 #ifndef WIN32
-static void R__WriteDependencyFile(const TString & /* build_loc */, const TString &depfilename, const TString &filename, const TString &library, const TString &libname,
+static void R__AddPath(TString &target, const TString &path) {
+   target += path;
+}
+#else
+static void R__AddPath(TString &target, const TString &path) {
+   if (path.Length() > 2 && path[1]==':') {
+      target += TString::Format("/cygdrive/%c",path[0]) + path(2,path.Length()-2);
+   } else {
+      target += path;
+   }
+}
+#endif
+
+#ifndef WIN32
+static void R__WriteDependencyFile(const TString & build_loc, const TString &depfilename, const TString &filename, const TString &library, const TString &libname,
                                    const TString &extension, const char *version_var_prefix, const TString &includes, const TString &defines, const TString &incPath) {
 #else
 static void R__WriteDependencyFile(const TString &build_loc, const TString &depfilename, const TString &filename, const TString &library, const TString &libname,
@@ -2392,6 +2415,21 @@ static void R__WriteDependencyFile(const TString &build_loc, const TString &depf
    TString builddep = "rmkdepend \"-f";
    builddep += depfilename;
    builddep += "\" -o_" + extension + "." + gSystem->GetSoExt() + " ";
+   if (build_loc.BeginsWith(gSystem->WorkingDirectory())) {
+      Int_t len = strlen(gSystem->WorkingDirectory());
+      if ( build_loc.Length() > (len+1) ) {
+         builddep += " \"-p";
+         if (build_loc[len] == '/') {
+            R__AddPath(builddep, build_loc.Data() + len + 1 );
+         } else {
+            // Case of dir\\name
+            R__AddPath(builddep, build_loc.Data() + len + 2 );
+         }         
+         builddep += "/\" ";
+      }
+   } else {
+      builddep += " \"-p" + build_loc + "/\" ";
+   }
    builddep += " -Y -- ";
 #ifndef ROOTINCDIR
    TString rootsys = gSystem->Getenv("ROOTSYS");
@@ -2402,32 +2440,43 @@ static void R__WriteDependencyFile(const TString &build_loc, const TString &depf
    builddep += includes;
    builddep += defines;
    builddep += " -- \"";
-   builddep += filename;
+   builddep += gSystem->BaseName(filename);
    builddep += "\" > ";
    builddep += stderrfile;
    builddep += " 2>&1 ";
 
    TString adddictdep = "echo ";
-   adddictdep += library;
+   if (library.BeginsWith(gSystem->WorkingDirectory())) {
+      Int_t len = strlen(gSystem->WorkingDirectory());
+      if ( library.Length() > (len+1) ) {
+         if (library[len] == '/') {
+            R__AddPath(adddictdep,library.Data() + len + 1);
+         } else {
+            R__AddPath(adddictdep,library.Data() + len + 2);            
+         }
+      } else {
+         R__AddPath(adddictdep,library);
+      }
+   }
    adddictdep += ": ";
    {
       char *cintdictversion = gSystem->Which(incPath,"cintdictversion.h");
       if (cintdictversion) {
-         adddictdep += cintdictversion;
+         R__AddPath(adddictdep,cintdictversion);
          adddictdep += " ";
          delete [] cintdictversion;
       } else {
-         adddictdep += rootsys+"/include/cintdictversion.h ";
+         R__AddPath(adddictdep,rootsys+"/include/cintdictversion.h ");
       }
    }
    {
       char *rootVersion = gSystem->Which(incPath,"RVersion.h");
       if (rootVersion) {
-         adddictdep += rootVersion;
+         R__AddPath(adddictdep,rootVersion);
          adddictdep += " ";
          delete [] rootVersion;
       } else {
-         adddictdep += rootsys+"/include/RVersion.h ";
+         R__AddPath(adddictdep,rootsys+"/include/RVersion.h ");
       }
    }
    adddictdep += " >> \""+depfilename+"\"";
@@ -2472,6 +2521,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    //     g : compile with debug symbol
    //     O : optimized the code (ignore if 'g' is specified)
    //     c : compile only, do not attempt to load the library.
+   //     - : if buildir is set, use a flat structure (see buildir below) 
    //
    // If library_specified is specified, CompileMacro generates the file
    // "library_specified".soext where soext is the shared library extension for
@@ -2479,8 +2529,12 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    //
    // If build_dir is specified, it is used as an alternative 'root' for the
    // generation of the shared library.  The library is stored in a sub-directories
-   // of 'build_dir' including the full pathname of the script.  See also
-   // TSystem::SetBuildDir.
+   // of 'build_dir' including the full pathname of the script unless a flat 
+   // directory structure is requested ('-' option).  With the '-' option the libraries
+   // are created directly in the directory 'build_dir'; in particular this means that
+   // 2 scripts with the same name in different source directory will over-write each
+   // other's library.
+   // See also TSystem::SetBuildDir.
    //
    // If dirmode is not zero and we need to create the target directory, the
    // file mode bit will be change to 'dirmode' using chmod.
@@ -2598,6 +2652,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          mode=kDebug;
       }
    }
+   Bool_t flatBuildDir = (fAclicProperties & kFlatBuildDir) || (strchr(opt,'-')!=0);
 
    // if non-zero, build_loc indicates where to build the shared library.
    TString build_loc = ExpandFileName(GetBuildDir());
@@ -2643,9 +2698,6 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    TString libname ( BaseName( libname_noext ) );
    libname.Append("_").Append(extension);
 
-   TString libname_ext ( libname );
-   libname_ext +=  "." + fSoExt;
-
    if (library_specified && strlen(library_specified) ) {
       // Use the specified name instead of the default
       libname = BaseName( library_specified );
@@ -2657,6 +2709,9 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       library = TString(library) + "." + fSoExt;
    }
 
+   TString libname_ext ( libname );
+   libname_ext +=  "." + fSoExt;
+
    TString lib_dirname = DirName( library );
    // For some probably good reason, DirName on Windows returns the 'name' of
    // the directory, omitting the drive letter (even if there was one). In
@@ -2665,13 +2720,19 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    if (library.Length()>1 && isalpha(library[0]) && library[1]==':') {
       lib_dirname.Prepend(library(0,2));
    }
+   // Strip potential, somewhat redundant '/.' from the pathname ...
+   if ( strncmp( &(lib_dirname[lib_dirname.Length()-2]), "/.", 2) == 0 ) {
+      lib_dirname.Remove(lib_dirname.Length()-2);
+   }
+   if ( strncmp( &(lib_dirname[lib_dirname.Length()-2]), "\\.", 2) == 0 ) {
+      lib_dirname.Remove(lib_dirname.Length()-2);
+   }
    TString lib_location( lib_dirname );
    Bool_t mkdirFailed = kFALSE;
 
    if (build_loc.Length()==0) {
       build_loc = lib_location;
    } else {
-
       // Removes an existing disk specification from the names
       TRegexp disk_finder ("[A-z]:");
       Int_t pos = library.Index( disk_finder );
@@ -2679,12 +2740,18 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       pos = lib_location.Index( disk_finder );
       if (pos==0) lib_location.Remove(pos,3);
 
-      AssignAndDelete( library, ConcatFileName( build_loc, library) );
-
+      if (flatBuildDir) {
+         AssignAndDelete( library, ConcatFileName( build_loc, libname_ext) );
+      } else {
+         AssignAndDelete( library, ConcatFileName( build_loc, library) );
+      }
+      
       Bool_t canWriteBuild_loc = !gSystem->AccessPathName(build_loc,kWritePermission);
       TString build_loc_store( build_loc );
-      AssignAndDelete( build_loc, ConcatFileName( build_loc, lib_location) );
-
+      if (!flatBuildDir) {
+         AssignAndDelete( build_loc, ConcatFileName( build_loc, lib_location) );
+      }
+      
       if (gSystem->AccessPathName(build_loc,kFileExists)) {
          mkdirFailed = (0 != mkdir(build_loc, true));
          if (mkdirFailed && !canWriteBuild_loc) {
@@ -2714,14 +2781,16 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
    // Calculate the -I lines
    TString includes = GetIncludePath();
+   includes.Prepend(' ');
+
    {
       // I need to replace the -Isomerelativepath by -I../ (or -I..\ on NT)
-      TRegexp rel_inc("-I[^\"/\\$%-][^:-]+");
+      TRegexp rel_inc(" -I[^\"/\\$%-][^:-]+");
       Int_t len,pos;
       pos = rel_inc.Index(includes,&len);
       while( len != 0 ) {
          TString sub = includes(pos,len);
-         sub.Remove(0,2); // Remove -I
+         sub.Remove(0,3); // Remove ' -I'
          AssignAndDelete( sub, ConcatFileName( WorkingDirectory(), sub ) );
          sub.Prepend(" -I");
          includes.Replace(pos,len,sub);
@@ -2730,12 +2799,12 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    }
    {
        // I need to replace the -I"somerelativepath" by -I"$cwd/ (or -I"$cwd\ on NT)
-      TRegexp rel_inc("-I\"[^/\\$%-][^:-]+");
+      TRegexp rel_inc(" -I\"[^/\\$%-][^:-]+");
       Int_t len,pos;
       pos = rel_inc.Index(includes,&len);
       while( len != 0 ) {
          TString sub = includes(pos,len);
-         sub.Remove(0,3); // Remove -I
+         sub.Remove(0,4); // Remove ' -I"'
          AssignAndDelete( sub, ConcatFileName( WorkingDirectory(), sub ) );
          sub.Prepend(" -I\"");
          includes.Replace(pos,len,sub);
@@ -2782,11 +2851,14 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    }
 
    TString emergency_loc;
-   UserGroup_t *ug = gSystem->GetUserInfo(gSystem->GetUid());
-   if (ug) {
-      AssignAndDelete( emergency_loc, ConcatFileName( TempDirectory(), ug->fUser ) );
-   } else {
-      emergency_loc = TempDirectory();
+   {
+      UserGroup_t *ug = gSystem->GetUserInfo(gSystem->GetUid());
+      if (ug) {
+         AssignAndDelete( emergency_loc, ConcatFileName( TempDirectory(), ug->fUser ) );
+         delete ug;
+      } else {
+         emergency_loc = TempDirectory();
+      }
    }
 
    Bool_t canWrite = !gSystem->AccessPathName(build_loc,kWritePermission);
@@ -2807,7 +2879,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
           (gSystem->GetPathInfo( filename, 0, (Long_t*)0, 0, &file_time ) == 0 &&
           (lib_time < file_time))) {
 
-         // the library does not exist and is older than the script.
+         // the library does not exist or is older than the script.
          recompile = kTRUE;
          modified  = kTRUE;
 
@@ -3140,7 +3212,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       mapfileStream << name << endl;
       if (gInterpreter->GetRootMapFiles()) {
          for (i = 0; i < gInterpreter->GetRootMapFiles()->GetEntriesFast(); i++) {
-            mapfileStream << ((TObjString*)gInterpreter->GetRootMapFiles()->At(i))->GetString() << endl;
+            mapfileStream << ((TNamed*)gInterpreter->GetRootMapFiles()->At(i))->GetTitle() << endl;
          }
       }
    }
@@ -3163,11 +3235,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    rcint += "\\";
 #endif
 #endif
-#ifdef G__NOSTUBS
-   rcint += "rootcint_nostubs.sh --lib-list-prefix=";
-#else
    rcint += "rootcint \"--lib-list-prefix=";
-#endif
    rcint += mapfile;
    rcint += "\" -f \"";
    rcint.Append(dict).Append("\" -c -p ").Append(GetIncludePath()).Append(" ");
@@ -3481,6 +3549,15 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 }
 
 //______________________________________________________________________________
+Int_t TSystem::GetAclicProperties() const
+{
+   // Return the ACLiC properties field.   See EAclicProperties for details
+   // on the semantic of each bit.
+   
+   return fAclicProperties;
+}
+
+//______________________________________________________________________________
 const char *TSystem::GetBuildArch() const
 {
    // Return the build architecture.
@@ -3605,15 +3682,22 @@ const char *TSystem::GetObjExt() const
 }
 
 //______________________________________________________________________________
-void TSystem::SetBuildDir(const char* build_dir)
+void TSystem::SetBuildDir(const char* build_dir, Bool_t isflat)
 {
    // Set the location where ACLiC will create libraries and use as
-   // a scratch area.  Note that the libraries are actually stored in
+   // a scratch area.
+   // If isflast is flase, then the libraries are actually stored in
    // sub-directories of 'build_dir' including the full pathname of the
    // script.  If the script is location at /full/path/name/macro.C
    // the library will be located at 'build_dir+/full/path/name/macro_C.so'
+   // If 'isflat' is true, then no subdirectory is created and the library
+   // is created directly in the directory 'build_dir'.  Note that in this
+   // mode there is a risk than 2 script of the same in different source 
+   // directory will over-write each other.
 
    fBuildDir = build_dir;
+   if (isflat) fAclicProperties |= (kFlatBuildDir & kBitMask);
+   else fAclicProperties &= ~(kFlatBuildDir & kBitMask);
 }
 
 //______________________________________________________________________________

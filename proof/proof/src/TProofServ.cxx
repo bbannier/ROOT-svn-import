@@ -690,15 +690,7 @@ Int_t TProofServ::CreateServer()
 
    // Everybody expects iostream to be available, so load it...
    ProcessLine("#include <iostream>", kTRUE);
-   ProcessLine("#include <_string>",kTRUE); // for std::string iostream.
-
-   // Allow the usage of ClassDef and ClassImp in interpreted macros
-   ProcessLine("#include <RtypesCint.h>", kTRUE);
-
-   // Disallow the interpretation of Rtypes.h, TError.h and TGenericClassInfo.h
-   ProcessLine("#define ROOT_Rtypes 0", kTRUE);
-   ProcessLine("#define ROOT_TError 0", kTRUE);
-   ProcessLine("#define ROOT_TGenericClassInfo 0", kTRUE);
+   ProcessLine("#include <string>",kTRUE); // for std::string iostream.
 
    // The following libs are also useful to have, make sure they are loaded...
    //gROOT->LoadClass("TMinuit",     "Minuit");
@@ -1167,7 +1159,7 @@ void TProofServ::HandleSocketInput()
          mess = 0;
       }
 
-      // Still somethign to do?
+      // Still something to do?
       doit = 0;
       if (fgRecursive == 1 && fQueuedMsg->GetSize() > 0) {
          // Add to the queue
@@ -1845,6 +1837,7 @@ Bool_t TProofServ::AcceptResults(Int_t connections, TVirtualProofPlayer *mergerP
 
       TSocket *s = fMergingMonitor->Select();
       if (!s) {
+         Info("AcceptResults", "interrupt!");
          result = kFALSE;
          break;
       }
@@ -1856,7 +1849,7 @@ Bool_t TProofServ::AcceptResults(Int_t connections, TVirtualProofPlayer *mergerP
 
          PDB(kSubmerger, 2)
             Info("AcceptResults", "connection from a worker accepted on merger %s ",
-                                  fOrdinal.Data()); 
+                                  fOrdinal.Data());
          // All assigned workers are connected
          if (++numworkers >= connections)
             fMergingMonitor->Remove(fMergingSocket);
@@ -1874,7 +1867,7 @@ Bool_t TProofServ::AcceptResults(Int_t connections, TVirtualProofPlayer *mergerP
          while ((mess->BufferSize() > mess->Length())) {
             (*mess) >> type;
 
-            PDB(kSubmerger, 2) Info("AcceptResults", " type %d ", type); 
+            PDB(kSubmerger, 2) Info("AcceptResults", " type %d ", type);
             if (type == 2) {
                mergedWorkers++;
                PDB(kSubmerger, 2)
@@ -1903,7 +1896,7 @@ Bool_t TProofServ::AcceptResults(Int_t connections, TVirtualProofPlayer *mergerP
    }
 
    fMergingMonitor->RemoveAll();
-   delete fMergingMonitor;
+   SafeDelete(fMergingMonitor);
 
    PDB(kSubmerger, 2) Info("AcceptResults", "exit: %d", result);
    return result;
@@ -2129,8 +2122,15 @@ void TProofServ::Reset(const char *dir)
 {
    // Reset PROOF environment to be ready for execution of next command.
 
-   // First go to new directory.
-   gDirectory->cd(dir);
+   // First go to new directory. Check first that we got a reasonable path;
+   // in PROOF-Lite it may not be the case
+   TString dd(dir);
+   if (!dd.BeginsWith("proofserv")) {
+      Int_t ic = dd.Index(":");
+      if (ic != kNPOS)
+         dd.Replace(0, ic, "proofserv");
+   }
+   gDirectory->cd(dd.Data());
 
    // Clear interpreter environment.
    gROOT->Reset();
@@ -2327,15 +2327,17 @@ void TProofServ::SendStatistics()
 {
    // Send statistics of slave server to master or client.
 
-   Long64_t bytesread = 0;
-   if (IsMaster())
+   Long64_t bytesread = TFile::GetFileBytesRead();
+   Float_t cputime = fCpuTime, realtime = fRealTime;
+   if (IsMaster()) {
       bytesread = fProof->GetBytesRead();
-   else
-      bytesread = TFile::GetFileBytesRead();
+      cputime = fProof->GetCpuTime();
+      realtime = fProof->GetRealTime();
+   }
 
    TMessage mess(kPROOF_GETSTATS);
    TString workdir = gSystem->WorkingDirectory();  // expect TString on other side
-   mess << bytesread << fRealTime << fCpuTime << workdir;
+   mess << bytesread << realtime << cputime << workdir;
    if (fProtocol >= 4) mess << TString(gProofServ->GetWorkDir());
    mess << TString(gProofServ->GetImage());
    fSocket->Send(mess);
@@ -2558,7 +2560,7 @@ Int_t TProofServ::Setup()
    // Incoming OOB should generate a SIGURG
    fSocket->SetOption(kProcessGroup, gSystem->GetPid());
 
-   // Send packages off immediately to reduce latency
+   // Send packets off immediately to reduce latency
    fSocket->SetOption(kNoDelay, 1);
 
    // Check every two hours if client is still alive
@@ -2759,14 +2761,14 @@ Int_t TProofServ::SetupCommon()
                                                           fUser.Data(), dsm.Data()));
             }
          }
-      }
-      if (fDataSetManager && fDataSetManager->TestBit(TObject::kInvalidObject)) {
-         Warning("SetupCommon", "dataset manager plug-in initialization failed");
-         SafeDelete(fDataSetManager);
-      }
-
-      // If no valid dataset manager has been created we instantiate the default one
-      if (!fDataSetManager) {
+         // Check the result of the dataset manager initialization
+         if (fDataSetManager && fDataSetManager->TestBit(TObject::kInvalidObject)) {
+            Warning("SetupCommon", "dataset manager plug-in initialization failed");
+            SendAsynMessage("TXProofServ::SetupCommon: dataset manager plug-in initialization failed");
+            SafeDelete(fDataSetManager);
+         }
+      } else {
+         // Initialize the default dataset manager
          TString opts("Av:");
          TString dsetdir = gEnv->GetValue("ProofServ.DataSetDir", "");
          if (dsetdir.IsNull()) {
@@ -3216,6 +3218,8 @@ void TProofServ::HandleProcess(TMessage *mess)
             SendAsynMessage(TString::Format("AssertDataSet on %s: %s",
                                  fPrefix.Data(), emsg.Data()));
             Error("HandleProcess", "AssertDataSet: %s", emsg.Data());
+            // To terminate collection
+            if (sync) SendLogFile();
             return;
          }
       }
@@ -3266,6 +3270,8 @@ void TProofServ::HandleProcess(TMessage *mess)
          EQueryAction retVal = GetWorkers(workerList, pc);
          if (retVal == TProofServ::kQueryStop) {
             Error("HandleProcess", "error getting list of worker nodes");
+            // To terminate collection
+            if (sync) SendLogFile();
             return;
          } else if (retVal == TProofServ::kQueryEnqueued) {
             // change to an asynchronous query
@@ -3274,12 +3280,16 @@ void TProofServ::HandleProcess(TMessage *mess)
          } else if (Int_t ret = fProof->AddWorkers(workerList) < 0) {
             Error("HandleProcess", "Adding a list of worker nodes returned: %d",
                   ret);
+            // To terminate collection
+            if (sync) SendLogFile();
             return;
          }
       } else {
          EQueryAction retVal = GetWorkers(0, pc);
          if (retVal == TProofServ::kQueryStop) {
             Error("HandleProcess", "error getting list of worker nodes");
+            // To terminate collection
+            if (sync) SendLogFile();
             return;
          } else if (retVal == TProofServ::kQueryEnqueued) {
             // change to an asynchronous query
@@ -3287,6 +3297,8 @@ void TProofServ::HandleProcess(TMessage *mess)
             Info("HandleProcess", "query %d enqueued", pq->GetSeqNum());
          } else if (retVal != TProofServ::kQueryOK) {
             Error("HandleProcess", "unknown return value: %d", retVal);
+            // To terminate collection
+            if (sync) SendLogFile();
             return;
          }
       }
@@ -3317,7 +3329,7 @@ void TProofServ::HandleProcess(TMessage *mess)
          doprocess = kTRUE;
          //
          ProcessNext();
-         // avoid processing async queries send during processing in dyn mode
+         // avoid processing async queries sent during processing in dyn mode
          if (fProof->UseDynamicStartup())
             enqueued = kTRUE;
 
@@ -3355,6 +3367,8 @@ void TProofServ::HandleProcess(TMessage *mess)
       // Set not idle
       SetIdle(kFALSE);
 
+      // Cleanup the player
+      Bool_t deleteplayer = kTRUE;
       MakePlayer();
 
       // Setup data set
@@ -3406,7 +3420,7 @@ void TProofServ::HandleProcess(TMessage *mess)
       }
 
       fSocket->Send(m);
-      PDB(kGlobal, 2) 
+      PDB(kGlobal, 2)
          Info("TProofServ::Handleprocess",
               "worker %s has finished processing with %d objects in output list",
               GetOrdinal(), fPlayer->GetOutputList()->GetEntries());
@@ -3428,9 +3442,9 @@ void TProofServ::HandleProcess(TMessage *mess)
           fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted && fPlayer->GetOutputList()) {
          // Worker in merging mode.
          //----------------------------
-         // First, it reports only the size of its output to the master 
+         // First, it reports only the size of its output to the master
          // + port on which it can possibly accept outputs from other workers if it becomes a merger
-         // Master will later tell it where it should send the output (either to the master or to some merger)	
+         // Master will later tell it where it should send the output (either to the master or to some merger)
          // or if it should become a merger
 
          TMessage msg_osize(kPROOF_SUBMERGER);
@@ -3450,6 +3464,9 @@ void TProofServ::HandleProcess(TMessage *mess)
 
          // Set idle
          SetIdle(kTRUE);
+
+         // Do not cleanup the player yet: it will be used in sub-merging activities
+         deleteplayer = kFALSE;
 
          PDB(kSubmerger, 2) Info("HandleProcess", "worker %s has finished", fOrdinal.Data());
 
@@ -3483,6 +3500,9 @@ void TProofServ::HandleProcess(TMessage *mess)
       fPlayer->GetInputList()->SetOwner(0);
       input->SetOwner();
       SafeDelete(input);
+
+      // Cleanup if required
+      if (deleteplayer) DeletePlayer();
    }
 
    PDB(kGlobal, 1) Info("HandleProcess", "done");
@@ -3738,7 +3758,7 @@ void TProofServ::ProcessNext()
    // Signal the client that we are starting a new query
    TMessage m(kPROOF_STARTPROCESS);
    m << TString(pq->GetSelecImp()->GetName())
-     << dset->GetListOfElements()->GetSize()
+     << dset->GetNumOfFiles()
      << pq->GetFirst() << pq->GetEntries();
    fSocket->Send(m);
 
@@ -4564,14 +4584,11 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                   SendAsynMessage(TString::Format("%s: kBuildPackage: failure locating %s ...",
                                        noth.Data(), package.Data()));
                   break;
-               } else {
-                  // Package is in the global dirs
-                  break;
                }
             }
          }
 
-         if (IsMaster()) {
+         if (IsMaster() && !fromglobal) {
             // make sure package is available on all slaves, even new ones
             fProof->UploadPackage(pdir + ".par");
          }
@@ -5486,6 +5503,9 @@ void TProofServ::MakePlayer()
 
    TVirtualProofPlayer *p = 0;
 
+   // Cleanup first
+   DeletePlayer();
+
    if (IsParallel()) {
       // remote mode
       p = fProof->MakePlayer();
@@ -5508,7 +5528,7 @@ void TProofServ::DeletePlayer()
    if (IsMaster()) {
       if (fProof) fProof->SetPlayer(0);
    } else {
-      delete fPlayer;
+      SafeDelete(fPlayer);
    }
    fPlayer = 0;
 }
@@ -5625,7 +5645,7 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
 
    // We need a dataset manager
    if (!fDataSetManager) {
-      Error("HandleDataSets", "data manager instance undefined! - Protocol error?");
+      Warning("HandleDataSets", "no data manager is available to fullfil the request");
       return -1;
    }
 
@@ -5687,7 +5707,7 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
             TMap *returnMap = fDataSetManager->GetDataSets(uri, (UInt_t)TDataSetManager::kExport);
             // If defines, option gives the name of a server for which to extract the information
             if (returnMap && !opt.IsNull()) {
-               // The return map will be in the form   </group/user/datasetname> --> <dataset> 
+               // The return map will be in the form   </group/user/datasetname> --> <dataset>
                TMap *rmap = new TMap;
                TObject *k = 0;
                TFileCollection *fc = 0, *xfc = 0;
@@ -5751,6 +5771,12 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
                (*mess) >> uri;
                TProofServLogHandlerGuard hg(fLogFile,  fSocket);
                rc = fDataSetManager->ScanDataSet(uri, TDataSetManager::kReopen | TDataSetManager::kDebug);
+               // TODO: verify in parallel:
+               //  - dataset = GetDataSet(uri)
+               //  - TList flist; TDataSetManager::ScanDataSet(dataset, ..., &flist)
+               //  - fPlayer->Process( ... flist ...) // needs to be developed
+               //  - dataset->Integrate(flist) (perhaps automatic; flist object owned by dataset)
+               //  - RegisterDataSet(uri, dataset, "OT")
             } else {
                Info("HandleDataSets", "dataset verification not allowed");
                return -1;
@@ -5795,6 +5821,20 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
             }
          }
          break;
+      case TProof::kCache:
+         {
+            (*mess) >> uri >> opt;
+            if (opt == "show") {
+               // Show cache content
+               fDataSetManager->ShowCache(uri);
+            } else if (opt == "clear") {
+               // Clear cache content
+               fDataSetManager->ClearCache(uri);
+            } else {
+               Error("HandleDataSets", "kCache: unknown action: %s", opt.Data());
+            }
+         }
+         break;
       default:
          rc = -1;
          Error("HandleDataSets", "unknown type %d", type);
@@ -5814,16 +5854,21 @@ void TProofServ::HandleSubmerger(TMessage *mess)
    Int_t type = 0;
    (*mess) >> type;
 
+   TString msg;
    switch (type) {
       case TProof::kOutputSize:
          break;
 
       case TProof::kSendOutput:
          {
+            Bool_t deleteplayer = kTRUE;
             if (!IsMaster()) {
-               PDB(kSubmerger, 1)
-                  Info("HandleSubmerger","worker %s redirected to merger", fOrdinal.Data()); 
+               if (fMergingMonitor) {
+                  Info("HandleSubmerger", "kSendOutput: interrupting ...");
+                  fMergingMonitor->Interrupt();
+               }
                if (fMergingSocket) {
+                  if (fMergingMonitor) fMergingMonitor->Remove(fMergingSocket);
                   fMergingSocket->Close();
                   SafeDelete(fMergingSocket);
                }
@@ -5832,6 +5877,8 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                Int_t port = 0;
                Int_t merger_id = -1;
                (*mess) >> merger_id >> name >> port;
+               PDB(kSubmerger, 1)
+                  Info("HandleSubmerger","worker %s redirected to merger #%d %s:%d", fOrdinal.Data(), merger_id, name.Data(), port); 
 
                TSocket *t = 0;
                if (name.Length() > 0 && port > 0 && (t = new TSocket(name, port)) && t->IsValid()) {
@@ -5841,7 +5888,11 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                                           merger_id, name.Data(), port);
 
                   if (SendResults(t, fPlayer->GetOutputList()) != 0) {
-                     // Results not send	
+                     msg.Form("worker %s cannot send results to merger #%d at %s:%d", GetPrefix(), merger_id, name.Data(), port);
+                     PDB(kSubmerger, 2) Info("HandleSubmerger",
+                                             "kSendOutput: %s - inform the master", msg.Data());
+                     SendAsynMessage(msg);
+                     // Results not send
                      TMessage answ(kPROOF_SUBMERGER);
                      answ << Int_t(TProof::kMergerDown);
                      answ << merger_id;
@@ -5861,29 +5912,51 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                   }
                } else {
 
+                  if (name == "master") {
+                     PDB(kSubmerger, 2) Info("HandleSubmerger",
+                                             "kSendOutput: worker was asked for sending output to master");
+                     SendResults(fSocket, fPlayer->GetOutputList());
+                     // Signal the master that we are idle
+                     fSocket->Send(kPROOF_SETIDLE);
+                     SetIdle(kTRUE);
+                     SendLogFile();
+
+                  } else if (!t || !(t->IsValid())) {
+                     msg.Form("worker %s could not open a valid socket to merger #%d at %s:%d",
+                              GetPrefix(), merger_id, name.Data(), port);
+                     PDB(kSubmerger, 2) Info("HandleSubmerger",
+                                             "kSendOutput: %s - inform the master", msg.Data());
+                     SendAsynMessage(msg);
+                     // Results not send
+                     TMessage answ(kPROOF_SUBMERGER);
+                     answ << Int_t(TProof::kMergerDown);
+                     answ << merger_id;
+                     fSocket->Send(answ);
+                     deleteplayer = kFALSE;
+                  }
+
                   if (t) SafeDelete(t);
 
-                  PDB(kSubmerger, 2) Info("HandleSubmerger",
-                                          "kSendOutput: worker was asked for sending output to master");
-                  SendResults(fSocket, fPlayer->GetOutputList());
-                  SendLogFile();
                }
 
             } else {
-               Error("HandleSubmerger", "kSendOutput: received not on worker");	
+               Error("HandleSubmerger", "kSendOutput: received not on worker");
             }
 
+            // Cleanup
+            if (deleteplayer) DeletePlayer();
          }
          break;
       case TProof::kBeMerger:
          {
+            Bool_t deleteplayer = kTRUE;
             if (!IsMaster()) {
                Int_t merger_id = -1;
                //Int_t merger_port = 0;
                Int_t connections = 0;
                (*mess) >> merger_id  >> connections;
                PDB(kSubmerger, 2)
-                  Info("HandleSubmerger", "worker %s established as merger", fOrdinal.Data()); 
+                  Info("HandleSubmerger", "worker %s established as merger", fOrdinal.Data());
 
                PDB(kSubmerger, 2)
                   Info("HandleSubmerger",
@@ -5902,18 +5975,22 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                   PDB(kSubmerger, 2)
                      Info("","adding own output to the list on %s", fOrdinal.Data());
 
-                  // Add own results to the output list
+                  // Add own results to the output list.
+                  // On workers the player does not own the output list, which is owned
+                  // by the selector and deleted in there
+                  // On workers the player does not own the output list, which is owned
+                  // by the selector and deleted in there
                   TIter nxo(fPlayer->GetOutputList());
                   TObject * o = 0;
                   while ((o = nxo())) {
-                     if ((mergerPlayer->AddOutputObject(o) == 1)) {
-                        // Remove the object if it has been merged
-                        PDB(kSubmerger, 2) Info("HandleSocketInput", "removing sent object (%p)", o);
-                        SafeDelete(o);
+                     if ((mergerPlayer->AddOutputObject(o) != 1)) {
+                        // Remove the object if it has not been merged: it is owned
+                        // now by the merger player (in its output list)
+                        PDB(kSubmerger, 2) Info("HandleSocketInput", "removing merged object (%p)", o);
+                        fPlayer->GetOutputList()->Remove(o);
                      }
                   }
                   PDB(kSubmerger, 2) Info("HandleSubmerger","kBeMerger: own outputs added");
-
                   PDB(kSubmerger, 2) Info("HandleSubmerger","starting delayed merging on %s", fOrdinal.Data());
 
                   // Delayed merging if neccessary
@@ -5924,6 +6001,7 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                   // Send merged results to master
                   if (SendResults(fSocket, mergerPlayer->GetOutputList()) != 0)
                      Warning("HandleSubmerger","kBeMerger: problems sending output list");
+                  mergerPlayer->GetOutputList()->SetOwner(kTRUE);
                   delete mergerPlayer;
 
                   PDB(kSubmerger, 2) Info("HandleSubmerger","kBeMerger: results sent to master");
@@ -5937,11 +6015,14 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                   answ << Int_t(TProof::kMergerDown);
                   answ << merger_id;
                   fSocket->Send(answ);
+                  deleteplayer = kFALSE;
                }
             } else {
-               Error("HandleSubmerger","kSendOutput: received not on worker");	
+               Error("HandleSubmerger","kSendOutput: received not on worker");
             }
 
+            // Cleanup
+            if (deleteplayer) DeletePlayer();
          }
          break;
 
@@ -5952,8 +6033,10 @@ void TProofServ::HandleSubmerger(TMessage *mess)
          {
             // Received only in case of forced termination of merger by master
             PDB(kSubmerger, 2)  Info("HandleSubmerger", "kStopMerging");
-            if (fMergingMonitor)
-               fMergingMonitor->DeActivateAll();
+            if (fMergingMonitor) {
+               Info("HandleSubmerger", "kStopMerging: interrupting ...");
+               fMergingMonitor->Interrupt();
+            }
          }
          break;
 
