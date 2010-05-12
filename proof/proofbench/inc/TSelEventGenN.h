@@ -7,8 +7,8 @@
 #ifndef TSelEventGenN_h
 #define TSelEventGenN_h
 
-#ifndef ROOT_TProofBench
-#include <TProofBench.h>
+#ifndef ROOT_TProofBenchMode
+#include <TProofBenchMode.h>
 #endif
 #ifndef ROOT_TSelector
 #include <TSelector.h>
@@ -17,7 +17,7 @@
 class TSelEventGenN : public TSelector {
 
 private:
-   TProofBench::EFileType fFileType;
+   TProofBenchMode::EFileType fFileType;
    TString      fBaseDir;
    Int_t        fNTries;
    Long64_t     fNEvents;
@@ -28,7 +28,7 @@ private:
 
    TObject     *fTotalGen; // Events generated on this worker
 
-   Long64_t GenerateFiles(TProofBench::EFileType, const char *filename, Long64_t nevents);
+   Long64_t GenerateFiles(TProofBenchMode::EFileType, const char *filename, Long64_t nevents);
 
 public :
 

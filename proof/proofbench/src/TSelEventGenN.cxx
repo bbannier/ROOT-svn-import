@@ -20,7 +20,7 @@
 #include <test/Event.h>
 
 //_____________________________________________________________________________
-TSelEventGenN::TSelEventGenN() : fFileType(TProofBench::kFileNotSpecified),
+TSelEventGenN::TSelEventGenN() : fFileType(TProofBenchMode::kFileNotSpecified),
                                  fNTries(10), fNEvents(10000),
                                  fNWorkersPerNode(0), fWorkerNumber(0),
                                  fNTracksBench(50), fNTracksCleanup(100),
@@ -88,7 +88,7 @@ void TSelEventGenN::SlaveBegin(TTree * /*tree*/)
       if (sinput.Contains("PROOF_BenchmarkFileType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fFileType = (TProofBench::EFileType) a->GetVal();
+            fFileType = (TProofBenchMode::EFileType) a->GetVal();
             continue;
          }
          continue;
@@ -210,7 +210,7 @@ void TSelEventGenN::Terminate()
 }
 
 //_____________________________________________________________________________
-Long64_t TSelEventGenN::GenerateFiles(TProofBench::EFileType filetype,
+Long64_t TSelEventGenN::GenerateFiles(TProofBenchMode::EFileType filetype,
                                       const char *filename, Long64_t size)
 {
    // 'runtype' is run type either TProofBench::kRunGenerateFileBench or
@@ -222,8 +222,8 @@ Long64_t TSelEventGenN::GenerateFiles(TProofBench::EFileType filetype,
    // Returns bytes rewritten when runtype==TProofBench::kRunGenerateFileCleanup
    // Return 0 in case error
 
-   if (!(filetype==TProofBench::kFileCleanup 
-      || filetype==TProofBench::kFileBenchmark)){
+   if (!(filetype==TProofBenchMode::kFileCleanup 
+      || filetype==TProofBenchMode::kFileBenchmark)){
       Error("GenerateFiles", "File type '%d' not supported", filetype);
       return 0;
    }
@@ -250,13 +250,13 @@ Long64_t TSelEventGenN::GenerateFiles(TProofBench::EFileType filetype,
    Long64_t i=0;
    Long64_t fileend=0;
 
-   if (filetype==TProofBench::kFileBenchmark){
+   if (filetype==TProofBenchMode::kFileBenchmark){
       Info("GenerateFiles", "Generating %s with %lld event(s)", filename, size);
       for(i=0; i<size; i++) {
          event->Build(i,fNTracksBench,0);
          eventtree->Fill();
       }
-   } else if (filetype==TProofBench::kFileCleanup){
+   } else if (filetype==TProofBenchMode::kFileCleanup){
       Info("GenerateFiles", "Generating %s", filename);
       f->SetCompressionLevel(0); //no compression
 
@@ -289,7 +289,7 @@ Long64_t TSelEventGenN::GenerateFiles(TProofBench::EFileType filetype,
    eventtree->Delete();
    savedir->cd();
 
-   if (filetype==TProofBench::kFileBenchmark) return nentries;
-   else if (filetype==TProofBench::kFileCleanup) return fileend;
+   if (filetype==TProofBenchMode::kFileBenchmark) return nentries;
+   else if (filetype==TProofBenchMode::kFileCleanup) return fileend;
    else return 0;
 }

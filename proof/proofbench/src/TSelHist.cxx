@@ -24,7 +24,6 @@
 //
 
 #include "TSelHist.h"
-#include "TProofBench.h"
 #include <TCanvas.h>
 #include <TFrame.h>
 #include <TPaveText.h>
@@ -46,8 +45,8 @@ ClassImp(TSelHist)
 //_____________________________________________________________________________
 TSelHist::TSelHist()
    // Constructor
-   :fNHists(16),
-   fHistType(TProofBench::kHist1D),
+   :fHistType(TProofBenchRun::kHist1D),
+   fNHists(16),
    fDraw(0),
    fHist1D(0),
    fHist2D(0),
@@ -109,10 +108,11 @@ void TSelHist::Begin(TTree * /*tree*/)
 
    while ((obj = nxt())){
       sinput=obj->GetName();
+      Info("Begin", "object name=%s", sinput.Data());
       if (sinput.Contains("PROOF_BenchmarkHistType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fHistType= a->GetVal();
+            fHistType=TProofBenchRun::EHistType(a->GetVal());
             found_histtype=kTRUE;
             Info("Begin", "PROOF_BenchmarkRunType=%d", fHistType);
          }
@@ -122,14 +122,14 @@ void TSelHist::Begin(TTree * /*tree*/)
          continue;
       }
       if (sinput.Contains("PROOF_BenchmarkNHists")){
-         TParameter<Long_t>* a=dynamic_cast<TParameter<Long_t>*>(obj);
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
             fNHists= a->GetVal();
             found_nhists=kTRUE;
             Info("Begin", "PROOF_BenchmarkNHists=%d", fNHists);
          }
          else{
-            Error("Begin", "PROOF_BenchmarkNHists not type TParameter<Long_t>*");
+            Error("Begin", "PROOF_BenchmarkNHists not type TParameter<Int_t>*");
          } 
          continue;
       }
@@ -158,9 +158,9 @@ void TSelHist::Begin(TTree * /*tree*/)
    }
 
    if (fDraw) {
-      if (fHistType & TProofBench::kHist1D) fHist1D = new TH1F*[fNHists];
-      if (fHistType & TProofBench::kHist2D) fHist2D = new TH2F*[fNHists];
-      if (fHistType & TProofBench::kHist3D) fHist3D = new TH3F*[fNHists];
+      if (fHistType & TProofBenchRun::kHist1D) fHist1D = new TH1F*[fNHists];
+      if (fHistType & TProofBenchRun::kHist2D) fHist2D = new TH2F*[fNHists];
+      if (fHistType & TProofBenchRun::kHist3D) fHist3D = new TH3F*[fNHists];
    }
 }
 
@@ -183,39 +183,40 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
 
    while ((obj = nxt())){
       sinput=obj->GetName();
+      Info("SlaveBegin", "object name=%s", sinput.Data());
       if (sinput.Contains("PROOF_BenchmarkHistType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fHistType= a->GetVal();
+            fHistType=TProofBenchRun::EHistType(a->GetVal());
             found_histtype=kTRUE;
-            Info("Begin", "PROOF_BenchmarkRunType=%d", fHistType);
+            Info("SlaveBegin", "PROOF_BenchmarkHistType=%d", fHistType);
          }
          else{
-            Error("Begin", "PROOF_BenchmarkHistType not type TParameter<Int_t>*");
+            Error("SlaveBegin", "PROOF_BenchmarkHistType not type TParameter<Int_t>*");
          } 
          continue;
       }
       if (sinput.Contains("PROOF_BenchmarkNHists")){
-         TParameter<Long_t>* a=dynamic_cast<TParameter<Long_t>*>(obj);
+         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fNHists= a->GetVal();
+            fNHists=a->GetVal();
             found_nhists=kTRUE;
-            Info("Begin", "PROOF_BenchmarkNHists=%d", fNHists);
+            Info("SlaveBegin", "PROOF_BenchmarkNHists=%d", fNHists);
          }
          else{
-            Error("Begin", "PROOF_BenchmarkNHists not type TParameter<Long_t>*");
+            Error("SlaveBegin", "PROOF_BenchmarkNHists not type TParameter<Int_t>*");
          } 
          continue;
       }
       if (sinput.Contains("PROOF_BenchmarkDraw")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
-            fDraw= a->GetVal();
+            fDraw=a->GetVal();
             found_draw=kTRUE;
-            Info("Begin", "PROOF_BenchmarkDraw=%d", fDraw);
+            Info("SlaveBegin", "PROOF_BenchmarkDraw=%d", fDraw);
          }
          else{
-            Error("Begin", "PROOF_BenchmarkDraw not type TParameter<Int_t>*");
+            Error("SlaveBegin", "PROOF_BenchmarkDraw not type TParameter<Int_t>*");
          } 
          continue;
       }
@@ -228,11 +229,11 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
       Warning("Begin", "PROOF_BenchmarkNHists not found; using default: %d", fNHists);
    }
    if (!found_draw){
-      Warning("Begin", "PROOF_BenchmarkDraw not found; using default: %d", fDraw);
+      Warning("SlaveBegin", "PROOF_BenchmarkDraw not found; using default: %d", fDraw);
    }
 
    // Create the histogram
-   if (fHistType & TProofBench::kHist1D){
+   if (fHistType & TProofBenchRun::kHist1D){
       fHist1D = new TH1F*[fNHists];
       for (Int_t i=0; i < fNHists; i++) {
          fHist1D[i] = new TH1F(Form("h1d_%d",i), Form("h1d_%d",i), 100, -3., 3.);
@@ -240,7 +241,7 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
          if (fDraw) fOutput->Add(fHist1D[i]);
       }
    }
-   if (fHistType & TProofBench::kHist2D){
+   if (fHistType & TProofBenchRun::kHist2D){
       fHist2D = new TH2F*[fNHists];
       for (Int_t i=0; i < fNHists; i++) {
          fHist2D[i] = new TH2F(Form("h2d_%d",i), Form("h2d_%d",i), 100, -3., 3., 100, -3., 3.);
@@ -248,7 +249,7 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
          if (fDraw) fOutput->Add(fHist2D[i]);
       }
    }
-   if (fHistType & TProofBench::kHist3D){
+   if (fHistType & TProofBenchRun::kHist3D){
       fHist3D = new TH3F*[fNHists];
       for (Int_t i=0; i < fNHists; i++) {
          fHist3D[i] = new TH3F(Form("h3d_%d",i), Form("h3d_%d",i), 100, -3., 3., 100, -3., 3., 100, -3., 3.);
@@ -256,13 +257,12 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
          if (fDraw) fOutput->Add(fHist3D[i]);
       }
    }
-
    // Set random seed
    fRandom = new TRandom3(0);
 }
 
 //_____________________________________________________________________________
-Bool_t TSelHist::Process(Long64_t)
+Bool_t TSelHist::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
    // keyed object in the case of PROOF) to be processed. The entry argument
@@ -283,7 +283,7 @@ Bool_t TSelHist::Process(Long64_t)
    // The return value is currently not used.
 
    Double_t x, y, z;
-   if (fHistType & TProofBench::kHist1D){
+   if (fHistType & TProofBenchRun::kHist1D){
       for (Int_t i=0; i < fNHists; i++) {
          if (fRandom && fHist1D[i]) {
             x = fRandom->Gaus(0.,1.);
@@ -291,7 +291,7 @@ Bool_t TSelHist::Process(Long64_t)
          }
       }
    }
-   if (fHistType & TProofBench::kHist2D){
+   if (fHistType & TProofBenchRun::kHist2D){
       for (Int_t i=0; i < fNHists; i++) {
          if (fRandom && fHist2D[i]) {
             x = fRandom->Gaus(0.,1.);
@@ -300,7 +300,7 @@ Bool_t TSelHist::Process(Long64_t)
          }
       }
    }
-   if (fHistType & TProofBench::kHist3D){
+   if (fHistType & TProofBenchRun::kHist3D){
       for (Int_t i=0; i < fNHists; i++) {
          if (fRandom && fHist3D[i]) {
             x = fRandom->Gaus(0.,1.);
@@ -338,8 +338,7 @@ void TSelHist::Terminate()
       return;
    }
 
-
-   if (fHistType & TProofBench::kHist1D){
+   if (fHistType & TProofBenchRun::kHist1D){
       fCHist1D=dynamic_cast<TCanvas*>(gROOT->FindObject("CHist1D"));
       if (!fCHist1D){
          fCHist1D = new TCanvas("CHist1D","Proof TSelHist Canvas (1D)",200,10,700,700);
@@ -357,7 +356,7 @@ void TSelHist::Terminate()
       fCHist1D->cd();
       fCHist1D->Update();
    }
-   if (fHistType & TProofBench::kHist2D){
+   if (fHistType & TProofBenchRun::kHist2D){
       fCHist2D=dynamic_cast<TCanvas*>(gROOT->FindObject("CHist2D"));
       if (!fCHist2D){
          fCHist2D = new TCanvas("CHist2D","Proof TSelHist Canvas (2D)",200,10,700,700);
@@ -375,7 +374,7 @@ void TSelHist::Terminate()
       fCHist2D->Update();
    }
 
-   if (fHistType & TProofBench::kHist3D){
+   if (fHistType & TProofBenchRun::kHist3D){
       fCHist3D=dynamic_cast<TCanvas*>(gROOT->FindObject("CHist3D"));
       if (!fCHist3D){
          fCHist3D = new TCanvas("CHist3D","Proof TSelHist Canvas (3D)",200,10,700,700);
