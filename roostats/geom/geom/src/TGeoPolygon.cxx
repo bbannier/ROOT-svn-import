@@ -101,20 +101,12 @@ Double_t TGeoPolygon::Area() const
    Int_t ic,i,j;
    Double_t area = 0;
    // Compute area of the convex part
-   for (ic=0; ic<fNconvex; ic++) {
-      i = fIndc[ic];
-      j = fIndc[(ic+1)%fNconvex];
-      area += 0.5*TMath::Abs(fX[i]*fY[j]-fX[j]*fY[i]);
+   for (ic=0; ic<fNvert; ic++) {
+      i = fInd[ic];
+      j = fInd[(ic+1)%fNvert];
+      area += 0.5*(fX[i]*fY[j]-fX[j]*fY[i]);
    }
-   // Compute area of the daughters
-   if (!fDaughters) return area;
-   Int_t nd = fDaughters->GetEntriesFast();
-   TGeoPolygon *poly;
-   for (i=0; i<nd; i++) {
-      poly = (TGeoPolygon*)fDaughters->UncheckedAt(i);
-      area -= poly->Area();
-   }
-   return area;   
+   return TMath::Abs(area);
 }      
 
 //_____________________________________________________________________________

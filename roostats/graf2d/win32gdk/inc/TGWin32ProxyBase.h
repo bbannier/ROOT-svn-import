@@ -42,12 +42,13 @@ public: // private:
    static ULong_t    fgPostMessageId;     // post message ID
    static ULong_t    fgPingMessageId;     // ping message ID
    static ULong_t    fgMainThreadId;      // main thread ID
+   static ULong_t    fgUserThreadId;      // user (e.g. python) thread ID
 
    static void    Lock();
    static void    Unlock();
    static void    GlobalLock();
    static void    GlobalUnlock();
-   static Bool_t  IsGloballyLocked() { return fgLock; }
+   static Bool_t  IsGloballyLocked();
    static Bool_t  Ping();
 
 public:

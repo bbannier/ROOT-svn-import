@@ -20,10 +20,6 @@
 #include "TClass.h"
 #include "TMathBase.h"
 #include "TMath.h"
-#include "TBuffer3D.h"
-#include "TBuffer3DTypes.h"
-#include "TVirtualPad.h"
-#include "TVirtualViewer3D.h"
 #include "TAxis.h"
 
 #include "TGLUtil.h"
@@ -154,7 +150,7 @@ void TEveCaloViz::SetPlotEt(Bool_t isEt)
 
    fPlotEt=isEt;
    if (fPalette)
-      fPalette->SetLimits(0, TMath::CeilNint(fData->GetMaxVal(fPlotEt)));
+      fPalette->SetLimits(0, TMath::CeilNint(GetMaxVal()));
 
    InvalidateCellIdCache();
 }
@@ -247,7 +243,7 @@ void TEveCaloViz::DataChanged()
 
    if (fPalette)
    {
-      Int_t hlimit = TMath::CeilNint(fScaleAbs ? fMaxValAbs : fData->GetMaxVal(fPlotEt));
+      Int_t hlimit = TMath::CeilNint(GetMaxVal());
       fPalette->SetLimits(0, hlimit);
       fPalette->SetMin(0);
       fPalette->SetMax(hlimit);
@@ -257,13 +253,18 @@ void TEveCaloViz::DataChanged()
 }
 
 //______________________________________________________________________________
-void TEveCaloViz::AssertCellIdCache() const
+Bool_t TEveCaloViz::AssertCellIdCache() const
 {
    // Assert cell id cache is ok.
+   // Returns true if the cache has been updated.
  
    TEveCaloViz* cv = const_cast<TEveCaloViz*>(this);
-   if (!fCellIdCacheOK)
+   if (!fCellIdCacheOK) {
       cv->BuildCellIdCache();
+      return kTRUE;
+   } else {
+      return kFALSE;
+   }
 }
 
 //______________________________________________________________________________
@@ -345,7 +346,7 @@ TEveRGBAPalette* TEveCaloViz::AssertPalette()
       fPalette = new TEveRGBAPalette;
       fPalette->SetDefaultColor((Color_t)4);
 
-      Int_t hlimit = TMath::CeilNint(fScaleAbs ? fMaxValAbs : fData->GetMaxVal(fPlotEt));
+      Int_t hlimit = TMath::CeilNint(GetMaxVal());
       fPalette->SetLimits(0, hlimit);
       fPalette->SetMin(0);
       fPalette->SetMax(hlimit);
@@ -359,24 +360,10 @@ void TEveCaloViz::Paint(Option_t* /*option*/)
 {
    // Paint this object. Only direct rendering is supported.
 
-   static const TEveException eH("TEvecaloViz::Paint ");
-
-   if (!fData)
-      return;
-
-   TBuffer3D buff(TBuffer3DTypes::kGeneric);
-
-   // Section kCore
-   buff.fID           = this;
-   buff.fColor        = GetMainColor();
-   buff.fTransparency = GetMainTransparency();
-   if (HasMainTrans())
-      RefMainTrans().SetBuffer3D(buff);
-   buff.SetSectionsValid(TBuffer3D::kCore);
-
-   Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);
-   if (reqSections != TBuffer3D::kNone)
-      Error(eH, "only direct GL rendering supported.");
+   if (fData)
+   {
+      PaintStandard(this);
+   }
 }
 
 //______________________________________________________________________________
@@ -631,10 +618,19 @@ void TEveCalo2D::BuildCellIdCache()
 //______________________________________________________________________________
 void TEveCalo2D::CellSelectionChanged()
 {
+   // Sort slected cells in eta or phi bins for selection and highlight.
+
+   CellSelectionChangedInternal(fData->GetCellsSelected(), fCellListsSelected);
+   CellSelectionChangedInternal(fData->GetCellsHighlighted(), fCellListsHighlighted);
+}
+
+//______________________________________________________________________________
+void TEveCalo2D::CellSelectionChangedInternal(TEveCaloData::vCellId_t& cells, std::vector<TEveCaloData::vCellId_t*>& cellLists)
+{
    // Sort slected cells in eta or phi bins.
 
    // clear old cache
-   for (vBinCells_i it = fCellListsSelected.begin(); it != fCellListsSelected.end(); it++)
+   for (vBinCells_i it = cellLists.begin(); it != cellLists.end(); it++)
    {
       if (*it)
       {
@@ -642,18 +638,17 @@ void TEveCalo2D::CellSelectionChanged()
          delete *it;
       }
    }
-   fCellListsSelected.clear();
+   cellLists.clear();
 
-   TEveCaloData::vCellId_t&  cells = fData->GetCellsSelected();
    TEveCaloData::CellData_t  cellData;
    if (cells.size())
    {
       Bool_t rPhi  = fManager->GetProjection()->GetType() == TEveProjection::kPT_RPhi;
       UInt_t nBins = rPhi ? fData->GetPhiBins()->GetNbins() : fData->GetEtaBins()->GetNbins();
 
-      fCellListsSelected.resize(nBins+1);
+      cellLists.resize(nBins+1);
       for (UInt_t b = 0; b <= nBins; ++b)
-         fCellListsSelected[b] = 0;
+         cellLists[b] = 0;
 
       Int_t bin;
       for (TEveCaloData::vCellId_i i=cells.begin(); i!=cells.end(); i++)
@@ -668,10 +663,10 @@ void TEveCalo2D::CellSelectionChanged()
             else {
                bin = fData->GetEtaBins()->FindBin(cellData.Eta());
             }
-            if (fCellListsSelected[bin] == 0)
-               fCellListsSelected[bin] = new TEveCaloData::vCellId_t();
+            if (cellLists[bin] == 0)
+               cellLists[bin] = new TEveCaloData::vCellId_t();
 
-            fCellListsSelected[bin]->push_back(*i);
+            cellLists[bin]->push_back(*i);
          }
       }
    }
@@ -762,7 +757,7 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* d, const char* n, const char* t):
    fAutoRebin(kTRUE),
 
    fPixelsPerBin(12),
-   fNormalizeRebin(kTRUE),
+   fNormalizeRebin(kFALSE),
 
    fProjection(kAuto),
    f2DMode(kValSize),
@@ -771,7 +766,6 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* d, const char* n, const char* t):
    fDrawHPlane(kFALSE),
    fHPlaneVal(0),
 
-   fBinStep(-1),
    fDrawNumberCellPixels(18), // draw numbers on cell above 30 pixels
    fCellPixelFontSize(12) // size of cell fonts in pixels
 {
@@ -809,7 +803,7 @@ void TEveCaloLego::ComputeBBox()
 
    BBoxZero();
 
-   Float_t ex = 1.2;
+   Float_t ex = 1.2*fMaxTowerH;
 
    Float_t a = 0.5*ex;
 

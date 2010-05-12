@@ -16,6 +16,7 @@
 #include "TBranchObject.h"
 #include "TFunction.h"
 #include "TClonesArray.h"
+#include "TLeafB.h"
 #include "TLeafC.h"
 #include "TLeafObject.h"
 #include "TDataMember.h"
@@ -870,10 +871,10 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
       previnfo = maininfo;
 
       delete names;
-   } else if (leaf->InheritsFrom("TLeafObject") ) {
+   } else if (leaf->InheritsFrom(TLeafObject::Class()) ) {
       TBranchObject *bobj = (TBranchObject*)leaf->GetBranch();
       cl = TClass::GetClass(bobj->GetClassName());
-   } else if (leaf->InheritsFrom("TLeafElement")) {
+   } else if (leaf->InheritsFrom(TLeafElement::Class())) {
       TBranchElement *branchEl = (TBranchElement *)leaf->GetBranch();
       branchEl->SetupAddresses();
       TStreamerInfo *info = branchEl->GetInfo();
@@ -2255,7 +2256,7 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
                // like "abs(some_val)", let TFormula decompose it first.
                return -1;
             }
-            //         if (!leaf->InheritsFrom("TLeafObject") ) {
+            //         if (!leaf->InheritsFrom(TLeafObject::Class()) ) {
             // If the leaf that we found so far is not a TLeafObject then there is
             // nothing we would be able to do.
             //   Error("DefinedVariable","Need a TLeafObject to call a function!");
@@ -2547,7 +2548,7 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
       final = leaf->IsOnTerminalBranch();
    }
 
-   if (leaf && leaf->InheritsFrom("TLeafObject") ) {
+   if (leaf && leaf->InheritsFrom(TLeafObject::Class()) ) {
       if (strlen(right)==0) strcpy(right,work);
    }
 
@@ -3002,11 +3003,11 @@ TLeaf* TTreeFormula::GetLeafWithDatamember(const char* topchoice, const char* ne
       // Here since we are interested in data member, we want to consider only
       // 'terminal' branch and leaf.
       cl = 0;
-      if (leafcur->InheritsFrom("TLeafObject") &&
+      if (leafcur->InheritsFrom(TLeafObject::Class()) &&
           leafcur->GetBranch()->GetListOfBranches()->Last()==0) {
          TLeafObject *lobj = (TLeafObject*)leafcur;
          cl = lobj->GetClass();
-      } else if (leafcur->InheritsFrom("TLeafElement") && leafcur->IsOnTerminalBranch()) {
+      } else if (leafcur->InheritsFrom(TLeafElement::Class()) && leafcur->IsOnTerminalBranch()) {
          TLeafElement * lElem = (TLeafElement*) leafcur;
          if (lElem->IsOnTerminalBranch()) {
             TBranchElement *branchEl = (TBranchElement *)leafcur->GetBranch();
@@ -4307,7 +4308,7 @@ Double_t TTreeFormula::GetValueFromMethod(Int_t i, TLeaf* leaf) const
    }
 
    void* thisobj = 0;
-   if (leaf->InheritsFrom("TLeafObject")) {
+   if (leaf->InheritsFrom(TLeafObject::Class())) {
       thisobj = ((TLeafObject*) leaf)->GetObject();
    } else {
       TBranchElement* branch = (TBranchElement*) ((TLeafElement*) leaf)->GetBranch();
@@ -4368,7 +4369,7 @@ void* TTreeFormula::GetValuePointerFromMethod(Int_t i, TLeaf* leaf) const
    }
 
    void* thisobj;
-   if (leaf->InheritsFrom("TLeafObject")) {
+   if (leaf->InheritsFrom(TLeafObject::Class())) {
       thisobj = ((TLeafObject*) leaf)->GetObject();
    } else {
       TBranchElement* branch = (TBranchElement*) ((TLeafElement*) leaf)->GetBranch();
@@ -4427,7 +4428,7 @@ Bool_t TTreeFormula::IsInteger(Bool_t fast) const
 {
    // return TRUE if the formula corresponds to one single Tree leaf
    // and this leaf is short, int or unsigned short, int
-   // When a leaf is of type integer, the generated histogram is forced
+   // When a leaf is of type integer or string, the generated histogram is forced
    // to have an integer bin width
 
    if (fast) {
@@ -4473,7 +4474,8 @@ Bool_t TTreeFormula::IsInteger(Bool_t fast) const
 
    if (EvalClass()==TBits::Class()) return kTRUE;
 
-   return IsLeafInteger(0);
+   if (IsLeafInteger(0) || IsLeafString(0)) return kTRUE;
+   return kFALSE;
 }
 
 //______________________________________________________________________________
@@ -4519,6 +4521,7 @@ Bool_t TTreeFormula::IsLeafInteger(Int_t code) const
    if (!strcmp(leaf->GetTypeName(),"Bool_t"))   return kTRUE;
    if (!strcmp(leaf->GetTypeName(),"Char_t"))   return kTRUE;
    if (!strcmp(leaf->GetTypeName(),"UChar_t"))  return kTRUE;
+   if (!strcmp(leaf->GetTypeName(),"string"))   return kTRUE;
    return kFALSE;
 }
 
@@ -4558,7 +4561,7 @@ Bool_t  TTreeFormula::IsLeafString(Int_t code) const
 
    switch(fLookupType[code]) {
       case kDirect:
-         if ( !leaf->IsUnsigned() && (leaf->InheritsFrom("TLeafC") || leaf->InheritsFrom("TLeafB") ) ) {
+         if ( !leaf->IsUnsigned() && (leaf->InheritsFrom(TLeafC::Class()) || leaf->InheritsFrom(TLeafB::Class()) ) ) {
             // Need to find out if it is an 'array' or a pointer.
             if (leaf->GetLenStatic() > 1) return kTRUE;
 
@@ -4575,7 +4578,7 @@ Bool_t  TTreeFormula::IsLeafString(Int_t code) const
                }
             }
             return kFALSE;
-         } else if (leaf->InheritsFrom("TLeafElement")) {
+         } else if (leaf->InheritsFrom(TLeafElement::Class())) {
             TBranchElement * br = (TBranchElement*)leaf->GetBranch();
             Int_t bid = br->GetID();
             if (bid < 0) return kFALSE;
@@ -4858,7 +4861,7 @@ Bool_t TTreeFormula::StringToNumber(Int_t oper)
          return kFALSE;
       }
       TLeaf *leaf = (TLeaf*)fLeaves.At(code);
-      if (leaf &&  (leaf->InheritsFrom("TLeafC") || leaf->InheritsFrom("TLeafB") ) ) {
+      if (leaf &&  (leaf->InheritsFrom(TLeafC::Class()) || leaf->InheritsFrom(TLeafB::Class()) ) ) {
          SetAction(oper, kDefinedVariable, code );
          fNval++;
          fNstring--;
@@ -5177,7 +5180,17 @@ Bool_t TTreeFormula::LoadCurrentDim() {
       // fCumulSizes.
 
       TLeaf *leaf = (TLeaf*)fLeaves.UncheckedAt(i);
-      if (!leaf) continue;
+      if (!leaf) {
+         switch(fLookupType[i]) {
+            case kDirect: 
+            case kMethod:
+            case kTreeMember:
+            case kDataMember:
+               fNdata[i] = 0;
+               outofbounds = kTRUE;
+         }
+         continue;
+      }
 
       TTree *realtree = fTree->GetTree();
       TTree *tleaf = leaf->GetBranch()->GetTree();
@@ -5464,7 +5477,7 @@ Bool_t TTreeFormula::SwitchToFormLeafInfo(Int_t code)
    if (!leaf) return kFALSE;
 
    if (fLookupType[code]==kDirect) {
-      if (leaf->InheritsFrom("TLeafElement")) {
+      if (leaf->InheritsFrom(TLeafElement::Class())) {
          TBranchElement * br = (TBranchElement*)leaf->GetBranch();
          if (br->GetType()==31) {
             // sub branch of a TClonesArray

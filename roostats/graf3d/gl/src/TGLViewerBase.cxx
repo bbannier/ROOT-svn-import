@@ -16,6 +16,7 @@
 
 #include "TGLRnrCtx.h"
 #include "TGLCamera.h"
+#include "TGLClip.h"
 #include "TGLOverlay.h"
 #include "TGLSelectBuffer.h"
 #include "TGLSelectRecord.h"
@@ -182,6 +183,21 @@ TGLSceneInfo* TGLViewerBase::GetSceneInfo(TGLSceneBase* scene)
       return 0;
 }
 
+//______________________________________________________________________________
+TGLLogicalShape* TGLViewerBase::FindLogicalInScenes(TObject* id)
+{
+   // Find logical-shape representing object id in the list of scenes.
+   // Return 0 if not found.
+
+   for (SceneInfoList_i i=fScenes.begin(); i!=fScenes.end(); ++i)
+   {
+      TGLLogicalShape *lshp = (*i)->GetScene()->FindLogical(id);
+      if (lshp)
+         return lshp;
+   }
+   return 0;
+}
+
 //______________________________________________________________________
 void TGLViewerBase::AddOverlayElement(TGLOverlayElement* el)
 {
@@ -270,6 +286,17 @@ void TGLViewerBase::MergeSceneBBoxes(TGLBoundingBox& bbox)
 // Rendering / selection virtuals
 /**************************************************************************/
 
+//______________________________________________________________________________
+void TGLViewerBase::SetupClipObject()
+{
+   // Setup clip-object. Protected virtual method.
+
+   if (fClip)
+   {
+      fClip->Setup(fOverallBoundingBox);
+   }
+}
+
 //______________________________________________________________________
 void TGLViewerBase::PreRender()
 {
@@ -331,6 +358,7 @@ void TGLViewerBase::PreRender()
    }
 
    fCamera->Apply(fOverallBoundingBox, fRnrCtx->GetPickRectangle());
+   SetupClipObject();
 
    // Make precursory selection of visible scenes.
    // Only scene bounding-box .vs. camera frustum check performed.

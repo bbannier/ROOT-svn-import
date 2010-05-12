@@ -46,17 +46,15 @@ options="                    \
    enable_builtin_zlib       \
    enable_castor             \
    enable_chirp              \
-   enable_cint5              \
-   enable_cint7              \
    enable_cintex             \
    enable_clarens            \
+   enable_cling              \
    enable_editline           \
    enable_dcache             \
    enable_exceptions         \
    enable_explicitlink       \
    enable_fftw3              \
    enable_gviz               \
-   enable_g4root             \
    enable_gdml               \
    enable_genvector          \
    enable_gfal               \
@@ -74,7 +72,6 @@ options="                    \
    enable_odbc               \
    enable_opengl             \
    enable_oracle             \
-   enable_pch                \
    enable_peac               \
    enable_pgsql              \
    enable_pythia6            \
@@ -110,14 +107,13 @@ for c in $options ; do eval ${c}="yes" ; done
 for c in $deprecated_options ; do eval ${c}="yes" ; done
 for c in $options ; do eval ${c}_explicit="" ; done
 
+enable_cling=
 enable_afs=no
-enable_cint7=no
 enable_gdml=no
 enable_globus=no
 enable_explicitlink=no
 enable_gsl_shared=no
 enable_krb5=no
-enable_pch=no
 enable_qt=no
 enable_qtgsi=no
 enable_roofit=no
@@ -128,8 +124,6 @@ enable_shadowpw=
 enable_soversion=no
 enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
-no_stubs=no              # complete Dictionaries by default (All stubs)
-no_stubs_test=no         # complete Dictionaries by default (All stubs)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
@@ -152,7 +146,6 @@ SAPDB            \
 RFIO             \
 CASTOR           \
 GFAL             \
-G4ROOT           \
 GSL              \
 HDFS             \
 PYTHIA6          \
@@ -293,14 +286,9 @@ check_libpic() {
     if [ "x`basename $chklibpic .a`" != "x`basename $chklibpic`" ]; then
         # we have an archive .a file
         logmsg "Checking if $chklibpic contains relocatable code"
-        logmsg " ar t $chklibpic | awk '{ if (NR==1) {print \$1 } }'"
-        objpic=`ar t $chklibpic | awk '{ if (NR==1) {print $1 } }'`
-        logmsg " ar x $chklibpic $objpic"
-        ar x $chklibpic $objpic
-        logmsg " objdump -r $objpic | grep 'R_X86_64_32'"
-        objdump -r $objpic | grep 'R_X86_64_32' > /dev/null 2>& 1
+        logmsg " objdump -r $chklibpic | grep -v ' .debug_' | grep 'R_X86_64_32'"
+        objdump -r $chklibpic | grep -v ' .debug_' | grep 'R_X86_64_32' > /dev/null 2>& 1
         ret=$?
-        rm -f $objpic
         logmsg " result: $ret"
         if test $ret -eq 0 ; then
             is_libpic=0
@@ -474,7 +462,7 @@ check_library() {
                             fi
                         fi
                     else
-                        logmsg "  $j not found in $j"
+                        logmsg "  $j not found in $l"
                     fi
                 done
             done
@@ -1005,8 +993,6 @@ GENREFLEXROOTCINTSHIN=config/genreflex-rootcint.in
 GENREFLEXROOTCINTSHOUT=bin/genreflex-rootcint
 GENREFLEXROOTCINTBATIN=config/genreflex-rootcint.bat.in
 GENREFLEXROOTCINTBATOUT=bin/genreflex-rootcint.bat
-ROOTCINTSTUBSHIN=utils/src/rootcint_nostubs.sh
-ROOTCINTSTUBSHOUT=bin/rootcint_nostubs.sh
 
 # unset global command options that can cause havoc
 unset GREP_OPTIONS
@@ -1059,8 +1045,6 @@ FIRST argument one of the architecures given at the end of this message.
    --macrodir      Macro installation dir    (<datadir>/macros)
    --mandir        Manpages installation dir (<prefix>/share/man/man1)
    --no-create     Do not create output files, dry run
-   --no-stubs      Remove Stubs from dictionaries (Direct call mechanism)
-   --no-stubs-test Remove Stubs from dictionaries (Direct call mechanism, can be switched off in rootrc)
    --prefix        Installation prefix       (/usr/local)
    --srcdir        Sources installation dir  (<datadir>/src)
    --testdir       Tests                     (<docdir>/test)
@@ -1086,8 +1070,6 @@ enable/disable options, prefix with either --enable- or --disable-
   builtin-zlib       Built included libz, or use system libz
   castor             CASTOR support, requires libshift from CASTOR >= 1.5.2
   chirp              Chirp support (Condor remote I/O), requires libchirp_client
-  cint5              Build the legacy CINT library
-  cint7              Build the *experimental* new CINT library
   cintex             Build the libCintex Reflex interface library
   clarens            Clarens RPC support, optionally used by PROOF
   editline           Color-enabled prompt, requires (n)curses library
@@ -1098,7 +1080,6 @@ enable/disable options, prefix with either --enable- or --disable-
   gviz               Graphs visualization support, requires graphviz
   gdml               GDML writer and reader
   gfal               GFAL support, requires libgfal
-  g4root             GEANT4 navigator based on TGeo, requires GEANT4 installed
   globus             Globus authentication support, requires Globus toolkit
   glite              gLite support, requires libglite-api-wrapper v.3 from GSI (https://subversion.gsi.de/trac/dgrid/wiki)
   gsl-shared         enable linking against shared libraries for GSL (default no)
@@ -1114,7 +1095,6 @@ enable/disable options, prefix with either --enable- or --disable-
   odbc               ODBC support, requires libiodbc or libodbc
   opengl             OpenGL support, requires libGL and libGLU
   oracle             Oracle support, requires libocci
-  pch                Precompiled headers (if supported by the compiler)
   peac               PEAC, PROOF Enabled Analysis Center, requires Clarens
   pgsql              PostgreSQL support, requires libpq
   pythia6            Pythia6 EG support, requires libPythia6
@@ -1171,9 +1151,6 @@ with options, prefix with --with-, enables corresponding support
   gfal-libdir        GFAL support, location of libgfal
   glew-incdir        GLEW support, location of glew.h
   glew-libdir        GLEW support, location of libGLEW
-  g4-incdir          GEANT4 support, location of GEANT4 header files
-  g4-libdir          GEANT4 support, location of GEANT4 libraries
-  clhep-incdir       CLHEP support, location of CLHEP header files
   gsl-incdir         GSL support, location of gsl/gsl_version.h
   gsl-libdir         GSL support, location of libgsl
   gccxml             Gccxml support, directory of the gccxml installation
@@ -1227,9 +1204,12 @@ with options, prefix with --with-, enables corresponding support
   xml-libdir         XML support, location of libxml2
   x11-libdir         X11 support, path to libX11
   xpm-libdir         XPM support, path to libXpm
+  xft-libdir         Xft support, path to libXft
+  xext-libdir        Xext support, path to libXext
   xrootd             XROOTD support, path to external XROOTD distribution
   xrootd-incdir      XROOTD support, path to external XROOTD header files (XrdVersion.hh, ...)
   xrootd-libdir      XROOTD support, path to external XROOTD libraries
+  xrootd-opts        XROOTD support, additional options to be passed to XROOTD-configure
 
 with compiler options, prefix with --with-, overrides default value
 
@@ -1237,6 +1217,8 @@ with compiler options, prefix with --with-, overrides default value
   cxx                alternative C++ compiler and options to be used
   f77                alternative Fortran compiler and options to be used
   ld                 alternative Linker and options to be used
+  clang              use clang compiler instead of gcc (mutual exclusive with
+                     the cc, cxx and ld options)
 
 Supported Architectures:
 
@@ -1252,6 +1234,19 @@ for example
 Report bugs to <rootdev@root.cern.ch>
 EOF
 }
+
+######################################################################
+#
+### echo %%% Store invocation and machine info in config.log
+#
+logmsg "Invoked on `hostname 2>/dev/null`"
+logmsg "   with `uname -a 2>/dev/null`"
+logmsg "   at `date 2>/dev/null`:"
+
+logmsg "   $0"
+for argv in "$@"; do
+    logmsg "     \"${argv}\""
+done
 
 ######################################################################
 #
@@ -1284,6 +1279,7 @@ if `awk '{ print $1 }' $ARCHS | grep "^$arch$" > /dev/null  2>&1` ; then
    echo "Configuring for $arch"
 else
    echo "Invalid architecture. Try $0 --help"
+   logmsg "Invalid architecture \"$arch\"."
    exit 1
 fi
 
@@ -1367,8 +1363,6 @@ if test $# -gt 0 ; then
       --no-create)             noact="yes"           ;;
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
-      --no-stubs)              no_stubs="yes";;
-      --no-stubs-test)         no_stubs="yes"; no_stubs_test="yes";;
       --with-afs=*)            afsdir=$optarg        ; enable_afs="yes"     ;;
       --with-afs-incdir=*)     afsincdir=$optarg     ; enable_afs="yes"     ;;
       --with-afs-libdir=*)     afslibdir=$optarg     ; enable_afs="yes"     ;;
@@ -1400,9 +1394,6 @@ if test $# -gt 0 ; then
       --with-gfal-libdir=*)    gfallibdir=$optarg    ; enable_gfal="yes"    ;;
       --with-glew-incdir=*)    glewincdir=$optarg    ; enable_builtin_glew=no;;
       --with-glew-libdir=*)    glewlibdir=$optarg    ; enable_builtin_glew=no;;
-      --with-g4-incdir=*)      g4incdir=$optarg      ; enable_g4root="yes"  ;;
-      --with-g4-libdir=*)      g4libdir=$optarg      ; enable_g4root="yes"  ;;
-      --with-clhep-incdir=*)   clhepincdir=$optarg   ;;
       --with-gsl-incdir=*)     gslincdir=$optarg     ; enable_gsl="yes"     ;;
       --with-gsl-libdir=*)     gsllibdir=$optarg     ; enable_gsl="yes"     ;;
       --with-globus=*)         globusdir=$optarg     ; enable_globus="yes"  ;;
@@ -1460,6 +1451,8 @@ if test $# -gt 0 ; then
       --with-xml-libdir=*)     xmllibdir=$optarg     ; enable_xml="yes"     ;;
       --with-x11-libdir=*)     x11libdir=$optarg     ;;
       --with-xpm-libdir=*)     xpmlibdir=$optarg     ;;
+      --with-xft-libdir=*)     xftlibdir=$optarg     ;;
+      --with-xext-libdir=*)    xextlibdir=$optarg    ;;
       --with-xrootd=*)         xrootddir=$optarg     ; enable_xrootd="yes"  ;;
       --with-xrootd-opts=*)    xrdaddopts=$optarg    ; enable_xrootd="yes"  ;;
       --with-xrootd-incdir=*)  xrdincdir=$optarg     ; enable_xrootd="yes"  ;;
@@ -1468,6 +1461,7 @@ if test $# -gt 0 ; then
       --with-cxx=*)            altcxx=$optarg        ;;
       --with-f77=*)            altf77=$optarg        ;;
       --with-ld=*)             altld=$optarg         ;;
+      --with-clang) altcc=clang; altcxx=clang++; altld=clang++ ;;
       ################################################################
       #
       # Enable/disable to turn on/off third party software linkage and
@@ -1614,12 +1608,12 @@ fi
 
 ######################################################################
 #
-### echo %%% check for GNU make >= 3.79.1 - Mandatory version of make
+### echo %%% check for GNU make >= 3.80 - Mandatory version of make
 #
 # Mandatory test, must succeed
-# Check for GNU make >= 3.79.1
+# Check for GNU make >= 3.80
 #
-message "Checking for GNU Make version >= 3.79.1"
+message "Checking for GNU Make version >= 3.80"
 gnumake="make"
 gnu=`$gnumake -v 2>&1 | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
 if test ! "x$gnu" = "xGNU" ; then
@@ -1631,13 +1625,17 @@ if test ! "x$gnu" = "xGNU" ; then
 fi
 if test ! "x$gnumake" = "x" ; then
     gnuv=`$gnumake -v | tr '.,' ' ' | awk 'BEGIN { FS=" "} { if (NR==1 && $3 == "version") printf "%d", ($4*1000)+($5*10)+$6; else printf "%d", ($3*1000)+($4*10)+$5 }'`
-    if test $gnuv -lt 3791 ; then
-        result "`basename $0`: GNU Make >= 3.79.1 MUST be installed, current version $gnuv is too old"
+    if test $gnuv -lt 3800 ; then
+        result "no"
+        result "`basename $0`: GNU Make >= 3.80 MUST be installed, current version $gnuv is too old"
+        result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
     result "ok"
 else
-    result "`basename $0`: GNU Make >= 3.79.1 MUST be installed"
+    result "no"
+    result "`basename $0`: GNU Make >= 3.80 MUST be installed"
+    result "See http://root.cern.ch/drupal/content/build-prerequisites"
     exit 1
 fi
 
@@ -1651,16 +1649,19 @@ fi
 check_comp C
 if test $found_comp -eq 0 ; then
    result "`basename $0`: C compiler MUST be installed"
+   result "See http://root.cern.ch/drupal/content/build-prerequisites"
    exit 1
 fi
 check_comp C++
 if test $found_comp -eq 0 ; then
    result "`basename $0`: C++ compiler MUST be installed"
+   result "See http://root.cern.ch/drupal/content/build-prerequisites"
    exit 1
 fi
 check_comp LD
 if test $found_comp -eq 0 ; then
    result "`basename $0`: Linker MUST be installed"
+   result "See http://root.cern.ch/drupal/content/build-prerequisites"
    exit 1
 fi
 check_comp F77
@@ -1684,7 +1685,8 @@ if test ! "x$platform" = "xwin32"; then
     x11libdir=$found_dir
 
     if test "x$found_lib" = "x" ; then
-        result "`basename $0`: libX11 (package libX11-devel) MUST be installed"
+        result "`basename $0`: libX11 MUST be installed"
+        result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
 
@@ -1694,7 +1696,19 @@ if test ! "x$platform" = "xwin32"; then
         /usr/X11/include /usr/include/X11R5
 
     if test "x$found_dir" = "x" ; then
-        result "`basename $0`: X11 headers (package x11-devel) MUST be installed"
+        result "`basename $0`: X11 headers MUST be installed"
+        result "See http://root.cern.ch/drupal/content/build-prerequisites"
+        exit 1
+    fi
+
+    check_header "X11/xpm.h" "" \
+        /usr/include /usr/X11R6/include /usr/include/X11 /usr/openwin/include \
+        /usr/local/include /usr/local/include/X11 /usr/local/X11R6/include \
+        /usr/X11/include /usr/include/X11R5
+
+    if test "x$found_dir" = "x" ; then
+        result "`basename $0`: xpm headers MUST be installed"
+        result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
 
@@ -1704,7 +1718,8 @@ if test ! "x$platform" = "xwin32"; then
         /usr/X11/include /usr/include/X11R5
 
     if test "x$found_dir" = "x" ; then
-        result "`basename $0`: Xft headers (libxft-devel) MUST be installed"
+        result "`basename $0`: Xft headers MUST be installed"
+        result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
 
@@ -1714,7 +1729,8 @@ if test ! "x$platform" = "xwin32"; then
         /usr/X11/include /usr/include/X11R5
 
     if test "x$found_dir" = "x" ; then
-        result "`basename $0`: X11/extensions/shape.h header (xorg-x11-proto-devel) MUST be installed"
+        result "`basename $0`: X11/extensions/shape.h header MUST be installed"
+        result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
 
@@ -1727,26 +1743,29 @@ if test ! "x$platform" = "xwin32"; then
 
     if test "x$xpmlib" = "x" ; then
         result "`basename $0`: libXpm MUST be installed"
+        result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
 
-    check_library "libXft" "$enable_shared" "" \
+    check_library "libXft" "$enable_shared" "$xftlibdir" \
         /usr/local/lib /usr/lib /usr/lib/X11 \
         /usr/local/lib/X11 /usr/X11R6/lib /usr/local/X11R6/lib \
         /usr/X11/lib
 
     if test "x$found_lib" = "x" ; then
-        result "`basename $0`: libXft (libxft-devel) MUST be installed"
+        result "`basename $0`: libXft MUST be installed"
+        result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
 
-    check_library "libXext" "$enable_shared" "" \
+    check_library "libXext" "$enable_shared" "$xextlibdir" \
         /usr/local/lib /usr/lib /usr/lib/X11 \
         /usr/local/lib/X11 /usr/X11R6/lib /usr/local/X11R6/lib \
         /usr/X11/lib
 
     if test "x$found_lib" = "x" ; then
-        result "`basename $0`: libXext (libXext-devel) MUST be installed"
+        result "`basename $0`: libXext MUST be installed"
+        result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
 fi
@@ -2007,14 +2026,22 @@ result "$enable_builtin_zlib"
 # Check for libcurses / libncurses
 #
 if test ! "x$enable_editline" = "xno" ; then
-    check_header "ncurses.h curses.h" "$cursesincdir" \
+    lookforcurseslib="libncurses"
+    check_header "ncurses.h" "$cursesincdir" \
         /usr/include/ncurses /usr/local/include/ncurses \
-        /usr/include/curses /usr/local/include/curses \
         /usr/include /usr/local/include
     cursesincdir=$found_dir
     curseshdr=$found_hdr
+    if test "x$cursesincdir" = "x"; then
+        lookforcurseslib="libcurses"
+        check_header "curses.h" "$cursesincdir" \
+            /usr/include/curses /usr/local/include/curses \
+            /usr/include /usr/local/include
+        cursesincdir=$found_dir
+        curseshdr=$found_hdr
+    fi
 
-    check_library "libncurses libcurses" "$enable_shared" "$curseslibdir" \
+    check_library "$lookforcurseslib" "$enable_shared" "$curseslibdir" \
         /usr/lib /usr/local/lib
     curseslib=$found_lib
     curseslibdir=$found_dir
@@ -2691,46 +2718,6 @@ if test ! "x$enable_gfal" = "xno"; then
 fi
 check_explicit "$enable_gfal" "$enable_gfal_explicit" \
      "Explicitly required GFAL dependencies not fulfilled"
-
-######################################################################
-#
-### echo %%% GEANT4 Support - Third party libraries
-#
-# (See http://geant4.web.cern.ch/geant4/)
-#
-# If the user has set the flags "--disable-g4root", we don't check for
-# GEANT4 at all.
-#
-if test ! "x$enable_g4root" = "xno"; then
-    # Check for GEANT4 include and library
-    check_header "G4Navigator.hh" "$g4incdir" "$g4incdir" \
-        $G4INCLUDE /opt/geant4/include /opt/g4/include \
-        /usr/local/include /usr/include
-    g4rootinc=$found_hdr
-    g4incdir=$found_dir
-
-    if test ! "$G4LIB/$G4SYSTEM" = "/"; then
-        G4SYSLIBDIR=$G4LIB/$G4SYSTEM
-    fi
-    check_library "libG4navigation" "$enable_shared" "$g4libdir" \
-        $G4SYSLIBDIR /opt/geant4/lib /opt/g4/lib /usr/local/lib /usr/lib \
-        /usr/lib/geant4
-
-    g4rootlib=$found_lib
-    g4libdir=$found_dir
-
-    # Check for CLHEP include
-    check_header "CLHEP/Vector/Rotation.h" "$clhepincdir" "$clhepincdir" \
-        $CLHEP_INCLUDE_DIR /usr/include
-    clhepinc=$found_hdr
-    clhepincdir=$found_dir
-
-    if test "x$g4incdir" = "x" || test "x$g4rootlib" = "x" || test "x$clhepincdir" = "x"; then
-        enable_g4root="no"
-    fi
-fi
-check_explicit "$enable_g4root" "$enable_g4root_explicit" \
-     "Explicitly required G4root dependencies not fulfilled"
 
 ######################################################################
 #
@@ -4782,7 +4769,7 @@ if test ! "x$enable_mathmore" = "xno"; then
         fi
     fi
     if test "x$enable_mathmore" = "xyes" && \
-       test ! "x$enable_gsl_shared" = "xyes" ; then
+       test "x$enable_gsl_shared" = "xno" ; then
         for gslalib in $gsllibs; do
            if [ "x`basename $gslalib .a`" != "x`basename $gslalib`" ]; then
                message "Checking whether $gslalib is compiled with -fPIC"
@@ -4795,6 +4782,15 @@ if test ! "x$enable_mathmore" = "xno"; then
                fi
            fi
         done
+        if `$cwhich gsl-config > /dev/null 2>&1` && \
+           test "x$enable_mathmore" = "xno" ; then
+            message "Checking for shared library versions using gsl-config"
+            gslflags=`gsl-config --cflags`
+            gsllibs=`gsl-config --libs`
+            gsllibdir=""
+            enable_mathmore="yes"
+            result "yes"
+        fi
     fi
 fi
 message "Checking whether to build libMathMore"
@@ -4807,7 +4803,6 @@ else
 fi
 check_explicit "$enable_mathmore" "$enable_mathmore_explicit" \
      "Explicitly required MathMore dependencies not fulfilled"
-
 
 ######################################################################
 #
@@ -4826,34 +4821,21 @@ check_explicit "$enable_genvector" "$enable_genvector_explicit" \
 
 ######################################################################
 #
-### echo %%% Legacy CINT Library
+### echo %%% Cling - LLVM/clang based interpreter prototype
 #
-message "Checking whether to build CINT5"
-if test ! "x$enable_cint5" = "xno"; then
-    enable_cint5="yes"
-    result "yes"
+if test ! "x$enable_cling" = "xno"; then
+    if test -d cint/cling; then
+        message "Checking whether to build cling"
+        enable_cling="yes"
+        hascling="define"
+        result "yes"
+    else
+        enable_cling="no"
+        hascling="undef"
+    fi
 else
-    enable_cint5=""
-    result "no"
-fi
-
-######################################################################
-#
-### echo %%% Experimental CINT7 Library
-#
-message "Checking whether to build CINT7"
-if test ! "x$enable_cint7" = "xno"; then
-    enable_cint7="yes"
-    enable_reflex="yes"
-    result "yes"
-else
-    enable_cint7=""
-    result "no"
-fi
-
-if test "x${enable_cint5}${enable_cint7}" = "x"; then
-   result "`basename $0`: Need to enable at least one of cint5 and cint7"
-   exit 1
+    enable_cling="no"
+    hascling="undef"
 fi
 
 ######################################################################
@@ -5068,35 +5050,6 @@ check_explicit "$enable_peac" "$enable_peac_explicit" \
 
 ######################################################################
 #
-### echo %%% Check for Stub removal support
-#
-if test "x$no_stubs" = "xyes" || test "x$no_stubs_test" = "xyes"; then
-    message "Checking for CINT support of function calls via symbols"
-    no_stubs="yes"
-
-    # Now check whether the platform is supported at all:
-    if test "x${arch}" = "xlinux"; then
-        gccmajor="`gcc -dumpversion 2>&1 | cut -d'.' -f1`"
-        gccminor="`gcc -dumpversion 2>&1 | cut -d'.' -f2`"
-        gccminorOK="`echo 234 | grep ${gccminor}`"
-        if test ! "x$gccmajor" = "x3" || test ! "x$gccminorOK" = "x234"; then
-            no_stubs="no"
-            no_stubs_test="no"
-            result "$no_stubs"
-            echo "WARNING: symbol-based calls are not supported with your compiler version"'!'
-        else
-            result "$no_stubs"
-        fi
-    else
-        no_stubs="no"
-        no_stubs_test="no"
-        result "$no_stubs"
-        echo "WARNING: symbol-based calls are not supported on ${arch}"'!'
-    fi
-fi
-
-######################################################################
-#
 ### echo %%% What dictionaries to build
 #
 # Can be either CINT (default), reflex, or gccxml.
@@ -5152,11 +5105,9 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_mathmore" = "xyes" && pl="$pl libroot-math-mathmore"
     test "x$enable_unuran"   = "xyes" && pl="$pl libroot-math-unuran"
     test "x$enable_table"    = "xyes" && pl="$pl libroot-misc-table"
-    test "x$enable_g4root"   = "xyes" && pl="$pl libroot-montecarlo-g4root"
     test "x$enable_ldap"     = "xyes" && pl="$pl libroot-net-ldap"
     test "x$enable_clarens"  = "xyes" && pl="$pl libroot-proof-clarens"
     test "x$enable_roofit"   = "xyes" && pl="$pl libroot-roofit"
-    test "x$enable_cint7"    = "xyes" && pl="$pl root-plugin-cint7"
     test "x$enable_asimage"  = "xyes" && pl="$pl root-plugin-graf2d-asimage"
     test "x$enable_gdml"     = "xyes" && pl="$pl root-plugin-geom-gdml"
     test "x$enable_qt"       = "xyes" && pl="$pl root-plugin-gui-qt root-plugin-graf2d-qt"
@@ -5169,7 +5120,6 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_fftw3"    = "xyes" && pl="$pl root-plugin-math-fftw3"
     test "x$enable_gviz"     = "xyes" && pl="$pl root-plugin-graf2d-gviz"
     test "x$enable_minuit2"  = "xyes" && pl="$pl root-plugin-math-minuit2"
-    test "x$enable_g4root"   = "xyes" && pl="$pl root-plugin-montecarlo-g4root"
     test "x$enable_pythia6"  = "xyes" && pl="$pl root-plugin-montecarlo-pythia6"
     test "x$enable_alien"    = "xyes" && pl="$pl root-plugin-net-alien"
     test "x$enable_bonjour"  = "xyes" && pl="$pl root-plugin-net-bonjour"
@@ -5326,8 +5276,8 @@ fi
 if test -d include/cint ; then
    rm -rf include/cint
 fi
-if test -d freetype/src/freetype-2.1.9 ; then
-   rm -rf freetype/src/freetype-2.1.9
+if test -d graf2d/freetype/src/freetype-2.3.5 ; then
+   rm -rf graf2d/freetype/src/freetype-2.3.5
 fi
 if test -d pcre/src/pcre-6.4 ; then
    rm -rf pcre/src/pcre-6.4
@@ -5341,6 +5291,12 @@ fi
 if test -d math/unuran/src/unuran-1.5.0-root ; then
    rm -rf math/unuran/src/unuran-1.5.0-root
 fi
+if test -d math/unuran/src/unuran-1.5.1-root ; then
+   rm -rf math/unuran/src/unuran-1.5.1-root
+fi
+if test -d cint/cint7 ; then
+   rm -rf cint/cint7
+fi
 if test ! "x$enable_editline" = "xno" ; then
    rm -f core/clib/src/Getline.o core/clib/src/Getline.d
 fi
@@ -5350,15 +5306,18 @@ fi
 if test ! "x$macosx106" = "x"; then
    rm -f bin/python64 bin/ruby64
 fi
-rm -f lib/libRXML* bin/libRXML* etc/system.rootmap
-rm -f lib/libProofGui* bin/libProofGui*
-rm -f lib/libMySQL* bin/libMySQL* lib/libGedOld* bin/libGedOld*
-rm -f lib/libSQL.* bin/libSQL.*
-rm -f lib/libASPluginGS.* bin/g2rootold*
-rm -f math/mathcore/src/G__MathCore32.*
-rm -f tmva/src/G__TMVA.*
-rm -f xrootd/src/headers.d
-rm -f asimage/src/headers.d asimage/src/G__ASImageGS.*
+rm -f lib/libRXML* bin/libRXML* etc/system.rootmap \
+ lib/libProofGui* bin/libProofGui* \
+ lib/libMySQL* bin/libMySQL* lib/libGedOld* bin/libGedOld* \
+ lib/libSQL.* bin/libSQL.* \
+ lib/libASPluginGS.* bin/g2rootold* \
+ math/mathcore/src/G__MathCore32.* \
+ tmva/src/G__TMVA.* \
+ xrootd/src/headers.d include/Xpm.h \
+ asimage/src/headers.d asimage/src/G__ASImageGS.* \
+ core/utils/src/rootcint7.cxx core/utils/src/RStl7.cxx \
+ core/metautils/src/TClassEdit7.cxx \
+ core/metautils/src/RConversionRuleParser7.cxx
 
 ######################################################################
 #
@@ -5540,8 +5499,6 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@chirpincdir@|$chirpincdir|"          \
     -e "s|@chirplib@|$chirplib|"                \
     -e "s|@chirplibdir@|$chirplibdir|"          \
-    -e "s|@buildcint5@|$enable_cint5|"          \
-    -e "s|@buildcint7@|$enable_cint7|"          \
     -e "s|@clarensincdir@|$clarensincdir|"      \
     -e "s|@clarenslibs@|$clarenslibs|"          \
     -e "s|@cintincdir@|$cintincdir|"            \
@@ -5574,15 +5531,13 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@zliblib@|$zliblib|"                  \
     -e "s|@zliblibdir@|$zliblibdir|"            \
     -e "s|@buildcintex@|$enable_cintex|"        \
+    -e "s|@buildcling@|$enable_cling|"        \
     -e "s|@buildreflex@|$enable_reflex|"        \
     -e "s|@buildroofit@|$enable_roofit|"        \
     -e "s|@buildminuit2@|$enable_minuit2|"      \
     -e "s|@buildunuran@|$enable_unuran|"        \
     -e "s|@buildgdml@|$enable_gdml|"            \
     -e "s|@buildmonalisa@|$enable_monalisa|"    \
-    -e "s|@enable_pch@|$enable_pch|"            \
-    -e "s|@no_stubs@|$no_stubs|"                \
-    -e "s|@no_stubs_test@|$no_stubs_test|"      \
     -e "s|@buildtable@|$enable_table|"          \
     -e "s|@buildtmva@|$enable_tmva|"            \
     -e "s|@buildmemstat@|$enable_memstat|"      \
@@ -5593,9 +5548,6 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@gfalincdir@|$gfalincdir|"            \
     -e "s|@gfallib@|$gfallib|"                  \
     -e "s|@gfallibdir@|$gfallibdir|"            \
-    -e "s|@g4incdir@|$g4incdir|"                \
-    -e "s|@g4libdir@|$g4libdir|"                \
-    -e "s|@clhepincdir@|$clhepincdir|"          \
     -e "s|@enable_xft@|$enable_xft|"            \
     -e "s|@glitelib@|$glitelib|"                \
     -e "s|@glitelibdir@|$glitelibdir|"          \
@@ -5738,7 +5690,6 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@buildfftw3@|$enable_fftw3|"          \
     -e "s|@buildgviz@|$enable_gviz|"            \
     -e "s|@buildgfal@|$enable_gfal|"            \
-    -e "s|@buildg4root@|$enable_g4root|"        \
     -e "s|@buildbonjour@|$enable_bonjour|"      \
     -e "s|@buildchirp@|$enable_chirp|"          \
     -e "s|@buildhdfs@|$enable_hdfs|"            \
@@ -5809,6 +5760,7 @@ sed \
     -e "s|@hasmathmore@|$hasmathmore|"     \
     -e "s|@haspthread@|$haspthread|"       \
     -e "s|@hasxft@|$hasxft|"               \
+    -e "s|@hascling@|$hascling|"               \
     < RConfigure.tmp > RConfigure-out.tmp
 rm -f RConfigure.tmp
 
@@ -5920,9 +5872,6 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@altcxx@|$altcxx|"               \
     -e "s|@altf77@|$altf772|"              \
     -e "s|@altld@|$altld2|"                \
-    -e "s|@no_stubs@|$no_stubs|"           \
-    -e "s|@no_stubs_test@|$no_stubs_test|" \
-    -e "s|@cint5enabled|$enable_cint5|"    \
    < root-config.tmp > $RCONFOUT
 rm -f root-config.tmp
 chmod 755 $RCONFOUT
@@ -6152,16 +6101,6 @@ if test "x$enable_reflex" = "xyes"; then
     fi
 else
     rm -f bin/genreflex*
-fi
-
-#---------------------------------------------------------------------
-# bin/rootcint_nostubs
-#
-if test "x$no_stubs" = "xyes"; then
-    message "Writing $ROOTCINTSTUBSHOUT"
-    cp -f  $ROOTCINTSTUBSHIN $ROOTCINTSTUBSHOUT
-    # force rootcint recompilation and thus regenerate dictionaries
-    touch utils/src/rootcint.cxx
 fi
 
 #---------------------------------------------------------------------

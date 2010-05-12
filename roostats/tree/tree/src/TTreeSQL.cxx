@@ -184,6 +184,7 @@ void TTreeSQL::CheckBasket(TBranch *branch)
    if (basket==0) {
       basket = (TBasketSQL*)CreateBasket(branch);
       if (basket==0) return;
+      //++(branch->fNBaskets);
       branch->GetListOfBaskets()->AddAtAndExpand(basket,0);
    }
    TBuffer * buffer = basket->GetBufferRef();
@@ -409,6 +410,7 @@ TString TTreeSQL::CreateBranches(TSQLResult * rs)
 
             br->SetEntries(fEntries);
 
+            //++(br->fNBaskets);
             br->GetListOfBaskets()->AddAtAndExpand(CreateBasket(br),0);
 
             prevBranch = branchName;
@@ -418,7 +420,7 @@ TString TTreeSQL::CreateBranches(TSQLResult * rs)
          prevBranch = branchName;
       }
 
-      if(type.CompareTo("varchar",TString::kIgnoreCase)==0 || type.CompareTo("char",TString::kIgnoreCase)==0 ){
+      if(type.CompareTo("varchar",TString::kIgnoreCase)==0 || type.CompareTo("varchar2",TString::kIgnoreCase)==0 || type.CompareTo("char",TString::kIgnoreCase)==0 ) { 
          char siz[6];
          sprintf(siz,"[%d]",prec);
          decl.Append( leafName+siz+"/C:" );

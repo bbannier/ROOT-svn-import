@@ -21,6 +21,7 @@
 
 #include "TGLPerspectiveCamera.h"
 #include "TGLOrthoCamera.h"
+#include "TGLClip.h"
 
 #include "TTimer.h"
 #include "TPoint.h"
@@ -60,7 +61,10 @@ public:
                       kCameraOrthoXOY,  kCameraOrthoXOZ,  kCameraOrthoZOY,
                       kCameraOrthoXnOY, kCameraOrthoXnOZ, kCameraOrthoZnOY };
 
-   enum ESecSelType { kOnRequest, kOnKeyMod1 };
+   enum ESecSelType { // When to do secondary-selection:
+      kOnRequest,     // - on request - when Mod1 is pressed or logical-shape requests it;
+      kOnKeyMod1      // - only when Mod1 is pressed.
+   };
 
 private:
    TGLViewer(const TGLViewer &);             // Not implemented
@@ -98,7 +102,6 @@ protected:
    TGLLightSet         *fLightSet;             //!
    // Clipping
    TGLClipSet          *fClipSet;              //!
-   Bool_t               fClipAutoUpdate;       //!
    // Selected physical
    TGLSelectRecord      fCurrentSelRec;        //! select record in use as selected
    TGLSelectRecord      fSelRec;               //! select record from last select (should go to context)
@@ -158,6 +161,9 @@ protected:
    ///////////////////////////////////////////////////////////////////////
    // Methods
    ///////////////////////////////////////////////////////////////////////
+
+   virtual void SetupClipObject();
+
    // Drawing - can tidy up/remove lots when TGLManager added
    void InitGL();
    void PreDraw();
@@ -238,6 +244,9 @@ public:
    static void         UseDefaultColorSetForNewViewers(Bool_t x);
    static Bool_t       IsUsingDefaultColorSetForNewViewers();
 
+   const TGLRect& RefViewport()      const { return fViewport; }
+   Int_t          ViewportDiagonal() const { return fViewport.Diagonal(); }
+
    Float_t GetPointScale()    const { return fPointScale; }
    Float_t GetLineScale()     const { return fLineScale; }
    void    SetPointScale(Float_t s) { fPointScale = s; }
@@ -249,8 +258,8 @@ public:
 
    TGLLightSet* GetLightSet() const { return fLightSet; }
    TGLClipSet * GetClipSet()  const { return fClipSet; }
-   Bool_t GetClipAutoUpdate() const   { return fClipAutoUpdate; }
-   void   SetClipAutoUpdate(Bool_t x) { fClipAutoUpdate = x; }
+   Bool_t GetClipAutoUpdate() const   { return fClipSet->GetAutoUpdate(); }
+   void   SetClipAutoUpdate(Bool_t x) { fClipSet->SetAutoUpdate(x); }
 
    // External GUI component interface
    TGLCamera & CurrentCamera() const { return *fCurrentCamera; }
@@ -340,10 +349,15 @@ public:
 
    virtual void PostSceneBuildSetup(Bool_t resetCameras);
 
+   virtual void Activated() { Emit("Activated()"); } // *SIGNAL*
+
    virtual void MouseIdle(TGLPhysicalShape*,UInt_t,UInt_t); // *SIGNAL*
    virtual void MouseOver(TGLPhysicalShape*); // *SIGNAL*
    virtual void MouseOver(TGLPhysicalShape*, UInt_t state); // *SIGNAL*
-   virtual void Activated() { Emit("Activated()"); } // *SIGNAL*
+   virtual void MouseOver(TObject *obj, UInt_t state); // *SIGNAL*
+   virtual void ReMouseOver(TObject *obj, UInt_t state); // *SIGNAL*
+   virtual void UnMouseOver(TObject *obj, UInt_t state); // *SIGNAL*
+
    virtual void Clicked(TObject *obj); //*SIGNAL*
    virtual void Clicked(TObject *obj, UInt_t button, UInt_t state); //*SIGNAL*
    virtual void ReClicked(TObject *obj, UInt_t button, UInt_t state); //*SIGNAL*

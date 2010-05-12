@@ -11,11 +11,6 @@
 
 #include "TEveStraightLineSet.h"
 
-#include "TBuffer3D.h"
-#include "TBuffer3DTypes.h"
-#include "TVirtualPad.h"
-#include "TVirtualViewer3D.h"
-
 #include "TRandom.h"
 #include "TEveProjectionManager.h"
 
@@ -147,25 +142,11 @@ void TEveStraightLineSet::ComputeBBox()
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveStraightLineSet::Paint(Option_t* /*option*/)
+void TEveStraightLineSet::Paint(Option_t*)
 {
    // Paint the line-set.
 
-   static const TEveException eH("TEveStraightLineSet::Paint ");
-
-   TBuffer3D buff(TBuffer3DTypes::kGeneric);
-
-   // Section kCore
-   buff.fID           = this;
-   buff.fColor        = GetMainColor();
-   buff.fTransparency = GetMainTransparency();
-   buff.fLocalFrame   = kFALSE;
-   RefMainTrans().SetBuffer3D(buff);
-   buff.SetSectionsValid(TBuffer3D::kCore);
-
-   Int_t reqSections = gPad->GetViewer3D()->AddObject(buff);
-   if (reqSections != TBuffer3D::kNone)
-      Error(eH, "only direct GL rendering supported.");
+   PaintStandard(this);
 }
 
 
@@ -227,6 +208,8 @@ void TEveStraightLineSetProjected::UpdateProjection()
    TEveProjection&      proj = * fManager->GetProjection();
    TEveStraightLineSet& orig = * dynamic_cast<TEveStraightLineSet*>(fProjectable);
 
+   TEveTrans *trans = orig.PtrMainTrans(kFALSE);
+
    BBoxClear();
 
    // Lines
@@ -246,14 +229,10 @@ void TEveStraightLineSetProjected::UpdateProjection()
    while (li.next())
    {
       Line_t* l = (Line_t*) li();
-      p1[0] = l->fV1[0]; p1[1] = l->fV1[1]; p1[2] = l->fV1[2];
-      p2[0] = l->fV2[0]; p2[1] = l->fV2[1]; p2[2] = l->fV2[2];
-      mx.MultiplyIP(p1);
-      mx.MultiplyIP(p2);
-      p1[0] += x; p1[1] += y; p1[2] += z;
-      p2[0] += x; p2[1] += y; p2[2] += z;
-      proj.ProjectPointfv(p1, fDepth);
-      proj.ProjectPointfv(p2, fDepth);
+
+      proj.ProjectPointfv(trans, l->fV1, p1, fDepth);
+      proj.ProjectPointfv(trans, l->fV2, p2, fDepth);
+
       AddLine(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
    }
 
@@ -269,7 +248,7 @@ void TEveStraightLineSetProjected::UpdateProjection()
       TEveVector t1, d, xx;
 
       t1.Set(lo->fV1); xx.Set(lo->fV2); xx -= t1; xx *= m->fPos; xx += t1;
-      proj.ProjectVector(xx, 0);
+      proj.ProjectVector(trans, xx, 0);
       t1.Set(lp->fV1); d.Set(lp->fV2); d -= t1; xx -= t1;
 
       AddMarker(m->fLineID, d.Dot(xx) / d.Mag2());

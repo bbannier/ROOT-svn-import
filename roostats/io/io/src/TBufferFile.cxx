@@ -392,7 +392,7 @@ void TBufferFile::ReadFloat16(Float_t *f, TStreamerElement *ele)
       ix = theExp;
       ix <<= 23;
       ix |= (theMan & ((1<<(nbits+1))-1)) <<(23-nbits);
-      if(1<<(nbits+1) & theMan) xx=-xx;
+      if(1<<(nbits+1) & theMan) xx = -xx;
       f[0] = xx;
    }
 }
@@ -428,7 +428,7 @@ void TBufferFile::ReadDouble32(Double_t *d, TStreamerElement *ele)
          ix = theExp;
          ix <<= 23;
          ix |= (theMan & ((1<<(nbits+1))-1)) <<(23-nbits);
-         if(1<<(nbits+1) & theMan) xx=-xx;
+         if(1<<(nbits+1) & theMan) xx = -xx;
          d[0] = (Double_t)xx;
       }
    }
@@ -1374,7 +1374,7 @@ void TBufferFile::ReadFastArrayFloat16(Float_t *f, Int_t n, TStreamerElement *el
          ix = theExp;
          ix <<= 23;
          ix |= (theMan & ((1<<(nbits+1))-1)) <<(23-nbits);
-         if(1<<(nbits+1) & theMan) xx=-xx;
+         if(1<<(nbits+1) & theMan) xx = -xx;
          f[i] = xx;
       }
    }
@@ -1421,7 +1421,7 @@ void TBufferFile::ReadFastArrayDouble32(Double_t *d, Int_t n, TStreamerElement *
             ix = theExp;
             ix <<= 23;
             ix |= (theMan & ((1<<(nbits+1))-1)) <<(23-nbits);
-            if (1<<(nbits+1) & theMan) xx=-xx;
+            if (1<<(nbits+1) & theMan) xx = -xx;
             d[i] = (Double_t)xx;
          }
       }
@@ -2076,7 +2076,7 @@ void TBufferFile::WriteFastArrayDouble32(const Double_t *d, Int_t n, TStreamerEl
 
 //______________________________________________________________________________
 void TBufferFile::WriteFastArray(void  *start, const TClass *cl, Int_t n,
-                             TMemberStreamer *streamer)
+                                 TMemberStreamer *streamer)
 {
    // Write an array of object starting at the address 'start' and of length 'n'
    // the objects in the array are assumed to be of class 'cl'
@@ -2097,7 +2097,7 @@ void TBufferFile::WriteFastArray(void  *start, const TClass *cl, Int_t n,
 
 //______________________________________________________________________________
 Int_t TBufferFile::WriteFastArray(void **start, const TClass *cl, Int_t n,
-                             Bool_t isPreAlloc, TMemberStreamer *streamer)
+                                  Bool_t isPreAlloc, TMemberStreamer *streamer)
 {
    // Write an array of object starting at the address '*start' and of length 'n'
    // the objects in the array are of class 'cl'
@@ -3210,12 +3210,12 @@ void TBufferFile::ForceWriteInfoClones(TClonesArray *a)
    // In case the StreamerInfo has already been computed and optimized,
    // one must disable the option BypassStreamer.
 
-   Bool_t optim = TStreamerInfo::CanOptimize();
-   if (optim) TStreamerInfo::Optimize(kFALSE);
    TStreamerInfo *sinfo = (TStreamerInfo*)a->GetClass()->GetStreamerInfo();
+   if (sinfo->IsOptimized()) {
+      sinfo->SetBit(TVirtualStreamerInfo::kCannotOptimize);
+      sinfo->Compile();
+   }
    ForceWriteInfo(sinfo,kFALSE);
-   if (optim) TStreamerInfo::Optimize(kTRUE);
-   if (sinfo->IsOptimized()) a->BypassStreamer(kFALSE);
 }
 
 //______________________________________________________________________________
@@ -3330,7 +3330,9 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, Int_t versio
             CheckByteCount(start, count, cl);
             return 0;            
          }
-      } else if (!sinfo->GetOffsets()) {
+      } else if (!sinfo->IsCompiled()) {
+         // Streamer info has not been compiled, but exists.
+         // Therefore it was read in from a file and we have to do schema evolution.
          const_cast<TClass*>(cl)->BuildRealData(pointer);
          sinfo->BuildOld();
       }
@@ -3424,8 +3426,10 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, const TClass
             return 0;            
          }
       } 
-      else if (!sinfo->TStreamerInfo::GetOffsets())  // 'TStreamerInfo::' avoids going via a virtual function.
+      else if (!sinfo->IsCompiled())
       { 
+         // Streamer info has not been compiled, but exists.
+         // Therefore it was read in from a file and we have to do schema evolution?
          const_cast<TClass*>(cl)->BuildRealData(pointer);
          sinfo->BuildOld();
       }
@@ -3462,14 +3466,10 @@ Int_t TBufferFile::WriteClassBuffer(const TClass *cl, void *pointer)
       cl->GetStreamerInfos()->AddAtAndExpand(sinfo,cl->GetClassVersion());
       if (gDebug > 0) printf("Creating StreamerInfo for class: %s, version: %d\n",cl->GetName(),cl->GetClassVersion());
       sinfo->Build();
-   } else if (!sinfo->GetOffsets()) {
+   } else if (!sinfo->IsCompiled()) {
       const_cast<TClass*>(cl)->BuildRealData(pointer);
       sinfo->BuildOld();
    }
-   // This is necessary because it might be induced later anyway if an object
-   // of the same type is either a base class or a pointer data member of this
-   // class of any contained objects.
-   if (sinfo->IsOptimized() && !TVirtualStreamerInfo::CanOptimize()) sinfo->Compile();
 
    //write the class version number and reserve space for the byte count
    UInt_t R__c = WriteVersion(cl, kTRUE);

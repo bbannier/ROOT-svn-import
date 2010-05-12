@@ -23,6 +23,7 @@
 
 #include "TVirtualArray.h"
 #include "TBufferFile.h"
+#include "TInterpreter.h"
 
 //==========CPP macros
 
@@ -156,20 +157,36 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
       b.SetStreamerElementNumber(i);
       TStreamerElement *aElement = (TStreamerElement*)fElem[i];
 
+      Int_t ioffset = eoffset+fOffset[i];
+
       if (R__TestUseCache<T>(aElement)) {
-         if (gDebug > 1) {
-           printf("WriteBuffer, class:%s, name=%s, fType[%d]=%d,"
-                " %s, bufpos=%d, arr=%p, eoffset=%d, Redirect=%p\n",
-                fClass->GetName(),aElement->GetName(),i,fType[i],
-                aElement->ClassName(),b.Length(),arr[0], eoffset,((TBufferFile&)b).PeekDataCache()->GetObjectAt(0));
-         }
          if (aElement->TestBit(TStreamerElement::kWrite)) {
-            thisVar->WriteBufferAux(b,*((TBufferFile&)b).PeekDataCache(),i,narr,eoffset, arrayMode);
+            if (((TBufferFile&)b).PeekDataCache()==0) {
+               Warning("WriteBuffer","Skipping %s::%s because the cache is missing.",thisVar->GetName(),aElement->GetName());
+            } else {
+               if (gDebug > 1) {
+                  printf("WriteBuffer, class:%s, name=%s, fType[%d]=%d,"
+                         " %s, bufpos=%d, arr=%p, eoffset=%d, Redirect=%p\n",
+                         fClass->GetName(),aElement->GetName(),i,fType[i],
+                         aElement->ClassName(),b.Length(),arr[0], eoffset,((TBufferFile&)b).PeekDataCache()->GetObjectAt(0));
+               }
+               thisVar->WriteBufferAux(b,*((TBufferFile&)b).PeekDataCache(),i,narr,eoffset, arrayMode);
+            }
+            continue;
+         } else {
+            if (gDebug > 1) {
+               printf("WriteBuffer, class:%s, name=%s, fType[%d]=%d,"
+                      " %s, bufpos=%d, arr=%p, eoffset=%d, not a write rule, skipping.\n",
+                      fClass->GetName(),aElement->GetName(),i,fType[i],
+                      aElement->ClassName(),b.Length(),arr[0], eoffset);
+            }
+            // The rule was a cached element for a read, rule, the real offset is in the
+            // next element (the one for the rule itself).
+            if (aElement->TestBit(TStreamerElement::kRepeat)) continue;
+            ioffset = eoffset+fOffset[i];
          }
-         continue;
       }
 
-      const Int_t ioffset = eoffset+fOffset[i];
 
       if (gDebug > 1) {
          printf("WriteBuffer, class:%s, name=%s, fType[%d]=%d, %s, "
@@ -506,13 +523,21 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
             {
                TClass *cl                 = fComp[i].fClass;
                TMemberStreamer *pstreamer = fComp[i].fStreamer;
+               TVirtualCollectionProxy *proxy = cl->GetCollectionProxy();
+               TClass* vClass = proxy ? proxy->GetValueClass() : 0;
 
-               if (!b.TestBit(TBuffer::kCannotHandleMemberWiseStreaming) && thisVar->GetStreamMemberWise() && cl->CanSplit()) {
+               if (!b.TestBit(TBuffer::kCannotHandleMemberWiseStreaming) && thisVar->GetStreamMemberWise() && cl->CanSplit()
+                   && !(strspn(aElement->GetTitle(),"||") == 2)
+                   && !(gInterpreter->ClassInfo_RootFlag(vClass->GetClassInfo()) & 1) ) {
                   // Let's save the collection member-wise.
 
                   UInt_t pos = b.WriteVersionMemberWise(thisVar->IsA(),kTRUE);
-                  TVirtualCollectionProxy *proxy = cl->GetCollectionProxy();
-                  TStreamerInfo *subinfo = (TStreamerInfo*)proxy->GetValueClass()->GetStreamerInfo();
+                  b.WriteVersion( vClass, kFALSE );
+                  TStreamerInfo *subinfo = (TStreamerInfo*)vClass->GetStreamerInfo();
+                  if (subinfo->IsOptimized()) {
+                     subinfo->SetBit(TVirtualStreamerInfo::kCannotOptimize);
+                     subinfo->Compile();
+                  }
                   DOLOOP {
                      char **contp = (char**)(arr[k]+ioffset);
                      for(int j=0;j<fLength[i];++j) {
@@ -547,14 +572,20 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
             {
                TClass *cl                 = fComp[i].fClass;
                TMemberStreamer *pstreamer = fComp[i].fStreamer;
-               if (!b.TestBit(TBuffer::kCannotHandleMemberWiseStreaming) && thisVar->GetStreamMemberWise() && cl->CanSplit()) {
+               TVirtualCollectionProxy *proxy = cl->GetCollectionProxy();
+               TClass* vClass = proxy ? proxy->GetValueClass() : 0;
+               if (!b.TestBit(TBuffer::kCannotHandleMemberWiseStreaming) && thisVar->GetStreamMemberWise() && cl->CanSplit()
+                   && !(strspn(aElement->GetTitle(),"||") == 2)
+                   && !(gInterpreter->ClassInfo_RootFlag(vClass->GetClassInfo()) & 1) ) {
                   // Let's save the collection in member-wise order.
 
                   UInt_t pos = b.WriteVersionMemberWise(thisVar->IsA(),kTRUE);
-                  TVirtualCollectionProxy *proxy = cl->GetCollectionProxy();
-                  TClass* vClass = proxy->GetValueClass();
                   b.WriteVersion( vClass, kFALSE );
-                  TStreamerInfo *subinfo = (TStreamerInfo*)proxy->GetValueClass()->GetStreamerInfo();
+                  TStreamerInfo *subinfo = (TStreamerInfo*)vClass->GetStreamerInfo();
+                  if (subinfo->IsOptimized()) {
+                     subinfo->SetBit(TVirtualStreamerInfo::kCannotOptimize);
+                     subinfo->Compile();
+                  }
                   DOLOOP {
                      char *obj = (char*)(arr[k]+ioffset);
                      Int_t n = fLength[i];

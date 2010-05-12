@@ -153,6 +153,14 @@ TEveProjected::~TEveProjected()
 }
 
 //______________________________________________________________________________
+TEveElement* TEveProjected::GetProjectableAsElement() const
+{
+   // Returns fProjectable dynamic-casted to TEveElement.
+
+   return dynamic_cast<TEveElement*>(fProjectable);
+}
+
+//______________________________________________________________________________
 void TEveProjected::SetProjection(TEveProjectionManager* mng, TEveProjectable* model)
 {
    // Sets projection manager and reference in the projectable object. Method called
@@ -209,4 +217,12 @@ void TEveProjected::SetDepthCommon(Float_t d, TEveElement* el, Float_t* bbox)
       bbox[5] += delta;
       el->StampTransBBox();
    }
+}
+
+//______________________________________________________________________________
+void TEveProjected::SetDepthLocal(Float_t d)
+{
+   // Base-class implementation -- just sets fDepth.
+
+   fDepth = d;
 }

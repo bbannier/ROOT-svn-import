@@ -47,20 +47,22 @@ TGLAnnotation::TGLAnnotation(TGLViewerBase *parent, const char *text, Float_t po
 
    fPosX(posx), fPosY(posy),
    fMouseX(0),  fMouseY(0),
-   fInDrag(kFALSE),
+   fDrag(kNone),
+   fDrawW(0), fDrawH(0), fTextSizeDrag(0),
    fActive(kFALSE),
    fMainFrame(0), fTextEdit(0),
 
    fParent(0),
 
    fText(text),
-   fTextSize(0.02),
+   fTextSize(0.03),
    fTextAlign(TGLFont::kLeft),
    fBackColor(fgBackColor),
    fTextColor(fgTextColor),
    fTransparency(100),
    fDrawRefLine(kFALSE),
-   fUseColorSet(kTRUE)
+   fUseColorSet(kTRUE),
+   fAllowClose(kTRUE)
 {
    // Constructor.
    // Create annotation as plain text
@@ -74,20 +76,22 @@ TGLAnnotation::TGLAnnotation(TGLViewerBase *parent, const char *text, Float_t po
    TGLOverlayElement(TGLOverlayElement::kAnnotation),
    fPosX(posx), fPosY(posy),
    fMouseX(0),  fMouseY(0),
-   fInDrag(kFALSE),
+   fDrag(kNone),
+   fDrawW(0), fDrawH(0), fTextSizeDrag(0),
    fActive(kFALSE),
    fMainFrame(0), fTextEdit(0),
 
    fParent(0),
 
    fText(text),
-   fTextSize(0.02),
+   fTextSize(0.03),
    fTextAlign(TGLFont::kLeft),
    fBackColor(fgBackColor),
    fTextColor(fgTextColor),
    fTransparency(40),
    fDrawRefLine(kTRUE),
-   fUseColorSet(kFALSE)
+   fUseColorSet(kTRUE),
+   fAllowClose(kTRUE)
 {
    // Constructor.
    // Create annotaton by picking an object.
@@ -116,39 +120,38 @@ Bool_t TGLAnnotation::Handle(TGLRnrCtx&          rnrCtx,
 
    if (selRec.GetN() < 2) return kFALSE;
    Int_t recID = selRec.GetItem(1);
-
    switch (event->fType)
    {
       case kButtonPress:
       {
          fMouseX = event->fX;
          fMouseY = event->fY;
-         fInDrag = kTRUE;
-
+         fDrag = (recID == kResizeID) ? kResize : kMove;
+         fTextSizeDrag = fTextSize;
          return kTRUE;
       }
       case kButtonRelease:
       {
-         fInDrag = kFALSE;
-
-         if (recID == 2)
+         fDrag = kNone;
+         if (recID == kDeleteID)
          {
             TGLViewer *v = fParent;
             delete this;
             v->RequestDraw(rnrCtx.ViewerLOD());
          }
-         else if (recID == 3)
+         else if (recID == kEditID)
          {
             MakeEditor();
          }
-
          return kTRUE;
       }
       case kMotionNotify:
       {
-         if (fInDrag)
+         const TGLRect& vp = rnrCtx.RefCamera().RefViewport();
+         if (vp.Width() == 0 || vp.Height() == 0) return kFALSE;
+
+         if (fDrag == kMove)
          {
-            const TGLRect& vp = rnrCtx.RefCamera().RefViewport();
             fPosX += (Float_t)(event->fX - fMouseX) / vp.Width();
             fPosY -= (Float_t)(event->fY - fMouseY) / vp.Height();
             fMouseX = event->fX;
@@ -158,10 +161,23 @@ Bool_t TGLAnnotation::Handle(TGLRnrCtx&          rnrCtx,
                fPosX = 0;
             else if (fPosX + fDrawW > 1.0f)
                fPosX = 1.0f - fDrawW;
-            if (fPosY - fDrawH + fDrawY < 0)
-               fPosY = fDrawH - fDrawY;
-            else if (fPosY + fDrawY > 1.0f)
-               fPosY = 1.0f - fDrawY;
+            if (fPosY < fDrawH)
+               fPosY = fDrawH;
+            else if (fPosY > 1.0f)
+               fPosY = 1.0f;
+         }
+         else if (fDrag == kResize)
+         {
+            using namespace TMath;
+            Float_t oovpw = 1.0f / vp.Width(), oovph = 1.0f / vp.Height();
+
+            Float_t xw = oovpw * Min(Max(0, event->fX), vp.Width());
+            Float_t yw = oovph * Min(Max(0, vp.Height() - event->fY), vp.Height());
+
+            Float_t rx = Max((xw - fPosX) / (oovpw * fMouseX - fPosX), 0.0f);
+            Float_t ry = Max((yw - fPosY) / (oovph*(vp.Height() - fMouseY) - fPosY), 0.0f);
+
+            fTextSize  = Max(fTextSizeDrag * Min(rx, ry), 0.01f);
          }
          return kTRUE;
       }
@@ -194,18 +210,21 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
 {
    // Render the annotation.
 
+   const TGLRect& vp = rnrCtx.RefCamera().RefViewport();
+   if (vp.Width() == 0 && vp.Height() == 0)
+      return;
+
    Float_t old_depth_range[2];
    glGetFloatv(GL_DEPTH_RANGE, old_depth_range);
    glDepthRange(0, 0.001);
 
-   glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT | GL_POLYGON_BIT );
+
+   glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT | GL_POLYGON_BIT);
    TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
    glDisable(GL_CULL_FACE);
    glEnable(GL_BLEND);
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-   const TGLRect& vp = rnrCtx.RefCamera().RefViewport();
 
    // prepare colors
    Color_t bgCol, fgCol;
@@ -220,20 +239,10 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
                                c1->GetGreen()*f1  + c2->GetGreen()*f2,
                                c1->GetBlue() *f1  + c2->GetBlue() *f2);
    }
-   else {
+   else
+   {
       fgCol = fTextColor;
       bgCol = fBackColor;
-   }
-
-   if (fDrawRefLine)
-   {
-      TGLUtil::ColorTransparency(bgCol, fTransparency);
-      TGLUtil::LineWidth(2);
-      glBegin(GL_LINES);
-      TGLVertex3 v = rnrCtx.RefCamera().ViewportToWorld(TGLVertex3(fPosX*vp.Width(), fPosY*vp.Height(), 0));
-      glVertex3dv(v.Arr());
-      glVertex3dv(fPointer.Arr());
-      glEnd();
    }
 
    // reset matrix
@@ -247,153 +256,219 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
       gluPickMatrix(rect.X(), rect.Y(), rect.Width(), rect.Height(),
                     (Int_t*) rnrCtx.GetCamera()->RefViewport().CArr());
    }
-   glOrtho(vp.X(), vp.Width(), vp.Y(), vp.Height(), 0, 1);
    glMatrixMode(GL_MODELVIEW);
    glPushMatrix();
+   // set ortho camera to [0,1] [0.1]
    glLoadIdentity();
+   glTranslatef(-1.0f, -1.0f, 0.0f);
+   glScalef(2.0f, 2.0f, 1.0f);
 
    glEnable(GL_POLYGON_OFFSET_FILL);
-   glPolygonOffset(0.1, 1);
+   glPolygonOffset(0.1f, 1.0f);
 
-   TGLUtil::LineWidth(1);
+   glPushMatrix();
+
+   TGLUtil::LineWidth(1.0f);
 
    // move to pos
-   Float_t posX = vp.Width()  * fPosX;
-   Float_t posY = vp.Height() * fPosY;
-   glTranslatef(posX, posY, -0.99);
+   glTranslatef(fPosX, fPosY, 0.0f);
 
+   TObjArray  *lines = fText.Tokenize("\n");
+   TIter       line_iter(lines);
+   TObjString *osl;
 
-   // get size of bg area, look at font attributes
-   rnrCtx.RegisterFontNoScale(TMath::Nint(fTextSize*vp.Width()), "arial",  TGLFont::kPixmap, fFont);
-   Float_t ascent, descent, line_height;
-   fFont.MeasureBaseLineParams(ascent, descent, line_height);
-   TObjArray* lines = fText.Tokenize("\n");
-   Float_t width  = 0;
-   Float_t height = 0;
-   TIter  lit(lines);
-   TObjString* osl;
-   Float_t llx, lly, llz, urx, ury, urz;
-   while ((osl = (TObjString*) lit()) != 0)
+   Float_t widthTxt, heightTxt, sx, sy, descent, line_height;
    {
-      fFont.BBox(osl->GetString().Data(), llx, lly, llz, urx, ury, urz);
-      width = TMath::Max(width, urx);
-      height -= (line_height + descent);
+      // get unscaled text size
+      Int_t fs = TGLFontManager::GetFontSize(TMath::Nint(vp.Height()*fTextSize), 12, 64);
+      rnrCtx.RegisterFontNoScale(fs, "arial", TGLFont::kTexture, fFont);
+      descent     = fFont.GetDescent();
+      line_height = fFont.GetLineHeight();
+
+      Float_t llx, lly, llz, urx, ury, urz;
+      widthTxt = heightTxt = 0;
+      while ((osl = (TObjString*) line_iter()) != 0)
+      {
+         fFont.BBox(osl->GetString().Data(), llx, lly, llz, urx, ury, urz);
+         widthTxt   = TMath::Max(widthTxt, urx);
+         heightTxt += line_height;
+      }
+      widthTxt  += 2.0f * descent;
+      heightTxt += 2.0f * descent;
+
+      // keep proportions
+      sy = fTextSize / (line_height + descent);
+      sx = sy / vp.Aspect();
+      fDrawW = sx*widthTxt;
+      fDrawH = sy*heightTxt;
    }
-   width  += 2 * descent;
-   height -= 2 * descent;
+   glScalef(sx, sy, 1.0f);
 
-   // Store variables needed for border check when box is dragged.
-   fDrawW = (Float_t) width / vp.Width();
-   fDrawH = (Float_t) - height / vp.Height();
-   fDrawY = line_height / vp.Height();
+   glPushName(kMoveID);
 
-   // polygon background
-   Float_t padT =  2;
-   Int_t   padF = 10;
-   Float_t padM = padF + 2 * padT;
+   Float_t x1, x2, y1, y2;
+   Float_t z3 =  0.0f;  // main background
+   Float_t z2 = -0.01f; // outlines and text
+   Float_t z1 = -0.02f; // button on top of text
+   Float_t z0 = -0.03f; // button on top of text
 
-   glPushName(0);
-
-   // bg plain
-   Float_t y = line_height;
-   Float_t x = 0;
-   glLoadName(1);
+   // main background
+   glLoadName(kMoveID);
+   x1 =  0.0f;
+   x2 =  widthTxt;
+   y1 = -heightTxt;
+   y2 =  0.0f;
    TGLUtil::ColorTransparency(bgCol, fTransparency);
    glBegin(GL_QUADS);
-   glVertex2f(x, y);
-   glVertex2f(x, y + height);
-   glVertex2f(x+width, y + height);
-   glVertex2f(x+width, y);
+   glVertex3f(x1, y1, z3);
+   glVertex3f(x2, y1, z3);
+   glVertex3f(x2, y2, z3);
+   glVertex3f(x1, y2, z3);
    glEnd();
-
-   // outline
-   TGLUtil::ColorTransparency(fgCol, fTransparency);
+   // main polygon outline
+   TGLUtil::ColorTransparency(fgCol, GetLineTransparency());
    glBegin(GL_LINE_LOOP);
-   glVertex2f(x, y);
-   glVertex2f(x, y + height);
-   glVertex2f(x+width, y + height);
-   glVertex2f(x+width, y);
+   glVertex3f(x1, y1, z2);
+   glVertex3f(x2, y1, z2);
+   glVertex3f(x2, y2, z2);
+   glVertex3f(x1, y2, z2);
    glEnd();
 
-   if (fActive && fTransparency < 100)
-   {  // edit area
-
-      TGLUtil::ColorTransparency(bgCol, fTransparency);
-      // edit button
-      glLoadName(2);
-      glBegin(GL_QUADS);
-      glVertex2f(x + padM, y);
-      glVertex2f(x,        y);
-      glVertex2f(x,        y + padM);
-      glVertex2f(x + padM, y + padM);
-      glEnd();
-      // close button
-      glLoadName(3);
-      x = padM;
-      glBegin(GL_QUADS);
-      glVertex2f(x + padM, y);
-      glVertex2f(x,        y);
-      glVertex2f(x,        y + padM);
-      glVertex2f(x + padM, y + padM);
-      glEnd();
-
-      // outlines
-      TGLUtil::ColorTransparency(fgCol, fTransparency);
-      x = 0; // left
-      glBegin(GL_LINE_LOOP);
-      glVertex2f(x + padM, y);
-      glVertex2f(x,        y);
-      glVertex2f(x,        y + padM);
-      glVertex2f(x + padM, y + padM);
-      glEnd(); // right
-      x = padM;
-      glBegin(GL_LINE_LOOP);
-      glVertex2f(x + padM, y);
-      glVertex2f(x,        y);
-      glVertex2f(x,        y + padM);
-      glVertex2f(x + padM, y + padM);
-      glEnd();
-   }
-   glPopName();
-
-   // text
-   Float_t zOff = 0.2; // more than 0, else not rendered
-   fFont.PreRender();
+   // annotation text
    TGLUtil::Color(fgCol);
-   TIter  next_base(lines);
-   TObjString* os;
+   fFont.PreRender();
    glPushMatrix();
-   glTranslatef(descent, line_height, zOff);
    Float_t tx = 0;
-   while ((os = (TObjString*) next_base()) != 0)
+   line_iter.Reset();
+   while ((osl = (TObjString*) line_iter()) != 0)
    {
-      glTranslatef(0, -(line_height + descent), 0);
       if (fTextAlign == TGLFont::kLeft) {
          tx = 0;
       }
       else if  (fTextAlign == TGLFont::kCenterH) {
-         tx = 0.5 * width - descent ;
+         tx = 0.5f * widthTxt - descent ;
       }
       else {
-         tx = width - 2*descent;
+         tx = widthTxt - 2.0f * descent;
       }
-      fFont.Render(os->GetString(), tx, 0, 0, fTextAlign, TGLFont::kTop);
+      glTranslatef(0.0f, -line_height, 0.0f);
+      fFont.Render(osl->GetString(), tx+descent, 0, z2, fTextAlign, TGLFont::kTop) ;
    }
    glPopMatrix();
    fFont.PostRender();
 
-   // menu
+   delete lines;
 
-   if (fActive && fTransparency < 100)
+   // buttons
+   if (fActive)
    {
-      x = padT;
-      y = padT + 0.5*padF + line_height;
-      rnrCtx.RegisterFontNoScale(padF, "arial",  TGLFont::kPixmap, fMenuFont);
-      fMenuFont.PreRender();
-      fMenuFont.Render("X", x, y, zOff, TGLFont::kLeft, TGLFont::kCenterV);
-      x += padM + padT;
-      fMenuFont.Render("E", x, y, zOff, TGLFont::kLeft, TGLFont::kCenterV);
-      fMenuFont.PostRender();
+      Float_t bbox[6];
+      fFont.PreRender();
+      fFont.BBox("X", bbox[0], bbox[1], bbox[2], bbox[3], bbox[4], bbox[5]);
+      glLoadName(kEditID);
+      fFont.Render("E", descent, descent, z2, fTextAlign, TGLFont::kTop);
+      x2 = bbox[3] + 2.0f * descent;
+      if (fAllowClose)
+      {
+         glLoadName(kDeleteID);
+         fFont.Render("X", x2 + descent, descent, z2, fTextAlign, TGLFont::kTop);
+      }
+      fFont.PostRender();
+
+      x1 = 0.0f;
+      y1 = 0.0f;
+      y2 = line_height + descent;
+      {
+         // edit button
+         glLoadName(kEditID);
+         // polygon
+         TGLUtil::ColorTransparency(bgCol, fTransparency);
+         glBegin(GL_QUADS);
+         glVertex3f(x1, y1, z3);
+         glVertex3f(x2, y1, z3);
+         glVertex3f(x2, y2, z3);
+         glVertex3f(x1, y2, z3);
+         glEnd();
+         //  outline
+         TGLUtil::ColorTransparency(fgCol, GetLineTransparency());
+         glBegin(GL_LINE_LOOP);
+         glVertex3f(x1, y1, z0);
+         glVertex3f(x2, y1, z0);
+         glVertex3f(x2, y2, z0);
+         glVertex3f(x1, y2, z0);
+         glEnd();
+      }
+      x1 += x2;
+      x2 += x2;
+      if (fAllowClose)
+      {
+         // close button
+         glLoadName(kDeleteID);
+         // polygon
+         TGLUtil::ColorTransparency(bgCol, fTransparency);
+         glBegin(GL_QUADS);
+         glVertex3f(x1, y1, z3);
+         glVertex3f(x2, y1, z3);
+         glVertex3f(x2, y2, z3);
+         glVertex3f(x1, y2, z3);
+         glEnd();
+         //  outline
+         TGLUtil::ColorTransparency(fgCol, GetLineTransparency());
+         glBegin(GL_LINE_LOOP);
+         glVertex3f(x1, y1, z0);
+         glVertex3f(x2, y1, z0);
+         glVertex3f(x2, y2, z0);
+         glVertex3f(x1, y2, z0);
+         glEnd();
+      }
+      {
+         // resize button
+         glLoadName(kResizeID);
+         // polygon
+         x1 =  widthTxt - line_height;
+         x2 =  widthTxt;
+         y1 = -heightTxt;
+         y2 = -heightTxt + line_height;
+         TGLUtil::ColorTransparency(bgCol, fTransparency);
+         glBegin(GL_QUADS);
+         glVertex3f(x1, y1, z1);
+         glVertex3f(x2, y1, z1);
+         glVertex3f(x2, y2, z1);
+         glVertex3f(x1, y2, z1);
+         glEnd();
+         // draw resize corner lines
+         TGLUtil::ColorTransparency(fgCol, GetLineTransparency());
+         glBegin(GL_LINES);
+         Float_t aOff = 0.25*line_height;
+         glVertex3f(x1+aOff, y1+aOff, z0);
+         glVertex3f(x2-aOff, y1+aOff, z0);
+         glVertex3f(x2-aOff, y1+aOff, z0);
+         glVertex3f(x2-aOff, y2-aOff, z0);
+         glEnd();
+      }
+   }
+
+   glPopName();
+
+   glPopMatrix();
+
+   if (fDrawRefLine)
+   {
+      TGLVertex3 op = rnrCtx.RefCamera().WorldToViewport(fPointer);
+      op[0] /= vp.Width();  op[1] /= vp.Height();
+
+      Float_t fx = op[0] < fPosX ? 0.0f : (op[0] > fPosX + fDrawW ? 1.0f : 0.5f);
+      Float_t fy = op[1] < fPosY-fDrawH ? 1.0f : (op[1] > fPosY ? 0.0f : 0.5f);
+
+      if (fx != 0.5f || fy != 0.5f)
+      {
+         TGLUtil::ColorTransparency(bgCol, fTransparency);
+         TGLUtil::LineWidth(2);
+         glBegin(GL_LINES);
+         glVertex3f(fPosX + fx*fDrawW, fPosY - fy*fDrawH, z3);
+         glVertex3f(op[0], op[1], z3);
+         glEnd();
+      }
    }
 
    glMatrixMode(GL_PROJECTION);
@@ -403,6 +478,18 @@ void TGLAnnotation::Render(TGLRnrCtx& rnrCtx)
 
    glDepthRange(old_depth_range[0], old_depth_range[1]);
    glPopAttrib();
+}
+
+//______________________________________________________________________________
+Char_t TGLAnnotation::GetLineTransparency() const
+{
+   // Returns transparecy of annotation outline.
+   // If annotation is selected enforce visiblity of outline.
+
+   if (fActive)
+      return TMath::Min(70, fTransparency);
+   else
+      return fTransparency;
 }
 
 //______________________________________________________________________________

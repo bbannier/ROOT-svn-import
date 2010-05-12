@@ -44,6 +44,7 @@
 #include "TClass.h"
 #include "TClassTable.h"
 #include "TCut.h"
+#include "TDataSetManager.h"
 #include "TError.h"
 #include "TEntryList.h"
 #include "TEnv.h"
@@ -78,27 +79,24 @@ ClassImp(TDSet)
 
 //______________________________________________________________________________
 TDSetElement::TDSetElement() : TNamed("",""),
-                               fDirectory(),
-                               fFirst(0),
-                               fNum(0),
-                               fMsd(),
-                               fTDSetOffset(0),
-                               fEntryList(0),
-                               fValid(kFALSE),
-                               fEntries(0),
-                               fFriends(0)
+                               fDirectory(), fFirst(0), fNum(0), fMsd(),
+                               fTDSetOffset(0), fEntryList(0), fValid(kFALSE),
+                               fEntries(0), fFriends(0), fDataSet(), fAssocObjList(0)
 {
    // Default constructor
    ResetBit(kWriteV3);
    ResetBit(kHasBeenLookedUp);
    ResetBit(kEmpty);
    ResetBit(kCorrupted);
+   ResetBit(kNewRun);
+   ResetBit(kNewPacket);
 }
 
 //______________________________________________________________________________
 TDSetElement::TDSetElement(const char *file, const char *objname, const char *dir,
                            Long64_t first, Long64_t num,
-                           const char *msd) : TNamed(file, objname)
+                           const char *msd, const char *dataset)
+             : TNamed(file, objname)
 {
    // Create a TDSet element.
 
@@ -120,7 +118,8 @@ TDSetElement::TDSetElement(const char *file, const char *objname, const char *di
    fFriends     = 0;
    fValid       = kFALSE;
    fEntries     = -1;
-
+   fDataSet     = dataset;
+   fAssocObjList = 0;
    if (dir)
       fDirectory = dir;
 
@@ -128,6 +127,8 @@ TDSetElement::TDSetElement(const char *file, const char *objname, const char *di
    ResetBit(kHasBeenLookedUp);
    ResetBit(kEmpty);
    ResetBit(kCorrupted);
+   ResetBit(kNewRun);
+   ResetBit(kNewPacket);
 }
 
 //______________________________________________________________________________
@@ -144,10 +145,14 @@ TDSetElement::TDSetElement(const TDSetElement& elem)
    fValid = elem.fValid;
    fEntries = elem.fEntries;
    fFriends = 0;
+   fDataSet = elem.fDataSet;
+   fAssocObjList = 0;
    ResetBit(kWriteV3);
    ResetBit(kHasBeenLookedUp);
    ResetBit(kEmpty);
    ResetBit(kCorrupted);
+   ResetBit(kNewRun);
+   ResetBit(kNewPacket);
 }
 
 //______________________________________________________________________________
@@ -155,6 +160,10 @@ TDSetElement::~TDSetElement()
 {
    // Clean up the element.
    DeleteFriends();
+   if (fAssocObjList) {
+      fAssocObjList->SetOwner(kTRUE);
+      SafeDelete(fAssocObjList);
+   }
 }
 
 //______________________________________________________________________________
@@ -508,7 +517,7 @@ Int_t TDSetElement::Lookup(Bool_t force)
          fName = url.GetUrl();
       } else {
          // Failure
-         Error("Lookup", "couldn't lookup %s\n", name.Data());
+         Error("Lookup", "couldn't lookup %s", name.Data());
          retVal = -1;
       }
    }
@@ -551,6 +560,46 @@ void TDSetElement::SetEntryList(TObject *aList, Long64_t first, Long64_t num)
 }
 
 //______________________________________________________________________________
+void TDSetElement::AddAssocObj(TObject *assocobj)
+{
+   // Add an associated object to the list
+   if (assocobj) {
+      if (!fAssocObjList) fAssocObjList = new TList;
+      if (fAssocObjList) fAssocObjList->Add(assocobj);
+   }
+}
+
+//______________________________________________________________________________
+TObject *TDSetElement::GetAssocObj(Long64_t i, Bool_t isentry)
+{
+   // Get i-th associated object.
+   // If 'isentry' fFirst is subtracted, so that i == fFirst returns the first
+   // object in the list.
+   // If there are not enough elements in the list, the element i%list_size is
+   // returned (if the list has only one element this only one element is always
+   // returned.
+   // This method is used when packet processing consist in processing the objects
+   // in the associated object list.
+   
+   TObject *o = 0;
+   if (!fAssocObjList || fAssocObjList->GetSize() <= 0) return o;
+   
+   TString s;
+   Int_t pos = -1;
+   if (isentry) {
+      if (i < fFirst) return o; 
+      s.Form("%lld", i - fFirst);
+   } else {
+      if (i < 0) return o;
+      s.Form("%lld", i);
+   }
+   if (!(s.IsDigit())) return o;
+   pos = s.Atoi();
+   if (pos > fAssocObjList->GetSize() - 1) pos %= fAssocObjList->GetSize();
+   return fAssocObjList->At(pos);
+}
+
+//______________________________________________________________________________
 TDSet::TDSet()
 {
    // Default ctor.
@@ -562,10 +611,13 @@ TDSet::TDSet()
    fCurrent   = 0;
    fEntryList = 0;
    fProofChain = 0;
+   fSrvMaps = 0;
+   fSrvMapsIter = 0;
    ResetBit(kWriteV3);
    ResetBit(kEmpty);
    ResetBit(kValidityChecked);
    ResetBit(kSomeInvalid);
+   ResetBit(kMultiDSet);
 
    // Add to the global list
    gROOT->GetListOfDataSets()->Add(this);
@@ -596,10 +648,13 @@ TDSet::TDSet(const char *name,
    fCurrent  = 0;
    fEntryList = 0;
    fProofChain = 0;
+   fSrvMaps = 0;
+   fSrvMapsIter = 0;
    ResetBit(kWriteV3);
    ResetBit(kEmpty);
    ResetBit(kValidityChecked);
    ResetBit(kSomeInvalid);
+   ResetBit(kMultiDSet);
 
    fType = "TTree";
    TClass *c = 0;
@@ -628,7 +683,7 @@ TDSet::TDSet(const char *name,
    // The correct class type
    c = TClass::GetClass(fType);
 
-   fIsTree = (c->InheritsFrom("TTree")) ? kTRUE : kFALSE;
+   fIsTree = (c->InheritsFrom(TTree::Class())) ? kTRUE : kFALSE;
 
    if (objname)
       fObjName = objname;
@@ -660,10 +715,13 @@ TDSet::TDSet(const TChain &chain, Bool_t withfriends)
    fCurrent  = 0;
    fEntryList = 0;
    fProofChain = 0;
+   fSrvMaps = 0;
+   fSrvMapsIter = 0;
    ResetBit(kWriteV3);
    ResetBit(kEmpty);
    ResetBit(kValidityChecked);
    ResetBit(kSomeInvalid);
+   ResetBit(kMultiDSet);
 
    fType = "TTree";
    fIsTree = kTRUE;
@@ -741,6 +799,8 @@ TDSet::~TDSet()
    SafeDelete(fElements);
    SafeDelete(fIterator);
    SafeDelete(fProofChain);
+   fSrvMaps = 0;
+   fSrvMapsIter = 0;
 
    gROOT->GetListOfDataSets()->Remove(this);
 }
@@ -900,6 +960,11 @@ Bool_t TDSet::Add(TDSet *dset)
    if (!dset)
       return kFALSE;
 
+   if (TestBit(TDSet::kMultiDSet)) {
+      fElements->Add(dset);
+      return kTRUE;
+   }
+
    if (fType != dset->GetType()) {
       Error("Add", "cannot add a set with a different type");
       return kFALSE;
@@ -963,6 +1028,18 @@ Bool_t TDSet::Add(TCollection *filelist, const char *meta, Bool_t availableOnly,
 }
 
 //______________________________________________________________________________
+void TDSet::SetSrvMaps(TList *srvmaps)
+{
+   // Set (or unset) the list for mapping servers coordinate for files.
+   // Reinitialize the related iterator if needed.
+   // Used by TProof.
+
+   fSrvMaps = srvmaps;
+   SafeDelete(fSrvMapsIter);
+   if (fSrvMaps) fSrvMapsIter = new TIter(fSrvMaps);
+}
+
+//______________________________________________________________________________
 Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
 {
    // Add file described by 'fi' to list of files to be analyzed.
@@ -979,8 +1056,16 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
    // Element to be added
    TDSetElement *el = 0;
 
-   // Check if it already exists in the TDSet
+   // Check if a remap of the server coordinates is requested
    const char *file = fi->GetFirstUrl()->GetUrl();
+   Bool_t setLookedUp = kTRUE;
+   TString file1;
+   if (TDataSetManager::CheckDataSetSrvMaps(fi->GetFirstUrl(), file1, fSrvMaps) &&
+       !(file1.IsNull())) {
+      file = file1.Data();
+      setLookedUp = kFALSE;
+   }
+   // Check if it already exists in the TDSet
    if ((el = (TDSetElement *) fElements->FindObject(file))) {
       msg.Form("duplication detected: %40s is already in dataset - ignored", file);
       Warning("Add", msg.Data());
@@ -1032,11 +1117,13 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
       first = m->GetFirst();
       num = m->GetEntries();
    }
-   el = new TDSetElement(file, objname, dir, first, -1);
+   const char *dataset = 0;
+   if (strcmp(fi->GetTitle(), "TFileInfo")) dataset = fi->GetTitle();
+   el = new TDSetElement(file, objname, dir, first, -1, 0, dataset);
    el->SetEntries(num);
 
    // Set looked-up bit
-   if (fi->TestBit(TFileInfo::kStaged))
+   if (fi->TestBit(TFileInfo::kStaged) && setLookedUp)
       el->SetBit(TDSetElement::kHasBeenLookedUp);
    if (fi->TestBit(TFileInfo::kCorrupted))
       el->SetBit(TDSetElement::kCorrupted);
@@ -1673,20 +1760,30 @@ void TDSet::SetEntryList(TObject *aList)
    if (!aList)
       return;
 
-   // Link the proper object
-   TEventList *evl = 0;
-   TEntryList *enl = dynamic_cast<TEntryList*>(aList);
-   if (!enl)
-      evl = dynamic_cast<TEventList*>(aList);
-   if (!enl && !evl) {
-      Error("SetEntryList", "type of input object must be either TEntryList "
-                            "or TEventList (found: '%s' - do nothing", aList->ClassName());
-      return;
+   if (TestBit(TDSet::kMultiDSet)) {
+
+      // Global entry list for all the datasets
+      TIter nxds(fElements);
+      TDSet *ds = 0;
+      while ((ds = (TDSet *) nxds()))
+         ds->SetEntryList(aList);
+
+   } else {
+
+      // Link the proper object
+      TEventList *evl = 0;
+      TEntryList *enl = dynamic_cast<TEntryList*>(aList);
+      if (!enl)
+         evl = dynamic_cast<TEventList*>(aList);
+      if (!enl && !evl) {
+         Error("SetEntryList", "type of input object must be either TEntryList "
+                              "or TEventList (found: '%s' - do nothing", aList->ClassName());
+         return;
+      }
+
+      // Action depends on the type
+      fEntryList = (enl) ? enl : (TEntryList *)evl;
    }
-
-   // Action depends on the type
-   fEntryList = (enl) ? enl : (TEntryList *)evl;
-
    // Done
    return;
 }
@@ -1696,6 +1793,16 @@ void TDSet::SplitEntryList()
 {
    // Splits the main entry (or event) list into sub-lists for the elements of
    // thet data set
+
+   if (TestBit(TDSet::kMultiDSet)) {
+      // Global entry list for all the datasets
+      TIter nxds(fElements);
+      TDSet *ds = 0;
+      while ((ds = (TDSet *) nxds()))
+         ds->SplitEntryList();
+      // Done
+      return;
+   }
 
    if (!fEntryList) {
       if (gDebug > 0)
@@ -1757,4 +1864,25 @@ void TDSet::SplitEntryList()
          } while (el);
       }
    }
+}
+
+//______________________________________________________________________________
+Int_t TDSet::GetNumOfFiles()
+{
+   // Return the number of files in the dataset
+
+   Int_t nf = -1;
+   if (fElements) {
+      nf = 0;
+      if (TestBit(TDSet::kMultiDSet)) {
+         TIter nxds(fElements);
+         TDSet *ds = 0;
+         while ((ds = (TDSet *) nxds()))
+            if (ds->GetListOfElements()) nf += ds->GetListOfElements()->GetSize();
+      } else {
+         nf = fElements->GetSize();
+      }
+   }
+   // Done
+   return nf;
 }

@@ -216,6 +216,11 @@ public :
    void Add(const double *x, double val, const double * ex, double  eval); 
 
    /**
+      add multi-dim coordinate data with both error in coordinates and value 
+   */
+   void Add(const double *x, double val, const double * ex, double  elval, double  ehval); 
+
+   /**
       return a pointer to the coordinates data for the given fit point 
     */
    const double * Coords(unsigned int ipoint) const { 
@@ -479,7 +484,7 @@ public :
        The information is added for the previously inserted point. 
        BinData::Add  must be called before
    */
-   void AddBinUpEdge(const double * binwidth); 
+   void AddBinUpEdge(const double * xup); 
 
    /** 
        retrieve the reference volume used to normalize the data when the option bin volume is set

@@ -111,7 +111,8 @@ void TGeoScaledShape::ComputeNormal(Double_t *point, Double_t *dir, Double_t *no
    fScale->MasterToLocalVect(dir,ldir);
    TGeoMatrix::Normalize(ldir);
    fShape->ComputeNormal(local,ldir,lnorm);
-   fScale->LocalToMasterVect(lnorm, norm);
+//   fScale->LocalToMasterVect(lnorm, norm);
+   fScale->MasterToLocalVect(lnorm, norm);
    TGeoMatrix::Normalize(norm);
 }
 
@@ -284,9 +285,23 @@ Double_t TGeoScaledShape::Safety(Double_t *point, Bool_t in) const
 }
 
 //_____________________________________________________________________________
-void TGeoScaledShape::SavePrimitive(ostream & /*out*/, Option_t * /*option*/ /*= ""*/)
+void TGeoScaledShape::SavePrimitive(ostream &out, Option_t *option)
 {
 // Save a primitive as a C++ statement(s) on output stream "out".
+   if (TObject::TestBit(kGeoSavePrimitive)) return;
+   out << "   // Shape: " << GetName() << " type: " << ClassName() << endl;
+   if (!fShape || !fScale) {
+      out << "##### Invalid shape or scale !. Aborting. #####" << endl;
+      return;
+   }
+   fShape->SavePrimitive(out, option);
+   TString sname = fShape->GetPointerName();
+   const Double_t *sc = fScale->GetScale();
+   out << "   // Scale factor:" << endl;
+   out << "   TGeoScale *pScale = new TGeoScale(\"" << fScale->GetName() 
+       << "\"," << sc[0] << "," << sc[1] << "," << sc[2] << ");" << endl;
+   out << "   TGeoScaledShape *" << GetPointerName() << " = new TGeoScaledShape(\"" 
+       << GetName() << "\"," << sname << ", pScale);" << endl;
 }
 
 //_____________________________________________________________________________

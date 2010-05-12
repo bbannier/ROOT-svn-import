@@ -246,11 +246,11 @@ public:
    virtual TBranch        *BranchRef();
    virtual void            Browse(TBrowser*);
    virtual Int_t           BuildIndex(const char* majorname, const char* minorname = "0");
-   TStreamerInfo          *BuildStreamerInfo(TClass* cl, void* pointer = 0);
+   TStreamerInfo          *BuildStreamerInfo(TClass* cl, void* pointer = 0, Bool_t canOptimize = kTRUE);
    virtual TFile          *ChangeFile(TFile* file);
    virtual TTree          *CloneTree(Long64_t nentries = -1, Option_t* option = "");
    virtual void            CopyAddresses(TTree*,Bool_t undo = kFALSE);
-   virtual Long64_t        CopyEntries(TTree* tree, Long64_t nentries = -1);
+   virtual Long64_t        CopyEntries(TTree* tree, Long64_t nentries = -1, Option_t *option = "");
    virtual TTree          *CopyTree(const char* selection, Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    virtual TBasket        *CreateBasket(TBranch*);
    virtual void            DirectoryAutoAdd(TDirectory *);

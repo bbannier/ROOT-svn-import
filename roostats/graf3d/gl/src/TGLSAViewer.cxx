@@ -65,6 +65,7 @@ DIRECT SCENE INTERACTIONS\n\n\
    \tk          --- ZOOM out\n\
    \tArrow Keys --- PAN (TRUCK) across scene\n\
    \tHome       --- reset current camera\n\
+   \tCtrl-Home  --- switch external/automatic camera center\n\
 \n\
    LEFT mouse button -- ROTATE (ORBIT) the scene by holding the mouse button and moving\n\
    the mouse (perspective camera, needs to be enabled in menu for orthograpic cameras).\n\
@@ -181,6 +182,8 @@ MANIPULATORS\n\
 
 ClassImp(TGLSAViewer);
 
+Long_t TGLSAViewer::fgMenuHidingTimeout = 400;
+
 const Int_t TGLSAViewer::fgInitX = 0;
 const Int_t TGLSAViewer::fgInitY = 0;
 const Int_t TGLSAViewer::fgInitW = 780;
@@ -214,6 +217,8 @@ TGLSAViewer::TGLSAViewer(TVirtualPad *pad, TGLFormat* format) :
    fMenuBar(0),
    fMenuBut(0),
    fHideMenuBar(kFALSE),
+   fMenuHidingTimer(0),
+   fMenuHidingShowMenu(kTRUE),
    fDeleteMenuBar(kFALSE)
 {
    // Construct a standalone viewer, bound to supplied 'pad'.
@@ -258,6 +263,8 @@ TGLSAViewer::TGLSAViewer(const TGWindow *parent, TVirtualPad *pad, TGedEditor *g
    fMenuBar(0),
    fMenuBut(0),
    fHideMenuBar(kFALSE),
+   fMenuHidingTimer(0),
+   fMenuHidingShowMenu(kTRUE),
    fDeleteMenuBar(kFALSE)
 {
    // Construct an embedded standalone viewer, bound to supplied 'pad'.
@@ -297,6 +304,8 @@ TGLSAViewer::~TGLSAViewer()
    // Destroy standalone viewer object.
 
    fGedEditor->DisconnectFromCanvas();
+
+   DisableMenuBarHiding();
 
    delete fHelpMenu;
    delete fCameraMenu;
@@ -536,6 +545,30 @@ void TGLSAViewer::EnableMenuBarHiding()
    fFrame->HideFrame(fMenuBar);
    fFrame->ShowFrame(fMenuBut);
    fFrame->Layout();
+
+   fMenuHidingTimer = new TTimer;
+   fMenuHidingTimer->Connect("Timeout()", "TGLSAViewer", this, "MenuHidingTimeout()");
+}
+
+//______________________________________________________________________________
+void TGLSAViewer::DisableMenuBarHiding()
+{
+   // Disable hiding of menu bar.
+
+   if (!fHideMenuBar)
+      return;
+
+   fHideMenuBar = kFALSE;
+
+   fMenuBar->Disconnect("ProcessedEvent(Event_t*)", this, "HandleMenuBarHiding(Event_t*)");
+   fMenuBut->Disconnect("ProcessedEvent(Event_t*)", this, "HandleMenuBarHiding(Event_t*)");
+
+   fFrame->ShowFrame(fMenuBar);
+   fFrame->HideFrame(fMenuBut);
+   fFrame->Layout();
+
+   delete fMenuHidingTimer;
+   fMenuHidingTimer = 0;
 }
 
 //______________________________________________________________________________
@@ -548,11 +581,9 @@ void TGLSAViewer::HandleMenuBarHiding(Event_t* ev)
    if (f == fMenuBut)
    {
       if (ev->fType == kEnterNotify)
-      {
-         fFrame->HideFrame(fMenuBut);
-         fFrame->ShowFrame(fMenuBar);
-         fFrame->Layout();
-      }
+         ResetMenuHidingTimer(kTRUE);
+      else
+         fMenuHidingTimer->TurnOff();
    }
    else if (f == fMenuBar)
    {
@@ -561,25 +592,59 @@ void TGLSAViewer::HandleMenuBarHiding(Event_t* ev)
            ev->fY < 0 || ev->fY >= (Int_t) f->GetHeight()))
       {
          if (fMenuBar->GetCurrent() == 0)
-         {
-            fFrame->HideFrame(fMenuBar);
-            fFrame->ShowFrame(fMenuBut);
-            fFrame->Layout();
-         }
+            ResetMenuHidingTimer(kFALSE);
          else
-         {
             fMenuBar->GetCurrent()->Connect("ProcessedEvent(Event_t*)", "TGLSAViewer", this, "HandleMenuBarHiding(Event_t*)");
-         }
+      }
+      else
+      {
+         fMenuHidingTimer->TurnOff();
       }
    }
    else
    {
       f->Disconnect("ProcessedEvent(Event_t*)", this);
+      ResetMenuHidingTimer(kFALSE);
+   }
+}
 
+//______________________________________________________________________________
+void TGLSAViewer::ResetMenuHidingTimer(Bool_t show_menu)
+{
+   // Reset the timer for menu-bar hiding.
+
+   fMenuHidingTimer->TurnOff();
+
+   fMenuHidingShowMenu = show_menu;
+
+   fMenuHidingTimer->SetTime(fgMenuHidingTimeout);
+   fMenuHidingTimer->Reset();
+   fMenuHidingTimer->TurnOn();
+}
+
+//______________________________________________________________________________
+void TGLSAViewer::MenuHidingTimeout()
+{
+   // Action for menu-hiding timeout.
+
+   fMenuHidingTimer->TurnOff();
+   if (fMenuHidingShowMenu) {
+      fFrame->HideFrame(fMenuBut);
+      fFrame->ShowFrame(fMenuBar);
+   } else {
       fFrame->HideFrame(fMenuBar);
       fFrame->ShowFrame(fMenuBut);
-      fFrame->Layout();
    }
+   fFrame->Layout();
+}
+
+//______________________________________________________________________________
+void TGLSAViewer::SetMenuHidingTimeout(Long_t timeout)
+{
+   // Set global timeout for menu-hiding in mili-seconds.
+   // Static function.
+
+   fgMenuHidingTimeout = timeout;
 }
 
 //______________________________________________________________________________

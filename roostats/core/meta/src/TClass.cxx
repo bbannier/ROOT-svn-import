@@ -60,6 +60,8 @@
 #include "TSchemaRuleSet.h"
 #include "TGenericClassInfo.h"
 #include "TIsAProxy.h"
+#include "TSchemaRule.h"
+#include "TSystem.h"
 
 #include <cstdio>
 #include <cctype>
@@ -73,12 +75,21 @@
 
 using namespace std;
 
-// Mutex to protect CINT operations
+// Mutex to protect CINT and META operations
 // (exported to be used for similar cases in related classes)
 
 TVirtualMutex* gCINTMutex = 0;
 
 void *gMmallocDesc = 0; //is used and set in TMapFile
+namespace {
+   class TMmallocDescTemp {
+   private:
+      void *fSave;
+   public:
+      TMmallocDescTemp(void *value = 0) : fSave(gMmallocDesc) { gMmallocDesc = value; }
+      ~TMmallocDescTemp() { gMmallocDesc = fSave; }
+   };
+}
 
 Int_t TClass::fgClassCount;
 TClass::ENewType TClass::fgCallingNew = kRealNew;
@@ -709,6 +720,7 @@ TClass::TClass() :
 {
    // Default ctor.
 
+   R__LOCKGUARD2(gCINTMutex);
    fDeclFileLine   = -2;    // -2 for standalone TClass (checked in dtor)
 }
 
@@ -736,6 +748,8 @@ TClass::TClass(const char *name, Bool_t silent) :
    // to get a TClass interface to an interpreted class. Used by TTabCom.
    // Normally you would use TClass::GetClass("class") to get access to a
    // TClass object for a certain class.
+
+   R__LOCKGUARD2(gCINTMutex);
 
    if (!gROOT)
       ::Fatal("TClass::TClass", "ROOT system not initialized");
@@ -780,6 +794,7 @@ TClass::TClass(const char *name, Version_t cversion,
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
+   R__LOCKGUARD2(gCINTMutex);
    Init(name,cversion, 0, 0, 0, dfil, ifil, dl, il,silent);
    SetBit(kUnloaded);
 }
@@ -809,6 +824,7 @@ TClass::TClass(const char *name, Version_t cversion,
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
 
+   R__LOCKGUARD2(gCINTMutex);
    // use info
    Init(name, cversion, &info, isa, showmembers, dfil, ifil, dl, il, silent);
 }
@@ -837,6 +853,7 @@ void TClass::ForceReload (TClass* oldcl)
    oldcl->ReplaceWith(this);
    delete oldcl;
 }
+
 //______________________________________________________________________________
 void TClass::Init(const char *name, Version_t cversion,
                   const type_info *typeinfo, TVirtualIsAProxy *isa,
@@ -849,7 +866,8 @@ void TClass::Init(const char *name, Version_t cversion,
    if (!gROOT)
       ::Fatal("TClass::TClass", "ROOT system not initialized");
 
-   SetName(name);
+   // Always strip the default STL template arguments (from any template argument or the class name)
+   SetName(TClassEdit::ShortType(name, TClassEdit::kDropStlDefault).c_str());
    fClassVersion   = cversion;
    fDeclFileName   = dfil ? dfil : "";
    fImplFileName   = ifil ? ifil : "";
@@ -864,7 +882,7 @@ void TClass::Init(const char *name, Version_t cversion,
 
    ResetInstanceCount();
 
-   TClass *oldcl = (TClass*)gROOT->GetListOfClasses()->FindObject(name);
+   TClass *oldcl = (TClass*)gROOT->GetListOfClasses()->FindObject(fName.Data());
 
    if (oldcl && oldcl->TestBit(kLoading)) {
       // Do not recreate a class while it is already being created!
@@ -889,6 +907,10 @@ void TClass::Init(const char *name, Version_t cversion,
          fStreamerInfo->AddAtAndExpand(info,info->GetClassVersion());
       }
       oldcl->GetStreamerInfos()->Clear();
+      
+      // Move the Schema Rules too.
+      fSchemaRules = oldcl->fSchemaRules;
+      oldcl->fSchemaRules = 0;
 
    }
 
@@ -896,13 +918,12 @@ void TClass::Init(const char *name, Version_t cversion,
    // Advertise ourself as the loading class for this class name
    TClass::AddClass(this);
 
-   Bool_t isStl = kFALSE;
+   Bool_t isStl = TClassEdit::IsSTLCont(fName);
 
    if (!fClassInfo) {
       Bool_t shouldLoad = kFALSE;
-      isStl = TClassEdit::IsSTLCont(name);
 
-      if (gInterpreter->CheckClassInfo(name)) shouldLoad = kTRUE;
+      if (gInterpreter->CheckClassInfo(fName)) shouldLoad = kTRUE;
       else if (fImplFileLine>=0) {
          // If the TClass is being generated from a ROOT dictionary,
          // eventhough we do not seem to have a CINT dictionary for
@@ -931,7 +952,7 @@ void TClass::Init(const char *name, Version_t cversion,
       }
    }
    if (!silent && !fClassInfo && !isStl && fName.First('@')==kNPOS)
-      ::Warning("TClass::TClass", "no dictionary for class %s is available", name);
+      ::Warning("TClass::TClass", "no dictionary for class %s is available", fName.Data());
 
    fgClassCount++;
    SetUniqueID(fgClassCount);
@@ -942,6 +963,20 @@ void TClass::Init(const char *name, Version_t cversion,
    // is different from the original name.
    TString resolvedThis;
    if (strchr (name, '<')) {
+      if ( fName != name) {
+         if (!fgClassTypedefHash) {
+            fgClassTypedefHash = new THashTable (100, 5);
+            fgClassTypedefHash->SetOwner (kTRUE);
+         }
+         
+         fgClassTypedefHash->Add (new TNameMapNode (name, fName));
+         SetBit (kHasNameMapNode);         
+
+         TString resolvedShort = TClassEdit::ResolveTypedef(fName, kTRUE);
+         if (resolvedShort != fName) {
+            fgClassShortTypedefHash->Add (new TNameMapNode (resolvedShort, fName));
+         }         
+      }
       resolvedThis = TClassEdit::ResolveTypedef (name, kTRUE);
       if (resolvedThis != name) {
          if (!fgClassTypedefHash) {
@@ -949,24 +984,10 @@ void TClass::Init(const char *name, Version_t cversion,
             fgClassTypedefHash->SetOwner (kTRUE);
          }
 
-         fgClassTypedefHash->Add (new TNameMapNode (resolvedThis, name));
+         fgClassTypedefHash->Add (new TNameMapNode (resolvedThis, fName));
          SetBit (kHasNameMapNode);
       }
 
-      TString resolvedShort =
-       TClassEdit::ResolveTypedef
-         (TClassEdit::ShortType(name,
-                                TClassEdit::kDropStlDefault).c_str(),
-          kTRUE);
-      if (resolvedShort != name) {
-         if (!fgClassShortTypedefHash) {
-            fgClassShortTypedefHash = new THashTable (100, 5);
-            fgClassShortTypedefHash->SetOwner (kTRUE);
-         }
-
-         fgClassShortTypedefHash->Add (new TNameMapNode (resolvedShort, name));
-         SetBit (kHasNameMapNode);
-      }
    }
 
    //In case a class with the same name had been created by TVirtualStreamerInfo
@@ -981,12 +1002,12 @@ void TClass::Init(const char *name, Version_t cversion,
 
       // Check for existing equivalent.
 
-      if (resolvedThis != name) {
+      if (resolvedThis != fName) {
          oldcl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedThis);
          if (oldcl && oldcl != this)
             ForceReload (oldcl);
       }
-      TIter next( fgClassTypedefHash->GetListForObject (resolvedThis) );
+      TIter next( fgClassTypedefHash->GetListForObject(resolvedThis) );
       while ( TNameMapNode* htmp = static_cast<TNameMapNode*> (next()) ) {
          if (resolvedThis != htmp->String()) continue;
          oldcl = (TClass*)gROOT->GetListOfClasses()->FindObject(htmp->fOrigName); // gROOT->GetClass (htmp->fOrigName, kFALSE);
@@ -999,9 +1020,7 @@ void TClass::Init(const char *name, Version_t cversion,
 
    ResetBit(kLoading);
 
-   Int_t stl = TClassEdit::IsSTLCont(GetName(), 0);
-
-   if ( stl || !strncmp(GetName(),"stdext::hash_",13) || !strncmp(GetName(),"__gnu_cxx::hash_",16) ) {
+   if ( isStl || !strncmp(GetName(),"stdext::hash_",13) || !strncmp(GetName(),"__gnu_cxx::hash_",16) ) {
       fCollectionProxy = TVirtualStreamerInfo::Factory()->GenEmulatedProxy( GetName() );
       if (fCollectionProxy) {
          fSizeof = fCollectionProxy->Sizeof();
@@ -1083,6 +1102,8 @@ TClass::~TClass()
 {
    // TClass dtor. Deletes all list that might have been created.
 
+   R__LOCKGUARD(gCINTMutex);
+   
    // Remove from the typedef hashtables.
    if (fgClassTypedefHash && TestBit (kHasNameMapNode)) {
       TString resolvedThis = TClassEdit::ResolveTypedef (GetName(), kTRUE);
@@ -1172,9 +1193,181 @@ TClass::~TClass()
 }
 
 //------------------------------------------------------------------------------
+namespace {
+   Int_t ReadRulesContent(FILE *f) 
+   {
+      // Read a class.rules file which contains one rule per line with comment
+      // starting with a #
+      // Returns the number of rules loaded.
+      // Returns -1 in case of error.
+      
+      R__ASSERT(f!=0);
+      TString rule(1024);
+      int c, state = 0;
+      Int_t count = 0;
+      
+      while ((c = fgetc(f)) != EOF) {
+         if (c == 13)        // ignore CR
+            continue;
+         if (c == '\n') {
+            if (state != 3) {
+               state = 0;
+               if (rule.Length() > 0) {
+                  if (TClass::AddRule(rule)) {
+                     ++count;
+                  }
+                  rule.Clear();
+               }
+            }
+            continue;
+         }
+         switch (state) {
+            case 0:             // start of line
+               switch (c) {
+                  case ' ':
+                  case '\t':
+                     break;
+                  case '#':
+                     state = 1;
+                     break;
+                  default:
+                     state = 2;
+                     break;
+               }
+               break;
+               
+            case 1:             // comment
+               break;
+               
+            case 2:             // rule
+               switch (c) {
+                  case '\\':
+                     state = 3; // Continuation request
+                  default:
+                     break;
+               }
+               break;            
+         }
+         switch (state) {
+            case 2:
+               rule.Append(c);
+               break;
+         }
+      }
+      return count;
+   }
+}
+
+//------------------------------------------------------------------------------
+Int_t TClass::ReadRules()
+{
+   // Read the class.rules files from the default location:.
+   //     $ROOTSYS/etc/class.rules (or ROOTETCDIR/class.rules)
+   
+   static const char *suffix = "class.rules";
+   TString sname = suffix;
+#ifdef ROOTETCDIR
+   gSystem->PrependPathName(ROOTETCDIR, sname);
+#else
+   TString etc = gRootDir;
+#ifdef WIN32
+   etc += "\\etc";
+#else
+   etc += "/etc";
+#endif
+   gSystem->PrependPathName(etc, sname);
+#endif
+   
+   Int_t res = -1;
+   
+   FILE * f = fopen(sname,"r");
+   if (f != 0) {
+      res = ReadRulesContent(f);
+      fclose(f);
+   }
+   return res;
+}
+
+//------------------------------------------------------------------------------
+Int_t TClass::ReadRules( const char *filename )
+{
+   // Read a class.rules file which contains one rule per line with comment
+   // starting with a #
+   // Returns the number of rules loaded.
+   // Returns -1 in case of error.
+   
+   if (!filename || !strlen(filename)) {
+      ::Error("TClass::ReadRules", "no file name specified");
+      return -1;
+   }
+   
+   FILE * f = fopen(filename,"r");
+   if (f == 0) {
+      ::Error("TClass::ReadRules","Failed to open %s\n",filename);
+      return -1;
+   }
+   Int_t count = ReadRulesContent(f);
+   
+   fclose(f);
+   return count;
+   
+}
+
+//------------------------------------------------------------------------------
+Bool_t TClass::AddRule( const char *rule )
+{
+   // Add a schema evolution customization rule.
+   // The syntax of the rule can be either the short form:
+   //  [type=Read] classname membername [attributes=... ] [version=[...] ] [checksum=[...] ] [oldtype=...] [code={...}]
+   // or the long form
+   //  [type=Read] sourceClass=classname [targetclass=newClassname] [ source="type membername; [type2 membername2]" ]
+   //      [target="membername3;membername4"] [attributes=... ] [version=...] [checksum=...] [code={...}|functionname]
+   //
+   // For example to set HepMC::GenVertex::m_event to _not_ owned the object it is pointing to:
+   //   HepMC::GenVertex m_event attributes=NotOwner
+   //
+   // Semantic of the tags:
+   //   type : the type of the rule, valid values: Read, ReadRaw, Write, WriteRaw, the default is 'Read'.
+   //   sourceClass : the name of the class as it is on the rule file
+   //   targetClass : the name of the class as it is in the current code ; defaults to the value of sourceClass
+   //   source : the types and names of the data members from the class on file that are needed, the list is separated by semi-colons ';'
+   //   oldtype: in the short form only, indicates the type on disk of the data member.
+   //   target : the names of the data members updated by this rule, the list is separated by semi-colons ';'
+   //   attributes : list of possible qualifiers amongs:
+   //      Owner, NotOwner
+   //   version : list of the version of the class layout that this rule applies to.  The syntax can be [1,4,5] or [2-] or [1-3] or [-3]
+   //   checksum : comma delimited list of the checksums of the class layout that this rule applies to.
+   //   code={...} : code to be executed for the rule or name of the function implementing it.
+ 
+   ROOT::TSchemaRule *ruleobj = new ROOT::TSchemaRule();
+   if (! ruleobj->SetFromRule( rule ) ) {
+      delete ruleobj;
+      return kFALSE;
+   }
+
+   TClass *cl = TClass::GetClass( ruleobj->GetTargetClass() );
+   if (!cl) {
+      // Create an empty emulated class for now.
+      cl = new TClass(ruleobj->GetTargetClass(), 1, 0, 0, -1, -1, kTRUE);
+      cl->SetBit(TClass::kIsEmulation);
+   }
+   ROOT::TSchemaRuleSet* rset = cl->GetSchemaRules( kTRUE );
+      
+   if( !rset->AddRule( ruleobj, ROOT::TSchemaRuleSet::kCheckConflict ) ) {
+      ::Warning( "TClass::AddRule", "The rule for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because it conflicts with one of the other rules.",
+                ruleobj->GetTargetClass(), ruleobj->GetVersion(), ruleobj->GetTargetString() );
+      delete ruleobj;
+      return kFALSE;
+   }
+   return kTRUE;
+}
+
+//------------------------------------------------------------------------------
 void TClass::AdoptSchemaRules( ROOT::TSchemaRuleSet *rules )
 {
    // Adopt a new set of Data Model Evolution rules.
+
+   R__LOCKGUARD(gCINTMutex);
 
    delete fSchemaRules;
    fSchemaRules = rules;
@@ -1217,6 +1410,7 @@ void TClass::AddRef(TClassRef *ref)
    // Register a TClassRef object which points to this TClass object.
    // When this TClass object is deleted, 'ref' will be 'Reset'.
 
+   R__LOCKGUARD(gCINTMutex);
    if (fRefStart==0) {
       fRefStart = ref;
    } else {
@@ -1304,10 +1498,16 @@ void TClass::BuildRealData(void* pointer, Bool_t isTransient)
    // If pointer is not 0, uses the object at pointer
    // otherwise creates a temporary object of this class.
 
+   R__LOCKGUARD(gCINTMutex);
+
    // Only do this once.
    if (fRealData) {
       return;
    }
+
+   // When called via TMapFile (e.g. Update()) make sure that the dictionary
+   // gets allocated on the heap and not in the mapped file.
+   TMmallocDescTemp setreset;
 
    // Handle emulated classes and STL containers specially.
    if (!fClassInfo || TClassEdit::IsSTLCont(GetName(), 0) || TClassEdit::IsSTLBitset(GetName())) {
@@ -1407,6 +1607,8 @@ void TClass::BuildEmulatedRealData(const char *name, Long_t offset, TClass *cl)
 {
    // Build the list of real data for an emulated class
 
+   R__LOCKGUARD(gCINTMutex);
+
    TIter next(GetStreamerInfo()->GetElements());
    TStreamerElement *element;
    while ((element = (TStreamerElement*)next())) {
@@ -1414,8 +1616,8 @@ void TClass::BuildEmulatedRealData(const char *name, Long_t offset, TClass *cl)
       Long_t eoffset = element->GetOffset();
       TClass *cle    = element->GetClassPointer();
       if (element->IsBase() || etype == TVirtualStreamerInfo::kBase) {
-         //base class
-         if (cle) cle->BuildEmulatedRealData(name,offset+eoffset,cl);
+         //base class are skipped in this loop, they will be added at the end.
+         continue;
       } else if (etype == TVirtualStreamerInfo::kTObject ||
                  etype == TVirtualStreamerInfo::kTNamed ||
                  etype == TVirtualStreamerInfo::kObject || 
@@ -1439,6 +1641,17 @@ void TClass::BuildEmulatedRealData(const char *name, Long_t offset, TClass *cl)
       //   fBase->Add(new TBaseClass(this, cl, eoffset));
       //}
    }
+   // The base classes must added last on the list of real data (to help with ambiguous data member names)
+   next.Reset();
+   while ((element = (TStreamerElement*)next())) {
+      Int_t etype    = element->GetType();
+      if (element->IsBase() || etype == TVirtualStreamerInfo::kBase) {
+         //base class
+         Long_t eoffset = element->GetOffset();
+         TClass *cle    = element->GetClassPointer();
+         if (cle) cle->BuildEmulatedRealData(name,offset+eoffset,cl);
+      }
+   }   
 }
 
 
@@ -1449,7 +1662,11 @@ void TClass::CalculateStreamerOffset() const
    // its base class TObject. The pointer can be adjusted by
    // that offset to access any virtual method of TObject like
    // Streamer() and ShowMembers().
+   R__LOCKGUARD(gCINTMutex);
    if (!fInterStreamer && fClassInfo) {
+      // When called via TMapFile (e.g. Update()) make sure that the dictionary
+      // gets allocated on the heap and not in the mapped file.
+      TMmallocDescTemp setreset;
       CallFunc_t *f  = gCint->CallFunc_Factory();
       gCint->CallFunc_SetFuncProto(f,fClassInfo,"Streamer","TBuffer&",&fOffsetStreamer);
       fInterStreamer = f;
@@ -1786,8 +2003,14 @@ TClass *TClass::GetActualClass(const void *object) const
    // have a virtual ptr table, the result will be 'this' and NOT the actual
    // class.
 
-   if (object==0 || !IsLoaded() ) return (TClass*)this;
-
+   if (object==0) return (TClass*)this;
+   if (!IsLoaded()) {
+      TVirtualStreamerInfo* sinfo = GetStreamerInfo();
+      if (sinfo) {
+         return sinfo->GetActualClass(object);
+      }
+      return (TClass*)this;
+   }
    if (fIsA) {
       return (*fIsA)(object); // ROOT::IsA((ThisClass*)object);
    } else if (fGlobalIsA) {
@@ -1946,6 +2169,7 @@ Int_t TClass::GetBaseClassOffset(const TClass *cl)
    if (offset == -2) {
       // Can we get the offset from CINT?
       if (cl->GetClassInfo()) {
+         R__LOCKGUARD(gCINTMutex);
          Long_t base_tagnum = gCint->ClassInfo_Tagnum(cl->GetClassInfo());
          BaseClassInfo_t *t = gCint->BaseClassInfo_Factory(GetClassInfo());
          while (gCint->BaseClassInfo_Next(t,0)) {
@@ -2078,10 +2302,24 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
    if (!gROOT->GetListOfClasses())    return 0;
 
    TClass *cl = (TClass*)gROOT->GetListOfClasses()->FindObject(name);
+   
+   TClassEdit::TSplitType splitname( name, TClassEdit::kLong64 );
 
    if (!cl) {
-      TString resolvedName = TClassEdit::ResolveTypedef(name,kTRUE).c_str();
-      cl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedName);
+      // Try the name where we strip out the STL default template arguments
+      std::string resolvedName;
+      splitname.ShortType(resolvedName, TClassEdit::kDropStlDefault);
+      if (resolvedName != name) cl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedName.c_str());
+      if (!cl) {
+         // Attempt to resolve typedefs
+         resolvedName = TClassEdit::ResolveTypedef(resolvedName.c_str(),kTRUE);
+         if (resolvedName != name) cl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedName.c_str());
+      }
+      if (!cl) {
+         // Try with Long64_t
+         resolvedName = TClassEdit::GetLong64_Name(resolvedName);
+         if (resolvedName != name) cl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedName.c_str());
+      }         
    }
 
    if (cl) {
@@ -2091,28 +2329,30 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
       //we may pass here in case of a dummy class created by TVirtualStreamerInfo
       load = kTRUE;
 
-      if (TClassEdit::IsSTLCont(name)) {
+      if (splitname.IsSTLCont()) {
 
-         const char *altname = gCint->GetInterpreterTypeName(name);
-         if (altname && strcmp(altname,name)!=0) {
+         const char * itypename = gCint->GetInterpreterTypeName(name);
+         if (itypename) {
+            std::string altname( TClassEdit::ShortType(itypename, TClassEdit::kDropStlDefault) );
+            if (altname != name) {
 
-            // Remove the existing (soon to be invalid) TClass object to
-            // avoid an infinite recursion.
-            gROOT->GetListOfClasses()->Remove(cl);
-            TClass *newcl = GetClass(altname,load);
-
-            // since the name are different but we got a TClass, we assume
-            // we need to replace and delete this class.
-            assert(newcl!=cl);
-            cl->ReplaceWith(newcl);
-            delete cl;
-            return newcl;
+               // Remove the existing (soon to be invalid) TClass object to
+               // avoid an infinite recursion.
+               gROOT->GetListOfClasses()->Remove(cl);
+               TClass *newcl = GetClass(altname.c_str(),load);
+               
+               // since the name are different but we got a TClass, we assume
+               // we need to replace and delete this class.
+               assert(newcl!=cl);
+               newcl->ForceReload(cl);
+               return newcl;
+            }
          }
       }
 
    } else {
 
-      if (!TClassEdit::IsSTLCont(name)) {
+      if (!splitname.IsSTLCont()) {
 
          // If the name is actually an STL container we prefer the
          // short name rather than the true name (at least) in
@@ -2158,7 +2398,7 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
       || ( strncmp(name,"std::",5)==0 && ((strcmp(name+5,"string")==0)||(strcmp(name+5,full_string_name)==0)))) {
       return TClass::GetClass("string");
    }
-   if (TClassEdit::IsSTLCont(name)) {
+   if (splitname.IsSTLCont()) {
 
       return gROOT->FindSTLClass(name,kTRUE,silent);
 
@@ -2206,7 +2446,7 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
 
 //______________________________________________________________________________
 THashTable *TClass::GetClassShortTypedefHash() {
-   // Return the class namesmassaged with TClassEdit::ShortType with kDropStlDefault.
+   // Return the class' names massaged with TClassEdit::ShortType with kDropStlDefault.
    return fgClassShortTypedefHash;
 }
 
@@ -2535,6 +2775,7 @@ TList *TClass::GetListOfDataMembers()
 {
    // Return list containing the TDataMembers of a class.
 
+   R__LOCKGUARD(gCINTMutex);
    if (!fClassInfo) {
       if (!fData) fData = new TList;
       return fData;
@@ -2554,6 +2795,7 @@ TList *TClass::GetListOfMethods()
 {
    // Return list containing the TMethods of a class.
 
+   R__LOCKGUARD(gCINTMutex);
    if (!fClassInfo) {
       if (!fMethod) fMethod = new THashList;
       return fMethod;
@@ -2563,6 +2805,7 @@ TList *TClass::GetListOfMethods()
       if (!gInterpreter)
          Fatal("GetListOfMethods", "gInterpreter not initialized");
 
+      TMmallocDescTemp setreset;
       gInterpreter->CreateListOfMethods(this);
    } else {
       gInterpreter->UpdateListOfMethods(this);
@@ -2584,6 +2827,7 @@ TList *TClass::GetListOfAllPublicMethods()
    // - once finished, loop over resulting list and remove all private and
    //   protected methods.
 
+   R__LOCKGUARD(gCINTMutex);
    if (!fAllPubMethod) {
       fAllPubMethod = new TList;
 
@@ -2620,6 +2864,7 @@ TList *TClass::GetListOfAllPublicDataMembers()
    // classes. Refers to a subset of the data members in GetListOfDatamembers()
    // so don't do GetListOfAllPublicDataMembers()->Delete().
 
+   R__LOCKGUARD(gCINTMutex);
    if (!fAllPubData) {
       fAllPubData = new TList;
       TIter next(GetListOfDataMembers());
@@ -2681,6 +2926,7 @@ void TClass::RemoveRef(TClassRef *ref)
 {
    // Unregister the TClassRef object.
 
+   R__LOCKGUARD(gCINTMutex);
    if (ref==fRefStart) {
       fRefStart = ref->fNext;
       if (fRefStart) fRefStart->fPrevious = 0;
@@ -2698,6 +2944,7 @@ void TClass::ReplaceWith(TClass *newcl, Bool_t recurse) const
 {
    // Inform the other objects to replace this object by the new TClass (newcl)
 
+   R__LOCKGUARD(gCINTMutex);
    //we must update the class pointers pointing to 'this' in all TStreamerElements
    TIter nextClass(gROOT->GetListOfClasses());
    TClass *acl;
@@ -2803,6 +3050,7 @@ void TClass::MakeCustomMenuList()
    // in this list, corresponding to the whole standard list.
    // Once the customizable version is done, one can remove or add elements.
 
+   R__LOCKGUARD(gCINTMutex);
    TClassMenuItem *menuItem;
 
    // Make sure fClassMenuList is initialized and empty.
@@ -3092,12 +3340,15 @@ TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version) const
    //           with TStreamer::Optimize()!
    //
 
+   R__LOCKGUARD(gCINTMutex);
+
    // Handle special version, 0 means currently loaded version.
    // Warning:  This may be -1 for an emulated class.
    if (version == 0) {
       version = fClassVersion;
    }
    if (!fStreamerInfo) {
+      TMmallocDescTemp setreset;
       fStreamerInfo = new TObjArray(version + 10, -1);
    } else {
       Int_t ninfos = fStreamerInfo->GetSize();
@@ -3118,6 +3369,7 @@ TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version) const
    }
    if (!sinfo) {
       // We just were not able to find a streamer info, we have to make a new one.
+      TMmallocDescTemp setreset;
       sinfo = TVirtualStreamerInfo::Factory()->NewInfo(const_cast<TClass*>(this));
       fStreamerInfo->AddAtAndExpand(sinfo, fClassVersion);
       if (gDebug > 0) {
@@ -3135,13 +3387,12 @@ TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version) const
          sinfo->Build();
       }
    } else {
-      if (!sinfo->GetOffsets()) {
+      if (!sinfo->IsCompiled()) {
          // Streamer info has not been compiled, but exists.
          // Therefore it was read in from a file and we have to do schema evolution?
          // Or it didn't have a dictionary before, but does now?
          sinfo->BuildOld();
-      }
-      if (sinfo->IsOptimized() && !TVirtualStreamerInfo::CanOptimize()) {
+      } else if (sinfo->IsOptimized() && !TVirtualStreamerInfo::CanOptimize()) {
          // Undo optimization if the global flag tells us to.
          sinfo->Compile();
       }
@@ -3172,7 +3423,7 @@ void TClass::IgnoreTObjectStreamer(Bool_t ignore)
    if (!ignore && !TestBit(kIgnoreTObjectStreamer)) return;
    TVirtualStreamerInfo *sinfo = GetCurrentStreamerInfo();
    if (sinfo) {
-      if (sinfo->GetOffsets()) {
+      if (sinfo->IsCompiled()) {
          // -- Warn the user that what he is doing cannot work.
          // Note: The reason is that TVirtualStreamerInfo::Build() examines
          // the kIgnoreTObjectStreamer bit and sets the TStreamerElement
@@ -3935,13 +4186,7 @@ TClass *ROOT::CreateClass(const char *cname, Version_t id,
 
    // When called via TMapFile (e.g. Update()) make sure that the dictionary
    // gets allocated on the heap and not in the mapped file.
-   if (gMmallocDesc) {
-      void *msave  = gMmallocDesc;
-      gMmallocDesc = 0;
-      TClass *cl   = new TClass(cname, id, info, isa, show, dfil, ifil, dl, il);
-      gMmallocDesc = msave;
-      return cl;
-   }
+   TMmallocDescTemp setreset;
    return new TClass(cname, id, info, isa, show, dfil, ifil, dl, il);
 }
 
@@ -3955,13 +4200,7 @@ TClass *ROOT::CreateClass(const char *cname, Version_t id,
 
    // When called via TMapFile (e.g. Update()) make sure that the dictionary
    // gets allocated on the heap and not in the mapped file.
-   if (gMmallocDesc) {
-      void *msave  = gMmallocDesc;
-      gMmallocDesc = 0;
-      TClass *cl   = new TClass(cname, id, dfil, ifil, dl, il);
-      gMmallocDesc = msave;
-      return cl;
-   }
+   TMmallocDescTemp setreset;
    return new TClass(cname, id, dfil, ifil, dl, il);
 }
 
@@ -4101,7 +4340,13 @@ Long_t TClass::Property() const
    //    kExternal: the class has a free standing way of streaming itself
    //    kEmulated: the class is missing its shared library.
 
+   R__LOCKGUARD(gCINTMutex);
+
    if (fProperty!=(-1)) return fProperty;
+
+   // When called via TMapFile (e.g. Update()) make sure that the dictionary
+   // gets allocated on the heap and not in the mapped file.
+   TMmallocDescTemp setreset;
 
    Long_t dummy;
    TClass *kl = const_cast<TClass*>(this);
@@ -4155,6 +4400,8 @@ void TClass::SetCollectionProxy(const ROOT::TCollectionProxyInfo &info)
 {
    // Create the collection proxy object (and the streamer object) from
    // using the information in the TCollectionProxyInfo.
+
+   R__LOCKGUARD(gCINTMutex);
 
    delete fCollectionProxy;
 
@@ -4376,6 +4623,8 @@ UInt_t TClass::GetCheckSum(UInt_t code) const
    // TStreamerInfo uses the information in TStreamerElement while TClass uses the information
    // from TClass::GetListOfBases and TClass::GetListOfDataMembers.
 
+   R__LOCKGUARD(gCINTMutex);
+   
    if (fCheckSum && code == 0) return fCheckSum;
 
    UInt_t id = 0;
@@ -4453,6 +4702,8 @@ void TClass::AdoptReferenceProxy(TVirtualRefProxy* proxy)
    // represents a reference.
    // When a new proxy is adopted, the old one is deleted.
 
+   R__LOCKGUARD(gCINTMutex);
+
    if ( fRefProxy )  {
       fRefProxy->Release();
    }
@@ -4469,6 +4720,9 @@ void TClass::AdoptMemberStreamer(const char *name, TMemberStreamer *p)
    // member name.
 
    if (!fRealData) return;
+
+   R__LOCKGUARD(gCINTMutex);
+
    TIter next(fRealData);
    TRealData *rd;
    while ((rd = (TRealData*)next())) {
@@ -4571,7 +4825,11 @@ void TClass::Streamer(void *object, TBuffer &b, const TClass *onfile_class) cons
       return;
 
       case kTObject|kEmulated : {
-         b.ReadClassEmulated(this, object, onfile_class);
+         if (b.IsReading()) {
+            b.ReadClassEmulated(this, object, onfile_class);
+         } else {
+            b.WriteClassBuffer(this, object);
+         }            
       }
       return;
 
@@ -4581,6 +4839,9 @@ void TClass::Streamer(void *object, TBuffer &b, const TClass *onfile_class) cons
          CallFunc_t *func = (CallFunc_t*)fInterStreamer;
 
          if (!func)  {
+            // When called via TMapFile (e.g. Update()) make sure that the dictionary
+            // gets allocated on the heap and not in the mapped file.
+            TMmallocDescTemp setreset;
             func  = gCint->CallFunc_Factory();
             gCint->CallFunc_SetFuncProto(func,fClassInfo,"Streamer","TBuffer&",&fOffsetStreamer);
             fInterStreamer = func;
@@ -4633,6 +4894,8 @@ void TClass::AdoptStreamer(TClassStreamer *str)
 //    // This code can be used to quickly test the STL Emulation layer
 //    Int_t k = TClassEdit::IsSTLCont(GetName());
 //    if (k==1||k==-1) { delete str; return; }
+
+   R__LOCKGUARD(gCINTMutex);
 
    if (fStreamer) delete fStreamer;
    if (str) {
@@ -4778,6 +5041,8 @@ TVirtualStreamerInfo *TClass::GetConversionStreamerInfo( const TClass* cl, Int_t
          return (TVirtualStreamerInfo*) arr->At( version );
    }
 
+   R__LOCKGUARD(gCINTMutex);
+
    //----------------------------------------------------------------------------
    // We don't have the streamer info so find it in other class
    //----------------------------------------------------------------------------
@@ -4800,13 +5065,12 @@ TVirtualStreamerInfo *TClass::GetConversionStreamerInfo( const TClass* cl, Int_t
       return 0;
    }
 
-   if (!info->GetOffsets()) {
+   if (!info->IsCompiled()) {
       // Streamer info has not been compiled, but exists.
       // Therefore it was read in from a file and we have to do schema evolution?
       // Or it didn't have a dictionary before, but does now?
       info->BuildOld();
-   }
-   if (info->IsOptimized() && !TVirtualStreamerInfo::CanOptimize()) {
+   } else if (info->IsOptimized() && !TVirtualStreamerInfo::CanOptimize()) {
       // Undo optimization if the global flag tells us to.
       info->Compile();
    }
@@ -4869,6 +5133,8 @@ TVirtualStreamerInfo *TClass::FindConversionStreamerInfo( const TClass* cl, UInt
    if( info )
       return info;
 
+   R__LOCKGUARD(gCINTMutex);
+
    //----------------------------------------------------------------------------
    // Get it from the foreign class
    //----------------------------------------------------------------------------
@@ -4887,13 +5153,12 @@ TVirtualStreamerInfo *TClass::FindConversionStreamerInfo( const TClass* cl, UInt
       return 0;
    }
 
-   if (!info->GetOffsets()) {
+   if (!info->IsCompiled()) {
       // Streamer info has not been compiled, but exists.
       // Therefore it was read in from a file and we have to do schema evolution?
       // Or it didn't have a dictionary before, but does now?
       info->BuildOld();
-   }
-   if (info->IsOptimized() && !TVirtualStreamerInfo::CanOptimize()) {
+   } else if (info->IsOptimized() && !TVirtualStreamerInfo::CanOptimize()) {
       // Undo optimization if the global flag tells us to.
       info->Compile();
    }
@@ -4918,9 +5183,11 @@ Bool_t TClass::HasDefaultConstructor() const
 {
    // Return true if we have access to a default constructor.
 
+   
    if (fNew) return kTRUE;
 
    if (GetClassInfo()) {
+      R__LOCKGUARD(gCINTMutex);
       return gCint->ClassInfo_HasDefaultConstructor(GetClassInfo());
    }
    if (fCollectionProxy) {

@@ -15,7 +15,7 @@ MODNAME      := freetype
 MODDIR       := graf2d/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 
-FREETYPEVERS := freetype-2.3.5
+FREETYPEVERS := freetype-2.3.12
 FREETYPEDIR  := $(MODDIR)
 FREETYPEDIRS := $(MODDIRS)
 FREETYPEDIRI := $(MODDIRS)/$(FREETYPEVERS)/include
@@ -25,10 +25,10 @@ FREETYPELIBS := $(MODDIRS)/$(FREETYPEVERS).tar.gz
 ifeq ($(PLATFORM),win32)
 FREETYPELIB  := $(LPATH)/libfreetype.lib
 ifeq (yes,$(WINRTDEBUG))
-FREETYPELIBA := $(MODDIRS)/$(FREETYPEVERS)/objs/freetype235MT_D.lib
+FREETYPELIBA := $(MODDIRS)/$(FREETYPEVERS)/objs/freetype2312MT_D.lib
 FTNMCFG      := "freetype - Win32 Debug Multithreaded"
 else
-FREETYPELIBA := $(MODDIRS)/$(FREETYPEVERS)/objs/freetype235MT.lib
+FREETYPELIBA := $(MODDIRS)/$(FREETYPEVERS)/objs/freetype2312MT.lib
 FTNMCFG      := "freetype - Win32 Release Multithreaded"
 endif
 else
@@ -95,11 +95,11 @@ else
 			FREE_CFLAGS="-m64"; \
 		fi; \
 		if [ $(ARCH) = "linuxicc" ]; then \
-			FREECC="$$FREECC -m32 -wd188 -wd181"; \
+			FREECC="$$FREECC -m32"; \
 			FREE_CFLAGS="-m32"; \
 		fi; \
 		if [ $(ARCH) = "linuxx8664icc" ]; then \
-			FREECC="$$FREECC -m64 -wd188 -wd181"; \
+			FREECC="$$FREECC -m64"; \
 			FREE_CFLAGS="-m64"; \
 		fi; \
 		if [ $(ARCH) = "macosx" ]; then \
@@ -132,8 +132,9 @@ else
 		if [ $(ARCH) = "aixgcc" ]; then \
 			FREEZLIB="--without-zlib"; \
 		fi; \
-		GNUMAKE=$(MAKE) ./configure --with-pic $$FREEZLIB \
-		CC=\"$$FREECC\" CFLAGS=\"$$FREE_CFLAGS -O\"; \
+		GNUMAKE=$(MAKE) ./configure --with-pic --disable-shared \
+		 $$FREEZLIB \
+		CC=\'$$FREECC\' CFLAGS=\'$$FREE_CFLAGS -O\'; \
 		$(MAKE))
 endif
 

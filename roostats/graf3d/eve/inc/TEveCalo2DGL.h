@@ -36,9 +36,9 @@ protected:
    void      MakeRPhiCell(Float_t phiMin, Float_t phiMax, Float_t towerH, Float_t offset) const;
 
    void      DrawRPhi(TGLRnrCtx & rnrCtx, TEveCalo2D::vBinCells_t&) const;
-   void      DrawRPhiHighlighted(TGLRnrCtx & rnrCtx) const;
+   void      DrawRPhiHighlighted(std::vector<TEveCaloData::vCellId_t*>& cellLists) const;
    void      DrawRhoZ(TGLRnrCtx & rnrCtx, TEveCalo2D::vBinCells_t&) const;
-   void      DrawRhoZHighlighted(TGLRnrCtx & rnrCtx) const;
+   void      DrawRhoZHighlighted(std::vector<TEveCaloData::vCellId_t*>& cellLists) const;
 
    Bool_t    IsRPhi() const;
 
@@ -50,7 +50,7 @@ public:
    virtual void   SetBBox();
 
    virtual void DirectDraw(TGLRnrCtx & rnrCtx) const;
-   virtual void DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* ps) const;
+   virtual void DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* ps, Int_t lvl=-1) const;
 
    // To support two-level selection
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }

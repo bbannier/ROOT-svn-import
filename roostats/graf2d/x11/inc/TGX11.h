@@ -33,8 +33,7 @@
 #include <X11/Xatom.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
-
-#include "Xpm.h"
+#include <X11/xpm.h>
 
 #else
 
@@ -237,6 +236,7 @@ public:
    Int_t     WriteGIF(char *name);
    void      WritePixmap(Int_t wid, UInt_t w, UInt_t h, char *pxname);
    Window_t  GetCurrentWindow() const;
+   Int_t     SupportsExtension(const char *ext) const;
 
    //---- Methods used for GUI -----
    void         GetWindowAttributes(Window_t id, WindowAttributes_t &attr);
@@ -408,4 +408,3 @@ public:
 };
 
 #endif
-

@@ -27,6 +27,7 @@
 #include "TMethod.h"
 #include "TDataMember.h"
 #include "TBaseClass.h"
+#include "TClassEdit.h"
 #include "TInterpreter.h"
 #include "TGlobal.h"
 #include "DllImport.h"
@@ -237,7 +238,7 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
          std::string::size_type start = 0, end = op.size();
          while ( start < end && isspace( op[ start ] ) ) ++start;
          while ( start < end && isspace( op[ end-1 ] ) ) --end;
-         op = op.substr( start, end - start );
+         op = TClassEdit::ResolveTypedef( op.substr( start, end - start ).c_str(), true );
 
       // map C++ operator to python equivalent, or made up name if no equivalent exists
          Utility::TC2POperatorMapping_t::iterator pop = Utility::gC2POperatorMapping.find( op );
@@ -761,11 +762,20 @@ PyObject* PyROOT::BindRootObject( void* address, TClass* klass, Bool_t isRef )
    if ( ! isRef ) {
       TClass* clActual = klass->GetActualClass( address );
       if ( clActual && klass != clActual ) {
-       // root/meta base class offset fails in the case of virtual inheritance
-       //   Long_t offset = clActual->GetBaseClassOffset( klass );
+      // root/meta base class offset fails in the case of virtual inheritance
          Long_t offset;
-         if (klass->GetClassInfo() &&  clActual->GetClassInfo()) {
-            offset = G__isanybase(((G__ClassInfo*)klass->GetClassInfo())->Tagnum(), ((G__ClassInfo*)clActual->GetClassInfo())->Tagnum(), (Long_t)address );
+         G__ClassInfo* ciKlass  = (G__ClassInfo*)klass->GetClassInfo();
+         G__ClassInfo* ciActual = (G__ClassInfo*)clActual->GetClassInfo();
+         if ( ciKlass && ciActual ) {
+#ifdef WIN32
+         // Windows cannot cast-to-derived for virtual inheritance
+         // with CINT's (or Reflex's) interfaces.
+            long baseprop = ciActual->IsBase( *ciKlass );
+            if ( !baseprop || (baseprop & G__BIT_ISVIRTUALBASE) ) 
+               offset = clActual->GetBaseClassOffset( klass );
+            else
+#endif
+               offset = G__isanybase( ciKlass->Tagnum(), ciActual->Tagnum(), (Long_t)address );
          } else {
             offset = clActual->GetBaseClassOffset( klass ); 
          }

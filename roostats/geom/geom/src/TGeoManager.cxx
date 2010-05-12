@@ -1802,6 +1802,28 @@ Int_t TGeoManager::GetVirtualLevel()
 
    return fCurrentNavigator->GetVirtualLevel();
 }
+//_____________________________________________________________________________
+TVirtualGeoTrack *TGeoManager::FindTrackWithId(Int_t id) const
+{
+// Search the track hierarchy to find the track with the
+// given id
+//
+// if 'primsFirst' is true, then:
+// first tries TGeoManager::GetTrackOfId, then does a
+// recursive search if that fails. this would be faster
+// if the track is somehow known to be a primary
+   TVirtualGeoTrack* trk = 0;
+   trk = GetTrackOfId(id);
+   if (trk) return trk;
+   // need recursive search
+   TIter next(fTracks);
+   TVirtualGeoTrack* prim;
+   while ((prim = (TVirtualGeoTrack*)next())) {
+      trk = prim->FindTrackWithId(id);
+      if (trk) return trk;
+   }
+   return NULL;
+}
 
 //_____________________________________________________________________________
 TVirtualGeoTrack *TGeoManager::GetTrackOfId(Int_t id) const
@@ -3042,9 +3064,16 @@ Int_t TGeoManager::GetNsegments() const
 //_____________________________________________________________________________
 void TGeoManager::BuildDefaultMaterials()
 {
-// Build the default materials. A list of those can be found in ...
-//   new TGeoMaterial("Air", 14.61, 7.3, 0.001205);
-   fElementTable = new TGeoElementTable(200);
+// Now just a shortcut for GetElementTable.
+   GetElementTable();
+}
+
+//_____________________________________________________________________________
+TGeoElementTable *TGeoManager::GetElementTable()
+{
+// Returns material table. Creates it if not existing.
+   if (!fElementTable) fElementTable = new TGeoElementTable(200);
+   return fElementTable;
 }
 
 //_____________________________________________________________________________
@@ -3326,7 +3355,7 @@ Int_t TGeoManager::Export(const char *filename, const char *name, Option_t *opti
    // -Case 3: gdml file
    //  if filename end with ".gdml"
    //  NOTE that to use this option, the PYTHONPATH must be defined like
-   //      export PYTHONPATH=$ROOTSYS/lib:$ROOTSYS/gdml
+   //      export PYTHONPATH=$ROOTSYS/lib:$ROOTSYS/geom/gdml
    //
 
    TString sfile(filename);
@@ -3465,6 +3494,7 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
 
    if (strstr(filename,".gdml")) {
       // import from a gdml file
+      new TGeoManager("GDMLImport", "Geometry imported from GDML");
       const char* cmd = Form("TGDMLParse::StartGDML(\"%s\")", filename);
       TGeoVolume* world = (TGeoVolume*)gROOT->ProcessLineFast(cmd);
 

@@ -14,6 +14,7 @@ namespace PyROOT {
    namespace PyStrings {
 
       R__EXTERN PyObject* gBases;
+      R__EXTERN PyObject* gBase;
       R__EXTERN PyObject* gClass;
       R__EXTERN PyObject* gDeref;
       R__EXTERN PyObject* gDict;
@@ -26,9 +27,15 @@ namespace PyROOT {
       R__EXTERN PyObject* gLen;
       R__EXTERN PyObject* gLifeLine;
       R__EXTERN PyObject* gModule;
+      R__EXTERN PyObject* gMRO;
       R__EXTERN PyObject* gName;
       R__EXTERN PyObject* gNe;
       R__EXTERN PyObject* gTypeCode;
+
+      R__EXTERN PyObject* gAdd;
+      R__EXTERN PyObject* gSub;
+      R__EXTERN PyObject* gMul;
+      R__EXTERN PyObject* gDiv;
 
       R__EXTERN PyObject* gAt;
       R__EXTERN PyObject* gBegin;

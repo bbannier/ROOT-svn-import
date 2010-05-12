@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "TEveVector.h"
+#include "TEvePathMark.h"
 #include "TEveElement.h"
 #include "TEveLine.h"
 
@@ -56,6 +57,7 @@ protected:
    Int_t              fStatus;     // Status-word, user-defined.
    Bool_t             fLockPoints; // Lock points that are currently in - do nothing in MakeTrack().
    vPathMark_t        fPathMarks;  // TEveVector of known points along the track
+   Int_t              fLastPMIdx;  //!Last path-mark index tried in track-propagation.
 
    TEveTrackPropagator *fPropagator;   // Pointer to shared render-style
 
@@ -79,8 +81,9 @@ public:
    virtual void MakeTrack(Bool_t recurse=kTRUE);
 
    TEveTrackPropagator* GetPropagator() const  { return fPropagator; }
-   void SetPropagator(TEveTrackPropagator* prop);
-   void SetAttLineAttMarker(TEveTrackList* tl);
+   Int_t GetLastPMIdx() const { return fLastPMIdx; }
+   void  SetPropagator(TEveTrackPropagator* prop);
+   void  SetAttLineAttMarker(TEveTrackList* tl);
 
    const TEveVector& GetVertex()      const { return fV;    }
    const TEveVector& GetMomentum()    const { return fP;    }
@@ -123,8 +126,8 @@ public:
    UChar_t GetBreakProjectedTracks() const     { return fBreakProjectedTracks; }
    void    SetBreakProjectedTracks(UChar_t bt) { fBreakProjectedTracks = bt;   }
 
-   static Bool_t GetDefaultBreakProjectedTracks()          { return fgDefaultBreakProjectedTracks; }
-   static void   SetDefaultBreakProjectedTracks(Bool_t bt) { fgDefaultBreakProjectedTracks = bt;   }
+   static Bool_t GetDefaultBreakProjectedTracks();
+   static void   SetDefaultBreakProjectedTracks(Bool_t bt);
 
    ClassDef(TEveTrack, 1); // Track with given vertex, momentum and optional referece-points (path-marks) along its path.
 };

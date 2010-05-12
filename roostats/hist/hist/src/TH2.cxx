@@ -1849,7 +1849,7 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    //check if a profile with identical name exist
    // if compatible reset and re-use previous histogram 
    TObject *h1obj = gROOT->FindObject(pname);
-   if (h1obj && h1obj->InheritsFrom("TH1")) {
+   if (h1obj && h1obj->InheritsFrom(TH1::Class())) {
       if (h1obj->IsA() != TProfile::Class() ) { 
          Error("DoProfile","Histogram with name %s must be a TProfile and is a %s",name,h1obj->ClassName());
          return 0; 
@@ -2136,7 +2136,7 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    // if compatible reset and re-use previous histogram 
    // (see https://savannah.cern.ch/bugs/?54340)
    TObject *h1obj = gROOT->FindObject(pname);
-   if (h1obj && h1obj->InheritsFrom("TH1")) {
+   if (h1obj && h1obj->InheritsFrom(TH1::Class())) {
       if (h1obj->IsA() != TH1D::Class() ) { 
          Error("DoProjection","Histogram with name %s must be a TH1D and is a %s",name,h1obj->ClassName());
          return 0; 
@@ -2766,11 +2766,11 @@ void TH2C::Reset(Option_t *option)
 void TH2C::SetBinContent(Int_t bin, Double_t content)
 {
    // Set bin content
+   fEntries++;
+   fTsumw = 0;
    if (bin < 0) return;
    if (bin >= fNcells) return;
    fArray[bin] = Char_t (content);
-   fEntries++;
-   fTsumw = 0;
 }
 
 //______________________________________________________________________________
@@ -3040,11 +3040,11 @@ void TH2S::Reset(Option_t *option)
 void TH2S::SetBinContent(Int_t bin, Double_t content)
 {
    // Set bin content
+   fEntries++;
+   fTsumw = 0;
    if (bin < 0) return;
    if (bin >= fNcells) return;
    fArray[bin] = Short_t (content);
-   fEntries++;
-   fTsumw = 0;
 }
 
 //______________________________________________________________________________
@@ -3314,11 +3314,11 @@ void TH2I::Reset(Option_t *option)
 void TH2I::SetBinContent(Int_t bin, Double_t content)
 {
    // Set bin content
+   fEntries++;
+   fTsumw = 0;
    if (bin < 0) return;
    if (bin >= fNcells) return;
    fArray[bin] = Int_t (content);
-   fEntries++;
-   fTsumw = 0;
 }
 
 //______________________________________________________________________________
@@ -3551,11 +3551,11 @@ void TH2F::Reset(Option_t *option)
 void TH2F::SetBinContent(Int_t bin, Double_t content)
 {
    // Set bin content
+   fEntries++;
+   fTsumw = 0;
    if (bin < 0) return;
    if (bin >= fNcells) return;
    fArray[bin] = Float_t (content);
-   fEntries++;
-   fTsumw = 0;
 }
 
 //______________________________________________________________________________
@@ -3835,11 +3835,11 @@ void TH2D::Reset(Option_t *option)
 void TH2D::SetBinContent(Int_t bin, Double_t content)
 {
    // Set bin content
+   fEntries++;
+   fTsumw = 0;
    if (bin < 0) return;
    if (bin >= fNcells) return;
    fArray[bin] = Double_t (content);
-   fEntries++;
-   fTsumw = 0;
 }
 
 //______________________________________________________________________________

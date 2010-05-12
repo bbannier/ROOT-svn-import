@@ -14,16 +14,18 @@ MEMSTATDIRI   := $(MEMSTATDIR)/inc
 
 ##### libMemStat #####
 MEMSTATL      := $(MODDIRI)/LinkDef.h
-MEMSTATDS     := $(MODDIRS)/G__Memstat.cxx
+MEMSTATDS     := $(MODDIRS)/G__MemStat.cxx
 MEMSTATDO     := $(MEMSTATDS:.cxx=.o)
 MEMSTATDH     := $(MEMSTATDS:.cxx=.h)
 
-MEMSTATH      := $(MODDIRI)/TMemStatHelpers.h $(MODDIRI)/TMemStatDepend.h \
-                 $(MODDIRI)/TMemStat.h \
-		 $(MODDIRI)/TMemStatManager.h $(MODDIRI)/TMemStatInfo.h
-MEMSTATS      := $(MODDIRS)/TMemStat.cxx $(MODDIRS)/TMemStatManager.cxx \
-		 $(MODDIRS)/TMemStatDepend.cxx $(MODDIRS)/TMemStatInfo.cxx \
-		 $(MODDIRS)/TMemStatHelpers.cxx
+MEMSTATH      := $(MODDIRI)/TMemStatHelpers.h \
+                 $(MODDIRI)/TMemStat.h $(MODDIRI)/TMemStatBacktrace.h \
+                 $(MODDIRI)/TMemStatChecksum.h $(MODDIRI)/TMemStatDef.h \
+		             $(MODDIRI)/TMemStatMng.h $(MODDIRI)/TMemStatHook.h
+
+MEMSTATS      := $(MODDIRS)/TMemStat.cxx $(MODDIRS)/TMemStatMng.cxx \
+		             $(MODDIRS)/TMemStatBacktrace.cxx $(MODDIRS)/TMemStatChecksum.cxx \
+		             $(MODDIRS)/TMemStatHelpers.cxx $(MODDIRS)/TMemStatHook.cxx
 MEMSTATO      := $(MEMSTATS:.cxx=.o)
 
 MEMSTATDEP    := $(MEMSTATO:.o=.d) $(MEMSTATDO:.o=.d)
@@ -31,30 +33,13 @@ MEMSTATDEP    := $(MEMSTATO:.o=.d) $(MEMSTATDO:.o=.d)
 MEMSTATLIB    := $(LPATH)/libMemStat.$(SOEXT)
 MEMSTATMAP    := $(MEMSTATLIB:.$(SOEXT)=.rootmap)
 
-##### libMemStatGui #####
-MEMSTATGUIL   := $(MODDIRI)/LinkDefGUI.h
-MEMSTATGUIDS  := $(MODDIRS)/G__MemstatGui.cxx
-MEMSTATGUIDO  := $(MEMSTATGUIDS:.cxx=.o)
-MEMSTATGUIDH  := $(MEMSTATGUIDS:.cxx=.h)
-
-MEMSTATGUIH   := $(MODDIRI)/TMemStat.h $(MODDIRI)/TMemStatViewerGUI.h \
-                 $(MODDIRI)/TMemStatDrawDlg.h $(MODDIRI)/TMemStatResource.h
-MEMSTATGUIS   := $(MODDIRS)/TMemStatViewerGUI.cxx $(MODDIRS)/TMemStatDrawDlg.cxx
-MEMSTATGUIO   := $(MEMSTATGUIS:.cxx=.o)
-
-MEMSTATGUIDEP := $(MEMSTATGUIO:.o=.d) $(MEMSTATGUIDO:.o=.d)
-
-MEMSTATGUILIB := $(LPATH)/libMemStatGui.$(SOEXT)
-MEMSTATGUIMAP := $(MEMSTATGUILIB:.$(SOEXT)=.rootmap)
-
 # used in the main Makefile
 ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(MEMSTATH))
-ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(MEMSTATGUIH))
 ALLLIBS     += $(MEMSTATLIB) $(MEMSTATGUILIB)
-ALLMAPS     += $(MEMSTATMAP) $(MEMSTATGUIMAP)
-
+ALLMAPS     += $(MEMSTATMAP)
+  
 # include all dependency files
-INCLUDEFILES += $(MEMSTATDEP) $(MEMSTATGUIDEP)
+INCLUDEFILES += $(MEMSTATDEP)
 
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
@@ -76,31 +61,16 @@ $(MEMSTATMAP):  $(RLIBMAP) $(MAKEFILEDEP) $(MEMSTATL)
 		$(RLIBMAP) -o $(MEMSTATMAP) -l $(MEMSTATLIB) \
 		   -d $(MEMSTATLIBDEPM) -c $(MEMSTATL)
 
-##### libMemStatGui #####
-$(MEMSTATGUILIB): $(MEMSTATGUIO) $(MEMSTATGUIDO) $(ORDER_) \
-                  $(MAINLIBS) $(MEMSTATGUILIBDEP)
-		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libMemStatGui.$(SOEXT) $@ \
-		   "$(MEMSTATGUIO) $(MEMSTATGUIDO)" "$(MEMSTATGUILIBEXTRA)"
 
-$(MEMSTATGUIDS): $(MEMSTATGUIH) $(MEMSTATGUIL) $(ROOTCINTTMPDEP)
-		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(MEMSTATGUIH) $(MEMSTATGUIL)
-
-$(MEMSTATGUIMAP): $(RLIBMAP) $(MAKEFILEDEP) $(MEMSTATGUIL)
-		$(RLIBMAP) -o $(MEMSTATGUIMAP) -l $(MEMSTATGUILIB) \
-		   -d $(MEMSTATGUILIBDEPM) -c $(MEMSTATGUIL)
-
-all-$(MODNAME): $(MEMSTATLIB) $(MEMSTATMAP) $(MEMSTATGUILIB) $(MEMSTATGUIMAP)
+all-$(MODNAME): $(MEMSTATLIB) $(MEMSTATMAP)
 
 clean-$(MODNAME):
-		@rm -f $(MEMSTATO) $(MEMSTATDO) $(MEMSTATGUIO) $(MEMSTATGUIDO)
+		@rm -f $(MEMSTATO) $(MEMSTATDO)
 
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(MEMSTATDEP) $(MEMSTATDS) $(MEMSTATDH) $(MEMSTATLIB) \
-		   $(MEMSTATMAP) $(MEMSTATGUIDEP) $(MEMSTATGUIDS) \
-		   $(MEMSTATGUIDH) $(MEMSTATGUILIB) $(MEMSTATGUIMAP)
+		   $(MEMSTATMAP)
 
 distclean::     distclean-$(MODNAME)

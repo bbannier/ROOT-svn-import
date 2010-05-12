@@ -27,12 +27,12 @@ TVirtualStreamerInfo *TVirtualStreamerInfo::fgInfoFactory    = 0;
 
 Bool_t  TVirtualStreamerInfo::fgCanDelete        = kTRUE;
 Bool_t  TVirtualStreamerInfo::fgOptimize         = kTRUE;
-Bool_t  TVirtualStreamerInfo::fgStreamMemberWise = kFALSE;
+Bool_t  TVirtualStreamerInfo::fgStreamMemberWise = kTRUE;
 
 ClassImp(TVirtualStreamerInfo)
 
 //______________________________________________________________________________
-TVirtualStreamerInfo::TVirtualStreamerInfo()
+TVirtualStreamerInfo::TVirtualStreamerInfo() : fOptimized(kFALSE), fIsBuilt(kFALSE)
 {
    // Default constructor.
 
@@ -40,7 +40,7 @@ TVirtualStreamerInfo::TVirtualStreamerInfo()
 
 //______________________________________________________________________________
 TVirtualStreamerInfo::TVirtualStreamerInfo(TClass *cl)
-   : TNamed(cl->GetName(),"")
+   : TNamed(cl->GetName(),""), fOptimized(kFALSE), fIsBuilt(kFALSE)
 {
    // Default constructor.
 
@@ -48,7 +48,7 @@ TVirtualStreamerInfo::TVirtualStreamerInfo(TClass *cl)
 
 //______________________________________________________________________________
 TVirtualStreamerInfo::TVirtualStreamerInfo(const TVirtualStreamerInfo& info)
-  : TNamed(info) 
+  : TNamed(info), fOptimized(kFALSE), fIsBuilt(kFALSE)
 { 
    //copy constructor
 }

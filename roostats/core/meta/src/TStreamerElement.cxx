@@ -40,6 +40,7 @@ namespace std {} using namespace std;
 const Int_t kMaxLen = 1024;
 static char gIncludeName[kMaxLen];
 
+extern void *gMmallocDesc;
 
 //______________________________________________________________________________
 static TStreamerBasicType *InitCounter(const char *countClass, const char *countName)
@@ -448,6 +449,8 @@ void TStreamerElement::Streamer(TBuffer &R__b)
       //R__b.CheckByteCount(R__s, R__c, TStreamerElement::IsA());
       R__b.ClassEnd(TStreamerElement::Class());
       R__b.SetBufferOffset(R__s+R__c+sizeof(UInt_t));
+      
+      ResetBit(TStreamerElement::kCache);
    } else {
       R__b.WriteClassBuffer(TStreamerElement::Class(),this);
    }
@@ -546,9 +549,15 @@ void TStreamerBase::Init(TObject *)
    fBaseClass = TClass::GetClass(GetName());
    if (!fBaseClass) return;
    if (!fBaseClass->GetMethodAny("StreamerNVirtual")) return;
+
+   // When called via TMapFile (e.g. Update()) make sure that the dictionary
+   // gets allocated on the heap and not in the mapped file.
+   void *save = gMmallocDesc;
+   gMmallocDesc = 0;
    delete fMethod;
    fMethod = new TMethodCall();
    fMethod->InitWithPrototype(fBaseClass,"StreamerNVirtual","TBuffer &");
+   gMmallocDesc = save;
    //fBaseClass = TClass::GetClass(GetName());
 }
 
@@ -1725,6 +1734,15 @@ void TStreamerSTL::Streamer(TBuffer &R__b)
       }
       if (IsaPointer()) fType = TVirtualStreamerInfo::kSTLp;
       else fType = TVirtualStreamerInfo::kSTL;
+      if (R__b.GetParent()) { // Avoid resetting during a cloning.
+         if (fCtype==TVirtualStreamerInfo::kObjectp || fCtype==TVirtualStreamerInfo::kAnyp || fCtype==TVirtualStreamerInfo::kObjectP || fCtype==TVirtualStreamerInfo::kAnyP) {
+            SetBit(kDoNotDelete); // For backward compatibility
+         } else if ( fSTLtype == kSTLmap || fSTLtype == kSTLmultimap) {
+            // Here we would like to set the bit only if one of the element of the pair is a pointer, 
+            // however we have no easy to determine this short of parsing the class name.
+            SetBit(kDoNotDelete); // For backward compatibility
+         }
+      }
       return;
    } else {
       // To enable forward compatibility we actually save with the old value

@@ -82,9 +82,10 @@ public:
 
    TEveCaloData* GetData() const { return fData; }
    void    SetData(TEveCaloData* d);
-   void    DataChanged();   Float_t GetMaxVal() const;
+   void    DataChanged();
+   Float_t GetMaxVal() const;
 
-   void    AssertCellIdCache() const;
+   Bool_t  AssertCellIdCache() const;
    void    InvalidateCellIdCache() { fCellIdCacheOK=kFALSE; ResetBBox(); };
 
    Float_t GetDataSliceThreshold(Int_t slice) const;
@@ -151,7 +152,6 @@ private:
 
 protected:
    TEveCaloData::vCellId_t fCellList;
-   TEveCaloData::vCellId_t fCellListSelected;
 
    Bool_t    fRnrEndCapFrame;
    Bool_t    fRnrBarrelFrame;
@@ -194,12 +194,13 @@ private:
    TEveCalo2D& operator=(const TEveCalo2D&); // Not implemented
 
    TEveProjection::EPType_e  fOldProjectionType;
+   void CellSelectionChangedInternal(TEveCaloData::vCellId_t& cells, std::vector<TEveCaloData::vCellId_t*>& cellLists);
 
 protected:
    std::vector<TEveCaloData::vCellId_t*>   fCellLists;
 
    std::vector<TEveCaloData::vCellId_t*>   fCellListsSelected;
-   std::vector<Int_t>                      fBinIdsSelected;
+   std::vector<TEveCaloData::vCellId_t*>   fCellListsHighlighted;
 
    Float_t                                 fMaxESumBin;
    Float_t                                 fMaxEtSumBin;
@@ -260,8 +261,6 @@ protected:
 
    Bool_t                  fDrawHPlane;
    Float_t                 fHPlaneVal;
-
-   Int_t                   fBinStep;
 
    Int_t                   fDrawNumberCellPixels;
    Int_t                   fCellPixelFontSize;

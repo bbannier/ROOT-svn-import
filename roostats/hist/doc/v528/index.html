@@ -32,3 +32,176 @@
      </pre>
 </ul>
 
+<h4>TGraph2D</h4>
+<ul>
+<li> In case all the points are in the same Z-plane Z0 (zmin = zmax), the graph
+     minimum is set to Z0-0.01*Z0 and the maximum to Z0+0.01*Z0. This
+     allow to make <tt>TGraph2D</tt> like:
+     <pre>
+     {
+        double *x = new double[2];
+        double *y = new double[2];
+        double *z = new double[2];
+        x[0] = 6215.;
+        x[1] = 5542.;
+        y[0] = 3853.;
+        y[1] = 5270.;
+        z[0] = 2723.;
+        z[1] = 2723.;
+        TGraph2D * g = new TGraph2D(2, x, y, z);
+        g->Draw("LINE");   
+     }
+     </pre>
+</ul>
+
+<h4>TGraph2DPainter</h4>
+<ul>
+<li> When a <tt>TGraph2D</tt> was painted with the option <tt>TRI1</tt> the 
+     color distribution in case of log scale along the Z axis was wrong.
+</ul>
+
+<h4>THistPainter</h4>
+<ul>
+<li> After executing the following macro, zooming the X axis interactively
+     generated the error message:
+     <br>
+     <tt>Error in <TGraphPainter::PaintGraphHist>: X must have N+1 values with option N </tt>
+     <pre>
+     {
+        int n = 70;
+        TH1F h("h","test",n,0.,30.);
+        TRandom3 rndm_engine;
+        for (int i=0; i<10000; ++i) h->Fill(rndm_engine->Gaus(15.,4.));
+        TF1 f("f","gaus");
+        h->Fit("f");
+        gPad->SetLogx();
+     }
+     </pre>
+<li> The following macro didn't draw any box. Because of a precision
+     problem the filled bin was not drawn.
+     <pre>
+     {
+        double yarr[] = { 1.0, 2.0, 3.0, 4.0 };
+        double xarr[] = { 0.01, 0.02, 0.03, 0.04 };
+        TH2D *h = new TH2D("h","h",3,xarr,3,yarr);
+        h->Fill(0.011,2.5);
+        h->Draw("box");           
+     }
+     </pre>
+<li> The following macro displayed the histogram out of the frame
+     (option "bar"):
+     <pre>
+     {
+        gStyle->SetHistMinimumZero();
+        TH1F* h = new TH1F("h","h", 44, -0.5, 43.5);
+        h->SetBarWidth(0.7);
+        h->SetBarOffset(0.2);
+        h->SetFillColor(kGreen);
+        for (int i=0;i<44; i++ ) h->Fill(i, -i-60);
+        h->DrawCopy("bar1");
+     } 
+     </pre>
+<li> The setting <tt>gStyle->SetHistMinimumZero()</tt> now works for horizontal
+     plots produced with the option <tt>HBAR</tt>.
+     <img src="hbarmin0.gif">
+</ul>
+
+<h4>TGraphPainter</h4>
+<ul>
+<li> When painted with option "2" (errors represented with boxes) the graph
+     with error bars were not clipped if the boxes were outside the frame
+     limits. This problem was visible with TGraphErrors, TGraphAsymmErrors and 
+     TGraphBentErrors. The following macro showed the problem:
+     <pre>
+     {
+        TCanvas *c1 = new TCanvas("c1","c1",200,10,700,500);
+
+        const Int_t n    = 10;
+        Double_t x[n]    = {-0.22, 0.05, 0.25, 0.35, 0.5, 0.61,0.7,0.85,0.89,0.95};
+        Double_t y[n]    = {1,2.9,5.6,7.4,9,9.6,8.7,6.3,4.5,1};
+        Double_t ex[n]   = {.05,.1,.07,.07,10.04,.05,.06,.07,.08,.05};
+        Double_t ey[n]   = {3.8,.7,.6,.5,.4,.4,.5,.6,.7,.8};
+        Double_t exd[n] = {.0,.0,.0,.0,.0,.0,.0,.0,.0,.0}; 
+        Double_t eyd[n] = {.0,.0,.05,.0,.0,.0,.0,.0,.0,.0}; 
+
+        TGraphErrors *gr1 = new TGraphErrors(n,x,y,ex,ey);
+        gr1->SetFillStyle(3004);
+
+        TGraphAsymmErrors *gr2 = new TGraphAsymmErrors(n, x, y, ex, ex, ey, ey);
+        gr2->SetFillStyle(3005);
+
+        TGraphBentErrors *gr3 = new TGraphBentErrors(n,x,y,ex,ex,ey,ey,exd,exd,eyd,eyd);        
+        gr3->SetFillStyle(3006);
+
+        c1->DrawFrame(-1,0,1,10);
+
+        gr1->Draw("2");
+        gr2->Draw("2");
+        gr3->Draw("2");  
+     }
+     </pre>
+<li> In PaintGraphBentErrors the fill style was not set for the boxes.
+<li> The following macro displayed the histogram out of the frame
+     (option "b"):
+     <pre>
+     {
+        gStyle->SetHistMinimumZero();
+        TH1F* h = new TH1F("h","h", 44, -0.5, 43.5);
+        h->SetBarWidth(0.7);
+        h->SetBarOffset(0.2);
+        h->SetFillColor(kGreen);
+        for (int i=0;i<44; i++ ) h->Fill(i, -i-60);
+        h->DrawCopy("b");
+     } 
+     </pre>
+</ul>
+
+<h4>TGraph</h4>
+<ul>
+<li>Fix a bug in <tt>TGraph::Eval</tt> when evaluating at the graph point
+    values. </li>
+</ul>  
+
+<h4>THStack</h4>
+<ul>
+<li>The color index used to erase the background while drawing a stack of 1D
+    histogram was wrong.</li>
+</ul>  
+
+<h4>TF1</h4>
+<ul>
+  <li> Bug fixed in TF1 zooming on Y axis. To reproduce it do:
+     <pre>
+     root [0] TF1 f1( "f1", "-x", 1,3)
+     root [1] f1.Draw()
+     </pre>
+     now selecting some range on the y-axis with the mouse
+     jumped to the range (0, 1) instead of chosen range.
+  </li>
+  <li> Add in <tt>TF1::GetX</tt> and <tt>TF1::GetMaximum, TF1::GetMinimum</tt> and
+  <tt>TF1::GetMaximumX, TF1::GetMinimumX</tt> the tolerance and max number
+  of iterations as extra parameters with default values of
+  tolerance=10E-10 and max iterations=100
+  </li>
+</ul>
+
+<h4>TH1</h4>
+<ul>
+  <li>Implement a faster version of <tt>TH1::FillRandom(TH1*,int)</tt>
+  when the passed histogram has the same bins. In this case generate
+  the flactuations bin by bins using Multinomial statistics
+  </li>
+</ul>
+
+<h4>THnSparse</h4>
+<ul>
+  <li>Shrink THnSparse on disk by 70% in an arbitrary example case;
+  also reduce memory usage, especially when not filling.
+  <br>
+  <b>IMPORTANT NOTE</b>: while new THnSparse objects can be read and e.g. projected from in old ROOT versions, filling a new THnSparse object in old ROOT versions does NOT WORK!
+  <li>
+  Add SetBinContent(), AddBinContent(), SetBinError() taking the
+  linear bin index. Use it in Projection() for a considerable
+  speed-up.
+</ul>
+  

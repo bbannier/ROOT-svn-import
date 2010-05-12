@@ -49,7 +49,6 @@ VERSION=
 EXPLLNKCORE=
 if [ "x$EXPLICIT" = "xyes" ]; then
    if [ $LIB != "lib/libCint.$soext" ] \
-       && [ $LIB != "lib/libCint7.$soext" ] \
        && [ $LIB != "lib/libReflex.$soext" ] \
        && [ $LIB != "lib/libminicern.$soext" ]; then
       NEEDREFLEX=""
@@ -116,7 +115,9 @@ elif [ $PLATFORM = "macosx" ]; then
    export DYLD_LIBRARY_PATH=`pwd`/lib:$DYLD_LIBRARY_PATH
    if [ $macosx_minor -ge 3 ]; then
       unset LD_PREBIND
-      export MACOSX_DEPLOYMENT_TARGET=10.$macosx_minor
+      if [ "$MACOSX_DEPLOYMENT_TARGET" = "" ]; then
+         export MACOSX_DEPLOYMENT_TARGET=10.$macosx_minor
+      fi
    fi
    # We need two library files: a .dylib to link to and a .so to load
    BUNDLE=`echo $LIB | sed s/.dylib/.so/`
@@ -159,13 +160,10 @@ elif [ $PLATFORM = "macosx" ]; then
 elif [ $LD = "build/unix/wingcc_ld.sh" ]; then
    EXPLLNKCORE=
    if [ $SONAME != "libCint.dll" ] \
-       && [ $SONAME != "libCint7.dll" ] \
        && [ $SONAME != "libReflex.dll" ] \
        && [ $SONAME != "libminicern.dll" ] ; then
       if [ $SONAME = "libCore.dll" ]; then
          EXPLLNKCORE="-Llib -lCint"
-      elif [ $SONAME = "libMetaTCint_7.dll" ]; then
-         EXPLLNKCORE="-Llib -lCore -lCint7"
       else
          EXPLLNKCORE="-Llib -lCore -lCint"
       fi
