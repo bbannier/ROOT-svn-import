@@ -28,10 +28,6 @@
 #ifndef ROOT_TProofBenchFileGenerator
 #define ROOT_TProofBenchFileGenerator
 
-#ifndef ROOT_TProofBenchMode
-#include "TProofBenchMode.h"
-#endif
-
 #ifndef ROOT_TObject
 #include "TObject.h"
 #endif
@@ -41,6 +37,8 @@
 #endif
 
 class TProof;
+class TProofBenchMode;
+class TDSet;
 
 R__EXTERN TProof *gProof;
 

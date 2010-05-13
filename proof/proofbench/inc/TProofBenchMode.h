@@ -20,13 +20,12 @@
 #ifndef ROOT_TProofBenchMode
 #define ROOT_TProofBenchMode
 
-#ifndef ROOT_TNamed
+#ifndef ROOT_TObject
 #include "TObject.h"
 #endif
 
 class TProof;
 class TDSet;
-class TList;
 class TMap;
 
 R__EXTERN TProof *gProof;
