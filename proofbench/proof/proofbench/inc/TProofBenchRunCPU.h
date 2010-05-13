@@ -20,10 +20,6 @@
 #ifndef ROOT_TProofBenchRunCPU
 #define ROOT_TProofBenchRunCPU
 
-#ifndef ROOT_TObject
-#include "TObject.h"
-#endif
-
 #ifndef ROOT_TString
 #include "TString.h"
 #endif

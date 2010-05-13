@@ -26,6 +26,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TProofBenchFileGenerator.h"
+#include "TProofBenchMode.h"
 #include "TProofNode.h"
 #include "TFile.h"
 #include "TFileCollection.h"

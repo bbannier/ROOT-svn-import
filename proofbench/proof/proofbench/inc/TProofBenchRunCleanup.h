@@ -20,10 +20,6 @@
 #ifndef ROOT_TProofBenchRunCleanup
 #define ROOT_TProofBenchRunCleanup
 
-#ifndef ROOT_TObject
-#include "TObject.h"
-#endif
-
 #ifndef ROOT_TString
 #include "TString.h"
 #endif
