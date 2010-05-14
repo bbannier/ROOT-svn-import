@@ -19,6 +19,7 @@
 #pragma link C++ class RooExponential+ ;
 #pragma link C++ class RooGaussian+ ;
 #pragma link C++ class RooLognormal+ ;
+#pragma link C++ class RooGamma+ ;
 #pragma link C++ class RooGaussModel+ ;
 #pragma link C++ class RooGExpModel+ ;
 #pragma link C++ class RooKeysPdf+ ;
