@@ -60,7 +60,7 @@ Alternative to '-o U'.
 \fB--trust\fR
 Alternative to '-o T'.
 .TP
-\fB--tree=default-tree-name\fR
+\fB--tree=\fR <\fIdefault-tree-name\fR
 Set the name of the default tree name to 'default-tree-name' (option 'T' or --trust only); this
 allows to skip the tree name specification during Process when more TTree (or derivative) objects
 are available in the files.
@@ -72,7 +72,7 @@ Assume all files online or staged (option 'T' or --trust only).
 URL of the PROOF master or data server providing the information; for data servers, it must include the directory.
 Can also be specified via the environment variables PQ2PROOFURL or PQ2DSSRVURL (see ENVIRONMENT VARIABLES)."
 .TP
-\fB--tmpdir\fR <\fIdir\fR>
+\fB--tmpdir\fR=<\fIdir\fR>
 Directory for temporary files; defualt is /tmp/<username>.
 .SH "FORMAT OF THE FILES"
 The name of the file defining the dataset is the name of the dataset.
@@ -130,7 +130,7 @@ The dataset is registered trusting the passed information:
    pq2-put: 1 dataset(s) registered
 .fi
 .SH "ENVIRONMENT VARIABLES"
-The same environment variables described in \fIpq2\fR(1) can be used to control the behaviour of pq2-ls .
+The same environment variables described in \fIpq2\fR(1) can be used to control the behaviour of pq2-put .
 .SH "SEE ALSO"
 \fIproof\fR(1), \fIpq2\fR(1), \fIpq2-ls\fR(1), \fIpq2-ls-files\fR(1), \fIpq2-ls-files-server\fR(1), \fIpq2-info-server\fR(1),
 \fIpq2-ana-dist\fR(1), \fIpq2-verify\fR(1), \fIpq2-rm\fR(1), \fIpq2-cache\fR(1)
