@@ -8,7 +8,7 @@ printhelp()
    echo "   "
    echo "  pq2-redistribute"
    echo "   "
-   echo "  Purpose: execute the file movements as deterimined by pq2-ana-dist"
+   echo "  Purpose: execute the file movements as determined by pq2-ana-dist"
    echo "   "
    echo "  Syntax:"
    echo "           pq2-redistribute [-h|--help] [-v] [-k|--keep] --dryrun"
