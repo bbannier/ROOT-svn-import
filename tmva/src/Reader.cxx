@@ -480,6 +480,53 @@ Float_t TMVA::Reader::EvaluateRegression( UInt_t tgtNumber, const TString& metho
    }
 }
 
+
+
+//_______________________________________________________________________
+const std::vector< Float_t >& TMVA::Reader::EvaluateMulticlass( const TString& methodTag, Double_t aux )
+{
+   // evaluates MVA for given set of input variables
+   IMethod* method = 0;
+
+   std::map<TString, IMethod*>::iterator it = fMethodMap.find( methodTag );
+   if (it == fMethodMap.end()) {
+      Log() << kINFO << "<EvaluateMVA> unknown method in map; "
+              << "you looked for \"" << methodTag << "\" within available methods: " << Endl;
+      for (it = fMethodMap.begin(); it!=fMethodMap.end(); it++) Log() << " --> " << it->first << Endl;
+      Log() << "Check calling string" << kFATAL << Endl;
+   }
+   else method = it->second;
+
+   MethodBase * kl = dynamic_cast<TMVA::MethodBase*>(method);
+
+   if(kl==0)
+      Log() << kFATAL << methodTag << " is not a method" << Endl;
+
+   return this->EvaluateMulticlass( kl, aux );
+}
+
+//_______________________________________________________________________
+const std::vector< Float_t >& TMVA::Reader::EvaluateMulticlass( MethodBase* method, Double_t /*aux*/ )
+{
+   // evaluates the multiclass MVA
+   return method->GetMulticlassValues();
+}
+
+
+//_______________________________________________________________________
+Float_t TMVA::Reader::EvaluateMulticlass( UInt_t clsNumber, const TString& methodTag, Double_t aux )
+{ 
+   // evaluates the multiclass MVA
+   try {
+      return EvaluateMulticlass(methodTag, aux).at(clsNumber); 
+   }
+   catch (std::out_of_range e) {
+      Log() << kWARNING << "Multiclass could not be evaluated for class-number " << clsNumber << Endl;
+      return 0;
+   }
+}
+
+
 //_______________________________________________________________________
 TMVA::IMethod* TMVA::Reader::FindMVA( const TString& methodTag )
 {

@@ -104,9 +104,15 @@ namespace TMVA {
       Double_t GetMVAError() const { return fMvaEventError; }
       Double_t GetMVAError2() const { return fMvaEventError2; }	//zjh
 
+      // regression response
       const std::vector< Float_t >& EvaluateRegression( const TString& methodTag, Double_t aux = 0 );
       const std::vector< Float_t >& EvaluateRegression( MethodBase* method, Double_t aux = 0 );
       Float_t  EvaluateRegression( UInt_t tgtNumber, const TString& methodTag, Double_t aux = 0 );
+
+      // multiclass response
+      const std::vector< Float_t >& EvaluateMulticlass( const TString& methodTag, Double_t aux = 0 );
+      const std::vector< Float_t >& EvaluateMulticlass( MethodBase* method, Double_t aux = 0 );
+      Float_t  EvaluateMulticlass( UInt_t clsNumber, const TString& methodTag, Double_t aux = 0 );
 
       // probability and rarity accessors (see Users Guide for definition of Rarity)
       Double_t GetProba ( const TString& methodTag, Double_t ap_sig=0.5, Double_t mvaVal=-9999999 ); 
