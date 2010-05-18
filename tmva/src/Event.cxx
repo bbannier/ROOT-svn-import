@@ -48,7 +48,6 @@ TMVA::Event::Event()
      fWeight(1.0),
      fBoostWeight(1.0),
      fDynamic(kFALSE)
-     // fSignalClass( 100 ) // TODO: remove this.. see "IsSignal"
 {
    // copy constructor
    fgCount++; 
@@ -68,7 +67,6 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
      fWeight(weight),
      fBoostWeight(boostweight),
      fDynamic(kFALSE)
-     // fSignalClass( 100 ) // TODO: remove this.. see "IsSignal"
 {
    // constructor
    fgCount++;
@@ -89,7 +87,6 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
      fWeight(weight),
      fBoostWeight(boostweight),
      fDynamic(kFALSE)
-     //fSignalClass( 100 ) // TODO: remove this.. see "IsSignal"
 {
    // constructor
    fgCount++;
@@ -108,7 +105,6 @@ TMVA::Event::Event( const std::vector<Float_t>& ev,
      fWeight(weight),
      fBoostWeight(boostweight),
      fDynamic(kFALSE)
-     //fSignalClass( 100 ) // TODO: remove this.. see "IsSignal"
 {
    // constructor
    fgCount++;
@@ -124,7 +120,6 @@ TMVA::Event::Event( const std::vector<Float_t*>*& evdyn, UInt_t nvar )
      fWeight(0),
      fBoostWeight(0),
      fDynamic(true)
-     //fSignalClass( 100 ) // TODO: remove this.. see "IsSignal" ... !!!!!! NOT CLEAR TO ME WHAT VALUE TO SET HERE...
 {
    // constructor for single events
    fgValuesDynamic = (std::vector<Float_t*>*) evdyn;
@@ -141,7 +136,6 @@ TMVA::Event::Event( const Event& event )
      fWeight(event.fWeight),
      fBoostWeight(event.fBoostWeight),
      fDynamic(event.fDynamic)
-     //fSignalClass( event.fSignalClass ) // TODO: remove this.. see "IsSignal"
 {
    // copy constructor
    fgCount++; 
@@ -191,7 +185,6 @@ void TMVA::Event::CopyVarValues( const Event& other )
    fClass       = other.fClass;
    fWeight      = other.fWeight;
    fBoostWeight = other.fBoostWeight;
-   //fSignalClass = other.fSignalClass;      // TODO: remove this.. see "IsSignal"
 }
 
 //____________________________________________________________
