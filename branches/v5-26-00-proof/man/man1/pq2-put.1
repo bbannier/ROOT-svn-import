@@ -31,15 +31,16 @@ the file name, i.e. '<dir>/fil*' is ok but '<dir>/*/file' is not. In all cases t
 dataset is the name of the file finally used. The format of the file is described below.
 .SH OPTIONS
 .TP
-\fB-h\fR or \fB--help\fR
+\fB-h\fR, \fB--help\fR
 Display help information.
 .TP 
-\fB-k\fR
+\fB-k\fR, \fB--keep\fR
 Keep the temporary files created during the analysis under $TMPDIR
 .TP 
 \fB-v\fR
 Verbose mode
-\fB-d\fR or \fB--dataset\fR <\fIdatasetfile\fR>
+.TP
+\fB-d\fR <\fIdatasetfile\fR>, \fB--dataset\fR <\fIdatasetfile\fR>
 Alternative way to define path to the file with the list of files.
 .TP
 \fB-o\fR <\fIoptions\fR>
@@ -68,11 +69,11 @@ are available in the files.
 \fB--staged\fR
 Assume all files online or staged (option 'T' or --trust only).
 .TP
-\fB-u\fR <\fIserverurl\fR>
+\fB-u\fR <\fIserverurl\fR>, \fB--url\fR=<\fIserverurl\fR>
 URL of the PROOF master or data server providing the information; for data servers, it must include the directory.
 Can also be specified via the environment variables PQ2PROOFURL or PQ2DSSRVURL (see ENVIRONMENT VARIABLES)."
 .TP
-\fB--tmpdir\fR=<\fIdir\fR>
+\fB-t\fR <\fIdir\fR>, \fB--tmpdir\fR=<\fIdir\fR>
 Directory for temporary files; defualt is /tmp/<username>.
 .SH "FORMAT OF THE FILES"
 The name of the file defining the dataset is the name of the dataset.
