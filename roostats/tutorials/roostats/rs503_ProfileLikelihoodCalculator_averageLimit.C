@@ -36,19 +36,19 @@ void rs503_ProfileLikelihoodCalculator_averageLimit(const char* fname="WS_GaussO
   std::cout<<"ws open"<<endl;
   //Import the objects needed
   RooAbsPdf* model_naked=my_WS->pdf("model");
-  RooAbsPdf* priorNuisance=my_WS->pdf("priorNuisance");
+  RooAbsPdf* nuisanceTerm=my_WS->pdf("nuisanceTerm");
   RooAbsPdf* modelBkg_naked=my_WS->pdf("modelBkg");
   const RooArgSet* paramInterestSet=my_WS->set("POI");
   RooRealVar* paramInterest= (RooRealVar*) paramInterestSet->first();
   const RooArgSet* observable=my_WS->set("observables");
   const RooArgSet* nuisanceParam=my_WS->set("parameters");
-  //If there are nuisance parameters present, multiply their prior to the model
+  //If there are nuisance parameters present, multiply their term to the model
   RooAbsPdf* model=model_naked;
   RooAbsPdf* modelBkg=modelBkg_naked;
-  if(priorNuisance!=0) {
-     model=new RooProdPdf("constrainedModel","Model with nuisance parameters",*model_naked,*priorNuisance);
+  if(nuisanceTerm!=0) {
+     model=new RooProdPdf("constrainedModel","Model with nuisance parameters",*model_naked,*nuisanceTerm);
      //From now work with the product of both
-     modelBkg=new RooProdPdf("constrainedBkgModel","Bkg Model with nuisance parameters",*modelBkg_naked,*priorNuisance);
+     modelBkg=new RooProdPdf("constrainedBkgModel","Bkg Model with nuisance parameters",*modelBkg_naked,*nuisanceTerm);
   }
   else{
     std::cout<<"No Nuisance Parameters present"<<std::endl;
@@ -76,7 +76,7 @@ void rs503_ProfileLikelihoodCalculator_averageLimit(const char* fname="WS_GaussO
   //If there are systematics constrain them
   //Generate the background and fit for the signal to test limitsetting
   RooMCStudy* mcs = 0; 
-  if(priorNuisance!=0) {
+  if(nuisanceTerm!=0) {
     mcs = new RooMCStudy(*modelBkg,*observable,Extended(kTRUE),FitModel(*model),
 				     FitOptions(Extended(kTRUE),PrintEvalErrors(1)),Constrain(*nuisanceParam)) ;
   }

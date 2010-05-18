@@ -37,16 +37,16 @@ void rs504_ProfileLikelihoodCalculator_averageSignificance(const char* fname="WS
   RooWorkspace* my_WS = (RooWorkspace*) file->Get("myWS");
   //Import the objects needed
   RooAbsPdf* model_naked=my_WS->pdf("model");
-  RooAbsPdf* priorNuisance=my_WS->pdf("priorNuisance");
+  RooAbsPdf* nuisanceTerm=my_WS->pdf("nuisanceTerm");
   const RooArgSet* paramInterestSet=my_WS->set("POI");
   RooRealVar* paramInterest= (RooRealVar*) paramInterestSet->first();
   const RooArgSet* observable=my_WS->set("observables");
   const RooArgSet* nuisanceParam=my_WS->set("parameters");
    
-  //If there are nuisance parameters present, multiply their prior to the model
+  //If there are nuisance parameters present, multiply their term to the model
   RooAbsPdf* model=model_naked;
-  if(priorNuisance!=0) {
-    model=new RooProdPdf("constrainedModel","Model with nuisance parameters",*model_naked,*priorNuisance);
+  if(nuisanceTerm!=0) {
+    model=new RooProdPdf("constrainedModel","Model with nuisance parameters",*model_naked,*nuisanceTerm);
     //From now work with the product of both
   }
 
@@ -61,10 +61,10 @@ void rs504_ProfileLikelihoodCalculator_averageSignificance(const char* fname="WS
    }while(currentparam!=0);
    
   
-  if(priorNuisance!=0)
-    RooFormulaVar nll_nuisance("nllSyst","-TMath::Log(@0)",RooArgList(*priorNuisance));
+  if(nuisanceTerm!=0)
+    RooFormulaVar nll_nuisance("nllSyst","-TMath::Log(@0)",RooArgList(*nuisanceTerm));
   else
-    RooFormulaVar nll_nuisance("nllSyst","0",RooArgList(*priorNuisance));
+    RooFormulaVar nll_nuisance("nllSyst","0",RooArgList(*nuisanceTerm));
   
  
   RooRandom::randomGenerator()->SetSeed(110);

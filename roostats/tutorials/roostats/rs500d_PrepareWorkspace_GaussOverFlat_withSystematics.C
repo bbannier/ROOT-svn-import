@@ -52,10 +52,13 @@ void rs500d_PrepareWorkspace_GaussOverFlat_withSystematics( TString fileName = "
 
   // Background only pdf
   myWS.factory("ExtendPdf::modelBkg(bkgPdf,B)") ;
-  // Priors
-  myWS.factory("Gaussian::prior_sigSigma(sigSigma,50,5)") ;
-  myWS.factory("Gaussian::prior_B(B,1000,200)") ;
-  myWS.factory("PROD::priorNuisance(prior_sigSigma,prior_B)") ;
+
+  // Nuisance terms
+  myWS.factory("Gaussian::term_sigSigma(sigSigma,50,5)") ;
+  myWS.factory("Gaussian::term_B(B,1000,200)") ;
+  myWS.factory("PROD::nuisanceTerm(term_sigSigma,term_B)") ;
+
+  // Prior
   myWS.factory("Uniform::priorPOI(S)") ;
 
   // Definition of observables and parameters of interest
