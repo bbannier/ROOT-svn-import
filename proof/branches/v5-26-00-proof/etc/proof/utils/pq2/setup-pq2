@@ -57,3 +57,15 @@ export PATH=$ROOTSYS/etc/proof/utils/pq2:$PATH
 # The example shows the default settings
 # export PQ2DSSRVACTS="ls:lsfiles:filessrv:infosrv:anadist:cache:"
 # setenv PQ2DSSRVACTS "ls:lsfiles:filessrv:infosrv:anadist:cache:"
+#
+# Group to be used to initialie the dataset manager
+# export PQ2GROUP="<my_group>"
+# setenv PQ2GROUP "<my_group>"
+# User to be used to initialie the dataset manager
+# export PQ2USER="<my_user>"
+# setenv PQ2USER "<my_user>"
+#
+# The temporary directory
+#
+# export TMPDIR="/<another>/<tmp>"
+# setenv TMPDIR "/<another>/<tmp>"
