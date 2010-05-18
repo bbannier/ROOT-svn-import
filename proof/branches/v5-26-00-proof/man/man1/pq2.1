@@ -96,11 +96,6 @@ The options listed below apply only to action 'verify'
 \fB-r\fR <\fIredirector\fR>
 Force re-location of the files via the specified redirector; useful after a file redistribution on the same file
 server.
-.TP
-\fB-f\fR <\fIresult file\fR>
-Defines the file where to save the result of the analysis; by the default the result is send to the screen.
-The output contains one line per each file that needs to be moved with the format 'file source destination' where
-'file' is the file name, 'source' is the source server URL and 'destination' is the destination server URL.
 .SH OPTIONS for action ana-dist
 The options listed below apply only to action 'ana-dist'
 .TP
@@ -110,16 +105,15 @@ the number of files, and 'S' to use the file size.
 .TP
 \fB-f\fR <\fIresult file\fR>
 Defines the file where to save the result of the analysis; by the default the result is send to the screen.
-The output contains one line per each file that needs to be moved with the format 'file source destination' where
-'file' is the file name, 'source' is the source server URL and 'destination' is the destination server URL.
-.TP 
+The output contains one line per each file that needs to be moved with the format 'file source destination' where 'file' is the file name, 'source' is the source server URL and 'destination' is the destination server URL.
+.TP
 \fB--outfile\fR <\fIoutput file\fR>
 Defines the file where to save the output of the analysis in binary form (ROOT file); this output can be used as starting
 point for a next run, allowing to run over many datasets in separate steps.
-.TP 
+.TP
 \fB--infile\fR <\fIinput file\fR>
 Defines the ROOT file from where to fetch the output of a previous run (saved with --outfile).
-.TP 
+.TP
 \fB-i\fR <\fIignored servers\fR>
 Specify a server or a comma-separated list of servers to be ignored in the analysis; this allows to exclude, for example,
 the redirector.

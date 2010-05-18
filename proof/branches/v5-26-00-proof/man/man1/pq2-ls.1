@@ -29,10 +29,10 @@ The dataset or the datasets to be listed; the wildcards '*' is supported. By def
 in the repository are listed.
 .SH OPTIONS
 .TP
-\fB-h\fR or \fB--help\fR
+\fB-h\fR, \fB--help\fR
 Display help information.
 .TP 
-\fB-k\fR
+\fB-k\fR, \fB--keep\fR
 Keep the temporary files created during the analysis under $TMPDIR
 .TP 
 \fB-v\fR
@@ -46,14 +46,15 @@ In the case a cache is used, do not update the cache (may be slow on some server
 .TP 
 \fB--refresh\fR
 Refresh the information (requires appropriate credentials; typically it can be done only for owned datasets).
-\fB-d\fR or \fB--dataset\fR <\fIdatasets\fR>
+.TP
+\fB-d\fR <\fIdataset\fR>, \fB--dataset\fR=<\fIdataset\fR>
 Alternative way to define the dataset or the datasets to be listed.
 .TP
-\fB-u\fR <\fIserverurl\fR>
+\fB-u\fR <\fIserverurl\fR>, \fB--url\fR=<\fIserverurl\fR>
 URL of the PROOF master or data server providing the information; for data servers, it must include the directory.
 Can also be specified via the environment variables PQ2PROOFURL or PQ2DSSRVURL (see ENVIRONMENT VARIABLES)."
 .TP
-\fB--tmpdir\fR=<\fIdir\fR>
+\fB-t\fR <\fIdir\fR>, \fB--tmpdir\fR=<\fIdir\fR>
 Directory for temporary files; defualt is /tmp/<username>.
 .SH "ENVIRONMENT VARIABLES"
 The same environment variables described in \fIpq2\fR(1) can be used to control the behaviour of pq2-ls .
