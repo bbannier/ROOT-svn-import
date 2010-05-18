@@ -37,7 +37,7 @@
 #include "TMVA/PDEFoamDistr.h"
 #endif
 
-ClassImp(TMVA::PDEFoamDistr);
+ClassImp(TMVA::PDEFoamDistr)
 
 //_____________________________________________________________________
 TMVA::PDEFoamDistr::PDEFoamDistr() 
