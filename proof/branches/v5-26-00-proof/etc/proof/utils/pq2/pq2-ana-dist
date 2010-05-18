@@ -167,7 +167,7 @@ fi
 if test ! "x$PLOT" = "x" && test ! "x$INFILE" = "x"; then
    echo "Creating distribution plot from $INFILE ..."
 else
-   if test "x$SRVURL" = "x" || test "x$DSNAME" = "x"; then
+   if test "x$DSNAME" = "x"; then
       echo "Some arguments are missing (d:$DSNAME)!"
       printhelp
       exit
