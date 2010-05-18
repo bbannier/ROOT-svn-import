@@ -32,14 +32,14 @@ void rs501_ProfileLikelihoodCalculator_limit( const char* fileName="WS_GaussOver
   RooWorkspace* myWS = (RooWorkspace*) file->Get("myWS");
   RooAbsPdf* modelTmp = myWS->pdf("model");
   RooAbsData* data = myWS->data("data");
-  RooAbsPdf* priorNuisance = myWS->pdf("priorNuisance");
+  RooAbsPdf* nuisanceTerm = myWS->pdf("nuisanceTerm");
   const RooArgSet* POI = myWS->set("POI");
   RooRealVar* parameterOfInterest = dynamic_cast<RooRealVar*>(POI->first());
   assert(parameterOfInterest);
 
-  // If there are nuisance parameters, multiply their prior distribution to the full model
+  // If there are nuisance parameters, multiply their term to the full model
   RooAbsPdf* model = modelTmp;
-  if( priorNuisance!=0 ) model = new RooProdPdf("constrainedModel","Model with nuisance parameters",*modelTmp,*priorNuisance);
+  if( nuisanceTerm!=0 ) model = new RooProdPdf("constrainedModel","Model with nuisance parameters",*modelTmp,*nuisanceTerm);
 
   // Set up the ProfileLikelihoodCalculator
   ProfileLikelihoodCalculator plc(*data, *model, *POI);

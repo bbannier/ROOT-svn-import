@@ -54,8 +54,10 @@ void rs500b_PrepareWorkspace_Poisson_withSystematics( TString fileName = "WS_Poi
   // Background only pdf
   myWS.factory("ExtendPdf::modelBkg(bkgPdf,B)") ;
 
-  // Priors
-  myWS.factory("Gaussian::priorNuisance(B,1000,200)") ;
+  // Nuisance terms
+  myWS.factory("Gaussian::nuisanceTerm(B,1000,200)") ;
+
+  // Priors 
   myWS.factory("Uniform::priorPOI(S)") ;
 
   // Definition of observables and parameters of interest
