@@ -32,7 +32,7 @@
 
 #define SW2 std::setprecision(7) << std::setw(12)
 
-ClassImp(TMVA::PDEFoamVect);
+ClassImp(TMVA::PDEFoamVect)
 
 TMVA::MsgLogger* TMVA::PDEFoamVect::fgLogger = 0;
 
