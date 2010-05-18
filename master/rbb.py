@@ -10,11 +10,11 @@ from buildbot.process import factory
 from buildbot.scheduler import Scheduler, Try_Jobdir
 from buildbot.status import html
 from buildbot.status.builder import SUCCESS, WARNINGS, FAILURE, SKIPPED, \
-    EXCEPTION, Results
+    EXCEPTION, HEADER, Results
 from buildbot.status.mail import MailNotifier
 from buildbot.status.web.auth import HTPasswdAuth
 from buildbot.steps import trigger
-from buildbot.steps.shell import ShellCommand
+from buildbot.steps.shell import ShellCommand, Configure, Compile
 from buildbot.steps.source import SVN
 
 class ROOTBuildSource:
@@ -258,9 +258,9 @@ class ROOTMailNotifier(MailNotifier):
                               sendToInterestedUsers = False,
                               lookup = "root.cern.ch",
                               extraRecipients = ['rootsvn@root.cern.ch'],
-                              mode = "problem",
+                              mode = "all", #"problem",
                               addPatch = False,
-                              categories = ['ROOT-incr','roottest-incr','ROOT-hourly','roottest-hourly'],
+                              categories = ['ROOT-incr','ROOT-hourly','roottest-hourly'],
                               messageFormatter = self.messageFormatter
                               )
         # Sent email for these revisions (previous 10)
@@ -277,6 +277,15 @@ class ROOTMailNotifier(MailNotifier):
             return # ignore this build
 
         if results != FAILURE:
+            if 'ROOT' in name and '-incr' in name:
+                # process warnings
+                for log in reversed(build.getLogs()):
+                    if 'warning' in log.getName():
+                        return self.buildMessage(name, build, results)
+            return # ignore
+
+        # roottest on Windows is unreliable, silence it for now:
+        if 'Windows' in name and 'roottest' in name:
             return
 
         if build.getSourceStamp() and build.getSourceStamp().revision:
@@ -290,7 +299,7 @@ class ROOTMailNotifier(MailNotifier):
                 if build.getSteps() \
                         and len(prev.getSteps()) == len(build.getSteps()) \
                         and (prev.getSteps()[-1].getText() == build.getSteps()[-1].getText() \
-                                  and name == "roottest"):
+                                  and 'roottest' in name):
                     # Looks like a similar roottest failure.
                     # Assume it's still caused by the same error.
                     return
@@ -309,6 +318,9 @@ class ROOTMailNotifier(MailNotifier):
     def messageFormatter(self, mode, name, build, results, master_status):
         """Customized email message"""
         result = Results[results]
+        if result == 'success':
+            # we only show success if there was a warning:
+            result = 'warnings'
 
         source = ""
         ss = build.getSourceStamp()
@@ -343,13 +355,14 @@ class ROOTMailNotifier(MailNotifier):
                 log_url = '%s/steps/%s/logs/%s' % (buildurl, step_name, log_name)
                 logs.append((log_name, log_url))
             if not buildbotProblem:
-                for line in log.getText().splitlines()[-10:]:
+                for line in list(log.getChunks(channels = (HEADER), onlyText=True))[-10:]:
                     if 'command timed out:' in line:
                         subject = "Buildbot: %s timeout for %s %s" % (laststepname, name, source)
                         buildbotProblem = True
      
         text = list()
         if buildbotProblem:
+            self.extraRecipients = ("axel@cern.ch")
             text.append('<h4>Timeout on %s</h4>' % (name))
             text.append("Running on %s" % build.getSlavename())
             text.append('<br>')
@@ -357,6 +370,7 @@ class ROOTMailNotifier(MailNotifier):
                 text.append('Logs: <a href="%s">%s</a>' % (buildurl,buildurl))
                 text.append('<br>')
         else:
+            self.extraRecipients = ('rootsvn@root.cern.ch')
             text.append('<h4>%s (and possibly others) %s</h4>' % (name, result))
             text.append("Step %s: %s" % (laststepname, " ".join(laststeptext)))
             text.append('<br>')
@@ -491,8 +505,9 @@ class ROOTBuildBotConfig:
                     if sched == 'triggered':
                         depsched = self.sources[src.triggeredby].schedule
                         for depsched in depsched.split(':'):
-                            bldname = self.generateBuilder(src, slave, arch, depsched)
-                            schedBuilders.append(bldname)
+                            if depsched != 'incr':
+                                bldname = self.generateBuilder(src, slave, arch, depsched)
+                                schedBuilders.append(bldname)
                     else :
                         bldname = self.generateBuilder(src, slave, arch, sched)
                         schedBuilders.append(bldname)
@@ -531,7 +546,8 @@ class ROOTBuildBotConfig:
         else :
             sched = scheduler.Nightly(name = name,
                                       builderNames = builders,
-                                      #hour = at each hour
+                                      # two-hourly, actually.
+                                      hour = range(0, 24, 2),
                                       minute = 0,
                                       onlyIfChanged = True)
             self.c['schedulers'].append(sched)
@@ -571,20 +587,20 @@ class ROOTBuildBotConfig:
         alwaysUseLatest = False
         if src.triggeredby != None: alwaysUseLatest = True
 
-        confLine = "bash -c "
-        compLine = "bash -c "
+        confLine = "bash "
+        compLine = "bash "
         haveExtraArgs = False
-        if ('envScript' in slave and slave['envScript']) \
-                or src.envScript:
-            confLine += '"'
-            compLine += '"'
-            haveExtraArgs = True
+        #if ('envScript' in slave and slave['envScript']) \
+        #        or src.envScript:
+        #    confLine += '"'
+        #    compLine += '"'
+        #    haveExtraArgs = True
         if 'envScript' in slave and slave['envScript']:
-            confLine += slave['envScript'] + " && "
-            compLine += slave['envScript'] + " && "
+            confLine += '"' + slave['envScript'] + '" && '
+            compLine += '"' + slave['envScript'] + '" && '
         if src.envScript:
-            confLine += src.envScript + " && "
-            compLine += src.envScript + " && "
+            confLine += '"' + src.envScript + '" && '
+            compLine += '"' + src.envScript + '" && '
             
         confLine += str(src.configure)
         compLine += str(src.make)
@@ -593,7 +609,7 @@ class ROOTBuildBotConfig:
         for flag in slave['configFlags']:
             confArgs += ' ' + flag
         for flag in src.configFlags:
-            confArgs += '  ' + flag
+            confArgs += ' ' + flag
         confLine += confArgs
         # make script wants config args in case configure needs to be called
         if src.name == 'ROOT': compLine += confArgs
@@ -612,11 +628,12 @@ class ROOTBuildBotConfig:
                       retry = (20, 6),
                       category = src.name)
         if src.name == 'ROOT':
-            fact = factory.GNUAutoconf(svn,
-                                       configure = confLine,
-                                       configureFlags = [],
-                                       compile = compLine,
-                                       test = None)
+            fact = factory.BuildFactory()
+            fact.addStep(svn)
+            if confLine:
+                fact.addStep(Configure(command = confLine))
+            compStep = Compile(command = compLine, warningPattern = '.*[Ww]arning(:| [^(]).*')
+            fact.addStep(compStep)
         else:
             fact = factory.BuildFactory()
             fact.addStep(svn)
@@ -625,7 +642,7 @@ class ROOTBuildBotConfig:
         if buildertype == 'incr' and src.name != 'roottest':
             fact.useProgress = False
 
-        if len(src.triggers):
+        if len(src.triggers) and buildertype != 'incr':
             trigsched = []
             for trig in src.triggers:
                 # the scheduler name is like
@@ -689,5 +706,3 @@ class ROOTBuildBotConfig:
     def configureNotifications(self):
         mn = ROOTMailNotifier()
         self.c['status'].append(mn)
-
-
