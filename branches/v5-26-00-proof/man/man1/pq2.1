@@ -129,71 +129,10 @@ The plot can also be obtained directly from a binary output file (saved with '--
 just specifying '--infile <outfile>.root --plot'
 
 .SH "ENVIRONMENT VARIABLES"
-The following environment variables may be used to control the behaviour of
-.B pq2
-.TP 
-PQ2DSSRVURL
-Path to the dataset repository when working via a local or remote file system; the value specified here is
-superseeded by '-u srvurl'; the path must contain the full directory spefication. To test the goodness of the
-path run gSystem->AccessPathName("$PQ2DSSRVURL", kReadPermissions) in a ROOT shell: this command will return
-0 is the path is good. The PQ2DSSRVURL settings are superseeded by '-u srvurl'. If not specified, PQ2DSSRVURL defaults
-to PQ2PROOFURL (see below).
-.TP 
-PQ2PROOFURL
-URL of the PROOF master connected to the dataset repository when working with PROOF server (i.e. the entry point of the
-PROOF cluster). To test the goodness of the url try to pen a PROOF session in ROOT shell with
-TProof::Open("$PQ2PROOFURL", "masteronly").
-.TP 
-PROOFURL
-Same as PQ2PROOFURL but deprecated.
-.TP 
-DATASETCACHE
-Controls the use of the cache when working via a remote file system; set to 'no' to disable the cache; by default
-the cache is enabled.
-.TP
-DATASETLOCALCACHEDIR
-Location of the local cache the default is a path derived from $PQ2DSSRVURL (replacemente of '/' and ':' with %) and
-created under $TMPDIR, e.g. for PQ2DSSRVURL set to root://alicecaf.cern.ch:11094//dataset-xpd, the default cache
-directory is /tmp/<user>/dataset.cache/root%%%alicecaf.cern.ch%11094%%dataset-xpd .
-.TP
-PQ2GROUP
-Group to be used to initialize the dataset manager instance when working via a local or remote file system;
-the default is an empty string, which results in 'default'.
-.TP
-PQ2USER
-User to be used to initialize the dataset manager instance when working via a local or remote file system;
-the default is an empty string, which results in 'username' running the 'pq2' instance.
-.TP
-PQ2DSMGROPTS
-Options to be used in initializing the dataset manager; the default allows for browsing only, e.g. '-Ar:-Av:'
-.TP
-PQ2DSSRVACTS
-List of operations to be done via the data server in the case both PQ2DSSRVURL and PQ2PROOFURL are specified.
-By the default, the browsing actions (ls, ls-files, ls-files-server, info-server, ana-dist) are executed via
-PQ2DSSRVURL, the others (put, rm, verify) via PQ2PROOFURL. This allows to speed-up the operations by using
-caching and to reduce the load on the PROOF master.
-.RS
-The format is "<action-tag>:" where the action tags are:
-.RE
-.RS
-.nf
-              ls             for      ls
-              lsfiles        for      ls-files
-              filessrv       for      ls-files-server
-              infosrv        for      info-server
-              anadist        for      ana-dist
-              cache          for      cache
-              put            for      put
-              rm             for      rm
-              vfy            for      verify
-.fi
-.RE
-.TP
-TMPDIR
-Directory used for temporary files or directories; the actual temporary directory is required to end witt the
-username (in some cases TMPDIR already ends with the username).
+See \fIsetup-pq2\fR(1).
 .SH "SEE ALSO"
-\fIproof\fR(1), \fIpq2-ls\fR(1), \fIpq2-ls-files\fR(1), \fIpq2-ls-files-server\fR(1), \fIpq2-info-server\fR(1), \fIpq2-ana-dist\fR(1),
+\fIsetup-pq2\fR(1), \fIpq2-ls\fR(1), \fIpq2-ls-files\fR(1), \fIpq2-ls-files-server\fR(1),
+\fIpq2-info-server\fR(1), \fIpq2-ana-dist\fR(1),
 \fIpq2-put\fR(1), \fIpq2-verify\fR(1), \fIpq2-rm\fR(1), \fIpq2-cache\fR(1)
 .PP
 For more information on the \fBROOT\fR system, please refer to 
