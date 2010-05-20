@@ -135,7 +135,7 @@ TMVA::ClassInfo* TMVA::DataSetInfo::GetClassInfo( Int_t cls ) const
       return fClasses.at(cls);
    }
    catch(...) {
-      return 0;
+      return NULL;
    }
 }
 

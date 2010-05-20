@@ -89,8 +89,8 @@ namespace TMVA {
 
       // variable selection
       virtual void           SelectInput( const TString& inputVariables  );
-      virtual void           GetInput ( const Event* event, std::vector<Float_t>& input  ) const;
-      virtual void           SetOutput( Event* event, std::vector<Float_t>& output, const Event* oldEvent = 0 ) const;
+      virtual void           GetInput ( const Event* event, std::vector<Float_t>& input, Bool_t backTransform = kFALSE  ) const;
+      virtual void           SetOutput( Event* event, std::vector<Float_t>& output, const Event* oldEvent = 0, Bool_t backTransform = kFALSE ) const;
       virtual void           CountVariableTypes( UInt_t& nvars, UInt_t& ntgts, UInt_t& nspcts );
 
       void SetUseSignalTransform( Bool_t e=kTRUE) { fUseSignalTransform = e; }
@@ -146,6 +146,7 @@ namespace TMVA {
 
       // variable selection
       VectorOfCharAndInt               fGet;           // get variables/targets/spectators
+      VectorOfCharAndInt               fPut;           // put variables/targets/spectators
 
 
    private:
