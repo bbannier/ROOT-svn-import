@@ -306,7 +306,7 @@ int main( int argc, char** argv )
             Double_t mva1 = reader->EvaluateMVA( mName); 
             Double_t mva2 = reader->EvaluateMVA( vecVar, mName); 
             if (mva1 == mva2) {
-               std::cout << "++++++++++++++ ERROR in "<< mName <<", obtaining idnetical output for different inputs" <<std::endl;
+               std::cout << "++++++++++++++ ERROR in "<< mName <<", obtaining identical output for different inputs" <<std::endl;
             }
          }
       }

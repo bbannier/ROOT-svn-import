@@ -61,46 +61,47 @@ int main( int argc, char** argv )
    Use["Cuts"]            = 0;
    Use["CutsD"]           = 0;
    Use["CutsPCA"]         = 0;
-   Use["CutsGA"]          = 1;
+   Use["CutsGA"]          = 0;
    Use["CutsSA"]          = 0;
    // ---
-   Use["Likelihood"]      = 1;
-   Use["LikelihoodD"]     = 1; // the "D" extension indicates decorrelated input variables (see option strings)
+   Use["Likelihood"]      = 0;
+   Use["LikelihoodD"]     = 0; // the "D" extension indicates decorrelated input variables (see option strings)
    Use["LikelihoodPCA"]   = 0; // the "PCA" extension indicates PCA-transformed input variables (see option strings)
    Use["LikelihoodKDE"]   = 0;
    Use["LikelihoodMIX"]   = 0;
    // ---
-   Use["PDERS"]           = 1;
+   Use["PDERS"]           = 0;
    Use["PDERSD"]          = 0;
    Use["PDERSPCA"]        = 0;
    Use["PDERSkNN"]        = 0; // depreciated until further notice
-   Use["PDEFoam"]         = 1;
+   Use["PDEFoam"]         = 0;
    // --
-   Use["KNN"]             = 1;
+   Use["KNN"]             = 0;
    // ---
    Use["HMatrix"]         = 0;
-   Use["Fisher"]          = 1;
+   Use["Fisher"]          = 0;
    Use["FisherG"]         = 0;
    Use["BoostedFisher"]   = 0;
-   Use["LD"]              = 1;
+   Use["LD"]              = 0;
    // ---
    Use["FDA_GA"]          = 0;
    Use["FDA_SA"]          = 0;
    Use["FDA_MC"]          = 0;
-   Use["FDA_MT"]          = 1;
+   Use["FDA_MT"]          = 0;
    Use["FDA_GAMT"]        = 0;
    Use["FDA_MCMT"]        = 0;
    // ---
-   Use["MLP"]             = 1; // this is the recommended ANN
+   Use["MLPBNN"]          = 1; // this is the recommended ANN
+   Use["MLP"]             = 0; // this is the recommended ANN
    Use["MLPBFGS"]         = 0; // recommended ANN with optional training method
    Use["CFMlpANN"]        = 0; // *** missing
    Use["TMlpANN"]         = 0; 
+   // --
+   Use["SVM"]             = 0;
    // ---
-   Use["SVM"]             = 1;
-   // ---
-   Use["BDT"]             = 1;
+   Use["BDT"]             = 0;
    Use["BDTD"]            = 0;
-   Use["BDTG"]            = 1;
+   Use["BDTG"]            = 0;
    Use["BDTB"]            = 0;
    // ---
    Use["RuleFit"]         = 0;
@@ -151,7 +152,7 @@ int main( int argc, char** argv )
    // The second argument is the output file for the training results
    // All TMVA output can be suppressed by removing the "!" (not) in 
    // front of the "Silent" argument in the option string
-   std::string factoryOptions( "!V:!Silent:Transformations=I;D;P;G,D:AnalysisType=Classification" );
+   std::string factoryOptions( "!V:!Silent:Transformations=I;D;P;G,D;N:AnalysisType=Classification" );
    if (batchMode) factoryOptions += ":!Color:!DrawProgressBar";
 
    TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification", outputFile, factoryOptions );
@@ -340,7 +341,7 @@ int main( int argc, char** argv )
 
    // Linear discriminant (same as Fisher)
    if (Use["LD"])
-      factory->BookMethod( TMVA::Types::kLD, "LD", "H:!V:VarTransform=None" );
+      factory->BookMethod( TMVA::Types::kLD, "LD", "H:!V:VarTransform=N(_V_)" );
 
 	// Function discrimination analysis (FDA) -- test of various fitters - the recommended one is Minuit (or GA or SA)
    if (Use["FDA_MC"])
@@ -368,11 +369,14 @@ int main( int argc, char** argv )
                            "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1);(-10,10);(-10,10);(-10,10);(-10,10):FitMethod=MC:Converger=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=0:!UseImprove:!UseMinos:SetBatch:SampleSize=20" );
 
    // TMVA ANN: MLP (recommended ANN) -- all ANNs in TMVA are Multilayer Perceptrons
+   if (Use["MLPBNN"])
+      factory->BookMethod( TMVA::Types::kMLP, "MLPBNN", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=50:HiddenLayers=N:TestRate=10:EpochMonitoring:RandomSeed=1:UseRegulator:TrainingMethod=BFGS" );
+
    if (Use["MLP"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5" );
+      factory->BookMethod( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N(_V_,_S_)+G(spec2,_V_,_S1_,_T_):NCycles=500:HiddenLayers=N+5:TestRate=10:EpochMonitoring:RandomSeed=1" );
 
    if (Use["MLPBFGS"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLPBFGS", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:TrainingMethod=BFGS" );
+      factory->BookMethod( TMVA::Types::kMLP, "MLPBFGS", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:TrainingMethod=BFGS:ConvergenceTests=15:ConvergenceImprove=1e-6" );
 
 
    // CF(Clermont-Ferrand)ANN

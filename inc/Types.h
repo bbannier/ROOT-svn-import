@@ -103,6 +103,7 @@ namespace TMVA {
          kDecorrelated,
          kNormalized,
          kPCA,
+         kRearranged,
          kGaussDecorr,
          kMaxVariableTransform
       };

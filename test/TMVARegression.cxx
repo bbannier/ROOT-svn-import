@@ -64,9 +64,9 @@ int main( int argc, char** argv )
    // default MVA methods to be trained + tested
    std::map<std::string,int> Use;
 
-   Use["PDERS"]           = 1;
+   Use["PDERS"]           = 0;
    Use["PDERSkNN"]        = 0; // depreciated until further notice
-   Use["PDEFoam"]         = 1; // preparation for new TMVA version "reader". This method is not available in this version of TMVA
+   Use["PDEFoam"]         = 0; // preparation for new TMVA version "reader". This method is not available in this version of TMVA
    // ---
    Use["KNN"]             = 0;
    // ---
@@ -74,10 +74,10 @@ int main( int argc, char** argv )
    // ---
    Use["FDA_GA"]          = 0;
    Use["FDA_MC"]          = 0;
-   Use["FDA_MT"]          = 1;
+   Use["FDA_MT"]          = 0;
    Use["FDA_GAMT"]        = 0;
    // ---
-   Use["MLP"]             = 1; // this is the recommended ANN
+   Use["MLP"]             = 0; // this is the recommended ANN
    // ---
    Use["SVM"]             = 0;
    // ---
@@ -125,6 +125,7 @@ int main( int argc, char** argv )
    // Define the input variables that shall be used for the MVA training
    // note that you may also use variable expressions, such as: "3*var1/var2*abs(var3)"
    // [all types of expressions that can also be parsed by TTree::Draw( "expression" )]
+   factory->AddVariable( "var0", "Variable 0", "units", 'F' );
    factory->AddVariable( "var1", "Variable 1", "units", 'F' );
    factory->AddVariable( "var2", "Variable 2", "units", 'F' );
 
@@ -135,7 +136,9 @@ int main( int argc, char** argv )
    factory->AddSpectator( "spec2:=var1*3",  "Spectator 2", "units", 'F' );
 
    // Add the variable carrying the regression target
-   factory->AddTarget  ( "fvalue" ); 
+   factory->AddTarget  ( "tgt0" ); 
+//    factory->AddTarget  ( "tgt1" ); 
+//    factory->AddTarget  ( "tgt2" ); 
 
    // It is also possible to declare additional targets for multi-dimensional regression, ie:
    // -- factory->AddTarget( "fvalue2" );
@@ -144,7 +147,7 @@ int main( int argc, char** argv )
    // read training and test data (see TMVAClassification for reading ASCII files)
    // load the signal and background event samples from ROOT trees
    TFile *input(0);
-   TString fname = "./tmva_reg_example.root";
+   TString fname = "./tmva_reg_cigars.root";
    if (!gSystem->AccessPathName( fname )) {
       // first we try to find tmva_example.root in the local directory
       std::cout << "--- TMVARegression    : Accessing " << fname << std::endl;
@@ -220,7 +223,7 @@ int main( int argc, char** argv )
    // Linear discriminant
    if (Use["LD"])
       factory->BookMethod( TMVA::Types::kLD, "LD", 
-                           "!H:!V:VarTransform=None" );
+                           "!H:!V:VarTransform=PCA(_V_)" );
 
 	// Function discrimination analysis (FDA) -- test of various fitters - the recommended one is Minuit (or GA or SA)
    if (Use["FDA_MC"]) 

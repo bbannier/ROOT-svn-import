@@ -86,7 +86,7 @@ Bool_t TMVA::VariablePCATransform::PrepareTransformation( const std::vector<Even
 
    // TPrincipal doesn't support PCA transformation for 1 or less variables
    if (inputSize <= 1) {
-      Log() << kINFO << "Cannot perform PCA transformation for " << GetNVariables() << " variable only" << Endl;
+      Log() << kINFO << "Cannot perform PCA transformation for " << inputSize << " variable only" << Endl;
       return kFALSE;
    }
 
@@ -180,16 +180,16 @@ const TMVA::Event* TMVA::VariablePCATransform::InverseTransform( const Event* co
    const std::vector<UInt_t>* varArrange = ev->GetVariableArrangement();
    if(!varArrange) {
 
-      GetInput( ev, principalComponents );
+      GetInput( ev, principalComponents, kTRUE );
       P2X( output, principalComponents, cls );
-      SetOutput( fBackTransformedEvent, output, ev );
+      SetOutput( fBackTransformedEvent, output, ev, kTRUE );
 
    } else {
       // TODO: check what has to be done here
       std::vector<Float_t> rv(inputSize);
       for (Int_t ivar=0; ivar<inputSize; ++ivar)
          rv[ivar] = ev->GetValue(ivar);
-      X2P( principalComponents, output, cls );
+      P2X( principalComponents, output, cls );
       for (Int_t ivar=0; ivar<inputSize; ++ivar)
          fBackTransformedEvent->SetVal(ivar, rv[ivar]);
    }

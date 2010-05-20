@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <exception>
 #include <stdexcept>
+#include <set>
 
 #include "TMath.h"
 #include "TVectorD.h"
@@ -97,6 +98,12 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables  )
    UInt_t ntgts  = GetNTargets();
    UInt_t nspcts = GetNSpectators();
 
+   typedef std::set<Int_t> SelectedIndices;
+
+   SelectedIndices varIndices;
+   SelectedIndices tgtIndices;
+   SelectedIndices spctIndices;
+
    if (inputVariables == "") // default is all variables and all targets 
    {                         //   (the default can be changed by decorating this member function in the implementations)
       inputVariables = "_V_,_T_";
@@ -116,54 +123,63 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables  )
 	    if( variables.Length() == 0 ){
 	       for( UInt_t ivar = 0; ivar < nvars; ++ivar ) {
 		  fGet.push_back( std::make_pair<Char_t,UInt_t>('v',ivar) );
+		  varIndices.insert( ivar );
 	       }
 	    } else {
 	       UInt_t idx = variables.Atoi();
 	       if( idx >= nvars )
 		  Log() << kFATAL << "You selected variable with index : " << idx << " of only " << nvars << " variables." << Endl;
 	       fGet.push_back( std::make_pair<Char_t,UInt_t>('v',idx) );
+	       varIndices.insert( idx );
 	    }
 	 }else if( variables.BeginsWith("T") ) {       // targets
 	    variables.Remove(0,1); // remove "T"
 	    if( variables.Length() == 0 ){
 	       for( UInt_t itgt = 0; itgt < ntgts; ++itgt ) {
 		  fGet.push_back( std::make_pair<Char_t,UInt_t>('t',itgt) );
+		  tgtIndices.insert( itgt );
 	       }
 	    } else {
 	       UInt_t idx = variables.Atoi();
 	       if( idx >= ntgts )
 		  Log() << kFATAL << "You selected target with index : " << idx << " of only " << ntgts << " targets." << Endl;
 	       fGet.push_back( std::make_pair<Char_t,UInt_t>('t',idx) );
+	       tgtIndices.insert( idx );
 	    }
 	 }else if( variables.BeginsWith("S") ) {       // spectators
 	    variables.Remove(0,1); // remove "S"
 	    if( variables.Length() == 0 ){
 	       for( UInt_t ispct = 0; ispct < nspcts; ++ispct ) {
 		  fGet.push_back( std::make_pair<Char_t,UInt_t>('s',ispct) );
+		  spctIndices.insert( ispct );
 	       }
 	    } else {
 	       UInt_t idx = variables.Atoi();
 	       if( idx >= nspcts )
 		  Log() << kFATAL << "You selected spectator with index : " << idx << " of only " << nspcts << " spectators." << Endl;
 	       fGet.push_back( std::make_pair<Char_t,UInt_t>('s',idx) );
+	       spctIndices.insert( idx );
 	    }
 	 }
       }else{ // no keyword
 	 for( UInt_t ivar = 0; ivar < nvars; ++ivar ) { // search all variables
 	    if( fDsi.GetVariableInfo( ivar ).GetLabel() == variables ) {
 	       fGet.push_back( std::make_pair<Char_t,UInt_t>('v',ivar) );
+	       varIndices.insert( ivar );
 	       break;
 	    }
 	 }
 	 for( UInt_t itgt = 0; itgt < ntgts; ++itgt ) { // search all targets
 	    if( fDsi.GetTargetInfo( itgt ).GetLabel() == variables ) {
 	       fGet.push_back( std::make_pair<Char_t,UInt_t>('t',itgt) );
+	       tgtIndices.insert( itgt );
 	       break;
 	    }
 	 }
 	 for( UInt_t ispct = 0; ispct < nspcts; ++ispct ) { // search all spectators
 	    if( fDsi.GetSpectatorInfo( ispct ).GetLabel() == variables ) {
 	       fGet.push_back( std::make_pair<Char_t,UInt_t>('s',ispct) );
+	       spctIndices.insert( ispct );
 	       break;
 	    }
 	 }
@@ -171,41 +187,93 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables  )
 
    }
 
+
+   for( SelectedIndices::iterator it = varIndices.begin(), itEnd = varIndices.end(); it != itEnd; ++it ) {
+      Int_t idx = (*it);
+      fPut.push_back( std::make_pair<Char_t,UInt_t>('v',idx) );
+   }
+   for( SelectedIndices::iterator it = tgtIndices.begin(), itEnd = tgtIndices.end(); it != itEnd; ++it ) {
+      Int_t idx = (*it);
+      fPut.push_back( std::make_pair<Char_t,UInt_t>('t',idx) );
+   }
+   for( SelectedIndices::iterator it = spctIndices.begin(), itEnd = spctIndices.end(); it != itEnd; ++it ) {
+      Int_t idx = (*it);
+      fPut.push_back( std::make_pair<Char_t,UInt_t>('s',idx) );
+   }
+
    Log() << kINFO << "Transformation, Variable selection : " << Endl;
 
+   
    ItVarTypeIdx itGet = fGet.begin(), itGetEnd = fGet.end();
+   ItVarTypeIdx itPut = fPut.begin(), itPutEnd = fPut.end();
    for( ; itGet != itGetEnd; ++itGet ) {
-      TString inputType  = "?";
+      TString inputTypeString  = "?";
 
-      Char_t type = (*itGet).first;
+      Char_t inputType = (*itGet).first;
       Int_t inputIdx  = (*itGet).second;
 
-      TString label = "NOT FOUND";
-      if( type == 'v' ) {
-	 label = fDsi.GetVariableInfo( inputIdx ).GetLabel();
-	 inputType = "variable";
+      TString inputLabel = "NOT FOUND";
+      if( inputType == 'v' ) {
+	 inputLabel = fDsi.GetVariableInfo( inputIdx ).GetLabel();
+	 inputTypeString = "variable";
       }
-      else if( type == 't' ){
-	 label = fDsi.GetTargetInfo( inputIdx ).GetLabel();
-	 inputType = "target";
+      else if( inputType == 't' ){
+	 inputLabel = fDsi.GetTargetInfo( inputIdx ).GetLabel();
+	 inputTypeString = "target";
       }
-      else if( type == 's' ){
-	 label = fDsi.GetSpectatorInfo( inputIdx ).GetLabel();
-	 inputType = "spectator";
+      else if( inputType == 's' ){
+	 inputLabel = fDsi.GetSpectatorInfo( inputIdx ).GetLabel();
+	 inputTypeString = "spectator";
       }
 
-      Log() << kINFO << "Input : " << inputType.Data() << " '" << label.Data() << "' (index=" << inputIdx << ")." << Endl;
+      TString outputTypeString  = "?";
+
+      Char_t outputType = (*itPut).first;
+      Int_t outputIdx  = (*itPut).second;
+
+      TString outputLabel = "NOT FOUND";
+      if( outputType == 'v' ) {
+	 outputLabel = fDsi.GetVariableInfo( outputIdx ).GetLabel();
+	 outputTypeString = "variable";
+      }
+      else if( outputType == 't' ){
+	 outputLabel = fDsi.GetTargetInfo( outputIdx ).GetLabel();
+	 outputTypeString = "target";
+      }
+      else if( outputType == 's' ){
+	 outputLabel = fDsi.GetSpectatorInfo( outputIdx ).GetLabel();
+	 outputTypeString = "spectator";
+      }
+
+
+      Log() << kINFO << "Input : " << inputTypeString.Data() << " '" << inputLabel.Data() << "' (index=" << inputIdx << ").   <---> "
+	    <<          "Output : " << outputTypeString.Data() << " '" << outputLabel.Data() << "' (index=" << outputIdx << ")." << Endl;
+
+      ++itPut;
    }
 
 }
 
 
 //_______________________________________________________________________
-void TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Float_t>& input ) const
+void TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Float_t>& input, Bool_t backTransformation ) const
 {
    // select the values from the event
+
+   ItVarTypeIdxConst itEntry;
+   ItVarTypeIdxConst itEntryEnd;
+
+   if( backTransformation ){
+      itEntry = fPut.begin();
+      itEntryEnd = fPut.end();
+   }
+   else {
+      itEntry = fGet.begin();
+      itEntryEnd = fGet.end();
+   }
+
    input.clear();
-   for( ItVarTypeIdxConst itEntry = fGet.begin(), itEntryEnd = fGet.end(); itEntry != itEntryEnd; ++itEntry ) {
+   for( ; itEntry != itEntryEnd; ++itEntry ) {
       Char_t type = (*itEntry).first;
       Int_t  idx  = (*itEntry).second;
 
@@ -226,7 +294,7 @@ void TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Floa
 }
 
 //_______________________________________________________________________
-void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>& output, const Event* oldEvent ) const
+void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>& output, const Event* oldEvent, Bool_t backTransformation ) const
 {
    // select the values from the event
    
@@ -237,7 +305,20 @@ void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>&
 
    try {
 
-      for( ItVarTypeIdxConst itEntry = fGet.begin(), itEntryEnd = fGet.end(); itEntry != itEntryEnd; ++itEntry ) {
+      ItVarTypeIdxConst itEntry;
+      ItVarTypeIdxConst itEntryEnd;
+
+      if( !backTransformation ){ // as in GetInput, but the other way round (from fPut for transformation, from fGet for backTransformation)
+	 itEntry = fPut.begin();
+	 itEntryEnd = fPut.end();
+      }
+      else {
+	 itEntry = fGet.begin();
+	 itEntryEnd = fGet.end();
+      }
+
+
+      for( ; itEntry != itEntryEnd; ++itEntry ) {
 	 Char_t type = (*itEntry).first;
 	 Int_t  idx  = (*itEntry).second;
 	 
@@ -294,6 +375,8 @@ void TMVA::VariableTransformBase::CountVariableTypes( UInt_t& nvars, UInt_t& ntg
 //_______________________________________________________________________
 void TMVA::VariableTransformBase::CalcNorm( const std::vector<Event*>& events ) 
 {
+   // TODO --> adapt to variable,target,spectator selection
+
    // method to calculate minimum, maximum, mean, and RMS for all
    // variables used in the MVA
 
@@ -384,7 +467,9 @@ void TMVA::VariableTransformBase::CalcNorm( const std::vector<Event*>& events )
 
 //_______________________________________________________________________
 std::vector<TString>* TMVA::VariableTransformBase::GetTransformationStrings( Int_t /*cls*/ ) const
-{
+{ 
+   // TODO --> adapt to variable,target,spectator selection
+
    // default transformation output
    // --> only indicate that transformation occurred
    std::vector<TString>* strVec = new std::vector<TString>;
@@ -398,6 +483,8 @@ std::vector<TString>* TMVA::VariableTransformBase::GetTransformationStrings( Int
 //_______________________________________________________________________
 void TMVA::VariableTransformBase::UpdateNorm ( Int_t ivar,  Double_t x ) 
 {
+   // TODO --> adapt to variable,target,spectator selection
+
    // update min and max of a given variable (target) and a given transformation method
    Int_t nvars = fDsi.GetNVariables();
    if( ivar < nvars ){
@@ -416,7 +503,9 @@ void TMVA::VariableTransformBase::AttachXMLTo(void* parent)
 {
    // create XML description the transformation (write out info of selected variables)
 
-   void* inpxml = gTools().AddChild(parent, "Input");
+   void* selxml = gTools().AddChild(parent, "Selection");
+
+   void* inpxml = gTools().AddChild(selxml, "Input");
    gTools().AddAttr(inpxml, "NInputs", fGet.size() );
 
    for( ItVarTypeIdx itGet = fGet.begin(), itGetEnd = fGet.end(); itGet != itGetEnd; ++itGet ) {
@@ -446,19 +535,60 @@ void TMVA::VariableTransformBase::AttachXMLTo(void* parent)
 //      gTools().AddAttr(idxxml, "Index", idx);
       gTools().AddAttr(idxxml, "Type",  typeString);
       gTools().AddAttr(idxxml, "Label", label);
-      
    }
+
+
+   void* outxml = gTools().AddChild(parent, "Output");
+   gTools().AddAttr(outxml, "NOutputs", fPut.size() );
+
+   for( ItVarTypeIdx itPut = fPut.begin(), itPutEnd = fPut.end(); itPut != itPutEnd; ++itPut ) {
+      UInt_t idx  = (*itPut).second;
+      Char_t type = (*itPut).first;
+      
+      TString label = "";
+      TString typeString = "";
+      switch( type ){
+      case 'v':
+	 typeString = "Variable";
+	 label = fDsi.GetVariableInfo( idx ).GetLabel();
+	 break;
+      case 't':
+	 typeString = "Target";
+	 label = fDsi.GetTargetInfo( idx ).GetLabel();
+	 break;
+      case 's':
+	 typeString = "Spectator";
+	 label = fDsi.GetSpectatorInfo( idx ).GetLabel();
+	 break;
+      default:
+	 Log() << kFATAL << "VariableTransformBase/AttachXMLTo unknown variable type '" << type << "'." << Endl;
+      }
+	 
+       void* idxxml = gTools().AddChild(outxml, "Output");
+//      gTools().AddAttr(idxxml, "Index", idx);
+      gTools().AddAttr(idxxml, "Type",  typeString);
+      gTools().AddAttr(idxxml, "Label", label);
+   }
+
+
 }
 
 //_______________________________________________________________________
-void TMVA::VariableTransformBase::ReadFromXML( void* inpnode ) 
+void TMVA::VariableTransformBase::ReadFromXML( void* selnode ) 
 {
    // Read the input variables from the XML node
-   fGet.clear();       
+
+   void* inpnode = gTools().GetChild( selnode );
+   void* outnode = gTools().GetChild( selnode );
 
    UInt_t nvars  = GetNVariables();
    UInt_t ntgts  = GetNTargets();
    UInt_t nspcts = GetNSpectators();
+
+
+
+   // read inputs
+   fGet.clear();       
 
    UInt_t nInputs = 0;
    gTools().ReadAttr(inpnode, "NInputs", nInputs);
@@ -497,6 +627,49 @@ void TMVA::VariableTransformBase::ReadFromXML( void* inpnode )
       }
       ch = gTools().GetNextChild( ch );
    }
+
+   // read outputs
+   fPut.clear();       
+
+   UInt_t nOutputs = 0;
+   gTools().ReadAttr(outnode, "NOutputs", nOutputs);
+
+   void* chOut = gTools().GetChild( outnode );
+   while(chOut) {
+      TString typeString = "";
+      TString label      = "";
+
+      gTools().ReadAttr(chOut, "Type",  typeString);
+      gTools().ReadAttr(chOut, "Label", label);
+   
+      if( typeString == "Variable"  ){
+	 for( UInt_t ivar = 0; ivar < nvars; ++ivar ) { // search all variables
+	    if( fDsi.GetVariableInfo( ivar ).GetLabel() == label ) {
+	       fPut.push_back( std::make_pair<Char_t,UInt_t>('v',ivar) );
+	       break;
+	    }
+	 }
+      }else if( typeString == "Target"    ){
+	 for( UInt_t itgt = 0; itgt < ntgts; ++itgt ) { // search all targets
+	    if( fDsi.GetTargetInfo( itgt ).GetLabel() == label ) {
+	       fPut.push_back( std::make_pair<Char_t,UInt_t>('t',itgt) );
+	       break;
+	    }
+	 }
+      }else if( typeString == "Spectator" ){
+	 for( UInt_t ispct = 0; ispct < nspcts; ++ispct ) { // search all spectators
+	    if( fDsi.GetSpectatorInfo( ispct ).GetLabel() == label ) {
+	       fPut.push_back( std::make_pair<Char_t,UInt_t>('s',ispct) );
+	       break;
+	    }
+	 }
+      }else{
+	 Log() << kFATAL << "VariableTransformationBase/ReadFromXML : unknown type '" << typeString << "'." << Endl;
+      }
+      chOut = gTools().GetNextChild( chOut );
+   }
+
+
 }
 
 

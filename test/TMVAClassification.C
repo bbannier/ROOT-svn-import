@@ -105,7 +105,8 @@ void TMVAClassification( TString myMethodList = "" )
    Use["FDA_GAMT"]        = 1;
    Use["FDA_MCMT"]        = 1;
    // ---
-   Use["MLP"]             = 1; // this is the recommended ANN
+   Use["MLP"]             = 1; 
+   Use["MLPBNN"]          = 1; // this is the recommended ANN, (bayesian neural network)
    Use["MLPBFGS"]         = 1; // recommended ANN with optional training method
    Use["CFMlpANN"]        = 1; // *** missing
    Use["TMlpANN"]         = 1;
@@ -157,7 +158,10 @@ void TMVAClassification( TString myMethodList = "" )
    // All TMVA output can be suppressed by removing the "!" (not) in
    // front of the "Silent" argument in the option string
    TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification", outputFile,
-                                               "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D:AnalysisType=Classification" );
+                                               "V:!Silent:Color:DrawProgressBar:Transformations=I;N;D;P;G,D:AnalysisType=Classification" );
+
+//    TMVA::gConfig().SetMsgType(TMVA::kDEBUG);
+//    (TMVA::gConfig().GetVariablePlotting()).fTimesRMS = 8.0;
 
    // If you wish to modify default settings
    // (please check "src/Config.h" to see all available global options)
@@ -169,8 +173,8 @@ void TMVAClassification( TString myMethodList = "" )
    // [all types of expressions that can also be parsed by TTree::Draw( "expression" )]
    factory->AddVariable( "myvar1 := var1+var2", 'F' );
    factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
-   factory->AddVariable( "var3",                "Variable 3", "units", 'F' );
-   factory->AddVariable( "var4",                "Variable 4", "units", 'F' );
+   factory->AddVariable( "var3:=var3",                "Variable 3", "units", 'F' );
+   factory->AddVariable( "var4:=var4",                "Variable 4", "units", 'F' );
 
    // You can add so-called "Spectator variables", which are not used in the MVA training,
    // but will appear in the final "TestTree" produced by TMVA. This TestTree will contain the
@@ -399,9 +403,12 @@ void TMVAClassification( TString myMethodList = "" )
       factory->BookMethod( TMVA::Types::kFDA, "FDA_MCMT",
                            "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1);(-10,10);(-10,10);(-10,10);(-10,10):FitMethod=MC:Converger=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=0:!UseImprove:!UseMinos:SetBatch:SampleSize=20" );
 
-   // TMVA ANN: MLP (recommended ANN) -- all ANNs in TMVA are Multilayer Perceptrons
    if (Use["MLP"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=500:HiddenLayers=N+5:TestRate=10:EpochMonitoring:RandomSeed=1" );
+      factory->BookMethod( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N(_V_,_S_)+G(_V_,_T_,spec2):NCycles=500:HiddenLayers=N+5:TestRate=10:EpochMonitoring:RandomSeed=1" );
+
+   // TMVA ANN: MLP (recommended ANN) -- all ANNs in TMVA are Multilayer Perceptrons
+   if (Use["MLPBNN"])
+      factory->BookMethod( TMVA::Types::kMLP, "MLPBNN", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=5000:HiddenLayers=N+15:TestRate=10:EpochMonitoring:RandomSeed=1:UseRegulator:TrainingMethod=BFGS:ConvergenceTests=15:ConvergenceImprove=1e-6:" );
 
    if (Use["MLPBFGS"])
       factory->BookMethod( TMVA::Types::kMLP, "MLPBFGS", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=500:HiddenLayers=N+5:TestRate=10:TrainingMethod=BFGS:!EpochMonitoring" );
