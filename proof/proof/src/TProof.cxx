@@ -86,7 +86,7 @@ TVirtualMutex *gProofMutex = 0;
 // Rotating indicator
 char TProofMergePrg::fgCr[4] = {'-', '\\', '|', '/'};
 
-TList   *TProof::fgProofEnvList = 0;  // List of env vars for proofserv
+TList   *TProof::fgProofEnvList = 0;          // List of env vars for proofserv
 TPluginHandler *TProof::fgLogViewer = 0;      // Log viewer handler
 
 ClassImp(TProof)
@@ -483,6 +483,7 @@ void TProof::InitMembers()
    fIntHandler = 0;
    fProgressDialog = 0;
    fProgressDialogStarted = kFALSE;
+   SetBit(kUseProgressDialog);
    fPlayer = 0;
    fFeedback = 0;
    fChains = 0;
@@ -1406,7 +1407,7 @@ Bool_t TProof::StartSlaves(Bool_t attach)
                   return kFALSE;
                }
 
-               if (!gROOT->IsBatch()) {
+               if (!gROOT->IsBatch() && TestBit(kUseProgressDialog)) {
                   if ((fProgressDialog =
                      gROOT->GetPluginManager()->FindHandler("TProofProgressDialog")))
                      if (fProgressDialog->LoadPlugin() == -1)
@@ -1422,7 +1423,7 @@ Bool_t TProof::StartSlaves(Bool_t attach)
             Printf("Starting master: OK                                     ");
             StartupMessage("Master attached", kTRUE, 1, 1);
 
-            if (!gROOT->IsBatch()) {
+            if (!gROOT->IsBatch() && TestBit(kUseProgressDialog)) {
                if ((fProgressDialog =
                   gROOT->GetPluginManager()->FindHandler("TProofProgressDialog")))
                   if (fProgressDialog->LoadPlugin() == -1)
@@ -3088,7 +3089,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                (*mess) >> selec >> dsz >> first >> nent;
                // Start or reset the progress dialog
                if (!gROOT->IsBatch()) {
-                  if (fProgressDialog && !TestBit(kUsingSessionGui)) {
+                  if (fProgressDialog &&
+                      !TestBit(kUsingSessionGui) && TestBit(kUseProgressDialog)) {
                      if (!fProgressDialogStarted) {
                         fProgressDialog->ExecPlugin(5, this,
                                                    selec.Data(), dsz, first, nent);
@@ -4310,10 +4312,16 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
    //                  named "mydset"
    //   "mydset#adir/" analysis of the first tree in the dir "adir" of the
    //                  dataset named "mydset"
+   // The component 'name' in its more general form contains also the group and
+   // user name following "/<group>/<user>/<dsname>". Each of these components
+   // can contain one or more wildcards '*', in which case all the datasets matching
+   // the expression are added together as a global dataset (wildcard support has
+   // been added in version 5.27/02).
    // The last argument 'elist' specifies an entry- or event-list to be used as
    // event selection.
    // It is also possible (starting w/ version 5.27/02) to run on multiple datasets
-   // at once. There are two possibilities:
+   // at once in a more flexible way that the one provided by wildcarding. There
+   // are three possibilities:
    //    1) specifying the dataset names separated by the OR operator '|', e.g.
    //          dsetname = "<dset1>|<dset2>|<dset3>|..."
    //       in this case the datasets are a seen as a global unique dataset
@@ -4322,8 +4330,15 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
    //       in this case the datasets are processed one after the other and the
    //       selector is notified when switching dataset via a bit in the current
    //       processed element.
-   // Each <dsetj> has the format specified above for the single dataset processing
-   // (the name of the tree and subdirectory must be same for all the datasets).
+   //    3) giving the path of a textfile where the dataset names are specified
+   //       on one or multiple lines; the lines found are joined as in 1), unless
+   //       the filepath is followed by a ',' (i.e. p->Process("datasets.txt,",...)
+   //       with the dataset names listed in 'datasets.txt') in which case they are
+   //       treated as in 2); the file is open in raw mode with TFile::Open and
+   //       therefore it cane be remote, e.g. on a Web server.
+   // Each <dsetj> has the format specified above for the single dataset processing,
+   // included wildcarding (the name of the tree and subdirectory must be same for
+   // all the datasets).
    // In the case of multiple datasets, 'elist' is treated a global entry list.
    // It is possible to specify per-dataset entry lists using the syntax
    //   "mydset[#adir/[T]]?enl=entrylist"
@@ -4343,7 +4358,56 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
       return -1;
    }
 
-   TString dsname(dsetname), names(dsetname), name, enl, newname;
+   TString dsname, fname(dsetname);
+   // If the 'dsetname' corresponds to an existing and readable file we will try to
+   // interpretate its content as names of datasets to be processed. One line can contain
+   // more datasets, separated by ',' or '|'. By default the dataset lines will be added
+   // (i.e. joined as in option '|'); if the file name ends with ',' the dataset lines are
+   // joined with ','.
+   const char *separator = (fname.EndsWith(",")) ? "," : "|";
+   if (!strcmp(separator, ",") || fname.EndsWith("|")) fname.Remove(fname.Length()-1, 1);
+   if (!(gSystem->AccessPathName(fname, kReadPermission))) {
+      TUrl uf(fname, kTRUE);
+      uf.SetOptions(TString::Format("%sfiletype=raw", uf.GetOptions()));
+      TFile *f = TFile::Open(uf.GetUrl());
+      if (f && !(f->IsZombie())) {
+         const Int_t blen = 8192;
+         char buf[blen];
+         Long64_t rest = f->GetSize();
+         while (rest > 0) {
+            Long64_t len = (rest > blen - 1) ? blen - 1 : rest;
+            if (f->ReadBuffer(buf, len)) {
+               Error("Process", "problems reading from file '%s'", fname.Data());
+               dsname = "";
+               break;
+            }
+            buf[len] = '\0';
+            dsname += buf;
+            rest -= len;
+         }
+         f->Close();
+         SafeDelete(f);
+         // We fail if a failure occured
+         if (rest > 0) return -1;
+      } else {
+         Error("Process", "could not open file '%s'", fname.Data());
+         return -1;
+      }
+   }
+   if (dsname.IsNull()) {
+      dsname = dsetname;
+   } else {
+      // Remove trailing '\n'
+      if (dsname.EndsWith("\n")) dsname.Remove(dsname.Length()-1, 1);
+      // Replace all '\n' with the proper separator
+      dsname.ReplaceAll("\n", separator);
+      if (gDebug > 0) {
+         Info("Process", "processing multi-dataset read from file '%s':", fname.Data());
+         Info("Process", "  '%s'", dsname.Data());
+      }
+   }
+
+   TString names(dsname), name, enl, newname;
    // If multi-dataset check if server supports it
    if (fProtocol < 28 && names.Index(TRegexp("[, |]")) != kNPOS) {
       Info("Process", "multi-dataset processing not supported by the server");
@@ -9077,12 +9141,8 @@ void TProof::Detach(Option_t *opt)
       }
    }
 
-   // Delete this instance
-   if ((!fProgressDialogStarted) && !TestBit(kUsingSessionGui))
-      delete this;
-   else
-      // ~TProgressDialog will delete this
-      fValid = kFALSE;
+   // Invalidate this instance
+   fValid = kFALSE;
 
    return;
 }
@@ -9654,6 +9714,8 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char *optStr)
 {
    // Get a list of TFileInfo objects describing the files of the specified
    // dataset.
+   // To get the short version (containing only the global meta information)
+   // specify optStr = "S:" or optStr = "short:".
    // To get the sub-dataset of files located on a given server(s) specify
    // the list of servers (comma-separated) in the 'optStr' field.
 
@@ -10786,3 +10848,16 @@ void TProof::LogViewer(const char *url, Int_t idx)
    // Done
    return;
 }
+
+//______________________________________________________________________________
+void TProof::SetProgressDialog(Bool_t on)
+{
+   // Enable/Disable the graphic progress dialog.
+   // By default the dialog is enabled
+
+   if (on)
+      SetBit(kUseProgressDialog);
+   else
+      ResetBit(kUseProgressDialog);
+}
+

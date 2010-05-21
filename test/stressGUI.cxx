@@ -73,6 +73,7 @@
 #include <TGSplitFrame.h>
 #include <TGTextEditor.h>
 #include <TRootHelpDialog.h>
+#include <TGHtmlBrowser.h>
 #include <HelpText.h>
 #include <TSystemDirectory.h>
 #include <TInterpreter.h>
@@ -107,6 +108,7 @@ void     testSplitFrame();
 void     testControlBars();
 void     testHelpDialog();
 void     testPaletteEditor();
+void     testHtmlBrowser();
 
 void     run_tutorials();
 void     guitest_playback();
@@ -186,6 +188,7 @@ void stressGUI()
          printf("Please generate the reference file by executing\n");
          printf("stressGUI with the -ref flag, as shown below:\n");
          printf("   stressGUI -ref\n");
+         gSystem->Unlink(gTmpfilename.Data());
          exit(0);
       }
       char line[160];
@@ -261,6 +264,7 @@ void stressGUI()
    testControlBars();
    testHelpDialog();
    testPaletteEditor();
+   testHtmlBrowser();
 
    if (!gOptionRef) {
 
@@ -297,13 +301,20 @@ void stressGUI()
       //Print table with results
       Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
       if (UNIX) {
-         FILE *fp = gSystem->OpenPipe("uname -a", "r");
-         Char_t line[60];
-         fgets(line,60,fp); line[59] = 0;
-         printf("*  SYS: %s\n",line);
-         gSystem->ClosePipe(fp);
+         TString sp = gSystem->GetFromPipe("uname -a");
+         sp.Resize(60);
+         printf("*  SYS: %s\n",sp.Data());
+         if (strstr(gSystem->GetBuildNode(),"Linux")) {
+            sp = gSystem->GetFromPipe("lsb_release -d -s");
+            printf("*  SYS: %s\n",sp.Data());
+         }
+         if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+            sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+            sp += " Mac OS X ";
+            printf("*  SYS: %s\n",sp.Data());
+         }
       } else {
-         const Char_t *os = gSystem->Getenv("OS");
+         const char *os = gSystem->Getenv("OS");
          if (!os) printf("*  SYS: Windows 95\n");
          else     printf("*  SYS: %s %s \n",os,gSystem->Getenv("PROCESSOR_IDENTIFIER"));
       }
@@ -2253,6 +2264,20 @@ void testPaletteEditor()
    f->CloseWindow();
 
    delete img;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+//______________________________________________________________________________
+void testHtmlBrowser()
+{
+   // Test the HTML Browser.
+
+   TGHtmlBrowser *b = new TGHtmlBrowser("http://bellenot.web.cern.ch/bellenot/Public/html_test/html_test.html");
+   ProcessFrame((TGMainFrame*)b, "HTML Browser 1");
+   b->Selected("http://bellenot.web.cern.ch/bellenot/Public/html_test/gallery/");
+   ProcessFrame((TGMainFrame*)b, "HTML Browser 2");
+   b->CloseWindow();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

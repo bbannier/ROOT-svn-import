@@ -111,9 +111,10 @@ Int_t TFileCollection::AddFromFile(const char *textfile, Int_t nfiles, Int_t fir
      return 0;
 
    Int_t nf = 0;
-   if (textfile && *textfile) {
+   TString fn(textfile);
+   if (!fn.IsNull() && !gSystem->ExpandPathName(fn)) {
       ifstream f;
-      f.open(gSystem->ExpandPathName(textfile));
+      f.open(fn);
       if (f.is_open()) {
          Bool_t all = (nfiles <= 0) ? kTRUE : kFALSE;
          Int_t ff = (!all && (firstfile < 1)) ? 1 : firstfile;
@@ -133,7 +134,7 @@ Int_t TFileCollection::AddFromFile(const char *textfile, Int_t nfiles, Int_t fir
          f.close();
          Update();
       } else
-         Error("AddFromFile", "unable to open file %s", textfile);
+         Error("AddFromFile", "unable to open file %s (%s)", textfile, fn.Data());
    }
    return nf;
 }
@@ -352,15 +353,21 @@ Int_t TFileCollection::Update(Long64_t avgsize)
 void TFileCollection::Print(Option_t *option) const
 {
    // Prints the contents of the TFileCollection.
-   // If option contains "M": prints meta data entries,
-   // if option contains "F": prints all the files in the collection.
+   // If option contains:
+   //      'M'             print global meta information
+   //      'F'             print all the files in the collection in compact form
+   //                      (current url, default tree name|class|entries, md5)
+   //      'L'             together with 'F', print all the files in the collection
+   //                      in long form (uuid, md5, all URLs, all meta objects; on
+   //                      many lines)
 
    Printf("TFileCollection %s - %s contains: %lld files with a size of"
           " %lld bytes, %.1f %% staged - default tree name: '%s'",
           GetName(), GetTitle(), fNFiles, fTotalSize, GetStagedPercentage(),
           GetDefaultTreeName());
 
-   if (TString(option).Contains("M", TString::kIgnoreCase)) {
+   TString opt(option);
+   if (opt.Contains("M", TString::kIgnoreCase)) {
       Printf("The files contain the following trees:");
 
       TIter metaDataIter(fMetaDataList);
@@ -373,9 +380,11 @@ void TFileCollection::Print(Option_t *option) const
       }
    }
 
-   if (fList && TString(option).Contains("F", TString::kIgnoreCase)) {
+   if (fList && opt.Contains("F", TString::kIgnoreCase)) {
       Printf("The collection contains the following files:");
-      fList->Print();
+      if (!opt.Contains("L") && !fDefaultTree.IsNull())
+         opt += TString::Format(" T:%s", fDefaultTree.Data());
+      fList->Print(opt);
    }
 }
 
@@ -538,16 +547,21 @@ TObjString *TFileCollection::ExportInfo(const char *name, Int_t popt)
       if (popt == 1) {
          treeInfo = GetDefaultTreeName();
          if (meta)
-            treeInfo += Form(", %lld entries", meta->GetEntries());
+            treeInfo += TString::Format(", %lld entries", meta->GetEntries());
          TFileInfoMeta *frac = GetMetaData("/FractionOfTotal");
          if (frac)
-            treeInfo += Form(", %3.1f %% of total", frac->GetEntries() / 10.);
+            treeInfo += TString::Format(", %3.1f %% of total", frac->GetEntries() / 10.);
       } else {
-         treeInfo = Form(" %s ", GetDefaultTreeName());
-         if (treeInfo.Length() < 14)
-            treeInfo.Resize(14);
-         if (meta)
-            treeInfo += Form("| %8lld ", meta->GetEntries());
+         treeInfo.Form(" %s ", GetDefaultTreeName());
+         if (treeInfo.Length() > 14) treeInfo.Replace(13, 1, '>');
+         treeInfo.Resize(14);
+         if (meta) {
+            if (meta->GetEntries() > 99999999) {
+               treeInfo += TString::Format("| %8lld ", meta->GetEntries());
+            } else {
+               treeInfo += TString::Format("| %8.4g ", (Double_t) meta->GetEntries());
+            }
+         }
       }
    } else {
       treeInfo = "        N/A";

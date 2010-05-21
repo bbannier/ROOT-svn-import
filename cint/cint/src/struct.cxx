@@ -1645,7 +1645,14 @@ try_again:
          if ((len == G__struct.hash[i]) && !strcmp(atom_tagname, G__struct.name[i])) {
             if ((!p && (enclosing || env_tagnum == -1) && (G__struct.parent_tagnum[i] == -1)) || (env_tagnum == G__struct.parent_tagnum[i])) {
                if (noerror < 3) {
-                  G__class_autoloading(&i);
+                  if ( G__class_autoloading(&i) < 0 && noerror < 2 ) {
+                     if (G__struct.type[i] != 'a') {
+                        // The autoload failed but we have a real forward declaration of the type.
+                     } else {
+                        // The autoloading did not load anything, let's try instantiating.
+                        break;
+                     }
+                  }
                }
                return i;
             }
@@ -1684,10 +1691,20 @@ try_again:
       goto try_again;
    }
    if (candidateTag != -1) {
-      if (noerror < 3) {
-         G__class_autoloading(&candidateTag);
+      if (noerror < 2) {
+         if ( G__class_autoloading(&candidateTag) >= 0 || G__struct.type[candidateTag] != 'a') {
+            // Either there was nothing to autoload or the autoload succeeded.
+            return candidateTag;
+         } 
+         // The autoloading did not load anything, let's try instantiating.
+         // (by continuing on).
+         
+      } else {
+         if (noerror < 3) {
+            G__class_autoloading(&candidateTag);
+         }
+         return candidateTag;
       }
-      return candidateTag;
    }
    // If tagname not found, try instantiating class template.
    len = strlen(tagname);

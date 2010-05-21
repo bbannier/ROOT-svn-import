@@ -99,12 +99,31 @@ options="                    \
    enable_xrootd             \
 "
 
+DEFAULTENABLE="yes"
+for flag in "$@"; do
+    case $flag in
+    --gminimal)
+       DEFAULTENABLE="no"
+       MINIMALENABLE="enable_gui" # to be implemented
+       break ;;
+     --minimal)
+       DEFAULTENABLE="no"
+       MINIMALENABLE=""
+       break ;;
+    esac
+done
+
 #
-# This sets all options to "yes" - we turn off those we don't want
-# on per default explictly afterwards.
+# This sets all options to "yes" unless --minimal is specified.
+# We turn off those we don't want on per default explictly afterwards.
 #
-for c in $options ; do eval ${c}="yes" ; done
-for c in $deprecated_options ; do eval ${c}="yes" ; done
+for c in $options $deprecated_options; do
+    case ${c} in
+        ${MINIMALENABLE}) eval ${c}="yes" ;;
+        enable_shared)    eval ${c}="yes" ;;
+        *)                eval ${c}="${DEFAULTENABLE}" ;;
+    esac
+done
 for c in $options ; do eval ${c}_explicit="" ; done
 
 enable_cling=
@@ -127,7 +146,11 @@ enable_thread=yes        # cannot be disabled (not in above options list)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
+enable_builtin_freetype=no
+enable_builtin_ftgl=no
 enable_builtin_glew=no
+enable_builtin_pcre=no
+enable_builtin_zlib=no
 
 # Remove old log file
 rm -f $logfile
@@ -315,19 +338,26 @@ check_lib64() {
 
     # Save arguments in logical names
     chklib64=$1
-    logmsg "Checking if $chklib64 is a 64bit library"
+    logmsg "Checking if $chklib64 is a 64-bit library"
     if [ "x`basename $chklib64 .a`" != "x`basename $chklib64`" ]; then
         # we have an archive .a file
         logmsg " objdump -a $chklib64 | grep 'x86-64'"
-        objdump -a $chklib64 | grep 'x86-64' > /dev/null 2>& 1
-        ret=$?
+        if objdump -a $chklib64 | grep 'x86-64' > /dev/null 2>& 1 ; then
+            ret=1
+        fi
     else
-        logmsg " file -L $chklib64 | grep '64-bit'"
-        file -L $chklib64 | grep '64-bit' > /dev/null 2>& 1
-        ret=$?
+        if file -L $chklib64 | grep 'ASCII' > /dev/null 2>& 1 ; then
+            check_link $chklib64
+            ret=$link_result
+        else
+            logmsg " file -L $chklib64 | grep '64-bit'"
+            if file -L $chklib64 | grep '64-bit' > /dev/null 2>& 1 ; then
+                ret=1
+            fi
+        fi
     fi
     logmsg " result: $ret"
-    if test $ret -eq 0 ; then
+    if test $ret -eq 1 ; then
         is_lib64=1
         logmsg " is a 64bit library"
     fi
@@ -614,6 +644,79 @@ check_header()  {
 }
 
 #_____________________________________________________________________
+check_link() {
+    # This function will try to link a specific library [$1] in an
+    # optional directory [$2] and test, optionally, for a specified
+    # symbol [$3].
+    # The result of the check is stored in link_result, 1 if true,
+    # 0 otherwise, which should be immediately copied, since the variable
+    # will be overwritten at next invocation of this function.
+
+    # Assert that we got enough arguments
+    if test $# -lt 1 ; then
+        echo "check_link: need at least one argument"
+        link_result=0
+        return 1
+    fi
+
+    # save arguments in logical names
+    linklib="$1"; shift
+    linkdir=""
+    if test $# -ge 1 ; then
+        linkdir="$1"; shift
+    fi
+    linksymbol=""
+    if test $# -ge 1 ; then
+        linksymbol="$1"
+    fi
+
+    if test "x$linksymbol" = "x" ; then
+       if test "x$linkdir" = "x" ; then
+          logmsg " trying to link against $linklib"
+       else
+          logmsg " trying to link against $linkdir $linklib"
+       fi
+       cat <<EOF > conftest.mk
+include config/Makefile.${arch}
+conftest: conftest.c
+	\$(CC) \$(CFLAGS) \$(LDFLAGS) $linkdir $linklib \$< -o \$@
+
+conftest.c:
+	echo "int main() { return 0; }" > \$@
+EOF
+    else
+       if test "x$linkdir" = "x" ; then
+           logmsg " trying to resolve symbol $linksymbol in $linklib"
+       else
+           logmsg " trying to resolve symbol $linksymbol in $linkdir $linklib"
+       fi
+       cat <<EOF > conftest.mk
+include config/Makefile.${arch}
+conftest:conftest.c
+	\$(CC) \$(CFLAGS) \$(LDFLAGS) $linkdir $linklib \$< -o \$@
+
+conftest.c:
+	echo "extern int $linksymbol (); " > \$@
+	echo "int main() { $linksymbol (); return 0; }" >> \$@
+EOF
+    fi
+    $gnumake -f conftest.mk >> $logfile 2>&1
+    if test $? -eq 0 ; then
+        link_result=1
+        logmsg " Link OK"
+    else
+        link_result=0
+        logmsg " Failed code was"
+        cat conftest.mk >> $logfile
+    fi
+    rm -rf conftest.c conftest.mk conftest
+
+    unset linklib
+    unset linkdir
+    unset linksymbol
+}
+
+#_____________________________________________________________________
 check_symbol() {
     # This function will try to locate a symbol [$1] in a specific
     # library [$2] and in a given directory [$3].
@@ -635,6 +738,9 @@ check_symbol() {
 
     if test "x$symbollib" = "x" ; then
         found_symbol=0
+        unset symbol
+        unset symbollib
+        unset symboldir
         return 1
     fi
 
@@ -698,6 +804,9 @@ check_symbol() {
     if test "x$symbolfile" = "x" || test ! -r $symbolfile ; then
        found_symbol=0
        logmsg " Symbol not found"
+       unset symbol
+       unset symbollib
+       unset symboldir
        return 1
     fi
 
@@ -709,29 +818,10 @@ check_symbol() {
     else
         nm $symbolfile 2>&1 | grep "no symbols" > /dev/null 2>&1
         if test $? -eq 0 ; then
-            logmsg " $symbolfile is stripped, trying a link"
-            # stripped library - only safe test is to link against the
-            # library!  However, we do not know what compiler to use
-            # so we can not do the test.  Assume the symbol is in
-            cat <<EOF > conftest.mk
-include config/Makefile.${arch}
-conftest:conftest.c $symbolfile
-	\$(CC) \$(CFLAGS) \$(LDFLAGS) $symbolfile \$< -o \$@
-
-conftest.c:
-	echo "extern int $symbol (); " > \$@
-	echo "int main() { $symbol (); return 0; }" >> \$@
-EOF
-            $gnumake -f conftest.mk >> $logfile 2>&1
-            if test $? -eq 0 ; then
-                found_symbol=1
-                logmsg " Link OK"
-            else
-                found_symbol=0
-                logmsg " Failed code was"
-                cat conftest.mk >> $logfile
-            fi
-            rm -rf conftest.c conftest.mk conftest
+            logmsg " $symbolfile is stripped, trying to link"
+            # stripped library - only safe test is to link against the library
+            check_link $symbolfile "" $symbol
+            found_symbol=$link_result
         else
             found_symbol=0
         fi
@@ -741,6 +831,10 @@ EOF
     else
         result "no"
     fi
+
+    unset symbol
+    unset symbollib
+    unset symboldir
 }
 
 #_____________________________________________________________________
@@ -971,12 +1065,18 @@ PROOFDIN=config/proofd.in
 PROOFDOUT=etc/daemons/proofd.rc.d
 PROOFDXINETDIN=config/proofd.xinetd.in
 PROOFDXINETDOUT=etc/daemons/proofd.xinetd
+PROOFSERVIN=config/proofserv.in
+PROOFSERVOUT=main/src/proofserv.sh
 XROOTDIN=config/xrootd.in
 XROOTDOUT=etc/daemons/xrootd.rc.d
+CMSDIN=config/cmsd.in
+CMSDOUT=etc/daemons/cmsd.rc.d
 OLBDIN=config/olbd.in
 OLBDOUT=etc/daemons/olbd.rc.d
 ROOTHELPIN=config/root-help.el.in
 ROOTHELPOUT=build/misc/root-help.el
+ROOTSIN=config/roots.in
+ROOTSOUT=main/src/roots.sh
 HTMLIN=config/html.C.in
 HTMLOUT=macros/html.C
 THISROOTSHIN=config/thisroot.sh
@@ -1121,6 +1221,10 @@ enable/disable options, prefix with either --enable- or --disable-
   xrootd             Build xrootd file server and its client (if supported)
   xft                Xft support (X11 antialiased fonts)
 
+minimal set of libraries, can be combined with above --enable-... options
+
+  --minimal          Do not automatically search for support libraries
+
 with options, prefix with --with-, enables corresponding support
 
   afs                AFS support, location of AFS distribution
@@ -1190,7 +1294,7 @@ with options, prefix with --with-, enables corresponding support
   sapdb-incdir       SapDB support, location of sql.h
   sapdb-libdir       SapDB support, location of libsqlod
   rfio-incdir        RFIO support, location of rfio_api.h
-  rfio-libdir        RFIO support, location of librfio or libshift
+  rfio-libdir        RFIO support, location of librfio, libdpm or libshift
   srp                Secure Remote Passwd support, location of SRP distribution
   srp-incdir         SRP support, location header of t_server.h
   srp-libdir         SRP support, location header of libsrp.a
@@ -1301,6 +1405,13 @@ hpuxia64acc)
 solaris64CC5)
    logmsg "Will check Solaris 64bit libraries"
    checksolaris64="yes" ;;
+win32)
+   logmsg "Will use by default builtin versions of libraries on Win32"
+   enable_builtin_freetype="yes"
+   enable_builtin_ftgl="yes"
+   enable_builtin_glew="yes"
+   enable_builtin_pcre="yes"
+   enable_builtin_zlib="yes" ;;
 esac
 
 # check for which
@@ -1363,6 +1474,7 @@ if test $# -gt 0 ; then
       --no-create)             noact="yes"           ;;
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
+      --minimal)               ;;
       --with-afs=*)            afsdir=$optarg        ; enable_afs="yes"     ;;
       --with-afs-incdir=*)     afsincdir=$optarg     ; enable_afs="yes"     ;;
       --with-afs-libdir=*)     afslibdir=$optarg     ; enable_afs="yes"     ;;
@@ -1568,8 +1680,11 @@ if test "x$noact" = "xno"; then
     cp -f $ROOTDXINETDIN rootd.xinetd.tmp
     cp -f $PROOFDIN proofd.tmp
     cp -f $PROOFDXINETDIN proofd.xinetd.tmp
+    cp -f $PROOFSERVIN proofserv.tmp
+    cp -f $ROOTSIN roots.tmp
     cp -f $XROOTDIN xrootd.tmp
     cp -f $OLBDIN olbd.tmp
+    cp -f $CMSDIN cmsd.tmp
 fi
 
 ######################################################################
@@ -1806,6 +1921,9 @@ if test "x$enable_winrtdebug" = "x" ; then
         enable_winrtdebug=no
     fi
 fi
+if test "x$platform" != "xwin32"; then
+    enable_winrtdebug=no
+fi
 
 ######################################################################
 #
@@ -1932,19 +2050,36 @@ if test "x$enable_builtin_ftgl" = "x" || \
    test "x$enable_builtin_ftgl" = "xno" ; then
 
    # check if we have pkg-config
+   checking_msg "pkg-config"
    if `$cwhich pkg-config > /dev/null 2>&1` ; then
+      $cwhich pkg-config
 
       message "Checking for libftgl"
       if pkg-config --exists ftgl ; then
-          result "ok"
-          ftglincdir=`pkg-config --cflags-only-I ftgl | sed 's/-I//g'`
-          ftgllibs=`pkg-config --libs-only-l ftgl`
-          ftgllibdir=`pkg-config --libs-only-L ftgl | sed 's/-L//g'`
-          enable_builtin_ftgl=no
+         result "ok"
+         message "Checking for ftgl version > 2.1.2"
+         ftgl_version=`pkg-config --modversion ftgl | \
+         tr '.' ' ' | \
+         awk 'BEGIN { FS = " "; } \
+            { printf "%d", ($''1 * 1000 + $''2) * 1000 + $''3;}'`
+         # Use FTGL/ftgl.h when > 2.1.2
+         if test $ftgl_version -gt 2001002 ; then
+            result "ok"
+            ftglincdir=`pkg-config --cflags-only-I ftgl | sed 's/-I//g'`
+            ftgllibs=`pkg-config --libs-only-l ftgl`
+            ftgllibdir=`pkg-config --libs-only-L ftgl | sed 's/-L//g'`
+            enable_builtin_ftgl="no"
+         else
+            enable_builtin_ftgl="yes"
+            result "no (`pkg-config --modversion ftgl`)"
+         fi
       else
-          enable_builtin_ftgl=yes
-          result "no"
+         enable_builtin_ftgl="yes"
+         result "no"
       fi
+   else
+      enable_builtin_ftgl="yes"
+      echo "not found"
    fi
 fi
 message "Checking whether to build included libftgl"
@@ -2537,7 +2672,7 @@ check_explicit "$enable_qt" "$enable_qt_explicit" \
 #
 # (See http://savannah.cern.ch/files/?group=castor)
 #
-# Check for rfio_api.h of CASTOR 2 and librfio or libshift
+# Check for rfio_api.h of CASTOR 2 and librfio, libdpm or libshift
 #
 shiftold=""
 if test ! "x$enable_rfio" = "xno" ; then
@@ -2563,7 +2698,7 @@ if test ! "x$enable_rfio" = "xno" ; then
         fi
     fi
 
-    check_library "librfio libshift shiftmd shift" "$enable_shared" \
+    check_library "librfio libdpm libshift shiftmd shift" "$enable_shared" \
         "$shiftlibdir" \
         $RFIO $RFIO/lib /cern/pro/lib /cern/new/lib /cern/old/lib \
         /opt/shift/lib /usr/local/shift/lib /usr/lib/shift \
@@ -2577,19 +2712,12 @@ if test ! "x$enable_rfio" = "xno" ; then
         case $platform in
            linux)      shiftlib="$shiftlib -lnsl"
                 for i in "" -ladns ; do
-                    echo "extern rfio_fchmod(); int main() { rfio_fchmod(); return 0; }" > conftest.c
-                    logmsg " Checking if we can link against $shiflib"
-                    logmsg " gcc conftest.c $shiftlibdir $shiftlib $i -o conftest"
-                    gcc conftest.c $shiftlibdir $shiftlib $i -o conftest >> $logfile 2>&1
-                    if test $? -eq 0 ; then
+                    check_link "$shiftlib $i" $shiftlibdir rfio_fchmod
+                    if test $link_result -eq 1 ; then
                         shiftlib="$shiftlib $i" ;
                         break ;
-                    else
-                        logmsg " Failed program was:"
-                        cat conftest.c >> $logfile
                     fi
                 done
-                rm -f conftest.c conftest
                 ;;
            solaris)    shiftlib="$shiftlib -lposix4" ;;
            win32)      shiftincdir="$shiftincdir $shiftincdir/../win32"
@@ -2642,9 +2770,9 @@ if test ! "x$enable_castor" = "xno" ; then
         castorcflags=-DR__CASTOR2
         # check for Castor >= 2.1.0
         message "Checking for Castor version being >= 2.1.0"
-        castor_version=`grep "define BASEVERSION" $castorincdir/patchlevel.h | sed 's/^.*"\([0-9]\.[0-9]\.[0-9]\)"/\1/' | awk 'BEGIN { FS="." } { printf "%d", $1 * 1000000 + $2 * 1000 + $3}'`
+        castor_version=`grep "define BASEVERSION" $castorincdir/patchlevel.h | sed 's/^.*"\([0-9]\.[0-9]\.[0-9]*\)"/\1/' | awk 'BEGIN { FS="." } { printf "%d", $1 * 1000000 + $2 * 1000 + $3}'`
         if test $castor_version -lt 2001000; then
-            base_vers=`grep "define BASEVERSION" $castorincdir/patchlevel.h | sed 's/^.*"\([0-9]\.[0-9]\.[0-9]\)"/\1/' | awk '{ printf $1}'`
+            base_vers=`grep "define BASEVERSION" $castorincdir/patchlevel.h | sed 's/^.*"\([0-9]\.[0-9]\.[0-9]*\)"/\1/' | awk '{ printf $1}'`
             patch_level=`grep "define PATCHLEVEL" $castorincdir/patchlevel.h | awk '{ printf $3}'`
             result "no, $base_vers-$patch_level"
             castorincdir=""
@@ -2666,19 +2794,12 @@ if test ! "x$enable_castor" = "xno" ; then
         case $platform in
            linux)      castorlib="$castorlib -lnsl"
                 for i in "" -ladns ; do
-                    echo "extern rfio_fchmod(); int main() { rfio_fchmod(); return 0; }" > conftest.c
-                    logmsg " Checking if we can link against $castorlib"
-                    logmsg " gcc conftest.c $castorlibdir $castorlib $i -o conftest"
-                    gcc conftest.c $castorlibdir $castorlib $i -o conftest >> $logfile 2>&1
-                    if test $? -eq 0 ; then
+                    check_link "$shiftlib $i" $shiftlibdir rfio_fchmod
+                    if test $link_result -eq 1 ; then
                         castorlib="$castorlib $i" ;
                         break ;
-                    else
-                        logmsg " Failed program was:"
-                        cat conftest.c >> $logfile
                     fi
                 done
-                rm -f conftest.c conftest
                 ;;
            solaris)    castorlib="$castorlib -lposix4" ;;
            win32)      castorincdir="$castorincdir $castorincdir/../win32"
@@ -3048,44 +3169,19 @@ if test ! "x$enable_hdfs" = "xno" ; then
         enable_hdfs="no"
     else
         case $platform in
-           linux)
-                hdfslib="$hdfslib"
-                for i in "" -ladns ; do
-                    echo 'extern hdfsConnect(const char *, unsigned short); int main() { hdfsConnect("default", 0); return 0; }' > conftest.c
-                    logmsg " Checking if we can link against $hdfslib"
-                    logmsg " gcc conftest.c $hdfslibdir $hdfslib $i -o conftest"
-                    gcc conftest.c $hdfslibdir $hdfslib $i -o conftest >> $logfile 2>&1
-                    if test $? -eq 0 ; then
-                        hdfslib="$hdfslib $i" ;
-                        break ;
-                    else
-                        logmsg " Failed program was:"
-                        cat conftest.c >> $logfile
-                        enable_hdfs="no"
-                    fi
-                done
-                rm -f conftest.c conftest
+            linux)
+                check_link $hdfslib $hdfslibdir hdfsConnect
+                if test $link_result -eq 0 ; then
+                    enable_hdfs="no"
+                fi
 
-                jvmlib="$jvmlib"
-                for i in "" -ladns ; do
-                    echo '#include "jni.h"' > conftest.c
-                    echo 'int main() { JNI_CreateJavaVM(NULL, NULL, NULL); return 0; }' >> conftest.c
-                    logmsg " Checking if we can link against $jvmlib"
-                    logmsg " gcc conftest.c -I$jniincdir -I$jniincdir/linux $jvmlibdir $jvmlib $i -o conftest"
-                    gcc conftest.c -I$jniincdir -I$jniincdir/linux $jvmlibdir $jvmlib $i -o conftest >> $logfile 2>&1
-                    if test $? -eq 0 ; then
-                        jvmlib="$jvmlib $i" ;
-                        break ;
-                    else
-                        logmsg " Failed program was:"
-                        cat conftest.c >> $logfile
-                        enable_hdfs="no"
-                    fi
-                done
-                rm -f conftest.c conftest
+                check_link $jvmlib $jvmlibdir JNI_CreateJavaVM
+                if test $link_result -eq 0 ; then
+                    enable_hdfs="no"
+                fi
                 ;;
         esac
-        echo "HDFS disabled due to failed compile and link test!"
+        echo "HDFS disabled due to failed compile and link test"
     fi
 fi
 check_explicit "$enable_hdfs" "$enable_hdfs_explicit" \
@@ -3583,48 +3679,51 @@ if test "x$enable_xrootd" = "xyes" && test "x$externalxrd" = "xyes"; then
    fi
 
 else
-
-   # Xrootd and its client need thread support
-   if test "x$enable_thread" = "xyes"; then
-       # Ok, now check the architecture
-       case $arch in
-       # xrootd does not build on all platforms yet
-       linux*)
-           if test "x$enable_xrootd" = "x"; then
-               enable_xrootd="yes"
-           fi
-           ;;
-       macos*)
-           if test "x$enable_xrootd" = "x"; then
-               enable_xrootd="yes"
-           fi
-           ;;
-       solaris*)
-           if test "x$enable_xrootd" = "x"; then
-               enable_xrootd="yes"
-           fi
-           ;;
-       win32)
-           if test "x$enable_xrootd" = "x"; then
-               enable_xrootd="yes"
-           fi
-           ;;
-       *)
+   if test "x$enable_xrootd" = "x" && test "x$DEFAULTENABLE" = "xno"; then
+       enable_xrootd="no"
+   else
+       # Xrootd and its client need thread support
+       if test "x$enable_thread" = "xyes"; then
+           # Ok, now check the architecture
+           case $arch in
+           # xrootd does not build on all platforms yet
+           linux*)
+               if test "x$enable_xrootd" = "x"; then
+                   enable_xrootd="yes"
+               fi
+               ;;
+           macos*)
+               if test "x$enable_xrootd" = "x"; then
+                   enable_xrootd="yes"
+               fi
+               ;;
+           solaris*)
+               if test "x$enable_xrootd" = "x"; then
+                   enable_xrootd="yes"
+               fi
+               ;;
+           win32)
+               if test "x$enable_xrootd" = "x"; then
+                   enable_xrootd="yes"
+               fi
+               ;;
+           *)
+               if test "x$enable_xrootd" = "xyes"; then
+                   enable_xrootd="yes"
+                   xrdcomm=", but not officially supported"
+               else
+                   enable_xrootd="no"
+               fi
+               ;;
+           esac
+       else
            if test "x$enable_xrootd" = "xyes"; then
-               enable_xrootd="yes"
-               xrdcomm=", but not officially supported"
+               enable_xrootd="no"
+               xrdcomm=", needs thread support (make sure pthread lib is found)"
            else
                enable_xrootd="no"
            fi
-           ;;
-       esac
-   else
-      if test "x$enable_xrootd" = "xyes"; then
-         enable_xrootd="no"
-         xrdcomm=", needs thread support (make sure pthread lib is found)"
-      else
-         enable_xrootd="no"
-      fi
+       fi
    fi
 
    xrdcomm="$enable_xrootd$xrdcomm"
@@ -5931,7 +6030,7 @@ result "done"
 # etc/daemons/rootd.rc.d
 #
 message "Writing $ROOTDOUT"
-sed -e "s|@bindir@|$bindir|" \
+sed -e "s|@bindir@|$bindir2|" \
     < rootd.tmp > $ROOTDOUT
 chmod a+x $ROOTDOUT
 rm -f rootd.tmp
@@ -5941,8 +6040,8 @@ result "done"
 # etc/daemons/rootd.xinetd
 #
 message "Writing $ROOTDXINETDOUT"
-sed -e "s|@bindir@|$bindir|" \
-    -e "s|@prefix@|$prefix|" \
+sed -e "s|@bindir@|$bindir2|" \
+    -e "s|@prefix@|$prefix2|" \
     < rootd.xinetd.tmp > $ROOTDXINETDOUT
 rm -f rootd.xinetd.tmp
 result "done"
@@ -5951,7 +6050,7 @@ result "done"
 # etc/daemons/proofd.rc.d
 #
 message "Writing $PROOFDOUT"
-sed -e "s|@bindir@|$bindir|" \
+sed -e "s|@bindir@|$bindir2|" \
     < proofd.tmp > $PROOFDOUT
 chmod a+x $PROOFDOUT
 rm -f proofd.tmp
@@ -5961,17 +6060,37 @@ result "done"
 # etc/daemons/proofd.xinetd
 #
 message "Writing $PROOFDXINETDOUT"
-sed -e "s|@bindir@|$bindir|" \
-    -e "s|@prefix@|$prefix|" \
+sed -e "s|@bindir@|$bindir2|" \
+    -e "s|@prefix@|$prefix2|" \
     < proofd.xinetd.tmp > $PROOFDXINETDOUT
 rm -f proofd.xinetd.tmp
+result "done"
+
+#---------------------------------------------------------------------
+# main/src/proofserv.sh
+#
+message "Writing $PROOFSERVOUT"
+sed -e "s|@bindir@|$bindir2|" \
+    < proofserv.tmp > $PROOFSERVOUT
+chmod a+x $PROOFSERVOUT
+rm -f proofserv.tmp
+result "done"
+
+#---------------------------------------------------------------------
+# main/src/roots.sh
+#
+message "Writing $ROOTSOUT"
+sed -e "s|@bindir@|$bindir2|" \
+    < roots.tmp > $ROOTSOUT
+chmod a+x $ROOTSOUT
+rm -f roots.tmp
 result "done"
 
 #---------------------------------------------------------------------
 # etc/daemons/xrootd.rc.d
 #
 message "Writing $XROOTDOUT"
-sed -e "s|@bindir@|$bindir|" \
+sed -e "s|@bindir@|$bindir2|" \
     < xrootd.tmp > $XROOTDOUT
 chmod a+x $XROOTDOUT
 rm -f xrootd.tmp
@@ -5981,10 +6100,20 @@ result "done"
 # etc/daemons/olbd.rc.d
 #
 message "Writing $OLBDOUT"
-sed -e "s|@bindir@|$bindir|" \
+sed -e "s|@bindir@|$bindir2|" \
     < olbd.tmp > $OLBDOUT
 chmod a+x $OLBDOUT
 rm -f olbd.tmp
+result "done"
+
+#---------------------------------------------------------------------
+# etc/daemons/cmsd.rc.d
+#
+message "Writing $CMSDOUT"
+sed -e "s|@bindir@|$bindir2|" \
+    < cmsd.tmp > $CMSDOUT
+chmod a+x $CMSDOUT
+rm -f cmsd.tmp
 result "done"
 
 #---------------------------------------------------------------------

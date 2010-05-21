@@ -142,29 +142,29 @@ void TDataSetManagerFile::Init()
       // Read locking path from kDataSet_LockLocation
       TString lockloc = TString::Format("%s/%s", fDataSetDir.Data(), kDataSet_LockLocation);
       if (!gSystem->AccessPathName(lockloc, kReadPermission)) {
-         TString lockloctmp;
-         const char *fnloc = 0;
-         if (fIsRemote) {
-            lockloctmp.Form("%s-%s", fDataSetDir.Data() , kDataSet_LockLocation);
-            lockloctmp.ReplaceAll("/","%");
-            lockloctmp.ReplaceAll(":","%");
-            lockloctmp.Insert(0, TString::Format("%s/", gSystem->TempDirectory()));
-            if (!gSystem->AccessPathName(lockloctmp)) gSystem->Unlink(lockloctmp);
-            if (!TFile::Cp(lockloc, lockloctmp, kFALSE)) {
-               Error("Init", "could not retrieve file (%s) with info about the lock path", lockloc.Data());
-               SetBit(TObject::kInvalidObject);
-               return;
+         // Open the file in RAW mode
+         lockloc += "?filetype=raw";
+         TFile *f = TFile::Open(lockloc);
+         if (f && !(f->IsZombie())) {
+            const Int_t blen = 8192;
+            char buf[blen];
+            Long64_t rest = f->GetSize();
+            while (rest > 0) {
+               Long64_t len = (rest > blen - 1) ? blen - 1 : rest;
+               if (f->ReadBuffer(buf, len)) {
+                  fDataSetLockFile = "";
+                  break;
+               }
+               buf[len] = '\0';
+               fDataSetLockFile += buf;
+               rest -= len;
             }
-            fnloc = lockloctmp.Data();
+            f->Close();
+            SafeDelete(f);
+            fDataSetLockFile.ReplaceAll("\n","");
          } else {
-            fnloc = lockloc.Data();
-         }
-         fstream infile(fnloc, std::ios::in);
-         if (infile.is_open()) {
-            fDataSetLockFile.ReadToken(infile);
-            infile.close();
-         } else {
-            Warning("Init", "could not open remore file '%s' with the lock location", fnloc);
+            lockloc.ReplaceAll("?filetype=raw", "");
+            Warning("Init", "could not open remore file '%s' with the lock location", lockloc.Data());
          }
       }
       if (fDataSetLockFile.IsNull()) {
@@ -189,11 +189,13 @@ void TDataSetManagerFile::Init()
    fLockFileTimeLimit = 120;
 
    // Default validity of the cache
-   fCacheUpdatePeriod = gEnv->GetValue("ProofDataSet.CacheUpdatePeriod", 600);
+   fCacheUpdatePeriod = gEnv->GetValue("ProofDataSet.CacheUpdatePeriod", 0);
 
    // If the MSS url was not given, check if one is defined via env
    if (fMSSUrl.IsNull())
       fMSSUrl = gEnv->GetValue("ProofDataSet.MSSUrl", "");
+   // Default highest priority for xrd-backends
+   fStageOpts = gEnv->GetValue("DataSet.StageOpts", "p=3");
 
    // File to check updates and its locking path
    fListFile.Form("%s/%s", fDataSetDir.Data(), kDataSet_DataSetList);
@@ -718,8 +720,8 @@ TMap *TDataSetManagerFile::GetDataSets(const char *group, const char *user,
    Bool_t listing = (option & kList) ? kTRUE : kFALSE;
 
    // The last three options are mutually exclusive
-   if (((Int_t)printing + (Int_t)exporting + (Int_t)updating + (Int_t)refreshingls + (Int_t)listing) > 1) {
-      Error("GetDataSets", "only one of '?P', '?Q', '?E', '?R' or '?L' can be specified at once");
+   if (((Int_t)printing + (Int_t)exporting + (Int_t)updating + (Int_t)listing) > 1) {
+      Error("GetDataSets", "only one of '?P', '?Q', '?E' or '?L' can be specified at once");
       return 0;
    }
 
@@ -1216,9 +1218,10 @@ Int_t TDataSetManagerFile::ClearCache(const char *uri)
          // Remove leading '/'
          if (u(0) == '/') u.Remove(0,1);
          // Change '/' to '%'
-         u.ReplaceAll("/", "%");
+         u.ReplaceAll("/", ".");
          // Init the regular expression
-         re = new TRegexp(u.Data(), u.Contains("*"));
+         u.ReplaceAll("*", ".*");
+         re = new TRegexp(u.Data());
       }
    }
 
@@ -1281,9 +1284,10 @@ Int_t TDataSetManagerFile::ShowCache(const char *uri)
          // Remove leading '/'
          if (u(0) == '/') u.Remove(0,1);
          // Change '/' to '%'
-         u.ReplaceAll("/", "%");
+         u.ReplaceAll("/", ".");
          // Init the regular expression
-         re = new TRegexp(u.Data(), u.Contains("*"));
+         u.ReplaceAll("*", ".*");
+         re = new TRegexp(u.Data());
       }
    }
 
@@ -1612,7 +1616,7 @@ Int_t TDataSetManagerFile::RegisterDataSet(const char *uri,
    if (opt.Contains("V", TString::kIgnoreCase)) {
       if (TestBit(TDataSetManager::kAllowVerify)) {
          // Reopen files and notify
-         if (TDataSetManager::ScanDataSet(dataSet, 1, kTRUE ) < 0) {
+         if (TDataSetManager::ScanDataSet(dataSet, 1, 0, 0, kTRUE ) < 0) {
             Error("RegisterDataSet", "problems verifying the dataset");
             return -1;
          }
@@ -1679,7 +1683,7 @@ Int_t TDataSetManagerFile::ScanDataSet(const char *uri, UInt_t opt)
       if (TestBit(TDataSetManager::kAllowVerify)) {
          if (ParseUri(uri, 0, 0, &dsName, 0, kTRUE, kTRUE)) {
             if (!(dsName.Contains("*"))) {
-               if (ScanDataSet(fGroup, fUser, dsName, (UInt_t)(kReopen | kDebug)) > 0)
+               if (ScanDataSet(fGroup, fUser, dsName, opt) > 0)
                   return GetNDisapparedFiles();
             } else {
                TString luri = TString::Format("/%s/%s/%s", fGroup.Data(), fUser.Data(), dsName.Data());
@@ -1693,7 +1697,7 @@ Int_t TDataSetManagerFile::ScanDataSet(const char *uri, UInt_t opt)
                   if (!(d->GetString().IsNull())) {
                      TString dsn(d->GetName());
                      if (dsn.Contains("/")) dsn.Remove(0, dsn.Last('/') + 1);
-                     if (ScanDataSet(fGroup, fUser, dsn, (UInt_t)(kReopen | kDebug)) > 0) {
+                     if (ScanDataSet(fGroup, fUser, dsn, opt) > 0) {
                         ndisappeared += GetNDisapparedFiles();
                      } else {
                         Warning("ScanDataSet", "problems processing dataset: %s", d->GetName());
@@ -1724,15 +1728,42 @@ Int_t TDataSetManagerFile::ScanDataSet(const char *group, const char *user,
    if (!dataset)
       return -1;
 
-   // Scan controllers
-   Int_t fopenopt = 0;
-   if ((option & kReopen)) fopenopt++;
-   if ((option & kTouch)) fopenopt++;
-   Bool_t notify = ((option & kDebug)) ? kTRUE : kFALSE;
+   // File selection
+   Int_t fopt = ((option & kAllFiles)) ? -1 : 0;
+   if (fopt >= 0) {
+      if ((option & kStagedFiles)) {
+         fopt = 10;
+      } else {
+         if ((option & kReopen)) fopt++;
+         if ((option & kTouch)) fopt++;
+      }
+      if ((option & kNoStagedCheck)) fopt += 100;
+   } else {
+      if ((option & kStagedFiles) || (option & kReopen) || (option & kTouch)) {
+         Warning("ScanDataSet", "kAllFiles mode: ignoring kStagedFiles or kReopen"
+                                " or kTouch requests");
+      }
+      if ((option & kNoStagedCheck)) fopt -= 100;
+   }
+
+   // Type of action
+   Int_t sopt = ((option & kNoAction)) ? -1 : 0;
+   if (sopt >= 0) {
+      if ((option & kLocateOnly) && (option & kStageOnly)) {
+         Error("ScanDataSet", "kLocateOnly and kStageOnly cannot be processed concurrently");
+         return -1;
+      }
+      if ((option & kLocateOnly)) sopt = 1;
+      if ((option & kStageOnly)) sopt = 2;
+   } else if ((option & kLocateOnly) || (option & kStageOnly)) {
+      Warning("ScanDataSet", "kNoAction mode: ignoring kLocateOnly or kStageOnly requests");
+   }
+
+   Bool_t dbg = ((option & kDebug)) ? kTRUE : kFALSE;
    // Do the scan
-   Int_t result = TDataSetManager::ScanDataSet(dataset, fopenopt,
-                                   notify, 0, (TList *)0, fAvgFileSize, fMSSUrl.Data(), -1,
-                                   &fNTouchedFiles, &fNOpenedFiles, &fNDisappearedFiles);
+   Int_t result = TDataSetManager::ScanDataSet(dataset, fopt, sopt, 0, dbg,
+                                   &fNTouchedFiles, &fNOpenedFiles, &fNDisappearedFiles,
+                                   (TList *)0, fAvgFileSize, fMSSUrl.Data(), -1, fStageOpts.Data());
    if (result == 2) {
       if (WriteDataSet(group, user, dsName, dataset) == 0) {
          delete dataset;
@@ -1776,16 +1807,19 @@ TMap *TDataSetManagerFile::GetDataSets(const char *uri, UInt_t option)
 }
 
 //______________________________________________________________________________
-TFileCollection *TDataSetManagerFile::GetDataSet(const char *uri, const char *srv)
+TFileCollection *TDataSetManagerFile::GetDataSet(const char *uri, const char *opts)
 {
    // Utility function used in various methods for user dataset upload.
 
-   TString dsUser, dsGroup, dsName;
+   TString dsUser, dsGroup, dsName, ss(opts);
 
    TFileCollection *fc = 0;
    if (!strchr(uri, '*')) {
       if (!ParseUri(uri, &dsGroup, &dsUser, &dsName)) return fc;
-      fc = GetDataSet(dsGroup, dsUser, dsName);
+      UInt_t opt = (ss.Contains("S:") || ss.Contains("short:")) ? kReadShort : 0;
+      ss.ReplaceAll("S:","");
+      ss.ReplaceAll("short:","");
+      fc = GetDataSet(dsGroup, dsUser, dsName, opt);
    } else {
       TMap *fcs = GetDataSets(uri);
       if (!fcs) return fc;
@@ -1804,10 +1838,10 @@ TFileCollection *TDataSetManagerFile::GetDataSet(const char *uri, const char *sr
       }
    }
 
-   if (fc && srv && strlen(srv) > 0) {
+   if (fc && !ss.IsNull()) {
       // Build up the subset
       TFileCollection *sfc = 0;
-      TString ss(srv), s;
+      TString s;
       Int_t from = 0;
       while (ss.Tokenize(s, from, ",")) {
          TFileCollection *xfc = fc->GetFilesOnServer(s.Data());
