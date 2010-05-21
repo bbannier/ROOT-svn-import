@@ -678,6 +678,7 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
    Bool_t parenthese;
    TString s,chaine_error,chaine1ST;
    TString s1,s2,s3,ctemp;
+   
    TString chaine = schain;
    TFormula *oldformula;
    Int_t modulo,plus,puiss10,puiss10bis,moins,multi,divi,puiss,et,ou,petit,grand,egal,diff,peteg,grdeg,etx,oux,rshift,lshift,tercond,terelse;
@@ -865,7 +866,7 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
             // Expression executed if condition is true.
             ctemp = chaine(tercond,terelse-tercond-1);
             Analyze(ctemp.Data(),err,offset); if (err) return;
-            actionParam = fNoper;
+            actionParam = fNoper; // We want to skip the next instruction ('else jump'), so we set the param to the current cursor and the next instruction will be skip by the ++i in the eval loop
             SetAction(optloc, actionCode, actionParam);
 
             fExpr[fNoper] = "?: else jump";
@@ -879,7 +880,7 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
             ctemp = chaine(terelse,lchain-terelse);
             Analyze(ctemp.Data(),err,offset); if (err) return;
             // Set jump target.
-            actionParam = fNoper;
+            actionParam = fNoper - 1; // We need to not skip the next instruction, so we compensate for the ++i in the eval loop 
             SetAction(optloc, actionCode, actionParam);
             
             if (IsString(optloc-1) != IsString(fNoper-1)) {
@@ -1314,7 +1315,9 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
                      oldformula = (TFormula*)gROOT->GetListOfFunctions()->FindObject((const char*)chaine);
                      if (oldformula && strcmp(schain,oldformula->GetTitle())) {
                         Int_t nprior = fNpar;
-                        Analyze(oldformula->GetExpFormula(),err,fNpar); if (err) return; // changes fNpar
+                        Analyze(oldformula->GetExpFormula(),err,fNpar);
+                         
+                        if (err) return; // changes fNpar
                         fNpar = nprior;
                         find=1;
                         if (!err) {
@@ -1331,7 +1334,7 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
 //*-*- Note that DefinedVariable can be overloaded
                      ctemp = chaine;
                      ctemp.ReplaceAll(escapedSlash, slash);
-                     Int_t action;
+                     Int_t action;                     
                      k = DefinedVariable(ctemp,action);
                      if (k==-3) {
                         // Error message already issued
@@ -3015,7 +3018,7 @@ TString TFormula::GetExpFormula(Option_t *option) const
 
          //Basic operators (+,-,*,/,==,^,etc)
          if(((optype>0 && optype<6) || optype==20 ||
-             (optype>59 && optype<82)) && spos>=2) {
+             (((optype>59 && optype<69) || (optype >75 && optype<82)) && spos>=2))) {
              // if(optype==-20 && spos>=2){
             if(ismulti[spos-2]){
                tab[spos-2]="("+tab[spos-2]+")";
@@ -3044,7 +3047,7 @@ TString TFormula::GetExpFormula(Option_t *option) const
             } else {
                tab[spos-2]=tab[spos-2]+tab[spos-1]+":";
             }
-            ternaryend = GetActionParam(i);
+            ternaryend = GetActionParam(i) + 1;
             spos--;
             continue;
          }

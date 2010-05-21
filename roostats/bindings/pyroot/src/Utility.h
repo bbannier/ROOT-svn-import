@@ -101,8 +101,7 @@ namespace PyROOT {
       };
 
    // data/operator mappings
-      typedef std::map< std::string, std::string > TC2POperatorMapping_t;
-      R__EXTERN TC2POperatorMapping_t gC2POperatorMapping;
+      std::string MapOperatorName( const std::string& name, Bool_t bTakesParames );
 
    // meta information
       EDataType EffectiveType( const std::string& name );
@@ -114,7 +113,8 @@ namespace PyROOT {
 
    // install a python function with CINT; returns identifier
       Long_t InstallMethod( Cint::G__ClassInfo* scope, PyObject* callback,
-         const std::string& mtName, const char* signature, void* func, Int_t npar = 0, Long_t extra = 0 );
+         const std::string& mtName, const char* rtype, const char* signature,
+         void* func, Int_t npar = 0, Long_t extra = 0 );
 
       PyObject* GetInstalledMethod( int tagnum, Long_t* extra = 0 );
 

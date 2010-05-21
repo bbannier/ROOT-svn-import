@@ -696,6 +696,7 @@ void G__smart_unload(int ifn)
   }
 
   /* disable file entry */
+  ++G__srcfile_serial;
   for(nfile=dictpos->nfile;nfile<hasonlyfunc->nfile;nfile++) {
     G__srcfile[nfile].hash = 0;
     G__srcfile[nfile].filename[0] = 0;
@@ -2259,6 +2260,7 @@ int G__loadfile(const char *filenamein)
       G__ifile.fp=(FILE*)NULL;
     }
     G__srcfile[fentry].fp=(FILE*)NULL;
+    G__ifile.line_number = -1;
     std::list<G__DLLINIT>* store_initpermanentsl = 0;
     if (G__initpermanentsl && !G__initpermanentsl->empty()) {
        store_initpermanentsl = G__initpermanentsl;
@@ -2940,6 +2942,14 @@ void G__openmfp()
     G__mfp=fopen(G__mfpname,"wb+");
   } while((FILE*)NULL==G__mfp && G__setTMPDIR(G__mfpname));
 #endif
+}
+
+namespace {
+   static struct G__MfpCloser {
+      ~G__MfpCloser() {
+         G__closemfp();
+      }
+   } sMfpCloser;
 }
 
 /**************************************************************************

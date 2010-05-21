@@ -172,6 +172,42 @@ picture.
 }
 </PRE>
 
+<H2>Making several pictures in the same Postscript file: case 3</H2>
+<b>This is the recommended way</b>. If the Postscript file name finishes with
+"(", the file remains opened (it is not closed). If the Postscript file name
+finishes with ")" and the file has been opened with "(", the file is closed.
+<P>Example:
+<PRE>
+{
+   TCanvas c1("c1");
+   h1.Draw();
+   c1.Print("c1.ps(");  // write canvas and keep the ps file open
+   h2.Draw();
+   c1.Print("c1.ps");   // canvas is added to "c1.ps"
+   h3.Draw();
+   c1.Print("c1.ps)");  // canvas is added to "c1.ps" and ps file is closed
+}
+</PRE>
+The <tt>TCanvas::Print("file.ps(")</tt> mechanism is very useful, but it can
+be a little inconvenient to have the action of opening/closing a file being
+atomic with printing a page. Particularly if pages are being generated in some
+loop one needs to detect the special cases of first and last page and then
+munge the argument to Print() accordingly.
+<BR>The "[" and "]" can be used instead of "(" and ")" as shown below.
+<P>Example:
+<PRE>
+   c1.Print("file.ps[");        // No actual print, just open file.ps
+
+   for (int i=0; i<10; ++i) {
+      // fill canvas for context i
+      // ...
+
+      c1.Print("file.ps");      // Actually print canvas to the file
+   }
+
+   c1.Print("file.ps]");        // No actual print, just close the file
+</PRE>
+
 <H2>Color Model</H2>
 TPostScript support two color model RGB and CMYK. CMY and CMYK models are
 subtractive color models unlike RGB which is an additive. They are mainly
@@ -402,6 +438,7 @@ void TPostScript::Close(Option_t *)
    if( fMode != 3) {
       SaveRestore(-1);
       if( fPrinted ) { PrintStr("showpage@"); SaveRestore(-1);}
+      PrintStr("@");
       PrintStr("%%Trailer@");
       PrintStr("%%Pages: ");
       WriteInteger(fNpages);
@@ -413,6 +450,7 @@ void TPostScript::Close(Option_t *)
       PrintStr("showpage@");
       PrintStr("end@");
    }
+   PrintStr("@");
    PrintStr("%%EOF@");
 
    // Close file stream
@@ -1686,10 +1724,12 @@ void TPostScript::Initialize()
    }
 
    PrintFast(15," .25 .25 scale ");
-   if (fMode != 3) SaveRestore(1);
-
-   if (fMode != 3) PrintStr("%%Page: 1 1@");
-   if (fMode != 3) SaveRestore(1);  //required
+   if (fMode != 3) {
+      SaveRestore(1);
+      PrintStr("@");
+      PrintStr("%%Page: 1 1@");
+      SaveRestore(1);
+   }
 
    //Check is user has defined a special header in the current style
    Int_t nh = strlen(gStyle->GetHeaderPS());
@@ -2365,16 +2405,39 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
 
    UInt_t w,w0;
    Bool_t kerning;
+   // In order to measure the precise character positions we need to trick
+   // FreeType into rendering high-resolution characters otherwise it will
+   // stick to the screen pixel grid, which is far worse than we can achieve
+   // on print.
+   const Float_t scale = 16.0;
+   // Save current text attributes.
+   TText saveAttText;
+   saveAttText.TAttText::operator=(*this);
+   const Int_t len=strlen(chars);
+   Int_t *charWidthsCumul = 0;
    TText t;
-   t.SetTextSize(fTextSize);
+   t.SetTextSize(fTextSize * scale);
    t.SetTextFont(fTextFont);
    t.GetTextAdvance(w, chars);
    t.GetTextAdvance(w0, chars, kFALSE);
-   if (w0-w>0) kerning = kTRUE;
+   t.TAttText::Modify();
+   if (w0-w != 0) kerning = kTRUE;
    else        kerning = kFALSE;
+   if (kerning) {
+      // Calculate the individual character placements.
+      charWidthsCumul = new Int_t[len];
+      for (Int_t i = len - 1;i >= 0;i--) {
+         UInt_t ww;
+         t.GetTextAdvance(ww, chars + i);
+         Double_t wwl = (gPad->AbsPixeltoX(ww)-gPad->AbsPixeltoX(0));
+         charWidthsCumul[i] = (Int_t)((XtoPS(wwl) - XtoPS(0)) / scale);
+      }
+   }
+   // Restore text attributes.
+   saveAttText.TAttText::Modify();
 
    Double_t charsLength = gPad->AbsPixeltoX(w)-gPad->AbsPixeltoX(0);
-   Int_t psCharsLength = XtoPS(charsLength)-XtoPS(0);
+   Int_t psCharsLength = (Int_t)((XtoPS(charsLength)-XtoPS(0)) / scale);
 
    // Text angle.
    Int_t psangle = Int_t(0.5 + fTextAngle);
@@ -2395,8 +2458,8 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
    PrintStr(" C");
 
    // Output text position and angle.
-   WriteInteger(XtoPS(x));
-   WriteInteger(YtoPS(y));
+   WriteReal(((XtoPS(x * scale) - XtoPS(0)) / scale) + XtoPS(0));
+   WriteReal(((YtoPS(y * scale) - YtoPS(0)) / scale) + YtoPS(0));
    PrintStr(Form(" t %d r ", psangle));
    if(txalh == 2) PrintStr(Form(" %d 0 t ", -psCharsLength/2));
    if(txalh == 3) PrintStr(Form(" %d 0 t ", -psCharsLength));
@@ -2407,19 +2470,8 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
      PrintStr(Form(" findfont %g sf 0 0 m ita ",fontsize));
    }
 
-   Int_t len=strlen(chars);
-
    if (kerning) {
-      // Calculate the individual character placements.
       PrintStr("@");
-      Int_t *charWidthsCumul = new Int_t[len];
-      for (Int_t i = len - 1;i >= 0;i--) {
-         UInt_t ww;
-         t.GetTextAdvance(ww, chars + i);
-         Double_t wwl = gPad->AbsPixeltoX(ww)-gPad->AbsPixeltoX(0);
-         charWidthsCumul[i] = XtoPS(wwl) - XtoPS(0);
-      }
-
       // Output individual character placements
       for (Int_t i = len-1; i >= 1; i--) {
          WriteInteger(charWidthsCumul[0] - charWidthsCumul[i]);
@@ -2430,10 +2482,15 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
 
    // Output text.
    PrintStr("(");
+
+   // Inside a PostScript string, the new line (if needed to break up long lines) must be escaped by a backslash.
+   const char *crsave = fImplicitCREsc;
+   fImplicitCREsc = "\\";
+
    char str[8];
    for (Int_t i=0; i<len;i++) {
       if (chars[i]!='\n') {
-         if (chars[i]=='(' || chars[i]==')') {
+         if (chars[i]=='(' || chars[i]==')' || chars[i]=='\\') {
             sprintf(str,"\\%c",chars[i]);
             PrintStr(str);
          } else if ((chars[i]=='-') && (font != 12)) {
@@ -2444,13 +2501,15 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
          }
       }
    }
+   PrintStr(")");
+   fImplicitCREsc = crsave;
 
    if (kerning) {
-      if (font != 15) PrintStr(") K NC");
-      else            PrintStr(") K gr NC");
+      if (font != 15) PrintStr(" K NC");
+      else            PrintStr(" K gr NC");
    } else {
-      if (font != 15) PrintStr(") show NC");
-      else            PrintStr(") show gr NC");
+      if (font != 15) PrintStr(" show NC");
+      else            PrintStr(" show gr NC");
    }
 
    SaveRestore(-1);

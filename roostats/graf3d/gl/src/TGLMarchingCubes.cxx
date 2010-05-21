@@ -1,3 +1,14 @@
+// @(#)root/gl:$Id$
+// Author:  Timur Pocheptsov  06/01/2009
+
+/*************************************************************************
+ * Copyright (C) 1995-2009, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #include <algorithm>
 #include <cmath>
 
@@ -49,16 +60,6 @@ enum ECubeBitMasks {
    k0_1_2_3_7_8_11 = k0 | k1 | k2 | k3 | k7 | k8 | k11,
    k6_7            = k6 | k7
 };
-
-//_________________________________________________________________
-template<class E, class V>
-V GetOffset(E val1, E val2, V iso)
-{
-   const V delta = val2 - val1;
-   if (!delta)
-      return 0.5f;
-   return (iso - val1) / delta;
-}
 
 //______________________________________________________________________
 template<class E, class V>
