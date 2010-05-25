@@ -35,6 +35,7 @@
 #include "RooRealVar.h"
 #include "RooRandom.h"
 #include "RooMath.h"
+#include "TMath.h"
 
 #include <Math/SpecFuncMathCore.h>
 #include <Math/PdfFuncMathCore.h>
@@ -68,9 +69,14 @@ RooLognormal::RooLognormal(const RooLognormal& other, const char* name) :
 //_____________________________________________________________________________
 Double_t RooLognormal::evaluate() const
 {
+  // ln(k)<1 would correspond to sigma < 0 in the parametrization
+  // resulting by transforming a normal random variable in its
+  // standard parametrization to a lognormal random variable
+  // => treat ln(k) as -ln(k) for k<1
+
   Double_t xv = x;
-  Double_t ln_k = log(k);
-  Double_t ln_m0 = log(m0);
+  Double_t ln_k = TMath::Abs(TMath::Log(k));
+  Double_t ln_m0 = TMath::Log(m0);
   Double_t x0 = 0;
 
   Double_t ret = ROOT::Math::lognormal_pdf(xv,ln_m0,ln_k,x0);
@@ -82,7 +88,7 @@ Double_t RooLognormal::evaluate() const
 //_____________________________________________________________________________
 Int_t RooLognormal::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* /*rangeName*/) const 
 {
-  //  if (matchArgs(allVars,analVars,x)) return 1 ;
+  if (matchArgs(allVars,analVars,x)) return 1 ;
   return 0 ;
 }
 
@@ -93,17 +99,12 @@ Double_t RooLognormal::analyticalIntegral(Int_t code, const char* rangeName) con
 {
   assert(code==1) ;
 
-  /*
   static const Double_t root2 = sqrt(2.) ;
-  static const Double_t rootPiBy2 = sqrt(atan2(0.0,-1.0)/2.0);
-  
-  Double_t xscale = root2*k;
-  Double_t ret = rootPiBy2*k*(RooMath::erf((x.max(rangeName)-m0)/xscale)-RooMath::erf((x.min(rangeName)-m0)/xscale));
 
-  //cout << "Int_gauss_dx(m0=" << m0 << ",k=" << k << ", xmin=" << x.min(rangeName) << ", xmax=" << x.max(rangeName) << ")=" << ret << endl ;
+  Double_t ln_k = TMath::Abs(TMath::Log(k));
+  Double_t ret = 0.5*( RooMath::erf( TMath::Log(x.max(rangeName)/m0)/(root2*ln_k) ) - RooMath::erf( TMath::Log(x.min(rangeName)/m0)/(root2*ln_k) ) ) ;
+
   return ret ;
-  */
-  return 1;
 }
 
 
@@ -112,7 +113,7 @@ Double_t RooLognormal::analyticalIntegral(Int_t code, const char* rangeName) con
 //_____________________________________________________________________________
 Int_t RooLognormal::getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t /*staticInitOK*/) const
 {
-  //if (matchArgs(directVars,generateVars,x)) return 1 ;  
+  if (matchArgs(directVars,generateVars,x)) return 1 ;  
   return 0 ;
 }
 
@@ -122,16 +123,16 @@ Int_t RooLognormal::getGenerator(const RooArgSet& directVars, RooArgSet &generat
 void RooLognormal::generateEvent(Int_t code)
 {
   assert(code==1) ;
-  /*
+
   Double_t xgen ;
   while(1) {    
-    xgen = RooRandom::randomGenerator()->Gaus(m0,k);
+    xgen = TMath::Exp(RooRandom::randomGenerator()->Gaus(TMath::Log(m0),TMath::Log(k)));
     if (xgen<x.max() && xgen>x.min()) {
       x = xgen ;
       break;
     }
   }
-  */
+
   return;
 }
 
