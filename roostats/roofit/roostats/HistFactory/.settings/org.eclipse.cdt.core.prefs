@@ -1,3 +1,0 @@
-#Thu Nov 12 12:20:36 EST 2009
-eclipse.preferences.version=1
-environment/project/cdt.managedbuild.toolchain.gnu.macosx.base.1509385892=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<environment append\="true" appendContributed\="true">\n<variable delimiter\=";" name\="PATH" operation\="replace" value\="/Applications/ROOT_versions/root_5.25.02/bin"/>\n</environment>\n
