@@ -82,12 +82,33 @@ FeldmanCousins::FeldmanCousins() :
 }
 
 //_______________________________________________________
+FeldmanCousins::FeldmanCousins(RooAbsData& data, ModelConfig& model) : 
+  fPdf(model.GetPdf()),
+  fData(&data),
+   fTestStatSampler(0),
+   fPointsToTest(0),
+   fAdaptiveSampling(false), 
+   fNbins(10), 
+   fFluctuateData(true),
+   fDoProfileConstruction(true),
+   fSaveBeltToFile(false),
+   fCreateBelt(false)
+{
+   // standard constructor
+   fPOI.removeAll();
+   fNuisParams.removeAll();
+   if (model.GetParametersOfInterest() ) fPOI.add(*model.GetParametersOfInterest());
+   if (model.GetNuisanceParameters() )   fNuisParams.add(*model.GetNuisanceParameters());
+}
+
+//_______________________________________________________
 FeldmanCousins::~FeldmanCousins() {
    // destructor
    //if(fOwnsWorkspace && fWS) delete fWS;
   if(fPointsToTest) delete fPointsToTest;
   if(fTestStatSampler) delete fTestStatSampler;
 }
+
 
 //_______________________________________________________
 void FeldmanCousins::SetModel(const ModelConfig & model) { 
