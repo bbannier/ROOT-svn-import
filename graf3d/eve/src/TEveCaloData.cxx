@@ -151,7 +151,7 @@ TString TEveCaloData::GetHighlightTooltip()
       
       s += TString::Format("%s %.2f (%.3f, %.3f)", 
                            fSliceInfos[i->fSlice].fName.Data(), cellData.fValue,
-                           cellData.fEtaMin, cellData.fEtaMax, cellData.fPhiMin, cellData.fPhiMax);
+                           cellData.Eta(), cellData.Phi());
 
       if (single) return s;
       s += "\n";
