@@ -124,7 +124,7 @@ One of the major goals of RooStats is to provide a unified framework for differe
 \begin{description}
  \item[Classical / Frequentist] This ``school'' of statistics restricts itself to making statements of the form ``probability of the data given the hypothesis''.  The definition of probability in this context is based on a limit of frequencies of various outcomes.  In that sense it is objective.
  \item[Bayesian] This ``school'' of statistics allows one to make statements of the form "probability of the hypothesis given the data", which requires a prior probability of the hypothesis.  Often the definition of probability in this context is a ``degree of belief''.  
- \item[Likelihood-based] This intermediate approach does not require a prior for the hypothesis, but also is not guaranteed to poses the properties that frequentists methods aim to achieve (or achieve by construction).  These approaches do ``obey the likelihood principle'' (as do Bayesian methods), while frequentist methods do not. 
+ \item[Likelihood-based] This intermediate approach also uses a frequentist notion of probability (ie. does not require a prior for the hypothesis), but also is not guaranteed to poses the properties (ie. coverage) that frequentists methods aim to achieve (or achieve by construction).  These approaches do ``obey the likelihood principle'' (as do Bayesian methods), while frequentist methods do not. 
 \end{description}
 The developers of RooStats appreciate that there are many different approaches to answering the same types of problems.  There are pros and cons of various techniques, and we aim to provide a framework which can accommodate any of them.
 
@@ -142,13 +142,13 @@ One of the first steps in any statistical analysis is to carefully pose the ques
  \item[Confidence intervals] Find a region in the parameter space that is consistent with the data.  In the frequentist setting, one desires for this interval or region to `cover' the true parameter point with a specified probability (or confidence).  In the Bayesian setting, one wishes for the interval or region to contain some fixed amount of the posterior probability.
  \item[Goodness of Fit] Quantify how well a model fits the data, without reference to an alternative.
 \end{description}
-RooStats provides tools for each of these broad class of questions in addition to some miscellaneous utilities.  The design of the software is explicitly organized around these broad classes of questions: for instance the interface \texttt{IntervalCalculator} is common to all tools that produce \texttt{ConfidenceInterval}s. 
+RooStats provides tools for each of these broad class of questions in addition to some miscellaneous utilities.  The design of the software is explicitly organized around these broad classes of questions: for instance the interface \textbf{IntervalCalculator} is common to all tools that produce \textbf{ConfidenceInterval}s. 
 
 {\flushleft \textbf{Combining Results \& Digital Publishing}}
 
 Combining results from multiple experiments in order to enhance sensitivity of a measurement or improve the power of a hypothesis test is common.  The challenge of combining results is primarily logistical, since a proper combination requires low-level information from each experiment be brought together to form one large statistical test. Again, this is hindered by the fact that the ingredients to the combination are heterogeneous (eg. different formats, technologies, and conventions).  
 
-The major advancement that was made by the RooStats project is the concept of the \textit{workspace}.   The power of the workspace is that it allows one to save data and an arbitrarily complicated model to disk in a ROOT file.  These files can then be shared or archived, and they provide all the low-level ingredients necessary for a proper combination in a unified framework.   The \texttt{ RooWorkspace} provides this low-level functionality, thus it is technically part of RooFit (along with its documentation and several tutorial macros).
+The major advancement that was made by the RooStats project is the concept of the \textit{workspace}.   The power of the workspace is that it allows one to save data and an arbitrarily complicated model to disk in a ROOT file.  These files can then be shared or archived, and they provide all the low-level ingredients necessary for a proper combination in a unified framework.   The \textbf{ RooWorkspace} provides this low-level functionality, thus it is technically part of RooFit (along with its documentation and several tutorial macros).
 
 This form of digital publishing has great potential, consider a few examples: It allows for one to publish likelihood functions in $n$-dimensions instead of resorting to 2-dimensional contours.  It allows for one to interface the likelihood function to even higher-level software packages (eg. extraction of fundamental lagrangian parameters from experimental measurements).  It allows for one to generate toy data for the observables given any parameter point, which is necessary for a truly frequentist calculation.  It allows for combinations with other experiments as already mentioned.
 
@@ -241,29 +241,33 @@ For more information about building ROOT from source, see the ROOT webpage:\\ \u
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\subsection{Types of Statistical Tools in RooStats}
-\section{Fundamental Interfaces in RooStats}
+\section{Fundamental Interfaces in RooFit and RooStats}
 
 
 One of the fundamental design philosophies behind RooFit and RooStats is a conceptually clear mapping between mathematics and software.  We have tried to identify fundamental concepts in statistics and assign corresponding C++ classes or interfaces~\footnote{Interfaces is a term used in object-oriented programing for an abstract specification of a C++ class.  It defines what the class can/should/must do, but it does not provide an implementation.  This is done because often there are many possible implementations that can satisfy that interface.  This is especially true in statistics, where there seem to be several ways to do almost everything.}.
 
 \subsection{RooRealVar, RooArgSet,  RooAbsReal, \& RooAbsPdf}
 
-In RooFit even simple real-valued parameters and observables are treated as a C++ objects, instead of just a simple floating point number.  This allows the variable to carry around a name, units, upper- and lower- values for fitting and integration, etc.  For real-valued variables, the class is \textbf{RooRealVar}, but there are equivalent classes for discrete categories etc.  They all inherit from an interface called \textbf{RooAbsArg} (for abstract argument).  
+In RooFit even simple real-valued parameters and observables are treated as a C++ objects, instead of just a simple floating point number.  This allows the variable to carry around a name, units, upper- and lower- values for fitting and integration, etc.  For real-valued variables, the class is \textbf{RooRealVar}, but there are equivalent classes for discrete categories etc.  
 
-In addition to real-valued variables, one can define real-valued functions, both of which inherit from \textbf{RooAbsReal} (for abstract real-valued thingy).  The most important methods in the interface are listed below.
+In addition to real-valued variables, one can define real-valued functions, both of which inherit from \textbf{RooAbsReal} (for abstract real-valued object).  The most important methods in the interface are listed below.  They all inherit from an interface called \textbf{RooAbsArg} (for abstract argument).  
 
 \lstinputlisting{code_snippits/RooAbsReal.h}
 
-One can create sets and lists of these abstract arguments called \textbf{RooArgSet} and \textbf{RooArgList}, respectively.  They are often used to represent a list of parameters or observables.
+One can create sets and lists of these abstract arguments called \textbf{RooArgSet} and \textbf{RooArgList}, respectively.  They are often used to represent a list of parameters or observables.  Sets have unique elements, while lists can have repitition.  These classes support basic list operations and use the ROOT TIterator syntax for iteration.
+
+Probability density functions (pdfs) are clearly one of the most important concepts for RooFit and RooStats.    A pdf is a real-valued function of some observables, it should be non-negative, and its integral over the domain of the observables should be 1.  They are represented by the interface \textbf{RooAbsPdf}.  Often pdfs are parametrized, for example a Gaussian is parametrized by its mean and standard deviation.  In RooFit there is no intrensic notion of which variables are observables and which are parameters, that must be specified or implied by a given context.  This also means that the normalization of the pdf is context dependent and managed by RooFit internally.  The RooFit documentation provides more details and examples of this basic design decision and various options for analytic and numerical integration.  While this may seem like an inconvenience, it provides a great deal of power.  For instance, it allows one to treat a single instance of a Gaussian $G(x|\mu,\sigma)$ either as a pdf over $x$ or as a poster of $\mu,\sigma$ given some measurement $x$.
+
+\lstinputlisting{code_snippits/RooAbsPdf.h}
 
 Let's consider a basic example of a Gaussian distribution of $x$ with mean $\mu$ and standard deviation $\sigma$.  The mathematical representation is
 \[
   G(x|\mu, \sigma)
 \]
-In RooFit / RooStats code, one an construct this via:
-\lstinputlisting[firstline=2,lastline=11]{GaussianModel.C}
-or via
-\lstinputlisting[firstline=2,lastline=5]{GaussianModel_factory.C}
+In RooFit / RooStats code, one an construct this pdf via:
+\lstinputlisting[firstline=2,lastline=13]{GaussianModel.C}
+or using the workspace factory syntax via
+\lstinputlisting[firstline=2,lastline=6]{GaussianModel_factory.C}
 which both produce a graphical representation (in the form of Bell labs ``graphviz'' format)
 \begin{figure}[htb]
 \begin{picture}(500, 100)(0,0)
@@ -290,17 +294,18 @@ which both produce a graphical representation (in the form of Bell labs ``graphv
 %\caption{test}
 %\end{figure}
 
-\newpage
+%\newpage
 
 \subsection{RooWorkspace \& Model Config}
 
 \textbf{RooWorkspace} is a new core RooFit class that was developed in the context of RooStats.  RooWorkspace brings the ability to save a model with all of its dependecies (variables, data, custom functions, etc.) into a ROOT file.  Thus, RooWorkspace is they primary tool for RooStats digital publishing capabilities.  In addition, the workspace provides a low level factory so that one can script the creation of complicated models.
 
+%\begin{figure}
 \lstinputlisting{code_snippits/RooWorkspace.h}
+%\caption{RooWorkspace}
+%\end{figure}
 
-
-
-\textbf{ModelConfig} is a simple class that holds configuration information specifying how a model should be used in the context of various RooStats tools.  A single model can be used in different ways, and this class should carry all that is needed to specify how it should be used.  In particular, it can identify which parameters are parameters of interest and which are nuisance parameters.  It can also identify which PDFs are part of the likelihood function and which are prior PDFs.
+\textbf{ModelConfig} is a simple class that holds configuration information specifying how a model should be used in the context of various RooStats tools.  Because a RooAbsPdf has no intrensic notion of observable or parameter, it can be used in different ways.  ModelConfig can be thought of as introducing the notion of a Hypothesis, and this class should carry all that is needed to specify how it should be used.  In particular, it can identify what are the observables, which parameters are parameters of interest, and which are nuisance parameters.  It can also identify which pdfs are part of the likelihood function (frequentist) and which are prior pdfs (Bayesian).
 
 \lstinputlisting{code_snippits/ModelConfig.h}
 
@@ -374,9 +379,95 @@ The motivation for this interface is that we hope to be able to specify the prob
 \lstinputlisting{code_snippits/HypoTestCalculator.h}
 
 
-\subsection{Test Statistic, Sampling Distribution}
+\subsection{TestStatistic, TestStatSampler, and  SamplingDistribution}
 
-See the section devoted to Test Statistic, Sampling Distribution.
+\textbf{TestStatistic} is an interface class for test statistics.  A test statistic is a real-valued number that summarizes the data, and usually p-values are based on integrals of the distribution of the test statistic. Thus, the TestStatistic interface defines the method \texttt{Evaluate(data, parameterPoint)}, which returns a double.  These classes are used in conjunction with a \textbf{TestStatSampler} to generate a \textbf{SamplingDistribution}.
+
+There are several choices for the test statistic (profile likelihood ratio, ratio of marginalized likelihoods, ...) and there are several ways for generating their sampling distribution (toy Monte Carlo, importance sampling, analytical techniques based on Fourier transforms, ...).  These are outlined in Section~\ref{S:TestStat}
+
+\lstinputlisting{code_snippits/TestStatistic.h}
+
+\lstinputlisting{code_snippits/TestStatSampler.h}
+
+\lstinputlisting{code_snippits/SamplingDistribution.h}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Quick Start}
+
+\subsection{List of Tools}
+
+\subsubsection{HypoTestCalculators}
+\begin{itemize}
+ \item HybridCalculator: hybrid Bayes-frequentist calculation (marginalize nuisance parameters)
+ \item ProfileLikelihoodCalculator: the method of MINUIT/MINOS, based on Wilks's theorem 
+\end{itemize}
+
+\subsubsection{IntervalCalculators}
+\begin{itemize}
+  \item ProfileLikelihoodCalculator: the method of MINUIT/MINOS, based on Wilks's theorem
+ \item NeymanConstruction: general purpose Neyman Construction class, highly configurable: choice of TestStatistic, TestStatSampler (defines ensemble/conditioning), integration boundary (upper, lower, central limits), and parameter points to scan
+ \item FeldmanCousins: specific configuration of NeymanConstruction for Feldman-Cousins (generalized for nuisance parameters)
+
+ \item MCMCCalculator: Bayesian Markov Chain Monte Carlo (Metropolis Hastings), proposal function is highly customizable
+
+ \item BayesianCalculator: Bayesian posterior calculated via numeric integration routines, currently only supports one parameter 
+
+ \item HypoTestInverter: adapter any HypoTestCalculator and forms an IntervalCalculator
+\end{itemize}
+
+\subsubsection{Plotting Classes}
+\begin{itemize}
+ \item LikelihoodIntervalPlot
+ \item SamplingDistPlot
+ \item HybridPlot
+ \item MCMCIntervalPlot
+ \item HypoTestInverterPlot
+\end{itemize}
+
+\subsubsection{Test Statistics}
+\begin{itemize}
+ \item ProfileLikleihoodTestStat
+ \item NumEventsTestStat
+ \item DebuggingTestStat
+\end{itemize}
+
+\subsubsection{TestStatSamplers}
+\begin{itemize}
+ \item ToyMCSampler
+ \item DebuggingSampler
+\end{itemize}
+
+\subsection{Example Confidence Interval}
+
+\lstinputlisting[firstline=35, lastline=126]{code_snippits/IntervalExamples.C}
+
+
+\subsection{Example Hypothesis Test}
+
+\subsection{Coding Hints}
+
+It is hard to remember the names of functions and their arguments
+start a root terminal, type the name of the class, then \texttt{::}, and hit \texttt{<tab>}.  
+that will shows you all of the methods of the class (often too many).
+If you remember part of the name, you can tab complete
+once you find the right method, add \texttt{(}, and hit \texttt{<tab>} again to see list of arguments.  For example:
+\begin{lstlisting}[backgroundcolor=\color{shellcommand}]
+root [1] RooGaussian::fitTo(<tab>
+RooFitResult* fitTo(RooAbsData& data, RooCmdArg arg1 ....
+RooFitResult* fitTo(RooAbsData& data, const RooLinkedList& cmdList)
+\end{lstlisting}
+\begin{lstlisting}[backgroundcolor=\color{shellcommand}]
+root [1] RooStats::ConfInterval::IsInInterval( <tab>
+Bool_t IsInInterval(const RooArgSet&) const
+\end{lstlisting}
+Note, RooFit methods usually start with a lower case letter, but ROOT coding convention is to start with an upper case letter
+expect upper case for methods inherited from core ROOT and all RooStats classes
+RooStats classes are in the namespace RooStats
+either add \texttt{RooStats::} before class name or \texttt{using namespace RooStats;} to your C++ file.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -397,7 +488,8 @@ Currently, RooStats does not provide functionality for point estimation beyond w
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Test Statistics and Sampling Distributions}
+
+\section{Test Statistics and Sampling Distributions}\label{S:TestStat}
 
 A \textit{test statistic} $T(x)$ is a general term for a numerical summary of the data.  Typically a test statistic is a single number, though it can be have multiple components.  Usually a test statistic is best thought of as a mapping of the data to a real number, and that mapping often depends on the values of the parameters of a model (implicit in the notation $T(x)$.  
 
@@ -442,9 +534,10 @@ A flexible framework for the Neyman Construction was added in this release. The 
 
 The FeldmanCousins class is a separate concrete implementation of the IntervalCalculator interface.  It uses the NeymanConstruction internally, and enforces specific choices of the test statistic and ordering principle to realize the Unified intervals described by Feldman and Cousins in their paper Phys.Rev.D57:3873-3889,1998.
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Hypothesis Testing}
+\section{Hypothesis Test Calculators}
 
 Hypothesis testing is one of the most common procedures in science.  In \textit{simple hypothesis testing} one considers a null hypothesis $H_0$ and an alternate hypothesis $H_1$, both of which are completely specified and provide models for the data.  
 
@@ -458,26 +551,13 @@ There is a precise dictionary that relates hypothesis tests to confidence interv
 
 In RooStats we wish to support several different techniques for hypothesis testing.  They mainly differ in the way that they incorporate systematic effects.  There are only very few cases in which hypothesis tests with systematics has a clear ``solution'' from first principles.  In a more general setting the field has developed several techniques, and new ones are being advocated given recent interaction with the professional statistics community.  Some of the techniques included in RooStats are mainly avaialbe for consistency with historical practice in the field.
 
-As denoted in Fig.~\ref{fig:OverviewOfInterfaces}, the interface for tools that peform hypothesis tests in RooStats is called \texttt{HypoTestCalculator}.  After configuring a HypoTestCalculator, one simply requests the result via \texttt{HypoTestCalculator::GetHypoTest()}.
+As denoted in Fig.~\ref{fig:OverviewOfInterfaces}, the interface for tools that peform hypothesis tests in RooStats is called \textbf{HypoTestCalculator}.  After configuring a HypoTestCalculator, one simply requests the result via \texttt{HypoTestCalculator::GetHypoTest()}.
 
 Below we describe three concrete implementatons.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\subsection{Single Channel Number Counting with Background Uncertainty}
-
-Here we describe the ratio of Poisson means.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\subsection{Profile Likelihood Ratio (the method of MINOS)}
-
-The approximate frequentist method based on Wilks' theorem.  See section~\ref{S:ProfileLikelihoodRatio}
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\subsection{The Hybrid Calculator}
+\subsection{The Hybrid Calculator}
 
 This is the traditional frequentist ToyMC method; however, because of
 its Bayesian marginalization of nuisance parameters it is not purely
@@ -507,8 +587,7 @@ hypothesis and favour the $H_{b}$ (resp.~$H_{s}$) hypothesis.
 The functional form of the $dP_{sb}/dQ$ and $dP_{b}/dQ$ pdfs not being
 known a priori, a large amount of toy Monte-Carlo experiments are performed
 in order to determine it for
-two families of pseudo datasets: the ones in the signal+background and the ones in 
-the background-only hypothesis (see figure~\ref{m2lnQ}).
+two families of pseudo datasets: the ones in the signal+background and the ones in the background-only hypothesis (see figure~\ref{m2lnQ}).
 
 
 \begin{figure}[h]
@@ -548,10 +627,10 @@ systematic uncertainties, a degraded separation of the hypotheses.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Confidence Intervals}
+\section{Confidence Interval Calculators}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\subsection{Profile Likelihood Ratio (the method of MINOS)}\label{S:ProfileLikelihoodRatio}
+	\subsection{Profile Likelihood Calculator}\label{S:ProfileLikelihoodRatio}
 
 Suppose we have, for each of $N$ events in a collection, a set of
 measured quantities \mbox{$\underline{x}=(x_a,\,x_b,\,x_c,\,\ldots)$}
@@ -628,14 +707,14 @@ Some details in the TestStatsitic section, more to come.
 
 This is a light weight class that encodes a specific configuration of the more general purpose  Neyman Construction class.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\subsection{Neyman Construction with nuisance parameters} 
+
+\subsubsection{Neyman Construction with nuisance parameters} 
+
+
+\subsubsection{The ``Profile Construction''}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\subsection{The ``Profile Construction''}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\subsection{Markov Chain Monte Carlo}
+\subsection{Markov Chain Monte Carlo}
 
 	Another way to determine a confidence interval for parameters is to use Markov Chain Monte-Carlo with the MCMCCalculator.  Like the other IntervalCalculator derived classes, once you initialize and configure your MCMCCalculator, just call GetInterval(), which returns an MCMCInterval (ConfInterval derived class).
 	
@@ -715,6 +794,16 @@ This is a light weight class that encodes a specific configuration of the more g
 	
 	\lstinputlisting{mcmc_examples/mcmc-markovchain.C}
 	
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{The BayesianCalculator}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{The HypoTestInverter}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Plotting Classes}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
