@@ -40,6 +40,9 @@ namespace RooStats {
 
      FeldmanCousins();
 
+     // Common constructor
+     FeldmanCousins(RooAbsData& data, ModelConfig& model);
+
      virtual ~FeldmanCousins();
     
       // Main interface to get a ConfInterval (will be a PointSetInterval)
