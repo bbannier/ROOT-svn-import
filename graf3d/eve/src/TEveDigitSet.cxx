@@ -80,6 +80,8 @@ TEveDigitSet::TEveDigitSet(const char* n, const char* t) :
 {
    // Constructor.
 
+   fCanEditMainColor        = kTRUE;
+   fCanEditMainTransparency = kTRUE;
    InitMainTrans();
 }
 
