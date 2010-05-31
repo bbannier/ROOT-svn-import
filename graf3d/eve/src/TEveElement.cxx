@@ -444,13 +444,16 @@ void TEveElement::PropagateVizParamsToElements(TEveElement* el)
 }
 
 //______________________________________________________________________________
-void TEveElement::CopyVizParams(const TEveElement* /* el */)
+void TEveElement::CopyVizParams(const TEveElement* el)
 {
    // Copy visualization parameters from element el.
    // This method needs to be overriden by any class that introduces
    // new parameters.
+   // Color is copied in sub-classes which define it.
    // See, for example, TEvePointSet::CopyVizParams(),
    // TEveLine::CopyVizParams() and TEveTrack::CopyVizParams().
+
+   fMainTransparency = el->GetMainTransparency();
 
    AddStamp(kCBColorSelection | kCBObjProps);
 }
@@ -1192,8 +1195,7 @@ void TEveElement::SetMainColorRGB(Float_t r, Float_t g, Float_t b)
 //______________________________________________________________________________
 void TEveElement::PropagateMainColorToProjecteds(Color_t color, Color_t old_color)
 {
-   // Convert RGB values to Color_t and call SetMainColor.
-   // Maybe this should be optional on gEve/element level.
+   // Propagate color to projected elements.
 
    TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
    if (pable && pable->HasProjecteds())
@@ -1208,9 +1210,13 @@ void TEveElement::SetMainTransparency(UChar_t t)
    // Set main-transparency.
    // Transparency is clamped to [0, 100].
 
+   UChar_t old_t = GetMainTransparency();
+
    if (t > 100) t = 100;
    fMainTransparency = t;
    StampColorSelection();
+
+   PropagateMainTransparencyToProjecteds(t, old_t);
 }
 
 //______________________________________________________________________________
@@ -1223,6 +1229,19 @@ void TEveElement::SetMainAlpha(Float_t alpha)
    if (alpha > 1) alpha = 1;
    SetMainTransparency((UChar_t) (100.0f*(1.0f - alpha)));
 }
+
+//______________________________________________________________________________
+void TEveElement::PropagateMainTransparencyToProjecteds(UChar_t t, UChar_t old_t)
+{
+   // Propagate transparency to projected elements.
+
+   TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
+   if (pable && pable->HasProjecteds())
+   {
+      pable->PropagateMainTransparency(t, old_t);
+   }
+}
+
 
 /******************************************************************************/
 
@@ -2094,12 +2113,13 @@ TEveElementObjectPtr::~TEveElementObjectPtr()
 ClassImp(TEveElementList);
 
 //______________________________________________________________________________
-TEveElementList::TEveElementList(const char* n, const char* t, Bool_t doColor) :
+TEveElementList::TEveElementList(const char* n, const char* t, Bool_t doColor, Bool_t doTransparency) :
    TEveElement(),
    TNamed(n, t),
    TEveProjectable(),
    fColor(0),
    fDoColor(doColor),
+   fDoTransparency(doTransparency),
    fChildClass(0)
 {
    // Constructor.
@@ -2116,6 +2136,7 @@ TEveElementList::TEveElementList(const TEveElementList& e) :
    TEveProjectable(),
    fColor      (e.fColor),
    fDoColor    (e.fDoColor),
+   fDoTransparency(e.fDoTransparency),
    fChildClass (e.fChildClass)
 {
    // Copy constructor.
