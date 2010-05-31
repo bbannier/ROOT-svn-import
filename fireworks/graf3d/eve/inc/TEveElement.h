@@ -269,6 +269,7 @@ public:
    virtual UChar_t GetMainTransparency()     const { return fMainTransparency; }
    virtual void    SetMainTransparency(UChar_t t);
    void            SetMainAlpha(Float_t alpha);
+   virtual void    PropagateMainTransparencyToProjecteds(UChar_t t, UChar_t old_t);
 
    virtual Bool_t     CanEditMainTrans() const { return fCanEditMainTrans; }
    virtual Bool_t     HasMainTrans()     const { return fMainTrans != 0;   }
@@ -307,7 +308,9 @@ protected:
       kCSCBImplySelectAllChildren           = BIT(0), // compound will select all children
       kCSCBTakeAnyParentAsMaster            = BIT(1), // element will take any compound parent as master
       kCSCBApplyMainColorToAllChildren      = BIT(2), // compound will apply color change to all children
-      kCSCBApplyMainColorToMatchingChildren = BIT(3)  // compound will apply color change to all children with matching color
+      kCSCBApplyMainColorToMatchingChildren = BIT(3), // compound will apply color change to all children with matching color
+      kCSCBApplyMainTransparencyToAllChildren      = BIT(4), // compound will apply transparency change to all children
+      kCSCBApplyMainTransparencyToMatchingChildren = BIT(5)  // compound will apply transparency change to all children with matching color
    };
 
    UChar_t fCSCBits;
@@ -336,7 +339,7 @@ public:
 
    virtual UChar_t GetSelectedLevel() const;
 
-   void RecheckImpliedSelections();
+   void   RecheckImpliedSelections();
 
    void   SetCSCBits(UChar_t f)   { fCSCBits |=  f; }
    void   ResetCSCBits(UChar_t f) { fCSCBits &= ~f; }
@@ -347,6 +350,8 @@ public:
    void   CSCTakeAnyParentAsMaster()            { fCSCBits |= kCSCBTakeAnyParentAsMaster;  }
    void   CSCApplyMainColorToAllChildren()      { fCSCBits |= kCSCBApplyMainColorToAllChildren; }
    void   CSCApplyMainColorToMatchingChildren() { fCSCBits |= kCSCBApplyMainColorToMatchingChildren; }
+   void   CSCApplyMainTransparencyToAllChildren()      { fCSCBits |= kCSCBApplyMainTransparencyToAllChildren; }
+   void   CSCApplyMainTransparencyToMatchingChildren() { fCSCBits |= kCSCBApplyMainTransparencyToMatchingChildren; }
 
 
    // Change-stamping and change bits
@@ -441,13 +446,14 @@ private:
    TEveElementList& operator=(const TEveElementList&); // Not implemented
 
 protected:
-   Color_t   fColor;       // Color of the object.
-   Bool_t    fDoColor;     // Should serve fColor as the main color of the object.
-   TClass   *fChildClass;  // Class of acceptable children, others are rejected.
+   Color_t   fColor;          // Color of the object.
+   Bool_t    fDoColor;        // Should serve fColor as the main color of the object.
+   Bool_t    fDoTransparency; // Allow editing of main transparency.
+   TClass   *fChildClass;     // Class of acceptable children, others are rejected.
 
 public:
    TEveElementList(const char* n="TEveElementList", const char* t="",
-                   Bool_t doColor=kFALSE);
+                   Bool_t doColor=kFALSE, Bool_t doTransparency=kFALSE);
    TEveElementList(const TEveElementList& e);
    virtual ~TEveElementList() {}
 
@@ -465,7 +471,11 @@ public:
    virtual void SetElementNameTitle(const char* name, const char* title)
    { TNamed::SetNameTitle(name, title); NameTitleChanged(); }
 
-   virtual Bool_t CanEditMainColor() const { return fDoColor; }
+   virtual Bool_t CanEditMainColor()        const { return fDoColor; }
+   virtual Bool_t CanEditMainTransparency() const { return fDoTransparency; }
+
+   void SetDoColor(Bool_t x)        { fDoColor = x; }
+   void SetDoTransparency(Bool_t x) { fDoTransparency = x; }
 
    TClass* GetChildClass() const { return fChildClass; }
    void    SetChildClass(TClass* c) { fChildClass = c; }
