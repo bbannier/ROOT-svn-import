@@ -78,6 +78,8 @@ TEveElement::TEveElement() :
    fDestroyOnZeroRefCnt (kTRUE),
    fRnrSelf             (kTRUE),
    fRnrChildren         (kTRUE),
+   fCanEditMainColor    (kFALSE),
+   fCanEditMainTransparency(kFALSE),
    fCanEditMainTrans    (kFALSE),
    fMainTransparency    (0),
    fMainColorPtr        (0),
@@ -110,6 +112,8 @@ TEveElement::TEveElement(Color_t& main_color) :
    fDestroyOnZeroRefCnt (kTRUE),
    fRnrSelf             (kTRUE),
    fRnrChildren         (kTRUE),
+   fCanEditMainColor    (kFALSE),
+   fCanEditMainTransparency(kFALSE),
    fCanEditMainTrans    (kFALSE),
    fMainTransparency    (0),
    fMainColorPtr        (&main_color),
@@ -142,6 +146,8 @@ TEveElement::TEveElement(const TEveElement& e) :
    fDestroyOnZeroRefCnt (e.fDestroyOnZeroRefCnt),
    fRnrSelf             (e.fRnrSelf),
    fRnrChildren         (e.fRnrChildren),
+   fCanEditMainColor    (e.fCanEditMainColor),
+   fCanEditMainTransparency(e.fCanEditMainTransparency),
    fCanEditMainTrans    (e.fCanEditMainTrans),
    fMainTransparency    (e.fMainTransparency),
    fMainColorPtr        (0),
@@ -453,7 +459,9 @@ void TEveElement::CopyVizParams(const TEveElement* el)
    // See, for example, TEvePointSet::CopyVizParams(),
    // TEveLine::CopyVizParams() and TEveTrack::CopyVizParams().
 
-   fMainTransparency = el->GetMainTransparency();
+   fCanEditMainColor        = el->fCanEditMainColor;
+   fCanEditMainTransparency = el->fCanEditMainTransparency;
+   fMainTransparency        = el->fMainTransparency;
 
    AddStamp(kCBColorSelection | kCBObjProps);
 }
@@ -512,6 +520,9 @@ void TEveElement::WriteVizParams(ostream& out, const TString& var)
 
    out << t << "SetElementName(\""  << GetElementName()  << "\");\n";
    out << t << "SetElementTitle(\"" << GetElementTitle() << "\");\n";
+   out << t << "SetEditMainColor("  << fCanEditMainColor << ");\n";
+   out << t << "SetEditMainTransparency(" << fCanEditMainTransparency << ");\n";
+   out << t << "SetMainTransparency("     << fMainTransparency << ");\n";
 }
 
 //______________________________________________________________________________
@@ -2118,14 +2129,17 @@ TEveElementList::TEveElementList(const char* n, const char* t, Bool_t doColor, B
    TNamed(n, t),
    TEveProjectable(),
    fColor(0),
-   fDoColor(doColor),
-   fDoTransparency(doTransparency),
    fChildClass(0)
 {
    // Constructor.
 
-   if (fDoColor) {
+   if (doColor) {
+      fCanEditMainColor = kTRUE;
       SetMainColorPtr(&fColor);
+   }
+   if (doTransparency)
+   {
+      fCanEditMainTransparency = kTRUE;
    }
 }
 
@@ -2135,8 +2149,6 @@ TEveElementList::TEveElementList(const TEveElementList& e) :
    TNamed      (e),
    TEveProjectable(),
    fColor      (e.fColor),
-   fDoColor    (e.fDoColor),
-   fDoTransparency(e.fDoTransparency),
    fChildClass (e.fChildClass)
 {
    // Copy constructor.

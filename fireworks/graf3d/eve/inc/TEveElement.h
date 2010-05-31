@@ -86,9 +86,11 @@ protected:
    Int_t            fDenyDestroy;          //! Deny-destroy count.
    Bool_t           fDestroyOnZeroRefCnt;  //  Auto-destruct when ref-count reaches zero.
 
-   Bool_t           fRnrSelf;              //  Render this element.
-   Bool_t           fRnrChildren;          //  Render children of this element.
-   Bool_t           fCanEditMainTrans;     //  Allow editing of main transformation.
+   Bool_t           fRnrSelf;                 //  Render this element.
+   Bool_t           fRnrChildren;             //  Render children of this element.
+   Bool_t           fCanEditMainColor;        //  Allow editing of main color.
+   Bool_t           fCanEditMainTransparency; //  Allow editing of main transparency.
+   Bool_t           fCanEditMainTrans;        //  Allow editing of main transformation.
 
    UChar_t          fMainTransparency;     //  Main-transparency variable.
    Color_t         *fMainColorPtr;         //  Pointer to main-color variable.
@@ -253,9 +255,10 @@ public:
    virtual Bool_t SetRnrState(Bool_t rnr);
    virtual void   PropagateRnrStateToProjecteds();
 
-   virtual Bool_t CanEditMainColor() const  { return kFALSE; }
-   Color_t* GetMainColorPtr()        const  { return fMainColorPtr; }
-   void     SetMainColorPtr(Color_t* color) { fMainColorPtr = color; }
+   virtual Bool_t CanEditMainColor() const   { return fCanEditMainColor; }
+   void           SetEditMainColor(Bool_t x) { fCanEditMainColor = x; }
+   Color_t* GetMainColorPtr()        const   { return fMainColorPtr; }
+   void     SetMainColorPtr(Color_t* color)  { fMainColorPtr = color; }
 
    virtual Bool_t  HasMainColor() const { return fMainColorPtr != 0; }
    virtual Color_t GetMainColor() const { return fMainColorPtr ? *fMainColorPtr : 0; }
@@ -265,7 +268,8 @@ public:
    void            SetMainColorRGB(Float_t r, Float_t g, Float_t b);
    virtual void    PropagateMainColorToProjecteds(Color_t color, Color_t old_color);
 
-   virtual Bool_t  CanEditMainTransparency() const { return kFALSE; }
+   virtual Bool_t  CanEditMainTransparency() const   { return fCanEditMainTransparency; }
+   void            SetEditMainTransparency(Bool_t x) { fCanEditMainTransparency = x; }
    virtual UChar_t GetMainTransparency()     const { return fMainTransparency; }
    virtual void    SetMainTransparency(UChar_t t);
    void            SetMainAlpha(Float_t alpha);
@@ -447,8 +451,6 @@ private:
 
 protected:
    Color_t   fColor;          // Color of the object.
-   Bool_t    fDoColor;        // Should serve fColor as the main color of the object.
-   Bool_t    fDoTransparency; // Allow editing of main transparency.
    TClass   *fChildClass;     // Class of acceptable children, others are rejected.
 
 public:
@@ -470,12 +472,6 @@ public:
 
    virtual void SetElementNameTitle(const char* name, const char* title)
    { TNamed::SetNameTitle(name, title); NameTitleChanged(); }
-
-   virtual Bool_t CanEditMainColor()        const { return fDoColor; }
-   virtual Bool_t CanEditMainTransparency() const { return fDoTransparency; }
-
-   void SetDoColor(Bool_t x)        { fDoColor = x; }
-   void SetDoTransparency(Bool_t x) { fDoTransparency = x; }
 
    TClass* GetChildClass() const { return fChildClass; }
    void    SetChildClass(TClass* c) { fChildClass = c; }

@@ -85,10 +85,7 @@ public:
 
    void UseSingleColor();
 
-   virtual Bool_t CanEditMainColor() const { return kTRUE; }
-   virtual void   SetMainColor(Color_t color);
-
-   virtual Bool_t  CanEditMainTransparency() const { return kTRUE; }
+   virtual void SetMainColor(Color_t color);
 
    virtual void UnSelected();
    virtual void UnHighlighted();
