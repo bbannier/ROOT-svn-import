@@ -135,7 +135,7 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          while (li.next())
          {
             TEveStraightLineSet::Line_t& l = * (TEveStraightLineSet::Line_t*) li();
-            glLoadName(name);
+            glLoadName(l.fId);
             {
                glBegin(GL_LINES);
                glVertex3f(l.fV1[0], l.fV1[1], l.fV1[2]);
