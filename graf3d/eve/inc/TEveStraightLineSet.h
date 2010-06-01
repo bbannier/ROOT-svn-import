@@ -46,12 +46,13 @@ private:
 public:
    struct Line_t
    {
+      Int_t          fId;
       Float_t        fV1[3];
       Float_t        fV2[3];
       TRef           fRef;
 
       Line_t(Float_t x1, Float_t y1, Float_t z1,
-             Float_t x2, Float_t y2, Float_t z2) : fRef()
+             Float_t x2, Float_t y2, Float_t z2) : fId(-1), fRef()
       {
          fV1[0] = x1, fV1[1] = y1, fV1[2] = z1;
          fV2[0] = x2, fV2[1] = y2, fV2[2] = z2;
@@ -72,8 +73,8 @@ protected:
    TEveChunkManager  fLinePlex;
    TEveChunkManager  fMarkerPlex;
 
-   Bool_t            fOwnLinesIds;    // Flag specifying if id-objects are owned by the TEveQuadSet
-   Bool_t            fOwnMarkersIds;  // Flag specifying if id-objects are owned by the TEveQuadSet
+   Bool_t            fOwnLinesIds;    // Flag specifying if id-objects are owned by the line-set
+   Bool_t            fOwnMarkersIds;  // Flag specifying if id-objects are owned by the line-set
 
    Bool_t            fRnrMarkers;
    Bool_t            fRnrLines;
@@ -88,8 +89,9 @@ public:
 
    virtual void SetLineColor(Color_t col) { SetMainColor(col); }
 
-   void AddLine(Float_t x1, Float_t y1, Float_t z1, Float_t x2, Float_t y2, Float_t z2);
-   void AddMarker(Int_t lineID, Float_t pos);
+   Line_t*   AddLine(Float_t x1, Float_t y1, Float_t z1, Float_t x2, Float_t y2, Float_t z2);
+   Line_t*   AddLine(const TEveVector& p1, const TEveVector& p2);
+   Marker_t* AddMarker(Int_t lineID, Float_t pos);
 
    TEveChunkManager& GetLinePlex()   { return fLinePlex;   }
    TEveChunkManager& GetMarkerPlex() { return fMarkerPlex; }

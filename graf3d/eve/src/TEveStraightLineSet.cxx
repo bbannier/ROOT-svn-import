@@ -54,20 +54,34 @@ TEveStraightLineSet::TEveStraightLineSet(const char* n, const char* t):
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TEveStraightLineSet::AddLine(Float_t x1, Float_t y1, Float_t z1,
-                                  Float_t x2, Float_t y2, Float_t z2)
+TEveStraightLineSet::Line_t*
+TEveStraightLineSet::AddLine(Float_t x1, Float_t y1, Float_t z1,
+                             Float_t x2, Float_t y2, Float_t z2)
 {
    // Add a line.
 
    fLastLine = new (fLinePlex.NewAtom()) Line_t(x1, y1, z1, x2, y2, z2);
+   fLastLine->fId = fLinePlex.Size() - 1;
+   return fLastLine;
 }
 
 //______________________________________________________________________________
-void TEveStraightLineSet::AddMarker(Int_t line, Float_t pos)
+TEveStraightLineSet::Line_t*
+TEveStraightLineSet::AddLine(const TEveVector& p1, const TEveVector& p2)
+{
+   // Add a line.
+
+   return AddLine(p1.fX, p1.fY, p1.fZ, p2.fX, p2.fY, p2.fZ);
+}
+
+//______________________________________________________________________________
+TEveStraightLineSet::Marker_t*
+TEveStraightLineSet::AddMarker(Int_t line, Float_t pos)
 {
    // Add a marker for line with given index on relative position pos.
 
-   /*Marker_t* marker = */new (fMarkerPlex.NewAtom()) Marker_t(line, pos);
+   Marker_t* marker = new (fMarkerPlex.NewAtom()) Marker_t(line, pos);
+   return marker;
 }
 
 /******************************************************************************/
@@ -213,28 +227,40 @@ void TEveStraightLineSetProjected::UpdateProjection()
    BBoxClear();
 
    // Lines
-   fLinePlex.Reset(sizeof(Line_t), orig.GetLinePlex().Size());
-   Float_t p1[3];
-   Float_t p2[3];
+   Int_t num_lines = orig.GetLinePlex().Size();
+   if (proj.HasSeveralSubSpaces())
+      num_lines *= 1.1;
+   fLinePlex.Reset(sizeof(Line_t), num_lines);
+   TEveVector p1, p2;
    TEveChunkManager::iterator li(orig.GetLinePlex());
-
-   TEveTrans& origTrans = orig.RefMainTrans();
-   Double_t s1, s2, s3;
-   Double_t x, y, z;
-   origTrans.GetScale(s1, s2, s3);
-   origTrans.GetPos(x, y, z);
-
-   TEveTrans mx;
-   mx.Scale(s1, s2, s3);
    while (li.next())
    {
-      Line_t* l = (Line_t*) li();
+      Line_t *l = (Line_t*) li();
 
       proj.ProjectPointfv(trans, l->fV1, p1, fDepth);
       proj.ProjectPointfv(trans, l->fV2, p2, fDepth);
 
-      AddLine(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
+      if (proj.AcceptSegment(p1, p2, 0.1f))
+      {
+         AddLine(p1, p2)->fId = l->fId;
+      }
+      else
+      {
+         TEveVector bp1(p1), bp2(p2);
+         if (trans) {
+            trans->MultiplyIP(bp1);
+            trans->MultiplyIP(bp2);
+         }
+         proj.BisectBreakPoint(bp1, bp2, 1e-10f);
+         proj.ProjectVector(bp1, fDepth);
+         proj.ProjectVector(bp2, fDepth);
+
+         AddLine(p1, bp1)->fId = l->fId;
+         AddLine(bp2, p2)->fId = l->fId;
+      }
    }
+   if (proj.HasSeveralSubSpaces())
+      fLinePlex.Refit();
 
    // Markers
    fMarkerPlex.Reset(sizeof(Marker_t), orig.GetMarkerPlex().Size());
