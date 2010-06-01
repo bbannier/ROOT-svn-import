@@ -172,7 +172,6 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       TEveChunkManager::iterator mi(mL.GetMarkerPlex());
       Float_t* pnts = new Float_t[mL.GetMarkerPlex().Size()*3];
       Float_t* pnt  = pnts;
-      Int_t lidx = -1;
       while (mi.next())
       {
          TEveStraightLineSet::Marker_t& m = * (TEveStraightLineSet::Marker_t*) mi();
