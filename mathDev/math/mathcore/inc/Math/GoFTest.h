@@ -42,14 +42,10 @@ public:
    };
   
    enum ETestType { // Goodness of Fit test types for using with the class's unary funtion as a shorthand for the in-built methods
-      kAD,   // Anderson Darling Test returning the p-value. Default value 
-      kA2,   // Anderson Darling Test returning the A2 test statistic
-      kAD2s, // Anderson Darling 2-Samples Test returning the p-value
-      k2sA2, // Anderson Darling 2-Samples Test returning the A2 test statistic
-      kKS,   // Kolmogorov Smirnov Test returning the p-value
-      kDn,   // Kolmogorov Smirnov Test returning the Dn test statistic
-      kKS2s, // Kolmogorov Smirnov 2-Samples Test returning the p-value
-      k2sDn  // Kolmogorov Smirnov 2-Samples Test returning the Dn test statistic
+      kAD,   // Anderson-Darling Test. Default value
+      kAD2s, // Anderson-Darling 2-Samples Test
+      kKS,   // Kolmogorov-Smirnov Test
+      kKS2s // Kolmogorov-Smirnov 2-Samples Test
    };
   
 #if not defined(__CINT__) && not defined(__MAKECINT__)
@@ -91,7 +87,7 @@ public:
   and described and taken from (1)
   Scholz F.W., Stephens M.A. (1987), K-sample Anderson-Darling Tests, Journal of the American Statistical Association, 82, 918–924. (2-samples variant implemented)
 */
-   const Double_t AndersonDarling2SamplesTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "A2"
+   Double_t AndersonDarling2SamplesTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "A2"
   
 /*
   The Anderson-Darling 1-Sample Test algorithm for a specific distribution is described at 
@@ -101,7 +97,7 @@ public:
   and described and taken from (3)
   Lewis P.A.W. (1961), The Annals of Mathematical Statistics, Distribution of the Anderson-Darling Statistic, Volume 32, Number 4, 1118-1124. 
 */
-   const Double_t AndersonDarlingTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "A2"
+   Double_t AndersonDarlingTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "A2"
   
 /*
   The Kolmogorov-Smirnov 2-Samples Test algorithm is described at
@@ -109,7 +105,7 @@ public:
   and described and taken from
   http://root.cern.ch/root/html/TMath.html#TMath:KolmogorovTest
 */
-   const Double_t KolmogorovSmirnov2SamplesTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "Dn"
+   Double_t KolmogorovSmirnov2SamplesTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "Dn"
 
 /*
   The Kolmogorov-Smirnov 1-Sample Test algorithm for a specific distribution is described at
@@ -117,14 +113,10 @@ public:
   and described and taken from (4)
   Press W. H., Teukolsky S.A., Vetterling W.T., Flannery B.P. (2007), Numerical Recipes - The Art of Scientific Computing (Third Edition), Cambridge Univerdity Press
 */
-   const Double_t KolmogorovSmirnovTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "Dn"
+   Double_t KolmogorovSmirnovTest(const Char_t* option = "p") const; // Returns default p-value; option "t" returns the test statistic value "Dn"
   
    // The class's unary function
-   const Double_t operator()(ETestType test = kAD, const char * option = "p") const { 
-      // to be implemented for the other case
-      if (test == kAD) return   AndersonDarlingTest(option);
-      else return 0;                    
-   }
+   Double_t operator()(ETestType test = kAD, const Char_t* option = "p") const; // The class's unary function: returns default Anderson Darling 1-Sample Test and default p-value; option "t" returns the test statistic value specific to the test type
 
 private:
   
@@ -160,18 +152,18 @@ private:
       throw(BadSampleArgument, std::bad_exception) 
 #endif
       ; 
-   const Double_t ComputeIntegral(Double_t* parms) const; // Computation of the integral term of the 1-Sample Anderson-Darling test statistic's asymtotic distribution as described in (2)
+   Double_t ComputeIntegral(Double_t* parms) const; // Computation of the integral term of the 1-Sample Anderson-Darling test statistic's asymtotic distribution as described in (2)
   
-   const Double_t GaussianCDF(Double_t x) const;
-   const Double_t ExponentialCDF(Double_t x) const;
+   Double_t GaussianCDF(Double_t x) const;
+   Double_t ExponentialCDF(Double_t x) const;
   
-   const Double_t GetSigmaN(UInt_t N) const; // Computation of sigma_N as described in (1) 
+   Double_t GetSigmaN(UInt_t N) const; // Computation of sigma_N as described in (1) 
   
-   const Double_t InterpolatePValues(Double_t dA2, Int_t bin) const; // Linear interpolation used in GoFTest::PValueAD2Samples
+   Double_t InterpolatePValues(Double_t dA2, Int_t bin) const; // Linear interpolation used in GoFTest::PValueAD2Samples
   
-   const Double_t PValueAD2Samples(Double_t& A2, UInt_t N) const; // Computation of the 2-Sample Anderson-Darling Test's p-value as described in (1)
+   Double_t PValueAD2Samples(Double_t& A2, UInt_t N) const; // Computation of the 2-Sample Anderson-Darling Test's p-value as described in (1)
   
-   const Double_t PValueAD1Sample(Double_t A2) const; // Computation of the 1-Sample Anderson-Darling Test's p-value 
+   Double_t PValueAD1Sample(Double_t A2) const; // Computation of the 1-Sample Anderson-Darling Test's p-value 
     
    void LogSample(); // Applies the logarithm to the sample when the specified distribution to test is LogNormal
     

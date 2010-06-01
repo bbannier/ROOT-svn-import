@@ -133,16 +133,35 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
       fMean = accumulate(fSamples[0].begin(), fSamples[0].end(), 0.0) / fSamples[0].size();
       fSigma = TMath::Sqrt(1. / (fSamples[0].size() - 1) * (inner_product(fSamples[0].begin(), fSamples[0].end(),     fSamples[0].begin(), 0.0) - fSamples[0].size() * TMath::Power(fMean, 2)));
    }
+   
+   Double_t GoFTest::operator()(ETestType test, const Char_t* option) const {
+      Double_t result = 0.0;
+      switch (test) {
+         default:
+         case kAD:
+            result = AndersonDarlingTest(option);
+            break;
+         case kAD2s:
+            result = AndersonDarling2SamplesTest(option);
+            break;
+         case kKS:
+            result = KolmogorovSmirnovTest(option);
+            break;
+         case kKS2s:
+            result = KolmogorovSmirnov2SamplesTest(option);
+      }
+      return result;
+   }
 
    void GoFTest::SetCDF(CDF_Ptr cdf) { //  Setting parameter-free distributions 
       switch (fDist) {
       case kLogNormal:
          LogSample();
       case kGaussian :
-         fCDF = new ROOT::Math::WrappedMemFunction<GoFTest, const Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::GaussianCDF);
+         fCDF = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::GaussianCDF);
          break;
       case kExponential:
-         fCDF = new ROOT::Math::WrappedMemFunction<GoFTest, const Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::ExponentialCDF);
+         fCDF = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::ExponentialCDF);
          break;
       case kUserDefined:
       default:
@@ -179,7 +198,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
 #endif 
    }
 
-   const Double_t GoFTest::ComputeIntegral(Double_t* parms) const { 
+   Double_t GoFTest::ComputeIntegral(Double_t* parms) const { 
       ROOT::Math::IntegratorOneDim ig;
       Integrand func(parms);
       ig.SetFunction(func);
@@ -187,13 +206,13 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
       return result;
    }
 
-   const Double_t GoFTest::GaussianCDF(Double_t x) const {
+   Double_t GoFTest::GaussianCDF(Double_t x) const {
       x -= fMean;
       x /= fSigma;
       return ROOT::Math::normal_cdf(x);
    }
 
-   const Double_t GoFTest::ExponentialCDF(Double_t x) const {
+   Double_t GoFTest::ExponentialCDF(Double_t x) const {
       x /= fMean;
       return ROOT::Math::exponential_cdf(x, 1.0);
    }
@@ -217,7 +236,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
 /*
   Taken from (1)
 */
-   const Double_t GoFTest::GetSigmaN(UInt_t N) const {
+   Double_t GoFTest::GetSigmaN(UInt_t N) const {
       Double_t sigmaN = 0.0, h = 0.0, H = 0.0, g = 0.0, a, b, c, d, k = fSamples.size();
       for (UInt_t i = 0; i < k; ++i) {
          H += 1.0 / fSamples[i].size();
@@ -240,7 +259,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
       return sigmaN;
    }
 
-   const Double_t GoFTest::InterpolatePValues(Double_t dA2, Int_t bin) const {
+   Double_t GoFTest::InterpolatePValues(Double_t dA2, Int_t bin) const {
       static const Double_t pvalue[450] = { // The p-value table for the 2-sample Anderson-Darling Anderson-Darling test statistic's asymtotic distribution TODO: put more accuracy and branch in the code the pvlues when they are the same for a long range
          1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 0.9999, 0.9996, 0.9987, 0.9968, 0.9936,
          0.9900, 0.9836, 0.9747, 0.9638, 0.9505, 0.9363, 0.9182, 0.9003, 0.8802, 0.8608,
@@ -300,7 +319,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
       return pvl + dA2 * (pvr - pvl);
    }
 
-   const Double_t GoFTest::PValueAD2Samples(Double_t& A2, UInt_t N) const {
+   Double_t GoFTest::PValueAD2Samples(Double_t& A2, UInt_t N) const {
       Double_t pvalue, dA2, W2 = A2, sigmaN = GetSigmaN(N);
       A2 -= fSamples.size() - 1;
       A2 /= sigmaN; // standartized test statistic
@@ -316,7 +335,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
 
 /*
   Taken from (2)
-*/const Double_t GoFTest::PValueAD1Sample(Double_t A2) const {
+*/Double_t GoFTest::PValueAD1Sample(Double_t A2) const {
    if (A2 == 0)
       return 0.0;
    Double_t t0 = TMath::Power(TMath::Pi(), 2) / (8 * A2);
@@ -331,7 +350,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
 
 /*
   Taken from (1) -- Named for 2 samples but implemented for K. Restricted to K = 2 by the class's constructors 
-*/const Double_t GoFTest::AndersonDarling2SamplesTest(const Char_t* option) const { 
+*/Double_t GoFTest::AndersonDarling2SamplesTest(const Char_t* option) const { 
    if (fTestSampleFromH0) {
       std::cerr << "Only 1-sample tests can be issued!" << std::endl;
       return -1;
@@ -370,7 +389,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
 
 /*
   Taken from (3)
-*/const Double_t GoFTest::AndersonDarlingTest(const Char_t* option) const {
+*/Double_t GoFTest::AndersonDarlingTest(const Char_t* option) const {
    if (!fTestSampleFromH0) {
       std::cerr << "Only 2-samples tests can be issued!" << std::endl;
       return -1;
@@ -388,7 +407,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
    return (strncmp(option, "p", 1) == 0 || strncmp(option, "t", 1) != 0) ? pvalue : A2;
 }
 
-   const Double_t GoFTest::KolmogorovSmirnov2SamplesTest(const Char_t* option) const {
+   Double_t GoFTest::KolmogorovSmirnov2SamplesTest(const Char_t* option) const {
       if (fTestSampleFromH0) {
          std::cerr << "Only 1-sample tests can be issued!" << std::endl;
          return -1;
@@ -405,7 +424,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
 
 /* 
    Algorithm taken from (3) in page 737
-*/const Double_t GoFTest::KolmogorovSmirnovTest(const Char_t* option) const {
+*/Double_t GoFTest::KolmogorovSmirnovTest(const Char_t* option) const {
    if (!fTestSampleFromH0) {
       std::cerr << "Only 2-samples tests can be issued!" << std::endl;
       return -1;
