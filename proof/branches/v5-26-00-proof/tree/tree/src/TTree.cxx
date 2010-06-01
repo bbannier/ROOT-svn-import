@@ -2682,6 +2682,17 @@ void TTree::CopyAddresses(TTree* tree, Bool_t undo)
       } else {
          char* addr = branch->GetAddress();
          if (!addr) {
+            if (branch->IsA() == TBranch::Class()) {
+               // If the branch was created using a leaflist, the branch itself may not have 
+               // an address but the leat might already do.
+               TLeaf *firstleaf = (TLeaf*)branch->GetListOfLeaves()->At(0);
+               if (!firstleaf || firstleaf->GetValuePointer()) {
+                  // Either there is no leaf (and thus no point in copying the address)
+                  // or the leaf has an address but we can not copy it via the branche
+                  // this will be copied via the the next loop (over the leaf).
+                  continue;
+               }
+            } 
             // Note: This may cause an object to be allocated.
             branch->SetAddress(0);
             addr = branch->GetAddress();
@@ -6645,10 +6656,20 @@ void TTree::Show(Long64_t entry, Int_t lenmax)
    // if a leaf is an array, a maximum of lenmax elements is printed.
    //
    if (entry != -1) {
-      Int_t ret = GetEntry(entry);
-      if (ret == -1 || ret == 0) {
-         Error("Show()", "Cannot read entry %lld (%s)",
-               entry, ret == -1 ? "I/O error" : "entry does not exist");
+      Int_t ret = LoadTree(entry);
+      if (ret == -2) {
+         Error("Show()", "Cannot read entry %lld (entry does not exist)", entry);
+         return;
+      } else if (ret == -1) {
+         Error("Show()", "Cannot read entry %lld (I/O error)", entry);
+         return;
+      }
+      ret = GetEntry(entry);
+      if (ret == -1) {
+         Error("Show()", "Cannot read entry %lld (I/O error)", entry);
+         return;
+      } else if (ret == 0) {
+         Error("Show()", "Cannot read entry %lld (no data read)", entry);
          return;
       }
    }
