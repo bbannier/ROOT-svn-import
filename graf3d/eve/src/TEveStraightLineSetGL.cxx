@@ -91,7 +91,6 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
 
    TEveStraightLineSet& mL = * fM;
 
-   TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
    if (mL.GetDepthTest() == kFALSE)
    {
       glPushAttrib(GL_VIEWPORT_BIT);
@@ -102,6 +101,7 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    if (mL.GetRnrLines() && mL.GetLinePlex().Size() > 0)
    {
       glPushAttrib(GL_LINE_BIT | GL_ENABLE_BIT);
+      glDisable(GL_LIGHTING);
       TGLUtil::LineWidth(mL.GetLineWidth());
       if (mL.GetLineStyle() > 1) {
          Int_t    fac = 1;
@@ -184,7 +184,7 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          pnt   += 3;
       }
       if (rnrCtx.SecSelection()) glPushName(2);
-      TGLUtil::RenderPolyMarkers((TAttMarker&)mL, 0,
+      TGLUtil::RenderPolyMarkers((TAttMarker&)mL, mL.GetMainTransparency(),
                                  pnts, mL.GetMarkerPlex().Size(),
                                  rnrCtx.GetPickRadius(),
                                  rnrCtx.Selection(),
