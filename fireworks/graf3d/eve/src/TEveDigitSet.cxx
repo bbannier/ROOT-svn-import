@@ -273,7 +273,7 @@ void TEveDigitSet::DigitColor(Color_t ci)
 }
 
 //______________________________________________________________________________
-void TEveDigitSet::DigitColor(Color_t ci, UChar_t transparency)
+void TEveDigitSet::DigitColor(Color_t ci, Char_t transparency)
 {
    // Set color for the last digit added.
 

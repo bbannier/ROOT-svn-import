@@ -269,7 +269,7 @@ void TEveCaloLegoEditor::DoTransparency()
 {
    // Slot for Transparency.
 
-   fM->SetPlaneTransparency((UChar_t)(fTransparency->GetNumber()));
+   fM->SetPlaneTransparency((Char_t)(fTransparency->GetNumber()));
    Update();
 }
 

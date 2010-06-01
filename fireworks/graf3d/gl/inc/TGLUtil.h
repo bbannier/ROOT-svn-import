@@ -993,18 +993,26 @@ public:
    static void BeginExtendPickRegion(Float_t scale);
    static void EndExtendPickRegion();
 
-   static void RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
+   static void RenderPolyMarkers(const TAttMarker& marker, Char_t transp,
+                                 Float_t* p, Int_t n,
                                  Int_t pick_radius=0, Bool_t selection=kFALSE,
                                  Bool_t sec_selection=kFALSE);
-   static void RenderPoints(const TAttMarker& marker, Float_t* p, Int_t n,
+
+   static void RenderPoints(const TAttMarker& marker,
+                            Float_t* p, Int_t n,
                             Int_t pick_radius=0, Bool_t selection=kFALSE,
                             Bool_t sec_selection=kFALSE);
-   static void RenderCrosses(const TAttMarker& marker, Float_t* p, Int_t n,
+
+   static void RenderCrosses(const TAttMarker& marker,
+                             Float_t* p, Int_t n,
                              Bool_t sec_selection=kFALSE);
-   static void RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
+
+   static void RenderPolyLine(const TAttLine& aline, Char_t transp,
+                              Float_t* p, Int_t n,
                               Int_t pick_radius=0, Bool_t selection=kFALSE);
 
-   static void BeginAttLine(const TAttLine& aline, Int_t pick_radius=0, Bool_t selection=kFALSE);
+   static void BeginAttLine(const TAttLine& aline, Char_t transp,
+                            Int_t pick_radius=0, Bool_t selection=kFALSE);
    static void EndAttLine(Int_t pick_radius=0, Bool_t selection=kFALSE);
 
    // TODO: These draw routines should take LOD hints

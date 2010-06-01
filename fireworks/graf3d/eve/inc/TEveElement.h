@@ -92,7 +92,7 @@ protected:
    Bool_t           fCanEditMainTransparency; //  Allow editing of main transparency.
    Bool_t           fCanEditMainTrans;        //  Allow editing of main transformation.
 
-   UChar_t          fMainTransparency;     //  Main-transparency variable.
+   Char_t           fMainTransparency;     //  Main-transparency variable.
    Color_t         *fMainColorPtr;         //  Pointer to main-color variable.
    TEveTrans       *fMainTrans;            //  Pointer to main transformation matrix.
 
@@ -270,10 +270,10 @@ public:
 
    virtual Bool_t  CanEditMainTransparency() const   { return fCanEditMainTransparency; }
    void            SetEditMainTransparency(Bool_t x) { fCanEditMainTransparency = x; }
-   virtual UChar_t GetMainTransparency()     const { return fMainTransparency; }
-   virtual void    SetMainTransparency(UChar_t t);
+   virtual Char_t  GetMainTransparency()     const { return fMainTransparency; }
+   virtual void    SetMainTransparency(Char_t t);
    void            SetMainAlpha(Float_t alpha);
-   virtual void    PropagateMainTransparencyToProjecteds(UChar_t t, UChar_t old_t);
+   virtual void    PropagateMainTransparencyToProjecteds(Char_t t, Char_t old_t);
 
    virtual Bool_t     CanEditMainTrans() const { return fCanEditMainTrans; }
    virtual Bool_t     HasMainTrans()     const { return fMainTrans != 0;   }

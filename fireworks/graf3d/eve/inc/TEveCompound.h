@@ -39,7 +39,7 @@ public:
    Bool_t IsCompoundOpen() const { return fCompoundOpen > 0; }
 
    virtual void SetMainColor(Color_t color);
-   virtual void SetMainTransparency(UChar_t t);
+   virtual void SetMainTransparency(Char_t t);
 
    virtual void AddElement(TEveElement* el);
    virtual void RemoveElementLocal(TEveElement* el);

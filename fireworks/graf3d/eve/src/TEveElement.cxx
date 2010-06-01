@@ -1216,12 +1216,12 @@ void TEveElement::PropagateMainColorToProjecteds(Color_t color, Color_t old_colo
 }
 
 //______________________________________________________________________________
-void TEveElement::SetMainTransparency(UChar_t t)
+void TEveElement::SetMainTransparency(Char_t t)
 {
    // Set main-transparency.
    // Transparency is clamped to [0, 100].
 
-   UChar_t old_t = GetMainTransparency();
+   Char_t old_t = GetMainTransparency();
 
    if (t > 100) t = 100;
    fMainTransparency = t;
@@ -1238,11 +1238,11 @@ void TEveElement::SetMainAlpha(Float_t alpha)
 
    if (alpha < 0) alpha = 0;
    if (alpha > 1) alpha = 1;
-   SetMainTransparency((UChar_t) (100.0f*(1.0f - alpha)));
+   SetMainTransparency((Char_t) (100.0f*(1.0f - alpha)));
 }
 
 //______________________________________________________________________________
-void TEveElement::PropagateMainTransparencyToProjecteds(UChar_t t, UChar_t old_t)
+void TEveElement::PropagateMainTransparencyToProjecteds(Char_t t, Char_t old_t)
 {
    // Propagate transparency to projected elements.
 
