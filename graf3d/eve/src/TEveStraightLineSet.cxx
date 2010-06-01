@@ -76,12 +76,34 @@ TEveStraightLineSet::AddLine(const TEveVector& p1, const TEveVector& p2)
 
 //______________________________________________________________________________
 TEveStraightLineSet::Marker_t*
-TEveStraightLineSet::AddMarker(Int_t line, Float_t pos)
+TEveStraightLineSet::AddMarker(Float_t x, Float_t y, Float_t z, Int_t line_id)
+{
+   // Add a marker with given position.
+
+   Marker_t* marker = new (fMarkerPlex.NewAtom()) Marker_t(x, y, z, line_id);
+   return marker;
+}
+
+//______________________________________________________________________________
+TEveStraightLineSet::Marker_t*
+TEveStraightLineSet::AddMarker(const TEveVector& p, Int_t line_id)
+{
+   // Add a marker with given position.
+
+   return AddMarker(p.fX, p.fY, p.fZ, line_id);
+}
+
+//______________________________________________________________________________
+TEveStraightLineSet::Marker_t*
+TEveStraightLineSet::AddMarker(Int_t line_id, Float_t pos)
 {
    // Add a marker for line with given index on relative position pos.
 
-   Marker_t* marker = new (fMarkerPlex.NewAtom()) Marker_t(line, pos);
-   return marker;
+   Line_t& l = * (Line_t*) fLinePlex.Atom(line_id);
+   return AddMarker(l.fV1[0] + (l.fV2[0] - l.fV1[0])*pos,
+                    l.fV1[1] + (l.fV2[1] - l.fV1[1])*pos,
+                    l.fV1[2] + (l.fV2[2] - l.fV1[2])*pos,
+                    line_id);
 }
 
 /******************************************************************************/
@@ -138,7 +160,6 @@ void TEveStraightLineSet::ComputeBBox()
    // Compute bounding-box.
    // Virtual from TAttBBox.
 
-   static const TEveException eH("TEveStraightLineSet::ComputeBBox ");
    if(fLinePlex.Size() == 0) {
       BBoxZero();
       return;
@@ -150,6 +171,12 @@ void TEveStraightLineSet::ComputeBBox()
    while (li.next()) {
       BBoxCheckPoint(((Line_t*)li())->fV1);
       BBoxCheckPoint(((Line_t*)li())->fV2);
+   }
+
+   TEveChunkManager::iterator mi(fMarkerPlex);
+   while (mi.next())
+   {
+      BBoxCheckPoint(((Marker_t*)mi())->fV);
    }
 }
 
@@ -211,6 +238,13 @@ void TEveStraightLineSetProjected::SetDepthLocal(Float_t d)
       l.fV1[2] = fDepth;
       l.fV2[2] = fDepth;
    }
+
+   TEveChunkManager::iterator mi(fMarkerPlex);
+   while (mi.next())
+   {
+      Marker_t& m = * (Marker_t*) mi();
+      m.fV[2] = fDepth;
+   }
 }
 
 //______________________________________________________________________________
@@ -246,7 +280,7 @@ void TEveStraightLineSetProjected::UpdateProjection()
       }
       else
       {
-         TEveVector bp1(p1), bp2(p2);
+         TEveVector bp1(l->fV1), bp2(l->fV2);
          if (trans) {
             trans->MultiplyIP(bp1);
             trans->MultiplyIP(bp2);
@@ -265,18 +299,12 @@ void TEveStraightLineSetProjected::UpdateProjection()
    // Markers
    fMarkerPlex.Reset(sizeof(Marker_t), orig.GetMarkerPlex().Size());
    TEveChunkManager::iterator mi(orig.GetMarkerPlex());
+   TEveVector pp;
    while (mi.next())
    {
-      Marker_t *m = (Marker_t*) mi();
-      Line_t  *lo = (Line_t*) orig.GetLinePlex().Atom(m->fLineID);
-      Line_t  *lp = (Line_t*) fLinePlex.Atom(m->fLineID);
+      Marker_t &m = * (Marker_t*) mi();
 
-      TEveVector t1, d, xx;
-
-      t1.Set(lo->fV1); xx.Set(lo->fV2); xx -= t1; xx *= m->fPos; xx += t1;
-      proj.ProjectVector(trans, xx, 0);
-      t1.Set(lp->fV1); d.Set(lp->fV2); d -= t1; xx -= t1;
-
-      AddMarker(m->fLineID, d.Dot(xx) / d.Mag2());
+      proj.ProjectPointfv(trans, m.fV, pp, fDepth);
+      AddMarker(pp, m.fLineId);
    }
 }
