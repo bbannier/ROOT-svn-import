@@ -104,7 +104,7 @@ public:
 
    void DigitValue(Int_t value);
    void DigitColor(Color_t ci);
-   void DigitColor(Color_t ci, UChar_t transparency);
+   void DigitColor(Color_t ci, Char_t transparency);
    void DigitColor(UChar_t r, UChar_t g, UChar_t b, UChar_t a=255);
    void DigitColor(UChar_t* rgba);
 

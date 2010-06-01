@@ -184,7 +184,7 @@ void TEveStraightLineSetGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          pnt   += 3;
       }
       if (rnrCtx.SecSelection()) glPushName(2);
-      TGLUtil::RenderPolyMarkers((TAttMarker&)mL,
+      TGLUtil::RenderPolyMarkers((TAttMarker&)mL, 0,
                                  pnts, mL.GetMarkerPlex().Size(),
                                  rnrCtx.GetPickRadius(),
                                  rnrCtx.Selection(),

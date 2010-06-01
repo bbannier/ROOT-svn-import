@@ -61,7 +61,7 @@ void TEveCompound::SetMainColor(Color_t color)
 }
 
 //______________________________________________________________________________
-void TEveCompound::SetMainTransparency(UChar_t t)
+void TEveCompound::SetMainTransparency(Char_t t)
 {
    // SetMainTransparency for the compound.
    // The transparenct is also propagated to children with compound set to this
@@ -72,7 +72,7 @@ void TEveCompound::SetMainTransparency(UChar_t t)
    //   kCSCBApplyMainTransparencyToMatchingChildren - apply transparency to children who have
    //                                                  matching transparency.
 
-   UChar_t old_t = GetMainTransparency();
+   Char_t old_t = GetMainTransparency();
 
    TEveElement::SetMainTransparency(t);
 

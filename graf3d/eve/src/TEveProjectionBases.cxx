@@ -118,7 +118,7 @@ void TEveProjectable::PropagateMainColor(Color_t color, Color_t old_color)
 }
 
 //______________________________________________________________________________
-void TEveProjectable::PropagateMainTransparency(UChar_t t, UChar_t old_t)
+void TEveProjectable::PropagateMainTransparency(Char_t t, Char_t old_t)
 {
    // Set main transparency of projecteds if their transparecy is the
    // same as the old one.

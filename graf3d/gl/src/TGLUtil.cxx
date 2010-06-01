@@ -1767,7 +1767,8 @@ void TGLUtil::EndExtendPickRegion()
 }
 
 //______________________________________________________________________________
-void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
+void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Char_t transp,
+                                Float_t* p, Int_t n,
                                 Int_t pick_radius, Bool_t selection,
                                 Bool_t sec_selection)
 {
@@ -1779,7 +1780,7 @@ void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
    glPushAttrib(GL_ENABLE_BIT | GL_POINT_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
-   TGLUtil::Color(marker.GetMarkerColor());
+   TGLUtil::Color(marker.GetMarkerColor(), transp);
 
    Int_t s = marker.GetMarkerStyle();
    if (s == 2 || s == 3 || s == 5 || s == 28)
@@ -1791,7 +1792,8 @@ void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
 }
 
 //______________________________________________________________________________
-void TGLUtil::RenderPoints(const TAttMarker& marker, Float_t* op, Int_t n,
+void TGLUtil::RenderPoints(const TAttMarker& marker,
+                           Float_t* op, Int_t n,
                            Int_t pick_radius, Bool_t selection,
                            Bool_t sec_selection)
 {
@@ -1861,7 +1863,8 @@ void TGLUtil::RenderPoints(const TAttMarker& marker, Float_t* op, Int_t n,
 }
 
 //______________________________________________________________________________
-void TGLUtil::RenderCrosses(const TAttMarker& marker, Float_t* op, Int_t n,
+void TGLUtil::RenderCrosses(const TAttMarker& marker,
+                            Float_t* op, Int_t n,
                             Bool_t sec_selection)
 {
    // Render markers as crosses.
@@ -1934,14 +1937,15 @@ void TGLUtil::RenderCrosses(const TAttMarker& marker, Float_t* op, Int_t n,
 }
 
 //______________________________________________________________________________
-void TGLUtil::RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
+void TGLUtil::RenderPolyLine(const TAttLine& aline, Char_t transp,
+                             Float_t* p, Int_t n,
                              Int_t pick_radius, Bool_t selection)
 {
    // Render poly-line as specified by the p-array.
 
    if (n == 0) return;
 
-   BeginAttLine(aline, pick_radius, selection);
+   BeginAttLine(aline, transp, pick_radius, selection);
 
    Float_t* tp = p;
    glBegin(GL_LINE_STRIP);
@@ -1953,14 +1957,15 @@ void TGLUtil::RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
 }
 
 //______________________________________________________________________________
-void TGLUtil::BeginAttLine(const TAttLine& aline, Int_t pick_radius, Bool_t selection)
+void TGLUtil::BeginAttLine(const TAttLine& aline, Char_t transp,
+                           Int_t pick_radius, Bool_t selection)
 {
    // Setup drawing parrameters according to passed TAttLine.
 
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
-   TGLUtil::Color(aline.GetLineColor());
+   TGLUtil::Color(aline.GetLineColor(), transp);
    TGLUtil::LineWidth(aline.GetLineWidth());
    if (aline.GetLineStyle() > 1)
    {
