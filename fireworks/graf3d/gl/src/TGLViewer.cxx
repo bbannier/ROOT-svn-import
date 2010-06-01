@@ -1105,7 +1105,7 @@ void TGLViewer::FadeView(Float_t alpha)
       TGLCapabilitySwitch blend(GL_BLEND,    kTRUE);
       TGLCapabilitySwitch light(GL_LIGHTING, kFALSE);
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      TGLUtil::Color(fRnrCtx->ColorSet().Background(), alpha);
+      TGLUtil::ColorAlpha(fRnrCtx->ColorSet().Background(), alpha);
       glBegin(GL_QUADS);
       glVertex3f(-1, -1, z);  glVertex3f( 1, -1, z);
       glVertex3f( 1,  1, z);  glVertex3f(-1,  1, z);

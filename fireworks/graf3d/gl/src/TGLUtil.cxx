@@ -1561,7 +1561,7 @@ void TGLUtil::Color(const TGLColor& color)
 }
 
 //______________________________________________________________________________
-void TGLUtil::Color(const TGLColor& color, UChar_t alpha)
+void TGLUtil::ColorAlpha(const TGLColor& color, UChar_t alpha)
 {
    // Set color from TGLColor and alpha value.
 
@@ -1572,7 +1572,7 @@ void TGLUtil::Color(const TGLColor& color, UChar_t alpha)
 }
 
 //______________________________________________________________________________
-void TGLUtil::Color(const TGLColor& color, Float_t alpha)
+void TGLUtil::ColorAlpha(const TGLColor& color, Float_t alpha)
 {
    // Set color from TGLColor and alpha value.
 
@@ -1583,7 +1583,7 @@ void TGLUtil::Color(const TGLColor& color, Float_t alpha)
 }
 
 //______________________________________________________________________________
-void TGLUtil::Color(Color_t color_index, Float_t alpha)
+void TGLUtil::ColorAlpha(Color_t color_index, Float_t alpha)
 {
    // Set color from color_index and GL-style alpha (default 1).
 
@@ -1780,7 +1780,7 @@ void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Char_t transp,
    glPushAttrib(GL_ENABLE_BIT | GL_POINT_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
-   TGLUtil::Color(marker.GetMarkerColor(), transp);
+   TGLUtil::ColorTransparency(marker.GetMarkerColor(), transp);
 
    Int_t s = marker.GetMarkerStyle();
    if (s == 2 || s == 3 || s == 5 || s == 28)
@@ -1965,7 +1965,7 @@ void TGLUtil::BeginAttLine(const TAttLine& aline, Char_t transp,
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
-   TGLUtil::Color(aline.GetLineColor(), transp);
+   TGLUtil::ColorTransparency(aline.GetLineColor(), transp);
    TGLUtil::LineWidth(aline.GetLineWidth());
    if (aline.GetLineStyle() > 1)
    {
