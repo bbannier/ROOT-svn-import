@@ -147,7 +147,7 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
 
    if (nf==-1){
       nf=fNFiles;
-      Info("MakeDataSets", "Number of files a worker is %d for %s", nf, GetName());
+      Info("MakeDataSets", "Number of files a node is %d for %s", nf, GetName());
    }
 
    //default max worker number is the number of all workers in the cluster
