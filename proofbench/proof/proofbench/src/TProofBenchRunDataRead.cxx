@@ -41,6 +41,8 @@
 #include "TEnv.h"
 #include "TLeaf.h"
 
+#include <stdlib.h>
+
 ClassImp(TProofBenchRunDataRead)
 
 TProofBenchRunDataRead::TProofBenchRunDataRead(TProofBenchMode* mode,

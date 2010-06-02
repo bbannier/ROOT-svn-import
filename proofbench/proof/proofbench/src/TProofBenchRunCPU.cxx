@@ -39,6 +39,8 @@
 #include "TRegexp.h"
 #include "TPerfStats.h"
 
+#include <stdlib.h>
+
 ClassImp(TProofBenchRunCPU)
 
 TProofBenchRunCPU::TProofBenchRunCPU(TProofBenchRun::EHistType histtype,
