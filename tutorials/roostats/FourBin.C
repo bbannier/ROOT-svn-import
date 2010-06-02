@@ -115,7 +115,7 @@ June 2010.  It proceeds as follows:
 
 #include "TStopwatch.h"
 #include "TCanvas.h"
-#include "TRoot.h"
+#include "TROOT.h"
 #include "RooPlot.h"
 #include "RooAbsPdf.h"
 #include "RooWorkspace.h"
