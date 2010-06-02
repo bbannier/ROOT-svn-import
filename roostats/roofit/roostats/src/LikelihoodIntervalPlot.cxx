@@ -190,7 +190,7 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
          
          f1->SetLineColor(kBlue);
          f1->GetXaxis()->SetTitle(myarg->GetName());
-         f1->GetYaxis()->SetTitle("- log #lambda");
+         f1->GetYaxis()->SetTitle(Form("- log #lambda(%s)",myparam->GetName()));
          f1->Draw(opt);
 
       } 
@@ -201,8 +201,11 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
 
          // want to set range on frame not function
          frame = myarg->frame(xmin,xmax);
+	 // for ycutoff line
+	 x1= xmin;
+	 x2=xmax;
          frame->SetTitle(title);
-         frame->GetYaxis()->SetTitle("- log #lambda");
+         frame->GetYaxis()->SetTitle(Form("- log #lambda(%s)",myparam->GetName()));
          //    frame->GetYaxis()->SetTitle("- log profile likelihood ratio");
          
          // plot 
@@ -218,7 +221,7 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
       //myarg->setVal(xcont_max);
       //const Double_t Yat_Xmax = newProfile->getVal();
       Double_t Yat_Xmax = 0.5*TMath::ChisquareQuantile(fInterval->ConfidenceLevel(),1);
-         
+      
       TLine *Yline_cutoff = new TLine(x1,Yat_Xmax,x2,Yat_Xmax);
       TLine *Yline_min = new TLine(xcont_min,0.,xcont_min,Yat_Xmax);
       TLine *Yline_max = new TLine(xcont_max,0.,xcont_max,Yat_Xmax);
@@ -328,8 +331,8 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
             if (fYmin < fYmax) { ymin = fYmin; ymax = fYmax; }  
 
             TH2F* hist2D = new TH2F("_hist2D",title, fNPoints, xmin, xmax, fNPoints, ymin, ymax );
-            hist2D->GetXaxis()->SetTitle(myparamY->GetName());
-            hist2D->GetYaxis()->SetTitle(myparam->GetName());
+            hist2D->GetXaxis()->SetTitle(myparam->GetName());
+            hist2D->GetYaxis()->SetTitle(myparamY->GetName());
             hist2D->SetBit(TH1::kNoStats); // do not draw statistics
             hist2D->SetFillStyle(fFillStyle); 
             hist2D->SetMaximum(1);  // to avoid problem with subsequents draws

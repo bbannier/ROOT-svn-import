@@ -37,7 +37,7 @@ void ModelConfig::SetWorkspace(RooWorkspace & ws) {
    
 }
 
-void ModelConfig::DefineSetInWS(const char* name, RooArgSet& set) {
+void ModelConfig::DefineSetInWS(const char* name, const RooArgSet& set) {
    // helper functions to avoid code duplication
    if (!fWS) {
       fWS = new RooWorkspace();

@@ -62,7 +62,7 @@ END_HTML
 #include "RooProfileLL.h"
 #include "RooNLLVar.h"
 #include "RooGlobalFunc.h"
-#include "RooProdPdf.h"
+//#include "RooProdPdf.h"
 
 ClassImp(RooStats::ProfileLikelihoodCalculator) ;
 
@@ -91,6 +91,9 @@ ProfileLikelihoodCalculator::ProfileLikelihoodCalculator(RooAbsData& data,  Mode
    fFitResult(0)
 {
    assert(model.GetPdf() );
+
+   /*
+     KC: THIS SHOULD NOT BE HERE.  Prior is not frequentist.
    // construct from model config (pdf from the model config does not include the nuisance)
    if (model.GetPriorPdf() ) { 
       std::string name = std::string("Costrained_") + (model.GetPdf())->GetName() + std::string("_with_") + (model.GetPriorPdf())->GetName();
@@ -98,6 +101,7 @@ ProfileLikelihoodCalculator::ProfileLikelihoodCalculator(RooAbsData& data,  Mode
       // set pdf in ModelConfig which will import in WS  and it will manage it 
       model.SetPdf(*fPdf);
    }
+   */
 }
 
 

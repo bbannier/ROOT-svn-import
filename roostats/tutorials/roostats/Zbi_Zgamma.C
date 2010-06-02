@@ -40,7 +40,6 @@ void Zbi_Zgamma() {
   w->pdf("px")->plotOn(frame,LineColor(kRed)) ;
   frame->Draw() ;
 
-
   // compare analytic calculation of Z_Bi
   // with the numerical RooFit implementation of Z_Gamma
   // for an example with x = 150, y = 100

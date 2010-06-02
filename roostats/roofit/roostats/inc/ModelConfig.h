@@ -85,11 +85,11 @@ public:
    }
     
    // specify the parameters of interest in the interval
-   virtual void SetParameters(RooArgSet& set) {
+   virtual void SetParameters(const RooArgSet& set) {
       fPOIName=std::string(GetName()) + "_POI";
       DefineSetInWS(fPOIName.c_str(), set);
    }
-   virtual void SetParametersOfInterest(RooArgSet& set) {
+   virtual void SetParametersOfInterest(const RooArgSet& set) {
       SetParameters(set); 
    }
     
@@ -197,7 +197,7 @@ protected:
 
    
    // helper functions to define a set in the WS
-   void DefineSetInWS(const char* name, RooArgSet& set);
+   void DefineSetInWS(const char* name, const RooArgSet& set);
     
    // internal function to import Pdf in WS
    void ImportPdfInWS(RooAbsPdf & pdf);
