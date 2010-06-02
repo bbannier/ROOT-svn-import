@@ -3269,6 +3269,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                      while ((ourwi = (TSlaveInfo *)nxw())) {
                         if (!strcmp(ourwi->GetOrdinal(), slinfo->GetOrdinal())) {
                            ourwi->SetSysInfo(slinfo->GetSysInfo());
+                           ourwi->fHostName = slinfo->GetName();
                            break;
                         }
                      }
