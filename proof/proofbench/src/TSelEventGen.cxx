@@ -125,13 +125,20 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          continue;
       }
       if (sinput.Contains("PROOF_BenchmarkBaseDir")){
-         TParameter<const char*>* a=dynamic_cast<TParameter<const char*>*>(obj);
+         TNamed* a=dynamic_cast<TNamed*>(obj);
          if (a){
-            fBaseDir=(const char*)a->GetVal();
+            TString proof_benchmarkbasedir=a->GetTitle();
+            if (gSystem->AccessPathName(proof_benchmarkbasedir, kWritePermission)){
+               //directory is not writable, use default directory
+               Info("BeginSlave", "\"%s\" directory is not writable, using default directory: %s", proof_benchmarkbasedir.Data(), fBaseDir.Data());
+            } 
+            else{
+               fBaseDir=proof_benchmarkbasedir;
+            }
             found_basedir=kTRUE; 
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkBaseDir not type TParameter<const char*>*");
+            Error("SlaveBegin", "PROOF_BenchmarkBaseDir not type TNamed");
          }
          continue;
       }
@@ -209,7 +216,7 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    fTotalGen = (TObject *) totalGen;
 #endif
 
-   TString hostname=gSystem->HostName();
+   TString hostname=TUrl(gSystem->HostName()).GetHostFQDN();
    TString thisordinal=gProofServ->GetOrdinal();
 
    //chop starting part. Temporary solution
@@ -234,11 +241,11 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          //printf("nodename=%s\n", nodename.Data());
          //printf("ordinal=%s\n", ordinal.Data());
 
-         //See if proof is running on localhost
+         /*//See if proof is running on localhost
          if (nodename.Contains("localhost")){
             //hostname="localhost.localdomain";
             nodename=gSystem->HostName();
-         }
+         }*/
          if (hostname==nodename){
             if (ordinal==thisordinal){
                 fWorkerNumber=fNWorkersPerNode;
@@ -519,7 +526,7 @@ void TSelEventGen::SlaveTerminate()
    // The SlaveTerminate() function is called after all entries or objects
    // have been processed. When running with PROOF SlaveTerminate() is called
    // on each slave server.
-   TString hostname=gSystem->HostName();
+   TString hostname=TUrl(gSystem->HostName()).GetHostFQDN();
    TString thisordinal=gProofServ->GetOrdinal();
 
    TString sfilegenerated="PROOF_FilesGenerated" "_"+hostname+"_"+thisordinal;
