@@ -150,6 +150,8 @@ public:
   friend class RooProdPdf ;
   friend class RooAddPdf ;
   friend class RooAddPdfOrig ;
+   friend class RooUnBinDataStore ;
+   
   RooArgSet* getVariables(Bool_t stripDisconnected=kTRUE) const ;
   RooArgSet* getParameters(const RooAbsData* data, Bool_t stripDisconnected=kTRUE) const ;
   RooArgSet* getParameters(const RooAbsData& data, Bool_t stripDisconnected=kTRUE) const { 

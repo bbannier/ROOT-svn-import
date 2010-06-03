@@ -120,6 +120,8 @@ public:
   void SetName(const char *name) ;
   void SetNameTitle(const char *name, const char* title) ;
 
+   static void useFitDataStore(bool on = true); 
+
 protected:
 
   virtual RooAbsData* cacheClone(const RooAbsArg* newCacheOwner, const RooArgSet* newCacheVars, const char* newName=0) ;
@@ -138,6 +140,7 @@ protected:
   
   RooArgSet _varsNoWgt ;   // Vars without weight variable 
   RooRealVar* _wgtVar ;    // Pointer to weight variable (if set) 
+  static bool _gUseFitDataStore;     // use alternative stores based one FitData
 
   ClassDef(RooDataSet,2) // Unbinned data set
 };

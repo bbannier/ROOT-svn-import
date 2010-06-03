@@ -29,7 +29,10 @@ public:
   virtual TObject* clone(const char* newname) const { return new RooExtendPdf(*this,newname) ; }
   virtual ~RooExtendPdf() ;
 
-  Double_t evaluate() const { return _pdf ; }
+   Double_t evaluate() const { 
+      //_pdf.Dump(); 
+      return _pdf ; 
+}
 
   Bool_t forceAnalyticalInt(const RooAbsArg& /*dep*/) const { return kTRUE ; }
   Int_t getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVars, const RooArgSet* normSet, const char* rangeName=0) const {
