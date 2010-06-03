@@ -32,6 +32,7 @@ class TFile;
 class TCanvas;
 class TProof;
 class TProfile;
+class TTree;
 
 class TProofBenchMode;
 
@@ -49,7 +50,7 @@ public:
                      TProof* proof=gProof,
                      Int_t maxnworkers=-1,//maximum number of workers to be tested. 
                                           //If not set (default), 2 times the number of total workers in the cluster available
-                     Long64_t nevents=10000,
+                     Long64_t nevents=1000000,
                      Int_t ntries=2,
                      Int_t start=1,
                      Int_t stop=-1,
@@ -113,6 +114,8 @@ public:
 
 protected:
 
+   void FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t nactive);
+
    Int_t FillNodeInfo();
 
    Int_t SetParameters();
@@ -149,6 +152,7 @@ private:
 
    TList* fPerfStats;            //List of PROOF_PerfStats
    TProfile* fProfEvent;
+   TList* fListPerfProfiles;       //List of performance profiles
    TCanvas* fCPerfProfiles;      //canvas for performance profile histograms
 
    TString fName;
