@@ -107,6 +107,7 @@ public:
    TFile* GetFile()const;
    TDirectory* GetDirProofBench() const;
    TList* GetListOfPerfStats()const;
+   TList* GetListPerfProfiles()const;
    TCanvas* GetCPerfProfiles() const;
    const char* GetName()const;
 
@@ -121,11 +122,10 @@ protected:
    Int_t SetParameters();
    Int_t DeleteParameters();
 
-   const char* BuildPatternName(const char* objname, const char* delimiter="_");
-   const char* BuildNewPatternName(const char* objname, Int_t nactive, Int_t tries, const char* delimiter="_");
-   const char* BuildProfileName(const char* objname, const char* type, const char* delimiter="_");
-   const char* BuildProfileTitle(const char* objname, const char* type, const char* delimiter=" ");
-
+   TString BuildPatternName(const TString& objname, const TString& delimiter="_");
+   TString BuildNewPatternName(const TString& objname, Int_t nactive, Int_t tries, const TString& delimiter="_");
+   TString BuildProfileName(const TString& objname, const TString& type, const TString& delimiter="_");
+   TString BuildProfileTitle(const TString& objname, const TString& type, const TString& delimiter=" ");
 private:
 
    TProof* fProof;                 //pointer to proof
