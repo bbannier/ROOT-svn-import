@@ -53,7 +53,9 @@ TSelEventGen::TSelEventGen():
       fBaseDir=gProofServ->GetDataDir();
       //2 directories up
       fBaseDir.Remove(fBaseDir.Last('/'));
+#if 0
       fBaseDir.Remove(fBaseDir.Last('/'));
+#endif
    }
    else{
       fBaseDir="";
