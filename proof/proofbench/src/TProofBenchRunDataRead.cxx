@@ -41,8 +41,6 @@
 #include "TEnv.h"
 #include "TLeaf.h"
 
-#include <stdlib.h>
-
 ClassImp(TProofBenchRunDataRead)
 
 TProofBenchRunDataRead::TProofBenchRunDataRead(TProofBenchMode* mode,
@@ -340,52 +338,38 @@ void TProofBenchRunDataRead::BuildPerfProfiles(Int_t start,
    TTree* t=0;
    Int_t max_slaves=0;
       
-   while (t=dynamic_cast<TTree*>(nxt())){
+   while ((t=dynamic_cast<TTree*>(nxt()))){
 
-      if (!TString(t->GetName()).Contains(TRegexp(pattern))){
+      TString treename=t->GetName();
+      //Info("BuildPerfProfiles", "%s", treename.Data());
+
+      if (!treename.Contains(TRegexp(pattern))){
          continue;
-      }
-
-      //parse name to get number of slaves and run
-      UInt_t Index = 0;
-      const Char_t *name = t->GetName();
-      while (Index<strlen(name)) {
-        if ( name[Index]>='0' && name[Index]<='9')
-        break;
-        Index++;
-      }
-
-      if (Index == strlen(name)) {
-         continue;
-      } else {
-         // this should be the number of slaves
-         ns_holder = atoi(name+Index);
-         //skip run with the number of slaves of no interest
-         if (ns_holder<ns_min || ns_holder>ns_max){
-            continue;
-         }
-         if ((ns_holder-start)%step){
-            continue;
-         }
-      }
-
-      // get past number of slaves
-      while (Index<strlen(name)) {
-        if ( name[Index]<'0' || name[Index]>'9')
-        break;
-        Index++;
-      }
-
-      if (Index == strlen(name)) {
-         continue;
-      } else {
-         // this should be the run number
-         run_holder = atoi(name+Index);
       }
 
       if(!t->FindBranch("PerfEvents")) {
          continue;
       }
+
+      //parse name to get number of slaves and run
+      treename.Remove(0, treename.Index(TRegexp("[0-9]*Slaves")));
+
+      // this should be the number of slaves
+      ns_holder=treename.Atoi();
+
+      //skip run with the number of slaves of no interest
+      if (ns_holder<ns_min || ns_holder>ns_max){
+         continue;
+      }
+      if ((ns_holder-start)%step){
+         continue;
+      }
+
+      treename.Remove(0, treename.Index(TRegexp("Run[0-9]*")));
+      treename.Remove(0, treename.Index(TRegexp("[0-9]")));
+
+      //this should be run (try) number
+      run_holder=treename.Atoi();
 
       // extract timing information
       TPerfEvent pe;
