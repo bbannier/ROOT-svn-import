@@ -74,6 +74,7 @@ fWritable(0),
 fNodes(0),
 fPerfStats(0),
 fProfEvent(0),
+fListPerfProfiles(0),
 fCPerfProfiles(0),
 fName(0)
 {
@@ -368,6 +369,7 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t 
    //}
    return;
 }
+/*
 void TProofBenchRunCPU::BuildPerfProfiles(Int_t start,
                                           Int_t stop,
                                           Int_t step,
@@ -565,7 +567,7 @@ void TProofBenchRunCPU::BuildPerfProfiles(Int_t start,
 
    delete timing_tree;
    return;
-}
+}*/
 
 void TProofBenchRunCPU::Print(Option_t* option)const{
 
