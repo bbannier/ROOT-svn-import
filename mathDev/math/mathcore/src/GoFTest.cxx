@@ -14,6 +14,7 @@
 #include <iostream>
 #include <map>
 #include <numeric>
+#include <string.h>
 
 #include "Math/Integrator.h"
 #include "Math/ProbFuncMathCore.h"
@@ -222,7 +223,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
       SetParameters();
    }
 
-   GoFTest::Integrand::Integrand(Double_t* parms) : parms(parms) {}
+   GoFTest::Integrand::Integrand(Double_t* p) : parms(p) {}
 
 /*
   Taken from (2)
