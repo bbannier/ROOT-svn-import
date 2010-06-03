@@ -17,6 +17,7 @@ END_HTML
 */
 //
 
+#include <algorithm>
 #include "RooStats/TemplateFactory/EstimateSummary.h"
 
 ClassImp(RooStats::TemplateFactory::EstimateSummary)
