@@ -9,6 +9,8 @@
 #include "Math/Random.h"
 #endif
 
+#include "TRandom3.h"
+
 #include <iostream>
 
 #include <cassert>
@@ -191,7 +193,9 @@ struct GoFTStress {
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
-      ROOT::Math::Random<ROOT::Math::GSLRngMT> r;
+      //ROOT::Math::Random<ROOT::Math::GSLRngMT> r;
+      TRandom3 r;
+
    
       Double_t* sample = new Double_t[nEvents];
    
@@ -230,7 +234,8 @@ struct GoFTStress {
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
-      ROOT::Math::Random<ROOT::Math::GSLRngMT> r;
+      //ROOT::Math::Random<ROOT::Math::GSLRngMT> r;
+      TRandom3 r;
    
       Double_t* sample = new Double_t[nEvents];
    
@@ -267,7 +272,8 @@ struct GoFTStress {
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
-      ROOT::Math::Random<ROOT::Math::GSLRngMT> r;
+      //ROOT::Math::Random<ROOT::Math::GSLRngMT> r;
+      TRandom3 r;
    
       Double_t* sample = new Double_t[nEvents];
    
