@@ -19,10 +19,10 @@ namespace RooStats {
 
 ModelConfig::~ModelConfig() { 
    // destructor.
-   if( fOwnsWorkspace && fWS) { 
-      std::cout << "ModelConfig : delete own workspace " << std::endl;
-      delete fWS;
-   }
+//    if( fOwnsWorkspace && fWS) { 
+//       std::cout << "ModelConfig : delete own workspace " << std::endl;
+//       delete fWS;
+//    }
 }
 
 void ModelConfig::SetWorkspace(RooWorkspace & ws) {
@@ -37,11 +37,36 @@ void ModelConfig::SetWorkspace(RooWorkspace & ws) {
    
 }
 
+void ModelConfig::SetSnapshot(const RooArgSet& set) {
+   // save snaphot in the workspace 
+   // and use values passed with the set
+   if (!fWS) {
+      coutE(ObjectHandling) << "workspace not set" << endl;
+      return;
+   }
+   fSnapshotName = GetName();
+   if (fSnapshotName.size()  > 0) fSnapshotName += "_";
+   fSnapshotName += set.GetName();
+   if (fSnapshotName.size()  > 0) fSnapshotName += "_";
+   fSnapshotName += "snapshot";
+   fWS->saveSnapshot(fSnapshotName.c_str(), set, true);  // import also the given parameter values 
+   // define the set also in WS
+   DefineSetInWS(fSnapshotName.c_str(), set); 
+}    
+
+const RooArgSet * ModelConfig::GetSnapshot() const{
+   // load the snapshot from ws and return the corresponding set with the snapshot values
+   if (!fWS) return 0; 
+   if (!fWS->loadSnapshot(fSnapshotName.c_str()) ) return 0; 
+   return fWS->set(fSnapshotName.c_str() );
+}
+
+
 void ModelConfig::DefineSetInWS(const char* name, const RooArgSet& set) {
    // helper functions to avoid code duplication
    if (!fWS) {
-      fWS = new RooWorkspace();
-      fOwnsWorkspace = true; 
+      coutE(ObjectHandling) << "workspace not set" << endl;
+      return;
    }
    if (! fWS->set( name )){
       RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
@@ -54,10 +79,12 @@ void ModelConfig::DefineSetInWS(const char* name, const RooArgSet& set) {
    }
 }
    
-void ModelConfig::ImportPdfInWS(RooAbsPdf & pdf) { 
+void ModelConfig::ImportPdfInWS(const RooAbsPdf & pdf) { 
    // internal function to import Pdf in WS
-   if (!fWS) 
-      fWS = new RooWorkspace();
+   if (!fWS) { 
+      coutE(ObjectHandling) << "workspace not set" << endl;
+      return;
+   }
    if (! fWS->pdf( pdf.GetName() ) ){
       RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
       fWS->import(pdf);
@@ -68,8 +95,8 @@ void ModelConfig::ImportPdfInWS(RooAbsPdf & pdf) {
 void ModelConfig::ImportDataInWS(RooAbsData & data) { 
    // internal function to import data in WS
    if (!fWS) {
-      fWS = new RooWorkspace();
-      fOwnsWorkspace = true; 
+      coutE(ObjectHandling) << "workspace not set" << endl;
+      return;
    }
    if (! fWS->data( data.GetName() ) ){
       RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;

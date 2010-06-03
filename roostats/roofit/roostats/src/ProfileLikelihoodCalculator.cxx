@@ -90,18 +90,9 @@ ProfileLikelihoodCalculator::ProfileLikelihoodCalculator(RooAbsData& data,  Mode
    CombinedCalculator(data, model, size), 
    fFitResult(0)
 {
+   // construct from a ModelConfig. Assume data model.GetPdf() will provide full description of model including 
+   // constraint term on the nuisances parameters
    assert(model.GetPdf() );
-
-   /*
-     KC: THIS SHOULD NOT BE HERE.  Prior is not frequentist.
-   // construct from model config (pdf from the model config does not include the nuisance)
-   if (model.GetPriorPdf() ) { 
-      std::string name = std::string("Costrained_") + (model.GetPdf())->GetName() + std::string("_with_") + (model.GetPriorPdf())->GetName();
-      fPdf = new RooProdPdf(name.c_str(),name.c_str(), *(model.GetPdf()), *(model.GetPriorPdf()) );
-      // set pdf in ModelConfig which will import in WS  and it will manage it 
-      model.SetPdf(*fPdf);
-   }
-   */
 }
 
 

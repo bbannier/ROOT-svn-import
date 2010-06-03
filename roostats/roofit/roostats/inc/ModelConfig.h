@@ -38,6 +38,7 @@ BEGIN_HTML
 ModelConfig is a simple class that holds configuration information specifying how a model
 should be used in the context of various RooStats tools.  A single model can be used
 in different ways, and this class should carry all that is needed to specify how it should be used.
+ModelConfig requires a workspace to be set 
 </p>
 END_HTML
 */
@@ -49,16 +50,23 @@ class ModelConfig : public TNamed {
 
 public:
 
-   ModelConfig() : TNamed(), fWS(0), fOwnsWorkspace(false) {
-   }
+   ModelConfig(RooWorkspace * ws = 0) : 
+      TNamed(), 
+      fWS(ws) 
+      //fOwnsWorkspace(false) 
+   {}
     
-   ModelConfig(const char* name) : TNamed(name, name), fWS(0), fOwnsWorkspace(false) {
-   }
+   ModelConfig(const char* name, RooWorkspace *ws = 0) : 
+      TNamed(name, name), 
+      fWS(ws) 
+      //fOwnsWorkspace(false) 
+   { }
     
-   ModelConfig(const char* name, const char* title) : TNamed(name, title), fWS(0), fOwnsWorkspace(false) {
-      fWS = 0;
-      fOwnsWorkspace = false;
-   }
+   ModelConfig(const char* name, const char* title, RooWorkspace *ws = 0) : 
+      TNamed(name, title), 
+      fWS(ws) 
+      //fOwnsWorkspace(false)
+   { }
     
    // destructor.
    virtual ~ModelConfig(); 
@@ -73,13 +81,13 @@ public:
    }
     
    // Set the Pdf, add to the the workspace if not already there
-   virtual void SetPdf(RooAbsPdf& pdf) {
+   virtual void SetPdf(const RooAbsPdf& pdf) {
       ImportPdfInWS(pdf);
       SetPdf( pdf.GetName() );      
    }
 
    // Set the Prior Pdf, add to the the workspace if not already there
-   virtual void SetPriorPdf(RooAbsPdf& pdf) {
+   virtual void SetPriorPdf(const RooAbsPdf& pdf) {
       ImportPdfInWS(pdf);
       SetPriorPdf( pdf.GetName() );      
    }
@@ -94,34 +102,32 @@ public:
    }
     
    // specify the nuisance parameters (eg. the rest of the parameters)
-   virtual void SetNuisanceParameters(RooArgSet& set) {
+   virtual void SetNuisanceParameters(const RooArgSet& set) {
       fNuisParamsName=std::string(GetName()) + "_NuisParams";
       DefineSetInWS(fNuisParamsName.c_str(), set);
    }
 
    // specify the constraint parameters 
-   virtual void SetConstraintParameters(RooArgSet& set) {
+   virtual void SetConstraintParameters(const RooArgSet& set) {
       fConstrParamsName=std::string(GetName()) + "_ConstrainedParams";
       DefineSetInWS(fConstrParamsName.c_str(), set);
    }
 
    // specify the observables
-   virtual void SetObservables(RooArgSet& set) {
+   virtual void SetObservables(const RooArgSet& set) {
       fObservablesName=std::string(GetName()) + "_Observables";
       DefineSetInWS(fObservablesName.c_str(), set);
    }
 
    // specify the conditional observables
-   virtual void SetConditionalObservables(RooArgSet& set) {
+   virtual void SetConditionalObservables(const RooArgSet& set) {
       fConditionalObsName=std::string(GetName()) + "_ConditionalObservables";
       DefineSetInWS(fConditionalObsName.c_str(), set);
    }
 
-   // set parameter values for the null if using a common PDF
-   virtual void SetSnapshot(RooArgSet& set) {
-      fSnapshotName=std::string(GetName()) + "_Snapshot";
-      DefineSetInWS(fSnapshotName.c_str(), set);
-   }    
+   // set parameter values for a particular hypothesis if using a common PDF
+   // by saving a snapshot in the workspace
+   virtual void SetSnapshot(const RooArgSet& set);
     
    // specify the name of the PDF in the workspace to be used
    virtual void SetPdf(const char* name) {
@@ -189,7 +195,7 @@ public:
    RooAbsData * GetProtoData()  const {  return (fWS) ? fWS->data(fProtoDataName.c_str()) : 0; } 
 
    /// get RooArgSet for parameters for a particular hypothesis  (return NULL if not existing) 
-   const RooArgSet * GetSnapshot() const { return (fWS) ? fWS->set(fSnapshotName.c_str()) : 0; } 
+   const RooArgSet * GetSnapshot() const;
  
    const RooWorkspace * GetWS() const { return fWS; }
     
@@ -200,13 +206,14 @@ protected:
    void DefineSetInWS(const char* name, const RooArgSet& set);
     
    // internal function to import Pdf in WS
-   void ImportPdfInWS(RooAbsPdf & pdf);
+   void ImportPdfInWS(const RooAbsPdf & pdf);
       
    // internal function to import data in WS
    void ImportDataInWS(RooAbsData & data); 
     
    RooWorkspace* fWS; // a workspace that owns all the components to be used by the calculator
-   Bool_t fOwnsWorkspace;
+
+   //Bool_t fOwnsWorkspace;
 
    std::string fPdfName; // name of  PDF in workspace
    std::string fDataName; // name of data set in workspace

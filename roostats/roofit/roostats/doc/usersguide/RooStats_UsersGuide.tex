@@ -643,7 +643,7 @@ the equation:
     \label{likelihood}
     L(\underline{x},\underline{\theta})=\prod^{N}_{i=1}f({\underline{x}}_{i},\underline{\theta}).
 \end{equation}
-For semplicity, let's focus on one dimensional case where  we are have
+For simplicity, let's focus on one dimensional case where  we are have
 a parameter of interest,  $\theta_{0}$ and K-1 nuisance parameters. 
 The profile likelihood is a function of $\theta_{0}$ and it is defined as 
 \begin{equation}
@@ -656,11 +656,11 @@ The profile likelihood is a function of $\theta_{0}$ and it is defined as
 \end{equation}
 The numerator, $ L(\hat{\theta}_{0} )$ is the maximum likelihood value,
 obtained from the best fit to the data, while the denominator is the
-maximum value obtained by fixing $\theta_{0}$ and varying the remining
+maximum value obtained by fixing $\theta_{0}$ and varying the remaining
 K-1 parameters.   
 %To ease the calculations, the negative of the logarithm of the likelihood
 %function $-\ln{L}$ (negative log-likelihood) is used.
-It can be shown (Wilks' theorem) that asyntotically
+It can be shown (Wilks' theorem) that asymptotically
 $-2ln\lambda(\theta_0)$ is distributed as a $\chi^2(1)$ ($\chi^2(n)$
 in the case of n parameter of interest). This is not
 surprising since in the asymptotic limit the Likelihood function
@@ -673,7 +673,7 @@ the profile likelihood curve has a parabolica shape:
 
 where $\sigma$ represent the Gaussian standard deviations of the
 parameter $\theta_{0}$. From this construction, it is possible to
-easily obtained the one- or two-sided confidenc interval we are
+easily obtained the one- or two-sided confidence interval we are
 interested in. Even in case of non parabolic log-likelihood
 functions, it can be shown, due to the invariance property of the
 likelihood ratios, that this approach is also valid. This is a
