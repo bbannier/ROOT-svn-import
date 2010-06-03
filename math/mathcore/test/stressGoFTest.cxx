@@ -15,6 +15,8 @@
 
 #include <cassert>
 
+/*N.B.: The tests' expected values (expectedDn and expectedA2) were computed on Pcphsft54.cern.ch i386 GNU/Linux computer (slc4_ia32_gcc34)
+*/
 struct GoFTStress {
 
    static enum EDebugLevelTypes {
@@ -193,9 +195,7 @@ struct GoFTStress {
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
-      //ROOT::Math::Random<ROOT::Math::GSLRngMT> r;
       TRandom3 r;
-
    
       Double_t* sample = new Double_t[nEvents];
    
@@ -234,7 +234,6 @@ struct GoFTStress {
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
-      //ROOT::Math::Random<ROOT::Math::GSLRngMT> r;
       TRandom3 r;
    
       Double_t* sample = new Double_t[nEvents];
@@ -253,14 +252,14 @@ struct GoFTStress {
       Double_t A2 =  goft->AndersonDarlingTest("t");
       Double_t pvalueAD = goft->AndersonDarlingTest();
    
-      Double_t expectedA2 = 0.561554;
+      Double_t expectedA2 = 0.441755;
    
       Int_t result = PrintResultAD1Sample(A2, expectedA2, pvalueAD);
    
       Double_t Dn = goft->KolmogorovSmirnovTest("t");
       Double_t pvalueKS = goft->KolmogorovSmirnovTest();
    
-      Double_t expectedDn = 0.0238472;
+      Double_t expectedDn = 0.0282508;
    
       result += PrintResultKS(nsmps, Dn, expectedDn, pvalueKS);
       
@@ -272,7 +271,6 @@ struct GoFTStress {
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
-      //ROOT::Math::Random<ROOT::Math::GSLRngMT> r;
       TRandom3 r;
    
       Double_t* sample = new Double_t[nEvents];
