@@ -369,7 +369,7 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t 
    //}
    return;
 }
-/*
+
 void TProofBenchRunCPU::BuildPerfProfiles(Int_t start,
                                           Int_t stop,
                                           Int_t step,
@@ -567,7 +567,7 @@ void TProofBenchRunCPU::BuildPerfProfiles(Int_t start,
 
    delete timing_tree;
    return;
-}*/
+}
 
 void TProofBenchRunCPU::Print(Option_t* option)const{
 
