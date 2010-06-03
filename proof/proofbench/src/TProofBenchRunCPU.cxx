@@ -880,6 +880,11 @@ TList* TProofBenchRunCPU::GetListOfPerfStats()const
    return fPerfStats;
 }  
 
+TList* TProofBenchRunCPU::GetListPerfProfiles()const
+{
+   return fListPerfProfiles;
+}  
+
 TCanvas* TProofBenchRunCPU::GetCPerfProfiles() const
 {
    return fCPerfProfiles;
@@ -976,15 +981,15 @@ Int_t TProofBenchRunCPU::DeleteParameters(){
    return 0;
 }
 
-const char* TProofBenchRunCPU::BuildPatternName(const char* objname, const char* delimiter)
+TString TProofBenchRunCPU::BuildPatternName(const TString& objname, const TString& delimiter)
 {
    TString newname(objname);
    newname+=delimiter;
    newname+=GetName();
-   return newname.Data();
+   return newname;
 }
 
-const char* TProofBenchRunCPU::BuildNewPatternName(const char* objname, Int_t nactive, Int_t tries, const char* delimiter)
+TString TProofBenchRunCPU::BuildNewPatternName(const TString& objname, Int_t nactive, Int_t tries, const TString& delimiter)
 {
    TString newname(BuildPatternName(objname, delimiter));
    newname+=delimiter;
@@ -993,22 +998,22 @@ const char* TProofBenchRunCPU::BuildNewPatternName(const char* objname, Int_t na
    newname+=delimiter;
    newname+="Run";
    newname+=tries;
-   return newname.Data();
+   return newname;
 }
 
-const char* TProofBenchRunCPU::BuildProfileName(const char* objname, const char* type, const char* delimiter)
+TString TProofBenchRunCPU::BuildProfileName(const TString& objname, const TString& type, const TString& delimiter)
 {
    TString newname(BuildPatternName(objname, delimiter));
    newname+=delimiter;
    newname+=type;
-   return newname.Data();
+   return newname;
 }
 
-const char* TProofBenchRunCPU::BuildProfileTitle(const char* objname, const char* type, const char* delimiter)
+TString TProofBenchRunCPU::BuildProfileTitle(const TString& objname, const TString& type, const TString& delimiter)
 {
    TString newname(BuildPatternName(objname, delimiter));
    newname+=delimiter;
    newname+=type;
-   return newname.Data();
+   return newname;
 }
 
