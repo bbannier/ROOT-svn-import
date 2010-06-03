@@ -47,6 +47,7 @@
 #include "TROOT.h"
 #include "TFile.h"
 #include "RooTreeDataStore.h"
+#include "RooUnBinDataStore.h"
 #include "RooCompositeDataStore.h"
 #include "RooTreeData.h"
 #include <string>
@@ -223,9 +224,14 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
     }
     
     // Create empty datastore 
+    if (_gUseFitDataStore) { 
+//        RooUnBinDataStore* tstore = new RooUnBinDataStore(name,title,_vars,wgtVarName) ;
+//        _dstore = tstore ;
+
+       Info("RooDataSet","creation of a RooUnBinDataStore not impelmented for this constructor - use Tree store");
+    }
     RooTreeDataStore* tstore = new RooTreeDataStore(name,title,_vars,wgtVarName) ;
     _dstore = tstore ;
-    
     
     // Make import mapping if index category is specified
     map<string,RooDataSet*> hmap ;  
@@ -446,8 +452,11 @@ RooDataSet::RooDataSet(const char *name, const char *title, const RooArgSet& var
 {
   // Constructor of an empty data set from a RooArgSet defining the dimensions
   // of the data space.
-
-  _dstore = new RooTreeDataStore(name,title,_vars,wgtVarName) ;
+   
+   if (_gUseFitDataStore) 
+      _dstore = new RooUnBinDataStore(name,title,_vars,wgtVarName) ;
+   else
+      _dstore = new RooTreeDataStore(name,title,_vars,wgtVarName) ;
 
   appendToDir(this,kTRUE) ;
   initialize(wgtVarName) ;
@@ -476,7 +485,10 @@ RooDataSet::RooDataSet(const char *name, const char *title, RooDataSet *dset,
   //
 
   // Initialize datastore
-  _dstore = new RooTreeDataStore(name,title,_vars,*dset->_dstore,cuts,wgtVarName) ;
+   if (_gUseFitDataStore) 
+      _dstore = new RooUnBinDataStore(name,title,_vars,*dset->_dstore,cuts,wgtVarName) ;
+   else
+      _dstore = new RooTreeDataStore(name,title,_vars,*dset->_dstore,cuts,wgtVarName) ;
 
   appendToDir(this,kTRUE) ;
   
@@ -515,7 +527,10 @@ RooDataSet::RooDataSet(const char *name, const char *title, RooDataSet *dset,
   // subset of an existing data
 
   // Initialize datastore
-  _dstore = new RooTreeDataStore(name,title,_vars,*dset->_dstore,cutVar,wgtVarName) ;
+   if (_gUseFitDataStore) 
+      _dstore = new RooUnBinDataStore(name,title,_vars,*dset->_dstore,cutVar,wgtVarName) ;
+   else
+      _dstore = new RooTreeDataStore(name,title,_vars,*dset->_dstore,cutVar,wgtVarName) ;
 
   appendToDir(this,kTRUE) ;
 
@@ -554,7 +569,10 @@ RooDataSet::RooDataSet(const char *name, const char *title, TTree *intree,
   // constructor with a string based cut expression is recommended.
 
   // Initialize datastore
-  _dstore = new RooTreeDataStore(name,title,_vars,*intree,cutVar,wgtVarName) ;
+   if (_gUseFitDataStore) 
+      _dstore = new RooUnBinDataStore(name,title,_vars,*intree,cutVar,wgtVarName) ;
+   else
+      _dstore = new RooTreeDataStore(name,title,_vars,*intree,cutVar,wgtVarName) ;
 
   appendToDir(this,kTRUE) ;
 
@@ -584,7 +602,10 @@ RooDataSet::RooDataSet(const char *name, const char *title, TTree *intree,
   //
 
   // Initialize datastore
-  _dstore = new RooTreeDataStore(name,title,_vars,*intree,selExpr,wgtVarName) ;
+   if (_gUseFitDataStore) 
+      _dstore = new RooUnBinDataStore(name,title,_vars,*intree,selExpr,wgtVarName) ;
+   else
+      _dstore = new RooTreeDataStore(name,title,_vars,*intree,selExpr,wgtVarName) ;
 
   appendToDir(this,kTRUE) ;
 
@@ -1682,3 +1703,10 @@ void RooDataSet::Streamer(TBuffer &R__b)
    }
 }
 
+// initialize the static value
+bool RooDataSet::_gUseFitDataStore = false; 
+ 
+//_____________________________________________________________________________
+void RooDataSet::useFitDataStore(bool on) { 
+   _gUseFitDataStore = on;
+}
