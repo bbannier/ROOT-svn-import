@@ -494,12 +494,12 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
 //Make data sets (file collection) and register them for benchmark test
 //
 //Input parameters
-//   nf: 
-//   start: Starting number of workers
-//   stop: Ending number of workers
-//   step: Incremental number of workers
-//   tdset: data set (TDSet*) from which file collection is built from. 
-//          This is usually the data set built when GenerateFiles function is called but user can supply one.
+//   nf: The first arguement to TProofBenchMode::MakeDataSets(...). The exact meaning of this parameter depends on the mode being used.
+//   start: Starting number of workers, when -1 (default) data member fStart is used
+//   stop: Ending number of workers, when -1 (default) data member fStop is used
+//   step: Incremental number of workers, when -1 (default) data member fStep is used
+//   tdset: data set (TDSet*) from which file collection will be built within this function. 
+//          When tdset=0, the data set built by TProofBenchFileGenerator::GenerateFiles is used. User can also supply one.
 //   option: is used as option to TProof::RegisterDataSet
 //Returns: 0 when ok, <0 when anything is wrong
 
