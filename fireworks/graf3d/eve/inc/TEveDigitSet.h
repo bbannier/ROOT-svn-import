@@ -60,6 +60,7 @@ protected:
    Int_t             fDefaultValue;   //  Default signal value.
    Bool_t            fValueIsColor;   //  Interpret signal value as RGBA color.
    Bool_t            fSingleColor;    //  Use the same color for all digits.
+   Bool_t            fAntiFlick;      // Make extra render pass to avoid flickering when quads are too small.
    Bool_t            fOwnIds;         //  Flag specifying if id-objects are owned by the TEveDigitSet.
    TEveChunkManager  fPlex;           //  Container of digit data.
    DigitBase_t*      fLastDigit;      //! The last / current digit added to collection.
@@ -83,7 +84,10 @@ public:
    TEveDigitSet(const char* n="TEveDigitSet", const char* t="");
    virtual ~TEveDigitSet();
 
-   void UseSingleColor();
+   void   UseSingleColor();
+
+   Bool_t GetAntiFlick() const   { return fAntiFlick; }
+   void   SetAntiFlick(Bool_t f) { fAntiFlick = f; }
 
    virtual void SetMainColor(Color_t color);
 
