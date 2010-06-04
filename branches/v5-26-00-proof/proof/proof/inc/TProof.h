@@ -602,8 +602,8 @@ private:
    void     NotifyLogMsg(const char *msg, const char *sfx = "\n");
    Int_t    BuildPackage(const char *package, EBuildPackageOpt opt = kBuildAll);
    Int_t    BuildPackageOnClient(const char *package, Int_t opt = 0, TString *path = 0);
-   Int_t    LoadPackage(const char *package, Bool_t notOnClient = kFALSE);
-   Int_t    LoadPackageOnClient(const char *package);
+   Int_t    LoadPackage(const char *package, Bool_t notOnClient = kFALSE, TList *loadopts = 0);
+   Int_t    LoadPackageOnClient(const char *package, TList *loadopts = 0);
    Int_t    UnloadPackage(const char *package);
    Int_t    UnloadPackageOnClient(const char *package);
    Int_t    UnloadPackages();
@@ -793,19 +793,23 @@ public:
    virtual void Print(Option_t *option="") const;
 
    //-- cache and package management
-   virtual void ShowCache(Bool_t all = kFALSE);
-   virtual void ClearCache(const char *file = 0);
-   TList      *GetListOfPackages();
-   TList      *GetListOfEnabledPackages();
-   void        ShowPackages(Bool_t all = kFALSE, Bool_t redirlog = kFALSE);
-   void        ShowEnabledPackages(Bool_t all = kFALSE);
-   Int_t       ClearPackages();
-   Int_t       ClearPackage(const char *package);
-   Int_t       DownloadPackage(const char *par, const char *dstdir = 0);
-   Int_t       EnablePackage(const char *package, Bool_t notOnClient = kFALSE);
-   Int_t       UploadPackage(const char *par, EUploadPackageOpt opt = kUntar);
-   Int_t       Load(const char *macro, Bool_t notOnClient = kFALSE, Bool_t uniqueOnly = kTRUE,
-                    TList *wrks = 0);
+   virtual void  ShowCache(Bool_t all = kFALSE);
+   virtual void  ClearCache(const char *file = 0);
+   TList        *GetListOfPackages();
+   TList        *GetListOfEnabledPackages();
+   void          ShowPackages(Bool_t all = kFALSE, Bool_t redirlog = kFALSE);
+   void          ShowEnabledPackages(Bool_t all = kFALSE);
+   Int_t         ClearPackages();
+   Int_t         ClearPackage(const char *package);
+   Int_t         DownloadPackage(const char *par, const char *dstdir = 0);
+   Int_t         EnablePackage(const char *package, Bool_t notOnClient = kFALSE);
+   Int_t         EnablePackage(const char *package, const char *loadopts,
+                               Bool_t notOnClient = kFALSE);
+   Int_t         EnablePackage(const char *package, TList *loadopts,
+                               Bool_t notOnClient = kFALSE);
+   Int_t         UploadPackage(const char *par, EUploadPackageOpt opt = kUntar);
+   virtual Int_t Load(const char *macro, Bool_t notOnClient = kFALSE, Bool_t uniqueOnly = kTRUE,
+                      TList *wrks = 0);
 
    Int_t       AddDynamicPath(const char *libpath, Bool_t onClient = kFALSE, TList *wrks = 0);
    Int_t       AddIncludePath(const char *incpath, Bool_t onClient = kFALSE, TList *wrks = 0);
