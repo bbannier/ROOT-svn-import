@@ -64,6 +64,8 @@ TEveDigitSet::TEveDigitSet(const char* n, const char* t) :
    fDigitIds       (0),
    fDefaultValue   (kMinInt),
    fValueIsColor   (kFALSE),
+   fSingleColor    (kFALSE),
+   fAntiFlick      (kTRUE),
    fOwnIds         (kFALSE),
    fPlex           (),
    fLastDigit      (0),
