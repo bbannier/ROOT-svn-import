@@ -28,6 +28,9 @@
 #include "RooWorkspace.h"
 #endif
 
+#ifndef ROOT_TRef
+#include "TRef.h"
+#endif
 
 #include <string>
 
@@ -44,6 +47,7 @@ END_HTML
 */
 //
 
+
 namespace RooStats {
 
 class ModelConfig : public TNamed {
@@ -52,24 +56,38 @@ public:
 
    ModelConfig(RooWorkspace * ws = 0) : 
       TNamed(), 
-      fWS(ws) 
+      fWS(ws)
       //fOwnsWorkspace(false) 
-   {}
+   {
+      if (ws) fWSName = ws->GetName();
+   }
     
    ModelConfig(const char* name, RooWorkspace *ws = 0) : 
       TNamed(name, name), 
       fWS(ws) 
       //fOwnsWorkspace(false) 
-   { }
+   {
+      if (ws) fWSName = ws->GetName();
+   }
     
    ModelConfig(const char* name, const char* title, RooWorkspace *ws = 0) : 
       TNamed(name, title), 
       fWS(ws) 
       //fOwnsWorkspace(false)
-   { }
+   {
+      if (ws) fWSName = ws->GetName();
+   }
+
     
    // destructor.
    virtual ~ModelConfig(); 
+
+   // clone
+   virtual ModelConfig * Clone(const char * name = "ModelConfig") const {
+      ModelConfig * mc =  new ModelConfig(*this);
+      mc->SetName(name); 
+      return mc; 
+   }
 
    // set a workspace that owns all the necessary components for the analysis
    virtual void SetWorkspace(RooWorkspace & ws);
@@ -197,7 +215,7 @@ public:
    /// get RooArgSet for parameters for a particular hypothesis  (return NULL if not existing) 
    const RooArgSet * GetSnapshot() const;
  
-   const RooWorkspace * GetWS() const { return fWS; }
+   const RooWorkspace * GetWS() const;
     
 protected:
 
@@ -211,9 +229,12 @@ protected:
    // internal function to import data in WS
    void ImportDataInWS(RooAbsData & data); 
     
-   RooWorkspace* fWS; // a workspace that owns all the components to be used by the calculator
+   mutable RooWorkspace* fWS;    //!  a workspace that owns all the components to be used by the calculator (transient member)
+   TRef fRefWS;  // WS reference used in the file
 
    //Bool_t fOwnsWorkspace;
+
+   std::string fWSName;  // name of the WS
 
    std::string fPdfName; // name of  PDF in workspace
    std::string fDataName; // name of data set in workspace

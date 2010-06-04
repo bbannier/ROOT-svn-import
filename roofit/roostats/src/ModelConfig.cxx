@@ -10,6 +10,8 @@
 
 #include "RooStats/ModelConfig.h"
 
+#include "TROOT.h"
+
 #ifndef ROO_MSG_SERVICE
 #include "RooMsgService.h"
 #endif
@@ -27,14 +29,27 @@ ModelConfig::~ModelConfig() {
 
 void ModelConfig::SetWorkspace(RooWorkspace & ws) {
    // set a workspace that owns all the necessary components for the analysis
-   if (!fWS)
+   if (!fWS) { 
       fWS = &ws;
+      fWSName = ws.GetName();
+      fRefWS = &ws; 
+   }   
    else{
       RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
       fWS->merge(ws);
       RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
    }
    
+}
+
+const RooWorkspace * ModelConfig::GetWS() const { 
+   // get workspace if pointer is null get from the TRef 
+   if (fWS) return fWS; 
+   // get from TRef
+   fWS = dynamic_cast<RooWorkspace *>(fRefWS.GetObject() );
+   if (fWS) return fWS; 
+   coutE(ObjectHandling) << "workspace not set" << endl;
+   return 0;
 }
 
 void ModelConfig::SetSnapshot(const RooArgSet& set) {
@@ -49,7 +64,7 @@ void ModelConfig::SetSnapshot(const RooArgSet& set) {
    fSnapshotName += set.GetName();
    if (fSnapshotName.size()  > 0) fSnapshotName += "_";
    fSnapshotName += "snapshot";
-   fWS->saveSnapshot(fSnapshotName.c_str(), set, true);  // import also the given parameter values 
+   fWS->saveSnapshot(fSnapshotName.c_str(), set, false);  // import also the given parameter values 
    // define the set also in WS
    DefineSetInWS(fSnapshotName.c_str(), set); 
 }    
