@@ -12,6 +12,25 @@
 // defined for $x \geq 0$ if $\mu = 0$
 //
 
+// Notes from Kyle Cranmer
+// Wikipedia and several sources refer to the Gamma distribution as
+// G(mu|alpha,beta) = beta^alpha mu^(alpha-1) e^(-beta mu) / Gamma(alpha)
+// Below is the correspondance
+// Wikipedia | This Implementation
+//---------------------------------
+// alpha     | gamma
+// beta      | 1/beta
+// mu        | x
+// 0         | mu
+//
+// Note, that for a model Pois(N|mu), a uniform prior on mu, and a measurement N
+// the posterior is in the Wikipedia parametrization Gamma(mu, alpha=N+1, beta=1)
+// thus for this implementation it is:
+// RooGamma(_x=mu,_gamma=N+1,_beta=1,_mu=0)
+// Also note, that in this case it is equivalent to
+// RooPoison(N,mu) and treating the function as a PDF in mu.
+
+
 #include "RooFit.h"
 
 #include "Riostream.h"
