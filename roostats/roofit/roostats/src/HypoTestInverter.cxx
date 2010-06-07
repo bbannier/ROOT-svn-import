@@ -365,7 +365,10 @@ bool HypoTestInverter::RunOnePoint( double thisX )
      fResults->fXValues.push_back(thisX);
      fResults->fYObjects.Add(myHybridResult);
    }
-   
+
+
+   std::cout << "computed: " << fResults->GetYValue(fResults->ArraySize()-1) << endl;
+
    fScannedVariable->setVal(oldValue);
    
    return true;
