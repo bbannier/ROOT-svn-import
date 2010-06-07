@@ -505,4 +505,7 @@ void TGVSlider::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 
    if (fScale != 10)
       out << "   " << GetName() <<"->SetScale(" << fScale << ");" << endl;
+
+   if (!fEnabled)
+      out << "   " << GetName() <<"->SetEnabled(kFALSE);" << endl;
 }
