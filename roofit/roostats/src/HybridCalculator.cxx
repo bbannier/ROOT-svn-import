@@ -263,19 +263,19 @@ HybridResult* HybridCalculator::Calculate(RooAbsData& data, unsigned int nToys, 
       /// profiled likelihood ratio used as test statistics
       if ( fTmpDoExtended ) { 
 	RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,data,RooFit::CloneData(false),RooFit::Extended());
-	fSbModel->fitTo(data,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0),RooFit::Extended());
+	fSbModel->fitTo(data,RooFit::Hesse(false),RooFit::Strategy(0),RooFit::Extended());
 	double sb_nll_val = sb_nll.getVal();
 	RooNLLVar b_nll("b_nll","b_nll",*fBModel,data,RooFit::CloneData(false),RooFit::Extended());
-	fBModel->fitTo(data,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0),RooFit::Extended());
+	fBModel->fitTo(data,RooFit::Hesse(false),RooFit::Strategy(0),RooFit::Extended());
 	double b_nll_val = b_nll.getVal();
 	double m2lnQ = 2*(sb_nll_val-b_nll_val);
 	testStatData = m2lnQ;
       } else {
 	RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,data,RooFit::CloneData(false));
-	fSbModel->fitTo(data,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
+	fSbModel->fitTo(data,RooFit::Hesse(false),RooFit::Strategy(0));
 	double sb_nll_val = sb_nll.getVal();
 	RooNLLVar b_nll("b_nll","b_nll",*fBModel,data,RooFit::CloneData(false));
-	fBModel->fitTo(data,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0));
+	fBModel->fitTo(data,RooFit::Hesse(false),RooFit::Strategy(0));
 	double b_nll_val = b_nll.getVal();
 	double m2lnQ = 2*(sb_nll_val-b_nll_val);
 	testStatData = m2lnQ;
@@ -294,6 +294,8 @@ HybridResult* HybridCalculator::Calculate(RooAbsData& data, unsigned int nToys, 
 	testStatData = m2lnQ;
       }
    }
+
+   std::cout << "Test statistics has been evaluated for data\n";
 
    HybridResult* result = Calculate(nToys,usePriors);
    result->SetDataTestStatistics(testStatData);
@@ -397,7 +399,7 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
 	bData = static_cast<RooAbsData*> (fBModel->generateBinned(*fObservables,RooFit::Extended()));	
       else {
 	if ( fTmpDoExtended ) bData = static_cast<RooAbsData*> (fBModel->generate(*fObservables,RooFit::Extended()));
-	else bData = static_cast<RooAbsData*> (fBModel->generate(*fObservables));
+	else bData = static_cast<RooAbsData*> (fBModel->generate(*fObservables,1));
       }
 
       /// work-around in case of an empty dataset (TO DO: need a debug in RooFit?)
@@ -416,7 +418,7 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
 	sbData = static_cast<RooAbsData*> (fSbModel->generateBinned(*fObservables,RooFit::Extended()));
       else {
 	if ( fTmpDoExtended ) sbData = static_cast<RooAbsData*> (fSbModel->generate(*fObservables,RooFit::Extended()));
-	else sbData = static_cast<RooAbsData*> (fSbModel->generate(*fObservables));
+	else sbData = static_cast<RooAbsData*> (fSbModel->generate(*fObservables,1));
       }
 
       /// work-around in case of an empty dataset (TO DO: need a debug in RooFit?)
@@ -449,7 +451,7 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
 	  if ( hypoTested==0 ) sbVals.push_back(nEvents);
 	  else bVals.push_back(nEvents);
 	} else if ( fTestStatisticsIdx==3 ) {  /// profiled likelihood ratio used as test statistics
-	  if ( fTmpDoExtended ) { 
+	  if ( fTmpDoExtended ) {
 	    RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*dataToTest,RooFit::CloneData(false),RooFit::Extended());
 	    fSbModel->fitTo(*dataToTest,RooFit::PrintLevel(-1), RooFit::Hesse(false),RooFit::Strategy(0),RooFit::Extended());
 	    double sb_nll_val = sb_nll.getVal();
