@@ -321,6 +321,17 @@ TEveCaloDataVec::~TEveCaloDataVec()
 }
 
 //______________________________________________________________________________
+Int_t TEveCaloDataVec::AddSlice()
+{
+  // Add new slice.
+  
+  fSliceInfos.push_back(SliceInfo_t());
+  fSliceVec.push_back(std::vector<Float_t> ()); 
+  
+  return fSliceInfos.size() - 1;
+}
+  
+//______________________________________________________________________________
 Int_t TEveCaloDataVec::AddTower(Float_t etaMin, Float_t etaMax, Float_t phiMin, Float_t phiMax)
 {
    // Add tower within eta/phi range.

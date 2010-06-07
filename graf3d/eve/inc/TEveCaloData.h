@@ -233,7 +233,6 @@ protected:
    typedef std::vector<vFloat_t>::iterator    vvFloat_i;
 
    vvFloat_t   fSliceVec;
-   vFloat_t    fValVec;
    vCellGeom_t fGeomVec;
 
    Int_t       fTower; // current tower
@@ -247,12 +246,15 @@ protected:
 public:
    TEveCaloDataVec(Int_t nslices);
    virtual ~TEveCaloDataVec();
-
+  
+   Int_t AddSlice();
    Int_t AddTower(Float_t etaMin, Float_t etaMax, Float_t phiMin, Float_t phiMax);
    void  FillSlice(Int_t slice, Float_t value);
    void  FillSlice(Int_t slice, Int_t tower, Float_t value);
 
    Int_t GetNCells() { return fGeomVec.size(); }
+   std::vector<Float_t>&  GetSliceVals(Int_t slice) { return fSliceVec[slice]; }
+   std::vector<TEveCaloData::CellGeom_t>& GetCellGeom() { return fGeomVec; } 
 
    virtual void GetCellList(Float_t etaMin, Float_t etaMax,
                             Float_t phi,    Float_t phiRng,
@@ -264,6 +266,7 @@ public:
    virtual void GetEtaLimits(Double_t &min, Double_t &max) const { min=fEtaMin, max=fEtaMax;}
    virtual void GetPhiLimits(Double_t &min, Double_t &max) const { min=fPhiMin; max=fPhiMax;}
 
+  
    virtual void  DataChanged();
    void          SetAxisFromBins(Double_t epsX=0.001, Double_t epsY=0.001);
 
