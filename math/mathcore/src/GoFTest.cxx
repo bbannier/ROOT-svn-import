@@ -14,7 +14,6 @@
 #include <iostream>
 #include <map>
 #include <numeric>
-#include <string.h>
 
 #include "Math/Integrator.h"
 #include "Math/ProbFuncMathCore.h"
@@ -223,7 +222,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
       SetParameters();
    }
 
-   GoFTest::Integrand::Integrand(Double_t* p) : parms(p) {}
+   GoFTest::Integrand::Integrand(Double_t* parms) : parms(parms) {}
 
 /*
   Taken from (2)
@@ -261,7 +260,7 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
    }
 
    Double_t GoFTest::InterpolatePValues(Double_t dA2, Int_t bin) const {
-      static const Double_t pvalue[450] = { // The p-value table for the 2-sample Anderson-Darling Anderson-Darling test statistic's asymtotic distribution TODO: put more accuracy and branch in the code the pvlues when they are the same for a long range
+      static const Double_t pvalue[450] = { // The p-value table for the 2-sample Anderson-Darling Anderson-Darling test statistic's asymtotic distribution
          1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 0.9999, 0.9996, 0.9987, 0.9968, 0.9936,
          0.9900, 0.9836, 0.9747, 0.9638, 0.9505, 0.9363, 0.9182, 0.9003, 0.8802, 0.8608,
          0.8437, 0.8251, 0.8033, 0.7839, 0.7643, 0.7452, 0.7273, 0.7081, 0.6900, 0.6704,
@@ -327,9 +326,10 @@ GoFTest::DegenerateSamples::DegenerateSamples(std::string type) : std::domain_er
       if (W2 >= 8.0)
          return 0.0;
       else if (W2 <= 0.0)
-         return 1;
-      Int_t bin = 1 + Int_t(50 * A2);
-      dA2 = Double_t(bin - 1) / 50 + 0.01 - A2; // Difference between the bin center and A2 
+         return 1.0;
+      if (A2 <= 0.0) A2 = W2;
+      Int_t bin = Int_t(50 * A2);
+      dA2 = Double_t(bin) / 50 + 0.01 - A2; // Difference between the bin center and A2 
       pvalue = InterpolatePValues(dA2, bin);
       return pvalue;
    }
