@@ -69,6 +69,7 @@ TGSlider::TGSlider(const TGWindow *p, UInt_t w, UInt_t h, UInt_t type, Int_t id,
    fType     = type;
    fScale    = 10;
    fDragging = kFALSE;
+   fEnabled  = kTRUE;
 }
 
 //______________________________________________________________________________
@@ -207,6 +208,10 @@ Bool_t TGVSlider::HandleMotion(Event_t *event)
 {
    // Handle mouse motion event in vertical slider.
 
+   // If the widget is not enabled, ignore any motion event.
+   if (!fEnabled)
+      return kTRUE;
+
    if (fDragging) {
       int old = fPos;
       fPos = ((fVmax - fVmin) * (event->fY - fYp)) / ((int)fHeight-16) + fVmin;
@@ -314,6 +319,10 @@ Bool_t TGHSlider::HandleButton(Event_t *event)
    // Handle mouse button event in horizontal slider widget.
 
    if (event->fType == kButtonPress) {
+      // If the widget is not enabled, we ignore any message.
+      if (!fEnabled)
+         return kTRUE;
+         
       // constrain to the slider height
       if (event->fY < (Int_t)fHeight/2-7 || event->fY > (Int_t)fHeight/2+7) {
          return kTRUE;
@@ -366,6 +375,10 @@ Bool_t TGHSlider::HandleButton(Event_t *event)
 Bool_t TGHSlider::HandleMotion(Event_t *event)
 {
    // Handle mouse motion event in horizontal slide widget.
+
+   // If the widget is not enabled, ignore any motion event.
+   if (!fEnabled)
+      return kTRUE;
 
    if (fDragging) {
       int old = fPos;
