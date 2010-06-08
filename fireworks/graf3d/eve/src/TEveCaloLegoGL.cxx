@@ -1090,15 +1090,15 @@ void TEveCaloLegoGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* /*
 //______________________________________________________________________________
 void TEveCaloLegoGL::DrawSelectedCells(TGLRnrCtx & rnrCtx, TEveCaloData::vCellId_t cellsSelectedInput) const
 {
-   // Draw selected cells  in highlight mode.
+   // Draw selected cells in highlight mode.
 
    // check eta&phi range of selected cells
-   TEveCaloData::vCellId_t cellsSelected;
+   TEveCaloData::vCellId_t  cellsSelected;
    TEveCaloData::CellData_t cellData;
-   for (TEveCaloData::vCellId_i i = cellsSelectedInput.begin(); i != cellsSelectedInput.end(); i++)
+   for (TEveCaloData::vCellId_i i = cellsSelectedInput.begin(); i != cellsSelectedInput.end(); ++i)
    {
       fM->fData->GetCellData((*i), cellData);
-      if(fM->CellInEtaPhiRng(cellData))
+      if (fM->CellInEtaPhiRng(cellData))
          cellsSelected.push_back(*i); 
    }
 
@@ -1182,10 +1182,11 @@ void TEveCaloLegoGL::DrawSelectedCells(TGLRnrCtx & rnrCtx, TEveCaloData::vCellId
       vCell2D_t cells2DSelected;
       if (fBinStep == 1)
       {
-         // but is confusing since top view does no tdraw all slices at same time
+         // but is confusing since top view does not draw all slices at same time
          TEveCaloData::vCellId_i j    = cellsSelectedInput.begin();
          TEveCaloData::vCellId_i jEnd = cellsSelectedInput.end();
-         for ( vCell2D_i i = fCells2D.begin(); i != fCells2D.end(); ++i) {
+         for (vCell2D_i i = fCells2D.begin(); i != fCells2D.end() && j != jEnd; ++i)
+         {
             TEveCaloData::CellId_t cell = fM->fCellList[i->fId];
             if (cell.fTower == j->fTower)
             {
@@ -1198,8 +1199,9 @@ void TEveCaloLegoGL::DrawSelectedCells(TGLRnrCtx & rnrCtx, TEveCaloData::vCellId
          }
       }
       else
+      {
          PrepareCell2DDataRebin(rebinDataSelected, cells2DSelected);
-
+      }
       DrawCells2D(rnrCtx, cells2DSelected);
       fCells2D.clear(); // clear cache
    }
