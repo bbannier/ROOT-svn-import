@@ -1190,7 +1190,7 @@ void TEveCaloLegoGL::DrawSelectedCells(TGLRnrCtx & rnrCtx, TEveCaloData::vCellId
             if (cell.fTower == j->fTower)
             {
                cells2DSelected.push_back(*i);
-               while (cell.fTower == j->fTower && j != jEnd)
+               while (j != jEnd && cell.fTower == j->fTower)
                   j++;
 
             }
