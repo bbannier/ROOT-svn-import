@@ -940,27 +940,16 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx &rnrCtx, vCell2D_t& cells2D) const
       {
          for (vCell2D_i i = cells2D.begin(); i != cells2D.end(); ++i)
          {
-            // point
             glLoadName(i->fMaxSlice);
             glPushName(i->fId);
-            TGLUtil::Color(fM->fData->GetSliceColor(i->fMaxSlice));
-            glBegin(GL_POINTS);
-            glVertex3f(i->X(), i->Y() , i->fSumVal);
-            glEnd();
-            glPopName();
 
-            // polygon
-            glLoadName(i->fMaxSlice);
-            glPushName(i->fId);
             glBegin(GL_QUADS);
-            Float_t bw = fValToPixel*TMath::Log10(i->fSumVal+1);
-            x = i->X();
-            y = i->Y();
-            glVertex3f(x - bw, y - bw, i->fSumVal);
-            glVertex3f(x + bw, y - bw, i->fSumVal);
-            glVertex3f(x + bw, y + bw, i->fSumVal);
-            glVertex3f(x - bw, y + bw, i->fSumVal);
+            glVertex3f(i->fX0, i->fY0,  i->fSumVal);
+            glVertex3f(i->fX1, i->fY0,  i->fSumVal);
+            glVertex3f(i->fX1, i->fY1,  i->fSumVal);
+            glVertex3f(i->fX0, i->fY1,  i->fSumVal);
             glEnd();
+
             glPopName();
          }
       }
