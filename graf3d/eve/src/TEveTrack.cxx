@@ -216,7 +216,7 @@ void TEveTrack::ComputeBBox()
    {
       BBoxInit();
       Int_t    n = Size();
-      Float_t* p = fP;
+      Float_t* p = TPolyMarker3D::fP;
       for (Int_t i = 0; i < n; ++i, p += 3)
       {
          BBoxCheckPoint(p);
