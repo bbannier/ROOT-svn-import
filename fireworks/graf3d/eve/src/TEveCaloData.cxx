@@ -327,7 +327,8 @@ Int_t TEveCaloDataVec::AddSlice()
   
   fSliceInfos.push_back(SliceInfo_t());
   fSliceVec.push_back(std::vector<Float_t> ()); 
-  
+  fSliceVec.back().resize(fGeomVec.size(), 0.f);
+
   return fSliceInfos.size() - 1;
 }
   
@@ -349,7 +350,7 @@ Int_t TEveCaloDataVec::AddTower(Float_t etaMin, Float_t etaMax, Float_t phiMin, 
 
    if (phiMin < fPhiMin) fPhiMin = phiMin;
    if (phiMax > fPhiMax) fPhiMax = phiMax;
-
+  
    fTower = fGeomVec.size() - 1;
    return fTower;
 }
