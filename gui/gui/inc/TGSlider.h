@@ -77,10 +77,11 @@ protected:
    Int_t            fType;          // slider type bits
    Int_t            fScale;         // tick mark scale
    Bool_t           fDragging;      // true if in dragging mode
-   Bool_t           fEnabled;       // true if when widget should handling events.
    const TGPicture *fSliderPic;     // picture to draw slider
+   const TGPicture *fDisabledPic;   // picture to draw disabled slider
 
    TString GetTypeString() const;   // used in SavePrimitive
+   virtual void CreateDisabledPicture();
 
 private:
    TGSlider(const TGSlider&);             // not implemented
@@ -98,10 +99,11 @@ public:
    virtual Bool_t HandleConfigureNotify(Event_t* event) = 0;
    virtual Bool_t HandleMotion(Event_t *event) = 0;
 
+   virtual void  SetEnabled(Bool_t flag = kTRUE) { SetState( flag ); }              //*TOGGLE* *GETTER=IsEnabled
+   virtual void  SetState(Bool_t state);
    virtual void  SetScale(Int_t scale) { fScale = scale; }                          //*MENU*
    virtual void  SetRange(Int_t min, Int_t max) { fVmin = min; fVmax = max; }       //*MENU*
    virtual void  SetPosition(Int_t pos) { fPos = pos; fClient->NeedRedraw(this); }  //*MENU*
-   virtual void  SetEnabled(Bool_t enabled) { fEnabled = enabled; }                  //*MENU*
    virtual Int_t GetPosition() const { return fPos; }
    virtual Int_t GetMinPosition() const { return fVmin; }
    virtual Int_t GetMaxPosition() const { return fVmax; }
