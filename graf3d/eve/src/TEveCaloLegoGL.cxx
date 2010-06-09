@@ -1203,7 +1203,6 @@ void TEveCaloLegoGL::DrawSelectedCells(TGLRnrCtx & rnrCtx, TEveCaloData::vCellId
          PrepareCell2DDataRebin(rebinDataSelected, cells2DSelected);
       }
       DrawCells2D(rnrCtx, cells2DSelected);
-      fCells2D.clear(); // clear cache
    }
 }
 
