@@ -54,10 +54,13 @@ namespace RooStats {
       // destructor
       virtual ~BayesianCalculator();
 
-      RooPlot* GetPosteriorPlot() const; 
+      // get the plot with option to get it normalized 
+      RooPlot* GetPosteriorPlot(bool norm = false, double precision = 0.01) const; 
 
       // return posterior pdf (object is managed by the BayesianCalculator class)
       RooAbsPdf* GetPosteriorPdf() const; 
+      // return posterior function (object is managed by the BayesianCalculator class)
+      RooAbsReal* GetPosteriorFunction() const; 
 
       virtual SimpleInterval* GetInterval() const ; 
 
@@ -104,8 +107,8 @@ namespace RooStats {
       mutable RooAbsPdf* fProductPdf; 
       mutable RooAbsReal* fLogLike; 
       mutable RooAbsReal* fLikelihood; 
-      mutable RooAbsReal* fIntegratedLikelihood; 
-      mutable RooAbsPdf* fPosteriorPdf; 
+      mutable RooAbsReal* fIntegratedLikelihood;  // integrated likelihood function, i.e - unnormalized posterior  
+      mutable RooAbsPdf* fPosteriorPdf;    // normalized posterior
       mutable Double_t  fLower; 
       mutable Double_t  fUpper; 
       double fBrfPrecision;
