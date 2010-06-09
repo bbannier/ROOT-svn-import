@@ -19,7 +19,7 @@
 #define ROOT_RELEASE_TIME "00:00:56"
 #define ROOT_SVN_REVISION 33694
 #define ROOT_SVN_BRANCH "branches/dev/proof/branches/v5-26-00-proof"
-#define ROOT_VERSION_CODE 334389
+#define ROOT_VERSION_CODE 334336
 #define ROOT_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 
 #endif
