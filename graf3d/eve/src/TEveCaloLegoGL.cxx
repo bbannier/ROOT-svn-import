@@ -219,7 +219,8 @@ void TEveCaloLegoGL::Make3DDisplayList(TEveCaloData::vCellId_t& cellList, SliceD
 
       glNewList(dlMap[s], GL_COMPILE);
 
-      for (UInt_t i = 0; i < cellList.size(); ++i) {
+      for (UInt_t i = 0; i < cellList.size(); ++i)
+      {
          if (cellList[i].fSlice > s) continue;
          if (cellList[i].fTower != prevTower) {
             offset = 0;
@@ -227,9 +228,9 @@ void TEveCaloLegoGL::Make3DDisplayList(TEveCaloData::vCellId_t& cellList, SliceD
          }
 
          fM->fData->GetCellData(cellList[i], cellData);
-         if (s == cellList[i].fSlice) {
-            if (selection)
-               glLoadName(i);
+         if (s == cellList[i].fSlice)
+         {
+            if (selection) glLoadName(i);
 
             WrapTwoPi(cellData.fPhiMin, cellData.fPhiMax);
             MakeQuad(cellData.EtaMin(), cellData.PhiMin(), offset,
@@ -249,9 +250,9 @@ void TEveCaloLegoGL::Make3DDisplayListRebin(TEveCaloData::RebinData_t& rebinData
 
    Int_t nSlices = fM->fData->GetNSlices();
    Float_t *vals;
-   Int_t bin;
    Float_t offset;
    Float_t y0, y1;
+
    for (Int_t s = 0; s < nSlices; ++s)
    {
       if (dlMap.empty() || dlMap[s] == 0)
@@ -261,27 +262,27 @@ void TEveCaloLegoGL::Make3DDisplayListRebin(TEveCaloData::RebinData_t& rebinData
 
       if (selection) glLoadName(s);
       if (selection) glPushName(0);
-      for (Int_t i=1; i<= fEtaAxis->GetNbins(); ++i)
+      for (Int_t i = 1; i <= fEtaAxis->GetNbins(); ++i)
       {
-         for (Int_t j=1; j <= fPhiAxis->GetNbins(); ++j)
+         for (Int_t j = 1; j <= fPhiAxis->GetNbins(); ++j)
          {
-            bin = (i)+(j)*(fEtaAxis->GetNbins()+2);
+            const Int_t bin = (i)+(j)*(fEtaAxis->GetNbins()+2);
 
             if (rebinData.fBinData[bin] !=-1)
             {
                vals = rebinData.GetSliceVals(bin);
                offset =0;
-               for (Int_t t=0; t<s; t++)
-                  offset+=vals[t];
+               for (Int_t t = 0; t < s; ++t)
+                  offset += vals[t];
 
                y0 = fPhiAxis->GetBinLowEdge(j);
                y1 = fPhiAxis->GetBinUpEdge(j);
                WrapTwoPi(y0, y1);
-               {
-                  if (selection) glLoadName(bin);
-                  MakeQuad(fEtaAxis->GetBinLowEdge(i), y0, offset,
-                           fEtaAxis->GetBinWidth(i), y1-y0, vals[s]);
-               }
+
+               if (selection) glLoadName(bin);
+
+               MakeQuad(fEtaAxis->GetBinLowEdge(i), y0, offset,
+                        fEtaAxis->GetBinWidth(i), y1-y0, vals[s]);
             }
          }
       }
@@ -779,7 +780,10 @@ void TEveCaloLegoGL::DrawCells3D(TGLRnrCtx & rnrCtx) const
    {
       for (SliceDLMap_i i = fDLMap.begin(); i != fDLMap.end(); ++i) {
          TGLUtil::Color(fM->GetDataSliceColor(i->first));
+         glLoadName(i->first);
+         glPushName(0);
          glCallList(i->second);
+         glPopName();
       }
    }
    // outlines
@@ -1116,45 +1120,39 @@ void TEveCaloLegoGL::DrawSelectedCells(TGLRnrCtx & rnrCtx, TEveCaloData::vCellId
 
    if (fCells3D)
    {
-      Int_t   prevTower = 0;
-      Float_t offset    = 0;
-      Int_t   nSlices   = fM->fData->GetNSlices();
+      Float_t offset =  0;
       if (fBinStep == 1)
       {
-         TEveCaloData::vCellId_i      j = cellsSelected.begin();
-         for (TEveCaloData::vCellId_i i = fM->fCellList.begin(); i != fM->fCellList.end(); ++i) {
-            if (i->fTower != prevTower) {
-               offset = 0;
-               prevTower = i->fTower;
-            }
-
-            // ceheck if this cell is in the list of slected cells
-            if (j->fTower == i->fTower && j->fSlice == i->fSlice)
+         for (TEveCaloData::vCellId_i j = cellsSelected.begin(); j != cellsSelected.end(); ++j)
+         {
+            offset = 0;
             {
-               fM->fData->GetCellData((*j), cellData);
-               WrapTwoPi(cellData.fPhiMin, cellData.fPhiMax);
-               MakeQuad(cellData.EtaMin(), cellData.PhiMin(), offset,
-                        cellData.EtaDelta(), cellData.PhiDelta(), cellData.Value(fM->fPlotEt));
-               j++;
-               if (j == cellsSelected.end())
-                  break;
+               Int_t   orig_slice = j->fSlice;
+               for (Int_t s = 0; s < orig_slice; ++s)
+               {
+                  j->fSlice = s;
+                  fM->fData->GetCellData(*j, cellData);
+                  offset += cellData.Value(fM->fPlotEt);
+               }
+               j->fSlice = orig_slice;
             }
-
-            fM->fData->GetCellData((*i), cellData);
-            offset += cellData.Value(fM->fPlotEt);
+            fM->fData->GetCellData(*j, cellData);
+            WrapTwoPi(cellData.fPhiMin, cellData.fPhiMax);
+            MakeQuad(cellData.EtaMin(), cellData.PhiMin(), offset,
+                     cellData.EtaDelta(), cellData.PhiDelta(), cellData.Value(fM->fPlotEt));
          }
       }
       else
       {
-         Int_t bin;
          Float_t *vals;
          Float_t *valsRef;
-         Float_t y0, y1;
-         for (Int_t i=1; i<= fEtaAxis->GetNbins(); ++i)
+         Float_t  y0, y1;
+         Int_t    nSlices = fM->fData->GetNSlices();
+         for (Int_t i = 1; i <= fEtaAxis->GetNbins(); ++i)
          {
-            for (Int_t j=1; j <= fPhiAxis->GetNbins(); ++j)
+            for (Int_t j = 1; j <= fPhiAxis->GetNbins(); ++j)
             {
-               bin = (i)+(j)*(fEtaAxis->GetNbins()+2);
+               const Int_t bin = (i)+(j)*(fEtaAxis->GetNbins()+2);
                if (rebinDataSelected.fBinData[bin] !=-1)
                {
                   offset  = 0;
@@ -1185,17 +1183,20 @@ void TEveCaloLegoGL::DrawSelectedCells(TGLRnrCtx & rnrCtx, TEveCaloData::vCellId
          // but is confusing since top view does not draw all slices at same time
          TEveCaloData::vCellId_i j    = cellsSelectedInput.begin();
          TEveCaloData::vCellId_i jEnd = cellsSelectedInput.end();
-         for (vCell2D_i i = fCells2D.begin(); i != fCells2D.end() && j != jEnd; ++i)
+         std::set<Int_t> towers;
+         while (j != jEnd)
+         {
+            towers.insert(j->fTower);
+            ++j;
+         }
+         for (vCell2D_i i = fCells2D.begin(); i != fCells2D.end(); ++i)
          {
             TEveCaloData::CellId_t cell = fM->fCellList[i->fId];
-            if (cell.fTower == j->fTower)
+            std::set<Int_t>::iterator ti = towers.find(cell.fTower);
+            if (towers.find(cell.fTower) != towers.end())
             {
                cells2DSelected.push_back(*i);
-               while (j != jEnd && cell.fTower == j->fTower)
-                  j++;
-
             }
-
          }
       }
       else
@@ -1309,7 +1310,6 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    if (!fM->fData->Empty())
    {
       glPushName(0);
-      glLoadName(0);
       if (fCells3D)
       {
          if (fDLCacheOK == kFALSE)
@@ -1325,7 +1325,9 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          glPolygonOffset(0.8, 1);
 
          DrawCells3D(rnrCtx);
-      } else {
+      }
+      else
+      {
          glDisable(GL_LIGHTING);
 
          fCells2D.clear();
@@ -1370,35 +1372,29 @@ void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & 
 {
    // Processes tower selection from TGLViewer.
 
-   TEveCaloData::vCellId_t& cells = rec.GetHighlight() ? fM->fData->GetCellsHighlighted() : fM->fData->GetCellsSelected() ;
-
-   Int_t prev = cells.size();
-   if (!rec.GetMultiple()) cells.clear();
-
-   Int_t cellID = -1;
-
-   if (rec.GetN() > 1)
+   TEveCaloData::vCellId_t sel;
+   if (rec.GetN() > 2)
    {
-      cellID = rec.GetItem(2);
       Int_t slice = rec.GetItem(1);
+      Int_t cell  = rec.GetItem(2);
 
       if (fBinStep == 1)
       {
-         Int_t tower = fM->fCellList[cellID].fTower;
-         while (cellID > 0 && tower == fM->fCellList[cellID].fTower)
+         Int_t tower = fM->fCellList[cell].fTower;
+         while (cell > 0 && tower == fM->fCellList[cell].fTower)
          {
-            cells.push_back(fM->fCellList[cellID]);
+            sel.push_back(fM->fCellList[cell]);
             if (fCells3D) break;
-            --cellID;
+            --cell;
          }
       }
       else
       {
-         if (cellID > 0)
+         if (cell > 0)
          {
             Int_t nEta   = fEtaAxis->GetNbins();
-            Int_t phiBin = Int_t(cellID/(nEta+2));
-            Int_t etaBin = cellID - phiBin*(nEta+2);
+            Int_t phiBin = Int_t(cell/(nEta+2));
+            Int_t etaBin = cell - phiBin*(nEta+2);
             TEveCaloData::vCellId_t sl;
             fM->fData->GetCellList(fEtaAxis->GetBinCenter(etaBin), fEtaAxis->GetBinWidth(etaBin),
                                    fPhiAxis->GetBinCenter(phiBin), fPhiAxis->GetBinWidth(phiBin),
@@ -1407,21 +1403,52 @@ void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & 
             for (TEveCaloData::vCellId_i it = sl.begin(); it != sl.end(); ++it)
             {
                if (fCells3D) {
-                  if ((*it).fSlice == slice ) cells.push_back(*it);
+                  if ((*it).fSlice == slice ) sel.push_back(*it);
                } else {
-                  if ((*it).fSlice <= slice ) cells.push_back(*it);
+                  if ((*it).fSlice <= slice ) sel.push_back(*it);
                }
             }
          }
       }
    }
+   fM->fData->ProcessSelection(sel, rec);
 
-   if (prev == 0 && cellID >= 0)
-      rec.SetSecSelResult(TGLSelectRecord::kEnteringSelection);
-   else if (prev  && cellID < 0)
-      rec.SetSecSelResult(TGLSelectRecord::kLeavingSelection);
-   else if (prev  && cellID >= 0)
-      rec.SetSecSelResult(TGLSelectRecord::kModifyingInternalSelection);
+   // if (rec.GetN() > 1)
+   // {
+   //    Int_t cellID = rec.GetItem(2);
+   //    Int_t slice = rec.GetItem(1);
 
-   fM->fData->CellSelectionChanged();
+   //    if (fBinStep == 1)
+   //    {
+   //       Int_t tower = fM->fCellList[cellID].fTower;
+   //       while (cellID > 0 && tower == fM->fCellList[cellID].fTower)
+   //       {
+   //          cells.push_back(fM->fCellList[cellID]);
+   //          if (fCells3D) break;
+   //          --cellID;
+   //       }
+   //    }
+   //    else
+   //    {
+   //       if (cellID > 0)
+   //       {
+   //          Int_t nEta   = fEtaAxis->GetNbins();
+   //          Int_t phiBin = Int_t(cellID/(nEta+2));
+   //          Int_t etaBin = cellID - phiBin*(nEta+2);
+   //          TEveCaloData::vCellId_t sl;
+   //          fM->fData->GetCellList(fEtaAxis->GetBinCenter(etaBin), fEtaAxis->GetBinWidth(etaBin),
+   //                                 fPhiAxis->GetBinCenter(phiBin), fPhiAxis->GetBinWidth(phiBin),
+   //                                 sl);
+
+   //          for (TEveCaloData::vCellId_i it = sl.begin(); it != sl.end(); ++it)
+   //          {
+   //             if (fCells3D) {
+   //                if ((*it).fSlice == slice ) cells.push_back(*it);
+   //             } else {
+   //                if ((*it).fSlice <= slice ) cells.push_back(*it);
+   //             }
+   //          }
+   //       }
+   //    }
+   // }
 }

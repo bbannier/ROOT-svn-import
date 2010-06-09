@@ -12,6 +12,8 @@
 #include "TEveCaloData.h"
 #include "TEveCalo.h"
 
+#include "TGLSelectRecord.h"
+
 #include "TAxis.h"
 #include "THStack.h"
 #include "TH2.h"
@@ -20,7 +22,7 @@
 
 #include <cassert>
 #include <algorithm>
-
+#include <set>
 
 //------------------------------------------------------------------------------
 // TEveCaloData::CellGeom_t
@@ -188,6 +190,113 @@ void TEveCaloData::PrintCellsSelected()
       printf("Eta:(%f, %f) Phi(%f, %f)\n",  cellData.fEtaMin, cellData.fEtaMax, cellData.fPhiMin, cellData.fPhiMax);
    }
 }
+
+//______________________________________________________________________________
+void TEveCaloData::ProcessSelection(vCellId_t& sel_cells, TGLSelectRecord& rec)
+{
+   // Process newly selected cells with given select-record.
+   // Secondary-select status is set.
+   // CellSelectionChanged() is called if needed.
+
+   typedef std::set<CellId_t>           sCellId_t;
+   typedef std::set<CellId_t>::iterator sCellId_i;
+
+   struct helper
+   {
+      static void fill_cell_set(sCellId_t& cset, vCellId_t& cvec)
+      {
+         for (vCellId_i i = cvec.begin(); i != cvec.end(); ++i)
+            cset.insert(*i);
+      }
+      static void fill_cell_vec(vCellId_t& cvec, sCellId_t& cset)
+      {
+         for (sCellId_i i = cset.begin(); i != cset.end(); ++i)
+            cvec.push_back(*i);
+      }
+   };
+
+   vCellId_t& cells = rec.GetHighlight() ? fCellsHighlighted : fCellsSelected;
+ 
+   if (cells.empty())
+   {
+      if (!sel_cells.empty())
+      {
+         cells.swap(sel_cells);
+         rec.SetSecSelResult(TGLSelectRecord::kEnteringSelection);
+      }
+   }
+   else
+   {
+      if (!sel_cells.empty())
+      {
+         if (rec.GetMultiple())
+         {
+            sCellId_t cs;
+            helper::fill_cell_set(cs, cells);
+            for (vCellId_i i = sel_cells.begin(); i != sel_cells.end(); ++i)
+            {
+               std::set<CellId_t>::iterator csi = cs.find(*i);
+               if (csi == cs.end())
+                  cs.insert(*i);
+               else
+                  cs.erase(csi);
+            }
+            cells.clear();
+            if (cs.empty())
+            {
+               rec.SetSecSelResult(TGLSelectRecord::kLeavingSelection);
+            }
+            else
+            {
+               helper::fill_cell_vec(cells, cs);
+               rec.SetSecSelResult(TGLSelectRecord::kModifyingInternalSelection);
+            }
+         }
+         else
+         {
+            Bool_t differ = kFALSE;
+            if (cells.size() == sel_cells.size())
+            {
+               sCellId_t cs;
+               helper::fill_cell_set(cs, cells);
+               for (vCellId_i i = sel_cells.begin(); i != sel_cells.end(); ++i)
+               {
+                  if (cs.find(*i) == cs.end())
+                  {
+                     differ = kTRUE;
+                     break;
+                  }
+               }
+            }
+            else
+            {
+               differ = kTRUE;
+            }
+            if (differ)
+            {
+               cells.swap(sel_cells);
+               rec.SetSecSelResult(TGLSelectRecord::kModifyingInternalSelection);
+            }
+         }
+      }
+      else
+      {
+         if (!rec.GetMultiple())
+         {
+            cells.clear();
+            rec.SetSecSelResult(TGLSelectRecord::kLeavingSelection);
+         }
+      }
+   }
+
+   if (rec.GetSecSelResult() != TGLSelectRecord::kNone)
+   {
+      CellSelectionChanged();
+   }
+}
+
+
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveCaloData::SetSliceThreshold(Int_t slice, Float_t val)
