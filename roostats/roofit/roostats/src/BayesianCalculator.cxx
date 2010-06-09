@@ -28,7 +28,15 @@
 #include "RooStats/BayesianCalculator.h"
 #include "RooStats/ModelConfig.h"
 
+#include "Math/IntegratorMultiDim.h"
+#include "Math/RootFinder.h"
+#include "RooFunctor.h"
+
 #include "TAxis.h"
+
+#include <cmath>
+
+#include "TRandom.h"
 
 ClassImp(RooStats::BayesianCalculator)
 
@@ -134,9 +142,9 @@ RooArgSet* BayesianCalculator::GetMode(RooArgSet* /* parameters */) const
 }
 
 
-RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
+RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
 {
-  /// build and return the posterior PDF
+  /// build and return the posterior function (not normalized)
 
    // run some sanity checks
    if (!fPdf ) {
@@ -164,44 +172,113 @@ RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
    // use RooFit::Constrain() to make product of likelihood with prior pdf
    fLogLike = fProductPdf->createNLL(*fData, RooFit::Constrain(*constrainedParams) );
 
+
+   // fLogLike is actually the product of the  Likelihood  with all the prior. 
+   // we need to integrate 1
+
+   // 
+
+
    TString likeName = TString("likelihood_") + TString(fProductPdf->GetName());   
    fLikelihood = new RooFormulaVar(likeName,"exp(-@0)",RooArgList(*fLogLike));
-   RooAbsReal * plike = fLikelihood; 
+   fIntegratedLikelihood = fLikelihood; 
    if (fNuisanceParameters.getSize() > 0) { 
       fIntegratedLikelihood = fLikelihood->createIntegral(fNuisanceParameters);
-      plike = fIntegratedLikelihood; 
    }
 
+//for debuggiung
+//    RooArgSet allParams; 
+//    allParams.add(fPOI);
+//    allParams.add(fNuisanceParameters);
+//    RooAbsReal * igll =  fLikelihood->createIntegral(allParams);
+//    double norm = igll->getVal();
+//    std::cout << "norm integral = " << norm << std::endl;
+
+   delete constrainedParams;
+
+   return fIntegratedLikelihood; 
+}
+
+RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
+{
+
+   if (!fIntegratedLikelihood) GetPosteriorFunction();
+
+  /// build and return the posterior pdf (i.e posterior function normalized to all range of poi
+   RooAbsReal * plike = fIntegratedLikelihood; 
    // create a unique name on the posterior from the names of the components
    TString posteriorName = this->GetName() + TString("_posteriorPdf_") + plike->GetName(); 
    fPosteriorPdf = new RooGenericPdf(posteriorName,"@0",*plike);
 
-   delete constrainedParams;
 
    return fPosteriorPdf;
 }
 
 
-RooPlot* BayesianCalculator::GetPosteriorPlot() const
+RooPlot* BayesianCalculator::GetPosteriorPlot(bool norm, double precision ) const
 {
-  /// return a RooPlot with the posterior PDF and the credibility region
+  /// return a RooPlot with the posterior  and the credibility region
 
-  if (!fPosteriorPdf) GetPosteriorPdf();
-  if (!fValidInterval) GetInterval();
+   RooAbsReal * posterior = fIntegratedLikelihood; 
+   if (norm) posterior = fPosteriorPdf; 
+   if (!posterior) { 
+      posterior = GetPosteriorFunction();
+      if (norm) posterior = GetPosteriorPdf();
+   }
+   if (!posterior) return 0;
 
-  RooAbsRealLValue* poi = dynamic_cast<RooAbsRealLValue*>( fPOI.first() );
-  assert(poi);
+   if (!fValidInterval) GetInterval();
+
+   RooAbsRealLValue* poi = dynamic_cast<RooAbsRealLValue*>( fPOI.first() );
+   assert(poi);
 
    RooPlot* plot = poi->frame();
 
    plot->SetTitle(TString("Posterior probability of parameter \"")+TString(poi->GetName())+TString("\""));  
-   fPosteriorPdf->plotOn(plot,RooFit::Range(fLower,fUpper,kFALSE),RooFit::VLines(),RooFit::DrawOption("F"),RooFit::MoveToBack(),RooFit::FillColor(kGray));
-   fPosteriorPdf->plotOn(plot);
-   plot->GetYaxis()->SetTitle("posterior probability");
+   posterior->plotOn(plot,RooFit::Range(fLower,fUpper,kFALSE),RooFit::VLines(),RooFit::DrawOption("F"),RooFit::MoveToBack(),RooFit::FillColor(kGray),RooFit::Precision(precision));
+   posterior->plotOn(plot);
+   plot->GetYaxis()->SetTitle("posterior function");
    
    return plot; 
 }
 
+
+struct  LikelihoodFunction { 
+   LikelihoodFunction(RooFunctor & f) : fFunc(f) {}
+
+   double operator() (const double *x ) const { 
+      double nll = fFunc(x);
+      double likelihood =  std::exp(-nll); 
+      return likelihood; 
+   }
+   RooFunctor & fFunc; 
+};
+
+struct PosteriorCdfFunction { 
+   PosteriorCdfFunction(ROOT::Math::IntegratorMultiDim & ig, const double * xmin, double * xmax) : 
+      fIntegrator(ig), fXmin(xmin), fXmax(xmax), fNorm(1.0), fOffset(0.0) {
+      // compute first the normalization with  the poi 
+      fNorm = (*this)(xmax[0] );  
+      std::cout << "normalization of posterior is " << fNorm << std::endl;
+   }
+
+   double operator() (double x) const { 
+      // integrate only first parameter 
+      fXmax[0] = x;
+      double cdf = fIntegrator.Integral(fXmin,fXmax);  
+      //std::cout << "un-normalize cdf for mu =  " << x << " =  " << cdf; 
+      double normcdf =  cdf/fNorm;  // normalize the cdf 
+      //std::cout << "  normalized is " << normcdf << std::endl; 
+      return normcdf - fOffset;  // apply an offset (for finding the roots) 
+   }
+
+   ROOT::Math::IntegratorMultiDim & fIntegrator; 
+   const double * fXmin; 
+   mutable double * fXmax; 
+   double fNorm; 
+   double fOffset;
+   
+};
 
 SimpleInterval* BayesianCalculator::GetInterval() const
 {
@@ -219,28 +296,106 @@ SimpleInterval* BayesianCalculator::GetInterval() const
 
    if (!fPosteriorPdf) fPosteriorPdf = (RooAbsPdf*) GetPosteriorPdf();
 
-   RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI,RooFit::ScanParameters(1000,2));
-   //RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI,RooFit::ScanNoCdf());
+   // use integration method if there are nuisance parameters 
+   if (fNuisanceParameters.getSize() > 0) { 
+   
+      // need to remove the constant parameters
+      RooArgList bindParams; 
+      bindParams.add(fPOI);
+      bindParams.add(fNuisanceParameters);
+      
+//    std::cout << "DEBUG - NLL = " << fLogLike->getVal() << std::endl; 
+      
+      
+      RooFunctor functor_nll(*fLogLike, bindParams, RooArgList());
 
-   RooAbsFunc* cdf_bind = cdf->bindVars(fPOI,&fPOI);
-   RooBrentRootFinder brf(*cdf_bind);
-   brf.setTol(fBrfPrecision); // set the brf precision
+   
+      // compute the intergal of the exp(-nll) function
+      LikelihoodFunction fll(functor_nll);
+      
+      const ROOT::Math::IntegrationMultiDim::Type integType = ROOT::Math::IntegrationMultiDim::kADAPTIVE; 
 
-   double tmpVal = poi->getVal();  // patch used because findRoot changes the value of poi
+// #ifdef R__HAS_MATHMORE
+//       integType = IntegrationMultiDim::kVEGAS; 
+// #endif
+      
+      ROOT::Math::IntegratorMultiDim ig(integType); 
+      ig.SetFunction(fll,bindParams.getSize()); 
+      
+      std::vector<double> pmin(bindParams.getSize());
+      std::vector<double> pmax(bindParams.getSize());
+      std::vector<double> par(bindParams.getSize());
+      for (unsigned int i = 0; i < pmin.size(); ++i) { 
+         RooRealVar & var = (RooRealVar &) bindParams[i]; 
+         pmin[i] = var.getMin(); 
+         pmax[i] = var.getMax();
+         par[i] = var.getVal();
+      } 
+      
+//    std::cout << "DEBUG - FUNCTOR - value " << functor_nll(&par[0]) << std::endl;
+//    std::cout << "DEBUG - LL - value " << fll(&par[0]) << std::endl;
+      
+//    for (int i = 0; i < par.size(); ++i) { 
+//       par[i] = gRandom->Uniform(pmin[i],pmax[i]);
+//       RooRealVar & var = (RooRealVar &) bindParams[i]; 
+//       var.setVal(par[i] );
+//    }
 
-   double y = fSize/2;
-   brf.findRoot(fLower,poi->getMin(),poi->getMax(),y);
+      bindParams.Print("V");
+//    std::cout << "DEBUG - NLL = " << fLogLike->getVal() << std::endl;    
+//    std::cout << "DEBUG - FUNCTOR - value " << functor_nll(&par[0]) << std::endl;
+//    std::cout << "DEBUG - LL - value " << fll(&par[0]) << std::endl;
 
-   y=1-fSize/2;
-   bool ret = brf.findRoot(fUpper,poi->getMin(),poi->getMax(),y);
-   if (!ret) std::cout << "BayesianCalculator::GetInterval: Warning:"
-                       << "Error returned from Root finder, estimated interval is not fully correct" 
-                       << std::endl;
 
-   poi->setVal(tmpVal); // patch: restore the original value of poi
+      PosteriorCdfFunction cdf(ig, &pmin[0], &pmax[0] ); 
 
-   delete cdf_bind;
-   delete cdf;
+   
+      //std::cout << "posterior cdf at current param value mu " << par[0] << "  = " << cdf(par[0]) << std::endl;
+
+   //find the roots 
+#ifdef R__HAS_MATHMORE
+      ROOT::Math::RootFinder::EType rfType = ROOT::Math::RootFinder::kGSL_BRENT; 
+#else 
+      ROOT::Math::RootFinder::EType rfType = ROOT::Math::RootFinder::kBRENT; 
+#endif
+      ROOT::Math::RootFinder rf(rfType); 
+      cdf.fOffset = fSize/2;
+      bool ok = false; 
+      ok = rf.Solve(cdf, poi->getMin(),poi->getMax() , 200,1.E-4, 1.E-4); 
+      if (!ok) std::cout << "Error from ROOT finder when searching lower limit !!! " << std::endl;
+      fLower = rf.Root(); 
+      cdf.fOffset = 1-fSize/2;
+      ok = rf.Solve(cdf, fLower,poi->getMax() , 200,1.E-4, 1.E-4); 
+      if (!ok) std::cout << "Error from ROOT finder when searching upper limit !!! " << std::endl;
+      fUpper = rf.Root(); 
+   }
+
+   // case of no nuisance - just use createCdf
+   else { 
+      RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI,RooFit::ScanParameters(100,2));
+      //RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI,RooFit::ScanNoCdf());
+
+      RooAbsFunc* cdf_bind = cdf->bindVars(fPOI,&fPOI);
+      RooBrentRootFinder brf(*cdf_bind);
+      brf.setTol(fBrfPrecision); // set the brf precision
+      
+      double tmpVal = poi->getVal();  // patch used because findRoot changes the value of poi
+   
+      double y = fSize/2;
+      brf.findRoot(fLower,poi->getMin(),poi->getMax(),y);
+      
+      y=1-fSize/2;
+      bool ret = brf.findRoot(fUpper,poi->getMin(),poi->getMax(),y);
+      if (!ret) std::cout << "BayesianCalculator::GetInterval: Warning:"
+                          << "Error returned from Root finder, estimated interval is not fully correct" 
+                          << std::endl;
+      
+      poi->setVal(tmpVal); // patch: restore the original value of poi
+
+      delete cdf_bind;
+      delete cdf;
+   }
+
    fValidInterval = true; 
 
    TString interval_name = TString("BayesianInterval_a") + TString(this->GetName());
