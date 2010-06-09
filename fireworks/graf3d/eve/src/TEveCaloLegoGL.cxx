@@ -1380,7 +1380,7 @@ void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & 
    if (rec.GetN() > 1)
    {
       cellID = rec.GetItem(2);
-      Int_t slice  = rec.GetItem(1);
+      Int_t slice = rec.GetItem(1);
 
       if (fBinStep == 1)
       {
@@ -1392,8 +1392,9 @@ void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & 
             --cellID;
          }
       }
-      else  {
-         if (cellID >0)
+      else
+      {
+         if (cellID > 0)
          {
             Int_t nEta   = fEtaAxis->GetNbins();
             Int_t phiBin = Int_t(cellID/(nEta+2));
@@ -1403,14 +1404,13 @@ void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & 
                                    fPhiAxis->GetBinCenter(phiBin), fPhiAxis->GetBinWidth(phiBin),
                                    sl);
 
-            for(TEveCaloData::vCellId_i it = sl.begin(); it != sl.end(); ++it)
+            for (TEveCaloData::vCellId_i it = sl.begin(); it != sl.end(); ++it)
             {
                if (fCells3D) {
-                  if ((*it).fSlice == slice )cells.push_back(*it);
+                  if ((*it).fSlice == slice ) cells.push_back(*it);
                } else {
-                  if ((*it).fSlice <= slice )cells.push_back(*it);
+                  if ((*it).fSlice <= slice ) cells.push_back(*it);
                }
-
             }
          }
       }
