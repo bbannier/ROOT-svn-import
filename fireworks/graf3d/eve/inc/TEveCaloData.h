@@ -15,6 +15,8 @@
 #include <vector>
 #include "TEveElement.h"
 
+class TGLSelectRecord;
+
 class TH2F;
 class TAxis;
 class THStack;
@@ -57,7 +59,10 @@ public:
 
       Float_t fFraction;
 
-      CellId_t(Int_t t, Int_t s, Float_t fr=1.f):fTower(t), fSlice(s), fFraction(fr){}
+      CellId_t(Int_t t, Int_t s, Float_t f=1.0f) : fTower(t), fSlice(s), fFraction(f) {}
+
+      bool operator<(const CellId_t& o) const
+      { return (fTower == o.fTower) ? fSlice < o.fSlice : fTower < o.fTower; }
    };
 
    struct CellGeom_t
@@ -173,6 +178,8 @@ public:
    vCellId_t&      GetCellsSelected()    { return fCellsSelected; }
    vCellId_t&      GetCellsHighlighted() { return fCellsHighlighted; }
    void            PrintCellsSelected();
+
+   void  ProcessSelection(vCellId_t& sel_cells, TGLSelectRecord& rec);
 
    virtual void    Rebin(TAxis *ax, TAxis *ay, vCellId_t &in, Bool_t et, RebinData_t &out) const = 0;
 
