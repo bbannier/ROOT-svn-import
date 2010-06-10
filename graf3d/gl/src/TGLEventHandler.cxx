@@ -717,6 +717,9 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
 {
    // Handle keyboard 'event'.
 
+  if (fTooltipShown)
+    fTooltip->Hide();
+
    fLastEventState = event->fState;
 
    fGLViewer->MouseIdle(0, 0, 0);
