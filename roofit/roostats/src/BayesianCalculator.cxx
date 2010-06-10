@@ -28,20 +28,170 @@
 #include "RooStats/BayesianCalculator.h"
 #include "RooStats/ModelConfig.h"
 
+#include "Math/IFunction.h"
 #include "Math/IntegratorMultiDim.h"
+#include "Math/Integrator.h"
 #include "Math/RootFinder.h"
 #include "RooFunctor.h"
+#include "RooFunctor1DBinding.h"
 
 #include "TAxis.h"
 
+
 #include <cmath>
 
-#include "TRandom.h"
+//#include "TRandom.h"
+#include "RConfigure.h"
 
 ClassImp(RooStats::BayesianCalculator)
 
 namespace RooStats { 
 
+
+// first some utility classes and functions 
+
+#ifdef R__HAS_MATHMORE
+   const ROOT::Math::RootFinder::EType kRootFinderType = ROOT::Math::RootFinder::kGSL_BRENT; 
+#else 
+   const ROOT::Math::RootFinder::EType kRootFinderType = ROOT::Math::RootFinder::kBRENT; 
+#endif
+
+
+ROOT::Math::IntegrationMultiDim::Type GetMultiDimIntegrationType(const char * type) { 
+   // function to return the type of multi-dim integrator from the given string
+   
+   ROOT::Math::IntegrationMultiDim::Type integType = ROOT::Math::IntegrationMultiDim::kADAPTIVE; 
+   if (type != 0) { 
+      TString integrationType(type);  integrationType.ToUpper(); 
+      if (integrationType.Contains("VEGAS"))   integType =  ROOT::Math::IntegrationMultiDim::kVEGAS; 
+      if (integrationType.Contains("MISER"))   integType =  ROOT::Math::IntegrationMultiDim::kMISER; 
+      if (integrationType.Contains("PLAIN"))   integType =  ROOT::Math::IntegrationMultiDim::kPLAIN; 
+   }
+#ifndef R__HAS_MATHMORE
+   if (integType != ROOT::Math::IntegrationMultiDim::kADAPTIVE) { 
+      std::cout << "BayesianCalculator: Info - MathMore is not present - can use only adaptive multi-dim integration " << std::endl;
+      integType =  ROOT::Math::IntegrationMultiDim::kADAPTIVE;
+   }
+#endif
+   return integType; 
+}
+   
+
+
+
+struct  LikelihoodFunction { 
+   LikelihoodFunction(RooFunctor & f) : fFunc(f) {}
+
+   double operator() (const double *x ) const { 
+      double nll = fFunc(x);
+      double likelihood =  std::exp(-nll); 
+      return likelihood; 
+   }
+
+   // for the 1D case
+   double operator() (double x) const { 
+      double tmp = x; 
+      return (*this)(&tmp); 
+   }
+
+   RooFunctor & fFunc; 
+};
+
+struct PosteriorCdfFunction { 
+   PosteriorCdfFunction(ROOT::Math::IntegratorMultiDim & ig, const double * xmin, double * xmax) : 
+      fIntegrator(ig), fXmin(xmin), fXmax(xmax), fNorm(1.0), fOffset(0.0) {
+      // compute first the normalization with  the poi 
+      fNorm = (*this)(xmax[0] );  
+      std::cout << "normalization of posterior is " << fNorm << std::endl;
+   }
+
+   PosteriorCdfFunction(ROOT::Math::IntegratorMultiDim & ig, const double * xmin, double * xmax, double norm) : 
+      fIntegrator(ig), fXmin(xmin), fXmax(xmax), fNorm(norm), fOffset(0.0) {
+      // compute posterior cdf from a normalization given from outside 
+   }
+
+   double operator() (double x) const { 
+      // evaluate cdf at poi value x by integrating poi from [-xmin,x] and all the nuisances  
+      fXmax[0] = x;
+      double cdf = fIntegrator.Integral(fXmin,fXmax);  
+      //std::cout << "un-normalize cdf for mu =  " << x << " =  " << cdf; 
+      double normcdf =  cdf/fNorm;  // normalize the cdf 
+      //std::cout << "  normalized is " << normcdf << std::endl; 
+      return normcdf - fOffset;  // apply an offset (for finding the roots) 
+   }
+
+   ROOT::Math::IntegratorMultiDim & fIntegrator; 
+   const double * fXmin; 
+   mutable double * fXmax; 
+   double fNorm; 
+   double fOffset;
+   
+};
+
+class PosteriorFunction : public ROOT::Math::IGenFunction { 
+
+public: 
+
+
+   PosteriorFunction(RooAbsReal & nll, RooRealVar & poi, RooArgList & nuisParams, const char * integType = 0, double norm = 1.0) :
+      fFunctor(nll, nuisParams, RooArgList() ),
+      fLikelihood(fFunctor), 
+      fPoi(&poi),
+      fXmin(nuisParams.getSize() ),
+      fXmax(nuisParams.getSize() ), 
+      fNorm(norm)      
+   { 
+
+      for (unsigned int i = 0; i < fXmin.size(); ++i) { 
+         RooRealVar & var = (RooRealVar &) nuisParams[i]; 
+         fXmin[i] = var.getMin(); 
+         fXmax[i] = var.getMax();
+      }
+      if (fXmin.size() == 1) { // 1D case  
+         fIntegratorOneDim = std::auto_ptr<ROOT::Math::Integrator>(new ROOT::Math::Integrator() );
+         fIntegratorOneDim->SetFunction(fLikelihood);
+      }
+      else { // multiDim case          
+         fIntegratorMultiDim = 
+            std::auto_ptr<ROOT::Math::IntegratorMultiDim>(new ROOT::Math::IntegratorMultiDim(GetMultiDimIntegrationType(integType) ) );
+         fIntegratorMultiDim->SetFunction(fLikelihood, fXmin.size());
+      }
+   }
+      
+      
+   ROOT::Math::IGenFunction * Clone() const { 
+      assert(1); 
+      return 0; // cannot clone this function for integrator 
+   } 
+   
+private: 
+   double DoEval (double x) const { 
+      // evaluate posterior function at a poi value x by integrating all nuisance parameters
+
+      fPoi->setVal(x);
+      double f = 0; 
+
+      if (fXmin.size() == 1) { // 1D case  
+         f = fIntegratorOneDim->Integral(fXmin[0],fXmax[0]); 
+      }
+      else 
+         f = fIntegratorMultiDim->Integral(&fXmin[0],&fXmax[0]); 
+      return f / fNorm;
+   }
+
+   RooFunctor fFunctor; 
+   LikelihoodFunction fLikelihood; 
+   RooRealVar * fPoi;
+   std::auto_ptr<ROOT::Math::Integrator>  fIntegratorOneDim; 
+   std::auto_ptr<ROOT::Math::IntegratorMultiDim>  fIntegratorMultiDim; 
+   std::vector<double> fXmin; 
+   std::vector<double> fXmax; 
+   double fNorm;
+};
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BayesianCalculator::BayesianCalculator() :
   fData(0),
@@ -105,8 +255,10 @@ void BayesianCalculator::ClearAll() const {
    if (fLogLike) delete fLogLike; 
    if (fLikelihood) delete fLikelihood; 
    if (fIntegratedLikelihood) delete fIntegratedLikelihood; 
-   if (fPosteriorPdf) delete fPosteriorPdf;      
+   if (fPosteriorPdf) delete fPosteriorPdf;    
+   if (fPosteriorFunction) delete fPosteriorFunction; 
    fPosteriorPdf = 0; 
+   fPosteriorFunction = 0; 
    fProductPdf = 0;
    fLogLike = 0; 
    fLikelihood = 0; 
@@ -172,29 +324,34 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
    // use RooFit::Constrain() to make product of likelihood with prior pdf
    fLogLike = fProductPdf->createNLL(*fData, RooFit::Constrain(*constrainedParams) );
 
-
-   // fLogLike is actually the product of the  Likelihood  with all the prior. 
-   // we need to integrate 1
-
-   // 
-
+   delete constrainedParams;
 
    TString likeName = TString("likelihood_") + TString(fProductPdf->GetName());   
    fLikelihood = new RooFormulaVar(likeName,"exp(-@0)",RooArgList(*fLogLike));
-   fIntegratedLikelihood = fLikelihood; 
-   if (fNuisanceParameters.getSize() > 0) { 
+
+   // if no nuisance p[arameter we can just return the likelihood funtion
+   if (fNuisanceParameters.getSize() == 0) return fLikelihood; 
+
+   // case of use RooFit 
+   if (fIntegrationType.Contains("ROOFIT") ) { 
       fIntegratedLikelihood = fLikelihood->createIntegral(fNuisanceParameters);
    }
 
-//for debuggiung
-//    RooArgSet allParams; 
-//    allParams.add(fPOI);
-//    allParams.add(fNuisanceParameters);
-//    RooAbsReal * igll =  fLikelihood->createIntegral(allParams);
-//    double norm = igll->getVal();
-//    std::cout << "norm integral = " << norm << std::endl;
+   // use integration method if there are nuisance parameters 
+   else  { 
 
-   delete constrainedParams;
+      RooRealVar* poi = dynamic_cast<RooRealVar*>( fPOI.first() ); 
+      assert(poi);
+
+      RooArgList nuisParams(fNuisanceParameters); 
+      fPosteriorFunction = new PosteriorFunction(*fLogLike, *poi, nuisParams, fIntegrationType ); 
+      
+      TString name = "posteriorfunction_from_"; 
+      name += fLogLike->GetName();  
+      fIntegratedLikelihood = new RooFunctor1DBinding(name,name,*fPosteriorFunction,*poi);
+
+   }
+
 
    return fIntegratedLikelihood; 
 }
@@ -202,10 +359,11 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
 RooAbsPdf* BayesianCalculator::GetPosteriorPdf() const
 {
 
-   if (!fIntegratedLikelihood) GetPosteriorFunction();
+   if (!fLikelihood) GetPosteriorFunction();
 
   /// build and return the posterior pdf (i.e posterior function normalized to all range of poi
-   RooAbsReal * plike = fIntegratedLikelihood; 
+   
+   RooAbsReal * plike = (fIntegratedLikelihood) ? fIntegratedLikelihood : fLikelihood; 
    // create a unique name on the posterior from the names of the components
    TString posteriorName = this->GetName() + TString("_posteriorPdf_") + plike->GetName(); 
    fPosteriorPdf = new RooGenericPdf(posteriorName,"@0",*plike);
@@ -219,6 +377,7 @@ RooPlot* BayesianCalculator::GetPosteriorPlot(bool norm, double precision ) cons
 {
   /// return a RooPlot with the posterior  and the credibility region
 
+   if (!fLikelihood) GetPosteriorFunction(); 
    RooAbsReal * posterior = fIntegratedLikelihood; 
    if (norm) posterior = fPosteriorPdf; 
    if (!posterior) { 
@@ -242,43 +401,11 @@ RooPlot* BayesianCalculator::GetPosteriorPlot(bool norm, double precision ) cons
    return plot; 
 }
 
+void BayesianCalculator::SetIntegrationType(const char * type) { 
+   fIntegrationType = TString(type); 
+   fIntegrationType.ToUpper(); 
+}
 
-struct  LikelihoodFunction { 
-   LikelihoodFunction(RooFunctor & f) : fFunc(f) {}
-
-   double operator() (const double *x ) const { 
-      double nll = fFunc(x);
-      double likelihood =  std::exp(-nll); 
-      return likelihood; 
-   }
-   RooFunctor & fFunc; 
-};
-
-struct PosteriorCdfFunction { 
-   PosteriorCdfFunction(ROOT::Math::IntegratorMultiDim & ig, const double * xmin, double * xmax) : 
-      fIntegrator(ig), fXmin(xmin), fXmax(xmax), fNorm(1.0), fOffset(0.0) {
-      // compute first the normalization with  the poi 
-      fNorm = (*this)(xmax[0] );  
-      std::cout << "normalization of posterior is " << fNorm << std::endl;
-   }
-
-   double operator() (double x) const { 
-      // integrate only first parameter 
-      fXmax[0] = x;
-      double cdf = fIntegrator.Integral(fXmin,fXmax);  
-      //std::cout << "un-normalize cdf for mu =  " << x << " =  " << cdf; 
-      double normcdf =  cdf/fNorm;  // normalize the cdf 
-      //std::cout << "  normalized is " << normcdf << std::endl; 
-      return normcdf - fOffset;  // apply an offset (for finding the roots) 
-   }
-
-   ROOT::Math::IntegratorMultiDim & fIntegrator; 
-   const double * fXmin; 
-   mutable double * fXmax; 
-   double fNorm; 
-   double fOffset;
-   
-};
 
 SimpleInterval* BayesianCalculator::GetInterval() const
 {
@@ -313,13 +440,7 @@ SimpleInterval* BayesianCalculator::GetInterval() const
       // compute the intergal of the exp(-nll) function
       LikelihoodFunction fll(functor_nll);
       
-      const ROOT::Math::IntegrationMultiDim::Type integType = ROOT::Math::IntegrationMultiDim::kADAPTIVE; 
-
-// #ifdef R__HAS_MATHMORE
-//       integType = IntegrationMultiDim::kVEGAS; 
-// #endif
-      
-      ROOT::Math::IntegratorMultiDim ig(integType); 
+      ROOT::Math::IntegratorMultiDim ig(GetMultiDimIntegrationType(fIntegrationType)); 
       ig.SetFunction(fll,bindParams.getSize()); 
       
       std::vector<double> pmin(bindParams.getSize());
@@ -331,6 +452,7 @@ SimpleInterval* BayesianCalculator::GetInterval() const
          pmax[i] = var.getMax();
          par[i] = var.getVal();
       } 
+
       
 //    std::cout << "DEBUG - FUNCTOR - value " << functor_nll(&par[0]) << std::endl;
 //    std::cout << "DEBUG - LL - value " << fll(&par[0]) << std::endl;
@@ -353,12 +475,7 @@ SimpleInterval* BayesianCalculator::GetInterval() const
       //std::cout << "posterior cdf at current param value mu " << par[0] << "  = " << cdf(par[0]) << std::endl;
 
    //find the roots 
-#ifdef R__HAS_MATHMORE
-      ROOT::Math::RootFinder::EType rfType = ROOT::Math::RootFinder::kGSL_BRENT; 
-#else 
-      ROOT::Math::RootFinder::EType rfType = ROOT::Math::RootFinder::kBRENT; 
-#endif
-      ROOT::Math::RootFinder rf(rfType); 
+      ROOT::Math::RootFinder rf(kRootFinderType); 
       cdf.fOffset = fSize/2;
       bool ok = false; 
       ok = rf.Solve(cdf, poi->getMin(),poi->getMax() , 200,1.E-4, 1.E-4); 

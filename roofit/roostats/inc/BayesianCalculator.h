@@ -13,6 +13,8 @@
 
 #include "TNamed.h"
 
+#include "Math/IFunctionfwd.h"
+
 #ifndef ROO_ARG_SET
 #include "RooArgSet.h"
 #endif
@@ -85,6 +87,11 @@ namespace RooStats {
 
       void SetBrfPrecision( double precision ) { fBrfPrecision = precision; }
 
+      // set the integration type (possible type are) 
+      // 1D: adaptive, gauss, nonadaptive
+      // multidim: adaptive, vegas, miser, plain. These last 3 are based on MC integration
+      void SetIntegrationType(const char * type); 
+
    protected:
 
       void ClearAll() const; 
@@ -107,14 +114,17 @@ namespace RooStats {
       mutable RooAbsPdf* fProductPdf; 
       mutable RooAbsReal* fLogLike; 
       mutable RooAbsReal* fLikelihood; 
-      mutable RooAbsReal* fIntegratedLikelihood;  // integrated likelihood function, i.e - unnormalized posterior  
-      mutable RooAbsPdf* fPosteriorPdf;    // normalized posterior
+      mutable RooAbsReal* fIntegratedLikelihood;  // integrated likelihood function, i.e - unnormalized posterior function  
+      mutable RooAbsPdf* fPosteriorPdf;          // normalized posterior on the poi
+      mutable ROOT::Math::IGenFunction * fPosteriorFunction;  // function representing the posterior
       mutable Double_t  fLower; 
       mutable Double_t  fUpper; 
       double fBrfPrecision;
       mutable Bool_t    fValidInterval;
 
       double fSize;  // size used for getting the interval
+
+      TString fIntegrationType; 
 
    protected:
 
