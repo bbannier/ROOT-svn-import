@@ -122,33 +122,24 @@ namespace Math {
       symmetric matrix
    */
 
-   struct RowOffsetsBase 
-   {
-     protected:
-       static void init(int *v, int *offsets, unsigned int D);
-   };
-
    template<unsigned int D>
-   struct RowOffsets : RowOffsetsBase {
+   struct RowOffsets {
       RowOffsets() {
          int v[D];
-         this->init(v, fOff, D);
+         v[0]=0;
+         for (unsigned int i=1; i<D; ++i)
+            v[i]=v[i-1]+i;
+         for (unsigned int i=0; i<D; ++i) { 
+            for (unsigned int j=0; j<=i; ++j)
+               fOff[i*D+j] = v[i]+j; 
+            for (unsigned int j=i+1; j<D; ++j)
+               fOff[i*D+j] = v[j]+i ;
+         }
       }
       int operator()(unsigned int i, unsigned int j) const { return fOff[i*D+j]; }
       int apply(unsigned int i) const { return fOff[i]; }
       int fOff[D*D];
    };
-
-   template <unsigned int D> struct SymMatrixOffsets
-   {
-    protected:
-      static RowOffsets<D> offsets;
-   };
-
-   template <unsigned int D>
-   RowOffsets<D>
-   SymMatrixOffsets<D>::offsets;
-
 
 //_________________________________________________________________________________
    /**
@@ -170,11 +161,11 @@ namespace Math {
       @ingroup MatRep 
    */
    template <class T, unsigned int D>
-   class MatRepSym : SymMatrixOffsets<D> {
+   class MatRepSym {
 
    public: 
 
-      MatRepSym() :fOff(&SymMatrixOffsets<D>::offsets) { } 
+      MatRepSym() :fOff(0) { CreateOffsets(); } 
 
       typedef T  value_type;
 
