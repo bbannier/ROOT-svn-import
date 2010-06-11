@@ -789,10 +789,7 @@ Bool_t TStreamerInfo::BuildFor( const TClass *in_memory_cl )
 
    const TObjArray* rules;
 
-   if( fOnFileClassVersion >= 2 )
-      rules = in_memory_cl->GetSchemaRules()->FindRules( GetName(), fOnFileClassVersion );
-   else
-      rules = in_memory_cl->GetSchemaRules()->FindRules( GetName(), fCheckSum );
+   rules = in_memory_cl->GetSchemaRules()->FindRules( GetName(), fOnFileClassVersion, fCheckSum );
 
    if( !rules && !TClassEdit::IsSTLCont( in_memory_cl->GetName() ) ) {
       Warning( "BuildFor", "The build of %s streamer info for %s has been requested, but no matching conversion rules were specified", GetName(), in_memory_cl->GetName() );
@@ -863,7 +860,7 @@ namespace {
             // All is good.
             newClass->GetStreamerInfos()->AddAtAndExpand(info,oldv);
          } else {
-            // We verify that we are consitent and that
+            // We verify that we are consistent and that
             //   newcl->GetStreamerInfos()->UncheckedAt(info->GetClassVersion)
             // is already the same as info.
             if (strcmp(newClass->GetStreamerInfos()->At(oldv)->GetName(),
@@ -1007,10 +1004,7 @@ void TStreamerInfo::BuildOld()
    const ROOT::TSchemaMatch*   rules   = 0;
    const ROOT::TSchemaRuleSet* ruleSet = fClass->GetSchemaRules();
    
-   if( fOnFileClassVersion >= 2 )
-      rules = (ruleSet ? ruleSet->FindRules( GetName(), fOnFileClassVersion ) : 0);
-   else
-      rules = (ruleSet ? ruleSet->FindRules( GetName(), fCheckSum ) : 0);
+   rules = (ruleSet ? ruleSet->FindRules( GetName(), fOnFileClassVersion, fCheckSum ) : 0);
 
    while ((element = (TStreamerElement*) next())) {
       if (element->IsA()==TStreamerArtificial::Class() 
@@ -1648,7 +1642,14 @@ void TStreamerInfo::ForceWriteInfo(TFile* file, Bool_t force)
    }
    // We do not want to write streamer info to the file
    // for STL containers.
-   if (fClass->GetCollectionProxy()) { // We are an STL collection.
+   if (fClass==0) {
+      // Build or BuildCheck has not been called yet.
+      // Let's use another means of checking.
+      if (fElements && fElements->GetEntries()==1 && strcmp("This",fElements->UncheckedAt(0)->GetName())==0) {
+         // We are an STL collection.
+         return;
+      }
+   } else if (fClass->GetCollectionProxy()) { // We are an STL collection.
       return;
    }
    // Mark ourselves for output, and block

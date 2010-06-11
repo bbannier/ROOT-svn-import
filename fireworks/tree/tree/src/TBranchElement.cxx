@@ -99,6 +99,10 @@ namespace {
                return kFALSE;
             }
          }
+         static TClassRef stringClass("std::string");
+         if (cl == stringClass || cl == TString::Class()) {
+            return kFALSE;
+         }
          // Here we could scan through the TStreamerInfo to see if there
          // is any pointer anywhere and know whether this is a possibility
          // of selfreference (but watch out for very indirect cases).
@@ -2259,8 +2263,13 @@ void TBranchElement::InitializeOffsets()
 
          {
             Int_t streamerType = subBranchElement->GetType();
-            if (streamerType > TStreamerInfo::kObject && aSubBranch->GetListOfBranches()->GetEntries()==0) {
+            if (streamerType > TStreamerInfo::kObject 
+                && aSubBranch->GetListOfBranches()->GetEntries()==0
+                && CanSelfReference(subBranchElement->GetClass())) 
+            {
                aSubBranch->SetBit(kBranchAny);
+            } else {
+               aSubBranch->ResetBit(kBranchAny);
             }
          }
 
@@ -2527,8 +2536,7 @@ void TBranchElement::InitializeOffsets()
                offset = rd->GetThisOffset();
             } else {
                // -- No dictionary meta info for this data member, it must no longer exist.
-               // FIXME: Enable this warning!
-               //Warning("InitializeOffsets", "Class '%s' version %d checksum %08x has no data member named '%s', assuming offset is zero!", pClass->GetName(), pClass->GetClassVersion(), pClass->GetCheckSum(), dataName.Data());
+               localOffset = TStreamerInfo::kMissing;
             }
          } else {
             // -- We have no data member name, ok for a base class, not good otherwise.
