@@ -809,6 +809,13 @@ class genDictionary(object) :
     c += '#pragma warning ( disable : 4786 )\n'
     c += '#pragma warning ( disable : 4345 )\n'
     c += '#endif\n'
+    # to silence conversion warnings woth -pedantic, see Savannah #49792
+    c += '#ifdef __GNUC__\n'
+    c += '#define RFLX_SILENCE __extension__\n'
+    c += '#else\n'
+    c += '#define RFLX_SILENCE\n'
+    c += '#endif\n'
+
     c += '#include "%s"\n' % self.hfile
     c += '#include "Reflex/Builder/ReflexBuilder.h"\n'
     c += '#include <typeinfo>\n'
@@ -1608,7 +1615,14 @@ class genDictionary(object) :
             body += iden + '  if (retaddr) *(void**)retaddr = (void*)&%s(' % ( name, )
             head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
             body += ');\n'
-            body += iden + '  else %s(' % ( name, )
+            # The seemingly useless '&' below is to work around Microsoft's
+            # compiler 7.1-9 odd complaint C2027 if the reference has only
+            # been forward declared.
+            if sys.platform == 'win32':
+              body += iden + '  else &%s(' % ( name, )
+            else:
+              # but '&' will trigger an "unused value" warning on != MSVC
+              body += iden + '  else %s(' % ( name, )
             head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
             body += ');\n'
           else :
@@ -1842,7 +1856,17 @@ class genDictionary(object) :
           body += iden + '  if (retaddr) new (retaddr) (%s)((((%s*)o)->%s)(' % ( returns, cl, name )
           head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
           body += '));\n' + iden + 'else '
-      body += iden + '  (((%s*)o)->%s)(' % ( cl, name )
+      if returns[-1] == '&' :
+        # The seemingly useless '&' below is to work around Microsoft's
+        # compiler 7.1-9 odd complaint C2027 if the reference has only
+        # been forward declared.
+        if sys.platform == 'win32':
+          body += iden + '  &(((%s*)o)->%s)(' % ( cl, name )
+        else:
+          # but '&' will trigger an "unused value" warning on != MSVC
+          body += iden + '  (((%s*)o)->%s)(' % ( cl, name )
+      else: 
+        body += iden + '  (((%s*)o)->%s)(' % ( cl, name )
       head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
       body += ');\n'
       if ndarg : 
@@ -1879,6 +1903,7 @@ class genDictionary(object) :
         td += pad*' ' + 'typedef %s RflxDict_arg_td%d%s;\n' % (argnoptr[:argnoptr.index('[')], i, argnoptr[argnoptr.index('['):])
         arg = 'RflxDict_arg_td%d' % i
         arg += argptr;
+      s += "RFLX_SILENCE "
       if arg[-1] == '*' or len(arg) > 7 and arg[-7:] == '* const':
         if arg[-2:] == ':*' or arg[-8:] == ':* const' : # Pointer to data member
           s += '*(%s*)arg[%d]' % (arg, i )
