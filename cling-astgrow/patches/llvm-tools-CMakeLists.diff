@@ -1,0 +1,13 @@
+Index: tools/CMakeLists.txt
+===================================================================
+--- tools/CMakeLists.txt	(revision 82689)
++++ tools/CMakeLists.txt	(working copy)
+@@ -38,4 +38,8 @@
+   add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/clang )
+ endif( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/clang/CMakeLists.txt )
+ 
++if( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/cling/CMakeLists.txt )
++  add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/cling )
++endif( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/cling/CMakeLists.txt )
++
+ set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
