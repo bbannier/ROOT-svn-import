@@ -74,11 +74,12 @@ public:
    }
 
    clang::CompilerInstance* getCI();
+   clang::CompilerInstance* getASTCI();
 
 private:
-   std::string m_globalDeclarations; // All global var decls seen.
    llvm::LLVMContext* m_llvm_context; // We own, our types.
    clang::CompilerInstance* m_CI; // We own, our compiler instance.
+   clang::CompilerInstance* m_ASTCI; // We own, our compiler instance for growing AST.
    llvm::ExecutionEngine* m_engine; // We own, our JIT.
    llvm::Module* m_prev_module; // We do *not* own, m_engine owns it.
    unsigned long long m_numCallWrappers; // number of generated call wrappers
@@ -89,8 +90,10 @@ private:
    int analyzeTokens(clang::Preprocessor& PP, clang::Token& lastTok,
                      int& indentLevel, bool& tokWasDo);
 
-   llvm::Module* makeModuleFromCommandLine(const std::string& input_line);
-   void createWrappedSrc(const std::string& src, std::string& wrapped);
+   llvm::Module* makeModuleFromCommandLine(const std::string& input_line,
+                                           bool& haveStatements);
+   void createWrappedSrc(const std::string& src, std::string& wrapped,
+                                           bool& haveStatements);
 
    clang::CompilerInstance* createStatementList(const std::string& srcCode,
          std::vector<clang::Stmt*>& stmts);
