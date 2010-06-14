@@ -76,6 +76,7 @@
 #endif
 #include "TVirtualMonitoring.h"
 #include "TParameter.h"
+#include "TOutputListSelectorDataMap.h"
 
 // Timeout exception
 #define kPEX_STOPPED  1001
@@ -999,6 +1000,8 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
          }
       }
 
+      MapOutputListToDataMembers();
+
       if (fSelStatus->IsOk()) {
          if (version == 0) {
             PDB(kLoop,1) Info("Process","Call Terminate()");
@@ -1050,6 +1053,14 @@ void TProofPlayer::MergeOutput()
    MayNotUse("MergeOutput");
    return;
 }
+
+//______________________________________________________________________________
+void TProofPlayer::MapOutputListToDataMembers() const
+{
+   TOutputListSelectorDataMap* olsdm = new TOutputListSelectorDataMap(fSelector);
+   fOutput->Add(olsdm);
+}
+
 //______________________________________________________________________________
 void TProofPlayer::UpdateAutoBin(const char *name,
                                  Double_t& xmin, Double_t& xmax,
@@ -1843,6 +1854,22 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
 
 
 //______________________________________________________________________________
+void TProofPlayerRemote::SetSelectorDataMembersFromOutputList()
+{
+   // Set the selector's data members:
+   // find the mapping of data members to otuput list entries in the output list
+   // and apply it.
+   TOutputListSelectorDataMap* olsdm
+      = TOutputListSelectorDataMap::FindInList(fOutput);
+   if (!olsdm) {
+      PDB(kOutput,1) Warning("SetSelectorDataMembersFromOutputList","Failed to find map object in output list!");
+      return;
+   }
+
+   olsdm->SetDataMembers(fSelector);
+}
+
+//______________________________________________________________________________
 Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
 {
 
@@ -1917,6 +1944,8 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
                // just add to the list
                output->Add(obj);
          }
+
+         SetSelectorDataMembersFromOutputList();
 
          PDB(kLoop,1) Info("Finalize","Call Terminate()");
          fOutput->Clear("nodelete");
@@ -2021,6 +2050,8 @@ Long64_t TProofPlayerRemote::Finalize(TQueryResult *qr)
       StoreOutput(out);
    }
    gSystem->RedirectOutput(0);
+
+   SetSelectorDataMembersFromOutputList();
 
    // Finalize it
    SetCurrentQuery(qr);
