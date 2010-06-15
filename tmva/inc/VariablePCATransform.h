@@ -74,6 +74,8 @@ namespace TMVA {
       void X2P( std::vector<Float_t>&, const std::vector<Float_t>&, Int_t cls ) const;
       void P2X( std::vector<Float_t>&, const std::vector<Float_t>&, Int_t cls ) const;
 
+      //      mutable Event*     fTransformedEvent;
+
       // store relevant parts of PCA locally
       std::vector<TVectorD*> fMeanValues;   // mean values
       std::vector<TMatrixD*> fEigenVectors; // eigenvectors
