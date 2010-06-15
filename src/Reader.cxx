@@ -437,11 +437,6 @@ Double_t TMVA::Reader::EvaluateMVA( const std::vector<Double_t>& inputVec, const
    // The parameter aux is obligatory for the cuts method where it represents the efficiency cutoff
 
    // performs a copy to float values which are internally used by all methods
-
-   Log() << kWARNING << "obsolete method, use TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, Double_t aux )" << Endl;
-   // Evaluate a vector<double> of input data for a given method
-   // The parameter aux is obligatory for the cuts method where it represents the efficiency cutoff
-
    if(fTmpEvalVec.size() != inputVec.size())
       fTmpEvalVec.resize(inputVec.size());
 
