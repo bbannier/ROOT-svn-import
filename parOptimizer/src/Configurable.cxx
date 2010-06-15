@@ -291,6 +291,30 @@ void TMVA::Configurable::CheckForUnusedOptions() const
 }
 
 //______________________________________________________________________
+void TMVA::Configurable::SetListOfOptions(const TList& otherOptions)
+{
+   //override local option values with values in otherOptions
+   if(fListOfOptions.GetEntries() != otherOptions.GetEntries())
+      Log() << kFATAL
+            << "Trying to assign an incompatible option list!" << Endl;
+   TListIter localOptIt(&fListOfOptions);
+   TListIter otherOptIt(&otherOptions);
+   OptionBase* localOpt;
+   OptionBase* otherOpt;
+   while ((localOpt = (OptionBase *) localOptIt()) && 
+          (otherOpt = (OptionBase *) otherOptIt())) {
+      if (otherOpt->IsArrayOpt()){
+         for(Int_t idx = 0; idx < otherOpt->GetArraySize(); idx++){
+            localOpt->SetValue(otherOpt->GetValue(idx), idx);
+         }
+      }
+      else
+         localOpt->SetValue(otherOpt->GetValue());
+   }
+   
+}
+
+//______________________________________________________________________
 void TMVA::Configurable::PrintOptions() const 
 {
    // prints out the options set in the options string and the defaults

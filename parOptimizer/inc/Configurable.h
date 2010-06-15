@@ -85,6 +85,9 @@ namespace TMVA {
 
       const TString& GetOptions() const { return fOptions; }
       void SetOptions(const TString& s) { fOptions = s; }
+      
+      const TList&   GetListOfOptions() const { return fListOfOptions; }
+      void SetListOfOptions(const TList& otherOptions);
 
       void WriteOptionsToStream ( std::ostream& o, const TString& prefix ) const;
       void ReadOptionsFromStream( istream& istr );
