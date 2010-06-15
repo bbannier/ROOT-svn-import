@@ -2394,6 +2394,36 @@ void TGLCapabilitySwitch::SetState(Bool_t s)
 
 
 //______________________________________________________________________________
+TGLCapabilityEnabler::TGLCapabilityEnabler(Int_t what, Bool_t state) :
+   fWhat(what)
+{
+   // Constructor - change state only if necessary.
+
+   fFlip = ! glIsEnabled(fWhat) && state;
+   if (fFlip)
+      SetState(kTRUE);
+}
+
+//______________________________________________________________________________
+TGLCapabilityEnabler::~TGLCapabilityEnabler()
+{
+   // Destructor - reset state if changed.
+
+   if (fFlip)
+      SetState(kFALSE);
+}
+
+//______________________________________________________________________________
+void TGLCapabilityEnabler::SetState(Bool_t s)
+{
+   if (s)
+      glEnable (fWhat);
+   else
+      glDisable(fWhat);
+}
+
+
+//______________________________________________________________________________
 TGLFloatHolder::TGLFloatHolder(Int_t what, Float_t state, void (*foo)(Float_t)) :
       fWhat(what), fState(0), fFlip(kFALSE), fFoo(foo)
    {
