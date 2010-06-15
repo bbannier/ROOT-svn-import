@@ -59,52 +59,52 @@ int main( int argc, char** argv )
    std::map<std::string,int> Use;
 
    Use["Cuts"]            = 0;
-   Use["CutsD"]           = 0;
+   Use["CutsD"]           = 1;
    Use["CutsPCA"]         = 0;
-   Use["CutsGA"]          = 0;
-   Use["CutsSA"]          = 0;
+   Use["CutsGA"]          = 1;
+   Use["CutsSA"]          = 1;
    // ---
-   Use["Likelihood"]      = 0;
-   Use["LikelihoodD"]     = 0; // the "D" extension indicates decorrelated input variables (see option strings)
-   Use["LikelihoodPCA"]   = 0; // the "PCA" extension indicates PCA-transformed input variables (see option strings)
+   Use["Likelihood"]      = 1;
+   Use["LikelihoodD"]     = 1; // the "D" extension indicates decorrelated input variables (see option strings)
+   Use["LikelihoodPCA"]   = 1; // the "PCA" extension indicates PCA-transformed input variables (see option strings)
    Use["LikelihoodKDE"]   = 0;
    Use["LikelihoodMIX"]   = 0;
    // ---
-   Use["PDERS"]           = 0;
-   Use["PDERSD"]          = 0;
-   Use["PDERSPCA"]        = 0;
+   Use["PDERS"]           = 1;
+   Use["PDERSD"]          = 1;
+   Use["PDERSPCA"]        = 1;
    Use["PDERSkNN"]        = 0; // depreciated until further notice
-   Use["PDEFoam"]         = 0;
+   Use["PDEFoam"]         = 1;
    // --
-   Use["KNN"]             = 0;
+   Use["KNN"]             = 1;
    // ---
    Use["HMatrix"]         = 0;
-   Use["Fisher"]          = 0;
+   Use["Fisher"]          = 1;
    Use["FisherG"]         = 0;
    Use["BoostedFisher"]   = 0;
-   Use["LD"]              = 0;
+   Use["LD"]              = 1;
    // ---
-   Use["FDA_GA"]          = 0;
+   Use["FDA_GA"]          = 1;
    Use["FDA_SA"]          = 0;
-   Use["FDA_MC"]          = 0;
+   Use["FDA_MC"]          = 1;
    Use["FDA_MT"]          = 0;
    Use["FDA_GAMT"]        = 0;
    Use["FDA_MCMT"]        = 0;
    // ---
-   Use["MLPBNN"]          = 1; // this is the recommended ANN
-   Use["MLP"]             = 0; // this is the recommended ANN
-   Use["MLPBFGS"]         = 0; // recommended ANN with optional training method
+   Use["MLPBNN"]          = 1; // this is the recommended ANN (with bayesian treatment)
+   Use["MLP"]             = 1; // this is the recommended ANN
+   Use["MLPBFGS"]         = 1; // recommended ANN with optional training method
    Use["CFMlpANN"]        = 0; // *** missing
    Use["TMlpANN"]         = 0; 
    // --
-   Use["SVM"]             = 0;
+   Use["SVM"]             = 1;
    // ---
-   Use["BDT"]             = 0;
-   Use["BDTD"]            = 0;
+   Use["BDT"]             = 1;
+   Use["BDTD"]            = 1;
    Use["BDTG"]            = 0;
    Use["BDTB"]            = 0;
    // ---
-   Use["RuleFit"]         = 0;
+   Use["RuleFit"]         = 1;
    // ---
    Use["Plugin"]          = 0;
    // ---------------------------------------------------------------
