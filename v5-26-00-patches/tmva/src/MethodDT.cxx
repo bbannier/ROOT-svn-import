@@ -269,6 +269,7 @@ TMVA::MethodDT::~MethodDT( void )
 //_______________________________________________________________________
 void TMVA::MethodDT::Train( void )
 {
+   TMVA::DecisionTreeNode::fgIsTraining=true;
    SeparationBase *qualitySepType = new GiniIndex();
    fTree = new DecisionTree( fSepType, fNodeMinEvents, fNCuts, qualitySepType,
                              fRandomisedTrees, fUseNvars, 0 );
@@ -278,6 +279,7 @@ void TMVA::MethodDT::Train( void )
    fTree->SetAnalysisType( GetAnalysisType() );
 
    fTree->BuildTree(GetEventCollection(Types::kTraining));
+   TMVA::DecisionTreeNode::fgIsTraining=false;
 }
 
 //_______________________________________________________________________
