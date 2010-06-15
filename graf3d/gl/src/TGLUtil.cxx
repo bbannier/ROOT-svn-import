@@ -2387,7 +2387,7 @@ TGLCapabilitySwitch::~TGLCapabilitySwitch()
 void TGLCapabilitySwitch::SetState(Bool_t s)
 {
    if (s)
-      glEnable (fWhat);
+      glEnable(fWhat);
    else
       glDisable(fWhat);
 }
@@ -2401,7 +2401,7 @@ TGLCapabilityEnabler::TGLCapabilityEnabler(Int_t what, Bool_t state) :
 
    fFlip = ! glIsEnabled(fWhat) && state;
    if (fFlip)
-      SetState(kTRUE);
+      glEnable(fWhat);
 }
 
 //______________________________________________________________________________
@@ -2410,15 +2410,6 @@ TGLCapabilityEnabler::~TGLCapabilityEnabler()
    // Destructor - reset state if changed.
 
    if (fFlip)
-      SetState(kFALSE);
-}
-
-//______________________________________________________________________________
-void TGLCapabilityEnabler::SetState(Bool_t s)
-{
-   if (s)
-      glEnable (fWhat);
-   else
       glDisable(fWhat);
 }
 
