@@ -52,7 +52,7 @@ namespace TMVA {
    public:
       
       //default constructor
-      Optimizer(const MethodBase* method, const DataSet* data, TString fomType="Separation");
+      Optimizer(const MethodBase* method, TString fomType="Separation");
       
       // destructor
       virtual ~Optimizer(){}

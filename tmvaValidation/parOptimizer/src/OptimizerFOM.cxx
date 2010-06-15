@@ -30,9 +30,8 @@ ClassImp(TMVA::OptimizerFOM)
 #include "TMath.h"
    
 //_______________________________________________________________________
-  TMVA::OptimizerFOM::OptimizerFOM(const MethodBase* method, const DataSet* data, TString fomType):
+  TMVA::OptimizerFOM::OptimizerFOM(const MethodBase* method, TString fomType):
     fMethod(method),
-    fData(data),
     fFOMType(fomType),
     fMvaSig(NULL),
     fMvaBkg(NULL)
@@ -72,8 +71,18 @@ Double_t TMVA::OptimizerFOM::GetFOM()
 void TMVA::OptimizerFOM::GetMVADists()
 {
    // fill the private histograms with the mva distributinos for sig/bkg
-   
 
+   const std::vector<Event*> events=fMethod->Data()->GetEventCollection(Types::kTesting);
+   
+   Int_t signalClassNr = fMethod->DataInfo().GetClassInfo("Signal")->GetNumber();
+
+   for (UInt_t iev=0; iev < events.size() ; iev++){
+      if (events[iev]->GetClass() == signalClassNr) {
+         fMvaSig->Fill(fMethod->GetMvaValue(events[iev]));
+      } else {
+         fMvaBkg->Fill(fMethod->GetMvaValue(events[iev]));
+      }
+   }
 }
 //_______________________________________________________________________
 Double_t TMVA::OptimizerFOM::GetSeparation()
