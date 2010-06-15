@@ -158,7 +158,7 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::InverseTransform( const TMV
 
    FloatVector input;  // will be filled with the selected variables, targets, (spectators)
    FloatVector output; // will be filled with the output
-   GetInput( ev, input, kTRUE );
+   GetInput( ev, input );
 
    if (fBackTransformedEvent==0) fBackTransformedEvent = new Event( *ev );
 
@@ -183,7 +183,7 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::InverseTransform( const TMV
       ++iidx;
    }
 
-   SetOutput( fBackTransformedEvent, output, ev, kTRUE );
+   SetOutput( fBackTransformedEvent, output, ev );
 
    return fBackTransformedEvent;
 }
@@ -357,7 +357,7 @@ void TMVA::VariableNormalizeTransform::ReadFromXML( void* trfnode )
 
    void* inpnode = NULL;
    try{
-      inpnode = gTools().GetChild(trfnode, "Selection"); // new xml format
+      inpnode = gTools().GetChild(trfnode, "Input"); // new xml format
       newFormat = kTRUE;
    }catch( std::logic_error& excpt ){
       newFormat = kFALSE; // old xml format
@@ -534,15 +534,11 @@ void TMVA::VariableNormalizeTransform::PrintTransformation( ostream& )
 {
    // prints the transformation ranges
 
-   Int_t nCls = GetNClasses();
-   Int_t numC = nCls+1;
-   if (nCls <= 1 ) numC = 1;
+   Int_t numC = GetNClasses()+1;
+   if (GetNClasses() <= 1 ) numC = 1;
 
    for (Int_t icls = 0; icls < numC; icls++ ) {
-      if( icls == nCls )
-	 Log() << kINFO << "Transformation for all classes based on these ranges:" << Endl;
-      else
-	 Log() << kINFO << "Transformation for class " << icls << " based on these ranges:" << Endl;
+      Log() << "Transformation for class " << icls << " based on these ranges:" << Endl;
       
       UInt_t iinp = 0;
       for( ItVarTypeIdxConst itGet = fGet.begin(), itGetEnd = fGet.end(); itGet != itGetEnd; ++itGet ){

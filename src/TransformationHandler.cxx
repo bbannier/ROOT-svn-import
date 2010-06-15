@@ -153,9 +153,9 @@ const TMVA::Event* TMVA::TransformationHandler::Transform( const Event* ev ) con
 //_______________________________________________________________________
 const TMVA::Event* TMVA::TransformationHandler::InverseTransform( const Event* ev ) const 
 {
-   // the inverse transformation (use reverse iterators to go backwards through the transformations)
-   TListIter trIt(&fTransformations,kIterBackward);
-   std::vector< Int_t >::const_reverse_iterator rClsIt = fTransformationsReferenceClasses.rbegin();
+   // the inverse transformation
+   TListIter trIt(&fTransformations);
+   std::vector< Int_t >::const_iterator rClsIt = fTransformationsReferenceClasses.begin();
    const Event* trEv = ev;
    while (VariableTransformBase *trf = (VariableTransformBase*) trIt() ) {
       if (trf->IsCreated()) trEv = trf->InverseTransform(ev, (*rClsIt) );
