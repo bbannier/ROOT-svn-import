@@ -118,8 +118,11 @@ Bool_t PdfProposal::Equals(RooArgSet& x1, RooArgSet& x2)
       TIterator* it = x1.createIterator();
       RooRealVar* r;
       while ((r = (RooRealVar*)it->Next()) != NULL)
-         if (r->getVal() != x2.getRealValue(r->GetName()))
+         if (r->getVal() != x2.getRealValue(r->GetName())) {
+            delete it;
             return kFALSE;
+         }
+      delete it;
       return kTRUE;
    }
    return kFALSE;

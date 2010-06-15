@@ -46,8 +46,8 @@
 // #ifndef ROO_PRODUCT
 // #include "RooProduct.h"
 // #endif
-// #ifndef RooStats_Heavyside
-// #include "RooStats/Heavyside.h"
+// #ifndef RooStats_Heaviside
+// #include "RooStats/Heaviside.h"
 // #endif
 // #ifndef ROO_PRODUCT
 // #include "RooProduct.h"
@@ -62,7 +62,7 @@ class RooProduct;
 
 namespace RooStats {
 
-   class Heavyside;
+   class Heaviside;
 
 
    class MCMCInterval : public ConfInterval {
@@ -78,6 +78,7 @@ namespace RooStats {
                    MarkovChain& chain);
 
       enum {DEFAULT_NUM_BINS = 50};
+      enum IntervalType {kShortest, kLower, kCentral, kUpper};
 
       virtual ~MCMCInterval();
         
@@ -208,7 +209,7 @@ namespace RooStats {
       // Get a clone of the keys pdf of the posterior
       virtual RooNDKeysPdf* GetPosteriorKeysPdf();
 
-      // Get a clone of the (keyspdf * heavyside) product of the posterior
+      // Get a clone of the (keyspdf * heaviside) product of the posterior
       virtual RooProduct* GetPosteriorKeysProduct();
 
       // Get the number of parameters of interest in this interval
@@ -254,8 +255,33 @@ namespace RooStats {
             fEpsilon = epsilon;
       }
 
+      // Set the type of interval to find.  This will only have an effect for
+      // 1-D intervals.  If is more than 1 parameter of interest, then a
+      // "shortest" interval will always be used, since it generalizes directly
+      // to N dimensions
+      virtual void SetIntervalType(enum IntervalType intervalType)
+      { fIntervalType = intervalType; }
+
+      // kbelasco: The inner-workings of the class really should not be exposed
+      // like this in a comment, but it seems to be the only way to give
+      // the user any control over this process, if he desires it
+      //
+      // Set the fraction delta such that
+      // topCutoff (a) is considered == bottomCutoff (b) iff
+      // (TMath::Abs(a - b) < TMath::Abs(fDelta * (a + b)/2))
+      // when determining the confidence interval by Keys
+      virtual void SetDelta(Double_t delta)
+      {
+         if (delta < 0.)
+            coutE(InputArguments) << "MCMCInterval::SetDelta will not allow "
+                                  << "negative delta value" << endl;
+         else
+            fDelta = delta;
+      }
+
    private:
       inline Bool_t AcceptableConfLevel(Double_t confLevel);
+      inline Bool_t WithinDeltaFraction(Double_t a, Double_t b);
 
    protected:
       // data members
@@ -263,8 +289,8 @@ namespace RooStats {
       MarkovChain* fChain; // the markov chain
       RooDataHist* fDataHist; // the binned Markov Chain data
       RooNDKeysPdf* fKeysPdf; // the kernel estimation pdf
-      RooProduct* fProduct; // the (keysPdf * heavyside) product
-      Heavyside* fHeavyside; // the Heavyside function
+      RooProduct* fProduct; // the (keysPdf * heaviside) product
+      Heaviside* fHeaviside; // the Heaviside function
       RooDataHist* fKeysDataHist; // data hist representing product
       TH1* fHist; // the binned Markov Chain data
       THnSparse* fSparseHist; // the binned Markov Chain data
@@ -277,16 +303,26 @@ namespace RooStats {
       RooRealVar* fCutoffVar; // cutoff variable to use for integrating keys pdf
       Bool_t fUseKeys; // whether to use kernel estimation
       Bool_t fUseSparseHist; // whether to use sparse hist (vs. RooDataHist)
-      Bool_t fIsHistStrict; // whether the specified confidence level is a floor
-                            // for the actual confidence level (strict), or a 
-                            // ceiling (not strict) for determination by histogram
+      Bool_t fIsHistStrict; // whether the specified confidence level is a
+                            // floor for the actual confidence level (strict),
+                            // or a ceiling (not strict) for determination by
+                            // histogram
       Int_t fDimension; // number of variables
-      Int_t fNumBurnInSteps; // number of steps to discard as burn in, starting from the first
+      Int_t fNumBurnInSteps; // number of steps to discard as burn in, starting
+                             // from the first
       Double_t fIntervalSum; // sum of heights of bins in the interval
       RooRealVar** fAxes; // array of pointers to RooRealVars representing
                           // the axes of the histogram
                           // fAxes[0] represents x-axis, [1] y, [2] z, etc
       Double_t fEpsilon; // acceptable error for Keys interval determination
+
+      Double_t fDelta; // topCutoff (a) considered == bottomCutoff (b) iff
+                       // (TMath::Abs(a - b) < TMath::Abs(fDelta * (a + b)/2));
+                       // Theoretically, the Abs is not needed here, but
+                       // floating-point arithmetic does not always work
+                       // perfectly, and the Abs doesn't hurt
+      enum IntervalType fIntervalType;
+
 
       // functions
       virtual void DetermineInterval();
@@ -294,6 +330,10 @@ namespace RooStats {
       virtual void DetermineBySparseHist();
       virtual void DetermineByDataHist();
       virtual void DetermineByKeys();
+      virtual void DetermineShortestInterval();
+      virtual void DetermineLowerInterval();
+      virtual void DetermineCentralInterval();
+      virtual void DetermineUpperInterval();
       virtual void CreateHist();
       virtual void CreateSparseHist();
       virtual void CreateDataHist();

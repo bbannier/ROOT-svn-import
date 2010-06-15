@@ -71,6 +71,8 @@ namespace RooStats {
     while ((var = (RooRealVar*)it->Next()) != NULL)
       if (!var->isConstant() || randomizeConstants)
          var->randomize();
+
+    delete it;
   }
 
 }

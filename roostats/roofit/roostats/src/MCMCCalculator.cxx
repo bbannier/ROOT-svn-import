@@ -13,20 +13,20 @@
 /*
 BEGIN_HTML
 <p>
-MCMCCalculator is a concrete implementation of IntervalCalculator.
-It uses a MetropolisHastings object to construct a Markov Chain of data points in the
-parameter space.  From this Markov Chain, this class can generate a MCMCInterval as
-per user specification.
+MCMCCalculator is a concrete implementation of IntervalCalculator.  It uses a
+MetropolisHastings object to construct a Markov Chain of data points in the
+parameter space.  From this Markov Chain, this class can generate a
+MCMCInterval as per user specification.
 </p>
 
 <p>
-The interface allows one to pass the model, data, and parameters via a workspace and
-then specify them with names.
+The interface allows one to pass the model, data, and parameters via a
+workspace and then specify them with names.
 </p>
 
 <p>
-After configuring the calculator, one only needs to ask GetInterval(), which will
-return an ConfInterval (MCMCInterval in this case).
+After configuring the calculator, one only needs to ask GetInterval(), which
+will return an ConfInterval (MCMCInterval in this case).
 </p>
 END_HTML
 */
@@ -74,8 +74,9 @@ END_HTML
 #ifndef ROOSTATS_PdfProposal
 #include "RooStats/PdfProposal.h"
 #endif
-
+#ifndef ROO_PROD_PDF
 #include "RooProdPdf.h"
+#endif
 
 ClassImp(RooStats::MCMCCalculator);
 
