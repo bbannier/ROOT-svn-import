@@ -115,8 +115,8 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables  )
       TString variables = os->GetString();
       
       if( variables.BeginsWith("_") && variables.EndsWith("_") ) { // special symbol (keyword)
-	 variables.Remove( 0,1); // remove first "_"
-	 variables.Remove( variables.Length()-1,1 ); // remove last "_"
+         variables.Remove( 0,1); // remove first "_"
+         variables.Remove( variables.Length()-1,1 ); // remove last "_"
 
 	 if( variables.BeginsWith("V") ) {       // variables
 	    variables.Remove(0,1); // remove "V"

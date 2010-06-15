@@ -51,7 +51,7 @@ namespace TMVA {
    public:
       
       //default constructor
-      OptimizerFOM(const MethodBase* method, TString fomType="Separation");
+      OptimizerFOM(MethodBase* const method, TString fomType="Separation");
       
       // destructor
       virtual ~OptimizerFOM(){}
@@ -59,7 +59,7 @@ namespace TMVA {
       // return the Figure of Merit (used in the parameter optimisation)
       Double_t GetFOM();
 
-      const MethodBase* GetMethod(){return fMethod;}
+      MethodBase* GetMethod(){return fMethod;}
       
    private:
       
@@ -67,7 +67,7 @@ namespace TMVA {
       Double_t GetSeparation();
       
       
-      const MethodBase *fMethod; // The MVA method to be evaluated
+      MethodBase* const fMethod; // The MVA method to be evaluated
       TString           fFOMType;    // the FOM type (Separation, ROC integra.. whaeter you implemented..
       
       TH1D             *fMvaSig; // MVA distrituion for signal events
