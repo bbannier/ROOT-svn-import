@@ -136,8 +136,9 @@ MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
 MCMCCalculator::MCMCCalculator(RooAbsData& data, const ModelConfig & model) :
    fPropFunc(0), 
    fPdf(model.GetPdf()), 
-   fPriorPdf(0),
-   fData(&data)
+   fPriorPdf(model.GetPriorPdf()),
+   fData(&data),
+   fAxes(0)
 {
    SetModel(model);
    SetupBasicUsage();
@@ -149,7 +150,7 @@ MCMCCalculator::MCMCCalculator(RooAbsData& data, const ModelConfig & model,
                                RooArgList* axes, Double_t size) : 
    fPropFunc(&proposalFunction), 
    fPdf(model.GetPdf()), 
-   fPriorPdf(0),
+   fPriorPdf(model.GetPriorPdf()),
    fData(&data), 
    fAxes(axes)
 {
