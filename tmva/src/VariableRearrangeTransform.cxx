@@ -60,7 +60,7 @@ void TMVA::VariableRearrangeTransform::Initialize()
 }
 
 //_______________________________________________________________________
-Bool_t TMVA::VariableRearrangeTransform::PrepareTransformation( const std::vector<Event*>& events )
+Bool_t TMVA::VariableRearrangeTransform::PrepareTransformation( const std::vector<Event*>& /*events*/ )
 {
    // prepare transformation --> (nothing to do)
    if (!IsEnabled() || IsCreated()) return kTRUE;
@@ -75,7 +75,7 @@ Bool_t TMVA::VariableRearrangeTransform::PrepareTransformation( const std::vecto
 }
 
 //_______________________________________________________________________
-const TMVA::Event* TMVA::VariableRearrangeTransform::Transform( const TMVA::Event* const ev, Int_t cls ) const
+const TMVA::Event* TMVA::VariableRearrangeTransform::Transform( const TMVA::Event* const ev, Int_t /*cls*/ ) const
 {
 
    // apply the normalization transformation
@@ -92,7 +92,7 @@ const TMVA::Event* TMVA::VariableRearrangeTransform::Transform( const TMVA::Even
 }
 
 //_______________________________________________________________________
-const TMVA::Event* TMVA::VariableRearrangeTransform::InverseTransform( const TMVA::Event* const ev, Int_t cls ) const
+const TMVA::Event* TMVA::VariableRearrangeTransform::InverseTransform( const TMVA::Event* const ev, Int_t /*cls*/ ) const
 {
    // apply the inverse transformation
    if (!IsCreated()) Log() << kFATAL << "Transformation not yet created" << Endl;
@@ -109,7 +109,7 @@ const TMVA::Event* TMVA::VariableRearrangeTransform::InverseTransform( const TMV
 
 
 //_______________________________________________________________________
-std::vector<TString>* TMVA::VariableRearrangeTransform::GetTransformationStrings( Int_t cls ) const
+std::vector<TString>* TMVA::VariableRearrangeTransform::GetTransformationStrings( Int_t /*cls*/ ) const
 {
 //    // creates string with variable transformations applied
 
@@ -147,7 +147,7 @@ std::vector<TString>* TMVA::VariableRearrangeTransform::GetTransformationStrings
 }
 
 //_______________________________________________________________________
-void TMVA::VariableRearrangeTransform::AttachXMLTo(void* parent) 
+void TMVA::VariableRearrangeTransform::AttachXMLTo(void* /*parent*/) 
 {
 //    // create XML description of Rearrange transformation
 //    void* trfxml = gTools().AddChild(parent, "Transform");
@@ -174,7 +174,7 @@ void TMVA::VariableRearrangeTransform::AttachXMLTo(void* parent)
 }
 
 //_______________________________________________________________________
-void TMVA::VariableRearrangeTransform::ReadFromXML( void* trfnode ) 
+void TMVA::VariableRearrangeTransform::ReadFromXML( void* /*trfnode*/ ) 
 {
 //    // Read the transformation matrices from the xml node
 
@@ -306,8 +306,8 @@ void TMVA::VariableRearrangeTransform::PrintTransformation( ostream& )
 }
 
 //_______________________________________________________________________
-void TMVA::VariableRearrangeTransform::MakeFunction( std::ostream& fout, const TString& fcncName, 
-                                                     Int_t part, UInt_t trCounter, Int_t ) 
+void TMVA::VariableRearrangeTransform::MakeFunction( std::ostream& /*fout*/, const TString& /*fcncName*/, 
+                                                     Int_t /*part*/, UInt_t /*trCounter*/, Int_t ) 
 {
 //    // creates a normalizing function
 
