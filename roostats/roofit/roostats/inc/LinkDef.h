@@ -54,17 +54,20 @@
 #pragma link C++ class RooStats::Heaviside+; 
 
 #pragma link C++ class RooStats::HybridCalculator+;
+#pragma link C++ class RooStats::HybridCalculator2+;
 #pragma link C++ class RooStats::HybridPlot+;
 #pragma link C++ class RooStats::HybridResult+;				 
 
 #pragma link C++ class RooStats::TestStatSampler+; // interface, not concrete
 #pragma link C++ class RooStats::DebuggingSampler+;
 #pragma link C++ class RooStats::ToyMCSampler+;
+#pragma link C++ class RooStats::ToyMCSampler2+;
 
 #pragma link C++ class RooStats::TestStatistic+; // interface
 #pragma link C++ class RooStats::DebuggingTestStat+;
 #pragma link C++ class RooStats::ProfileLikelihoodTestStat+;
 #pragma link C++ class RooStats::NumEventsTestStat+;
+#pragma link C++ class RooStats::SimpleLikelihoodRatioTestStat+;
 
 #pragma link C++ class RooStats::SamplingDistribution+;
 #pragma link C++ class RooStats::NeymanConstruction+;

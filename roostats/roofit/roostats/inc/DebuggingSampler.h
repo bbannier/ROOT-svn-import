@@ -68,7 +68,11 @@ namespace RooStats {
      }
 
       // Get the TestStatistic
-      virtual const RooAbsArg* GetTestStatistic()  const {return fTestStatistic;}  
+      virtual TestStatistic* GetTestStatistic()  const {
+         // TODO change to Roo... notifications
+         cout << "GetTestStatistic() IS NOT IMPLEMENTED FOR THIS SAMPLER. Returning NULL." << endl;
+         return NULL; /*fTestStatistic;*/
+      }
     
       // Get the Confidence level for the test
       virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}  
@@ -91,7 +95,10 @@ namespace RooStats {
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
 
       // Set the TestStatistic (want the argument to be a function of the data & parameter points
-      virtual void SetTestStatistic(RooAbsArg&)  const {}  
+      virtual void SetTestStatistic(TestStatistic* /*testStatistic*/) {
+         // TODO change to Roo... notifications
+         cout << "SetTestStatistic(...) IS NOT IMPLEMENTED FOR THIS SAMPLER" << endl;
+      }
       
    private:
       Double_t fSize;

@@ -33,47 +33,56 @@ class RooAbsPdf;
 
 namespace RooStats {
 
-   class SamplingDistribution; 
+   class SamplingDistribution;
+   class TestStatistic;
+   class ModelConfig;
 
    class TestStatSampler {
 
    public:
-     //     TestStatSampler();
-     virtual ~TestStatSampler() {}
+      //     TestStatSampler();
+      virtual ~TestStatSampler() {}
     
       // Main interface to get a SamplingDistribution, pure virtual
-      virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) = 0; 
+      virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) = 0;
 
       // Main interface to evaluate the test statistic on a dataset
       virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& paramsOfInterest) = 0;
 
       // Get the TestStatistic
-      virtual const RooAbsArg* GetTestStatistic()  const = 0;  
+      virtual TestStatistic* GetTestStatistic()  const = 0;
     
       // Get the Confidence level for the test
       virtual Double_t ConfidenceLevel()  const = 0;  
 
       // Common Initialization
-      virtual void Initialize(RooAbsArg& testStatistic, RooArgSet& paramsOfInterest, RooArgSet& nuisanceParameters) = 0;
+      virtual void Initialize(
+         RooAbsArg& testStatistic,
+         RooArgSet& paramsOfInterest,
+         RooArgSet& nuisanceParameters
+      ) = 0;
 
-      // Set the Pdf, add to the the workspace if not already there
-      virtual void SetPdf(RooAbsPdf&) = 0;
+      // DEPRECATED Set the Pdf, add to the the workspace if not already there
+      virtual void SetPdf(RooAbsPdf&) {};
 
-      // specify the parameters of interest in the interval
-      virtual void SetParameters(RooArgSet&) = 0;
-      // specify the nuisance parameters (eg. the rest of the parameters)
-      virtual void SetNuisanceParameters(RooArgSet&) = 0;
-      // specify the observables in the dataset (needed to evaluate the test statistic)
-      virtual void SetObservables(RooArgSet& ) = 0;
+      // DEPRECATED specify the parameters of interest in the interval
+      virtual void SetParameters(RooArgSet&) {};
+      // DEPRECATED specify the nuisance parameters (eg. the rest of the parameters)
+      virtual void SetNuisanceParameters(RooArgSet&) {};
+      // DEPRECATED specify the observables in the dataset (needed to evaluate the test statistic)
+      virtual void SetObservables(RooArgSet& ) {};
 
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
       virtual void SetTestSize(Double_t size) = 0;
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) = 0;
 
-      // Set the TestStatistic (want the argument to be a function of the data & parameter points
-      virtual void SetTestStatistic(RooAbsArg&)  const = 0;  
+      // Set the TestStatistic (want the argument to be a function of the data & parameter points)
+      virtual void SetTestStatistic(TestStatistic* testStatistic) = 0;
       
+
+      // NEW: replaces the above deprecated functions (change "{}" to "=0" once transition is complete)
+      virtual void SetModel(ModelConfig&) {}
 
    protected:
       ClassDef(TestStatSampler,1)   // Interface for tools producing SamplingDistribution objects
