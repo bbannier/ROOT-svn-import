@@ -157,6 +157,8 @@ namespace TMVA {
 
       std::map<TString, IMethod*> fMethodMap; // map of methods
 
+      std::vector<Float_t>        fTmpEvalVec; // temporary evaluation vector (if user input is v<double>)
+
       mutable MsgLogger* fLogger;   // message logger
       MsgLogger& Log() const { return *fLogger; }    
 

@@ -415,15 +415,17 @@ Double_t TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const 
 //_______________________________________________________________________
 Double_t TMVA::Reader::EvaluateMVA( const std::vector<Double_t>& inputVec, const TString& methodTag, Double_t aux )
 {
-   // obsolete method, use TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, Double_t aux )
-   Log() << kWARNING << "obsolete method, use TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, Double_t aux )" << Endl;
-      // Evaluate a vector<double> of input data for a given method
+   // Evaluate a vector<double> of input data for a given method
    // The parameter aux is obligatory for the cuts method where it represents the efficiency cutoff
-   std::vector<Float_t>* inputVecFloat = new std::vector<Float_t>();
-   for (std::vector<Double_t>::const_iterator it=inputVec.begin(); it != inputVec.end(); it++ ) inputVecFloat->push_back(*it);
-   Double_t val = EvaluateMVA( *inputVecFloat, methodTag, aux );
-   delete inputVecFloat;
-   return val;
+
+   // performs a copy to float values which are internally used by all methods
+   if(fTmpEvalVec.size() != inputVec.size())
+      fTmpEvalVec.resize(inputVec.size());
+
+   for (UInt_t idx=0; idx!=inputVec.size(); idx++ ) 
+      fTmpEvalVec[idx]=inputVec[idx];
+
+   return EvaluateMVA( fTmpEvalVec, methodTag, aux );
 }
 
 //_______________________________________________________________________
