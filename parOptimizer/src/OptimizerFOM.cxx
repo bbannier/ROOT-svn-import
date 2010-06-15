@@ -30,27 +30,27 @@ ClassImp(TMVA::OptimizerFOM)
 #include "TMath.h"
    
 //_______________________________________________________________________
-  TMVA::OptimizerFOM::OptimizerFOM(const MethodBase* method, TString fomType):
-    fMethod(method),
-    fFOMType(fomType),
-    fMvaSig(NULL),
-    fMvaBkg(NULL)
+TMVA::OptimizerFOM::OptimizerFOM(MethodBase* const method, TString fomType):
+   fMethod(method),
+   fFOMType(fomType),
+   fMvaSig(NULL),
+   fMvaBkg(NULL)
 {
    // Constructor which sets either "Classification or Regression"
    // and the type of Figure of Merit that you've chosen
    if (fMethod->DoRegression()){
       if ( fFOMType == "Separation"){
-	 // that's ok... 
-      }else{
-	 std::cout << " ERROR, you've specified as Figure of Merit in the \n"
-		   << " parameter optimisation " << fFOMType << " which has not\n"
-		   << " been implemented yet!! ---> exit " << std::endl;
-	 exit(1);
+         // that's ok... 
+      } else {
+         std::cout << " ERROR, you've specified as Figure of Merit in the \n"
+                   << " parameter optimisation " << fFOMType << " which has not\n"
+                   << " been implemented yet!! ---> exit " << std::endl;
+         exit(1);
       }
    } else {
-     std::cout << " ERROR: Sorry, Regression is not yet implement for automatic parameter optimisation"
-	       << " --> exit" << std::endl;
-     exit(1);
+      std::cout << " ERROR: Sorry, Regression is not yet implement for automatic parameter optimisation"
+                << " --> exit" << std::endl;
+      exit(1);
    }
 }
 //_______________________________________________________________________
@@ -74,7 +74,7 @@ void TMVA::OptimizerFOM::GetMVADists()
 
    const std::vector<Event*> events=fMethod->Data()->GetEventCollection(Types::kTesting);
    
-   Int_t signalClassNr = fMethod->DataInfo().GetClassInfo("Signal")->GetNumber();
+   UInt_t signalClassNr = fMethod->DataInfo().GetClassInfo("Signal")->GetNumber();
 
    for (UInt_t iev=0; iev < events.size() ; iev++){
       if (events[iev]->GetClass() == signalClassNr) {

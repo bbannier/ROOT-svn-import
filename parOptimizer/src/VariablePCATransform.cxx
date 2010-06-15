@@ -115,7 +115,7 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
 
    const Int_t inputSize = fGet.size();
    const UInt_t nCls = GetNClasses();
-   UInt_t evCls = ev->GetClass();
+   //UInt_t evCls = ev->GetClass();
 
    // if we have more than one class, take the last PCA analysis where all classes are combined if 
    // the cls parameter is outside the defined classes
@@ -163,7 +163,7 @@ const TMVA::Event* TMVA::VariablePCATransform::InverseTransform( const Event* co
 
    const Int_t inputSize = fGet.size();
    const UInt_t nCls = GetNClasses();
-   UInt_t evCls = ev->GetClass();
+   //UInt_t evCls = ev->GetClass();
 
    // if we have more than one class, take the last PCA analysis where all classes are combined if 
    // the cls parameter is outside the defined classes

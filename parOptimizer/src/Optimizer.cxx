@@ -28,18 +28,18 @@ ClassImp(TMVA::Optimizer)
 #include "TMath.h"
    
 //_______________________________________________________________________
-   TMVA::Optimizer::Optimizer(const MethodBase* method, TString fomType) 
+TMVA::Optimizer::Optimizer(MethodBase * const method, TString fomType) 
 {
    // Constructor which sets either "Classification or Regression"
    // and the type of Figure of Merit that you've chosen
 
 
-  //Somehow loop over the different paremters (ListOfOptions) and
-  //find the one where
+   //Somehow loop over the different paremters (ListOfOptions) and
+   //find the one where
 
    if ( !(fFOM = new TMVA::OptimizerFOM(method,fomType))){
       std::cout << "ERROR in TMVA::Optimizer, you've probably chosen an FOM not yet implemented"
-		<< std::endl;
+                << std::endl;
       exit(1);
    }
 }
@@ -54,7 +54,7 @@ void TMVA::Optimizer::optimize()
    Double_t      currentFOM;
    
 
-   fFOM->GetMethod()->Train()
+   fFOM->GetMethod()->Train();
    currentFOM = fFOM->GetFOM(); 
   
 

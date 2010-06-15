@@ -1,4 +1,4 @@
-// // @(#)root/tmva $Id$
+// @(#)root/tmva $Id$
 // Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss
 
 /**********************************************************************************
