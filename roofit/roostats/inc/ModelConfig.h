@@ -214,12 +214,15 @@ public:
 
    /// get RooArgSet for parameters for a particular hypothesis  (return NULL if not existing) 
    const RooArgSet * GetSnapshot() const;
- 
-   const RooWorkspace * GetWS() const;
-    
-protected:
 
-   
+   void LoadSnapshot() const;
+ 
+   RooWorkspace * GetWS() const;
+
+   /// guesses Observables and ParametersOfInterest if not already set
+   void GuessObsAndNuisance(const RooAbsData& data);
+
+protected:
    // helper functions to define a set in the WS
    void DefineSetInWS(const char* name, const RooArgSet& set);
     

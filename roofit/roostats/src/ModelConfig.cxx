@@ -16,6 +16,7 @@
 #include "RooMsgService.h"
 #endif
 
+#include <sstream>
 
 namespace RooStats {
 
@@ -26,6 +27,38 @@ ModelConfig::~ModelConfig() {
 //       delete fWS;
 //    }
 }
+
+/*
+ * Defaults:
+ *  observables: determined from data
+ *  parameters of interest: empty
+ *  nuisance parameters: all parameters except parameters of interest
+ */
+void ModelConfig::GuessObsAndNuisance(const RooAbsData& data) {
+   if (!GetObservables()) {
+      SetObservables(*GetPdf()->getObservables(data));
+   }
+   if (!GetParametersOfInterest()) {
+      SetParametersOfInterest(RooArgSet());
+   }
+   if (!GetNuisanceParameters()) {
+      RooArgSet *p = GetPdf()->getParameters(data);
+      p->remove(*GetParametersOfInterest());
+      SetNuisanceParameters(*p);
+   }
+
+   ostream& oldstream = RooPrintable::defaultPrintStream(&ccoutI(InputArguments));
+   ccoutI(InputArguments) << endl << "=== Using the following for " << GetName() << " ===" << endl;
+   ccoutI(InputArguments) << "Observables:            ";
+   GetObservables()->Print("");
+   ccoutI(InputArguments) << "Parameters of Interest: ";
+   GetParametersOfInterest()->Print("");
+   ccoutI(InputArguments) << "Nuisance Parameters:    ";
+   GetNuisanceParameters()->Print("");
+   ccoutI(InputArguments) << endl;
+   RooPrintable::defaultPrintStream(&oldstream);
+}
+
 
 void ModelConfig::SetWorkspace(RooWorkspace & ws) {
    // set a workspace that owns all the necessary components for the analysis
@@ -42,7 +75,7 @@ void ModelConfig::SetWorkspace(RooWorkspace & ws) {
    
 }
 
-const RooWorkspace * ModelConfig::GetWS() const { 
+RooWorkspace * ModelConfig::GetWS() const {
    // get workspace if pointer is null get from the TRef 
    if (fWS) return fWS; 
    // get from TRef
@@ -64,18 +97,26 @@ void ModelConfig::SetSnapshot(const RooArgSet& set) {
    fSnapshotName += set.GetName();
    if (fSnapshotName.size()  > 0) fSnapshotName += "_";
    fSnapshotName += "snapshot";
-   fWS->saveSnapshot(fSnapshotName.c_str(), set, false);  // import also the given parameter values 
-   // define the set also in WS
-   DefineSetInWS(fSnapshotName.c_str(), set); 
+   fWS->saveSnapshot(fSnapshotName.c_str(), set, true);  // import also the given parameter values
 }    
 
 const RooArgSet * ModelConfig::GetSnapshot() const{
    // load the snapshot from ws and return the corresponding set with the snapshot values
    if (!fWS) return 0; 
-   if (!fWS->loadSnapshot(fSnapshotName.c_str()) ) return 0; 
+   if (!fWS->loadSnapshot(fSnapshotName.c_str()) ) return 0;
    return fWS->set(fSnapshotName.c_str() );
 }
 
+void ModelConfig::LoadSnapshot() const{
+   // load the snapshot from ws if it exists
+   if (!fWS) return;
+
+   // kill output
+   RooFit::MsgLevel level = RooMsgService::instance().globalKillBelow();
+   RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
+   fWS->loadSnapshot(fSnapshotName.c_str());
+   RooMsgService::instance().setGlobalKillBelow(level);
+}
 
 void ModelConfig::DefineSetInWS(const char* name, const RooArgSet& set) {
    // helper functions to avoid code duplication
@@ -102,7 +143,7 @@ void ModelConfig::ImportPdfInWS(const RooAbsPdf & pdf) {
    }
    if (! fWS->pdf( pdf.GetName() ) ){
       RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-      fWS->import(pdf);
+      fWS->import(pdf, RooFit::RecycleConflictNodes());
       RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
    }
 }
