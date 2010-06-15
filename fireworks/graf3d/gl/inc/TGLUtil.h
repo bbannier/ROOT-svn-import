@@ -1066,8 +1066,6 @@ private:
    Int_t    fWhat;
    Bool_t   fFlip;
 
-   void SetState(Bool_t s);
-
 public:
    TGLCapabilityEnabler(Int_t what, Bool_t state);
    ~TGLCapabilityEnabler();
