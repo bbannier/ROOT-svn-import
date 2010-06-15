@@ -106,9 +106,25 @@ namespace TMVA {
    public:
 
       Option( T& ref, const TString& name, const TString& desc ) : 
-         OptionBase(name, desc), fRefPtr(&ref) {}
-      virtual ~Option() {}
+         OptionBase(name, desc), fRefPtr(&ref), fStandAlone(false) {}
+ 
+     virtual ~Option() {
+         if(fStandAlone) 
+            //if(IsArrayOpt())
+            //   delete[] fRefPtr;
+            //else
+            delete fRefPtr;
+      }
 
+      Option(const Option& otherOption):
+         OptionBase(otherOption)
+      {
+         fStandAlone   = true;    //standalone copy
+         
+         fRefPtr = new T();
+         SetValue(otherOption.GetValue());
+      }
+      
       // getters
       virtual TString  GetValue( Int_t i=-1 ) const;
       virtual const T& Value   ( Int_t i=-1 ) const;
@@ -122,7 +138,7 @@ namespace TMVA {
       using OptionBase::Print;
       virtual void Print       ( ostream&, Int_t levelofdetail=0 ) const;
       virtual void PrintPreDefs( ostream&, Int_t levelofdetail=0 ) const;
-
+       
    protected:
 
       T& Value(Int_t=-1);
@@ -132,6 +148,8 @@ namespace TMVA {
 
       T* fRefPtr;
       std::vector<T> fPreDefs;  // templated vector
+      Bool_t fStandAlone;       // option exists outside of Configurable? 
+
    };      
 
    template<typename T>
@@ -140,14 +158,29 @@ namespace TMVA {
    public:
 
       Option( T*& ref, Int_t size, const TString& name, const TString& desc ) : 
-         Option<T>(*ref,name, desc), fVRefPtr(&ref), fSize(size) {}
-      virtual ~Option() {}
+         Option<T>(*ref, name, desc), fVRefPtr(&ref), fSize(size) {}
 
+      virtual ~Option() {
+         if(this->fStandAlone) 
+            delete[] fVRefPtr;
+      }
+
+      Option(const Option<T*>& otherOption):
+         Option<T>(otherOption)
+       {
+         fSize    = otherOption.fSize;
+         fVRefPtr = new T[fSize];
+         for(Int_t idx = 0; idx < fSize; idx++){
+            SetValue(otherOption.GetValue(), idx);
+         }
+       }
+      
       TString GetValue( Int_t i ) const {
          std::stringstream str;
          str << std::scientific << Value(i);
          return str.str();
       }
+      
       const T& Value( Int_t i ) const { return (*fVRefPtr)[i]; }
       virtual Bool_t IsArrayOpt()   const { return kTRUE; }
       virtual Int_t  GetArraySize() const { return fSize; }
@@ -160,7 +193,6 @@ namespace TMVA {
       T& Value(Int_t i) { return (*fVRefPtr)[i]; }
       T ** fVRefPtr;
       Int_t fSize;
-
    };
 
 } // namespace
