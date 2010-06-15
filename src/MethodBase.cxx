@@ -1323,17 +1323,17 @@ void TMVA::MethodBase::ReadStateFromFile()
          << gTools().Color("lightblue") << tfname << gTools().Color("reset") << Endl;
 
    if (tfname.EndsWith(".xml") ) {
-      void* doc = gTools().xmlengine().ParseFile(tfname); 
+      void* doc = gTools().xmlengine().ParseFile(tfname);
       void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
       ReadStateFromXML(rootnode);
-   } 
+   }
    else {
       filebuf fb;
       fb.open(tfname.Data(),ios::in);
       if (!fb.is_open()) { // file not found --> Error
          Log() << kFATAL << "<ReadStateFromFile> "
                << "Unable to open input weight file: " << tfname << Endl;
-      }      
+      }
       istream fin(&fb);
       ReadStateFromStream(fin);
       fb.close();
@@ -1347,11 +1347,24 @@ void TMVA::MethodBase::ReadStateFromFile()
       ReadStateFromStream( *rfile );
       rfile->Close();
    }
-
 }
 
+#if ROOT_SVN_REVISION >= 32259
 //_______________________________________________________________________
-void TMVA::MethodBase::ReadStateFromXML( void* methodNode ) 
+void TMVA::MethodBase::ReadStateFromXMLString( const char* xmlstr ) {
+   // for reading from memory
+   
+   void* doc = gTools().xmlengine().ParseString(xmlstr);
+
+   void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
+
+   return ReadStateFromXML(rootnode);
+
+}
+#endif
+
+//_______________________________________________________________________
+void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
 {
    TString fullMethodName;
    gTools().ReadAttr( methodNode, "Method", fullMethodName );
@@ -1373,10 +1386,10 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
          void* antypeNode = gTools().GetChild(ch);
          while (antypeNode) {
             gTools().ReadAttr( antypeNode, "name",   name );
-            
-            if (name == "TrainingTime") 
+
+            if (name == "TrainingTime")
                gTools().ReadAttr( antypeNode, "value",  fTrainTime );
-      
+
             if (name == "AnalysisType") {
                gTools().ReadAttr( antypeNode, "value",  val );
                val.ToLower();
@@ -1385,7 +1398,7 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
                else if (val == "multiclass" )     SetAnalysisType( Types::kMulticlass );
                else Log() << kFATAL << "Analysis type " << val << " is not known." << Endl;
             }
-            
+
             if (name == "TMVA Release" || name == "TMVA" ){
                TString s;
                gTools().ReadAttr( antypeNode, "value", s);
@@ -1401,12 +1414,12 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
             }
             antypeNode = gTools().GetNextChild(antypeNode);
          }
-      } 
+      }
       else if (nodeName=="Options") {
          ReadOptionsFromXML(ch);
          ParseOptions();
-         
-      } 
+
+      }
       else if (nodeName=="Variables") {
          ReadVariablesFromXML(ch);
       }
@@ -1434,10 +1447,10 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
             fMVAPdfB = new PDF(pdfname);
             fMVAPdfB->ReadXML(pdfnode);
          }
-      } 
+      }
       else if (nodeName=="Weights") {
          ReadWeightsFromXML(ch);
-      } 
+      }
       else {
          std::cout << "Unparsed: " << nodeName << std::endl;
       }

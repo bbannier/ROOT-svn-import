@@ -86,6 +86,9 @@ namespace TMVA {
   
       // book MVA method via weight file
       IMethod* BookMVA( const TString& methodTag, const TString& weightfile );
+#if ROOT_SVN_REVISION >= 32259
+      IMethod* BookMVA( TMVA::Types::EMVA methodType, const char* xmlstr );
+#endif
       IMethod* FindMVA( const TString& methodTag );
       // special function for Cuts to avoid dynamic_casts in ROOT macros, 
       // which are not properly handled by CINT
@@ -94,10 +97,9 @@ namespace TMVA {
 
       // returns the MVA response for given event
       Double_t EvaluateMVA( const std::vector<Float_t> &, const TString& methodTag, Double_t aux = 0 );    
-
+      Double_t EvaluateMVA( const std::vector<Double_t>&, const TString& methodTag, Double_t aux = 0 );
       Double_t EvaluateMVA( MethodBase* method,           Double_t aux = 0 );    
       Double_t EvaluateMVA( const TString& methodTag,     Double_t aux = 0 );    
-//      Double_t EvaluateMVA( const TString& methodTag,     Double_t upper, Double_t lower );   //zjh
 
       // returns error on MVA response for given event
       // NOTE: must be called AFTER "EvaluateMVA(...)" call !
@@ -165,6 +167,8 @@ namespace TMVA {
       Double_t  fMvaEventError2; // per-event error returned by MVA (unless: -1)  //zjh
 
       std::map<TString, IMethod*> fMethodMap; // map of methods
+
+      std::vector<Float_t>        fTmpEvalVec; // temporary evaluation vector (if user input is v<double>)
 
       mutable MsgLogger* fLogger;   // message logger
       MsgLogger& Log() const { return *fLogger; }    
