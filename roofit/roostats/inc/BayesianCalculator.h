@@ -31,6 +31,7 @@ class RooAbsData;
 class RooAbsPdf; 
 class RooPlot; 
 class RooAbsReal;
+class TF1;
 
 namespace RooStats {
 
@@ -85,7 +86,14 @@ namespace RooStats {
       // Get the Confidence level for the test
       virtual Double_t ConfidenceLevel() const { return 1.-fSize; }
 
+      // set the precision of the Root Finder 
       void SetBrfPrecision( double precision ) { fBrfPrecision = precision; }
+
+      // use directly the approximate posterior function obtained by binning it in nbins
+      // by default the cdf is used by integrating the posterior
+      // if a value of nbin <= 0 the cdf function will be used
+      void UseScanOfPosterior(int nbin = 100) { fNScanBins = nbin; }
+
 
       // set the integration type (possible type are) 
       // 1D: adaptive, gauss, nonadaptive
@@ -119,10 +127,13 @@ namespace RooStats {
       mutable ROOT::Math::IGenFunction * fPosteriorFunction;  // function representing the posterior
       mutable Double_t  fLower; 
       mutable Double_t  fUpper; 
-      double fBrfPrecision;
+      double fBrfPrecision;     // root finder precision
+      int fNScanBins;            // number of bins to scan, if = -1 no scan is done (default)
+      mutable TF1 * fApproxPosterior;    // TF! representing the scanned posterior function
       mutable Bool_t    fValidInterval;
 
       double fSize;  // size used for getting the interval
+
 
       TString fIntegrationType; 
 

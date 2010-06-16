@@ -147,7 +147,7 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
 
       RooRealVar* myarg = (RooRealVar *) newProfile->getVariables()->find(myparam->GetName());
       double x1 = myarg->getMin(); 
-      double x2 = myarg->getMax(); 
+      double x2 = myarg->getMax();
 
 
       // use TF1 for drawing the function
@@ -199,6 +199,11 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
          double xmin = myparam->getMin(); double xmax =  myparam->getMax();
          if (fXmin < fXmax) { xmin = fXmin; xmax = fXmax; }  
 
+         // set nbins (must be used in combination with precision )
+         // the curve will evaluate 2 * nbins if preciaon is > 1
+         int prevBins = myarg->getBins();
+         myarg->setBins(fNPoints);
+
          // want to set range on frame not function
          frame = myarg->frame(xmin,xmax);
 	 // for ycutoff line
@@ -208,6 +213,7 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
          frame->GetYaxis()->SetTitle(Form("- log #lambda(%s)",myparam->GetName()));
          //    frame->GetYaxis()->SetTitle("- log profile likelihood ratio");
          
+
          // plot 
          RooCmdArg cmd; 
          if (fPrecision > 0) cmd = RooFit::Precision(fPrecision); 
@@ -215,6 +221,9 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
          
          frame->SetMaximum(fMaximum);
          frame->SetMinimum(0.);
+
+         myarg->setBins(prevBins);
+
       }
 
       
