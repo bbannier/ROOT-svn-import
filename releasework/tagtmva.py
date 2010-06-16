@@ -2,6 +2,7 @@
 
 import os, sys, time
 from optparse import OptionParser
+from commands import getoutput as go
 
 def getOptions():
     parser = OptionParser(usage="usage: %prog options")
@@ -53,7 +54,7 @@ def update_dev_head(dry):
     if dry:
         print cmdup
     else:
-        print getoutput(cmdup)
+        print go(cmdup)
 
 
 def commit_changes(new_release, dry):
@@ -63,24 +64,28 @@ def commit_changes(new_release, dry):
     if dry:
         print cmdci
     else:
-        print getoutput(cmdci)
+        print go(cmdci)
 
 def tag(new_release, revision, dry):
     tag = 'V%02d-%02d-%02d' % tuple([int(x) for x in new_release.split('.')])
 
     #answer = raw_input("Would you like to tag as %s? [Y/n]> " % tag)
 
-    src  = 'https://root.cern.ch/svn/root/branches/dev/tmva'
-    if revision:
-        src += "@%i" % int(revision)
+    if tag.endswith("-00"):
+        src  = 'https://root.cern.ch/svn/root/branches/dev/tmva'
+    else:
+        src  = 'https://root.cern.ch/svn/root/branches/dev/tmvapatches/v5-26-00-patches/tmva'
     dest = 'https://root.cern.ch/svn/root/branches/dev/tmvatags/%s' % tag
 
-    cmdcp = 'svn cp -m "new release %s" %s %s' % (new_release, src, dest)
+    if revision:
+        cmdcp = 'svn cp -r %i -m "new release %s" %s %s' % ( int(revision), new_release, src, dest)
+    else:
+        cmdcp = 'svn cp -m "new release %s" %s %s' % (new_release, src, dest)
     print "tagging ..."
     if dry:
         print cmdcp
     else:
-        print getoutput(cmdcp)
+        print go(cmdcp)
     
 
 
