@@ -147,8 +147,9 @@ RooAbsArg::RooAbsArg(const RooAbsArg& other, const char* name)
   setValueDirty() ;
   setShapeDirty() ;
 
-  setAttribute(Form("CloneOf(%08x)",&other)) ;
-
+  //setAttribute(Form("CloneOf(%08x)",&other)) ;
+  //cout << "RooAbsArg::cctor(" << this << ") #bools = " << _boolAttrib.size() << " #strings = " << _stringAttrib.size() << endl ;
+  
   RooTrace::create(this) ;
 }
 
@@ -2207,3 +2208,19 @@ Bool_t RooAbsArg::flipAClean()
 
 
 
+//_____________________________________________________________________________
+const char* RooAbsArg::aggregateCacheUniqueSuffix() const 
+{
+  string suffix ;
+
+  RooArgSet branches ;
+  branchNodeServerList(&branches) ;
+  TIterator* iter = branches.createIterator( );
+  RooAbsArg* arg ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    const char* tmp = arg->cacheUniqueSuffix() ;
+    if (tmp) suffix += tmp ;
+  }
+  delete iter ;
+  return Form("%s",suffix.c_str()) ;
+}
