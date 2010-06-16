@@ -353,7 +353,7 @@ RooTreeDataStore::RooTreeDataStore(const RooTreeDataStore& other, const RooArgSe
   _cacheTree(0),
   _defCtor(kFALSE),
   _varsww(vars),
-  _wgtVar(other._wgtVar),
+  _wgtVar(other._wgtVar?weightVar(vars,other._wgtVar->GetName()):0),
   _extWgtArray(other._extWgtArray),
   _extWgtErrLoArray(other._extWgtErrLoArray),
   _extWgtErrHiArray(other._extWgtErrHiArray),
@@ -507,6 +507,7 @@ void RooTreeDataStore::loadValues(const TTree *t, const RooFormulaVar* select, c
 
   // Loop over events in source tree   
   RooAbsArg* destArg = 0;
+  TIterator* destIter = _varsww.createIterator() ;
   Int_t numInvalid(0) ;
   Int_t nevent= (Int_t)tClone->GetEntries();
   for(Int_t i=0; i < nevent; ++i) {
@@ -515,10 +516,10 @@ void RooTreeDataStore::loadValues(const TTree *t, const RooFormulaVar* select, c
     tClone->GetEntry(entryNumber,1);
  
     // Copy from source to destination
-     _iterator->Reset() ;
+     destIter->Reset() ;
      sourceIter->Reset() ;
      Bool_t allOK(kTRUE) ;
-     while ((destArg = (RooAbsArg*)_iterator->Next())) {              
+     while ((destArg = (RooAbsArg*)destIter->Next())) {              
        sourceArg = (RooAbsArg*) sourceIter->Next() ;
        destArg->copyCache(sourceArg) ;
        sourceArg->copyCache(destArg) ;
@@ -535,10 +536,11 @@ void RooTreeDataStore::loadValues(const TTree *t, const RooFormulaVar* select, c
      }
 
      fill() ;
-   }
+  }
+  delete destIter ;
 
   if (numInvalid>0) {
-    coutI(Eval) << "RooTreeData::loadValues(" << GetName() << ") Ignored " << numInvalid << " out of range events" << endl ;
+    coutI(Eval) << "RooTreeDataStore::loadValues(" << GetName() << ") Ignored " << numInvalid << " out of range events" << endl ;
   }
   
   SetTitle(t->GetTitle());
@@ -596,11 +598,11 @@ void RooTreeDataStore::loadValues(const RooAbsDataStore *ads, const RooFormulaVa
 
     
     _varsww.assignValueOnly(((RooTreeDataStore*)ads)->_varsww) ;
-
-    _iterator->Reset() ;
+    TIterator* destIter = _varsww.createIterator() ;
+    destIter->Reset() ;
     // Check that all copied values are valid
     allValid=kTRUE ;
-    while((arg=(RooAbsArg*)_iterator->Next())) {
+    while((arg=(RooAbsArg*)destIter->Next())) {
       if (!arg->isValid() || (rangeName && !arg->inRange(rangeName))) {
 	//cout << "arg " << arg->GetName() << " is not valid" << endl ;
 	//arg->Print("v") ;
@@ -610,9 +612,10 @@ void RooTreeDataStore::loadValues(const RooAbsDataStore *ads, const RooFormulaVa
     }
     //cout << "RooTreeData::loadValues(" << GetName() << ") allValid = " << (allValid?"T":"F") << endl ;
     if (!allValid) continue ;
-
+    
     _cachedVars = ((RooTreeDataStore*)ads)->_cachedVars ;
     fill() ;
+    delete destIter ;
    }
   
   delete selectClone ;
@@ -671,7 +674,7 @@ const RooArgSet* RooTreeDataStore::get(Int_t index) const
   
   // Update current weight cache
   if (_extWgtArray) {
-    
+
     // If external array is specified use that  
     _curWgt = _extWgtArray[index] ;
     _curWgtErrLo = _extWgtErrLoArray[index] ;
@@ -679,7 +682,7 @@ const RooArgSet* RooTreeDataStore::get(Int_t index) const
     _curWgtErr   = sqrt(_extSumW2Array[index]) ;
 
   } else if (_wgtVar) {
-    
+
     // Otherwise look for weight variable
     _curWgt = _wgtVar->getVal() ;
     _curWgtErrLo = _wgtVar->getAsymErrorLo() ;
@@ -1048,6 +1051,10 @@ void RooTreeDataStore::append(RooAbsDataStore& other)
   Int_t nevt = other.numEntries() ;
   for (int i=0 ; i<nevt ; i++) {  
     _vars = *other.get(i) ;
+    if (_wgtVar) {
+      _wgtVar->setVal(other.weight()) ;
+    }
+    
     fill() ;
   }
 }

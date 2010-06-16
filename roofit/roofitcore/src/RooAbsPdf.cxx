@@ -158,6 +158,7 @@ ClassImp(RooAbsPdf)
 
 Int_t RooAbsPdf::_verboseEval = 0;
 Bool_t RooAbsPdf::_evalError = kFALSE ;
+TString RooAbsPdf::_normRangeOverride ;
 
 //_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf() : _norm(0), _normSet(0), _minDimNormValueCache(999), _valueCacheIntOrder(2), _specGeneratorConfig(0)
@@ -193,8 +194,7 @@ RooAbsPdf::RooAbsPdf(const char *name, const char *title,
 //_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf(const RooAbsPdf& other, const char* name) : 
   RooAbsReal(other,name), _norm(0), _normSet(0), _minDimNormValueCache(other._minDimNormValueCache), _valueCacheIntOrder(other._valueCacheIntOrder),
-  _normMgr(other._normMgr,this), _selectComp(other._selectComp)
-
+  _normMgr(other._normMgr,this), _selectComp(other._selectComp), _normRange(other._normRange)
 {
   // Copy constructor
   resetErrorCounters() ;
@@ -358,6 +358,7 @@ Double_t RooAbsPdf::getNorm(const RooArgSet* nset) const
   if (_verboseEval>1) cxcoutD(Tracing) << IsA()->GetName() << "::getNorm(" << GetName() << "): norm(" << _norm << ") = " << _norm->getVal() << endl ;
 
   Double_t ret = _norm->getVal() ;
+//   cout << "RooAbsPdf::getNorm(" << GetName() << ") norm obj = " << _norm->GetName() << endl ;
   if (ret==0.) {
     if(++_errorCount <= 10) {
       coutW(Eval) << "RooAbsPdf::getNorm(" << GetName() << ":: WARNING normalization is zero, nset = " ;  nset->Print("1") ;
@@ -411,7 +412,9 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
   // For functions that declare to be self-normalized by overloading the
   // selfNormalized() function, a unit normalization is always constructed
 
-  
+
+  //cout << IsA()->GetName() << "::syncNormalization(" << GetName() << ") nset = " << nset << " = " << (nset?*nset:RooArgSet()) << endl ;
+
   _normSet = (RooArgSet*) nset ;
 
   // Check if data sets are identical
@@ -420,6 +423,9 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
 
     Bool_t nsetChanged = (_norm!=cache->_norm) ;
     _norm = cache->_norm ;
+
+
+//     cout << "returning existing object " << _norm->GetName() << endl ;
 
     if (nsetChanged && adjustProxies) {
       // Update dataset pointers of proxies
@@ -452,7 +458,13 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
     TString nname(GetName()) ; nname.Append("_UnitNorm") ;
     _norm = new RooRealVar(nname.Data(),ntitle.Data(),1) ;
   } else {    
-    RooRealIntegral* normInt = (RooRealIntegral*) createIntegral(*depList,*getIntegratorConfig()) ;
+    const char* nr = (_normRangeOverride.Length()>0 ? _normRangeOverride.Data() : (_normRange.Length()>0 ? _normRange.Data() : 0)) ;
+
+//     cout << "RooAbsPdf::syncNormalization(" << GetName() << ") rangeName for normalization is " << (nr?nr:"<null>") << endl ;
+    RooRealIntegral* normInt = (RooRealIntegral*) createIntegral(*depList,*getIntegratorConfig(),nr) ;
+    normInt->getVal() ;
+//     cout << "resulting normInt = " << normInt->GetName() << endl ;
+
     RooArgSet* normParams = normInt->getVariables() ;
     if (normParams->getSize()>0 && normParams->getSize()<3 && normInt->numIntRealVars().getSize()>=_minDimNormValueCache) {
       coutI(Caching) << "RooAbsPdf::syncNormalization(" << GetName() << ") INFO: constructing " << normParams->getSize() 
@@ -473,6 +485,8 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
   // Register new normalization with manager (takes ownership)
   cache = new CacheElem(*_norm) ;
   _normMgr.setObj(nset,cache) ;
+
+//     cout << "making new object " << _norm->GetName() << endl ;
 
   delete depList ;
   return kTRUE ;
@@ -626,6 +640,8 @@ Double_t RooAbsPdf::extendedTerm(UInt_t observed, const RooArgSet* nset) const
   // factor for this dataset, dropping the constant log(observed!)
   Double_t extra= expected - observed*log(expected);
 
+//   cout << "RooAbsPdf::extendedTerm(" << GetName() << ") observed = " << observed << " expected = " << expected << endl ;
+
   Bool_t trace(kFALSE) ;
   if(trace) {
     cxcoutD(Tracing) << fName << "::extendedTerm: expected " << expected << " events, got "
@@ -726,7 +742,6 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   if (cloneData==2) {
     cloneData = optConst ;
   }
-
   RooArgSet* cPars = pc.getSet("cPars") ;
   Bool_t doStripDisconnected=kFALSE ;
 
@@ -775,6 +790,8 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   string baseName = Form("nll_%s_%s",GetName(),data.GetName()) ;
   if (!rangeName || strchr(rangeName,',')==0) {
     // Simple case: default range, or single restricted range
+    //cout<<"FK: Data test 1: "<<data.sumEntries()<<endl;
+
     nll = new RooNLLVar(baseName.c_str(),"-log(likelihood)",*this,data,projDeps,ext,rangeName,addCoefRangeName,numcpu,kFALSE,verbose,splitr,cloneData) ;
 
   } else {
@@ -812,11 +829,13 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
 
     nllCons = new RooConstraintSum(Form("%s_constr",baseName.c_str()),"nllCons",allConstraints,*cPars) ;
     RooAbsReal* orignll = nll ;
+
     nll = new RooAddition(Form("%s_with_constr",baseName.c_str()),"nllWithCons",RooArgSet(*nll,*nllCons)) ;
     nll->addOwnedComponents(RooArgSet(*orignll,*nllCons)) ;
   }
 
   if (optConst) {
+
     nll->constOptimizeTestStatistic(RooAbsArg::Activate) ;
   }
 
@@ -1334,8 +1353,7 @@ RooFitResult* RooAbsPdf::chi2FitTo(RooDataHist& data, const RooLinkedList& cmdLi
 
   // Pull arguments to be passed to chi2 construction from list
   RooLinkedList fitCmdList(cmdList) ;
-  RooLinkedList chi2CmdList = pc.filterCmdList(fitCmdList,"Range,RangeWithName,NumCPU,Optimize,ProjectedObservables,AddCoefRange,SplitRange,DataError") ;
-
+  RooLinkedList chi2CmdList = pc.filterCmdList(fitCmdList,"Range,RangeWithName,NumCPU,Optimize,ProjectedObservables,AddCoefRange,SplitRange") ;
 
   RooAbsReal* chi2 = createChi2(data,chi2CmdList) ;
   RooFitResult* ret = chi2FitDriver(*chi2,fitCmdList) ;
@@ -3038,3 +3056,35 @@ RooAbsPdf::GenSpec::GenSpec(RooAbsGenContext* context, const RooArgSet& whatVars
 {
 }
 
+
+
+//_____________________________________________________________________________
+void RooAbsPdf::setNormRange(const char* rangeName) 
+{ 
+  if (rangeName) {
+    _normRange = rangeName ; 
+  } else {
+    _normRange.Clear() ; 
+  }
+
+  if (_norm) { 
+    _normMgr.sterilize() ;
+    _norm = 0 ; 
+  }
+}
+
+
+//_____________________________________________________________________________
+void RooAbsPdf::setNormRangeOverride(const char* rangeName) 
+{
+  if (rangeName) {
+    _normRangeOverride = rangeName ; 
+  } else {
+    _normRangeOverride.Clear() ; 
+  }
+
+  if (_norm) { 
+    _normMgr.sterilize() ;
+    _norm = 0 ; 
+  }
+}

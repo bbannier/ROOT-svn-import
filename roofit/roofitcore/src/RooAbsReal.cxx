@@ -312,6 +312,7 @@ Double_t RooAbsReal::analyticalIntegralWN(Int_t code, const RooArgSet* normSet, 
   // getAnalyticalIntegral.  This functions will only be called with
   // codes returned by getAnalyticalIntegral, except code zero.
 
+//   cout << "RooAbsReal::analyticalIntegralWN(" << GetName() << ") code = " << code << " normSet = " << (normSet?*normSet:RooArgSet()) << endl ;
   if (code==0) return getVal(normSet) ;
   return analyticalIntegral(code,rangeName) ;
 }
@@ -388,7 +389,7 @@ void RooAbsReal::printMultiline(ostream& os, Int_t contents, Bool_t verbose, TSt
   os << indent << "--- RooAbsReal ---" << endl;
   TString unit(_unit);
   if(!unit.IsNull()) unit.Prepend(' ');
-  os << indent << "  Value = " << getVal() << unit << endl;
+  //os << indent << "  Value = " << getVal() << unit << endl;
   os << endl << indent << "  Plot label is \"" << getPlotLabel() << "\"" << endl;
 
 }
@@ -511,16 +512,33 @@ RooAbsReal* RooAbsReal::createIntegral(const RooArgSet& iset, const RooArgSet* n
   } 
 
   // Integral over multiple ranges
-  char* buf = new char[strlen(rangeName)+1] ;
-  strcpy(buf,rangeName) ;
-  char* range = strtok(buf,",") ;
   RooArgSet components ;
-  while (range) {
-    RooAbsReal* compIntegral = createIntObj(iset,nset,cfg,range) ;
+  
+  // char* buf = new char[strlen(rangeName)+1] ;
+  //   strcpy(buf,rangeName) ;
+  //   char* range = strtok(buf,",") ;
+  
+  //   while (range) {
+  //     RooAbsReal* compIntegral = createIntObj(iset,nset,cfg,range) ;
+  //     components.add(*compIntegral) ;
+  //     range = strtok(0,",") ;
+  //   }
+  //   delete[] buf ;
+  
+  // + ALEX
+  TObjArray* oa = TString(rangeName).Tokenize(",");
+  
+  for( Int_t i=0; i < oa->GetEntries(); ++i) {
+    TObjString* os = (TObjString*) (*oa)[i];
+//     cout<< "    ALEX:: RooAbsReal::createIntegral (" << GetName() << ")  os = " << os->GetString().Data() <<endl;
+    if(!os) break;
+    RooAbsReal* compIntegral = createIntObj(iset,nset,cfg,os->GetString().Data()) ;
+//     cout << "just created " << compIntegral->GetName() << " for rangename = " << os->GetString().Data() << endl ;
     components.add(*compIntegral) ;
-    range = strtok(0,",") ;
   }
-  delete[] buf ;
+  delete oa;
+  // - ALEX 
+//     cout<< "    ALEX:: RooAbsReal::createIntegral (" << GetName() << ")  components = " << components <<endl;
 
   TString title(GetTitle()) ;
   title.Prepend("Integral of ") ;
@@ -729,6 +747,11 @@ TString RooAbsReal::integralNameSuffix(const RooArgSet& iset, const RooArgSet* n
       name.Append(arg->GetName()) ;
     }
     delete iter ;
+    const RooAbsPdf* thisPdf = dynamic_cast<const RooAbsPdf*>(this) ;    
+    if (thisPdf && thisPdf->normRange()) {
+      name.Append("|") ;
+      name.Append(thisPdf->normRange()) ;
+    }
     name.Append("]") ;
   }
 
@@ -1900,6 +1923,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
     
     // Construct optimized data weighted average
     RooDataWeightedAverage dwa(Form("%sDataWgtAvg",GetName()),"Data Weighted average",*projection,*projDataSel,RooArgSet()/**projDataSel->get()*/,o.numCPU,o.interleave,kTRUE) ;
+    //RooDataWeightedAverage dwa(Form("%sDataWgtAvg",GetName()),"Data Weighted average",*projection,*projDataSel,*projDataSel->get(),o.numCPU,o.interleave,kTRUE) ;
     dwa.constOptimizeTestStatistic(Activate) ;
 
     RooRealBinding projBind(dwa,*plotVar) ;
@@ -2253,6 +2277,7 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
     
 
     RooDataWeightedAverage dwa(Form("%sDataWgtAvg",GetName()),"Data Weighted average",*funcAsym,*projDataSel,RooArgSet()/**projDataSel->get()*/,o.numCPU,o.interleave,kTRUE) ;
+    //RooDataWeightedAverage dwa(Form("%sDataWgtAvg",GetName()),"Data Weighted average",*funcAsym,*projDataSel,*projDataSel->get(),o.numCPU,o.interleave,kTRUE) ;
     dwa.constOptimizeTestStatistic(Activate) ;
 
     RooRealBinding projBind(dwa,*plotVar) ;

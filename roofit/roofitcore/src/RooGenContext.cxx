@@ -285,7 +285,7 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
   }
 
   if (_acceptRejectFunc && _otherVars.getSize()>0) {
-    _generator = RooNumGenFactory::instance().createSampler(*_acceptRejectFunc,_otherVars,RooArgSet(*protoDeps),*model.getGeneratorConfig(),_verbose,_maxVar) ;    
+    _generator = RooNumGenFactory::instance().createSampler(*_acceptRejectFunc,_otherVars,RooArgSet(_protoVars),*model.getGeneratorConfig(),_verbose,_maxVar) ;    
     cxcoutD(Generation) << "RooGenContext::ctor() creating MC sampling generator " << _generator->IsA()->GetName() << "  from function for observables " << _otherVars << endl ;
     //_generator= new RooAcceptReject(*_acceptRejectFunc,_otherVars,RooNumGenConfig::defaultConfig(),_verbose,_maxVar);
   } else {
