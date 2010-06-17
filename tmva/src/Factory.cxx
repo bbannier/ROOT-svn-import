@@ -998,7 +998,13 @@ void TMVA::Factory::TrainAllMethods()
          m = dynamic_cast<MethodBase*>( ClassifierFactory::Instance()
                                                        .Create( std::string(Types::Instance().GetMethodName(methodType)), 
                                                                 dataSetInfo, weightfile ) );
-        
+         if( m->GetMethodType() == Types::kCategory ){ 
+            MethodCategory *methCat = (dynamic_cast<MethodCategory*>(m));
+            if( !methCat ) Log() << kFATAL << "Method with type kCategory cannot be casted to MethodCategory. /Factory" << Endl; 
+            else methCat->fDataSetManager = fDataSetManager;
+         }
+         //ToDo, Do we need to fill the DataSetManager of MethodBoost here too?
+
          m->SetupMethod();
          m->ReadStateFromFile();
          m->SetTestvarName(testvarName);
