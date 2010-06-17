@@ -397,6 +397,22 @@ void TMVA::MethodBDT::Init( void )
 
 }
 
+
+//_______________________________________________________________________
+void TMVA::MethodBDT::Reset( void )
+{
+   // reset the method, as if it had just been instantiated (forget all training etc.)
+   
+   // I keep the BDT EventSample and its Validation sample (eventuall they should all
+   // disappear and just use the DataSet samples ..
+   
+   // remove all the trees 
+   for (UInt_t i=0; i<fForest.size();           i++) delete fForest[i];
+
+   this->Init();
+   this->ProcessOptions();
+}
+
 //_______________________________________________________________________
 TMVA::MethodBDT::~MethodBDT( void )
 {

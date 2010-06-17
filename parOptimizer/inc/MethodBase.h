@@ -143,6 +143,12 @@ namespace TMVA {
       virtual void     ProcessOptions() = 0;
       virtual void     DeclareCompatibilityOptions(); // declaration of past options
 
+      // reset the Method --> As if it was not yet trained, just instantiated
+      //      virtual void     Reset()          = 0;
+      //for the moment, I provide a dummy (that would not work) default, just to make
+      // compilation/running w/o parameter optimisation still possible
+      virtual void     Reset(){return;}
+
       // classifier response - some methods may return a per-event error estimate (unless: *err = -1)
       virtual Double_t GetMvaValue( Double_t* err = 0 ) = 0;
 
