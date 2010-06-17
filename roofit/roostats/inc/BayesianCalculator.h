@@ -107,7 +107,7 @@ namespace RooStats {
       // use directly the approximate posterior function obtained by binning it in nbins
       // by default the cdf is used by integrating the posterior
       // if a value of nbin <= 0 the cdf function will be used
-      void SetUseScanOfPosterior(int nbin = 100) { fNScanBins = nbin; }
+      void SetScanOfPosterior(int nbin = 100) { fNScanBins = nbin; }
 
 
       // set the integration type (possible type are) 

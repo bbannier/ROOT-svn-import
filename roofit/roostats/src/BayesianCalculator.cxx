@@ -718,7 +718,7 @@ void BayesianCalculator::ComputeIntervalFromApproxPosterior(double lowerCutOff, 
 
 void BayesianCalculator::ComputeShortestInterval( ) const { 
    // compute the shortest interval
-   coutI(Eval) << "BayesianCalculator - computing shortest interval with CL " << 1.-fSize << std::endl;
+   coutI(Eval) << "BayesianCalculator - computing shortest interval with CL = " << 1.-fSize << std::endl;
 
    // compute via the approx posterior function
    ApproximatePosterior(); 
