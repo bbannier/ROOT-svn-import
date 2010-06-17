@@ -249,6 +249,7 @@ void TMVA::MethodFDA::ProcessOptions()
       if (pmin > pmax) Log() << kFATAL << "<ProcessOptions> max > min in interval for parameter: ["
                                << ipar << "] : [" << pmin  << ", " << pmax << "] " << Endl;
 
+      Log() << kINFO << "Create parameter interval for parameter " << ipar << " : [" << pmin << "," << pmax << "]" << Endl;
       fParRange[ipar] = new Interval( pmin, pmax );
    }
    delete parList;
@@ -264,7 +265,7 @@ void TMVA::MethodFDA::ProcessOptions()
    if( DoMulticlass() )
       fOutputDimensions = DataInfo().GetNClasses();
 
-   for( Int_t dim = 0; dim < fOutputDimensions; ++dim ){
+   for( Int_t dim = 1; dim < fOutputDimensions; ++dim ){
       for( UInt_t par = 0; par < fNPars; ++par ){
          fParRange.push_back( fParRange.at(par) );
       }
