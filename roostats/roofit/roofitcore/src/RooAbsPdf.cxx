@@ -611,7 +611,7 @@ Double_t RooAbsPdf::getLogVal(const RooArgSet* nset) const
 
     logEvalError("getLogVal() top-level p.d.f evaluates to zero") ;
 
-    return log(0);
+    return log((double)0);
   }
   return log(prob);
 }
