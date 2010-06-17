@@ -102,7 +102,8 @@ ClassImp(RooAbsReal)
 Bool_t RooAbsReal::_cacheCheck(kFALSE) ;
 Bool_t RooAbsReal::_globalSelectComp = kFALSE ;
 
-Bool_t RooAbsReal::_doLogEvalError ;
+RooAbsReal::ErrorLoggingMode RooAbsReal::_evalErrorMode = RooAbsReal::PrintErrors ;
+Int_t RooAbsReal::_evalErrorCount = 0 ;
 map<const RooAbsArg*,pair<string,list<RooAbsReal::EvalError> > > RooAbsReal::_evalErrorList ;
 
 
@@ -1044,7 +1045,7 @@ TH1 *RooAbsReal::fillHistogram(TH1 *hist, const RooArgList &plotVars,
 
   // Loop over the input histogram's bins and fill each one with our projection's
   // value, calculated at the center.
-  RooAbsReal::enableEvalErrorLogging(kTRUE) ;
+  RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
   Int_t xbin(0),ybin(0),zbin(0);
   Int_t bins= xbins*ybins*zbins;
   for(Int_t bin= 0; bin < bins; bin++) {
@@ -1087,7 +1088,7 @@ TH1 *RooAbsReal::fillHistogram(TH1 *hist, const RooArgList &plotVars,
     }
     //cout << "bin " << bin << " -> (" << xbin << "," << ybin << "," << zbin << ") = " << result << endl;
   }
-  RooAbsReal::enableEvalErrorLogging(kFALSE) ;
+  RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
 
   // cleanup
   delete cloneSet;
@@ -1948,10 +1949,10 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
     }
 
     // Curve constructor for data weighted average    
-    RooAbsReal::enableEvalErrorLogging(kTRUE) ;
+    RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
     RooCurve *curve = new RooCurve(projection->GetName(),projection->GetTitle(),scaleBind,
 				   o.rangeLo,o.rangeHi,frame->GetNbinsX(),o.precision,o.precision,o.shiftToZero,o.wmode,o.numee,o.doeeval,o.eeval) ;
-    RooAbsReal::enableEvalErrorLogging(kFALSE) ;
+    RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
 
     curve->SetName(curveName.Data()) ;
 
@@ -2006,10 +2007,10 @@ RooPlot* RooAbsReal::plotOn(RooPlot *frame, PlotOpt o) const
     // create a new curve of our function using the clone to do the evaluations
     // Curve constructor for regular projections
 
-    RooAbsReal::enableEvalErrorLogging(kTRUE) ;
+    RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
     RooCurve *curve = new RooCurve(*projection,*plotVar,o.rangeLo,o.rangeHi,frame->GetNbinsX(),
 				   o.scaleFactor,0,o.precision,o.precision,o.shiftToZero,o.wmode,o.numee,o.doeeval,o.eeval,o.progress);
-    RooAbsReal::enableEvalErrorLogging(kFALSE) ;
+    RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
 
 
 
@@ -2306,10 +2307,10 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
     }
 
 
-    RooAbsReal::enableEvalErrorLogging(kTRUE) ;
+    RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
     RooCurve *curve = new RooCurve(funcAsym->GetName(),funcAsym->GetTitle(),scaleBind,
 				   o.rangeLo,o.rangeHi,frame->GetNbinsX(),o.precision,o.precision,kFALSE,o.wmode,o.numee,o.doeeval,o.eeval) ;
-    RooAbsReal::enableEvalErrorLogging(kFALSE) ;
+    RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
 
     dynamic_cast<TAttLine*>(curve)->SetLineColor(2) ;
     // add this new curve to the specified plot frame
@@ -2327,10 +2328,10 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
       o.rangeHi = frame->GetXaxis()->GetXmax() ;
     }
 
-    RooAbsReal::enableEvalErrorLogging(kTRUE) ;
+    RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
     RooCurve* curve= new RooCurve(*funcAsym,*plotVar,o.rangeLo,o.rangeHi,frame->GetNbinsX(),
 				  o.scaleFactor,0,o.precision,o.precision,kFALSE,o.wmode,o.numee,o.doeeval,o.eeval);
-    RooAbsReal::enableEvalErrorLogging(kFALSE) ;
+    RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
 
     dynamic_cast<TAttLine*>(curve)->SetLineColor(2) ;
 
@@ -3292,6 +3293,11 @@ void RooAbsReal::logEvalError(const RooAbsReal* originator, const char* origName
 {
   // Interface to insert remote error logging messages received by RooRealMPFE into current error loggin stream
 
+  if (_evalErrorMode==CountErrors) {
+    _evalErrorCount++ ;
+    return ;
+  }
+
   static Bool_t inLogEvalError = kFALSE ;  
 
   if (inLogEvalError) {
@@ -3306,12 +3312,12 @@ void RooAbsReal::logEvalError(const RooAbsReal* originator, const char* origName
     ee.setServerValues(serverValueString) ;
   } 
 
-  if (!_doLogEvalError) {
+  if (_evalErrorMode==PrintErrors) {
    oocoutE((TObject*)0,Eval) << "RooAbsReal::logEvalError(" << "<STATIC>" << ") evaluation error, " << endl 
 		   << " origin       : " << origName << endl 
 		   << " message      : " << ee._msg << endl
 		   << " server values: " << ee._srvval << endl ;
-  } else {
+  } else if (_evalErrorMode==CollectErrors) {
     _evalErrorList[originator].first = origName ;
     _evalErrorList[originator].second.push_back(ee) ;
   }
@@ -3337,6 +3343,11 @@ void RooAbsReal::logEvalError(const char* message, const char* serverValueString
   // reported through this method are passed for immediate printing through RooMsgService.
   // A string with server names and values is constructed automatically for error logging
   // purposes, unless a custom string with similar information is passed as argument.
+
+  if (_evalErrorMode==CountErrors) {
+    _evalErrorCount++ ;
+    return ;
+  }
 
   static Bool_t inLogEvalError = kFALSE ;  
 
@@ -3370,12 +3381,12 @@ void RooAbsReal::logEvalError(const char* message, const char* serverValueString
   ostringstream oss2 ;
   printStream(oss2,kName|kClassName|kArgs,kInline)  ;
 
-  if (!_doLogEvalError) {
+  if (_evalErrorMode==PrintErrors) {
    coutE(Eval) << "RooAbsReal::logEvalError(" << GetName() << ") evaluation error, " << endl 
 	       << " origin       : " << oss2.str() << endl 
 	       << " message      : " << ee._msg << endl
 	       << " server values: " << ee._srvval << endl ;
-  } else {
+  } else if (_evalErrorMode==CollectErrors) {
     _evalErrorList[this].first = oss2.str().c_str() ;
     _evalErrorList[this].second.push_back(ee) ;
   }
@@ -3391,8 +3402,13 @@ void RooAbsReal::logEvalError(const char* message, const char* serverValueString
 void RooAbsReal::clearEvalErrorLog() 
 {
   // Clear the stack of evaluation error messages
-  if (!_doLogEvalError) return ;
-  _evalErrorList.clear() ;
+  if (_evalErrorMode==PrintErrors) {
+    return ;
+  } else if (_evalErrorMode==CollectErrors) {
+    _evalErrorList.clear() ;
+  } else {
+    _evalErrorCount = 0 ;
+  }
 }
 
 
@@ -3405,6 +3421,10 @@ void RooAbsReal::printEvalErrors(ostream& os, Int_t maxPerNode)
   // If maxPerNode is greater than zero, up to maxPerNode detailed error messages are shown
   // per source of errors. A truncation message is shown if there were more errors logged
   // than shown.
+
+  if (_evalErrorMode == CountErrors) {
+    os << _evalErrorCount << " errors counted" << endl ;
+  }
 
   if (maxPerNode<0) return ;
 
@@ -3443,6 +3463,9 @@ void RooAbsReal::printEvalErrors(ostream& os, Int_t maxPerNode)
 Int_t RooAbsReal::numEvalErrors()
 {
   // Return the number of logged evaluation errors since the last clearing.
+  if (_evalErrorMode==CountErrors) {
+    return _evalErrorCount ;
+  }
 
   Int_t ntot(0) ;
   map<const RooAbsArg*,pair<string,list<EvalError> > >::iterator iter = _evalErrorList.begin() ;

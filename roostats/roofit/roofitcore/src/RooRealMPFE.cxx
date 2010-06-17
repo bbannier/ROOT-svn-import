@@ -77,7 +77,7 @@ RooRealMPFE::RooRealMPFE(const char *name, const char *title, RooAbsReal& arg, B
   _verboseClient(kFALSE),
   _verboseServer(kFALSE),
   _inlineMode(calcInline),
-  _remoteEvalErrorLoggingState(kFALSE),
+  _remoteEvalErrorLoggingState(RooAbsReal::PrintErrors),
   _pid(0)
 {  
   // Construct front-end object for object 'arg' whose evaluation will be calculated
@@ -291,11 +291,11 @@ void RooRealMPFE::serverLoop()
 
     case LogEvalError:
       {
-      Bool_t flag2 ;
-      read(_pipeToServer[0],&flag2,sizeof(Bool_t)) ;
-      RooAbsReal::enableEvalErrorLogging(flag2) ;
+      RooAbsReal::ErrorLoggingMode flag2 ;
+      read(_pipeToServer[0],&flag2,sizeof(RooAbsReal::ErrorLoggingMode)) ;
+      RooAbsReal::setEvalErrorLoggingMode(flag2) ;
       if (_verboseServer) cout << "RooRealMPFE::serverLoop(" << GetName() 
-			       << ") IPC fromClient> LogEvalError flag = " << (flag2?"kTRUE":"kFALSE") << endl ;       
+			       << ") IPC fromClient> LogEvalError flag = " << flag2 << endl ;       
       }
       break ;
 
@@ -480,12 +480,12 @@ Double_t RooRealMPFE::evaluate() const
 
     // If current error loggin state is not the same as remote state
     // update the remote state
-    if (evalErrorLoggingEnabled() != _remoteEvalErrorLoggingState) {
+    if (evalErrorLoggingMode() != _remoteEvalErrorLoggingState) {
       msg = LogEvalError ;
       write(_pipeToServer[1],&msg,sizeof(Message)) ;    
-      Bool_t flag = evalErrorLoggingEnabled() ;
-      write(_pipeToServer[1],&flag,sizeof(Bool_t)) ;      
-      _remoteEvalErrorLoggingState = evalErrorLoggingEnabled() ;
+      RooAbsReal::ErrorLoggingMode flag = evalErrorLoggingMode() ;
+      write(_pipeToServer[1],&flag,sizeof(RooAbsReal::ErrorLoggingMode)) ;      
+      _remoteEvalErrorLoggingState = evalErrorLoggingMode() ;
     }
 
     msg = Retrieve ;

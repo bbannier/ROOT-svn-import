@@ -153,6 +153,9 @@ Double_t RooNLLVar::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t s
   for (i=firstEvent ; i<lastEvent ; i+=stepSize) {
     
     // get the data values for this event
+    //Double_t wgt = _dataClone->weight(i) ;
+    //if (wgt==0) continue ;
+
     _dataClone->get(i);
 
     if (!_dataClone->valid()) {
