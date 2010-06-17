@@ -598,7 +598,7 @@ void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode )
 
    try {
       gTools().ReadAttr( wghtnode, "NDim" , fOutputDimensions );
-   }catch( std::logic_error& excpt ){
+   } catch ( std::logic_error& ){
       // attribute could not be read, it probably does not exist because the weight file has been written with an older version
       fOutputDimensions = 1;
    }
