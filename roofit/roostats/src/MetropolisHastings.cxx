@@ -156,7 +156,7 @@ MarkovChain* MetropolisHastings::ConstructChain()
 
    // we will need to check if log-likelihood evaluation left an error status
    if (fType == kLog)
-      fFunction->enableEvalErrorLogging(true);
+     fFunction->setEvalErrorLoggingMode(RooAbsReal::CollectErrors);
    bool hadEvalError = true;
 
    Int_t i = 0;

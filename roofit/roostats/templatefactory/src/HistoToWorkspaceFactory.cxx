@@ -349,7 +349,7 @@ namespace TemplateFactory{
 
       // output
       cout << "Poisson Term " << command << endl;
-      ((RooAbsPdf*) temp)->enableEvalErrorLogging(kFALSE);
+      ((RooAbsPdf*) temp)->setEvalErrorLoggingMode(RooAbsReal::PrintErrors);
       //cout << temp << endl;
 
       likelihoodTermNames.push_back( temp->GetName() );
