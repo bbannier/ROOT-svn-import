@@ -86,6 +86,9 @@ namespace TMVA {
       // training method
       void Train( void );
 
+      // revoke training
+      void Reset( void );
+
       using MethodBase::ReadWeightsFromStream;
 
       // write weights to file
