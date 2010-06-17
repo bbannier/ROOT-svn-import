@@ -39,6 +39,9 @@
 
 #include "TAxis.h"
 #include "TF1.h"
+#include "TH1.h"
+#include "TMath.h"
+#include "TCanvas.h"
 
 #include <map>
 #include <cmath>
@@ -271,11 +274,12 @@ BayesianCalculator::BayesianCalculator() :
   fPdf(0),
   fPriorPOI(0),
   fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0), 
-  fPosteriorFunction(0),
-  fLower(0), fUpper(0),
-  fBrfPrecision(0.00005),
-  fValidInterval(false),
-  fSize(0.05)
+  fPosteriorFunction(0), fApproxPosterior(0),
+  fLower(0), fUpper(0), 
+  fSize(0.05), fLeftSideFraction(0.5), 
+  fBrfPrecision(0.00005), 
+  fNScanBins(-1),
+  fValidInterval(false)
 {
    // default constructor
 }
@@ -292,12 +296,12 @@ BayesianCalculator::BayesianCalculator( /* const char* name,  const char* title,
   fPOI(POI),
   fPriorPOI(&priorPOI),
   fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0),
-  fPosteriorFunction(0),
-  fLower(0), fUpper(0),
-  fBrfPrecision(0.00005),
+  fPosteriorFunction(0), fApproxPosterior(0),
+  fLower(0), fUpper(0), 
+  fSize(0.05), fLeftSideFraction(0.5), 
+  fBrfPrecision(0.00005), 
   fNScanBins(-1),
-  fValidInterval(false),  
-  fSize(0.05)
+  fValidInterval(false)
 {
    // constructor
    if (nuisanceParameters) fNuisanceParameters.add(*nuisanceParameters); 
@@ -309,12 +313,12 @@ BayesianCalculator::BayesianCalculator( RooAbsData& data,
    fPdf(model.GetPdf()),
    fPriorPOI( model.GetPriorPdf()),
    fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0),
-   fPosteriorFunction(0),
-   fLower(0), fUpper(0),
-   fBrfPrecision(0.00005),
+   fPosteriorFunction(0), fApproxPosterior(0),
+   fLower(0), fUpper(0), 
+   fSize(0.05), fLeftSideFraction(0.5), 
+   fBrfPrecision(0.00005), 
    fNScanBins(-1),
-   fValidInterval(false),
-   fSize(0.05)
+   fValidInterval(false)
 {
    // constructor from Model Config
    SetModel(model);
@@ -335,6 +339,7 @@ void BayesianCalculator::ClearAll() const {
    if (fIntegratedLikelihood) delete fIntegratedLikelihood; 
    if (fPosteriorPdf) delete fPosteriorPdf;    
    if (fPosteriorFunction) delete fPosteriorFunction; 
+   if (fApproxPosterior) delete fApproxPosterior; 
    fPosteriorPdf = 0; 
    fPosteriorFunction = 0; 
    fProductPdf = 0;
@@ -360,16 +365,6 @@ void BayesianCalculator::SetModel(const ModelConfig & model) {
    ClearAll(); 
 }
 
-
-RooArgSet* BayesianCalculator::GetMode(RooArgSet* /* parameters */) const
-{
-  /// Returns the value of the parameters for the point in
-  /// parameter-space that is the most likely.
-  // Should cover multi-dimensional cases...
-  // How do we do if there are points that are equi-probable?
-
-  return 0;
-}
 
 
 RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
@@ -490,6 +485,7 @@ void BayesianCalculator::SetIntegrationType(const char * type) {
 }
 
 
+
 SimpleInterval* BayesianCalculator::GetInterval() const
 {
   /// returns a SimpleInterval with lower and upper bounds on the
@@ -500,132 +496,36 @@ SimpleInterval* BayesianCalculator::GetInterval() const
    if (fValidInterval) 
       coutW(Eval) << "BayesianCalculator::GetInterval - recomputing interval for the same CL and same model" << std::endl;
 
-   RooRealVar* poi = dynamic_cast<RooRealVar*>( fPOI.first() ); 
-   assert(poi);
+   RooRealVar* poi = dynamic_cast<RooRealVar*>( fPOI.first() );
+   if (!poi) { 
+      coutE(Eval) << "BayesianCalculator::GetInterval - no parameter of interest is set " << std::endl;
+      return 0; 
+   } 
 
-   RooAbsReal * posterior =  GetPosteriorFunction();
-
-   if (fNScanBins > 0) { 
-
-      coutI(Eval) << "BayesianCalculator::GetInterval - use a scan of posterior function in nbins = " << fNScanBins << std::endl;
-
-      // use the scanned of the function
-      TF1 * tmp = posterior->asTF(fPOI); 
-      double prob[2]; 
-      double limits[2];
-      prob[0] = 0.5 * fSize;
-      prob[1] = 1.- prob[0];
-      // binned the function in nbins and evaluate at thos points
-      tmp->SetNpx(fNScanBins);
-      fApproxPosterior = (TF1*) tmp->Clone();
-      fApproxPosterior->GetQuantiles(2,limits,prob);
-      fLower = limits[0]; 
-      fUpper = limits[1];
-      // save this function for future reuse 
-      // I can delete now original posterior and use this approximated copy
-      delete tmp;
-      TString name = posterior->GetName() + TString("_approx");
-      TString title = posterior->GetTitle() + TString("_approx");
-      RooAbsReal * posterior2 = new RooTFnBinding(name,title,fApproxPosterior,fPOI);
-      if (posterior == fIntegratedLikelihood) { 
-         delete fIntegratedLikelihood;
-         fIntegratedLikelihood = posterior2; 
-      }
-      else if (posterior == fLikelihood) { 
-         delete fLikelihood; 
-         fLikelihood = posterior2;
-      }
-      else {
-         assert(1); // should never happen this case
-      }
-
+   if (fLeftSideFraction < 0 ) { 
+      // compute short intervals
+      ComputeShortestInterval(); 
    }
+   else {
+      // compute the other intervals
 
-   else { 
-      // use integration method if there are nuisance parameters 
-      if (fNuisanceParameters.getSize() > 0) { 
-         
-         
-         // need to remove the constant parameters
-         RooArgList bindParams; 
-         bindParams.add(fPOI);
-         bindParams.add(fNuisanceParameters);
-         
-         
-         RooFunctor functor_nll(*fLogLike, bindParams, RooArgList());
-         
-         
-         // compute the intergal of the exp(-nll) function
-         LikelihoodFunction fll(functor_nll);
-      
-         ROOT::Math::IntegratorMultiDim ig(GetMultiDimIntegrationType(fIntegrationType)); 
-         ig.SetFunction(fll,bindParams.getSize()); 
-         
-         std::vector<double> pmin(bindParams.getSize());
-         std::vector<double> pmax(bindParams.getSize());
-         std::vector<double> par(bindParams.getSize());
-         for (unsigned int i = 0; i < pmin.size(); ++i) { 
-            RooRealVar & var = (RooRealVar &) bindParams[i]; 
-            pmin[i] = var.getMin(); 
-            pmax[i] = var.getMax();
-            par[i] = var.getVal();
-         } 
-         
-         
-         //bindParams.Print("V");
-         
-         PosteriorCdfFunction cdf(ig, &pmin[0], &pmax[0] ); 
-         
-         
-         //find the roots 
+      double lowerCutOff = fLeftSideFraction * fSize; 
+      double upperCutOff = 1. - (1.- fLeftSideFraction) * fSize; 
 
-         ROOT::Math::RootFinder rf(kRootFinderType); 
-         
-         ccoutD(Eval) << "BayesianCalculator::GetInterval - finding roots of posterior using RF " << rf.Name() 
-                      << " with precision = " << fBrfPrecision;
-         
-         cdf.SetOffset(fSize/2);
-         ccoutD(NumIntegration) << "Integrating posterior to get cdf and search lower limit at p =" << fSize/2 << std::endl;
-         bool ok = false; 
-         ok = rf.Solve(cdf, poi->getMin(),poi->getMax() , 200,fBrfPrecision, fBrfPrecision); 
-         if (!ok) 
-            coutE(NumIntegration) << "BayesianCalculator::GetInterval - Error from root finder when searching lower limit !" << std::endl;
-         fLower = rf.Root(); 
-         cdf.SetOffset(1.-fSize/2);
-         ccoutD(NumIntegration) << "Integrating posterior to get cdf and search upper interval limit at p =" << 1-fSize/2 << std::endl;
-         ok = rf.Solve(cdf, fLower,poi->getMax() , 200, fBrfPrecision, fBrfPrecision); 
-         if (!ok) 
-            coutE(NumIntegration) << "BayesianCalculator::GetInterval - Error from root finder when searching upper limit !" << std::endl;
 
-         fUpper = rf.Root(); 
+      if (fNScanBins > 0) { 
+         ComputeIntervalFromApproxPosterior(lowerCutOff, upperCutOff);
       }
-
-      // case of no nuisance - just use createCdf
-      else { 
-
-         if (!fPosteriorPdf) fPosteriorPdf = (RooAbsPdf*) GetPosteriorPdf();
-         
-         RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI,RooFit::ScanNoCdf());
-         
-         RooAbsFunc* cdf_bind = cdf->bindVars(fPOI,&fPOI);
-         RooBrentRootFinder brf(*cdf_bind);
-         brf.setTol(fBrfPrecision); // set the brf precision
-         
-         double tmpVal = poi->getVal();  // patch used because findRoot changes the value of poi
-         
-         double y = fSize/2;
-         brf.findRoot(fLower,poi->getMin(),poi->getMax(),y);
-         
-         y=1-fSize/2;
-         bool ret = brf.findRoot(fUpper,poi->getMin(),poi->getMax(),y);
-         if (!ret) coutE(Eval) << "BayesianCalculator::GetInterval "
-                               << "Error returned from Root finder, estimated interval is not fully correct" 
-                            << std::endl;
       
-         poi->setVal(tmpVal); // patch: restore the original value of poi
-         
-         delete cdf_bind;
-         delete cdf;
+      else { 
+         // use integration method if there are nuisance parameters 
+         if (fNuisanceParameters.getSize() > 0) { 
+            ComputeIntervalFromCdf(lowerCutOff, upperCutOff);      
+            // case of no nuisance - just use createCdf from roofit
+         }
+         else { 
+            ComputeIntervalUsingRooFit(lowerCutOff, upperCutOff);      
+         }
       }
    }
 
@@ -637,6 +537,243 @@ SimpleInterval* BayesianCalculator::GetInterval() const
    
    return interval;
 }
+
+double BayesianCalculator::GetMode() const { 
+   /// Returns the value of the parameter for the point in
+   /// parameter-space that is the most likely.
+   ///  How do we do if there are points that are equi-probable?
+   /// use approximate posterior
+   /// t.b.d use real function to find the mode
+
+   ApproximatePosterior(); 
+   TH1 * h = fApproxPosterior->GetHistogram();
+   return h->GetBinCenter(h->GetMaximumBin() );
+   //return  fApproxPosterior->GetMaximumX();
+}
+
+void BayesianCalculator::ComputeIntervalUsingRooFit(double lowerCutOff, double upperCutOff ) const { 
+   // compute the interval using RooFit
+
+   RooRealVar* poi = dynamic_cast<RooRealVar*>( fPOI.first() ); 
+   assert(poi);
+
+   if (!fPosteriorPdf) fPosteriorPdf = (RooAbsPdf*) GetPosteriorPdf();
+         
+   RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI,RooFit::ScanNoCdf());
+         
+   RooAbsFunc* cdf_bind = cdf->bindVars(fPOI,&fPOI);
+   RooBrentRootFinder brf(*cdf_bind);
+   brf.setTol(fBrfPrecision); // set the brf precision
+   
+   double tmpVal = poi->getVal();  // patch used because findRoot changes the value of poi
+   
+   bool ret = true; 
+   if (lowerCutOff > 0) { 
+      double y = lowerCutOff;
+      ret &= brf.findRoot(fLower,poi->getMin(),poi->getMax(),y);
+   } 
+   else 
+      fLower = poi->getMin(); 
+
+   if (upperCutOff < 1.0) { 
+      double y=upperCutOff;
+      ret &= brf.findRoot(fUpper,poi->getMin(),poi->getMax(),y);
+   }
+   else 
+      fUpper = poi->getMax();
+   if (!ret) coutE(Eval) << "BayesianCalculator::GetInterval "
+                         << "Error returned from Root finder, estimated interval is not fully correct" 
+                         << std::endl;
+
+   poi->setVal(tmpVal); // patch: restore the original value of poi
+   
+   delete cdf_bind;
+   delete cdf;
+}
+
+void BayesianCalculator::ComputeIntervalFromCdf(double lowerCutOff, double upperCutOff ) const { 
+   // compute the interval using Cdf integration
+
+   RooRealVar* poi = dynamic_cast<RooRealVar*>( fPOI.first() ); 
+   assert(poi);
+   GetPosteriorFunction();
+
+   // need to remove the constant parameters
+   RooArgList bindParams; 
+   bindParams.add(fPOI);
+   bindParams.add(fNuisanceParameters);
+   
+         
+   RooFunctor functor_nll(*fLogLike, bindParams, RooArgList());
+         
+   
+   // compute the intergal of the exp(-nll) function
+   LikelihoodFunction fll(functor_nll);
+      
+   ROOT::Math::IntegratorMultiDim ig(GetMultiDimIntegrationType(fIntegrationType)); 
+   ig.SetFunction(fll,bindParams.getSize()); 
+   
+   std::vector<double> pmin(bindParams.getSize());
+   std::vector<double> pmax(bindParams.getSize());
+   std::vector<double> par(bindParams.getSize());
+   for (unsigned int i = 0; i < pmin.size(); ++i) { 
+      RooRealVar & var = (RooRealVar &) bindParams[i]; 
+      pmin[i] = var.getMin(); 
+      pmax[i] = var.getMax();
+      par[i] = var.getVal();
+   } 
+         
+         
+   //bindParams.Print("V");
+         
+   PosteriorCdfFunction cdf(ig, &pmin[0], &pmax[0] ); 
+         
+         
+   //find the roots 
+
+   ROOT::Math::RootFinder rf(kRootFinderType); 
+         
+   ccoutD(Eval) << "BayesianCalculator::GetInterval - finding roots of posterior using RF " << rf.Name() 
+                << " with precision = " << fBrfPrecision;
+         
+   if (lowerCutOff > 0) { 
+      cdf.SetOffset(lowerCutOff);
+      ccoutD(NumIntegration) << "Integrating posterior to get cdf and search lower limit at p =" << lowerCutOff << std::endl;
+      bool ok = rf.Solve(cdf, poi->getMin(),poi->getMax() , 200,fBrfPrecision, fBrfPrecision); 
+      if (!ok) 
+         coutE(NumIntegration) << "BayesianCalculator::GetInterval - Error from root finder when searching lower limit !" << std::endl;
+      fLower = rf.Root(); 
+   }
+   else { 
+      fLower = poi->getMin(); 
+   }
+   if (upperCutOff < 1.0) {  
+      cdf.SetOffset(upperCutOff);
+      ccoutD(NumIntegration) << "Integrating posterior to get cdf and search upper interval limit at p =" << upperCutOff << std::endl;
+      bool ok = rf.Solve(cdf, fLower,poi->getMax() , 200, fBrfPrecision, fBrfPrecision); 
+      if (!ok) 
+         coutE(NumIntegration) << "BayesianCalculator::GetInterval - Error from root finder when searching upper limit !" << std::endl;
+      
+      fUpper = rf.Root(); 
+   }
+   else { 
+      fUpper = poi->getMax(); 
+   }
+}
+
+void BayesianCalculator::ApproximatePosterior() const { 
+   // approximate posterior in nbins using a TF1 and
+   // scan the values
+
+   if (fApproxPosterior) { 
+      // if number of bins of existing function is >= requetsed one - no need to redo the scan
+      if (fApproxPosterior->GetNpx() >= fNScanBins) return;  
+      // otherwise redo the scan
+      delete fApproxPosterior; 
+      fApproxPosterior = 0;
+   }      
+
+
+   RooAbsReal * posterior = GetPosteriorFunction();
+
+   TF1 * tmp = posterior->asTF(fPOI); 
+   assert(tmp != 0);
+   // binned the function in nbins and evaluate at thos points
+   if (fNScanBins > 0)  tmp->SetNpx(fNScanBins);  // if not use default of TF1 (which is 100)
+
+   coutI(Eval) << "BayesianCalculator - scan posterior function in nbins = " << tmp->GetNpx() << std::endl;
+
+   fApproxPosterior = (TF1*) tmp->Clone();
+   // save this function for future reuse 
+   // I can delete now original posterior and use this approximated copy
+   delete tmp;
+   TString name = posterior->GetName() + TString("_approx");
+   TString title = posterior->GetTitle() + TString("_approx");
+   RooAbsReal * posterior2 = new RooTFnBinding(name,title,fApproxPosterior,fPOI);
+   if (posterior == fIntegratedLikelihood) { 
+      delete fIntegratedLikelihood;
+      fIntegratedLikelihood = posterior2; 
+   }
+   else if (posterior == fLikelihood) { 
+      delete fLikelihood; 
+      fLikelihood = posterior2;
+   }
+   else {
+      assert(1); // should never happen this case
+   }
+}
+
+void BayesianCalculator::ComputeIntervalFromApproxPosterior(double lowerCutOff, double upperCutOff ) const { 
+   // compute the interval using the approximate posterior function
+   ApproximatePosterior();
+
+   double prob[2]; 
+   double limits[2];
+   prob[0] = lowerCutOff;
+   prob[1] = upperCutOff; 
+   fApproxPosterior->GetQuantiles(2,limits,prob);
+   fLower = limits[0]; 
+   fUpper = limits[1];
+}
+
+void BayesianCalculator::ComputeShortestInterval( ) const { 
+   // compute the shortest interval
+   coutI(Eval) << "BayesianCalculator - computing shortest interval with CL " << 1.-fSize << std::endl;
+
+   // compute via the approx posterior function
+   ApproximatePosterior(); 
+   TH1D * h1 = dynamic_cast<TH1D*>(fApproxPosterior->GetHistogram() );
+   h1->SetName(fApproxPosterior->GetName());
+   assert(h1 != 0);
+   // get bins and sort them 
+   double * bins = h1->GetArray(); 
+   int n = h1->GetSize()-2; // exclude under/overflow bins
+   std::vector<int> index(n);
+   TMath::Sort(n, bins, &index[0]); 
+   // find cut off as test size
+   double sum = 0; 
+   double actualCL = 0;
+   double upper =  h1->GetXaxis()->GetXmin();
+   double lower =  h1->GetXaxis()->GetXmax();
+   double norm = h1->GetSumOfWeights();
+
+   for (int i = 0; i < n; ++i)  {
+      int idx = index[i]; 
+      double p = bins[ idx] / norm;
+      sum += p;
+      if (sum > 1.-fSize ) { 
+         actualCL = sum - p;
+         break; 
+      }
+
+      if ( h1->GetBinLowEdge(idx) < lower) 
+         lower = h1->GetBinLowEdge(idx);
+      if ( h1->GetXaxis()->GetBinUpEdge(idx) > upper) 
+         upper = h1->GetXaxis()->GetBinUpEdge(idx);
+   }
+
+   ccoutD(Eval) << "BayesianCalculator::ComputeShortestInterval - actual interval CL = " 
+                << actualCL << " difference from requested is " << (actualCL-(1.-fSize))/fSize*100. << "%  "
+                << " limits are [ " << lower << " , " << " upper ] " << std::endl;
+
+
+   if (lower < upper) { 
+      fLower = lower;
+      fUpper = upper; 
+
+
+
+      if ( std::abs(actualCL-(1.-fSize)) > 0.1*(1.-fSize) )
+         coutW(Eval) << "BayesianCalculator::ComputeShortestInterval - actual interval CL = " 
+                     << actualCL << " differs more than 10% from desired CL value - must increase nbins " 
+                     << n << " to an higher value " << std::endl;
+   }
+   else 
+      coutE(Eval) << "BayesianCalculator::ComputeShortestInterval " << n << " bins are not sufficient " << std::endl;
+
+
+}
+
 
 } // end namespace RooStats
 

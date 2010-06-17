@@ -65,6 +65,9 @@ namespace RooStats {
       // return posterior function (object is managed by the BayesianCalculator class)
       RooAbsReal* GetPosteriorFunction() const; 
 
+      // compute the interval. By Default a central interval is computed 
+      // By using SetLeftTileFraction can control if central/ upper/lower interval
+      // For shortest interval use SetShortestInterval(true)
       virtual SimpleInterval* GetInterval() const ; 
 
       virtual void SetData( RooAbsData & data ) {
@@ -72,6 +75,8 @@ namespace RooStats {
          ClearAll();
       }
 
+
+      // set the model via the ModelConfig
       virtual void SetModel( const ModelConfig& model ); 
 
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
@@ -86,13 +91,23 @@ namespace RooStats {
       // Get the Confidence level for the test
       virtual Double_t ConfidenceLevel() const { return 1.-fSize; }
 
+      // set the fraction of probability content on the left tail
+      // Central limits use 0.5 (default case)  
+      // for upper limits it is 0 and 1 for lower limit
+      // For shortest intervals a negative value (i.e. -1) must be given
+      void SetLeftSideTailFraction(Double_t leftSideFraction )  {fLeftSideFraction = leftSideFraction;} 
+
+      // set the Bayesian calculator to compute the shorest interval (default is central interval) 
+      // to switch off SetLeftSideTailFraction to the rght value
+      void SetShortestInterval() { fLeftSideFraction = -1; }
+
       // set the precision of the Root Finder 
       void SetBrfPrecision( double precision ) { fBrfPrecision = precision; }
 
       // use directly the approximate posterior function obtained by binning it in nbins
       // by default the cdf is used by integrating the posterior
       // if a value of nbin <= 0 the cdf function will be used
-      void UseScanOfPosterior(int nbin = 100) { fNScanBins = nbin; }
+      void SetUseScanOfPosterior(int nbin = 100) { fNScanBins = nbin; }
 
 
       // set the integration type (possible type are) 
@@ -100,15 +115,25 @@ namespace RooStats {
       // multidim: adaptive, vegas, miser, plain. These last 3 are based on MC integration
       void SetIntegrationType(const char * type); 
 
+      // return the mode (most probable value of the posterior function) 
+      double GetMode() const; 
+
    protected:
 
       void ClearAll() const; 
+
+      void ApproximatePosterior() const; 
+
+      void ComputeIntervalFromApproxPosterior(double c1, double c2) const;
+
+      void ComputeIntervalFromCdf(double c1, double c2) const; 
+
+      void ComputeIntervalUsingRooFit(double c1, double c2) const;
+
+      void ComputeShortestInterval() const; 
    
    private:
 
-      // compute the most probable value: move to public once implemented
-      // returns a RooArgSet
-      RooArgSet* GetMode( RooArgSet* parameters ) const;
       // plan to replace the above: return a SimpleInterval integrating 
       // over all other parameters except the one specified as argument
       //virtual SimpleInterval* GetInterval( RooRealVar* parameter  ) const { return 0; }
@@ -119,20 +144,21 @@ namespace RooStats {
       RooAbsPdf* fPriorPOI;
       RooArgSet fNuisanceParameters;
 
-      mutable RooAbsPdf* fProductPdf; 
-      mutable RooAbsReal* fLogLike; 
-      mutable RooAbsReal* fLikelihood; 
-      mutable RooAbsReal* fIntegratedLikelihood;  // integrated likelihood function, i.e - unnormalized posterior function  
-      mutable RooAbsPdf* fPosteriorPdf;          // normalized posterior on the poi
-      mutable ROOT::Math::IGenFunction * fPosteriorFunction;  // function representing the posterior
-      mutable Double_t  fLower; 
-      mutable Double_t  fUpper; 
+      mutable RooAbsPdf* fProductPdf;              // internal pointer to model * prior
+      mutable RooAbsReal* fLogLike;                // internal pointer to log likelihood function
+      mutable RooAbsReal* fLikelihood;             // internal pointer to likelihood function 
+      mutable RooAbsReal* fIntegratedLikelihood;   // integrated likelihood function, i.e - unnormalized posterior function  
+      mutable RooAbsPdf* fPosteriorPdf;             // normalized (on the poi) posterior pdf 
+      mutable ROOT::Math::IGenFunction * fPosteriorFunction;   // function representing the posterior
+      mutable TF1 * fApproxPosterior;    // TF1 representing the scanned posterior function
+      mutable Double_t  fLower;    // computer lower interval bound
+      mutable Double_t  fUpper;    // upper interval bound
+      double fSize;  // size used for getting the interval
+      double fLeftSideFraction;    // fraction of probability content on left side of interval
       double fBrfPrecision;     // root finder precision
       int fNScanBins;            // number of bins to scan, if = -1 no scan is done (default)
-      mutable TF1 * fApproxPosterior;    // TF! representing the scanned posterior function
-      mutable Bool_t    fValidInterval;
+      mutable Bool_t    fValidInterval; 
 
-      double fSize;  // size used for getting the interval
 
 
       TString fIntegrationType; 
