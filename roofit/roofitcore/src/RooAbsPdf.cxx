@@ -601,11 +601,17 @@ Double_t RooAbsPdf::getLogVal(const RooArgSet* nset) const
   // An error message is printed if the argument of the log is negative.
 
   Double_t prob = getVal(nset) ;
-  if(prob <= 0) {
+  if(prob < 0) {
 
-    logEvalError("getLogVal() top-level p.d.f evaluates to zero or negative number") ;
+    logEvalError("getLogVal() top-level p.d.f evaluates to a negative number") ;
 
     return 0;
+  }
+  if(prob == 0) {
+
+    logEvalError("getLogVal() top-level p.d.f evaluates to zero") ;
+
+    return log(0);
   }
   return log(prob);
 }
@@ -785,7 +791,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   }
 
   // Construct NLL
-  RooAbsReal::enableEvalErrorLogging(kTRUE) ;
+  RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
   RooAbsReal* nll ;
   string baseName = Form("nll_%s_%s",GetName(),data.GetName()) ;
   if (!rangeName || strchr(rangeName,',')==0) {
@@ -808,7 +814,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
     delete[] buf ;
     nll = new RooAddition(baseName.c_str(),"-log(likelihood)",nllList,kTRUE) ;
   }
-  RooAbsReal::enableEvalErrorLogging(kFALSE) ;
+  RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   
   // Collect internal and external constraint specifications
   RooArgSet allConstraints ;
