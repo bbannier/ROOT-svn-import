@@ -866,63 +866,26 @@ void TMVA::Factory::WriteDataInformation()
          }
          delete trClsList;
 
-	 TString variables = "_V_";
-
-	 VariableTransformBase* transformation = NULL;
          if (trName=='I') {
-	    transformation = new VariableIdentityTransform ( DefaultDataSetInfo() );
+            trfs.back()->AddTransformation( new VariableIdentityTransform ( DefaultDataSetInfo() ), idxCls );
             identityTrHandler = trfs.back();
-	 } 
-	 else if      (trName == "D" || trName == "Deco" || trName == "Decorrelate"){
-	    if( variables.Length() == 0 )
-	       variables = "_V_";
-	    transformation = new VariableDecorrTransform( DefaultDataSetInfo());
-	 }
-         else if (trName == "P" || trName == "PCA"){
-	    if( variables.Length() == 0 )
-	       variables = "_V_";
-	    transformation = new VariablePCATransform   ( DefaultDataSetInfo());
-	 }
-         else if (trName == "G" || trName == "Gauss"){
-	    if( variables.Length() == 0 )
-	       variables = "_V_,_T_";
-	    transformation = new VariableGaussTransform ( DefaultDataSetInfo());
-	 }
-         else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize")
-	 {
-	    if( variables.Length() == 0 )
-	       variables = "_V_,_T_";
-	    transformation = new VariableNormalizeTransform( DefaultDataSetInfo());
-	 }
-         else
-            Log() << kFATAL << "<ProcessOptions> Variable transform '"
-                  << trName << "' unknown." << Endl;
-
-	 if( transformation ){
-	    transformation->SelectInput( "_V_" );
-	    trfs.back()->AddTransformation(transformation, idxCls);
-	 }
-
-//          if (trName=='I') {
-//             trfs.back()->AddTransformation( new VariableIdentityTransform ( DefaultDataSetInfo() ), idxCls );
-//             identityTrHandler = trfs.back();
-//          } 
-//          else if (trName=='D') {
-//             trfs.back()->AddTransformation( new VariableDecorrTransform   ( DefaultDataSetInfo() ), idxCls );
-//          } 
-//          else if (trName=='P') {
-//             trfs.back()->AddTransformation( new VariablePCATransform      ( DefaultDataSetInfo() ), idxCls );
-//          } 
-//          else if (trName=='G') {
-//             trfs.back()->AddTransformation( new VariableGaussTransform    ( DefaultDataSetInfo() ), idxCls );
-//          } 
-//          else if (trName=='N') {
-//             trfs.back()->AddTransformation( new VariableNormalizeTransform( DefaultDataSetInfo() ), idxCls );
-//          } 
-//          else {
-//             Log() << kINFO << "The transformation " << *trfsDefIt << " definition is not valid, the \n"
-//                     << "transformation " << trName << " is not known!" << Endl;
-//          }
+         } 
+         else if (trName=='D') {
+            trfs.back()->AddTransformation( new VariableDecorrTransform   ( DefaultDataSetInfo() ), idxCls );
+         } 
+         else if (trName=='P') {
+            trfs.back()->AddTransformation( new VariablePCATransform      ( DefaultDataSetInfo() ), idxCls );
+         } 
+         else if (trName=='G') {
+            trfs.back()->AddTransformation( new VariableGaussTransform    ( DefaultDataSetInfo() ), idxCls );
+         } 
+         else if (trName=='N') {
+            trfs.back()->AddTransformation( new VariableNormalizeTransform( DefaultDataSetInfo() ), idxCls );
+         } 
+         else {
+            Log() << kINFO << "The transformation " << *trfsDefIt << " definition is not valid, the \n"
+                    << "transformation " << trName << " is not known!" << Endl;
+         }
       }
    }
 
