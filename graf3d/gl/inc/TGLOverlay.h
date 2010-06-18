@@ -56,6 +56,8 @@ public:
    EState  GetState() const   { return fState; }
    void    SetState(EState s) { fState = s; }
 
+   void    SetBinaryState(Bool_t s) { SetState(s ? kActive : kInvisible); }
+
    ClassDef(TGLOverlayElement, 0) // Base class for GL overlay elements.
 };
 
