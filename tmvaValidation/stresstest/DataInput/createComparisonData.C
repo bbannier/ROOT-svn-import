@@ -53,6 +53,13 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
    TTree* treeSBSumTrain = new TTree( "TreeSBSumTrain", "TreeSBSumTrain", 1 );
    TTree* treeSBLarge = new TTree( "TreeSBLarge", "TreeSBLarge", 1 );
 
+   TTree* treeBlow = new TTree( "TreeBlow", "TreeBlow", 1 );
+   TTree* treeBmed = new TTree( "TreeBmed", "TreeBmed", 1 );
+   TTree* treeBhig = new TTree( "TreeBhig", "TreeBhig", 1 );
+   TTree* treeSlow = new TTree( "TreeSlow", "TreeSlow", 1 );
+   TTree* treeSmed = new TTree( "TreeSmed", "TreeSmed", 1 );
+   TTree* treeShig = new TTree( "TreeShig", "TreeShig", 1 );
+
    vector<TTree*> trees;
    trees.push_back(treeS1Train); //0
    trees.push_back(treeS2Train);
@@ -73,7 +80,12 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
    trees.push_back(treeSBSumTest); //14
    trees.push_back(treeSBSumTrain); //15
    trees.push_back(treeSBLarge); //16
-
+   trees.push_back(treeBlow);
+   trees.push_back(treeBmed);
+   trees.push_back(treeBhig);
+   trees.push_back(treeSlow);
+   trees.push_back(treeSmed);
+   trees.push_back(treeShig);
    ofstream fileSSumTrain,fileSSumTest,fileBSumTrain,fileBSumTest;
    fileSSumTrain.open("fileSSumTrain.dat");
    fileSSumTrain<<"var1/F:var2/F:var3/F:var4/F:weight/F:istest/F:isfake/F:issig/F:evtno/F"<<endl;
@@ -115,6 +127,17 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
       //-----------------------     
       if (isSignal) evtno=nsig;
       else evtno = nbgd;
+
+      if (isSignal && nsig < nmax){
+         if  (xvar[4]< -1.)      treeSlow->Fill();
+         else if  (xvar[4]< 1. && R.Rndm()>0.5)  treeSmed->Fill();
+         else                    treeShig->Fill();
+      }
+      if (!isSignal && nbgd < nmax){
+         if  (xvar[4]< -1.)      treeBlow->Fill();
+         else if  (xvar[4]< 1. && R.Rndm()>0.5)  treeBmed->Fill();
+         else                    treeBhig->Fill();
+      }
 
       if (isSignal && nsig < nmax){
          isfake=0.;

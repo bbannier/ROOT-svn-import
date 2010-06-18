@@ -84,6 +84,13 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
    TTree* TreeSBSumTrain=(TTree*)input->Get( "TreeSBSumTrain");
    TTree* TreeSBLarge   =(TTree*)input->Get( "TreeSBLarge");
 
+   TTree* TreeBlow =(TTree*)input->Get( "TreeBlow");
+   TTree* TreeBmed =(TTree*)input->Get( "TreeBmed");
+   TTree* TreeBhig =(TTree*)input->Get( "TreeBhig");
+   TTree* TreeSlow =(TTree*)input->Get( "TreeSlow");
+   TTree* TreeSmed =(TTree*)input->Get( "TreeSmed");
+   TTree* TreeShig =(TTree*)input->Get( "TreeShig");
+
    TChain TreeSBLargeChain( "TreeSBLarge");
    if (index==110){
       TreeSBLargeChain.Add("TMVAInputDataChain2.root");
@@ -723,6 +730,18 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
       factory->PrepareTrainingAndTestTree( dummycut, dummycut,
                                            "nTrain_Signal=4000:nTrain_Background=4000:nTest_Signal=4000:nTest_Background=3000:SplitMode=Alternate:NormMode=NumEvents:!V" );  
       thetest->RegisterAssertion(4000,4000,4000,3000);
+   }
+   else if (index==130) {
+      std::cout << "signal and background divided into separate trees depending on phase space, signal and background med-sample require additional tree weight of 2"<<std::endl;
+      factory->AddSignalTree    ( TreeSlow, 1.0);
+      factory->AddSignalTree    ( TreeSmed, 2.0);
+      factory->AddSignalTree    ( TreeShig,  1.0);
+      factory->AddBackgroundTree( TreeBlow,  1.0);
+      factory->AddBackgroundTree( TreeBmed,  2.0);
+      factory->AddBackgroundTree( TreeBhig,  1.0);
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "SplitMode=Random:NormMode=NumEvents:!V" );  
+      //thetest->RegisterAssertion(4000,4000,4000,3000);
    }
    else {
       std::cout <<" unknown index mode exiting"<<std::endl;
