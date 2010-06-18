@@ -65,34 +65,26 @@ void TProofBenchModeVaryingNFilesWorker::Print(Option_t* option)const
 }
 
 //Default behaviour for generating files on the worker nodes.
-TMap* TProofBenchModeVaryingNFilesWorker::FilesToProcess(Int_t nf,
-                                                    const char* basedir)
+TMap* TProofBenchModeVaryingNFilesWorker::FilesToProcess(Int_t nf)
 {
 
 //Generates files on worker nodes for I/O test or for cleanup run
 //Input parameters do not change corresponding data members
-//Data set member (fDataSetGeneratedBench or fDataSetGeneratedCleanup) gets filled up
-//with generated data set elements
 //
 //Input parameters
-//   filetype: kFileBenchmark : Generate files for benchmark run
-//             kFileCleanup: Generate files for cleanup run
-//   nf: Number of files per node when filetype==kFileBenchmark.
-//       Ignored when filetype==kFileCleanup
-//   nevents: Number of events in a file when filetype==kFileBenchmark.
-//            Igonired when filetype==kFileCleanup 
-//   basedir: Base directory for the files to be generated on the worker nodes. 
-//   regenerate: Regenerate files when kTRUE,
-//               Reuse files if they exist, when kFALSE (default)
+//   nf: Number of files per worker. When nf=-1, use data member fNFiles.
 //Returns: 
-//   0 when ok
-//  <0 when anything is wrong
+//  map with files to be generated on the worker nodes
 
    // Create the file names and the map {worker,files}
    // Naming:        <basedir>/EventTree_Benchmark_nfile_serial.root
+
+   if (nf==-1){
+      nf=fNFiles;
+   }
+
    TMap *filesmap = new TMap;
    filesmap->SetName("PROOF_FilesToProcess");
-   Long64_t entries = 0;
    TIter nxni(fNodes);
    TProofNode *ni = 0;
 
@@ -102,9 +94,7 @@ TMap* TProofBenchModeVaryingNFilesWorker::FilesToProcess(Int_t nf,
       Int_t nwrks=ni->GetNWrks();
       Int_t nfilesthisnode=nwrks*nf;
       for (Int_t i = 0; i<nfilesthisnode; i++) {
-         files->Add(new TObjString(TString::Format("%s/EventTree_Benchmark_%d_0.root",
-                                                   basedir, i)));
-         entries++;
+         files->Add(new TObjString(TString::Format("EventTree_Benchmark_%d_0.root", i)));
       }
       filesmap->Add(new TObjString(ni->GetName()), files);
       //files->Print();

@@ -70,19 +70,14 @@ void TProofBenchModeConstNFilesNode::Print(Option_t* option)const
    Printf("fName=%s", fName.Data());
 }
 
-//Default behaviour for generating files on the worker nodes.
-TMap* TProofBenchModeConstNFilesNode::FilesToProcess(Int_t nf,
-                                                const char* basedir)
+TMap* TProofBenchModeConstNFilesNode::FilesToProcess(Int_t nf)
 {
 
 //Generates files on worker nodes for I/O test or for cleanup run
 //Input parameters do not change corresponding data members
-//Data set member (fDataSetGeneratedBench or fDataSetGeneratedCleanup) gets filled up
-//with generated data set elements
 //
 //Input parameters
-//   nf: Number of files per node when filetype==kFileBenchmark.
-//   basedir: Base directory for the files to be generated on the worker nodes. 
+//   nf: Number of files per node. When nf=-1, use data member fNFiles.
 //Returns: 
 //  map with files to be generated on the worker nodes
 
@@ -91,42 +86,21 @@ TMap* TProofBenchModeConstNFilesNode::FilesToProcess(Int_t nf,
 
    TMap *filesmap = new TMap;
    filesmap->SetName("PROOF_FilesToProcess");
-   Long64_t entries = 0;
    TIter nxni(fNodes);
    TProofNode *ni = 0;
 
-   if (nf==-1){//as many files as maximum number of workers on node in the cluster
-      Int_t nworkers=0;
-      Int_t maxnworkers=0;
-      while ((ni = (TProofNode *) nxni())) {
-         nworkers=ni->GetNWrks();
-         maxnworkers=nworkers>maxnworkers?nworkers:maxnworkers;
-      }
-      nxni.Reset();
-      while ((ni = (TProofNode *) nxni())) {
-         TList *files = new TList;
-         files->SetName(ni->GetName());
-         for (Int_t i = 0; i<maxnworkers; i++) {
-            files->Add(new TObjString(TString::Format("%s/EventTree_Benchmark_%d_0.root",
-                                                      basedir, i)));
-            entries++;
-         }
-         filesmap->Add(new TObjString(ni->GetName()), files);
-         //files->Print();
-      }
+   if (nf==-1){
+      nf=fNFiles;
    }
-   else{
-      while ((ni = (TProofNode *) nxni())) {
-         TList *files = new TList;
-         files->SetName(ni->GetName());
-         for (Int_t i = 0; i<nf; i++) {
-            files->Add(new TObjString(TString::Format("%s/EventTree_Benchmark_%d_0.root",
-                                                      basedir, i)));
-            entries++;
-         }
-         filesmap->Add(new TObjString(ni->GetName()), files);
-         //files->Print();
+
+   while ((ni = (TProofNode *) nxni())) {
+      TList *files = new TList;
+      files->SetName(ni->GetName());
+      for (Int_t i = 0; i<nf; i++) {
+         files->Add(new TObjString(TString::Format("EventTree_Benchmark_%d_0.root", i)));
       }
+      filesmap->Add(new TObjString(ni->GetName()), files);
+      //files->Print();
    }
    return filesmap;
 }

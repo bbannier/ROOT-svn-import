@@ -48,8 +48,7 @@ public:
                                                  //of workers on each node
    virtual ~TProofBenchModeVaryingNFilesWorker();          //destructor
 
-   TMap* FilesToProcess(Int_t nf,
-                        const char* basedir);
+   TMap* FilesToProcess(Int_t nf);
 
    Int_t MakeDataSets(Int_t nf,
                       Int_t start,

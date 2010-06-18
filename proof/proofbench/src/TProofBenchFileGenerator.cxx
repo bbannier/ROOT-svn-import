@@ -253,7 +253,7 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
    fProof->AddInput(wlcopy);
 
    //build file map to generate on worker nodes
-   TMap* filesmap=fMode->FilesToProcess(nf, basedir.Data());
+   TMap* filesmap=fMode->FilesToProcess(nf);
    // Add the file map in the input list
    fProof->AddInput(filesmap);
 
