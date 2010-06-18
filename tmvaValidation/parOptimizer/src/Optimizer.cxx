@@ -26,7 +26,9 @@ ClassImp(TMVA::Optimizer)
 
 #include <limits>
 #include "TMath.h"
-   
+
+#include "TMVA/MethodBase.h"   
+#include "TMVA/MethodBDT.h"   
 //_______________________________________________________________________
 TMVA::Optimizer::Optimizer(MethodBase * const method, TString fomType) 
 {
@@ -51,12 +53,35 @@ void TMVA::Optimizer::optimize()
    // different tuning paraemters and remember which one is
    // gave the best FOM
 
-   Double_t      currentFOM;
-   
+   Double_t      bestFOM=-1000000, currentFOM;
+   UInt_t        ibest=0;
 
-   fFOM->GetMethod()->Train();
-   currentFOM = fFOM->GetFOM(); 
-  
+   //let's somehow translate for each method individually (maybe we just 
+   //define WHICH parameter(s) we want optimizer ourselfs (not the user) and
+   //then do it here..
+   //   too much freedom for the user just gives us bad publicity when being
+   //   compared with Neurobayes!!
+   
+   std::vector<Int_t>  loopVariable;
+
+   if (fFOM->GetMethod()->GetMethodType() == TMVA::Types::kBDT){
+     for (UInt_t i=0;i<9;i++){loopVariable.push_back(i+1);}
+   }
+
+   for (UInt_t i=0;i<loopVariable.size();i++){    
+     if(i!=0)fFOM->GetMethod()->Reset();
+     ((MethodBDT*)(fFOM->GetMethod()))->SetMaxDepth(loopVariable[i]);     
+     fFOM->GetMethod()->Train();
+     currentFOM = fFOM->GetFOM(); 
+     if (currentFOM > bestFOM) {
+       bestFOM = currentFOM;
+       ibest   = i;
+     }
+   }
+
+   fFOM->GetMethod()->Reset();
+   ((MethodBDT*)(fFOM->GetMethod()))->SetMaxDepth(loopVariable[ibest]);
+   std::cout << "And the winner is : MaxDepth = " << loopVariable[ibest] << std::endl;
 
 }
 
