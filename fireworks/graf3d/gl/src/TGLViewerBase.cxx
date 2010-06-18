@@ -470,7 +470,7 @@ void TGLViewerBase::RenderOverlay(Int_t state, Bool_t selection)
    for (Int_t i = 0; i < nOvl; ++i)
    {
       TGLOverlayElement* el = fOverlay[i];
-      if (el->GetState() && state)
+      if (el->GetState() & state)
       {
          if (selection) glPushName(i);
          el->Render(*fRnrCtx);
