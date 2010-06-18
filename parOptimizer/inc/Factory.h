@@ -184,6 +184,11 @@ namespace TMVA {
                               TMVA::Types::EMVA /*theCommittee*/, 
                               TString /*committeeOption = ""*/ ) { return 0; } 
 
+      // optimize all booked methods (well, if desired by the method)
+      void OptimiseAllMethods                 ();
+      void OptimiseAllMethodsForClassification( void ) { OptimiseAllMethods(); }
+      void OptimiseAllMethodsForRegression    ( void ) { OptimiseAllMethods(); }
+
       // training for all booked methods
       void TrainAllMethods                 ();
       void TrainAllMethodsForClassification( void ) { TrainAllMethods(); }

@@ -31,5 +31,7 @@
 #pragma link C++ class TMVA::CCPruner+;
 #pragma link C++ class TMVA::CostComplexityPruneTool+;
 #pragma link C++ class TMVA::SVEvent+;
+#pragma link C++ class TMVA::Optimizer;
+#pragma link C++ class TMVA::OptimizerFOM;
 
 #endif
