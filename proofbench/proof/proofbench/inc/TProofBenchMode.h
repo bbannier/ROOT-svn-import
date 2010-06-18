@@ -40,8 +40,7 @@ public:
 
    virtual ~TProofBenchMode();          //destructor
 
-   virtual TMap* FilesToProcess(Int_t nf,
-                                const char* basedir="")=0;
+   virtual TMap* FilesToProcess(Int_t nf)=0;
 
    virtual Int_t MakeDataSets(Int_t nf=-1,   //when ==-1, use data member fNFiles in the derived class
                               Int_t start=1, //start number of workers

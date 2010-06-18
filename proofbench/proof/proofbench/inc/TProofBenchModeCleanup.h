@@ -48,8 +48,7 @@ public:
 
    virtual ~TProofBenchModeCleanup();          //destructor
 
-   TMap* FilesToProcess(Int_t, //not used
-                        const char*basedir);
+   TMap* FilesToProcess(Int_t);//not used
  
    Int_t MakeDataSets(Int_t,   //not used
                       Int_t,   //not used

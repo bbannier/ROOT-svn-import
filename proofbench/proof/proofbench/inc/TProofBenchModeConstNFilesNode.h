@@ -48,8 +48,7 @@ public:
                                                //of workers on node in the cluster will be generated
    virtual ~TProofBenchModeConstNFilesNode();          //destructor
 
-   TMap* FilesToProcess(Int_t nf,
-                        const char* basedir);
+   TMap* FilesToProcess(Int_t nf);
 
    Int_t MakeDataSets(Int_t nf,   //when ==-1, use data member fNFiles
                       Int_t start,  //

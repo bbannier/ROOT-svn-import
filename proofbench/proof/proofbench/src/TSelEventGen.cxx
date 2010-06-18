@@ -397,15 +397,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
 
    TString filename=fCurrent->GetName();
 
-   //check if the directory is writable
-   const char* basename=gSystem->BaseName(filename.Data());
-   const char* dirname=gSystem->DirName(filename.Data());
-   if (gSystem->AccessPathName(dirname, kWritePermission)){
-      //directory is not writable, use default directory
-      Info("Process", "%s directory is not writable, using default directory: %s", 
-                      dirname, fBaseDir.Data());
-      filename=fBaseDir+"/"+basename;
-   } 
+   filename=fBaseDir+"/"+filename;
 
    //generate files
    if (fFileType==TProofBenchMode::kFileBenchmark){

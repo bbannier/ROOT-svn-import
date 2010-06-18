@@ -85,11 +85,22 @@ TProofBenchModeCleanup::~TProofBenchModeCleanup()
 {
 }
 
-TMap* TProofBenchModeCleanup::FilesToProcess(Int_t,
-                                        const char* basedir){
+TMap* TProofBenchModeCleanup::FilesToProcess(Int_t)
+{
+
+//Generates files on worker nodes for cleanup run
+//Input parameters do not change corresponding data members
+//
+//Input parameters
+//  ignored
+//Returns: 
+//  map with files to be generated on the worker nodes
+
+   // Create the file names and the map {worker,files}
+   // Naming:        <basedir>/EventTree_Cleanup_nfile_serial.root
+
    TMap *filesmap = new TMap;
    filesmap->SetName("PROOF_FilesToProcess");
-   Long64_t entries = 0;
    TIter nxni(fNodes);
    TProofNode *ni = 0;
 
@@ -99,9 +110,7 @@ TMap* TProofBenchModeCleanup::FilesToProcess(Int_t,
       files->SetName(ni->GetName());
 
       for (Int_t i = 0; i <nworkers; i++) { //split load across the workers on the node
-         files->Add(new TObjString(TString::Format("%s/EventTree_Cleanup_%d_0.root",
-                                                   basedir, i)));
-         entries++;
+         files->Add(new TObjString(TString::Format("EventTree_Cleanup_%d_0.root", i)));
       }
       filesmap->Add(new TObjString(ni->GetName()), files);
       //files->Print();
