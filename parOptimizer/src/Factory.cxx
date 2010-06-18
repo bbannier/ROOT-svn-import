@@ -65,6 +65,7 @@
 #include "TMVA/DataSetInfo.h"
 #include "TMVA/MethodBoost.h"
 #include "TMVA/MethodCategory.h"
+#include "TMVA/Optimizer.h"
 
 #include "TMVA/VariableIdentityTransform.h"
 #include "TMVA/VariableDecorrTransform.h"
@@ -951,9 +952,29 @@ void TMVA::Factory::OptimizeAllMethods()
   // in the main training loop.
 
  
+   MVector::iterator itrMethod;
 
-  // well, not yet implemented..
+   // iterate over methods and optimize
+   for( itrMethod = fMethods.begin(); itrMethod != fMethods.end(); ++itrMethod ) {
 
+      MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
+
+      if (mva->Data()->GetNTrainingEvents() < MinNoTrainingEvents) {
+         Log() << kWARNING << "Method " << mva->GetMethodName() 
+               << " not trained (training tree has less entries ["
+               << mva->Data()->GetNTrainingEvents() 
+               << "] than required [" << MinNoTrainingEvents << "]" << Endl; 
+         continue;
+      }
+
+      Log() << kINFO << "Optimize method: " << mva->GetMethodName() << " for " 
+            << (fAnalysisType == Types::kRegression ? "Regression" : 
+		(fAnalysisType == Types::kMulticlass ? "Multiclass classification" : "Classification")) << Endl;
+      Optimizer optimize(mva);
+      optimize.optimize();
+      Log() << kINFO << "Optimize finished" << Endl;
+   }
+   std::cout << "YESSSSSSSSSSSSSS I was here " << std::endl;
   // 
 }
 //_______________________________________________________________________

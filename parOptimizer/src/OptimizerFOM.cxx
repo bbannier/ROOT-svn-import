@@ -38,7 +38,7 @@ TMVA::OptimizerFOM::OptimizerFOM(MethodBase* const method, TString fomType):
 {
    // Constructor which sets either "Classification or Regression"
    // and the type of Figure of Merit that you've chosen
-   if (fMethod->DoRegression()){
+   if (!fMethod->DoRegression()){
       if ( fFOMType == "Separation"){
          // that's ok... 
       } else {
