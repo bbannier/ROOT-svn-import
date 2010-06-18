@@ -739,10 +739,27 @@ void SetInputData(int index, TMVA::Factory* factory, DataInputTest* thetest)
       factory->AddBackgroundTree( TreeBlow,  1.0);
       factory->AddBackgroundTree( TreeBmed,  2.0);
       factory->AddBackgroundTree( TreeBhig,  1.0);
+      factory->SetSignalWeightExpression("weight");
+      factory->SetBackgroundWeightExpression("weight");
+      factory->PrepareTrainingAndTestTree( dummycut, dummycut,
+                                           "nTrain_Signal=2000:nTrain_Background=2000:nTest_Signal=2000:nTest_Background=2000:SplitMode=Random:NormMode=NumEvents:!V" );  
+      thetest->RegisterAssertion(2000,2000,2000,2000,"testtrainmixed");
+   }
+   else if (index==131) {
+      std::cout << "signal and background divided into separate trees depending on phase space, signal and background med-sample require additional tree weight of 2"<<std::endl;
+      factory->AddSignalTree    ( TreeSlow, 1.0);
+      factory->AddSignalTree    ( TreeSmed, 2.0);
+      factory->AddSignalTree    ( TreeShig,  1.0);
+      factory->AddBackgroundTree( TreeBlow,  1.0);
+      factory->AddBackgroundTree( TreeBmed,  2.0);
+      factory->AddBackgroundTree( TreeBhig,  1.0);
+      factory->SetSignalWeightExpression("weight");
+      factory->SetBackgroundWeightExpression("weight");
       factory->PrepareTrainingAndTestTree( dummycut, dummycut,
                                            "SplitMode=Random:NormMode=NumEvents:!V" );  
-      //thetest->RegisterAssertion(4000,4000,4000,3000);
+      thetest->RegisterAssertion(2000,2000,2000,2000,"testtrainmixed");
    }
+
    else {
       std::cout <<" unknown index mode exiting"<<std::endl;
       exit(1);

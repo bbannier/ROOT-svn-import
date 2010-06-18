@@ -128,12 +128,14 @@ void CreateDataForInputTests(Int_t nmax = 10000, Int_t nmax2=150000, const char*
       if (isSignal) evtno=nsig;
       else evtno = nbgd;
 
-      if (isSignal && nsig < nmax){
+      if (isSignal && treeSlow->GetEntries()+treeSmed->GetEntries()+treeShig->GetEntries() < 2*n1){
+         isfake=0.;
          if  (xvar[4]< -1.)      treeSlow->Fill();
          else if  (xvar[4]< 1. && R.Rndm()>0.5)  treeSmed->Fill();
          else                    treeShig->Fill();
       }
-      if (!isSignal && nbgd < nmax){
+      if (!isSignal && treeBlow->GetEntries()+treeBmed->GetEntries()+treeBhig->GetEntries() < 2*n1){
+         isfake=0.;
          if  (xvar[4]< -1.)      treeBlow->Fill();
          else if  (xvar[4]< 1. && R.Rndm()>0.5)  treeBmed->Fill();
          else                    treeBhig->Fill();
