@@ -1279,6 +1279,9 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
    Log().SetSource( GetName() );
    Log() << kINFO << "Read method \"" << GetMethodName() << "\" of type \"" << GetMethodTypeName() << "\"" << Endl;
 
+   // after the method name is read, the testvar can be set
+   SetTestvarName();
+
    TString nodeName("");
    void* ch = gTools().GetChild(methodNode);
    while (ch!=0) {

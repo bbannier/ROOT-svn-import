@@ -122,8 +122,10 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
       fTransformedEvent = new Event();
    }
 
+
    // set the variable values
    const std::vector<UInt_t>* varArrange = ev->GetVariableArrangement();
+
    if(!varArrange) {
       std::vector<Float_t> rv = X2P( ev->GetValues(), cls );
       for (Int_t ivar=0; ivar<nvar; ++ivar)
@@ -143,6 +145,7 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
    fTransformedEvent->SetWeight     ( ev->GetWeight() );
    fTransformedEvent->SetBoostWeight( ev->GetBoostWeight() );
    fTransformedEvent->SetClass      ( ev->GetClass() );
+
    return fTransformedEvent;
 }
 
