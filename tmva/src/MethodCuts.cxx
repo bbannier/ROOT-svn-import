@@ -1527,9 +1527,9 @@ Double_t TMVA::MethodCuts::GetEfficiency( const TString& theString, Types::ETree
       // treat signal and background one must decide which transformation type shall 
       // be used: our default is signal-type
       fBinaryTreeS = new BinarySearchTree();
-      fBinaryTreeS->Fill( Data()->GetEventCollection(Types::kTesting), fSignalClass );
+      fBinaryTreeS->Fill( GetEventCollection(Types::kTesting), fSignalClass );
       fBinaryTreeB = new BinarySearchTree();
-      fBinaryTreeB->Fill( Data()->GetEventCollection(Types::kTesting), fBackgroundClass );
+      fBinaryTreeB->Fill( GetEventCollection(Types::kTesting), fBackgroundClass );
 
       // there is no really good equivalent to the fEffS; fEffB (efficiency vs cutvalue)
       // for the "Cuts" method (unless we had only one cut). Maybe later I might add here
