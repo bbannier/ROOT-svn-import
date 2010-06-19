@@ -13,7 +13,9 @@ Improvements foreseen for TMVA4:
 * automatic parameter tuning
 * simple example scripts
 * automatic variable relevance determination/variable selection
-
+* meaningful MethodBase::TestMulticlass() and ResultsMulticlass
+* Likelihood with Multiclass feature (requested by ATLAS-tau group)
+* remove incompatibility of multiclass and TMVAGui.C
 
 ---------------------------------------------------------
 Features we would like to have in future versions of TMVA:
