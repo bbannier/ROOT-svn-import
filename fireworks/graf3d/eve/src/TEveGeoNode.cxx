@@ -205,15 +205,9 @@ Bool_t TEveGeoNode::CanEditMainTransparency() const
 //______________________________________________________________________________
 Char_t TEveGeoNode::GetMainTransparency() const
 {
-   // Get transparency from node, if different propagate to this.
+   // Get transparency -- it is taken from the geo node.
 
-   Char_t t = fNode->GetVolume()->GetTransparency();
-   if (fMainTransparency != t)
-   {
-      TEveGeoNode* ncthis = const_cast<TEveGeoNode*>(this);
-      ncthis->SetMainTransparency(t);
-   }
-   return t;
+   return fNode->GetVolume()->GetTransparency();
 }
 
 //______________________________________________________________________________
