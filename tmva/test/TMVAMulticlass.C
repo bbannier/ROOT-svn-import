@@ -57,8 +57,9 @@ void TMVAMulticlass(){
    factory->BookMethod( TMVA::Types::kBDT, "BDT", "!H:!V:NTrees=1000:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.6:SeparationType=GiniIndex:nCuts=20:NNodesMax=5");
    factory->BookMethod( TMVA::Types::kMLP, "MLP", "!H:!V:NeuronType=tanh:VarTransform=N:NCycles=100:HiddenLayers=N+5,3:TestRate=5"); // testing vartransforms
    factory->BookMethod( TMVA::Types::kMLP, "MLP2", "!H:!V:NeuronType=tanh:NCycles=100:HiddenLayers=N+5,3:TestRate=5");
-
-
+   factory->BookMethod( TMVA::Types::kFDA, "FDA_GA",
+                        "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x0*x1:ParRanges=(-1,1);(-10,10);(-10,10);(-10,10):FitMethod=GA:PopSize=300:Cycles=3:Steps=20:Trim=True:SaveBestGen=1" );
+   
   // Train MVAs using the set of training events
    factory->TrainAllMethods();
 
