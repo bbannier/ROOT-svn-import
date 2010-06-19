@@ -595,6 +595,7 @@ void  TMVA::MethodCuts::Train( void )
    // this is important: reset the branch addresses of the training tree to the current event
    fEffBvsSLocal = new TH1F( GetTestvarName() + "_effBvsSLocal", 
                              TString(GetName()) + " efficiency of B vs S", fNbins, 0.0, 1.0 );
+   fEffBvsSLocal->SetDirectory(0); // it's local
 
    // init
    for (Int_t ibin=1; ibin<=fNbins; ibin++) fEffBvsSLocal->SetBinContent( ibin, -0.1 ); 
@@ -995,7 +996,7 @@ void TMVA::MethodCuts::GetEffsfromSelection( Double_t* cutMin, Double_t* cutMax,
    // for given cut sample
    Float_t nTotS = 0, nTotB = 0;
    Float_t nSelS = 0, nSelB = 0;  
-      
+   
    Volume* volume = new Volume( cutMin, cutMax, GetNvar() );
   
    // search for all events lying in the volume, and add up their weights
@@ -1582,7 +1583,6 @@ Double_t TMVA::MethodCuts::GetEfficiency( const TString& theString, Types::ETree
 
       // create splines for histogram
       fSpleffBvsS = new TSpline1( "effBvsS", tmpBvsS );
-      //fSpleffBvsS = new TSpline1( "effBvsS", new TGraph( eff_BvsS ) );
       for (Int_t bini=1; bini<=fNbins; bini++) {
          Double_t effS = (bini - 0.5)/Float_t(fNbins);
          Double_t effB = fSpleffBvsS->Eval( effS );

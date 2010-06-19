@@ -105,7 +105,7 @@ TMVA::Factory::Factory( TString jobName, TFile* theTargetFile, TString theOption
 
    fgTargetFile = theTargetFile;
 
-//   DataSetManager::CreateInstance(*fDataInputHandler); // DSMTEST removed
+   //   DataSetManager::CreateInstance(*fDataInputHandler); // DSMTEST removed
    fDataSetManager = new DataSetManager( *fDataInputHandler ); // DSMTEST 
 
 
@@ -709,7 +709,7 @@ TMVA::MethodBase* TMVA::Factory::BookMethod( TString theMethodName, TString meth
       MethodBoost* methBoost = dynamic_cast<MethodBoost*>(im); // DSMTEST divided into two lines
       methBoost->SetBoostedMethodName( theMethodName ); // DSMTEST divided into two lines
       if( !methBoost ) // DSMTEST
-	 Log() << kERROR << "Method with type kBoost cannot be casted to MethodCategory. /Factory" << Endl; // DSMTEST
+         Log() << kERROR << "Method with type kBoost cannot be casted to MethodCategory. /Factory" << Endl; // DSMTEST
       methBoost->fDataSetManager = fDataSetManager; // DSMTEST
 
    }
@@ -978,7 +978,10 @@ void TMVA::Factory::TrainAllMethods()
    Log() << Endl;
    if (RECREATE_METHODS) {
 
-      Log() << kINFO << "=== Destroy and recreate all methods via weight files for testing ===" << Endl << Endl;;
+      Log() << kINFO << "=== Destroy and recreate all methods via weight files for testing ===" << Endl << Endl;
+
+      RootBaseDir()->cd();
+
       // iterate through all booked methods
       for (UInt_t i=0; i<fMethods.size(); i++) {
 
@@ -1012,7 +1015,6 @@ void TMVA::Factory::TrainAllMethods()
          // replace trained method by newly created one (from weight file) in methods vector
          fMethods[i] = m;
       }
-
    }
 }
 
@@ -1205,10 +1207,9 @@ void TMVA::Factory::EvaluateAllMethods( void )
          theMethod->WriteEvaluationHistosToFile(Types::kTesting);
          theMethod->WriteEvaluationHistosToFile(Types::kTraining);
       } else if (theMethod->DoMulticlass()) {
-	 doMulticlass = kTRUE;
+         doMulticlass = kTRUE;
          Log() << kINFO << "Evaluate multiclass classification method: " << theMethod->GetMethodName() << Endl;         
-
-	 theMethod->TestMulticlass();
+         theMethod->TestMulticlass();
       } else {
          
          Log() << kINFO << "Evaluate classifier: " << theMethod->GetMethodName() << Endl;
