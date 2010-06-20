@@ -355,16 +355,16 @@ void TMVA::MethodMLP::Train(Int_t nEpochs)
    else                               BackPropagationMinimize(nEpochs);
 #endif
 
+   float trainE = CalculateEstimator( Types::kTraining, 0 ) ; // estimator for training sample  //zjh
+   float testE  = CalculateEstimator( Types::kTesting,  0 ) ; // estimator for test sample //zjh
    if (fUseRegulator){
-      float trainE = CalculateEstimator( Types::kTraining, 0 ) ; // estimator for training sample  //zjh
-      float testE  = CalculateEstimator( Types::kTesting,  0 ) ; // estimator for test sample //zjh
       Log()<<kINFO<<"Finalizing handling of Regulator terms, trainE="<<trainE<<" testE="<<testE<<Endl;
       UpdateRegulators();
-      Int_t numSynapses=fSynapses->GetEntriesFast();
-      fInvHessian.ResizeTo(numSynapses,numSynapses);
-      GetApproxInvHessian( fInvHessian ,false);
       Log()<<kINFO<<"Done with handling of Regulator terms"<<Endl;
    }
+   Int_t numSynapses=fSynapses->GetEntriesFast();
+   fInvHessian.ResizeTo(numSynapses,numSynapses);
+   GetApproxInvHessian( fInvHessian ,false);
 }
 
 //______________________________________________________________________________
