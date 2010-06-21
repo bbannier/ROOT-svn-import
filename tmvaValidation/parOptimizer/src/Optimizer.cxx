@@ -71,8 +71,17 @@ void TMVA::Optimizer::optimize()
    for (UInt_t i=0;i<loopVariable.size();i++){    
      if(i!=0)fFOM->GetMethod()->Reset();
      ((MethodBDT*)(fFOM->GetMethod()))->SetMaxDepth(loopVariable[i]);     
+
+
+     
+     fFOM->GetMethod()->BaseDir()->cd();
+     fFOM->GetMethod()->GetTransformationHandler().CalcTransformations(
+                                                                       fFOM->GetMethod()->Data()->GetEventCollection());
+     std::cout << "train in optimizer with " << fFOM->GetMethod()->Data()->GetNEvents() << std::endl;
      fFOM->GetMethod()->Train();
+     std::cout << "Got back from train" << std::endl;
      currentFOM = fFOM->GetFOM(); 
+     std::cout << "Got back from GetFOM with " << currentFOM << std::endl;
      if (currentFOM > bestFOM) {
        bestFOM = currentFOM;
        ibest   = i;
