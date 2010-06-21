@@ -24,9 +24,9 @@ MCMCIntervalPlot plot(*interval);
 plot.Draw();
 </p>
 <p>
-(The standard Draw() function will currently draw the confidence interval
+The standard Draw() function will currently draw the confidence interval
 range with bars if 1-D and a contour if 2-D.  The MCMC posterior will also be
-plotted for the 1-D case.  Many other fun plotting options are available.
+plotted for the 1-D case.
 </p>
 END_HTML
 */
@@ -164,6 +164,12 @@ void MCMCIntervalPlot::DrawPosteriorHist(const Option_t* options, Bool_t scale)
    if (fPosteriorHist == NULL)
       fPosteriorHist = fInterval->GetPosteriorHist();
 
+   if (fPosteriorHist == NULL) {
+      coutE(InputArguments) << "MCMCIntervalPlot::DrawPosteriorHist: "
+         << "Couldn't get posterior histogram." << endl;
+      return;
+   }
+
    // scale so highest bin has height 1
    if (scale)
       fPosteriorHist->Scale(1/fPosteriorHist->GetBinContent(fPosteriorHist->GetMaximumBin()));
@@ -174,6 +180,12 @@ void MCMCIntervalPlot::DrawPosteriorKeysPdf(const Option_t* options)
 {
    if (fPosteriorKeysPdf == NULL)
       fPosteriorKeysPdf = fInterval->GetPosteriorKeysPdf();
+
+   if (fPosteriorKeysPdf == NULL) {
+      coutE(InputArguments) << "MCMCIntervalPlot::DrawPosteriorKeysPdf: "
+         << "Couldn't get posterior Keys PDF." << endl;
+      return;
+   }
 
    if (fDimension == 1) {
       RooPlot* frame = ((RooRealVar*)fParameters->first())->frame();
@@ -191,7 +203,24 @@ void MCMCIntervalPlot::DrawPosteriorKeysPdf(const Option_t* options)
    }
 }
 
+//kbelasco: adding support for different types of intervals to DrawInterval
 void MCMCIntervalPlot::DrawInterval(const Option_t* options)
+{
+   switch (fInterval->GetIntervalType()) {
+      case MCMCInterval::kShortest:
+         DrawShortestInterval(options);
+         break;
+      case MCMCInterval::kTailFraction:
+         DrawTailFractionInterval(options);
+         break;
+      default:
+         coutE(InputArguments) << "MCMCIntervalPlot::DrawInterval(): " <<
+            "Error: Interval type not supported" << endl;
+         break;
+   }
+}
+
+void MCMCIntervalPlot::DrawShortestInterval(const Option_t* options)
 {
    if (fInterval->GetUseKeys())
       DrawKeysPdfInterval(options);
@@ -201,17 +230,14 @@ void MCMCIntervalPlot::DrawInterval(const Option_t* options)
 
 void MCMCIntervalPlot::DrawKeysPdfInterval(const Option_t* options)
 {
-   if (fPosteriorKeysPdf == NULL)
-      fPosteriorKeysPdf = fInterval->GetPosteriorKeysPdf();
-
    if (fDimension == 1) {
+      // Draw the posterior keys PDF as well so the user can see where the
+      // limit bars line up
+      DrawPosteriorKeysPdf(options);
+
       RooRealVar* p = (RooRealVar*)fParameters->first();
       Double_t ul = fInterval->UpperLimitByKeys(*p);
       Double_t ll = fInterval->LowerLimitByKeys(*p);
-      cout << "MCMC keys pdf lower limit on " << p->GetName() << " = "
-           << ll << endl;
-      cout << "MCMC keys pdf upper limit on " << p->GetName() << " = "
-           << ul << endl;
       TLine* llLine = new TLine(ll, 0, ll, 1);
       TLine* ulLine = new TLine(ul, 0, ul, 1);
       llLine->SetLineColor(fLineColor);
@@ -221,11 +247,20 @@ void MCMCIntervalPlot::DrawKeysPdfInterval(const Option_t* options)
       llLine->Draw(options);
       ulLine->Draw(options);
    } else if (fDimension == 2) {
+      if (fPosteriorKeysPdf == NULL)
+         fPosteriorKeysPdf = fInterval->GetPosteriorKeysPdf();
+
+      if (fPosteriorKeysPdf == NULL) {
+         coutE(InputArguments) << "MCMCIntervalPlot::DrawKeysPdfInterval: "
+            << "Couldn't get posterior Keys PDF." << endl;
+         return;
+      }
+
       RooArgList* axes = fInterval->GetAxes();
       RooRealVar* xVar = (RooRealVar*)axes->at(0);
       RooRealVar* yVar = (RooRealVar*)axes->at(1);
       TH2F* contHist = (TH2F*)fPosteriorKeysPdf->createHistogram(
-            "keysContour2D", *xVar, RooFit::YVar(*yVar), RooFit::Scaling(kFALSE));
+          "keysContour2D", *xVar, RooFit::YVar(*yVar), RooFit::Scaling(kFALSE));
       contHist->SetTitle(GetTitle());
       contHist->SetStats(kFALSE);
 
@@ -246,18 +281,15 @@ void MCMCIntervalPlot::DrawKeysPdfInterval(const Option_t* options)
 
 void MCMCIntervalPlot::DrawHistInterval(const Option_t* options)
 {
-   if (fPosteriorHist == NULL)
-      fPosteriorHist = fInterval->GetPosteriorHist();
-
    if (fDimension == 1) {
+      // Draw the posterior histogram as well so the user can see where the
+      // limit bars line up
+      DrawPosteriorHist(options);
+
       // draw lower and upper limits
       RooRealVar* p = (RooRealVar*)fParameters->first();
       Double_t ul = fInterval->UpperLimitByHist(*p);
       Double_t ll = fInterval->LowerLimitByHist(*p);
-      cout << "MCMC histogram lower limit on " << p->GetName() << " = "
-           << ll << endl;
-      cout << "MCMC histogram upper limit on " << p->GetName() << " = "
-           << ul << endl;
       TLine* llLine = new TLine(ll, 0, ll, 1);
       TLine* ulLine = new TLine(ul, 0, ul, 1);
       llLine->SetLineColor(fLineColor);
@@ -267,6 +299,15 @@ void MCMCIntervalPlot::DrawHistInterval(const Option_t* options)
       llLine->Draw(options);
       ulLine->Draw(options);
    } else if (fDimension == 2) {
+      if (fPosteriorHist == NULL)
+         fPosteriorHist = fInterval->GetPosteriorHist();
+
+      if (fPosteriorHist == NULL) {
+         coutE(InputArguments) << "MCMCIntervalPlot::DrawHistInterval: "
+            << "Couldn't get posterior histogram." << endl;
+         return;
+      }
+
       fPosteriorHist->SetTitle(GetTitle());
       fPosteriorHist->SetStats(kFALSE);
 
@@ -284,10 +325,43 @@ void MCMCIntervalPlot::DrawHistInterval(const Option_t* options)
    }
 }
 
+void MCMCIntervalPlot::DrawTailFractionInterval(const Option_t* options)
+{
+   if (fDimension == 1) {
+      // Draw the posterior histogram as well so the user can see where the
+      // limit bars line up
+      DrawPosteriorHist(options);
+
+      // draw lower and upper limits
+      RooRealVar* p = (RooRealVar*)fParameters->first();
+      Double_t ul = fInterval->UpperLimitTailFraction(*p);
+      Double_t ll = fInterval->LowerLimitTailFraction(*p);
+      TLine* llLine = new TLine(ll, 0, ll, 1);
+      TLine* ulLine = new TLine(ul, 0, ul, 1);
+      llLine->SetLineColor(fLineColor);
+      ulLine->SetLineColor(fLineColor);
+      llLine->SetLineWidth(fLineWidth);
+      ulLine->SetLineWidth(fLineWidth);
+      llLine->Draw(options);
+      ulLine->Draw(options);
+   } else {
+      coutE(InputArguments) << "MCMCIntervalPlot::DrawTailFractionInterval: "
+         << " Sorry: " << fDimension << "-D plots not currently supported"
+         << endl;
+   }
+}
+
 void MCMCIntervalPlot::DrawPosteriorKeysProduct(const Option_t* options)
 {
    if (fPosteriorKeysProduct == NULL)
       fPosteriorKeysProduct = fInterval->GetPosteriorKeysProduct();
+
+   if (fPosteriorKeysProduct == NULL) {
+      coutE(InputArguments) << "MCMCIntervalPlot::DrawPosteriorKeysProduct: "
+         << "Couldn't get posterior Keys product." << endl;
+      return;
+   }
+
 
    if (fDimension == 1) {
       RooPlot* frame = ((RooRealVar*)fParameters->first())->frame();

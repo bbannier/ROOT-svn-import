@@ -156,7 +156,10 @@ MarkovChain* MetropolisHastings::ConstructChain()
 
    // we will need to check if log-likelihood evaluation left an error status
    if (fType == kLog)
-     fFunction->setEvalErrorLoggingMode(RooAbsReal::CollectErrors);
+     //fFunction->setEvalErrorLoggingMode(RooAbsReal::CollectErrors);
+     // kbelasco: to speed up error logging, use new mode CountErrors
+     fFunction->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
+
    bool hadEvalError = true;
 
    Int_t i = 0;
@@ -206,7 +209,6 @@ MarkovChain* MetropolisHastings::ConstructChain()
 
       fPropFunc->Propose(xPrime, x);
 
-      // check if nll for xprime had an error status
       RooStats::SetParameters(&xPrime, fParameters);
       xPrimeL = fFunction->getVal();
 
