@@ -72,11 +72,24 @@ void TMVA::OptimizerFOM::GetMVADists()
 {
    // fill the private histograms with the mva distributinos for sig/bkg
 
+   if (fMvaSig) fMvaSig->Delete();
+   if (fMvaBkg) fMvaBkg->Delete();
+   fMvaSig = new TH1D("fMvaSig","",1000,-2,2);
+   fMvaBkg = new TH1D("fMvaBkg","",1000,-2,2);
+   std::cout << "Call GetMVADists" << std::endl;
    const std::vector<Event*> events=fMethod->Data()->GetEventCollection(Types::kTesting);
+   std::cout << "Call GetMVADists - get test events" << std::endl;
    
    UInt_t signalClassNr = fMethod->DataInfo().GetClassInfo("Signal")->GetNumber();
+   std::cout << "Call GetMVADists - test events have class " << signalClassNr<< std::endl;
 
+   fMethod->GetTransformationHandler().CalcTransformations(fMethod->Data()->GetEventCollection(Types::kTesting));
+
+   std::cout << "the testing sample has " << events.size() << " events " << std::endl;
    for (UInt_t iev=0; iev < events.size() ; iev++){
+      //      std::cout << " GetMVADists event " << iev << std::endl;
+      //      std::cout << " Class  = " << events[iev]->GetClass() << std::endl;
+      //         std::cout << " MVA Value = " << fMethod->GetMvaValue(events[iev]) << std::endl;
       if (events[iev]->GetClass() == signalClassNr) {
          fMvaSig->Fill(fMethod->GetMvaValue(events[iev]));
       } else {

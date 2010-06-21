@@ -408,10 +408,23 @@ void TMVA::MethodBDT::Reset( void )
    
    // remove all the trees 
    for (UInt_t i=0; i<fForest.size();           i++) delete fForest[i];
+   fForest.clear();
 
-   this->Init();
-   this->ProcessOptions();
+   fBoostWeights.clear();
+   fMonitorNtuple->Delete(); fMonitorNtuple=NULL;
+   fVariableImportance.clear();
+   fResiduals.clear();
+   Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
+
+   delete results;
+   results = NULL;
+
+   std::cout << " successfully deleted results " << results << std::endl;
+
+  
+                                         
 }
+
 
 //_______________________________________________________________________
 TMVA::MethodBDT::~MethodBDT( void )
@@ -807,6 +820,7 @@ Double_t TMVA::MethodBDT::GradBoostRegression( vector<TMVA::Event*> eventSample,
 void TMVA::MethodBDT::InitGradBoost( vector<TMVA::Event*> eventSample)
 {
    // initialize targets for first tree
+   fSumOfWeights = 0;
    fSepType=NULL; //set fSepType to NULL (regression trees are used for both classification an regression)
    if(DoRegression()){
       for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
