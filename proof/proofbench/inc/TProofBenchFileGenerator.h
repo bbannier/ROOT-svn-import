@@ -46,7 +46,7 @@ class TProofBenchFileGenerator: public TObject{
 
 public:
 
-   TProofBenchFileGenerator(TProofBenchMode* mode,
+   TProofBenchFileGenerator(TProofBenchMode* mode=0,
                             Long64_t nevents=10000,
                             Int_t maxnworkers=-1,
                             Int_t start=1,
