@@ -20,10 +20,6 @@
 #include "RooStats/HypoTestCalculator.h"
 #endif
 
-#ifndef ROOSTATS_HybridResult
-#include "RooStats/HybridResult.h"
-#endif
-
 #ifndef ROOSTATS_ModelConfig
 #include "RooStats/ModelConfig.h"
 #endif
@@ -46,16 +42,19 @@
 
 namespace RooStats {
 
-   class HybridCalculator2: public HypoTestCalculator, public TNamed {
+   class HybridCalculator2: public HypoTestCalculator {
 
    public:
       HybridCalculator2(
-         const char *name,
-         TestStatSampler &sampler,
-         ModelConfig &altModel,
-         ModelConfig &nullModel,
-         RooAbsData &data
+			RooAbsData &data,
+			ModelConfig &altModel,
+			ModelConfig &nullModel,
+			TestStatSampler* sampler=0
       );
+
+
+      ~HybridCalculator2();
+
 
    public:
 
@@ -69,20 +68,25 @@ namespace RooStats {
       // Set the DataSet
       virtual void SetData(RooAbsData &data) { fData = data; }
 
+      // Override the distribution used for marginalizing nuisance parameters that is infered from ModelConfig
+      virtual void ForcePriorNuisanceNull(RooAbsPdf& priorNuisance) { fPriorNuisanceNull = &priorNuisance; }
+      virtual void ForcePriorNuisanceAlt(RooAbsPdf& priorNuisance) { fPriorNuisanceAlt = &priorNuisance; }
+
       // Returns instance of TestStatSampler. Use to change properties of
       // TestStatSampler, e.g. GetTestStatSampler.SetTestSize(Double_t size);
-      TestStatSampler& GetTestStatSampler(void) { return fTestStatSampler; }
-
-      virtual void ForcePriorNuisance(RooAbsPdf& p) { fForcePriorNuisance = &p; }
+      TestStatSampler* GetTestStatSampler(void) { return fTestStatSampler; }
 
    private:
-      TestStatSampler &fTestStatSampler;
       ModelConfig &fAltModel;
       ModelConfig &fNullModel;
       RooAbsData &fData;
-      RooAbsPdf *fForcePriorNuisance;
+      RooAbsPdf *fPriorNuisanceNull;
+      RooAbsPdf *fPriorNuisanceAlt;
+      TestStatSampler* fTestStatSampler;
+      TestStatSampler* fDefaultSampler;
+      TestStatistic* fDefaultTestStat;
 
-      void SetModel(ModelConfig& model) const;
+      void SetupSampler(ModelConfig& model) const;
 
    protected:
    ClassDef(HybridCalculator2,1)

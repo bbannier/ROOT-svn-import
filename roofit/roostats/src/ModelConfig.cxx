@@ -43,8 +43,11 @@ void ModelConfig::GuessObsAndNuisance(const RooAbsData& data) {
    //  nuisance parameters: all parameters except parameters of interest
 
    // observables
-   if (!GetObservables()) {
-      SetObservables(*GetPdf()->getObservables(data));
+  if (!GetObservables()) {
+    SetObservables(*GetPdf()->getObservables(data));
+    //const RooArgSet* temp = data.get();
+    //     SetObservables(*(RooArgSet*)temp->snapshot());
+    //     delete temp;
    }
    if (!GetGlobalObservables()) {
       RooArgSet co(*GetObservables());
@@ -124,12 +127,13 @@ void ModelConfig::SetSnapshot(const RooArgSet& set) {
    if (fSnapshotName.size()  > 0) fSnapshotName += "_";
    fSnapshotName += "snapshot";
    fWS->saveSnapshot(fSnapshotName.c_str(), set, true);  // import also the given parameter values
+   DefineSetInWS(fSnapshotName.c_str(), set);
 }    
 
 const RooArgSet * ModelConfig::GetSnapshot() const{
    // load the snapshot from ws and return the corresponding set with the snapshot values
    if (!fWS) return 0; 
-   if (!fWS->loadSnapshot(fSnapshotName.c_str()) ) return 0;
+   if (!(fWS->loadSnapshot(fSnapshotName.c_str())) ) return 0;
    return fWS->set(fSnapshotName.c_str() );
 }
 

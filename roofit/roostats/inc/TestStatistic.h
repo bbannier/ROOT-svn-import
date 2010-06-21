@@ -39,8 +39,6 @@ class TestStatistic {
       // values for the Null Parameters Of Interest.
       virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullPOI) = 0;
 
-      virtual const RooAbsArg* GetTestStatistic() const = 0;
-
       virtual const TString GetVarName() const = 0;
 
       // Defines the sign convention of the test statistic. Overwrite function if necessary.

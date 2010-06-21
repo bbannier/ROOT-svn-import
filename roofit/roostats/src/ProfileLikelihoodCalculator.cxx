@@ -188,7 +188,7 @@ LikelihoodInterval* ProfileLikelihoodCalculator::GetInterval() const {
    //RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
    //  profile->Print();
 
-   TString name = TString("LikelihoodInterval_") + TString(GetName() ); 
+   TString name = TString("LikelihoodInterval_");// + TString(GetName() ); 
 
    // make a list of fPOI with fit result values and pass to LikelihoodInterval class
    // bestPOI is a cloned list of POI only with their best fit values 
@@ -294,7 +294,7 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
    // Use Wilks' theorem to translate -2 log lambda into a signifcance/p-value
    Double_t deltaNLL = std::max( NLLatCondMLE-NLLatMLE, 0.);
 
-   TString name = TString("ProfileLRHypoTestResult_") + TString(GetName() ); 
+   TString name = TString("ProfileLRHypoTestResult_");// + TString(GetName() ); 
    HypoTestResult* htr = 
       new HypoTestResult(name, SignificanceToPValue(sqrt( 2*deltaNLL)), 0 );
 

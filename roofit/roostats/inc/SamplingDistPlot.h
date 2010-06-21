@@ -19,14 +19,7 @@
 #include "TH1F.h"
 #include "TLegend.h"
 
-#ifndef ROOSTATS_SamplingDistribution
 #include "RooStats/SamplingDistribution.h"
-#endif
-
-#ifndef ROO_PLOT
-#include "RooPlot.h"
-#endif
-
 
 namespace RooStats {
 
@@ -51,9 +44,6 @@ namespace RooStats {
 
     void Draw(const Option_t *options=0);
 
-    // Applies a predefined style if fApplyStyle is kTRUE (default).
-    void ApplyDefaultStyle(void);
-
     void SetLineColor(const Color_t color, const SamplingDistribution *samplDist = 0);
     void SetLineWidth(const Width_t lwidth, const SamplingDistribution *samplDist = 0);
     void SetLineStyle(const Style_t style, const SamplingDistribution *samplDist = 0);
@@ -69,9 +59,6 @@ namespace RooStats {
     // If you do not want SamplingDistPlot to interfere with your style settings, call this
     // function with "false" before Draw().
     void SetApplyStyle(const Bool_t s) { fApplyStyle = s; }
-
-    // write to Root file
-    void DumpToFile(const char* RootFileName, Option_t *option="", const char *ftitle="", Int_t compress=1);
 
   private:
     std::vector<Double_t> fSamplingDistr;
@@ -93,7 +80,6 @@ namespace RooStats {
     RooList fItems; // holds TH1Fs only
     RooList fOtherItems; // other objects to be drawn like TLine etc.
     TIterator* fIterator; // TODO remove class variable and instanciate locally as necessary
-    RooPlot* fRooPlot;
 
     Bool_t fApplyStyle;
     Style_t fFillStyle;

@@ -1,5 +1,5 @@
 // @(#)root/roostats:$Id$
-// Author: Sven Kreiss    June 2010
+// Author: Kyle Cranmer and Sven Kreiss    June 2010
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -37,65 +37,118 @@ namespace RooStats {
 class SimpleLikelihoodRatioTestStat: public TestStatistic {
 
    public:
-      SimpleLikelihoodRatioTestStat(RooAbsPdf& nullPdf, RooAbsPdf& altPdf) :
-         fNullPdf(nullPdf), fAltPdf(altPdf)
+
+    //__________________________________
+  SimpleLikelihoodRatioTestStat(RooAbsPdf& nullPdf, RooAbsPdf& altPdf) :
+    fNullPdf(nullPdf), fAltPdf(altPdf)
+    {
+      // b/c null and alternate parameters are not set, it will take
+      // values from PDF. Can override
+      fNullParameters = (RooArgSet*)fNullPdf.getVariables()->snapshot();      
+      fAltParameters = (RooArgSet*)fAltPdf.getVariables()->snapshot();          
+
+    }
+
+
+    //__________________________________
+  SimpleLikelihoodRatioTestStat(RooAbsPdf& nullPdf, RooAbsPdf& altPdf, const RooArgSet& nullParameters, const RooArgSet& altParameters) :
+    fNullPdf(nullPdf), fAltPdf(altPdf)
       {
-         // The parameter values for the alternative are taken at the time
-         // this constructor is called. The parameter values for the null
-         // are given in each call to Evaluate(...).
+	// constructor, explicitly set parameters.
+	// note to developers, constructor with two const RooArgSet*
+	// causes problems if the usage is
+	// null.GetSnapshot(), alt.GetSnapshot()
+	// because both are pointers to the same set, and you will
+	// get duplicate values.
 
-         fAltVars = (RooArgSet*)fAltPdf.getVariables()->snapshot();
-      }
-      virtual ~SimpleLikelihoodRatioTestStat() {
+	fNullParameters = (RooArgSet*)nullParameters.snapshot();
+	fAltParameters = (RooArgSet*)altParameters.snapshot();
+
       }
 
-      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullPOI) {
+    //_________________________________________
+    void SetNullParameters(const RooArgSet& nullParameters){
+      delete fNullParameters;
+      fFirstEval=true;
+      fNullParameters = (RooArgSet*)nullParameters.snapshot();
+    }
+
+    //_________________________________________
+    void SetAltParameters(const RooArgSet& altParameters){
+      delete fAltParameters;
+      fFirstEval=true;
+      fAltParameters = (RooArgSet*)altParameters.snapshot();
+    }
+    //______________________________
+    virtual ~SimpleLikelihoodRatioTestStat() {
+      delete fNullParameters;
+      delete fAltParameters;
+    }
+
+    //______________________________
+    bool ParamsAreEqual(){
+      // this should be possible with RooAbsCollection
+      if(!fNullParameters->equals(*fAltParameters))
+	return false;
+
+      RooAbsReal* null;
+      RooAbsReal* alt;
+
+      TIterator* nullIt = fNullParameters->createIterator();
+      TIterator* altIt = fAltParameters->createIterator();
+      bool ret =true;
+      while((null = (RooAbsReal*) nullIt->Next()) && 
+	    (alt = (RooAbsReal*) altIt->Next()) ){
+	if(null->getVal() != alt->getVal() ) ret = false;
+      }
+      return ret;    
+    }
+
+    //______________________________
+    virtual Double_t Evaluate(RooAbsData& data, RooArgSet& /*nullPOI*/) {
+      
+      if( fFirstEval && ParamsAreEqual()){
+	  oocoutW(fNullParameters,InputArguments) << "Same RooArgSet used for null and alternate, so you must explicitly SetNullParameters and SetAlternateParameters or the likelihood ratio will always be 1." << endl; 
+	  fFirstEval=false;
+	}
+
          RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
          RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
 
-         RooArgSet *altVars = fAltPdf.getVariables();
-         RooArgSet *nullVars = fNullPdf.getVariables();
-
-
-         RooArgSet *allVars = fNullPdf.getVariables();
-         allVars->add(*altVars);
-         RooArgSet *saveAll = (RooArgSet*)allVars->snapshot();
 
          RooAbsReal *nll;
-         *nullVars = nullPOI;
-         nll = fNullPdf.createNLL(data, RooFit::CloneData(kFALSE), RooFit::Extended());
+         nll = fNullPdf.createNLL(data, RooFit::CloneData(kFALSE));
+	 // make sure we set the variables attached to this nll
+	 RooArgSet* attachedSet = nll->getVariables();
+	 *attachedSet = *fNullParameters;
          double nullNLL = nll->getVal();
          delete nll;
-         *altVars = *fAltVars;
-         nll = fAltPdf.createNLL(data, RooFit::CloneData(kFALSE), RooFit::Extended());
+	 delete attachedSet;
+
+         nll = fAltPdf.createNLL(data, RooFit::CloneData(kFALSE));
+	 // make sure we set the variables attached to this nll
+	 attachedSet = nll->getVariables();
+	 *attachedSet = *fAltParameters;
          double altNLL = nll->getVal();
          delete nll;
+	 delete attachedSet;
 
-         *allVars = *saveAll;
-         delete saveAll;
-         delete allVars;
-
-
-
-         delete nullVars;
-         delete altVars;
 
          RooMsgService::instance().setGlobalKillBelow(msglevel);
-         return -((-nullNLL) - (-altNLL));
+         return nullNLL - altNLL;
       }
 
-      // TODO Has to be implemented?
-      virtual const RooAbsArg* GetTestStatistic() const { return NULL; }
+      virtual const TString GetVarName() const { return "Simple Likelihood Ratio"; }
 
-      virtual const TString GetVarName() const { return "log(L(#mu_{1}) / L(#mu_{0}))"; }
-
-      virtual const bool PValueIsRightTail(void) { return false; } // overwrite the default
+      //  virtual const bool PValueIsRightTail(void) { return false; } // overwrite the default
 
 
    private:
       RooAbsPdf& fNullPdf;
       RooAbsPdf& fAltPdf;
-      RooArgSet* fAltVars;
+      RooArgSet* fNullParameters;
+      RooArgSet* fAltParameters;
+      bool fFirstEval;
 
    protected:
    ClassDef(SimpleLikelihoodRatioTestStat,1)
