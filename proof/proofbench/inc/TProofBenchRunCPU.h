@@ -68,11 +68,6 @@ public:
             Int_t debug,
             Int_t draw);
 
-   void BuildPerfProfiles(Int_t start,
-                          Int_t stop,
-                          Int_t step,
-                          Int_t debug);
-
    void DrawPerfProfiles();
 
    void Print(Option_t* option="")const;   //Print status of an instance of this class 
