@@ -72,6 +72,8 @@ public:
                               const TDSet* tdset=0,
                               const char* option="V");
 
+   virtual Int_t MakeDataSets(const char* option);
+
    virtual Int_t MakeDataSets(Int_t nf,
                               Int_t np,
                               const Int_t *wp,
