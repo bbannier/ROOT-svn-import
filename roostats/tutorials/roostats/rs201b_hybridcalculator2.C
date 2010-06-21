@@ -21,7 +21,7 @@
 #include "RooStats/HypoTestResult.h"
 
 
-void rs201b_hybridcalculator2(int ntoys = 3000)
+void rs201b_hybridcalculator2(int ntoys = 1000)
 {
   //***********************************************************************//
   // This macro show an example on how to use RooStats/HybridCalculator    //
@@ -29,7 +29,8 @@ void rs201b_hybridcalculator2(int ntoys = 3000)
   //
   // With this example, you should get: CL_sb = 0.130 and CL_b = 0.946
   // (if data had -2lnQ = -3.0742). You can compare to the expected plot:
-  // http://www-ekp.physik.uni-karlsruhe.de/~schott/roostats/hybridplot_example.png
+
+
 
   using namespace RooFit;
   using namespace RooStats;
@@ -69,12 +70,15 @@ void rs201b_hybridcalculator2(int ntoys = 3000)
   /// generate a data sample
   RooDataSet* data = tot_pdf.generate(observables,RooFit::Extended());
 
+  /*
+  RooPlot* frame = x.frame();
+  data->plotOn(frame);
+  tot_pdf.plotOn(frame);
+  frame->Draw();
+  */
   //***********************************************************************//
 
 
-  SimpleLikelihoodRatioTestStat slrts(bkg_ext_pdf, tot_pdf);
-  RatioOfProfiledLikelihoodsTestStat ropl(tot_pdf, tot_pdf);
-  ProfileLikelihoodTestStat profll(tot_pdf);
 
   // 2lnQ: -3.15469
   // -lnQ: 1.57734
@@ -82,30 +86,51 @@ void rs201b_hybridcalculator2(int ntoys = 3000)
   // to determine observables and nuisance parameters automatically using
   // the GuessObsAndNuisance(...) function.
   RooWorkspace w;
-  ModelConfig sb_model("S+B model", &w);
+  ModelConfig sb_model("S+B_model");
+  sb_model.SetWorkspace(w);
   sb_model.SetPdf(tot_pdf);
   sb_model.SetParameters(parametersOfInterest);
   sb_model.SetSnapshot(parametersOfInterest);
 
-
-  ModelConfig b_model("B model", &w);
+  ModelConfig b_model("B_model");
+  b_model.SetWorkspace(w);
   b_model.SetPdf(tot_pdf);
   b_model.SetParameters(parametersOfInterest);
   sig_yield.setVal(0.0);
   b_model.SetSnapshot(parametersOfInterest);
+  //ropl.SetNullVars(parametersOfInterest);
 
-  //ToyMCSampler2 toymcsampler2(slrts, ntoys);
-  //ToyMCSampler2 toymcsampler2(profll, ntoys);
+//  bkg_yield.setConstant(kTRUE);
+//  w.Print();
+
+  // test statistic options
+  SimpleLikelihoodRatioTestStat slrts(tot_pdf, tot_pdf);
+  slrts.SetNullParameters(*b_model.GetSnapshot());
+  slrts.SetAltParameters(*sb_model.GetSnapshot());
+
+  RatioOfProfiledLikelihoodsTestStat ropl(tot_pdf, tot_pdf, sb_model.GetSnapshot());
+  ropl.SetSubtractMLE(false);
+  ProfileLikelihoodTestStat profll(tot_pdf);
+  MaxLikelihoodEstimateTestStat mlets(tot_pdf, sig_yield);
+
+  // Create toyMCSampler with chosen test statistic
+  //  ToyMCSampler2 toymcsampler2(slrts, ntoys);
+  //  ToyMCSampler2 toymcsampler2(profll, ntoys);
   ToyMCSampler2 toymcsampler2(ropl, ntoys);
+  //  ToyMCSampler2 toymcsampler2(mlets, ntoys);
 
   //toymcsampler2.SetExpectedNuisancePar(kTRUE);
   //toymcsampler2.SetGenerateBinned(true);
   //toymcsampler2.SetNEventsPerToy(10000);
 
-  HybridCalculator2 myH2("H2", toymcsampler2, sb_model, b_model, *data);
-  myH2.ForcePriorNuisance(bkg_yield_prior);
+  HybridCalculator2 myH2(*data,sb_model, b_model, &toymcsampler2);
+  //HybridCalculator2 myH2(*data,sb_model, b_model);
+  myH2.ForcePriorNuisanceNull(bkg_yield_prior); // ad hoc hybrid
+  myH2.ForcePriorNuisanceAlt(bkg_yield_prior);  // ad hoc hybrid
   HypoTestResult *res = myH2.GetHypoTest();
-  res->PrintMore();
+  res->Print();
+  HypoTestPlot *plot = new HypoTestPlot(*res, 80); // number of bins is optional (default: 100)
+  plot->Draw();
 
   TCanvas *c = new TCanvas("rs201b_hybridcalculator2","rs201b_hybridcalculator2");
   HypoTestPlot *plot = new HypoTestPlot(*res, 80); // number of bins is optional (default: 100)
