@@ -62,11 +62,6 @@ public:
                     Int_t debug=-1,
                     Int_t draw=-1)=0;
 
-   virtual void BuildPerfProfiles(Int_t start=-1,
-                                  Int_t stop=-1,
-                                  Int_t step=-1,
-                                  Int_t debug=-1)=0;
-
    virtual void DrawPerfProfiles()=0;
 
    virtual void Print(Option_t* option="")const=0;   //Print status of an instance of this class 
