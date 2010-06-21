@@ -91,12 +91,12 @@ FeldmanCousins::FeldmanCousins(RooAbsData& data, ModelConfig& model) :
   fTestStatSampler(0),
   fPointsToTest(0),
   fAdaptiveSampling(false), 
+  fAdditionalNToysFactor(1.),
   fNbins(10), 
   fFluctuateData(true),
   fDoProfileConstruction(true),
   fSaveBeltToFile(false),
-  fCreateBelt(false),
-  fAdditionalNToysFactor(1.)
+  fCreateBelt(false)
 {
    // standard constructor
 }

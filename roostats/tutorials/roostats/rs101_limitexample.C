@@ -60,8 +60,10 @@ void rs101_limitexample()
   /////////////////////////////////////////
   RooWorkspace* wspace = new RooWorkspace();
   wspace->factory("Poisson::countingModel(obs[150,0,300], sum(s[50,0,120]*ratioSigEff[1.,0,2.],b[100,0,300]*ratioBkgEff[1.,0.,2.]))"); // counting model
-  wspace->factory("Gaussian::sigConstraint(ratioSigEff,1,0.05)"); // 5% signal efficiency uncertainty
-  wspace->factory("Gaussian::bkgConstraint(ratioBkgEff,1,0.1)"); // 10% background efficiency uncertainty
+  //  wspace->factory("Gaussian::sigConstraint(ratioSigEff,1,0.05)"); // 5% signal efficiency uncertainty
+  //  wspace->factory("Gaussian::bkgConstraint(ratioBkgEff,1,0.1)"); // 10% background efficiency uncertainty
+  wspace->factory("Gaussian::sigConstraint(1,ratioSigEff,0.05)"); // 5% signal efficiency uncertainty
+  wspace->factory("Gaussian::bkgConstraint(1,ratioBkgEff,0.1)"); // 10% background efficiency uncertainty
   wspace->factory("PROD::modelWithConstraints(countingModel,sigConstraint,bkgConstraint)"); // product of terms
   wspace->Print();
 
@@ -89,8 +91,17 @@ void rs101_limitexample()
 
   // First, let's use a Calculator based on the Profile Likelihood Ratio
   ProfileLikelihoodCalculator plc(*data, *modelWithConstraints, paramOfInterest); 
-  plc.SetTestSize(.1);
+  plc.SetTestSize(.05);
   ConfInterval* lrint = plc.GetInterval();  // that was easy.
+
+  // Let's make a plot
+  TCanvas* dataCanvas = new TCanvas("dataCanvas");
+  dataCanvas->Divide(2,1);
+
+  dataCanvas->cd(1);
+  LikelihoodIntervalPlot plotInt((LikelihoodInterval*)lrint);
+  plotInt.SetTitle("Profile Likelihood Ratio and Posterior for S");
+  plotInt.Draw();
 
   // Second, use a Calculator based on the Feldman Cousins technique
   FeldmanCousins fc;
@@ -100,7 +111,7 @@ void rs101_limitexample()
   fc.UseAdaptiveSampling(true);
   fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
   fc.SetNBins(100); // number of points to test per parameter
-  fc.SetTestSize(.1);
+  fc.SetTestSize(.05);
   //  fc.SaveBeltToFile(true); // optional
   ConfInterval* fcint = NULL;
   fcint = fc.GetInterval();  // that was easy.
@@ -114,21 +125,13 @@ void rs101_limitexample()
   mc.SetParameters(paramOfInterest);
   mc.SetProposalFunction(up);
   mc.SetNumIters(100000); // steps in the chain
-  mc.SetTestSize(.1); // 90% CL
+  mc.SetTestSize(.05); // 90% CL
   mc.SetNumBins(50); // used in posterior histogram
   mc.SetNumBurnInSteps(40); // ignore first steps in chain due to "burn in"
   ConfInterval* mcmcint = NULL;
   mcmcint = mc.GetInterval();
 
-  // Let's make a plot
-  TCanvas* dataCanvas = new TCanvas("dataCanvas");
-  dataCanvas->Divide(2,1);
 
-
-  dataCanvas->cd(1);
-  LikelihoodIntervalPlot plotInt((LikelihoodInterval*)lrint);
-  plotInt.SetTitle("Profile Likelihood Ratio and Posterior for S");
-  plotInt.Draw();
 
   // draw posterior
   TH1* posterior = ((MCMCInterval*)mcmcint)->GetPosteriorHist();  
