@@ -206,6 +206,7 @@ MarkovChain* MetropolisHastings::ConstructChain()
 
       fPropFunc->Propose(xPrime, x);
 
+      // check if nll for xprime had an error status
       RooStats::SetParameters(&xPrime, fParameters);
       xPrimeL = fFunction->getVal();
 

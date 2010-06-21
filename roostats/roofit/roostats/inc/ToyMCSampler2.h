@@ -1,5 +1,5 @@
 // @(#)root/roostats:$Id$
-// Author: Sven Kreiss    June 2010
+// Author: Sven Kreiss and Kyle Cranmer    June 2010
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 // Additions and modifications by Mario Pelliccioni
 /*************************************************************************
@@ -48,12 +48,12 @@ namespace RooStats {
 class ToyMCSampler2: public TestStatSampler {
 
    public:
-      ToyMCSampler2(TestStatistic &ts, Int_t ntoys = 1000) :
+      ToyMCSampler2(TestStatistic &ts, Int_t ntoys) :
          fTestStat(&ts), fSamplingDistName("temp"), fNToys(ntoys)
       {
          fPdf = NULL;
          fPriorNuisance = NULL;
-         fPOI = NULL;
+         fNullPOI = NULL;
          fNuisancePars = NULL;
          fObservables = NULL;
          fGlobalObservables = NULL;
@@ -66,37 +66,37 @@ class ToyMCSampler2: public TestStatSampler {
       virtual ~ToyMCSampler2() {
       }
 
-      virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& nullPOI);
+      // main interface
+      virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramPoint);
 
-      virtual RooAbsData* GenerateToyData(RooArgSet& /*nullPOI*/) const;
+      // generates toy data
+      virtual RooAbsData* GenerateToyData(RooArgSet& /*paramPoint*/) const;
 
 
 
-      // append more toys to sampling distribution
-      virtual SamplingDistribution* AppendSamplingDistribution(
-         RooArgSet& nullPOI,
-         SamplingDistribution* last,
-         Int_t nToys
-      ) {
-        Int_t tmp = fNToys;
-        fNToys = nToys;
-        SamplingDistribution* newSamples = GetSamplingDistribution(nullPOI);
-        fNToys = tmp;
+      // Extended interface to append to sampling distribution more samples
+      virtual SamplingDistribution* AppendSamplingDistribution(RooArgSet& allParameters, 
+							       SamplingDistribution* last, 
+							       Int_t additionalMC) {
 
-        if(last) {
-           last->Add(newSamples);
-           delete newSamples;
-           return last;
-        }
+	Int_t tmp = fNToys;
+	fNToys = additionalMC;
+	SamplingDistribution* newSamples = GetSamplingDistribution(allParameters);
+	fNToys = tmp;
+	
+	if(last){
+	  last->Add(newSamples);
+	  delete newSamples;
+	  return last;
+	}
 
-        return newSamples;
+	return newSamples;
       }
 
 
-
       // Main interface to evaluate the test statistic on a dataset
-      virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& allParameters) {
-         return fTestStat->Evaluate(data, allParameters);
+      virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& nullPOI) {
+         return fTestStat->Evaluate(data, nullPOI);
       }
 
       virtual TestStatistic* GetTestStatistic() const { return fTestStat; }
@@ -115,12 +115,12 @@ class ToyMCSampler2: public TestStatSampler {
       }
 
 
+      // specify the values of parameters used when evaluating test statistic
+      virtual void SetParametersForTestStat(const RooArgSet& nullpoi) { fNullPOI = (RooArgSet*)nullpoi.snapshot(); }
       // Set the Pdf, add to the the workspace if not already there
       virtual void SetPdf(RooAbsPdf& pdf) { fPdf = &pdf; }
       // How to randomize the prior. Set to NULL to deactivate randomization.
       virtual void SetPriorNuisance(RooAbsPdf* pdf) { fPriorNuisance = pdf; }
-      // specify the parameters of interest in the interval
-      virtual void SetParameters(const RooArgSet& poi) { fPOI = &poi; }
       // specify the nuisance parameters (eg. the rest of the parameters)
       virtual void SetNuisanceParameters(const RooArgSet& np) { fNuisancePars = &np; }
       // specify the observables in the dataset (needed to evaluate the test statistic)
@@ -137,6 +137,7 @@ class ToyMCSampler2: public TestStatSampler {
       // Set the TestStatistic (want the argument to be a function of the data & parameter points
       virtual void SetTestStatistic(TestStatistic *testStatistic) { fTestStat = testStatistic; }
 
+      // SetModel does not load the snapshot. Use LoadSnapshot if necessary.
       virtual void SetExpectedNuisancePar(Bool_t i) { fExpectedNuisancePar = i; cout << "WILL NOT WORK YET" << endl; } // TODO
       virtual void SetAsimovNuisancePar(Bool_t i) { fExpectedNuisancePar = i; cout << "WILL NOT WORK YET" << endl; } // TODO
 
@@ -146,6 +147,7 @@ class ToyMCSampler2: public TestStatSampler {
       // control to use bin data generation
       void SetGenerateBinned(bool binned = true) { fGenerateBinned = binned; }
 
+      // Set the name of the sampling distribution used for plotting
       void SetSamplingDistName(const char* name) { if(name) fSamplingDistName = name; }
 
    private:
@@ -153,7 +155,7 @@ class ToyMCSampler2: public TestStatSampler {
       RooAbsPdf *fPdf; // model
       string fSamplingDistName; // name of the model
       RooAbsPdf *fPriorNuisance; // prior pdf for nuisance parameters
-      const RooArgSet *fPOI; // parameters of interest
+      RooArgSet *fNullPOI; // parameters of interest
       const RooArgSet *fNuisancePars;
       const RooArgSet *fObservables;
       const RooArgSet *fGlobalObservables;

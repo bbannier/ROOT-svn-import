@@ -65,7 +65,7 @@ namespace RooStats {
       fOwnsWorkspace = true;
       fDataName = "";
       fPdfName = "";
-      fPOI = 0;
+      fNullPOI = 0;
       fNuisParams=0;
       fObservables=0;
       fExtended = kTRUE;
@@ -105,6 +105,7 @@ namespace RooStats {
       std::vector<Double_t> testStatVec;
       //       cout << " about to generate sampling dist " << endl;
 
+      RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
       RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 
       for(Int_t i=0; i<fNtoys; ++i){
@@ -114,7 +115,9 @@ namespace RooStats {
 	//	delete toydata;
 
 	RooDataSet* toydata = (RooDataSet*)GenerateToyData(allParameters);
-	testStatVec.push_back( fTestStat->Evaluate(*toydata, allParameters) );
+
+	// note, evaluation always done at fNullPOI
+	testStatVec.push_back( fTestStat->Evaluate(*toydata, *fNullPOI) );
 
 	// want to clean up memory, but delete toydata causes problem with 
 	// nll->setData(data, noclone) because pointer to last data set is no longer valid
@@ -125,6 +128,7 @@ namespace RooStats {
 	fLastDataSet = toydata;
       }
      
+       RooMsgService::instance().setGlobalKillBelow(msglevel);
 
       //      cout << " generated sampling dist " << endl;
       return new SamplingDistribution( "temp",//MakeName(allParameters).c_str(),
@@ -144,15 +148,20 @@ namespace RooStats {
 	 RemoveConstantParameters(observables); // observables might be set constant, this is just a guess
 
 
-	 if(fPOI) observables->remove(*fPOI, kFALSE, kTRUE);
+	 if(fNullPOI) observables->remove(*fNullPOI, kFALSE, kTRUE);
 	 if(fNuisParams) observables->remove(*fNuisParams, kFALSE, kTRUE);
 	 cout << "will use the following as observables when generating data" << endl;
 	 observables->Print();
 	 fObservables=observables;
-       }
+       } /*else {
+	   cout << "obs set: will use the following as observables when generating data" << endl;
+	   fObservables->Print();
+	   }*/
 
        //fluctuate the number of events if fExtended is on.  
        // This is a bit slippery for number counting expts. where entry in data and
+
+       /*
        // model is number of events, and so number of entries in data always =1.
        Int_t nEvents = fNevents;
        if(fExtended) {
@@ -163,6 +172,7 @@ namespace RooStats {
 	   nEvents = fRand->Poisson(fNevents);
 	 }
        }
+       */
 
        // Set the parameters to desired values for generating toys
        RooArgSet* parameters = pdf->getParameters(fObservables);
@@ -179,7 +189,12 @@ namespace RooStats {
        RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 
        //       cout << "nEvents = " << nEvents << endl;
-       RooAbsData* data = (RooAbsData*)pdf->generate(*fObservables, nEvents);
+       RooAbsData* data = NULL;
+       if(fExtended) {
+	 data = (RooAbsData*)pdf->generate(*fObservables, RooFit::Extended());
+       } else {
+	 data = (RooAbsData*)pdf->generate(*fObservables, fNevents);
+     }
 
        RooMsgService::instance().setGlobalKillBelow(level) ;
        delete parameters;
@@ -251,13 +266,17 @@ namespace RooStats {
       virtual void SetData(const char* name) {fDataName = name;}
       // specify the name of the PDF in the workspace to be used
       virtual void SetPdf(const char* name) {fPdfName = name;}
+      // How to randomize the prior. Set to NULL to deactivate randomization.
+      virtual void SetPriorNuisance(RooAbsPdf* /*not supported*/) {}
 
-      // specify the parameters of interest in the interval
-      virtual void SetParameters(const RooArgSet& set) {fPOI = &set;}
+      // specify the values of parameters used when evaluating test statistic
+      virtual void SetParametersForTestStat(const RooArgSet& nullpoi) {fNullPOI = (RooArgSet*)nullpoi.snapshot();}
       // specify the nuisance parameters (eg. the rest of the parameters)
       virtual void SetNuisanceParameters(const RooArgSet& set) {fNuisParams = &set;}
       // specify the observables in the dataset (needed to evaluate the test statistic)
       virtual void SetObservables(const RooArgSet& set) {fObservables = &set;}
+      // specify the conditional observables
+      virtual void SetGlobalObservables(const RooArgSet& ) {}
 
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
       virtual void SetTestSize(Double_t size) {fSize = size;}
@@ -269,15 +288,18 @@ namespace RooStats {
 	fTestStat = testStat;
       }  
 
+      // Set the name of the sampling distribution used for plotting
+      void SetSamplingDistName(const char* name) { if(name) fSamplingDistName = name; }
 
       
    private:
       Double_t fSize;
       RooWorkspace* fWS; // a workspace that owns all the components to be used by the calculator
       Bool_t fOwnsWorkspace; // flag if this object owns its workspace
+      string fSamplingDistName; // name of the model
       const char* fPdfName; // name of  common PDF in workspace
       const char* fDataName; // name of data set in workspace
-      const RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
+      RooArgSet* fNullPOI; // the values of parameters used when evaluating test statistic
       const RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
       mutable const RooArgSet* fObservables; // RooArgSet specifying the observables in the dataset (needed to evaluate the test statistic)
       TestStatistic* fTestStat; // pointer to the test statistic that is being sampled

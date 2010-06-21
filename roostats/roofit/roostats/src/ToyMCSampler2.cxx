@@ -23,19 +23,19 @@ namespace RooStats {
 
 Bool_t ToyMCSampler2::CheckConfig(void) {
    // only checks, no guessing/determination (do this in calculators,
-   // e.g. using ModelConfig::GuessObsAndNuissance(...))
+   // e.g. using ModelConfig::GuessObsAndNuisance(...))
    bool goodConfig = true;
 
    // TODO
    //if(!fTestStat) { ooccoutE(NULL,InputArguments) << "Test statistic not set." << endl; goodConfig = false; }
    if(!fObservables) { cout << "Observables not set." << endl; goodConfig = false; }
-   if(!fPOI) { cout << "Parameters of interest not set." << endl; goodConfig = false; }
+   if(!fNullPOI) { cout << "Parameter values used to evaluate for test statistic  not set." << endl; goodConfig = false; }
    if(!fPdf) { cout << "Pdf not set." << endl; goodConfig = false; }
 
    return goodConfig;
 }
 
-SamplingDistribution* ToyMCSampler2::GetSamplingDistribution(RooArgSet& nullPOI) {
+SamplingDistribution* ToyMCSampler2::GetSamplingDistribution(RooArgSet& paramPoint) {
    CheckConfig();
 
    std::vector<Double_t> testStatVec;
@@ -47,7 +47,8 @@ SamplingDistribution* ToyMCSampler2::GetSamplingDistribution(RooArgSet& nullPOI)
    RooDataSet *nuisanceParPoints = NULL;
    if (fPriorNuisance  &&  fNuisancePars) {
       if (fExpectedNuisancePar) {
-#ifdef EXPECTED_NUISANCE_PAR
+         // ad hoc method
+#ifdef EXPECTED_NUISANCE_PAR // under development
          nuisanceParPoints = fModel->GetPriorPdf()->generateBinned(
             *fModel->GetNuisanceParameters(),
             RooFit::ExpectedData(),
@@ -59,21 +60,36 @@ SamplingDistribution* ToyMCSampler2::GetSamplingDistribution(RooArgSet& nullPOI)
          }
 #endif
       }else{
+         // ad hoc method
          nuisanceParPoints = fPriorNuisance->generate(*fNuisancePars, fNToys);
+
+         // TODO will not work for principled case as global variable changes prior pdf of nuisance
+         // parameters
       }
    }
 
 
    for (Int_t i = 0; i < fNToys; ++i) {
       if (nuisanceParPoints) {
-         *allVars = *nuisanceParPoints->get(i);
-         RooAbsData* toydata = GenerateToyData(nullPOI);
-         testStatVec.push_back(fTestStat->Evaluate(*toydata, nullPOI));
+	 // set variables to requested parameter point
+	 *allVars = paramPoint;
+	 // set nuisance parameters to randomized value
+	 *allVars = *nuisanceParPoints->get(i);
+
+	 // generate toy data for this parameter point
+         RooAbsData* toydata = GenerateToyData(*allVars);
+
+	 // evaluate test statistic, that only depends on null POI
+         testStatVec.push_back(fTestStat->Evaluate(*toydata, *fNullPOI));
          testStatWeights.push_back(nuisanceParPoints->weight());
          delete toydata;
       }else{
-         RooAbsData* toydata = GenerateToyData(nullPOI);
-         testStatVec.push_back(fTestStat->Evaluate(*toydata, nullPOI));
+	 // set variables to requested parameter point
+	 *allVars = paramPoint;
+	 // generate toy data for this parameter point
+         RooAbsData* toydata = GenerateToyData(*allVars);
+	 // evaluate test statistic, that only depends on null POI
+         testStatVec.push_back(fTestStat->Evaluate(*toydata, *fNullPOI));
          delete toydata;
       }
    }
@@ -126,9 +142,6 @@ RooAbsData* ToyMCSampler2::GenerateToyData(RooArgSet& /*nullPOI*/) const {
       if(fGenerateBinned) data = fPdf->generateBinned(observables, RooFit::Extended());
       else                data = fPdf->generate      (observables, RooFit::Extended());
    } else {
-      if(fNEvents == 0) {
-         cout << "ERROR: Please specify number of events or use extended pdf." << endl;
-      }
       if(fGenerateBinned) data = fPdf->generateBinned(observables, fNEvents);
       else                data = fPdf->generate      (observables, fNEvents);
    }

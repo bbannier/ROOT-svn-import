@@ -1,5 +1,5 @@
 // @(#)root/roostats:$Id$
-// Author: Sven Kreiss    June 2010
+// Authors: Kyle Cranmer, Sven Kreiss    June 2010
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -38,85 +38,117 @@ namespace RooStats {
 class RatioOfProfiledLikelihoodsTestStat: public TestStatistic {
 
    public:
-      RatioOfProfiledLikelihoodsTestStat(RooAbsPdf& nullPdf, RooAbsPdf& altPdf) :
-         fNullPdf(nullPdf), fAltPdf(altPdf)
+  RatioOfProfiledLikelihoodsTestStat(RooAbsPdf& nullPdf, RooAbsPdf& altPdf, 
+				     const RooArgSet* altPOI=0) :
+    fNullPdf(nullPdf), fAltPdf(altPdf), fSubtractMLE(true)
       {
-         // Calculates the ratio of profiled likelihoods. The variable values
-         // for the alternative hypothesis are taken at the time of the construction
-         // of this test statistics. The null hypotheses values are passed into
-         // each call of Evaluate(...).
+	/*
+         Calculates the ratio of profiled likelihoods. 
 
-         fAltVars = (RooArgSet*)fAltPdf.getVariables()->snapshot();
-      }
-      ~RatioOfProfiledLikelihoodsTestStat(void) {
-         delete fAltVars;
-      }
+	 By default the calculation is:
 
-      Double_t ProfiledLikelihood(RooAbsData& data, RooArgSet& poi, RooAbsPdf& pdf) {
-         RooArgSet* constrainedParams = pdf.getParameters(data);
-         RemoveConstantParameters(constrainedParams);
-         RooNLLVar* nll = (RooNLLVar*) pdf.createNLL(data, RooFit::CloneData(kFALSE), RooFit::Constrain(*constrainedParams));
-         RooProfileLL* profile = (RooProfileLL*) nll->createProfile(poi);
-         double nllVal = profile->getVal();
-         delete profile;
-         delete nll;
-         delete constrainedParams;
+	    Lambda(mu_alt , conditional MLE for alt nuisance) 
+	log --------------------------------------------
+   	    Lambda(mu_null , conditional MLE for null nuisance)
 
-         return nllVal;
-      }
+	where Lambda is the profile likeihood ratio, so the 
+	MLE for the null and alternate are subtracted off.
 
-      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullParamsOfInterest) {
-         RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-         RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+	If SetSubtractMLE(false) then it calculates:
 
-         // construct allVars
-         RooArgSet *allVars = fNullPdf.getVariables();
-         RooArgSet *altVars = fAltPdf.getVariables();
-         allVars->add(*altVars);
-         delete altVars;
-
-         RooArgSet *saveNullPOI = (RooArgSet*)nullParamsOfInterest.snapshot();
-         RooArgSet *saveAll = (RooArgSet*)allVars->snapshot();
+	    L(mu_alt , conditional MLE for alt nuisance) 
+	log --------------------------------------------
+	    L(mu_null , conditional MLE for null nuisance)
 
 
-         // null
-         *allVars = nullParamsOfInterest;
-         double nullNLL = ProfiledLikelihood(data, nullParamsOfInterest, fNullPdf);
+	The values of the parameters of interest for the alternative 
+	hypothesis are taken at the time of the construction.
+	If empty, it treats all free parameters as nuisance parameters.
 
-         // alt
-         RooArgSet altPOI(nullParamsOfInterest);
-         altPOI = *fAltVars;
-         *allVars = altPOI;
-         double altNLL = ProfiledLikelihood(data, altPOI, fAltPdf);
+	The value of the parameters of interest for the null hypotheses 
+	are given at each call of Evaluate(data,nullPOI).
+	*/
+	if(altPOI)
+	  fAltPOI = (RooArgSet*) altPOI->snapshot();
+	else
+	  fAltPOI = new RooArgSet(); // empty set
 
-
-         *allVars = *saveAll;
-         delete saveAll;
-         delete allVars;
-
-         nullParamsOfInterest = *saveNullPOI;
-         delete saveNullPOI;
-
-         RooMsgService::instance().setGlobalKillBelow(msglevel);
-         return -((-nullNLL) - (-altNLL));
       }
 
-      // TODO It has to be implemented?
-      virtual const RooAbsArg* GetTestStatistic() const { return NULL; }
+    //__________________________________________
+    ~RatioOfProfiledLikelihoodsTestStat(void) {
+      if(fAltPOI) delete fAltPOI;
+    }
+    
+    //__________________________________________
+    Double_t ProfiledLikelihood(RooAbsData& data, RooArgSet& poi, RooAbsPdf& pdf) {
+      // returns -logL(poi, conditonal MLE of nuisance params)
+      // it does not subtract off the global MLE
+      // because  nuisance parameters of null and alternate may not
+      // be the same.
+      RooAbsReal* nll = pdf.createNLL(data, RooFit::CloneData(kFALSE));      
+      RooAbsReal* profile = nll->createProfile(poi);
+      // make sure we set the variables attached to this nll
+      RooArgSet* attachedSet = nll->getVariables();
+      *attachedSet = poi;
+      // now evaluate profile to set nuisance to conditional MLE values
+      double nllVal =  profile->getVal();
+      // but we may want the nll value without subtracting off the MLE      
+      if(!fSubtractMLE) nllVal = nll->getVal();
 
-      virtual const TString GetVarName() const { return "log(L(#mu_{1},#hat{#nu}_{1}) / L(#mu_{0},#hat{#nu}_{0}))"; }
-
-      const bool PValueIsRightTail(void) { return false; } // overwrites default
-
-
-   private:
-      RooAbsPdf& fNullPdf;
-      RooAbsPdf& fAltPdf;
-      RooArgSet* fAltVars;
-
-   protected:
-   ClassDef(RatioOfProfiledLikelihoodsTestStat,1)
-};
+      delete attachedSet;
+      delete profile;
+      delete nll;
+      
+      return nllVal;
+    }
+    
+    //__________________________________________
+    virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullParamsOfInterest) {
+      RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
+      RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+      
+      /*
+	// if we want to set params back to what they were
+      RooArgSet *nullParams = fNullPdf.getParameters(data);
+      RooArgSet *altParams = fAltPdf.getParameters(data);
+      allVars->add(*altVars);
+      RooArgSet *saveAll = (RooArgSet*)allVars->snapshot();  
+      */
+      
+      // null
+      double nullNLL = ProfiledLikelihood(data, nullParamsOfInterest, fNullPdf);
+      
+      // alt 
+      double altNLL = ProfiledLikelihood(data, *fAltPOI, fAltPdf);
+           
+      /*      
+      // set variables back to where they were
+      *allVars = *saveAll;
+      delete saveAll;
+      delete allVars;
+      */
+      
+      RooMsgService::instance().setGlobalKillBelow(msglevel);
+      return nullNLL -altNLL;
+    }
+    
+   
+    virtual const TString GetVarName() const { return "log(L(#mu_{1},#hat{#nu}_{1}) / L(#mu_{0},#hat{#nu}_{0}))"; }
+    
+    //    const bool PValueIsRightTail(void) { return false; } // overwrites default
+    
+    void SetSubtractMLE(bool subtract){fSubtractMLE = subtract;}
+    
+  private:
+    RooAbsPdf& fNullPdf;
+    RooAbsPdf& fAltPdf;
+    RooArgSet* fAltPOI;
+    Bool_t fSubtractMLE;
+    
+  protected:
+    ClassDef(RatioOfProfiledLikelihoodsTestStat,1)
+      };
 
 }
 

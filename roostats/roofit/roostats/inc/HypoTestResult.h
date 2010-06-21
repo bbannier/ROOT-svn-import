@@ -1,6 +1,5 @@
 // @(#)root/roostats:$Id$
-// Author: Sven Kreiss   June 2010
-// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
+// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke, Sven Kreiss
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -77,7 +76,7 @@ namespace RooStats {
       void SetPValueIsRightTail(Bool_t pr);
       Bool_t GetPValueIsRightTail(void) { return fPValueIsRightTail; }
 
-      void PrintMore() const {
+      void Print(const Option_t* ) const {
          // Print out some information about the results
 
          cout << endl << "Results " << GetName() << ": " << endl;
@@ -103,8 +102,8 @@ namespace RooStats {
 
    protected:
 
-      Double_t fNullPValue; // p-value for the null hypothesis (small number means disfavored)
-      Double_t fAlternatePValue; // p-value for the alternate hypothesis (small number means disfavored)
+      mutable Double_t fNullPValue; // p-value for the null hypothesis (small number means disfavored)
+      mutable Double_t fAlternatePValue; // p-value for the alternate hypothesis (small number means disfavored)
       Double_t fTestStatisticData; // result of the test statistic evaluated on data
       const SamplingDistribution *fNullDistr;
       const SamplingDistribution *fAltDistr;
