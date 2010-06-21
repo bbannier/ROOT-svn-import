@@ -73,6 +73,7 @@ public:
    void SetNEvents(Long64_t nevents);
    void SetMaxNWorkers(Int_t maxnworkers);
    void SetMaxNWorkers(TString sworkers);
+   void SetDataSetCleanup(const TString& dataset);
    void SetDraw(Int_t draw);
    void SetDebug(Int_t debug);
    TFile* OpenFile(const char* filename="",
@@ -85,6 +86,7 @@ public:
    TProofBenchRun::ECleanupType GetCleanupType()const;
    Long64_t GetNEvents()const;
    Int_t GetMaxNWorkers()const;
+   TString GetDataSetCleanup()const;
    Int_t GetDraw()const;
    Int_t GetDebug()const;
    TFile* GetFile()const;
@@ -108,6 +110,7 @@ private:
    Long64_t fNEvents;            //number of events per file for CPU test and/or I/O test
    Int_t fMaxNWorkers;           //number of maximum processes, 
                                  //this can be more than the number of total workers in the cluster
+   TString fDataSetCleanup;      //data set to be cleaned up at nodes using fadvice
    Int_t fDraw;
    Int_t fDebug;
 

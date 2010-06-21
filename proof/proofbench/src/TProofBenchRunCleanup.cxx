@@ -145,108 +145,131 @@ void TProofBenchRunCleanup::Run(Long64_t,
 
    proof->AddInput(arun);
    */
-   SetParameters();
 
    //if (CheckParameters("RunBenchmark")) return;
    Int_t nactive_sav=fProof->GetParallel();
    fProof->SetParallel(99999);
 
+   DeleteParameters();
+   SetParameters();
+
    //fProof->Process(fDataSetGeneratedCleanup, "TSelEvent", "", -1);
 
-   TString dsname="DataSetEventCleanup";
-   TFileCollection* fc_cleanup=fProof->GetDataSet(dsname.Data());
+   if (fCleanupType==TProofBenchRun::kCleanupFile){
+      TString dsname="DataSetEventCleanup";
+      TFileCollection* fc_cleanup=fProof->GetDataSet(dsname.Data());
 
-   TTime starttime = gSystem->Now();
-   if (fc_cleanup){
-      fProof->Process(fc_cleanup, "TSelEvent", "", -1);
-   }
-   else{
-      Error("Run", "File Collection does not exist; returning", dsname.Data());
-      return;
-   }
+      TTime starttime = gSystem->Now();
+      if (fc_cleanup){
+         fProof->Process(fc_cleanup, "TSelEvent", "", -1);
+      }
+      else{
+         Error("Run", "File Collection does not exist; returning", dsname.Data());
+         return;
+      }
 
-   if (debug){
-
-      TList* l = fProof->GetOutputList();
-
-      TString perfstats_name = "PROOF_PerfStats";
-      //save perfstats
-      TTree* t = dynamic_cast<TTree*>(l->FindObject(perfstats_name.Data()));
-
-      static Long64_t ncalls=0;
-
-      if (t) {
-         t->SetDirectory(fDirProofBench);
-
-         //build up new name
-         TString newname = perfstats_name;
-         newname+="_";
-         newname+="Cleanup";
-         newname+=Form("%lld", ncalls);
-         t->SetName(newname);
-
-         if (fWritable){
-            fDirProofBench->cd();
-            t->Write();
+      if (debug){
+   
+         TList* l = fProof->GetOutputList();
+   
+         TString perfstats_name = "PROOF_PerfStats";
+         //save perfstats
+         TTree* t = dynamic_cast<TTree*>(l->FindObject(perfstats_name.Data()));
+   
+         static Long64_t ncalls=0;
+   
+         if (t) {
+            t->SetDirectory(fDirProofBench);
+   
+            //build up new name
+            TString newname = perfstats_name;
+            newname+="_";
+            newname+="Cleanup";
+            newname+=Form("%lld", ncalls);
+            t->SetName(newname);
+   
+            if (fWritable){
+               fDirProofBench->cd();
+               t->Write();
+            }
+         } else {
+            Error("RunBenchmark", "tree %s not found",  perfstats_name.Data());
          }
-      } else {
-         Error("RunBenchmark", "tree %s not found",  perfstats_name.Data());
-      }
-
-      //save outputhistos
-      TString ptdist_name = "pt_dist";
-      TH1* h = dynamic_cast<TH1*>(l->FindObject(ptdist_name.Data()));
-      if (h) {
-         //TDirectory* hdir = h->GetDirectory();
-         //TDirectory* dirsav = gDirectory;
-         //fFile->cd();
-         TH1 *hnew = (TH1*)h->Clone("hnew");
-
-         hnew->SetDirectory(fDirProofBench);
-         TString origname = h->GetName();
-         TString newname = ptdist_name;
-         newname+="_";
-         newname+="Cleanup";
-         newname+=Form("%lld", ncalls);
-         hnew->SetName(newname);
-
-         if (fWritable){
-            fDirProofBench->cd();
-            hnew->Write();
-            delete hnew;
+   
+         //save outputhistos
+         TString ptdist_name = "pt_dist";
+         TH1* h = dynamic_cast<TH1*>(l->FindObject(ptdist_name.Data()));
+         if (h) {
+            //TDirectory* hdir = h->GetDirectory();
+            //TDirectory* dirsav = gDirectory;
+            //fFile->cd();
+            TH1 *hnew = (TH1*)h->Clone("hnew");
+   
+            hnew->SetDirectory(fDirProofBench);
+            TString origname = h->GetName();
+            TString newname = ptdist_name;
+            newname+="_";
+            newname+="Cleanup";
+            newname+=Form("%lld", ncalls);
+            hnew->SetName(newname);
+   
+            if (fWritable){
+               fDirProofBench->cd();
+               hnew->Write();
+               delete hnew;
+            }
+         } else {
+            Error("RunBenchmark", "histogram %s not found",  ptdist_name.Data());
          }
-      } else {
-         Error("RunBenchmark", "histogram %s not found",  ptdist_name.Data());
-      }
-
-      TString tracksdist_name = "ntracks_dist";
-      TH1* h2 = dynamic_cast<TH1*>(l->FindObject(tracksdist_name.Data()));
-      if (h2) {
-         //TDirectory* hdir = h2->GetDirectory();
-         //TDirectory* dirsav = gDirectory;
-         //fFile->cd();
-         TH1 *hnew = (TH1*)h2->Clone("hnew");
-         hnew->SetDirectory(fDirProofBench);
-         //TString origname = h2->GetName();
-         TString newname = tracksdist_name;
-         newname+="_";
-         newname+="Cleanup";
-         newname+=Form("%lld", ncalls);
-         hnew->SetName(newname);
-         if (fWritable){
-            fDirProofBench->cd();
-            hnew->Write();
-            delete hnew;
+   
+         TString tracksdist_name = "ntracks_dist";
+         TH1* h2 = dynamic_cast<TH1*>(l->FindObject(tracksdist_name.Data()));
+         if (h2) {
+            //TDirectory* hdir = h2->GetDirectory();
+            //TDirectory* dirsav = gDirectory;
+            //fFile->cd();
+            TH1 *hnew = (TH1*)h2->Clone("hnew");
+            hnew->SetDirectory(fDirProofBench);
+            //TString origname = h2->GetName();
+            TString newname = tracksdist_name;
+            newname+="_";
+            newname+="Cleanup";
+            newname+=Form("%lld", ncalls);
+            hnew->SetName(newname);
+            if (fWritable){
+               fDirProofBench->cd();
+               hnew->Write();
+               delete hnew;
+            }
          }
+         else {
+            Error("RunBenchmark", "histogram %s not found",  tracksdist_name.Data());
+         }
+         ncalls++;
       }
-      else {
-         Error("RunBenchmark", "histogram %s not found",  tracksdist_name.Data());
-      }
-      ncalls++;
-      fProof->SetParallel(nactive_sav);
    }
+   else if (fCleanupType==TProofBenchRun::kCleanupKernel){
+      TString inputdataname="PROOF_BenchmarkFilesToCleanupCacheFor";
+      //fProof->ClearInputData(inputdataname.Data());
+
+      TFileCollection* fc=fProof->GetDataSet(fDataSetCleanup.Data());
+      THashList* l=fc->GetList();
+
+      THashList* lcopy=dynamic_cast<THashList*>(l->Clone());
+ 
+      lcopy->SetName(inputdataname.Data());
+      fProof->AddInputData(lcopy); 
+
+      fProof->Process("TSelEvent", Long64_t(0));
+      fProof->ClearInputData(inputdataname.Data()); 
+   }
+   else if (fCleanupType==TProofBenchRun::kCleanupNotSpecified){
+      Error("Run", "fCleanupType==kCleanupNotSpecified; try again"
+                   " with either TProofBenchRun::kCleanupFile or TProofBenchRun::kCleanupKernel");
+   }
+
    DeleteParameters();
-
+   fProof->SetParallel(nactive_sav);
 }
 
 void TProofBenchRunCleanup::BuildPerfProfiles(Int_t,
@@ -336,6 +359,11 @@ void TProofBenchRunCleanup::SetMaxNWorkers(TString sworkers)
    return;
 }
 
+void TProofBenchRunCleanup::SetDataSetCleanup(const TString& dataset)
+{
+   fDataSetCleanup=dataset;
+}
+
 void TProofBenchRunCleanup::SetDraw(Int_t draw)
 {
    fDraw=draw;
@@ -421,6 +449,11 @@ Int_t TProofBenchRunCleanup::GetMaxNWorkers()const
    return fMaxNWorkers;
 }
 
+TString TProofBenchRunCleanup::GetDataSetCleanup()const
+{
+   return fDataSetCleanup;
+}
+
 Int_t TProofBenchRunCleanup::GetDraw()const
 {
    return fDraw;
@@ -454,6 +487,7 @@ Int_t TProofBenchRunCleanup::SetParameters(){
    fProof->SetParameter("PROOF_BenchmarkCleanupType", Int_t(fCleanupType));
    fProof->SetParameter("PROOF_BenchmarkDraw", Int_t(fDraw));
    fProof->SetParameter("PROOF_BenchmarkDebug", Int_t(fDebug));
+
    return 0;
 }
 

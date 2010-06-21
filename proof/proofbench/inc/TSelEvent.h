@@ -88,6 +88,7 @@ public :
 
    TProofBenchRun::EReadType GetReadType(){return fReadType;}
    TProofBenchRun::ECleanupType GetCleanupType(){return fCleanupType;}
+   THashList* GetFilesToCleanupCacheFor(){return fFilesToCleanupCacheFor;}
    Bool_t GetDraw(){return fDraw;}
    Bool_t GetDebug(){return fDebug;}
    TCanvas* GetCHist(){return fCHist;}
@@ -98,6 +99,7 @@ private:
 
    TProofBenchRun::EReadType fReadType; //read type
    TProofBenchRun::ECleanupType fCleanupType; //read type
+   THashList* fFilesToCleanupCacheFor; //hash list of files to clean up cache for
    Bool_t fDraw; //when true, display output histograms
    Bool_t fDebug; //when true, create and fill in output histograms
    TCanvas* fCHist; //canvas to display histograms
