@@ -31,9 +31,6 @@
 #ifndef ROO_ARG_LIST
 #include "RooArgList.h"
 #endif
-// #ifndef ROO_WORKSPACE
-// #include "RooWorkspace.h"
-// #endif
 #ifndef ROOSTATS_ProposalFunction
 #include "RooStats/ProposalFunction.h"
 #endif
@@ -54,39 +51,12 @@ namespace RooStats {
       // default constructor
       MCMCCalculator();
 
-      // This constructor will set up a basic settings package including a
-      // ProposalFunction, number of iterations, burn in steps, confidence
-      // level, and interval determination method. Any of these basic
-      // settings can be overridden by calling one of the Set...() methods.
-      // Force to pass the a prior PDF for the parameter of interest 
-      MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest, RooAbsPdf & priorPdf );
-
-      // Constructor as before but without a  prior.
-      // In this case it is assumed the prior is already included in the model
-      // This constructor will set up a basic settings package including a
-      // ProposalFunction, number of iterations, burn in steps, confidence
-      // level, and interval determination method. Any of these basic
-      // settings can be overridden by calling one of the Set...() methods.
-      MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf, const RooArgSet& paramsOfInterest );
-
-      // Constructor from a ModelConfig class. 
-      // This constructor will set up a basic settings package including a
-      // ProposalFunction, number of iterations, burn in steps, confidence
-      // level, and interval determination method. Any of these basic
-      // settings can be overridden by calling one of the Set...() methods.
+      // Constructor for automatic configuration with basic settings and a
+      // ModelConfig.  Uses a UniformProposal, 10,000 iterations, 40 burn in
+      // steps, 50 bins for each RooRealVar, determines interval by histogram,
+      // and finds a 95% confidence interval.  Any of these basic settings can
+      // be overridden by calling one of the Set...() methods.
       MCMCCalculator(RooAbsData& data, const ModelConfig& model);
-
-      // alternate constructor, no automatic basic settings
-      MCMCCalculator(RooAbsData& data, const ModelConfig& model, ProposalFunction& proposalFunction,
-                     Int_t numIters, RooArgList* axes = NULL, Double_t size = 0.05);
-//       MCMCCalculator(RooWorkspace& ws, RooAbsData& data,  RooAbsPdf& pdf,
-//          const RooArgSet& paramsOfInterest, ProposalFunction& proposalFunction,
-//          Int_t numIters, RooArgList* axes = NULL, Double_t size = 0.05);
-
-      // alternate constructor, no automatic basic settings
-      MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
-                     const RooArgSet& paramsOfInterest, RooAbsPdf & priorPdf, ProposalFunction& proposalFunction,
-         Int_t numIters, RooArgList* axes = NULL, Double_t size = 0.05);
 
       virtual ~MCMCCalculator() {}
 
@@ -145,14 +115,51 @@ namespace RooStats {
       virtual void SetUseSparseHist(Bool_t useSparseHist)
       { fUseSparseHist = useSparseHist; }
 
+      // set what type of interval to have the MCMCInterval represent
+      virtual void SetIntervalType(enum MCMCInterval::IntervalType intervalType)
+      { fIntervalType = intervalType; }
+
+      // Set the left side tail fraction. This will automatically configure the
+      // MCMCInterval to find a tail-fraction interval.
+      // Note: that `a' must be in the range 0 <= a <= 1
+      // or the user will be notified of the error
+      virtual void SetLeftSideTailFraction(Double_t a);
+
+      // set the acceptable level or error for Keys interval determination
+      virtual void SetEpsilon(Double_t epsilon)
+      {
+         if (epsilon < 0)
+            coutE(InputArguments) << "MCMCInterval::SetEpsilon will not allow "
+                                  << "negative epsilon value" << endl;
+         else
+            fEpsilon = epsilon;
+      }
+
+      // kbelasco: The inner-workings of the class really should not be exposed
+      // like this in a comment, but it seems to be the only way to give
+      // the user any control over this process, if he desires it
+      //
+      // Set the fraction delta such that
+      // topCutoff (a) is considered == bottomCutoff (b) iff
+      // (TMath::Abs(a - b) < TMath::Abs(fDelta * (a + b)/2))
+      // when determining the confidence interval by Keys
+      virtual void SetDelta(Double_t delta)
+      {
+         if (delta < 0.)
+            coutE(InputArguments) << "MCMCInterval::SetDelta will not allow "
+                                  << "negative delta value" << endl;
+         else
+            fDelta = delta;
+      }
+
    protected:
 
-      Double_t fSize;          // size of the test (eg. specified rate of Type I error)
+      Double_t fSize;   // size of the test (eg. specified rate of Type I error)
       RooArgSet   fPOI;        // parameters of interest for interval
       RooArgSet   fNuisParams; // nuisance parameters for interval (not really used)
       mutable ProposalFunction* fPropFunc; // Proposal function for MCMC integration
-      RooAbsPdf * fPdf;        // pointer to common PDF (owned by the workspace) 
-      RooAbsPdf * fPriorPdf;   // pointer to prior  PDF (owned by the workspace) 
+      RooAbsPdf * fPdf;        // pointer to common PDF (owned by the workspace)
+      RooAbsPdf * fPriorPdf;   // pointer to prior  PDF (owned by the workspace)
       RooAbsData * fData;     // pointer to the data (owned by the workspace)
       Int_t fNumIters; // number of iterations to run metropolis algorithm
       Int_t fNumBurnInSteps; // number of iterations to discard as burn-in, starting from the first
@@ -161,6 +168,16 @@ namespace RooStats {
       RooArgList * fAxes; // which variables to put on each axis
       Bool_t fUseKeys; // whether to use kernel estimation to determine interval
       Bool_t fUseSparseHist; // whether to use sparse histogram (if using hist at all)
+      Double_t fLeftSideTF; // left side tail-fraction for interval
+      Double_t fEpsilon; // acceptable error for Keys interval determination
+
+      Double_t fDelta; // acceptable error for Keys cutoffs being equal
+                       // topCutoff (a) considered == bottomCutoff (b) iff
+                       // (TMath::Abs(a - b) < TMath::Abs(fDelta * (a + b)/2));
+                       // Theoretically, the Abs is not needed here, but
+                       // floating-point arithmetic does not always work
+                       // perfectly, and the Abs doesn't hurt
+      enum MCMCInterval::IntervalType fIntervalType; // type of interval to find
 
       void SetupBasicUsage();
       void SetBins(const RooAbsCollection& coll, Int_t numBins) const

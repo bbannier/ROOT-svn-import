@@ -62,8 +62,10 @@ namespace RooStats {
       void DrawPosteriorKeysProduct(const Option_t* options = NULL);
 
       void DrawInterval(const Option_t* options = NULL);
+      void DrawShortestInterval(const Option_t* options = NULL);
       void DrawHistInterval(const Option_t* options = NULL);
       void DrawKeysPdfInterval(const Option_t* options = NULL);
+      void DrawTailFractionInterval(const Option_t* options = NULL);
 
       void DrawChainScatter(RooRealVar& xVar, RooRealVar& yVar);
       void DrawParameterVsTime(RooRealVar& param);
