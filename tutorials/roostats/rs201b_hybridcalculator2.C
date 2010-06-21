@@ -86,14 +86,12 @@ void rs201b_hybridcalculator2(int ntoys = 1000)
   // to determine observables and nuisance parameters automatically using
   // the GuessObsAndNuisance(...) function.
   RooWorkspace w;
-  ModelConfig sb_model("S+B_model");
-  sb_model.SetWorkspace(w);
+  ModelConfig sb_model("S+B_model", &w);
   sb_model.SetPdf(tot_pdf);
   sb_model.SetParameters(parametersOfInterest);
   sb_model.SetSnapshot(parametersOfInterest);
 
-  ModelConfig b_model("B_model");
-  b_model.SetWorkspace(w);
+  ModelConfig b_model("B_model", &w);
   b_model.SetPdf(tot_pdf);
   b_model.SetParameters(parametersOfInterest);
   sig_yield.setVal(0.0);
@@ -129,10 +127,8 @@ void rs201b_hybridcalculator2(int ntoys = 1000)
   myH2.ForcePriorNuisanceAlt(bkg_yield_prior);  // ad hoc hybrid
   HypoTestResult *res = myH2.GetHypoTest();
   res->Print();
-  HypoTestPlot *plot = new HypoTestPlot(*res, 80); // number of bins is optional (default: 100)
-  plot->Draw();
 
-  TCanvas *c = new TCanvas("rs201b_hybridcalculator2","rs201b_hybridcalculator2");
+//  TCanvas *c = new TCanvas("rs201b_hybridcalculator2","rs201b_hybridcalculator2");
   HypoTestPlot *plot = new HypoTestPlot(*res, 80); // number of bins is optional (default: 100)
   plot->Draw();
 //  plot->DumpToFile("test.root", "RECREATE");
