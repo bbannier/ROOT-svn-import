@@ -35,8 +35,9 @@ class TestStatistic {
       virtual ~TestStatistic() {
       }
 
-      // Main interface to evaluate the test statistic on a dataset
-      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& paramsOfInterest) = 0;
+      // Main interface to evaluate the test statistic on a dataset given the
+      // values for the Null Parameters Of Interest.
+      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullPOI) = 0;
 
       virtual const RooAbsArg* GetTestStatistic() const = 0;
 

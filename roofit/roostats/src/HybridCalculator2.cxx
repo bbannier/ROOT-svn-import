@@ -34,11 +34,33 @@ HybridCalculator2::HybridCalculator2(
    fTestStatSampler(sampler),
    fAltModel(altModel),
    fNullModel(nullModel),
-   fData(data)
+   fData(data),
+   fForcePriorNuisance(NULL)
 {
 }
 
-HybridResult* HybridCalculator2::GetHypoTest() const {
+void HybridCalculator2::SetModel(ModelConfig& model) const {
+   fTestStatSampler.SetSamplingDistName(model.GetName());
+   fTestStatSampler.SetPdf(*model.GetPdf());
+   fTestStatSampler.SetObservables(*model.GetObservables());
+   fTestStatSampler.SetGlobalObservables(*model.GetGlobalObservables());
+   fTestStatSampler.SetNuisanceParameters(*model.GetNuisanceParameters());
+   fTestStatSampler.SetParameters(*model.GetParametersOfInterest());
+
+   if(model.GetNuisanceParameters()  &&  model.GetNuisanceParameters()->getSize() > 0) {
+      if(fForcePriorNuisance) {
+         coutI(InputArguments) << "Using the forced prior for the nuisance parameters." << endl;
+         fTestStatSampler.SetPriorNuisance(fForcePriorNuisance);
+      }
+      else {
+         coutE(InputArguments)
+            << "You have to specify a prior for the nuisance parameters "
+            << "using ForcePriorNuisance(..)." << endl;
+      }
+   }
+}
+
+HypoTestResult* HybridCalculator2::GetHypoTest() const {
    fNullModel.GuessObsAndNuisance(fData);
    fAltModel.GuessObsAndNuisance(fData);
 
@@ -46,14 +68,14 @@ HybridResult* HybridCalculator2::GetHypoTest() const {
    allVar->add(*fAltModel.GetPdf()->getVariables());
    RooArgSet *saveAll = (RooArgSet*)allVar->snapshot();
 
-   fTestStatSampler.SetModel(fNullModel);
+   SetModel(fNullModel);
    fNullModel.LoadSnapshot();
    RooArgSet* nullParams = (RooArgSet*)fNullModel.GetParametersOfInterest()->snapshot();
    SamplingDistribution* samp_null = fTestStatSampler.GetSamplingDistribution(*nullParams);
 
    *allVar = *saveAll;
 
-   fTestStatSampler.SetModel(fAltModel);
+   SetModel(fAltModel);
    fAltModel.LoadSnapshot();
    SamplingDistribution* samp_alt = fTestStatSampler.GetSamplingDistribution(*nullParams);
 
@@ -61,13 +83,11 @@ HybridResult* HybridCalculator2::GetHypoTest() const {
    delete saveAll;
 
    string resultname = string(GetName()) + string("_result");
-   HybridResult* res = new HybridResult(
-      resultname.c_str(),
-      samp_alt->GetSamplingDistribution(),
-      samp_null->GetSamplingDistribution(),
-      fTestStatSampler.GetTestStatistic()->PValueIsRightTail()
-   );
-   res->SetDataTestStatistics(fTestStatSampler.EvaluateTestStatistic(fData, *nullParams));
+   HypoTestResult* res = new HypoTestResult(resultname.c_str());
+   res->SetPValueIsRightTail(fTestStatSampler.GetTestStatistic()->PValueIsRightTail());
+   res->SetTestStatisticData(fTestStatSampler.EvaluateTestStatistic(fData, *nullParams));
+   res->SetAltDistribution(samp_alt);
+   res->SetNullDistribution(samp_null);
 
 #ifdef EXPECTED_NUISANCE_PAR
    HybridPlot* p = new HybridPlot(

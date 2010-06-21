@@ -40,6 +40,10 @@
 #include "RooStats/SamplingDistribution.h"
 #endif
 
+#ifndef ROOSTATS_HypoTestResult
+#include "RooStats/HypoTestResult.h"
+#endif
+
 namespace RooStats {
 
    class HybridCalculator2: public HypoTestCalculator, public TNamed {
@@ -56,7 +60,7 @@ namespace RooStats {
    public:
 
       /// inherited methods from HypoTestCalculator interface
-      virtual HybridResult* GetHypoTest() const;
+      virtual HypoTestResult* GetHypoTest() const;
 
       // set the model for the null hypothesis (only B)
       virtual void SetNullModel(const ModelConfig &nullModel) { fNullModel = nullModel; }
@@ -65,14 +69,20 @@ namespace RooStats {
       // Set the DataSet
       virtual void SetData(RooAbsData &data) { fData = data; }
 
-   private:
+      // Returns instance of TestStatSampler. Use to change properties of
+      // TestStatSampler, e.g. GetTestStatSampler.SetTestSize(Double_t size);
+      TestStatSampler& GetTestStatSampler(void) { return fTestStatSampler; }
 
+      virtual void ForcePriorNuisance(RooAbsPdf& p) { fForcePriorNuisance = &p; }
+
+   private:
       TestStatSampler &fTestStatSampler;
-      unsigned int fNToys; // number of Toys MC
       ModelConfig &fAltModel;
       ModelConfig &fNullModel;
-      RooAbsData &fData; // pointer to the data sets
-      //bool fGenerateBinned;   //Flag to control binned generation TODO
+      RooAbsData &fData;
+      RooAbsPdf *fForcePriorNuisance;
+
+      void SetModel(ModelConfig& model) const;
 
    protected:
    ClassDef(HybridCalculator2,1)

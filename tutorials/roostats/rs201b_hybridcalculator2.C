@@ -13,11 +13,12 @@
 #endif
 
 #include "RooStats/HybridCalculator2.h"
-#include "RooStats/HybridResult.h"
-#include "RooStats/HybridPlot.h"
 #include "RooStats/ToyMCSampler2.h"
 #include "RooStats/ProfileLikelihoodTestStat.h"
 #include "RooStats/SimpleLikelihoodRatioTestStat.h"
+#include "RooStats/RatioOfProfiledLikelihoodsTestStat.h"
+#include "RooStats/HypoTestPlot.h"
+#include "RooStats/HypoTestResult.h"
 
 
 void rs201b_hybridcalculator2(int ntoys = 3000)
@@ -41,16 +42,16 @@ void rs201b_hybridcalculator2(int ntoys = 3000)
   RooArgSet observables(x); // variables to be generated
 
   // gaussian signal
-//  RooRealVar sig_mean("sig_mean","",0);
-//  RooRealVar sig_sigma("sig_sigma","",0.8);
-//  RooGaussian sig_pdf("sig_pdf","",x,sig_mean,sig_sigma);
-  RooGaussian sig_pdf("sig_pdf","",x, RooConst(0.0),RooConst(0.8));
+  RooRealVar sig_mean("sig_mean","",0);
+  RooRealVar sig_sigma("sig_sigma","",0.8);
+  RooGaussian sig_pdf("sig_pdf","",x,sig_mean,sig_sigma);
+//  RooGaussian sig_pdf("sig_pdf","",x, RooConst(0.0),RooConst(0.8));
   RooRealVar sig_yield("sig_yield","",20,0,300);
 
   // flat background (extended PDF)
-//  RooRealVar bkg_slope("bkg_slope","",0);
-//  RooPolynomial bkg_pdf("bkg_pdf","",x,bkg_slope);
-  RooPolynomial bkg_pdf("bkg_pdf","", x, RooConst(0));
+  RooRealVar bkg_slope("bkg_slope","",0);
+  RooPolynomial bkg_pdf("bkg_pdf","",x,bkg_slope);
+//  RooPolynomial bkg_pdf("bkg_pdf","", x, RooConst(0));
   RooRealVar bkg_yield("bkg_yield","",40,0,300);
   //bkg_yield.setBins(ntoys); // TODO How to set this automatically for sets of nuisance parameters?
   RooExtendPdf bkg_ext_pdf("bkg_ext_pdf","",bkg_pdf,bkg_yield);
@@ -72,45 +73,45 @@ void rs201b_hybridcalculator2(int ntoys = 3000)
 
 
   SimpleLikelihoodRatioTestStat slrts(bkg_ext_pdf, tot_pdf);
+  RatioOfProfiledLikelihoodsTestStat ropl(tot_pdf, tot_pdf);
   ProfileLikelihoodTestStat profll(tot_pdf);
 
   // 2lnQ: -3.15469
   // -lnQ: 1.57734
+  // Note about ModelConfig: The HybridCalculator2 uses its knowledge about the data
+  // to determine observables and nuisance parameters automatically using
+  // the GuessObsAndNuisance(...) function.
   RooWorkspace w;
-  ModelConfig sb_model("sbmodel");
-  sb_model.SetWorkspace(w);
+  ModelConfig sb_model("S+B model", &w);
   sb_model.SetPdf(tot_pdf);
   sb_model.SetParameters(parametersOfInterest);
-  //sb_model.SetObservables(observables); // determined automatically
-  //sb_model.SetNuisanceParameters(nuisance_parameters); // determined automatically
-  sb_model.SetPriorPdf(bkg_yield_prior);
   sb_model.SetSnapshot(parametersOfInterest);
 
-  ModelConfig b_model("bmodel");
-  b_model.SetWorkspace(w);
+
+  ModelConfig b_model("B model", &w);
   b_model.SetPdf(tot_pdf);
   b_model.SetParameters(parametersOfInterest);
-  //b_model.SetObservables(observables); // determined automatically
-  //b_model.SetNuisanceParameters(nuisance_parameters); // determined automatically
-  b_model.SetPriorPdf(bkg_yield_prior);
   sig_yield.setVal(0.0);
   b_model.SetSnapshot(parametersOfInterest);
-  //sig_yield.setVal(20.0);
 
-  bkg_yield.setConstant(kTRUE);
-  //sig_yield.setConstant(kTRUE);
-
-
-  ToyMCSampler2 toymcsampler2(slrts, ntoys);
+  //ToyMCSampler2 toymcsampler2(slrts, ntoys);
   //ToyMCSampler2 toymcsampler2(profll, ntoys);
-  //ToyMCSampler2 toymcsampler2(profllr, ntoys);
+  ToyMCSampler2 toymcsampler2(ropl, ntoys);
+
   //toymcsampler2.SetExpectedNuisancePar(kTRUE);
+  //toymcsampler2.SetGenerateBinned(true);
+  //toymcsampler2.SetNEventsPerToy(10000);
 
   HybridCalculator2 myH2("H2", toymcsampler2, sb_model, b_model, *data);
-  HybridResult *res = myH2.GetHypoTest();
-  HybridPlot* myHybridPlot = res->GetPlot("myHybridPlot","Results with HybridCalculator2",100);
-  myHybridPlot->Draw();
-  res->PrintMore("");
+  myH2.ForcePriorNuisance(bkg_yield_prior);
+  HypoTestResult *res = myH2.GetHypoTest();
+  res->PrintMore();
+
+  TCanvas *c = new TCanvas("rs201b_hybridcalculator2","rs201b_hybridcalculator2");
+  HypoTestPlot *plot = new HypoTestPlot(*res, 80); // number of bins is optional (default: 100)
+  plot->Draw();
+//  plot->DumpToFile("test.root", "RECREATE");
+//  c->Print("rs201b_output.pdf");
 
   return;
 }
