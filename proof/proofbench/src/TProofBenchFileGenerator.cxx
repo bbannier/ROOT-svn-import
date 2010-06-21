@@ -538,6 +538,26 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
    return 0;
 }
 
+Int_t TProofBenchFileGenerator::MakeDataSets(const char* option)
+{
+//Make data sets (file collection) and register them for benchmark test
+//
+//Input parameters
+//   option: is used as option to TProof::RegisterDataSet
+//Returns: 0 when ok, 
+//        -1 when files are not generated
+
+   if ( fDataSetGenerated ) {
+      fMode->MakeDataSets(-1, fStart, fStop, fStep, fDataSetGenerated, option, fProof);
+   }
+   else{
+      Error("MakeDataSet", "Generate files first");
+      return -1;
+   }
+
+   return 0;
+}
+
 //_________________________________________________________________________________
 Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
                                              Int_t np,
