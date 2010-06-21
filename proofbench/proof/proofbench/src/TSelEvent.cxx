@@ -30,12 +30,19 @@
 #include "TProofBenchRun.h"
 #include "TTree.h"
 #include "TCanvas.h"
+#include "TFileInfo.h"
+#include "THashList.h"
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include "TSystem.h"
 
 ClassImp(TSelEvent)
 
 TSelEvent::TSelEvent(TTree *):
    fReadType(TProofBenchRun::kReadNotSpecified),
    fCleanupType(TProofBenchRun::kCleanupNotSpecified),
+   fFilesToCleanupCacheFor(0),
    fDraw(kFALSE),
    fDebug(kFALSE),
    fCHist(0), 
@@ -46,6 +53,7 @@ TSelEvent::TSelEvent(TTree *):
 TSelEvent::TSelEvent():
    fReadType(TProofBenchRun::kReadNotSpecified),
    fCleanupType(TProofBenchRun::kCleanupNotSpecified),
+   fFilesToCleanupCacheFor(0),
    fDraw(kFALSE),
    fDebug(kFALSE),
    fCHist(0),
@@ -65,6 +73,7 @@ void TSelEvent::Begin(TTree *)
 
    Bool_t found_readtype=kFALSE;
    Bool_t found_cleanuptype=kFALSE;
+   Bool_t found_filestocleanupcachefor=kFALSE;
    Bool_t found_draw=kFALSE;
    Bool_t found_debug=kFALSE;
 
@@ -122,6 +131,19 @@ void TSelEvent::Begin(TTree *)
          } 
          continue;
       }
+      if (sinput.Contains("PROOF_BenchmarkFilesToCleanupCacheFor")){
+         THashList* l=dynamic_cast<THashList*>(obj);
+         if (l){
+            fFilesToCleanupCacheFor=l;
+            found_filestocleanupcachefor=kTRUE;
+            Info("Begin", "PROOF_BenchmarkFilesToCleanupCacheFor:");
+            fFilesToCleanupCacheFor->Print("A");
+         }
+         else{
+            Error("Begin", "PROOF_BenchmarkFilesToCleanupCacheFor not type THashList*"); 
+         } 
+         continue;
+      }
    }
 
    if (!found_readtype && !found_cleanuptype){
@@ -148,6 +170,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
 
    Bool_t found_readtype=kFALSE;
    Bool_t found_cleanuptype=kFALSE;
+   Bool_t found_filestocleanupcachefor=kFALSE;
    Bool_t found_draw=kFALSE;
    Bool_t found_debug=kFALSE;
 
@@ -206,6 +229,19 @@ void TSelEvent::SlaveBegin(TTree *tree)
          } 
          continue;
       }
+      if (sinput.Contains("PROOF_BenchmarkFilesToCleanupCacheFor")){
+         THashList* l=dynamic_cast<THashList*>(obj);
+         if (l){
+            fFilesToCleanupCacheFor=l;
+            found_filestocleanupcachefor=kTRUE;
+            Info("SlaveBegin", "PROOF_BenchmarkFilesToCleanupCacheFor:");
+            fFilesToCleanupCacheFor->Print("A");
+         }
+         else{
+            Error("SlaveBegin", "PROOF_BenchmarkFilesToCleanupCacheFor not type THashList*"); 
+         } 
+         continue;
+      }
    }
 
    if (!found_readtype && !found_cleanuptype){
@@ -241,6 +277,34 @@ void TSelEvent::SlaveBegin(TTree *tree)
       fNTracksHist->GetYaxis()->SetTitle("N_{Events}");
    
       fOutput->Add(fNTracksHist);
+   }
+
+   //clear file cache
+   if (fCleanupType==TProofBenchRun::kCleanupKernel){
+      TIter nxt(fFilesToCleanupCacheFor);
+      TFileInfo* fi=0;
+      while ((fi=dynamic_cast<TFileInfo*>(nxt()))){
+         TUrl* url=0;
+//         do {
+            url=fi->GetCurrentUrl();
+//            if (!url) break;
+            TString hostname=url->GetHostFQDN(); 
+            TString localhostname=TUrl(gSystem->HostName()).GetHostFQDN();
+            if (hostname==localhostname){
+               TString filename=url->GetFile();
+               Info("SlaveBegin", "Cleaning up cache for file: %s", filename.Data());
+               Int_t fd;
+               fd = open(filename.Data(), O_RDONLY);
+               if (fd) {
+                  fdatasync(fd);
+                  posix_fadvise(fd, 0,0,POSIX_FADV_DONTNEED);
+                  close(fd);
+               } else {
+                  Error("SlaveBegin", "Cannot open file for clean up: %s", filename.Data());
+               }
+            }
+//         } while ((url=fi->NextUrl()));
+      }
    }
 }
 
