@@ -28,6 +28,7 @@
 
 
 #pragma link C++ class RooStats::HypoTestResult+;
+#pragma link C++ class RooStats::HypoTestPlot+;
 #pragma link C++ class RooStats::ConfInterval+; // interface, not concrete
 #pragma link C++ class RooStats::SimpleInterval+;
 #pragma link C++ class RooStats::LikelihoodInterval+;
@@ -66,6 +67,7 @@
 #pragma link C++ class RooStats::TestStatistic+; // interface
 #pragma link C++ class RooStats::DebuggingTestStat+;
 #pragma link C++ class RooStats::ProfileLikelihoodTestStat+;
+#pragma link C++ class RooStats::RatioOfProfiledLikelihoodsTestStat+;
 #pragma link C++ class RooStats::NumEventsTestStat+;
 #pragma link C++ class RooStats::SimpleLikelihoodRatioTestStat+;
 

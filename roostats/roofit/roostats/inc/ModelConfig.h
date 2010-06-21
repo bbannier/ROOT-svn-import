@@ -143,6 +143,12 @@ public:
       DefineSetInWS(fConditionalObsName.c_str(), set);
    }
 
+   // specify the conditional observables
+   virtual void SetGlobalObservables(const RooArgSet& set) {
+      fGlobalObsName=std::string(GetName()) + "_GlobalObservables";
+      DefineSetInWS(fGlobalObsName.c_str(), set);
+   }
+
    // set parameter values for a particular hypothesis if using a common PDF
    // by saving a snapshot in the workspace
    virtual void SetSnapshot(const RooArgSet& set);
@@ -203,11 +209,14 @@ public:
    /// get parameters prior pdf  (return NULL if not existing) 
    RooAbsPdf * GetPriorPdf() const { return (fWS) ? fWS->pdf(fPriorPdfName.c_str()) : 0; } 
 
-   /// get RooArgSet for observales  (return NULL if not existing) 
+   /// get RooArgSet for observables  (return NULL if not existing)
    const RooArgSet * GetObservables() const { return (fWS) ? fWS->set(fObservablesName.c_str()) : 0; } 
 
-   /// get RooArgSet for conditional observales  (return NULL if not existing) 
+   /// get RooArgSet for conditional observables  (return NULL if not existing)
    const RooArgSet * GetConditionalObservables() const { return (fWS) ? fWS->set(fConditionalObsName.c_str()) : 0; } 
+
+   /// get RooArgSet for global observables  (return NULL if not existing)
+   const RooArgSet * GetGlobalObservables() const { return (fWS) ? fWS->set(fGlobalObsName.c_str()) : 0; }
 
    /// get Proto data set (return NULL if not existing) 
    RooAbsData * GetProtoData()  const {  return (fWS) ? fWS->data(fProtoDataName.c_str()) : 0; } 
@@ -248,6 +257,7 @@ protected:
    std::string fPriorPdfName; // name for RooAbsPdf specifying a prior on the parameters
     
    std::string fConditionalObsName; // name for RooArgSet specifying conditional observables
+   std::string fGlobalObsName; // name for RooArgSet specifying global observables
    std::string fProtoDataName; // name for RooArgSet specifying dataset that should be used as protodata
     
    std::string fSnapshotName; // name for RooArgSet that specifies a particular hypothesis

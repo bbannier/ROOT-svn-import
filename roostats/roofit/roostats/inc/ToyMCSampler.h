@@ -253,11 +253,11 @@ namespace RooStats {
       virtual void SetPdf(const char* name) {fPdfName = name;}
 
       // specify the parameters of interest in the interval
-      virtual void SetParameters(RooArgSet& set) {fPOI = &set;}
+      virtual void SetParameters(const RooArgSet& set) {fPOI = &set;}
       // specify the nuisance parameters (eg. the rest of the parameters)
-      virtual void SetNuisanceParameters(RooArgSet& set) {fNuisParams = &set;}
+      virtual void SetNuisanceParameters(const RooArgSet& set) {fNuisParams = &set;}
       // specify the observables in the dataset (needed to evaluate the test statistic)
-      virtual void SetObservables(RooArgSet& set) {fObservables = &set;}
+      virtual void SetObservables(const RooArgSet& set) {fObservables = &set;}
 
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
       virtual void SetTestSize(Double_t size) {fSize = size;}
@@ -277,9 +277,9 @@ namespace RooStats {
       Bool_t fOwnsWorkspace; // flag if this object owns its workspace
       const char* fPdfName; // name of  common PDF in workspace
       const char* fDataName; // name of data set in workspace
-      RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
-      RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
-      mutable RooArgSet* fObservables; // RooArgSet specifying the observables in the dataset (needed to evaluate the test statistic)
+      const RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
+      const RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
+      mutable const RooArgSet* fObservables; // RooArgSet specifying the observables in the dataset (needed to evaluate the test statistic)
       TestStatistic* fTestStat; // pointer to the test statistic that is being sampled
       Int_t fNtoys; // number of toys to generate
       Int_t fNevents; // number of events per toy (may be ignored depending on settings)

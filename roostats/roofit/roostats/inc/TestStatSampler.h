@@ -35,7 +35,6 @@ namespace RooStats {
 
    class SamplingDistribution;
    class TestStatistic;
-   class ModelConfig;
 
    class TestStatSampler {
 
@@ -62,15 +61,19 @@ namespace RooStats {
          RooArgSet& nuisanceParameters
       ) = 0;
 
-      // DEPRECATED Set the Pdf, add to the the workspace if not already there
-      virtual void SetPdf(RooAbsPdf&) {};
+      // Set the Pdf, add to the the workspace if not already there
+      virtual void SetPdf(RooAbsPdf&) = 0;
+      // How to randomize the prior. Set to NULL to deactivate randomization.
+      virtual void SetPriorNuisance(RooAbsPdf*) {}
 
-      // DEPRECATED specify the parameters of interest in the interval
-      virtual void SetParameters(RooArgSet&) {};
-      // DEPRECATED specify the nuisance parameters (eg. the rest of the parameters)
-      virtual void SetNuisanceParameters(RooArgSet&) {};
-      // DEPRECATED specify the observables in the dataset (needed to evaluate the test statistic)
-      virtual void SetObservables(RooArgSet& ) {};
+      // specify the parameters of interest in the interval
+      virtual void SetParameters(const RooArgSet&) = 0;
+      // specify the nuisance parameters (eg. the rest of the parameters)
+      virtual void SetNuisanceParameters(const RooArgSet&) = 0;
+      // specify the observables in the dataset (needed to evaluate the test statistic)
+      virtual void SetObservables(const RooArgSet& ) = 0;
+      // specify the conditional observables
+      virtual void SetGlobalObservables(const RooArgSet& ) {}
 
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
       virtual void SetTestSize(Double_t size) = 0;
@@ -80,9 +83,10 @@ namespace RooStats {
       // Set the TestStatistic (want the argument to be a function of the data & parameter points)
       virtual void SetTestStatistic(TestStatistic* testStatistic) = 0;
       
+      // Optional name of a model
+      virtual void SetSamplingDistName(const char* ) {}
 
-      // NEW: replaces the above deprecated functions (change "{}" to "=0" once transition is complete)
-      virtual void SetModel(ModelConfig&) {}
+
 
    protected:
       ClassDef(TestStatSampler,1)   // Interface for tools producing SamplingDistribution objects

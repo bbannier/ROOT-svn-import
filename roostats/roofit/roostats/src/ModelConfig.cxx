@@ -16,6 +16,10 @@
 #include "RooMsgService.h"
 #endif
 
+#ifndef RooStats_RooStatsUtils
+#include "RooStats/RooStatsUtils.h"
+#endif
+
 #include <sstream>
 
 namespace RooStats {
@@ -28,33 +32,55 @@ ModelConfig::~ModelConfig() {
 //    }
 }
 
-/*
- * Defaults:
- *  observables: determined from data
- *  parameters of interest: empty
- *  nuisance parameters: all parameters except parameters of interest
- */
 void ModelConfig::GuessObsAndNuisance(const RooAbsData& data) {
+   // Makes sensible guesses of observables, parameters of interest
+   // and nuisance parameters.
+   //
+   // Defaults:
+   //  observables: determined from data,
+   //  global observables = explicit obs  -  obs from data
+   //  parameters of interest: empty,
+   //  nuisance parameters: all parameters except parameters of interest
+
+   // observables
    if (!GetObservables()) {
       SetObservables(*GetPdf()->getObservables(data));
    }
+   if (!GetGlobalObservables()) {
+      RooArgSet co(*GetObservables());
+      co.remove(*GetPdf()->getObservables(data));
+      RemoveConstantParameters(&co);
+      SetGlobalObservables(co);
+
+      // TODO BUG This does not work as observables with the same name are already in the workspace.
+/*
+      RooArgSet o(*GetObservables());
+      o.remove(co);
+      SetObservables(o);
+*/
+   }
+
+   // parameters
    if (!GetParametersOfInterest()) {
       SetParametersOfInterest(RooArgSet());
    }
    if (!GetNuisanceParameters()) {
-      RooArgSet *p = GetPdf()->getParameters(data);
-      p->remove(*GetParametersOfInterest());
-      SetNuisanceParameters(*p);
+      RooArgSet p(*GetPdf()->getParameters(data));
+      p.remove(*GetParametersOfInterest());
+      RemoveConstantParameters(&p);
+      SetNuisanceParameters(p);
    }
 
    ostream& oldstream = RooPrintable::defaultPrintStream(&ccoutI(InputArguments));
    ccoutI(InputArguments) << endl << "=== Using the following for " << GetName() << " ===" << endl;
-   ccoutI(InputArguments) << "Observables:            ";
+   ccoutI(InputArguments) << "Observables:             ";
    GetObservables()->Print("");
-   ccoutI(InputArguments) << "Parameters of Interest: ";
+   ccoutI(InputArguments) << "Parameters of Interest:  ";
    GetParametersOfInterest()->Print("");
-   ccoutI(InputArguments) << "Nuisance Parameters:    ";
+   ccoutI(InputArguments) << "Nuisance Parameters:     ";
    GetNuisanceParameters()->Print("");
+   ccoutI(InputArguments) << "Global Observables:      ";
+   GetGlobalObservables()->Print("");
    ccoutI(InputArguments) << endl;
    RooPrintable::defaultPrintStream(&oldstream);
 }
@@ -127,7 +153,8 @@ void ModelConfig::DefineSetInWS(const char* name, const RooArgSet& set) {
    if (! fWS->set( name )){
       RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
       // use option to import missing constituents
-      // if content with same name exist they will not be imported ? 
+      // TODO IS THIS A BUG? if content with same name exist they will not be imported ?
+      // See ModelConfig::GuessObsAndNuissance(...) for example of the problem.
 
       fWS->defineSet(name, set,true);  
 

@@ -112,7 +112,7 @@ double HybridResult::NullPValue() const
 {
    // return 1-CL_b : the B p-value
 
-   if (fComputationsNulDoneFlag==false) {
+//   if (fComputationsNulDoneFlag==false) {
       int nToys = fTestStat_b.size();
       if (nToys==0) {
          std::cout << "Error: no toy data present. Returning -1.\n";
@@ -129,12 +129,13 @@ double HybridResult::NullPValue() const
       }
 
       if (larger_than_measured==0) std::cout << "Warning: CLb = 0 ... maybe more toys are needed!\n";
+      return 1-larger_than_measured/nToys;
 
-      fComputationsNulDoneFlag = true;
-      fNullPValue = 1-larger_than_measured/nToys;
-   }
+      //fComputationsNulDoneFlag = true;
+      //fNullPValue = 1-larger_than_measured/nToys;
+//   }
 
-   return fNullPValue;
+//   return fNullPValue;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -143,7 +144,7 @@ double HybridResult::AlternatePValue() const
 {
    // return CL_s+b : the S+B p-value
 
-   if (fComputationsAltDoneFlag==false) {
+//   if (fComputationsAltDoneFlag==false) {
       int nToys = fTestStat_b.size();
       if (nToys==0) {
          std::cout << "Error: no toy data present. Returning -1.\n";
@@ -161,11 +162,13 @@ double HybridResult::AlternatePValue() const
 
       if (larger_than_measured==0) std::cout << "Warning: CLsb = 0 ... maybe more toys are needed!\n";
 
-      fComputationsAltDoneFlag = true;
-      fAlternatePValue = larger_than_measured/nToys;
-   }
+      return larger_than_measured/nToys;
 
-   return fAlternatePValue;
+      //fComputationsAltDoneFlag = true;
+      //fAlternatePValue = larger_than_measured/nToys;
+//   }
+
+//   return fAlternatePValue;
 }
 
 ///////////////////////////////////////////////////////////////////////////

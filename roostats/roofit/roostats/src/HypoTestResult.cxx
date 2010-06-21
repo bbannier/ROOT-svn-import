@@ -1,5 +1,5 @@
 // @(#)root/roostats:$Id$
-// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
+// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke, Sven Kreiss
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -13,7 +13,7 @@
  * Package: RooFit/RooStats  
  * @(#)root/roofit/roostats:$Id$
  * Authors:                     
- *   Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
+ *   Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke, Sven Kreiss
  *
  *****************************************************************************/
 
@@ -43,6 +43,9 @@ END_HTML
 #include "RooStats/RooStatsUtils.h"
 #endif
 
+#include <limits>
+#define NaN numeric_limits<float>::quiet_NaN()
+#define IsNaN(a) isnan(a)
 
 ClassImp(RooStats::HypoTestResult) ;
 
@@ -50,7 +53,11 @@ using namespace RooStats;
 
 //____________________________________________________________________
 HypoTestResult::HypoTestResult(const char* name) : 
-   TNamed(name,name), fNullPValue(0), fAlternatePValue(0)
+   TNamed(name,name),
+   fNullPValue(NaN), fAlternatePValue(NaN),
+   fTestStatisticData(NaN),
+   fNullDistr(NULL), fAltDistr(NULL),
+   fPValueIsRightTail(kTRUE)
 {
    // Default constructor
 }
@@ -58,7 +65,11 @@ HypoTestResult::HypoTestResult(const char* name) :
 
 //____________________________________________________________________
 HypoTestResult::HypoTestResult(const char* name, Double_t nullp, Double_t altp) :
-   TNamed(name,name), fNullPValue(nullp), fAlternatePValue(altp)
+   TNamed(name,name),
+   fNullPValue(nullp), fAlternatePValue(altp),
+   fTestStatisticData(NaN),
+   fNullDistr(NULL), fAltDistr(NULL),
+   fPValueIsRightTail(kTRUE)
 {
    // Alternate constructor
 }
@@ -70,3 +81,51 @@ HypoTestResult::~HypoTestResult()
    // Destructor
 
 }
+
+
+//____________________________________________________________________
+void HypoTestResult::SetAltDistribution(const SamplingDistribution *alt) {
+   fAltDistr = alt;
+   UpdatePValue(fAltDistr, &fAlternatePValue, !fPValueIsRightTail);
+}
+//____________________________________________________________________
+void HypoTestResult::SetNullDistribution(const SamplingDistribution *null) {
+   fNullDistr = null;
+   UpdatePValue(fNullDistr, &fNullPValue, fPValueIsRightTail);
+}
+//____________________________________________________________________
+void HypoTestResult::SetTestStatisticData(const Double_t tsd) {
+   fTestStatisticData = tsd;
+
+   UpdatePValue(fNullDistr, &fNullPValue, fPValueIsRightTail);
+   UpdatePValue(fAltDistr, &fAlternatePValue, !fPValueIsRightTail);
+}
+//____________________________________________________________________
+void HypoTestResult::SetPValueIsRightTail(Bool_t pr) {
+   fPValueIsRightTail = pr;
+
+   UpdatePValue(fNullDistr, &fNullPValue, fPValueIsRightTail);
+   UpdatePValue(fAltDistr, &fAlternatePValue, !fPValueIsRightTail);
+}
+
+
+Bool_t HypoTestResult::HasTestStatisticData(void) const {
+   return !IsNaN(fTestStatisticData);
+}
+
+
+// private
+//____________________________________________________________________
+void HypoTestResult::UpdatePValue(const SamplingDistribution* distr, Double_t *pvalue, Bool_t pIsRightTail) {
+   // updates the pvalue if sufficient data is available
+
+   if(IsNaN(fTestStatisticData)) return;
+
+   if(distr) {
+      if(pIsRightTail)
+         *pvalue = distr->Integral(-RooNumber::infinity(), fTestStatisticData);
+      else
+         *pvalue = distr->Integral(fTestStatisticData, RooNumber::infinity());
+   }
+}
+

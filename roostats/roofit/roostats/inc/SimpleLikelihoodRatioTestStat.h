@@ -15,8 +15,8 @@
 /*
 BEGIN_HTML
 <p>
-Neg2LogLikeRatioTestStat: TestStatistic that returns -2*log(Lambda) where
-Lambda is the likelihood ratio.
+SimpleLikelihoodRatioTestStat: TestStatistic that returns -log(L[null] / L[alt]) where
+L is the likelihood.
 </p>
 END_HTML
 */
@@ -40,32 +40,45 @@ class SimpleLikelihoodRatioTestStat: public TestStatistic {
       SimpleLikelihoodRatioTestStat(RooAbsPdf& nullPdf, RooAbsPdf& altPdf) :
          fNullPdf(nullPdf), fAltPdf(altPdf)
       {
-         fNullVars = (RooArgSet*)fNullPdf.getVariables()->snapshot();
+         // The parameter values for the alternative are taken at the time
+         // this constructor is called. The parameter values for the null
+         // are given in each call to Evaluate(...).
+
          fAltVars = (RooArgSet*)fAltPdf.getVariables()->snapshot();
       }
       virtual ~SimpleLikelihoodRatioTestStat() {
       }
 
-      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& /*paramsOfInterest*/) {
+      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullPOI) {
          RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
          RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
 
+         RooArgSet *altVars = fAltPdf.getVariables();
+         RooArgSet *nullVars = fNullPdf.getVariables();
+
+
          RooArgSet *allVars = fNullPdf.getVariables();
-         allVars->add(*fAltPdf.getVariables());
+         allVars->add(*altVars);
          RooArgSet *saveAll = (RooArgSet*)allVars->snapshot();
 
-         *fNullPdf.getVariables() = *fNullVars;
          RooAbsReal *nll;
+         *nullVars = nullPOI;
          nll = fNullPdf.createNLL(data, RooFit::CloneData(kFALSE), RooFit::Extended());
          double nullNLL = nll->getVal();
          delete nll;
-         *fAltPdf.getVariables() = *fAltVars;
+         *altVars = *fAltVars;
          nll = fAltPdf.createNLL(data, RooFit::CloneData(kFALSE), RooFit::Extended());
          double altNLL = nll->getVal();
          delete nll;
 
          *allVars = *saveAll;
          delete saveAll;
+         delete allVars;
+
+
+
+         delete nullVars;
+         delete altVars;
 
          RooMsgService::instance().setGlobalKillBelow(msglevel);
          return -((-nullNLL) - (-altNLL));
@@ -74,7 +87,7 @@ class SimpleLikelihoodRatioTestStat: public TestStatistic {
       // TODO Has to be implemented?
       virtual const RooAbsArg* GetTestStatistic() const { return NULL; }
 
-      virtual const TString GetVarName() const { return "-ln[L(null) / L(alt)]"; }
+      virtual const TString GetVarName() const { return "log(L(#mu_{1}) / L(#mu_{0}))"; }
 
       virtual const bool PValueIsRightTail(void) { return false; } // overwrite the default
 
@@ -82,7 +95,6 @@ class SimpleLikelihoodRatioTestStat: public TestStatistic {
    private:
       RooAbsPdf& fNullPdf;
       RooAbsPdf& fAltPdf;
-      RooArgSet* fNullVars;
       RooArgSet* fAltVars;
 
    protected:

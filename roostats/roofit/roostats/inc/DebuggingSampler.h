@@ -85,9 +85,9 @@ namespace RooStats {
       virtual void SetPdf(RooAbsPdf&) {}
 
       // specify the parameters of interest in the interval
-      virtual void SetParameters(RooArgSet&) {}
+      virtual void SetParameters(const RooArgSet&) {}
       // specify the nuisance parameters (eg. the rest of the parameters)
-      virtual void SetNuisanceParameters(RooArgSet&) {}
+      virtual void SetNuisanceParameters(const RooArgSet&) {}
 
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
       virtual void SetTestSize(Double_t size) {fSize = size;}
