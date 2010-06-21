@@ -91,9 +91,11 @@ SamplingDistribution::~SamplingDistribution()
 
 
 //_______________________________________________________
-void SamplingDistribution::Add(SamplingDistribution* other)
+void SamplingDistribution::Add(const SamplingDistribution* other)
 {
-   // merge SamplingDistributions
+   // merge SamplingDistributions (does nothing if NULL is given)
+
+   if(!other) return;
 
   std::vector<double> newSamplingDist = other->fSamplingDist;
   std::vector<double> newSampleWeights = other->fSampleWeights;

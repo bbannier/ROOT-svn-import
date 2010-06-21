@@ -23,7 +23,7 @@
 /*
 BEGIN_HTML
 <p>
-HypoTestResult is an base class for a results from hypothesis tests.  
+HypoTestResult is a base class for results from hypothesis tests.
 Any tool inheriting from HypoTestCalculator can return a HypoTestResult.
 As such, it stores a p-value for the null-hypothesis (eg. background-only) 
 and an alternate hypothesis (eg. signal+background).  
@@ -83,13 +83,36 @@ HypoTestResult::~HypoTestResult()
 }
 
 
+void HypoTestResult::Append(const HypoTestResult* other) {
+   // Add additional toy-MC experiments to the current results.
+   // Use the data test statistics of the added object if it is not already
+   // set (otherwise, ignore the new one).
+
+   if(fNullDistr)
+      fNullDistr->Add(other->GetNullDistribution());
+   else
+      fNullDistr = other->GetNullDistribution();
+
+   if(fAltDistr)
+      fAltDistr->Add(other->GetAltDistribution());
+   else
+      fAltDistr = other->GetAltDistribution();
+
+   // if no data is present use the other HypoTestResult's data
+   if(IsNaN(fTestStatisticData)) fTestStatisticData = other->GetTestStatisticData();
+
+   UpdatePValue(fNullDistr, &fNullPValue, fPValueIsRightTail);
+   UpdatePValue(fAltDistr, &fAlternatePValue, !fPValueIsRightTail);
+}
+
+
 //____________________________________________________________________
-void HypoTestResult::SetAltDistribution(const SamplingDistribution *alt) {
+void HypoTestResult::SetAltDistribution(SamplingDistribution *alt) {
    fAltDistr = alt;
    UpdatePValue(fAltDistr, &fAlternatePValue, !fPValueIsRightTail);
 }
 //____________________________________________________________________
-void HypoTestResult::SetNullDistribution(const SamplingDistribution *null) {
+void HypoTestResult::SetNullDistribution(SamplingDistribution *null) {
    fNullDistr = null;
    UpdatePValue(fNullDistr, &fNullPValue, fPValueIsRightTail);
 }
@@ -108,10 +131,64 @@ void HypoTestResult::SetPValueIsRightTail(Bool_t pr) {
    UpdatePValue(fAltDistr, &fAlternatePValue, !fPValueIsRightTail);
 }
 
-
+//____________________________________________________________________
 Bool_t HypoTestResult::HasTestStatisticData(void) const {
    return !IsNaN(fTestStatisticData);
 }
+
+
+
+//____________________________________________________________________
+Double_t HypoTestResult::CLbError() const {
+   // Returns an estimate of the error on CLb assuming a binomial error on
+   // CLb:
+   // BEGIN_LATEX
+   // #sigma_{CL_{b}} = #sqrt{CL_{b} #left( 1 - CL_{b} #right) /
+   //   n_{toys}}
+   // END_LATEX
+
+   if(!fNullDistr) return NaN;
+   unsigned const int n = fNullDistr->GetSamplingDistribution().size();
+   return TMath::Sqrt(CLb() * (1. - CLb()) / n);
+}
+
+//____________________________________________________________________
+Double_t HypoTestResult::CLsplusbError() const {
+   // Returns an estimate of the error on CLsplusb assuming a binomial
+   // error on CLsplusb:
+   // BEGIN_LATEX
+   // #sigma_{CL_{s+b}} = #sqrt{CL_{s+b} #left( 1 - CL_{s+b} #right) /
+   //   n_{toys}}
+   // END_LATEX
+
+   if(!fAltDistr) return NaN;
+   unsigned const int n = fAltDistr->GetSamplingDistribution().size();
+   return TMath::Sqrt(CLsplusb() * (1. - CLsplusb()) / n);
+}
+
+//____________________________________________________________________
+Double_t HypoTestResult::CLsError() const {
+   // Returns an estimate of the error on CLs through combination of the
+   // errors on CLb and CLsplusb:
+   // BEGIN_LATEX
+   // #sigma_{CL_s} = CL_s
+   //   #sqrt{#left( #frac{#sigma_{CL_{s+b}}}{CL_{s+b}} #right)^2 +
+   //     #left( #frac{#sigma_{CL_{b}}}{CL_{b}} #right)^2}
+   // END_LATEX
+
+   if(!fAltDistr || !fNullDistr) return NaN;
+
+   unsigned const int n_b = fNullDistr->GetSamplingDistribution().size();
+   unsigned const int n_sb = fAltDistr->GetSamplingDistribution().size();
+
+   if (CLb() == 0 || CLsplusb() == 0) return 0;
+
+   double cl_b_err = (1. - CLb()) / (n_b * CLb());
+   double cl_sb_err = (1. - CLsplusb()) / (n_sb * CLsplusb());
+
+   return CLs() * TMath::Sqrt(cl_b_err + cl_sb_err);
+}
+
 
 
 // private
