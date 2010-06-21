@@ -38,6 +38,9 @@ namespace RooStats {
       // destructor 
       virtual ~HypoTestResult();
 
+      // add values from another HypoTestResult
+      virtual void Append(const HypoTestResult *other);
+
       // Return p-value for null hypothesis
       virtual Double_t NullPValue() const { return fNullPValue; }
 
@@ -64,17 +67,27 @@ namespace RooStats {
       // familiar name for the Null p-value in terms of 1-sided Gaussian significance
       virtual Double_t Significance() const {return RooStats::PValueToSignificance( NullPValue() ); }
 
-      const SamplingDistribution* GetNullDistribution(void) const { return fNullDistr; }
-      const SamplingDistribution* GetAltDistribution(void) const { return fAltDistr; }
+      SamplingDistribution* GetNullDistribution(void) const { return fNullDistr; }
+      SamplingDistribution* GetAltDistribution(void) const { return fAltDistr; }
       Double_t GetTestStatisticData(void) const { return fTestStatisticData; }
       Bool_t HasTestStatisticData(void) const;
 
-      void SetAltDistribution(const SamplingDistribution *alt);
-      void SetNullDistribution(const SamplingDistribution *null);
+      void SetAltDistribution(SamplingDistribution *alt);
+      void SetNullDistribution(SamplingDistribution *null);
       void SetTestStatisticData(const Double_t tsd);
 
       void SetPValueIsRightTail(Bool_t pr);
       Bool_t GetPValueIsRightTail(void) { return fPValueIsRightTail; }
+
+      /// The error on the "confidence level" of the null hypothesis
+      Double_t CLbError() const;
+
+      /// The error on the "confidence level" of the alternative hypothesis
+      Double_t CLsplusbError() const;
+
+      /// The error on the ratio CLs+b/CLb
+      Double_t CLsError() const;
+
 
       void Print(const Option_t* ) const {
          // Print out some information about the results
@@ -87,11 +100,11 @@ namespace RooStats {
          if(HasTestStatisticData())
             cout << " - test statistics evaluated on data: " << fTestStatisticData << std::endl;
          if(HasTestStatisticData()  &&  fNullDistr)
-            cout << " - CL_b " << CLb() << std::endl;
+            cout << " - CL_b: " << CLb() << std::endl;
          if(HasTestStatisticData()  &&  fAltDistr)
-            cout << " - CL_s+b " << CLsplusb() << std::endl;
+            cout << " - CL_s+b: " << CLsplusb() << std::endl;
          if(HasTestStatisticData()  &&  fAltDistr  &&  fNullDistr)
-            cout << " - CL_s " << CLs() << std::endl;
+            cout << " - CL_s: " << CLs() << std::endl;
 
          return;
       }
@@ -105,8 +118,8 @@ namespace RooStats {
       mutable Double_t fNullPValue; // p-value for the null hypothesis (small number means disfavored)
       mutable Double_t fAlternatePValue; // p-value for the alternate hypothesis (small number means disfavored)
       Double_t fTestStatisticData; // result of the test statistic evaluated on data
-      const SamplingDistribution *fNullDistr;
-      const SamplingDistribution *fAltDistr;
+      SamplingDistribution *fNullDistr;
+      SamplingDistribution *fAltDistr;
       Bool_t fPValueIsRightTail;
 
       ClassDef(HypoTestResult,1)  // Base class to represent results of a hypothesis test

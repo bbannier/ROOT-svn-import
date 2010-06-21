@@ -56,7 +56,7 @@ namespace RooStats {
     Double_t InverseCDF(Double_t pvalue, Double_t sigmaVariaton, Double_t& inverseVariation);
   
     // merge two sampling distributions
-    void Add(SamplingDistribution* other);
+    void Add(const SamplingDistribution* other);
     
     // size of samples
     Int_t GetSize() const{return fSamplingDist.size();}

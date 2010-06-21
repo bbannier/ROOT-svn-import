@@ -20,9 +20,9 @@ objects.
 #include "RooStats/SamplingDistPlot.h"
 
 #include "RooRealVar.h"
-#include "RooPlot.h"
 #include "TStyle.h"
 #include "TLine.h"
+#include "TFile.h"
 
 #include <algorithm>
 #include <iostream>
@@ -34,7 +34,7 @@ using namespace RooStats;
 
 //_______________________________________________________
 SamplingDistPlot::SamplingDistPlot(const Int_t nbins) :
- fHist(0), fLegend(NULL), fItems(), fOtherItems(), fApplyStyle(kTRUE), fFillStyle(3004)
+ fHist(0), fLegend(NULL), fItems(), fOtherItems(), fRooPlot(NULL), fApplyStyle(kTRUE), fFillStyle(3004)
 {
   // SamplingDistPlot default constructor with bin size
   fIterator = fItems.MakeIterator();
@@ -46,7 +46,7 @@ SamplingDistPlot::SamplingDistPlot(const Int_t nbins) :
 
 //_______________________________________________________
 SamplingDistPlot::SamplingDistPlot(const char* name, const char* title, Int_t nbins, Double_t xmin, Double_t xmax) :
- fHist(0), fLegend(NULL), fItems(), fOtherItems(), fApplyStyle(kTRUE), fFillStyle(3004)
+ fHist(0), fLegend(NULL), fItems(), fOtherItems(), fRooPlot(NULL), fApplyStyle(kTRUE), fFillStyle(3004)
 {
   // SamplingDistPlot constructor
   fHist = new TH1F(name, title, nbins, xmin, xmax);
@@ -214,6 +214,38 @@ void SamplingDistPlot::Draw(const Option_t * /*options */) {
    // only apply to the drawing of our frame. The options specified in our add...()
    // methods will be used to draw each object we contain.
 
+   ApplyDefaultStyle();
+
+   Float_t theMin(0.), theMax(0.), theYMax(0.);
+   GetAbsoluteInterval(theMin, theMax, theYMax);
+
+   RooRealVar xaxis("xaxis", fVarName.Data(), theMin, theMax);
+   fRooPlot = xaxis.frame();
+   fRooPlot->SetTitle("");
+   fRooPlot->SetMaximum(theYMax);
+
+   fIterator->Reset();
+   TH1F *obj = 0;
+   while ((obj = (TH1F*) fIterator->Next())) {
+      //obj->Draw(fIterator->GetOption());
+      fRooPlot->addTH1(obj, fIterator->GetOption());
+   }
+
+   TIterator *otherIt = fOtherItems.MakeIterator();
+   TObject *otherObj = NULL;
+   while ((otherObj = otherIt->Next())) {
+      fRooPlot->addObject(otherObj, otherIt->GetOption());
+   }
+   delete otherIt;
+
+
+   if(fLegend) fRooPlot->addObject(fLegend);
+   fRooPlot->Draw();
+
+   return;
+}
+
+void SamplingDistPlot::ApplyDefaultStyle(void) {
    if(fApplyStyle) {
       // use plain black on white colors
       Int_t icol = 0;
@@ -233,34 +265,6 @@ void SamplingDistPlot::Draw(const Option_t * /*options */) {
          fLegend->SetBorderSize(1);
       }
    }
-
-   Float_t theMin(0.), theMax(0.), theYMax(0.);
-   GetAbsoluteInterval(theMin, theMax, theYMax);
-
-   RooRealVar xaxis("xaxis", fVarName.Data(), theMin, theMax);
-   RooPlot* frame = xaxis.frame();
-   frame->SetTitle("");
-   frame->SetMaximum(theYMax);
-
-   fIterator->Reset();
-   TH1F *obj = 0;
-   while ((obj = (TH1F*) fIterator->Next())) {
-      //obj->Draw(fIterator->GetOption());
-      frame->addTH1(obj, fIterator->GetOption());
-   }
-
-   TIterator *otherIt = fOtherItems.MakeIterator();
-   TObject *otherObj = NULL;
-   while ((otherObj = otherIt->Next())) {
-      frame->addObject(otherObj, otherIt->GetOption());
-   }
-   delete otherIt;
-
-
-   if(fLegend) frame->addObject(fLegend);
-   frame->Draw();
-
-   return;
 }
 
 //_____________________________________________________________________________
@@ -416,6 +420,23 @@ void SamplingDistPlot::SetMarkerSize(const Size_t size, const SamplingDistributi
   return;
 }
 
+//_____________________________________________________________________________
+TH1F* SamplingDistPlot::GetTH1F(const SamplingDistribution *samplDist)
+{
+  if(samplDist == NULL){
+    return fHist;
+  }else{
+    fIterator->Reset();
+    TH1F *obj = 0;
+    while((obj = (TH1F*)fIterator->Next())) {
+      if(!strcmp(obj->GetName(),samplDist->GetName())){
+        return obj;
+      }
+    }
+  }
+
+  return NULL;
+}
 
 
 //_____________________________________________________________________________
@@ -437,3 +458,20 @@ void SamplingDistPlot::RebinDistribution(const Int_t rebinFactor, const Sampling
 
   return;
 }
+
+
+// TODO test
+void SamplingDistPlot::DumpToFile(const char* RootFileName, Option_t *option, const char *ftitle, Int_t compress) {
+   // All the objects are written to rootfile
+
+   if(!fRooPlot) {
+      cout << "Plot was not drawn yet. Dump can only be saved after it was drawn with Draw()." << endl;
+      return;
+   }
+
+   TFile ofile(RootFileName, option, ftitle, compress);
+   ofile.cd();
+   fRooPlot->Write();
+   ofile.Close();
+}
+
