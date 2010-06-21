@@ -40,6 +40,7 @@
 #include "TPerfStats.h"
 #include "TQueryResult.h"
 #include "TMath.h"
+#include "TStyle.h"
 
 ClassImp(TProofBenchRunCPU)
 
@@ -103,6 +104,7 @@ fName(0)
    fPerfStats=new TList();
 
    gEnv->SetValue("Proof.StatsTrace",1);
+   gStyle->SetOptStat(0);
 
 }
 

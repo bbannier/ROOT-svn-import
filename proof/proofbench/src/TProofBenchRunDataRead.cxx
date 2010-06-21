@@ -42,6 +42,7 @@
 #include "TLeaf.h"
 #include "TQueryResult.h"
 #include "TMath.h"
+#include "TStyle.h"
 
 ClassImp(TProofBenchRunDataRead)
 
@@ -114,6 +115,7 @@ fName(0)
    fPerfStats=new TList();
 
    gEnv->SetValue("Proof.StatsTrace",1);
+   gStyle->SetOptStat(0);
 }
 
 TProofBenchRunDataRead::~TProofBenchRunDataRead()
