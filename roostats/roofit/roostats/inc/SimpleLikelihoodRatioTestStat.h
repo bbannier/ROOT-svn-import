@@ -138,7 +138,7 @@ class SimpleLikelihoodRatioTestStat: public TestStatistic {
          return nullNLL - altNLL;
       }
 
-      virtual const TString GetVarName() const { return "Simple Likelihood Ratio"; }
+      virtual const TString GetVarName() const { return "log(L(#mu_{1}) / L(#mu_{0}))"; }
 
       //  virtual const bool PValueIsRightTail(void) { return false; } // overwrite the default
 

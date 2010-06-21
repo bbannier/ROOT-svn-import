@@ -123,9 +123,9 @@ void HypoTestResult::UpdatePValue(const SamplingDistribution* distr, Double_t *p
 
    if(distr) {
       if(pIsRightTail)
-         *pvalue = distr->Integral(-RooNumber::infinity(), fTestStatisticData);
-      else
          *pvalue = distr->Integral(fTestStatisticData, RooNumber::infinity());
+      else
+         *pvalue = distr->Integral(-RooNumber::infinity(), fTestStatisticData);
    }
 }
 

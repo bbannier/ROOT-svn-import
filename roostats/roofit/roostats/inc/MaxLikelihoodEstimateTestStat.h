@@ -81,7 +81,7 @@ class MaxLikelihoodEstimateTestStat: public TestStatistic {
   }
   
   virtual const TString GetVarName() const { 
-    TString varName = Form("Maximum Likeihood Estimate of %s",fParameter.GetName());
+    TString varName = Form("Maximum Likelihood Estimate of %s",fParameter.GetName());
     return varName;
   }
 
