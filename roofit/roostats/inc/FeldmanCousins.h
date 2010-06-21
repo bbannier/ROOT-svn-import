@@ -55,7 +55,7 @@ namespace RooStats {
       virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}  
       // Set the DataSet
       virtual void SetData(RooAbsData& /*data*/) {  
-	cout << "DEPRECATED, use ModelConfig" << endl;
+	cout << "DEPRECATED, set data in constructor" << endl;
       }    
       // Set the Pdf
       virtual void SetPdf(RooAbsPdf& /*pdf*/) { 
@@ -123,13 +123,13 @@ namespace RooStats {
       mutable ToyMCSampler2* fTestStatSampler; // the test statistic sampler
       mutable RooAbsData* fPointsToTest; // points to perform the construction
       mutable ConfidenceBelt* fConfBelt;
-      bool fAdaptiveSampling; // controls use of adaptive sampling algorithm
+      Bool_t fAdaptiveSampling; // controls use of adaptive sampling algorithm
       Double_t fAdditionalNToysFactor; // give user ability to ask for more toys
       Int_t fNbins; // number of samples per variable
       Bool_t fFluctuateData;  // tell ToyMCSampler to fluctuate number of entries in dataset
       Bool_t fDoProfileConstruction; // instead of full construction over nuisance parametrs, do profile
-      bool fSaveBeltToFile; // controls use if ConfidenceBelt should be saved to a TFile
-      bool fCreateBelt; // controls use if ConfidenceBelt should be saved to a TFile
+      Bool_t fSaveBeltToFile; // controls use if ConfidenceBelt should be saved to a TFile
+      Bool_t fCreateBelt; // controls use if ConfidenceBelt should be saved to a TFile
 
    protected:
       ClassDef(FeldmanCousins,1)   // Interface for tools setting limits (producing confidence intervals)

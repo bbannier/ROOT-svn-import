@@ -153,6 +153,7 @@ int FourBin(bool doFeldmanCousins=false){
   // define parameers of interest
   // for 1-d plots
   wspace->defineSet("poi","s");
+  wspace->defineSet("nuis","b,tau,rho,bbar");
   // for 2-d plots:
   //  wspace->defineSet("poi","s,rho");
 
@@ -161,8 +162,8 @@ int FourBin(bool doFeldmanCousins=false){
   // we get good agreement between Bayesian and Profile unless
   // rho AND b are floating poor agreement
   // tau AND b floating mediocre agreement
-  //  wspace->var("tau")->setConstant();
-  //  wspace->var("rho")->setConstant();
+  //    wspace->var("tau")->setConstant();
+  //    wspace->var("rho")->setConstant();
   //  wspace->var("b")->setConstant();
   //  wspace->var("bbar")->setConstant();
 
@@ -189,6 +190,7 @@ int FourBin(bool doFeldmanCousins=false){
   modelConfig->SetPdf(*wspace->pdf("model"));
   modelConfig->SetPriorPdf(*wspace->pdf("prior"));
   modelConfig->SetParametersOfInterest(*wspace->set("poi"));
+  modelConfig->SetNuisanceParameters(*wspace->set("nuis"));
   wspace->import(*modelConfig);
   wspace->writeToFile("FourBin.root");
 

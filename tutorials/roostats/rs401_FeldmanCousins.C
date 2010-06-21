@@ -46,6 +46,7 @@ void rs401_FeldmanCousins()
   RooRealVar sigma("sigma","", 1, 0.5 ,1.5);
   RooGaussian gaus("gaus", "", x, mu, sigma);
   RooArgSet parameters(mu, sigma);
+  //  sigma.setConstant();
 
   Int_t nEventsData = 100;
 
@@ -63,7 +64,6 @@ void rs401_FeldmanCousins()
 
   //////// show use of Feldman-Cousins
   RooStats::FeldmanCousins fc;
-  // set the distribution creator, which encodes the test statistic
   fc.SetPdf(gaus);
   fc.SetParameters(parameters);
   fc.SetTestSize(.2); // set size of test
