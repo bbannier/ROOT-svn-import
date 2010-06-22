@@ -161,6 +161,9 @@ namespace RooStats {
       // determine upper limit using histogram
       virtual Double_t UpperLimitByDataHist(RooRealVar& param);
 
+      // Determine the approximate maximum value of the Keys PDF
+      Double_t GetKeysMax();
+
       // set the number of steps in the chain to discard as burn-in,
       // starting from the first
       virtual void SetNumBurnInSteps(Int_t numBurnInSteps)

@@ -472,6 +472,13 @@ void MCMCInterval::CreateHist()
                               entry->getRealValue(fAxes[2]->GetName()),
                               fChain->Weight());
    }
+
+   if (fDimension >= 1)
+      fHist->GetXaxis()->SetTitle(fAxes[0]->GetName());
+   if (fDimension >= 2)
+      fHist->GetYaxis()->SetTitle(fAxes[1]->GetName());
+   if (fDimension >= 3)
+      fHist->GetZaxis()->SetTitle(fAxes[2]->GetName());
 }
 
 void MCMCInterval::CreateSparseHist()
@@ -1310,6 +1317,37 @@ Double_t MCMCInterval::UpperLimitByKeys(RooRealVar& param)
    return param.getMax();
 }
 
+// Determine the approximate maximum value of the Keys PDF
+Double_t MCMCInterval::GetKeysMax()
+{
+   if (fKeysCutoff < 0)
+      DetermineByKeys();
+
+   if (fKeysDataHist == NULL)
+      CreateKeysDataHist();
+
+   if (fKeysDataHist == NULL) {
+      // failure in determination of cutoff and/or creation of histogram
+      coutE(Eval) << "in MCMCInterval::KeysMax(): "
+         << "couldn't find Keys max value, check that the number of burn in "
+         << "steps < number of total steps in the Markov chain.  Returning 0"
+         << endl;
+      return 0;
+   }
+
+   Int_t numBins = fKeysDataHist->numEntries();
+   Double_t max = 0;
+   Double_t w;
+   for (Int_t i = 0; i < numBins; i++) {
+      fKeysDataHist->get(i);
+      w = fKeysDataHist->weight();
+      if (w > max)
+         max = w;
+   }
+
+   return max;
+}
+
 Double_t MCMCInterval::GetHistCutoff()
 {
    if (fHistCutoff < 0)
@@ -1408,15 +1446,71 @@ Bool_t MCMCInterval::WithinDeltaFraction(Double_t a, Double_t b)
 
 void MCMCInterval::CreateKeysDataHist()
 {
+   if (fAxes == NULL)
+      return;
    if (fProduct == NULL)
       DetermineByKeys();
    if (fProduct == NULL)
       // if fProduct still NULL, then creation failed
       return;
 
+   //RooAbsBinning** savedBinning = new RooAbsBinning*[fDimension];
+   Int_t* savedBins = new Int_t[fDimension];
+   Int_t i;
+   Double_t numBins;
+   RooRealVar* var;
+
+   // kbelasco: Note - the accuracy is only increased here if the binning for
+   // each RooRealVar is uniform
+
+   // kbelasco: look into why saving the binnings and replacing them doesn't
+   // work (replaces with 1 bin always).
+   // Note: this code modifies the binning for the parameters (if they are
+   // uniform) and sets them back to what they were.  If the binnings are not
+   // uniform, this code does nothing.
+
+   // first scan through fAxes to make sure all binnings are uniform, or else
+   // we can't change the number of bins because there seems to be an error
+   // when setting the binning itself rather than just the number of bins
+   Bool_t tempChangeBinning = true;
+   for (i = 0; i < fDimension; i++) {
+      if (!fAxes[i]->getBinning(NULL, false, false).isUniform()) {
+         tempChangeBinning = false;
+         break;
+      }
+   }
+
+   // kbelasco: for 1 dimension this should be fine, but for more dimensions
+   // the total nubmer of bins in the histogram increases exponentially with
+   // the dimension, so don't do this above 1-D for now.
+   if (fDimension >= 2)
+      tempChangeBinning = false;
+
+   if (tempChangeBinning) {
+      // set high nubmer of bins for high accuracy on lower/upper limit by keys
+      for (i = 0; i < fDimension; i++) {
+         var = fAxes[i];
+         //savedBinning[i] = &var->getBinning("__binning_clone", false, true);
+         savedBins[i] = var->getBinning(NULL, false, false).numBins();
+         numBins = (var->getMax() - var->getMin()) / fEpsilon;
+         var->setBins((Int_t)numBins);
+      }
+   }
+
    fKeysDataHist = new RooDataHist("_productDataHist",
          "Keys PDF & Heaviside Product Data Hist", fParameters);
    fKeysDataHist = fProduct->fillDataHist(fKeysDataHist, &fParameters, 1.);
+
+   if (tempChangeBinning) {
+      // set the binning back to normal
+      for (i = 0; i < fDimension; i++)
+         //fAxes[i]->setBinning(*savedBinning[i], NULL);
+         //fAxes[i]->setBins(savedBinning[i]->numBins(), NULL);
+         fAxes[i]->setBins(savedBins[i], NULL);
+   }
+
+   //delete[] savedBinning;
+   delete[] savedBins;
 }
 
 Bool_t MCMCInterval::CheckParameters(const RooArgSet& parameterPoint) const
