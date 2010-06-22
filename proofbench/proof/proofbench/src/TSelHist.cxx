@@ -1,27 +1,21 @@
-#define TSelHist_cxx
-// The class definition in TSelHist.h has been generated automatically
-// by the ROOT utility TTree::MakeSelector(). This class is derived
-// from the ROOT class TSelector. For more information on the TSelector
-// framework see $ROOTSYS/README/README.SELECTOR or the ROOT User Manual.
+// @(#)root/proofx:$Id$
+// Author:
 
-// The following methods are defined in this file:
-//    Begin():        called everytime a loop on the tree starts,
-//                    a convenient place to create your histograms.
-//    SlaveBegin():   called after Begin(), when on PROOF called only on the
-//                    slave servers.
-//    Process():      called for each event, in this function you decide what
-//                    to read and fill your histograms.
-//    SlaveTerminate: called at the end of the loop on the tree, when on PROOF
-//                    called only on the slave servers.
-//    Terminate():    called at the end of the loop on the tree,
-//                    a convenient place to draw/fit your histograms.
-//
-// To use this file, try the following session on your Tree T:
-//
-// Root > T->Process("TSelHist.C")
-// Root > T->Process("TSelHist.C","some options")
-// Root > T->Process("TSelHist.C+")
-//
+/*************************************************************************
+ * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// TSelHist                                                             //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
+#define TSelHist_cxx
 
 #include "TSelHist.h"
 #include <TCanvas.h>
@@ -42,7 +36,7 @@
 
 ClassImp(TSelHist)
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 TSelHist::TSelHist()
    // Constructor
    :fHistType(TProofBenchRun::kHist1D),
@@ -57,7 +51,7 @@ TSelHist::TSelHist()
    fCHist3D(0)
 { }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 TSelHist::~TSelHist()
 {
    // Destructor
@@ -89,7 +83,7 @@ TSelHist::~TSelHist()
 //   SafeDelete(fCHist3D);
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void TSelHist::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
@@ -164,7 +158,7 @@ void TSelHist::Begin(TTree * /*tree*/)
    }
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void TSelHist::SlaveBegin(TTree * /*tree*/)
 {
    // The SlaveBegin() function is called after the Begin() function.
@@ -261,7 +255,7 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
    fRandom = new TRandom3(0);
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 Bool_t TSelHist::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
@@ -314,7 +308,7 @@ Bool_t TSelHist::Process(Long64_t entry)
    return kTRUE;
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void TSelHist::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
@@ -323,7 +317,7 @@ void TSelHist::SlaveTerminate()
 
 }
 
-//_____________________________________________________________________________
+//______________________________________________________________________________
 void TSelHist::Terminate()
 {
    // The Terminate() function is the last function to be called during
@@ -397,5 +391,6 @@ void TSelHist::Terminate()
 
 }
 
+//______________________________________________________________________________
 void TSelHist::Print(Option_t* option) const{
 }

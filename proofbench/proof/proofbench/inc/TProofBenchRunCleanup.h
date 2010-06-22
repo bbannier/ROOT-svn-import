@@ -9,6 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#ifndef ROOT_TProofBenchRunCleanup
+#define ROOT_TProofBenchRunCleanup
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TProofBenchRunCleanup                                                //
@@ -16,9 +19,6 @@
 // TProofBenchRunCleanup is ...                                         //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-
-#ifndef ROOT_TProofBenchRunCleanup
-#define ROOT_TProofBenchRunCleanup
 
 #ifndef ROOT_TString
 #include "TString.h"
@@ -36,6 +36,31 @@ class TProfile;
 R__EXTERN TProof *gProof;
 
 class TProofBenchRunCleanup : public TProofBenchRun{
+
+private:
+
+   TProof* fProof;                 //pointer to proof
+
+   TProofBenchRun::ECleanupType fCleanupType;
+   Long64_t fNEvents;            //number of events per file for CPU test and/or I/O test
+   Int_t fMaxNWorkers;           //number of maximum processes, 
+                                 //this can be more than the number of total workers in the cluster
+   TString fDataSetCleanup;      //data set to be cleaned up at nodes using fadvice
+   Int_t fDraw;
+   Int_t fDebug;
+
+   TFile* fFile;                 //output file to write performance histograms and trees on
+   TDirectory* fDirProofBench;   //directory for proof outputs
+   Bool_t fWritable;
+
+   TString fName;
+
+protected:
+
+   Int_t SetParameters();
+   Int_t DeleteParameters();
+
+   const char* BuildPatternName(const char* objname, const char* delimiter="_");
 
 public:
 
@@ -94,31 +119,6 @@ public:
    const char* GetName()const;
 
    TString GetNameStem()const;
-
-protected:
-
-   Int_t SetParameters();
-   Int_t DeleteParameters();
-
-   const char* BuildPatternName(const char* objname, const char* delimiter="_");
-
-private:
-
-   TProof* fProof;                 //pointer to proof
-
-   TProofBenchRun::ECleanupType fCleanupType;
-   Long64_t fNEvents;            //number of events per file for CPU test and/or I/O test
-   Int_t fMaxNWorkers;           //number of maximum processes, 
-                                 //this can be more than the number of total workers in the cluster
-   TString fDataSetCleanup;      //data set to be cleaned up at nodes using fadvice
-   Int_t fDraw;
-   Int_t fDebug;
-
-   TFile* fFile;                 //output file to write performance histograms and trees on
-   TDirectory* fDirProofBench;   //directory for proof outputs
-   Bool_t fWritable;
-
-   TString fName;
 
    ClassDef(TProofBenchRunCleanup,0)         //PROOF benchmark memory cleaning-up run 
 };

@@ -1,27 +1,22 @@
-#define TSelEvent_cxx
-// The class definition in TSelEvent.h has been generated automatically
-// by the ROOT utility TTree::MakeSelector(). This class is derived
-// from the ROOT class TSelector. For more information on the TSelector
-// framework see $ROOTSYS/README/README.SELECTOR or the ROOT User Manual.
+// @(#)root/proofx:$Id$
+// Author:
 
-// The following methods are defined in this file:
-//    Begin():        called everytime a loop on the tree starts,
-//                    a convenient place to create your histograms.
-//    SlaveBegin():   called after Begin(), when on PROOF called only on the
-//                    slave servers.
-//    Process():      called for each event, in this function you decide what
-//                    to read and fill your histograms.
-//    SlaveTerminate: called at the end of the loop on the tree, when on PROOF
-//                    called only on the slave servers.
-//    Terminate():    called at the end of the loop on the tree,
-//                    a convenient place to draw/fit your histograms.
-//
-// To use this file, try the following session on your Tree T:
-//
-// Root > T->Process("TSelEvent.C")
-// Root > T->Process("TSelEvent.C","some options")
-// Root > T->Process("TSelEvent.C+")
-//
+/*************************************************************************
+ * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// TSelEvent                                                            //
+//                                                                      //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
+#define TSelEvent_cxx
 
 #include "TSelEvent.h"
 #include <TH1.h>
@@ -39,6 +34,7 @@
 
 ClassImp(TSelEvent)
 
+//______________________________________________________________________________
 TSelEvent::TSelEvent(TTree *):
    fReadType(TProofBenchRun::kReadNotSpecified),
    fCleanupType(TProofBenchRun::kCleanupNotSpecified),
@@ -50,6 +46,7 @@ TSelEvent::TSelEvent(TTree *):
    fNTracksHist(0)
 {}
 
+//______________________________________________________________________________
 TSelEvent::TSelEvent():
    fReadType(TProofBenchRun::kReadNotSpecified),
    fCleanupType(TProofBenchRun::kCleanupNotSpecified),
@@ -61,6 +58,7 @@ TSelEvent::TSelEvent():
    fNTracksHist(0)
 {}
 
+//______________________________________________________________________________
 void TSelEvent::Begin(TTree *)
 {
    // The Begin() function is called at the start of the query.
@@ -158,6 +156,7 @@ void TSelEvent::Begin(TTree *)
    }
 }
 
+//______________________________________________________________________________
 void TSelEvent::SlaveBegin(TTree *tree)
 {
    // The SlaveBegin() function is called after the Begin() function.
@@ -308,6 +307,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
    }
 }
 
+//______________________________________________________________________________
 Bool_t TSelEvent::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
@@ -401,6 +401,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
    return kTRUE;
 }
 
+//______________________________________________________________________________
 void TSelEvent::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
@@ -409,37 +410,10 @@ void TSelEvent::SlaveTerminate()
 
 }
 
+//______________________________________________________________________________
 void TSelEvent::Terminate()
 {
    // The Terminate() function is the last function to be called during
    // a query. It always runs on the client, it can be used to present
    // the results graphically or save the results to file.
-
-/*   if (!fDraw || gROOT->IsBatch()){
-      return;
-   }
-*/
-
-/*   if (!(fRun==TProofBench::kRunFullDataRead || fRun==TProofBench::kRunOptDataRead)){
-      return;
-   }
-*/
-
-/*
-   fCHist=dynamic_cast<TCanvas*>(gROOT->FindObject("cPt"));
-   if (!fCHist){
-      fCHist = new TCanvas("cPt","P_t Distribution",800,600);
-      fCHist->SetBorderMode(0);
-   }
-   fCHist->Clear();
-   fCHist->cd();
-   TH1F* h = dynamic_cast<TH1F*>(fOutput->FindObject("pt_dist"));
-   if (h){
-      if (h->GetEntries()>0) fCHist->SetLogy();
-      else fCHist->SetLogy(0);
-      h->DrawCopy();
-      fCHist->Update();
-   }
-   else Warning("Terminate", "no pt dist found");
-*/
 }

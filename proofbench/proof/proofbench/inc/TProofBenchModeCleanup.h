@@ -9,6 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#ifndef ROOT_TProofBenchModeCleanup
+#define ROOT_TProofBenchModeCleanup
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TProofBenchModeCleanup                                                          //
@@ -25,9 +28,6 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TProofBenchModeCleanup
-#define ROOT_TProofBenchModeCleanup
-
 #ifndef ROOT_TProofBenchMode
 #include "TProofBenchMode.h"
 #endif
@@ -41,6 +41,16 @@ class TProof;
 R__EXTERN TProof *gProof;
 
 class TProofBenchModeCleanup : public TProofBenchMode {
+
+private:
+
+   TProof* fProof;
+   TList* fNodes;
+   TString fName;
+
+protected:
+
+   Int_t FillNodeInfo();
 
 public:
 
@@ -75,16 +85,6 @@ public:
    TProof* GetProof()const;
    Int_t GetNFiles()const;
    const char* GetName()const;
-
-protected:
-
-   Int_t FillNodeInfo();
-
-private:
-
-   TProof* fProof;
-   TList* fNodes;
-   TString fName;
 
    ClassDef(TProofBenchModeCleanup,0)         //PROOF benchmark suite steering
 };

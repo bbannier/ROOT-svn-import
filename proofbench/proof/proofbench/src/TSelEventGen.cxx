@@ -1,27 +1,21 @@
-#define TSelEventGen_cxx
-// The class definition in TSelEventGen.h has been generated automatically
-// by the ROOT utility TTree::MakeSelector(). This class is derived
-// from the ROOT class TSelector. For more information on the TSelector
-// framework see $ROOTSYS/README/README.SELECTOR or the ROOT User Manual.
+// @(#)root/proofx:$Id$
+// Author:
 
-// The following methods are defined in this file:
-//    Begin():        called everytime a loop on the tree starts,
-//                    a convenient place to create your histograms.
-//    SlaveBegin():   called after Begin(), when on PROOF called only on the
-//                    slave servers.
-//    Process():      called for each event, in this function you decide what
-//                    to read and fill your histograms.
-//    SlaveTerminate: called at the end of the loop on the tree, when on PROOF
-//                    called only on the slave servers.
-//    Terminate():    called at the end of the loop on the tree,
-//                    a convenient place to draw/fit your histograms.
-//
-// To use this file, try the following session on your Tree T:
-//
-// Root > T->Process("TSelEventGen.C")
-// Root > T->Process("TSelEventGen.C","some options")
-// Root > T->Process("TSelEventGen.C+")
-//
+/*************************************************************************
+ * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// TSelEventGen                                                         //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
+#define TSelEventGen_cxx
 
 #include "TSelEventGen.h"
 #include "TParameter.h"
@@ -38,6 +32,7 @@ static const Long64_t MaxTreeSizeOrg=TTree::GetMaxTreeSize();
 
 ClassImp(TSelEventGen)
 
+//______________________________________________________________________________
 TSelEventGen::TSelEventGen():
    fFileType(TProofBenchMode::kFileNotSpecified),
    fBaseDir(""),
@@ -62,6 +57,7 @@ TSelEventGen::TSelEventGen():
    }
 }
 
+//______________________________________________________________________________
 void TSelEventGen::Begin(TTree *)
 {
    // The Begin() function is called at the start of the query.
@@ -84,6 +80,7 @@ void TSelEventGen::Begin(TTree *)
    }
 }
 
+//______________________________________________________________________________
 void TSelEventGen::SlaveBegin(TTree *tree)
 {
    // The SlaveBegin() function is called after the Begin() function.
@@ -271,6 +268,7 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    TTree::SetMaxTreeSize(10*MaxTreeSizeOrg);
 }
 
+//______________________________________________________________________________
 Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype, TString filename, Long64_t sizenevents)
 {
 //runtype is run type either TProofBench::kRunGenerateFileBench or TProofBench::kRunGenerateFileCleanup
@@ -356,6 +354,7 @@ Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype, TStrin
    else return 0;
 }
 
+//______________________________________________________________________________
 Bool_t TSelEventGen::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
@@ -515,6 +514,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
    return kTRUE;
 }
 
+//______________________________________________________________________________
 void TSelEventGen::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
@@ -536,6 +536,7 @@ void TSelEventGen::SlaveTerminate()
 
 }
 
+//______________________________________________________________________________
 void TSelEventGen::Terminate()
 {
    // The Terminate() function is the last function to be called during
@@ -543,6 +544,7 @@ void TSelEventGen::Terminate()
    // the results graphically or save the results to file.
 }
 
+//______________________________________________________________________________
 void TSelEventGen::Print(Option_t *) const
 {
 

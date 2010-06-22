@@ -44,6 +44,7 @@
 
 ClassImp(TProofBenchRunCPU)
 
+//______________________________________________________________________________
 TProofBenchRunCPU::TProofBenchRunCPU(TProofBenchRun::EHistType histtype,
                                      Int_t nhists,
                                      TString filename, //user has to provide one
@@ -108,6 +109,7 @@ fName(0)
 
 }
 
+//______________________________________________________________________________
 TProofBenchRunCPU::~TProofBenchRunCPU()
 {
 //destructor
@@ -122,6 +124,7 @@ TProofBenchRunCPU::~TProofBenchRunCPU()
    if (fCPerfProfiles) delete fCPerfProfiles;
 } 
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::Run(Long64_t nevents,
                             Int_t ntries,
                             Int_t start,
@@ -294,6 +297,7 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
    }//for number of workers
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t nactive)
 {
 
@@ -372,6 +376,7 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t 
    return;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::Print(Option_t* option)const{
 
    Printf("Name=%s", fName.Data());
@@ -405,66 +410,7 @@ void TProofBenchRunCPU::Print(Option_t* option)const{
    }
 }
 
-/*
-void TProofBenchRunCPU::DrawPerfProfiles(TDirectory* dir,
-                                              TPad* pad,
-                                              TString nameprof_event, TString nameprof_io)
-{
-//Draw performance profiles
-//Input parameters:
-//   runtype: Run type to build performance profiles for.
-//            When kRunAll, this function is recursively called with runtype=kRunFullDataRead, 
-//            kRunOptDataRead, kRunNoDataRead in turn.
-//   mode: Benchmark mode to build performance profiles for.
-//         Ignored when runtype==kRunCPUTest.
-//Returns:
-//   Nothing
-   //create canvas
-   if (!pad){
-      pad=new TCanvas("CPerfProfiles", "Performance Profiles");
-      pad->Divide(2, 1);
-   }
-   
-   dir->cd();
-
-   //event rate profile
-   TProfile* prof_event=dynamic_cast<TProfile*>(dir->FindObject(nameprof_event.Data())); //list of object
-   if (!prof_event){
-      //try reading key
-      TKey* key=dir->FindKey(nameprof_event.Data()); 
-      if (key){
-         prof_event=dynamic_cast<TProfile*>(key->ReadObj());
-      }
-   }
-   if (prof_event){
-      pad->cd(1);
-      prof_event->Draw();
-   }
-   else{
-      Error("DrawPerfProfiles", "Profile %s not found", nameprof_event.Data());
-   }
-
-   //IO rate profile
-   TProfile* prof_io=dynamic_cast<TProfile*>(dir->FindObject(nameprof_io.Data())); //list of object
-   if (!prof_io){
-      //try reading key
-      TKey* key=dir->FindKey(nameprof_io.Data()); 
-      if (key){
-         prof_io=dynamic_cast<TProfile*>(key->ReadObj());
-      }
-   }
-   if (prof_io){
-      pad->cd(2);
-      prof_io->Draw();
-   }
-   else{
-      Error("DrawPerfProfiles", "Profile %s not found", nameprof_io.Data());
-   }
-
-   return;
-}
-*/
-
+//______________________________________________________________________________
 void TProofBenchRunCPU::DrawPerfProfiles()
 {
    //TPad* canvas=proofbench->GetCPerfProfiles();
@@ -481,32 +427,38 @@ void TProofBenchRunCPU::DrawPerfProfiles()
    return; 
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetHistType(TProofBenchRun::EHistType histtype)
 {
    fHistType=histtype;
    fName=GetNameStem()+"CPU";
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetNHists(Int_t nhists)
 {
    fNHists=nhists;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetNEvents(Long64_t nevents)
 {
    fNEvents=nevents;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetNTries(Int_t ntries)
 {
    fNTries=ntries;
 }
    
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetMaxNWorkers(Int_t maxnworkers)
 {
   fMaxNWorkers=maxnworkers;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetMaxNWorkers(TString sworkers)
 {
 //Set the maximum number of workers for benchmark test
@@ -533,28 +485,34 @@ void TProofBenchRunCPU::SetMaxNWorkers(TString sworkers)
    return;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetStart(Int_t start){
    fStart=start;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetStop(Int_t stop){
    fStop=stop;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetStep(Int_t step){
    fStep=step;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetDraw(Int_t draw)
 {
    fDraw=draw;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetDebug(Int_t debug)
 {
    fDebug=debug;
 }
 
+//______________________________________________________________________________
 TFile* TProofBenchRunCPU::OpenFile(const char* filename,
                              Option_t* option,
                              const char* ftitle,
@@ -613,91 +571,109 @@ TFile* TProofBenchRunCPU::OpenFile(const char* filename,
    }
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCPU::SetDirProofBench(TDirectory* dir)
 {
    fDirProofBench=dir;
 }
 
+//______________________________________________________________________________
 TProofBenchRun::EHistType TProofBenchRunCPU::GetHistType()const
 {
    return fHistType;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::GetNHists()const
 {
    return fNHists;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::GetNTries()const
 {
    return fNTries;
 }
 
+//______________________________________________________________________________
 Long64_t TProofBenchRunCPU::GetNEvents()const
 {
    return fNEvents;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::GetMaxNWorkers()const
 {
    return fMaxNWorkers;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::GetStart()const
 {
    return fStart;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::GetStop()const
 {
    return fStop;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::GetStep()const
 {
    return fStep;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::GetDraw()const
 {
    return fDraw;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::GetDebug()const
 {
    return fDebug;
 }
 
+//______________________________________________________________________________
 TFile* TProofBenchRunCPU::GetFile()const
 {
    return fFile;
 }
 
+//______________________________________________________________________________
 TDirectory* TProofBenchRunCPU::GetDirProofBench() const
 {
    return fDirProofBench;
 }
 
+//______________________________________________________________________________
 TList* TProofBenchRunCPU::GetListOfPerfStats()const
 {
    return fPerfStats;
 }  
 
+//______________________________________________________________________________
 TList* TProofBenchRunCPU::GetListPerfProfiles()const
 {
    return fListPerfProfiles;
 }  
 
+//______________________________________________________________________________
 TCanvas* TProofBenchRunCPU::GetCPerfProfiles() const
 {
    return fCPerfProfiles;
 }
 
+//______________________________________________________________________________
 const char* TProofBenchRunCPU::GetName()const
 {
    return fName.Data();
 }
 
+//______________________________________________________________________________
 TString TProofBenchRunCPU::GetNameStem()const
 {
    TString namestem;
@@ -720,6 +696,7 @@ TString TProofBenchRunCPU::GetNameStem()const
     return namestem;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::FillNodeInfo()
 {
    // Re-Generate the list of worker node info (fNodes)
@@ -761,6 +738,7 @@ Int_t TProofBenchRunCPU::FillNodeInfo()
    return 0;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::SetParameters(){
    if (!fProof){
       Error("SetParameters", "proof not set; Doing nothing");
@@ -773,6 +751,7 @@ Int_t TProofBenchRunCPU::SetParameters(){
    return 0;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCPU::DeleteParameters(){
    if (!fProof){
       Error("DeleteParameters", "proof not set; Doing nothing");
@@ -784,6 +763,7 @@ Int_t TProofBenchRunCPU::DeleteParameters(){
    return 0;
 }
 
+//______________________________________________________________________________
 TString TProofBenchRunCPU::BuildPatternName(const TString& objname, const TString& delimiter)
 {
    TString newname(objname);
@@ -792,6 +772,7 @@ TString TProofBenchRunCPU::BuildPatternName(const TString& objname, const TStrin
    return newname;
 }
 
+//______________________________________________________________________________
 TString TProofBenchRunCPU::BuildNewPatternName(const TString& objname, Int_t nactive, Int_t tries, const TString& delimiter)
 {
    TString newname(BuildPatternName(objname, delimiter));
@@ -804,6 +785,7 @@ TString TProofBenchRunCPU::BuildNewPatternName(const TString& objname, Int_t nac
    return newname;
 }
 
+//______________________________________________________________________________
 TString TProofBenchRunCPU::BuildProfileName(const TString& objname, const TString& type, const TString& delimiter)
 {
    TString newname(BuildPatternName(objname, delimiter));
@@ -812,6 +794,7 @@ TString TProofBenchRunCPU::BuildProfileName(const TString& objname, const TStrin
    return newname;
 }
 
+//______________________________________________________________________________
 TString TProofBenchRunCPU::BuildProfileTitle(const TString& objname, const TString& type, const TString& delimiter)
 {
    TString newname(BuildPatternName(objname, delimiter));
