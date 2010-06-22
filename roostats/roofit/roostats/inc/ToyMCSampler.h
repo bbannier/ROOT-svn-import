@@ -60,6 +60,7 @@ class ToyMCSampler: public TestStatSampler {
 
          fSize = 0.05;
          fNEvents = 0;
+         fGenerateBinned = kFALSE;
          fExpectedNuisancePar = kFALSE;
       }
 
@@ -150,7 +151,8 @@ class ToyMCSampler: public TestStatSampler {
       // Set the name of the sampling distribution used for plotting
       void SetSamplingDistName(const char* name) { if(name) fSamplingDistName = name; }
 
-   private:
+   protected:
+
       TestStatistic *fTestStat; // test statistic that is being sampled
       RooAbsPdf *fPdf; // model
       string fSamplingDistName; // name of the model
