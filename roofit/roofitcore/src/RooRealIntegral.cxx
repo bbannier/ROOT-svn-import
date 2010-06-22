@@ -768,17 +768,24 @@ RooAbsReal* RooRealIntegral::createIntegral(const RooArgSet& iset, const RooArgS
   isetAll.add(_facList) ;
 
   const RooArgSet* newNormSet(0) ;
+  RooArgSet* tmp(0) ;
   if (nset && !_funcNormSet) {
     newNormSet = nset ;
   } else if (!nset && _funcNormSet) {
     newNormSet = _funcNormSet ;
   } else if (nset && _funcNormSet) {
-    RooArgSet* tmp = new RooArgSet ;
+    tmp = new RooArgSet ;
     tmp->add(*nset) ;
     tmp->add(*_funcNormSet,kTRUE) ;
     newNormSet = tmp ;
   } 
-  return _function.arg().createIntegral(isetAll,newNormSet,cfg,rangeName) ;
+  RooAbsReal* ret =  _function.arg().createIntegral(isetAll,newNormSet,cfg,rangeName) ;
+
+  if (tmp) {
+    delete tmp ;
+  }
+
+  return ret ;
 }
 
 

@@ -562,6 +562,7 @@ RooAddPdf::CacheElem* RooAddPdf::getProjCache(const RooArgSet* nset, const RooAr
 	RooArgSet* tmp = thePdf->getObservables(_refCoefNorm) ;
 	rangeProj1 = thePdf->createIntegral(*tmp,*tmp,RooNameReg::str(_refCoefRangeName)) ;
 	//rangeProj1->setOperMode(operMode()) ;
+	delete tmp ;
       } else {
 	TString theName(GetName()) ;
 	theName.Append("_") ;

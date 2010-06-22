@@ -65,6 +65,32 @@
 #include <string.h>
 #include <sstream>
 
+#ifndef _WIN32
+#include <strings.h>
+#else
+
+static char *strtok_r(char *s1, const char *s2, char **lasts)
+{
+  char *ret;
+  
+  if (s1 == NULL)
+    s1 = *lasts;
+  while(*s1 && strchr(s2, *s1))
+    ++s1;
+  if(*s1 == '\0')
+    return NULL;
+  ret = s1;
+  while(*s1 && !strchr(s2, *s1))
+    ++s1;
+  if(*s1)
+    *s1++ = '\0';
+  *lasts = s1;
+  return ret;
+}
+
+#endif
+
+
 #include "TSystem.h"
 
 ClassImp(RooProdPdf)
@@ -528,7 +554,7 @@ Double_t RooProdPdf::calculate(const RooArgList* partIntList, const RooLinkedLis
 
 
 //_____________________________________________________________________________
-Double_t RooProdPdf::calculate(const RooProdPdf::CacheElem& cache, Bool_t verbose) const
+Double_t RooProdPdf::calculate(const RooProdPdf::CacheElem& cache, Bool_t /*verbose*/) const
 {
   // Calculate running product of pdfs terms, using the supplied
   // normalization set in 'normSetList' for each component
@@ -912,6 +938,7 @@ void RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset,
 	  }
 	}      
       }
+      delete tIter ;
     }
 
   }
@@ -1150,10 +1177,10 @@ void RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset,
 
 
 //_____________________________________________________________________________
-RooAbsReal* RooProdPdf::makeCondPdfRatioCorr(RooAbsReal& pdf, const RooArgSet& termNset, const RooArgSet& termImpSet, const char* normRange, const char* refRange) const
+RooAbsReal* RooProdPdf::makeCondPdfRatioCorr(RooAbsReal& pdf, const RooArgSet& termNset, const RooArgSet& /*termImpSet*/, const char* normRangeTmp, const char* refRange) const
 {
   // For single normalization ranges
-  RooAbsReal* ratio_num = pdf.createIntegral(termNset,normRange) ;
+  RooAbsReal* ratio_num = pdf.createIntegral(termNset,normRangeTmp) ;
   RooAbsReal* ratio_den = pdf.createIntegral(termNset,refRange) ;
   RooFormulaVar* ratio = new RooFormulaVar(Form("ratio(%s,%s)",ratio_num->GetName(),ratio_den->GetName()),"@0/@1",
 					   RooArgList(*ratio_num,*ratio_den)) ;
@@ -1285,7 +1312,7 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 	if (orig->intRange()) {
 	  specIntRange = orig->intRange() ;
 	}
-	RooProduct* numtmp = (RooProduct*) specRatio->getParameter(0) ;
+	//RooProduct* numtmp = (RooProduct*) specRatio->getParameter(0) ;
 	RooProduct* dentmp = (RooProduct*) specRatio->getParameter(1) ;
 
 // 	cout << "numtmp = " << numtmp->IsA()->GetName() << "::" << numtmp->GetName() << endl ;
@@ -1413,8 +1440,8 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
   if (specIntDeps.getSize()>0) {
     // Apply posterior integration required for SPECINT case
     
-    string name = Form("SPEC_RATIO(%s,%s)",numerator->GetName(),norm->GetName()) ;
-    RooFormulaVar* ndr = new RooFormulaVar(name.c_str(),"@0/@1",RooArgList(*numerator,*norm)) ;
+    string namesr = Form("SPEC_RATIO(%s,%s)",numerator->GetName(),norm->GetName()) ;
+    RooFormulaVar* ndr = new RooFormulaVar(namesr.c_str(),"@0/@1",RooArgList(*numerator,*norm)) ;
     
     // Integral of ratio
     RooAbsReal* numtmp = ndr->createIntegral(specIntDeps,specIntRange.c_str()) ;      
