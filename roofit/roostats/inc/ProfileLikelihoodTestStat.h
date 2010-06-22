@@ -80,10 +80,12 @@ namespace RooStats {
        double ret = profile->getVal();
        //       paramsOfInterest.Print("v");
        delete nll;
+       nll = 0; 
        delete profile;
        RooMsgService::instance().setGlobalKillBelow(msglevel);
        //       cout << "ret = " << ret << endl;
        return ret;
+
 
 
        // OLD version with some handling for local minima
@@ -116,11 +118,11 @@ namespace RooStats {
             //cout << "cons: " << endl;
             //constrainedParams->Print("v");
 
-            RooNLLVar* nll = (RooNLLVar*) fPdf->createNLL(
+            RooNLLVar * nll2 = (RooNLLVar*) fPdf->createNLL(
                data, RooFit::CloneData(kFALSE), RooFit::Constrain(*constrainedParams)
             );
-            fNll = nll;
-            fProfile = (RooProfileLL*) nll->createProfile(paramsOfInterest);
+            fNll = nll2;
+            fProfile = (RooProfileLL*) nll2->createProfile(paramsOfInterest);
             delete constrainedParams;
 
             //	 paramsOfInterest.Print("v");
@@ -217,10 +219,10 @@ namespace RooStats {
             RooArgSet* constrainedParams = fPdf->getParameters(data);
             RemoveConstantParameters(constrainedParams);
 
-            RooNLLVar* nll = (RooNLLVar*) fPdf->createNLL(data, RooFit::CloneData(kFALSE), RooFit::Constrain(
+            RooNLLVar * nll2 = (RooNLLVar*) fPdf->createNLL(data, RooFit::CloneData(kFALSE), RooFit::Constrain(
                *constrainedParams));
-            fNll = nll;
-            fProfile = (RooProfileLL*) nll->createProfile(paramsOfInterest);
+            fNll = nll2;
+            fProfile = (RooProfileLL*) nll2->createProfile(paramsOfInterest);
             delete constrainedParams;
 
             // set parameters to point being requested

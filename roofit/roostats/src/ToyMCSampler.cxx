@@ -133,9 +133,16 @@ RooAbsData* ToyMCSampler::GenerateToyData(RooArgSet& /*nullPOI*/) const {
    }
 
    RooAbsData* data = NULL;
-   if(fNEvents == 0  &&  fPdf->expectedEvents(observables) > 0) {
-      if(fGenerateBinned) data = fPdf->generateBinned(observables, RooFit::Extended());
-      else                data = fPdf->generate      (observables, RooFit::Extended());
+   if(fNEvents == 0 )  {
+      if( fPdf->canBeExtended() && fPdf->expectedEvents(observables) > 0) {
+         if(fGenerateBinned) data = fPdf->generateBinned(observables, RooFit::Extended());
+         else                data = fPdf->generate      (observables, RooFit::Extended());
+      }
+      else {
+         oocoutE((TObject*)0,InputArguments) 
+            << "ToyMCSampler: Error : pdf is not extended and number of events per toy is zero"
+            << endl;
+      }
    } else {
       if(fGenerateBinned) data = fPdf->generateBinned(observables, fNEvents);
       else                data = fPdf->generate      (observables, fNEvents);
