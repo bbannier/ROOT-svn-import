@@ -1284,9 +1284,8 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    glPushMatrix();
    Float_t sx = (eM - em) / fM->GetEtaRng();
    Float_t sy = (pM - pm) / fM->GetPhiRng();
-   glScalef(sx / unit, sy / unit, fM->GetValToHeight());
-   glTranslatef(-fM->GetEta(), -fM->fPhi, 0);
-
+   Float_t sz = (fM->fData->Empty() && (fM->GetScaleAbs() == false)) ? 1 : fM->GetMaxTowerH() / fDataMax;
+   glScalef(sx / unit, sy / unit, sz);
 
    fFontColor = fM->fFontColor;
    fGridColor = fM->fGridColor;
