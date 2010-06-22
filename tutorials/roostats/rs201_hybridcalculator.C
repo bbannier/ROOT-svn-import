@@ -12,14 +12,14 @@
 #include "RooGlobalFunc.h"
 #endif
 
-#include "RooStats/HybridCalculator.h"
+#include "RooStats/HybridCalculatorOld.h"
 #include "RooStats/HybridResult.h"
 #include "RooStats/HybridPlot.h"
 
-void rs201_hybridcalculator(int ntoys = 2000)
+void rs201_hybridcalculator(int ntoys = 1000)
 {
   //***********************************************************************//
-  // This macro show an example on how to use RooStats/HybridCalculator    //
+  // This macro show an example on how to use RooStats/HybridCalculatorOld //
   //***********************************************************************//
   //
   // With this example, you should get: CL_sb = 0.130 and CL_b = 0.946
@@ -37,25 +37,24 @@ void rs201_hybridcalculator(int ntoys = 2000)
   RooArgList observables(x); // variables to be generated
 
   // gaussian signal
-  RooRealVar sig_mean("sig_mean","",0);
-  RooRealVar sig_sigma("sig_sigma","",0.8);
-  RooGaussian sig_pdf("sig_pdf","",x,sig_mean,sig_sigma);
+//  RooRealVar sig_mean("sig_mean","",0);
+//  RooRealVar sig_sigma("sig_sigma","",0.8);
+//  RooGaussian sig_pdf("sig_pdf","",x,sig_mean,sig_sigma);
+  RooGaussian sig_pdf("sig_pdf","",x, RooConst(0.0),RooConst(0.8));
   RooRealVar sig_yield("sig_yield","",20,0,300);
 
   // flat background (extended PDF)
-  //RooRealVar bkg_slope("bkg_slope","",0);
-  //  RooPolynomial bkg_pdf("bkg_pdf","",x,bkg_slope);
-  RooUniform bkg_pdf("bkg_pdf","",x);
+//  RooRealVar bkg_slope("bkg_slope","",0);
+//  RooPolynomial bkg_pdf("bkg_pdf","",x,bkg_slope);
+  RooPolynomial bkg_pdf("bkg_pdf","", x, RooConst(0));
   RooRealVar bkg_yield("bkg_yield","",40,0,300);
-  //  RooExtendPdf bkg_ext_pdf("bkg_ext_pdf","",bkg_pdf,bkg_yield);
-  RooAddPdf bkg_ext_pdf("bkg_ext_pdf","",bkg_pdf,bkg_yield);
+  RooExtendPdf bkg_ext_pdf("bkg_ext_pdf","",bkg_pdf,bkg_yield);
+
+//  bkg_yield.setConstant(kTRUE);
+  sig_yield.setConstant(kTRUE);
 
   // total sig+bkg (extended PDF)
   RooAddPdf tot_pdf("tot_pdf","",RooArgList(sig_pdf,bkg_pdf),RooArgList(sig_yield,bkg_yield));
-  tot_pdf.specialGeneratorConfig(kTRUE)->method1D(kFALSE,kFALSE).setLabel("RooFoamGenerator") ;
-  //  tot_pdf.specialGeneratorConfig(kTRUE)->method1D(kFALSE,kFALSE).setLabel("RooAcceptReject") ;
-  tot_pdf.specialGeneratorConfig()->getConfigSection("RooFoamGenerator").setRealValue("chatLevel",1) ;
-  //  bkg_ext_pdf.specialGeneratorConfig()->getConfigSection("RooFoamGenerator").setRealValue("chatLevel",1) ;
 
   /// build the prior PDF on the parameters to be integrated
   // gaussian contraint on the background yield ( N_B = 40 +/- 10  ie. 25% )
@@ -64,34 +63,29 @@ void rs201_hybridcalculator(int ntoys = 2000)
   RooArgSet nuisance_parameters(bkg_yield); // variables to be integrated
 
   /// generate a data sample
-  RooDataSet* databkg = bkg_ext_pdf.generate(observables,RooFit::Extended(),Verbose());
-  cout << " and tot..." << endl;
-  RooDataSet* data = tot_pdf.generate(observables,RooFit::Extended(),Verbose());
+  RooDataSet* data = tot_pdf.generate(observables,RooFit::Extended());
 
   //***********************************************************************//
 
-  /// run HybridCalculator on those inputs 
+  /// run HybridCalculatorOld on those inputs
 
   // use interface from HypoTest calculator by default
 
-  TStopwatch w;
-  w.Start();
-  HybridCalculator myHybridCalc(*data, tot_pdf , bkg_ext_pdf ,
-                                &nuisance_parameters, &bkg_yield_prior); 
+  HybridCalculatorOld myHybridCalc(*data, tot_pdf , bkg_ext_pdf ,
+                                   &nuisance_parameters, &bkg_yield_prior);
 
   // here I use the default test statistics: 2*lnQ (optional)
   myHybridCalc.SetTestStatistic(1);
+  //myHybridCalc.SetTestStatistic(3); // profile likelihood ratio
 
   myHybridCalc.SetNumberOfToys(ntoys); 
-  //myHybridCalc.UseNuisance(false);                            
+  myHybridCalc.UseNuisance(true);
 
   // for speed up generation (do binned data) 
   myHybridCalc.SetGenerateBinned(false); 
 
   // calculate by running ntoys for the S+B and B hypothesis and retrieve the result
   HybridResult* myHybridResult = myHybridCalc.GetHypoTest(); 
-  w.Stop();
-  w.Print();
 
   if (! myHybridResult) { 
      std::cerr << "\nError returned from Hypothesis test" << std::endl;
@@ -119,7 +113,7 @@ void rs201_hybridcalculator(int ntoys = 2000)
   //myHybridResult->Add(myOtherHybridResult);
 
   /// nice plot of the results
-  HybridPlot* myHybridPlot = myHybridResult->GetPlot("myHybridPlot","Plot of results with HybridCalculator",100);
+  HybridPlot* myHybridPlot = myHybridResult->GetPlot("myHybridPlot","Plot of results with HybridCalculatorOld",100);
   myHybridPlot->Draw();
 
   /// recover and display the results
@@ -134,7 +128,7 @@ void rs201_hybridcalculator(int ntoys = 2000)
   myHybridResult->SetDataTestStatistics(mean_sb_toys_test_stat);
   double toys_significance = myHybridResult->Significance();
 
-  std::cout << "Completed HybridCalculator example:\n"; 
+  std::cout << "Completed HybridCalculatorOld example:\n";
   std::cout << " - -2lnQ = " << min2lnQ_data << endl;
   std::cout << " - CL_sb = " << clsb_data << std::endl;
   std::cout << " - CL_b  = " << clb_data << std::endl;

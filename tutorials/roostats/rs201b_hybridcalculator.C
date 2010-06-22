@@ -12,8 +12,8 @@
 #include "RooGlobalFunc.h"
 #endif
 
-#include "RooStats/HybridCalculator2.h"
-#include "RooStats/ToyMCSampler2.h"
+#include "RooStats/HybridCalculator.h"
+#include "RooStats/ToyMCSampler.h"
 #include "RooStats/ProfileLikelihoodTestStat.h"
 #include "RooStats/SimpleLikelihoodRatioTestStat.h"
 #include "RooStats/RatioOfProfiledLikelihoodsTestStat.h"
@@ -21,7 +21,7 @@
 #include "RooStats/HypoTestResult.h"
 
 
-void rs201b_hybridcalculator2(int ntoys = 1000)
+void rs201b_hybridcalculator(int ntoys = 1000)
 {
   //***********************************************************************//
   // This macro show an example on how to use RooStats/HybridCalculator    //
@@ -82,7 +82,7 @@ void rs201b_hybridcalculator2(int ntoys = 1000)
 
   // 2lnQ: -3.15469
   // -lnQ: 1.57734
-  // Note about ModelConfig: The HybridCalculator2 uses its knowledge about the data
+  // Note about ModelConfig: The HybridCalculator uses its knowledge about the data
   // to determine observables and nuisance parameters automatically using
   // the GuessObsAndNuisance(...) function.
   RooWorkspace w;
@@ -112,27 +112,30 @@ void rs201b_hybridcalculator2(int ntoys = 1000)
   MaxLikelihoodEstimateTestStat mlets(tot_pdf, sig_yield);
 
   // Create toyMCSampler with chosen test statistic
-  //  ToyMCSampler2 toymcsampler2(slrts, ntoys);
-  //  ToyMCSampler2 toymcsampler2(profll, ntoys);
-  ToyMCSampler2 toymcsampler2(ropl, ntoys);
-  //  ToyMCSampler2 toymcsampler2(mlets, ntoys);
+  //  ToyMCSampler toymcsampler(slrts, ntoys);
+  //  ToyMCSampler toymcsampler(profll, ntoys);
+  ToyMCSampler toymcsampler(ropl, ntoys);
+  //  ToyMCSampler toymcsampler(mlets, ntoys);
 
-  //toymcsampler2.SetExpectedNuisancePar(kTRUE);
-  //toymcsampler2.SetGenerateBinned(true);
-  //toymcsampler2.SetNEventsPerToy(10000);
+  //toymcsampler.SetExpectedNuisancePar(kTRUE);
+  //toymcsampler.SetGenerateBinned(true);
+  //toymcsampler.SetNEventsPerToy(10000);
 
-  HybridCalculator2 myH2(*data,sb_model, b_model, &toymcsampler2);
-  //HybridCalculator2 myH2(*data,sb_model, b_model);
+  HybridCalculator myH2(*data,sb_model, b_model, &toymcsampler);
   myH2.ForcePriorNuisanceNull(bkg_yield_prior); // ad hoc hybrid
   myH2.ForcePriorNuisanceAlt(bkg_yield_prior);  // ad hoc hybrid
   HypoTestResult *res = myH2.GetHypoTest();
   res->Print();
 
-//  TCanvas *c = new TCanvas("rs201b_hybridcalculator2","rs201b_hybridcalculator2");
+//  TCanvas *c = new TCanvas("rs201b_hybridcalculator","rs201b_hybridcalculator");
   HypoTestPlot *plot = new HypoTestPlot(*res, 80); // number of bins is optional (default: 100)
   plot->Draw();
 //  plot->DumpToFile("test.root", "RECREATE");
 //  c->Print("rs201b_output.pdf");
+
+
+  // TEMPORARY TESTS
+  cout << "NullHisto->GetMean(): " << plot->GetTH1F(res->GetNullDistribution())->GetMean() << endl;
 
   return;
 }

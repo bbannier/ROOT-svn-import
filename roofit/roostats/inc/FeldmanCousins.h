@@ -21,7 +21,7 @@
 #endif
 
 #include "RooStats/ToyMCSampler.h"
-#include "RooStats/ToyMCSampler2.h"
+//#include "RooStats/ToyMCSampler2.h"
 #include "RooStats/ConfidenceBelt.h"
 
 #include "RooAbsData.h"
@@ -120,7 +120,7 @@ namespace RooStats {
       RooArgSet fObservables;// RooArgSet specifying  nuisance parameters for interval
       */
 
-      mutable ToyMCSampler2* fTestStatSampler; // the test statistic sampler
+      mutable ToyMCSampler* fTestStatSampler; // the test statistic sampler
       mutable RooAbsData* fPointsToTest; // points to perform the construction
       mutable ConfidenceBelt* fConfBelt;
       Bool_t fAdaptiveSampling; // controls use of adaptive sampling algorithm

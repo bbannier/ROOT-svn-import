@@ -21,7 +21,7 @@
 #include "RooRealVar.h"
 #include "TMath.h"
 
-#include "RooStats/HybridCalculator.h"
+#include "RooStats/HybridCalculatorOld.h"
 #include "RooStats/HybridResult.h"
 
 // include header file of this class 
@@ -57,9 +57,9 @@ HypoTestInverter::HypoTestInverter( HypoTestCalculator& myhc0,
    SetName("HypoTestInverter");
 
 
-   HybridCalculator * hc = dynamic_cast<HybridCalculator *> (fCalculator0);
+   HybridCalculatorOld * hc = dynamic_cast<HybridCalculatorOld *> (fCalculator0);
    if (hc == 0) { 
-      Fatal("HypoTestInverter","Using non HybridCalculator class IS NOT SUPPORTED");
+      Fatal("HypoTestInverter","Using non HybridCalculatorOld class IS NOT SUPPORTED");
    }
 
 }
@@ -128,7 +128,7 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, dou
   const double nSigma = 1; // number of times the estimated error the final p-value should be from the target
 
   // backup some values to be restored at the end 
-  const unsigned int nToys_backup = ((HybridCalculator*)fCalculator0)->GetNumberOfToys();
+  const unsigned int nToys_backup = ((HybridCalculatorOld*)fCalculator0)->GetNumberOfToys();
 
   // check the 2 hypothesis tests specified as extrema in the constructor
   double leftX = xMin;
@@ -249,13 +249,13 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, dou
       if ( fabs(centerCL-target) < nSigma*centerCLError && centerCLError > epsilon  ) {
 	do {
 
-	  int nToys = ((HybridCalculator*)fCalculator0)->GetNumberOfToys();  // current number of toys
+	  int nToys = ((HybridCalculatorOld*)fCalculator0)->GetNumberOfToys();  // current number of toys
 	  int nToysTarget = (int) TMath::Max(nToys*1.5, 1.2*nToys*pow(centerCLError/epsilon,2));  // estimated number of toys until the target precision is reached
 	  
 	  std::cout << "Increasing the number of toys to: " << nToysTarget << std::endl;
 	  
 	  // run again the same point with more toyMC (run the complement number of toys)
-	  ((HybridCalculator*)fCalculator0)->SetNumberOfToys(nToysTarget-nToys);
+	  ((HybridCalculatorOld*)fCalculator0)->SetNumberOfToys(nToysTarget-nToys);
 	  
 	  if (!RunOnePoint(x)) quitThisLoop=true;
 	  nIteration++;  // succeeded, increase the iteration counter
@@ -263,7 +263,7 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, dou
 	  centerCLError = fResults->GetYError(fResults->ArraySize()-1);
 	  
 	  // set the number of toys to reach the target 
-	  ((HybridCalculator*)fCalculator0)->SetNumberOfToys(nToysTarget);
+	  ((HybridCalculatorOld*)fCalculator0)->SetNumberOfToys(nToysTarget);
 	} while ( fabs(centerCL-target) < nSigma*centerCLError && centerCLError > epsilon && quitThisLoop==false );  // run this block again if it's still compatible with the target and the error still too large
       }
       
@@ -276,7 +276,7 @@ bool HypoTestInverter::RunAutoScan( double xMin, double xMax, double target, dou
   } while ( ( fabs(centerCL-target) > nSigma*centerCLError || centerCLError > epsilon ) && quitThisLoop==false );  // end of the main 'do' loop 
 
   // restore some parameters that might have been changed by the algorithm
-  ((HybridCalculator*)fCalculator0)->SetNumberOfToys(nToys_backup);
+  ((HybridCalculatorOld*)fCalculator0)->SetNumberOfToys(nToys_backup);
   
   if ( quitThisLoop==true ) {
     // abort and return 'false' to indicate fail status

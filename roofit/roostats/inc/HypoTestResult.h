@@ -100,11 +100,11 @@ namespace RooStats {
          if(HasTestStatisticData())
             cout << " - test statistics evaluated on data: " << fTestStatisticData << std::endl;
          if(HasTestStatisticData()  &&  fNullDistr)
-            cout << " - CL_b: " << CLb() << std::endl;
+            cout << " - CL_b: " << CLb() << " +/- " << CLbError() << std::endl;
          if(HasTestStatisticData()  &&  fAltDistr)
-            cout << " - CL_s+b: " << CLsplusb() << std::endl;
+            cout << " - CL_s+b: " << CLsplusb() << " +/- " << CLsplusbError() << std::endl;
          if(HasTestStatisticData()  &&  fAltDistr  &&  fNullDistr)
-            cout << " - CL_s: " << CLs() << std::endl;
+            cout << " - CL_s: " << CLs() << " +/- " << CLsError()  << std::endl;
 
          return;
       }

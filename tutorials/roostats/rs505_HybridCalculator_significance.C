@@ -2,7 +2,7 @@
 #include "RooRealVar.h"
 #include "RooProdPdf.h"
 #include "RooWorkspace.h"
-#include "RooStats/HybridCalculator.h"
+#include "RooStats/HybridCalculatorOld.h"
 #include "RooStats/HybridResult.h"
 #include "RooStats/HybridPlot.h"
 
@@ -34,7 +34,7 @@ void rs505_HybridCalculator_significance(const char* fname="WS_GaussOverFlat_wit
   const RooArgSet* nuisanceParam=my_WS->set("parameters");
   
  
-  HybridCalculator * hc=new HybridCalculator(*data,*model,*modelBkg);
+  HybridCalculatorOld * hc=new HybridCalculatorOld(*data,*model,*modelBkg);
   hc->SetNumberOfToys(ntoys);
   bool useNuisance=false;
 

@@ -20,7 +20,7 @@
 #include "RooStats/HypoTestInverter.h"
 #include "RooStats/HypoTestInverterResult.h"
 #include "RooStats/HypoTestInverterPlot.h"
-#include "RooStats/HybridCalculator.h"
+#include "RooStats/HybridCalculatorOld.h"
 
 #include "TGraphErrors.h"
 
@@ -43,7 +43,7 @@ void rs801_HypoTestInverter()
   RooDataSet* data = totPdf.generate(x,1);
 
   // prepare the calculator
-  HybridCalculator myhc(*data, totPdf, bkgPdf,0,0);
+  HybridCalculatorOld myhc(*data, totPdf, bkgPdf,0,0);
   myhc.SetTestStatistic(2);
   myhc.SetNumberOfToys(1000);
   myhc.UseNuisance(false);                            

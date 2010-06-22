@@ -12,14 +12,14 @@
 #include "RooGlobalFunc.h"
 #endif
 
-#include "RooStats/HybridCalculator.h"
+#include "RooStats/HybridCalculatorOld.h"
 #include "RooStats/HybridResult.h"
 #include "RooStats/HybridPlot.h"
 
 void rs203_HybridCalculator_with_ModelConfig()
 {
   //***********************************************************************//
-  // This macro show an example on how to use RooStats/HybridCalculator    //
+  // This macro show an example on how to use RooStats/HybridCalculatorOld //
   //***********************************************************************//
   //
   // With this example, you should get: CL_sb = 0.130 and CL_b = 0.946
@@ -81,8 +81,8 @@ void rs203_HybridCalculator_with_ModelConfig()
  
   //***********************************************************************//
 
-  /// run HybridCalculator on those inputs 
-  HybridCalculator myHybridCalc(*data, model1, model2 );
+  /// run HybridCalculatorOld on those inputs
+  HybridCalculatorOld myHybridCalc(*data, model1, model2 );
   //myHybridCalc.SetModel(&model); // alternative
 
   myHybridCalc.SetNumberOfToys(3000); 
@@ -99,7 +99,7 @@ void rs203_HybridCalculator_with_ModelConfig()
   }
 
   /// nice plot of the results
-  HybridPlot* myHybridPlot = myHybridResult->GetPlot("myHybridPlot","Plot of results with HybridCalculator",100);
+  HybridPlot* myHybridPlot = myHybridResult->GetPlot("myHybridPlot","Plot of results with HybridCalculatorOld",100);
   myHybridPlot->Draw();
 
   /// recover and display the results
@@ -114,7 +114,7 @@ void rs203_HybridCalculator_with_ModelConfig()
   myHybridResult->SetDataTestStatistics(mean_sb_toys_test_stat);
   double toys_significance = myHybridResult->Significance();
 
-  std::cout << "Completed HybridCalculator example:\n"; 
+  std::cout << "Completed HybridCalculatorOld example:\n";
   std::cout << " - -2lnQ = " << min2lnQ_data << endl;
   std::cout << " - CL_sb = " << clsb_data << std::endl;
   std::cout << " - CL_b  = " << clb_data << std::endl;
