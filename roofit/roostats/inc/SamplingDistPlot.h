@@ -75,6 +75,11 @@ namespace RooStats {
     // GetRMS() etc.
     TH1F* GetTH1F(const SamplingDistribution *samplDist);
 
+    // changes plot to log scale on x axis
+    void SetLogXaxis(const Bool_t lx) { fLogXaxis = lx; }
+    // changes plot to log scale on y axis
+    void SetLogYaxis(const Bool_t ly) { fLogYaxis = ly; }
+
     // write to Root file
     void DumpToFile(const char* RootFileName, Option_t *option="", const char *ftitle="", Int_t compress=1);
 
@@ -99,6 +104,8 @@ namespace RooStats {
     RooList fOtherItems; // other objects to be drawn like TLine etc.
     TIterator* fIterator; // TODO remove class variable and instantiate locally as necessary
     RooPlot* fRooPlot;
+    Bool_t fLogXaxis;
+    Bool_t fLogYaxis;
 
     Bool_t fApplyStyle;
     Style_t fFillStyle;
