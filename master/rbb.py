@@ -355,14 +355,15 @@ class ROOTMailNotifier(MailNotifier):
                 log_url = '%s/steps/%s/logs/%s' % (buildurl, step_name, log_name)
                 logs.append((log_name, log_url))
             if not buildbotProblem:
-                for line in list(log.getChunks(channels = (HEADER), onlyText=True))[-10:]:
+                #for line in list(log.getChunks(channels = [HEADER], onlyText=True))[-10:]:
+                for line in list(log.getChunks())[-10:]:
                     if 'command timed out:' in line:
                         subject = "Buildbot: %s timeout for %s %s" % (laststepname, name, source)
                         buildbotProblem = True
      
         text = list()
         if buildbotProblem:
-            self.extraRecipients = ("axel@cern.ch")
+            self.extraRecipients = ['axel@cern.ch']
             text.append('<h4>Timeout on %s</h4>' % (name))
             text.append("Running on %s" % build.getSlavename())
             text.append('<br>')
@@ -370,7 +371,7 @@ class ROOTMailNotifier(MailNotifier):
                 text.append('Logs: <a href="%s">%s</a>' % (buildurl,buildurl))
                 text.append('<br>')
         else:
-            self.extraRecipients = ('rootsvn@root.cern.ch')
+            self.extraRecipients = ['rootsvn@root.cern.ch']
             text.append('<h4>%s (and possibly others) %s</h4>' % (name, result))
             text.append("Step %s: %s" % (laststepname, " ".join(laststeptext)))
             text.append('<br>')
@@ -391,7 +392,7 @@ class ROOTMailNotifier(MailNotifier):
 
             if ss and ss.changes:
                 text.append('<h4>Changes:</h4>')
-                text.extend([c.asHTML() for c in ss.changes])
+                text.extend([self.changeAsHTML(c) for c in ss.changes])
 
         if len(logs):
             text.append('<h4>Logs:</h4>')
@@ -406,6 +407,18 @@ class ROOTMailNotifier(MailNotifier):
         return {'type': 'html',
                'body': "\n".join(text),
                'subject' : subject}
+
+    def changeAsHTML(self, c):
+        cd = c.asDict();
+        t = 'Changed by: <b>' + cd['who'] + '</b><br/>'
+        t += 'Changed at: <b>' + cd['at'] + '</b><br/>'
+        t += 'Revision: <b>' + cd['revision'] + '</b><br/>'
+        t += 'Category: <b>' + cd['category'] + '</b><br/>'
+        t += 'Changed files: <br/>'
+        for f in cd['files']:
+            t += '<b>' + f['name'] + '</b><br/>'
+        t += 'Comments:<br/>' + cd['comments']
+        return t
 
 class ROOTBuildBotConfig:
     """Collect configuration options and spread them into buildbot
@@ -632,7 +645,9 @@ class ROOTBuildBotConfig:
             fact.addStep(svn)
             if confLine:
                 fact.addStep(Configure(command = confLine))
-            compStep = Compile(command = compLine, warningPattern = '.*[Ww]arning(:| [^(]).*')
+            compStep = Compile(command = compLine,
+                               warningPattern = '.*[Ww]arning(:| [^(]).*',
+                               timeout = None)
             fact.addStep(compStep)
         else:
             fact = factory.BuildFactory()

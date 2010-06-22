@@ -1,0 +1,63 @@
+{%- block doctype -%}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+{% endblock %}
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    {% block head %}
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    {% if metatags %}
+      {{ metatags }}
+    {% endif %}
+    {% if refresh %}
+      <meta http-equiv="refresh" content="{{ refresh|e }}"/>
+    {% endif %}
+    <title>{{ title|e }}</title>
+    <link rel="stylesheet" href="{{ stylesheet }}" type="text/css" />
+    {% endblock %}
+  </head>
+  <body class="interface">
+    {% block header -%}
+    <div class="header">    
+        <a href="http://root.cern.ch/drupal/content/buildbot-overview">Home</a>
+        - <em>incremental</em>:
+        <a href="{{ path_to_root }}grid?category=ROOT-incr&category=ROOT"><img src="http://root.cern.ch/drupal/sites/default/files/appointment-soon.png" style="border:none;height:16px"/> Recent</a>
+        <a href="{{ path_to_root }}waterfall?category=ROOT-incr&category=ROOT"><img src="http://root.cern.ch/drupal/sites/default/files/applications-office-2.png" style="border:none;height:16px"/> History</a>
+        <a href="{{ path_to_root }}console?category=ROOT-incr&category=ROOT"><img src="http://root.cern.ch/drupal/sites/default/files/applications-utilities-3.png" style="border:none;height:16px"/> Console</a>
+        - <em>full</em>:
+        <a href="{{ path_to_root }}grid?category=ROOT-hourly&category=roottest-hourly&ROOT&category=roottest"><img src="http://root.cern.ch/drupal/sites/default/files/appointment-soon.png" style="border:none;height:16px"/> Recent</a>
+        <a href="{{ path_to_root }}waterfall?category=ROOT-hourly&category=roottest-hourly&ROOT&category=roottest"><img src="http://root.cern.ch/drupal/sites/default/files/applications-office-2.png" style="border:none;height:16px"/> History</a>
+        <a href="{{ path_to_root }}console?category=ROOT-hourly&category=roottest-hourly&ROOT&category=roottest"><img src="http://root.cern.ch/drupal/sites/default/files/applications-utilities-3.png" style="border:none;height:16px"/> Console</a>
+
+        - <a href="{{ path_to_root }}buildslaves">Buildslaves</a>
+        <a href="{{ path_to_root }}changes">Changesources</a>
+        <a href="{{ path_to_root }}about">About</a>
+    </div>
+    {% endblock %}
+
+    <hr/>
+
+    <div class="content">
+      {%- block content -%}     
+      {%- endblock -%}
+    </div>
+
+    {%- block footer -%} 
+    <div class="footer" style="clear:both">
+      <hr/>
+      <a href="http://buildbot.net/">BuildBot</a> ({{version}})
+      {% if project_name -%}
+        working for the&nbsp;
+        {%- if project_url -%}
+          <a href="{{ project_url }}">{{ project_name }}</a>
+        {%- else -%}
+          {{ project_name }}
+        {%- endif -%}
+        &nbsp;project.
+      {%- endif -%}
+      <br/>
+      Page built: <b>{{ time }}</b> ({{ tz }})
+    </div>
+    {% endblock -%}
+  </body>
+</html>
