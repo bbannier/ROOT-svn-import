@@ -61,13 +61,14 @@ void rs401_FeldmanCousins()
   frame->Draw();
   dataCanvas->Update();
 
+  RooWorkspace w;
+  ModelConfig m("example", &w);
+  m.SetParametersOfInterest(parameters);
+  m.SetPdf(gaus);
 
   //////// show use of Feldman-Cousins
-  RooStats::FeldmanCousins fc;
-  fc.SetPdf(gaus);
-  fc.SetParameters(parameters);
+  RooStats::FeldmanCousins fc(*data, m);
   fc.SetTestSize(.2); // set size of test
-  fc.SetData(*data);
   fc.UseAdaptiveSampling(true);
 
   // use the Feldman-Cousins tool

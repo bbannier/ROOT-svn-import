@@ -55,7 +55,7 @@ END_HTML
 #endif
 
 #include "RooStats/SamplingDistribution.h"
-#include "RooStats/ToyMCSampler2.h"
+#include "RooStats/ToyMCSampler.h"
 #include "RooStats/ModelConfig.h"
 
 #include "RooMsgService.h"
@@ -174,7 +174,7 @@ ConfInterval* NeymanConstruction::GetInterval() const {
     // use control
     totalMC*=fAdditionalNToysFactor;
 
-    ToyMCSampler2* toyMCSampler = dynamic_cast<ToyMCSampler2*>(fTestStatSampler);
+    ToyMCSampler* toyMCSampler = dynamic_cast<ToyMCSampler*>(fTestStatSampler);
     if(fAdaptiveSampling && toyMCSampler) {
       do{
 	// this will be executed first, then while conditioned checked

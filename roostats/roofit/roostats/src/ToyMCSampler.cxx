@@ -9,7 +9,7 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#include "RooStats/ToyMCSampler2.h"
+#include "RooStats/ToyMCSampler.h"
 
 #ifndef ROO_MSG_SERVICE
 #include "RooMsgService.h"
@@ -21,7 +21,7 @@
 
 namespace RooStats {
 
-Bool_t ToyMCSampler2::CheckConfig(void) {
+Bool_t ToyMCSampler::CheckConfig(void) {
    // only checks, no guessing/determination (do this in calculators,
    // e.g. using ModelConfig::GuessObsAndNuisance(...))
    bool goodConfig = true;
@@ -35,7 +35,7 @@ Bool_t ToyMCSampler2::CheckConfig(void) {
    return goodConfig;
 }
 
-SamplingDistribution* ToyMCSampler2::GetSamplingDistribution(RooArgSet& paramPoint) {
+SamplingDistribution* ToyMCSampler::GetSamplingDistribution(RooArgSet& paramPoint) {
    CheckConfig();
 
    std::vector<Double_t> testStatVec;
@@ -47,7 +47,6 @@ SamplingDistribution* ToyMCSampler2::GetSamplingDistribution(RooArgSet& paramPoi
    RooDataSet *nuisanceParPoints = NULL;
    if (fPriorNuisance  &&  fNuisancePars) {
       if (fExpectedNuisancePar) {
-         // ad hoc method
 #ifdef EXPECTED_NUISANCE_PAR // under development
          nuisanceParPoints = fModel->GetPriorPdf()->generateBinned(
             *fModel->GetNuisanceParameters(),
@@ -60,11 +59,7 @@ SamplingDistribution* ToyMCSampler2::GetSamplingDistribution(RooArgSet& paramPoi
          }
 #endif
       }else{
-         // ad hoc method
          nuisanceParPoints = fPriorNuisance->generate(*fNuisancePars, fNToys);
-
-         // TODO will not work for principled case as global variable changes prior pdf of nuisance
-         // parameters
       }
    }
 
@@ -119,7 +114,7 @@ SamplingDistribution* ToyMCSampler2::GetSamplingDistribution(RooArgSet& paramPoi
 }
 
 
-RooAbsData* ToyMCSampler2::GenerateToyData(RooArgSet& /*nullPOI*/) const {
+RooAbsData* ToyMCSampler::GenerateToyData(RooArgSet& /*nullPOI*/) const {
    // This method generates a toy data set for the given parameter point taking
    // global observables into account.
 

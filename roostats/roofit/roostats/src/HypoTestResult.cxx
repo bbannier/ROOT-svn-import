@@ -147,7 +147,7 @@ Double_t HypoTestResult::CLbError() const {
    //   n_{toys}}
    // END_LATEX
 
-   if(!fNullDistr) return NaN;
+   if(!fNullDistr) return 0.0;
    unsigned const int n = fNullDistr->GetSamplingDistribution().size();
    return TMath::Sqrt(CLb() * (1. - CLb()) / n);
 }
@@ -161,7 +161,7 @@ Double_t HypoTestResult::CLsplusbError() const {
    //   n_{toys}}
    // END_LATEX
 
-   if(!fAltDistr) return NaN;
+   if(!fAltDistr) return 0.0;
    unsigned const int n = fAltDistr->GetSamplingDistribution().size();
    return TMath::Sqrt(CLsplusb() * (1. - CLsplusb()) / n);
 }
@@ -176,12 +176,12 @@ Double_t HypoTestResult::CLsError() const {
    //     #left( #frac{#sigma_{CL_{b}}}{CL_{b}} #right)^2}
    // END_LATEX
 
-   if(!fAltDistr || !fNullDistr) return NaN;
+   if(!fAltDistr || !fNullDistr) return 0.0;
 
    unsigned const int n_b = fNullDistr->GetSamplingDistribution().size();
    unsigned const int n_sb = fAltDistr->GetSamplingDistribution().size();
 
-   if (CLb() == 0 || CLsplusb() == 0) return 0;
+   if (CLb() == 0 || CLsplusb() == 0) return 0.0;
 
    double cl_b_err = (1. - CLb()) / (n_b * CLb());
    double cl_sb_err = (1. - CLsplusb()) / (n_sb * CLsplusb());
