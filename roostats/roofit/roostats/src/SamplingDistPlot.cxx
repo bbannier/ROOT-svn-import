@@ -27,6 +27,11 @@ objects.
 #include <algorithm>
 #include <iostream>
 
+
+#ifndef ROO_MSG_SERVICE
+#include "RooMsgService.h"
+#endif
+
 /// ClassImp for building the THtml documentation of the class 
 ClassImp(RooStats::SamplingDistPlot);
 
@@ -34,7 +39,15 @@ using namespace RooStats;
 
 //_______________________________________________________
 SamplingDistPlot::SamplingDistPlot(const Int_t nbins) :
- fHist(0), fLegend(NULL), fItems(), fOtherItems(), fRooPlot(NULL), fApplyStyle(kTRUE), fFillStyle(3004)
+   fHist(0),
+   fLegend(NULL),
+   fItems(),
+   fOtherItems(),
+   fRooPlot(NULL),
+   fLogXaxis(kFALSE),
+   fLogYaxis(kFALSE),
+   fApplyStyle(kTRUE),
+   fFillStyle(3004)
 {
   // SamplingDistPlot default constructor with bin size
   fIterator = fItems.MakeIterator();
@@ -46,7 +59,15 @@ SamplingDistPlot::SamplingDistPlot(const Int_t nbins) :
 
 //_______________________________________________________
 SamplingDistPlot::SamplingDistPlot(const char* name, const char* title, Int_t nbins, Double_t xmin, Double_t xmax) :
- fHist(0), fLegend(NULL), fItems(), fOtherItems(), fRooPlot(NULL), fApplyStyle(kTRUE), fFillStyle(3004)
+   fHist(0),
+   fLegend(NULL),
+   fItems(),
+   fOtherItems(),
+   fRooPlot(NULL),
+   fLogXaxis(kFALSE),
+   fLogYaxis(kFALSE),
+   fApplyStyle(kTRUE),
+   fFillStyle(3004)
 {
   // SamplingDistPlot constructor
   fHist = new TH1F(name, title, nbins, xmin, xmax);
@@ -240,6 +261,15 @@ void SamplingDistPlot::Draw(const Option_t * /*options */) {
 
 
    if(fLegend) fRooPlot->addObject(fLegend);
+
+   if(gStyle->GetOptLogx() != fLogXaxis) {
+      if(!fApplyStyle) coutW(Plotting) << "gStyle will be changed to adjust SetOptLogx(...)";
+      gStyle->SetOptLogx(fLogXaxis);
+   }
+   if(gStyle->GetOptLogy() != fLogYaxis) {
+      if(!fApplyStyle) coutW(Plotting) << "gStyle will be changed to adjust SetOptLogy(...)";
+      gStyle->SetOptLogy(fLogYaxis);
+   }
    fRooPlot->Draw();
 
    return;
