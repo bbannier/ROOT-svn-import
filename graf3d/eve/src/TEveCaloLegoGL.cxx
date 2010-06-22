@@ -966,7 +966,8 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx &rnrCtx, vCell2D_t& cells2D) const
             for (vCell2D_i i = cells2D.begin(); i != cells2D.end(); ++i)
             {
                TGLUtil::ColorTransparency(fM->fData->GetSliceColor(i->fMaxSlice), fM->fData->GetSliceTransparency(i->fMaxSlice));
-               glVertex3f(i->X(), i->Y() , i->fSumVal);
+               Float_t z = fM->GetHasFixedHeightIn2DMode() ? baseOffset : i->fSumVal;
+               glVertex3f(i->X(), i->Y() , z);
             }
             glEnd();
          }
