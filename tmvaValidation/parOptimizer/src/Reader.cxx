@@ -111,6 +111,7 @@
 #include "TMVA/ClassifierFactory.h"
 #include "TMVA/IMethod.h"
 #include "TMVA/MethodCuts.h"
+#include "TMVA/MethodCategory.h"
 #include "TMVA/DataSetManager.h"
 
 ClassImp(TMVA::Reader)
@@ -287,6 +288,7 @@ void TMVA::Reader::AddVariable( const TString& expression, Int_t* datalink )
 {
    Log() << kFATAL << "Reader::AddVariable( const TString& expression, Int_t* datalink ), this function is deprecated, please provide all variables to the reader as floats" << Endl;
    // Add an integer variable or expression to the reader
+   Log() << kFATAL << "Reader::AddVariable( const TString& expression, Int_t* datalink ), this function is deprecated, please provide all variables to the reader as floats" << Endl;
    DataInfo().AddVariable(expression, "", "", 0, 0, 'I', kFALSE, (void*)datalink ); // <= should this be F or rather T?
 }
 
@@ -350,6 +352,12 @@ TMVA::IMethod* TMVA::Reader::BookMVA( const TString& methodTag, const TString& w
 
    MethodBase* method = dynamic_cast<MethodBase*>(this->BookMVA( Types::Instance().GetMethodType(methodType),
                                                                  weightfile ) );
+   if( method->GetMethodType() == Types::kCategory ){ 
+      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method)); 
+      if( !methCat ) 
+	 Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl; 
+      methCat->fDataSetManager = fDataSetManager; 
+   }
 
    return fMethodMap[methodTag] = method;
 }
@@ -362,6 +370,13 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const TStrin
                                                       DataInfo(), weightfile );
 
    MethodBase *method = (dynamic_cast<MethodBase*>(im));
+
+   if( method->GetMethodType() == Types::kCategory ){ 
+      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method)); 
+      if( !methCat ) 
+         Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl; 
+      methCat->fDataSetManager = fDataSetManager; 
+   }
 
    if (method==0) return im;
 
@@ -384,6 +399,47 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const TStrin
 }
 
 //_______________________________________________________________________
+TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const char* xmlstr )
+{
+
+#if (ROOT_SVN_REVISION >= 32259) && (ROOT_VERSION_CODE >= 334336) // 5.26/00
+
+   // books MVA method from weightfile
+   IMethod* im = ClassifierFactory::Instance().Create(std::string(Types::Instance().GetMethodName( methodType )),
+                                                      DataInfo(), "" );
+   
+   MethodBase *method = (dynamic_cast<MethodBase*>(im));
+
+   if( method->GetMethodType() == Types::kCategory ){ 
+      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method)); 
+      if( !methCat ) 
+         Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl; 
+      methCat->fDataSetManager = fDataSetManager; 
+   }
+
+   method->SetupMethod();
+
+   // when reading older weight files, they could include options
+   // that are not supported any longer
+   method->DeclareCompatibilityOptions();
+
+   // read weight file
+   method->ReadStateFromXMLString( xmlstr );
+
+   // check for unused options
+   method->CheckSetup();
+   
+   Log() << kINFO << "Booked classifier \"" << method->GetMethodName()
+         << "\" of type: \"" << method->GetMethodTypeName() << "\"" << Endl;
+   
+   return method;
+#else
+   Log() << kFATAL << "Method Reader::BookMVA(TMVA::Types::EMVA methodType, const char* xmlstr) is not available for ROOT versions prior to 5.26/00." << Endl;
+   return 0;
+#endif
+}
+
+//_______________________________________________________________________
 Double_t TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, Double_t aux )
 {
    // Evaluate a vector<float> of input data for a given method
@@ -398,6 +454,22 @@ Double_t TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const 
    Double_t val = meth->GetMvaValue( tmpEvent, &fMvaEventError);
    delete tmpEvent;
    return val;
+}
+
+//_______________________________________________________________________
+Double_t TMVA::Reader::EvaluateMVA( const std::vector<Double_t>& inputVec, const TString& methodTag, Double_t aux )
+{
+   // Evaluate a vector<double> of input data for a given method
+   // The parameter aux is obligatory for the cuts method where it represents the efficiency cutoff
+
+   // performs a copy to float values which are internally used by all methods
+   if(fTmpEvalVec.size() != inputVec.size())
+      fTmpEvalVec.resize(inputVec.size());
+
+   for (UInt_t idx=0; idx!=inputVec.size(); idx++ ) 
+      fTmpEvalVec[idx]=inputVec[idx];
+
+   return EvaluateMVA( fTmpEvalVec, methodTag, aux );
 }
 
 //_______________________________________________________________________

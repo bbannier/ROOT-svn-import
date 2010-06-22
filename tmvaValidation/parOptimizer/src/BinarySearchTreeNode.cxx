@@ -73,7 +73,7 @@ TMVA::BinarySearchTreeNode::BinarySearchTreeNode( BinarySearchTreeNode* parent, 
    fEventV  ( std::vector<Float_t>() ),
    fTargets ( std::vector<Float_t>() ),
    fWeight  ( 0  ),
-   fClass   ( -1 ),
+   fClass   ( 0 ),
    fSelector( -1 )
 {
    // constructor of a daughter node as a daughter of 'p'

@@ -37,6 +37,7 @@
 
 #include "TString.h"
 #include <vector>
+#include <cmath>
 #include "TTree.h"
 #include "Riostream.h"
 #include "TFitter.h"
@@ -177,8 +178,8 @@ void TMVA::MethodMLP::DeclareOptions()
    DeclareOptionRef(fSteps=-1, "ConvergenceTests", 
                     "Number of steps (without improvement) required for convergence (<0 means automatic convergence check is turned off)");
 
-   DeclareOptionRef(fUseRegulator=kTRUE, "UseRegulator",
-		    "Use regulator to avoid over-training  (bayesian neural network technique)");   //zjh
+   DeclareOptionRef(fUseRegulator=kFALSE, "UseRegulator",
+		    "Use regulator to avoid over-training");   //zjh
    DeclareOptionRef(fUpdateLimit=10, "UpdateLimit",
 		    "Number of updates for regulator before stop training");   //zjh
 }
@@ -354,16 +355,16 @@ void TMVA::MethodMLP::Train(Int_t nEpochs)
    else                               BackPropagationMinimize(nEpochs);
 #endif
 
-   //zjh
    float trainE = CalculateEstimator( Types::kTraining, 0 ) ; // estimator for training sample  //zjh
    float testE  = CalculateEstimator( Types::kTesting,  0 ) ; // estimator for test sample //zjh
-   Log()<<kDEBUG<<"Finalizing...\ttrainE="<<trainE<<"\ttestE="<<testE<<Endl;
-   UpdateRegulators();
+   if (fUseRegulator){
+      Log()<<kINFO<<"Finalizing handling of Regulator terms, trainE="<<trainE<<" testE="<<testE<<Endl;
+      UpdateRegulators();
+      Log()<<kINFO<<"Done with handling of Regulator terms"<<Endl;
+   }
    Int_t numSynapses=fSynapses->GetEntriesFast();
    fInvHessian.ResizeTo(numSynapses,numSynapses);
    GetApproxInvHessian( fInvHessian ,false);
-   //zjh
-
 }
 
 //______________________________________________________________________________
@@ -474,7 +475,7 @@ void TMVA::MethodMLP::BFGSMinimize( Int_t nEpochs )
       //zjh+
       if (dError<0) Log()<<kWARNING<<"\nnegative dError=" <<dError<<Endl;
       AccuError+=dError;
-      if (fabs(dError)>0.0001) RegUpdateCD=0;
+      if (std::abs(dError)>0.0001) RegUpdateCD=0;
       
       if ( fUseRegulator && RegUpdateTimes<fUpdateLimit && RegUpdateCD>=((0.4*fResetStep)>50?50:(0.4*fResetStep)) && i<0.8*nEpochs && AccuError>0.01 ) {
 	     Log()<<kDEBUG <<Endl;
@@ -514,7 +515,7 @@ void TMVA::MethodMLP::BFGSMinimize( Int_t nEpochs )
       }
       
       // draw progress
-      TString convText = Form( "<D^2> (Epoch/train/test): %d/%.4g/%.4g", i, trainE, testE ); //zjh
+      TString convText = Form( "<D^2> (train/test): %.4g/%.4g", trainE, testE ); //zjh
       if (fSteps > 0) {
          Float_t progress = 0;
          if (Float_t(i)/nEpochs < fSamplingEpoch) 

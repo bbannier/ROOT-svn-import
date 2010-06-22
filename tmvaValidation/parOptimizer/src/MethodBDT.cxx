@@ -135,8 +135,6 @@ REGISTER_METHOD(BDT)
 
 ClassImp(TMVA::MethodBDT)
 
-const Int_t TMVA::MethodBDT::fgDebugLevel = 0;
-
 
 //_______________________________________________________________________
 TMVA::MethodBDT::MethodBDT( const TString& jobName,
@@ -419,7 +417,7 @@ void TMVA::MethodBDT::Reset( void )
    delete results;
    results = NULL;
 
-   std::cout << " successfully deleted results " << results << std::endl;
+   Log() << kDEBUG << " successfully deleted results " << results << Endl;
 
   
                                          

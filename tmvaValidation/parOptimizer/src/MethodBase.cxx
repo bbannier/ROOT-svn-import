@@ -448,92 +448,7 @@ void TMVA::MethodBase::ProcessBaseOptions()
 //_______________________________________________________________________
 void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition )
 {
-   // create variable transformations
-
-   if (trafoDefinition == "None") // no transformations
-      return;
-
-   if( trafoDefinition.Contains("+") || trafoDefinition.Contains("(") ) { // new format
-      TList* trList = gTools().ParseFormatLine( trafoDefinition, "+" );
-      TListIter trIt(trList);
-      while (TObjString* os = (TObjString*)trIt()) {
-	 TString tdef = os->GetString();
-         Int_t idxCls = -1;
-
-	 TString variables = "_V_";
-	 if( tdef.Contains("(") ) { // contains selection of variables
-	    Ssiz_t parStart = tdef.Index( "(" );
-	    Ssiz_t parLen   = tdef.Index( ")", parStart )-parStart+1;
-
-	    variables = tdef(parStart,parLen);
-	    tdef.Remove(parStart,parLen);
-	    variables.Remove(parLen-1,1);
-	    variables.Remove(0,1);
-	 }
-
-         TList* trClsList = gTools().ParseFormatLine( tdef, "_" ); // split entry to get trf-name and class-name
-         TListIter trClsIt(trClsList);
-         const TString& trName = ((TObjString*)trClsList->At(0))->GetString();
-
-         if (trClsList->GetEntries() > 1) {
-            TString trCls = "AllClasses";
-            ClassInfo *ci = NULL;
-            trCls  = ((TObjString*)trClsList->At(1))->GetString();
-            if (trCls != "AllClasses") {
-               ci = DataInfo().GetClassInfo( trCls );
-               if (ci == NULL)
-                  Log() << kFATAL << "Class " << trCls << " not known for variable transformation "
-                        << trName << ", please check." << Endl;
-               else
-                  idxCls = ci->GetNumber();
-            }
-         }
-
-
-	 VariableTransformBase* transformation = NULL;
-         if      (trName == "D" || trName == "Deco" || trName == "Decorrelate"){
-	    if( variables.Length() == 0 )
-	       variables = "_V_";
-	    transformation = new VariableDecorrTransform( DataInfo());
-	 }
-         else if (trName == "P" || trName == "PCA"){
-	    if( variables.Length() == 0 )
-	       variables = "_V_";
-	    transformation = new VariablePCATransform   ( DataInfo());
-	 }
-         else if (trName == "G" || trName == "Gauss"){
-	    if( variables.Length() == 0 )
-	       variables = "_V_,_T_";
-	    transformation = new VariableGaussTransform ( DataInfo());
-	 }
-         else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize")
-	 {
-	    if( variables.Length() == 0 )
-	       variables = "_V_,_T_";
-	    transformation = new VariableNormalizeTransform( DataInfo());
-	 }
-         else
-            Log() << kFATAL << "<ProcessOptions> Variable transform '"
-                  << trName << "' unknown." << Endl;
-
-	 if( transformation ){
-	    ClassInfo* clsInfo = DataInfo().GetClassInfo(idxCls);
-	    if( clsInfo )
-	       Log() << kINFO << " create Transformation " << trName << " with reference class " << clsInfo->GetName() << "=("<< idxCls <<")"<<Endl;
-	    else
-	       Log() << kINFO << " create Transformation " << trName << " with events of all classes." << Endl;
-
-	    transformation->SelectInput( variables );
-	    GetTransformationHandler().AddTransformation(transformation, idxCls);
-	 }
-      }
-      
-
-
-      return;
-   }
-
-   if (trafoDefinition != "None") { // old format
+   if (trafoDefinition != "None") {
       TList* trList = gTools().ParseFormatLine( trafoDefinition, "," );
       TListIter trIt(trList);
       while (TObjString* os = (TObjString*)trIt()) {
@@ -557,33 +472,23 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition )
             }
          }
 
-	 VariableTransformBase* transformation = NULL;
-	 TString variables = "_V_";
          if      (trName == "D" || trName == "Deco" || trName == "Decorrelate")
-	    transformation = new VariableDecorrTransform( DataInfo());
+            GetTransformationHandler().AddTransformation( new VariableDecorrTransform   ( DataInfo()) , idxCls );
          else if (trName == "P" || trName == "PCA")
-	    transformation = new VariablePCATransform   ( DataInfo());
+            GetTransformationHandler().AddTransformation( new VariablePCATransform      ( DataInfo()), idxCls );
          else if (trName == "G" || trName == "Gauss")
-	    transformation = new VariableGaussTransform ( DataInfo());
-         else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize"){
-	    variables = "_V_,_T_";
-	    transformation = new VariableNormalizeTransform( DataInfo());
-	 }
+            GetTransformationHandler().AddTransformation( new VariableGaussTransform    ( DataInfo()), idxCls );
+         else if (trName == "N" || trName == "Norm" || trName == "Normalise" || trName == "Normalize")
+            GetTransformationHandler().AddTransformation( new VariableNormalizeTransform( DataInfo()), idxCls );
          else
             Log() << kFATAL << "<ProcessOptions> Variable transform '"
-                  << trName << "' unknown." << Endl;        
-
-	 ClassInfo* clsInfo = DataInfo().GetClassInfo(idxCls);
-	 if( clsInfo )
-	    Log() << kINFO << " create Transformation " << trName << " with reference class " << clsInfo->GetName() << "=("<< idxCls <<")"<<Endl;
-	 else
-	    Log() << kINFO << " create Transformation " << trName << " with events of all classes." << Endl;
-	    
-
-	 if( transformation ){
-	    transformation->SelectInput( variables );
-	    GetTransformationHandler().AddTransformation(transformation, idxCls);
-	 }
+                  << trName << "' unknown." << Endl;         
+         ClassInfo* clsInfo = DataInfo().GetClassInfo(idxCls);
+         if( clsInfo )
+            Log() << kINFO << " create Transformation " << trName << " with reference class " <<clsInfo->GetName() << "=("<< idxCls <<")"<<Endl;
+         else
+            Log() << kINFO << " create Transformation " << trName << " with events of all classes." << Endl;
+         
       }
    }
 }
@@ -1323,17 +1228,17 @@ void TMVA::MethodBase::ReadStateFromFile()
          << gTools().Color("lightblue") << tfname << gTools().Color("reset") << Endl;
 
    if (tfname.EndsWith(".xml") ) {
-      void* doc = gTools().xmlengine().ParseFile(tfname); 
+      void* doc = gTools().xmlengine().ParseFile(tfname);
       void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
       ReadStateFromXML(rootnode);
-   } 
+   }
    else {
       filebuf fb;
       fb.open(tfname.Data(),ios::in);
       if (!fb.is_open()) { // file not found --> Error
          Log() << kFATAL << "<ReadStateFromFile> "
                << "Unable to open input weight file: " << tfname << Endl;
-      }      
+      }
       istream fin(&fb);
       ReadStateFromStream(fin);
       fb.close();
@@ -1347,11 +1252,26 @@ void TMVA::MethodBase::ReadStateFromFile()
       ReadStateFromStream( *rfile );
       rfile->Close();
    }
+}
+//_______________________________________________________________________
+void TMVA::MethodBase::ReadStateFromXMLString( const char* xmlstr ) {
+   // for reading from memory
+   
+#if (ROOT_SVN_REVISION >= 32259) && (ROOT_VERSION_CODE >= 334336) // 5.26/00
+   void* doc = gTools().xmlengine().ParseString(xmlstr);
+
+   void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
+
+   return ReadStateFromXML(rootnode);
+#else
+   Log() << kFATAL << "Method MethodBase::ReadStateFromXMLString( const char* xmlstr ) is not available for ROOT versions prior to 5.26/00." << Endl;
+   return;
+#endif
 
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBase::ReadStateFromXML( void* methodNode ) 
+void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
 {
    TString fullMethodName;
    gTools().ReadAttr( methodNode, "Method", fullMethodName );
@@ -1360,6 +1280,9 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
    // update logger
    Log().SetSource( GetName() );
    Log() << kINFO << "Read method \"" << GetMethodName() << "\" of type \"" << GetMethodTypeName() << "\"" << Endl;
+
+   // after the method name is read, the testvar can be set
+   SetTestvarName();
 
    TString nodeName("");
    void* ch = gTools().GetChild(methodNode);
@@ -1373,10 +1296,10 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
          void* antypeNode = gTools().GetChild(ch);
          while (antypeNode) {
             gTools().ReadAttr( antypeNode, "name",   name );
-            
-            if (name == "TrainingTime") 
+
+            if (name == "TrainingTime")
                gTools().ReadAttr( antypeNode, "value",  fTrainTime );
-      
+
             if (name == "AnalysisType") {
                gTools().ReadAttr( antypeNode, "value",  val );
                val.ToLower();
@@ -1385,7 +1308,7 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
                else if (val == "multiclass" )     SetAnalysisType( Types::kMulticlass );
                else Log() << kFATAL << "Analysis type " << val << " is not known." << Endl;
             }
-            
+
             if (name == "TMVA Release" || name == "TMVA" ){
                TString s;
                gTools().ReadAttr( antypeNode, "value", s);
@@ -1401,12 +1324,12 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
             }
             antypeNode = gTools().GetNextChild(antypeNode);
          }
-      } 
+      }
       else if (nodeName=="Options") {
          ReadOptionsFromXML(ch);
          ParseOptions();
-         
-      } 
+
+      }
       else if (nodeName=="Variables") {
          ReadVariablesFromXML(ch);
       }
@@ -1434,10 +1357,10 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
             fMVAPdfB = new PDF(pdfname);
             fMVAPdfB->ReadXML(pdfnode);
          }
-      } 
+      }
       else if (nodeName=="Weights") {
          ReadWeightsFromXML(ch);
-      } 
+      }
       else {
          std::cout << "Unparsed: " << nodeName << std::endl;
       }
@@ -1785,7 +1708,7 @@ TDirectory* TMVA::MethodBase::BaseDir() const
    TString defaultDir = GetMethodName();
 
    TObject* o = methodDir->FindObject(defaultDir);
-   if (o!=0 && o->InheritsFrom("TDirectory")) dir = (TDirectory*)o;
+   if (o!=0 && o->InheritsFrom(TDirectory::Class())) dir = (TDirectory*)o;
 
    if (dir != 0) return dir;
 
