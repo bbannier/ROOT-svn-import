@@ -585,6 +585,7 @@ void RooTreeDataStore::loadValues(const RooAbsDataStore *ads, const RooFormulaVa
 
   // Loop over events in source tree   
   RooAbsArg* arg = 0;
+  TIterator* destIter = _varsww.createIterator() ;
   Int_t nevent = nStop < ads->numEntries() ? nStop : ads->numEntries() ;
   Bool_t allValid ;
 
@@ -598,7 +599,6 @@ void RooTreeDataStore::loadValues(const RooAbsDataStore *ads, const RooFormulaVa
 
     
     _varsww.assignValueOnly(((RooTreeDataStore*)ads)->_varsww) ;
-    TIterator* destIter = _varsww.createIterator() ;
     destIter->Reset() ;
     // Check that all copied values are valid
     allValid=kTRUE ;
@@ -611,12 +611,14 @@ void RooTreeDataStore::loadValues(const RooAbsDataStore *ads, const RooFormulaVa
       }
     }
     //cout << "RooTreeData::loadValues(" << GetName() << ") allValid = " << (allValid?"T":"F") << endl ;
-    if (!allValid) continue ;
+    if (!allValid) {
+      continue ;
+    }
     
     _cachedVars = ((RooTreeDataStore*)ads)->_cachedVars ;
     fill() ;
-    delete destIter ;
    }
+  delete destIter ;
   
   delete selectClone ;
   SetTitle(ads->GetTitle());
