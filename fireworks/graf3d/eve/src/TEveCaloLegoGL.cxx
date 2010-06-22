@@ -572,6 +572,9 @@ void TEveCaloLegoGL::DrawAxis2D(TGLRnrCtx & rnrCtx) const
 {
    // Draw XY axis.
 
+   if (fM->GetData()->Empty())
+      fAxisPainter.SetTMNDim(1);
+
    TGLCamera& cam  = rnrCtx.RefCamera();
 
    TAxis ax;
@@ -637,6 +640,8 @@ void TEveCaloLegoGL::DrawAxis2D(TGLRnrCtx & rnrCtx) const
    glTranslatef(fM->GetEtaMin(), 0, 0);
    fAxisPainter.PaintAxis(rnrCtx, &ax);
    glPopMatrix();
+
+   fAxisPainter.SetTMNDim(2); 
 }
 
 //______________________________________________________________________________
@@ -1010,7 +1015,7 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx &rnrCtx, vCell2D_t& cells2D) const
             for ( vCell2D_i i = cells2D.begin(); i != cells2D.end(); ++i) {
                TGLUtil::ColorTransparency(fM->fData->GetSliceColor(i->fMaxSlice), 60);
                z = fM->GetHasFixedHeightIn2DMode() ? baseOffset : i->fSumVal;
-               z -=  zOff;
+               z +=  zOff;
                glVertex3f(i->fX0, i->fY0, z);
                glVertex3f(i->fX1, i->fY0, z);
                glVertex3f(i->fX1, i->fY1, z);
@@ -1067,7 +1072,8 @@ void TEveCaloLegoGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* /*
    Double_t unit = ((eM - em) < (pM - pm)) ? (eM - em) : (pM - pm);
    Float_t sx = (eM - em) / fM->GetEtaRng();
    Float_t sy = (pM - pm) / fM->GetPhiRng();
-   glScalef(sx / unit, sy / unit, fM->GetValToHeight());
+   Float_t sz = (fM->fData->Empty() && (fM->GetScaleAbs() == false)) ? 1 : fM->GetMaxTowerH() / fDataMax;
+   glScalef(sx / unit, sy / unit, sz);
    glTranslatef(-fM->GetEta(), -fM->fPhi, 0);
 
    glDisable(GL_LIGHTING);
@@ -1286,6 +1292,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    Float_t sy = (pM - pm) / fM->GetPhiRng();
    Float_t sz = (fM->fData->Empty() && (fM->GetScaleAbs() == false)) ? 1 : fM->GetMaxTowerH() / fDataMax;
    glScalef(sx / unit, sy / unit, sz);
+   glTranslatef(-fM->GetEta(), -fM->fPhi, 0);
 
    fFontColor = fM->fFontColor;
    fGridColor = fM->fGridColor;
