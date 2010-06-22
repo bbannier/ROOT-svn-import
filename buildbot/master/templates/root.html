@@ -1,0 +1,22 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+
+<h1>Welcome to the Buildbot
+{%- if project_name -%}
+  &nbsp;for the&nbsp;
+  {%- if project_url -%}
+    <a href="{{ project_url }}">{{ project_name }}</a>
+  {%- else -%}
+    {{ project_name }}
+  {%- endif -%}
+&nbsp;project
+{%- endif -%}
+!
+</h1>
+<p>Redirecting to <a href="http://root.cern.ch/drupal/content/buildbot-overview">Buildbot Overview</a> page...</p>
+<script type="text/javascript">
+window.location="http://root.cern.ch/drupal/content/buildbot-overview"
+</script>
+
+{% endblock %}
