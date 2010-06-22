@@ -125,8 +125,17 @@ namespace RooStats {
       // or the user will be notified of the error
       virtual void SetLeftSideTailFraction(Double_t a);
 
-      // set the acceptable level or error for Keys interval determination
-      virtual void SetEpsilon(Double_t epsilon)
+      // Set the desired level of confidence-level accuracy  for Keys interval
+      // determination.
+      //
+      // When determining the cutoff PDF height that gives the
+      // desired confidence level (C_d), the algorithm will consider acceptable
+      // any found confidence level c such that Abs(c - C_d) < epsilon.
+      //
+      // Any value of this "epsilon" > 0 is considered acceptable, though it is
+      // advisable to not use a value too small, because the integration of the
+      // Keys PDF sometimes does not have extremely high accuracy.
+      virtual void SetKeysConfidenceAccuracy(Double_t epsilon)
       {
          if (epsilon < 0)
             coutE(InputArguments) << "MCMCInterval::SetEpsilon will not allow "
@@ -135,15 +144,21 @@ namespace RooStats {
             fEpsilon = epsilon;
       }
 
-      // kbelasco: The inner-workings of the class really should not be exposed
-      // like this in a comment, but it seems to be the only way to give
-      // the user any control over this process, if he desires it
+      // When the shortest interval using Keys PDF could not be found to have
+      // the desired confidence level +/- the accuracy (see
+      // SetKeysConfidenceAccuracy()), the interval determination algorithm
+      // will have to terminate with an unsatisfactory confidence level when
+      // the bottom and top of the cutoff search range are very close to being
+      // equal.  This scenario comes into play when there seems to be an error
+      // in the accuracy of the Keys PDF integration, so the search range
+      // continues to shrink without converging to a cutoff value that will
+      // give an acceptable confidence level.  To choose how small to allow the
+      // search range to be before terminating, set the fraction delta such
+      // that the search will terminate when topCutoff (a) and bottomCutoff (b)
+      // satisfy this condition:
       //
-      // Set the fraction delta such that
-      // topCutoff (a) is considered == bottomCutoff (b) iff
-      // (TMath::Abs(a - b) < TMath::Abs(fDelta * (a + b)/2))
-      // when determining the confidence interval by Keys
-      virtual void SetDelta(Double_t delta)
+      // TMath::Abs(a - b) < TMath::Abs(delta * (a + b)/2)
+      virtual void SetKeysTerminationThreshold(Double_t delta)
       {
          if (delta < 0.)
             coutE(InputArguments) << "MCMCInterval::SetDelta will not allow "

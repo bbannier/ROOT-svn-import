@@ -72,6 +72,18 @@ END_HTML
 #ifndef ROOT_TAxis
 #include "TAxis.h"
 #endif
+#ifndef ROO_GLOBAL_FUNC
+#include "RooGlobalFunc.h"
+#endif
+
+// Extra draw commands
+static const char* POSTERIOR_HIST = "posterior_hist";
+static const char* POSTERIOR_KEYS_PDF = "posterior_keys_pdf";
+static const char* POSTERIOR_KEYS_PRODUCT = "posterior_keys_product";
+static const char* HIST_INTERVAL = "hist_interval";
+static const char* KEYS_PDF_INTERVAL = "keys_pdf_interval";
+static const char* TAIL_FRACTION_INTERVAL = "tail_fraction_interval";
+//static const char* OPTION_SEP = ":";
 
 ClassImp(RooStats::MCMCIntervalPlot);
 
@@ -148,7 +160,22 @@ void MCMCIntervalPlot::SetMCMCInterval(MCMCInterval& interval)
 
 void MCMCIntervalPlot::Draw(const Option_t* options)
 {
-   DrawInterval(options);
+   TString tmpOpt(options);
+
+   if (tmpOpt.Contains(POSTERIOR_HIST))
+      DrawPosteriorHist(options);
+   else if (tmpOpt.Contains(POSTERIOR_KEYS_PDF))
+      DrawPosteriorKeysPdf(options);
+   else if (tmpOpt.Contains(POSTERIOR_KEYS_PRODUCT))
+      DrawPosteriorKeysProduct(options);
+   else if (tmpOpt.Contains(HIST_INTERVAL))
+      DrawHistInterval(options);
+   else if (tmpOpt.Contains(KEYS_PDF_INTERVAL))
+      DrawKeysPdfInterval(options);
+   else if (tmpOpt.Contains(TAIL_FRACTION_INTERVAL))
+      DrawTailFractionInterval(options);
+   else 
+      DrawInterval(options);
 }
 
 void MCMCIntervalPlot::DrawPosterior(const Option_t* options)
@@ -159,7 +186,8 @@ void MCMCIntervalPlot::DrawPosterior(const Option_t* options)
       DrawPosteriorHist(options);
 }
 
-void MCMCIntervalPlot::DrawPosteriorHist(const Option_t* options, Bool_t scale)
+void MCMCIntervalPlot::DrawPosteriorHist(const Option_t* options,
+      const char* title, Bool_t scale)
 {
    if (fPosteriorHist == NULL)
       fPosteriorHist = fInterval->GetPosteriorHist();
@@ -170,10 +198,22 @@ void MCMCIntervalPlot::DrawPosteriorHist(const Option_t* options, Bool_t scale)
       return;
    }
 
+   // kbelasco: annoying hack because histogram drawing fails when it sees
+   // an unrecognized option like POSTERIOR_HIST, etc.
+   const Option_t* myOpt = NULL;
+
+   TString tmpOpt(options);
+   if (tmpOpt.Contains("same"))
+      myOpt = "same";
+
    // scale so highest bin has height 1
    if (scale)
       fPosteriorHist->Scale(1/fPosteriorHist->GetBinContent(fPosteriorHist->GetMaximumBin()));
-   fPosteriorHist->Draw(options);
+   if (title == NULL)
+      fPosteriorHist->SetTitle("MCMC Posterior Histogram");
+   else
+      fPosteriorHist->SetTitle(title);
+   fPosteriorHist->Draw(myOpt);
 }
 
 void MCMCIntervalPlot::DrawPosteriorKeysPdf(const Option_t* options)
@@ -188,8 +228,12 @@ void MCMCIntervalPlot::DrawPosteriorKeysPdf(const Option_t* options)
    }
 
    if (fDimension == 1) {
-      RooPlot* frame = ((RooRealVar*)fParameters->first())->frame();
-      fPosteriorKeysPdf->plotOn(frame);
+      RooRealVar* v = (RooRealVar*)fParameters->first();
+      RooPlot* frame = v->frame();
+      frame->SetTitle(Form("Posterior Keys PDF for %s", v->GetName()));
+      //fPosteriorKeysPdf->plotOn(frame);
+      fPosteriorKeysPdf->plotOn(frame,
+            RooFit::Normalization(1, RooAbsReal::Raw));
       frame->Draw(options);
    } else if (fDimension == 2) {
       RooArgList* axes = fInterval->GetAxes();
@@ -197,13 +241,14 @@ void MCMCIntervalPlot::DrawPosteriorKeysPdf(const Option_t* options)
       RooRealVar* yVar = (RooRealVar*)axes->at(1);
       TH2F* keysHist = (TH2F*)fPosteriorKeysPdf->createHistogram(
             "keysPlot2D", *xVar, RooFit::YVar(*yVar), RooFit::Scaling(kFALSE));
-      keysHist->SetTitle(GetTitle());
+      keysHist->SetTitle(Form("MCMC histogram of posterior Keys PDF for %s, %s",
+               axes->at(0)->GetName(), axes->at(1)->GetName()));
+
       keysHist->Draw(options);
       delete axes;
    }
 }
 
-//kbelasco: adding support for different types of intervals to DrawInterval
 void MCMCIntervalPlot::DrawInterval(const Option_t* options)
 {
    switch (fInterval->GetIntervalType()) {
@@ -215,7 +260,7 @@ void MCMCIntervalPlot::DrawInterval(const Option_t* options)
          break;
       default:
          coutE(InputArguments) << "MCMCIntervalPlot::DrawInterval(): " <<
-            "Error: Interval type not supported" << endl;
+            "Interval type not supported" << endl;
          break;
    }
 }
@@ -235,11 +280,15 @@ void MCMCIntervalPlot::DrawKeysPdfInterval(const Option_t* options)
       // limit bars line up
       DrawPosteriorKeysPdf(options);
 
+      //Double_t height = 1;
+      //Double_t height = 2.0 * fInterval->GetKeysPdfCutoff();
+      Double_t height = fInterval->GetKeysMax();
+
       RooRealVar* p = (RooRealVar*)fParameters->first();
       Double_t ul = fInterval->UpperLimitByKeys(*p);
       Double_t ll = fInterval->LowerLimitByKeys(*p);
-      TLine* llLine = new TLine(ll, 0, ll, 1);
-      TLine* ulLine = new TLine(ul, 0, ul, 1);
+      TLine* llLine = new TLine(ll, 0, ll, height);
+      TLine* ulLine = new TLine(ul, 0, ul, height);
       llLine->SetLineColor(fLineColor);
       ulLine->SetLineColor(fLineColor);
       llLine->SetLineWidth(fLineWidth);
@@ -261,7 +310,9 @@ void MCMCIntervalPlot::DrawKeysPdfInterval(const Option_t* options)
       RooRealVar* yVar = (RooRealVar*)axes->at(1);
       TH2F* contHist = (TH2F*)fPosteriorKeysPdf->createHistogram(
           "keysContour2D", *xVar, RooFit::YVar(*yVar), RooFit::Scaling(kFALSE));
-      contHist->SetTitle(GetTitle());
+      contHist->SetTitle(Form("MCMC Keys conf. interval for %s, %s",
+               axes->at(0)->GetName(), axes->at(1)->GetName()));
+
       contHist->SetStats(kFALSE);
 
       TString tmpOpt(options);
@@ -308,7 +359,11 @@ void MCMCIntervalPlot::DrawHistInterval(const Option_t* options)
          return;
       }
 
-      fPosteriorHist->SetTitle(GetTitle());
+      RooArgList* axes = fInterval->GetAxes();
+      fPosteriorHist->SetTitle(Form("MCMC histogram conf. interval for %s, %s",
+               axes->at(0)->GetName(), axes->at(1)->GetName()));
+      delete axes;
+
       fPosteriorHist->SetStats(kFALSE);
 
       TString tmpOpt(options);
@@ -330,7 +385,8 @@ void MCMCIntervalPlot::DrawTailFractionInterval(const Option_t* options)
    if (fDimension == 1) {
       // Draw the posterior histogram as well so the user can see where the
       // limit bars line up
-      DrawPosteriorHist(options);
+      DrawPosteriorHist(options,
+            "MCMC Tail-Fraction Interval w/ Posterior Histogram");
 
       // draw lower and upper limits
       RooRealVar* p = (RooRealVar*)fParameters->first();
@@ -362,21 +418,24 @@ void MCMCIntervalPlot::DrawPosteriorKeysProduct(const Option_t* options)
       return;
    }
 
+   RooArgList* axes = fInterval->GetAxes();
 
    if (fDimension == 1) {
       RooPlot* frame = ((RooRealVar*)fParameters->first())->frame();
       fPosteriorKeysProduct->plotOn(frame);
+      frame->SetTitle(Form("Posterior Keys PDF * Heaviside product for %s",
+               axes->at(0)->GetName()));
       frame->Draw(options);
    } else if (fDimension == 2) {
-      RooArgList* axes = fInterval->GetAxes();
       RooRealVar* xVar = (RooRealVar*)axes->at(0);
       RooRealVar* yVar = (RooRealVar*)axes->at(1);
       TH2F* productHist = (TH2F*)fPosteriorKeysProduct->createHistogram(
             "prodPlot2D", *xVar, RooFit::YVar(*yVar), RooFit::Scaling(kFALSE));
-      productHist->SetTitle(GetTitle());
+      productHist->SetTitle(Form("MCMC Posterior Keys Product Hist. for %s, %s",
+               axes->at(0)->GetName(), axes->at(1)->GetName()));
       productHist->Draw(options);
-      delete axes;
    }
+   delete axes;
 }
 
 void MCMCIntervalPlot::DrawChainScatter(RooRealVar& xVar, RooRealVar& yVar)
@@ -415,9 +474,13 @@ void MCMCIntervalPlot::DrawChainScatter(RooRealVar& xVar, RooRealVar& yVar)
    firstY = markovChain->Get(0)->getRealValue(yVar.GetName());
 
    TGraph* walk = new TGraph(size - burnInSteps, x, y);
+   walk->SetTitle(Form("2-D Scatter Plot of Markov chain for %s, %s",
+            xVar.GetName(), yVar.GetName()));
    // kbelasco: figure out how to set TGraph variable ranges
    walk->GetXaxis()->Set(xVar.numBins(), xVar.getMin(), xVar.getMax());
+   walk->GetXaxis()->SetTitle(xVar.GetName());
    walk->GetYaxis()->Set(yVar.numBins(), yVar.getMin(), yVar.getMax());
+   walk->GetYaxis()->SetTitle(yVar.GetName());
    walk->SetLineColor(kGray);
    walk->SetMarkerStyle(6);
    walk->SetMarkerColor(kViolet);
@@ -470,6 +533,9 @@ void MCMCIntervalPlot::DrawParameterVsTime(RooRealVar& param)
    }
 
    TGraph* paramGraph = new TGraph(numEntries, time, value);
+   paramGraph->SetTitle(Form("%s vs. time in Markov chain", param.GetName()));
+   paramGraph->GetXaxis()->SetTitle("Time (in discrete steps of Markov chain)");
+   paramGraph->GetYaxis()->SetTitle(param.GetName());
    //paramGraph->SetLineColor(fLineColor);
    paramGraph->Draw("A,L,same");
    //gPad->Update();
@@ -496,6 +562,9 @@ void MCMCIntervalPlot::DrawNLLVsTime()
    }
 
    TGraph* nllGraph = new TGraph(numEntries, time, nllValue);
+   nllGraph->SetTitle("NLL value vs. time in Markov chain");
+   nllGraph->GetXaxis()->SetTitle("Time (in discrete steps of Markov chain)");
+   nllGraph->GetYaxis()->SetTitle("NLL (-log(likelihood))");
    //nllGraph->SetLineColor(fLineColor);
    nllGraph->Draw("A,L,same");
    //gPad->Update();

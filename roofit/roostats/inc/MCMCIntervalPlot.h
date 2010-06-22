@@ -51,21 +51,9 @@ namespace RooStats {
       void SetMCMCInterval(MCMCInterval& interval);
       void SetLineColor(Color_t color) {fLineColor = color;}
       void SetLineWidth(Int_t width) {fLineWidth = width;}
-      //void SetContourColor(Color_t color) {fContourColor = color;}
       void SetShowBurnIn(Bool_t showBurnIn) { fShowBurnIn = showBurnIn; }
 
       void Draw(const Option_t* options = NULL);
-
-      void DrawPosterior(const Option_t* options = NULL);
-      void DrawPosteriorHist(const Option_t* options = NULL, Bool_t scale = kTRUE);
-      void DrawPosteriorKeysPdf(const Option_t* options = NULL);
-      void DrawPosteriorKeysProduct(const Option_t* options = NULL);
-
-      void DrawInterval(const Option_t* options = NULL);
-      void DrawShortestInterval(const Option_t* options = NULL);
-      void DrawHistInterval(const Option_t* options = NULL);
-      void DrawKeysPdfInterval(const Option_t* options = NULL);
-      void DrawTailFractionInterval(const Option_t* options = NULL);
 
       void DrawChainScatter(RooRealVar& xVar, RooRealVar& yVar);
       void DrawParameterVsTime(RooRealVar& param);
@@ -85,7 +73,6 @@ namespace RooStats {
       Int_t fDimension;
       Color_t fLineColor;
       Int_t fLineWidth;
-      //Color_t fContourColor;
       Bool_t fShowBurnIn;
       TGraph* fWalk;
       TGraph* fBurnIn;
@@ -94,6 +81,17 @@ namespace RooStats {
       TGraph* fNLLGraph;
 
    protected:
+      void DrawPosterior(const Option_t* options = NULL);
+      void DrawPosteriorHist(const Option_t* options = NULL,
+            const char* title = NULL, Bool_t scale = kTRUE);
+      void DrawPosteriorKeysPdf(const Option_t* options = NULL);
+      void DrawPosteriorKeysProduct(const Option_t* options = NULL);
+
+      void DrawInterval(const Option_t* options = NULL);
+      void DrawShortestInterval(const Option_t* options = NULL);
+      void DrawHistInterval(const Option_t* options = NULL);
+      void DrawKeysPdfInterval(const Option_t* options = NULL);
+      void DrawTailFractionInterval(const Option_t* options = NULL);
 
       ClassDef(MCMCIntervalPlot,1)  // Class containing the results of the MCMCCalculator
    };

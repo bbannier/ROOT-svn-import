@@ -154,10 +154,9 @@ MarkovChain* MetropolisHastings::ConstructChain()
    RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
 
 
-   // we will need to check if log-likelihood evaluation left an error status
+   // We will need to check if log-likelihood evaluation left an error status.
+   // Now using faster eval error logging with CountErrors.
    if (fType == kLog)
-     //fFunction->setEvalErrorLoggingMode(RooAbsReal::CollectErrors);
-     // kbelasco: to speed up error logging, use new mode CountErrors
      fFunction->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
 
    bool hadEvalError = true;
