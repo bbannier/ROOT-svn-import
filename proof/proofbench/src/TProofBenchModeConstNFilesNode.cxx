@@ -39,6 +39,7 @@
 
 ClassImp(TProofBenchModeConstNFilesNode)
 
+//______________________________________________________________________________
 TProofBenchModeConstNFilesNode::TProofBenchModeConstNFilesNode(Int_t nfiles, TProof* proof)
 :fProof(proof), fNFiles(nfiles), fNodes(0), fName("ConstNFilesNode")
 {
@@ -58,10 +59,12 @@ TProofBenchModeConstNFilesNode::TProofBenchModeConstNFilesNode(Int_t nfiles, TPr
    }
 }
 
+//______________________________________________________________________________
 TProofBenchModeConstNFilesNode::~TProofBenchModeConstNFilesNode()
 {
 }
 
+//______________________________________________________________________________
 void TProofBenchModeConstNFilesNode::Print(Option_t* option)const
 {
    if (fProof) fProof->Print(option);
@@ -70,6 +73,7 @@ void TProofBenchModeConstNFilesNode::Print(Option_t* option)const
    Printf("fName=%s", fName.Data());
 }
 
+//______________________________________________________________________________
 TMap* TProofBenchModeConstNFilesNode::FilesToProcess(Int_t nf)
 {
 
@@ -105,6 +109,7 @@ TMap* TProofBenchModeConstNFilesNode::FilesToProcess(Int_t nf)
    return filesmap;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
                                               Int_t start,
                                               Int_t stop,
@@ -147,6 +152,7 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
    return 0;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
                                               Int_t np,
                                               const Int_t *wp,
@@ -240,36 +246,43 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
    return 0;
 }
 
+//______________________________________________________________________________
 TProofBenchMode::EFileType TProofBenchModeConstNFilesNode::GetFileType()
 {
    return TProofBenchMode::kFileBenchmark;
 }
 
+//______________________________________________________________________________
 void TProofBenchModeConstNFilesNode::SetProof(TProof* proof)
 {
    fProof=proof;
 }
 
+//______________________________________________________________________________
 void TProofBenchModeConstNFilesNode::SetNFiles(Int_t nfiles)
 {
    fNFiles=nfiles;
 }
 
+//______________________________________________________________________________
 TProof* TProofBenchModeConstNFilesNode::GetProof()const
 {
    return fProof;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchModeConstNFilesNode::GetNFiles()const
 {
    return fNFiles;
 }
 
+//______________________________________________________________________________
 const char* TProofBenchModeConstNFilesNode::GetName()const
 {
    return fName.Data();
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchModeConstNFilesNode::FillNodeInfo()
 {
    // Re-Generate the list of worker node info (fNodes)

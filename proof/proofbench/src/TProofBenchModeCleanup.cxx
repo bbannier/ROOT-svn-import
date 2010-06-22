@@ -63,28 +63,19 @@
 
 ClassImp(TProofBenchModeCleanup)
 
-
-/*TProofBenchModeCleanup::TProofBenchModeCleanup(Int_t nfiles,
-                                                       Int_t start,
-                                                       Int_t stop,
-                                                       Int_t step)
-:TProofBenchMode("ConstNFilesNode", "ConstNFilesNode", nfiles, start, stop, step)
-{
-   //if no stop is given set it to the maximum number of workers of nodes in the cluster
-   //if (fstop==-1){
-   //}
-}*/
-
+//______________________________________________________________________________
 TProofBenchModeCleanup::TProofBenchModeCleanup(TProof* proof)
 :fProof(proof), fNodes(0), fName("ConstNFilesNode")
 {
    FillNodeInfo();
 }
 
+//______________________________________________________________________________
 TProofBenchModeCleanup::~TProofBenchModeCleanup()
 {
 }
 
+//______________________________________________________________________________
 TMap* TProofBenchModeCleanup::FilesToProcess(Int_t)
 {
 
@@ -119,6 +110,7 @@ TMap* TProofBenchModeCleanup::FilesToProcess(Int_t)
    return filesmap;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
                                       Int_t,
                                       Int_t,
@@ -162,6 +154,7 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
    return 0;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
                                       Int_t,
                                       const Int_t*,
@@ -172,6 +165,7 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
    return 0;
 }
 
+//______________________________________________________________________________
 void TProofBenchModeCleanup::Print(Option_t* option)const
 {
    if (fProof) fProof->Print(option);
@@ -179,35 +173,42 @@ void TProofBenchModeCleanup::Print(Option_t* option)const
    Printf("fName=%s", fName.Data());
 }
 
+//______________________________________________________________________________
 TProofBenchMode::EFileType TProofBenchModeCleanup::GetFileType()
 {
    return TProofBenchMode::kFileCleanup;
 }
 
+//______________________________________________________________________________
 void TProofBenchModeCleanup::SetProof(TProof* proof)
 {
    fProof=proof;
 }
 
+//______________________________________________________________________________
 void TProofBenchModeCleanup::SetNFiles(Int_t)
 {
 }
 
+//______________________________________________________________________________
 TProof* TProofBenchModeCleanup::GetProof()const
 {
    return fProof;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchModeCleanup::GetNFiles()const
 {
    return 0;
 }
 
+//______________________________________________________________________________
 const char* TProofBenchModeCleanup::GetName()const
 {
    return fName.Data();
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchModeCleanup::FillNodeInfo()
 {
    // Re-Generate the list of worker node info (fNodes)

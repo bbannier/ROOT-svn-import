@@ -9,6 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#ifndef ROOT_TProofBenchFileGenerator
+#define ROOT_TProofBenchFileGenerator
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TProofBenchFileGenerator                                                          //
@@ -25,9 +28,6 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TProofBenchFileGenerator
-#define ROOT_TProofBenchFileGenerator
-
 #ifndef ROOT_TObject
 #include "TObject.h"
 #endif
@@ -43,6 +43,31 @@ class TDSet;
 R__EXTERN TProof *gProof;
 
 class TProofBenchFileGenerator: public TObject{
+
+private:
+
+   TProof* fProof;                 //pointer to proof
+   TProofBenchMode* fMode;
+
+   Long64_t fNEvents;              //number of events in a file
+   Int_t fMaxNWorkers;
+
+   Int_t fStart;                   //starting number of cpu cores
+   Int_t fStop;
+   Int_t fStep;                    //test to be performed every fStep workers
+   TString fBaseDir;               //base directory for files
+   Int_t fNTracks;                 //number of tracks to generate in an event
+   Int_t fRegenerate;              //when true, regenerate files
+
+   //Int_t fDebug;                   //debug switch, when on various debug plots will be saved to file
+
+   TList* fNodes;               // List of worker nodes info
+   TDSet* fDataSetGenerated;  //Data set generated at worker nodes for benchmarking
+//   TDSet* fDataSetGeneratedCleanup;//Data set generated at worker nodes for cleaning up memory
+
+protected:
+
+   Int_t FillNodeInfo();
 
 public:
 
@@ -102,31 +127,6 @@ public:
    TString GetBaseDir()const;
    Int_t GetNTracks()const;
    Int_t GetRegenerate()const;
-
-protected:
-
-   Int_t FillNodeInfo();
-
-private:
-
-   TProof* fProof;                 //pointer to proof
-   TProofBenchMode* fMode;
-
-   Long64_t fNEvents;              //number of events in a file
-   Int_t fMaxNWorkers;
-
-   Int_t fStart;                   //starting number of cpu cores
-   Int_t fStop;
-   Int_t fStep;                    //test to be performed every fStep workers
-   TString fBaseDir;               //base directory for files
-   Int_t fNTracks;                 //number of tracks to generate in an event
-   Int_t fRegenerate;              //when true, regenerate files
-
-   //Int_t fDebug;                   //debug switch, when on various debug plots will be saved to file
-
-   TList* fNodes;               // List of worker nodes info
-   TDSet* fDataSetGenerated;  //Data set generated at worker nodes for benchmarking
-//   TDSet* fDataSetGeneratedCleanup;//Data set generated at worker nodes for cleaning up memory
 
    ClassDef(TProofBenchFileGenerator,0)         //PROOF benchmark suite steering
 };

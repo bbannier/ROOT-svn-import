@@ -9,6 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#ifndef ROOT_TProofBenchMode
+#define ROOT_TProofBenchMode
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TProofBenchMode                                                      //
@@ -16,9 +19,6 @@
 // TProofBenchMode is ...                                               //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-
-#ifndef ROOT_TProofBenchMode
-#define ROOT_TProofBenchMode
 
 #ifndef ROOT_TObject
 #include "TObject.h"
@@ -31,6 +31,8 @@ class TMap;
 R__EXTERN TProof *gProof;
 
 class TProofBenchMode: public TObject{
+
+private:
 
 public:
 
@@ -64,8 +66,6 @@ public:
 
    virtual void SetNFiles(Int_t nfiles)=0;
    virtual Int_t GetNFiles()const=0;
-
-private:
 
    ClassDef(TProofBenchMode,0)         //Abstract class for Proof benchmark
 };

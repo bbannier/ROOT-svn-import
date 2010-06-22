@@ -9,6 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#ifndef ROOT_TProofBenchRunCPU
+#define ROOT_TProofBenchRunCPU
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TProofBenchRunCPU                                                //
@@ -16,9 +19,6 @@
 // TProofBenchRunCPU is ...                                         //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-
-#ifndef ROOT_TProofBenchRunCPU
-#define ROOT_TProofBenchRunCPU
 
 #ifndef ROOT_TString
 #include "TString.h"
@@ -39,6 +39,51 @@ class TProofBenchMode;
 R__EXTERN TProof *gProof;
 
 class TProofBenchRunCPU : public TProofBenchRun{
+
+private:
+
+   TProof* fProof;                 //pointer to proof
+
+   TProofBenchRun::EHistType fHistType;
+   Int_t fNHists;
+
+   Long64_t fNEvents;            //number of events per file for CPU test and/or I/O test
+   Int_t fNTries;                //number of files for I/O test
+   Int_t fMaxNWorkers;           //number of maximum processes, 
+                                 //this can be more than the number of total workers in the cluster
+   Int_t fStart;
+   Int_t fStop;
+   Int_t fStep;
+
+   Int_t fDraw;
+   Int_t fDebug;
+
+   TFile* fFile;                 //output file to write performance histograms and trees on
+   TDirectory* fDirProofBench;   //directory for proof outputs
+   Bool_t fWritable;
+
+   TList* fNodes;                // List of worker nodes info, fNodes is the owner of its members
+
+   TList* fPerfStats;            //List of PROOF_PerfStats
+   TProfile* fProfEvent;
+   TList* fListPerfProfiles;       //List of performance profiles
+   TCanvas* fCPerfProfiles;      //canvas for performance profile histograms
+
+   TString fName;
+
+protected:
+
+   void FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t nactive);
+
+   Int_t FillNodeInfo();
+
+   Int_t SetParameters();
+   Int_t DeleteParameters();
+
+   TString BuildPatternName(const TString& objname, const TString& delimiter="_");
+   TString BuildNewPatternName(const TString& objname, Int_t nactive, Int_t tries, const TString& delimiter="_");
+   TString BuildProfileName(const TString& objname, const TString& type, const TString& delimiter="_");
+   TString BuildProfileTitle(const TString& objname, const TString& type, const TString& delimiter=" ");
 
 public:
 
@@ -107,50 +152,6 @@ public:
    const char* GetName()const;
 
    TString GetNameStem()const;
-
-protected:
-
-   void FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t nactive);
-
-   Int_t FillNodeInfo();
-
-   Int_t SetParameters();
-   Int_t DeleteParameters();
-
-   TString BuildPatternName(const TString& objname, const TString& delimiter="_");
-   TString BuildNewPatternName(const TString& objname, Int_t nactive, Int_t tries, const TString& delimiter="_");
-   TString BuildProfileName(const TString& objname, const TString& type, const TString& delimiter="_");
-   TString BuildProfileTitle(const TString& objname, const TString& type, const TString& delimiter=" ");
-private:
-
-   TProof* fProof;                 //pointer to proof
-
-   TProofBenchRun::EHistType fHistType;
-   Int_t fNHists;
-
-   Long64_t fNEvents;            //number of events per file for CPU test and/or I/O test
-   Int_t fNTries;                //number of files for I/O test
-   Int_t fMaxNWorkers;           //number of maximum processes, 
-                                 //this can be more than the number of total workers in the cluster
-   Int_t fStart;
-   Int_t fStop;
-   Int_t fStep;
-
-   Int_t fDraw;
-   Int_t fDebug;
-
-   TFile* fFile;                 //output file to write performance histograms and trees on
-   TDirectory* fDirProofBench;   //directory for proof outputs
-   Bool_t fWritable;
-
-   TList* fNodes;                // List of worker nodes info, fNodes is the owner of its members
-
-   TList* fPerfStats;            //List of PROOF_PerfStats
-   TProfile* fProfEvent;
-   TList* fListPerfProfiles;       //List of performance profiles
-   TCanvas* fCPerfProfiles;      //canvas for performance profile histograms
-
-   TString fName;
 
    ClassDef(TProofBenchRunCPU,0)         //PROOF benchmark run for CPU test
 };

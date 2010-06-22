@@ -9,6 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#ifndef ROOT_TProofBenchModeVaryingNFilesWorker
+#define ROOT_TProofBenchModeVaryingNFilesWorker
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TProofBenchModeVaryingNFilesWorker                                                          //
@@ -25,9 +28,6 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TProofBenchModeVaryingNFilesWorker
-#define ROOT_TProofBenchModeVaryingNFilesWorker
-
 #ifndef ROOT_TProofBenchMode
 #include "TProofBenchMode.h"
 #endif
@@ -41,6 +41,17 @@ class TProof;
 R__EXTERN TProof *gProof;
 
 class TProofBenchModeVaryingNFilesWorker : public TProofBenchMode {
+
+private:
+
+   TProof* fProof;
+   Int_t fNFiles;             //number of files a node for I/O test
+   TList* fNodes;   
+   TString fName;
+
+protected:
+
+   Int_t FillNodeInfo();
 
 public:
 
@@ -74,17 +85,6 @@ public:
    TProof* GetProof()const;
    Int_t GetNFiles()const;
    const char* GetName()const;
-
-protected:
-
-   Int_t FillNodeInfo();
-
-private:
-
-   TProof* fProof;
-   Int_t fNFiles;             //number of files a node for I/O test
-   TList* fNodes;   
-   TString fName;
 
    ClassDef(TProofBenchModeVaryingNFilesWorker,0)         //PROOF benchmark suite steering
 };

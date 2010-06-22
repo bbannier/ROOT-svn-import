@@ -9,6 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#ifndef ROOT_TProofBenchRunDataRead
+#define ROOT_TProofBenchRunDataRead
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TProofBenchRunDataRead                                               //
@@ -16,9 +19,6 @@
 // TProofBenchRunDataRead is ...                                        //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-
-#ifndef ROOT_TProofBenchRunDataRead
-#define ROOT_TProofBenchRunDataRead
 
 #ifndef ROOT_TString
 #include "TString.h"
@@ -40,6 +40,53 @@ class TProofBenchRunCleanup;
 R__EXTERN TProof *gProof;
 
 class TProofBenchRunDataRead : public TProofBenchRun{
+
+private:
+   TProof* fProof;                 //pointer to proof
+
+   TProofBenchRun::EReadType fReadType;
+   TProofBenchMode* fMode;
+   TProofBenchRunCleanup* fRunCleanup;
+
+   Long64_t fNEvents;            //number of events per file for CPU test and/or I/O test
+   Int_t fNTries;                //number of files for I/O test
+   Int_t fMaxNWorkers;           //number of maximum processes, 
+                                 //this can be more than the number of total workers in the cluster
+   Int_t fStart;                 //number of workers the test starts with
+   Int_t fStop;                  //number of workers the test ends with
+   Int_t fStep;                  //number of workers to increase for each step
+   Int_t fDraw;                  //various plots on the canvas when true
+   Int_t fDebug;                 //debug switch, various debug plots will be saved to file when true
+
+   TFile* fFile;                 //output file to write performance histograms and trees on
+   TDirectory* fDirProofBench;   //directory for proof outputs
+   Bool_t fWritable;             //true when file is writable
+
+   TList* fNodes;                // List of worker nodes info, fNodes is the owner of its members
+
+   TList* fPerfStats;            //List of PROOF_PerfStats
+   TProfile* fProfEvent;         //profile histogram (number of events processed per second)
+   TProfile* fProfIO;            //profile histogram (data size read per second)
+
+   TList* fListPerfProfiles;       //List of performance profiles
+
+   TCanvas* fCPerfProfiles;      //canvas for performance profile histograms
+
+   TString fName;                
+
+protected:
+
+   void FillPerfStatProfiles(TTree* t, TProfile* profile_event, TProfile* profile_IO, Int_t nactive);
+
+   Int_t FillNodeInfo();
+
+   Int_t SetParameters();
+   Int_t DeleteParameters();
+
+   TString BuildPatternName(const TString& objname, const TString& delimiter="_");
+   TString BuildNewPatternName(const TString& objname, Int_t nactive, Int_t tries, const TString& delimiter="_");
+   TString BuildProfileName(const TString& objname, const TString& type, const TString& delimiter="_");
+   TString BuildProfileTitle(const TString& objname, const TString& type, const TString& delimiter=" ");
 
 public:
 
@@ -111,53 +158,6 @@ public:
    const char* GetName()const;
 
    TString GetNameStem()const;
-
-protected:
-
-   void FillPerfStatProfiles(TTree* t, TProfile* profile_event, TProfile* profile_IO, Int_t nactive);
-
-   Int_t FillNodeInfo();
-
-   Int_t SetParameters();
-   Int_t DeleteParameters();
-
-   TString BuildPatternName(const TString& objname, const TString& delimiter="_");
-   TString BuildNewPatternName(const TString& objname, Int_t nactive, Int_t tries, const TString& delimiter="_");
-   TString BuildProfileName(const TString& objname, const TString& type, const TString& delimiter="_");
-   TString BuildProfileTitle(const TString& objname, const TString& type, const TString& delimiter=" ");
-
-private:
-   TProof* fProof;                 //pointer to proof
-
-   TProofBenchRun::EReadType fReadType;
-   TProofBenchMode* fMode;
-   TProofBenchRunCleanup* fRunCleanup;
-
-   Long64_t fNEvents;            //number of events per file for CPU test and/or I/O test
-   Int_t fNTries;                //number of files for I/O test
-   Int_t fMaxNWorkers;           //number of maximum processes, 
-                                 //this can be more than the number of total workers in the cluster
-   Int_t fStart;                 //number of workers the test starts with
-   Int_t fStop;                  //number of workers the test ends with
-   Int_t fStep;                  //number of workers to increase for each step
-   Int_t fDraw;                  //various plots on the canvas when true
-   Int_t fDebug;                 //debug switch, various debug plots will be saved to file when true
-
-   TFile* fFile;                 //output file to write performance histograms and trees on
-   TDirectory* fDirProofBench;   //directory for proof outputs
-   Bool_t fWritable;             //true when file is writable
-
-   TList* fNodes;                // List of worker nodes info, fNodes is the owner of its members
-
-   TList* fPerfStats;            //List of PROOF_PerfStats
-   TProfile* fProfEvent;         //profile histogram (number of events processed per second)
-   TProfile* fProfIO;            //profile histogram (data size read per second)
-
-   TList* fListPerfProfiles;       //List of performance profiles
-
-   TCanvas* fCPerfProfiles;      //canvas for performance profile histograms
-
-   TString fName;                
 
    ClassDef(TProofBenchRunDataRead,0)         //PROOF benchmark run type data read
 };

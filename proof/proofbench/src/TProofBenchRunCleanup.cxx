@@ -42,6 +42,7 @@
 
 ClassImp(TProofBenchRunCleanup)
 
+//______________________________________________________________________________
 TProofBenchRunCleanup::TProofBenchRunCleanup(TProofBenchRun::ECleanupType cleanuptype,
                TString filename,
                                     //user has to provide one
@@ -86,6 +87,7 @@ fWritable(0)
 
 }
 
+//______________________________________________________________________________
 TProofBenchRunCleanup::~TProofBenchRunCleanup()
 {
 //destructor
@@ -98,6 +100,7 @@ TProofBenchRunCleanup::~TProofBenchRunCleanup()
    //if (fNodes) delete fNodes;
 } 
 
+//______________________________________________________________________________
 TString TProofBenchRunCleanup::GetNameStem()const
 {
    TString namestem;
@@ -114,6 +117,7 @@ TString TProofBenchRunCleanup::GetNameStem()const
     return namestem;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::Run(Long64_t,
                                 Int_t,
                                 Int_t,
@@ -272,6 +276,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
    fProof->SetParallel(nactive_sav);
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::BuildPerfProfiles(Int_t,
                                               Int_t,
                                               Int_t,
@@ -292,6 +297,7 @@ void TProofBenchRunCleanup::BuildPerfProfiles(Int_t,
    return;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::Print(Option_t* option)const{
    Printf("Name=%s", fName.Data());
    if (fProof) fProof->Print(option);
@@ -312,27 +318,32 @@ void TProofBenchRunCleanup::Print(Option_t* option)const{
    }
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::DrawPerfProfiles()
 {
    Info("DrawPerfProfiles", "There is nothing to be done");
    return; 
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::SetCleanupType(TProofBenchRun::ECleanupType cleanuptype)
 {
    fCleanupType=cleanuptype;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::SetNEvents(Long64_t nevents)
 {
    fNEvents=nevents;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::SetMaxNWorkers(Int_t maxnworkers)
 {
   fMaxNWorkers=maxnworkers;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::SetMaxNWorkers(TString sworkers)
 {
 //Set the maximum number of workers for benchmark test
@@ -359,21 +370,25 @@ void TProofBenchRunCleanup::SetMaxNWorkers(TString sworkers)
    return;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::SetDataSetCleanup(const TString& dataset)
 {
    fDataSetCleanup=dataset;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::SetDraw(Int_t draw)
 {
    fDraw=draw;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::SetDebug(Int_t debug)
 {
    fDebug=debug;
 }
 
+//______________________________________________________________________________
 TFile* TProofBenchRunCleanup::OpenFile(const char* filename,
                                        Option_t* option,
                                        const char* ftitle,
@@ -434,51 +449,61 @@ TFile* TProofBenchRunCleanup::OpenFile(const char* filename,
    }
 }
 
+//______________________________________________________________________________
 void TProofBenchRunCleanup::SetDirProofBench(TDirectory* dir)
 {
    fDirProofBench=dir;
 }
 
+//______________________________________________________________________________
 TProofBenchRun::ECleanupType TProofBenchRunCleanup::GetCleanupType()const
 {
    return fCleanupType;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCleanup::GetMaxNWorkers()const
 {
    return fMaxNWorkers;
 }
 
+//______________________________________________________________________________
 TString TProofBenchRunCleanup::GetDataSetCleanup()const
 {
    return fDataSetCleanup;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCleanup::GetDraw()const
 {
    return fDraw;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCleanup::GetDebug()const
 {
    return fDebug;
 }
 
+//______________________________________________________________________________
 TFile* TProofBenchRunCleanup::GetFile()const
 {
    return fFile;
 }
 
+//______________________________________________________________________________
 TDirectory* TProofBenchRunCleanup::GetDirProofBench()const
 {
    return fDirProofBench;
 }
 
+//______________________________________________________________________________
 const char* TProofBenchRunCleanup::GetName()const
 {
    return fName.Data();
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCleanup::SetParameters(){
    if (!fProof){
       Error("SetParameters", "Proof not set; Doing nothing");
@@ -491,6 +516,7 @@ Int_t TProofBenchRunCleanup::SetParameters(){
    return 0;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunCleanup::DeleteParameters(){
    if (!fProof){
       Error("DeleteParameters", "Proof not set; Doing nothing");
@@ -502,6 +528,7 @@ Int_t TProofBenchRunCleanup::DeleteParameters(){
    return 0;
 }
 
+//______________________________________________________________________________
 const char* TProofBenchRunCleanup::BuildPatternName(const char* objname, const char* delimiter)
 {
 

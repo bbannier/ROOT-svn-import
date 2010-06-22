@@ -1,12 +1,22 @@
-//////////////////////////////////////////////////////////
-//
-// Example of TSelector implementation to do generic
-// processing (filling a set of histograms in this case)
-//
-//////////////////////////////////////////////////////////
+// @(#)root/proofx:$Id:$
+// Author:
+
+/*************************************************************************
+ * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
 
 #ifndef ROOT_TSelHist
 #define ROOT_TSelHist
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// TSelHist                                                             //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
 
 #ifndef ROOT_TSelector
 #include <TSelector.h>

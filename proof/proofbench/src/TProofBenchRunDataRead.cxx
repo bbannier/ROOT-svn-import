@@ -46,6 +46,7 @@
 
 ClassImp(TProofBenchRunDataRead)
 
+//______________________________________________________________________________
 TProofBenchRunDataRead::TProofBenchRunDataRead(TProofBenchMode* mode,
                                                TProofBenchRunCleanup* runcleanup,
                                                TProofBenchRun::EReadType readtype,
@@ -118,6 +119,7 @@ fName(0)
    gStyle->SetOptStat(0);
 }
 
+//______________________________________________________________________________
 TProofBenchRunDataRead::~TProofBenchRunDataRead()
 {
 //destructor
@@ -133,6 +135,7 @@ TProofBenchRunDataRead::~TProofBenchRunDataRead()
    if (fCPerfProfiles) delete fCPerfProfiles;
 } 
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::Run(Long64_t nevents,
                                  Int_t ntries,
                                  Int_t start,
@@ -426,6 +429,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    }
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t, TProfile* profile_event, TProfile* profile_IO, Int_t nactive)
 {
    Int_t nevents_holder;
@@ -503,6 +507,7 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t, TProfile* profile_ev
    return;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::Print(Option_t* option)const{
 
    Printf("Name=%s", fName.Data());
@@ -538,66 +543,7 @@ void TProofBenchRunDataRead::Print(Option_t* option)const{
    }
 }
 
-/*
-void TProofBenchRunDataRead::DrawPerfProfiles(TDirectory* dir,
-                                              TPad* pad,
-                                              TString nameprof_event, TString nameprof_io)
-{
-//Draw performance profiles
-//Input parameters:
-//   runtype: Run type to build performance profiles for.
-//            When kRunAll, this function is recursively called with runtype=kRunFullDataRead, 
-//            kRunOptDataRead, kRunNoDataRead in turn.
-//   mode: Benchmark mode to build performance profiles for.
-//         Ignored when runtype==kRunCPUTest.
-//Returns:
-//   Nothing
-   //create canvas
-   if (!pad){
-      pad=new TCanvas("CPerfProfiles", "Performance Profiles");
-      pad->Divide(2, 1);
-   }
-   
-   dir->cd();
-
-   //event rate profile
-   TProfile* prof_event=dynamic_cast<TProfile*>(dir->FindObject(nameprof_event.Data())); //list of object
-   if (!prof_event){
-      //try reading key
-      TKey* key=dir->FindKey(nameprof_event.Data()); 
-      if (key){
-         prof_event=dynamic_cast<TProfile*>(key->ReadObj());
-      }
-   }
-   if (prof_event){
-      pad->cd(1);
-      prof_event->Draw();
-   }
-   else{
-      Error("DrawPerfProfiles", "Profile %s not found", nameprof_event.Data());
-   }
-
-   //IO rate profile
-   TProfile* prof_io=dynamic_cast<TProfile*>(dir->FindObject(nameprof_io.Data())); //list of object
-   if (!prof_io){
-      //try reading key
-      TKey* key=dir->FindKey(nameprof_io.Data()); 
-      if (key){
-         prof_io=dynamic_cast<TProfile*>(key->ReadObj());
-      }
-   }
-   if (prof_io){
-      pad->cd(2);
-      prof_io->Draw();
-   }
-   else{
-      Error("DrawPerfProfiles", "Profile %s not found", nameprof_io.Data());
-   }
-
-   return;
-}
-*/
-
+//______________________________________________________________________________
 void TProofBenchRunDataRead::DrawPerfProfiles()
 {
    //TPad* canvas=proofbench->GetCPerfProfiles();
@@ -623,36 +569,43 @@ void TProofBenchRunDataRead::DrawPerfProfiles()
    return; 
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetMode(TProofBenchMode* mode)
 {
    fMode=mode;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetRunCleanup(TProofBenchRunCleanup* runcleanup)
 {
    fRunCleanup=runcleanup;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetReadType(TProofBenchRun::EReadType readtype)
 {
    fReadType=readtype;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetNEvents(Long64_t nevents)
 {
    fNEvents=nevents;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetNTries(Int_t ntries)
 {
    fNTries=ntries;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetMaxNWorkers(Int_t maxnworkers)
 {
   fMaxNWorkers=maxnworkers;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetMaxNWorkers(TString sworkers)
 {
 //Set the maximum number of workers for benchmark test
@@ -679,31 +632,37 @@ void TProofBenchRunDataRead::SetMaxNWorkers(TString sworkers)
    return;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetStart(Int_t start)
 {
    fStart=start;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetStop(Int_t stop)
 {
    fStop=stop;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetStep(Int_t step)
 {
    fStep=step;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetDraw(Int_t draw)
 {
    fDraw=draw;
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetDebug(Int_t debug)
 {
    fDebug=debug;
 }
 
+//______________________________________________________________________________
 TFile* TProofBenchRunDataRead::OpenFile(const char* filename,
                                         Option_t* option,
                                         const char* ftitle,
@@ -763,96 +722,115 @@ TFile* TProofBenchRunDataRead::OpenFile(const char* filename,
    }
 }
 
+//______________________________________________________________________________
 void TProofBenchRunDataRead::SetDirProofBench(TDirectory* dir)
 {
    fDirProofBench=dir;
 }
 
+//______________________________________________________________________________
 TProofBenchMode* TProofBenchRunDataRead::GetMode()const
 {
    return fMode;
 }
 
+//______________________________________________________________________________
 TProofBenchRunCleanup* TProofBenchRunDataRead::GetRunCleanup()const
 {
    return fRunCleanup;
 }
 
+//______________________________________________________________________________
 TProofBenchRun::EReadType TProofBenchRunDataRead::GetReadType()const
 {
    return fReadType;
 }
 
+//______________________________________________________________________________
 Long64_t TProofBenchRunDataRead::GetNEvents()const
 {
    return fNEvents;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::GetNTries()const
 {
    return fNTries;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::GetMaxNWorkers()const
 {
    return fMaxNWorkers;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::GetStart()const
 {
    return fStart;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::GetStop()const
 {
    return fStop;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::GetStep()const
 {
    return fStep;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::GetDraw()const
 {
    return fDraw;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::GetDebug()const
 {
    return fDebug;
 }
 
+//______________________________________________________________________________
 TFile* TProofBenchRunDataRead::GetFile()const
 {
    return fFile;
 }
 
+//______________________________________________________________________________
 TDirectory* TProofBenchRunDataRead::GetDirProofBench()const
 {
    return fDirProofBench;
 }
 
+//______________________________________________________________________________
 TList* TProofBenchRunDataRead::GetListOfPerfStats()const
 {
    return fPerfStats;
 }
 
+//______________________________________________________________________________
 TList* TProofBenchRunDataRead::GetListPerfProfiles()const
 {
    return fListPerfProfiles;
 }
 
+//______________________________________________________________________________
 TCanvas* TProofBenchRunDataRead::GetCPerfProfiles()const
 {
    return fCPerfProfiles;
 }
 
+//______________________________________________________________________________
 const char* TProofBenchRunDataRead::GetName()const
 {
    return fName.Data();
 }
 
+//______________________________________________________________________________
 TString TProofBenchRunDataRead::GetNameStem()const
 {
    TString namestem;
@@ -872,6 +850,7 @@ TString TProofBenchRunDataRead::GetNameStem()const
     return namestem;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::FillNodeInfo()
 {
    // Re-Generate the list of worker node info (fNodes)
@@ -914,6 +893,7 @@ Int_t TProofBenchRunDataRead::FillNodeInfo()
    return 0;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::SetParameters()
 {
    if (!fProof){
@@ -927,6 +907,7 @@ Int_t TProofBenchRunDataRead::SetParameters()
    return 0;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::DeleteParameters(){
    if (!fProof){
       Error("DeleteParameters", "Proof not set; Doing nothing");
@@ -938,7 +919,7 @@ Int_t TProofBenchRunDataRead::DeleteParameters(){
    return 0;
 }
 
-//const char* TProofBenchRunDataRead::BuildPatternName(const char* objname, const char* delimiter){
+//______________________________________________________________________________
 TString TProofBenchRunDataRead::BuildPatternName(const TString& objname, const TString& delimiter){
   
    if (!fMode){
@@ -955,7 +936,7 @@ TString TProofBenchRunDataRead::BuildPatternName(const TString& objname, const T
    return newname;
 }
 
-//const char* TProofBenchRunDataRead::BuildNewPatternName(const char* objname, Int_t nactive, Int_t tries, const char* delimiter){
+//______________________________________________________________________________
 TString TProofBenchRunDataRead::BuildNewPatternName(const TString& objname, Int_t nactive, Int_t tries, const TString& delimiter){
   
    if (!fMode){
@@ -972,7 +953,7 @@ TString TProofBenchRunDataRead::BuildNewPatternName(const TString& objname, Int_
    return newname;
 }
 
-//const char* TProofBenchRunDataRead::BuildProfileName(const char* objname, const char* type, const char* delimiter){
+//______________________________________________________________________________
 TString TProofBenchRunDataRead::BuildProfileName(const TString& objname, const TString& type, const TString& delimiter){
    if (!fMode){
       Error("BuildProfileName", "Mode is not set");
@@ -986,7 +967,7 @@ TString TProofBenchRunDataRead::BuildProfileName(const TString& objname, const T
    return newname;
 }
 
-//const char* TProofBenchRunDataRead::BuildProfileTitle(const char* objname, const char* type, const char* delimiter){
+//______________________________________________________________________________
 TString TProofBenchRunDataRead::BuildProfileTitle(const TString& objname, const TString& type, const TString& delimiter){
    if (!fMode){
       Error("BuildProfileTitle", "Mode is not set");

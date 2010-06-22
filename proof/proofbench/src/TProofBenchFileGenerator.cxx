@@ -61,6 +61,7 @@
 
 ClassImp(TProofBenchFileGenerator)
 
+//______________________________________________________________________________
 TProofBenchFileGenerator::TProofBenchFileGenerator(TProofBenchMode* mode,
                                          Long64_t nevents,
                                          Int_t maxnworkers,
@@ -96,91 +97,14 @@ fDataSetGenerated(0)
    }
 }
 
+//______________________________________________________________________________
 TProofBenchFileGenerator::~TProofBenchFileGenerator(){
    if (fDataSetGenerated){
       delete fDataSetGenerated;
    }
 }
 
-/*
-//_________________________________________________________________________________
-Int_t TProofBench::GenerateFilesN(Int_t nf, Long64_t fileent)
-{
-   // Generate the files needed for the test using TPacketizerFile
-   // *** This is only to show how it works ***
-
-   // Find out the number of physically different machines
-   if (FillNodeInfo()) {
-      Error("GenerateFilesN", "could not get information about workers!");
-      return -1;
-   }
-
-   // Number of events per file
-   Long64_t oldNEvents = fNEvents;
-   fNEvents = fileent;
-
-   // Create the file names and the map {worker,files}
-   // Naming:
-   //         <basedir>/event_<file>.root
-   TMap *filesmap = new TMap;
-   filesmap->SetName("PROOF_FilesToProcess");
-   Long64_t entries = 0;
-   TIter nxni(fNodes);
-   TProofNode *ni = 0;
-   while ((ni = (TProofNode *) nxni())) {
-      TList *files = new TList;
-      files->SetName(ni->GetName());
-      Int_t i = 0;
-      for (i = 0; i < nf; i++) {
-         files->Add(new TObjString(TString::Format("%s/event_%d.root", fBaseDir.Data(), i)));
-         entries++;
-      }
-      filesmap->Add(new TObjString(ni->GetName()), files);
-      files->Print();
-   }
-
-   // Set the relevant input parameters
-   //SetInputParameters();
-   if (fProof){
-      fProof->SetParameter("PROOF_BenchmarkBaseDir", fBaseDir.Data());
-      fProof->SetParameter("PROOF_BenchmarkRunType", fRunType);
-      fProof->SetParameter("PROOF_BenchmarkNHists", fNHists);
-      fProof->SetParameter("PROOF_BenchmarkHistType", fHistType);
-      fProof->SetParameter("PROOF_BenchmarkNTries", fNTries);
-      fProof->SetParameter("PROOF_BenchmarkNEvents", fNEvents);
-      fProof->SetParameter("PROOF_BenchmarkDraw", Int_t(fDraw));
-      fProof->SetParameter("PROOF_BenchmarkRegenerate", Int_t(fRegenerate));
-      fProof->SetParameter("PROOF_BenchmarkMode", fBenchmarkMode);
-      fProof->SetParameter("PROOF_BenchmarkNFilesAWorker", fNFilesAWorker);
-      fProof->SetParameter("PROOF_BenchmarkNFilesANode", fNFilesANode);
-   }
-   else{
-      Error("GenerateFilesN", "Proof not set, doing noting");
-   }
-
-   // Add the file map in the input list
-   fProof->AddInput(filesmap);
-
-   // Set the packetizer to be the one on test
-   fProof->SetParameter("PROOF_Packetizer", "TPacketizerFile");
-
-   // Run
-   fProof->Process("TSelEventGenN", entries);
-
-   // Clear the input parameters
-   ClearInputParameters();
-   fProof->DeleteParameters("PROOF_Packetizer");
-   fProof->GetInputList()->Remove(filesmap);
-   filesmap->SetOwner(kTRUE);
-   SafeDelete(filesmap);
-
-   // Restore previous value
-   fNEvents = oldNEvents;
-
-   // Done
-   return 0;
-}*/
-
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
                                               Long64_t nevents,
                                               TString basedir,
@@ -353,137 +277,8 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
    }
    return 0;
 }
-/*
-//_________________________________________________________________________________
-Int_t TProofBench::CreateDataSetsN(const char *basedir, const char *lab,
-                                   Int_t np, const Int_t *wp,
-                                   Int_t nr, Int_t nfw, Int_t nfmx)
-{
-   // Create the datasets for tests wth PROOF-Lite
-   // NB: Should be extended to the case the files are not local
 
-   // Check inputs
-   if (np <= 0 || !wp || !fProof) {
-      Error("CreateDataSetsN", "wrong inputs (%d, %p, %p)", np, wp, fProof);
-      return -1;
-   }
-
-   // There will be 'nr' datasets per point, rotating the files
-   // Dataset naming:
-   //                   ds_event_[lab]_[wrks_point]_[run]
-   //
-   TString dsname, slab("");
-   if (lab && strlen(lab) > 0) slab.Form("_%s", lab);
-   Int_t kp, kr, kf, kk = 0;
-   for (kp = 0; kp < np; kp++) {
-      for (kr = 0; kr < nr; kr++) {
-         // Dataset name
-         dsname.Form("ds_event%s_%d_%d", slab.Data(), wp[kp], kr);
-         Info("CreateDataSetsN", "creating dataset '%s' ...", dsname.Data());
-         // Create the TFileCollection
-         TFileCollection *fc = new TFileCollection;
-         Int_t nf = nfw * wp[kp];
-         for (kf = 0; kf < nf; kf++) {
-            Info("CreateDataSetsN", "adding file '%s/event_%d.root' ...", basedir, kk);
-            fc->Add(TString::Format("%s/event_%d.root", basedir, kk++));
-            if (kk >= nfmx) kk = 0;
-         }
-         fc->Update();
-         // Register dataset with verification
-         fProof->RegisterDataSet(dsname, fc, "OV");
-         // Cleanup
-         delete fc;
-      }
-   }
-   // Done
-   return 0;
-}
-
-Int_t TProofBench::GenerateDataSetN(const char *dset,
-                                     Int_t nw, Int_t nfw, Long64_t fileent)
-{
-   // Generate the files needed for a test on PROOF-Lite with nw workers.
-   // It will generate nfw files per worker for 'nr' different runs.
-   // Each file will have 'fileent' entries.
-   // A set of datasets 'dset_[nw]_[run]' are automatically registered and verified
-   // Uses TPacketizerFile.
-   // *** This is only to show how it works ***
-
-   // Number of events per file
-   Long64_t oldNEvents = fNEvents;
-   fNEvents = fileent;
-
-   // Create dataset containers
-   Int_t nr = 4;
-   TFileCollection fcs[4];
-   Int_t ir = 0;
-   for (ir = 0; ir < nr ; ir++) {
-     fcs[ir].SetName(TString::Format("%s_%d_%d", dset, nw, ir));
-   }
-
-   // Number of files
-   Int_t nf = nw * nfw;
-
-   // Create the file names and the map {worker,files}
-   // Naming:
-   //         <basedir>/event_<file>.root
-   TMap *filesmap = new TMap;
-   filesmap->SetName("PROOF_FilesToProcess");
-   TList *files = new TList;
-   files->SetName(gSystem->HostName());
-   Long64_t entries = 0;
-   Int_t kk = 0;
-   for (ir = 0; ir < nr ; ir++) {
-      Int_t i = 0;
-      for (i = 0; i < nf; i++) {
-         fcs[ir].Add(new TFileInfo(TString::Format("%s/event_%d.root", fBaseDir.Data(), kk)));
-         files->Add(new TObjString(TString::Format("%s/event_%d.root", fBaseDir.Data(), kk++)));
-         entries++;
-      }
-   }
-   filesmap->Add(new TObjString((gSystem->HostName())), files);
-   files->Print();
-
-   // Set the relevant input parameters
-   //SetInputParameters();
-   if (fProof){
-      fProof->SetParameter("PROOF_BenchmarkRunType", fRunType);
-      fProof->SetParameter("PROOF_BenchmarkNEvents", fNEvents);
-      fProof->SetParameter("PROOF_BenchmarkNTracksBench", fNTracksBench);
-      fProof->SetParameter("PROOF_BenchmarkNTracksCleanup", fNTracksCleanup);
-   }
-   else{
-      Error("GenerateFilesN", "Proof not set, doing noting");
-   }
-
-   // Add the file map in the input list
-   fProof->AddInput(filesmap);
-
-   // Set the packetizer to be the one on test
-   fProof->SetParameter("PROOF_Packetizer", "TPacketizerFile");
-
-   // Run
-   fProof->Process("TSelEventGenN", entries);
-
-   // Clear the input parameters
-   ClearInputParameters();
-   fProof->DeleteParameters("PROOF_Packetizer");
-   fProof->GetInputList()->Remove(filesmap);
-   filesmap->SetOwner(kTRUE);
-   SafeDelete(filesmap);
-
-   // Restore previous value
-   fNEvents = oldNEvents;
-
-   // Register and verify the datasets
-   for (ir = 0; ir < nr ; ir++) {
-     fProof->RegisterDataSet(fcs[ir].GetName(), &fcs[ir], "OV");
-   }
-
-   // Done
-   return 0;
-}*/
-
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
                                              Int_t start,
                                              Int_t stop,
@@ -538,6 +333,7 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
    return 0;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::MakeDataSets(const char* option)
 {
 //Make data sets (file collection) and register them for benchmark test
@@ -558,7 +354,7 @@ Int_t TProofBenchFileGenerator::MakeDataSets(const char* option)
    return 0;
 }
 
-//_________________________________________________________________________________
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
                                              Int_t np,
                                              const Int_t *wp,
@@ -584,270 +380,14 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
 //  <0 when anything is wrong
 
    fMode->MakeDataSets(nf, np, wp, tdset, option, fProof);
-/*
-   // Check inputs
-   if (np <= 0 || !wp || !fProof) {
-      Error("MakeDataSets", "wrong inputs (%d, %p, %p)", np, wp, fProof);
-      return -1;
-   }
-
-   if (!tdset){
-      if (fDataSetGeneratedBench){
-         tdset=fDataSetGeneratedBench;
-      }
-      else{
-         Error("MakeDataSets", "Empty data set; Files not generated");
-         return -1;
-      }
-   }
-   TString smode, stem;
-   switch (mode){
-      case kModeConstNFilesNode:
-         smode="ConstNFilesNode";
-         stem="_Benchmark_";
-      break;
-      case kModeConstNFilesWorker:
-         if (!tdset){
-            if (fDataSetGeneratedBench){
-               tdset=fDataSetGeneratedBench;
-            }
-            else{
-               Error("MakeDataSets", "Empty data set; Files not generated");
-               return -1;
-            }
-         }
-         smode="ConstNFilesWorker";
-         stem="_Benchmark_";
-      break;
-      case kModeVaryingNFilesWorker:
-         if (!tdset){
-            if (fDataSetGeneratedBench){
-               tdset=fDataSetGeneratedBench;
-            }
-            else{
-               Error("MakeDataSets", "Empty data set; Files not generated");
-               return -1;
-            }
-         }
-         smode="VaryingNFilesWorker";
-         stem="_Benchmark_";
-      break;
-      case kModeCleanup:
-         Error("MakeDataSets", "Nothing to be done for this mode; %d", mode);
-      break;
-      default:
-         Error("MakeDataSets", "Benchmark mode not recognized; %d", mode);
-         return -1;
-      break;
-   }
-   // There will be 'nr' datasets per point, rotating the files
-   // Dataset naming:
-   //                   ds_event_[lab]_[wrks_point]_[run]
-   TString dsname;
-
-   if (mode==kModeConstNFilesNode|| mode==kModeConstNFilesWorker){
-      Int_t kp;
-      for (kp = 0; kp < np; kp++) {
-         // Dataset name
- 	 dsname.Form("DataSetEvent%s_%d_%d", smode.Data(), wp[kp], nf);
-         Info("MakeDataSets", "creating dataset '%s' ...", dsname.Data());
-         // Create the TFileCollection
-         TFileCollection *fc = new TFileCollection;
-
-         TIter nxni(fNodes);
-         TProofNode *ni = 0;
-         while ((ni = (TProofNode *) nxni())) {
-            TString nodename=ni->GetName();
-            Int_t nworkers=ni->GetNWrks();
-
-            //set number of files to add for each node
-            Int_t nfiles=0;
-            if (mode==kModeConstNFilesNode){
-                  nfiles=nf;
-            }
-            else if (kModeConstNFilesWorker){
-                  nfiles=nf*nworkers;
-            }
-            Int_t nfilesadded=0;
-            Int_t nfile;
-            TList* lelement=tdset->GetListOfElements();
-            TIter nxtelement(lelement);
-            TDSetElement *tdelement;
-            TFileInfo* fileinfo;
-            TUrl* url;
-            TString hostname, filename, tmpstring;
-      
-            while ((tdelement=(TDSetElement*)nxtelement())){
-      
-               fileinfo=tdelement->GetFileInfo();
-               url=fileinfo->GetCurrentUrl();
-               hostname=url->GetHost();
-               filename=url->GetFile();
-      
-               if (hostname!=nodename) continue;
-      
-               //filename=root://hostname//directory/EventTree_Benchmark_filenumber_serial.root
-               //remove upto "Benchmark_"
-               tmpstring=filename;
-               tmpstring.Remove(0, filename.Index(stem)+stem.Length());
-      
-               TObjArray* token=tmpstring.Tokenize("_");
-      
-               if (token){
-                  nfile=TString((*token)[0]->GetName()).Atoi();
-                  token=TString((*token)[1]->GetName()).Tokenize(".");
-                  Int_t serial=TString((*token)[0]->GetName()).Atoi();
-      
-                  //ok found, add it to the dataset
-                  //count only once for set of split files
-                  if (serial==0){
-                     if (nfilesadded>=nfiles){
-                        break;
-                     }
-                     nfilesadded++;
-                  }
-                  fc->Add(fileinfo);
-                  //Info ("CreateDataSetsN", "added");
-               }
-               else{
-                  Error("MakeDataSets", "File name not recognized: %s", fileinfo->GetName());
-                  return -1;
-               }
-            }
-            if (nfilesadded<nfiles){
-               Warning("MakeDataSets", "Not enough number of files; "
-                                       "%d files out of %d files requested on node %s "
-                                       "are added to data set %s",
-                        nfilesadded, nfiles, nodename.Data(), dsname.Data());
-            }
-         }
-
-         fc->Update();
-         // Register dataset with verification
-         fProof->RegisterDataSet(dsname, fc, opt);
-         SafeDelete(fc);
-      }
-   }
-   else if (mode==kModeVaryingNFilesWorker){
-      Int_t kp;
-      Int_t nfiles=0;
-      for (kp = 0; kp < np; kp++) {
-         TFileCollection *fc = new TFileCollection;
- 	 dsname.Form("DataSetEvent%s_%d_%d", smode.Data(), wp[kp], nf);
-         Info("MakeDataSets", "creating dataset '%s' ...", dsname.Data());
-
-         nfiles=nf*wp[kp]; //number of files on all nodes for wp[kp] workers
-
-         //Check if we have enough number of files
-         TList* le=tdset->GetListOfElements();
-         Int_t nfilesavailable=le->GetSize(); 
-         if (nfilesavailable<nfiles){
-            Warning("MakeDataSets", "Number of available files (%d) is smaller than needed (%d)"
-                   ,nfilesavailable, nfiles);
-         }
-         //Check if number of requested workers are not greater than number of available workers
-         TList *wl = fProof->GetListOfSlaveInfos();
-         if (!wl) {
-            Error("MakeDataSets", "Could not get information about workers!");
-            return -2;
-         }
-
-         Int_t nworkersavailable=wl->GetSize();
-         if (nworkersavailable<wp[kp]){
-            Warning("MakeDataSets", "Number of available workers (%d) is smaller than needed (%d); "
-                                    "Only upto %d(=%d files/worker * %d workers) out of %d(=%d files/worker* %d workers) files will be added to the data set"
-                   ,nworkersavailable, wp[kp], nf*nworkersavailable, nf, nworkersavailable, nfiles, nf, wp[kp]);
-         }
-         
-         //copy tdset
-         TList* lecopy=new TList;
-         TIter nxte(le);
-         TDSetElement *tde;
-         while (tde=(TDSetElement*)nxte()){
-            lecopy->Add(new TDSetElement(*tde));
-         }
-         //lecopy->Print("A");
-
-         TIter nxwi(wl);
-         TSlaveInfo *si = 0;
-         TString nodename;
-         Int_t nfilesadded=0;
-         Int_t nfile;
-         TFileInfo* fileinfo;
-         TUrl* url;
-         TString hostname, filename, tmpstring;
-         while ((si = (TSlaveInfo *) nxwi())) {
-            nodename=si->GetName();
-            //start over for this worker
-            TIter nxtelement(lecopy);
-            Int_t nfilesadded_worker=0;
-            while ((tde=(TDSetElement*)nxtelement())){
-      
-               fileinfo=tde->GetFileInfo();
-               url=fileinfo->GetCurrentUrl();
-               hostname=url->GetHost();
-               filename=url->GetFile();
-      
-               if (hostname!=nodename) continue;
-      
-               //Info("MakeDataSets", "filename=%s", fileinfo->GetName());
-               //filename=root://hostname//directory/EventTree_Benchmark_filenumber_serial.root
-               //remove upto "Benchmark_"
-               tmpstring=filename;
-               tmpstring.Remove(0, filename.Index(stem)+stem.Length());
-      
-               TObjArray* token=tmpstring.Tokenize("_");
-      
-               //Info ("CreateDataSetsN", "file %s", url->GetUrl());
-               if (token){
-                  nfile=TString((*token)[0]->GetName()).Atoi();
-                  token=TString((*token)[1]->GetName()).Tokenize(".");
-                  Int_t serial=TString((*token)[0]->GetName()).Atoi();
-      
-                  //ok found, add it to the dataset
-                  //count only once for set of split files
-                  if (serial==0){
-                     if (nfilesadded_worker>=nf){
-                        break;
-                     }
-                     nfilesadded_worker++;
-                  }
-                  fc->Add(fileinfo);
-                  lecopy->Remove(tde);
-               }
-               else{
-                  Error("MakeDataSets", "File name not recognized: %s", fileinfo->GetName());
-                  return -1;
-               }
-            }
-            nfilesadded+=nfilesadded_worker;
-            if (nfilesadded>=nfiles){
-               break;
-            }
-         }
-         if (nfilesadded<nfiles){
-            Warning("MakeDataSets", "Only %d files out of %d files requested "
-                                    "are added to data set %s",
-                     nfilesadded, nfiles, dsname.Data());
-         }
-         fc->Update();
-         // Register dataset with verification
-         fProof->RegisterDataSet(dsname, fc, opt);
-         lecopy->SetOwner(kTRUE);
-         SafeDelete(lecopy);
-         SafeDelete(fc);
-      }
-   }
-*/
    return 0;
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::Print(Option_t* option)const{
 
    if (fProof) fProof->Print(option);
    Printf("fBaseDir=\"%s\"", fBaseDir.Data()); 
-
-   
 
    //Printf("fMaxNWorkers=%d", fMaxNWorkers);
    Printf("fNEvents=%lld", fNEvents);
@@ -874,21 +414,25 @@ void TProofBenchFileGenerator::Print(Option_t* option)const{
    if (fNodes) fNodes->Print(option);
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::SetMode(TProofBenchMode* mode)
 {
    fMode=mode;
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::SetNEvents(Long64_t nevents)
 {
    fNEvents=nevents;
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::SetMaxNWorkers(Int_t maxnworkers)
 {
    fMaxNWorkers=maxnworkers;
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::SetMaxNWorkers(TString sworkers)
 {
    sworkers.ToLower();
@@ -908,82 +452,97 @@ void TProofBenchFileGenerator::SetMaxNWorkers(TString sworkers)
    return;
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::SetStart(Int_t start)
 {
    fStart=start;
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::SetStop(Int_t stop)
 {
    fStop=stop;
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::SetStep(Int_t step)
 {
    fStep=step;
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::SetBaseDir(TString basedir)
 {
    fBaseDir=basedir;
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::SetNTracks(Int_t ntracks)
 {
    fNTracks=ntracks;
 }
 
+//______________________________________________________________________________
 void TProofBenchFileGenerator::SetRegenerate(Int_t regenerate)
 {
    fRegenerate=regenerate;
 }
 
+//______________________________________________________________________________
 TProofBenchMode* TProofBenchFileGenerator::GetMode()const
 {
    return fMode;
 }
 
+//______________________________________________________________________________
 Long64_t TProofBenchFileGenerator::GetNEvents()const
 {
    return fNEvents;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::GetMaxNWorkers()const
 {
    return fMaxNWorkers;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::GetStart()const
 {
    return fStart;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::GetStop()const
 {
    return fStop;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::GetStep()const
 {
    return fStep;
 }
 
+//______________________________________________________________________________
 TString TProofBenchFileGenerator::GetBaseDir()const
 {
    return fBaseDir;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::GetNTracks()const
 {
    return fNTracks;
 }
 
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::GetRegenerate()const
 {
    return fRegenerate;
 }
 
-//_________________________________________________________________________________
+//______________________________________________________________________________
 Int_t TProofBenchFileGenerator::FillNodeInfo()
 {
    // Re-Generate the list of worker node info (fNodes)

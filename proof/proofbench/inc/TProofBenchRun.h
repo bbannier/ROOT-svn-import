@@ -9,6 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#ifndef ROOT_TProofBenchRun
+#define ROOT_TProofBenchRun
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TProofBenchRun                                                          //
@@ -25,14 +28,13 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TProofBenchRun
-#define ROOT_TProofBenchRun
-
 #ifndef ROOT_TObject
 #include "TObject.h"
 #endif
 
 class TProofBenchRun : public TObject {
+
+private:
 
 public:
 
@@ -65,8 +67,6 @@ public:
    virtual void DrawPerfProfiles()=0;
 
    virtual void Print(Option_t* option="")const=0;   //Print status of an instance of this class 
-
-private:
 
    ClassDef(TProofBenchRun, 0)   //PROOF benchmark suite steering
 };

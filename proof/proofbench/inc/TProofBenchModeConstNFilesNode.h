@@ -9,6 +9,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#ifndef ROOT_TProofBenchModeConstNFilesNode
+#define ROOT_TProofBenchModeConstNFilesNode
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TProofBenchModeConstNFilesNode                                                          //
@@ -25,9 +28,6 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TProofBenchModeConstNFilesNode
-#define ROOT_TProofBenchModeConstNFilesNode
-
 #ifndef ROOT_TProofBenchMode
 #include "TProofBenchMode.h"
 #endif
@@ -41,6 +41,18 @@ class TProof;
 R__EXTERN TProof *gProof;
 
 class TProofBenchModeConstNFilesNode : public TProofBenchMode {
+
+private:
+
+   TProof* fProof;
+   Int_t fNFiles;
+
+   TList* fNodes;
+   TString fName;
+
+protected:
+
+   Int_t FillNodeInfo();
 
 public:
 
@@ -75,18 +87,6 @@ public:
    TProof* GetProof()const;
    Int_t GetNFiles()const;
    const char* GetName()const;
-
-protected:
-
-   Int_t FillNodeInfo();
-
-private:
-
-   TProof* fProof;
-   Int_t fNFiles;
-
-   TList* fNodes;
-   TString fName;
 
    ClassDef(TProofBenchModeConstNFilesNode,0)         //PROOF benchmark suite steering
 };
