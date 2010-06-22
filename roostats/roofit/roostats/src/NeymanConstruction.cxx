@@ -81,9 +81,10 @@ NeymanConstruction::NeymanConstruction(RooAbsData& data, ModelConfig& model):
    fModel(model),
    fLeftSideFraction(0), 
    fConfBelt(0),  // constructed with tree data 
+   fAdaptiveSampling(false),
+   fAdditionalNToysFactor(1.),
    fSaveBeltToFile(false),
-   fCreateBelt(false),
-   fAdditionalNToysFactor(1.)
+   fCreateBelt(false)
 
 {
    // default constructor

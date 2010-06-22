@@ -44,12 +44,12 @@ HybridCalculator::HybridCalculator(
   // and nToys = 1000.
   // User can : GetTestStatSampler()->SetNToys( # )
   if(!sampler){
-    RatioOfProfiledLikelihoodsTestStat* fDefaultTestStat
+    fDefaultTestStat
       = new RatioOfProfiledLikelihoodsTestStat(*nullModel.GetPdf(), 
 					       *altModel.GetPdf(), 
 					       altModel.GetSnapshot());
     
-    ToyMCSampler* fDefaultSampler = new ToyMCSampler(*fDefaultTestStat, 1000);
+    fDefaultSampler = new ToyMCSampler(*fDefaultTestStat, 1000);
     fTestStatSampler = fDefaultSampler;
   }
 }
