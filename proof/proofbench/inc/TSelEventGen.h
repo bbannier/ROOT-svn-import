@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -15,6 +15,11 @@
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TSelEventGen                                                         //
+//                                                                      //
+// PROOF selector for event file generation.                            //
+// List of files to be generated for each node is provided by client.   //
+// And list of files generated is sent back.                            //
+// Existing files are reused if not forced to be regenerated.           //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -39,7 +44,27 @@ class TSortedList;
 R__EXTERN TProofServ *gProofServ;
 
 class TSelEventGen : public TSelector {
+
+private:
+
+   TProofBenchMode::EFileType fFileType;      //event file type
+   TString fBaseDir;                          //directory where the generated files will be written to
+   //Int_t fMaxNWorkers;
+   Long64_t fNEvents;                         //number of events in a file
+   Int_t fNTracks;                            //number of tracks in an event
+   Int_t fRegenerate;                         //force generation of cleanup files
+
+   Int_t fNWorkersPerNode;                    //total number of workers on this node
+   Int_t fWorkerNumber;                       //worker number on this node
+   TObject* fTotalGen;                        //events generated on this worker
+   TDSet* fDataSet;                           //dataset of files generated
+
+protected:
+
+   Long64_t GenerateFiles(TProofBenchMode::EFileType filetype, TString filename, Long64_t sizenevents);
+
 public :
+
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
 
    // Declaration of leave types
@@ -106,23 +131,7 @@ public :
    virtual void    Terminate();
    virtual void    Print(Option_t *option="") const;
 
-protected:
-   Long64_t GenerateFiles(TProofBenchMode::EFileType filetype, TString filename, Long64_t sizenevents);
-
-private:
-   TProofBenchMode::EFileType fFileType;
-   TString fBaseDir;
-   //Int_t fMaxNWorkers;
-   Long64_t fNEvents;
-   Int_t fNTracks;                            //number of tracks in an event
-   Int_t fRegenerate;                         //Force generation of cleanup files
-
-   Int_t fNWorkersPerNode;                    //total number of workers on this node
-   Int_t fWorkerNumber;                       //worker number on this node
-   TObject* fTotalGen;                        // Events generated on this worker
-   TDSet* fDataSet;
-
-   ClassDef(TSelEventGen,0);
+   ClassDef(TSelEventGen,0)     //PROOF selector for event file generation
 };
 
 #endif

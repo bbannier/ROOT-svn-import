@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -14,17 +14,9 @@
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TProofBenchModeCleanup                                                          //
+// TProofBenchModeCleanup                                               //
 //                                                                      //
-// TProofBenchModeCleanup is a steering class for PROOF benchmark suite.           //
-// The primary goal of benchmark suite is to determine the optimal      //
-// configuration parameters for a set of machines to be used as PROOF   //
-// cluster. The suite measures the performance of the cluster for a set //
-// of standard tasks as a function of the number of effective processes.//
-// From these results, indications about the optimal number of          //
-// concurrent processes could be derived. For large facilities,         //
-// the suite should also give indictions about the optimal number of    //
-// of sub-masters into which the cluster should be partitioned.         //
+// Cleaning-up mode for Proof benchmark test.                           //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -44,9 +36,9 @@ class TProofBenchModeCleanup : public TProofBenchMode {
 
 private:
 
-   TProof* fProof;
-   TList* fNodes;
-   TString fName;
+   TProof* fProof;    //proof
+   TList* fNodes;     //list of nodes
+   TString fName;     //name of this mode
 
 protected:
 
@@ -56,14 +48,14 @@ public:
 
    TProofBenchModeCleanup(TProof* proof=gProof);
 
-   virtual ~TProofBenchModeCleanup();          //destructor
+   virtual ~TProofBenchModeCleanup();
 
-   TMap* FilesToProcess(Int_t);//not used
+   TMap* FilesToProcess(Int_t);
  
-   Int_t MakeDataSets(Int_t,   //not used
-                      Int_t,   //not used
-                      Int_t,   //not used
-                      Int_t,   //not used
+   Int_t MakeDataSets(Int_t,
+                      Int_t,
+                      Int_t,
+                      Int_t,
                       const TDSet* tdset,
                       const char* option,
                       TProof* proof);
@@ -73,7 +65,7 @@ public:
                       const Int_t*,
                       const TDSet*,
                       const char*,
-                      TProof*); //this function does nothing
+                      TProof*);
 
    TProofBenchMode::EFileType GetFileType();
 
@@ -86,7 +78,7 @@ public:
    Int_t GetNFiles()const;
    const char* GetName()const;
 
-   ClassDef(TProofBenchModeCleanup,0)         //PROOF benchmark suite steering
+   ClassDef(TProofBenchModeCleanup,0)    //Cleaning-up mode for PROOF benchmark test
 };
 
 #endif

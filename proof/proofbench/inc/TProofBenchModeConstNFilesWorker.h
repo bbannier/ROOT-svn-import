@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -14,17 +14,12 @@
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TProofBenchModeConstNFilesWorker                                                          //
+// TProofBenchModeConstNFilesWorker                                     //
 //                                                                      //
-// TProofBenchModeConstNFilesWorker is a steering class for PROOF benchmark suite.           //
-// The primary goal of benchmark suite is to determine the optimal      //
-// configuration parameters for a set of machines to be used as PROOF   //
-// cluster. The suite measures the performance of the cluster for a set //
-// of standard tasks as a function of the number of effective processes.//
-// From these results, indications about the optimal number of          //
-// concurrent processes could be derived. For large facilities,         //
-// the suite should also give indictions about the optimal number of    //
-// of sub-masters into which the cluster should be partitioned.         //
+// A mode for PROOF benchmark test.                                     //
+// In this mode, a given number of files are generated for each worker. //
+// During the test, all of these files are processed no matter how many //
+// workers are active.                                                  //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -44,20 +39,19 @@ class TProofBenchModeConstNFilesWorker : public TProofBenchMode {
 
 private:
 
-   TProof* fProof;
+   TProof* fProof;            //proof
    Int_t fNFiles;             //number of files a node for I/O test
-   TList* fNodes;
-   TString fName;
+   TList* fNodes;             //list of nodes
+   TString fName;             //name of this mode
 
 protected:
 
    Int_t FillNodeInfo();
 
 public:
-
-   TProofBenchModeConstNFilesWorker(Int_t nfiles=1, TProof* proof=gProof);  //default is to generate as many files as number 
-                                                 //of workers on each node
-    virtual ~TProofBenchModeConstNFilesWorker();          //destructor
+   
+   TProofBenchModeConstNFilesWorker(Int_t nfiles=1, TProof* proof=gProof);
+    virtual ~TProofBenchModeConstNFilesWorker();
 
     TMap* FilesToProcess(Int_t nf);
 
@@ -87,7 +81,7 @@ public:
    Int_t GetNFiles()const;
    const char* GetName()const; 
 
-   ClassDef(TProofBenchModeConstNFilesWorker,0)         //PROOF benchmark suite steering
+   ClassDef(TProofBenchModeConstNFilesWorker,0)  //A mode for PROOF benchmark test
 };
 
 #endif

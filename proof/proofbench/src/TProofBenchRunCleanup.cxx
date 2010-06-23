@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -11,9 +11,16 @@
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TProofBenchRunDataRead                                               //
+// TProofBenchRunCleanup                                                //
 //                                                                      //
-// TProofBenchRunDataRead is ...                                        //
+// Represents a memory cleaning-up run for PROOF benchmark.             //
+// During I/O benchmark, files are repeatedly read.                     //
+// Every new run should read file from disk, not from memory.           //
+// 2 ways of clean up method are provided. One is brute force way       //
+// in which dedicated files large enough to clean up memory             //
+// on the machine are read in before every run. The other way is clean  //
+// up files cache by calling posix_fadvise. It works only on Linux      //
+// for now.                                                             //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 

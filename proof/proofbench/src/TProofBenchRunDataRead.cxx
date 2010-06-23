@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -13,7 +13,11 @@
 //                                                                      //
 // TProofBenchRunDataRead                                               //
 //                                                                      //
-// TProofBenchRunDataRead is ...                                        //
+// I/O-intensive PROOF benchmark test reads in event files distributed  //
+// on the cluster. Number of events processed per second and size of    //
+// events processed per second are plotted against number of active     //
+// workers. Performance rate for unit packets and performance rate      //
+// for query are plotted.                                               //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 

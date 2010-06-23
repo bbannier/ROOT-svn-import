@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author:
+// Author: Sangsu Ryu 22/6/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -14,17 +14,10 @@
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TProofBenchFileGenerator                                                          //
+// TProofBenchFileGenerator                                             //
 //                                                                      //
-// TProofBenchFileGenerator is a steering class for PROOF benchmark suite.           //
-// The primary goal of benchmark suite is to determine the optimal      //
-// configuration parameters for a set of machines to be used as PROOF   //
-// cluster. The suite measures the performance of the cluster for a set //
-// of standard tasks as a function of the number of effective processes.//
-// From these results, indications about the optimal number of          //
-// concurrent processes could be derived. For large facilities,         //
-// the suite should also give indictions about the optimal number of    //
-// of sub-masters into which the cluster should be partitioned.         //
+// This class lets you generate files and register them as datasets     //
+// to be used for Proof benchmark test.                                 //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -47,23 +40,20 @@ class TProofBenchFileGenerator: public TObject{
 private:
 
    TProof* fProof;                 //pointer to proof
-   TProofBenchMode* fMode;
+   TProofBenchMode* fMode;         //benchmark mode 
 
    Long64_t fNEvents;              //number of events in a file
-   Int_t fMaxNWorkers;
+   Int_t fMaxNWorkers;             //reserved
 
-   Int_t fStart;                   //starting number of cpu cores
-   Int_t fStop;
+   Int_t fStart;                   //start number of workers to scan
+   Int_t fStop;                    //stop number of workers to scan
    Int_t fStep;                    //test to be performed every fStep workers
    TString fBaseDir;               //base directory for files
    Int_t fNTracks;                 //number of tracks to generate in an event
    Int_t fRegenerate;              //when true, regenerate files
 
-   //Int_t fDebug;                   //debug switch, when on various debug plots will be saved to file
-
-   TList* fNodes;               // List of worker nodes info
-   TDSet* fDataSetGenerated;  //Data set generated at worker nodes for benchmarking
-//   TDSet* fDataSetGeneratedCleanup;//Data set generated at worker nodes for cleaning up memory
+   TList* fNodes;                  //list of nodes information
+   TDSet* fDataSetGenerated;       //data set generated at worker nodes for benchmarking
 
 protected:
 
@@ -82,7 +72,7 @@ public:
                             Bool_t regenerate=kFALSE,
                             TProof* proof=gProof);
 
-   virtual ~TProofBenchFileGenerator();          //destructor
+   virtual ~TProofBenchFileGenerator();
 
    virtual Int_t  GenerateFiles(Int_t nf=-1,
                                 Long64_t nevents=-1,
@@ -90,10 +80,10 @@ public:
                                 Int_t regenerate=-1,
                                 Int_t ntracks=-1);
 
-   virtual Int_t MakeDataSets(Int_t nf=-1,   //when ==-1, use current set value
-                              Int_t start=-1, //when ==-1, use current set value
-                              Int_t stop=-1,  //when ==-1, use current set value
-                              Int_t step=-1,  //when ==-1, use current set value
+   virtual Int_t MakeDataSets(Int_t nf=-1,
+                              Int_t start=-1,
+                              Int_t stop=-1,
+                              Int_t step=-1,
                               const TDSet* tdset=0,
                               const char* option="V");
 
@@ -128,7 +118,7 @@ public:
    Int_t GetNTracks()const;
    Int_t GetRegenerate()const;
 
-   ClassDef(TProofBenchFileGenerator,0)         //PROOF benchmark suite steering
+   ClassDef(TProofBenchFileGenerator,0)  //Generate files and register them as datasets to be used for the Proof benchmark test
 };
 
 #endif

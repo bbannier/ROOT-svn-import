@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -15,6 +15,8 @@
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TSelHist                                                             //
+// PROOF selector for CPU-intensive benchmark test.                     //
+// Events are generated and 1-D, 2-D, and/or 3-D histograms are filled. //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -61,7 +63,7 @@ public :
    virtual void    Terminate();
    virtual void    Print(Option_t* option = "") const;
 
-   ClassDef(TSelHist,0);
+   ClassDef(TSelHist,0)  //PROOF selector for CPU-intensive benchmark test
 };
 
 #endif

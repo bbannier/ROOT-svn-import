@@ -16,6 +16,8 @@
 //                                                                      //
 // TProofNode                                                           //
 //                                                                      //
+// PROOF worker node information                                        //
+//                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef ROOT_TNamed
@@ -40,7 +42,7 @@ public:
    Int_t GetNWrks() const { return fNWrks; }
    void SetNWrks(Int_t n) { fNWrks = n; }
 
-   ClassDef(TProofNode,0)
- };
+   ClassDef(TProofNode,0) //PROOF worker node information
+};
 
 #endif

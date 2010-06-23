@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -16,7 +16,14 @@
 //                                                                      //
 // TProofBenchRunCleanup                                                //
 //                                                                      //
-// TProofBenchRunCleanup is ...                                         //
+// Represents a memory cleaning-up run for PROOF benchmark.             //
+// During I/O benchmark, files are repeatedly read.                     //
+// Every new run should read file from disk, not from memory.           //
+// 2 ways of clean up method are provided. One is brute force way       //
+// in which dedicated files large enough to clean up memory             //
+// on the machine are read in before every run. The other way is clean  //
+// up files cache by calling posix_fadvise. It works only on Linux      //
+// for now.                                                             //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -39,21 +46,21 @@ class TProofBenchRunCleanup : public TProofBenchRun{
 
 private:
 
-   TProof* fProof;                 //pointer to proof
+   TProof* fProof;               //proof
 
-   TProofBenchRun::ECleanupType fCleanupType;
+   TProofBenchRun::ECleanupType fCleanupType; //cleanup type
    Long64_t fNEvents;            //number of events per file for CPU test and/or I/O test
    Int_t fMaxNWorkers;           //number of maximum processes, 
                                  //this can be more than the number of total workers in the cluster
    TString fDataSetCleanup;      //data set to be cleaned up at nodes using fadvice
-   Int_t fDraw;
-   Int_t fDebug;
+   Int_t fDraw;                  //draw switch
+   Int_t fDebug;                 //debug switch
 
    TFile* fFile;                 //output file to write performance histograms and trees on
    TDirectory* fDirProofBench;   //directory for proof outputs
-   Bool_t fWritable;
+   Bool_t fWritable;             //file writable
 
-   TString fName;
+   TString fName;                //name of this run
 
 protected:
 
@@ -65,17 +72,15 @@ protected:
 public:
 
    TProofBenchRunCleanup(TProofBenchRun::ECleanupType cleanuptype=TProofBenchRun::kCleanupNotSpecified,
-                         TString filename="",//output file where benchmark performance plot will be written to, 
-                                             //user has to provide one
-                         Option_t* foption="", //option to TFile() 
+                         TString filename="",
+                         Option_t* foption="",
                          TProof* proof=gProof,
-                         Int_t maxnworkers=-1,//maximum number of workers to be tested. 
-                                              //If not set (default), 2 times the number of total workers in the cluster available
+                         Int_t maxnworkers=-1,
                          Long64_t nevents=-1,
                          Int_t draw=0,
-                         Int_t debug=0); //default constructor
+                         Int_t debug=0);
 
-   virtual ~TProofBenchRunCleanup();          //Destructor
+   virtual ~TProofBenchRunCleanup();
 
    void Run(Long64_t nevents,
             Int_t,
@@ -92,7 +97,7 @@ public:
 
    void DrawPerfProfiles();
 
-   void Print(Option_t* option="")const;   //Print status of an instance of this class 
+   void Print(Option_t* option="")const;
 
    void SetCleanupType(TProofBenchRun::ECleanupType cleanuptype);
    void SetNEvents(Long64_t nevents);
@@ -104,7 +109,7 @@ public:
    TFile* OpenFile(const char* filename="",
                            Option_t* option="",
                            const char* ftitle = "",
-                           Int_t compress = 1);    //open a file for outputs 
+                           Int_t compress = 1);
    void SetDirProofBench(TDirectory* dir);
    void SetName(TString name);
 
@@ -120,7 +125,7 @@ public:
 
    TString GetNameStem()const;
 
-   ClassDef(TProofBenchRunCleanup,0)         //PROOF benchmark memory cleaning-up run 
+   ClassDef(TProofBenchRunCleanup,0)   //Represents a memory cleaning-up run for PROOF benchmark
 };
 
 #endif
