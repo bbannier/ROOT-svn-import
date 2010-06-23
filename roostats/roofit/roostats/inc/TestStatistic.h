@@ -42,7 +42,7 @@ class TestStatistic {
       virtual const TString GetVarName() const = 0;
 
       // Defines the sign convention of the test statistic. Overwrite function if necessary.
-      virtual const bool PValueIsRightTail(void) { return true; }
+      virtual  bool PValueIsRightTail(void) const { return true; }
 
    protected:
    ClassDef(TestStatistic,1) // Interface for a TestStatistic
