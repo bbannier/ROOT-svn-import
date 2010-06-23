@@ -101,6 +101,8 @@ class SimpleLikelihoodRatioTestStat: public TestStatistic {
 	    (alt = (RooAbsReal*) altIt->Next()) ){
 	if(null->getVal() != alt->getVal() ) ret = false;
       }
+      delete nullIt;
+      delete altIt;
       return ret;    
     }
 

@@ -136,8 +136,10 @@ void PdfProposal::Propose(RooArgSet& xPrime, RooArgSet& x)
       fLastX.addClone(x);
       // generate initial cache
       RooStats::SetParameters(&x, &fMaster);
-      for (fIt = fMap.begin(); fIt != fMap.end(); fIt++)
-         fIt->first->setVal(fIt->second->getVal(&x));
+      if (fMap.size() > 0) {
+         for (fIt = fMap.begin(); fIt != fMap.end(); fIt++)
+            fIt->first->setVal(fIt->second->getVal(&x));
+      }
       fCache = fPdf->generate(xPrime, fCacheSize);
    }
 
