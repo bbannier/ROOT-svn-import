@@ -43,7 +43,7 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistribution(RooArgSet& paramPoin
 
    // important to cache the paramPoint b/c test statistic might 
    // modify it from event to event
-   RooArgSet paramPoint = (RooArgSet*) paramPointIn.snapshot();
+   RooArgSet* paramPoint = (RooArgSet*) paramPointIn.snapshot();
    RooArgSet *allVars = fPdf->getVariables();
    RooArgSet *saveAll = (RooArgSet*) allVars->snapshot();
 
