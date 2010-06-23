@@ -87,7 +87,7 @@ class MaxLikelihoodEstimateTestStat: public TestStatistic {
 
       
   virtual void PValueIsRightTail(bool isright) {  fUpperLimit = isright; }
-  virtual const bool PValueIsRightTail(void) { return fUpperLimit; }
+  virtual bool PValueIsRightTail(void) const { return fUpperLimit; }
 
 
    private:
