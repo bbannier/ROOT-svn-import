@@ -35,12 +35,15 @@ Bool_t ToyMCSampler::CheckConfig(void) {
    return goodConfig;
 }
 
-SamplingDistribution* ToyMCSampler::GetSamplingDistribution(RooArgSet& paramPoint) {
+SamplingDistribution* ToyMCSampler::GetSamplingDistribution(RooArgSet& paramPointIn) {
    CheckConfig();
 
    std::vector<Double_t> testStatVec;
    std::vector<Double_t> testStatWeights;
 
+   // important to cache the paramPoint b/c test statistic might 
+   // modify it from event to event
+   RooArgSet paramPoint = (RooArgSet*) paramPointIn.snapshot();
    RooArgSet *allVars = fPdf->getVariables();
    RooArgSet *saveAll = (RooArgSet*) allVars->snapshot();
 
@@ -67,7 +70,7 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistribution(RooArgSet& paramPoin
    for (Int_t i = 0; i < fNToys; ++i) {
       if (nuisanceParPoints) {
 	 // set variables to requested parameter point
-	 *allVars = paramPoint;
+	 *allVars = *paramPoint;
 	 // set nuisance parameters to randomized value
 	 *allVars = *nuisanceParPoints->get(i);
 
@@ -80,7 +83,7 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistribution(RooArgSet& paramPoin
          delete toydata;
       }else{
 	 // set variables to requested parameter point
-	 *allVars = paramPoint;
+	 *allVars = *paramPoint;
 	 // generate toy data for this parameter point
          RooAbsData* toydata = GenerateToyData(*allVars);
 	 // evaluate test statistic, that only depends on null POI
