@@ -44,9 +44,9 @@ class SimpleLikelihoodRatioTestStat: public TestStatistic {
     {
       // b/c null and alternate parameters are not set, it will take
       // values from PDF. Can override
+      fFirstEval=true;
       fNullParameters = (RooArgSet*)fNullPdf.getVariables()->snapshot();      
       fAltParameters = (RooArgSet*)fAltPdf.getVariables()->snapshot();          
-
     }
 
 
@@ -61,6 +61,7 @@ class SimpleLikelihoodRatioTestStat: public TestStatistic {
 	// because both are pointers to the same set, and you will
 	// get duplicate values.
 
+	fFirstEval=true;
 	fNullParameters = (RooArgSet*)nullParameters.snapshot();
 	fAltParameters = (RooArgSet*)altParameters.snapshot();
 
@@ -70,6 +71,7 @@ class SimpleLikelihoodRatioTestStat: public TestStatistic {
     void SetNullParameters(const RooArgSet& nullParameters){
       delete fNullParameters;
       fFirstEval=true;
+      //      if(fNullParameters) delete fNullParameters;
       fNullParameters = (RooArgSet*)nullParameters.snapshot();
     }
 
@@ -77,6 +79,7 @@ class SimpleLikelihoodRatioTestStat: public TestStatistic {
     void SetAltParameters(const RooArgSet& altParameters){
       delete fAltParameters;
       fFirstEval=true;
+      //      if(fAltParameters) delete fAltParameters;
       fAltParameters = (RooArgSet*)altParameters.snapshot();
     }
     //______________________________
@@ -108,11 +111,11 @@ class SimpleLikelihoodRatioTestStat: public TestStatistic {
 
     //______________________________
     virtual Double_t Evaluate(RooAbsData& data, RooArgSet& /*nullPOI*/) {
-      
+            
       if( fFirstEval && ParamsAreEqual()){
 	  oocoutW(fNullParameters,InputArguments) << "Same RooArgSet used for null and alternate, so you must explicitly SetNullParameters and SetAlternateParameters or the likelihood ratio will always be 1." << endl; 
-	  fFirstEval=false;
 	}
+      fFirstEval=false;
 
          RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
          RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
