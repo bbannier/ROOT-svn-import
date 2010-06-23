@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -14,17 +14,9 @@
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TProofBenchRun                                                          //
+// TProofBenchRun                                                       //
 //                                                                      //
-// TProofBenchRun is a steering class for PROOF benchmark suite.           //
-// The primary goal of benchmark suite is to determine the optimal      //
-// configuration parameters for a set of machines to be used as PROOF   //
-// cluster. The suite measures the performance of the cluster for a set //
-// of standard tasks as a function of the number of effective processes.//
-// From these results, indications about the optimal number of          //
-// concurrent processes could be derived. For large facilities,         //
-// the suite should also give indictions about the optimal number of    //
-// of sub-masters into which the cluster should be partitioned.         //
+// Abstract base class for PROOF benchmark run.                         //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -38,23 +30,29 @@ private:
 
 public:
 
-   enum EReadType {kReadNotSpecified=0, 
-                   kReadFull=1, 
-                   kReadOpt=2, 
-                   kReadNo=4,
-                   kReadAll=kReadFull | kReadOpt | kReadNo}; //Read type
+   enum EReadType {
+      kReadNotSpecified=0,                    //read type not specified
+      kReadFull=1,                            //read in a full event
+      kReadOpt=2,                             //read in part of an event
+      kReadNo=4,                              //do not read in event
+      kReadAll=kReadFull | kReadOpt | kReadNo //read in a full event, part of a event and no event
+   };
 
-   enum EHistType {kHistNotSpecified=0, 
-                   kHist1D=1, 
-                   kHist2D=2, 
-                   kHist3D=4,
-                   kHistAll=kHist1D | kHist2D | kHist3D}; //histogram types for CPU test
+   enum EHistType {
+      kHistNotSpecified=0,                  //histogram type not specified
+      kHist1D=1,                            //1-D histogram
+      kHist2D=2,                            //2-D histogram
+      kHist3D=4,                            //3-D histogram
+      kHistAll=kHist1D | kHist2D | kHist3D  //1-D, 2-D and 3-D histograms
+   };
 
-   enum ECleanupType {kCleanupNotSpecified=0,
-                      kCleanupFile=1,        
-                      kCleanupKernel=2};      //clean-up run type 
+   enum ECleanupType {
+      kCleanupNotSpecified=0,               //clean-up type not specified
+      kCleanupFile=1,                       //clean-up by reading in dedicated files
+      kCleanupKernel=2                      //clean-up by system call
+   };
 
-   virtual ~TProofBenchRun();           //Destructor
+   virtual ~TProofBenchRun();
 
    virtual void Run(Long64_t nevents=-1,
                     Int_t ntries=-1,
@@ -66,9 +64,9 @@ public:
 
    virtual void DrawPerfProfiles()=0;
 
-   virtual void Print(Option_t* option="")const=0;   //Print status of an instance of this class 
+   virtual void Print(Option_t* option="")const=0;
 
-   ClassDef(TProofBenchRun, 0)   //PROOF benchmark suite steering
+   ClassDef(TProofBenchRun, 0)   //Abstract base class for PROOF benchmark run
 };
 
 #endif

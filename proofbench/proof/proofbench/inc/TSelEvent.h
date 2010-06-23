@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -15,6 +15,13 @@
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TSelEvent                                                            //
+//                                                                      //
+// PROOF selector for I/O benchmark test.                               //
+// For I/O benchmark, event files are read in and histograms are filled.//
+// For memory clean-up, dedicated files large enough to clean up memory //
+// cache on the machine are read in. Or memory clean-up can be          //
+// accompolished by system call on Linux machine inside SlaveBegin(..)  //
+// which should be much faster the reading in large files.              //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -40,7 +47,22 @@ class TH1;
 class TCanvas;
 
 class TSelEvent : public TSelector {
+
+private:
+
+   TProofBenchRun::EReadType fReadType;       //read type
+   TProofBenchRun::ECleanupType fCleanupType; //clean-up type
+   THashList* fFilesToCleanupCacheFor;        //list of files to clean up cache for
+   Bool_t fDraw;                              //draw switch
+   Bool_t fDebug;                             //debug switch
+   TCanvas* fCHist;                           //canvas to display histograms
+
+   //Output hists
+   TH1F* fPtHist;
+   TH1I* fNTracksHist;
+
 public :
+
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
 
    // Declaration of leave types
@@ -112,20 +134,7 @@ public :
    TH1* GetPtHist(){return fPtHist;}
    TH1* GetNTracksHist(){return fNTracksHist;}
 
-private:
-
-   TProofBenchRun::EReadType fReadType; //read type
-   TProofBenchRun::ECleanupType fCleanupType; //read type
-   THashList* fFilesToCleanupCacheFor; //hash list of files to clean up cache for
-   Bool_t fDraw; //when true, display output histograms
-   Bool_t fDebug; //when true, create and fill in output histograms
-   TCanvas* fCHist; //canvas to display histograms
-
-   //Output hists
-   TH1F* fPtHist;
-   TH1I* fNTracksHist;
-
-   ClassDef(TSelEvent,0);
+   ClassDef(TSelEvent,0) //PROOF selector for I/O-intensive benchmark test
 };
 
 #endif

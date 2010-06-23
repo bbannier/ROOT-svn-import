@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -16,7 +16,11 @@
 //                                                                      //
 // TProofBenchRunDataRead                                               //
 //                                                                      //
-// TProofBenchRunDataRead is ...                                        //
+// I/O-intensive PROOF benchmark test reads in event files distributed  //
+// on the cluster. Number of events processed per second and size of    //
+// events processed per second are plotted against number of active     //
+// workers. Performance rate for unit packets and performance rate      //
+// for query are plotted.                                               //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -42,37 +46,36 @@ R__EXTERN TProof *gProof;
 class TProofBenchRunDataRead : public TProofBenchRun{
 
 private:
-   TProof* fProof;                 //pointer to proof
+   TProof* fProof;               //pointer to proof
 
-   TProofBenchRun::EReadType fReadType;
-   TProofBenchMode* fMode;
-   TProofBenchRunCleanup* fRunCleanup;
+   TProofBenchRun::EReadType fReadType; //read type
+   TProofBenchMode* fMode;              //mode
+   TProofBenchRunCleanup* fRunCleanup;  //clean-up run
 
-   Long64_t fNEvents;            //number of events per file for CPU test and/or I/O test
-   Int_t fNTries;                //number of files for I/O test
-   Int_t fMaxNWorkers;           //number of maximum processes, 
-                                 //this can be more than the number of total workers in the cluster
-   Int_t fStart;                 //number of workers the test starts with
-   Int_t fStop;                  //number of workers the test ends with
-   Int_t fStep;                  //number of workers to increase for each step
-   Int_t fDraw;                  //various plots on the canvas when true
-   Int_t fDebug;                 //debug switch, various debug plots will be saved to file when true
+   Long64_t fNEvents;            //number of events per file
+   Int_t fNTries;                //number of tries
+   Int_t fMaxNWorkers;           //number of maximum processes
+   Int_t fStart;                 //start number of workers
+   Int_t fStop;                  //stop number of workers
+   Int_t fStep;                  //test to be performed every fStep workers
+   Int_t fDraw;                  //draw switch
+   Int_t fDebug;                 //debug switch
 
    TFile* fFile;                 //output file to write performance histograms and trees on
    TDirectory* fDirProofBench;   //directory for proof outputs
-   Bool_t fWritable;             //true when file is writable
+   Bool_t fWritable;             //file writable
 
-   TList* fNodes;                // List of worker nodes info, fNodes is the owner of its members
+   TList* fNodes;                //list of nodes information
 
-   TList* fPerfStats;            //List of PROOF_PerfStats
+   TList* fPerfStats;            //list of PROOF_PerfStats
    TProfile* fProfEvent;         //profile histogram (number of events processed per second)
    TProfile* fProfIO;            //profile histogram (data size read per second)
 
-   TList* fListPerfProfiles;       //List of performance profiles
+   TList* fListPerfProfiles;     //list of performance profiles
 
    TCanvas* fCPerfProfiles;      //canvas for performance profile histograms
 
-   TString fName;                
+   TString fName;                //name of this run
 
 protected:
 
@@ -93,21 +96,19 @@ public:
    TProofBenchRunDataRead(TProofBenchMode* mode,
                           TProofBenchRunCleanup* runcleanup,
                           TProofBenchRun::EReadType readtype=TProofBenchRun::kReadNotSpecified,
-                          TString filename="",  //output file where benchmark performance plot will be written to, 
-                                                //user has to provide one
-                          Option_t* foption="", //option to TFile() 
+                          TString filename="",
+                          Option_t* foption="",
                           TProof* proof=gProof,
-                          Int_t maxnworkers=-1, //maximum number of workers to be tested. 
-                                                //If not set (default), 2 times the number of total workers in the cluster available
-                          Long64_t nevents=-1,  //process all events
+                          Int_t maxnworkers=-1,
+                          Long64_t nevents=-1,
                           Int_t ntries=2,
                           Int_t start=1,
-                          Int_t stop=-1,        //stop=maxnowkers when stop=-1
+                          Int_t stop=-1,
                           Int_t step=1,
                           Int_t draw=0,
-                          Int_t debug=0);       //default constructor
+                          Int_t debug=0);
 
-   virtual ~TProofBenchRunDataRead();           //Destructor
+   virtual ~TProofBenchRunDataRead();
 
    void Run(Long64_t nevents,
             Int_t ntries,
@@ -119,7 +120,7 @@ public:
 
    void DrawPerfProfiles();
 
-   void Print(Option_t* option="")const;   //Print status of an instance of this class 
+   void Print(Option_t* option="")const;
 
    void SetReadType(TProofBenchRun::EReadType readtype);
    void SetMode(TProofBenchMode* mode);
@@ -136,7 +137,7 @@ public:
    TFile* OpenFile(const char* filename="",
                    Option_t* option="",
                    const char* ftitle = "",
-                   Int_t compress = 1);    //open a file for outputs 
+                   Int_t compress = 1);
    void SetDirProofBench(TDirectory* dir);
 
    TProofBenchRun::EReadType GetReadType()const;
@@ -159,7 +160,7 @@ public:
 
    TString GetNameStem()const;
 
-   ClassDef(TProofBenchRunDataRead,0)         //PROOF benchmark run type data read
+   ClassDef(TProofBenchRunDataRead,0)         //I/O-intensive PROOF benchmark
 };
 
 #endif

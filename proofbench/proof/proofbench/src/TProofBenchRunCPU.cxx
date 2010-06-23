@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -13,7 +13,8 @@
 //                                                                      //
 // TProofBenchRunCPU                                                    //
 //                                                                      //
-// TProofBenchRunCPU is ...                                             //
+// CPU-intensive PROOF benchmark test generates events and fill 1, 2,   //
+//or 3-D histograms. No I/O activity is involved.                       //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 

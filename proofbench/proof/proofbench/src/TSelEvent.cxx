@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -13,6 +13,12 @@
 //                                                                      //
 // TSelEvent                                                            //
 //                                                                      //
+// PROOF selector for I/O benchmark test.                               //
+// For I/O benchmark, event files are read in and histograms are filled.//
+// For memory clean-up, dedicated files large enough to clean up memory //
+// cache on the machine are read in. Or memory clean-up can be          //
+// accompolished by system call on Linux machine inside SlaveBegin(..)  //
+// which should be much faster the reading in large files.              //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 

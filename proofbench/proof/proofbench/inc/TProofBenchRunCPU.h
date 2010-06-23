@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id:$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -14,9 +14,10 @@
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TProofBenchRunCPU                                                //
+// TProofBenchRunCPU                                                    //
 //                                                                      //
-// TProofBenchRunCPU is ...                                         //
+// CPU-intensive PROOF benchmark test generates events and fill 1, 2,   //
+//or 3-D histograms. No I/O activity is involved.                       //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -42,34 +43,34 @@ class TProofBenchRunCPU : public TProofBenchRun{
 
 private:
 
-   TProof* fProof;                 //pointer to proof
+   TProof* fProof;               //proof
 
-   TProofBenchRun::EHistType fHistType;
-   Int_t fNHists;
+   TProofBenchRun::EHistType fHistType;  //histogram type
+   Int_t fNHists;                //number of histograms
 
-   Long64_t fNEvents;            //number of events per file for CPU test and/or I/O test
-   Int_t fNTries;                //number of files for I/O test
-   Int_t fMaxNWorkers;           //number of maximum processes, 
-                                 //this can be more than the number of total workers in the cluster
-   Int_t fStart;
-   Int_t fStop;
-   Int_t fStep;
+   Long64_t fNEvents;            //number of events to generate
+   Int_t fNTries;                //number of tries 
+   Int_t fMaxNWorkers;           //number of maximum workers
 
-   Int_t fDraw;
-   Int_t fDebug;
+   Int_t fStart;                 //start number of workers to scan
+   Int_t fStop;                  //stop number of workers to scan
+   Int_t fStep;                  //test to be performed every fStep workers
+
+   Int_t fDraw;                  //draw switch
+   Int_t fDebug;                 //debug switch
 
    TFile* fFile;                 //output file to write performance histograms and trees on
    TDirectory* fDirProofBench;   //directory for proof outputs
-   Bool_t fWritable;
+   Bool_t fWritable;             //file writable
 
-   TList* fNodes;                // List of worker nodes info, fNodes is the owner of its members
+   TList* fNodes;                //list of node information
 
-   TList* fPerfStats;            //List of PROOF_PerfStats
-   TProfile* fProfEvent;
-   TList* fListPerfProfiles;       //List of performance profiles
+   TList* fPerfStats;            //list of PROOF_PerfStats
+   TProfile* fProfEvent;         //profile histogram (number of events processed per second)
+   TList* fListPerfProfiles;     //list of performance profiles
    TCanvas* fCPerfProfiles;      //canvas for performance profile histograms
 
-   TString fName;
+   TString fName;                //name of CPU run
 
 protected:
 
@@ -89,21 +90,19 @@ public:
 
    TProofBenchRunCPU(TProofBenchRun::EHistType histtype=TProofBenchRun::kHistNotSpecified,
                      Int_t nhists=16,
-                     TString filename="",//output file where benchmark performance plot will be written to, 
-                                         //user has to provide one
-                     Option_t* foption="", //option to TFile() 
+                     TString filename="",
+                     Option_t* foption="",
                      TProof* proof=gProof,
-                     Int_t maxnworkers=-1,//maximum number of workers to be tested. 
-                                          //If not set (default), 2 times the number of total workers in the cluster available
+                     Int_t maxnworkers=-1,
                      Long64_t nevents=1000000,
                      Int_t ntries=2,
                      Int_t start=1,
                      Int_t stop=-1,
                      Int_t step=1,
                      Int_t draw=0,
-                     Int_t debug=0); //default constructor
+                     Int_t debug=0);
 
-   virtual ~TProofBenchRunCPU();          //Destructor
+   virtual ~TProofBenchRunCPU();
 
    void Run(Long64_t nevents,
             Int_t ntries,
@@ -115,7 +114,7 @@ public:
 
    void DrawPerfProfiles();
 
-   void Print(Option_t* option="")const;   //Print status of an instance of this class 
+   void Print(Option_t* option="")const;
 
    void SetHistType(TProofBenchRun::EHistType histtype);
    void SetNHists(Int_t nhists);
@@ -131,7 +130,7 @@ public:
    TFile* OpenFile(const char* filename="",
                            Option_t* option="",
                            const char* ftitle = "",
-                           Int_t compress = 1);    //open a file for outputs 
+                           Int_t compress = 1);
    void SetDirProofBench(TDirectory* dir);
 
    TProofBenchRun::EHistType GetHistType()const;
@@ -153,7 +152,7 @@ public:
 
    TString GetNameStem()const;
 
-   ClassDef(TProofBenchRunCPU,0)         //PROOF benchmark run for CPU test
+   ClassDef(TProofBenchRunCPU,0)     //CPU-intensive PROOF benchmark
 };
 
 #endif
