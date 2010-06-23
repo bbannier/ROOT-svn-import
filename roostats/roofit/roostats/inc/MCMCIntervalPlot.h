@@ -51,6 +51,7 @@ namespace RooStats {
       void SetMCMCInterval(MCMCInterval& interval);
       void SetLineColor(Color_t color) {fLineColor = color;}
       void SetLineWidth(Int_t width) {fLineWidth = width;}
+      void SetShadeColor(Color_t color) {fShadeColor = color;}
       void SetShowBurnIn(Bool_t showBurnIn) { fShowBurnIn = showBurnIn; }
 
       void Draw(const Option_t* options = NULL);
@@ -70,8 +71,11 @@ namespace RooStats {
       RooProduct* fPosteriorKeysProduct;
       TH1* fNLLHist;
       TH1* fWeightHist;
+      TH1* fPosteriorHistHistCopy;
+      TH1* fPosteriorHistTFCopy;
       Int_t fDimension;
       Color_t fLineColor;
+      Color_t fShadeColor;
       Int_t fLineWidth;
       Bool_t fShowBurnIn;
       TGraph* fWalk;
@@ -82,10 +86,10 @@ namespace RooStats {
 
    protected:
       void DrawPosterior(const Option_t* options = NULL);
-      void DrawPosteriorHist(const Option_t* options = NULL,
+      void* DrawPosteriorHist(const Option_t* options = NULL,
             const char* title = NULL, Bool_t scale = kTRUE);
-      void DrawPosteriorKeysPdf(const Option_t* options = NULL);
-      void DrawPosteriorKeysProduct(const Option_t* options = NULL);
+      void* DrawPosteriorKeysPdf(const Option_t* options = NULL);
+      void* DrawPosteriorKeysProduct(const Option_t* options = NULL);
 
       void DrawInterval(const Option_t* options = NULL);
       void DrawShortestInterval(const Option_t* options = NULL);

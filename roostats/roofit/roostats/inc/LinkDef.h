@@ -50,8 +50,6 @@
 #pragma link C++ class RooStats::ProposalHelper+; 
 #pragma link C++ class RooStats::UniformProposal+; 
 #pragma link C++ class RooStats::PdfProposal+; 
-// kbelasco: deprecating and removing Heavyside class
-//#pragma link C++ class RooStats::Heavyside+; 
 #pragma link C++ class RooStats::Heaviside+; 
 
 #pragma link C++ class RooStats::HybridCalculator+;
