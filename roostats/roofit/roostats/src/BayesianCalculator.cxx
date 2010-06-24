@@ -400,6 +400,10 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
    // use RooFit::Constrain() to make product of likelihood with prior pdf
    fLogLike = fProductPdf->createNLL(*fData, RooFit::Constrain(*constrainedParams) );
 
+   // if pdf evaluates to zero, should be fixed, but this will
+   // stop error messages.
+   fLogLike->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
+
    delete constrainedParams;
 
    TString likeName = TString("likelihood_") + TString(fProductPdf->GetName());   
@@ -428,6 +432,7 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
 
    }
 
+   fIntegratedLikelihood->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
 
    return fIntegratedLikelihood; 
 }
