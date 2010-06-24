@@ -63,33 +63,39 @@ void TMVA::Optimizer::optimize()
    //   compared with Neurobayes!!
    
    std::vector<Int_t>  loopVariable;
-
+   
    if (fFOM->GetMethod()->GetMethodType() == TMVA::Types::kBDT){
-     for (UInt_t i=0;i<9;i++){loopVariable.push_back(i+1);}
+      for (UInt_t i=0;i<9;i++){loopVariable.push_back(i+1);}
    }
-
+   
    for (UInt_t i=0;i<loopVariable.size();i++){    
-     if(i!=0)fFOM->GetMethod()->Reset();
-     ((MethodBDT*)(fFOM->GetMethod()))->SetMaxDepth(loopVariable[i]);     
-
-
-     
-     fFOM->GetMethod()->BaseDir()->cd();
-     fFOM->GetMethod()->GetTransformationHandler().CalcTransformations(
-                                                                       fFOM->GetMethod()->Data()->GetEventCollection());
-     std::cout << "train in optimizer with " << fFOM->GetMethod()->Data()->GetNEvents() << std::endl;
-     fFOM->GetMethod()->Train();
-     std::cout << "Got back from train" << std::endl;
-     currentFOM = fFOM->GetFOM(); 
-     std::cout << "Got back from GetFOM with " << currentFOM << std::endl;
-     if (currentFOM > bestFOM) {
-       bestFOM = currentFOM;
-       ibest   = i;
-     }
+      
+      
+      if(i!=0)fFOM->GetMethod()->Reset();
+      std::cout << "Set new parameter " << loopVariable[i] << std::endl;
+      ((MethodBDT*)(fFOM->GetMethod()))->SetMaxDepth(loopVariable[i]);     
+      
+      std::cout << "Set BaseDir " << std::endl;
+      
+      
+      fFOM->GetMethod()->BaseDir()->cd();
+      std::cout << "Get Transformation events " << std::endl;
+      fFOM->GetMethod()->GetTransformationHandler().CalcTransformations(
+                                                                        fFOM->GetMethod()->Data()->GetEventCollection());
+      std::cout << "train in optimizer with " << fFOM->GetMethod()->Data()->GetNEvents() << std::endl;
+      fFOM->GetMethod()->Train();
+      std::cout << "Got back from train" << std::endl;
+      currentFOM = fFOM->GetFOM(); 
+      std::cout << "With variable:"  << loopVariable[i] << " we get GetFOM = " << currentFOM << std::endl;
+      if (currentFOM > bestFOM) {
+         bestFOM = currentFOM;
+         ibest   = i;
+      }
    }
-
+   
    fFOM->GetMethod()->Reset();
    ((MethodBDT*)(fFOM->GetMethod()))->SetMaxDepth(loopVariable[ibest]);
+
    std::cout << "And the winner is : MaxDepth = " << loopVariable[ibest] << std::endl;
 
 }

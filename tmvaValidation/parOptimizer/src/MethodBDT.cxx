@@ -412,15 +412,10 @@ void TMVA::MethodBDT::Reset( void )
    fMonitorNtuple->Delete(); fMonitorNtuple=NULL;
    fVariableImportance.clear();
    fResiduals.clear();
-   Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
-
-   delete results;
-   results = NULL;
-
-   Log() << kDEBUG << " successfully deleted results " << results << Endl;
-
-  
-                                         
+   // reset all previously stored/accumulated BOOST weights in the event sample
+   for (UInt_t iev=0; iev<fEventSample.size(); iev++) fEventSample[iev]->SetBoostWeight(1.);
+   Data()->DeleteResults(GetMethodName(), Types::kTraining, GetAnalysisType());
+   Log() << kDEBUG << " successfully(?) resetted the method " << Endl;                                      
 }
 
 
@@ -485,6 +480,8 @@ void TMVA::MethodBDT::Train()
    // fill the STL Vector with the event sample
    InitEventSample();
 
+   // HHV (it's been here since looong but I really don't know why we cannot handle
+   // normalized variables in BDTs...  todo
    if (IsNormalised()) Log() << kFATAL << "\"Normalise\" option cannot be used with BDT; "
                              << "please remove the option from the configuration string, or "
                              << "use \"!Normalise\""
@@ -511,15 +508,21 @@ void TMVA::MethodBDT::Train()
 
    // book monitoring histograms (for AdaBost only)   
 
+   Log()<< kDEBUG << " book monitoring plots " << Endl;
    TH1* h = new TH1F("BoostWeight",hname,nBins,xMin,xMax);
    TH1* nodesBeforePruningVsTree = new TH1I("NodesBeforePruning","nodes before pruning",fNTrees,0,fNTrees);
    TH1* nodesAfterPruningVsTree = new TH1I("NodesAfterPruning","nodes after pruning",fNTrees,0,fNTrees);
+   TH1D *alpha = new TH1D("alpha","PruneStrengths",fNTrees,0,fNTrees);
 
    if(!DoMulticlass()){
+      Log()<< kDEBUG << " get the results class " << Endl;
+      Log()<< kDEBUG << " do we have data ? Nevents=" << Data()->GetNEvents() << Endl;
       Results* results = Data()->GetResults(GetMethodName(), Types::kTraining, GetAnalysisType());
+      Log()<< kDEBUG << " successfully go the results class (Ptr=" << results << Endl;
 
       h->SetXTitle("boost weight");
       results->Store(h, "BoostWeights");
+      Log()<<kDEBUG<< "actually manage to store things in the result class" << Endl;
       
       // weights applied in boosting vs tree number
       h = new TH1F("BoostWeightVsTree","Boost weights vs tree",fNTrees,0,fNTrees);
@@ -542,8 +545,15 @@ void TMVA::MethodBDT::Train()
       nodesAfterPruningVsTree->SetXTitle("#tree");
       nodesAfterPruningVsTree->SetYTitle("#tree nodes");
       results->Store(nodesAfterPruningVsTree);
+
+      alpha->SetXTitle("#tree");
+      alpha->SetYTitle("PruneStrength");
+      results->Store(alpha);
+
+
    }
    
+   Log()<< kDEBUG << " book monitoring ntuple " << Endl;
    fMonitorNtuple= new TTree("MonitorNtuple","BDT variables");
    fMonitorNtuple->Branch("iTree",&fITree,"iTree/I");
    fMonitorNtuple->Branch("boostWeight",&fBoostWeight,"boostWeight/D");
@@ -556,9 +566,6 @@ void TMVA::MethodBDT::Train()
    Int_t nNodesBeforePruning = 0;
    Int_t nNodesAfterPruning = 0;
 
-   TH1D *alpha = new TH1D("alpha","PruneStrengths",fNTrees,0,fNTrees);
-   alpha->SetXTitle("#tree");
-   alpha->SetYTitle("PruneStrength");
 
    if(fBoostType=="Grad"){
       InitGradBoost(fEventSample);

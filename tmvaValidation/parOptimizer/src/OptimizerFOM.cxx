@@ -28,7 +28,8 @@ ClassImp(TMVA::OptimizerFOM)
 
 #include <limits>
 #include "TMath.h"
-   
+
+#include "TMVA/PDF.h"   
 //_______________________________________________________________________
 TMVA::OptimizerFOM::OptimizerFOM(MethodBase* const method, TString fomType):
    fMethod(method),
@@ -74,8 +75,15 @@ void TMVA::OptimizerFOM::GetMVADists()
 
    if (fMvaSig) fMvaSig->Delete();
    if (fMvaBkg) fMvaBkg->Delete();
-   fMvaSig = new TH1D("fMvaSig","",1000,-2,2);
-   fMvaBkg = new TH1D("fMvaBkg","",1000,-2,2);
+ 
+   // maybe later on this should be done a bit more clever (time consuming) by
+   // first determining proper ranges, removing outliers, as we do in the 
+   // MVA output calculation in MethodBase::TestClassifier...
+   // --> then it might be possible also to use the splined PDF's which currently
+   // doesn't seem to work
+
+   fMvaSig = new TH1D("fMvaSig","",10000,-2,2);
+   fMvaBkg = new TH1D("fMvaBkg","",10000,-2,2);
    std::cout << "Call GetMVADists" << std::endl;
    const std::vector<Event*> events=fMethod->Data()->GetEventCollection(Types::kTesting);
    std::cout << "Call GetMVADists - get test events" << std::endl;
@@ -103,6 +111,9 @@ Double_t TMVA::OptimizerFOM::GetSeparation()
    // return the searation between the signal and background 
    // MVA ouput distribution
    GetMVADists();
+   // PDF *splS = new PDF( " PDF Sig", fMvaSig, PDF::kSpline2 );
+   // PDF *splB = new PDF( " PDF Bkg", fMvaBkg, PDF::kSpline2 );
+   // return gTools().GetSeparation(*splS,*splB);
    return gTools().GetSeparation(fMvaSig,fMvaBkg);
 }
 

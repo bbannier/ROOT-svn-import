@@ -1698,6 +1698,7 @@ TDirectory* TMVA::MethodBase::BaseDir() const
    // corresponding MVA method instance are stored
 
    if (fBaseDir != 0) return fBaseDir;
+   Log()<<kDEBUG<<" Base Directory for " << GetMethodTypeName() << " not set yet --> check if already there.." <<Endl;
 
    TDirectory* methodDir = MethodBaseDir();
    if (methodDir==0)
@@ -1710,8 +1711,12 @@ TDirectory* TMVA::MethodBase::BaseDir() const
    TObject* o = methodDir->FindObject(defaultDir);
    if (o!=0 && o->InheritsFrom(TDirectory::Class())) dir = (TDirectory*)o;
 
-   if (dir != 0) return dir;
+   if (dir != 0) {
+      Log()<<kDEBUG<<" Base Directory for " << GetMethodName() << " existed, return it.." <<Endl;
+      return dir;
+   }
 
+   Log()<<kDEBUG<<" Base Directory for " << GetMethodName() << " does not exist yet--> created it" <<Endl;
    TDirectory *sdir = methodDir->mkdir(defaultDir);
 
    // write weight file name into target file
@@ -1732,13 +1737,20 @@ TDirectory* TMVA::MethodBase::MethodBaseDir() const
 
    if (fMethodBaseDir != 0) return fMethodBaseDir;
 
+   Log()<<kDEBUG<<" Base Directory for " << GetMethodTypeName() << " not set yet --> check if already there.." <<Endl;
+
    const TString dirName(Form("Method_%s",GetMethodTypeName().Data()));
 
    TDirectory * dir = Factory::RootBaseDir()->GetDirectory(dirName);
-   if (dir != 0) return dir;
+   if (dir != 0){
+      Log()<<kDEBUG<<" Base Directory for " << GetMethodTypeName() << " existed, return it.." <<Endl;
+      return dir;
+   }
 
+   Log()<<kDEBUG<<" Base Directory for " << GetMethodTypeName() << " does not exist yet--> created it" <<Endl;
    fMethodBaseDir = Factory::RootBaseDir()->mkdir(dirName,Form("Directory for all %s methods", GetMethodTypeName().Data()));
 
+   Log()<<kDEBUG<<"Return from MethodBaseDir() after creating base directory "<<Endl;
    return fMethodBaseDir;
 }
 
@@ -2381,7 +2393,13 @@ Double_t TMVA::MethodBase::GetSeparation( PDF* pdfS, PDF* pdfB ) const
    if (!pdfS) pdfS = fSplS;
    if (!pdfB) pdfB = fSplB;
 
-   return gTools().GetSeparation( *pdfS, *pdfB );
+   if (!fSplS || !fSplB){
+      Log()<<kWARNING<< "could not calculate the separation, distributions"
+           << " fSplS or fSplB are not yet filled" << Endl;
+      return 0;
+   }else{
+      return gTools().GetSeparation( *pdfS, *pdfB );
+   }
 }
 
 //_______________________________________________________________________
