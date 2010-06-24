@@ -369,7 +369,13 @@ void BayesianCalculator::SetModel(const ModelConfig & model) {
 
 RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
 {
-   /// build and return the posterior function (not normalized)
+   // build and return the posterior function (not normalized) as a RooAbsReal
+   // the posterior is obtained from the product of the likelihood function and the
+   // prior pdf which is then intergated in the nuisance parameters (if existing).
+   // A prior function for the nuisance can be specified either in the prior pdf object
+   // or in the model itself. If no prior nuisance is specified, but prior parameters are then
+   // the integration is performed assuming a flat prior for the nuisance parameters.        
+
    if (fIntegratedLikelihood) return fIntegratedLikelihood; 
    if (fLikelihood) return fLikelihood; 
 
@@ -497,8 +503,14 @@ void BayesianCalculator::SetIntegrationType(const char * type) {
 SimpleInterval* BayesianCalculator::GetInterval() const
 {
   /// returns a SimpleInterval with lower and upper bounds on the
-  /// parameter of interest. Applies the central ordering rule to
-  /// compute the credibility interval. Covers only the case with one
+  /// parameter of interest specified in the constructor. 
+  /// Using the method (to be called before SetInterval) SetLeftSideTailFraction the user can choose the type of interval.
+  /// By default the returned interval is a central interval with the confidence level specified 
+  /// previously in the constructor ( LeftSideTailFraction = 0.5). 
+  ///  For lower limit use SetLeftSideTailFraction = 1
+  ///  For upper limit use SetLeftSideTailFraction = 0
+  ///  for shortest intervals use SetLeftSideTailFraction = -1 or call the method SetShortestInterval()
+  /// NOTE: The BayesianCaluclator covers only the case with one
   /// single parameter of interest
 
    if (fValidInterval) 
