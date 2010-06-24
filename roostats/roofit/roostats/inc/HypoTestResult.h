@@ -93,12 +93,14 @@ namespace RooStats {
          // Print out some information about the results
 
          cout << endl << "Results " << GetName() << ": " << endl;
+	 cout << " - Null p-value = " << NullPValue() << endl;
+	 cout << " - Significance = " << Significance() << " sigma" << endl;
          if(fAltDistr)
             cout << " - Number of S+B toys: " << fAltDistr->GetSize() << std::endl;
          if(fNullDistr)
             cout << " - Number of B toys: " << fNullDistr->GetSize() << std::endl;
          if(HasTestStatisticData())
-            cout << " - test statistics evaluated on data: " << fTestStatisticData << std::endl;
+            cout << " - Test statistic evaluated on data: " << fTestStatisticData << std::endl;
          if(HasTestStatisticData()  &&  fNullDistr)
             cout << " - CL_b: " << CLb() << " +/- " << CLbError() << std::endl;
          if(HasTestStatisticData()  &&  fAltDistr)

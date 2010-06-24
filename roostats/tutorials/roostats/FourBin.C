@@ -124,6 +124,8 @@ June 2010.  It proceeds as follows:
 #include "RooStats/LikelihoodInterval.h"
 #include "RooStats/LikelihoodIntervalPlot.h"
 #include "RooStats/BayesianCalculator.h"
+#include "RooStats/MCMCCalculator.h"
+#include "RooStats/MCMCInterval.h"
 #include "RooStats/SimpleInterval.h"
 #include "RooStats/FeldmanCousins.h"
 #include "RooStats/PointSetInterval.h"
@@ -131,16 +133,16 @@ June 2010.  It proceeds as follows:
 using namespace RooFit;
 using namespace RooStats;
 
-int FourBin(bool doFeldmanCousins=false){
+int FourBin(bool doFeldmanCousins=false, bool doMCMC=false){
   TStopwatch t;
   t.Start();
   // make model
   RooWorkspace* wspace = new RooWorkspace("wspace");
   wspace->factory("Poisson::on(non[0,1000], sum::splusb(s[40,0,100],b[100,0,300]))");
-  wspace->factory("Poisson::off(noff[0,5000], prod::taub(b,tau[5,0,10],rho[1,0,2])))");
+  wspace->factory("Poisson::off(noff[0,5000], prod::taub(b,tau[5,3,7],rho[1,0,2]))");
   wspace->factory("Poisson::onbar(nonbar[0,10000], bbar[1000,500,2000])");
   wspace->factory("Poisson::offbar(noffbar[0,1000000], prod::lambdaoffbar(bbar, tau))");
-  wspace->factory("Gaussian::mcCons(rhonom[1.,0,2], rho, sigma[.2]");
+  wspace->factory("Gaussian::mcCons(rhonom[1.,0,2], rho, sigma[.2])");
   wspace->factory("PROD::model(on,off,onbar,offbar,mcCons)");
   wspace->defineSet("obs","non,noff,nonbar,noffbar,rhonom");
 
@@ -153,17 +155,13 @@ int FourBin(bool doFeldmanCousins=false){
   // define parameers of interest
   // for 1-d plots
   wspace->defineSet("poi","s");
-  wspace->defineSet("nuis","b,tau,rho,bbar");
+  //  wspace->defineSet("nuis","b,tau,rho,bbar");
   // for 2-d plots:
   //  wspace->defineSet("poi","s,rho");
 
   // test simpler cases where parameters are known.
-  // VERY INTERESTING
-  // we get good agreement between Bayesian and Profile unless
-  // rho AND b are floating poor agreement
-  // tau AND b floating mediocre agreement
-  //    wspace->var("tau")->setConstant();
-  //    wspace->var("rho")->setConstant();
+  //  wspace->var("tau")->setConstant();
+  //  wspace->var("rho")->setConstant();
   //  wspace->var("b")->setConstant();
   //  wspace->var("bbar")->setConstant();
 
@@ -190,7 +188,7 @@ int FourBin(bool doFeldmanCousins=false){
   modelConfig->SetPdf(*wspace->pdf("model"));
   modelConfig->SetPriorPdf(*wspace->pdf("prior"));
   modelConfig->SetParametersOfInterest(*wspace->set("poi"));
-  modelConfig->SetNuisanceParameters(*wspace->set("nuis"));
+  //  modelConfig->SetNuisanceParameters(*wspace->set("nuis"));
   wspace->import(*modelConfig);
   wspace->writeToFile("FourBin.root");
 
@@ -202,11 +200,12 @@ int FourBin(bool doFeldmanCousins=false){
   ProfileLikelihoodCalculator plc(*data, *modelConfig);
   plc.SetConfidenceLevel(0.95);
   LikelihoodInterval* plInt = plc.GetInterval();
+  RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
+  RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
   plInt->LowerLimit( *wspace->var("s") ); // get ugly print out of the way. Fix.
+  RooMsgService::instance().setGlobalKillBelow(msglevel);
 
   // use FeldmaCousins (takes a few min)  
-  // INTERESTING cut off values tend to be -log \lambda ~ 4, not 1.92
-  // interval tends to be wider
   FeldmanCousins fc(*data, *modelConfig);
   fc.SetConfidenceLevel(0.95);
   //number counting: dataset always has 1 entry with N events observed
@@ -228,6 +227,28 @@ int FourBin(bool doFeldmanCousins=false){
     cout << "Bayesian Calc. only supports on parameter of interest" << endl;
   }
 
+  // use MCMCCalculator  
+  RooFitResult* fit = wspace->pdf("model")->fitTo(*data,Save());
+  // Easy ProposalFunction construction with ProposalHelper
+  ProposalHelper ph;
+  const RooArgList temp = fit->floatParsFinal();
+  ph.SetVariables(temp);
+  ph.SetCovMatrix(fit->covarianceMatrix());
+  ph.SetUpdateProposalParameters(kTRUE); // auto-create mean vars and add mappings
+  ph.SetCacheSize(100);
+  ProposalFunction* pf = ph.GetProposalFunction();
+
+  MCMCCalculator mc(*data, *modelConfig);
+  mc.SetConfidenceLevel(0.95);
+  mc.SetProposalFunction(*pf);
+  mc.SetNumBins(100);	  // bins used internally for representing posterior
+  mc.SetNumBurnInSteps(500); // first N steps to be ignored as burn-in
+  mc.SetNumIters(50000);
+  mc.SetUseKeys(false);
+  MCMCInterval* mcInt = NULL;
+  if(doMCMC)
+    mcInt = mc.GetInterval();
+
   //////////////////////////////////////
   // Make a plot
   TCanvas* c1 = (TCanvas*) gROOT->Get("c1");
@@ -241,11 +262,13 @@ int FourBin(bool doFeldmanCousins=false){
     c1->cd(2);
   }
   LikelihoodIntervalPlot* plot = new LikelihoodIntervalPlot(plInt);
+  //  plot.SetRange(10,90);
   plot->Draw();
+  //  return;
 
   ////////////////////////////////////
   // querry intervals
-  cout << "PL: interval on s = [" << 
+  cout << "Profile Likelihood interval on s = [" << 
     plInt->LowerLimit( *wspace->var("s") ) << ", " <<
     plInt->UpperLimit( *wspace->var("s") ) << "]" << endl; 
   
@@ -256,9 +279,15 @@ int FourBin(bool doFeldmanCousins=false){
   }  
 
   if(doFeldmanCousins){    
-    cout << "FC: interval on s = [" << 
+    cout << "Feldman Cousins interval on s = [" << 
       fcInt->LowerLimit( *wspace->var("s") ) << ", " <<
       fcInt->UpperLimit( *wspace->var("s") ) << "]" << endl;
+  }
+
+  if(doMCMC){
+    cout << "MCMC interval on s = [" << 
+      mcInt->LowerLimit(*wspace->var("s") ) << ", " <<
+      mcInt->UpperLimit(*wspace->var("s") ) << "]" << endl;
   }
 
   t.Print();
