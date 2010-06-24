@@ -38,6 +38,12 @@
 #include "RooStats/LikelihoodInterval.h"
 #include "RooStats/LikelihoodIntervalPlot.h"
 #include "RooStats/RooStatsUtils.h"
+#include "RooStats/ModelConfig.h"
+#include "RooStats/MCMCInterval.h"
+#include "RooStats/MCMCIntervalPlot.h"
+#include "RooStats/ProposalFunction.h"
+#include "RooStats/ProposalHelper.h"
+#include "RooFitResult.h"
 
 
 // use this order for safety on library loading
@@ -89,8 +95,14 @@ void rs101_limitexample()
   // Now let's make some confidence intervals for s, our parameter of interest
   RooArgSet paramOfInterest(*s);
 
+  ModelConfig modelConfig(new RooWorkspace());
+  modelConfig.SetPdf(*modelWithConstraints);
+  modelConfig.SetParametersOfInterest(paramOfInterest);
+
+
   // First, let's use a Calculator based on the Profile Likelihood Ratio
-  ProfileLikelihoodCalculator plc(*data, *modelWithConstraints, paramOfInterest); 
+  //ProfileLikelihoodCalculator plc(*data, *modelWithConstraints, paramOfInterest); 
+  ProfileLikelihoodCalculator plc(*data, modelConfig); 
   plc.SetTestSize(.05);
   ConfInterval* lrint = plc.GetInterval();  // that was easy.
 
@@ -104,10 +116,7 @@ void rs101_limitexample()
   plotInt.Draw();
 
   // Second, use a Calculator based on the Feldman Cousins technique
-  FeldmanCousins fc;
-  fc.SetPdf(*modelWithConstraints);
-  fc.SetData(*data); 
-  fc.SetParameters( paramOfInterest );
+  FeldmanCousins fc(*data, modelConfig);
   fc.UseAdaptiveSampling(true);
   fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
   fc.SetNBins(100); // number of points to test per parameter
@@ -116,27 +125,26 @@ void rs101_limitexample()
   ConfInterval* fcint = NULL;
   fcint = fc.GetInterval();  // that was easy.
 
+  RooFitResult* fit = modelWithConstraints->fitTo(*data, Save(true));
 
   // Third, use a Calculator based on Markov Chain monte carlo
-  UniformProposal up;
-  MCMCCalculator mc;
-  mc.SetPdf(*modelWithConstraints);
-  mc.SetData(*data);
-  mc.SetParameters(paramOfInterest);
-  mc.SetProposalFunction(up);
-  mc.SetNumIters(100000); // steps in the chain
-  mc.SetTestSize(.05); // 90% CL
-  mc.SetNumBins(50); // used in posterior histogram
-  mc.SetNumBurnInSteps(40); // ignore first steps in chain due to "burn in"
-  ConfInterval* mcmcint = NULL;
-  mcmcint = mc.GetInterval();
+  // Before configuring the calculator, let's make a ProposalFunction
+  // that will achieve a high acceptance rate
+  ProposalHelper ph;
+  ph.SetVariables((RooArgSet&)fit->floatParsFinal());
+  ph.SetCovMatrix(fit->covarianceMatrix());
+  ph.SetUpdateProposalParameters(true);
+  ph.SetCacheSize(100);
+  ProposalFunction* pdfProp = ph.GetProposalFunction();  // that was easy
 
+  MCMCCalculator mc(*data, modelConfig);
+  mc.SetNumIters(20000); // steps to propose in the chain
+  mc.SetTestSize(.05); // 95% CL
+  mc.SetNumBurnInSteps(40); // ignore first N steps in chain as "burn in"
+  mc.SetProposalFunction(*pdfProp);
+  mc.SetLeftSideTailFraction(0.5);  // find a "central" interval
+  MCMCInterval* mcInt = (MCMCInterval*)mc.GetInterval();  // that was easy
 
-
-  // draw posterior
-  TH1* posterior = ((MCMCInterval*)mcmcint)->GetPosteriorHist();  
-  posterior->Scale(1/posterior->GetBinContent(posterior->GetMaximumBin())); // scale so highest bin has y=1.
-  posterior->Draw("same");
 
   // Get Lower and Upper limits from Profile Calculator
   cout << "Profile lower limit on s = " << ((LikelihoodInterval*) lrint)->LowerLimit(*s) << endl;
@@ -157,23 +165,23 @@ void rs101_limitexample()
      dataCanvas->Update();
   }
 
-  // Get Lower and Upper limits from MCMC
-  double mcul = ((MCMCInterval*) mcmcint)->UpperLimit(*s);
-  double mcll = ((MCMCInterval*) mcmcint)->LowerLimit(*s);
+  // Plot MCMC interval and print some statistics
+  MCMCIntervalPlot mcPlot(*mcInt);
+  mcPlot.SetLineColor(kMagenta);
+  mcPlot.SetLineWidth(2);
+  mcPlot.Draw("same");
+
+  double mcul = mcInt->UpperLimit(*s);
+  double mcll = mcInt->LowerLimit(*s);
   cout << "MCMC lower limit on s = " << mcll << endl;
   cout << "MCMC upper limit on s = " << mcul << endl;
-  TLine* mcllLine = new TLine(mcll, 0, mcll, 1);
-  TLine* mculLine = new TLine(mcul, 0, mcul, 1);
-  mcllLine->SetLineColor(kMagenta);
-  mculLine->SetLineColor(kMagenta);
-  mcllLine->Draw("same");
-  mculLine->Draw("same");
-  dataCanvas->Update();
+  cout << "MCMC Actual confidence level: "
+     << mcInt->GetActualConfidenceLevel() << endl;
 
   // 3-d plot of the parameter points
   dataCanvas->cd(2);
   // also plot the points in the markov chain
-  TTree& chain =  ((RooTreeDataStore*) ((MCMCInterval*)mcmcint)->GetChainAsDataSet()->store())->tree();
+  TTree& chain =  ((RooTreeDataStore*) mcInt->GetChainAsDataSet()->store())->tree();
   chain.SetMarkerStyle(6);
   chain.SetMarkerColor(kRed);
   chain.Draw("s:ratioSigEff:ratioBkgEff","weight_MarkovChain_local_","box"); // 3-d box proporional to posterior
@@ -183,16 +191,13 @@ void rs101_limitexample()
   parameterScan.SetMarkerStyle(24);
   parameterScan.Draw("s:ratioSigEff:ratioBkgEff","","same");
 
-
   delete wspace;
   delete lrint;
-  if (fcint != NULL) delete fcint;
+  delete mcInt;
+  delete fcint;
   delete data;
 
   /// print timing info
   t.Stop();
   t.Print();
 }
-// int main() { 
-//    rs101_limitexample();
-// }

@@ -157,10 +157,11 @@ void FeldmanCousins::CreateParameterPoints() const{
 
   // get list of all paramters
   RooArgSet* parameters = new RooArgSet(*fModel.GetParametersOfInterest());
-  parameters->add(*fModel.GetNuisanceParameters());
+  if(fModel.GetNuisanceParameters())
+    parameters->add(*fModel.GetNuisanceParameters());
   
   
-  if( ! fModel.GetParametersOfInterest()->equals(*parameters) && fDoProfileConstruction) {
+  if( fModel.GetNuisanceParameters() && ! fModel.GetParametersOfInterest()->equals(*parameters) && fDoProfileConstruction) {
     // if parameters include nuisance parameters, do profile construction
     ooccoutP(&fModel,Generation) << "FeldmanCousins: Model has nuisance parameters, will do profile construction" << endl;
     
