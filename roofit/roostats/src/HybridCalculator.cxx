@@ -74,6 +74,10 @@ void HybridCalculator::SetupSampler(ModelConfig& model) const {
    } else if( (&model == &fAltModel) && fPriorNuisanceAlt){
      // Setup Priors for ad hoc Hybrid
      fTestStatSampler->SetPriorNuisance(fPriorNuisanceAlt);
+   } else if(model.GetNuisanceParameters()==NULL || 
+	     model.GetNuisanceParameters()->getSize()==0){
+     oocoutI((TObject*)0,InputArguments)  
+       << "No nuisance parameters specified and no prior forced, reduces to simple hypothesis testing with no uncertainty" << endl;
    } else{
      // TODO principled case:
      // must create posterior from Model.PriorPdf and Model.Pdf
@@ -81,7 +85,7 @@ void HybridCalculator::SetupSampler(ModelConfig& model) const {
      // Note, we do not want to use "prior" for nuisance parameters:
      // fTestStatSampler->SetPriorNuisance(const_cast<RooAbsPdf*>(model.GetPriorPdf()));
      
-     cout << "infering posterior from ModelConfig is not yet implemented" << endl;
+     oocoutE((TObject*)0,InputArguments)  << "infering posterior from ModelConfig is not yet implemented" << endl;
    }
 
 
@@ -97,13 +101,37 @@ HybridCalculator::~HybridCalculator()  {
 }
 //____________________________________________________
 HypoTestResult* HybridCalculator::GetHypoTest() const {
-   if(!fPriorNuisanceNull || !fPriorNuisanceAlt){
-     cout << "Must ForceNuisancePdf, infering posterior from ModelConfig is not yet implemented" << endl;
-     return 0;
-   }
+
+  // several possibilities:
+  // no prior nuisance given and no nuisance parameters: ok
+  // no prior nuisance given but nuisance parametrs: error
+  // prior nuisance given for some nuisance parameters:
+  //   - nuisance parameters are constant, so they don't float in test statistic
+  //   - nuisance parameters are floating, so they do float in test statistic
 
    fNullModel.GuessObsAndNuisance(fData);
    fAltModel.GuessObsAndNuisance(fData);
+
+   if( (fNullModel.GetNuisanceParameters() 
+	&& fNullModel.GetNuisanceParameters()->getSize()>0 
+	&& !fPriorNuisanceNull)
+     || (fAltModel.GetNuisanceParameters() 
+	 && fAltModel.GetNuisanceParameters()->getSize()>0 
+	 && !fPriorNuisanceAlt) 
+       ){
+     oocoutE((TObject*)0,InputArguments)  << "Must ForceNuisancePdf, infering posterior from ModelConfig is not yet implemented" << endl;
+     return 0;
+   }
+
+   if(   (!fNullModel.GetNuisanceParameters() && fPriorNuisanceNull)
+      || (!fAltModel.GetNuisanceParameters()  && fPriorNuisanceAlt)
+      || (fNullModel.GetNuisanceParameters()  && fNullModel.GetNuisanceParameters()->getSize()==0 && fPriorNuisanceNull)
+       || (fAltModel.GetNuisanceParameters()  && fAltModel.GetNuisanceParameters()->getSize()>0   && !fPriorNuisanceAlt) 
+       ){
+     oocoutE((TObject*)0,InputArguments)  << "Nuisance PDF specified, but the pdf doesn't know which parameters are the nuisance parameters.  Must set nuisance parameters in the ModelConfig" << endl;
+     return 0;
+   }
+
 
    // get a big list of all variables for convenient switching
    RooArgSet *nullParams = fNullModel.GetPdf()->getParameters(fData);

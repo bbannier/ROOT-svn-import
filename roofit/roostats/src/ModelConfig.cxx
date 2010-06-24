@@ -41,6 +41,9 @@ void ModelConfig::GuessObsAndNuisance(const RooAbsData& data) {
    //  global observables = explicit obs  -  obs from data
    //  parameters of interest: empty,
    //  nuisance parameters: all parameters except parameters of interest
+  //
+  // We use NULL to mean not set, so we don't want to fill
+  // with empty RooArgSets
 
    // observables
   if (!GetObservables()) {
@@ -53,37 +56,47 @@ void ModelConfig::GuessObsAndNuisance(const RooAbsData& data) {
       RooArgSet co(*GetObservables());
       co.remove(*GetPdf()->getObservables(data));
       RemoveConstantParameters(&co);
-      SetGlobalObservables(co);
+      if(co.getSize()>0)
+	SetGlobalObservables(co);
 
       // TODO BUG This does not work as observables with the same name are already in the workspace.
-/*
+      /*
       RooArgSet o(*GetObservables());
       o.remove(co);
       SetObservables(o);
-*/
+      */
    }
 
    // parameters
-   if (!GetParametersOfInterest()) {
-      SetParametersOfInterest(RooArgSet());
-   }
+   //   if (!GetParametersOfInterest()) {
+   //      SetParametersOfInterest(RooArgSet());
+   //   }
    if (!GetNuisanceParameters()) {
       RooArgSet p(*GetPdf()->getParameters(data));
       p.remove(*GetParametersOfInterest());
       RemoveConstantParameters(&p);
-      SetNuisanceParameters(p);
+      if(p.getSize()>0)
+	SetNuisanceParameters(p);
    }
 
    ostream& oldstream = RooPrintable::defaultPrintStream(&ccoutI(InputArguments));
    ccoutI(InputArguments) << endl << "=== Using the following for " << GetName() << " ===" << endl;
-   ccoutI(InputArguments) << "Observables:             ";
-   GetObservables()->Print("");
-   ccoutI(InputArguments) << "Parameters of Interest:  ";
-   GetParametersOfInterest()->Print("");
-   ccoutI(InputArguments) << "Nuisance Parameters:     ";
-   GetNuisanceParameters()->Print("");
-   ccoutI(InputArguments) << "Global Observables:      ";
-   GetGlobalObservables()->Print("");
+   if(GetObservables()){
+     ccoutI(InputArguments) << "Observables:             ";
+     GetObservables()->Print("");
+   }
+   if(GetParametersOfInterest()) {
+     ccoutI(InputArguments) << "Parameters of Interest:  ";
+     GetParametersOfInterest()->Print("");
+   }
+   if(GetNuisanceParameters()){
+     ccoutI(InputArguments) << "Nuisance Parameters:     ";
+     GetNuisanceParameters()->Print("");
+   }
+   if(GetGlobalObservables()){
+     ccoutI(InputArguments) << "Global Observables:      ";
+     GetGlobalObservables()->Print("");
+   }
    ccoutI(InputArguments) << endl;
    RooPrintable::defaultPrintStream(&oldstream);
 }
