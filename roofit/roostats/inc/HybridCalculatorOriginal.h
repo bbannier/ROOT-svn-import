@@ -13,8 +13,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_HybridCalculatorOld
-#define ROOSTATS_HybridCalculatorOld
+#ifndef ROOSTATS_HybridCalculatorOriginal
+#define ROOSTATS_HybridCalculatorOriginal
 
 #ifndef ROOSTATS_HypoTestCalculator
 #include "RooStats/HypoTestCalculator.h"
@@ -37,16 +37,16 @@ namespace RooStats {
 
    class HybridResult; 
 
-   class HybridCalculatorOld : public HypoTestCalculator , public TNamed {
+   class HybridCalculatorOriginal : public HypoTestCalculator , public TNamed {
 
    public:
 
 
       /// Dummy Constructor with only name 
-      explicit HybridCalculatorOld(const char *name = 0);
+      explicit HybridCalculatorOriginal(const char *name = 0);
       
       /// Constructor for HybridCalculator from pdf instances but without a data-set
-      HybridCalculatorOld(RooAbsPdf& sb_model,
+      HybridCalculatorOriginal(RooAbsPdf& sb_model,
                        RooAbsPdf& b_model,
                        RooArgList& observables,
                        const RooArgSet* nuisance_parameters = 0,
@@ -54,7 +54,7 @@ namespace RooStats {
                        bool GenerateBinned = false, int testStatistics = 1, int ntoys = 1000 );
 
       /// Constructor for HybridCalculator using  a data set and pdf instances
-      HybridCalculatorOld(RooAbsData& data,
+      HybridCalculatorOriginal(RooAbsData& data,
                        RooAbsPdf& sb_model,
                        RooAbsPdf& b_model,
                        const RooArgSet* nuisance_parameters = 0,
@@ -63,7 +63,7 @@ namespace RooStats {
 
 
       /// Constructor passing a ModelConfig for the SBmodel and a ModelConfig for the B Model
-      HybridCalculatorOld(RooAbsData& data,
+      HybridCalculatorOriginal(RooAbsData& data,
                        const ModelConfig& sb_model, 
                        const ModelConfig& b_model,
                        bool GenerateBinned = false, int testStatistics = 1, int ntoys = 1000 );
@@ -72,7 +72,7 @@ namespace RooStats {
    public: 
 
       /// Destructor of HybridCalculator
-      virtual ~HybridCalculatorOld();
+      virtual ~HybridCalculatorOriginal();
 
       /// inherited methods from HypoTestCalculator interface
       virtual HybridResult* GetHypoTest() const;
@@ -162,8 +162,9 @@ namespace RooStats {
 //       TString fDataName;      // name of the dataset in the workspace
 
    protected:
-      ClassDef(HybridCalculatorOld,1)  // Hypothesis test calculator using a Bayesian-frequentist hybrid method
+      ClassDef(HybridCalculatorOriginal,1)  // Hypothesis test calculator using a Bayesian-frequentist hybrid method
    };
+
 }
 
 #endif

@@ -16,7 +16,7 @@
 
 //_________________________________________________________________
 /**
-HybridCalculatorOld class: this class is a fresh rewrite in RooStats of
+HybridCalculatorOriginal class: this class is a fresh rewrite in RooStats of
 	RooStatsCms/LimitCalculator developped by D. Piparo and G. Schott
 Authors: D. Piparo, G. Schott - Universitaet Karlsruhe
 
@@ -71,15 +71,15 @@ see also the following interesting references:
 
 #include "TH1.h"
 
-#include "RooStats/HybridCalculatorOld.h"
+#include "RooStats/HybridCalculatorOriginal.h"
 
-ClassImp(RooStats::HybridCalculatorOld)
+ClassImp(RooStats::HybridCalculatorOriginal)
 
 using namespace RooStats;
 
 ///////////////////////////////////////////////////////////////////////////
 
-HybridCalculatorOld::HybridCalculatorOld(const char *name) :
+HybridCalculatorOriginal::HybridCalculatorOriginal(const char *name) :
    TNamed(name,name),
    fSbModel(0),
    fBModel(0),
@@ -97,7 +97,7 @@ HybridCalculatorOld::HybridCalculatorOld(const char *name) :
 
 
 /// constructor without the data - is it needed ???????????
-HybridCalculatorOld::HybridCalculatorOld( RooAbsPdf& sbModel,
+HybridCalculatorOriginal::HybridCalculatorOriginal( RooAbsPdf& sbModel,
                                     RooAbsPdf& bModel,
                                     RooArgList& observables,
                                     const RooArgSet* nuisance_parameters,
@@ -114,7 +114,7 @@ HybridCalculatorOld::HybridCalculatorOld( RooAbsPdf& sbModel,
    fUsePriorPdf(false),
    fTmpDoExtended(true)
 {
-   /// HybridCalculatorOld constructor without specifying a data set
+   /// HybridCalculatorOriginal constructor without specifying a data set
    /// the user need to specify the models in the S+B case and B-only case,
    /// the list of observables of the model(s) (for MC-generation), the list of parameters 
    /// that are marginalised and the prior distribution of those parameters
@@ -137,7 +137,7 @@ HybridCalculatorOld::HybridCalculatorOld( RooAbsPdf& sbModel,
 }
 
 
-HybridCalculatorOld::HybridCalculatorOld( RooAbsData & data,
+HybridCalculatorOriginal::HybridCalculatorOriginal( RooAbsData & data,
                                     RooAbsPdf& sbModel,
                                     RooAbsPdf& bModel,
                                     const RooArgSet* nuisance_parameters,
@@ -155,7 +155,7 @@ HybridCalculatorOld::HybridCalculatorOld( RooAbsData & data,
    fUsePriorPdf(false),
    fTmpDoExtended(true)
 {
-   /// HybridCalculatorOld constructor for performing hypotesis test
+   /// HybridCalculatorOriginal constructor for performing hypotesis test
    /// the user need to specify the data set, the models in the S+B case and B-only case. 
    /// In case of treatment of nuisance parameter, the user need to specify the  
    /// the list of parameters  that are marginalised and the prior distribution of those parameters
@@ -169,7 +169,7 @@ HybridCalculatorOld::HybridCalculatorOld( RooAbsData & data,
 
 
 
-HybridCalculatorOld::HybridCalculatorOld( RooAbsData& data,
+HybridCalculatorOriginal::HybridCalculatorOriginal( RooAbsData& data,
                                     const ModelConfig& sbModel, 
                                     const ModelConfig& bModel, 
 				    bool GenerateBinned,
@@ -198,15 +198,15 @@ HybridCalculatorOld::HybridCalculatorOld( RooAbsData& data,
 
 ///////////////////////////////////////////////////////////////////////////
 
-HybridCalculatorOld::~HybridCalculatorOld()
+HybridCalculatorOriginal::~HybridCalculatorOriginal()
 {
-   /// HybridCalculatorOld destructor
+   /// HybridCalculatorOriginal destructor
    if (fObservables) delete fObservables; 
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
-void HybridCalculatorOld::SetNullModel(const ModelConfig& model)
+void HybridCalculatorOriginal::SetNullModel(const ModelConfig& model)
 {
    // Set the model describing the null hypothesis
    fBModel = model.GetPdf();
@@ -215,7 +215,7 @@ void HybridCalculatorOld::SetNullModel(const ModelConfig& model)
    if (!fNuisanceParameters) fNuisanceParameters = model.GetNuisanceParameters(); 
 }
 
-void HybridCalculatorOld::SetAlternateModel(const ModelConfig& model)
+void HybridCalculatorOriginal::SetAlternateModel(const ModelConfig& model)
 {
    // Set the model describing the alternate hypothesis
    fSbModel = model.GetPdf();
@@ -223,7 +223,7 @@ void HybridCalculatorOld::SetAlternateModel(const ModelConfig& model)
    fNuisanceParameters = model.GetNuisanceParameters(); 
 }
 
-void HybridCalculatorOld::SetTestStatistic(int index)
+void HybridCalculatorOriginal::SetTestStatistic(int index)
 {
    /// set the desired test statistics:
    /// index=1 : likelihood ratio: 2 * log( L_sb / L_b )  (DEFAULT)
@@ -235,7 +235,7 @@ void HybridCalculatorOld::SetTestStatistic(int index)
 
 ///////////////////////////////////////////////////////////////////////////
 
-HybridResult* HybridCalculatorOld::Calculate(TH1& data, unsigned int nToys, bool usePriors) const
+HybridResult* HybridCalculatorOriginal::Calculate(TH1& data, unsigned int nToys, bool usePriors) const
 {
    /// first compute the test statistics for data and then prepare and run the toy-MC experiments
 
@@ -250,7 +250,7 @@ HybridResult* HybridCalculatorOld::Calculate(TH1& data, unsigned int nToys, bool
 
 ///////////////////////////////////////////////////////////////////////////
 
-HybridResult* HybridCalculatorOld::Calculate(RooAbsData& data, unsigned int nToys, bool usePriors) const
+HybridResult* HybridCalculatorOriginal::Calculate(RooAbsData& data, unsigned int nToys, bool usePriors) const
 {
    /// first compute the test statistics for data and then prepare and run the toy-MC experiments
 
@@ -305,7 +305,7 @@ HybridResult* HybridCalculatorOld::Calculate(RooAbsData& data, unsigned int nToy
 
 ///////////////////////////////////////////////////////////////////////////
 
-HybridResult* HybridCalculatorOld::Calculate(unsigned int nToys, bool usePriors) const
+HybridResult* HybridCalculatorOriginal::Calculate(unsigned int nToys, bool usePriors) const
 {
    std::vector<double> bVals;
    bVals.reserve(nToys);
@@ -329,10 +329,10 @@ HybridResult* HybridCalculatorOld::Calculate(unsigned int nToys, bool usePriors)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void HybridCalculatorOld::RunToys(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors) const
+void HybridCalculatorOriginal::RunToys(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors) const
 {
    /// do the actual run-MC processing
-   std::cout << "HybridCalculatorOld: run " << nToys << " toy-MC experiments\n";
+   std::cout << "HybridCalculatorOriginal: run " << nToys << " toy-MC experiments\n";
    std::cout << "with test statistics index: " << fTestStatisticsIdx << "\n";
    if (usePriors) std::cout << "marginalize nuisance parameters \n";
 
@@ -527,7 +527,7 @@ void HybridCalculatorOld::RunToys(std::vector<double>& bVals, std::vector<double
 
 ///////////////////////////////////////////////////////////////////////////
 
-void HybridCalculatorOld::PrintMore(const char* options) const
+void HybridCalculatorOriginal::PrintMore(const char* options) const
 {
    /// Print out some information about the input models
 
@@ -561,14 +561,14 @@ void HybridCalculatorOld::PrintMore(const char* options) const
 ///////////////////////////////////////////////////////////////////////////
 // implementation of inherited methods from HypoTestCalculator
 
-HybridResult* HybridCalculatorOld::GetHypoTest() const {
+HybridResult* HybridCalculatorOriginal::GetHypoTest() const {
    // perform the hypothesis test and return result of hypothesis test 
 
    // check first that everything needed is there 
    if (!DoCheckInputs()) return 0;  
    RooAbsData * treeData = dynamic_cast<RooAbsData *> (fData); 
    if (!treeData) { 
-      std::cerr << "Error in HybridCalculatorOld::GetHypoTest - invalid data type - return NULL" << std::endl;
+      std::cerr << "Error in HybridCalculatorOriginal::GetHypoTest - invalid data type - return NULL" << std::endl;
       return 0; 
    }
    bool usePrior = (fUsePriorPdf && fPriorPdf ); 
@@ -576,34 +576,34 @@ HybridResult* HybridCalculatorOld::GetHypoTest() const {
 }
 
 
-bool HybridCalculatorOld::DoCheckInputs() const {
+bool HybridCalculatorOriginal::DoCheckInputs() const {
    if (!fData) { 
-      std::cerr << "Error in HybridCalculatorOld - data have not been set" << std::endl;
+      std::cerr << "Error in HybridCalculatorOriginal - data have not been set" << std::endl;
       return false; 
    }
 
    // if observable have not been set take them from data 
    if (!fObservables && fData->get() ) fObservables =  new RooArgList( *fData->get() );
    if (!fObservables) { 
-      std::cerr << "Error in HybridCalculatorOld - no observables" << std::endl;
+      std::cerr << "Error in HybridCalculatorOriginal - no observables" << std::endl;
       return false; 
    }
 
    if (!fSbModel) { 
-      std::cerr << "Error in HybridCalculatorOld - S+B pdf has not been set " << std::endl;
+      std::cerr << "Error in HybridCalculatorOriginal - S+B pdf has not been set " << std::endl;
       return false; 
    }
 
    if (!fBModel) { 
-      std::cerr << "Error in HybridCalculatorOld - B pdf has not been set" << std::endl;
+      std::cerr << "Error in HybridCalculatorOriginal - B pdf has not been set" << std::endl;
       return false; 
    }
    if (fUsePriorPdf && !fNuisanceParameters) { 
-      std::cerr << "Error in HybridCalculatorOld - nuisance parameters have not been set " << std::endl;
+      std::cerr << "Error in HybridCalculatorOriginal - nuisance parameters have not been set " << std::endl;
       return false; 
    }
    if (fUsePriorPdf && !fPriorPdf) { 
-      std::cerr << "Error in HybridCalculatorOld - prior pdf has not been set " << std::endl;
+      std::cerr << "Error in HybridCalculatorOriginal - prior pdf has not been set " << std::endl;
       return false; 
    }
    return true; 

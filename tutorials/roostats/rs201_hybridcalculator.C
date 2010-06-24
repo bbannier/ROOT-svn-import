@@ -12,14 +12,14 @@
 #include "RooGlobalFunc.h"
 #endif
 
-#include "RooStats/HybridCalculatorOld.h"
+#include "RooStats/HybridCalculatorOriginal.h"
 #include "RooStats/HybridResult.h"
 #include "RooStats/HybridPlot.h"
 
 void rs201_hybridcalculator(int ntoys = 1000)
 {
   //***********************************************************************//
-  // This macro show an example on how to use RooStats/HybridCalculatorOld //
+  // This macro show an example on how to use RooStats/HybridCalculatorOriginal //
   //***********************************************************************//
   //
   // With this example, you should get: CL_sb = 0.130 and CL_b = 0.946
@@ -67,11 +67,11 @@ void rs201_hybridcalculator(int ntoys = 1000)
 
   //***********************************************************************//
 
-  /// run HybridCalculatorOld on those inputs
+  /// run HybridCalculator on those inputs
 
   // use interface from HypoTest calculator by default
 
-  HybridCalculatorOld myHybridCalc(*data, tot_pdf , bkg_ext_pdf ,
+  HybridCalculatorOriginal myHybridCalc(*data, tot_pdf , bkg_ext_pdf ,
                                    &nuisance_parameters, &bkg_yield_prior);
 
   // here I use the default test statistics: 2*lnQ (optional)
@@ -113,7 +113,7 @@ void rs201_hybridcalculator(int ntoys = 1000)
   //myHybridResult->Add(myOtherHybridResult);
 
   /// nice plot of the results
-  HybridPlot* myHybridPlot = myHybridResult->GetPlot("myHybridPlot","Plot of results with HybridCalculatorOld",100);
+  HybridPlot* myHybridPlot = myHybridResult->GetPlot("myHybridPlot","Plot of results with HybridCalculatorOriginal",100);
   myHybridPlot->Draw();
 
   /// recover and display the results
@@ -128,7 +128,7 @@ void rs201_hybridcalculator(int ntoys = 1000)
   myHybridResult->SetDataTestStatistics(mean_sb_toys_test_stat);
   double toys_significance = myHybridResult->Significance();
 
-  std::cout << "Completed HybridCalculatorOld example:\n";
+  std::cout << "Completed HybridCalculatorOriginal example:\n";
   std::cout << " - -2lnQ = " << min2lnQ_data << endl;
   std::cout << " - CL_sb = " << clsb_data << std::endl;
   std::cout << " - CL_b  = " << clb_data << std::endl;

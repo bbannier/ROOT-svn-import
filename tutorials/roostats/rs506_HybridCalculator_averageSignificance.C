@@ -2,7 +2,7 @@
 #include "RooRealVar.h"
 #include "RooProdPdf.h"
 #include "RooWorkspace.h"
-#include "RooStats/HybridCalculatorOld.h"
+#include "RooStats/HybridCalculatorOriginal.h"
 #include "RooStats/HybridResult.h"
 #include "RooStats/HybridPlot.h"
 
@@ -33,7 +33,7 @@ void rs506_HybridCalculator_averageSignificance(const char* fname="WS_GaussOverF
   const RooArgSet* nuisanceParam=my_WS->set("parameters");
   RooArgList observable(*(my_WS->set("observables") ) );
   
-  HybridCalculatorOld * hc=new HybridCalculatorOld(*model,*modelBkg,observable);
+  HybridCalculatorOriginal * hc=new HybridCalculatorOriginal(*model,*modelBkg,observable);
   hc->SetNumberOfToys(ntoys);
   hc->SetTestStatistic(1);
   bool useNuisance=false;

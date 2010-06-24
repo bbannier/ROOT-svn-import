@@ -53,7 +53,7 @@
 #pragma link C++ class RooStats::Heaviside+; 
 
 #pragma link C++ class RooStats::HybridCalculator+;
-#pragma link C++ class RooStats::HybridCalculatorOld+;
+#pragma link C++ class RooStats::HybridCalculatorOriginal+;
 #pragma link C++ class RooStats::HybridPlot+;
 #pragma link C++ class RooStats::HybridResult+;				 
 
