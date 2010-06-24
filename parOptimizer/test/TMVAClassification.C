@@ -105,9 +105,9 @@ void TMVAClassification( TString myMethodList = "" )
    Use["FDA_GAMT"]        = 1;
    Use["FDA_MCMT"]        = 1;
    // ---
-   Use["MLP"]             = 1; 
-   Use["MLPBNN"]          = 1; // this is the recommended ANN, (bayesian neural network)
+   Use["MLP"]             = 1; // this is the recommended ANN
    Use["MLPBFGS"]         = 1; // recommended ANN with optional training method
+   Use["MLPBNN"]          = 1;  // recommended ANN with BFGS training method and bayesian regulator
    Use["CFMlpANN"]        = 1; // *** missing
    Use["TMlpANN"]         = 1;
    // ---
@@ -158,10 +158,7 @@ void TMVAClassification( TString myMethodList = "" )
    // All TMVA output can be suppressed by removing the "!" (not) in
    // front of the "Silent" argument in the option string
    TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification", outputFile,
-                                               "V:!Silent:Color:DrawProgressBar:Transformations=I;N;D;P;G,D:AnalysisType=Classification" );
-
-//    TMVA::gConfig().SetMsgType(TMVA::kDEBUG);
-//    (TMVA::gConfig().GetVariablePlotting()).fTimesRMS = 8.0;
+                                               "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D:AnalysisType=Classification" );
 
    // If you wish to modify default settings
    // (please check "src/Config.h" to see all available global options)
@@ -173,8 +170,8 @@ void TMVAClassification( TString myMethodList = "" )
    // [all types of expressions that can also be parsed by TTree::Draw( "expression" )]
    factory->AddVariable( "myvar1 := var1+var2", 'F' );
    factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
-   factory->AddVariable( "var3:=var3",                "Variable 3", "units", 'F' );
-   factory->AddVariable( "var4:=var4",                "Variable 4", "units", 'F' );
+   factory->AddVariable( "var3",                "Variable 3", "units", 'F' );
+   factory->AddVariable( "var4",                "Variable 4", "units", 'F' );
 
    // You can add so-called "Spectator variables", which are not used in the MVA training,
    // but will appear in the final "TestTree" produced by TMVA. This TestTree will contain the
@@ -182,79 +179,61 @@ void TMVAClassification( TString myMethodList = "" )
    factory->AddSpectator( "spec1:=var1*2",  "Spectator 1", "units", 'F' );
    factory->AddSpectator( "spec2:=var1*3",  "Spectator 2", "units", 'F' );
 
-   // read training and test data
-   if (ReadDataFromAsciiIFormat) {
-      // load the signal and background event samples from ascii files
-      // format in file must be:
-      // var1/F:var2/F:var3/F:var4/F
-      // 0.04551   0.59923   0.32400   -0.19170
-      // ...
+   // load the signal and background event samples from ROOT trees
+   TString fname = "./tmva_class_example.root";
 
-      TString datFileS = "tmva_example_sig.dat";
-      TString datFileB = "tmva_example_bkg.dat";
-
-      factory->SetInputTrees( datFileS, datFileB );
-   }
-   else {
-      // load the signal and background event samples from ROOT trees
-      TString fname = "./tmva_class_example.root";
-
-      if (gSystem->AccessPathName( fname ))  // file does not exist in local directory
-         gSystem->Exec("wget http://root.cern.ch/files/tmva_class_example.root");
-
-      TFile *input = TFile::Open( fname );
-
-      std::cout << "--- TMVAClassification       : Using input file: " << input->GetName() << std::endl;
-
-      TTree *signal     = (TTree*)input->Get("TreeS");
-      TTree *background = (TTree*)input->Get("TreeB");
-
-      // global event weights per tree (see below for setting event-wise weights)
-      Double_t signalWeight     = 1.0;
-      Double_t backgroundWeight = 1.0;
-
-      // ====== register trees ====================================================
-      //
-      // the following method is the prefered one:
-      // you can add an arbitrary number of signal or background trees
-      factory->AddSignalTree    ( signal,     signalWeight     );
-      factory->AddBackgroundTree( background, backgroundWeight );
-
-      // To give different trees for training and testing, do as follows:
-      //    factory->AddSignalTree( signalTrainingTree, signalTrainWeight, "Training" );
-      //    factory->AddSignalTree( signalTestTree,     signalTestWeight,  "Test" );
-
-      // Use the following code instead of the above two or four lines to add signal and background
-      // training and test events "by hand"
-      // NOTE that in this case one should not give expressions (such as "var1+var2") in the input
-      //      variable definition, but simply compute the expression before adding the event
-      //
-      //    // --- begin ----------------------------------------------------------
-      //    std::vector<Double_t> vars( 4 ); // vector has size of number of input variables
-      //    Float_t  treevars[4];
-      //    for (Int_t ivar=0; ivar<4; ivar++) signal->SetBranchAddress( Form( "var%i", ivar+1 ), &(treevars[ivar]) );
-      //    for (Int_t i=0; i<signal->GetEntries(); i++) {
-      //       signal->GetEntry(i);
-      //       for (Int_t ivar=0; ivar<4; ivar++) vars[ivar] = treevars[ivar];
-      //       // add training and test events; here: first half is training, second is testing
-      //       // note that the weight can also be event-wise
-      //       if (i < signal->GetEntries()/2) factory->AddSignalTrainingEvent( vars, signalWeight );
-      //       else                            factory->AddSignalTestEvent    ( vars, signalWeight );
-      //    }
-      //
-      //    for (Int_t ivar=0; ivar<4; ivar++) background->SetBranchAddress( Form( "var%i", ivar+1 ), &(treevars[ivar]) );
-      //    for (Int_t i=0; i<background->GetEntries(); i++) {
-      //       background->GetEntry(i);
-      //       for (Int_t ivar=0; ivar<4; ivar++) vars[ivar] = treevars[ivar];
-      //       // add training and test events; here: first half is training, second is testing
-      //       // note that the weight can also be event-wise
-      //       if (i < background->GetEntries()/2) factory->AddBackgroundTrainingEvent( vars, backgroundWeight );
-      //       else                                factory->AddBackgroundTestEvent    ( vars, backgroundWeight );
-      //    }
-      //    // --- end ------------------------------------------------------------
-      //
-      // ====== end of register trees ==============================================
-   }
+   TFile *input = TFile::Open( fname );
+   
+   std::cout << "--- TMVAClassification       : Using input file: " << input->GetName() << std::endl;
+   
+   TTree *signal     = (TTree*)input->Get("TreeS");
+   TTree *background = (TTree*)input->Get("TreeB");
+   
+   // global event weights per tree (see below for setting event-wise weights)
+   Double_t signalWeight     = 1.0;
+   Double_t backgroundWeight = 1.0;
+   
+   // ====== register trees ====================================================
+   //
+   // the following method is the prefered one:
+   // you can add an arbitrary number of signal or background trees
+   factory->AddSignalTree    ( signal,     signalWeight     );
+   factory->AddBackgroundTree( background, backgroundWeight );
+   
+   // To give different trees for training and testing, do as follows:
+   //    factory->AddSignalTree( signalTrainingTree, signalTrainWeight, "Training" );
+   //    factory->AddSignalTree( signalTestTree,     signalTestWeight,  "Test" );
+   
+   // Use the following code instead of the above two or four lines to add signal and background
+   // training and test events "by hand"
+   // NOTE that in this case one should not give expressions (such as "var1+var2") in the input
+   //      variable definition, but simply compute the expression before adding the event
+   //
+   //    // --- begin ----------------------------------------------------------
+   //    std::vector<Double_t> vars( 4 ); // vector has size of number of input variables
+   //    Float_t  treevars[4];
+   //    for (Int_t ivar=0; ivar<4; ivar++) signal->SetBranchAddress( Form( "var%i", ivar+1 ), &(treevars[ivar]) );
+   //    for (Int_t i=0; i<signal->GetEntries(); i++) {
+   //       signal->GetEntry(i);
+   //       for (Int_t ivar=0; ivar<4; ivar++) vars[ivar] = treevars[ivar];
+   //       // add training and test events; here: first half is training, second is testing
+   //       // note that the weight can also be event-wise
+   //       if (i < signal->GetEntries()/2) factory->AddSignalTrainingEvent( vars, signalWeight );
+   //       else                            factory->AddSignalTestEvent    ( vars, signalWeight );
+   //    }
+   //
+   //    for (Int_t ivar=0; ivar<4; ivar++) background->SetBranchAddress( Form( "var%i", ivar+1 ), &(treevars[ivar]) );
+   //    for (Int_t i=0; i<background->GetEntries(); i++) {
+   //       background->GetEntry(i);
+   //       for (Int_t ivar=0; ivar<4; ivar++) vars[ivar] = treevars[ivar];
+   //       // add training and test events; here: first half is training, second is testing
+   //       // note that the weight can also be event-wise
+   //       if (i < background->GetEntries()/2) factory->AddBackgroundTrainingEvent( vars, backgroundWeight );
+   //       else                                factory->AddBackgroundTestEvent    ( vars, backgroundWeight );
+   //    }
+   //    // --- end ------------------------------------------------------------
+   //
+   // ====== end of register trees ==============================================
 
    // This would set individual event weights (the variables defined in the
    // expression need to exist in the original TTree)
@@ -268,7 +247,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    // tell the factory to use all remaining events in the trees after training for testing:
    factory->PrepareTrainingAndTestTree( mycuts, mycutb,
-                                        "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" );
+                                        "nTrain_Signal=2000:nTrain_Background=2000:SplitMode=Random:NormMode=NumEvents:V:VerboseLevel=Debug" );
 
    // If no numbers of events are given, half of the events in the tree are used for training, and
    // the other half for testing:
@@ -403,16 +382,15 @@ void TMVAClassification( TString myMethodList = "" )
       factory->BookMethod( TMVA::Types::kFDA, "FDA_MCMT",
                            "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1);(-10,10);(-10,10);(-10,10);(-10,10):FitMethod=MC:Converger=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=0:!UseImprove:!UseMinos:SetBatch:SampleSize=20" );
 
-   if (Use["MLP"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N(_V_,_S_)+G(_V_,_T_,spec2):NCycles=500:HiddenLayers=N+5:TestRate=10:EpochMonitoring:RandomSeed=1" );
-
    // TMVA ANN: MLP (recommended ANN) -- all ANNs in TMVA are Multilayer Perceptrons
-   if (Use["MLPBNN"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLPBNN", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=5000:HiddenLayers=N+15:TestRate=10:EpochMonitoring:RandomSeed=1:UseRegulator:TrainingMethod=BFGS:ConvergenceTests=15:ConvergenceImprove=1e-6:" );
+   if (Use["MLP"])
+      factory->BookMethod( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:!UseRegulator" );
 
    if (Use["MLPBFGS"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLPBFGS", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=500:HiddenLayers=N+5:TestRate=10:TrainingMethod=BFGS:!EpochMonitoring" );
+      factory->BookMethod( TMVA::Types::kMLP, "MLPBFGS", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:TrainingMethod=BFGS:!UseRegulator" );
 
+   if (Use["MLPBNN"])
+      factory->BookMethod( TMVA::Types::kMLP, "MLPBNN", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:TrainingMethod=BFGS:UseRegulator" ); // BFGS training with bayesian regulators
 
    // CF(Clermont-Ferrand)ANN
    if (Use["CFMlpANN"])
@@ -431,10 +409,10 @@ void TMVAClassification( TString myMethodList = "" )
       factory->BookMethod( TMVA::Types::kBDT, "BDTG",
                            "!H:!V:NTrees=1000:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.6:SeparationType=GiniIndex:nCuts=20:NNodesMax=5" );
 
-   if (Use["BDT"])  // Adaptive Boost
-      factory->BookMethod( TMVA::Types::kBDT, "BDT",
-                           "!H:!V:NTrees=400:nEventsMin=400:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
-
+   
+  if (Use["BDT"])  // Adaptive Boost
+         factory->BookMethod( TMVA::Types::kBDT, "BDT",
+                           "!H:NTrees=40:nEventsMin=400:MaxDepth=1:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning:VerbosityLevel=Debug" );
    if (Use["BDTB"]) // Bagging
       factory->BookMethod( TMVA::Types::kBDT, "BDTB",
                            "!H:!V:NTrees=400:BoostType=Bagging:SeparationType=GiniIndex:nCuts=20:PruneMethod=NoPruning" );
@@ -470,6 +448,10 @@ void TMVAClassification( TString myMethodList = "" )
    // --------------------------------------------------------------------------------------------------
 
    // ---- Now you can tell the factory to train, test, and evaluate the MVAs
+
+   
+   // Optimize MVAs using the set of training events
+   factory->OptimizeAllMethods();
 
    // Train MVAs using the set of training events
    factory->TrainAllMethods();
