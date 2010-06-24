@@ -68,6 +68,11 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistribution(RooArgSet& paramPoin
 
 
    for (Int_t i = 0; i < fNToys; ++i) {
+
+      if ( i% 500 == 0 && i > 0 ) 
+         oocoutP((TObject*)0,Generation) 
+            << "....... on toy number " << i << " / " << fNToys << std::endl;
+
       if (nuisanceParPoints) {
 	 // set variables to requested parameter point
 	 *allVars = *paramPoint;
