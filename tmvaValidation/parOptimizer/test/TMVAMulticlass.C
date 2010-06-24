@@ -22,47 +22,44 @@
 
 using namespace TMVA;
 
-void Boost2(){
-   TString outfileName = "boost.root";
+void TMVAMulticlass(){
+   TString outfileName = "TMVAMulticlass.root";
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
    TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification", outputFile,
-                                               "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D" );
+                                               "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D:AnalysisType=multiclass" );
    factory->AddVariable( "var0", 'F' );
    factory->AddVariable( "var1", 'F' );
    TFile *input(0);
-   TString fname = "./circledata.root";
+   TString fname = "./data.root";
    if (!gSystem->AccessPathName( fname )) {
       // first we try to find data.root in the local directory
-      std::cout << "--- BOOST       : Accessing " << fname << std::endl;
+      std::cout << "--- TMVAMulticlass   : Accessing " << fname << std::endl;
       input = TFile::Open( fname );
    }
    else {
       gROOT->LoadMacro( "./createData.C");
-      create_fullcirc(20000);
-      cout << " created circledata.root with data and circle arranged in circles"<<endl;
+      create_multiclassdata(20000);
+      cout << " created data.root for tests of the multiclass features"<<endl;
       input = TFile::Open( fname );
    }
    if (!input) {
       std::cout << "ERROR: could not open data file" << std::endl;
       exit(1);
    }
-   TTree *signal     = (TTree*)input->Get("TreeS");
-   TTree *background = (TTree*)input->Get("TreeB");
-   Double_t signalWeight     = 1.0;
-   Double_t backgroundWeight = 1.0;
+   TTree *tree     = (TTree*)input->Get("TreeR");
    
    gROOT->cd( outfileName+TString(":/") );
-   factory->AddSignalTree    ( signal,     signalWeight     );
-   factory->AddBackgroundTree( background, backgroundWeight );
-   factory->PrepareTrainingAndTestTree( "", "",
-                                        "nTrain_Signal=10000:nTrain_Background=10000:SplitMode=Random:NormMode=NumEvents:!V" );
+   factory->AddTree    ( tree, "Signal1",    1. , "cls==0"   );
+   factory->AddTree    ( tree, "Signal2",    1. , "cls==1"   );
+   factory->AddTree    ( tree, "Background",    1., "cls==2" );
+   factory->PrepareTrainingAndTestTree( "", "SplitMode=Random:NormMode=NumEvents:!V" );
 
-   TString fisher="H:!V";
-   factory->BookMethod( TMVA::Types::kFisher, "Fisher", fisher );
-   factory->BookMethod( TMVA::Types::kFisher, "FisherBS", fisher+":Boost_Num=100:Boost_Type=Bagging:Boost_Transform=step" );
-   factory->BookMethod( TMVA::Types::kFisher, "FisherS", fisher+":Boost_Num=100:Boost_Type=AdaBoost:Boost_Transform=step" );
-
-
+   factory->BookMethod( TMVA::Types::kBDT, "BDT", "!H:!V:NTrees=1000:BoostType=Grad:Shrinkage=0.30:UseBaggedGrad:GradBaggingFraction=0.6:SeparationType=GiniIndex:nCuts=20:NNodesMax=5");
+   factory->BookMethod( TMVA::Types::kMLP, "MLP", "!H:!V:NeuronType=tanh:VarTransform=N:NCycles=100:HiddenLayers=N+5,3:TestRate=5"); // testing vartransforms
+   factory->BookMethod( TMVA::Types::kMLP, "MLP2", "!H:!V:NeuronType=tanh:NCycles=100:HiddenLayers=N+5,3:TestRate=5");
+   factory->BookMethod( TMVA::Types::kFDA, "FDA_GA",
+                        "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x0*x1:ParRanges=(-1,1);(-10,10);(-10,10);(-10,10):FitMethod=GA:PopSize=300:Cycles=3:Steps=20:Trim=True:SaveBestGen=1" );
+   
   // Train MVAs using the set of training events
    factory->TrainAllMethods();
 
