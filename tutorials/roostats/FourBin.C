@@ -242,7 +242,7 @@ void FourBin(bool doBayesian=false, bool doFeldmanCousins=false, bool doMCMC=fal
   // matrix of fit
   RooFitResult* fit = wspace->pdf("model")->fitTo(*data,Save());
   ProposalHelper ph;
-  ph.SetVariables(fit->floatParsFinal());
+  ph.SetVariables((RooArgSet&)fit->floatParsFinal());
   ph.SetCovMatrix(fit->covarianceMatrix());
   ph.SetUpdateProposalParameters(kTRUE); // auto-create mean vars and add mappings
   ph.SetCacheSize(100);
@@ -278,8 +278,8 @@ void FourBin(bool doBayesian=false, bool doFeldmanCousins=false, bool doMCMC=fal
 
   if(doBayesian && wspace->set("poi")->getSize() == 1)   {
     c1->cd(2);
-    RooPlot* bplot = bc.GetPosteriorPlot();
-    bplot->Draw();
+    //    RooPlot* bplot = bc.GetPosteriorPlot();
+    //    bplot->Draw();// the plot takes a long time
   } 
 
   if(doMCMC){
@@ -287,7 +287,7 @@ void FourBin(bool doBayesian=false, bool doFeldmanCousins=false, bool doMCMC=fal
       c1->cd(3);
     else 
       c1->cd(2);
-    MCMCIntervalPlot mcPlot(*mcInt);
+    MCMCIntervalPlot mcPlot(*mcInt); 
     mcPlot.Draw();
   }
 

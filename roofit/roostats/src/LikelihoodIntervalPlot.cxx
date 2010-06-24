@@ -138,8 +138,8 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
    
    if(fNdimPlot == 1){
 
-      if (title.Length() == 0) 
-         title = "- log profile likelihood ratio";
+     //      if (title.Length() == 0) 
+     //         title = "- log profile likelihood ratio";
       
 
       const Double_t xcont_min = fInterval->LowerLimit(*myparam);

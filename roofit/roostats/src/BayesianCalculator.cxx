@@ -476,6 +476,9 @@ RooPlot* BayesianCalculator::GetPosteriorPlot(bool norm, double precision ) cons
 
    RooPlot* plot = poi->frame();
 
+   // try to reduce some error messages
+   posterior->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
+
    plot->SetTitle(TString("Posterior probability of parameter \"")+TString(poi->GetName())+TString("\""));  
    posterior->plotOn(plot,RooFit::Range(fLower,fUpper,kFALSE),RooFit::VLines(),RooFit::DrawOption("F"),RooFit::MoveToBack(),RooFit::FillColor(kGray),RooFit::Precision(precision));
    posterior->plotOn(plot);
