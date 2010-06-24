@@ -61,7 +61,7 @@ namespace TMVA {
       
       
    private:
-      
+
       OptimizerFOM *fFOM;
       
       ClassDef(Optimizer,0) // Interface to different separation critiera used in training algorithms
