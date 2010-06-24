@@ -287,7 +287,33 @@ TMVA::Results* TMVA::DataSet::GetResults( const TString & resultsName,
    //Log() << kINFO << " GetResults("<<info<<") builds new result." << Endl;
    return newresults;
 }
+//_______________________________________________________________________
+void TMVA::DataSet::DeleteResults( const TString & resultsName,
+                                   Types::ETreeType type,
+                                   Types::EAnalysisType analysistype ) 
+{
+   // delete the results stored for this particulary 
+   //      Method instance  (here appareantly called resultsName instead of MethodTitle
+   //      Tree type (Training, testing etc..)
+   //      Analysis Type (Classification, Multiclass, Regression etc..)
 
+   if (UInt_t(type) > fResults.size()){
+      Log()<<kFATAL<< "you asked for an Treetype (training/testing/...)"
+           << " whose index " << type << " does not exist " << Endl;
+      exit(1);
+   }
+   std::map< TString, Results* >& resultsForType = fResults[UInt_t(type)];
+   std::map< TString, Results* >::iterator it = resultsForType.find(resultsName);
+   if (it!=resultsForType.end()) {
+      Log() << kDEBUG << " Delete Results previous existing result:" << resultsName 
+            << " of type " << type << Endl;
+      delete it->second;
+      resultsForType.erase(it->first);
+   }else{
+      Log() << kINFO << "could not fine Result class of " << resultsName 
+            << " of type " << type << " which I should have deleted" << Endl;
+   }
+}
 //_______________________________________________________________________
 void TMVA::DataSet::DivideTrainingSet( UInt_t blockNum )
 {
