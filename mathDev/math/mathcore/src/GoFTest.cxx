@@ -14,6 +14,7 @@
 #include <iostream>
 #include <map>
 #include <numeric>
+#include <cstring>
 
 #include "Math/Integrator.h"
 #include "Math/ProbFuncMathCore.h"
