@@ -28,29 +28,23 @@
 #include "TString.h"
 #include "TDSet.h"
 #include "Riostream.h"
-#include "THashList.h"
 #include "TMap.h"
 #include "TEnv.h"
 #include "TTree.h"
 #include "TH1.h"
 #include "TLeaf.h"
 #include "TCanvas.h"
-#include "TROOT.h"
 #include "TStyle.h"
 #include "TPaveText.h"
 #include "TProfile.h"
 #include "TLegend.h"
 #include "TKey.h"
 #include "TMap.h"
-#include "TRegexp.h"
 #include "TPerfStats.h"
 #include "TParameter.h"
-#include "TSelectorList.h"
 #include "TDrawFeedback.h"
 #include "TSortedList.h"
 #include "TError.h"
-
-#include <stdlib.h>
 
 ClassImp(TProofBenchFileGenerator)
 
@@ -105,24 +99,25 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
                                               Int_t ntracks)
 {
 
-//Generates files on worker nodes for I/O test or for cleanup run
-//Input parameters do not change corresponding data members
-//Data set member (fDataSetGeneratedBench or fDataSetGeneratedCleanup) gets filled up
-//with generated data set elements
-//
-//Input parameters
-//   nf: meaning of this parameter is the same as data member NFiles of mode in use
-//   nevents: Number of events in a file when filetype==kFileBenchmark.
-//            Igonired when filetype==kFileCleanup 
-//   basedir: Base directory for the files to be generated on the worker nodes. 
-//   regenerate: Regenerate files when kTRUE,
-//               Reuse files if they exist, when kFALSE
-//               Use data member fRegenerate when <0
-//Returns: 
-//   0 when ok
-//  <0 when anything is wrong
-
-   //Generate files on all nodes, active or inactive
+   // Generates files on worker nodes for I/O test or for cleanup run
+   // Input parameters do not change corresponding data members
+   // Data set member (fDataSetGenerated) gets filled up with generated data set elements
+   //
+   // Input parameters
+   //    nf: This parameter is passed to the mode in use.
+   //        When -1, data member fNFiles of mode in use is used.
+   //    nevents: Number of events in a file
+   //             When clean files are generated, this parameter is ignored and files
+   //             large enough to clean up node memory are generated.
+   //    basedir: Base directory for the files to be generated on the worker nodes. 
+   //             When null, data member fBaseDir is used.
+   //    regenerate: Regenerate files when >0,
+   //                Reuse files if they exist when =0, 
+   //                Use data member fRegenerate when ==-1
+   //    ntracks: Number of traks in an event. Use data member fNTracks when ==-1
+   // Return: 
+   //    0 when ok
+   //   <0 otherwise
    Int_t nactive_sav;
 
    if (fProof){
@@ -134,23 +129,23 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
       return -1;
    }
 
-   //check input parameters
-   if (nf<=0){
+   // Check input parameters
+   if (nf==-1){
       nf=fMode->GetNFiles();
    }
-   if (nevents<=0){
+   if (nevents==-1){
       nevents=fNEvents;
    }
       
-   if (!basedir.Length()){
+   if (basedir.IsNull()){
       basedir=fBaseDir;
    }
 
-   if (regenerate<0){
+   if (regenerate==-1){
       regenerate=fRegenerate; 
    }
  
-   if (ntracks<0){
+   if (ntracks==-1){
       ntracks=fNTracks;
    }
  
@@ -169,7 +164,7 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
    }
    fProof->AddInput(wlcopy);
 
-   //build file map to generate on worker nodes
+   // Build file map to generate on worker nodes
    TMap* filesmap=fMode->FilesToProcess(nf);
    // Add the file map in the input list
    fProof->AddInput(filesmap);
@@ -188,20 +183,17 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
    Int_t entries=filesmap->GetSize();
    fProof->Process("TSelEventGen", entries);
 
-   //Check outputs
+   // Check outputs
    TList* l = fProof->GetOutputList();
 
    if (!l){
       Error("GenerateFiles", "list of output not found");
-      //Put it back to old configuration
+      // Put it back to old configuration
       fProof->SetParallel(nactive_sav);
       return -1;
    }
 
-   //l->Print("A");
-
-   //merge outputs
-
+   // Merge outputs
    TObject* obj;
    TList* lfilesgenerated;
    TList* ltdelement;
@@ -216,10 +208,10 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
       if (outputname.Contains("PROOF_FilesGenerated")){
          lfilesgenerated=dynamic_cast<TList*>(obj);
          if (lfilesgenerated){
-            TObjArray* token=outputname.Tokenize("_"); //filename=PROOF_FilesGenerated_hostname_ordinal
+            TObjArray* token=outputname.Tokenize("_"); // filename=PROOF_FilesGenerated_hostname_ordinal
             hostname=((*token)[2])->GetName();
 
-            tdset=dynamic_cast<TDSet*>(lfilesgenerated->At(0)); //lfilesgenerated is 1-element list
+            tdset=dynamic_cast<TDSet*>(lfilesgenerated->At(0)); // lfilesgenerated is 1-element list
             ltdelement=tdset->GetListOfElements();
             TIter nxtelement(ltdelement);
 
@@ -237,8 +229,7 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
       }
    }
 
-   // Clear the input parameters
-   //ClearInputParameters();
+   // Clear input parameters
    fProof->DeleteParameters("PROOF_BenchmarkFileType");
    fProof->DeleteParameters("PROOF_BenchmarkBaseDir");
    fProof->DeleteParameters("PROOF_BenchmarkNEvents");
@@ -253,15 +244,15 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
    wlcopy->SetOwner(kTRUE);
    SafeDelete(wlcopy);
 
-   //Put it back to old configuration
+   // Put it back to old configuration
    fProof->SetParallel(nactive_sav);
 
-   //sort output list
+   // Sort output list
    TList* lds=0;
    lds=fDataSetGenerated->GetListOfElements();
    lds->Sort();
 
-   //print outputs
+   // Print outputs
    TIter nds(lds);
    TDSetElement* dse=0;
    Info("GenerateFiles", "List of files generarted:");
@@ -279,19 +270,20 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
                                              const TDSet* tdset,
                                              const char* option)
 {
-//Make data sets (file collection) and register them for benchmark test
-//
-//Input parameters
-//   nf: The first arguement to TProofBenchMode::MakeDataSets(...). The exact meaning of this parameter depends on the mode being used.
-//   start: Starting number of workers, when -1 (default) data member fStart is used
-//   stop: Ending number of workers, when -1 (default) data member fStop is used
-//   step: Incremental number of workers, when -1 (default) data member fStep is used
-//   tdset: data set (TDSet*) from which file collection will be built within this function. 
-//          When tdset=0, the data set built by TProofBenchFileGenerator::GenerateFiles is used. User can also supply one.
-//   option: is used as option to TProof::RegisterDataSet
-//Returns: 0 when ok, <0 when anything is wrong
+   // Make data sets out of tdset and register them for benchmark test
+   //
+   // Input parameters
+   //    nf: This parameter is passed to the mode in use.
+   //        When -1, data member fNFiles of mode in use is used.
+   //    start: Start number of workers, when -1 (default) data member fStart is used
+   //    stop: Ending number of workers, when -1 (default) data member fStop is used
+   //    step: Incremental number of workers, when -1 (default) data member fStep is used
+   //    tdset: Data set (TDSet*) from which file collection will be built in this function. 
+   //           When tdset=0, the data set filled up by TProofBenchFileGenerator::GenerateFiles is used.
+   //    option: Option to TProof::RegisterDataSet
+   // Return: 0 when ok
+   //        <0 otherwise
 
-   //check input parameters
    if (start==-1){
       start=fStart;
       Info("MakeDataSets", "Start number of workers is %d", start);
@@ -318,7 +310,7 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
          fMode->MakeDataSets(nf, start, stop, step, fDataSetGenerated, option, fProof);
       }
       else{
-         Error("MakeDataSet", "Generate files first");
+         Error("MakeDataSet", "Empty data set; Either generate files first or supply one.");
          return -1;
       }
    }
@@ -329,12 +321,12 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
 //______________________________________________________________________________
 Int_t TProofBenchFileGenerator::MakeDataSets(const char* option)
 {
-//Make data sets (file collection) and register them for benchmark test
-//
-//Input parameters
-//   option: is used as option to TProof::RegisterDataSet
-//Returns: 0 when ok, 
-//        -1 when files are not generated
+   // Make data sets and register them for benchmark test
+   //
+   // Input parameters
+   //    option: Option to TProof::RegisterDataSet
+   // Return: 0 when ok, 
+   //        <0 otherwise
 
    if ( fDataSetGenerated ) {
       fMode->MakeDataSets(-1, fStart, fStop, fStep, fDataSetGenerated, option, fProof);
@@ -354,25 +346,32 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
                                              const TDSet* tdset,
                                              const char* option)
 {
-   
-  
-//Create the data sets (file collection) and register them to Proof
-//Input parameters:
-//   mode: benchmark mode
-//   np: Number of test points
-//   wp: Array of number of workers for test points (should contain np points)
-//   nf: Number of files 
-//       It corresponds to fNFilesANode when mode is kModeConstNFilesNode,
-//       fNFilesAWorker when mode=kModeConstNFilesWorker,
-//       fNFilesAWorker when mode=kModeVaryingNFilesWorker
-//   opt: Option to TProof::RegisterDataSet
-//   tdset: Data set (TDSet*) from which file collections are to be built from. 
-//          This is usually the data set built when GenerateFiles function is called but user can supply one.
-//Returns:
-//   0 when ok
-//  <0 when anything is wrong
+   // Create the data sets out of tdset and register them for benchmark test
+   //
+   // Input parameters:
+   //    nf: This parameter is passed to the mode in use.
+   //        When -1, data member fNFiles of mode in use is used.
+   //    np: Number of test points
+   //    wp: Array of number of workers for test points (should contain np points)
+   //    tdset: Data set (TDSet*) from which file collection will be built in this function. 
+   //           When tdset=0, the data set filled up by TProofBenchFileGenerator::GenerateFiles is used.
+   //    option: Option to TProof::RegisterDataSet
+   // Return:
+   //    0 when ok
+   //   <0 otherwise
 
-   fMode->MakeDataSets(nf, np, wp, tdset, option, fProof);
+   if (tdset){
+      fMode->MakeDataSets(nf, np, wp, tdset, option, fProof);
+   }
+   else{
+      if ( fDataSetGenerated ) {
+         fMode->MakeDataSets(nf, np, wp, fDataSetGenerated, option, fProof);
+      }
+      else{
+         Error("MakeDataSet", "Empty data set; Either generate files first or supply one.");
+         return -1;
+      }
+   }
    return 0;
 }
 
@@ -380,31 +379,17 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
 void TProofBenchFileGenerator::Print(Option_t* option)const{
 
    if (fProof) fProof->Print(option);
-   Printf("fBaseDir=\"%s\"", fBaseDir.Data()); 
-
-   //Printf("fMaxNWorkers=%d", fMaxNWorkers);
+   if (fMode) fMode->Print(option);
    Printf("fNEvents=%lld", fNEvents);
+   Printf("fMaxNWorkers=%d", fMaxNWorkers);
    Printf("fStart=%d", fStart);
    Printf("fStop=%d", fStop);
    Printf("fStep=%d", fStep);
-
-   //Printf("fNTracksBench=%d", fNTracksBench);
-   //Printf("fNTracksCleanup=%d", fNTracksCleanup);
-   //Printf("fDebug=%d", fDebug);
-   //Printf("fRegenerate=%d", fRegenerate);
-
-   if (fMode) fMode->Print("A");
-
-   if (fDataSetGenerated) fDataSetGenerated->Print(option);
-   //if (fCPerfProfiles){
-   //   Printf("Performance Profiles Canvas: Name=%s Title=%s", 
-   //           fCPerfProfiles->GetName(), fCPerfProfiles->GetTitle());
-   //}
-   //if (fDirProofBench){
-   //   Printf("fDirProofBench=%s", fDirProofBench->GetPath());
-   //}
-
+   Printf("fBaseDir=\"%s\"", fBaseDir.Data()); 
+   Printf("fNTracksBench=%d", fNTracks);
+   Printf("fRegenerate=%d", fRegenerate);
    if (fNodes) fNodes->Print(option);
+   if (fDataSetGenerated) fDataSetGenerated->Print(option);
 }
 
 //______________________________________________________________________________
@@ -431,12 +416,14 @@ void TProofBenchFileGenerator::SetMaxNWorkers(TString sworkers)
    sworkers.ToLower();
    sworkers.Remove(TString::kTrailing, ' ');
    if (fProof){
-      if (sworkers.Contains("x")){//nx
+      if (sworkers.Contains("x")){
          TList* lslave=fProof->GetListOfSlaveInfos();
-         Int_t nslaves=lslave->GetSize();  //number of slave workers regardless of its status, active or inactive
+         // Number of slave workers regardless of its status, active or inactive
+         Int_t nslaves=lslave->GetSize();  
          sworkers.Remove(TString::kTrailing, 'x');
          Int_t mult=sworkers.Atoi();
-         fMaxNWorkers=mult*nslaves; //this number to be parameterized in the future
+         // This number to be parameterized in the future
+         fMaxNWorkers=mult*nslaves; 
       }
    }
    else{
@@ -541,6 +528,9 @@ Int_t TProofBenchFileGenerator::FillNodeInfo()
    // Re-Generate the list of worker node info (fNodes)
    // Return 0 if OK, -1 if proof not set, -2 if info could not be retrieved
    // (the existing info is always removed)
+   // Return:
+   //     0 when ok
+   //    <0 otherwise
 
    if (!fProof){
       Error("FillNodeInfo", "proof not set, doing nothing");
