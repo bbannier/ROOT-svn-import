@@ -18,39 +18,12 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TProofBenchModeCleanup.h"
-#include "TFile.h"
 #include "TFileCollection.h"
 #include "TFileInfo.h"
 #include "TProof.h"
-
 #include "TString.h"
-
 #include "TDSet.h"
-#include "Riostream.h"
-#include "THashList.h"
 #include "TMap.h"
-#include "TEnv.h"
-#include "TTree.h"
-#include "TH1.h"
-#include "TLeaf.h"
-#include "TCanvas.h"
-#include "TROOT.h"
-#include "TStyle.h"
-#include "TPaveText.h"
-#include "TProfile.h"
-#include "TLegend.h"
-#include "TKey.h"
-#include "TMap.h"
-#include "TRegexp.h"
-#include "TPerfStats.h"
-#include "TParameter.h"
-#include "TSelectorList.h"
-#include "TDrawFeedback.h"
-#include "TSortedList.h"
-
-#include <stdlib.h>
-#include "TDSet.h"
-#include "TFileCollection.h"
 #include "TProofNode.h"
 
 ClassImp(TProofBenchModeCleanup)
@@ -71,16 +44,13 @@ TProofBenchModeCleanup::~TProofBenchModeCleanup()
 TMap* TProofBenchModeCleanup::FilesToProcess(Int_t)
 {
 
-//Generates files on worker nodes for cleanup run
-//Input parameters do not change corresponding data members
-//
-//Input parameters
-//  ignored
-//Returns: 
-//  map with files to be generated on the worker nodes
-
-   // Create the file names and the map {worker,files}
-   // Naming:        <basedir>/EventTree_Cleanup_nfile_serial.root
+   //Create map of files to be generated on each worker node for cleanup run
+   //Input parameters do not change corresponding data members
+   //
+   //Input parameters
+   //  Ignored
+   //Returns: 
+   //  map of files to be generated on each worker node
 
    TMap *filesmap = new TMap;
    filesmap->SetName("PROOF_FilesToProcess");
@@ -92,11 +62,11 @@ TMap* TProofBenchModeCleanup::FilesToProcess(Int_t)
       Int_t nworkers=ni->GetNWrks();
       files->SetName(ni->GetName());
 
-      for (Int_t i = 0; i <nworkers; i++) { //split load across the workers on the node
+      //split load across the workers on the node
+      for (Int_t i = 0; i <nworkers; i++) {
          files->Add(new TObjString(TString::Format("EventTree_Cleanup_%d_0.root", i)));
       }
       filesmap->Add(new TObjString(ni->GetName()), files);
-      //files->Print();
    }
 
    return filesmap;
@@ -111,16 +81,19 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
                                       const char* option,
                                       TProof* proof)
 {
-/*   if (!tdset){
-      if (fDataSetGeneratedCleanup){
-         tdset=fDataSetGeneratedCleanup;
-      }
-      else{
-         Error("MakeDataSets", "Empty data set; Files not generated");
-         return -1;
-      }
-   }
-*/
+   // Make data set from data set tdset and register it.
+   // Input parameters
+   //    Int_t Ignored.
+   //    Int_t Ignored.
+   //    Int_t Ignored.
+   //    Int_t Ignored.
+   //    tdset Dataset from which data set is built and registered.
+   //    option Option to TProof::RegisterDataSet(...).
+   //    proof Proof
+   // Return
+   //    0 when ok
+   //   <0 otherwise
+
    if (!tdset){
       Error("MakeDataSets", "Empty data set; Files not generated");
       return -1;
@@ -143,6 +116,7 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
    }
    fc->Update();
    proof->RegisterDataSet(dsname, fc, option);
+   delete fc;
    return 0;
 }
 
@@ -150,11 +124,23 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
 Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
                                       Int_t,
                                       const Int_t*,
-                                      const TDSet*,
-                                      const char*,
-                                      TProof*)
+                                      const TDSet* tdset,
+                                      const char* option,
+                                      TProof* proof)
 {
-   return 0;
+   // Make data set from data set tdset and register it.
+   // Input parameters
+   //    Int_t Ignored.
+   //    Int_t Ignored.
+   //    const Int_t* Ignored.
+   //    tdset Dataset from which data set is built and registered.
+   //    option Option to TProof::RegisterDataSet(...).
+   //    proof Proof
+   // Return
+   //    0 when ok
+   //   <0 otherwise
+
+   return MakeDataSets(0, 0, 0, 0, tdset, option, proof);
 }
 
 //______________________________________________________________________________
@@ -203,9 +189,11 @@ const char* TProofBenchModeCleanup::GetName()const
 //______________________________________________________________________________
 Int_t TProofBenchModeCleanup::FillNodeInfo()
 {
-   // Re-Generate the list of worker node info (fNodes)
-   // Return 0 if OK, -1 if proof not set, -2 if info could not be retrieved
-   // (the existing info is always removed)
+   // Re-Generate the list of worker node info (fNodes).
+   // The existing info is always removed.
+   // Return
+   //    0 when ok
+   //   <0 otherwise
 
    if (!fProof){
       Error("FillNodeInfo", "proof not set, doing nothing");
