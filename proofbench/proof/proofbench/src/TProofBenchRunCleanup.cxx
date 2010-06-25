@@ -158,7 +158,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
    */
 
    //if (CheckParameters("RunBenchmark")) return;
-   Int_t nactive_sav=fProof->GetParallel();
+   //Int_t nactive_sav=fProof->GetParallel();
    fProof->SetParallel(99999);
 
    DeleteParameters();
@@ -271,8 +271,12 @@ void TProofBenchRunCleanup::Run(Long64_t,
       lcopy->SetName(inputdataname.Data());
       fProof->AddInputData(lcopy); 
 
+      Info("Run", "Cleaning up files in data set: %s", fDataSetCleanup.Data());
       fProof->Process("TSelEvent", Long64_t(0));
       fProof->ClearInputData(inputdataname.Data()); 
+      delete lcopy;
+      //Wait a second or 2 because start time of TQueryResult has only 1-second precision.
+      gSystem->Sleep(1500);
    }
    else if (fCleanupType==TProofBenchRun::kCleanupNotSpecified){
       Error("Run", "fCleanupType==kCleanupNotSpecified; try again"
@@ -280,7 +284,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
    }
 
    DeleteParameters();
-   fProof->SetParallel(nactive_sav);
+   //fProof->SetParallel(nactive_sav);
 }
 
 //______________________________________________________________________________
