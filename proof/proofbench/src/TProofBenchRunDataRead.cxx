@@ -311,6 +311,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
             continue;
          }
 
+         Info("RunBenchmark", "Processing data set : %s", dsname.Data()); 
          Info("RunBenchmark", "Total number of events to process is %lld", nevents_total); 
          TTime starttime = gSystem->Now();
          fProof->Process(dsname.Data(), "TSelEvent", "", nevents_total);
@@ -365,7 +366,19 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
          //Info("Run", "init=%f proc=%f used cpu=%f", qr_init, qr_proc, qr_usedcpu);
 
          //calculate event rate, fill and draw
-         Double_t qr_eventrate=qr_entries/Double_t(qr_init+qr_proc);
+         Long64_t qr_entriesinkilo=0;
+         Double_t qr_eventrate=0;
+
+         const Long64_t Lkilobytes=1024;
+         const Double_t Dkilobytes=1024;
+
+         if (qr_entries>1024*Lkilobytes){
+            qr_entriesinkilo=qr_entries/Lkilobytes;
+            qr_eventrate=qr_entriesinkilo/Double_t(qr_init+qr_proc);
+         }
+         else{
+            qr_eventrate=qr_entries/Double_t(qr_init+qr_proc)/Dkilobytes;
+         }
 
          profile_queryresult_event->Fill(nactive, qr_eventrate);
          fCPerfProfiles->cd(npad++);
@@ -373,7 +386,19 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
          gPad->Update();
 
          //calculate IO rate, fill and draw
-         Double_t qr_IOrate=qr_bytes/Double_t(qr_init+qr_proc);
+         Long64_t qr_bytesinmega=0;
+         Double_t qr_IOrate=0;
+
+         const Long64_t Lmegabytes=1024*1024;
+         const Double_t Dmegabytes=1024*1024;
+
+         if (qr_IOrate>1024*Lmegabytes){
+            qr_bytesinmega=qr_bytes/Lmegabytes;
+            qr_IOrate=qr_bytesinmega/Double_t(qr_init+qr_proc);
+         }
+         else{
+            qr_IOrate=qr_bytes/Double_t(qr_init+qr_proc)/Dmegabytes;
+         }
 
          profile_queryresult_IO->Fill(nactive, qr_IOrate);
          fCPerfProfiles->cd(npad++);
@@ -457,7 +482,7 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t, TProfile* profile_ev
    for (Long64_t k=0; k<entries; k++) {
       t->GetEntry(k);
 
-      Printf("k:%lld fTimeStamp=%lf fEvtNode=%s pe.fType=%d fSlaveName=%s fNodeName=%s fFileName=%s fFileClass=%s fSlave=%s fEventsProcessed=%lld fBytesRead=%lld fLen=%lld fLatency=%lf fProcTime=%lf fCpuTime=%lf fIsStart=%d fIsOk=%d",k, pe.fTimeStamp.GetSec() + 1e-9*pe.fTimeStamp.GetNanoSec(), pe.fEvtNode.Data(), pe.fType, pe.fSlaveName.Data(), pe.fNodeName.Data(), pe.fFileName.Data(), pe.fFileClass.Data(), pe.fSlave.Data(), pe.fEventsProcessed, pe.fBytesRead, pe.fLen, pe.fLatency, pe.fProcTime, pe.fCpuTime, pe.fIsStart, pe.fIsOk);
+      //Printf("k:%lld fTimeStamp=%lf fEvtNode=%s pe.fType=%d fSlaveName=%s fNodeName=%s fFileName=%s fFileClass=%s fSlave=%s fEventsProcessed=%lld fBytesRead=%lld fLen=%lld fLatency=%lf fProcTime=%lf fCpuTime=%lf fIsStart=%d fIsOk=%d",k, pe.fTimeStamp.GetSec() + 1e-9*pe.fTimeStamp.GetNanoSec(), pe.fEvtNode.Data(), pe.fType, pe.fSlaveName.Data(), pe.fNodeName.Data(), pe.fFileName.Data(), pe.fFileClass.Data(), pe.fSlave.Data(), pe.fEventsProcessed, pe.fBytesRead, pe.fLen, pe.fLatency, pe.fProcTime, pe.fCpuTime, pe.fIsStart, pe.fIsOk);
 
       if (pe.fType==TVirtualPerfStats::kPacket){
          nevents_kPacket+=pe.fEventsProcessed;
