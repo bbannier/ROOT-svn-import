@@ -9,6 +9,7 @@
 import xml.parsers.expat
 import os, sys, string, time, re
 import gccdemangler
+import annotations
 
 class genDictionary(object) :
 #----------------------------------------------------------------------------------
@@ -56,6 +57,8 @@ class genDictionary(object) :
     # references to id equal '_0' which is not defined anywhere
     self.xref['_0'] = {'elem':'Unknown', 'attrs':{'id':'_0','name':''}, 'subelems':[]}
     self.TObject_id = ''
+    self.annotations = {}
+    self.annotationsIds = set()
 #----------------------------------------------------------------------------------
   def addTemplateToName(self, attrs):
     if attrs['name'].find('>') == -1 and 'demangled' in attrs :
@@ -1120,6 +1123,8 @@ class genDictionary(object) :
     # Fill the different streams sc: constructor, ss: stub functions
     sc = ''
 
+    sc += self.genAnnotationFunctions(attrs)
+
     #-------------------------------------------------------------------------------
     # Get the data members information and write down the schema evolution functions
     #-------------------------------------------------------------------------------
@@ -1170,8 +1175,8 @@ class genDictionary(object) :
       if sys.platform == 'win32':
          typeidtype = 'MSVC71_typeid_bug_workaround'
          sc += '  typedef ::%s %s;\n' % (cls, typeidtype)
-      sc += '  ::Reflex::ClassBuilder(dictionary, Reflex::Literal("%s"), typeid(%s), sizeof(::%s), %s, %s)' \
-            % (cls, typeidtype, cls, mod, typ)
+      sc += '  ::Reflex::ClassBuilder(dictionary, Reflex::Literal("%s"), typeid(%s), sizeof(::%s), %s, %s, &%s)' \
+            % (cls, typeidtype, cls, mod, typ, self.getAnnotationFunctionName(attrs))
     if 'extra' in attrs :
       for pname, pval in attrs['extra'].items() :
         if pname not in ('name','pattern','n_name','file_name','file_pattern','fields') :
@@ -1238,6 +1243,48 @@ class genDictionary(object) :
         if funcname in dir(self) :
           ss += self.__class__.__dict__[funcname](self, self.xref[m]['attrs'], self.xref[m]['subelems']) + '\n'
     return sc, ss
+#----------------------------------------------------------------------------------
+  def getAnnotationFunctionName( self, attrs ):
+    return "annotations"+attrs['id']
+#----------------------------------------------------------------------------------
+  def getAllAnnotationsForFile( self, filename ):
+    if filename not in self.annotations:
+      self.annotations[filename] = annotations.fromfile(filename)
+    return self.annotations[filename]
+#----------------------------------------------------------------------------------
+  def getAnnotations( self, attrs, annots):
+    if 'line' in attrs:
+      line = int(attrs['line'])
+      for annot in annots:
+        if annot.getcodeline() == line:
+          yield annot.getast()
+#----------------------------------------------------------------------------------
+  def genAnnotationFunction( self, attrs, annots, lines ):
+    if attrs['id'] not in self.annotationsIds:
+      self.annotationsIds.add(attrs['id'])
+
+      lines.append("static void %s(Reflex::AnnotationList& collector) {"%self.getAnnotationFunctionName(attrs))
+      for ast in self.getAnnotations(attrs, annots):
+        lines.append("")
+        annotVar = ast.collectInitCode(lines)
+        lines.append("  collector.AddAnnotation(Reflex::Any(*%s));"%annotVar)
+      lines.append("}")
+      lines.append("")
+#----------------------------------------------------------------------------------
+  def genAnnotationFunctions( self, attrs ):
+    filename = self.files[attrs['file']]['name']
+    annots = self. getAllAnnotationsForFile(filename)
+
+    lines = []
+    self.genAnnotationFunction(attrs, annots, lines)
+    if 'members' in attrs:
+      for mid in attrs['members'].split():
+        mattrs = self.xref[mid]['attrs']
+        if 'artificial' in mattrs:
+          self.genAnnotationFunction(mattrs, [], lines)
+        else:
+          self.genAnnotationFunction(mattrs, annots, lines)
+    return "\n".join(lines)
 #----------------------------------------------------------------------------------
   def checkAccessibleType( self, type ):
     while type['elem'] in ('PointerType','Typedef','ArrayType') :
@@ -1941,7 +1988,7 @@ class genDictionary(object) :
     if attrs.get('const')=='1' : mod += ' | ::Reflex::CONST'
     if args : params  = '"'+ string.join( map(self.genParameter, args),';')+'"'
     else    : params  = '0'
-    s = '  .AddFunctionMember(%s, Reflex::Literal("%s"), %s%s, 0, %s, %s)' % (self.genTypeID(id), name, type, id, params, mod)
+    s = '  .AddFunctionMember(%s, Reflex::Literal("%s"), %s%s, 0, %s, %s, %s)' % (self.genTypeID(id), name, type, id, params, mod, self.getAnnotationFunctionName(attrs))
     s += self.genCommentProperty(attrs)
     return s
 #----------------------------------------------------------------------------------

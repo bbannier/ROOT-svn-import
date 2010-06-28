@@ -31,6 +31,8 @@ class OnDemandBuilderForScope;
 
 template <typename C> class ClassBuilderT;
 
+typedef void (*AnnotationBuilder)(AnnotationList&);
+
 /**
  * @class ClassBuilderImpl ClassBuilder.h Reflex/Builder/ClassBuilder.h
  * @author Stefan Roiser
@@ -40,7 +42,7 @@ template <typename C> class ClassBuilderT;
 class RFLX_API ClassBuilderImpl {
 public:
    /** constructor */
-   ClassBuilderImpl(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, TYPE typ = CLASS);
+   ClassBuilderImpl(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, TYPE typ = CLASS, AnnotationBuilder buildAnnotation = 0);
    ClassBuilderImpl(Class* cl);
 
    /** destructor */
@@ -84,7 +86,8 @@ public:
                           StubFunction stubFP,
                           void* stubCtx = 0,
                           const char* params = 0,
-                          unsigned int modifiers = 0);
+                          unsigned int modifiers = 0,
+                          AnnotationBuilder buildAnnotation = 0);
 
    void AddTypedef(const Type& typ,
                    const char* def);
@@ -173,7 +176,7 @@ private:
 class RFLX_API ClassBuilder {
 public:
    /** constructor */
-   ClassBuilder(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, TYPE typ = CLASS);
+   ClassBuilder(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, TYPE typ = CLASS, AnnotationBuilder buildAnnotation = 0);
    ClassBuilder(Class* cl);
 
    /** destructor */
@@ -221,13 +224,15 @@ public:
                                                       StubFunction stubFP,
                                                       void* stubCtx = 0,
                                                       const char* params = 0,
-                                                      unsigned int modifiers = 0);
+                                                      unsigned int modifiers = 0,
+                                                      AnnotationBuilder buildAnnotation = 0);
    ClassBuilder& AddFunctionMember(const Type& typ,
                                    const char* nam,
                                    StubFunction stubFP,
                                    void* stubCtx = 0,
                                    const char* params = 0,
-                                   unsigned int modifiers = 0);
+                                   unsigned int modifiers = 0,
+                                   AnnotationBuilder buildAnnotation = 0);
 
    template <typename TD> ClassBuilder& AddTypedef(const char* def);
    ClassBuilder& AddTypedef(const Type& typ,
@@ -311,14 +316,16 @@ public:
    /** constructor */
    ClassBuilderT(const Reflex::Dictionary& dictionary,
                  unsigned int modifiers = 0,
-                 TYPE typ = CLASS);
+                 TYPE typ = CLASS,
+                 AnnotationBuilder buildAnnotation = 0);
 
 
    /** constructor */
    ClassBuilderT(const Reflex::Dictionary& dictionary,
                  const char* nam,
                  unsigned int modifiers = 0,
-                 TYPE typ = CLASS);
+                 TYPE typ = CLASS,
+                 AnnotationBuilder buildAnnotation = 0);
 
 
    /**
@@ -368,13 +375,15 @@ public:
                                     StubFunction stubFP,
                                     void* stubCtx = 0,
                                     const char* params = 0,
-                                    unsigned int modifiers = 0);
+                                    unsigned int modifiers = 0,
+                                    AnnotationBuilder buildAnnotation = 0);
    ClassBuilderT& AddFunctionMember(const Type& typ,
                                     const char* nam,
                                     StubFunction stubFP,
                                     void* stubCtx = 0,
                                     const char* params = 0,
-                                    unsigned int modifiers = 0);
+                                    unsigned int modifiers = 0,
+                                    AnnotationBuilder buildAnnotation = 0);
 
    template <typename TD>
    ClassBuilderT& AddTypedef(const char* def);
@@ -471,8 +480,9 @@ Reflex::ClassBuilder::AddFunctionMember(const char* nam,
                                         StubFunction stubFP,
                                         void* stubCtx,
                                         const char* params,
-                                        unsigned int modifiers) {
-   fClassBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(fDictionary), stubFP, stubCtx, params, modifiers);
+                                        unsigned int modifiers,
+                                        AnnotationBuilder buildAnnotation) {
+   fClassBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(fDictionary), stubFP, stubCtx, params, modifiers, buildAnnotation);
    return *this;
 }
 
@@ -505,16 +515,16 @@ Reflex::ClassBuilder::AddProperty(const char* key,
 
 //______________________________________________________________________________
 template <typename C> inline
-Reflex::ClassBuilderT<C>::ClassBuilderT(const Reflex::Dictionary& dictionary, unsigned int modifiers, TYPE typ):
-   fClassBuilderImpl(dictionary, Tools::Demangle(typeid(C)).c_str(), typeid(C), sizeof(C), modifiers, typ),
+Reflex::ClassBuilderT<C>::ClassBuilderT(const Reflex::Dictionary& dictionary, unsigned int modifiers, TYPE typ, AnnotationBuilder buildAnnotation):
+   fClassBuilderImpl(dictionary, Tools::Demangle(typeid(C)).c_str(), typeid(C), sizeof(C), modifiers, typ, buildAnnotation),
    fDictionary(dictionary) {
 }
 
 
 //______________________________________________________________________________
 template <class C> inline
-Reflex::ClassBuilderT<C>::ClassBuilderT(const Reflex::Dictionary& dictionary, const char* nam, unsigned int modifiers, TYPE typ):
-   fClassBuilderImpl(dictionary, nam, typeid(C), sizeof(C), modifiers, typ),
+Reflex::ClassBuilderT<C>::ClassBuilderT(const Reflex::Dictionary& dictionary, const char* nam, unsigned int modifiers, TYPE typ, AnnotationBuilder buildAnnotation):
+   fClassBuilderImpl(dictionary, nam, typeid(C), sizeof(C), modifiers, typ, buildAnnotation),
    fDictionary(dictionary) {
 }
    
@@ -569,8 +579,9 @@ Reflex::ClassBuilderT<C>::AddFunctionMember(const char* nam,
                                             StubFunction stubFP,
                                             void* stubCtx,
                                             const char* params,
-                                            unsigned int modifiers) {
-   fClassBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(fDictionary), stubFP, stubCtx, params, modifiers);
+                                            unsigned int modifiers,
+                                            AnnotationBuilder buildAnnotation) {
+   fClassBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(fDictionary), stubFP, stubCtx, params, modifiers, buildAnnotation);
    return *this;
 }
 
@@ -583,14 +594,16 @@ Reflex::ClassBuilderT<C>::AddFunctionMember(const Type& typ,
                                             StubFunction stubFP,
                                             void* stubCtx,
                                             const char* params,
-                                            unsigned int modifiers) {
+                                            unsigned int modifiers,
+                                            AnnotationBuilder buildAnnotation) {
 //-------------------------------------------------------------------------------
    fClassBuilderImpl.AddFunctionMember(nam,
                                        typ,
                                        stubFP,
                                        stubCtx,
                                        params,
-                                       modifiers);
+                                       modifiers,
+                                       buildAnnotation);
    return *this;
 }
 

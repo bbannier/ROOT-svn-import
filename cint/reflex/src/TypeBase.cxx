@@ -57,6 +57,7 @@ Reflex::TypeBase::TypeBase( const Reflex::Dictionary& dictionary,
      fSize( size ),
      fTypeType( typeTyp ),
      fPropertyList( OwnedPropertyList( new PropertyListImpl())),
+     fAnnotationList( OwnedAnnotationList( new AnnotationListImpl())),
      fBasePosition(Tools::GetBasePosition( nam)),
      fFinalType(finalType.Id() ? new Type(finalType) : 0 ),
      fRawType(0) {
@@ -334,6 +335,13 @@ Reflex::TypeBase::UnhideName() const {
    fTypeName->UnhideName();
 }
 
+
+//-------------------------------------------------------------------------------
+Reflex::AnnotationList
+Reflex::TypeBase::Annotations() const {
+//-------------------------------------------------------------------------------
+   return fAnnotationList;
+}
 
 //-------------------------------------------------------------------------------
 std::string

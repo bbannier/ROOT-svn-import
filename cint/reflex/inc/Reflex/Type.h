@@ -1222,6 +1222,13 @@ namespace Reflex {
       */
       Dictionary DictionaryGet() const;
 
+
+      /**
+       * List of annotations attached to this type.
+       */
+      AnnotationList Annotations() const;
+
+
    REPRESTYPE RepresType() const;
 
    private:
@@ -2372,12 +2379,23 @@ Reflex::Type::SetTypeInfo(const std::type_info& ti) const {
 }
 
 //-------------------------------------------------------------------------------
-inline Reflex::Dictionary Reflex::Type::DictionaryGet() const {
+inline Reflex::Dictionary
+Reflex::Type::DictionaryGet() const {
 //-------------------------------------------------------------------------------
    if ( * this )
       return fTypeName->NamesGet();
    else
       return Dictionary::Main();
+}
+
+//-------------------------------------------------------------------------------
+inline Reflex::AnnotationList
+Reflex::Type::Annotations() const {
+//-------------------------------------------------------------------------------
+   if ( * this )
+      return fTypeName->Annotations();
+   else
+      return Dummy::AnnotationList();
 }
 
 #ifdef REFLEX_CINT_MERGE

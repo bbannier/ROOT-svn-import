@@ -26,6 +26,7 @@
 #include "Reflex/MemberTemplate.h"
 #include "Reflex/Any.h"
 #include "Reflex/Dictionary.h"
+#include "Reflex/AnnotationList.h"
 
 #include "Reflex/Builder/DictionaryBuilder.h"
 #include "Reflex/Builder/TypeBuilder.h"
@@ -321,6 +322,14 @@ Reflex::Dummy::MemberTemplateCont() {
    return Get< MemberTemplate_Cont_Type_t >();
 }
 
+//-------------------------------------------------------------------------------
+const Reflex::Any_Cont_Type_t&
+Reflex::Dummy::Any_Cont_Type() {
+//-------------------------------------------------------------------------------
+// static wrapper for an empty container of MemberTemplates.
+   return Get< Any_Cont_Type_t >();
+}
+
 
 //-------------------------------------------------------------------------------
 Reflex::Any&
@@ -405,6 +414,14 @@ Reflex::Dummy::Scope() {
 //-------------------------------------------------------------------------------
    // static wrapper for an empty Scope 
    return Get< Reflex::Scope >();
+}
+
+//-------------------------------------------------------------------------------
+const Reflex::AnnotationList&
+Reflex::Dummy::AnnotationList() {
+//-------------------------------------------------------------------------------
+   // static wrapper for an empty AnnotationList
+   return Get< Reflex::AnnotationList >();
 }
 
 

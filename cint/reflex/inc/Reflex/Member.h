@@ -533,6 +533,11 @@ public:
     */
    void UpdateFunctionParameterNames(const char* parameters);
 
+   /**
+    * List of annotations attached to this member.
+    */
+   AnnotationList Annotations() const;
+
 private:
    void Delete();
 
@@ -1268,6 +1273,17 @@ Reflex::Member::UpdateFunctionParameterNames(const char* parameters) {
    if (*this) {
       return fMemberBase->UpdateFunctionParameterNames(parameters);
    }
+}
+
+
+//-------------------------------------------------------------------------------
+inline Reflex::AnnotationList
+Reflex::Member::Annotations() const {
+//-------------------------------------------------------------------------------
+   if ( * this )
+      return fMemberBase->Annotations();
+   else
+      return Dummy::AnnotationList();
 }
 
 

@@ -304,6 +304,13 @@ public:
     */
    virtual void UpdateFunctionParameterNames(const char* parameters);
 
+
+   /**
+    * List of annotations attached to this type.
+    */
+   AnnotationList Annotations() const;
+
+
 protected:
    /**
     * CalculateBaseObject will calculate the inheritance between an object
@@ -361,6 +368,16 @@ private:
     * @supplierCardinality 0..1
     */
    OwnedPropertyList fPropertyList;
+
+
+   /**
+    * Annotation list attached to this type
+    * @label annotationlist
+    * @link aggregationByValue
+    * @clientCardinality 1
+    * @supplierCardinality 1
+    */
+   OwnedAnnotationList fAnnotationList;
 
 
    /**

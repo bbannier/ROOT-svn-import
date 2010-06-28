@@ -130,6 +130,12 @@ namespace Reflex {
       static Reverse_Type_Iterator Type_RBegin();
       static Reverse_Type_Iterator Type_REnd();
 
+      /**
+       * List of annotations attached to this type.
+       */
+      AnnotationList Annotations() const;
+
+
    private:
       /** destructor */
       ~TypeName();
