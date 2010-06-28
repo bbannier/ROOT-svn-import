@@ -1,0 +1,12 @@
+Index: inc/TCling.h
+===================================================================
+--- inc/TCling.h	(revision 33658)
++++ inc/TCling.h	(working copy)
+@@ -200,6 +200,7 @@
+    virtual void   SetRTLD_LAZY() const;
+    virtual void   SetTempLevel(int val) const;
+    virtual int    UnloadFile(const char *path) const;
++   cling::Interpreter* GetInterpreter() const { return fInterpreter; }
+    
+    
+    // G__CallFunc interface
