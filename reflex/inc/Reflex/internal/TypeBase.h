@@ -16,6 +16,7 @@
 #include "Reflex/Kernel.h"
 #include "Reflex/Scope.h"
 #include "Reflex/internal/OwnedPropertyList.h"
+#include "Reflex/internal/OwnedAnnotationList.h"
 #include <vector>
 #include <typeinfo>
 
@@ -445,6 +446,12 @@ public:
     */
    virtual void UnhideName() const;
 
+
+   /**
+    * List of annotations attached to this type.
+    */
+   AnnotationList Annotations() const;
+
    REPRESTYPE
    RepresType() const { return fRepresType; }
 
@@ -514,6 +521,16 @@ private:
     * @supplierCardinality 1
     */
    OwnedPropertyList fPropertyList;
+
+
+   /**
+    * Annotation list attached to this type
+    * @label annotationlist
+    * @link aggregationByValue
+    * @clientCardinality 1
+    * @supplierCardinality 1
+    */
+   OwnedAnnotationList fAnnotationList;
 
 
    /**

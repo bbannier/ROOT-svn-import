@@ -33,6 +33,6 @@ EXPORTS
    ?Name@Pointer@Reflex@@UBE?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@I@Z
    ?RemoveDataMember@Class@Reflex@@UBEXABVMember@2@@Z
    ?RemoveFunctionMember@Class@Reflex@@UBEXABVMember@2@@Z
-   ?SimpleName@ClassTemplateInstance@Reflex@@UBEABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AAII@Z
+   ?SimpleName@ClassTemplateInstance@Reflex@@UBEPBDAAII@Z
    ?TemplateArgumentAt@ClassTemplateInstance@Reflex@@UBE?AVType@2@I@Z
    ?UpdateMembers@Class@Reflex@@UBE_NXZ

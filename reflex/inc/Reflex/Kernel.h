@@ -150,6 +150,7 @@ class Member;
 class PropertyList;
 class TypeTemplate;
 class MemberTemplate;
+class AnnotationList;
 
 typedef std::vector<std::string> StdString_Cont_Type_t;
 typedef StdString_Cont_Type_t::const_iterator StdString_Iterator;
@@ -183,6 +184,10 @@ typedef std::vector<MemberTemplate> MemberTemplate_Cont_Type_t;
 typedef MemberTemplate_Cont_Type_t::const_iterator MemberTemplate_Iterator;
 typedef MemberTemplate_Cont_Type_t::const_reverse_iterator Reverse_MemberTemplate_Iterator;
 
+typedef std::vector<Any> Any_Cont_Type_t;
+typedef Any_Cont_Type_t::const_iterator Any_Iterator;
+typedef Any_Cont_Type_t::const_reverse_iterator Reverse_Any_Iterator;
+
 
 namespace Dummy {
 RFLX_API const StdString_Cont_Type_t& StdStringCont();
@@ -193,6 +198,7 @@ RFLX_API const Object_Cont_Type_t& ObjectCont();
 RFLX_API const Member_Cont_Type_t& MemberCont();
 RFLX_API const TypeTemplate_Cont_Type_t& TypeTemplateCont();
 RFLX_API const MemberTemplate_Cont_Type_t& MemberTemplateCont();
+RFLX_API const Any_Cont_Type_t& Any_Cont_Type();
 RFLX_API Any& Any();
 RFLX_API const Object& Object();
 RFLX_API const Type& Type();
@@ -202,6 +208,7 @@ RFLX_API const PropertyList& PropertyList();
 RFLX_API const Member& Member();
 RFLX_API const MemberTemplate& MemberTemplate();
 RFLX_API const Scope& Scope();
+RFLX_API const AnnotationList& AnnotationList();
 template <class T> inline const T&
 Get() {
    static T t;

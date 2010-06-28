@@ -21,6 +21,7 @@
 #include "Reflex/Base.h"
 #include "Reflex/Object.h"
 #include "Reflex/internal/OwnedPropertyList.h"
+#include "Reflex/internal/OwnedAnnotationList.h"
 #include "Reflex/DictionaryGenerator.h"
 
 #include "Reflex/Tools.h"
@@ -37,7 +38,8 @@ Reflex::MemberBase::MemberBase(const char* name,
    fName(name),
    fScope(Scope()),
    fMemberType(memberType),
-   fPropertyList(OwnedPropertyList(new PropertyListImpl())) {
+   fPropertyList(OwnedPropertyList(new PropertyListImpl())),
+   fAnnotationList(OwnedAnnotationList(new AnnotationListImpl())) {
 // Construct the dictionary info for a member
    fThisMember = new Member(this);
 }
@@ -60,6 +62,12 @@ Reflex::Member() const {
    return *fThisMember;
 }
 
+//-------------------------------------------------------------------------------
+Reflex::AnnotationList
+Reflex::MemberBase::Annotations() const {
+//-------------------------------------------------------------------------------
+   return fAnnotationList;
+}
 
 //-------------------------------------------------------------------------------
 void*

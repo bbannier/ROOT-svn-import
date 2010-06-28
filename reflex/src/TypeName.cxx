@@ -237,3 +237,10 @@ Reflex::TypeName::Unload() {
    }
 }
 
+
+//-------------------------------------------------------------------------------
+Reflex::AnnotationList
+Reflex::TypeName::Annotations() const {
+//-------------------------------------------------------------------------------
+   return fTypeBase->Annotations();
+}

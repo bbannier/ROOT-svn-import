@@ -37,7 +37,7 @@
 //
 
 //______________________________________________________________________________
-Reflex::ClassBuilderImpl::ClassBuilderImpl(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ):
+Reflex::ClassBuilderImpl::ClassBuilderImpl(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ, Reflex::AnnotationBuilder buildAnnotation):
    fClass(0),
    fLastMember(),
    fNewClass(true),
@@ -91,7 +91,11 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const Reflex::Dictionary& dictionary,
          } else if (fClass->Modifiers() != modifiers) {
             throw RuntimeError(std::string("Attempt to change the modifiers of the class ") + std::string(nam));
          }
+      }
    }
+   if (buildAnnotation && c) {
+      AnnotationList annots = c.Annotations();
+      buildAnnotation(annots);
    }
 }
 
@@ -168,7 +172,8 @@ Reflex::ClassBuilderImpl::AddFunctionMember(const char* nam,
                                             StubFunction stubFP,
                                             void* stubCtx,
                                             const char* params,
-                                            unsigned int modifiers) {
+                                            unsigned int modifiers,
+                                            AnnotationBuilder buildAnnotation) {
    // -- Add function member info (internal).
    if (!fNewClass) {
       for (Reflex::Member_Iterator iter = fClass->DataMember_Begin(); iter != fClass->DataMember_End(); ++iter) {
@@ -182,6 +187,10 @@ Reflex::ClassBuilderImpl::AddFunctionMember(const char* nam,
       fLastMember = Member(new FunctionMemberTemplateInstance(fClass->TypeNameGet()->NamesGet(), nam, typ, stubFP, stubCtx, params, modifiers, *(dynamic_cast<ScopeBase*>(fClass))));
    } else {
       fLastMember = Member(new FunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
+   }
+   if (buildAnnotation) {
+      AnnotationList annots = fLastMember.Annotations();
+      buildAnnotation(annots);
    }
    fClass->AddFunctionMember(fLastMember);
 } // AddFunctionMember
@@ -330,8 +339,8 @@ Reflex::ClassBuilderImpl::ToType() {
 //
 
 //______________________________________________________________________________
-Reflex::ClassBuilder::ClassBuilder(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ):
-   fClassBuilderImpl(dictionary, nam, ti, size, modifiers, typ),
+Reflex::ClassBuilder::ClassBuilder(const Reflex::Dictionary& dictionary, const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ, AnnotationBuilder buildAnnotation):
+   fClassBuilderImpl(dictionary, nam, ti, size, modifiers, typ, buildAnnotation),
    fDictionary(dictionary) {
    // -- Constructor
 }
@@ -380,9 +389,10 @@ Reflex::ClassBuilder::AddFunctionMember(const Type& typ,
                                         StubFunction stubFP,
                                         void* stubCtx,
                                         const char* params,
-                                        unsigned int modifiers) {
+                                        unsigned int modifiers,
+                                        AnnotationBuilder buildAnnotation) {
    // -- Add function member info to this class.
-   fClassBuilderImpl.AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers);
+   fClassBuilderImpl.AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers, buildAnnotation);
    return *this;
 }
 
