@@ -66,16 +66,15 @@ void TProofBenchModeConstNFilesWorker::Print(Option_t* option)const
 TMap* TProofBenchModeConstNFilesWorker::FilesToProcess(Int_t nf)
 {
 
-//Generates files on worker nodes for I/O test or for cleanup run
-//Input parameters do not change corresponding data members
-//
-//Input parameters
-//   nf: Number of files per worker. When nf=-1, use data member fNFiles.
-//Returns: 
-//  map with files to be generated on the worker nodes
-
-   // Create the file names and the map {worker,files}
-   // Naming:        <basedir>/EventTree_Benchmark_nfile_serial.root
+   // Create a map of files to be generated on worker nodes.
+   // File name format is "EventTree_Benchmark_nfile_serial.root".
+   // Input parameters do not change corresponding data members.
+   //
+   // Input parameters
+   //    nf: Number of files per worker.
+   //        When nf=-1, use data member fNFiles.
+   // Returns
+   //    Map of files to be generated on the worker nodes.
 
    if (nf==-1){
       nf=fNFiles;
@@ -109,7 +108,27 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
                                                 const char* option,
                                                 TProof* proof)
 {
-   //check input parameters
+
+   // Make data sets out of data set 'tdset' and register them.
+   // Input parameters
+   //    nf: Number of files a node.
+   //        When ==-1, data member fNFiles are used.
+   //    start: Start scan at 'start' number of workers.
+   //    stop: Stop scan at 'stop' number of workers.
+   //          When ==-1, it is set to total number of workers in the cluster.
+   //    step: Scan every 'step' workers.
+   //    tdset: Data set ouf of which data sets are built and registered.
+   //    option: Option to TProof::RegisterDataSet(...).
+   //    proof: Proof
+   // Return
+   //   0 when ok
+   //  <0 otherwise
+
+   if (!fProof){
+      Error("MakeDataSets", "proof not set, doing nothing");
+      return -1;
+   }
+
    if (!tdset){
       Error("MakeDataSets", "No generated files provided; returning");
       return -1;
@@ -138,8 +157,7 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
       wp[i]=nactive;
       i++;
    }
-   MakeDataSets(nf, np, wp, tdset, option, proof);
-   return 0;
+   return MakeDataSets(nf, np, wp, tdset, option, proof);
 }
 
 //______________________________________________________________________________
@@ -150,23 +168,42 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
                                                 const char *option,
                                                 TProof* proof)
 {
-   //check input parameters
+
+   // Make data sets out of data set 'tdset' and register them.
+   // Data set name has the form : DataSetEventConstNFilesWorker_nactiveworkersincluster_nfilesanode
+   // Input parameters
+   //    nf: Number of files a node.
+   //    np: Number of test points.
+   //    wp: 'np'-sized array containing the number of active workers to process files.
+   //    tdset: Data set ouf of which data sets are built and registered.
+   //    option: Option to TProof::RegisterDataSet(...).
+   //    proof: Proof
+   // Return
+   //   0 when ok
+   //  <0 otherwise
+
+   if (!fProof){
+      Error("MakeDataSets", "proof not set, doing nothing");
+      return -1;
+   }
+
    if (!tdset){
       Error("MakeDataSets", "No generated files provided; returning");
       return -1;
    }
 
-   // Dataset naming: DataSetEventConstNFilesNode_nworkersincluster_nfilesaworker
+   if (nf==-1){
+      nf=fNFiles;
+      Info("MakeDataSets", "Number of files a node is %d for %s", nf, GetName());
+   }
 
-   TString smode, stem;
-   smode="ConstNFilesWorker";
-   stem="_Benchmark_";
+   // Dataset naming: DataSetEventConstNFilesWorker_nworkersincluster_nfilesaworker
 
    TString dsname;
    Int_t kp; 
    for (kp=0; kp<np; kp++) {
       // Dataset name
-      dsname.Form("DataSetEvent%s_%d_%d", smode.Data(), wp[kp], nf);
+      dsname.Form("DataSetEvent%s_%d_%d", GetName(), wp[kp], nf);
       Info("MakeDataSets", "creating dataset '%s' ...", dsname.Data());
       // Create the TFileCollection 
       TFileCollection *fc = new TFileCollection;
@@ -197,9 +234,11 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
 
             if (hostname!=nodename) continue;
 
-            //filename=root://hostname//directory/EventTree_Benchmark_filenumber_serial.root
+            //filename=root://hostname/directory/EventTree_Benchmark_filenumber_serial.root
             //remove upto "Benchmark_"
             tmpstring=filename;
+            TString stem="_Benchmark_";
+
             tmpstring.Remove(0, filename.Index(stem)+stem.Length());
 
             TObjArray* token=tmpstring.Tokenize("_");
@@ -234,7 +273,7 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
       }
 
       fc->Update();
-      // Register dataset with verification
+      // Register dataset
       proof->RegisterDataSet(dsname, fc, option);
       SafeDelete(fc);
    }
@@ -275,8 +314,10 @@ const char* TProofBenchModeConstNFilesWorker::GetName()const
 Int_t TProofBenchModeConstNFilesWorker::FillNodeInfo()
 {
    // Re-Generate the list of worker node info (fNodes)
-   // Return 0 if OK, -1 if proof not set, -2 if info could not be retrieved
    // (the existing info is always removed)
+   // Return
+   //    0 if ok
+   //   <0 otherwise
 
    if (!fProof){
       Error("FillNodeInfo", "proof not set, doing nothing");
