@@ -90,11 +90,6 @@ public:
             Int_t debug,
             Int_t draw);
 
-   void BuildPerfProfiles(Int_t,
-                          Int_t,
-                          Int_t,
-                          Int_t);
-
    void DrawPerfProfiles();
 
    void Print(Option_t* option="")const;
