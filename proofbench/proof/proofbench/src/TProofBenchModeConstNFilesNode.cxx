@@ -130,7 +130,7 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
    //  <0 otherwise
 
    if (!fProof){
-      Error("FillNodeInfo", "proof not set, doing nothing");
+      Error("MakeDataSets", "proof not set, doing nothing");
       return -1;
    }
 
@@ -188,7 +188,7 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
    //  <0 otherwise
 
    if (!fProof){
-      Error("FillNodeInfo", "proof not set, doing nothing");
+      Error("MakeDataSets", "proof not set, doing nothing");
       return -1;
    }
 
