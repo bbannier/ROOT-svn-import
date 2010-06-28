@@ -32,18 +32,15 @@
 #include "TFileInfo.h"
 #include "TProof.h"
 #include "TString.h"
-#include "TDSet.h"
 #include "Riostream.h"
 #include "THashList.h"
 #include "TMap.h"
 #include "TEnv.h"
 #include "TTree.h"
 #include "TH1.h"
-#include "TLeaf.h"
 #include "TCanvas.h"
 #include "TProfile.h"
 #include "TKey.h"
-#include "TRegexp.h"
 #include "TPerfStats.h"
 #include "TPad.h"
 
@@ -52,11 +49,9 @@ ClassImp(TProofBenchRunCleanup)
 //______________________________________________________________________________
 TProofBenchRunCleanup::TProofBenchRunCleanup(TProofBenchRun::ECleanupType cleanuptype,
                TString filename,
-                                    //user has to provide one
-               Option_t* foption, //option to TFile() 
+               Option_t* foption,
                TProof* proof,
-               Int_t maxnworkers,//maximum number of workers to be tested. 
-                                    //If not set (default), 2 times the number of total workers in the cluster available
+               Int_t maxnworkers,
                Long64_t nevents,
                Int_t draw,
                Int_t debug):
@@ -69,7 +64,7 @@ fFile(0),
 fDirProofBench(0),
 fWritable(0)
 {
-//Default constructor
+   //Default constructor
  
    fProof=proof?proof:gProof;
 
@@ -97,14 +92,13 @@ fWritable(0)
 //______________________________________________________________________________
 TProofBenchRunCleanup::~TProofBenchRunCleanup()
 {
-//destructor
+   //destructor
    fProof=0;
    fDirProofBench=0;
    if (fFile){
       fFile->Close();
       delete fFile;
    }
-   //if (fNodes) delete fNodes;
 } 
 
 //______________________________________________________________________________
@@ -133,14 +127,18 @@ void TProofBenchRunCleanup::Run(Long64_t,
                                 Int_t debug,
                                 Int_t draw)
 {
-//Run benchmark
-//Input parameter:
-//   nevents:   Number of events to run per file (-1 for all entries in files) 
-//              when whattorun==kRunFullDataRead or whattorun==kRunOptDataRead or whattorun==kRunAll.
-//              Total number of events to process when whattorun==kRunCPUTest.
-//              Ignored when whattorun==kRunCleanup or whattorun==kRunNotSpecified
-//Returns: Nothing
-//  
+   // Clean up cache between bench mark runs. 
+   // Input parameters
+   //    Long64_t Ignored.
+   //    Int_t    Ignored.
+   //    Int_t    Ignored.
+   //    Int_t    Ignored.
+   //    Int_t    Ignored.
+   //    debug    debug switch  
+   //    draw     draw switch
+   // Return
+   //    Nothing
+
    if (!fProof){
       Error("RunBenchmark", "Proof not set");
       return;
@@ -148,23 +146,10 @@ void TProofBenchRunCleanup::Run(Long64_t,
 
    Info("RunBenchmark", "kRunCleanup");
 
-   /*
-   //TProofBenchRun* arun=new TProofBenchRunCleanup();
-   TProofBenchRun* arun=dynamic_cast<TProofBenchRun*>(Clone());
-
-   arun->SetName("PROOF_BenchmarkRun");
-
-   proof->AddInput(arun);
-   */
-
-   //if (CheckParameters("RunBenchmark")) return;
-   //Int_t nactive_sav=fProof->GetParallel();
    fProof->SetParallel(99999);
 
    DeleteParameters();
    SetParameters();
-
-   //fProof->Process(fDataSetGeneratedCleanup, "TSelEvent", "", -1);
 
    if (fCleanupType==TProofBenchRun::kCleanupFile){
       TString dsname="DataSetEventCleanup";
@@ -284,28 +269,6 @@ void TProofBenchRunCleanup::Run(Long64_t,
    }
 
    DeleteParameters();
-   //fProof->SetParallel(nactive_sav);
-}
-
-//______________________________________________________________________________
-void TProofBenchRunCleanup::BuildPerfProfiles(Int_t,
-                                              Int_t,
-                                              Int_t,
-                                              Int_t)
-{
-
-//Build performance profiles
-//Input parameters:
-//   runtype: Run type to build performance profiles for.
-//            When kRunAll, this function is recursively called with runtype=kRunFullDataRead, 
-//            kRunOptDataRead, kRunNoDataRead in turn.
-//   mode: Benchmark mode to build performance profiles for.
-//         Ignored when runtype==kRunCPUTest.
-//Returns:
-//   Nothing
-
-   Info("BuildPerfProfiles", "There is nothing to be done");
-   return;
 }
 
 //______________________________________________________________________________
@@ -357,22 +320,25 @@ void TProofBenchRunCleanup::SetMaxNWorkers(Int_t maxnworkers)
 //______________________________________________________________________________
 void TProofBenchRunCleanup::SetMaxNWorkers(TString sworkers)
 {
-//Set the maximum number of workers for benchmark test
-//Input parameters:
-//   sworkers: can be "1x", "2x" and so on, where total number of workers is set 
-//             to 1*no_total_workers, 2*no_total_workers respectively.
-//             For now only "1x" is supported
-//Returns:
-//   Nothing
+
+   // Set the maximum number of workers for benchmark test
+   // Input parameters
+   //    sworkers: Can be "1x", "2x" and so on, where total number of workers is set 
+   //              to 1*no_total_workers, 2*no_total_workers respectively.
+   //              For now only "1x" is supported
+   // Return
+   //    Nothing
+
    sworkers.ToLower();
    sworkers.Remove(TString::kTrailing, ' ');
    if (fProof){
       if (sworkers.Contains("x")){//nx
          TList* lslave=fProof->GetListOfSlaveInfos();
-         Int_t nslaves=lslave->GetSize();  //number of slave workers regardless of its status, active or inactive
+         // Number of slave workers regardless of its status, active or inactive
+         Int_t nslaves=lslave->GetSize();  
          sworkers.Remove(TString::kTrailing, 'x');
          Int_t mult=sworkers.Atoi();
-         fMaxNWorkers=mult*nslaves; //this number to be parameterized in the future
+         fMaxNWorkers=mult*nslaves;
       }
    }
    else{
@@ -405,18 +371,19 @@ TFile* TProofBenchRunCleanup::OpenFile(const char* filename,
                                        const char* ftitle,
                                        Int_t compress)
 {
-//Opens a file which output profiles and/or intermediate files (trees, histograms when debug is set)
-//are to be written to. Makes a directory named "ProofBench" if possible and changes to the directory.
-//If directory ProofBench already exists, change to the directory. If the directory can not be created,
-//make a directory Rint:/ProofBench and change to the directory.
-//Input parameters:
-//   filename: Name of the file to open
-//   option: Option to TFile::Open(...) function
-//   ftitle: Input to TFile::Open(...) function
-//Returns:
-//   Open file if a file is already open
-//   New file just opened
-//   0 when open fails;
+   // Opens a file which output profiles and/or intermediate files (trees, histograms when debug is set)
+   // are to be written to. Makes a directory named "ProofBench" if possible and changes to the directory.
+   // If directory ProofBench already exists, change to the directory. If the directory can not be created,
+   // make a directory Rint:/ProofBench and change to the directory.
+   // Input parameters:
+   //    filename: Name of the file to open
+   //    option: Option to TFile::Open(...) function
+   //    ftitle: Title for TFile::Open(...) function
+   //    compress: Compression for TFile::Open(...) function
+   // Returns
+   //    Open file if a file is already open
+   //    New file just opened
+   //    0 when open fails;
 
    TString sfilename(filename);
    sfilename.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
@@ -437,14 +404,14 @@ TFile* TProofBenchRunCleanup::OpenFile(const char* filename,
    TDirectory* dirsav=gDirectory;
    fFile=new TFile(sfilename, option, ftitle, compress);
 
-   if (fFile->IsZombie()){//open failed
+   if (fFile->IsZombie()){ // Open failed
       Error("FileOpen", "Cannot open file: %s", sfilename.Data());
       fFile->Close();
       fFile=0;
       dirsav->cd();
       return 0;
    }
-   else{//open succeeded
+   else{ // Open succeeded
       fFile->mkdir("ProofBench");
 
       fFile->cd("ProofBench");
