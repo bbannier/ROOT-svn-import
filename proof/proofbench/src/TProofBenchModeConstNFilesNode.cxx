@@ -197,6 +197,11 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
       return -1;
    }
 
+   if (nf==-1){
+      nf=fNFiles;
+      Info("MakeDataSets", "Number of files a node is %d for %s", nf, GetName());
+   }
+
    TString dsname;
    Int_t kp;
    for (kp=0; kp<np; kp++) {
