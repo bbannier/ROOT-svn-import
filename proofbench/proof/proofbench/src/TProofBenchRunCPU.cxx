@@ -14,7 +14,7 @@
 // TProofBenchRunCPU                                                    //
 //                                                                      //
 // CPU-intensive PROOF benchmark test generates events and fill 1, 2,   //
-//or 3-D histograms. No I/O activity is involved.                       //
+// or 3-D histograms. No I/O activity is involved.                       //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -48,11 +48,10 @@ ClassImp(TProofBenchRunCPU)
 //______________________________________________________________________________
 TProofBenchRunCPU::TProofBenchRunCPU(TProofBenchRun::EHistType histtype,
                                      Int_t nhists,
-                                     TString filename, //user has to provide one
-                                     Option_t* foption, //option to TFile() 
+                                     TString filename,
+                                     Option_t* foption, 
                                      TProof* proof,
-                                     Int_t maxnworkers,//maximum number of workers to be tested. 
-                                                       //If not set (default), 1 times the number of total workers in the cluster available
+                                     Int_t maxnworkers,
                                      Long64_t nevents,
                                      Int_t ntries,
                                      Int_t start,
@@ -81,7 +80,7 @@ fListPerfProfiles(0),
 fCPerfProfiles(0),
 fName(0)
 {
-//Default constructor
+   //Default constructor
    fProof=proof?proof:gProof;
 
    if (filename.Length()){
@@ -113,7 +112,7 @@ fName(0)
 //______________________________________________________________________________
 TProofBenchRunCPU::~TProofBenchRunCPU()
 {
-//destructor
+   // Destructor
    fProof=0;
    if (fProfEvent) delete fProfEvent;
    fDirProofBench=0;
@@ -134,14 +133,17 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
                             Int_t debug,
                             Int_t draw)
 {
-//Run benchmark
-//Input parameter:
-//   nevents:   Number of events to run per file (-1 for all entries in files) 
-//              when whattorun==kRunFullDataRead or whattorun==kRunOptDataRead or whattorun==kRunAll.
-//              Total number of events to process when whattorun==kRunCPUTest.
-//              Ignored when whattorun==kRunCleanup or whattorun==kRunNotSpecified
-//Returns: Nothing
-//  
+   // Run benchmark
+   // Input parameters
+   //   nevents:   Number of events to run per file. When it is -1, use data member fNEvents.
+   //   start: Start scan with 'start' workers. When it is -1, use data member fNTries.
+   //   stop: Stop scan at 'stop' workers. When it is -1 , use data member fStop.
+   //   step: Scan every 'step' workers. When it is -1, use data member fStep.
+   //   debug: debug switch. When it is -1, use data member fDebug.
+   //   draw: draw switch. When it is -1, use data member fDraw.
+   // Returns
+   //    Nothing
+
    if (!fProof){
       Error("RunBenchmark", "Proof not set");
       return;
@@ -261,30 +263,26 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
             Error("RunBenchmark", "tree %s not found", perfstats_name.Data());
          }
          
-         //performance measures from TQueryResult
+         // Performance measures from TQueryResult
 
          TQueryResult* queryresult=fProof->GetQueryResult();  
          TDatime qr_start=queryresult->GetStartTime(); 
          TDatime qr_end=queryresult->GetEndTime(); 
          Float_t qr_init=queryresult->GetInitTime(); 
          Float_t qr_proc=queryresult->GetProcTime(); 
-         Float_t qr_usedcpu=queryresult->GetUsedCPU(); 
+         //Float_t qr_usedcpu=queryresult->GetUsedCPU(); 
     
          Long64_t qr_entries=queryresult->GetEntries();
 
-         //Info("Run", "start="); qr_start.Print();
-         //Info("Run", "end="); qr_end.Print();
-         //Info("Run", "init=%f proc=%f used cpu=%f", qr_init, qr_proc, qr_usedcpu);
-
-         //calculate event rate
+         // Calculate event rate
          Double_t qr_eventrate=qr_entries/Double_t(qr_init+qr_proc);
 
-         //build profile name
+         // Build profile name
          TString profile_queryresult_event_name=BuildProfileName("hProf", "QueryResult_Event");
-         //get profile
+         // Get profile
          TProfile* profile_queryresult_event=(TProfile*)(fListPerfProfiles->FindObject(profile_queryresult_event_name.Data()));
 
-         //fill and draw
+         // Fill and draw
          if (profile_queryresult_event){
             profile_queryresult_event->Fill(nactive, qr_eventrate);
             fCPerfProfiles->cd(npad++);
@@ -302,12 +300,18 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
 void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t nactive)
 {
 
+   // Fill performance profiles using tree 't'(PROOF_PerfStats).
+   // Input parameters
+   //    t: Proof output tree (PROOF_PerfStat) containing performance statistics.
+   //    profile: Profile to be filled up with information from tree 't'.
+   //    nactive: Number of active workers processed the query.
+   // Return
+   //    Nothing
+
    Int_t nevents_holder;
    Int_t bytes_holder;
    Float_t time_holder;
 
-   Int_t max_slaves=0;
-      
    // extract timing information
    TPerfEvent pe;
    TPerfEvent* pep = &pe;
@@ -323,7 +327,7 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t 
    for (Long64_t k=0; k<entries; k++) {
       t->GetEntry(k);
 
-      Printf("k:%lld fTimeStamp=%lf fEvtNode=%s pe.fType=%d fSlaveName=%s fNodeName=%s fFileName=%s fFileClass=%s fSlave=%s fEventsProcessed=%lld fBytesRead=%lld fLen=%lld fLatency=%lf fProcTime=%lf fCpuTime=%lf fIsStart=%d fIsOk=%d",k, pe.fTimeStamp.GetSec() + 1e-9*pe.fTimeStamp.GetNanoSec(), pe.fEvtNode.Data(), pe.fType, pe.fSlaveName.Data(), pe.fNodeName.Data(), pe.fFileName.Data(), pe.fFileClass.Data(), pe.fSlave.Data(), pe.fEventsProcessed, pe.fBytesRead, pe.fLen, pe.fLatency, pe.fProcTime, pe.fCpuTime, pe.fIsStart, pe.fIsOk);
+      //Printf("k:%lld fTimeStamp=%lf fEvtNode=%s pe.fType=%d fSlaveName=%s fNodeName=%s fFileName=%s fFileClass=%s fSlave=%s fEventsProcessed=%lld fBytesRead=%lld fLen=%lld fLatency=%lf fProcTime=%lf fCpuTime=%lf fIsStart=%d fIsOk=%d",k, pe.fTimeStamp.GetSec() + 1e-9*pe.fTimeStamp.GetNanoSec(), pe.fEvtNode.Data(), pe.fType, pe.fSlaveName.Data(), pe.fNodeName.Data(), pe.fFileName.Data(), pe.fFileClass.Data(), pe.fSlave.Data(), pe.fEventsProcessed, pe.fBytesRead, pe.fLen, pe.fLatency, pe.fProcTime, pe.fCpuTime, pe.fIsStart, pe.fIsOk);
 
       if (pe.fType==TVirtualPerfStats::kPacket){
          nevents_kPacket+=pe.fEventsProcessed;
@@ -354,9 +358,6 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t 
       if (pe.fType==TVirtualPerfStats::kStop) end= pe.fTimeStamp.GetSec()+1e-9*pe.fTimeStamp.GetNanoSec();
    }
      
-   //printf("nevents_kPacket=%lld, nevents_kRate=%lld\n", nevents_kPacket, nevents_kRate);
-   //printf("bytesread_kPacket=%lld, bytesread_kRate=%lld\n", bytesread_kPacket, bytesread_kRate);
-
    //if (nevents_kPacket!=fNEvents){
    //  Error("BuildTimingTree", "Number of events processed is different from the number of events in the file");
    // return 0;
@@ -462,13 +463,15 @@ void TProofBenchRunCPU::SetMaxNWorkers(Int_t maxnworkers)
 //______________________________________________________________________________
 void TProofBenchRunCPU::SetMaxNWorkers(TString sworkers)
 {
-//Set the maximum number of workers for benchmark test
-//Input parameters:
-//   sworkers: can be "1x", "2x" and so on, where total number of workers is set 
-//             to 1*no_total_workers, 2*no_total_workers respectively.
-//             For now only "1x" is supported
-//Returns:
-//   Nothing
+
+   // Set the maximum number of workers for benchmark test
+   // Input parameters
+   //    sworkers: can be "1x", "2x" and so on, where total number of workers is set 
+   //              to 1*no_total_workers, 2*no_total_workers respectively.
+   //              For now only "1x" is supported
+   // Returns
+   //    Nothing
+
    sworkers.ToLower();
    sworkers.Remove(TString::kTrailing, ' ');
    if (fProof){
@@ -519,18 +522,19 @@ TFile* TProofBenchRunCPU::OpenFile(const char* filename,
                              const char* ftitle,
                              Int_t compress)
 {
-//Opens a file which output profiles and/or intermediate files (trees, histograms when debug is set)
-//are to be written to. Makes a directory named "ProofBench" if possible and changes to the directory.
-//If directory ProofBench already exists, change to the directory. If the directory can not be created,
-//make a directory Rint:/ProofBench and change to the directory.
-//Input parameters:
-//   filename: Name of the file to open
-//   option: Option to TFile::Open(...) function
-//   ftitle: Input to TFile::Open(...) function
-//Returns:
-//   Open file if a file is already open
-//   New file just opened
-//   0 when open fails;
+   // Opens a file which output profiles and/or intermediate files (trees, histograms when debug is set)
+   // are to be written to. Makes a directory named "ProofBench" if possible and changes to the directory.
+   // If directory ProofBench already exists, change to the directory. If the directory can not be created,
+   // make a directory Rint:/ProofBench and change to the directory.
+   // Input parameters:
+   //    filename: Name of the file to open
+   //    option: Option for TFile::Open(...) function
+   //    ftitle: Title parameter for TFile::Open(...) function
+   //    compress: Compression parameter for TFile::Open(...) function
+   // Returns:
+   //    Open file if a file is already open
+   //    New file just opened
+   //    0 when open fails;
 
    TString sfilename(filename);
    sfilename.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
@@ -701,8 +705,10 @@ TString TProofBenchRunCPU::GetNameStem()const
 Int_t TProofBenchRunCPU::FillNodeInfo()
 {
    // Re-Generate the list of worker node info (fNodes)
-   // Return 0 if OK, -1 if proof not set, -2 if info could not be retrieved
    // (the existing info is always removed)
+   // Return
+   //     0 if ok
+   //    <0 otherwise
 
    if (!fProof){
       Error("FillNodeInfo", "proof not set, doing nothing");
