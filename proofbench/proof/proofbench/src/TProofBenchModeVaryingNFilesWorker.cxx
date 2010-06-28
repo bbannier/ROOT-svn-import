@@ -1,5 +1,5 @@
 // @(#)root/proofx:$Id$
-// Author:
+// Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
  * Copyright (C) 1995-2005, Rene Brun and Fons Rademakers.               *
@@ -11,17 +11,12 @@
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TProofBench                                                          //
+// TProofBenchVaryingNFilesWorker                                       //
 //                                                                      //
-// TProofBench is a steering class for PROOF benchmark suite.           //
-// The primary goal of benchmark suite is to determine the optimal      //
-// configuration parameters for a set of machines to be used as PROOF   //
-// cluster. The suite measures the performance of the cluster for a set //
-// of standard tasks as a function of the number of effective processes.//
-// From these results, indications about the optimal number of          //
-// concurrent processes could be derived. For large facilities,         //
-// the suite should also give indictions about the optimal number of    //
-// of sub-masters into which the cluster should be partitioned.         //
+// A mode for PROOF benchmark test.                                     //
+// In this mode, a given number of files are generated for each worker. //
+// During the test, the number of files to be processed in the cluster  //
+// is fNFiles * number_of_active_workers_in_the_cluster.                //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -67,21 +62,19 @@ void TProofBenchModeVaryingNFilesWorker::Print(Option_t* option)const
    Printf("fName=%s", fName.Data());
 }
 
-//Default behaviour for generating files on the worker nodes.
 //______________________________________________________________________________
 TMap* TProofBenchModeVaryingNFilesWorker::FilesToProcess(Int_t nf)
 {
 
-//Generates files on worker nodes for I/O test or for cleanup run
-//Input parameters do not change corresponding data members
-//
-//Input parameters
-//   nf: Number of files per worker. When nf=-1, use data member fNFiles.
-//Returns: 
-//  map with files to be generated on the worker nodes
-
-   // Create the file names and the map {worker,files}
-   // Naming:        <basedir>/EventTree_Benchmark_nfile_serial.root
+   // Create a map of files to be generated on worker nodes.
+   // File name format is "EventTree_Benchmark_nfile_serial.root".
+   // Input parameters do not change corresponding data members.
+   //
+   // Input parameters
+   //    nf: Number of files per worker.
+   //        When nf=-1, use data member fNFiles.
+   // Returns
+   //    Map of files to be generated on the worker nodes.
 
    if (nf==-1){
       nf=fNFiles;
@@ -115,7 +108,26 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
                                                   const char* option,
                                                   TProof* proof)
 {
-   //check input parameters
+   // Make data sets out of data set 'tdset' and register them.
+   // Input parameters
+   //    nf: Number of files a node.
+   //        When ==-1, data member fNFiles are used.
+   //    start: Start scan at 'start' number of workers.
+   //    stop: Stop scan at 'stop' number of workers.
+   //          When ==-1, it is set to total number of workers in the cluster.
+   //    step: Scan every 'step' workers.
+   //    tdset: Data set ouf of which data sets are built and registered.
+   //    option: Option to TProof::RegisterDataSet(...).
+   //    proof: Proof
+   // Return
+   //   0 when ok
+   //  <0 otherwise
+
+   if (!fProof){
+      Error("MakeDataSets", "proof not set, doing nothing");
+      return -1;
+   }
+
    if (!tdset){
        Error("MakeDataSets", "No generated files provided; returning");
        return -1;
@@ -144,9 +156,8 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
       wp[i]=nactive;
       i++;
    }
-   MakeDataSets(nf, np, wp, tdset, option, proof);
+   return MakeDataSets(nf, np, wp, tdset, option, proof);
 
-   return 0;
 }
 
 //______________________________________________________________________________
@@ -157,23 +168,43 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
                                                   const char *option,
                                                   TProof* proof)
 {
-   //check input parameters
+
+   // Make data sets out of data set 'tdset' and register them.
+   // Data set name has the form : DataSetEventConstNFilesWorker_nactiveworkersincluster_nfilesanode
+   // Input parameters
+   //    nf: Number of files a node.
+   //    np: Number of test points.
+   //    wp: 'np'-sized array containing the number of active workers to process files.
+   //    tdset: Data set ouf of which data sets are built and registered.
+   //    option: Option to TProof::RegisterDataSet(...).
+   //    proof: Proof
+   // Return
+   //   0 when ok
+   //  <0 otherwise
+
+   if (!fProof){
+      Error("MakeDataSets", "proof not set, doing nothing");
+      return -1;
+   }
+
    if (!tdset){
       Error("MakeDataSets", "No generated files provided; returning");
       return -1;
    }
 
+   if (nf==-1){
+      nf=fNFiles;
+      Info("MakeDataSets", "Number of files a node is %d for %s", nf, GetName());
+   }
+
    // Dataset naming: DataSetEventConstNFilesNode_nworkersincluster_nfilesaworker
-   TString smode, stem;
-   smode="VaryingNFilesWorker";
-   stem="_Benchmark_";
 
    TString dsname;
    Int_t kp;
    Int_t nfiles=0;
    for (kp = 0; kp < np; kp++) {
       TFileCollection *fc = new TFileCollection;
-      dsname.Form("DataSetEvent%s_%d_%d", smode.Data(), wp[kp], nf);
+      dsname.Form("DataSetEvent%s_%d_%d", GetName(), wp[kp], nf);
       Info("MakeDataSets", "creating dataset '%s' ...", dsname.Data());
 
       nfiles=nf*wp[kp]; //number of files on all nodes for wp[kp] workers
@@ -232,9 +263,11 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
             if (hostname!=nodename) continue; 
 
             //Info("MakeDataSets", "filename=%s", fileinfo->GetName());
-            //filename=root://hostname//directory/EventTree_Benchmark_filenumber_serial.root
+            //filename=root://hostname/directory/EventTree_Benchmark_filenumber_serial.root
             //remove upto "Benchmark_"
             tmpstring=filename;
+            TString stem="_Benchmark_";
+
             tmpstring.Remove(0, filename.Index(stem)+stem.Length());
 
             TObjArray* token=tmpstring.Tokenize("_");
@@ -315,8 +348,10 @@ const char* TProofBenchModeVaryingNFilesWorker::GetName()const
 Int_t TProofBenchModeVaryingNFilesWorker::FillNodeInfo()
 {
    // Re-Generate the list of worker node info (fNodes)
-   // Return 0 if OK, -1 if proof not set, -2 if info could not be retrieved
    // (the existing info is always removed)
+   // Return
+   //    0 if ok
+   //   <0 otherwise
 
    if (!fProof){
       Error("FillNodeInfo", "proof not set, doing nothing");
