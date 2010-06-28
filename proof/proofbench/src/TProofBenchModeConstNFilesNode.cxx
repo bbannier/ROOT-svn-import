@@ -129,6 +129,11 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
    //   0 when ok
    //  <0 otherwise
 
+   if (!fProof){
+      Error("FillNodeInfo", "proof not set, doing nothing");
+      return -1;
+   }
+
    if (!tdset){
        Error("MakeDataSets", "No generated files provided; returning");
        return -1;
@@ -181,7 +186,16 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
    // Return
    //   0 when ok
    //  <0 otherwise
-   // There will be 'nr' datasets per point, rotating the files
+
+   if (!fProof){
+      Error("FillNodeInfo", "proof not set, doing nothing");
+      return -1;
+   }
+
+   if (!tdset){
+      Error("MakeDataSets", "No generated files provided; returning");
+      return -1;
+   }
 
    TString dsname;
    Int_t kp;
