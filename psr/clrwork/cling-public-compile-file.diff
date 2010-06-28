@@ -1,0 +1,15 @@
+Index: include/cling/Interpreter/Interpreter.h
+===================================================================
+--- include/cling/Interpreter/Interpreter.h	(revision 33795)
++++ include/cling/Interpreter/Interpreter.h	(working copy)
+@@ -98,8 +98,10 @@
+    clang::CompilerInstance* createCI(const char* llvmdir = 0);
+    clang::ASTConsumer* maybeGenerateASTPrinter() const;
+    clang::CompilerInstance* compileString(const std::string& srcCode);
++public:
+    clang::CompilerInstance* compileFile(const std::string& filename,
+                                         const std::string* trailcode = 0);
++private:
+ 
+    llvm::Module* doCodegen(clang::CompilerInstance* CI,
+                            const std::string& filename);
