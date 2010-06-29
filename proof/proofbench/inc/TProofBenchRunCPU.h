@@ -66,7 +66,6 @@ private:
    TList* fNodes;                //list of node information
 
    TList* fPerfStats;            //list of PROOF_PerfStats
-   TProfile* fProfEvent;         //profile histogram (number of events processed per second)
    TList* fListPerfProfiles;     //list of performance profiles
    TCanvas* fCPerfProfiles;      //canvas for performance profile histograms
 

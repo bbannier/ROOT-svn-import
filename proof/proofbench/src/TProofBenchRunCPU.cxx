@@ -75,7 +75,6 @@ fDirProofBench(0),
 fWritable(0),
 fNodes(0),
 fPerfStats(0),
-fProfEvent(0),
 fListPerfProfiles(0),
 fCPerfProfiles(0),
 fName(0)
@@ -114,13 +113,13 @@ TProofBenchRunCPU::~TProofBenchRunCPU()
 {
    // Destructor
    fProof=0;
-   if (fProfEvent) delete fProfEvent;
    fDirProofBench=0;
    if (fFile){
       fFile->Close();
       delete fFile;
    }
    if (fNodes) delete fNodes;  //fNodes is the owner of its members
+   if (fListPerfProfiles) delete fListPerfProfiles;
    if (fCPerfProfiles) delete fCPerfProfiles;
 } 
 
@@ -404,8 +403,8 @@ void TProofBenchRunCPU::Print(Option_t* option)const{
       Printf("fDirProofBench=%s", fDirProofBench->GetPath());
    }
    if (fNodes) fNodes->Print(option);
-   if (fProfEvent) fProfEvent->Print(option);
-
+   if (fPerfStats) fPerfStats->Print(option);
+   if (fListPerfProfiles) fListPerfProfiles->Print(option);
    if (fCPerfProfiles){
       Printf("Performance Profiles Canvas: Name=%s Title=%s",
               fCPerfProfiles->GetName(), fCPerfProfiles->GetTitle());
@@ -415,17 +414,32 @@ void TProofBenchRunCPU::Print(Option_t* option)const{
 //______________________________________________________________________________
 void TProofBenchRunCPU::DrawPerfProfiles()
 {
-   //TPad* canvas=proofbench->GetCPerfProfiles();
-   fCPerfProfiles->cd();
-   fCPerfProfiles->Clear();
-   fCPerfProfiles->Divide(2,1);
-
-   if (fProfEvent){
-      fCPerfProfiles->cd(1);
-      fProfEvent->Draw(); 
+   // Get canvas
+   if (!fCPerfProfiles){
+      fCPerfProfiles=new TCanvas("CPerfProfiles");
    }
 
-   fCPerfProfiles->cd(0);
+   fCPerfProfiles->Clear();
+
+   // Divide the canvas as many as the number of profiles in the list
+   Int_t nprofiles=fListPerfProfiles->GetSize();
+   if (nprofiles<=2){
+      fCPerfProfiles->Divide(nprofiles);
+   }
+   else{
+      Int_t nside = (Int_t)TMath::Sqrt((Float_t)nprofiles);
+      nside = (nside*nside<nprofiles)?nside+1:nside;
+      fCPerfProfiles->Divide(nside,nside);
+   }
+
+   Int_t npad=1;
+   TIter nxt(fListPerfProfiles);
+   TProfile* profile=0;
+   while ((profile=(TProfile*)(nxt()))){
+      fCPerfProfiles->cd(npad++);
+      profile->Draw();
+      gPad->Update();
+   }
    return; 
 }
 
