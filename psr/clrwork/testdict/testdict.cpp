@@ -6,10 +6,10 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Frontend/CodeGenAction.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/DiagnosticOptions.h"
@@ -33,8 +33,10 @@
 
 #include "TSystem.h"
 
-#include "clr-scan.h"
-#include "dict.h"
+#include "Reflex/DictionaryGenerator.h"
+
+#include "../lib/clr-scan.h"
+#include "../lib/dict.h"
 
 #include <vector>
 #include <iostream>
