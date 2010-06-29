@@ -82,8 +82,6 @@ fDirProofBench(0),
 fWritable(0),
 fNodes(0),
 fPerfStats(0),
-fProfEvent(0),
-fProfIO(0),
 fListPerfProfiles(0),
 fCPerfProfiles(0),
 fName(0)
@@ -128,14 +126,23 @@ TProofBenchRunDataRead::~TProofBenchRunDataRead()
 {
    // Destructor
    fProof=0;
-   if (fProfEvent) delete fProfEvent;
-   if (fProfIO) delete fProfIO;
    fDirProofBench=0;
    if (fFile){
       fFile->Close();
       delete fFile;
    }
-   if (fNodes) delete fNodes;
+   if (fNodes){
+      fNodes->SetOwner(kTRUE);
+      SafeDelete(fNodes);
+   }
+   if (fPerfStats){
+      fPerfStats->SetOwner(kTRUE);
+      SafeDelete(fPerfStats);
+   }
+   if (fListPerfProfiles){
+      fListPerfProfiles->SetOwner(kTRUE);
+      SafeDelete(fListPerfProfiles);
+   }
    if (fCPerfProfiles) delete fCPerfProfiles;
 } 
 
@@ -264,7 +271,8 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
 
    //get pad
    if (!fCPerfProfiles){
-      fCPerfProfiles=new TCanvas("CPerfProfiles");
+      TString canvasname=TString("Performance Profiles ")+GetName();
+      fCPerfProfiles=new TCanvas(canvasname.Data(), canvasname.Data());
    }
    //divide the canvas as many as the number of profiles in the list
    Int_t nprofiles=fListPerfProfiles->GetSize();
@@ -570,8 +578,8 @@ void TProofBenchRunDataRead::Print(Option_t* option)const{
       Printf("fDirProofBench=%s", fDirProofBench->GetPath());
    }
    if (fNodes) fNodes->Print(option);
-   if (fProfEvent) fProfEvent->Print(option);
-   if (fProfIO) fProfIO->Print(option);
+   if (fPerfStats) fPerfStats->Print(option);
+   if (fListPerfProfiles) fListPerfProfiles->Print(option);
 
    if (fCPerfProfiles){
       Printf("Performance Profiles Canvas: Name=%s Title=%s", 
@@ -582,27 +590,34 @@ void TProofBenchRunDataRead::Print(Option_t* option)const{
 //______________________________________________________________________________
 void TProofBenchRunDataRead::DrawPerfProfiles()
 {
-   //TPad* canvas=proofbench->GetCPerfProfiles();
-   
-   if (!fCPerfProfiles) fCPerfProfiles=new TCanvas("cPerfPrifiles", "Performance Profiles");
+   // Get canvas
+   if (!fCPerfProfiles){
+      TString canvasname=TString("Performance Profiles ")+GetName();
+      fCPerfProfiles=new TCanvas(canvasname.Data(), canvasname.Data());
+   }
 
-   fCPerfProfiles->cd();
    fCPerfProfiles->Clear();
-   fCPerfProfiles->Divide(2,1);
 
-   //TProfile* prof_event=proofbench->GetProfEvent();
-   if (fProfEvent){
-      fCPerfProfiles->cd(1);
-      fProfEvent->Draw(); 
+   // Divide the canvas as many as the number of profiles in the list
+   Int_t nprofiles=fListPerfProfiles->GetSize();
+   if (nprofiles<=2){
+      fCPerfProfiles->Divide(nprofiles);
+   }
+   else{
+      Int_t nside = (Int_t)TMath::Sqrt((Float_t)nprofiles);
+      nside = (nside*nside<nprofiles)?nside+1:nside;
+      fCPerfProfiles->Divide(nside,nside);
    }
 
-   //TProfile* prof_io=proofbench->GetProfIO();
-   if (fProfIO){
-      fCPerfProfiles->cd(2);
-      fProfIO->Draw(); 
+   Int_t npad=1;
+   TIter nxt(fListPerfProfiles);
+   TProfile* profile=0;
+   while ((profile=(TProfile*)(nxt()))){
+      fCPerfProfiles->cd(npad++);
+      profile->Draw();
+      gPad->Update();
    }
-   fCPerfProfiles->cd(0);
-   return; 
+   return;
 }
 
 //______________________________________________________________________________
