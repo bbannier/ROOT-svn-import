@@ -1,4 +1,3 @@
-// @(#)root/cint:$Id$
 // Author: Zdenek Culik   16/04/2010
 
 #ifndef __CLR_UTIL_H__

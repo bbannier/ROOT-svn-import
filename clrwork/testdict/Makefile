@@ -1,3 +1,5 @@
+all : testdict
+
 #srcdir = .
 #top_srcdir = ..
 
@@ -24,21 +26,22 @@ LLVM_COMPONENTS += bitreader bitwriter codegen ipo selectiondag
 
 LLVM_LIBS := $(shell $(LLVM_CONFIG) --ldflags) -lclangFrontend -lclangCodeGen -lclangSema -lclangChecker -lclangAnalysis -lclangRewrite -lclangAST -lclangParse -lclangLex -lclangBasic -lclangDriver $(shell $(LLVM_CONFIG) --libs $(LLVM_COMPONENTS))
 
+vpath %.h ../lib
+vpath %.cpp ../lib
+
 testdict_OBJECTS := clr-reg.o clr-scan.o dict.o testdict.o
 testdict_LDFLAGS := $(ROOT_LDFLAGS) -lReflex $(LLVM_LIBS)
 
-CLEANFILES := testdict $(testdict_OBJECTS)
-
-all : testdict
+CLEANFILES := .deps testdict $(testdict_OBJECTS)
 
 testdict : $(testdict_OBJECTS)
-	g++ -o $@ $^ $(testdict_LDFLAGS)
+	g++ -o $@ $(ROOT_CFLAGS) -I$(ROOTSYS) $(LLVM_CFLAGS) $^ $(testdict_LDFLAGS)
 
 $(testdict_OBJECTS) : %.o : %.cpp
-	g++ -o $@ $< -Wp,-MMD,.deps/$(*F).pp
+	g++ -c -o $@ $(ROOT_CFLAGS) -I$(ROOTSYS) $(LLVM_CFLAGS) $< -Wp,-MMD,.deps/$(*F).pp
 
 clean :
-	rm -f "$(CLEANFILES)"
+	rm -rf $(CLEANFILES)
 
 #COMPLETE_CLEAN_FILES := Makefile
 
