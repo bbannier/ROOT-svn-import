@@ -5,11 +5,11 @@
 
 //______________________________________________________________________________
 TTextHelper::TTextHelper():
+   fIndent(0),
+   fStartLine(true),
    fFileStream(NULL),
    fStringStream(NULL),
-   fStream(NULL),
-   fIndent(0),
-   fStartLine(true)
+   fStream(NULL)
 {
 }
 
@@ -114,7 +114,7 @@ void TTextHelper::PutChr(char c)
 //______________________________________________________________________________
 void TTextHelper::PutEol()
 {
-   PutPlainStr("\n");
+   PutPlainStr("\r\n");
    CloseLine();
 }
 
@@ -393,4 +393,3 @@ void THtmlHelper::Tail()
 }
 
 /* -------------------------------------------------------------------------- */
-

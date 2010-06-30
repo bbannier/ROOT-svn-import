@@ -1,11 +1,22 @@
-// dict.h
+
+/* dict.h */
+
 #ifndef __CLR_DICT_H__
 #define __CLR_DICT_H__
 
-namespace Reflex {
-class DictionaryGenerator;
-}
+#include "Reflex/Reflex.h"
+#include "Reflex/DictionaryGenerator.h"
+
+/* ---------------------------------------------------------------------- */
 
 void GlobalScope_GenerateDict(Reflex::DictionaryGenerator& generator);
 
-#endif // __CLR_DICT_H__
+/* ---------------------------------------------------------------------- */
+
+class TContext;
+TContext* GetFirstContext ();
+void DeleteContexts ();
+
+/* ---------------------------------------------------------------------- */
+
+#endif /* __CLR_DICT_H__ */

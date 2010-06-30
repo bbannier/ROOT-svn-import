@@ -13,6 +13,7 @@
 class TReflexPrinter : public THtmlHelper {
 private:
    void PrintLine(TString key, TString name);
+   void PrintNote(TString s);
 
    void PrintTypeName(Reflex::Type t);
    void PrintTypeNotes(Reflex::Type t);
@@ -29,6 +30,7 @@ private:
    void PrintAccess(Reflex::Member m, int& acs);
    void PrintScope(Reflex::Scope s, bool show_access = false);
    void PrintSrcScope(TString text, Reflex::Scope s);
+
    #if 0
    void PrintTypeTemplate(Reflex::TypeTemplate s);
    void PrintMemberTemplate(Reflex::MemberTemplate s);
@@ -40,18 +42,6 @@ public:
 
    void Print(Reflex::Scope scope);
 };
-
-/* -------------------------------------------------------------------------- */
-
-/* pseudo code from Reflex dictionary */
-
-void ClrPrint(TString file_name,
-              TString style_file_name = "",
-              bool useHtml = false);
-
-TString ClrPrintScope (Reflex::Scope scope,
-                       TString style_file_name = "",
-                       bool useHtml = false);
 
 /* -------------------------------------------------------------------------- */
 
