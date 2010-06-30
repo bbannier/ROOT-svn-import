@@ -12,20 +12,26 @@ CLINGDIR     := $(MODDIR)
 CLINGDIRS    := $(CLINGDIR)/src
 CLINGDIRI    := $(CLINGDIR)/inc
 
-##### libRCling #####
 CLINGL       := $(MODDIRI)/LinkDef.h
 CLINGDS      := $(MODDIRS)/G__Cling.cxx
 CLINGDO      := $(CLINGDS:.cxx=.o)
 CLINGDH      := $(CLINGDS:.cxx=.h)
 
+##### rootcling #####
+ROOTCLINGS   := $(MODDIRS)/rootcling.cxx
+ROOTCLINGO   := $(ROOTCLINGS:.cxx=.o)
+ROOTCLING    := bin/rootcling$(EXEEXT)
+
+##### libRCling #####
 CLINGH       := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
-CLINGS       := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
+CLINGS       := $(filter-out $(ROOTCLINGS),$(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx)))
 CLINGO       := $(CLINGS:.cxx=.o)
 
-CLINGDEP     := $(CLINGO:.o=.d) $(CLINGDO:.o=.d)
+CLINGDEP     := $(CLINGO:.o=.d) $(CLINGDO:.o=.d) $(ROOTCLINGO:.o=.d)
 
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(CLINGH))
+ALLEXECS     += $(ROOTCLING)
 
 ### TODO: rename cling-based TCint to TCling, move into libRCling
 #CLINGLIB     := $(LPATH)/libRCling.$(SOEXT)
@@ -55,7 +61,11 @@ $(CLINGDS):     $(CLINGH) $(CLINGL) $(ROOTCINTTMPDEP)
 $(CLINGMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(CLINGL)
 		$(RLIBMAP) -o $(CLINGMAP) -l $(CLINGLIB) -d $(CLINGLIBDEPM) -c $(CLINGL)
 
-all-$(MODNAME): $(CLINGLIB) $(CLINGMAP)
+$(ROOTCLING):   $(ROOTCLINGO) $(BOOTLIBSDEP)
+		$(LD) $(LDFLAGS) -o $@ $(ROOTCLINGO) $(BOOTULIBS) \
+		  $(RPATH) $(BOOTLIBS) $(CORELIBEXTRA) $(SYSLIBS)
+
+all-$(MODNAME): $(CLINGLIB) $(CLINGMAP) $(ROOTCLING)
 
 clean-$(MODNAME):
 		@rm -f $(CLINGO) $(CLINGDO)
@@ -68,19 +78,17 @@ distclean-$(MODNAME): clean-$(MODNAME)
 distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
-$(CLINGO) $(clingdo): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS \
-                                  -I$(LLVMDIR)/include
+$(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS \
+                                  -I$(LLVMDIR)/include -I. -Wno-unused-parameter
 
 CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
  -lclingInterpreter -lclingMetaProcessor -lclingEditLine \
  -lclangFrontend \
  -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
- -lclangAST -lclangBasic -lclangDriver -Llib -lReflex \
+ -lclangBasic -lclangDriver -lclangAST -lclang -Llib -lReflex \
  -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
  -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86AsmParser -lLLVMX86AsmPrinter \
  -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86Info -lLLVMAsmPrinter \
  -lLLVMCodeGen -lLLVMScalarOpts -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
  -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMCParser -lLLVMMC -lLLVMCore \
  -lLLVMSupport -lLLVMSystem
-
-$(CLINGO) $(CLINGDO): CXXFLAGS += -Wno-unused-parameter
