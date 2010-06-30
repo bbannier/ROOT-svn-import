@@ -1,7 +1,8 @@
+// @(#)root/cint:$Id$
+// Author: Zdenek Culik   16/04/2010
+
 #ifndef __CLR_SCAN_H__
 #define __CLR_SCAN_H__
-
-// Author: Zdenek Culik   16/04/2010
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
@@ -9,49 +10,79 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/Type.h"
 
+#include "llvm/Module.h"
+
 #include "Reflex/Reflex.h"
 #include "Reflex/Builder/ReflexBuilder.h"
 
 #include "TString.h"
 
-#include <map>
-#include <string>
+/* -------------------------------------------------------------------------- */
 
-class TScanner {
+void ClrStubFunction (void* result, void* obj, const std::vector<void*>& params, void* ctx);
+
+struct TContext
+{
+   const llvm::Function * func;
+
+   // Reflex::Member* member;
+   std::string name; // only for debugging
+
+   int index;
+   TContext * next;
+
+   TContext () :
+      func (NULL),
+      // member (NULL),
+      index (0),
+      next (NULL)
+      { }
+};
+
+/* -------------------------------------------------------------------------- */
+
+class TScanner
+{
 private:
-   static int fgAnonymousClassCounter;
-   static int fgBadClassCounter;
-   static int fgAnonymousEnumCounter;
-
-   static std::map<clang::Decl*, std::string> fgAnonymousClassMap;
-   static std::map<clang::Decl*, std::string> fgAnonymousEnumMap;
+   clang::ASTContext* fCtx;
+   TObject * fReporter;
 
 public:
    static const char* fgClangDeclKey; // property key used for CLang declaration objects
    static const char* fgClangFuncKey; // property key for function (demangled) names
 
-public:
-   static clang::Decl* GetDeclProp(const Reflex::PropertyList& prop_list);
-   static std::string GetFuncProp(const Reflex::PropertyList& prop_list);
+   static clang::Decl* GetDeclProp (const Reflex::PropertyList& prop_list);
+   static std::string  GetFuncProp (const Reflex::PropertyList& prop_list);
 
 private:
-   clang::ASTContext* fCtx;
-   TObject* fReporter;
-   bool fUseStubs;
+   static int fgAnonymousClassCounter;
+   static int fgBadClassCounter;
+   static int fgAnonymousEnumCounter;
 
-public:
-   void UseStubs(bool value) { fUseStubs = value; }
+   static std::map <clang::Decl*, std::string> fgAnonymousClassMap;
+   static std::map <clang::Decl*, std::string> fgAnonymousEnumMap;
 
 private:
    // only for debugging
 
    static const int fgDeclLast = clang::Decl::Var;
-   bool fDeclTable[fgDeclLast+1];
+   bool fDeclTable [ fgDeclLast+1 ];
 
    static const int fgTypeLast = clang::Type::TemplateTypeParm;
-   bool fTypeTable[fgTypeLast+1];
+   bool fTypeTable [ fgTypeLast+1 ];
 
-   clang::Decl* fLastDecl;
+   clang::Decl * fLastDecl;
+
+#if 0
+private:
+   TContext* fFirstContext;
+   TContext* fLastContext;
+public:
+   void DeleteContexts ();
+   TContext* GetFirstContext () { return fFirstContext; }
+#endif
+private:
+   TContext* AllocateContext ();
 
 private:
    void ShowInfo(const TString msg, const TString location = "");
@@ -77,7 +108,7 @@ private:
    void UnsupportedType(clang::QualType qual_type);
    void UnimportantType(clang::QualType qual_type);
    void UnimplementedType(clang::QualType qual_type);
-   void UnimplementedType(clang::Type* T);
+   void UnimplementedType (clang::Type* T);
 
    std::string GetClassName(clang::RecordDecl* D);
    std::string GetEnumName(clang::EnumDecl* D);
@@ -138,7 +169,7 @@ private:
 
    void ScanEnum(clang::EnumDecl* D);
 
-   void ScanNamespaceAlias(clang::NamespaceAliasDecl *D);
+   void ScanNamespaceAlias (clang::NamespaceAliasDecl *D);
    void ScanUsing(clang::UsingDecl* D, Reflex::Scope Outer);
    void ScanUsingShadow(clang::UsingShadowDecl* D, Reflex::Scope Outer);
    void ScanUsingDirective(clang::UsingDirectiveDecl *D, Reflex::Scope Outer);
@@ -156,9 +187,12 @@ private:
    void ScanDecl(clang::Decl* D, Reflex::Scope Outer);
 
 public:
-   TScanner();
-   virtual ~TScanner();
-   void Scan(clang::ASTContext*);
+   TScanner ();
+   virtual ~ TScanner ();
+
+   void Scan (clang::ASTContext* C, clang::Decl* D);
 };
 
-#endif // __CLR_SCAN_H__
+/* -------------------------------------------------------------------------- */
+
+#endif /* __CLR_SCAN_H__ */

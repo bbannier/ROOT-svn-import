@@ -47,61 +47,66 @@ void TReflexPrinter::PrintLine(TString key, TString name)
 }
 
 //______________________________________________________________________________
+void TReflexPrinter::PrintNote(TString s)
+{
+   PutChr(' ');
+   s = "// " + s;
+   StyledText(s, comment_style);
+}
+
+//______________________________________________________________________________
 void TReflexPrinter::PrintTypeNotes(Reflex::Type t)
 {
    if (t.IsVirtual())
-      Put(" // virtual");
+      PrintNote("virtual");
 
    if (t.IsConst())
-      Put(" // const");
+      PrintNote("const");
 
    if (t.IsVolatile())
-      Put(" // volatile");
+      PrintNote("volatile");
 
    if (t.IsConstVolatile())
-      Put(" // const volatile");
+      PrintNote("const volatile");
 
    if (t.IsAbstract())
-      Put(" // abstract");
+      PrintNote("abstract");
 
-   if (t.IsArray()) {
-      Put(" // array [");
-      Put(NumToStr(t.ArrayLength()));
-      Put("]");
-   }
+   if (t.IsArray())
+      PrintNote("array [" + NumToStr(t.ArrayLength()) + "]");
 
    if (t.IsClass())
-      Put(" // class");
+      PrintNote("class");
 
    if (t.IsComplete())
-      Put(" // complete");
+      PrintNote("complete");
 
    if (t.IsEnum())
-      Put(" // enum");
+      PrintNote("enum");
 
    if (t.IsFundamental())
-      Put(" // fundamental");
+      PrintNote("fundamental");
 
    if (t.IsPointer())
-      Put(" // pointer");
+      PrintNote("pointer");
 
    if (t.IsPointerToMember())
-      Put(" // pointer to member");
+      PrintNote("pointer to member");
 
    if (t.IsReference())
-      Put(" // reference");
+      PrintNote("reference");
 
    if (t.IsStruct())
-      Put(" // struct");
+      PrintNote("struct");
 
    if (t.IsTypedef())
-      Put(" // typedef");
+      PrintNote("typedef");
 
    if (t.IsUnion())
-      Put(" // union");
+      PrintNote("union");
 
    if (t.IsUnqualified())
-      Put(" // unqualified");
+      PrintNote("unqualified");
 }
 
 //______________________________________________________________________________
@@ -166,12 +171,29 @@ void TReflexPrinter::PrintType(Reflex::Type t)
 }
 
 //______________________________________________________________________________
+void TReflexPrinter::PrintTypeName(Reflex::Type t)
+{
+   if (! t) {
+      StyledText( "no-type " + t.Name(qual_opt), error_style);
+   }
+   #if 0
+   else if (t.IsPointerToMember()) {
+      StyledText(t.Name(qual_opt), member_pointer_style);
+   }
+   #endif
+   else {
+      StyledText(t.Name(qual_opt), type_style);
+   }
+}
+
+//______________________________________________________________________________
 void TReflexPrinter::PrintSrcType(Reflex::Type t)
 {
    if (t.IsTypedef()) {
       StyledText("typedef", type_style);
       Put(" ");
-      Put(t.ToType().Name(qual_opt));
+      // Put(t.ToType().Name(qual_opt));
+      PrintTypeName(t.ToType());
       Put(" ");
       Put(t.Name());
       Put(";");
@@ -179,22 +201,6 @@ void TReflexPrinter::PrintSrcType(Reflex::Type t)
       PutEol();
    } else {
       // PrintType (t);
-   }
-}
-
-//______________________________________________________________________________
-void TReflexPrinter::PrintTypeName(Reflex::Type t)
-{
-   if (! t) {
-      StyledText("no-type", error_style);
-   }
-   #if 0
-   else if (t.IsPointerToMember()) {
-      StyledText("pointer-to-member", error_style);
-   }
-   #endif
-   else {
-      Put(t.Name(qual_opt));
    }
 }
 
@@ -300,7 +306,7 @@ void TReflexPrinter::PrintEnum(Reflex::Scope s)
 
       StyledText(m.Name(mini_opt), enum_style);
 
-      Put("=");
+      Put(" = ");
       Put(NumToStr(m.Offset()));
 
       ++ i;
@@ -382,7 +388,8 @@ void TReflexPrinter::PrintMember(Reflex::Member m)
          if (any)
             Put(", ");
 
-         Put(t.Name(qual_opt));
+         // Put(t.Name(qual_opt));
+         PrintTypeName(t);
 
          any = true;
       }
@@ -437,31 +444,31 @@ void TReflexPrinter::PrintMember(Reflex::Member m)
    /* comments */
 
    if (m.IsArtificial())
-      Put(" // artificial");
+      PrintNote("artificial");
 
    if (m.IsConstructor())
-      Put(" // constructor");
+      PrintNote("constructor");
 
    if (m.IsCopyConstructor())
-      Put(" // copy constructor");
+      PrintNote("copy constructor");
 
    if (m.IsConverter())
-      Put(" // converter");
+      PrintNote("converter");
 
    if (m.IsOperator())
-      Put(" // operator");
+      PrintNote("operator");
 
    if (m.IsDestructor())
-      Put(" // destructor");
+      PrintNote("destructor");
 
    if (m.IsAbstract())
-      Put(" // abstract");
+      PrintNote("abstract");
 
    if (m.IsPureVirtual())
-      Put(" // pure virtual");
+      PrintNote("pure virtual");
 
    if (m.IsTransient())
-      Put(" // transient");
+      PrintNote("transient");
 
    PutEol();
 
@@ -518,8 +525,8 @@ void TReflexPrinter::PrintScope(Reflex::Scope s, bool show_access)
    /* UsingDirective */
 
    for (Reflex::Scope_Iterator i = s.UsingDirective_Begin(); i != s.UsingDirective_End(); ++i) {
-      Reflex::Scope m = *i;
-      PrintLine("using", m.Name(qual_opt));
+      Reflex::Scope u = *i;
+      PrintLine("using", u.Name(qual_opt));
    }
 
    /* Member */
@@ -580,25 +587,25 @@ void TReflexPrinter::PrintScope(Reflex::Scope s, bool show_access)
    #if 0
    // all scopes
    for (Reflex::Scope_Iterator i = s.Scope_Begin(); i != s.Scope_End(); ++i) {
-      Reflex::Scope m = *i;
-      PrintLine("scope", m.Name());
+      Reflex::Scope sub_scope = *i;
+      PrintLine("scope", sub_scope.Name());
    }
    #endif
-
-   /* SubScope */
-
-   for (Reflex::Scope_Iterator i = s.SubScope_Begin(); i != s.SubScope_End(); ++i) {
-      Reflex::Scope m = *i;
-      PrintSrcScope("sub-scope", m);  // %%
-   }
 
    /* SubType */
 
    for (Reflex::Type_Iterator i = s.SubType_Begin(); i != s.SubType_End(); ++i) {
-      Reflex::Type t = *i;
-      Reflex::Scope sub_scope = t;
+      Reflex::Type sub_type = *i;
+      Reflex::Scope sub_scope = sub_type;
       if (! sub_scope)
-         PrintSrcType(t);
+         PrintSrcType(sub_type);
+   }
+
+   /* SubScope */
+
+   for (Reflex::Scope_Iterator i = s.SubScope_Begin(); i != s.SubScope_End(); ++i) {
+      Reflex::Scope sub_scope = *i;
+      PrintSrcScope("sub-scope", sub_scope);  // %%
    }
 
    if (show_access)
@@ -769,41 +776,3 @@ void TReflexPrinter::Print(Reflex::Scope scope)
    }
 
 }
-
-/*********************************** PRINT ************************************/
-
-void ClrPrint(TString file_name,
-              TString style_file_name,
-              bool useHtml)
-{
-   Reflex::Scope scope = Reflex::Scope::GlobalScope();
-
-   TReflexPrinter io;
-
-   io.Open(file_name);
-   io.EnableHtml(useHtml);
-   io.SetStyleFileName(style_file_name);
-
-   io.Print(scope);
-
-   io.Close();
-}
-
-TString ClrPrintScope(Reflex::Scope scope,
-                      TString style_file_name,
-                      bool useHtml)
-{
-   TReflexPrinter io;
-
-   io.OpenString();
-   io.EnableHtml(useHtml);
-   io.SetStyleFileName(style_file_name);
-
-   io.Print(scope);
-
-   return io.CloseString();
-}
-
-/* -------------------------------------------------------------------------- */
-
-
