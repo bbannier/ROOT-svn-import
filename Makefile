@@ -1,7 +1,62 @@
-LEVEL = ../..
-DIRS := lib tools
+##===- Makefile --------------------------------------------*- Makefile -*-===##
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+##===----------------------------------------------------------------------===##
 
+# If CLING_LEVEL is not set, then we are the top-level Makefile. Otherwise, we
+# are being included from a subdirectory makefile.
+
+ifndef CLING_LEVEL
+
+IS_TOP_LEVEL := 1
+CLING_LEVEL := .
+DIRS := include lib tools
+
+PARALLEL_DIRS :=
+
+ifeq ($(BUILD_EXAMPLES),1)
+  PARALLEL_DIRS += examples
+endif
+endif
+
+ifeq ($(MAKECMDGOALS),libs-only)
+  DIRS := $(filter-out tools docs, $(DIRS))
+  OPTIONAL_DIRS :=
+endif
+
+###
+# Common Makefile code, shared by all Cling Makefiles.
+
+# Set LLVM source root level.
+LEVEL := $(CLING_LEVEL)/../..
+
+# Include LLVM common makefile.
 include $(LEVEL)/Makefile.common
+
+# Set common Cling build flags.
+CPP.Flags += -I$(PROJ_SRC_DIR)/$(CLING_LEVEL)/include -I$(PROJ_OBJ_DIR)/$(CLING_LEVEL)/include
+ifdef CLING_VENDOR
+CPP.Flags += -DCLING_VENDOR='"$(CLING_VENDOR) "'
+endif
+
+# Disable -fstrict-aliasing. Darwin disables it by default (and LLVM doesn't
+# work with it enabled with GCC), Cling/llvm-gc don't support it yet, and newer
+# GCC's have false positive warnings with it on Linux (which prove a pain to
+# fix). For example:
+#   http://gcc.gnu.org/PR41874
+#   http://gcc.gnu.org/PR41838
+#
+# We can revisit this when LLVM/Cling support it.
+CXX.Flags += -fno-strict-aliasing
+
+###
+# Cling Top Level specific stuff.
+
+ifeq ($(IS_TOP_LEVEL),1)
 
 ifneq ($(PROJ_SRC_ROOT),$(PROJ_OBJ_ROOT))
 $(RecursiveTargets)::
@@ -12,7 +67,7 @@ $(RecursiveTargets)::
 endif
 
 test::
-	@ $(MAKE) -C test 
+	@ $(MAKE) -C test
 
 report::
 	@ $(MAKE) -C test report
@@ -20,8 +75,11 @@ report::
 clean::
 	@ $(MAKE) -C test clean
 
+libs-only: all
+
 tags::
-	$(Verb) etags `find . -type f -name \*.h | grep -v /lib/Headers | grep -v /test/` `find . -type f -name \*.cpp | grep -v /lib/Headers | grep -v /test/`
+	$(Verb) etags `find . -type f -name '*.h' -or -name '*.cpp' | \
+	  grep -v /lib/Headers | grep -v /test/`
 
 cscope.files:
 	find tools lib include -name '*.cpp' \
@@ -31,27 +89,4 @@ cscope.files:
 
 .PHONY: test report clean cscope.files
 
-install-local::
-	$(Echo) Installing include files
-	$(Verb) $(MKDIR) $(PROJ_includedir)
-	$(Verb) if test -d "$(PROJ_SRC_ROOT)/tools/cling/include" ; then \
-	  cd $(PROJ_SRC_ROOT)/tools/cling/include && \
-	  for  hdr in `find . -type f '!' '(' -name '*~' \
-	      -o -name '.#*' -o -name '*.in' ')' -print | grep -v CVS | \
-	      grep -v .svn` ; do \
-	    instdir=`dirname "$(PROJ_includedir)/$$hdr"` ; \
-	    if test \! -d "$$instdir" ; then \
-	      $(EchoCmd) Making install directory $$instdir ; \
-	      $(MKDIR) $$instdir ;\
-	    fi ; \
-	    $(DataInstall) $$hdr $(PROJ_includedir)/$$hdr ; \
-	  done ; \
-	fi
-ifneq ($(PROJ_SRC_ROOT),$(PROJ_OBJ_ROOT))
-	$(Verb) if test -d "$(PROJ_OBJ_ROOT)/tools/cling/include" ; then \
-	  cd $(PROJ_OBJ_ROOT)/tools/cling/include && \
-	  for hdr in `find . -type f -print | grep -v CVS | grep -v .tmp` ; do \
-	    $(DataInstall) $$hdr $(PROJ_includedir)/$$hdr ; \
-	  done ; \
-	fi
 endif
