@@ -301,7 +301,9 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    
          //cleanup run
          dsname.Form("DataSetEvent%s_%d_%d", smode.Data(), nactive, nf);
-         fRunCleanup->SetDataSetCleanup(dsname);
+         if (fRunCleanup->GetCleanupType()==TProofBenchRun::kCleanupKernel){
+            fRunCleanup->SetDataSetCleanup(dsname);
+         }
          fRunCleanup->Run(nevents, 0, 0, 0, 0, debug, draw);
 
          //TString namestem=GetNameStem();
@@ -309,10 +311,13 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
          SetParameters();
          fProof->SetParallel(nactive);
 
+         Info("RunBenchmark", "Processing data set : %s", dsname.Data()); 
+
          TFileCollection* fc=0;
          Long64_t nfiles=0;
          Long64_t nevents_total=-1; //-1 for all events in the group of files
          if ((fc=fProof->GetDataSet(dsname.Data()))){
+            fc->Print();
             nfiles=fc->GetNFiles();
             if (nevents>0){
                nevents_total=nfiles*nevents;
@@ -323,7 +328,6 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
             continue;
          }
 
-         Info("RunBenchmark", "Processing data set : %s", dsname.Data()); 
          Info("RunBenchmark", "Total number of events to process is %lld", nevents_total); 
          TTime starttime = gSystem->Now();
          fProof->Process(dsname.Data(), "TSelEvent", "", nevents_total);
