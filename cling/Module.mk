@@ -44,6 +44,11 @@ ALLEXECS     += $(ROOTCLING)
 INCLUDEFILES += $(CLINGDEP)
 
 ##### local rules #####
+ifeq ($(strip $(LLVMDIR)),)
+PRINTME:=$(shell echo 'ERROR: you forgot to define LLVMDIR!' >&2)
+EXITING-BECAUSE-OF-ERROR
+endif
+
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME) check-cling-header
 
 include/%.h:    $(CLINGDIRI)/%.h
