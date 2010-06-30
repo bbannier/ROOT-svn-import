@@ -68,7 +68,7 @@ $(CLINGMAP):    $(RLIBMAP) $(MAKEFILEDEP) $(CLINGL)
 
 $(ROOTCLING):   $(ROOTCLINGO) $(BOOTLIBSDEP)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTCLINGO) $(BOOTULIBS) \
-		  $(RPATH) $(BOOTLIBS) $(CORELIBEXTRA) $(SYSLIBS)
+		  $(RPATH) $(BOOTLIBS) $(SYSLIBS)
 
 all-$(MODNAME): $(CLINGLIB) $(CLINGMAP) $(ROOTCLING)
 
@@ -90,7 +90,7 @@ CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
  -lclingInterpreter -lclingMetaProcessor -lclingEditLine \
  -lclangFrontend \
  -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
- -lclangBasic -lclangDriver -lclangAST -lclang -Llib -lReflex \
+ -lclangBasic -lclangDriver -lclangAST -Llib -lReflex \
  -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
  -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86AsmParser -lLLVMX86AsmPrinter \
  -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86Info -lLLVMAsmPrinter \
