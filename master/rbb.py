@@ -662,17 +662,19 @@ class ROOTBuildBotConfig:
             for trig in src.triggers:
                 # the scheduler name is like
                 #   roottest-ARCH-full-triggerable
-                trigsched.append(trig + '-' + arch + '-' + buildertype + '-triggerable')
-            fact.addStep(trigger.Trigger(schedulerNames = trigsched,
-                                         # it's bad to rebuild ROOT while its roottest is using it,
-                                         # but waiting to finish can end up in a deadlock
-                                         # where the node cannot build roottest because it's busy with a ROOT
-                                         # build waiting for roottest to finish...
-                                         # Instead, use locks on the builders
-                                         waitForFinish = False,
-                                         # DO NOT use src's SVN revision but
-                                         # the one from the trigger's src:
-                                         updateSourceStamp = False))
+                if trig not in slave['vetoSource']:
+                    trigsched.append(trig + '-' + arch + '-' + buildertype + '-triggerable')
+            if len(trigsched):
+                fact.addStep(trigger.Trigger(schedulerNames = trigsched,
+                                             # it's bad to rebuild ROOT while its roottest is using it,
+                                             # but waiting to finish can end up in a deadlock
+                                             # where the node cannot build roottest because it's busy with a ROOT
+                                             # build waiting for roottest to finish...
+                                             # Instead, use locks on the builders
+                                             waitForFinish = False,
+                                             # DO NOT use src's SVN revision but
+                                             # the one from the trigger's src:
+                                             updateSourceStamp = False))
 
         buildtypesort = {
             'incr'     : 0,
