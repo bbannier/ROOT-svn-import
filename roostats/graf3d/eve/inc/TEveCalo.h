@@ -79,6 +79,8 @@ public:
    virtual TClass* ProjectedClass(const TEveProjection* p) const;
    virtual Float_t GetValToHeight() const;
    virtual void    CellSelectionChanged() {}
+   
+   virtual void    SetScaleAbs(Bool_t x) { fScaleAbs = x; }
 
    TEveCaloData* GetData() const { return fData; }
    void    SetData(TEveCaloData* d);
@@ -103,7 +105,6 @@ public:
 
    void    SetMaxTowerH(Float_t x) { fMaxTowerH = x; }
    Float_t GetMaxTowerH() const    { return fMaxTowerH; }
-   void    SetScaleAbs(Bool_t x) { fScaleAbs = x; }
    Bool_t  GetScaleAbs() const { return fScaleAbs; }
    void    SetMaxValAbs(Float_t x) { fMaxValAbs = x; }
    Float_t GetMaxValAbs() const    { return fMaxValAbs; }
@@ -157,7 +158,7 @@ protected:
    Bool_t    fRnrBarrelFrame;
 
    Color_t   fFrameColor;
-   UChar_t   fFrameTransparency;
+   Char_t    fFrameTransparency;
 
    virtual void BuildCellIdCache();
 
@@ -166,14 +167,11 @@ public:
    virtual ~TEveCalo3D() {}
    virtual void ComputeBBox();
 
-   virtual Bool_t CanEditMainColor()        const { return kTRUE; }
-   virtual Bool_t CanEditMainTransparency() const { return kTRUE; }
-
    void SetRnrFrame(Bool_t e, Bool_t b)         { fRnrEndCapFrame = e; fRnrBarrelFrame = b; }
    void GetRnrFrame(Bool_t &e, Bool_t &b) const { e = fRnrEndCapFrame; b = fRnrBarrelFrame; }
 
-   void    SetFrameTransparency(UChar_t x) { fFrameTransparency = x; }
-   UChar_t GetFrameTransparency() const { return fFrameTransparency; }
+   void   SetFrameTransparency(Char_t x) { fFrameTransparency = x; }
+   Char_t GetFrameTransparency() const { return fFrameTransparency; }
 
    ClassDef(TEveCalo3D, 0); // Class for 3D visualization of calorimeter event data.
 };
@@ -218,6 +216,8 @@ public:
    virtual void ComputeBBox();
 
    virtual void CellSelectionChanged();
+      
+   virtual void    SetScaleAbs(Bool_t);
 
    virtual Float_t GetValToHeight() const;
 
@@ -246,7 +246,7 @@ protected:
    Color_t                 fFontColor;
    Color_t                 fGridColor;
    Color_t                 fPlaneColor;
-   UChar_t                 fPlaneTransparency;
+   Char_t                  fPlaneTransparency;
 
    Int_t                   fNZSteps; // Z axis label step in GeV
    Float_t                 fZAxisStep;
@@ -261,6 +261,9 @@ protected:
 
    Bool_t                  fDrawHPlane;
    Float_t                 fHPlaneVal;
+
+   Bool_t                  fHasFixedHeightIn2DMode;
+   Float_t                 fFixedHeightValIn2DMode; // 1% of whole height
 
    Int_t                   fDrawNumberCellPixels;
    Int_t                   fCellPixelFontSize;
@@ -283,8 +286,8 @@ public:
    Color_t  GetPlaneColor() const { return fPlaneColor; }
    void     SetPlaneColor(Color_t ci) { fPlaneColor=ci; }
 
-   UChar_t  GetPlaneTransparency() const { return fPlaneTransparency; }
-   void     SetPlaneTransparency(UChar_t t) { fPlaneTransparency=t; }
+   Char_t   GetPlaneTransparency() const { return fPlaneTransparency; }
+   void     SetPlaneTransparency(Char_t t) { fPlaneTransparency=t; }
 
    Int_t    GetNZSteps() const { return fNZSteps; }
    void     SetNZSteps(Int_t s) { fNZSteps = s;}
@@ -298,11 +301,17 @@ public:
    Bool_t   GetNormalizeRebin() const { return fNormalizeRebin; }
    void     SetNormalizeRebin(Bool_t s) { fNormalizeRebin = s; fCellIdCacheOK=kFALSE;}
 
+   EProjection_e  GetProjection() const { return fProjection; }
    void           SetProjection(EProjection_e p) { fProjection = p; }
-   EProjection_e  GetProjection() { return fProjection; }
 
    void       Set2DMode(E2DMode_e p) { f2DMode = p; }
    E2DMode_e  Get2DMode() { return f2DMode; }
+
+   bool       GetHasFixedHeightIn2DMode() const { return fHasFixedHeightIn2DMode; }
+   void       SetHasFixedHeightIn2DMode(bool x) { fHasFixedHeightIn2DMode = x; }
+
+   float      GetFixedHeightValIn2DMode() const  { return fFixedHeightValIn2DMode; }
+   void       SetFixedHeightValIn2DMode(float x) { fFixedHeightValIn2DMode = x; }
 
    void        SetBoxMode(EBoxMode_e p) { fBoxMode = p; }
    EBoxMode_e  GetBoxMode() { return fBoxMode; }

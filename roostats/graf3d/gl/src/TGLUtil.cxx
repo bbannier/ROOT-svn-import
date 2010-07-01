@@ -1381,6 +1381,13 @@ Float_t TGLUtil::fgLineWidth      = 1.0f;
 Float_t TGLUtil::fgPointSizeScale = 1.0f;
 Float_t TGLUtil::fgLineWidthScale = 1.0f;
 
+const UChar_t TGLUtil::fgRed[4]    = { 230,   0,   0, 255 };
+const UChar_t TGLUtil::fgGreen[4]  = {   0, 230,   0, 255 };
+const UChar_t TGLUtil::fgBlue[4]   = {   0,   0, 230, 255 };
+const UChar_t TGLUtil::fgYellow[4] = { 210, 210,   0, 255 };
+const UChar_t TGLUtil::fgWhite[4]  = { 255, 255, 255, 255 };
+const UChar_t TGLUtil::fgGrey[4]   = { 128, 128, 128, 100 };
+
 #ifndef CALLBACK
 #define CALLBACK
 #endif
@@ -1565,7 +1572,7 @@ void TGLUtil::Color(const TGLColor& color)
 }
 
 //______________________________________________________________________________
-void TGLUtil::Color(const TGLColor& color, UChar_t alpha)
+void TGLUtil::ColorAlpha(const TGLColor& color, UChar_t alpha)
 {
    // Set color from TGLColor and alpha value.
 
@@ -1576,7 +1583,7 @@ void TGLUtil::Color(const TGLColor& color, UChar_t alpha)
 }
 
 //______________________________________________________________________________
-void TGLUtil::Color(const TGLColor& color, Float_t alpha)
+void TGLUtil::ColorAlpha(const TGLColor& color, Float_t alpha)
 {
    // Set color from TGLColor and alpha value.
 
@@ -1587,7 +1594,7 @@ void TGLUtil::Color(const TGLColor& color, Float_t alpha)
 }
 
 //______________________________________________________________________________
-void TGLUtil::Color(Color_t color_index, Float_t alpha)
+void TGLUtil::ColorAlpha(Color_t color_index, Float_t alpha)
 {
    // Set color from color_index and GL-style alpha (default 1).
 
@@ -1771,7 +1778,8 @@ void TGLUtil::EndExtendPickRegion()
 }
 
 //______________________________________________________________________________
-void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
+void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Char_t transp,
+                                Float_t* p, Int_t n,
                                 Int_t pick_radius, Bool_t selection,
                                 Bool_t sec_selection)
 {
@@ -1783,7 +1791,7 @@ void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
    glPushAttrib(GL_ENABLE_BIT | GL_POINT_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
-   TGLUtil::Color(marker.GetMarkerColor());
+   TGLUtil::ColorTransparency(marker.GetMarkerColor(), transp);
 
    Int_t s = marker.GetMarkerStyle();
    if (s == 2 || s == 3 || s == 5 || s == 28)
@@ -1795,7 +1803,8 @@ void TGLUtil::RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
 }
 
 //______________________________________________________________________________
-void TGLUtil::RenderPoints(const TAttMarker& marker, Float_t* op, Int_t n,
+void TGLUtil::RenderPoints(const TAttMarker& marker,
+                           Float_t* op, Int_t n,
                            Int_t pick_radius, Bool_t selection,
                            Bool_t sec_selection)
 {
@@ -1865,7 +1874,8 @@ void TGLUtil::RenderPoints(const TAttMarker& marker, Float_t* op, Int_t n,
 }
 
 //______________________________________________________________________________
-void TGLUtil::RenderCrosses(const TAttMarker& marker, Float_t* op, Int_t n,
+void TGLUtil::RenderCrosses(const TAttMarker& marker,
+                            Float_t* op, Int_t n,
                             Bool_t sec_selection)
 {
    // Render markers as crosses.
@@ -1938,14 +1948,15 @@ void TGLUtil::RenderCrosses(const TAttMarker& marker, Float_t* op, Int_t n,
 }
 
 //______________________________________________________________________________
-void TGLUtil::RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
+void TGLUtil::RenderPolyLine(const TAttLine& aline, Char_t transp,
+                             Float_t* p, Int_t n,
                              Int_t pick_radius, Bool_t selection)
 {
    // Render poly-line as specified by the p-array.
 
    if (n == 0) return;
 
-   BeginAttLine(aline, pick_radius, selection);
+   BeginAttLine(aline, transp, pick_radius, selection);
 
    Float_t* tp = p;
    glBegin(GL_LINE_STRIP);
@@ -1957,14 +1968,15 @@ void TGLUtil::RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
 }
 
 //______________________________________________________________________________
-void TGLUtil::BeginAttLine(const TAttLine& aline, Int_t pick_radius, Bool_t selection)
+void TGLUtil::BeginAttLine(const TAttLine& aline, Char_t transp,
+                           Int_t pick_radius, Bool_t selection)
 {
    // Setup drawing parrameters according to passed TAttLine.
 
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT);
 
    glDisable(GL_LIGHTING);
-   TGLUtil::Color(aline.GetLineColor());
+   TGLUtil::ColorTransparency(aline.GetLineColor(), transp);
    TGLUtil::LineWidth(aline.GetLineWidth());
    if (aline.GetLineStyle() > 1)
    {
@@ -2007,7 +2019,7 @@ void TGLUtil::EndAttLine(Int_t pick_radius, Bool_t selection)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TGLUtil::SetDrawColors(const Float_t rgba[4])
+void TGLUtil::SetDrawColors(const UChar_t rgbai[4])
 {
    // Set basic draw colors from 4 component 'rgba'
    // Used by other TGLUtil drawing routines
@@ -2026,8 +2038,9 @@ void TGLUtil::SetDrawColors(const Float_t rgba[4])
 
 
    // Util function to setup GL color for both unlit and lit material
-   static Float_t ambient[4] = {0.0, 0.0, 0.0, 1.0};
-   static Float_t specular[4] = {0.6, 0.6, 0.6, 1.0};
+   Float_t rgba[4]     = {rgbai[0]/255.f, rgbai[1]/255.f, rgbai[2]/255.f, rgbai[3]/255.f};
+   Float_t ambient[4]  = {0.0, 0.0, 0.0, 1.0};
+   Float_t specular[4] = {0.6, 0.6, 0.6, 1.0};
    Float_t emission[4] = {rgba[0]/4.f, rgba[1]/4.f, rgba[2]/4.f, rgba[3]};
 
    glColor4fv(rgba);
@@ -2040,7 +2053,7 @@ void TGLUtil::SetDrawColors(const Float_t rgba[4])
 
 //______________________________________________________________________________
 void TGLUtil::DrawSphere(const TGLVertex3 & position, Double_t radius,
-                         const Float_t rgba[4])
+                         const UChar_t rgba[4])
 {
    // Draw sphere, centered on vertex 'position', with radius 'radius',
    // color 'rgba'
@@ -2054,7 +2067,7 @@ void TGLUtil::DrawSphere(const TGLVertex3 & position, Double_t radius,
 
 //______________________________________________________________________________
 void TGLUtil::DrawLine(const TGLLine3 & line, ELineHeadShape head, Double_t size,
-                       const Float_t rgba[4])
+                       const UChar_t rgba[4])
 {
    // Draw thick line (tube) defined by 'line', with head at end shape
    // 'head' - box/arrow/none, (head) size 'size', color 'rgba'
@@ -2063,7 +2076,7 @@ void TGLUtil::DrawLine(const TGLLine3 & line, ELineHeadShape head, Double_t size
 
 //______________________________________________________________________________
 void TGLUtil::DrawLine(const TGLVertex3 & start, const TGLVector3 & vector,
-                       ELineHeadShape head, Double_t size, const Float_t rgba[4])
+                       ELineHeadShape head, Double_t size, const UChar_t rgba[4])
 {
    // Draw thick line (tube) running from 'start', length 'vector',
    // with head at end of shape 'head' - box/arrow/none,
@@ -2118,7 +2131,7 @@ void TGLUtil::DrawLine(const TGLVertex3 & start, const TGLVector3 & vector,
 
 //______________________________________________________________________________
 void TGLUtil::DrawRing(const TGLVertex3 & center, const TGLVector3 & normal,
-                       Double_t radius, const Float_t rgba[4])
+                       Double_t radius, const UChar_t rgba[4])
 {
    // Draw ring, centered on 'center', lying on plane defined by 'center' & 'normal'
    // of outer radius 'radius', color 'rgba'
@@ -2160,12 +2173,12 @@ void TGLUtil::DrawRing(const TGLVertex3 & center, const TGLVector3 & normal,
 void TGLUtil::DrawReferenceMarker(const TGLCamera  & camera,
                                   const TGLVertex3 & pos,
                                         Float_t      radius,
-                                  const Float_t    * rgba)
+                                  const UChar_t    * rgba)
 {
    // Draw a sphere- marker on world-coordinate 'pos' with pixel
    // radius 'radius'. Color argument is optional.
 
-   static const Float_t defColor[4] = { 0.98, 0.45, 0.0, 1.0 }; // Orange
+   static const UChar_t defColor[4] = { 250, 110, 0, 255 }; // Orange
 
    radius = camera.ViewportDeltaToWorld(pos, radius, radius).Mag();
    DrawSphere(pos, radius, rgba ? rgba : defColor);
@@ -2182,13 +2195,13 @@ void TGLUtil::DrawSimpleAxes(const TGLCamera      & camera,
    if (axesType == kAxesNone)
       return;
 
-   static const Float_t axesColors[][4] = {
-      {0.5, 0.0, 0.0, 1.0},  // -ive X axis light red
-      {1.0, 0.0, 0.0, 1.0},  // +ive X axis deep red
-      {0.0, 0.5, 0.0, 1.0},  // -ive Y axis light green
-      {0.0, 1.0, 0.0, 1.0},  // +ive Y axis deep green
-      {0.0, 0.0, 0.5, 1.0},  // -ive Z axis light blue
-      {0.0, 0.0, 1.0, 1.0}   // +ive Z axis deep blue
+   static const UChar_t axesColors[][4] = {
+      {128,   0,   0, 255},  // -ive X axis light red
+      {255,   0,   0, 255},  // +ive X axis deep red
+      {  0, 128,   0, 255},  // -ive Y axis light green
+      {  0, 255,   0, 255},  // +ive Y axis deep green
+      {  0,   0, 128, 255},  // -ive Z axis light blue
+      {  0,   0, 255, 255}   // +ive Z axis deep blue
    };
 
    static const UChar_t xyz[][8] = {
@@ -2250,8 +2263,7 @@ void TGLUtil::DrawSimpleAxes(const TGLCamera      & camera,
    // Draw origin sphere(s)
    if (axesType == kAxesOrigin) {
       // Single white origin sphere at 0, 0, 0
-      Float_t white[4] = { 1.0, 1.0, 1.0, 1.0 };
-      DrawSphere(TGLVertex3(0.0, 0.0, 0.0), pixelSize*2.0, white);
+      DrawSphere(TGLVertex3(0.0, 0.0, 0.0), pixelSize*2.0, fgWhite);
    } else {
       for (UInt_t j = 0; j < 3; j++) {
          if (min[j] <= 0.0 && max[j] >= 0.0) {
@@ -2386,8 +2398,29 @@ TGLCapabilitySwitch::~TGLCapabilitySwitch()
 void TGLCapabilitySwitch::SetState(Bool_t s)
 {
    if (s)
-      glEnable (fWhat);
+      glEnable(fWhat);
    else
+      glDisable(fWhat);
+}
+
+
+//______________________________________________________________________________
+TGLCapabilityEnabler::TGLCapabilityEnabler(Int_t what, Bool_t state) :
+   fWhat(what)
+{
+   // Constructor - change state only if necessary.
+
+   fFlip = ! glIsEnabled(fWhat) && state;
+   if (fFlip)
+      glEnable(fWhat);
+}
+
+//______________________________________________________________________________
+TGLCapabilityEnabler::~TGLCapabilityEnabler()
+{
+   // Destructor - reset state if changed.
+
+   if (fFlip)
       glDisable(fWhat);
 }
 

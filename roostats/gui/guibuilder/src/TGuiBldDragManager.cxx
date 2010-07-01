@@ -50,7 +50,7 @@
 #include "TGProgressBar.h"
 #include "TGScrollBar.h"
 #include "TGTextEntry.h"
-
+#include "snprintf.h"
 
 #undef DEBUG_LOCAL
 
@@ -228,28 +228,28 @@ const char *TGuiBldMenuDialog::GetParameters()
 
       // if necessary, replace the selected object by it's address
       if (selfobjpos == nparam-1) {
-         if (params[0]) strcat(params, ",");
+         if (params[0]) strncat(params, ",", 1023-strlen(params));
          sprintf(param, "(TObject*)0x%lx", (Long_t)fObject);
-         strcat(params, param);
+         strncat(params, param, 1023-strlen(params));
       }
 
-      if (params[0]) strcat(params, ",");
+      if (params[0]) strncat(params, ",", 1023-strlen(params));
       if (data) {
          if (!strncmp(type, "char*", 5))
-            sprintf(param, "\"%s\"", data);
+            snprintf(param, 255, "\"%s\"", data);
          else
-            strncpy(param, data, 256);
+            strncpy(param, data, 255);
       } else
          strcpy(param, "0");
 
-      strcat(params, param);
+      strncat(params, param, 1023-strlen(params));
    }
 
    // if selected object is the last argument, have to insert it here
    if (selfobjpos == nparam) {
-      if (params[0]) strcat(params, ",");
+      if (params[0]) strncat(params, ",", 1023-strlen(params));
       sprintf(param, "(TObject*)0x%lx", (Long_t)fObject);
-      strcat(params, param);
+      strncat(params, param, 1023-strlen(params));
    }
 
    return params;
@@ -323,7 +323,7 @@ void TGuiBldMenuDialog::Build()
          char        basictype[32];
 
          if (datatype) {
-            strcpy(basictype, datatype->GetTypeName());
+            strncpy(basictype, datatype->GetTypeName(), 30);
          } else {
             TClass *cl = TClass::GetClass(type);
             if (strncmp(type, "enum", 4) && (cl && !(cl->Property() & kIsEnum)))
@@ -912,11 +912,15 @@ TGuiBldDragManager::TGuiBldDragManager() : TVirtualDragManager() ,
    CreateListOfDialogs();
 
    TString tmpfile = gSystem->TempDirectory();
-   fPasteFileName = gSystem->ConcatFileName(tmpfile.Data(),
-                             TString::Format("RootGuiBldClipboard%d.C", gSystem->GetPid()));
+   char *s = gSystem->ConcatFileName(tmpfile.Data(),
+               TString::Format("RootGuiBldClipboard%d.C", gSystem->GetPid()));
+   fPasteFileName = s;
+   delete [] s;
 
-   fTmpBuildFile = gSystem->ConcatFileName(tmpfile.Data(),
-                             TString::Format("RootGuiBldTmpFile%d.C", gSystem->GetPid()));
+   s = gSystem->ConcatFileName(tmpfile.Data(),
+               TString::Format("RootGuiBldTmpFile%d.C", gSystem->GetPid()));
+   fTmpBuildFile = s;
+   delete [] s;
 
    fName = "Gui Builder Drag Manager";
    SetWindowName(fName.Data());
@@ -2952,46 +2956,48 @@ void TGuiBldDragManager::HandleDelete(Bool_t crop)
    h = y - y0;
 
    if (fLassoDrawn || fromGrab) {
-      TIter next(comp->GetList());
-      TGFrameElement *el;
+      if (comp) {
+         TIter next(comp->GetList());
+         TGFrameElement *el;
 
-      while ((el = (TGFrameElement*)next())) {
-         TGFrame *fr = el->fFrame;
+         while ((el = (TGFrameElement*)next())) {
+            TGFrame *fr = el->fFrame;
 
-         if ((fr->GetX() >= x0) && (fr->GetY() >= y0) &&
-             (fr->GetX() + (Int_t)fr->GetWidth() <= x) &&
-             (fr->GetY() + (Int_t)fr->GetHeight() <= y)) {
-            if (!crop) {
-               DeleteFrame(fr);
+            if ((fr->GetX() >= x0) && (fr->GetY() >= y0) &&
+                (fr->GetX() + (Int_t)fr->GetWidth() <= x) &&
+                (fr->GetY() + (Int_t)fr->GetHeight() <= y)) {
+               if (!crop) {
+                  DeleteFrame(fr);
+               } else {
+                  fr->Move(fr->GetX() - x0, fr->GetY() - y0);
+               }
             } else {
-               fr->Move(fr->GetX() - x0, fr->GetY() - y0);
-            }
-         } else {
-            if (crop) {
-               DeleteFrame(fr);
+               if (crop) {
+                  DeleteFrame(fr);
+               }
             }
          }
-      }
-      if (crop && comp) {
-         gVirtualX->TranslateCoordinates(comp->GetId(), comp->GetParent()->GetId(),
-                                          x0, y0, xx, yy, c);
+         if (crop && comp) {
+            gVirtualX->TranslateCoordinates(comp->GetId(), comp->GetParent()->GetId(),
+                                             x0, y0, xx, yy, c);
 
-         comp->MoveResize(xx, yy, w, h);
+            comp->MoveResize(xx, yy, w, h);
 
-         if (comp->GetParent()->InheritsFrom(TGMdiDecorFrame::Class())) {
-            TGMdiDecorFrame *decor = (TGMdiDecorFrame *)comp->GetParent();
+            if (comp->GetParent()->InheritsFrom(TGMdiDecorFrame::Class())) {
+               TGMdiDecorFrame *decor = (TGMdiDecorFrame *)comp->GetParent();
 
+               gVirtualX->TranslateCoordinates(decor->GetId(), decor->GetParent()->GetId(),
+                                               xx, yy, xx, yy, c);
 
-            gVirtualX->TranslateCoordinates(decor->GetId(), decor->GetParent()->GetId(),
-                                            xx, yy, xx, yy, c);
-
-            Int_t b = 2 * decor->GetBorderWidth();
-            decor->MoveResize(xx, yy, comp->GetWidth() + b,
-                              comp->GetHeight() + b + decor->GetTitleBar()->GetDefaultHeight());
+               Int_t b = 2 * decor->GetBorderWidth();
+               decor->MoveResize(xx, yy, comp->GetWidth() + b,
+                                 comp->GetHeight() + b + decor->GetTitleBar()->GetDefaultHeight());
+            }
          }
       }
    } else { //  no lasso drawn -> delete selected frame
-      DeleteFrame(frame);
+      if (frame)
+         DeleteFrame(frame);
       UngrabFrame();
       ChangeSelected(0);   //update editors
    }

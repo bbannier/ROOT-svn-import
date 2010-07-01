@@ -149,14 +149,6 @@ const TGPicture* TEvePointSet::GetListTreeIcon(Bool_t)
 }
 
 //______________________________________________________________________________
-void TEvePointSet::ComputeBBox()
-{
-   // Override of virtual method from TAttBBox.
-
-   TPointSet3D::ComputeBBox();
-}
-
-//______________________________________________________________________________
 void TEvePointSet::Reset(Int_t n_points, Int_t n_int_ids)
 {
    // Drop all data and set-up the data structures to recive new data.
@@ -788,7 +780,7 @@ void TEvePointSetProjected::SetProjection(TEveProjectionManager* proj,
    // Virtual from TEveProjected.
 
    TEveProjected::SetProjection(proj, model);
-   * (TAttMarker*)this = * dynamic_cast<TAttMarker*>(fProjectable);
+   CopyVizParams(dynamic_cast<TEveElement*>(model));
 }
 
 //______________________________________________________________________________

@@ -500,7 +500,7 @@ TF1::TF1(const char *name, Double_t xmin, Double_t xmax, Int_t npar)
    fNdim       = 1;
 
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
 
    if (gStyle) {
@@ -589,7 +589,7 @@ TF1::TF1(const char *name,void *fcn, Double_t xmin, Double_t xmax, Int_t npar)
    fNdim       = 1;
 
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
 
    if (gStyle) {
@@ -678,7 +678,7 @@ TF1::TF1(const char *name,Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin
 
    // Store formula in linked list of formula in ROOT
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
@@ -750,7 +750,7 @@ TF1::TF1(const char *name,Double_t (*fcn)(const Double_t *, const Double_t *), D
 
    // Store formula in linked list of formula in ROOT
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
@@ -836,7 +836,7 @@ void TF1::CreateFromFunctor(const char *name, Int_t npar)
 
    // Store formula in linked list of formula in ROOT
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
@@ -942,7 +942,7 @@ void TF1::CreateFromCintClass(const char *name,void *ptr, Double_t xmin, Double_
    fNdim       = 1;
 
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
 
    if (gStyle) {
@@ -1620,6 +1620,8 @@ Double_t TF1::GetMaximum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t m
    //  the fNpx to a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
    //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) and absolute (if |x| < 1     //  and maxiter (default = 100) controls the maximum number of iteration of the Brent algorithm
+   //
+   // NOTE: see also TF1::GetMaximumX and TF1::GetX
 
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
@@ -1648,7 +1650,9 @@ Double_t TF1::GetMaximumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
    //  the fNpx to a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
    //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) and absolute (if |x| < 1     //  and maxiter (default = 100) controls the maximum number of iteration of the Brent algorithm
-
+   //
+   // NOTE: see also TF1::GetX
+   
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
    ROOT::Math::BrentMinimizer1D bm;
@@ -1676,6 +1680,8 @@ Double_t TF1::GetMinimum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t m
    //  a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
    //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) and absolute (if |x| < 1     //  and maxiter (default = 100) controls the maximum number of iteration of the Brent algorithm
+   //
+   // NOTE: see also TF1::GetMaximumX and TF1::GetX
 
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
@@ -1704,6 +1710,8 @@ Double_t TF1::GetMinimumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
    //  a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
    //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) and absolute (if |x| < 1     //  and maxiter (default = 100) controls the maximum number of iteration of the Brent algorithm
+   //
+   // NOTE: see also TF1::GetX
 
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
@@ -1723,6 +1731,8 @@ Double_t TF1::GetMinimumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
 Double_t TF1::GetX(Double_t fy, Double_t xmin, Double_t xmax, Double_t epsilon, Int_t maxiter) const
 {
    // Returns the X value corresponding to the function value fy for (xmin<x<xmax).
+   // in other words it can find the roots of the function when fy=0 and successive calls
+   // by changing the next call to [xmin+eps,xmax] where xmin is the previous root.
    // Method:
    //  First, the grid search is used to bracket the maximum
    //  with the step size = (xmax-xmin)/fNpx. This way, the step size
@@ -1731,6 +1741,8 @@ Double_t TF1::GetX(Double_t fy, Double_t xmin, Double_t xmax, Double_t epsilon, 
    //  a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
    //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) and absolute (if |x| < 1     //  and maxiter (default = 100) controls the maximum number of iteration of the Brent algorithm
+   //
+   // NOTE: see also TF1::GetMaximumX, TF1::GetMinimumX
 
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
    
@@ -1851,7 +1863,10 @@ Int_t TF1::GetQuantiles(Int_t nprobSum, Double_t *q, const Double_t *probSum)
    //     f2->GetQuantiles(nprob,gr->GetY());
    //     gr->Draw("alp");
 
-   const Int_t npx     = TMath::Min(250,TMath::Max(50,2*nprobSum));
+   // LM: change to use fNpx 
+   // should we change code to use a root finder ? 
+   // It should be more precise and more efficient
+   const Int_t npx     = TMath::Max(fNpx, 2*nprobSum);
    const Double_t xMin = GetXmin();
    const Double_t xMax = GetXmax();
    const Double_t dx   = (xMax-xMin)/npx;
@@ -1898,9 +1913,10 @@ Int_t TF1::GetQuantiles(Int_t nprobSum, Double_t *q, const Double_t *probSum)
    // is monotone increasing
    for (i = 0; i < nprobSum; i++) {
       const Double_t r = probSum[i];
-      Int_t bin  = TMath::Max(TMath::BinarySearch(npx+1,integral.GetArray(),r)-1,(Long64_t)0);
-      while (bin < npx-1 && integral[bin+1] == r) {
-         if (integral[bin+2] == r) bin++;
+      Int_t bin  = TMath::Max(TMath::BinarySearch(npx+1,integral.GetArray(),r),(Long64_t)0);
+      // LM use a tolerance 1.E-12 (integral precision)
+      while (bin < npx-1 && TMath::AreEqualRel(integral[bin+1], r, 1E-12) ) {
+         if (TMath::AreEqualRel(integral[bin+2], r, 1E-12) ) bin++;
          else break;
       }
 

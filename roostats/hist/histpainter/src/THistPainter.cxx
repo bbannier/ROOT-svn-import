@@ -224,7 +224,7 @@ Draw only grid (if the grid is requested).
 
 <tr><th valign=top>"HIST"</th><td>
 When an histogram has errors it is visualized by default with error bars. To
-visualize it without errors use the option HIST together with the required
+visualize it without errors use the option "HIST" together with the required
 option (eg "hist same c").  The "HIST" option can also be used to plot only the
 histogram and not the associated function(s).
 </td></tr>
@@ -1231,7 +1231,7 @@ For each bin the content is printed. The text attributes are:
 <li> text font = current TStyle font (<tt>gStyle->SetTextFont()</tt>).
 <li> text size = 0.02*padheight*markersize (if <tt>h</tt> is the histogram drawn
      with the option <tt>"TEXT"</tt> the marker size can be changed with
-     <tt>h->SetMarkerSize(markersize)</tt>). 
+     <tt>h->SetMarkerSize(markersize)</tt>).
 <li> text color = marker color.
 </ul>
 By default the format <tt>"g"</tt> is used. This format can be redefined
@@ -1272,7 +1272,7 @@ End_Macro
 Begin_Html
 
 <p>In the case of profile histograms it is possible to print the number
-of entries instead of the bin content. It is enough to combine the 
+of entries instead of the bin content. It is enough to combine the
 option "E" (for entries) with the option "TEXT".
 
 End_Html
@@ -1298,7 +1298,7 @@ Begin_Macro(source)
    c02->cd(2); profile->Draw("HIST TEXT0E");
 
    return c02;
-} 
+}
 End_Macro
 Begin_Html
 
@@ -1982,7 +1982,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-This option also works for horizontal plots. The example given in the section 
+This option also works for horizontal plots. The example given in the section
 <a href="http://root.cern.ch/root/html/THistPainter.html#HP100">
 "The bar chart option"</a> appears as follow:
 
@@ -2213,12 +2213,14 @@ is a collection of <tt>TH1</tt> (or derived) objects. For painting only the
 <li> The first histogram is paint.
 <li> The the sum of the first and second, etc...
 </ol>
-If option <tt>"NOSTACK"</tt> is specified, histograms are all paint in the
-same pad as if the option <tt>"SAME"</tt> had been specified.
+If the option <tt>"NOSTACK"</tt> is specified, the histograms are all paint in
+the same pad as if the option <tt>"SAME"</tt> had been specified. This allows to
+compute X and Y scales common to all the histograms, like
+<tt>TMultiGraph</tt> does for graphs.
 
-<p>If option <tt>"PADS"</tt> is specified, the current pad/canvas is subdivided
-into a number of pads equal to the number of histograms and each histogram
-is paint into a separate pad.
+<p>If the option <tt>"PADS"</tt> is specified, the current pad/canvas is
+subdivided into a number of pads equal to the number of histograms and each
+histogram is paint into a separate pad.
 
 <p>The following example shows various types of stacks.
 
@@ -2228,6 +2230,38 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
+If at least one of the histograms in the stack has errors, the whole stack is
+visualized by default with error bars. To visualize it without errors the
+option <tt>"HIST"</tt> should be used.
+
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *cst1 = new TCanvas("cst1","cst1",700,400);
+   cst1->Divide(2,1);
+
+   TH1F * hst11 = new TH1F("hst11", "", 20, -10, 10);
+   hst11->Sumw2();
+   hst11->FillRandom("gaus", 1000);
+   hst11->SetFillColor(kViolet);
+   hst11->SetLineColor(kViolet);
+
+   TH1F * hst12 = new TH1F("hst12", "", 20, -10, 10);
+   hst12->FillRandom("gaus", 500);
+   hst12->SetFillColor(kBlue);
+   hst12->SetLineColor(kBlue);
+
+   THStack st1("st1", "st1");
+   st1.Add(hst11);
+   st1.Add(hst12);
+
+   cst1->cd(1); st1.Draw();
+   cst1->cd(2); st1.Draw("hist");
+
+   return cst1;
+}
+End_Macro
+Begin_Html
 
 <a name="HP27"></a><h3>Drawing of 3D implicit functions</h3>
 
@@ -3069,7 +3103,20 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
    l = strstr(chopt,"SPEC");
    if (l) {
       Hoption.Scat = 0;
-      Hoption.Spec = 1; strncpy(l,"    ",4);
+      strncpy(l,"    ",4);
+      Int_t bs=0;
+      l = strstr(chopt,"BF(");
+      if (l) {
+         if (sscanf(&l[3],"%d",&bs) > 0) {
+            Int_t i=0;
+            while (l[i]!=')') {
+               l[i] = ' ';
+               i++;
+            }
+            l[i] = ' ';
+         }
+      }
+      Hoption.Spec = TMath::Max(1600,bs);
       return 1;
    }
 
@@ -3395,7 +3442,7 @@ void THistPainter::Paint(Option_t *option)
    if (Hoption.Spec) {
       if (!TableInit()) return;
       if (!TClass::GetClass("TSpectrum2Painter")) gSystem->Load("libSpectrumPainter");
-      gROOT->ProcessLineFast(Form("TSpectrum2Painter::PaintSpectrum((TH2F*)0x%lx,\"%s\")",fH,option));
+      gROOT->ProcessLineFast(Form("TSpectrum2Painter::PaintSpectrum((TH2F*)0x%lx,\"%s\",%d)",fH,option,Hoption.Spec));
       return;
    }
 
@@ -3783,6 +3830,10 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
       strcat(chopt, "-");
       gridl = -gridl;
    }
+   if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
+      axis.SetLabelSize(0.);
+      axis.SetTitle("");
+   }
    axis.PaintAxis(axmin, xAxisYPos1,
                   axmax, xAxisYPos1,
                   umin, umax,  ndiv, chopt, gridl, drawGridOnly);
@@ -3865,6 +3916,10 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    if (yAxisPos) {
       strcat(chopt, "+L");
       gridl = -gridl;
+   }
+   if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
+      axis.SetLabelSize(0.);
+      axis.SetTitle("");
    }
    axis.PaintAxis(yAxisXPos1, aymin,
                   yAxisXPos1, aymax,
@@ -5364,7 +5419,10 @@ void THistPainter::PaintHist(Option_t *)
       }
    }
 
-   if (Hoption.Off) strcat(chopth,"][");
+   if (Hoption.Off) {
+      chopth[11] = ']';
+      chopth[12] = '[';
+   }
 
    //         Draw the histogram
 
@@ -5562,12 +5620,14 @@ Int_t THistPainter::PaintInit()
       }
    }
 
+
    //     Take into account maximum , minimum
 
    if (Hoption.Logy && ymin <= 0) {
       if (ymax >= 1) ymin = TMath::Max(.005,ymax*1e-10);
       else           ymin = 0.001*ymax;
    }
+
    Double_t xm = ymin;
    if (maximum) ymax = fH->GetMaximumStored();
    if (minimum) xm   = fH->GetMinimumStored();
@@ -5576,6 +5636,7 @@ Int_t THistPainter::PaintInit()
       return 0;
    }
    else ymin = xm;
+
    if (ymin >= ymax && !Hoption.Plus) {
       if (Hoption.Logy) {
          if (ymax > 0) ymin = 0.001*ymax;
@@ -5596,6 +5657,12 @@ Int_t THistPainter::PaintInit()
             ymax = 1;
          }
       }
+   }
+
+   // In some cases, mainly because of precision issues, ymin and ymax could almost equal.
+   if(TMath::AreEqualRel(ymin,ymax,1E-15)) {
+      ymin = ymin*(1-1E-14);
+      ymax = ymax*(1+1E-14);
    }
 
    //     take into account normalization factor
@@ -5655,6 +5722,7 @@ Int_t THistPainter::PaintInit()
    if (!maximum && !Hoption.Plus) {
       ymax += yMARGIN*(ymax-ymin);
    }
+
    Hparam.ymin = ymin;
    Hparam.ymax = ymax;
    return 1;
@@ -5882,6 +5950,9 @@ void THistPainter::PaintH3Iso()
    TView *view = gPad->GetView();
    if (!view) {
       Error("PaintH3Iso", "no TView in current pad");
+      delete [] x;
+      delete [] y;
+      delete [] z;
       return;
    }
    Double_t thedeg =  90 - gPad->GetTheta();
@@ -7641,7 +7712,7 @@ void THistPainter::PaintText(Option_t *)
       for (Int_t i=Hparam.xfirst; i<=Hparam.xlast;i++) {
          x  = fH->GetXaxis()->GetBinCenter(i);
          y  = fH->GetBinContent(i);
-	 yt = y;
+         yt = y;
          if (getentries) yt = hp->GetBinEntries(i);
          sprintf(value,format,yt);
          if (Hoption.Logx) {

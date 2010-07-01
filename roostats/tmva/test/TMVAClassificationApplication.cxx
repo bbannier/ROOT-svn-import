@@ -63,6 +63,7 @@ int main( int argc, char** argv )
    // ---
    Use["MLP"]             = 0; // this is the recommended ANN
    Use["MLPBFGS"]         = 0; // recommended ANN with optional training method
+   Use["MLPBNN"]          = 0; 
    Use["CFMlpANN"]        = 0; // *** missing
    Use["TMlpANN"]         = 0; 
    // ---
@@ -106,10 +107,10 @@ int main( int argc, char** argv )
    // create a set of variables and declare them to the reader
    // - the variable names must corresponds in name and type to 
    // those given in the weight file(s) that you use
-   Float_t myvar1, myvar2;
+   Float_t var1, var2;
    Float_t var3, var4;
-   reader->AddVariable( "myvar1 := var1+var2", &myvar1 );
-   reader->AddVariable( "myvar2 := var1-var2", &myvar2 );
+   reader->AddVariable( "myvar1 := var1+var2", &var1 );
+   reader->AddVariable( "myvar2 := var1-var2", &var2 );
    reader->AddVariable( "var3",                &var3 );
    reader->AddVariable( "var4",                &var4 );
    Float_t spec1,spec2;
@@ -170,7 +171,7 @@ int main( int argc, char** argv )
    UInt_t nbin = 100;
    TH1F *histLk(0), *histLkD(0), *histLkPCA(0), *histLkKDE(0), *histLkMIX(0), *histPD(0), *histPDD(0);
    TH1F *histPDPCA(0), *histPDEFoam(0), *histPDEFoamErr(0), *histPDEFoamSig(0), *histKNN(0), *histHm(0);
-   TH1F *histFi(0), *histFiG(0),  *histFiB(0), *histLD(0), *histNn(0), *histNnC(0), *histNnT(0), *histBdt(0), *histBdtG(0), *histBdtD(0);
+   TH1F *histFi(0), *histFiG(0),  *histFiB(0), *histLD(0), *histNn(0), *histNnbfgs(0), *histNnbnn(0), *histNnC(0), *histNnT(0), *histBdt(0), *histBdtG(0), *histBdtD(0);
    TH1F *histRf(0), *histSVMG(0), *histSVMP(0), *histSVML(0), *histFDAMT(0), *histFDAGA(0), *histCateg(0), *histPBdt(0);
 
    if (Use["Likelihood"])    histLk      = new TH1F( "MVA_Likelihood",    "MVA_Likelihood",    nbin, -1, 1 );
@@ -188,6 +189,8 @@ int main( int argc, char** argv )
    if (Use["BoostedFisher"]) histFiB     = new TH1F( "MVA_BoostedFisher", "MVA_BoostedFisher", nbin, -2, 2 );
    if (Use["LD"])            histLD      = new TH1F( "MVA_LD",            "MVA_LD",            nbin, -2, 2 );
    if (Use["MLP"])           histNn      = new TH1F( "MVA_MLP",           "MVA_MLP",           nbin, -1.25, 1.5 );
+   if (Use["MLPBFGS"])       histNnbfgs  = new TH1F( "MVA_MLPBFGS",           "MVA_MLPBFGS",           nbin, -1.25, 1.5 );
+   if (Use["MLPBNN"])     histNnbnn      = new TH1F( "MVA_MLPBNN",           "MVA_MLPBNN",           nbin, -1.25, 1.5 );
    if (Use["CFMlpANN"])      histNnC     = new TH1F( "MVA_CFMlpANN",      "MVA_CFMlpANN",      nbin,  0, 1 );
    if (Use["TMlpANN"])       histNnT     = new TH1F( "MVA_TMlpANN",       "MVA_TMlpANN",       nbin, -1.3, 1.3 );
    if (Use["BDT"])           histBdt     = new TH1F( "MVA_BDT",           "MVA_BDT",           nbin, -0.8, 0.8 );
@@ -246,7 +249,6 @@ int main( int argc, char** argv )
    TTree* theTree = (TTree*)input->Get("TreeS");
    std::cout << "--- Select signal sample" << std::endl;
    Float_t userVar1, userVar2;
-   Float_t var1,var2;
    theTree->SetBranchAddress( "var1", &userVar1 );
    theTree->SetBranchAddress( "var2", &userVar2 );
    theTree->SetBranchAddress( "var3", &var3 );
@@ -255,6 +257,8 @@ int main( int argc, char** argv )
    // efficiency calculator for cut method
    Int_t    nSelCutsGA = 0;
    Double_t effS       = 0.7;
+
+   std::vector<Float_t> vecVar(4); // vector for EvaluateMVA tests
 
    std::cout << "--- Processing: " << theTree->GetEntries() << " events" << std::endl;
    TStopwatch sw;
@@ -277,7 +281,38 @@ int main( int argc, char** argv )
       Category_cat2 = (var3>0)&&(var4<0);
       Category_cat3 = (var3>0)&&(var4>=0);
 
-
+      // test the twodifferent Reader::EvaluateMVA functions 
+      // access via registered variables compared to access via vector<float>
+      vecVar[0]=var1;
+      vecVar[1]=var2;
+      vecVar[2]=var3;
+      vecVar[3]=var4;      
+      for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) {
+         if (it->second) {
+            TString mName = it->first + " method";
+            Double_t mva1 = reader->EvaluateMVA( mName); 
+            Double_t mva2 = reader->EvaluateMVA( vecVar, mName); 
+            if (mva1 != mva2) {
+               std::cout << "++++++++++++++ ERROR in "<< mName <<", comparing different EvaluateMVA results val1=" << mva1 << " val2="<<mva2<<std::endl;
+            }
+         }
+      }
+      // now test that the inputs do matter
+      TRandom3 rand(0);
+      vecVar[0]=rand.Rndm();
+      vecVar[1]=rand.Rndm();
+      vecVar[2]=rand.Rndm();
+      vecVar[3]=rand.Rndm();
+      for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) {
+         if (it->second) {
+            TString mName = it->first + " method";
+            Double_t mva1 = reader->EvaluateMVA( mName); 
+            Double_t mva2 = reader->EvaluateMVA( vecVar, mName); 
+            if (mva1 == mva2) {
+               std::cout << "++++++++++++++ ERROR in "<< mName <<", obtaining idnetical output for different inputs" <<std::endl;
+            }
+         }
+      }
       // 
       // return the MVAs and fill to histograms
       // 
@@ -301,6 +336,8 @@ int main( int argc, char** argv )
       if (Use["BoostedFisher"])   histFiB    ->Fill( reader->EvaluateMVA( "BoostedFisher method"        ) );
       if (Use["LD"           ])   histLD     ->Fill( reader->EvaluateMVA( "LD method"            ) );
       if (Use["MLP"          ])   histNn     ->Fill( reader->EvaluateMVA( "MLP method"           ) );
+      if (Use["MLPBFGS"          ])   histNnbfgs     ->Fill( reader->EvaluateMVA( "MLPBFGS method"           ) );
+      if (Use["MLPBNN"          ])   histNnbnn     ->Fill( reader->EvaluateMVA( "MLPBNN method"           ) );
       if (Use["CFMlpANN"     ])   histNnC    ->Fill( reader->EvaluateMVA( "CFMlpANN method"      ) );
       if (Use["TMlpANN"      ])   histNnT    ->Fill( reader->EvaluateMVA( "TMlpANN method"       ) );
       if (Use["BDT"          ])   histBdt    ->Fill( reader->EvaluateMVA( "BDT method"           ) );
@@ -382,6 +419,8 @@ int main( int argc, char** argv )
    if (Use["BoostedFisher"])   histFiB    ->Write();
    if (Use["LD"           ])   histLD     ->Write();
    if (Use["MLP"          ])   histNn     ->Write();
+   if (Use["MLPBFGS"      ])   histNnbfgs ->Write();
+   if (Use["MLPBNN"       ])   histNnbnn  ->Write();
    if (Use["CFMlpANN"     ])   histNnC    ->Write();
    if (Use["TMlpANN"      ])   histNnT    ->Write();
    if (Use["BDT"          ])   histBdt    ->Write();

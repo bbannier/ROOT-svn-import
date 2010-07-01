@@ -47,8 +47,7 @@
 #include "TSortedList.h"
 #include "TTree.h"
 #include "TVirtualProofPlayer.h"
-
-#include "TH3F.h"
+#include "TSelector.h"
 
 ClassImp(TProofLite)
 
@@ -201,12 +200,12 @@ Int_t TProofLite::Init(const char *, const char *conffile,
    }
    fLogToWindowOnly = kFALSE;
 
-   fCacheLock = new TProofLockPath(Form("%s/%s%s", gSystem->TempDirectory(),
+   fCacheLock = new TProofLockPath(TString::Format("%s/%s%s", gSystem->TempDirectory(),
                                    kPROOF_CacheLockFile,
                                    TString(fCacheDir).ReplaceAll("/","%").Data()));
 
    // Create 'queries' locker instance and lock it
-   fQueryLock = new TProofLockPath(Form("%s/%s%s-%s", gSystem->TempDirectory(),
+   fQueryLock = new TProofLockPath(TString::Format("%s/%s%s-%s", gSystem->TempDirectory(),
                                    kPROOF_QueryLockFile, GetName(),
                                    TString(fQueryDir).ReplaceAll("/","%").Data()));
    fQueryLock->Lock();
@@ -303,9 +302,10 @@ Int_t TProofLite::Init(const char *, const char *conffile,
          }
       }
 
-      UserGroup_t *ug = gSystem->GetUserInfo();
-      fPackageLock = new TProofLockPath(Form("%s%s", kPROOF_PackageLockFile, ug->fUser.Data()));
-      delete ug;
+      TString lockpath(fPackageDir);
+      lockpath.ReplaceAll("/", "%");
+      lockpath.Insert(0, TString::Format("%s/%s", gSystem->TempDirectory(), kPROOF_PackageLockFile));
+      fPackageLock = new TProofLockPath(lockpath.Data());
 
       fEnabledPackagesOnClient = new TList;
       fEnabledPackagesOnClient->SetOwner();
@@ -572,7 +572,7 @@ Int_t TProofLite::SetupWorkers(Int_t opt, TList *startedWorkers)
                   fSlaves->Add(wrk);
                   if (opt == 1) fActiveSlaves->Add(wrk);
                   fAllMonitor->Add(wrk->GetSocket());
-                  // Recod also in the list for termination
+                  // Record also in the list for termination
                   if (startedWorkers) startedWorkers->Add(wrk);
                   // Notify startup operations
                   NotifyStartUp("Setting up worker servers", ++nWrksDone, nWrksTot);
@@ -666,8 +666,8 @@ Int_t TProofLite::SetProofServEnv(const char *ord)
    fprintf(frc,"ProofServ.RootVersionTag: %s\n", gROOT->GetVersion());
 
    // Work dir
-   TString sandbox = gEnv->GetValue("ProofLite.Sandbox", Form("%s/%s",
-                                     gSystem->WorkingDirectory(), kPROOF_WorkDir));
+   TString sandbox = gEnv->GetValue("ProofServ.Sandbox", fSandbox);
+   gSystem->ExpandPathName(sandbox);
    fprintf(frc,"# Users sandbox\n");
    fprintf(frc, "ProofServ.Sandbox: %s\n", sandbox.Data());
 
@@ -769,29 +769,28 @@ Int_t TProofLite::CreateSandbox()
    // Create the sandbox for this session
 
    // Make sure the sandbox area exist and is writable
-   TString sandbox = gEnv->GetValue("Proof.Sandbox", "");
-   if (sandbox.IsNull()) {
-      sandbox.Form("~/%s", kPROOF_WorkDir);
-   }
-   gSystem->ExpandPathName(sandbox);
-   if (AssertPath(sandbox, kTRUE) != 0) return -1;
+   fSandbox = gEnv->GetValue("ProofLite.Sandbox", "");
+   if (fSandbox.IsNull())
+      fSandbox = gEnv->GetValue("Proof.Sandbox", TString::Format("~/%s", kPROOF_WorkDir));
+   gSystem->ExpandPathName(fSandbox);
+   if (AssertPath(fSandbox, kTRUE) != 0) return -1;
 
    // Package Dir
    fPackageDir = gEnv->GetValue("Proof.PackageDir", "");
    if (fPackageDir.IsNull())
-      fPackageDir.Form("%s/%s", sandbox.Data(), kPROOF_PackDir);
+      fPackageDir.Form("%s/%s", fSandbox.Data(), kPROOF_PackDir);
    if (AssertPath(fPackageDir, kTRUE) != 0) return -1;
 
    // Cache Dir
    fCacheDir = gEnv->GetValue("Proof.CacheDir", "");
    if (fCacheDir.IsNull())
-      fCacheDir.Form("%s/%s", sandbox.Data(), kPROOF_CacheDir);
+      fCacheDir.Form("%s/%s", fSandbox.Data(), kPROOF_CacheDir);
    if (AssertPath(fCacheDir, kTRUE) != 0) return -1;
 
    // Data Set Dir
    fDataSetDir = gEnv->GetValue("Proof.DataSetDir", "");
    if (fDataSetDir.IsNull())
-      fDataSetDir.Form("%s/%s", sandbox.Data(), kPROOF_DataSetDir);
+      fDataSetDir.Form("%s/%s", fSandbox.Data(), kPROOF_DataSetDir);
    if (AssertPath(fDataSetDir, kTRUE) != 0) return -1;
 
    // Session unique tag (name of this TProof instance)
@@ -799,12 +798,12 @@ Int_t TProofLite::CreateSandbox()
    stag.Form("%s-%d-%d", gSystem->HostName(), (int)time(0), gSystem->GetPid());
    SetName(stag.Data());
 
-   // Subpath for this session in the sandbox (<sandbox>/path-to-working-dir)
+   // Subpath for this session in the fSandbox (<sandbox>/path-to-working-dir)
    TString sessdir(gSystem->WorkingDirectory());
    sessdir.ReplaceAll(gSystem->HomeDirectory(),"");
    sessdir.ReplaceAll("/","-");
    sessdir.Replace(0,1,"/",1);
-   sessdir.Insert(0, sandbox.Data());
+   sessdir.Insert(0, fSandbox.Data());
 
    // Session working and queries dir
    fWorkDir.Form("%s/session-%s", sessdir.Data(), stag.Data());
@@ -994,7 +993,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    }
 
    // Make sure that all enabled workers get some work, unless stated
-   // differently 
+   // differently
    if (!fPlayer->GetInputList()->FindObject("PROOF_MaxSlavesPerNode"))
       SetParameter("PROOF_MaxSlavesPerNode", (Long_t)fNWorkers);
 
@@ -1139,7 +1138,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
          Emit("StopProcess(Bool_t)", abort);
       }
 
-      // In PROOFLite this has to be done once only in TProofLite::Process 
+      // In PROOFLite this has to be done once only in TProofLite::Process
       pq->SetOutputList(fPlayer->GetOutputList(), kFALSE);
       // If the last object, notify the GUI that the result arrived
       QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
@@ -1323,6 +1322,269 @@ void TProofLite::ClearCache(const char *file)
       gSystem->Exec(Form("%s %s/%s", kRM, fCacheDir.Data(), file));
    }
    fCacheLock->Unlock();
+}
+
+//______________________________________________________________________________
+Int_t TProofLite::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueOnly,
+                       TList *wrks)
+{
+   // Copy the specified macro in the cache directory. The macro file is
+   // uploaded if new or updated. If existing, the corresponding header
+   // basename(macro).h or .hh, is also uploaded. For the other arguments
+   // see TProof::Load().
+   // Returns 0 in case of success and -1 in case of error.
+
+   if (!IsValid()) return -1;
+
+   if (!macro || !strlen(macro)) {
+      Error("Load", "need to specify a macro name");
+      return -1;
+   }
+
+   if (CopyMacroToCache(macro) < 0)
+      return -1;
+
+   return TProof::Load(macro, notOnClient, uniqueOnly, wrks);
+}
+
+//______________________________________________________________________________
+Int_t TProofLite::CopyMacroToCache(const char *macro, Int_t headerRequired,
+                                   TSelector **selector, Int_t opt)
+{
+   // Copy a macro, and its possible associated .h[h] file,
+   // to the cache directory, from where the workers can get the file.
+   // If headerRequired is 1, return -1 in case the header is not found.
+   // If headerRequired is 0, try to copy header too.
+   // If headerRequired is -1, don't look for header, only copy macro.
+   // If the selector pionter is not 0, consider the macro to be a selector
+   // and try to load the selector and set it to the pointer.
+   // The mask 'opt' is an or of ESendFileOpt:
+   //       kCpBin   (0x8)     Retrieve from the cache the binaries associated
+   //                          with the file
+   //       kCp      (0x10)    Retrieve the files from the cache
+   // Return -1 in case of error, 0 otherwise.
+
+   // Relevant pointers
+   TString cacheDir = fCacheDir;
+   gSystem->ExpandPathName(cacheDir);
+   TProofLockPath *cacheLock = fCacheLock;
+
+   // Split out the aclic mode, if any
+   TString name = macro;
+   TString acmode, args, io;
+   name = gSystem->SplitAclicMode(name, acmode, args, io);
+
+   PDB(kGlobal,1)
+      Info("CopyMacroToCache", "enter: names: %s, %s", macro, name.Data());
+
+   // Make sure that the file exists
+   if (gSystem->AccessPathName(name, kReadPermission)) {
+      Error("CopyMacroToCache", "file %s not found or not readable", name.Data());
+      return -1;
+   }
+
+   // Update the macro path
+   TString mp(TROOT::GetMacroPath());
+   TString np(gSystem->DirName(name));
+   if (!np.IsNull()) {
+      np += ":";
+      if (!mp.BeginsWith(np) && !mp.Contains(":"+np)) {
+         Int_t ip = (mp.BeginsWith(".:")) ? 2 : 0;
+         mp.Insert(ip, np);
+         TROOT::SetMacroPath(mp);
+         if (gDebug > 0)
+            Info("CopyMacroToCache", "macro path set to '%s'", TROOT::GetMacroPath());
+      }
+   }
+
+   // Check the header file
+   Int_t dot = name.Last('.');
+   const char *hext[] = { ".h", ".hh", "" };
+   TString hname, checkedext;
+   Int_t i = 0;
+   while (strlen(hext[i]) > 0) {
+      hname = name(0, dot);
+      hname += hext[i];
+      if (!gSystem->AccessPathName(hname, kReadPermission))
+         break;
+      if (!checkedext.IsNull()) checkedext += ",";
+      checkedext += hext[i];
+      hname = "";
+      i++;
+   }
+   if (hname.IsNull() && headerRequired == 1) {
+      Error("CopyMacroToCache", "header file for %s not found or not readable "
+            "(checked extensions: %s)", name.Data(), checkedext.Data());
+      return -1;
+   }
+   if (headerRequired < 0)
+      hname = "";
+
+   cacheLock->Lock();
+
+   // Check these files with those in the cache (if any)
+   Bool_t useCacheBinaries = kFALSE;
+   TString cachedname = Form("%s/%s", cacheDir.Data(), gSystem->BaseName(name));
+   TString cachedhname;
+   if (!hname.IsNull())
+      cachedhname = Form("%s/%s", cacheDir.Data(), gSystem->BaseName(hname));
+   if (!gSystem->AccessPathName(cachedname, kReadPermission)) {
+      TMD5 *md5 = TMD5::FileChecksum(name);
+      TMD5 *md5cache = TMD5::FileChecksum(cachedname);
+      if (md5 && md5cache && (*md5 == *md5cache))
+         useCacheBinaries = kTRUE;
+      if (!hname.IsNull()) {
+         if (!gSystem->AccessPathName(cachedhname, kReadPermission)) {
+            TMD5 *md5h = TMD5::FileChecksum(hname);
+            TMD5 *md5hcache = TMD5::FileChecksum(cachedhname);
+            if (md5h && md5hcache && (*md5h != *md5hcache))
+               useCacheBinaries = kFALSE;
+         }
+      }
+   }
+
+   // Create version file name template
+   TString vername(Form(".%s", name.Data()));
+   dot = vername.Last('.');
+   if (dot != kNPOS)
+      vername.Remove(dot);
+   vername += ".binversion";
+   Bool_t savever = kFALSE;
+
+   // Check binary version
+   if (useCacheBinaries) {
+      TString v;
+      Int_t rev = -1;
+      FILE *f = fopen(Form("%s/%s", cacheDir.Data(), vername.Data()), "r");
+      if (f) {
+         TString r;
+         v.Gets(f);
+         r.Gets(f);
+         rev = (!r.IsNull() && r.IsDigit()) ? r.Atoi() : -1;
+         fclose(f);
+      }
+      if (!f || v != gROOT->GetVersion() ||
+          (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision()))
+         useCacheBinaries = kFALSE;
+   }
+
+   // Create binary name template
+   TString binname = gSystem->BaseName(name);
+   dot = binname.Last('.');
+   if (dot != kNPOS)
+      binname.Replace(dot,1,"_");
+   binname += ".";
+
+   FileStat_t stlocal, stcache;
+   void *dirp = 0;
+   if (useCacheBinaries) {
+      // Loop over binaries in the cache and copy them locally if newer then the local
+      // versions or there is no local version
+      dirp = gSystem->OpenDirectory(cacheDir);
+      if (dirp) {
+         const char *e = 0;
+         while ((e = gSystem->GetDirEntry(dirp))) {
+            if (!strncmp(e, binname.Data(), binname.Length())) {
+               TString fncache = Form("%s/%s", cacheDir.Data(), e);
+               Bool_t docp = kTRUE;
+               if (!gSystem->GetPathInfo(fncache, stcache)) {
+                  Int_t rc = gSystem->GetPathInfo(e, stlocal);
+                  if (rc == 0 && (stlocal.fMtime >= stcache.fMtime))
+                     docp = kFALSE;
+                  // Copy the file, if needed
+                  if (docp) {
+                     gSystem->Exec(Form("%s %s", kRM, e));
+                     PDB(kGlobal,2)
+                        Info("CopyMacroToCache",
+                             "retrieving %s from cache", fncache.Data());
+                     gSystem->Exec(Form("%s %s %s", kCP, fncache.Data(), e));
+                  }
+               }
+            }
+         }
+         gSystem->FreeDirectory(dirp);
+      }
+   }
+   cacheLock->Unlock();
+
+   if (selector) {
+      // Now init the selector in optimized way
+      if (!(*selector = TSelector::GetSelector(macro))) {
+         Error("CopyMacroToCache", "could not create a selector from %s", macro);
+         return -1;
+      }
+   }
+
+   cacheLock->Lock();
+
+   TList *cachedFiles = new TList;
+   // Save information in the cache now for later usage
+   dirp = gSystem->OpenDirectory(".");
+   if (dirp) {
+      const char *e = 0;
+      while ((e = gSystem->GetDirEntry(dirp))) {
+         if (!strncmp(e, binname.Data(), binname.Length())) {
+            Bool_t docp = kTRUE;
+            if (!gSystem->GetPathInfo(e, stlocal)) {
+               TString fncache = Form("%s/%s", cacheDir.Data(), e);
+               Int_t rc = gSystem->GetPathInfo(fncache, stcache);
+               if (rc == 0 && (stlocal.fMtime <= stcache.fMtime))
+                  docp = kFALSE;
+               // Copy the file, if needed
+               if (docp) {
+                  gSystem->Exec(Form("%s %s", kRM, fncache.Data()));
+                  PDB(kGlobal,2)
+                     Info("CopyMacroToCache","caching %s ...", e);
+                  gSystem->Exec(Form("%s %s %s", kCP, e, fncache.Data()));
+                  savever = kTRUE;
+               }
+               if (opt & kCpBin)
+                  cachedFiles->Add(new TObjString(fncache.Data()));
+            }
+         }
+      }
+      gSystem->FreeDirectory(dirp);
+   }
+
+   // Save binary version if requested
+   if (savever) {
+      FILE *f = fopen(Form("%s/%s", cacheDir.Data(), vername.Data()), "w");
+      if (f) {
+         fputs(gROOT->GetVersion(), f);
+         fputs(Form("\n%d",gROOT->GetSvnRevision()), f);
+         fclose(f);
+      }
+   }
+
+   // Save also the selector info, if needed
+   if (!useCacheBinaries) {
+      gSystem->Exec(Form("%s %s", kRM, cachedname.Data()));
+      PDB(kGlobal,2)
+         Info("CopyMacroToCache","caching %s ...", name.Data());
+      gSystem->Exec(Form("%s %s %s", kCP, name.Data(), cachedname.Data()));
+      if (!hname.IsNull()) {
+         gSystem->Exec(Form("%s %s", kRM, cachedhname.Data()));
+         PDB(kGlobal,2)
+            Info("CopyMacroToCache","caching %s ...", hname.Data());
+         gSystem->Exec(Form("%s %s %s", kCP, hname.Data(), cachedhname.Data()));
+      }
+   }
+   if (opt & kCp) {
+      cachedFiles->Add(new TObjString(cachedname.Data()));
+      if (!hname.IsNull())
+         cachedFiles->Add(new TObjString(cachedhname.Data()));
+   }
+
+   cacheLock->Unlock();
+
+   // Create symlinks
+   if (opt & (kCp | kCpBin))
+      CreateSymLinks(cachedFiles);
+
+   cachedFiles->SetOwner();
+   delete cachedFiles;
+
+   return 0;
 }
 
 //______________________________________________________________________________

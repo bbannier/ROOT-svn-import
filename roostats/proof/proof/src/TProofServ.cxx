@@ -100,6 +100,9 @@
 #include "TProofProgressStatus.h"
 #include "TServerSocket.h"
 #include "TMonitor.h"
+#include "TFunction.h"
+#include "TMethodArg.h"
+#include "TMethodCall.h"
 
 // global proofserv handle
 TProofServ *gProofServ = 0;
@@ -200,6 +203,8 @@ Bool_t TProofServInputHandler::Notify()
 }
 
 TString TProofServLogHandler::fgPfx = ""; // Default prefix to be prepended to messages
+Int_t TProofServLogHandler::fgCmdRtn = 0; // Return code of the command execution (available only
+                                          // after closing the pipe)
 //______________________________________________________________________________
 TProofServLogHandler::TProofServLogHandler(const char *cmd,
                                              TSocket *s, const char *pfx)
@@ -208,6 +213,7 @@ TProofServLogHandler::TProofServLogHandler(const char *cmd,
    // Execute 'cmd' in a pipe and handle output messages from the related file
 
    ResetBit(kFileIsPipe);
+   fgCmdRtn = 0;
    fFile = 0;
    if (s && cmd) {
       fFile = gSystem->OpenPipe(cmd, "r");
@@ -220,6 +226,7 @@ TProofServLogHandler::TProofServLogHandler(const char *cmd,
       } else {
          fSocket = 0;
          Error("TProofServLogHandler", "executing command in pipe");
+         fgCmdRtn = -1;
       }
    } else {
       Error("TProofServLogHandler",
@@ -233,6 +240,7 @@ TProofServLogHandler::TProofServLogHandler(FILE *f, TSocket *s, const char *pfx)
    // Handle available message from the open file 'f'
 
    ResetBit(kFileIsPipe);
+   fgCmdRtn = 0;
    fFile = 0;
    if (s && f) {
       fFile = f;
@@ -248,8 +256,14 @@ TProofServLogHandler::~TProofServLogHandler()
 {
    // Handle available message in the open file
 
-   if (TestBit(kFileIsPipe) && fFile)
-      gSystem->ClosePipe(fFile);
+   if (TestBit(kFileIsPipe) && fFile) {
+      Int_t rc = gSystem->ClosePipe(fFile);
+#ifdef WIN32
+      fgCmdRtn = rc;
+#else
+      fgCmdRtn = WIFEXITED(rc) ? WEXITSTATUS(rc) : -1;
+#endif
+   }
    fFile = 0;
    fSocket = 0;
    ResetBit(kFileIsPipe);
@@ -293,6 +307,14 @@ void TProofServLogHandler::SetDefaultPrefix(const char *pfx)
    // Static method to set the default prefix
 
    fgPfx = pfx;
+}
+//______________________________________________________________________________
+Int_t TProofServLogHandler::GetCmdRtn()
+{
+   // Static method to get the return code from the execution of a command via
+   // the pipe. This is always 0 when the log handler is not used with a pipe
+
+   return fgCmdRtn;
 }
 
 //______________________________________________________________________________
@@ -346,7 +368,7 @@ TProofServLogHandlerGuard::~TProofServLogHandlerGuard()
    }
 }
 
-//--- Special timer to constrol delayed shutdowns ----------------------------//
+//--- Special timer to control delayed shutdowns ----------------------------//
 //______________________________________________________________________________
 Bool_t TShutdownTimer::Notify()
 {
@@ -442,6 +464,40 @@ Bool_t TReaperTimer::Notify()
    } else {
       // Needed for the next shot
       Reset();
+   }
+   return kTRUE;
+}
+
+//--- Special timer to to terminate idle sessions ----------------------------//
+//______________________________________________________________________________
+Bool_t TIdleTOTimer::Notify()
+{
+   // Handle expiration of the idle timer. The session will just be terminated.
+
+   Info ("Notify", "session idle for more then %d secs: terminating", Long_t(fTime)/1000);
+
+   if (fProofServ) {
+      // Set the status to timed-out
+      Int_t uss_rc = -1;
+      if ((uss_rc = fProofServ->UpdateSessionStatus(4)) != 0)
+         Warning("Notify", "problems updating session status (errno: %d)", -uss_rc);
+      // Send a terminate request
+      TString msg;
+      if (fProofServ->GetProtocol() < 29) {
+         msg.Form("\n//\n// PROOF session at %s (%s) terminated because idle for more than %d secs\n"
+                  "// Please IGNORE any error message possibly displayed below\n//",
+                  gSystem->HostName(), fProofServ->GetSessionTag(), Long_t(fTime)/1000);
+      } else {
+         msg.Form("\n//\n// PROOF session at %s (%s) terminated because idle for more than %d secs\n//",
+                  gSystem->HostName(), fProofServ->GetSessionTag(), Long_t(fTime)/1000);
+      }
+      fProofServ->SendAsynMessage(msg.Data());
+      fProofServ->Terminate(0);
+      Reset();
+      Stop();
+   } else {
+      Warning("Notify", "fProofServ undefined!");
+      Start(-1, kTRUE);
    }
    return kTRUE;
 }
@@ -556,6 +612,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
 
    fShutdownTimer   = 0;
    fReaperTimer     = 0;
+   fIdleTOTimer     = 0;
 
    fInflateFactor   = 1000;
 
@@ -1140,6 +1197,9 @@ void TProofServ::HandleSocketInput()
 {
    // Handle input coming from the client or from the master server.
 
+   // The idle timeout guard: stops the timer and restarts when we return from here
+   TIdleTOTimerGuard itg(fIdleTOTimer);
+
    Bool_t all = (fgRecursive > 0) ? kFALSE : kTRUE;
    fgRecursive++;
 
@@ -1612,7 +1672,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             } else {
                TMessage answ(kPROOF_GETSLAVEINFO);
                TList *info = new TList;
-               TSlaveInfo *wi = new TSlaveInfo(GetOrdinal(), gSystem->HostName(), 0);
+               TSlaveInfo *wi = new TSlaveInfo(GetOrdinal(), TUrl(gSystem->HostName()).GetHostFQDN(), 0);
                SysInfo_t si;
                gSystem->GetSysInfo(&si);
                wi->SetSysInfo(si);
@@ -2692,10 +2752,11 @@ Int_t TProofServ::SetupCommon()
                          TString(fPackageDir).ReplaceAll("/","%").Data()));
 
    // Check and make sure "data" directory exists
-   fDataDir = gEnv->GetValue("ProofServ.DataDir",
-                              TString::Format("%s/%s", fWorkDir.Data(), kPROOF_DataDir));
-   if (!fDataDir.Contains("<ord>")) fDataDir += "/<ord>";
-   if (!fDataDir.Contains("<stag>")) fDataDir += "/<stag>";
+   fDataDir = gEnv->GetValue("ProofServ.DataDir","");
+   if (fDataDir.IsNull()) {
+      // Use default
+      fDataDir.Form("%s/%s/<ord>/<stag>", fWorkDir.Data(), kPROOF_DataDir);
+   }
    ResolveKeywords(fDataDir);
    if (gSystem->AccessPathName(fDataDir))
       gSystem->mkdir(fDataDir, kTRUE);
@@ -2917,9 +2978,6 @@ Int_t TProofServ::SetupCommon()
       }
    }
 
-   if (gProofDebugLevel > 0)
-      Info("SetupCommon", "successfully completed");
-
    if (fgLogToSysLog > 0) {
       // Set the syslog entity (all the information is available now)
       if (!(fUser.IsNull()) && !(fGroup.IsNull())) {
@@ -2935,6 +2993,23 @@ Int_t TProofServ::SetupCommon()
       gSystem->Syslog(kLogNotice, s.Data());
    }
 
+   // Setup the idle timer
+   if (IsMaster() && !fIdleTOTimer) {
+      // Check activity on socket every 5 mins
+      Int_t idle_to = gEnv->GetValue("ProofServ.IdleTimeout", -1);
+      if (idle_to > 0) {
+         fIdleTOTimer = new TIdleTOTimer(this, idle_to * 1000);
+         fIdleTOTimer->Start(-1, kTRUE);
+         if (gProofDebugLevel > 0)
+            Info("SetupCommon", " idle timer started (%d secs)", idle_to);
+      } else if (gProofDebugLevel > 0) {
+         Info("SetupCommon", " idle timer not started (no idle timeout requested)");
+      }
+   }
+
+   if (gProofDebugLevel > 0)
+      Info("SetupCommon", "successfully completed");
+
    // Done
    return 0;
 }
@@ -2946,7 +3021,7 @@ void TProofServ::Terminate(Int_t status)
 
    if (fgLogToSysLog > 0) {
       TString s;
-      s.Form("%s -1 %.3f %.3f", fgSysLogEntity.Data(), fRealTime, fCpuTime);
+      s.Form("%s -1 %.3f %.3f %d", fgSysLogEntity.Data(), fRealTime, fCpuTime, status);
       gSystem->Syslog(kLogNotice, s.Data());
    }
 
@@ -2988,6 +3063,12 @@ void TProofServ::Terminate(Int_t status)
          fQueryLock->Unlock();
    }
 
+   // Cleanup data directory if empty
+   if (!fDataDir.IsNull() && !gSystem->AccessPathName(fDataDir, kWritePermission)) {
+     if (UnlinkDataDir(fDataDir))
+        Info("Terminate", "data directory '%s' has been removed", fDataDir.Data());
+   }
+
    // Remove input handler to avoid spurious signals in socket
    // selection for closing activities executed upon exit()
    TIter next(gSystem->GetListOfFileHandlers());
@@ -3002,6 +3083,41 @@ void TProofServ::Terminate(Int_t status)
    gSystem->ExitLoop();
 
    // Exit() is called in pmain
+}
+
+//______________________________________________________________________________
+Bool_t TProofServ::UnlinkDataDir(const char *path)
+{
+   // Scan recursively the datadir and unlink it if empty
+   // Return kTRUE if it can be unlinked, kFALSE otherwise
+
+   if (!path || strlen(path) <= 0) return kFALSE;
+
+   Bool_t dorm = kTRUE;
+   void *dirp = gSystem->OpenDirectory(path);
+   if (dirp) {
+      TString fpath;
+      const char *ent = 0;
+      while (dorm && (ent = gSystem->GetDirEntry(dirp))) {
+         if (!strcmp(ent, ".") || !strcmp(ent, "..")) continue;
+         fpath.Form("%s/%s", path, ent);
+         FileStat_t st;
+         if (gSystem->GetPathInfo(fpath, st) == 0 && R_ISDIR(st.fMode)) {
+            dorm = UnlinkDataDir(fpath);
+         } else {
+            dorm = kFALSE;
+         }
+      }
+   } else {
+      // Cannot open the directory
+      dorm = kFALSE;
+   }
+
+    // Do remove, if required
+   if (dorm && gSystem->Unlink(path) != 0)
+      Warning("UnlinkDataDir", "data directory '%s' is empty but could not be removed");
+   // done
+   return dorm;
 }
 
 //______________________________________________________________________________
@@ -4554,7 +4670,8 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
    const char *k = (IsMaster()) ? "Mst" : "Wrk";
    noth.Form("%s-%s", k, fOrdinal.Data());
 
-   TString package, pdir, ocwd, file;
+   TList *optls = 0;
+   TString packagedir(fPackageDir), package, pdir, ocwd, file;
    (*mess) >> type;
    switch (type) {
       case TProof::kShowCache:
@@ -4658,6 +4775,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                       !gSystem->AccessPathName(pdir + "/PROOF-INF", kReadPermission)) {
                      // Package found, stop searching
                      fromglobal = kTRUE;
+                     packagedir = nm->GetTitle();
                      break;
                   }
                   pdir = "";
@@ -4710,14 +4828,14 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                }
                if (!f || v != gROOT->GetVersion() ||
                   (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision())) {
-                  if (!fromglobal) {
+                  if (!fromglobal || !gSystem->AccessPathName(pdir, kWritePermission)) {
                      savever = kTRUE;
                      SendAsynMessage(TString::Format("%s: %s: version change (current: %s:%d,"
                                           " build: %s:%d): cleaning ... ",
                                           noth.Data(), package.Data(), gROOT->GetVersion(),
                                           gROOT->GetSvnRevision(), v.Data(), rev));
                      // Hard cleanup: go up the dir tree
-                     gSystem->ChangeDirectory(fPackageDir);
+                     gSystem->ChangeDirectory(packagedir);
                      // remove package directory
                      gSystem->Exec(TString::Format("%s %s", kRM, pdir.Data()));
                      // find gunzip...
@@ -4735,7 +4853,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                         } else {
                            // Store md5 in package/PROOF-INF/md5.txt
                            TMD5 *md5local = TMD5::FileChecksum(par);
-                           TString md5f = fPackageDir + "/" + package + "/PROOF-INF/md5.txt";
+                           TString md5f = packagedir + "/" + package + "/PROOF-INF/md5.txt";
                            TMD5::WriteChecksum(md5f, md5local);
                            // Go down to the package directory
                            gSystem->ChangeDirectory(pdir);
@@ -4765,14 +4883,15 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                   {
                      TProofServLogHandlerGuard hg(cmd, fSocket);
                   }
-
-                  // write version file
-                  if (savever) {
-                     f = fopen("PROOF-INF/proofvers.txt", "w");
-                     if (f) {
-                        fputs(gROOT->GetVersion(), f);
-                        fputs(TString::Format("\n%d",gROOT->GetSvnRevision()), f);
-                        fclose(f);
+                  if (!(status = TProofServLogHandler::GetCmdRtn())) {
+                     // Success: write version file
+                     if (savever) {
+                        f = fopen("PROOF-INF/proofvers.txt", "w");
+                        if (f) {
+                           fputs(gROOT->GetVersion(), f);
+                           fputs(TString::Format("\n%d",gROOT->GetSvnRevision()), f);
+                           fclose(f);
+                        }
                      }
                   }
                }
@@ -4788,7 +4907,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
 
          if (status) {
             // Notify the upper level
-            SendAsynMessage(TString::Format("%s: failure building %s ...", noth.Data(), package.Data()));
+            SendAsynMessage(TString::Format("%s: failure building %s ... (status: %d)", noth.Data(), package.Data(), status));
          } else {
             // collect built results from slaves
             if (IsMaster())
@@ -4837,19 +4956,91 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
          ocwd = gSystem->WorkingDirectory();
          gSystem->ChangeDirectory(pdir);
 
-         // check for SETUP.C and execute
+         // Check for SETUP.C and execute
          if (!gSystem->AccessPathName("PROOF-INF/SETUP.C")) {
-            Int_t err = 0;
-            Int_t errm = gROOT->Macro("PROOF-INF/SETUP.C", &err);
-            if (errm < 0)
+            // Load the macro
+            if (gROOT->LoadMacro("PROOF-INF/SETUP.C") != 0) {
+               // Macro could not be loaded
+               SendAsynMessage(TString::Format("%s: error: macro '%s/PROOF-INF/SETUP.C' could not be loaded:"
+                                                " cannot continue",
+                                                noth.Data(), package.Data()));
                status = -1;
-            if (err > TInterpreter::kNoError && err <= TInterpreter::kFatal)
-               status = -1;
+            } else {
+               // Check the signature
+               TFunction *fun = (TFunction *) gROOT->GetListOfGlobalFunctions()->FindObject("SETUP");
+               if (!fun) {
+                  // Notify the upper level
+                  SendAsynMessage(TString::Format("%s: error: function SETUP() not found in macro '%s/PROOF-INF/SETUP.C':"
+                                                   " cannot continue",
+                                                   noth.Data(), package.Data()));
+                  status = -1;
+               } else {
+                  TMethodCall callEnv;
+                  // Check the number of arguments
+                  if (fun->GetNargs() == 0) {
+                     // No arguments (basic signature)
+                     callEnv.InitWithPrototype("SETUP","");
+                     if ((mess->BufferSize() > mess->Length())) {
+                        (*mess) >> optls;
+                        SendAsynMessage(TString::Format("%s: warning: loaded SETUP() does not take any argument:"
+                                                        " the specified argument will be ignored", noth.Data()));
+                     }
+                  } else if (fun->GetNargs() == 1) {
+                     TMethodArg *arg = (TMethodArg *) fun->GetListOfMethodArgs()->First();
+                     if (arg) {
+                        // Get argument
+                        if ((mess->BufferSize() > mess->Length())) (*mess) >> optls;
+                        // Check argument type
+                        TString argsig(arg->GetTitle());
+                        if (argsig.BeginsWith("TList")) {
+                           callEnv.InitWithPrototype("SETUP","TList *");
+                           callEnv.ResetParam();
+                           callEnv.SetParam((Long_t) optls);
+                        } else if (argsig.BeginsWith("const char")) {
+                           callEnv.InitWithPrototype("SETUP","const char *");
+                           callEnv.ResetParam();
+                           TObjString *os = optls ? dynamic_cast<TObjString *>(optls->First()) : 0;
+                           if (os) {
+                              callEnv.SetParam((Long_t) os->GetName());
+                           } else {
+                              if (optls && optls->First()) {
+                                 SendAsynMessage(TString::Format("%s: warning: found object argument of type %s:"
+                                                                 " SETUP expects 'const char *': ignoring",
+                                                                 noth.Data(), optls->First()->ClassName()));
+                              }
+                              callEnv.SetParam((Long_t) 0);
+                           }
+                        } else {
+                           // Notify the upper level
+                           SendAsynMessage(TString::Format("%s: error: unsupported SETUP signature: SETUP(%s)"
+                                                            " cannot continue", noth.Data(), arg->GetTitle()));
+                           status = -1;
+                        }
+                     } else {
+                        // Notify the upper level
+                        SendAsynMessage(TString::Format("%s: error: cannot get information about the SETUP() argument:"
+                                                         " cannot continue", noth.Data()));
+                        status = -1;
+                     }
+                  } else if (fun->GetNargs() > 1) {
+                     // Notify the upper level
+                     SendAsynMessage(TString::Format("%s: error: function SETUP() can have at most a 'TList *' argument:"
+                                                      " cannot continue", noth.Data()));
+                     status = -1;
+                  }
+                  // Execute
+                  Long_t setuprc = (status == 0) ? 0 : -1;
+                  if (status == 0) {
+                     callEnv.Execute(setuprc);
+                     if (setuprc < 0) status = -1;
+                  }
+               }
+            }
          }
 
          gSystem->ChangeDirectory(ocwd);
 
-         if (status) {
+         if (status < 0) {
 
             // Notify the upper level
             SendAsynMessage(TString::Format("%s: failure loading %s ...", noth.Data(), package.Data()));
@@ -6251,12 +6442,34 @@ Int_t TProofServ::GetSessionStatus()
    //     1     running
    //     2     being terminated  (currently unused)
    //     3     queued
+   //     4     idle timed-out (not set in here but in TIdleTOTimer::Notify)
    // This is typically run in the reader thread, so access needs to be protected
 
    R__LOCKGUARD(fQMtx);
    Int_t st = (fIdle) ? 0 : 1;
    if (fIdle && fWaitingQueries->GetSize() > 0) st = 3;
    return st;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::UpdateSessionStatus(Int_t xst)
+{
+   // Update the session status in the relevant file. The status is taken from
+   // GetSessionStatus() unless xst >= 0, in which case xst is used.
+   // Return 0 on success, -errno if the file could not be opened.
+
+   FILE *fs = fopen(fAdminPath.Data(), "w");
+   if (fs) {
+      Int_t st = (xst < 0) ? GetSessionStatus() : xst;
+      fprintf(fs, "%d", st);
+      fclose(fs);
+      PDB(kGlobal, 2)
+         Info("UpdateSessionStatus", "status (=%d) update in path: %s", st, fAdminPath.Data());
+   } else {
+      return -errno;
+   }
+   // Done
+   return 0;
 }
 
 //______________________________________________________________________________

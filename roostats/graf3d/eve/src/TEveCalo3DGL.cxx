@@ -526,13 +526,14 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
    if (fM->fCellIdCacheOK == kFALSE)
       fM->BuildCellIdCache();
 
-
-   glEnable(GL_LIGHTING);
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT | GL_POLYGON_BIT);
+   glEnable(GL_LIGHTING);
    glEnable(GL_NORMALIZE);
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
    TEveCaloData::CellData_t cellData;
-   Float_t towerH;
+   Float_t towerH = 0;
    Int_t   tower = 0;
    Int_t   prevTower = -1;
    Float_t offset = 0;
@@ -610,7 +611,7 @@ void TEveCalo3DGL::DrawHighlight(TGLRnrCtx & rnrCtx, const TGLPhysicalShape* /*p
 void TEveCalo3DGL::DrawSelectedCells(TEveCaloData::vCellId_t cells) const
 {
    TEveCaloData::CellData_t cellData;
-   Float_t towerH;
+   Float_t towerH = 0;
 
    for (TEveCaloData::vCellId_i i = cells.begin(); i != cells.end(); i++)
    {
@@ -639,29 +640,15 @@ void TEveCalo3DGL::DrawSelectedCells(TEveCaloData::vCellId_t cells) const
 }
 
 //______________________________________________________________________________
-void TEveCalo3DGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & rec)
+void TEveCalo3DGL::ProcessSelection(TGLRnrCtx& /*rnrCtx*/, TGLSelectRecord& rec)
 {
    // Processes tower selection.
    // Virtual function from TGLogicalShape. Called from TGLViewer.
 
-   TEveCaloData::vCellId_t& cells = rec.GetHighlight() ? fM->fData->GetCellsHighlighted() : fM->fData->GetCellsSelected() ;
-
-   Int_t prev = cells.size();
-   if (!rec.GetMultiple()) cells.clear();
-   Int_t cellID = -1;
+   TEveCaloData::vCellId_t sel;
    if (rec.GetN() > 1)
    {
-      cellID = rec.GetItem(1);
-      cells.push_back(fM->fCellList[cellID]);
+      sel.push_back(fM->fCellList[rec.GetItem(1)]);
    }
-
-   if (prev == 0 && cellID >= 0)
-      rec.SetSecSelResult(TGLSelectRecord::kEnteringSelection);
-   else if (prev  && cellID < 0)
-      rec.SetSecSelResult(TGLSelectRecord::kLeavingSelection);
-   else if (prev  && cellID >= 0)
-      rec.SetSecSelResult(TGLSelectRecord::kModifyingInternalSelection);
-
-
-   fM->fData->CellSelectionChanged();
+   fM->fData->ProcessSelection(sel, rec);
 }

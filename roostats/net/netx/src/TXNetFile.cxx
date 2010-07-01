@@ -202,8 +202,8 @@ Int_t TXNetFile::ParseOptions(const char *opts,
    Int_t fo = 0;
    TString s(opts);
 
-   Int_t i = 0;
-   for (i = 0; i < 4; i++) {
+   UInt_t i = 0;
+   for (i = 0; i < (sizeof(keys)/sizeof(keys[0])); i++) {
       Int_t j = s.Index(keys[i]);
       if (j != kNPOS) {
          TString val(s(j+strlen(keys[i]), s.Length()));
@@ -1349,15 +1349,17 @@ void TXNetFile::SynchronizeCacheSize()
    // Synchronize the cache size
    // Alternative purging policy
 
+   if (fClient == 0) return;
+
    fClient->UseCache(TRUE);
    Int_t size;
    Long64_t bytessubmitted, byteshit, misscount, readreqcnt;
    Float_t  missrate, bytesusefulness;
    int newbsz = -1;
-   if (fClient && fClient->GetCacheInfo(size, bytessubmitted,
-                                        byteshit, misscount,
-                                        missrate, readreqcnt,
-                                        bytesusefulness) ) {
+   if (fClient->GetCacheInfo(size, bytessubmitted,
+                             byteshit, misscount,
+                             missrate, readreqcnt,
+                             bytesusefulness) ) {
 
       // To allow for some space for outstanding data
       newbsz = GetCacheRead()->GetBufferSize() / 2 * 3;

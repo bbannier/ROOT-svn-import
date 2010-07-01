@@ -1455,8 +1455,35 @@ void TRootBrowserLite::AddToTree(TObject *obj, const char *name, Int_t check)
          }
          // add the object only if not already in the list
          if ((!fLt->FindChildByName(fListLevel, name)) &&
-            (!fLt->FindChildByData(fListLevel, obj))) {
-            fLt->AddItem(fListLevel, name, obj);
+             (!fLt->FindChildByData(fListLevel, obj))) {
+            TGListTreeItem *it = fLt->AddItem(fListLevel, name, obj);
+            Long64_t bsize, fsize, objsize = 0;
+            TString objinfo = obj->GetObjectInfo(1, 1);
+            TString infos = obj->GetName();
+            infos += "\n";
+            infos += obj->GetTitle();
+            if (!objinfo.IsNull() && !objinfo.BeginsWith("x=")) {
+               objsize = objinfo.Atoll();
+               if (objsize > 0) {
+                  infos += "\n";
+                  bsize = fsize = objsize;
+                  if (fsize > 1024) {
+                     fsize /= 1024;
+                     if (fsize > 1024) {
+                        // 3.7MB is more informative than just 3MB
+                        infos += TString::Format("Size: %lld.%lldM", fsize/1024,
+                                                 (fsize%1024)/103);
+                     } else {
+                        infos += TString::Format("Size: %lld.%lldK", bsize/1024,
+                                                 (bsize%1024)/103);
+                     }
+                  } else {
+                     infos += TString::Format("Size: %lld bytes", bsize);
+                  }
+               }
+            }
+            if (it) 
+               it->SetTipText(infos.Data());
          }
       }
    }
@@ -1753,6 +1780,7 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
          switch (GET_SUBMSG(msg)) {
 
             case kCM_BUTTON:
+               // fallthrough
             case kCM_MENU:
 
                switch (parm1) {
@@ -1988,6 +2016,7 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                      hd->Popup();
                      break;
                }
+               break;
             case kCM_COMBOBOX:
                if (parm1 == kFSComboBox) {
                   TGTreeLBEntry *e = (TGTreeLBEntry *) fFSComboBox->GetSelectedEntry();
@@ -3029,7 +3058,7 @@ void TRootBrowserLite::ExecMacro()
    fTextEdit->SaveFile(tmpfile, kFALSE);
    gROOT->Macro(tmpfile);
    gSystem->Unlink(tmpfile);
-   delete tmpfile;
+   delete [] tmpfile;
    gROOT->SetExecutingMacro(kFALSE);
 }
 
