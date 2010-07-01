@@ -44,10 +44,15 @@
 #include "TMVA/OptimizerFOM.h"
 #endif
 
+#ifndef ROOT_TMVA_IFitterTarget
+#ifndef ROOT_IFitterTarget
+#include "IFitterTarget.h"
+#endif
+#endif
 
 namespace TMVA {
 
-   class Optimizer {
+   class Optimizer : public IFitterTarget  {
       
    public:
       
@@ -56,13 +61,21 @@ namespace TMVA {
       
       // destructor
       virtual ~Optimizer(){}
+      // could later be changed to be set via option string... 
+      // but for now it's impler like this
+      void optimize(TString optimizationType = "GA"); 
       
-      void optimize();
-      
+      void optimizeScan();
+      void optimizeGA();
+
+      Double_t EstimatorFunction( std::vector<Double_t> & );
+
       
    private:
 
       OptimizerFOM *fFOM;
+
+      std::map< std::vector<Double_t> , Double_t>  fAlreadyTrainedParCombination;
       
       ClassDef(Optimizer,0) // Interface to different separation critiera used in training algorithms
    };
