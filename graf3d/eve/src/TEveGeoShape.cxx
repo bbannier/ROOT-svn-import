@@ -97,6 +97,8 @@ TEveGeoShape::TEveGeoShape(const char* name, const char* title) :
 {
    // Constructor.
 
+   fCanEditMainColor        = kTRUE;
+   fCanEditMainTransparency = kTRUE;
    InitMainTrans();
 }
 
@@ -374,9 +376,8 @@ void TEveGeoShapeProjected::SetProjection(TEveProjectionManager* mng,
    TEveProjected::SetProjection(mng, model);
 
    TEveGeoShape* gre = dynamic_cast<TEveGeoShape*>(fProjectable);
-
    SetMainColor(gre->GetMainColor());
-   SetMainTransparency(gre->GetMainTransparency());
+   CopyVizParams(gre);
 }
 
 //______________________________________________________________________________

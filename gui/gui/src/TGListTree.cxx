@@ -2305,7 +2305,8 @@ start:
       s = strchr(p, '/');
 
       if (!s) {
-         strncpy(dirname, p, 1024);
+         strncpy(dirname, p, 1023);
+         dirname[1023] = 0;
       } else {
          strncpy(dirname, p, s-p);
          dirname[s-p] = 0;
@@ -2652,13 +2653,13 @@ void TGListTreeItemStd::SavePrimitive(ostream &out, Option_t *option, Int_t n)
          makeuncheck = kFALSE;
       }
       out << "   item" << s.Data() << "->CheckItem();" << endl;
-      if (oldcheck != fCheckedPic) {
+      if (fCheckedPic && oldcheck != fCheckedPic) {
          oldcheck = fCheckedPic;
          out << "   pcheck = gClient->GetPicture(" << quote
              << gSystem->ExpandPathName(gSystem->UnixPathName(fCheckedPic->GetName()))
              << quote << ");" << endl;
       }
-      if (olduncheck != fUncheckedPic) {
+      if (fUncheckedPic && olduncheck != fUncheckedPic) {
          olduncheck = fUncheckedPic;
          out << "   puncheck = gClient->GetPicture(" << quote
              << gSystem->ExpandPathName(gSystem->UnixPathName(fUncheckedPic->GetName()))

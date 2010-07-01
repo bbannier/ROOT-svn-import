@@ -384,11 +384,12 @@ void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t& outH) co
       outH = GetValToHeight()*fData->GetMaxVal(fPlotEt);
       UChar_t c[4];
       fPalette->ColorFromValue((Int_t)value, c);
+      c[3] = fData->GetSliceTransparency(slice);
       TGLUtil::Color4ubv(c);
    }
    else
    {
-      TGLUtil::Color(fData->RefSliceInfo(slice).fColor);
+      TGLUtil::ColorTransparency(fData->GetSliceColor(slice), fData->GetSliceTransparency(slice));
       outH = GetValToHeight()*value;
    }
 }
@@ -416,6 +417,8 @@ TEveCalo3D::TEveCalo3D(TEveCaloData* d, const char* n, const char* t):
 
    // Constructor.
 
+   fCanEditMainColor        = kTRUE;
+   fCanEditMainTransparency = kTRUE;
    fMainColorPtr = &fFrameColor;
 }
 
@@ -673,6 +676,15 @@ void TEveCalo2D::CellSelectionChangedInternal(TEveCaloData::vCellId_t& cells, st
 }
 
 //______________________________________________________________________________
+void TEveCalo2D::SetScaleAbs(Bool_t sa)
+{
+   // Set absolute scale in projected calorimeter.
+   
+   TEveCaloViz::SetScaleAbs(sa);
+   BuildCellIdCache();
+}
+
+//______________________________________________________________________________
 Float_t TEveCalo2D::GetValToHeight() const
 {
    // Virtual function of TEveCaloViz.
@@ -765,6 +777,9 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* d, const char* n, const char* t):
 
    fDrawHPlane(kFALSE),
    fHPlaneVal(0),
+
+   fHasFixedHeightIn2DMode(kFALSE),
+   fFixedHeightValIn2DMode(0.f),
 
    fDrawNumberCellPixels(18), // draw numbers on cell above 30 pixels
    fCellPixelFontSize(12) // size of cell fonts in pixels

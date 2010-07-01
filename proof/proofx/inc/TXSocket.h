@@ -104,6 +104,8 @@ private:
    Int_t               fByteCur;       // current position in the first buffer
    TXSockBuf          *fBufCur;        // current read buffer
 
+   TSemaphore          fAsynProc;      // Control actions while processing async messages
+
    // Interrupts
    TMutex             *fIMtx;          // To protect interrupt queue
    kXR_int32           fILev;          // Highest received interrupt
@@ -134,7 +136,7 @@ private:
    void                PushBackSpare();
 
    // Post a message into the queue for asynchronous processing
-   void                PostMsg(Int_t type);
+   void                PostMsg(Int_t type, const char *msg = 0);
 
    // Auxilliary
    Int_t               GetLowSocket() const { return (fConn ? fConn->GetLowSocket() : -1); }

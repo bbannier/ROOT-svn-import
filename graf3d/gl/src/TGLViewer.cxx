@@ -322,7 +322,7 @@ void TGLViewer::PadPaint(TVirtualPad* pad)
 /**************************************************************************/
 
 //______________________________________________________________________________
-void TGLViewer::UpdateScene()
+void TGLViewer::UpdateScene(Bool_t redraw)
 {
    // Force update of pad-scenes. Eventually this could be generalized
    // to all scene-types via a virtual function in TGLSceneBase.
@@ -340,7 +340,8 @@ void TGLViewer::UpdateScene()
    PostSceneBuildSetup(fResetCamerasOnNextUpdate || fResetCamerasOnUpdate);
    fResetCamerasOnNextUpdate = kFALSE;
 
-   RequestDraw();
+   if (redraw)
+      RequestDraw();
 }
 
 //______________________________________________________________________________
@@ -442,10 +443,9 @@ void TGLViewer::RequestDraw(Short_t LODInput)
    // Request is directed via cross thread gVirtualGL object.
 
    fRedrawTimer->Stop();
-   // Ignore request if GL window or context not yet availible - we
-   // will get redraw later
-   if (!fGLWidget && fGLDevice == -1) {
-      fRedrawTimer->RequestDraw(100, LODInput);
+   // Ignore request if GL window or context not yet availible or shown.
+   if ((!fGLWidget && fGLDevice == -1) || (fGLWidget && !fGLWidget->IsMapped()))
+   {
       return;
    }
 
@@ -611,7 +611,7 @@ void TGLViewer::DoDrawMono()
       RenderNonSelected();
       RenderSelected();
       DrawGuides();
-      RenderOverlay();
+      RenderOverlay(TGLOverlayElement::kAllVisible, kFALSE);
 
       glClear(GL_DEPTH_BUFFER_BIT);
       fRnrCtx->SetHighlight(kTRUE);
@@ -684,7 +684,7 @@ void TGLViewer::DoDrawStereo()
       RenderNonSelected();
       RenderSelected();
       DrawGuides();
-      RenderOverlay();
+      RenderOverlay(TGLOverlayElement::kAllVisible, kFALSE);
 
       glClear(GL_DEPTH_BUFFER_BIT);
       fRnrCtx->SetHighlight(kTRUE);
@@ -722,7 +722,7 @@ void TGLViewer::DoDrawStereo()
       RenderNonSelected();
       RenderSelected();
       DrawGuides();
-      RenderOverlay();
+      RenderOverlay(TGLOverlayElement::kAllVisible, kFALSE);
 
       glClear(GL_DEPTH_BUFFER_BIT);
       fRnrCtx->SetHighlight(kTRUE);
@@ -982,7 +982,7 @@ void TGLViewer::DrawGuides()
    {
       glDisable(GL_DEPTH_TEST);
       Float_t radius = fCamera->ViewportDeltaToWorld(TGLVertex3(fCamera->GetCenterVec()), 3, 3).Mag();
-      const Float_t rgba[4] = { 0, 1, 1, 1.0 };
+      const UChar_t rgba[4] = { 0, 255, 255, 255 };
       TGLUtil::DrawSphere(fCamera->GetCenterVec(), radius, rgba);
       disabled = kTRUE;
    }
@@ -1018,11 +1018,9 @@ void TGLViewer::DrawDebugInfo()
       // Scene bounding box center sphere (green) and
       glDisable(GL_DEPTH_TEST);
       Double_t size = fOverallBoundingBox.Extents().Mag() / 200.0;
-      static Float_t white[4] = {1.0, 1.0, 1.0, 1.0};
-      TGLUtil::DrawSphere(TGLVertex3(0.0, 0.0, 0.0), size, white);
-      static Float_t green[4] = {0.0, 1.0, 0.0, 1.0};
+      TGLUtil::DrawSphere(TGLVertex3(0.0, 0.0, 0.0), size, TGLUtil::fgWhite);
       const TGLVertex3 & center = fOverallBoundingBox.Center();
-      TGLUtil::DrawSphere(center, size, green);
+      TGLUtil::DrawSphere(center, size, TGLUtil::fgGreen);
       glEnable(GL_DEPTH_TEST);
 
       glEnable(GL_LIGHTING);
@@ -1095,7 +1093,7 @@ void TGLViewer::FadeView(Float_t alpha)
       TGLCapabilitySwitch blend(GL_BLEND,    kTRUE);
       TGLCapabilitySwitch light(GL_LIGHTING, kFALSE);
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      TGLUtil::Color(fRnrCtx->ColorSet().Background(), alpha);
+      TGLUtil::ColorAlpha(fRnrCtx->ColorSet().Background(), alpha);
       glBegin(GL_QUADS);
       glVertex3f(-1, -1, z);  glVertex3f( 1, -1, z);
       glVertex3f( 1,  1, z);  glVertex3f(-1,  1, z);
@@ -1343,7 +1341,7 @@ Bool_t TGLViewer::DoOverlaySelect(Int_t x, Int_t y)
    glRenderMode(GL_SELECT);
 
    PreRenderOverlaySelection();
-   RenderOverlay();
+   RenderOverlay(TGLOverlayElement::kActive, kTRUE);
    PostRenderOverlaySelection();
 
    Int_t nHits = glRenderMode(GL_RENDER);

@@ -55,6 +55,7 @@ class TDSetElement;
 class TMessage;
 class TShutdownTimer;
 class TReaperTimer;
+class TIdleTOTimer;
 class TMutex;
 class TFileCollection;
 class TDataSetManager;
@@ -141,6 +142,7 @@ private:
 
    TShutdownTimer *fShutdownTimer;  // Timer used to shutdown out-of-control sessions
    TReaperTimer   *fReaperTimer;    // Timer used to control children state
+   TIdleTOTimer   *fIdleTOTimer;    // Timer used to control children state
 
    Int_t         fInflateFactor;    // Factor in 1/1000 to inflate the CPU time
 
@@ -224,6 +226,7 @@ protected:
    virtual Int_t Fork();
    Int_t         GetSessionStatus();
    Bool_t        IsIdle();
+   Bool_t        UnlinkDataDir(const char *path);
 
 public:
    TProofServ(Int_t *argc, char **argv, FILE *flog = 0);
@@ -304,6 +307,8 @@ public:
    void           SendStatistics();
    void           SendParallel(Bool_t async = kFALSE);
 
+   Int_t          UpdateSessionStatus(Int_t xst = -1);
+
    // Disable / Enable read timeout
    virtual void   DisableTimeout() { }
    virtual void   EnableTimeout() { }
@@ -360,6 +365,8 @@ private:
    TString      fPfx;    // Prefix to be prepended to messages
 
    static TString fgPfx; // Default prefix to be prepended to messages
+   static Int_t   fgCmdRtn; // Return code of the command execution (available only
+                            // after closing the pipe)
 public:
    enum EStatusBits { kFileIsPipe = BIT(23) };
    TProofServLogHandler(const char *cmd, TSocket *s, const char *pfx = "");
@@ -372,6 +379,7 @@ public:
    Bool_t ReadNotify() { return Notify(); }
 
    static void SetDefaultPrefix(const char *pfx);
+   static Int_t GetCmdRtn();
 };
 
 //--- Guard class: close pipe, deactivatethe related descriptor --------------//
@@ -414,5 +422,28 @@ public:
    void AddPid(Int_t pid);
    Bool_t Notify();
 };
+
+//--- Special timer to terminate idle sessions
+//______________________________________________________________________________
+class TIdleTOTimer : public TTimer {
+private:
+   TProofServ    *fProofServ;
+
+public:
+   TIdleTOTimer(TProofServ *p, Int_t delay) : TTimer(delay, kTRUE), fProofServ(p) { }
+
+   Bool_t Notify();
+};
+//______________________________________________________________________________
+class TIdleTOTimerGuard {
+
+private:
+   TIdleTOTimer *fIdleTOTimer;
+
+public:
+   TIdleTOTimerGuard(TIdleTOTimer *t) : fIdleTOTimer(t) { if (fIdleTOTimer) fIdleTOTimer->Stop(); }
+   virtual ~TIdleTOTimerGuard() { if (fIdleTOTimer) fIdleTOTimer->Start(-1, kTRUE); }
+};
+
 
 #endif

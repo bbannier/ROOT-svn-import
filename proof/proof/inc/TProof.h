@@ -123,9 +123,10 @@ class TMacro;
 // 26 -> 27: Use new file for updating the session status
 // 27 -> 28: Support for multi-datasets, fix global pack dirs, fix AskStatistics,
 //           package download, dataset caching
+// 28 -> 29: Support for config parameters in EnablePackage, idle-timeout
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 28;            // protocol version number
+const Int_t       kPROOF_Protocol        = 29;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -140,6 +141,7 @@ const char* const kPROOF_CacheLockFile   = "proof-cache-lock-";   // cache lock 
 const char* const kPROOF_PackageLockFile = "proof-package-lock-"; // package lock file
 const char* const kPROOF_QueryLockFile   = "proof-query-lock-";   // query lock file
 const char* const kPROOF_TerminateWorker = "+++ terminating +++"; // signal worker termination in MarkBad
+const char* const kPROOF_WorkerIdleTO    = "+++ idle-timeout +++"; // signal worker idle timeout in MarkBad
 const char* const kPROOF_InputDataFile   = "inputdata.root";      // Default input data file name
 
 #ifndef R__WIN32
@@ -430,7 +432,7 @@ private:
       kGetQuota            = 10, //Get quota info per group
       kShowQuota           = 11, //Show quotas
       kSetDefaultTreeName  = 12, //Set the default tree name
-      kCache               = 13  //Show/clear cache 
+      kCache               = 13  //Show/clear cache
    };
    enum ESendFileOpt {
       kAscii               = 0x0,
@@ -586,8 +588,6 @@ private:
    Int_t    SendCommand(const char *cmd, ESlaves list = kActive);
    Int_t    SendCurrentState(ESlaves list = kActive);
    Bool_t   CheckFile(const char *file, TSlave *sl, Long_t modtime, Int_t cpopt = (kCp | kCpBin));
-   Int_t    SendFile(const char *file, Int_t opt = (kBinary | kForward | kCp | kCpBin),
-                     const char *rfile = 0, TSlave *sl = 0);
    Int_t    SendObject(const TObject *obj, ESlaves list = kActive);
    Int_t    SendGroupView();
    Int_t    SendInitialState();
@@ -602,8 +602,8 @@ private:
    void     NotifyLogMsg(const char *msg, const char *sfx = "\n");
    Int_t    BuildPackage(const char *package, EBuildPackageOpt opt = kBuildAll);
    Int_t    BuildPackageOnClient(const char *package, Int_t opt = 0, TString *path = 0);
-   Int_t    LoadPackage(const char *package, Bool_t notOnClient = kFALSE);
-   Int_t    LoadPackageOnClient(const char *package);
+   Int_t    LoadPackage(const char *package, Bool_t notOnClient = kFALSE, TList *loadopts = 0);
+   Int_t    LoadPackageOnClient(const char *package, TList *loadopts = 0);
    Int_t    UnloadPackage(const char *package);
    Int_t    UnloadPackageOnClient(const char *package);
    Int_t    UnloadPackages();
@@ -722,7 +722,9 @@ protected:
    Int_t AssertPath(const char *path, Bool_t writable);
 
    void PrepareInputDataFile(TString &dataFile);
-   virtual void SendInputDataFile();
+   virtual void  SendInputDataFile();
+   Int_t SendFile(const char *file, Int_t opt = (kBinary | kForward | kCp | kCpBin),
+                  const char *rfile = 0, TSlave *sl = 0);
 
    static void *SlaveStartupThread(void *arg);
 
@@ -793,19 +795,23 @@ public:
    virtual void Print(Option_t *option="") const;
 
    //-- cache and package management
-   virtual void ShowCache(Bool_t all = kFALSE);
-   virtual void ClearCache(const char *file = 0);
-   TList      *GetListOfPackages();
-   TList      *GetListOfEnabledPackages();
-   void        ShowPackages(Bool_t all = kFALSE, Bool_t redirlog = kFALSE);
-   void        ShowEnabledPackages(Bool_t all = kFALSE);
-   Int_t       ClearPackages();
-   Int_t       ClearPackage(const char *package);
-   Int_t       DownloadPackage(const char *par, const char *dstdir = 0);
-   Int_t       EnablePackage(const char *package, Bool_t notOnClient = kFALSE);
-   Int_t       UploadPackage(const char *par, EUploadPackageOpt opt = kUntar);
-   Int_t       Load(const char *macro, Bool_t notOnClient = kFALSE, Bool_t uniqueOnly = kTRUE,
-                    TList *wrks = 0);
+   virtual void  ShowCache(Bool_t all = kFALSE);
+   virtual void  ClearCache(const char *file = 0);
+   TList        *GetListOfPackages();
+   TList        *GetListOfEnabledPackages();
+   void          ShowPackages(Bool_t all = kFALSE, Bool_t redirlog = kFALSE);
+   void          ShowEnabledPackages(Bool_t all = kFALSE);
+   Int_t         ClearPackages();
+   Int_t         ClearPackage(const char *package);
+   Int_t         DownloadPackage(const char *par, const char *dstdir = 0);
+   Int_t         EnablePackage(const char *package, Bool_t notOnClient = kFALSE);
+   Int_t         EnablePackage(const char *package, const char *loadopts,
+                               Bool_t notOnClient = kFALSE);
+   Int_t         EnablePackage(const char *package, TList *loadopts,
+                               Bool_t notOnClient = kFALSE);
+   Int_t         UploadPackage(const char *par, EUploadPackageOpt opt = kUntar);
+   virtual Int_t Load(const char *macro, Bool_t notOnClient = kFALSE, Bool_t uniqueOnly = kTRUE,
+                      TList *wrks = 0);
 
    Int_t       AddDynamicPath(const char *libpath, Bool_t onClient = kFALSE, TList *wrks = 0);
    Int_t       AddIncludePath(const char *incpath, Bool_t onClient = kFALSE, TList *wrks = 0);
@@ -837,11 +843,11 @@ public:
    void        ShowDataSetQuota(Option_t* opt = 0);
 
    virtual Bool_t ExistsDataSet(const char *dataset);
-   void        ShowDataSet(const char *dataset = "", const char* opt = "M");
-   virtual Int_t RemoveDataSet(const char *dataset, const char* optStr = "");
-   virtual Int_t VerifyDataSet(const char *dataset, const char* optStr = "");
+   void           ShowDataSet(const char *dataset = "", const char* opt = "M");
+   virtual Int_t  RemoveDataSet(const char *dataset, const char* optStr = "");
+   virtual Int_t  VerifyDataSet(const char *dataset, const char* optStr = "");
    virtual TFileCollection *GetDataSet(const char *dataset, const char* optStr = "");
-   TList       *FindDataSets(const char *searchString, const char* optStr = "");
+   TList         *FindDataSets(const char *searchString, const char* optStr = "");
 
    virtual Int_t SetDataSetTreeName( const char *dataset, const char *treename);
 

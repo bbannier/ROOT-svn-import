@@ -74,6 +74,7 @@
 #include "TH1.h"
 #include "TVirtualMonitoring.h"
 #include "TParameter.h"
+#include "TOutputListSelectorDataMap.h"
 
 // Timeout exception
 #define kPEX_STOPPED  1001
@@ -997,6 +998,8 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
          }
       }
 
+      MapOutputListToDataMembers();
+
       if (fSelStatus->IsOk()) {
          if (version == 0) {
             PDB(kLoop,1) Info("Process","Call Terminate()");
@@ -1048,6 +1051,14 @@ void TProofPlayer::MergeOutput()
    MayNotUse("MergeOutput");
    return;
 }
+
+//______________________________________________________________________________
+void TProofPlayer::MapOutputListToDataMembers() const
+{
+   TOutputListSelectorDataMap* olsdm = new TOutputListSelectorDataMap(fSelector);
+   fOutput->Add(olsdm);
+}
+
 //______________________________________________________________________________
 void TProofPlayer::UpdateAutoBin(const char *name,
                                  Double_t& xmin, Double_t& xmax,
@@ -1841,6 +1852,22 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
 
 
 //______________________________________________________________________________
+void TProofPlayerRemote::SetSelectorDataMembersFromOutputList()
+{
+   // Set the selector's data members:
+   // find the mapping of data members to otuput list entries in the output list
+   // and apply it.
+   TOutputListSelectorDataMap* olsdm
+      = TOutputListSelectorDataMap::FindInList(fOutput);
+   if (!olsdm) {
+      PDB(kOutput,1) Warning("SetSelectorDataMembersFromOutputList","Failed to find map object in output list!");
+      return;
+   }
+
+   olsdm->SetDataMembers(fSelector);
+}
+
+//______________________________________________________________________________
 Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
 {
 
@@ -1859,7 +1886,7 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
          MergeOutput();
       }
    }
-   
+
    Long64_t rv = 0;
    if (fProof->IsMaster()) {
       TPerfStats::Stop();
@@ -1916,6 +1943,8 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
                output->Add(obj);
          }
 
+         SetSelectorDataMembersFromOutputList();
+
          PDB(kLoop,1) Info("Finalize","Call Terminate()");
          fOutput->Clear("nodelete");
          fSelector->Terminate();
@@ -1950,12 +1979,12 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
       }
    }
    PDB(kGlobal,1) Info("Process","exit");
-   
+
    if (!IsClient()) {
       Info("Finalize", "finalization on %s finished", gProofServ->GetPrefix());
    }
    fProof->FinalizationDone();
-   
+
    return rv;
 }
 
@@ -2020,6 +2049,8 @@ Long64_t TProofPlayerRemote::Finalize(TQueryResult *qr)
    }
    gSystem->RedirectOutput(0);
 
+   SetSelectorDataMembersFromOutputList();
+
    // Finalize it
    SetCurrentQuery(qr);
    Long64_t rc = Finalize();
@@ -2074,12 +2105,14 @@ Bool_t TProofPlayerRemote::SendSelector(const char* selector_file)
    TString np(gSystem->DirName(selec));
    if (!np.IsNull()) {
       np += ":";
-      Int_t ip = (mp.BeginsWith(".:")) ? 2 : 0;
-      mp.Insert(ip, np);
+      if (!mp.BeginsWith(np) && !mp.Contains(":"+np)) {
+         Int_t ip = (mp.BeginsWith(".:")) ? 2 : 0;
+         mp.Insert(ip, np);
+         TROOT::SetMacroPath(mp);
+         if (gDebug > 0)
+            Info("SendSelector", "macro path set to '%s'", TROOT::GetMacroPath());
+      }
    }
-   TROOT::SetMacroPath(mp);
-   if (gDebug > 0)
-      Info("SendSelector", "macro path set to '%s'", TROOT::GetMacroPath());
 
    // Header file
    TString header = selec;
@@ -2309,6 +2342,7 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
 
       // Incorporate the resulting global list in fOutput
       Incorporate(evlist, fOutput, merged);
+      NotifyMemory(evlist);
 
       // Delete the global list if merged
       if (merged)
@@ -2353,17 +2387,8 @@ Int_t TProofPlayerRemote::AddOutputObject(TObject *obj)
 
    // For other objects we just run the incorporation procedure
    Incorporate(obj, fOutput, merged);
-   if (fProof && (!IsClient() || fProof->IsLite())){
-      ProcInfo_t pi;
-      if (!gSystem->GetProcInfo(&pi)){
-         // For PROOF-Lite we redirect this output to a the open log file so that the
-         // memory monitor can pick these messages up
-         RedirectOutput(fProof->IsLite());
-         Info("AddOutputObject|Svc", "Memory %ld virtual %ld resident after merging object %s",
-                                     pi.fMemVirtual, pi.fMemResident, obj->GetName());
-         RedirectOutput(0);
-      }
-   }
+   NotifyMemory(obj);
+
    // We are done
    return (merged ? 1 : 0);
 }
@@ -2410,7 +2435,7 @@ void TProofPlayerRemote::AddOutput(TList *out)
    if (elists) {
 
       // Create a global event list, result of merging the event lists
-      // coresponding to the various data set elements
+      // corresponding to the various data set elements
       TEventList *evlist = new TEventList("PROOF_EventList");
 
       // Iterate the list of event list segments
@@ -2451,6 +2476,7 @@ void TProofPlayerRemote::AddOutput(TList *out)
 
       // Incorporate the resulting global list in fOutput
       Incorporate(evlist, fOutput, merged);
+      NotifyMemory(evlist);
    }
 
    // Iterate on the remaining objects in the received list
@@ -2462,10 +2488,30 @@ void TProofPlayerRemote::AddOutput(TList *out)
       // passes to fOutput
       if (!merged)
          out->Remove(obj);
+      NotifyMemory(obj);
    }
 
    // Done
    return;
+}
+
+//______________________________________________________________________________
+void TProofPlayerRemote::NotifyMemory(TObject *obj)
+{
+   // Printout the memory record after merging object 'obj'
+   // This record is used by the memory monitor
+
+   if (fProof && (!IsClient() || fProof->IsLite())){
+      ProcInfo_t pi;
+      if (!gSystem->GetProcInfo(&pi)){
+         // For PROOF-Lite we redirect this output to a the open log file so that the
+         // memory monitor can pick these messages up
+         RedirectOutput(fProof->IsLite());
+         Info("NotifyMemory|Svc", "Memory %ld virtual %ld resident after merging object %s",
+                                  pi.fMemVirtual, pi.fMemResident, obj->GetName());
+         RedirectOutput(0);
+      }
+   }
 }
 
 //______________________________________________________________________________

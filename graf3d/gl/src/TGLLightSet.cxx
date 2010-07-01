@@ -108,7 +108,9 @@ void TGLLightSet::StdSetupLights(const TGLBoundingBox& bbox,
       glLoadIdentity();
 
       // 0: Front, 1: Top, 2: Bottom, 3: Left, 4: Right
-      TGLVertex3 center = bbox.Center();
+      TGLVertex3 c = bbox.Center();
+      TGLVector3 center(c.X(), c.Y(), c.Z());
+      camera.RefModelViewMatrix().MultiplyIP(center);
       // Float_t pos0[] = { center.X(), center.Y(), frontLightZ, 1.0 };
       Float_t pos0[] = { 0.0,        0.0,                      frontLightZ, 1.0 };
       Float_t pos1[] = { center.X(), center.Y() + lightRadius, sideLightsZ, 1.0 };
@@ -149,12 +151,11 @@ void TGLLightSet::StdSetupLights(const TGLBoundingBox& bbox,
          {
             // Lighting itself needs to be disable so a single one can show...!
             glDisable(GL_LIGHTING);
-            Float_t yellow[4] = { 1.0, 1.0, 0.0, 1.0 };
             Float_t position[4]; // Only float parameters for lights (no double)....
             glGetLightfv(GLenum(GL_LIGHT0 + light), GL_POSITION, position);
             Double_t size = bbox.Extents().Mag() / 10.0;
             TGLVertex3 dPosition(position[0], position[1], position[2]);
-            TGLUtil::DrawSphere(dPosition, size, yellow);
+            TGLUtil::DrawSphere(dPosition, size, TGLUtil::fgYellow);
             glEnable(GL_LIGHTING);
          }
       }

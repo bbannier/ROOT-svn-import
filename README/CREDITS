@@ -190,6 +190,7 @@ N: Jason Detwiler
 E: jasondet@gmail.com
 D: Implementation of class KelvinFunctions
 D: Implementation of multiple columns in TLegend class
+D: Implementation of TClonesArray::MultiSort
 
 N: Mat Dobbs
 E: Matthew.Adam.Dobbs@cern.ch
@@ -311,6 +312,7 @@ D: Event Recorder
 
 N: Oleksandr Grebenyuk
 E: Oleksandr.Grebenyuk@gsi.de
+D: Major developments in TLatex and TPostScript text.
 D: OpenLDAP interface
 
 N: Kristjan Gulbrandsen

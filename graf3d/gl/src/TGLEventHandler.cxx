@@ -33,6 +33,8 @@
 #include "TGToolTip.h"
 #include "KeySymbols.h"
 #include "TGLAnnotation.h"
+#include "TEnv.h"
+#include "TMath.h"
 
 //______________________________________________________________________________
 //
@@ -45,7 +47,12 @@
 // The signals about object being selected or hovered above are
 // emitted via the TGLViewer itself.
 //
-// This class is still under development.
+// The following rootrc settings influence the behaviour:
+// OpenGL.EventHandler.ViewerCentricControls:  1
+// OpenGL.EventHandler.ArrowKeyFactor:        -1.0
+// OpenGL.EventHandler.MouseDragFactor:       -1.0
+// OpenGL.EventHandler.MouseWheelFactor:      -1.0
+
 
 ClassImp(TGLEventHandler);
 
@@ -65,13 +72,19 @@ TGLEventHandler::TGLEventHandler(TGWindow *w, TObject *obj) :
    fMouseTimerRunning  (kFALSE),
    fTooltipShown       (kFALSE),
    fTooltipPixelTolerance (3),
-   fSecSelType(TGLViewer::kOnRequest)
+   fSecSelType(TGLViewer::kOnRequest),
+   fDoInternalSelection(kTRUE),
+   fViewerCentricControls(kFALSE)
 {
    // Constructor.
 
    fMouseTimer = new TTimer(this, 80);
    fTooltip    = new TGToolTip(0, 0, "", 650);
    fTooltip->Hide();
+   fViewerCentricControls = gEnv->GetValue("OpenGL.EventHandler.ViewerCentricControls", 0) != 0;
+   fArrowKeyFactor   = gEnv->GetValue("OpenGL.EventHandler.ArrowKeyFactor",   1.0);
+   fMouseDragFactor  = gEnv->GetValue("OpenGL.EventHandler.MouseDragFactor",  1.0);
+   fMouseWheelFactor = gEnv->GetValue("OpenGL.EventHandler.MouseWheelFactor", 1.0);
 }
 
 //______________________________________________________________________________
@@ -435,20 +448,20 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       // On Win32 only button release events come for mouse wheel.
       // Note: Modifiers (ctrl/shift) disabled as fState doesn't seem to
       // have correct modifier flags with mouse wheel under Windows.
-      // TODO: Put '50' into some static const.
 
       if (event->fType == kButtonRelease)
       {
          Bool_t redraw = kFALSE;
 
+         Int_t zoom = TMath::Nint(fMouseWheelFactor * ControlValue(50));
          switch(event->fCode)
          {
             case kButton5: // Zoom out (dolly or adjust camera FOV).
-               redraw = fGLViewer->CurrentCamera().Zoom(50, kFALSE, kFALSE);
+               redraw = fGLViewer->CurrentCamera().Zoom(zoom, kFALSE, kFALSE);
                break;
 
             case kButton4: // Zoom in (dolly or adjust camera FOV).
-               redraw = fGLViewer->CurrentCamera().Zoom(-50, kFALSE, kFALSE);
+               redraw = fGLViewer->CurrentCamera().Zoom(-zoom, kFALSE, kFALSE);
                break;
 
             case kButton6:
@@ -605,7 +618,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       {
          if (event->fCode == kButton1)
          {
-            if (event->fState & kKeyShiftMask)
+            if (event->fState & kKeyShiftMask && fDoInternalSelection)
             {
                if (fGLViewer->RequestSelect(event->fX, event->fY))
                {
@@ -716,6 +729,9 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
 {
    // Handle keyboard 'event'.
 
+  if (fTooltipShown)
+    fTooltip->Hide();
+
    fLastEventState = event->fState;
 
    fGLViewer->MouseIdle(0, 0, 0);
@@ -744,8 +760,10 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
    }
    else
    {
-      Bool_t mod1 = event->fState & kKeyControlMask;
-      Bool_t mod2 = event->fState & kKeyShiftMask;
+      const Bool_t mod1 = event->fState & kKeyControlMask;
+      const Bool_t mod2 = event->fState & kKeyShiftMask;
+
+      const Int_t shift = TMath::Nint(fArrowKeyFactor * ControlValue(10));
 
       switch (keysym)
       {
@@ -779,24 +797,24 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
          case kKey_Plus:
          case kKey_J:
          case kKey_j:
-            redraw = fGLViewer->CurrentCamera().Dolly(10, mod1, mod2);
+            redraw = fGLViewer->CurrentCamera().Dolly(shift, mod1, mod2);
             break;
          case kKey_Minus:
          case kKey_K:
          case kKey_k:
-            redraw = fGLViewer->CurrentCamera().Dolly(-10, mod1, mod2);
+            redraw = fGLViewer->CurrentCamera().Dolly(-shift, mod1, mod2);
             break;
          case kKey_Up:
-            redraw = fGLViewer->CurrentCamera().Truck(0, 10, mod1, mod2);
+            redraw = fGLViewer->CurrentCamera().Truck(0, shift, mod1, mod2);
             break;
          case kKey_Down:
-            redraw = fGLViewer->CurrentCamera().Truck(0, -10, mod1, mod2);
+            redraw = fGLViewer->CurrentCamera().Truck(0, -shift, mod1, mod2);
             break;
          case kKey_Left:
-            redraw = fGLViewer->CurrentCamera().Truck(-10, 0, mod1, mod2);
+            redraw = fGLViewer->CurrentCamera().Truck(-shift, 0, mod1, mod2);
             break;
          case kKey_Right:
-            redraw = fGLViewer->CurrentCamera().Truck(10, 0, mod1, mod2);
+            redraw = fGLViewer->CurrentCamera().Truck(shift, 0, mod1, mod2);
             break;
          case kKey_Home:
             if (mod1) {
@@ -810,14 +828,13 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
             break;
 
             // Toggle debugging mode
-         case kKey_D:
          case kKey_d:
             fGLViewer->fDebugMode = !fGLViewer->fDebugMode;
             redraw = kTRUE;
             Info("OpenGL viewer debug mode : ", fGLViewer->fDebugMode ? "ON" : "OFF");
             break;
             // Forced rebuild for debugging mode
-         case kKey_Space:
+         case kKey_D:
             if (fGLViewer->fDebugMode) {
                Info("OpenGL viewer FORCED rebuild", "");
                fGLViewer->UpdateScene();
@@ -853,8 +870,8 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    Short_t lod = TGLRnrCtx::kLODMed;
 
    // Camera interface requires GL coords - Y inverted
-   Int_t  xDelta = event->fX - fLastPos.fX;
-   Int_t  yDelta = event->fY - fLastPos.fY;
+   Int_t  xDelta = TMath::Nint(fMouseDragFactor * ControlValue(event->fX - fLastPos.fX));
+   Int_t  yDelta = TMath::Nint(fMouseDragFactor * ControlValue(event->fY - fLastPos.fY));
    Bool_t mod1   = event->fState & kKeyControlMask;
    Bool_t mod2   = event->fState & kKeyShiftMask;
 
@@ -891,7 +908,7 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    }
    else if (fGLViewer->fDragAction == TGLViewer::kDragCameraDolly)
    {
-      processed = fGLViewer->CurrentCamera().Dolly(xDelta - yDelta, mod1, mod2);
+      processed = fGLViewer->CurrentCamera().Dolly(yDelta - xDelta, mod1, mod2);
    }
    else if (fGLViewer->fDragAction == TGLViewer::kDragOverlay)
    {

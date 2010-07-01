@@ -1,5 +1,5 @@
 // @(#)root/tmva $Id$
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss
+// Author: Andreas Hoecker, Peter Speckmayer, Joerg Stelzer, Helge Voss
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -127,15 +127,33 @@ void TMVA::VariableTransformBase::CalcNorm( const std::vector<Event*>& events )
       }
    }
 
+   if (sumOfWeights <= 0) {
+      Log() << kFATAL << " the sum of event weights calcualted for your input is == 0"
+            << " or exactly: " << sumOfWeights << " there is obviously some problem..."<< Endl;
+   } 
+
    // set Mean and RMS
    for (UInt_t ivar=0; ivar<nvars; ivar++) {
       Double_t mean = x0(ivar)/sumOfWeights;
+      
       Variables().at(ivar).SetMean( mean ); 
+      if (x2(ivar)/sumOfWeights - mean*mean < 0) {
+         Log() << kFATAL << " the RMS of your input variable " << ivar 
+               << " evaluates to an imaginary number: sqrt("<< x2(ivar)/sumOfWeights - mean*mean
+               <<") .. sometimes related to a problem with outliers and negative event weights"
+               << Endl;
+      }
       Variables().at(ivar).SetRMS( TMath::Sqrt( x2(ivar)/sumOfWeights - mean*mean) );
    }
    for (UInt_t itgt=0; itgt<ntgts; itgt++) {
       Double_t mean = x0(nvars+itgt)/sumOfWeights;
       Targets().at(itgt).SetMean( mean ); 
+      if (x2(nvars+itgt)/sumOfWeights - mean*mean < 0) {
+         Log() << kFATAL << " the RMS of your target variable " << itgt 
+               << " evaluates to an imaginary number: sqrt(" << x2(nvars+itgt)/sumOfWeights - mean*mean
+               <<") .. sometimes related to a problem with outliers and negative event weights"
+               << Endl;
+      }
       Targets().at(itgt).SetRMS( TMath::Sqrt( x2(nvars+itgt)/sumOfWeights - mean*mean) );
    }
 

@@ -47,6 +47,7 @@
 #include "Riostream.h"
 #include "TGComboBox.h"
 #include "TGListBox.h"
+#include "snprintf.h"
 
 //_____________________________________________________________________________
 //
@@ -1471,19 +1472,19 @@ TGFont *TGHtml::GetFont(int iFont)
       if (iFamily < 4) size += 2;
 #endif
 
-      sprintf(name, familyStr, size);
+      snprintf(name, 200, familyStr, size);
 
       // Get the named font
-      fAFont[iFont] = fClient->GetFont(name);\
+      fAFont[iFont] = fClient->GetFont(name);
 
       if (fAFont[iFont] == 0) {
          fprintf(stderr, "TGHtml: could not get font \"%s\", trying fixed\n",
-                      name);
+                 name);
          fAFont[iFont] = fClient->GetFont("fixed");
       }
-      if (fAFont[iFont]==0 ){
+      if (fAFont[iFont] == 0 ){
          fprintf(stderr, "TGHtml: could not get font \"fixed\", trying "
-                      "\"helvetica -12\"\n");
+                 "\"helvetica -12\"\n");
          fAFont[iFont] = fClient->GetFont("helvetica -12");
       }
       FontSetValid(iFont);
@@ -1572,9 +1573,9 @@ int TGHtml::GetColorByName(const char *zColor)
          if (!isxdigit(zColor[i])) break;
       }
       if (i == n) {
-         sprintf(zAltColor, "#%s", zColor);
+         snprintf(zAltColor, 15, "#%s", zColor);
       } else {
-         strcpy(zAltColor, zColor);
+         strncpy(zAltColor, zColor, 15);
       }
       name = GetUid(zAltColor);
    } else {
@@ -2054,11 +2055,11 @@ void TGHtml::SavePrimitive(ostream &out, Option_t * /*= ""*/)
       out << "   " << GetName() << "->ChangeBackground(" << fCanvas->GetBackground() << ");" << endl;
    }
 
-   char fn[kMAXPATHLEN];
+   TString fn;
    TGText txt(GetText());
-   sprintf(fn,"Html%s.htm",GetName()+5);
-   txt.Save(fn);
-   out << "   " << "FILE *f = fopen(\"" << fn << "\", \"r\");" << endl;
+   fn.Form("Html%s.htm", GetName()+5);
+   txt.Save(fn.Data());
+   out << "   " << "FILE *f = fopen(\"" << fn.Data() << "\", \"r\");" << endl;
    out << "   " << "if (f) {" << endl;
    out << "      " << GetName() << "->Clear();" << endl;
    out << "      " << GetName() << "->Layout();" << endl;

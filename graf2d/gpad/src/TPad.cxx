@@ -455,8 +455,15 @@ TLegend *TPad::BuildLegend(Double_t x1, Double_t y1, Double_t x2, Double_t y2,
          }
       }
    }
-   if (leg) leg->Draw();
-   else Info("BuildLegend(void)","No object to build a TLegend.");
+   if (leg) {
+      TVirtualPad *gpadsave;
+      gpadsave = gPad;
+      this->cd();
+      leg->Draw();
+      gpadsave->cd();
+   } else {
+      Info("BuildLegend(void)","No object to build a TLegend.");
+   }
    return leg;
 }
 
@@ -2277,22 +2284,51 @@ void TPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
          if (!strcmp(axis->GetName(),"xaxis")) axisNumber = 1;
          if (!strcmp(axis->GetName(),"yaxis")) axisNumber = 2;
          if (ratio2 - ratio1 > 0.05) {
-            TH1 *hobj = (TH1*)axis->GetParent();
+            //update object owning this axis
+            TH1 *hobj1 = (TH1*)axis->GetParent();
             bin1 = axis->FindFixBin(xmin);
             bin2 = axis->FindFixBin(xmax);
             if (axisNumber == 1) axis->SetRange(bin1,bin2);
-            if (axisNumber == 2 && hobj) {
-               if (hobj->GetDimension() == 1) {
-                  if (hobj->GetNormFactor() != 0) {
-                     Double_t norm = hobj->GetSumOfWeights()/hobj->GetNormFactor();
+            if (axisNumber == 2 && hobj1) {
+               if (hobj1->GetDimension() == 1) {
+                  if (hobj1->GetNormFactor() != 0) {
+                     Double_t norm = hobj1->GetSumOfWeights()/hobj1->GetNormFactor();
                      xmin *= norm;
                      xmax *= norm;
                   }
-                  hobj->SetMinimum(xmin);
-                  hobj->SetMaximum(xmax);
-                  hobj->SetBit(TH1::kIsZoomed);
+                  hobj1->SetMinimum(xmin);
+                  hobj1->SetMaximum(xmax);
+                  hobj1->SetBit(TH1::kIsZoomed);
                } else {
                   axis->SetRange(bin1,bin2);
+               }
+            }
+            //update all histograms in the pad
+            TIter next(GetListOfPrimitives());
+            TObject *obj;
+            while ((obj= next())) {
+               if (!obj->InheritsFrom(TH1::Class())) continue;
+               TH1 *hobj = (TH1*)obj;
+               if (hobj == hobj1) continue;
+               bin1 = hobj->GetXaxis()->FindFixBin(xmin);
+               bin2 = hobj->GetXaxis()->FindFixBin(xmax);
+               if (axisNumber == 1) {
+                  hobj->GetXaxis()->SetRange(bin1,bin2);
+               } else if (axisNumber == 2) {
+                  if (hobj->GetDimension() == 1) {
+                     Double_t xxmin = xmin;
+                     Double_t xxmax = xmax;
+                     if (hobj->GetNormFactor() != 0) {
+                        Double_t norm = hobj->GetSumOfWeights()/hobj->GetNormFactor();
+                        xxmin *= norm;
+                        xxmax *= norm;
+                     }
+                     hobj->SetMinimum(xxmin);
+                     hobj->SetMaximum(xxmax);
+                     hobj->SetBit(TH1::kIsZoomed);
+                  } else {
+                     hobj->GetXaxis()->SetRange(bin1,bin2);
+                  }
                }
             }
             Modified(kTRUE);
@@ -4842,6 +4878,14 @@ void TPad::SaveAs(const char *filename, Option_t * /*option*/) const
    else if (psname.EndsWith(".eps"))
       ((TPad*)this)->Print(psname,"eps");
    else if (psname.EndsWith(".pdf"))
+      ((TPad*)this)->Print(psname,"pdf");
+   else if (psname.EndsWith(".pdf["))
+      ((TPad*)this)->Print(psname,"pdf");
+   else if (psname.EndsWith(".pdf]"))
+      ((TPad*)this)->Print(psname,"pdf");
+   else if (psname.EndsWith(".pdf("))
+      ((TPad*)this)->Print(psname,"pdf");
+   else if (psname.EndsWith(".pdf)"))
       ((TPad*)this)->Print(psname,"pdf");
    else if (psname.EndsWith(".svg"))
       ((TPad*)this)->Print(psname,"svg");

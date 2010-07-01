@@ -343,17 +343,18 @@ void TGLViewerBase::PreRender()
       TGLSceneBase *scene = sinfo->GetScene();
       if (sinfo->GetActive())
       {
-         if (fRnrCtx->Selection() && ! scene->GetSelectable())
-            continue;
-         if ( ! sinfo->GetScene()->TakeLock(kDrawLock))
+         if ( ! fRnrCtx->Selection() || scene->GetSelectable())
          {
-            Warning("TGLViewerBase::PreRender", "locking of scene '%s' failed, skipping.",
-                    sinfo->GetScene()->GetName());
-            continue;
+            if ( ! sinfo->GetScene()->TakeLock(kDrawLock))
+            {
+               Warning("TGLViewerBase::PreRender", "locking of scene '%s' failed, skipping.",
+                       sinfo->GetScene()->GetName());
+               continue;
+            }
+            locked_scenes.push_back(sinfo);
          }
          sinfo->SetupTransformsAndBBox(); // !!! transform not done yet
          fOverallBoundingBox.MergeAligned(sinfo->GetTransformedBBox());
-         locked_scenes.push_back(sinfo);
       }
    }
 
@@ -461,7 +462,7 @@ void TGLViewerBase::RenderSelected()
 }
 
 //______________________________________________________________________
-void TGLViewerBase::RenderOverlay()
+void TGLViewerBase::RenderOverlay(Int_t state, Bool_t selection)
 {
    // Render overlay objects.
 
@@ -469,9 +470,12 @@ void TGLViewerBase::RenderOverlay()
    for (Int_t i = 0; i < nOvl; ++i)
    {
       TGLOverlayElement* el = fOverlay[i];
-      glPushName(i);
-      el->Render(*fRnrCtx);
-      glPopName();
+      if (el->GetState() & state)
+      {
+         if (selection) glPushName(i);
+         el->Render(*fRnrCtx);
+         if (selection) glPopName();
+      }
    }
 }
 

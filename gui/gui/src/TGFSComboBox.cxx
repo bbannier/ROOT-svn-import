@@ -427,7 +427,8 @@ void TGFSComboBox::Update(const char *path)
                sel = afterID = gLbc[i].fId;
                indent_lvl = gLbc[i].fIndent + 1;
                tailpath = path + slen;
-               strncpy(mpath, gLbc[i].fPath, 1024);
+               strncpy(mpath, gLbc[i].fPath, 1023);
+               mpath[1023] = 0;
                len = slen;
             }
          }
@@ -441,14 +442,16 @@ void TGFSComboBox::Update(const char *path)
             const char *picname;
             const char *semi = strchr(tailpath, '/');
             if (semi == 0) {
-               strncpy(dirname, tailpath, 1024);
+               strncpy(dirname, tailpath, 1023);
+               dirname[1023] = 0;
                picname = "ofolder_t.xpm";
             } else {
                strncpy(dirname, tailpath, semi-tailpath);
                dirname[semi-tailpath] = 0;
                picname = "folder_t.xpm";
             }
-            if (mpath[strlen(mpath)-1] != '/') strcat(mpath, "/");
+            if (mpath[strlen(mpath)-1] != '/') 
+               strncat(mpath, "/", 1024-strlen(mpath));
             strncat(mpath, dirname, 1024-strlen(mpath));
             int indent = 4 + (indent_lvl * 10);
             const TGPicture *pic = fClient->GetPicture(picname);

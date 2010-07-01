@@ -72,6 +72,7 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    // ---
    Use["MLP"]             = 1; // this is the recommended ANN
    Use["MLPBFGS"]         = 0; // recommended ANN with optional training method
+   Use["MLPBNN"]          = 0;  // 
    Use["CFMlpANN"]        = 0; // *** missing
    Use["TMlpANN"]         = 0; 
    // ---
@@ -181,7 +182,7 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    UInt_t nbin = 100;
    TH1F *histLk(0), *histLkD(0), *histLkPCA(0), *histLkKDE(0), *histLkMIX(0), *histPD(0), *histPDD(0);
    TH1F *histPDPCA(0), *histPDEFoam(0), *histPDEFoamErr(0), *histPDEFoamSig(0), *histKNN(0), *histHm(0);
-   TH1F *histFi(0), *histFiG(0), *histFiB(0), *histLD(0), *histNn(0), *histNnC(0), *histNnT(0), *histBdt(0), *histBdtG(0), *histBdtD(0);
+   TH1F *histFi(0), *histFiG(0), *histFiB(0), *histLD(0), *histNn(0),*histNnbfgs(0),*histNnbnn(0), *histNnC(0), *histNnT(0), *histBdt(0), *histBdtG(0), *histBdtD(0);
    TH1F *histRf(0), *histSVMG(0), *histSVMP(0), *histSVML(0), *histFDAMT(0), *histFDAGA(0), *histCat(0), *histPBdt(0);
 
    if (Use["Likelihood"])    histLk      = new TH1F( "MVA_Likelihood",    "MVA_Likelihood",    nbin, -1, 1 );
@@ -195,22 +196,24 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    if (Use["KNN"])           histKNN     = new TH1F( "MVA_KNN",           "MVA_KNN",           nbin,  0, 1 );
    if (Use["HMatrix"])       histHm      = new TH1F( "MVA_HMatrix",       "MVA_HMatrix",       nbin, -0.95, 1.55 );
    if (Use["Fisher"])        histFi      = new TH1F( "MVA_Fisher",        "MVA_Fisher",        nbin, -4, 4 );
-   if (Use["FisherG"])        histFiG    = new TH1F( "MVA_FisherG",        "MVA_FisherG",        nbin, -1, 1 );
-   if (Use["BoostedFisher"])  histFiB    = new TH1F( "MVA_BoostedFisher",        "MVA_BoostedFisher",        nbin, -2, 2 );
+   if (Use["FisherG"])       histFiG     = new TH1F( "MVA_FisherG",       "MVA_FisherG",       nbin, -1, 1 );
+   if (Use["BoostedFisher"]) histFiB     = new TH1F( "MVA_BoostedFisher", "MVA_BoostedFisher", nbin, -2, 2 );
    if (Use["LD"])            histLD      = new TH1F( "MVA_LD",            "MVA_LD",            nbin, -2, 2 );
    if (Use["MLP"])           histNn      = new TH1F( "MVA_MLP",           "MVA_MLP",           nbin, -1.25, 1.5 );
+   if (Use["MLPBFGS"])       histNnbfgs  = new TH1F( "MVA_MLPBFGS",           "MVA_MLPBFGS",           nbin, -1.25, 1.5 );
+   if (Use["MLPBNN"])        histNnbnn   = new TH1F( "MVA_MLPBNN",           "MVA_MLPBNN",           nbin, -1.25, 1.5 );
    if (Use["CFMlpANN"])      histNnC     = new TH1F( "MVA_CFMlpANN",      "MVA_CFMlpANN",      nbin,  0, 1 );
    if (Use["TMlpANN"])       histNnT     = new TH1F( "MVA_TMlpANN",       "MVA_TMlpANN",       nbin, -1.3, 1.3 );
    if (Use["BDT"])           histBdt     = new TH1F( "MVA_BDT",           "MVA_BDT",           nbin, -0.8, 0.8 );
    if (Use["BDTD"])          histBdtD    = new TH1F( "MVA_BDTD",          "MVA_BDTD",          nbin, -0.8, 0.8 );
    if (Use["BDTG"])          histBdtG    = new TH1F( "MVA_BDTG",          "MVA_BDTG",          nbin, -1.0, 1.0 );
    if (Use["RuleFit"])       histRf      = new TH1F( "MVA_RuleFit",       "MVA_RuleFit",       nbin, -2.0, 2.0 );
-   if (Use["SVM_Gauss"])     histSVMG    = new TH1F( "MVA_SVM_Gauss",     "MVA_SVM_Gauss",     nbin, 0.0, 1.0 );
-   if (Use["SVM_Poly"])      histSVMP    = new TH1F( "MVA_SVM_Poly",      "MVA_SVM_Poly",      nbin, 0.0, 1.0 );
-   if (Use["SVM_Lin"])       histSVML    = new TH1F( "MVA_SVM_Lin",       "MVA_SVM_Lin",       nbin, 0.0, 1.0 );
+   if (Use["SVM_Gauss"])     histSVMG    = new TH1F( "MVA_SVM_Gauss",     "MVA_SVM_Gauss",     nbin,  0.0, 1.0 );
+   if (Use["SVM_Poly"])      histSVMP    = new TH1F( "MVA_SVM_Poly",      "MVA_SVM_Poly",      nbin,  0.0, 1.0 );
+   if (Use["SVM_Lin"])       histSVML    = new TH1F( "MVA_SVM_Lin",       "MVA_SVM_Lin",       nbin,  0.0, 1.0 );
    if (Use["FDA_MT"])        histFDAMT   = new TH1F( "MVA_FDA_MT",        "MVA_FDA_MT",        nbin, -2.0, 3.0 );
    if (Use["FDA_GA"])        histFDAGA   = new TH1F( "MVA_FDA_GA",        "MVA_FDA_GA",        nbin, -2.0, 3.0 );
-   if (Use["Category"])      histCat     = new TH1F( "MVA_Category",      "MVA_Category",           nbin, -2., 2. );
+   if (Use["Category"])      histCat     = new TH1F( "MVA_Category",      "MVA_Category",      nbin, -2., 2. );
    if (Use["Plugin"])        histPBdt    = new TH1F( "MVA_PBDT",          "MVA_BDT",           nbin, -0.8, 0.8 );
 
    // PDEFoam also returns per-event error, fill in histogram, and also fill significance
@@ -264,6 +267,8 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    Int_t    nSelCutsGA = 0;
    Double_t effS       = 0.7;
 
+   std::vector<Float_t> vecVar(4); // vector for EvaluateMVA tests
+
    std::cout << "--- Processing: " << theTree->GetEntries() << " events" << std::endl;
    TStopwatch sw;
    sw.Start();
@@ -278,6 +283,40 @@ void TMVAClassificationApplication( TString myMethodList = "" )
       var1 = userVar1 + userVar2;
       var2 = userVar1 - userVar2;
 
+      if (ievt <20){
+         // test the twodifferent Reader::EvaluateMVA functions 
+         // access via registered variables compared to access via vector<float>
+         vecVar[0]=var1;
+         vecVar[1]=var2;
+         vecVar[2]=var3;
+         vecVar[3]=var4;      
+         for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) {
+            if (it->second) {
+               TString mName = it->first + " method";
+               Double_t mva1 = reader->EvaluateMVA( mName); 
+               Double_t mva2 = reader->EvaluateMVA( vecVar, mName); 
+               if (mva1 != mva2) {
+                  std::cout << "++++++++++++++ ERROR in "<< mName <<", comparing different EvaluateMVA results val1=" << mva1 << " val2="<<mva2<<std::endl;
+               }
+            }
+         }
+         // now test that the inputs do matter
+         TRandom3 rand(0);
+         vecVar[0]=rand.Rndm();
+         vecVar[1]=rand.Rndm();
+         vecVar[2]=rand.Rndm();
+         vecVar[3]=rand.Rndm();
+         for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) {
+            if (it->second) {
+               TString mName = it->first + " method";
+               Double_t mva1 = reader->EvaluateMVA( mName); 
+               Double_t mva2 = reader->EvaluateMVA( vecVar, mName); 
+               if (mva1 == mva2) {
+                  std::cout << "++++++++++++++ ERROR in "<< mName <<", obtaining idnetical output for different inputs" <<std::endl;
+               }
+            }
+         }
+      }
       // 
       // return the MVAs and fill to histograms
       // 
@@ -298,10 +337,12 @@ void TMVAClassificationApplication( TString myMethodList = "" )
       if (Use["KNN"          ])   histKNN    ->Fill( reader->EvaluateMVA( "KNN method"           ) );
       if (Use["HMatrix"      ])   histHm     ->Fill( reader->EvaluateMVA( "HMatrix method"       ) );
       if (Use["Fisher"       ])   histFi     ->Fill( reader->EvaluateMVA( "Fisher method"        ) );
-      if (Use["FisherG"      ])   histFiG    ->Fill( reader->EvaluateMVA( "FisherG method"        ) );
-      if (Use["BoostedFisher"])   histFiB    ->Fill( reader->EvaluateMVA( "BoostedFisher method"        ) );
+      if (Use["FisherG"      ])   histFiG    ->Fill( reader->EvaluateMVA( "FisherG method"       ) );
+      if (Use["BoostedFisher"])   histFiB    ->Fill( reader->EvaluateMVA( "BoostedFisher method" ) );
       if (Use["LD"           ])   histLD     ->Fill( reader->EvaluateMVA( "LD method"            ) );
       if (Use["MLP"          ])   histNn     ->Fill( reader->EvaluateMVA( "MLP method"           ) );
+      if (Use["MLPBFGS"          ])   histNnbfgs ->Fill( reader->EvaluateMVA( "MLPBFGS method"           ) );
+      if (Use["MLPBNN"          ])   histNnbnn ->Fill( reader->EvaluateMVA( "MLPBNN method"           ) );
       if (Use["CFMlpANN"     ])   histNnC    ->Fill( reader->EvaluateMVA( "CFMlpANN method"      ) );
       if (Use["TMlpANN"      ])   histNnT    ->Fill( reader->EvaluateMVA( "TMlpANN method"       ) );
       if (Use["BDT"          ])   histBdt    ->Fill( reader->EvaluateMVA( "BDT method"           ) );
@@ -313,7 +354,7 @@ void TMVAClassificationApplication( TString myMethodList = "" )
       if (Use["SVM_Lin"      ])   histSVML   ->Fill( reader->EvaluateMVA( "SVM_Lin method"       ) );
       if (Use["FDA_MT"       ])   histFDAMT  ->Fill( reader->EvaluateMVA( "FDA_MT method"        ) );
       if (Use["FDA_GA"       ])   histFDAGA  ->Fill( reader->EvaluateMVA( "FDA_GA method"        ) );
-      if (Use["Category"     ])   histCat    ->Fill( reader->EvaluateMVA( "Category method"         ) );
+      if (Use["Category"     ])   histCat    ->Fill( reader->EvaluateMVA( "Category method"      ) );
       if (Use["Plugin"       ])   histPBdt   ->Fill( reader->EvaluateMVA( "P_BDT method"         ) );
 
       // retrieve also per-event error
@@ -382,6 +423,8 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    if (Use["BoostedFisher"])   histFiB    ->Write();
    if (Use["LD"           ])   histLD     ->Write();
    if (Use["MLP"          ])   histNn     ->Write();
+   if (Use["MLPBFGS"      ])   histNnbfgs ->Write();
+   if (Use["MLPBNN"       ])   histNnbnn  ->Write();
    if (Use["CFMlpANN"     ])   histNnC    ->Write();
    if (Use["TMlpANN"      ])   histNnT    ->Write();
    if (Use["BDT"          ])   histBdt    ->Write();

@@ -1139,7 +1139,12 @@ Int_t TROOT::IgnoreInclude(const char *fname, const char * /*expandedfname*/)
       className.ReplaceAll("/", "::");
       className.ReplaceAll("\\", "::");
       if (className.Contains(":::")) {
-         // "C:\dir" becomes "C:::dir"
+         // "C:\dir" becomes "C:::dir".
+         // fname corresponds to whatever is stated after #include and
+         // a full path name usually means that it's not a regular #include
+         // but e.g. a ".L", so we can assume that this is not a header of
+         // a class in a namespace (a global-namespace class would have been
+         // detected already before).
          return 0;
       }
       cla = TClass::GetClass(className);
@@ -1147,8 +1152,9 @@ Int_t TROOT::IgnoreInclude(const char *fname, const char * /*expandedfname*/)
    if ( cla ) {
       if (cla->GetDeclFileLine() <= 0) return 0; // to a void an error with VisualC++
       TString decfile = gSystem->BaseName(cla->GetDeclFileName());
-      if (decfile == gSystem->BaseName(fname))
+      if (decfile == gSystem->BaseName(fname)) {
          return 1;
+      }
    }
    return 0;
 }
@@ -1239,19 +1245,8 @@ TClass *TROOT::LoadClass(const char *requestedname, Bool_t silent) const
    
    VoidFuncPtr_t dict = TClassTable::GetDict(classname);
    
-   TString long64name;
    TString resolved;
 
-   if (!dict) {
-      // Try with Long64_t instead of long long
-      long64name = TClassEdit::GetLong64_Name(classname.Data());
-      if (long64name != classname) {
-         TClass *res = LoadClass(long64name.Data(),silent);
-         if (res) return res;
-      } else {
-         long64name.Clear();
-      }
-   }
    if (!dict) {
       // Try to remove the ROOT typedefs
       resolved = TClassEdit::ResolveTypedef(classname,kTRUE);
@@ -1266,11 +1261,6 @@ TClass *TROOT::LoadClass(const char *requestedname, Bool_t silent) const
          dict = TClassTable::GetDict(classname);
          if (!dict) {
             // Try the typedefs again.
-
-            if (long64name.Length()) {
-               TClass *res = LoadClass(long64name.Data(),silent);
-               if (res) return res;
-            }
             if (resolved.Length()) {
                dict = TClassTable::GetDict(resolved.Data());
             }

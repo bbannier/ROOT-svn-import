@@ -28,6 +28,8 @@
 #include "TStopwatch.h"
 #include "TF1.h"
 
+#include <limits>
+
 //!calculates exact integral of Breit Wigner distribution
 //!and compares with existing methods
 
@@ -111,8 +113,9 @@ void  DrawCumulative(double x1, double x2, int n = 100){
    }
 
    // alternative method using ROOT::Math::Functor class 
-   ROOT::Math::Functor1D f1(& TMath::BreitWigner);
-  
+   ROOT::Math::Functor1D f1(& func);
+ 
+ 
    ROOT::Math::Integrator ig(f1, ROOT::Math::IntegrationOneDim::kADAPTIVE,1.E-12,1.E-12);
  
    TH1D *cum1 = new TH1D("cum1", "", n, x1, x2); 
@@ -184,6 +187,11 @@ void  DrawCumulative(double x1, double x2, int n = 100){
 
 void mathmoreIntegration(double a = -2, double b = 2)
 {
+#if defined(__CINT__) && !defined(__MAKECINT__) 
+  cout << "WARNING: This tutorial can run only using ACliC, you must run it by doing: " << endl;
+  cout << "\t .x $ROOTSYS/tutorials/math/mathmoreIntegration.C+" << endl; 
+  return;
+#endif
 
    DrawCumulative(a, b);
    testIntegPerf(a, b);

@@ -39,6 +39,10 @@
 #include <sys/stat.h>
 #endif
 
+#if defined(__GNUC__) && __GNUC__ > 3 && ((__GNUC_MINOR__ > 3 &&__GNUC_PATCHLEVEL__ > 3) || __GNUC_MINOR__ > 4)
+#define G__LOCALS_REFERENCED_FROM_RSP
+#endif
+
 extern "C"
 void G__enable_wrappers(int set) {
    // enable wrappers
@@ -3070,8 +3074,10 @@ void G__cpplink_header(FILE *fp)
 #if defined(__hpux) && !defined(G__ROOT)
   G__getcintsysdir();
   fprintf(fp,"#include \"%s/%s/inc/G__ci.h\"\n",G__cintsysdir, G__CFG_COREVERSION);
+  fprintf(fp,"#include \"%s/%s/inc/FastAllocString.h\"\n", G__cintsysdir, G__CFG_COREVERSION);
 #else
   fprintf(fp,"#include \"G__ci.h\"\n");
+  fprintf(fp,"#include \"FastAllocString.h\"\n");
 #endif
   if(G__multithreadlibcint)
     fprintf(fp,"#undef G__MULTITHREADLIBCINTCPP\n");
@@ -3814,7 +3820,7 @@ void G__set_globalcomp(const char *mode,const char *linkfilename,const char *dll
       fprintf(fp,"*          FROM HEADER FILES LISTED IN G__setup_cpp_environmentXXX().\n");
       fprintf(fp,"*          CHANGE THOSE HEADER FILES AND REGENERATE THIS FILE.\n");
       fprintf(fp,"********************************************************/\n");
-      fprintf(fp,"#include \"%s\" //newlink 3678 \n",G__CPPLINK_H);
+      fprintf(fp,"#include \"%s\" //newlink 3678 \n",G__CPPLINK_H); // THIS COMMENT IS IMPORTANT - rootcint triggers on it!
 
       fprintf(fp,"\n");
       fprintf(fp,"#ifdef G__MEMTEST\n");
@@ -6056,14 +6062,14 @@ static void G__x8664_vararg(FILE *fp, int ifn, G__ifunc_table_internal *ifunc,
       fprintf(fp, "  // only an offset into the virtual table and not a function address\n");
       fprintf(fp, "  long faddr;\n");
 
-      fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%rax\"  :: \"m\" (lval[0]) : \"%%rax\", \"%%rdx\");\n");
+      fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%rax\"  :: \"m\" (lval[0]) : \"%%rax\");\n");
       fprintf(fp, "  __asm__ __volatile__(\"movq %%rax, %%rdx\");\n");
-      fprintf(fp, "  __asm__ __volatile__(\"leaq %%0, %%%%rax\" :: \"m\" (fptr));\n");
+      fprintf(fp, "  __asm__ __volatile__(\"leaq %%0, %%%%rax\" :: \"m\" (fptr) : \"%%rax\");\n");
       fprintf(fp, "  __asm__ __volatile__(\"movq 8(%%rax), %%rax\");  //multiple inheritance offset\n");
 #if defined(__GNUC__) && __GNUC__ > 3
       fprintf(fp, "  __asm__ __volatile__(\"leaq (%%rdx,%%rax), %%rax\");\n");
       fprintf(fp, "  __asm__ __volatile__(\"movq (%%rax), %%rdx\");\n");
-      fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%rax\"  :: \"m\" (fptr));  //virtual member function offset\n");
+      fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%rax\"  :: \"m\" (fptr) : \"%%rax\");  //virtual member function offset\n");
       fprintf(fp, "  __asm__ __volatile__(\"leaq (%%rdx,%%rax), %%rax\");\n");
 #else
       fprintf(fp, "  __asm__ __volatile__(\"addq %%rax, %%rdx\");\n");
@@ -6074,6 +6080,14 @@ static void G__x8664_vararg(FILE *fp, int ifn, G__ifunc_table_internal *ifunc,
       fprintf(fp, "  __asm__ __volatile__(\"movq (%%rax), %%rax\");\n");
       fprintf(fp, "  __asm__ __volatile__(\"movq %%%%rax, %%0\"  : \"=m\" (faddr) :: \"memory\");\n\n");
    }
+
+#ifdef G__LOCALS_REFERENCED_FROM_RSP
+   fprintf(fp, "  long savr15;\n");
+   fprintf(fp, "  __asm__ __volatile__(\"movq %%%%r15, %%0\" : \"=m\" (savr15) :: \"memory\");  // save r15\n");
+   // reference u from r15 and not rsp, as rsp will be decreased to put
+   // the args for the var arg call on the stack
+   fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%r15\" :: \"r\" (u) : \"%%r15\");\n");
+#endif
 
    fprintf(fp, "  __asm__ __volatile__(\"movlpd %%0, %%%%xmm0\"  :: \"m\" (dval[0]) : \"%%xmm0\");\n");
    fprintf(fp, "  __asm__ __volatile__(\"movlpd %%0, %%%%xmm1\"  :: \"m\" (dval[1]) : \"%%xmm1\");\n");
@@ -6087,7 +6101,7 @@ static void G__x8664_vararg(FILE *fp, int ifn, G__ifunc_table_internal *ifunc,
    fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%rdi\" :: \"m\" (lval[0]) : \"%%rdi\");\n");
 #if defined(__GNUC__) && __GNUC__ < 4
    if (tagnum != -1 && ifunc->isvirtual[ifn]) {
-      fprintf(fp, "  __asm__ __volatile__(\"leaq %%0, %%%%rax\" :: \"m\" (fptr));\n");
+      fprintf(fp, "  __asm__ __volatile__(\"leaq %%0, %%%%rax\" :: \"m\" (fptr) : \"%%rax\");\n");
       fprintf(fp, "  __asm__ __volatile__(\"movq 8(%%rax), %%rax\");  //multiple inheritance offset\n");
       fprintf(fp, "  __asm__ __volatile__(\"addq %%rax, %%rdi\");\n");
    }
@@ -6097,23 +6111,32 @@ static void G__x8664_vararg(FILE *fp, int ifn, G__ifunc_table_internal *ifunc,
    fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%rcx\" :: \"m\" (lval[3]) : \"%%rcx\");\n");
    fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%r8\"  :: \"m\" (lval[4]) : \"%%r8\");\n");
    fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%r9\"  :: \"m\" (lval[5]) : \"%%r9\");\n");
+   if (tagnum != -1 && ifunc->isvirtual[ifn])
+      fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%r10\" :: \"m\" (faddr) : \"%%r10\");\n");
+   else
+      fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%r10\" :: \"m\" (fptr) : \"%%r10\");\n");
 
    int istck = 0;
-   fprintf(fp, "  __asm__ __volatile__(\"subq %%0, %%%%rsp\" :: \"i\" ((umax+2)*8));\n");
+   fprintf(fp, "  // (umax+2)*8 = 176\n");
+   fprintf(fp, "  __asm__ __volatile__(\"subq $176, %%rsp\");\n");
    for (i = 0; i < umax; i++) {
+#ifdef G__LOCALS_REFERENCED_FROM_RSP
+     fprintf(fp, "  __asm__ __volatile__(\"movq %d(%%r15), %%rax \\n\\t\"\n", istck);
+     fprintf(fp, "                       \"movq %%rax, %d(%%rsp)\");\n", istck);
+#else
      fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%rax \\n\\t\"\n");
      fprintf(fp, "                       \"movq %%%%rax, %d(%%%%rsp)\" :: \"m\" (u[%d].lval) : \"%%rax\");\n", istck, i);
+#endif
      istck += 8;
    }
-   if (tagnum != -1 && ifunc->isvirtual[ifn])
-      fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%r10\"  :: \"m\" (faddr) : \"%%r10\");\n");
-   else
-      fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%r10\"  :: \"m\" (fptr) : \"%%r10\");\n");
    fprintf(fp, "  __asm__ __volatile__(\"movl $8, %%eax\");  // number of used xmm registers\n");
    fprintf(fp, "  __asm__ __volatile__(\"call *%%r10\");\n");
+   fprintf(fp, "  __asm__ __volatile__(\"addq $176, %%rsp\");\n");
    fprintf(fp, "  __asm__ __volatile__(\"movq %%%%rax, %%0\" : \"=m\" (u[0].lval) :: \"memory\");  // get return value\n");
    fprintf(fp, "  __asm__ __volatile__(\"movq %%%%rdi, %%0\" : \"=m\" (u[1].lval) :: \"memory\");  // get return value (icc C++ object)\n");
-   fprintf(fp, "  __asm__ __volatile__(\"addq %%0, %%%%rsp\" :: \"i\" ((umax+2)*8));\n");
+#ifdef G__LOCALS_REFERENCED_FROM_RSP
+   fprintf(fp, "  __asm__ __volatile__(\"movq %%0, %%%%r15\" :: \"m\" (savr15) : \"%%r15\");\n");
+#endif
 }
 
 static void G__x8664_vararg_epilog(FILE *fp, int ifn, G__ifunc_table_internal *ifunc)
@@ -8879,8 +8902,6 @@ static int G__hascompiledoriginalbase(int tagnum)
 **************************************************************************/
 void G__cpplink_memvar(FILE *fp)
 {
-   G__FastAllocString value(G__MAXNAME*6);
-   G__FastAllocString ttt(G__MAXNAME*6);
    G__FastAllocString commentbuf(G__LONGLINE);
    fprintf(fp, "\n/*********************************************************\n");
    fprintf(fp, "* Data Member information setup/\n");
@@ -8967,7 +8988,7 @@ void G__cpplink_memvar(FILE *fp)
                if ( // Data member is not a bitfield and is accessible.
                   G__precomp_private || // option -V given on the command line, or
                   (
-                     !var->bitfield[j] &&
+                     !var->bitfield[j] && // not a bitfield, and
                      (
                         (var->access[j] == G__PUBLIC) || // is public, or
                         (
@@ -8982,55 +9003,89 @@ void G__cpplink_memvar(FILE *fp)
                   //  Write a data member setup call to the dictionary file.
                   //
                   int pvoidflag = 0; // if true, pass G__PVOID as the addr to force G__malloc to allocate storage.
-                  if ( // Is enumerator or unaddressable bool or const static fundamental.
-                     (
-                        islower(var->type[j]) && // not a pointer, and
-                        var->constvar[j] && // is const, and
-                        (var->p_tagtable[j] != -1) && // class tag is valid, and
-                        (G__struct.type[var->p_tagtable[j]] == 'e') // data member of an enum
-                     ) || // or,
+                  if (
+                     // Is enumerator or unaddressable bool.
 #ifdef G__UNADDRESSABLEBOOL
-                     (var->type[j] == 'g') || // or, is an unaddressable bool, or
+                     (var->type[j] == 'g') || // is bool, or
 #endif // G__UNADDRESSABLEBOOL
                      (
-                        (var->statictype[j] == G__LOCALSTATIC) && // static, and
-                        var->constvar[j] && // const, and
-                        islower(var->type[j]) && // not a pointer, and
-                        (var->type[j] != 'u') && // not a class, enum, struct, or union, and
-                        var->p[j] // has allocated memory (is initialized???)
+                        var->constvar[j] && // is const, and // TODO: Do we need this check?
+                        islower(var->type[j]) && // not a pointer, and // TODO: Do we need this check?
+                        (var->p_tagtable[j] != -1) && // class tag is valid, and
+                        (G__struct.type[var->p_tagtable[j]] == 'e') // data member of an enum
                      )
-                  ) { // Is enumerator or unaddressable bool or const static fundamental.
-                     pvoidflag = 1; // Pass G__PVOID as the address to force G__malloc to allocate storage.
+                  ) {
+                     // Pass G__PVOID as the address to force G__malloc to allocate storage.
+                     pvoidflag = 1;
                   }
+                  else if (
+                     // Is static const integral type.
+                     (var->statictype[j] == G__LOCALSTATIC) && // static member, and
+                     var->constvar[j] && // is const, and
+                     (var->p_tagtable[j] == -1) && // is fundamental type, and
+                     islower(var->type[j]) && // not a pointer, and
+                     (var->reftype[j] == G__PARANORMAL) && // not a ref, and
+                     (
+                        // no elements, no dimensions, not an array
+                        !var->varlabel[j][1] /* number of elements */ &&
+                        !var->paran[j]
+                     ) && // and,
+                     ( // of integral type
+                        (var->type[j] == 'c') || // char
+                        (var->type[j] == 'b') || // unsigned char
+                        (var->type[j] == 's') || // short
+                        (var->type[j] == 'r') || // unsigned short
+                        (var->type[j] == 'i') || // int
+                        (var->type[j] == 'h') || // unsigned int
+                        (var->type[j] == 'l') || // long
+                        (var->type[j] == 'k') || // unsigned long
+                        (var->type[j] == 'n') || // long long
+                        (var->type[j] == 'm') // unsigned long long
+                     )
+                  ) {
+                     // Pass G__PVOID as the address to force G__malloc to allocate storage.
+                     pvoidflag = 1;
+                  }
+                  //
+                  //  Begin writing the member setup call.
+                  //
                   fprintf(fp, "   G__memvar_setup(");
                   //
                   //  Offset in object for a non-static data member, or
                   //  the address of the member for a static data
                   //  member, or a namespace member.
                   //
-                  if ((var->access[j] == G__PUBLIC) && !var->bitfield[j]) { // Public member and not a bitfield.
+                  if ((var->access[j] == G__PUBLIC) && !var->bitfield[j]) {
                      // Public member and not a bitfield.
-                     if (!G__struct.name[i][0]) { // Unnamed class or namespace.
-                        fprintf(fp, "(void*)0,"); // We pass a null pointer, which means no data allocation (unfortunate, but we have no way to take the address!).
+                     if (!G__struct.name[i][0]) {
+                        // Unnamed class or namespace.
+                        // We pass a null pointer, which means
+                        // no data allocation (unfortunate, but
+                        // we have no way to take the address).
+                        fprintf(fp, "(void*)0,");
                      }
                      else if ( // Static member or namespace member.
-                        (var->statictype[j] == G__LOCALSTATIC) || // Static member, or
-                        (G__struct.type[i] == 'n') // Namespace member.
+                        (var->statictype[j] == G__LOCALSTATIC) || // static member, or
+                        (G__struct.type[i] == 'n') // namespace member.
                      ) { // Static member or namespace member.
-                        // We pass the special G__PVOID flag, or the address of the member.
-                        if (pvoidflag) { // Special case, is enumerator, unaddressable bool, or static.
-                           fprintf(fp, "(void*)G__PVOID,"); // Pass G__PVOID to force G__malloc to allocate storage.
+                        if (pvoidflag) {
+                           // Special case, is unaddressable bool, or enumerator.
+                           // Pass G__PVOID to force G__malloc to allocate storage.
+                           fprintf(fp, "(void*)G__PVOID,");
                         }
                         else {
-                           fprintf(fp, "(void*)(&%s::%s),", G__fulltagname(i, 1), var->varnamebuf[j]); // Pass the addr of the member.
+                           // Pass the addr of the member.
+                           fprintf(fp, "(void*)(&%s::%s),", G__fulltagname(i, 1), var->varnamebuf[j]);
                         }
                      }
                      else {
-                        fprintf(fp, "(void*)((long)(&p->%s)-(long)(p)),", var->varnamebuf[j]); // Pass the offset of the member in the class.
+                        // Pass the offset of the member in the class.
+                        fprintf(fp, "(void*)((long)(&p->%s)-(long)(p)),", var->varnamebuf[j]);
                      }
                   }
-                  else if ((var->access[j] == G__PROTECTED) && G__struct.protectedaccess[i]) { // Protected member, and enabled by pragma link.
+                  else if ((var->access[j] == G__PROTECTED) && G__struct.protectedaccess[i]) {
                      // Protected member, and enabled by pragma link.
+                     // FIXME: Need code for enum, bool, and static const.
                      fprintf(fp, "(void*)((%s_PR*)p)->G__OS_%s(),", G__get_link_tagname(i), var->varnamebuf[j]);
                   }
                   else {
@@ -9071,60 +9126,134 @@ void G__cpplink_memvar(FILE *fp)
                   //  Name and array dimensions (quoted) as the
                   //  left hand side of an assignment expression.
                   //
-                  fprintf(fp, "\"%s", var->varnamebuf[j]);
-                  //
-                  if (var->varlabel[j][1] /* num of elements */ == INT_MAX /* unspecified length array */) {
-                     fprintf(fp, "[]");
-                  }
-                  else if (var->varlabel[j][1] /* num of elements */) {
-                     fprintf(fp, "[%d]", var->varlabel[j][1] /* num of elements */ / var->varlabel[j][0] /* stride */);
-                  }
-                  for (int k = 1; k < var->paran[j]; ++k) {
-                     fprintf(fp, "[%d]", var->varlabel[j][k+1]);
-                  }
-                  if (
-                     // -- Enumerator in a static enum or const static fundamental.
-                     pvoidflag && // Is enumerator or unaddressable bool, and
-                     (var->statictype[j] == G__LOCALSTATIC)// is static
-                     && (
-#ifdef G__UNADDRESSABLEBOOL
-                         var->type[j] != 'g' || // and is unaddressable bool FIXME: Should be or here?
-#endif // G__UNADDRESSABLEBOOL
-                         (var->constvar[j] && // const static
-                          islower(var->type[j]) && var->type[j] != 'u' && // of fundamental
-                          var->p[j]) // with initializer
-                      )
-                     // --
-                  ) {
-                     // -- Enumerator in a static enum has a special initializer.
-                     // FIXME: CAUTION: This implementation cause error on enum in nested class.
-                     ttt.Format("%s::%s", G__fulltagname(i, 1), var->varnamebuf[j]);
-                     int store_var_type = G__var_type;
-                     G__var_type = 'p';
-                     G__value buf;
-                     if (var->constvar[j] && // const static
-                         (isupper(var->type[j]) || var->type[j] != 'u') && // of fundamental
-                         var->p[j] // with initializer
-                         ) {
-                        // local static, can be private thus cannot call G__getitem.
-                        // Take the value from var->p instead. If var is an enum constant
-                        // it will be stored as an int, so convert it accordingly.
-                        bool isInt = var->type[j] == 'i';
-                        value.Format("*(%s*)0x%lx",
-                                isInt ? "int" : G__type2string(var->type[j], var->p_tagtable[j], var->p_typetable[j], 0, 0),
-                                var->p[j]);
-                        buf = G__calc_internal(value);
-                     } else {
-                        buf = G__getitem(ttt);
+                  if (!pvoidflag) {
+                     // No special initializer needed.
+                     fprintf(fp, "\"%s", var->varnamebuf[j]);
+                     if (var->varlabel[j][1] /* num of elements */ == INT_MAX /* unspecified length array */) {
+                        fprintf(fp, "[]");
                      }
-                     G__var_type = store_var_type;
-                     G__string(buf, value);
-                     G__quotedstring(value, ttt);
-                     fprintf(fp, "=%s\"", ttt());
+                     else if (var->varlabel[j][1] /* num of elements */) {
+                        fprintf(fp, "[%d]", var->varlabel[j][1] /* num of elements */ / var->varlabel[j][0] /* stride */);
+                     }
+                     for (int k = 1; k < var->paran[j]; ++k) {
+                        fprintf(fp, "[%d]", var->varlabel[j][k+1]);
+                     }
+                     fprintf(fp, "=\"");
                   }
                   else {
-                     // --
-                     fprintf(fp, "=\"");
+                     if (
+                        (var->statictype[j] == G__LOCALSTATIC) && // static member, and
+                        var->constvar[j] && // is const, and
+                        (var->p_tagtable[j] == -1) && // is fundamental type, and
+                        islower(var->type[j]) && // not a pointer, and
+                        (var->reftype[j] == G__PARANORMAL) && // not a ref, and
+                        (
+                           // no elements, no dimensions, not an array
+                           !var->varlabel[j][1] /* number of elements */ &&
+                           !var->paran[j]
+                        ) && // and,
+                        ( // of integral type
+                           (var->type[j] == 'g') || // bool
+                           (var->type[j] == 'c') || // char
+                           (var->type[j] == 'b') || // unsigned char
+                           (var->type[j] == 's') || // short
+                           (var->type[j] == 'r') || // unsigned short
+                           (var->type[j] == 'i') || // int
+                           (var->type[j] == 'h') || // unsigned int
+                           (var->type[j] == 'l') || // long
+                           (var->type[j] == 'k') || // unsigned long
+                           (var->type[j] == 'n') || // long long
+                           (var->type[j] == 'm') // unsigned long long
+                        ) && // and,
+                        (G__globalcomp != G__CLINK) // not generating a C dictionary
+                     ) {
+                        // Static const integral type.
+                        fprintf(
+                             fp
+                           , "G__FastAllocString(%d).Format(\""
+                           , G__LONGLINE
+                        );
+                        fprintf(fp, "%s", var->varnamebuf[j]);
+                        if (var->access[j] != G__PUBLIC) {
+                              // Not public, so cannot access the value, force it to zero.
+                              fprintf(fp , "=0\").data()");
+                        }
+                        else {
+                           // Public, use the value directly.
+#ifdef G_WIN32
+                           if (
+                              (var->type[j] == 'g') || // bool
+                              (var->type[j] == 'c') || // char
+                              (var->type[j] == 's') || // short
+                              (var->type[j] == 'i') || // int
+                              (var->type[j] == 'l') || // long
+                              (var->type[j] == 'n')    // long long
+                           ) {
+                              fprintf(
+                                   fp
+                                 , "=%%I64dLL\",(G__int64)%s::%s).data()"
+                                 , G__fulltagname(i, 1)
+                                 , var->varnamebuf[j]
+                              );
+                           }
+                           else {
+                              fprintf(
+                                   fp
+                                 , "=%%I64uULL\",(G__uint64)%s::%s).data()"
+                                 , G__fulltagname(i, 1)
+                                 , var->varnamebuf[j]
+                              );
+                           }
+#else // G_WIN32
+                           if (
+                              (var->type[j] == 'g') || // bool
+                              (var->type[j] == 'c') || // char
+                              (var->type[j] == 's') || // short
+                              (var->type[j] == 'i') || // int
+                              (var->type[j] == 'l') || // long
+                              (var->type[j] == 'n')    // long long
+                           ) {
+                              fprintf(
+                                   fp
+                                 , "=%%lldLL\",(long long)%s::%s).data()"
+                                 , G__fulltagname(i, 1)
+                                 , var->varnamebuf[j]
+                              );
+                           }
+                           else {
+                              fprintf(
+                                   fp
+                                 , "=%%lluULL\",(unsigned long long)%s::%s).data()"
+                                 , G__fulltagname(i, 1)
+                                 , var->varnamebuf[j]
+                              );
+                           }
+#endif // G_WIN32
+                           // --
+                        }
+                     }
+                     else {
+                        // Enumerator.
+                        // FIXME: CAUTION: This implementation cause error on enum in nested class.
+                        // FIXME: This is wrong for G__UNADDRESSABLEBOOL && (var->type[j] == 'g').
+                        fprintf(fp, "\"%s", var->varnamebuf[j]);
+                        G__value initializer_value;
+                        G__FastAllocString qualified_id(G__MAXNAME*6);
+                        qualified_id.Format("%s::%s", G__fulltagname(i, 1), var->varnamebuf[j]);
+                        {
+                           int store_var_type = G__var_type;
+                           G__var_type = 'p';
+                           initializer_value = G__getitem(qualified_id);
+                           G__var_type = store_var_type;
+                        }
+                        G__FastAllocString init_value_str(G__MAXNAME*6);
+                        G__string(initializer_value, init_value_str);
+                        {
+                           G__FastAllocString initializer_expression(G__MAXNAME*6);
+                           G__quotedstring(init_value_str, initializer_expression);
+                           fprintf(fp, "=%s\"", initializer_expression());
+                        }
+                     }
                   }
                   //
                   //  Define macro flag (always zero).
@@ -10461,6 +10590,8 @@ char G__incsetup_exist(std::list<G__incsetup> *incsetuplist, G__incsetup incsetu
 int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,const char *comment
                       ,G__incsetup setup_memvar, G__incsetup setup_memfunc)
 {
+  if (tagnum < 0) return 0;
+   
   char *p;
   G__FastAllocString buf(G__ONELINE);
 
@@ -10572,17 +10703,17 @@ int G__inheritance_setup(int tagnum,int basetagnum
                          )
 {
 #ifndef G__SMALLOBJECT
-  int basen;
-  G__ASSERT(0<=tagnum && 0<=basetagnum);
-  basen=G__struct.baseclass[tagnum]->basen;
-  //G__herit *herit = G__struct.baseclass[tagnum]->herit;
-  //printf("G__inheritance_setup, tagnum=%d, basetagnum=%d, basen=%d\n",tagnum,basetagnum,basen);
-  //printf("    herit=%x, herit.id=%x\n",herit,herit->id);
-  G__struct.baseclass[tagnum]->herit[basen]->basetagnum = basetagnum;
-  G__struct.baseclass[tagnum]->herit[basen]->baseoffset=baseoffset;
-  G__struct.baseclass[tagnum]->herit[basen]->baseaccess=baseaccess;
-  G__struct.baseclass[tagnum]->herit[basen]->property=property;
-  ++G__struct.baseclass[tagnum]->basen;
+   if (0<=tagnum && 0<=basetagnum) {
+      int basen=G__struct.baseclass[tagnum]->basen;
+      //G__herit *herit = G__struct.baseclass[tagnum]->herit;
+      //printf("G__inheritance_setup, tagnum=%d, basetagnum=%d, basen=%d\n",tagnum,basetagnum,basen);
+      //printf("    herit=%x, herit.id=%x\n",herit,herit->id);
+      G__struct.baseclass[tagnum]->herit[basen]->basetagnum = basetagnum;
+      G__struct.baseclass[tagnum]->herit[basen]->baseoffset=baseoffset;
+      G__struct.baseclass[tagnum]->herit[basen]->baseaccess=baseaccess;
+      G__struct.baseclass[tagnum]->herit[basen]->property=property;
+      ++G__struct.baseclass[tagnum]->basen;
+   }
 #endif
   return(0);
 }
@@ -10599,11 +10730,13 @@ int G__tag_memvar_setup(int tagnum)
    /* Variables stack storing */
    G__IncSetupStack::push();
 
-   G__tagnum = tagnum;
-   G__p_local=G__struct.memvar[G__tagnum];
-   G__def_struct_member = 1;
-   G__def_tagnum = G__struct.parent_tagnum[G__tagnum];
-   G__tagdefining=G__tagnum;
+   if (tagnum >= 0) {
+      G__tagnum = tagnum;
+      G__p_local=G__struct.memvar[G__tagnum];
+      G__def_struct_member = 1;
+      G__def_tagnum = G__struct.parent_tagnum[G__tagnum];
+      G__tagdefining=G__tagnum;
+   }
 
    return(0);
 }
@@ -10764,19 +10897,21 @@ int G__usermemfunc_setup2(char *funcname,int hash,char *mangled_name,
 **************************************************************************/
 int G__tag_memfunc_setup(int tagnum)
 {
-
-  G__IncSetupStack::push();
-
-  G__tagdefining = G__struct.parent_tagnum[tagnum];
-  G__def_tagnum = G__tagdefining;
-  G__tagnum = tagnum;
-  G__p_ifunc = G__struct.memfunc[G__tagnum];
-
-  while(G__p_ifunc->next) G__p_ifunc=G__p_ifunc->next;
-
-  --G__p_ifunc->allifunc;
-  G__memfunc_next();
-  return(0);
+   
+   G__IncSetupStack::push();
+   
+   if (tagnum >= 0) { 
+      G__tagdefining = G__struct.parent_tagnum[tagnum];
+      G__def_tagnum = G__tagdefining;
+      G__tagnum = tagnum;
+      G__p_ifunc = G__struct.memfunc[G__tagnum];
+   
+      while(G__p_ifunc->next) G__p_ifunc=G__p_ifunc->next;
+   
+      --G__p_ifunc->allifunc;
+      G__memfunc_next();
+   }
+   return(0);
 }
 
 /**************************************************************************
@@ -11537,10 +11672,10 @@ int G__memfunc_next()
 **************************************************************************/
 int G__tag_memfunc_reset()
 {
- /* Variables stack restoring */
+   /* Variables stack restoring */
    G__IncSetupStack::pop();
-
-  return(0);
+   
+   return(0);
 }
 #ifdef G__NEVER
 /**************************************************************************
@@ -11551,7 +11686,7 @@ int G__tag_memfunc_reset()
 int G__p2ary_setup(n,...)
 int n)
 {
-  return(0);
+   return(0);
 }
 #endif
 
@@ -13096,7 +13231,11 @@ void G__incsetup_memfunc(int tagnum)
 **************************************************************************/
 int G__getnumbaseclass(int tagnum)
 {
-  return(G__struct.baseclass[tagnum]->basen);
+   if (tagnum >= 0) {
+      return(G__struct.baseclass[tagnum]->basen);
+   } else {
+      return 0;
+   }
 }
 
 /**************************************************************************
@@ -13106,7 +13245,7 @@ int G__getnumbaseclass(int tagnum)
 static int G__setnewtype_typenum = -1;
 void G__setnewtype_settypeum(int typenum)
 {
-  G__setnewtype_typenum=typenum;
+   G__setnewtype_typenum=typenum;
 }
 
 /**************************************************************************

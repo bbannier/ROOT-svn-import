@@ -429,6 +429,12 @@ void TProofServLite::Terminate(Int_t status)
       gSystem->Exec(Form("%s %s", kRM, fSessionDir.Data()));
    }
 
+   // Cleanup data directory if empty
+   if (!fDataDir.IsNull() && !gSystem->AccessPathName(fDataDir, kWritePermission)) {
+     if (UnlinkDataDir(fDataDir))
+        Info("Terminate", "data directory '%s' has been removed", fDataDir.Data());
+   }
+
    // Remove input and signal handlers to avoid spurious "signals"
    // for closing activities executed upon exit()
    gSystem->RemoveSignalHandler(fInterruptHandler);
