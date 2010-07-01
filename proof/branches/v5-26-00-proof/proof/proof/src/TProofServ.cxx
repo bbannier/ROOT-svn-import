@@ -474,7 +474,7 @@ Bool_t TIdleTOTimer::Notify()
 {
    // Handle expiration of the idle timer. The session will just be terminated.
 
-   Info ("Notify", "session idle for more then %d secs: terminating", Long_t(fTime)/1000);
+   Info ("Notify", "session idle for more then %ld secs: terminating", Long_t(fTime)/1000);
 
    if (fProofServ) {
       // Set the status to timed-out
@@ -1029,7 +1029,7 @@ void TProofServ::RestartComputeTime()
    if (fPlayer) {
       TProofProgressStatus *status = fPlayer->GetProgressStatus();
       if (status) status->SetLearnTime(fCompute.RealTime());
-      Info("RestartComputeTime", "compute time restarted after %f secs (%lld entries)",
+      Info("RestartComputeTime", "compute time restarted after %f secs (%d entries)",
                                  fCompute.RealTime(), fPlayer->GetLearnEntries());
    }
    fCompute.Start(kFALSE);
@@ -1445,7 +1445,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                (*mess) >> timeout;
             PDB(kGlobal, 1)
                Info("HandleSocketInput:kPROOF_STOPPROCESS",
-                    "recursive mode: enter %d, %d", aborted, timeout);
+                    "recursive mode: enter %d, %ld", aborted, timeout);
             if (fProof)
                // On the master: propagate further
                fProof->StopProcess(aborted, timeout);
@@ -2948,9 +2948,10 @@ Int_t TProofServ::SetupCommon()
                      fHWMBoxSize = (fact > 0) ? tok.Atoi() * fact : tok.Atoi();
                   else
                      fMaxBoxSize = (fact > 0) ? tok.Atoi() * fact : tok.Atoi();
-               } else
-                  Info("SetupCommon", "parsing '%.*s' : ignoring token %s",
-                                      strlen(ksz[j])-1, ksz[j], tok.Data());
+               } else {
+                  TString ssz(ksz[j], strlen(ksz[j])-1);
+                  Info("SetupCommon", "parsing '%s' : ignoring token %s", ssz.Data(), tok.Data());
+               }
             }
          }
       }
@@ -3123,7 +3124,7 @@ Bool_t TProofServ::UnlinkDataDir(const char *path)
 
     // Do remove, if required
    if (dorm && gSystem->Unlink(path) != 0)
-      Warning("UnlinkDataDir", "data directory '%s' is empty but could not be removed");
+      Warning("UnlinkDataDir", "data directory '%s' is empty but could not be removed", path);
    // done
    return dorm;
 }
@@ -3739,7 +3740,7 @@ Int_t TProofServ::SendResults(TSocket *sock, TList *outlist, TQueryResult *pq)
          if (mbuf.Length() > fMsgSizeHWM) {
             PDB(kOutput, 1)
                Info("SendResults",
-                    "message has %lld bytes: limit of %lld bytes reached - sending ...",
+                    "message has %d bytes: limit of %lld bytes reached - sending ...",
                     mbuf.Length(), fMsgSizeHWM);
             // Compress the message, if required; for these messages we do it already
             // here so we get the size; TXSocket does not do it twice.
@@ -4966,8 +4967,24 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
 
          // Check for SETUP.C and execute
          if (!gSystem->AccessPathName("PROOF-INF/SETUP.C")) {
+            // We need to change the name of the function to avoid problems when we load more packages
+            TString setup, setupfn;
+            setup.Form("%s_SETUP", package.Data());
+            setupfn.Form("%s/%s.C", gSystem->TempDirectory(), setup.Data());
+            TMacro setupmc("PROOF-INF/SETUP.C");
+            TObjString *setupline = setupmc.GetLineWith("SETUP(");
+            if (setupline) {
+               TString setupstring(setupline->GetString());
+               setupstring.ReplaceAll("SETUP(", TString::Format("%s(", setup.Data()));
+               setupline->SetString(setupstring);
+            } else {
+               // Macro does not contain SETUP()
+               SendAsynMessage(TString::Format("%s: warning: macro '%s/PROOF-INF/SETUP.C' does not contain a SETUP()"
+                                               " function", noth.Data(), package.Data()));
+            }
+            setupmc.SaveSource(setupfn.Data());
             // Load the macro
-            if (gROOT->LoadMacro("PROOF-INF/SETUP.C") != 0) {
+            if (gROOT->LoadMacro(setupfn.Data()) != 0) {
                // Macro could not be loaded
                SendAsynMessage(TString::Format("%s: error: macro '%s/PROOF-INF/SETUP.C' could not be loaded:"
                                                 " cannot continue",
@@ -4975,7 +4992,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                status = -1;
             } else {
                // Check the signature
-               TFunction *fun = (TFunction *) gROOT->GetListOfGlobalFunctions()->FindObject("SETUP");
+               TFunction *fun = (TFunction *) gROOT->GetListOfGlobalFunctions()->FindObject(setup);
                if (!fun) {
                   // Notify the upper level
                   SendAsynMessage(TString::Format("%s: error: function SETUP() not found in macro '%s/PROOF-INF/SETUP.C':"
@@ -4987,7 +5004,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                   // Check the number of arguments
                   if (fun->GetNargs() == 0) {
                      // No arguments (basic signature)
-                     callEnv.InitWithPrototype("SETUP","");
+                     callEnv.InitWithPrototype(setup.Data(),"");
                      if ((mess->BufferSize() > mess->Length())) {
                         (*mess) >> optls;
                         SendAsynMessage(TString::Format("%s: warning: loaded SETUP() does not take any argument:"
@@ -5001,11 +5018,11 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                         // Check argument type
                         TString argsig(arg->GetTitle());
                         if (argsig.BeginsWith("TList")) {
-                           callEnv.InitWithPrototype("SETUP","TList *");
+                           callEnv.InitWithPrototype(setup.Data(),"TList *");
                            callEnv.ResetParam();
                            callEnv.SetParam((Long_t) optls);
                         } else if (argsig.BeginsWith("const char")) {
-                           callEnv.InitWithPrototype("SETUP","const char *");
+                           callEnv.InitWithPrototype(setup.Data(),"const char *");
                            callEnv.ResetParam();
                            TObjString *os = optls ? dynamic_cast<TObjString *>(optls->First()) : 0;
                            if (os) {
@@ -5044,6 +5061,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                   }
                }
             }
+            if (!gSystem->AccessPathName(setupfn.Data())) gSystem->Unlink(setupfn.Data());
          }
 
          gSystem->ChangeDirectory(ocwd);
@@ -6181,7 +6199,7 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                if (name.Length() > 0 && port > 0 && (t = new TSocket(name, port)) && t->IsValid()) {
 
                   PDB(kSubmerger, 2) Info("HandleSubmerger",
-                                          "%f kSendOutput: worker asked for sending output to merger #%d %s:%d",
+                                          "kSendOutput: worker asked for sending output to merger #%d %s:%d",
                                           merger_id, name.Data(), port);
 
                   if (SendResults(t, fPlayer->GetOutputList()) != 0) {
@@ -6201,8 +6219,7 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                      answ << merger_id;
                      fSocket->Send(answ);
 
-                     PDB(kSubmerger, 2) Info("HandleSubmerger",
-                                             "kSendOutput: worker sent its output", name.Data(), port);
+                     PDB(kSubmerger, 2) Info("HandleSubmerger", "kSendOutput: worker sent its output");
                      fSocket->Send(kPROOF_SETIDLE);
                      SetIdle(kTRUE);
                      SendLogFile();
