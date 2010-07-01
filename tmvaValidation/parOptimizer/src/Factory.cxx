@@ -937,8 +937,6 @@ void TMVA::Factory::OptimizeAllMethods()
       optimize.optimize();
       Log() << kINFO << "Optimize finished" << Endl;
    }
-   std::cout << "YESSSSSSSSSSSSSS I was here " << std::endl;
-  // 
 }
 //_______________________________________________________________________
 void TMVA::Factory::TrainAllMethods() 
@@ -1631,11 +1629,15 @@ void TMVA::Factory::EvaluateAllMethods( void )
       }
       Log() << kINFO << hLine << Endl;
       Log() << kINFO << Endl; 
+    
    }
 
    // write test tree
    RootBaseDir()->cd();
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTesting)->Write( "", TObject::kOverwrite );
    DefaultDataSetInfo().GetDataSet()->GetTree(Types::kTraining)->Write( "", TObject::kOverwrite );
+
+
+
 }
 

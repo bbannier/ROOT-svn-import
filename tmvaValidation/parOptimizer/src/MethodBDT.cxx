@@ -145,6 +145,7 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    TMVA::MethodBase( jobName, Types::kBDT, methodTitle, theData, theOption, theTargetDir )
 {
    // the standard constructor for the "boosted decision trees"
+   fMonitorNtuple = NULL;
 }
 
 //_______________________________________________________________________
@@ -392,6 +393,8 @@ void TMVA::MethodBDT::Init( void )
 
    // reference cut value to distinguish signal-like from background-like events
    SetSignalReferenceCut( 0 );
+   // fill the STL Vector with the event sample
+   InitEventSample();
 
 }
 
@@ -409,12 +412,12 @@ void TMVA::MethodBDT::Reset( void )
    fForest.clear();
 
    fBoostWeights.clear();
-   fMonitorNtuple->Delete(); fMonitorNtuple=NULL;
+   if (fMonitorNtuple) fMonitorNtuple->Delete(); fMonitorNtuple=NULL;
    fVariableImportance.clear();
    fResiduals.clear();
    // reset all previously stored/accumulated BOOST weights in the event sample
    for (UInt_t iev=0; iev<fEventSample.size(); iev++) fEventSample[iev]->SetBoostWeight(1.);
-   Data()->DeleteResults(GetMethodName(), Types::kTraining, GetAnalysisType());
+   if (Data()) Data()->DeleteResults(GetMethodName(), Types::kTraining, GetAnalysisType());
    Log() << kDEBUG << " successfully(?) resetted the method " << Endl;                                      
 }
 
@@ -477,8 +480,8 @@ void TMVA::MethodBDT::Train()
    // BDT training
    TMVA::DecisionTreeNode::fgIsTraining=true;
 
-   // fill the STL Vector with the event sample
-   InitEventSample();
+   // // fill the STL Vector with the event sample
+   // InitEventSample();
 
    // HHV (it's been here since looong but I really don't know why we cannot handle
    // normalized variables in BDTs...  todo
@@ -489,7 +492,8 @@ void TMVA::MethodBDT::Train()
 
    Log() << kINFO << "Training "<< fNTrees << " Decision Trees ... patience please" << Endl;
 
- 
+   Log() << kDEBUG << "Training  with maximal depth = "<<fMaxDepth<< " and NNodesMax=" << fNNodesMax << Endl;
+
    // weights applied in boosting
    Int_t nBins;
    Double_t xMin,xMax;
@@ -656,6 +660,7 @@ void TMVA::MethodBDT::Train()
             << Endl;
    }
    TMVA::DecisionTreeNode::fgIsTraining=false;
+
 }
 
 //_______________________________________________________________________

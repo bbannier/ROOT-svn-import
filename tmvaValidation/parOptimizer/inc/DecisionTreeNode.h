@@ -46,6 +46,7 @@
 #include "TMVA/Version.h"
 #endif
 
+#include <iostream>
 #include <vector>
 #include <map>
 namespace TMVA {
@@ -136,7 +137,6 @@ namespace TMVA {
       void SetSelector( Short_t i) { fSelector = i; }
       // return index of variable used for discrimination at this node 
       Short_t GetSelector() const { return fSelector; }
-    
     
       // set the cut value applied at this node 
       void  SetCutValue ( Float_t c ) { fCutValue  = c; }

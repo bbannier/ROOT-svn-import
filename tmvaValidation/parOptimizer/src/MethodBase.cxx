@@ -106,6 +106,8 @@
 #include "TMVA/ResultsRegression.h"
 #include "TMVA/ResultsMulticlass.h"
 
+#include "TMVA/OptimizerFOM.h"
+
 ClassImp(TMVA::MethodBase)
 
 using std::endl;
@@ -1023,6 +1025,7 @@ void TMVA::MethodBase::TestClassification()
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
       
       const Event* ev = GetEvent(ievt);
+
       Float_t v = (*mvaRes)[ievt];
       Float_t w = ev->GetWeight();
       

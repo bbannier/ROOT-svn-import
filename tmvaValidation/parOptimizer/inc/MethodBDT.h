@@ -119,6 +119,8 @@ namespace TMVA {
       void DeclareOptions();
       void ProcessOptions();
       void SetMaxDepth(Int_t d){fMaxDepth = d;}
+      void SetNodeMinEvents(Int_t d){fNodeMinEvents = d;}
+      void SetNTrees(Int_t d){fNTrees = d;}
 
       // get the forest
       inline const std::vector<TMVA::DecisionTree*> & GetForest() const;
