@@ -31,13 +31,14 @@ ClassImp(TMVA::OptimizerFOM)
 
 #include "TMVA/PDF.h"   
 //_______________________________________________________________________
-TMVA::OptimizerFOM::OptimizerFOM(MethodBase* const method, TString fomType):
+TMVA::OptimizerFOM::OptimizerFOM(MethodBase* const method, TString fomType, std::vector<Float_t> & fomVsIter):
    fMethod(method),
    fFOMType(fomType),
    fMvaSig(NULL),
    fMvaBkg(NULL),
    fMvaSigFineBin(NULL),
-   fMvaBkgFineBin(NULL)
+   fMvaBkgFineBin(NULL),
+   fFOMvsIter(fomVsIter)
 {
    // Constructor which sets either "Classification or Regression"
    // and the type of Figure of Merit that you've chosen
@@ -67,6 +68,7 @@ Double_t TMVA::OptimizerFOM::GetFOM()
          exit(1);
       }
    }
+   fFOMvsIter.push_back(fom);
    return fom;
 }
 
@@ -103,8 +105,10 @@ void TMVA::OptimizerFOM::GetMVADists()
       //         std::cout << " MVA Value = " << fMethod->GetMvaValue(events[iev]) << std::endl;
       if (events[iev]->GetClass() == signalClassNr) {
          fMvaSig->Fill(fMethod->GetMvaValue(events[iev]),events[iev]->GetWeight());
+         fMvaSigFineBin->Fill(fMethod->GetMvaValue(events[iev]),events[iev]->GetWeight());
       } else {
          fMvaBkg->Fill(fMethod->GetMvaValue(events[iev]),events[iev]->GetWeight());
+         fMvaBkgFineBin->Fill(fMethod->GetMvaValue(events[iev]),events[iev]->GetWeight());
       }
    }
 }

@@ -127,6 +127,7 @@ Double_t TMVA::Tools::GetSeparation( TH1* S, TH1* B ) const
    Double_t intBin = (S->GetXaxis()->GetXmax() - S->GetXaxis()->GetXmin())/nstep;
    Double_t nS     = S->GetSumOfWeights()*intBin;
    Double_t nB     = B->GetSumOfWeights()*intBin;
+
    if (nS > 0 && nB > 0) {
       for (Int_t bin=0; bin<nstep; bin++) {
          Double_t s = S->GetBinContent( bin )/Double_t(nS);
