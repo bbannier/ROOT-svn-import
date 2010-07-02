@@ -66,7 +66,7 @@ namespace TMVA {
       void optimize(TString optimizationType = "GA"); 
       
       void optimizeScan();
-      void optimizeGA();
+      void optimizeFit(TString optimizationFitType);
 
       Double_t EstimatorFunction( std::vector<Double_t> & );
 

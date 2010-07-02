@@ -180,7 +180,7 @@ void TMVAClassification( TString myMethodList = "" )
    factory->AddSpectator( "spec2:=var1*3",  "Spectator 2", "units", 'F' );
 
    // load the signal and background event samples from ROOT trees
-   TString fname = "./tmva_class_example.root";
+   TString fname = "./tmva_example.root";
 
    TFile *input = TFile::Open( fname );
    
