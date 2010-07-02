@@ -26,6 +26,7 @@ ClassImp(TMVA::Optimizer)
 
 #include <limits>
 #include "TMath.h"
+#include "TGraph.h"
 
 #include "TMVA/MethodBase.h"   
 #include "TMVA/MethodBDT.h"   
@@ -41,7 +42,7 @@ TMVA::Optimizer::Optimizer(MethodBase * const method, TString fomType)
    //Somehow loop over the different paremters (ListOfOptions) and
    //find the one where
 
-   if ( !(fFOM = new TMVA::OptimizerFOM(method,fomType))){
+   if ( !(fFOM = new TMVA::OptimizerFOM(method,fomType,fFOMvsIter))){
       std::cout << "ERROR in TMVA::Optimizer, you've probably chosen an FOM not yet implemented"
                 << std::endl;
       exit(1);
@@ -49,12 +50,45 @@ TMVA::Optimizer::Optimizer(MethodBase * const method, TString fomType)
 }
 
 //_______________________________________________________________________
-void TMVA::Optimizer::optimize(TString optimizationType)
+TMVA::Optimizer::~Optimizer() 
 {
-   if      (optimizationType == "Scan") this->optimizeScan();
-   else if (optimizationType == "GA"  ) this->optimizeGA();
+   // the destructor (delete the OptimizerFOM, store the graph and .. delete it)
+   
+   fFOM->GetMethod()->BaseDir()->cd();
+   Int_t n=Int_t(fFOMvsIter.size());
+   Float_t *x = new Float_t[n];
+   Float_t *y = new Float_t[n];
+   Float_t  ymin=+999999999;
+   Float_t  ymax=-999999999;
+   std::cout << "make graph with " << n << " points" << std::endl;
+   for (Int_t i=0;i<n;i++){
+      x[i] = Float_t(i);
+      y[i] = fFOMvsIter[i];
+      if (ymin>y[i]) ymin=y[i];
+      if (ymax<y[i]) ymax=y[i];
+
+      std::cout << "for "<<i<<" fom = " << y[i] << std::endl;
+   }
+
+   TH2D   *h=new TH2D(fFOM->GetMethod()->GetMethodName()+"_FOMvsIterHist","",2,0,n,2,ymin,ymax);
+   TGraph *gFOMvsIter = new TGraph(n,x,y);
+   gFOMvsIter->SetName((fFOM->GetMethod()->GetMethodName()+"_FOMvsIter").Data());
+   gFOMvsIter->Write();
+   h->Write();
+
+
+
+   //delete fFOM;
+
+   // delete fFOMvsIter;
+} 
+//_______________________________________________________________________
+void TMVA::Optimizer::optimize(TString optimizationFitType)
+{
+   if      (optimizationFitType == "Scan") this->optimizeScan();
+   else if (optimizationFitType == "GA"  ) this->optimizeGA();
    else {
-      std::cout << "You have chosen as optimization type " << optimizationType
+      std::cout << "You have chosen as optimization type " << optimizationFitType
                 << " that is not (yet) coded --> exit()" << std::endl;
       exit(1);
    }
@@ -154,6 +188,7 @@ void TMVA::Optimizer::optimizeScan()
          bestFOM = currentFOM;
          ibest   = i;
       }
+
    }
    
    fFOM->GetMethod()->Reset();

@@ -451,7 +451,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    
    // Optimize MVAs using the set of training events
-   factory->OptimizeAllMethods();
+   factory->OptimizeAllMethods("ROCIntegral","GA");
 
    // Train MVAs using the set of training events
    factory->TrainAllMethods();

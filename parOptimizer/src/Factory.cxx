@@ -907,7 +907,7 @@ void TMVA::Factory::WriteDataInformation()
 }
 
 //_______________________________________________________________________
-void TMVA::Factory::OptimizeAllMethods() 
+void TMVA::Factory::OptimizeAllMethods(TString fomType, TString fitType) 
 {
   // iterates through all booked methods and sees if they use parameter tuning and if so..
   // does just that  i.e. calls "Method::Train()" for different parameter setttings and
@@ -933,8 +933,8 @@ void TMVA::Factory::OptimizeAllMethods()
       Log() << kINFO << "Optimize method: " << mva->GetMethodName() << " for " 
             << (fAnalysisType == Types::kRegression ? "Regression" : 
 		(fAnalysisType == Types::kMulticlass ? "Multiclass classification" : "Classification")) << Endl;
-      Optimizer optimize(mva);
-      optimize.optimize();
+      Optimizer optimize(mva, fomType);
+      optimize.optimize(fitType);
       Log() << kINFO << "Optimize finished" << Endl;
    }
 }

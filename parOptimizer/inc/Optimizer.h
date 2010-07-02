@@ -60,7 +60,7 @@ namespace TMVA {
       Optimizer(MethodBase * const method, TString fomType="Separation");
       
       // destructor
-      virtual ~Optimizer(){}
+      virtual ~Optimizer();
       // could later be changed to be set via option string... 
       // but for now it's impler like this
       void optimize(TString optimizationType = "GA"); 
@@ -73,9 +73,11 @@ namespace TMVA {
       
    private:
 
-      OptimizerFOM *fFOM;
+      OptimizerFOM *fFOM;  // the Figure of Merit calculator
 
-      std::map< std::vector<Double_t> , Double_t>  fAlreadyTrainedParCombination;
+      std::vector<Float_t> fFOMvsIter; // graph showing the develompment of the Figure Of Merit values during the fit
+
+      std::map< std::vector<Double_t> , Double_t>  fAlreadyTrainedParCombination; // save parameters for which the FOM is already known (GA seems to evaluate the same parameters several times)
       
       ClassDef(Optimizer,0) // Interface to different separation critiera used in training algorithms
    };
