@@ -117,25 +117,14 @@ void TMVA::Optimizer::optimizeScan()
    if (fFOM->GetMethod()->GetMethodType() == TMVA::Types::kBDT){
       loopVariable.clear();
       std::vector<Int_t> *tmp = new std::vector<Int_t>; 
-      tmp->push_back(3); tmp->push_back(400); tmp->push_back(400); loopVariable.push_back(tmp);
-      tmp->clear();
-      tmp->push_back(2); tmp->push_back(50); tmp->push_back(400); loopVariable.push_back(tmp);
-      tmp->clear();
-      tmp->push_back(4); tmp->push_back(300); tmp->push_back(400); loopVariable.push_back(tmp);
-      tmp->clear();
-      tmp->push_back(3); tmp->push_back(400); tmp->push_back(200); loopVariable.push_back(tmp);
-      tmp->clear();
-      tmp->push_back(2); tmp->push_back(50); tmp->push_back(200); loopVariable.push_back(tmp);
-      tmp->clear();
-      tmp->push_back(4); tmp->push_back(300); tmp->push_back(200); loopVariable.push_back(tmp);
-      tmp->clear();
-      tmp->push_back(3); tmp->push_back(400); tmp->push_back(50); loopVariable.push_back(tmp);
-      tmp->clear();
-      tmp->push_back(2); tmp->push_back(50); tmp->push_back(50); loopVariable.push_back(tmp);
-      tmp->clear();
-      tmp->push_back(4); tmp->push_back(300); tmp->push_back(50); loopVariable.push_back(tmp);
+      for (Int_t idepth=2; idepth<=20; idepth++)
+        for (Int_t nEv=50; nEv<=500; nEv+=50)
+          for (Int_t nTrees=50; nTrees<=800; nTrees+=50){
+            tmp->push_back(idepth); tmp->push_back(nEv); tmp->push_back(nTrees); loopVariable.push_back(tmp);
+            tmp->clear();
+          }
    }
-   
+      
    for (UInt_t i=0;i<loopVariable.size();i++){    
       
       
@@ -179,9 +168,8 @@ void TMVA::Optimizer::optimizeFit(TString optimizationFitType)
    std::vector<Interval*> ranges;
 
    ranges.push_back(new Interval(2,20,20-2+1)); // MaxDepth
-   ranges.push_back(new Interval(50,500,(500-50)/10+1)); // NNodeMinEvents
-   ranges.push_back(new Interval(50,800,(800-50)/10+1)); // NTrees
-
+   ranges.push_back(new Interval(50,500,50)); // NNodeMinEvents
+   ranges.push_back(new Interval(50,800,50)); // NTrees
 
    // create the fitter
 
