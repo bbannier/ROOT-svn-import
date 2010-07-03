@@ -116,18 +116,15 @@ void TMVA::Optimizer::optimizeScan()
    
    if (fFOM->GetMethod()->GetMethodType() == TMVA::Types::kBDT){
       loopVariable.clear();
-      std::vector<Int_t> *tmp = new std::vector<Int_t>; 
       for (Int_t idepth=2; idepth<=20; idepth++)
         for (Int_t nEv=50; nEv<=500; nEv+=50)
           for (Int_t nTrees=50; nTrees<=800; nTrees+=50){
+            std::vector<Int_t> *tmp = new std::vector<Int_t>; 
             tmp->push_back(idepth); tmp->push_back(nEv); tmp->push_back(nTrees); loopVariable.push_back(tmp);
-            tmp->clear();
           }
    }
       
    for (UInt_t i=0;i<loopVariable.size();i++){    
-      
-      
      if(i!=0)fFOM->GetMethod()->Reset();
      ((MethodBDT*)(fFOM->GetMethod()))->SetMaxDepth((*(loopVariable[i]))[0]);     
      ((MethodBDT*)(fFOM->GetMethod()))->SetNodeMinEvents((*(loopVariable[i]))[1]);     
@@ -139,8 +136,8 @@ void TMVA::Optimizer::optimizeScan()
      fFOM->GetMethod()->Train();
      currentFOM = fFOM->GetFOM(); 
      
-     std::cout << "With variable:";
-     for (UInt_t iv=0; iv<<(*(loopVariable[i])).size(); iv++) std::cout << (*(loopVariable[i]))[iv]<< "  ";
+     std::cout << "With variables:";
+     for (UInt_t iv=0; iv<(*(loopVariable[i])).size(); iv++) std::cout << (*(loopVariable[i]))[iv]<< "  ";
      std::cout << " we get GetFOM = " << currentFOM << std::endl;
       if (currentFOM > bestFOM) {
          bestFOM = currentFOM;
