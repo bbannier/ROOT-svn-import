@@ -157,8 +157,13 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& model, const RooArgSet& observables,
   _randProto = pc.getInt("randProtoData") ;
 
   // Process constraints specifications
-  const RooArgSet* cPars = pc.getSet("cPars") ;
+  const RooArgSet* cParsTmp = pc.getSet("cPars") ;
   const RooArgSet* extCons = pc.getSet("extCons") ;
+
+  RooArgSet* cPars = new RooArgSet ;
+  if (cParsTmp) {
+    cPars->add(*cParsTmp) ;
+  }
   
   // If constraints are specified, add to fit options
   if (cPars) {
@@ -173,8 +178,10 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& model, const RooArgSet& observables,
   RooArgSet consPars ;
   if (cPars) {
     RooArgSet* constraints = model.getConstraints(observables,*cPars,kTRUE) ;
-    allConstraints.add(*constraints) ;
-    delete constraints ;
+    if (constraints) {
+      allConstraints.add(*constraints) ;
+      delete constraints ;
+    }
   }
   
   // Construct constraint p.d.f
@@ -193,6 +200,9 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& model, const RooArgSet& observables,
     _constrGenContext = _constrPdf->genContext(consPars,0,0,_verboseGen) ;
 
     _perExptGenParams = kTRUE ;
+
+    coutI(Generation) << "RooMCStudy::RooMCStudy: INFO have pdf with constraints, will generate paramaters from constraint pdf for each experiment" << endl ;
+
 
   } else {
     _constrPdf = 0 ;
@@ -1198,7 +1208,7 @@ RooPlot* RooMCStudy::plotPull(const RooRealVar& param, const RooCmdArg& arg1, co
 
     // Add Gaussian fit if requested
     if (fitGauss) {
-      RooRealVar pullMean("pullMean","Mean of pull",0,-100,100) ;
+      RooRealVar pullMean("pullMean","Mean of pull",0,-10,10) ;
       RooRealVar pullSigma("pullSigma","Width of pull",1,0.1,5) ;
       RooGenericPdf pullGauss("pullGauss","Gaussian of pull",
 			      "exp(-0.5*(@0-@1)*(@0-@1)/(@2*@2))",

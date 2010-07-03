@@ -75,7 +75,7 @@ public:
   virtual Bool_t isDirectGenSafe(const RooAbsArg& arg) const ; 
 
   // Constraint management
-  virtual RooArgSet* getConstraints(const RooArgSet& observables, const RooArgSet& constrainedParams, Bool_t stripDisconnected) const ;
+  virtual RooArgSet* getConstraints(const RooArgSet& observables, RooArgSet& constrainedParams, Bool_t stripDisconnected) const ;
 
   virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const ; 
 
@@ -132,6 +132,8 @@ protected:
     // Cache management functions
     virtual RooArgList containedArgs(Action) ;
     virtual void printCompactTreeHook(std::ostream&, const char *, Int_t, Int_t) ;
+  private:
+    CacheElem(const CacheElem&) ;
   } ;
   mutable RooObjCacheManager _cacheMgr ; // The cache manager
 
