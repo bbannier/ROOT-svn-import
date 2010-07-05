@@ -386,6 +386,9 @@ void TCint::LoadMacro(const char *filename, EErrorCode *error)
    // Load a macro file in CINT's memory.
 
    ProcessLine(Form(".L %s", filename), error);
+   UpdateListOfTypes();
+   UpdateListOfGlobals();
+   UpdateListOfGlobalFunctions();
 }
 
 //______________________________________________________________________________
@@ -655,6 +658,13 @@ void TCint::UpdateListOfGlobals()
    // Update the list of pointers to global variables. This function
    // is called by TROOT::GetListOfGlobals().
 
+   if (!gROOT->fGlobals) {
+      // No globals registered yet, trigger it:
+      gROOT->GetListOfGlobals();
+      // It already called us again.
+      return;
+   }
+
    R__LOCKGUARD2(gCINTMutex);
 
    G__DataMemberInfo t, *a;
@@ -678,6 +688,13 @@ void TCint::UpdateListOfGlobalFunctions()
 {
    // Update the list of pointers to global functions. This function
    // is called by TROOT::GetListOfGlobalFunctions().
+
+   if (!gROOT->fGlobalFunctions) {
+      // No global functions registered yet, trigger it:
+      gROOT->GetListOfGlobalFunctions();
+      // We were already called by TROOT::GetListOfGlobalFunctions()
+      return;
+   }
 
    R__LOCKGUARD2(gCINTMutex);
 
