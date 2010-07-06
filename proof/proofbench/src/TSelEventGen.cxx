@@ -32,9 +32,6 @@
 #include "TFile.h"
 #include "TSortedList.h"
 
-static const Long64_t MaxTreeSizeOrg=TTree::GetMaxTreeSize();
-//static const Long64_t MaxTreeSizeOrg=100*1000*1000; //100 MB max tree size for test
-
 ClassImp(TSelEventGen)
 
 //______________________________________________________________________________
@@ -53,9 +50,9 @@ TSelEventGen::TSelEventGen():
       fBaseDir=gProofServ->GetDataDir();
       //2 directories up
       fBaseDir.Remove(fBaseDir.Last('/'));
-#if 0
+//#if 0
       fBaseDir.Remove(fBaseDir.Last('/'));
-#endif
+//#endif
    }
    else{
       fBaseDir="";
@@ -92,7 +89,6 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    // When running with PROOF SlaveBegin() is called on each slave server.
    // The tree argument is deprecated (on PROOF 0 is passed).
 
-   Printf("MaxTreeSizeOrg=%lld", MaxTreeSizeOrg);
    Init(tree);
 
    TString option = GetOption();
@@ -269,8 +265,6 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    }
 
    fDataSet=new TDSet("TTree","EventTree");
-
-   TTree::SetMaxTreeSize(10*MaxTreeSizeOrg);
 }
 
 //______________________________________________________________________________
@@ -309,17 +303,13 @@ Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype, TStrin
    eventtree->AutoSave();
 
    Long64_t i=0;
-   Long64_t fileend=0;
    Long64_t size_generated=0;
 
    f->SetCompressionLevel(0); //no compression
-   //take control on file change
-   //const Long64_t maxtreesize_org=TTree::GetMaxTreeSize();
-   //const Long64_t maxtreesize_org=100*1024*1024;  //100 MB limit for test
 
    if (filetype==TProofBenchMode::kFileBenchmark){
       Info("GenerateFiles", "Generating %s", filename.Data());   
-      while (sizenevents-- && size_generated<MaxTreeSizeOrg){
+      while (sizenevents--){
          //event->Build(i++,fNTracksBench,0);
          event->Build(i++, fNTracks, 0);
          size_generated+=eventtree->Fill();
@@ -329,11 +319,9 @@ Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype, TStrin
    }
    else if (filetype==TProofBenchMode::kFileCleanup){
       Info("GenerateFiles", "Generating %s", filename.Data());   
-      //while (fileend<size && (fileend+buffersize)<fMaxTreeSize){
-      while (size_generated<sizenevents && size_generated<MaxTreeSizeOrg){
+      while (size_generated<sizenevents){
          event->Build(i++, fNTracks, 0);
          size_generated+=eventtree->Fill();
-         //fileend=f->GetEND();
       }
       Info("GenerateFiles", "%s generated with %lld bytes", filename.Data(), size_generated);
    }
@@ -344,9 +332,6 @@ Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype, TStrin
    eventtree->Write();
    eventtree->SetDirectory(0);
 
-   //nentries=eventtree->GetEntries();
-   //f->Write();
-   //printf("current dir=%s\n", gDirectory->GetPath());
    f->Close();
    delete f;
    f = 0;
@@ -400,115 +385,84 @@ Bool_t TSelEventGen::Process(Long64_t entry)
 #endif
 
    TString filename=fCurrent->GetName();
-
    filename=fBaseDir+"/"+filename;
+
+   TString hostfqdn=TUrl(gSystem->HostName()).GetHostFQDN();
+   TString url="root://"+hostfqdn+"/"+filename;
+   //Info("Process", "url=%s", url.Data());
 
    //generate files
    if (fFileType==TProofBenchMode::kFileBenchmark){
       Long64_t neventstogenerate=fNEvents;
 
-      Int_t serial=0;//serial number of file when a file becomes larger 
-                     //than maximum tree size limit
-      while(neventstogenerate>0){
-         //increase serial number
-         TString newfilename=filename;
-         newfilename.Replace(newfilename.Last('_')+1, newfilename.Length(), "", newfilename.Length());
-         newfilename=TString::Format("%s%d.root", newfilename.Data(), serial);
-
-         serial++;
-         if (!fRegenerate){
-            //see if a file exists
-            FileStat_t filestat;
-            if (!gSystem->GetPathInfo(newfilename, filestat)){//stat'ed
-               //Check if file is ok
-               TFile f(newfilename);
-               if (!f.IsZombie()){
-                  Long64_t size=f.GetSize();
-                  TTree* t=(TTree*)f.Get("EventTree");
-                  if (size!=-1 && t){
-                     Long64_t entries_file=t->GetEntries();
-                     Long64_t sizetree=t->GetTotBytes();
-                     //Long64_t maxtreesize=TTree::GetMaxTreeSize();
-                     //Long64_t maxtreesize=100*1024*1024;//test
-                     if (entries_file==neventstogenerate
-                    || (entries_file<neventstogenerate && 0.9*MaxTreeSizeOrg<sizetree && sizetree<1.1*MaxTreeSizeOrg)){
-                        //file size seems to be correct, skip generation
-                        Info("Process", "Bench file (%s, entries=%lld) exists."
-                             " Skipping generation", newfilename.Data(), entries_file);
-                        neventstogenerate-=entries_file;
-                        fDataSet->Add(newfilename);
-                        continue;
-                     }
-                  }
+      Bool_t filefound=kFALSE;
+      if (!fRegenerate){
+         TFile f(filename);
+         if (!f.IsZombie()){
+            TTree* t=(TTree*)f.Get("EventTree");
+            if (t){
+               Long64_t entries_file=t->GetEntries();
+               if ( entries_file==neventstogenerate ){
+                  //file size seems to be correct, skip generation
+                  Info("Process", "Bench file (%s, entries=%lld) exists."
+                       " Skipping generation", url.Data(), entries_file);
+                  neventstogenerate-=entries_file;
+                  filefound=kTRUE;
+                  fDataSet->Add(url);
                }
             }
          }
-         neventstogenerate-=GenerateFiles(fFileType, newfilename, neventstogenerate);
-         fDataSet->Add(newfilename);
+         f.Close();
       }
-      //fListOfFilesGenerated->Add(fDataSet);
-      //fListOfFilesGenerated->Print("a");
 
-      //fOutput->Add(fListOfFilesGenerated);
+      if (!filefound){
+         neventstogenerate-=GenerateFiles(fFileType, filename, neventstogenerate);
+         fDataSet->Add(url);
+      }
    }
    else if (fFileType==TProofBenchMode::kFileCleanup){
 
       //(re)generate files
       MemInfo_t meminfo;
+      Bool_t filefound=kFALSE;
+
       if (gSystem->GetMemInfo(&meminfo)){
           Error("SlaveBegin", "Cannot get memory information, returning");
           return kFALSE;
       }
       Info("SlaveBegin", "Total memory on this node: %d MB", meminfo.fMemTotal);
 
-      //Long64_t memorytotal=(Long64_t)(meminfo.fMemTotal)*1024*1024;
-      Long64_t memorytotal=(Long64_t)200*1024*1024;
+      Long64_t memorytotal=(Long64_t)(meminfo.fMemTotal)*1024*1024;
   
       Long64_t memorythisworker=memorytotal/fNWorkersPerNode+1;
       Long64_t bytestowrite=memorythisworker;
       Long64_t byteswritten=0;
-
-      Int_t serial=0;
-      while(bytestowrite>0){
-
-         //increase serial number
-         TString newfilename=filename;
-         newfilename.Replace(newfilename.Last('_')+1, newfilename.Length(), "", newfilename.Length());
-         newfilename=TString::Format("%s%d.root", newfilename.Data(), serial);
-
-         serial++;
-
-         if (!fRegenerate){
-            //see if a file exists
-            FileStat_t filestat;
-            if (!gSystem->GetPathInfo(newfilename, filestat)){//stat'ed
-               //Check if file is ok
-               //Long64_t size=filestat.fSize;
-               TFile f(newfilename);
-               if (!f.IsZombie()){
-                  TTree* tree=(TTree*)f.Get("EventTree");
-                  if (tree){
-                     Long64_t sizetree=tree->GetTotBytes();
-                     //Long64_t maxtreesize=TTree::GetMaxTreeSize();
-                     //Long64_t maxtreesize=100*1024*1024;//test
-                     if ( ((0.9*MaxTreeSizeOrg<sizetree && sizetree<1.1*MaxTreeSizeOrg)
-                      || (0.9*bytestowrite<sizetree && sizetree<1.1*bytestowrite))){
-                        //file size seems to be correct, skip generation
-                        byteswritten=sizetree;
-                        bytestowrite-=byteswritten;
-                        Info("Process", "Cleanup file (%s, tree size=%lld) exists."
-                             " Skipping generation", newfilename.Data(), sizetree);
-                        fDataSet->Add(newfilename);
-                        continue;
-                     }
-                  }
+      
+      if (!fRegenerate){
+         TFile f(filename);
+         if (!f.IsZombie()){
+            TTree* t=(TTree*)f.Get("EventTree");
+            if (t){
+               Long64_t sizetree=t->GetTotBytes();
+               Info("Process", "sizetree=%lld bytestowrite=%lld", sizetree, bytestowrite);
+               if (0.9*bytestowrite<sizetree && sizetree<1.1*bytestowrite){
+                  //file size seems to be correct, skip generation
+                  byteswritten=sizetree;
+                  bytestowrite-=byteswritten;
+                  Info("Process", "Cleanup file (%s, tree size=%lld) exists."
+                       " Skipping generation", url.Data(), sizetree);
+                  filefound=kTRUE;
+                  fDataSet->Add(url);
                }
             }
          }
+         f.Close();
+      }
 
-         byteswritten=GenerateFiles(fFileType, newfilename, bytestowrite);
+      if (!filefound){
+         byteswritten=GenerateFiles(fFileType, filename, bytestowrite);
          bytestowrite-=byteswritten;
-         fDataSet->Add(newfilename);
+         fDataSet->Add(url);
       }
    }
    else{
@@ -536,8 +490,7 @@ void TSelEventGen::SlaveTerminate()
    fOutput->Add(listoffilesgenerated);
 
    //set it back
-   TTree::SetMaxTreeSize(MaxTreeSizeOrg);
-   //TTree::SetMaxTreeSize(1900000000);
+   //TTree::SetMaxTreeSize(MaxTreeSizeOrg);
 
 }
 

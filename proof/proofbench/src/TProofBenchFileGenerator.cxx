@@ -196,10 +196,8 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
    // Merge outputs
    TObject* obj;
    TList* lfilesgenerated;
-   TList* ltdelement;
    TDSet* tdset;
    TString outputname, hostname, filename, newfilename;
-   TDSetElement* tdelement;
 
    TIter nxt(l);
    
@@ -208,18 +206,7 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
       if (outputname.Contains("PROOF_FilesGenerated")){
          lfilesgenerated=dynamic_cast<TList*>(obj);
          if (lfilesgenerated){
-            TObjArray* token=outputname.Tokenize("_"); // filename=PROOF_FilesGenerated_hostname_ordinal
-            hostname=((*token)[2])->GetName();
-
             tdset=dynamic_cast<TDSet*>(lfilesgenerated->At(0)); // lfilesgenerated is 1-element list
-            ltdelement=tdset->GetListOfElements();
-            TIter nxtelement(ltdelement);
-
-            while((tdelement=(TDSetElement*)nxtelement())){
-               filename=tdelement->GetName();
-               newfilename="root://"+hostname+"/"+filename;
-               tdelement->SetName(newfilename.Data());
-            }
             fDataSetGenerated->Add(tdset);
          }
          else{
