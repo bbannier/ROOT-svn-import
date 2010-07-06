@@ -1,0 +1,48 @@
+# Makefile for the ROOT test programs.
+# For stand-alone UnitTests
+# make -f Makefile.standalone
+# using the local TMVA libraries
+#
+
+include $(ROOTSYS)/test/Makefile.arch
+
+#------------------------------------------------------------------------------
+# define local settings
+TMVAINCLUDE = -I../../tmva
+TMVALOCALLIBS = -L../../tmva/lib
+# locals end
+
+STRESSTMVAO   = stressTMVA.$(ObjSuf)
+STRESSTMVAS   = stressTMVA.$(SrcSuf)
+STRESSTMVA    = stressTMVA$(ExeSuf)
+
+OBJS          = $(STRESSTMVAO)
+
+PROGRAMS      = $(STRESSTMVA)
+
+#------------------------------------------------------------------------------
+
+.SUFFIXES: .$(SrcSuf) .$(ObjSuf) .$(DllSuf)
+
+all:            $(PROGRAMS)
+
+
+TMVAUTDIR        = tmvaut
+TMVAUTSOURCES    = $(wildcard $(TMVAUTDIR)/*.cxx)
+TMVAUTOBJECTS    = $(TMVAUTSOURCES:.cxx=.o)
+TMVAUTH          = $(TMVAUTSOURCES:.cxx=.h)
+
+$(TMVAUTOBJECTS): %.o : %.cxx $(TMVAUTH)
+	$(CXX)  $(TMVAINCLUDE) $(CXXFLAGS) -c $< -o $@
+
+$(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
+	$(LD) $(LDFLAGS) $^ $(TMVALOCALLIBS) $(LIBS) -lTMVA.1 -lMinuit -lXMLIO -lMLP -lTreePlayer $(OutPutOpt)$@
+	$(MT_EXE)
+	@echo "$@ done"
+
+
+clean:
+	@rm -f $(PROGRAMS) $(OBJS) $(TMVAUTOBJECTS)
+
+.$(SrcSuf).$(ObjSuf):
+	$(CXX)  $(CXXFLAGS) -c $<
