@@ -4,6 +4,14 @@
 // from the ROOT class TSelector. For more information on the TSelector
 // framework see $ROOTSYS/README/README.SELECTOR or the ROOT User Manual.
 
+// ============ <EDITED HERE ================
+// The file for this selector can be found at
+// http://lcg-heppkg.web.cern.ch/lcg-heppkg/ROOT/eventdata.root
+// i.e run
+//   root [0] f = TFile::Open("http://lcg-heppkg.web.cern.ch/lcg-heppkg/ROOT/eventdata.root");
+//   root [1] EventData->Process("EventDataSelector.C+")
+// ============ /EDITED HERE> ================
+
 // The following methods are defined in this file:
 //    Begin():        called every time a loop on the tree starts,
 //                    a convenient place to create your histograms.
