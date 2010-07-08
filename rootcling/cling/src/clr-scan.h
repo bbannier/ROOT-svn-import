@@ -1,5 +1,6 @@
-// @(#)root/cint:$Id$
+
 // Author: Zdenek Culik   16/04/2010
+// Modified by: Velislava Spasova
 
 #ifndef __CLR_SCAN_H__
 #define __CLR_SCAN_H__
@@ -9,14 +10,21 @@
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 
 #include "llvm/Module.h"
 
 #include "Reflex/Reflex.h"
 #include "Reflex/Builder/ReflexBuilder.h"
+#include "Reflex/Builder/ClassBuilder.h"
+#include "Reflex/Builder/EnumBuilder.h"
+#include "Reflex/Builder/VariableBuilder.h"
+#include "Reflex/Builder/FunctionBuilder.h"
 
 #include "TString.h"
+#include <stack>
 
+//using namespace clang;
 /* -------------------------------------------------------------------------- */
 
 void ClrStubFunction (void* result, void* obj, const std::vector<void*>& params, void* ctx);
@@ -41,7 +49,9 @@ struct TContext
 
 /* -------------------------------------------------------------------------- */
 
-class TScanner
+// Note form Velislava: We are inheriting here from the class RecursiveASTVisitor
+// which traverses every node of the AST
+class TScanner: public clang::RecursiveASTVisitor<TScanner>
 {
 private:
    clang::ASTContext* fCtx;
@@ -53,6 +63,8 @@ public:
 
    static clang::Decl* GetDeclProp (const Reflex::PropertyList& prop_list);
    static std::string  GetFuncProp (const Reflex::PropertyList& prop_list);
+
+   std::stack <Reflex::ClassBuilder*> fClassBuilders; //ADDED BY VELISLAVA - a stack of ClassBuider-s
 
 private:
    static int fgAnonymousClassCounter;
@@ -84,7 +96,8 @@ public:
 private:
    TContext* AllocateContext ();
 
-private:
+   //private:
+public:
    void ShowInfo(const TString msg, const TString location = "");
    void ShowWarning(const TString msg, const TString location = "");
    void ShowError(const TString msg, const TString location = "");
@@ -143,11 +156,6 @@ private:
    TString ConvTemplateParams(clang::TemplateDecl* D);
    TString ConvTemplateArguments(const clang::TemplateArgumentList& list);
 
-   void ScanClassTemplate(clang::ClassTemplateDecl* D);
-   void ScanClassTemplateSpecialization(clang::ClassTemplateSpecializationDecl* D);
-   void ScanClassTemplatePartialSpecialization(clang::ClassTemplatePartialSpecializationDecl* D);
-   void ScanFunctionTemplate(clang::FunctionTemplateDecl* D);
-
    TString      FuncParameters(clang::FunctionDecl* D);
    std::string  FuncParameterList(clang::FunctionDecl* D);
    Reflex::Type FuncType(clang::FunctionDecl* D);
@@ -157,40 +165,22 @@ private:
    unsigned int Visibility(clang::Decl* D);
    unsigned int VarModifiers(clang::VarDecl* D);
 
-   void ScanFieldMember(clang::FieldDecl* D, Reflex::ClassBuilder* builder);
-   void ScanVarMember(clang::VarDecl* D, Reflex::ClassBuilder* builder);
-   void ScanFunctionMember(clang::FunctionDecl* D, Reflex::ClassBuilder* builder, TString template_params = "");
-   void ScanEnumMember(clang::EnumDecl* D, Reflex::ClassBuilder* builder);
-   void ScanTypedefMember(clang::TypedefDecl* D, Reflex::ClassBuilder* builder);
-   void ScanFunctionTemplateMember(clang::FunctionTemplateDecl* D, Reflex::ClassBuilder* builder);
-   void ScanFriendMember(clang::FriendDecl *D, Reflex::ClassBuilder* builder);
-   void ScanMember(clang::Decl* D, Reflex::ClassBuilder* builder);
-   void ScanClass(clang::RecordDecl* D, TString template_params = "");
-
-   void ScanEnum(clang::EnumDecl* D);
-
-   void ScanNamespaceAlias (clang::NamespaceAliasDecl *D);
-   void ScanUsing(clang::UsingDecl* D, Reflex::Scope Outer);
-   void ScanUsingShadow(clang::UsingShadowDecl* D, Reflex::Scope Outer);
-   void ScanUsingDirective(clang::UsingDirectiveDecl *D, Reflex::Scope Outer);
-
-   void ScanUnresolvedUsingValueMember(clang::UnresolvedUsingValueDecl* D, Reflex::ClassBuilder* builder);
-
-   void ScanTranslationUnit(clang::TranslationUnitDecl* D, Reflex::Scope Outer);
-   void ScanNamespace(clang::NamespaceDecl* D);
-   void ScanLinkageSpec(clang::LinkageSpecDecl* D, Reflex::Scope Outer);
-   void ScanTypedef(clang::TypedefDecl* D);
-   void ScanVariable(clang::VarDecl* D);
-   void ScanVariableOrField(clang::VarDecl* D);
-   void ScanFunction(clang::FunctionDecl* D, TString template_params = "");
-   void ScanMethod(clang::CXXMethodDecl* D, TString template_params = "");
-   void ScanDecl(clang::Decl* D, Reflex::Scope Outer);
-
 public:
    TScanner ();
    virtual ~ TScanner ();
 
+public: // ADDED BY VELISLAVA 
+   bool VisitVarDecl(clang::VarDecl* D); //Visitor for every VarDecl i.e. variable node in the AST
+   bool VisitFieldDecl(clang::FieldDecl* D); //Visitor for e field inside a class
+   bool VisitFunctionDecl(clang::FunctionDecl* D); //Visitor for every FunctionDecl i.e. function node in the AST
+   bool VisitEnumDecl(clang::EnumDecl* D); //Visitor for every EnumDecl i.e. enumeration node in the AST
+   bool VisitRecordDecl(clang::RecordDecl* D); // Visitor for every RecordDecl i.e. class node in the AST
+   bool TraverseDeclContextHelper(clang::DeclContext *DC); // Here is the code magic :) - every Decl 
+   // according to its type is processed by the corresponding Visitor method
+   void RemoveBuilder(clang::DeclContext* DC); // Pop()-ing elements from the fClassBuilders stack
    void Scan (clang::ASTContext* C, clang::Decl* D);
+   const char* getClassName(clang::DeclContext* DC);
+   void DumpDecl(clang::Decl* D, const char* msg);
 };
 
 /* -------------------------------------------------------------------------- */

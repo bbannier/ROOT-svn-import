@@ -1,5 +1,5 @@
-// @(#)root/cint:$Id$
 // Author: Zdenek Culik   16/04/2010
+// Modified by: Velislava Spasova
 
 #include "clang/AST/ASTConsumer.h"
 #include "TObject.h"
@@ -30,7 +30,7 @@
 // DIRECT_OUTPUT -- output to std err with gcc compatible filename an line number
 
 /* -------------------------------------------------------------------------- */
-
+using namespace clang;
 const char* TScanner::fgClangDeclKey = "ClangDecl"; // property key used for connection with Clang objects
 const char* TScanner::fgClangFuncKey = "ClangFunc"; // property key for demangled names
 
@@ -69,6 +69,8 @@ TContext* TScanner::AllocateContext ()
 
    return result;
 }
+
+
 
 //______________________________________________________________________________
 #if 0
@@ -959,65 +961,6 @@ TString TScanner::ConvTemplateArguments(const clang::TemplateArgumentList& list)
           (list.getFlatArgumentList(), list.flat_size(), print_opts);
 }
 
-//______________________________________________________________________________
-void TScanner::ScanClassTemplate(clang::ClassTemplateDecl* D)
-{
-   ShowTemplateInfo ("ClassTemplate " + D->getQualifiedNameAsString (), GetLocation (D));
-   #ifdef COMPLETE_TEMPLATES
-      TString template_params = ConvTemplateParams(D);
-      ScanClass(D->getTemplatedDecl(), template_params);
-   #endif
-
-   typedef llvm::FoldingSet < clang::ClassTemplateSpecializationDecl > container_t;
-   container_t& list = D->getSpecializations();
-   for (container_t::iterator I = list.begin(), E = list.end(); I != E; ++I) {
-
-      clang::ClassTemplateSpecializationDecl& S = *I;
-
-      TString txt = S.getQualifiedNameAsString() + ConvTemplateArguments (S.getTemplateArgs ());
-      txt = txt + " ... " + ConvTemplateArguments (S.getTemplateInstantiationArgs ());
-      ShowTemplateInfo("specialization --> " + txt, GetLocation (&S));
-
-      ScanClass (&S, ConvTemplateArguments (S.getTemplateArgs ()));
-   }
-}
-
-//______________________________________________________________________________
-void TScanner::ScanClassTemplateSpecialization(clang::ClassTemplateSpecializationDecl* D)
-{
-   ShowTemplateInfo ("ClassTemplateSpecialization " + D->getQualifiedNameAsString (),GetLocation (D));
-   UnimportantDecl(D);
-}
-
-//______________________________________________________________________________
-void TScanner::ScanClassTemplatePartialSpecialization(clang::ClassTemplatePartialSpecializationDecl* D)
-{
-   ShowTemplateInfo ("ClassTemplatePartialSpecialization " + D->getQualifiedNameAsString (), GetLocation (D));
-   UnimportantDecl(D);
-}
-
-//______________________________________________________________________________
-void TScanner::ScanFunctionTemplate(clang::FunctionTemplateDecl* D)
-{
-   ShowTemplateInfo ("FunctionTemplate " + D->getQualifiedNameAsString (), GetLocation (D));
-   #ifdef COMPLETE_TEMPLATES
-      TString template_params = ConvTemplateParams(D);
-      ScanFunction(D->getTemplatedDecl(), template_params);
-   #endif
-
-   typedef llvm::FoldingSet < clang::FunctionTemplateSpecializationInfo > container_t;
-   container_t& list = D->getSpecializations();
-   for (container_t::iterator I = list.begin(), E = list.end(); I != E; ++I) {
-      clang::FunctionTemplateSpecializationInfo& S = *I;
-
-      TString txt = S.Function->getQualifiedNameAsString() + ConvTemplateArguments (*S.TemplateArguments);
-      TString location = GetSrcLocation(S.getPointOfInstantiation());
-      ShowTemplateInfo("function --> " + txt, location);
-
-      ScanFunction(S.Function, ConvTemplateArguments (*S.TemplateArguments));
-   }
-}
-
 /********************************** FUNCTION **********************************/
 
 //______________________________________________________________________________
@@ -1214,609 +1157,353 @@ unsigned int TScanner::VarModifiers(clang::VarDecl* D)
    return modifiers;
 }
 
-//______________________________________________________________________________
-void TScanner::ScanFieldMember(clang::FieldDecl* D, Reflex::ClassBuilder* builder)
+
+/********************* Velislava's Method implementations **********************/
+
+// This method visits a class node - for every class is created a new class buider
+// irrespectful of weather the class is internal for another class declaration or not.
+// For every clas the class builder is put on top of the fClassBuilders stack
+bool TScanner::VisitRecordDecl(clang::RecordDecl* D)
 {
-   // type
-
-   Reflex::Type type = ExploreQualType(D->getType());
-
-   // name
-
-   std::string var_name = D->getNameAsString();
-
-   // modifiers
-
-   int modifiers = Visibility(D);
-
-   if (D->isMutable())
-      modifiers |= Reflex::MUTABLE;
-
-   // offset
-
-   int offset = 0; // !?
-
-   // add item
-
-   try {
-      builder->AddDataMember(type, var_name.c_str (), offset, modifiers);
-      builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
-   } catch (std::exception& e) {
-      ShowReflexWarning(TString(e.what()) + " ... field " + var_name, GetLocation(D));
+  
+   bool ret;
+   
+   // in case it is implicit we don't create a builder 
+   if(D && D->isImplicit()){
+      printf("\n\tImplicit declaration - we don't construct builder, VisitRecordDecl()");
+      return true;
    }
+
+   DumpDecl(D, "VisitRecordDecl()");
+
+   Reflex::ClassBuilder* builder = GetClassBuilder(D); 	//template_parameters has a default value of ""
+					// GetClassBuilder is declared in clr-scan.h
+   if(builder!=NULL){ // Is it OK?
+      fClassBuilders.push(builder);
+      printf("\n\tPush()-ed a class builder; %d elements in the stack", fClassBuilders.size());
+
+      // I think this should be left as it is ?
+      if (clang::CXXRecordDecl* C = dyn_cast <clang::CXXRecordDecl> (D)) {
+         if (C->getDefinition() != NULL)                                                                                            
+            for (clang::CXXRecordDecl::base_class_iterator I = C->bases_begin(), E = C->bases_end(); I != E; ++I) {
+                                                                                                            
+               Reflex::Type type = ExploreQualType(I->getType());
+	       Reflex::OffsetFunction offset = NULL; // ?!
+                                                                                                    
+               unsigned int modifiers = VisibilityModifiers(I->getAccessSpecifier());
+
+               if (I->isVirtual())
+                  modifiers |= Reflex::VIRTUAL;
+
+                  builder->AddBase(type, offset, modifiers);
+                  printf("\n\tAddBase()-ed");
+            }
+      }
+      ret = true;
+      printf("\n\tReturning true ...");
+   }
+   else{
+      ret = false;
+      printf("\n\tReturning false ...");
+   }
+   
+   return ret;
 }
 
-//______________________________________________________________________________
-void TScanner::ScanVarMember(clang::VarDecl* D, Reflex::ClassBuilder* builder)
+// This method visits an enumeration - if the enumaration is part of a class 
+// the corresponding class builder is used; if the enumeration is standalone - 
+// it uses the EnumerationBuilder from Reflex. 
+bool TScanner::VisitEnumDecl(clang::EnumDecl* D)
 {
-   // type
+   DumpDecl(D, "VisitEnumDecl()");
+
+   bool ret = true;
+   TString full_name = GetEnumName (D);
+   unsigned int modifiers = Visibility(D); // ?!
+   
+   clang::DeclContext *ctx = D->getDeclContext();
+   if (ctx->isRecord()){
+	Reflex::ClassBuilder* builder = fClassBuilders.top();
+	TString items;
+
+	// should we do it that way ?!
+        // Here we create a string with all the enum entries in the form of name=value couples
+  	for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
+      	   if (items != "")
+           	items = items + ";";
+           items = items + I->getNameAsString();;
+           if (I->getInitExpr())
+           	items += "=" + APIntToStr(I->getInitVal());
+	}
+	
+	builder->AddEnum(full_name, items, &typeid(Reflex::UnknownType), modifiers); // typeid is actually
+					// class_name::enum_name, at least according to genreflex output!
+   }
+   else{
+	Reflex::EnumBuilder* builder =
+      		new Reflex::EnumBuilder(full_name, typeid(Reflex::UnknownType), modifiers); // typeid is actually
+					// ::enum_name, at least according to genreflex output!
+        if(builder != NULL){ // Is it OK?
+
+           builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
+
+           // shouldwe do it that way?!
+           // Here we call the AddItem() method of the EnumBuilder for every enum entry
+           for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
+              std::string item_name = I->getNameAsString();
+              long value = APIntToLong(I->getInitVal());      
+                                                                                           
+              builder->AddItem(item_name.c_str (), value);
+           }
+           ret = true;
+           printf("\n\tReturning true ...");
+        }
+        else{
+           ret = false;
+           printf("\n\tReturning false ...");
+        }
+   }
+   return ret;
+}
+
+// This method visits a varable - if the variable is part of a class 
+// the corresponding class builder is used; if the variable is standalone - 
+// it uses the VariableBuilder from Reflex
+// Probably for the variables found in classes we should use the FieldDecl
+// and to override the VisitFieldDecl() visitor function
+bool TScanner::VisitVarDecl(clang::VarDecl* D)
+{
+   DumpDecl(D, "VisitVarDecl()");
+
+   bool ret = true;
 
    Reflex::Type type = ExploreQualType(D->getType());
+   std::string var_name;
+   unsigned int modifiers = Visibility(D) | VarModifiers(D);
+   int offset = 0;
 
-   // name
+   clang::DeclContext * ctx = D->getDeclContext();
+   if (ctx->isRecord()){
+	Reflex::ClassBuilder* builder = fClassBuilders.top();
+	
+	var_name = D->getNameAsString();
 
-   std::string var_name = D->getNameAsString();
+	/* What to do with this?
+	if (! Reflex::Scope::ByName("").IsNamespace())
+      	   ShowInfo("Bug");
+	*/
 
-   // modifiers
+	try {
+      	   builder->AddDataMember(type, var_name.c_str (), offset, modifiers);
+           builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
+   	} catch (std::exception& e) {
+           ret = false;
+      	   ShowReflexWarning(TString(e.what()) + " ... var member " + var_name, GetLocation(D));
+           printf("\n\tError in adding data member to the class buider");
+   	}
+   }
+   else{
+	var_name = D->getQualifiedNameAsString();
 
-   int modifiers = Visibility(D) | VarModifiers(D);
+	/* What to do with this?
+	if (! Reflex::Scope::ByName("").IsNamespace())
+      	   ShowInfo("Bug");
+	*/
 
-   // offset
+   	try {
+      	   Reflex::VariableBuilder builder =
+               Reflex::VariableBuilder(var_name.c_str (), type, offset, modifiers);
 
-   int offset = 0; // !?
+           builder.AddProperty(fgClangDeclKey, ToDeclProp(D));
+   	} catch (std::exception& e) {
+           ret = false; // Is it OK?
+           ShowReflexWarning(TString(e.what()) + " ... variable " + var_name, GetLocation(D));
+           printf("\n\tError in creating a VariableBuilder");
+   	}
 
-   // add item
+   }
+   if(ret) printf("\n\tReturning true ...");
+   else printf("\n\tReturning false ...");
+   return ret;
+}
+
+bool TScanner::VisitFieldDecl(clang::FieldDecl* D)
+{
+   DumpDecl(D, "VisitFieldDecl()");
+
+   bool ret = true;
+
+   Reflex::Type type = ExploreQualType(D->getType());
+   std::string var_name =  D->getNameAsString();;
+   //unsigned int modifiers = Visibility(D) | VarModifiers(D);
+   unsigned int modifiers = Visibility(D);
+   int offset = 0;
+
+   Reflex::ClassBuilder* builder = fClassBuilders.top();
+	
+   //var_name = D->getNameAsString();
+
+	/* What to do with this?
+	if (! Reflex::Scope::ByName("").IsNamespace())
+      	   ShowInfo("Bug");
+	*/
 
    try {
       builder->AddDataMember(type, var_name.c_str (), offset, modifiers);
       builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
    } catch (std::exception& e) {
+      ret = false;
       ShowReflexWarning(TString(e.what()) + " ... var member " + var_name, GetLocation(D));
+      printf("\n\tError in adding data member to the class buider");
    }
+
+   if(ret) printf("\n\tReturning true ...");
+   else printf("\n\tReturning false ...");
+   return ret;
 }
 
-//______________________________________________________________________________
-void TScanner::ScanFunctionMember(clang::FunctionDecl* D, Reflex::ClassBuilder* builder, TString template_params)
+
+// This method visits a function declaration - if the function is part of a class 
+// the corresponding class builder is used; if the function is standalone - 
+// it uses the FunctionBuilder from Reflex
+bool TScanner::VisitFunctionDecl(clang::FunctionDecl* D)
 {
-   // type
+   DumpDecl(D, "VisitFunctionDecl()");
+   bool ret = true;
 
    Reflex::Type type = FuncType(D);
-
-   // name
-
-   TString name = D->getNameAsString() + template_params;
+   TString name;
    std::string func_name = D->getQualifiedNameAsString() + FuncParameterList(D);
 
-   // paramers
-
    TString params = FuncParameters(D);
-
-   // modifiers
-
-   int modifiers = Visibility(D) | FuncModifiers(D);
-
-   // stub
-
-   TContext* context = AllocateContext ();
-   context->name = func_name;
-
-   Reflex::StubFunction stub = ClrStubFunction;
-   void* stub_ctx = context;
-
-   // add item
-
-   builder->AddFunctionMember(type, name, stub, stub_ctx, params, modifiers);
-
-   builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
-   builder->AddProperty(fgClangFuncKey, ToFuncProp (func_name));
-}
-
-//______________________________________________________________________________
-void TScanner::ScanEnumMember(clang::EnumDecl* D, Reflex::ClassBuilder* builder)
-{
-   // name
-
-   TString full_name = GetEnumName (D);
-
-   // modifiers
-
-   unsigned int modifiers = Visibility(D);  // !?
-
-   // items
-
-   TString items = "";
-   for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
-      TString item_name = I->getNameAsString();
-      if (items != "")
-         items = items + ";";
-      items = items + item_name ;
-      if (I->getInitExpr() != NULL)
-         items += "=" + APIntToStr(I->getInitVal());
-   }
-
-   // add item
-
-   builder->AddEnum(full_name, items, &typeid(Reflex::UnknownType), modifiers);
-
-   // no property
-}
-
-//______________________________________________________________________________
-void TScanner::ScanTypedefMember(clang::TypedefDecl* D, Reflex::ClassBuilder* builder)
-{
-   // type
-
-   Reflex::Type type = ExploreQualType(D->getUnderlyingType());
-
-   // name
-
-   std::string name = D->getNameAsString();
-
-   try {
-      builder->AddTypedef(type, name.c_str ());
-      builder->AddProperty (fgClangDeclKey, ToDeclProp (D));
-   } catch (std::exception& e) {
-      ShowReflexWarning(TString(e.what()) + " ... typedef member " + name, GetLocation(D));
-   }
-}
-
-//______________________________________________________________________________
-void TScanner::ScanFunctionTemplateMember(clang::FunctionTemplateDecl* D, Reflex::ClassBuilder* builder)
-{
-   ShowTemplateInfo ("FunctionTemplate (member) " + D->getQualifiedNameAsString (), GetLocation (D));
-   #ifdef COMPLETE_TEMPLATES
-      TString template_params = ConvTemplateParams(D);
-      clang::FunctionDecl* F = D->getTemplatedDecl();
-      ScanFunctionMember(F, builder, template_params);
-   #endif
-}
-
-//______________________________________________________________________________
-void TScanner::ScanFriendMember(clang::FriendDecl *D, Reflex::ClassBuilder* builder)
-{
-   UnimportantDecl(D);
-}
-
-//______________________________________________________________________________
-void TScanner::ScanMember(clang::Decl* D, Reflex::ClassBuilder* builder)
-{
-   switch (D->getKind()) {
-
-      case clang::Decl::Field:
-         ScanFieldMember(dyn_cast <clang::FieldDecl> (D), builder);
-         break;
-
-      case clang::Decl::Var:
-         ScanVarMember(dyn_cast <clang::VarDecl> (D), builder);
-         break;
-
-      case clang::Decl::CXXMethod:
-      case clang::Decl::CXXConstructor:
-      case clang::Decl::CXXDestructor:
-      case clang::Decl::CXXConversion:
-         ScanFunctionMember(dyn_cast <clang::CXXMethodDecl> (D), builder);
-         break;
-
-      case clang::Decl::Typedef:
-         ScanTypedefMember(dyn_cast <clang::TypedefDecl> (D), builder);
-         break;
-
-      case clang::Decl::Enum:
-         ScanEnumMember(dyn_cast <clang::EnumDecl> (D), builder);
-         break;
-
-      case clang::Decl::Record:
-      case clang::Decl::CXXRecord:
-         ScanClass(dyn_cast <clang::RecordDecl> (D));
-         break;
-
-      case clang::Decl::Friend:
-         ScanFriendMember(dyn_cast <clang::FriendDecl> (D), builder);
-         break;
-
-      case clang::Decl::ClassTemplate:
-         ScanClassTemplate(dyn_cast <clang::ClassTemplateDecl> (D));
-         break;
-
-      case clang::Decl::ClassTemplateSpecialization:
-         ScanClassTemplateSpecialization(dyn_cast <clang::ClassTemplatePartialSpecializationDecl> (D));
-         break;
-
-      case clang::Decl::ClassTemplatePartialSpecialization:
-         ScanClassTemplatePartialSpecialization(dyn_cast <clang::ClassTemplatePartialSpecializationDecl> (D));
-         break;
-
-      case clang::Decl::FunctionTemplate:
-         ScanFunctionTemplateMember(dyn_cast <clang::FunctionTemplateDecl> (D), builder);
-         break;
-
-      case clang::Decl::Using:
-         ScanUsing(dyn_cast <clang::UsingDecl> (D), builder->ToType());
-         break;
-
-      case clang::Decl::UsingShadow:
-         ScanUsingShadow(dyn_cast <clang::UsingShadowDecl> (D), builder->ToType());
-         break;
-
-      case clang::Decl::UnresolvedUsingValue:
-         ScanUnresolvedUsingValueMember(dyn_cast <clang::UnresolvedUsingValueDecl> (D), builder);
-         break;
-
-      case clang::Decl::AccessSpec:
-         /* nothing */
-         break;
-
-      default:
-         UnknownDecl(D, "member");
-   }
-}
-
-//______________________________________________________________________________
-void TScanner::ScanClass(clang::RecordDecl* D, TString template_params)
-{
-   Reflex::ClassBuilder* builder = GetClassBuilder(D, template_params);
-
-   if (clang::CXXRecordDecl* C = dyn_cast <clang::CXXRecordDecl> (D)) {
-      if (C->getDefinition() != NULL)  // important
-         for (clang::CXXRecordDecl::base_class_iterator I = C->bases_begin(), E = C->bases_end(); I != E; ++I) {
-            // clang::CXXBaseSpecifier  b = *I;
-
-            Reflex::Type type = ExploreQualType(I->getType());
-
-            Reflex::OffsetFunction offset = NULL; // !?
-
-            unsigned int modifiers = VisibilityModifiers(I->getAccessSpecifier());
-
-            if (I->isVirtual())
-               modifiers |= Reflex::VIRTUAL;
-
-            builder->AddBase(type, offset, modifiers);
-         }
-   }
-
-   for (clang::DeclContext::decl_iterator I = D->decls_begin(), E = D->decls_end(); I != E; ++I)
-      ScanMember(*I, builder);
-
-   // return builder->ToType ();
-}
-
-/************************************ ENUM ************************************/
-
-//______________________________________________________________________________
-void TScanner::ScanEnum(clang::EnumDecl* D)
-{
-   // name
-
-   TString full_name = GetEnumName (D);
-
-   // modifiers
-
-   unsigned int modifiers = Visibility(D);  // !?
-
-   // add item
-
-   Reflex::EnumBuilder* builder =
-      new Reflex::EnumBuilder(full_name, typeid(Reflex::UnknownType), modifiers);
-
-   builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
-
-   // items
-
-   for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
-      std::string item_name = I->getNameAsString();
-      long value = APIntToLong(I->getInitVal());   // !?
-      builder->AddItem(item_name.c_str (), value);
-   }
-}
-
-/*********************************** USING ************************************/
-
-//______________________________________________________________________________
-void TScanner::ScanNamespaceAlias (clang::NamespaceAliasDecl *D)
-{
-   UnimplementedDecl(D);
-}
-
-//______________________________________________________________________________
-void TScanner::ScanUsing(clang::UsingDecl* D, Reflex::Scope Outer)
-{
-   UnimportantDecl(D);
-}
-
-//______________________________________________________________________________
-void TScanner::ScanUsingDirective(clang::UsingDirectiveDecl *D, Reflex::Scope Outer)
-{
-   std::string name = D->getNominatedNamespace()->getQualifiedNameAsString();
-   // ShowInfo("using namespace " + name, GetLocation (D));
-   Reflex::Scope Inner = Reflex::Scope::ByName(name);
-   Outer.AddUsingDirective(Inner);
-}
-
-//______________________________________________________________________________
-void TScanner::ScanUsingShadow(clang::UsingShadowDecl* D, Reflex::Scope Outer)
-{
-   UnimportantDecl(D);
-}
-
-//______________________________________________________________________________
-void TScanner::ScanUnresolvedUsingValueMember(clang::UnresolvedUsingValueDecl* D, Reflex::ClassBuilder* builder)
-{
-   UnimplementedDecl(D, "member");
-}
-
-/*********************************** GLOBAL ************************************/
-
-//______________________________________________________________________________
-void TScanner::ScanTranslationUnit(clang::TranslationUnitDecl* D, Reflex::Scope Outer)
-{
-   clang::DeclContext* DC = clang::TranslationUnitDecl::castToDeclContext(D);
-   for (clang::DeclContext::decl_iterator I = DC->decls_begin(), E = DC->decls_end(); I != E; ++I)
-      ScanDecl(*I, Outer);
-}
-
-//______________________________________________________________________________
-void TScanner::ScanNamespace(clang::NamespaceDecl* D)
-{
-   std::string ns_name = D->getQualifiedNameAsString();
-
-   Reflex::NamespaceBuilder* builder =
-      new Reflex::NamespaceBuilder(ns_name.c_str ());
-
-   builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
-
-   clang::DeclContext* DC = dyn_cast <clang::DeclContext> (D);
-   if (DC != NULL)
-      for (clang::DeclContext::decl_iterator I = DC->decls_begin(), E = DC->decls_end(); I != E; ++I)
-         ScanDecl(*I, builder->ToScope());
-}
-
-//______________________________________________________________________________
-void TScanner::ScanLinkageSpec(clang::LinkageSpecDecl* D, Reflex::Scope Outer)
-{
-   for (clang::DeclContext::decl_iterator I = D->decls_begin(), E = D->decls_end(); I != E; ++I)
-      ScanDecl(*I, Outer);
-}
-
-//______________________________________________________________________________
-void TScanner::ScanTypedef(clang::TypedefDecl* D)
-{
-   // type
-
-   Reflex::Type type = ExploreQualType(D->getUnderlyingType());
-
-   // name
-
-   std::string name = D->getQualifiedNameAsString();
-
-   // ShowInfo ("TypedefDecl " + name, GetLocation (D));
-
-   // Reflex::TypeBuilder(name.c_str ());
-   return; // !? !!
-
-   // add item
-
-   Reflex::Type result = Reflex::TypedefTypeBuilder(name.c_str (), type);
-
-   result.Properties().AddProperty(fgClangDeclKey, ToDeclProp(D));
-}
-
-//______________________________________________________________________________
-void TScanner::ScanVariable(clang::VarDecl* D)
-{
-   // type
-
-   Reflex::Type type = ExploreQualType(D->getType());
-
-   // name
-
-   std::string var_name = D->getQualifiedNameAsString();
-
-   // modifiers
-
-   unsigned int modifiers = Visibility(D) | VarModifiers(D);
-
-   // offset
-
-   int offset = 0; // !?
-
-   // add item
-
-   if (! Reflex::Scope::ByName("").IsNamespace())
-      ShowInfo("Bug");
-
-   try {
-      Reflex::VariableBuilder builder =
-         Reflex::VariableBuilder(var_name.c_str (), type, offset, modifiers);
-
-      builder.AddProperty(fgClangDeclKey, ToDeclProp(D));
-   } catch (std::exception& e) {
-      ShowReflexWarning(TString(e.what()) + " ... variable " + var_name, GetLocation(D));
-   }
-}
-
-//______________________________________________________________________________
-void TScanner::ScanVariableOrField(clang::VarDecl* D)
-{
-   clang::DeclContext * ctx = D->getDeclContext();
-   if (ctx->isRecord ())
-   {
-      clang::RecordDecl * cls = dyn_cast <clang::RecordDecl> (ctx);
-      Reflex::ClassBuilder * builder = GetClassBuilder(cls);
-      ScanVarMember(D, builder);
-   }
-   else
-   {
-      ScanVariable(D);
-   }
-}
-
-//______________________________________________________________________________
-void TScanner::ScanFunction(clang::FunctionDecl* D, TString template_params)
-{
-   // type
-
-   Reflex::Type type = FuncType(D);
-
-   // name
-
-   std::string qual_name = D->getQualifiedNameAsString();
-   std::string func_name = qual_name + FuncParameterList(D);
-   TString full_name = qual_name + template_params;
-
-   // paramers
-
-   TString params = FuncParameters(D);
-
-   // modifiers
-
    int modifiers = FuncModifiers(D);
 
-   // stub
-
    TContext* context = AllocateContext ();
    context->name = func_name;
 
    Reflex::StubFunction stub = ClrStubFunction;
    void* stub_ctx = context;
 
-   // add item
+   clang::DeclContext * ctx = D->getDeclContext();
 
-   try {
-      Reflex::FunctionBuilder builder =
-         Reflex::FunctionBuilder(type, full_name, stub, stub_ctx, params, modifiers);
-
-      builder.AddProperty(fgClangDeclKey, ToDeclProp(D));
-      builder.AddProperty(fgClangFuncKey, ToFuncProp(func_name));
-
-   } catch (std::exception& e) {
-      ShowReflexWarning(TString(e.what()) + " ... function " + full_name, GetLocation(D));
+   if (ctx->isRecord()){
+	Reflex::ClassBuilder* builder = fClassBuilders.top();  
+     
+   	name = D->getNameAsString();
+	try {
+	   builder->AddFunctionMember(type, name, stub, stub_ctx, params, modifiers);
+   	   builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
+   	   builder->AddProperty(fgClangFuncKey, ToFuncProp (func_name));
+	} catch (std::exception& e) {
+           ret = false; // Is it OK? 
+      	   ShowReflexWarning(TString(e.what()) + " ... function member " + func_name, GetLocation(D));
+           printf("\n\tError in adding function member to the class builder");
+   	}
    }
+   else{
+        name = D->getQualifiedNameAsString();
+
+  	try {
+      	   Reflex::FunctionBuilder builder =
+         	Reflex::FunctionBuilder(type, name, stub, stub_ctx, params, modifiers);
+
+           builder.AddProperty(fgClangDeclKey, ToDeclProp(D));
+           builder.AddProperty(fgClangFuncKey, ToFuncProp(func_name));
+
+   	} catch (std::exception& e) {
+           ret = false; // Is it OK?
+      	   ShowReflexWarning(TString(e.what()) + " ... function " + func_name, GetLocation(D));
+           printf("\n\tError in creating the function builder");
+   	}
+   }
+   if(ret) printf("\n\tReturning true ...");
+   else printf("\n\tReturning false ...");
+   return ret;
+}
+                                                                          
+bool TScanner::TraverseDeclContextHelper(DeclContext *DC)
+{
+   
+   bool ret=true;
+   
+ 
+   if (!DC)
+     return true;
+
+   clang::Decl* D = dyn_cast<clang::Decl>(DC);
+   // skip implicit decls
+   if (D && D->isImplicit()){
+      printf("\nDEBUG - Implicit declaration in TraverseDeclContextHelper()");
+      return true;
+   }
+
+   DumpDecl(D, "TraverseDeclContextHelper()");
+
+   for (DeclContext::decl_iterator Child = DC->decls_begin(), ChildEnd = DC->decls_end(); 
+        ret && (Child != ChildEnd); ++Child) {
+      
+      ret=TraverseDecl(*Child);
+     
+   }
+ 
+   RemoveBuilder(DC); 
+   return ret;
+   
 }
 
-//______________________________________________________________________________
-void TScanner::ScanMethod(clang::CXXMethodDecl* D, TString template_params)
-{
-   // standalone C++ method --> ScanFunctionMember
-   clang::RecordDecl * cls = D->getParent();
-   Reflex::ClassBuilder * builder = GetClassBuilder(cls, template_params);
-   ScanFunctionMember(D, builder, template_params);
+
+void TScanner::RemoveBuilder(clang::DeclContext *DC){
+   if(DC->isRecord()){
+	fClassBuilders.pop();
+        //printf("\nDEBUG - Removing the builder");
+        if(getClassName(DC)!=NULL)
+           printf("\nDEBUG - removing buider for %s", getClassName(DC));
+        else 
+           printf("\nDEBUG - removing a builder");
+        printf("\n\tWe have %d elements left in the stack", fClassBuilders.size());
+   }
+}
+const char* TScanner::getClassName(clang::DeclContext* DC){
+   
+   clang::NamedDecl* N=dyn_cast<clang::NamedDecl>(DC);
+   if(N && (N->getIdentifier()!=NULL))
+      return N->getNameAsCString();
+   else return NULL;
 }
 
-/************************************ DECL ************************************/
-
-//______________________________________________________________________________
-void TScanner::ScanDecl(clang::Decl* D, Reflex::Scope Outer)
-{
-   // ScanInfo (D);
-   // see clang/include/clang/AST/DeclNodes.def
-
-   fLastDecl = D; // only for debugging
-
-   switch (D->getKind()) {
-
-      case clang::Decl::Var:
-         ScanVariableOrField (dyn_cast <clang::VarDecl> (D));
-         break;
-
-      case clang::Decl::Function:
-         ScanFunction(dyn_cast <clang::FunctionDecl> (D));
-         break;
-
-      case clang::Decl::CXXMethod:
-      case clang::Decl::CXXConstructor:
-      case clang::Decl::CXXDestructor:
-      case clang::Decl::CXXConversion:
-         ScanMethod(dyn_cast <clang::CXXMethodDecl> (D));
-         break;
-
-      case clang::Decl::Enum:
-         ScanEnum(dyn_cast <clang::EnumDecl> (D));
-         break;
-
-      case clang::Decl::Record:
-      case clang::Decl::CXXRecord:
-         ScanClass(dyn_cast <clang::RecordDecl> (D));
-         break;
-
-      case clang::Decl::Typedef:
-         ScanTypedef(dyn_cast <clang::TypedefDecl> (D));
-         break;
-
-      case clang::Decl::ClassTemplate:
-         ScanClassTemplate(dyn_cast <clang::ClassTemplateDecl> (D));
-         break;
-
-      case clang::Decl::ClassTemplateSpecialization:
-         ScanClassTemplateSpecialization(dyn_cast <clang::ClassTemplateSpecializationDecl> (D));
-         break;
-
-      case clang::Decl::ClassTemplatePartialSpecialization:
-         ScanClassTemplatePartialSpecialization(dyn_cast <clang::ClassTemplatePartialSpecializationDecl> (D));
-         break;
-
-      case clang::Decl::FunctionTemplate:
-         ScanFunctionTemplate(dyn_cast <clang::FunctionTemplateDecl> (D));
-         break;
-
-      case clang::Decl::TranslationUnit:
-         ScanTranslationUnit(dyn_cast <clang::TranslationUnitDecl> (D), Outer);
-         break;
-
-      case clang::Decl::Namespace:
-         ScanNamespace(dyn_cast <clang::NamespaceDecl> (D));
-         break;
-
-      case clang::Decl::NamespaceAlias:
-         ScanNamespaceAlias(dyn_cast <clang::NamespaceAliasDecl> (D));
-         break;
-
-      case clang::Decl::LinkageSpec:
-         ScanLinkageSpec(dyn_cast <clang::LinkageSpecDecl> (D), Outer);
-         break;
-
-      case clang::Decl::Using:
-         ScanUsing(dyn_cast <clang::UsingDecl> (D), Outer);
-         break;
-
-      case clang::Decl::UsingDirective:
-         ScanUsingDirective(dyn_cast <clang::UsingDirectiveDecl> (D), Outer);
-         break;
-
-      case clang::Decl::UsingShadow:
-         ScanUsingShadow(dyn_cast <clang::UsingShadowDecl> (D), Outer);
-         break;
-
-      case clang::Decl::StaticAssert:
-         UnsupportedDecl(dyn_cast <clang::StaticAssertDecl> (D));
-         break;
-
-      case clang::Decl::Friend:
-      case clang::Decl::FriendTemplate:
-         // should be used in class declaration
-         UnexpectedDecl(D);
-         break;
-
-      case clang::Decl::EnumConstant:
-         // should be used inside enumeration type declaration
-         UnexpectedDecl(D);
-         break;
-
-      case clang::Decl::TemplateTemplateParm:
-      case clang::Decl::TemplateTypeParm:
-         // should be used in template declaration
-         UnexpectedDecl(D);
-         break;
-
-      default:
-         UnknownDecl(D);
+void TScanner::DumpDecl(clang::Decl* D, const char* msg) {
+   char *name="";
+   
+   if (!D) {
+      printf("\nDEBUG - DECL is NULL: %s", msg);
+      return;
    }
+
+   //clang::DeclContext *ctx = D->getDeclContext();
+
+   //if(ctx && (ctx->isRecord() || ctx->isFunctionOrMethod())){
+      clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
+      if(N && N->getIdentifier()) name = (char *) N->getNameAsCString();
+      //}
+      else name = "UNNAMED";
+      
+   /*
+   clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
+   printf("\nDecl %s (%s): %s",
+          N->getIdentifier() ? N->getNameAsCString() : "(UNNAMED)",
+          N->getDeclKindName(),
+          msg);
+   */
+   printf("\nDEBUG - Decl %s of kind %s: %s", name, D->getDeclKindName(), msg);
 }
 
 //______________________________________________________________________________
 void TScanner::Scan(clang::ASTContext* C, clang::Decl* D)
 {
    fCtx = C;
-   ScanDecl(D, Reflex::Scope::GlobalScope());
+   printf("\nDEBUG from Velislava - into the Scan() function!!!");
+   TraverseDecl(D);
 }
 
-/* -------------------------------------------------------------------------- */
+
+
