@@ -44,14 +44,12 @@ void utEvent::_testConstructor1()
 {
   _eventC1 = new Event(); 
 
-  test_(_eventC1->IsSignal()          == false);
   test_(_eventC1->IsDynamic()         == false);
 
   test_(_eventC1->GetWeight()         == 1.);
   test_(_eventC1->GetOriginalWeight() == 1.);
   test_(_eventC1->GetBoostWeight()    == 1.);
   test_(_eventC1->GetClass()          == 1);
-  test_(_eventC1->GetSignalClass()    == 0);
   test_(_eventC1->GetNVariables()     == 0);
   test_(_eventC1->GetNTargets()       == 0);
   test_(_eventC1->GetNSpectators()    == 0);
@@ -65,14 +63,12 @@ void utEvent::_testConstructor2()
 {
   _eventC2 = new Event(*_eventC3);
 
-  test_(_eventC2->IsSignal()          == false);
   test_(_eventC2->IsDynamic()         == false);
 
   test_(_eventC2->GetWeight()         == (_testWeight*_testBoostWeight));
   test_(_eventC2->GetOriginalWeight() == _testWeight);
   test_(_eventC2->GetBoostWeight()    == _testBoostWeight);
   test_(_eventC2->GetClass()          == _testClassVal);
-  test_(_eventC2->GetSignalClass()    == (Int_t)_testClassVal);
   test_(_eventC2->GetNVariables()     == (UInt_t)_testValueVec.size());
   test_(_eventC2->GetNTargets()       == (UInt_t)_testTargetVec.size());
   test_(_eventC2->GetNSpectators()    == (UInt_t)_testSpectatorVec.size());
@@ -108,14 +104,12 @@ void utEvent::_testConstructor3()
 {
   _eventC3 = new Event( _testValueVec, _testTargetVec, _testSpectatorVec, _testClassVal, _testWeight, _testBoostWeight);
 
-  test_(_eventC3->IsSignal()          == false);
   test_(_eventC3->IsDynamic()         == false);
 
   test_(_eventC3->GetWeight()         == (_testWeight*_testBoostWeight));
   test_(_eventC3->GetOriginalWeight() == _testWeight);
   test_(_eventC3->GetBoostWeight()    == _testBoostWeight);
   test_(_eventC3->GetClass()          == _testClassVal);
-  test_(_eventC3->GetSignalClass()    == (Int_t)_testClassVal);
   test_(_eventC3->GetNVariables()     == (UInt_t)_testValueVec.size());
   test_(_eventC3->GetNTargets()       == (UInt_t)_testTargetVec.size());
   test_(_eventC3->GetNSpectators()    == (UInt_t)_testSpectatorVec.size());
@@ -150,14 +144,12 @@ void utEvent::_testConstructor4()
 {
   _eventC4 = new Event( _testValueVec, _testTargetVec, _testClassVal, _testWeight, _testBoostWeight);
 
-  test_(_eventC4->IsSignal()          == false);
   test_(_eventC4->IsDynamic()         == false);
 
   test_(_eventC4->GetWeight()         == (_testWeight*_testBoostWeight));
   test_(_eventC4->GetOriginalWeight() == _testWeight);
   test_(_eventC4->GetBoostWeight()    == _testBoostWeight);
   test_(_eventC4->GetClass()          == _testClassVal);
-  test_(_eventC4->GetSignalClass()    == (Int_t)_testClassVal);
   test_(_eventC4->GetNVariables()     == (UInt_t)_testValueVec.size());
   test_(_eventC4->GetNTargets()       == (UInt_t)_testTargetVec.size());
   
@@ -183,14 +175,12 @@ void utEvent::_testConstructor5()
 {
   _eventC5 = new Event( _testValueVec, _testClassVal, _testWeight, _testBoostWeight);
 
-  test_(_eventC5->IsSignal()          == false);
   test_(_eventC5->IsDynamic()         == false);
 
   test_(_eventC5->GetWeight()         == (_testWeight*_testBoostWeight));
   test_(_eventC5->GetOriginalWeight() == _testWeight);
   test_(_eventC5->GetBoostWeight()    == _testBoostWeight);
   test_(_eventC5->GetClass()          == _testClassVal);
-  test_(_eventC5->GetSignalClass()    == (Int_t)_testClassVal);
   test_(_eventC5->GetNVariables()     == (UInt_t)_testValueVec.size());
   
   _compareValueVec = _eventC5->GetValues();
@@ -212,14 +202,12 @@ void utEvent::_testConstructor6()
   // I don't understand what the constructor is for
   // or in what cases it should be used
 
-  test_(_eventC6->IsSignal()          == false);
   test_(_eventC6->IsDynamic()         == true);
 
   //   test_(_eventC6->GetWeight()         == 1.);
   //   test_(_eventC6->GetOriginalWeight() == 1.);
   //   test_(_eventC6->GetBoostWeight()    == 1.);
   //   test_(_eventC6->GetClass()          == _testClassVal);
-  //   test_(_eventC6->GetSignalClass()    == (Int_t)_testClassVal);
   //   test_(_eventC6->GetNVariables()     == (UInt_t)_testValueVec.size());
 
   // ? const std::vector<UInt_t>* GetVariableArrangement() const { return fVariableArrangement; }
@@ -264,7 +252,6 @@ void utEvent::_testMutators()
     test_(getboostweight == testVal2);
   
   _eventC1->SetClass(_testClassVal);
-  test_(_eventC1->GetSignalClass() == (Int_t)_testClassVal);
   
   // check variables
   for(vector<Float_t>::const_iterator it = _testValueVec.begin(); it < _testValueVec.end(); ++it)
@@ -306,9 +293,6 @@ void utEvent::_testMutators()
       test_(_compareSpectatorVec.at(index) == *it);
     } 
   
-  _eventC1->SetSignalClass(_testClassVal);
-  test_(_eventC1->GetSignalClass() == (Int_t)_testClassVal);
-
   // ??    _eventC1->SetVariableArrangement( std::vector<UInt_t>* const m ) const;
 }
 
