@@ -6,7 +6,7 @@
 // Prefer compiled:
 #include "EventData.h+"
 
-void createTree(ULong64_t numEvents = 100000) {
+void createTree(ULong64_t numEvents = 10000) {
    TFile* f = new TFile("eventdata.root", "RECREATE");
    TTree* tree = new TTree("EventData", "Tutorial tree");
    tree->SetAutoSave(0); // to not confuse people with "EventData;2" keys
