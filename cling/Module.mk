@@ -84,7 +84,7 @@ distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
 $(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS \
-                                  -I$(LLVMDIR)/include -I. -Wno-unused-parameter
+                                  -I$(LLVMDIR)/include -I. -Wno-unused-parameter -Wno-shadow
 
 CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
  -lclingInterpreter -lclingMetaProcessor -lclingEditLine \
