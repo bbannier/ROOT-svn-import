@@ -44,7 +44,7 @@ TMVA::Event::Event()
      fTargets(),
      fSpectators(),
      fVariableArrangement(0),
-     fClass(1),
+     fClass(0),
      fWeight(1.0),
      fBoostWeight(1.0),
      fDynamic(kFALSE)
