@@ -9,7 +9,7 @@
 // http://lcg-heppkg.web.cern.ch/lcg-heppkg/ROOT/eventdata.root
 // i.e run
 //   root [0] f = TFile::Open("http://lcg-heppkg.web.cern.ch/lcg-heppkg/ROOT/eventdata.root");
-//   root [1] EventData->Process("EventDataSelector.C+")
+//   root [1] EventTree->Process("EventDataSelector.C+")
 // ============ /EDITED HERE> ================
 
 // The following methods are defined in this file:
@@ -44,7 +44,7 @@ void EventDataSelector::Begin(TTree * /*tree*/)
 
    TString option = GetOption();
    // ============ <EDITED HERE ================
-   fPosX = new TH1F("hPosX", "Position in X", 20, -10, 10);
+   fPosX = new TH1F("hPosX", "Position in X", 20, -5, 5);
    // enable bin errors:
    fPosX->Sumw2();
    // ============ /EDITED HERE> ================
@@ -93,7 +93,7 @@ Bool_t EventDataSelector::Process(Long64_t entry)
 
    // *** 2. *** Do the actual analysis
    for (int iParticle = 0; iParticle < fParticles_; ++iParticle) {
-      if (fParticles_fMomentum[iParticle] > 80.)
+      if (fParticles_fMomentum[iParticle] > 40.)
          fPosX->Fill(fParticles_fPosX[iParticle]);
    }
 
