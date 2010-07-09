@@ -48,7 +48,7 @@ public :
 
    // ============ <EDITED HERE ================
    EventDataSelector(TTree * /*tree*/ =0):
-      fTotalDataSize(0) { }
+      fPosX(0), fTotalDataSize(0) { }
    // ============ /EDITED HERE> ================
 
    virtual ~EventDataSelector() { }
@@ -86,6 +86,15 @@ void EventDataSelector::Init(TTree *tree)
    if (!tree) return;
    fChain = tree;
    fChain->SetMakeClass(1);
+
+   // ============ <EDITED HERE ================
+   // Enable TTree read-ahead:
+   fChain->SetCacheSize(30000000); // 30MB
+   fChain->AddBranchToCache("fParticles");
+   fChain->AddBranchToCache("fParticles.fPosX");
+   fChain->AddBranchToCache("fParticles.fMomentum");
+   fChain->AddBranchToCache("fEventSize");
+   // ============ /EDITED HERE> ================
 
    fChain->SetBranchAddress("fParticles", &fParticles_, &b_event_fParticles_);
    fChain->SetBranchAddress("fParticles.fPosX", fParticles_fPosX, &b_fParticles_fPosX);

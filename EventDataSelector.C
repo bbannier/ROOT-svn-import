@@ -47,6 +47,8 @@ void EventDataSelector::Begin(TTree * /*tree*/)
    fPosX = new TH1F("hPosX", "Position in X", 20, -5, 5);
    // enable bin errors:
    fPosX->Sumw2();
+   // Add to output list (needed for PROOF)
+   GetOutputList()->Add(fPosX);
    // ============ /EDITED HERE> ================
 }
 
