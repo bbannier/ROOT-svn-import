@@ -12,6 +12,9 @@
 #include <TChain.h>
 #include <TFile.h>
 #include <TSelector.h>
+// ============ <EDITED HERE ================
+#include <TProofServ.h>
+// ============ /EDITED HERE> ================
    const Int_t kMaxfParticles = 1293;
 
 class EventDataSelector : public TSelector {
@@ -88,12 +91,14 @@ void EventDataSelector::Init(TTree *tree)
    fChain->SetMakeClass(1);
 
    // ============ <EDITED HERE ================
-   // Enable TTree read-ahead:
-   fChain->SetCacheSize(30000000); // 30MB
-   fChain->AddBranchToCache("fParticles");
-   fChain->AddBranchToCache("fParticles.fPosX");
-   fChain->AddBranchToCache("fParticles.fMomentum");
-   fChain->AddBranchToCache("fEventSize");
+   if (!gProofServ) {
+      // Enable TTree read-ahead:
+      fChain->SetCacheSize(30000000); // 30MB
+      fChain->AddBranchToCache("fParticles");
+      fChain->AddBranchToCache("fParticles.fPosX");
+      fChain->AddBranchToCache("fParticles.fMomentum");
+      fChain->AddBranchToCache("fEventSize");
+   }
    // ============ /EDITED HERE> ================
 
    fChain->SetBranchAddress("fParticles", &fParticles_, &b_event_fParticles_);

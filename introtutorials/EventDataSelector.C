@@ -43,13 +43,6 @@ void EventDataSelector::Begin(TTree * /*tree*/)
    // The tree argument is deprecated (on PROOF 0 is passed).
 
    TString option = GetOption();
-   // ============ <EDITED HERE ================
-   fPosX = new TH1F("hPosX", "Position in X", 20, -5, 5);
-   // enable bin errors:
-   fPosX->Sumw2();
-   // Add to output list (needed for PROOF)
-   GetOutputList()->Add(fPosX);
-   // ============ /EDITED HERE> ================
 }
 
 void EventDataSelector::SlaveBegin(TTree * /*tree*/)
@@ -60,6 +53,13 @@ void EventDataSelector::SlaveBegin(TTree * /*tree*/)
 
    TString option = GetOption();
 
+   // ============ <EDITED HERE ================
+   fPosX = new TH1F("hPosX", "Position in X", 20, -5, 5);
+   // enable bin errors:
+   fPosX->Sumw2();
+   // Add to output list (needed for PROOF)
+   GetOutputList()->Add(fPosX);
+   // ============ /EDITED HERE> ================
 }
 
 Bool_t EventDataSelector::Process(Long64_t entry)
