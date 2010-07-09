@@ -997,9 +997,9 @@ void TEveTrackPropagator::StepRungeKutta(Double_t step,
   Double_t yt;
   Double_t zt;
 
-  // Double_t maxit = 1992;
-  Double_t maxit = 10;
-  Double_t maxcut = 11;
+  // const Int_t maxit = 1992;
+  const Int_t maxit  = 500;
+  const Int_t maxcut = 11;
 
   const Double_t hmin   = 1e-4; // !!! MT ADD,  should be member
   const Double_t kdlt   = 1e-3; // !!! MT CHANGE from 1e-4, should be member
