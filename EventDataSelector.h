@@ -90,17 +90,6 @@ void EventDataSelector::Init(TTree *tree)
    fChain = tree;
    fChain->SetMakeClass(1);
 
-   // ============ <EDITED HERE ================
-   if (!gProofServ) {
-      // Enable TTree read-ahead:
-      fChain->SetCacheSize(30000000); // 30MB
-      fChain->AddBranchToCache("fParticles");
-      fChain->AddBranchToCache("fParticles.fPosX");
-      fChain->AddBranchToCache("fParticles.fMomentum");
-      fChain->AddBranchToCache("fEventSize");
-   }
-   // ============ /EDITED HERE> ================
-
    fChain->SetBranchAddress("fParticles", &fParticles_, &b_event_fParticles_);
    fChain->SetBranchAddress("fParticles.fPosX", fParticles_fPosX, &b_fParticles_fPosX);
    fChain->SetBranchAddress("fParticles.fPosY", fParticles_fPosY, &b_fParticles_fPosY);
