@@ -3989,6 +3989,13 @@ void TProofServ::ProcessNext(TString *slb)
    // Remove the list of the missing files from the original list, if any
    if ((o = input->FindObject("MissingFiles"))) input->Remove(o);
 
+   // Check whether we have to enforce the use of submergers, respecting the will
+   // of the user
+   if (gEnv->Lookup("Proof.SubMergers") && !input->FindObject("PROOF_UseMergers")) {
+      Int_t smg = gEnv->GetValue("Proof.SubMergers",-1);
+      input->Add(new TParameter<Int_t>("PROOF_UseMergers", smg));
+   }
+
    // Process
    PDB(kGlobal, 1) Info("ProcessNext", "calling %s::Process()", fPlayer->IsA()->GetName());
    fPlayer->Process(dset, filename, opt, nentries, first);
@@ -4920,7 +4927,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
          } else {
             // collect built results from slaves
             if (IsMaster())
-               fProof->BuildPackage(package, TProof::kCollectBuildResults);
+               status = fProof->BuildPackage(package, TProof::kCollectBuildResults);
             PDB(kPackage, 1)
                Info("HandleCache", "package %s successfully built", package.Data());
          }
@@ -4964,6 +4971,9 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
 
          ocwd = gSystem->WorkingDirectory();
          gSystem->ChangeDirectory(pdir);
+
+         // We have to be atomic here
+         fPackageLock->Lock();
 
          // Check for SETUP.C and execute
          if (!gSystem->AccessPathName("PROOF-INF/SETUP.C")) {
@@ -5065,6 +5075,9 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
             if (!gSystem->AccessPathName(setupfn.Data())) gSystem->Unlink(setupfn.Data());
          }
 
+         // End of atomicity
+         fPackageLock->Unlock();
+
          gSystem->ChangeDirectory(ocwd);
 
          if (status < 0) {
@@ -5087,7 +5100,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
             // if successful add to list and propagate to slaves
             fEnabledPackages->Add(new TObjString(package));
             if (IsMaster())
-               fProof->LoadPackage(package);
+               status = fProof->LoadPackage(package);
 
             PDB(kPackage, 1)
                Info("HandleCache", "package %s successfully loaded", package.Data());
