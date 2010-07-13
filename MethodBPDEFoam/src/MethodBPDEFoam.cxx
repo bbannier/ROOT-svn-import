@@ -44,6 +44,7 @@
 #ifndef ROOT_TMVA_MethodBPDEFoam
 #include "TMVA/MethodBPDEFoam.h"
 #endif
+#include "TMath.h"
 
 using namespace std;
 
@@ -64,7 +65,7 @@ MethodPDEFoam( jobName, methodTitle, dsi, theOption, theTargetDir, Types::kBPDEF
    fMVAHist_S(0),
    fMVAHist_B(0),
    fBoostNum(100),
-   fWeightType("OneOverDiscr"),
+   fWeightType("Quadratic"),
    fMethodError(0),
    fOrigMethodError(0),
    fResetBoostWeights(kTRUE)
@@ -83,7 +84,7 @@ TMVA::MethodBPDEFoam::MethodBPDEFoam( DataSetInfo& dsi,
    fMVAHist_S(0),
    fMVAHist_B(0),
    fBoostNum(100),
-   fWeightType("OneOverDiscr"),
+   fWeightType("Quadratic"),
    fMethodError(0),
    fOrigMethodError(0),
    fResetBoostWeights(kTRUE)
@@ -122,9 +123,9 @@ void TMVA::MethodBPDEFoam::DeclareOptions()
    // MethodBPDEFoam specific options
    DeclareOptionRef( fBoostNum = 100, "BoostNum", "Maximum number of boosts");
 
-   DeclareOptionRef( fWeightType = "OneOverDiscr", "BoostWeightType", "How to weight missclassified events");
-   AddPreDefVal(TString("OneOverDiscr"));
-   AddPreDefVal(TString("LogisticMap"));
+   DeclareOptionRef( fWeightType = "Quadratic", "BoostWeightType", "How to weight missclassified events");
+   AddPreDefVal(TString("Quadratic"));
+   AddPreDefVal(TString("Gauss"));
 
    DeclareOptionRef( fResetBoostWeights = kTRUE, "ResetBoostWeights", "Whether to reset the boost weights of the training sample");
 }
@@ -190,7 +191,7 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
    // on the specified option
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
       ev  = Data()->GetEvent(ievt);
-      sig = DataInfo().IsSignal(ev);
+      // sig = DataInfo().IsSignal(ev);
       v   = TMVA::MethodPDEFoam::GetMvaValue();
       w   = ev->GetWeight();
       wo  = ev->GetOriginalWeight();
@@ -200,11 +201,12 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
 	 // the event was classified wrong
 	 sumWrong     += w;
 	 sumWrongOrig += wo;
-	 if (fWeightType == "OneOverDiscr")
-	    ev->ScaleBoostWeight( 1.0 / (sig ? v : (1.0-v)) );
-	 else if (fWeightType == "LogisticMap")
-	    ev->ScaleBoostWeight(v * (1.0 - v));
       }
+      // reweight the training events
+      if (fWeightType == "Quadratic")
+	 ev->ScaleBoostWeight( -TMath::Power(v-0.5,2) + 1.0 );
+      else if (fWeightType == "Gauss")
+	 ev->ScaleBoostWeight( TMath::Exp( -TMath::Power(v-0.5,2)/0.1 ) );
 
       FactorOrig += ev->GetWeight();
       Factor     += ev->GetBoostWeight();
@@ -285,6 +287,8 @@ void TMVA::MethodBPDEFoam::ResetFoams( void )
 //_______________________________________________________________________
 void TMVA::MethodBPDEFoam::ResetBoostWeights( void )
 {
+   // reset boost weights of training sample to 1.0
+
    Data()->SetCurrentType(Types::kTraining);
 
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++)

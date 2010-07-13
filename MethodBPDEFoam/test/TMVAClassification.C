@@ -355,7 +355,7 @@ void TMVAClassification( TString myMethodList = "" )
    // Boosted PDEFoam
    if (Use["BPDEFoam"])
       factory->BookMethod( TMVA::Types::kBPDEFoam, "BPDEFoam",
-                           "H:!V:BoostNum=10:BoostWeightType=OneOverDiscr:ResetBoostWeights=T:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:CutNmin=T:Nmin=100:Kernel=None:Compress=T" );
+                           "H:!V:BoostNum=10:BoostWeightType=Quadratic:ResetBoostWeights=T:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:CutNmin=T:Nmin=100:Kernel=None:Compress=T" );
 
    // K-Nearest Neighbour classifier (KNN)
    if (Use["KNN"])
