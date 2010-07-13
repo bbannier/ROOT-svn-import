@@ -107,7 +107,7 @@ void TMVA::MethodPDEFoam::Init( void )
 
    for (int i=0; i<FOAM_NUMBER; i++) foam[i] = NULL;
 
-   SetSignalReferenceCut( 0.0 );
+   SetSignalReferenceCut( 0.5 );
 }
 
 //_______________________________________________________________________
