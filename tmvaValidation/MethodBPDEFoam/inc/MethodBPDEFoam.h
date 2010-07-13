@@ -101,9 +101,6 @@ namespace TMVA {
       // reset boost weights of all events
       void ResetBoostWeights();
 
-      // recalculate MVA cut value
-      void FindMVACut();
-
       // initialize histograms
       void InitMonitorHistograms();
 

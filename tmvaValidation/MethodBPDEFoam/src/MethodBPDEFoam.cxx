@@ -186,9 +186,6 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
    Double_t sumAll=0, sumWrong=0, sumAllOrig=0, sumWrongOrig=0;
    Double_t Factor=0., FactorOrig=0.;
 
-   // finding the MVA cut value for IsSignalLike, stored in the method
-   //FindMVACut();
-
    // finding the wrong classified events and reweight them, depending
    // on the specified option
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
@@ -292,49 +289,6 @@ void TMVA::MethodBPDEFoam::ResetBoostWeights( void )
 
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++)
       Data()->GetEvent(ievt)->ScaleBoostWeight(1.0);
-}
-
-//_______________________________________________________________________
-void TMVA::MethodBPDEFoam::FindMVACut( void )
-{
-   // recalculate the MVA cut value
-
-   // creating a fine histograms containing the error rate
-   const Int_t nValBins=1000;
-   Double_t* err=new Double_t[nValBins];
-   const Double_t valmin=-1.;
-   const Double_t valmax=1.;
-   for (Int_t i=0;i<nValBins;i++) err[i]=0.;
-   Double_t sum = 0.;
-   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-      Double_t weight = GetEvent(ievt)->GetWeight();
-      sum +=weight;
-      Double_t val=GetMvaValue();
-      Int_t ibin = (Int_t) (((val-valmin)/(valmax-valmin))*nValBins);
-      if (ibin>=nValBins) ibin = nValBins-1;
-      if (ibin<0) ibin = 0;
-      if (DataInfo().IsSignal(Data()->GetEvent(ievt))){
-	 for (Int_t i=ibin;i<nValBins;i++) err[i]+=weight;
-      }
-      else {
-	 for (Int_t i=0;i<ibin;i++) err[i]+=weight;
-      }
-   }
-   Double_t minerr=1.e6;
-   Int_t minbin=-1;
-   for (Int_t i=0;i<nValBins;i++){
-      if (err[i]<minerr){
-	 minerr=err[i];
-	 minbin=i;
-      }
-   }
-   Double_t sigCutVal = valmin + (valmax-valmin)*minbin/nValBins;
-   SetSignalReferenceCut(sigCutVal);
-
-   Log() << kINFO << "Setting method cut to " 
-	 << GetSignalReferenceCut() << Endl;
-
-   delete[] err;
 }
 
 //_______________________________________________________________________
