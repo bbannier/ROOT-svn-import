@@ -54,8 +54,9 @@ TMVA::MethodPDEFoam::MethodPDEFoam( const TString& jobName,
                                     const TString& methodTitle,
                                     DataSetInfo& dsi,
                                     const TString& theOption,
-                                    TDirectory* theTargetDir ) :
-   MethodBase( jobName, Types::kPDEFoam, methodTitle, dsi, theOption, theTargetDir )
+                                    TDirectory* theTargetDir,
+				    Types::EMVA methodType ) :
+   MethodBase( jobName, methodType, methodTitle, dsi, theOption, theTargetDir )
 {
    // init PDEFoam objects
 }
@@ -63,8 +64,9 @@ TMVA::MethodPDEFoam::MethodPDEFoam( const TString& jobName,
 //_______________________________________________________________________
 TMVA::MethodPDEFoam::MethodPDEFoam( DataSetInfo& dsi,
                                     const TString& theWeightFile,
-                                    TDirectory* theTargetDir ) :
-   MethodBase( Types::kPDEFoam, dsi, theWeightFile, theTargetDir )
+                                    TDirectory* theTargetDir,
+				    Types::EMVA methodType ) :
+   MethodBase( methodType, dsi, theWeightFile, theTargetDir )
 {
    // constructor from weight file
 }

@@ -240,6 +240,12 @@ void TMVAGui( const char* fName = "TMVA.root" )
                  buttonType, "PDEFoam" );
 
    ActionButton( cbar,  
+                 Form( "(%i) BPDEFoam Boost Control Plots", ++ic ),
+                 Form( ".x BPDEFoamControlPlots.C(\"%s\")", fName ),
+                 "Plots to monitor boosting of BPDEFoam (macro BPDEFoamControlPlots.C)",
+                 buttonType, "PDEFoam" );
+
+   ActionButton( cbar,  
                  Form( "(%i) General Boost Control Plots", ++ic ),
                  Form( ".x BoostControlPlots.C(\"%s\")", fName ),
                  "Plots to monitor boosting of general classifiers (macro BoostControlPlots.C)",

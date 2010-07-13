@@ -37,6 +37,7 @@
 #pragma link C++ class TMVA::MethodCommittee+;
 #pragma link C++ class TMVA::MethodBoost+;
 #pragma link C++ class TMVA::MethodPDEFoam+;
+#pragma link C++ class TMVA::MethodBPDEFoam+;
 #pragma link C++ class TMVA::MethodLD+;
 #pragma link C++ class TMVA::MethodCategory+;
 
