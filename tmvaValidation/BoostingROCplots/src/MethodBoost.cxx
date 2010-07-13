@@ -168,6 +168,8 @@ void TMVA::MethodBoost::InitHistos()
    fMonitorHist->push_back(new TH1F("BoostWeight","Boost Weight",fBoostNum,0,fBoostNum));
    fMonitorHist->push_back(new TH1F("ErrFraction","Error Fraction (by boosted event weights)",fBoostNum,0,fBoostNum));
    fMonitorHist->push_back(new TH1F("OrigErrFraction","Error Fraction (by original event weights)",fBoostNum,0,fBoostNum));
+   fMonitorHist->push_back(new TH1F("ROCIntegral","ROC integral",fBoostNum,0,fBoostNum));
+   fMonitorHist->push_back(new TH1F("ROCIntegralBoosted","ROC integral of boosted method",fBoostNum,0,fBoostNum));
    fDefaultHistNum = fMonitorHist->size();
    (*fMonitorHist)[0]->GetXaxis()->SetTitle("Index of boosted classifier");
    (*fMonitorHist)[0]->GetYaxis()->SetTitle("Classifier Weight");
@@ -177,6 +179,10 @@ void TMVA::MethodBoost::InitHistos()
    (*fMonitorHist)[2]->GetYaxis()->SetTitle("Error Fraction");
    (*fMonitorHist)[3]->GetXaxis()->SetTitle("Index of boosted classifier");
    (*fMonitorHist)[3]->GetYaxis()->SetTitle("Error Fraction");
+   (*fMonitorHist)[4]->GetXaxis()->SetTitle("Index of boosted classifier");
+   (*fMonitorHist)[4]->GetYaxis()->SetTitle("ROC integral");
+   (*fMonitorHist)[5]->GetXaxis()->SetTitle("Index of boosted classifier");
+   (*fMonitorHist)[5]->GetYaxis()->SetTitle("ROC integral boosted");
 
    fMonitorTree= new TTree("MonitorBoost","Boost variables");
    fMonitorTree->Branch("iMethod",&fMethodIndex,"iMethod/I");
@@ -303,6 +309,10 @@ void TMVA::MethodBoost::Train()
          (*fMonitorHist)[1]->SetBinContent(fMethodIndex+1,fBoostWeight);
          (*fMonitorHist)[2]->SetBinContent(fMethodIndex+1,fMethodError);
          (*fMonitorHist)[3]->SetBinContent(fMethodIndex+1,fOrigMethodError);
+         SingleTest(); // test and evaluate single method
+         (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1,dynamic_cast<MethodBase*>(method)->GetROCIntegral());
+         //(*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetROCIntegral());
+
          AllMethodsWeight += fMethodWeight.back();
          fMonitorTree->Fill();
 
@@ -713,3 +723,16 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err )
    return mvaValue;
 }
 
+//_______________________________________________________________________
+void TMVA::MethodBoost::SingleTest()
+{
+   MethodBase* method = dynamic_cast<MethodBase*>(fMethods.back());
+   Data()->SetCurrentType(Types::kTesting);
+
+   // Evaluate method on testing sample
+   method->AddOutput( Types::kTesting, method->GetAnalysisType() );
+   // Evaluate performance of method
+   method->TestClassification();
+
+   Data()->SetCurrentType(Types::kTraining);
+}
