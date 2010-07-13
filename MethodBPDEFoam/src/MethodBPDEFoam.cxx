@@ -201,12 +201,12 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
 	 // the event was classified wrong
 	 sumWrong     += w;
 	 sumWrongOrig += wo;
+	 // reweight the misclassified training event
+	 if (fWeightType == "Quadratic")
+	    ev->ScaleBoostWeight( -TMath::Power(v-0.5,2) + 1.0 );
+	 else if (fWeightType == "Gauss")
+	    ev->ScaleBoostWeight( TMath::Exp( -TMath::Power(v-0.5,2)/0.1 ) );
       }
-      // reweight the training events
-      if (fWeightType == "Quadratic")
-	 ev->ScaleBoostWeight( -TMath::Power(v-0.5,2) + 1.0 );
-      else if (fWeightType == "Gauss")
-	 ev->ScaleBoostWeight( TMath::Exp( -TMath::Power(v-0.5,2)/0.1 ) );
 
       FactorOrig += ev->GetWeight();
       Factor     += ev->GetBoostWeight();
