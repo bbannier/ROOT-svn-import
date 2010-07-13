@@ -121,6 +121,9 @@ namespace TMVA {
       //training a single classifier
       void SingleTrain();
 
+      //testing a single classifier
+      void SingleTest();
+
       //calculating a boosting weight from the classifier, storing it in the next one
       void SingleBoost();
 
