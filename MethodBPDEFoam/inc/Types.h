@@ -91,6 +91,7 @@ namespace TMVA {
          kCommittee      ,
          kBoost          ,
          kPDEFoam        ,
+         kBPDEFoam       ,
          kLD             ,
          kPlugins        ,
          kCategory       ,

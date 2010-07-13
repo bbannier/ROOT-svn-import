@@ -83,11 +83,13 @@ namespace TMVA {
                      const TString& methodTitle, 
                      DataSetInfo& dsi,
                      const TString& theOption = "PDEFoam",
-                     TDirectory* theTargetDir = 0 );
+                     TDirectory* theTargetDir = 0,
+		     Types::EMVA methodType   = Types::kPDEFoam );
 
       MethodPDEFoam( DataSetInfo& dsi, 
                      const TString& theWeightFile,  
-                     TDirectory* theTargetDir = NULL );
+                     TDirectory* theTargetDir = NULL,
+		     Types::EMVA methodType   = Types::kPDEFoam );
 
       virtual ~MethodPDEFoam( void );
 
@@ -231,6 +233,8 @@ namespace TMVA {
 
       // default initialisation called by all constructors
       void Init( void );
+
+      friend class MethodBPDEFoam;  // DSMTEST
 
       ClassDef(MethodPDEFoam,0) // Analysis of PDEFoam discriminant (PDEFoam or Mahalanobis approach) 
    };

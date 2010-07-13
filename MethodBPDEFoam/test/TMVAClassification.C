@@ -89,6 +89,7 @@ void TMVAClassification( TString myMethodList = "" )
    Use["PDERSPCA"]        = 1;
    Use["PDERSkNN"]        = 1; // depreciated until further notice
    Use["PDEFoam"]         = 1;
+   Use["BPDEFoam"]        = 1;
    // --
    Use["KNN"]             = 1;
    // ---
@@ -265,7 +266,7 @@ void TMVAClassification( TString myMethodList = "" )
 
    // tell the factory to use all remaining events in the trees after training for testing:
    factory->PrepareTrainingAndTestTree( mycuts, mycutb,
-                                        "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" );
+                                        "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=EqualNumEvents:!V" );
 
    // If no numbers of events are given, half of the events in the tree are used for training, and
    // the other half for testing:
@@ -350,6 +351,11 @@ void TMVAClassification( TString myMethodList = "" )
    if (Use["PDEFoam"])
       factory->BookMethod( TMVA::Types::kPDEFoam, "PDEFoam",
                            "H:!V:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:CutNmin=T:Nmin=100:Kernel=None:Compress=T" );
+
+   // Boosted PDEFoam
+   if (Use["BPDEFoam"])
+      factory->BookMethod( TMVA::Types::kBPDEFoam, "BPDEFoam",
+                           "H:!V:BoostNum=10:BoostWeightType=OneOverDiscr:ResetBoostWeights=T:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:CutNmin=T:Nmin=100:Kernel=None:Compress=T" );
 
    // K-Nearest Neighbour classifier (KNN)
    if (Use["KNN"])
