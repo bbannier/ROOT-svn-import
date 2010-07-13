@@ -295,8 +295,7 @@ void TMVA::MethodBPDEFoam::ResetBoostWeights( void )
 Double_t TMVA::MethodBPDEFoam::GetMvaValue( Double_t* err )
 {
    // Return Mva-Value for method
-   Double_t discr_error = 0.;
-   return TMVA::MethodPDEFoam::GetMvaValue( &discr_error );
+   return TMVA::MethodPDEFoam::GetMvaValue( err );
 }
 
 //_______________________________________________________________________
