@@ -191,7 +191,7 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
    // on the specified option
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
       ev  = Data()->GetEvent(ievt);
-      // sig = DataInfo().IsSignal(ev);
+      sig = DataInfo().IsSignal(ev);
       v   = TMVA::MethodPDEFoam::GetMvaValue();
       w   = ev->GetWeight();
       wo  = ev->GetOriginalWeight();
