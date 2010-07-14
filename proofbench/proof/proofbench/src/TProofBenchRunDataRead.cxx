@@ -63,7 +63,6 @@ TProofBenchRunDataRead::TProofBenchRunDataRead(TProofBenchMode* mode,
                                                 Int_t start,
                                                 Int_t stop,
                                                 Int_t step,
-                                                Int_t draw,
                                                 Int_t debug):
 fProof(0),
 fReadType(readtype),
@@ -75,7 +74,6 @@ fMaxNWorkers(0),
 fStart(start),
 fStop(stop),
 fStep(step),
-fDraw(draw),
 fDebug(debug),
 fFile(0),
 fDirProofBench(0),
@@ -91,13 +89,12 @@ fName(0)
 
    fProof=proof?proof:gProof;
 
-   //if (filename.Length()){
-      if(!OpenFile(filename.Data(), foption)){//file open failed
-         gDirectory->mkdir("ProofBench");
-         gDirectory->cd("ProofBench");
-         fDirProofBench=gDirectory; 
-      }
-   //}
+   if(!OpenFile(filename.Data(), foption)){//file open failed
+      gDirectory->cd("Rint:/");
+      gDirectory->mkdir("ProofBench");
+      gDirectory->cd("ProofBench");
+      fDirProofBench=gDirectory; 
+   }
 
    //set name
    fName="DataRead"+GetNameStem();
@@ -153,7 +150,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
                                  Int_t stop,
                                  Int_t step,
                                  Int_t debug,
-                                 Int_t draw)
+                                 Int_t)
 {
    // Run benchmark
    // Input parameters
@@ -163,12 +160,12 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    //    stop: Stop scan at 'stop workers.
    //    step: Scan every 'step' workers.
    //    debug: debug switch.
-   //    draw: draw switch.
+   //    Int_t: Ignored
    // Returns
    //    Nothing
 
    if (!fProof){
-      Error("RunBenchmark", "Proof not set");
+      Error("Run", "Proof not set");
       return;
    }
 
@@ -178,7 +175,6 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    stop=-1?fStop:stop;
    step=-1?fStep:step;
    debug=-1?fDebug:debug;
-   draw=-1?fDraw:draw;
 
    if (!fListPerfProfiles){
       fListPerfProfiles=new TList();
@@ -198,6 +194,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
       TString profile_perfstat_event_title=BuildProfileTitle("Profile", "PerfStat Event");
       profile_perfstat_event= new TProfile(profile_perfstat_event_name, profile_perfstat_event_title, ndiv, ns_min-0.5, ns_max+0.5);
 
+      profile_perfstat_event->SetDirectory(fDirProofBench);
       profile_perfstat_event->GetXaxis()->SetTitle("Number of Slaves");
       profile_perfstat_event->GetYaxis()->SetTitle("#times10^{3} Events/sec");
       profile_perfstat_event->SetMarkerStyle(21);
@@ -216,7 +213,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    if (!profile_perfstat_IO){
       TString profile_perfstat_IO_title=BuildProfileTitle("Profile", "PerfStat IO");
       profile_perfstat_IO= new TProfile(profile_perfstat_IO_name, profile_perfstat_IO_title, ndiv, ns_min-0.5, ns_max+0.5);
-
+      profile_perfstat_IO->SetDirectory(fDirProofBench);
       profile_perfstat_IO->GetXaxis()->SetTitle("Number of Slaves");
       profile_perfstat_IO->GetYaxis()->SetTitle("MB/sec");
       profile_perfstat_IO->SetMarkerStyle(21);
@@ -237,7 +234,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    if (!profile_queryresult_event){
       TString profile_queryresult_event_title=BuildProfileTitle("Profile", "QueryResult Event");
       profile_queryresult_event=new TProfile(profile_queryresult_event_name, profile_queryresult_event_title, ndiv, ns_min-0.5, ns_max+0.5);
-
+      profile_queryresult_event->SetDirectory(fDirProofBench);
       profile_queryresult_event->GetXaxis()->SetTitle("Number of Slaves");
       profile_queryresult_event->GetYaxis()->SetTitle("#times10^{3} Events/sec");
       profile_queryresult_event->SetMarkerStyle(22);
@@ -257,7 +254,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    if (!profile_queryresult_IO){
       TString profile_queryresult_IO_title=BuildProfileTitle("Profile", "QueryResult IO");
       profile_queryresult_IO=new TProfile(profile_queryresult_IO_name, profile_queryresult_IO_title, ndiv, ns_min-0.5, ns_max+0.5);
-
+      profile_queryresult_IO->SetDirectory(fDirProofBench);
       profile_queryresult_IO->GetXaxis()->SetTitle("Number of Slaves");
       profile_queryresult_IO->GetYaxis()->SetTitle("MB/sec");
       profile_queryresult_IO->SetMarkerStyle(22);
@@ -304,14 +301,14 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
          if (fRunCleanup->GetCleanupType()==TProofBenchRun::kCleanupKernel){
             fRunCleanup->SetDataSetCleanup(dsname);
          }
-         fRunCleanup->Run(nevents, 0, 0, 0, 0, debug, draw);
+         fRunCleanup->Run(nevents, 0, 0, 0, 0, debug, 0);
 
          //TString namestem=GetNameStem();
          DeleteParameters();
          SetParameters();
          fProof->SetParallel(nactive);
 
-         Info("RunBenchmark", "Processing data set : %s", dsname.Data()); 
+         Info("Run", "Processing data set : %s", dsname.Data()); 
 
          TFileCollection* fc=0;
          Long64_t nfiles=0;
@@ -324,11 +321,11 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
             }
          }
          else{
-            Error("RunBenchmark", "no such data set found; %s", dsname.Data());
+            Error("Run", "no such data set found; %s", dsname.Data());
             continue;
          }
 
-         Info("RunBenchmark", "Total number of events to process is %lld", nevents_total); 
+         Info("Run", "Total number of events to process is %lld", nevents_total); 
          TTime starttime = gSystem->Now();
          fProof->Process(dsname.Data(), "TSelEvent", "", nevents_total);
          DeleteParameters();
@@ -344,7 +341,10 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
          TString perfstats_name = "PROOF_PerfStats";
          TTree* t = dynamic_cast<TTree*>(l->FindObject(perfstats_name.Data()));
          if (t) {
-            FillPerfStatProfiles(t, profile_perfstat_event, profile_perfstat_IO, nactive);
+            TTree* tnew=(TTree*)t->Clone("tnew");
+
+            FillPerfStatProfiles(tnew, profile_perfstat_event, profile_perfstat_IO, nactive);
+
             fCPerfProfiles->cd(npad++);
             profile_perfstat_event->Draw();
             gPad->Update();
@@ -352,14 +352,16 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
             profile_perfstat_IO->Draw();
             gPad->Update();
 
-            t->SetDirectory(fDirProofBench);
+            tnew->SetDirectory(fDirProofBench);
 
             //change the name
             TString newname=BuildNewPatternName(perfstats_name, nactive, j);
-            t->SetName(newname);
-            fPerfStats->Add(t);
+            tnew->SetName(newname);
+            fPerfStats->Add(tnew);
+
             if (debug && fWritable){
-               t->Write();
+               fDirProofBench->cd();
+               tnew->Write();
             }
          } else {
             cout << perfstats_name.Data() << " tree not found" << endl << flush;
@@ -423,14 +425,13 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
             TH1* h = dynamic_cast<TH1*>(l->FindObject(ptdist_name.Data()));
             if (h) {
                TH1 *hnew = (TH1*)h->Clone("hnew");
-
                hnew->SetDirectory(fDirProofBench);
                TString origname = h->GetName();
-
                TString newname=BuildNewPatternName(ptdist_name, nactive, j);
-
                hnew->SetName(newname);
+
                if (fWritable){
+                  fDirProofBench->cd();
                   hnew->Write();
                   delete hnew;
                }
@@ -441,28 +442,26 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
             TString tracksdist_name = "ntracks_dist";
             TH1* h2 = dynamic_cast<TH1*>(l->FindObject(tracksdist_name.Data()));
             if (h2) {
-               //TDirectory* hdir = h2->GetDirectory();
-               //TDirectory* dirsav = gDirectory;
-               //fFile->cd();
                TH1 *hnew = (TH1*)h2->Clone("hnew");
                hnew->SetDirectory(fDirProofBench);
-               //TString origname = h2->GetName();
                TString newname=BuildNewPatternName(tracksdist_name, nactive, j);
- 
                hnew->SetName(newname);
+
                if (fWritable){
+                  fDirProofBench->cd();
                   hnew->Write();
                   delete hnew;
                }
             } 
             else {
-               Error("RunBenchmark", "histogram %s not found", tracksdist_name.Data());
+               Error("Run", "histogram %s not found", tracksdist_name.Data());
             }
          }
       }//for ntries
    }//for number of workers
    
    if (fWritable){
+      fDirProofBench->cd();
       profile_perfstat_event->Write();
       profile_perfstat_IO->Write();
       profile_queryresult_event->Write();
@@ -569,7 +568,6 @@ void TProofBenchRunDataRead::Print(Option_t* option)const{
    Printf("fStart=%d", fStart);
    Printf("fStop=%d", fStop);
    Printf("fStep=%d", fStep);
-   Printf("fDraw=%d", fDraw);
    Printf("fDebug=%d", fDebug);
    if (fFile){
        fFile->Print(option);
@@ -707,12 +705,6 @@ void TProofBenchRunDataRead::SetStep(Int_t step)
 }
 
 //______________________________________________________________________________
-void TProofBenchRunDataRead::SetDraw(Int_t draw)
-{
-   fDraw=draw;
-}
-
-//______________________________________________________________________________
 void TProofBenchRunDataRead::SetDebug(Int_t debug)
 {
    fDebug=debug;
@@ -725,9 +717,7 @@ TFile* TProofBenchRunDataRead::OpenFile(const char* filename,
                                         Int_t compress)
 {
    // Opens a file which output profiles and/or intermediate files (trees, histograms when debug is set)
-   // are to be written to. Makes a directory named "ProofBench" if possible and changes to the directory.
-   // If directory ProofBench already exists, change to the directory. If the directory can not be created,
-   // make a directory Rint:/ProofBench and change to the directory.
+   // are to be written to. Makes a directory named "ProofBench" and changes to the directory.
    // Input parameters
    //    filename: Name of the file to open
    //    option: Option for TFile::Open(...) function
@@ -742,9 +732,9 @@ TFile* TProofBenchRunDataRead::OpenFile(const char* filename,
    sfilename.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
    sfilename.Remove(TString::kBoth, '\t');//remove leading and trailing tab character(s)
 
-   //if (sfilename.Length()<1){
-   //   return fFile;
-   //}
+   if (sfilename.IsNull()){
+      return fFile;
+   }
 
    TString soption(option);
    soption.ToLower();
@@ -837,12 +827,6 @@ Int_t TProofBenchRunDataRead::GetStop()const
 Int_t TProofBenchRunDataRead::GetStep()const
 {
    return fStep;
-}
-
-//______________________________________________________________________________
-Int_t TProofBenchRunDataRead::GetDraw()const
-{
-   return fDraw;
 }
 
 //______________________________________________________________________________
@@ -961,7 +945,6 @@ Int_t TProofBenchRunDataRead::SetParameters()
    }
    
    fProof->SetParameter("PROOF_BenchmarkReadType", Int_t(fReadType));
-   fProof->SetParameter("PROOF_BenchmarkDraw", Int_t(fDraw));
    fProof->SetParameter("PROOF_BenchmarkDebug", Int_t(fDebug));
    return 0;
 }
@@ -973,7 +956,6 @@ Int_t TProofBenchRunDataRead::DeleteParameters(){
       return 1;
    }
    fProof->DeleteParameters("PROOF_BenchmarkReadType");
-   fProof->DeleteParameters("PROOF_BenchmarkDraw");
    fProof->DeleteParameters("PROOF_BenchmarkDebug");
    return 0;
 }

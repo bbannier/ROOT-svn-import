@@ -58,7 +58,6 @@ private:
    Int_t fStart;                 //start number of workers
    Int_t fStop;                  //stop number of workers
    Int_t fStep;                  //test to be performed every fStep workers
-   Int_t fDraw;                  //draw switch
    Int_t fDebug;                 //debug switch
 
    TFile* fFile;                 //output file to write performance histograms and trees on
@@ -102,7 +101,6 @@ public:
                           Int_t start=1,
                           Int_t stop=-1,
                           Int_t step=1,
-                          Int_t draw=0,
                           Int_t debug=0);
 
    virtual ~TProofBenchRunDataRead();
@@ -113,7 +111,7 @@ public:
             Int_t stop,
             Int_t step,
             Int_t debug,
-            Int_t draw);
+            Int_t);
 
    void DrawPerfProfiles();
 
@@ -129,7 +127,6 @@ public:
    void SetStart(Int_t start);
    void SetStop(Int_t stop);
    void SetStep(Int_t step);
-   void SetDraw(Int_t draw);
    void SetDebug(Int_t debug);
    TFile* OpenFile(const char* filename="",
                    Option_t* option="",
@@ -146,7 +143,6 @@ public:
    Int_t GetStart()const;
    Int_t GetStop()const;
    Int_t GetStep()const;
-   Int_t GetDraw()const;
    Int_t GetDebug()const;
    TFile* GetFile()const;
    TDirectory* GetDirProofBench()const;

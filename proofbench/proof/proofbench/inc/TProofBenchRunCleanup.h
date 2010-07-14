@@ -53,7 +53,6 @@ private:
    Int_t fMaxNWorkers;           //number of maximum processes, 
                                  //this can be more than the number of total workers in the cluster
    TString fDataSetCleanup;      //data set to be cleaned up at nodes using fadvice
-   Int_t fDraw;                  //draw switch
    Int_t fDebug;                 //debug switch
 
    TFile* fFile;                 //output file to write performance histograms and trees on
@@ -77,7 +76,6 @@ public:
                          TProof* proof=gProof,
                          Int_t maxnworkers=-1,
                          Long64_t nevents=-1,
-                         Int_t draw=0,
                          Int_t debug=0);
 
    virtual ~TProofBenchRunCleanup();
@@ -88,7 +86,7 @@ public:
             Int_t,
             Int_t,
             Int_t debug,
-            Int_t draw);
+            Int_t);
 
    void DrawPerfProfiles();
 
@@ -99,7 +97,6 @@ public:
    void SetMaxNWorkers(Int_t maxnworkers);
    void SetMaxNWorkers(TString sworkers);
    void SetDataSetCleanup(const TString& dataset);
-   void SetDraw(Int_t draw);
    void SetDebug(Int_t debug);
    TFile* OpenFile(const char* filename="",
                            Option_t* option="",
@@ -112,7 +109,6 @@ public:
    Long64_t GetNEvents()const;
    Int_t GetMaxNWorkers()const;
    TString GetDataSetCleanup()const;
-   Int_t GetDraw()const;
    Int_t GetDebug()const;
    TFile* GetFile()const;
    TDirectory* GetDirProofBench() const;

@@ -53,12 +53,10 @@ TProofBenchRunCleanup::TProofBenchRunCleanup(TProofBenchRun::ECleanupType cleanu
                TProof* proof,
                Int_t maxnworkers,
                Long64_t nevents,
-               Int_t draw,
                Int_t debug):
 fProof(0),
 fCleanupType(cleanuptype),
 fNEvents(nevents),
-fDraw(draw),
 fDebug(debug),
 fFile(0),
 fDirProofBench(0),
@@ -68,8 +66,8 @@ fWritable(0)
  
    fProof=proof?proof:gProof;
 
-   //if (filename.Length()){
-   if(!OpenFile(filename.Data(), foption)){
+   if (!OpenFile(filename.Data(), foption)){
+      gDirectory->cd("Rint:/");
       gDirectory->mkdir("ProofBench");
       gDirectory->cd("ProofBench");
       fDirProofBench=gDirectory;
@@ -125,7 +123,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
                                 Int_t,
                                 Int_t,
                                 Int_t debug,
-                                Int_t draw)
+                                Int_t)
 {
    // Clean up cache between bench mark runs. 
    // Input parameters
@@ -134,17 +132,17 @@ void TProofBenchRunCleanup::Run(Long64_t,
    //    Int_t    Ignored.
    //    Int_t    Ignored.
    //    Int_t    Ignored.
-   //    debug    debug switch  
-   //    draw     draw switch
+   //    debug    debug switch. When -1, data member fDebug is used.  
+   //    Int_t    Ignored.
    // Return
    //    Nothing
 
    if (!fProof){
-      Error("RunBenchmark", "Proof not set");
+      Error("Run", "Proof not set");
       return;
    }
 
-   Info("RunBenchmark", "kRunCleanup");
+   debug=-1?fDebug:debug;
 
    fProof->SetParallel(99999);
 
@@ -176,33 +174,34 @@ void TProofBenchRunCleanup::Run(Long64_t,
          static Long64_t ncalls=0;
    
          if (t) {
-            t->SetDirectory(fDirProofBench);
+            TTree* tnew=(TTree*)t->Clone("tnew");
+            tnew->SetDirectory(fDirProofBench);
    
             //build up new name
             TString newname = perfstats_name;
             newname+="_";
             newname+="Cleanup";
             newname+=Form("%lld", ncalls);
-            t->SetName(newname);
+            tnew->SetName(newname);
    
+            Info("Run", "PROOF_PerfStats found, directory=%s", fDirProofBench->GetName());
             if (fWritable){
                fDirProofBench->cd();
-               t->Write();
+               tnew->Write();
+               tnew->Delete();
             }
          } else {
-            Error("RunBenchmark", "tree %s not found",  perfstats_name.Data());
+            Error("Run", "tree %s not found",  perfstats_name.Data());
          }
    
          //save outputhistos
          TString ptdist_name = "pt_dist";
          TH1* h = dynamic_cast<TH1*>(l->FindObject(ptdist_name.Data()));
          if (h) {
-            //TDirectory* hdir = h->GetDirectory();
-            //TDirectory* dirsav = gDirectory;
-            //fFile->cd();
             TH1 *hnew = (TH1*)h->Clone("hnew");
-   
             hnew->SetDirectory(fDirProofBench);
+
+            //build up new name
             TString origname = h->GetName();
             TString newname = ptdist_name;
             newname+="_";
@@ -216,23 +215,22 @@ void TProofBenchRunCleanup::Run(Long64_t,
                delete hnew;
             }
          } else {
-            Error("RunBenchmark", "histogram %s not found",  ptdist_name.Data());
+            Error("Run", "histogram %s not found",  ptdist_name.Data());
          }
    
          TString tracksdist_name = "ntracks_dist";
          TH1* h2 = dynamic_cast<TH1*>(l->FindObject(tracksdist_name.Data()));
          if (h2) {
-            //TDirectory* hdir = h2->GetDirectory();
-            //TDirectory* dirsav = gDirectory;
-            //fFile->cd();
             TH1 *hnew = (TH1*)h2->Clone("hnew");
             hnew->SetDirectory(fDirProofBench);
-            //TString origname = h2->GetName();
+
+            //build up new name
             TString newname = tracksdist_name;
             newname+="_";
             newname+="Cleanup";
             newname+=Form("%lld", ncalls);
             hnew->SetName(newname);
+
             if (fWritable){
                fDirProofBench->cd();
                hnew->Write();
@@ -240,7 +238,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
             }
          }
          else {
-            Error("RunBenchmark", "histogram %s not found",  tracksdist_name.Data());
+            Error("Run", "histogram %s not found",  tracksdist_name.Data());
          }
          ncalls++;
       }
@@ -279,7 +277,6 @@ void TProofBenchRunCleanup::Print(Option_t* option)const{
    Printf("fCleanupType=%s%s", "k", fName.Data());
    Printf("fNEvents=%lld", fNEvents);
    Printf("fMaxNWorkers=%d", fMaxNWorkers);
-   Printf("fDraw=%d", fDraw);
    Printf("fDebug=%d", fDebug);
    if (fFile){
        fFile->Print(option);
@@ -355,12 +352,6 @@ void TProofBenchRunCleanup::SetDataSetCleanup(const TString& dataset)
 }
 
 //______________________________________________________________________________
-void TProofBenchRunCleanup::SetDraw(Int_t draw)
-{
-   fDraw=draw;
-}
-
-//______________________________________________________________________________
 void TProofBenchRunCleanup::SetDebug(Int_t debug)
 {
    fDebug=debug;
@@ -373,9 +364,7 @@ TFile* TProofBenchRunCleanup::OpenFile(const char* filename,
                                        Int_t compress)
 {
    // Opens a file which output profiles and/or intermediate files (trees, histograms when debug is set)
-   // are to be written to. Makes a directory named "ProofBench" if possible and changes to the directory.
-   // If directory ProofBench already exists, change to the directory. If the directory can not be created,
-   // make a directory Rint:/ProofBench and change to the directory.
+   // are to be written to. Makes a directory named "ProofBench" and changes to the directory.
    // Input parameters:
    //    filename: Name of the file to open
    //    option: Option to TFile::Open(...) function
@@ -390,9 +379,9 @@ TFile* TProofBenchRunCleanup::OpenFile(const char* filename,
    sfilename.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
    sfilename.Remove(TString::kBoth, '\t');//remove leading and trailing tab character(s)
 
-   //if (sfilename.Length()<1){
-   //   return fFile;
-   //}
+   if (sfilename.IsNull()){
+      return fFile;
+   }
 
    TString soption(option);
    soption.ToLower();
@@ -453,12 +442,6 @@ TString TProofBenchRunCleanup::GetDataSetCleanup()const
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchRunCleanup::GetDraw()const
-{
-   return fDraw;
-}
-
-//______________________________________________________________________________
 Int_t TProofBenchRunCleanup::GetDebug()const
 {
    return fDebug;
@@ -489,7 +472,6 @@ Int_t TProofBenchRunCleanup::SetParameters(){
       return 1;
    }
    fProof->SetParameter("PROOF_BenchmarkCleanupType", Int_t(fCleanupType));
-   fProof->SetParameter("PROOF_BenchmarkDraw", Int_t(fDraw));
    fProof->SetParameter("PROOF_BenchmarkDebug", Int_t(fDebug));
 
    return 0;
@@ -502,7 +484,6 @@ Int_t TProofBenchRunCleanup::DeleteParameters(){
       return 1;
    }
    fProof->DeleteParameters("PROOF_BenchmarkCleanupType");
-   fProof->DeleteParameters("PROOF_BenchmarkDraw");
    fProof->DeleteParameters("PROOF_BenchmarkDebug");
    return 0;
 }
