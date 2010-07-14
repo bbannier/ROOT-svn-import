@@ -82,7 +82,7 @@ void BPDEFoamControlPlots( TString fin = "TMVA.root",
 	 cout << "Number of boosts: " << fBoostNum << endl;
 
 	 // loop over all boosts
-	 for (Int_t i=1; i<=fBoostNum; i++){
+	 for (Int_t i=0; i<=fBoostNum; i++){
 	    // draw only every 10th histogram (plus 1st and last one)
 	    if ((i!=1) && (i!=fBoostNum) && (i % 10 != 0)) 
 	       continue;
@@ -134,9 +134,9 @@ void PlotSigBg(
    TMVAGlob::SetSignalAndBackgroundStyle( hS, hB );
 
    // Draw histograms
-   //hS->Rebin(4);
+   hS->Rebin(2);
    hS->Draw("hist");
-   //hB->Rebin(4);
+   hB->Rebin(2);
    hB->Draw("SAME HIST");
 
    // Draw legend               
