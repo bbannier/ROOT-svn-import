@@ -1,38 +1,12 @@
 #include <algorithm>
 #include <numeric>
+#include <limits>
 #include "TKDE.h"
+#include "Math/Error.h"
 #include "Math/Integrator.h"
 #include "Math/QuantFuncMathCore.h"
 
 ClassImp(TKDE)
-
-template<class F>
-TKDE::TKDE(const F& kernelFunction, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, /*EFitMethod fit,*/ EIteration iter, EMirror mir, EBinning bin, Double_t rho) :
-   fData(events, 0.0),
-   fPDF(0),
-   fUpperPDF(0),
-   fLowerPDF(0),
-   fHistogram(0),
-//    fFitMethod(fit),
-   fIteration(iter),
-   fMirror(mir),
-   fBinning(bin),
-//    fSettedOptions(std::vector<Bool_t>(kTotalOptions, kFALSE)),
-   fNBins(1000),
-   fNEvents(events),
-   fUseBinsNEvents(1000),
-   fMean(0.0),
-   fSigma(0.0),
-   fXMin(xMin),
-   fXMax(xMax),
-   fRho(rho)
-{
-   //Class constructor
-//    SetOptions(fit, kUserDefined, iter, mir, bin);
-   SetData(data);
-   SetKernelFunction(kernelFunction);
-   SetKernel();
-}   
    
 TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, /*EFitMethod fit,*/ EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho) :
    fData(events, 0.0),
@@ -53,12 +27,14 @@ TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, /*
    fSigma(0.0),
    fXMin(xMin),
    fXMax(xMax),
-   fRho(rho)
+   fRho(rho),
+   fCanonicalBandwidths(std::vector<Double_t>(kTotalKernels, 0.0))
 {
    //Class constructor
 //    SetOptions(fit, kern, iter, mir, bin);
    SetData(data);
    SetKernelFunction();
+   SetCanonicalBandwidths();
    SetKernel();
 }
    
@@ -101,16 +77,46 @@ TKDE::~TKDE() {
 //    fFitMethod = fit;
 // }
    
-// Sets User option for the choice of kernel estimator 
+
 void TKDE::SetKernelType(EKernelType kern) {
+   // Sets User option for the choice of kernel estimator    
    fKernelType = kern;
 }
-      
-// Sets User option for fixed or adaptive iteration      
+   
 void TKDE::SetIteration(EIteration iter) {
+   // Sets User option for fixed or adaptive iteration      
    fIteration = iter;
 }
       
+
+void TKDE::Instantiate(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, /*EFitMethod fit = kKDE,*/ EIteration iter, EMirror mir, EBinning bin, Double_t rho) {
+   // Template's constructor surrogate
+   fData = std::vector<Double_t>(events, 0.0);
+   fPDF = 0;
+   fUpperPDF = 0;
+   fLowerPDF = 0;
+   fHistogram = 0;
+   fKernelType = kUserDefined;
+//    fFitMethod(fit);
+   fIteration = iter;
+   fMirror = mir;
+   fBinning = bin;
+//    fSettedOptions(std::vector<Bool_t>(kTotalOptions; kFALSE));
+   fNBins = 1000;
+   fNEvents = events;
+   fUseBinsNEvents = 1000;
+   fMean = 0.0;
+   fSigma = 0.0;
+   fXMin = xMin;
+   fXMax = xMax;
+   fRho = rho;
+   fCanonicalBandwidths = std::vector<Double_t>(kTotalKernels, 0.0);
+//    SetOptions(fit, kUserDefined; iter, mir, bin);
+   SetData(data);
+   SetCanonicalBandwidths();
+   SetKernel();
+}
+
 void TKDE::SetMirror(EMirror mir) {
    // Sets User option for mirroring the data
    fMirror = mir;
@@ -198,35 +204,49 @@ void TKDE::SetSigma() {
 
 void TKDE::SetKernel() {
    // Sets the kernel density estimator
-   Double_t weight(fSigma * TMath::Power( 3./ 4. * fNEvents, -0.2)); // bandwidth
+   Double_t weight(fCanonicalBandwidths[kGaussian] * fSigma * TMath::Power( 3. / (8. * TMath::Sqrt(TMath::Pi())) * fNEvents, -0.2));// Optimal bandwidth (Silverman's rule of thumb with assumed Gaussian density)
+   weight *= fCanonicalBandwidths[fKernelType] / fCanonicalBandwidths[kGaussian];
    UInt_t n = fUseBins ? fNBins : fNEvents; 
    fKernel = new TKernel(n, weight, this);
    if (fIteration == kAdaptive) {
       fKernel->ComputeAdaptiveWeights();
    }
 }
- 
-template<class F>
-void TKDE::SetKernelFunction(const F& kernelFunction) {
-   // Sets User input kernel estimator  
-   fKernelFunction = new ROOT::Math::WrappedFunction<F>(kernelFunction);
-}
    
-void TKDE::SetKernelFunction() {
+void TKDE::SetKernelFunction(KernelFunction_Ptr kernfunc) {
    // Sets kernel estimator
    switch (fKernelType) {
-//       case kKernels :
-//          break; // No case
-      case kUserDefined :
-         break; // Case already taken care of in templated SetKernelFunction at constructor
-      default:
       case kGaussian :
          fKernelFunction = new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::GaussianKernel);
+      case kEpanechnikov :
+         new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::EpanechnikovKernel);
+         break;
+      case kBiweight :
+         new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::BiweightKernel);
+         break;
+      case kCosineArch :
+         new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::CosineArchKernel);
+         break;
+      case kUserDefined :
+      case kTotalKernels :
+      default:
+         fKernelFunction = kernfunc;
+         CheckKernelValidity();
+         ComputeCanonicalBandwidth();
    }
 }
 
+void TKDE::SetCanonicalBandwidths() {
+   // Sets the canonical bandwidths according to the kernel type
+   fCanonicalBandwidths[kUserDefined] = 1.0;
+   fCanonicalBandwidths[kGaussian] = 0.7764;
+   fCanonicalBandwidths[kEpanechnikov] = 1.7188;
+   fCanonicalBandwidths[kBiweight] = 1.0; // need computation in Mathematica
+   fCanonicalBandwidths[kCosineArch] = 1.0; // need computation in Mathematica
+}
+
 inline void TKDE::SetData(Double_t x, UInt_t i) {
-   // set data point at the i-th data vector position
+   // Set data point at the i-th data vector position
    fData[i] = x;
 }
 
@@ -236,9 +256,9 @@ TH1D* TKDE::GetHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
 }
 
 void TKDE::SetRange(Double_t xMin, Double_t xMax) {
-   //Sets minimum range value and maximum range value
+   // Sets minimum range value and maximum range value
    if (xMin >= xMax) {
-      std::cerr << "Minimum range cannot be bigger or equal than the maximum range!" << std::endl;
+      MATH_ERROR_MSG("TKDE::SetRange", "Minimum range cannot be bigger or equal than the maximum range!" << std::endl);
       return;
    } 
    fXMin = xMin;
@@ -288,8 +308,8 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
    std::vector<Double_t>::iterator weight = weights.begin();
    std::vector<Double_t> dataset(fKDE->fUseBins ? GetBinCentreData() : fKDE->fData);
    std::vector<Double_t>::iterator data = dataset.begin();
-   Double_t minWeight(*weight * TMath::Power(50.0, -0.5));
-   Double_t norm(2.0 * TMath::Sqrt(3.0)); // Adaptive weight normalization
+   Double_t minWeight(*weight * TMath::Power(50.0, -0.5)); //TODO: how was its computation done?
+   Double_t norm(2.0 * TMath::Sqrt(3.0)); // Adaptive weight normalization TODO: find source of justification
    for (; weight != weights.end(); ++weight, ++data) {
       *weight *= fKDE->fRho / fKDE->fSigma * TMath::Power(fKDE->fSigma / (*fKDE->fKernel)(*data), 0.5) / norm;
       if (*weight < minWeight) {
@@ -378,13 +398,43 @@ Double_t TKDE::GetError(Double_t x) const {
    return TMath::Sqrt(result);
 }
 
+
+void TKDE::CheckKernelValidity() {
+   // Checks if kernel has mu = 0 and positive finite sigma conditions
+   Bool_t valid = ComputeKernelMu() == 0.0 /*needs better comaprison*/ && ComputeKernelSigma2() > 0 && ComputeKernelSigma2() != std::numeric_limits<Double_t>::infinity();
+   if (!valid) MATH_ERROR_MSG("TKDE::CheckKernelValidity", "No valid conditions: either the kernel's mu is not zero or the kernel's sigma2 is not finite positive! Unsuitable kernel." << std::endl);
+}
+
 Double_t TKDE::ComputeKernelL2Norm() const {
    // Computes the kernel's L2 norm
    ROOT::Math::IntegratorOneDim ig;
-   KernelIntegrand kernel(this);
+   KernelIntegrand kernel(this, TKDE::KernelIntegrand::kNorm);
    ig.SetFunction(kernel);
    Double_t result = ig.Integral();
    return result;
+}
+
+Double_t TKDE::ComputeKernelSigma2() {
+   // Computes the kernel's sigma squared
+   ROOT::Math::IntegratorOneDim ig;
+   KernelIntegrand kernel(this, TKDE::KernelIntegrand::kSigma2);
+   ig.SetFunction(kernel);
+   Double_t result = ig.Integral();
+   return result;
+}
+   
+Double_t TKDE::ComputeKernelMu() {
+   // Computes the kernel's mu
+   ROOT::Math::IntegratorOneDim ig;
+   KernelIntegrand kernel(this, TKDE::KernelIntegrand::kMu);
+   ig.SetFunction(kernel);
+   Double_t result = ig.Integral();
+   return result;
+}
+
+void TKDE::ComputeCanonicalBandwidth() {
+   // Computes the user's input kernel function canonical bandwidth
+   fCanonicalBandwidths[kUserDefined] = TMath::Power(ComputeKernelL2Norm() / TMath::Power(ComputeKernelSigma2(), 2), -1. / 5.);
 }
 
 Double_t TKDE::GaussianKernel(Double_t x) const {
@@ -392,27 +442,51 @@ Double_t TKDE::GaussianKernel(Double_t x) const {
    return TMath::Gaus(x, 0.0, 1.0, kTRUE);
 }
 
-TKDE::KernelIntegrand::KernelIntegrand(const TKDE* kde) : fKDE(kde) {
+Double_t TKDE::EpanechnikovKernel(Double_t x) const {
+   Double_t result = 3. / 4. * (1 - TMath::Power(x, 2));
+   return result > 0.0 ? result : 0.0;
+}
+
+Double_t TKDE::BiweightKernel(Double_t x) const {
+   // Returns the kernel evaluation at x 
+   Double_t result = 15. / 16. * TMath::Power(1 - TMath::Power(x, 2), 2);
+   return result > 0.0 ? result : 0.0;
+}
+
+Double_t TKDE::CosineArchKernel(Double_t x) const {
+   // Returns the kernel evaluation at x 
+   Double_t result = TMath::PiOver4() * TMath::Cos(TMath::PiOver2() * x);
+   return result > 0.0 ? result : 0.0;
+}
+
+TKDE::KernelIntegrand::KernelIntegrand(const TKDE* kde, EIntegralResult intRes) : fKDE(kde), fIntegralResult(intRes) {
    // Internal class constructor
 }
    
 Double_t TKDE::KernelIntegrand::operator()(Double_t x) const {
    // Internal class unary function
-   return TMath::Power((*fKDE->fKernelFunction)(x), 2);
+   if (fIntegralResult == kNorm) {
+     return TMath::Power((*fKDE->fKernelFunction)(x), 2);
+   } else if (fIntegralResult == kMu) {
+      return x * (*fKDE->fKernelFunction)(x);
+   } else if (fIntegralResult == kSigma2) {
+      return TMath::Power(x, 2) * (*fKDE->fKernelFunction)(x);   
+   } else {
+      return -1;
+   }
 }
 
 TH1D* TKDE::GetKDEHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
    // Returns the histogram of the estimated density at data points
-   if (xMin < xMax) {
+   if (xMin < xMax && nbins > 0) {
       fHistogram = new TH1D("KDE Histogram", "KDE Histogram", nbins, xMin, xMax);
    } else {
-      fHistogram = new TH1D("KDE Histogram", "KDE Histogram", nbins, fXMin, fXMax);  
+      fHistogram = new TH1D("KDE Histogram", "KDE Histogram", fNBins, fXMin, fXMax);  
    }
-   fHistogram = new TH1D("KDE Histogram", "KDE Histogram", nbins, fXMin, fXMax);  
    for (std::vector<Double_t>::iterator data = fData.begin(); data != fData.end(); ++data) {
       fHistogram->Fill(*data, (*fKernel)(*data));
    }
-   fHistogram->Scale(1 / fHistogram->Integral(), "width");
+   fHistogram->Scale(1. / fHistogram->Integral(), "width");
    return fHistogram;
 }
    
