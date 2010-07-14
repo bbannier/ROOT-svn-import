@@ -53,13 +53,12 @@ private:
    TProofBenchRun::EReadType fReadType;       //read type
    TProofBenchRun::ECleanupType fCleanupType; //clean-up type
    THashList* fFilesToCleanupCacheFor;        //list of files to clean up cache for
-   Bool_t fDraw;                              //draw switch
    Bool_t fDebug;                             //debug switch
    TCanvas* fCHist;                           //canvas to display histograms
 
    //Output hists
    TH1F* fPtHist;
-   TH1I* fNTracksHist;
+   TH1F* fNTracksHist;
 
 public :
 
@@ -128,7 +127,6 @@ public :
    TProofBenchRun::EReadType GetReadType(){return fReadType;}
    TProofBenchRun::ECleanupType GetCleanupType(){return fCleanupType;}
    THashList* GetFilesToCleanupCacheFor(){return fFilesToCleanupCacheFor;}
-   Bool_t GetDraw(){return fDraw;}
    Bool_t GetDebug(){return fDebug;}
    TCanvas* GetCHist(){return fCHist;}
    TH1* GetPtHist(){return fPtHist;}

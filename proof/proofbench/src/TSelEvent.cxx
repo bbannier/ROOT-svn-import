@@ -37,6 +37,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "TSystem.h"
+#include "TROOT.h"
 
 ClassImp(TSelEvent)
 
@@ -45,7 +46,6 @@ TSelEvent::TSelEvent(TTree *):
    fReadType(TProofBenchRun::kReadNotSpecified),
    fCleanupType(TProofBenchRun::kCleanupNotSpecified),
    fFilesToCleanupCacheFor(0),
-   fDraw(kFALSE),
    fDebug(kFALSE),
    fCHist(0), 
    fPtHist(0),
@@ -57,7 +57,6 @@ TSelEvent::TSelEvent():
    fReadType(TProofBenchRun::kReadNotSpecified),
    fCleanupType(TProofBenchRun::kCleanupNotSpecified),
    fFilesToCleanupCacheFor(0),
-   fDraw(kFALSE),
    fDebug(kFALSE),
    fCHist(0),
    fPtHist(0),
@@ -78,7 +77,6 @@ void TSelEvent::Begin(TTree *)
    Bool_t found_readtype=kFALSE;
    Bool_t found_cleanuptype=kFALSE;
    Bool_t found_filestocleanupcachefor=kFALSE;
-   Bool_t found_draw=kFALSE;
    Bool_t found_debug=kFALSE;
 
    TIter nxt(fInput);
@@ -108,18 +106,6 @@ void TSelEvent::Begin(TTree *)
          }
          else{
             Error("Begin", "PROOF_BenchmarkCleanupType not type TParameter<Int_t>*"); 
-         } 
-         continue;
-      }
-      if (sinput.Contains("PROOF_BenchmarkDraw")){
-         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
-         if (a){
-            fDraw= a->GetVal();
-            found_draw=kTRUE;
-            Info("Begin", "PROOF_BenchmarkDraw=%d", fDraw);
-         }
-         else{
-            Error("Begin", "PROOF_BenchmarkDraw not type TParameter<Int_t>*"); 
          } 
          continue;
       }
@@ -154,9 +140,6 @@ void TSelEvent::Begin(TTree *)
       Error("Begin", "Neither of PROOF_BenchmarkReadType nor PROOF_BenchmarkCleanupType found");
       return;
    }
-   if (!found_draw){
-      Warning("Begin", "PROOF_BenchmarkDraw not found; using default: %d", fDraw);
-   }
    if (!found_debug){
       Warning("Begin", "PROOF_BenchmarkDebug not found; using default: %d", fDebug);
    }
@@ -176,7 +159,6 @@ void TSelEvent::SlaveBegin(TTree *tree)
    Bool_t found_readtype=kFALSE;
    Bool_t found_cleanuptype=kFALSE;
    Bool_t found_filestocleanupcachefor=kFALSE;
-   Bool_t found_draw=kFALSE;
    Bool_t found_debug=kFALSE;
 
    //fInput->Print("A");
@@ -207,18 +189,6 @@ void TSelEvent::SlaveBegin(TTree *tree)
          }
          else{
             Error("SlaveBegin", "PROOF_BenchmarkCleanupType not type TParameter<Int_t>*"); 
-         } 
-         continue;
-      }
-      if (sinput.Contains("PROOF_BenchmarkDraw")){
-         TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
-         if (a){
-            fDraw= a->GetVal();
-            found_draw=kTRUE;
-            Info("SlaveBegin", "PROOF_BenchmarkDraw=%d", fDraw);
-         }
-         else{
-            Error("SlaveBegin", "PROOF_BenchmarkDraw not type TParameter<Int_t>*"); 
          } 
          continue;
       }
@@ -253,14 +223,11 @@ void TSelEvent::SlaveBegin(TTree *tree)
       Error("SlaveBegin", "Neither of PROOF_BenchmarkReadType  PROOF_BenchmarkCleanupType found");
       return;
    }
-   if (!found_draw){
-      Warning("SlaveBegin", "PROOF_BenchmarkDraw not found; using default: %d", fDraw);
-   }
    if (!found_debug){
       Warning("SlaveBegin", "PROOF_BenchmarkDebug not found; using default: %d", fDebug);
    }
 
-   if (fDraw || fDebug){
+   if (fDebug){
       fPtHist = new TH1F("pt_dist","p_{T} Distribution", 100, 0, 5);
       fPtHist->SetDirectory(0);
       fPtHist->GetXaxis()->SetTitle("p_{T}");
@@ -268,13 +235,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
    
       fOutput->Add(fPtHist);
    
-/*      if (fRun==TProofBenchRun::kRunCleanup){
-         fNTracksHist = new TH1I("ntracks_dist","N_{Tracks} per Event Distribution", 100, 50, 150);
-      }
-      else{
-         fNTracksHist = new TH1I("ntracks_dist","N_{Tracks} per Event Distribution", 100, 5, 15);
-      }
-*/
+      fNTracksHist = new TH1F("ntracks_dist","N_{Tracks} per Event Distribution", 100, 50, 150);
       //enable rebinning
       fNTracksHist->SetBit(TH1::kCanRebin);
       fNTracksHist->SetDirectory(0);
@@ -343,7 +304,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
          break;
       case TProofBenchRun::kReadFull://full read
          fChain->GetTree()->GetEntry(entry);
-         if (fDraw || fDebug){
+         if (fDebug){
             //printf("fNtrack=%d\n", fNtrack);
             fNTracksHist->Fill(fNtrack);
    
@@ -357,14 +318,14 @@ Bool_t TSelEvent::Process(Long64_t entry)
       case TProofBenchRun::kReadOpt: //partial read
          b_event_fNtrack->GetEntry(entry);
    
-         if (fDraw || fDebug){
+         if (fDebug){
             //printf("fNtrack=%d\n", fNtrack);
             fNTracksHist->Fill(fNtrack);
          }
       
          if (fNtrack>0) {
             b_fTracks->GetEntry(entry);
-            if (fDraw || fDebug){
+            if (fDebug){
                for(Int_t j=0;j<fTracks->GetEntries();j++){
                  Track* curtrack = dynamic_cast<Track*>(fTracks->At(j));
                  fPtHist->Fill(curtrack->GetPt(),1./curtrack->GetPt());
@@ -385,7 +346,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
       switch (fCleanupType){
       case TProofBenchRun::kCleanupFile:
          fChain->GetTree()->GetEntry(entry);
-         if (fDraw || fDebug){
+         if (fDebug){
             //printf("fNtrack=%d\n", fNtrack);
             fNTracksHist->Fill(fNtrack);
 
