@@ -104,6 +104,9 @@ namespace TMVA {
       // initialize histograms
       void InitMonitorHistograms();
 
+      // Fill monitor histtograms
+      void FillHistograms( Int_t );
+
       // write Monitor histograms to file
       void WriteMonitorHistograms();
 
