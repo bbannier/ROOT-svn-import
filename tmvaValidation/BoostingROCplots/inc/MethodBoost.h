@@ -122,7 +122,7 @@ namespace TMVA {
       void SingleTrain();
 
       //testing a single classifier
-      void SingleTest();
+      void SingleTest(Int_t);
 
       //calculating a boosting weight from the classifier, storing it in the next one
       void SingleBoost();

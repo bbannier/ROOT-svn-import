@@ -98,10 +98,10 @@ TH1* TMVA::Results::GetHist(const TString & alias) const
 
 
 //_______________________________________________________________________
-void TMVA::Results::Clear()
+void TMVA::Results::Delete()
 {
    // delete all stored histograms
 
-   fStorage->Clear();
+   fStorage->Delete();
    fHistAlias->clear();
 }
