@@ -29,20 +29,23 @@
    size dependance.
 */
 class TKDE : public TNamed  {
-public:
+public: //TODO all enum shoud be private, constructors should now have TOption possibility
    
 //    enum EFitMethod { // Non-parametric PDF fitting method 
 //       kKDE
 //    };
    
    enum EKernelType { // Kernel function
-      kUserDefined, // = -1, // Internal use only for the class's template constructor
+      kUserDefined, // Internal use only for the class's template constructor
       kGaussian,
-//       kKernels
+      kEpanechnikov,
+      kBiweight,
+      kCosineArch,
+      kTotalKernels // Internal use only for member initialization
    };
    
    enum EIteration { // KDE fitting option
-      kAdaptive /*= kKernels*/,
+      kAdaptive,
       kFixed
    };
    
@@ -64,14 +67,15 @@ public:
       kForcedBinning
    };
    
-   template<class F>
-   TKDE(const F& kernelFunction, UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, /*EFitMethod fit = kKDE,*/ EIteration iter = kAdaptive, EMirror = kNoMirror, EBinning = kRelaxedBinning, Double_t rho = 1.0);
-   
-   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, /*EFitMethod fit = kKDE,*/ EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror = kNoMirror, EBinning = kRelaxedBinning, Double_t rho = 1.0);
+   template<class KernelFunction>
+   TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, /*EFitMethod fit = kKDE,*/ EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0) {
+      Instantiate(events, data, xMin, xMax, /*EFitMethod fit = kKDE,*/ iter, mir, bin, rho);
+      SetKernelFunction(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc));
+   }
+      
+   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, /*EFitMethod fit = kKDE,*/ EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0); //change to TOption
    
    virtual ~TKDE();
-   
-   template<class F> void SetKernelFunction(const F& kernelFunction);
    
    void Fill(Double_t data);
 //    void SetMethod(EFitMethod fit);
@@ -90,16 +94,15 @@ public:
    TF1* GetUpperFunction(Double_t confidenceLevel = 0.95);
    TF1* GetLowerFunction(Double_t confidenceLevel = 0.95);
    
-private:
+   private:
    
    TKDE();                    // Disallowed default constructor
    TKDE(TKDE& kde);           // Disallowed copy constructor
    TKDE operator=(TKDE& kde); // Disallowed assign operator
    
-   typedef ROOT::Math::IBaseFunctionOneDim* KernelFunctionPtr;
-   KernelFunctionPtr fKernelFunction;
+   typedef ROOT::Math::IBaseFunctionOneDim* KernelFunction_Ptr;
+   KernelFunction_Ptr fKernelFunction;
    
-   class TKernel;
    friend class TKernel;
    class TKernel {
       UInt_t fNWeights; // Number of kernel weights (bandwidth as vectorized for binning)
@@ -119,11 +122,11 @@ private:
    
    std::vector<Double_t> fData; // Data events
    
-   TF1* fPDF;      // Kernel Density Estimation PDF function
+   TF1* fPDF;      // Output Kernel Density Estimation PDF function
    TF1* fUpperPDF; // Kernel Density Estimation upper confidence interval PDF function
    TF1* fLowerPDF; // Kernel Density Estimation lower confidence interval PDF function
    
-   TH1D* fHistogram; // Data histogram
+   TH1D* fHistogram; // Output data histogram
    
 //    EFitMethod fFitMethod;
    EKernelType fKernelType;
@@ -144,27 +147,40 @@ private:
    Double_t fXMax;  // Data maximum value
    Double_t fRho;   // Adjustment factor for sigma
    
-   class KernelIntegrand;
-   friend class KernelIntegrand;
-   class KernelIntegrand {
-      const TKDE* fKDE;
-   public:
-      KernelIntegrand(const TKDE* kde);
+   std::vector<Double_t> fCanonicalBandwidths;
+   
+   friend struct KernelIntegrand;
+   struct KernelIntegrand {
+      enum EIntegralResult{kNorm, kMu, kSigma2};
+      KernelIntegrand(const TKDE* kde, EIntegralResult intRes);
       Double_t operator()(Double_t x) const;
+   private:
+      const TKDE* fKDE;
+      EIntegralResult fIntegralResult;
    };
    
+   void Instantiate(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, /*EFitMethod fit = kKDE,*/ EIteration iter, EMirror mir, EBinning bin, Double_t rho);
+   
    Double_t GaussianKernel(Double_t x) const;
-   Double_t UpperConfidenceInterval(const Double_t* x, const Double_t* p = 0) const;
-   Double_t LowerConfidenceInterval(const Double_t* x, const Double_t* p = 0) const;
+   Double_t EpanechnikovKernel(Double_t x) const;
+   Double_t BiweightKernel(Double_t x) const;
+   Double_t CosineArchKernel(Double_t x) const;
+   Double_t UpperConfidenceInterval(const Double_t* x, const Double_t* p = 0) const; // Valid if the bandwidth is small compared to nEvents**1/5
+   Double_t LowerConfidenceInterval(const Double_t* x, const Double_t* p = 0) const; // Valid if the bandwidth is small compared to nEvents**1/5
    Double_t GetError(Double_t x) const;
    Double_t ComputeKernelL2Norm() const;
+   Double_t ComputeKernelSigma2();
+   Double_t ComputeKernelMu();
    
+   void CheckKernelValidity();
+   void ComputeCanonicalBandwidth(); 
+   void SetCanonicalBandwidths(); 
    void SetHistogram();
    void SetUseBins();  
    void SetMean();
    void SetSigma();
    void SetKernel();
-   void SetKernelFunction();
+   void SetKernelFunction(KernelFunction_Ptr kernfunc = 0);
    void SetOptions();
    void SetData(const Double_t* data);
    void SetMirroredData();
@@ -174,8 +190,8 @@ private:
    TH1D* GetKDEHistogram(UInt_t nbins, Double_t xMin, Double_t xMax);
    
    TF1* GetKDEFunction();
-   TF1* GetPDFUpperConfidenceInterval(Double_t confidenceLevel);
-   TF1* GetPDFLowerConfidenceInterval(Double_t confidenceLevel);
+   TF1* GetPDFUpperConfidenceInterval(Double_t confidenceLevel); // The density to estimate should be at least twice differentiable. 
+   TF1* GetPDFLowerConfidenceInterval(Double_t confidenceLevel); // The density to estimate should be at least twice differentiable. 
    
    ClassDef(TKDE, 1) // One dimensional semi-parametric Kernel Density Estimation 
    
