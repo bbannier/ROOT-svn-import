@@ -158,16 +158,11 @@ void TMVA::MethodBPDEFoam::Train( void )
       ResetFoams();
       // Train PDEFoam
       TMVA::MethodPDEFoam::Train();
-      // boost the method
-      Boost(i);
       // Test method
       SingleTest(i);
-      Log() << kINFO << "ROC integral for boost " << i << " is " 
-	    << GetROCIntegral() << Endl;
-      fMonitorHist->at(0)->SetBinContent(i, GetROCIntegral());
-      fMonitorHist->at(1)->SetBinContent(i, GetSeparation());
-      fMonitorHist->at(2)->SetBinContent(i, fMethodError);
-      fMonitorHist->at(3)->SetBinContent(i, fOrigMethodError);
+      FillHistograms(i);
+      // boost the method
+      Boost(i);
       // reset the boost weights
       if (fResetBoostWeights)
 	 ResetBoostWeights();
@@ -220,25 +215,6 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
    Factor = FactorOrig/Factor; // rescaling factor
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++)
       Data()->GetEvent(ievt)->ScaleBoostWeight(Factor);
-
-   // save the reweighted training sample
-   fTrainingHist_S->push_back(new TH1F(Form("Reweighted_Training_Sample_var1_S_%i",boost_num),"Reweighted training sample (signal)", 100, 1.0, -1.0));
-   fTrainingHist_S->back()->GetXaxis()->SetTitle("var1 (signal)");
-
-   fTrainingHist_B->push_back(new TH1F(Form("Reweighted_Training_Sample_var1_B_%i",boost_num),"Reweighted training sample (background)", 100, 1.0, -1.0));
-   fTrainingHist_B->back()->GetXaxis()->SetTitle("var1 (background)");
-
-   // loop over training sample and fill reweighted events
-   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-      ev  = Data()->GetEvent(ievt);
-      sig = DataInfo().IsSignal(ev);
-      if (sig)
-	 fTrainingHist_S->back()->Fill( Data()->GetEvent(ievt)->GetValue(0),
-					Data()->GetEvent(ievt)->GetWeight() );
-      else
-	 fTrainingHist_B->back()->Fill( Data()->GetEvent(ievt)->GetValue(0),
-					Data()->GetEvent(ievt)->GetWeight() );
-   }
 }
 
 //_______________________________________________________________________
@@ -333,6 +309,34 @@ void TMVA::MethodBPDEFoam::InitMonitorHistograms( void )
    fTrainingHist_B = new std::vector<TH1F*>();
    fMVAHist_S = new std::vector<TH1F*>();
    fMVAHist_B = new std::vector<TH1F*>();
+}
+
+//_______________________________________________________________________
+void TMVA::MethodBPDEFoam::FillHistograms( Int_t BoostIndex )
+{
+   fMonitorHist->at(0)->SetBinContent(BoostIndex, GetROCIntegral());
+   fMonitorHist->at(1)->SetBinContent(BoostIndex, GetSeparation());
+   fMonitorHist->at(2)->SetBinContent(BoostIndex, fMethodError);
+   fMonitorHist->at(3)->SetBinContent(BoostIndex, fOrigMethodError);
+
+   // save the reweighted training sample
+   fTrainingHist_S->push_back(new TH1F(Form("Reweighted_Training_Sample_var1_S_%i",BoostIndex),"Reweighted training sample (signal)", 100, 1.0, -1.0));
+   fTrainingHist_S->back()->GetXaxis()->SetTitle("var1 (signal)");
+
+   fTrainingHist_B->push_back(new TH1F(Form("Reweighted_Training_Sample_var1_B_%i",BoostIndex),"Reweighted training sample (background)", 100, 1.0, -1.0));
+   fTrainingHist_B->back()->GetXaxis()->SetTitle("var1 (background)");
+
+   // loop over training sample and fill reweighted events
+   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+      Event * ev = Data()->GetEvent(ievt);
+      Bool_t sig = DataInfo().IsSignal(ev);
+      if (sig)
+	 fTrainingHist_S->back()->Fill( Data()->GetEvent(ievt)->GetValue(0),
+					Data()->GetEvent(ievt)->GetWeight() );
+      else
+	 fTrainingHist_B->back()->Fill( Data()->GetEvent(ievt)->GetValue(0),
+					Data()->GetEvent(ievt)->GetWeight() );
+   }
 }
 
 //_______________________________________________________________________
