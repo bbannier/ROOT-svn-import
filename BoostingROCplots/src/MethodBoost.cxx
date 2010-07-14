@@ -58,6 +58,7 @@
 #include "TMVA/Timer.h"
 #include "TMVA/Types.h"
 #include "TMVA/PDF.h"
+#include "TMVA/Results.h"
 #include "TMVA/Config.h"
 
 REGISTER_METHOD(Boost)
@@ -309,9 +310,7 @@ void TMVA::MethodBoost::Train()
          (*fMonitorHist)[1]->SetBinContent(fMethodIndex+1,fBoostWeight);
          (*fMonitorHist)[2]->SetBinContent(fMethodIndex+1,fMethodError);
          (*fMonitorHist)[3]->SetBinContent(fMethodIndex+1,fOrigMethodError);
-         SingleTest(); // test and evaluate single method
-         (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1,dynamic_cast<MethodBase*>(method)->GetROCIntegral());
-         //(*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetROCIntegral());
+         SingleTest(fMethodIndex); // test and evaluate single method
 
          AllMethodsWeight += fMethodWeight.back();
          fMonitorTree->Fill();
@@ -724,15 +723,22 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err )
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBoost::SingleTest()
+void TMVA::MethodBoost::SingleTest(Int_t MethodIndex)
 {
    MethodBase* method = dynamic_cast<MethodBase*>(fMethods.back());
    Data()->SetCurrentType(Types::kTesting);
+
+   // delete testing results
+   Data()->GetResults(Form("%s_B%04i", fBoostedMethodName.Data(),MethodIndex), Types::kTesting, GetAnalysisType())->Delete();
 
    // Evaluate method on testing sample
    method->AddOutput( Types::kTesting, method->GetAnalysisType() );
    // Evaluate performance of method
    method->TestClassification();
+
+   // calculate ROC integral
+   (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1,dynamic_cast<MethodBase*>(method)->GetROCIntegral());
+   //(*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetROCIntegral());
 
    Data()->SetCurrentType(Types::kTraining);
 }
