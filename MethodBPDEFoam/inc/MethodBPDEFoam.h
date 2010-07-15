@@ -147,9 +147,6 @@ namespace TMVA {
       Float_t fMethodError;
       Float_t fOrigMethodError;
 
-      // whether to reset the boost weights of the training sample
-      Bool_t  fResetBoostWeights;
-
       ClassDef(MethodBPDEFoam,0) // Analysis of PDEFoam discriminant (PDEFoam or Mahalanobis approach) 
    };
 

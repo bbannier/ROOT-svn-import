@@ -68,8 +68,7 @@ MethodPDEFoam( jobName, methodTitle, dsi, theOption, theTargetDir, Types::kBPDEF
    fBoostNum(100),
    fWeightType("Quadratic"),
    fMethodError(0),
-   fOrigMethodError(0),
-   fResetBoostWeights(kTRUE)
+   fOrigMethodError(0)
 {
    // init MethodPDEFoam
 }
@@ -88,8 +87,7 @@ TMVA::MethodBPDEFoam::MethodBPDEFoam( DataSetInfo& dsi,
    fBoostNum(100),
    fWeightType("Quadratic"),
    fMethodError(0),
-   fOrigMethodError(0),
-   fResetBoostWeights(kTRUE)
+   fOrigMethodError(0)
 {
    // constructor from weight file
 }
@@ -129,8 +127,6 @@ void TMVA::MethodBPDEFoam::DeclareOptions()
    DeclareOptionRef( fWeightType = "Quadratic", "BoostWeightType", "How to weight missclassified events");
    AddPreDefVal(TString("Quadratic"));
    AddPreDefVal(TString("Gauss"));
-
-   DeclareOptionRef( fResetBoostWeights = kTRUE, "ResetBoostWeights", "Whether to reset the boost weights of the training sample");
 }
 
 //_______________________________________________________________________
@@ -166,9 +162,6 @@ void TMVA::MethodBPDEFoam::Train( void )
       FillHistograms(i);
       // boost the method
       Boost(i);
-      // reset the boost weights
-      if (fResetBoostWeights)
-	 ResetBoostWeights();
    }
    
    // delete all histograms stored in the Results class
