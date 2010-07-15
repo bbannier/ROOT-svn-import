@@ -180,7 +180,7 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
 {
    Event * ev; Float_t w,v,wo; Bool_t sig=kTRUE;
    Double_t sumAll=0, sumWrong=0, sumAllOrig=0, sumWrongOrig=0;
-   Double_t Factor=0., FactorOrig=0.;
+   Double_t sumAllnewBoost=0.;
 
    // finding the wrong classified events and reweight them, depending
    // on the specified option
@@ -202,9 +202,7 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
 	 else if (fWeightType == "Gauss")
 	    ev->ScaleBoostWeight( TMath::Exp( -TMath::Power(v-0.5,2)/0.1 ) );
       }
-
-      FactorOrig += ev->GetWeight();
-      Factor     += ev->GetBoostWeight();
+      sumAllnewBoost += ev->GetBoostWeight(); // new boost weights
    }
    // calculate missclassification rate
    fMethodError = sumWrong/sumAll;
@@ -212,9 +210,9 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
    fOrigMethodError = sumWrongOrig/sumAllOrig;
 
    // renormalize the events
-   Factor = FactorOrig/Factor; // rescaling factor
+   sumAllnewBoost = sumAll/sumAllnewBoost; // rescaling factor
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++)
-      Data()->GetEvent(ievt)->ScaleBoostWeight(Factor);
+      Data()->GetEvent(ievt)->ScaleBoostWeight(sumAllnewBoost);
 }
 
 //_______________________________________________________________________
