@@ -169,14 +169,8 @@ void TMVA::MethodPDEFoam::ProcessOptions()
 TMVA::MethodPDEFoam::~MethodPDEFoam( void )
 {
    // destructor
-   if(foam[0]) {
-      delete foam[0];  
-      foam[0]=0;
-   }
-   if (!DoRegression() && fSigBgSeparated && foam[1]){
-      delete foam[1];
-      foam[1]=0;
-   }
+   for (Int_t i=0; i<FOAM_NUMBER; i++)
+      if (foam[i]) { delete foam[i]; foam[i]=0; }
 }
 
 //_______________________________________________________________________
@@ -869,8 +863,8 @@ void TMVA::MethodPDEFoam::ReadWeightsFromXML( void* wghtnode )
    }
 
    // if foams exist, delete them
-   if (foam[0]) delete foam[0];
-   if (foam[1]) delete foam[1];
+   for (Int_t i=0; i<FOAM_NUMBER; i++)
+      if (foam[i]) { delete foam[i]; foam[i]=0; }
    
    // read pure foams from file
    ReadFoamsFromFile();
