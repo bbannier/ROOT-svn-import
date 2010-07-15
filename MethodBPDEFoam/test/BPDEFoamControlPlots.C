@@ -98,6 +98,9 @@ void BPDEFoamControlPlots( TString fin = "TMVA.root",
 		      Form("Booster_ReweightedTrainingSample_var1_B_%i",i), 
 		      Form("cv_RW_TrainingSample_%i",i),
 		      Form("Reweighted training sample boost %i",i) );
+
+	    PlotBoostWeights(boostdir,
+			     Form("BoostWeights_var1_%i",i));
 	 }
 
       } // if (titName == "BPDEFoam")
@@ -152,4 +155,29 @@ void PlotSigBg(
    legend->Draw("same");
 
    cSB->Update();
+}
+
+void PlotBoostWeights(
+   TDirectory *boostdir,
+   TString gname )
+{
+   cout << "Draw graph: " << gname << endl;
+
+   // read histograms from file
+   TGraph *g = dynamic_cast<TGraph*>( boostdir->Get(gname) );
+
+   // check if histograms were found
+   if ( !g ) {
+      cout << "Error: Graph not found: "
+	   << gname << "=" << g << endl;
+      return;
+   }
+
+   // create canvas
+   TCanvas *cg = new TCanvas( TString("cv_")+gname, gname, 500, 500 ); 
+
+   // Draw graph
+   g->Draw("A*");
+
+   cg->Update();
 }
