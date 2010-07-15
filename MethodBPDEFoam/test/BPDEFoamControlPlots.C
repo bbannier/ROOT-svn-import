@@ -97,10 +97,8 @@ void BPDEFoamControlPlots( TString fin = "TMVA.root",
 		      Form("Booster_ReweightedTrainingSample_var1_S_%i",i), 
 		      Form("Booster_ReweightedTrainingSample_var1_B_%i",i), 
 		      Form("cv_RW_TrainingSample_%i",i),
-		      Form("Reweighted training sample boost %i",i) );
-
-	    PlotBoostWeights(boostdir,
-			     Form("BoostWeights_var1_%i",i));
+		      Form("Reweighted training sample boost %i",i),
+		      Form("BoostWeights_var1_%i",i) );
 	 }
 
       } // if (titName == "BPDEFoam")
@@ -113,7 +111,8 @@ void PlotSigBg(
    TString name_s, 
    TString name_b, 
    TString name, 
-   TString title)
+   TString title,
+   TString gname = "" )
 {
    cout << "Draw histogram: " <<  name_s << ", " << name_b << endl;
 
@@ -130,7 +129,11 @@ void PlotSigBg(
    }
 
    // create canvas
-   TCanvas *cSB = new TCanvas( name, title, 500, 500 ); 
+   TCanvas *cSB = new TCanvas( name, title, 500, gname == "" ? 500 : 1000 ); 
+   if (gname != "") {
+      cSB->Divide(1,2); // to draw the graph below
+      cSB->cd(1);
+   }
 
    // normalise both signal and background
    TMVAGlob::NormalizeHists( hS, hB );
@@ -153,31 +156,35 @@ void PlotSigBg(
    legend->SetBorderSize(1);
    legend->SetMargin( 0.3 );
    legend->Draw("same");
+   
+   if (gname != "") {
+      cSB->cd(2);
+      // read graph from file
+      TGraph *g = dynamic_cast<TGraph*>( boostdir->Get(gname) );
 
-   cSB->Update();
-}
+      // check if graph was found
+      if ( !g ) {
+	 cout << "Error: Graph not found: "
+	      << gname << "=" << g << endl;
+	 return;
+      }
 
-void PlotBoostWeights(
-   TDirectory *boostdir,
-   TString gname )
-{
-   cout << "Draw graph: " << gname << endl;
+      // dummy histogram for axis range
+      TH2F *hpx = new TH2F("hpx",gname+";var1;boost weight",10,
+			   hS->GetXaxis()->GetXmin(),
+			   hS->GetXaxis()->GetXmax(),
+			   10,0.0,1.5);
+      hpx->SetStats(kFALSE);  // no statistics
+      hpx->Draw();
+      g->GetXaxis()->SetTitle("X-Axis");
+      g->GetYaxis()->SetTitle("Y-Axis");
+      g->Draw("*");
 
-   // read histograms from file
-   TGraph *g = dynamic_cast<TGraph*>( boostdir->Get(gname) );
 
-   // check if histograms were found
-   if ( !g ) {
-      cout << "Error: Graph not found: "
-	   << gname << "=" << g << endl;
-      return;
+      // // Draw graph
+      // //cSB->GetPad()->RangeAxis();
+      // g->Draw("A*");
    }
 
-   // create canvas
-   TCanvas *cg = new TCanvas( TString("cv_")+gname, gname, 500, 500 ); 
-
-   // Draw graph
-   g->Draw("A*");
-
-   cg->Update();
+   cSB->Update();
 }
