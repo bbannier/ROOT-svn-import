@@ -59,6 +59,8 @@
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
+#include "TGraph.h"
+
 #ifndef ROOT_TMVA_MethodPDEFoam
 #include "TMVA/MethodPDEFoam.h"
 #endif
@@ -127,6 +129,9 @@ namespace TMVA {
       // classifier respones (MVA value) on testing sample
       std::vector<TH1F*>* fMVAHist_S;
       std::vector<TH1F*>* fMVAHist_B;
+
+      // Graph with boost weights
+      std::vector<TGraph*>* fBoostWeightGraph;
 
       // the option handling methods
       void DeclareOptions();

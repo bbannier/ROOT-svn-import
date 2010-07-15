@@ -64,6 +64,7 @@ MethodPDEFoam( jobName, methodTitle, dsi, theOption, theTargetDir, Types::kBPDEF
    fTrainingHist_B(0),
    fMVAHist_S(0),
    fMVAHist_B(0),
+   fBoostWeightGraph(0),
    fBoostNum(100),
    fWeightType("Quadratic"),
    fMethodError(0),
@@ -83,6 +84,7 @@ TMVA::MethodBPDEFoam::MethodBPDEFoam( DataSetInfo& dsi,
    fTrainingHist_B(0),
    fMVAHist_S(0),
    fMVAHist_B(0),
+   fBoostWeightGraph(0),
    fBoostNum(100),
    fWeightType("Quadratic"),
    fMethodError(0),
@@ -101,6 +103,7 @@ TMVA::MethodBPDEFoam::~MethodBPDEFoam()
    if (fTrainingHist_B) delete fTrainingHist_B;
    if (fMVAHist_S) delete fMVAHist_S;
    if (fMVAHist_B) delete fMVAHist_B;
+   if (fBoostWeightGraph) delete fBoostWeightGraph;
 }
 
 //_______________________________________________________________________
@@ -182,6 +185,9 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
    Double_t sumAll=0, sumWrong=0, sumAllOrig=0, sumWrongOrig=0;
    Double_t sumAllnewBoost=0.;
 
+   // debug variables
+   vector<Float_t> var1, BoostWeight;
+
    // finding the wrong classified events and reweight them, depending
    // on the specified option
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
@@ -201,6 +207,9 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
 	    ev->ScaleBoostWeight( -TMath::Power(v-0.5,2) + 1.0 );
 	 else if (fWeightType == "Gauss")
 	    ev->ScaleBoostWeight( TMath::Exp( -TMath::Power(v-0.5,2)/0.1 ) );
+	 // fill debug variables
+	 var1.push_back(ev->GetValue(0));
+	 BoostWeight.push_back(ev->GetBoostWeight());
       }
       sumAllnewBoost += ev->GetBoostWeight(); // new boost weights
    }
@@ -213,6 +222,9 @@ void TMVA::MethodBPDEFoam::Boost( UInt_t boost_num )
    sumAllnewBoost = sumAll/sumAllnewBoost; // rescaling factor
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++)
       Data()->GetEvent(ievt)->ScaleBoostWeight(sumAllnewBoost);
+
+   // fill TGraph
+   fBoostWeightGraph->push_back(new TGraph(var1.size(), &var1[0], &BoostWeight[0]));
 }
 
 //_______________________________________________________________________
@@ -307,6 +319,7 @@ void TMVA::MethodBPDEFoam::InitMonitorHistograms( void )
    fTrainingHist_B = new std::vector<TH1F*>();
    fMVAHist_S = new std::vector<TH1F*>();
    fMVAHist_B = new std::vector<TH1F*>();
+   fBoostWeightGraph = new std::vector<TGraph*>();
 }
 
 //_______________________________________________________________________
@@ -373,6 +386,15 @@ void TMVA::MethodBPDEFoam::WriteMonitorHistograms( void )
    ss << fBoostNum;
    TObjString *os = new TObjString(ss.str().c_str());
    os->Write("fBoostNum", kWriteDelete);
+
+   // write boost weights graph
+   for (UInt_t i=0; i<fBoostWeightGraph->size(); i++) {
+      stringstream gname (stringstream::in | stringstream::out);
+      gname << "BoostWeights_var1_" << i;
+      fBoostWeightGraph->at(i)->GetXaxis()->SetTitle("var1");
+      fBoostWeightGraph->at(i)->GetYaxis()->SetTitle("boost weight");
+      fBoostWeightGraph->at(i)->Write(gname.str().c_str());
+   }
 }
 
 //_______________________________________________________________________
