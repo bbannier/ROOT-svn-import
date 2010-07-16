@@ -16,10 +16,10 @@ public:
    std::vector<Particle> fParticles; // particles of the event
    int fEventSize; // size (in bytes) of the event
 
-   void setSize() {
+   void SetSize() {
       fEventSize = sizeof(EventData) + fParticles.size() * sizeof(Particle);
    }
-   void clear() {
+   void Clear() {
       fParticles.clear();
    }
    void AddParticle(const Particle& p) { fParticles.push_back(p); }
