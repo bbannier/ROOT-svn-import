@@ -2811,7 +2811,7 @@ void TPad::Paint(Option_t * /*option*/)
       if (GetGLDevice()!=-1 && gVirtualPS) {
          TPad *padsav = (TPad*)gPad;
          gPad = this;
-         gGLManager->PrintViewer(GetViewer3D());
+         fViewer3D->PrintObjects();
          gPad = padsav;
       }
       return;
@@ -2858,13 +2858,6 @@ void TPad::Paint(Option_t * /*option*/)
    if (began3DScene) {
       fViewer3D->EndScene();
    }
-
-///// Generate the PS output using gl2ps
-///if (GetGLDevice()!=-1 && gVirtualPS) {
-///   gPad = this;
-///   gGLManager->PrintViewer(GetViewer3D());
-///   gPad = padsav;
-///}
 }
 
 
