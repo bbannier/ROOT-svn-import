@@ -200,10 +200,10 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
       weighted_count += (nodes.at(j))->GetWeight();
 
    if (FillDiscriminator()){ // calc number of signal events in nodes
-      Double_t N_sig = 0;    // number of target events found
+      Double_t N_sig = 0;    // number of signal events found
       // now sum over all nodes->IsSignal;
       for (Int_t j=0; j<count; j++){
-         N_sig += ((nodes.at(j))->IsSignal()?1.:0.) * (nodes.at(j))->GetWeight();
+         if (nodes.at(j)->IsSignal()) N_sig += nodes.at(j)->GetWeight();
       }
       return (N_sig/(weighted_count+0.1))*probevolume_inv; // return:  (N_sig/N_total) / (cell_volume)
    }
