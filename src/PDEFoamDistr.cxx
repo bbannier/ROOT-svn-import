@@ -140,6 +140,8 @@ void TMVA::PDEFoamDistr::FillBinarySearchTree( const Event* ev, EFoamType ft, Bo
       event->SetClass(fSignalClass);
    }
    fBst->Insert(event);
+
+   delete event;
 }
 
 //_____________________________________________________________________
