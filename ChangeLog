@@ -1,0 +1,12 @@
+2010-07-12  Matevz TADEL  <mtadel@pcalice14.cern.ch>
+
+	* TVirtualViewer3D:
+	From TVirtualViewer3D remove virtual functions:
+	  TObject *SelectObject(Int_t, Int_t){return 0;}
+	  void   DrawViewer(){}
+	They were never defined and never called.
+
+	* TGLManager, TX11GL, TGWin32GL, TPad:
+	Remove TGLManager::PrintViewer().
+	Call TVirtualViewer3D::PrintObjects() directly from TPad::Paint()
+	when printing -- it was not used elsewhere.

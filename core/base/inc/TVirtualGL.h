@@ -111,8 +111,6 @@ public:
    //
    virtual void     PaintSingleObject(TVirtualGLPainter *) = 0;
    virtual void     PanObject(TVirtualGLPainter *o, Int_t x, Int_t y) = 0;
-   //EPS/PDF output
-   virtual void     PrintViewer(TVirtualViewer3D *vv) = 0;
 
    virtual Bool_t   PlotSelected(TVirtualGLPainter *plot, Int_t px, Int_t py) = 0;
    virtual char    *GetPlotInfo(TVirtualGLPainter *plot, Int_t px, Int_t py) = 0;

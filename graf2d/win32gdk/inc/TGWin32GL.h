@@ -78,7 +78,6 @@ public:
 
    void     PaintSingleObject(TVirtualGLPainter *);
    void     PanObject(TVirtualGLPainter *o, Int_t x, Int_t y);
-   void     PrintViewer(TVirtualViewer3D *vv);
 
    Bool_t   HighColorFormat(Int_t ctx);
 

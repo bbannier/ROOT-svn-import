@@ -74,10 +74,13 @@ public:
    virtual void   CloseComposite() = 0;
    virtual void   AddCompositeOp(UInt_t operation) = 0;
 
-   virtual TObject *SelectObject(Int_t, Int_t){return 0;}
-   virtual void   DrawViewer(){}
-
+   // Called only via TGLManager::PrintViewer() [for TX11GLManager and TGWin32GLManager].
+   // Implemented only for TGLViewer -- it does capture for PS output.
+   // TGLManager::PrintViewer() only called from TPad::Paint().
+   // So ... this whole thing is a bit spooky ... printing from pad should use
+   // whatever it uses to paint itself, other viewers have Print if they support it.
    virtual void PrintObjects(){}
+   // Only implemented for TGLViewer ... never called ... could be removed here.
    virtual void ResetCameras(){}
    virtual void ResetCamerasAfterNextUpdate(){}
 

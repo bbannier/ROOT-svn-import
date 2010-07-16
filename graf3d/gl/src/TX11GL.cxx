@@ -546,14 +546,6 @@ void TX11GLManager::PaintSingleObject(TVirtualGLPainter *p)
 
 
 //______________________________________________________________________________
-void TX11GLManager::PrintViewer(TVirtualViewer3D *vv)
-{
-   // Print viewer.
-
-   vv->PrintObjects();
-}
-
-//______________________________________________________________________________
 Bool_t TX11GLManager::SelectManip(TVirtualGLManip *manip, const TGLCamera * camera, const TGLRect * rect, const TGLBoundingBox * sceneBox)
 {
    // Select manipulator.

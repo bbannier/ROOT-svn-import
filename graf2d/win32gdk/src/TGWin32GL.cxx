@@ -474,12 +474,6 @@ void TGWin32GLManager::PaintSingleObject(TVirtualGLPainter *p)
 }
 
 //______________________________________________________________________________
-void TGWin32GLManager::PrintViewer(TVirtualViewer3D *vv)
-{
-   vv->PrintObjects();
-}
-
-//______________________________________________________________________________
 Bool_t TGWin32GLManager::SelectManip(TVirtualGLManip *manip, const TGLCamera * camera, const TGLRect * rect, const TGLBoundingBox * sceneBox)
 {
    return manip->Select(*camera, *rect, *sceneBox);
