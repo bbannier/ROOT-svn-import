@@ -190,7 +190,7 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
 
    // normalized density: (number of counted events) / volume / (total
    // number of events) should be ~1 on average
-   const Double_t count = (Double_t) (nodes.size()); // number of events found
+   const UInt_t count = nodes.size(); // number of events found
 
    // store density based on total number of events
    event_density = count * probevolume_inv;
@@ -202,7 +202,7 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
    if (FillDiscriminator()){ // calc number of signal events in nodes
       Double_t N_sig = 0;    // number of signal events found
       // now sum over all nodes->IsSignal;
-      for (Int_t j=0; j<count; j++){
+      for (UInt_t j=0; j<count; j++){
          if (nodes.at(j)->IsSignal()) N_sig += nodes.at(j)->GetWeight();
       }
       return (N_sig/(weighted_count+0.1))*probevolume_inv; // return:  (N_sig/N_total) / (cell_volume)
@@ -210,7 +210,7 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
    else if (FillTarget0()){ // calc sum of weighted target values
       Double_t N_tar = 0;   // number of target events found
       // now sum over all nodes->GetTarget(0);
-      for (Int_t j=0; j<count; j++) {
+      for (UInt_t j=0; j<count; j++) {
          N_tar += ((nodes.at(j))->GetTargets()).at(0) * ((nodes.at(j))->GetWeight());
       }
       return (N_tar/(weighted_count+0.1))*probevolume_inv; // return:  (N_tar/N_total) / (cell_volume)
