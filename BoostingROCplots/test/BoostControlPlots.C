@@ -33,7 +33,7 @@ void BoostControlPlots( TString fin = "TMVA.root", Bool_t useTMVAStyle = kTRUE )
 
 void boostcontrolplots( TDirectory *boostdir ) {
 
-   const Int_t nPlots = 5;
+   const Int_t nPlots = 6;
 
    Int_t width  = 900;
    Int_t height = 900;
@@ -47,7 +47,7 @@ void boostcontrolplots( TDirectory *boostdir ) {
 
    const TString titName = boostdir->GetName();
 
-   TString hname[nPlots]={"Booster_BoostWeight","Booster_MethodWeight","Booster_ErrFraction","Booster_OrigErrFraction","Booster_ROCIntegral"};
+   TString hname[nPlots]={"Booster_BoostWeight","Booster_MethodWeight","Booster_ErrFraction","Booster_OrigErrFraction","Booster_ROCIntegral","Booster_ROCIntegralBoosted"};
 
    for (Int_t i=0; i<nPlots; i++){
       Int_t color = 4; 
