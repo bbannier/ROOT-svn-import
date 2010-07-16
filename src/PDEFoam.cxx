@@ -1035,8 +1035,8 @@ void TMVA::PDEFoam::CalcCellDiscr()
 
       if (N_sig+N_bg > 1e-10){
          SetCellElement(fCells[iCell], 0, N_sig/(N_sig+N_bg));  // set discriminator
-         SetCellElement(fCells[iCell], 1, TMath::Sqrt( TMath::Power ( N_sig/TMath::Power(N_sig+N_bg,2),2)*N_sig +
-                                                       TMath::Power ( N_bg /TMath::Power(N_sig+N_bg,2),2)*N_bg ) ); // set discriminator error
+         SetCellElement(fCells[iCell], 1, TMath::Sqrt( Sqr ( N_sig/Sqr(N_sig+N_bg))*N_sig +
+                                                       Sqr ( N_bg /Sqr(N_sig+N_bg))*N_bg ) ); // set discriminator error
 
       }
       else {
@@ -1705,7 +1705,7 @@ Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> txvec
 
    Float_t distance = 0.; // distance for weighting
    for (UInt_t i=0; i<dims; i++)
-      distance += TMath::Power(txvec.at(i)-cell_center.at(i), 2);
+      distance += Sqr(txvec.at(i)-cell_center.at(i));
    distance = TMath::Sqrt(distance);
 
    Float_t width = 1./GetPDEFoamVolumeFraction();

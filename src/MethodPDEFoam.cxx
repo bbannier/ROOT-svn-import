@@ -534,12 +534,12 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err )
          errorB = 1.;
 
       if ( (neventsS>1e-10) || (neventsB>1e-10) ) // eq. (5) in paper T.Carli, B.Koblitz 2002
-         discr_error = TMath::Sqrt( TMath::Power ( scaleB*neventsB
-                                                   / TMath::Power((neventsS+scaleB*neventsB),2)
-                                                   * errorS, 2) +
-                                    TMath::Power ( (scaleB*neventsS)
-                                                   / TMath::Power((neventsS+scaleB*neventsB),2)
-                                                   * errorB, 2) );
+         discr_error = TMath::Sqrt( Sqr ( scaleB*neventsB
+					  / Sqr(neventsS+scaleB*neventsB)
+					  * errorS) +
+                                    Sqr ( scaleB*neventsS
+					  / Sqr(neventsS+scaleB*neventsB)
+					  * errorB) );
       else discr_error = 1.;
 
       if (discr_error < 1e-10) discr_error = 1.;
