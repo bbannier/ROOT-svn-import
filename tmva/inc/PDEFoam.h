@@ -141,7 +141,8 @@ namespace TMVA {
       //                            METHODS                          //
       /////////////////////////////////////////////////////////////////
    private:
-      Double_t Sqr(Double_t x) const { return x*x;}      // Square function
+      // Square function (fastest implementation)
+      template<typename T> T Sqr(T x) const { return x*x; }
 
    protected:
       // ---------- TMVA console output

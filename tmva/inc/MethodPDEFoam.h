@@ -198,6 +198,9 @@ namespace TMVA {
       // nice output
       void PrintCoefficients( void );
 
+      // Square function (fastest implementation)
+      template<typename T> T Sqr(T x) const { return x*x; }
+
       // options to be used
       Bool_t        fSigBgSeparated;  // Separate Sig and Bg, or not
       Double_t      fFrac;            // Fraction used for calc of Xmin, Xmax
