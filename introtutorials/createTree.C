@@ -17,7 +17,7 @@ void createTree(ULong64_t numEvents = 200) {
    Particle p;
 
    for (ULong64_t i = 0; i < numEvents; ++i) {
-      event->clear();
+      event->Clear();
       int nParticles = 10 * gRandom->Exp(10.);
       if (i == 0) nParticles = 1200; // to have a large value for TSelector's array size
       for (int ip = 0; ip < nParticles; ++ip) {
@@ -36,7 +36,7 @@ void createTree(ULong64_t numEvents = 200) {
 
          event->AddParticle(p);
       }
-      event->setSize();
+      event->SetSize();
 
       tree->Fill();
 
