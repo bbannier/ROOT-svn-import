@@ -315,6 +315,9 @@ void TMVA::MethodBoost::Train()
          AllMethodsWeight += fMethodWeight.back();
          fMonitorTree->Fill();
 
+	 // test MethodBoost in order to calculate ROC integral
+	 FullTest(AllMethodsWeight);
+
          // stop boosting if needed when error has reached 0.5
          // thought of counting a few steps, but it doesn't seem to be necessary
          if (fMethodError > 0.49999) StopCounter++; 
@@ -744,12 +747,20 @@ void TMVA::MethodBoost::SingleTest(Int_t MethodIndex)
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBoost::FullTest( void )
+void TMVA::MethodBoost::FullTest( Double_t AllMethodsWeight )
 {
    Data()->SetCurrentType(Types::kTesting);
 
    // delete testing results
    Data()->GetResults(GetMethodName(), Types::kTesting, GetAnalysisType())->Delete();
+   
+   // save the old normalization of the methods
+   std::vector<Double_t> OldMethodWeight(fMethodWeight);
+   // normalize the weights of the classifiers
+   if (fMethodWeightType == "LastMethod") 
+      fMethodWeight.back() = AllMethodsWeight = 1.0;
+   for (Int_t i=0; i<=fMethodIndex; i++)
+      fMethodWeight[i] = fMethodWeight[i] / AllMethodsWeight;
 
    // Evaluate method on testing sample
    AddOutput( Types::kTesting, GetAnalysisType() );
@@ -758,6 +769,12 @@ void TMVA::MethodBoost::FullTest( void )
 
    // calculate ROC integral
    (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetROCIntegral());
+
+   // restore the method weights
+   fMethodWeight = OldMethodWeight;
+
+   // delete testing results
+   Data()->GetResults(GetMethodName(), Types::kTesting, GetAnalysisType())->Delete();
 
    Data()->SetCurrentType(Types::kTraining);
 }
