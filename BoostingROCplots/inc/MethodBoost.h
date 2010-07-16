@@ -127,6 +127,9 @@ namespace TMVA {
       //calculating a boosting weight from the classifier, storing it in the next one
       void SingleBoost();
 
+      // testing a whole classifier
+      void FullTest();
+
       //writing the monitoring histograms and tree to a file
       void WriteMonitoringHistosToFile( void ) const;
 
