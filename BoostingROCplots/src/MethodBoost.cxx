@@ -316,7 +316,9 @@ void TMVA::MethodBoost::Train()
          fMonitorTree->Fill();
 
 	 // test MethodBoost in order to calculate ROC integral
+         TMVA::MsgLogger::InhibitOutput(); //supressing Logger outside the method
 	 FullTest(AllMethodsWeight);
+         TMVA::MsgLogger::EnableOutput();
 
          // stop boosting if needed when error has reached 0.5
          // thought of counting a few steps, but it doesn't seem to be necessary
