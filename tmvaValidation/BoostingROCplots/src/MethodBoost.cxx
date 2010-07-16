@@ -742,3 +742,22 @@ void TMVA::MethodBoost::SingleTest(Int_t MethodIndex)
 
    Data()->SetCurrentType(Types::kTraining);
 }
+
+//_______________________________________________________________________
+void TMVA::MethodBoost::FullTest( void )
+{
+   Data()->SetCurrentType(Types::kTesting);
+
+   // delete testing results
+   Data()->GetResults(GetMethodName(), Types::kTesting, GetAnalysisType())->Delete();
+
+   // Evaluate method on testing sample
+   AddOutput( Types::kTesting, GetAnalysisType() );
+   // Evaluate performance of method
+   TestClassification();
+
+   // calculate ROC integral
+   (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetROCIntegral());
+
+   Data()->SetCurrentType(Types::kTraining);
+}
