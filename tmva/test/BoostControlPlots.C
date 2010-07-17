@@ -33,21 +33,21 @@ void BoostControlPlots( TString fin = "TMVA.root", Bool_t useTMVAStyle = kTRUE )
 
 void boostcontrolplots( TDirectory *boostdir ) {
 
-   const Int_t nPlots = 4;
+   const Int_t nPlots = 6;
 
    Int_t width  = 900;
-   Int_t height = 600;
+   Int_t height = 900;
    char cn[100];
    const TString titName = boostdir->GetName();
    sprintf( cn, "cv_%s", titName.Data() );
    TCanvas *c = new TCanvas( cn,  Form( "%s Control Plots", titName.Data() ),
                              width, height ); 
-   c->Divide(2,2);
+   c->Divide(2,3);
 
 
    const TString titName = boostdir->GetName();
 
-   TString hname[nPlots]={"Booster_BoostWeight","Booster_MethodWeight","Booster_ErrFraction","Booster_OrigErrFraction"};
+   TString hname[nPlots]={"Booster_BoostWeight","Booster_MethodWeight","Booster_ErrFraction","Booster_OrigErrFraction","Booster_ROCIntegral","Booster_ROCIntegralBoosted"};
 
    for (Int_t i=0; i<nPlots; i++){
       Int_t color = 4; 
