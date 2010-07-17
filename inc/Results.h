@@ -79,7 +79,7 @@ namespace TMVA {
       virtual Types::EAnalysisType  GetAnalysisType() { return Types::kNoAnalysisType; }
 
       // delete all stored data
-      void Clear();
+      void Delete();
 
    private:
       Types::ETreeType             fTreeType;    //! tree type for this result 
