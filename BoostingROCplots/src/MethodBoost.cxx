@@ -169,8 +169,8 @@ void TMVA::MethodBoost::InitHistos()
    fMonitorHist->push_back(new TH1F("BoostWeight","Boost Weight",fBoostNum,0,fBoostNum));
    fMonitorHist->push_back(new TH1F("ErrFraction","Error Fraction (by boosted event weights)",fBoostNum,0,fBoostNum));
    fMonitorHist->push_back(new TH1F("OrigErrFraction","Error Fraction (by original event weights)",fBoostNum,0,fBoostNum));
-   fMonitorHist->push_back(new TH1F("ROCIntegral","ROC integral",fBoostNum,0,fBoostNum));
-   fMonitorHist->push_back(new TH1F("ROCIntegralBoosted","ROC integral of boosted method",fBoostNum,0,fBoostNum));
+   fMonitorHist->push_back(new TH1F("ROCIntegral","ROC integral of single classifier (testing sample)",fBoostNum,0,fBoostNum));
+   fMonitorHist->push_back(new TH1F("ROCIntegralBoosted","ROC integral of boosted method (testing sample)",fBoostNum,0,fBoostNum));
    fDefaultHistNum = fMonitorHist->size();
    (*fMonitorHist)[0]->GetXaxis()->SetTitle("Index of boosted classifier");
    (*fMonitorHist)[0]->GetYaxis()->SetTitle("Classifier Weight");
@@ -181,7 +181,7 @@ void TMVA::MethodBoost::InitHistos()
    (*fMonitorHist)[3]->GetXaxis()->SetTitle("Index of boosted classifier");
    (*fMonitorHist)[3]->GetYaxis()->SetTitle("Error Fraction");
    (*fMonitorHist)[4]->GetXaxis()->SetTitle("Index of boosted classifier");
-   (*fMonitorHist)[4]->GetYaxis()->SetTitle("ROC integral");
+   (*fMonitorHist)[4]->GetYaxis()->SetTitle("ROC integral of single classifier");
    (*fMonitorHist)[5]->GetXaxis()->SetTitle("Index of boosted classifier");
    (*fMonitorHist)[5]->GetYaxis()->SetTitle("ROC integral boosted");
 
