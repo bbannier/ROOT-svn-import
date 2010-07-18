@@ -16,24 +16,24 @@ using namespace std;
 
 int main()
 {
-  UnitTestSuite TMVA_test("TMVA unit testing");
-  
-  TMVA_test.intro();
-  
-  TMVA_test.addTest(new utEvent);
-  TMVA_test.addTest(new utVariableInfo);
-  TMVA_test.addTest(new utDataSetInfo);
-  TMVA_test.addTest(new utDataSet);
-
-  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "Cuts",
-		"!H:!V:FitMethod=MC:EffSel:SampleSize=200000:VarProp=FSmart", 0.5, 1.0) );
-  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsD", 
-        "!H:!V:FitMethod=MC:EffSel:SampleSize=200000:VarProp=FSmart:VarTransform=Decorrelate" , 0.5, 1.0) );
-  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsPCA", "!H:!V:FitMethod=MC:EffSel:SampleSize=200000:VarProp=FSmart:VarTransform=PCA" , 0.5, 1.0) );
-  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsGA",
-        "H:!V:FitMethod=GA:CutRangeMin[0]=-10:CutRangeMax[0]=10:VarProp[1]=FMax:EffSel:Steps=30:Cycles=3:PopSize=400:SC_steps=10:SC_rate=5:SC_factor=0.95" , 0.5, 1.0) );
-  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsSA",
-        "!H:!V:FitMethod=SA:EffSel:MaxCalls=150000:KernelTemp=IncAdaptive:InitialTemp=1e+6:MinTemp=1e-6:Eps=1e-10:UseDefaultScale" , 0.5, 1.0) );
+   UnitTestSuite TMVA_test("TMVA unit testing");
+   
+   TMVA_test.intro();
+   
+   TMVA_test.addTest(new utEvent);
+   TMVA_test.addTest(new utVariableInfo);
+   TMVA_test.addTest(new utDataSetInfo);
+   TMVA_test.addTest(new utDataSet);
+   
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "Cuts",
+   "!H:!V:FitMethod=MC:EffSel:SampleSize=20000:VarProp=FSmart", 0.3, 0.98) );
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsD", 
+   "!H:!V:FitMethod=MC:EffSel:SampleSize=20000:VarProp=FSmart:VarTransform=Decorrelate" , 0.6, 0.98) );
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsPCA", "!H:!V:FitMethod=MC:EffSel:SampleSize=20000:VarProp=FSmart:VarTransform=PCA" , 0.4, 0.98) );
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsGA",
+   "H:!V:FitMethod=GA:CutRangeMin[0]=-10:CutRangeMax[0]=10:VarProp[1]=FMax:EffSel:Steps=30:Cycles=4:PopSize=500:SC_steps=10:SC_rate=5:SC_factor=0.95" , 0.4, 0.98) );
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kCuts, "CutsSA",
+                                                      "!H:!V:FitMethod=SA:EffSel:MaxCalls=150000:KernelTemp=IncAdaptive:InitialTemp=1e+6:MinTemp=1e-6:Eps=1e-10:UseDefaultScale" , 0.4, 0.98) );
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLikelihood, "Likelihood", 
         "H:!V:TransformOutput:PDFInterpol=Spline2:NSmoothSig[0]=20:NSmoothBkg[0]=20:NSmoothBkg[1]=10:NSmooth=1:NAvEvtPerBin=50" , 0.5, 1.0) ); 
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLikelihood, "LikelihoodD", 
