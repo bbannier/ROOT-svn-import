@@ -14,9 +14,12 @@
 #include <cassert>
 
 #include "TTree.h"
+#include "TString.h"
 
 #include "TMVA/Factory.h"
 #include "TMVA/MethodBase.h"
+#include "TMVA/Types.h"
+
 #include "UnitTest.h"
 
 namespace UnitTesting
@@ -24,20 +27,23 @@ namespace UnitTesting
   class MethodUnitTestWithROCLimits : public UnitTest
   {
   public:
-    MethodUnitTestWithROCLimits(double upLimit = 0., double lowLimit = 1.,
-		   const std::string & name="", const std::string & filename="", std::ostream* osptr = &std::cout);
+    MethodUnitTestWithROCLimits(const TMVA::Types::EMVA& theMethod, const TString& methodTitle, const TString& theOption,
+								double lowLimit = 0., double upLimit = 1.,
+								const std::string & name="", const std::string & filename="", std::ostream* osptr = &std::cout);
     virtual ~MethodUnitTestWithROCLimits();
     
     virtual void run();
-    
-    void init();
     
   protected:
     TTree*          theTree;
 
   private:
     TMVA::Factory* _factory; 
-    TMVA::MethodBase* _theMethod;	
+    TMVA::MethodBase* _theMethod;
+	TMVA::Types::EMVA _methodType;
+	TString _methodTitle;
+	TString _methodOption;
+	
     double _upROCLimit;
     double _lowROCLimit;
     double _ROCValue;
