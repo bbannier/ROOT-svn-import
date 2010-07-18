@@ -55,7 +55,7 @@ void utEvent::_testConstructor1()
    test_(_eventC1->GetWeight()         == 1.);
    test_(_eventC1->GetOriginalWeight() == 1.);
    test_(_eventC1->GetBoostWeight()    == 1.);
-   test_(_eventC1->GetClass()          == 1);
+   test_(_eventC1->GetClass()          == 0);
    test_(_eventC1->GetNVariables()     == 0);
    test_(_eventC1->GetNTargets()       == 0);
    test_(_eventC1->GetNSpectators()    == 0);
@@ -237,31 +237,31 @@ void utEvent::_testMutators()
    test_(_eventC1->GetWeight() == _testWeight);
 
    _eventC1->ScaleWeight(_testScale);
-   float multiple   = _testWeight*_testScale;
-   float comparison = _eventC1->GetWeight();
-   void* multp = &multiple;
-   void* compp = &comparison;
-   int getweight = *(int*)(compp);
-   int testVal = *(int*)(multp);
+   //float multiple   = _testWeight*_testScale;
+   //float comparison = _eventC1->GetWeight();
+   //void* multp = &multiple;
+   //void* compp = &comparison;
+   //int getweight = *(int*)(compp);
+   //int testVal = *(int*)(multp);
    //std::cout << "int casted results "<< getweight<< " " << testVal<< std::endl;
    //std::cout << "results "<< _eventC1->GetWeight()<< " " << _testWeight*_testScale<< std::endl;
 
-   //test_(_eventC1->GetWeight() == _testWeight*_testScale); Christoph, this line works for me (Eckhard)
-   if(sizeof(int) == sizeof(float))
-      test_(getweight == testVal); // this one does not (Eckhard)
+   test_(_eventC1->GetWeight() == _testWeight*_testScale); //this line works for me (Eckhard)
+   //if(sizeof(int) == sizeof(float))
+   //   test_(getweight == testVal); // this one does not (Eckhard)
 
    _eventC1->SetBoostWeight(_testBoostWeight);
    test_(_eventC1->GetBoostWeight() == _testBoostWeight);
    _eventC1->ScaleBoostWeight(_testScale);
-   float multiple2   = _testBoostWeight*_testScale;
-   float comparison2 = _eventC1->GetBoostWeight();
-   void* multp2 = &multiple2;
-   void* compp2 = &comparison2;
-   int getboostweight = *(int*)(compp2);
-   int testVal2 = *(int*)(multp2);
-   //test_(_eventC1->GetBoostWeight() == _testBoostWeight*_testScale);
-   if(sizeof(int) == sizeof(float))
-      test_(getboostweight == testVal2);
+   //float multiple2   = _testBoostWeight*_testScale;
+   //float comparison2 = _eventC1->GetBoostWeight();
+   //void* multp2 = &multiple2;
+   //void* compp2 = &comparison2;
+   //int getboostweight = *(int*)(compp2);
+   //int testVal2 = *(int*)(multp2);
+   test_(_eventC1->GetBoostWeight() == _testBoostWeight*_testScale); // work for me (Eckhard)
+   //if(sizeof(int) == sizeof(float))
+   //   test_(getboostweight == testVal2); // does not work for me (Eckhard)
 
    _eventC1->SetClass(_testClassVal);
    test_(_eventC1->GetClass() == (UInt_t)_testClassVal);

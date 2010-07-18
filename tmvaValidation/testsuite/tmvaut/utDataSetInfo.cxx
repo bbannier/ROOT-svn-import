@@ -94,7 +94,7 @@ void utDataSetInfo::testMethods()
 
    test_(datasetinfo->GetClassNameMaxLength() == classname.Length() );
    test_(datasetinfo->GetNClasses()           == 1);
-   test_(datasetinfo->IsSignal(event)         == kFALSE);
+   test_(datasetinfo->IsSignal(event)         == kTRUE);
 
    /*
    // classification information
@@ -113,7 +113,7 @@ void utDataSetInfo::testMethods()
    test_(datasetinfo->GetCut(classname) == cut1);
    datasetinfo->AddCut(cut2, classname);
    cut1 += cut2;
-   test_(datasetinfo->GetCut(classname) == cut1);
+   test_(TString(datasetinfo->GetCut(classname)) == TString(cut1));
 
    datasetinfo->SetSplitOptions(splitoption);
    test_(datasetinfo->GetSplitOptions() == splitoption);
