@@ -65,19 +65,19 @@ int main()
   TMVA_test.addTest(new MethodUnitTestWithROCLimits(TMVA::Types::kLD, "LD","!H:!V", 0.8, 0.9) );
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kLD, "LD", "H:!V:VarTransform=None" , 0.5, 1.0) );
 
-// trouble with the option string:
-//  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_MC",
-//		"H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10):FitMethod=MC:SampleSize=100000:Sigma=0.1" , 0.5, 1.0) );
-//  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_GA",
-//		"H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10):FitMethod=GA:PopSize=300:Cycles=3:Steps=20:Trim=True:SaveBestGen=1" , 0.5, 1.0) );
-//  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_SA",
-//                          "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10):FitMethod=SA:MaxCalls=15000:KernelTemp=IncAdaptive:InitialTemp=1e+6:MinTemp=1e-6:Eps=1e-10:UseDefaultScale" , 0.5, 1.0) );
-//  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_MT",
-//                           "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10):FitMethod=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=2:UseImprove:UseMinos:SetBatch" , 0.5, 1.0) );
-//  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_GAMT",
-//                           "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10):FitMethod=GA:Converger=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=0:!UseImprove:!UseMinos:SetBatch:Cycles=1:PopSize=5:Steps=5:Trim" , 0.5, 1.0) );
-//  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_MCMT",
-//                           "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10, 0.5, 1.0) );(-10,10):FitMethod=MC:Converger=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=0:!UseImprove:!UseMinos:SetBatch:SampleSize=20" , 0.5, 1.0) );
+  TString baseFDAstring="!H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1);(-10,10);(-10,10);(-10,10);(-10,10):";
+  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_MC",
+  baseFDAstring+"FitMethod=MC:SampleSize=5000:Sigma=0.1" , 0.8, 0.98) );
+  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_GA",
+  baseFDAstring+"FitMethod=GA:PopSize=300:Cycles=3:Steps=20:Trim=True:SaveBestGen=1" , 0.8, 0.98) );
+  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_SA",
+  baseFDAstring+"FitMethod=SA:MaxCalls=5000:KernelTemp=IncAdaptive:InitialTemp=1e+6:MinTemp=1e-6:Eps=1e-10:UseDefaultScale" , 0.8, 0.98) );
+  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_MT",
+  baseFDAstring+"FitMethod=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=2:UseImprove:UseMinos:SetBatch" , 0.1, 0.98) );
+  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_GAMT",
+  baseFDAstring+"FitMethod=GA:Converger=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=0:!UseImprove:!UseMinos:SetBatch:Cycles=1:PopSize=5:Steps=5:Trim" , 0.4, 0.98) );
+  TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kFDA, "FDA_MCMT",
+  baseFDAstring+"FitMethod=MC:Converger=MINUIT:ErrorLevel=1:PrintLevel=-1:FitStrategy=0:!UseImprove:!UseMinos:SetBatch:SampleSize=20" , 0.7, 0.98) );
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:!UseRegulator" , 0.5, 1.0) );
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kMLP, "MLPBFGS", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:TrainingMethod=BFGS:!UseRegulator" , 0.5, 1.0) );
   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kMLP, "MLPBNN", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:TrainingMethod=BFGS:UseRegulator" , 0.5, 1.0) ); // BFGS training with bayesian regulators
