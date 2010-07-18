@@ -20,7 +20,7 @@ MethodUnitTestWithROCLimits::~MethodUnitTestWithROCLimits()
 
 bool MethodUnitTestWithROCLimits::ROCIntegralWithinInterval()
 {
-  return (_ROCValue <= _upROCLimit) && (_ROCValue >= _lowROCLimit);
+   return (_ROCValue <= _upROCLimit) && (_ROCValue >= _lowROCLimit);
 }
 
 void MethodUnitTestWithROCLimits::run()
@@ -46,9 +46,11 @@ void MethodUnitTestWithROCLimits::run()
   
   TFile* input(0);
 // FIXME:: give the filename of the sample somewhere else?
-  TString fname = "../../tmva/test/tmva_example.root"; 
-  input = TFile::Open( fname );
-  
+  TString fname = "../tmva/test/tmva_example.root"; 
+  TString fname2 = TString("../")+fname;
+
+  input = TFile::Open( fname );  
+  if (input == NULL) input = TFile::Open( fname2 );
   if (input == NULL) 
     {
       cerr << "broken/inaccessible input file" << endl;
@@ -67,7 +69,7 @@ void MethodUnitTestWithROCLimits::run()
   
   // FIXME:: make options string mutable?
   factory->PrepareTrainingAndTestTree( mycuts, mycutb,
-				       "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" );
+				       "nTrain_Signal=1000:nTrain_Background=1000:SplitMode=Random:NormMode=NumEvents:!V" );
  
   factory->BookMethod(_methodType, _methodTitle, _methodOption);
 
@@ -75,11 +77,21 @@ void MethodUnitTestWithROCLimits::run()
   factory->TestAllMethods();
   factory->EvaluateAllMethods();
 
-	_theMethod = dynamic_cast<TMVA::MethodBase*> (factory->GetMethod(_methodTitle));
-	_ROCValue = _theMethod->GetROCIntegral();
+  _theMethod = dynamic_cast<TMVA::MethodBase*> (factory->GetMethod(_methodTitle));
 
- test_(ROCIntegralWithinInterval());
-
+  if (_methodType == TMVA::Types::kCuts) {
+     // ToDo make class variable _theEffi
+     Double_t err=0.;
+     Double_t effi = _theMethod->GetEfficiency("Efficiency:0.1", Types::kTesting,err);
+     std::cout << "Cuts Signal effi at for Background effi of 0.1 = " << effi<<std::endl;
+     test_(effi <= _upROCLimit && effi>=_lowROCLimit);
+  }
+  else {
+     _ROCValue = _theMethod->GetROCIntegral();
+     std::cout << "ROC integral = "<<_ROCValue <<std::endl;
+     
+     test_(ROCIntegralWithinInterval());
+  }
   outputFile->Close();
   delete factory;
 }
