@@ -110,6 +110,7 @@ TMVA::PDEFoam::PDEFoam() :
    fNmin      = 100;  // only used, when fCutMin == kTRUE
    fCutRMSmin = kFALSE;
    fRMSmin    = 1.0;
+   fFillFoamWithBoostWeights = kTRUE;
 
    SetPDEFoamVolumeFraction(-1.);
 
@@ -155,6 +156,7 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fXmax      = 0;
    fCutNmin   = kFALSE;
    fCutRMSmin = kFALSE;
+   fFillFoamWithBoostWeights = kTRUE;
    SetPDEFoamVolumeFraction(-1.);
 
    fSignalClass     = -1;
@@ -1109,7 +1111,7 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev, Bool_t NoNegWeights)
 
    std::vector<Float_t> values  = ev->GetValues();
    std::vector<Float_t> targets = ev->GetTargets();
-   Float_t weight               = ev->GetOriginalWeight();
+   Float_t weight               = fFillFoamWithBoostWeights ? ev->GetWeight() : ev->GetOriginalWeight();
    EFoamType ft                 = GetFoamType();
 
    if((NoNegWeights && weight<=0) || weight==0)

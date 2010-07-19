@@ -94,10 +94,11 @@ void TMVA::MethodPDEFoam::Init( void )
    fnSampl         = 2000;
    fnBin           = 5;
    fEvPerBin       = 10000;
-   fCutNmin        = true;
+   fCutNmin        = kTRUE;
    fNmin           = 100;
-   fCutRMSmin      = false;   // default TFoam method
+   fCutRMSmin      = kFALSE;   // default TFoam method
    fRMSmin         = 0.01;
+   fFillFoamWithBoostWeights = kTRUE;
 
    fKernel         = kNone; // default: use no kernel
    fTargetSelection= kMean; // default: use mean for target selection (only multi target regression!)
@@ -124,8 +125,9 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    DeclareOptionRef( fnBin = 5,               "nBin",     "Number of bins in edge histograms");
    DeclareOptionRef( fCompress = kTRUE,       "Compress", "Compress foam output file");
    DeclareOptionRef( fMultiTargetRegression = kFALSE,     "MultiTargetRegression", "Do regression with multiple targets");
-   DeclareOptionRef( fCutNmin = true,         "CutNmin",  "Requirement for minimal number of events in cell");
+   DeclareOptionRef( fCutNmin = kTRUE,         "CutNmin",  "Requirement for minimal number of events in cell");
    DeclareOptionRef( fNmin = 100,             "Nmin",     "Number of events in cell required to split cell");
+   DeclareOptionRef( fFillFoamWithBoostWeights = kTRUE, "FillFoamWithBoostWeights", "Fill foam with boost or original weights");
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -621,6 +623,7 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    pdefoam->SetnSampl(      fnSampl);    // optional
    pdefoam->SetnBin(        fnBin);      // optional
    pdefoam->SetEvPerBin(    fEvPerBin);  // optional
+   pdefoam->SetFillFoamWithBoostWeights(fFillFoamWithBoostWeights);
 
    // cuts
    pdefoam->CutNmin(fCutNmin);     // cut on minimal number of events per cell
