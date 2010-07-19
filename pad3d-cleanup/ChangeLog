@@ -1,4 +1,23 @@
-2010-07-12  Matevz TADEL  <mtadel@pcalice14.cern.ch>
+2010-07-19  Matevz Tadel  <mtadel@greed>
+
+	* TCanvas:
+	Add function:
+	  TVirtualPadPainter *SwitchCanvasPainter(TVirtualPadPainter* new_painter);
+	It returns the old painter and allows temporary switch of active
+	pad-painter for given canvas.
+
+	* TGLPadPainter:
+	Add function:
+	  void InitPainterForGLViewer();
+	that does minimal initialization.
+
+	* TEvePadFrame, TEvePadFrameGL:
+	Prototype for drawing 2D pad in TGLViewer.
+
+	* tutorials/eve/testgl1.C:
+	Test for plotting a pad with canvas in TGLViewer.
+
+2010-07-12  Matevz Tadel  <mtadel@pcalice14.cern.ch>
 
 	* TVirtualViewer3D:
 	From TVirtualViewer3D remove virtual functions:

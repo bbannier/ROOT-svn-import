@@ -311,6 +311,20 @@ void TGLPadPainter::InitPainter()
 }
 
 //______________________________________________________________________________
+void TGLPadPainter::InitPainterForGLViewer()
+{
+   //Init gl-pad painter:
+   //2. Disable cull face.
+   //3. Disable lighting.
+   //6. Unlock painter.
+
+   glDisable(GL_CULL_FACE);
+   glDisable(GL_LIGHTING);
+
+   fLocked = kFALSE;
+}
+
+//______________________________________________________________________________
 void TGLPadPainter::InvalidateCS()
 {
    //When TPad::Range for gPad is called, projection

@@ -93,6 +93,7 @@ public:
    void     SelectDrawable(Int_t device);
 
    void     InitPainter();
+   void     InitPainterForGLViewer();
    void     InvalidateCS();
    void     LockPainter();
    
