@@ -1,4 +1,26 @@
+2010-07-19  Matevz Tadel  <mtadel@pcalice14.cern.ch>
+
+	* TGLPadPainter:
+	Revert all changes.
+
+	* TGLPadPainter3D:
+	New sub-class of TVirtualPadPainter -- a near copy of
+	TGLPadPainter for now -- but this will soon change.
+	It has the changes that were in TGLPadPainter before.
+
+	* TEvePadFrame:
+	Add 'Double_t fSizeX' specifying scene-coordinate width of the
+	pad.
+	Calculate bounding-box accordingly.
+
+	* TEvePadFrameGL:
+	Use TGLPadPainter3D instead of TGLPadPainter.
+	Proper sclaing / translation of the pad.
+	Add back rectangle.
+
 2010-07-19  Matevz Tadel  <mtadel@greed>
+
+	Prototype implementation of 2D pad drawing in TGLViewer.
 
 	* TCanvas:
 	Add function:

@@ -128,6 +128,7 @@
 #pragma link C++ class TH3GL+;
 #pragma link C++ class TGLParametricEquationGL;
 #pragma link C++ class TGLPadPainter;
+#pragma link C++ class TGLPadPainter3D;
 #pragma link C++ class TGL5DDataSet;
 #pragma link C++ class TGL5DDataSetEditor;
 #pragma link C++ class TGLTH3Composition;

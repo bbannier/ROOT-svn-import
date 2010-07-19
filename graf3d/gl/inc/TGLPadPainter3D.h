@@ -9,8 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_TGLPadPainter
-#define ROOT_TGLPadPainter
+#ifndef ROOT_TGLPadPainter3D
+#define ROOT_TGLPadPainter3D
 
 #include <deque>
 
@@ -28,10 +28,10 @@
 #endif
 
 /*
-The _main_ purpose of TGLPadPainter is to enable 2d gl raphics
-inside standard TPad/TCanvas.
+The _main_ purpose of TGLPadPainter3D is to enable 2d gl graphics
+inside TGLViewer.
 */
-class TGLPadPainter : public TVirtualPadPainter {
+class TGLPadPainter3D : public TVirtualPadPainter {
 private:
    Rgl::Pad::PolygonStippleSet fSSet;
    Rgl::Pad::Tesselator        fTess;
@@ -50,7 +50,7 @@ private:
    
    Bool_t                      fLocked;
 public:
-   TGLPadPainter();
+   TGLPadPainter3D();
    
    //Final overriders for TVirtualPadPainter pure virtual functions.
    //1. Part, which simply delegates to TVirtualX.
@@ -93,6 +93,7 @@ public:
    void     SelectDrawable(Int_t device);
 
    void     InitPainter();
+   void     InitPainterForGLViewer();
    void     InvalidateCS();
    void     LockPainter();
    
@@ -136,10 +137,10 @@ private:
    
    void     DrawPolyMarker();
    
-   TGLPadPainter(const TGLPadPainter &rhs);
-   TGLPadPainter & operator = (const TGLPadPainter &rhs);
+   TGLPadPainter3D(const TGLPadPainter3D &rhs);
+   TGLPadPainter3D & operator = (const TGLPadPainter3D &rhs);
    
-   ClassDef(TGLPadPainter, 0)
+   ClassDef(TGLPadPainter3D, 0)
 };
 
 #endif
