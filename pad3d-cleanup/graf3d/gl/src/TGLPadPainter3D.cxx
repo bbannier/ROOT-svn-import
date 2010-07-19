@@ -20,13 +20,13 @@
 #include "TROOT.h"
 #include "TPad.h"
 
-#include "TGLPadPainter.h"
+#include "TGLPadPainter3D.h"
 #include "TGLIncludes.h"
 #include "TGLUtil.h"
 #include "TError.h"
 
 //______________________________________________________________________________
-   //"Delegating" part of TGLPadPainter. Line/fill/etc. attributes can be
+   //"Delegating" part of TGLPadPainter3D. Line/fill/etc. attributes can be
    //set inside TPad, but not only there:
    //many of them are set by base sub-objects of 2d primitives
    //(2d primitives usually inherit TAttLine or TAttFill etc.).  And these sub-objects
@@ -34,10 +34,10 @@
    //it will be mess - at any moment I do not know, where to take line attribute - from
    //gVirtualX or from my own member. So! All attributed, _ALL_ go to/from gVirtualX.
 
-ClassImp(TGLPadPainter)
+ClassImp(TGLPadPainter3D)
 
 //______________________________________________________________________________
-TGLPadPainter::TGLPadPainter()
+TGLPadPainter3D::TGLPadPainter3D()
                   : fIsHollowArea(kFALSE),
                     fLocked(kTRUE)
 {
@@ -46,63 +46,63 @@ TGLPadPainter::TGLPadPainter()
 
 
 //______________________________________________________________________________
-Color_t TGLPadPainter::GetLineColor() const
+Color_t TGLPadPainter3D::GetLineColor() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetLineColor();
 }
 
 //______________________________________________________________________________
-Style_t TGLPadPainter::GetLineStyle() const
+Style_t TGLPadPainter3D::GetLineStyle() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetLineStyle();
 }
 
 //______________________________________________________________________________
-Width_t TGLPadPainter::GetLineWidth() const
+Width_t TGLPadPainter3D::GetLineWidth() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetLineWidth();
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetLineColor(Color_t lcolor)
+void TGLPadPainter3D::SetLineColor(Color_t lcolor)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetLineColor(lcolor);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetLineStyle(Style_t lstyle)
+void TGLPadPainter3D::SetLineStyle(Style_t lstyle)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetLineStyle(lstyle);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetLineWidth(Width_t lwidth)
+void TGLPadPainter3D::SetLineWidth(Width_t lwidth)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetLineWidth(lwidth);
 }
 
 //______________________________________________________________________________
-Color_t TGLPadPainter::GetFillColor() const
+Color_t TGLPadPainter3D::GetFillColor() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetFillColor();
 }
 
 //______________________________________________________________________________
-Style_t TGLPadPainter::GetFillStyle() const
+Style_t TGLPadPainter3D::GetFillStyle() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetFillStyle();
 }
 
 //______________________________________________________________________________
-Bool_t TGLPadPainter::IsTransparent() const
+Bool_t TGLPadPainter3D::IsTransparent() const
 {
    //Delegate to gVirtualX.
    //IsTransparent is implemented as inline function in TAttFill.
@@ -110,141 +110,141 @@ Bool_t TGLPadPainter::IsTransparent() const
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetFillColor(Color_t fcolor)
+void TGLPadPainter3D::SetFillColor(Color_t fcolor)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetFillColor(fcolor);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetFillStyle(Style_t fstyle)
+void TGLPadPainter3D::SetFillStyle(Style_t fstyle)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetFillStyle(fstyle);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetOpacity(Int_t percent)
+void TGLPadPainter3D::SetOpacity(Int_t percent)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetOpacity(percent);
 }
 
 //______________________________________________________________________________
-Short_t TGLPadPainter::GetTextAlign() const
+Short_t TGLPadPainter3D::GetTextAlign() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetTextAlign();
 }
 
 //______________________________________________________________________________
-Float_t TGLPadPainter::GetTextAngle() const
+Float_t TGLPadPainter3D::GetTextAngle() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetTextAngle();
 }
 
 //______________________________________________________________________________
-Color_t TGLPadPainter::GetTextColor() const
+Color_t TGLPadPainter3D::GetTextColor() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetTextColor();
 }
 
 //______________________________________________________________________________
-Font_t TGLPadPainter::GetTextFont() const
+Font_t TGLPadPainter3D::GetTextFont() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetTextFont();
 }
 
 //______________________________________________________________________________
-Float_t TGLPadPainter::GetTextSize() const
+Float_t TGLPadPainter3D::GetTextSize() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetTextSize();
 }
 
 //______________________________________________________________________________
-Float_t TGLPadPainter::GetTextMagnitude() const
+Float_t TGLPadPainter3D::GetTextMagnitude() const
 {
    //Delegate to gVirtualX.
    return gVirtualX->GetTextMagnitude();
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetTextAlign(Short_t align)
+void TGLPadPainter3D::SetTextAlign(Short_t align)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetTextAlign(align);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetTextAngle(Float_t tangle)
+void TGLPadPainter3D::SetTextAngle(Float_t tangle)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetTextAngle(tangle);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetTextColor(Color_t tcolor)
+void TGLPadPainter3D::SetTextColor(Color_t tcolor)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetTextColor(tcolor);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetTextFont(Font_t tfont)
+void TGLPadPainter3D::SetTextFont(Font_t tfont)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetTextFont(tfont);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetTextSize(Float_t tsize)
+void TGLPadPainter3D::SetTextSize(Float_t tsize)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetTextSize(tsize);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SetTextSizePixels(Int_t npixels)
+void TGLPadPainter3D::SetTextSizePixels(Int_t npixels)
 {
    //Delegate to gVirtualX.
    gVirtualX->SetTextSizePixels(npixels);
 }
 
 /*
-"Pixmap" part of TGLPadPainter.
+"Pixmap" part of TGLPadPainter3D.
 */
 
 //______________________________________________________________________________
-Int_t TGLPadPainter::CreateDrawable(UInt_t/*w*/, UInt_t/*h*/)
+Int_t TGLPadPainter3D::CreateDrawable(UInt_t/*w*/, UInt_t/*h*/)
 {
    //Not required at the moment.
    return 0;
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::ClearDrawable()
+void TGLPadPainter3D::ClearDrawable()
 {
    //Not required at the moment.
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::CopyDrawable(Int_t /*id*/, Int_t /*px*/, Int_t /*py*/)
+void TGLPadPainter3D::CopyDrawable(Int_t /*id*/, Int_t /*px*/, Int_t /*py*/)
 {
    //Not required at the moment.
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DestroyDrawable()
+void TGLPadPainter3D::DestroyDrawable()
 {
    //Not required at the moment.
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SelectDrawable(Int_t /*device*/)
+void TGLPadPainter3D::SelectDrawable(Int_t /*device*/)
 {
    //For gVirtualX this means select pixmap (or window)
    //and all subsequent drawings will go into
@@ -252,6 +252,9 @@ void TGLPadPainter::SelectDrawable(Int_t /*device*/)
    //coordinate system and viewport.
    if (fLocked)
       return;
+
+   // XXXX Here we need to do something smarter ... for now just return.
+   return;
 
    if (TPad *pad = dynamic_cast<TPad *>(gPad)) {
       Int_t px = 0, py = 0;
@@ -270,13 +273,13 @@ void TGLPadPainter::SelectDrawable(Int_t /*device*/)
       glLoadIdentity();
       glTranslated(0., 0., -1.);
    } else {
-      Error("TGLPadPainter::SelectDrawable", "function was called not from TPad or TCanvas code\n");
+      Error("TGLPadPainter3D::SelectDrawable", "function was called not from TPad or TCanvas code\n");
       throw std::runtime_error("");
    }
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::InitPainter()
+void TGLPadPainter3D::InitPainter()
 {
    //Init gl-pad painter:
    //1. 2D painter does not use depth test, should not modify
@@ -311,7 +314,21 @@ void TGLPadPainter::InitPainter()
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::InvalidateCS()
+void TGLPadPainter3D::InitPainterForGLViewer()
+{
+   //Init gl-pad painter:
+   //2. Disable cull face.
+   //3. Disable lighting.
+   //6. Unlock painter.
+
+   glDisable(GL_CULL_FACE);
+   glDisable(GL_LIGHTING);
+
+   fLocked = kFALSE;
+}
+
+//______________________________________________________________________________
+void TGLPadPainter3D::InvalidateCS()
 {
    //When TPad::Range for gPad is called, projection
    //must be changed in OpenGL.
@@ -327,7 +344,7 @@ void TGLPadPainter::InvalidateCS()
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::LockPainter()
+void TGLPadPainter3D::LockPainter()
 {
    //Locked state of painter means, that
    //GL context can be invalid, so no GL calls
@@ -346,7 +363,7 @@ void TGLPadPainter::LockPainter()
 const Double_t lineWidthTS = 3.;
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
+void TGLPadPainter3D::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 {
    //Draw line segment.
    if (fLocked) {
@@ -389,7 +406,7 @@ void TGLPadPainter::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t v2)
+void TGLPadPainter3D::DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t v2)
 {
    //Draw line segment in NDC coordinates.
    if (fLocked)
@@ -406,7 +423,7 @@ void TGLPadPainter::DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t 
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMode mode)
+void TGLPadPainter3D::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMode mode)
 {
    //Draw filled or hollow box.
    if (fLocked)
@@ -426,7 +443,7 @@ void TGLPadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, 
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
+void TGLPadPainter3D::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
 {
    //Draw tesselated polygon (probably, outline only).
    if (fLocked)
@@ -459,7 +476,7 @@ void TGLPadPainter::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawFillArea(Int_t n, const Float_t *x, const Float_t *y)
+void TGLPadPainter3D::DrawFillArea(Int_t n, const Float_t *x, const Float_t *y)
 {
    //Draw tesselated polygon (never called, probably, since TPad::PaintFillArea for floats
    //is deprecated).
@@ -492,7 +509,7 @@ void TGLPadPainter::DrawFillArea(Int_t n, const Float_t *x, const Float_t *y)
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y)
+void TGLPadPainter3D::DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y)
 {
    //Draw poly-line in user coordinates.
    if (fLocked)
@@ -529,7 +546,7 @@ void TGLPadPainter::DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y)
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyLine(Int_t n, const Float_t *x, const Float_t *y)
+void TGLPadPainter3D::DrawPolyLine(Int_t n, const Float_t *x, const Float_t *y)
 {
    //Never called?
    if (fLocked)
@@ -551,7 +568,7 @@ void TGLPadPainter::DrawPolyLine(Int_t n, const Float_t *x, const Float_t *y)
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyLineNDC(Int_t n, const Double_t *u, const Double_t *v)
+void TGLPadPainter3D::DrawPolyLineNDC(Int_t n, const Double_t *u, const Double_t *v)
 {
    //Poly line in NDC.
    if (fLocked)
@@ -579,7 +596,7 @@ void ConvertMarkerPoints(Int_t n, const ValueType *x, const ValueType *y, std::v
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y)
+void TGLPadPainter3D::DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y)
 {
    //Poly-marker.
    if (fLocked)
@@ -590,7 +607,7 @@ void TGLPadPainter::DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y)
+void TGLPadPainter3D::DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y)
 {
    //Poly-marker.
    if (fLocked)
@@ -601,7 +618,7 @@ void TGLPadPainter::DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y)
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyMarker()
+void TGLPadPainter3D::DrawPolyMarker()
 {
    //Poly-marker.
    if (fLocked)
@@ -685,7 +702,7 @@ void TGLPadPainter::DrawPolyMarker()
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mode*/)
+void TGLPadPainter3D::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mode*/)
 {
    //Draw text. This operation is especially
    //dangerous if in locked state -
@@ -719,7 +736,7 @@ void TGLPadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMode
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode)
+void TGLPadPainter3D::DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode)
 {
    //Draw text in NDC. This operation is especially
    //dangerous if in locked state -
@@ -734,7 +751,7 @@ void TGLPadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, ETextM
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SaveProjectionMatrix()const
+void TGLPadPainter3D::SaveProjectionMatrix()const
 {
    //Save the projection matrix.
    //Attention! GL_PROJECTION will become the current matrix
@@ -744,7 +761,7 @@ void TGLPadPainter::SaveProjectionMatrix()const
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::RestoreProjectionMatrix()const
+void TGLPadPainter3D::RestoreProjectionMatrix()const
 {
    //Restore the projection matrix.
    //Attention! GL_PROJECTION will become the current matrix
@@ -754,7 +771,7 @@ void TGLPadPainter::RestoreProjectionMatrix()const
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SaveModelviewMatrix()const
+void TGLPadPainter3D::SaveModelviewMatrix()const
 {
    //Save the modelview matrix.
    //Attention! GL_MODELVIEW will become the current matrix
@@ -764,7 +781,7 @@ void TGLPadPainter::SaveModelviewMatrix()const
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::RestoreModelviewMatrix()const
+void TGLPadPainter3D::RestoreModelviewMatrix()const
 {
    //Restore the modelview matrix.
    //Attention! GL_MODELVIEW will become the current matrix
@@ -774,21 +791,21 @@ void TGLPadPainter::RestoreModelviewMatrix()const
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SaveViewport()
+void TGLPadPainter3D::SaveViewport()
 {
    //Extract and save the current viewport.
    glGetIntegerv(GL_VIEWPORT, fVp);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::RestoreViewport()
+void TGLPadPainter3D::RestoreViewport()
 {
    //Restore the saved viewport.
    glViewport(fVp[0], fVp[1], fVp[2], fVp[3]);
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::SaveImage(TVirtualPad *pad, const char *fileName, Int_t type) const
+void TGLPadPainter3D::SaveImage(TVirtualPad *pad, const char *fileName, Int_t type) const
 {
    // Using TImage save frame-buffer contents as a picture.
 
@@ -805,7 +822,7 @@ void TGLPadPainter::SaveImage(TVirtualPad *pad, const char *fileName, Int_t type
 
    std::auto_ptr<TImage> image(TImage::Create());
    if (!image.get()) {
-      Error("TGLPadPainter::SaveImage", "TImage creation failed");
+      Error("TGLPadPainter3D::SaveImage", "TImage creation failed");
       return;
    }
 
@@ -813,7 +830,7 @@ void TGLPadPainter::SaveImage(TVirtualPad *pad, const char *fileName, Int_t type
    UInt_t *argb = image->GetArgbArray();
 
    if (!argb) {
-      Error("TGLPadPainter::SaveImage", "null argb array in TImage object");
+      Error("TGLPadPainter3D::SaveImage", "null argb array in TImage object");
       return;
    }
 

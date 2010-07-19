@@ -16,7 +16,7 @@
 
 class TGLViewer;
 class TGLScene;
-class TGLPadPainter;
+class TGLPadPainter3D;
 
 class TEvePadFrame;
 
@@ -26,7 +26,7 @@ private:
    TEvePadFrameGL(const TEvePadFrameGL&);            // Not implemented
    TEvePadFrameGL& operator=(const TEvePadFrameGL&); // Not implemented
 
-   static TGLPadPainter *fgPainter;
+   static TGLPadPainter3D *fgPainter;
 
 protected:
    TEvePadFrame    *fM; // Model object.

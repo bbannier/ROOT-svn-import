@@ -18,7 +18,7 @@
 #include "TList.h"
 #include "TCanvas.h"
 #include "TPad.h"
-#include "TGLPadPainter.h"
+#include "TGLPadPainter3D.h"
 
 //______________________________________________________________________________
 // OpenGL renderer class for TEvePadFrame.
@@ -26,7 +26,7 @@
 
 ClassImp(TEvePadFrameGL);
 
-TGLPadPainter *TEvePadFrameGL::fgPainter = new TGLPadPainter;
+TGLPadPainter3D *TEvePadFrameGL::fgPainter = new TGLPadPainter3D;
 
 //______________________________________________________________________________
 TEvePadFrameGL::TEvePadFrameGL() :
@@ -66,26 +66,48 @@ void TEvePadFrameGL::DirectDraw(TGLRnrCtx& /*rnrCtx*/) const
 {
    // Render with OpenGL.
 
-   TPad *pad = fM->GetPad();
-
-   //printf("TEvePadFrameGL::DirectDraw, pad=%p\n", pad);
-
    if (fM->GetPad() == 0)
       return;
 
+   //printf("TEvePadFrameGL::DirectDraw, pad=%p\n", pad);
+
+   TPad           *pad    = fM->GetPad();
+   const Double_t  z_step = 0.1 * 0.2 * fM->GetSizeX() / pad->GetListOfPrimitives()->GetSize();
+
    TVirtualPad *opad = gPad;
-   gPad = fM->GetPad();
-   TVirtualPadPainter *opainter = gPad->GetCanvas()->SwitchCanvasPainter(fgPainter);
+   gPad = pad;
+   TVirtualPadPainter *opainter = pad->GetCanvas()->SwitchCanvasPainter(fgPainter);
 
    glPushAttrib(GL_ENABLE_BIT);
+
+   Double_t x1, y1, x2, y2;  pad->GetRange(x1, y1, x2, y2);
+
+   glPushMatrix();
+   glScaled(fM->GetSizeX() / (x2 - x1),
+            (fM->GetSizeX() * pad->GetWh()) / pad->GetWw() / (y2 - y1),
+            1.0);
+   glTranslated(-x1, -y1, -z_step);
+
+   glDisable(GL_CULL_FACE);
+
+   TGLUtil::Color(pad->GetFrameFillColor());
+   glBegin(GL_QUADS);
+   glVertex2d(x1, y1); glVertex2d(x2, y1); 
+   glVertex2d(x2, y2); glVertex2d(x1, y2); 
+   glEnd();
+
    fgPainter->InitPainterForGLViewer();
 
-   TObjOptLink *lnk = (TObjOptLink*) gPad->GetListOfPrimitives()->FirstLink();
+   TObjOptLink *lnk = (TObjOptLink*) pad->GetListOfPrimitives()->FirstLink();
    while (lnk)
    {
+      glTranslated(0.0, 0.0, z_step);
+
       lnk->GetObject()->Paint(lnk->GetOption());
       lnk = (TObjOptLink*) lnk->Next();
    }
+
+   glPopMatrix();
 
    fgPainter->LockPainter();
    glPopAttrib();

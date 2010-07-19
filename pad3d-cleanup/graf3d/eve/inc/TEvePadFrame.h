@@ -26,6 +26,7 @@ private:
 
 protected:
    TPad    *fPad;
+   Double_t fSizeX;
 
 public:
    TEvePadFrame(const char* n="TEvePadFrame", const char* t="");
@@ -39,6 +40,9 @@ public:
 
    TPad* GetPad() const  { return fPad; }
    void  SetPad(TPad* p) { fPad = p; }
+
+   Double_t GetSizeX() const     { return fSizeX; }
+   void     SetSizeX(Double_t x) { fSizeX = x; }
 
    ClassDef(TEvePadFrame, 0); // Short description.
 };
