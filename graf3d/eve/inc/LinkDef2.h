@@ -139,6 +139,10 @@
 #pragma link C++ class TEvePlot3D+;
 #pragma link C++ class TEvePlot3DGL+;
 
+// TEvePadFrame
+#pragma link C++ class TEvePadFrame+;
+#pragma link C++ class TEvePadFrameGL+;
+
 // TEveFrameBox
 #pragma link C++ class TEveFrameBox+;
 #pragma link C++ class TEveFrameBoxGL+;

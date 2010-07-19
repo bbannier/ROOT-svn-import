@@ -2187,3 +2187,13 @@ TVirtualPadPainter *TCanvas::GetCanvasPainter()
    if (!fPainter) CreatePainter();
    return fPainter;
 }
+
+//______________________________________________________________________________
+TVirtualPadPainter *TCanvas::SwitchCanvasPainter(TVirtualPadPainter* new_painter)
+{
+   // Access and (probably) creation of pad painter.
+
+   TVirtualPadPainter *old_painter = fPainter;
+   fPainter = new_painter;
+   return old_painter;
+}

@@ -25,23 +25,27 @@ EVEDS     := $(EVEDS1) $(EVEDS2)
 EVEDO     := $(EVEDO1) $(EVEDO2)
 EVEDH     := $(EVEDS:.cxx=.h)
 
+# Wildcard stems for 1st dictionary
 EVEH1     := TEveBrowser TEveChunkManager TEveCompound \
              TEveElement TEveEventManager TEveGValuators \
-             TEveGedEditor TEveMacro TEveManager TEvePad TEveParamList \
+             TEveGedEditor TEveMacro TEveManager TEveParamList \
              TEveProjectionAxes TEveProjectionBases TEveProjectionManager \
              TEveProjections TEveScene TEveSelection TEveTrans TEveTreeTools \
              TEveUtil TEveVector TEvePathMark TEveVSD TEveViewer TEveWindow \
              TEveSecondarySelectable
 
+# Wildcard stems for 2nd dictionary
 EVEH2     := TEveArrow TEveBox TEveCalo \
              TEveDigitSet TEveFrameBox TEveGeo \
              TEveGridStepper TEveLegoEventHandler TEveShape \
              TEveLine TEvePointSet TEvePolygonSetProjected TEveQuadSet \
              TEveRGBAPalette TEveScalableStraightLineSet TEveStraightLineSet \
              TEveText TEveTrack TEveTriangleSet TEveJetCone \
-	     TEvePlot3D
+	     TEvePlot3D TEvePadFrame
 
-EVEH1     := $(foreach stem, $(EVEH1), $(wildcard $(MODDIRI)/$(stem)*.h))
+EVEH1     := $(foreach stem, $(EVEH1), $(wildcard $(MODDIRI)/$(stem)*.h)) \
+	     $(MODDIRI)/TEvePad.h
+
 EVEH2     := $(foreach stem, $(EVEH2), $(wildcard $(MODDIRI)/$(stem)*.h))
 
 EVEH      := $(EVEH1) $(EVEH2)
