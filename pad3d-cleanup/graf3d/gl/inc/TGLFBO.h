@@ -31,6 +31,8 @@ protected:
    Bool_t  fIsRescaled;
    Float_t fWScale, fHScale;
 
+   Bool_t  fIsTextureBound;
+
    static Bool_t fgRescaleToPow2;
 
 public:

@@ -110,7 +110,8 @@ void TEvePadFrame::ComputeBBox()
 
    BBoxInit();
    BBoxCheckPoint(0, 0, 0);
-   BBoxCheckPoint(fSizeX, (fSizeX * fPad->GetWh()) / fPad->GetWw(), 0.1*fSizeX);
+   BBoxCheckPoint(fSizeX, (fSizeX * fPad->GetWh()) / fPad->GetWw(),
+                  fUseFBO ? 0 : 0.1*fSizeX);
 }
 
 //==============================================================================
@@ -119,6 +120,8 @@ void TEvePadFrame::ComputeBBox()
 void TEvePadFrame::PadClosed()
 {
    // Slot for Closed signal from pad.
+
+   // printf("PadClosed\n");
 
    SetPad(0);
 
@@ -132,6 +135,8 @@ void TEvePadFrame::PadModified()
 {
    // Slot for Modified signal from pad.
 
+   // printf("PadModified\n");
+
    IncRTS();
    StampObjProps();
    gEve->Redraw3D();
@@ -141,6 +146,8 @@ void TEvePadFrame::PadModified()
 void TEvePadFrame::PadRangeChanged()
 {
    // Slot for RangeChanged signal from pad.
+
+   // printf("PadRangeChanged\n");
 
    IncRTS();
    StampObjProps();
@@ -152,7 +159,11 @@ void TEvePadFrame::PadRangeAxisChanged()
 {
    // Slot for RangeAxisChanged signal from pad.
 
+   // printf("PadRangeAxisChanged\n");
+
+   ResetBBox();
    IncRTS();
    StampObjProps();
+   StampTransBBox();
    gEve->Redraw3D();
 }
