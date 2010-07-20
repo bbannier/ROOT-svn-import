@@ -156,6 +156,9 @@ namespace TMVA {
       // string specifying the boost type ( ByError,Average,LastMethod )
       TString           fMethodWeightType;
 
+      // Stop the boosting, of the misclassification rate exceeds 0.5
+      Bool_t            fStopIfErrorTooBig;
+
       //estimation of the level error of the classifier analysing the train dataset
       Double_t          fMethodError;
       //estimation of the level error of the classifier analysing the train dataset (with unboosted weights)
