@@ -1,3 +1,26 @@
+2010-07-20  Matevz Tadel  <mtadel@greed>
+
+	* graf3d/gl/src/TGLPadPainter.cxx:
+	* graf3d/gl/inc/TGLPadPainter.h:
+	Add function:
+	  void InitPainterWithOptions(Bool_t set_viewport);
+
+	* graf3d/gl/src/TGLFBO.cxx:
+	* graf3d/gl/inc/TGLFBO.h:
+	Add 'Bool_t fIsTextureBound'.
+	Fix wrong logic in checking if FBOwidth/height has changed.
+
+	* graf3d/eve/src/TEvePadFrame.cxx:
+	ResetBBox and stamp it as changed in PadRangeAxisChanged().
+
+	* graf3d/eve/src/TEvePadFrameGL.cxx:
+	* graf3d/eve/inc/TEvePadFrameGL.h:
+	Implement all the functions needed for rendering into FBO and for
+	drawing using it as a texture.
+
+	* tutorials/eve/testgl1.C:
+	Add another view of the same histo -- drawn using FBO.
+
 2010-07-20  Timur Pocheptsov
 
 	* core/base/inc/TVirtualGL.h Removed TVirtualGLManip - now

@@ -1,3 +1,6 @@
+TEvePadFrame *epf1 = 0;
+TEvePadFrame *epf2 = 0;
+
 void testgl1()
 {
    TEveManager::Create();
@@ -17,8 +20,14 @@ void testgl1()
    }
    h->Draw();
 
-   TEveElement *e = new TEvePadFrame(gPad,"Foo");
-   e->RefMainTrans();
-   gEve->AddElement(e);
+   epf1 = new TEvePadFrame(gPad, "Foo");
+   epf1->RefMainTrans().MoveLF(1, -0.7);
+   gEve->AddElement(epf1);
+
+   epf2 = new TEvePadFrame(gPad, "Foo");
+   epf2->SetUseFBO(kTRUE);
+   epf2->RefMainTrans().MoveLF(1, 0.7);
+   gEve->AddElement(epf2);
+
    gEve->Redraw3D(kTRUE);
 }

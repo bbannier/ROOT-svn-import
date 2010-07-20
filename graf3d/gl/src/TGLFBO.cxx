@@ -40,7 +40,8 @@ TGLFBO::TGLFBO() :
    fH (-1),
    fIsRescaled (kFALSE),
    fWScale     (1),
-   fHScale     (1)
+   fHScale     (1),
+   fIsTextureBound (kFALSE)
 {
    // Constructor.
 }
@@ -190,6 +191,8 @@ void TGLFBO::BindTexture()
 {
    // Bind texture.
 
+   fIsTextureBound = kTRUE;
+
    glPushAttrib(GL_TEXTURE_BIT);
    glBindTexture(GL_TEXTURE_2D, fColorTexture);
    glEnable(GL_TEXTURE_2D);
@@ -210,4 +213,6 @@ void TGLFBO::UnbindTexture()
    glMatrixMode(GL_MODELVIEW);
 
    glPopAttrib();
+
+   fIsTextureBound = kFALSE;
 }
