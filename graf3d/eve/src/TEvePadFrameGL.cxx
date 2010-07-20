@@ -18,6 +18,7 @@
 #include "TList.h"
 #include "TCanvas.h"
 #include "TPad.h"
+#include "TGLPadPainter.h"
 #include "TGLPadPainter3D.h"
 
 //______________________________________________________________________________
@@ -26,15 +27,16 @@
 
 ClassImp(TEvePadFrameGL);
 
-TGLPadPainter3D *TEvePadFrameGL::fgPainter = new TGLPadPainter3D;
+TGLPadPainter   *TEvePadFrameGL::fgPainter   = new TGLPadPainter;
+TGLPadPainter3D *TEvePadFrameGL::fgPainter3D = new TGLPadPainter3D;
 
 //______________________________________________________________________________
 TEvePadFrameGL::TEvePadFrameGL() :
-   TGLObject(), fM(0)
+   TGLObject(), fM(0), fFBO(0), fRTS(0)
 {
    // Constructor.
 
-   fDLCache = kFALSE; // Disable display list.
+   // fDLCache = kFALSE; // Disable display list.
 }
 
 /******************************************************************************/
@@ -59,32 +61,61 @@ void TEvePadFrameGL::SetBBox()
    SetAxisAlignedBBox(((TEvePadFrame*)fExternalObj)->AssertBBox());
 }
 
-/******************************************************************************/
+//==============================================================================
+
+//______________________________________________________________________________
+void TEvePadFrameGL::DirectDrawIntoFBO(const TGLRnrCtx& rnrCtx) const
+{
+   // Draw the pad in 2D mode into the FBO.
+
+}
+
+//______________________________________________________________________________
+void TEvePadFrameGL::DirectDrawFBO(const TGLRnrCtx& rnrCtx) const
+{
+   // Draw the pad in 2D mode using existing FBO.
+
+}
+
+//______________________________________________________________________________
+void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& rnrCtx) const
+{
+   // Draw the pad in 3D mode.
+
+}
+
+//==============================================================================
+
+//______________________________________________________________________________
+Bool_t TEvePadFrameGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
+{
+
+}
 
 //______________________________________________________________________________
 void TEvePadFrameGL::DirectDraw(TGLRnrCtx& /*rnrCtx*/) const
 {
    // Render with OpenGL.
 
-   if (fM->GetPad() == 0)
+   // printf("TEvePadFrameGL::DirectDraw ... UseFBO=%d\n", fM->fUseFBO);
+
+   if (fM->fPad == 0)
       return;
 
-   //printf("TEvePadFrameGL::DirectDraw, pad=%p\n", pad);
-
-   TPad           *pad    = fM->GetPad();
-   const Double_t  z_step = 0.1 * 0.2 * fM->GetSizeX() / pad->GetListOfPrimitives()->GetSize();
+   TPad           *pad    = fM->fPad;
+   const Double_t  z_step = 0.1 * 0.2 * fM->fSizeX / pad->GetListOfPrimitives()->GetSize();
 
    TVirtualPad *opad = gPad;
    gPad = pad;
-   TVirtualPadPainter *opainter = pad->GetCanvas()->SwitchCanvasPainter(fgPainter);
+   TVirtualPadPainter *opainter = pad->GetCanvas()->SwitchCanvasPainter(fgPainter3D);
 
    glPushAttrib(GL_ENABLE_BIT);
 
    Double_t x1, y1, x2, y2;  pad->GetRange(x1, y1, x2, y2);
 
    glPushMatrix();
-   glScaled(fM->GetSizeX() / (x2 - x1),
-            (fM->GetSizeX() * pad->GetWh()) / pad->GetWw() / (y2 - y1),
+   glScaled(fM->fSizeX / (x2 - x1),
+            (fM->fSizeX * pad->GetWh()) / pad->GetWw() / (y2 - y1),
             1.0);
    glTranslated(-x1, -y1, -z_step);
 
@@ -96,7 +127,7 @@ void TEvePadFrameGL::DirectDraw(TGLRnrCtx& /*rnrCtx*/) const
    glVertex2d(x2, y2); glVertex2d(x1, y2); 
    glEnd();
 
-   fgPainter->InitPainterForGLViewer();
+   fgPainter3D->InitPainterForGLViewer();
 
    TObjOptLink *lnk = (TObjOptLink*) pad->GetListOfPrimitives()->FirstLink();
    while (lnk)
@@ -109,7 +140,7 @@ void TEvePadFrameGL::DirectDraw(TGLRnrCtx& /*rnrCtx*/) const
 
    glPopMatrix();
 
-   fgPainter->LockPainter();
+   fgPainter3D->LockPainter();
    glPopAttrib();
 
    gPad->GetCanvas()->SwitchCanvasPainter(opainter);

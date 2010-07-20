@@ -20,6 +20,8 @@ class TPad;
 class TEvePadFrame : public TEveElementList,
                      public TAttBBox
 {
+   friend class TEvePadFrameGL;
+
 private:
    TEvePadFrame(const TEvePadFrame&);            // Not implemented
    TEvePadFrame& operator=(const TEvePadFrame&); // Not implemented
@@ -27,22 +29,38 @@ private:
 protected:
    TPad    *fPad;
    Double_t fSizeX;
+   Bool_t   fUseFBO;
+   Int_t    fSizeFBO;  // Width of FBO buffer. If 0, pad pixel width is used.
+
+   Int_t    fRTS;      //! Rendering TimeStamp
+   void     IncRTS() { ++fRTS; }
 
 public:
    TEvePadFrame(const char* n="TEvePadFrame", const char* t="");
    TEvePadFrame(TPad* pad, const char* n="TEvePadFrame", const char* t="");
-   virtual ~TEvePadFrame() {}
+   virtual ~TEvePadFrame();
 
    // For TAttBBox:
    virtual void ComputeBBox();
 
+   // Override TObject:
    virtual void Paint(Option_t*) { PaintStandard(this); }
 
-   TPad* GetPad() const  { return fPad; }
-   void  SetPad(TPad* p) { fPad = p; }
+   // Getters & Setters
+   TPad*    GetPad() const { return fPad; }
+   void     SetPad(TPad* p);
+   Double_t GetSizeX() const     { return fSizeX;  }
+   void     SetSizeX(Double_t x) { fSizeX = x;     }
+   Bool_t   GetUseFBO() const    { return fUseFBO; }
+   void     SetUseFBO(Bool_t u);
+   Int_t    GetSizeFBO() const   { return fSizeFBO; }
+   void     SetSizeFBO(Int_t s)  { fSizeFBO = s;    }
 
-   Double_t GetSizeX() const     { return fSizeX; }
-   void     SetSizeX(Double_t x) { fSizeX = x; }
+   // Slots for pad-change notifications
+   void PadClosed();
+   void PadModified();
+   void PadRangeChanged();
+   void PadRangeAxisChanged();
 
    ClassDef(TEvePadFrame, 0); // Short description.
 };
