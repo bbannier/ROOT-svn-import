@@ -26,10 +26,11 @@ protected:
    UInt_t  fDepthBuffer;
    // UInt_t  fStencilBuffer;
 
+   Int_t   fRequestedW, fRequestedH;
    Int_t   fW, fH;
 
-   Bool_t  fIsRescaled;
    Float_t fWScale, fHScale;
+   Bool_t  fIsRescaled;
 
    Bool_t  fIsTextureBound;
 
@@ -47,6 +48,14 @@ public:
 
    void BindTexture();
    void UnbindTexture();
+
+   // ----------------------------------------------------------------
+
+   Int_t GetW() const { return fW; }
+   Int_t GetH() const { return fH; }
+
+   Int_t GetRequestedW() const { return fRequestedW; }
+   Int_t GetRequestedH() const { return fRequestedH; }
 
    ClassDef(TGLFBO, 0); // Frame-buffer object.
 };

@@ -1,5 +1,29 @@
 2010-07-20  Matevz Tadel  <mtadel@greed>
 
+	* graf2d/gpad/src/TCanvas.cxx:
+	* graf2d/gpad/inc/TCanvas.h:
+	Add functions:
+	   void SetCanvasSizeForOffscreenRendering(UInt_t cw,   UInt_t ch,
+	                                           UInt_t& ocw, UInt_t& och);
+	   void RestoreCanvasSizeAfterOffscreenRendering(UInt_t cw, UInt_t ch);
+	that allow setting of perceived window/canvas size. This is used
+	all over pad-painting.
+	There is still some problem with histo-painter.
+
+	* graf3d/gl/src/TGLFBO.cxx:
+	* graf3d/gl/inc/TGLFBO.h:
+	Add data-members:
+	  Int_t   fRequestedW, fRequestedH;
+	that allow to query the width/height that user asked for.
+	Add getters for them and for actual width and height.
+
+	* graf3d/eve/src/TEvePadFrameGL.cxx:
+	Generate mipmaps for FBO texture after it is created.
+	Try to make FBOs work with width/height other than that of the
+	canvas/window. Somewhat works, histo-painter object behave strange.
+
+2010-07-20  Matevz Tadel  <mtadel@greed>
+
 	* graf3d/gl/src/TGLPadPainter.cxx:
 	* graf3d/gl/inc/TGLPadPainter.h:
 	Add function:
