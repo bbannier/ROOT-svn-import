@@ -1,3 +1,22 @@
+2010-07-20  Timur Pocheptsov
+
+	* core/base/inc/TVirtualGL.h Removed TVirtualGLManip - now
+	obsolete and not used anywhere at all (also removed
+	TVirtualGLManager corresponding member).
+
+	* core/base/inc/LinkDef1.h removed pragma for TVirtualGLManip
+
+	* core/base/src/TVirtualGL.cxx removed ClassImp for TVirtualGLManip
+
+	* win32gdk removed SelectManip methods from GL proxy and win32glmanager
+
+	* TGLAdapter class can be completely removed
+
+	* LinkDef.h pragma for TGLAdapter removed
+
+	* TGLManip - does not need to inherit TVirtualGLManip and does not
+	need to override Select function.
+
 2010-07-20  Matevz Tadel  <mtadel@pcalice14.cern.ch>
 
 	Intermediate commit towards usage of FBOs.
