@@ -22,6 +22,8 @@
 #include "TGLPadPainter.h"
 #include "TGLPadPainter3D.h"
 
+#include "TMath.h"
+
 //______________________________________________________________________________
 // OpenGL renderer class for TEvePadFrame.
 //
@@ -79,11 +81,18 @@ void TEvePadFrameGL::DirectDrawIntoFBO(const TGLRnrCtx& /*rnrCtx*/) const
    TVirtualPad *opad = gPad;
    gPad = pad;
 
-   TVirtualPadPainter *opainter = pad->GetCanvas()->SwitchCanvasPainter(fgPainter);
+   TCanvas *canvas = pad->GetCanvas();
+   Int_t  reqw = fFBO->GetRequestedW();
+   Int_t  reqh = fFBO->GetRequestedH();
+   UInt_t ocw, och;
+   canvas->SetCanvasSizeForOffscreenRendering(reqw, reqh, ocw, och);
+   TVirtualPadPainter *opainter = canvas->SwitchCanvasPainter(fgPainter);
 
    glPushAttrib(GL_ALL_ATTRIB_BITS);
    glMatrixMode(GL_PROJECTION); glPushMatrix();
    glMatrixMode(GL_MODELVIEW);  glPushMatrix();
+
+   glViewport(0, 0, reqw, reqh);
 
    fgPainter->InitPainterWithOptions(kFALSE);
 
@@ -100,7 +109,9 @@ void TEvePadFrameGL::DirectDrawIntoFBO(const TGLRnrCtx& /*rnrCtx*/) const
    glMatrixMode(GL_MODELVIEW);  glPopMatrix();
    glPopAttrib();
 
-   gPad->GetCanvas()->SwitchCanvasPainter(opainter);
+   canvas->RestoreCanvasSizeAfterOffscreenRendering(ocw, och);
+
+   canvas->SwitchCanvasPainter(opainter);
    gPad = opad;
 }
 
@@ -204,7 +215,7 @@ Bool_t TEvePadFrameGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
       Int_t w, h;
       if (fM->fSizeFBO > 0) {
          w = fM->fSizeFBO;
-         h = (w * pad->GetWh()) / pad->GetWw();
+         h = TMath::Nint(((Double_t)w * pad->GetWh()) / pad->GetWw());
       } else {
          w = pad->GetWw();
          h = pad->GetWh();
@@ -213,6 +224,11 @@ Bool_t TEvePadFrameGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
       fFBO->Bind();
       DirectDrawIntoFBO(rnrCtx);
       fFBO->Unbind();
+
+      fFBO->BindTexture();
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+      glGenerateMipmapEXT(GL_TEXTURE_2D);
+      fFBO->UnbindTexture();
    }
    else if (fFBO != 0)
    {

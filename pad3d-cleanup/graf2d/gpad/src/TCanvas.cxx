@@ -2197,3 +2197,25 @@ TVirtualPadPainter *TCanvas::SwitchCanvasPainter(TVirtualPadPainter* new_painter
    fPainter = new_painter;
    return old_painter;
 }
+
+//______________________________________________________________________________
+void TCanvas::SetCanvasSizeForOffscreenRendering(UInt_t cw, UInt_t ch,
+                                                 UInt_t& ocw, UInt_t& och)
+{
+   // Sets internal perception of canvas size so that pad-painters that use
+   // this information do proper painting.
+
+   ocw = fCw;
+   och = fCh;
+   fCw = cw;
+   fCh = ch;
+}
+
+//______________________________________________________________________________
+void TCanvas::RestoreCanvasSizeAfterOffscreenRendering(UInt_t cw, UInt_t ch)
+{
+   // Restores internal perception of canvas size.
+
+   fCw = cw;
+   fCh = ch;
+}

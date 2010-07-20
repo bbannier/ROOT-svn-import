@@ -244,6 +244,9 @@ public:
    //GetPadPainter and GetPainter are non-virtual (no need, in fact).
    TVirtualPadPainter *GetCanvasPainter();
    TVirtualPadPainter *SwitchCanvasPainter(TVirtualPadPainter* new_painter);
+   // When drawing into GL FBO, need to set window size appropriately.
+   void SetCanvasSizeForOffscreenRendering(UInt_t cw, UInt_t ch, UInt_t& ocw, UInt_t& och);
+   void RestoreCanvasSizeAfterOffscreenRendering(UInt_t cw, UInt_t ch);
 
    static TCanvas   *MakeDefCanvas();
 

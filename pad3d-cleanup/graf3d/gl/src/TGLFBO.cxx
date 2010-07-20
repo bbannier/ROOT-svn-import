@@ -33,15 +33,14 @@ ClassImp(TGLFBO);
 Bool_t TGLFBO::fgRescaleToPow2 = kTRUE; // For ATI.
 
 TGLFBO::TGLFBO() :
-   fFrameBuffer  (0),
-   fColorTexture (0),
-   fDepthBuffer  (0),
-   fW (-1),
-   fH (-1),
-   fIsRescaled (kFALSE),
-   fWScale     (1),
-   fHScale     (1),
-   fIsTextureBound (kFALSE)
+   fFrameBuffer(0),
+   fColorTexture(0),
+   fDepthBuffer(0),
+   fRequestedW(-1), fRequestedH(-1),
+   fW(-1), fH(-1),
+   fWScale(1), fHScale(1),
+   fIsRescaled(kFALSE),
+   fIsTextureBound(kFALSE)
 {
    // Constructor.
 }
@@ -65,6 +64,9 @@ void TGLFBO::Init(int w, int h)
    {
       throw std::runtime_error(eh + "GL version 1.5 required for FBO.");
    }
+
+   fRequestedW = w;
+   fRequestedH = h;
 
    fIsRescaled = kFALSE;
    if (fgRescaleToPow2)
