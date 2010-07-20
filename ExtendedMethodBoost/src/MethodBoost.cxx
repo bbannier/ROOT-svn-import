@@ -640,12 +640,13 @@ void TMVA::MethodBoost::SingleBoost()
       }
    }
    else if (fBoostType == "HighEdgeGauss") {
-      // Give events high boost weight, which are close the default
-      // MVA cut value 0.5
+      // Give events high boost weight, which are close the MVA cut
+      // value
+      Double_t MVACutValue = method->GetSignalReferenceCut();
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
 	 ev->SetBoostWeight( 
-	    TMath::Exp( -TMath::Power(method->GetMvaValue()-0.5,2)/0.1 ) );
+	    TMath::Exp( -TMath::Power(method->GetMvaValue()-MVACutValue,2)/0.1 ) );
          sumAll1 += ev->GetWeight();
       }
       // rescaling all the weights to have the same sum, but without
