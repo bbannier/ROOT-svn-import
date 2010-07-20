@@ -613,7 +613,7 @@ void TMVA::MethodBoost::SingleBoost()
          ev =  Data()->GetEvent(ievt);
          FactorOrig += ev->GetWeight();
          ev->ScaleBoostWeight(TMath::Exp(-alphaWeight*((WrongDetection[ievt])? -1.0 : 1.0)));
-         Factor += ev->GetBoostWeight();
+         Factor += ev->GetWeight();
       }
       Factor = FactorOrig/Factor;
       // next normalize the weights
