@@ -27,7 +27,7 @@ TEvePadFrame::TEvePadFrame(const char* n, const char* t) :
    TAttBBox(),
    fPad(0),
    fSizeX(1),
-   fUseFBO(kFALSE), fSizeFBO(0),
+   fSizeFBO(0), fUseFBO(kFALSE), fUseMipmaps(kFALSE),
    fRTS(1)
 {
    // Constructor.
@@ -39,7 +39,7 @@ TEvePadFrame::TEvePadFrame(TPad* pad, const char* n, const char* t) :
    TAttBBox(),
    fPad(0),
    fSizeX(1),
-   fUseFBO(kFALSE), fSizeFBO(0),
+   fSizeFBO(0), fUseFBO(kFALSE), fUseMipmaps(kFALSE),
    fRTS(1)
 {
    // Constructor.
@@ -85,10 +85,23 @@ void TEvePadFrame::SetPad(TPad* p)
 //______________________________________________________________________________
 void TEvePadFrame::SetUseFBO(Bool_t u)
 {
-   // Set usage of frame-buffer object. This enforces dropping of
-   // display lists and an eve redraw.
+   // Set usage of frame-buffer object.
+   // This enforces dropping of display lists and an eve redraw.
 
    fUseFBO = u;
+
+   IncRTS();
+   StampObjProps();
+   gEve->Redraw3D();
+}
+
+//______________________________________________________________________________
+void TEvePadFrame::SetUseMipmaps(Bool_t u)
+{
+   // Set usage of mipmaps on top frame-buffer object.
+   // This enforces dropping of display lists and an eve redraw.
+
+   fUseMipmaps = u;
 
    IncRTS();
    StampObjProps();

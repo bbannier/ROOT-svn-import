@@ -225,10 +225,13 @@ Bool_t TEvePadFrameGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
       DirectDrawIntoFBO(rnrCtx);
       fFBO->Unbind();
 
-      fFBO->BindTexture();
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-      glGenerateMipmapEXT(GL_TEXTURE_2D);
-      fFBO->UnbindTexture();
+      if (fM->fUseMipmaps)
+      {
+         fFBO->BindTexture();
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+         glGenerateMipmapEXT(GL_TEXTURE_2D);
+         fFBO->UnbindTexture();
+      }
    }
    else if (fFBO != 0)
    {
