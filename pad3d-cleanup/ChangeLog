@@ -1,3 +1,18 @@
+2010-07-20  Matevz Tadel  <mtadel@pcalice14.cern.ch>
+
+	Intermediate commit towards usage of FBOs.
+
+	* TEvePadFrame:
+	Add members controlling usage/width of FBO and rendering
+	time-stamp.
+	Connect to all possible pad signals and do a redraw, requesting
+	update of display-list or FBO.
+
+	* TEvePadFrameGL:
+	Add mutable variables for holding FBO and a time-stamp.
+	Add some more rendering functions and implement ShouldDLCache()..
+	Also have a static TGLPadPainter -- for FBO.
+
 2010-07-19  Matevz Tadel  <mtadel@pcalice14.cern.ch>
 
 	* TGLPadPainter:

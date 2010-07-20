@@ -16,6 +16,8 @@
 
 class TGLViewer;
 class TGLScene;
+class TGLFBO;
+class TGLPadPainter;
 class TGLPadPainter3D;
 
 class TEvePadFrame;
@@ -26,10 +28,19 @@ private:
    TEvePadFrameGL(const TEvePadFrameGL&);            // Not implemented
    TEvePadFrameGL& operator=(const TEvePadFrameGL&); // Not implemented
 
-   static TGLPadPainter3D *fgPainter;
+   static TGLPadPainter   *fgPainter;
+   static TGLPadPainter3D *fgPainter3D;
 
 protected:
    TEvePadFrame    *fM; // Model object.
+
+   mutable TGLFBO  *fFBO;
+   mutable Int_t    fRTS;
+   
+   void DirectDrawIntoFBO(const TGLRnrCtx& rnrCtx) const;
+
+   void DirectDrawFBO(const TGLRnrCtx& rnrCtx) const;
+   void DirectDraw3D(const TGLRnrCtx& rnrCtx) const;
 
 public:
    TEvePadFrameGL();
@@ -38,7 +49,9 @@ public:
    virtual Bool_t SetModel(TObject* obj, const Option_t* opt=0);
    virtual void   SetBBox();
 
-   virtual void DirectDraw(TGLRnrCtx & rnrCtx) const;
+   virtual Bool_t ShouldDLCache(const TGLRnrCtx& rnrCtx) const;
+
+   virtual void   DirectDraw(TGLRnrCtx & rnrCtx) const;
 
    // To support two-level selection
    // virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
