@@ -47,7 +47,6 @@ public:
    Bool_t   MakeCurrent(Int_t devInd);
    void     Flush(Int_t ctxInd);
    void     DeleteGLContext(Int_t devInd);
-   Bool_t   SelectManip(TVirtualGLManip *manip, const TGLCamera *camera, const TGLRect *rect, const TGLBoundingBox *sceneBox);
    void     PaintSingleObject(TVirtualGLPainter *);
    void     PanObject(TVirtualGLPainter *o, Int_t x, Int_t y);
    void     PrintViewer(TVirtualViewer3D *vv);

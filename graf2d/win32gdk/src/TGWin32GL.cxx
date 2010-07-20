@@ -474,12 +474,6 @@ void TGWin32GLManager::PaintSingleObject(TVirtualGLPainter *p)
 }
 
 //______________________________________________________________________________
-Bool_t TGWin32GLManager::SelectManip(TVirtualGLManip *manip, const TGLCamera * camera, const TGLRect * rect, const TGLBoundingBox * sceneBox)
-{
-   return manip->Select(*camera, *rect, *sceneBox);
-}
-
-//______________________________________________________________________________
 void TGWin32GLManager::PanObject(TVirtualGLPainter *o, Int_t x, Int_t y)
 {
    return o->Pan(x, y);

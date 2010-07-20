@@ -71,8 +71,6 @@ public:
 
    //functions to switch between threads in win32
    //used by viewer
-   Bool_t   SelectManip(TVirtualGLManip *manip, const TGLCamera *camera, const TGLRect *rect, const TGLBoundingBox *sceneBox);
-
    Bool_t   PlotSelected(TVirtualGLPainter *plot, Int_t px, Int_t py);
    char    *GetPlotInfo(TVirtualGLPainter *plot, Int_t px, Int_t py);
 
