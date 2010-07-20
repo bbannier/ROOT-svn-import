@@ -72,9 +72,6 @@ public:
    void     Flush(Int_t ctxInd);
    //Generic function for gl context and off-screen device deletion
    void     DeleteGLContext(Int_t devInd);
-
-   //used by viewer
-   Bool_t   SelectManip(TVirtualGLManip *manip, const TGLCamera *camera, const TGLRect *rect, const TGLBoundingBox *sceneBox);
    //
    Bool_t   PlotSelected(TVirtualGLPainter *plot, Int_t px, Int_t py);
    char    *GetPlotInfo(TVirtualGLPainter *plot, Int_t px, Int_t py);

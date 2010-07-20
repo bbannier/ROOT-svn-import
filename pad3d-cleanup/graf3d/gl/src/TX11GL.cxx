@@ -544,16 +544,6 @@ void TX11GLManager::PaintSingleObject(TVirtualGLPainter *p)
    p->Paint();
 }
 
-
-//______________________________________________________________________________
-Bool_t TX11GLManager::SelectManip(TVirtualGLManip *manip, const TGLCamera * camera, const TGLRect * rect, const TGLBoundingBox * sceneBox)
-{
-   // Select manipulator.
-
-   return manip->Select(*camera, *rect, *sceneBox);
-}
-
-
 //______________________________________________________________________________
 void TX11GLManager::PanObject(TVirtualGLPainter *o, Int_t x, Int_t y)
 {

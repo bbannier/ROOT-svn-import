@@ -54,7 +54,6 @@ TGLManip::TGLManip(TGLPhysicalShape* shape) :
 
 //______________________________________________________________________________
 TGLManip::TGLManip(const TGLManip& gm) :
-  TVirtualGLManip(gm),
   fShape(gm.fShape),
   fSelectedWidget(gm.fSelectedWidget),
   fActive(gm.fActive),
@@ -70,7 +69,6 @@ TGLManip& TGLManip::operator=(const TGLManip& gm)
    // Assignement operator.
 
    if(this!=&gm) {
-      TVirtualGLManip::operator=(gm);
       fShape=gm.fShape;
       fSelectedWidget=gm.fSelectedWidget;
       fActive=gm.fActive;

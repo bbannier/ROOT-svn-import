@@ -61,15 +61,6 @@ public:
    ClassDef(TVirtualGLPainter, 0); // Interface for OpenGL painter
 };
 
-//We need this class to implement TGWin32GLManager's SelectManip
-class TVirtualGLManip {
-public:
-   virtual ~TVirtualGLManip(){}
-   virtual Bool_t Select(const TGLCamera & camera, const TGLRect & rect, const TGLBoundingBox & sceneBox) = 0;
-
-   ClassDef(TVirtualGLManip, 0); //Interface for GL manipulator
-};
-
 //This class (and its descendants) in future will replace (?)
 //TVirtualGL/TGLKernel/TGWin32GL/TGX11GL
 
@@ -105,9 +96,6 @@ public:
    virtual void     Flush(Int_t ctxInd) = 0;
    //GL context and off-screen device deletion
    virtual void     DeleteGLContext(Int_t ctxInd) = 0;
-
-   //functions to switch between threads in win32
-   virtual Bool_t   SelectManip(TVirtualGLManip *manip, const TGLCamera *camera, const TGLRect *rect, const TGLBoundingBox *sceneBox) = 0;
    //
    virtual void     PaintSingleObject(TVirtualGLPainter *) = 0;
    virtual void     PanObject(TVirtualGLPainter *o, Int_t x, Int_t y) = 0;
