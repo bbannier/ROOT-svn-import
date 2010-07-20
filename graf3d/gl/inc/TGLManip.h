@@ -12,9 +12,6 @@
 #ifndef ROOT_TGLManip
 #define ROOT_TGLManip
 
-#ifndef ROOT_TVirtualGL
-#include "TVirtualGL.h"
-#endif
 #ifndef ROOT_TPoint
 #include "TPoint.h"
 #endif
@@ -33,7 +30,7 @@ class TGLRect;
 class TGLBoundingBox;
 
 
-class TGLManip : public TVirtualGLManip
+class TGLManip
 {
 protected:
    TGLPhysicalShape  *fShape;             //! manipulated shape
@@ -67,8 +64,6 @@ public:
    TGLPhysicalShape * GetAttached() const { return fShape; }
 
    virtual void   Draw(const TGLCamera& camera) const = 0;
-   // CRAPPY TVirtualGLManip TTTT, just override it here
-   virtual Bool_t Select(const TGLCamera&, const TGLRect&, const TGLBoundingBox&) { return kFALSE; }
 
    virtual Bool_t HandleButton(const Event_t& event, const TGLCamera& camera);
    virtual Bool_t HandleMotion(const Event_t& event, const TGLCamera& camera);

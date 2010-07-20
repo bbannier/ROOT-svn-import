@@ -45,7 +45,4 @@ TGLManager *&TGLManager::Instance()
 
 ClassImp(TVirtualGLPainter)
 
-
-ClassImp(TVirtualGLManip)
-
 ClassImp(TGLPaintDevice)

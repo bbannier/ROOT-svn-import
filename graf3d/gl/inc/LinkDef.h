@@ -122,7 +122,6 @@
 #pragma link C++ class TGLBoxCut;
 #pragma link C++ class TGLParametricEquation;
 #pragma link C++ class TGLParametricPlot;
-#pragma link C++ class TGLAdapter;
 #pragma link C++ class TF2GL+;
 #pragma link C++ class TH2GL+;
 #pragma link C++ class TH3GL+;

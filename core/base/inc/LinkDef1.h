@@ -155,7 +155,6 @@
 #pragma link C++ class TBuffer3D;
 #pragma link C++ class TGLManager;
 #pragma link C++ class TVirtualGLPainter;
-#pragma link C++ class TVirtualGLManip;
 #pragma link C++ class TVirtualPS;
 #pragma link C++ class TGLPaintDevice;
 #pragma link C++ class TVirtualPadPainter;
