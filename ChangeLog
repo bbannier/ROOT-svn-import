@@ -1,5 +1,17 @@
 2010-07-20  Matevz Tadel  <mtadel@greed>
 
+	* graf3d/eve/src/TEvePadFrame.cxx:
+	* graf3d/eve/src/TEvePadFrameGL.cxx:
+	* graf3d/eve/inc/TEvePadFrame.h:
+	Make usage of mimpaps optional via new data-member:
+	  Bool_t fUseMipmaps;
+
+	* tutorials/eve/testgl1.C:
+	Add two more ways to render the histogram:
+	FBO without mipmap, FBO with LARGE internal size.
+
+2010-07-20  Matevz Tadel  <mtadel@greed>
+
 	* graf2d/gpad/src/TCanvas.cxx:
 	* graf2d/gpad/inc/TCanvas.h:
 	Add functions:

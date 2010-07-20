@@ -29,8 +29,9 @@ private:
 protected:
    TPad    *fPad;
    Double_t fSizeX;
-   Bool_t   fUseFBO;
    Int_t    fSizeFBO;  // Width of FBO buffer. If 0, pad pixel width is used.
+   Bool_t   fUseFBO;
+   Bool_t   fUseMipmaps;
 
    Int_t    fRTS;      //! Rendering TimeStamp
    void     IncRTS() { ++fRTS; }
@@ -51,10 +52,12 @@ public:
    void     SetPad(TPad* p);
    Double_t GetSizeX() const     { return fSizeX;  }
    void     SetSizeX(Double_t x) { fSizeX = x;     }
-   Bool_t   GetUseFBO() const    { return fUseFBO; }
-   void     SetUseFBO(Bool_t u);
    Int_t    GetSizeFBO() const   { return fSizeFBO; }
    void     SetSizeFBO(Int_t s)  { fSizeFBO = s;    }
+   Bool_t   GetUseFBO() const    { return fUseFBO; }
+   void     SetUseFBO(Bool_t u);
+   Bool_t   GetUseMipmaps() const { return fUseMipmaps; }
+   void     SetUseMipmaps(Bool_t u);
 
    // Slots for pad-change notifications
    void PadClosed();
