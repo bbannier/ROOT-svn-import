@@ -93,7 +93,6 @@ public:
    void     SelectDrawable(Int_t device);
 
    void     InitPainter();
-   void     InitPainterWithOptions(Bool_t set_viewport);
    void     InvalidateCS();
    void     LockPainter();
    

@@ -19,7 +19,6 @@
 #include "TList.h"
 #include "TCanvas.h"
 #include "TPad.h"
-#include "TGLPadPainter.h"
 #include "TGLPadPainter3D.h"
 
 #include "TMath.h"
@@ -30,8 +29,7 @@
 
 ClassImp(TEvePadFrameGL);
 
-TGLPadPainter   *TEvePadFrameGL::fgPainter   = new TGLPadPainter;
-TGLPadPainter3D *TEvePadFrameGL::fgPainter3D = new TGLPadPainter3D;
+TGLPadPainter3D *TEvePadFrameGL::fgPainter = new TGLPadPainter3D;
 
 //______________________________________________________________________________
 TEvePadFrameGL::TEvePadFrameGL() :
@@ -94,7 +92,7 @@ void TEvePadFrameGL::DirectDrawIntoFBO(const TGLRnrCtx& /*rnrCtx*/) const
 
    glViewport(0, 0, reqw, reqh);
 
-   fgPainter->InitPainterWithOptions(kFALSE);
+   fgPainter->InitPainterForFBO(((Double_t)reqw)/ocw, ((Double_t)reqh)/och, kFALSE);
 
    TObjOptLink *lnk = (TObjOptLink*) pad->GetListOfPrimitives()->FirstLink();
    while (lnk)
@@ -154,7 +152,7 @@ void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& /*rnrCtx*/) const
    TVirtualPad *opad = gPad;
    gPad = pad;
 
-   TVirtualPadPainter *opainter = pad->GetCanvas()->SwitchCanvasPainter(fgPainter3D);
+   TVirtualPadPainter *opainter = pad->GetCanvas()->SwitchCanvasPainter(fgPainter);
 
    glPushAttrib(GL_ENABLE_BIT);
 
@@ -176,7 +174,7 @@ void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& /*rnrCtx*/) const
    glVertex2d(x2, y2); glVertex2d(x1, y2); 
    glEnd();
 
-   fgPainter3D->InitPainterForGLViewer();
+   fgPainter->InitPainterForGLViewer();
 
    TObjOptLink *lnk = (TObjOptLink*) pad->GetListOfPrimitives()->FirstLink();
    while (lnk)
@@ -189,7 +187,7 @@ void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& /*rnrCtx*/) const
 
    glPopMatrix();
 
-   fgPainter3D->LockPainter();
+   fgPainter->LockPainter();
    glPopAttrib();
 
    gPad->GetCanvas()->SwitchCanvasPainter(opainter);

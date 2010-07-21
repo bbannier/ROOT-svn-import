@@ -49,6 +49,11 @@ private:
    Bool_t                      fIsHollowArea;
    
    Bool_t                      fLocked;
+
+   Bool_t                      fForGLViewer;
+   Double_t                    fVPScaleX;
+   Double_t                    fVPScaleY;
+
 public:
    TGLPadPainter3D();
    
@@ -93,6 +98,7 @@ public:
    void     SelectDrawable(Int_t device);
 
    void     InitPainter();
+   void     InitPainterForFBO(Double_t vpsx, Double_t vpsy, Bool_t set_viewport);
    void     InitPainterForGLViewer();
    void     InvalidateCS();
    void     LockPainter();

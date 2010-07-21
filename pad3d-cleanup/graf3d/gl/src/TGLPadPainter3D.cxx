@@ -18,6 +18,7 @@
 #include "TError.h"
 #include "TImage.h"
 #include "TROOT.h"
+#include "TMath.h"
 #include "TPad.h"
 
 #include "TGLPadPainter3D.h"
@@ -253,26 +254,29 @@ void TGLPadPainter3D::SelectDrawable(Int_t /*device*/)
    if (fLocked)
       return;
 
-   // XXXX Here we need to do something smarter ... for now just return.
-   return;
+   if (TPad *pad = dynamic_cast<TPad*>(gPad))
+   {
+      if (fForGLViewer)
+      {
+         return;
+      }
+      else
+      {
+         glViewport(TMath::Nint(fVp[0]*pad->GetAbsXlowNDC()), TMath::Nint(fVp[1]*(1.0 - pad->GetAbsYlowNDC())),
+                    TMath::Nint(fVp[2]*pad->GetAbsWNDC()),    TMath::Nint(fVp[3]*pad->GetAbsHNDC()));
 
-   if (TPad *pad = dynamic_cast<TPad *>(gPad)) {
-      Int_t px = 0, py = 0;
+         glMatrixMode(GL_PROJECTION);
+         glLoadIdentity();
+         glOrtho(pad->GetX1(), pad->GetX2(), pad->GetY1(), pad->GetY2(), -10., 10.);
 
-      pad->XYtoAbsPixel(pad->GetX1(), pad->GetY1(), px, py);
-
-      py = gPad->GetWh() - py;
-      //
-      glViewport(px, py, GLsizei(gPad->GetWw() * pad->GetAbsWNDC()), GLsizei(gPad->GetWh() * pad->GetAbsHNDC()));
-
-      glMatrixMode(GL_PROJECTION);
-      glLoadIdentity();
-      glOrtho(pad->GetX1(), pad->GetX2(), pad->GetY1(), pad->GetY2(), -10., 10.);
-
-      glMatrixMode(GL_MODELVIEW);
-      glLoadIdentity();
-      glTranslated(0., 0., -1.);
-   } else {
+         // XXXX WTF???
+         // glMatrixMode(GL_MODELVIEW);
+         // glLoadIdentity();
+         // glTranslated(0., 0., -1.);
+      }
+   }
+   else
+   {
       Error("TGLPadPainter3D::SelectDrawable", "function was called not from TPad or TCanvas code\n");
       throw std::runtime_error("");
    }
@@ -314,6 +318,49 @@ void TGLPadPainter3D::InitPainter()
 }
 
 //______________________________________________________________________________
+void TGLPadPainter3D::InitPainterForFBO(Double_t vpsx, Double_t vpsy,
+                                        Bool_t set_viewport)
+{
+   //Init gl-pad painter:
+   //1. 2D painter does not use depth test, should not modify
+   //   depth-buffer content (except initial cleanup).
+   //2. Disable cull face.
+   //3. Disable lighting.
+   //4. Set viewport to the whole canvas area -- if set_viewport is true.
+   //5. Set camera.
+   //6. Unlock painter.
+
+   glDisable(GL_DEPTH_TEST);
+   glDisable(GL_CULL_FACE);
+   glDisable(GL_LIGHTING);
+
+   if (set_viewport)
+      glViewport(0, 0, GLsizei(gPad->GetWw()), GLsizei(gPad->GetWh()));
+
+   //Clear the buffer
+   glDepthMask(GL_TRUE);
+   glClearColor(1.,1.,1.,1.);
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   glDepthMask(GL_FALSE);
+
+   glMatrixMode(GL_PROJECTION);
+   glLoadIdentity();
+
+   glOrtho(gPad->GetX1(), gPad->GetX2(), gPad->GetY1(), gPad->GetY2(), -10., 10.);
+
+   glMatrixMode(GL_MODELVIEW);
+   glLoadIdentity();
+   glTranslated(0., 0., -1.);
+
+   fLocked = kFALSE;
+
+   fForGLViewer = kFALSE;
+   fVPScaleX = vpsx;
+   fVPScaleY = vpsy;
+   SaveViewport();
+}
+
+//______________________________________________________________________________
 void TGLPadPainter3D::InitPainterForGLViewer()
 {
    //Init gl-pad painter:
@@ -325,6 +372,8 @@ void TGLPadPainter3D::InitPainterForGLViewer()
    glDisable(GL_LIGHTING);
 
    fLocked = kFALSE;
+
+   fForGLViewer = kTRUE;
 }
 
 //______________________________________________________________________________
@@ -719,16 +768,27 @@ void TGLPadPainter3D::DrawText(Double_t x, Double_t y, const char *text, ETextMo
    glMatrixMode(GL_MODELVIEW);
 
    Float_t rgba[3] = {};
-   Rgl::Pad::ExtractRGB(gVirtualX->GetTextColor(), rgba);
+   Rgl::Pad::ExtractRGB(GetTextColor(), rgba);
    glColor3fv(rgba);
 
-   fFM.RegisterFont(Int_t(gVirtualX->GetTextSize()) - 1,
-                    TGLFontManager::GetFontNameFromId(gVirtualX->GetTextFont()),
-                    TGLFont::kTexture, fF);
+   // XXXX The font size can get TOO LARGE, esp. for large FBOs.
+   // Also get GL-errors for polygons fonts --- why??
+   Int_t size = Int_t(GetTextSize() * fVPScaleY) - 1;
+   if (size <= 64)
+   {
+      fFM.RegisterFont(size, TGLFontManager::GetFontNameFromId(GetTextFont()),
+                       TGLFont::kTexture, fF);
+   }
+   else
+   {
+      fFM.RegisterFont(size, TGLFontManager::GetFontNameFromId(GetTextFont()),
+                       TGLFont::kPolygon, fF);
+   }
+
    fF.PreRender();
 
    const UInt_t padH = UInt_t(gPad->GetAbsHNDC() * gPad->GetWh());
-   fF.Render(text, gPad->XtoPixel(x), padH - gPad->YtoPixel(y), GetTextAngle(), GetTextMagnitude());
+   fF.Render(text, TMath::Nint(fVPScaleX * gPad->XtoPixel(x)), padH - TMath::Nint(fVPScaleY * gPad->YtoPixel(y)), GetTextAngle(), GetTextMagnitude());
 
    fF.PostRender();
    RestoreProjectionMatrix();
