@@ -128,6 +128,7 @@ void TMVA::MethodBoost::DeclareOptions()
    AddPreDefVal(TString("AdaBoost"));
    AddPreDefVal(TString("Bagging"));
    AddPreDefVal(TString("HighEdgeGauss"));
+   AddPreDefVal(TString("HighEdgePara"));
 
    DeclareOptionRef(fMethodWeightType = "ByError", "Boost_MethodWeightType",
                     "How to set the final weight of the boosted classifiers");
@@ -642,14 +643,17 @@ void TMVA::MethodBoost::SingleBoost()
          ev->ScaleBoostWeight(Factor);
       }
    }
-   else if (fBoostType == "HighEdgeGauss") {
+   else if (fBoostType == "HighEdgeGauss" || 
+	    fBoostType == "HighEdgePara") {
       // Give events high boost weight, which are close the MVA cut
       // value
       Double_t MVACutValue = method->GetSignalReferenceCut();
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
-	 ev->SetBoostWeight( 
-	    TMath::Exp( -TMath::Power(method->GetMvaValue()-MVACutValue,2)/0.1 ) );
+	 if (fBoostType == "HighEdgeGauss")
+	    ev->SetBoostWeight( TMath::Exp( -TMath::Power(method->GetMvaValue()-MVACutValue,2)/0.1 ) );
+	 else
+	    ev->SetBoostWeight( -4.0 * TMath::Power(method->GetMvaValue()-0.5,2) + 1.0 );
          sumAll1 += ev->GetWeight();
       }
       // rescaling all the weights to have the same sum, but without
