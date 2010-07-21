@@ -1091,10 +1091,16 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
       // associate undefined events 
       if( splitMode == "ALTERNATE" ){
          Log() << kDEBUG << "split 'ALTERNATE'" << Endl;
+	 Int_t nTraining = alreadyAvailableTraining;
+	 Int_t nTesting  = alreadyAvailableTesting;
          for( EventVector::iterator it = eventVectorUndefined.begin(), itEnd = eventVectorUndefined.end(); it != itEnd; ){
-            eventVectorTraining.insert( eventVectorTraining.end(), (*it) );
-            ++it;
+	    ++nTraining;
+	    if( nTraining <= requestedTraining ){
+	       eventVectorTraining.insert( eventVectorTraining.end(), (*it) );
+	       ++it;
+	    }
             if( it != itEnd ){
+	       ++nTesting;
                eventVectorTesting.insert( eventVectorTesting.end(), (*it) );
                ++it;
             }
@@ -1129,7 +1135,7 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
       if (splitMode.Contains( "RANDOM" )){
          UInt_t sizeTraining  = eventVectorTraining.size();
          if( sizeTraining > UInt_t(requestedTraining) ){
-            std::vector<UInt_t> indicesTraining( sizeTraining );
+           std::vector<UInt_t> indicesTraining( sizeTraining );
             // make indices
             std::generate( indicesTraining.begin(), indicesTraining.end(), TMVA::Increment<UInt_t>(0) );
             // shuffle indices
@@ -1164,9 +1170,15 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
          }
       }
       else { // erase at end
+	 if( eventVectorTraining.size() < UInt_t(requestedTraining) )
+	    Log() << kWARNING << "DataSetFactory/requested number of training samples larger than size of eventVectorTraining.\n"
+		  << "There is probably an issue. Please contact the TMVA developers." << Endl;
          std::for_each( eventVectorTraining.begin()+requestedTraining, eventVectorTraining.end(), DeleteFunctor<Event>() );
          eventVectorTraining.erase(eventVectorTraining.begin()+requestedTraining,eventVectorTraining.end());
 
+	 if( eventVectorTesting.size() < UInt_t(requestedTesting) )
+	    Log() << kWARNING << "DataSetFactory/requested number of testing samples larger than size of eventVectorTesting.\n"
+		  << "There is probably an issue. Please contact the TMVA developers." << Endl;
          std::for_each( eventVectorTesting.begin()+requestedTesting, eventVectorTesting.end(), DeleteFunctor<Event>() );
          eventVectorTesting.erase(eventVectorTesting.begin()+requestedTesting,eventVectorTesting.end());
       }
