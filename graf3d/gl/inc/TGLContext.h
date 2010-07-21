@@ -25,8 +25,8 @@ class TGLContextIdentity;
 #endif
 
 class TGLContextPrivate;
-class TGLPaintDevice;
 class TGLFontManager;
+class TGLWidgetBase;
 class TGLWidget;
 
 class TGLContext
@@ -34,7 +34,7 @@ class TGLContext
    friend class TGLContextPrivate;
 
 private:
-   TGLPaintDevice    *fDevice;
+   TGLWidgetBase     *fWidget;
    TGLContextPrivate *fPimpl;
 
    Bool_t fFromCtor;//To prohibit user's calls of SetContext.
@@ -46,7 +46,7 @@ private:
    void GlewInit();
 
 public:
-   TGLContext(TGLPaintDevice *glDevice, Bool_t shareDefault = kTRUE, const TGLContext *shareList = 0);
+   TGLContext(TGLWidgetBase *glWid, Bool_t shareDefault = kTRUE, const TGLContext *shareList = 0);
 
    TGLContextIdentity *GetIdentity()const;
 
