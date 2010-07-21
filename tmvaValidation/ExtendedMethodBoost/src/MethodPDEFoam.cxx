@@ -98,7 +98,7 @@ void TMVA::MethodPDEFoam::Init( void )
    fNmin           = 100;
    fCutRMSmin      = kFALSE;   // default TFoam method
    fRMSmin         = 0.01;
-   fFillFoamWithBoostWeights = kTRUE;
+   fFillFoamWithBoostWeights = kFALSE;
 
    fKernel         = kNone; // default: use no kernel
    fTargetSelection= kMean; // default: use mean for target selection (only multi target regression!)
@@ -127,7 +127,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    DeclareOptionRef( fMultiTargetRegression = kFALSE,     "MultiTargetRegression", "Do regression with multiple targets");
    DeclareOptionRef( fCutNmin = kTRUE,         "CutNmin",  "Requirement for minimal number of events in cell");
    DeclareOptionRef( fNmin = 100,             "Nmin",     "Number of events in cell required to split cell");
-   DeclareOptionRef( fFillFoamWithBoostWeights = kTRUE, "FillFoamWithBoostWeights", "Fill foam with boost or original weights");
+   DeclareOptionRef( fFillFoamWithBoostWeights = kFALSE, "FillFoamWithBoostWeights", "Fill foam with boost or original weights");
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -619,9 +619,9 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    // set Options VolFrac, kDim, ...
    if (ft==kMultiTarget)
       // dimension of foam = number of targets + non-targets
-      pdefoam->SetkDim(     Data()->GetNTargets()+Data()->GetNVariables());
+      pdefoam->SetDim(      Data()->GetNTargets()+Data()->GetNVariables());
    else
-      pdefoam->SetkDim(     GetNvar());  // Mandatory!
+      pdefoam->SetDim(      GetNvar());  // Mandatory!
    pdefoam->SetVolumeFraction(fVolFrac); // Mandatory!
    pdefoam->SetnCells(      fnCells);    // optional
    pdefoam->SetnSampl(      fnSampl);    // optional
