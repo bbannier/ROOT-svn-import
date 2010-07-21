@@ -179,8 +179,8 @@ TMVA::PDEFoam::~PDEFoam()
 
    delete fVariableNames;
    delete fTimer;
-   delete fDistr;
-   delete fPseRan;
+   if (fDistr)  delete fDistr;
+   if (fPseRan) delete fPseRan;
    if (fXmin) delete [] fXmin;  fXmin=0;
    if (fXmax) delete [] fXmax;  fXmax=0;
 
@@ -227,7 +227,7 @@ void TMVA::PDEFoam::SetXmin(Int_t idim, Double_t wmin)
       Log() << kFATAL << "<SetXmin>: Dimension out of bounds!" << Endl;
 
    fXmin[idim]=wmin;
-   fDistr->SetXmin(idim, wmin);
+   GetDistr()->SetXmin(idim, wmin);
 }
 
 //_____________________________________________________________________
@@ -238,7 +238,7 @@ void TMVA::PDEFoam::SetXmax(Int_t idim, Double_t wmax)
       Log() << kFATAL << "<SetXmax>: Dimension out of bounds!" << Endl;
 
    fXmax[idim]=wmax;
-   fDistr->SetXmax(idim, wmax);
+   GetDistr()->SetXmax(idim, wmax);
 }
 
 //_____________________________________________________________________
@@ -2421,7 +2421,7 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, std::string what,
 void TMVA::PDEFoam::SetVolumeFraction( Double_t vfr )
 {
    // set VolFrac to internal foam density PDEFoamDistr
-   fDistr->SetVolumeFraction(vfr);
+   GetDistr()->SetVolumeFraction(vfr);
    SetPDEFoamVolumeFraction(vfr);
 }
 
@@ -2429,14 +2429,14 @@ void TMVA::PDEFoam::SetVolumeFraction( Double_t vfr )
 void TMVA::PDEFoam::FillBinarySearchTree( const Event* ev, Bool_t NoNegWeights )
 {
    // Insert event to internal foam density PDEFoamDistr.
-   fDistr->FillBinarySearchTree(ev, GetFoamType(), NoNegWeights);
+   GetDistr()->FillBinarySearchTree(ev, GetFoamType(), NoNegWeights);
 }
 
 //_____________________________________________________________________
 void TMVA::PDEFoam::Init()
 {
    // Initialize internal foam density PDEFoamDistr
-   fDistr->Initialize(GetTotDim());
+   GetDistr()->Initialize(GetTotDim());
 }
 
 //_____________________________________________________________________
@@ -2445,11 +2445,11 @@ void TMVA::PDEFoam::SetFoamType( EFoamType ft )
    // Set the foam type.  This determinates the method of the
    // calculation of the density during the foam build-up.
    if (ft==kDiscr)
-      fDistr->SetDensityCalc(kDISCRIMINATOR);
+      GetDistr()->SetDensityCalc(kDISCRIMINATOR);
    else if (ft==kMonoTarget)
-      fDistr->SetDensityCalc(kTARGET);
+      GetDistr()->SetDensityCalc(kTARGET);
    else
-      fDistr->SetDensityCalc(kEVENT_DENSITY);
+      GetDistr()->SetDensityCalc(kEVENT_DENSITY);
 
    fFoamType = ft; // set foam type class variable
 }

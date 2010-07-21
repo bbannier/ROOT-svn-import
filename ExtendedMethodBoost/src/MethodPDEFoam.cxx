@@ -314,6 +314,10 @@ void TMVA::MethodPDEFoam::Train( void )
       else
          TrainUnifiedClassification();
    }
+
+   // Delete the binary search tree in order to save memory
+   for(int i=0; i<FOAM_NUMBER; i++)
+      if(foam[i]) foam[i]->DeleteBinarySearchTree();
 }
 
 /////////////////////////////////////////////////////////////////////////////
