@@ -144,6 +144,7 @@ namespace TMVA {
    private:
       // Square function (fastest implementation)
       template<typename T> T Sqr(T x) const { return x*x; }
+      PDEFoamDistr* GetDistr() const { assert(fDistr); return fDistr; }
 
    protected:
       // ---------- TMVA console output
@@ -266,9 +267,13 @@ namespace TMVA {
       Double_t GetXmax(Int_t idim){return fXmax[idim];}
 
       // Getters and Setters for variable names
-      void AddVariableName(const char *s) { AddVariableName(new TObjString(s)); };
-      void AddVariableName(TObjString *s) { fVariableNames->Add(s); };
-      TObjString* GetVariableName(Int_t idx) {return dynamic_cast<TObjString*>(fVariableNames->At(idx));};
+      void AddVariableName(const char *s) { AddVariableName(new TObjString(s)); }
+      void AddVariableName(TObjString *s) { fVariableNames->Add(s); }
+      TObjString* GetVariableName(Int_t idx) {return dynamic_cast<TObjString*>(fVariableNames->At(idx));}
+
+      // Delete the fDistr object, which contains the binary search
+      // tree
+      void DeleteBinarySearchTree(){ if(fDistr) delete fDistr; fDistr=0; }
 
       // ---------- Transformation functions for event variables into foam boundaries
       // reason: foam allways has boundaries [0, 1]
