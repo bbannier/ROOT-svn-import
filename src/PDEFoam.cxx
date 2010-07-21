@@ -110,7 +110,7 @@ TMVA::PDEFoam::PDEFoam() :
    fNmin      = 100;  // only used, when fCutMin == kTRUE
    fCutRMSmin = kFALSE;
    fRMSmin    = 1.0;
-   fFillFoamWithBoostWeights = kTRUE;
+   fFillFoamWithBoostWeights = kFALSE;
 
    SetPDEFoamVolumeFraction(-1.);
 
@@ -156,7 +156,7 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fXmax      = 0;
    fCutNmin   = kFALSE;
    fCutRMSmin = kFALSE;
-   fFillFoamWithBoostWeights = kTRUE;
+   fFillFoamWithBoostWeights = kFALSE;
    SetPDEFoamVolumeFraction(-1.);
 
    fSignalClass     = -1;
