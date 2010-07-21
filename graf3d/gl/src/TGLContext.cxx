@@ -39,9 +39,9 @@ ClassImp(TGLContext);
 Bool_t TGLContext::fgGlewInitDone = kFALSE;
 
 //______________________________________________________________________________
-TGLContext::TGLContext(TGLWidget *wid, Bool_t shareDefault,
+TGLContext::TGLContext(TGLPaintDevice *dev, Bool_t shareDefault,
                        const TGLContext *shareList)
-   : fDevice(wid),
+   : fDevice(dev),
      fPimpl(0),
      fFromCtor(kTRUE),
      fValid(kFALSE),
@@ -57,10 +57,10 @@ TGLContext::TGLContext(TGLWidget *wid, Bool_t shareDefault,
       shareList = TGLContextIdentity::GetDefaultContextAny();
 
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLContext *)0x%lx)->SetContext((TGLWidget *)0x%lx, (TGLContext *)0x%lx)",
-                                  (ULong_t)this, (ULong_t)wid, (ULong_t)shareList));
+      gROOT->ProcessLineFast(Form("((TGLContext *)0x%lx)->SetContext((TGLContext *)0x%lx)",
+                                  (ULong_t)this, (ULong_t)shareList));
    } else {
-      SetContext(wid, shareList);
+      SetContext(shareList);
    }
 
    if (shareDefault)
@@ -93,22 +93,22 @@ void TGLContext::GlewInit()
 
 namespace {
 
-   struct LayoutCompatible_t {
-      void          *fDummy0;
-      void          *fDummy1;
-      HWND          *fPHwnd;
-      unsigned char  fDummy2;
-      unsigned       fDummy3;
-      unsigned short fDummy4;
-      unsigned short fDummy5;
-      void          *fDummy6;
-      unsigned       fDummy7:2;
-   };
+struct LayoutCompatible_t {
+  void          *fDummy0;
+  void          *fDummy1;
+  HWND          *fPHwnd;
+  unsigned char  fDummy2;
+  unsigned       fDummy3;
+  unsigned short fDummy4;
+  unsigned short fDummy5;
+  void          *fDummy6;
+  unsigned       fDummy7:2;
+};
 
 }
 
 //______________________________________________________________________________
-void TGLContext::SetContext(TGLWidget *widget, const TGLContext *shareList)
+void TGLContext::SetContext(const TGLContext *shareList)
 {
    //WIN32 gl-context creation. Defined as a member-function (this code removed from ctor)
    //to make WIN32/X11 separation cleaner.
@@ -118,9 +118,15 @@ void TGLContext::SetContext(TGLWidget *widget, const TGLContext *shareList)
       return;
    }
 
+   const TGLWidgetBase *widget = dynamic_cast<TGLWidgetBase *>(fDevice);
+   if (!widget) {
+      Error("TGLContext::SetContext", "A class, derived from TGLWidgetBase was expected!");
+      throw std::runtime_error("dynamic_case has failed");
+   }
+
    std::auto_ptr<TGLContextPrivate> safe_ptr(fPimpl = new TGLContextPrivate);
    LayoutCompatible_t *trick =
-      reinterpret_cast<LayoutCompatible_t *>(widget->GetId());
+      reinterpret_cast<LayoutCompatible_t *>(widget->GetDeviceID());
    HWND hWND = *trick->fPHwnd;
    HDC  hDC  = GetWindowDC(hWND);
 
@@ -226,7 +232,7 @@ void TGLContext::Release()
 //==============================================================================
 
 //______________________________________________________________________________
-void TGLContext::SetContext(TGLWidget *widget, const TGLContext *shareList)
+void TGLContext::SetContext(const TGLContext *shareList)
 {
    //X11 gl-context creation. Defined as a member-function (this code removed from ctor)
    //to make WIN32/X11 separation cleaner.
@@ -235,6 +241,12 @@ void TGLContext::SetContext(TGLWidget *widget, const TGLContext *shareList)
    if (!fFromCtor) {
       Error("TGLContext::SetContext", "SetContext must be called only from ctor");
       return;
+   }
+
+   TGLWidgetBase *widget = dynamic_cast<TGLWidgetBase *>(fDevice);
+   if (!widget) {
+      Error("TGLContext::SetContext", "A class, derived from TGLWidgetBase was expected!");
+      throw std::runtime_error("dynamic_case has failed");
    }
 
    std::auto_ptr<TGLContextPrivate> safe_ptr(fPimpl = new TGLContextPrivate);
@@ -252,7 +264,7 @@ void TGLContext::SetContext(TGLWidget *widget, const TGLContext *shareList)
    fPimpl->fDpy = dpy;
    fPimpl->fVisualInfo = visInfo;
    fPimpl->fGLContext = glCtx;
-   fPimpl->fWindowID = widget->GetId();
+   fPimpl->fWindowID = widget->GetDeviceID();
 
    fValid = kTRUE;
    fDevice->AddContext(this);

@@ -14,6 +14,7 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
+#pragma link C++ class TGLWidgetBase;
 #pragma link C++ class TGLWidget;
 #pragma link C++ class TGLContext;
 #pragma link C++ class TGLContextIdentity;

@@ -32,8 +32,19 @@
 class TGLWidget;
 class TGEventHandler;
 
-class TGLWidget : public TGFrame, public TGLPaintDevice
-{
+//Base class for window based gl devices.
+//Simple adds two new functions to widget's interface.
+//Exists to make TGLContext more "generic".
+class TGLWidgetBase : public TGLPaintDevice {
+public:
+  virtual std::pair<void *, void *> GetInnerData() const = 0;
+  virtual Handle_t GetDeviceID() const = 0;
+
+private:
+   ClassDef(TGLWidgetBase, 0)//Base class for gl-widgets.
+};
+
+class TGLWidget : public TGFrame, public TGLWidgetBase {
    friend class TGLContext;
 
 private:
@@ -91,10 +102,6 @@ public:
 
    void   DoRedraw();
 
-private:
-   TGLWidget(const TGLWidget &);              // Not implemented.
-   TGLWidget &operator = (const TGLWidget &); // Not implemented.
-
 protected:
    TGLWidget(Window_t glw, const TGWindow* parent, Bool_t selectInput);
 
@@ -102,10 +109,16 @@ protected:
                                 UInt_t width, UInt_t height,
                                 std::pair<void *, void *>& innerData);
 
-   void AddContext(TGLContext *ctx);
-   void RemoveContext(TGLContext *ctx);
+   //Overriders.
+   void                      AddContext(TGLContext *ctx);
+   void                      RemoveContext(TGLContext *ctx);
 
+   Handle_t                  GetDeviceID() const {return GetId();}
    std::pair<void *, void *> GetInnerData()const;
+
+private:
+   TGLWidget(const TGLWidget &);              // Not implemented.
+   TGLWidget &operator = (const TGLWidget &); // Not implemented.
 
    ClassDef(TGLWidget, 0); //Window (widget) version of TGLPaintDevice
 };
