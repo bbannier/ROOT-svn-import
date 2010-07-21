@@ -8,32 +8,24 @@
 
 ClassImp(TKDE)
    
-TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, /*EFitMethod fit,*/ EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho) :
+TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho) :
    fData(events, 0.0),
    fPDF(0),
    fUpperPDF(0),
    fLowerPDF(0),
    fHistogram(0),
-//    fFitMethod(fit),
-   fKernelType(kern),
-   fIteration(iter),
-   fMirror(mir),
-   fBinning(bin),
-//    fSettedOptions(std::vector<Bool_t>(kTotalOptions, kFALSE)),
    fNBins(1000),
    fNEvents(events),
    fUseBinsNEvents(1000),
    fMean(0.0),
    fSigma(0.0),
-   fXMin(xMin),
-   fXMax(xMax),
-   fRho(rho),
    fCanonicalBandwidths(std::vector<Double_t>(kTotalKernels, 0.0))
 {
    //Class constructor
-//    SetOptions(fit, kern, iter, mir, bin);
-   SetData(data);
+   SetOptions(xMin, xMax, kern, iter, mir, bin, rho);
+   CheckOptions();
    SetKernelFunction();
+   SetData(data);
    SetCanonicalBandwidths();
    SetKernel();
 }
@@ -47,71 +39,44 @@ TKDE::~TKDE() {
    delete fKernelFunction;
    delete fKernel;
 }
-    
-// void TKDE::ResetOptions() {
-//    // Sets options to default
-//    fSettedOptions.assign(kTotalOptions, kFALSE);  
-// }
-   
-// void TKDE::SetOptions(EFitMethod fit, EKernelType kern, EIteration iter, EMirror mir, EBinning bin) {
-//    // Sets User global options
-//    SetFittingMethod(fit);
-//    SetKernelType(kern) ;
-//    SetIteration(iter);
-//    SetMirror(mir);
-//    SetBinning(bin);
-//    SetOptions();
-// }
-      
-// void TKDE::SetOptions() {
-//    // Sets global options
-//    fSettedOptions[fFitMethod]  = kTRUE;
-//    fSettedOptions[fKernelType] = kTRUE;
-//    fSettedOptions[fIteration]  = kTRUE;
-//    fSettedOptions[fMirror]     = kTRUE;
-//    fSettedOptions[fBinning]    = kTRUE;
-// }
-
-// void TKDE::SetMethod(EFitMethod fit) {
-//    // Sets User option for density estimator 
-//    fFitMethod = fit;
-// }
-   
+  
+void TKDE::SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho) {
+   // Sets User global options
+   fXMin = xMin;
+   fXMax = xMax;
+   fKernelType = kern;
+   fIteration = iter;
+   fMirror = mir;
+   fBinning = bin;
+   fRho = rho;
+}
 
 void TKDE::SetKernelType(EKernelType kern) {
    // Sets User option for the choice of kernel estimator    
    fKernelType = kern;
+   SetKernel();
 }
    
 void TKDE::SetIteration(EIteration iter) {
    // Sets User option for fixed or adaptive iteration      
    fIteration = iter;
+   SetKernel();
 }
       
-
-void TKDE::Instantiate(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, /*EFitMethod fit = kKDE,*/ EIteration iter, EMirror mir, EBinning bin, Double_t rho) {
+void TKDE::Instantiate(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho) {
    // Template's constructor surrogate
    fData = std::vector<Double_t>(events, 0.0);
    fPDF = 0;
    fUpperPDF = 0;
    fLowerPDF = 0;
    fHistogram = 0;
-   fKernelType = kUserDefined;
-//    fFitMethod(fit);
-   fIteration = iter;
-   fMirror = mir;
-   fBinning = bin;
-//    fSettedOptions(std::vector<Bool_t>(kTotalOptions; kFALSE));
    fNBins = 1000;
    fNEvents = events;
    fUseBinsNEvents = 1000;
    fMean = 0.0;
    fSigma = 0.0;
-   fXMin = xMin;
-   fXMax = xMax;
-   fRho = rho;
    fCanonicalBandwidths = std::vector<Double_t>(kTotalKernels, 0.0);
-//    SetOptions(fit, kUserDefined; iter, mir, bin);
+   SetOptions(xMin, xMax, kUserDefined, iter, mir, bin, rho);
    SetData(data);
    SetCanonicalBandwidths();
    SetKernel();
@@ -124,19 +89,19 @@ void TKDE::SetMirror(EMirror mir) {
    fMirrorRight = fMirror == kMirrorRight || fMirror == kMirrorBoth || fMirror == kMirrorAsymLeftRight;
    fAsymLeft    = fMirror == kMirrorAsymLeft  || fMirror == kMirrorAsymLeftRight || fMirror == kMirrorAsymBoth;
    fAsymRight   = fMirror == kMirrorAsymRight || fMirror == kMirrorLeftAsymRight || fMirror == kMirrorAsymBoth;
+   SetKernel();
 }
       
 void TKDE::SetBinning(EBinning bin) {
    // Sets User option for binning
    fBinning = bin;
    SetUseBins();
+   SetKernel();
 }
    
 void TKDE::SetUseBins() {
    // Sets User option for using binned weights  
    switch (fBinning) {
-//       case kTotalOptions:
-//          break;
       default:
       case kRelaxedBinning:
          if (fNEvents >= fUseBinsNEvents) {
@@ -231,18 +196,23 @@ void TKDE::SetKernelFunction(KernelFunction_Ptr kernfunc) {
       case kTotalKernels :
       default:
          fKernelFunction = kernfunc;
-         CheckKernelValidity();
-         ComputeCanonicalBandwidth();
+         if (fKernelFunction) {
+            CheckKernelValidity();
+            ComputeCanonicalBandwidth();
+         } else {
+            MATH_ERROR_MSG("TKDE::SetKernelFunction", "Undefined user kernel function input!" << std::endl);
+            exit(EXIT_FAILURE);
+         }
    }
 }
 
 void TKDE::SetCanonicalBandwidths() {
    // Sets the canonical bandwidths according to the kernel type
    fCanonicalBandwidths[kUserDefined] = 1.0;
-   fCanonicalBandwidths[kGaussian] = 0.7764;
-   fCanonicalBandwidths[kEpanechnikov] = 1.7188;
-   fCanonicalBandwidths[kBiweight] = 1.0; // need computation in Mathematica
-   fCanonicalBandwidths[kCosineArch] = 1.0; // need computation in Mathematica
+   fCanonicalBandwidths[kGaussian] = 0.7764;     // Checked in Mathematica
+   fCanonicalBandwidths[kEpanechnikov] = 1.7188; // Checked in Mathematica
+   fCanonicalBandwidths[kBiweight] = 2.03617;    // Checked in Mathematica
+   fCanonicalBandwidths[kCosineArch] = 1.7663;   // Checked in Mathematica
 }
 
 inline void TKDE::SetData(Double_t x, UInt_t i) {
@@ -264,6 +234,15 @@ void TKDE::SetRange(Double_t xMin, Double_t xMax) {
    fXMin = xMin;
    fXMax = xMax;
    SetKernel();
+}
+
+void TKDE::CheckOptions() {
+   if (fKernelType == kUserDefined || fKernelType == kTotalKernels)
+      this->Error("TKDE::CheckOptions", "Ilegal user kernel type input!");
+   if (fRho <= 0.0) {
+      MATH_ERROR_MSG("TKDE::CheckOptions", "rho cannot be non-positive!!" << std::endl);
+      exit(EXIT_FAILURE);
+   }
 }
 
 TF1* TKDE::GetFunction() {
@@ -288,6 +267,7 @@ void TKDE::Fill(Double_t data) {
    fXMax = std::max(data, fXMin);
    SetMean();
    SetSigma();
+   SetKernel();
 }
 
 Double_t TKDE::operator()(const Double_t* x, const Double_t*) const {
@@ -308,13 +288,13 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
    std::vector<Double_t>::iterator weight = weights.begin();
    std::vector<Double_t> dataset(fKDE->fUseBins ? GetBinCentreData() : fKDE->fData);
    std::vector<Double_t>::iterator data = dataset.begin();
-   Double_t minWeight(*weight * TMath::Power(50.0, -0.5)); //TODO: how was its computation done?
+//    Double_t minWeight(*weight * TMath::Power(50.0, -0.5)); //TODO:  find source of justification; seems not needed
    Double_t norm(2.0 * TMath::Sqrt(3.0)); // Adaptive weight normalization TODO: find source of justification
    for (; weight != weights.end(); ++weight, ++data) {
       *weight *= fKDE->fRho / fKDE->fSigma * TMath::Power(fKDE->fSigma / (*fKDE->fKernel)(*data), 0.5) / norm;
-      if (*weight < minWeight) {
-         *weight = minWeight;
-      }
+//       if (*weight < minWeight) {
+//          *weight = minWeight;
+//       }
    }
    fWeights = weights;
 }
@@ -400,9 +380,15 @@ Double_t TKDE::GetError(Double_t x) const {
 
 
 void TKDE::CheckKernelValidity() {
-   // Checks if kernel has mu = 0 and positive finite sigma conditions
-   Bool_t valid = ComputeKernelMu() == 0.0 /*needs better comaprison*/ && ComputeKernelSigma2() > 0 && ComputeKernelSigma2() != std::numeric_limits<Double_t>::infinity();
-   if (!valid) MATH_ERROR_MSG("TKDE::CheckKernelValidity", "No valid conditions: either the kernel's mu is not zero or the kernel's sigma2 is not finite positive! Unsuitable kernel." << std::endl);
+   // Checks if kernel has unit integral, mu = 0 and positive finite sigma conditions
+   Double_t mu = ComputeKernelMu();
+   Double_t sigma2 = ComputeKernelSigma2();
+   Double_t unity = ComputeKernelUnitIntegration();
+   Double_t valid = unity != 1.0 && mu == 0.0  && sigma2 > 0 && sigma2 != std::numeric_limits<Double_t>::infinity();
+   if (!valid) {
+      MATH_ERROR_MSG("TKDE::CheckKernelValidity", "No valid conditions: either the kernel's mu is not zero or the kernel's sigma2 is not finite positive or the kernel's integration is not 1! Unsuitable kernel." << std::endl);
+      exit(EXIT_FAILURE);
+   }
 }
 
 Double_t TKDE::ComputeKernelL2Norm() const {
@@ -414,7 +400,7 @@ Double_t TKDE::ComputeKernelL2Norm() const {
    return result;
 }
 
-Double_t TKDE::ComputeKernelSigma2() {
+Double_t TKDE::ComputeKernelSigma2() const {
    // Computes the kernel's sigma squared
    ROOT::Math::IntegratorOneDim ig;
    KernelIntegrand kernel(this, TKDE::KernelIntegrand::kSigma2);
@@ -423,7 +409,7 @@ Double_t TKDE::ComputeKernelSigma2() {
    return result;
 }
    
-Double_t TKDE::ComputeKernelMu() {
+Double_t TKDE::ComputeKernelMu() const {
    // Computes the kernel's mu
    ROOT::Math::IntegratorOneDim ig;
    KernelIntegrand kernel(this, TKDE::KernelIntegrand::kMu);
@@ -432,9 +418,18 @@ Double_t TKDE::ComputeKernelMu() {
    return result;
 }
 
+Double_t TKDE::ComputeKernelUnitIntegration() const {
+   // Computes the kernel's integral which ought to be unity
+   ROOT::Math::IntegratorOneDim ig;
+   KernelIntegrand kernel(this, TKDE::KernelIntegrand::kUnitIntegration);
+   ig.SetFunction(kernel);
+   Double_t result = ig.Integral();
+   return result;
+}
+
 void TKDE::ComputeCanonicalBandwidth() {
    // Computes the user's input kernel function canonical bandwidth
-   fCanonicalBandwidths[kUserDefined] = TMath::Power(ComputeKernelL2Norm() / TMath::Power(ComputeKernelSigma2(), 2), -1. / 5.);
+   fCanonicalBandwidths[kUserDefined] = TMath::Power(ComputeKernelL2Norm() / TMath::Power(ComputeKernelSigma2(), 2), 1. / 5.);
 }
 
 Double_t TKDE::GaussianKernel(Double_t x) const {
@@ -470,7 +465,9 @@ Double_t TKDE::KernelIntegrand::operator()(Double_t x) const {
    } else if (fIntegralResult == kMu) {
       return x * (*fKDE->fKernelFunction)(x);
    } else if (fIntegralResult == kSigma2) {
-      return TMath::Power(x, 2) * (*fKDE->fKernelFunction)(x);   
+      return TMath::Power(x, 2) * (*fKDE->fKernelFunction)(x);
+   } else if (fIntegralResult == kUnitIntegration) {
+      return (*fKDE->fKernelFunction)(x);
    } else {
       return -1;
    }
