@@ -1,3 +1,23 @@
+2010-07-21  Matevz Tadel  <mtadel@greed>
+
+	* graf3d/gl/src/TGLPadPainter.cxx:
+	* graf3d/gl/inc/TGLPadPainter.h:
+	Remove all modifications -- should be as it was before.
+
+	* graf3d/gl/src/TGLPadPainter3D.cxx:
+	* graf3d/gl/inc/TGLPadPainter3D.h:
+	Add InitPainterForFBO() -- moved in from TGLPadPainter.
+	Properly implement SelectDrawable() for FBO rendering.
+	Implement DrawText() almost properly.
+
+	* graf3d/eve/src/TEvePadFrameGL.cxx:
+	* graf3d/eve/inc/TEvePadFrameGL.h:
+	Only use TGLPadPainter3D.
+	Pass viewport scales into painter intit function.
+
+	* tutorials/eve/testgl1.C:
+	Increase FBO width to 4096 -- it brings up a GL error.
+
 2010-07-20  Matevz Tadel  <mtadel@greed>
 
 	* graf3d/eve/src/TEvePadFrame.cxx:

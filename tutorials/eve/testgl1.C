@@ -38,7 +38,7 @@ void testgl1()
 
    epf4 = new TEvePadFrame(gPad, "Pad FBO LargeBuf");
    epf4->SetUseFBO(kTRUE);
-   epf4->SetSizeFBO(2048);
+   epf4->SetSizeFBO(4096);
    epf4->RefMainTrans().Move3LF(0.7, -0.5, 0);
    gEve->AddElement(epf4);
 

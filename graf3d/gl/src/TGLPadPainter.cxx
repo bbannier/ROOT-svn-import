@@ -311,42 +311,6 @@ void TGLPadPainter::InitPainter()
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::InitPainterWithOptions(Bool_t set_viewport)
-{
-   //Init gl-pad painter:
-   //1. 2D painter does not use depth test, should not modify
-   //   depth-buffer content (except initial cleanup).
-   //2. Disable cull face.
-   //3. Disable lighting.
-   //4. Set viewport to the whole canvas area -- if set_viewport is true.
-   //5. Set camera.
-   //6. Unlock painter.
-   glDisable(GL_DEPTH_TEST);
-   glDisable(GL_CULL_FACE);
-   glDisable(GL_LIGHTING);
-
-   if (set_viewport)
-      glViewport(0, 0, GLsizei(gPad->GetWw()), GLsizei(gPad->GetWh()));
-
-   //Clear the buffer
-   glDepthMask(GL_TRUE);
-   glClearColor(1.,1.,1.,1.);
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   glDepthMask(GL_FALSE);
-
-   glMatrixMode(GL_PROJECTION);
-   glLoadIdentity();
-
-   glOrtho(gPad->GetX1(), gPad->GetX2(), gPad->GetY1(), gPad->GetY2(), -10., 10.);
-
-   glMatrixMode(GL_MODELVIEW);
-   glLoadIdentity();
-   glTranslated(0., 0., -1.);
-
-   fLocked = kFALSE;
-}
-
-//______________________________________________________________________________
 void TGLPadPainter::InvalidateCS()
 {
    //When TPad::Range for gPad is called, projection
