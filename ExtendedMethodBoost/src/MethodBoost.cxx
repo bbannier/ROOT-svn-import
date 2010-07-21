@@ -648,6 +648,7 @@ void TMVA::MethodBoost::SingleBoost()
       // Give events high boost weight, which are close the MVA cut
       // value
       Double_t MVACutValue = method->GetSignalReferenceCut();
+      sumAll1 = 0;
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
 	 if (fBoostType == "HighEdgeGauss")
