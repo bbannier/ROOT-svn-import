@@ -224,7 +224,7 @@ namespace TMVA {
 
       // ---------- Getters and Setters
 
-      void SetkDim(Int_t kDim); // Sets dimension of cubical space
+      void SetDim(Int_t kDim); // Sets dimension of cubical space
       void SetnCells(Long_t nCells){fNCells =nCells;}  // Sets maximum number of cells
       void SetnSampl(Long_t nSampl){fNSampl =nSampl;}  // Sets no of MC events in cell exploration
       void SetnBin(Int_t nBin){fNBin = nBin;}          // Sets no of bins in histogs in cell exploration
