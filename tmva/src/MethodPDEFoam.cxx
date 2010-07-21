@@ -619,9 +619,9 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    // set Options VolFrac, kDim, ...
    if (ft==kMultiTarget)
       // dimension of foam = number of targets + non-targets
-      pdefoam->SetkDim(     Data()->GetNTargets()+Data()->GetNVariables());
+      pdefoam->SetDim(      Data()->GetNTargets()+Data()->GetNVariables());
    else
-      pdefoam->SetkDim(     GetNvar());  // Mandatory!
+      pdefoam->SetDim(      GetNvar());  // Mandatory!
    pdefoam->SetVolumeFraction(fVolFrac); // Mandatory!
    pdefoam->SetnCells(      fnCells);    // optional
    pdefoam->SetnSampl(      fnSampl);    // optional
