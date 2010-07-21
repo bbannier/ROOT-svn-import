@@ -63,6 +63,8 @@
 //
 // Non-copyable.
 
+ClassImp(TGLWidgetBase)
+
 ClassImp(TGLWidget);
 
 //==============================================================================

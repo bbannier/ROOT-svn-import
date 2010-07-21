@@ -26,18 +26,15 @@ class TGLContextIdentity;
 
 class TGLContextPrivate;
 class TGLPaintDevice;
-//class TGLPBuffer;
-class TGLWidget;
 class TGLFontManager;
+class TGLWidget;
 
 class TGLContext
 {
    friend class TGLContextPrivate;
-   friend class TGLWidget;
-   //   friend class TGLPBuffer;
 
 private:
-   TGLPaintDevice *fDevice;
+   TGLPaintDevice    *fDevice;
    TGLContextPrivate *fPimpl;
 
    Bool_t fFromCtor;//To prohibit user's calls of SetContext.
@@ -49,24 +46,22 @@ private:
    void GlewInit();
 
 public:
-   TGLContext(TGLWidget *glWidget, Bool_t shareDefault=kTRUE, const TGLContext *shareList=0);
-   //   TGLContext(TGLPBuffer *glPbuf, const TGLContext *shareList = 0);
+   TGLContext(TGLPaintDevice *glDevice, Bool_t shareDefault = kTRUE, const TGLContext *shareList = 0);
 
    TGLContextIdentity *GetIdentity()const;
 
    virtual ~TGLContext();
 
-   Bool_t           MakeCurrent();
-   Bool_t           ClearCurrent();
-   void             SwapBuffers();
+   Bool_t MakeCurrent();
+   Bool_t ClearCurrent();
+   void   SwapBuffers();
 
    //This functions are public _ONLY_ for calls via
    //gROOT under win32. Please, DO NOT CALL IT DIRECTLY.
-   void             SetContext(TGLWidget *widget, const TGLContext *shareList);
-   // void          SetContextPB(TGLPBuffer *pbuff, const TGLContext *shareList);
-   void             Release();
+   void             SetContext(const TGLContext *shareList);
 
-   Bool_t           IsValid() const { return fValid; }
+   void   Release();
+   Bool_t IsValid() const { return fValid; }
 
    static TGLContext *GetCurrent();
 
