@@ -39,9 +39,9 @@ ClassImp(TGLContext);
 Bool_t TGLContext::fgGlewInitDone = kFALSE;
 
 //______________________________________________________________________________
-TGLContext::TGLContext(TGLPaintDevice *dev, Bool_t shareDefault,
+TGLContext::TGLContext(TGLWidgetBase *wid, Bool_t shareDefault,
                        const TGLContext *shareList)
-   : fDevice(dev),
+   : fWidget(wid),
      fPimpl(0),
      fFromCtor(kTRUE),
      fValid(kFALSE),
@@ -118,15 +118,9 @@ void TGLContext::SetContext(const TGLContext *shareList)
       return;
    }
 
-   const TGLWidgetBase *widget = dynamic_cast<TGLWidgetBase *>(fDevice);
-   if (!widget) {
-      Error("TGLContext::SetContext", "A class, derived from TGLWidgetBase was expected!");
-      throw std::runtime_error("dynamic_case has failed");
-   }
-
    std::auto_ptr<TGLContextPrivate> safe_ptr(fPimpl = new TGLContextPrivate);
    LayoutCompatible_t *trick =
-      reinterpret_cast<LayoutCompatible_t *>(widget->GetDeviceID());
+      reinterpret_cast<LayoutCompatible_t *>(fWidget->GetDeviceID());
    HWND hWND = *trick->fPHwnd;
    HDC  hDC  = GetWindowDC(hWND);
 
@@ -152,7 +146,7 @@ void TGLContext::SetContext(const TGLContext *shareList)
 
    //Register context for "parent" gl-device.
    fValid = kTRUE;
-   fDevice->AddContext(this);
+   fWidget->AddContext(this);
    TGLContextPrivate::RegisterContext(this);
 
    dcGuard.Stop();
@@ -243,15 +237,9 @@ void TGLContext::SetContext(const TGLContext *shareList)
       return;
    }
 
-   TGLWidgetBase *widget = dynamic_cast<TGLWidgetBase *>(fDevice);
-   if (!widget) {
-      Error("TGLContext::SetContext", "A class, derived from TGLWidgetBase was expected!");
-      throw std::runtime_error("dynamic_case has failed");
-   }
-
    std::auto_ptr<TGLContextPrivate> safe_ptr(fPimpl = new TGLContextPrivate);
-   Display *dpy = static_cast<Display *>(widget->GetInnerData().first);
-   XVisualInfo *visInfo = static_cast<XVisualInfo *>(widget->GetInnerData().second);
+   Display *dpy = static_cast<Display *>(fWidget->GetInnerData().first);
+   XVisualInfo *visInfo = static_cast<XVisualInfo *>(fWidget->GetInnerData().second);
 
    GLXContext glCtx = shareList ? glXCreateContext(dpy, visInfo, shareList->fPimpl->fGLContext, True)
                                 : glXCreateContext(dpy, visInfo, None, True);
@@ -263,11 +251,11 @@ void TGLContext::SetContext(const TGLContext *shareList)
 
    fPimpl->fDpy = dpy;
    fPimpl->fVisualInfo = visInfo;
-   fPimpl->fGLContext = glCtx;
-   fPimpl->fWindowID = widget->GetDeviceID();
+   fPimpl->fGLContext  = glCtx;
+   fPimpl->fWindowID   = fWidget->GetDeviceID();
 
    fValid = kTRUE;
-   fDevice->AddContext(this);
+   fWidget->AddContext(this);
    TGLContextPrivate::RegisterContext(this);
 
    safe_ptr.release();
@@ -344,7 +332,7 @@ TGLContext::~TGLContext()
    //un-registered.
    if (fValid) {
       Release();
-      fDevice->RemoveContext(this);
+      fWidget->RemoveContext(this);
    }
 
    fIdentity->Release(this);
