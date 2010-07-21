@@ -1,5 +1,5 @@
-// @(#)root/mathcore:$Id$
-// Authors: Bartolomeu Rabacal    06/2010 
+// @(#)root/hist:$Id$
+// Authors: Bartolomeu Rabacal    07/2010 
 /**********************************************************************
  *                                                                    *
  * Copyright (c) 2006 , LCG ROOT MathLib Team                         *
@@ -22,6 +22,7 @@
 #include "TF1.h"
 #include "TH1D.h"
 
+
 /*
    Kernel Density Estimation class. The algorithm is described in (1) "Cranmer KS, Kernel Estimation in High-Energy
    Physics. Computer Physics Communications 136:198-207,2001" - e-Print Archive: hep ex/0011057.
@@ -29,12 +30,8 @@
    size dependance.
 */
 class TKDE : public TNamed  {
-public: //TODO all enum shoud be private, constructors should now have TOption possibility
-   
-//    enum EFitMethod { // Non-parametric PDF fitting method 
-//       kKDE
-//    };
-   
+public:
+
    enum EKernelType { // Kernel function
       kUserDefined, // Internal use only for the class's template constructor
       kGaussian,
@@ -68,17 +65,16 @@ public: //TODO all enum shoud be private, constructors should now have TOption p
    };
    
    template<class KernelFunction>
-   TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, /*EFitMethod fit = kKDE,*/ EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0) {
-      Instantiate(events, data, xMin, xMax, /*EFitMethod fit = kKDE,*/ iter, mir, bin, rho);
+   TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0) {
+      Instantiate(events, data, xMin, xMax, iter, mir, bin, rho);
       SetKernelFunction(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc));
    }
       
-   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, /*EFitMethod fit = kKDE,*/ EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0); //change to TOption
+   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0);
    
    virtual ~TKDE();
    
    void Fill(Double_t data);
-//    void SetMethod(EFitMethod fit);
    void SetKernelType(EKernelType kern);
    void SetIteration(EIteration iter);
    void SetMirror(EMirror mir);
@@ -128,7 +124,6 @@ public: //TODO all enum shoud be private, constructors should now have TOption p
    
    TH1D* fHistogram; // Output data histogram
    
-//    EFitMethod fFitMethod;
    EKernelType fKernelType;
    EIteration fIteration;
    EMirror fMirror;
@@ -151,7 +146,7 @@ public: //TODO all enum shoud be private, constructors should now have TOption p
    
    friend struct KernelIntegrand;
    struct KernelIntegrand {
-      enum EIntegralResult{kNorm, kMu, kSigma2};
+      enum EIntegralResult{kNorm, kMu, kSigma2, kUnitIntegration};
       KernelIntegrand(const TKDE* kde, EIntegralResult intRes);
       Double_t operator()(Double_t x) const;
    private:
@@ -169,9 +164,11 @@ public: //TODO all enum shoud be private, constructors should now have TOption p
    Double_t LowerConfidenceInterval(const Double_t* x, const Double_t* p = 0) const; // Valid if the bandwidth is small compared to nEvents**1/5
    Double_t GetError(Double_t x) const;
    Double_t ComputeKernelL2Norm() const;
-   Double_t ComputeKernelSigma2();
-   Double_t ComputeKernelMu();
-   
+   Double_t ComputeKernelSigma2() const;
+   Double_t ComputeKernelMu() const;
+   Double_t ComputeKernelUnitIntegration() const;
+         
+   void CheckOptions();
    void CheckKernelValidity();
    void ComputeCanonicalBandwidth(); 
    void SetCanonicalBandwidths(); 
@@ -181,7 +178,7 @@ public: //TODO all enum shoud be private, constructors should now have TOption p
    void SetSigma();
    void SetKernel();
    void SetKernelFunction(KernelFunction_Ptr kernfunc = 0);
-   void SetOptions();
+   void SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho);
    void SetData(const Double_t* data);
    void SetMirroredData();
    
