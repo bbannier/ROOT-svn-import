@@ -319,9 +319,8 @@ void TMVA::MethodBoost::Train()
          if (fMethodIndex==0 && fMonitorBoostedMethod) CreateMVAHistorgrams();
 
 	 // get ROC integral for training sample
-	 fROC_training = GetTrainingROCIntegral();
+	 fROC_training = GetTrainingROCIntegral(kTRUE);
 	 (*fMonitorHist)[6]->SetBinContent(fMethodIndex+1, fROC_training);
-	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, 0.0);
    
          // boosting
          method->MonitorBoost(SetStage(Types::kBeforeBoosting));
@@ -334,6 +333,8 @@ void TMVA::MethodBoost::Train()
 
          AllMethodsWeight += fMethodWeight.back();
          fMonitorTree->Fill();
+
+	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetTrainingROCIntegral(kFALSE, AllMethodsWeight));
 
 	 // test MethodBoost in order to calculate ROC integral
          TMVA::MsgLogger::InhibitOutput(); //supressing Logger outside the method
@@ -794,19 +795,38 @@ void TMVA::MethodBoost::SingleTest()
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBoost::GetTrainingROCIntegral()
+Double_t TMVA::MethodBoost::GetTrainingROCIntegral(Bool_t singleMethod, Double_t AllMethodsWeight)
 {
    Data()->SetCurrentType(Types::kTraining);
 
-   MethodBase* method = dynamic_cast<MethodBase*>(fMethods.back());
+   MethodBase* method = singleMethod ? dynamic_cast<MethodBase*>(fMethods.back()) : 0;
+   Double_t err = 0.0;
 
+   // temporary renormalize the method weights in case of evaluation
+   // of full classifier.
+   // save the old normalization of the methods
+   std::vector<Double_t> OldMethodWeight(fMethodWeight);
+   if (!singleMethod) {
+      // normalize the weights of the classifiers
+      if (fMethodWeightType == "LastMethod") 
+	 fMethodWeight.back() = AllMethodsWeight = 1.0;
+      for (Int_t i=0; i<=fMethodIndex; i++)
+	 fMethodWeight[i] = fMethodWeight[i] / AllMethodsWeight;
+   }
+
+   // calculate MVA values
    Double_t meanS, meanB, rmsS, rmsB, xmin, xmax, nrms = 10;
    std::vector <Float_t>* mvaRes = new std::vector <Float_t>(Data()->GetNEvents());
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
       Data()->GetEvent(ievt);
-      (*mvaRes)[ievt] = method->GetMvaValue();
+      (*mvaRes)[ievt] = singleMethod ? method->GetMvaValue() : GetMvaValue(&err);
    }
 
+   // restore the method weights
+   if (!singleMethod)
+      fMethodWeight = OldMethodWeight;
+
+   // now create histograms for calculation of the ROC integral
    Int_t signalClass = 0;
    if (DataInfo().GetClassInfo("Signal") != 0) {
       signalClass = DataInfo().GetClassInfo("Signal")->GetNumber();
@@ -832,8 +852,7 @@ Double_t TMVA::MethodBoost::GetTrainingROCIntegral()
    PDF *fS = new PDF( "PDF Sig", mva_s, PDF::kSpline2 );
    PDF *fB = new PDF( "PDF Bkg", mva_b, PDF::kSpline2 );
    // calculate ROC integral from fS, fB
-   Double_t ROC_training = GetROCIntegral(fS, fB);
-   Log() << "ROC (training) [" << fMethodIndex << "]: " << ROC_training << Endl;
+   Double_t ROC = GetROCIntegral(fS, fB);
    
    delete mva_s;
    delete mva_b;
@@ -841,8 +860,9 @@ Double_t TMVA::MethodBoost::GetTrainingROCIntegral()
    delete fB;
 
    mvaRes->clear();
+   Data()->SetCurrentType(Types::kTraining);
 
-   return ROC_training;
+   return ROC;
 }
 
 //_______________________________________________________________________

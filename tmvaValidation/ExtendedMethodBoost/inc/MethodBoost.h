@@ -131,8 +131,8 @@ namespace TMVA {
       void FullTest(Double_t);
 
       // return ROC integral on training sample
-      Double_t GetTrainingROCIntegral();
-   
+      Double_t GetTrainingROCIntegral(Bool_t, Double_t AllMethodsWeight=1.0);
+
       //writing the monitoring histograms and tree to a file
       void WriteMonitoringHistosToFile( void ) const;
 
