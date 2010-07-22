@@ -654,12 +654,14 @@ void TMVA::MethodBoost::SingleBoost()
       sumAll1 = 0;
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
-	 if (fBoostType == "HighEdgeGauss")
-	    ev->SetBoostWeight( TMath::Exp( -std::pow(method->GetMvaValue()-MVACutValue,2)/0.1 ) );
-	 else if (fBoostType == "HighEdgePara")
-	    ev->SetBoostWeight( -4.0 * std::pow(method->GetMvaValue()-0.5,2) + 1.0 );
-	 else 
-	    ev->SetBoostWeight( 4.0 * std::pow(method->GetMvaValue()-0.5,2) + 1.0 );
+	 if (WrongDetection[ievt]) {
+	    if (fBoostType == "HighEdgeGauss")
+	       ev->SetBoostWeight( TMath::Exp( -std::pow(method->GetMvaValue()-MVACutValue,2)/0.1 ) );
+	    else if (fBoostType == "HighEdgePara")
+	       ev->SetBoostWeight( -4.0 * std::pow(method->GetMvaValue()-0.5,2) + 1.0 );
+	    else 
+	       ev->SetBoostWeight( 4.0 * std::pow(method->GetMvaValue()-0.5,2) + 1.0 );
+	 }
          sumAll1 += ev->GetWeight();
       }
       // rescaling all the weights to have the same sum, but without
