@@ -121,17 +121,11 @@ namespace TMVA {
       //training a single classifier
       void SingleTrain();
 
-      //testing a single classifier
-      void SingleTest();
-
       //calculating a boosting weight from the classifier, storing it in the next one
       void SingleBoost();
 
-      // testing a whole classifier
-      void FullTest(Double_t);
-
       // return ROC integral on training sample
-      Double_t GetTrainingROCIntegral(Bool_t, Double_t AllMethodsWeight=1.0);
+      Double_t GetTrainingROCIntegral(Bool_t, Types::ETreeType, Double_t AllMethodsWeight=1.0);
 
       //writing the monitoring histograms and tree to a file
       void WriteMonitoringHistosToFile( void ) const;
