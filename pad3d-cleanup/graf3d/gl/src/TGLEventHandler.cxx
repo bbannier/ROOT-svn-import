@@ -315,8 +315,9 @@ void TGLEventHandler::ExecuteEvent(Int_t event, Int_t px, Int_t py)
       break;
       case 6://trick :)
          if (fGLViewer->CurrentCamera().Zoom(+50, kFALSE, kFALSE)) { //TODO : val static const somewhere
-            if (fGLViewer->fGLDevice != -1) {
-               gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kTRUE);
+            if (fGLViewer->fGLDevice) {
+               //TODOTODO
+               //gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kTRUE);
                gVirtualX->SetDrawMode(TVirtualX::kCopy);
             }
             fGLViewer->RequestDraw();
@@ -324,8 +325,9 @@ void TGLEventHandler::ExecuteEvent(Int_t event, Int_t px, Int_t py)
          break;
       case 5://trick :)
          if (fGLViewer->CurrentCamera().Zoom(-50, kFALSE, kFALSE)) { //TODO : val static const somewhere
-            if (fGLViewer->fGLDevice != -1) {
-               gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kTRUE);
+            if (fGLViewer->fGLDevice) {
+               //TODOTODO
+               //gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kTRUE);
                gVirtualX->SetDrawMode(TVirtualX::kCopy);
             }
             fGLViewer->RequestDraw();
@@ -609,9 +611,10 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
 
       fGLViewer->fDragAction = TGLViewer::kDragNone;
 
-      if (fGLViewer->fGLDevice != -1)
+      if (fGLViewer->fGLDevice)
       {
-         gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kFALSE);
+         //TODOTODO
+         //gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kFALSE);
       }
 
       if (event->fX == fButtonPushPos.fX && event->fY == fButtonPushPos.fY)
@@ -750,7 +753,7 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
    char tmp[10] = {0};
    UInt_t keysym = 0;
 
-   if (fGLViewer->fGLDevice == -1)
+   if (!fGLViewer->fGLDevice)
       gVirtualX->LookupString(event, tmp, sizeof(tmp), keysym);
    else
       keysym = event->fCode;
@@ -848,8 +851,10 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
    }
 
    if (redraw) {
-      if (fGLViewer->fGLDevice != -1)
-         gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kTRUE);
+      //TODOTODO
+      if (fGLViewer->fGLDevice)
+      {
+      }//gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kTRUE);
       fGLViewer->RequestDraw();
    }
 
@@ -927,8 +932,9 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    fLastGlobalPos.fY = event->fYRoot;
 
    if (processed || changed) {
-      if (fGLViewer->fGLDevice != -1) {
-         gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kTRUE);
+      if (fGLViewer->fGLDevice) {
+         //TODOTODO
+         //gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kTRUE);
          gVirtualX->SetDrawMode(TVirtualX::kCopy);
       }
 

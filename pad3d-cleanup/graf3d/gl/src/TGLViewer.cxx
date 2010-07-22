@@ -142,7 +142,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fPictureFileName("viewer.jpg"),
    fFader(0),
    fGLWidget(0),
-   fGLDevice(-1),
+   fGLDevice(0),
    fGLCtxId(0),
    fIgnoreSizesOnUpdate(kFALSE),
    fResetCamerasOnUpdate(kTRUE),
@@ -218,12 +218,13 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
 
    InitSecondaryObjects();
 
-   if (fGLDevice != -1) {
+   if (fGLDevice) {
       // For the moment instantiate a fake context identity.
       fGLCtxId = new TGLContextIdentity;
       fGLCtxId->AddRef(0);
       Int_t viewport[4] = {0};
-      gGLManager->ExtractViewport(fGLDevice, viewport);
+      //TODOTODO
+      //gGLManager->ExtractViewport(fGLDevice, viewport);
       SetViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
    }
 }
@@ -281,7 +282,7 @@ TGLViewer::~TGLViewer()
 
    if (fPad)
       fPad->ReleaseViewer3D();
-   if (fGLDevice != -1)
+   if (fGLDevice)
       fGLCtxId->Release(0);
 }
 
@@ -444,7 +445,7 @@ void TGLViewer::RequestDraw(Short_t LODInput)
 
    fRedrawTimer->Stop();
    // Ignore request if GL window or context not yet availible or shown.
-   if ((!fGLWidget && fGLDevice == -1) || (fGLWidget && !fGLWidget->IsMapped()))
+   if ((!fGLWidget && !fGLDevice) || (fGLWidget && !fGLWidget->IsMapped()))
    {
       return;
    }
@@ -489,7 +490,7 @@ void TGLViewer::PreRender()
 
    fCamera = fCurrentCamera;
    fClip   = fClipSet->GetCurrentClip();
-   if (fGLDevice != -1)
+   if (fGLDevice)
    {
       fRnrCtx->SetGLCtxIdentity(fGLCtxId);
       fGLCtxId->DeleteGLResources();
@@ -540,16 +541,17 @@ void TGLViewer::DoDraw()
 
    TUnlocker ulck(this);
 
-   if (fGLDevice == -1 && (fViewport.Width() <= 1 || fViewport.Height() <= 1)) {
+   if (!fGLDevice && (fViewport.Width() <= 1 || fViewport.Height() <= 1)) {
       if (gDebug > 2) {
 	 Info("TGLViewer::DoDraw()", "zero surface area, draw skipped.");
       }
       return;
    }
 
-   if (fGLDevice != -1) {
+   if (fGLDevice) {
       Int_t viewport[4] = {};
-      gGLManager->ExtractViewport(fGLDevice, viewport);
+      //TODOTODO
+      //gGLManager->ExtractViewport(fGLDevice, viewport);
       SetViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
    }
 
@@ -1039,7 +1041,7 @@ void TGLViewer::PreDraw()
 
    // For embedded gl clear color must be pad's background color.
    {
-      Color_t ci = (fGLDevice != -1) ? gPad->GetFillColor() : fRnrCtx->ColorSet().Background().GetColorIndex();
+      Color_t ci = fGLDevice ? gPad->GetFillColor() : fRnrCtx->ColorSet().Background().GetColorIndex();
       TColor *color = gROOT->GetColor(ci);
       Float_t rgb[3];
       if (color)
@@ -1108,10 +1110,12 @@ void TGLViewer::FadeView(Float_t alpha)
 void TGLViewer::MakeCurrent() const
 {
    // Make GL context current
-   if (fGLDevice == -1)
+   if (!fGLDevice)
       fGLWidget->MakeCurrent();
-   else
-      gGLManager->MakeCurrent(fGLDevice);
+   else{
+   //TODOTODO
+      //gGLManager->MakeCurrent(fGLDevice);
+   }
 }
 
 //______________________________________________________________________________
@@ -1121,12 +1125,15 @@ void TGLViewer::SwapBuffers() const
    if ( ! IsDrawOrSelectLock()) {
       Error("TGLViewer::SwapBuffers", "viewer is %s", LockName(CurrentLock()));
    }
-   if (fGLDevice == -1)
+
+   if (!fGLDevice)
       fGLWidget->SwapBuffers();
-   else {
+   else{
+   /*
       gGLManager->ReadGLBuffer(fGLDevice);
       gGLManager->Flush(fGLDevice);
-      gGLManager->MarkForDirectCopy(fGLDevice, kFALSE);
+      gGLManager->MarkForDirectCopy(fGLDevice, kFALSE);*/
+      //TODOTODO
    }
 }
 
@@ -1785,8 +1792,11 @@ void TGLViewer::SetGuideState(Int_t axesType, Bool_t axesDepthTest, Bool_t refer
    fReferenceOn = referenceOn;
    if (referencePos)
       fReferencePos.Set(referencePos[0], referencePos[1], referencePos[2]);
-   if (fGLDevice != -1)
-      gGLManager->MarkForDirectCopy(fGLDevice, kTRUE);
+   if (fGLDevice)
+   {
+      //TODOTODO
+      //gGLManager->MarkForDirectCopy(fGLDevice, kTRUE);
+   }
    RequestDraw();
 }
 

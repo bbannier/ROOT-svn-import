@@ -85,9 +85,9 @@ protected:
    Double_t      fAspectRatio;     //  ratio of w/h in case of fixed ratio
 
    Int_t         fPixmapID;        //! Off-screen pixmap identifier
-   Int_t         fGLDevice;        //! OpenGL off-screen pixmap identifier
-   Bool_t        fCopyGLDevice;    //!
-   Bool_t        fEmbeddedGL;      //!
+
+   TGLPaintDevice *fGLDevice;        //! OpenGL device.
+
    Int_t         fNumber;          //  pad number identifier
    Int_t         fTickx;           //  Set to 1 if tick marks along X
    Int_t         fTicky;           //  Set to 1 if tick marks along Y
@@ -234,7 +234,7 @@ public:
    virtual TObject  *GetPadPointer() const {return fPadPointer;}
    TVirtualPad      *GetPadSave() const;
    TVirtualPad      *GetSelectedPad() const;
-   Int_t             GetGLDevice();
+   TGLPaintDevice   *GetGLDevice();
    TView            *GetView() const {return fView;}
    TObject          *GetView3D() const {return fPadView3D;}// Return 3D View of this TPad
    Int_t             GetLogx() const {return fLogx;}
@@ -341,8 +341,7 @@ public:
    virtual void      SetView(TView *view = 0);
    virtual void      SetViewer3D(TVirtualViewer3D *viewer3d) {fViewer3D = viewer3d;}
    //
-   virtual void      SetGLDevice(Int_t dev) {fGLDevice = dev;}
-   virtual void      SetCopyGLDevice(Bool_t copy) {fCopyGLDevice = copy;}
+   virtual void      SetGLDevice(TGLPaintDevice *dev) {fGLDevice = dev;}
    //
    virtual void      Update();
 ///   virtual void      UpdateFillAttributes(Int_t col, Int_t sty);

@@ -149,9 +149,6 @@ void TGLViewerEditor::ConnectSignals2Slots()
 void TGLViewerEditor::ViewerRedraw()
 {
    // Initiate redraw of the viewer.
-
-   if (gGLManager && fIsInPad)
-      gGLManager->MarkForDirectCopy(fViewer->GetDev(), kTRUE);
    fViewer->RequestDraw();
 }
 

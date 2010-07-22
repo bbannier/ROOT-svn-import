@@ -120,7 +120,7 @@ void TGLContext::SetContext(const TGLContext *shareList)
 
    std::auto_ptr<TGLContextPrivate> safe_ptr(fPimpl = new TGLContextPrivate);
    LayoutCompatible_t *trick =
-      reinterpret_cast<LayoutCompatible_t *>(fWidget->GetDeviceID());
+      reinterpret_cast<LayoutCompatible_t *>(fWidget->GetWidgetID());
    HWND hWND = *trick->fPHwnd;
    HDC  hDC  = GetWindowDC(hWND);
 
@@ -252,7 +252,7 @@ void TGLContext::SetContext(const TGLContext *shareList)
    fPimpl->fDpy = dpy;
    fPimpl->fVisualInfo = visInfo;
    fPimpl->fGLContext  = glCtx;
-   fPimpl->fWindowID   = fWidget->GetDeviceID();
+   fPimpl->fWindowID   = fWidget->GetWidgetID();
 
    fValid = kTRUE;
    fWidget->AddContext(this);

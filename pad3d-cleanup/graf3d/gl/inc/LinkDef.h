@@ -16,6 +16,7 @@
 
 #pragma link C++ class TGLWidgetBase;
 #pragma link C++ class TGLWidget;
+#pragma link C++ class TGLCanvasWidget;
 #pragma link C++ class TGLContext;
 #pragma link C++ class TGLContextIdentity;
 #pragma link C++ class TGLFormat;
@@ -133,10 +134,6 @@
 #pragma link C++ class TGL5DDataSetEditor;
 #pragma link C++ class TGLTH3Composition;
 #pragma link C++ class TGLTH3CompositionPainter;
-
-#ifndef _WIN32
-#pragma link C++ class TX11GLManager;
-#endif
 
 #pragma link C++ class TGLObject+;
 #pragma link C++ class TGLPlot3D+;

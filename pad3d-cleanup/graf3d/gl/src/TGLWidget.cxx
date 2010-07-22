@@ -14,6 +14,7 @@
 
 #include "TVirtualX.h"
 #include "TGClient.h"
+#include "TGCanvas.h"
 #include "TError.h"
 #include "TROOT.h"
 
@@ -63,7 +64,104 @@
 //
 // Non-copyable.
 
+
+namespace {
+
+//TGLWidget's case
+Window_t CreateGLWindow(const TGWindow *parent, const TGLFormat &format, UInt_t width,
+                      UInt_t height, std::pair<void *, void *> &innerData);
+
+//TGLCanvasWidget's case, geometry will be extracted by XGetGeomtry (or from parent).
+Window_t CreateGLWindow(const TGWindow *parent, const TGLFormat &format, std::pair<void *, void *> &innerData);
+
+}
+
+
 ClassImp(TGLWidgetBase)
+
+//______________________________________________________________________________
+TGLWidgetBase::TGLWidgetBase()
+                  : fGLContext(0),
+                    fWindowIndex(-1),
+                    fFromInit(kTRUE),
+                    fWidgetID(0)
+{
+   //Default ctor.
+   //Class owns resuorces, but does not acquire them - done in derived classes.
+}
+
+//______________________________________________________________________________
+TGLWidgetBase::~TGLWidgetBase()
+{
+#ifndef WIN32
+   XFree(fInnerData.second);//free XVisualInfo
+#endif
+   if (fValidContexts.size() > 1u) {
+      Warning("~TGLWidget", "There are some gl-contexts connected to this gl device"
+                            "which have longer lifetime than lifetime of gl-device");
+   }
+
+   std::set<TGLContext *>::iterator it = fValidContexts.begin();
+   for (; it != fValidContexts.end(); ++it) {
+      (*it)->Release();
+   }
+
+   delete fGLContext;
+
+   gVirtualX->SelectWindow(fWindowIndex);
+   gVirtualX->CloseWindow();
+}
+
+//______________________________________________________________________________
+void TGLWidgetBase::AddContext(TGLContext *ctx)
+{
+   //Register gl-context created for this window.
+   fValidContexts.insert(ctx);
+}
+
+//______________________________________________________________________________
+void TGLWidgetBase::RemoveContext(TGLContext *ctx)
+{
+   //Remove context (no real deletion, done by TGLContex dtor).
+   std::set<TGLContext *>::iterator it = fValidContexts.find(ctx);
+   if (it != fValidContexts.end())
+      fValidContexts.erase(it);
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidgetBase::MakeCurrent()
+{
+   //Make the gl-context current.
+   return fGLContext->MakeCurrent();
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidgetBase::ClearCurrent()
+{
+   //Clear the current gl-context.
+   return fGLContext->ClearCurrent();
+}
+
+//______________________________________________________________________________
+void TGLWidgetBase::SwapBuffers()
+{
+   //Swap buffers.
+   fGLContext->SwapBuffers();
+}
+
+//______________________________________________________________________________
+const TGLContext *TGLWidgetBase::GetContext()const
+{
+   //Get gl context.
+   return fGLContext;
+}
+
+//______________________________________________________________________________
+const TGLFormat *TGLWidgetBase::GetPixelFormat()const
+{
+   //Pixel format.
+   return &fGLFormat;
+}
 
 ClassImp(TGLWidget);
 
@@ -94,9 +192,11 @@ TGLWidget* TGLWidget::Create(const TGLFormat &format,
 
    std::pair<void *, void *> innerData;
 
-   Window_t wid = CreateWindow(parent, format, width, height, innerData);
+   const Window_t wid = CreateGLWindow(parent, format, width, height, innerData);
 
    TGLWidget* glw = new TGLWidget(wid, parent, selectInput);
+
+   glw->fWidgetID = glw->GetId();
 
 #ifdef WIN32
    glw->fWindowIndex = (Int_t) innerData.second;
@@ -126,9 +226,6 @@ TGLWidget* TGLWidget::Create(const TGLFormat &format,
 //______________________________________________________________________________
 TGLWidget::TGLWidget(Window_t glw, const TGWindow* p, Bool_t selectInput)
    : TGFrame(gClient, glw, p),
-     fGLContext(0),
-     fWindowIndex(-1),
-     fFromInit(kTRUE),
      fEventHandler(0)
 {
    // Creates widget with default pixel format.
@@ -149,22 +246,7 @@ TGLWidget::~TGLWidget()
 {
    //Destructor. Deletes window ???? and XVisualInfo
 
-#ifndef WIN32
-   XFree(fInnerData.second);//free XVisualInfo
-#endif
-   if (fValidContexts.size() > 1u) {
-      Warning("~TGLWidget", "There are some gl-contexts connected to this gl device"
-                            "which have longer lifetime than lifetime of gl-device");
-   }
 
-   std::set<TGLContext *>::iterator it = fValidContexts.begin();
-   for (; it != fValidContexts.end(); ++it) {
-      (*it)->Release();
-   }
-   delete fGLContext;
-
-   gVirtualX->SelectWindow(fWindowIndex);
-   gVirtualX->CloseWindow();
 }
 
 //______________________________________________________________________________
@@ -177,64 +259,6 @@ void TGLWidget::InitGL()
 void TGLWidget::PaintGL()
 {
    //Do actual drawing in overrider of PaintGL.
-}
-
-//______________________________________________________________________________
-Bool_t TGLWidget::MakeCurrent()
-{
-   //Make the gl-context current.
-   return fGLContext->MakeCurrent();
-}
-
-//______________________________________________________________________________
-Bool_t TGLWidget::ClearCurrent()
-{
-   //Clear the current gl-context.
-   return fGLContext->ClearCurrent();
-}
-
-//______________________________________________________________________________
-void TGLWidget::SwapBuffers()
-{
-   //Swap buffers.
-   fGLContext->SwapBuffers();
-}
-
-//______________________________________________________________________________
-const TGLContext *TGLWidget::GetContext()const
-{
-   //Get gl context.
-   return fGLContext;
-}
-
-//______________________________________________________________________________
-const TGLFormat *TGLWidget::GetPixelFormat()const
-{
-   //Pixel format.
-   return &fGLFormat;
-}
-
-//______________________________________________________________________________
-std::pair<void *, void *> TGLWidget::GetInnerData()const
-{
-   //Dpy*, XVisualInfo *
-   return fInnerData;
-}
-
-//______________________________________________________________________________
-void TGLWidget::AddContext(TGLContext *ctx)
-{
-   //Register gl-context created for this window.
-   fValidContexts.insert(ctx);
-}
-
-//______________________________________________________________________________
-void TGLWidget::RemoveContext(TGLContext *ctx)
-{
-   //Remove context (no real deletion, done by TGLContex dtor).
-   std::set<TGLContext *>::iterator it = fValidContexts.find(ctx);
-   if (it != fValidContexts.end())
-      fValidContexts.erase(it);
 }
 
 //______________________________________________________________________________
@@ -255,82 +279,8 @@ void TGLWidget::ExtractViewport(Int_t *vp)const
 #ifdef WIN32
 //==============================================================================
 
-namespace {
-
-   struct LayoutCompatible_t {
-      void          *fDummy0;
-      void          *fDummy1;
-      HWND          *fPHwnd;
-      unsigned char  fDummy2;
-      unsigned       fDummy3;
-      unsigned short fDummy4;
-      unsigned short fDummy5;
-      void          *fDummy6;
-      unsigned       fDummy7:2;
-   };
-
-   void fill_pfd(PIXELFORMATDESCRIPTOR *pfd, const TGLFormat &request)
-   {
-      pfd->nSize = sizeof(PIXELFORMATDESCRIPTOR);
-      pfd->nVersion = 1;
-      pfd->dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
-      if (request.IsDoubleBuffered())
-         pfd->dwFlags |= PFD_DOUBLEBUFFER;
-      pfd->iPixelType = PFD_TYPE_RGBA;
-      pfd->cColorBits = 24;
-      if (UInt_t acc = request.GetAccumSize())
-         pfd->cAccumBits = acc;
-      if (UInt_t depth = request.GetDepthSize())
-         pfd->cDepthBits = depth;
-      if (UInt_t stencil = request.GetStencilSize())
-         pfd->cStencilBits = stencil;
-   }
-
-   void check_pixel_format(Int_t pixIndex, HDC hDC, TGLFormat &request)
-   {
-      PIXELFORMATDESCRIPTOR pfd = {};
-
-      if (!DescribePixelFormat(hDC, pixIndex, sizeof pfd, &pfd)) {
-         Warning("TGLContext::SetContext", "DescribePixelFormat failed");
-         return;
-      }
-
-      if (pfd.cAccumBits)
-         request.SetAccumSize(pfd.cAccumBits);
-
-      if (pfd.cDepthBits)
-         request.SetDepthSize(pfd.cDepthBits);
-
-      if (pfd.cStencilBits)
-         request.SetStencilSize(pfd.cStencilBits);
-   }
-
-}
-
 //______________________________________________________________________________
-Window_t TGLWidget::CreateWindow(const TGWindow* parent, const TGLFormat& /*format*/,
-                                 UInt_t width, UInt_t  height,
-                                 std::pair<void *, void *>& innerData)
-{
-   // CreateWidget.
-   // Static function called prior to widget construction,
-   // I've extracted this code from ctors to make WIN32/X11
-   // separation simpler and because of gInterpreter usage.
-   // new, TGLContext can throw
-   // std::bad_alloc and std::runtime_error. Before try block, the only
-   // resource allocated is pointed by fWindowIndex (InitWindow cannot throw).
-   // In try block (and after successful constraction)
-   // resources are controlled by std::auto_ptrs and dtor.
-
-   Int_t widx = gVirtualX->InitWindow((ULong_t)parent->GetId());
-   innerData.second = (void*) widx;
-   Window_t win = gVirtualX->GetWindowID(widx);
-   gVirtualX->ResizeWindow(win, width, height);
-   return win;
-}
-
-//______________________________________________________________________________
-void TGLWidget::SetFormat()
+void TGLWidgetBase::SetFormat()
 {
    // Set pixel format.
    // Resource - hDC, owned and freed by guard object.
@@ -340,10 +290,9 @@ void TGLWidget::SetFormat()
       return;
    }
    if (!gVirtualX->IsCmdThread())
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->SetFormat()", this));
+      gROOT->ProcessLineFast(Form("((TGLWidgetBase *)0x%lx)->SetFormat()", this));
 
-   LayoutCompatible_t *trick =
-      reinterpret_cast<LayoutCompatible_t *>(GetId());
+   LayoutCompatible_t *trick = reinterpret_cast<LayoutCompatible_t *>(GetDeviceID());
    HWND hWND = *trick->fPHwnd;
    HDC  hDC  = GetWindowDC(hWND);
 
@@ -369,62 +318,151 @@ void TGLWidget::SetFormat()
    }
 }
 
-//==============================================================================
-#else // Non WIN32
-//==============================================================================
-
 namespace {
 
-   void fill_format(std::vector<Int_t> &format, const TGLFormat &request)
-   {
-      format.push_back(GLX_RGBA);
-      format.push_back(GLX_RED_SIZE);
-      format.push_back(1);
-      format.push_back(GLX_GREEN_SIZE);
-      format.push_back(1);
-      format.push_back(GLX_BLUE_SIZE);
-      format.push_back(1);
+struct LayoutCompatible_t {
+   void          *fDummy0;
+   void          *fDummy1;
+   HWND          *fPHwnd;
+   unsigned char  fDummy2;
+   unsigned       fDummy3;
+   unsigned short fDummy4;
+   unsigned short fDummy5;
+   void          *fDummy6;
+   unsigned       fDummy7:2;
+};
 
-      if (request.IsDoubleBuffered())
-         format.push_back(GLX_DOUBLEBUFFER);
-
-      if (request.HasDepth()) {
-         format.push_back(GLX_DEPTH_SIZE);
-         format.push_back(request.GetDepthSize());
-      }
-
-      if (request.HasStencil()) {
-         format.push_back(GLX_STENCIL_SIZE);
-         format.push_back(request.GetStencilSize());
-      }
-
-      if (request.HasAccumBuffer()) {
-         format.push_back(GLX_ACCUM_RED_SIZE);
-         format.push_back(1);
-         format.push_back(GLX_ACCUM_GREEN_SIZE);
-         format.push_back(1);
-         format.push_back(GLX_ACCUM_BLUE_SIZE);
-         format.push_back(1);
-      }
-
-      if (request.IsStereo())
-        format.push_back(GLX_STEREO);
-
-      format.push_back(None);
-   }
+//______________________________________________________________________________
+void fill_pfd(PIXELFORMATDESCRIPTOR *pfd, const TGLFormat &request)
+{
+   pfd->nSize = sizeof(PIXELFORMATDESCRIPTOR);
+   pfd->nVersion = 1;
+   pfd->dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
+   if (request.IsDoubleBuffered())
+      pfd->dwFlags |= PFD_DOUBLEBUFFER;
+   pfd->iPixelType = PFD_TYPE_RGBA;
+   pfd->cColorBits = 24;
+   if (UInt_t acc = request.GetAccumSize())
+      pfd->cAccumBits = acc;
+   if (UInt_t depth = request.GetDepthSize())
+      pfd->cDepthBits = depth;
+   if (UInt_t stencil = request.GetStencilSize())
+      pfd->cStencilBits = stencil;
 }
 
 //______________________________________________________________________________
-Window_t TGLWidget::CreateWindow(const TGWindow* parent, const TGLFormat &format,
-                                 UInt_t width, UInt_t height,
-                                 std::pair<void *, void *>& innerData)
+void check_pixel_format(Int_t pixIndex, HDC hDC, TGLFormat &request)
 {
-   // CreateWidget - X11 version.
+   PIXELFORMATDESCRIPTOR pfd = {};
+
+   if (!DescribePixelFormat(hDC, pixIndex, sizeof pfd, &pfd)) {
+      Warning("TGLContext::SetContext", "DescribePixelFormat failed");
+      return;
+   }
+
+   if (pfd.cAccumBits)
+      request.SetAccumSize(pfd.cAccumBits);
+
+   if (pfd.cDepthBits)
+      request.SetDepthSize(pfd.cDepthBits);
+
+   if (pfd.cStencilBits)
+      request.SetStencilSize(pfd.cStencilBits);
+}
+
+//______________________________________________________________________________
+Window_t CreateGLWindow(const TGWindow *parent, const TGLFormat &/*format*/,
+                        UInt_t width, UInt_t  height,
+                        std::pair<void *, void *> &innerData)
+{
+   // CreateWidget.
+   // Static function called prior to widget construction,
+   // I've extracted this code from ctors to make WIN32/X11
+   // separation simpler and because of gInterpreter usage.
+   // new, TGLContext can throw
+   // std::bad_alloc and std::runtime_error. Before try block, the only
+   // resource allocated is pointed by fWindowIndex (InitWindow cannot throw).
+   // In try block (and after successful constraction)
+   // resources are controlled by std::auto_ptrs and dtor.
+   Int_t widx = gVirtualX->InitWindow((ULong_t)parent->GetId());
+   innerData.second = (void*) widx;
+   Window_t win = gVirtualX->GetWindowID(widx);
+   gVirtualX->ResizeWindow(win, width, height);
+   return win;
+}
+
+//______________________________________________________________________________
+Window_t CreateGLWindow(const TGWindow *parent, const TGLFormat &/*format*/,
+                        std::pair<void *, void *> &innerData)
+{
+   Int_t widx = gVirtualX->InitWindow((ULong_t)parent->GetId());
+   innerData.second = (void*) widx;
+   Window_t win = gVirtualX->GetWindowID(widx);
+   return win;
+}
+
+}
+
+//==============================================================================
+#else // X11 part.
+//==============================================================================
+
+//______________________________________________________________________________
+void TGLWidgetBase::SetFormat()
+{
+   // Set pixel format.
+   // Empty version for X11.
+}
+
+namespace {
+
+void fill_format(std::vector<Int_t> &format, const TGLFormat &request)
+{
+   format.push_back(GLX_RGBA);
+   format.push_back(GLX_RED_SIZE);
+   format.push_back(1);
+   format.push_back(GLX_GREEN_SIZE);
+   format.push_back(1);
+   format.push_back(GLX_BLUE_SIZE);
+   format.push_back(1);
+
+   if (request.IsDoubleBuffered())
+      format.push_back(GLX_DOUBLEBUFFER);
+
+   if (request.HasDepth()) {
+      format.push_back(GLX_DEPTH_SIZE);
+      format.push_back(request.GetDepthSize());
+   }
+
+   if (request.HasStencil()) {
+      format.push_back(GLX_STENCIL_SIZE);
+      format.push_back(request.GetStencilSize());
+   }
+
+   if (request.HasAccumBuffer()) {
+      format.push_back(GLX_ACCUM_RED_SIZE);
+      format.push_back(1);
+      format.push_back(GLX_ACCUM_GREEN_SIZE);
+      format.push_back(1);
+      format.push_back(GLX_ACCUM_BLUE_SIZE);
+      format.push_back(1);
+   }
+
+   if (request.IsStereo())
+      format.push_back(GLX_STEREO);
+
+   format.push_back(None);
+}
+
+//______________________________________________________________________________
+Window_t CreateGLWindow(const TGWindow* parent, const TGLFormat &format, UInt_t width,
+                        UInt_t height, std::pair<void *, void *>& innerData)
+{
+   // CreateGLWidget - X11 version.
    // Static function called prior to construction.
    // Can throw std::bad_alloc and std::runtime_error.
    // This version is bad - I do not check the results of
    // X11 calls.
-
    std::vector<Int_t> glxfmt;
    fill_format(glxfmt, format);
 
@@ -432,7 +470,7 @@ Window_t TGLWidget::CreateWindow(const TGWindow* parent, const TGLFormat &format
    XVisualInfo *visInfo = glXChooseVisual(dpy, DefaultScreen(dpy), &glxfmt[0]);
 
    if (!visInfo) {
-      ::Error("TGLWidget::CreateWindow", "No good visual found!");
+      ::Error("TGLWidget::CreateGLWindow", "No good visual found!");
       throw std::runtime_error("No good visual found!");
    }
 
@@ -457,10 +495,49 @@ Window_t TGLWidget::CreateWindow(const TGWindow* parent, const TGLFormat &format
 }
 
 //______________________________________________________________________________
-void TGLWidget::SetFormat()
+Window CreateGLWindow(const TGWindow* parent, const TGLFormat &format, std::pair<void *, void *>& innerData)
 {
-   // Set pixel format.
-   // Empty version for X11.
+   // CreateGLWidget - X11 version.
+   // Can throw std::bad_alloc and std::runtime_error.
+   // This version is bad - I do not check the results of
+   // X11 calls.
+   std::vector<Int_t> glxfmt;
+   fill_format(glxfmt, format);
+
+   Display *dpy = reinterpret_cast<Display *>(gVirtualX->GetDisplay());
+   XVisualInfo *visInfo = glXChooseVisual(dpy, DefaultScreen(dpy), &glxfmt[0]);
+
+   if (!visInfo) {
+      ::Error("CreateGLWindow", "No good visual found!");
+      throw std::runtime_error("No good visual found!");
+   }
+
+   Int_t  x = 0, y = 0;
+   UInt_t w = 0, h = 0, b = 0, d = 0;
+   Window root = 0;
+   Window_t winID = parent->GetId();
+
+   XGetGeometry(dpy, winID, &root, &x, &y, &w, &h, &b, &d);
+
+   XSetWindowAttributes attr;
+   attr.colormap         = XCreateColormap(dpy, root, visInfo->visual, AllocNone); // Can fail?
+   attr.background_pixel = 0;
+   attr.event_mask       = NoEventMask;
+   attr.backing_store    = Always;
+   attr.bit_gravity      = NorthWestGravity;
+
+   ULong_t mask = CWBackPixel | CWColormap | CWEventMask | CWBackingStore | CWBitGravity;
+   Window glWin = XCreateWindow(dpy, winID, x, y, w, h, 0, visInfo->depth,
+                                InputOutput, visInfo->visual, mask, &attr);
+   // Check results.
+   XMapWindow(dpy, glWin);
+
+   innerData.first  = dpy;
+   innerData.second = visInfo;
+
+   return glWin;
+}
+
 }
 
 //==============================================================================
@@ -588,4 +665,36 @@ void TGLWidget::DoRedraw()
 //   }
    if (fEventHandler)
       return fEventHandler->Repaint();
+}
+
+ClassImp(TGLCanvasWidget)
+
+//______________________________________________________________________________
+TGLCanvasWidget::TGLCanvasWidget(const TGViewPort *parent)
+{
+   fWidgetID = CreateGLWindow(parent, fGLFormat, fInnerData);
+#ifdef WIN32
+   fWindowIndex = (Int_t) fInnerData.second;
+#else
+   fWindowIndex = gVirtualX->AddWindow(fWidgetID, parent->GetWidth(), parent->GetHeight());
+#endif
+
+   try
+   {
+      SetFormat();
+      fGLContext = new TGLContext(this, kTRUE, 0);
+   }
+   catch (const std::exception &)
+   {
+      //TODOTODO CORRECT CLEANUP REQUIRED!!!!
+      throw;
+   }
+
+   fFromInit = kFALSE;
+}
+
+//______________________________________________________________________________
+void TGLCanvasWidget::ExtractViewport(Int_t * /*vp*/)const
+{
+   //I do not use it inside TPad/TCanvas.
 }

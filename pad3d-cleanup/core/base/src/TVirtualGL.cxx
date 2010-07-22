@@ -17,32 +17,5 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TVirtualGL.h"
-#include "TROOT.h"
-
-
-ClassImp(TGLManager)
-
-TGLManager * (*gPtr2GLManager)() = 0;
-
-//____________________________________________________________________________
-TGLManager::TGLManager() : TNamed("gGLManager", "")
-{
-}
-
-//____________________________________________________________________________
-TGLManager *&TGLManager::Instance()
-{
-   // Return the global GL Manager.
-
-   static TGLManager *instance = 0;
-
-   if(gPtr2GLManager) {
-      instance = gPtr2GLManager();
-   }
-
-   return instance;
-}
-
-ClassImp(TVirtualGLPainter)
 
 ClassImp(TGLPaintDevice)
