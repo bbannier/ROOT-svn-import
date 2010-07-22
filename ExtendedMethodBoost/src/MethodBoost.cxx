@@ -136,6 +136,7 @@ void TMVA::MethodBoost::DeclareOptions()
                     "How to set the final weight of the boosted classifiers");
    AddPreDefVal(TString("ByError"));
    AddPreDefVal(TString("Average"));
+   AddPreDefVal(TString("ByROC"));
    AddPreDefVal(TString("LastMethod"));
 
    DeclareOptionRef(fRecalculateMVACut = kTRUE, "Boost_RecalculateMVACut",
@@ -674,6 +675,7 @@ void TMVA::MethodBoost::SingleBoost()
 
    if      (fMethodWeightType == "ByError") fMethodWeight.push_back(TMath::Log(fBoostWeight));
    else if (fMethodWeightType == "Average") fMethodWeight.push_back(1.0);
+   else if (fMethodWeightType == "ByROC")   fMethodWeight.push_back(0.5);
    else                                     fMethodWeight.push_back(0);
 
    delete[] WrongDetection;
@@ -775,8 +777,9 @@ void TMVA::MethodBoost::SingleTest(Int_t MethodIndex)
    method->TestClassification();
 
    // calculate ROC integral
-   (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1,dynamic_cast<MethodBase*>(method)->GetROCIntegral());
-   //(*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetROCIntegral());
+   Double_t roc = dynamic_cast<MethodBase*>(method)->GetROCIntegral();
+   (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1, roc);
+   fMethodWeight.at(MethodIndex) = roc;
 
    Data()->SetCurrentType(Types::kTraining);
 }
