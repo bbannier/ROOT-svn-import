@@ -70,7 +70,7 @@ void utEvent::_testConstructor2()
    _eventC2 = new Event(*_eventC3);
 
    test_(_eventC2->IsDynamic()         == false);
-
+   
    test_(_eventC2->GetWeight()         == (_testWeight*_testBoostWeight));
    test_(_eventC2->GetOriginalWeight() == _testWeight);
    test_(_eventC2->GetBoostWeight()    == _testBoostWeight);
@@ -245,13 +245,13 @@ void utEvent::_testMutators()
    //int testVal = *(int*)(multp);
    //std::cout << "int casted results "<< getweight<< " " << testVal<< std::endl;
    //std::cout << "results "<< _eventC1->GetWeight()<< " " << _testWeight*_testScale<< std::endl;
-
-   test_(_eventC1->GetWeight() == _testWeight*_testScale); //this line works for me (Eckhard)
+   //std::cout <<_eventC1->GetWeight() << " " << _testWeight*_testScale << std::endl;
+   test_(TMath::Abs(_eventC1->GetWeight()- _testWeight*_testScale)<1.e-6); //empirical value
    //if(sizeof(int) == sizeof(float))
    //   test_(getweight == testVal); // this one does not (Eckhard)
 
    _eventC1->SetBoostWeight(_testBoostWeight);
-   test_(_eventC1->GetBoostWeight() == _testBoostWeight);
+   test_(TMath::Abs(_eventC1->GetBoostWeight()-_testBoostWeight)<1.e-6); //empirical value
    _eventC1->ScaleBoostWeight(_testScale);
    //float multiple2   = _testBoostWeight*_testScale;
    //float comparison2 = _eventC1->GetBoostWeight();
@@ -259,7 +259,7 @@ void utEvent::_testMutators()
    //void* compp2 = &comparison2;
    //int getboostweight = *(int*)(compp2);
    //int testVal2 = *(int*)(multp2);
-   test_(_eventC1->GetBoostWeight() == _testBoostWeight*_testScale); // work for me (Eckhard)
+   test_(TMath::Abs(_eventC1->GetBoostWeight()- _testBoostWeight*_testScale)<1.e-6); // empirical value
    //if(sizeof(int) == sizeof(float))
    //   test_(getboostweight == testVal2); // does not work for me (Eckhard)
 
