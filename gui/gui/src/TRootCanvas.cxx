@@ -515,35 +515,23 @@ void TRootCanvas::CreateCanvas(const char *name)
 
    fCanvasID = -1;
 
+   //TODOTODO
    if (fCanvas->UseGL()) {
       fCanvas->SetSupportGL(kFALSE);
-      //first, initialize GL (if not yet)
-      if (!gGLManager) {
-         TString x = "win32";
-         if (gVirtualX->InheritsFrom("TGX11"))
-            x = "x11";
 
-         TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TGLManager", x);
+      TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TGLCanvasWidget");
 
-         if (ph && ph->LoadPlugin() != -1) {
-            if (!ph->ExecPlugin(0))
-               Error("CreateCanvas", "GL manager plugin failed");
+      if (ph && ph->LoadPlugin() != -1) {
+         TGLPaintDevice *glWidget = (TGLPaintDevice *)ph->ExecPlugin(1, fCanvasWindow->GetViewPort());
+         if (!glWidget)
+            Error("CreateCanvas", "TGLCanvasWidget plugin failed");
+         else {
+            fCanvas->SetSupportGL(kTRUE);
+            fCanvas->SetGLDevice(glWidget);
+            fCanvasID = glWidget->GetWindowIndex();
          }
       }
 
-      if (gGLManager) {
-         fCanvasID = gGLManager->InitGLWindow((ULong_t)fCanvasWindow->GetViewPort()->GetId());
-         if (fCanvasID != -1) {
-            //Create gl context.
-            const Int_t glCtx = gGLManager->CreateGLContext(fCanvasID);
-            if (glCtx != -1) {
-               fCanvas->SetSupportGL(kTRUE);
-               fCanvas->SetGLDevice(glCtx);//Now, fCanvas is responsible for context deletion!
-            } else
-               Error("CreateCanvas", "GL context creation failed.");
-         } else
-            Error("CreateCanvas", "GL window creation failed\n");
-      }
    }
 
    if (fCanvasID == -1)

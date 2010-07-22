@@ -42,6 +42,7 @@ class TGLClipSet;
 class TGLManipSet;
 class TGLCameraOverlay;
 class TGLContextIdentity;
+class TGLPaintDevice;
 class TTimer;
 
 class TContextMenu;
@@ -179,7 +180,7 @@ protected:
 
 protected:
    TGLWidget          *fGLWidget;
-   Int_t               fGLDevice; //!for embedded gl viewer
+   TGLPaintDevice     *fGLDevice; //!for embedded gl viewer
    TGLContextIdentity *fGLCtxId;  //!for embedded gl viewer
 
    // Updata/camera-reset behaviour
@@ -223,7 +224,8 @@ public:
    virtual void  CreateGLWidget()  {}
    virtual void  DestroyGLWidget() {}
 
-   Int_t   GetDev()          const           { return fGLDevice; }
+   //TODOTODO
+   Int_t   GetDev()          const           { return -1;}// fGLDevice; }
    Bool_t  GetSmartRefresh() const           { return fSmartRefresh; }
    void    SetSmartRefresh(Bool_t smart_ref) { fSmartRefresh = smart_ref; }
 

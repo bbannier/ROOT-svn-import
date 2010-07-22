@@ -206,8 +206,9 @@ TCanvas::TCanvas(const char *name, Int_t ww, Int_t wh, Int_t winid) : TPad(), fD
    fUseGL = gStyle->GetCanvasPreferGL();
 
    if (fUseGL) {
-      fGLDevice = gGLManager->CreateGLContext(winid);
-      if (fGLDevice == -1)
+     /* fGLDevice = gGLManager->CreateGLContext(winid);
+      if (fGLDevice == -1)*/
+      //TODOTODO
          fUseGL = kFALSE;
    }
 
@@ -737,8 +738,9 @@ void TCanvas::Close(Option_t *option)
    if (!IsBatch()) {
       gVirtualX->SelectWindow(fCanvasID);    //select current canvas
 
-      if (fGLDevice != -1)
-         gGLManager->DeleteGLContext(fGLDevice);//?
+    //TODOTODO
+    //  if (fGLDevice)
+      //   gGLManager->DeleteGLContext(fGLDevice);//?
 
       if (fCanvasImp) fCanvasImp->Close();
    }
@@ -1040,7 +1042,9 @@ void TCanvas::Flush()
       } else {
          TVirtualPS *tvps = gVirtualPS;
          gVirtualPS = 0;
-         gGLManager->MakeCurrent(fGLDevice);
+         //gGLManager->MakeCurrent(fGLDevice);
+         fGLDevice->MakeCurrent();
+         //TODOTODO
          fPainter->InitPainter();
          Paint();
          if (padsav && padsav->GetCanvas() == this) {
@@ -1049,7 +1053,9 @@ void TCanvas::Flush()
             //cd();
          }
          fPainter->LockPainter();
-         gGLManager->Flush(fGLDevice);
+         fGLDevice->SwapBuffers();
+         //gGLManager->Flush(fGLDevice);
+         //TODOTODO
          gVirtualPS = tvps;
       }
    }

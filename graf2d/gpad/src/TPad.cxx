@@ -130,9 +130,7 @@ TPad::TPad()
    fMother     = 0;
    fPadPaint   = 0;
    fPixmapID   = -1;
-   fGLDevice   = -1;
-   fCopyGLDevice = kFALSE;
-   fEmbeddedGL = kFALSE;
+   fGLDevice   = 0;
    fTheta      = 30;
    fPhi        = 30;
    fNumber     = 0;
@@ -251,8 +249,7 @@ TPad::TPad(const char *name, const char *title, Double_t xlow,
    fPadPaint   = 0;
    fPadView3D  = 0;
    fPixmapID   = -1;      // -1 means pixmap will be created by ResizePad()
-   fCopyGLDevice = kFALSE;
-   fEmbeddedGL = kFALSE;
+
    fNumber     = 0;
    fAbsCoord   = kFALSE;
    fEditable   = kTRUE;
@@ -2808,7 +2805,7 @@ void TPad::Paint(Option_t * /*option*/)
    if (fViewer3D && fViewer3D->CanLoopOnPrimitives()) {
       fViewer3D->PadPaint(this);
       Modified(kFALSE);
-      if (GetGLDevice()!=-1 && gVirtualPS) {
+      if (GetGLDevice() && gVirtualPS) {
          TPad *padsav = (TPad*)gPad;
          gPad = this;
          fViewer3D->PrintObjects();
@@ -3968,7 +3965,7 @@ TPad *TPad::Pick(Int_t px, Int_t py, TObjLink *&pickobj)
 
       //If canvas prefers GL, all 3d objects must be drawn/selected by
       //gl viewer
-      if (obj->InheritsFrom(TAtt3D::Class()) && fEmbeddedGL) {
+      if (obj->InheritsFrom(TAtt3D::Class()) /*&& fEmbeddedGL*/) {//TODOTODO
          lnk = lnk->Prev();
          continue;
       }
@@ -4005,7 +4002,8 @@ TPad *TPad::Pick(Int_t px, Int_t py, TObjLink *&pickobj)
    if (fView && !gotPrim) {
       Double_t dx = 0.05*(fUxmax-fUxmin);
       if ((x > fUxmin + dx) && (x < fUxmax-dx)) {
-
+         //TODOTODO
+         /*
          if (fEmbeddedGL) {
             //No 2d stuff was selected, but we have gl-viewer. Let it select an object in
             //scene (or select itself). In any case it'll internally call
@@ -4014,7 +4012,7 @@ TPad *TPad::Pick(Int_t px, Int_t py, TObjLink *&pickobj)
             px -= Int_t(GetXlowNDC() * GetWw());
             fViewer3D->DistancetoPrimitive(px, py);
          }
-         else
+         else*/
             dummyLink.SetObject(fView);
       }
    }
@@ -5844,7 +5842,7 @@ TVirtualViewer3D *TPad::GetViewer3D(Option_t *type)
       }
 
       if (strstr(type, "gl") && !strstr(type, "ogl"))
-         fEmbeddedGL = kTRUE, fCopyGLDevice = kTRUE, Modified();
+         /*fEmbeddedGL = kTRUE, fCopyGLDevice = kTRUE,*/ Modified();//TODOTODO
       else
          createdExternal = kTRUE;
 
@@ -5888,7 +5886,7 @@ void TPad::ReleaseViewer3D(Option_t * /*type*/ )
 
 
 //______________________________________________________________________________
-Int_t TPad::GetGLDevice()
+TGLPaintDevice *TPad::GetGLDevice()
 {
    // Get GL device.
    return fGLDevice;

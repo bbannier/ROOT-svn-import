@@ -188,7 +188,7 @@ private:
 
 }
 
-class TGLPlotPainter : public TVirtualGLPainter {
+class TGLPlotPainter {
    friend class Rgl::PlotTranslation;
 private:
    const TColor         *fPadColor;
@@ -227,9 +227,6 @@ protected:
    mutable Bool_t        fDrawPalette;
 
 public:
-/*   TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordinates *coord, Int_t context,
-                  Bool_t xoySelectable, Bool_t xozSelectable, Bool_t yozSelectable);
-   TGLPlotPainter(TGLPlotCamera *camera, Int_t context);*/
    TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordinates *coord,
                   Bool_t xoySelectable, Bool_t xozSelectable, Bool_t yozSelectable);
    TGLPlotPainter(TGL5DDataSet *data, TGLPlotCamera *camera, TGLPlotCoordinates *coord);
@@ -248,7 +245,9 @@ public:
    virtual Bool_t   InitGeometry() = 0;
 
    virtual void     StartPan(Int_t px, Int_t py) = 0;
-   //Pan function is already declared in TVirtualGLPainter.
+   virtual void     Pan(Int_t px, Int_t py) = 0;
+   //Used by status bar in a canvas.
+   virtual char    *GetPlotInfo(Int_t px, Int_t py) = 0;
 
    //Add string option, it can be a digit in "lego" or "surf".
    virtual void     AddOption(const TString &stringOption) = 0;

@@ -35,12 +35,50 @@ class TGEventHandler;
 //Base class for window based gl devices.
 //Simple adds two new functions to widget's interface.
 //Exists to make TGLContext more "generic".
+
 class TGLWidgetBase : public TGLPaintDevice {
+protected:
+   TGLContext               *fGLContext;
+   //fInnerData is for X11 - <dpy, visualInfo> pair.
+   std::pair<void *, void *> fInnerData;
+   Int_t                     fWindowIndex;
+
+   TGLFormat                 fGLFormat;
+   //fFromCtor checks that SetFormat was called only from ctor.
+   Bool_t                    fFromInit;
+
+   Handle_t                  fWidgetID;
+
+   std::set<TGLContext *>    fValidContexts;
+
+   TGLWidgetBase();
+   ~TGLWidgetBase();
 public:
-  virtual std::pair<void *, void *> GetInnerData() const = 0;
-  virtual Handle_t GetDeviceID() const = 0;
+
+   virtual std::pair<void *, void *> GetInnerData() const {return fInnerData;}
+   virtual Handle_t GetWidgetID() const {return fWidgetID;}
+
+   //Overriders.
+   Int_t GetWindowIndex() const {return fWindowIndex;}
+
+   void AddContext(TGLContext *ctx);
+   void RemoveContext(TGLContext *ctx);
+
+   //This function is public _ONLY_ for calls
+   //via gInterpreter. Do not call it directly.
+   void SetFormat();
+   //
+   Bool_t            MakeCurrent();
+   Bool_t            ClearCurrent();
+   void              SwapBuffers();
+   const TGLContext *GetContext()const;
+   const  TGLFormat *GetPixelFormat()const;
 
 private:
+
+   TGLWidgetBase(const TGLWidgetBase &rhs);
+   TGLWidgetBase &operator = (const TGLWidgetBase &rhs);
+
    ClassDef(TGLWidgetBase, 0)//Base class for gl-widgets.
 };
 
@@ -48,17 +86,6 @@ class TGLWidget : public TGFrame, public TGLWidgetBase {
    friend class TGLContext;
 
 private:
-   TGLContext                       *fGLContext;
-   //fInnerData is for X11 - <dpy, visualInfo> pair.
-   std::pair<void *, void *>         fInnerData;
-   Int_t                             fWindowIndex;
-
-   TGLFormat                         fGLFormat;
-   //fFromCtor checks that SetFormat was called only from ctor.
-   Bool_t                            fFromInit;
-
-   std::set<TGLContext *>            fValidContexts;
-
    TGEventHandler                   *fEventHandler;
 
 public:
@@ -76,16 +103,6 @@ public:
    virtual void      InitGL();
    virtual void      PaintGL();
 
-   Bool_t            MakeCurrent();
-   Bool_t            ClearCurrent();
-   void              SwapBuffers();
-   const TGLContext *GetContext()const;
-
-   const  TGLFormat *GetPixelFormat()const;
-
-   //This function is public _ONLY_ for calls
-   //via gInterpreter. Do not call it directly.
-   void              SetFormat();
    //To repaint gl-widget without GUI events.
    void              ExtractViewport(Int_t *vp)const;
 
@@ -105,22 +122,32 @@ public:
 protected:
    TGLWidget(Window_t glw, const TGWindow* parent, Bool_t selectInput);
 
-   static Window_t CreateWindow(const TGWindow* parent, const TGLFormat &format,
-                                UInt_t width, UInt_t height,
-                                std::pair<void *, void *>& innerData);
 
-   //Overriders.
-   void                      AddContext(TGLContext *ctx);
-   void                      RemoveContext(TGLContext *ctx);
 
-   Handle_t                  GetDeviceID() const {return GetId();}
-   std::pair<void *, void *> GetInnerData()const;
+   Handle_t                  GetWidgetID() const {return GetId();}
 
 private:
    TGLWidget(const TGLWidget &);              // Not implemented.
    TGLWidget &operator = (const TGLWidget &); // Not implemented.
 
    ClassDef(TGLWidget, 0); //Window (widget) version of TGLPaintDevice
+};
+
+class TGViewPort;
+
+class TGLCanvasWidget : public TGLWidgetBase {
+private:
+public:
+   TGLCanvasWidget(const TGViewPort *parent);
+
+   void ExtractViewport(Int_t *vp)const;
+
+private:
+
+   TGLCanvasWidget(const TGLCanvasWidget &rhs);
+   TGLCanvasWidget & operator = (const TGLCanvasWidget &);
+
+   ClassDef(TGLCanvasWidget, 0)
 };
 
 #endif
