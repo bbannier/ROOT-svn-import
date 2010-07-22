@@ -23,6 +23,46 @@
 	it causes GL errors when fonts become too small.
 	All FBO examples now use mip-maps but with different sizes.
 
+2010-07-22 Timur Pocheptsov
+
+	* core/base/inc/TVirtualGL.h
+	* core/base/src/TVirtualGL.cxx
+
+	Removed TVirtualGLPainter, TGLManager, ClassImp macros;
+	changed TGLPaintDevice interface.
+
+	* graf3d/gl/inc/TX11GL.h
+	* graf3d/gl/src/TX11GL.cxx
+	* graf2d/win32dgk/inc/TGWin32GL.h
+	* graf2d/win32gdk/inc/TGWin32VirtualGLProxy.h
+	* graf2d/win32gdk/src/TGWin32GL.cxx
+	* graf2d/win32gdk/src/TGWIn32VirtualGLProxy.cxx
+
+	Files were deleted, TGWin32GLManager and TX11GLManager are not used anymore.
+
+	* gui/gui/src/TRootCanvas.cxx
+	* gui/gui/src/TRootEmbeddedCanvas.cxx
+
+	TGLCanvasWidget now used instead of gGLManager and integer indices.
+
+	* graf2d/gpad/inc/TPad.h
+	* graf2d/gpad/inc/TCanvas.h
+	* graf2d/gpad/src/TPad.cxx
+	* graf2d/gpad/src/TCanvas.cxx
+
+	Integer indices for "gl device" replaced by pointer to TGLPaintDevice class
+	from TVirtualGL.h, all context management done internally by TGLCanvasWidget,
+	gGLManager removed.
+
+	* core/base/inc/TVirtualPad.h
+
+	Changes in gl-device management interface.
+
+	* graf3d/gl/src/TGLHistPainter.cxx
+	* graf3d/gl/src/TGLViewer.cxx
+
+	gGLManager is not used anymore
+
 2010-07-21  Matevz Tadel  <mtadel@greed>
 
 	* graf3d/gl/src/TGLPadPainter.cxx:
@@ -42,6 +82,7 @@
 
 	* tutorials/eve/testgl1.C:
 	Increase FBO width to 4096 -- it brings up a GL error.
+
 
 2010-07-20  Matevz Tadel  <mtadel@greed>
 
