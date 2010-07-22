@@ -122,7 +122,7 @@ namespace TMVA {
       void SingleTrain();
 
       //testing a single classifier
-      void SingleTest(Int_t);
+      void SingleTest();
 
       //calculating a boosting weight from the classifier, storing it in the next one
       void SingleBoost();
@@ -130,6 +130,9 @@ namespace TMVA {
       // testing a whole classifier
       void FullTest(Double_t);
 
+      // return ROC integral on training sample
+      Double_t GetTrainingROCIntegral();
+   
       //writing the monitoring histograms and tree to a file
       void WriteMonitoringHistosToFile( void ) const;
 
@@ -206,6 +209,8 @@ namespace TMVA {
       //whether to recalculate the MVA cut at every boosting step
       Bool_t            fRecalculateMVACut;
 
+      // roc integral for training sample
+      Double_t          fROC_training;
 
       
       DataSetManager* fDataSetManager; // DSMTEST
