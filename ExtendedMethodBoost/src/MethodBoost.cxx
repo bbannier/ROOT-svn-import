@@ -319,7 +319,7 @@ void TMVA::MethodBoost::Train()
          if (fMethodIndex==0 && fMonitorBoostedMethod) CreateMVAHistorgrams();
 
 	 // get ROC integral for training sample
-	 fROC_training = GetTrainingROCIntegral(kTRUE);
+	 fROC_training = GetTrainingROCIntegral(kTRUE, Types::kTraining);
 	 (*fMonitorHist)[6]->SetBinContent(fMethodIndex+1, fROC_training);
    
          // boosting
@@ -329,17 +329,13 @@ void TMVA::MethodBoost::Train()
          (*fMonitorHist)[1]->SetBinContent(fMethodIndex+1,fBoostWeight);
          (*fMonitorHist)[2]->SetBinContent(fMethodIndex+1,fMethodError);
          (*fMonitorHist)[3]->SetBinContent(fMethodIndex+1,fOrigMethodError);
-         SingleTest(); // test and evaluate single method
+	 (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1, GetTrainingROCIntegral(kTRUE, Types::kTesting));
 
          AllMethodsWeight += fMethodWeight.back();
          fMonitorTree->Fill();
 
-	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetTrainingROCIntegral(kFALSE, AllMethodsWeight));
-
-	 // test MethodBoost in order to calculate ROC integral
-         TMVA::MsgLogger::InhibitOutput(); //supressing Logger outside the method
-	 FullTest(AllMethodsWeight);
-         TMVA::MsgLogger::EnableOutput();
+	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetTrainingROCIntegral(kFALSE, Types::kTraining, AllMethodsWeight));
+	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetTrainingROCIntegral(kFALSE, Types::kTesting, AllMethodsWeight));
 
          // stop boosting if needed when error has reached 0.5
          // thought of counting a few steps, but it doesn't seem to be necessary
@@ -775,29 +771,10 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err )
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBoost::SingleTest()
+Double_t TMVA::MethodBoost::GetTrainingROCIntegral(Bool_t singleMethod, Types::ETreeType eTT, Double_t AllMethodsWeight)
 {
-   MethodBase* method = dynamic_cast<MethodBase*>(fMethods.back());
-   Data()->SetCurrentType(Types::kTesting);
-
-   // delete testing results
-   Data()->GetResults(Form("%s_B%04i", fBoostedMethodName.Data(),fMethodIndex), Types::kTesting, GetAnalysisType())->Delete();
-
-   // Evaluate method on testing sample
-   method->AddOutput( Types::kTesting, method->GetAnalysisType() );
-   // Evaluate performance of method
-   method->TestClassification();
-
-   // calculate ROC integral (testing sample)
-   (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1, method->GetROCIntegral());
-
-   Data()->SetCurrentType(Types::kTraining);
-}
-
-//_______________________________________________________________________
-Double_t TMVA::MethodBoost::GetTrainingROCIntegral(Bool_t singleMethod, Double_t AllMethodsWeight)
-{
-   Data()->SetCurrentType(Types::kTraining);
+   // set data sample training / testing
+   Data()->SetCurrentType(eTT);
 
    MethodBase* method = singleMethod ? dynamic_cast<MethodBase*>(fMethods.back()) : 0;
    Double_t err = 0.0;
@@ -831,7 +808,7 @@ Double_t TMVA::MethodBoost::GetTrainingROCIntegral(Bool_t singleMethod, Double_t
    if (DataInfo().GetClassInfo("Signal") != 0) {
       signalClass = DataInfo().GetClassInfo("Signal")->GetNumber();
    }
-   gTools().ComputeStat( Data()->GetEventCollection(Types::kTraining), mvaRes,
+   gTools().ComputeStat( Data()->GetEventCollection(eTT), mvaRes,
                          meanS, meanB, rmsS, rmsB, xmin, xmax, signalClass );
 
    fNbins = gConfig().fVariablePlotting.fNbinsXOfROCCurve;
@@ -851,6 +828,7 @@ Double_t TMVA::MethodBoost::GetTrainingROCIntegral(Bool_t singleMethod, Double_t
    gTools().NormHist( mva_b );
    PDF *fS = new PDF( "PDF Sig", mva_s, PDF::kSpline2 );
    PDF *fB = new PDF( "PDF Bkg", mva_b, PDF::kSpline2 );
+
    // calculate ROC integral from fS, fB
    Double_t ROC = GetROCIntegral(fS, fB);
    
@@ -858,42 +836,9 @@ Double_t TMVA::MethodBoost::GetTrainingROCIntegral(Bool_t singleMethod, Double_t
    delete mva_b;
    delete fS;
    delete fB;
+   delete mvaRes;
 
-   mvaRes->clear();
    Data()->SetCurrentType(Types::kTraining);
 
    return ROC;
-}
-
-//_______________________________________________________________________
-void TMVA::MethodBoost::FullTest( Double_t AllMethodsWeight )
-{
-   Data()->SetCurrentType(Types::kTesting);
-
-   // delete testing results
-   Data()->GetResults(GetMethodName(), Types::kTesting, GetAnalysisType())->Delete();
-   
-   // save the old normalization of the methods
-   std::vector<Double_t> OldMethodWeight(fMethodWeight);
-   // normalize the weights of the classifiers
-   if (fMethodWeightType == "LastMethod") 
-      fMethodWeight.back() = AllMethodsWeight = 1.0;
-   for (Int_t i=0; i<=fMethodIndex; i++)
-      fMethodWeight[i] = fMethodWeight[i] / AllMethodsWeight;
-
-   // Evaluate method on testing sample
-   AddOutput( Types::kTesting, GetAnalysisType() );
-   // Evaluate performance of method
-   TestClassification();
-
-   // calculate ROC integral
-   (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetROCIntegral());
-
-   // restore the method weights
-   fMethodWeight = OldMethodWeight;
-
-   // delete testing results
-   Data()->GetResults(GetMethodName(), Types::kTesting, GetAnalysisType())->Delete();
-
-   Data()->SetCurrentType(Types::kTraining);
 }
