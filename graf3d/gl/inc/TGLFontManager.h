@@ -53,7 +53,7 @@ public:
    TGLFont(const TGLFont& o);            // Not implemented.
    virtual ~TGLFont();
 
-   void CopyAttributes(const TGLFont &o);
+   void  CopyAttributes(const TGLFont &o);
 
    Int_t GetSize() const { return fSize;}
    Int_t GetFile() const { return fFile;}
@@ -77,6 +77,7 @@ public:
    Float_t GetLineHeight() const;
    void    MeasureBaseLineParams(Float_t& ascent, Float_t& descent, Float_t& line_height,
                                  const char* txt="Xj") const;
+   void    SetUseDisplayLists(Bool_t udl);
 
    void  BBox(const char* txt,
               Float_t& llx, Float_t& lly, Float_t& llz,

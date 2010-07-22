@@ -92,7 +92,7 @@ void TEvePadFrameGL::DirectDrawIntoFBO(const TGLRnrCtx& /*rnrCtx*/) const
 
    glViewport(0, 0, reqw, reqh);
 
-   fgPainter->InitPainterForFBO(((Double_t)reqw)/ocw, ((Double_t)reqh)/och, kFALSE);
+   fgPainter->InitPainterForFBO(((Double_t)reqw)/ocw, ((Double_t)reqh)/och, kFALSE, kFALSE);
 
    TObjOptLink *lnk = (TObjOptLink*) pad->GetListOfPrimitives()->FirstLink();
    while (lnk)
@@ -144,7 +144,7 @@ void TEvePadFrameGL::DirectDrawFBO(const TGLRnrCtx& /*rnrCtx*/) const
 }
 
 //______________________________________________________________________________
-void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& /*rnrCtx*/) const
+void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& rnrCtx) const
 {
    // Draw the pad in 3D mode.
 
@@ -174,7 +174,7 @@ void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& /*rnrCtx*/) const
    glVertex2d(x2, y2); glVertex2d(x1, y2); 
    glEnd();
 
-   fgPainter->InitPainterForGLViewer();
+   fgPainter->InitPainterForGLViewer(rnrCtx.IsDLCaptureOpen());
 
    TObjOptLink *lnk = (TObjOptLink*) pad->GetListOfPrimitives()->FirstLink();
    while (lnk)
@@ -213,10 +213,10 @@ Bool_t TEvePadFrameGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
       Int_t w, h;
       if (fM->fSizeFBO > 0) {
          w = fM->fSizeFBO;
-         h = TMath::Nint(((Double_t)w * pad->GetWh()) / pad->GetWw());
+         h = TMath::Range(0, 8192, TMath::Nint(((Double_t)w * pad->GetWh()) / pad->GetWw()));
       } else {
-         w = pad->GetWw();
-         h = pad->GetWh();
+         w = TMath::Range(0, 8192, (Int_t) pad->GetWw());
+         h = TMath::Range(0, 8192, (Int_t) pad->GetWh());
       }
       fFBO->Init(w, h);
       fFBO->Bind();

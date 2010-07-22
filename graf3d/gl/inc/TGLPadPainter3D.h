@@ -51,6 +51,7 @@ private:
    Bool_t                      fLocked;
 
    Bool_t                      fForGLViewer;
+   Bool_t                      fBeingEmbeddedInDisplayList;
    Double_t                    fVPScaleX;
    Double_t                    fVPScaleY;
 
@@ -98,8 +99,8 @@ public:
    void     SelectDrawable(Int_t device);
 
    void     InitPainter();
-   void     InitPainterForFBO(Double_t vpsx, Double_t vpsy, Bool_t set_viewport);
-   void     InitPainterForGLViewer();
+   void     InitPainterForFBO(Double_t vpsx, Double_t vpsy, Bool_t set_viewport, Bool_t dl_capture_active);
+   void     InitPainterForGLViewer(Bool_t dl_capture_active);
    void     InvalidateCS();
    void     LockPainter();
    

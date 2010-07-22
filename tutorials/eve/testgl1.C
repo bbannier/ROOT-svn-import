@@ -5,7 +5,10 @@ TEvePadFrame *epf1 = 0, *epf2 = 0, *epf3 = 0, *epf4 = 0;
 void testgl1()
 {
    TEveManager::Create();
-   gStyle->SetCanvasPreferGL(kTRUE);
+   // Disable this -- get GL error invalid value from FTGL when
+   // creating texture fonst with size < 10.
+   // Fixed (?) in TGLPadPAinter3D by using polygon fonts from some point onwards.
+   // gStyle->SetCanvasPreferGL(kTRUE);
 
    // --- Create an embedded canvas
 
@@ -25,8 +28,10 @@ void testgl1()
    epf1->RefMainTrans().Move3LF(-0.7, 0.5, 0);
    gEve->AddElement(epf1);
 
-   epf2 = new TEvePadFrame(gPad, "Pad FBO");
+   epf2 = new TEvePadFrame(gPad, "Pad FBO Mipmap 256");
    epf2->SetUseFBO(kTRUE);
+   epf2->SetSizeFBO(256);
+   epf2->SetUseMipmaps(kTRUE);
    epf2->RefMainTrans().Move3LF(0.7, 0.5, 0);
    gEve->AddElement(epf2);
 
@@ -36,9 +41,10 @@ void testgl1()
    epf3->RefMainTrans().Move3LF(-0.7, -0.5, 0);
    gEve->AddElement(epf3);
 
-   epf4 = new TEvePadFrame(gPad, "Pad FBO LargeBuf");
+   epf4 = new TEvePadFrame(gPad, "Pad FBO Mipmap 4096");
    epf4->SetUseFBO(kTRUE);
    epf4->SetSizeFBO(4096);
+   epf4->SetUseMipmaps(kTRUE);
    epf4->RefMainTrans().Move3LF(0.7, -0.5, 0);
    gEve->AddElement(epf4);
 
