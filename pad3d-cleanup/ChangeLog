@@ -1,3 +1,28 @@
+2010-07-22  Matevz Tadel  <mtadel@greed>
+
+	* graf3d/gl/src/TGLFontManager.cxx:
+	* graf3d/gl/inc/TGLFontManager.h:
+	Add function
+	  void TGLFont::SetUseDisplayLists(Bool_t)
+	allowing to change DL capture of individual glyphs.
+
+	* graf3d/gl/inc/TGLPadPainter3D.h:
+	* graf3d/gl/src/TGLPadPainter3D.cxx:
+	Add disp_list_capture active argument to InitXXX() functions,
+	store it in a new member.
+	Use polygon fonts for small <10 and large >64 sizes.
+	Disable display-lists for them when DL-capture is already active.
+
+	* graf3d/eve/src/TEvePadFrameGL.cxx:
+	Make sure FBO size is in reasonable limits.
+	Pass DL-capture state to PadPainter::InitXXX().
+
+	* tutorials/eve/testgl1.C:
+	Do not use
+	  gStyle->SetCanvasPreferGL(kTRUE);
+	it causes GL errors when fonts become too small.
+	All FBO examples now use mip-maps but with different sizes.
+
 2010-07-21  Matevz Tadel  <mtadel@greed>
 
 	* graf3d/gl/src/TGLPadPainter.cxx:

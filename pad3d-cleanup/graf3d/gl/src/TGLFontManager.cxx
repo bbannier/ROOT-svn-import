@@ -145,6 +145,14 @@ void TGLFont::MeasureBaseLineParams(Float_t& ascent, Float_t& descent, Float_t& 
 }
 
 //______________________________________________________________________________
+void TGLFont::SetUseDisplayLists(Bool_t udl)
+{
+   // Get state of display list-usage.
+
+   fFont->UseDisplayList(udl);
+}
+
+//______________________________________________________________________________
 void TGLFont::BBox(const char* txt,
                    Float_t& llx, Float_t& lly, Float_t& llz,
                    Float_t& urx, Float_t& ury, Float_t& urz) const
@@ -158,15 +166,16 @@ void TGLFont::BBox(const char* txt,
 //______________________________________________________________________________
 void TGLFont::Render(const char* txt, Double_t x, Double_t y, Double_t angle, Double_t /*mgn*/) const
 {
-   //mgn is simply ignored, because ROOT's TVirtualX TGX11 are complete mess with
-   //painting attributes.
+   // mgn is simply ignored, because ROOT's TVirtualX TGX11 are complete mess with
+   // painting attributes.
+
    glPushMatrix();
    //glLoadIdentity();
-   
+
    // FTGL is not const correct.
    Float_t llx = 0.f, lly = 0.f, llz = 0.f, urx = 0.f, ury = 0.f, urz = 0.f;
    BBox(txt, llx, lly, llz, urx, ury, urz);
-   
+
    /*
     V\H   | left | center | right
    _______________________________
@@ -212,18 +221,16 @@ void TGLFont::Render(const char* txt, Double_t x, Double_t y, Double_t angle, Do
       yc -= 0.5 * dy;
       break;
    }
-   
+
    glTranslated(x, y, 0.);
    glRotated(angle, 0., 0., 1.);
    glTranslated(xc, yc, 0.);
    glTranslated(-0.5 * dx, -0.5 * dy, 0.);
    //glScaled(mgn, mgn, 1.);
-      
+
    const_cast<FTFont*>(fFont)->Render(txt);
-   
+
    glPopMatrix();
-   
-   
 }
 
 //______________________________________________________________________________

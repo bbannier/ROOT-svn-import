@@ -319,7 +319,8 @@ void TGLPadPainter3D::InitPainter()
 
 //______________________________________________________________________________
 void TGLPadPainter3D::InitPainterForFBO(Double_t vpsx, Double_t vpsy,
-                                        Bool_t set_viewport)
+                                        Bool_t set_viewport,
+                                        Bool_t dl_capture_active)
 {
    //Init gl-pad painter:
    //1. 2D painter does not use depth test, should not modify
@@ -358,10 +359,12 @@ void TGLPadPainter3D::InitPainterForFBO(Double_t vpsx, Double_t vpsy,
    fVPScaleX = vpsx;
    fVPScaleY = vpsy;
    SaveViewport();
+
+   fBeingEmbeddedInDisplayList = dl_capture_active;
 }
 
 //______________________________________________________________________________
-void TGLPadPainter3D::InitPainterForGLViewer()
+void TGLPadPainter3D::InitPainterForGLViewer(Bool_t dl_capture_active)
 {
    //Init gl-pad painter:
    //2. Disable cull face.
@@ -374,6 +377,8 @@ void TGLPadPainter3D::InitPainterForGLViewer()
    fLocked = kFALSE;
 
    fForGLViewer = kTRUE;
+
+   fBeingEmbeddedInDisplayList = dl_capture_active;
 }
 
 //______________________________________________________________________________
@@ -773,8 +778,11 @@ void TGLPadPainter3D::DrawText(Double_t x, Double_t y, const char *text, ETextMo
 
    // XXXX The font size can get TOO LARGE, esp. for large FBOs.
    // Also get GL-errors for polygons fonts --- why??
-   Int_t size = Int_t(GetTextSize() * fVPScaleY) - 1;
-   if (size <= 64)
+   Int_t size = TMath::Max(2, Int_t(GetTextSize() * fVPScaleY) - 1);
+
+   // printf("Rendering at %d, '%s' \n", size, text);
+
+   if (size >= 10 && size <= 64)
    {
       fFM.RegisterFont(size, TGLFontManager::GetFontNameFromId(GetTextFont()),
                        TGLFont::kTexture, fF);
@@ -783,8 +791,9 @@ void TGLPadPainter3D::DrawText(Double_t x, Double_t y, const char *text, ETextMo
    {
       fFM.RegisterFont(size, TGLFontManager::GetFontNameFromId(GetTextFont()),
                        TGLFont::kPolygon, fF);
+      if (fBeingEmbeddedInDisplayList)
+         fF.SetUseDisplayLists(kFALSE);
    }
-
    fF.PreRender();
 
    const UInt_t padH = UInt_t(gPad->GetAbsHNDC() * gPad->GetWh());
@@ -793,6 +802,8 @@ void TGLPadPainter3D::DrawText(Double_t x, Double_t y, const char *text, ETextMo
    fF.PostRender();
    RestoreProjectionMatrix();
    glMatrixMode(GL_MODELVIEW);
+
+   TGLUtil::CheckError("TGLPadPainter3D::DrawText post rendering");
 }
 
 //______________________________________________________________________________
