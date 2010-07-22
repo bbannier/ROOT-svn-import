@@ -51,6 +51,7 @@ void MethodUnitTestWithROCLimits::run()
 
   input = TFile::Open( fname );  
   if (input == NULL) input = TFile::Open( fname2 );
+  if (input == NULL) input = TFile::Open( "http://root.cern.ch/files/tmva_example.root" );
   if (input == NULL) 
     {
       cerr << "broken/inaccessible input file" << endl;
