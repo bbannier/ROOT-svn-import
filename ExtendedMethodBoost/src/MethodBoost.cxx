@@ -334,8 +334,12 @@ void TMVA::MethodBoost::Train()
          AllMethodsWeight += fMethodWeight.back();
          fMonitorTree->Fill();
 
+	 // There is a problem here: the evaluation of the full
+	 // classifier needs to be done with the unweighted events,
+	 // but with known method weights, which are obtained after
+	 // the reweighting!
 	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetTrainingROCIntegral(kFALSE, Types::kTraining, AllMethodsWeight));
-	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetTrainingROCIntegral(kFALSE, Types::kTesting, AllMethodsWeight));
+	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1, GetTrainingROCIntegral(kFALSE, Types::kTesting, AllMethodsWeight));
 
          // stop boosting if needed when error has reached 0.5
          // thought of counting a few steps, but it doesn't seem to be necessary
