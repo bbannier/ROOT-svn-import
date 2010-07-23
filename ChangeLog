@@ -1,3 +1,46 @@
+2010-07-23  Matevz Tadel  <mtadel@greed>
+
+	* core/base/inc/TVirtualPad.h:
+	Add function:
+	  virtual void AdvanceDepth() = 0;
+
+	* core/base/inc/TVirtualPadPainter.h:
+	Add function:
+	  virtual void AdvanceDepth() {}
+
+	* hist/histpainter/src/THistPainter.cxx:
+	Add gPad->AdvanceDepth() calls when painting new sub-elements of a
+	histogram.
+	Put "stats" TPaveStat into gPad instead of fFunctions -- it was
+	painted twice before.
+
+	* graf2d/gpad/src/TPad.cxx:
+	* graf2d/gpad/inc/TPad.h:
+	Implement virtual AdvanceDepth(), forwarding the call to pad-painter.
+
+	* graf3d/gl/src/TGLPadPainter3D.cxx:
+	* graf3d/gl/inc/TGLPadPainter3D.h:
+	Add member 'Double_t fAdvanceDepthStep' and implement virtual
+	AdvanceDepth().
+	The z_step is passed in the Init
+
+	* graf3d/eve/src/TEvePadFrameGL.cxx:
+	Pass the z-depth to the painter in Init() call.
+	Never use display-lists for 3D pad-painting. Polygon, outline and
+	extrude fonts declare new DLs during render.
+
+	* graf3d/gl/src/TGLFontManager.cxx:
+	White-space.
+
+	* graf3d/ftgl/src/FTPolyGlyph.cxx:
+	* graf3d/ftgl/src/FTOutlineGlyph.cxx:
+	* graf3d/ftgl/inc/FTOutlineGlyph.h:
+	* graf3d/ftgl/inc/FTVectoriser.h:
+	* graf3d/ftgl/inc/FTPolyGlyph.h:
+	Make polygon and outline glyphs also work when display-lists are
+	turned off. Until now this didn't work at all!
+	Extruded glyphs still only work with display-lists enabled.
+
 2010-07-22  Matevz Tadel  <mtadel@greed>
 
 	* graf3d/gl/src/TGLFontManager.cxx:

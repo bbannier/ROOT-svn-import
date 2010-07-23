@@ -10,6 +10,7 @@
 #include "FTGlyph.h"
 
 class FTVectoriser;
+class FTMesh;
 
 /**
  * FTPolyGlyph is a specialisation of FTGlyph for creating tessellated
@@ -50,8 +51,12 @@ class FTGL_EXPORT FTPolyGlyph : public FTGlyph
         /**
          * OpenGL display list
          */
-        GLuint glList;
-    
+        GLuint        glList;
+        const FTMesh *mesh;
+        unsigned int  horizontalTextureScale;
+        unsigned int  verticalTextureScale;
+
+        void RenderMesh();
 };
 
 

@@ -3526,6 +3526,7 @@ void THistPainter::Paint(Option_t *option)
    //          Picture surround (if new page) and page number (if requested).
    //          Histogram surround (if not option "Same").
    PaintFrame();
+   gPad->AdvanceDepth();
 
    //          Paint histogram axis only
    Bool_t gridx = gPad->GetGridx();
@@ -3562,6 +3563,8 @@ void THistPainter::Paint(Option_t *option)
 
    if (Hoption.Text) PaintText(option);
 
+   gPad->AdvanceDepth();
+
    //         test for associated function
    if (Hoption.Func) {
       Hoption_t hoptsave = Hoption;
@@ -3575,10 +3578,12 @@ void THistPainter::Paint(Option_t *option)
    if (gridx) gPad->SetGridx(0);
    if (gridy) gPad->SetGridy(0);
    PaintAxis(kFALSE);
+   gPad->AdvanceDepth();
    if (gridx) gPad->SetGridx(1);
    if (gridy) gPad->SetGridy(1);
 
-   PaintTitle();  // Draw histogram title
+   // Draw histogram title. It is actually added to the list, not painted.
+   PaintTitle();
 
    // Draw box with histogram statistics and/or fit parameters
 paintstat:
@@ -5243,9 +5248,13 @@ void THistPainter::PaintFunction(Option_t *)
       obj = lnk->GetObject();
       TVirtualPad *padsave = gPad;
       if (obj->InheritsFrom(TF1::Class())) {
-         if (obj->TestBit(TF1::kNotDraw) == 0) obj->Paint("lsame");
+         if (obj->TestBit(TF1::kNotDraw) == 0) {
+            obj->Paint("lsame");
+            gPad->AdvanceDepth();
+         }
       } else  {
          obj->Paint(lnk->GetOption());
+         gPad->AdvanceDepth();
       }
       lnk = (TObjOptLink*)lnk->Next();
       padsave->cd();
@@ -6589,11 +6598,12 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
    static char t[100];
    Int_t dofit;
    TPaveStats *stats  = 0;
-   TIter next(fFunctions);
+   TIter next(gPad->GetListOfPrimitives());
    TObject *obj;
    while ((obj = next())) {
       if (obj->InheritsFrom(TPaveStats::Class())) {
          stats = (TPaveStats*)obj;
+         if (strcmp(stats->GetName(),"stats")) {stats = 0; continue;}
          break;
       }
    }
@@ -6631,7 +6641,6 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
    if (fH->InheritsFrom(TProfile::Class())) nlinesf += print_mean + print_rms;
 
    // Pavetext with statistics
-   Bool_t done = kFALSE;
    if (!dostat && !fit) {
       if (stats) { delete stats; fFunctions->Remove(stats); }
       return;
@@ -6644,7 +6653,6 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
    }
    if (stats) {
       stats->Clear();
-      done = kTRUE;
    } else {
       stats  = new TPaveStats(
                gStyle->GetStatX()-statw,
@@ -6669,6 +6677,8 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
       stats->SetTextAlign(12);
       stats->SetBit(kCanDelete);
       stats->SetBit(kMustCleanup);
+
+      stats->Draw();
    }
    if (print_name)  stats->AddText(fH->GetName());
    if (print_entries) {
@@ -6789,9 +6799,6 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
          }
       }
    }
-
-   if (!done) fFunctions->Add(stats);
-   stats->Paint();
 }
 
 
@@ -7912,8 +7919,8 @@ void THistPainter::PaintTitle()
    ptitle->AddText(fH->GetTitle());
    ptitle->SetBit(kCanDelete);
    ptitle->Draw();
-   ptitle->Paint();
-
+   // Do not paint! It will be painted again as it is in the primitive list.
+   // ptitle->Paint();
 }
 
 

@@ -48,8 +48,10 @@ class FTGL_EXPORT FTOutlineGlyph : public FTGlyph
         /**
          * OpenGL display list
          */
-        GLuint glList;
-	
+        GLuint        glList;
+        FTVectoriser *vectoriser;
+
+        void RenderContour();
 };
 
 

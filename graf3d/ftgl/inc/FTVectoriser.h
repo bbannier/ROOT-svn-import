@@ -204,6 +204,11 @@ class FTGL_EXPORT FTVectoriser
         const FTMesh* GetMesh() const { return mesh;}
         
         /**
+         * Disown the current mesh.
+         */
+        const FTMesh* DisownMesh() { FTMesh *ret = mesh; mesh = 0; return ret; }
+ 
+        /**
          * Get the total count of points in this outline
          *
          * @return the number of points

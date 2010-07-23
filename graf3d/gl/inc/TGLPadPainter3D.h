@@ -54,6 +54,7 @@ private:
    Bool_t                      fBeingEmbeddedInDisplayList;
    Double_t                    fVPScaleX;
    Double_t                    fVPScaleY;
+   Double_t                    fAdvanceDepthStep;
 
 public:
    TGLPadPainter3D();
@@ -99,11 +100,13 @@ public:
    void     SelectDrawable(Int_t device);
 
    void     InitPainter();
-   void     InitPainterForFBO(Double_t vpsx, Double_t vpsy, Bool_t set_viewport, Bool_t dl_capture_active);
-   void     InitPainterForGLViewer(Bool_t dl_capture_active);
+   void     InitPainterForFBO(Double_t vpsx, Double_t vpsy, Bool_t dl_capture_active);
+   void     InitPainterForGLViewer(Double_t z_step, Bool_t dl_capture_active);
    void     InvalidateCS();
    void     LockPainter();
-   
+
+   void     AdvanceDepth();
+
    void     DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2);
    void     DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t v2);
    

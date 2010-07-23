@@ -4,13 +4,16 @@
 
 FTPolyGlyph::FTPolyGlyph( FT_GlyphSlot glyph, bool useDisplayList1)
 :   FTGlyph( glyph),
-    glList(0)
+    glList(0), mesh(0)
 {
     if( ft_glyph_format_outline != glyph->format)
     {
         err = 0x14; // Invalid_Outline
         return;
     }
+
+    horizontalTextureScale = glyph->face->size->metrics.x_ppem * 64;
+    verticalTextureScale   = glyph->face->size->metrics.y_ppem * 64;        
 
     FTVectoriser vectoriser( glyph);
 
@@ -19,18 +22,48 @@ FTPolyGlyph::FTPolyGlyph( FT_GlyphSlot glyph, bool useDisplayList1)
         return;
     }
     
-    unsigned int horizontalTextureScale = glyph->face->size->metrics.x_ppem * 64;
-    unsigned int verticalTextureScale = glyph->face->size->metrics.y_ppem * 64;        
-        
     vectoriser.MakeMesh( 1.0);
-    
-    if( useDisplayList1)
+    if (useDisplayList1)
     {
         glList = glGenLists( 1);
         glNewList( glList, GL_COMPILE);
+        mesh = vectoriser.GetMesh();
+        RenderMesh();
+        glEndList();
+        mesh = 0;
     }
+    else
+    {
+       mesh = vectoriser.DisownMesh();
+    }
+}
 
-    const FTMesh* mesh = vectoriser.GetMesh();
+
+FTPolyGlyph::~FTPolyGlyph()
+{
+    glDeleteLists( glList, 1);
+    delete mesh;
+}
+
+
+const FTPoint& FTPolyGlyph::Render( const FTPoint& pen)
+{
+    glTranslatef(  pen.X(),  pen.Y(), 0.0f);
+
+    if (glList)
+    {
+        glCallList( glList);    
+    }
+    else if (mesh)
+    {
+       RenderMesh();
+    }
+    
+    return advance;
+}
+
+void FTPolyGlyph::RenderMesh()
+{
     for( unsigned int index = 0; index < mesh->TesselationCount(); ++index)
     {
         const FTTesselation* subMesh = mesh->Tesselation( index);
@@ -50,28 +83,4 @@ FTPolyGlyph::FTPolyGlyph( FT_GlyphSlot glyph, bool useDisplayList1)
             }
         glEnd();
     }
-
-    if(useDisplayList1)
-    {
-        glEndList();
-    }
-}
-
-
-FTPolyGlyph::~FTPolyGlyph()
-{
-    glDeleteLists( glList, 1);
-}
-
-
-const FTPoint& FTPolyGlyph::Render( const FTPoint& pen)
-{
-    glTranslatef(  pen.X(),  pen.Y(), 0.0f);
-
-    if( glList)
-    {
-        glCallList( glList);    
-    }
-    
-    return advance;
 }

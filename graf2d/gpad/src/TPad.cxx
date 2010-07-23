@@ -362,6 +362,18 @@ void TPad::AddExec(const char *name, const char*command)
 
 
 //______________________________________________________________________________
+void TPad::AdvanceDepth()
+{
+   // Prepare pad-painter for next element to be painted. This should be called
+   // from withing TObject::Paint() that draws several elements.
+   // Only relevant for 3D pad-painter.
+
+   if (!gPad->IsBatch())
+      GetPainter()->AdvanceDepth();
+}
+
+
+//______________________________________________________________________________
 void TPad::AutoExec()
 {
    // Execute the list of Execs when a pad event occurs.
