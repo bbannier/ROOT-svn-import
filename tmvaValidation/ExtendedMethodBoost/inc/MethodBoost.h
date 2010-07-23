@@ -124,6 +124,9 @@ namespace TMVA {
       //calculating a boosting weight from the classifier, storing it in the next one
       void SingleBoost();
 
+      // calculate weight of single method
+      void CalcMethodWeight();
+
       // return ROC integral on training/testing sample
       Double_t GetBoostROCIntegral(Bool_t, Types::ETreeType, Double_t AllMethodsWeight=1.0);
 

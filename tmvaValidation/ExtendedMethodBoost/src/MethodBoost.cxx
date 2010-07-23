@@ -684,13 +684,47 @@ void TMVA::MethodBoost::SingleBoost()
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++)
          Data()->GetEvent(ievt)->ScaleBoostWeight(Factor);
    }
+   delete[] WrongDetection;
+}
 
+//_______________________________________________________________________
+void TMVA::MethodBoost::CalcMethodWeight()
+{
+   // calculate weight of single method
+
+   MethodBase* method =  dynamic_cast<MethodBase*>(fMethods.back());
+   Event * ev; Float_t w; Bool_t sig=kTRUE;
+   Double_t sumAll=0, sumWrong=0;
+
+   // finding the MVA cut value for IsSignalLike, stored in the method
+   FindMVACut();
+
+   // finding the wrong events and calculating their total weights
+   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+      ev      = Data()->GetEvent(ievt);
+      sig     = DataInfo().IsSignal(ev);
+      w       = ev->GetWeight();
+      sumAll += w;
+      if (sig != method->IsSignalLike())  sumWrong += w;
+   }
+   fMethodError=sumWrong/sumAll;
+
+   // calculating the fMethodError and the fBoostWeight out of it uses
+   // the formula
+   // w = ((1-err)/err)^beta
+   if (fMethodError>0 && fADABoostBeta == 1.0) {
+      fBoostWeight = (1.0-fMethodError)/fMethodError;
+   }
+   else if (fMethodError>0 && fADABoostBeta != 1.0) {
+      fBoostWeight =  TMath::Power((1.0 - fMethodError)/fMethodError, fADABoostBeta);
+   }
+   else fBoostWeight = 1000;
+   
+   // calculate method weight
    if      (fMethodWeightType == "ByError") fMethodWeight.push_back(TMath::Log(fBoostWeight));
    else if (fMethodWeightType == "Average") fMethodWeight.push_back(1.0);
    else if (fMethodWeightType == "ByROC")   fMethodWeight.push_back(fROC_training);
    else                                     fMethodWeight.push_back(0);
-
-   delete[] WrongDetection;
 }
 
 //_______________________________________________________________________
