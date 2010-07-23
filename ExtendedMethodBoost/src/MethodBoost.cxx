@@ -318,28 +318,27 @@ void TMVA::MethodBoost::Train()
          method->WriteMonitoringHistosToFile();
          if (fMethodIndex==0 && fMonitorBoostedMethod) CreateMVAHistorgrams();
 
-	 // get ROC integral for training sample
+	 // get ROC integral for single method on training sample
 	 fROC_training = GetBoostROCIntegral(kTRUE, Types::kTraining);
-	 (*fMonitorHist)[6]->SetBinContent(fMethodIndex+1, fROC_training);
    
-         // boosting
+	 // calculate method weight
+	 CalcMethodWeight();
+         AllMethodsWeight += fMethodWeight.back();
+
+	 (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kTRUE, Types::kTesting));
+	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTesting, AllMethodsWeight));
+	 (*fMonitorHist)[6]->SetBinContent(fMethodIndex+1, fROC_training);
+	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTraining, AllMethodsWeight));
+
+         // boosting (reweight training sample)
          method->MonitorBoost(SetStage(Types::kBeforeBoosting));
          SingleBoost();
          method->MonitorBoost(SetStage(Types::kAfterBoosting));
          (*fMonitorHist)[1]->SetBinContent(fMethodIndex+1,fBoostWeight);
          (*fMonitorHist)[2]->SetBinContent(fMethodIndex+1,fMethodError);
          (*fMonitorHist)[3]->SetBinContent(fMethodIndex+1,fOrigMethodError);
-	 (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kTRUE, Types::kTesting));
 
-         AllMethodsWeight += fMethodWeight.back();
          fMonitorTree->Fill();
-
-	 // There is a problem here: the evaluation of the full
-	 // classifier needs to be done with the unweighted events,
-	 // but with known method weights, which are obtained after
-	 // the reweighting!
-	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTraining, AllMethodsWeight));
-	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTesting, AllMethodsWeight));
 
          // stop boosting if needed when error has reached 0.5
          // thought of counting a few steps, but it doesn't seem to be necessary
