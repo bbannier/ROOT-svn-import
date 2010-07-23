@@ -193,11 +193,11 @@ void TMVA::MethodBoost::InitHistos()
    (*fMonitorHist)[3]->GetYaxis()->SetTitle("Error Fraction");
    (*fMonitorHist)[4]->GetXaxis()->SetTitle("Index of boosted classifier");
    (*fMonitorHist)[4]->GetYaxis()->SetTitle("ROC integral of single classifier");
-   (*fMonitorHist)[5]->GetXaxis()->SetTitle("Index of boosted classifier");
+   (*fMonitorHist)[5]->GetXaxis()->SetTitle("Number of boosts");
    (*fMonitorHist)[5]->GetYaxis()->SetTitle("ROC integral boosted");
    (*fMonitorHist)[6]->GetXaxis()->SetTitle("Index of boosted classifier");
    (*fMonitorHist)[6]->GetYaxis()->SetTitle("ROC integral of single classifier");
-   (*fMonitorHist)[7]->GetXaxis()->SetTitle("Index of boosted classifier");
+   (*fMonitorHist)[7]->GetXaxis()->SetTitle("Number of boosts");
    (*fMonitorHist)[7]->GetYaxis()->SetTitle("ROC integral boosted");
 
    fMonitorTree= new TTree("MonitorBoost","Boost variables");
