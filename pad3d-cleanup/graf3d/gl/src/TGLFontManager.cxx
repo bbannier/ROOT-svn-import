@@ -256,8 +256,8 @@ void TGLFont::Render(const TString &txt) const
 }
 
 //______________________________________________________________________________
-void  TGLFont:: Render(const TString &txt, Float_t x, Float_t y, Float_t z,
-             ETextAlignH_e alignH, ETextAlignV_e alignV) const
+void TGLFont::Render(const TString &txt, Float_t x, Float_t y, Float_t z,
+                     ETextAlignH_e alignH, ETextAlignV_e alignV) const
 {
    // Render text with given alignmentrepl and at given position.
 

@@ -69,6 +69,8 @@ public:
    virtual void     LockPainter();
       
    //Now, drawing primitives.
+   virtual void     AdvanceDepth() {}
+
    virtual void     DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2) = 0;
    virtual void     DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t v2) = 0;
    

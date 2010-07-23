@@ -73,6 +73,7 @@ public:
    virtual Double_t AbsPixeltoX(Int_t px) = 0;
    virtual Double_t AbsPixeltoY(Int_t py) = 0;
    virtual void     AddExec(const char *name, const char *command) = 0;
+   virtual void     AdvanceDepth() = 0;
    virtual TVirtualPad* cd(Int_t subpadnumber=0) = 0;
    virtual void     Clear(Option_t *option="") = 0;
    virtual void     Close(Option_t *option="") = 0;

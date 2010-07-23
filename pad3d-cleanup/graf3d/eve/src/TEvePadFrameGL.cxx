@@ -92,7 +92,7 @@ void TEvePadFrameGL::DirectDrawIntoFBO(const TGLRnrCtx& /*rnrCtx*/) const
 
    glViewport(0, 0, reqw, reqh);
 
-   fgPainter->InitPainterForFBO(((Double_t)reqw)/ocw, ((Double_t)reqh)/och, kFALSE, kFALSE);
+   fgPainter->InitPainterForFBO(((Double_t)reqw)/ocw, ((Double_t)reqh)/och, kFALSE);
 
    TObjOptLink *lnk = (TObjOptLink*) pad->GetListOfPrimitives()->FirstLink();
    while (lnk)
@@ -174,7 +174,7 @@ void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& rnrCtx) const
    glVertex2d(x2, y2); glVertex2d(x1, y2); 
    glEnd();
 
-   fgPainter->InitPainterForGLViewer(rnrCtx.IsDLCaptureOpen());
+   fgPainter->InitPainterForGLViewer(z_step, rnrCtx.IsDLCaptureOpen());
 
    TObjOptLink *lnk = (TObjOptLink*) pad->GetListOfPrimitives()->FirstLink();
    while (lnk)
@@ -235,6 +235,13 @@ Bool_t TEvePadFrameGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
    {
       delete fFBO;
       fFBO = 0;
+   }
+
+   // Never use display-lists for pure 3D.
+   // Polygon / outline / extrude fonts declare new DLs during render.
+   if ( ! fM->fUseFBO)
+   {
+      return kFALSE;
    }
 
    return TGLObject::ShouldDLCache(rnrCtx);

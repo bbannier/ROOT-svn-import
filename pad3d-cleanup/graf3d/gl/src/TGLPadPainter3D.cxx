@@ -319,7 +319,6 @@ void TGLPadPainter3D::InitPainter()
 
 //______________________________________________________________________________
 void TGLPadPainter3D::InitPainterForFBO(Double_t vpsx, Double_t vpsy,
-                                        Bool_t set_viewport,
                                         Bool_t dl_capture_active)
 {
    //Init gl-pad painter:
@@ -331,12 +330,16 @@ void TGLPadPainter3D::InitPainterForFBO(Double_t vpsx, Double_t vpsy,
    //5. Set camera.
    //6. Unlock painter.
 
+   fForGLViewer = kFALSE;
+   fVPScaleX = vpsx;
+   fVPScaleY = vpsy;
+   SaveViewport();
+
+   fBeingEmbeddedInDisplayList = dl_capture_active;
+
    glDisable(GL_DEPTH_TEST);
    glDisable(GL_CULL_FACE);
    glDisable(GL_LIGHTING);
-
-   if (set_viewport)
-      glViewport(0, 0, GLsizei(gPad->GetWw()), GLsizei(gPad->GetWh()));
 
    //Clear the buffer
    glDepthMask(GL_TRUE);
@@ -354,31 +357,24 @@ void TGLPadPainter3D::InitPainterForFBO(Double_t vpsx, Double_t vpsy,
    glTranslated(0., 0., -1.);
 
    fLocked = kFALSE;
-
-   fForGLViewer = kFALSE;
-   fVPScaleX = vpsx;
-   fVPScaleY = vpsy;
-   SaveViewport();
-
-   fBeingEmbeddedInDisplayList = dl_capture_active;
 }
 
 //______________________________________________________________________________
-void TGLPadPainter3D::InitPainterForGLViewer(Bool_t dl_capture_active)
+void TGLPadPainter3D::InitPainterForGLViewer(Double_t z_step, Bool_t dl_capture_active)
 {
    //Init gl-pad painter:
    //2. Disable cull face.
    //3. Disable lighting.
    //6. Unlock painter.
 
+   fForGLViewer = kTRUE;
+   fAdvanceDepthStep = z_step;
+   fBeingEmbeddedInDisplayList = dl_capture_active;
+
    glDisable(GL_CULL_FACE);
    glDisable(GL_LIGHTING);
 
    fLocked = kFALSE;
-
-   fForGLViewer = kTRUE;
-
-   fBeingEmbeddedInDisplayList = dl_capture_active;
 }
 
 //______________________________________________________________________________
@@ -415,6 +411,17 @@ void TGLPadPainter3D::LockPainter()
 */
 
 const Double_t lineWidthTS = 3.;
+
+//______________________________________________________________________________
+void TGLPadPainter3D::AdvanceDepth()
+{
+   // Advance depth for the next element to be painted.
+
+   if (fForGLViewer)
+   {
+      glTranslated(0.0, 0.0, fAdvanceDepthStep);
+   }
+}
 
 //______________________________________________________________________________
 void TGLPadPainter3D::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
@@ -776,8 +783,9 @@ void TGLPadPainter3D::DrawText(Double_t x, Double_t y, const char *text, ETextMo
    Rgl::Pad::ExtractRGB(GetTextColor(), rgba);
    glColor3fv(rgba);
 
-   // XXXX The font size can get TOO LARGE, esp. for large FBOs.
-   // Also get GL-errors for polygons fonts --- why??
+   // For small font sizes get GL errors in texture fonts from glSubTex2D.
+   // Also get GL-errors for polygons fonts when external display-list capture
+   // is active.
    Int_t size = TMath::Max(2, Int_t(GetTextSize() * fVPScaleY) - 1);
 
    // printf("Rendering at %d, '%s' \n", size, text);
@@ -791,8 +799,6 @@ void TGLPadPainter3D::DrawText(Double_t x, Double_t y, const char *text, ETextMo
    {
       fFM.RegisterFont(size, TGLFontManager::GetFontNameFromId(GetTextFont()),
                        TGLFont::kPolygon, fF);
-      if (fBeingEmbeddedInDisplayList)
-         fF.SetUseDisplayLists(kFALSE);
    }
    fF.PreRender();
 
