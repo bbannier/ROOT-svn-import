@@ -357,6 +357,13 @@ void TMVA::MethodBoost::Train()
       (*fMonitorHist)[0]->SetBinContent(fMethodIndex+1,fMethodWeight[fMethodIndex]);
    }
 
+   // Ensure that in case of only 1 boost the method weight equals
+   // 1.0.  This avoids unexpected behaviour in case of very bad
+   // classifiers which have fBoostWeight=1 or fMethodError=0.5,
+   // because their weight would be set to zero.  This behaviour is
+   // not ok if one boosts just one time.
+   if (fMethods.size()==1)  fMethodWeight[0] = 1.0;
+
    fMethods.back()->MonitorBoost(SetStage(Types::kBoostProcEnd));
 }
 
