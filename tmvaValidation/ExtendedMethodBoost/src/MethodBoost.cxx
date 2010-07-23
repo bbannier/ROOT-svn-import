@@ -865,7 +865,7 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    xmin = TMath::Max( TMath::Min(meanS - nrms*rmsS, meanB - nrms*rmsB ), xmin );
    xmax = TMath::Min( TMath::Max(meanS + nrms*rmsS, meanB + nrms*rmsB ), xmax ) + 0.0001;
 
-   // calculate ROC integral (training sample)
+   // calculate ROC integral
    TH1* mva_s = new TH1F( "MVA_S", "MVA_S", fNbins, xmin, xmax );
    TH1* mva_b = new TH1F( "MVA_B", "MVA_B", fNbins, xmin, xmax );
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
@@ -880,7 +880,7 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    PDF *fB = new PDF( "PDF Bkg", mva_b, PDF::kSpline2 );
 
    // calculate ROC integral from fS, fB
-   Double_t ROC = GetROCIntegral(fS, fB);
+   Double_t ROC = MethodBase::GetROCIntegral(fS, fB);
    
    delete mva_s;
    delete mva_b;
