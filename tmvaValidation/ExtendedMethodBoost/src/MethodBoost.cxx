@@ -689,10 +689,11 @@ void TMVA::MethodBoost::SingleBoost()
 //_______________________________________________________________________
 void TMVA::MethodBoost::CalcMethodWeight()
 {
-   // calculate weight of single method
+   // Calculate weight of single method.
+   // This is no longer done in SingleBoost();
 
    MethodBase* method =  dynamic_cast<MethodBase*>(fMethods.back());
-   Event * ev; Float_t w; Bool_t sig=kTRUE;
+   Event * ev; Float_t w;
    Double_t sumAll=0, sumWrong=0;
 
    // finding the MVA cut value for IsSignalLike, stored in the method
@@ -701,10 +702,9 @@ void TMVA::MethodBoost::CalcMethodWeight()
    // finding the wrong events and calculating their total weights
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
       ev      = Data()->GetEvent(ievt);
-      sig     = DataInfo().IsSignal(ev);
       w       = ev->GetWeight();
       sumAll += w;
-      if (sig != method->IsSignalLike())  sumWrong += w;
+      if (DataInfo().IsSignal(ev) != method->IsSignalLike())  sumWrong += w;
    }
    fMethodError=sumWrong/sumAll;
 
