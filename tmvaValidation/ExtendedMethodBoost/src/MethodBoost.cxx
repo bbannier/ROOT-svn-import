@@ -319,7 +319,7 @@ void TMVA::MethodBoost::Train()
          if (fMethodIndex==0 && fMonitorBoostedMethod) CreateMVAHistorgrams();
 
 	 // get ROC integral for training sample
-	 fROC_training = GetTrainingROCIntegral(kTRUE, Types::kTraining);
+	 fROC_training = GetBoostROCIntegral(kTRUE, Types::kTraining);
 	 (*fMonitorHist)[6]->SetBinContent(fMethodIndex+1, fROC_training);
    
          // boosting
@@ -329,7 +329,7 @@ void TMVA::MethodBoost::Train()
          (*fMonitorHist)[1]->SetBinContent(fMethodIndex+1,fBoostWeight);
          (*fMonitorHist)[2]->SetBinContent(fMethodIndex+1,fMethodError);
          (*fMonitorHist)[3]->SetBinContent(fMethodIndex+1,fOrigMethodError);
-	 (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1, GetTrainingROCIntegral(kTRUE, Types::kTesting));
+	 (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kTRUE, Types::kTesting));
 
          AllMethodsWeight += fMethodWeight.back();
          fMonitorTree->Fill();
@@ -338,8 +338,8 @@ void TMVA::MethodBoost::Train()
 	 // classifier needs to be done with the unweighted events,
 	 // but with known method weights, which are obtained after
 	 // the reweighting!
-	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetTrainingROCIntegral(kFALSE, Types::kTraining, AllMethodsWeight));
-	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1, GetTrainingROCIntegral(kFALSE, Types::kTesting, AllMethodsWeight));
+	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTraining, AllMethodsWeight));
+	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTesting, AllMethodsWeight));
 
          // stop boosting if needed when error has reached 0.5
          // thought of counting a few steps, but it doesn't seem to be necessary
@@ -775,8 +775,24 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBoost::GetTrainingROCIntegral(Bool_t singleMethod, Types::ETreeType eTT, Double_t AllMethodsWeight)
+Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETreeType eTT, Double_t AllMethodsWeight)
 {
+   // Calculate the ROC integral of a single classifier or even the
+   // whole boosted classifier.  The tree type (training or testing
+   // sample) is specified by 'eTT'.  In case of the full boosted
+   // classifier, the 'AllMethodsWeight' must be specified in order to
+   // normalize the single classifiers correctly.
+   //
+   // - singleMethod - if kTRUE, return ROC integral of single
+   //                  classifier; if kFALSE, return ROC integral of
+   //                  full classifier
+   //
+   // - eTT - tree type (Types::kTraining / Types::kTesting)
+   //
+   // - AllMethodsWeight - sum of all trained methods; needed in case
+   //                      of full classifier to normalize the single
+   //                      methods
+
    // set data sample training / testing
    Data()->SetCurrentType(eTT);
 
