@@ -813,6 +813,9 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    // classifier, the 'AllMethodsWeight' must be specified in order to
    // normalize the single classifiers correctly.
    //
+   // If tree type kTraining is set, the original training sample is
+   // used to compute the ROC integral (original weights).
+   //
    // - singleMethod - if kTRUE, return ROC integral of single
    //                  classifier; if kFALSE, return ROC integral of
    //                  full classifier
@@ -870,7 +873,7 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    TH1* mva_b = new TH1F( "MVA_B", "MVA_B", fNbins, xmin, xmax );
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
       const Event* ev = GetEvent(ievt);
-      Float_t w = ev->GetWeight();
+      Float_t w = (eTT==Types::kTesting ? ev->GetWeight() : ev->GetOriginalWeight());
       if (DataInfo().IsSignal(ev))  mva_s->Fill( (*mvaRes)[ievt], w );
       else                          mva_b->Fill( (*mvaRes)[ievt], w );
    }

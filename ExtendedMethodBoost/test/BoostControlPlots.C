@@ -96,10 +96,11 @@ void boostcontrolplots( TDirectory *boostdir ) {
 
       TLegend *legend= new TLegend( cPad->GetLeftMargin(), 
 				    0.2 + cPad->GetBottomMargin(),
-				    cPad->GetLeftMargin() + 0.4, 
+				    cPad->GetLeftMargin() + 0.6, 
 				    cPad->GetBottomMargin() );
       legend->AddEntry(htest,  TString("testing sample"),  "L");
-      legend->AddEntry(htrain, TString("training sample"), "L");
+      legend->AddEntry(htrain, TString("training sample (orig. weights)"), "L");
+      legend->SetFillStyle( 1 );
       legend->SetBorderSize(1);
       legend->SetMargin( 0.3 );
       legend->Draw("same");
