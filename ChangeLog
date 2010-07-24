@@ -1,3 +1,43 @@
+2010-07-24  Matevz Tadel  <mtadel@greed>
+
+	* graf3d/gl/inc/TGLPadPainter3D.h:
+	* graf3d/gl/src/TGLPadPainter3D.cxx:
+	Implement text rendering for 3D / GL viewer mode.
+
+	Remove TGLFontManage member and add TGLRnrCtx.
+	This allows sharing of fonts with the rest of the world.
+	Add TGLRnrCtx argument to InitXyzz() functions.
+
+	Remove InitPainter() coming from the std GL painter.
+
+	* graf3d/eve/inc/TEvePadFrameGL.h:
+	* graf3d/eve/src/TEvePadFrameGL.cxx:
+	Pass TGLRnrCtx to init functions.
+
+	* graf2d/graf/src/TPaveText.cxx:
+	* graf2d/graf/src/TPaveStats.cxx:
+	Add AdvanceDepth() calls after back-poly is painted so the text is
+	drawn on top.
+
+	* tutorials/eve/testgl1.C:
+	Re-enable gStyle->SetCanvasPreferGL(kTRUE) so that the errors will
+	become visible again once Timur re-enables GL in canvas.
+
+	* graf3d/gl/src/TGLLogicalShape.cxx:
+	* graf3d/gl/src/TPointSet3DGL.cxx:
+	* graf3d/gl/src/TGLObject.cxx:
+	* graf3d/gl/inc/TPointSet3DGL.h:
+	* graf3d/gl/inc/TGLObject.h:
+	* graf3d/gl/inc/TGLLogicalShape.h:
+	* graf3d/eve/src/TEveStraightLineSetGL.cxx:
+	* graf3d/eve/src/TEveBoxSetGL.cxx:
+	* graf3d/eve/src/TEveCalo3DGL.cxx:
+	* graf3d/eve/inc/TEveStraightLineSetGL.h:
+	* graf3d/eve/inc/TEveBoxSetGL.h:
+	* graf3d/eve/inc/TEveCalo3DGL.h:
+	Remove const from TGLRnrCtx& arg to ShouldDLCache().
+	Font access can be needed in this function.
+
 2010-07-23  Matevz Tadel  <mtadel@greed>
 
 	* core/base/inc/TVirtualPad.h:

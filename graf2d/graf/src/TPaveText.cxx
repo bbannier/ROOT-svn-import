@@ -399,6 +399,7 @@ void TPaveText::Paint(Option_t *option)
    // Draw the pave
    TPave::ConvertNDCtoPad();
    TPave::PaintPave(fX1,fY1,fX2,fY2,GetBorderSize(),option);
+   gPad->AdvanceDepth();
    PaintPrimitives(kPaveText);
 }
 

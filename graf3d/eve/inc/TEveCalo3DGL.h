@@ -49,7 +49,7 @@ public:
    virtual void   DirectDraw(TGLRnrCtx & rnrCtx) const;
    virtual void   DrawHighlight(TGLRnrCtx & rnrCtx, const TGLPhysicalShape* ps, Int_t lvl=-1) const;
 
-   virtual Bool_t ShouldDLCache(const TGLRnrCtx& rnrCtx) const;
+   virtual Bool_t ShouldDLCache(TGLRnrCtx& rnrCtx) const;
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
    virtual Bool_t AlwaysSecondarySelect()   const { return kTRUE; }
    virtual void   ProcessSelection(TGLRnrCtx & rnrCtx, TGLSelectRecord & rec);

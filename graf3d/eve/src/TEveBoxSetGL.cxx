@@ -161,7 +161,7 @@ void TEveBoxSetGL::MakeDisplayList() const
 /******************************************************************************/
 
 //______________________________________________________________________________
-Bool_t TEveBoxSetGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
+Bool_t TEveBoxSetGL::ShouldDLCache(TGLRnrCtx& rnrCtx) const
 {
    // Determines if display-list will be used for rendering.
    // Virtual from TGLLogicalShape.

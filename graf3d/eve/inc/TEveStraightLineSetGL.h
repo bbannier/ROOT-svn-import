@@ -39,7 +39,7 @@ public:
 
    virtual Bool_t IgnoreSizeForOfInterest() const { return kTRUE; }
 
-   virtual Bool_t ShouldDLCache(const TGLRnrCtx& rnrCtx) const;
+   virtual Bool_t ShouldDLCache(TGLRnrCtx& rnrCtx) const;
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
    virtual void ProcessSelection(TGLRnrCtx& rnrCtx, TGLSelectRecord& rec);
 

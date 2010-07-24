@@ -71,7 +71,7 @@ void TEvePadFrameGL::SetBBox()
 //==============================================================================
 
 //______________________________________________________________________________
-void TEvePadFrameGL::DirectDrawIntoFBO(const TGLRnrCtx& /*rnrCtx*/) const
+void TEvePadFrameGL::DirectDrawIntoFBO(TGLRnrCtx& rnrCtx) const
 {
    // Draw the pad in 2D mode into the FBO.
 
@@ -92,7 +92,7 @@ void TEvePadFrameGL::DirectDrawIntoFBO(const TGLRnrCtx& /*rnrCtx*/) const
 
    glViewport(0, 0, reqw, reqh);
 
-   fgPainter->InitPainterForFBO(((Double_t)reqw)/ocw, ((Double_t)reqh)/och, kFALSE);
+   fgPainter->InitPainterForFBO(rnrCtx, ((Double_t)reqw)/ocw, ((Double_t)reqh)/och, kFALSE);
 
    TObjOptLink *lnk = (TObjOptLink*) pad->GetListOfPrimitives()->FirstLink();
    while (lnk)
@@ -114,7 +114,7 @@ void TEvePadFrameGL::DirectDrawIntoFBO(const TGLRnrCtx& /*rnrCtx*/) const
 }
 
 //______________________________________________________________________________
-void TEvePadFrameGL::DirectDrawFBO(const TGLRnrCtx& /*rnrCtx*/) const
+void TEvePadFrameGL::DirectDrawFBO(TGLRnrCtx& /*rnrCtx*/) const
 {
    // Draw the pad in 2D mode using existing FBO.
 
@@ -144,7 +144,7 @@ void TEvePadFrameGL::DirectDrawFBO(const TGLRnrCtx& /*rnrCtx*/) const
 }
 
 //______________________________________________________________________________
-void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& rnrCtx) const
+void TEvePadFrameGL::DirectDraw3D(TGLRnrCtx& rnrCtx) const
 {
    // Draw the pad in 3D mode.
 
@@ -174,7 +174,7 @@ void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& rnrCtx) const
    glVertex2d(x2, y2); glVertex2d(x1, y2); 
    glEnd();
 
-   fgPainter->InitPainterForGLViewer(z_step, rnrCtx.IsDLCaptureOpen());
+   fgPainter->InitPainterForGLViewer(rnrCtx, z_step, rnrCtx.IsDLCaptureOpen());
 
    TObjOptLink *lnk = (TObjOptLink*) pad->GetListOfPrimitives()->FirstLink();
    while (lnk)
@@ -197,7 +197,7 @@ void TEvePadFrameGL::DirectDraw3D(const TGLRnrCtx& rnrCtx) const
 //==============================================================================
 
 //______________________________________________________________________________
-Bool_t TEvePadFrameGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
+Bool_t TEvePadFrameGL::ShouldDLCache(TGLRnrCtx& rnrCtx) const
 {
    // Override from TGLObject -- we really just need to check rendering
    // time-stamp here.

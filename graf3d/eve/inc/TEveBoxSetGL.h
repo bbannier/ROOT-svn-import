@@ -36,7 +36,7 @@ public:
    TEveBoxSetGL();
    virtual ~TEveBoxSetGL();
 
-   virtual Bool_t ShouldDLCache(const TGLRnrCtx& rnrCtx) const;
+   virtual Bool_t ShouldDLCache(TGLRnrCtx& rnrCtx) const;
    virtual void   DLCacheDrop();
    virtual void   DLCachePurge();
 

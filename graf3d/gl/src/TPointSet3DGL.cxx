@@ -43,7 +43,7 @@ void TPointSet3DGL::SetBBox()
 }
 
 //______________________________________________________________________________
-Bool_t TPointSet3DGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
+Bool_t TPointSet3DGL::ShouldDLCache(TGLRnrCtx& rnrCtx) const
 {
    // Override from TGLLogicalShape.
    // To account for large point-sizes we modify the projection matrix

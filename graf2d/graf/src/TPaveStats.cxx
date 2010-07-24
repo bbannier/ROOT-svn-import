@@ -334,6 +334,7 @@ void TPaveStats::Paint(Option_t *option)
 
    TPave::ConvertNDCtoPad();
    TPave::PaintPave(fX1,fY1,fX2,fY2,GetBorderSize(),option);
+   gPad->AdvanceDepth();
 
    if (!fLines) return;
    Double_t y2ref = TMath::Max(fY1,fY2);

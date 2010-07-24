@@ -35,10 +35,10 @@ protected:
    mutable TGLFBO  *fFBO;
    mutable Int_t    fRTS;
    
-   void DirectDrawIntoFBO(const TGLRnrCtx& rnrCtx) const;
+   void DirectDrawIntoFBO(TGLRnrCtx& rnrCtx) const;
 
-   void DirectDrawFBO(const TGLRnrCtx& rnrCtx) const;
-   void DirectDraw3D(const TGLRnrCtx& rnrCtx) const;
+   void DirectDrawFBO(TGLRnrCtx& rnrCtx) const;
+   void DirectDraw3D(TGLRnrCtx& rnrCtx) const;
 
 public:
    TEvePadFrameGL();
@@ -47,7 +47,7 @@ public:
    virtual Bool_t SetModel(TObject* obj, const Option_t* opt=0);
    virtual void   SetBBox();
 
-   virtual Bool_t ShouldDLCache(const TGLRnrCtx& rnrCtx) const;
+   virtual Bool_t ShouldDLCache(TGLRnrCtx& rnrCtx) const;
 
    virtual void   DirectDraw(TGLRnrCtx & rnrCtx) const;
 

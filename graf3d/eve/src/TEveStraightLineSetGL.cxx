@@ -59,7 +59,7 @@ void TEveStraightLineSetGL::SetBBox()
 }
 
 //______________________________________________________________________________
-Bool_t TEveStraightLineSetGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
+Bool_t TEveStraightLineSetGL::ShouldDLCache(TGLRnrCtx& rnrCtx) const
 {
    // Override from TGLObject.
    // To account for large point-sizes we modify the projection matrix
