@@ -7,8 +7,8 @@ void testgl1()
    TEveManager::Create();
    // Disable this -- get GL error invalid value from FTGL when
    // creating texture fonst with size < 10.
-   // Fixed (?) in TGLPadPAinter3D by using polygon fonts from some point onwards.
-   // gStyle->SetCanvasPreferGL(kTRUE);
+   // Fixed (?) in TGLPadPainter3D by using polygon fonts from some point onwards.
+   gStyle->SetCanvasPreferGL(kTRUE);
 
    // --- Create an embedded canvas
 

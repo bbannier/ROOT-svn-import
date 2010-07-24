@@ -40,7 +40,7 @@ ClassImp(TGLObject);
 TMap TGLObject::fgGLClassMap;
 
 //______________________________________________________________________________
-Bool_t TGLObject::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
+Bool_t TGLObject::ShouldDLCache(TGLRnrCtx& rnrCtx) const
 {
    // Decide if display-list should be used for this pass rendering,
    // as determined by rnrCtx.

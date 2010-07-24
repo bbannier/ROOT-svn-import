@@ -86,7 +86,7 @@ public:
 
    // Display List Caching
            Bool_t SetDLCache(Bool_t cached);
-   virtual Bool_t ShouldDLCache(const TGLRnrCtx & rnrCtx) const;
+   virtual Bool_t ShouldDLCache(TGLRnrCtx & rnrCtx) const;
    virtual UInt_t DLOffset(Short_t /*lod*/) const { return 0; }
    virtual void   DLCacheClear();
    virtual void   DLCacheDrop();

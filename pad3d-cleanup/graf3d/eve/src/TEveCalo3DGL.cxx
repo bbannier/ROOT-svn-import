@@ -60,7 +60,7 @@ void TEveCalo3DGL::SetBBox()
 }
 
 //______________________________________________________________________________
-Bool_t TEveCalo3DGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
+Bool_t TEveCalo3DGL::ShouldDLCache(TGLRnrCtx& rnrCtx) const
 {
    // Override from TGLObject.
    // To account for large point-sizes we modify the projection matrix

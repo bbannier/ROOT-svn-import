@@ -12,26 +12,21 @@
 #ifndef ROOT_TGLPadPainter3D
 #define ROOT_TGLPadPainter3D
 
+#include "TVirtualPadPainter.h"
+#include "TGLPadUtils.h"
+#include "TGLFontManager.h"
+#include "TPoint.h"
+
 #include <deque>
 
-#ifndef ROOT_TVirtualPadPainter
-#include "TVirtualPadPainter.h"
-#endif
-#ifndef ROOT_TGLFontmanager
-#include "TGLFontManager.h"
-#endif
-#ifndef ROOT_TGLPadUtils
-#include "TGLPadUtils.h"
-#endif
-#ifndef ROOT_TPoint
-#include "TPoint.h"
-#endif
+class TGLRnrCtx;
 
 /*
 The _main_ purpose of TGLPadPainter3D is to enable 2d gl graphics
 inside TGLViewer.
 */
-class TGLPadPainter3D : public TVirtualPadPainter {
+class TGLPadPainter3D : public TVirtualPadPainter
+{
 private:
    Rgl::Pad::PolygonStippleSet fSSet;
    Rgl::Pad::Tesselator        fTess;
@@ -40,7 +35,7 @@ private:
    
    std::vector<Double_t>       fVs;//Vertex buffer for tesselator.
    
-   TGLFontManager              fFM;
+   TGLRnrCtx                  *fRnrCtx;
    TGLFont                     fF;
    
    Int_t                       fVp[4];
@@ -99,9 +94,8 @@ public:
    void     DestroyDrawable();
    void     SelectDrawable(Int_t device);
 
-   void     InitPainter();
-   void     InitPainterForFBO(Double_t vpsx, Double_t vpsy, Bool_t dl_capture_active);
-   void     InitPainterForGLViewer(Double_t z_step, Bool_t dl_capture_active);
+   void     InitPainterForFBO(TGLRnrCtx& rnrCtx, Double_t vpsx, Double_t vpsy, Bool_t dl_capture_active);
+   void     InitPainterForGLViewer(TGLRnrCtx& rnrCtx, Double_t z_step, Bool_t dl_capture_active);
    void     InvalidateCS();
    void     LockPainter();
 

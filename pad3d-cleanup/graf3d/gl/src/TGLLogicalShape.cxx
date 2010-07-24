@@ -270,7 +270,7 @@ Bool_t TGLLogicalShape::SetDLCache(Bool_t cache)
 }
 
 //______________________________________________________________________________
-Bool_t TGLLogicalShape::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
+Bool_t TGLLogicalShape::ShouldDLCache(TGLRnrCtx& rnrCtx) const
 {
    // Returns kTRUE if draws should be display list cached
    // kFALSE otherwise.
