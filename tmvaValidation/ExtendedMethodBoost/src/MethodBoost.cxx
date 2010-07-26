@@ -622,7 +622,7 @@ void TMVA::MethodBoost::SingleBoost()
    }
    else fBoostWeight = 1000;
 
-   Double_t alphaWeight = TMath::Log(fBoostWeight);
+   Double_t alphaWeight = ( fBoostWeight >= 0.0 ? TMath::Log(fBoostWeight) : 0.0);
    if (alphaWeight>5.) alphaWeight = 5.;
    if (alphaWeight<0.){
       //Log()<<kWARNING<<"alphaWeight is too small in AdaBoost alpha=" << alphaWeight<< Endl;
@@ -726,6 +726,9 @@ void TMVA::MethodBoost::CalcMethodWeight()
       fBoostWeight =  TMath::Power((1.0 - fMethodError)/fMethodError, fADABoostBeta);
    }
    else fBoostWeight = 1000;
+
+   // sanity check to avoid log() with negative argument
+   if (fBoostWeight <= 0.0)  fBoostWeight = 1.0;
    
    // calculate method weight
    if      (fMethodWeightType == "ByError") fMethodWeight.push_back(TMath::Log(fBoostWeight));
