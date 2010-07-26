@@ -213,6 +213,10 @@ namespace TMVA {
       // roc integral for training sample
       Double_t          fROC_training;
 
+      // overlap integral of mva distributions for signal and
+      // background (training sample)
+      Double_t          fOverlap_integral;
+
       
       DataSetManager* fDataSetManager; // DSMTEST
       friend class Factory; // DSMTEST

@@ -76,7 +76,8 @@ TMVA::MethodBoost::MethodBoost( const TString& jobName,
    fBoostedMethodTitle(methodTitle),
    fBoostedMethodOptions(theOption),
    fMonitorHist(0),
-   fROC_training(0.0)
+   fROC_training(0.0),
+   fOverlap_integral(0.0)
 {}
 
 //_______________________________________________________________________
@@ -84,7 +85,7 @@ TMVA::MethodBoost::MethodBoost( DataSetInfo& dsi,
                                 const TString& theWeightFile,
                                 TDirectory* theTargetDir )
    : TMVA::MethodCompositeBase( Types::kBoost, dsi, theWeightFile, theTargetDir ),
-     fBoostNum(0), fMonitorHist(0), fROC_training(0.0)
+     fBoostNum(0), fMonitorHist(0), fROC_training(0.0), fOverlap_integral(0.0)
 {}
 
 //_______________________________________________________________________
@@ -139,6 +140,7 @@ void TMVA::MethodBoost::DeclareOptions()
    AddPreDefVal(TString("ByError"));
    AddPreDefVal(TString("Average"));
    AddPreDefVal(TString("ByROC"));
+   AddPreDefVal(TString("ByOverlap"));
    AddPreDefVal(TString("LastMethod"));
 
    DeclareOptionRef(fRecalculateMVACut = kTRUE, "Boost_RecalculateMVACut",
@@ -183,6 +185,7 @@ void TMVA::MethodBoost::InitHistos()
    fMonitorHist->push_back(new TH1F("ROCIntegralBoosted_test","ROC integral of boosted method (testing sample)",fBoostNum,0,fBoostNum));
    fMonitorHist->push_back(new TH1F("ROCIntegral_train","ROC integral of single classifier (training sample)",fBoostNum,0,fBoostNum));
    fMonitorHist->push_back(new TH1F("ROCIntegralBoosted_train","ROC integral of boosted method (training sample)",fBoostNum,0,fBoostNum));
+   fMonitorHist->push_back(new TH1F("OverlapIntegal_train","Overlap integral (training sample)",fBoostNum,0,fBoostNum));
    fDefaultHistNum = fMonitorHist->size();
    (*fMonitorHist)[0]->GetXaxis()->SetTitle("Index of boosted classifier");
    (*fMonitorHist)[0]->GetYaxis()->SetTitle("Classifier Weight");
@@ -200,6 +203,8 @@ void TMVA::MethodBoost::InitHistos()
    (*fMonitorHist)[6]->GetYaxis()->SetTitle("ROC integral of single classifier");
    (*fMonitorHist)[7]->GetXaxis()->SetTitle("Number of boosts");
    (*fMonitorHist)[7]->GetYaxis()->SetTitle("ROC integral boosted");
+   (*fMonitorHist)[8]->GetXaxis()->SetTitle("Index of boosted classifier");
+   (*fMonitorHist)[8]->GetYaxis()->SetTitle("Overlap integral");
 
    fMonitorTree= new TTree("MonitorBoost","Boost variables");
    fMonitorTree->Branch("iMethod",&fMethodIndex,"iMethod/I");
@@ -321,6 +326,7 @@ void TMVA::MethodBoost::Train()
 
 	 // get ROC integral for single method on training sample
 	 fROC_training = GetBoostROCIntegral(kTRUE, Types::kTraining);
+	 fOverlap_integral = GetOverlapIntegral();
    
 	 // calculate method weight
 	 CalcMethodWeight();
@@ -330,6 +336,7 @@ void TMVA::MethodBoost::Train()
 	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTesting, AllMethodsWeight));
 	 (*fMonitorHist)[6]->SetBinContent(fMethodIndex+1, fROC_training);
 	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTraining, AllMethodsWeight));
+	 (*fMonitorHist)[8]->SetBinContent(fMethodIndex+1, fOverlap_integral);
 
          // boosting (reweight training sample)
          method->MonitorBoost(SetStage(Types::kBeforeBoosting));
@@ -734,6 +741,7 @@ void TMVA::MethodBoost::CalcMethodWeight()
    if      (fMethodWeightType == "ByError") fMethodWeight.push_back(TMath::Log(fBoostWeight));
    else if (fMethodWeightType == "Average") fMethodWeight.push_back(1.0);
    else if (fMethodWeightType == "ByROC")   fMethodWeight.push_back(fROC_training);
+   else if (fMethodWeightType == "ByOverlap") fMethodWeight.push_back(fOverlap_training);
    else                                     fMethodWeight.push_back(0);
 }
 
