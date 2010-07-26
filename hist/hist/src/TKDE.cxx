@@ -3,11 +3,15 @@
 #include <limits>
 #include "TKDE.h"
 #include "Math/Error.h"
+#include "Math/Functor.h"
 #include "Math/Integrator.h"
 #include "Math/QuantFuncMathCore.h"
+#include "Math/RichardsonDerivator.h"
+
+// //TODO: Fix KernelIntegrand functor in ComputeKernelL2Norm does not output correctly, allways zero valued. As a result the PDF's Confidence Intervals improperly overlap it
 
 ClassImp(TKDE)
-   
+
 TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho) :
    fData(events, 0.0),
    fPDF(0),
@@ -19,7 +23,8 @@ TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EK
    fUseBinsNEvents(1000),
    fMean(0.0),
    fSigma(0.0),
-   fCanonicalBandwidths(std::vector<Double_t>(kTotalKernels, 0.0))
+   fCanonicalBandwidths(std::vector<Double_t>(kTotalKernels, 0.0)),
+   fKernelSigmas2(std::vector<Double_t>(kTotalKernels, -1.0))
 {
    //Class constructor
    SetOptions(xMin, xMax, kern, iter, mir, bin, rho);
@@ -27,15 +32,17 @@ TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EK
    SetKernelFunction();
    SetData(data);
    SetCanonicalBandwidths();
+   SetKernelSigmas2();
    SetKernel();
 }
    
 TKDE::~TKDE() {
    //Class destructor
-   if (fHistogram) delete fHistogram;
-   if (fPDF)       delete fPDF;
-   if (fUpperPDF)  delete fUpperPDF;
-   if (fLowerPDF)  delete fLowerPDF;
+   if (fHistogram)        delete fHistogram;
+   if (fPDF)              delete fPDF;
+   if (fUpperPDF)         delete fUpperPDF;
+   if (fLowerPDF)         delete fLowerPDF;
+   if (fApproximateBias)  delete fApproximateBias;
    delete fKernelFunction;
    delete fKernel;
 }
@@ -76,10 +83,11 @@ void TKDE::Instantiate(UInt_t events, const Double_t* data, Double_t xMin, Doubl
    fMean = 0.0;
    fSigma = 0.0;
    fCanonicalBandwidths = std::vector<Double_t>(kTotalKernels, 0.0);
+   fKernelSigmas2 = std::vector<Double_t>(kTotalKernels, -1.0);
    SetOptions(xMin, xMax, kUserDefined, iter, mir, bin, rho);
    SetData(data);
    SetCanonicalBandwidths();
-   SetKernel();
+   SetKernelSigmas2();
 }
 
 void TKDE::SetMirror(EMirror mir) {
@@ -198,7 +206,9 @@ void TKDE::SetKernelFunction(KernelFunction_Ptr kernfunc) {
          fKernelFunction = kernfunc;
          if (fKernelFunction) {
             CheckKernelValidity();
-            ComputeCanonicalBandwidth();
+            SetCanonicalBandwidth();
+            SetKernelSigma2();
+            SetKernel();
          } else {
             MATH_ERROR_MSG("TKDE::SetKernelFunction", "Undefined user kernel function input!" << std::endl);
             exit(EXIT_FAILURE);
@@ -208,12 +218,20 @@ void TKDE::SetKernelFunction(KernelFunction_Ptr kernfunc) {
 
 void TKDE::SetCanonicalBandwidths() {
    // Sets the canonical bandwidths according to the kernel type
-   fCanonicalBandwidths[kUserDefined] = 1.0;
    fCanonicalBandwidths[kGaussian] = 0.7764;     // Checked in Mathematica
    fCanonicalBandwidths[kEpanechnikov] = 1.7188; // Checked in Mathematica
    fCanonicalBandwidths[kBiweight] = 2.03617;    // Checked in Mathematica
    fCanonicalBandwidths[kCosineArch] = 1.7663;   // Checked in Mathematica
 }
+
+void TKDE::SetKernelSigmas2() {
+   // Sets the kernel sigmas2 according to the kernel type
+   fKernelSigmas2[kGaussian] = 1.0;
+   fKernelSigmas2[kEpanechnikov] = 1.0 / 5.0;
+   fKernelSigmas2[kBiweight] = 1.0 / 7.0;
+   fKernelSigmas2[kCosineArch] = 1.0 - 8.0 / TMath::Power(TMath::Pi(), 2);
+}
+
 
 inline void TKDE::SetData(Double_t x, UInt_t i) {
    // Set data point at the i-th data vector position
@@ -247,18 +265,24 @@ void TKDE::CheckOptions() {
 
 TF1* TKDE::GetFunction() {
    // Returns the PDF estimate
-   return fPDF ? fPDF : fPDF = GetKDEFunction();
+   return fPDF ? fPDF : GetKDEFunction();
 }
 
 TF1* TKDE::GetUpperFunction(Double_t confidenceLevel) {
    // Returns the PDF upper estimate (upper confidence interval limit)
-   return fUpperPDF ? fUpperPDF : fUpperPDF = GetPDFUpperConfidenceInterval(confidenceLevel);
+   return fUpperPDF ? fUpperPDF : GetPDFUpperConfidenceInterval(confidenceLevel);
 }
 
 TF1* TKDE::GetLowerFunction(Double_t confidenceLevel) {
    // Returns the PDF lower estimate (lower confidence interval limit)
-   return fLowerPDF ? fLowerPDF : fLowerPDF = GetPDFLowerConfidenceInterval(confidenceLevel);
+   return fLowerPDF ? fLowerPDF : GetPDFLowerConfidenceInterval(confidenceLevel);
 }
+
+TF1* TKDE::GetApproximateBias() {
+   // Returns the PDF estimate bias
+   return fApproximateBias ? fApproximateBias : GetKDEApproximateBias();
+}
+
 void TKDE::Fill(Double_t data) {
    // Fills data member with User input data event
    SetData(data, static_cast<UInt_t>(fData.size()));
@@ -358,7 +382,7 @@ Double_t TKDE::UpperConfidenceInterval(const Double_t* x, const Double_t* p) con
    Double_t f = this->operator()(x);
    Double_t fsigma = GetError(*x);
    Double_t z = ROOT::Math::normal_quantile(*p, 1.0);
-   return  f + z * fsigma;
+   return f + z * fsigma;
 }
 
 Double_t TKDE::LowerConfidenceInterval(const Double_t* x, const Double_t* p) const {
@@ -366,25 +390,33 @@ Double_t TKDE::LowerConfidenceInterval(const Double_t* x, const Double_t* p) con
    Double_t f = this->operator()(x);
    Double_t fsigma = GetError(*x);
    Double_t z = ROOT::Math::normal_quantile(*p, 1.0);
-   return  f - z * fsigma;
+   return f - z * fsigma;
 }
 
+Double_t TKDE::ApproximateBias(const Double_t* x, const Double_t*) const {
+   // Returns the pointwise approximate estimated density bias
+   ROOT::Math::Functor1D kern(this->fKernel, &TKDE::TKernel::operator());
+   ROOT::Math::RichardsonDerivator rd;
+   rd.SetFunction(kern);
+   Double_t df2 = rd.Derivative2(*x);
+   Double_t weight = fKernel->GetWeight(*x); // Bandwidth
+   return  0.5 * fKernelSigmas2[fKernelType] * TMath::Power(weight, 2) * df2;
+}
 Double_t TKDE::GetError(Double_t x) const {
    // Returns the pointwise variance of estimated density
    Double_t kernelL2Norm = ComputeKernelL2Norm();
-   Double_t f = this->operator()(&x);// (fSigma * TMath::Power( 3./ 4. * fNEvents, -0.2)
+   Double_t f = this->operator()(&x);
    Double_t weight = fKernel->GetWeight(x); // Bandwidth
    Double_t result = f * kernelL2Norm / (fNEvents * weight); 
    return TMath::Sqrt(result);
 }
-
 
 void TKDE::CheckKernelValidity() {
    // Checks if kernel has unit integral, mu = 0 and positive finite sigma conditions
    Double_t mu = ComputeKernelMu();
    Double_t sigma2 = ComputeKernelSigma2();
    Double_t unity = ComputeKernelUnitIntegration();
-   Double_t valid = unity != 1.0 && mu == 0.0  && sigma2 > 0 && sigma2 != std::numeric_limits<Double_t>::infinity();
+   Double_t valid = unity == 1.0 && mu == 0.0  && sigma2 > 0 && sigma2 != std::numeric_limits<Double_t>::infinity();
    if (!valid) {
       MATH_ERROR_MSG("TKDE::CheckKernelValidity", "No valid conditions: either the kernel's mu is not zero or the kernel's sigma2 is not finite positive or the kernel's integration is not 1! Unsuitable kernel." << std::endl);
       exit(EXIT_FAILURE);
@@ -427,9 +459,14 @@ Double_t TKDE::ComputeKernelUnitIntegration() const {
    return result;
 }
 
-void TKDE::ComputeCanonicalBandwidth() {
+void TKDE::SetCanonicalBandwidth() {
    // Computes the user's input kernel function canonical bandwidth
    fCanonicalBandwidths[kUserDefined] = TMath::Power(ComputeKernelL2Norm() / TMath::Power(ComputeKernelSigma2(), 2), 1. / 5.);
+}
+
+void TKDE::SetKernelSigma2() {
+   // Computes the user's input kernel function sigma2
+   fKernelSigmas2[kUserDefined] = ComputeKernelSigma2();
 }
 
 Double_t TKDE::GaussianKernel(Double_t x) const {
@@ -475,10 +512,10 @@ Double_t TKDE::KernelIntegrand::operator()(Double_t x) const {
 
 TH1D* TKDE::GetKDEHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
    // Returns the histogram of the estimated density at data points
-   if (xMin < xMax && nbins > 0) {
-      fHistogram = new TH1D("KDE Histogram", "KDE Histogram", nbins, xMin, xMax);
+   if (xMin < xMax) {
+      fHistogram = new TH1D("KDE Histogram", "KDE Histogram", nbins > 0 ? nbins : fNBins, xMin, xMax);
    } else {
-      fHistogram = new TH1D("KDE Histogram", "KDE Histogram", fNBins, fXMin, fXMax);  
+      fHistogram = new TH1D("KDE Histogram", "KDE Histogram", nbins > 0 ? nbins : fNBins, fXMin, fXMax);  
    }
    for (std::vector<Double_t>::iterator data = fData.begin(); data != fData.end(); ++data) {
       fHistogram->Fill(*data, (*fKernel)(*data));
@@ -494,14 +531,19 @@ TF1* TKDE::GetKDEFunction() {
 
 TF1* TKDE::GetPDFUpperConfidenceInterval(Double_t confidenceLevel) {
    // Returns the upper estimated density 
-   TF1* fPDFUpper = new TF1("KDE_UpperFunc", this, &TKDE::UpperConfidenceInterval, fXMin, fXMax, 1, "TKDE", "UpperConfidenceInterval");
-   fPDFUpper->SetParameter(0, confidenceLevel);
-   return fPDFUpper;
+   fUpperPDF = new TF1("KDE_UpperFunc", this, &TKDE::UpperConfidenceInterval, fXMin, fXMax, 1, "TKDE", "UpperConfidenceInterval");
+   fUpperPDF->SetParameter(0, confidenceLevel);
+   return fUpperPDF;
 }
 
 TF1* TKDE::GetPDFLowerConfidenceInterval(Double_t confidenceLevel) {
    // Returns the upper estimated density 
-   TF1* fPDFLower = new TF1("KDE_LowerFunc", this, &TKDE::LowerConfidenceInterval, fXMin, fXMax, 1, "TKDE", "LowerConfidenceInterval");
-   fPDFLower->SetParameter(0, confidenceLevel);
-   return fPDFLower;
+   fLowerPDF = new TF1("KDE_LowerFunc", this, &TKDE::LowerConfidenceInterval, fXMin, fXMax, 1, "TKDE", "LowerConfidenceInterval");
+   fLowerPDF->SetParameter(0, confidenceLevel);
+   return fLowerPDF;
+}
+
+TF1* TKDE::GetKDEApproximateBias(){
+   // Returns the approximate bias
+   return fApproximateBias = new TF1("KDE_ApproxBias", this, &TKDE::ApproximateBias, fXMin, fXMax, 0, "TKDE", "ApproximateBias");;
 }
