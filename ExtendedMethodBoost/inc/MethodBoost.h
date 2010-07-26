@@ -129,6 +129,10 @@ namespace TMVA {
 
       // return ROC integral on training/testing sample
       Double_t GetBoostROCIntegral(Bool_t, Types::ETreeType, Double_t AllMethodsWeight=1.0);
+      
+      // get overlap integral of signal and background MVA
+      // distributions
+      Double_t GetOverlapIntegral();
 
       //writing the monitoring histograms and tree to a file
       void WriteMonitoringHistosToFile( void ) const;
