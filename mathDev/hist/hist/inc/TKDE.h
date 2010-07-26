@@ -89,8 +89,9 @@ public:
    TF1* GetFunction();
    TF1* GetUpperFunction(Double_t confidenceLevel = 0.95);
    TF1* GetLowerFunction(Double_t confidenceLevel = 0.95);
+   TF1* GetApproximateBias();
    
-   private:
+private:
    
    TKDE();                    // Disallowed default constructor
    TKDE(TKDE& kde);           // Disallowed copy constructor
@@ -118,9 +119,10 @@ public:
    
    std::vector<Double_t> fData; // Data events
    
-   TF1* fPDF;      // Output Kernel Density Estimation PDF function
-   TF1* fUpperPDF; // Kernel Density Estimation upper confidence interval PDF function
-   TF1* fLowerPDF; // Kernel Density Estimation lower confidence interval PDF function
+   TF1* fPDF;             // Output Kernel Density Estimation PDF function
+   TF1* fUpperPDF;        // Output Kernel Density Estimation upper confidence interval PDF function
+   TF1* fLowerPDF;        // Output Kernel Density Estimation lower confidence interval PDF function
+   TF1* fApproximateBias; // Output Kernel Density Estimation approximate bias
    
    TH1D* fHistogram; // Output data histogram
    
@@ -143,6 +145,7 @@ public:
    Double_t fRho;   // Adjustment factor for sigma
    
    std::vector<Double_t> fCanonicalBandwidths;
+   std::vector<Double_t> fKernelSigmas2;
    
    friend struct KernelIntegrand;
    struct KernelIntegrand {
@@ -160,8 +163,9 @@ public:
    Double_t EpanechnikovKernel(Double_t x) const;
    Double_t BiweightKernel(Double_t x) const;
    Double_t CosineArchKernel(Double_t x) const;
-   Double_t UpperConfidenceInterval(const Double_t* x, const Double_t* p = 0) const; // Valid if the bandwidth is small compared to nEvents**1/5
-   Double_t LowerConfidenceInterval(const Double_t* x, const Double_t* p = 0) const; // Valid if the bandwidth is small compared to nEvents**1/5
+   Double_t UpperConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
+   Double_t LowerConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
+   Double_t ApproximateBias(const Double_t* x, const Double_t* p) const;
    Double_t GetError(Double_t x) const;
    Double_t ComputeKernelL2Norm() const;
    Double_t ComputeKernelSigma2() const;
@@ -170,8 +174,10 @@ public:
          
    void CheckOptions();
    void CheckKernelValidity();
-   void ComputeCanonicalBandwidth(); 
+   void SetCanonicalBandwidth(); 
+   void SetKernelSigma2(); 
    void SetCanonicalBandwidths(); 
+   void SetKernelSigmas2(); 
    void SetHistogram();
    void SetUseBins();  
    void SetMean();
@@ -189,6 +195,7 @@ public:
    TF1* GetKDEFunction();
    TF1* GetPDFUpperConfidenceInterval(Double_t confidenceLevel); // The density to estimate should be at least twice differentiable. 
    TF1* GetPDFLowerConfidenceInterval(Double_t confidenceLevel); // The density to estimate should be at least twice differentiable. 
+   TF1* GetKDEApproximateBias();
    
    ClassDef(TKDE, 1) // One dimensional semi-parametric Kernel Density Estimation 
    
