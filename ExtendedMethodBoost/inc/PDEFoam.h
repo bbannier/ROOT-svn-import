@@ -27,6 +27,7 @@
 #define ROOT_TMVA_PDEFoam
 
 #include <iosfwd>
+#include <cassert>
 
 #ifndef ROOT_TH2D
 #include "TH2D.h"
