@@ -741,7 +741,7 @@ void TMVA::MethodBoost::CalcMethodWeight()
    if      (fMethodWeightType == "ByError") fMethodWeight.push_back(TMath::Log(fBoostWeight));
    else if (fMethodWeightType == "Average") fMethodWeight.push_back(1.0);
    else if (fMethodWeightType == "ByROC")   fMethodWeight.push_back(fROC_training);
-   else if (fMethodWeightType == "ByOverlap") fMethodWeight.push_back(fOverlap_training);
+   else if (fMethodWeightType == "ByOverlap") fMethodWeight.push_back((fOverlap_integral > 0.0 ? 1.0/fOverlap_integral : 1000.0));
    else                                     fMethodWeight.push_back(0);
 }
 
