@@ -909,3 +909,61 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
 
    return ROC;
 }
+
+//_______________________________________________________________________
+Double_t TMVA::MethodBoost::GetOverlapIntegral()
+{
+   // Calculate the overlap integral of a single classifier
+
+   Data()->SetCurrentType(Types::kTraining);
+   MethodBase* method = dynamic_cast<MethodBase*>(fMethods.back());
+
+   // calculate MVA values
+   Double_t meanS, meanB, rmsS, rmsB, xmin, xmax, nrms = 10;
+   std::vector <Float_t>* mvaRes = new std::vector <Float_t>(Data()->GetNEvents());
+   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+      Data()->GetEvent(ievt);
+      (*mvaRes)[ievt] = method->GetMvaValue();
+   }
+
+   // now create histograms for calculation of the ROC integral
+   Int_t signalClass = 0;
+   if (DataInfo().GetClassInfo("Signal") != 0) {
+      signalClass = DataInfo().GetClassInfo("Signal")->GetNumber();
+   }
+   gTools().ComputeStat( Data()->GetEventCollection(Types::kTraining), mvaRes,
+                         meanS, meanB, rmsS, rmsB, xmin, xmax, signalClass );
+
+   fNbins = gConfig().fVariablePlotting.fNbinsXOfROCCurve;
+   xmin = TMath::Max( TMath::Min(meanS - nrms*rmsS, meanB - nrms*rmsB ), xmin );
+   xmax = TMath::Min( TMath::Max(meanS + nrms*rmsS, meanB + nrms*rmsB ), xmax ) + 0.0001;
+
+   // fill MVA histograms
+   TH1* mva_s = new TH1F( "MVA_S", "MVA_S", fNbins, xmin, xmax );
+   TH1* mva_b = new TH1F( "MVA_B", "MVA_B", fNbins, xmin, xmax );
+   for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
+      const Event* ev = GetEvent(ievt);
+      Float_t w = ev->GetWeight();
+      if (DataInfo().IsSignal(ev))  mva_s->Fill( (*mvaRes)[ievt], w );
+      else                          mva_b->Fill( (*mvaRes)[ievt], w );
+   }
+   gTools().NormHist( mva_s );
+   gTools().NormHist( mva_b );
+
+   // calculate overlap integral
+   Double_t overlap = 0.0;
+   for (Int_t bin=1; bin<=mva_s->GetNbinsX(); bin++){
+      Double_t bc_s = mva_s->GetBinContent(bin);
+      Double_t bc_b = mva_b->GetBinContent(bin);
+      if (bc_s > 0.0 && bc_b > 0.0)
+	 overlap += TMath::Min(bc_s, bc_b);
+   }
+   
+   delete mva_s;
+   delete mva_b;
+   delete mvaRes;
+
+   Data()->SetCurrentType(Types::kTraining);
+
+   return overlap;
+}
