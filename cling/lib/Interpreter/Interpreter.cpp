@@ -459,7 +459,7 @@ Interpreter::analyzeInput(const std::string& contextSource,
    //CI->createASTContext();
    CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
       PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-      PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
+      PP.getSelectorTable(), PP.getBuiltinInfo(), 0));
 
    CI->setASTConsumer(maybeGenerateASTPrinter());
    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
@@ -994,7 +994,7 @@ Interpreter::createStatementList(const std::string& srcCode,
    //CI->createASTContext();
    CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
       PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-      PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
+      PP.getSelectorTable(), PP.getBuiltinInfo(), 0));
    // Create an ASTConsumer for this frontend run which
    // will produce a list of statements seen.
    StmtSplitter splitter(stmts);
@@ -1174,7 +1174,7 @@ Interpreter::compileString(const std::string& srcCode)
    //CI->createASTContext();
    CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
       PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-      PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
+      PP.getSelectorTable(), PP.getBuiltinInfo(), 0));
    CI->setASTConsumer(maybeGenerateASTPrinter());
    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
                                           PP.getLangOptions().NoBuiltin);
