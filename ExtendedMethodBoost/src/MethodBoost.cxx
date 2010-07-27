@@ -381,7 +381,8 @@ void TMVA::MethodBoost::Train()
          }
       }
 
-      fMethodWeight[fMethodIndex] = fMethodWeight[fMethodIndex] / AllMethodsWeight;
+      if (AllMethodsWeight != 0.0)
+	 fMethodWeight[fMethodIndex] = fMethodWeight[fMethodIndex] / AllMethodsWeight;
       (*fMonitorHist)[0]->SetBinContent(fMethodIndex+1,fMethodWeight[fMethodIndex]);
    }
 
@@ -391,6 +392,20 @@ void TMVA::MethodBoost::Train()
    // because their weight would be set to zero.  This behaviour is
    // not ok if one boosts just one time.
    if (fMethods.size()==1)  fMethodWeight[0] = 1.0;
+
+   // workaround for bad classifiers: if all method weights are zero,
+   // weight all methods with 1.0
+   Bool_t AllWeightsZero = kTRUE;
+   for (UInt_t i=0; i<fMethodWeight.size(); i++)
+      if (fMethodWeight[i] != 0.0){
+	 AllWeightsZero = kFALSE;
+	 break;
+      }
+   if (AllWeightsZero){
+      // set all weights to 1.0
+      for (UInt_t i=0; i<fMethodWeight.size(); i++)
+	 fMethodWeight[i] = 1.0/fMethodWeight.size();
+   }
 
    fMethods.back()->MonitorBoost(SetStage(Types::kBoostProcEnd));
 }
@@ -863,7 +878,8 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
       if (fMethodWeightType == "LastMethod") 
 	 fMethodWeight.back() = AllMethodsWeight = 1.0;
       for (Int_t i=0; i<=fMethodIndex; i++)
-	 fMethodWeight[i] = fMethodWeight[i] / AllMethodsWeight;
+	 if (AllMethodsWeight != 0.0)
+	    fMethodWeight[i] = fMethodWeight[i] / AllMethodsWeight;
    }
 
    // calculate MVA values
