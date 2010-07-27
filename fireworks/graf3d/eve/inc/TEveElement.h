@@ -81,6 +81,7 @@ protected:
    TEveElement     *fVizModel;             //! Element used as model from VizDB.
    TString          fVizTag;               //  Tag used to query VizDB for model element.
 
+   Int_t            fNumChildren;          //!
    Int_t            fParentIgnoreCnt;      //! Counter for parents that are ignored in ref-counting.
    Int_t            fTopItemCnt;           //! Counter for top-level list-tree items that prevent automatic destruction.
    Int_t            fDenyDestroy;          //! Deny-destroy count.
@@ -162,8 +163,8 @@ public:
    List_i  EndChildren()         { return  fChildren.end();   }
    List_ci BeginChildren() const { return  fChildren.begin(); }
    List_ci EndChildren()   const { return  fChildren.end();   }
-   Int_t   NumChildren()   const { return  fChildren.size();  }
-   Bool_t  HasChildren()   const { return !fChildren.empty(); }
+   Int_t   NumChildren()   const { return  fNumChildren;      }
+   Bool_t  HasChildren()   const { return  fNumChildren != 0; }
 
    Bool_t       HasChild(TEveElement* el);
    TEveElement* FindChild(const TString& name, const TClass* cls=0);
