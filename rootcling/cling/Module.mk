@@ -87,13 +87,13 @@ $(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_C
                                   -I$(LLVMDIR)/include -I. -Wno-unused-parameter -Wno-shadow
 
 CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
- -lclingInterpreter -lclingMetaProcessor -lclingEditLine \
- -lclangFrontend \
+ -lclingInterpreter -lclingMetaProcessor -lclingEditLine -lclangFrontend \
  -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
- -lclangBasic -lclangDriver -lclangAST -Llib -lReflex \
+ -lclangBasic -lclangDriver -lclangAST -Llib -lReflex -lLLVMMCDisassembler \
  -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
- -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86AsmParser -lLLVMX86AsmPrinter \
- -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86Info -lLLVMAsmPrinter \
- -lLLVMCodeGen -lLLVMScalarOpts -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
- -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMCParser -lLLVMMC -lLLVMCore \
- -lLLVMSupport -lLLVMSystem
+ -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86Disassembler \
+ -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMSelectionDAG -lLLVMX86AsmPrinter \
+ -lLLVMX86Info -lLLVMAsmPrinter -lLLVMMCParser -lLLVMCodeGen -lLLVMScalarOpts \
+ -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
+ -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC \
+ -lLLVMCore -lLLVMSupport -lLLVMSystem
