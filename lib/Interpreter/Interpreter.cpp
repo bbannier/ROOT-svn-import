@@ -744,7 +744,7 @@ Interpreter::makeModuleFromCommandLine(const std::string& input_line)
    src += "void __cling_internal() {\n";
    src += "#define __CLING__MAIN_FILE_MARKER __cling__prompt\n";
    src += input_line;
-   src += "#undef __CLING__MAIN_FILE_MARKER\n";
+   src += "\n#undef __CLING__MAIN_FILE_MARKER\n";
    src += "\n} // end __cling_internal()\n";
    //fprintf(stderr, "input_line:\n%s\n", src.c_str());
    std::string wrapped;
