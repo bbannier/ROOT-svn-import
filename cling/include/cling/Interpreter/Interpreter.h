@@ -7,6 +7,7 @@
 #ifndef CLING_COMPILER_H
 #define CLING_COMPILER_H
 
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/System/Path.h"
 
 #include <string>
@@ -71,6 +72,11 @@ public:
       bool prev = m_printAST;
       m_printAST = print;
       return prev;
+   }
+
+   void installLazyFunctionCreator(void* (*fp)(const std::string&))
+   {
+      m_engine->InstallLazyFunctionCreator(fp);
    }
 
    clang::CompilerInstance* getCI();
