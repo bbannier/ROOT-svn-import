@@ -225,7 +225,6 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
               PP.getIdentifierTable (),
               PP.getSelectorTable (),
               PP.getBuiltinInfo (),
-              false,
               0)
    );
 
