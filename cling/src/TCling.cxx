@@ -25,6 +25,7 @@
 #include "TDataType.h"
 #include "TClass.h"
 #include "TClassEdit.h"
+#include "TCollection.h"
 #include "TBaseClass.h"
 #include "TDataMember.h"
 #include "TMethod.h"
@@ -39,6 +40,7 @@
 #include "TVirtualMutex.h"
 #include "TError.h"
 #include "TEnv.h"
+#include "THashList.h"
 #include "THashTable.h"
 #include "RConfigure.h"
 #include "compiledata.h"
@@ -47,10 +49,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Frontend/HeaderSearchOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "llvm/System/DynamicLibrary.h"
 
+#include <map>
 #include <vector>
 #include <set>
 #include <string>
+#include <cxxabi.h>
 
 #undef USE_CLR
 
@@ -69,6 +74,9 @@ void G__SetGetlineFunc(char*(*)(const char* prompt),
 using namespace std;
 
 R__EXTERN int optind;
+
+std::map<std::string, std::string> class_to_library_map;
+static void loadClassToLibraryMap();
 
 extern "C" int ScriptCompiler(const char *filename, const char *opt) {
    return gSystem->CompileMacro(filename, opt);
@@ -89,6 +97,60 @@ extern "C" int TCint_AutoLoadCallback(char *c, char *l) {
    int result =  TCint::AutoLoadCallback(cls.c_str(), l);
    G__setgvp(varp);
    return result;
+}
+
+static void* autoloadCallback(const std::string& mangled_name)
+{
+   // Autoload a library. Given a mangled function name find the
+   // library which provides the function and load it.
+   //--
+   //
+   //  Use the C++ ABI provided function to demangle the function name.
+   //
+   int err = 0;
+   char* demangled_name = abi::__cxa_demangle(mangled_name.c_str(), 0, 0, &err);
+   if (err) {
+      return 0;
+   }
+   //fprintf(stderr, "demangled name: '%s'\n", demangled_name);
+   //
+   //  Separate out the class or namespace part of the
+   //  function name.
+   //
+   std::string name(demangled_name);
+   // Remove the function arguments.
+   std::string::size_type pos = name.rfind('(');
+   if (pos != std::string::npos) {
+      name.erase(pos);
+   }
+   // Remove the function name.
+   pos = name.rfind(':');
+   if (pos != std::string::npos) {
+      if ((pos != 0) && (name[pos-1] == ':')) {
+         name.erase(pos-1);
+      }
+   }
+   //fprintf(stderr, "name: '%s'\n", name.c_str());
+   // Now we have the class or namespace name, so do the lookup.
+   std::map<std::string, std::string>::iterator iter = class_to_library_map.find(name);
+   if (iter == class_to_library_map.end()) {
+      // Not found in the map, all done.
+      return 0;
+   }
+   //fprintf(stderr, "library: %s\n", iter->second.c_str());
+   // Now we have the name of the library to load, so load it.
+   std::string errmsg;
+   bool load_failed = llvm::sys::DynamicLibrary::LoadLibraryPermanently(iter->second.c_str(), &errmsg);
+   if (load_failed) {
+      // The library load failed, all done.
+      //fprintf(stderr, "load failed: %s\n", errmsg.c_str());
+      return 0;
+   }
+   //fprintf(stderr, "load succeeded.\n");
+   // Get the address of the function being called.
+   void* addr = llvm::sys::DynamicLibrary::SearchForAddressOfSymbol(mangled_name.c_str());
+   //fprintf(stderr, "addr: %016lx\n", reinterpret_cast<unsigned long>(addr));
+   return addr;
 }
 
 extern "C" void *TCint_FindSpecialObject(char *c, G__ClassInfo *ci, void **p1, void **p2) {
@@ -238,6 +300,7 @@ TCint::TCint(const char *name, const char *title) :
    G__LockCpp();
 
    fInterpreter = new cling::Interpreter(gSystem->ExpandPathName("$(LLVMDIR)"));
+   fInterpreter->installLazyFunctionCreator(autoloadCallback);
    clang::CompilerInstance * CI = fInterpreter->getCI ();
 
    clang::LangOptions & langInfo = CI->getLangOpts ();
@@ -1448,6 +1511,8 @@ Int_t TCint::LoadLibraryMap(const char *rootmapfile)
 
    R__LOCKGUARD(gCINTMutex);
 
+   loadClassToLibraryMap();
+
    // open the [system].rootmap files
    if (!fMapfile) {
       fMapfile = new TEnv(".rootmap");
@@ -1596,6 +1661,112 @@ Int_t TCint::LoadLibraryMap(const char *rootmapfile)
       }
    }
    return 0;
+}
+
+//______________________________________________________________________________
+static void loadClassToLibraryMap()
+{
+   static TEnv* map_file = 0;
+   if (!map_file) {
+      map_file = new TEnv(".rootmap");
+      map_file->IgnoreDuplicates(kTRUE);
+   }
+   static TString rootmap_load_path;
+   TString ldpath = gSystem->GetDynamicPath();
+   if (ldpath != rootmap_load_path) {
+      rootmap_load_path = ldpath;
+#ifdef WIN32
+      TObjArray* paths = ldpath.Tokenize(";");
+#else // WIN32
+      TObjArray* paths = ldpath.Tokenize(":");
+#endif // WIN32
+      for (int i = 0; i < paths->GetEntriesFast(); ++i) {
+         TString d = ((TObjString*)paths->At(i))->GetString();
+         bool skip = false;
+         for (int j = 0; j < i; ++j) {
+            TString pd = ((TObjString*)paths->At(j))->GetString();
+            if (pd == d) {
+               skip = true;
+               break;
+            }
+         }
+         if (skip) {
+            continue;
+         }
+         void* dirp = gSystem->OpenDirectory(d);
+         if (dirp) {
+            for (const char* f1 = 0; (f1 = gSystem->GetDirEntry(dirp));) {
+               TString f = f1;
+               if (!f.EndsWith(".rootmap")) {
+                  continue;
+               }
+               TString p;
+               p = d + "/" + f;
+               if (gSystem->AccessPathName(p, kReadPermission)) {
+                  continue;
+               }
+               map_file->ReadFile(p, kEnvGlobal);
+            }
+         }
+         gSystem->FreeDirectory(dirp);
+      }
+      delete paths;
+   }
+   TIter next(map_file->GetTable());
+   TEnvRec* rec = 0;
+   for (; (rec = (TEnvRec*) next());) {
+      TString entry_name = rec->GetName();
+      if (
+         (entry_name.Length() > 8) &&
+         !strncmp(entry_name.Data(), "Library.", 8)
+      ) {
+         TString entry_value = rec->GetValue();
+         if (entry_value == "") {
+            continue;
+         }
+         TString delim(" ");
+         TObjArray* lib_list = entry_value.Tokenize(delim);
+         const char* libname = ((TObjString*)lib_list->At(0))->GetName();
+         delete lib_list;
+         entry_name.Remove(0, 8);
+         entry_name.ReplaceAll("@@", "::");
+         entry_name.ReplaceAll("-", " ");
+         if (entry_name.Contains(":")) {
+            int slen = entry_name.Length();
+            for (int i = 0; i < (slen - 1); ++i) {
+               if (entry_name[i] == '<') {
+                  break;
+               }
+               if (entry_name[i] != ':') {
+                  continue;
+               }
+               if (entry_name[i+1] != ':') {
+                  break;
+               }
+               if (!i) {
+                  continue;
+               }
+               TString qual_id = entry_name(0, i);
+               ++i;
+               if (qual_id == "std") {
+                  break;
+               }
+               std::map<std::string, std::string>::iterator iter =
+                  class_to_library_map.find(qual_id.Data());
+               if (
+                  (
+                     (iter == class_to_library_map.end()) ||
+                     !iter->second.size()
+                  ) &&
+                  !rec->FindObject(qual_id)
+               ) {
+                  class_to_library_map[qual_id.Data()] = "";
+               }
+            }
+         }
+         class_to_library_map[entry_name.Data()] = libname;
+      }
+   }
 }
 
 //______________________________________________________________________________
