@@ -77,7 +77,6 @@ fStep(step),
 fDebug(debug),
 fFile(0),
 fDirProofBench(0),
-fWritable(0),
 fNodes(0),
 fPerfStats(0),
 fListPerfProfiles(0),
@@ -359,7 +358,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
             tnew->SetName(newname);
             fPerfStats->Add(tnew);
 
-            if (debug && fWritable){
+            if (debug && fFile && fFile->IsWritable()){
                fDirProofBench->cd();
                tnew->Write();
             }
@@ -430,7 +429,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
                TString newname=BuildNewPatternName(ptdist_name, nactive, j);
                hnew->SetName(newname);
 
-               if (fWritable){
+               if (fFile && fFile->IsWritable()){
                   fDirProofBench->cd();
                   hnew->Write();
                   delete hnew;
@@ -447,7 +446,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
                TString newname=BuildNewPatternName(tracksdist_name, nactive, j);
                hnew->SetName(newname);
 
-               if (fWritable){
+               if (fFile && fFile->IsWritable()){
                   fDirProofBench->cd();
                   hnew->Write();
                   delete hnew;
@@ -457,10 +456,13 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
                Error("Run", "histogram %s not found", tracksdist_name.Data());
             }
          }
+
+         fCPerfProfiles->cd(0); 
       }//for ntries
    }//for number of workers
    
-   if (fWritable){
+   //save performance profiles to file
+   if (fFile && fFile->IsWritable()){
       fDirProofBench->cd();
       profile_perfstat_event->Write();
       profile_perfstat_IO->Write();
@@ -756,15 +758,8 @@ TFile* TProofBenchRunDataRead::OpenFile(const char* filename,
    }
    else{//open succeeded
       fFile->mkdir("ProofBench");
-
       fFile->cd("ProofBench");
       SetDirProofBench(gDirectory);
-
-      TString soption=fFile->GetOption(); 
-      soption.ToLower(); 
-      if (soption.Contains("create") || soption.Contains("update")){
-         fWritable=1;
-      }
       return fFile;
    }
 }

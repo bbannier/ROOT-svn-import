@@ -57,7 +57,6 @@ private:
 
    TFile* fFile;                 //output file to write performance histograms and trees on
    TDirectory* fDirProofBench;   //directory for proof outputs
-   Bool_t fWritable;             //file writable
 
    TString fName;                //name of this run
 

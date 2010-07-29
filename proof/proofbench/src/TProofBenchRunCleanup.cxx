@@ -59,8 +59,7 @@ fCleanupType(cleanuptype),
 fNEvents(nevents),
 fDebug(debug),
 fFile(0),
-fDirProofBench(0),
-fWritable(0)
+fDirProofBench(0)
 {
    //Default constructor
  
@@ -185,7 +184,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
             tnew->SetName(newname);
    
             Info("Run", "PROOF_PerfStats found, directory=%s", fDirProofBench->GetName());
-            if (fWritable){
+            if (fFile && fFile->IsWritable()){
                fDirProofBench->cd();
                tnew->Write();
                tnew->Delete();
@@ -209,7 +208,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
             newname+=Form("%lld", ncalls);
             hnew->SetName(newname);
    
-            if (fWritable){
+            if (fFile && fFile->IsWritable()){
                fDirProofBench->cd();
                hnew->Write();
                delete hnew;
@@ -231,7 +230,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
             newname+=Form("%lld", ncalls);
             hnew->SetName(newname);
 
-            if (fWritable){
+            if (fFile && fFile->IsWritable()){
                fDirProofBench->cd();
                hnew->Write();
                delete hnew;
@@ -403,16 +402,8 @@ TFile* TProofBenchRunCleanup::OpenFile(const char* filename,
    }
    else{ // Open succeeded
       fFile->mkdir("ProofBench");
-
       fFile->cd("ProofBench");
       SetDirProofBench(gDirectory);
-
-      TString soption=fFile->GetOption();
-      soption.ToLower();
-      if (soption.Contains("create") || soption.Contains("update")){
-         fWritable=1;
-      }
-
       return fFile;
    }
 }
