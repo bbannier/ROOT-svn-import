@@ -72,7 +72,6 @@ fDraw(draw),
 fDebug(debug),
 fFile(0),
 fDirProofBench(0),
-fWritable(0),
 fNodes(0),
 fPerfStats(0),
 fListPerfProfiles(0),
@@ -82,8 +81,11 @@ fName(0)
    //Default constructor
    fProof=proof?proof:gProof;
 
-   if (filename.Length()){
-      OpenFile(filename.Data(), foption);
+   if(!OpenFile(filename.Data(), foption)){//file open failed
+      gDirectory->cd("Rint:/");
+      gDirectory->mkdir("ProofBench");
+      gDirectory->cd("ProofBench");
+      fDirProofBench=gDirectory;
    }
 
    fName="CPU"+GetNameStem();
@@ -174,6 +176,7 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
       TString profile_perfstat_event_title=BuildProfileTitle("Profile", "PerfStat Event");
       profile_perfstat_event= new TProfile(profile_perfstat_event_name, profile_perfstat_event_title, ndiv, ns_min-0.5, ns_max+0.5);
 
+      profile_perfstat_event->SetDirectory(fDirProofBench);
       profile_perfstat_event->GetXaxis()->SetTitle("Number of Slaves");
       profile_perfstat_event->GetYaxis()->SetTitle("#times10^{3} Events/sec");
       profile_perfstat_event->SetMarkerStyle(21);
@@ -190,8 +193,9 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
  
    if (!profile_queryresult_event){
       TString profile_queryresult_event_title=BuildProfileTitle("Profile", "QueryResult Event");
-      TProfile* profile_queryresult_event=new TProfile(profile_queryresult_event_name, profile_queryresult_event_title, ndiv, ns_min-0.5, ns_max+0.5);
+      profile_queryresult_event=new TProfile(profile_queryresult_event_name, profile_queryresult_event_title, ndiv, ns_min-0.5, ns_max+0.5);
 
+      profile_queryresult_event->SetDirectory(fDirProofBench);
       profile_queryresult_event->GetXaxis()->SetTitle("Number of Slaves");
       profile_queryresult_event->GetYaxis()->SetTitle("#times10^{3} Events/sec");
       profile_queryresult_event->SetMarkerStyle(22);
@@ -254,7 +258,7 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
 
             fPerfStats->Add(t);
 
-            if (debug && fWritable){
+            if (debug && fFile && fFile->IsWritable()){
                fDirProofBench->cd();
                t->Write();
             }
@@ -276,23 +280,22 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
          // Calculate event rate
          Double_t qr_eventrate=qr_entries/Double_t(qr_init+qr_proc);
 
-         // Build profile name
-         TString profile_queryresult_event_name=BuildProfileName("hProf", "QueryResult_Event");
-         // Get profile
-         TProfile* profile_queryresult_event=(TProfile*)(fListPerfProfiles->FindObject(profile_queryresult_event_name.Data()));
-
          // Fill and draw
-         if (profile_queryresult_event){
-            profile_queryresult_event->Fill(nactive, qr_eventrate);
-            fCPerfProfiles->cd(npad++);
-            profile_queryresult_event->Draw();
-            gPad->Update();
-         }
-         else{
-            Error("Run", "Profile not found: %s", profile_queryresult_event_name.Data());
-         }
+         profile_queryresult_event->Fill(nactive, qr_eventrate);
+         fCPerfProfiles->cd(npad++);
+         profile_queryresult_event->Draw();
+         gPad->Update();
+         fCPerfProfiles->cd(0);
+
       }//for iterations
    }//for number of workers
+
+   //save performance profiles to file
+   if (fFile && fFile->IsWritable()){
+      fDirProofBench->cd();
+      profile_perfstat_event->Write();
+      profile_queryresult_event->Write();
+   }
 }
 
 //______________________________________________________________________________
@@ -537,9 +540,7 @@ TFile* TProofBenchRunCPU::OpenFile(const char* filename,
                              Int_t compress)
 {
    // Opens a file which output profiles and/or intermediate files (trees, histograms when debug is set)
-   // are to be written to. Makes a directory named "ProofBench" if possible and changes to the directory.
-   // If directory ProofBench already exists, change to the directory. If the directory can not be created,
-   // make a directory Rint:/ProofBench and change to the directory.
+   // are to be written to. Makes a directory named "ProofBench" and changes to the directory.
    // Input parameters:
    //    filename: Name of the file to open
    //    option: Option for TFile::Open(...) function
@@ -554,9 +555,9 @@ TFile* TProofBenchRunCPU::OpenFile(const char* filename,
    sfilename.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
    sfilename.Remove(TString::kBoth, '\t');//remove leading and trailing tab character(s)
 
-   //if (sfilename.Length()<1){
-   //   return fFile;
-   //}
+   if (sfilename.IsNull()){
+      return fFile;
+   }
 
    TString soption(option);
    soption.ToLower();
@@ -580,12 +581,6 @@ TFile* TProofBenchRunCPU::OpenFile(const char* filename,
       fFile->mkdir("ProofBench");
       fFile->cd("ProofBench");
       SetDirProofBench(gDirectory);
-
-      TString soption=fFile->GetOption();
-      soption.ToLower();
-      if (soption.Contains("create") || soption.Contains("update")){
-         fWritable=1;
-      }
       return fFile;
    }
 }
