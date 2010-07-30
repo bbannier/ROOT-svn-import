@@ -28,7 +28,6 @@
 #include "TGLPlotPainter.h"
 #include "TGLPlotCamera.h"
 #include "TGLIncludes.h"
-#include "TGLAdapter.h"
 #include "TGLOutput.h"
 #include "TGL5D.h"
 #include "gl2ps.h"

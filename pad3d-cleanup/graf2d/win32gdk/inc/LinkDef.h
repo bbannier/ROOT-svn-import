@@ -15,6 +15,5 @@
 #pragma link off all functions;
 
 #pragma link C++ class TGWin32;
-#pragma link C++ class TGWin32GLManager;
 
 #endif
