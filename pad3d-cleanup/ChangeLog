@@ -1,3 +1,17 @@
+2010-07-30  Timur Pocheptsov
+
+	* graf2d/win32gdk/Module.mk:
+	TGWin32GL removed, does not exist anymore.
+	
+	* graf2d/win32gdk/inc/LinkDef.h:
+	pragma directive for TGWin32GLManager was removed.
+
+	* graf3d/gl/src/TGLPlotPainter.cxx:
+	include "TGLAdapter.h" was removed.
+
+	* graf3d/gl/src/TGLWidget.cxx
+	compilation errors fixed.
+
 2010-07-24  Matevz Tadel  <mtadel@greed>
 
 	* graf3d/gl/inc/TGLPadPainter3D.h:
