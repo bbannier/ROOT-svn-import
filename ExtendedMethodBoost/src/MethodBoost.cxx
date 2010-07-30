@@ -327,7 +327,7 @@ void TMVA::MethodBoost::Train()
 	 // get ROC integral for single method on training sample
 	 fROC_training = GetBoostROCIntegral(kTRUE, Types::kTraining);
 	 fOverlap_integral = GetOverlapIntegral();
-   
+	 
 	 // calculate method weight
 	 CalcMethodWeight();
          AllMethodsWeight += fMethodWeight.back();
@@ -345,6 +345,13 @@ void TMVA::MethodBoost::Train()
          (*fMonitorHist)[1]->SetBinContent(fMethodIndex+1,fBoostWeight);
          (*fMonitorHist)[2]->SetBinContent(fMethodIndex+1,fMethodError);
          (*fMonitorHist)[3]->SetBinContent(fMethodIndex+1,fOrigMethodError);
+   
+	 Log() << "[" << fMethodIndex << "]"
+	       << " ROC single (test)=" << (*fMonitorHist)[4]->GetBinContent(fMethodIndex+1)
+	       << " ROC full (test)=" << (*fMonitorHist)[5]->GetBinContent(fMethodIndex+1)
+	       << " fMethodWeight=" << fMethodWeight.back() 
+	       << " fBoostWeight=" << fBoostWeight
+	       << " fMethodError=" << fMethodError << Endl;
 
          fMonitorTree->Fill();
 
@@ -644,7 +651,7 @@ void TMVA::MethodBoost::SingleBoost()
    }
    else fBoostWeight = 1000;
 
-   Double_t alphaWeight = ( fBoostWeight >= 0.0 ? TMath::Log(fBoostWeight) : 0.0);
+   Double_t alphaWeight = ( fBoostWeight > 0.0 ? TMath::Log(fBoostWeight) : 0.0);
    if (alphaWeight>5.) alphaWeight = 5.;
    if (alphaWeight<0.){
       //Log()<<kWARNING<<"alphaWeight is too small in AdaBoost alpha=" << alphaWeight<< Endl;
