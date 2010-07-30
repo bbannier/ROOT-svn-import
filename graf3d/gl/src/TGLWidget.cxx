@@ -279,45 +279,6 @@ void TGLWidget::ExtractViewport(Int_t *vp)const
 #ifdef WIN32
 //==============================================================================
 
-//______________________________________________________________________________
-void TGLWidgetBase::SetFormat()
-{
-   // Set pixel format.
-   // Resource - hDC, owned and freed by guard object.
-
-   if (!fFromInit) {
-      Error("TGLWidget::SetFormat", "Sorry, you should not call this function");
-      return;
-   }
-   if (!gVirtualX->IsCmdThread())
-      gROOT->ProcessLineFast(Form("((TGLWidgetBase *)0x%lx)->SetFormat()", this));
-
-   LayoutCompatible_t *trick = reinterpret_cast<LayoutCompatible_t *>(GetDeviceID());
-   HWND hWND = *trick->fPHwnd;
-   HDC  hDC  = GetWindowDC(hWND);
-
-   if (!hDC) {
-      Error("TGLWidget::SetFormat", "GetWindowDC failed");
-      throw std::runtime_error("GetWindowDC failed");
-   }
-
-   const Rgl::TGuardBase &dcGuard = Rgl::make_guard(ReleaseDC, hWND, hDC);
-   PIXELFORMATDESCRIPTOR pfd = {};
-   fill_pfd(&pfd, fGLFormat);
-
-   if (const Int_t pixIndex = ChoosePixelFormat(hDC, &pfd)) {
-      check_pixel_format(pixIndex, hDC, fGLFormat);
-
-      if (!SetPixelFormat(hDC, pixIndex, &pfd)) {
-         Error("TGLWidget::SetFormat", "SetPixelFormat failed");
-         throw std::runtime_error("SetPixelFormat failed");
-      }
-   } else {
-      Error("TGLWidget::SetFormat", "ChoosePixelFormat failed");
-      throw std::runtime_error("ChoosePixelFormat failed");
-   }
-}
-
 namespace {
 
 struct LayoutCompatible_t {
@@ -401,6 +362,45 @@ Window_t CreateGLWindow(const TGWindow *parent, const TGLFormat &/*format*/,
    return win;
 }
 
+}
+
+//______________________________________________________________________________
+void TGLWidgetBase::SetFormat()
+{
+   // Set pixel format.
+   // Resource - hDC, owned and freed by guard object.
+
+   if (!fFromInit) {
+      Error("TGLWidget::SetFormat", "Sorry, you should not call this function");
+      return;
+   }
+   if (!gVirtualX->IsCmdThread())
+      gROOT->ProcessLineFast(Form("((TGLWidgetBase *)0x%lx)->SetFormat()", this));
+
+   LayoutCompatible_t *trick = reinterpret_cast<LayoutCompatible_t *>(GetWidgetID());
+   HWND hWND = *trick->fPHwnd;
+   HDC  hDC  = GetWindowDC(hWND);
+
+   if (!hDC) {
+      Error("TGLWidget::SetFormat", "GetWindowDC failed");
+      throw std::runtime_error("GetWindowDC failed");
+   }
+
+   const Rgl::TGuardBase &dcGuard = Rgl::make_guard(ReleaseDC, hWND, hDC);
+   PIXELFORMATDESCRIPTOR pfd = {};
+   fill_pfd(&pfd, fGLFormat);
+
+   if (const Int_t pixIndex = ChoosePixelFormat(hDC, &pfd)) {
+      check_pixel_format(pixIndex, hDC, fGLFormat);
+
+      if (!SetPixelFormat(hDC, pixIndex, &pfd)) {
+         Error("TGLWidget::SetFormat", "SetPixelFormat failed");
+         throw std::runtime_error("SetPixelFormat failed");
+      }
+   } else {
+      Error("TGLWidget::SetFormat", "ChoosePixelFormat failed");
+      throw std::runtime_error("ChoosePixelFormat failed");
+   }
 }
 
 //==============================================================================
