@@ -712,7 +712,7 @@ void TMVA::MethodBoost::SingleBoost()
 	 else if (fBoostType == "HighEdgePara")
 	    ev->SetBoostWeight( -4.0 * std::pow(method->GetMvaValue()-0.5,2) + 1.0 );
 	 else if (fBoostType == "HighEdgeCoPara")
-	    ev->SetBoostWeight( 4.0 * std::pow(method->GetMvaValue()-0.5,2) + 1.0 );
+	    ev->SetBoostWeight( DataInfo().IsSignal(ev) ? std::pow(1-method->GetMvaValue(),2) : std::pow(method->GetMvaValue(),2) );
 	 else
 	    ev->SetBoostWeight( DataInfo().IsSignal(ev) ? 1-method->GetMvaValue() : method->GetMvaValue() );
 
