@@ -177,6 +177,9 @@ namespace TMVA {
       //ADA boost parameter, default is 1
       Double_t          fADABoostBeta;
 
+      // seed for random number generator used for bagging
+      UInt_t            fRandomSeed;
+
       // details of the boosted classifier
       TString           fBoostedMethodName;
       TString           fBoostedMethodTitle;
