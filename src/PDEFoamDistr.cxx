@@ -173,7 +173,7 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
    std::vector<Double_t> ub(fDim);
 
    // probevolume relative to hypercube with edge length 1:
-   static const Double_t probevolume_inv = std::pow((fVolFrac/2), fDim);
+   const Double_t probevolume_inv = std::pow((fVolFrac/2), fDim);
 
    // set upper and lower bound for search volume
    for (Int_t idim = 0; idim < fDim; idim++) {
