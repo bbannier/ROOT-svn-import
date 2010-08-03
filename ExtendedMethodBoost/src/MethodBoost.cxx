@@ -363,7 +363,7 @@ void TMVA::MethodBoost::Train()
          // stop boosting if needed when error has reached 0.5
          // thought of counting a few steps, but it doesn't seem to be necessary
          if (fStopIfErrorTooBig && fMethodError > 0.49999) StopCounter++; 
-         if (StopCounter > 0 && fBoostType == "AdaBoost")
+         if (StopCounter > 0)
             {
                timer.DrawProgressBar( fBoostNum );
                fBoostNum = fMethodIndex+1; 
