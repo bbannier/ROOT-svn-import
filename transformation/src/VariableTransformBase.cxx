@@ -62,6 +62,11 @@ TMVA::VariableTransformBase::VariableTransformBase( DataSetInfo& dsi,
      fCreated( kFALSE ),
      fNormalise( kFALSE ),
      fTransformName(trfName),
+     fVariableTypesAreCounted(false),
+     fNVariables(0),
+     fNTargets(0),
+     fNSpectators(0),
+     fSortGet(kTRUE),
      fTMVAVersion(TMVA_VERSION_CODE),
      fLogger( 0 )
 {
@@ -72,6 +77,9 @@ TMVA::VariableTransformBase::VariableTransformBase( DataSetInfo& dsi,
    }
    for (UInt_t itgt = 0; itgt < fDsi.GetNTargets(); itgt++) {
       fTargets.push_back( VariableInfo( fDsi.GetTargetInfo(itgt) ) );
+   }
+   for (UInt_t ispct = 0; ispct < fDsi.GetNSpectators(); ispct++) {
+      fTargets.push_back( VariableInfo( fDsi.GetSpectatorInfo(ispct) ) );
    }
 }
 
@@ -89,7 +97,6 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables  )
 {
    // select the variables/targets/spectators which serve as input to the transformation
    TString inputVariables = _inputVariables;
-
 
    // unselect all variables first
    fGet.clear();       
@@ -112,8 +119,9 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables  )
    TList* inList = gTools().ParseFormatLine( inputVariables, "," );
    TListIter inIt(inList);
    while (TObjString* os = (TObjString*)inIt()) {
+
       TString variables = os->GetString();
-      
+
       if( variables.BeginsWith("_") && variables.EndsWith("_") ) { // special symbol (keyword)
 	 variables.Remove( 0,1); // remove first "_"
 	 variables.Remove( variables.Length()-1,1 ); // remove last "_"
@@ -160,8 +168,14 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables  )
 	       fGet.push_back( std::make_pair<Char_t,UInt_t>('s',idx) );
 	       spctIndices.insert( idx );
 	    }
+	 }else if( TString("REARRANGE").BeginsWith(variables) ) {       // toggle rearrange sorting (take sort order given in the options)
+	    ToggleInputSortOrder( kFALSE );
+	    if( !fSortGet )
+	       Log() << kINFO << "Variable rearrangement set true: Variable order given in transformation option is used for input to transformation!" << Endl;
+
 	 }
       }else{ // no keyword
+	 Int_t numIndices = varIndices.size()+tgtIndices.size()+spctIndices.size();
 	 for( UInt_t ivar = 0; ivar < nvars; ++ivar ) { // search all variables
 	    if( fDsi.GetVariableInfo( ivar ).GetLabel() == variables ) {
 	       fGet.push_back( std::make_pair<Char_t,UInt_t>('v',ivar) );
@@ -183,8 +197,11 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables  )
 	       break;
 	    }
 	 }
+	 Int_t numIndicesEndOfLoop = varIndices.size()+tgtIndices.size()+spctIndices.size();
+	 if( numIndicesEndOfLoop == numIndices )
+	    Log() << kWARNING << "Variable/Target/Spectator '" << variables.Data() << "' not found." << Endl;
+	 numIndices = numIndicesEndOfLoop;
       }
-
    }
 
 
@@ -200,6 +217,13 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables  )
       Int_t idx = (*it);
       fPut.push_back( std::make_pair<Char_t,UInt_t>('s',idx) );
    }
+
+   // if sorting is turned on, fGet should have the indices sorted as fPut has them.
+   if( fSortGet ) {
+      fGet.clear();
+      fGet.assign( fPut.begin(), fPut.end() );
+   }
+
 
    Log() << kINFO << "Transformation, Variable selection : " << Endl;
 
@@ -251,7 +275,6 @@ void TMVA::VariableTransformBase::SelectInput( const TString& _inputVariables  )
 
       ++itPut;
    }
-
 }
 
 
@@ -350,6 +373,13 @@ void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>&
 void TMVA::VariableTransformBase::CountVariableTypes( UInt_t& nvars, UInt_t& ntgts, UInt_t& nspcts )
 {
    // count variables, targets and spectators
+   if( fVariableTypesAreCounted ){
+      nvars = fNVariables;
+      ntgts = fNTargets;
+      nspcts = fNSpectators;
+      return;
+   }
+
    nvars = ntgts = nspcts = 0;
 
    for( ItVarTypeIdxConst itEntry = fGet.begin(), itEntryEnd = fGet.end(); itEntry != itEntryEnd; ++itEntry ) {
@@ -369,6 +399,12 @@ void TMVA::VariableTransformBase::CountVariableTypes( UInt_t& nvars, UInt_t& ntg
 	    Log() << kFATAL << "VariableTransformBase/GetVariableTypeNumbers : unknown type '" << type << "'." << Endl;
 	 }
    }
+
+   fNVariables = nvars;
+   fNTargets = ntgts;
+   fNSpectators = nspcts;
+
+   fVariableTypesAreCounted = true;
 }
 
 

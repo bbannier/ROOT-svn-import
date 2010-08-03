@@ -78,6 +78,8 @@ namespace TMVA {
 
    class MethodBase : virtual public IMethod, public Configurable {
 
+      friend class Factory;
+
    public:
 
       enum EWeightFileType { kROOT=0, kTEXT };
@@ -455,8 +457,12 @@ namespace TMVA {
    private:
 
       void             AddInfoItem( void* gi, const TString& name, const TString& value) const;
-      void             CreateVariableTransforms(const TString& trafoDefinition );
 
+
+      static void      CreateVariableTransforms(const TString& trafoDefinition, 
+						TMVA::DataSetInfo& dataInfo,
+						TMVA::TransformationHandler& transformationHandler,
+						TMVA::MsgLogger& log );
 
       // ========== class members ==================================================
 
