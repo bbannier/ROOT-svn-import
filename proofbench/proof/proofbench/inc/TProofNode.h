@@ -41,8 +41,6 @@ public:
    Int_t GetPhysRam() const { return fPhysRam; }
    Int_t GetNWrks() const { return fNWrks; }
    void SetNWrks(Int_t n) { fNWrks = n; }
-
-   ClassDef(TProofNode,0) //PROOF worker node information
 };
 
 #endif

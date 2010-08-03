@@ -19,7 +19,6 @@
 #pragma link C++ class Track+;
 #pragma link C++ class HistogramManager+;
 //#pragma link C++ class TProofBench+;
-#pragma link C++ class TProofNode+;
 #pragma link C++ class TProofBenchRun+;
 #pragma link C++ class TProofBenchRunDataRead+;
 #pragma link C++ class TProofBenchRunCleanup+;
