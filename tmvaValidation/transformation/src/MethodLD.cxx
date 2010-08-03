@@ -166,7 +166,7 @@ const std::vector< Float_t >& TMVA::MethodLD::GetRegressionValues()
       (*fRegressionReturnVal)[iout] = (*(*fLDCoeff)[iout])[0] ;
 
       int icoeff = 0;      
-      for (std::vector<Float_t>::const_iterator it = ev->GetValues().begin();it!=ev->GetValues().end();++it){
+      for (std::vector<Float_t>::const_iterator it = ev->GetValues().begin(), itEnd =ev->GetValues().end();it!=itEnd;++it){
          (*fRegressionReturnVal)[iout] += (*(*fLDCoeff)[iout])[++icoeff] * (*it);
       }
    }

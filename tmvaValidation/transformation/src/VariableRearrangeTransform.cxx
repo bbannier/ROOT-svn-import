@@ -84,7 +84,7 @@ const TMVA::Event* TMVA::VariableRearrangeTransform::Transform( const TMVA::Even
    if (fTransformedEvent==0 ) 
       fTransformedEvent = new Event();
 
-   FloatVector input; // will be filled with the selected variables, (spectators)
+   FloatVector input; // will be filled with the selected variables, (targets)
    GetInput( ev, input );
    SetOutput( fTransformedEvent, input, ev );
 

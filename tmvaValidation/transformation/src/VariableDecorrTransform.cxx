@@ -80,9 +80,10 @@ Bool_t TMVA::VariableDecorrTransform::PrepareTransformation( const std::vector<E
 
    Log() << kINFO << "Preparing the Decorrelation transformation..." << Endl;
 
-   SetNVariables(events[0]->GetNVariables());
+   Int_t inputSize = fGet.size();
+   SetNVariables(inputSize);
 
-   if (GetNVariables() > 200) { 
+   if (inputSize > 200) { 
       Log() << kINFO << "----------------------------------------------------------------------------" 
             << Endl;
       Log() << kINFO 
@@ -120,7 +121,8 @@ std::vector<TString>* TMVA::VariableDecorrTransform::GetTransformationStrings( I
                << Endl;
    }
 
-   const Int_t nvar = GetNVariables();
+
+   const Int_t nvar = fGet.size();
    std::vector<TString>* strVec = new std::vector<TString>;
 
    // fill vector
@@ -128,7 +130,23 @@ std::vector<TString>* TMVA::VariableDecorrTransform::GetTransformationStrings( I
       TString str( "" );
       for (Int_t jvar=0; jvar<nvar; jvar++) {
          str += ((*m)(ivar,jvar) > 0) ? " + " : " - ";
-         str += Form( "%10.5g*[%s]", TMath::Abs((*m)(ivar,jvar)), Variables()[jvar].GetLabel().Data() );
+
+	 Char_t type = fGet.at(jvar).first;
+	 Int_t  idx  = fGet.at(jvar).second;
+
+	 switch( type ) {
+	 case 'v':
+	    str += Form( "%10.5g*[%s]", TMath::Abs((*m)(ivar,jvar)), Variables()[idx].GetLabel().Data() );
+	    break;
+	 case 't':
+	    str += Form( "%10.5g*[%s]", TMath::Abs((*m)(ivar,jvar)), Targets()[idx].GetLabel().Data() );
+	    break;
+	 case 's':
+	    str += Form( "%10.5g*[%s]", TMath::Abs((*m)(ivar,jvar)), Spectators()[idx].GetLabel().Data() );
+	    break;
+	 default:
+	    Log() << kFATAL << "VariableDecorrTransform::GetTransformationStrings : unknown type '" << type << "'." << Endl;
+	 }
       }
       strVec->push_back( str );
    }      
@@ -162,9 +180,14 @@ const TMVA::Event* TMVA::VariableDecorrTransform::Transform( const TMVA::Event* 
    }
 
    // transformation to decorrelate the variables
-   const Int_t nvar = GetNVariables();
-   TVectorD vec( nvar );
-   for (Int_t ivar=0; ivar<nvar; ivar++) vec(ivar) = ev->GetValue(ivar);
+   const Int_t nvar = fGet.size();
+
+   std::vector<Float_t> input;
+   GetInput( ev, input );
+
+  TVectorD vec( nvar );
+  for (Int_t ivar=0; ivar<nvar; ivar++) vec(ivar) = input.at(ivar);
+
    // diagonalise variable vectors
    vec *= *m;
 
@@ -173,12 +196,11 @@ const TMVA::Event* TMVA::VariableDecorrTransform::Transform( const TMVA::Event* 
       fTransformedEvent = new Event();
    }
 
-   for (UInt_t itgt=0; itgt<ev->GetNTargets(); itgt++) fTransformedEvent->SetTarget( itgt, ev->GetTarget(itgt) );
-   for (Int_t  ivar=0; ivar<nvar;              ivar++) fTransformedEvent->SetVal   ( ivar,vec(ivar) );
+   input.clear();
+   for (Int_t ivar=0; ivar<nvar; ivar++) input.at(ivar) = vec(ivar);
 
-   fTransformedEvent->SetWeight     ( ev->GetWeight() );
-   fTransformedEvent->SetBoostWeight( ev->GetBoostWeight() );
-   fTransformedEvent->SetClass      ( ev->GetClass() );
+   SetOutput( fTransformedEvent, input, ev );
+
    return fTransformedEvent;
 }
 
@@ -186,46 +208,9 @@ const TMVA::Event* TMVA::VariableDecorrTransform::Transform( const TMVA::Event* 
 const TMVA::Event* TMVA::VariableDecorrTransform::InverseTransform( const TMVA::Event* const ev, Int_t cls ) const
 {
    // apply the inverse decorrelation transformation ... 
-   // TODO : this is only a copy of the transform method... build the inverse transformation
+   // TODO : ... build the inverse transformation
    Log() << kFATAL << "Inverse transformation for decorrelation transformation not yet implemented. Hence, this transformation cannot be applied together with regression. Please contact the authors if necessary." << Endl;
 
-   if (!IsCreated())
-      Log() << kFATAL << "Transformation matrix not yet created" 
-            << Endl;
-
-   Int_t whichMatrix = cls;
-   // if cls (the class chosen by the user) not existing, assume that he wants to have the matrix for all classes together. 
-   if (cls < 0 || cls > GetNClasses()) {
-      whichMatrix = GetNClasses();
-   }
-
-   TMatrixD* m = fDecorrMatrices.at(whichMatrix);
-   if (m == 0) {
-      if (whichMatrix == GetNClasses() )
-         Log() << kFATAL << "Transformation matrix all classes is not defined" 
-               << Endl;
-      else
-         Log() << kFATAL << "Transformation matrix for class " << whichMatrix << " is not defined" 
-               << Endl;
-   }
-
-   // transformation to decorrelate the variables
-   const Int_t nvar = GetNVariables();
-   TVectorD vec( nvar );
-   for (Int_t ivar=0; ivar<nvar; ivar++) vec(ivar) = ev->GetValue(ivar);
-
-   // diagonalise variable vectors
-   vec *= *m;
-
-   if (fBackTransformedEvent==0 || fBackTransformedEvent->GetNVariables()!=ev->GetNVariables()) {
-      if (fBackTransformedEvent!=0) { delete fBackTransformedEvent; fBackTransformedEvent = 0; }
-      fBackTransformedEvent = new Event( *ev );
-   }
-   for (UInt_t itgt = 0; itgt < ev->GetNTargets(); itgt++ ) fBackTransformedEvent->SetTarget( itgt, ev->GetTarget(itgt) );
-   for ( Int_t ivar=0; ivar<nvar; ivar++) fBackTransformedEvent->SetVal(ivar,vec(ivar));
-   fBackTransformedEvent->SetWeight     ( ev->GetWeight() );
-   fBackTransformedEvent->SetBoostWeight( ev->GetBoostWeight() );
-   fBackTransformedEvent->SetClass      ( ev->GetClass() );
 
    return fBackTransformedEvent;
 }
@@ -265,7 +250,7 @@ TMVA::VariableDecorrTransform::CalcCovarianceMatrices( const std::vector<Event*>
 {
    // compute covariance matrices
 
-   UInt_t nvar = GetNVariables(), ivar = 0, jvar = 0;
+   UInt_t nvar = fGet.size(), ivar = 0, jvar = 0;
 
    // init matrices
    Int_t matNum = maxCls;
@@ -293,6 +278,8 @@ TMVA::VariableDecorrTransform::CalcCovarianceMatrices( const std::vector<Event*>
       }
    }
 
+   std::vector<Float_t> input;
+
    // perform event loop
    for (UInt_t i=0; i<events.size(); i++) {
 
@@ -301,6 +288,8 @@ TMVA::VariableDecorrTransform::CalcCovarianceMatrices( const std::vector<Event*>
       cls = ev->GetClass();
       Double_t weight = ev->GetWeight();
        
+      GetInput( ev, input );
+
       if (maxCls > 1) {
          v = vec->at(matNum-1);
          m = mat2->at(matNum-1);
@@ -308,12 +297,12 @@ TMVA::VariableDecorrTransform::CalcCovarianceMatrices( const std::vector<Event*>
          count.at(matNum-1)+=weight; // count used events
          for (ivar=0; ivar<nvar; ivar++) {
 
-            Double_t xi = ev->GetValue(ivar);
+            Double_t xi = input.at(ivar);
             (*v)(ivar) += xi*weight;
             (*m)(ivar, ivar) += (xi*xi*weight);
 
             for (jvar=ivar+1; jvar<nvar; jvar++) {
-               Double_t xj = ev->GetValue(jvar);
+               Double_t xj = input.at(jvar);
                (*m)(ivar, jvar) += (xi*xj*weight);
                (*m)(jvar, ivar) = (*m)(ivar, jvar); // symmetric matrix
             }
@@ -324,12 +313,12 @@ TMVA::VariableDecorrTransform::CalcCovarianceMatrices( const std::vector<Event*>
       v = vec->at(cls);
       m = mat2->at(cls);
       for (ivar=0; ivar<nvar; ivar++) {
-         Double_t xi = ev->GetValue(ivar);
+         Double_t xi = input.at(ivar);
          (*v)(ivar) += xi*weight;
          (*m)(ivar, ivar) += (xi*xi*weight);
 
          for (jvar=ivar+1; jvar<nvar; jvar++) {
-            Double_t xj = ev->GetValue(jvar);
+            Double_t xj = input.at(jvar);
             (*m)(ivar, jvar) += (xi*xj*weight);
             (*m)(jvar, ivar) = (*m)(ivar, jvar); // symmetric matrix
          }

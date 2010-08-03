@@ -80,6 +80,8 @@ namespace TMVA {
       virtual const Event* Transform       ( const Event* const, Int_t cls ) const = 0;
       virtual const Event* InverseTransform( const Event* const, Int_t cls ) const = 0;
 
+      void ToggleInputSortOrder( const Bool_t sortOrder ) { fSortGet = sortOrder; }
+
       // accessors
       void   SetEnabled  ( Bool_t e ) { fEnabled = e; }
       void   SetNormalise( Bool_t n ) { fNormalise = n; }
@@ -117,6 +119,7 @@ namespace TMVA {
 
       const std::vector<TMVA::VariableInfo>& Variables() const { return fVariables; }
       const std::vector<TMVA::VariableInfo>& Targets()   const { return fTargets;   }
+      const std::vector<TMVA::VariableInfo>& Spectators()   const { return fSpectators;   }
 
       MsgLogger& Log() const { return *fLogger; }
 
@@ -138,6 +141,7 @@ namespace TMVA {
 
       std::vector<TMVA::VariableInfo>& Variables() { return fVariables; }
       std::vector<TMVA::VariableInfo>& Targets() { return fTargets; }
+      std::vector<TMVA::VariableInfo>& Spectators() { return fSpectators; }
       Int_t GetNClasses() const { return fDsi.GetNClasses(); }
 
 
@@ -163,7 +167,16 @@ namespace TMVA {
       TString                          fTransformName;      // name of transformation
       std::vector<TMVA::VariableInfo>  fVariables;          // event variables [saved to weight file]
       std::vector<TMVA::VariableInfo>  fTargets;            // event targets [saved to weight file --> TODO ]
+      std::vector<TMVA::VariableInfo>  fSpectators;         // event spectators [saved to weight file --> TODO ]
 
+
+      Bool_t                           fVariableTypesAreCounted; // true if variable types have been counted already
+      UInt_t                           fNVariables;         // number of variables to be transformed
+      UInt_t                           fNTargets;           // number of targets to be transformed
+      UInt_t                           fNSpectators;        // number of spectators to be transformed
+
+      Bool_t                           fSortGet;            // if true, sort the variables into the order as defined by the user at the var definition
+                                                            // if false, sort the variables according to the order given for the var transformation
 
    protected:
 
