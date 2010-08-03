@@ -246,7 +246,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
    }
 
    //clear file cache
-   if (fCleanupType==TProofBenchRun::kCleanupKernel){
+   if (fCleanupType==TProofBenchRun::kCleanupFileAdvise){
       TIter nxt(fFilesToCleanupCacheFor);
       TFileInfo* fi=0;
       while ((fi=dynamic_cast<TFileInfo*>(nxt()))){
@@ -344,7 +344,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
    }
    if (fCleanupType!=TProofBenchRun::kCleanupNotSpecified){
       switch (fCleanupType){
-      case TProofBenchRun::kCleanupFile:
+      case TProofBenchRun::kCleanupReadInFiles:
          fChain->GetTree()->GetEntry(entry);
          if (fDebug){
             //printf("fNtrack=%d\n", fNtrack);
@@ -358,7 +358,7 @@ Bool_t TSelEvent::Process(Long64_t entry)
          fTracks->Clear("C");
          break;
 
-      case TProofBenchRun::kCleanupKernel:
+      case TProofBenchRun::kCleanupFileAdvise:
          break;
       default:
          Error("Process", "Cleanup type not supported; %d", fCleanupType);

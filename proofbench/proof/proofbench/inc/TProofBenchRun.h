@@ -48,8 +48,8 @@ public:
 
    enum ECleanupType {
       kCleanupNotSpecified=0,               //clean-up type not specified
-      kCleanupFile=1,                       //clean-up by reading in dedicated files
-      kCleanupKernel=2                      //clean-up by system call
+      kCleanupReadInFiles=1,                       //clean-up by reading in dedicated files
+      kCleanupFileAdvise=2                      //clean-up by system call
    };
 
    virtual ~TProofBenchRun();

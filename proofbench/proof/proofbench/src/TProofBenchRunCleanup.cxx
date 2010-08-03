@@ -103,10 +103,10 @@ TString TProofBenchRunCleanup::GetNameStem()const
 {
    TString namestem;
    switch (fCleanupType){
-   case TProofBenchRun::kCleanupFile:
+   case TProofBenchRun::kCleanupReadInFiles:
       namestem="File";
       break;
-   case TProofBenchRun::kCleanupKernel:
+   case TProofBenchRun::kCleanupFileAdvise:
       namestem="Kernel";
       break;
    default:
@@ -148,7 +148,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
    DeleteParameters();
    SetParameters();
 
-   if (fCleanupType==TProofBenchRun::kCleanupFile){
+   if (fCleanupType==TProofBenchRun::kCleanupReadInFiles){
       TString dsname="DataSetEventCleanup";
       Info("Run", "Clean-up run by reading in files of data set: %s", dsname.Data());
       TFileCollection* fc_cleanup=fProof->GetDataSet(dsname.Data());
@@ -242,7 +242,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
          ncalls++;
       }
    }
-   else if (fCleanupType==TProofBenchRun::kCleanupKernel){
+   else if (fCleanupType==TProofBenchRun::kCleanupFileAdvise){
       TString inputdataname="PROOF_BenchmarkFilesToCleanupCacheFor";
       //fProof->ClearInputData(inputdataname.Data());
 
@@ -263,7 +263,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
    }
    else if (fCleanupType==TProofBenchRun::kCleanupNotSpecified){
       Error("Run", "fCleanupType==kCleanupNotSpecified; try again"
-                   " with either TProofBenchRun::kCleanupFile or TProofBenchRun::kCleanupKernel");
+                   " with either TProofBenchRun::kCleanupReadInFiles or TProofBenchRun::kCleanupFileAdvise");
    }
 
    DeleteParameters();
