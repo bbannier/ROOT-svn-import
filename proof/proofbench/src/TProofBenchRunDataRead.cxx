@@ -297,7 +297,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    
          //cleanup run
          dsname.Form("DataSetEvent%s_%d_%d", smode.Data(), nactive, nf);
-         if (fRunCleanup->GetCleanupType()==TProofBenchRun::kCleanupKernel){
+         if (fRunCleanup->GetCleanupType()==TProofBenchRun::kCleanupFileAdvise){
             fRunCleanup->SetDataSetCleanup(dsname);
          }
          fRunCleanup->Run(nevents, 0, 0, 0, 0, debug, 0);
