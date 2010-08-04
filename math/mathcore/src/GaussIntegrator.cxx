@@ -14,8 +14,6 @@
 #include <limits>
 #include <iostream>
 
-#define disp(var) std::cout << #var << ": " << var << std::endl;
-
 namespace ROOT {
 namespace Math {
 
@@ -59,7 +57,6 @@ double GaussIntegrator::Integral (double a, double b) {
 
 double GaussIntegrator::Integral () {
    ROOT::Math::IGenFunction* transformation = new WrappedMemFunction<GaussIntegrator, double (GaussIntegrator::*)(double)>(*this, &GaussIntegrator::DefaultMapping);
-   disp("GaussIntegrator::Integral ()");
    return DoIntegral(0., 1., transformation);  
 }
 
