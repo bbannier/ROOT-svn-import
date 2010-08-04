@@ -38,6 +38,8 @@ END_HTML
 #include "RooStats/SamplingDistribution.h"
 #include "RooStats/TestStatistic.h"
 
+#include "RooStats/RooStatsUtils.h"
+
 #include "RooRealVar.h"
 #include "RooProfileLL.h"
 #include "RooNLLVar.h"
@@ -49,6 +51,14 @@ namespace RooStats {
   class ProfileLikelihoodTestStat : public TestStatistic{
 
    public:
+     ProfileLikelihoodTestStat() {
+        // Proof constructor. Do not use.
+        fPdf = 0;
+        fProfile = 0;
+        fNll = 0;
+        fCachedBestFitParams = 0;
+        fLastData = 0;
+     }
      ProfileLikelihoodTestStat(RooAbsPdf& pdf) {
        fPdf = &pdf;
        fProfile = 0;
