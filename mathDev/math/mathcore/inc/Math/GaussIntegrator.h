@@ -146,15 +146,22 @@ public:
         undefined.
    */
    double Integral (double a, double b);
+                                                                                      
+   //double Integral (const IGenFunction& mapping, double a, double b);                   
+   
+   //double Integral (const IGenFunction& mapping);
+   
+   double Integral ();
+   
+   double DoIntegral (double a, double b, const IGenFunction* mapping = (const IGenFunction*)0);
 
    /** Set integration function (flag control if function must be copied inside).
        \@param f Function to be used in the calculations.
    */
    void SetFunction (const IGenFunction &);
-
-   /** This method is not implemented. */
-   double Integral ();
-
+   
+   double DefaultMapping(double x);
+   
    /** This method is not implemented. */
    double IntegralUp (double a);
 
@@ -174,7 +181,7 @@ protected:
    double fLastResult;              // Result from the last stimation.
    double fLastError;               // Error from the last stimation.
    const IGenFunction* fFunction;   // Pointer to function used.
-
+   
 };
 
 } // end namespace Math
