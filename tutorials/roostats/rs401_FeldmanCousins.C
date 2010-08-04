@@ -70,6 +70,7 @@ void rs401_FeldmanCousins()
   RooStats::FeldmanCousins fc(*data, m);
   fc.SetTestSize(.2); // set size of test
   fc.UseAdaptiveSampling(true);
+  fc.FluctuateNumDataEntries(false);
 
   // use the Feldman-Cousins tool
   ConfInterval* interval = fc.GetInterval();
