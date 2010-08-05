@@ -225,7 +225,7 @@ namespace TMVA {
       Double_t          fOverlap_integral;
 
       // mva values for the last trained method (testing sample)
-      std::vector<Double_t> *fMVAvalues;
+      std::vector<Float_t> *fMVAvalues;
       
       DataSetManager* fDataSetManager; // DSMTEST
       friend class Factory; // DSMTEST

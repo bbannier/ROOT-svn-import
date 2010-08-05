@@ -81,7 +81,7 @@ TMVA::MethodBoost::MethodBoost( const TString& jobName,
    fOverlap_integral(0.0),
    fMVAvalues(0)
 {
-   fMVAvalues = new std::vector<Double_t>;
+   fMVAvalues = new std::vector<Float_t>;
 }
 
 //_______________________________________________________________________
@@ -96,7 +96,7 @@ TMVA::MethodBoost::MethodBoost( DataSetInfo& dsi,
      fOverlap_integral(0.0), 
      fMVAvalues(0)
 {
-   fMVAvalues = new std::vector<Double_t>;
+   fMVAvalues = new std::vector<Float_t>;
 }
 
 //_______________________________________________________________________
