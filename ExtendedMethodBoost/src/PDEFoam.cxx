@@ -1577,7 +1577,7 @@ Double_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::WeightLinNeighbors( std::vector<Float_t> txvec, ECellValue cv, Int_t dim1, Int_t dim2, Bool_t TreatEmptyCells )
+Double_t TMVA::PDEFoam::WeightLinNeighbors( std::vector<Float_t> &txvec, ECellValue cv, Int_t dim1, Int_t dim2, Bool_t TreatEmptyCells )
 {
    // results the cell value, corresponding to txvec, weighted by the
    // neighor cells via a linear function
@@ -1622,7 +1622,7 @@ Double_t TMVA::PDEFoam::WeightLinNeighbors( std::vector<Float_t> txvec, ECellVal
 
    // loop over all dimensions to find neighbor cells
    for (Int_t dim=0; dim<GetTotDim(); dim++) {
-      std::vector<Float_t> ntxvec = txvec;
+      std::vector<Float_t> ntxvec(txvec);
       Double_t mindist;
       PDEFoamCell *mindistcell = 0; // cell with minimal distance to txvec
       // calc minimal distance to neighbor cell
@@ -1657,7 +1657,7 @@ Double_t TMVA::PDEFoam::WeightLinNeighbors( std::vector<Float_t> txvec, ECellVal
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> txvec,
+Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> &txvec,
                                    UInt_t dim )
 {
    // Returns the gauss weight between the 'cell' and a given coordinate 'txvec'.
@@ -2190,7 +2190,7 @@ Double_t TMVA::PDEFoam::GetProjectionCellValue( PDEFoamCell* cell,
 }
 
 //_____________________________________________________________________
-TVectorD* TMVA::PDEFoam::GetCellElements( std::vector<Float_t> xvec )
+TVectorD* TMVA::PDEFoam::GetCellElements( std::vector<Float_t> &xvec )
 {
    // Returns pointer to cell elements.  The given event vector 'xvec'
    // must be untransformed (i.e. [xmin, xmax]).
