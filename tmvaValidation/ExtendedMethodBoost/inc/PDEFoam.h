@@ -154,9 +154,9 @@ namespace TMVA {
 
       // ---------- Weighting functions for kernels
 
-      Float_t WeightGaus(PDEFoamCell*, std::vector<Float_t>, UInt_t dim=0);
+      Float_t WeightGaus(PDEFoamCell*, std::vector<Float_t>&, UInt_t dim=0);
 
-      Double_t WeightLinNeighbors( std::vector<Float_t> txvec, ECellValue cv, 
+      Double_t WeightLinNeighbors( std::vector<Float_t> &txvec, ECellValue cv, 
                                    Int_t dim1=-1, Int_t dim2=-1, 
                                    Bool_t TreatEmptyCells=kFALSE );
       
@@ -176,7 +176,7 @@ namespace TMVA {
       // ---------- Cell value access functions
 
       // low level functions to access a certain cell value
-      TVectorD* GetCellElements(std::vector<Float_t>);       // return cell elements of cell with given coordinates
+      TVectorD* GetCellElements(std::vector<Float_t>&);       // return cell elements of cell with given coordinates
       Double_t GetCellElement(PDEFoamCell *cell, UInt_t i);  // get Element 'i' in cell 'cell'
       void SetCellElement(PDEFoamCell *cell, UInt_t i, Double_t value); // set Element 'i' in cell 'cell' to value 'value'
 
