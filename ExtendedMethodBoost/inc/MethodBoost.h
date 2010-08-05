@@ -152,6 +152,10 @@ namespace TMVA {
       //creating the vectors of histogram for monitoring MVA response of each classifier
       void CreateMVAHistorgrams();
 
+      // calculate MVA values of current trained method on training
+      // sample
+      void CalcMVAValues();
+
       //Number of times the classifier is boosted (set by the user)
       Int_t             fBoostNum;
       // string specifying the boost type (AdaBoost / Bagging )
@@ -220,6 +224,8 @@ namespace TMVA {
       // background (training sample)
       Double_t          fOverlap_integral;
 
+      // mva values for the last trained method (testing sample)
+      std::vector<Double_t> *fMVAvalues;
       
       DataSetManager* fDataSetManager; // DSMTEST
       friend class Factory; // DSMTEST
