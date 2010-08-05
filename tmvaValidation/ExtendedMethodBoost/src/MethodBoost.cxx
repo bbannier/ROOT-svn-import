@@ -78,16 +78,26 @@ TMVA::MethodBoost::MethodBoost( const TString& jobName,
    fBoostedMethodOptions(theOption),
    fMonitorHist(0),
    fROC_training(0.0),
-   fOverlap_integral(0.0)
-{}
+   fOverlap_integral(0.0),
+   fMVAvalues(0)
+{
+   fMVAvalues = new std::vector<Double_t>;
+}
 
 //_______________________________________________________________________
 TMVA::MethodBoost::MethodBoost( DataSetInfo& dsi,
                                 const TString& theWeightFile,
                                 TDirectory* theTargetDir )
    : TMVA::MethodCompositeBase( Types::kBoost, dsi, theWeightFile, theTargetDir ),
-     fBoostNum(0), fRandomSeed(0), fMonitorHist(0), fROC_training(0.0), fOverlap_integral(0.0)
-{}
+     fBoostNum(0), 
+     fRandomSeed(0), 
+     fMonitorHist(0), 
+     fROC_training(0.0), 
+     fOverlap_integral(0.0), 
+     fMVAvalues(0)
+{
+   fMVAvalues = new std::vector<Double_t>;
+}
 
 //_______________________________________________________________________
 TMVA::MethodBoost::~MethodBoost( void )
@@ -103,6 +113,11 @@ TMVA::MethodBoost::~MethodBoost( void )
    fBTrainBgdMVAHist.clear();
    fTestSigMVAHist.clear();
    fTestBgdMVAHist.clear();
+
+   if (fMVAvalues) {
+      delete fMVAvalues;
+      fMVAvalues = 0;
+   }
 }
 
 
@@ -260,6 +275,7 @@ void TMVA::MethodBoost::Train()
    Data()->SetCurrentType(Types::kTraining);
 
    if (fMethods.size() > 0) fMethods.clear();
+   fMVAvalues->resize(Data()->GetNTrainingEvents());
 
    Log() << kINFO << "Training "<< fBoostNum << " " << fBoostedMethodName << " Classifiers ... patience please" << Endl;
    Timer timer( fBoostNum, GetName() );
@@ -1002,4 +1018,19 @@ Double_t TMVA::MethodBoost::GetOverlapIntegral()
    Data()->SetCurrentType(Types::kTraining);
 
    return overlap;
+}
+
+void TMVA::MethodBoost::CalcMVAValues()
+{
+   // Calculate MVA values of current method fMethods.back() on
+   // training sample
+
+   Data()->SetCurrentType(Types::kTraining);
+   MethodBase* method = dynamic_cast<MethodBase*>(fMethods.back());
+
+   // calculate MVA values
+   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+      Data()->GetEvent(ievt);
+      fMVAvalues->at(ievt) = method->GetMvaValue();
+   }
 }
