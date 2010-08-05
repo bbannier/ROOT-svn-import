@@ -154,9 +154,9 @@ namespace TMVA {
 
       // ---------- Weighting functions for kernels
 
-      Float_t WeightGaus(PDEFoamCell*, std::vector<Float_t>, UInt_t dim=0);
+      Float_t WeightGaus(PDEFoamCell*, std::vector<Float_t>&, UInt_t dim=0);
 
-      Double_t WeightLinNeighbors( std::vector<Float_t> txvec, ECellValue cv, 
+      Double_t WeightLinNeighbors( std::vector<Float_t> &txvec, ECellValue cv, 
                                    Int_t dim1=-1, Int_t dim2=-1, 
                                    Bool_t TreatEmptyCells=kFALSE );
       
@@ -176,7 +176,7 @@ namespace TMVA {
       // ---------- Cell value access functions
 
       // low level functions to access a certain cell value
-      TVectorD* GetCellElements(std::vector<Float_t>);       // return cell elements of cell with given coordinates
+      TVectorD* GetCellElements(std::vector<Float_t>&);       // return cell elements of cell with given coordinates
       Double_t GetCellElement(PDEFoamCell *cell, UInt_t i);  // get Element 'i' in cell 'cell'
       void SetCellElement(PDEFoamCell *cell, UInt_t i, Double_t value); // set Element 'i' in cell 'cell' to value 'value'
 
@@ -187,15 +187,15 @@ namespace TMVA {
       Bool_t   CellValueIsUndefined( PDEFoamCell* );
 
       // finds cell according to given event variables
-      PDEFoamCell* FindCell(std::vector<Float_t>); //!
-      std::vector<TMVA::PDEFoamCell*> FindCells(std::vector<Float_t>); //!
+      PDEFoamCell* FindCell(std::vector<Float_t>&); //!
+      std::vector<TMVA::PDEFoamCell*> FindCells(std::vector<Float_t>&); //!
 
       // find cells, which fit a given event vector
-      void FindCellsRecursive(std::vector<Float_t>, PDEFoamCell*, 
+      void FindCellsRecursive(std::vector<Float_t>&, PDEFoamCell*, 
                               std::vector<PDEFoamCell*> &);
       
       // calculates the mean/ mpv target values for a given event 'tvals'
-      std::vector<Float_t> GetCellTargets( std::vector<Float_t> tvals, ETargetSelection ts );
+      std::vector<Float_t> GetCellTargets( std::vector<Float_t> &tvals, ETargetSelection ts );
       // get number of events in cell during foam build-up
       Double_t GetBuildUpCellEvents(PDEFoamCell* cell);
       
@@ -280,9 +280,9 @@ namespace TMVA {
       // reason: foam allways has boundaries [0, 1]
 
       Float_t VarTransform(Int_t idim, Float_t x);       // transform [xmin, xmax] --> [0, 1]
-      std::vector<Float_t> VarTransform(std::vector<Float_t> invec);
+      std::vector<Float_t> VarTransform(std::vector<Float_t> &invec);
       Float_t VarTransformInvers(Int_t idim, Float_t x); // transform [0, 1] --> [xmin, xmax]
-      std::vector<Float_t> VarTransformInvers(std::vector<Float_t> invec);
+      std::vector<Float_t> VarTransformInvers(std::vector<Float_t> &invec);
 
       // ---------- Debug functions
 
@@ -323,20 +323,20 @@ namespace TMVA {
       // ---------- Foam evaluation functions
 
       // get cell value for a given event
-      Double_t GetCellValue(std::vector<Float_t>, ECellValue);
+      Double_t GetCellValue(std::vector<Float_t>&, ECellValue);
 
       // helper functions to access cell data with kernel
-      Double_t GetCellDiscr(std::vector<Float_t> xvec, EKernel kernel=kNone);
-      Double_t GetCellDensity(std::vector<Float_t> xvec, EKernel kernel=kNone);
+      Double_t GetCellDiscr(std::vector<Float_t> &xvec, EKernel kernel=kNone);
+      Double_t GetCellDensity(std::vector<Float_t> &xvec, EKernel kernel=kNone);
 
       // calc mean cell value of neighbor cells
-      Double_t GetAverageNeighborsValue(std::vector<Float_t> txvec, ECellValue cv);
+      Double_t GetAverageNeighborsValue(std::vector<Float_t> &txvec, ECellValue cv);
 
       // returns regression value (mono target regression)
-      Double_t GetCellRegValue0(std::vector<Float_t>, EKernel kernel=kNone);
+      Double_t GetCellRegValue0(std::vector<Float_t>&, EKernel kernel=kNone);
 
       // returns regression value i, given all variables (multi target regression)
-      std::vector<Float_t> GetProjectedRegValue(std::vector<Float_t> vals, EKernel kernel=kNone, ETargetSelection ts=kMean);
+      std::vector<Float_t> GetProjectedRegValue(std::vector<Float_t> &vals, EKernel kernel=kNone, ETargetSelection ts=kMean);
 
       // ---------- ROOT class definition
       ClassDef(PDEFoam,3)
@@ -354,7 +354,7 @@ inline Float_t TMVA::PDEFoam::VarTransform(Int_t idim, Float_t x)
 }
 
 //_____________________________________________________________________
-inline std::vector<Float_t> TMVA::PDEFoam::VarTransform(std::vector<Float_t> invec)
+inline std::vector<Float_t> TMVA::PDEFoam::VarTransform(std::vector<Float_t> &invec)
 {
    // transform vector invec from [xmin, xmax] --> [0, 1]
    std::vector<Float_t> outvec;
@@ -371,7 +371,7 @@ inline Float_t TMVA::PDEFoam::VarTransformInvers(Int_t idim, Float_t x)
 }
 
 //_____________________________________________________________________
-inline std::vector<Float_t> TMVA::PDEFoam::VarTransformInvers(std::vector<Float_t> invec)
+inline std::vector<Float_t> TMVA::PDEFoam::VarTransformInvers(std::vector<Float_t> &invec)
 {
    // transform vector invec from [0, 1] --> [xmin, xmax]
    std::vector<Float_t> outvec;
