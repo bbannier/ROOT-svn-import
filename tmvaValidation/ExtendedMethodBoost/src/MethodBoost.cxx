@@ -653,7 +653,7 @@ void TMVA::MethodBoost::SingleBoost()
       }
       sumAll += w;
       sumAllOrig += wo;
-      if ( sig != (fMVAvalues->at(ievt) > GetSignalReferenceCut()) ) {
+      if ( sig != (fMVAvalues->at(ievt) > method->GetSignalReferenceCut()) ) {
 	 WrongDetection[ievt]=kTRUE; 
 	 sumWrong+=w; 
 	 sumWrongOrig+=wo;
@@ -751,6 +751,7 @@ void TMVA::MethodBoost::CalcMethodWeight()
    // Calculate weight of single method.
    // This is no longer done in SingleBoost();
 
+   MethodBase* method =  dynamic_cast<MethodBase*>(fMethods.back());
    Event * ev; Float_t w;
    Double_t sumAll=0, sumWrong=0;
 
@@ -763,7 +764,7 @@ void TMVA::MethodBoost::CalcMethodWeight()
       w       = ev->GetWeight();
       sumAll += w;
       if ( DataInfo().IsSignal(ev) != 
-	   (fMVAvalues->at(ievt) > GetSignalReferenceCut()) )
+	   (fMVAvalues->at(ievt) > method->GetSignalReferenceCut()) )
 	 sumWrong += w;
    }
    fMethodError=sumWrong/sumAll;
