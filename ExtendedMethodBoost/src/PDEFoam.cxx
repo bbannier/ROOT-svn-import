@@ -1049,7 +1049,7 @@ void TMVA::PDEFoam::CalcCellDiscr()
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellDiscr( std::vector<Float_t> xvec, EKernel kernel )
+Double_t TMVA::PDEFoam::GetCellDiscr( std::vector<Float_t> &xvec, EKernel kernel )
 {
    // Get discriminator saved in cell (previously calculated in CalcCellDiscr())
    // which encloses the coordinates given in xvec.
@@ -1059,7 +1059,7 @@ Double_t TMVA::PDEFoam::GetCellDiscr( std::vector<Float_t> xvec, EKernel kernel 
    Double_t result = 0.;
 
    // transform xvec
-   std::vector<Float_t> txvec = VarTransform(xvec);
+   std::vector<Float_t> txvec(VarTransform(xvec));
 
    // find cell
    PDEFoamCell *cell= FindCell(txvec);
@@ -1121,7 +1121,8 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev, Bool_t NoNegWeights)
       values.insert(values.end(), targets.begin(), targets.end());
 
    // find corresponding foam cell
-   PDEFoamCell *cell = FindCell(VarTransform(values));
+   std::vector<Float_t> tvalues = VarTransform(values);
+   PDEFoamCell *cell = FindCell(tvalues);
    if (!cell) {
       Log() << kFATAL << "<PDEFoam::FillFoamCells>: No cell found!" << Endl;
       return;
@@ -1149,15 +1150,15 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev, Bool_t NoNegWeights)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellRegValue0( std::vector<Float_t> xvec, EKernel kernel )
+Double_t TMVA::PDEFoam::GetCellRegValue0( std::vector<Float_t> &xvec, EKernel kernel )
 {
    // Get regression value 0 from cell that contains xvec.
    // This function is used when the MultiTargetRegression==False option is set.
 
    Double_t result = 0.;
 
-   std::vector<Float_t> txvec = VarTransform(xvec);
-   PDEFoamCell *cell          = FindCell(txvec);
+   std::vector<Float_t> txvec(VarTransform(xvec));
+   PDEFoamCell *cell = FindCell(txvec);
 
    if (!cell) {
       Log() << kFATAL << "<GetCellRegValue0> ERROR: No cell found!" << Endl;
@@ -1212,7 +1213,7 @@ Double_t TMVA::PDEFoam::GetCellRegValue0( std::vector<Float_t> xvec, EKernel ker
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetAverageNeighborsValue( std::vector<Float_t> txvec,
+Double_t TMVA::PDEFoam::GetAverageNeighborsValue( std::vector<Float_t> &txvec,
                                                   ECellValue cv )
 {
    // This function returns the average value 'cv' of only nearest
@@ -1234,7 +1235,7 @@ Double_t TMVA::PDEFoam::GetAverageNeighborsValue( std::vector<Float_t> txvec,
 
    // loop over all dimensions and find neighbor cells
    for (Int_t dim=0; dim<GetTotDim(); dim++) {
-      std::vector<Float_t> ntxvec = txvec;
+      std::vector<Float_t> ntxvec(txvec);
       PDEFoamCell* left_cell  = 0; // left cell
       PDEFoamCell* right_cell = 0; // right cell
 
@@ -1286,7 +1287,7 @@ Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-std::vector<Float_t> TMVA::PDEFoam::GetCellTargets( std::vector<Float_t> tvals, ETargetSelection ts )
+std::vector<Float_t> TMVA::PDEFoam::GetCellTargets( std::vector<Float_t> &tvals, ETargetSelection ts )
 {
    // This function is used when the MultiTargetRegression==True
    // option is set.  It calculates the mean target or most probable
@@ -1360,7 +1361,7 @@ std::vector<Float_t> TMVA::PDEFoam::GetCellTargets( std::vector<Float_t> tvals, 
 }
 
 //_____________________________________________________________________
-std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> vals, EKernel kernel, ETargetSelection ts )
+std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> &vals, EKernel kernel, ETargetSelection ts )
 {
    // This function is used when the MultiTargetRegression==True option is set.
    // Returns regression value i, given the event variables 'vals'.
@@ -1384,7 +1385,7 @@ std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> v
    }
 
    // transform variables (vals)
-   std::vector<Float_t> txvec = VarTransform(vals);
+   std::vector<Float_t> txvec(VarTransform(vals));
    std::vector<Float_t> target(GetTotDim()-txvec.size(), 0); // returned vector
 
    // choose kernel
@@ -1437,7 +1438,7 @@ std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> v
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellDensity( std::vector<Float_t> xvec, EKernel kernel )
+Double_t TMVA::PDEFoam::GetCellDensity( std::vector<Float_t> &xvec, EKernel kernel )
 {
    // Returns density (=number of entries / volume) of cell that encloses 'xvec'.
    // This function is called by GetMvaValue() in case of two separated foams
@@ -1445,7 +1446,7 @@ Double_t TMVA::PDEFoam::GetCellDensity( std::vector<Float_t> xvec, EKernel kerne
    // 'kernel' can be either kNone or kGaus.
 
    Double_t result = 0;
-   std::vector<Float_t> txvec = VarTransform(xvec);
+   std::vector<Float_t> txvec(VarTransform(xvec));
    PDEFoamCell *cell          = FindCell(txvec);
 
    if (!cell) {
@@ -1557,13 +1558,14 @@ Double_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv )
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> xvec, ECellValue cv)
+Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv)
 {
    // This function finds the cell, which corresponds to the given
    // event vector 'xvec' and return its value, which is given by the
    // parameter 'cv'.
    
-   return GetCellValue(FindCell(VarTransform(xvec)), cv);
+   std::vector<Float_t> txvec(VarTransform(xvec));
+   return GetCellValue(FindCell(txvec), cv);
 }
 
 //_____________________________________________________________________
@@ -1719,7 +1721,7 @@ Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> txvec
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> xvec )
+TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> &xvec )
 {
    // Find cell that contains xvec
    //
@@ -1745,7 +1747,7 @@ TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> xvec )
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::FindCellsRecursive(std::vector<Float_t> txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells)
+void TMVA::PDEFoam::FindCellsRecursive(std::vector<Float_t> &txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells)
 {
    // This is a helper function for FindCells().  It saves in 'cells'
    // all cells, which contain txvec.  It works analogous to
@@ -1788,7 +1790,7 @@ void TMVA::PDEFoam::FindCellsRecursive(std::vector<Float_t> txvec, PDEFoamCell* 
 }
 
 //_____________________________________________________________________
-std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::vector<Float_t> txvec)
+std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::vector<Float_t> &txvec)
 {
    // Find all cells, that contain txvec.  This function can be used,
    // when the dimension of the foam is greater than the dimension of
@@ -1874,7 +1876,7 @@ TH1D* TMVA::PDEFoam::Draw1Dim( const char *opt, Int_t nbin )
       xvec.at(0) = h1->GetBinCenter(ibinx);
 
       // transform xvec
-      std::vector<Float_t> txvec = VarTransform(xvec);
+      std::vector<Float_t> txvec(VarTransform(xvec));
 
       // loop over all active cells
       for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
@@ -2194,8 +2196,8 @@ TVectorD* TMVA::PDEFoam::GetCellElements( std::vector<Float_t> xvec )
    // must be untransformed (i.e. [xmin, xmax]).
 
    assert(unsigned(GetTotDim()) == xvec.size());
-
-   return dynamic_cast<TVectorD*>(FindCell(VarTransform(xvec))->GetElement());
+   std::vector<Float_t> txvec(VarTransform(xvec));
+   return dynamic_cast<TVectorD*>(FindCell(txvec)->GetElement());
 }
 
 //_____________________________________________________________________

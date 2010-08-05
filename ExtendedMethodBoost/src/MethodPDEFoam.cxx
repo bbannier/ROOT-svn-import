@@ -549,9 +549,6 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err )
       else discr_error = 1.;
 
       if (discr_error < 1e-10) discr_error = 1.;
-
-      // do not classify, if error too big
-      if (fDiscrErrCut>=0.0 && discr_error > fDiscrErrCut) discr = -1.;
    }
 
    /////////////////////////////////////////////////////////////////////////////
@@ -565,9 +562,6 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err )
       // get discriminator direct from the foam
       discr       = foam[0]->GetCellDiscr(xvec, fKernel);
       discr_error = foam[0]->GetCellValue(xvec, kDiscriminatorError);
-
-      // do not classify, if error too big
-      if (fDiscrErrCut>=0.0 && discr_error > fDiscrErrCut) discr = -1.;
    }
 
    // attribute error
