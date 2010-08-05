@@ -275,7 +275,7 @@ void TMVA::MethodBoost::Train()
    Data()->SetCurrentType(Types::kTraining);
 
    if (fMethods.size() > 0) fMethods.clear();
-   fMVAvalues->resize(Data()->GetNTrainingEvents());
+   fMVAvalues->resize(Data()->GetNTrainingEvents(), 0.0);
 
    Log() << kINFO << "Training "<< fBoostNum << " " << fBoostedMethodName << " Classifiers ... patience please" << Endl;
    Timer timer( fBoostNum, GetName() );
@@ -343,11 +343,16 @@ void TMVA::MethodBoost::Train()
          SingleTrain();
          TMVA::MsgLogger::EnableOutput();
          method->WriteMonitoringHistosToFile();
+
+	 // calculate MVA values of method on training sample
+	 CalcMVAValues();
+
          if (fMethodIndex==0 && fMonitorBoostedMethod) CreateMVAHistorgrams();
 
-	 // get ROC integral for single method on training sample
-	 fROC_training = GetBoostROCIntegral(kTRUE, Types::kTraining);
-	 fOverlap_integral = GetOverlapIntegral();
+	 // get ROC integral and overlap integral for single method on
+	 // training sample
+	 fROC_training = GetBoostROCIntegral(kTRUE, Types::kTraining, 
+					     1.0, kTRUE);
 	 
 	 // calculate method weight
 	 CalcMethodWeight();
@@ -451,17 +456,11 @@ void TMVA::MethodBoost::CreateMVAHistorgrams()
    // calculating histograms boundries and creating histograms..
    // nrms = number of rms around the average to use for outline (of the 0 classifier)
    Double_t meanS, meanB, rmsS, rmsB, xmin, xmax, nrms = 10;
-   std::vector <Float_t>* mvaRes = new std::vector <Float_t>(Data()->GetNEvents());
-   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-      Data()->GetEvent(ievt);
-      (*mvaRes)[ievt] = fMethods[0]->GetMvaValue();
-   }
-
    Int_t signalClass = 0;
    if (DataInfo().GetClassInfo("Signal") != 0) {
       signalClass = DataInfo().GetClassInfo("Signal")->GetNumber();
    }
-   gTools().ComputeStat( Data()->GetEventCollection(), mvaRes,
+   gTools().ComputeStat( Data()->GetEventCollection(), fMVAvalues,
                          meanS, meanB, rmsS, rmsB, xmin, xmax, signalClass );
 
    fNbins = gConfig().fVariablePlotting.fNbinsXOfROCCurve;
@@ -477,7 +476,6 @@ void TMVA::MethodBoost::CreateMVAHistorgrams()
       fTestSigMVAHist  .push_back( new TH1F( Form("MVA_Test_S%04i",imtd), "MVA_Test_S", fNbins, xmin, xmax ) );
       fTestBgdMVAHist  .push_back( new TH1F( Form("MVA_Test_B%04i",imtd), "MVA_Test_B", fNbins, xmin, xmax ) );
    }
-   mvaRes->clear();
 }
 
 //_______________________________________________________________________
@@ -642,7 +640,7 @@ void TMVA::MethodBoost::SingleBoost()
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
       ev = Data()->GetEvent(ievt);
       sig=DataInfo().IsSignal(ev);
-      v = method->GetMvaValue();
+      v = fMVAvalues->at(ievt);
       w = ev->GetWeight();
       wo = ev->GetOriginalWeight();
       if (sig && fMonitorBoostedMethod) {
@@ -655,8 +653,11 @@ void TMVA::MethodBoost::SingleBoost()
       }
       sumAll += w;
       sumAllOrig += wo;
-      if (sig != method->IsSignalLike())
-         {WrongDetection[ievt]=kTRUE; sumWrong+=w; sumWrongOrig+=wo;}
+      if ( sig != (fMVAvalues->at(ievt) > GetSignalReferenceCut()) ) {
+	 WrongDetection[ievt]=kTRUE; 
+	 sumWrong+=w; 
+	 sumWrongOrig+=wo;
+      }
       else WrongDetection[ievt]=kFALSE;
    }
    fMethodError=sumWrong/sumAll;
@@ -724,13 +725,13 @@ void TMVA::MethodBoost::SingleBoost()
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
 	 if (fBoostType == "HighEdgeGauss")
-	    ev->SetBoostWeight( TMath::Exp( -std::pow(method->GetMvaValue()-MVACutValue,2)/0.1 ) );
+	    ev->SetBoostWeight( TMath::Exp( -std::pow(fMVAvalues->at(ievt)-MVACutValue,2)/0.1 ) );
 	 else if (fBoostType == "HighEdgePara")
-	    ev->SetBoostWeight( -4.0 * std::pow(method->GetMvaValue()-0.5,2) + 1.0 );
+	    ev->SetBoostWeight( -4.0 * std::pow(fMVAvalues->at(ievt)-0.5,2) + 1.0 );
 	 else if (fBoostType == "HighEdgeCoPara")
-	    ev->SetBoostWeight( DataInfo().IsSignal(ev) ? std::pow(1-method->GetMvaValue(),2) : std::pow(method->GetMvaValue(),2) );
+	    ev->SetBoostWeight( DataInfo().IsSignal(ev) ? std::pow(1-fMVAvalues->at(ievt),2) : std::pow(fMVAvalues->at(ievt),2) );
 	 else
-	    ev->SetBoostWeight( DataInfo().IsSignal(ev) ? 1-method->GetMvaValue() : method->GetMvaValue() );
+	    ev->SetBoostWeight( DataInfo().IsSignal(ev) ? 1-fMVAvalues->at(ievt) : fMVAvalues->at(ievt) );
 
          sumAll1 += ev->GetWeight();
       }
@@ -750,7 +751,6 @@ void TMVA::MethodBoost::CalcMethodWeight()
    // Calculate weight of single method.
    // This is no longer done in SingleBoost();
 
-   MethodBase* method =  dynamic_cast<MethodBase*>(fMethods.back());
    Event * ev; Float_t w;
    Double_t sumAll=0, sumWrong=0;
 
@@ -762,7 +762,9 @@ void TMVA::MethodBoost::CalcMethodWeight()
       ev      = Data()->GetEvent(ievt);
       w       = ev->GetWeight();
       sumAll += w;
-      if (DataInfo().IsSignal(ev) != method->IsSignalLike())  sumWrong += w;
+      if ( DataInfo().IsSignal(ev) != 
+	   (fMVAvalues->at(ievt) > GetSignalReferenceCut()) )
+	 sumWrong += w;
    }
    fMethodError=sumWrong/sumAll;
 
@@ -870,7 +872,7 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETreeType eTT, Double_t AllMethodsWeight)
+Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETreeType eTT, Double_t AllMethodsWeight, Bool_t CalcOverlapIntergral)
 {
    // Calculate the ROC integral of a single classifier or even the
    // whole boosted classifier.  The tree type (training or testing
@@ -912,10 +914,15 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
 
    // calculate MVA values
    Double_t meanS, meanB, rmsS, rmsB, xmin, xmax, nrms = 10;
-   std::vector <Float_t>* mvaRes = new std::vector <Float_t>(Data()->GetNEvents());
-   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-      Data()->GetEvent(ievt);
-      (*mvaRes)[ievt] = singleMethod ? method->GetMvaValue() : GetMvaValue(&err);
+   std::vector <Float_t>* mvaRes;
+   if (singleMethod && eTT==Types::kTraining)
+      mvaRes = fMVAvalues; // values already calculated
+   else {
+      mvaRes = new std::vector <Float_t>(Data()->GetNEvents());
+      for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
+	 Data()->GetEvent(ievt);
+	 (*mvaRes)[ievt] = singleMethod ? method->GetMvaValue() : GetMvaValue(&err);
+      }
    }
 
    // restore the method weights
@@ -937,11 +944,24 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    // calculate ROC integral
    TH1* mva_s = new TH1F( "MVA_S", "MVA_S", fNbins, xmin, xmax );
    TH1* mva_b = new TH1F( "MVA_B", "MVA_B", fNbins, xmin, xmax );
+   TH1 *mva_s_overlap=0, *mva_b_overlap=0;
+   if (CalcOverlapIntergral) {
+      mva_s_overlap = new TH1F( "MVA_S_OVERLAP", "MVA_S_OVERLAP", fNbins, xmin, xmax );
+      mva_b_overlap = new TH1F( "MVA_B_OVERLAP", "MVA_B_OVERLAP", fNbins, xmin, xmax );
+   }
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
       const Event* ev = GetEvent(ievt);
       Float_t w = (eTT==Types::kTesting ? ev->GetWeight() : ev->GetOriginalWeight());
       if (DataInfo().IsSignal(ev))  mva_s->Fill( (*mvaRes)[ievt], w );
       else                          mva_b->Fill( (*mvaRes)[ievt], w );
+
+      if (CalcOverlapIntergral) {
+	 Float_t w_ov = ev->GetWeight();
+	 if (DataInfo().IsSignal(ev))  
+	    mva_s_overlap->Fill( (*mvaRes)[ievt], w_ov );
+	 else
+	    mva_b_overlap->Fill( (*mvaRes)[ievt], w_ov );
+      }
    }
    gTools().NormHist( mva_s );
    gTools().NormHist( mva_b );
@@ -951,73 +971,32 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    // calculate ROC integral from fS, fB
    Double_t ROC = MethodBase::GetROCIntegral(fS, fB);
    
+   // calculate overlap integral
+   if (CalcOverlapIntergral) {
+      gTools().NormHist( mva_s_overlap );
+      gTools().NormHist( mva_b_overlap );
+
+      fOverlap_integral = 0.0;
+      for (Int_t bin=1; bin<=mva_s_overlap->GetNbinsX(); bin++){
+	 Double_t bc_s = mva_s_overlap->GetBinContent(bin);
+	 Double_t bc_b = mva_b_overlap->GetBinContent(bin);
+	 if (bc_s > 0.0 && bc_b > 0.0)
+	    fOverlap_integral += TMath::Min(bc_s, bc_b);
+      }
+
+      delete mva_s_overlap;
+      delete mva_b_overlap;
+   }
+
    delete mva_s;
    delete mva_b;
    delete fS;
    delete fB;
-   delete mvaRes;
+   if (!(singleMethod && eTT==Types::kTraining))  delete mvaRes;
 
    Data()->SetCurrentType(Types::kTraining);
 
    return ROC;
-}
-
-//_______________________________________________________________________
-Double_t TMVA::MethodBoost::GetOverlapIntegral()
-{
-   // Calculate the overlap integral of a single classifier
-
-   Data()->SetCurrentType(Types::kTraining);
-   MethodBase* method = dynamic_cast<MethodBase*>(fMethods.back());
-
-   // calculate MVA values
-   Double_t meanS, meanB, rmsS, rmsB, xmin, xmax, nrms = 10;
-   std::vector <Float_t>* mvaRes = new std::vector <Float_t>(Data()->GetNEvents());
-   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-      Data()->GetEvent(ievt);
-      (*mvaRes)[ievt] = method->GetMvaValue();
-   }
-
-   // now create histograms for calculation of the ROC integral
-   Int_t signalClass = 0;
-   if (DataInfo().GetClassInfo("Signal") != 0) {
-      signalClass = DataInfo().GetClassInfo("Signal")->GetNumber();
-   }
-   gTools().ComputeStat( Data()->GetEventCollection(Types::kTraining), mvaRes,
-                         meanS, meanB, rmsS, rmsB, xmin, xmax, signalClass );
-
-   fNbins = gConfig().fVariablePlotting.fNbinsXOfROCCurve;
-   xmin = TMath::Max( TMath::Min(meanS - nrms*rmsS, meanB - nrms*rmsB ), xmin );
-   xmax = TMath::Min( TMath::Max(meanS + nrms*rmsS, meanB + nrms*rmsB ), xmax ) + 0.0001;
-
-   // fill MVA histograms
-   TH1* mva_s = new TH1F( "MVA_S", "MVA_S", fNbins, xmin, xmax );
-   TH1* mva_b = new TH1F( "MVA_B", "MVA_B", fNbins, xmin, xmax );
-   for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-      const Event* ev = GetEvent(ievt);
-      Float_t w = ev->GetWeight();
-      if (DataInfo().IsSignal(ev))  mva_s->Fill( (*mvaRes)[ievt], w );
-      else                          mva_b->Fill( (*mvaRes)[ievt], w );
-   }
-   gTools().NormHist( mva_s );
-   gTools().NormHist( mva_b );
-
-   // calculate overlap integral
-   Double_t overlap = 0.0;
-   for (Int_t bin=1; bin<=mva_s->GetNbinsX(); bin++){
-      Double_t bc_s = mva_s->GetBinContent(bin);
-      Double_t bc_b = mva_b->GetBinContent(bin);
-      if (bc_s > 0.0 && bc_b > 0.0)
-	 overlap += TMath::Min(bc_s, bc_b);
-   }
-   
-   delete mva_s;
-   delete mva_b;
-   delete mvaRes;
-
-   Data()->SetCurrentType(Types::kTraining);
-
-   return overlap;
 }
 
 void TMVA::MethodBoost::CalcMVAValues()
