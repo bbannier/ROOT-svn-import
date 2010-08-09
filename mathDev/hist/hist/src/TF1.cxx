@@ -1572,17 +1572,41 @@ void TF1::ExecuteEvent(Int_t event, Int_t px, Int_t py)
    }
 }
 
+//______________________________________________________________________________
+Bool_t TF1::IsParFixed(Int_t ipar) const
+{
+   // return true if parameter ipar is fixed
+   // Use a convention in the way the par limits are stored 
+   // if fmin >= fmax the parameter is fixed apart from  the case 0,0 
+   if (ipar < 0 || ipar > fNpar-1) return kFALSE;
+   if (!fParMin || !fParMax) return kFALSE; 
+   if (fParMin[ipar] == 0 && fParMax[ipar] == 0) return kFALSE; 
+   if (fParMin[ipar] < fParMax[ipar]) return kFALSE;
+   return kTRUE;  
+}
+
 
 //______________________________________________________________________________
 void TF1::FixParameter(Int_t ipar, Double_t value)
 {
    // Fix the value of a parameter
    // The specified value will be used in a fit operation
+   // Store the limits 
+   // as -low, +up
 
    if (ipar < 0 || ipar > fNpar-1) return;
    SetParameter(ipar,value);
-   if (value != 0) SetParLimits(ipar,value,value);
-   else            SetParLimits(ipar,1,1);
+   Double_t plow, pup; 
+   GetParLimits(ipar,plow,pup);
+   if (plow == 0 && pup == 0) { 
+      // set to -1,-1 in case value is zero and limits are not set
+      if (value == 0) SetParLimits(ipar,-1,-1);
+      else SetParLimits(ipar, -value, -value); 
+   }
+   else {
+      // case limits exists
+      SetParLimits(ipar,-plow,-pup);
+   }
 }
 
 
@@ -1806,6 +1830,11 @@ void TF1::GetParLimits(Int_t ipar, Double_t &parmin, Double_t &parmax) const
    if (ipar < 0 || ipar > fNpar-1) return;
    if (fParMin) parmin = fParMin[ipar];
    if (fParMax) parmax = fParMax[ipar];
+   // since we store -min, -max for fixed parameters
+   if (IsParFixed(ipar) ) { 
+      parmin *= -1; 
+      parmax *= -1; 
+   }
 }
 
 
