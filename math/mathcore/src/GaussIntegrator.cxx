@@ -12,10 +12,48 @@
 #include "Math/WrappedFunction.h"
 #include <cmath>
 #include <limits>
+
+//debugging
 #include <iostream>
+#define disp(var) std::cout << #var << ": " << var << std::endl;
 
 namespace ROOT {
 namespace Math {
+
+// GaussIntegrator::IntegrandTransform::IntegrandTransform()
+// /* : fSign(kPlus), fIntegrand(integrand), fBoundary(0.), fInfiniteInterval(true) */{
+// }
+      
+GaussIntegrator::IntegrandTransform::IntegrandTransform(const IGenFunction* integrand)
+   : fSign(kPlus), fIntegrand(integrand), fBoundary(0.), fInfiniteInterval(true) {
+}
+
+GaussIntegrator::IntegrandTransform::IntegrandTransform(const double boundary, ESemiInfinitySign sign, const IGenFunction* integrand) 
+   : fSign(sign), fIntegrand(integrand), fBoundary(boundary), fInfiniteInterval(false)  {
+}
+
+double GaussIntegrator::IntegrandTransform::DoEval(double x) const {
+   double result = DoEval(x, fBoundary, fSign);
+   return  result += (fInfiniteInterval ? DoEval(x, 0., -1) : 0.);
+}
+
+double GaussIntegrator::IntegrandTransform::DoEval(double x, double boundary, int sign) const {
+   double mappedX = 1. / x - 1.;
+   return (*fIntegrand)(boundary + sign * mappedX) * std::pow(mappedX + 1., 2);;
+}
+
+double GaussIntegrator::IntegrandTransform::operator()(double x) const {
+   return DoEval(x);
+}
+
+IGenFunction* GaussIntegrator::IntegrandTransform::Clone() const {
+   return new IntegrandTransform(fBoundary, fSign, fIntegrand);
+}
+
+IGenFunction* GaussIntegrator::IntegrandTransform::Mapping() {
+   return this;
+}
+
 
 bool GaussIntegrator::fgAbsValue = false;
 
@@ -37,32 +75,31 @@ GaussIntegrator::~GaussIntegrator()
 void GaussIntegrator::AbsValue(bool flag)
 {   fgAbsValue = flag;  }
 
-double GaussIntegrator::Integral (double a, double b) {
-   return DoIntegral(a, b);
+double GaussIntegrator::Integral(double a, double b) {
+   return DoIntegral(a, b, fFunction);
 }
-
-// double GaussIntegrator::Integral (const IGenFunction& mapping, double a, double b) {
-//    const IGenFunction* transformation = &mapping;
-//    a = (*transformation)(a);
-//    b = (*transformation)(b);
-//    return DoIntegral(a, b, transformation);
-// }
-
-// double GaussIntegrator::Integral (const IGenFunction& mapping) { // Mind that the mapping has to tranform (-inf, inf) interval strictly to the limited interval (a,b)
-//    const IGenFunction* transformation = &mapping;
-//    double a = -1. * std::numeric_limits<Double_t>::infinity();
-//    double b = std::numeric_limits<Double_t>::infinity();
-//    return DoIntegral (a, b, transformation);  
-// }
 
 double GaussIntegrator::Integral () {
-   ROOT::Math::IGenFunction* transformation = new WrappedMemFunction<GaussIntegrator, double (GaussIntegrator::*)(double)>(*this, &GaussIntegrator::DefaultMapping);
-   return DoIntegral(0., 1., transformation);  
+   disp("GaussIntegrator::Integral")
+   IntegrandTransform it(this->fFunction);
+   return DoIntegral(0., 1., it.Clone());
 }
 
-double GaussIntegrator::DoIntegral (double a, double b, const IGenFunction* mapping)
+double GaussIntegrator::IntegralUp (double a) {
+   disp("GaussIntegrator::IntegralUp")
+   IntegrandTransform it(a, GaussIntegrator::IntegrandTransform::kPlus, this->fFunction);
+   return DoIntegral(0., 1., it.Clone());
+}
+
+double GaussIntegrator::IntegralLow (double b) {
+   disp("GaussIntegrator::IntegralLow")
+   IntegrandTransform it(b, GaussIntegrator::IntegrandTransform::kMinus, this->fFunction);
+   return DoIntegral(0., 1., it.Clone()/*Mapping()*/);
+}
+
+double GaussIntegrator::DoIntegral(double a, double b, const IGenFunction* function)
 {
-   //  Return Integral of function between mapping(a) and mapping(b).
+   //  Return Integral of function between a and b.
 
    const double kHF = 0.5;
    const double kCST = 5./1000;
@@ -105,46 +142,22 @@ CASE2:
    s8 = 0;
    for (i=0;i<4;i++) {
       u     = c2*x[i];
-      if (mapping) {
-         xx[0] = (*mapping)(c1+u);
-         double xxminus[1] = {-1. * xx[0]}; 
-         f1    = ((*fFunction)(xx) + (*fFunction)(xxminus)) / std::pow(1. / (*xx + 1) , 2);
-      } else {
-         xx[0] = c1+u;
-         f1    = (*fFunction)(xx);
-      }
+      xx[0] = c1+u;
+      f1    = (*function)(xx);
       if (fgAbsValue) f1 = std::abs(f1);
-      if (mapping) {
-         xx[0] = (*mapping)(c1-u);
-         double xxminus[1] = {-1. * xx[0]};
-         f2    = ((*fFunction)(xx) + (*fFunction)(xxminus)) / std::pow(1. / (*xx + 1) , 2);
-      } else {
-         xx[0] = c1-u;
-         f2    = (*fFunction)(xx);
-      }
+      xx[0] = c1-u;
+      f2    = (*function) (xx);
       if (fgAbsValue) f2 = std::abs(f2);
       s8   += w[i]*(f1 + f2);
    }
    s16 = 0;
    for (i=4;i<12;i++) {
       u     = c2*x[i];
-      if (mapping) {
-         xx[0] = (*mapping)(c1+u);
-         double xxminus[1] = {-1. * xx[0]};
-         f1    = ((*fFunction)(xx) + (*fFunction)(xxminus)) / std::pow(1. / (*xx + 1) , 2);
-      } else {
-         xx[0] = c1+u;
-         f1    = (*fFunction) (xx);
-      }
+      xx[0] = c1+u;
+      f1    = (*function) (xx);
       if (fgAbsValue) f1 = std::abs(f1);
-      if (mapping) {
-         xx[0] = (*mapping)(c1-u);
-         double xxminus[1] = {-1. * xx[0]};
-         f2    = ((*fFunction)(xx) + (*fFunction)(xxminus)) / std::pow(1. / (*xx + 1) , 2);
-      } else {
-         xx[0] = c1-u;
-         f2    = (*fFunction) (xx);
-      }
+      xx[0] = c1-u;
+      f2    = (*function) (xx);
       if (fgAbsValue) f2 = std::abs(f2);
       s16  += w[i]*(f1 + f2);
    }
@@ -194,16 +207,6 @@ void GaussIntegrator::SetFunction (const IGenFunction & function)
    // reset fUsedOne flag
    fUsedOnce = false; 
 }
-
-double GaussIntegrator::DefaultMapping(double x) { 
-   return 1./ x - 1. ;
-}
-
-double GaussIntegrator::IntegralUp (double /*a*/)
-{   return 0.0;  }
-
-double GaussIntegrator::IntegralLow (double /*b*/)
-{   return 0.0;  }
 
 double GaussIntegrator::Integral (const std::vector< double > &/*pts*/)
 {   return 0.0;  }
