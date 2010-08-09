@@ -249,6 +249,7 @@ public:
    virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t minpts, Int_t maxpts, Double_t epsilon, Double_t &relerr,Int_t &nfnevl, Int_t &ifail);
    virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Double_t epsilon, Double_t &relerr);
    virtual Bool_t   IsInside(const Double_t *x) const;
+   virtual Bool_t   IsParFixed(Int_t ipar) const;
    virtual void     Paint(Option_t *option="");
    virtual void     Print(Option_t *option="") const;
    virtual void     ReleaseParameter(Int_t ipar);
@@ -295,8 +296,10 @@ public:
    ClassDef(TF1,7)  //The Parametric 1-D function
 };
 
+
+
 inline Double_t TF1::operator()(Double_t x, Double_t y, Double_t z, Double_t t) const  
-   { return Eval(x,y,z,t); }
+{ return Eval(x,y,z,t); }
 inline Double_t TF1::operator()(const Double_t *x, const Double_t *params)
    { 
       if (fMethodCall) InitArgs(x,params);

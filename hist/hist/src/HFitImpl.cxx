@@ -219,15 +219,13 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
    for (int i = 0; i < npar; ++i) { 
       ROOT::Fit::ParameterSettings & parSettings = fitConfig.ParSettings(i); 
 
+      // check if par is fixed
+      if (f1->IsParFixed(i) )   parSettings.Fix();
+
       // check limits
       double plow,pup; 
       f1->GetParLimits(i,plow,pup);  
-      if (plow*pup != 0 && plow >= pup) { // this is a limitation - cannot fix a parameter to zero value
-         parSettings.Fix();
-      }
-      else if (plow < pup ) { 
-         parSettings.SetLimits(plow,pup);
-      }
+      if (plow < pup )     parSettings.SetLimits(plow,pup);
 
       // set the parameter step size (by default are set to 0.3 of value)
       // if function provides meaningful error values
