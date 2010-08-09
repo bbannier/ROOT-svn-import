@@ -35,6 +35,23 @@ namespace Math {
  */
 
 class GaussIntegrator: public VirtualIntegratorOneDim {
+               
+   struct IntegrandTransform : public IGenFunction {
+      enum ESemiInfinitySign {kMinus = -1, kPlus = +1};
+      IntegrandTransform(const IGenFunction* integrand);
+      IntegrandTransform(const double boundary, ESemiInfinitySign sign, const IGenFunction* integrand);
+      double operator()(double x) const;
+      double DoEval(double x) const;
+      IGenFunction* Clone() const;
+      IGenFunction* Mapping();
+   private:
+      ESemiInfinitySign fSign;
+      const IGenFunction* fIntegrand;
+      double fBoundary;
+      bool fInfiniteInterval;
+      double DoEval(double x, double boundary, int sign) const;
+   };
+   
 public:
    /** Destructor */
    ~GaussIntegrator();
@@ -145,28 +162,29 @@ public:
         required. The subprogram may therefore be used when these values are
         undefined.
    */
+
    double Integral (double a, double b);
-                                                                                      
-   //double Integral (const IGenFunction& mapping, double a, double b);                   
    
-   //double Integral (const IGenFunction& mapping);
+//    double Integral(const IGenFunction& mapping, double a, double b);
    
    double Integral ();
    
-   double DoIntegral (double a, double b, const IGenFunction* mapping = (const IGenFunction*)0);
+//    double Integral (const IGenFunction& mapping);
+   
+   double IntegralUp (double a);
+   
+//    double IntegralUp (const IGenFunction& mapping, double a);
+   
+   double IntegralLow (double b);
+
+//    double IntegralLow (const IGenFunction& mapping, double b);
+   
+   double DoIntegral (double a, double b, const IGenFunction* mapping);
 
    /** Set integration function (flag control if function must be copied inside).
        \@param f Function to be used in the calculations.
    */
    void SetFunction (const IGenFunction &);
-   
-   double DefaultMapping(double x);
-   
-   /** This method is not implemented. */
-   double IntegralUp (double a);
-
-   /**This method is not implemented. */
-   double IntegralLow (double b);
 
    /** This method is not implemented. */
    double Integral (const std::vector< double > &pts);
@@ -181,7 +199,7 @@ protected:
    double fLastResult;              // Result from the last stimation.
    double fLastError;               // Error from the last stimation.
    const IGenFunction* fFunction;   // Pointer to function used.
-   
+
 };
 
 } // end namespace Math
