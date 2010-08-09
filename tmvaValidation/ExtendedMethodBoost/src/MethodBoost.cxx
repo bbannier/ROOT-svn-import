@@ -377,7 +377,8 @@ void TMVA::MethodBoost::Train()
 	       << " ROC full (test)=" << (*fMonitorHist)[5]->GetBinContent(fMethodIndex+1)
 	       << " fMethodWeight=" << fMethodWeight.back() 
 	       << " fBoostWeight=" << fBoostWeight
-	       << " fMethodError=" << fMethodError << Endl;
+	       << " fMethodError=" << fMethodError
+	       << " fOverlap_integral=" << fOverlap_integral << Endl;
 
          fMonitorTree->Fill();
 
@@ -725,7 +726,7 @@ void TMVA::MethodBoost::SingleBoost()
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
 	 if (fBoostType == "HighEdgeGauss")
-	    ev->SetBoostWeight( TMath::Exp( -std::pow(fMVAvalues->at(ievt)-MVACutValue,2)/0.1 ) );
+	    ev->SetBoostWeight( fADABoostBeta*TMath::Exp( -std::pow(fMVAvalues->at(ievt)-MVACutValue,2)/0.1 ) );
 	 else if (fBoostType == "HighEdgePara")
 	    ev->SetBoostWeight( -4.0 * std::pow(fMVAvalues->at(ievt)-0.5,2) + 1.0 );
 	 else if (fBoostType == "HighEdgeCoPara")
