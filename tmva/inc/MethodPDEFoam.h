@@ -227,10 +227,10 @@ namespace TMVA {
       ETargetSelection fTargetSelection; // method of selecting the target (only mulit target regr.)
       Bool_t        fFillFoamWithBoostWeights; // fill the foam with boost weights
      
-      std::vector<Double_t> Xmin, Xmax; // range for histograms and foams
+      std::vector<Double_t> fXmin, fXmax; // range for histograms and foams
 
       // foams and densities
-      PDEFoam* foam[FOAM_NUMBER]; // foam[0]=signal, if Sig and BG are Seperated; else foam[0]=signal/bg
+      PDEFoam* fFoam[FOAM_NUMBER]; // foam[0]=signal, if Sig and BG are Seperated; else foam[0]=signal/bg
                                   // foam[1]=background, if Sig and BG are Seperated; else it is not used
 
       // default initialisation called by all constructors
