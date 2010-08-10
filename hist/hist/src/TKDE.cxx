@@ -8,7 +8,6 @@
 #include "Math/QuantFuncMathCore.h"
 #include "Math/RichardsonDerivator.h"
 
-// //TODO: Fix KernelIntegrand functor in ComputeKernelL2Norm does not output correctly, allways zero valued. As a result the PDF's Confidence Intervals improperly overlap it
 
 ClassImp(TKDE)
 
@@ -28,7 +27,6 @@ TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EK
 {
    //Class constructor
    SetOptions(xMin, xMax, kern, iter, mir, bin, rho);
-   CheckOptions();
    SetKernelFunction();
    SetData(data);
    SetCanonicalBandwidths();
@@ -49,12 +47,36 @@ TKDE::~TKDE() {
   
 void TKDE::SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho) {
    // Sets User global options
+   if (xMin != 1. || xMax != 0.0 && xMin >= xMax) { // potects default range initialization
+      MATH_ERROR_MSG("TKDE::SetOptions", "Minimum range cannot be bigger or equal than the maximum range!" << std::endl);
+      exit(EXIT_FAILURE);
+   }
    fXMin = xMin;
-   fXMax = xMax;
+   fXMax = xMax; 
+   if (!(kern >= kGaussian && kern < kUserDefined)) {
+      this->Error("TKDE::SetOptions", "Ilegal user kernel type input!");
+      exit(EXIT_FAILURE);
+   }
    fKernelType = kern;
+   if (iter != kAdaptive && iter != kFixed) {
+      this->Error("TKDE::SetOptions", "Ilegal user iteration type input!");
+      exit(EXIT_FAILURE);
+   }
    fIteration = iter;
+   if (!(mir >= kNoMirror && mir <= kMirrorAsymBoth)) {
+      this->Error("TKDE::SetOptions", "Ilegal user mirroring type input!");
+      exit(EXIT_FAILURE);
+   }
    fMirror = mir;
+   if (!(bin >= kUnbinned && bin <= kForcedBinning)) {
+      this->Error("TKDE::SetOptions", "Ilegal user binning type input!");
+      exit(EXIT_FAILURE);
+   }
    fBinning = bin;
+   if (rho <= 0.0) {
+      MATH_ERROR_MSG("TKDE::SetOptions", "rho cannot be non-positive!!" << std::endl);
+      exit(EXIT_FAILURE);
+   }
    fRho = rho;
 }
 
@@ -70,7 +92,7 @@ void TKDE::SetIteration(EIteration iter) {
    SetKernel();
 }
       
-void TKDE::Instantiate(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho) {
+void TKDE::Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho) {
    // Template's constructor surrogate
    fData = std::vector<Double_t>(events, 0.0);
    fPDF = 0;
@@ -85,6 +107,7 @@ void TKDE::Instantiate(UInt_t events, const Double_t* data, Double_t xMin, Doubl
    fCanonicalBandwidths = std::vector<Double_t>(kTotalKernels, 0.0);
    fKernelSigmas2 = std::vector<Double_t>(kTotalKernels, -1.0);
    SetOptions(xMin, xMax, kUserDefined, iter, mir, bin, rho);
+   SetKernelFunction(kernfunc);
    SetData(data);
    SetCanonicalBandwidths();
    SetKernelSigmas2();
@@ -254,15 +277,6 @@ void TKDE::SetRange(Double_t xMin, Double_t xMax) {
    SetKernel();
 }
 
-void TKDE::CheckOptions() {
-   if (fKernelType == kUserDefined || fKernelType == kTotalKernels)
-      this->Error("TKDE::CheckOptions", "Ilegal user kernel type input!");
-   if (fRho <= 0.0) {
-      MATH_ERROR_MSG("TKDE::CheckOptions", "rho cannot be non-positive!!" << std::endl);
-      exit(EXIT_FAILURE);
-   }
-}
-
 TF1* TKDE::GetFunction() {
    // Returns the PDF estimate
    return fPDF ? fPDF : GetKDEFunction();
@@ -312,13 +326,9 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
    std::vector<Double_t>::iterator weight = weights.begin();
    std::vector<Double_t> dataset(fKDE->fUseBins ? GetBinCentreData() : fKDE->fData);
    std::vector<Double_t>::iterator data = dataset.begin();
-//    Double_t minWeight(*weight * TMath::Power(50.0, -0.5)); //TODO:  find source of justification; seems not needed
-   Double_t norm(2.0 * TMath::Sqrt(3.0)); // Adaptive weight normalization TODO: find source of justification
+   Double_t norm(2.0 * TMath::Sqrt(3.0)); // Adaptive weight normalization TODO: find source of justification; makes a difference on stress test's profile 
    for (; weight != weights.end(); ++weight, ++data) {
       *weight *= fKDE->fRho / fKDE->fSigma * TMath::Power(fKDE->fSigma / (*fKDE->fKernel)(*data), 0.5) / norm;
-//       if (*weight < minWeight) {
-//          *weight = minWeight;
-//       }
    }
    fWeights = weights;
 }
@@ -413,12 +423,24 @@ Double_t TKDE::GetError(Double_t x) const {
 
 void TKDE::CheckKernelValidity() {
    // Checks if kernel has unit integral, mu = 0 and positive finite sigma conditions
-   Double_t mu = ComputeKernelMu();
-   Double_t sigma2 = ComputeKernelSigma2();
-   Double_t unity = ComputeKernelUnitIntegration();
-   Double_t valid = unity == 1.0 && mu == 0.0  && sigma2 > 0 && sigma2 != std::numeric_limits<Double_t>::infinity();
+   Double_t valid = kTRUE;
+   Double_t unity = ComputeKernelIntegral();
+   valid = valid && unity == 1.;
    if (!valid) {
-      MATH_ERROR_MSG("TKDE::CheckKernelValidity", "No valid conditions: either the kernel's mu is not zero or the kernel's sigma2 is not finite positive or the kernel's integration is not 1! Unsuitable kernel." << std::endl);
+      MATH_ERROR_MSG("TKDE::CheckKernelValidity", "Kernel's integral is " << unity << std::endl);
+   }
+   Double_t mu = ComputeKernelMu();
+   valid = valid && mu == 0.;
+   if (!valid) {
+      MATH_ERROR_MSG("TKDE::CheckKernelValidity", "Kernel's mu is " << mu << std::endl);
+   }
+   Double_t sigma2 = ComputeKernelSigma2();
+   valid = valid && sigma2 > 0 && sigma2 != std::numeric_limits<Double_t>::infinity();
+   if (!valid) {
+      MATH_ERROR_MSG("TKDE::CheckKernelValidity", "Kernel's sigma2 is " << sigma2 << std::endl);
+   }
+   if (!valid) {
+      MATH_ERROR_MSG("TKDE::CheckKernelValidity", "Validation conditions: the kernel's integral must be 1, the kernel's mu must be zero and the kernel's sigma2 must be finite positive to be a suitable kernel." << std::endl);
       exit(EXIT_FAILURE);
    }
 }
@@ -450,7 +472,7 @@ Double_t TKDE::ComputeKernelMu() const {
    return result;
 }
 
-Double_t TKDE::ComputeKernelUnitIntegration() const {
+Double_t TKDE::ComputeKernelIntegral() const {
    // Computes the kernel's integral which ought to be unity
    ROOT::Math::IntegratorOneDim ig;
    KernelIntegrand kernel(this, TKDE::KernelIntegrand::kUnitIntegration);

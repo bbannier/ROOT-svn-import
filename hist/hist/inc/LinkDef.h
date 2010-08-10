@@ -89,7 +89,6 @@
 #pragma link C++ class TUnfoldSys+;
 #pragma link C++ class TKDE+;
 
-
 #pragma link C++ typedef THnSparseD;
 #pragma link C++ typedef THnSparseF;
 #pragma link C++ typedef THnSparseL;
