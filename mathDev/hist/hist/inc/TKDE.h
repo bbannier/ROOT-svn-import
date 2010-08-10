@@ -31,13 +31,15 @@
 */
 class TKDE : public TNamed  {
 public:
+   
+   typedef ROOT::Math::IBaseFunctionOneDim* KernelFunction_Ptr;
 
    enum EKernelType { // Kernel function
-      kUserDefined, // Internal use only for the class's template constructor
       kGaussian,
       kEpanechnikov,
       kBiweight,
       kCosineArch,
+      kUserDefined, // Internal use only for the class's template constructor
       kTotalKernels // Internal use only for member initialization
    };
    
@@ -66,8 +68,7 @@ public:
    
    template<class KernelFunction>
    TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0) {
-      Instantiate(events, data, xMin, xMax, iter, mir, bin, rho);
-      SetKernelFunction(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc));
+      Instantiate(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc), events, data, xMin, xMax, iter, mir, bin, rho);
    }
       
    TKDE(UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0);
@@ -97,7 +98,6 @@ private:
    TKDE(TKDE& kde);           // Disallowed copy constructor
    TKDE operator=(TKDE& kde); // Disallowed assign operator
    
-   typedef ROOT::Math::IBaseFunctionOneDim* KernelFunction_Ptr;
    KernelFunction_Ptr fKernelFunction;
    
    friend class TKernel;
@@ -157,7 +157,7 @@ private:
       EIntegralResult fIntegralResult;
    };
    
-   void Instantiate(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, /*EFitMethod fit = kKDE,*/ EIteration iter, EMirror mir, EBinning bin, Double_t rho);
+   void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho);
    
    Double_t GaussianKernel(Double_t x) const;
    Double_t EpanechnikovKernel(Double_t x) const;
@@ -170,9 +170,8 @@ private:
    Double_t ComputeKernelL2Norm() const;
    Double_t ComputeKernelSigma2() const;
    Double_t ComputeKernelMu() const;
-   Double_t ComputeKernelUnitIntegration() const;
-         
-   void CheckOptions();
+   Double_t ComputeKernelIntegral() const;
+
    void CheckKernelValidity();
    void SetCanonicalBandwidth(); 
    void SetKernelSigma2(); 
