@@ -9,20 +9,10 @@
  **********************************************************************/
 
 #include "Math/GaussIntegrator.h"
-#include "Math/WrappedFunction.h"
 #include <cmath>
-#include <limits>
-
-//debugging
-#include <iostream>
-#define disp(var) std::cout << #var << ": " << var << std::endl;
 
 namespace ROOT {
 namespace Math {
-
-// GaussIntegrator::IntegrandTransform::IntegrandTransform()
-// /* : fSign(kPlus), fIntegrand(integrand), fBoundary(0.), fInfiniteInterval(true) */{
-// }
       
 GaussIntegrator::IntegrandTransform::IntegrandTransform(const IGenFunction* integrand)
    : fSign(kPlus), fIntegrand(integrand), fBoundary(0.), fInfiniteInterval(true) {
@@ -34,7 +24,7 @@ GaussIntegrator::IntegrandTransform::IntegrandTransform(const double boundary, E
 
 double GaussIntegrator::IntegrandTransform::DoEval(double x) const {
    double result = DoEval(x, fBoundary, fSign);
-   return  result += (fInfiniteInterval ? DoEval(x, 0., -1) : 0.);
+   return (result += (fInfiniteInterval ? DoEval(x, 0., -1) : 0.));
 }
 
 double GaussIntegrator::IntegrandTransform::DoEval(double x, double boundary, int sign) const {
@@ -47,13 +37,8 @@ double GaussIntegrator::IntegrandTransform::operator()(double x) const {
 }
 
 IGenFunction* GaussIntegrator::IntegrandTransform::Clone() const {
-   return new IntegrandTransform(fBoundary, fSign, fIntegrand);
+   return (fInfiniteInterval ? new IntegrandTransform(fIntegrand) : new IntegrandTransform(fBoundary, fSign, fIntegrand));
 }
-
-IGenFunction* GaussIntegrator::IntegrandTransform::Mapping() {
-   return this;
-}
-
 
 bool GaussIntegrator::fgAbsValue = false;
 
@@ -80,21 +65,18 @@ double GaussIntegrator::Integral(double a, double b) {
 }
 
 double GaussIntegrator::Integral () {
-   disp("GaussIntegrator::Integral")
    IntegrandTransform it(this->fFunction);
    return DoIntegral(0., 1., it.Clone());
 }
 
 double GaussIntegrator::IntegralUp (double a) {
-   disp("GaussIntegrator::IntegralUp")
    IntegrandTransform it(a, GaussIntegrator::IntegrandTransform::kPlus, this->fFunction);
    return DoIntegral(0., 1., it.Clone());
 }
 
 double GaussIntegrator::IntegralLow (double b) {
-   disp("GaussIntegrator::IntegralLow")
    IntegrandTransform it(b, GaussIntegrator::IntegrandTransform::kMinus, this->fFunction);
-   return DoIntegral(0., 1., it.Clone()/*Mapping()*/);
+   return DoIntegral(0., 1., it.Clone());
 }
 
 double GaussIntegrator::DoIntegral(double a, double b, const IGenFunction* function)
