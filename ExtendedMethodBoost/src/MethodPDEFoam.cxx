@@ -147,6 +147,11 @@ void TMVA::MethodPDEFoam::ProcessOptions()
       fFrac = 0.001;
    }
 
+   if (fnActiveCells < 1) {
+      Log() << kWARNING << "invalid number of active cells specified: " 
+	    << fnActiveCells << "; setting nActiveCells=2" << Endl;
+      fnActiveCells = 2;
+   }
    fnCells = fnActiveCells*2-1;
 
    fVolFrac = Int_t(1./fVolFracInv + 0.5); // round
