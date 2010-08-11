@@ -726,7 +726,7 @@ void TMVA::MethodBoost::SingleBoost()
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
 	 if (fBoostType == "HighEdgeGauss")
-	    ev->SetBoostWeight( fADABoostBeta*TMath::Exp( -std::pow(fMVAvalues->at(ievt)-MVACutValue,2)/0.1 ) );
+	    ev->SetBoostWeight( TMath::Exp( -std::pow(fMVAvalues->at(ievt)-MVACutValue,2)/(0.1*fADABoostBeta) ) );
 	 else if (fBoostType == "HighEdgePara")
 	    ev->SetBoostWeight( -4.0 * std::pow(fMVAvalues->at(ievt)-0.5,2) + 1.0 );
 	 else if (fBoostType == "HighEdgeCoPara")
