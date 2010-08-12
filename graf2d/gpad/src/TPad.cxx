@@ -18,6 +18,7 @@
 #include "TMath.h"
 #include "TSystem.h"
 #include "TStyle.h"
+#include "TH3.h"
 #include "TH1.h"
 #include "TClass.h"
 #include "TBaseClass.h"
@@ -3979,7 +3980,7 @@ TPad *TPad::Pick(Int_t px, Int_t py, TObjLink *&pickobj)
 
       //If canvas prefers GL, all 3d objects must be drawn/selected by
       //gl viewer
-      if (obj->InheritsFrom(TAtt3D::Class()) /*&& fEmbeddedGL*/) {//TODOTODO
+      if (obj->InheritsFrom(TAtt3D::Class()) && !obj->InheritsFrom(TH3::Class())) {//TODOTODO
          lnk = lnk->Prev();
          continue;
       }
