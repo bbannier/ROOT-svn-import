@@ -2812,6 +2812,8 @@ Double_t TPad::YtoPad(Double_t y) const
 void TPad::Paint(Option_t * /*option*/)
 {
    // Paint all primitives in pad.
+   if (GetPainter()->CoverFlowOn() && this == fCanvas)//Top level canvas/pad.
+      return GetPainter()->DrawCoverFlow();
 
    if (!fPrimitives) fPrimitives = new TList;
    if (fViewer3D && fViewer3D->CanLoopOnPrimitives()) {
@@ -5926,3 +5928,23 @@ TVirtualPadPainter *TPad::GetPainter()
    //Get pad painter from TCanvas.
    return fCanvas->GetCanvasPainter();
 }
+
+//______________________________________________________________________________
+void TPad::TurnOnCoverFlow()
+{
+   fCanvas->TurnOnCoverFlow();
+}
+
+//______________________________________________________________________________
+void TPad::TurnOffCoverFlow()
+{
+   fCanvas->TurnOffCoverFlow();
+}
+
+//______________________________________________________________________________
+Bool_t TPad::CoverFlowOn()const
+{
+   return fCanvas->CoverFlowOn();
+}
+
+

@@ -4,6 +4,9 @@
 #ifndef ROOT_Rtypes
 #include "Rtypes.h"
 #endif
+#ifndef ROOT_TObject
+#include "TObject.h"
+#endif
 
 /*
 To make it possible to use gl for 2D graphic in a TPad/TCanvas,
@@ -14,8 +17,9 @@ to gVirtualX, and has to implement some of the calls from the scratch.
 */
 
 class TVirtualPad;
+class TCanvas;
 
-class TVirtualPadPainter {
+class TVirtualPadPainter : public TObject{
 public:
    enum EBoxMode  {kHollow, kFilled};
    enum ETextMode {kClear,  kOpaque};
@@ -92,7 +96,15 @@ public:
    //gif, jpg, png, bmp output.
    virtual void     SaveImage(TVirtualPad *pad, const char *fileName, Int_t type) const = 0;
 
+   //Cover-flow API.
+   virtual void     TurnOnCoverFlow(TCanvas * /*topPad*/){}
+   virtual void     TurnOffCoverFlow(){}
+   virtual Bool_t   CoverFlowOn() const {return kFALSE;}
+
+   virtual void     DrawCoverFlow(){}
    
+   virtual void     Animate(Int_t key){}
+
    static TVirtualPadPainter *PadPainter(Option_t *opt = "");
 
    ClassDef(TVirtualPadPainter, 0)//Painter interface for pad.

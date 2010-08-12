@@ -107,6 +107,7 @@ enum ERootCanvasCommands {
    kViewIconify,
    kViewX3D,
    kViewOpenGL,
+   kCoverFlow,
 
    kOptionAutoResize,
    kOptionResizeCanvas,
@@ -526,6 +527,9 @@ void TRootCanvas::CreateCanvas(const char *name)
          if (!glWidget)
             Error("CreateCanvas", "TGLCanvasWidget plugin failed");
          else {
+            if (glWidget->HasFBO()) {
+               fViewMenu->AddEntry("Cover flow", kCoverFlow);
+            }
             fCanvas->SetSupportGL(kTRUE);
             fCanvas->SetGLDevice(glWidget);
             fCanvasID = glWidget->GetWindowIndex();
@@ -969,6 +973,14 @@ again:
                   case kViewOpenGL:
                      gPad->GetViewer3D("ogl");
                      break;
+                  case kCoverFlow:
+                     if (fCanvas->CoverFlowOn()) {
+                        fViewMenu->UnCheckEntry(kCoverFlow);
+                        fCanvas->TurnOffCoverFlow();
+                     } else {
+                        fViewMenu->CheckEntry(kCoverFlow);
+                        fCanvas->TurnOnCoverFlow();
+                     }
 
                   // Handle Option menu items...
                   case kOptionAutoExec:

@@ -35,6 +35,7 @@
 #include "TVirtualGL.h"
 #include "TVirtualPS.h"
 #include "TObjectSpy.h"
+#include "KeySymbols.h"
 #include "TAxis.h"
 #include "TView.h"
 
@@ -1044,18 +1045,15 @@ void TCanvas::Flush()
          gVirtualPS = 0;
          //gGLManager->MakeCurrent(fGLDevice);
          fGLDevice->MakeCurrent();
-         //TODOTODO
          fPainter->InitPainter();
          Paint();
-         if (padsav && padsav->GetCanvas() == this) {
+         if (padsav && padsav->GetCanvas() == this && !fPainter->CoverFlowOn()) {
             padsav->cd();
             padsav->HighLight(padsav->GetHighLightColor());
             //cd();
          }
          fPainter->LockPainter();
          fGLDevice->SwapBuffers();
-         //gGLManager->Flush(fGLDevice);
-         //TODOTODO
          gVirtualPS = tvps;
       }
    }
@@ -1305,6 +1303,10 @@ void TCanvas::HandleInput(EEventType event, Int_t px, Int_t py)
       break;
 
    case kKeyPress:
+      if (fPainter->CoverFlowOn()) {
+         fPainter->Animate(py);
+         break;
+      }
       if (!fSelectedPad || !fSelected) return;
       gPad = fSelectedPad;   // don't use cd() because we won't draw in pad
                     // we will only use its coordinate system
@@ -1426,6 +1428,8 @@ TPad *TCanvas::Pick(Int_t px, Int_t py, TObject *prevSelObj)
 {
    // Prepare for pick, call TPad::Pick() and when selected object
    // is different from previous then emit Picked() signal.
+   if (fPainter->CoverFlowOn())
+      return 0;
 
    TObjLink *pickobj = 0;
 
@@ -2184,6 +2188,32 @@ void TCanvas::CreatePainter()
    }
 }
 
+//______________________________________________________________________________
+void TCanvas::TurnOnCoverFlow()
+{
+   if (fPainter) {
+      fPainter->TurnOnCoverFlow(this);
+      Update();
+   }
+}
+
+//______________________________________________________________________________
+void TCanvas::TurnOffCoverFlow()
+{
+   if (fPainter) {
+      fPainter->TurnOffCoverFlow();
+      Update();
+   }
+}
+
+//______________________________________________________________________________
+Bool_t TCanvas::CoverFlowOn() const
+{
+   if (fPainter)
+      return fPainter->CoverFlowOn();
+
+   return kFALSE;
+}
 
 //______________________________________________________________________________
 TVirtualPadPainter *TCanvas::GetCanvasPainter()

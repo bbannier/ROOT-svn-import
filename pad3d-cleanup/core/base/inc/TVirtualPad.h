@@ -248,6 +248,10 @@ public:
    virtual Bool_t            HasViewer3D() const = 0;
    virtual void              ReleaseViewer3D(Option_t * type = "")  = 0;
 
+   virtual void              TurnOnCoverFlow() {}
+   virtual void              TurnOffCoverFlow() {}
+   virtual Bool_t            CoverFlowOn() const {return kFALSE;}
+
    virtual TGLPaintDevice *GetGLDevice() = 0;
 
    static TVirtualPad *&Pad();

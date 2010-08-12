@@ -12,7 +12,8 @@
 #ifndef ROOT_TGLPadPainter
 #define ROOT_TGLPadPainter
 
-#include <deque>
+#include <memory>
+#include <vector>
 
 #ifndef ROOT_TVirtualPadPainter
 #include "TVirtualPadPainter.h"
@@ -23,9 +24,45 @@
 #ifndef ROOT_TGLPadUtils
 #include "TGLPadUtils.h"
 #endif
+#ifndef ROOT_TTimer
+#include "TTimer.h"
+#endif
 #ifndef ROOT_TPoint
 #include "TPoint.h"
 #endif
+#ifndef ROOT_TGLFBO
+#include "TGLFBO.h"
+#endif
+
+class TCanvas;
+class TPad;
+
+class TGLPadCover {
+private:
+   std::auto_ptr<TGLFBO> fFBO;
+
+   UInt_t   fW;
+   UInt_t   fH;
+   TPad    *fPad;
+
+   Double_t fXLowNDC;
+   Double_t fYLowNDC;
+   Double_t fXUpNDC;
+   Double_t fYUpNDC;
+
+public:
+   TGLPadCover();
+   ~TGLPadCover();
+
+   TGLPadCover(const TGLPadCover &rhs);
+   TGLPadCover &operator = (const TGLPadCover &rhs);
+
+   void DrawToFBO(TGLPadPainter *painter);
+   void DrawCover(Bool_t reflected);
+
+   Bool_t Init(UInt_t w, UInt_t h, TPad *pad);
+   void   RestorePad();
+};
 
 /*
 The _main_ purpose of TGLPadPainter is to enable 2d gl raphics
@@ -49,6 +86,35 @@ private:
    Bool_t                      fIsHollowArea;
    
    Bool_t                      fLocked;
+   Bool_t                      fIsCoverFlow;
+
+   //Cover-flow part.
+   typedef std::vector<TGLPadCover>::size_type size_type;
+
+   //Animation: move covers to the left or to the right.
+   enum EAnimation {
+      kNoAnimation,
+      kLeftShift,
+      kRightShift
+   };
+
+   //Animation takes (should take) 100 ms - 25 frames, 4 ms each.
+   enum ECoverFlowParameters {
+      kFrames = 25,
+      kTimeStep = 4
+   };
+
+   std::vector<TGLPadCover>    fCovers;
+   Bool_t                      fCoversGenerated;
+
+   EAnimation                  fAnimation;
+
+   size_type                   fFrame;     //!The number of the current frame.
+   size_type                   fFrontCover;//!The index of the front cover.
+
+   TTimer                      fTimer;
+   TCanvas                    *fCanvas;
+
 public:
    TGLPadPainter();
    
@@ -135,7 +201,26 @@ private:
    void     RestoreViewport();
    
    void     DrawPolyMarker();
-   
+
+   //
+
+   //Overriders.
+   void     TurnOnCoverFlow(TCanvas *topCanvas);
+   void     TurnOffCoverFlow();
+   Bool_t   CoverFlowOn() const {return fIsCoverFlow;}
+   void     DrawCoverFlow();
+
+   //Aux. staff.
+   void     DrawCovers(Bool_t reflected);
+   void     DrawCoversStatic(Bool_t reflected);
+   void     DrawLeftShift(Bool_t reflected);
+   void     DrawRightShift(Bool_t reflected);
+
+   void     Animate(Int_t key);   
+   //
+   Bool_t   HandleTimer(TTimer *timer);
+
+
    TGLPadPainter(const TGLPadPainter &rhs);
    TGLPadPainter & operator = (const TGLPadPainter &rhs);
    

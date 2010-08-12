@@ -32,6 +32,7 @@ class TGLWidget;
 class TGLContext
 {
    friend class TGLContextPrivate;
+   friend class TGLWidgetBase;
 
 private:
    TGLWidgetBase     *fWidget;

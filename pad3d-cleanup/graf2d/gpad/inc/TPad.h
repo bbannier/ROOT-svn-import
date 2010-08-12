@@ -379,6 +379,10 @@ public:
    virtual void      EventPave() { Emit("EventPave()"); }         // *SIGNAL*
    virtual void      StartEditing() { Emit("StartEditing()"); }   // *SIGNAL*
 
+   virtual void      TurnOnCoverFlow();
+   virtual void      TurnOffCoverFlow();
+   virtual Bool_t    CoverFlowOn()const;
+
    ClassDef(TPad,10)  //A Graphics pad
 };
 
