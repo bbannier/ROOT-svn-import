@@ -1258,6 +1258,7 @@ void TGLPadPainter::TurnOnCoverFlow(TCanvas *topPad)
    }
 
    fCanvas = topPad;
+   fFrontCover = 0;
 
    fIsCoverFlow = kTRUE;
 }
