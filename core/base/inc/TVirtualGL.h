@@ -33,6 +33,8 @@ public:
    virtual const  TGLContext *GetContext()const = 0;
    virtual void   ExtractViewport(Int_t *vp)const = 0;
 
+   virtual Bool_t HasFBO()const = 0;
+
    //Function for TRootCanvas.
    virtual Int_t  GetWindowIndex()const
    {

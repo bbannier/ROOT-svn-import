@@ -12,6 +12,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <GL/glew.h>
+
 #include "TVirtualX.h"
 #include "TGClient.h"
 #include "TGCanvas.h"
@@ -110,6 +112,21 @@ TGLWidgetBase::~TGLWidgetBase()
 
    gVirtualX->SelectWindow(fWindowIndex);
    gVirtualX->CloseWindow();
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidgetBase::HasFBO()const
+{
+   if (!fGLContext)
+      return kFALSE;
+
+   //MakeCurrent();
+   fGLContext->MakeCurrent();
+   //fGLContext->GlewInit();
+   if (!GLEW_VERSION_1_5)
+      return kFALSE;
+
+   return kTRUE;
 }
 
 //______________________________________________________________________________

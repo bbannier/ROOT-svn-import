@@ -238,6 +238,10 @@ public:
    //Still need this.
    Bool_t            UseGL() const { return fUseGL; }
    void              SetSupportGL(Bool_t support) {fUseGL = support;}
+
+   void              TurnOnCoverFlow();
+   void              TurnOffCoverFlow();
+   Bool_t            CoverFlowOn() const;
    
    //Name is GetPainter, not GetPadPainter
    //to avoid name hiding and confusion.

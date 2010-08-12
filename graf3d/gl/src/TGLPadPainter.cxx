@@ -15,8 +15,12 @@
 
 #include "TAttMarker.h"
 #include "TVirtualX.h"
+#include "KeySymbols.h"
+#include "TCanvas.h"
+#include "TTimer.h"
 #include "TError.h"
 #include "TImage.h"
+#include "TList.h"
 #include "TROOT.h"
 #include "TPad.h"
 
@@ -39,9 +43,17 @@ ClassImp(TGLPadPainter)
 //______________________________________________________________________________
 TGLPadPainter::TGLPadPainter()
                   : fIsHollowArea(kFALSE),
-                    fLocked(kTRUE)
+                    fLocked(kTRUE),
+                    fIsCoverFlow(kFALSE),
+                    fCoversGenerated(kFALSE),
+                    fAnimation(kNoAnimation),
+                    fFrame(0),
+                    fFrontCover(0),
+                    fCanvas(0)
 {
    fVp[0] = fVp[1] = fVp[2] = fVp[3] = 0;
+
+   fTimer.SetObject(this);
 }
 
 
@@ -570,11 +582,20 @@ void TGLPadPainter::DrawPolyLineNDC(Int_t n, const Double_t *u, const Double_t *
    glEnd();
 }
 
+//Aux. functions.
 namespace {
 
-//Aux. function.
 template<class ValueType>
-void ConvertMarkerPoints(Int_t n, const ValueType *x, const ValueType *y, std::vector<TPoint> & dst);
+void ConvertMarkerPoints(Int_t n, const ValueType *x, const ValueType *y, std::vector<TPoint> & dst)
+{
+   const UInt_t padH = UInt_t(gPad->GetAbsHNDC() * gPad->GetWh());
+
+   dst.resize(n);
+   for (Int_t i = 0; i < n; ++i) {
+      dst[i].fX = gPad->XtoPixel(x[i]);
+      dst[i].fY = padH - gPad->YtoPixel(y[i]);
+   }
+}
 
 }
 
@@ -837,20 +858,461 @@ void TGLPadPainter::SaveImage(TVirtualPad *pad, const char *fileName, Int_t type
    image->WriteImage(fileName, (TImage::EImageFileTypes)type);
 }
 
+//////////////////////////////////////////////////////
+// Cover-flow core.
+//////////////////////////////////////////////////////
 
-//Aux. functions.
+//______________________________________________________________________________
+TGLPadCover::TGLPadCover()
+               : fFBO(new TGLFBO),
+                 fW(0),
+                 fH(0)
+{
+}
+
+//______________________________________________________________________________
+TGLPadCover::TGLPadCover(const TGLPadCover &rhs)
+               : fFBO(new TGLFBO),
+                 fW(0),
+                 fH(0),
+                 fXLowNDC(0.),
+                 fYLowNDC(0.),
+                 fXUpNDC(0.),
+                 fYUpNDC(0.)
+{
+}
+
+//______________________________________________________________________________
+TGLPadCover &TGLPadCover::operator = (const TGLPadCover &rhs)
+{
+   return *this;
+}
+
+//______________________________________________________________________________
+TGLPadCover::~TGLPadCover()
+{
+   //Do cleanup here.
+}
+
+//______________________________________________________________________________
+Bool_t TGLPadCover::Init(UInt_t w, UInt_t h, TPad *pad)
+{
+   try {
+      fFBO->Init(w, h);
+   } catch (const std::exception &) {
+      return kFALSE;
+   }
+
+   fPad = pad;
+   //Save old pad's dimensions.
+   fXLowNDC = fPad->GetXlowNDC();
+   fYLowNDC = fPad->GetYlowNDC();
+   fXUpNDC  = fXLowNDC + fPad->GetWNDC();
+   fYUpNDC  = fYLowNDC + fPad->GetHNDC();
+   //Set new dimensions for pad.
+   fPad->SetPad(0., 0., 1., 1.);
+
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+void TGLPadCover::RestorePad()
+{
+   fPad->SetPad(fXLowNDC, fYLowNDC, fXUpNDC, fYUpNDC);
+}
+
+//______________________________________________________________________________
+void TGLPadCover::DrawToFBO(TGLPadPainter *painter)
+{
+   if (!painter)
+      return;
+
+   fFBO->Bind();
+
+   painter->InitPainter();
+
+   fPad->Paint();
+   fFBO->Unbind();
+}
+
+//______________________________________________________________________________
+void TGLPadCover::DrawCover(Bool_t reflected)
+{
+   fFBO->BindTexture();
+
+   glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+   glBegin(GL_QUADS);
+   if (!reflected)
+      glTexCoord2d(0., 0.);
+   else
+      glTexCoord2d(0., 1.);
+   glVertex2d(-0.25, -0.25);
+
+   if (!reflected)
+      glTexCoord2d(1., 0.);
+   else
+      glTexCoord2d(1., 1.);
+   glVertex2d(0.25, -0.25);
+
+   if (!reflected)
+      glTexCoord2d(1., 1.);
+   else
+      glTexCoord2d(1., 0.);
+   glVertex2d(0.25, 0.25);
+
+   if (!reflected)
+      glTexCoord2d(0., 1.);
+   else
+      glTexCoord2d(0., 0.);
+   glVertex2d(-0.25, 0.25);
+   glEnd();
+
+   fFBO->UnbindTexture();
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::DrawCovers(Bool_t reflection)
+{
+   switch(fAnimation)
+   {
+   case kNoAnimation:
+      return DrawCoversStatic(reflection);
+   case kLeftShift:
+      return DrawLeftShift(reflection);
+   case kRightShift:
+      return DrawRightShift(reflection);
+   default:;
+   }  
+}
+
 namespace {
 
-template<class ValueType>
-void ConvertMarkerPoints(Int_t n, const ValueType *x, const ValueType *y, std::vector<TPoint> & dst)
-{
-   const UInt_t padH = UInt_t(gPad->GetAbsHNDC() * gPad->GetWh());
+//Different cover-flow constants and parameters.
 
-   dst.resize(n);
-   for (Int_t i = 0; i < n; ++i) {
-      dst[i].fX = gPad->XtoPixel(x[i]);
-      dst[i].fY = padH - gPad->YtoPixel(y[i]);
+
+//Covers on the left and right are rotated.
+const Double_t coverAngle = 60.;
+//Number of visible covers is 7, one on the left and one on the right are invisible.
+const UInt_t nCovers = 9;
+//Covers' positions on the left and on the right.
+//1.1 and -1.1 are invisible covers.
+const Double_t coverPos[] = {-1.1, -0.5, -0.4, -0.3, 0., 0.3, 0.4, 0.5, 1.1};
+//Shifts to move covers from coverPos to the right.
+const Double_t coverRShifts[] = {0.6, 0.1, 0.1, 0.3, 0.3, 0.1, 0.1, 0.6, 0.};
+//Shifts to move covers from coverPos to the left.
+const Double_t coverLShifts[] = {0., -0.6, -0.1, -0.1, -0.3, -0.3, -0.1, -0.1, -0.6};
+
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::DrawLeftShift(Bool_t reflection)
+{
+   const Double_t step      = fFrame / double(kFrames);
+   const Double_t rotAngle  = coverAngle * step;
+   const size_type oldFront = fFrontCover - 1;
+
+   //First, fix covers on the left.
+   const size_type left = oldFront > 3 ? oldFront - 3 : 0;
+   size_type posIndex = 4 - (oldFront - left);
+
+   for (size_type coverIndex = left; coverIndex < oldFront; ++coverIndex, ++posIndex) {
+      glPushMatrix();
+      glTranslated(coverPos[posIndex] + step * coverLShifts[posIndex], 0., -1.5);
+      glRotated(coverAngle, 0., 1., 0.);
+      fCovers[coverIndex].DrawCover(reflection);
+      glPopMatrix();
+   }
+
+   //Now, fix covers on the right.
+   const size_type right = fCovers.size() - oldFront > 4 ? oldFront + 5 : fCovers.size();
+   posIndex = 6;
+
+   for (size_type coverIndex = oldFront + 2; coverIndex < right; ++coverIndex, ++posIndex) {
+      glPushMatrix();
+      glTranslated(coverPos[posIndex] + coverLShifts[posIndex] * step, 0., -1.5);
+      glRotated(-coverAngle, 0., 1., 0.);
+      fCovers[coverIndex].DrawCover(reflection);
+      glPopMatrix();
+   }
+
+   //The final stage: rotate and move the previous front cover and replace it with the new one.
+   const Double_t angleStep = coverAngle * step;
+
+   //The new cover.
+   glPushMatrix();
+   glTranslated(coverPos[5] + coverLShifts[5] * step, 0., -1.5 + 0.4 * step);
+   glRotated(-coverAngle + angleStep, 0., 1., 0.);
+   fCovers[fFrontCover].DrawCover(reflection);
+   glPopMatrix();
+   //The old cover.
+   glPushMatrix();
+   glTranslated(coverPos[4] + coverLShifts[4] * step, 0., -1.1 - 0.4 * step);
+   glRotated(angleStep, 0., 1., 0.);
+   fCovers[oldFront].DrawCover(reflection);
+   glPopMatrix();
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::DrawRightShift(Bool_t reflection)
+{
+   const double step        = fFrame / Double_t(kFrames);
+   const double rotAngle    = coverAngle * step;
+   const size_type oldFront = fFrontCover + 1;
+
+   //First, fix covers on the right.
+   const size_type right = fCovers.size() - oldFront > 3 ? oldFront + 4 : fCovers.size();
+   size_type posIndex = 5;
+
+   for (size_type coverIndex = oldFront + 1; coverIndex < right; ++coverIndex, ++posIndex) {
+      glPushMatrix();
+      glTranslated(coverPos[posIndex] + coverRShifts[posIndex] * step, 0., -1.5);
+      glRotated(-coverAngle, 0., 1., 0.);
+      fCovers[coverIndex].DrawCover(reflection);
+      glPopMatrix();
+   }
+ 
+   //Now, fix covers on the left.
+   const size_type left = oldFront > 4 ? oldFront - 4 : 0;
+   posIndex = 4 - (oldFront - left);
+
+   for (size_type coverIndex = left; coverIndex < oldFront - 1; ++coverIndex, ++posIndex) {
+      glPushMatrix();
+      glTranslated(coverPos[posIndex] + step * coverRShifts[posIndex], 0., -1.5);
+      glRotated(coverAngle, 0., 1., 0.);
+      fCovers[coverIndex].DrawCover(reflection);
+      glPopMatrix();
+   }
+
+   //The final stage: rotate and move the previous front cover and replace it with the new one.
+   const double angleStep = coverAngle * step;
+   //The new cover.
+   glPushMatrix();
+   glTranslated(coverPos[3] + coverRShifts[3] * step, 0., -1.5 + 0.4 * step);
+   glRotated(coverAngle - angleStep, 0., 1., 0.);
+   fCovers[fFrontCover].DrawCover(reflection);
+   glPopMatrix();
+   //The old cover.
+   glPushMatrix();
+   glTranslated(coverPos[4] + coverRShifts[4] * step, 0., -1.1 - 0.4 * step);
+   glRotated(-angleStep, 0., 1., 0.);
+   fCovers[oldFront].DrawCover(reflection);
+   glPopMatrix();
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::DrawCoversStatic(Bool_t reflection)
+{
+   //Static cover-flow (no animation).
+	const size_type left = fFrontCover > 3 ? fFrontCover - 3 : 0;
+   size_type posIndex   = 4 - (fFrontCover - left);
+
+   for (size_type coverIndex = left; coverIndex < fFrontCover; ++coverIndex, ++posIndex) {
+      glPushMatrix();
+      glTranslated(coverPos[posIndex], 0., -1.5);
+      glRotated(coverAngle, 0., 1., 0.);
+      fCovers[coverIndex].DrawCover(reflection);
+      glPopMatrix();
+   }
+   //"Covers" on the right.
+   const size_type right = fCovers.size() - fFrontCover > 3 ? fFrontCover + 4 : fCovers.size();
+   posIndex = 5;
+
+   for (size_type coverIndex = fFrontCover + 1; coverIndex < right; ++coverIndex, ++posIndex) {
+      glPushMatrix();
+      glTranslated(coverPos[posIndex], 0., -1.5);
+      glRotated(-coverAngle, 0., 1., 0.);
+      fCovers[coverIndex].DrawCover(reflection);
+      glPopMatrix();
+   }
+
+   //Now, the front cover.
+   glPushMatrix();
+   glTranslated(0., 0., -1.1);
+   fCovers[fFrontCover].DrawCover(reflection);
+   glPopMatrix();
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::DrawCoverFlow()
+{
+   if (!fCoversGenerated) {
+      //"Save" pad's image into FBO.
+      for (size_type i = 0; i < fCovers.size(); ++i)
+         fCovers[i].DrawToFBO(this);
+      fCoversGenerated = kTRUE;
+   }
+
+   //
+   glMatrixMode(GL_PROJECTION);
+   glLoadIdentity();
+   glFrustum(-0.5, 0.5, -0.5, 0.5, 1., 2.);
+
+   glMatrixMode(GL_MODELVIEW);
+   glLoadIdentity();
+   //
+
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   
+   //[Draw the reflection first.
+   glEnable(GL_DEPTH_TEST);
+   glDepthMask(GL_TRUE);
+
+   glPushMatrix();
+   glTranslated(0., -0.5, 0.);
+
+   DrawCovers(kTRUE);//kTRUE - draw the relfection of cover.
+
+   glPopMatrix();
+   //Reflection is done.]
+
+   //[Draw "water" on top of reflection.
+   glDisable(GL_DEPTH_TEST);
+   glDepthMask(GL_FALSE);
+
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+ 
+   //Switch to ortho projection and full-window draw rectangle.
+   //1. Save old projection matrix.
+   glMatrixMode(GL_PROJECTION);
+   glPushMatrix();
+   //2. Set new projection.
+   glLoadIdentity();
+   glOrtho(-1., 1., -1., 1., -10., 10.);
+   //3. Save old modelview matrix.
+   glMatrixMode(GL_MODELVIEW);
+   glPushMatrix();
+   glLoadIdentity();
+   //
+   glTranslated(0., 0., -1.2);
+  
+   glBegin(GL_QUADS);
+   glColor4d(0., 0., 0.7, 0.9);
+   glVertex2d(-1., -1.);
+   glVertex2d(1., -1.);
+   glColor4d(0., 0., 0., 0.9);
+   glVertex2d(1., 1.);
+   glVertex2d(-1., 1.);
+   glEnd();
+
+   //Restore old modelview matrix.
+   glPopMatrix();
+   //Restore old projection matrix.
+   glMatrixMode(GL_PROJECTION);
+   glPopMatrix();
+
+   glDisable(GL_BLEND);
+ 
+   //
+   glMatrixMode(GL_MODELVIEW);
+   //"Water" is done.]
+
+   //The final pass - draw fCovers.
+   glDepthMask(GL_TRUE);
+   glEnable(GL_DEPTH_TEST);
+
+   DrawCovers(kFALSE);//kFALSE - not a reflection.
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::TurnOnCoverFlow(TCanvas *topPad)
+{
+   if (!topPad) {
+      Error("TGLPadPainter::TurnOnCoverFlow", "TCanvas' pointer is null");
+      return;
+   }
+
+   fCovers.clear();
+
+   const TList *lp = topPad->GetListOfPrimitives();
+   if (!lp || !lp->GetEntries()) {
+      return;
+   } else {
+      for (TObjLink *link = lp->FirstLink(); link; link = link->Next()) {
+         const TObject *obj = link->GetObject();
+         if (!obj)
+            continue;
+         if (obj->InheritsFrom("TPad"))
+            fCovers.push_back(TGLPadCover());
+      }
+
+      if (!fCovers.size()) {
+         return;
+      } else {
+         UInt_t i = 0;
+         for (TObjLink *link = lp->FirstLink(); link; link = link->Next()) {
+            const TObject *obj = link->GetObject();
+            if (!obj)
+               continue;
+            if (obj->InheritsFrom("TPad")) {
+               if (!fCovers.at(i).Init(topPad->GetWw(), topPad->GetWh(), (TPad *)obj)) {
+                  Error("TGLPadPainter::TurnOnCoverFlow", "FBO initialization failed");
+                  fCovers.clear();
+                  return;
+               }
+               ++i;
+            }
+         }
+      }
+   }
+
+   fCanvas = topPad;
+
+   fIsCoverFlow = kTRUE;
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::TurnOffCoverFlow()
+{
+   typedef std::vector<TGLPadCover>::size_type size_type;
+   for (size_type i = 0; i < fCovers.size(); ++i) {
+      fCovers[i].RestorePad();
+   }
+
+   fCovers.clear();
+   fIsCoverFlow     = kFALSE;
+   fCoversGenerated = kFALSE;
+
+   fCanvas = 0;
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::Animate(Int_t key)
+{
+   //
+   if (key == kKey_Left) {
+      if (fFrontCover + 1 == fCovers.size())
+         return;
+
+      ++fFrontCover;
+      fAnimation = kLeftShift;
+      fFrame = 0;
+      fTimer.Start(kTimeStep);
+   } else if (key == kKey_Right) {
+      if (!fFrontCover)
+         return;
+
+      --fFrontCover;
+      fAnimation = kRightShift;
+      fFrame = 0;
+      fTimer.Start(kTimeStep);
    }
 }
 
+//______________________________________________________________________________
+Bool_t TGLPadPainter::HandleTimer(TTimer *timer)
+{
+   if (fFrame + 1 < kFrames)
+   {
+      ++fFrame;
+      if (fCanvas)
+         fCanvas->Update();
+   } else {
+      fTimer.Stop();
+      fAnimation = kNoAnimation;
+      if (fCanvas)
+         fCanvas->Update();
+   }
+   return kTRUE;
 }

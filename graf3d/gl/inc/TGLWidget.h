@@ -59,7 +59,8 @@ public:
    virtual Handle_t GetWidgetID() const {return fWidgetID;}
 
    //Overriders.
-   Int_t GetWindowIndex() const {return fWindowIndex;}
+   Bool_t HasFBO()const;
+   Int_t  GetWindowIndex() const {return fWindowIndex;}
 
    void AddContext(TGLContext *ctx);
    void RemoveContext(TGLContext *ctx);
