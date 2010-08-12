@@ -71,8 +71,6 @@
 #include "TMVA/PDEFoam.h"
 #endif
 
-#define FOAM_NUMBER 2
-
 namespace TMVA {
 
    class MethodPDEFoam : public MethodBase {
@@ -230,8 +228,9 @@ namespace TMVA {
       std::vector<Double_t> fXmin, fXmax; // range for histograms and foams
 
       // foams and densities
-      PDEFoam* fFoam[FOAM_NUMBER]; // foam[0]=signal, if Sig and BG are Seperated; else foam[0]=signal/bg
-                                  // foam[1]=background, if Sig and BG are Seperated; else it is not used
+      // foam[0]=signal, if Sig and BG are Seperated; else foam[0]=signal/bg
+      // foam[1]=background, if Sig and BG are Seperated; else it is not used
+      std::vector<PDEFoam*> fFoam;
 
       // default initialisation called by all constructors
       void Init( void );
