@@ -1,3 +1,47 @@
+2010-08-12  Timur Pocheptsov
+
+	* core/base/inc/TVirtualGL.h
+	TGLPaintDevice - HasFBO - new function to check, if GL has          	FBO extension.
+
+	* core/base/inc/TVirtualPad.h
+	TVirtualPad - methods to switch on/off cover-flow in a    	canvas (used by TRootCanvas).
+
+	* core/base/inc/TVirtualPadPainter.h
+	"cover-flow API" added to TVirtualPadPainter. Also, 	TVirtualPadPainter is now inherits TObject (to work with 	TTimer class).
+
+	* graf2d/gpad/inc/TCanvas.h
+	Overriders for new methods from TVirtualPad.
+
+	* graf2d/gpad/inc/TPad.h
+	Overriders for new methods from TVirtualPad.
+	
+	* graf2d/gpad/src/TCanvas.cxx
+	Overriders for new methods from TVirtualPad. Modifications
+	in HandleInput - to pass the pressed key to the cover-flow.
+
+	* graf2d/gpad/src/TPad.cxx
+	Overriders for new methods from TVirtualPad. Modifications
+	in TPad::Paint - for top-level pad, call DrawCoverFlow if
+	cover-flow mode was enabled.
+
+	* graf3d/gl/inc/TGLContext.h
+	Changes to support HasFBO method.
+
+	* graf3d/gl/inc/TGLPadPainter.h
+	"Cover-flow API" implementation added.
+
+	* graf3d/gl/inc/TGLWidget.h
+	HasFBO implementation.
+
+	* graf3d/gl/src/TGLPadPainter.cxx
+	"Cover-flow API" implementation added.
+
+	* graf3d/gl/src/TGLWidget.cxx
+	HasFBO implementation.
+
+	* gui/gui/src/TRootCanvas.cxx
+	If gl has FBO extension, enable menu entry "Cover flow" in 	"View" menu. Switch on/off cover-flow, check/uncheck this 	menu entry.
+
 2010-07-30  Timur Pocheptsov
 
 	* graf2d/win32gdk/Module.mk:
