@@ -60,7 +60,7 @@ TMVA::DecisionTreeNode::DecisionTreeNode()
      fSelector ( -1 ),       
      fResponse(-99 ),
      fNodeType (-99 ),
-     fSequence ( 0 ),
+     fPurity (-99),
      fIsTerminalNode( kFALSE )
 {
    // constructor of an essentially "empty" node floating in space
@@ -84,19 +84,11 @@ TMVA::DecisionTreeNode::DecisionTreeNode(TMVA::Node* p, char pos)
      fSelector( -1 ),  
      fResponse(-99 ),
      fNodeType( -99 ),
-     fSequence( 0 ),
+     fPurity (-99),
      fIsTerminalNode( kFALSE )
 {
    // constructor of a daughter node as a daughter of 'p'
    if (!fgLogger) fgLogger = new TMVA::MsgLogger( "DecisionTreeNode" );
-
-   // get the sequence, depending on if it is a left or a right daughter
-   if (pos == 'r' ){
-      ULong_t tmp =1; for (UInt_t i=1; i<this->GetDepth(); i++) {tmp *= 2; }  //  (2^depth) 
-      fSequence =  ((DecisionTreeNode*)p)->GetSequence() + tmp;
-   } else {
-      fSequence =  ((DecisionTreeNode*)p)->GetSequence();
-   }      
 
    if (fgIsTraining){
       fTrainInfo = new DTNodeTrainingInfo();
@@ -117,7 +109,6 @@ TMVA::DecisionTreeNode::DecisionTreeNode(const TMVA::DecisionTreeNode &n,
      fSelector( n.fSelector ),  
      fResponse( n.fResponse ),
      fNodeType( n.fNodeType ),
-     fSequence( n.fSequence ),
      fIsTerminalNode( n.fIsTerminalNode )  
 {
    // copy constructor of a node. It will result in an explicit copy of
@@ -165,19 +156,21 @@ Bool_t TMVA::DecisionTreeNode::GoesLeft(const TMVA::Event & e) const
 
 
 //_______________________________________________________________________
-Float_t TMVA::DecisionTreeNode::GetPurity( void ) const  
+void TMVA::DecisionTreeNode::SetPurity( void ) 
 {
    // return the S/(S+B) (purity) for the node
    // REM: even if nodes with purity 0.01 are very PURE background nodes, they still
    //      get a small value of the purity.
+
    if ( ( this->GetNSigEvents() + this->GetNBkgEvents() ) > 0 ) {
-      return this->GetNSigEvents() / ( this->GetNSigEvents() + this->GetNBkgEvents()); 
+      fPurity =  this->GetNSigEvents() / ( this->GetNSigEvents() + this->GetNBkgEvents()); 
    }
    else {
       *fgLogger << kINFO << "Zero events in purity calcuation , return purity=0.5" << Endl;
       this->Print(*fgLogger);
-      return 0.5;
+      fPurity = 0.5;
    }
+   return;
 }
 
 // print a node
@@ -187,7 +180,6 @@ void TMVA::DecisionTreeNode::Print(ostream& os) const
    //print the node
    os << "< ***  "  << std::endl; 
    os << " d: "     << this->GetDepth()
-      << " seq: "   << this->GetSequence()
       << " ivar: "  << this->GetSelector()
       << " cut: "   << this->GetCutValue() 
       << " cType: " << this->GetCutType() 
@@ -218,7 +210,6 @@ void TMVA::DecisionTreeNode::PrintRec(ostream& os) const
    os << this->GetDepth() 
       << std::setprecision(6)
       << " "         << this->GetPos() 
-      << " seq: "    << this->GetSequence()
       << " ivar: "   << this->GetSelector()
       << " cut: "    << this->GetCutValue() 
       << " cType: "  << this->GetCutType() 
@@ -304,9 +295,8 @@ Bool_t TMVA::DecisionTreeNode::ReadDataRecord( istream& is, UInt_t tmva_Version_
    this->SetSeparationIndex(separationIndex);
    this->SetSeparationGain(separationGain);
    this->SetNodeType(nodeType);
-   
+   this->SetPurity();
    this->SetResponse(response);
-   this->SetSequence(lseq);
    this->SetCC(cc);
 
    return kTRUE;
@@ -324,6 +314,7 @@ void TMVA::DecisionTreeNode::ClearNodeAndAllDaughters()
    SetNEvents_unweighted(0);
    SetSeparationIndex(-1);
    SetSeparationGain(-1);
+   SetPurity();
 
    if (this->GetLeft()  != NULL) ((DecisionTreeNode*)(this->GetLeft()))->ClearNodeAndAllDaughters();
    if (this->GetRight() != NULL) ((DecisionTreeNode*)(this->GetRight()))->ClearNodeAndAllDaughters();
@@ -417,7 +408,6 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
    Double_t tempCC;
 
    // read attribute from xml
-   gTools().ReadAttr(node, "Seq",   fSequence               );
    gTools().ReadAttr(node, "IVar",  fSelector               );
    gTools().ReadAttr(node, "Cut",   fCutValue               );
    gTools().ReadAttr(node, "cType", fCutType                );
@@ -432,6 +422,7 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
    gTools().ReadAttr(node, "res",   fResponse               );
    gTools().ReadAttr(node, "rms",   fRMS                    );
    gTools().ReadAttr(node, "nType", fNodeType               );
+   gTools().ReadAttr(node, "purity",fPurity                 );
    gTools().ReadAttr(node, "CC",    tempCC                  );
    if (fTrainInfo){
       SetNSigEvents(tempNSigEvents);
@@ -451,7 +442,6 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
 void TMVA::DecisionTreeNode::AddAttributesToNode(void* node) const
 {
    // add attribute to xml
-   gTools().AddAttr(node, "Seq",   GetSequence());
    gTools().AddAttr(node, "IVar",  GetSelector());
    gTools().AddAttr(node, "Cut",   GetCutValue());
    gTools().AddAttr(node, "cType", GetCutType());
@@ -466,6 +456,7 @@ void TMVA::DecisionTreeNode::AddAttributesToNode(void* node) const
    gTools().AddAttr(node, "res",   GetResponse());
    gTools().AddAttr(node, "rms",   GetRMS());
    gTools().AddAttr(node, "nType", GetNodeType());
+   gTools().AddAttr(node, "purity",GetPurity());
    gTools().AddAttr(node, "CC",    (GetCC() > 10000000000000.)?100000.:GetCC());
 }
 
