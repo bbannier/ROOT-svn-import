@@ -180,8 +180,10 @@ public:
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
    virtual void UpdateProjection();
+   virtual TEveElement* GetProjectedAsElement() { return this; }
 
    virtual void PointSelected(Int_t id);
+
 
    ClassDef(TEvePointSetProjected, 1); // Projected copy of a TEvePointSet.
 };

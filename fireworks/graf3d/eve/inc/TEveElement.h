@@ -501,6 +501,7 @@ public:
    virtual ~TEveElementListProjected() {}
 
    virtual void UpdateProjection();
+   virtual TEveElement* GetProjectedAsElement() { return this; }
 
    ClassDef(TEveElementListProjected, 0); // Projected TEveElementList.
 };

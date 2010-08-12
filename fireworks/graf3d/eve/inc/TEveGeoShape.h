@@ -88,9 +88,10 @@ public:
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
    virtual void UpdateProjection();
+   virtual TEveElement* GetProjectedAsElement() { return this; }
 
    virtual void ComputeBBox();
-   virtual void Paint(Option_t* option = "");
+   virtual void Paint(Option_t* option = ""); 
 
    ClassDef(TEveGeoShapeProjected, 0);
 };
