@@ -16,6 +16,7 @@ TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EK
    fPDF(0),
    fUpperPDF(0),
    fLowerPDF(0),
+   fApproximateBias(0),
    fHistogram(0),
    fNBins(1000),
    fNEvents(events),
@@ -45,15 +46,15 @@ TKDE::~TKDE() {
    delete fKernel;
 }
   
-void TKDE::SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho) {
+void TKDE::SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho, Bool_t IsUserDefinedKernel) {
    // Sets User global options
-   if (xMin != 1. || xMax != 0.0 && xMin >= xMax) { // potects default range initialization
+   if (xMin != 1. || xMax != 0.0 && xMin >= xMax) { // protects default range initialization
       MATH_ERROR_MSG("TKDE::SetOptions", "Minimum range cannot be bigger or equal than the maximum range!" << std::endl);
       exit(EXIT_FAILURE);
    }
    fXMin = xMin;
    fXMax = xMax; 
-   if (!(kern >= kGaussian && kern < kUserDefined)) {
+   if (!(IsUserDefinedKernel || kern >= kGaussian && kern < kUserDefined)) {
       this->Error("TKDE::SetOptions", "Ilegal user kernel type input!");
       exit(EXIT_FAILURE);
    }
@@ -68,11 +69,13 @@ void TKDE::SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration
       exit(EXIT_FAILURE);
    }
    fMirror = mir;
+   SetMirror();
    if (!(bin >= kUnbinned && bin <= kForcedBinning)) {
       this->Error("TKDE::SetOptions", "Ilegal user binning type input!");
       exit(EXIT_FAILURE);
    }
    fBinning = bin;
+   SetUseBins();
    if (rho <= 0.0) {
       MATH_ERROR_MSG("TKDE::SetOptions", "rho cannot be non-positive!!" << std::endl);
       exit(EXIT_FAILURE);
@@ -99,6 +102,7 @@ void TKDE::Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_
    fUpperPDF = 0;
    fLowerPDF = 0;
    fHistogram = 0;
+   fApproximateBias = 0;
    fNBins = 1000;
    fNEvents = events;
    fUseBinsNEvents = 1000;
@@ -106,7 +110,7 @@ void TKDE::Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_
    fSigma = 0.0;
    fCanonicalBandwidths = std::vector<Double_t>(kTotalKernels, 0.0);
    fKernelSigmas2 = std::vector<Double_t>(kTotalKernels, -1.0);
-   SetOptions(xMin, xMax, kUserDefined, iter, mir, bin, rho);
+   SetOptions(xMin, xMax, kUserDefined, iter, mir, bin, rho, kTRUE);
    SetKernelFunction(kernfunc);
    SetData(data);
    SetCanonicalBandwidths();
@@ -116,11 +120,16 @@ void TKDE::Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_
 void TKDE::SetMirror(EMirror mir) {
    // Sets User option for mirroring the data
    fMirror = mir;
+   SetMirror();
+   SetKernel();
+}
+
+void TKDE::SetMirror() {
+   // Sets the mirroring
    fMirrorLeft  = fMirror == kMirrorLeft  || fMirror == kMirrorBoth || fMirror == kMirrorLeftAsymRight;
    fMirrorRight = fMirror == kMirrorRight || fMirror == kMirrorBoth || fMirror == kMirrorAsymLeftRight;
    fAsymLeft    = fMirror == kMirrorAsymLeft  || fMirror == kMirrorAsymLeftRight || fMirror == kMirrorAsymBoth;
    fAsymRight   = fMirror == kMirrorAsymRight || fMirror == kMirrorLeftAsymRight || fMirror == kMirrorAsymBoth;
-   SetKernel();
 }
       
 void TKDE::SetBinning(EBinning bin) {
@@ -152,6 +161,12 @@ void TKDE::SetUseBins() {
 void TKDE::SetNBins(UInt_t nBins) {
    // Sets User option for number of bins    
    fNBins = nBins;
+   SetKernel();
+}
+
+void TKDE::SetUseBinsNEvents(UInt_t nEvents) {
+   fUseBinsNEvents = nEvents;
+   SetUseBins();
    SetKernel();
 }
 
@@ -214,14 +229,15 @@ void TKDE::SetKernelFunction(KernelFunction_Ptr kernfunc) {
    switch (fKernelType) {
       case kGaussian :
          fKernelFunction = new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::GaussianKernel);
+         break;
       case kEpanechnikov :
-         new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::EpanechnikovKernel);
+         fKernelFunction = new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::EpanechnikovKernel);
          break;
       case kBiweight :
-         new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::BiweightKernel);
+         fKernelFunction = new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::BiweightKernel);
          break;
       case kCosineArch :
-         new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::CosineArchKernel);
+         fKernelFunction = new ROOT::Math::WrappedMemFunction<TKDE, Double_t (TKDE::*)(Double_t) const>(*this, &TKDE::CosineArchKernel);
          break;
       case kUserDefined :
       case kTotalKernels :
@@ -326,9 +342,12 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
    std::vector<Double_t>::iterator weight = weights.begin();
    std::vector<Double_t> dataset(fKDE->fUseBins ? GetBinCentreData() : fKDE->fData);
    std::vector<Double_t>::iterator data = dataset.begin();
-   Double_t norm(2.0 * TMath::Sqrt(3.0)); // Adaptive weight normalization TODO: find source of justification; makes a difference on stress test's profile 
+   Double_t norm(/*2.0 * TMath::Sqrt(3.0)*/ 1.); // Adaptive weight normalization used in RooKeysPdf without justification. Makes a difference on profiling the estimator. 
    for (; weight != weights.end(); ++weight, ++data) {
-      *weight *= fKDE->fRho / fKDE->fSigma * TMath::Power(fKDE->fSigma / (*fKDE->fKernel)(*data), 0.5) / norm;
+      Double_t f = (*fKDE->fKernel)(*data);
+      if (f > 0.) {
+         *weight *= fKDE->fRho / fKDE->fSigma * TMath::Power(fKDE->fSigma / f, 0.5) / norm;
+      }
    }
    fWeights = weights;
 }
@@ -447,7 +466,7 @@ void TKDE::CheckKernelValidity() {
 
 Double_t TKDE::ComputeKernelL2Norm() const {
    // Computes the kernel's L2 norm
-   ROOT::Math::IntegratorOneDim ig;
+   ROOT::Math::IntegratorOneDim ig(ROOT::Math::IntegrationOneDim::kGAUSS);
    KernelIntegrand kernel(this, TKDE::KernelIntegrand::kNorm);
    ig.SetFunction(kernel);
    Double_t result = ig.Integral();
@@ -456,7 +475,7 @@ Double_t TKDE::ComputeKernelL2Norm() const {
 
 Double_t TKDE::ComputeKernelSigma2() const {
    // Computes the kernel's sigma squared
-   ROOT::Math::IntegratorOneDim ig;
+   ROOT::Math::IntegratorOneDim ig( ROOT::Math::IntegrationOneDim::kGAUSS);
    KernelIntegrand kernel(this, TKDE::KernelIntegrand::kSigma2);
    ig.SetFunction(kernel);
    Double_t result = ig.Integral();
@@ -465,7 +484,7 @@ Double_t TKDE::ComputeKernelSigma2() const {
    
 Double_t TKDE::ComputeKernelMu() const {
    // Computes the kernel's mu
-   ROOT::Math::IntegratorOneDim ig;
+   ROOT::Math::IntegratorOneDim ig(ROOT::Math::IntegrationOneDim::kGAUSS);
    KernelIntegrand kernel(this, TKDE::KernelIntegrand::kMu);
    ig.SetFunction(kernel);
    Double_t result = ig.Integral();
@@ -474,7 +493,7 @@ Double_t TKDE::ComputeKernelMu() const {
 
 Double_t TKDE::ComputeKernelIntegral() const {
    // Computes the kernel's integral which ought to be unity
-   ROOT::Math::IntegratorOneDim ig;
+   ROOT::Math::IntegratorOneDim ig(ROOT::Math::IntegrationOneDim::kGAUSS);
    KernelIntegrand kernel(this, TKDE::KernelIntegrand::kUnitIntegration);
    ig.SetFunction(kernel);
    Double_t result = ig.Integral();

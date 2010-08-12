@@ -32,8 +32,6 @@
 class TKDE : public TNamed  {
 public:
    
-   typedef ROOT::Math::IBaseFunctionOneDim* KernelFunction_Ptr;
-
    enum EKernelType { // Kernel function
       kGaussian,
       kEpanechnikov,
@@ -81,6 +79,7 @@ public:
    void SetMirror(EMirror mir);
    void SetBinning(EBinning);
    void SetNBins(UInt_t nBins);
+   void SetUseBinsNEvents(UInt_t nEvents);
    void SetRange(Double_t xMin, Double_t xMax); // By default computed from the data
    
    Double_t operator()(const Double_t* x, const Double_t* p = 0) const;
@@ -98,6 +97,7 @@ private:
    TKDE(TKDE& kde);           // Disallowed copy constructor
    TKDE operator=(TKDE& kde); // Disallowed assign operator
    
+   typedef ROOT::Math::IBaseFunctionOneDim* KernelFunction_Ptr;
    KernelFunction_Ptr fKernelFunction;
    
    friend class TKernel;
@@ -178,12 +178,13 @@ private:
    void SetCanonicalBandwidths(); 
    void SetKernelSigmas2(); 
    void SetHistogram();
-   void SetUseBins();  
+   void SetUseBins();
+   void SetMirror();
    void SetMean();
    void SetSigma();
    void SetKernel();
    void SetKernelFunction(KernelFunction_Ptr kernfunc = 0);
-   void SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho);
+   void SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho, Bool_t IsUserDefinedKernel = kFALSE);
    void SetData(const Double_t* data);
    void SetMirroredData();
    
