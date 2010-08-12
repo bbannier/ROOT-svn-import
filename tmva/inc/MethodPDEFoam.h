@@ -223,7 +223,7 @@ namespace TMVA {
       EKernel       fKernel;          // Kernel for GetMvaValue()
       TString       fTargetSelectionStr; // method of selecting the target (only mulit target regr.)
       ETargetSelection fTargetSelection; // method of selecting the target (only mulit target regr.)
-      Bool_t        fFillFoamWithBoostWeights; // fill the foam with boost weights
+      Bool_t        fFillFoamWithOrigWeights; // fill the foam with boost weights
      
       std::vector<Double_t> fXmin, fXmax; // range for histograms and foams
 
