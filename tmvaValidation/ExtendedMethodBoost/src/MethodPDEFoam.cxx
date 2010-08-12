@@ -715,6 +715,7 @@ void TMVA::MethodPDEFoam::AddWeightsXMLTo( void* parent ) const
    gTools().AddAttr( wght, "RMSmin",          fRMSmin );
    gTools().AddAttr( wght, "Kernel",          KernelToUInt(fKernel) );
    gTools().AddAttr( wght, "TargetSelection", TargetSelectionToUInt(fTargetSelection) );
+   gTools().AddAttr( wght, "FillFoamWithOrigWeights", fFillFoamWithOrigWeights );
    
    // save foam borders Xmin[i], Xmax[i]
    void *xmin_wrap;
@@ -794,6 +795,7 @@ void  TMVA::MethodPDEFoam::ReadWeightsFromStream( istream& istr )
    istr >> ts;                             // used method for target selection
    fTargetSelection = UIntToTargetSelection(ts);
 
+   istr >> fFillFoamWithOrigWeights;        // fill foam with original event weights
 
    // clear old range and prepare new range
    fXmin.clear();
@@ -843,6 +845,7 @@ void TMVA::MethodPDEFoam::ReadWeightsFromXML( void* wghtnode )
    UInt_t ts = 0;
    gTools().ReadAttr( wghtnode, "TargetSelection", ts );
    fTargetSelection = UIntToTargetSelection(ts);
+   gTools().ReadAttr( wghtnode, "FillFoamWithOrigWeights", fFillFoamWithOrigWeights );
    
    // clear old range [Xmin, Xmax] and prepare new range for reading
    fXmin.clear();
