@@ -130,7 +130,7 @@ namespace TMVA {
       Bool_t fCutRMSmin;       // true: peek cell with max. RMS for next split
       Double_t fRMSmin;        // activate cut: minimal RMS in cell to split cell
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
-      Bool_t fFillFoamWithBoostWeights; // fill the foam with boost or orig. weights
+      Bool_t fFillFoamWithOrigWeights; // fill the foam with boost or orig. weights
       PDEFoamDistr *fDistr;    //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
@@ -235,7 +235,7 @@ namespace TMVA {
       void SetPDEFoamVolumeFraction(Double_t vfr){fVolFrac = vfr;} // set VolFrac to PDEFoam
       void SetVolumeFraction(Double_t); // set VolFrac to PDEFoamDistr
       void SetFoamType(EFoamType ft);   // set foam type
-      void SetFillFoamWithBoostWeights(Bool_t new_val){fFillFoamWithBoostWeights=new_val;}
+      void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
 
       void SetSignalClass( Int_t cls )     { fSignalClass = cls; fDistr->SetSignalClass( cls ); } // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
       void SetBackgroundClass( Int_t cls ) { fBackgroundClass = cls; fDistr->SetBackgroundClass( cls ); } // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
@@ -259,7 +259,7 @@ namespace TMVA {
       UInt_t   GetNmin()               { return fNmin;   }
       void     SetRMSmin(Double_t val) { fRMSmin=val;    }
       Double_t GetRMSmin()             { return fRMSmin; }
-      Bool_t   GetFillFoamWithBoostWeights(){ return fFillFoamWithBoostWeights; }
+      Bool_t   GetFillFoamWithOrigWeights(){ return fFillFoamWithOrigWeights; }
 
       // Getters and Setters for foam boundaries
       void SetXmin(Int_t idim, Double_t wmin);
