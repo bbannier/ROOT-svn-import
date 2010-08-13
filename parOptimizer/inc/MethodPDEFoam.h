@@ -71,8 +71,6 @@
 #include "TMVA/PDEFoam.h"
 #endif
 
-#define FOAM_NUMBER 2
-
 namespace TMVA {
 
    class MethodPDEFoam : public MethodBase {
@@ -198,6 +196,9 @@ namespace TMVA {
       // nice output
       void PrintCoefficients( void );
 
+      // Square function (fastest implementation)
+      template<typename T> T Sqr(T x) const { return x*x; }
+
       // options to be used
       Bool_t        fSigBgSeparated;  // Separate Sig and Bg, or not
       Double_t      fFrac;            // Fraction used for calc of Xmin, Xmax
@@ -222,12 +223,14 @@ namespace TMVA {
       EKernel       fKernel;          // Kernel for GetMvaValue()
       TString       fTargetSelectionStr; // method of selecting the target (only mulit target regr.)
       ETargetSelection fTargetSelection; // method of selecting the target (only mulit target regr.)
+      Bool_t        fFillFoamWithBoostWeights; // fill the foam with boost weights
      
-      std::vector<Double_t> Xmin, Xmax; // range for histograms and foams
+      std::vector<Double_t> fXmin, fXmax; // range for histograms and foams
 
       // foams and densities
-      PDEFoam* foam[FOAM_NUMBER]; // foam[0]=signal, if Sig and BG are Seperated; else foam[0]=signal/bg
-                                  // foam[1]=background, if Sig and BG are Seperated; else it is not used
+      // foam[0]=signal, if Sig and BG are Seperated; else foam[0]=signal/bg
+      // foam[1]=background, if Sig and BG are Seperated; else it is not used
+      std::vector<PDEFoam*> fFoam;
 
       // default initialisation called by all constructors
       void Init( void );
