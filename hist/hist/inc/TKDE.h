@@ -93,6 +93,10 @@ public:
    
 private:
    
+   static const Double_t _2_PI_ROOT_INV = 0.398942280401432703; // (2*TMath::Pi())**-0.5
+   static const Double_t PI_OVER2       = 1.57079632679489656;  // TMath::PiOver2()
+   static const Double_t PI_OVER4       = 0.785398163397448279; // TMath::PiOver4()
+   
    TKDE();                    // Disallowed default constructor
    TKDE(TKDE& kde);           // Disallowed copy constructor
    TKDE operator=(TKDE& kde); // Disallowed assign operator
@@ -143,6 +147,8 @@ private:
    Double_t fXMin;  // Data minimum value
    Double_t fXMax;  // Data maximum value
    Double_t fRho;   // Adjustment factor for sigma
+  
+   Double_t fWeightSize; // Caches the weight size
    
    std::vector<Double_t> fCanonicalBandwidths;
    std::vector<Double_t> fKernelSigmas2;
@@ -159,10 +165,10 @@ private:
    
    void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho);
    
-   Double_t GaussianKernel(Double_t x) const;
-   Double_t EpanechnikovKernel(Double_t x) const;
-   Double_t BiweightKernel(Double_t x) const;
-   Double_t CosineArchKernel(Double_t x) const;
+   inline Double_t GaussianKernel(Double_t x) const;
+   inline Double_t EpanechnikovKernel(Double_t x) const;
+   inline Double_t BiweightKernel(Double_t x) const;
+   inline Double_t CosineArchKernel(Double_t x) const;
    Double_t UpperConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
    Double_t LowerConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
    Double_t ApproximateBias(const Double_t* x, const Double_t* p) const;
