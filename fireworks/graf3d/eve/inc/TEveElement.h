@@ -460,6 +460,9 @@ public:
    TEveElementList(const TEveElementList& e);
    virtual ~TEveElementList() {}
 
+   virtual TObject* GetObject(const TEveException& /*eh*/="TEveElementList::GetObject ") const
+   { const TObject* obj = this; return const_cast<TObject*>(obj); }
+
    virtual TEveElementList* CloneElement() const;
 
    virtual const char* GetElementName()  const { return GetName();  }
