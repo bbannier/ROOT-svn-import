@@ -58,6 +58,7 @@
 #include "TMVA/Timer.h"
 #include "TMVA/Types.h"
 #include "TMVA/PDF.h"
+#include "TMVA/Results.h"
 #include "TMVA/Config.h"
 
 REGISTER_METHOD(Boost)
@@ -71,6 +72,7 @@ TMVA::MethodBoost::MethodBoost( const TString& jobName,
                                 const TString& theOption,
                                 TDirectory* theTargetDir ) :
    TMVA::MethodCompositeBase( jobName, Types::kBoost, methodTitle, theData, theOption, theTargetDir ),
+   fRandomSeed(0),
    fBoostedMethodTitle(methodTitle),
    fBoostedMethodOptions(theOption),
    fMonitorHist(0)
@@ -81,7 +83,7 @@ TMVA::MethodBoost::MethodBoost( DataSetInfo& dsi,
                                 const TString& theWeightFile,
                                 TDirectory* theTargetDir )
    : TMVA::MethodCompositeBase( Types::kBoost, dsi, theWeightFile, theTargetDir ),
-     fBoostNum(0), fMonitorHist(0)
+     fBoostNum(0), fRandomSeed(0), fMonitorHist(0)
 {}
 
 //_______________________________________________________________________
@@ -142,6 +144,9 @@ void TMVA::MethodBoost::DeclareOptions()
    AddPreDefVal(TString("linear"));
    AddPreDefVal(TString("log"));
 
+   DeclareOptionRef(fRandomSeed = 0, "Boost_RandomSeed",
+                    "Seed for random number generator used for bagging");
+
    TMVA::MethodCompositeBase::fMethods.reserve(fBoostNum);;
 }
 
@@ -168,6 +173,8 @@ void TMVA::MethodBoost::InitHistos()
    fMonitorHist->push_back(new TH1F("BoostWeight","Boost Weight",fBoostNum,0,fBoostNum));
    fMonitorHist->push_back(new TH1F("ErrFraction","Error Fraction (by boosted event weights)",fBoostNum,0,fBoostNum));
    fMonitorHist->push_back(new TH1F("OrigErrFraction","Error Fraction (by original event weights)",fBoostNum,0,fBoostNum));
+   fMonitorHist->push_back(new TH1F("ROCIntegral","ROC integral of single classifier (testing sample)",fBoostNum,0,fBoostNum));
+   fMonitorHist->push_back(new TH1F("ROCIntegralBoosted","ROC integral of boosted method (testing sample)",fBoostNum,0,fBoostNum));
    fDefaultHistNum = fMonitorHist->size();
    (*fMonitorHist)[0]->GetXaxis()->SetTitle("Index of boosted classifier");
    (*fMonitorHist)[0]->GetYaxis()->SetTitle("Classifier Weight");
@@ -177,6 +184,10 @@ void TMVA::MethodBoost::InitHistos()
    (*fMonitorHist)[2]->GetYaxis()->SetTitle("Error Fraction");
    (*fMonitorHist)[3]->GetXaxis()->SetTitle("Index of boosted classifier");
    (*fMonitorHist)[3]->GetYaxis()->SetTitle("Error Fraction");
+   (*fMonitorHist)[4]->GetXaxis()->SetTitle("Index of boosted classifier");
+   (*fMonitorHist)[4]->GetYaxis()->SetTitle("ROC integral of single classifier");
+   (*fMonitorHist)[5]->GetXaxis()->SetTitle("Index of boosted classifier");
+   (*fMonitorHist)[5]->GetYaxis()->SetTitle("ROC integral boosted");
 
    fMonitorTree= new TTree("MonitorBoost","Boost variables");
    fMonitorTree->Branch("iMethod",&fMethodIndex,"iMethod/I");
@@ -195,6 +206,7 @@ void TMVA::MethodBoost::CheckSetup()
    Log() << kDEBUG << "CheckSetup: fMethodError="<<fMethodError<<Endl;
    Log() << kDEBUG << "CheckSetup: fOrigMethodError="<<fOrigMethodError<<Endl;
    Log() << kDEBUG << "CheckSetup: fBoostNum="<<fBoostNum<< " fMonitorHist="<< fMonitorHist<< Endl;              
+   Log() << kDEBUG << "CheckSetup: fRandomSeed=" << fRandomSeed<< Endl;
    Log() << kDEBUG << "CheckSetup: fDefaultHistNum=" << fDefaultHistNum << " fRecalculateMVACut=" << (fRecalculateMVACut? "true" : "false") << Endl;
    Log() << kDEBUG << "CheckSetup: fTrainSigMVAHist.size()="<<fTrainSigMVAHist.size()<<Endl;
    Log() << kDEBUG << "CheckSetup: fTestSigMVAHist.size()="<<fTestSigMVAHist.size()<<Endl;
@@ -303,8 +315,15 @@ void TMVA::MethodBoost::Train()
          (*fMonitorHist)[1]->SetBinContent(fMethodIndex+1,fBoostWeight);
          (*fMonitorHist)[2]->SetBinContent(fMethodIndex+1,fMethodError);
          (*fMonitorHist)[3]->SetBinContent(fMethodIndex+1,fOrigMethodError);
+         SingleTest(fMethodIndex); // test and evaluate single method
+
          AllMethodsWeight += fMethodWeight.back();
          fMonitorTree->Fill();
+
+	 // test MethodBoost in order to calculate ROC integral
+         TMVA::MsgLogger::InhibitOutput(); //supressing Logger outside the method
+	 FullTest(AllMethodsWeight);
+         TMVA::MsgLogger::EnableOutput();
 
          // stop boosting if needed when error has reached 0.5
          // thought of counting a few steps, but it doesn't seem to be necessary
@@ -342,6 +361,13 @@ void TMVA::MethodBoost::Train()
       fMethodWeight[fMethodIndex] = fMethodWeight[fMethodIndex] / AllMethodsWeight;
       (*fMonitorHist)[0]->SetBinContent(fMethodIndex+1,fMethodWeight[fMethodIndex]);
    }
+
+   // Ensure that in case of only 1 boost the method weight equals
+   // 1.0.  This avoids unexpected behaviour in case of very bad
+   // classifiers which have fBoostWeight=1 or fMethodError=0.5,
+   // because their weight would be set to zero.  This behaviour is
+   // not ok if one boosts just one time.
+   if (fMethods.size()==1)  fMethodWeight[0] = 1.0;
 
    fMethods.back()->MonitorBoost(SetStage(Types::kBoostProcEnd));
 }
@@ -599,7 +625,7 @@ void TMVA::MethodBoost::SingleBoost()
          ev =  Data()->GetEvent(ievt);
          FactorOrig += ev->GetWeight();
          ev->ScaleBoostWeight(TMath::Exp(-alphaWeight*((WrongDetection[ievt])? -1.0 : 1.0)));
-         Factor += ev->GetBoostWeight();
+         Factor += ev->GetWeight();
       }
       Factor = FactorOrig/Factor;
       // next normalize the weights
@@ -610,7 +636,7 @@ void TMVA::MethodBoost::SingleBoost()
    }
    else if (fBoostType == "Bagging") {
       // Bagging or Bootstrap boosting, gives new random weight for every event
-      TRandom3*trandom   = new TRandom3(fMethods.size()-1);
+      TRandom3*trandom   = new TRandom3(fRandomSeed+fMethods.size());
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          ev = Data()->GetEvent(ievt);
          ev->SetBoostWeight(trandom->Rndm());
@@ -713,3 +739,56 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err )
    return mvaValue;
 }
 
+//_______________________________________________________________________
+void TMVA::MethodBoost::SingleTest(Int_t MethodIndex)
+{
+   MethodBase* method = dynamic_cast<MethodBase*>(fMethods.back());
+   Data()->SetCurrentType(Types::kTesting);
+
+   // delete testing results
+   Data()->GetResults(Form("%s_B%04i", fBoostedMethodName.Data(),MethodIndex), Types::kTesting, GetAnalysisType())->Delete();
+
+   // Evaluate method on testing sample
+   method->AddOutput( Types::kTesting, method->GetAnalysisType() );
+   // Evaluate performance of method
+   method->TestClassification();
+
+   // calculate ROC integral
+   (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1,dynamic_cast<MethodBase*>(method)->GetROCIntegral());
+   //(*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetROCIntegral());
+
+   Data()->SetCurrentType(Types::kTraining);
+}
+
+//_______________________________________________________________________
+void TMVA::MethodBoost::FullTest( Double_t AllMethodsWeight )
+{
+   Data()->SetCurrentType(Types::kTesting);
+
+   // delete testing results
+   Data()->GetResults(GetMethodName(), Types::kTesting, GetAnalysisType())->Delete();
+   
+   // save the old normalization of the methods
+   std::vector<Double_t> OldMethodWeight(fMethodWeight);
+   // normalize the weights of the classifiers
+   if (fMethodWeightType == "LastMethod") 
+      fMethodWeight.back() = AllMethodsWeight = 1.0;
+   for (Int_t i=0; i<=fMethodIndex; i++)
+      fMethodWeight[i] = fMethodWeight[i] / AllMethodsWeight;
+
+   // Evaluate method on testing sample
+   AddOutput( Types::kTesting, GetAnalysisType() );
+   // Evaluate performance of method
+   TestClassification();
+
+   // calculate ROC integral
+   (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1,GetROCIntegral());
+
+   // restore the method weights
+   fMethodWeight = OldMethodWeight;
+
+   // delete testing results
+   Data()->GetResults(GetMethodName(), Types::kTesting, GetAnalysisType())->Delete();
+
+   Data()->SetCurrentType(Types::kTraining);
+}

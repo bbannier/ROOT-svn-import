@@ -110,6 +110,7 @@ TMVA::PDEFoam::PDEFoam() :
    fNmin      = 100;  // only used, when fCutMin == kTRUE
    fCutRMSmin = kFALSE;
    fRMSmin    = 1.0;
+   fFillFoamWithOrigWeights = kTRUE;
 
    SetPDEFoamVolumeFraction(-1.);
 
@@ -155,6 +156,7 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fXmax      = 0;
    fCutNmin   = kFALSE;
    fCutRMSmin = kFALSE;
+   fFillFoamWithOrigWeights = kTRUE;
    SetPDEFoamVolumeFraction(-1.);
 
    fSignalClass     = -1;
@@ -177,8 +179,8 @@ TMVA::PDEFoam::~PDEFoam()
 
    delete fVariableNames;
    delete fTimer;
-   delete fDistr;
-   delete fPseRan;
+   if (fDistr)  delete fDistr;
+   if (fPseRan) delete fPseRan;
    if (fXmin) delete [] fXmin;  fXmin=0;
    if (fXmax) delete [] fXmax;  fXmax=0;
 
@@ -204,11 +206,11 @@ TMVA::PDEFoam::PDEFoam(const PDEFoam &From):
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::SetkDim(Int_t kDim) 
+void TMVA::PDEFoam::SetDim(Int_t kDim) 
 { 
    // Sets dimension of cubical space
    if (kDim < 1)
-      Log() << kFATAL << "<SetkDim>: Dimension is zero or negative!" << Endl;
+      Log() << kFATAL << "<SetDim>: Dimension is zero or negative!" << Endl;
 
    fDim = kDim;
    if (fXmin) delete [] fXmin;
@@ -225,7 +227,7 @@ void TMVA::PDEFoam::SetXmin(Int_t idim, Double_t wmin)
       Log() << kFATAL << "<SetXmin>: Dimension out of bounds!" << Endl;
 
    fXmin[idim]=wmin;
-   fDistr->SetXmin(idim, wmin);
+   GetDistr()->SetXmin(idim, wmin);
 }
 
 //_____________________________________________________________________
@@ -236,7 +238,7 @@ void TMVA::PDEFoam::SetXmax(Int_t idim, Double_t wmax)
       Log() << kFATAL << "<SetXmax>: Dimension out of bounds!" << Endl;
 
    fXmax[idim]=wmax;
-   fDistr->SetXmax(idim, wmax);
+   GetDistr()->SetXmax(idim, wmax);
 }
 
 //_____________________________________________________________________
@@ -1035,8 +1037,8 @@ void TMVA::PDEFoam::CalcCellDiscr()
 
       if (N_sig+N_bg > 1e-10){
          SetCellElement(fCells[iCell], 0, N_sig/(N_sig+N_bg));  // set discriminator
-         SetCellElement(fCells[iCell], 1, TMath::Sqrt( TMath::Power ( N_sig/TMath::Power(N_sig+N_bg,2),2)*N_sig +
-                                                       TMath::Power ( N_bg /TMath::Power(N_sig+N_bg,2),2)*N_bg ) ); // set discriminator error
+         SetCellElement(fCells[iCell], 1, TMath::Sqrt( Sqr ( N_sig/Sqr(N_sig+N_bg))*N_sig +
+                                                       Sqr ( N_bg /Sqr(N_sig+N_bg))*N_bg ) ); // set discriminator error
 
       }
       else {
@@ -1047,7 +1049,7 @@ void TMVA::PDEFoam::CalcCellDiscr()
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellDiscr( std::vector<Float_t> xvec, EKernel kernel )
+Double_t TMVA::PDEFoam::GetCellDiscr( std::vector<Float_t> &xvec, EKernel kernel )
 {
    // Get discriminator saved in cell (previously calculated in CalcCellDiscr())
    // which encloses the coordinates given in xvec.
@@ -1057,7 +1059,7 @@ Double_t TMVA::PDEFoam::GetCellDiscr( std::vector<Float_t> xvec, EKernel kernel 
    Double_t result = 0.;
 
    // transform xvec
-   std::vector<Float_t> txvec = VarTransform(xvec);
+   std::vector<Float_t> txvec(VarTransform(xvec));
 
    // find cell
    PDEFoamCell *cell= FindCell(txvec);
@@ -1109,7 +1111,7 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev, Bool_t NoNegWeights)
 
    std::vector<Float_t> values  = ev->GetValues();
    std::vector<Float_t> targets = ev->GetTargets();
-   Float_t weight               = ev->GetOriginalWeight();
+   Float_t weight               = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
    EFoamType ft                 = GetFoamType();
 
    if((NoNegWeights && weight<=0) || weight==0)
@@ -1119,7 +1121,8 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev, Bool_t NoNegWeights)
       values.insert(values.end(), targets.begin(), targets.end());
 
    // find corresponding foam cell
-   PDEFoamCell *cell = FindCell(VarTransform(values));
+   std::vector<Float_t> tvalues = VarTransform(values);
+   PDEFoamCell *cell = FindCell(tvalues);
    if (!cell) {
       Log() << kFATAL << "<PDEFoam::FillFoamCells>: No cell found!" << Endl;
       return;
@@ -1147,15 +1150,15 @@ void TMVA::PDEFoam::FillFoamCells(const Event* ev, Bool_t NoNegWeights)
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellRegValue0( std::vector<Float_t> xvec, EKernel kernel )
+Double_t TMVA::PDEFoam::GetCellRegValue0( std::vector<Float_t> &xvec, EKernel kernel )
 {
    // Get regression value 0 from cell that contains xvec.
    // This function is used when the MultiTargetRegression==False option is set.
 
    Double_t result = 0.;
 
-   std::vector<Float_t> txvec = VarTransform(xvec);
-   PDEFoamCell *cell          = FindCell(txvec);
+   std::vector<Float_t> txvec(VarTransform(xvec));
+   PDEFoamCell *cell = FindCell(txvec);
 
    if (!cell) {
       Log() << kFATAL << "<GetCellRegValue0> ERROR: No cell found!" << Endl;
@@ -1210,7 +1213,7 @@ Double_t TMVA::PDEFoam::GetCellRegValue0( std::vector<Float_t> xvec, EKernel ker
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetAverageNeighborsValue( std::vector<Float_t> txvec,
+Double_t TMVA::PDEFoam::GetAverageNeighborsValue( std::vector<Float_t> &txvec,
                                                   ECellValue cv )
 {
    // This function returns the average value 'cv' of only nearest
@@ -1232,7 +1235,7 @@ Double_t TMVA::PDEFoam::GetAverageNeighborsValue( std::vector<Float_t> txvec,
 
    // loop over all dimensions and find neighbor cells
    for (Int_t dim=0; dim<GetTotDim(); dim++) {
-      std::vector<Float_t> ntxvec = txvec;
+      std::vector<Float_t> ntxvec(txvec);
       PDEFoamCell* left_cell  = 0; // left cell
       PDEFoamCell* right_cell = 0; // right cell
 
@@ -1284,7 +1287,7 @@ Bool_t TMVA::PDEFoam::CellValueIsUndefined( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-std::vector<Float_t> TMVA::PDEFoam::GetCellTargets( std::vector<Float_t> tvals, ETargetSelection ts )
+std::vector<Float_t> TMVA::PDEFoam::GetCellTargets( std::vector<Float_t> &tvals, ETargetSelection ts )
 {
    // This function is used when the MultiTargetRegression==True
    // option is set.  It calculates the mean target or most probable
@@ -1358,7 +1361,7 @@ std::vector<Float_t> TMVA::PDEFoam::GetCellTargets( std::vector<Float_t> tvals, 
 }
 
 //_____________________________________________________________________
-std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> vals, EKernel kernel, ETargetSelection ts )
+std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> &vals, EKernel kernel, ETargetSelection ts )
 {
    // This function is used when the MultiTargetRegression==True option is set.
    // Returns regression value i, given the event variables 'vals'.
@@ -1382,7 +1385,7 @@ std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> v
    }
 
    // transform variables (vals)
-   std::vector<Float_t> txvec = VarTransform(vals);
+   std::vector<Float_t> txvec(VarTransform(vals));
    std::vector<Float_t> target(GetTotDim()-txvec.size(), 0); // returned vector
 
    // choose kernel
@@ -1435,7 +1438,7 @@ std::vector<Float_t> TMVA::PDEFoam::GetProjectedRegValue( std::vector<Float_t> v
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellDensity( std::vector<Float_t> xvec, EKernel kernel )
+Double_t TMVA::PDEFoam::GetCellDensity( std::vector<Float_t> &xvec, EKernel kernel )
 {
    // Returns density (=number of entries / volume) of cell that encloses 'xvec'.
    // This function is called by GetMvaValue() in case of two separated foams
@@ -1443,7 +1446,7 @@ Double_t TMVA::PDEFoam::GetCellDensity( std::vector<Float_t> xvec, EKernel kerne
    // 'kernel' can be either kNone or kGaus.
 
    Double_t result = 0;
-   std::vector<Float_t> txvec = VarTransform(xvec);
+   std::vector<Float_t> txvec(VarTransform(xvec));
    PDEFoamCell *cell          = FindCell(txvec);
 
    if (!cell) {
@@ -1555,13 +1558,14 @@ Double_t TMVA::PDEFoam::GetCellValue( PDEFoamCell* cell, ECellValue cv )
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> xvec, ECellValue cv)
+Double_t TMVA::PDEFoam::GetCellValue(std::vector<Float_t> &xvec, ECellValue cv)
 {
    // This function finds the cell, which corresponds to the given
    // event vector 'xvec' and return its value, which is given by the
    // parameter 'cv'.
    
-   return GetCellValue(FindCell(VarTransform(xvec)), cv);
+   std::vector<Float_t> txvec(VarTransform(xvec));
+   return GetCellValue(FindCell(txvec), cv);
 }
 
 //_____________________________________________________________________
@@ -1573,7 +1577,7 @@ Double_t TMVA::PDEFoam::GetBuildUpCellEvents( PDEFoamCell* cell )
 }
 
 //_____________________________________________________________________
-Double_t TMVA::PDEFoam::WeightLinNeighbors( std::vector<Float_t> txvec, ECellValue cv, Int_t dim1, Int_t dim2, Bool_t TreatEmptyCells )
+Double_t TMVA::PDEFoam::WeightLinNeighbors( std::vector<Float_t> &txvec, ECellValue cv, Int_t dim1, Int_t dim2, Bool_t TreatEmptyCells )
 {
    // results the cell value, corresponding to txvec, weighted by the
    // neighor cells via a linear function
@@ -1618,7 +1622,7 @@ Double_t TMVA::PDEFoam::WeightLinNeighbors( std::vector<Float_t> txvec, ECellVal
 
    // loop over all dimensions to find neighbor cells
    for (Int_t dim=0; dim<GetTotDim(); dim++) {
-      std::vector<Float_t> ntxvec = txvec;
+      std::vector<Float_t> ntxvec(txvec);
       Double_t mindist;
       PDEFoamCell *mindistcell = 0; // cell with minimal distance to txvec
       // calc minimal distance to neighbor cell
@@ -1653,7 +1657,7 @@ Double_t TMVA::PDEFoam::WeightLinNeighbors( std::vector<Float_t> txvec, ECellVal
 }
 
 //_____________________________________________________________________
-Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> txvec,
+Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> &txvec,
                                    UInt_t dim )
 {
    // Returns the gauss weight between the 'cell' and a given coordinate 'txvec'.
@@ -1705,7 +1709,7 @@ Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> txvec
 
    Float_t distance = 0.; // distance for weighting
    for (UInt_t i=0; i<dims; i++)
-      distance += TMath::Power(txvec.at(i)-cell_center.at(i), 2);
+      distance += Sqr(txvec.at(i)-cell_center.at(i));
    distance = TMath::Sqrt(distance);
 
    Float_t width = 1./GetPDEFoamVolumeFraction();
@@ -1717,7 +1721,7 @@ Float_t TMVA::PDEFoam::WeightGaus( PDEFoamCell* cell, std::vector<Float_t> txvec
 }
 
 //_____________________________________________________________________
-TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> xvec )
+TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> &xvec )
 {
    // Find cell that contains xvec
    //
@@ -1743,7 +1747,7 @@ TMVA::PDEFoamCell* TMVA::PDEFoam::FindCell( std::vector<Float_t> xvec )
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoam::FindCellsRecursive(std::vector<Float_t> txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells)
+void TMVA::PDEFoam::FindCellsRecursive(std::vector<Float_t> &txvec, PDEFoamCell* cell, std::vector<PDEFoamCell*> &cells)
 {
    // This is a helper function for FindCells().  It saves in 'cells'
    // all cells, which contain txvec.  It works analogous to
@@ -1786,7 +1790,7 @@ void TMVA::PDEFoam::FindCellsRecursive(std::vector<Float_t> txvec, PDEFoamCell* 
 }
 
 //_____________________________________________________________________
-std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::vector<Float_t> txvec)
+std::vector<TMVA::PDEFoamCell*> TMVA::PDEFoam::FindCells(std::vector<Float_t> &txvec)
 {
    // Find all cells, that contain txvec.  This function can be used,
    // when the dimension of the foam is greater than the dimension of
@@ -1872,7 +1876,7 @@ TH1D* TMVA::PDEFoam::Draw1Dim( const char *opt, Int_t nbin )
       xvec.at(0) = h1->GetBinCenter(ibinx);
 
       // transform xvec
-      std::vector<Float_t> txvec = VarTransform(xvec);
+      std::vector<Float_t> txvec(VarTransform(xvec));
 
       // loop over all active cells
       for (Long_t iCell=0; iCell<=fLastCe; iCell++) {
@@ -2186,14 +2190,14 @@ Double_t TMVA::PDEFoam::GetProjectionCellValue( PDEFoamCell* cell,
 }
 
 //_____________________________________________________________________
-TVectorD* TMVA::PDEFoam::GetCellElements( std::vector<Float_t> xvec )
+TVectorD* TMVA::PDEFoam::GetCellElements( std::vector<Float_t> &xvec )
 {
    // Returns pointer to cell elements.  The given event vector 'xvec'
    // must be untransformed (i.e. [xmin, xmax]).
 
    assert(unsigned(GetTotDim()) == xvec.size());
-
-   return dynamic_cast<TVectorD*>(FindCell(VarTransform(xvec))->GetElement());
+   std::vector<Float_t> txvec(VarTransform(xvec));
+   return dynamic_cast<TVectorD*>(FindCell(txvec)->GetElement());
 }
 
 //_____________________________________________________________________
@@ -2419,7 +2423,7 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, std::string what,
 void TMVA::PDEFoam::SetVolumeFraction( Double_t vfr )
 {
    // set VolFrac to internal foam density PDEFoamDistr
-   fDistr->SetVolumeFraction(vfr);
+   GetDistr()->SetVolumeFraction(vfr);
    SetPDEFoamVolumeFraction(vfr);
 }
 
@@ -2427,14 +2431,14 @@ void TMVA::PDEFoam::SetVolumeFraction( Double_t vfr )
 void TMVA::PDEFoam::FillBinarySearchTree( const Event* ev, Bool_t NoNegWeights )
 {
    // Insert event to internal foam density PDEFoamDistr.
-   fDistr->FillBinarySearchTree(ev, GetFoamType(), NoNegWeights);
+   GetDistr()->FillBinarySearchTree(ev, GetFoamType(), NoNegWeights);
 }
 
 //_____________________________________________________________________
 void TMVA::PDEFoam::Init()
 {
    // Initialize internal foam density PDEFoamDistr
-   fDistr->Initialize(GetTotDim());
+   GetDistr()->Initialize(GetTotDim());
 }
 
 //_____________________________________________________________________
@@ -2443,11 +2447,11 @@ void TMVA::PDEFoam::SetFoamType( EFoamType ft )
    // Set the foam type.  This determinates the method of the
    // calculation of the density during the foam build-up.
    if (ft==kDiscr)
-      fDistr->SetDensityCalc(kDISCRIMINATOR);
+      GetDistr()->SetDensityCalc(kDISCRIMINATOR);
    else if (ft==kMonoTarget)
-      fDistr->SetDensityCalc(kTARGET);
+      GetDistr()->SetDensityCalc(kTARGET);
    else
-      fDistr->SetDensityCalc(kEVENT_DENSITY);
+      GetDistr()->SetDensityCalc(kEVENT_DENSITY);
 
    fFoamType = ft; // set foam type class variable
 }

@@ -72,6 +72,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <algorithm>
+#include <limits>
 
 #include "TROOT.h"
 #include "TSystem.h"
