@@ -149,7 +149,6 @@ void TMVA::MethodBoost::DeclareOptions()
    AddPreDefVal(TString("HighEdgeGauss"));
    AddPreDefVal(TString("HighEdgePara"));
    AddPreDefVal(TString("HighEdgeCoPara"));
-   AddPreDefVal(TString("HighEdgeLinear"));
 
    DeclareOptionRef(fMethodWeightType = "ByError", "Boost_MethodWeightType",
                     "How to set the final weight of the boosted classifiers");
@@ -717,10 +716,9 @@ void TMVA::MethodBoost::SingleBoost()
    }
    else if (fBoostType == "HighEdgeGauss" || 
 	    fBoostType == "HighEdgePara" ||
-	    fBoostType == "HighEdgeCoPara" ||
-	    fBoostType == "HighEdgeLinear") {
-      // Give events high boost weight, which are close the MVA cut
-      // value
+	    fBoostType == "HighEdgeCoPara") {
+      // Give events high boost weight, which are close of far away
+      // from the MVA cut value
       Double_t MVACutValue = method->GetSignalReferenceCut();
       sumAll1 = 0;
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
@@ -730,9 +728,9 @@ void TMVA::MethodBoost::SingleBoost()
 	 else if (fBoostType == "HighEdgePara")
 	    ev->SetBoostWeight( -4.0 * std::pow(fMVAvalues->at(ievt)-0.5,2) + 1.0 );
 	 else if (fBoostType == "HighEdgeCoPara")
-	    ev->SetBoostWeight( DataInfo().IsSignal(ev) ? std::pow(1-fMVAvalues->at(ievt),2) : std::pow(fMVAvalues->at(ievt),2) );
+	    ev->SetBoostWeight( DataInfo().IsSignal(ev) ? TMath::Power(1.0-fMVAvalues->at(ievt),fADABoostBeta) : TMath::Power(fMVAvalues->at(ievt),fADABoostBeta) );
 	 else
-	    ev->SetBoostWeight( DataInfo().IsSignal(ev) ? 1-fMVAvalues->at(ievt) : fMVAvalues->at(ievt) );
+	    Log() << kFATAL << "Unknown event weight type!" << Endl;
 
          sumAll1 += ev->GetWeight();
       }
