@@ -29,6 +29,8 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
+#include <cmath>
+
 #ifndef ROOT_TMath
 #include "TMath.h"
 #endif
@@ -138,6 +140,8 @@ void TMVA::PDEFoamDistr::FillBinarySearchTree( const Event* ev, EFoamType ft, Bo
       event->SetClass(fSignalClass);
    }
    fBst->Insert(event);
+
+   delete event;
 }
 
 //_____________________________________________________________________
@@ -169,7 +173,7 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
    std::vector<Double_t> ub(fDim);
 
    // probevolume relative to hypercube with edge length 1:
-   static const Double_t probevolume_inv = TMath::Power((fVolFrac/2), fDim);
+   const Double_t probevolume_inv = std::pow((fVolFrac/2), fDim);
 
    // set upper and lower bound for search volume
    for (Int_t idim = 0; idim < fDim; idim++) {
@@ -186,7 +190,7 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
 
    // normalized density: (number of counted events) / volume / (total
    // number of events) should be ~1 on average
-   const Double_t count = (Double_t) (nodes.size()); // number of events found
+   const UInt_t count = nodes.size(); // number of events found
 
    // store density based on total number of events
    event_density = count * probevolume_inv;
@@ -196,17 +200,17 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
       weighted_count += (nodes.at(j))->GetWeight();
 
    if (FillDiscriminator()){ // calc number of signal events in nodes
-      Double_t N_sig = 0;    // number of target events found
+      Double_t N_sig = 0;    // number of signal events found
       // now sum over all nodes->IsSignal;
-      for (Int_t j=0; j<count; j++){
-         N_sig += ((nodes.at(j))->IsSignal()?1.:0.) * (nodes.at(j))->GetWeight();
+      for (UInt_t j=0; j<count; j++){
+         if (nodes.at(j)->IsSignal()) N_sig += nodes.at(j)->GetWeight();
       }
       return (N_sig/(weighted_count+0.1))*probevolume_inv; // return:  (N_sig/N_total) / (cell_volume)
    }
    else if (FillTarget0()){ // calc sum of weighted target values
       Double_t N_tar = 0;   // number of target events found
       // now sum over all nodes->GetTarget(0);
-      for (Int_t j=0; j<count; j++) {
+      for (UInt_t j=0; j<count; j++) {
          N_tar += ((nodes.at(j))->GetTargets()).at(0) * ((nodes.at(j))->GetWeight());
       }
       return (N_tar/(weighted_count+0.1))*probevolume_inv; // return:  (N_tar/N_total) / (cell_volume)

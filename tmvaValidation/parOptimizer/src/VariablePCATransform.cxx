@@ -111,7 +111,6 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
    if (!IsCreated()) return 0;
 
    const Int_t nvar = ev->GetNVariables();
-
    // if we have more than one class, take the last PCA analysis where all classes are combined if 
    // the cls parameter is outside the defined classes
    // If there is only one class, then no extra class for all events of all classes has to be created
