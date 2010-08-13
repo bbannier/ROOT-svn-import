@@ -2083,7 +2083,7 @@ TObject* TEveElementObjectPtr::GetObject(const TEveException& eh) const
    // Virtual from TEveElement.
 
    if (fObject == 0)
-      throw(eh + "fObject not set.");
+      throw eh + "fObject not set.";
    return fObject;
 }
 
