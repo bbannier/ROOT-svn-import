@@ -52,8 +52,6 @@ public:
 
    virtual Bool_t HasProjecteds() const { return ! fProjectedList.empty(); }
 
-
-
    ProjList_i   BeginProjecteds()       { return  fProjectedList.begin(); }
    ProjList_i   EndProjecteds()         { return  fProjectedList.end();   }
 
@@ -106,7 +104,6 @@ public:
 
    virtual void UpdateProjection() = 0;   
    virtual TEveElement* GetProjectedAsElement();
-
 
    virtual void SetDepth(Float_t d);
 
