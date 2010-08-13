@@ -381,9 +381,10 @@ void TMVA::MethodBDT::Init( void )
 
    fNodeMinEvents  = TMath::Max( Int_t(40), Int_t( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
    fNCuts          = 20;
-   fPruneMethodS   = "CostComplexity";
+   //   fPruneMethodS   = "CostComplexity";
+   fPruneMethodS   = "NoPruning";
    fPruneMethod    = DecisionTree::kCostComplexityPruning;
-   fPruneStrength  = -1.0;
+   fPruneStrength  = 0;
    fFValidationEvents = 0.5;
    fRandomisedTrees = kFALSE;
    fUseNvars        =  (GetNvar()>12) ? UInt_t(GetNvar()/8) : TMath::Max(UInt_t(2),UInt_t(GetNvar()/3));
