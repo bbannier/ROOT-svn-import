@@ -15,13 +15,9 @@
 #include "Math/WrappedFunction.h"
 #endif
 
-#ifndef ROOT_TMath
-#include "TMath.h"
-#endif
-
 #include "TF1.h"
 #include "TH1D.h"
-
+#include "Math/Math.h"
 
 /*
    Kernel Density Estimation class. The algorithm is described in (1) "Cranmer KS, Kernel Estimation in High-Energy
@@ -94,6 +90,7 @@ public:
 private:
    
    static const Double_t _2_PI_ROOT_INV = 0.398942280401432703; // (2*TMath::Pi())**-0.5
+   static const Double_t PI             = 3.14159265358979312;  // TMath::Pi()
    static const Double_t PI_OVER2       = 1.57079632679489656;  // TMath::PiOver2()
    static const Double_t PI_OVER4       = 0.785398163397448279; // TMath::PiOver4()
    
@@ -165,10 +162,24 @@ private:
    
    void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho);
    
-   inline Double_t GaussianKernel(Double_t x) const;
-   inline Double_t EpanechnikovKernel(Double_t x) const;
-   inline Double_t BiweightKernel(Double_t x) const;
-   inline Double_t CosineArchKernel(Double_t x) const;
+   inline Double_t GaussianKernel(Double_t x) const {
+      // Returns the kernel evaluation at x 
+      return _2_PI_ROOT_INV * std::exp(-.5 * x * x);
+   }
+   inline Double_t EpanechnikovKernel(Double_t x) const {
+      Double_t result = 3. / 4. * (1. - x * x);
+      return result > 0.0 ? result : 0.0;
+   }
+   inline Double_t BiweightKernel(Double_t x) const {
+      // Returns the kernel evaluation at x 
+      Double_t result = 15. / 16. * (1. - x * x) * (1. - x * x);
+      return result > 0.0 ? result : 0.0;
+   }
+   inline Double_t CosineArchKernel(Double_t x) const {
+      // Returns the kernel evaluation at x 
+      Double_t result = PI_OVER4 * std::cos(PI_OVER2 * x);
+      return result > 0.0 ? result : 0.0;
+   }
    Double_t UpperConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
    Double_t LowerConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
    Double_t ApproximateBias(const Double_t* x, const Double_t* p) const;
@@ -194,7 +205,10 @@ private:
    void SetData(const Double_t* data);
    void SetMirroredData();
    
-   inline void SetData(Double_t x, UInt_t i);
+   inline void SetData(Double_t x, UInt_t i) {
+      // Set data point at the i-th data vector position
+      fData[i] = x;
+   }
       
    TH1D* GetKDEHistogram(UInt_t nbins, Double_t xMin, Double_t xMax);
    

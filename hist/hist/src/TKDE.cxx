@@ -2,7 +2,6 @@
 #include <numeric>
 #include <limits>
 #include "TKDE.h"
-#include "Math/Math.h"
 #include "Math/Error.h"
 #include "Math/Functor.h"
 #include "Math/Integrator.h"
@@ -19,7 +18,7 @@ TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EK
    fLowerPDF(0),
    fApproximateBias(0),
    fHistogram(0),
-   fNBins(/*1000*/500),
+   fNBins(/*1000*/500), // Perhaps in function of nEvents, check
    fNEvents(events),
    fUseBinsNEvents(1000),
    fMean(0.0),
@@ -212,12 +211,12 @@ void TKDE::SetMean() {
    
 void TKDE::SetSigma() { 
    // Computes input data's sigma
-   fSigma = TMath::Sqrt(1. / (fData.size() - 1) * (inner_product(fData.begin(), fData.end(), fData.begin(), 0.0) - fData.size() * TMath::Power(fMean, 2)));
+   fSigma = std::sqrt(1. / (fData.size() - 1) * (inner_product(fData.begin(), fData.end(), fData.begin(), 0.0) - fData.size() * std::pow(fMean, 2)));
 }
 
 void TKDE::SetKernel() {
    // Sets the kernel density estimator
-   Double_t weight(fCanonicalBandwidths[kGaussian] * fSigma * TMath::Power( 3. / (8. * TMath::Sqrt(TMath::Pi())) * fNEvents, -0.2));// Optimal bandwidth (Silverman's rule of thumb with assumed Gaussian density)
+   Double_t weight(fCanonicalBandwidths[kGaussian] * fSigma * std::pow( 3. / (8. * std::sqrt(PI)) * fNEvents, -0.2));// Optimal bandwidth (Silverman's rule of thumb with assumed Gaussian density)
    weight *= fCanonicalBandwidths[fKernelType] / fCanonicalBandwidths[kGaussian];
    UInt_t n = fUseBins ? fNBins : fNEvents; 
    fKernel = new TKernel(n, weight, this);
@@ -270,13 +269,7 @@ void TKDE::SetKernelSigmas2() {
    fKernelSigmas2[kGaussian] = 1.0;
    fKernelSigmas2[kEpanechnikov] = 1.0 / 5.0;
    fKernelSigmas2[kBiweight] = 1.0 / 7.0;
-   fKernelSigmas2[kCosineArch] = 1.0 - 8.0 / TMath::Power(TMath::Pi(), 2);
-}
-
-
-inline void TKDE::SetData(Double_t x, UInt_t i) {
-   // Set data point at the i-th data vector position
-   fData[i] = x;
+   fKernelSigmas2[kCosineArch] = 1.0 - 8.0 / std::pow(PI, 2);
 }
 
 TH1D* TKDE::GetHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
@@ -344,11 +337,11 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
    std::vector<Double_t>::iterator weight = weights.begin();
    std::vector<Double_t> dataset(fKDE->fUseBins ? GetBinCentreData() : fKDE->fData);
    std::vector<Double_t>::iterator data = dataset.begin();
-   Double_t norm(/*2.0 * TMath::Sqrt(3.0)*/ 1.); // Adaptive weight normalization used in RooKeysPdf without justification. Makes a difference on profiling the estimator. 
+   Double_t norm(/*2.0 * std::sqrt(3.0)*/ 1.); // Adaptive weight normalization used in RooKeysPdf without justification. Makes a difference on profiling the estimator. 
    for (; weight != weights.end(); ++weight, ++data) {
       Double_t f = (*fKDE->fKernel)(*data);
       if (f > 0.) {
-         *weight *= fKDE->fRho / fKDE->fSigma * TMath::Power(fKDE->fSigma / f, 0.5) / norm;
+         *weight *= fKDE->fRho / fKDE->fSigma * std::pow(fKDE->fSigma / f, 0.5) / norm;
       }
    }
    fWeights = weights;
@@ -387,24 +380,18 @@ Double_t TKDE::TKernel::operator()(Double_t x) const {
 
 UInt_t TKDE::TKernel::Index(Double_t x, UInt_t i) const {
    // Returns the indices for the binned weights. Otherwise, the the data orderinf is returned
-   if(fKDE->fNEvents > fNWeights) {
-      return Index(x);
-   } else {
-      return i;
-   }
+   return fKDE->fNEvents > fNWeights ? Index(x) : i;
 }
 
-UInt_t TKDE::TKernel::Index(Double_t x) const {
+UInt_t TKDE::TKernel::Index(Double_t x) const { // TODO: inline??
    // Returns the indices (bins) for the binned weights
-//    Int_t bin = Int_t(fNWeights * (x - fKDE->fXMin) / (fKDE->fXMax - fKDE->fXMin));
    Int_t bin = Int_t((x - fKDE->fXMin) * fKDE->fWeightSize);
    if (bin < 0) { // Left Mirrored Data
-      bin *= -1;
+      return bin *= -1;
    } else if (bin > (Int_t)fNWeights) { // Right Mirrored Data
-      bin -= fNWeights ;
-   }
-   if (bin == (Int_t)fNWeights) {
-      bin = fNWeights - 1;
+      return bin -= fNWeights ;
+   } else if (bin == (Int_t)fNWeights) {
+      return --bin;
    }
    return bin;
 }
@@ -432,7 +419,7 @@ Double_t TKDE::ApproximateBias(const Double_t* x, const Double_t*) const {
    rd.SetFunction(kern);
    Double_t df2 = rd.Derivative2(*x);
    Double_t weight = fKernel->GetWeight(*x); // Bandwidth
-   return  0.5 * fKernelSigmas2[fKernelType] * TMath::Power(weight, 2) * df2;
+   return  0.5 * fKernelSigmas2[fKernelType] * std::pow(weight, 2) * df2;
 }
 Double_t TKDE::GetError(Double_t x) const {
    // Returns the pointwise variance of estimated density
@@ -440,7 +427,7 @@ Double_t TKDE::GetError(Double_t x) const {
    Double_t f = this->operator()(&x);
    Double_t weight = fKernel->GetWeight(x); // Bandwidth
    Double_t result = f * kernelL2Norm / (fNEvents * weight); 
-   return TMath::Sqrt(result);
+   return std::sqrt(result);
 }
 
 void TKDE::CheckKernelValidity() {
@@ -505,34 +492,12 @@ Double_t TKDE::ComputeKernelIntegral() const {
 
 void TKDE::SetCanonicalBandwidth() {
    // Computes the user's input kernel function canonical bandwidth
-   fCanonicalBandwidths[kUserDefined] = TMath::Power(ComputeKernelL2Norm() / TMath::Power(ComputeKernelSigma2(), 2), 1. / 5.);
+   fCanonicalBandwidths[kUserDefined] = std::pow(ComputeKernelL2Norm() / std::pow(ComputeKernelSigma2(), 2), 1. / 5.);
 }
 
 void TKDE::SetKernelSigma2() {
    // Computes the user's input kernel function sigma2
    fKernelSigmas2[kUserDefined] = ComputeKernelSigma2();
-}
-
-inline Double_t TKDE::GaussianKernel(Double_t x) const {
-   // Returns the kernel evaluation at x 
-   return _2_PI_ROOT_INV * std::exp(-x * x / 2.);
-}
-
-inline Double_t TKDE::EpanechnikovKernel(Double_t x) const {
-   Double_t result = 3. / 4. * (1. - x * x);
-   return result > 0.0 ? result : 0.0; // TODO: change to output predefined weight (loses (f > 0.) in ComputeAdaptiveWeights)
-}
-
-inline Double_t TKDE::BiweightKernel(Double_t x) const {
-   // Returns the kernel evaluation at x 
-   Double_t result = 15. / 16. * (1. - x * x) * (1. - x * x);
-   return result > 0.0 ? result : 0.0;// TODO: change to output predefined weight (loses (f > 0.) in ComputeAdaptiveWeights)
-}
-
-inline Double_t TKDE::CosineArchKernel(Double_t x) const {
-   // Returns the kernel evaluation at x 
-   Double_t result = PI_OVER4 * std::cos(PI_OVER2 * x);
-   return result > 0.0 ? result : 0.0; // TODO: change to output predefined weight (loses (f > 0.) in ComputeAdaptiveWeights)
 }
 
 TKDE::KernelIntegrand::KernelIntegrand(const TKDE* kde, EIntegralResult intRes) : fKDE(kde), fIntegralResult(intRes) {
@@ -542,11 +507,11 @@ TKDE::KernelIntegrand::KernelIntegrand(const TKDE* kde, EIntegralResult intRes) 
 Double_t TKDE::KernelIntegrand::operator()(Double_t x) const {
    // Internal class unary function
    if (fIntegralResult == kNorm) {
-     return TMath::Power((*fKDE->fKernelFunction)(x), 2);
+     return std::pow((*fKDE->fKernelFunction)(x), 2);
    } else if (fIntegralResult == kMu) {
       return x * (*fKDE->fKernelFunction)(x);
    } else if (fIntegralResult == kSigma2) {
-      return TMath::Power(x, 2) * (*fKDE->fKernelFunction)(x);
+      return std::pow(x, 2) * (*fKDE->fKernelFunction)(x);
    } else if (fIntegralResult == kUnitIntegration) {
       return (*fKDE->fKernelFunction)(x);
    } else {
