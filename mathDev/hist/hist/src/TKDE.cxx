@@ -2,6 +2,7 @@
 #include <numeric>
 #include <limits>
 #include "TKDE.h"
+#include "Math/Math.h"
 #include "Math/Error.h"
 #include "Math/Functor.h"
 #include "Math/Integrator.h"
@@ -18,7 +19,7 @@ TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EK
    fLowerPDF(0),
    fApproximateBias(0),
    fHistogram(0),
-   fNBins(1000),
+   fNBins(/*1000*/500),
    fNEvents(events),
    fUseBinsNEvents(1000),
    fMean(0.0),
@@ -103,7 +104,7 @@ void TKDE::Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_
    fLowerPDF = 0;
    fHistogram = 0;
    fApproximateBias = 0;
-   fNBins = 1000;
+   fNBins = /*1000*/ 500;
    fNEvents = events;
    fUseBinsNEvents = 1000;
    fMean = 0.0;
@@ -181,6 +182,7 @@ void TKDE::SetData(const Double_t* data) {
    }
    SetMean();
    SetSigma();
+   fWeightSize = (fUseBins ? fNBins : fNEvents) / (fXMax - fXMin);
    if (fMirror != kNoMirror) {
       SetMirroredData();
    }
@@ -394,7 +396,8 @@ UInt_t TKDE::TKernel::Index(Double_t x, UInt_t i) const {
 
 UInt_t TKDE::TKernel::Index(Double_t x) const {
    // Returns the indices (bins) for the binned weights
-   Int_t bin = Int_t(fNWeights * (x - fKDE->fXMin) / (fKDE->fXMax - fKDE->fXMin));
+//    Int_t bin = Int_t(fNWeights * (x - fKDE->fXMin) / (fKDE->fXMax - fKDE->fXMin));
+   Int_t bin = Int_t((x - fKDE->fXMin) * fKDE->fWeightSize);
    if (bin < 0) { // Left Mirrored Data
       bin *= -1;
    } else if (bin > (Int_t)fNWeights) { // Right Mirrored Data
@@ -510,26 +513,26 @@ void TKDE::SetKernelSigma2() {
    fKernelSigmas2[kUserDefined] = ComputeKernelSigma2();
 }
 
-Double_t TKDE::GaussianKernel(Double_t x) const {
+inline Double_t TKDE::GaussianKernel(Double_t x) const {
    // Returns the kernel evaluation at x 
-   return TMath::Gaus(x, 0.0, 1.0, kTRUE);
+   return _2_PI_ROOT_INV * std::exp(-x * x / 2.);
 }
 
-Double_t TKDE::EpanechnikovKernel(Double_t x) const {
-   Double_t result = 3. / 4. * (1 - TMath::Power(x, 2));
-   return result > 0.0 ? result : 0.0;
+inline Double_t TKDE::EpanechnikovKernel(Double_t x) const {
+   Double_t result = 3. / 4. * (1. - x * x);
+   return result > 0.0 ? result : 0.0; // TODO: change to output predefined weight (loses (f > 0.) in ComputeAdaptiveWeights)
 }
 
-Double_t TKDE::BiweightKernel(Double_t x) const {
+inline Double_t TKDE::BiweightKernel(Double_t x) const {
    // Returns the kernel evaluation at x 
-   Double_t result = 15. / 16. * TMath::Power(1 - TMath::Power(x, 2), 2);
-   return result > 0.0 ? result : 0.0;
+   Double_t result = 15. / 16. * (1. - x * x) * (1. - x * x);
+   return result > 0.0 ? result : 0.0;// TODO: change to output predefined weight (loses (f > 0.) in ComputeAdaptiveWeights)
 }
 
-Double_t TKDE::CosineArchKernel(Double_t x) const {
+inline Double_t TKDE::CosineArchKernel(Double_t x) const {
    // Returns the kernel evaluation at x 
-   Double_t result = TMath::PiOver4() * TMath::Cos(TMath::PiOver2() * x);
-   return result > 0.0 ? result : 0.0;
+   Double_t result = PI_OVER4 * std::cos(PI_OVER2 * x);
+   return result > 0.0 ? result : 0.0; // TODO: change to output predefined weight (loses (f > 0.) in ComputeAdaptiveWeights)
 }
 
 TKDE::KernelIntegrand::KernelIntegrand(const TKDE* kde, EIntegralResult intRes) : fKDE(kde), fIntegralResult(intRes) {
