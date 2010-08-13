@@ -121,8 +121,14 @@ namespace TMVA {
       //training a single classifier
       void SingleTrain();
 
+      //testing a single classifier
+      void SingleTest(Int_t);
+
       //calculating a boosting weight from the classifier, storing it in the next one
       void SingleBoost();
+
+      // testing a whole classifier
+      void FullTest(Double_t);
 
       //writing the monitoring histograms and tree to a file
       void WriteMonitoringHistosToFile( void ) const;
@@ -163,6 +169,9 @@ namespace TMVA {
 
       //ADA boost parameter, default is 1
       Double_t          fADABoostBeta;
+
+      // seed for random number generator used for bagging
+      UInt_t            fRandomSeed;
 
       // details of the boosted classifier
       TString           fBoostedMethodName;

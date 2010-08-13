@@ -154,7 +154,9 @@ namespace TMVA {
       Int_t GetNodeType( void ) const { return fNodeType; }
     
       //return  S/(S+B) (purity) at this node (from  training)
-      Float_t GetPurity( void ) const ;
+      Float_t GetPurity( void ) const { return fPurity;}
+      //calculate S/(S+B) (purity) at this node (from  training)
+      void SetPurity( void );
 
       //set the response of the node (for regression)
       void SetResponse( Float_t r ) { fResponse = r;}
@@ -253,10 +255,6 @@ namespace TMVA {
       inline const DecisionTreeNode* GetRightDaughter( ) const { return dynamic_cast<DecisionTreeNode*>(GetRight()); }
       inline const DecisionTreeNode* GetMother( ) const { return dynamic_cast<DecisionTreeNode*>(GetParent()); }
 
-      ULong_t GetSequence() const {return fSequence;}
-    
-      void SetSequence(ULong_t s) {fSequence=s;}
-    
       // the node resubstitution estimate, R(t), for Cost Complexity pruning
       inline void SetNodeR( Double_t r ) { fTrainInfo->fNodeR = r;    }
       inline Double_t GetNodeR( ) const  { return fTrainInfo->fNodeR; }
@@ -328,8 +326,7 @@ namespace TMVA {
       Float_t  fResponse;        // response value in case of regression
       Float_t  fRMS;             // response RMS of the regression node 
       Int_t    fNodeType;        // Type of node: -1 == Bkg-leaf, 1 == Signal-leaf, 0 = internal 
-    
-      ULong_t  fSequence;        // bit coded left right sequence to reach the node
+      Float_t  fPurity;          // the node purity
 
       Bool_t   fIsTerminalNode;    //! flag to set node as terminal (i.e., without deleting its descendants)
 
