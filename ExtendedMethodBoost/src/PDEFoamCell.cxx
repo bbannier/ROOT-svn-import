@@ -185,6 +185,19 @@ void TMVA::PDEFoamCell::CalcVolume(void)
 }
 
 //_____________________________________________________________________
+UInt_t TMVA::PDEFoamCell::GetDepth() const 
+{
+   // Get depth of cell in binary tree, where the root cell has depth
+   // 0
+   PDEFoamCell *cell = 0;
+   UInt_t depth = 0;
+   while (fParent != 0 && (cell = GetPare()) != 0){
+      ++depth;
+   }
+   return depth;
+}
+
+//_____________________________________________________________________
 void TMVA::PDEFoamCell::Print(Option_t *option) const
 {
    // Printout of the cell geometry parameters for the debug purpose
