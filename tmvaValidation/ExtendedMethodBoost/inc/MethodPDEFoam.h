@@ -218,6 +218,7 @@ namespace TMVA {
       Bool_t        fCutNmin;         // Grabbing cell with maximal RMS to split next (TFoam default)
       Double_t      fRMSmin;          // minimal number of events in cell necessary to split cell"
       Bool_t        fCutRMSmin;       // Grabbing cell with maximal RMS to split next (TFoam default)
+      UInt_t        fMaxDepth;        // maximum depth of cell tree
 
       TString       fKernelStr;       // Kernel for GetMvaValue() (option string)
       EKernel       fKernel;          // Kernel for GetMvaValue()

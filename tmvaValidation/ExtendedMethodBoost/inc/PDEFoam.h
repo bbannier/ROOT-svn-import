@@ -129,6 +129,7 @@ namespace TMVA {
       UInt_t fNmin;            // minimal number of events in cell to split cell
       Bool_t fCutRMSmin;       // true: peek cell with max. RMS for next split
       Double_t fRMSmin;        // activate cut: minimal RMS in cell to split cell
+      UInt_t fMaxDepth;        // maximum depth of cell tree
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
       Bool_t fFillFoamWithOrigWeights; // fill the foam with boost or orig. weights
       PDEFoamDistr *fDistr;    //! distribution of training events
@@ -260,6 +261,8 @@ namespace TMVA {
       void     SetRMSmin(Double_t val) { fRMSmin=val;    }
       Double_t GetRMSmin()             { return fRMSmin; }
       Bool_t   GetFillFoamWithOrigWeights(){ return fFillFoamWithOrigWeights; }
+      void     SetMaxDepth(UInt_t maxdepth) { fMaxDepth = maxdepth; }
+      UInt_t   GetMaxDepth() const { return fMaxDepth; }
 
       // Getters and Setters for foam boundaries
       void SetXmin(Int_t idim, Double_t wmin);

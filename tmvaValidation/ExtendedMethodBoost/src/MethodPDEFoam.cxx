@@ -98,6 +98,7 @@ void TMVA::MethodPDEFoam::Init( void )
    fNmin           = 100;
    fCutRMSmin      = kFALSE;   // default TFoam method
    fRMSmin         = 0.01;
+   fMaxDepth       = 0;  // cell tree depth is unlimited
    fFillFoamWithOrigWeights = kTRUE;
 
    fKernel         = kNone; // default: use no kernel
@@ -129,6 +130,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    DeclareOptionRef( fMultiTargetRegression = kFALSE,     "MultiTargetRegression", "Do regression with multiple targets");
    DeclareOptionRef( fCutNmin = kTRUE,         "CutNmin",  "Requirement for minimal number of events in cell");
    DeclareOptionRef( fNmin = 100,             "Nmin",     "Number of events in cell required to split cell");
+   DeclareOptionRef( fMaxDepth = 0,           "MaxDepth",  "Maximum depth of cell tree (0=unlimited)");
    DeclareOptionRef( fFillFoamWithOrigWeights = kTRUE, "FillFoamWithOrigWeights", "Fill foam with original or boost weights");
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
@@ -642,6 +644,7 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    pdefoam->SetNmin(fNmin);
    pdefoam->CutRMSmin(fCutRMSmin); // cut on minimal RMS in cell
    pdefoam->SetRMSmin(fRMSmin);
+   pdefoam->SetMaxDepth(fMaxDepth); // maximum cell tree depth
 
    // Init PDEFoam
    pdefoam->Init();

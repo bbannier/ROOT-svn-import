@@ -110,6 +110,7 @@ TMVA::PDEFoam::PDEFoam() :
    fNmin      = 100;  // only used, when fCutMin == kTRUE
    fCutRMSmin = kFALSE;
    fRMSmin    = 1.0;
+   fMaxDepth  = 0;  // cell tree depth is unlimited
    fFillFoamWithOrigWeights = kTRUE;
 
    SetPDEFoamVolumeFraction(-1.);
@@ -155,7 +156,10 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fXmin      = 0;
    fXmax      = 0;
    fCutNmin   = kFALSE;
+   fNmin      = 100;  // only used, when fCutMin == kTRUE
    fCutRMSmin = kFALSE;
+   fRMSmin    = 1.0;
+   fMaxDepth  = 0;  // cell tree depth is unlimited
    fFillFoamWithOrigWeights = kTRUE;
    SetPDEFoamVolumeFraction(-1.);
 
@@ -604,11 +608,17 @@ Long_t TMVA::PDEFoam::PeekMax()
    Double_t  drivMax, driv;
    Bool_t bCutNmin = kTRUE;
    Bool_t bCutRMS  = kTRUE;
+   Bool_t bCutMaxDepth = kTRUE;
    //   drivMax = gVlow;
    drivMax = 0;  // only split cells if gain>0 (this also avoids splitting at cell boundary)
    for(i=0; i<=fLastCe; i++) {//without root
       if( fCells[i]->GetStat() == 1 ) {
          driv =  TMath::Abs( fCells[i]->GetDriv());
+
+	 // apply cut on depth
+	 if (GetMaxDepth() > 0)
+	    bCutMaxDepth = fCells[i]->GetDepth() < GetMaxDepth();
+
          // apply RMS-cut for all options
          if (CutRMSmin()){
             // calc error on rms, but how?
@@ -621,7 +631,7 @@ Long_t TMVA::PDEFoam::PeekMax()
             bCutNmin = GetBuildUpCellEvents(fCells[i]) > GetNmin();
 
          // choose cell
-         if(driv > drivMax && bCutNmin && bCutRMS) {
+         if(driv > drivMax && bCutNmin && bCutRMS && bCutMaxDepth) {
             drivMax = driv;
             iCell = i;
          }
@@ -630,9 +640,14 @@ Long_t TMVA::PDEFoam::PeekMax()
 
    if (iCell == -1){
       if (!bCutNmin)
-         Log() << kVERBOSE << "Warning: No cell with more than " << GetNmin() << " events found!" << Endl;
+         Log() << kVERBOSE << "Warning: No cell with more than " 
+	       << GetNmin() << " events found!" << Endl;
       else if (!bCutRMS)
-         Log() << kVERBOSE << "Warning: No cell with RMS/mean > " << GetRMSmin() << " found!" << Endl;
+         Log() << kVERBOSE << "Warning: No cell with RMS/mean > " 
+	       << GetRMSmin() << " found!" << Endl;
+      else if (!bCutMaxDepth)
+         Log() << kVERBOSE << "Warning: Maximum depth reached: " 
+	       << GetMaxDepth() << Endl;
       else
          Log() << kWARNING << "Warning: PDEFoam::PeekMax: no more candidate cells (drivMax>0) found for further splitting." << Endl;
    }
