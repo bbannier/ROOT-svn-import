@@ -112,7 +112,10 @@ void TMVA::MethodPDEFoam::Init( void )
       if (fFoam.at(i)) delete fFoam.at(i);
    fFoam.clear();
 
-   SetSignalReferenceCut( 0.5 );
+   if (fUseYesNoCell)
+      SetSignalReferenceCut( 0.0 );
+   else
+      SetSignalReferenceCut( 0.5 );
 }
 
 //_______________________________________________________________________
@@ -586,7 +589,7 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err )
    if (err != 0) *err = discr_error;
 
    if (fUseYesNoCell)
-      return (discr < GetSignalReferenceCut() ? -1 : 1);
+      return (discr < 0.5 ? -1 : 1);
    else
       return discr;
 }
