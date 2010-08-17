@@ -134,8 +134,6 @@ namespace TMVA {
       PDEFoamDistr *fDistr;    //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
-      Int_t fSignalClass;      // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
-      Int_t fBackgroundClass;  // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
       mutable MsgLogger* fLogger;                     //! message logger
 
       /////////////////////////////////////////////////////////////////
@@ -235,9 +233,6 @@ namespace TMVA {
       void SetVolumeFraction(Double_t); // set VolFrac to PDEFoamDistr
       void SetFoamType(EFoamType ft);   // set foam type
       void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
-
-      void SetSignalClass( Int_t cls )     { fSignalClass = cls; fDistr->SetSignalClass( cls ); } // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
-      void SetBackgroundClass( Int_t cls ) { fBackgroundClass = cls; fDistr->SetBackgroundClass( cls ); } // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
 
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
