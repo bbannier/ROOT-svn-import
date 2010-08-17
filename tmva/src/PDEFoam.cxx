@@ -417,100 +417,100 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
       toteventsOld = GetBuildUpCellEvents(cell);
 
    /////////////////////////////////////////////////////
-      //    Special Short MC sampling to probe cell      //
-      /////////////////////////////////////////////////////
-      ceSum[0]=0;
-      ceSum[1]=0;
-      ceSum[2]=0;
-      ceSum[3]=gHigh;  //wtmin
-      ceSum[4]=gVlow;  //wtmax
+   //    Special Short MC sampling to probe cell      //
+   /////////////////////////////////////////////////////
+   ceSum[0]=0;
+   ceSum[1]=0;
+   ceSum[2]=0;
+   ceSum[3]=gHigh;  //wtmin
+   ceSum[4]=gVlow;  //wtmax
 
-      for (i=0;i<fDim;i++) ((TH1D *)(*fHistEdg)[i])->Reset(); // Reset histograms
+   for (i=0;i<fDim;i++) ((TH1D *)(*fHistEdg)[i])->Reset(); // Reset histograms
 
-      Double_t nevEff=0.;
-      // ||||||||||||||||||||||||||BEGIN MC LOOP|||||||||||||||||||||||||||||
-      for (iev=0;iev<fNSampl;iev++){
-         MakeAlpha();               // generate uniformly vector inside hypercube
+   Double_t nevEff=0.;
+   // ||||||||||||||||||||||||||BEGIN MC LOOP|||||||||||||||||||||||||||||
+   for (iev=0;iev<fNSampl;iev++){
+      MakeAlpha();               // generate uniformly vector inside hypercube
 
-         if (fDim>0){
-            for (j=0; j<fDim; j++)
-               xRand[j]= cellPosi[j] +fAlpha[j]*(cellSize[j]);
-         }
-
-         wt         = dx*Eval(xRand, event_density);
-         totevents += dx*event_density;
-
-         nProj = 0;
-         if (fDim>0) {
-            for (k=0; k<fDim; k++) {
-               xproj =fAlpha[k];
-               ((TH1D *)(*fHistEdg)[nProj])->Fill(xproj,wt);
-               nProj++;
-            }
-         }
-
-         ceSum[0] += wt;    // sum of weights
-         ceSum[1] += wt*wt; // sum of weights squared
-         ceSum[2]++;        // sum of 1
-         if (ceSum[3]>wt) ceSum[3]=wt;  // minimum weight;
-         if (ceSum[4]<wt) ceSum[4]=wt;  // maximum weight
-         // test MC loop exit condition
-         nevEff = ceSum[0]*ceSum[0]/ceSum[1];
-         if ( nevEff >= fNBin*fEvPerBin) break;
-      }   // ||||||||||||||||||||||||||END MC LOOP|||||||||||||||||||||||||||||
-      totevents /= fNSampl;
-
-      // make shure that, if root cell is explored, more than zero
-      // events were found.
-      if (cell==fCells[0] && ceSum[0]<=0.0){
-         if (ceSum[0]==0.0)
-            Log() << kFATAL << "No events were found during exploration of "
-                  << "root cell.  Please check PDEFoam parameters nSampl "
-                  << "and VolFrac." << Endl;
-         else
-            Log() << kWARNING << "Negative number of events found during "
-                  << "exploration of root cell" << Endl;
+      if (fDim>0){
+	 for (j=0; j<fDim; j++)
+	    xRand[j]= cellPosi[j] +fAlpha[j]*(cellSize[j]);
       }
 
-      //------------------------------------------------------------------
-      //---  predefine logics of searching for the best division edge ---
-      for (k=0; k<fDim;k++){
-         fMaskDiv[k] =1;                       // default is all
-         if ( fInhiDiv[k]==1) fMaskDiv[k] =0; // inhibit some...
+      wt         = dx*Eval(xRand, event_density);
+      totevents += dx*event_density;
+
+      nProj = 0;
+      if (fDim>0) {
+	 for (k=0; k<fDim; k++) {
+	    xproj =fAlpha[k];
+	    ((TH1D *)(*fHistEdg)[nProj])->Fill(xproj,wt);
+	    nProj++;
+	 }
       }
-      kBest=-1;
 
-      //------------------------------------------------------------------
-      nevMC            = ceSum[2];
-      Double_t intTrue = ceSum[0]/(nevMC+0.000001);
-      Double_t intDriv=0.;
+      ceSum[0] += wt;    // sum of weights
+      ceSum[1] += wt*wt; // sum of weights squared
+      ceSum[2]++;        // sum of 1
+      if (ceSum[3]>wt) ceSum[3]=wt;  // minimum weight;
+      if (ceSum[4]<wt) ceSum[4]=wt;  // maximum weight
+      // test MC loop exit condition
+      nevEff = ceSum[0]*ceSum[0]/ceSum[1];
+      if ( nevEff >= fNBin*fEvPerBin) break;
+   }   // ||||||||||||||||||||||||||END MC LOOP|||||||||||||||||||||||||||||
+   totevents /= fNSampl;
 
-      if (kBest == -1) Varedu(ceSum,kBest,xBest,yBest); // determine the best edge,
-      if (CutRMSmin())
-         intDriv =sqrt( ceSum[1]/nevMC -intTrue*intTrue ); // Older ansatz, numerically not bad
+   // make shure that, if root cell is explored, more than zero
+   // events were found.
+   if (cell==fCells[0] && ceSum[0]<=0.0){
+      if (ceSum[0]==0.0)
+	 Log() << kFATAL << "No events were found during exploration of "
+	       << "root cell.  Please check PDEFoam parameters nSampl "
+	       << "and VolFrac." << Endl;
       else
-         intDriv =sqrt(ceSum[1]/nevMC) -intTrue; // Foam build-up, sqrt(<w**2>) -<w>
+	 Log() << kWARNING << "Negative number of events found during "
+	       << "exploration of root cell" << Endl;
+   }
 
-      //=================================================================================
-      cell->SetBest(kBest);
-      cell->SetXdiv(xBest);
-      cell->SetIntg(intTrue);
-      cell->SetDriv(intDriv);
+   //------------------------------------------------------------------
+   //---  predefine logics of searching for the best division edge ---
+   for (k=0; k<fDim;k++){
+      fMaskDiv[k] =1;                       // default is all
+      if ( fInhiDiv[k]==1) fMaskDiv[k] =0; // inhibit some...
+   }
+   kBest=-1;
+
+   //------------------------------------------------------------------
+   nevMC            = ceSum[2];
+   Double_t intTrue = ceSum[0]/(nevMC+0.000001);
+   Double_t intDriv=0.;
+
+   if (kBest == -1) Varedu(ceSum,kBest,xBest,yBest); // determine the best edge,
+   if (CutRMSmin())
+      intDriv =sqrt( ceSum[1]/nevMC -intTrue*intTrue ); // Older ansatz, numerically not bad
+   else
+      intDriv =sqrt(ceSum[1]/nevMC) -intTrue; // Foam build-up, sqrt(<w**2>) -<w>
+
+   //=================================================================================
+   cell->SetBest(kBest);
+   cell->SetXdiv(xBest);
+   cell->SetIntg(intTrue);
+   cell->SetDriv(intDriv);
+   if (CutNmin())
+      SetCellElement(cell, 0, totevents);
+
+   // correct/update integrals in all parent cells to the top of the tree
+   Double_t  parIntg, parDriv;
+   for (parent = cell->GetPare(); parent!=0; parent = parent->GetPare()){
+      parIntg = parent->GetIntg();
+      parDriv = parent->GetDriv();
+      parent->SetIntg( parIntg   +intTrue -intOld );
+      parent->SetDriv( parDriv   +intDriv -driOld );
       if (CutNmin())
-         SetCellElement(cell, 0, totevents);
-
-      // correct/update integrals in all parent cells to the top of the tree
-      Double_t  parIntg, parDriv;
-      for (parent = cell->GetPare(); parent!=0; parent = parent->GetPare()){
-         parIntg = parent->GetIntg();
-         parDriv = parent->GetDriv();
-         parent->SetIntg( parIntg   +intTrue -intOld );
-         parent->SetDriv( parDriv   +intDriv -driOld );
-         if (CutNmin())
-            SetCellElement( parent, 0, GetBuildUpCellEvents(parent) + totevents - toteventsOld);
-      }
-      delete [] volPart;
-      delete [] xRand;
+	 SetCellElement( parent, 0, GetBuildUpCellEvents(parent) + totevents - toteventsOld);
+   }
+   delete [] volPart;
+   delete [] xRand;
 }
 
 //_____________________________________________________________________
