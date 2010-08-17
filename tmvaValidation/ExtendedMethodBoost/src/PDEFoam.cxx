@@ -732,7 +732,7 @@ void TMVA::PDEFoam::Grow()
    OutputGrow( kTRUE );
    CheckAll(1);   // set arg=1 for more info
 
-   Log() << kINFO << GetNActiveCells() << " active cells created" << Endl;
+   Log() << kVERBOSE << GetNActiveCells() << " active cells created" << Endl;
 }// Grow
 
 //_____________________________________________________________________
@@ -767,7 +767,7 @@ void TMVA::PDEFoam::CheckAll(Int_t level)
    Long_t iCell;
 
    errors = 0; warnings = 0;
-   if (level==1) Log() <<  "Performing consistency checks for created foam" << Endl;
+   if (level==1) Log() << kVERBOSE <<  "Performing consistency checks for created foam" << Endl;
    for(iCell=1; iCell<=fLastCe; iCell++) {
       cell = fCells[iCell];
       //  checking general rules
@@ -822,7 +822,7 @@ void TMVA::PDEFoam::CheckAll(Int_t level)
    }
    // summary
    if(level==1){
-     Log() << kINFO << "Check has found " << errors << " errors and " << warnings << " warnings." << Endl;
+     Log() << kVERBOSE << "Check has found " << errors << " errors and " << warnings << " warnings." << Endl;
    }
    if(errors>0){
       Info("CheckAll","Check - found total %d  errors \n",errors);
@@ -859,8 +859,8 @@ void TMVA::PDEFoam::RemoveEmptyCell( Int_t iCell )
    Double_t volume = fCells[iCell]->GetVolume();
 
    if (!fCells[iCell]->GetStat() || volume>0){
-      Log() << "<RemoveEmptyCell>: cell " << iCell
-              << "is not active or has volume>0 ==> doesn't need to be removed" << Endl;
+      Log() << kDEBUG << "<RemoveEmptyCell>: cell " << iCell
+	    << "is not active or has volume>0 ==> doesn't need to be removed" << Endl;
       return;
    }
 
