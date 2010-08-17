@@ -154,10 +154,8 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fLogger(new MsgLogger("PDEFoam"))
 {
    // User constructor, to be employed by the user
-   if(strlen(Name)  >129) {
+   if(strlen(Name) > 128)
       Log() << kFATAL << "Name too long " << Name.Data() << Endl;
-   }
-   Log().SetSource( "PDEFoam" );
 }
 
 //_____________________________________________________________________
