@@ -74,9 +74,6 @@ namespace TMVA {
       TDensityCalc fDensityCalc;// method of density calculation
 
    protected:
-      UInt_t fSignalClass;      // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
-      Int_t fBackgroundClass;  // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
-
       mutable MsgLogger* fLogger;                     //! message logger
       MsgLogger& Log() const { return *fLogger; }
 
@@ -120,9 +117,6 @@ namespace TMVA {
       Bool_t FillDiscriminator(){ return fDensityCalc == kDISCRIMINATOR; }
       Bool_t FillTarget0()      { return fDensityCalc == kTARGET;        }
       Bool_t FillEventDensity() { return fDensityCalc == kEVENT_DENSITY; }
-
-      void SetSignalClass( Int_t cls )     { fSignalClass = cls;  } // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
-      void SetBackgroundClass( Int_t cls ) { fBackgroundClass = cls;  } // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
 
       ClassDef(PDEFoamDistr,2) //Class for Event density
    };  //end of PDEFoamDistr
