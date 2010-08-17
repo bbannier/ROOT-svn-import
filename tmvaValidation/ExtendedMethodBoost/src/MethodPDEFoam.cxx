@@ -100,6 +100,7 @@ void TMVA::MethodPDEFoam::Init( void )
    fRMSmin         = 0.01;
    fMaxDepth       = 0;  // cell tree depth is unlimited
    fFillFoamWithOrigWeights = kTRUE;
+   fUseYesNoCell   = kFALSE; // return -1 or 1 for bg or signal like events
 
    fKernel         = kNone; // default: use no kernel
    fTargetSelection= kMean; // default: use mean for target selection (only multi target regression!)
@@ -132,6 +133,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    DeclareOptionRef( fNmin = 100,             "Nmin",     "Number of events in cell required to split cell");
    DeclareOptionRef( fMaxDepth = 0,           "MaxDepth",  "Maximum depth of cell tree (0=unlimited)");
    DeclareOptionRef( fFillFoamWithOrigWeights = kTRUE, "FillFoamWithOrigWeights", "Fill foam with original or boost weights");
+   DeclareOptionRef( fUseYesNoCell = kFALSE, "UseYesNoCell", "Return -1 or 1 for bkg or signal like events");
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -583,7 +585,10 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err )
    // attribute error
    if (err != 0) *err = discr_error;
 
-   return discr;
+   if (fUseYesNoCell)
+      return (discr < GetSignalReferenceCut() ? -1 : 1);
+   else
+      return discr;
 }
 
 //_______________________________________________________________________
@@ -722,6 +727,7 @@ void TMVA::MethodPDEFoam::AddWeightsXMLTo( void* parent ) const
    gTools().AddAttr( wght, "Kernel",          KernelToUInt(fKernel) );
    gTools().AddAttr( wght, "TargetSelection", TargetSelectionToUInt(fTargetSelection) );
    gTools().AddAttr( wght, "FillFoamWithOrigWeights", fFillFoamWithOrigWeights );
+   gTools().AddAttr( wght, "UseYesNoCell",    fUseYesNoCell );
    
    // save foam borders Xmin[i], Xmax[i]
    void *xmin_wrap;
@@ -802,6 +808,7 @@ void  TMVA::MethodPDEFoam::ReadWeightsFromStream( istream& istr )
    fTargetSelection = UIntToTargetSelection(ts);
 
    istr >> fFillFoamWithOrigWeights;        // fill foam with original event weights
+   istr >> fUseYesNoCell;                   // return -1 or 1 for bg or signal event
 
    // clear old range and prepare new range
    fXmin.clear();
@@ -852,6 +859,7 @@ void TMVA::MethodPDEFoam::ReadWeightsFromXML( void* wghtnode )
    gTools().ReadAttr( wghtnode, "TargetSelection", ts );
    fTargetSelection = UIntToTargetSelection(ts);
    gTools().ReadAttr( wghtnode, "FillFoamWithOrigWeights", fFillFoamWithOrigWeights );
+   gTools().ReadAttr( wghtnode, "UseYesNoCell",    fUseYesNoCell );
    
    // clear old range [Xmin, Xmax] and prepare new range for reading
    fXmin.clear();
