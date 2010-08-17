@@ -88,77 +88,75 @@ using namespace std;
 
 //_____________________________________________________________________
 TMVA::PDEFoam::PDEFoam() :
+   fName("PDEFoam"),
+   fDim(0),
+   fNCells(0),
+   fNBin(5),
+   fNSampl(2000),
+   fEvPerBin(0),
+   fMaskDiv(0),
+   fInhiDiv(0),
+   fNoAct(1),
+   fLastCe(-1),
+   fCells(0),
+   fHistEdg(0),
+   fRvec(0),
+   fPseRan(new TRandom3(4356)),
+   fAlpha(0),
+   fFoamType(kDiscr),
+   fXmin(0),
+   fXmax(0),
+   fNElements(0),
+   fCutNmin(kTRUE),
+   fNmin(100),
+   fCutRMSmin(kFALSE),
+   fRMSmin(1.0),
+   fVolFrac(1.0/30.0),
+   fFillFoamWithOrigWeights(kTRUE),
+   fDistr(new PDEFoamDistr()),
+   fTimer(new Timer(0, "PDEFoam", kTRUE)),
+   fVariableNames(new TObjArray()),
    fLogger(new MsgLogger("PDEFoam"))
 {
    // Default constructor for streamer, user should not use it.
-   fDim      = 0;
-   fNoAct    = 1;
-   fNCells   = 0;
-   fMaskDiv  = 0;
-   fInhiDiv  = 0;
-   fCells    = 0;
-   fAlpha    = 0;
-   fHistEdg  = 0;
-   fRvec     = 0;
-   fPseRan   = new TRandom3(4356);  // generator of pseudorandom numbers
-
-   fFoamType  = kSeparate;
-   fXmin      = 0;
-   fXmax      = 0;
-   fNElements = 0;
-   fCutNmin   = kTRUE;
-   fNmin      = 100;  // only used, when fCutMin == kTRUE
-   fCutRMSmin = kFALSE;
-   fRMSmin    = 1.0;
-   fFillFoamWithOrigWeights = kTRUE;
-
-   SetPDEFoamVolumeFraction(-1.);
-
-   fDistr = new PDEFoamDistr();
-
-   fTimer = new Timer(fNCells, "PDEFoam", kTRUE);
-   fVariableNames = new TObjArray();
 }
 
 //_____________________________________________________________________
 TMVA::PDEFoam::PDEFoam(const TString& Name) :
+   fName(Name),
+   fDim(0),
+   fNCells(1000),
+   fNBin(5),
+   fNSampl(2000),
+   fEvPerBin(0),
+   fMaskDiv(0),
+   fInhiDiv(0),
+   fNoAct(1),
+   fLastCe(-1),
+   fCells(0),
+   fHistEdg(0),
+   fRvec(0),
+   fPseRan(new TRandom3(4356)),
+   fAlpha(0),
+   fFoamType(kDiscr),
+   fXmin(0),
+   fXmax(0),
+   fNElements(0),
+   fCutNmin(kTRUE),
+   fNmin(100),
+   fCutRMSmin(kFALSE),
+   fRMSmin(1.0),
+   fVolFrac(1.0/30.0),
+   fFillFoamWithOrigWeights(kTRUE),
+   fDistr(new PDEFoamDistr()),
+   fTimer(new Timer(1, "PDEFoam", kTRUE)),
+   fVariableNames(new TObjArray()),
    fLogger(new MsgLogger("PDEFoam"))
 {
    // User constructor, to be employed by the user
-
    if(strlen(Name)  >129) {
       Log() << kFATAL << "Name too long " << Name.Data() << Endl;
    }
-   fName     = Name;          // Class name
-   fMaskDiv  = 0;             // Dynamic Mask for  cell division, h-cubic
-   fInhiDiv  = 0;             // Flag allowing to inhibit cell division in certain projection/edge
-   fCells    = 0;
-   fAlpha    = 0;
-   fHistEdg  = 0;
-   fDim      = 0;                // dimension of hyp-cubical space
-   fNCells   = 1000;             // Maximum number of Cells,    is usually re-set
-   fNSampl   = 200;              // No of sampling when dividing cell
-   //------------------------------------------------------
-   fNBin     = 8;                // binning of edge-histogram in cell exploration
-   fEvPerBin =25;                // maximum no. of EFFECTIVE event per bin, =0 option is inactive
-   //------------------------------------------------------
-   fLastCe   =-1;                // Index of the last cell
-   fNoAct    = 1;                // No of active cells (used in MC generation)
-   fPseRan   = new TRandom3(4356);   // Initialize private copy of random number generator
-
-   fFoamType  = kSeparate;
-   fXmin      = 0;
-   fXmax      = 0;
-   fCutNmin   = kFALSE;
-   fCutRMSmin = kFALSE;
-   fFillFoamWithOrigWeights = kTRUE;
-   SetPDEFoamVolumeFraction(-1.);
-
-   fDistr = new PDEFoamDistr();
-
-   fTimer = new Timer(fNCells, "PDEFoam", kTRUE);
-   fVariableNames = new TObjArray();
-
    Log().SetSource( "PDEFoam" );
 }
 
