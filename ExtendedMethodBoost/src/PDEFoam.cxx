@@ -115,12 +115,7 @@ TMVA::PDEFoam::PDEFoam() :
 
    SetPDEFoamVolumeFraction(-1.);
 
-   fSignalClass     = -1;
-   fBackgroundClass = -1;
-
    fDistr = new PDEFoamDistr();
-   fDistr->SetSignalClass( fSignalClass );
-   fDistr->SetBackgroundClass( fBackgroundClass );
 
    fTimer = new Timer(fNCells, "PDEFoam", kTRUE);
    fVariableNames = new TObjArray();
@@ -163,12 +158,7 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fFillFoamWithOrigWeights = kTRUE;
    SetPDEFoamVolumeFraction(-1.);
 
-   fSignalClass     = -1;
-   fBackgroundClass = -1;
-
    fDistr = new PDEFoamDistr();
-   fDistr->SetSignalClass( fSignalClass );
-   fDistr->SetBackgroundClass( fBackgroundClass );
 
    fTimer = new Timer(fNCells, "PDEFoam", kTRUE);
    fVariableNames = new TObjArray();

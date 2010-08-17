@@ -625,12 +625,6 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    // set fLogger attributes
    pdefoam->Log().SetMinType(this->Log().GetMinType());
 
-   // set signal and background classes
-   if (ft==kSeparate || ft==kDiscr){
-      pdefoam->SetSignalClass    (fSignalClass);
-      pdefoam->SetBackgroundClass(fBackgroundClass);
-   }
-
    // Set foam fill value
    pdefoam->SetFoamType(ft);
    

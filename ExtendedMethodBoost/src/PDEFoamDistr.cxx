@@ -50,8 +50,6 @@ TMVA::PDEFoamDistr::PDEFoamDistr()
      fVolFrac(-1.),
      fBst(NULL),
      fDensityCalc(kEVENT_DENSITY), // default: fill event density to BinarySearchTree
-     fSignalClass(1),
-     fBackgroundClass(0),
      fLogger( new MsgLogger("PDEFoamDistr"))
 {}
 
@@ -73,8 +71,6 @@ TMVA::PDEFoamDistr::PDEFoamDistr(const PDEFoamDistr &distr)
      fVolFrac         (distr.fVolFrac),
      fBst             (distr.fBst),
      fDensityCalc     (kEVENT_DENSITY), // default: fill event density to BinarySearchTree
-     fSignalClass     (distr.fSignalClass),
-     fBackgroundClass (distr.fBackgroundClass),
      fLogger( new MsgLogger("PDEFoamDistr"))
 {
    // Copy constructor
@@ -127,17 +123,14 @@ void TMVA::PDEFoamDistr::FillBinarySearchTree( const Event* ev, EFoamType ft, Bo
 
    TMVA::Event *event = new TMVA::Event(*ev);
  
-   // set event class and normalization
-   if (ft==kSeparate || ft==kDiscr){
-      event->SetClass(ev->GetClass()==fSignalClass ? fSignalClass : fBackgroundClass);
-   } else if (ft==kMultiTarget){
+   // set event variables in case of multi-target regression
+   if (ft==kMultiTarget){
       // since in multi target regression targets are handled like
       // variables, remove targets and add them to the event variabels
       std::vector<Float_t> targets = ev->GetTargets();
       for (UInt_t i = 0; i < targets.size(); i++)
          event->SetVal(i+ev->GetValues().size(), targets.at(i));
       event->GetTargets().clear();
-      event->SetClass(fSignalClass);
    }
    fBst->Insert(event);
 
