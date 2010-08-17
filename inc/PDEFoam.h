@@ -137,7 +137,6 @@ namespace TMVA {
       Int_t fSignalClass;      // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
       Int_t fBackgroundClass;  // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
       mutable MsgLogger* fLogger;                     //! message logger
-      MsgLogger& Log() const { return *fLogger; }
 
       /////////////////////////////////////////////////////////////////
       //                            METHODS                          //
@@ -291,6 +290,9 @@ namespace TMVA {
       void     CheckCells(Bool_t remove_empty_cells=false);   // check all cells with respect to critical values
       void     RemoveEmptyCell(Int_t iCell); // removes iCell if its volume is zero
       void     PrintCellElements();          // print all cells with its elements
+
+      // Message logger
+      MsgLogger& Log() const { return *fLogger; }
 
       // ---------- Foam output
 
