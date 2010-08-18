@@ -871,7 +871,7 @@ TGLPadCover::TGLPadCover()
 }
 
 //______________________________________________________________________________
-TGLPadCover::TGLPadCover(const TGLPadCover &rhs)
+TGLPadCover::TGLPadCover(const TGLPadCover &)
                : fFBO(new TGLFBO),
                  fW(0),
                  fH(0),
@@ -883,7 +883,7 @@ TGLPadCover::TGLPadCover(const TGLPadCover &rhs)
 }
 
 //______________________________________________________________________________
-TGLPadCover &TGLPadCover::operator = (const TGLPadCover &rhs)
+TGLPadCover &TGLPadCover::operator = (const TGLPadCover &)
 {
    return *this;
 }
@@ -1009,7 +1009,6 @@ const Double_t coverLShifts[] = {0., -0.6, -0.1, -0.1, -0.3, -0.3, -0.1, -0.1, -
 void TGLPadPainter::DrawLeftShift(Bool_t reflection)
 {
    const Double_t step      = fFrame / double(kFrames);
-   const Double_t rotAngle  = coverAngle * step;
    const size_type oldFront = fFrontCover - 1;
 
    //First, fix covers on the left.
@@ -1057,7 +1056,6 @@ void TGLPadPainter::DrawLeftShift(Bool_t reflection)
 void TGLPadPainter::DrawRightShift(Bool_t reflection)
 {
    const double step        = fFrame / Double_t(kFrames);
-   const double rotAngle    = coverAngle * step;
    const size_type oldFront = fFrontCover + 1;
 
    //First, fix covers on the right.
@@ -1266,7 +1264,7 @@ void TGLPadPainter::TurnOnCoverFlow(TCanvas *topPad)
 //______________________________________________________________________________
 void TGLPadPainter::TurnOffCoverFlow()
 {
-   typedef std::vector<TGLPadCover>::size_type size_type;
+   //
    for (size_type i = 0; i < fCovers.size(); ++i) {
       fCovers[i].RestorePad();
    }
@@ -1302,7 +1300,7 @@ void TGLPadPainter::Animate(Int_t key)
 }
 
 //______________________________________________________________________________
-Bool_t TGLPadPainter::HandleTimer(TTimer *timer)
+Bool_t TGLPadPainter::HandleTimer(TTimer *)
 {
    if (fFrame + 1 < kFrames)
    {
