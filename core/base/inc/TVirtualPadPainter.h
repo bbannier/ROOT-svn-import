@@ -103,7 +103,7 @@ public:
 
    virtual void     DrawCoverFlow(){}
    
-   virtual void     Animate(Int_t key){}
+   virtual void     Animate(Int_t /*key*/){}
 
    static TVirtualPadPainter *PadPainter(Option_t *opt = "");
 
