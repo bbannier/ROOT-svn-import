@@ -130,6 +130,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    DeclareOptionRef( fCutNmin = kTRUE,         "CutNmin",  "Requirement for minimal number of events in cell");
    DeclareOptionRef( fNmin = 100,             "Nmin",     "Number of events in cell required to split cell");
    DeclareOptionRef( fFillFoamWithOrigWeights = kTRUE, "FillFoamWithOrigWeights", "Fill foam with original or boost weights");
+   DeclareOptionRef( fDTLogic = kFALSE, "DTLogic", "Use decision tree algorithm to split cells");
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -161,6 +162,12 @@ void TMVA::MethodPDEFoam::ProcessOptions()
    if (fCutRMSmin && fRMSmin>1.0) {
       Log() << kWARNING << "RMSmin > 1.0 ==> using 1.0 instead" << Endl;
       fRMSmin = 1.0;
+   }
+
+   // DT logic is only applicable if a single foam is trained
+   if (fSigBgSeparated && fDTLogic) {
+      Log() << kWARNING << "Decision tree logic works only for a single foam (SigBgSeparate=F)" << Endl;
+      fDTLogic = kFALSE;
    }
    
    if (fNmin==0)
@@ -633,6 +640,7 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    pdefoam->SetnBin(        fnBin);      // optional
    pdefoam->SetEvPerBin(    fEvPerBin);  // optional
    pdefoam->SetFillFoamWithOrigWeights(fFillFoamWithOrigWeights);
+   pdefoam->SetDTLogic(fDTLogic);
 
    // cuts
    pdefoam->CutNmin(fCutNmin);     // cut on minimal number of events per cell
