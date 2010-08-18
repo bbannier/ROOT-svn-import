@@ -1447,7 +1447,7 @@ void TEveElement::ProjectChild(TEveElement* el, Bool_t same_depth)
          Float_t cd = pmgr->GetCurrentDepth();
          if (same_depth) pmgr->SetCurrentDepth((*i)->GetDepth());
 
-         pmgr->SubImportElements(el, dynamic_cast<TEveElement*>(*i));
+         pmgr->SubImportElements(el, (*i)->GetProjectedAsElement());
 
          if (same_depth) pmgr->SetCurrentDepth(cd);
       }
@@ -1477,7 +1477,7 @@ void TEveElement::ProjectAllChildren(Bool_t same_depth)
          Float_t cd = pmgr->GetCurrentDepth();
          if (same_depth) pmgr->SetCurrentDepth((*i)->GetDepth());
 
-         pmgr->SubImportChildren(this, dynamic_cast<TEveElement*>(*i));
+         pmgr->SubImportChildren(this, (*i)->GetProjectedAsElement());
 
          if (same_depth) pmgr->SetCurrentDepth(cd);
       }
