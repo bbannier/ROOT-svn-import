@@ -515,6 +515,8 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    // volume = 1/2 parent has to be already defined prior to calling
    // this routine.
 
+   Log() << ">>> start DTExplore" << Endl;
+
    if (!cell)
       Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
 
@@ -534,7 +536,7 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    if (CutNmin())
       SetCellElement( cell, 0, hsig.at(0)->Integral() + hbkg.at(0)->Integral());
 
-   Log() << kDEBUG << "NEvents in cell " << cell << ": "
+   Log() << ">>> NEvents in cell " << cell << ": "
 	 << hsig.at(0)->Integral() + hbkg.at(0)->Integral() << Endl;
 
    // ------ determine the best division edge
@@ -567,11 +569,16 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
       } // jLo
    } // idim
 
+   Log() << ">>> xBest=" << xBest << " kBest=" << kBest << Endl;
+   
    // set cell properties
    cell->SetBest(kBest);
    cell->SetXdiv(xBest);
    cell->SetIntg( nTotS/(nTotB+nTotS) );
    cell->SetDriv(maxGain);
+   cell->CalcVolume();
+
+   cell->Print("1");
 }
 
 //_____________________________________________________________________
@@ -868,7 +875,7 @@ void TMVA::PDEFoam::CheckAll(Int_t level)
       }
      if(cell->GetVolume()<1E-50) {
          errors++;
-         if(level==1) Log() << kFATAL << "ERROR: Cell no. %d has Volume of <1E-50" << iCell << Endl;
+         if(level==1) Log() << kFATAL << "ERROR: Cell no. " << iCell << " has Volume of <1E-50" << Endl;
      }
     }// loop after cells;
 
