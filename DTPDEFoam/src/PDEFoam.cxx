@@ -113,6 +113,7 @@ TMVA::PDEFoam::PDEFoam() :
    fRMSmin(1.0),
    fVolFrac(1.0/30.0),
    fFillFoamWithOrigWeights(kTRUE),
+   fDTLogic(kFALSE),
    fDistr(new PDEFoamDistr()),
    fTimer(new Timer(0, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -148,6 +149,7 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fRMSmin(1.0),
    fVolFrac(1.0/30.0),
    fFillFoamWithOrigWeights(kTRUE),
+   fDTLogic(kFALSE),
    fDistr(new PDEFoamDistr()),
    fTimer(new Timer(1, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -316,7 +318,10 @@ void TMVA::PDEFoam::InitCells(Bool_t CreateCellElements)
 
    // Exploration of the root cell(s)
    for(Long_t iCell=0; iCell<=fLastCe; iCell++){
-      Explore( fCells[iCell] );               // Exploration of root cell(s)
+      if (fDTLogic)
+	 DTExplore( fCells[iCell] );  // Exploration of root cell(s)
+      else
+	 Explore( fCells[iCell] );    // Exploration of root cell(s)
    }
 }//InitCells
 
@@ -500,6 +505,85 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
 }
 
 //_____________________________________________________________________
+void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
+{
+   // Internal subprogram used by Create.  It explores newly defined
+   // cell with according to the decision tree logic.
+   //
+   // The optimal division point for eventual future cell division is
+   // determined/recorded.  Note that links to parents and initial
+   // volume = 1/2 parent has to be already defined prior to calling
+   // this routine.
+
+   if (!cell)
+      Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
+
+   // create edge histograms
+   std::vector<TH1F*> hsig, hbkg;
+   for (Int_t idim=0; idim<fDim; idim++) {
+      hsig.push_back( new TH1F(Form("hsig_%i",idim), 
+			       Form("signal[%i]",idim), fNBin, 0.0, 1.0) );
+      hbkg.push_back( new TH1F(Form("hbkg_%i",idim), 
+			       Form("background[%i]",idim), fNBin, 0.0, 1.0) );
+   }
+
+   // Fill histograms
+   fDistr->FillHist(cell, hsig, hbkg);
+
+   // set cell element 0 (number of events in cell)
+   if (CutNmin())
+      SetCellElement( cell, 0, hsig.at(0)->Integral() + hbkg.at(0)->Integral());
+
+   Log() << kDEBUG << "NEvents in cell " << cell << ": "
+	 << hsig.at(0)->Integral() + hbkg.at(0)->Integral() << Endl;
+
+   // ------ determine the best division edge
+   Float_t xBest = 0.5;   // best division point
+   Int_t   kBest = -1;    // best split dimension
+   Float_t maxGain = 0.0; // maximum gain
+   Float_t nTotS = hsig.at(0)->Integral();
+   Float_t nTotB = hbkg.at(0)->Integral();
+
+   for (Int_t idim=0; idim<fDim; idim++) {
+      Float_t nSelS=0.0, nSelB=0.0;
+      for(Int_t jLo=1; jLo<=fNBin; jLo++) {
+	 nSelS += hsig.at(idim)->GetBinContent(jLo);
+	 nSelB += hbkg.at(idim)->GetBinContent(jLo);
+	 
+	 Float_t xLo=(jLo-1.0)/fNBin;
+
+	 // calculate gain
+	 Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
+	 Float_t leftGain   = ((nTotS - nSelS) + (nTotB - nSelB))
+	    * GetSeparation(nTotS-nSelS,nTotB-nSelB);
+	 Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
+	 Float_t gain = parentGain - leftGain - rightGain;
+	 
+	 if (gain > maxGain) {
+	    maxGain = gain;
+	    xBest   = xLo;
+	    kBest   = idim;
+	 }
+      } // jLo
+   } // idim
+
+   // set cell properties
+   cell->SetBest(kBest);
+   cell->SetXdiv(xBest);
+   cell->SetIntg( nTotS/(nTotB+nTotS) );
+   cell->SetDriv(maxGain);
+}
+
+//_____________________________________________________________________
+Float_t TMVA::PDEFoam::GetSeparation(Float_t s, Float_t b)
+{
+   // return Gini index p*(1-p), where p = s/(s+b)
+   if (s+b <= 0)      return 0;
+   if (s<=0 || b <=0) return 0;
+   else               return s*b/((s+b)*(s+b));
+}
+
+//_____________________________________________________________________
 void TMVA::PDEFoam::Varedu(Double_t ceSum[5], Int_t &kBest, Double_t &xBest, Double_t &yBest)
 {
    // Internal subrogram used by Create.
@@ -658,8 +742,13 @@ Int_t TMVA::PDEFoam::Divide(PDEFoamCell *cell)
    Int_t d2 = CellFill(1,   cell);
    cell->SetDau0((fCells[d1]));
    cell->SetDau1((fCells[d2]));
-   Explore( (fCells[d1]) );
-   Explore( (fCells[d2]) );
+   if (fDTLogic) {
+      DTExplore( (fCells[d1]) );
+      DTExplore( (fCells[d2]) );
+   } else {
+      Explore( (fCells[d1]) );
+      Explore( (fCells[d2]) );
+   }
    return 1;
 } // PDEFoam_Divide
 
