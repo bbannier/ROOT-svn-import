@@ -26,6 +26,7 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
+#include <iostream>
 #include <ostream>
 
 #ifndef ROOT_TMVA_PDEFoamCell

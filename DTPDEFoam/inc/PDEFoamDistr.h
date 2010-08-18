@@ -49,6 +49,9 @@
 #ifndef ROOT_TMVA_PDEFoamCell
 #include "TMVA/PDEFoamCell.h"
 #endif
+#ifndef ROOT_TMVA_MsgLogger
+#include "TMVA/MsgLogger.h"
+#endif
 
 namespace TMVA {
    enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget };

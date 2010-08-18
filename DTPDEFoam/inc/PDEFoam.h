@@ -340,7 +340,7 @@ namespace TMVA {
       std::vector<Float_t> GetProjectedRegValue(std::vector<Float_t> &vals, EKernel kernel=kNone, ETargetSelection ts=kMean);
 
       // ---------- ROOT class definition
-      ClassDef(PDEFoam,3)
+      ClassDef(PDEFoam,4)
    }; // end of PDEFoam 
 
 }  // namespace TMVA
