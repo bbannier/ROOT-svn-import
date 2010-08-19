@@ -532,10 +532,6 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    // Fill histograms
    fDistr->FillHist(cell, hsig, hbkg);
 
-   // set cell element 0 (number of events in cell)
-   if (CutNmin())
-      SetCellElement( cell, 0, hsig.at(0)->Integral() + hbkg.at(0)->Integral());
-
    Log() << ">>> NEvents in cell " << cell << ": "
 	 << hsig.at(0)->Integral() + hbkg.at(0)->Integral() << Endl;
 
@@ -577,8 +573,18 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    cell->SetIntg( nTotS/(nTotB+nTotS) );
    cell->SetDriv(maxGain);
    cell->CalcVolume();
-
    cell->Print("1");
+
+   // set cell element 0 (total number of events in cell) during
+   // build-up
+   if (CutNmin())
+      SetCellElement( cell, 0, nTotS + nTotB);
+
+   // clean up
+   for (UInt_t ih=0; ih<hsig.size(); ih++)
+      delete hsig.at(ih);
+   for (UInt_t ih=0; ih<hbkg.size(); ih++)
+      delete hbkg.at(ih);
 }
 
 //_____________________________________________________________________
