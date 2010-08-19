@@ -132,6 +132,7 @@ namespace TMVA {
       UInt_t fMaxDepth;        // maximum depth of cell tree
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
       Bool_t fFillFoamWithOrigWeights; // fill the foam with boost or orig. weights
+      Bool_t fDTLogic;         // split cells according to decision tree logic
       PDEFoamDistr *fDistr;    //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
@@ -164,12 +165,14 @@ namespace TMVA {
       void InitCells(Bool_t CreateCellElements);      // Initialisation of all foam cells
       Int_t CellFill(Int_t, PDEFoamCell*);// Allocates new empty cell and return its index
       void Explore(PDEFoamCell *Cell);    // Exploration of the new cell, determine <wt>, wtMax etc.
+      void DTExplore(PDEFoamCell *Cell);  // Exploration of the new cell according to decision tree logic
       void Varedu(Double_t [], Int_t&, Double_t&,Double_t&); // Determines the best edge, variace reduction
       void MakeAlpha();             // Provides random point inside hyperrectangle
       void Grow();                  // build up foam
       Long_t PeekMax();             // peek cell with max. driver integral
       Int_t  Divide(PDEFoamCell *); // Divide iCell into two daughters; iCell retained, taged as inactive
       Double_t Eval(Double_t *xRand, Double_t &event_density); // evaluate distribution on point 'xRand'
+      Float_t GetSeparation(Float_t s, Float_t b); // calculate Gini index
 
       // ---------- Cell value access functions
 
@@ -234,6 +237,7 @@ namespace TMVA {
       void SetVolumeFraction(Double_t); // set VolFrac to PDEFoamDistr
       void SetFoamType(EFoamType ft);   // set foam type
       void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
+      void SetDTLogic(Bool_t new_val){fDTLogic=new_val;}
 
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
