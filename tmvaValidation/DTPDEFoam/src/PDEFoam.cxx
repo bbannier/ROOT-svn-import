@@ -515,7 +515,7 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    // volume = 1/2 parent has to be already defined prior to calling
    // this routine.
 
-   Log() << ">>> start DTExplore" << Endl;
+   // Log() << ">>> start DTExplore" << Endl;
 
    if (!cell)
       Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
@@ -532,8 +532,8 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    // Fill histograms
    fDistr->FillHist(cell, hsig, hbkg);
 
-   Log() << ">>> NEvents in cell " << cell << ": "
-	 << hsig.at(0)->Integral() + hbkg.at(0)->Integral() << Endl;
+   // Log() << ">>> NEvents in cell " << cell << ": "
+   // 	 << hsig.at(0)->Integral() + hbkg.at(0)->Integral() << Endl;
 
    // ------ determine the best division edge
    Float_t xBest = 0.5;   // best division point
@@ -569,8 +569,8 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 	    maxGain = gain;
 	    xBest   = xLo;
 	    kBest   = idim;
-	    Log() << "setting new divisino edge: "
-		  << "xbest=" << xBest << " maxGain=" << maxGain << Endl;
+	    // Log() << "setting new divisino edge: "
+	    // 	  << "xbest=" << xBest << " maxGain=" << maxGain << Endl;
 	 }
       } // jLo
    } // idim
