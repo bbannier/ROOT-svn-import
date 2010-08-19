@@ -144,7 +144,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
 void TMVA::MethodPDEFoam::ProcessOptions() 
 {
    // process user options
-   if (!(fFrac>0. && fFrac<=1.)) {
+   if (!(fFrac>=0. && fFrac<=1.)) {
       Log() << kWARNING << "TailCut not in [0.,1] ==> using 0.001 instead" << Endl;
       fFrac = 0.001;
    }
