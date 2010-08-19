@@ -544,11 +544,11 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 
    for (Int_t idim=0; idim<fDim; idim++) {
       Float_t nSelS=0.0, nSelB=0.0;
-      for(Int_t jLo=1; jLo<=fNBin; jLo++) {
+      for(Int_t jLo=1; jLo<fNBin; jLo++) {
 	 nSelS += hsig.at(idim)->GetBinContent(jLo);
 	 nSelB += hbkg.at(idim)->GetBinContent(jLo);
 	 
-	 Float_t xLo=(jLo-1.0)/fNBin;
+	 Float_t xLo = 1.0*jLo/fNBin;
 
 	 // calculate gain
 	 Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
@@ -557,23 +557,46 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 	 Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
 	 Float_t gain = parentGain - leftGain - rightGain;
 	 
-	 if (gain > maxGain) {
+	 // Log() << ">>> bin[" << jLo << "]: " 
+	 //       << " gain=" << gain
+	 //       << " maxGain=" << maxGain
+	 //       << " parentgain=" << parentGain
+	 //       << " rightgain=" << rightGain
+	 //       << " leftgain=" << leftGain
+	 //       << Endl;
+
+	 if (gain >= maxGain) {
 	    maxGain = gain;
 	    xBest   = xLo;
 	    kBest   = idim;
+	    Log() << "setting new divisino edge: "
+		  << "xbest=" << xBest << " maxGain=" << maxGain << Endl;
 	 }
       } // jLo
    } // idim
 
-   Log() << ">>> xBest=" << xBest << " kBest=" << kBest << Endl;
+   if (kBest >= fDim || kBest < 0)
+      Log() << kWARNING << "No best division edge found!" << Endl;
+
+   // Log() << ">>> xBest=" << xBest << " kBest=" << kBest << Endl;
    
    // set cell properties
    cell->SetBest(kBest);
    cell->SetXdiv(xBest);
-   cell->SetIntg( nTotS/(nTotB+nTotS) );
+   if (nTotB+nTotS > 0)
+      cell->SetIntg( nTotS/(nTotB+nTotS) );
+   else 
+      cell->SetIntg( 0.0 );
    cell->SetDriv(maxGain);
    cell->CalcVolume();
-   cell->Print("1");
+
+   // debug output
+   // cell->Print("1");
+   // PDEFoamVect  cellSize(fDim);
+   // PDEFoamVect  cellPosi(fDim);
+   // cell->GetHcub(cellPosi, cellSize);
+   // Log() << ">>> cell split in dim[" << kBest << "] at "
+   // 	 << VarTransformInvers(kBest,cellPosi[kBest]) + xBest*( VarTransformInvers(kBest,cellPosi[kBest]+cellSize[kBest]) - VarTransformInvers(kBest,cellPosi[kBest])) << Endl;
 
    // set cell element 0 (total number of events in cell) during
    // build-up
