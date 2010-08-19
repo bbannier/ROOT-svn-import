@@ -211,3 +211,61 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
 
    return ((weighted_count+0.1)*probevolume_inv); // return:  N_total(weighted) / cell_volume
 }
+
+//_____________________________________________________________________
+void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, std::vector<TH1F*> &hbkg)
+{
+   // fill the given histograms with signal and background events,
+   // which are located in the given cell
+
+   // sanity check
+   if (!cell)
+      Log() << kFATAL << "<PDEFoamDistr::FillHist> Null pointer for cell given!" << Endl;
+   if (Int_t(hsig.size()) != fDim || Int_t(hbkg.size()) != fDim)
+      Log() << kFATAL << "<PDEFoamDistr::FillHist> Edge histograms have wrong size!" << Endl;
+
+   // check histograms
+   for (Int_t idim=0; idim<fDim; idim++) {
+      if (!hsig.at(idim) || !hbkg.at(idim))
+	 Log() << kFATAL << "<PDEFoamDistr::FillHist> Histogram not initialized!" << Endl;
+   }
+
+   // reset histograms
+   for (Int_t idim=0; idim<fDim; idim++) {
+      hsig.at(idim)->Reset();
+      hbkg.at(idim)->Reset();
+   }
+
+   // get cell position and size
+   PDEFoamVect  cellSize(fDim);
+   PDEFoamVect  cellPosi(fDim);
+   cell->GetHcub(cellPosi, cellSize);
+
+   // determine lower and upper cell bound
+   std::vector<Double_t> lb(fDim); // lower bound
+   std::vector<Double_t> ub(fDim); // upper bound
+   for (Int_t idim = 0; idim < fDim; idim++) {
+      lb[idim] = VarTransformInvers(idim, cellPosi[idim]);
+      ub[idim] = VarTransformInvers(idim, cellPosi[idim] + cellSize[idim]);
+   }
+
+   // create TMVA::Volume object needed for searching within the BST
+   TMVA::Volume volume(&lb, &ub); // volume to search in
+   std::vector<const TMVA::BinarySearchTreeNode*> nodes; // BST nodes found
+
+   // do range searching
+   fBst->SearchVolume(&volume, &nodes);
+
+   // fill histograms
+   for (UInt_t iev=0; iev<nodes.size(); iev++) {
+      std::vector<Float_t> ev = nodes.at(iev)->GetEventV();
+      Float_t              wt = nodes.at(iev)->GetWeight();
+      Bool_t           signal = nodes.at(iev)->IsSignal();
+      for (Int_t idim=0; idim<fDim; idim++) {
+	 if (signal)
+	    hsig.at(idim)->Fill(VarTransform(idim,ev.at(idim)), wt);
+	 else
+	    hbkg.at(idim)->Fill(VarTransform(idim,ev.at(idim)), wt);
+      }
+   }
+}

@@ -137,6 +137,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    DeclareOptionRef( fMaxDepth = 0,           "MaxDepth",  "Maximum depth of cell tree (0=unlimited)");
    DeclareOptionRef( fFillFoamWithOrigWeights = kTRUE, "FillFoamWithOrigWeights", "Fill foam with original or boost weights");
    DeclareOptionRef( fUseYesNoCell = kFALSE, "UseYesNoCell", "Return -1 or 1 for bkg or signal like events");
+   DeclareOptionRef( fDTLogic = kFALSE, "DTLogic", "Use decision tree algorithm to split cells");
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -151,7 +152,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
 void TMVA::MethodPDEFoam::ProcessOptions() 
 {
    // process user options
-   if (!(fFrac>0. && fFrac<=1.)) {
+   if (!(fFrac>=0. && fFrac<=1.)) {
       Log() << kWARNING << "TailCut not in [0.,1] ==> using 0.001 instead" << Endl;
       fFrac = 0.001;
    }
@@ -168,6 +169,12 @@ void TMVA::MethodPDEFoam::ProcessOptions()
    if (fCutRMSmin && fRMSmin>1.0) {
       Log() << kWARNING << "RMSmin > 1.0 ==> using 1.0 instead" << Endl;
       fRMSmin = 1.0;
+   }
+
+   // DT logic is only applicable if a single foam is trained
+   if (fSigBgSeparated && fDTLogic) {
+      Log() << kWARNING << "Decision tree logic works only for a single foam (SigBgSeparate=F)" << Endl;
+      fDTLogic = kFALSE;
    }
    
    if (fNmin==0)
@@ -643,6 +650,7 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    pdefoam->SetnBin(        fnBin);      // optional
    pdefoam->SetEvPerBin(    fEvPerBin);  // optional
    pdefoam->SetFillFoamWithOrigWeights(fFillFoamWithOrigWeights);
+   pdefoam->SetDTLogic(fDTLogic);
 
    // cuts
    pdefoam->CutNmin(fCutNmin);     // cut on minimal number of events per cell
