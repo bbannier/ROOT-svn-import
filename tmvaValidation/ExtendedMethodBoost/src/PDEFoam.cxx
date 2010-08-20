@@ -547,7 +547,7 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    // ------ determine the best division edge
    Float_t xBest = 0.5;   // best division point
    Int_t   kBest = -1;    // best split dimension
-   Float_t maxGain = 0.0; // maximum gain
+   Float_t maxGain = -1.0; // maximum gain
    Float_t nTotS = hsig.at(0)->Integral();
    Float_t nTotB = hbkg.at(0)->Integral();
    Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
@@ -566,14 +566,6 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 	 Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
 	 Float_t gain = parentGain - leftGain - rightGain;
 
-	 // Log() << kWARNING 
-	 //       << " dim[" << idim << "][" << jLo << "]"
-	 //       << " gain=" << gain
-	 //       << " leftgain=" << leftGain
-	 //       << " rightgain=" << rightGain
-	 //       << " parentgain=" << parentGain
-	 //       << Endl;
-
 	 if (gain >= maxGain) {
 	    maxGain = gain;
 	    xBest   = xLo;
@@ -581,12 +573,6 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 	 }
       } // jLo
    } // idim
-
-   Log() << kWARNING 
-	 << " kBest=" << kBest 
-	 << " xBest=" << xBest 
-	 << " maxGain=" << maxGain
-	 << Endl;
 
    if (kBest >= fDim || kBest < 0)
       Log() << kWARNING << "No best division edge found!" << Endl;
@@ -734,6 +720,10 @@ Long_t TMVA::PDEFoam::PeekMax()
    drivMax = 0;  // only split cells if gain>0 (this also avoids splitting at cell boundary)
    for(i=0; i<=fLastCe; i++) {//without root
       if( fCells[i]->GetStat() == 1 ) {
+	 // if driver integral < numeric limit, skip cell
+	 if (fCells[i]->GetDriv() < std::numeric_limits<float>::epsilon())
+	    continue;
+
          driv =  TMath::Abs( fCells[i]->GetDriv());
 
 	 // apply cut on depth
@@ -790,6 +780,9 @@ Long_t TMVA::PDEFoam::PeekLast()
 
    for(Long_t i=fLastCe; i>=0; i--) {
       if( fCells[i]->GetStat() == 1 ) {
+	 // if driver integral < numeric limit, skip cell
+	 if (fCells[i]->GetDriv() < std::numeric_limits<float>::epsilon())
+	    continue;
 
 	 // apply cut on depth
 	 if (GetMaxDepth() > 0)
