@@ -167,18 +167,15 @@ private:
       return _2_PI_ROOT_INV * std::exp(-.5 * x * x);
    }
    inline Double_t EpanechnikovKernel(Double_t x) const {
-      Double_t result = 3. / 4. * (1. - x * x);
-      return result > 0.0 ? result : 0.0;
+      return (x >= -1. &&  x <= 1.) ? 3. / 4. * (1. - x * x) : 0.0;
    }
    inline Double_t BiweightKernel(Double_t x) const {
       // Returns the kernel evaluation at x 
-      Double_t result = 15. / 16. * (1. - x * x) * (1. - x * x);
-      return result > 0.0 ? result : 0.0;
+      return (x >= -1. &&  x <= 1.) ? 15. / 16. * (1. - x * x) * (1. - x * x) : 0.0;
    }
    inline Double_t CosineArchKernel(Double_t x) const {
       // Returns the kernel evaluation at x 
-      Double_t result = PI_OVER4 * std::cos(PI_OVER2 * x);
-      return result > 0.0 ? result : 0.0;
+      return (x >= -1. &&  x <= 1.) ? PI_OVER4 * std::cos(PI_OVER2 * x) : 0.0;
    }
    Double_t UpperConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
    Double_t LowerConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
