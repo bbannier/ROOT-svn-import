@@ -103,6 +103,7 @@ void TMVA::MethodPDEFoam::Init( void )
    fUseYesNoCell   = kFALSE; // return -1 or 1 for bg or signal like events
    fDTLogic        = "None";
    fDTSeparation   = kFoam;
+   fPeekMax        = kTRUE;
 
    fKernel         = kNone; // default: use no kernel
    fTargetSelection= kMean; // default: use mean for target selection (only multi target regression!)
@@ -144,6 +145,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    AddPreDefVal(TString("GiniIndex"));
    AddPreDefVal(TString("MisClassificationError"));
    AddPreDefVal(TString("CrossEntropy"));
+   DeclareOptionRef( fPeekMax = kTRUE, "PeekMax", "Peek up cell with max. driver integral for the next split");
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -674,6 +676,7 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    pdefoam->SetEvPerBin(    fEvPerBin);  // optional
    pdefoam->SetFillFoamWithOrigWeights(fFillFoamWithOrigWeights);
    pdefoam->SetDTSeparation(fDTSeparation);
+   pdefoam->SetPeekMax(fPeekMax);
 
    // cuts
    pdefoam->CutNmin(fCutNmin);     // cut on minimal number of events per cell

@@ -228,6 +228,7 @@ namespace TMVA {
       Bool_t        fUseYesNoCell;    // return -1 or 1 for bg or signal like event
       TString       fDTLogic;         // use DT algorithm to split cells
       EDTSeparation fDTSeparation;    // enum which specifies the separation to use for the DT logic
+      Bool_t        fPeekMax;         // peek up cell with max. driver integral for split
      
       std::vector<Double_t> fXmin, fXmax; // range for histograms and foams
 
