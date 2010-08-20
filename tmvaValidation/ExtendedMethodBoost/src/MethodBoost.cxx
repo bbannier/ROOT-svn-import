@@ -338,9 +338,9 @@ void TMVA::MethodBoost::Train()
          timer.DrawProgressBar( fMethodIndex );
          if (fMethodIndex==0) method->MonitorBoost(SetStage(Types::kBoostProcBegin));
          method->MonitorBoost(SetStage(Types::kBeforeTraining));
-         TMVA::MsgLogger::InhibitOutput(); //supressing Logger outside the method
+         //TMVA::MsgLogger::InhibitOutput(); //supressing Logger outside the method
          SingleTrain();
-         TMVA::MsgLogger::EnableOutput();
+         //TMVA::MsgLogger::EnableOutput();
          method->WriteMonitoringHistosToFile();
 
 	 // calculate MVA values of method on training sample
