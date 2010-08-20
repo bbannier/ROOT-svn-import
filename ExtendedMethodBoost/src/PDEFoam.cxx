@@ -566,6 +566,14 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 	 Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
 	 Float_t gain = parentGain - leftGain - rightGain;
 
+	 // Log() << kWARNING 
+	 //       << " dim[" << idim << "][" << jLo << "]"
+	 //       << " gain=" << gain
+	 //       << " leftgain=" << leftGain
+	 //       << " rightgain=" << rightGain
+	 //       << " parentgain=" << parentGain
+	 //       << Endl;
+
 	 if (gain >= maxGain) {
 	    maxGain = gain;
 	    xBest   = xLo;
@@ -573,6 +581,12 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 	 }
       } // jLo
    } // idim
+
+   Log() << kWARNING 
+	 << " kBest=" << kBest 
+	 << " xBest=" << xBest 
+	 << " maxGain=" << maxGain
+	 << Endl;
 
    if (kBest >= fDim || kBest < 0)
       Log() << kWARNING << "No best division edge found!" << Endl;
