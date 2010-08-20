@@ -615,7 +615,7 @@ Float_t TMVA::PDEFoam::GetSeparation(Float_t s, Float_t b)
    case kMisClassificationError: // 1 - max(p,1-p)
       return 1 - TMath::Max(p, 1-p);
    case kCrossEntropy: // -p*log(p) - (1-p)*log(1-p)
-      return -p*TMath::Log(p) - (1-p)*TMath::Log(1-p);
+      return (p<=0 || p >=1 ? 0 : -p*TMath::Log(p) - (1-p)*TMath::Log(1-p));
    default:
       Log() << kFATAL << "Unknown separation type" << Endl;
       break;
