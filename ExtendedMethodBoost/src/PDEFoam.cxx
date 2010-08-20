@@ -525,8 +525,8 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    if (!cell)
       Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
 
-   // create output file
-   TFile file("DTPDEFoam_debug.root","UPDATE");
+   // // create output file
+   // TFile file("DTPDEFoam_debug.root","UPDATE");
 
    // create edge histograms
    std::vector<TH1F*> hsig, hbkg;
@@ -540,15 +540,15 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    // Fill histograms
    fDistr->FillHist(cell, hsig, hbkg);
    
-   // write histos to file
-   if (cell == fCells[0]) {
-      for (UInt_t ih=0; ih<hsig.size(); ih++)
-	 hsig.at(ih)->Write();
-      for (UInt_t ih=0; ih<hbkg.size(); ih++)
-	 hbkg.at(ih)->Write();
-   }
+   // // write histos to file
+   // if (cell == fCells[0]) {
+   //    for (UInt_t ih=0; ih<hsig.size(); ih++)
+   // 	 hsig.at(ih)->Write();
+   //    for (UInt_t ih=0; ih<hbkg.size(); ih++)
+   // 	 hbkg.at(ih)->Write();
+   // }
 
-   file.Close();
+   // file.Close();
 
    // Log() << ">>> NEvents in cell " << cell << ": "
    // 	 << hsig.at(0)->Integral() + hbkg.at(0)->Integral() << Endl;
