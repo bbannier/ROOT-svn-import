@@ -89,7 +89,8 @@ namespace TMVA {
    enum ECellValue { kNev, kDiscriminator, kDiscriminatorError, kTarget0, 
                      kTarget0Error, kMeanValue, kRms, kRmsOvMean, kDensity };
    // separation quantity to use (kFoam: use PDEFoam algorithm)
-   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError };
+   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
+			kCrossEntropy };
 }
 
 namespace TMVA {
