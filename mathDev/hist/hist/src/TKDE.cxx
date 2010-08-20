@@ -18,7 +18,7 @@ TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EK
    fLowerPDF(0),
    fApproximateBias(0),
    fHistogram(0),
-   fNBins(/*1000*/500), // Perhaps in function of nEvents, check
+   fNBins(events < 1000 ? events : events / 10), // Perhaps in function of nEvents, check
    fNEvents(events),
    fUseBinsNEvents(1000),
    fMean(0.0),
@@ -103,7 +103,7 @@ void TKDE::Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_
    fLowerPDF = 0;
    fHistogram = 0;
    fApproximateBias = 0;
-   fNBins = /*1000*/ 500;
+   fNBins = events < 1000 ? events : events / 10;
    fNEvents = events;
    fUseBinsNEvents = 1000;
    fMean = 0.0;
@@ -282,7 +282,7 @@ void TKDE::SetRange(Double_t xMin, Double_t xMax) {
    if (xMin >= xMax) {
       MATH_ERROR_MSG("TKDE::SetRange", "Minimum range cannot be bigger or equal than the maximum range!" << std::endl);
       return;
-   } 
+   }
    fXMin = xMin;
    fXMax = xMax;
    SetKernel();
@@ -310,7 +310,7 @@ TF1* TKDE::GetApproximateBias() {
 
 void TKDE::Fill(Double_t data) {
    // Fills data member with User input data event
-   SetData(data, static_cast<UInt_t>(fData.size()));
+   fData.push_back(data);
    fNEvents++;
    fXMin = std::min(data, fXMin);
    fXMax = std::max(data, fXMin);
@@ -379,19 +379,20 @@ Double_t TKDE::TKernel::operator()(Double_t x) const {
 }
 
 UInt_t TKDE::TKernel::Index(Double_t x, UInt_t i) const {
-   // Returns the indices for the binned weights. Otherwise, the the data orderinf is returned
+   // Returns the indices for the binned weights. Otherwise, the data order is returned
    return fKDE->fNEvents > fNWeights ? Index(x) : i;
 }
 
-UInt_t TKDE::TKernel::Index(Double_t x) const { // TODO: inline??
+UInt_t TKDE::TKernel::Index(Double_t x) const { // TODO: inline?? or make weight container as deque?
    // Returns the indices (bins) for the binned weights
    Int_t bin = Int_t((x - fKDE->fXMin) * fKDE->fWeightSize);
+   if (bin == (Int_t)fNWeights) {
+      return --bin;
+   }
    if (bin < 0) { // Left Mirrored Data
       return bin *= -1;
    } else if (bin > (Int_t)fNWeights) { // Right Mirrored Data
       return bin -= fNWeights ;
-   } else if (bin == (Int_t)fNWeights) {
-      return --bin;
    }
    return bin;
 }
