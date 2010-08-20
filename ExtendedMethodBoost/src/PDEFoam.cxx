@@ -118,6 +118,7 @@ TMVA::PDEFoam::PDEFoam() :
    fVolFrac(1.0/30.0),
    fFillFoamWithOrigWeights(kTRUE),
    fDTSeparation(kFoam),
+   fPeekMax(kTRUE),
    fDistr(new PDEFoamDistr()),
    fTimer(new Timer(0, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -155,6 +156,7 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fVolFrac(1.0/30.0),
    fFillFoamWithOrigWeights(kTRUE),
    fDTSeparation(kFoam),
+   fPeekMax(kTRUE),
    fDistr(new PDEFoamDistr()),
    fTimer(new Timer(1, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -520,13 +522,8 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    // volume = 1/2 parent has to be already defined prior to calling
    // this routine.
 
-   // Log() << ">>> start DTExplore" << Endl;
-
    if (!cell)
       Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
-
-   // // create output file
-   // TFile file("DTPDEFoam_debug.root","UPDATE");
 
    // get cell position and size
    PDEFoamVect  cellSize(fDim);
@@ -546,14 +543,6 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 
    // Fill histograms
    fDistr->FillHist(cell, hsig, hbkg);
-   
-   // // write histos to file
-   // for (UInt_t ih=0; ih<hsig.size(); ih++)
-   //    hsig.at(ih)->Write();
-   // for (UInt_t ih=0; ih<hbkg.size(); ih++)
-   //    hbkg.at(ih)->Write();
-
-   // file.Close();
 
    // ------ determine the best division edge
    Float_t xBest = 0.5;   // best division point
@@ -562,12 +551,6 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    Float_t nTotS = hsig.at(0)->Integral();
    Float_t nTotB = hbkg.at(0)->Integral();
    Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
-
-   // Log() << ">>> NEvents=" << nTotS+nTotB
-   // 	 << " Nsig=" << nTotS
-   // 	 << " Nbkg=" << nTotB
-   // 	 << " D=" << nTotS / (nTotS + nTotB)
-   // 	 << Endl;
 
    for (Int_t idim=0; idim<fDim; idim++) {
       Float_t nSelS=0.0, nSelB=0.0;
@@ -583,34 +566,16 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 	 Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
 	 Float_t gain = parentGain - leftGain - rightGain;
 
-	 // Log() << "nSelS=" << nSelS 
-	 //       << " nSelB=" << nSelB
-	 //       << " GetSeparation(nSelS,nSelB)=" << GetSeparation(nSelS,nSelB)
-	 //       << " GetSeparation(nTotS-nSelS,nTotB-nSelB)=" << GetSeparation(nTotS-nSelS,nTotB-nSelB)
-	 //       << Endl;
-	 
-	 // Log() << ">>> bin[" << jLo << "]: " 
-	 //       << " gain=" << gain
-	 //       << " maxGain=" << maxGain
-	 //       << " parentgain=" << parentGain
-	 //       << " rightgain=" << rightGain
-	 //       << " leftgain=" << leftGain
-	 //       << Endl;
-
 	 if (gain >= maxGain) {
 	    maxGain = gain;
 	    xBest   = xLo;
 	    kBest   = idim;
-	    // Log() << "setting new divisino edge: "
-	    // 	  << "xbest=" << xBest << " maxGain=" << maxGain << Endl;
 	 }
       } // jLo
    } // idim
 
    if (kBest >= fDim || kBest < 0)
       Log() << kWARNING << "No best division edge found!" << Endl;
-
-   // Log() << ">>> xBest=" << xBest << " kBest=" << kBest << Endl;
    
    // set cell properties
    cell->SetBest(kBest);
@@ -621,11 +586,6 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
       cell->SetIntg( 0.0 );
    cell->SetDriv(maxGain);
    cell->CalcVolume();
-
-   // debug output
-   // Log() << ">>> cell split in dim[" << kBest << "] at "
-   // 	 << VarTransformInvers(kBest,cellPosi[kBest]) + xBest*( VarTransformInvers(kBest,cellPosi[kBest]+cellSize[kBest]) - VarTransformInvers(kBest,cellPosi[kBest])) << Endl;
-   // cell->Print("1");
 
    // set cell element 0 (total number of events in cell) during
    // build-up
@@ -803,6 +763,54 @@ Long_t TMVA::PDEFoam::PeekMax()
 }
 
 //_____________________________________________________________________
+Long_t TMVA::PDEFoam::PeekLast()
+{
+   // Internal subprogram used by Create.
+   // It finds the last created active for the purpose of the division.
+
+   Long_t iCell = -1;
+
+   Bool_t bCutNmin = kTRUE;
+   Bool_t bCutRMS  = kTRUE;
+   Bool_t bCutMaxDepth = kTRUE;
+
+   for(Long_t i=fLastCe; i>=0; i--) {
+      if( fCells[i]->GetStat() == 1 ) {
+
+	 // apply cut on depth
+	 if (GetMaxDepth() > 0)
+	    bCutMaxDepth = fCells[i]->GetDepth() < GetMaxDepth();
+
+         // apply Nmin-cut
+         if (CutNmin())
+            bCutNmin = GetBuildUpCellEvents(fCells[i]) > GetNmin();
+
+         // choose cell
+         if(bCutNmin && bCutRMS && bCutMaxDepth) {
+            iCell = i;
+	    break;
+	 }
+      }
+   }
+
+   if (iCell == -1){
+      if (!bCutNmin)
+         Log() << kVERBOSE << "Warning: No cell with more than " 
+	       << GetNmin() << " events found!" << Endl;
+      else if (!bCutRMS)
+         Log() << kVERBOSE << "Warning: No cell with RMS/mean > " 
+	       << GetRMSmin() << " found!" << Endl;
+      else if (!bCutMaxDepth)
+         Log() << kVERBOSE << "Warning: Maximum depth reached: " 
+	       << GetMaxDepth() << Endl;
+      else
+         Log() << kWARNING << "Warning: PDEFoam::PeekLast: no more candidate cells found for further splitting." << Endl;
+   }
+
+   return(iCell);
+}
+
+//_____________________________________________________________________
 Int_t TMVA::PDEFoam::Divide(PDEFoamCell *cell)
 {
    // Internal subrogram used by Create.
@@ -866,7 +874,11 @@ void TMVA::PDEFoam::Grow()
    PDEFoamCell* newCell;
 
    while ( (fLastCe+2) < fNCells ) {  // this condition also checked inside Divide
-      iCell   = PeekMax();            // peek up cell with maximum driver integral
+      if (fPeekMax)
+	 iCell = PeekMax(); // peek up cell with maximum driver integral
+      else
+	 iCell = PeekLast(); // peek up last cell created
+
       if ( (iCell<0) || (iCell>fLastCe) ) {
          Log() << kVERBOSE << "Break: "<< fLastCe+1 << " cells created" << Endl;
          // remove remaining empty cells

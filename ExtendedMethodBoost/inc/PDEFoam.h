@@ -136,6 +136,7 @@ namespace TMVA {
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
       Bool_t fFillFoamWithOrigWeights; // fill the foam with boost or orig. weights
       EDTSeparation fDTSeparation; // split cells according to decision tree logic
+      Bool_t fPeekMax;         // peek up cell with max. driver integral for split
       PDEFoamDistr *fDistr;    //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
@@ -173,6 +174,7 @@ namespace TMVA {
       void MakeAlpha();             // Provides random point inside hyperrectangle
       void Grow();                  // build up foam
       Long_t PeekMax();             // peek cell with max. driver integral
+      Long_t PeekLast();            // peek last created cell
       Int_t  Divide(PDEFoamCell *); // Divide iCell into two daughters; iCell retained, taged as inactive
       Double_t Eval(Double_t *xRand, Double_t &event_density); // evaluate distribution on point 'xRand'
       Float_t GetSeparation(Float_t s, Float_t b); // calculate Gini index
@@ -241,6 +243,7 @@ namespace TMVA {
       void SetFoamType(EFoamType ft);   // set foam type
       void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
       void SetDTSeparation(EDTSeparation new_val){fDTSeparation=new_val;}
+      void SetPeekMax(Bool_t new_val){ fPeekMax = new_val; }
 
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
