@@ -518,13 +518,20 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    if (!cell)
       Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
 
+   // get cell position and size
+   PDEFoamVect  cellSize(fDim);
+   PDEFoamVect  cellPosi(fDim);
+   cell->GetHcub(cellPosi, cellSize);
+
    // create edge histograms
    std::vector<TH1F*> hsig, hbkg;
    for (Int_t idim=0; idim<fDim; idim++) {
       hsig.push_back( new TH1F(Form("hsig_%i",idim), 
-			       Form("signal[%i]",idim), fNBin, 0.0, 1.0) );
+			       Form("signal[%i]",idim), fNBin, 
+			       cellPosi[idim], cellPosi[idim]+cellSize[idim]) );
       hbkg.push_back( new TH1F(Form("hbkg_%i",idim), 
-			       Form("background[%i]",idim), fNBin, 0.0, 1.0) );
+			       Form("background[%i]",idim), fNBin, 
+			       cellPosi[idim], cellPosi[idim]+cellSize[idim]) );
    }
 
    // Fill histograms
