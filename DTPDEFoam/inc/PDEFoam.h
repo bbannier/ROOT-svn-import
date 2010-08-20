@@ -88,6 +88,8 @@ namespace TMVA {
    // kDensity       : number of events/cell volume
    enum ECellValue { kNev, kDiscriminator, kDiscriminatorError, kTarget0, 
                      kTarget0Error, kMeanValue, kRms, kRmsOvMean, kDensity };
+   // separation quantity to use (kFoam: use PDEFoam algorithm)
+   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError };
 }
 
 namespace TMVA {
@@ -131,7 +133,7 @@ namespace TMVA {
       Double_t fRMSmin;        // activate cut: minimal RMS in cell to split cell
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
       Bool_t fFillFoamWithOrigWeights; // fill the foam with boost or orig. weights
-      Bool_t fDTLogic;         // split cells according to decision tree logic
+      EDTSeparation fDTSeparation; // split cells according to decision tree logic
       PDEFoamDistr *fDistr;    //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
@@ -236,7 +238,7 @@ namespace TMVA {
       void SetVolumeFraction(Double_t); // set VolFrac to PDEFoamDistr
       void SetFoamType(EFoamType ft);   // set foam type
       void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
-      void SetDTLogic(Bool_t new_val){fDTLogic=new_val;}
+      void SetDTSeparation(EDTSeparation new_val){fDTSeparation=new_val;}
 
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
