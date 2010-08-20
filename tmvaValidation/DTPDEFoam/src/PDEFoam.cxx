@@ -620,7 +620,7 @@ Float_t TMVA::PDEFoam::GetSeparation(Float_t s, Float_t b)
    
    switch(fDTSeparation) {
    case kFoam:                   // p
-      return s/(s+b);
+      return p;
    case kGiniIndex:              // p * (1-p)
       return p*(1-p);
    case kMisClassificationError: // 1 - max(p,1-p)
