@@ -528,30 +528,32 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    // // create output file
    // TFile file("DTPDEFoam_debug.root","UPDATE");
 
+   // get cell position and size
+   PDEFoamVect  cellSize(fDim);
+   PDEFoamVect  cellPosi(fDim);
+   cell->GetHcub(cellPosi, cellSize);
+
    // create edge histograms
    std::vector<TH1F*> hsig, hbkg;
    for (Int_t idim=0; idim<fDim; idim++) {
       hsig.push_back( new TH1F(Form("hsig_%i",idim), 
-			       Form("signal[%i]",idim), fNBin, 0.0, 1.0) );
+			       Form("signal[%i]",idim), fNBin, 
+			       cellPosi[idim], cellPosi[idim]+cellSize[idim]) );
       hbkg.push_back( new TH1F(Form("hbkg_%i",idim), 
-			       Form("background[%i]",idim), fNBin, 0.0, 1.0) );
+			       Form("background[%i]",idim), fNBin, 
+			       cellPosi[idim], cellPosi[idim]+cellSize[idim]) );
    }
 
    // Fill histograms
    fDistr->FillHist(cell, hsig, hbkg);
    
    // // write histos to file
-   // if (cell == fCells[0]) {
-   //    for (UInt_t ih=0; ih<hsig.size(); ih++)
-   // 	 hsig.at(ih)->Write();
-   //    for (UInt_t ih=0; ih<hbkg.size(); ih++)
-   // 	 hbkg.at(ih)->Write();
-   // }
+   // for (UInt_t ih=0; ih<hsig.size(); ih++)
+   //    hsig.at(ih)->Write();
+   // for (UInt_t ih=0; ih<hbkg.size(); ih++)
+   //    hbkg.at(ih)->Write();
 
    // file.Close();
-
-   // Log() << ">>> NEvents in cell " << cell << ": "
-   // 	 << hsig.at(0)->Integral() + hbkg.at(0)->Integral() << Endl;
 
    // ------ determine the best division edge
    Float_t xBest = 0.5;   // best division point
@@ -559,6 +561,13 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    Float_t maxGain = 0.0; // maximum gain
    Float_t nTotS = hsig.at(0)->Integral();
    Float_t nTotB = hbkg.at(0)->Integral();
+   Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
+
+   // Log() << ">>> NEvents=" << nTotS+nTotB
+   // 	 << " Nsig=" << nTotS
+   // 	 << " Nbkg=" << nTotB
+   // 	 << " D=" << nTotS / (nTotS + nTotB)
+   // 	 << Endl;
 
    for (Int_t idim=0; idim<fDim; idim++) {
       Float_t nSelS=0.0, nSelB=0.0;
@@ -569,11 +578,16 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 	 Float_t xLo = 1.0*jLo/fNBin;
 
 	 // calculate gain
-	 Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
 	 Float_t leftGain   = ((nTotS - nSelS) + (nTotB - nSelB))
 	    * GetSeparation(nTotS-nSelS,nTotB-nSelB);
 	 Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
 	 Float_t gain = parentGain - leftGain - rightGain;
+
+	 // Log() << "nSelS=" << nSelS 
+	 //       << " nSelB=" << nSelB
+	 //       << " GetSeparation(nSelS,nSelB)=" << GetSeparation(nSelS,nSelB)
+	 //       << " GetSeparation(nTotS-nSelS,nTotB-nSelB)=" << GetSeparation(nTotS-nSelS,nTotB-nSelB)
+	 //       << Endl;
 	 
 	 // Log() << ">>> bin[" << jLo << "]: " 
 	 //       << " gain=" << gain
@@ -609,12 +623,9 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    cell->CalcVolume();
 
    // debug output
-   // cell->Print("1");
-   // PDEFoamVect  cellSize(fDim);
-   // PDEFoamVect  cellPosi(fDim);
-   // cell->GetHcub(cellPosi, cellSize);
    // Log() << ">>> cell split in dim[" << kBest << "] at "
    // 	 << VarTransformInvers(kBest,cellPosi[kBest]) + xBest*( VarTransformInvers(kBest,cellPosi[kBest]+cellSize[kBest]) - VarTransformInvers(kBest,cellPosi[kBest])) << Endl;
+   // cell->Print("1");
 
    // set cell element 0 (total number of events in cell) during
    // build-up
