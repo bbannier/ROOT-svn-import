@@ -78,6 +78,9 @@
 #ifndef ROOT_TColor
 #include "TColor.h"
 #endif
+#ifndef ROOT_TFile
+#include "TFile.h"
+#endif
 
 ClassImp(TMVA::PDEFoam)
 
@@ -114,7 +117,7 @@ TMVA::PDEFoam::PDEFoam() :
    fMaxDepth(0),
    fVolFrac(1.0/30.0),
    fFillFoamWithOrigWeights(kTRUE),
-   fDTLogic(kFALSE),
+   fDTSeparation(kFoam),
    fDistr(new PDEFoamDistr()),
    fTimer(new Timer(0, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -151,7 +154,7 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fMaxDepth(0),
    fVolFrac(1.0/30.0),
    fFillFoamWithOrigWeights(kTRUE),
-   fDTLogic(kFALSE),
+   fDTSeparation(kFoam),
    fDistr(new PDEFoamDistr()),
    fTimer(new Timer(1, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -320,7 +323,7 @@ void TMVA::PDEFoam::InitCells(Bool_t CreateCellElements)
 
    // Exploration of the root cell(s)
    for(Long_t iCell=0; iCell<=fLastCe; iCell++){
-      if (fDTLogic)
+      if (fDTSeparation != kFoam)
 	 DTExplore( fCells[iCell] );  // Exploration of root cell(s)
       else
 	 Explore( fCells[iCell] );    // Exploration of root cell(s)
@@ -522,6 +525,9 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    if (!cell)
       Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
 
+   // create output file
+   TFile file("DTPDEFoam_debug.root","UPDATE");
+
    // create edge histograms
    std::vector<TH1F*> hsig, hbkg;
    for (Int_t idim=0; idim<fDim; idim++) {
@@ -533,6 +539,16 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 
    // Fill histograms
    fDistr->FillHist(cell, hsig, hbkg);
+   
+   // write histos to file
+   if (cell == fCells[0]) {
+      for (UInt_t ih=0; ih<hsig.size(); ih++)
+	 hsig.at(ih)->Write();
+      for (UInt_t ih=0; ih<hbkg.size(); ih++)
+	 hbkg.at(ih)->Write();
+   }
+
+   file.Close();
 
    // Log() << ">>> NEvents in cell " << cell << ": "
    // 	 << hsig.at(0)->Integral() + hbkg.at(0)->Integral() << Endl;
@@ -615,10 +631,26 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 //_____________________________________________________________________
 Float_t TMVA::PDEFoam::GetSeparation(Float_t s, Float_t b)
 {
-   // return Gini index p*(1-p), where p = s/(s+b)
-   if (s+b <= 0)      return 0;
-   if (s<=0 || b <=0) return 0;
-   else               return s*b/((s+b)*(s+b));
+   if (s+b <= 0 || s < 0 || b < 0 )
+      return 0;
+
+   Float_t p = s/(s+b);
+   
+   switch(fDTSeparation) {
+   case kFoam:                   // p
+      return p;
+   case kGiniIndex:              // p * (1-p)
+      return p*(1-p);
+   case kMisClassificationError: // 1 - max(p,1-p)
+      return 1 - TMath::Max(p, 1-p);
+   case kCrossEntropy: // -p*log(p) - (1-p)*log(1-p)
+      return -p*TMath::Log(p) - (1-p)*TMath::Log(1-p);
+   default:
+      Log() << kFATAL << "Unknown separation type" << Endl;
+      break;
+   }
+
+   return 0;
 }
 
 //_____________________________________________________________________
@@ -791,7 +823,7 @@ Int_t TMVA::PDEFoam::Divide(PDEFoamCell *cell)
    Int_t d2 = CellFill(1,   cell);
    cell->SetDau0((fCells[d1]));
    cell->SetDau1((fCells[d2]));
-   if (fDTLogic) {
+   if (fDTSeparation != kFoam) {
       DTExplore( (fCells[d1]) );
       DTExplore( (fCells[d2]) );
    } else {

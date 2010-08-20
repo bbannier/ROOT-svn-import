@@ -101,6 +101,8 @@ void TMVA::MethodPDEFoam::Init( void )
    fMaxDepth       = 0;  // cell tree depth is unlimited
    fFillFoamWithOrigWeights = kTRUE;
    fUseYesNoCell   = kFALSE; // return -1 or 1 for bg or signal like events
+   fDTLogic        = "None";
+   fDTSeparation   = kFoam;
 
    fKernel         = kNone; // default: use no kernel
    fTargetSelection= kMean; // default: use mean for target selection (only multi target regression!)
@@ -137,7 +139,11 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    DeclareOptionRef( fMaxDepth = 0,           "MaxDepth",  "Maximum depth of cell tree (0=unlimited)");
    DeclareOptionRef( fFillFoamWithOrigWeights = kTRUE, "FillFoamWithOrigWeights", "Fill foam with original or boost weights");
    DeclareOptionRef( fUseYesNoCell = kFALSE, "UseYesNoCell", "Return -1 or 1 for bkg or signal like events");
-   DeclareOptionRef( fDTLogic = kFALSE, "DTLogic", "Use decision tree algorithm to split cells");
+   DeclareOptionRef( fDTLogic = "None", "DTLogic", "Use decision tree algorithm to split cells");
+   AddPreDefVal(TString("None"));
+   AddPreDefVal(TString("GiniIndex"));
+   AddPreDefVal(TString("MisClassificationError"));
+   AddPreDefVal(TString("CrossEntropy"));
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -172,9 +178,26 @@ void TMVA::MethodPDEFoam::ProcessOptions()
    }
 
    // DT logic is only applicable if a single foam is trained
-   if (fSigBgSeparated && fDTLogic) {
+   if (fSigBgSeparated && fDTLogic != "None") {
       Log() << kWARNING << "Decision tree logic works only for a single foam (SigBgSeparate=F)" << Endl;
-      fDTLogic = kFALSE;
+      fDTLogic = "None";
+      fDTSeparation = kFoam;
+   } 
+
+   // set separation to use
+   if (fDTLogic == "None")
+      fDTSeparation = kFoam;
+   else if (fDTLogic == "GiniIndex")
+      fDTSeparation = kGiniIndex;
+   else if (fDTLogic == "MisClassificationError")
+      fDTSeparation = kMisClassificationError;
+   else if (fDTLogic == "CrossEntropy")
+      fDTSeparation = kCrossEntropy;
+   else {
+      Log() << kWARNING << "Unknown separation type: " << fDTLogic 
+	    << ", setting to None" << Endl;
+      fDTLogic = "None";
+      fDTSeparation = kFoam;
    }
    
    if (fNmin==0)
@@ -650,7 +673,7 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    pdefoam->SetnBin(        fnBin);      // optional
    pdefoam->SetEvPerBin(    fEvPerBin);  // optional
    pdefoam->SetFillFoamWithOrigWeights(fFillFoamWithOrigWeights);
-   pdefoam->SetDTLogic(fDTLogic);
+   pdefoam->SetDTSeparation(fDTSeparation);
 
    // cuts
    pdefoam->CutNmin(fCutNmin);     // cut on minimal number of events per cell
