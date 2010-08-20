@@ -543,6 +543,7 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    Float_t maxGain = 0.0; // maximum gain
    Float_t nTotS = hsig.at(0)->Integral();
    Float_t nTotB = hbkg.at(0)->Integral();
+   Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
 
    for (Int_t idim=0; idim<fDim; idim++) {
       Float_t nSelS=0.0, nSelB=0.0;
@@ -553,7 +554,6 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 	 Float_t xLo = 1.0*jLo/fNBin;
 
 	 // calculate gain
-	 Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
 	 Float_t leftGain   = ((nTotS - nSelS) + (nTotB - nSelB))
 	    * GetSeparation(nTotS-nSelS,nTotB-nSelB);
 	 Float_t rightGain  = (nSelS+nSelB) * GetSeparation(nSelS,nSelB);
