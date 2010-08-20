@@ -113,7 +113,7 @@ TMVA::PDEFoam::PDEFoam() :
    fRMSmin(1.0),
    fVolFrac(1.0/30.0),
    fFillFoamWithOrigWeights(kTRUE),
-   fDTLogic(kFALSE),
+   fDTSeparation(kFoam),
    fDistr(new PDEFoamDistr()),
    fTimer(new Timer(0, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -149,7 +149,7 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fRMSmin(1.0),
    fVolFrac(1.0/30.0),
    fFillFoamWithOrigWeights(kTRUE),
-   fDTLogic(kFALSE),
+   fDTSeparation(kFoam),
    fDistr(new PDEFoamDistr()),
    fTimer(new Timer(1, "PDEFoam", kTRUE)),
    fVariableNames(new TObjArray()),
@@ -318,7 +318,7 @@ void TMVA::PDEFoam::InitCells(Bool_t CreateCellElements)
 
    // Exploration of the root cell(s)
    for(Long_t iCell=0; iCell<=fLastCe; iCell++){
-      if (fDTLogic)
+      if (fDTSeparation != kFoam)
 	 DTExplore( fCells[iCell] );  // Exploration of root cell(s)
       else
 	 Explore( fCells[iCell] );    // Exploration of root cell(s)
@@ -613,10 +613,24 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 //_____________________________________________________________________
 Float_t TMVA::PDEFoam::GetSeparation(Float_t s, Float_t b)
 {
-   // return Gini index p*(1-p), where p = s/(s+b)
-   if (s+b <= 0)      return 0;
-   if (s<=0 || b <=0) return 0;
-   else               return s*b/((s+b)*(s+b));
+   if (s+b <= 0 || s < 0 || b < 0 )
+      return 0;
+
+   Float_t p = s/(s+b);
+   
+   switch(fDTSeparation) {
+   case kFoam:                   // p
+      return s/(s+b);
+   case kGiniIndex:              // p * (1-p)
+      return p*(1-p);
+   case kMisClassificationError: // 1 - max(p,1-p)
+      return 1 - TMath::Max(p, 1-p);
+   default:
+      Log() << kFATAL << "Unknown separation type" << Endl;
+      break;
+   }
+
+   return 0;
 }
 
 //_____________________________________________________________________
@@ -778,7 +792,7 @@ Int_t TMVA::PDEFoam::Divide(PDEFoamCell *cell)
    Int_t d2 = CellFill(1,   cell);
    cell->SetDau0((fCells[d1]));
    cell->SetDau1((fCells[d2]));
-   if (fDTLogic) {
+   if (fDTSeparation != kFoam) {
       DTExplore( (fCells[d1]) );
       DTExplore( (fCells[d2]) );
    } else {

@@ -224,7 +224,8 @@ namespace TMVA {
       TString       fTargetSelectionStr; // method of selecting the target (only mulit target regr.)
       ETargetSelection fTargetSelection; // method of selecting the target (only mulit target regr.)
       Bool_t        fFillFoamWithOrigWeights; // fill the foam with boost weights
-      Bool_t        fDTLogic;         // use DT algorithm to split cells
+      TString       fDTLogic;         // use DT algorithm to split cells
+      EDTSeparation fDTSeparation;    // enum which specifies the separation to use for the DT logic
      
       std::vector<Double_t> fXmin, fXmax; // range for histograms and foams
 
