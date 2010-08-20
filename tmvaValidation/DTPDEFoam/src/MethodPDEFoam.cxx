@@ -136,6 +136,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    AddPreDefVal(TString("None"));
    AddPreDefVal(TString("GiniIndex"));
    AddPreDefVal(TString("MisClassificationError"));
+   AddPreDefVal(TString("CrossEntropy"));
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -183,6 +184,8 @@ void TMVA::MethodPDEFoam::ProcessOptions()
       fDTSeparation = kGiniIndex;
    else if (fDTLogic == "MisClassificationError")
       fDTSeparation = kMisClassificationError;
+   else if (fDTLogic == "CrossEntropy")
+      fDTSeparation = kCrossEntropy;
    else {
       Log() << kWARNING << "Unknown separation type: " << fDTLogic 
 	    << ", setting to None" << Endl;
