@@ -1015,10 +1015,18 @@ void TMVA::PDEFoam::PrintCells(void)
       Double_t xBest = fCells[iCell]->GetXdiv();
 
       Log()<<"Cell["<<iCell<<"]={ ";
-      Log()<<"  "<< fCells[iCell]<<"  ";  // extra DEBUG
+      Log()<<"  "<< fCells[iCell]<<"  " << Endl;  // extra DEBUG
       Log() << " Xdiv[abs. coord.]="
 	    << VarTransformInvers(kBest,cellPosi[kBest] + xBest*cellSize[kBest])
 	    << Endl;
+      Log() << " Abs. coord. = (";
+      for (Int_t idim=0; idim<fDim; idim++) {
+	 Log() << "dim[" << idim << "]={"
+	       << VarTransformInvers(idim,cellPosi[idim]) << ","
+	       << VarTransformInvers(idim,cellPosi[idim] + cellSize[idim])
+	       << "}, ";
+      }
+      Log() << Endl;
       fCells[iCell]->Print("1");
       Log()<<"}"<<Endl;
    }
