@@ -1008,9 +1008,17 @@ void TMVA::PDEFoam::PrintCells(void)
    Long_t iCell;
 
    for(iCell=0; iCell<=fLastCe; iCell++) {
+      PDEFoamVect cellPosi(fDim); 
+      PDEFoamVect cellSize(fDim);
+      fCells[iCell]->GetHcub(cellPosi,cellSize);
+      Int_t kBest = fCells[iCell]->GetBest();
+      Double_t xBest = fCells[iCell]->GetXdiv();
+
       Log()<<"Cell["<<iCell<<"]={ ";
       Log()<<"  "<< fCells[iCell]<<"  ";  // extra DEBUG
-      Log()<<Endl;
+      Log() << " Xdiv[abs. coord.]="
+	    << VarTransformInvers(kBest,cellPosi[kBest] + xBest*cellSize[kBest])
+	    << Endl;
       fCells[iCell]->Print("1");
       Log()<<"}"<<Endl;
    }
