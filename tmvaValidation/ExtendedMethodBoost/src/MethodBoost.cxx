@@ -369,14 +369,6 @@ void TMVA::MethodBoost::Train()
          (*fMonitorHist)[1]->SetBinContent(fMethodIndex+1,fBoostWeight);
          (*fMonitorHist)[2]->SetBinContent(fMethodIndex+1,fMethodError);
          (*fMonitorHist)[3]->SetBinContent(fMethodIndex+1,fOrigMethodError);
-   
-	 Log() << "[" << fMethodIndex << "]"
-	       << " ROC single (test)=" << (*fMonitorHist)[4]->GetBinContent(fMethodIndex+1)
-	       << " ROC full (test)=" << (*fMonitorHist)[5]->GetBinContent(fMethodIndex+1)
-	       << " fMethodWeight=" << fMethodWeight.back() 
-	       << " fBoostWeight=" << fBoostWeight
-	       << " fMethodError=" << fMethodError
-	       << " fOverlap_integral=" << fOverlap_integral << Endl;
 
          fMonitorTree->Fill();
 
