@@ -271,7 +271,7 @@ void TMVA::MethodDT::Train( void )
 {
    TMVA::DecisionTreeNode::fgIsTraining=true;
    SeparationBase *qualitySepType = new GiniIndex();
-   fTree = new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0, qualitySepType,
+   fTree = new DecisionTree( fSepType, fNodeMinEvents, fNCuts, kFALSE, 0, qualitySepType,
                              fRandomisedTrees, fUseNvars, 0 );
    if (fRandomisedTrees) Log()<<kWARNING<<" randomised Trees do not work yet in this framework," 
                                 << " as I do not know how to give each tree a new random seed, now they"

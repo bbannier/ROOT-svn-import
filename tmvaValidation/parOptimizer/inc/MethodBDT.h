@@ -201,6 +201,7 @@ namespace TMVA {
       Int_t                           fNodeMinEvents;   // min number of events in node
 
       Int_t                           fNCuts;           // grid used in cut applied in node splitting
+      Bool_t                          fUseFisherCuts;   // use multivariate splits using the Fisher criterium
       Bool_t                          fUseYesNoLeaf;    // use sig or bkg classification in leave nodes or sig/bkg
       Double_t                        fNodePurityLimit; // purity limit for sig/bkg nodes
       Bool_t                          fUseWeightedTrees;// use average classification from the trees, or have the individual trees trees in the forest weighted (e.g. log(boostweight) from AdaBoost

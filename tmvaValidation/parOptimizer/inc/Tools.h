@@ -234,6 +234,7 @@ namespace TMVA {
       Bool_t      AddRawLine  ( void* node, const char * raw );
       Bool_t      AddComment  ( void* node, const char* comment );
 
+      void*       GetParent   ( void* child);
       void*       GetChild    ( void* parent, const char* childname=0 );
       void*       GetNextChild( void* prevchild, const char* childname=0 );
       const char* GetContent  ( void* node );

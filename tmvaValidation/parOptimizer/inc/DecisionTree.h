@@ -47,6 +47,9 @@
 #ifndef ROOT_TMVA_DecisionTreeNode
 #include "TMVA/DecisionTreeNode.h"
 #endif
+#ifndef ROOT_TMVA_FisherDecisionTreeNode
+#include "TMVA/FisherDecisionTreeNode.h"
+#endif
 #ifndef ROOT_TMVA_BinaryTree
 #include "TMVA/BinaryTree.h"
 #endif
@@ -82,6 +85,7 @@ namespace TMVA {
       // the constructur needed for constructing the decision tree via training with events
       DecisionTree( SeparationBase *sepType, Int_t minSize, 
                     Int_t nCuts,
+                    Bool_t useFisherCuts, 
                     UInt_t cls =0,
                     Bool_t randomisedTree=kFALSE, Int_t useNvars=0, 
                     UInt_t nNodesMax=999999, UInt_t nMaxDepth=9999999, 
@@ -93,7 +97,9 @@ namespace TMVA {
     
       virtual ~DecisionTree( void );
 
-      virtual Node * CreateNode(UInt_t) const { return new DecisionTreeNode(); }
+      // Retrieves the address of the root node
+      virtual DecisionTreeNode* GetRoot() const { return dynamic_cast<TMVA::DecisionTreeNode*>(fRoot); }
+      virtual DecisionTreeNode * CreateNode(UInt_t) const { if (fUseFisherCuts) return new FisherDecisionTreeNode(); else return new DecisionTreeNode(); }
       virtual BinaryTree* CreateTree() const { return new DecisionTree(); }
       virtual const char* ClassName() const { return "DecisionTree"; }
   
@@ -105,8 +111,11 @@ namespace TMVA {
 
       Float_t TrainNode( const EventList & eventSample,  DecisionTreeNode *node ) { return TrainNodeFast( eventSample, node ); }
       Float_t TrainNodeFast( const EventList & eventSample,  DecisionTreeNode *node );
+      Float_t TrainNodeFisher( const EventList & eventSample,  FisherDecisionTreeNode *node );
       Float_t TrainNodeFull( const EventList & eventSample,  DecisionTreeNode *node );
+      void    GetRandomisedVariables(Bool_t *useVariable, Int_t *variableMap);
     
+
       // fill at tree with a given structure already (just see how many signa/bkgr
       // events end up in each node 
 
@@ -157,17 +166,13 @@ namespace TMVA {
       void SetNodePurityLimit( Double_t p ) { fNodePurityLimit = p; }
       Float_t GetNodePurityLimit( ) const { return fNodePurityLimit; }
 
-      void DescendTree( DecisionTreeNode *n = NULL );
-      void SetParentTreeInNodes( DecisionTreeNode *n = NULL );
-    
-      DecisionTreeNode* GetLeftDaughter( DecisionTreeNode *n );
-    
-      DecisionTreeNode* GetRightDaughter( DecisionTreeNode *n );
-    
+      void DescendTree( Node *n = NULL );
+      void SetParentTreeInNodes( Node *n = NULL );
+        
       // retrieve node from the tree. Its position (up to a maximal tree depth of 64)
       // is coded as a sequence of left-right moves starting from the root, coded as
       // 0-1 bit patterns stored in the "long-integer" together with the depth
-      DecisionTreeNode* GetNode( ULong_t sequence, UInt_t depth );
+      Node* GetNode( ULong_t sequence, UInt_t depth );
     
       UInt_t CleanTree(DecisionTreeNode *node=NULL);
      
@@ -178,7 +183,7 @@ namespace TMVA {
       void PruneNodeInPlace( TMVA::DecisionTreeNode* node );
     
 
-      UInt_t CountLeafNodes(TMVA::DecisionTreeNode *n = NULL);
+      UInt_t CountLeafNodes(TMVA::Node *n = NULL);
 
       void  SetTreeID(Int_t treeID){fTreeID = treeID;};
       Int_t GetTreeID(){return fTreeID;};
@@ -186,6 +191,7 @@ namespace TMVA {
       Bool_t DoRegression() const { return fAnalysisType == Types::kRegression; }
       void SetAnalysisType (Types::EAnalysisType t) { fAnalysisType = t;}
       Types::EAnalysisType GetAnalysisType ( void ) { return fAnalysisType;}
+      void SetUseFisherCuts(Bool_t t) { fUseFisherCuts = t;}
 
    private:
       // utility functions
@@ -198,6 +204,7 @@ namespace TMVA {
 
       UInt_t    fNvars;          // number of variables used to separate S and B
       Int_t     fNCuts;          // number of grid point in variable cut scans
+      Bool_t    fUseFisherCuts;  // use multivariate splits using the Fisher criterium
       SeparationBase *fSepType;  // the separation crition
       RegressionVariance *fRegType;  // the separation crition used in Regression
     

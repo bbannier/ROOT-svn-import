@@ -329,9 +329,9 @@ void TMVA::DecisionTreeNode::ResetValidationData( ) {
    SetSumTarget( 0 );
    SetSumTarget2( 0 );
 
-   if(GetLeftDaughter() != NULL && GetRightDaughter() != NULL) {
-      GetLeftDaughter()->ResetValidationData();
-      GetRightDaughter()->ResetValidationData();
+   if(GetLeft() != NULL && GetRight() != NULL) {
+      GetLeft()->ResetValidationData();
+      GetRight()->ResetValidationData();
    }
 }
 

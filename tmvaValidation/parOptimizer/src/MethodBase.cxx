@@ -274,6 +274,7 @@ void TMVA::MethodBase::SetupMethod()
 {
    // setup of methods
    
+
    if (fSetupCompleted) Log() << kFATAL << "Calling SetupMethod for the second time" << Endl;
    InitBase();
    DeclareBaseOptions();
