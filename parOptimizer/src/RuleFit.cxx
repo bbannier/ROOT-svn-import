@@ -224,7 +224,7 @@ void TMVA::RuleFit::MakeForest()
       while (tryAgain) {
          Double_t frnd = rndGen.Uniform( fMethodRuleFit->GetMinFracNEve(), fMethodRuleFit->GetMaxFracNEve() );
          nminRnd = Int_t(frnd*static_cast<Double_t>(fNTreeSample));
-         dt = new DecisionTree( fMethodRuleFit->GetSeparationBase(), nminRnd, fMethodRuleFit->GetNCuts(), 0, qualitySepType );
+         dt = new DecisionTree( fMethodRuleFit->GetSeparationBase(), nminRnd, fMethodRuleFit->GetNCuts(), kFALSE, 0, qualitySepType );
          BuildTree(dt); // reads fNTreeSample events from fTrainingEventsRndm
          if (dt->GetNNodes()<3) {
             delete dt;

@@ -136,10 +136,13 @@ void* TMVA::BinaryTree::AddXMLTo(void* parent) const {
 //_______________________________________________________________________
 void TMVA::BinaryTree::ReadXML(void* node, UInt_t tmva_Version_Code ) {
    // read attributes from XML
+
    this->DeleteNode( fRoot );
    fRoot= CreateNode();
+
    void* trnode = gTools().GetChild(node);
    fRoot->ReadXML(trnode, tmva_Version_Code);
+
    this->SetTotalTreeDepth();
 }
 
@@ -151,11 +154,15 @@ TMVA::BinaryTree* TMVA::BinaryTree::CreateFromXML(void* node, UInt_t tmva_Versio
    BinaryTree* bt = 0;
    if(type == "DecisionTree") {
       bt = new DecisionTree();
+      Bool_t tmp;
+      gTools().ReadAttr( (gTools().GetParent(node)), "UseFisherCuts", tmp);
+      (dynamic_cast<DecisionTree*>(bt))->SetUseFisherCuts(tmp);
    } else if(type == "BinarySearchTree") {
       bt = new BinarySearchTree();
    } else {
       gTools().Log() << kFATAL << "Can't read binary tree of type '" << type << "'" << Endl;
    }
+
    bt->ReadXML( node, tmva_Version_Code );
    return bt;
 }

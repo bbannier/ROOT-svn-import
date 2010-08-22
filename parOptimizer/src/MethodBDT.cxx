@@ -193,6 +193,7 @@ void TMVA::MethodBDT::DeclareOptions()
    // nEventsMin:      the minimum number of events in a node (leaf criteria, stop splitting)
    // nCuts:           the number of steps in the optimisation of the cut for a node (if < 0, then
    //                  step size is determined by the events)
+   // UseFisherCuts:   use multivariate splits using the Fisher criterium
    // UseYesNoLeaf     decide if the classification is done simply by the node type, or the S/B
    //                  (from the training) in the leaf node
    // NodePurityLimit  the minimum purity to classify a node as a signal node (used in pruning and boosting to determine
@@ -259,6 +260,7 @@ void TMVA::MethodBDT::DeclareOptions()
    }
    DeclareOptionRef(fNodeMinEvents, "nEventsMin", "Minimum number of events required in a leaf node (default: max(20, N_train/(Nvar^2)/10) ) ");
    DeclareOptionRef(fNCuts, "nCuts", "Number of steps during node cut optimisation");
+   DeclareOptionRef(fUseFisherCuts=kFALSE, "UseFisherCuts", "use multivariate splits using the Fisher criterium");
    DeclareOptionRef(fPruneStrength, "PruneStrength", "Pruning strength");
    DeclareOptionRef(fPruneMethodS, "PruneMethod", "Method used for pruning (removal) of statistically insignificant branches");
    AddPreDefVal(TString("NoPruning"));
@@ -362,6 +364,11 @@ void TMVA::MethodBDT::ProcessOptions()
    //             << " Hence I cannot make any split at all... this will not work!" << Endl;
    //    }
 
+   // fill the STL Vector with the event sample
+   // (needs to be done here and cannot be done in "init" as the options need to be 
+   // known). Train (where it was before) was also a bad place, as we don't want to repeat
+   // this for each "training" when optimising parameters.
+   InitEventSample();
 
 }
 //_______________________________________________________________________
@@ -380,9 +387,10 @@ void TMVA::MethodBDT::Init( void )
 
    fNodeMinEvents  = TMath::Max( Int_t(40), Int_t( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
    fNCuts          = 20;
-   fPruneMethodS   = "CostComplexity";
+   //   fPruneMethodS   = "CostComplexity";
+   fPruneMethodS   = "NoPruning";
    fPruneMethod    = DecisionTree::kCostComplexityPruning;
-   fPruneStrength  = -1.0;
+   fPruneStrength  = 0;
    fFValidationEvents = 0.5;
    fRandomisedTrees = kFALSE;
    fUseNvars        =  (GetNvar()>12) ? UInt_t(GetNvar()/8) : TMath::Max(UInt_t(2),UInt_t(GetNvar()/3));
@@ -393,8 +401,6 @@ void TMVA::MethodBDT::Init( void )
 
    // reference cut value to distinguish signal-like from background-like events
    SetSignalReferenceCut( 0 );
-   // fill the STL Vector with the event sample
-   InitEventSample();
 
 }
 
@@ -585,7 +591,7 @@ void TMVA::MethodBDT::Train()
          }
          UInt_t nClasses = DataInfo().GetNClasses();
          for (UInt_t i=0;i<nClasses;i++){
-            fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, i,
+            fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, fUseFisherCuts, i,
                                                  fRandomisedTrees, fUseNvars, fNNodesMax, fMaxDepth,
                                                  itree*nClasses+i, fNodePurityLimit, itree*nClasses+i));
             if (fBaggedGradBoost) nNodesBeforePruning = fForest.back()->BuildTree(fSubSample);
@@ -595,7 +601,7 @@ void TMVA::MethodBDT::Train()
       }
       else{
          
-         fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0,
+         fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, fUseFisherCuts, 0,
                                               fRandomisedTrees, fUseNvars, fNNodesMax, fMaxDepth,
                                               itree, fNodePurityLimit, itree));
          if (fBaggedGradBoost) nNodesBeforePruning = fForest.back()->BuildTree(fSubSample);
@@ -1168,6 +1174,8 @@ void TMVA::MethodBDT::AddWeightsXMLTo( void* parent ) const
    void* wght = gTools().AddChild(parent, "Weights");
    gTools().AddAttr( wght, "NTrees", fForest.size() );
    gTools().AddAttr( wght, "TreeType", fForest.back()->GetAnalysisType() );
+   gTools().AddAttr( wght, "UseFisherCuts", fUseFisherCuts); 
+   
 
    for (UInt_t i=0; i< fForest.size(); i++) {
       void* trxml = fForest[i]->AddXMLTo(wght);
@@ -1191,6 +1199,10 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
 
    gTools().ReadAttr( parent, "NTrees", ntrees );
    gTools().ReadAttr( parent, "TreeType", analysisType );
+   std::cout << "1 UseFisherCuts="<<fUseFisherCuts << std::endl;
+   gTools().ReadAttr( parent, "UseFisherCuts", fUseFisherCuts );
+   std::cout << "2 UseFisherCuts="<<fUseFisherCuts << std::endl;
+ 
 
    void* ch = gTools().GetChild(parent);
    i=0;
@@ -1198,6 +1210,7 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
       fForest.push_back( dynamic_cast<DecisionTree*>( BinaryTree::CreateFromXML(ch, GetTrainingTMVAVersionCode()) ) );
       fForest.back()->SetAnalysisType(Types::EAnalysisType(analysisType));
       fForest.back()->SetTreeID(i++);
+
       gTools().ReadAttr(ch,"boostWeight",boostWeight);
       fBoostWeights.push_back(boostWeight);
       ch = gTools().GetNextChild(ch);
@@ -1272,6 +1285,7 @@ Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, UInt_t useNTrees )
          norm  += 1;
       }
    }
+
    return ( norm > std::numeric_limits<double>::epsilon() ) ? myMVA /= norm : 0 ;
 }
 

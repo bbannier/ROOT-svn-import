@@ -21,6 +21,7 @@
 #pragma link C++ class TMVA::CrossEntropy+;
 #pragma link C++ class TMVA::DecisionTree+;
 #pragma link C++ class TMVA::DecisionTreeNode+;
+#pragma link C++ class TMVA::FisherDecisionTreeNode+;
 #pragma link C++ class TMVA::MisClassificationError+;
 #pragma link C++ class TMVA::Node+;
 #pragma link C++ class TMVA::SdivSqrtSplusB+;
