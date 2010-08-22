@@ -147,7 +147,6 @@ void TMVA::MethodBoost::DeclareOptions()
    AddPreDefVal(TString("AdaBoost"));
    AddPreDefVal(TString("Bagging"));
    AddPreDefVal(TString("HighEdgeGauss"));
-   AddPreDefVal(TString("HighEdgePara"));
    AddPreDefVal(TString("HighEdgeCoPara"));
 
    DeclareOptionRef(fMethodWeightType = "ByError", "Boost_MethodWeightType",
@@ -715,7 +714,6 @@ void TMVA::MethodBoost::SingleBoost()
       }
    }
    else if (fBoostType == "HighEdgeGauss" || 
-	    fBoostType == "HighEdgePara" ||
 	    fBoostType == "HighEdgeCoPara") {
       // Give events high boost weight, which are close of far away
       // from the MVA cut value
@@ -725,8 +723,6 @@ void TMVA::MethodBoost::SingleBoost()
          ev = Data()->GetEvent(ievt);
 	 if (fBoostType == "HighEdgeGauss")
 	    ev->SetBoostWeight( TMath::Exp( -std::pow(fMVAvalues->at(ievt)-MVACutValue,2)/(0.1*fADABoostBeta) ) );
-	 else if (fBoostType == "HighEdgePara")
-	    ev->SetBoostWeight( -4.0 * std::pow(fMVAvalues->at(ievt)-0.5,2) + 1.0 );
 	 else if (fBoostType == "HighEdgeCoPara")
 	    ev->SetBoostWeight( DataInfo().IsSignal(ev) ? TMath::Power(1.0-fMVAvalues->at(ievt),fADABoostBeta) : TMath::Power(fMVAvalues->at(ievt),fADABoostBeta) );
 	 else
