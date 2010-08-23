@@ -624,7 +624,7 @@ void TMVA::MethodBoost::SingleBoost()
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
          ev =  Data()->GetEvent(ievt);
          FactorOrig += ev->GetWeight();
-         ev->ScaleBoostWeight(TMath::Exp(-alphaWeight*((WrongDetection[ievt])? -1.0 : 1.0)));
+         ev->ScaleBoostWeight(TMath::Exp(-alphaWeight*((WrongDetection[ievt])? -1.0 : 0)));
          Factor += ev->GetWeight();
       }
       Factor = FactorOrig/Factor;
