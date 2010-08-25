@@ -25,7 +25,7 @@ import vary # helper functions to parse and expand the option string
 # BkgTree   - name of background tree from the event sample
 # Variables - comma separated list of variables to be used
 #
-Sample    = "/afs/cern.ch/user/a/avoigt/scratch0/samples/sample_e3.root"
+Sample    = "/afs/cern.ch/user/path/to/sample/sample.root"
 SigTree   = "TreeS"
 BkgTree   = "TreeB"
 Variables = "var1,var2,var3,var4,var5"
@@ -38,8 +38,8 @@ Variables = "var1,var2,var3,var4,var5"
 #              and factory parameters as well as the classifier output
 #              (ROC integral, boosting output).  See 'analysis.cxx'.
 #
-ROOTOutput = "/tmp/TMVA.root"
-TextOutput = "/afs/cern.ch/user/a/avoigt/parameter_scan/results.txt"
+ROOTOutput = "/afs/cern.ch/user/path/to/results/TMVA.root"
+TextOutput = "/afs/cern.ch/user/path/to/results/results.txt"
 
 ### specify factory option string
 #
