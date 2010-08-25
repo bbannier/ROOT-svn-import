@@ -24,7 +24,7 @@ void create_histo()
       h1->Fill(atof(line));
    }
    // create a file in recreate mode (to replace contents if any)
-   TFile *file = new TFile("ages.root", "RECREATE");
+   TFile *file = TFile::Open("ages.root", "RECREATE");
    // write the histogram in the file
    h1->Write();
    // delete the file (the object, not the file on disk!)
@@ -57,7 +57,7 @@ void read_histo()
    // function reading the 1D histogram from the Root file
 
    // create a file in read mode
-   TFile *file = new TFile("ages.root", "READ");
+   TFile *file = TFile::Open("ages.root", "READ");
    // get (read) the histogram from the file
    TH1F *h1 = (TH1F *)file->Get("ages");
    // draw (display) the histogram

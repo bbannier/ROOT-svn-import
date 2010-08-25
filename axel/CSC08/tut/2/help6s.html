@@ -28,7 +28,7 @@ void read_tree()
    // function reading particles collection in a tree
 
    // open the Root file
-   TFile *f = new TFile("/var/www/html/ROOT/exercise2.root");
+   TFile *f = TFile::Open("/var/www/html/ROOT/exercise2.root");
    // get the tree from the file
    TTree *myTree = (TTree*)f-&gt;Get("MyTree");
    

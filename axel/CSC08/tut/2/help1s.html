@@ -18,7 +18,7 @@ void read_histo()
    // function reading the 1D histogram from the Root file
 
    // create a file in read mode
-   TFile *file = new TFile("ages.root", "READ");
+   TFile *file = TFile::Open("ages.root", "READ");
    // get (read) the histogram from the file
    TH1F *h1 = (TH1F *)file-&gt;Get("ages");
    // remove the association of h1 with file
