@@ -99,7 +99,7 @@ void TMVA::MethodPDEFoam::Init( void )
    fCutRMSmin      = kFALSE;   // default TFoam method
    fRMSmin         = 0.01;
    fMaxDepth       = 0;  // cell tree depth is unlimited
-   fFillFoamWithOrigWeights = kTRUE;
+   fFillFoamWithOrigWeights = kFALSE;
    fUseYesNoCell   = kFALSE; // return -1 or 1 for bg or signal like events
    fDTLogic        = "None";
    fDTSeparation   = kFoam;
@@ -138,7 +138,7 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    DeclareOptionRef( fCutNmin = kTRUE,         "CutNmin",  "Requirement for minimal number of events in cell");
    DeclareOptionRef( fNmin = 100,             "Nmin",     "Number of events in cell required to split cell");
    DeclareOptionRef( fMaxDepth = 0,           "MaxDepth",  "Maximum depth of cell tree (0=unlimited)");
-   DeclareOptionRef( fFillFoamWithOrigWeights = kTRUE, "FillFoamWithOrigWeights", "Fill foam with original or boost weights");
+   DeclareOptionRef( fFillFoamWithOrigWeights = kFALSE, "FillFoamWithOrigWeights", "Fill foam with original or boost weights");
    DeclareOptionRef( fUseYesNoCell = kFALSE, "UseYesNoCell", "Return -1 or 1 for bkg or signal like events");
    DeclareOptionRef( fDTLogic = "None", "DTLogic", "Use decision tree algorithm to split cells");
    AddPreDefVal(TString("None"));
