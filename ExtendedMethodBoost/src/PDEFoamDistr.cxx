@@ -30,6 +30,7 @@
  **********************************************************************************/
 
 #include <cmath>
+#include <limits>
 
 #ifndef ROOT_TMath
 #include "TMath.h"
@@ -245,8 +246,8 @@ void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, s
    std::vector<Double_t> lb(fDim); // lower bound
    std::vector<Double_t> ub(fDim); // upper bound
    for (Int_t idim = 0; idim < fDim; idim++) {
-      lb[idim] = VarTransformInvers(idim, cellPosi[idim]);
-      ub[idim] = VarTransformInvers(idim, cellPosi[idim] + cellSize[idim]);
+      lb[idim] = VarTransformInvers(idim, cellPosi[idim] - std::numeric_limits<float>::epsilon());
+      ub[idim] = VarTransformInvers(idim, cellPosi[idim] + cellSize[idim] + std::numeric_limits<float>::epsilon());
    }
 
    // create TMVA::Volume object needed for searching within the BST
