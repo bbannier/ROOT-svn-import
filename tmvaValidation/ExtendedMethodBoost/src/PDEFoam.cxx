@@ -548,16 +548,17 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    Float_t xBest = 0.5;   // best division point
    Int_t   kBest = -1;    // best split dimension
    Float_t maxGain = -1.0; // maximum gain
-   Float_t nTotS = hsig.at(0)->Integral();
-   Float_t nTotB = hbkg.at(0)->Integral();
+   Float_t nTotS = hsig.at(0)->Integral() + hsig.at(0)->GetBinContent(0) + hsig.at(0)->GetBinContent(hsig.at(0)->GetNbinsX()+1);
+   Float_t nTotB = hbkg.at(0)->Integral() + hbkg.at(0)->GetBinContent(0) + hbkg.at(0)->GetBinContent(hbkg.at(0)->GetNbinsX()+1);
    Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
 
    for (Int_t idim=0; idim<fDim; idim++) {
-      Float_t nSelS=0.0, nSelB=0.0;
+      Float_t nSelS=hsig.at(idim)->GetBinContent(0);
+      Float_t nSelB=hbkg.at(idim)->GetBinContent(0);
       for(Int_t jLo=1; jLo<fNBin; jLo++) {
 	 nSelS += hsig.at(idim)->GetBinContent(jLo);
 	 nSelB += hbkg.at(idim)->GetBinContent(jLo);
-	 
+
 	 Float_t xLo = 1.0*jLo/fNBin;
 
 	 // calculate gain
