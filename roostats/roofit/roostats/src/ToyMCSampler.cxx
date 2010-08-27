@@ -267,7 +267,7 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistributionSingleWorker(RooArgSe
             delete pdfNLL;
 
             // L(pdf) / L(imp)  =  exp( NLL(imp) - NLL(pdf) )
-            weight = exp(impNLLVal - pdfNLLVal);
+            weight *= exp(impNLLVal - pdfNLLVal);
          }
 
          delete toydata;
@@ -358,7 +358,7 @@ RooAbsData* ToyMCSampler::GenerateToyData(RooArgSet& /*nullPOI*/) const {
       // the pdf with a Poisson fluctuation
       int forceEvents = 0;
       if(fNEvents == 0) {
-         forceEvents = fPdf->expectedEvents(observables);
+         forceEvents = (int)fPdf->expectedEvents(observables);
          forceEvents = RooRandom::randomGenerator()->Poisson(forceEvents);
       }
 

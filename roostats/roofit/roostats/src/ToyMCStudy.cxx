@@ -30,8 +30,9 @@ namespace RooStats {
 Bool_t ToyMCStudy::initialize(void) {
    coutP(Generation) << "initialize" << endl;
 
-   //coutI(Generation) << "SetSeed(0)" << endl;
+   //coutI(InputArguments) << "SetSeed(0)" << endl;
    //RooRandom::randomGenerator()->SetSeed(0);
+   coutI(InputArguments) << "Seed is: " << RooRandom::randomGenerator()->GetSeed() << endl;
 
    if(!fToyMCSampler) {
       coutE(InputArguments) << "Need an instance of ToyMCSampler to run." << endl;

@@ -130,7 +130,7 @@ class RatioOfProfiledLikelihoodsTestStat: public TestStatistic {
 */
 
       // null
-      double nullNLL = ProfiledLikelihood(data, *(RooArgSet*)nullParamsOfInterest.snapshot(), *fNullPdf);
+      double nullNLL = ProfiledLikelihood(data, nullParamsOfInterest, *fNullPdf);
       
       // alt 
       double altNLL = ProfiledLikelihood(data, *fAltPOI, *fAltPdf);
