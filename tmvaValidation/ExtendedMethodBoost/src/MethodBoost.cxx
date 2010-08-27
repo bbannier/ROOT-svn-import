@@ -456,7 +456,7 @@ void TMVA::MethodBoost::CreateMVAHistorgrams()
 
    fNbins = gConfig().fVariablePlotting.fNbinsXOfROCCurve;
    xmin = TMath::Max( TMath::Min(meanS - nrms*rmsS, meanB - nrms*rmsB ), xmin );
-   xmax = TMath::Min( TMath::Max(meanS + nrms*rmsS, meanB + nrms*rmsB ), xmax ) + 0.0001;
+   xmax = TMath::Min( TMath::Max(meanS + nrms*rmsS, meanB + nrms*rmsB ), xmax ) + 0.00001;
 
    // creating all the historgrams
    for (Int_t imtd=0; imtd<fBoostNum; imtd++) {
