@@ -99,6 +99,5 @@ void TPosCorr::Terminate()
 
    //if (fHistCorrPos) delete fHistCorrPos;
    Info("Terminate()", "Analysis done.");
-   fHistCorrPos = (TH2*) GetOutputList()->FindObject("hPosCorr");
    fHistCorrPos->Draw();
 }
