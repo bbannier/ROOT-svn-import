@@ -1,0 +1,29 @@
+#!/bin/sh
+
+if [ "x${BASH_ARGV[0]}" = "x" ]; then
+    THIS=$(basename ${0})
+    if [ "x${THIS}" == "xremovepatch" ]; then
+        PATCHLOC=$(cd `dirname ${0}`; pwd); export PATCHLOC
+    elif [ ! -f optimizedio.patch ]; then
+        echo ERROR: must "cd where/optimizedio.patch/is" before calling ". removepatch" for this version of bash!
+        exit 1
+    else
+        PATCHLOC="$PWD"; export PATCHLOC
+    fi
+else
+    # get param to "."
+    THIS=$(dirname ${BASH_ARGV[0]})
+    PATCHLOC=$(cd ${THIS}/..;pwd); export PATCHLOC
+fi
+
+files=`grep '^Index' ${PATCHLOC}/optimizedio.patch | cut -d':' -f2- `
+newfiles=`cd ${ROOTSYS} ; svn status | grep -e '^A ' -e '^? ' | cut -c2-`
+
+patch -p0 -R < ${PATCHLOC}/optimizedio.patch
+
+for f in ${newfiles} ; do
+  if [ `echo $files | grep -c $f` -eq 1 ] ; then
+     echo Removing new file: $f
+     rm -f $f
+  fi
+done
