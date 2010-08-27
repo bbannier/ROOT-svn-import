@@ -26,18 +26,6 @@ using namespace RooStats;
 
 void rs201b_hybridcalculator(int ntoys = 1000)
 {
-/*
-   RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG);
-   oocoutW((TObject*)0,Generation) << "warning" << endl;
-   oocoutI((TObject*)0,Generation) << "info generation" << endl; // does not print
-   oocoutI((TObject*)0,InputArguments) << "info inputarguments" << endl;
-
-   TNamed n("test", "test");
-   oocoutI(&n,Generation) << "info named" << endl; // does not print
-
-   return;
-*/
-
   //***********************************************************************//
   // This macro show an example on how to use RooStats/HybridCalculator    //
   // Tutorial by Kyle Cranmer and Sven Kreiss, 
@@ -163,8 +151,9 @@ void rs201b_hybridcalculator(int ntoys = 1000)
   slrts.SetNullParameters(*b_model.GetSnapshot());
   slrts.SetAltParameters(*sb_model.GetSnapshot());
 
-  // ratio of alt and null likelihoods with background yiled profiled
+  // ratio of alt and null likelihoods with background yield profiled
   RatioOfProfiledLikelihoodsTestStat ropl(*b_model.GetPdf(), *sb_model.GetPdf(), sb_model.GetSnapshot());
+  ropl.SetSubtractMLE(false);
 
   // profile likelihood where alternate is best fit value of signal yield
   ProfileLikelihoodTestStat profll(*b_model.GetPdf());
@@ -179,7 +168,7 @@ void rs201b_hybridcalculator(int ntoys = 1000)
   //  ToyMCSampler toymcsampler(mlets, ntoys);
 
   // and we can set some options for the toy mc sampler
-  // toymcsampler.SetGenerateBinned(true); // can speed things up
+  //  toymcsampler.SetGenerateBinned(true); // can speed things up
 
   // if given, use a fixed number of events per toy
   if(eventspertoy) toymcsampler.SetNEventsPerToy(eventspertoy);
@@ -211,13 +200,13 @@ void rs201b_hybridcalculator(int ntoys = 1000)
   );
   w.var("sig_yield0")->setVal(0.0);
   RooMsgService::instance().setGlobalKillBelow(msglevel);
-  w.factory("SUM::impDens(95*main_pdf0, 5*main_pdf)");
+  w.factory("SUM::impDens(75*main_pdf0, 25*main_pdf)");
   w.saveSnapshot("impSnapshot", "sig_yield");
 
   // Alternatively to the impDens above:
   // (very slow)
-  //  w.factory("RooGaussian::importanceWeightFunction(sig_yield,0,5)");
-  //  w.factory("PROJ::impDens(PROD::foo(main_pdf|sig_yield,importanceWeightFunction),sig_yield)");
+  //w.factory("RooGaussian::importanceWeightFunction(sig_yield,0,30)");
+  //w.factory("PROJ::impDens(PROD::foo(main_pdf|sig_yield,importanceWeightFunction),sig_yield)");
 
 
   // F O R   R U N S   I N   P A R A L L E L
@@ -225,9 +214,9 @@ void rs201b_hybridcalculator(int ntoys = 1000)
   // experiments (or sometimes called "events" in proof) and
   // the proof hostname. An empty hostname implies the use of
   // proof-lite.
-  ProofConfig pc(w, 2, "workers=2");    // proof-lite
-  //ProofConfig pc(w, 8, "localhost");    // proof
-  toymcsampler.SetProofConfig(&pc);     // enable proof
+  ProofConfig pc(w, 8, "workers=2");    // proof-lite
+  //ProofConfig pc(w, 10000, "localhost");    // proof
+  //toymcsampler.SetProofConfig(&pc);     // enable proof
 
   // U S E   H Y B R I D   C A L C U L A T O R
   // this is the tool that does the actual hypothesis test
@@ -236,8 +225,8 @@ void rs201b_hybridcalculator(int ntoys = 1000)
   //  HybridCalculator myH2(*data, sb_model, b_model);
 
   // Use Importance Sampling
-  w.loadSnapshot("impSnapshot");
-  myH2.SetNullImportanceDensity(w.pdf("impDens"), (RooArgSet*)w.set("poi")->snapshot());
+  //  w.loadSnapshot("impSnapshot");
+  //  myH2.SetNullImportanceDensity(w.pdf("impDens"), (RooArgSet*)w.set("poi")->snapshot());
 
   // the hybrid calculator needs a Bayesian distribution \pi on the nuisance parameters
   // if a prior is included in the ModelConfig, then it is possible 

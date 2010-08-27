@@ -84,7 +84,7 @@ class ToyMCSampler: public TestStatSampler {
          fProofConfig = NULL;
       }
       ToyMCSampler(TestStatistic &ts, Int_t ntoys) :
-         fTestStat(&ts), fSamplingDistName("temp"), fNToys(ntoys)
+         fTestStat(&ts), fSamplingDistName(ts.GetVarName()), fNToys(ntoys)
       {
          fPdf = NULL;
          fPriorNuisance = NULL;

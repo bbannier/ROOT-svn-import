@@ -95,7 +95,7 @@ Document version 0
 \vspace{2in}
 {\em With contributions from:}\\
 
-Kevin Belasco, Danilo Piparo, Giacinto Piacquadio, Maurizio Pierini, George H. Lewis, Alfio Lazzaro, Mario Pelliccioni, Matthias Wolf
+Sven Kreiss, Kevin Belasco, Danilo Piparo, Giacinto Piacquadio, Maurizio Pierini, George H. Lewis, Alfio Lazzaro, Mario Pelliccioni, Matthias Wolf
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -422,7 +422,8 @@ There are several choices for the test statistic (profile likelihood ratio, rati
 \begin{itemize}
  \item LikelihoodIntervalPlot
  \item SamplingDistPlot
- \item HybridPlot
+ \item HybridPlot (deprecated)
+ \item HypoTestPlot 
  \item MCMCIntervalPlot
  \item HypoTestInverterPlot
 \end{itemize}
@@ -430,6 +431,8 @@ There are several choices for the test statistic (profile likelihood ratio, rati
 \subsubsection{Test Statistics}
 \begin{itemize}
  \item ProfileLikleihoodTestStat
+ \item SimpleLikelihoodRatioTestStat
+ \item RatioOfProfiledLikelihoodsTestStat
  \item NumEventsTestStat
  \item DebuggingTestStat
 \end{itemize}
@@ -517,7 +520,40 @@ We added a new interface class called \textbf{TestStatistic}. It defines the met
 
 The following concrete implementations of the TestStatistic interface are currently available
 
-\textbf{ProfileLikelihoodTestStat} returns the log of profile likelihood ratio.  Generally a powerful test statistic.
+\textbf{ProfileLikelihoodTestStat} returns the log of profile likelihood ratio.  Generally a powerful test statistic. To introduce notation, this is
+\[
+  \log{
+      \Lambda( \mu, \hat{\hat{\theta}} )
+  }
+  =
+   \log{
+     \frac{ L(\mu, \hat{\hat{ \theta }} )}
+          { L(\hat{\mu}, \hat{\theta}) }
+   }
+\]
+where two hats denote a conditional maximum likelihood estimate.
+% Question is whether notation should be introduced here when it is introduced in detail under ``Profile Likelihood Calculator''
+\textbf{SimpleLikelihoodRatioTestStat} returns the log of the ratio of two simple hypotheses, namely the background hypothesis $b$ and the signal+background hypothesis $sb$.
+\[
+  \log{
+    \frac{ L(\mu_{sb}) }
+         { L(\mu_{b}) }
+  }.
+\]
+\textbf{RatioOfProfiledLikelihoodsTestStat} returns the log of the ratio of the two profiled likelihoods under the two hypotheses. The default is
+\[
+  \log{
+    \frac{\Lambda(\mu_{sb} , \hat{\hat{ \theta }}_{sb}  )}
+         {\Lambda(\mu_{b} , \hat{\hat{ \theta }}_{b}  )}
+  }.
+\]
+Alternatively, using SetSubtractMLE(false), it is
+\[
+  \log{
+    \frac{L(\mu_{sb} , \hat{\hat{ \theta }}_{sb}  )}
+         {L(\mu_{b} , \hat{\hat{ \theta }}_{b}  )}
+  }.
+\]
 NumEventsTestStatReturns the number of events in the dataset.  Useful for number counting experiments.
 DebuggingTestStat Simply returns a uniform random number between 0,1.  Useful for debugging.
 SamplingDistribution and the TestStatSampler interface and implementations
@@ -526,7 +562,17 @@ We introduced a ``result'' or data model class called \textbf{SamplingDistributi
 
 We introduced an interface for any tool that can produce a SamplingDistribution, called \textbf{TestStatSampler}.  The interface is essentially GetSamplingDistribution(parameterPoint) which returns a SamplingDistribution based on a given probability density function.  We foresee a few versions of this tool based on toy Monte Carlo, importance sampling, Fourier transforms, etc.  The following concrete implementation of the TestStatSampler interface are currently available
 
-ToyMCSampler uses a Toy Monte Carlo approach to build the sampling distribution.  The pdf's generate method to generate is used to generate toy data, and then the test statistic is evaluated at the requested parameter point.
+ToyMCSampler uses a Toy Monte Carlo approach to build the sampling distribution. The pdf's generate method is used to generate toy data at the requested parameter point, and then the test statistic is evaluated. If the pdf is extended, the number of events to generate is determined automatically. If the pdf is not extended or one wants to set the number of events to a specific value, one can use SetNEventsPerToy(const Int\_t).
+As an option, ToyMCSampler also supports the generation of toys from an ``importance density'' instead of the pdf. It then re-weights the values of the test statistic to recover a distribution according to the pdf.\footnote{This is based on the talk by Michael Woodroofe at Banff, where he was able to populate the tail of a $5\sigma$ test with 3600 toys.} The importance density has to be similar to the pdf to avoid anomalously large values after reweighting.  This method can improve the sampling of small tails of a distribution significantly.
+Another feature of the ToyMCSampler is its capability to leverage Proof. To activate this feature, one has to call SetProofConfig() with a ProofConfig instance. ProofConfig supports runs with Proof-Lite and runs on Proof clusters. A blank Proof-hostname implies Proof-Lite. Generic options for Proof(-Lite) are also supported, e.g. ``workers=2'' to force the use of exactly two workers irrespective of how many cores are available.  For example:
+\begin{lstlisting}
+ProofConfig pc(workspace, 10, "workers=2");    // proof-lite, force 2 workers
+//ProofConfig pc(workspace, 8, "localhost");   // proof cluster at "localhost"
+toymcsampler.SetProofConfig(&pc);              // enable proof
+\end{lstlisting}
+The integer number in the ProofConfig constructor defines the number of ``Proof events''.
+
+
 DebuggingSampler Simply returns a uniform distribution between 0,1.  Useful for debugging.
 NeymanConstruction and FeldmanCousins
 
@@ -543,13 +589,13 @@ Hypothesis testing is one of the most common procedures in science.  In \textit{
 
 Define: Type I \& Type II errors, size, and power.
 
-The Neyman-Pearson lemma states that the likelihood ratio $P(x|H_1)/P(x|H_0)$ provides the most powerful test statistic for testing the alternate against the null.  This is the basis for the ubiquity of the use of teh likelihood ratio; however, it is only the most powerful test in this very limited situation.
+The Neyman-Pearson lemma states that the likelihood ratio $P(x|H_1)/P(x|H_0)$ provides the most powerful test statistic for testing the alternate against the null.  This is the basis for the ubiquity of the use of the likelihood ratio; however, it is only the most powerful test in this very limited situation.
 
 More commonly one does not have a fully specified simple hypothesis, but a \textit{composite hypothesis} $P(x|\mu,\nu)$ that is parametrized.  It may be parametrized according to some parameter of interest $\mu$ (e.g., the mass of a particle) or by some nuisance parameter $\nu$ (e.g., an unknown background rate).  In these cases, the Neyman-Pearson lemma is not applicable.  One would like to find a test statistic that is most powerful over the full range of $\mu$ -- which is referred to as Uniformly Most Powerful (UMP).  Unfortunately, UMP tests don't exist in general.  
 
 There is a precise dictionary that relates hypothesis tests to confidence intervals.  In fact, the frequentist method for deriving confidence intervals is referred to as an ``inverted hypothesis test''.
 
-In RooStats we wish to support several different techniques for hypothesis testing.  They mainly differ in the way that they incorporate systematic effects.  There are only very few cases in which hypothesis tests with systematics has a clear ``solution'' from first principles.  In a more general setting the field has developed several techniques, and new ones are being advocated given recent interaction with the professional statistics community.  Some of the techniques included in RooStats are mainly avaialbe for consistency with historical practice in the field.
+In RooStats we wish to support several different techniques for hypothesis testing.  They mainly differ in the way that they incorporate systematic effects.  There are only very few cases in which hypothesis tests with systematics have a clear ``solution'' from first principles.  In a more general setting the field has developed several techniques, and new ones are being advocated given recent interaction with the professional statistics community.  Some of the techniques included in RooStats are mainly avaialbe for consistency with historical practice in the field.
 
 As denoted in Fig.~\ref{fig:OverviewOfInterfaces}, the interface for tools that peform hypothesis tests in RooStats is called \textbf{HypoTestCalculator}.  After configuring a HypoTestCalculator, one simply requests the result via \texttt{HypoTestCalculator::GetHypoTest()}.
 
@@ -623,6 +669,11 @@ The whole phase space of the nuisance parameters is thus sampled through
 Monte-Carlo integration. The final net effect consist in a broadening
 of the $-\ln Q$ distribution and thus, as expected in presence of
 systematic uncertainties, a degraded separation of the hypotheses.
+
+
+
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
