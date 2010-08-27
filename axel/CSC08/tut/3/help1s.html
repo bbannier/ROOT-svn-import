@@ -16,7 +16,6 @@
 	  http://server/ROOT/exercise3_3.root
 	  http://server/ROOT/exercise3_4.root
 	  http://server/ROOT/exercise3_5.root
-	  http://server/ROOT/exercise3_6.root
 	  </pre>
 	  <p>Run the selector in compiled mode on the whole tree.</p>
 </div>
@@ -29,7 +28,7 @@ TChain* makechain()
 {
    TChain* ch = new TChain("MyTree");
    ch-&gt;Add("http://server/ROOT/exercise3.root");
-   for (int i = 1; i &lt; 6; ++i) {
+   for (int i = 1; i &lt; 5; ++i) {
        // Use TString::Format() to insert the file number (%d gets replaced by i)
        ch-&gt;Add(TString::Format("http://server/ROOT/exercise3_%d.root", i));
    }
