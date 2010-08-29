@@ -20,6 +20,10 @@ fi
 
 files=`grep '^Index' ${PATCHLOC}/optimizedio.patch | cut -d':' -f2- `
 
+if [ -e optimizedio.patch.applied ] ; then
+  ${PATCHLOC}/removepatch
+fi
+
 patch -p0 < ${PATCHLOC}/optimizedio.patch
 
 cp -r ${PATCHLOC}/optimizedio.patch optimizedio.patch.applied
