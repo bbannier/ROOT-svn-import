@@ -189,7 +189,7 @@ Index: core/meta/src/TClass.cxx
        return 0;
     }
  
-@@ -4867,6 +4894,139 @@
+@@ -4867,6 +4894,138 @@
  }
  
  //______________________________________________________________________________
@@ -201,8 +201,7 @@ Index: core/meta/src/TClass.cxx
 +   //      case kExternal|kEmulated: 
 +
 +   TClassStreamer *streamer = gThreadTsd ? GetStreamer() : fStreamer;
-+   streamer->SetOnFileClass( onfile_class );
-+   (*streamer)(b,object);   
++   streamer->Stream(b,object,onfile_class);   
 +}
 +
 +//______________________________________________________________________________
@@ -329,7 +328,7 @@ Index: core/meta/src/TClass.cxx
  void TClass::Streamer(void *object, TBuffer &b, const TClass *onfile_class) const
  {
     // Stream object of this class to or from buffer.
-@@ -4877,7 +5037,7 @@
+@@ -4877,7 +5036,7 @@
        case kExternal|kEmulated: 
        {
           //There is special streamer for the class
@@ -338,7 +337,7 @@ Index: core/meta/src/TClass.cxx
           streamer->SetOnFileClass( onfile_class );
           (*streamer)(b,object);
  
-@@ -4954,6 +5114,7 @@
+@@ -4954,6 +5113,7 @@
        }
     }
  }
@@ -346,7 +345,7 @@ Index: core/meta/src/TClass.cxx
  
  //______________________________________________________________________________
  void TClass::AdoptStreamer(TClassStreamer *str)
-@@ -4971,13 +5132,16 @@
+@@ -4971,13 +5131,16 @@
     if (str) {
        fStreamerType = kExternal | ( fStreamerType&kEmulated );
        fStreamer = str;
@@ -365,7 +364,7 @@ Index: core/meta/src/TClass.cxx
     }
  }
  
-@@ -5107,7 +5271,7 @@
+@@ -5107,7 +5270,7 @@
           arr = it->second;
        }
  
@@ -420,6 +419,43 @@ Index: core/meta/inc/TClass.h
  
     ClassDef(TClass,0)  //Dictionary containing class information
  };
+Index: core/meta/inc/TClassStreamer.h
+===================================================================
+--- core/meta/inc/TClassStreamer.h	(revision 35031)
++++ core/meta/inc/TClassStreamer.h	(working copy)
+@@ -35,7 +35,7 @@
+    virtual void SetOnFileClass( const TClass* cl ) { fOnFileClass = const_cast<TClass*>(cl); }
+    virtual const TClass* GetOnFileClass() const { return fOnFileClass; }
+ 
+-   virtual TClassStreamer *Generate() {
++   virtual TClassStreamer *Generate() const {
+       // Virtual copy constructor.
+       return new TClassStreamer(*this); 
+    }
+@@ -48,6 +48,23 @@
+       
+       (*fStreamer)(b,objp);
+    }
++   virtual void Stream(TBuffer &b, void *objp, const TClass *onfileClass)
++   {
++      // The address passed to operator() will be the address of the start of the
++      // object.   Overload this routine, if your derived class can optimize
++      // the handling of the onfileClass (rather than storing and restoring from the
++      // fOnFileClass member.
++      
++      // Note we can not name this routine 'operator()' has it would be slightly
++      // backward incompatible and lead to the following warning/error from the
++      // compiler in the derived class overloading the other operator():
++//      include/TClassStreamer.h:51: error: ‘virtual void TClassStreamer::operator()(TBuffer&, void*, const TClass*)’ was hidden
++//      include/TCollectionProxyFactory.h:180: error:   by ‘virtual void TCollectionClassStreamer::operator()(TBuffer&, void*)’
++//   cc1plus: warnings being treated as errors
++      
++      SetOnFileClass(onfileClass);
++      (*fStreamer)(b,objp);
++   }
+    
+ private:
+    ClassStreamerFunc_t fStreamer;
 Index: core/meta/inc/TClassRef.h
 ===================================================================
 --- core/meta/inc/TClassRef.h	(revision 35031)
@@ -2228,6 +2264,40 @@ Index: io/io/src/TStreamerInfo.cxx
                 for (UInt_t i = 0;i < sub_numberOfClasses;++i) {
                    fprintf(fp, "}; // end of class.\n");
                 }
+Index: io/io/src/TEmulatedMapProxy.cxx
+===================================================================
+--- io/io/src/TEmulatedMapProxy.cxx	(revision 35031)
++++ io/io/src/TEmulatedMapProxy.cxx	(working copy)
+@@ -204,6 +204,29 @@
+    }
+ }
+ 
++void TEmulatedMapProxy::ReadBuffer(TBuffer &b, void *obj, const TClass *onfileClass)
++{
++   // Read portion of the streamer.
++
++   SetOnFileClass((TClass*)onfileClass);
++   ReadBuffer(b,obj);
++}
++
++void TEmulatedMapProxy::ReadBuffer(TBuffer &b, void *obj)
++{
++   // Read portion of the streamer.
++
++   TPushPop env(this,obj);
++   int nElements = 0;
++   b >> nElements;
++   if ( fEnv->fObject )  {
++      Resize(nElements,true);
++   }
++   if ( nElements > 0 )  {
++      ReadMap(nElements, b);
++   }
++}
++
+ void TEmulatedMapProxy::Streamer(TBuffer &b)
+ {
+    // TClassStreamer IO overload.
 Index: io/io/src/TMakeProject.cxx
 ===================================================================
 --- io/io/src/TMakeProject.cxx	(revision 35031)
@@ -2581,6 +2651,45 @@ Index: io/io/src/TEmulatedCollectionProxy.cxx
           // std::cout << "Initialized " << typeid(*this).name() << ":" << fName << std::endl;
           int slong = sizeof(void*);
           switch ( fSTL_type )  {
+@@ -431,7 +436,7 @@
+    // Allocate the necessary space.
+ 
+    Resize(n, forceDelete);
+-   return fEnv;
++   return fEnv->fObject;
+ }
+ 
+ void TEmulatedCollectionProxy::Commit(void* /* env */ )
+@@ -534,6 +539,29 @@
+ #undef DOLOOP
+ }
+ 
++void TEmulatedCollectionProxy::ReadBuffer(TBuffer &b, void *obj, const TClass *onfileClass)
++{
++   // Read portion of the streamer.
++   
++   SetOnFileClass((TClass*)onfileClass);
++   ReadBuffer(b,obj);
++}
++
++void TEmulatedCollectionProxy::ReadBuffer(TBuffer &b, void *obj)
++{
++   // Read portion of the streamer.
++
++   TPushPop env(this,obj);
++   int nElements = 0;
++   b >> nElements;
++   if ( fEnv->fObject )  {
++      Resize(nElements,true);
++   }
++   if ( nElements > 0 )  {
++      ReadItems(nElements, b);
++   }
++}
++
+ void TEmulatedCollectionProxy::Streamer(TBuffer &b)
+ {
+    // TClassStreamer IO overload
 Index: io/io/src/TStreamerInfoActions.cxx
 ===================================================================
 --- io/io/src/TStreamerInfoActions.cxx	(revision 0)
@@ -4747,7 +4856,26 @@ Index: io/io/src/TGenCollectionProxy.cxx
     if ( !fProxyList.empty() ) {
        EnvironBase_t* e = fProxyList.back();
        if ( --e->fRefCount <= 0 ) {
-@@ -1105,3 +1167,311 @@
+@@ -1080,6 +1142,18 @@
+ }
+ 
+ //______________________________________________________________________________
++void TGenCollectionProxy::ReadBuffer(TBuffer & /* b */, void * /* obj */, const TClass * /* onfileClass */)
++{
++   MayNotUse("TGenCollectionProxy::ReadBuffer(TBuffer &, void *, const TClass *)");
++}
++
++//______________________________________________________________________________
++void TGenCollectionProxy::ReadBuffer(TBuffer & /* b */, void * /* obj */)
++{
++   MayNotUse("TGenCollectionProxy::ReadBuffer(TBuffer &, void *)");
++}
++
++//______________________________________________________________________________
+ void TGenCollectionProxy::Streamer(TBuffer &buff)
+ {
+    // Streamer Function.
+@@ -1105,3 +1179,318 @@
     Streamer(b, objp, 0);
  }
  
@@ -4799,11 +4927,18 @@ Index: io/io/src/TGenCollectionProxy.cxx
 +
 +
 +//______________________________________________________________________________
-+void TGenCollectionProxy__VectorCreateIterators(void *, void **begin_arena, void **end_arena) 
++void TGenCollectionProxy__VectorCreateIterators(void *obj, void **begin_arena, void **end_arena) 
 +{
-+   TVirtualCollectionProxy *proxy = gSlowIterator__Proxy.back();
-+   *begin_arena = proxy->At(0);
-+   *end_arena = ((char*)proxy->At(0)) + proxy->Size() * proxy->GetIncrement();
++   // Humm let's pretend that the std::vector layout does not really depend on
++   // the content!
++   std::vector<char> *vec = (std::vector<char>*)obj;
++   *begin_arena = &(*vec->begin());
++   *end_arena = &(*vec->end());
++   
++   // The following is a safer way but require the caller to have called TPushPop
++   //   TVirtualCollectionProxy *proxy = gSlowIterator__Proxy.back();
++   //   void *good_begin_arena = proxy->At(0);
++   //   void *good_end_arena = ((char*)proxy->At(0)) + proxy->Size() * proxy->GetIncrement();
 +}
 +
 +//______________________________________________________________________________
@@ -5063,7 +5198,38 @@ Index: io/io/src/TGenCollectionStreamer.cxx
 ===================================================================
 --- io/io/src/TGenCollectionStreamer.cxx	(revision 35031)
 +++ io/io/src/TGenCollectionStreamer.cxx	(working copy)
-@@ -137,7 +137,7 @@
+@@ -32,19 +32,19 @@
+ #include "Riostream.h"
+ 
+ TGenCollectionStreamer::TGenCollectionStreamer(const TGenCollectionStreamer& copy)
+-      : TGenCollectionProxy(copy)
++      : TGenCollectionProxy(copy), fReadBufferFunc(&TGenCollectionStreamer::ReadBufferDefault)
+ {
+    // Build a Streamer for an emulated vector whose type is 'name'.
+ }
+ 
+ TGenCollectionStreamer::TGenCollectionStreamer(Info_t info, size_t iter_size)
+-      : TGenCollectionProxy(info, iter_size)
++      : TGenCollectionProxy(info, iter_size), fReadBufferFunc(&TGenCollectionStreamer::ReadBufferDefault)
+ {
+    // Build a Streamer for a collection whose type is described by 'collectionClass'.
+ }
+ 
+ TGenCollectionStreamer::TGenCollectionStreamer(const ::ROOT::TCollectionProxyInfo &info, TClass *cl)
+-      : TGenCollectionProxy(info, cl)
++      : TGenCollectionProxy(info, cl), fReadBufferFunc(&TGenCollectionStreamer::ReadBufferDefault)
+ {
+    // Build a Streamer for a collection whose type is described by 'collectionClass'.
+ }
+@@ -61,6 +61,7 @@
+    return new TGenCollectionStreamer(*this);
+ }
+ 
++
+ void TGenCollectionStreamer::ReadPrimitives(int nElements, TBuffer &b)
+ {
+    // Primitive input streamer.
+@@ -137,7 +138,7 @@
           Error("TGenCollectionStreamer", "fType %d is not supported yet!\n", fVal->fKind);
     }
     if (feed)  {      // need to feed in data...
@@ -5072,7 +5238,7 @@ Index: io/io/src/TGenCollectionStreamer.cxx
        if (memory)  {
           ::operator delete(memory);
        }
-@@ -203,29 +203,29 @@
+@@ -203,29 +204,29 @@
        case TClassEdit::kSet:
  #define DOLOOP(x) {int idx=0; while(idx<nElements) {StreamHelper* i=(StreamHelper*)(((char*)itm) + fValDiff*idx); { x ;} ++idx;}}
           fEnv->fStart = itm = (StreamHelper*)(len < sizeof(buffer) ? buffer : memory =::operator new(len));
@@ -5110,7 +5276,7 @@ Index: io/io/src/TGenCollectionStreamer.cxx
                 break;
           }
  #undef DOLOOP
-@@ -297,15 +297,15 @@
+@@ -297,15 +298,15 @@
        case TClassEdit::kSet:
  #define DOLOOP(x) {int idx=0; while(idx<nElements) {StreamHelper* i=(StreamHelper*)(((char*)itm) + fValDiff*idx); { x ;} ++idx;}}
           fEnv->fStart = itm = (StreamHelper*)(len < sizeof(buffer) ? buffer : memory =::operator new(len));
@@ -5129,7 +5295,7 @@ Index: io/io/src/TGenCollectionStreamer.cxx
                 break;
           }
  #undef DOLOOP
-@@ -416,7 +416,7 @@
+@@ -416,7 +417,7 @@
     fEnv->fSize  = nElements;
     fEnv->fStart = (len < sizeof(buffer) ? buffer : memory =::operator new(len));
     addr = temp = (char*)fEnv->fStart;
@@ -5138,7 +5304,7 @@ Index: io/io/src/TGenCollectionStreamer.cxx
     for (int loop, idx = 0; idx < nElements; ++idx)  {
        addr = temp + fValDiff * idx;
        v = fKey;
-@@ -502,8 +502,8 @@
+@@ -502,8 +503,8 @@
           addr += fValOffset;
        }
     }
@@ -5149,6 +5315,208 @@ Index: io/io/src/TGenCollectionStreamer.cxx
     if (memory) {
        ::operator delete(memory);
     }
+@@ -732,6 +733,201 @@
+    }
+ }
+ 
++template <typename basictype>
++void TGenCollectionStreamer::ReadBufferVectorPrimitives(TBuffer &b, void *obj)
++{
++   int nElements = 0;
++   b >> nElements;
++   
++   TVirtualCollectionProxy::TPushPop env(this, obj);
++   fEnv->fSize = nElements;
++   char *items = (char*)fResize.invoke(fEnv);
++   b.ReadFastArray((basictype*)items, nElements);
++}
++
++void TGenCollectionStreamer::ReadBufferVectorPrimitivesFloat16(TBuffer &b, void *obj)
++{
++   int nElements = 0;
++   b >> nElements;
++   
++   TVirtualCollectionProxy::TPushPop env(this, obj);
++   fEnv->fSize = nElements;
++   char *items = (char*)fResize.invoke(fEnv);
++   b.ReadFastArrayFloat16((Float_t*)items, nElements);
++}
++
++void TGenCollectionStreamer::ReadBufferVectorPrimitivesDouble32(TBuffer &b, void *obj)
++{
++   int nElements = 0;
++   b >> nElements;
++   
++   TVirtualCollectionProxy::TPushPop env(this, obj);
++   fEnv->fSize = nElements;
++   char *items = (char*)fResize.invoke(fEnv);
++   b.ReadFastArrayDouble32((Double_t*)items, nElements);
++}
++
++
++
++void TGenCollectionStreamer::ReadBuffer(TBuffer &b, void *obj, const TClass *onFileClass)
++{
++   // Call the specialized function.  The first time this call ReadBufferDefault which
++   // actually set to fReadBufferFunc to the 'right' specialized version.
++   
++   SetOnFileClass((TClass*)onFileClass);
++   (this->*fReadBufferFunc)(b,obj);
++}
++
++void TGenCollectionStreamer::ReadBuffer(TBuffer &b, void *obj)
++{
++   // Call the specialized function.  The first time this call ReadBufferDefault which
++   // actually set to fReadBufferFunc to the 'right' specialized version.
++   
++   (this->*fReadBufferFunc)(b,obj);
++}
++
++void TGenCollectionStreamer::ReadBufferDefault(TBuffer &b, void *obj)
++{
++   
++   fReadBufferFunc = &TGenCollectionStreamer::ReadBufferGeneric;
++   if (fSTL_type == TClassEdit::kVector) {
++      switch (int(fVal->fKind))   {
++         case kBool_t:
++            // Nothing use generic for now
++            break;
++         case kChar_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<Char_t>;
++            break;
++         case kShort_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<Short_t>;
++            break;
++         case kInt_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<Int_t>;
++            break;
++         case kLong_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<Long_t>;
++            break;
++         case kLong64_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<Long64_t>;
++            break;
++         case kFloat_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<Float_t>;
++            break;
++         case kFloat16_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitivesFloat16;
++            break;
++         case kDouble_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<Double_t>;
++            break;
++//         case kBOOL_t:
++//            fReadBufferFunc = &ReadBufferVectorPrimitives<>;
++//            break;
++         case kUChar_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<UChar_t>;
++            break;
++         case kUShort_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<UShort_t>;
++            break;
++         case kUInt_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<UInt_t>;
++            break;
++         case kULong_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<ULong_t>;
++            break;
++         case kULong64_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitives<ULong64_t>;
++            break;
++         case kDouble32_t:
++            fReadBufferFunc = &TGenCollectionStreamer::ReadBufferVectorPrimitivesDouble32;
++            break;
++         case kchar:
++         case kNoType_t:
++         case kOther_t:
++            // Nothing use the generic for now
++            break;
++      }
++   }
++   (this->*fReadBufferFunc)(b,obj);
++}
++
++void TGenCollectionStreamer::ReadBufferGeneric(TBuffer &b, void *obj)
++{
++   TVirtualCollectionProxy::TPushPop env(this, obj);
++
++   int nElements = 0;
++   b >> nElements;
++
++   if (nElements == 0) {
++      if (obj) {
++         TGenCollectionProxy::Clear("force");
++      }
++   } else if (nElements > 0)  {
++      switch (fSTL_type)  {
++         case TClassEdit::kBitSet:
++            if (obj) {
++               if (fPointers)   {
++                  TGenCollectionProxy::Clear("force");
++               }  else {
++                  fClear.invoke(fEnv);
++               }
++            }
++            ReadPrimitives(nElements, b);
++            return;
++         case TClassEdit::kVector:
++            if (obj) {
++               if (fPointers)   {
++                  TGenCollectionProxy::Clear("force");
++               } // a resize will be called in ReadPrimitives/ReadObjects.
++               else if (fVal->fKind == EDataType(kBOOL_t)) {
++                  fClear.invoke(fEnv);                  
++               }
++            }
++            switch (fVal->fCase) {
++               case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
++               case G__BIT_ISENUM:
++                  ReadPrimitives(nElements, b);
++                  return;
++               default:
++                  ReadObjects(nElements, b);
++                  return;
++            }
++            break;
++         case TClassEdit::kList:
++         case TClassEdit::kDeque:
++         case TClassEdit::kMultiSet:
++         case TClassEdit::kSet:
++            if (obj) {
++               if (fPointers)   {
++                  TGenCollectionProxy::Clear("force");
++               }  else {
++                  fClear.invoke(fEnv);
++               }
++            }
++            switch (fVal->fCase) {
++               case G__BIT_ISFUNDAMENTAL:  // Only handle primitives this way
++               case G__BIT_ISENUM:
++                  ReadPrimitives(nElements, b);
++                  return;
++               default:
++                  ReadObjects(nElements, b);
++                  return;
++            }
++            break;
++         case TClassEdit::kMap:
++         case TClassEdit::kMultiMap:
++            if (obj) {
++               if (fPointers)   {
++                  TGenCollectionProxy::Clear("force");
++               }  else {
++                  fClear.invoke(fEnv);
++               }
++            }
++            ReadMap(nElements, b);
++            break;
++      }
++   }
++}
++
+ void TGenCollectionStreamer::Streamer(TBuffer &b)
+ {
+    // TClassStreamer IO overload.
 Index: io/io/inc/TBufferFile.h
 ===================================================================
 --- io/io/inc/TBufferFile.h	(revision 35031)
@@ -5209,6 +5577,21 @@ Index: io/io/inc/TBufferFile.h
     virtual   Int_t    ReadArray(Bool_t    *&b);
     virtual   Int_t    ReadArray(Char_t    *&c);
     virtual   Int_t    ReadArray(UChar_t   *&c);
+Index: io/io/inc/TEmulatedCollectionProxy.h
+===================================================================
+--- io/io/inc/TEmulatedCollectionProxy.h	(revision 35031)
++++ io/io/inc/TEmulatedCollectionProxy.h	(working copy)
+@@ -107,6 +107,10 @@
+    // Block commit of containees
+    virtual void Commit(void* env);
+ 
++   // Read portion of the streamer
++   virtual void ReadBuffer(TBuffer &buff, void *pObj);
++   virtual void ReadBuffer(TBuffer &buff, void *pObj, const TClass *onfile);
++
+    // Streamer for I/O handling
+    virtual void Streamer(TBuffer &refBuffer);
+ 
 Index: io/io/inc/TStreamerInfoActions.h
 ===================================================================
 --- io/io/inc/TStreamerInfoActions.h	(revision 0)
@@ -5367,12 +5750,91 @@ Added: svn:keywords
 Added: svn:eol-style
    + LF
 
+Index: io/io/inc/TCollectionProxyFactory.h
+===================================================================
+--- io/io/inc/TCollectionProxyFactory.h	(revision 35031)
++++ io/io/inc/TCollectionProxyFactory.h	(working copy)
+@@ -28,10 +28,15 @@
+ #ifndef ROOT_TClassStreamer
+ #include "TClassStreamer.h"
+ #endif
++
+ #ifndef ROOT_TMemberStreamer
+ #include "TMemberStreamer.h"
+ #endif
+ 
++#ifndef ROOT_TGenCollectionProxy
++#include "TGenCollectionProxy.h"
++#endif
++
+ // Forward declarations
+ class TBuffer;
+ class TGenCollectionProxy;
+@@ -154,7 +159,7 @@
+    /// Attach worker proxy
+    void AdoptStreamer(TGenCollectionProxy* streamer);
+    /// Streamer for I/O handling
+-   void Streamer(TBuffer &refBuffer, void *pObject, int siz, TClass *onFileClass );
++   void Streamer(TBuffer &refBuffer, void *obj, int siz, TClass *onFileClass );
+ };
+ 
+ /** @class TEmulatedClassStreamer TCollectionProxy.h cont/TCollectionProxy.h
+@@ -177,10 +182,25 @@
+    /// Standard destructor
+    virtual ~TCollectionClassStreamer()                {                        }
+    /// Streamer for I/O handling
+-   virtual void operator()(TBuffer &buff, void *pObj ) { Streamer(buff,pObj,0,fOnFileClass); }
++   virtual void operator()(TBuffer &buff, void *obj ) { Streamer(buff,obj,0,fOnFileClass); }
+ 
++   virtual void Stream(TBuffer &b, void *obj, const TClass *onfileClass)
++   {
++      if (b.IsReading()) {
++         TGenCollectionProxy *proxy = TCollectionStreamer::fStreamer;
++         if (onfileClass==0 || onfileClass == proxy->GetCollectionClass()) {
++            proxy->ReadBuffer(b,obj);
++         } else {
++            proxy->ReadBuffer(b,obj,onfileClass);
++         }
++      } else {
++         // fStreamer->WriteBuffer(b,objp,onfileClass);
++         Streamer(b,obj,0,(TClass*)onfileClass);
++      }
++   }
++   
+    /// Virtual copy constructor.
+-   virtual TClassStreamer *Generate() {
++   virtual TClassStreamer *Generate() const {
+       return new TCollectionClassStreamer(*this);
+    }
+ 
+@@ -208,8 +228,8 @@
+    /// Standard destructor
+    virtual ~TCollectionMemberStreamer()             { }
+    /// Streamer for I/O handling
+-   virtual void operator()(TBuffer &buff,void *pObj,Int_t siz=0)
+-   { Streamer(buff, pObj, siz, 0); /* FIXME */ }
++   virtual void operator()(TBuffer &buff,void *obj,Int_t siz=0)
++   { Streamer(buff, obj, siz, 0); /* FIXME */ }   
+ };
+ 
+ #endif
 Index: io/io/inc/TGenCollectionProxy.h
 ===================================================================
 --- io/io/inc/TGenCollectionProxy.h	(revision 35031)
 +++ io/io/inc/TGenCollectionProxy.h	(working copy)
-@@ -29,6 +29,11 @@
- #include "TCollectionProxyFactory.h"
+@@ -25,10 +25,22 @@
+ //
+ //////////////////////////////////////////////////////////////////////////
+ 
++#ifndef ROOT_TVirtualCollectionProxy
+ #include "TVirtualCollectionProxy.h"
+-#include "TCollectionProxyFactory.h"
++#endif
++
++#ifndef ROOT_TCollectionProxyInfo
++#include "TCollectionProxyInfo.h"
++#endif
++
  #include <typeinfo>
  #include <string>
 +#include <map>
@@ -5380,10 +5842,11 @@ Index: io/io/inc/TGenCollectionProxy.h
 +#include <malloc.h>
 +#endif
 +class TObjArray;
++class TCollectionProxyFactory;
  
  class TGenCollectionProxy
     : public TVirtualCollectionProxy
-@@ -223,11 +228,74 @@
+@@ -223,11 +235,74 @@
        Method0(const Method0& m) : call(m.call)   {      }
        void* invoke() const { return (*call)(); }
     };
@@ -5458,7 +5921,7 @@ Index: io/io/inc/TGenCollectionProxy.h
  
     std::string   fName;      // Name of the class being proxied.
     Bool_t        fPointers;  // Flag to indicate if containee has pointers (key or value)
-@@ -236,9 +304,9 @@
+@@ -236,9 +311,9 @@
     Method        fResize;    // Container accessors: resize container
     Method        fFirst;     // Container accessors: generic iteration: first
     Method        fNext;      // Container accessors: generic iteration: next
@@ -5471,7 +5934,7 @@ Index: io/io/inc/TGenCollectionProxy.h
     Method        fCollect;   // Method to collect objects from container
     Method0       fCreateEnv; // Method to allocate an Environment holder.
     Value*        fValue;     // Descriptor of the container value type
-@@ -249,6 +317,7 @@
+@@ -249,6 +324,7 @@
     int           fValDiff;   // Offset between two consecutive value_types (memory layout).
     Proxies_t     fProxyList; // Stack of recursive proxies
     Proxies_t     fProxyKept; // Optimization: Keep proxies once they were created
@@ -5479,7 +5942,7 @@ Index: io/io/inc/TGenCollectionProxy.h
     int           fSTL_type;  // STL container type
     Info_t        fTypeinfo;  // Type information
     TClass*       fOnFileClass; // On file class
-@@ -261,7 +330,9 @@
+@@ -261,7 +337,9 @@
     virtual void DeleteItem(Bool_t force, void* ptr) const;
     // Allow to check function pointers.
     void CheckFunctions()  const;
@@ -5490,7 +5953,7 @@ Index: io/io/inc/TGenCollectionProxy.h
  public:
  
     // Virtual copy constructor.
-@@ -280,6 +351,12 @@
+@@ -280,6 +358,12 @@
     // Return a pointer to the TClass representing the container.
     virtual TClass *GetCollectionClass();
  
@@ -5503,7 +5966,14 @@ Index: io/io/inc/TGenCollectionProxy.h
     // Return the sizeof the collection object.
     virtual UInt_t Sizeof() const;
  
-@@ -330,6 +407,41 @@
+@@ -327,9 +411,48 @@
+ 
+    // TClassStreamer I/O overload.
+    virtual void operator()(TBuffer &refBuffer, void *pObject);
++   
++   // Routine to read the content of the buffer into 'obj'.
++   virtual void ReadBuffer(TBuffer &b, void *obj);
++   virtual void ReadBuffer(TBuffer &b, void *obj, const TClass *onfileClass);
  
     virtual void SetOnFileClass( TClass* cl ) { fOnFileClass = cl; }
     virtual TClass* GetOnFileClass() const { return fOnFileClass; }
@@ -5545,7 +6015,7 @@ Index: io/io/inc/TGenCollectionProxy.h
  };
  
  template <typename T>
-@@ -345,9 +457,9 @@
+@@ -345,9 +468,9 @@
        fNext.call      = T::next;
        fFirst.call     = T::first;
        fClear.call     = T::clear;
@@ -5562,7 +6032,47 @@ Index: io/io/inc/TGenCollectionStreamer.h
 ===================================================================
 --- io/io/inc/TGenCollectionStreamer.h	(revision 35031)
 +++ io/io/inc/TGenCollectionStreamer.h	(working copy)
-@@ -72,9 +72,9 @@
+@@ -21,6 +21,7 @@
+ //////////////////////////////////////////////////////////////////////////
+ 
+ #include "TGenCollectionProxy.h"
++#include "TCollectionProxyFactory.h"
+ 
+ class TGenCollectionStreamer : public TGenCollectionProxy {
+ 
+@@ -34,6 +35,18 @@
+    void WriteObjects(int nElements, TBuffer &b);
+    void WritePrimitives(int nElements, TBuffer &b);
+ 
++//   typedef void (TGenCollectionStreamer::*ReadBufferConv_t)(TBuffer &b, void *obj, const TClass *onfileClass);
++//   ReadBufferConv_t fReadBufferConvFunc;
++   
++   typedef void (TGenCollectionStreamer::*ReadBuffer_t)(TBuffer &b, void *obj);
++   ReadBuffer_t fReadBufferFunc;
++   
++   template <typename basictype> void ReadBufferVectorPrimitives(TBuffer &b, void *obj);
++   void ReadBufferVectorPrimitivesFloat16(TBuffer &b, void *obj);
++   void ReadBufferVectorPrimitivesDouble32(TBuffer &b, void *obj);
++   void ReadBufferDefault(TBuffer &b, void *obj);
++   void ReadBufferGeneric(TBuffer &b, void *obj);
++      
+ public:
+    // Virtual copy constructor
+    virtual TVirtualCollectionProxy* Generate() const;
+@@ -58,6 +71,12 @@
+    virtual void Streamer(TBuffer &buff, void *pObj, int siz)  {
+       TGenCollectionProxy::Streamer(buff, pObj, siz);
+    }
++
++   // Routine to read the content of the buffer into 'obj'.
++   virtual void ReadBuffer(TBuffer &b, void *obj, const TClass *onfileClass);
++
++   // Routine to read the content of the buffer into 'obj'.
++   virtual void ReadBuffer(TBuffer &b, void *obj);
+ };
+ 
+ template <typename T>
+@@ -72,9 +91,9 @@
        fClear.call     = T::clear;
        fResize.call    = T::resize;
        fCollect.call   = T::collect;
@@ -5639,3 +6149,18 @@ Index: io/io/inc/TStreamerInfo.h
  #ifdef R__BROKEN_FUNCTION_TEMPLATES
     // Support for non standard compilers
     Int_t               ReadBuffer(TBuffer &b,  char** const &arrptr, Int_t first,Int_t narr=1,Int_t eoffset=0,Int_t mode=0);
+Index: io/io/inc/TEmulatedMapProxy.h
+===================================================================
+--- io/io/inc/TEmulatedMapProxy.h	(revision 35031)
++++ io/io/inc/TEmulatedMapProxy.h	(working copy)
+@@ -50,6 +50,10 @@
+    // Return the current size of the container
+    virtual UInt_t Size() const;
+ 
++   // Read portion of the streamer
++   virtual void ReadBuffer(TBuffer &buff, void *pObj);
++   virtual void ReadBuffer(TBuffer &buff, void *pObj, const TClass *onfile);
++
+    // Streamer for I/O handling
+    virtual void Streamer(TBuffer &refBuffer);
+ 
