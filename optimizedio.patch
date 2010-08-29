@@ -520,7 +520,7 @@ Index: core/cont/inc/TCollectionProxyInfo.h
              ::new(m) Value_t();
           return 0;
        }
-@@ -177,17 +173,10 @@
+@@ -177,18 +173,10 @@
              ::new(m) Value_t(*i);
           return 0;
        }
@@ -533,17 +533,28 @@ Index: core/cont/inc/TCollectionProxyInfo.h
 -            ROOT::Destruct(m);
 -#else
 -         for (size_t i=0; i < e->fSize; ++i, ++m )
-+      static void* destruct(void *what, size_t size)  {
++      static void destruct(void *what, size_t size)  {
 +         PValue_t m = PValue_t(what);
 +         for (size_t i=0; i < size; ++i, ++m )
              m->~Value_t();
 -#endif
-          return 0;
+-         return 0;
        }
     };
-@@ -216,11 +205,10 @@
-          e->fIdx = 0;
-          return e->fStart = e->fSize ? Type<T>::address(*c->begin()) : 0;
+ 
+@@ -209,18 +197,14 @@
+       typedef Env_t                 *PEnv_t;
+       typedef Cont_t                *PCont_t;
+       typedef Value_t               *PValue_t;
+-      static void* resize(void* env)  {
+-         PEnv_t  e = PEnv_t(env);
+-         PCont_t c = PCont_t(e->fObject);
+-         c->resize(e->fSize);
+-         e->fIdx = 0;
+-         return e->fStart = e->fSize ? Type<T>::address(*c->begin()) : 0;
++      static void resize(void* obj, size_t n) {
++         PCont_t c = PCont_t(obj);
++         c->resize(n);
        }
 -      static void* feed(void* env)  {
 -         PEnv_t   e = PEnv_t(env);
@@ -557,7 +568,7 @@ Index: core/cont/inc/TCollectionProxyInfo.h
              c->push_back(*m);
           return 0;
        }
-@@ -246,11 +234,10 @@
+@@ -246,16 +230,15 @@
        typedef Env_t                 *PEnv_t;
        typedef Cont_t                *PCont_t;
        typedef Value_t               *PValue_t;
@@ -573,7 +584,14 @@ Index: core/cont/inc/TCollectionProxyInfo.h
              c->insert(*m);
           return 0;
        }
-@@ -279,11 +266,10 @@
+-      static void* resize(void* /* env */ )  {
+-         return 0;
++      static void resize(void* /* obj */, size_t )  {
++         ;
+       }
+       static int value_offset()  {
+          return 0;
+@@ -279,16 +262,15 @@
        typedef Env_t                 *PEnv_t;
        typedef Cont_t                *PCont_t;
        typedef Value_t               *PValue_t;
@@ -589,7 +607,19 @@ Index: core/cont/inc/TCollectionProxyInfo.h
              c->insert(*m);
           return 0;
        }
-@@ -308,12 +294,34 @@
+-      static void* resize(void* /* env */ )  {
+-         return 0;
++      static void resize(void* /* obj */, size_t )  {
++         ;
+       }
+       static int value_offset()  {
+          return ((char*)&((PValue_t(0x1000))->second)) - ((char*)PValue_t(0x1000));
+@@ -304,29 +286,51 @@
+       size_t fValueDiff;
+       int    fValueOffset;
+       void*  (*fSizeFunc)(void*);
+-      void*  (*fResizeFunc)(void*);
++      void   (*fResizeFunc)(void*,size_t);
        void*  (*fClearFunc)(void*);
        void*  (*fFirstFunc)(void*);
        void*  (*fNextFunc)(void*);
@@ -597,7 +627,7 @@ Index: core/cont/inc/TCollectionProxyInfo.h
 -      void*  (*fDestructFunc)(void*);
 -      void*  (*fFeedFunc)(void*);
 +      void*  (*fConstructFunc)(void*,size_t);
-+      void*  (*fDestructFunc)(void*,size_t);
++      void   (*fDestructFunc)(void*,size_t);
 +      void*  (*fFeedFunc)(void*,void*,size_t);
        void*  (*fCollectFunc)(void*);
        void*  (*fCreateEnv)();
@@ -628,7 +658,11 @@ Index: core/cont/inc/TCollectionProxyInfo.h
     public:
        TCollectionProxyInfo(const type_info& info,
                             size_t iter_size,
-@@ -324,9 +332,9 @@
+                            size_t value_diff,
+                            int    value_offset,
+                            void*  (*size_func)(void*),
+-                           void*  (*resize_func)(void*),
++                           void   (*resize_func)(void*,size_t),
                             void*  (*clear_func)(void*),
                             void*  (*first_func)(void*),
                             void*  (*next_func)(void*),
@@ -636,12 +670,12 @@ Index: core/cont/inc/TCollectionProxyInfo.h
 -                           void*  (*destruct_func)(void*),
 -                           void*  (*feed_func)(void*),
 +                           void*  (*construct_func)(void*,size_t),
-+                           void*  (*destruct_func)(void*,size_t),
++                           void   (*destruct_func)(void*,size_t),
 +                           void*  (*feed_func)(void*,void*,size_t),
                             void*  (*collect_func)(void*),
                             void*  (*create_env)()
                             ) :
-@@ -335,7 +343,8 @@
+@@ -335,7 +339,8 @@
           fSizeFunc(size_func),fResizeFunc(resize_func),fClearFunc(clear_func),
           fFirstFunc(first_func),fNextFunc(next_func),fConstructFunc(construct_func),
           fDestructFunc(destruct_func),fFeedFunc(feed_func),fCollectFunc(collect_func),
@@ -651,7 +685,7 @@ Index: core/cont/inc/TCollectionProxyInfo.h
        {
        }
   
-@@ -434,7 +443,7 @@
+@@ -434,7 +439,7 @@
           // TODO: Need to find something for going backwards....
           return 0;
        }
@@ -660,18 +694,30 @@ Index: core/cont/inc/TCollectionProxyInfo.h
           // Nothing to construct.
           return 0;
        }
-@@ -446,7 +455,7 @@
+@@ -446,9 +451,8 @@
              ::new(m) Value_t(*i);
           return 0;
        }
 -      static void* destruct(void*)  {
-+      static void* destruct(void*,size_t)  {
++      static void destruct(void*,size_t)  {
           // Nothing to destruct.
-          return 0;
+-         return 0;
        }
-@@ -468,11 +477,10 @@
-          e->fIdx = 0;
-          return 0;
+    };
+    
+@@ -461,18 +465,14 @@
+       typedef Cont_t                *PCont_t;
+       typedef Value_t               *PValue_t;
+       
+-      static void* resize(void* env)  {
+-         PEnv_t  e = PEnv_t(env);
+-         PCont_t c = PCont_t(e->fObject);
+-         c->resize(e->fSize);
+-         e->fIdx = 0;
+-         return 0;
++      static void resize(void* obj,size_t n) {
++         PCont_t c = PCont_t(obj);
++         c->resize(n);
        }
 -      static void* feed(void* env)  {
 -         PEnv_t   e = PEnv_t(env);
@@ -685,7 +731,7 @@ Index: core/cont/inc/TCollectionProxyInfo.h
              c->push_back(*m);
           return 0;
        }
-@@ -535,7 +543,7 @@
+@@ -535,7 +535,7 @@
           e->fIterator.second = (e->fIterator.first != c->size()) ? c->test(e->fIterator.first) : false;
           return 0;
        }
@@ -694,18 +740,26 @@ Index: core/cont/inc/TCollectionProxyInfo.h
           // Nothing to construct.
           return 0;
        }
-@@ -547,7 +555,7 @@
+@@ -547,9 +547,8 @@
              *m = c->test(i);
           return 0;
        }
 -      static void* destruct(void*)  {
-+      static void* destruct(void*,size_t)  {
++      static void destruct(void*,size_t)  {
           // Nothing to destruct.
-          return 0;
+-         return 0;
        }
-@@ -568,11 +576,10 @@
-          e->fIdx = 0;
-          return 0;
+    };
+    
+@@ -563,16 +562,12 @@
+       typedef Cont_t          *PCont_t;
+       typedef Value_t         *PValue_t;
+       
+-      static void* resize(void* env)  {
+-         PEnv_t  e = PEnv_t(env);
+-         e->fIdx = 0;
+-         return 0;
++      static void resize(void*,size_t)  {
        }
 -      static void* feed(void* env)  {
 -         PEnv_t   e = PEnv_t(env);
@@ -723,6 +777,17 @@ Index: core/cont/inc/TVirtualCollectionProxy.h
 ===================================================================
 --- core/cont/inc/TVirtualCollectionProxy.h	(revision 35031)
 +++ core/cont/inc/TVirtualCollectionProxy.h	(working copy)
+@@ -9,8 +9,8 @@
+  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+  *************************************************************************/
+ 
+-#ifndef Root_TVirtualCollectionProxy
+-#define Root_TVirtualCollectionProxy
++#ifndef ROOT_TVirtualCollectionProxy
++#define ROOT_TVirtualCollectionProxy
+ 
+ //////////////////////////////////////////////////////////////////////////
+ //                                                                      //
 @@ -22,10 +22,16 @@
  //                                                                      //
  //////////////////////////////////////////////////////////////////////////
@@ -1127,13 +1192,15 @@ Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
           ::new (m) Value_t();
        }
        return 0;
-@@ -195,11 +194,10 @@
+@@ -194,15 +193,13 @@
+    }
  
  
-    static void*
+-   static void*
 -   destruct(void* env) {
 -      PEnv_t e = PEnv_t(env);
 -      PValue_t m = PValue_t(e->fStart);
++   static void
 +   destruct(void* what, size_t size) {
 +      PValue_t m = PValue_t(what);
  
@@ -1141,9 +1208,24 @@ Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
 +      for (size_t i = 0; i < size; ++i, ++m) {
           m->~Value_t();
        }
-       return 0;
-@@ -234,14 +232,12 @@
-       return e->fStart = address(*c->begin());
+-      return 0;
+    }
+ 
+ 
+@@ -225,23 +222,17 @@
+    typedef Env_t* PEnv_t;
+    typedef Cont_t* PCont_t;
+    typedef Value_t* PValue_t;
+-   static void*
+-   resize(void* env) {
+-      PEnv_t e = PEnv_t(env);
+-      PCont_t c = PCont_t(e->fObject);
+-      c->resize(e->fSize);
+-      e->fIdx = 0;
+-      return e->fStart = address(*c->begin());
++   static void resize(void* obj, size_t n) {
++      PCont_t c = PCont_t(obj);
++      c->resize(n);
     }
  
 -
@@ -1161,7 +1243,7 @@ Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
           c->push_back(*m);
        }
        return 0;
-@@ -273,13 +269,13 @@
+@@ -273,21 +264,20 @@
     typedef Env_t* PEnv_t;
     typedef Cont_t* PCont_t;
     typedef Value_t* PValue_t;
@@ -1180,7 +1262,16 @@ Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
           c->insert(*m);
        }
        return 0;
-@@ -317,13 +313,13 @@
+    }
+ 
+ 
+-   static void*
+-   resize(void* /* env */) {
++   static void resize(void* /* obj */, size_t) {
+       return 0;
+    }
+ 
+@@ -317,21 +307,20 @@
     typedef Env_t* PEnv_t;
     typedef Cont_t* PCont_t;
     typedef Value_t* PValue_t;
@@ -1199,7 +1290,21 @@ Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
           c->insert(*m);
        }
        return 0;
-@@ -374,9 +370,9 @@
+    }
+ 
+ 
+-   static void*
+-   resize(void* /* env */) {
++   static void resize(void* /* obj */, size_t) {
+       return 0;
+    }
+ 
+@@ -370,13 +359,13 @@
+    size_t value_diff;
+    int value_offset;
+    void*  (*size_func)(void*);
+-   void*  (*resize_func)(void*);
++   void   (*resize_func)(void*,size_t);
     void*  (*clear_func)(void*);
     void*  (*first_func)(void*);
     void*  (*next_func)(void*);
@@ -1207,15 +1312,18 @@ Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
 -   void*  (*destruct_func)(void*);
 -   void*  (*feed_func)(void*);
 +   void*  (*construct_func)(void*,size_t);
-+   void*  (*destruct_func)(void*,size_t);
++   void   (*destruct_func)(void*,size_t);
 +   void*  (*feed_func)(void*,void*,size_t);
     void*  (*collect_func)(void*);
     void*  (*create_env)();
  };
-@@ -416,6 +412,12 @@
+@@ -416,6 +405,15 @@
     static void*
     Void_func0() { return 0; }
  
++   static void
++   Void_func2b(void*,size_t) { ; }
++
 +   static void*
 +   Void_func2(void*,size_t) { return 0; }
 +
@@ -1225,20 +1333,23 @@ Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
     static CollFuncTable*
     Generate() {
        CollFuncTable* p = new CollFuncTable();
-@@ -428,9 +430,9 @@
+@@ -426,11 +424,11 @@
+       p->first_func = Void_func;
+       p->next_func = Void_func;
        p->clear_func = Void_func;
-       p->resize_func = Void_func;
+-      p->resize_func = Void_func;
++      p->resize_func = Void_func2b;
        p->collect_func = Void_func;
 -      p->construct_func = Void_func;
 -      p->destruct_func = Void_func;
 -      p->feed_func = Void_func;
 +      p->construct_func = Void_func2;
-+      p->destruct_func = Void_func2;
++      p->destruct_func = Void_func2b;
 +      p->feed_func = Void_func3;
        p->create_env = Void_func0;
        return p;
     } // Generate
-@@ -651,7 +653,7 @@
+@@ -651,7 +649,7 @@
  
  
     static void*
@@ -1247,16 +1358,33 @@ Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
        // Nothing to construct.
        return 0;
     }
-@@ -671,7 +673,7 @@
+@@ -670,10 +668,9 @@
+    }
  
  
-    static void*
+-   static void*
 -   destruct(void*) {
++   static void
 +   destruct(void*,size_t) {
        // Nothing to destruct.
-       return 0;
+-      return 0;
     }
-@@ -709,7 +711,18 @@
+ 
+ 
+@@ -689,11 +686,7 @@
+    typedef Cont_t* PCont_t;
+    typedef Value_t* PValue_t;
+ 
+-   static void*
+-   resize(void* env) {
+-      PEnv_t e = PEnv_t(env);
+-      e->fIdx = 0;
+-      return 0;
++   static void resize(void* obj, size_t n) {
+    }
+ 
+ 
+@@ -709,7 +702,18 @@
        return 0;
     }
  
@@ -1279,7 +1407,14 @@ Index: tree/tree/src/TBranchElement.cxx
 ===================================================================
 --- tree/tree/src/TBranchElement.cxx	(revision 35031)
 +++ tree/tree/src/TBranchElement.cxx	(working copy)
-@@ -44,6 +44,8 @@
+@@ -38,12 +38,15 @@
+ #include "TStreamerInfo.h"
+ #include "TTree.h"
+ #include "TVirtualCollectionProxy.h"
++#include "TVirtualCollectionIterators.h"
+ #include "TVirtualPad.h"
+ #include "TBranchSTL.h"
+ #include "TVirtualArray.h"
  #include "TBufferFile.h"
  #include "TInterpreter.h"
  
@@ -1288,7 +1423,7 @@ Index: tree/tree/src/TBranchElement.cxx
  ClassImp(TBranchElement)
  
  //______________________________________________________________________________
-@@ -78,8 +80,12 @@
+@@ -78,8 +81,12 @@
        TBranchElement* br = (TBranchElement*) branches->At(i);
        switch (br->GetType()) {
           case 31: br->SetType(41); break;
@@ -1303,58 +1438,7 @@ Index: tree/tree/src/TBranchElement.cxx
        br->SetReadLeavesPtr();
        // Note: This is a tail recursion.
        SwitchContainer(br->GetListOfBranches());
-@@ -111,6 +117,50 @@
-    }
- }
- 
-+struct TBranchElement::TIterators
-+{
-+   // Note when the collection is a vector, fBegin and fEnd points to
-+   // the start and end of the memory content rather than to the address
-+   // of iterators (saving one dereference when being used).
-+   
-+   typedef TVirtualCollectionProxy::CreateIterators_t CreateIterators_t;
-+   typedef TVirtualCollectionProxy::DeleteTwoIterators_t DeleteTwoIterators_t;
-+   
-+   char  fBeginBuffer[TVirtualCollectionProxy::fgIteratorArenaSize];
-+   char  fEndBuffer[TVirtualCollectionProxy::fgIteratorArenaSize];
-+   void *fBegin; // Pointer to the starting iterator (collection->begin())
-+   void *fEnd;   // Pointer to the ending iterator (collection->end())
-+   CreateIterators_t    fCreateIterators;
-+   DeleteTwoIterators_t fDeleteTwoIterators;
-+   
-+   TIterators(TVirtualCollectionProxy *proxy) : fBegin( &(fBeginBuffer[0]) ), fEnd(&(fEndBuffer[0])), fCreateIterators(0), fDeleteTwoIterators(0) 
-+   {
-+      memset(fBeginBuffer,0,TVirtualCollectionProxy::fgIteratorArenaSize);
-+      memset(fEndBuffer,0,TVirtualCollectionProxy::fgIteratorArenaSize);
-+      if (proxy) {
-+         fCreateIterators = proxy->GetFunctionCreateIterators();
-+         fDeleteTwoIterators = proxy->GetFunctionDeleteTwoIterators();
-+      } else {
-+         ::Fatal("TIterators::TIterators","Created with out a collection proxy!\n");
-+      }
-+   }
-+   
-+   inline void CreateIterators(void *collection) 
-+   {
-+      // Initialize the fBegin and fEnd iterators.
-+      
-+      fCreateIterators(collection, &fBegin, &fEnd);
-+   }
-+
-+   ~TIterators() 
-+   {
-+      if (fBegin != &(fBeginBuffer[0])) {
-+         // assert(end != endbuf);
-+         fDeleteTwoIterators(fBegin,fEnd);
-+      }      
-+   }
-+};
-+
- //______________________________________________________________________________
- TBranchElement::TBranchElement()
- : TBranch()
-@@ -139,6 +189,8 @@
+@@ -139,6 +146,8 @@
  , fBranchClass()
  , fBranchOffset(0)
  , fBranchID(-1)
@@ -1363,7 +1447,7 @@ Index: tree/tree/src/TBranchElement.cxx
  {
     // -- Default and I/O constructor.
     fNleaves = 0;
-@@ -173,6 +225,8 @@
+@@ -173,6 +182,8 @@
  , fBranchClass(sinfo->GetClass())
  , fBranchOffset(0)
  , fBranchID(-1)
@@ -1372,7 +1456,7 @@ Index: tree/tree/src/TBranchElement.cxx
  {
     // -- Constructor when the branch object is not a TClonesArray nor an STL container.
     //
-@@ -209,6 +263,8 @@
+@@ -209,6 +220,8 @@
  , fBranchClass(sinfo->GetClass())
  , fBranchOffset(0)
  , fBranchID(-1)
@@ -1381,7 +1465,7 @@ Index: tree/tree/src/TBranchElement.cxx
  {
     // -- Constructor when the branch object is not a TClonesArray nor an STL container.
     //
-@@ -558,7 +614,8 @@
+@@ -558,7 +571,8 @@
              if (err >= 0) {
                 // Return on success.
                 // FIXME: Why not on error too?
@@ -1391,7 +1475,7 @@ Index: tree/tree/src/TBranchElement.cxx
              }
           }
        }
-@@ -597,6 +654,8 @@
+@@ -597,6 +611,8 @@
  , fParentClass()
  , fBranchClass(TClonesArray::Class())
  , fBranchID(-1)
@@ -1400,7 +1484,7 @@ Index: tree/tree/src/TBranchElement.cxx
  {
     // -- Constructor when the branch object is a TClonesArray.
     //
-@@ -616,6 +675,8 @@
+@@ -616,6 +632,8 @@
  , fParentClass()
  , fBranchClass(TClonesArray::Class())
  , fBranchID(-1)
@@ -1409,7 +1493,7 @@ Index: tree/tree/src/TBranchElement.cxx
  {
     // -- Constructor when the branch object is a TClonesArray.
     //
-@@ -727,6 +788,8 @@
+@@ -727,6 +745,8 @@
  , fParentClass()
  , fBranchClass(cont->GetCollectionClass())
  , fBranchID(-1)
@@ -1418,7 +1502,7 @@ Index: tree/tree/src/TBranchElement.cxx
  {
     // -- Constructor when the branch object is an STL collection.
     //
-@@ -745,6 +808,8 @@
+@@ -745,6 +765,8 @@
  , fParentClass()
  , fBranchClass(cont->GetCollectionClass())
  , fBranchID(-1)
@@ -1427,7 +1511,7 @@ Index: tree/tree/src/TBranchElement.cxx
  {
     // -- Constructor when the branch object is an STL collection.
     //
-@@ -878,6 +943,9 @@
+@@ -878,6 +900,9 @@
        delete fCollProxy;
     }
     fCollProxy = 0;
@@ -1437,7 +1521,7 @@ Index: tree/tree/src/TBranchElement.cxx
  }
  
  //
-@@ -1717,7 +1785,14 @@
+@@ -1717,7 +1742,14 @@
              }
           }
           fInit = kTRUE;
@@ -1452,7 +1536,7 @@ Index: tree/tree/src/TBranchElement.cxx
     }
  }
  
-@@ -2609,9 +2684,9 @@
+@@ -2609,9 +2641,9 @@
              //
              // Compensate for the i/o routines adding our local offset later.
              if (subBranch->fObject == 0 && localOffset == TStreamerInfo::kMissing) {
@@ -1464,7 +1548,7 @@ Index: tree/tree/src/TBranchElement.cxx
              }
           } else {
              // -- Set fBranchOffset for sub-branch.
-@@ -3144,7 +3219,9 @@
+@@ -3144,7 +3176,9 @@
     // TODO: Exception safety a la TPushPop
     TVirtualCollectionProxy* proxy = GetCollectionProxy();
     TVirtualCollectionProxy::TPushPop helper(proxy, fObject);
@@ -1475,7 +1559,7 @@ Index: tree/tree/src/TBranchElement.cxx
     Int_t nbranches = fBranches.GetEntriesFast();
     switch (fSTLtype) {
        case TClassEdit::kSet:
-@@ -3211,9 +3288,18 @@
+@@ -3211,9 +3245,18 @@
        return;
     }
     TStreamerInfo *info = GetInfo();
@@ -1484,7 +1568,7 @@ Index: tree/tree/src/TBranchElement.cxx
     TVirtualCollectionProxy *proxy = GetCollectionProxy();
     TVirtualCollectionProxy::TPushPop helper(proxy, fObject);
  
-+//   TIterators *iter = fBranchCount->fIterators;
++//   TVirtualCollectionIterators *iter = fBranchCount->fIterators;
 +//   fReadActionSequence->ReadBufferVecPtr(b,iter->fBegin,iter->fEnd);
 +
 +//   char **arr = (char **)proxy->At(0);
@@ -1494,7 +1578,7 @@ Index: tree/tree/src/TBranchElement.cxx
     info->ReadBufferSTLPtrs(b, proxy, fNdata, fID, fOffset);
     for(UInt_t ii=0; ii < fIDs.size(); ++ii) {
        info->ReadBufferSTLPtrs(b, proxy, fNdata, fIDs[ii], fOffset);
-@@ -3242,15 +3328,15 @@
+@@ -3242,15 +3285,15 @@
        return;
     }
     TStreamerInfo *info = GetInfo();
@@ -1512,12 +1596,12 @@ Index: tree/tree/src/TBranchElement.cxx
 -      info->ReadBuffer(b, *proxy,  fIDs[ii], fNdata, fOffset,1);
 -   }
 +   
-+   TIterators *iter = fBranchCount->fIterators;
++   TVirtualCollectionIterators*iter = fBranchCount->fIterators;
 +   fReadActionSequence->ReadBuffer(b,iter->fBegin,iter->fEnd);
  }
  
  //______________________________________________________________________________
-@@ -3320,10 +3406,12 @@
+@@ -3320,10 +3363,12 @@
        return;
     }
     TStreamerInfo *info = GetInfo();
@@ -1534,7 +1618,7 @@ Index: tree/tree/src/TBranchElement.cxx
  }
  
  //______________________________________________________________________________
-@@ -3360,10 +3448,8 @@
+@@ -3360,10 +3405,8 @@
     if (!info) {
        return;
     }
@@ -1547,7 +1631,7 @@ Index: tree/tree/src/TBranchElement.cxx
  }
  
  //______________________________________________________________________________
-@@ -3399,10 +3485,8 @@
+@@ -3399,10 +3442,8 @@
     if (!info) {
        return;
     }
@@ -1560,7 +1644,7 @@ Index: tree/tree/src/TBranchElement.cxx
  }
  
  //______________________________________________________________________________
-@@ -3436,10 +3520,8 @@
+@@ -3436,10 +3477,8 @@
     if (!info) {
        return;
     }
@@ -1573,7 +1657,7 @@ Index: tree/tree/src/TBranchElement.cxx
     fNdata = (Int_t) GetValue(0, 0);
  }
  
-@@ -3810,11 +3892,14 @@
+@@ -3810,11 +3849,14 @@
           if (matched) {
              // Change from 3/31 to 4/41
              SetType(4);
@@ -1586,11 +1670,11 @@ Index: tree/tree/src/TBranchElement.cxx
 +            SwitchContainer(GetListOfBranches());
 +            SetReadLeavesPtr();
 +            
-+            fIterators = new TIterators(fCollProxy);
++            fIterators = new TVirtualCollectionIterators(fCollProxy);
           } else {
              // FIXME: Must maintain fObject here as well.
              fAddress = 0;
-@@ -3831,49 +3916,69 @@
+@@ -3831,49 +3873,69 @@
              if (fSTLtype == TClassEdit::kNotSTL) {
                 fSTLtype = TMath::Abs(TClassEdit::IsSTLCont(newType->GetName()));
              }
@@ -1608,7 +1692,7 @@ Index: tree/tree/src/TBranchElement.cxx
 +            SetReadActionSequence();
 +            SetReadLeavesPtr();
 +            delete fIterators;
-+            fIterators = new TIterators(fCollProxy);
++            fIterators = new TVirtualCollectionIterators(fCollProxy);
 +         } 
 +         else if ((newType == TClonesArray::Class()) && (oldProxy->GetValueClass() && !oldProxy->HasPointers() && oldProxy->GetValueClass()->InheritsFrom(TObject::Class()))) 
 +         {            
@@ -1691,12 +1775,12 @@ Index: tree/tree/src/TBranchElement.cxx
           }
 +      } else {
 +         if (!fIterators) {
-+            fIterators = new TIterators(GetCollectionProxy());
++            fIterators = new TVirtualCollectionIterators(GetCollectionProxy());
 +         }
        }
     }
  
-@@ -4187,6 +4292,62 @@
+@@ -4187,6 +4249,62 @@
  }
  
  //______________________________________________________________________________
@@ -1759,7 +1843,7 @@ Index: tree/tree/src/TBranchElement.cxx
  void TBranchElement::SetReadLeavesPtr()
  {
     // Set the ReadLeaves pointer to execute the expected operations.
-@@ -4219,6 +4380,8 @@
+@@ -4219,6 +4337,8 @@
     } else {
        Fatal("SetReadLeavePtr","Unexpected branch type %d for %s",fType,GetName());
     }
@@ -1768,7 +1852,7 @@ Index: tree/tree/src/TBranchElement.cxx
  }
  
  //______________________________________________________________________________
-@@ -4237,6 +4400,8 @@
+@@ -4237,6 +4357,8 @@
        fInfo = 0;
        fInit = kFALSE;
        fInitOffsets = kFALSE;
@@ -1777,7 +1861,7 @@ Index: tree/tree/src/TBranchElement.cxx
  
        Int_t nbranches = fBranches.GetEntriesFast();
        for (Int_t i = 0; i < nbranches; ++i) {
-@@ -4351,7 +4516,7 @@
+@@ -4351,7 +4473,7 @@
           fLeaves.Add(leaf);
           fTree->GetListOfLeaves()->Add(leaf);
        }
@@ -1790,24 +1874,19 @@ Index: tree/tree/inc/TBranchElement.h
 ===================================================================
 --- tree/tree/inc/TBranchElement.h	(revision 35031)
 +++ tree/tree/inc/TBranchElement.h	(working copy)
-@@ -36,6 +36,8 @@
+@@ -34,8 +34,12 @@
+ class TFolder;
+ class TStreamerInfo;
  class TVirtualCollectionProxy;
++class TVirtualCollectionIterators;
  class TVirtualArray;
  
 +namespace TStreamerInfoActions { class TActionSequence; }
 +
++
  class TBranchElement : public TBranch {
  
  // Friends
-@@ -53,6 +55,8 @@
-       kDecomposedObj= BIT(21)   //  More explicit alias for kMakeClass.
-    };
- 
-+   struct TIterators;  // This holds the iterators when the branch is of fType==4.
-+   
- // Data Members
- protected:
-    TString                  fClassName;     //  Class name of referenced object
 @@ -80,7 +84,9 @@
     TClassRef                fBranchClass;   //! Reference to class definition in fClassName
     Int_t                   *fBranchOffset;  //! Sub-Branch offsets with respect to current transient class
@@ -1815,7 +1894,7 @@ Index: tree/tree/inc/TBranchElement.h
 -   std::vector<Int_t>       fIDs;           //! List of the serial number of all the StreamerInfo to be used.
 +   std::vector<Int_t>       fIDs;           //! List of the serial number of all the StreamerInfo to be used.   
 +   TStreamerInfoActions::TActionSequence *fReadActionSequence;  //! Set of actions to be executed to extract the data from the basket.
-+   TIterators              *fIterators;     //! holds the iterators when the branch is of fType==4.
++   TVirtualCollectionIterators           *fIterators;     //! holds the iterators when the branch is of fType==4.
  
  // Not implemented
  private:
@@ -4443,35 +4522,41 @@ Index: io/io/src/TGenCollectionProxy.cxx
  //////////////////////////////////////////////////////////////////////////
  //                                                                      //
  //  class TGenVectorProxy
-@@ -508,9 +511,9 @@
+@@ -507,10 +510,10 @@
+    fNext.call      = copy.fNext.call;
     fFirst.call     = copy.fFirst.call;
     fClear.call     = copy.fClear.call;
-    fResize.call    = copy.fResize.call;
+-   fResize.call    = copy.fResize.call;
 -   fDestruct.call  = copy.fDestruct.call;
 -   fConstruct.call = copy.fConstruct.call;
 -   fFeed.call      = copy.fFeed.call;
++   fResize         = copy.fResize;
 +   fDestruct       = copy.fDestruct;
 +   fConstruct      = copy.fConstruct;
 +   fFeed           = copy.fFeed;
     fCollect.call   = copy.fCollect.call;
     fCreateEnv.call = copy.fCreateEnv.call;
     fValOffset      = copy.fValOffset;
-@@ -519,6 +522,9 @@
+@@ -519,6 +522,11 @@
     fVal            = copy.fVal   ? new Value(*copy.fVal)   : 0;
     fKey            = copy.fKey   ? new Value(*copy.fKey)   : 0;
     fOnFileClass    = copy.fOnFileClass;
 +   fReadMemberWise = new TObjArray(TCollection::kInitCapacity,-1);
 +   fConversionReadMemberWise = 0;
 +   fProperties     = copy.fProperties;
++   fFunctionCreateIterators    = copy.fFunctionCreateIterators;
++   fFunctionDeleteTwoIterators = copy.fFunctionDeleteTwoIterators;
  }
  
  //______________________________________________________________________________
-@@ -533,11 +539,11 @@
+@@ -532,12 +540,12 @@
+    fFirst.call      = 0;
     fNext.call       = 0;
     fClear.call      = 0;
-    fResize.call     = 0;
+-   fResize.call     = 0;
 -   fDestruct.call   = 0;
 -   fConstruct.call  = 0;
++   fResize          = 0;
 +   fDestruct        = 0;
 +   fConstruct       = 0;
     fCollect.call    = 0;
@@ -4481,16 +4566,23 @@ Index: io/io/src/TGenCollectionProxy.cxx
     fValue           = 0;
     fKey             = 0;
     fVal             = 0;
-@@ -555,6 +561,8 @@
+@@ -555,6 +563,10 @@
              (Long_t)iter_size,
              (Long_t)sizeof(e.fIterator));
     }
 +   fReadMemberWise = new TObjArray(TCollection::kInitCapacity,-1);
-+   fConversionReadMemberWise = 0;
++   fConversionReadMemberWise   = 0;
++   fFunctionCreateIterators    = 0;
++   fFunctionDeleteTwoIterators = 0;
  }
  
  //______________________________________________________________________________
-@@ -571,9 +579,9 @@
+@@ -567,13 +579,13 @@
+    fValDiff        = info.fValueDiff;
+    fValOffset      = info.fValueOffset;
+    fSize.call      = info.fSizeFunc;
+-   fResize.call    = info.fResizeFunc;
++   fResize         = info.fResizeFunc;
     fNext.call      = info.fNextFunc;
     fFirst.call     = info.fFirstFunc;
     fClear.call     = info.fClearFunc;
@@ -4503,12 +4595,14 @@ Index: io/io/src/TGenCollectionProxy.cxx
     fCollect.call   = info.fCollectFunc;
     fCreateEnv.call = info.fCreateEnv;
     
-@@ -597,18 +605,19 @@
+@@ -597,18 +609,21 @@
              (Long_t)info.fIterSize,
              (Long_t)sizeof(e.fIterator));
     }
 +   fReadMemberWise = new TObjArray(TCollection::kInitCapacity,-1);
-+   fConversionReadMemberWise = 0;
++   fConversionReadMemberWise   = 0;
++   fFunctionCreateIterators    = 0;
++   fFunctionDeleteTwoIterators = 0;
  }
  
  namespace {
@@ -4528,7 +4622,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
              delete e;
           }
        }
-@@ -619,12 +628,24 @@
+@@ -619,12 +634,24 @@
  TGenCollectionProxy::~TGenCollectionProxy()
  {
     // Standard destructor
@@ -4555,7 +4649,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
  }
  
  //______________________________________________________________________________
-@@ -666,6 +687,7 @@
+@@ -666,6 +693,7 @@
     // Proxy initializer
     TGenCollectionProxy* p = const_cast<TGenCollectionProxy*>(this);
     if ( fValue ) return p;
@@ -4563,7 +4657,16 @@ Index: io/io/src/TGenCollectionProxy.cxx
     return p->InitializeEx();
  }
  
-@@ -688,13 +710,13 @@
+@@ -676,7 +704,7 @@
+    if ( 0 == fSize.call ) {
+       Fatal("TGenCollectionProxy","No 'size' function pointer for class %s present.",fName.c_str());
+    }
+-   if ( 0 == fResize.call ) {
++   if ( 0 == fResize ) {
+       Fatal("TGenCollectionProxy","No 'resize' function for class %s present.",fName.c_str());
+    }
+    if ( 0 == fNext.call  ) {
+@@ -688,13 +716,13 @@
     if ( 0 == fClear.call ) {
        Fatal("TGenCollectionProxy","No 'clear' function for class %s present.",fName.c_str());
     }
@@ -4580,7 +4683,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
        Fatal("TGenCollectionProxy","No 'data feed' function for class %s present.",fName.c_str());
     }
     if ( 0 == fCollect.call ) {
-@@ -738,39 +760,48 @@
+@@ -738,39 +766,48 @@
           if ( inside[0].find("__gnu_cxx::hash_") != std::string::npos )
              inside[0].replace(0,16,"std::");
           fSTL_type = TClassEdit::STLKind(inside[0].c_str());
@@ -4660,7 +4763,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
           }
  
           fPointers = fPointers || (0 != (fVal->fCase&G__BIT_ISPOINTER));
-@@ -791,6 +822,27 @@
+@@ -791,6 +828,27 @@
  }
  
  //______________________________________________________________________________
@@ -4688,7 +4791,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
  UInt_t TGenCollectionProxy::Sizeof() const
  {
     // Return the sizeof the collection object.
-@@ -902,7 +954,11 @@
+@@ -902,7 +960,11 @@
  {
     // Return the current size of the container
     if ( fEnv && fEnv->fObject ) {
@@ -4701,7 +4804,16 @@ Index: io/io/src/TGenCollectionProxy.cxx
     }
     Fatal("TGenCollectionProxy","Size> Logic error - no proxy object set.");
     return 0;
-@@ -932,73 +988,76 @@
+@@ -922,7 +984,7 @@
+       }
+       MESSAGE(3, "Resize(n)" );
+       fEnv->fSize = n;
+-      fResize.invoke(fEnv);
++      fResize(fEnv->fObject,fEnv->fSize);
+       return;
+    }
+    Fatal("TGenCollectionProxy","Resize> Logic error - no proxy object set.");
+@@ -932,73 +994,76 @@
  void* TGenCollectionProxy::Allocate(UInt_t n, Bool_t /* forceDelete */ )
  {
     // Allocate the needed space.
@@ -4775,7 +4887,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
 +               Clear("force");
 +            }
 +            fEnv->fSize = n;
-+            fResize.invoke(fEnv);
++            fResize(fEnv->fObject,n);
 +            return fEnv->fObject;
 +            
 +         case TClassEdit::kBitSet:
@@ -4830,7 +4942,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
     }
  }
  
-@@ -1007,6 +1066,8 @@
+@@ -1007,6 +1072,8 @@
  {
     // Add an object.
  
@@ -4839,7 +4951,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
     if ( !fValue ) Initialize();
     if ( !fProxyList.empty() ) {
        EnvironBase_t* back = fProxyList.back();
-@@ -1020,7 +1081,6 @@
+@@ -1020,7 +1087,6 @@
     EnvironBase_t* e    = 0;
     if ( fProxyKept.empty() ) {
        e = (EnvironBase_t*)fCreateEnv.invoke();
@@ -4847,7 +4959,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
        e->fTemp  = 0;
        e->fUseTemp = kFALSE;
     }
-@@ -1043,6 +1103,8 @@
+@@ -1043,6 +1109,8 @@
  {
     // Remove the last object.
  
@@ -4856,7 +4968,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
     if ( !fProxyList.empty() ) {
        EnvironBase_t* e = fProxyList.back();
        if ( --e->fRefCount <= 0 ) {
-@@ -1080,6 +1142,18 @@
+@@ -1080,6 +1148,18 @@
  }
  
  //______________________________________________________________________________
@@ -4875,7 +4987,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
  void TGenCollectionProxy::Streamer(TBuffer &buff)
  {
     // Streamer Function.
-@@ -1105,3 +1179,318 @@
+@@ -1105,3 +1185,324 @@
     Streamer(b, objp, 0);
  }
  
@@ -4929,7 +5041,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
 +//______________________________________________________________________________
 +void TGenCollectionProxy__VectorCreateIterators(void *obj, void **begin_arena, void **end_arena) 
 +{
-+   // Humm let's pretend that the std::vector layout does not really depend on
++   // We can safely assume that the std::vector layout does not really depend on
 +   // the content!
 +   std::vector<char> *vec = (std::vector<char>*)obj;
 +   *begin_arena = &(*vec->begin());
@@ -5014,6 +5126,8 @@ Index: io/io/src/TGenCollectionProxy.cxx
 +   // If the collection iterator are of that size or less, the iterators will be constructed in place in those location (new with placement)
 +   // Otherwise the iterators will be allocated via a regular new and their address returned by modifying the value of begin_arena and end_arena.
 +   
++   if ( fFunctionCreateIterators ) return fFunctionCreateIterators;
++   
 +   if ( !fValue ) InitializeEx();
 +
 +//   fprintf(stderr,"GetFunctinCreateIterator for %s will give: ",fClass.GetClassName());
@@ -5025,11 +5139,12 @@ Index: io/io/src/TGenCollectionProxy.cxx
 +//      fprintf(stderr,"a generic iterator\n");
 +      
 +   if (fSTL_type==TClassEdit::kVector || (fProperties & kIsEmulated)) 
-+      return TGenCollectionProxy__VectorCreateIterators;
++      fFunctionCreateIterators = TGenCollectionProxy__VectorCreateIterators;
 +   else if ( (fProperties & kIsAssociative) && read)
-+      return TGenCollectionProxy__StagingCreateIterators;
++      fFunctionCreateIterators = TGenCollectionProxy__StagingCreateIterators;
 +   else 
-+      return TGenCollectionProxy__SlowCreateIterators;
++      fFunctionCreateIterators = TGenCollectionProxy__SlowCreateIterators;
++   return fFunctionCreateIterators;
 +}
 +
 +//______________________________________________________________________________
@@ -5101,14 +5216,17 @@ Index: io/io/src/TGenCollectionProxy.cxx
 +   // If the sizeof iterator is greater than fgIteratorArenaSize, call delete on the addresses,
 +   // Otherwise just call the iterator's destructor.
 +
++   if ( fFunctionDeleteTwoIterators ) return fFunctionDeleteTwoIterators;
++   
 +   if ( !fValue ) InitializeEx();
 +   
 +   if (fSTL_type==TClassEdit::kVector || (fProperties & kIsEmulated)) 
-+      return TGenCollectionProxy__VectorDeleteTwoIterators;
++      fFunctionDeleteTwoIterators = TGenCollectionProxy__VectorDeleteTwoIterators;
 +   else if ( (fProperties & kIsAssociative) && read)
-+      return TGenCollectionProxy__StagingDeleteTwoIterators;
++      fFunctionDeleteTwoIterators = TGenCollectionProxy__StagingDeleteTwoIterators;
 +   else 
-+      return TGenCollectionProxy__SlowDeleteTwoIterators;
++      fFunctionDeleteTwoIterators = TGenCollectionProxy__SlowDeleteTwoIterators;
++   return fFunctionDeleteTwoIterators;
 +}
 +
 +//______________________________________________________________________________
@@ -5198,8 +5316,11 @@ Index: io/io/src/TGenCollectionStreamer.cxx
 ===================================================================
 --- io/io/src/TGenCollectionStreamer.cxx	(revision 35031)
 +++ io/io/src/TGenCollectionStreamer.cxx	(working copy)
-@@ -32,19 +32,19 @@
+@@ -30,21 +30,22 @@
+ #include "TStreamerInfo.h"
+ #include "TStreamerElement.h"
  #include "Riostream.h"
++#include "TVirtualCollectionIterators.h"
  
  TGenCollectionStreamer::TGenCollectionStreamer(const TGenCollectionStreamer& copy)
 -      : TGenCollectionProxy(copy)
@@ -5221,7 +5342,7 @@ Index: io/io/src/TGenCollectionStreamer.cxx
  {
     // Build a Streamer for a collection whose type is described by 'collectionClass'.
  }
-@@ -61,6 +61,7 @@
+@@ -61,6 +62,7 @@
     return new TGenCollectionStreamer(*this);
  }
  
@@ -5229,7 +5350,22 @@ Index: io/io/src/TGenCollectionStreamer.cxx
  void TGenCollectionStreamer::ReadPrimitives(int nElements, TBuffer &b)
  {
     // Primitive input streamer.
-@@ -137,7 +138,7 @@
+@@ -73,7 +75,13 @@
+    switch (fSTL_type)  {
+       case TClassEdit::kVector:
+          if (fVal->fKind != EDataType(kBOOL_t))  {
+-            itm = (StreamHelper*)fResize.invoke(fEnv);
++            fResize(fEnv->fObject,fEnv->fSize);
++            fEnv->fIdx = 0;
++            
++            TVirtualVectorIterators iterators(fFunctionCreateIterators);
++            iterators.CreateIterators(fEnv->fObject);
++            itm = (StreamHelper*)iterators.fBegin;
++            fEnv->fStart = itm;
+             break;
+          }
+       default:
+@@ -137,7 +145,7 @@
           Error("TGenCollectionStreamer", "fType %d is not supported yet!\n", fVal->fKind);
     }
     if (feed)  {      // need to feed in data...
@@ -5238,7 +5374,35 @@ Index: io/io/src/TGenCollectionStreamer.cxx
        if (memory)  {
           ::operator delete(memory);
        }
-@@ -203,29 +204,29 @@
+@@ -160,7 +168,15 @@
+          // Simple case: contiguous memory. get address of first, then jump.
+       case TClassEdit::kVector:
+ #define DOLOOP(x) {int idx=0; while(idx<nElements) {StreamHelper* i=(StreamHelper*)(((char*)itm) + fValDiff*idx); { x ;} ++idx;} break;}
+-         itm = (StreamHelper*)fResize.invoke(fEnv);
++         fResize(fEnv->fObject,fEnv->fSize);
++         fEnv->fIdx = 0;
++         
++         {
++            TVirtualVectorIterators iterators(fFunctionCreateIterators);
++            iterators.CreateIterators(fEnv->fObject);
++            itm = (StreamHelper*)iterators.fBegin;
++         }
++         fEnv->fStart = itm;
+          switch (fVal->fCase) {
+             case G__BIT_ISCLASS:
+                DOLOOP(b.StreamObject(i, fVal->fType, onFileValClass ));
+@@ -181,7 +197,9 @@
+       case TClassEdit::kList:
+       case TClassEdit::kDeque:
+ #define DOLOOP(x) {int idx=0; while(idx<nElements) {StreamHelper* i=(StreamHelper*)TGenCollectionProxy::At(idx); { x ;} ++idx;} break;}
+-         fResize.invoke(fEnv);
++         fResize(fEnv->fObject,fEnv->fSize);
++         fEnv->fIdx = 0;
++         fEnv->fStart = 0;
+          switch (fVal->fCase) {
+             case G__BIT_ISCLASS:
+                DOLOOP(b.StreamObject(i, fVal->fType, onFileValClass));
+@@ -203,29 +221,29 @@
        case TClassEdit::kSet:
  #define DOLOOP(x) {int idx=0; while(idx<nElements) {StreamHelper* i=(StreamHelper*)(((char*)itm) + fValDiff*idx); { x ;} ++idx;}}
           fEnv->fStart = itm = (StreamHelper*)(len < sizeof(buffer) ? buffer : memory =::operator new(len));
@@ -5276,7 +5440,39 @@ Index: io/io/src/TGenCollectionStreamer.cxx
                 break;
           }
  #undef DOLOOP
-@@ -297,15 +298,15 @@
+@@ -264,7 +282,15 @@
+          // Simple case: contiguous memory. get address of first, then jump.
+       case TClassEdit::kVector:
+ #define DOLOOP(x) {int idx=0; while(idx<nElements) {StreamHelper* i=(StreamHelper*)(((char*)itm) + fValDiff*idx); { x ;} ++idx;} break;}
+-         itm = (StreamHelper*)fResize.invoke(fEnv);
++         fResize(fEnv->fObject,fEnv->fSize);
++         fEnv->fIdx = 0;
++         
++         {
++            TVirtualVectorIterators iterators(fFunctionCreateIterators);
++            iterators.CreateIterators(fEnv->fObject);
++            itm = (StreamHelper*)iterators.fBegin;
++         }
++         fEnv->fStart = itm;
+          switch (fVal->fCase) {
+             case G__BIT_ISCLASS:
+                DOLOOP(
+@@ -280,7 +306,13 @@
+       case TClassEdit::kList:
+       case TClassEdit::kDeque:
+ #define DOLOOP(x) {int idx=0; while(idx<nElements) {StreamHelper* i=(StreamHelper*)TGenCollectionProxy::At(idx); { x ;} ++idx;} break;}
+-         fResize.invoke(fEnv);
++         fResize(fEnv->fObject,fEnv->fSize);
++         fEnv->fIdx = 0;
++         {
++            TVirtualVectorIterators iterators(fFunctionCreateIterators);
++            iterators.CreateIterators(fEnv->fObject);
++            fEnv->fStart = iterators.fBegin;
++         }
+          switch (fVal->fCase) {
+             case G__BIT_ISCLASS:
+                DOLOOP(
+@@ -297,15 +329,15 @@
        case TClassEdit::kSet:
  #define DOLOOP(x) {int idx=0; while(idx<nElements) {StreamHelper* i=(StreamHelper*)(((char*)itm) + fValDiff*idx); { x ;} ++idx;}}
           fEnv->fStart = itm = (StreamHelper*)(len < sizeof(buffer) ? buffer : memory =::operator new(len));
@@ -5295,7 +5491,7 @@ Index: io/io/src/TGenCollectionStreamer.cxx
                 break;
           }
  #undef DOLOOP
-@@ -416,7 +417,7 @@
+@@ -416,7 +448,7 @@
     fEnv->fSize  = nElements;
     fEnv->fStart = (len < sizeof(buffer) ? buffer : memory =::operator new(len));
     addr = temp = (char*)fEnv->fStart;
@@ -5304,7 +5500,7 @@ Index: io/io/src/TGenCollectionStreamer.cxx
     for (int loop, idx = 0; idx < nElements; ++idx)  {
        addr = temp + fValDiff * idx;
        v = fKey;
-@@ -502,8 +503,8 @@
+@@ -502,8 +534,8 @@
           addr += fValOffset;
        }
     }
@@ -5315,7 +5511,7 @@ Index: io/io/src/TGenCollectionStreamer.cxx
     if (memory) {
        ::operator delete(memory);
     }
-@@ -732,6 +733,201 @@
+@@ -732,6 +764,207 @@
     }
  }
  
@@ -5324,33 +5520,33 @@ Index: io/io/src/TGenCollectionStreamer.cxx
 +{
 +   int nElements = 0;
 +   b >> nElements;
++   fResize(obj,nElements);
 +   
-+   TVirtualCollectionProxy::TPushPop env(this, obj);
-+   fEnv->fSize = nElements;
-+   char *items = (char*)fResize.invoke(fEnv);
-+   b.ReadFastArray((basictype*)items, nElements);
++   TVirtualVectorIterators iterators(fFunctionCreateIterators);
++   iterators.CreateIterators(obj);
++   b.ReadFastArray((basictype*)iterators.fBegin, nElements);
 +}
 +
 +void TGenCollectionStreamer::ReadBufferVectorPrimitivesFloat16(TBuffer &b, void *obj)
 +{
 +   int nElements = 0;
 +   b >> nElements;
++   fResize(obj,nElements);
 +   
-+   TVirtualCollectionProxy::TPushPop env(this, obj);
-+   fEnv->fSize = nElements;
-+   char *items = (char*)fResize.invoke(fEnv);
-+   b.ReadFastArrayFloat16((Float_t*)items, nElements);
++   TVirtualVectorIterators iterators(fFunctionCreateIterators);
++   iterators.CreateIterators(obj);
++   b.ReadFastArrayFloat16((Float16_t*)iterators.fBegin, nElements);
 +}
 +
 +void TGenCollectionStreamer::ReadBufferVectorPrimitivesDouble32(TBuffer &b, void *obj)
 +{
 +   int nElements = 0;
 +   b >> nElements;
++   fResize(obj,nElements);
 +   
-+   TVirtualCollectionProxy::TPushPop env(this, obj);
-+   fEnv->fSize = nElements;
-+   char *items = (char*)fResize.invoke(fEnv);
-+   b.ReadFastArrayDouble32((Double_t*)items, nElements);
++   TVirtualVectorIterators iterators(fFunctionCreateIterators);
++   iterators.CreateIterators(obj);
++   b.ReadFastArrayDouble32((Double32_t*)iterators.fBegin, nElements);
 +}
 +
 +
@@ -5374,9 +5570,15 @@ Index: io/io/src/TGenCollectionStreamer.cxx
 +
 +void TGenCollectionStreamer::ReadBufferDefault(TBuffer &b, void *obj)
 +{
-+   
++ 
 +   fReadBufferFunc = &TGenCollectionStreamer::ReadBufferGeneric;
-+   if (fSTL_type == TClassEdit::kVector) {
++   // We will need this later, so let's make sure it is initialized.
++   if (!GetFunctionCreateIterators()) {
++      Fatal("TGenCollectionStreamer::ReadBufferDefault","No CreateIterators function for %s",fName.c_str());
++   }
++   if (fSTL_type == TClassEdit::kVector && ( fVal->fCase == G__BIT_ISFUNDAMENTAL || fVal->fCase == G__BIT_ISENUM ) )
++   {
++      // Only handle primitives this way
 +      switch (int(fVal->fKind))   {
 +         case kBool_t:
 +            // Nothing use generic for now
@@ -5846,7 +6048,15 @@ Index: io/io/inc/TGenCollectionProxy.h
  
  class TGenCollectionProxy
     : public TVirtualCollectionProxy
-@@ -223,11 +235,74 @@
+@@ -53,7 +65,6 @@
+       kBOOL_t = 21
+    };
+ 
+-
+    /** @class TGenCollectionProxy::Value TGenCollectionProxy.h TGenCollectionProxy.h
+     *
+     * Small helper to describe the Value_type or the key_type
+@@ -223,22 +234,86 @@
        Method0(const Method0& m) : call(m.call)   {      }
        void* invoke() const { return (*call)(); }
     };
@@ -5916,25 +6126,28 @@ Index: io/io/inc/TGenCollectionProxy.h
     typedef std::vector<EnvironBase_t*>     Proxies_t;
 +   mutable TObjArray *fReadMemberWise;                                   //Array of bundle of TStreamerInfoActions to stream out (read)
 +   mutable std::map<std::string, TObjArray*> *fConversionReadMemberWise; //Array of bundle of TStreamerInfoActions to stream out (read) derived from another class.
++   typedef void (*Sizing_t)(void *obj, size_t size);
 +   typedef void* (*Feedfunc_t)(void *from, void *to, size_t size);
 +   typedef void* (*ArrIterfunc_t)(void *from, size_t size);
  
     std::string   fName;      // Name of the class being proxied.
     Bool_t        fPointers;  // Flag to indicate if containee has pointers (key or value)
-@@ -236,9 +311,9 @@
-    Method        fResize;    // Container accessors: resize container
+    Method        fClear;     // Method cache for container accessors: clear container
+    Method        fSize;      // Container accessors: size of container
+-   Method        fResize;    // Container accessors: resize container
++   Sizing_t      fResize;    // Container accessors: resize container
     Method        fFirst;     // Container accessors: generic iteration: first
     Method        fNext;      // Container accessors: generic iteration: next
 -   Method        fConstruct; // Container accessors: block construct
 -   Method        fDestruct;  // Container accessors: block destruct
 -   Method        fFeed;      // Container accessors: block feed
 +   ArrIterfunc_t fConstruct; // Container accessors: block construct
-+   ArrIterfunc_t fDestruct;  // Container accessors: block destruct
++   Sizing_t      fDestruct;  // Container accessors: block destruct
 +   Feedfunc_t    fFeed;      // Container accessors: block feed
     Method        fCollect;   // Method to collect objects from container
     Method0       fCreateEnv; // Method to allocate an Environment holder.
     Value*        fValue;     // Descriptor of the container value type
-@@ -249,6 +324,7 @@
+@@ -249,9 +324,13 @@
     int           fValDiff;   // Offset between two consecutive value_types (memory layout).
     Proxies_t     fProxyList; // Stack of recursive proxies
     Proxies_t     fProxyKept; // Optimization: Keep proxies once they were created
@@ -5942,7 +6155,13 @@ Index: io/io/inc/TGenCollectionProxy.h
     int           fSTL_type;  // STL container type
     Info_t        fTypeinfo;  // Type information
     TClass*       fOnFileClass; // On file class
-@@ -261,7 +337,9 @@
++   
++   CreateIterators_t    fFunctionCreateIterators;
++   DeleteTwoIterators_t fFunctionDeleteTwoIterators;
+ 
+    // Late initialization of collection proxy
+    TGenCollectionProxy* Initialize() const;
+@@ -261,7 +340,9 @@
     virtual void DeleteItem(Bool_t force, void* ptr) const;
     // Allow to check function pointers.
     void CheckFunctions()  const;
@@ -5953,7 +6172,7 @@ Index: io/io/inc/TGenCollectionProxy.h
  public:
  
     // Virtual copy constructor.
-@@ -280,6 +358,12 @@
+@@ -280,6 +361,12 @@
     // Return a pointer to the TClass representing the container.
     virtual TClass *GetCollectionClass();
  
@@ -5966,7 +6185,7 @@ Index: io/io/inc/TGenCollectionProxy.h
     // Return the sizeof the collection object.
     virtual UInt_t Sizeof() const;
  
-@@ -327,9 +411,48 @@
+@@ -327,9 +414,48 @@
  
     // TClassStreamer I/O overload.
     virtual void operator()(TBuffer &refBuffer, void *pObject);
@@ -6015,7 +6234,12 @@ Index: io/io/inc/TGenCollectionProxy.h
  };
  
  template <typename T>
-@@ -345,9 +468,9 @@
+@@ -341,13 +467,13 @@
+       fValDiff        = sizeof(T::Value_t);
+       fValOffset      = T::value_offset();
+       fSize.call      = T::size;
+-      fResize.call    = T::resize;
++      fResize         = T::resize;
        fNext.call      = T::next;
        fFirst.call     = T::first;
        fClear.call     = T::clear;
@@ -6028,6 +6252,20 @@ Index: io/io/inc/TGenCollectionProxy.h
        CheckFunctions();
     }
     virtual ~AnyCollectionProxy() {  }
+Index: io/io/inc/LinkDef.h
+===================================================================
+--- io/io/inc/LinkDef.h	(revision 35031)
++++ io/io/inc/LinkDef.h	(working copy)
+@@ -43,4 +43,9 @@
+ #pragma link C++ options=version(0) class TVirtualObject-;
+ #pragma link C++ options=version(0) class TVirtualArray-;
+ 
++#pragma link C++ namespace TStreamerInfoActions;
++#pragma link C++ class TStreamerInfoActions::TConfiguredAction+;
++#pragma link C++ class TStreamerInfoActions::TActionSequence+;
++#pragma link C++ class TStreamerInfoActions::TConfiguration-;
++
+ #endif
 Index: io/io/inc/TGenCollectionStreamer.h
 ===================================================================
 --- io/io/inc/TGenCollectionStreamer.h	(revision 35031)
@@ -6072,9 +6310,12 @@ Index: io/io/inc/TGenCollectionStreamer.h
  };
  
  template <typename T>
-@@ -72,9 +91,9 @@
+@@ -70,11 +89,11 @@
+       fFirst.call     = T::first;
+       fNext.call      = T::next;
        fClear.call     = T::clear;
-       fResize.call    = T::resize;
+-      fResize.call    = T::resize;
++      fResize         = T::resize;
        fCollect.call   = T::collect;
 -      fConstruct.call = T::construct;
 -      fDestruct.call  = T::destruct;
@@ -6085,20 +6326,6 @@ Index: io/io/inc/TGenCollectionStreamer.h
        CheckFunctions();
     }
     virtual ~AnyCollectionStreamer() {  }
-Index: io/io/inc/LinkDef.h
-===================================================================
---- io/io/inc/LinkDef.h	(revision 35031)
-+++ io/io/inc/LinkDef.h	(working copy)
-@@ -43,4 +43,9 @@
- #pragma link C++ options=version(0) class TVirtualObject-;
- #pragma link C++ options=version(0) class TVirtualArray-;
- 
-+#pragma link C++ namespace TStreamerInfoActions;
-+#pragma link C++ class TStreamerInfoActions::TConfiguredAction+;
-+#pragma link C++ class TStreamerInfoActions::TActionSequence+;
-+#pragma link C++ class TStreamerInfoActions::TConfiguration-;
-+
- #endif
 Index: io/io/inc/TStreamerInfo.h
 ===================================================================
 --- io/io/inc/TStreamerInfo.h	(revision 35031)
@@ -6149,6 +6376,144 @@ Index: io/io/inc/TStreamerInfo.h
  #ifdef R__BROKEN_FUNCTION_TEMPLATES
     // Support for non standard compilers
     Int_t               ReadBuffer(TBuffer &b,  char** const &arrptr, Int_t first,Int_t narr=1,Int_t eoffset=0,Int_t mode=0);
+Index: io/io/inc/TVirtualCollectionIterators.h
+===================================================================
+--- io/io/inc/TVirtualCollectionIterators.h	(revision 0)
++++ io/io/inc/TVirtualCollectionIterators.h	(revision 0)
+@@ -0,0 +1,124 @@
++// @(#)root/cont:$Id$
++// Author: Philippe Canal 20/08/2010
++
++/*************************************************************************
++ * Copyright (C) 1995-2003, Rene Brun, Fons Rademakers and al.           *
++ * All rights reserved.                                                  *
++ *                                                                       *
++ * For the licensing terms see $ROOTSYS/LICENSE.                         *
++ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
++ *************************************************************************/
++
++#ifndef ROOT_TVirtualCollectionIterators
++#define ROOT_TVirtualCollectionIterators
++
++//////////////////////////////////////////////////////////////////////////
++//                                                                      //
++// TVirtualCollectionIterators                                          //
++//                                                                      //
++// Small helper class to generically acquire and release iterators      //
++//                                                                      //
++//////////////////////////////////////////////////////////////////////////
++
++#ifndef ROOT_TVirtualCollectionProxy
++#include "TVirtualCollectionProxy.h"
++#endif
++
++struct TVirtualCollectionIterators
++{
++private:
++   TVirtualCollectionIterators(); // Intentionally unimplemented.
++   TVirtualCollectionIterators(const TVirtualCollectionIterators&); // Intentionally unimplemented.
++   
++public:
++   // Note when the collection is a vector, fBegin and fEnd points to
++   // the start and end of the memory content rather than to the address
++   // of iterators (saving one dereference when being used).
++   
++   typedef TVirtualCollectionProxy::CreateIterators_t CreateIterators_t;
++   typedef TVirtualCollectionProxy::DeleteTwoIterators_t DeleteTwoIterators_t;
++   
++   char  fBeginBuffer[TVirtualCollectionProxy::fgIteratorArenaSize];
++   char  fEndBuffer[TVirtualCollectionProxy::fgIteratorArenaSize];
++   void *fBegin; // Pointer to the starting iterator (collection->begin())
++   void *fEnd;   // Pointer to the ending iterator (collection->end())
++   CreateIterators_t    fCreateIterators;
++   DeleteTwoIterators_t fDeleteTwoIterators;
++   
++   TVirtualCollectionIterators(TVirtualCollectionProxy *proxy) : fBegin( &(fBeginBuffer[0]) ), fEnd(&(fEndBuffer[0])), fCreateIterators(0), fDeleteTwoIterators(0) 
++   {
++      //         memset(fBeginBuffer,0,TVirtualCollectionProxy::fgIteratorArenaSize);
++      //         memset(fEndBuffer,0,TVirtualCollectionProxy::fgIteratorArenaSize);
++      if (proxy) {
++         fCreateIterators = proxy->GetFunctionCreateIterators();
++         fDeleteTwoIterators = proxy->GetFunctionDeleteTwoIterators();
++      } else {
++         ::Fatal("TIterators::TIterators","Created with out a collection proxy!\n");
++      }
++   }
++   TVirtualCollectionIterators(CreateIterators_t creator, DeleteTwoIterators_t destruct) : fBegin( &(fBeginBuffer[0]) ), fEnd(&(fEndBuffer[0])), fCreateIterators(creator), fDeleteTwoIterators(destruct) 
++   {
++   }
++
++   inline void CreateIterators(void *collection)
++   {
++      // Initialize the fBegin and fEnd iterators.
++      
++      fCreateIterators(collection, &fBegin, &fEnd);
++   }
++   
++   inline ~TVirtualCollectionIterators() 
++   {
++      if (fBegin != &(fBeginBuffer[0])) {
++         // assert(end != endbuf);
++         fDeleteTwoIterators(fBegin,fEnd);
++      }      
++   }
++};
++
++// Specialization of TVirtualCollectionIterators when we know the collection
++// to be a vector (hence there is nothing to delete at the end).
++struct TVirtualVectorIterators
++{
++private:
++   TVirtualVectorIterators(const TVirtualVectorIterators&); // Intentionally unimplemented.
++   
++public:
++   // Note when the collection is a vector, fBegin and fEnd points to
++   // the start and end of the memory content rather than to the address
++   // of iterators (saving one dereference when being used).
++   
++   typedef TVirtualCollectionProxy::CreateIterators_t CreateIterators_t;
++
++   void *fBegin; // Pointer to the starting iterator (collection->begin())
++   void *fEnd;   // Pointer to the ending iterator (collection->end())
++   
++   TVirtualVectorIterators(TVirtualCollectionProxy * /* proxy */) : fBegin(0), fEnd(0)
++   {
++      // fCreateIterators = proxy->GetFunctionCreateIterators();
++   }
++   
++   TVirtualVectorIterators(CreateIterators_t /* creator */) : fBegin(0), fEnd(0)
++   {
++      // fCreateIterators = creator;
++   }
++   
++   TVirtualVectorIterators() : fBegin(0), fEnd(0) 
++   {
++      // Default constructor.
++   }
++   
++   inline void CreateIterators(void *collection)
++   {
++      // Initialize the fBegin and fEnd iterators.
++      
++      // We can safely assume that the std::vector layout does not really depend on
++      // the content!
++      std::vector<char> *vec = (std::vector<char>*)collection;
++      fBegin = &(*vec->begin());
++      fEnd = &(*vec->end());
++      //fCreateIterators(collection, &fBegin, &fEnd);
++   }
++};
++
++#endif // ROOT_TVirtualCollectionIterators
+\ No newline at end of file
+
+Property changes on: io/io/inc/TVirtualCollectionIterators.h
+___________________________________________________________________
+Added: svn:keywords
+   + Id
+Added: svn:eol-style
+   + LF
+
 Index: io/io/inc/TEmulatedMapProxy.h
 ===================================================================
 --- io/io/inc/TEmulatedMapProxy.h	(revision 35031)
