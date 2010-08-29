@@ -1,10 +1,11 @@
 #!/bin/sh
 
-if [ "x${BASH_ARGV[0]}" = "x" ]; then
-    THIS=$(basename ${0})
-    if [ "x${THIS}" == "xremovepatch" ]; then
-        PATCHLOC=$(cd `dirname ${0}`; pwd); export PATCHLOC
-    elif [ ! -f optimizedio.patch ]; then
+
+THIS=$(basename ${0})
+if [ "x${THIS}" == "xremovepatch" ]; then
+   PATCHLOC=$(cd `dirname ${0}`; pwd); export PATCHLOC
+elif [ "x${BASH_ARGV[0]}" = "x" ]; then
+    if [ ! -f optimizedio.patch ]; then
         echo ERROR: must "cd where/optimizedio.patch/is" before calling ". removepatch" for this version of bash!
         exit 1
     else
@@ -16,10 +17,47 @@ else
     PATCHLOC=$(cd ${THIS}/..;pwd); export PATCHLOC
 fi
 
+help=
+force=
+
+while test "x$1" != "x"; do
+   case $1 in
+      "--force") force=x; shift;;
+      "--help") help=x; shift;;
+      "-h" ) help=x; shift;;
+      *) help=x; shift;;
+   esac
+done
+
+if test "x$help" != "x"; then
+    echo "$0 [options]"
+    echo "Option:"
+    echo "  -h | --help: this message"
+    exit
+fi
 files=`grep '^Index' ${PATCHLOC}/optimizedio.patch | cut -d':' -f2- `
 newfiles=`cd ${ROOTSYS} ; svn status | grep -e '^A ' -e '^? ' | cut -c2-`
 
-patch -p0 -R < ${PATCHLOC}/optimizedio.patch
+if [ "x${force}" != "x" ] ; then 
+  modfiles=`cd ${ROOTSYS} ; svn status | grep -e '^M ' | cut -c2-`
+  ourmodfiles=
+  for f in ${modfiles} ; do
+     if [ `echo $files | grep -c $f` -eq 1 ] ; then
+        ourmodfiles="${ourmodfiles} ${f}"
+     fi
+  done
+  if [ "x${modfiles}" != "x" ] ; then
+     echo "Warning! Reverting the following files: ${modfiles}"
+     svn revert ${modfiles}
+  fi
+else
+  if [ -e optimizedio.patch.applied ] ; then 
+     patch -p0 -R <  optimizedio.patch.applied
+     rm optimizedio.patch.applied
+  else 
+     patch -p0 -R < ${PATCHLOC}/optimizedio.patch
+  fi
+fi
 
 for f in ${newfiles} ; do
   if [ `echo $files | grep -c $f` -eq 1 ] ; then
