@@ -1,6 +1,6 @@
 Index: core/meta/src/TClassRef.cxx
 ===================================================================
---- core/meta/src/TClassRef.cxx	(revision 35031)
+--- core/meta/src/TClassRef.cxx	(revision 35067)
 +++ core/meta/src/TClassRef.cxx	(working copy)
 @@ -55,37 +55,31 @@
  }
@@ -58,7 +58,7 @@ Index: core/meta/src/TClassRef.cxx
  //______________________________________________________________________________
 Index: core/meta/src/TClass.cxx
 ===================================================================
---- core/meta/src/TClass.cxx	(revision 35031)
+--- core/meta/src/TClass.cxx	(revision 35067)
 +++ core/meta/src/TClass.cxx	(working copy)
 @@ -717,7 +717,7 @@
     fVersionUsed(kFALSE), fProperty(0),
@@ -364,18 +364,9 @@ Index: core/meta/src/TClass.cxx
     }
  }
  
-@@ -5107,7 +5270,7 @@
-          arr = it->second;
-       }
- 
--      if( version > -1 && version < arr->GetSize() && arr->At( version ) )
-+      if( arr && version > -1 && version < arr->GetSize() && arr->At( version ) )
-          return (TVirtualStreamerInfo*) arr->At( version );
-    }
- 
 Index: core/meta/inc/TClass.h
 ===================================================================
---- core/meta/inc/TClass.h	(revision 35031)
+--- core/meta/inc/TClass.h	(revision 35067)
 +++ core/meta/inc/TClass.h	(working copy)
 @@ -131,6 +131,9 @@
     TVirtualRefProxy  *fRefProxy;        //!Pointer to reference proxy if this class represents a reference
@@ -421,7 +412,7 @@ Index: core/meta/inc/TClass.h
  };
 Index: core/meta/inc/TClassStreamer.h
 ===================================================================
---- core/meta/inc/TClassStreamer.h	(revision 35031)
+--- core/meta/inc/TClassStreamer.h	(revision 35067)
 +++ core/meta/inc/TClassStreamer.h	(working copy)
 @@ -35,7 +35,7 @@
     virtual void SetOnFileClass( const TClass* cl ) { fOnFileClass = const_cast<TClass*>(cl); }
@@ -458,7 +449,7 @@ Index: core/meta/inc/TClassStreamer.h
     ClassStreamerFunc_t fStreamer;
 Index: core/meta/inc/TClassRef.h
 ===================================================================
---- core/meta/inc/TClassRef.h	(revision 35031)
+--- core/meta/inc/TClassRef.h	(revision 35067)
 +++ core/meta/inc/TClassRef.h	(working copy)
 @@ -40,6 +40,8 @@
  
@@ -494,7 +485,7 @@ Index: core/meta/inc/TClassRef.h
  
 Index: core/cont/inc/TCollectionProxyInfo.h
 ===================================================================
---- core/cont/inc/TCollectionProxyInfo.h	(revision 35031)
+--- core/cont/inc/TCollectionProxyInfo.h	(revision 35067)
 +++ core/cont/inc/TCollectionProxyInfo.h	(working copy)
 @@ -85,9 +85,6 @@
     struct EnvironBase;
@@ -775,7 +766,7 @@ Index: core/cont/inc/TCollectionProxyInfo.h
        }
 Index: core/cont/inc/TVirtualCollectionProxy.h
 ===================================================================
---- core/cont/inc/TVirtualCollectionProxy.h	(revision 35031)
+--- core/cont/inc/TVirtualCollectionProxy.h	(revision 35067)
 +++ core/cont/inc/TVirtualCollectionProxy.h	(working copy)
 @@ -9,8 +9,8 @@
   * For the list of contributors see $ROOTSYS/README/CREDITS.             *
@@ -975,7 +966,7 @@ Index: core/cont/inc/TVirtualCollectionProxy.h
  #endif
 Index: core/base/src/String.cxx
 ===================================================================
---- core/base/src/String.cxx	(revision 35031)
+--- core/base/src/String.cxx	(revision 35067)
 +++ core/base/src/String.cxx	(working copy)
 @@ -30,20 +30,24 @@
     UChar_t nwh;
@@ -1017,7 +1008,7 @@ Index: core/base/src/String.cxx
        if (nbig > 254) {
 Index: core/base/src/TBuffer.cxx
 ===================================================================
---- core/base/src/TBuffer.cxx	(revision 35031)
+--- core/base/src/TBuffer.cxx	(revision 35067)
 +++ core/base/src/TBuffer.cxx	(working copy)
 @@ -288,3 +288,34 @@
  
@@ -1056,7 +1047,7 @@ Index: core/base/src/TBuffer.cxx
 +
 Index: core/base/src/TObject.cxx
 ===================================================================
---- core/base/src/TObject.cxx	(revision 35031)
+--- core/base/src/TObject.cxx	(revision 35067)
 +++ core/base/src/TObject.cxx	(working copy)
 @@ -801,7 +801,7 @@
     if (IsA()->CanIgnoreTObjectStreamer()) return;
@@ -1069,7 +1060,7 @@ Index: core/base/src/TObject.cxx
        fBits |= kIsOnHeap;  // by definition de-serialized object is on heap
 Index: core/base/src/TString.cxx
 ===================================================================
---- core/base/src/TString.cxx	(revision 35031)
+--- core/base/src/TString.cxx	(revision 35067)
 +++ core/base/src/TString.cxx	(working copy)
 @@ -1089,14 +1089,37 @@
     UChar_t nwh;
@@ -1119,7 +1110,7 @@ Index: core/base/src/TString.cxx
        if (nbig > 254) {
 Index: core/base/inc/TBuffer.h
 ===================================================================
---- core/base/inc/TBuffer.h	(revision 35031)
+--- core/base/inc/TBuffer.h	(revision 35067)
 +++ core/base/inc/TBuffer.h	(working copy)
 @@ -32,10 +32,13 @@
  class TProcessID;
@@ -1175,7 +1166,7 @@ Index: core/base/inc/TBuffer.h
     virtual   Int_t    ReadArray(Char_t    *&c) = 0;
 Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
 ===================================================================
---- cint/reflex/inc/Reflex/Builder/CollectionProxy.h	(revision 35031)
+--- cint/reflex/inc/Reflex/Builder/CollectionProxy.h	(revision 35067)
 +++ cint/reflex/inc/Reflex/Builder/CollectionProxy.h	(working copy)
 @@ -170,11 +170,10 @@
  
@@ -1405,7 +1396,7 @@ Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
        return 0;
 Index: tree/tree/src/TBranchElement.cxx
 ===================================================================
---- tree/tree/src/TBranchElement.cxx	(revision 35031)
+--- tree/tree/src/TBranchElement.cxx	(revision 35067)
 +++ tree/tree/src/TBranchElement.cxx	(working copy)
 @@ -38,12 +38,15 @@
  #include "TStreamerInfo.h"
@@ -1872,7 +1863,7 @@ Index: tree/tree/src/TBranchElement.cxx
        TDirectory* dirsav = fDirectory;
 Index: tree/tree/inc/TBranchElement.h
 ===================================================================
---- tree/tree/inc/TBranchElement.h	(revision 35031)
+--- tree/tree/inc/TBranchElement.h	(revision 35067)
 +++ tree/tree/inc/TBranchElement.h	(working copy)
 @@ -34,8 +34,12 @@
  class TFolder;
@@ -1916,7 +1907,7 @@ Index: tree/tree/inc/TBranchElement.h
     virtual void             SetTargetClassName(const char *name);
 Index: io/sql/src/TBufferSQL2.cxx
 ===================================================================
---- io/sql/src/TBufferSQL2.cxx	(revision 35031)
+--- io/sql/src/TBufferSQL2.cxx	(revision 35067)
 +++ io/sql/src/TBufferSQL2.cxx	(working copy)
 @@ -931,6 +931,13 @@
  }
@@ -1981,7 +1972,7 @@ Index: io/sql/src/TBufferSQL2.cxx
     // Write Float16 value
 Index: io/sql/inc/TBufferSQL2.h
 ===================================================================
---- io/sql/inc/TBufferSQL2.h	(revision 35031)
+--- io/sql/inc/TBufferSQL2.h	(revision 35067)
 +++ io/sql/inc/TBufferSQL2.h	(working copy)
 @@ -152,8 +152,9 @@
     virtual Int_t    CheckByteCount(UInt_t startpos, UInt_t bcnt, const char *classname); // SL
@@ -2009,7 +2000,7 @@ Index: io/sql/inc/TBufferSQL2.h
     virtual Int_t    ReadArray(UChar_t   *&c);
 Index: io/xml/src/TBufferXML.cxx
 ===================================================================
---- io/xml/src/TBufferXML.cxx	(revision 35031)
+--- io/xml/src/TBufferXML.cxx	(revision 35067)
 +++ io/xml/src/TBufferXML.cxx	(working copy)
 @@ -1358,6 +1358,13 @@
  }
@@ -2078,7 +2069,7 @@ Index: io/xml/src/TBufferXML.cxx
     // write a Float16_t to the buffer
 Index: io/xml/inc/TBufferXML.h
 ===================================================================
---- io/xml/inc/TBufferXML.h	(revision 35031)
+--- io/xml/inc/TBufferXML.h	(revision 35067)
 +++ io/xml/inc/TBufferXML.h	(working copy)
 @@ -66,8 +66,9 @@
     virtual Int_t    CheckByteCount(UInt_t startpos, UInt_t bcnt, const char *classname); // SL
@@ -2106,7 +2097,7 @@ Index: io/xml/inc/TBufferXML.h
     virtual Int_t    ReadArray(UChar_t   *&c);
 Index: io/io/src/TStreamerInfo.cxx
 ===================================================================
---- io/io/src/TStreamerInfo.cxx	(revision 35031)
+--- io/io/src/TStreamerInfo.cxx	(revision 35067)
 +++ io/io/src/TStreamerInfo.cxx	(working copy)
 @@ -69,6 +69,8 @@
  
@@ -2345,7 +2336,7 @@ Index: io/io/src/TStreamerInfo.cxx
                 }
 Index: io/io/src/TEmulatedMapProxy.cxx
 ===================================================================
---- io/io/src/TEmulatedMapProxy.cxx	(revision 35031)
+--- io/io/src/TEmulatedMapProxy.cxx	(revision 35067)
 +++ io/io/src/TEmulatedMapProxy.cxx	(working copy)
 @@ -204,6 +204,29 @@
     }
@@ -2379,7 +2370,7 @@ Index: io/io/src/TEmulatedMapProxy.cxx
     // TClassStreamer IO overload.
 Index: io/io/src/TMakeProject.cxx
 ===================================================================
---- io/io/src/TMakeProject.cxx	(revision 35031)
+--- io/io/src/TMakeProject.cxx	(revision 35067)
 +++ io/io/src/TMakeProject.cxx	(working copy)
 @@ -412,7 +412,7 @@
     UInt_t numberOfClasses = 0;
@@ -2392,7 +2383,7 @@ Index: io/io/src/TMakeProject.cxx
        fprintf(fp, "#endif\n");
 Index: io/io/src/TBufferFile.cxx
 ===================================================================
---- io/io/src/TBufferFile.cxx	(revision 35031)
+--- io/io/src/TBufferFile.cxx	(revision 35067)
 +++ io/io/src/TBufferFile.cxx	(working copy)
 @@ -161,36 +161,6 @@
  }
@@ -2702,7 +2693,7 @@ Index: io/io/src/TBufferFile.cxx
     // Check that the buffer position corresponds to the byte count.
 Index: io/io/src/TEmulatedCollectionProxy.cxx
 ===================================================================
---- io/io/src/TEmulatedCollectionProxy.cxx	(revision 35031)
+--- io/io/src/TEmulatedCollectionProxy.cxx	(revision 35067)
 +++ io/io/src/TEmulatedCollectionProxy.cxx	(working copy)
 @@ -45,6 +45,7 @@
     : TGenCollectionProxy(copy)
@@ -4472,7 +4463,7 @@ Added: svn:eol-style
 
 Index: io/io/src/TStreamerInfoReadBuffer.cxx
 ===================================================================
---- io/io/src/TStreamerInfoReadBuffer.cxx	(revision 35031)
+--- io/io/src/TStreamerInfoReadBuffer.cxx	(revision 35067)
 +++ io/io/src/TStreamerInfoReadBuffer.cxx	(working copy)
 @@ -665,7 +665,10 @@
  
@@ -4506,7 +4497,7 @@ Index: io/io/src/TStreamerInfoReadBuffer.cxx
  
 Index: io/io/src/TGenCollectionProxy.cxx
 ===================================================================
---- io/io/src/TGenCollectionProxy.cxx	(revision 35031)
+--- io/io/src/TGenCollectionProxy.cxx	(revision 35067)
 +++ io/io/src/TGenCollectionProxy.cxx	(working copy)
 @@ -33,10 +33,13 @@
  #include "TInterpreter.h"
@@ -5314,7 +5305,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
 +
 Index: io/io/src/TGenCollectionStreamer.cxx
 ===================================================================
---- io/io/src/TGenCollectionStreamer.cxx	(revision 35031)
+--- io/io/src/TGenCollectionStreamer.cxx	(revision 35067)
 +++ io/io/src/TGenCollectionStreamer.cxx	(working copy)
 @@ -30,21 +30,22 @@
  #include "TStreamerInfo.h"
@@ -5721,7 +5712,7 @@ Index: io/io/src/TGenCollectionStreamer.cxx
     // TClassStreamer IO overload.
 Index: io/io/inc/TBufferFile.h
 ===================================================================
---- io/io/inc/TBufferFile.h	(revision 35031)
+--- io/io/inc/TBufferFile.h	(revision 35067)
 +++ io/io/inc/TBufferFile.h	(working copy)
 @@ -49,7 +49,6 @@
  
@@ -5781,7 +5772,7 @@ Index: io/io/inc/TBufferFile.h
     virtual   Int_t    ReadArray(UChar_t   *&c);
 Index: io/io/inc/TEmulatedCollectionProxy.h
 ===================================================================
---- io/io/inc/TEmulatedCollectionProxy.h	(revision 35031)
+--- io/io/inc/TEmulatedCollectionProxy.h	(revision 35067)
 +++ io/io/inc/TEmulatedCollectionProxy.h	(working copy)
 @@ -107,6 +107,10 @@
     // Block commit of containees
@@ -5954,7 +5945,7 @@ Added: svn:eol-style
 
 Index: io/io/inc/TCollectionProxyFactory.h
 ===================================================================
---- io/io/inc/TCollectionProxyFactory.h	(revision 35031)
+--- io/io/inc/TCollectionProxyFactory.h	(revision 35067)
 +++ io/io/inc/TCollectionProxyFactory.h	(working copy)
 @@ -28,10 +28,15 @@
  #ifndef ROOT_TClassStreamer
@@ -6022,7 +6013,7 @@ Index: io/io/inc/TCollectionProxyFactory.h
  #endif
 Index: io/io/inc/TGenCollectionProxy.h
 ===================================================================
---- io/io/inc/TGenCollectionProxy.h	(revision 35031)
+--- io/io/inc/TGenCollectionProxy.h	(revision 35067)
 +++ io/io/inc/TGenCollectionProxy.h	(working copy)
 @@ -25,10 +25,22 @@
  //
@@ -6254,7 +6245,7 @@ Index: io/io/inc/TGenCollectionProxy.h
     virtual ~AnyCollectionProxy() {  }
 Index: io/io/inc/LinkDef.h
 ===================================================================
---- io/io/inc/LinkDef.h	(revision 35031)
+--- io/io/inc/LinkDef.h	(revision 35067)
 +++ io/io/inc/LinkDef.h	(working copy)
 @@ -43,4 +43,9 @@
  #pragma link C++ options=version(0) class TVirtualObject-;
@@ -6268,7 +6259,7 @@ Index: io/io/inc/LinkDef.h
  #endif
 Index: io/io/inc/TGenCollectionStreamer.h
 ===================================================================
---- io/io/inc/TGenCollectionStreamer.h	(revision 35031)
+--- io/io/inc/TGenCollectionStreamer.h	(revision 35067)
 +++ io/io/inc/TGenCollectionStreamer.h	(working copy)
 @@ -21,6 +21,7 @@
  //////////////////////////////////////////////////////////////////////////
@@ -6328,7 +6319,7 @@ Index: io/io/inc/TGenCollectionStreamer.h
     virtual ~AnyCollectionStreamer() {  }
 Index: io/io/inc/TStreamerInfo.h
 ===================================================================
---- io/io/inc/TStreamerInfo.h	(revision 35031)
+--- io/io/inc/TStreamerInfo.h	(revision 35067)
 +++ io/io/inc/TStreamerInfo.h	(working copy)
 @@ -44,6 +44,8 @@
  class TVirtualArray;
@@ -6516,7 +6507,7 @@ Added: svn:eol-style
 
 Index: io/io/inc/TEmulatedMapProxy.h
 ===================================================================
---- io/io/inc/TEmulatedMapProxy.h	(revision 35031)
+--- io/io/inc/TEmulatedMapProxy.h	(revision 35067)
 +++ io/io/inc/TEmulatedMapProxy.h	(working copy)
 @@ -50,6 +50,10 @@
     // Return the current size of the container
