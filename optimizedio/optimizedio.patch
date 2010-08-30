@@ -6015,7 +6015,7 @@ Index: io/io/inc/TGenCollectionProxy.h
 ===================================================================
 --- io/io/inc/TGenCollectionProxy.h	(revision 35067)
 +++ io/io/inc/TGenCollectionProxy.h	(working copy)
-@@ -25,10 +25,22 @@
+@@ -25,10 +25,26 @@
  //
  //////////////////////////////////////////////////////////////////////////
  
@@ -6032,14 +6032,18 @@ Index: io/io/inc/TGenCollectionProxy.h
  #include <string>
 +#include <map>
 +#ifndef __CINT__
++#if defined(__APPLE__)
++#include <stdlib.h>
++#else
 +#include <malloc.h>
++#endif
 +#endif
 +class TObjArray;
 +class TCollectionProxyFactory;
  
  class TGenCollectionProxy
     : public TVirtualCollectionProxy
-@@ -53,7 +65,6 @@
+@@ -53,7 +69,6 @@
        kBOOL_t = 21
     };
  
@@ -6047,7 +6051,7 @@ Index: io/io/inc/TGenCollectionProxy.h
     /** @class TGenCollectionProxy::Value TGenCollectionProxy.h TGenCollectionProxy.h
      *
      * Small helper to describe the Value_type or the key_type
-@@ -223,22 +234,86 @@
+@@ -223,22 +238,86 @@
        Method0(const Method0& m) : call(m.call)   {      }
        void* invoke() const { return (*call)(); }
     };
@@ -6138,7 +6142,7 @@ Index: io/io/inc/TGenCollectionProxy.h
     Method        fCollect;   // Method to collect objects from container
     Method0       fCreateEnv; // Method to allocate an Environment holder.
     Value*        fValue;     // Descriptor of the container value type
-@@ -249,9 +324,13 @@
+@@ -249,9 +328,13 @@
     int           fValDiff;   // Offset between two consecutive value_types (memory layout).
     Proxies_t     fProxyList; // Stack of recursive proxies
     Proxies_t     fProxyKept; // Optimization: Keep proxies once they were created
@@ -6152,7 +6156,7 @@ Index: io/io/inc/TGenCollectionProxy.h
  
     // Late initialization of collection proxy
     TGenCollectionProxy* Initialize() const;
-@@ -261,7 +340,9 @@
+@@ -261,7 +344,9 @@
     virtual void DeleteItem(Bool_t force, void* ptr) const;
     // Allow to check function pointers.
     void CheckFunctions()  const;
@@ -6163,7 +6167,7 @@ Index: io/io/inc/TGenCollectionProxy.h
  public:
  
     // Virtual copy constructor.
-@@ -280,6 +361,12 @@
+@@ -280,6 +365,12 @@
     // Return a pointer to the TClass representing the container.
     virtual TClass *GetCollectionClass();
  
@@ -6176,7 +6180,7 @@ Index: io/io/inc/TGenCollectionProxy.h
     // Return the sizeof the collection object.
     virtual UInt_t Sizeof() const;
  
-@@ -327,9 +414,48 @@
+@@ -327,9 +418,48 @@
  
     // TClassStreamer I/O overload.
     virtual void operator()(TBuffer &refBuffer, void *pObject);
@@ -6225,7 +6229,7 @@ Index: io/io/inc/TGenCollectionProxy.h
  };
  
  template <typename T>
-@@ -341,13 +467,13 @@
+@@ -341,13 +471,13 @@
        fValDiff        = sizeof(T::Value_t);
        fValOffset      = T::value_offset();
        fSize.call      = T::size;
@@ -6371,7 +6375,7 @@ Index: io/io/inc/TVirtualCollectionIterators.h
 ===================================================================
 --- io/io/inc/TVirtualCollectionIterators.h	(revision 0)
 +++ io/io/inc/TVirtualCollectionIterators.h	(revision 0)
-@@ -0,0 +1,124 @@
+@@ -0,0 +1,125 @@
 +// @(#)root/cont:$Id$
 +// Author: Philippe Canal 20/08/2010
 +
@@ -6496,7 +6500,7 @@ Index: io/io/inc/TVirtualCollectionIterators.h
 +};
 +
 +#endif // ROOT_TVirtualCollectionIterators
-\ No newline at end of file
++
 
 Property changes on: io/io/inc/TVirtualCollectionIterators.h
 ___________________________________________________________________
