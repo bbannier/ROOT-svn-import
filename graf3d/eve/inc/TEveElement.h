@@ -375,8 +375,8 @@ public:
    };
 
 protected:
-   UChar_t      fChangeBits;
-   Bool_t       fDestructing;
+   UChar_t      fChangeBits;  //!
+   Bool_t       fDestructing; //!
 
 public:
    void StampColorSelection() { AddStamp(kCBColorSelection); }

@@ -276,18 +276,19 @@ void TEveCalo3DGL::RenderGrid(TGLRnrCtx & rnrCtx) const
 
    TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
 
+   TGLUtil::LineWidth(fM->GetFrameWidth());
    glBegin(GL_LINES);
 
    Float_t etaMin = fM->GetEtaMin();
    Float_t etaMax = fM->GetEtaMax();
 
    Float_t trans = fM->GetTransitionEta();
-   if (etaMin < trans && etaMax > -trans)
+   if (fM->GetRnrBarrelFrame() && (etaMin < trans && etaMax > -trans))
    {
       RenderGridBarrel();
    }
 
-   if (etaMax > trans || etaMin < -trans)
+   if (fM->GetRnrEndCapFrame() && (etaMax > trans || etaMin < -trans))
    {
       RenderGridEndCap();
    }
@@ -561,9 +562,8 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
 
       if (rnrCtx.SecSelection()) glLoadName(cellID);
 
-      if (cellData.Eta() > 0 && cellData.Eta() < fM->GetTransitionEta() 
-          || cellData.Eta() < 0 && cellData.Eta() > -fM->GetTransitionEta() ) 
-  
+      if ((cellData.Eta() > 0 && cellData.Eta() < fM->GetTransitionEta()) ||
+          (cellData.Eta() < 0 && cellData.Eta() > -fM->GetTransitionEta())) 
       {
          RenderBarrelCell(cellData, towerH, offset);
       }
