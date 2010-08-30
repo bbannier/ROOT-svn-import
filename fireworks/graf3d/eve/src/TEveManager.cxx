@@ -26,6 +26,7 @@
 #include "TGLSAViewer.h"
 
 #include "TGeoManager.h"
+#include "TGeoMatrix.h"
 #include "TObjString.h"
 #include "TROOT.h"
 #include "TFile.h"
@@ -809,7 +810,12 @@ TGeoManager* TEveManager::GetGeometry(const TString& filename)
           filename.Data(), exp_filename.Data());
 
    gGeoManager = (TGeoManager*) fGeometries->GetValue(filename);
-   if (!gGeoManager) {
+   if (gGeoManager)
+   {
+      gGeoIdentity = (TGeoIdentity*) gGeoManager->GetListOfMatrices()->At(0);
+   }
+   else
+   {
       Bool_t locked = TGeoManager::IsLocked();
       if (locked) {
          Warning(eh, "TGeoManager is locked ... unlocking it.");
