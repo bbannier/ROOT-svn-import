@@ -155,6 +155,8 @@ TEveTriangleSet* TEveTriangleSet::ReadTrivialFile(const char* file)
 {
    // Read a simple ascii input file describing vertices and triangles.
 
+   static const TEveException kEH("TEveTriangleSet::ReadTrivialFile ");
+
    FILE* f = fopen(file, "r");
    if (f == 0) {
       ::Error("TEveTriangleSet::ReadTrivialFile", Form("file '%s' not found.", file));
@@ -163,6 +165,9 @@ TEveTriangleSet* TEveTriangleSet::ReadTrivialFile(const char* file)
 
    Int_t nv, nt;
    fscanf(f, "%d %d", &nv, &nt);
+   if (nv < 0 || nt < 0)
+      throw kEH + "Negative number of vertices / triangles specified.";
+
 
    TEveTriangleSet* ts = new TEveTriangleSet(nv, nt);
 

@@ -33,6 +33,7 @@
 # include "FTGLBitmapFont.h"
 #endif
 
+
 //______________________________________________________________________________
 // TGLFont
 //
@@ -316,14 +317,17 @@ void TGLFontManager::RegisterFont(Int_t sizeIn, Int_t fileID, TGLFont::EMode mod
    FontMap_i it = fFontMap.find(TGLFont(size, fileID, mode));
    if (it == fFontMap.end())
    {
-      TString ttpath;
+      TString ttpath, file;
 # ifdef TTFFONTDIR
       ttpath = gEnv->GetValue("Root.TTGLFontPath", TTFFONTDIR );
 # else
       ttpath = gEnv->GetValue("Root.TTGLFontPath", "$(ROOTSYS)/fonts");
 # endif
-      TObjString* name = (TObjString*)fgFontFileArray[fileID];
-      TString file = gSystem->Which(ttpath.Data(), Form("%s.ttf", name->GetString().Data()));
+      {
+         char *fp = gSystem->Which(ttpath, ((TObjString*)fgFontFileArray[fileID])->String() + ".ttf");
+         file = fp;
+         delete [] fp;
+      }
 
       FTFont* ftfont = 0;
       switch (mode)
