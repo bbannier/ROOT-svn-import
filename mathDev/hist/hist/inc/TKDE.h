@@ -28,7 +28,7 @@
 class TKDE : public TNamed  {
 public:
    
-   enum EKernelType { // Kernel function
+   enum EKernelType { // Kernel function type option
       kGaussian,
       kEpanechnikov,
       kBiweight,
@@ -42,7 +42,7 @@ public:
       kFixed
    };
    
-   enum EMirror { // Data "mirroring" to address the probability "spill out" boundary effect
+   enum EMirror { // Data "mirroring" option to address the probability "spill out" boundary effect
       kNoMirror,
       kMirrorLeft,
       kMirrorRight,
@@ -54,18 +54,18 @@ public:
       kMirrorAsymBoth
    };
    
-   enum EBinning{ 
-      kUnbinned,
-      kRelaxedBinning, // The algorithm is allowed to use binning if the data is large enough
-      kForcedBinning
-   };
+//    enum EBinning{ // Weight (bandwidth) binning option
+//       kUnbinned,
+//       kRelaxedBinning, // The algorithm is allowed to use binning if the data is large enough
+//       kForcedBinning
+//    };
    
    template<class KernelFunction>
-   TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0) {
-      Instantiate(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc), events, data, xMin, xMax, iter, mir, bin, rho);
+         TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EIteration iter = kAdaptive, EMirror mir = kNoMirror/*, EBinning bin = kRelaxedBinning*/, Double_t rho = 1.0) {
+      Instantiate(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc), events, data, xMin, xMax, iter, mir/*, bin*/, rho);
    }
       
-   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0);
+   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror/*, EBinning bin = kRelaxedBinning*/, Double_t rho = 1.0);
    
    virtual ~TKDE();
    
@@ -73,9 +73,9 @@ public:
    void SetKernelType(EKernelType kern);
    void SetIteration(EIteration iter);
    void SetMirror(EMirror mir);
-   void SetBinning(EBinning);
-   void SetNBins(UInt_t nBins);
-   void SetUseBinsNEvents(UInt_t nEvents);
+//    void SetBinning(EBinning);
+//    void SetNBins(UInt_t nBins);
+//    void SetUseBinsNEvents(UInt_t nEvents);
    void SetRange(Double_t xMin, Double_t xMax); // By default computed from the data
    
    Double_t operator()(const Double_t* x, const Double_t* p = 0) const;
@@ -106,8 +106,8 @@ private:
       UInt_t fNWeights; // Number of kernel weights (bandwidth as vectorized for binning)
       std::vector<Double_t> fWeights; // Kernel weights (bandwidth)
       TKDE* fKDE;
-      const std::vector<Double_t> GetBinCentreData() const;
-      UInt_t Index(Double_t x, UInt_t i) const;
+//       const std::vector<Double_t> GetBinCentreData() const;
+//       UInt_t Index(Double_t x, UInt_t i) const;
       UInt_t Index(Double_t x) const;
    public:
       TKernel(UInt_t n, Double_t weight, TKDE* kde);
@@ -130,14 +130,14 @@ private:
    EKernelType fKernelType;
    EIteration fIteration;
    EMirror fMirror;
-   EBinning fBinning;
+//    EBinning fBinning;
    
    Bool_t fMirrorLeft, fMirrorRight, fAsymLeft, fAsymRight;
-   Bool_t fUseBins;
+//    Bool_t fUseBins;
    
-   UInt_t fNBins;          // Histograms' settable number of bins
+//    UInt_t fNBins;          // Histograms' settable number of bins
    UInt_t fNEvents;        // Data's number of events
-   UInt_t fUseBinsNEvents; // If the algorithm is allowed to use binning this is the minimum number of events to do so
+//    UInt_t fUseBinsNEvents; // If the algorithm is allowed to use binning this is the minimum number of events to do so
    
    Double_t fMean;  // Data mean
    Double_t fSigma; // Data std deviation
@@ -160,22 +160,22 @@ private:
       EIntegralResult fIntegralResult;
    };
    
-   void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho);
+   void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir/*, EBinning bin*/, Double_t rho);
    
    inline Double_t GaussianKernel(Double_t x) const {
       // Returns the kernel evaluation at x 
       return _2_PI_ROOT_INV * std::exp(-.5 * x * x);
    }
    inline Double_t EpanechnikovKernel(Double_t x) const {
-      return (x >= -1. &&  x <= 1.) ? 3. / 4. * (1. - x * x) : 0.0;
+      return (x > -1. &&  x < 1.) ? 3. / 4. * (1. - x * x) : 0.0;
    }
    inline Double_t BiweightKernel(Double_t x) const {
       // Returns the kernel evaluation at x 
-      return (x >= -1. &&  x <= 1.) ? 15. / 16. * (1. - x * x) * (1. - x * x) : 0.0;
+      return (x > -1. &&  x < 1.) ? 15. / 16. * (1. - x * x) * (1. - x * x) : 0.0;
    }
    inline Double_t CosineArchKernel(Double_t x) const {
       // Returns the kernel evaluation at x 
-      return (x >= -1. &&  x <= 1.) ? PI_OVER4 * std::cos(PI_OVER2 * x) : 0.0;
+      return (x > -1. &&  x < 1.) ? PI_OVER4 * std::cos(PI_OVER2 * x) : 0.0;
    }
    Double_t UpperConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
    Double_t LowerConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
@@ -192,13 +192,13 @@ private:
    void SetCanonicalBandwidths(); 
    void SetKernelSigmas2(); 
    void SetHistogram();
-   void SetUseBins();
+//    void SetUseBins();
    void SetMirror();
    void SetMean();
    void SetSigma();
    void SetKernel();
    void SetKernelFunction(KernelFunction_Ptr kernfunc = 0);
-   void SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho, Bool_t IsUserDefinedKernel = kFALSE);
+   void SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir/*, EBinning bin*/, Double_t rho, Bool_t IsUserDefinedKernel = kFALSE);
    void SetData(const Double_t* data);
    void SetMirroredData();
    
