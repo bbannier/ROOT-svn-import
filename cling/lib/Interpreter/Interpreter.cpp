@@ -27,7 +27,7 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Sema/ParseAST.h"
+#include "clang/Parse/ParseAST.h"
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Assembly/PrintModulePass.h"
@@ -882,7 +882,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped)
             //
             //  Handle a variable declarator.
             //
-            std::string decl = VD->getNameAsCString();
+            std::string decl = VD->getNameAsString();
             // FIXME: Probably should not remove the qualifiers!
             VD->getType().getUnqualifiedType().
             getAsStringInternal(decl, clang::PrintingPolicy(LO));
@@ -905,7 +905,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped)
             //
             //  Handle variable declarators with a constant initializer.
             //
-            if (I->isConstantInitializer(CI->getASTContext())) {
+            if (I->isConstantInitializer(CI->getASTContext(), false)) {
                //fprintf(stderr, "var decl, init is const.\n");
                std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
                wrapped_globals.append(decl + " = " +
@@ -934,7 +934,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped)
             for (unsigned j = 0; j < numInits; ++j) {
                std::string stmt;
                llvm::raw_string_ostream stm(stmt);
-               stm << VD->getNameAsCString() << "[" << j << "] = ";
+               stm << VD->getNameAsString() << "[" << j << "] = ";
                std::pair<unsigned, unsigned> r =
                   getStmtRange(ILE->getInit(j), SM, LO);
                stm << src.substr(r.first, r.second - r.first) << ";\n";
@@ -1058,8 +1058,9 @@ Interpreter::createCI(const char* llvmdir /*=0*/)
       //  Buffer the error messages while we process
       //  the compiler options.
       //
-      clang::TextDiagnosticBuffer DiagsBuffer;
-      clang::Diagnostic Diags(&DiagsBuffer);
+      clang::TextDiagnosticBuffer *DiagsBuffer = new clang::TextDiagnosticBuffer();
+      // Diags takes ownership of DiagsBuffer
+      clang::Diagnostic Diags(DiagsBuffer);
       clang::CompilerInvocation::CreateFromArgs(CI->getInvocation(),
             fake_argv + 1, fake_argv + fake_argc, Diags);
       if (
@@ -1101,7 +1102,7 @@ Interpreter::createCI(const char* llvmdir /*=0*/)
          return 0;
       }
       // Output the buffered error messages now.
-      DiagsBuffer.FlushDiagnostics(CI->getDiagnostics());
+      DiagsBuffer->FlushDiagnostics(CI->getDiagnostics());
       if (CI->getDiagnostics().getNumErrors()) {
          CI->takeLLVMContext();
          delete CI;

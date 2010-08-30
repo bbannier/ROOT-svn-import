@@ -19,7 +19,7 @@ TOOL_NO_EXPORTS = 1
 
 LDFLAGS += -lcurses
 
-USEDLIBS = clingUserInterface.a clingMetaProcessor.a clingInterpreter.a clingEditLine.a clangFrontend.a clangDriver.a clangCodeGen.a clangSema.a clangChecker.a clangAnalysis.a clangRewrite.a clangAST.a clangParse.a clangLex.a clangBasic.a
+USEDLIBS = clingUserInterface.a clingMetaProcessor.a clingInterpreter.a clingEditLine.a clangFrontend.a clangSerialization.a clangDriver.a clangCodeGen.a clangSema.a clangChecker.a clangAnalysis.a clangRewrite.a clangAST.a clangParse.a clangLex.a clangBasic.a
 
 LINK_COMPONENTS := all
 
