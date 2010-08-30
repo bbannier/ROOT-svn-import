@@ -119,8 +119,8 @@ TEveCalo3D* MakeCalo3D(TEveCaloData* data, TEveWindowSlot* slot)
    s->SetElementName("Scene - 3D");
 
    TEveCalo3D* calo3d = new TEveCalo3D(data);
-   calo3d->SetBarrelRadius(129);
-   calo3d->SetEndCapPos(300);
+   calo3d->SetBarrelRadius(129.00);
+   calo3d->SetEndCapPos(268.36);
    s->AddElement(calo3d);
 
    return calo3d;
