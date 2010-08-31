@@ -339,7 +339,7 @@ void TEveProjection::BisectBreakPoint(TEveVector& vL, TEveVector& vR, Float_t ep
       vLP.Set(vL); ProjectPoint(vLP.fX, vLP.fY, vLP.fZ, 0);
       vMP.Set(vM); ProjectPoint(vMP.fX, vMP.fY, vMP.fZ, 0);
 
-      if (IsOnSubSpaceBoundrary(vM))
+      if (IsOnSubSpaceBoundrary(vMP))
       {
          vL.Set(vM);
          vR.Set(vM);
@@ -588,7 +588,7 @@ Bool_t TEveRhoZProjection::IsOnSubSpaceBoundrary(const TEveVector& v) const
 {
    // Checks if point is on sub-space boundrary.
 
-   return v.fY == fProjectedCenter.fY ;
+   return v.fY == fProjectedCenter.fY;
 }
 
 //==============================================================================
