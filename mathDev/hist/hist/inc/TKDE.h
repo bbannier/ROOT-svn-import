@@ -61,11 +61,11 @@ public:
 //    };
    
    template<class KernelFunction>
-         TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EIteration iter = kAdaptive, EMirror mir = kNoMirror/*, EBinning bin = kRelaxedBinning*/, Double_t rho = 1.0) {
+   TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EIteration iter = kAdaptive, EMirror mir = kNoMirror/*, EBinning bin = kRelaxedBinning*/, Double_t rho =  .288675134594812921/* Tuned factor for optimizing Gaussian like shapes */) {
       Instantiate(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc), events, data, xMin, xMax, iter, mir/*, bin*/, rho);
    }
       
-   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror/*, EBinning bin = kRelaxedBinning*/, Double_t rho = 1.0);
+   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror/*, EBinning bin = kRelaxedBinning*/, Double_t rho = .288675134594812921/* Tuned factor for optimizing Gaussian like shapes */);
    
    virtual ~TKDE();
    
@@ -107,7 +107,10 @@ private:
       std::vector<Double_t> fWeights; // Kernel weights (bandwidth)
       TKDE* fKDE;
 //       const std::vector<Double_t> GetBinCentreData() const;
-//       UInt_t Index(Double_t x, UInt_t i) const;
+// UInt_t Index(Double_t x, UInt_t i) const {
+//    // Returns the indices for the binned weights. Otherwise, the data order is returned
+//    return fKDE->fNEvents > fNWeights ? Index(x) : i;
+// }
       UInt_t Index(Double_t x) const;
    public:
       TKernel(UInt_t n, Double_t weight, TKDE* kde);

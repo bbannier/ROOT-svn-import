@@ -337,14 +337,15 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
    // Gets the adaptive weights (bandwidths) for TKernel internal computation
    std::vector<Double_t> weights = fWeights;
    std::vector<Double_t>::iterator weight = weights.begin();
+   Double_t minWeight(*weight * std::pow(50.0, -0.5)); // As implemented in RooKeysPdf
    std::vector<Double_t> dataset(/*fKDE->fUseBins ? GetBinCentreData() :*/ fKDE->fData);
    std::vector<Double_t>::iterator data = dataset.begin();
-   Double_t norm(/*2.0 * std::sqrt(3.0)*/ 1.); // Adaptive weight normalization used in RooKeysPdf
    for (; weight != weights.end(); ++weight, ++data) {
       Double_t f = (*fKDE->fKernel)(*data);
       if (f > 0.) {
-         *weight *= fKDE->fRho / fKDE->fSigma * std::pow(fKDE->fSigma / f, 0.5) / norm;
+         *weight *= fKDE->fRho / fKDE->fSigma * std::pow(fKDE->fSigma / f, 0.5);
       }
+      *weight = std::min(*weight, minWeight);
    }
    fWeights = weights;
 }
@@ -367,23 +368,18 @@ Double_t TKDE::TKernel::GetWeight(Double_t x) const {
 Double_t TKDE::TKernel::operator()(Double_t x) const {
    // The internal class's unary function: returns the kernel density estimate
    Double_t result(0.0);
-   for (UInt_t i = 0, j = 0; i < fKDE->fNEvents; ++i, ++j) {
+   for (UInt_t i = 0/*, j = 0*/; i < fKDE->fNEvents; ++i) {
 //       j = Index(fKDE->fData[i], i);
-      result += 1. / fWeights[j] * (*fKDE->fKernelFunction)((x - fKDE->fData[i]) / fWeights[j]);
+      result += 1. / fWeights[/*j*/i] * (*fKDE->fKernelFunction)((x - fKDE->fData[i]) / fWeights[/*j*/i]);
       if (fKDE->fAsymLeft) {
-         result -= 1. / fWeights[j] * (*fKDE->fKernelFunction)((x - (2 * fKDE->fXMin - fKDE->fData[i])) / fWeights[j]);
+         result -= 1. / fWeights[/*j*/i] * (*fKDE->fKernelFunction)((x - (2 * fKDE->fXMin - fKDE->fData[i])) / fWeights[/*j*/i]);
       }
       if (fKDE->fAsymRight) {
-         result -= 1. / fWeights[j] * (*fKDE->fKernelFunction)((x - (2 * fKDE->fXMax - fKDE->fData[i])) / fWeights[j]);
+         result -= 1. / fWeights[/*j*/i] * (*fKDE->fKernelFunction)((x - (2 * fKDE->fXMax - fKDE->fData[i])) / fWeights[/*j*/i]);
       }
    }
    return result / fKDE->fNEvents;
 }
-
-// UInt_t TKDE::TKernel::Index(Double_t x, UInt_t i) const {
-//    // Returns the indices for the binned weights. Otherwise, the data order is returned
-//    return fKDE->fNEvents > fNWeights ? Index(x) : i;
-// }
 
 UInt_t TKDE::TKernel::Index(Double_t x) const {
    // Returns the indices (bins) for the binned weights
