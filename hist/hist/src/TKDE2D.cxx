@@ -57,18 +57,18 @@ void TKDE2D::SetOptions(Double_t xMin, Double_t xMax, Double_t yMin, Double_t yM
    fYMin = yMin;
    fYMax = yMax; 
 
-   if (!(IsUserDefinedKernel || kern >= kGaussian && kern < kUserDefined)) {
-      this->Error("TKDE2D::SetOptions", "Ilegal user kernel type input!");
+   if (!(IsUserDefinedKernel) && !(kern >= kGaussian && kern < kUserDefined)) {
+      this->Error("TKDE2D::SetOptions", "Illegal user kernel type input - use template constructor for user defined kernel!");
       exit(EXIT_FAILURE);
    }
    fKernelType = kern;
    if (iter != kAdaptive && iter != kFixed) {
-      this->Error("TKDE2D::SetOptions", "Ilegal user iteration type input!");
+      this->Error("TKDE2D::SetOptions", "Illegal user iteration type input!");
       exit(EXIT_FAILURE);
    }
    fIteration = iter;
    if (!(mir >= kNoMirror && mir <= kMirrorAsymBoth)) {
-      this->Error("TKDE2D::SetOptions", "Ilegal user mirroring type input!");
+      this->Error("TKDE2D::SetOptions", "Illegal user mirroring type input!");
       exit(EXIT_FAILURE);
    }
    fBinning = bin;

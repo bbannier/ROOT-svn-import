@@ -56,24 +56,24 @@ void TKDE::SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration
    }
    fXMin = xMin;
    fXMax = xMax; 
-   if (!(IsUserDefinedKernel || kern >= kGaussian && kern < kUserDefined)) {
-      this->Error("TKDE::SetOptions", "Ilegal user kernel type input!");
+   if (!(IsUserDefinedKernel) && !(kern >= kGaussian && kern < kUserDefined)) {
+      this->Error("TKDE::SetOptions", "Illegal user kernel type input - use template constructor for user defined kernel!");
       exit(EXIT_FAILURE);
    }
    fKernelType = kern;
    if (iter != kAdaptive && iter != kFixed) {
-      this->Error("TKDE::SetOptions", "Ilegal user iteration type input!");
+      this->Error("TKDE::SetOptions", "Illegal user iteration type input!");
       exit(EXIT_FAILURE);
    }
    fIteration = iter;
    if (!(mir >= kNoMirror && mir <= kMirrorAsymBoth)) {
-      this->Error("TKDE::SetOptions", "Ilegal user mirroring type input!");
+      this->Error("TKDE::SetOptions", "Illegal user mirroring type input!");
       exit(EXIT_FAILURE);
    }
    fMirror = mir;
    SetMirror();
 //    if (!(bin >= kUnbinned && bin <= kForcedBinning)) {
-//       this->Error("TKDE::SetOptions", "Ilegal user binning type input!");
+//       this->Error("TKDE::SetOptions", "Illegal user binning type input!");
 //       exit(EXIT_FAILURE);
 //    }
 //    fBinning = bin;
