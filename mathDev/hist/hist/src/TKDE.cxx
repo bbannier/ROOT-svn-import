@@ -50,7 +50,7 @@ TKDE::~TKDE() {
   
 void TKDE::SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir/*, EBinning bin*/, Double_t rho, Bool_t IsUserDefinedKernel) {
    // Sets User global options
-   if (xMin != 1. || xMax != 0.0 && xMin >= xMax) { // protects default range initialization
+   if (xMin >= xMax) { // protects default range initialization
       MATH_ERROR_MSG("TKDE::SetOptions", "Minimum range cannot be bigger or equal than the maximum range!" << std::endl);
       exit(EXIT_FAILURE);
    }

@@ -52,18 +52,11 @@ TKDE2D::~TKDE2D() {
   
 void TKDE2D::SetOptions(Double_t xMin, Double_t xMax, Double_t yMin, Double_t yMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho, Bool_t IsUserDefinedKernel) {
    // Sets User global options
-   if (xMin != 1. || xMax != 0.0 && xMin >= xMax) { // protects default range initialization
-      MATH_ERROR_MSG("TKDE2D::SetOptions", "X minimum range cannot be bigger or equal than the maximum range!" << std::endl);
-      exit(EXIT_FAILURE);
-   }
    fXMin = xMin;
    fXMax = xMax;
-   if (yMin != 1. || yMax != 0.0 && yMin >= yMax) { // protects default range initialization
-      MATH_ERROR_MSG("TKDE2D::SetOptions", "Y minimum range cannot be bigger or equal than the maximum range!" << std::endl);
-      exit(EXIT_FAILURE);
-   }
    fYMin = yMin;
    fYMax = yMax; 
+
    if (!(IsUserDefinedKernel || kern >= kGaussian && kern < kUserDefined)) {
       this->Error("TKDE2D::SetOptions", "Ilegal user kernel type input!");
       exit(EXIT_FAILURE);
