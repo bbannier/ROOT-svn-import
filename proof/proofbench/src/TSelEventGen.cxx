@@ -31,6 +31,7 @@
 #include "TDSet.h"
 #include "TFile.h"
 #include "TSortedList.h"
+#include "TRandom.h"
 
 ClassImp(TSelEventGen)
 
@@ -397,7 +398,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
 
    TString hostfqdn=TUrl(gSystem->HostName()).GetHostFQDN();
    TString url="root://"+hostfqdn+"/"+filename;
-   //Info("Process", "url=%s", url.Data());
+   TString seed = hostfqdn+"/"+filename;
 
    //generate files
    if (fFileType==TProofBenchMode::kFileBenchmark){
@@ -425,6 +426,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
       }
 
       if (!filefound){
+         gRandom->SetSeed(static_cast<UInt_t>(TMath::Hash(seed)));
          neventstogenerate-=GenerateFiles(fFileType, filename, neventstogenerate);
          fDataSet->Add(url);
       }
@@ -470,6 +472,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
       }
 
       if (!filefound){
+         gRandom->SetSeed(static_cast<UInt_t>(TMath::Hash(seed)));
          byteswritten=GenerateFiles(fFileType, filename, bytestowrite);
          bytestowrite-=byteswritten;
          fDataSet->Add(url);
