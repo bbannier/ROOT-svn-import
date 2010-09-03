@@ -57,27 +57,11 @@ namespace
 std::string Reflex::SharedLibraryDefining(const void* functionPointer) {
 //-------------------------------------------------------------------------------
 
-   DWORD requested = 0;
-   EnumProcessModules(GetCurrentProcess(), NULL, 0, &requested);
-   HMODULE* modules = new HMODULE[requested];
-   DWORD needed = 0;
-   EnumProcessModules(GetCurrentProcess(), modules, requested, &needed);
-
    HMODULE hmodule = NULL;
-   for(DWORD i = 0; i < needed; ++i)
-   {
-      MODULEINFO moduleInfos = {0};
-      GetModuleInformation(GetCurrentProcess(), modules[i], &moduleInfos, sizeof(moduleInfos));
-
-      if (((DWORD)moduleInfos.lpBaseOfDll < (DWORD)functionPointer) &&
-          ((DWORD)functionPointer < (DWORD)moduleInfos.lpBaseOfDll + (DWORD)moduleInfos.SizeOfImage))
-      {
-         hmodule = modules[i];
-         break;
-      }
-   }
-   delete[] modules;
-
+   GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                     (LPCTSTR)functionPointer,
+                     &hmodule);
+   assert(hmodule && "Could not find the dll containing pointer.");
    return HModulePath(hmodule);
 }
 
