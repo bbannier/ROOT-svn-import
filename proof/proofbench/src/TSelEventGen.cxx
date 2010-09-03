@@ -128,12 +128,20 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          TNamed* a=dynamic_cast<TNamed*>(obj);
          if (a){
             TString proof_benchmarkbasedir=a->GetTitle();
-            if (gSystem->AccessPathName(proof_benchmarkbasedir, kWritePermission)){
-               //directory is not writable, use default directory
-               Info("BeginSlave", "\"%s\" directory is not writable, using default directory: %s", proof_benchmarkbasedir.Data(), fBaseDir.Data());
+            if (!proof_benchmarkbasedir.IsNull()){
+               if (!gSystem->AccessPathName(proof_benchmarkbasedir, kWritePermission)){
+                  //directory is writable
+                  fBaseDir=proof_benchmarkbasedir;
+                  Info("BeginSlave", "Using directory \"%s\"", fBaseDir.Data());
+               }
+               else{
+                  //directory is not writable, use default directory
+                  Warning("BeginSlave", "\"%s\" directory is not writable, using default directory: %s",
+                          proof_benchmarkbasedir.Data(), fBaseDir.Data());
+               }
             } 
             else{
-               fBaseDir=proof_benchmarkbasedir;
+               Info("BeginSlave", "Using default directory: %s", fBaseDir.Data());
             }
             found_basedir=kTRUE; 
          }
@@ -396,7 +404,8 @@ Bool_t TSelEventGen::Process(Long64_t entry)
       Long64_t neventstogenerate=fNEvents;
 
       Bool_t filefound=kFALSE;
-      if (!fRegenerate){
+      FileStat_t filestat;
+      if (!fRegenerate && !gSystem->GetPathInfo(filename, filestat)){//stat'ed
          TFile f(filename);
          if (!f.IsZombie()){
             TTree* t=(TTree*)f.Get("EventTree");
@@ -438,7 +447,8 @@ Bool_t TSelEventGen::Process(Long64_t entry)
       Long64_t bytestowrite=memorythisworker;
       Long64_t byteswritten=0;
       
-      if (!fRegenerate){
+      FileStat_t filestat;
+      if (!fRegenerate && !gSystem->GetPathInfo(filename, filestat)){//stat'ed
          TFile f(filename);
          if (!f.IsZombie()){
             TTree* t=(TTree*)f.Get("EventTree");
