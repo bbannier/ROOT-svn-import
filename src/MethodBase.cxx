@@ -1768,7 +1768,9 @@ TString TMVA::MethodBase::GetWeightFileName() const
    // the default consists of
    // directory/jobname_methodname_suffix.extension.{root/txt}
    TString suffix = "";
-   return ( GetWeightFileDir() + "/" + GetJobName() + "_" + GetMethodName() +
+   TString wFileDir(GetWeightFileDir());
+   return ( wFileDir + (wFileDir[wFileDir.Length()-1]=='/' ? "" : "/") 
+	    + GetJobName() + "_" + GetMethodName() +
             suffix + "." + gConfig().GetIONames().fWeightFileExtension + ".xml" );
 }
 
