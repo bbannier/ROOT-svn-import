@@ -94,10 +94,7 @@ void TMVA::MethodPDEFoam::Init( void )
    fnSampl         = 2000;
    fnBin           = 5;
    fEvPerBin       = 10000;
-   fCutNmin        = kTRUE;
    fNmin           = 100;
-   fCutRMSmin      = kFALSE;   // default TFoam method
-   fRMSmin         = 0.01;
    fMaxDepth       = 0;  // cell tree depth is unlimited
    fFillFoamWithOrigWeights = kFALSE;
    fUseYesNoCell   = kFALSE; // return -1 or 1 for bg or signal like events
@@ -135,7 +132,6 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    DeclareOptionRef( fnBin = 5,               "nBin",     "Number of bins in edge histograms");
    DeclareOptionRef( fCompress = kTRUE,       "Compress", "Compress foam output file");
    DeclareOptionRef( fMultiTargetRegression = kFALSE,     "MultiTargetRegression", "Do regression with multiple targets");
-   DeclareOptionRef( fCutNmin = kTRUE,         "CutNmin",  "Requirement for minimal number of events in cell");
    DeclareOptionRef( fNmin = 100,             "Nmin",     "Number of events in cell required to split cell");
    DeclareOptionRef( fMaxDepth = 0,           "MaxDepth",  "Maximum depth of cell tree (0=unlimited)");
    DeclareOptionRef( fFillFoamWithOrigWeights = kFALSE, "FillFoamWithOrigWeights", "Fill foam with original or boost weights");
@@ -174,11 +170,6 @@ void TMVA::MethodPDEFoam::ProcessOptions()
 
    fVolFrac = Int_t(1./fVolFracInv + 0.5); // round
 
-   if (fCutRMSmin && fRMSmin>1.0) {
-      Log() << kWARNING << "RMSmin > 1.0 ==> using 1.0 instead" << Endl;
-      fRMSmin = 1.0;
-   }
-
    // DT logic is only applicable if a single foam is trained
    if (fSigBgSeparated && fDTLogic != "None") {
       Log() << kWARNING << "Decision tree logic works only for a single foam (SigBgSeparate=F)" << Endl;
@@ -201,9 +192,6 @@ void TMVA::MethodPDEFoam::ProcessOptions()
       fDTLogic = "None";
       fDTSeparation = kFoam;
    }
-   
-   if (fNmin==0)
-      fCutNmin = false;
 
    if (fKernelStr == "None" ) fKernel = kNone;
    else if (fKernelStr == "Gauss" ) fKernel = kGaus;
@@ -403,7 +391,7 @@ void TMVA::MethodPDEFoam::TrainSeparatedClassification()
       Log() << kINFO << "Build up " << foamcaption[i] << Endl;
       // build foam
       fFoam.back()->SetNElements(1);  // init space for 1 variable on every cell (number of events in cell)
-      fFoam.back()->Create(fCutNmin);
+      fFoam.back()->Create(fNmin > 0);
 
       // Reset Cell Integrals
       fFoam.back()->SetNElements(2);  // init space for 2 variables on every cell (N_ev, RMS)
@@ -441,7 +429,7 @@ void TMVA::MethodPDEFoam::TrainUnifiedClassification()
    Log() << kINFO << "Build up discriminator foam" << Endl;
    // build foam with 1 cell element
    fFoam.back()->SetNElements(1);     // init space for 1 variable on every cell (number of events in cell)
-   fFoam.back()->Create(fCutNmin);    // build foam and create cell elements if Nmin-cut is activated
+   fFoam.back()->Create(fNmin > 0);    // build foam and create cell elements if Nmin-cut is activated
 
    Log() << kVERBOSE << "Resetting cell elements" << Endl;
    // Reset cell elements, used after foam build-up
@@ -492,7 +480,7 @@ void TMVA::MethodPDEFoam::TrainMonoTargetRegression()
    Log() << kINFO << "Build mono target regression foam" << Endl;
    // build foam
    fFoam.back()->SetNElements(1);        // to save N_ev during foam build-up
-   fFoam.back()->Create(fCutNmin);
+   fFoam.back()->Create(fNmin > 0);
 
    Log() << kVERBOSE << "Resetting cell elements" << Endl;
    // Reset Cell Integrals
@@ -540,7 +528,7 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
    Log() << kINFO << "Build multi target regression foam" << Endl;
    // build foam
    fFoam.back()->SetNElements(1);          // to save N_ev during build-up
-   fFoam.back()->Create(fCutNmin);
+   fFoam.back()->Create(fNmin > 0);
 
    Log() << kVERBOSE << "Resetting cell elements" << Endl;
    // Reset Cell values
@@ -679,10 +667,7 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    pdefoam->SetPeekMax(fPeekMax);
 
    // cuts
-   pdefoam->CutNmin(fCutNmin);     // cut on minimal number of events per cell
    pdefoam->SetNmin(fNmin);
-   pdefoam->CutRMSmin(fCutRMSmin); // cut on minimal RMS in cell
-   pdefoam->SetRMSmin(fRMSmin);
    pdefoam->SetMaxDepth(fMaxDepth); // maximum cell tree depth
 
    // Init PDEFoam
@@ -751,10 +736,7 @@ void TMVA::MethodPDEFoam::AddWeightsXMLTo( void* parent ) const
    gTools().AddAttr( wght, "EvPerBin",        fEvPerBin );
    gTools().AddAttr( wght, "Compress",        fCompress );
    gTools().AddAttr( wght, "DoRegression",    DoRegression() );
-   gTools().AddAttr( wght, "CutNmin",         fCutNmin );
    gTools().AddAttr( wght, "Nmin",            fNmin );
-   gTools().AddAttr( wght, "CutRMSmin",       fCutRMSmin );
-   gTools().AddAttr( wght, "RMSmin",          fRMSmin );
    gTools().AddAttr( wght, "Kernel",          KernelToUInt(fKernel) );
    gTools().AddAttr( wght, "TargetSelection", TargetSelectionToUInt(fTargetSelection) );
    gTools().AddAttr( wght, "FillFoamWithOrigWeights", fFillFoamWithOrigWeights );
@@ -825,10 +807,7 @@ void  TMVA::MethodPDEFoam::ReadWeightsFromStream( istream& istr )
    istr >> regr;                            // regression foam
    SetAnalysisType( (regr ? Types::kRegression : Types::kClassification ) );
    
-   istr >> fCutNmin;                        // cut on minimal number of events in cell
    istr >> fNmin;
-   istr >> fCutRMSmin;                      // cut on minimal RMS in cell
-   istr >> fRMSmin;
 
    UInt_t ker = 0;
    istr >> ker;                             // used kernel for GetMvaValue()
@@ -879,10 +858,7 @@ void TMVA::MethodPDEFoam::ReadWeightsFromXML( void* wghtnode )
    Bool_t regr;
    gTools().ReadAttr( wghtnode, "DoRegression",    regr );
    SetAnalysisType( (regr ? Types::kRegression : Types::kClassification ) );
-   gTools().ReadAttr( wghtnode, "CutNmin",         fCutNmin );
    gTools().ReadAttr( wghtnode, "Nmin",            fNmin );
-   gTools().ReadAttr( wghtnode, "CutRMSmin",       fCutRMSmin );
-   gTools().ReadAttr( wghtnode, "RMSmin",          fRMSmin );
    UInt_t ker = 0;
    gTools().ReadAttr( wghtnode, "Kernel",          ker );
    fKernel = UIntToKernel(ker);
@@ -1033,7 +1009,6 @@ void TMVA::MethodPDEFoam::GetHelpMessage() const
    Log() << "         nActiveCells     500   Maximal number of active cells in final foam " << Endl;
    Log() << "               nSampl    2000   Number of MC events per cell in foam build-up " << Endl;
    Log() << "                 nBin       5   Number of bins used in foam build-up " << Endl;
-   Log() << "              CutNmin    True   Requirement for minimal number of events in cell " << Endl;
    Log() << "                 Nmin     100   Number of events in cell required to split cell" << Endl;
    Log() << "               Kernel    None   Kernel type used (possible valuses are: None," << Endl;
    Log() << "                                Gauss)" << Endl;

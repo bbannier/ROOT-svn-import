@@ -107,10 +107,7 @@ TMVA::PDEFoam::PDEFoam() :
    fXmin(0),
    fXmax(0),
    fNElements(0),
-   fCutNmin(kTRUE),
    fNmin(100),
-   fCutRMSmin(kFALSE),
-   fRMSmin(1.0),
    fMaxDepth(0),
    fVolFrac(1.0/30.0),
    fFillFoamWithOrigWeights(kFALSE),
@@ -145,10 +142,7 @@ TMVA::PDEFoam::PDEFoam(const TString& Name) :
    fXmin(0),
    fXmax(0),
    fNElements(0),
-   fCutNmin(kTRUE),
    fNmin(100),
-   fCutRMSmin(kFALSE),
-   fRMSmin(1.0),
    fMaxDepth(0),
    fVolFrac(1.0/30.0),
    fFillFoamWithOrigWeights(kFALSE),
@@ -408,7 +402,7 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
    dx = cell->GetVolume();
    intOld = cell->GetIntg(); //memorize old values,
    driOld = cell->GetDriv(); //will be needed for correcting parent cells
-   if (CutNmin())
+   if (GetNmin() > 0)
       toteventsOld = GetBuildUpCellEvents(cell);
 
    /////////////////////////////////////////////////////
@@ -481,17 +475,14 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
    Double_t intDriv=0.;
 
    if (kBest == -1) Varedu(ceSum,kBest,xBest,yBest); // determine the best edge,
-   if (CutRMSmin())
-      intDriv =sqrt( ceSum[1]/nevMC -intTrue*intTrue ); // Older ansatz, numerically not bad
-   else
-      intDriv =sqrt(ceSum[1]/nevMC) -intTrue; // Foam build-up, sqrt(<w**2>) -<w>
+   intDriv =sqrt(ceSum[1]/nevMC) -intTrue; // Foam build-up, sqrt(<w**2>) -<w>
 
    //=================================================================================
    cell->SetBest(kBest);
    cell->SetXdiv(xBest);
    cell->SetIntg(intTrue);
    cell->SetDriv(intDriv);
-   if (CutNmin())
+   if (GetNmin() > 0)
       SetCellElement(cell, 0, totevents);
 
    // correct/update integrals in all parent cells to the top of the tree
@@ -501,7 +492,7 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
       parDriv = parent->GetDriv();
       parent->SetIntg( parIntg   +intTrue -intOld );
       parent->SetDriv( parDriv   +intDriv -driOld );
-      if (CutNmin())
+      if (GetNmin() > 0)
 	 SetCellElement( parent, 0, GetBuildUpCellEvents(parent) + totevents - toteventsOld);
    }
    delete [] volPart;
@@ -587,7 +578,7 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
 
    // set cell element 0 (total number of events in cell) during
    // build-up
-   if (CutNmin())
+   if (GetNmin() > 0)
       SetCellElement( cell, 0, nTotS + nTotB);
 
    // clean up
@@ -705,14 +696,13 @@ Long_t TMVA::PDEFoam::PeekMax()
    // Internal subprogram used by Create.
    // It finds cell with maximal driver integral for the purpose of the division.
    // This function is overridden by the PDEFoam Class to apply cuts
-   // on Nmin and RMSmin during cell buildup.
+   // on Nmin during cell buildup.
 
    Long_t iCell = -1;
 
    Long_t  i;
    Double_t  drivMax, driv;
    Bool_t bCutNmin = kTRUE;
-   Bool_t bCutRMS  = kTRUE;
    Bool_t bCutMaxDepth = kTRUE;
    //   drivMax = gVlow;
    drivMax = 0;  // only split cells if gain>0 (this also avoids splitting at cell boundary)
@@ -728,19 +718,12 @@ Long_t TMVA::PDEFoam::PeekMax()
 	 if (GetMaxDepth() > 0)
 	    bCutMaxDepth = fCells[i]->GetDepth() < GetMaxDepth();
 
-         // apply RMS-cut for all options
-         if (CutRMSmin()){
-            // calc error on rms, but how?
-            bCutRMS = driv > GetRMSmin() /*&& driv > driv_err*/;
-            Log() << kINFO << "rms[cell "<<i<<"]=" << driv << Endl;
-         }
-
          // apply Nmin-cut
-         if (CutNmin())
+         if (GetNmin() > 0)
             bCutNmin = GetBuildUpCellEvents(fCells[i]) > GetNmin();
 
          // choose cell
-         if(driv > drivMax && bCutNmin && bCutRMS && bCutMaxDepth) {
+         if(driv > drivMax && bCutNmin && bCutMaxDepth) {
             drivMax = driv;
             iCell = i;
          }
@@ -751,9 +734,6 @@ Long_t TMVA::PDEFoam::PeekMax()
       if (!bCutNmin)
          Log() << kVERBOSE << "Warning: No cell with more than " 
 	       << GetNmin() << " events found!" << Endl;
-      else if (!bCutRMS)
-         Log() << kVERBOSE << "Warning: No cell with RMS/mean > " 
-	       << GetRMSmin() << " found!" << Endl;
       else if (!bCutMaxDepth)
          Log() << kVERBOSE << "Warning: Maximum depth reached: " 
 	       << GetMaxDepth() << Endl;
@@ -773,7 +753,6 @@ Long_t TMVA::PDEFoam::PeekLast()
    Long_t iCell = -1;
 
    Bool_t bCutNmin = kTRUE;
-   Bool_t bCutRMS  = kTRUE;
    Bool_t bCutMaxDepth = kTRUE;
 
    for(Long_t i=fLastCe; i>=0; i--) {
@@ -787,11 +766,11 @@ Long_t TMVA::PDEFoam::PeekLast()
 	    bCutMaxDepth = fCells[i]->GetDepth() < GetMaxDepth();
 
          // apply Nmin-cut
-         if (CutNmin())
+         if (GetNmin() > 0)
             bCutNmin = GetBuildUpCellEvents(fCells[i]) > GetNmin();
 
          // choose cell
-         if(bCutNmin && bCutRMS && bCutMaxDepth) {
+         if(bCutNmin && bCutMaxDepth) {
             iCell = i;
 	    break;
 	 }
@@ -802,9 +781,6 @@ Long_t TMVA::PDEFoam::PeekLast()
       if (!bCutNmin)
          Log() << kVERBOSE << "Warning: No cell with more than " 
 	       << GetNmin() << " events found!" << Endl;
-      else if (!bCutRMS)
-         Log() << kVERBOSE << "Warning: No cell with RMS/mean > " 
-	       << GetRMSmin() << " found!" << Endl;
       else if (!bCutMaxDepth)
          Log() << kVERBOSE << "Warning: Maximum depth reached: " 
 	       << GetMaxDepth() << Endl;

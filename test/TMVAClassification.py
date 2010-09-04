@@ -298,11 +298,11 @@ def main():
     # Multi-dimensional likelihood estimator using self-adapting phase-space binning
     if "PDEFoam" in mlist:
         factory.BookMethod( TMVA.Types.kPDEFoam, "PDEFoam", 
-                            "H:!V:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:CutNmin=T:Nmin=100:Kernel=None:Compress=T" )
+                            "H:!V:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0333:nActiveCells=500:nSampl=2000:nBin=5:Nmin=100:Kernel=None:Compress=T" )
 
     if "PDEFoamBoost" in mlist:
         factory.BookMethod( TMVA.Types.kPDEFoam, "PDEFoamBoost", 
-                           "!H:!V:Boost_Num=30:Boost_Transform=linear:SigBgSeparate=F:MaxDepth=4:UseYesNoCell=T:DTLogic=MisClassificationError:FillFoamWithOrigWeights=F:TailCut=0:nActiveCells=500:nBin=20:CutNmin=T:Nmin=400:Kernel=None:Compress=T" )
+                           "!H:!V:Boost_Num=30:Boost_Transform=linear:SigBgSeparate=F:MaxDepth=4:UseYesNoCell=T:DTLogic=MisClassificationError:FillFoamWithOrigWeights=F:TailCut=0:nActiveCells=500:nBin=20:Nmin=400:Kernel=None:Compress=T" )
 
     # K-Nearest Neighbour classifier (KNN)
     if "KNN" in mlist:

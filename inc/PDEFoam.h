@@ -128,10 +128,7 @@ namespace TMVA {
       Double_t *fXmin;         // [fDim] minimum for variable transform
       Double_t *fXmax;         // [fDim] maximum for variable transform
       UInt_t fNElements;       // number of variables in every cell
-      Bool_t fCutNmin;         // true: activate cut on minimal number of events in cell
       UInt_t fNmin;            // minimal number of events in cell to split cell
-      Bool_t fCutRMSmin;       // true: peek cell with max. RMS for next split
-      Double_t fRMSmin;        // activate cut: minimal RMS in cell to split cell
       UInt_t fMaxDepth;        // maximum depth of cell tree
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
       Bool_t fFillFoamWithOrigWeights; // fill the foam with boost or orig. weights
@@ -256,14 +253,8 @@ namespace TMVA {
       PDEFoamCell* GetRootCell()   const {return fCells[0];}; // get pointer to root cell
 
       // Getters and Setters for user cut options
-      void     CutNmin(Bool_t cut )    { fCutNmin = cut;    }
-      Bool_t   CutNmin()               { return fCutNmin;   }
-      void     CutRMSmin(Bool_t cut )  { fCutRMSmin = cut;  }
-      Bool_t   CutRMSmin()             { return fCutRMSmin; }
       void     SetNmin(UInt_t val)     { fNmin=val;      }
       UInt_t   GetNmin()               { return fNmin;   }
-      void     SetRMSmin(Double_t val) { fRMSmin=val;    }
-      Double_t GetRMSmin()             { return fRMSmin; }
       Bool_t   GetFillFoamWithOrigWeights(){ return fFillFoamWithOrigWeights; }
       void     SetMaxDepth(UInt_t maxdepth) { fMaxDepth = maxdepth; }
       UInt_t   GetMaxDepth() const { return fMaxDepth; }
