@@ -215,9 +215,6 @@ namespace TMVA {
       Bool_t        fCompress;        // compress foam output file
       Bool_t        fMultiTargetRegression; // do regression on multible targets
       UInt_t        fNmin;            // minimal number of events in cell necessary to split cell"
-      Bool_t        fCutNmin;         // Grabbing cell with maximal RMS to split next (TFoam default)
-      Double_t      fRMSmin;          // minimal number of events in cell necessary to split cell"
-      Bool_t        fCutRMSmin;       // Grabbing cell with maximal RMS to split next (TFoam default)
       UInt_t        fMaxDepth;        // maximum depth of cell tree
 
       TString       fKernelStr;       // Kernel for GetMvaValue() (option string)
