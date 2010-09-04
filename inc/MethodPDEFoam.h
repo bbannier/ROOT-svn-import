@@ -218,12 +218,17 @@ namespace TMVA {
       Bool_t        fCutNmin;         // Grabbing cell with maximal RMS to split next (TFoam default)
       Double_t      fRMSmin;          // minimal number of events in cell necessary to split cell"
       Bool_t        fCutRMSmin;       // Grabbing cell with maximal RMS to split next (TFoam default)
+      UInt_t        fMaxDepth;        // maximum depth of cell tree
 
       TString       fKernelStr;       // Kernel for GetMvaValue() (option string)
       EKernel       fKernel;          // Kernel for GetMvaValue()
       TString       fTargetSelectionStr; // method of selecting the target (only mulit target regr.)
       ETargetSelection fTargetSelection; // method of selecting the target (only mulit target regr.)
       Bool_t        fFillFoamWithOrigWeights; // fill the foam with boost weights
+      Bool_t        fUseYesNoCell;    // return -1 or 1 for bg or signal like event
+      TString       fDTLogic;         // use DT algorithm to split cells
+      EDTSeparation fDTSeparation;    // enum which specifies the separation to use for the DT logic
+      Bool_t        fPeekMax;         // peek up cell with max. driver integral for split
      
       std::vector<Double_t> fXmin, fXmax; // range for histograms and foams
 

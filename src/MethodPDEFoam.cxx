@@ -98,7 +98,12 @@ void TMVA::MethodPDEFoam::Init( void )
    fNmin           = 100;
    fCutRMSmin      = kFALSE;   // default TFoam method
    fRMSmin         = 0.01;
-   fFillFoamWithOrigWeights = kTRUE;
+   fMaxDepth       = 0;  // cell tree depth is unlimited
+   fFillFoamWithOrigWeights = kFALSE;
+   fUseYesNoCell   = kFALSE; // return -1 or 1 for bg or signal like events
+   fDTLogic        = "None";
+   fDTSeparation   = kFoam;
+   fPeekMax        = kTRUE;
 
    fKernel         = kNone; // default: use no kernel
    fTargetSelection= kMean; // default: use mean for target selection (only multi target regression!)
@@ -110,7 +115,10 @@ void TMVA::MethodPDEFoam::Init( void )
       if (fFoam.at(i)) delete fFoam.at(i);
    fFoam.clear();
 
-   SetSignalReferenceCut( 0.5 );
+   if (fUseYesNoCell)
+      SetSignalReferenceCut( 0.0 );
+   else
+      SetSignalReferenceCut( 0.5 );
 }
 
 //_______________________________________________________________________
@@ -129,7 +137,15 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    DeclareOptionRef( fMultiTargetRegression = kFALSE,     "MultiTargetRegression", "Do regression with multiple targets");
    DeclareOptionRef( fCutNmin = kTRUE,         "CutNmin",  "Requirement for minimal number of events in cell");
    DeclareOptionRef( fNmin = 100,             "Nmin",     "Number of events in cell required to split cell");
-   DeclareOptionRef( fFillFoamWithOrigWeights = kTRUE, "FillFoamWithOrigWeights", "Fill foam with original or boost weights");
+   DeclareOptionRef( fMaxDepth = 0,           "MaxDepth",  "Maximum depth of cell tree (0=unlimited)");
+   DeclareOptionRef( fFillFoamWithOrigWeights = kFALSE, "FillFoamWithOrigWeights", "Fill foam with original or boost weights");
+   DeclareOptionRef( fUseYesNoCell = kFALSE, "UseYesNoCell", "Return -1 or 1 for bkg or signal like events");
+   DeclareOptionRef( fDTLogic = "None", "DTLogic", "Use decision tree algorithm to split cells");
+   AddPreDefVal(TString("None"));
+   AddPreDefVal(TString("GiniIndex"));
+   AddPreDefVal(TString("MisClassificationError"));
+   AddPreDefVal(TString("CrossEntropy"));
+   DeclareOptionRef( fPeekMax = kTRUE, "PeekMax", "Peek up cell with max. driver integral for the next split");
 
    DeclareOptionRef( fKernelStr = "None",     "Kernel",   "Kernel type used");
    AddPreDefVal(TString("None"));
@@ -161,6 +177,29 @@ void TMVA::MethodPDEFoam::ProcessOptions()
    if (fCutRMSmin && fRMSmin>1.0) {
       Log() << kWARNING << "RMSmin > 1.0 ==> using 1.0 instead" << Endl;
       fRMSmin = 1.0;
+   }
+
+   // DT logic is only applicable if a single foam is trained
+   if (fSigBgSeparated && fDTLogic != "None") {
+      Log() << kWARNING << "Decision tree logic works only for a single foam (SigBgSeparate=F)" << Endl;
+      fDTLogic = "None";
+      fDTSeparation = kFoam;
+   } 
+
+   // set separation to use
+   if (fDTLogic == "None")
+      fDTSeparation = kFoam;
+   else if (fDTLogic == "GiniIndex")
+      fDTSeparation = kGiniIndex;
+   else if (fDTLogic == "MisClassificationError")
+      fDTSeparation = kMisClassificationError;
+   else if (fDTLogic == "CrossEntropy")
+      fDTSeparation = kCrossEntropy;
+   else {
+      Log() << kWARNING << "Unknown separation type: " << fDTLogic 
+	    << ", setting to None" << Endl;
+      fDTLogic = "None";
+      fDTSeparation = kFoam;
    }
    
    if (fNmin==0)
@@ -581,7 +620,10 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err )
    // attribute error
    if (err != 0) *err = discr_error;
 
-   return discr;
+   if (fUseYesNoCell)
+      return (discr < 0.5 ? -1 : 1);
+   else
+      return discr;
 }
 
 //_______________________________________________________________________
@@ -633,12 +675,15 @@ void TMVA::MethodPDEFoam::InitFoam(TMVA::PDEFoam *pdefoam, EFoamType ft){
    pdefoam->SetnBin(        fnBin);      // optional
    pdefoam->SetEvPerBin(    fEvPerBin);  // optional
    pdefoam->SetFillFoamWithOrigWeights(fFillFoamWithOrigWeights);
+   pdefoam->SetDTSeparation(fDTSeparation);
+   pdefoam->SetPeekMax(fPeekMax);
 
    // cuts
    pdefoam->CutNmin(fCutNmin);     // cut on minimal number of events per cell
    pdefoam->SetNmin(fNmin);
    pdefoam->CutRMSmin(fCutRMSmin); // cut on minimal RMS in cell
    pdefoam->SetRMSmin(fRMSmin);
+   pdefoam->SetMaxDepth(fMaxDepth); // maximum cell tree depth
 
    // Init PDEFoam
    pdefoam->Init();
@@ -713,6 +758,7 @@ void TMVA::MethodPDEFoam::AddWeightsXMLTo( void* parent ) const
    gTools().AddAttr( wght, "Kernel",          KernelToUInt(fKernel) );
    gTools().AddAttr( wght, "TargetSelection", TargetSelectionToUInt(fTargetSelection) );
    gTools().AddAttr( wght, "FillFoamWithOrigWeights", fFillFoamWithOrigWeights );
+   gTools().AddAttr( wght, "UseYesNoCell",    fUseYesNoCell );
    
    // save foam borders Xmin[i], Xmax[i]
    void *xmin_wrap;
@@ -793,6 +839,7 @@ void  TMVA::MethodPDEFoam::ReadWeightsFromStream( istream& istr )
    fTargetSelection = UIntToTargetSelection(ts);
 
    istr >> fFillFoamWithOrigWeights;        // fill foam with original event weights
+   istr >> fUseYesNoCell;                   // return -1 or 1 for bg or signal event
 
    // clear old range and prepare new range
    fXmin.clear();
@@ -843,6 +890,7 @@ void TMVA::MethodPDEFoam::ReadWeightsFromXML( void* wghtnode )
    gTools().ReadAttr( wghtnode, "TargetSelection", ts );
    fTargetSelection = UIntToTargetSelection(ts);
    gTools().ReadAttr( wghtnode, "FillFoamWithOrigWeights", fFillFoamWithOrigWeights );
+   gTools().ReadAttr( wghtnode, "UseYesNoCell",    fUseYesNoCell );
    
    // clear old range [Xmin, Xmax] and prepare new range for reading
    fXmin.clear();
