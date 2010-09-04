@@ -346,17 +346,16 @@ void TMVA::MethodBoost::Train()
 
 	 // get ROC integral and overlap integral for single method on
 	 // training sample
-	 fROC_training = GetBoostROCIntegral(kTRUE, Types::kTraining, 
-					     1.0, kTRUE);
+	 fROC_training = GetBoostROCIntegral(kTRUE, Types::kTraining, kTRUE);
 	 
 	 // calculate method weight
 	 CalcMethodWeight();
          AllMethodsWeight += fMethodWeight.back();
 
 	 (*fMonitorHist)[4]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kTRUE, Types::kTesting));
-	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTesting, AllMethodsWeight));
+	 (*fMonitorHist)[5]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTesting));
 	 (*fMonitorHist)[6]->SetBinContent(fMethodIndex+1, fROC_training);
-	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTraining, AllMethodsWeight));
+	 (*fMonitorHist)[7]->SetBinContent(fMethodIndex+1, GetBoostROCIntegral(kFALSE, Types::kTraining));
 	 (*fMonitorHist)[8]->SetBinContent(fMethodIndex+1, fOverlap_integral);
 
          // boosting (reweight training sample)
@@ -843,13 +842,11 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETreeType eTT, Double_t AllMethodsWeight, Bool_t CalcOverlapIntergral)
+Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETreeType eTT, Bool_t CalcOverlapIntergral)
 {
    // Calculate the ROC integral of a single classifier or even the
    // whole boosted classifier.  The tree type (training or testing
-   // sample) is specified by 'eTT'.  In case of the full boosted
-   // classifier, the 'AllMethodsWeight' must be specified in order to
-   // normalize the single classifiers correctly.
+   // sample) is specified by 'eTT'.
    //
    // If tree type kTraining is set, the original training sample is
    // used to compute the ROC integral (original weights).
@@ -859,10 +856,6 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    //                  integral of full classifier
    //
    // - eTT - tree type (Types::kTraining / Types::kTesting)
-   //
-   // - AllMethodsWeight - sum of all trained methods; needed in case
-   //                      of full classifier to normalize the single
-   //                      methods
    //
    // - CalcOverlapIntergral - if kTRUE, the overlap integral of the
    //                          signal/background MVA distributions
@@ -880,12 +873,17 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    // save the old normalization of the methods
    std::vector<Double_t> OldMethodWeight(fMethodWeight);
    if (!singleMethod) {
+      // calculate sum of weights of all methods
+      Double_t AllMethodsWeight = 0;
+      for (Int_t i=0; i<=fMethodIndex; i++)
+	 AllMethodsWeight += fMethodWeight.at(i);
       // normalize the weights of the classifiers
       if (fMethodWeightType == "LastMethod") 
 	 fMethodWeight.back() = AllMethodsWeight = 1.0;
-      for (Int_t i=0; i<=fMethodIndex; i++)
-	 if (AllMethodsWeight != 0.0)
-	    fMethodWeight[i] = fMethodWeight[i] / AllMethodsWeight;
+      if (AllMethodsWeight != 0.0) {
+	 for (Int_t i=0; i<=fMethodIndex; i++)
+	    fMethodWeight[i] /= AllMethodsWeight;
+      }
    }
 
    // calculate MVA values
