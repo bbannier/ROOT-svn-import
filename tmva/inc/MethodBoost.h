@@ -121,14 +121,14 @@ namespace TMVA {
       //training a single classifier
       void SingleTrain();
 
-      //testing a single classifier
-      void SingleTest(Int_t);
-
       //calculating a boosting weight from the classifier, storing it in the next one
       void SingleBoost();
 
-      // testing a whole classifier
-      void FullTest(Double_t);
+      // calculate weight of single method
+      void CalcMethodWeight();
+
+      // return ROC integral on training/testing sample
+      Double_t GetBoostROCIntegral(Bool_t, Types::ETreeType, Double_t AllMethodsWeight=1.0, Bool_t CalcOverlapIntergral=kFALSE);
 
       //writing the monitoring histograms and tree to a file
       void WriteMonitoringHistosToFile( void ) const;
@@ -147,6 +147,10 @@ namespace TMVA {
 
       //creating the vectors of histogram for monitoring MVA response of each classifier
       void CreateMVAHistorgrams();
+
+      // calculate MVA values of current trained method on training
+      // sample
+      void CalcMVAValues();
 
       //Number of times the classifier is boosted (set by the user)
       Int_t             fBoostNum;
@@ -206,7 +210,15 @@ namespace TMVA {
       //whether to recalculate the MVA cut at every boosting step
       Bool_t            fRecalculateMVACut;
 
+      // roc integral of last trained method (on training sample)
+      Double_t          fROC_training;
 
+      // overlap integral of mva distributions for signal and
+      // background (training sample)
+      Double_t          fOverlap_integral;
+
+      // mva values for the last trained method (on training sample)
+      std::vector<Float_t> *fMVAvalues;
       
       DataSetManager* fDataSetManager; // DSMTEST
       friend class Factory; // DSMTEST

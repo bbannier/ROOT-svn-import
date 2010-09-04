@@ -88,6 +88,9 @@ namespace TMVA {
    // kDensity       : number of events/cell volume
    enum ECellValue { kNev, kDiscriminator, kDiscriminatorError, kTarget0, 
                      kTarget0Error, kMeanValue, kRms, kRmsOvMean, kDensity };
+   // separation quantity to use (kFoam: use PDEFoam algorithm)
+   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
+			kCrossEntropy };
 }
 
 namespace TMVA {
@@ -129,8 +132,11 @@ namespace TMVA {
       UInt_t fNmin;            // minimal number of events in cell to split cell
       Bool_t fCutRMSmin;       // true: peek cell with max. RMS for next split
       Double_t fRMSmin;        // activate cut: minimal RMS in cell to split cell
+      UInt_t fMaxDepth;        // maximum depth of cell tree
       Float_t fVolFrac;        // volume fraction (with respect to total phase space
       Bool_t fFillFoamWithOrigWeights; // fill the foam with boost or orig. weights
+      EDTSeparation fDTSeparation; // split cells according to decision tree logic
+      Bool_t fPeekMax;         // peek up cell with max. driver integral for split
       PDEFoamDistr *fDistr;    //! distribution of training events
       Timer *fTimer;           // timer for graphical output
       TObjArray *fVariableNames;// collection of all variable names
@@ -163,12 +169,15 @@ namespace TMVA {
       void InitCells(Bool_t CreateCellElements);      // Initialisation of all foam cells
       Int_t CellFill(Int_t, PDEFoamCell*);// Allocates new empty cell and return its index
       void Explore(PDEFoamCell *Cell);    // Exploration of the new cell, determine <wt>, wtMax etc.
+      void DTExplore(PDEFoamCell *Cell);  // Exploration of the new cell according to decision tree logic
       void Varedu(Double_t [], Int_t&, Double_t&,Double_t&); // Determines the best edge, variace reduction
       void MakeAlpha();             // Provides random point inside hyperrectangle
       void Grow();                  // build up foam
       Long_t PeekMax();             // peek cell with max. driver integral
+      Long_t PeekLast();            // peek last created cell
       Int_t  Divide(PDEFoamCell *); // Divide iCell into two daughters; iCell retained, taged as inactive
       Double_t Eval(Double_t *xRand, Double_t &event_density); // evaluate distribution on point 'xRand'
+      Float_t GetSeparation(Float_t s, Float_t b); // calculate Gini index
 
       // ---------- Cell value access functions
 
@@ -233,6 +242,8 @@ namespace TMVA {
       void SetVolumeFraction(Double_t); // set VolFrac to PDEFoamDistr
       void SetFoamType(EFoamType ft);   // set foam type
       void SetFillFoamWithOrigWeights(Bool_t new_val){fFillFoamWithOrigWeights=new_val;}
+      void SetDTSeparation(EDTSeparation new_val){fDTSeparation=new_val;}
+      void SetPeekMax(Bool_t new_val){ fPeekMax = new_val; }
 
       Int_t    GetTotDim()    const {return fDim;  } // Get total dimension
       TString  GetFoamName()  const {return fName; } // Get name of foam
@@ -254,6 +265,8 @@ namespace TMVA {
       void     SetRMSmin(Double_t val) { fRMSmin=val;    }
       Double_t GetRMSmin()             { return fRMSmin; }
       Bool_t   GetFillFoamWithOrigWeights(){ return fFillFoamWithOrigWeights; }
+      void     SetMaxDepth(UInt_t maxdepth) { fMaxDepth = maxdepth; }
+      UInt_t   GetMaxDepth() const { return fMaxDepth; }
 
       // Getters and Setters for foam boundaries
       void SetXmin(Int_t idim, Double_t wmin);
