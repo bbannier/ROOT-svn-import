@@ -2356,17 +2356,6 @@ Double_t TMVA::PDEFoam::GetProjectionCellValue( PDEFoamCell* cell,
 }
 
 //_____________________________________________________________________
-TVectorD* TMVA::PDEFoam::GetCellElements( std::vector<Float_t> &xvec )
-{
-   // Returns pointer to cell elements.  The given event vector 'xvec'
-   // must be untransformed (i.e. [xmin, xmax]).
-
-   assert(unsigned(GetTotDim()) == xvec.size());
-   std::vector<Float_t> txvec(VarTransform(xvec));
-   return dynamic_cast<TVectorD*>(FindCell(txvec)->GetElement());
-}
-
-//_____________________________________________________________________
 Double_t TMVA::PDEFoam::GetCellElement( PDEFoamCell *cell, UInt_t i )
 {
    // Returns cell element i of cell 'cell'.
