@@ -1131,32 +1131,22 @@ void TMVA::PDEFoam::ResetCellElements(Bool_t allcells)
    if (allcells){
       Log() << kVERBOSE << "Reset new cell elements to "
             << GetNElements() << " value(s) per cell" << Endl;
-      // create new cell elements on every cell
-      for(Long_t iCell=0; iCell<fNCells; iCell++) {
-         TVectorD *elem = new TVectorD(GetNElements());
-
-         for (UInt_t i=0; i<GetNElements(); i++)
-            (*elem)(i) = 0.;
-
-         fCells[iCell]->SetElement(elem);
-      }
    } else {
       Log() << kVERBOSE << "Reset active cell elements to "
             << GetNElements() << " value(s) per cell" << Endl;
-      // create new cell elements (only active cells with
-      // cell index <= fLastCe)
-      for(Long_t iCell=0; iCell<=fLastCe; iCell++) {
-         // skip inactive cells
-         if (!(fCells[iCell]->GetStat()))
-            continue;
+   }
 
-         TVectorD *elem = new TVectorD(GetNElements());
+   // create new cell elements
+   for(Long_t iCell=0; iCell<(allcells ? fNCells : fLastCe+1); iCell++) {
+      // skip inactive cells if allcells == false
+      if (!allcells && !(fCells[iCell]->GetStat()))
+	 continue;
 
-         for (UInt_t i=0; i<GetNElements(); i++)
-            (*elem)(i) = 0.;
+      TVectorD *elem = new TVectorD(GetNElements());
+      for (UInt_t i=0; i<GetNElements(); i++)
+	 (*elem)(i) = 0.;
 
-         fCells[iCell]->SetElement(elem);
-      }
+      fCells[iCell]->SetElement(elem);
    }
 }
 
