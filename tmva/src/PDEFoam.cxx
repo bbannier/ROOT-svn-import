@@ -2073,7 +2073,7 @@ TH1D* TMVA::PDEFoam::Draw1Dim( const char *opt, Int_t nbin )
 }
 
 //_____________________________________________________________________
-TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const char *ker, UInt_t maxbins )
+TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const char *ker, UInt_t nbin )
 {
    // Project foam variable idim1 and variable idim2 to histogram.
    //
@@ -2092,8 +2092,7 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
    //
    // - ker - kGaus, kNone (warning: Gaus may be very slow!)
    //
-   // - maxbins - maximal number of bins in result histogram.
-   //   Set maxbins to 0 if no maximum bin number should be used.
+   // - nbin - number of bins in x and y direction of result histogram.
    //
    // Returns:
    // a 2-dimensional histogram
@@ -2138,24 +2137,6 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
    else
       Log() << kWARNING << "Warning: wrong kernel! using kNone instead" << Endl;
 
-   Double_t bin_width = 1.; // minimal size of cell
-
-   // loop over all cells to determine minimal cell size -> use for bin width
-   for (Long_t iCell=0; iCell<=fLastCe; iCell++) { // loop over all active cells
-      if (!(fCells[iCell]->GetStat())) continue;   // cell not active -> continue
-      // get cell position and dimesions
-      PDEFoamVect  cellPosi(GetTotDim()), cellSize(GetTotDim());
-      fCells[iCell]->GetHcub(cellPosi,cellSize);
-      // loop over all dimensions and determine minimal cell size
-      for (Int_t d1=0; d1<GetTotDim(); d1++)
-         if (cellSize[d1]<bin_width && cellSize[d1]>0)
-            bin_width = cellSize[d1];
-   }
-   UInt_t nbin = UInt_t(1./bin_width);  // calculate number of bins
-
-   if (maxbins>0 && nbin>maxbins) // limit maximum number of bins
-      nbin = maxbins;
-
    // root can not handle too many bins in one histogram --> catch this
    // Furthermore, to have more than 1000 bins in the histogram doesn't make
    // sense.
@@ -2163,6 +2144,10 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
       Log() << kWARNING << "Warning: number of bins too big: " << nbin
             << " Using 1000 bins for each dimension instead." << Endl;
       nbin = 1000;
+   } else if (nbin<1) {
+      Log() << kWARNING << "Wrong bin number: " << nbin 
+	    << "; set nbin=50" << Endl;
+      nbin = 50;
    }
 
    // create result histogram
@@ -2190,24 +2175,21 @@ TH2D* TMVA::PDEFoam::Project2( Int_t idim1, Int_t idim2, const char *opt, const 
       // this value will later be filled into the histogram
       Double_t var = GetProjectionCellValue(fCells[iCell], idim1, idim2, cell_value);
 
-      const Double_t xsmall = (1.e-20)*cellSize[idim1];
-      const Double_t ysmall = (1.e-20)*cellSize[idim2];
-
       // coordinates of upper left corner of cell
-      Double_t x1 = VarTransformInvers( idim1, cellPosi[idim1]+xsmall );
-      Double_t y1 = VarTransformInvers( idim2, cellPosi[idim2]+ysmall );
+      Double_t x1 = VarTransformInvers( idim1, cellPosi[idim1] );
+      Double_t y1 = VarTransformInvers( idim2, cellPosi[idim2] );
 
       // coordinates of lower right corner of cell
-      Double_t x2 = VarTransformInvers( idim1, cellPosi[idim1]+cellSize[idim1]-xsmall );
-      Double_t y2 = VarTransformInvers( idim2, cellPosi[idim2]+cellSize[idim2]-ysmall );
+      Double_t x2 = VarTransformInvers( idim1, cellPosi[idim1]+cellSize[idim1] );
+      Double_t y2 = VarTransformInvers( idim2, cellPosi[idim2]+cellSize[idim2] );
 
       // most left and most right bins, which correspond to cell
       // borders
-      Int_t xbin_start = h1->GetXaxis()->FindBin(x1);
+      Int_t xbin_start = TMath::Max(1, h1->GetXaxis()->FindBin(x1));
       Int_t xbin_stop  = h1->GetXaxis()->FindBin(x2);
 
       // upper and lower bins, which correspond to cell borders
-      Int_t ybin_start = h1->GetYaxis()->FindBin(y1);
+      Int_t ybin_start = TMath::Max(1, h1->GetYaxis()->FindBin(y1));
       Int_t ybin_stop  = h1->GetYaxis()->FindBin(y2);
 
       // loop over all bins, which the cell occupies
