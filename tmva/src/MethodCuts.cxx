@@ -663,6 +663,8 @@ void  TMVA::MethodCuts::Train( void )
 
       // clean up
       for (UInt_t ivar=0; ivar<ranges.size(); ivar++) delete ranges[ivar];
+      delete fitter;
+      
    }
    // --------------------------------------------------------------------------
    else if (fFitMethod == kUseEventScan) {
@@ -793,11 +795,21 @@ Double_t TMVA::MethodCuts::EstimatorFunction( Int_t ievt1, Int_t ievt2 )
    Double_t* evt2 = new Double_t[nvar];
    
    const Event *ev1 = GetEvent(ievt1);
-   if (!DataInfo().IsSignal(ev1)) return -1;
+   if (!DataInfo().IsSignal(ev1)) {
+      delete ev1;
+      delete[] evt1;
+      delete[] evt2;
+      return -1;
+   }
    for (Int_t ivar=0; ivar<nvar; ivar++) evt1[ivar] = ev1->GetValue( ivar );
 
    const Event *ev2 = GetEvent(ievt2);
-   if (!DataInfo().IsSignal(ev2)) return -1;
+   if (!DataInfo().IsSignal(ev2)) {
+      delete ev2;
+      delete[] evt1;
+      delete[] evt2;
+      return -1;
+   }
    for (Int_t ivar=0; ivar<nvar; ivar++) evt2[ivar] = ev2->GetValue( ivar );
 
    // determine cuts

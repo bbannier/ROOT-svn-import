@@ -107,7 +107,7 @@ void TMVA::MethodANNBase::DeclareOptions()
    DeclareOptionRef( fNcycles    = 500,       "NCycles",         "Number of training cycles" );
    DeclareOptionRef( fLayerSpec  = "N,N-1",   "HiddenLayers",    "Specification of hidden layer architecture" );
    DeclareOptionRef( fNeuronType = "sigmoid", "NeuronType",      "Neuron activation function type" );
-   DeclareOptionRef( fRandomSeed = 0, "RandomSeed", "Random seed for initial synapse weights (0 means unique seed for each run)");
+   DeclareOptionRef( fRandomSeed = 1, "RandomSeed", "Random seed for initial synapse weights (0 means unique seed for each run; default value '1')");
 
    DeclareOptionRef(fEstimatorS="MSE", "EstimatorType",
                     "MSE (Mean Square Estimator) for Gaussian Likelihood or CE(Cross-Entropy) for Bernoulli Likelihood" ); //zjh
@@ -954,7 +954,14 @@ void TMVA::MethodANNBase::WriteMonitoringHistosToFile() const
    CreateWeightMonitoringHists( "weights_hist" );
 
    // now save all the epoch-wise monitoring information
-   TDirectory* epochdir = BaseDir()->mkdir( "EpochMonitoring" );
+   static int epochMonitoringDirectoryNumber = 0;
+   TDirectory* epochdir = NULL;
+   if( epochMonitoringDirectoryNumber == 0 )
+      epochdir = BaseDir()->mkdir( "EpochMonitoring" );
+   else
+      epochdir = BaseDir()->mkdir( Form("EpochMonitoring_%4d",epochMonitoringDirectoryNumber) );
+   ++epochMonitoringDirectoryNumber;
+
    epochdir->cd();
    for (std::vector<TH1*>::const_iterator it = fEpochMonHistS.begin(); it != fEpochMonHistS.end(); it++) {
       (*it)->Write();

@@ -414,6 +414,8 @@ void TMVA::MethodBoost::Train()
    if (fMethods.size()==1)  fMethodWeight[0] = 1.0;
 
    fMethods.back()->MonitorBoost(SetStage(Types::kBoostProcEnd));
+
+   delete timer1;
 }
 
 //_______________________________________________________________________

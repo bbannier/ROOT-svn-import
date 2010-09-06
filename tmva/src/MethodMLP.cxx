@@ -271,7 +271,8 @@ Double_t TMVA::MethodMLP::CalculateEstimator( Types::ETreeType treeType, Int_t i
       if (DoRegression()) {
          for (UInt_t itgt = 0; itgt < nTgts; itgt++) {
             v = GetOutputNeuron( itgt )->GetActivationValue();
-            Double_t dt = v - ev->GetTarget( itgt );
+	    Double_t targetValue = ev->GetTarget( itgt );
+            Double_t dt = v - targetValue;
             d += (dt*dt);
          }
 //         d = TMath::Sqrt(d);
