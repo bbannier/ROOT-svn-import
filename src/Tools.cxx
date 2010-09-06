@@ -1319,6 +1319,34 @@ void TMVA::Tools::TMVAWelcomeMessage( MsgLogger& logger, EWelcomeMessage msgType
 }
 
 //_______________________________________________________________________
+void TMVA::Tools::TMVACitation( MsgLogger& logger, ECitation citType )
+{
+   // kinds of TMVA citation
+
+   switch (citType) {
+
+   case kPlainText:
+      logger << "Hoecker, A.; Speckmayer, P.; Stelzer, J.; Therhaag, J.; von Toerne, E. & Voss TMVA - Toolkit for Multivariate Data Analysis ArXiv Physics e-prints, 2007" << Endl;
+      break;
+
+   case kBibTeX:
+      logger << "@ARTICLE{TMVA2007," << Endl;
+      logger << "author = {{Hoecker}, A. and {Speckmayer}, P. and {Stelzer}, J. and {Therhaag}," << Endl;
+      logger << "J. and {von Toerne}, E. and {Voss}}," << Endl;
+      logger << "title = {{TMVA - Toolkit for Multivariate Data Analysis}}," << Endl;
+      logger << "journal = {ArXiv Physics e-prints}," << Endl;
+      logger << "year = {2007}," << Endl;
+      logger << "month = mar," << Endl;
+      logger << "adsnote = {Provided by the SAO/NASA Astrophysics Data System}," << Endl;
+      logger << "adsurl = {http://adsabs.harvard.edu/abs/2007physics...3039H}," << Endl;
+      logger << "eprint = {arXiv:physics/0703039}," << Endl;
+      logger << "keywords = {Physics - Data Analysis, Statistics and Probability}" << Endl;
+      break;
+
+   }
+}
+
+//_______________________________________________________________________
 Bool_t TMVA::Tools::HistoHasEquidistantBins(const TH1& h)
 {
    return !(h.GetXaxis()->GetXbins()->fN);

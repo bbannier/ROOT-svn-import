@@ -198,10 +198,16 @@ namespace TMVA {
                              kOriginalWelcomeMsgColor,
                              kOriginalWelcomeMsgBW };
 
+      // print TMVA citation (to be called from, eg, .TMVAlogon)
+      enum ECitation { kPlainText = 1,
+		       kBibTeX };
+
       void TMVAWelcomeMessage();
       void TMVAWelcomeMessage( MsgLogger& logger, EWelcomeMessage m = kStandardWelcomeMsg );
       void TMVAVersionMessage( MsgLogger& logger );
       void ROOTVersionMessage( MsgLogger& logger );
+
+      void TMVACitation( MsgLogger& logger, ECitation citType = kPlainText );
 
       // string tools
 

@@ -343,6 +343,7 @@ Double_t TMVA::MethodCommittee::Bagging( UInt_t imember )
       ev->SetBoostWeight( ev->GetBoostWeight() * Data()->GetNTrainingEvents() / newSumw );      
    }
 
+   delete trandom;
    // return weight factor for this committee member
    return 1.0;  // here as there are random weights for each event, just return a constant==1;
 }

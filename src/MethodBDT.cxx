@@ -1009,6 +1009,7 @@ Double_t TMVA::MethodBDT::Bagging( vector<TMVA::Event*> eventSample, Int_t iTree
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       (*e)->SetBoostWeight( (*e)->GetBoostWeight() * eventSample.size() / newSumw );
    }
+   delete trandom;
    return 1.;  //here as there are random weights for each event, just return a constant==1;
 }
 
@@ -1169,7 +1170,7 @@ void TMVA::MethodBDT::ReadWeightsFromXML(void* parent) {
 void  TMVA::MethodBDT::ReadWeightsFromStream( istream& istr )
 {
    // read the weights (BDT coefficients)
-   TString var, dummy;
+   TString dummy;
    //   Types::EAnalysisType analysisType;
    Int_t analysisType(0);
 
