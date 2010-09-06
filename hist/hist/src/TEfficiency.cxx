@@ -80,7 +80,7 @@ TEfficiency::TEfficiency(const TH1& passed,const TH1& total):
    //       - Clones of both histograms are stored internally
    //       - The function SetName(total.GetName() + "_clone") is called to set
    //         the names of the new object and the internal histograms..
-   //       - The created TEfficiency object is Begin_Html<b>not</b>End_Html appended to a directory. It
+   //       - The created TEfficiency object is NOT appended to a directory. It
    //         will not be written to disk during the next TFile::Write() command
    //         in order to prevent duplication of data. If you want to save this
    //         TEfficiency object anyway, you can either append it to a
@@ -462,7 +462,20 @@ TEfficiency::~TEfficiency()
 //______________________________________________________________________________
 Double_t TEfficiency::AgrestiCoullLow(Int_t total,Int_t passed,Double_t level)
 {
-   //misiing
+   //calculates the lower boundary for the frequentist Agresti-Coull interval
+   //
+   //Input: - total : number of total events
+   //       - passed: 0 <= number of passed events <= total
+   //       - level : confidence level
+   //
+   //calculation:
+   //Begin_Latex(separator='=',align='rl')
+   // #alpha = 1 - #frac{level}{2}
+   // #kappa = #Phi^{-1}(1 - #alpha,1) ... normal quantile function
+   // mode = #frac{passed + #frac{#kappa^{2}}{2}}{total + #kappa^{2}}
+   // #Delta = #kappa * #sqrt{#frac{mode * (1 - mode)}{total + #kappa^{2}}}
+   // return =  max(0,mode - #Delta)
+   //End_Latex
    
    Double_t alpha = (1.0 - level)/2;
    Double_t kappa = ROOT::Math::normal_quantile(1 - alpha,1);
@@ -476,7 +489,20 @@ Double_t TEfficiency::AgrestiCoullLow(Int_t total,Int_t passed,Double_t level)
 //______________________________________________________________________________
 Double_t TEfficiency::AgrestiCoullUp(Int_t total,Int_t passed,Double_t level)
 {
-   //misiing
+   //calculates the upper boundary for the frequentist Agresti-Coull interval
+   //
+   //Input: - total : number of total events
+   //       - passed: 0 <= number of passed events <= total
+   //       - level : confidence level
+   //
+   //calculation:
+   //Begin_Latex(separator='=',align='rl')
+   // #alpha = 1 - #frac{level}{2}
+   // #kappa = #Phi^{-1}(1 - #alpha,1) ... normal quantile function
+   // mode = #frac{passed + #frac{#kappa^{2}}{2}}{total + #kappa^{2}}
+   // #Delta = #kappa * #sqrt{#frac{mode * (1 - mode)}{total + #kappa^{2}}}
+   // return =  min(1,mode + #Delta)
+   //End_Latex
    
    Double_t alpha = (1.0 - level)/2;
    Double_t kappa = ROOT::Math::normal_quantile(1 - alpha,1);
@@ -490,17 +516,77 @@ Double_t TEfficiency::AgrestiCoullUp(Int_t total,Int_t passed,Double_t level)
 //______________________________________________________________________________
 Double_t TEfficiency::BayesianLow(Int_t total,Int_t passed,Double_t level,Double_t alpha,Double_t beta)
 {
-   //misiing
-   
-   return (passed == 0)? 0.0 : ROOT::Math::beta_quantile((1-level)/2,passed+alpha,total-passed+beta);
+   //calculates the lower boundary for a baysian confidence interval
+   //
+   //Input: - total : number of total events
+   //       - passed: 0 <= number of passed events <= total
+   //       - level : confidence level
+   //       - alpha : shape parameter > 0 for the prior distribution (fBeta_alpha)
+   //       - beta  : shape parameter > 0 for the prior distribution (fBeta_beta)
+   //
+   //Note: The equal-tailed confidence interval is calculated which might be not
+   //      the shortest interval containing the desired coverage probability.
+   //
+   //Calculation:
+   //
+   //The posterior probability in bayesian statistics is given by:
+   //Begin_Latex P(#varepsilon |k,N) #propto L(#varepsilon|k,N) #times Prior(#varepsilon)End_Latex
+   //As an efficiency can be interpreted as probability of a positive outcome of
+   //a Bernoullli trial the likelihood function is given by the binomial
+   //distribution:
+   //Begin_Latex L(#varepsilon|k,N) = Binomial(N,k) #varepsilon ^{k} (1 - #varepsilon)^{N-k}End_Latex
+   //At the moment only beta distributions are supported as prior probabilities
+   //of the efficiency (Begin_Latex #scale[0.8]{B(#alpha,#beta)}End_Latex is the beta function):
+   //Begin_Latex Prior(#varepsilon) = #frac{1}{B(#alpha,#beta)} #varepsilon ^{#alpha - 1} (1 - #varepsilon)^{#beta - 1}End_Latex
+   //The posterior probability is therefore again given by a beta distribution:
+   //Begin_Latex P(#varepsilon |k,N) #propto #varepsilon ^{k + #alpha - 1} (1 - #varepsilon)^{N - k + #beta - 1} End_Latex
+   //The lower boundary for the equal-tailed confidence interval is given by the
+   //inverse cumulative (= quantile) function for the quantile Begin_Latex #frac{1 - level}{2} End_Latex.
+   //Hence it is the solution Begin_Latex #varepsilon End_Latex of the following equation:
+   //Begin_Latex I_{#varepsilon}(k + #alpha,N - k + #beta) = #frac{1}{norm} #int_{0}^{#varepsilon} dt t^{k + #alpha - 1} (1 - t)^{N - k + #beta - 1} =  #frac{1 - level}{2} End_Latex
+
+   if((alpha > 0) && (beta > 0))
+      return (passed == 0)? 0.0 : ROOT::Math::beta_quantile((1-level)/2,passed+alpha,total-passed+beta);
+   else
+      return 0;
 }
 
 //______________________________________________________________________________
 Double_t TEfficiency::BayesianUp(Int_t total,Int_t passed,Double_t level,Double_t alpha,Double_t beta)
 {
-   //misiing
-   
-   return (passed == total)? 1.0 : ROOT::Math::beta_quantile((1+level)/2,passed+alpha,total-passed+beta);
+   //calculates the upper boundary for a baysian confidence interval
+   //
+   //Input: - total : number of total events
+   //       - passed: 0 <= number of passed events <= total
+   //       - level : confidence level
+   //       - alpha : shape parameter > 0 for the prior distribution (fBeta_alpha)
+   //       - beta  : shape parameter > 0 for the prior distribution (fBeta_beta)
+   //
+   //Note: The equal-tailed confidence interval is calculated which might be not
+   //      the shortest interval containing the desired coverage probability.
+   //
+   //Calculation:
+   //
+   //The posterior probability in bayesian statistics is given by:
+   //Begin_Latex P(#varepsilon |k,N) #propto L(#varepsilon|k,N) #times Prior(#varepsilon)End_Latex
+   //As an efficiency can be interpreted as probability of a positive outcome of
+   //a Bernoullli trial the likelihood function is given by the binomial
+   //distribution:
+   //Begin_Latex L(#varepsilon|k,N) = Binomial(N,k) #varepsilon ^{k} (1 - #varepsilon)^{N-k}End_Latex
+   //At the moment only beta distributions are supported as prior probabilities
+   //of the efficiency (Begin_Latex #scale[0.8]{B(#alpha,#beta)}End_Latex is the beta function):
+   //Begin_Latex Prior(#varepsilon) = #frac{1}{B(#alpha,#beta)} #varepsilon ^{#alpha - 1} (1 - #varepsilon)^{#beta - 1}End_Latex
+   //The posterior probability is therefore again given by a beta distribution:
+   //Begin_Latex P(#varepsilon |k,N) #propto #varepsilon ^{k + #alpha - 1} (1 - #varepsilon)^{N - k + #beta - 1} End_Latex
+   //The upper boundary for the equal-tailed confidence interval is given by the
+   //inverse cumulative (= quantile) function for the quantile Begin_Latex #frac{1 + level}{2} End_Latex.
+   //Hence it is the solution Begin_Latex #varepsilon End_Latex of the following equation:
+   //Begin_Latex I_{#varepsilon}(k + #alpha,N - k + #beta) = #frac{1}{norm} #int_{0}^{#varepsilon} dt t^{k + #alpha - 1} (1 - t)^{N - k + #beta - 1} =  #frac{1 + level}{2} End_Latex
+
+   if((alpha > 0) && (beta > 0))
+      return (passed == total)? 1.0 : ROOT::Math::beta_quantile((1+level)/2,passed+alpha,total-passed+beta);
+   else
+      return 1;
 }
 
 //______________________________________________________________________________
@@ -634,7 +720,31 @@ Bool_t TEfficiency::CheckEntries(const TH1& pass,const TH1& total)
 //______________________________________________________________________________
 Double_t TEfficiency::ClopperPearsonLow(Int_t total,Int_t passed,Double_t level)
 {
-   //misiing
+   //calculates the lower boundary for the frequentist Clopper-Pearson interval
+   //
+   //This interval is recommended by the PDG.
+   //
+   //Input: - total : number of total events
+   //       - passed: 0 <= number of passed events <= total
+   //       - level : confidence level
+   //
+   //calculation:
+   //
+   //The lower boundary of the Clopper-Pearson interval is the "exact" inversion
+   //of the test:
+   //Begin_Latex(separator='=',aling='rl')
+   //P(x #geq passed; total) = #frac{1 - level}{2}
+   //P(x #geq passed; total) = 1 - P(x #leq passed - 1; total)
+   // = 1 - #frac{1}{norm} * #int_{0}^{1 - #varepsilon} t^{total - passed} (1 - t)^{passed - 1} dt
+   // = 1 - #frac{1}{norm} * #int_{#varepsilon}^{1} t^{passed - 1} (1 - t)^{total - passed} dt
+   // = #frac{1}{norm} * #int_{0}^{#varepsilon} t^{passed - 1} (1 - t)^{total - passed} dt
+   // = I_{#varepsilon}(passed,total - passed + 1)
+   //End_Latex
+   //The lower boundary is therfore given by the Begin_Latex #frac{1 - level}{2}End_Latex quantile
+   //of the beta distribution.
+   //
+   //Note: The connection between the binomial distribution and the regularized
+   //      incomplete beta function Begin_Latex I_{#varepsilon}(#alpha,#beta)End_Latex has been used.
    
    Double_t alpha = (1.0 - level) / 2;
    return ((passed == 0) ? 0.0 : ROOT::Math::beta_quantile(alpha,passed,total-passed+1.0));
@@ -643,7 +753,31 @@ Double_t TEfficiency::ClopperPearsonLow(Int_t total,Int_t passed,Double_t level)
 //______________________________________________________________________________
 Double_t TEfficiency::ClopperPearsonUp(Int_t total,Int_t passed,Double_t level)
 {
-   //misiing
+   //calculates the upper boundary for the frequentist Clopper-Pearson interval
+   //
+   //This interval is recommended by the PDG.
+   //
+   //Input: - total : number of total events
+   //       - passed: 0 <= number of passed events <= total
+   //       - level : confidence level
+   //
+   //calculation:
+   //
+   //The upper boundary of the Clopper-Pearson interval is the "exact" inversion
+   //of the test:
+   //Begin_Latex(separator='=',aling='rl')
+   //P(x #leq passed; total) = #frac{1 - level}{2}
+   //P(x #leq passed; total) = #frac{1}{norm} * #int_{0}^{1 - #varepsilon} t^{total - passed - 1} (1 - t)^{passed} dt
+   // = #frac{1}{norm} * #int_{#varepsilon}^{1} t^{passed} (1 - t)^{total - passed - 1} dt
+   // = 1 - #frac{1}{norm} * #int_{0}^{#varepsilon} t^{passed} (1 - t)^{total - passed - 1} dt
+   // #Rightarrow 1 - #frac{1 - level}{2} = #frac{1}{norm} * #int_{0}^{#varepsilon} t^{passed} (1 - t)^{total - passed -1} dt
+   // #frac{1 + level}{2} = I_{#varepsilon}(passed + 1,total - passed)
+   //End_Latex
+   //The upper boundary is therfore given by the Begin_Latex #frac{1 + level}{2}End_Latex quantile
+   //of the beta distribution.
+   //
+   //Note: The connection between the binomial distribution and the regularized
+   //      incomplete beta function Begin_Latex I_{#varepsilon}(#alpha,#beta)End_Latex has been used.
    
    Double_t alpha = (1.0 - level) / 2;
    return ((passed == total) ? 1.0 : ROOT::Math::beta_quantile(1 - alpha,passed + 1,total-passed));
@@ -1476,13 +1610,14 @@ void TEfficiency::SetName(const char* name)
    TNamed::SetName(name);
    
    //setting the names (appending the correct ending)
-   char namebuf[strlen(name)+8];
+   char* namebuf = new char[strlen(name)+8];
    strcpy(namebuf,name);
    strcat(namebuf,"_total");
    fTotalHistogram->SetName(namebuf);
    strcpy(namebuf,name);
    strcat(namebuf,"_passed");
    fPassedHistogram->SetName(namebuf);
+   delete namebuf;
 }
 
 //______________________________________________________________________________
@@ -1613,12 +1748,12 @@ void TEfficiency::SetTitle(const char* title)
    TNamed::SetTitle(title);
    
    //setting the titles (looking for the first semicolon and insert the tokens there)
-   char titlebuf[strlen(title)+10];
+   char* titlebuf = new char[strlen(title)+10];
    strcpy(titlebuf,title);
    char* semicolon = strchr(titlebuf,';');
    if(semicolon != 0)
    {
-      char axistitles[strlen(titlebuf)];
+      char* axistitles = new char[strlen(titlebuf)];
       strcpy(axistitles,semicolon);
       
       strcpy(semicolon," (total)\0");
@@ -1627,6 +1762,8 @@ void TEfficiency::SetTitle(const char* title)
       strcpy(semicolon," (passed)\0");
       strcat(titlebuf,axistitles);
       fPassedHistogram->SetTitle(titlebuf);
+
+      delete [] axistitles;
    }
    else
    {
@@ -1636,6 +1773,8 @@ void TEfficiency::SetTitle(const char* title)
       strcat(titlebuf," (passed)");
       fPassedHistogram->SetTitle(titlebuf);
    }
+
+   delete [] titlebuf;
 }
 
 //______________________________________________________________________________
@@ -1711,6 +1850,21 @@ void TEfficiency::SetWeight(Double_t weight)
 //______________________________________________________________________________
 Double_t TEfficiency::WilsonLow(Int_t total,Int_t passed,Double_t level)
 {
+   //calculates the lower boundary for the frequentist Wilson interval
+   //
+   //Input: - total : number of total events
+   //       - passed: 0 <= number of passed events <= total
+   //       - level : confidence level
+   //
+   //calculation:
+   //Begin_Latex(separator='=',align='rl')
+   // #alpha = 1 - #frac{level}{2}
+   // #kappa = #Phi^{-1}(1 - #alpha,1) ... normal quantile function
+   // mode = #frac{passed + #frac{#kappa^{2}}{2}}{total + #kappa^{2}}
+   // #Delta = #frac{#kappa}{total + #kappa^{2}} * #sqrt{passed (1 - #frac{passed}{total}) + #frac{#kappa^{2}}{4}}
+   // return =  max(0,mode - #Delta)
+   //End_Latex
+   
    Double_t alpha = (1.0 - level)/2;
    Double_t average = ((Double_t)passed) / total;
    Double_t kappa = ROOT::Math::normal_quantile(1 - alpha,1);
@@ -1724,6 +1878,21 @@ Double_t TEfficiency::WilsonLow(Int_t total,Int_t passed,Double_t level)
 //______________________________________________________________________________
 Double_t TEfficiency::WilsonUp(Int_t total,Int_t passed,Double_t level)
 {
+   //calculates the upper boundary for the frequentist Wilson interval
+   //
+   //Input: - total : number of total events
+   //       - passed: 0 <= number of passed events <= total
+   //       - level : confidence level
+   //
+   //calculation:
+   //Begin_Latex(separator='=',align='rl')
+   // #alpha = 1 - #frac{level}{2}
+   // #kappa = #Phi^{-1}(1 - #alpha,1) ... normal quantile function
+   // mode = #frac{passed + #frac{#kappa^{2}}{2}}{total + #kappa^{2}}
+   // #Delta = #frac{#kappa}{total + #kappa^{2}} * #sqrt{passed (1 - #frac{passed}{total}) + #frac{#kappa^{2}}{4}}
+   // return =  min(1,mode + #Delta)
+   //End_Latex
+   
    Double_t alpha = (1.0 - level)/2;
    Double_t average = ((Double_t)passed) / total;
    Double_t kappa = ROOT::Math::normal_quantile(1 - alpha,1);
