@@ -167,7 +167,7 @@ private:
    
    inline Double_t GaussianKernel(Double_t x) const {
       // Returns the kernel evaluation at x 
-      return _2_PI_ROOT_INV * std::exp(-.5 * x * x);
+      return (x > -9. && x < 9.) ? _2_PI_ROOT_INV * std::exp(-.5 * x * x) : 0.0;
    }
    inline Double_t EpanechnikovKernel(Double_t x) const {
       return (x > -1. &&  x < 1.) ? 3. / 4. * (1. - x * x) : 0.0;
