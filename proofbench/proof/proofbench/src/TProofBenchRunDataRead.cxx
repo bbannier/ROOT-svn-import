@@ -195,7 +195,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
 
       profile_perfstat_event->SetDirectory(fDirProofBench);
       profile_perfstat_event->GetXaxis()->SetTitle("Number of Slaves");
-      profile_perfstat_event->GetYaxis()->SetTitle("#times10^{3} Events/sec");
+      profile_perfstat_event->GetYaxis()->SetTitle("Events/sec");
       profile_perfstat_event->SetMarkerStyle(21);
 
       fListPerfProfiles->Add(profile_perfstat_event);
@@ -235,7 +235,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
       profile_queryresult_event=new TProfile(profile_queryresult_event_name, profile_queryresult_event_title, ndiv, ns_min-0.5, ns_max+0.5);
       profile_queryresult_event->SetDirectory(fDirProofBench);
       profile_queryresult_event->GetXaxis()->SetTitle("Number of Slaves");
-      profile_queryresult_event->GetYaxis()->SetTitle("#times10^{3} Events/sec");
+      profile_queryresult_event->GetYaxis()->SetTitle("Events/sec");
       profile_queryresult_event->SetMarkerStyle(22);
 
       fListPerfProfiles->Add(profile_queryresult_event);
@@ -379,19 +379,9 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
          Long64_t qr_entries=queryresult->GetEntries();
 
          //calculate event rate, fill and draw
-         Long64_t qr_entriesinkilo=0;
          Double_t qr_eventrate=0;
 
-         const Long64_t Lkilobytes=1024;
-         const Double_t Dkilobytes=1024;
-
-         if (qr_entries>1024*Lkilobytes){
-            qr_entriesinkilo=qr_entries/Lkilobytes;
-            qr_eventrate=qr_entriesinkilo/Double_t(qr_init+qr_proc);
-         }
-         else{
-            qr_eventrate=qr_entries/Double_t(qr_init+qr_proc)/Dkilobytes;
-         }
+         qr_eventrate=qr_entries/Double_t(qr_init+qr_proc);
 
          profile_queryresult_event->Fill(nactive, qr_eventrate);
          fCPerfProfiles->cd(npad++);
@@ -399,19 +389,11 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
          gPad->Update();
 
          //calculate IO rate, fill and draw
-         Long64_t qr_bytesinmega=0;
          Double_t qr_IOrate=0;
 
-         const Long64_t Lmegabytes=1024*1024;
          const Double_t Dmegabytes=1024*1024;
 
-         if (qr_IOrate>1024*Lmegabytes){
-            qr_bytesinmega=qr_bytes/Lmegabytes;
-            qr_IOrate=qr_bytesinmega/Double_t(qr_init+qr_proc);
-         }
-         else{
-            qr_IOrate=qr_bytes/Double_t(qr_init+qr_proc)/Dmegabytes;
-         }
+         qr_IOrate=qr_bytes/Dmegabytes/Double_t(qr_init+qr_proc);
 
          profile_queryresult_IO->Fill(nactive, qr_IOrate);
          fCPerfProfiles->cd(npad++);
@@ -484,9 +466,9 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t, TProfile* profile_ev
    // Return
    //    Nothing
 
-   Int_t nevents_holder;
-   Int_t bytes_holder;
-   Float_t time_holder;
+   Long64_t nevents_holder;
+   Long64_t bytes_holder;
+   Double_t time_holder;
 
    Int_t max_slaves=0;
 
@@ -547,10 +529,11 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t, TProfile* profile_ev
 
    Double_t event_rate, IO_rate;
 
-   event_rate=nevents_holder/time_holder/1000.; 
+   event_rate=nevents_holder/time_holder; 
    profile_event->Fill(Double_t(nactive), event_rate);
 
-   IO_rate=bytes_holder/time_holder/(1024.*1024.); 
+   const Double_t Dmegabytes=1024.*1024.;
+   IO_rate=bytes_holder/Dmegabytes/time_holder; 
    profile_IO->Fill(Double_t(nactive), IO_rate);
 
    return;

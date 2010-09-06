@@ -178,7 +178,7 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
 
       profile_perfstat_event->SetDirectory(fDirProofBench);
       profile_perfstat_event->GetXaxis()->SetTitle("Number of Slaves");
-      profile_perfstat_event->GetYaxis()->SetTitle("#times10^{3} Events/sec");
+      profile_perfstat_event->GetYaxis()->SetTitle("Events/sec");
       profile_perfstat_event->SetMarkerStyle(21);
 
       fListPerfProfiles->Add(profile_perfstat_event);
@@ -197,7 +197,7 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
 
       profile_queryresult_event->SetDirectory(fDirProofBench);
       profile_queryresult_event->GetXaxis()->SetTitle("Number of Slaves");
-      profile_queryresult_event->GetYaxis()->SetTitle("#times10^{3} Events/sec");
+      profile_queryresult_event->GetYaxis()->SetTitle("Events/sec");
       profile_queryresult_event->SetMarkerStyle(22);
 
       fListPerfProfiles->Add(profile_queryresult_event);
@@ -310,9 +310,9 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t 
    // Return
    //    Nothing
 
-   Int_t nevents_holder;
-   Int_t bytes_holder;
-   Float_t time_holder;
+   Long64_t nevents_holder;
+   Long64_t bytes_holder;
+   Double_t time_holder;
 
    // extract timing information
    TPerfEvent pe;
@@ -371,7 +371,7 @@ void TProofBenchRunCPU::FillPerfStatProfiles(TTree* t, TProfile* profile, Int_t 
 
    Double_t event_rate;
 
-   event_rate=nevents_holder/time_holder/1000.; 
+   event_rate=nevents_holder/time_holder; 
    profile->Fill(Double_t(nactive), event_rate);
 
    //if (fWritable){
