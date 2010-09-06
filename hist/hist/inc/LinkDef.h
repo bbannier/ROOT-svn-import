@@ -87,7 +87,9 @@
 #pragma link C++ class TBackCompFitter+;
 #pragma link C++ class TUnfold+;
 #pragma link C++ class TUnfoldSys+;
+#pragma link C++ class TEfficiency+;
 #pragma link C++ class TKDE+;
+#pragma link C++ class TKDE2D+;
 
 #pragma link C++ typedef THnSparseD;
 #pragma link C++ typedef THnSparseF;
