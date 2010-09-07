@@ -559,7 +559,7 @@ static int G__fgetstream_newtemplate_internal(G__FastAllocString& string,
                char prev = string[i - 2];
                // We only keep spaces between "identifiers" like "new const long long"
                // and between '> >'
-               if (G__IsIdentifier(prev) || (prev == '>' && c == '>')) {
+               if ((G__IsIdentifier(prev) && G__IsIdentifier(c)) || (prev == '>' && c == '>')) {
                } else {
                   // replace previous ' '
                   --i;
