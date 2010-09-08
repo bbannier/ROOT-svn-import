@@ -422,14 +422,9 @@ TEfficiency::TEfficiency(const TEfficiency& rEff):
    SetDirectory(rEff.GetDirectory());
 
    //copy style
-   SetLineColor(rEff.GetLineColor());
-   SetLineStyle(rEff.GetLineStyle());
-   SetLineWidth(rEff.GetLineWidth());
-   SetFillColor(rEff.GetFillColor());
-   SetFillStyle(rEff.GetFillStyle());
-   SetMarkerColor(rEff.GetMarkerColor());
-   SetMarkerSize(rEff.GetMarkerSize());
-   SetMarkerStyle(rEff.GetMarkerStyle());   
+   rEff.TAttLine::Copy(*this);
+   rEff.TAttFill::Copy(*this);
+   rEff.TAttMarker::Copy(*this);
 }
 
 //______________________________________________________________________________
@@ -649,7 +644,7 @@ Bool_t TEfficiency::CheckBinning(const TH1& pass,const TH1& total)
 }
 
 //______________________________________________________________________________
-Bool_t TEfficiency::CheckConsistency(const TH1& pass,const TH1& total)
+Bool_t TEfficiency::CheckConsistency(const TH1& pass,const TH1& total,Option_t* opt)
 {
    //checks the consistence of the given histograms
    //
@@ -657,6 +652,9 @@ Bool_t TEfficiency::CheckConsistency(const TH1& pass,const TH1& total)
    //- both have the same dimension
    //- both have the same binning
    //- pass.GetBinContent(i) <= total.GetBinContent(i) for each bin i
+   //
+   //Option: - w: The check for unit weights is skipped and therefore histograms
+   //             filled with weights are accepted.
    
    if(pass.GetDimension() != total.GetDimension())
       return false;
@@ -664,14 +662,14 @@ Bool_t TEfficiency::CheckConsistency(const TH1& pass,const TH1& total)
    if(!CheckBinning(pass,total))
       return false;
 
-   if(!CheckEntries(pass,total))
+   if(!CheckEntries(pass,total,opt))
       return false;
 
    return true;
 }
 
 //______________________________________________________________________________
-Bool_t TEfficiency::CheckEntries(const TH1& pass,const TH1& total)
+Bool_t TEfficiency::CheckEntries(const TH1& pass,const TH1& total,Option_t* opt)
 {
    //checks whether bin contents are compatible with binomial statistics
    //
@@ -680,21 +678,29 @@ Bool_t TEfficiency::CheckEntries(const TH1& pass,const TH1& total)
    //
    //and the histogram have to be filled with unit weights.
    //
+   //Option: - w: Do not check for unit weights -> accept histograms filled with
+   //             weights
+   //
    //Note: - It is assumed that both histograms have the same dimension and
    //        binning.
 
+   TString option = opt;
+   option.ToLower();
+
    //check for unit weights
-   Double_t statpass[10];
-   Double_t stattotal[10];
+   if(!option.Contains("w")) {      
+      Double_t statpass[10];
+      Double_t stattotal[10];
 
-   pass.GetStats(statpass);
-   total.GetStats(stattotal);
+      pass.GetStats(statpass);
+      total.GetStats(stattotal);
 
-   //require: sum of weights == sum of weights^2
-   if((TMath::Abs(statpass[0]-statpass[1]) > 1e-5) ||
-      (TMath::Abs(stattotal[0]-stattotal[1]) > 1e-5))
-      return false;
-
+      //require: sum of weights == sum of weights^2
+      if((TMath::Abs(statpass[0]-statpass[1]) > 1e-5) ||
+	 (TMath::Abs(stattotal[0]-stattotal[1]) > 1e-5))
+	 return false;
+   }
+   
    //check: pass <= total
    Int_t nbinsx, nbinsy, nbinsz, nbins;
 
@@ -792,7 +798,8 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
    // -s        : strict combining; only TEfficiency objects with the same beta
    //             prior and the flag kIsBayesian == true are combined
    // -v        : verbose mode; print information about combining
-   // -cl=0.xxx : set confidence level (0 < cl < 1)
+   // -cl=0.xxx : set confidence level (0 < cl < 1). If not specified, the
+   //             confidence level of the first TEfficiency object is used.
    
    TString opt = option;
    opt.ToLower();
@@ -828,7 +835,7 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
    //are weights explicitly given
    if(n && p) {
       bWeights = true;
-      for(UInt_t k = 0; k < n; ++k) {
+      for(Int_t k = 0; k < n; ++k) {
 	 if(p[k] > 0)
 	    vWeights.push_back(p[k]);
 	 else {
@@ -888,8 +895,8 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
    }
 
    //invalid number of custom weights
-   if(bWeights && (n != vTotal.size())) {
-      gROOT->Error("TEfficiency::Combine","number of weights n=%i differs from number of TEfficiency objects k=%i which should be combined",n,vTotal.size());
+   if(bWeights && (n != (Int_t)vTotal.size())) {
+      gROOT->Error("TEfficiency::Combine","number of weights n=%i differs from number of TEfficiency objects k=%i which should be combined",n,(Int_t)vTotal.size());
       gROOT->Info("TEfficiency::Combine","stop combining");
       return 0;
    }
@@ -908,7 +915,7 @@ TGraphAsymmErrors* TEfficiency::Combine(TCollection* pList,Option_t* option,
 
    //display information about combining
    if(bOutput) {
-      gROOT->Info("TEfficiency::Combine","combining %i TEfficiency objects",vTotal.size());
+      gROOT->Info("TEfficiency::Combine","combining %i TEfficiency objects",(Int_t)vTotal.size());
       if(bWeights)
 	 gROOT->Info("TEfficiency::Combine","using custom weights");
       if(bStrict) {
@@ -1183,8 +1190,8 @@ TH1* TEfficiency::GetCopyTotalHisto() const
 //______________________________________________________________________________
 Int_t TEfficiency::GetDimension() const
 {
-   //returns the dimension of the current TEfficiency object   
-   
+   //returns the dimension of the current TEfficiency object
+
    return fTotalHistogram->GetDimension();
 }
 
@@ -1264,22 +1271,6 @@ Int_t TEfficiency::GetGlobalBin(Int_t binx,Int_t biny,Int_t binz) const
    //see TH1::GetBin() for conventions on numbering bins
    
    return fTotalHistogram->GetBin(binx,biny,binz);
-}
-
-//______________________________________________________________________________
-Int_t TEfficiency::GetPassedEvents(Int_t bin) const
-{
-   //returns the number of selected events in the given global bin
-   
-   return fPassedHistogram->GetBinContent(bin);
-}
-
-//______________________________________________________________________________
-Int_t TEfficiency::GetTotalEvents(Int_t bin) const
-{
-   //returns the number of total events in the given global bin
-   
-   return fTotalHistogram->GetBinContent(bin);
 }
 
 //______________________________________________________________________________
@@ -1415,14 +1406,9 @@ TEfficiency& TEfficiency::operator=(const TEfficiency& rhs)
       fPaintGraph = 0;
 
       //copy style
-      SetLineColor(rhs.GetLineColor());
-      SetLineStyle(rhs.GetLineStyle());
-      SetLineWidth(rhs.GetLineWidth());
-      SetFillColor(rhs.GetFillColor());
-      SetFillStyle(rhs.GetFillStyle());
-      SetMarkerColor(rhs.GetMarkerColor());
-      SetMarkerSize(rhs.GetMarkerSize());
-      SetMarkerStyle(rhs.GetMarkerStyle());
+      rhs.TAttLine::Copy(*this);
+      rhs.TAttFill::Copy(*this);
+      rhs.TAttMarker::Copy(*this);
    }
 
    return *this;
@@ -1464,14 +1450,9 @@ void TEfficiency::Paint(const Option_t* opt)
       }
 
       //copying style information
-      fPaintGraph->SetLineColor(GetLineColor());
-      fPaintGraph->SetLineStyle(GetLineStyle());
-      fPaintGraph->SetLineWidth(GetLineWidth());
-      fPaintGraph->SetFillColor(GetFillColor());
-      fPaintGraph->SetFillStyle(GetFillStyle());
-      fPaintGraph->SetMarkerColor(GetMarkerColor());
-      fPaintGraph->SetMarkerSize(GetMarkerSize());
-      fPaintGraph->SetMarkerStyle(GetMarkerStyle());
+      TAttLine::Copy(*fPaintGraph);
+      TAttFill::Copy(*fPaintGraph);
+      TAttMarker::Copy(*fPaintGraph);
       
       //paint graph      
       fPaintGraph->Paint(option.Data());
@@ -1514,14 +1495,9 @@ void TEfficiency::Paint(const Option_t* opt)
       }
 
       //copying style information
-      fPaintHisto->SetLineColor(GetLineColor());
-      fPaintHisto->SetLineStyle(GetLineStyle());
-      fPaintHisto->SetLineWidth(GetLineWidth());
-      fPaintHisto->SetFillColor(GetFillColor());
-      fPaintHisto->SetFillStyle(GetFillStyle());
-      fPaintHisto->SetMarkerColor(GetMarkerColor());
-      fPaintHisto->SetMarkerSize(GetMarkerSize());
-      fPaintHisto->SetMarkerStyle(GetMarkerStyle());
+      TAttLine::Copy(*fPaintHisto);
+      TAttFill::Copy(*fPaintHisto);
+      TAttMarker::Copy(*fPaintHisto);
       fPaintHisto->SetStats(0);
 
       //paint histogram
@@ -1625,12 +1601,13 @@ void TEfficiency::SetPassedEvents(Int_t bin,Int_t events)
 {
    //sets the number of passed events in the given global bin
    //
-   //Note: - requires: 0 <= events <= GetTotalEvents(bin)
+   //Note: - requires: 0 <= events <= fTotalHistogram->GetBinContent(bin)
 
-   if(events <= GetTotalEvents(bin))
+   if(events <= fTotalHistogram->GetBinContent(bin))
       fPassedHistogram->SetBinContent(bin,events);
    else
-      Error("SetPassedEvents(Int_t,Int_t)","total number of events (%i) in bin %i is less than given number of passed events %i",GetTotalEvents(bin),bin,events);
+      Error("SetPassedEvents(Int_t,Int_t)","total number of events (%.1lf) in bin %i is less than given number of passed events %i",
+	    fTotalHistogram->GetBinContent(bin),bin,events);
 }
 
 //______________________________________________________________________________
@@ -1782,12 +1759,13 @@ void TEfficiency::SetTotalEvents(Int_t bin,Int_t events)
 {
    //sets the number of total events in the given global bin
    //
-   //Note: - requires: GetPassedEvents(bin) <= events
+   //Note: - requires: fPassedHistogram->GetBinContent(bin) <= events
 
-   if(events >= GetPassedEvents(bin))
+   if(events >= fPassedHistogram->GetBinContent(bin))
       fTotalHistogram->SetBinContent(bin,events);
    else
-      Error("SetTotalEvents(Int_t,Int_t)","passed number of events (%i) in bin %i is bigger than given number of total events %i",GetPassedEvents(bin),bin,events);
+      Error("SetTotalEvents(Int_t,Int_t)","passed number of events (%.1lf) in bin %i is bigger than given number of total events %i",
+	    fPassedHistogram->GetBinContent(bin),bin,events);
 }
 
 //______________________________________________________________________________
@@ -1845,6 +1823,12 @@ void TEfficiency::SetWeight(Double_t weight)
       fWeight = weight;
    else
       Warning("SetWeight","invalid weight %.2lf",weight);
+}
+
+//______________________________________________________________________________
+Bool_t TEfficiency::UsesBayesianStat() const
+{
+   return TestBit(kIsBayesian);
 }
 
 //______________________________________________________________________________

@@ -220,7 +220,7 @@ void TKDE::SetKernel() {
    // Sets the kernel density estimator
    Double_t weight(fCanonicalBandwidths[kGaussian] * fSigma * std::pow( 3. / (8. * std::sqrt(PI)) * fNEvents, -0.2));// Optimal bandwidth (Silverman's rule of thumb with assumed Gaussian density)
    weight *= fCanonicalBandwidths[fKernelType] / fCanonicalBandwidths[kGaussian];
-   UInt_t n = /*fUseBins ? fNBins :*/ fNEvents; 
+   UInt_t n = /*fUseBins ? fNBins :*/ fNEvents;
    fKernel = new TKernel(n, weight, this);
    if (fIteration == kAdaptive) {
       fKernel->ComputeAdaptiveWeights();
@@ -340,12 +340,14 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
    Double_t minWeight(*weight * std::pow(50.0, -0.5)); // As implemented in RooKeysPdf
    std::vector<Double_t> dataset(/*fKDE->fUseBins ? GetBinCentreData() :*/ fKDE->fData);
    std::vector<Double_t>::iterator data = dataset.begin();
+
    for (; weight != weights.end(); ++weight, ++data) {
       Double_t f = (*fKDE->fKernel)(*data);
       if (f > 0.) {
          *weight *= fKDE->fRho / fKDE->fSigma * std::pow(fKDE->fSigma / f, 0.5);
       }
-      *weight = std::min(*weight, minWeight);
+      *weight = std::max(*weight, minWeight);
+      
    }
    fWeights = weights;
 }
