@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <functional>
 #include <numeric>
 #include <limits>
 
@@ -13,23 +14,52 @@
 
 ClassImp(TKDE)
 
-TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir/*, EBinning bin*/, Double_t rho) :
+const Double_t TKDE::_2_PI_ROOT_INV = 0.398942280401432703;
+const Double_t TKDE::PI             = 3.14159265358979312;
+const Double_t TKDE::PI_OVER2       = 1.57079632679489656;
+const Double_t TKDE::PI_OVER4       = 0.785398163397448279;
+
+class TKDE::TKernel {
+   TKDE* fKDE;
+   UInt_t fNWeights; // Number of kernel weights (bandwidth as vectorized for binning)
+   std::vector<Double_t> fWeights; // Kernel weights (bandwidth)
+   UInt_t Index(Double_t x) const;
+   public:
+      TKernel(Double_t weight, TKDE* kde);
+      void ComputeAdaptiveWeights();
+      Double_t operator()(Double_t x) const;
+      Double_t GetWeight(Double_t x) const;
+};
+
+struct TKDE::KernelIntegrand {
+   enum EIntegralResult{kNorm, kMu, kSigma2, kUnitIntegration};
+   KernelIntegrand(const TKDE* kde, EIntegralResult intRes);
+   Double_t operator()(Double_t x) const;
+   private:
+      const TKDE* fKDE;
+      EIntegralResult fIntegralResult;
+};
+
+TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho) :
    fData(events, 0.0),
    fPDF(0),
    fUpperPDF(0),
    fLowerPDF(0),
    fApproximateBias(0),
    fHistogram(0),
-//    fNBins(events < 1000 ? events : events / 10),
+   fNBins(events < 10000 ? events : events / 10),
    fNEvents(events),
-//    fUseBinsNEvents(1000),
+   fUseBinsNEvents(10000),
    fMean(0.0),
    fSigma(0.0),
+   fXMin(xMin),
+   fXMax(xMax),
+   fAdaptiveBandwidthFactor(1.0),
    fCanonicalBandwidths(std::vector<Double_t>(kTotalKernels, 0.0)),
    fKernelSigmas2(std::vector<Double_t>(kTotalKernels, -1.0))
 {
    //Class constructor
-   SetOptions(xMin, xMax, kern, iter, mir/*, bin*/, rho);
+   SetOptions(kern, iter, mir, bin, rho);
    SetKernelFunction();
    SetData(data);
    SetCanonicalBandwidths();
@@ -48,16 +78,10 @@ TKDE::~TKDE() {
    delete fKernel;
 }
   
-void TKDE::SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir/*, EBinning bin*/, Double_t rho, Bool_t IsUserDefinedKernel) {
+void TKDE::SetOptions(EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho, Bool_t isUserDefinedKernel) {
    // Sets User global options
-   if (xMin >= xMax) { // protects default range initialization
-      MATH_ERROR_MSG("TKDE::SetOptions", "Minimum range cannot be bigger or equal than the maximum range!" << std::endl);
-      exit(EXIT_FAILURE);
-   }
-   fXMin = xMin;
-   fXMax = xMax; 
-   if (!(IsUserDefinedKernel) && !(kern >= kGaussian && kern < kUserDefined)) {
-      this->Error("TKDE::SetOptions", "Illegal user kernel type input - use template constructor for user defined kernel!");
+   if (!(isUserDefinedKernel) && !(kern >= kGaussian && kern < kUserDefined)) {
+      this->Error("TKDE::SetOptions", "Illegal user kernel type input! Use template constructor for user defined kernel.");
       exit(EXIT_FAILURE);
    }
    fKernelType = kern;
@@ -72,14 +96,18 @@ void TKDE::SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration
    }
    fMirror = mir;
    SetMirror();
-//    if (!(bin >= kUnbinned && bin <= kForcedBinning)) {
-//       this->Error("TKDE::SetOptions", "Illegal user binning type input!");
-//       exit(EXIT_FAILURE);
-//    }
-//    fBinning = bin;
-//    SetUseBins();
+   if (!(bin >= kUnbinned && bin <= kForcedBinning)) {
+      this->Error("TKDE::SetOptions", "Illegal user binning type input!");
+      exit(EXIT_FAILURE);
+   }
+   fBinning = bin;
+   SetUseBins();
+   if (fUseBins && fUseMirroring) {
+      this->Warning("TKDE::SetOptions", "Data mirroring option cannot be used with data binning one! Mirroring ignored.");
+      fUseMirroring = kFALSE;
+   }
    if (rho <= 0.0) {
-      MATH_ERROR_MSG("TKDE::SetOptions", "rho cannot be non-positive!!" << std::endl);
+      MATH_ERROR_MSG("TKDE::SetOptions", "rho cannot be non-positive!" << std::endl);
       exit(EXIT_FAILURE);
    }
    fRho = rho;
@@ -97,7 +125,7 @@ void TKDE::SetIteration(EIteration iter) {
    SetKernel();
 }
       
-void TKDE::Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir/*, EBinning bin*/, Double_t rho) {
+void TKDE::Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho) {
    // Template's constructor surrogate
    fData = std::vector<Double_t>(events, 0.0);
    fPDF = 0;
@@ -105,14 +133,17 @@ void TKDE::Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_
    fLowerPDF = 0;
    fHistogram = 0;
    fApproximateBias = 0;
-//    fNBins = events < 1000 ? events : events / 10;
+   fNBins = events < 10000 ? events : events / 10;
    fNEvents = events;
-//    fUseBinsNEvents = 1000;
+   fUseBinsNEvents = 10000;
    fMean = 0.0;
    fSigma = 0.0;
+   fXMin = xMin;
+   fXMax = xMax;
+   fAdaptiveBandwidthFactor = 1.;
    fCanonicalBandwidths = std::vector<Double_t>(kTotalKernels, 0.0);
    fKernelSigmas2 = std::vector<Double_t>(kTotalKernels, -1.0);
-   SetOptions(xMin, xMax, kUserDefined, iter, mir/*, bin*/, rho, kTRUE);
+   SetOptions(kUserDefined, iter, mir, bin, rho, kTRUE);
    SetKernelFunction(kernfunc);
    SetData(data);
    SetCanonicalBandwidths();
@@ -128,64 +159,70 @@ void TKDE::SetMirror(EMirror mir) {
 
 void TKDE::SetMirror() {
    // Sets the mirroring
-   fMirrorLeft  = fMirror == kMirrorLeft  || fMirror == kMirrorBoth || fMirror == kMirrorLeftAsymRight;
-   fMirrorRight = fMirror == kMirrorRight || fMirror == kMirrorBoth || fMirror == kMirrorAsymLeftRight;
-   fAsymLeft    = fMirror == kMirrorAsymLeft  || fMirror == kMirrorAsymLeftRight || fMirror == kMirrorAsymBoth;
-   fAsymRight   = fMirror == kMirrorAsymRight || fMirror == kMirrorLeftAsymRight || fMirror == kMirrorAsymBoth;
+   fMirrorLeft   = fMirror == kMirrorLeft      || fMirror == kMirrorBoth          || fMirror == kMirrorLeftAsymRight;
+   fMirrorRight  = fMirror == kMirrorRight     || fMirror == kMirrorBoth          || fMirror == kMirrorAsymLeftRight;
+   fAsymLeft     = fMirror == kMirrorAsymLeft  || fMirror == kMirrorAsymLeftRight || fMirror == kMirrorAsymBoth;
+   fAsymRight    = fMirror == kMirrorAsymRight || fMirror == kMirrorLeftAsymRight || fMirror == kMirrorAsymBoth;
+   fUseMirroring = fMirrorLeft || fMirrorRight || fAsymLeft || fAsymRight || fAsymRight;
 }
       
-// void TKDE::SetBinning(EBinning bin) {
-//    // Sets User option for binning the weights
-//    fBinning = bin;
-//    SetUseBins();
-//    SetKernel();
-// }
+void TKDE::SetBinning(EBinning bin) {
+   // Sets User option for binning the weights
+   fBinning = bin;
+   SetUseBins();
+   SetKernel();
+}
    
-// void TKDE::SetUseBins() {
-//    // Sets User option for using binned weights  
-//    switch (fBinning) {
-//       default:
-//       case kRelaxedBinning:
-//          if (fNEvents >= fUseBinsNEvents) {
-//             fUseBins = kTRUE;
-//          } else {
-//             fUseBins = kFALSE;
-//          }
-//          break;
-//       case kForcedBinning:
-//          fUseBins = kTRUE;
-//          break;
-//       case kUnbinned:
-//          fUseBins = kFALSE;
-//    }
-// }
+void TKDE::SetUseBins() {
+   // Sets User option for using binned weights  
+   switch (fBinning) {
+      default:
+      case kRelaxedBinning:
+         if (fNEvents >= fUseBinsNEvents) {
+            fUseBins = kTRUE;
+         } else {
+            fUseBins = kFALSE;
+         }
+         break;
+      case kForcedBinning:
+         fUseBins = kTRUE;
+         break;
+      case kUnbinned:
+         fUseBins = kFALSE;
+   }
+}
 
-// void TKDE::SetNBins(UInt_t nBins) {
-//    // Sets User option for number of bins    
-//    fNBins = nBins;
-//    SetKernel();
-// }
+void TKDE::SetNBins(UInt_t nBins) {
+   // Sets User option for number of bins    
+   fNBins = nBins;
+   SetKernel();
+}
 
-// void TKDE::SetUseBinsNEvents(UInt_t nEvents) {
-//    fUseBinsNEvents = nEvents;
-//    SetUseBins();
-//    SetKernel();
-// }
+void TKDE::SetUseBinsNEvents(UInt_t nEvents) {
+   fUseBinsNEvents = nEvents;
+   SetUseBins();
+   SetKernel();
+}
 
 void TKDE::SetData(const Double_t* data) {
-   // Sets the data events input sample
-   for (UInt_t i = 0; i < fNEvents; ++i) {
-      SetData(data[i], i);
-   }
+   // Sets the data events input sample or bin centres for binned option and computes basic estimators
    if (fXMin >= fXMax) {
-      fXMin = *std::min_element(fData.begin(), fData.end());
-      fXMax = *std::max_element(fData.begin(), fData.end());
+      fXMin = *std::min_element(data, data + fNEvents);
+      fXMax = *std::max_element(data, data + fNEvents);
    }
-   SetMean();
-   SetSigma();
-   fWeightSize = (/*fUseBins ? fNBins : */fNEvents) / (fXMax - fXMin);
-   if (fMirror != kNoMirror) {
-      SetMirroredData();
+   Double_t midspread = ComputeMidspread(data, fNEvents);
+   SetMean(data, fNEvents);
+   SetSigma(data, fNEvents, midspread);
+   fWeightSize = (fUseBins ? fNBins : fNEvents) / (fXMax - fXMin);
+   if (fUseBins) {
+      fData = GetBinCentreData();
+   } else {
+      for (UInt_t i = 0; i < fNEvents; ++i) {
+         SetData(data[i], i);
+      }
+      if (fMirror != kNoMirror) {
+         SetMirroredData();
+      }
    }
 }
    
@@ -206,22 +243,24 @@ void TKDE::SetMirroredData() {
    fNEvents *= (fMirrorLeft + fMirrorRight + 1);
 }
 
-void TKDE::SetMean() {
+void TKDE::SetMean(const Double_t* data, UInt_t dataSize) {
    // Computes input data's mean
-   fMean = accumulate(fData.begin(), fData.end(), 0.0) / fData.size();
+   fMean = std::accumulate(data, data + dataSize, 0.0) / dataSize;
 }
    
-void TKDE::SetSigma() { 
+void TKDE::SetSigma(const Double_t* data, UInt_t dataSize, Double_t R) { 
    // Computes input data's sigma
-   fSigma = std::sqrt(1. / (fData.size() - 1) * (inner_product(fData.begin(), fData.end(), fData.begin(), 0.0) - fData.size() * std::pow(fMean, 2)));
+   fSigma = std::sqrt(1. / (dataSize - 1.) * (std::inner_product(data, data + dataSize, data, 0.0) - dataSize * std::pow(fMean, 2.)));
+   fSigma = std::min(fSigma,  R / 1.34); // Sigma's robust estimator
 }
 
 void TKDE::SetKernel() {
    // Sets the kernel density estimator
-   Double_t weight(fCanonicalBandwidths[kGaussian] * fSigma * std::pow( 3. / (8. * std::sqrt(PI)) * fNEvents, -0.2));// Optimal bandwidth (Silverman's rule of thumb with assumed Gaussian density)
+   UInt_t n = fUseBins ? fNBins : fNEvents;
+   //Optimal bandwidth (Silverman's rule of thumb with assumed Gaussian density) :
+   Double_t weight(fCanonicalBandwidths[kGaussian] * fSigma * std::pow(3. / (8. * std::sqrt(PI)) * n, -0.2)); 
    weight *= fCanonicalBandwidths[fKernelType] / fCanonicalBandwidths[kGaussian];
-   UInt_t n = /*fUseBins ? fNBins :*/ fNEvents;
-   fKernel = new TKernel(n, weight, this);
+   fKernel = new TKernel(weight, this);
    if (fIteration == kAdaptive) {
       fKernel->ComputeAdaptiveWeights();
    }
@@ -282,7 +321,7 @@ TH1D* TKDE::GetHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
 void TKDE::SetRange(Double_t xMin, Double_t xMax) {
    // Sets minimum range value and maximum range value
    if (xMin >= xMax) {
-      MATH_ERROR_MSG("TKDE::SetRange", "Minimum range cannot be bigger or equal than the maximum range!" << std::endl);
+      MATH_ERROR_MSG("TKDE::SetRange", "Minimum range cannot be bigger or equal than the maximum range! Present range values remain the same." << std::endl);
       return;
    }
    fXMin = xMin;
@@ -311,13 +350,17 @@ TF1* TKDE::GetApproximateBias() {
 }
 
 void TKDE::Fill(Double_t data) {
-   // Fills data member with User input data event
+   // Fills data member with User input data event for the unbinned option
+   if (fUseBins) {
+      this->Warning("TKDE::Fill", "Cannot fill data with data binned option. Data input ignored.");
+      return;
+   }
    fData.push_back(data);
-   fNEvents++;
+   ((fSigma *= fSigma) *= (fNEvents - 1.)) += fNEvents * fMean * fMean;
+   ((fMean *= fNEvents++) += data) /= fNEvents;
+   (fSigma += data * data - fNEvents * fMean * fMean) /= (fNEvents - 1.);
    fXMin = std::min(data, fXMin);
    fXMax = std::max(data, fXMin);
-   SetMean();
-   SetSigma();
    SetKernel();
 }
 
@@ -326,58 +369,55 @@ Double_t TKDE::operator()(const Double_t* x, const Double_t*) const {
    return (*fKernel)(*x);
 }
 
-TKDE::TKernel::TKernel(UInt_t n, Double_t weight, TKDE* kde) :
+TKDE::TKernel::TKernel(Double_t weight, TKDE* kde) :
    // Internal class constructor
-   fNWeights(n),
-   fWeights(n, weight),
-   fKDE(kde)
+   fKDE(kde),
+   fNWeights(kde->fData.size()),
+   fWeights(fNWeights, weight)  
 {}
    
 void TKDE::TKernel::ComputeAdaptiveWeights() {
    // Gets the adaptive weights (bandwidths) for TKernel internal computation
    std::vector<Double_t> weights = fWeights;
    std::vector<Double_t>::iterator weight = weights.begin();
-   Double_t minWeight(*weight * std::pow(50.0, -0.5)); // As implemented in RooKeysPdf
-   std::vector<Double_t> dataset(/*fKDE->fUseBins ? GetBinCentreData() :*/ fKDE->fData);
-   std::vector<Double_t>::iterator data = dataset.begin();
-
+   Double_t minWeight = *weight * std::sqrt(0.02);
+   std::vector<Double_t>::iterator data = fKDE->fData.begin();
+   Double_t x = fKDE->fRho / fKDE->fSigma * std::sqrt(fKDE->fSigma);
+   Double_t f = 0.0;
    for (; weight != weights.end(); ++weight, ++data) {
-      Double_t f = (*fKDE->fKernel)(*data);
-      if (f > 0.) {
-         *weight *= fKDE->fRho / fKDE->fSigma * std::pow(fKDE->fSigma / f, 0.5);
-      }
-      *weight = std::max(*weight, minWeight);
-      
+      f = (*fKDE->fKernel)(*data);
+      *weight = std::max((*weight *=  x / std::sqrt(f)), minWeight);
+      fKDE->fAdaptiveBandwidthFactor += std::log(f);
    }
-   fWeights = weights;
-}
+   fKDE->fAdaptiveBandwidthFactor = std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size())); 
+   transform(weights.begin(), weights.end(), fWeights.begin(), std::bind2nd(std::multiplies<Double_t>(), fKDE->fAdaptiveBandwidthFactor));
+ }
 
 Double_t TKDE::TKernel::GetWeight(Double_t x) const {
    // Returns the bandwidth
    return fWeights[Index(x)];
 }
 
-// const std::vector<Double_t> TKDE::TKernel::GetBinCentreData() const {
-//    // Gets the bins' centres from the data for using with the binned weights
-//    std::vector<Double_t> result(fKDE->fNBins, 0.0);
-//    Double_t binWidth((fKDE->fXMax - fKDE->fXMin) / fKDE->fNBins);
-//    for (UInt_t i = 0; i < fKDE->fNBins; ++i) {
-//       result[i] = fKDE->fXMin + i * binWidth + 0.5 * binWidth;
-//    }
-//    return result;
-// }
+std::vector<Double_t> TKDE::GetBinCentreData() {
+   // Gets the bins' centres from the data for using with the binned option
+   std::vector<Double_t> result(fNBins, 0.0);
+   Double_t binWidth((fXMax - fXMin) / fNBins);
+   for (UInt_t i = 0; i < fNBins; ++i) {
+      result[i] = fXMin + i * binWidth + 0.5 * binWidth;
+   }
+   return result;
+}
 
 Double_t TKDE::TKernel::operator()(Double_t x) const {
    // The internal class's unary function: returns the kernel density estimate
    Double_t result(0.0);
-   for (UInt_t i = 0/*, j = 0*/; i < fKDE->fNEvents; ++i) {
-//       j = Index(fKDE->fData[i], i);
-      result += 1. / fWeights[/*j*/i] * (*fKDE->fKernelFunction)((x - fKDE->fData[i]) / fWeights[/*j*/i]);
+   for (UInt_t i = 0; i < (fKDE->fUseBins ? fKDE->fNBins : fKDE->fNEvents); ++i) {
+      result += 1. / fWeights[i] * (*fKDE->fKernelFunction)((x - fKDE->fData[i]) / fWeights[i]);
       if (fKDE->fAsymLeft) {
-         result -= 1. / fWeights[/*j*/i] * (*fKDE->fKernelFunction)((x - (2 * fKDE->fXMin - fKDE->fData[i])) / fWeights[/*j*/i]);
+         result -= 1. / fWeights[i] * (*fKDE->fKernelFunction)((x - (2 * fKDE->fXMin - fKDE->fData[i])) / fWeights[i]);
       }
       if (fKDE->fAsymRight) {
-         result -= 1. / fWeights[/*j*/i] * (*fKDE->fKernelFunction)((x - (2 * fKDE->fXMax - fKDE->fData[i])) / fWeights[/*j*/i]);
+         result -= 1. / fWeights[i] * (*fKDE->fKernelFunction)((x - (2 * fKDE->fXMax - fKDE->fData[i])) / fWeights[i]);
       }
    }
    return result / fKDE->fNEvents;
@@ -389,9 +429,9 @@ UInt_t TKDE::TKernel::Index(Double_t x) const {
    if (bin == (Int_t)fNWeights) {
       return --bin;
    }
-   if (bin < 0) { // Left Mirrored Data
+   if (fKDE->fUseMirroring && bin < 0) { // Left Mirrored Data
       return bin *= -1;
-   } else if (bin > (Int_t)fNWeights) { // Right Mirrored Data
+   } else if (fKDE->fUseMirroring && bin > (Int_t)fNWeights) { // Right Mirrored Data
       return bin -= fNWeights ;
    }
    return bin;
@@ -491,6 +531,16 @@ Double_t TKDE::ComputeKernelIntegral() const {
    return result;
 }
 
+Double_t TKDE::ComputeMidspread (const Double_t* data, UInt_t dataSize) const {
+   std::vector<Double_t> sample(data, data + dataSize);
+   sort(sample.begin(), sample.end());
+   UInt_t midpoint = dataSize / 2;
+   UInt_t quarterpoint = midpoint / 2;
+   Double_t lowerquartile = (midpoint % 2 != 0 ? sample[quarterpoint + 1] : (sample[quarterpoint] + sample[quarterpoint + 1]) / 2);
+   Double_t upperquartile = (midpoint % 2 != 0 ? sample[quarterpoint + midpoint + 1] : (sample[quarterpoint + midpoint] + sample[quarterpoint + midpoint + 1]) / 2);
+   return upperquartile - lowerquartile;
+}
+
 void TKDE::SetCanonicalBandwidth() {
    // Computes the user's input kernel function canonical bandwidth
    fCanonicalBandwidths[kUserDefined] = std::pow(ComputeKernelL2Norm() / std::pow(ComputeKernelSigma2(), 2), 1. / 5.);
@@ -527,8 +577,9 @@ TH1D* TKDE::GetKDEHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
    } else {
       fHistogram = new TH1D("KDE Histogram", "KDE Histogram", nbins > 0 ? nbins : 100 /*fNBins*/, fXMin, fXMax);  
    }
-   for (std::vector<Double_t>::iterator data = fData.begin(); data != fData.end(); ++data) {
-      fHistogram->Fill(*data, (*fKernel)(*data));
+   for (Int_t bin = 1; bin <= fHistogram->GetNbinsX(); ++bin) {
+      Double_t binCenter = fHistogram->GetBinCenter(bin);
+      fHistogram->Fill(binCenter, (*fKernel)(binCenter));
    }
    fHistogram->Scale(1. / fHistogram->Integral(), "width");
    return fHistogram;
