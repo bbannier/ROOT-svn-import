@@ -5,6 +5,10 @@
 #include <vector>
 
 //ROOT header
+#ifndef ROOT_TNamed
+#include "TNamed.h"
+#endif
+
 #ifndef ROOT_TAttLine
 #include "TAttLine.h"
 #endif
@@ -69,9 +73,6 @@ protected:
       };
 
       void          Build(const char* name,const char* title);      
-      static Bool_t CheckBinning(const TH1& pass,const TH1& total);
-      static Bool_t CheckConsistency(const TH1& pass,const TH1& total);
-      static Bool_t CheckEntries(const TH1& pass,const TH1& total);
       
 public:
       TEfficiency();   
@@ -111,9 +112,9 @@ public:
       Double_t      GetEfficiencyErrorUp(Int_t bin) const;
       Int_t         GetGlobalBin(Int_t binx,Int_t biny=0,Int_t binz=0) const;
       TList*        GetListOfFunctions() const {return fFunctions;}
-      Int_t         GetPassedEvents(Int_t bin) const;
+      const TH1*    GetPassedHistogram() const {return fPassedHistogram;}
       Int_t         GetStatisticOption() const {return fStatisticOption;}
-      Int_t         GetTotalEvents(Int_t bin) const;
+      const TH1*    GetTotalHistogram() const {return fTotalHistogram;}
       Double_t      GetWeight() const {return fWeight;}
       void          Merge(TCollection* list);      
       TEfficiency& operator+=(const TEfficiency& rhs);
@@ -131,22 +132,25 @@ public:
       void          SetTotalEvents(Int_t bin,Int_t events);
       Bool_t        SetTotalHistogram(const TH1& rTotal,Option_t* opt);
       void          SetWeight(Double_t weight);    
-      Bool_t        UsesBayesianStat() const {return TestBit(kIsBayesian);}
-      
+      Bool_t        UsesBayesianStat() const;
+
+      static Bool_t CheckBinning(const TH1& pass,const TH1& total);
+      static Bool_t CheckConsistency(const TH1& pass,const TH1& total,Option_t* opt="");
+      static Bool_t CheckEntries(const TH1& pass,const TH1& total,Option_t* opt="");
       static TGraphAsymmErrors* Combine(TCollection* pList,Option_t* opt="",
 					Int_t n=0,Double_t* p=0);
       
       //calculating boundaries of confidence intervals
-      static Double_t NormalUp(Int_t total,Int_t passed,Double_t level);
-      static Double_t NormalLow(Int_t total,Int_t passed,Double_t level);
-      static Double_t WilsonUp(Int_t total,Int_t passed,Double_t level);
-      static Double_t WilsonLow(Int_t total,Int_t passed,Double_t level);
-      static Double_t AgrestiCoullUp(Int_t total,Int_t passed,Double_t level);
       static Double_t AgrestiCoullLow(Int_t total,Int_t passed,Double_t level);
-      static Double_t ClopperPearsonUp(Int_t total,Int_t passed,Double_t level);
-      static Double_t ClopperPearsonLow(Int_t total,Int_t passed,Double_t level);
-      static Double_t BayesianUp(Int_t total,Int_t passed,Double_t level,Double_t alpha=1,Double_t beta=1);
+      static Double_t AgrestiCoullUp(Int_t total,Int_t passed,Double_t level);
       static Double_t BayesianLow(Int_t total,Int_t passed,Double_t level,Double_t alpha=1,Double_t beta=1);
+      static Double_t BayesianUp(Int_t total,Int_t passed,Double_t level,Double_t alpha=1,Double_t beta=1);
+      static Double_t ClopperPearsonLow(Int_t total,Int_t passed,Double_t level);
+      static Double_t ClopperPearsonUp(Int_t total,Int_t passed,Double_t level);
+      static Double_t NormalLow(Int_t total,Int_t passed,Double_t level);
+      static Double_t NormalUp(Int_t total,Int_t passed,Double_t level);
+      static Double_t WilsonLow(Int_t total,Int_t passed,Double_t level);
+      static Double_t WilsonUp(Int_t total,Int_t passed,Double_t level);
       
       ClassDef(TEfficiency,1)     //calculating efficiencies
 };
