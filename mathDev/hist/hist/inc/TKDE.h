@@ -54,18 +54,18 @@ public:
       kMirrorAsymBoth
    };
    
-//    enum EBinning{ // Weight (bandwidth) binning option
-//       kUnbinned,
-//       kRelaxedBinning, // The algorithm is allowed to use binning if the data is large enough
-//       kForcedBinning
-//    };
+   enum EBinning{ // Data binning option
+      kUnbinned,
+      kRelaxedBinning, // The algorithm is allowed to use binning if the data is large enough
+      kForcedBinning
+   };
    
    template<class KernelFunction>
-   TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EIteration iter = kAdaptive, EMirror mir = kNoMirror/*, EBinning bin = kRelaxedBinning*/, Double_t rho =  .288675134594812921/* Tuned factor for optimizing Gaussian like shapes */) {
-      Instantiate(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc), events, data, xMin, xMax, iter, mir/*, bin*/, rho);
+   TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 0.0, Double_t xMax = 0.0, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0) {
+      Instantiate(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc), events, data, xMin, xMax, iter, mir, bin, rho);
    }
       
-   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 1.0, Double_t xMax = 0.0, EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror/*, EBinning bin = kRelaxedBinning*/, Double_t rho = .288675134594812921/* Tuned factor for optimizing Gaussian like shapes */);
+   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 0.0, Double_t xMax = 0.0, EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0 );
    
    virtual ~TKDE();
    
@@ -73,9 +73,9 @@ public:
    void SetKernelType(EKernelType kern);
    void SetIteration(EIteration iter);
    void SetMirror(EMirror mir);
-//    void SetBinning(EBinning);
-//    void SetNBins(UInt_t nBins);
-//    void SetUseBinsNEvents(UInt_t nEvents);
+   void SetBinning(EBinning);
+   void SetNBins(UInt_t nBins);
+   void SetUseBinsNEvents(UInt_t nEvents);
    void SetRange(Double_t xMin, Double_t xMax); // By default computed from the data
    
    Double_t operator()(const Double_t* x, const Double_t* p = 0) const;
@@ -89,10 +89,10 @@ public:
    
 private:
    
-   static const Double_t _2_PI_ROOT_INV = 0.398942280401432703; // (2*TMath::Pi())**-0.5
-   static const Double_t PI             = 3.14159265358979312;  // TMath::Pi()
-   static const Double_t PI_OVER2       = 1.57079632679489656;  // TMath::PiOver2()
-   static const Double_t PI_OVER4       = 0.785398163397448279; // TMath::PiOver4()
+   static const Double_t _2_PI_ROOT_INV; // (2*TMath::Pi())**-0.5
+   static const Double_t PI;             // TMath::Pi()
+   static const Double_t PI_OVER2;       // TMath::PiOver2()
+   static const Double_t PI_OVER4;       // TMath::PiOver4()
    
    TKDE();                    // Disallowed default constructor
    TKDE(TKDE& kde);           // Disallowed copy constructor
@@ -101,23 +101,8 @@ private:
    typedef ROOT::Math::IBaseFunctionOneDim* KernelFunction_Ptr;
    KernelFunction_Ptr fKernelFunction;
    
+   class TKernel;
    friend class TKernel;
-   class TKernel {
-      UInt_t fNWeights; // Number of kernel weights (bandwidth as vectorized for binning)
-      std::vector<Double_t> fWeights; // Kernel weights (bandwidth)
-      TKDE* fKDE;
-//       const std::vector<Double_t> GetBinCentreData() const;
-// UInt_t Index(Double_t x, UInt_t i) const {
-//    // Returns the indices for the binned weights. Otherwise, the data order is returned
-//    return fKDE->fNEvents > fNWeights ? Index(x) : i;
-// }
-      UInt_t Index(Double_t x) const;
-   public:
-      TKernel(UInt_t n, Double_t weight, TKDE* kde);
-      void ComputeAdaptiveWeights();
-      Double_t operator()(Double_t x) const;
-      Double_t GetWeight(Double_t x) const;
-   };
    
    TKernel* fKernel;
    
@@ -133,37 +118,31 @@ private:
    EKernelType fKernelType;
    EIteration fIteration;
    EMirror fMirror;
-//    EBinning fBinning;
+   EBinning fBinning;
    
-   Bool_t fMirrorLeft, fMirrorRight, fAsymLeft, fAsymRight;
-//    Bool_t fUseBins;
+   Bool_t fUseMirroring, fMirrorLeft, fMirrorRight, fAsymLeft, fAsymRight;
+   Bool_t fUseBins;
    
-//    UInt_t fNBins;          // Histograms' settable number of bins
+   UInt_t fNBins;          // Number of bins for binned data option
    UInt_t fNEvents;        // Data's number of events
-//    UInt_t fUseBinsNEvents; // If the algorithm is allowed to use binning this is the minimum number of events to do so
+   UInt_t fUseBinsNEvents; // If the algorithm is allowed to use binning this is the minimum number of events to do so
    
    Double_t fMean;  // Data mean
    Double_t fSigma; // Data std deviation
    Double_t fXMin;  // Data minimum value
    Double_t fXMax;  // Data maximum value
    Double_t fRho;   // Adjustment factor for sigma
-  
+   Double_t fAdaptiveBandwidthFactor; // Geometric mean of the kernel density estimation from the data for adaptive iteration 
+   
    Double_t fWeightSize; // Caches the weight size
    
    std::vector<Double_t> fCanonicalBandwidths;
    std::vector<Double_t> fKernelSigmas2;
    
+   struct KernelIntegrand;
    friend struct KernelIntegrand;
-   struct KernelIntegrand {
-      enum EIntegralResult{kNorm, kMu, kSigma2, kUnitIntegration};
-      KernelIntegrand(const TKDE* kde, EIntegralResult intRes);
-      Double_t operator()(Double_t x) const;
-   private:
-      const TKDE* fKDE;
-      EIntegralResult fIntegralResult;
-   };
    
-   void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir/*, EBinning bin*/, Double_t rho);
+   void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho);
    
    inline Double_t GaussianKernel(Double_t x) const {
       // Returns the kernel evaluation at x 
@@ -188,6 +167,9 @@ private:
    Double_t ComputeKernelSigma2() const;
    Double_t ComputeKernelMu() const;
    Double_t ComputeKernelIntegral() const;
+   Double_t ComputeMidspread(const Double_t* data, UInt_t dataSize) const;
+   
+   std::vector<Double_t> GetBinCentreData();
 
    void CheckKernelValidity();
    void SetCanonicalBandwidth(); 
@@ -195,13 +177,13 @@ private:
    void SetCanonicalBandwidths(); 
    void SetKernelSigmas2(); 
    void SetHistogram();
-//    void SetUseBins();
+   void SetUseBins();
    void SetMirror();
-   void SetMean();
-   void SetSigma();
+   void SetMean(const Double_t* data, UInt_t dataSize);
+   void SetSigma(const Double_t* data, UInt_t dataSize, Double_t R);
    void SetKernel();
    void SetKernelFunction(KernelFunction_Ptr kernfunc = 0);
-   void SetOptions(Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir/*, EBinning bin*/, Double_t rho, Bool_t IsUserDefinedKernel = kFALSE);
+   void SetOptions(EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho, Bool_t isUserDefinedKernel = kFALSE);
    void SetData(const Double_t* data);
    void SetMirroredData();
    
