@@ -163,73 +163,32 @@ TInterpreter* TCint_Factory(const char* name, const char* title) {
 
 
 
-int TCint_GenerateDictionary(const std::string &className,
-                             const std::vector<std::string> &headers )
+int TCint_GenerateDictionary(const std::vector<std::string> &classes,
+                             const std::vector<std::string> &headers,
+                             const std::vector<std::string> &fwdDecls,
+                             const std::vector<std::string> &unknown)
 {
    //This function automatically creates the "LinkDef.h" file for templated
    //classes then executes CompileMacro on it.
    //The name of the file depends on the class name, and it's not generated again
    //if the file exist.
 
-
-   //(0) prepare file name
-   TString fileName = "AutoDict_";
-   std::string::const_iterator sIt;
-   for( sIt = className.begin(); sIt != className.end(); sIt++ ) {
-      if (*sIt == '<' || *sIt == '>' ||
-          *sIt == ' ' || *sIt == '*' ||
-          *sIt == ',' || *sIt == '&')
-         fileName += '_';
-      else
-         fileName += *sIt;
-   }
-   fileName += ".cxx";
-
-   if( gSystem->AccessPathName(fileName) != 0 ) {
-      //file does not exist
-      //(1) prepare file data
-      std::vector<std::string>::const_iterator it;
-      std::string fileContent ("");
-
-      for( it = headers.begin(); it < headers.end(); it++ )
-         fileContent += "#include \"" + *it + "\"\n";
-
-      fileContent += "#ifdef __CINT__ \n";
-      fileContent += "#pragma link off all class;\n";
-      fileContent += "#pragma link off all function;\n";
-      fileContent += "#pragma link off all global;\n";
-      fileContent += "#pragma link off all typedef;\n";
-      fileContent += "#pragma link C++ nestedclasses;\n";
-      fileContent += "#pragma link C++ class ";
-      fileContent += className + "+;\n" ;
-      fileContent += "#endif\n";
-      //end(1)
-
-      //(2) prepare the file
-      FILE *filePointer;
-
-      filePointer = fopen( fileName, "w" );
-
-      if( filePointer == NULL ) {
-         //can't open a file
-         return 1;
-      }
-      //end(2)
-
-      //write data into the file
-      fprintf( filePointer, "%s", fileContent.c_str() );
-      fclose( filePointer );
-   }
-
-   //(3) checking if we can compile a macro, if not then cleaning
-   Int_t oldErrorIgnoreLevel = gErrorIgnoreLevel;
-   gErrorIgnoreLevel = kWarning; // no "Info: creating library..."
-   Int_t ret = gSystem->CompileMacro( fileName, "k" );
-   gErrorIgnoreLevel = oldErrorIgnoreLevel;
-   if( ret == 0 ) //can't compile a macro
-      return 2;
-   //end(3)
    return 0;
+}
+ 
+int TCint_GenerateDictionary(const std::string &className,
+                             const std::vector<std::string> &headers,
+                             const std::vector<std::string> &fwdDecls,
+                             const std::vector<std::string> &unknown)
+{
+   //This function automatically creates the "LinkDef.h" file for templated
+   //classes then executes CompileMacro on it.
+   //The name of the file depends on the class name, and it's not generated again
+   //if the file exist.
+   
+   std::vector<std::string> classes;
+   classes.push_back(className);
+   return TCint_GenerateDictionary(classes, headers, fwdDecls, unknown);
 }
 
 // It is a "fantom" method to synchronize user keyboard input
@@ -1183,6 +1142,48 @@ void TCint::CreateListOfMethodArgs(TFunction *m)
       }
    }
 }
+
+
+//______________________________________________________________________________
+Int_t TCint::GenerateDictionary(const char *classes, const char *includes /* = 0 */, const char * /* options  = 0 */)
+{
+   // Generate the dictionary for the C++ classes listed in the first
+   // argmument (in a semi-colon separated list).
+   // 'includes' contains a semi-colon separated list of file to 
+   // #include in the dictionary.  
+   // For example:
+   //    gInterpreter->GenerateDictionary("vector<vector<float> >;list<vector<float> >","list;vector");
+   // or
+   //    gInterpreter->GenerateDictionary("myclass","myclass.h;myhelper.h");
+   
+   if (classes == 0 || classes[0] == 0) return 0;
+   
+   // Split the input list
+   std::vector<std::string> listClasses;
+   for(const char *current = classes, *prev = classes; *current != 0; ++current) {
+      if (*current == ';') {
+         listClasses.push_back( std::string(prev,current-prev) );
+         prev = current+1;
+      } else if (*(current+1) == 0) {
+         listClasses.push_back( std::string(prev,current+1-prev) );
+         prev = current+1;
+      }
+   }
+   std::vector<std::string> listIncludes;
+   for(const char *current = includes, *prev = includes; *current != 0; ++current) {
+      if (*current == ';') {
+         listIncludes.push_back( std::string(prev,current-prev) );
+         prev = current+1;
+      } else if (*(current+1) == 0) {
+         listIncludes.push_back( std::string(prev,current+1-prev) );
+         prev = current+1;
+      }
+   }
+   
+   // Generate the temporary dictionary file
+   return TCint_GenerateDictionary(listClasses,listIncludes, std::vector<std::string>(), std::vector<std::string>());
+}
+
 
 //______________________________________________________________________________
 TString TCint::GetMangledName(TClass *cl, const char *method,
@@ -2318,7 +2319,8 @@ void TCint::AddIncludePath(const char *path)
    clang::HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
    const bool IsUserSupplied = false;
    const bool IsFramework = false;
-   headerOpts.AddPath (incpath, clang::frontend::Angled, IsUserSupplied, IsFramework);
+   const bool IsSysRootRelative = true;
+   headerOpts.AddPath (incpath, clang::frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
 
    delete [] incpath;
 }

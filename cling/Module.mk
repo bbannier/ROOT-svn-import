@@ -88,7 +88,7 @@ $(CLINGO) $(CLINGDO) $(ROOTCLINGO): CXXFLAGS += -D__STDC_LIMIT_MACROS -D__STDC_C
 
 CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
  -lclingInterpreter -lclingMetaProcessor -lclingEditLine -lclangFrontend \
- -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
+ -lclangSerialization -lclangSema -lclangLex -lclangParse -lclangCodeGen -lclangAnalysis \
  -lclangBasic -lclangDriver -lclangAST -Llib -lReflex -lLLVMMCDisassembler \
  -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT \
  -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86Disassembler \
@@ -97,3 +97,5 @@ CORELIBEXTRA += -L$(LLVMDIR)/lib -lclingInterpreter -lclingUserInterface \
  -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser \
  -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC \
  -lLLVMCore -lLLVMSupport -lLLVMSystem
+
+CORELIBDEP += $(REFLEXLIB)

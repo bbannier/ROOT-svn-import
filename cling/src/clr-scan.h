@@ -179,7 +179,7 @@ public: // ADDED BY VELISLAVA
    // according to its type is processed by the corresponding Visitor method
    void RemoveBuilder(clang::DeclContext* DC); // Pop()-ing elements from the fClassBuilders stack
    void Scan (clang::ASTContext* C, clang::Decl* D);
-   const char* getClassName(clang::DeclContext* DC);
+   TString getClassName(clang::DeclContext* DC);
    void DumpDecl(clang::Decl* D, const char* msg);
 };
 
