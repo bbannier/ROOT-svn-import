@@ -78,7 +78,7 @@ test-$(MODNAME): $(QTGSILIB)
 		cd $(QTGSIDIR)/test; $(MAKE) $(QTTESTOPTS)
 
 clean-$(MODNAME):
-		@rm -f $(QTGSIO) $(QTGSIMOCO)
+		@rm -f $(QTGSIO) $(QTGSIDO) $(QTGSIMOCO)
 		-@cd $(QTGSIDIR)/test; $(MAKE) ROOTCONFIG=../../../bin/root-config clean
 
 clean::         clean-$(MODNAME)
@@ -90,8 +90,10 @@ distclean-$(MODNAME): clean-$(MODNAME)
 distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
-$(sort $(QTGSIMOCO) $(QTGSIO)): CXXFLAGS += $(QTGSICXXFLAGS)
+$(sort $(QTGSIMOCO) $(QTGSIO)): CXXFLAGS := $(filter-out -Wshadow,$(CXXFLAGS))
+$(QTGSIDO): CXXFLAGS := $(filter-out -Wshadow,$(CXXFLAGS))
 
+$(sort $(QTGSIMOCO) $(QTGSIO)): CXXFLAGS += $(QTGSICXXFLAGS)
 $(QTGSIDO): CXXFLAGS += $(QTGSICXXFLAGS)
 
 $(QTGSIMOC): $(QTGSIDIRS)/moc_%.cxx: $(QTGSIDIRI)/%.h

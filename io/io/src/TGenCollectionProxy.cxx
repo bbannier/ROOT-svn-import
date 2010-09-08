@@ -518,6 +518,7 @@ TGenCollectionProxy::TGenCollectionProxy(const TGenCollectionProxy& copy)
    fValue          = copy.fValue ? new Value(*copy.fValue) : 0;
    fVal            = copy.fVal   ? new Value(*copy.fVal)   : 0;
    fKey            = copy.fKey   ? new Value(*copy.fKey)   : 0;
+   fOnFileClass    = copy.fOnFileClass;
 }
 
 //______________________________________________________________________________
@@ -543,21 +544,23 @@ TGenCollectionProxy::TGenCollectionProxy(Info_t info, size_t iter_size)
    fValOffset       = 0;
    fValDiff         = 0;
    fPointers        = false;
+   fOnFileClass     = 0;
+   fSTL_type        = TClassEdit::kNotSTL;
    Env_t e;
    if ( iter_size > sizeof(e.fIterator) ) {
       Fatal("TGenCollectionProxy",
-            "%s %s are too large:%d bytes. Maximum is:%d bytes",
+            "%s %s are too large:%ld bytes. Maximum is:%ld bytes",
             "Iterators for collection",
             fClass->GetName(),
-            iter_size,
-            sizeof(e.fIterator));
+            (Long_t)iter_size,
+            (Long_t)sizeof(e.fIterator));
    }
 }
 
 //______________________________________________________________________________
 TGenCollectionProxy::TGenCollectionProxy(const ROOT::TCollectionProxyInfo &info, TClass *cl)
    : TVirtualCollectionProxy(cl),
-     fTypeinfo(info.fInfo)
+     fTypeinfo(info.fInfo), fOnFileClass(0)
 {
    // Build a proxy for a collection whose type is described by 'collectionClass'.
    fEnv            = 0;
@@ -583,15 +586,16 @@ TGenCollectionProxy::TGenCollectionProxy(const ROOT::TCollectionProxyInfo &info,
    fKey             = 0;
    fVal             = 0;
    fPointers        = false;
+   fSTL_type        = TClassEdit::kNotSTL;
 
    Env_t e;
    if ( info.fIterSize > sizeof(e.fIterator) ) {
       Fatal("TGenCollectionProxy",
-            "%s %s are too large:%d bytes. Maximum is:%d bytes",
+            "%s %s are too large:%ld bytes. Maximum is:%ld bytes",
             "Iterators for collection",
             fClass->GetName(),
-            info.fIterSize,
-            sizeof(e.fIterator));
+            (Long_t)info.fIterSize,
+            (Long_t)sizeof(e.fIterator));
    }
 }
 

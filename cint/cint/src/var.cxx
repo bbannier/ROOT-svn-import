@@ -1674,6 +1674,8 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
                   G__changeconsterror(varname, "enforced macro");
                }
             }
+            G__letautomatic(var, ig15, G__struct_offset, linear_index, result);
+            break;
          default:
             // case 'X' automatic variable
             G__letautomatic(var, ig15, G__struct_offset, linear_index, result);
@@ -2515,7 +2517,7 @@ G__value G__classassign(long pdest, int tagnum, G__value result)
       memcpy((void*) pdest, (void*) G__int(result), (size_t) G__struct.size[tagnum]);
       return result;
    }
-   if (result.type == 'u') {
+   if (result.type == 'u' && result.tagnum != -1) {
       // --
       if (result.obj.i < 0) {
          ttt.Format("(%s)(%ld)", G__struct.name[result.tagnum], result.obj.i);
@@ -2980,6 +2982,14 @@ inline void G__alloc_var_ref(int SIZE, CONVFUNC f, char* item, G__var_array* var
          ) {
             /*memset((char*) var->p[ig15], 0, SIZE);*/
          }
+      }
+      if (
+         (G__asm_wholefunction == G__ASM_FUNC_COMPILE) &&
+         (var->type[ig15] == 'i') &&
+         (var->constvar[ig15] & G__CONSTVAR) &&
+         result.type
+      ) {
+         G__abortbytecode();
       }
       /* Now do initialization. */
       if (
@@ -3508,7 +3518,7 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
    //  Determine class member access control.
    //
    var->access[var->allvar] = G__PUBLIC;
-   if (G__def_struct_member) {
+   if (G__def_struct_member || G__enumdef) {
       var->access[var->allvar] = G__access;
    }
 #ifndef G__NEWINHERIT
@@ -6931,7 +6941,9 @@ struct G__var_array* G__getvarentry(const char* varname, int varhash, int* pi, G
             baseclass = G__struct.baseclass[G__tagnum];
          }
 #else // G__OLDIMPLEMENTATION589_YET
-         baseclass = G__struct.baseclass[G__tagnum];
+         if (G__tagnum > -1) {
+            baseclass = G__struct.baseclass[G__tagnum];
+         }
 #endif // G__OLDIMPLEMENTATION589_YET
          if (G__exec_memberfunc || G__isfriend(G__tagnum)) {
             accesslimit = G__PUBLIC_PROTECTED_PRIVATE;
@@ -7487,8 +7499,10 @@ struct G__var_array* G__searchvariable(char* varname, int varhash, G__var_array*
          *pstore_struct_offset = *pG__struct_offset;
          isbase = 1;
          basen = 0;
-         baseclass = G__struct.baseclass[scope_tagnum];
-         if (G__exec_memberfunc || isdecl || G__isfriend(G__tagnum)) {
+         if (scope_tagnum > -1) {
+            baseclass = G__struct.baseclass[scope_tagnum];
+         }
+         if (G__exec_memberfunc || isdecl || G__enumdef || G__isfriend(G__tagnum)) {
             accesslimit = G__PUBLIC_PROTECTED_PRIVATE;
             memfunc_or_friend = 1;
          }

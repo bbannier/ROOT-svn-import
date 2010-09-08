@@ -74,7 +74,9 @@ XRDHDRS    := $(wildcard $(XROOTDDIRI)/Xrd/*.hh) $(wildcard $(XROOTDDIRI)/XrdCli
               $(wildcard $(XROOTDDIRI)/XrdSys/*.hh)
 
 ##### Xrootd headers, sources, config dependences #####
-XROOTDDEPS := $(wildcard $(XROOTDDIRI)/*/*.hh) $(wildcard $(XROOTDDIRI)/*/*.cc)
+XROOTDDEPS := $(wildcard $(XROOTDDIRI)/*/*.hh) $(wildcard $(XROOTDDIRI)/*/*.cc) \
+              $(wildcard $(XROOTDDIRI)/*/*.h) $(wildcard $(XROOTDDIRI)/*/*.c) \
+              $(wildcard $(XROOTDDIRI)/*/*/*.h) $(wildcard $(XROOTDDIRI)/*/*/*.c)
 XROOTDCFGD := $(wildcard $(XROOTDDIRD)/config/*) $(wildcard $(XROOTDDIRD)/config/test/*) \
               $(XROOTDDIRD)/configure.classic
 
@@ -113,6 +115,7 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		linuxx8664gcc:*) xopt="--ccflavour=gccx8664 --use-xrd-strlcpy";; \
 		linuxx8664icc:*) xopt="--ccflavour=iccx8664 --use-xrd-strlcpy";; \
 		linuxppc64gcc:*) xopt="--ccflavour=gccppc64 --use-xrd-strlcpy";; \
+                linuxalphagcc:*) xopt="--ccflavour=gcc --use-xrd-strlcpy";; \
 		linux*:*)        xarch="i386_linux"; xopt="--ccflavour=gcc --use-xrd-strlcpy";; \
 		macosx64:*)      xopt="--ccflavour=macos64";; \
 		macosxicc:*)     xopt="--ccflavour=icc";; \

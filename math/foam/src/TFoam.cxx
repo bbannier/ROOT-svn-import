@@ -179,7 +179,7 @@ TFoam::TFoam()
    fMCvect   = 0;
    fRvec     = 0;
    fPseRan   = 0;  // generator of pseudorandom numbers
-
+   fMethodCall=0;  // ROOT's pointer to global distribution function
 }
 //_________________________________________________________________________________________________
 TFoam::TFoam(const Char_t* Name)
@@ -223,6 +223,9 @@ TFoam::TFoam(const Char_t* Name)
    fPseRan   = 0;                // Initialize private copy of random number generator
    fMCMonit  = 0;                // MC efficiency monitoring
    fRho = 0;                     // pointer to abstract class providing function to integrate
+   fMCvect   = 0;
+   fRvec     = 0;
+   fPseRan   = 0;                // generator of pseudorandom numbers
    fMethodCall=0;                // ROOT's pointer to global distribution function
 }
 
@@ -238,19 +241,19 @@ TFoam::~TFoam()
       delete [] fCells;
    }
    if (fCellsAct) delete fCellsAct ; // WVE FIX LEAK
-   delete [] fRvec;    //double[]
-   delete [] fAlpha;   //double[]
-   delete [] fMCvect;  //double[]
-   delete [] fPrimAcu; //double[]
-   delete [] fMaskDiv; //int[]
-   delete [] fInhiDiv; //int[]
+   if (fRvec)    delete [] fRvec;    //double[]
+   if (fAlpha)   delete [] fAlpha;   //double[]
+   if (fMCvect)  delete [] fMCvect;  //double[]
+   if (fPrimAcu) delete [] fPrimAcu; //double[]
+   if (fMaskDiv) delete [] fMaskDiv; //int[]
+   if (fInhiDiv) delete [] fInhiDiv; //int[]
  
    if( fXdivPRD!= 0) {
       for(i=0; i<fDim; i++) delete fXdivPRD[i]; // TFoamVect*[]
       delete [] fXdivPRD;
    }
-   delete fMCMonit;
-   delete fHistWt;
+   if (fMCMonit) delete fMCMonit;
+   if (fHistWt)  delete fHistWt;
 
    // delete histogram arrays
    if (fHistEdg) { 
@@ -523,7 +526,7 @@ void TFoam::Explore(TFoamCell *cell)
 // Note that links to parents and initial volume = 1/2 parent has to be
 // already defined prior to calling this routine.
 
-   Double_t wt, dx, xBest, yBest;
+   Double_t wt, dx, xBest=0, yBest=0;
    Double_t intOld, driOld;
 
    Long_t iev;
@@ -1366,7 +1369,7 @@ void  TFoam::SetXdivPRD(Int_t iDim, Int_t len, Double_t xDiv[])
    // Priting predefined division points
    cout<<" SetXdivPRD, idim= "<<iDim<<"  len= "<<len<<"   "<<endl;
    for(i=0; i<len; i++) {
-      cout<< (*fXdivPRD[iDim])[i] <<"  ";
+      if (iDim < fDim) cout<< (*fXdivPRD[iDim])[i] <<"  ";
    }
    cout<<endl;
    for(i=0; i<len; i++)  cout<< xDiv[i] <<"   ";
@@ -1394,22 +1397,22 @@ void TFoam::CheckAll(Int_t level)
       if( ((cell->GetDau0()==0) && (cell->GetDau1()!=0) ) ||
          ((cell->GetDau1()==0) && (cell->GetDau0()!=0) ) ) {
          errors++;
-         if (level==1) Error("CheckAll","ERROR: Cell's no %d has only one daughter \n",iCell);
+         if (level==1) Error("CheckAll","ERROR: Cell's no %ld has only one daughter \n",iCell);
       }
       if( (cell->GetDau0()==0) && (cell->GetDau1()==0) && (cell->GetStat()==0) ) {
          errors++;
-         if (level==1) Error("CheckAll","ERROR: Cell's no %d  has no daughter and is inactive \n",iCell);
+         if (level==1) Error("CheckAll","ERROR: Cell's no %ld  has no daughter and is inactive \n",iCell);
       }
       if( (cell->GetDau0()!=0) && (cell->GetDau1()!=0) && (cell->GetStat()==1) ) {
          errors++;
-         if (level==1) Error("CheckAll","ERROR: Cell's no %d has two daughters and is active \n",iCell);
+         if (level==1) Error("CheckAll","ERROR: Cell's no %ld has two daughters and is active \n",iCell);
       }
 
       // checking parents
       if( (cell->GetPare())!=fCells[0] ) { // not child of the root
          if ( (cell != cell->GetPare()->GetDau0()) && (cell != cell->GetPare()->GetDau1()) ) {
             errors++;
-            if (level==1) Error("CheckAll","ERROR: Cell's no %d parent not pointing to this cell\n ",iCell);
+            if (level==1) Error("CheckAll","ERROR: Cell's no %ld parent not pointing to this cell\n ",iCell);
          }
       }
 
@@ -1417,13 +1420,13 @@ void TFoam::CheckAll(Int_t level)
       if(cell->GetDau0()!=0) {
          if(cell != (cell->GetDau0())->GetPare()) {
             errors++;
-            if (level==1)  Error("CheckAll","ERROR: Cell's no %d daughter 0 not pointing to this cell \n",iCell);
+            if (level==1)  Error("CheckAll","ERROR: Cell's no %ld daughter 0 not pointing to this cell \n",iCell);
          }
       }
       if(cell->GetDau1()!=0) {
          if(cell != (cell->GetDau1())->GetPare()) {
             errors++;
-            if (level==1) Error("CheckAll","ERROR: Cell's no %d daughter 1 not pointing to this cell \n",iCell);
+            if (level==1) Error("CheckAll","ERROR: Cell's no %ld daughter 1 not pointing to this cell \n",iCell);
          }
       }
    }// loop after cells;
@@ -1433,7 +1436,7 @@ void TFoam::CheckAll(Int_t level)
       cell = fCells[iCell];
       if( (cell->GetStat()==1) && (cell->GetDriv()==0) ) {
          warnings++;
-         if(level==1) Warning("CheckAll", "Warning: Cell no. %d is active but empty \n", iCell);
+         if(level==1) Warning("CheckAll", "Warning: Cell no. %ld is active but empty \n", iCell);
       }
    }
    // summary

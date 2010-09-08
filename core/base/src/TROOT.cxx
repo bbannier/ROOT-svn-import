@@ -212,14 +212,35 @@ Int_t gDebug;
 ClassImp(TROOT)
 
 //______________________________________________________________________________
-TROOT::TROOT() : TDirectory()
+TROOT::TROOT() : TDirectory(),
+     fLineIsProcessing(0), fVersion(0), fVersionInt(0), fVersionCode(0),
+     fVersionDate(0), fVersionTime(0), fBuiltDate(0), fBuiltTime(0), fSvnRevision(0),
+     fTimer(0), fApplication(0), fInterpreter(0), fBatch(kTRUE), fEditHistograms(kTRUE),
+     fFromPopUp(kTRUE),fMustClean(kTRUE),fReadingObject(kFALSE),fForceStyle(kFALSE),
+     fInterrupt(kFALSE),fEscape(kFALSE),fExecutingMacro(kFALSE),fEditorMode(0),
+     fPrimitive(0),fSelectPad(0),fClasses(0),fTypes(0),fGlobals(0),fGlobalFunctions(0),
+     fFiles(0),fMappedFiles(0),fSockets(0),fCanvases(0),fStyles(0),fFunctions(0),
+     fTasks(0),fColors(0),fGeometries(0),fBrowsers(0),fSpecials(0),fCleanups(0),
+     fMessageHandlers(0),fStreamerInfo(0),fClassGenerators(0),fSecContexts(0),
+     fProofs(0),fClipboard(0),fDataSets(0),fUUIDs(0),fRootFolder(0),fBrowsables(0),
+     fPluginManager(0)
 {
    // Default ctor.
 }
 
 //______________________________________________________________________________
 TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
-           : TDirectory()
+   : TDirectory(), fLineIsProcessing(0), fVersion(0), fVersionInt(0), fVersionCode(0),
+     fVersionDate(0), fVersionTime(0), fBuiltDate(0), fBuiltTime(0), fSvnRevision(0),
+     fTimer(0), fApplication(0), fInterpreter(0), fBatch(kTRUE), fEditHistograms(kTRUE),
+     fFromPopUp(kTRUE),fMustClean(kTRUE),fReadingObject(kFALSE),fForceStyle(kFALSE),
+     fInterrupt(kFALSE),fEscape(kFALSE),fExecutingMacro(kFALSE),fEditorMode(0),
+     fPrimitive(0),fSelectPad(0),fClasses(0),fTypes(0),fGlobals(0),fGlobalFunctions(0),
+     fFiles(0),fMappedFiles(0),fSockets(0),fCanvases(0),fStyles(0),fFunctions(0),
+     fTasks(0),fColors(0),fGeometries(0),fBrowsers(0),fSpecials(0),fCleanups(0),
+     fMessageHandlers(0),fStreamerInfo(0),fClassGenerators(0),fSecContexts(0),
+     fProofs(0),fClipboard(0),fDataSets(0),fUUIDs(0),fRootFolder(0),fBrowsables(0),
+     fPluginManager(0)
 {
    // Initialize the ROOT system. The creation of the TROOT object initializes
    // the ROOT system. It must be the first ROOT related action that is
@@ -1115,33 +1136,48 @@ void TROOT::Idle(UInt_t idleTimeInSec, const char *command)
 //______________________________________________________________________________
 Int_t TROOT::IgnoreInclude(const char *fname, const char * /*expandedfname*/)
 {
-   // Return true if the given include file correspond to a class that has
+   // Return 1 if the given include file correspond to a class that has
    // been loaded through a compiled dictionnary.
 
-   Int_t result = 0;
+   if (fname == 0) return 0;
 
-   if (fname == 0) return result;
-
-   TString className = gSystem->BaseName(fname);
-
+   TString stem(fname);
    // Remove extension if any, ignore files with extension not being .h*
-   Int_t where = className.Last('.');
+   Int_t where = stem.Last('.');
    if (where != kNPOS) {
-      if (className.EndsWith(".so") || className.EndsWith(".sl") ||
-          className.EndsWith(".dl") || className.EndsWith(".a")  ||
-          className.EndsWith(".dll", TString::kIgnoreCase))
-         return result;
-      className.Remove(where);
+      if (stem.EndsWith(".so") || stem.EndsWith(".sl") ||
+          stem.EndsWith(".dl") || stem.EndsWith(".a")  ||
+          stem.EndsWith(".dll", TString::kIgnoreCase))
+         return 0;
+      stem.Remove(where);
    }
 
+   TString className = gSystem->BaseName(stem);
    TClass *cla = TClass::GetClass(className);
-   if ( cla ) {
-      if (cla->GetDeclFileLine() < 0) return 0; // to a void an error with VisualC++
-      const char *decfile = gSystem->BaseName(cla->GetDeclFileName());
-      if(!decfile) return 0;
-      result = strcmp(decfile,fname) == 0;
+
+   if (!cla) {
+      className = stem;
+      className.ReplaceAll("/", "::");
+      className.ReplaceAll("\\", "::");
+      if (className.Contains(":::")) {
+         // "C:\dir" becomes "C:::dir".
+         // fname corresponds to whatever is stated after #include and
+         // a full path name usually means that it's not a regular #include
+         // but e.g. a ".L", so we can assume that this is not a header of
+         // a class in a namespace (a global-namespace class would have been
+         // detected already before).
+         return 0;
+      }
+      cla = TClass::GetClass(className);
    }
-   return result;
+   if ( cla ) {
+      if (cla->GetDeclFileLine() <= 0) return 0; // to a void an error with VisualC++
+      TString decfile = gSystem->BaseName(cla->GetDeclFileName());
+      if (decfile == gSystem->BaseName(fname)) {
+         return 1;
+      }
+   }
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -1227,23 +1263,11 @@ TClass *TROOT::LoadClass(const char *requestedname, Bool_t silent) const
    // In addition the call to the dictionary function (dict()) might also have
    // the same effect (change/delete requestedname).
    TString classname(requestedname);
-   // const char *classname = requestedname;
    
    VoidFuncPtr_t dict = TClassTable::GetDict(classname);
    
-   TString long64name;
    TString resolved;
 
-   if (!dict) {
-      // Try with Long64_t instead of long long
-      long64name = TClassEdit::GetLong64_Name(classname.Data());
-      if (long64name != classname) {
-         TClass *res = LoadClass(long64name.Data(),silent);
-         if (res) return res;
-      } else {
-         long64name.Clear();
-      }
-   }
    if (!dict) {
       // Try to remove the ROOT typedefs
       resolved = TClassEdit::ResolveTypedef(classname,kTRUE);
@@ -1258,11 +1282,6 @@ TClass *TROOT::LoadClass(const char *requestedname, Bool_t silent) const
          dict = TClassTable::GetDict(classname);
          if (!dict) {
             // Try the typedefs again.
-
-            if (long64name.Length()) {
-               TClass *res = LoadClass(long64name.Data(),silent);
-               if (res) return res;
-            }
             if (resolved.Length()) {
                dict = TClassTable::GetDict(resolved.Data());
             }
@@ -1392,7 +1411,7 @@ Int_t TROOT::LoadMacro(const char *filename, int *error, Bool_t check)
       TString fname = gSystem->SplitAclicMode(filename, aclicMode, arguments, io);
 
       if (arguments.Length()) {
-         Warning("LoadMacro", "argument(s) \"%s\" ignored", arguments.Data(), GetMacroPath());
+         Warning("LoadMacro", "argument(%s) ignored in %s", arguments.Data(), GetMacroPath());
       }
       char *mac = gSystem->Which(GetMacroPath(), fname, kReadPermission);
       if (!mac) {

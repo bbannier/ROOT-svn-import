@@ -46,6 +46,8 @@
 
 #include "TRFIOFile.h"
 #include "TROOT.h"
+#include "TTimeStamp.h"
+#include "TVirtualPerfStats.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -221,6 +223,9 @@ Bool_t TRFIOFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
       return kTRUE;
    }
 
+   Double_t start = 0;
+   if (gPerfStats) start = TTimeStamp();
+
    // we maintain a static iove64 buffer to avoid malloc/free with every call
    if (!iov) {
       if (nbuf > iovsize)
@@ -230,8 +235,8 @@ Bool_t TRFIOFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
       if (gDebug > 1)
          Info("TRFIOFile", "allocating iovec64 with size %d", iovsize);
       if (!iov) {
-         Error("TRFIOFile", "error allocating preseek vector of size %d",
-               sizeof(struct iovec64) * iovsize);
+         Error("TRFIOFile", "error allocating preseek vector of size %ld",
+               (Long_t)sizeof(struct iovec64) * iovsize);
          return kTRUE;
       }
    } else {
@@ -241,17 +246,16 @@ Bool_t TRFIOFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
          if (gDebug > 1)
             Info("TRFIOFile", "re-allocating iovec64 with size %d", iovsize);
          if (!iov) {
-            Error("TRFIOFile", "error reallocating preseek vector of size %d",
-                  sizeof(struct iovec64) * iovsize);
+            Error("TRFIOFile", "error reallocating preseek vector of size %ld",
+                  (Long_t)sizeof(struct iovec64) * iovsize);
             return kTRUE;
          }
       }
    }
 
-
    for (n = 0; n < nbuf; n++) {
       if (gDebug>1)
-         Info("TFIOFile", "adding chunk %lld, %d %d", n, pos[n], len[n]);
+         Info("TFIOFile", "adding chunk %d, %lld %d", n, pos[n], len[n]);
       iov[n].iov_base = pos[n] + fArchiveOffset;
       iov[n].iov_len  = len[n];
    }
@@ -266,7 +270,7 @@ Bool_t TRFIOFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
    Int_t k = 0;
 
    for (n = 0; n < nbuf; n++) {
-      if (rfio_lseek64(fD, (off_t) iov[n].iov_base, SEEK_SET) < 0) {
+      if (rfio_lseek64(fD, iov[n].iov_base, SEEK_SET) < 0) {
          Error("TRFIOFile", "error doing rfio_lseek");
          return kTRUE;
       }
@@ -286,6 +290,9 @@ Bool_t TRFIOFile::ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf)
    fgBytesRead += k;
    fgReadCalls++;
 #endif
+
+   if (gPerfStats)
+      gPerfStats->FileReadEvent(this, k, start);
 
    return kFALSE;
 }

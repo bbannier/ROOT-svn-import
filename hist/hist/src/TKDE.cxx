@@ -595,7 +595,8 @@ TH1D* TKDE::GetKDEHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
    
 TF1* TKDE::GetKDEFunction() {
    //Returns the estimated density 
-   return fPDF = new TF1("KDE_Func", this, &TKDE::operator(), fXMin, fXMax, 0, "TKDE", "operator()");
+   fPDF = new TF1("KDE_Func", this, &TKDE::operator(), fXMin, fXMax, 0, "TKDE", "operator()");
+   return fPDF;
 }
 
 TF1* TKDE::GetPDFUpperConfidenceInterval(Double_t confidenceLevel) {

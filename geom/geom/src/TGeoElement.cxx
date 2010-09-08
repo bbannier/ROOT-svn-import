@@ -87,7 +87,7 @@ TGeoElement::TGeoElement(const char *name, const char *title, Int_t z, Double_t 
    SetDefined(kFALSE);
    SetUsed(kFALSE);
    fZ = z;
-   fN = 0;
+   fN = Int_t(a);
    fNisotopes = 0;
    fA = a;
    fIsotopes = NULL;
@@ -128,7 +128,7 @@ TGeoElement::TGeoElement(const char *name, const char *title, Int_t z, Int_t n, 
 void TGeoElement::Print(Option_t *option) const
 {
 // Print this isotope
-   printf("Element: %s      Z=%d   N=%d   A=%f [g/mole]\n", GetName(), fZ,fN,fA);
+   printf("Element: %s      Z=%d   N=%f   A=%f [g/mole]\n", GetName(), fZ,Neff(),fA);
    if (HasIsotopes()) {
       for (Int_t i=0; i<fNisotopes; i++) {
          TGeoIsotope *iso = GetIsotope(i);
@@ -193,6 +193,23 @@ void TGeoElement::AddIsotope(TGeoIsotope *isotope, Double_t relativeAbundance)
 }
 
 //______________________________________________________________________________
+Double_t TGeoElement::Neff() const
+{
+// Returns effective number of nucleons.
+   if (!fNisotopes) return fN;
+   TGeoIsotope *isocrt;
+   Double_t weight = 0.0;
+   Double_t neff = 0.0;
+   for (Int_t i=0; i<fNisotopes; i++) {
+      isocrt = (TGeoIsotope*)fIsotopes->At(i);
+      neff += fAbundances[i]*isocrt->GetN();
+      weight += fAbundances[i];
+   }
+   neff /= weight;
+   return neff;
+}
+
+//______________________________________________________________________________
 TGeoIsotope *TGeoElement::GetIsotope(Int_t i) const
 {
 // Return i-th isotope in the element.
@@ -230,8 +247,8 @@ TGeoIsotope::TGeoIsotope(const char *name, Int_t z, Int_t n, Double_t a)
              fA(a)
 {
 // Constructor
-   if (z<1) Fatal("ctor", "Not allowed Z=%d (<1) for isotope: %s", name, z);
-   if (n<z) Fatal("ctor", "Not allowed Z=%d < N=%d for isotope: %s", name, z,n);
+   if (z<1) Fatal("ctor", "Not allowed Z=%d (<1) for isotope: %s", z,name);
+   if (n<z) Fatal("ctor", "Not allowed Z=%d < N=%d for isotope: %s", z,n,name);
    TGeoElement::GetElementTable()->AddIsotope(this);
 }
 
@@ -778,6 +795,7 @@ TGeoElementTable::TGeoElementTable()
 // default constructor
    fNelements = 0;
    fNelementsRN = 0;
+   fNisotopes = 0;
    fList      = 0;
    fListRN    = 0;
    fIsotopes = 0;
@@ -789,6 +807,7 @@ TGeoElementTable::TGeoElementTable(Int_t /*nelements*/)
 // constructor
    fNelements = 0;
    fNelementsRN = 0;
+   fNisotopes = 0;
    fList = new TObjArray(128);
    fListRN    = 0;
    fIsotopes = 0;
@@ -801,6 +820,7 @@ TGeoElementTable::TGeoElementTable(const TGeoElementTable& get) :
   TObject(get),
   fNelements(get.fNelements),
   fNelementsRN(get.fNelementsRN),
+  fNisotopes(get.fNisotopes),
   fList(get.fList),
   fListRN(get.fListRN),
   fIsotopes(0)
@@ -816,6 +836,7 @@ TGeoElementTable& TGeoElementTable::operator=(const TGeoElementTable& get)
       TObject::operator=(get);
       fNelements=get.fNelements;
       fNelementsRN=get.fNelementsRN;
+      fNisotopes=get.fNisotopes;
       fList=get.fList;
       fListRN=get.fListRN;
       fIsotopes = 0;
@@ -1029,6 +1050,7 @@ void TGeoElementTable::ImportElementsRN()
       for (i=0; i<ndecays; i++) {
          if (!fgets(&line[0],140,fp)) {
             Error("ImportElementsRN", "Error parsing RadioNuclides.txt file");
+            fclose(fp);
             return;
          }   
          TGeoDecayChannel *dc = TGeoDecayChannel::ReadDecay(line);
@@ -1039,6 +1061,7 @@ void TGeoElementTable::ImportElementsRN()
    }
    TObject::SetBit(kETRNElements,kTRUE);
    CheckTable();
+   fclose(fp);
 }
 
 //______________________________________________________________________________

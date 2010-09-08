@@ -63,13 +63,14 @@ void TEveLineGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
    TGLUtil::LockColor(); // Keep color from TGLPhysicalShape.
    if (q.fRnrLine) {
-      TGLCapabilitySwitch sw_smooth(GL_LINE_SMOOTH, q.fSmooth);
-      TGLCapabilitySwitch sw_blend(GL_BLEND, q.fSmooth);
-      TGLUtil::RenderPolyLine(q, q.GetP(), q.Size());
+      TGLCapabilityEnabler sw_smooth(GL_LINE_SMOOTH, q.fSmooth);
+      TGLCapabilityEnabler sw_blend(GL_BLEND, q.fSmooth);
+      TGLUtil::RenderPolyLine(q, q.GetMainTransparency(), q.GetP(), q.Size());
    }
    TGLUtil::UnlockColor();
-   if (q.fRnrPoints)
-      TGLUtil::RenderPolyMarkers(q, q.GetP(), q.Size(),
+   if (q.fRnrPoints) {
+      TGLUtil::RenderPolyMarkers(q, 0,q.GetP(), q.Size(),
                                  rnrCtx.GetPickRadius(),
                                  rnrCtx.Selection());
+   }
 }

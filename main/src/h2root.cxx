@@ -291,7 +291,7 @@ int main(int argc, char **argv)
    if (argc > 2) {
       file_out=argv[2];
    } else {
-      file_out= new char[2000];
+      file_out= new char[strlen(file_in)+strlen(".root")+1];
       strcpy(file_out,file_in);
       char *dot = strrchr(file_out,'.');
       if (dot) strcpy(dot+1,"root");
@@ -419,6 +419,11 @@ void convert_directory(const char *dir)
 #else
       uhtoc(ihdir[0],ncw,chdir,16,nch);
 #endif
+      //do not process directory names containing a slash
+      if (strchr(chdir,'/')) {
+         printf("Sorry cannot convert directory name %s because it contains a slash\n",chdir);
+         continue;
+      }   
       strcpy(hbookdir,chdir);
       for (i=16;i>0;i--) {
          if (chdir[i] == 0) continue;

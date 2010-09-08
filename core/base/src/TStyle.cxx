@@ -809,7 +809,8 @@ void TStyle::Paint(Option_t *option)
    // Show the options from the current style
    // if (TClass::GetClass("TStyleManager")) gSystem->Load("libGed");
 
-   gROOT->ProcessLine(Form("TStyleManager::PaintStyle((TStyle*)0x%lx,\"%s\")",this,option));
+   gROOT->ProcessLine(Form("TStyleManager::PaintStyle((TStyle*)0x%lx,\"%s\")",
+                           (ULong_t)this,option));
 }
 
 
@@ -1445,6 +1446,7 @@ void TStyle::SaveSource(const char *filename, Option_t *option)
    ofstream out;
    out.open(ff.Data(), ios::out);
    if (!out.good()) {
+      delete [] sname;
       Error("SaveSource", "cannot open file: %s", ff.Data());
       return;
    }

@@ -1,4 +1,4 @@
-// @(#)root/gx11:$Id$
+// @(#)root/gl:$Id$
 // Author: Timur Pocheptsov (TX11GLManager) / Valeriy Onuchin (TX11GL)
 
 /*************************************************************************
@@ -168,7 +168,7 @@ TX11GLManager::TX11GLImpl::~TX11GLImpl()
       TGLContext_t &ctx = fGLContexts[i];
 
       if (ctx.fGLXContext) {
-         ::Warning("TX11GLManager::~TX11GLManager", "opengl device with index %d was not destroyed", i);
+         ::Warning("TX11GLManager::~TX11GLManager", "opengl device with index %ld was not destroyed", (Long_t)i);
          glXDestroyContext(fDpy, ctx.fGLXContext);
 
          if (ctx.fPixmapIndex != -1) {

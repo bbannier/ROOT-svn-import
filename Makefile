@@ -9,8 +9,11 @@
 ##### config/Makefile.config isn't made yet - the package  #####
 ##### scripts want's to make it them selves - so we don't  #####
 
-ifeq ($(findstring $(MAKECMDGOALS), maintainer-clean debian redhat),)
+ifeq ($(findstring $(MAKECMDGOALS), debian redhat),)
 include config/Makefile.config
+endif
+ifeq ($(MAKECMDGOALS),maintainer-clean)
+-include config/Makefile.config
 endif
 ifeq ($(MAKECMDGOALS),clean)
 include config/Makefile.config
@@ -93,16 +96,19 @@ SYSTEMO       = $(WINNTO)
 SYSTEMDO      = $(WINNTDO)
 else
 ifeq ($(ARCH),win32gcc)
-MODULES      += core/unix graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
+MODULES      += core/unix
 SYSTEML       = $(UNIXL)
 SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 else
-MODULES      += core/unix graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
+MODULES      += core/unix
 SYSTEML       = $(UNIXL)
 SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 endif
+endif
+ifeq ($(BUILDX11),yes)
+MODULES      += graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
 endif
 ifeq ($(BUILDGL),yes)
 ifeq ($(BUILDFTGL),yes)
@@ -111,7 +117,7 @@ endif
 ifeq ($(BUILDGLEW),yes)
 MODULES      += graf3d/glew
 endif
-MODULES      += graf3d/gl graf3d/eve graf3d/gviz3d 
+MODULES      += graf3d/gl graf3d/eve graf3d/gviz3d
 endif
 ifeq ($(BUILDMYSQL),yes)
 MODULES      += sql/mysql
@@ -157,6 +163,9 @@ MODULES      += misc/memstat
 endif
 ifeq ($(BUILDASIMAGE),yes)
 MODULES      += graf2d/asimage
+ifeq ($(BUILDFITSIO),yes)
+MODULES      += graf2d/fitsio
+endif
 endif
 ifeq ($(BUILDFPYTHIA6),yes)
 MODULES      += montecarlo/pythia6
@@ -205,7 +214,7 @@ ifeq ($(BUILDCINTEX),yes)
 MODULES      += cint/cintex
 endif
 ifeq ($(BUILDCLING),yes)
-# to be added to the unconditional MODULES list below once cling is in trunk 
+# to be added to the unconditional MODULES list above once cling is in trunk
 MODULES      += cint/cling
 endif
 ifeq ($(BUILDROOFIT),yes)
@@ -280,7 +289,7 @@ MODULES      += core/unix core/winnt core/editline graf2d/x11 graf2d/x11ttf \
                 graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
                 proof/proofd proof/proofx proof/clarens proof/peac proof/pq2 \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
-                tmva io/hdfs \
+                tmva io/hdfs graf2d/fitsio \
                 roofit/roofitcore roofit/roofit roofit/roostats \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve net/glite misc/memstat \
@@ -472,8 +481,8 @@ COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(METACDO) $(SYSTEMDO) \
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
 ifneq ($(BUILTINZLIB),yes)
-CORELIBEXTRA += $(ZLIBCLILIB)
-STATICEXTRALIBS += -lz
+CORELIBEXTRA += $(ZLIBLIBDIR) $(ZLIBCLILIB)
+STATICEXTRALIBS += $(ZLIBLIBDIR) $(ZLIBCLILIB)
 endif
 ifeq ($(BUILDEDITLINE),yes)
 CORELIBEXTRA += $(CURSESLIBDIR) $(CURSESLIB)
@@ -505,6 +514,30 @@ INCLUDEFILES :=
 .PRECIOUS: include/%.h
 
 # special rules (need to be defined before generic ones)
+cint/cint/lib/dll_stl/G__%.o: cint/cint/lib/dll_stl/G__%.cxx
+	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
+	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	$(CXX) $(NOOPT) $(CXXFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+
+cint/cint/lib/dll_stl/G__c_%.o: cint/cint/lib/dll_stl/G__c_%.c
+	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIR)/lib/prec_stl \
+	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	$(CC) $(NOOPT) $(CFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+
+cint/cint/lib/G__%.o: cint/cint/lib/G__%.cxx
+	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
+	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	$(CXX) $(NOOPT) $(CXXFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+
+cint/cint/lib/G__c_%.o: cint/cint/lib/G__c_%.c
+	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	   $(CFLAGS) $(DICTFLAGS) -I$(CINTDIR)/lib/prec_stl \
+	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
+	$(CC) $(NOOPT) $(CFLAGS) $(DICTFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+
 G__%.o: G__%.cxx
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
 	   $(CXXFLAGS) $(DICTFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
@@ -617,7 +650,7 @@ ifeq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean debian redhat),)
 Makefile: configure config/rootrc.in config/RConfigure.in config/Makefile.in \
   config/Makefile-comp.in config/root-config.in config/rootauthrc.in \
   config/rootdaemonrc.in config/mimes.unix.in config/mimes.win32.in \
-  config.status
+  config.status config/proofserv.in config/roots.in
 	@( $(RECONFIGURE) "$?" || ( \
 	   echo ""; echo "Please, run ./configure again as config option files ($?) have changed."; \
 	   echo ""; exit 1; \
@@ -855,10 +888,7 @@ endif
 	@rm -f $(CINTDIR)/lib/posix/a.out $(CINTDIR)/lib/posix/mktypes
 	@rm -f README/ChangeLog build/dummy.d
 	@rm -rf README/ReleaseNotes
-	@rm -f etc/daemons/rootd.rc.d etc/daemons/rootd.xinetd
-	@rm -f etc/daemons/proofd.rc.d etc/daemons/proofd.xinetd
-	@rm -f etc/daemons/olbd.rc.d etc/daemons/xrootd.rc.d
-	@rm -f etc/svninfo.txt macros/html.C
+	@rm -f etc/svninfo.txt
 	@(find . -path '*/daemons' -prune -o -name *.d -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find . -name *.o -exec rm -rf {} \; >/dev/null 2>&1;true)
 	-@cd test && $(MAKE) distclean
@@ -866,8 +896,12 @@ endif
 maintainer-clean:: distclean
 	@rm -rf bin lib include htmldoc system.rootrc config/Makefile.config \
 	   config/Makefile.comp $(ROOTRC) etc/system.rootauthrc \
-	   etc/system.rootdaemonrc etc/root.mimes build/misc/root-help.el \
-	   rootd/misc/rootd.rc.d build-arch-stamp build-indep-stamp \
+	   etc/system.rootdaemonrc etc/root.mimes etc/daemons/rootd.rc.d \
+	   etc/daemons/rootd.xinetd etc/daemons/proofd.rc.d \
+	   etc/daemons/proofd.xinetd main/src/proofserv.sh main/src/roots.sh \
+	   etc/daemons/olbd.rc.d etc/daemons/xrootd.rc.d \
+	   etc/daemons/cmsd.rc.d macros/html.C \
+	   build/misc/root-help.el build-arch-stamp build-indep-stamp \
 	   configure-stamp build-arch-cint-stamp config.status config.log
 
 version: $(CINTTMP)

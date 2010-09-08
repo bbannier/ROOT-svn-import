@@ -2746,6 +2746,12 @@ static G__value G__exec_loop(const char* forinit, char* condition,
    //                ^
    //
    //fprintf(stderr, "G__exec_loop: at begin, G__no_exec_compile: %d\n", G__no_exec_compile);
+   struct TempLevel {
+     TempLevel() { ++G__templevel; }
+     ~TempLevel() { --G__templevel; }
+   };
+   // Make sure all temporaries created in the loop get destroyed.
+   TempLevel raise_temp_level;
 #ifdef G__ASM
    int store_asm_noverflow = 0;
    int store_asm_cp = 0;
@@ -3973,7 +3979,7 @@ static void G__parse_friend()
             friendtagnum = G__search_tagname(classname, tagtype);
          }
          // friend class ...;
-         if (envtagnum != -1) {
+         if (envtagnum != -1 && friendtagnum != -1) {
             struct G__friendtag* friendtag = G__struct.friendtag[friendtagnum];
             if (friendtag) {
                while (friendtag->next) {
@@ -4062,7 +4068,6 @@ static int G__keyword_anytime_5(G__FastAllocString& statement)
       }
       int store_no_exec = G__no_exec;
       G__no_exec = 0;
-      G__static_alloc = 1;
       int brace_level = 0;
       G__exec_statement(&brace_level);
       G__static_alloc = 0;
@@ -4477,7 +4482,9 @@ static int G__defined_type(G__FastAllocString& type_name, int len)
             // Output the info to the given file.
             fprintf(G__fpundeftype, "class %s; /* %s %d */\n", type_name(), G__ifile.name, G__ifile.line_number);
             fprintf(G__fpundeftype, "#pragma link off class %s;\n\n", type_name());
-            G__struct.globalcomp[G__tagnum] = G__NOLINK;
+            if (G__tagnum > -1) { // it could be -1 if we get too many classes.
+               G__struct.globalcomp[G__tagnum] = G__NOLINK;
+            }
          }
          else {
             // -- Was not a known type, return.

@@ -51,6 +51,7 @@ TEveCaloLegoOverlay::TEveCaloLegoOverlay() :
    fShowScales(kTRUE),
    fScaleColor(-1), fScaleTransparency(0),
    fScaleCoordX(0.85), fScaleCoordY(0.65),
+   fScaleW(0), fScaleH(0),
    fCellX(-1), fCellY(-1),
 
    fFrameColor(-1), fFrameLineTransp(70), fFrameBgTransp(90),
@@ -212,7 +213,7 @@ void TEveCaloLegoOverlay::MouseLeave()
 }
 
 //______________________________________________________________________________
-void TEveCaloLegoOverlay::SetScaleColorTransparency(Color_t colIdx, UChar_t transp)
+void TEveCaloLegoOverlay::SetScaleColorTransparency(Color_t colIdx, Char_t transp)
 {
    // Set color and transparency of scales.
 
@@ -230,7 +231,7 @@ void TEveCaloLegoOverlay::SetScalePosition(Double_t x, Double_t y)
 }
 
 //______________________________________________________________________________
-void TEveCaloLegoOverlay:: SetFrameAttribs(Color_t frameColor, UChar_t lineTransp, UChar_t bgTransp)
+void TEveCaloLegoOverlay:: SetFrameAttribs(Color_t frameColor, Char_t lineTransp, Char_t bgTransp)
 {
    // Set frame attribs.
 

@@ -76,7 +76,7 @@ TEveGeoNode::TEveGeoNode(TGeoNode* node) :
    // Hack!! Should use cint to retrieve TAttLine::fLineColor offset.
    char* l = (char*) dynamic_cast<TAttLine*>(node->GetVolume());
    SetMainColorPtr((Color_t*)(l + sizeof(void*)));
-   SetMainTransparency((UChar_t) fNode->GetVolume()->GetTransparency());
+   SetMainTransparency(fNode->GetVolume()->GetTransparency());
 
    fRnrSelf = fNode->TGeoAtt::IsVisible();
 }
@@ -122,10 +122,12 @@ void TEveGeoNode::ExpandIntoListTree(TGListTree* ltree,
    // Checks if child-nodes have been imported ... imports them if not.
    // Then calls TEveElement::ExpandIntoListTree.
 
-   if (fChildren.empty() && fNode->GetVolume()->GetNdaughters() > 0) {
+   if ( ! HasChildren() && fNode->GetVolume()->GetNdaughters() > 0)
+   {
       TIter next(fNode->GetVolume()->GetNodes());
       TGeoNode* dnode;
-      while ((dnode = (TGeoNode*) next()) != 0) {
+      while ((dnode = (TGeoNode*) next()) != 0)
+      {
          TEveGeoNode* node_re = new TEveGeoNode(dnode);
          AddElement(node_re);
       }
@@ -203,26 +205,20 @@ Bool_t TEveGeoNode::CanEditMainTransparency() const
 }
 
 //______________________________________________________________________________
-UChar_t TEveGeoNode::GetMainTransparency() const
+Char_t TEveGeoNode::GetMainTransparency() const
 {
-   // Get transparency from node, if different propagate to this.
+   // Get transparency -- it is taken from the geo node.
 
-   UChar_t t = (UChar_t) fNode->GetVolume()->GetTransparency();
-   if (fMainTransparency != t)
-   {
-      TEveGeoNode* ncthis = const_cast<TEveGeoNode*>(this);
-      ncthis->SetMainTransparency(t);
-   }
-   return t;
+   return fNode->GetVolume()->GetTransparency();
 }
 
 //______________________________________________________________________________
-void TEveGeoNode::SetMainTransparency(UChar_t t)
+void TEveGeoNode::SetMainTransparency(Char_t t)
 {
    // Set transparency, propagate to volume's transparency.
 
    TEveElement::SetMainTransparency(t);
-   fNode->GetVolume()->SetTransparency((Char_t) t);
+   fNode->GetVolume()->SetTransparency(t);
 }
 
 /******************************************************************************/
@@ -357,26 +353,24 @@ TEveGeoShapeExtract* TEveGeoNode::DumpShapeTree(TEveGeoNode*         geon,
          TGLScenePad scene_pad(&pad);
          pad.SetViewer3D(&scene_pad);
 
-         TEveGeoManagerHolder gmgr(tvolume->GetGeoManager());
-         gGeoManager->SetPaintVolume(tvolume);
-         Int_t nseg = gGeoManager->GetNsegments();
-         gGeoManager->SetNsegments(fgCSGExportNSeg);
+         {
+            TEveGeoManagerHolder gmgr(tvolume->GetGeoManager(), fgCSGExportNSeg);
+            gGeoManager->SetPaintVolume(tvolume);
 
-         Bool_t had_null_transform = kFALSE;
-         if (tshape->GetTransform() == 0) {
-            had_null_transform = kTRUE;
-            tshape->SetTransform(gGeoIdentity);
+            Bool_t had_null_transform = kFALSE;
+            if (tshape->GetTransform() == 0) {
+               had_null_transform = kTRUE;
+               tshape->SetTransform(gGeoIdentity);
+            }
+
+            scene_pad.BeginScene();
+            dynamic_cast<TGeoCompositeShape*>(tshape)->PaintComposite();
+            scene_pad.EndScene();
+
+            if (had_null_transform) {
+               tshape->SetTransform(0);
+            }
          }
-
-         scene_pad.BeginScene();
-         dynamic_cast<TGeoCompositeShape*>(tshape)->PaintComposite();
-         scene_pad.EndScene();
-
-         if (had_null_transform) {
-            tshape->SetTransform(0);
-         }
-
-         gGeoManager->SetNsegments(nseg);
 
          pad.SetViewer3D(0);
 
@@ -530,20 +524,35 @@ void TEveGeoTopNode::Paint(Option_t* option)
    // option given in data-members.
    // Uses TGeoPainter internally.
 
-   if (fRnrSelf) {
-      gGeoManager = fManager;
-      TVirtualPad* pad = gPad;
+   if (fRnrSelf)
+   {
+      TEveGeoManagerHolder geo_holder(fManager);
+      TVirtualPad *pad = gPad;
       gPad = 0;
       TGeoVolume* top_volume = fManager->GetTopVolume();
-      fManager->SetVisOption(fVisOption);
       if (fVisLevel > 0)
          fManager->SetVisLevel(fVisLevel);
       else
          fManager->SetMaxVisNodes(fMaxVisNodes);
-      fManager->SetTopVolume(fNode->GetVolume());
-      gPad = pad;
       TVirtualGeoPainter* vgp = fManager->GetGeomPainter();
+      fManager->SetTopVolume(fNode->GetVolume());
+      switch (fVisOption)
+      {
+         case 0:
+            fNode->GetVolume()->SetVisContainers(kTRUE);
+            fManager->SetTopVisible(kTRUE);
+            break;
+         case 1:
+            fNode->GetVolume()->SetVisLeaves(kTRUE);
+            fManager->SetTopVisible(kFALSE);
+            break;
+         case 2:
+            fNode->GetVolume()->SetVisOnly(kTRUE);
+            break;
+      }
+      gPad = pad;
       if(vgp != 0) {
+         vgp->SetVisOption(fVisOption);
          TGeoHMatrix geomat;
          if (HasMainTrans()) RefMainTrans().SetGeoHMatrix(geomat);
          vgp->PaintNode(fNode, option, &geomat);

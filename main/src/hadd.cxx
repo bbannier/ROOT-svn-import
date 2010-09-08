@@ -3,7 +3,7 @@
   This program will add histograms (see note) and Trees from a list of root files and write them
   to a target root file. The target file is newly created and must not be
   identical to one of the source files.
-         
+
   Syntax:
 
        hadd targetfile source1 source2 ...
@@ -15,7 +15,7 @@
   level of the target file. By default the compression level is 1, but
   if "-f0" is specified, the target file will not be compressed.
   if "-f6" is specified, the compression level 6 will be used.
-      
+
   For example assume 3 files f1, f2, f3 containing histograms hn and Trees Tn
     f1 with h1 h2 h3 T1
     f2 with h1 h4 T1 T2
@@ -27,11 +27,11 @@
          T1 will be the merge of the Trees in f1 and f2
 
    The files may contain sub-directories.
-   
-  if the source files contains histograms and Trees, one can skip 
+
+  if the source files contains histograms and Trees, one can skip
   the Trees with
        hadd -T targetfile source1 source2 ...
-  
+
   Wildcarding and indirect files are also supported
     hadd result.root  myfil*.root
    will merge all files in myfil*.root
@@ -41,18 +41,18 @@
     character of the file indicates an indirect file. An indirect file
     is a text file containing a list of other files, including other
     indirect files, one line per file).
-    
+
   If the sources and and target compression levels are identical (default),
   the program uses the TChain::Merge function with option "fast", ie
-  the merge will be done without  unzipping or unstreaming the baskets 
+  the merge will be done without  unzipping or unstreaming the baskets
   (i.e. direct copy of the raw byte on disk). The "fast" mode is typically
   5 times faster than the mode unzipping and unstreaming the baskets.
-   
+
   NOTE1: By default histograms are added. However if histograms have their bit kIsAverage
         set, the contents are averaged instead of being summed. See TH1::Add.
-        
+
   NOTE2: hadd returns a status code: 0 if OK, -1 otherwise
-  
+
   Authors: Rene Brun, Dirk Geppert, Sven A. Schmidt, sven.schmidt@cern.ch
          : rewritten from scratch by Rene Brun (30 November 2005)
             to support files with nested directories.
@@ -65,6 +65,7 @@
 #include "TFile.h"
 #include "THashList.h"
 #include "TH1.h"
+#include "THStack.h"
 #include "TKey.h"
 #include "TObjString.h"
 #include "Riostream.h"
@@ -76,21 +77,23 @@ TList *FileList;
 TFile *Target, *Source;
 Bool_t noTrees;
 Bool_t fastMethod;
+Bool_t reoptimize;
 
 int AddFile(TList* sourcelist, std::string entry, int newcomp) ;
 int MergeRootfile( TDirectory *target, TList *sourcelist);
 
 //___________________________________________________________________________
-int main( int argc, char **argv ) 
+int main( int argc, char **argv )
 {
 
    if ( argc < 3 || "-h" == string(argv[1]) || "--help" == string(argv[1]) ) {
-      cout << "Usage: " << argv[0] << " [-f] [-T] targetfile source1 [source2 source3 ...]" << endl;
+      cout << "Usage: " << argv[0] << " [-f[0-9]] [-T] [-O] targetfile source1 [source2 source3 ...]" << endl;
       cout << "This program will add histograms from a list of root files and write them" << endl;
       cout << "to a target root file. The target file is newly created and must not " << endl;
       cout << "exist, or if -f (\"force\") is given, must not be one of the source files." << endl;
       cout << "Supply at least two source files for this to make sense... ;-)" << endl;
-      cout << "If the first argument is -T, Trees are not merged" <<endl;
+      cout << "If the option -T is used, Trees are not merged" <<endl;
+      cout << "If the option -O is used, when merging TTree, the basket size is re-optimized" <<endl;
       cout << "When -the -f option is specified, one can also specify the compression" <<endl;
       cout << "level of the target file. By default the compression level is 1, but" <<endl;
       cout << "if \"-f0\" is specified, the target file will not be compressed." <<endl;
@@ -101,27 +104,39 @@ int main( int argc, char **argv )
    }
    FileList = new TList();
 
-   Bool_t force = (!strcmp(argv[1],"-f") || !strcmp(argv[2],"-f"));
-   noTrees = (!strcmp(argv[1],"-T") || !strcmp(argv[2],"-T"));
+   Bool_t force = kFALSE;
+   reoptimize = kFALSE;
+   
+   int ffirst = 2;
    Int_t newcomp = 1;
-   char ft[4];
-   for (int j=0;j<=9;j++) {
-      sprintf(ft,"-f%d",j);
-      if (!strcmp(argv[1],ft) || !strcmp(argv[2],ft)) {
+   for( int a = 1; a < argc; ++a ) {
+      if ( strcmp(argv[a],"-T") == 0 ) {
+         noTrees = kTRUE;
+         ++ffirst;
+      } else if ( strcmp(argv[a],"-f") == 0 ) {
          force = kTRUE;
-         newcomp = j;
-         break;
+         ++ffirst;
+      } else if ( strcmp(argv[a],"-O") == 0 ) {
+         reoptimize = kTRUE;
+         ++ffirst;
+      } else if ( argv[a][0] == '-' ) {
+         char ft[4];
+         for( int j=0; j<=9; ++j ) {
+            sprintf(ft,"-f%d",j);
+            if (!strcmp(argv[a],ft)) {
+               force = kTRUE;
+               newcomp = j;
+               ++ffirst;
+               break;
+            }
+         }
       }
    }
- 
+
    gSystem->Load("libTreePlayer");
- 
-   int ffirst = 2;
-   if (force) ffirst++;
-   if (noTrees) ffirst++;
 
    cout << "Target file: " << argv[ffirst-1] << endl;
-   
+
    Target = TFile::Open( argv[ffirst-1], (force?"RECREATE":"CREATE") );
    if (!Target || Target->IsZombie()) {
       cerr << "Error opening target file (does " << argv[ffirst-1] << " exist?)." << endl;
@@ -129,18 +144,19 @@ int main( int argc, char **argv )
       exit(1);
    }
    Target->SetCompressionLevel(newcomp);
-  
+
    // by default hadd can merge Trees in a file that can go up to 100 Gbytes
    // No need to set this, as 100Gb is now the TTree default
    // Long64_t maxsize = 100000000; //100GB
    // maxsize *= 1000;  //to bypass some compiler limitations with big constants
    // TTree::SetMaxTreeSize(maxsize);
-  
+
    fastMethod = kTRUE;
    for ( int i = ffirst; i < argc; i++ ) {
       if( AddFile(FileList, argv[i], newcomp) !=0 ) return 1;
    }
-   if (!fastMethod) {
+   if (!fastMethod && !reoptimize) {
+      // Don't warn if the user any request re-optimization.
       cout <<"Sources and Target have different compression levels"<<endl;
       cout <<"Merging will be slower"<<endl;
    }
@@ -154,7 +170,7 @@ int main( int argc, char **argv )
 }
 
 //___________________________________________________________________________
-int AddFile(TList* sourcelist, std::string entry, int newcomp) 
+int AddFile(TList* sourcelist, std::string entry, int newcomp)
 {
    // add a new file to the list of files
    static int count(0);
@@ -182,13 +198,13 @@ int AddFile(TList* sourcelist, std::string entry, int newcomp)
       return 1;
    }
    sourcelist->Add(source);
-   if (newcomp != source->GetCompressionLevel())  fastMethod = kFALSE;
+   if (newcomp != source->GetCompressionLevel()) fastMethod = kFALSE;
    return 0;
 }
 
 
 //___________________________________________________________________________
-int MergeRootfile( TDirectory *target, TList *sourcelist) 
+int MergeRootfile( TDirectory *target, TList *sourcelist)
 {
    // Merge all objects in a directory
    int status = 0;
@@ -203,7 +219,7 @@ int MergeRootfile( TDirectory *target, TList *sourcelist)
    ((THashList*)target->GetListOfKeys())->Rehash(nguess);
    TList listH;
    TString listHargs;
-   listHargs.Form("((TCollection*)0x%lx)",&listH);
+   listHargs.Form("((TCollection*)0x%lx)", (ULong_t)&listH);
    while(first_source) {
       TDirectory *current_sourcedir = first_source->GetDirectory(path);
       if (!current_sourcedir) {
@@ -217,7 +233,7 @@ int MergeRootfile( TDirectory *target, TList *sourcelist)
       TKey *key, *oldkey=0;
       //gain time, do not add the objects in the list in memory
       TH1::AddDirectory(kFALSE);
-  
+
       while ( (key = (TKey*)nextkey())) {
          if (current_sourcedir == target) break;
          //keep only the highest cycle number for each key
@@ -226,7 +242,7 @@ int MergeRootfile( TDirectory *target, TList *sourcelist)
          if (allNames.FindObject(key->GetName())) continue;
          TClass *cl = TClass::GetClass(key->GetClassName());
          if (!cl || !cl->InheritsFrom(TObject::Class())) {
-            cout << "Cannot merge object type, name: " 
+            cout << "Cannot merge object type, name: "
                  << key->GetName() << " title: " << key->GetTitle() << endl;
             continue;
          }
@@ -237,7 +253,7 @@ int MergeRootfile( TDirectory *target, TList *sourcelist)
          //printf("keyname=%s, obj=%x\n",key->GetName(),obj);
 
          if ( obj->IsA()->InheritsFrom( TTree::Class() ) ) {
-      
+
             // loop over all source files create a chain of Trees "globChain"
             if (!noTrees) {
                TString obj_name;
@@ -249,7 +265,7 @@ int MergeRootfile( TDirectory *target, TList *sourcelist)
                globChain = new TChain(obj_name);
                globChain->Add(first_source->GetName());
                TFile *nextsource = (TFile*)sourcelist->After( first_source );
-               while ( nextsource ) {     	  
+               while ( nextsource ) {
                   //do not add to the list a file that does not contain this Tree
                   TFile *curf = TFile::Open(nextsource->GetName());
                   if (curf) {
@@ -311,9 +327,33 @@ int MergeRootfile( TDirectory *target, TList *sourcelist)
                }
                nextsource = (TFile*)sourcelist->After( nextsource );
             }
+         } else if ( obj->IsA()->InheritsFrom( THStack::Class() ) ) {
+            THStack *hstack1 = (THStack*) obj;
+            TList* l = new TList();
+
+            // loop over all source files and merge the histos of the
+            // corresponding THStacks with the one pointed to by "hstack1"
+            TFile *nextsource = (TFile*)sourcelist->After( first_source );
+            while ( nextsource ) {
+               // make sure we are at the correct directory level by cd'ing to path
+               TDirectory *ndir = nextsource->GetDirectory(path);
+               if (ndir) {
+                  ndir->cd();
+                  TKey *key2 = (TKey*)gDirectory->GetListOfKeys()->FindObject(hstack1->GetName());
+                  if (key2) {
+                    THStack *hstack2 = (THStack*) key2->ReadObj();
+                    l->Add(hstack2->GetHists()->Clone());
+                    delete hstack2;
+                  }
+               }
+
+               nextsource = (TFile*)sourcelist->After( nextsource );
+            }
+            hstack1->GetHists()->Merge(l);
+            l->Delete();
          } else {
-            // object is of no type that we can merge 
-            cout << "Cannot merge object type, name: " 
+            // object is of no type that we can merge
+            cout << "Cannot merge object type, name: "
                  << obj->GetName() << " title: " << obj->GetTitle() << endl;
 
             // loop over all source files and write similar objects directly to the output file
@@ -342,15 +382,15 @@ int MergeRootfile( TDirectory *target, TList *sourcelist)
          // by "target->Write()" below
          if ( obj ) {
             target->cd();
-       
+
             //!!if the object is a tree, it is stored in globChain...
             if(obj->IsA()->InheritsFrom( TDirectory::Class() )) {
                //printf("cas d'une directory\n");
             } else if(obj->IsA()->InheritsFrom( TTree::Class() )) {
                if (!noTrees) {
                   globChain->ls();
-                  if (fastMethod) globChain->Merge(target->GetFile(),0,"keep fast");
-                  else            globChain->Merge(target->GetFile(),0,"keep");
+                  if (fastMethod && !reoptimize) globChain->Merge(target->GetFile(),0,"keep fast");
+                  else                           globChain->Merge(target->GetFile(),0,"keep");
                   delete globChain;
                }
             } else {

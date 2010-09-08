@@ -51,24 +51,32 @@ TGraphDelaunay::TGraphDelaunay()
 {
    // TGraphDelaunay default constructor
 
-   fGraph2D    = 0;
-   fX          = 0;
-   fY          = 0;
-   fZ          = 0;
-   fNpoints    = 0;
-   fTriedSize  = 0;
-   fZout       = 0.;
-   fNdt        = 0;
-   fNhull      = 0;
-   fHullPoints = 0;
-   fXN         = 0;
-   fYN         = 0;
-   fOrder      = 0;
-   fDist       = 0;
-   fPTried     = 0;
-   fNTried     = 0;
-   fMTried     = 0;
-   fInit       = kFALSE;
+   fGraph2D      = 0;
+   fX            = 0;
+   fY            = 0;
+   fZ            = 0;
+   fNpoints      = 0;
+   fTriedSize    = 0;
+   fZout         = 0.;
+   fNdt          = 0;
+   fNhull        = 0;
+   fHullPoints   = 0;
+   fXN           = 0;
+   fYN           = 0;
+   fOrder        = 0;
+   fDist         = 0;
+   fPTried       = 0;
+   fNTried       = 0;
+   fMTried       = 0;
+   fInit         = kFALSE;
+   fXNmin        = 0.;
+   fXNmax        = 0.;
+   fYNmin        = 0.;
+   fYNmax        = 0.;
+   fXoffset      = 0.;
+   fYoffset      = 0.;
+   fXScaleFactor = 0.;
+   fYScaleFactor = 0.;
 
    SetMaxIter();
 }
@@ -78,26 +86,34 @@ TGraphDelaunay::TGraphDelaunay()
 TGraphDelaunay::TGraphDelaunay(TGraph2D *g)
             : TNamed("TGraphDelaunay","TGraphDelaunay")
 {
-   // TGraphDelaunay default constructor
+   // TGraphDelaunay normal constructor
 
-   fGraph2D    = g;
-   fX          = fGraph2D->GetX();
-   fY          = fGraph2D->GetY();
-   fZ          = fGraph2D->GetZ();
-   fNpoints    = fGraph2D->GetN();
-   fTriedSize  = 0;
-   fZout       = 0.;
-   fNdt        = 0;
-   fNhull      = 0;
-   fHullPoints = 0;
-   fXN         = 0;
-   fYN         = 0;
-   fOrder      = 0;
-   fDist       = 0;
-   fPTried     = 0;
-   fNTried     = 0;
-   fMTried     = 0;
-   fInit       = kFALSE;
+   fGraph2D      = g;
+   fX            = fGraph2D->GetX();
+   fY            = fGraph2D->GetY();
+   fZ            = fGraph2D->GetZ();
+   fNpoints      = fGraph2D->GetN();
+   fTriedSize    = 0;
+   fZout         = 0.;
+   fNdt          = 0;
+   fNhull        = 0;
+   fHullPoints   = 0;
+   fXN           = 0;
+   fYN           = 0;
+   fOrder        = 0;
+   fDist         = 0;
+   fPTried       = 0;
+   fNTried       = 0;
+   fMTried       = 0;
+   fInit         = kFALSE;
+   fXNmin        = 0.;
+   fXNmax        = 0.;
+   fYNmin        = 0.;
+   fYNmax        = 0.;
+   fXoffset      = 0.;
+   fYoffset      = 0.;
+   fXScaleFactor = 0.;
+   fYScaleFactor = 0.;
 
    SetMaxIter();
 }
@@ -134,7 +150,8 @@ Double_t TGraphDelaunay::ComputeZ(Double_t x, Double_t y)
    // Return the z value corresponding to the (x,y) point in fGraph2D
 
    // Initialise the Delaunay algorithm if needed.
-   // CreateTrianglesDataStructure computes fXoffset, fYoffset and fScaleFactor
+   // CreateTrianglesDataStructure computes fXoffset, fYoffset,
+   // fXScaleFactor and fYScaleFactor;
    // needed in this function.
    if (!fInit) {
       CreateTrianglesDataStructure();
@@ -144,8 +161,8 @@ Double_t TGraphDelaunay::ComputeZ(Double_t x, Double_t y)
 
    // Find the z value corresponding to the point (x,y).
    Double_t xx, yy;
-   xx = (x+fXoffset)*fScaleFactor;
-   yy = (y+fYoffset)*fScaleFactor;
+   xx = (x+fXoffset)*fXScaleFactor;
+   yy = (y+fYoffset)*fYScaleFactor;
    Double_t zz = Interpolate(xx, yy);
 
    // Wrong zeros may appear when points sit on a regular grid.
@@ -174,16 +191,17 @@ void TGraphDelaunay::CreateTrianglesDataStructure()
    Double_t ymin = fGraph2D->GetYmin();
    fXoffset      = -(xmax+xmin)/2.;
    fYoffset      = -(ymax+ymin)/2.;
-   fScaleFactor  = 2./((xmax-xmin)+(ymax-ymin));
-   fXNmax        = (xmax+fXoffset)*fScaleFactor;
-   fXNmin        = (xmin+fXoffset)*fScaleFactor;
-   fYNmax        = (ymax+fYoffset)*fScaleFactor;
-   fYNmin        = (ymin+fYoffset)*fScaleFactor;
+   fXScaleFactor  = 1./(xmax-xmin);
+   fYScaleFactor  = 1./(ymax-ymin);
+   fXNmax        = (xmax+fXoffset)*fXScaleFactor;
+   fXNmin        = (xmin+fXoffset)*fXScaleFactor;
+   fYNmax        = (ymax+fYoffset)*fYScaleFactor;
+   fYNmin        = (ymin+fYoffset)*fYScaleFactor;
    fXN           = new Double_t[fNpoints+1];
    fYN           = new Double_t[fNpoints+1];
    for (Int_t n=0; n<fNpoints; n++) {
-      fXN[n+1] = (fX[n]+fXoffset)*fScaleFactor;
-      fYN[n+1] = (fY[n]+fYoffset)*fScaleFactor;
+      fXN[n+1] = (fX[n]+fXoffset)*fXScaleFactor;
+      fYN[n+1] = (fY[n]+fYoffset)*fYScaleFactor;
    }
 
    // If needed, creates the arrays to hold the Delaunay triangles.

@@ -99,6 +99,7 @@ When most solids or volumes are added to the geometry they
 #include "TGeoHype.h"
 #include "TGeoEltu.h"
 #include "TGeoXtru.h"
+#include "TGeoScaledShape.h"
 #include "TGeoVolume.h"
 #include "TROOT.h"
 #include "TMath.h"
@@ -233,7 +234,6 @@ const char* TGDMLParse::ParseGDML(TXMLEngine* gdml, XMLNodePointer_t node)
    } else if ((strcmp(name, bboxstr)) == 0){ 
       node = Box(gdml, node, attr);
    } else if ((strcmp(name, ellistr)) == 0){
-      std::cout << "Warning: Ellipsoid is not supported, converting it to a box!" << std::endl; 
       node = Ellipsoid(gdml, node, attr);
    } else if ((strcmp(name, cutTstr)) == 0){ 
       node = CutTube(gdml, node, attr);
@@ -342,56 +342,14 @@ const char* TGDMLParse::NameShort(const char* name)
    //each other, when it finds this, it calls another function to strip
    //the hex address.   It does this recursively until the end of the 
    //string is reached, returning a string without any hex addresses.
-
-   int len = strlen(name);
-   int offset = 0;
-   const char* newname = name;
-   
-   while(offset != len){
-      if((name[offset] == '0') && (name[offset+1] == 'x')){
-         newname = NameShortB(newname);
-      }
-      offset = offset + 1;
-   }
-   
-   return newname;
+   static TString stripped;
+   stripped = name;
+   Int_t index = -1;
+   while ((index = stripped.Index("0x")) >= 0) {
+      stripped = stripped(0,index)+stripped(index+10, stripped.Length());
+   }   
+   return stripped.Data();   
 }
-
-//_____________________________________________________________
-const char* TGDMLParse::NameShortB(const char* name)
-{ 
-   //this function is passed a string, and removes the first hex address
-   //it finds.   This function is called recursively by NameShort to
-   //fully strip a string of all hex addresses within it.
-
-   char* shortname = NULL;
-   const char* retname = NULL;   
-   int char_offset = 0; /* 8 hex + 0x */
-   int len = strlen(name);
-
-   while (shortname == NULL && char_offset != len){
-      if((name[char_offset] == '0') && (name[(char_offset+1)] == 'x')){
-         
-         shortname = new char[len];
-         memcpy(shortname,name,char_offset);
-         shortname[char_offset]='\0';
-         
-         const char *temp = &name[(char_offset + 10)];
-         shortname = strcat(shortname, temp);
-         retname = shortname;
-      } else {
-         retname = name;
-      }               
-      char_offset = char_offset + 1;
-   }
-   
-   if(shortname == NULL){
-      retname = name;
-   }
-   
-   return retname;   
-}
-
 
 //________________________________________________________
 XMLNodePointer_t TGDMLParse::ConProcess(TXMLEngine* gdml, XMLNodePointer_t node, XMLAttrPointer_t attr)
@@ -1151,8 +1109,7 @@ XMLNodePointer_t TGDMLParse::VolProcess(TXMLEngine* gdml, XMLNodePointer_t node)
 
                XMLDocPointer_t filedoc1 = gdml2->ParseFile(fCurrentFile);
                if (filedoc1==0) {
-                  std::cout << "Error: Bad filename given :" << fCurrentFile << std::endl;
-                  delete gdml2;  
+                  Fatal("VolProcess", "Bad filename given %s", fCurrentFile);
                } 
                // take access to main node   
                XMLNodePointer_t mainnode2 = gdml2->DocGetRootElement(filedoc1);
@@ -1339,13 +1296,29 @@ XMLNodePointer_t TGDMLParse::VolProcess(TXMLEngine* gdml, XMLNodePointer_t node)
          
          retunit = GetScale(lunit);
          
-         numberline = Form("%s*%s", number, retunit);
+         numberline = Form("%s", number);
          widthline = Form("%s*%s", width, retunit);
          offsetline = Form("%s*%s", offset, retunit);
  
          fVolID = fVolID + 1;
-
-         vol->Divide(NameShort(name), axis, (Int_t)Evaluate(numberline), (Double_t)Evaluate(offsetline), (Double_t)Evaluate(widthline));
+         Double_t xlo, xhi;
+         vol->GetShape()->GetAxisRange(axis, xlo, xhi);
+         Int_t ndiv = (Int_t)Evaluate(numberline);
+         Double_t start = xlo + (Double_t)Evaluate(offsetline);
+         Double_t step = (Double_t)Evaluate(widthline);
+         Int_t numed = 0;
+         TGeoVolume *old = fvolmap[NameShort(reftemp)];
+         if (old) {
+            // We need to recreate the content of the divided volume
+            old = fvolmap[NameShort(reftemp)];
+            // medium id
+            numed = old->GetMedium()->GetId();
+         }   
+         TGeoVolume *divvol = vol->Divide(NameShort(reftemp), axis, ndiv, start, step, numed);
+         if (old && old->GetNdaughters()) {
+            divvol->ReplayCreation(old);
+         }
+         fvolmap[NameShort(reftemp)] = divvol;
 
       }//end of Division else if
       
@@ -1770,19 +1743,34 @@ XMLNodePointer_t TGDMLParse::Ellipsoid(TXMLEngine* gdml, XMLNodePointer_t node, 
    axline = Form("%s*%s", ax, retunit);
    byline = Form("%s*%s", by, retunit);
    czline = Form("%s*%s", cz, retunit);
+   Double_t radius = Evaluate(czline);
+   Double_t dx = Evaluate(axline);
+   Double_t dy = Evaluate(byline);
+   Double_t sx = dx/radius;
+   Double_t sy = dy/radius;
+   Double_t sz = 1.;
    zcut1line = Form("%s*%s", zcut1, retunit);
    zcut2line = Form("%s*%s", zcut2, retunit);
+   Double_t z1 = Evaluate(zcut1line);
+   Double_t z2 = Evaluate(zcut2line);
 
-   TGeoBBox* box;
-   if(Evaluate(zcut1line)==0.0 && Evaluate(zcut2line)==0.0)
+   TGeoSphere *sph = new TGeoSphere(0,radius);
+   TGeoScale *scl = new TGeoScale("",sx,sy,sz);
+   TGeoScaledShape *shape = new TGeoScaledShape(NameShort(name), sph, scl);
+   if(z1==0.0 && z2==0.0)
    {
-    box = new TGeoBBox(NameShort(name),Evaluate(axline), Evaluate(byline), Evaluate(czline));
+      fsolmap[name] = shape;
    }
    else
    {
-    box = new TGeoBBox(NameShort(name),Evaluate(axline), Evaluate(byline), Evaluate(zcut2line)-Evaluate(zcut1line));
+      Double_t origin[3] = {0.,0.,0.};
+      origin[2] = 0.5*(z1+z2);
+      Double_t dz = 0.5*(z2-z1);
+      TGeoBBox *pCutBox = new TGeoBBox("cutBox", dx, dy, dz, origin);
+      TGeoBoolNode *pBoolNode = new TGeoIntersection(shape,pCutBox,0,0);
+      TGeoCompositeShape *cs = new TGeoCompositeShape(NameShort(name), pBoolNode);
+      fsolmap[name] = cs;
    }
-   fsolmap[name] = box;
    
    return node;
    
@@ -2305,7 +2293,9 @@ XMLNodePointer_t TGDMLParse::Cone(TXMLEngine* gdml, XMLNodePointer_t node, XMLAt
    rmax2line = Form("%s*%s", rmax2, retlunit);
    zline = Form("%s*%s", z, retlunit);
    startphiline = Form("%s*%s", startphi, retaunit);
-   deltaphiline = Form("(%s*%s) + %s", deltaphi, retaunit, startphiline);
+   deltaphiline = Form("%s*%s", deltaphi, retaunit);
+   Double_t sphi = Evaluate(startphiline);
+   Double_t ephi = sphi + Evaluate(deltaphiline);
 
       
    TGeoConeSeg* cone = new TGeoConeSeg(NameShort(name),Evaluate(zline)/2,
@@ -2313,8 +2303,7 @@ XMLNodePointer_t TGDMLParse::Cone(TXMLEngine* gdml, XMLNodePointer_t node, XMLAt
                            Evaluate(rmax1line),
                            Evaluate(rmin2line),
                            Evaluate(rmax2line),
-                           Evaluate(startphiline),
-                           Evaluate(deltaphiline));
+                           sphi, ephi);
                    
    fsolmap[name] = cone;
    
@@ -2783,6 +2772,10 @@ XMLNodePointer_t TGDMLParse::Polyhedra(TXMLEngine* gdml, XMLNodePointer_t node, 
    }
    
    fsolmap[name] = polyg;
+   for(i = 0; i < numplanes; i++){
+      delete [] table[i];
+   }
+   delete [] table;
    
    return node;
 
@@ -3349,7 +3342,7 @@ XMLNodePointer_t TGDMLParse::Orb(TXMLEngine* gdml, XMLNodePointer_t node, XMLAtt
    //converted to type TGeoSphere and stored in fsolmap map using the name 
    //as its key.
 
-   const char* aunit = "deg"; 
+   const char* lunit = "mm"; 
    const char* r = "0"; 
    const char* name = "";
    const char* tempattr; 
@@ -3364,8 +3357,8 @@ XMLNodePointer_t TGDMLParse::Orb(TXMLEngine* gdml, XMLNodePointer_t node, XMLAtt
       else if((strcmp(tempattr, "r")) == 0) { 
          r = gdml->GetAttrValue(attr);
       }
-      else if (strcmp(tempattr, "aunit") == 0){
-         aunit = gdml->GetAttrValue(attr);
+      else if (strcmp(tempattr, "lunit") == 0){
+         lunit = gdml->GetAttrValue(attr);
       }
       
       attr = gdml->GetNextAttr(attr);   
@@ -3378,10 +3371,9 @@ XMLNodePointer_t TGDMLParse::Orb(TXMLEngine* gdml, XMLNodePointer_t node, XMLAtt
    const char* rline = "";
    const char* retunit;
    
-   retunit = GetScale(aunit);
+   retunit = GetScale(lunit);
    
    rline = Form("%s*%s", r, retunit);
-
    
    TGeoSphere* orb = new TGeoSphere(NameShort(name), 0, Evaluate(rline), 0, 180, 0, 360);
 

@@ -284,13 +284,6 @@ int G__using_namespace()
       long store_struct_offset = 0;
       struct G__var_array* var = G__searchvariable(buf, hash, G__p_local, &G__global, &struct_offset, &store_struct_offset, &ig15, 1);
       if (var) {
-         char* pc = strrchr(buf, ':');
-         if (!pc) {
-            pc = buf;
-         }
-         else {
-            ++pc;
-         }
          G__FastAllocString varname(buf);
          // Allocate a variable array entry which shares value storage with the found variable.
          int store_globalvarpointer = G__globalvarpointer;
@@ -1069,6 +1062,7 @@ void G__define_struct(char type)
             enumval.isconst = 0;
 #endif // G__OLDIMPLEMENTATION1259
             G__constvar = G__CONSTVAR;
+            G__access = store_access;
             G__enumdef = 1;
             do {
                int store_decl = 0;
@@ -1078,8 +1072,11 @@ void G__define_struct(char type)
                   char store_var_typeX = G__var_type;
                   int store_tagnumX = G__tagnum;
                   int store_def_tagnumX = G__def_tagnum;
+                  int store_tagdefiningX = G__tagdefining;
                   G__var_type = 'p';
-                  G__tagnum = G__def_tagnum = -1;
+                  G__tagnum = -1;
+                  G__def_tagnum = store_tagnum;
+                  G__tagdefining = store_tagnum;
                   G__FastAllocString val(G__ONELINE);
                   c = G__fgetstream(val, 0, ",}");
                   int store_prerun = G__prerun;
@@ -1089,6 +1086,7 @@ void G__define_struct(char type)
                   G__var_type = store_var_typeX;
                   G__tagnum = store_tagnumX;
                   G__def_tagnum = store_def_tagnumX;
+                  G__tagdefining = store_tagdefiningX;
                }
                else {
                   enumval.obj.i++;
@@ -1428,6 +1426,10 @@ void G__set_class_autoloading_table(char* classname, char* libname)
    G__enable_autoloading = 0;
    int store_var_type = G__var_type;
    tagnum = G__search_tagname(classname, G__CLASS_AUTOLOAD);
+   if (tagnum == -1) {
+      // We ran out of space in G__struct.
+      return;
+   }
    G__var_type = store_var_type;
    if (libname == (void*)-1) {
       if (G__struct.type[tagnum] != 'a') {
@@ -1645,7 +1647,14 @@ try_again:
          if ((len == G__struct.hash[i]) && !strcmp(atom_tagname, G__struct.name[i])) {
             if ((!p && (enclosing || env_tagnum == -1) && (G__struct.parent_tagnum[i] == -1)) || (env_tagnum == G__struct.parent_tagnum[i])) {
                if (noerror < 3) {
-                  G__class_autoloading(&i);
+                  if ( G__class_autoloading(&i) < 0 && noerror < 2 ) {
+                     if (G__struct.type[i] != 'a') {
+                        // The autoload failed but we have a real forward declaration of the type.
+                     } else {
+                        // The autoloading did not load anything, let's try instantiating.
+                        break;
+                     }
+                  }
                }
                return i;
             }
@@ -1684,10 +1693,20 @@ try_again:
       goto try_again;
    }
    if (candidateTag != -1) {
-      if (noerror < 3) {
-         G__class_autoloading(&candidateTag);
+      if (noerror < 2) {
+         if ( G__class_autoloading(&candidateTag) >= 0 || G__struct.type[candidateTag] != 'a') {
+            // Either there was nothing to autoload or the autoload succeeded.
+            return candidateTag;
+         } 
+         // The autoloading did not load anything, let's try instantiating.
+         // (by continuing on).
+         
+      } else {
+         if (noerror < 3) {
+            G__class_autoloading(&candidateTag);
+         }
+         return candidateTag;
       }
-      return candidateTag;
    }
    // If tagname not found, try instantiating class template.
    len = strlen(tagname);

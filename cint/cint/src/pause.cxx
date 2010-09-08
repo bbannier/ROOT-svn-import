@@ -716,6 +716,7 @@ int G__reloadfile(char *filename, bool keep)
       return(-1);
    }
 
+   storefname[0] = 0;
    for (i = 0;i < G__nfile;i++) {
       if (!flag &&
             G__matchfilename(i, filename)
@@ -762,7 +763,7 @@ int G__reloadfile(char *filename, bool keep)
       return(G__loadfile(filename));
    }
 
-   if (G__UNLOADFILE_SUCCESS != G__unloadfile(storefname[0])) {
+   if (storefname[0] || G__UNLOADFILE_SUCCESS != G__unloadfile(storefname[0])) {
       return(1);
    }
 
@@ -1426,6 +1427,7 @@ readagain:
                if ('/' == com[i+1]) {
                   com[i] = 0;
                   com[i+1] = 0;
+                  --i;
                }
             }
             break;
@@ -2048,6 +2050,10 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
       G__catchexception ^= 1;
       fprintf(G__sout, "G__catchexception=%d\n", G__catchexception);
    }
+   else if (strncmp("preproc", com, 4) == 0) {
+      G__cpp ^= 1;
+      fprintf(G__sout, "G__cpp=%d\n", G__cpp);
+   }
    else if (strncmp("autodict", com, 8) == 0) {
       G__EnableAutoDictionary ^= 1;
       fprintf(G__sout, "Automatic building of dictionaries now %s\n",
@@ -2540,6 +2546,7 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
 #endif
       G__more(G__sout, "             undo      : undo previous declarations\n");
       G__more(G__sout, "             lang      : local language (EUC,SJIS,EUROPEAN,UNKNOWN)\n");
+      G__more(G__sout, "             preproc   : toggle preprocessing of interpreted files\n");
       G__more(G__sout, "Monitor:     g <[var]> : list global variable\n");
       G__more(G__sout, "             l <[var]> : list local variable\n");
       G__more(G__sout, "             proto <[scope]::>[func] : show function prototype\n");
@@ -2575,6 +2582,7 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
 #endif
       G__more(G__sout, "             dasm      : disassembler\n");
 #endif
+      G__more(G__sout, "             except    : toggle exception catching\n");
       G__more(G__sout, "Quit:        q         : quit cint\n");
       G__more(G__sout, "             qqq       : quit cint - mandatory\n");
       G__more(G__sout, "             qqqqq     : exit process immediately\n");

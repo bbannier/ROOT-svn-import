@@ -31,7 +31,6 @@
 #include "TVectorD.h"
 #include "TMatrixD.h"
 #include "TMatrixDBase.h"
-#include "TXMLEngine.h"
 
 #include "TMVA/VariablePCATransform.h"
 
@@ -123,8 +122,10 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
       fTransformedEvent = new Event();
    }
 
+
    // set the variable values
    const std::vector<UInt_t>* varArrange = ev->GetVariableArrangement();
+
    if(!varArrange) {
       std::vector<Float_t> rv = X2P( ev->GetValues(), cls );
       for (Int_t ivar=0; ivar<nvar; ++ivar)
@@ -144,7 +145,7 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
    fTransformedEvent->SetWeight     ( ev->GetWeight() );
    fTransformedEvent->SetBoostWeight( ev->GetBoostWeight() );
    fTransformedEvent->SetClass      ( ev->GetClass() );
-   fTransformedEvent->SetSignalClass( ev->GetSignalClass() );
+
    return fTransformedEvent;
 }
 
@@ -277,12 +278,12 @@ void TMVA::VariablePCATransform::WriteTransformationToStream( std::ostream& o ) 
 void TMVA::VariablePCATransform::AttachXMLTo(void* parent) {
    // create XML description of PCA transformation
 
-   void* trfxml = gTools().xmlengine().NewChild(parent, 0, "Transform");
-   gTools().xmlengine().NewAttr(trfxml, 0, "Name", "PCA");
+   void* trfxml = gTools().AddChild(parent, "Transform");
+   gTools().AddAttr(trfxml, "Name", "PCA");
 
    // write mean values to stream
    for (UInt_t sbType=0; sbType<fMeanValues.size(); sbType++) {
-      void* meanxml = gTools().xmlengine().NewChild( trfxml, 0, "Statistics");
+      void* meanxml = gTools().AddChild( trfxml, "Statistics");
       const TVectorD* means = fMeanValues[sbType];
       gTools().AddAttr( meanxml, "Class",     (sbType==0 ? "Signal" :(sbType==1 ? "Background":"Combined")) );
       gTools().AddAttr( meanxml, "ClassIndex", sbType );
@@ -290,12 +291,12 @@ void TMVA::VariablePCATransform::AttachXMLTo(void* parent) {
       TString meansdef = "";
       for (Int_t row = 0; row<means->GetNrows(); row++)
          meansdef += gTools().StringFromDouble((*means)[row]) + " ";
-      gTools().xmlengine().AddRawLine( meanxml, meansdef );      
+      gTools().AddRawLine( meanxml, meansdef );      
    }
 
    // write eigenvectors to stream
    for (UInt_t sbType=0; sbType<fEigenVectors.size(); sbType++) {
-      void* evxml = gTools().xmlengine().NewChild( trfxml, 0, "Eigenvectors");
+      void* evxml = gTools().AddChild( trfxml, "Eigenvectors");
       const TMatrixD* mat = fEigenVectors[sbType];
       gTools().AddAttr( evxml, "Class",      (sbType==0 ? "Signal" :(sbType==1 ? "Background":"Combined") ) );
       gTools().AddAttr( evxml, "ClassIndex", sbType );
@@ -305,7 +306,7 @@ void TMVA::VariablePCATransform::AttachXMLTo(void* parent) {
       for (Int_t row = 0; row<mat->GetNrows(); row++)
          for (Int_t col = 0; col<mat->GetNcols(); col++)
             evdef += gTools().StringFromDouble((*mat)[row][col]) + " ";
-      gTools().xmlengine().AddRawLine( evxml, evdef );
+      gTools().AddRawLine( evxml, evdef );
    }
 }
 
@@ -319,9 +320,9 @@ void TMVA::VariablePCATransform::ReadFromXML( void* trfnode )
    TString classtype;
    TString nodeName;
 
-   void* ch = gTools().xmlengine().GetChild(trfnode);
+   void* ch = gTools().GetChild(trfnode);
    while (ch) {
-      nodeName = gTools().xmlengine().GetNodeName(ch);
+      nodeName = gTools().GetName(ch);
       if (nodeName == "Statistics") {
          // read mean values
          gTools().ReadAttr(ch, "Class",      classtype);
@@ -334,7 +335,7 @@ void TMVA::VariablePCATransform::ReadFromXML( void* trfnode )
          fMeanValues[clsIdx]->ResizeTo( nrows );
          
          // now read vector entries
-         std::stringstream s(gTools().xmlengine().GetNodeContent(ch));
+         std::stringstream s(gTools().GetContent(ch));
          for (Int_t row = 0; row<nrows; row++) s >> (*fMeanValues[clsIdx])(row);
       } 
       else if ( nodeName == "Eigenvectors" ) {
@@ -349,12 +350,12 @@ void TMVA::VariablePCATransform::ReadFromXML( void* trfnode )
          fEigenVectors[clsIdx]->ResizeTo( nrows, ncols );
 
          // now read matrix entries
-         std::stringstream s(gTools().xmlengine().GetNodeContent(ch));
+         std::stringstream s(gTools().GetContent(ch));
          for (Int_t row = 0; row<nrows; row++)
             for (Int_t col = 0; col<ncols; col++)
                s >> (*fEigenVectors[clsIdx])[row][col];
       } // done reading eigenvectors
-      ch = gTools().xmlengine().GetNext(ch);
+      ch = gTools().GetNextChild(ch);
    }
 
    SetCreated();
@@ -377,7 +378,7 @@ void TMVA::VariablePCATransform::ReadTransformationFromStream( std::istream& ist
    fMeanValues.resize(3);
    fEigenVectors.resize(3);
 
-   std::cout << "VariablePCATransform::ReadTransformationFromStream(): " << std::endl;
+   Log() << kINFO << "VariablePCATransform::ReadTransformationFromStream(): " << Endl;
 
    while (!(buf[0]=='#'&& buf[1]=='#')) { // if line starts with ## return
       char* p = buf;

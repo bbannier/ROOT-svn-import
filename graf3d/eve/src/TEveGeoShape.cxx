@@ -36,20 +36,23 @@
 
 namespace
 {
-TGeoManager* init_geo_mangeur()
-{
-   // Create a phony geo manager that can be used for storing free
-   // shapes. Otherwise shapes register themselves to current
-   // geo-manager (or even create one).
+   TGeoManager* init_geo_mangeur()
+   {
+      // Create a phony geo manager that can be used for storing free
+      // shapes. Otherwise shapes register themselves to current
+      // geo-manager (or even create one).
 
-   TGeoManager* old = gGeoManager;
-   gGeoManager = 0;
-   TGeoManager* mgr = new TGeoManager();
-   mgr->SetNameTitle("TEveGeoShape::fgGeoMangeur",
-                     "Static geo manager used for wrapped TGeoShapes.");
-   gGeoManager = old;
-   return mgr;
-}
+      TGeoManager  *old    = gGeoManager;
+      TGeoIdentity *old_id = gGeoIdentity;
+      gGeoManager = 0;
+      TGeoManager* mgr = new TGeoManager();
+      mgr->SetNameTitle("TEveGeoShape::fgGeoMangeur",
+                        "Static geo manager used for wrapped TGeoShapes.");
+      gGeoIdentity = new TGeoIdentity("Identity");
+      gGeoManager  = old;
+      gGeoIdentity = old_id;
+      return mgr;
+   }
 }
 
 //==============================================================================
@@ -97,6 +100,8 @@ TEveGeoShape::TEveGeoShape(const char* name, const char* title) :
 {
    // Constructor.
 
+   fCanEditMainColor        = kTRUE;
+   fCanEditMainTransparency = kTRUE;
    InitMainTrans();
 }
 
@@ -374,9 +379,8 @@ void TEveGeoShapeProjected::SetProjection(TEveProjectionManager* mng,
    TEveProjected::SetProjection(mng, model);
 
    TEveGeoShape* gre = dynamic_cast<TEveGeoShape*>(fProjectable);
-
    SetMainColor(gre->GetMainColor());
-   SetMainTransparency(gre->GetMainTransparency());
+   CopyVizParams(gre);
 }
 
 //______________________________________________________________________________

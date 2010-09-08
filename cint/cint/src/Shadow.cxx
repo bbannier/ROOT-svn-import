@@ -578,24 +578,31 @@ void Cint::G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
                   for (; posRef < lenArg; ++posRef) {
                      switch (arg[posRef]) {
                      case '<':
-                        if (arg[posRef + 1] != '<') ++templateLevel;
-                        else ++posRef;
+                        if (posRef + 1 < lenArg && arg[posRef + 1] != '<') {
+                           ++templateLevel;
+                        } else ++posRef;
                         break;
                      case '>':
-                        if (arg[posRef + 1] != '>') ++templateLevel;
-                        else if (posRef > 8) {
+                        if (posRef + 1 < lenArg && arg[posRef + 1] != '>') {
+                           --templateLevel;
+                        } else if (posRef > 8) {
                            std::string::size_type posOp = posRef - 1;
                            while (posOp && isspace(arg[posOp])) --posOp;
                            if (posOp > 8 && !arg.compare(posOp - 8, 8, "operator"))
                               // it's the operator >>
                               ++posRef; 
-                           else ++templateLevel;
-                        } else ++templateLevel;
+                           else {
+                              --templateLevel;
+                           }
+                        } else {
+                           --templateLevel;
+                        }
                         break;
                      case '*':
                      case '&':
                         if (!templateLevel) {
                            arg.erase(posRef, 1);
+                           --lenArg;
                            --posRef;
                         }
                         break;
@@ -672,7 +679,8 @@ void Cint::G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
                      break;
                   case 4: builtinType = !typenameOriginal.compare(posArg, lenArg, "long")
                         || !typenameOriginal.compare(posArg, lenArg, "char")
-                        || !typenameOriginal.compare(posArg, lenArg, "void");
+                        || !typenameOriginal.compare(posArg, lenArg, "void")
+                        || !typenameOriginal.compare(posArg, lenArg, "bool");
                      break;
                   case 5: builtinType = !typenameOriginal.compare(posArg, lenArg, "short")
                         || !typenameOriginal.compare(posArg, lenArg, "float");
@@ -715,11 +723,9 @@ void Cint::G__ShadowMaker::WriteShadowClass(G__ClassInfo &cl, int level /*=0*/)
          G__DataMemberInfo d(cl);
          while (d.Next()) {
             // fprintf(stderr,"%s %s %ld\n",d.Type()->Name(),d.Name(),d.Property());
-
-            if (((d.Type()->Property() & G__BIT_ISCONSTANT)
-                 && (d.Type()->Property() & G__BIT_ISENUM))  // an enum const
-                  || (d.Property() & G__BIT_ISSTATIC)) // a static member
+            if (d.Property() & G__BIT_ISSTATIC) { // a static member
                continue;
+            }
             if (strcmp("G__virtualinfo", d.Name()) == 0) continue;
 
             std::string type_name = GetNonConstTypeName(d, true); // .Type()->Name();

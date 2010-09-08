@@ -30,8 +30,9 @@ endif
 PROOFSERVS   := $(MODDIRS)/pmain.cxx
 PROOFSERVO   := $(PROOFSERVS:.cxx=.o)
 PROOFSERVDEP := $(PROOFSERVO:.o=.d)
-ifeq ($(ARCH),win32gcc)
+ifneq ($(findstring win32,$(ARCH)),)
 PROOFSERVEXE := bin/proofserv_exe.exe
+PROOFSERVSH  := bin/proofserv
 else
 PROOFSERVEXE := bin/proofserv.exe
 PROOFSERVSH  := bin/proofserv
@@ -101,7 +102,7 @@ SSH2RPD         :=
 endif
 
 # used in the main Makefile
-ALLEXECS     += $(ROOTEXE) $(ROOT7EXE) $(ROOTNEXE) $(PROOFSERVEXE) $(PROOFSERVSH) \
+ALLEXECS     += $(ROOTEXE) $(ROOTNEXE) $(PROOFSERVEXE) $(PROOFSERVSH) \
                 $(HADD) $(SSH2RPD) $(ROOTSEXE) $(ROOTSSH)
 ifneq ($(F77),)
 ALLEXECS     += $(H2ROOT) $(G2ROOT)
@@ -179,7 +180,7 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		   $(PROOFSERVEXE) $(PROOFSERVSH) $(HADDDEP) $(HADD) \
 		   $(H2ROOTDEP) $(H2ROOT) $(G2ROOT) \
 		   $(SSH2RPDDEP) $(SSH2RPD) $(ROOTSEXEDEP) $(ROOTSEXE) \
-		   $(ROOTSSH) $(subst root,rootc7,$(ROOTEXE))
+		   $(ROOTSSH)
 
 distclean::     distclean-$(MODNAME)
 

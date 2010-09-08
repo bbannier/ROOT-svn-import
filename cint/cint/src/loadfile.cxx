@@ -292,20 +292,9 @@ int G__include_file()
 * G__getmakeinfo()
 *
 ******************************************************************/
+#ifdef G__HAVE_CONFIG
 const char *G__getmakeinfo(const char *item)
 {
-  G__FastAllocString makeinfo(G__MAXFILENAME);
-  FILE *fp;
-  G__FastAllocString line(G__LARGEBUF);
-  G__FastAllocString argbuf(G__LARGEBUF);
-  char *arg[G__MAXARG];
-  int argn;
-  char *p;
-  static G__FastAllocString buf(G__ONELINE);
-
-  buf[0]='\0';
-
-#ifdef G__HAVE_CONFIG
   if (!strcmp(item,"CPP")) return G__CFG_CXX;
   else if (!strcmp(item,"CC")) return G__CFG_CC;
   else if (!strcmp(item,"DLLPOST")) return G__CFG_SOEXT;
@@ -322,9 +311,25 @@ const char *G__getmakeinfo(const char *item)
               item);
      return "";
   }
+}
 #elif defined(G__NOMAKEINFO)
+const char *G__getmakeinfo(const char *)
+{
   return("");
-#endif
+}
+#else
+const char *G__getmakeinfo(const char *item)
+{
+  G__FastAllocString makeinfo(G__MAXFILENAME);
+  FILE *fp;
+  G__FastAllocString line(G__LARGEBUF);
+  G__FastAllocString argbuf(G__LARGEBUF);
+  char *arg[G__MAXARG];
+  int argn;
+  char *p;
+  static G__FastAllocString buf(G__ONELINE);
+
+  buf[0]='\0';
 
   /****************************************************************
   * Environment variable overrides MAKEINFO file if exists.
@@ -377,6 +382,7 @@ const char *G__getmakeinfo(const char *item)
   fclose(fp);
   return(buf);
 }
+#endif
 
 /******************************************************************
 * G__getmakeinfo1()
@@ -461,8 +467,12 @@ int G__getcintsysdir()
 #  ifdef CINTINCDIR
       sprintf(G__cintsysdir, "%s", CINTINCDIR);
 #  else
-      if(G__UseCINTSYSDIR) strcpy(G__cintsysdir,env);
-      else                 sprintf(G__cintsysdir, "%s/cint", env);
+       if(G__UseCINTSYSDIR) {
+          strncpy(G__cintsysdir,env, G__MAXFILENAME-1);
+       } else {
+          strncpy(G__cintsysdir,env, G__MAXFILENAME-1-strlen("/cint"));
+          strcat(G__cintsysdir,"/cint");
+       }
 #  endif
 # endif /* ROOTBUILD */
 #endif /* G__VMS */
@@ -2260,6 +2270,7 @@ int G__loadfile(const char *filenamein)
       G__ifile.fp=(FILE*)NULL;
     }
     G__srcfile[fentry].fp=(FILE*)NULL;
+    G__ifile.line_number = -1;
     std::list<G__DLLINIT>* store_initpermanentsl = 0;
     if (G__initpermanentsl && !G__initpermanentsl->empty()) {
        store_initpermanentsl = G__initpermanentsl;
@@ -2891,16 +2902,19 @@ char* G__tmpnam(char *name)
 
   char *tmp;
   if('\0'==tmpdir[0]) {
-    if((tmp=getenv("CINTTMPDIR"))) strcpy(tmpdir,tmp);
-    else if((tmp=getenv("TEMP"))) strcpy(tmpdir,tmp);
-    else if((tmp=getenv("TMP"))) strcpy(tmpdir,tmp);
+    if((tmp=getenv("CINTTMPDIR"))) strncpy(tmpdir,tmp,G__MAXFILENAME-1);
+    else if((tmp=getenv("TEMP"))) strncpy(tmpdir,tmp,G__MAXFILENAME-1);
+    else if((tmp=getenv("TMP"))) strncpy(tmpdir,tmp,G__MAXFILENAME-1);
     else strcpy(tmpdir,"/tmp");
   }
 
   if (name==0) name = tempname;
   strcpy(name, tmpdir);
   strcat(name,"/XXXXXX");
-  close(mkstemp(name));/*mkstemp not only generate file name but also opens the file*/
+  int temp_fileno = mkstemp(name);/*mkstemp not only generate file name but also opens the file*/
+  if (temp_fileno >= 0) {
+     close(temp_fileno);
+  }
   remove(name); /* mkstemp creates this file anyway. Delete it. questionable */
   if(strlen(name)<G__MAXFILENAME-6) strcat(name,appendix);
   G__tmpfiles.Add(name);
@@ -2941,6 +2955,14 @@ void G__openmfp()
     G__mfp=fopen(G__mfpname,"wb+");
   } while((FILE*)NULL==G__mfp && G__setTMPDIR(G__mfpname));
 #endif
+}
+
+namespace {
+   static struct G__MfpCloser {
+      ~G__MfpCloser() {
+         G__closemfp();
+      }
+   } sMfpCloser;
 }
 
 /**************************************************************************

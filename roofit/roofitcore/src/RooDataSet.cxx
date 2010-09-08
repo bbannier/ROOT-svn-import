@@ -50,8 +50,6 @@
 #include "RooUnBinDataStore.h"
 #include "RooCompositeDataStore.h"
 #include "RooTreeData.h"
-#include <string>
-using namespace std ;
 
 #if (__GNUC__==3&&__GNUC_MINOR__==2&&__GNUC_PATCHLEVEL__==3)
 char* operator+( streampos&, char* );
@@ -222,7 +220,7 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
     if (wgtVar) {
       wgtVarName = wgtVar->GetName() ;
     }
-    
+
     // Create empty datastore 
     if (_gUseFitDataStore) { 
 //        RooUnBinDataStore* tstore = new RooUnBinDataStore(name,title,_vars,wgtVarName) ;
@@ -650,7 +648,6 @@ RooArgSet RooDataSet::addWgtVar(const RooArgSet& origVars, const RooAbsArg* wgtV
   if (wgtVar) tmp.add(*wgtVar) ;
   return tmp ;
 }
-
 
 
 
@@ -1617,16 +1614,6 @@ void RooDataSet::printArgs(ostream& os) const
   os << "]" ;
   delete iter ;
 }
-
-
-
-//_____________________________________________________________________________
-void RooDataSet::setWeightVar(const char*)
-{
-  coutF(InputArguments) << "RooDataSet::setWeightVar(" << GetName() << ") ERROR: method setWeightVar is deprecated. Specify weight variable instead in dataset constructor using WeightVar() argument" << endl ;
-  throw string("ERROR: RooDataSet::setWeightVar() is deprecated. Specify weight variable in RooDataSet constructor instead using WeightVar()") ;
-}
-
 
 
 

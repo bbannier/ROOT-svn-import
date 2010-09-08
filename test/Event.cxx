@@ -70,6 +70,12 @@
 //   of histograms can be filled. The creation and handling of the
 //   histograms is taken care of by the HistogramManager class.
 //
+//   Note:  This version of the class Event (see EventMT.h and EventMT.cxx
+//   for an alternative) uses static variables to improve performance (by
+//   reducing the number of memory allocations).  Consequently, only one
+//   instance of the class Event should be in use at a time (a 2nd instance 
+//   would share the array of Tracks with the first instance).
+//
 ////////////////////////////////////////////////////////////////////////
 
 #include "TRandom.h"

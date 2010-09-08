@@ -26,6 +26,7 @@ altcc=
 altcxx=
 altf77=
 altld=
+host=
 
 deprecated_options="         \
    enable_mathcore           \
@@ -35,6 +36,7 @@ deprecated_options="         \
 options="                    \
    enable_afs                \
    enable_alien              \
+   enable_alloc              \
    enable_asimage            \
    enable_astiff             \
    enable_bonjour            \
@@ -54,6 +56,7 @@ options="                    \
    enable_exceptions         \
    enable_explicitlink       \
    enable_fftw3              \
+   enable_fitsio             \
    enable_gviz               \
    enable_gdml               \
    enable_genvector          \
@@ -94,21 +97,42 @@ options="                    \
    enable_tmva               \
    enable_unuran             \
    enable_winrtdebug         \
+   enable_x11                \
    enable_xft                \
    enable_xml                \
    enable_xrootd             \
 "
 
+DEFAULTENABLE="yes"
+for flag in "$@"; do
+    case $flag in
+    --gminimal)
+       DEFAULTENABLE="no"
+       MINIMALENABLE="enable_x11"
+       break ;;
+     --minimal)
+       DEFAULTENABLE="no"
+       MINIMALENABLE=""
+       break ;;
+    esac
+done
+
 #
-# This sets all options to "yes" - we turn off those we don't want
-# on per default explictly afterwards.
+# This sets all options to "yes" unless --minimal is specified.
+# We turn off those we don't want on per default explictly afterwards.
 #
-for c in $options ; do eval ${c}="yes" ; done
-for c in $deprecated_options ; do eval ${c}="yes" ; done
+for c in $options $deprecated_options; do
+    case ${c} in
+        ${MINIMALENABLE}) eval ${c}="yes" ;;
+        enable_shared)    eval ${c}="yes" ;;
+        *)                eval ${c}="${DEFAULTENABLE}" ;;
+    esac
+done
 for c in $options ; do eval ${c}_explicit="" ; done
 
 enable_cling=
 enable_afs=no
+enable_alloc=no
 enable_gdml=no
 enable_globus=no
 enable_explicitlink=no
@@ -155,6 +179,7 @@ HDFS             \
 PYTHIA6          \
 PYTHIA8          \
 FFTW3            \
+CFITSIO          \
 GVIZ             \
 PYTHONDIR        \
 DCACHE           \
@@ -319,19 +344,26 @@ check_lib64() {
 
     # Save arguments in logical names
     chklib64=$1
-    logmsg "Checking if $chklib64 is a 64bit library"
+    logmsg "Checking if $chklib64 is a 64-bit library"
     if [ "x`basename $chklib64 .a`" != "x`basename $chklib64`" ]; then
         # we have an archive .a file
         logmsg " objdump -a $chklib64 | grep 'x86-64'"
-        objdump -a $chklib64 | grep 'x86-64' > /dev/null 2>& 1
-        ret=$?
+        if objdump -a $chklib64 | grep 'x86-64' > /dev/null 2>& 1 ; then
+            ret=1
+        fi
     else
-        logmsg " file -L $chklib64 | grep '64-bit'"
-        file -L $chklib64 | grep '64-bit' > /dev/null 2>& 1
-        ret=$?
+        if file -L $chklib64 | grep 'ASCII' > /dev/null 2>& 1 ; then
+            check_link $chklib64
+            ret=$link_result
+        else
+            logmsg " file -L $chklib64 | grep '64-bit'"
+            if file -L $chklib64 | grep '64-bit' > /dev/null 2>& 1 ; then
+                ret=1
+            fi
+        fi
     fi
     logmsg " result: $ret"
-    if test $ret -eq 0 ; then
+    if test $ret -eq 1 ; then
         is_lib64=1
         logmsg " is a 64bit library"
     fi
@@ -357,6 +389,10 @@ check_library() {
     shared=$1    ; shift
     libdirl=$1   ; shift
     libdirs="$*"
+
+    if test ! "x$iossdk" = "x" ; then
+        libdirs="$iossdk/usr/lib"
+    fi
 
     # Write a message
     checking_msg $lib
@@ -427,7 +463,7 @@ check_library() {
                 continue
             fi
             for j in ${libs} ; do
-                logmsg "  Checking for library $j in directory $i"
+                logmsg "  Checking for library $j in directory $l"
                 # if we found the file (it's readable by user), we set the
                 # logical variables and are on our way, otherwise we continue
                 liblist=`echo $l/$j`    # expands wildcard in $l/$j
@@ -553,6 +589,10 @@ check_header()  {
     hdrdir=$1   ; shift
     hdrdirs="$*"
 
+    if test ! "x$iossdk" = "x" ; then
+        hdrdirs="$iossdk/usr/include"
+    fi
+
     # Write a message
     checking_msg $hdrs
 
@@ -618,6 +658,79 @@ check_header()  {
 }
 
 #_____________________________________________________________________
+check_link() {
+    # This function will try to link a specific library [$1] in an
+    # optional directory [$2] and test, optionally, for a specified
+    # symbol [$3].
+    # The result of the check is stored in link_result, 1 if true,
+    # 0 otherwise, which should be immediately copied, since the variable
+    # will be overwritten at next invocation of this function.
+
+    # Assert that we got enough arguments
+    if test $# -lt 1 ; then
+        echo "check_link: need at least one argument"
+        link_result=0
+        return 1
+    fi
+
+    # save arguments in logical names
+    linklib="$1"; shift
+    linkdir=""
+    if test $# -ge 1 ; then
+        linkdir="$1"; shift
+    fi
+    linksymbol=""
+    if test $# -ge 1 ; then
+        linksymbol="$1"
+    fi
+
+    if test "x$linksymbol" = "x" ; then
+       if test "x$linkdir" = "x" ; then
+          logmsg " trying to link against $linklib"
+       else
+          logmsg " trying to link against $linkdir $linklib"
+       fi
+       cat <<EOF > conftest.mk
+include config/Makefile.${arch}
+conftest: conftest.c
+	\$(CC) \$(CFLAGS) \$(LDFLAGS) $linkdir $linklib \$< -o \$@
+
+conftest.c:
+	echo "int main() { return 0; }" > \$@
+EOF
+    else
+       if test "x$linkdir" = "x" ; then
+           logmsg " trying to resolve symbol $linksymbol in $linklib"
+       else
+           logmsg " trying to resolve symbol $linksymbol in $linkdir $linklib"
+       fi
+       cat <<EOF > conftest.mk
+include config/Makefile.${arch}
+conftest:conftest.c
+	\$(CC) \$(CFLAGS) \$(LDFLAGS) $linkdir $linklib \$< -o \$@
+
+conftest.c:
+	echo "extern int $linksymbol (); " > \$@
+	echo "int main() { $linksymbol (); return 0; }" >> \$@
+EOF
+    fi
+    $gnumake -f conftest.mk >> $logfile 2>&1
+    if test $? -eq 0 ; then
+        link_result=1
+        logmsg " Link OK"
+    else
+        link_result=0
+        logmsg " Failed code was"
+        cat conftest.mk >> $logfile
+    fi
+    rm -rf conftest.c conftest.mk conftest
+
+    unset linklib
+    unset linkdir
+    unset linksymbol
+}
+
+#_____________________________________________________________________
 check_symbol() {
     # This function will try to locate a symbol [$1] in a specific
     # library [$2] and in a given directory [$3].
@@ -639,6 +752,9 @@ check_symbol() {
 
     if test "x$symbollib" = "x" ; then
         found_symbol=0
+        unset symbol
+        unset symbollib
+        unset symboldir
         return 1
     fi
 
@@ -702,6 +818,9 @@ check_symbol() {
     if test "x$symbolfile" = "x" || test ! -r $symbolfile ; then
        found_symbol=0
        logmsg " Symbol not found"
+       unset symbol
+       unset symbollib
+       unset symboldir
        return 1
     fi
 
@@ -713,29 +832,10 @@ check_symbol() {
     else
         nm $symbolfile 2>&1 | grep "no symbols" > /dev/null 2>&1
         if test $? -eq 0 ; then
-            logmsg " $symbolfile is stripped, trying a link"
-            # stripped library - only safe test is to link against the
-            # library!  However, we do not know what compiler to use
-            # so we can not do the test.  Assume the symbol is in
-            cat <<EOF > conftest.mk
-include config/Makefile.${arch}
-conftest:conftest.c $symbolfile
-	\$(CC) \$(CFLAGS) \$(LDFLAGS) $symbolfile \$< -o \$@
-
-conftest.c:
-	echo "extern int $symbol (); " > \$@
-	echo "int main() { $symbol (); return 0; }" >> \$@
-EOF
-            $gnumake -f conftest.mk >> $logfile 2>&1
-            if test $? -eq 0 ; then
-                found_symbol=1
-                logmsg " Link OK"
-            else
-                found_symbol=0
-                logmsg " Failed code was"
-                cat conftest.mk >> $logfile
-            fi
-            rm -rf conftest.c conftest.mk conftest
+            logmsg " $symbolfile is stripped, trying to link"
+            # stripped library - only safe test is to link against the library
+            check_link $symbolfile "" $symbol
+            found_symbol=$link_result
         else
             found_symbol=0
         fi
@@ -745,6 +845,10 @@ EOF
     else
         result "no"
     fi
+
+    unset symbol
+    unset symbollib
+    unset symboldir
 }
 
 #_____________________________________________________________________
@@ -763,18 +867,23 @@ check_comp() {
     fi
 
     comptype="$1"
+    nocomp=""
 
     if test "x$comptype" = "xLD" ; then
-       message "Checking for linker (LD)"
+       message "Checking for ${compmsgextra}linker (LD)"
     else
-       message "Checking for $comptype compiler"
+       message "Checking for ${compmsgextra}$comptype compiler"
     fi
 
     found_comp=0
     case $comptype in
     C)
         if test "x$altcc" = "x" ; then
-            altcc=`grep '^CC ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
+            if `make -f config/Makefile.$arch CONFIGURE=yes showcc > /dev/null 2>&1` ; then
+                altcc=`make -f config/Makefile.$arch CONFIGURE=yes showcc`
+            else
+                altcc=`grep '^CC ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
+            fi
         fi
         altcc1=`echo "$altcc" | awk '{print $1}'`
         if `$cwhich $altcc1 > /dev/null 2>&1` ; then
@@ -786,7 +895,11 @@ check_comp() {
         ;;
     C++)
         if test "x$altcxx" = "x" ; then
-            altcxx=`grep '^CXX ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
+            if `make -f config/Makefile.$arch CONFIGURE=yes showcxx > /dev/null 2>&1` ; then
+                altcxx=`make -f config/Makefile.$arch CONFIGURE=yes showcxx`
+            else
+                altcxx=`grep '^CXX ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
+            fi
         fi
         altcxx1=`echo "$altcxx" | awk '{print $1}'`
         if `$cwhich $altcxx1 > /dev/null 2>&1` ; then
@@ -798,16 +911,20 @@ check_comp() {
         ;;
     LD)
         if test "x$altld" = "x" ; then
-            altld=`grep '^LD ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
-            if test "x$arch" = "xwin32" ; then
-                altldorg="link"
-                altldtmp="$altld"
-                altld="$altldorg"
-            fi
-            if test "x$arch" = "xwin32gcc" ; then
-                altldorg="g++"
-                altldtmp="$altld"
-                altld="$altldorg"
+            if `make -f config/Makefile.$arch CONFIGURE=yes showld > /dev/null 2>&1` ; then
+                altld=`make -f config/Makefile.$arch CONFIGURE=yes showld`
+            else
+                altld=`grep '^LD ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
+                if test "x$arch" = "xwin32" ; then
+                    altldorg="link"
+                    altldtmp="$altld"
+                    altld="$altldorg"
+                fi
+                if test "x$arch" = "xwin32gcc" ; then
+                    altldorg="g++"
+                    altldtmp="$altld"
+                    altld="$altldorg"
+                fi
             fi
         fi
         altld1=`echo "$altld" | awk '{print $1}'`
@@ -824,11 +941,15 @@ check_comp() {
         ;;
     F77)
         if test "x$altf77" = "x" ; then
-            altf77=`grep '^F77 ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
-            if test "x$arch" = "xwin32" ; then
-                altf77org="fl32"
-                altf77tmp="$altf77"
-                altf77="$altf77org"
+            if `make -f config/Makefile.$arch CONFIGURE=yes showf77 > /dev/null 2>&1` ; then
+                altf77=`make -f config/Makefile.$arch CONFIGURE=yes showf77`
+            else
+                altf77=`grep '^F77 ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
+                if test "x$arch" = "xwin32" ; then
+                    altf77org="fl32"
+                    altf77tmp="$altf77"
+                    altf77="$altf77org"
+                fi
             fi
         fi
         altf771=`echo "$altf77" | awk '{print $1}'`
@@ -975,12 +1096,18 @@ PROOFDIN=config/proofd.in
 PROOFDOUT=etc/daemons/proofd.rc.d
 PROOFDXINETDIN=config/proofd.xinetd.in
 PROOFDXINETDOUT=etc/daemons/proofd.xinetd
+PROOFSERVIN=config/proofserv.in
+PROOFSERVOUT=main/src/proofserv.sh
 XROOTDIN=config/xrootd.in
 XROOTDOUT=etc/daemons/xrootd.rc.d
+CMSDIN=config/cmsd.in
+CMSDOUT=etc/daemons/cmsd.rc.d
 OLBDIN=config/olbd.in
 OLBDOUT=etc/daemons/olbd.rc.d
 ROOTHELPIN=config/root-help.el.in
 ROOTHELPOUT=build/misc/root-help.el
+ROOTSIN=config/roots.in
+ROOTSOUT=main/src/roots.sh
 HTMLIN=config/html.C.in
 HTMLOUT=macros/html.C
 THISROOTSHIN=config/thisroot.sh
@@ -1081,12 +1208,13 @@ enable/disable options, prefix with either --enable- or --disable-
   exceptions         Turn on compiler exception handling capability
   explicitlink       Explicitly link with all dependent libraries
   fftw3              Fast Fourier Transform support, requires libfftw3
+  fitsio             Read images and data from FITS files, requires cfitsio
   gviz               Graphs visualization support, requires graphviz
   gdml               GDML writer and reader
   gfal               GFAL support, requires libgfal
   globus             Globus authentication support, requires Globus toolkit
   glite              gLite support, requires libglite-api-wrapper v.3 from GSI (https://subversion.gsi.de/trac/dgrid/wiki)
-  gsl-shared         enable linking against shared libraries for GSL (default no)
+  gsl-shared         Enable linking against shared libraries for GSL (default no)
   hdfs               HDFS support; requires libhdfs from HDFS >= 0.19.1
   krb5               Kerberos5 support, requires Kerberos libs
   ldap               LDAP support, requires (Open)LDAP libs
@@ -1121,9 +1249,15 @@ enable/disable options, prefix with either --enable- or --disable-
   tmva               Build TMVA multi variate analysis library
   unuran             UNURAN - package for generating non-uniform random numbers
   winrtdebug         Link against the Windows debug runtime library
+  x11                X11 support
   xml                XML parser interface
   xrootd             Build xrootd file server and its client (if supported)
   xft                Xft support (X11 antialiased fonts)
+
+minimal set of libraries, can be combined with above --enable-... options
+
+  --minimal          Do not automatically search for support libraries
+  --gminimal         Do not automatically search for support libraries, but include X11
 
 with options, prefix with --with-, enables corresponding support
 
@@ -1133,6 +1267,8 @@ with options, prefix with --with-, enables corresponding support
   afs-shared         AFS support, controls usage of shared linkage AFS libraries {yes/no}
   alien-incdir       AliEn support, location of gapiUI.h
   alien-libdir       AliEn support, location of libapiUI
+  alloc-libdir       Alternative memory allocator support, location of allocator lib
+  alloc-lib          Alternative memory allocator support, allocator lib
   castor-incdir      CASTOR support, location of stager_api.h
   castor-libdir      CASTOR support, location of libshift
   chirp-incdir       Chirp support, location of chirp_client.h
@@ -1149,6 +1285,8 @@ with options, prefix with --with-, enables corresponding support
   ftgl-libdir        FTGL support, location of libftgl
   fftw3-incdir       FFTW3 support, location of fftw3.h
   fftw3-libdir       FFTW3 support, location of libfftw3 (libfftw3-3 for windows)
+  cfitsio-incdir     FITS support, location of fitsio.h
+  cfitsio-libdir     FITS support, location of libcfitsio
   gviz-incdir        Graphviz support, location of gvc.h
   gviz-libdir        Graphviz support, location of libgvplugin_core
   gfal-incdir        GFAL support, location of gfal_api.h
@@ -1223,6 +1361,13 @@ with compiler options, prefix with --with-, overrides default value
   ld                 alternative Linker and options to be used
   clang              use clang compiler instead of gcc (mutual exclusive with
                      the cc, cxx and ld options)
+
+cross compiling options, currently only used when building for ios and iossim
+
+  --host[=hostarch]  host architecture to be used in case of cross compiling
+  --with-hostcc      alternative host C compiler in case of cross compiling
+  --with-hostcxx     alternative host C++ compiler in case of cross compiling
+  --with-hostld      alternative host Linker in case of cross compiling
 
 Supported Architectures:
 
@@ -1305,13 +1450,33 @@ hpuxia64acc)
 solaris64CC5)
    logmsg "Will check Solaris 64bit libraries"
    checksolaris64="yes" ;;
+ios*)
+   logmsg "Will check iOS SDK libraries"
+   iossdk=`make -f config/Makefile.$arch CONFIGURE=yes showsdk`
+   enable_cintex="no"
+   enable_reflex="no"
+   enable_genvector="no"
+   enable_tmva="no"
+   ;;
+win32)
+   logmsg "Will use by default builtin versions of libraries on Win32"
+   enable_builtin_freetype="yes"
+   enable_builtin_ftgl="yes"
+   enable_builtin_glew="yes"
+   enable_builtin_pcre="yes"
+   enable_builtin_zlib="yes" ;;
 esac
 
-# check for which
-case $platform in
-macosx) cwhich="type -path" ;;
-*)      cwhich="which"      ;;
-esac
+# check for which, avoid using which, as it may be a buggy csh script.
+if type -path type >/dev/null 2>&1 ; then
+   cwhich="type -path"
+elif type whence >/dev/null 2>&1 ; then
+   cwhich="whence"
+else
+   # XXX Should do something better...
+   # ... possibly using type inside a sh function whence() { ... }
+   cwhich="which"
+fi
 
 # check for Fink on MacOS X
 # and for sanity of source e.g. pcre-*.tar.gz must exist
@@ -1325,6 +1490,12 @@ if test "x$platform" = "xmacosx" ; then
    logmsg "Checking Fink directory"
    finkdir=`$cwhich fink 2>&1 | sed -ne "s/\/bin\/fink//p"`
    logmsg "$finkdir"
+
+   if test -d /opt/local; then
+      logmsg "Checking MacPorts directory"
+      finkdir=/opt/local
+      logmsg "$finkdir"
+   fi
 
    if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
       macosx105=yes
@@ -1367,12 +1538,21 @@ if test $# -gt 0 ; then
       --no-create)             noact="yes"           ;;
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
+      --minimal)               ;;
+      --gminimal)              ;;
+      --host)                  savearch=$arch
+                               guess_architecture
+                               host=$arch
+                               arch=$savearch        ;;
+      --host=*)                host=$optarg          ;;
       --with-afs=*)            afsdir=$optarg        ; enable_afs="yes"     ;;
       --with-afs-incdir=*)     afsincdir=$optarg     ; enable_afs="yes"     ;;
       --with-afs-libdir=*)     afslibdir=$optarg     ; enable_afs="yes"     ;;
       --with-afs-shared=*)     afsshared=$optarg     ; enable_afs="yes"     ;;
       --with-alien-incdir=*)   alienincdir=$optarg   ; enable_alien="yes"   ;;
       --with-alien-libdir=*)   alienlibdir=$optarg   ; enable_alien="yes"   ;;
+      --with-alloc-libdir=*)   alloclibdir=$optarg   ; enable_alloc="yes"   ;;
+      --with-alloc-lib=*)      alloclib=$optarg      ; enable_alloc="yes"   ;;
       --with-afterimage-incdir=*) afterimageincdir=$optarg; enable_builtin_afterimage=no ;;
       --with-afterimage-libdir=*) afterimagelibdir=$optarg; enable_builtin_afterimage=no ;;
       --with-castor-incdir=*)  castorincdir=$optarg  ; enable_castor="yes"  ;;
@@ -1392,8 +1572,10 @@ if test $# -gt 0 ; then
       --with-ftgl-libdir=*)    ftgllibdir=$optarg    ; enable_builtin_ftgl=no;;
       --with-fftw3-incdir=*)   fftw3incdir=$optarg   ; enable_fftw3="yes"   ;;
       --with-fftw3-libdir=*)   fftw3libdir=$optarg   ; enable_fftw3="yes"   ;;
-      --with-gviz-incdir=*)    gvizincdir=$optarg    ; enable_gviz="yes"   ;;
-      --with-gviz-libdir=*)    gvizlibdir=$optarg    ; enable_gviz="yes"   ;;
+      --with-cfitsio-incdir=*) cfitsioincdir=$optarg ; enable_fitsio="yes"  ;;
+      --with-cfitsio-libdir=*) cfitsiolibdir=$optarg ; enable_fitsio="yes"  ;;
+      --with-gviz-incdir=*)    gvizincdir=$optarg    ; enable_gviz="yes"    ;;
+      --with-gviz-libdir=*)    gvizlibdir=$optarg    ; enable_gviz="yes"    ;;
       --with-gfal-incdir=*)    gfalincdir=$optarg    ; enable_gfal="yes"    ;;
       --with-gfal-libdir=*)    gfallibdir=$optarg    ; enable_gfal="yes"    ;;
       --with-glew-incdir=*)    glewincdir=$optarg    ; enable_builtin_glew=no;;
@@ -1439,9 +1621,6 @@ if test $# -gt 0 ; then
       --with-sapdb-libdir=*)   sapdblibdir=$optarg   ; enable_sapdb="yes"   ;;
       --with-rfio-incdir=*)    shiftincdir=$optarg   ; enable_rfio="yes"    ;;
       --with-rfio-libdir=*)    shiftlibdir=$optarg   ; enable_rfio="yes"    ;;
-      # leave --with-shift-* for backward compatibility, use --with-rfio-* instead
-      --with-shift-incdir=*)   shiftincdir=$optarg   ; enable_rfio="yes"    ;;
-      --with-shift-libdir=*)   shiftlibdir=$optarg   ; enable_rfio="yes"    ;;
       --with-srp=*)            srpdir=$optarg        ; enable_srp="yes"     ;;
       --with-srp-incdir=*)     srpincdir=$optarg     ; enable_srp="yes"     ;;
       --with-srp-libdir=*)     srplibdir=$optarg     ; enable_srp="yes"     ;;
@@ -1466,6 +1645,9 @@ if test $# -gt 0 ; then
       --with-f77=*)            altf77=$optarg        ;;
       --with-ld=*)             altld=$optarg         ;;
       --with-clang) altcc=clang; altcxx=clang++; altld=clang++ ;;
+      --with-hostcc=*)         hostcc=$optarg        ;;
+      --with-hostcxx=*)        hostcxx=$optarg       ;;
+      --with-hostld=*)         hostld=$optarg        ;;
       ################################################################
       #
       # Enable/disable to turn on/off third party software linkage and
@@ -1572,8 +1754,11 @@ if test "x$noact" = "xno"; then
     cp -f $ROOTDXINETDIN rootd.xinetd.tmp
     cp -f $PROOFDIN proofd.tmp
     cp -f $PROOFDXINETDIN proofd.xinetd.tmp
+    cp -f $PROOFSERVIN proofserv.tmp
+    cp -f $ROOTSIN roots.tmp
     cp -f $XROOTDIN xrootd.tmp
     cp -f $OLBDIN olbd.tmp
+    cp -f $CMSDIN cmsd.tmp
 fi
 
 ######################################################################
@@ -1598,6 +1783,33 @@ fi
 #
 if test "x$platform" = "xwin32"; then
     enable_shared="no"
+    enable_x11="no"
+fi
+
+######################################################################
+#
+### echo %%% On iOS always disable X11
+#
+if test "x$platform" = "xios"; then
+    enable_x11="no"
+    if test "x$host" = "x"; then
+        savearch=$arch
+        guess_architecture
+        host=$arch
+        arch=$savearch
+    fi
+else
+    # cross compiling only supported for ios for the time being
+    host=
+fi
+
+######################################################################
+#
+### echo %%% If no X11 then also no OpenGL and ASImage on non Win32 platforms
+#
+if test "x$enable_x11" = "xno" && test ! "x$platform" = "xwin32"; then
+   enable_opengl="no"
+   enable_asimage="no"
 fi
 
 ######################################################################
@@ -1676,12 +1888,58 @@ fi
 
 ######################################################################
 #
+### echo %%% Check host environment in case of cross compiling
+#
+#
+if test ! "x$host" = "x"; then
+    if ! test -f config/Makefile.$host; then
+        echo 'Invalid host platform' $host
+        exit 1
+    fi
+
+    compmsgextra="host "
+    archbak=$arch
+    arch=$host
+
+    altccbak=$altcc
+    altcc=$hostcc
+    check_comp C
+    if test ${found_comp} -eq 0; then
+        echo "Cannot find host CC $hostcc"
+        exit 1
+    fi
+    altcc=$altccbak
+
+    altcxxbak=$altcxx
+    altcxx=$hostcxx
+    check_comp C++
+    if test ${found_comp} -eq 0; then
+        echo "Cannot find host CXX $hostcc"
+        exit 1
+    fi
+    altcxx=$altcxxbak
+
+    altldbak=$altld
+    altld=$hostld
+    check_comp LD
+    if test ${found_comp} -eq 0; then
+        echo 'Cannot find host linker (LD)' $hostcc
+        exit 1
+    fi
+    altld=$altldbak
+
+    compmsgextra=""
+    arch=$archbak
+fi
+
+######################################################################
+#
 ### echo %%% X11 and XPM Library - Mandatory lib on Unix
 #
 # Mandatory test, must succeed
 # Check for X11 and Xpm library (for X11 use always shared lib)
 #
-if test ! "x$platform" = "xwin32"; then
+if test ! "x$enable_x11" = "xno" ; then
     check_library "libX11" "yes" "$x11libdir" \
         /usr/lib /usr/X11R6/lib /usr/lib/X11 /usr/openwin/lib \
         /usr/local/lib /usr/local/lib/X11 /usr/local/X11R6/lib \
@@ -1778,7 +2036,7 @@ fi
 #
 ### echo %%%Xft support (X11 antialiased fonts)
 #
-if test "x$platform" = "xwin32"; then
+if test "x$enable_x11" = "xno"; then
    enable_xft="no"
 fi
 hasxft="undef"
@@ -1809,6 +2067,9 @@ if test "x$enable_winrtdebug" = "x" ; then
     else
         enable_winrtdebug=no
     fi
+fi
+if test "x$platform" != "xwin32"; then
+    enable_winrtdebug=no
 fi
 
 ######################################################################
@@ -1893,7 +2154,7 @@ if test "x$enable_builtin_freetype" = "x" || \
    test "x$enable_builtin_freetype" = "xno" ; then
 
    checking_msg "freetype-config"
-   if `$cwhich freetype-config > /dev/null 2>&1` ; then
+   if `$cwhich freetype-config > /dev/null 2>&1` && test "x$host" = "x" ; then
       $cwhich freetype-config
 
       message "Checking for libfreetype version >= 9.3.0"
@@ -1919,60 +2180,6 @@ result "$enable_builtin_freetype"
 
 ######################################################################
 #
-### echo %%% libftgl (builtin or system) - Mandatory lib
-#
-# Mandatory test, must succeed
-# (see http://homepages.paradise.net.nz/henryj/code/index.html#FTGL)
-#
-ftglincdir=include
-if test "x$platform" = "xwin32"; then
-   ftgllibdir=
-   ftgllibs=lib/libFTGL.lib
-else
-   ftgllibdir=-Llib
-   ftgllibs=-lFTGL
-fi
-if test "x$enable_builtin_ftgl" = "x" || \
-   test "x$enable_builtin_ftgl" = "xno" ; then
-
-   # check if we have pkg-config
-   checking_msg "pkg-config"
-   if `$cwhich pkg-config > /dev/null 2>&1` ; then
-      $cwhich pkg-config
-
-      message "Checking for libftgl"
-      if pkg-config --exists ftgl ; then
-         result "ok"
-         message "Checking for ftgl version > 2.1.2"
-         ftgl_version=`pkg-config --modversion ftgl | \
-         tr '.' ' ' | \
-         awk 'BEGIN { FS = " "; } \
-            { printf "%d", ($''1 * 1000 + $''2) * 1000 + $''3;}'`
-         # Use FTGL/ftgl.h when > 2.1.2
-         if test $ftgl_version -gt 2001002 ; then
-            result "ok"
-            ftglincdir=`pkg-config --cflags-only-I ftgl | sed 's/-I//g'`
-            ftgllibs=`pkg-config --libs-only-l ftgl`
-            ftgllibdir=`pkg-config --libs-only-L ftgl | sed 's/-L//g'`
-            enable_builtin_ftgl="no"
-         else
-            enable_builtin_ftgl="yes"
-            result "no (`pkg-config --modversion ftgl`)"
-         fi
-      else
-         enable_builtin_ftgl="yes"
-         result "no"
-      fi
-   else
-      enable_builtin_ftgl="yes"
-      echo "not found"
-   fi
-fi
-message "Checking whether to build included libftgl"
-result "$enable_builtin_ftgl"
-
-######################################################################
-#
 ### echo %%% libpcre (builtin or system) - Mandatory lib
 #
 # Mandatory test, must succeed (see http://www.pcre.org/)
@@ -1981,7 +2188,7 @@ if test "x$enable_builtin_pcre" = "x" || \
    test "x$enable_builtin_pcre" = "xno" ; then
 
    checking_msg "pcre-config"
-   if `$cwhich pcre-config > /dev/null 2>&1` ; then
+   if `$cwhich pcre-config > /dev/null 2>&1` && test "x$host" = "x" ; then
       $cwhich pcre-config
 
       message "Checking for libpcre version >= 3.9"
@@ -2010,9 +2217,9 @@ result "$enable_builtin_pcre"
 ### echo %%% Use included ZLib or use systems
 #
 if test "x$enable_builtin_zlib" = "xno" ; then
-    check_header "zlib.h" "/usr/include"  $ZLIB $ZLIB/include \
+    check_header "zlib.h" ""  $ZLIB $ZLIB/include \
         /usr/local/include /usr/include/zlib /usr/local/include/zlib \
-        /opt/zlib/include
+        /opt/zlib/include /usr/include
     if test "x$found_dir" = "x" ; then
         enable_builtin_zlib=yes
     else
@@ -2020,10 +2227,10 @@ if test "x$enable_builtin_zlib" = "xno" ; then
         zlibincdir=$found_dir
     fi
 
-    check_library "libz" "$enable_shared" "" "/usr/lib" \
+    check_library "libz" "$enable_shared" "" \
         $ZLIB $ZLIB/lib /usr/local/zlib/lib /usr/local/lib \
-            /usr/lib/zlib /usr/local/lib/zlib /usr/zlib/lib /usr/lib \
-            /usr/zlib /usr/local/zlilb /opt/zlib /opt/zlib/lib
+        /usr/lib/zlib /usr/local/lib/zlib /usr/zlib/lib /usr/lib \
+        /usr/zlib /usr/local/zlib /opt/zlib /opt/zlib/lib
     if test "x$found_lib" = "x" ; then
         zliblib=""
         zliblibdir=""
@@ -2148,9 +2355,60 @@ check_explicit "$enable_opengl" "$enable_opengl_explicit" \
 
 ######################################################################
 #
+### echo %%% libftgl (builtin or system) - Needed if OpenGL enabled
+#
+# Mandatory test, must succeed
+# (see http://homepages.paradise.net.nz/henryj/code/index.html#FTGL)
+#
+if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
+   ftglincdir=include
+   ftgllibdir=-Llib
+   ftgllibs=-lFTGL
+   if test "x$enable_builtin_ftgl" = "x" || \
+      test "x$enable_builtin_ftgl" = "xno" ; then
+
+      # check if we have pkg-config
+      checking_msg "pkg-config"
+      if `$cwhich pkg-config > /dev/null 2>&1` ; then
+         $cwhich pkg-config
+
+         message "Checking for libftgl"
+         if pkg-config --exists ftgl ; then
+            result "ok"
+            message "Checking for ftgl version > 2.1.2"
+            ftgl_version=`pkg-config --modversion ftgl | \
+            tr '.' ' ' | \
+            awk 'BEGIN { FS = " "; } \
+               { printf "%d", ($''1 * 1000 + $''2) * 1000 + $''3;}'`
+            # Use FTGL/ftgl.h when > 2.1.2
+            if test $ftgl_version -gt 2001002 ; then
+               result "ok"
+               ftglincdir=`pkg-config --cflags-only-I ftgl | sed 's/-I//g'`
+               ftgllibs=`pkg-config --libs-only-l ftgl`
+               ftgllibdir=`pkg-config --libs-only-L ftgl | sed 's/-L//g'`
+               enable_builtin_ftgl="no"
+            else
+               enable_builtin_ftgl="yes"
+               result "no (`pkg-config --modversion ftgl`)"
+            fi
+         else
+            enable_builtin_ftgl="yes"
+            result "no"
+         fi
+      else
+         enable_builtin_ftgl="yes"
+         echo "not found"
+      fi
+   fi
+   message "Checking whether to build included libftgl"
+   result "$enable_builtin_ftgl"
+fi
+
+######################################################################
+#
 ### echo %%% OpenGL support on Windoze
 #
-# On win32 we always have OpenGL available (is this true?)
+# On win32 we always have OpenGL available
 #
 if test "x$platform" = "xwin32"; then
    enable_opengl="yes"
@@ -2160,7 +2418,31 @@ if test "x$platform" = "xwin32"; then
    glewincdir=include
    glewlibdir=
    glewlibs=lib/libGLEW.lib
+
+   enable_builtin_ftgl="yes"
+   ftglincdir=include
+   ftgllibdir=
+   ftgllibs=lib/libFTGL.lib
 fi
+
+######################################################################
+#
+### echo %%% Alternative Memory Allocator Support - Third party libraries
+#
+if test ! "x$enable_alloc" = "xno"; then
+    # Check for alternative memory allocator
+    check_library "$alloclib" "$enable_shared" "$alloclibdir" \
+        /usr/lib /usr/local/lib
+    alloclib=$found_lib
+    alloclibdir=$found_dir
+
+    if test "x$alloclib" = "x"; then
+        alloclibdir=""
+        enable_alloc="no"
+    fi
+fi
+check_explicit "$enable_alloc" "$enable_alloc_explicit" \
+     "Explicitly required allocator dependencies not fulfilled"
 
 ######################################################################
 #
@@ -2175,9 +2457,9 @@ if test ! "x$enable_mysql" = "xno"; then
     # Check for MySQL include and library
     checking_msg "mysql_config"
     mysql_config=`$cwhich mysql_config 2> /dev/null`
-    if test ! "x$mysql_config" = "x" && test -x "$mysql_config" && \
-       test "x$mysqlincdir" = "x"    && test "x$mysqllibdir" = "x" && \
-       test ! "x$platform" = "xwin32" ; then
+    if test ! "x$mysql_config" = "x"  && test -x "$mysql_config" && \
+       test "x$mysqlincdir" = "x"     && test "x$mysqllibdir" = "x" && \
+       test ! "x$platform" = "xwin32" && test "x$host" = "x" ; then
        echo $mysql_config
        # we found mysql_config - now check the version number
        message "Checking for libmysqlclient version >= 3.23.*"
@@ -2187,7 +2469,7 @@ if test ! "x$enable_mysql" = "xno"; then
           enable_mysql="no"
           mysqllibdir=""
        else
-          if test "x$arch" = "xlinux" && mysql_config --libs | grep 'lib64' > /dev/null 2>& 1; then
+          if test "x$arch" = "xlinux" && mysql_config --libs | grep 'lib64/mysql' > /dev/null 2>& 1; then
              result "no (lib64 version found)"
              enable_mysql="no"
              mysqllibdir=""
@@ -2598,19 +2880,12 @@ if test ! "x$enable_rfio" = "xno" ; then
         case $platform in
            linux)      shiftlib="$shiftlib -lnsl"
                 for i in "" -ladns ; do
-                    echo "extern rfio_fchmod(); int main() { rfio_fchmod(); return 0; }" > conftest.c
-                    logmsg " Checking if we can link against $shiflib"
-                    logmsg " gcc conftest.c $shiftlibdir $shiftlib $i -o conftest"
-                    gcc conftest.c $shiftlibdir $shiftlib $i -o conftest >> $logfile 2>&1
-                    if test $? -eq 0 ; then
+                    check_link "$shiftlib $i" "$shiftlibdir" rfio_fchmod
+                    if test $link_result -eq 1 ; then
                         shiftlib="$shiftlib $i" ;
                         break ;
-                    else
-                        logmsg " Failed program was:"
-                        cat conftest.c >> $logfile
                     fi
                 done
-                rm -f conftest.c conftest
                 ;;
            solaris)    shiftlib="$shiftlib -lposix4" ;;
            win32)      shiftincdir="$shiftincdir $shiftincdir/../win32"
@@ -2663,9 +2938,9 @@ if test ! "x$enable_castor" = "xno" ; then
         castorcflags=-DR__CASTOR2
         # check for Castor >= 2.1.0
         message "Checking for Castor version being >= 2.1.0"
-        castor_version=`grep "define BASEVERSION" $castorincdir/patchlevel.h | sed 's/^.*"\([0-9]\.[0-9]\.[0-9]\)"/\1/' | awk 'BEGIN { FS="." } { printf "%d", $1 * 1000000 + $2 * 1000 + $3}'`
+        castor_version=`grep "define BASEVERSION" $castorincdir/patchlevel.h | sed 's/^.*"\([0-9]\.[0-9]\.[0-9]*\)"/\1/' | awk 'BEGIN { FS="." } { printf "%d", $1 * 1000000 + $2 * 1000 + $3}'`
         if test $castor_version -lt 2001000; then
-            base_vers=`grep "define BASEVERSION" $castorincdir/patchlevel.h | sed 's/^.*"\([0-9]\.[0-9]\.[0-9]\)"/\1/' | awk '{ printf $1}'`
+            base_vers=`grep "define BASEVERSION" $castorincdir/patchlevel.h | sed 's/^.*"\([0-9]\.[0-9]\.[0-9]*\)"/\1/' | awk '{ printf $1}'`
             patch_level=`grep "define PATCHLEVEL" $castorincdir/patchlevel.h | awk '{ printf $3}'`
             result "no, $base_vers-$patch_level"
             castorincdir=""
@@ -2687,19 +2962,12 @@ if test ! "x$enable_castor" = "xno" ; then
         case $platform in
            linux)      castorlib="$castorlib -lnsl"
                 for i in "" -ladns ; do
-                    echo "extern rfio_fchmod(); int main() { rfio_fchmod(); return 0; }" > conftest.c
-                    logmsg " Checking if we can link against $castorlib"
-                    logmsg " gcc conftest.c $castorlibdir $castorlib $i -o conftest"
-                    gcc conftest.c $castorlibdir $castorlib $i -o conftest >> $logfile 2>&1
-                    if test $? -eq 0 ; then
+                    check_link "$shiftlib $i" "$shiftlibdir" rfio_fchmod
+                    if test $link_result -eq 1 ; then
                         castorlib="$castorlib $i" ;
                         break ;
-                    else
-                        logmsg " Failed program was:"
-                        cat conftest.c >> $logfile
                     fi
                 done
-                rm -f conftest.c conftest
                 ;;
            solaris)    castorlib="$castorlib -lposix4" ;;
            win32)      castorincdir="$castorincdir $castorincdir/../win32"
@@ -2801,6 +3069,38 @@ if test ! "x$enable_fftw3" = "xno"; then
 fi
 check_explicit "$enable_fftw3" "$enable_fftw3_explicit" \
      "Explicitly required FFT in the West dependencies not fulfilled"
+
+######################################################################
+#
+### echo %%% FITSIO Support - Third party libraries
+#
+# (See http://heasarc.gsfc.nasa.gov/fitsio/)
+#
+# If the user has set the flags "--disable-fitsio", we don't check for
+# FITSIO at all.
+#
+if test ! "x$enable_fitsio" = "xno"; then
+    # Check for cfitsio include and library
+    check_header "fitsio.h" "$cfitsioincdir" $CFITSIO $CFITSIO/include \
+        /usr/local/include /usr/include /usr/include/cfitsio \
+        /opt/cfitsio/include $finkdir/include
+    cfitsioinc=$found_hdr
+    cfitsioincdir=$found_dir
+
+    # At this time, libcfitsio.a should always be prefered over .so,
+    # to avoid forcing users to install cfitsio.
+    check_library "libcfitsio cfitsio" "no" "$cfitsiolibdir" \
+        $CFITSIO $CFITSIO/lib $CFITSIO/.libs /usr/local/lib /usr/lib \
+        /opt/cfitsio/lib $finkdir/lib
+    cfitsiolib=$found_lib
+    cfitsiolibdir=$found_dir
+
+    if test "x$cfitsioincdir" = "x" || test "x$cfitsiolib" = "x"; then
+        enable_fitsio="no"
+    fi
+fi
+check_explicit "$enable_fitsio" "$enable_fitsio_explicit" \
+     "Explicitly required cfitsio dependencies not fulfilled"
 
 ######################################################################
 #
@@ -3044,22 +3344,25 @@ if test ! "x$enable_hdfs" = "xno" ; then
     hdfsinc=$found_hdr
     hdfsincdir=$found_dir
 
+    if test "x$platform" = "xmacosx" && test -z $JAVA_HOME; then
+       JAVA_HOME=`/usr/libexec/java_home`
+    fi
+
     keepincdir=$jniincdir
     check_header "jni.h" "$jniincdir" $JAVA_HOME/include \
         /usr/java/default/include /usr/include /usr/local/include
     jniinc=$found_hdr
     jniincdir=$found_dir
 
-    check_library "libhdfs" "$enable_shared" \
-        "$hdfslibdir" \
+    check_library "libhdfs" "$enable_shared" "$hdfslibdir" \
         $HDFS $HDFS/lib $HDFS/build/libhdfs $HADOOP_HOME $HADOOP_HOME/build/libhdfs \
         /usr/lib /usr/local/lib
     hdfslib=$found_lib
     hdfslibdir=$found_dir
 
-    check_library "libjvm" "$enable_shared" \
-        "$jvmlibdir" \
+    check_library "libjvm" "$enable_shared" "$jvmlibdir" \
         $JAVA_HOME/jre/lib/amd64/server $JAVA_HOME/jre/lib/i386/server \
+        $JAVA_HOME/../Libraries \
         /usr/java/default/jre/lib/amd64/server \
         /usr/java/default/jre/lib/i386/server /usr/lib /usr/local/lib
     jvmlib=$found_lib
@@ -3069,44 +3372,19 @@ if test ! "x$enable_hdfs" = "xno" ; then
         enable_hdfs="no"
     else
         case $platform in
-           linux)
-                hdfslib="$hdfslib"
-                for i in "" -ladns ; do
-                    echo 'extern hdfsConnect(const char *, unsigned short); int main() { hdfsConnect("default", 0); return 0; }' > conftest.c
-                    logmsg " Checking if we can link against $hdfslib"
-                    logmsg " gcc conftest.c $hdfslibdir $hdfslib $i -o conftest"
-                    gcc conftest.c $hdfslibdir $hdfslib $i -o conftest >> $logfile 2>&1
-                    if test $? -eq 0 ; then
-                        hdfslib="$hdfslib $i" ;
-                        break ;
-                    else
-                        logmsg " Failed program was:"
-                        cat conftest.c >> $logfile
-                        enable_hdfs="no"
-                    fi
-                done
-                rm -f conftest.c conftest
+            linux)
+                check_link $hdfslib "$hdfslibdir" hdfsConnect
+                if test $link_result -eq 0 ; then
+                    enable_hdfs="no"
+                fi
 
-                jvmlib="$jvmlib"
-                for i in "" -ladns ; do
-                    echo '#include "jni.h"' > conftest.c
-                    echo 'int main() { JNI_CreateJavaVM(NULL, NULL, NULL); return 0; }' >> conftest.c
-                    logmsg " Checking if we can link against $jvmlib"
-                    logmsg " gcc conftest.c -I$jniincdir -I$jniincdir/linux $jvmlibdir $jvmlib $i -o conftest"
-                    gcc conftest.c -I$jniincdir -I$jniincdir/linux $jvmlibdir $jvmlib $i -o conftest >> $logfile 2>&1
-                    if test $? -eq 0 ; then
-                        jvmlib="$jvmlib $i" ;
-                        break ;
-                    else
-                        logmsg " Failed program was:"
-                        cat conftest.c >> $logfile
-                        enable_hdfs="no"
-                    fi
-                done
-                rm -f conftest.c conftest
+                check_link $jvmlib "$jvmlibdir" JNI_CreateJavaVM
+                if test $link_result -eq 0 ; then
+                    enable_hdfs="no"
+                fi
                 ;;
         esac
-        echo "HDFS disabled due to failed compile and link test!"
+        echo "HDFS disabled due to failed compile and link test"
     fi
 fi
 check_explicit "$enable_hdfs" "$enable_hdfs_explicit" \
@@ -3123,8 +3401,8 @@ check_explicit "$enable_hdfs" "$enable_hdfs_explicit" \
 # Check for libdns_sd
 #
 if test ! "x$enable_bonjour" = "xno" ; then
-    # Bonjour is built-in on MacOS X (i.e. available in libSystem)
-    if test ! "x$platform" = "xmacosx"; then
+    # Bonjour is built-in on MacOS X / iOS (i.e. available in libSystem)
+    if test ! "x$platform" = "xmacosx" && test ! "x$platform" = "xios" ; then
         check_header "dns_sd.h" "$dnssdincdir" $DNSSD $DNSSD/include \
         /opt/dnssd/include /usr/include /usr/local/include
         dnssdincdir=$found_dir
@@ -3290,6 +3568,9 @@ if test ! "x$enable_asimage" = "xno" ; then
    fi
    message "Checking whether to build included libAfterImage"
    result "$enable_builtin_afterimage"
+else
+   enable_astiff="no"
+   enable_builtin_afterimage="no"
 fi
 check_explicit "$enable_asimage" "$enable_asimage_explicit" \
      "Explicitly required AfterImage dependencies not fulfilled"
@@ -3313,11 +3594,12 @@ if test ! "x$enable_ldap" = "xno"; then
     ldapinc=$found_hdr
     ldapincdir=$found_dir
 
+    ldaplibdir1="$ldaplibdir"
     ldaplib=""
     ldaplibdir=""
 
     for i in libldap liblber ; do
-        check_library $i "$enable_shared" "" $ldaplibdir \
+        check_library $i "$enable_shared" "$ldaplibdir1" \
             $LDAP $LDAP/lib /usr/local/ldap/lib /usr/local/lib \
             /usr/lib/ldap /usr/local/lib/ldap /usr/ldap/lib /usr/lib \
             /usr/ldap /usr/local/ldap /opt/ldap /opt/ldap/lib
@@ -3461,7 +3743,7 @@ if test ! "x$enable_xml" = "xno" ; then
     checking_msg "xml2-config"
     xml2_config=`$cwhich xml2-config 2> /dev/null`
     if test ! "x$xml2_config" = "x" && test -x "$xml2_config" && \
-       test ! "x$platform" = "xwin32" ; then
+       test ! "x$platform" = "xwin32" && test "x$host" = "x"; then
        $cwhich xml2-config
        # we found xml2-config - now check the version number
        message "Checking for libxml2 version >= 2.4.x"
@@ -3480,8 +3762,8 @@ if test ! "x$enable_xml" = "xno" ; then
        result "not found"
        # fall back in case xml2-config is not found
        keepincdir=$xmlincdir
-       check_header "libxml/tree.h" "$xmlincdir" $XMLDIR $XMLDIR/include \
-           /opt/libxml2/include /usr/local/include/libxml2 /usr/include/libxml2
+       check_header "libxml2/libxml/tree.h" "$xmlincdir" $XMLDIR $XMLDIR/include \
+           /opt/include /usr/local/include
        xmlincdir=$found_dir
 
        keeplibdir=$xmllibdir
@@ -3516,7 +3798,6 @@ if test ! "x$enable_xml" = "xno" ; then
           esac
           case $platform in
              linux)     xmllib="$xmllib -lpthread"            ;;
-             solaris)   xmllib="$xmllib -liconv"              ;;
              win32)     xmlincdir="$xmlincdir $iconvincdir"
                         xmllib="$xmllib $iconvlib Ws2_32.lib" ;;
           esac
@@ -3604,48 +3885,51 @@ if test "x$enable_xrootd" = "xyes" && test "x$externalxrd" = "xyes"; then
    fi
 
 else
-
-   # Xrootd and its client need thread support
-   if test "x$enable_thread" = "xyes"; then
-       # Ok, now check the architecture
-       case $arch in
-       # xrootd does not build on all platforms yet
-       linux*)
-           if test "x$enable_xrootd" = "x"; then
-               enable_xrootd="yes"
-           fi
-           ;;
-       macos*)
-           if test "x$enable_xrootd" = "x"; then
-               enable_xrootd="yes"
-           fi
-           ;;
-       solaris*)
-           if test "x$enable_xrootd" = "x"; then
-               enable_xrootd="yes"
-           fi
-           ;;
-       win32)
-           if test "x$enable_xrootd" = "x"; then
-               enable_xrootd="yes"
-           fi
-           ;;
-       *)
+   if test "x$enable_xrootd" = "x" && test "x$DEFAULTENABLE" = "xno"; then
+       enable_xrootd="no"
+   else
+       # Xrootd and its client need thread support
+       if test "x$enable_thread" = "xyes"; then
+           # Ok, now check the architecture
+           case $arch in
+           # xrootd does not build on all platforms yet
+           linux*)
+               if test "x$enable_xrootd" = "x"; then
+                   enable_xrootd="yes"
+               fi
+               ;;
+           macos*)
+               if test "x$enable_xrootd" = "x"; then
+                   enable_xrootd="yes"
+               fi
+               ;;
+           solaris*)
+               if test "x$enable_xrootd" = "x"; then
+                   enable_xrootd="yes"
+               fi
+               ;;
+           win32)
+               if test "x$enable_xrootd" = "x"; then
+                   enable_xrootd="yes"
+               fi
+               ;;
+           *)
+               if test "x$enable_xrootd" = "xyes"; then
+                   enable_xrootd="yes"
+                   xrdcomm=", but not officially supported"
+               else
+                   enable_xrootd="no"
+               fi
+               ;;
+           esac
+       else
            if test "x$enable_xrootd" = "xyes"; then
-               enable_xrootd="yes"
-               xrdcomm=", but not officially supported"
+               enable_xrootd="no"
+               xrdcomm=", needs thread support (make sure pthread lib is found)"
            else
                enable_xrootd="no"
            fi
-           ;;
-       esac
-   else
-      if test "x$enable_xrootd" = "xyes"; then
-         enable_xrootd="no"
-         xrdcomm=", needs thread support (make sure pthread lib is found)"
-      else
-         enable_xrootd="no"
-      fi
+       fi
    fi
 
    xrdcomm="$enable_xrootd$xrdcomm"
@@ -4738,9 +5022,9 @@ if test ! "x$enable_mathmore" = "xno"; then
     #
     # if gslincdir not specified look for gsl-config
     #
-    # gsl-config check does not work on Solaris so lets skip it
-    if test "x$platform" = "xsolaris"; then
-        if (test "x$gslincdir" = "x" || test "x$gsllibs" = "x"); then
+    # gsl-config check does not work on Solaris, or when x-compiling, so lets skip it
+    if test "x$platform" = "xsolaris" || test ! "x$host" = "x"; then
+        if test "x$gslincdir" = "x" || test "x$gsllibs" = "x"; then
             gslskip="skip"
             enable_mathmore="no"
         fi
@@ -4792,15 +5076,17 @@ if test ! "x$enable_mathmore" = "xno"; then
     if test "x$enable_mathmore" = "xyes" && \
        test "x$enable_gsl_shared" = "xno" ; then
         for gslalib in $gsllibs; do
-           if [ "x`basename $gslalib .a`" != "x`basename $gslalib`" ]; then
-               message "Checking whether $gslalib is compiled with -fPIC"
-               check_libpic $gslalib
-               if test $is_libpic -eq 0 ; then
-                   result "no"
-                   enable_mathmore="no"
-               else
-                   result "yes"
-               fi
+            if `basename $gslalib > /dev/null 2>&1`; then
+                if [ "x`basename $gslalib .a`" != "x`basename $gslalib`" ]; then
+                    message "Checking whether $gslalib is compiled with -fPIC"
+                    check_libpic $gslalib
+                    if test $is_libpic -eq 0 ; then
+                        result "no"
+                        enable_mathmore="no"
+                    else
+                        result "yes"
+                    fi
+                fi
            fi
         done
         if `$cwhich gsl-config > /dev/null 2>&1` && \
@@ -5143,6 +5429,7 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_hdfs"     = "xyes" && pl="$pl root-plugin-io-hdfs"
     test "x$enable_rfio"     = "xyes" && pl="$pl root-plugin-io-rfio"
     test "x$enable_fftw3"    = "xyes" && pl="$pl root-plugin-math-fftw3"
+    test "x$enable_fitsio"   = "xyes" && pl="$pl root-plugin-graf2d-fitsio"
     test "x$enable_gviz"     = "xyes" && pl="$pl root-plugin-graf2d-gviz"
     test "x$enable_minuit2"  = "xyes" && pl="$pl root-plugin-math-minuit2"
     test "x$enable_pythia6"  = "xyes" && pl="$pl root-plugin-montecarlo-pythia6"
@@ -5319,6 +5606,9 @@ fi
 if test -d math/unuran/src/unuran-1.5.1-root ; then
    rm -rf math/unuran/src/unuran-1.5.1-root
 fi
+if test -d math/unuran/src/unuran-1.7.1-root ; then
+   rm -rf math/unuran/src/unuran-1.7.1-root
+fi
 if test -d cint/cint7 ; then
    rm -rf cint/cint7
 fi
@@ -5492,14 +5782,17 @@ fi
 message "Writing $MAKEOUT"
 sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@afslib@|$afslib|"                    \
-    -e "s|@afslibdir@|$afslibdirs|"              \
+    -e "s|@afslibdir@|$afslibdirs|"             \
     -e "s|@afsincdir@|$afsincdir|"              \
     -e "s|@afsextracflags@|$afsextracflags|"    \
     -e "s|@afsshared@|$afsshared|"              \
     -e "s|@alienincdir@|$alienincdir|"          \
     -e "s|@alienlib@|$alienlib|"                \
     -e "s|@alienlibdir@|$alienlibdir|"          \
+    -e "s|@alloclibdir@|$alloclibdir|"          \
+    -e "s|@alloclib@|$alloclib|"                \
     -e "s|@architecture@|$arch|"                \
+    -e "s|@host@|$host|"                        \
     -e "s|@asextralib@|$asextralib|"            \
     -e "s|@asextralibdir@|$asextralibdir|"      \
     -e "s|@asjpegincdir@|$asjpegincdir|"        \
@@ -5690,6 +5983,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@xmlincdir@|$xmlincdir|"              \
     -e "s|@xmllib@|$xmllib|"                    \
     -e "s|@xmllibdir@|$xmllibdir|"              \
+    -e "s|@buildx11@|$enable_x11|"              \
     -e "s|@x11libdir@|$x11libdir|"              \
     -e "s|@xpmlib@|$xpmlib|"                    \
     -e "s|@xpmlibdir@|$xpmlibdir|"              \
@@ -5700,6 +5994,10 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@curseshdr@|$curseshdr|"              \
     -e "s|@curseslib@|$curseslib|"              \
     -e "s|@curseslibdir@|$curseslibdir|"        \
+    -e "s|@cfitsioincdir@|$cfitsioincdir|"      \
+    -e "s|@cfitsiolib@|$cfitsiolib|"            \
+    -e "s|@cfitsiolibdir@|$cfitsiolibdir|"      \
+    -e "s|@buildfitsio@|$enable_fitsio|"        \
     -e "s|@buildgl@|$enable_opengl|"            \
     -e "s|@buildldap@|$enable_ldap|"            \
     -e "s|@buildmysql@|$enable_mysql|"          \
@@ -5893,8 +6191,9 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@winrtdebug@|$enable_winrtdebug|"\
     -e "s|@configargs@|$configargs|"       \
     -e "s|@dicttype@|$dicttype|"           \
-    -e "s|@zliblib@|$zliblib|"             \
     -e "s|@pythonvers@|$pythonvers|"       \
+    -e "s|@alloclibdir@|$alloclibdir|"     \
+    -e "s|@alloclib@|$alloclib|"           \
     -e "s|@altcc@|$altcc|"                 \
     -e "s|@altcxx@|$altcxx|"               \
     -e "s|@altf77@|$altf772|"              \
@@ -5958,7 +6257,7 @@ result "done"
 # etc/daemons/rootd.rc.d
 #
 message "Writing $ROOTDOUT"
-sed -e "s|@bindir@|$bindir|" \
+sed -e "s|@bindir@|$bindir2|" \
     < rootd.tmp > $ROOTDOUT
 chmod a+x $ROOTDOUT
 rm -f rootd.tmp
@@ -5968,8 +6267,8 @@ result "done"
 # etc/daemons/rootd.xinetd
 #
 message "Writing $ROOTDXINETDOUT"
-sed -e "s|@bindir@|$bindir|" \
-    -e "s|@prefix@|$prefix|" \
+sed -e "s|@bindir@|$bindir2|" \
+    -e "s|@prefix@|$prefix2|" \
     < rootd.xinetd.tmp > $ROOTDXINETDOUT
 rm -f rootd.xinetd.tmp
 result "done"
@@ -5978,7 +6277,7 @@ result "done"
 # etc/daemons/proofd.rc.d
 #
 message "Writing $PROOFDOUT"
-sed -e "s|@bindir@|$bindir|" \
+sed -e "s|@bindir@|$bindir2|" \
     < proofd.tmp > $PROOFDOUT
 chmod a+x $PROOFDOUT
 rm -f proofd.tmp
@@ -5988,17 +6287,37 @@ result "done"
 # etc/daemons/proofd.xinetd
 #
 message "Writing $PROOFDXINETDOUT"
-sed -e "s|@bindir@|$bindir|" \
-    -e "s|@prefix@|$prefix|" \
+sed -e "s|@bindir@|$bindir2|" \
+    -e "s|@prefix@|$prefix2|" \
     < proofd.xinetd.tmp > $PROOFDXINETDOUT
 rm -f proofd.xinetd.tmp
+result "done"
+
+#---------------------------------------------------------------------
+# main/src/proofserv.sh
+#
+message "Writing $PROOFSERVOUT"
+sed -e "s|@bindir@|$bindir2|" \
+    < proofserv.tmp > $PROOFSERVOUT
+chmod a+x $PROOFSERVOUT
+rm -f proofserv.tmp
+result "done"
+
+#---------------------------------------------------------------------
+# main/src/roots.sh
+#
+message "Writing $ROOTSOUT"
+sed -e "s|@bindir@|$bindir2|" \
+    < roots.tmp > $ROOTSOUT
+chmod a+x $ROOTSOUT
+rm -f roots.tmp
 result "done"
 
 #---------------------------------------------------------------------
 # etc/daemons/xrootd.rc.d
 #
 message "Writing $XROOTDOUT"
-sed -e "s|@bindir@|$bindir|" \
+sed -e "s|@bindir@|$bindir2|" \
     < xrootd.tmp > $XROOTDOUT
 chmod a+x $XROOTDOUT
 rm -f xrootd.tmp
@@ -6008,10 +6327,20 @@ result "done"
 # etc/daemons/olbd.rc.d
 #
 message "Writing $OLBDOUT"
-sed -e "s|@bindir@|$bindir|" \
+sed -e "s|@bindir@|$bindir2|" \
     < olbd.tmp > $OLBDOUT
 chmod a+x $OLBDOUT
 rm -f olbd.tmp
+result "done"
+
+#---------------------------------------------------------------------
+# etc/daemons/cmsd.rc.d
+#
+message "Writing $CMSDOUT"
+sed -e "s|@bindir@|$bindir2|" \
+    < cmsd.tmp > $CMSDOUT
+chmod a+x $CMSDOUT
+rm -f cmsd.tmp
 result "done"
 
 #---------------------------------------------------------------------
@@ -6165,17 +6494,6 @@ fi
 
 ######################################################################
 #
-# Warning about recommended build options
-#
-echo ""
-if test "x$enable_opengl" = "xno" ; then
-    result "To build the ROOT OpenGL add-on library see README/INSTALL."
-    echo ""
-    echo ""
-fi
-
-######################################################################
-#
 ### echo %%% Final instructions
 #
 # List the possible Makefiles
@@ -6184,6 +6502,7 @@ if test "x$nohowto" = "xyes" ; then
     exit 0
 fi
 
+result ""
 result "To build ROOT type:"
 result ""
 result "   $gnumake"

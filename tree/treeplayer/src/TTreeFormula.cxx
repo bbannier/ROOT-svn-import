@@ -246,7 +246,7 @@ void TTreeFormula::Init(const char*name, const char* expression)
          }
          continue;
       }
-      if (GetAction(i)==kJump && GetActionParam(i)==fNoper) {
+      if (GetAction(i)==kJump && GetActionParam(i)==(fNoper-1)) {
          // We have cond ? string1 : string2
          if (IsString(fNoper-1)) SetBit(kIsCharacter);
       }
@@ -441,7 +441,7 @@ Int_t TTreeFormula::RegisterDimensions(Int_t code, Int_t size, TFormLeafInfoMult
 
 //______________________________________________________________________________
 Int_t TTreeFormula::RegisterDimensions(Int_t code, TFormLeafInfo *leafinfo,
-                                       TFormLeafInfo *maininfo,
+                                       TFormLeafInfo * /* maininfo */,
                                        Bool_t useCollectionObject) {
    // This method is used internally to decode the dimensions of the variables
 
@@ -474,6 +474,9 @@ Int_t TTreeFormula::RegisterDimensions(Int_t code, TFormLeafInfo *leafinfo,
       TClass *cl = leafinfo->fClass;
       Int_t offset;
       TStreamerElement* counter = ((TStreamerInfo*)cl->GetStreamerInfo())->GetStreamerElement(array->GetCountName(),offset);
+#if 1
+      leafinfo->fCounter = new TFormLeafInfo(cl,offset,counter);
+#else /* Code is not ready yet see revision 14078 */
       if (maininfo==0 || maininfo==leafinfo || 1) {
          leafinfo->fCounter = new TFormLeafInfo(cl,offset,counter);
       } else {
@@ -483,7 +486,7 @@ Int_t TTreeFormula::RegisterDimensions(Int_t code, TFormLeafInfo *leafinfo,
          delete currentinfo->fNext;
          currentinfo->fNext = new TFormLeafInfo(cl,offset,counter);
       }
-
+#endif
    } else if (!useCollectionObject && elem->GetClassPointer() == TClonesArray::Class() ) {
 
       ndim = 1;
@@ -1306,7 +1309,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                   clones = (TClonesArray*)clonesinfo->GetLocalValuePointer(leaf,0);
                }
                TClass * inside_cl = clones->GetClass();
-               if (1 || inside_cl) cl = inside_cl;
+               cl = inside_cl;
 
             }
             else if (!useCollectionObject && cl && cl->GetCollectionProxy() ) {
@@ -1565,6 +1568,10 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                   return -1;
                }
                TClass * inside_cl = clones->GetClass();
+#if 1
+               cl = inside_cl; 
+#else
+/* Maybe we should make those test lead to warning messages */
                if (1 || inside_cl) cl = inside_cl;
                // if inside_cl is nul ... we have a problem of inconsistency :(
                if (0 && strlen(work)==0) {
@@ -1572,6 +1579,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                   // so let get the number of objects
                   //strcpy(work,"fLast");
                }
+#endif
             } else if (!prevUseCollectionObject && cl && cl->GetCollectionProxy() ) {
 
                // We are NEVER interested in the Collection object but only
@@ -2856,7 +2864,7 @@ Int_t TTreeFormula::DefinedVariable(TString &name, Int_t &action)
       if (dims[0]) {
          char *current = &( dims[0] );
          Int_t dim = 0;
-         char varindex[kMaxLen];
+         TString varindex;
          Int_t index;
          Int_t scanindex ;
          while (current) {
@@ -2869,20 +2877,18 @@ Int_t TTreeFormula::DefinedVariable(TString &name, Int_t &action)
                   fIndexes[code][dim] = index;
                } else {
                   fIndexes[code][dim] = -2; // Index is calculated via a variable.
-                  strcpy(varindex,current);
-                  char *end = varindex;
+                  varindex = current;
+                  char *end = (char*)(varindex.Data());
                   for(char bracket_level = 0;*end!=0;end++) {
                      if (*end=='[') bracket_level++;
                      if (bracket_level==0 && *end==']') break;
                      if (*end==']') bracket_level--;
                   }
-                  if (end != 0) {
-                     *end = '\0';
-                     fVarIndexes[code][dim] = new TTreeFormula("index_var",
-                                                               varindex,
-                                                                  fTree);
-                     current += strlen(varindex)+1; // move to the end of the index array
-                  }
+                  *end = '\0';
+                  fVarIndexes[code][dim] = new TTreeFormula("index_var",
+                                                            varindex,
+                                                            fTree);
+                  current += strlen(varindex)+1; // move to the end of the index array
                }
             }
             dim ++;
@@ -3355,21 +3361,27 @@ Int_t TTreeFormula::GetRealInstance(Int_t instance, Int_t codeindex) {
                   local_index = 0;
                   Int_t virt_accum = 0;
                   Int_t maxloop = fManager->fCumulUsedVarDims->GetSize();
-                  do {
-                     virt_accum += fManager->fCumulUsedVarDims->GetArray()[local_index];
-                     local_index++;
-                  } while( instance >= virt_accum && local_index<maxloop);
-                  if (local_index==maxloop && (instance >= virt_accum)) {
+                  if (maxloop == 0) {
                      local_index--;
                      instance = fNdata[0]+1; // out of bounds.
                      if (check) return fNdata[0]+1;
                   } else {
-                     local_index--;
-                     if (fManager->fCumulUsedVarDims->At(local_index)) {
-                        instance -= (virt_accum - fManager->fCumulUsedVarDims->At(local_index));
-                     } else {
+                     do {
+                        virt_accum += fManager->fCumulUsedVarDims->GetArray()[local_index];
+                        local_index++;
+                     } while( instance >= virt_accum && local_index<maxloop);
+                     if (local_index==maxloop && (instance >= virt_accum)) {
+                        local_index--;
                         instance = fNdata[0]+1; // out of bounds.
                         if (check) return fNdata[0]+1;
+                     } else {
+                        local_index--;
+                        if (fManager->fCumulUsedVarDims->At(local_index)) {
+                           instance -= (virt_accum - fManager->fCumulUsedVarDims->At(local_index));
+                        } else {
+                           instance = fNdata[0]+1; // out of bounds.
+                           if (check) return fNdata[0]+1;
+                        }
                      }
                   }
                   virt_dim ++;
@@ -5396,7 +5408,7 @@ Bool_t TTreeFormula::LoadCurrentDim() {
                   fManager->fUsedSizes[virt_dim] = index;
                }
 
-            } else if (hasBranchCount2 && k==info->GetVarDim()) {
+            } else if (hasBranchCount2 && info && k==info->GetVarDim()) {
                // NOTE: We assume the indexing of variable sizes on the first index!
                if (fIndexes[i][0]>=0) {
                   index = info->GetSize(fIndexes[i][0]);

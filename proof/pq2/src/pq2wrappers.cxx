@@ -29,7 +29,6 @@
 #include "TROOT.h"
 
 TDataSetManager *gDataSetManager = 0;
-TString gUser, gGroup;
 
 // Global variables defined by other PQ2 components
 extern TUrl    gUrl;
@@ -157,6 +156,7 @@ Int_t VerifyDataSet(const char *dsname, const char *opt, const char *redir)
 {
    // VerifyDataSet wrapper
 
+   Int_t rc = -1;
    // Honour the 'redir' if required
    TString srvmaps;
    if (redir && strlen(redir) > 0) srvmaps.Form("|%s", redir);
@@ -166,17 +166,25 @@ Int_t VerifyDataSet(const char *dsname, const char *opt, const char *redir)
          TProof::AddEnvVar("DATASETSRVMAPS", srvmaps);
       }
       if (!gProof && getProof("VerifyDataSet") != 0) return -1;
-      return gProof->VerifyDataSet(dsname, opt);
+      if ((rc = gProof->VerifyDataSet(dsname, opt)) == 0) {
+         // Success; partial at least. Check if all files are staged
+         TFileCollection *fcs = gProof->GetDataSet(dsname, "S:");
+         if (fcs && fcs->GetStagedPercentage() < 99.99999) rc = 1;
+      }
    } else {
       // Honour the 'redir' if required
       if (!(srvmaps.IsNull())) {
          gEnv->SetValue("DataSet.SrvMaps", srvmaps);
       }
       if (!gDataSetManager && getDSMgr("VerifyDataSet") != 0) return -1;
-      return gDataSetManager->ScanDataSet(dsname, opt);
+      if ((rc = gDataSetManager->ScanDataSet(dsname, opt)) == 0) {
+         // Success; partial at least. Check if all files are staged
+         TFileCollection *fcs = gDataSetManager->GetDataSet(dsname, "S:");
+         if (fcs && fcs->GetStagedPercentage() < 99.99999) rc = 1;
+      }
    }
    // Done
-   return -1;
+   return rc;
 }
 
 //_______________________________________________________________________________________
@@ -234,6 +242,7 @@ Int_t getDSMgr(const char *where)
       // Find the appropriate handler
       TPluginHandler *h = gROOT->GetPluginManager()->FindHandler("TDataSetManager", "file");
       if (h && h->LoadPlugin() != -1) {
+         TString group(getenv("PQ2GROUP")), user(getenv("PQ2USER"));
          TString dsm, opt("opt:-Ar:-Av:");
          const char *o = getenv("PQ2DSMGROPTS");
          if (o) {
@@ -242,8 +251,8 @@ Int_t getDSMgr(const char *where)
          }
          dsm.Form("file dir:%s %s", gUrl.GetUrl(), opt.Data());
          gDataSetManager = reinterpret_cast<TDataSetManager*>(h->ExecPlugin(3,
-                                                               gGroup.Data(),
-                                                               gUser.Data(), dsm.Data()));
+                                                              group.Data(), user.Data(),
+                                                              dsm.Data()));
          if (gDataSetManager) {
             rc = 0;
          } else {

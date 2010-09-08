@@ -33,7 +33,19 @@ namespace ROOT
             case ' ':
             case '\t':
             case '\r':
-            case '=': if (level==0) return cursor; else break;
+            case '=': if (level==0) {
+               std::string::size_type sub_cursor = cursor;
+               while( isspace(command[sub_cursor]) ) {
+                  ++sub_cursor;
+               }
+               if ( command[sub_cursor] == '=' ) {
+                  return sub_cursor;
+               } else {
+                  return cursor;
+               }
+            } else {
+               break;
+            }
             case '<': ++level; break;
             case '>': --level; break;
             default: {
@@ -68,6 +80,7 @@ namespace ROOT
       {
          std::string::size_type endsymbol = FindEndSymbol( command );
          if ( endsymbol == command.length() || command[endsymbol] == ' ' || command[endsymbol] == '\t' ) {
+            
 //         std::string::size_type space_pos = command.find( ' ' );
 //         std::string::size_type equal_pos = command.find( '=' );
 //         if ( space_pos < equal_pos) {
@@ -337,29 +350,50 @@ namespace ROOT
    }
 
    //--------------------------------------------------------------------------
-   void CreateNameTypeMap( G__ClassInfo &cl, MembersMap_t& nameType )
+   void CreateNameTypeMap( G__ClassInfo &cl, MembersTypeMap_t& nameType )
    {
       // Create the data member name-type map for given class
 
       G__DataMemberInfo member( cl );
+      std::string dims;
       while( member.Next() ) {
-         nameType[member.Name()] = member.Type()->Name();
+         if (((member.Type()->Property() & G__BIT_ISCONSTANT)
+              && (member.Type()->Property() & G__BIT_ISENUM))  // an enum const
+             || (member.Property() & G__BIT_ISSTATIC)) // a static member
+            continue;
+         if (strcmp("G__virtualinfo", member.Name()) == 0) continue;
+         
+         dims.clear();
+         for (int dim = 0; dim < member.ArrayDim(); dim++) {
+            char cdim[24];
+            static const int maxsize = sizeof(cdim)/sizeof(cdim[0]);
+#ifdef _MSC_VER
+           int result = _snprintf(cdim,maxsize,"[%d]",member.MaxIndex(dim));
+#else
+           int result = snprintf(cdim,maxsize,"[%d]",member.MaxIndex(dim));
+#endif
+           if (result > maxsize) {
+               std::cout << "Error: array size is to large, the size '" << member.MaxIndex(dim) << "' does not fit in " << maxsize << " characters.\n";
+            }
+            dims += cdim;
+         }         
+         nameType[member.Name()] = TSchemaType(member.Type()->Name(),dims.c_str());
       }
 
       G__BaseClassInfo base( cl );
       while( base.Next() ) {
-         nameType[base.Name()] = base.Name();
+         nameType[base.Name()] = TSchemaType(base.Name(),"");
       }
    }
 
    //---------------------------------------------------------------------------
    bool HasValidDataMembers( SchemaRuleMap_t& rule,
-                             MembersMap_t& members )
+                             MembersTypeMap_t& members )
    {
       // Check if given rule contains references to valid data members
       std::list<std::string>           mem;
       std::list<std::string>::iterator it;
-      MembersMap_t::iterator           rIt;
+      // MembersMap_t::iterator           rIt;
 
       TSchemaRuleProcessor::SplitList( rule["target"], mem );
 
@@ -378,10 +412,11 @@ namespace ROOT
       return true;
    }
 
+   typedef std::list<std::pair<ROOT::TSchemaType,std::string> > SourceTypeList_t;
    //--------------------------------------------------------------------------
    static void WriteAutoVariables( const std::list<std::string>& target,
-                                   const std::list<std::pair<std::string,std::string> >& source,
-                                   MembersMap_t& members,
+                                   const SourceTypeList_t& source,
+                                   MembersTypeMap_t& members,
                                    std::string& className, std::string& mappedName,
                                    std::ostream& output )
    {
@@ -390,7 +425,7 @@ namespace ROOT
       //-----------------------------------------------------------------------
       if (!source.empty()) {
          bool start = true;
-         std::list<std::pair<std::string,std::string> >::const_iterator it;
+         SourceTypeList_t::const_iterator it;
 
          //--------------------------------------------------------------------
          // Write IDs and check if we should generate the onfile structure
@@ -403,7 +438,7 @@ namespace ROOT
             output << "static Int_t id_" << it->second << " = oldObj->GetId(";
             output << "\"" << it->second << "\");" << std::endl;
 
-            if( it->first != "" )
+            if( it->first.fType != "" )
                generateOnFile = true;
          }
          output << "#endif" << std::endl; // this is to be removed later
@@ -420,9 +455,18 @@ namespace ROOT
             // List the data members with non-empty type declarations
             //-----------------------------------------------------------------
             for( it = source.begin(); it != source.end(); ++it ) {
-               if( it->first != "" ) {
-                  output << "         ";
-                  output << it->first << " &" << it->second << ";\n"; 
+               // fprintf(stderr, "Seeing %s %s %s\n", it->first.fType.c_str(), it->second.c_str(), it->first.fDimensions.c_str());
+               if( it->first.fType.size() ) {
+                  if ( it->first.fDimensions.size() ) {
+                     output << "         typedef " << it->first.fType;
+                     output << " onfile_" << it->second << "_t" << it->first.fDimensions << ";\n";
+                     output << "         ";
+                     output << "onfile_" << it->second << "_t &" << it->second << ";\n"; 
+                     
+                  } else {
+                     output << "         ";
+                     output << it->first.fType << " &" << it->second << ";\n"; 
+                  }
                }
             }
 
@@ -431,7 +475,7 @@ namespace ROOT
             //-----------------------------------------------------------------
             output << "         " << onfileStructName << "(";
             for( start = true, it = source.begin(); it != source.end(); ++it ) {
-               if( it->first == "" )
+               if( it->first.fType.size() == 0)
                   continue;
 
                if( !start )
@@ -439,7 +483,11 @@ namespace ROOT
                else
                   start = false;
 
-               output << it->first << " &onfile_" << it->second;
+               if (it->first.fDimensions.size() == 0) {
+                  output << it->first.fType << " &onfile_" << it->second;
+               } else {
+                  output << " onfile_" << it->second << "_t" << " &onfile_" << it->second;                  
+               }
             }
             output << " ): ";
 
@@ -447,7 +495,7 @@ namespace ROOT
             // Generate the constructor's initializer list
             //-----------------------------------------------------------------
             for( start = true, it = source.begin(); it != source.end(); ++it ) {
-               if( it->first == "" )
+               if( it->first.fType == "" )
                   continue;
 
                if( !start )
@@ -473,7 +521,7 @@ namespace ROOT
             output << "      " << mappedName << "_Onfile onfile(\n";
 
             for( start = true, it = source.begin(); it != source.end(); ++it ) {
-               if( it->first == "" )
+               if( it->first.fType == "" )
                   continue;
 
                if( !start )
@@ -483,7 +531,13 @@ namespace ROOT
                   start = false;
 
                output << "         ";
-               output << "*(" << it->first << "*)(onfile_add+offset_Onfile_";
+               output << "*(";
+               if (it->first.fDimensions.size() == 0) {
+                  output << it->first.fType;
+               } else {
+                  output << mappedName << "_Onfile::onfile_" << it->second << "_t";
+               }
+               output << "*)(onfile_add+offset_Onfile_";
                output << mappedName << "_" << it->second << ")";  
             }
             output << " );\n\n";
@@ -499,20 +553,27 @@ namespace ROOT
 
          std::list<std::string>::const_iterator it;
          for( it = target.begin(); it != target.end(); ++it ) {
-            std::string memData = members[*it];
+            TSchemaType memData = members[*it];
             output << "      static Long_t offset_" << *it << " = ";
             output << "cls->GetDataMemberOffset(\"" << *it << "\");";
             output << std::endl;
-            output << "      " << memData << "& " << *it << " = ";
-            output << "*(" << memData << "*)(target+offset_" << *it;
-            output << ");" << std::endl;
+            if (memData.fDimensions.size()) {
+               output << "      typedef " << memData.fType << " " << *it << "_t" << memData.fDimensions << ";" << std::endl;
+               output << "      " << *it << "_t& " << *it << " = ";
+               output << "*(" << *it << "_t *)(target+offset_" << *it;
+               output << ");" << std::endl;
+            } else {
+               output << "      " << memData.fType << "& " << *it << " = ";
+               output << "*(" << memData.fType << "*)(target+offset_" << *it;
+               output << ");" << std::endl;
+            }
          }
       }
    }
 
    //--------------------------------------------------------------------------
    void WriteReadRuleFunc( SchemaRuleMap_t& rule, int index,
-                           std::string& mappedName, MembersMap_t& members,
+                           std::string& mappedName, MembersTypeMap_t& members,
                            std::ostream& output )
    {
       // Write the conversion function for Read rule, the function name
@@ -538,7 +599,7 @@ namespace ROOT
       //-----------------------------------------------------------------------
       // Write the automatically generated variables
       //-----------------------------------------------------------------------
-      std::list<std::pair<std::string,std::string> > source;
+      std::list<std::pair<ROOT::TSchemaType,std::string> > source;
       std::list<std::string> target;
       TSchemaRuleProcessor::SplitDeclaration( rule["source"], source );
       TSchemaRuleProcessor::SplitList( rule["target"], target );
@@ -561,7 +622,7 @@ namespace ROOT
 
    //--------------------------------------------------------------------------
    void WriteReadRawRuleFunc( SchemaRuleMap_t& rule, int index,
-                              std::string& mappedName, MembersMap_t& members,
+                              std::string& mappedName, MembersTypeMap_t& members,
                               std::ostream& output )
    {
       // Write the conversion function for ReadRaw rule, the function name
@@ -588,7 +649,7 @@ namespace ROOT
       //-----------------------------------------------------------------------
       // Write the automatically generated variables
       //-----------------------------------------------------------------------
-      std::list<std::pair<std::string,std::string> > source;
+      std::list<std::pair<ROOT::TSchemaType,std::string> > source;
       std::list<std::string> target;
       TSchemaRuleProcessor::SplitList( rule["target"], target );
 
@@ -612,7 +673,8 @@ namespace ROOT
       // Replace all accurances of given string with other string
       std::string::size_type it = 0;
       std::string::size_type s  = pat.size();
-
+      std::string::size_type tr_len= tr.size();
+      
       if( s == 0 ) return;
 
       while( 1 ) {
@@ -621,7 +683,7 @@ namespace ROOT
             break;
 
          proc.replace( it, s, tr );
-         ++it;
+         it += tr_len;
       }
    }
 
@@ -662,6 +724,7 @@ namespace ROOT
          if( it->find( "funcname" ) != it->end() ) {
             std::string code = (*it)["code"];
             StrReplace( code, "\n", "\\n" );
+            StrReplace( code, "\"", "\\\"");
 
             output << "      rule->fFunctionPtr = (void *)G__func2void( ";
             output << (*it)["funcname"] << ");" << std::endl;

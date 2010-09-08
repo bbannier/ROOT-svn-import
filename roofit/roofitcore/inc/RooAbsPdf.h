@@ -157,11 +157,11 @@ public:
 
 
   // Constraint management
-  virtual RooArgSet* getConstraints(const RooArgSet& /*observables*/, const RooArgSet& /*constrainedParams*/, Bool_t /*stripDisconnected*/) const { 
+  virtual RooArgSet* getConstraints(const RooArgSet& /*observables*/, RooArgSet& /*constrainedParams*/, Bool_t /*stripDisconnected*/) const { 
     // Interface to retrieve constraint terms on this pdf. Default implementation returns null
     return 0 ; 
   }
-  virtual RooArgSet* getAllConstraints(const RooArgSet& observables, const RooArgSet& constrainedParams, Bool_t stripDisconnected=kTRUE) const ;
+  virtual RooArgSet* getAllConstraints(const RooArgSet& observables, RooArgSet& constrainedParams, Bool_t stripDisconnected=kTRUE) const ;
   
   // Project p.d.f into lower dimensional p.d.f
   virtual RooAbsPdf* createProjection(const RooArgSet& iset) ;  
@@ -236,6 +236,11 @@ public:
   static void clearEvalError() ;
   static Bool_t evalError() ;
 
+  void setNormRange(const char* rangeName) ;
+  const char* normRange() const { 
+    return _normRange.Length()>0 ? _normRange.Data() : 0 ; 
+  }
+  void setNormRangeOverride(const char* rangeName) ;
 
   
 protected:   
@@ -323,8 +328,10 @@ protected:
 
   RooNumGenConfig* _specGeneratorConfig ; //! MC generator configuration specific for this object
   
+  TString _normRange ; // Normalization range
+  static TString _normRangeOverride ; 
   
-  ClassDef(RooAbsPdf,2) // Abstract PDF with normalization support
+  ClassDef(RooAbsPdf,3) // Abstract PDF with normalization support
 };
 
 

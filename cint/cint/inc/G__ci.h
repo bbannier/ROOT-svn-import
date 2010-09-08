@@ -20,10 +20,10 @@
 #define G__CINT_VER6  1
 #endif
 
-#define G__CINTVERSION_V6      60020000
-#define G__CINTVERSIONSTR_V6  "6.2.00, Dec 21, 2008"
-#define G__CINTVERSION_V5      50170000
-#define G__CINTVERSIONSTR_V5  "5.17.00, Dec 21, 2008"
+#define G__CINTVERSION_V6      60030000
+#define G__CINTVERSIONSTR_V6  "6.03.00, July 2, 2010"
+#define G__CINTVERSION_V5      50180000
+#define G__CINTVERSIONSTR_V5  "5.18.00, July 2, 2010"
 
 #define G__ALWAYS
 /* #define G__NEVER */
@@ -1248,17 +1248,20 @@ extern "C" { /* extern C 3 */
 *
 **************************************************************************/
 struct G__input_file {
-  FILE *fp;
-  int line_number;
-  short filenum;
-  char name[G__MAXFILENAME];
+   FILE *fp;
+   int line_number;
+   short filenum;
+   char name[G__MAXFILENAME];
 #ifndef G__OLDIMPLEMENTATION1649
-  char *str;
-  unsigned long pos;
-  int vindex;
+   char *str;
+   unsigned long pos;
+   int vindex;
+#endif
+#ifdef __cplusplus
+   G__input_file() : fp(0),line_number(-1),filenum(-1),str(0),pos(0),vindex(0) { name[0] = 0; }
 #endif
 };
-
+   
 /**************************************************************************
 * make hash value
 *

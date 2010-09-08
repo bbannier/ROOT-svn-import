@@ -964,6 +964,10 @@ void G__make_ifunctable(char* funcheader)
          G__p_ifunc->ansi[func_now] = 1;
          isvoid = 0;
       }
+      else if (!strcmp(paraname, "...")) {
+         G__p_ifunc->ansi[func_now] = 1;
+         isvoid = 0;
+      }
       else {
          if (G__def_struct_member) G__genericerror("Syntax error");
          if (G__globalcomp < G__NOLINK && !G__nonansi_func
@@ -1186,10 +1190,10 @@ void G__make_ifunctable(char* funcheader)
       if (G__tagdefining >= 0) ++G__struct.isabstract[G__tagdefining];
       if ('~' == G__p_ifunc->funcname[func_now][0]) {
          if (G__dispmsg >= G__DISPWARN) {
-            G__fprinterr(G__serr, "Warning: Pure virtual destructor may cause problem. Define as 'virtual %s() { }'"
+            G__printlinenum();
+            G__fprinterr(G__serr, "Warning: Pure virtual destructor may cause problem. Define as 'virtual %s() { }'\n"
                          , G__p_ifunc->funcname[func_now]
                         );
-            G__printlinenum();
          }
       }
       if (0 == strncmp(paraname, "const", 5))
@@ -1908,7 +1912,9 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                      tagnum = G__search_tagname(buf, 'c');
                      fprintf(G__fpundeftype, "class %s; /* %s %d */\n", buf(), G__ifile.name, G__ifile.line_number);
                      fprintf(G__fpundeftype, "#pragma link off class %s;\n\n", buf());
-                     G__struct.globalcomp[tagnum] = G__NOLINK;
+                     if (tagnum > -1) { // it could be -1 if we get too many classes.
+                        G__struct.globalcomp[tagnum] = G__NOLINK;
+                     }
                      type = 'u';
                   }
                   else {
@@ -2212,7 +2218,11 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                // -- If binding a reference to default rvalue and the types do not match, do a cast.
                G__FastAllocString tmp(G__ONELINE);
                tmp.Format("%s(%s)", G__type2string(type, tagnum, -1, 0, 0), buf());
+               int store_templevel = G__templevel; 
+               // Ensures that any default value is kept forever.
+               G__templevel = 0;
                *val = G__getexpr(tmp);
+               G__templevel = store_templevel;
                if (val->type == 'u') {
                   val->ref = val->obj.i;
                }
@@ -2400,6 +2410,8 @@ int G__param_match(char formal_type, int formal_tagnum, G__value* default_parame
                   match = 1;
                   break;
                case 'u':
+                  // Since the param_type is 'u' we are guaranted that 
+                  // param_tagnum is greater or equal to zero
                   if ('e' == G__struct.type[param_tagnum]) {
                      if (param->ref) param->obj.i = *(long*)(param->ref);
                      match = 1;
@@ -4011,8 +4023,8 @@ int G__convert_param(G__param* libp, G__ifunc_table_internal* p_ifunc, int ifn, 
             break;
          case 'n': /* long long */
             if (G__PARAREFERENCE == formal_reftype) {
-               param->type = formal_type;
                if (param->type != formal_type) param->ref = 0;
+               param->type = formal_type;
                switch (param_type) {
                   case 'd':
                   case 'f':
@@ -4040,8 +4052,8 @@ int G__convert_param(G__param* libp, G__ifunc_table_internal* p_ifunc, int ifn, 
             break;
          case 'm': /* unsigned long long */
             if (G__PARAREFERENCE == formal_reftype) {
-               param->type = formal_type;
                if (param->type != formal_type) param->ref = 0;
+               param->type = formal_type;
                switch (param_type) {
                   case 'd':
                   case 'f':
@@ -4069,8 +4081,8 @@ int G__convert_param(G__param* libp, G__ifunc_table_internal* p_ifunc, int ifn, 
             break;
          case 'q': /* long double */
             if (G__PARAREFERENCE == formal_reftype) {
-               param->type = formal_type;
                if (param->type != formal_type) param->ref = 0;
+               param->type = formal_type;
                switch (param_type) {
                   case 'd':
                   case 'f':
@@ -4833,7 +4845,6 @@ end_of_function:
          G__display_func(G__serr, p_ifunc, *pifn);
          G__display_ambiguous(scopetagnum, funcname, libp, funclist, bestmatch);
          G__funclist_delete(funclist);
-         return p_ifunc;
          *pifn = -1;
          return((struct G__ifunc_table_internal*)NULL);
       }
@@ -5862,7 +5873,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
       if ((G__debug || G__break || G__step
             || (strcmp(G__breakfile, G__ifile.name) == 0) || (strcmp(G__breakfile, "") == 0)
           ) && ((G__prerun != 0) || (G__no_exec == 0))) {
-         if (G__ifile.name && G__ifile.name[0])
+         if (/* G__ifile.name is an array so never null && */ G__ifile.name[0])
             G__fprinterr(G__serr, "\n# %s", G__ifile.name);
          if (-1 != p_ifunc->tagnum) {
             G__fprinterr(G__serr, "\n%-5d%s::%s(" , G__ifile.line_number

@@ -49,7 +49,6 @@ altcxx="@altcxx@"
 altf77="@altf77@"
 altld="@altld@"
 dicttype=@dicttype@
-zliblib=@zliblib@
 
 if test "$platform" = "win32"; then
    if [ "x$ROOTSYS" != "x" ]; then
@@ -65,12 +64,18 @@ fi
 
 ### ROOT libraries ###
 
-newlib="-lNew"
-rootglibs="-lGui"
-rootlibs="-lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree \
--lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread $zliblib"
-if test "$dicttype" = "reflex" || test "$dicttype" = "gccxml"; then
-    rootlibs="$rootlibs -lReflex"
+if test "$platform" = "ios"; then
+   newlib=
+   rootglibs=
+   rootlibs="-lRoota"
+else
+   newlib="-lNew"
+   rootglibs="-lGui"
+   rootlibs="-lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree \
+-lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread"
+   if test "$dicttype" = "reflex" || test "$dicttype" = "gccxml"; then
+       rootlibs="$rootlibs -lReflex"
+   fi
 fi
 
 if test "$platform" = "win32"; then
@@ -320,7 +325,9 @@ macosx)
    # MacOS X with gcc (GNU cc v3.1) and possible fink (fink.sf.net)
    macosx_minor=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
    # cannot find the one linked to libGraf if relocated after built
-   rootlibs="$rootlibs -lfreetype"
+   if [ $macosx_minor -le 4 ]; then
+      rootlibs="$rootlibs -lfreetype"
+   fi
    if [ $macosx_minor -le 3 ]; then
       finkdir=`which fink 2>&1 | sed -ne "s/\/bin\/fink//p"`
       auxcflags=`[ -d ${finkdir}/include ] && echo -I${finkdir}/include`
@@ -338,7 +345,9 @@ macosxicc)
    # MacOS X with Intel icc compiler
    macosx_minor=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
    # cannot find the one linked to libGraf if relocated after built
-   rootlibs="$rootlibs -lfreetype"
+   if [ $macosx_minor -le 4 ]; then
+      rootlibs="$rootlibs -lfreetype"
+   fi
    auxcflags=
    auxlibs="-lm -ldl"
    ;;
@@ -346,7 +355,9 @@ macosx64)
    # MacOS X with gcc (GNU cc v4.x) in 64 bit mode
    macosx_minor=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
    # cannot find the one linked to libGraf if relocated after built
-   rootlibs="$rootlibs -lfreetype"
+   if [ $macosx_minor -le 4 ]; then
+      rootlibs="$rootlibs -lfreetype"
+   fi
    auxcflags="-m64"
    auxldflags="-m64"
    auxlibs="-lm -ldl"
@@ -355,7 +366,9 @@ macosxxlc)
    # MacOS X with IBM xl compiler and possible fink (fink.sf.net)
    macosx_minor=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
    # cannot find the one linked to libGraf if relocated after built
-   rootlibs="$rootlibs -lfreetype"
+   if [ $macosx_minor -le 4 ]; then
+      rootlibs="$rootlibs -lfreetype"
+   fi
    if [ $macosx_minor -le 3 ]; then
       finkdir=`which fink 2>&1 | sed -ne "s/\/bin\/fink//p"`
       auxcflags=`[ -d ${finkdir}/include ] && echo -I${finkdir}/include`
@@ -366,6 +379,11 @@ macosxxlc)
       auxcflags=
       auxlibs="-lm -ldl"
    fi
+   ;;
+ios*)
+   auxcflags="-m32"
+   auxldflags="-m32"
+   auxlibs="-lm -ldl"
    ;;
 hiux)
    # Hitachi HIUX
@@ -454,6 +472,13 @@ win32)
    done
    ;;
 esac
+
+# allocator must be last in auxlibs
+for f in $features ; do
+   if test "x$f" = "xalloc" ; then
+      auxlibs="$auxlibs @alloclibdir@ @alloclib@"
+   fi
+done
 
 ### end of machine and compiler dependent settings ###
 

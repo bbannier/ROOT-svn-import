@@ -43,14 +43,17 @@ namespace PyROOT {
 
    // convenience functions for adding methods to classes
       Bool_t AddToClass( PyObject* pyclass, const char* label, PyCFunction cfunc,
-                       int flags = METH_VARARGS );
+                         int flags = METH_VARARGS );
       Bool_t AddToClass( PyObject* pyclass, const char* label, const char* func );
       Bool_t AddToClass( PyObject* pyclass, const char* label, PyCallable* pyfunc );
 
       Bool_t AddUsingToClass( PyObject* pyclass, const char* method );
 
-   // helper for dynamically constructing binary operators
+   // helpers for dynamically constructing binary operators
       Bool_t AddBinaryOperator( PyObject* left, PyObject* right, const char* op, const char* label = "" );
+      Bool_t AddBinaryOperator( PyObject* pyclass, const char* op, const char* label = "" );
+      Bool_t AddBinaryOperator( PyObject* pyclass, const std::string& lcname, const std::string& rcname,
+                                const char* op, const char* label = "" );
 
    // helper for template classes and methods
       Bool_t BuildTemplateName( PyObject*& pyname, PyObject* args, int argoff );
@@ -106,6 +109,7 @@ namespace PyROOT {
    // meta information
       EDataType EffectiveType( const std::string& name );
       const std::string Compound( const std::string& name );
+      const std::string ClassName( PyObject* pyobj );
 
    // CINT integration
       void ErrMsgCallback( char* msg );
@@ -113,7 +117,8 @@ namespace PyROOT {
 
    // install a python function with CINT; returns identifier
       Long_t InstallMethod( Cint::G__ClassInfo* scope, PyObject* callback,
-         const std::string& mtName, const char* signature, void* func, Int_t npar = 0, Long_t extra = 0 );
+         const std::string& mtName, const char* rtype, const char* signature,
+         void* func, Int_t npar = 0, Long_t extra = 0 );
 
       PyObject* GetInstalledMethod( int tagnum, Long_t* extra = 0 );
 

@@ -483,7 +483,7 @@ TFile::~TFile()
    gROOT->GetUUIDs()->RemoveUUID(GetUniqueID());
 
    if (gDebug)
-      Info("~TFile", "dtor called for %s [%d]", GetName(),this);
+      Info("~TFile", "dtor called for %s [%lx]", GetName(),(Long_t)this);
 }
 
 //______________________________________________________________________________
@@ -1251,6 +1251,7 @@ void TFile::Map()
       frombuf(buffer, &nbytes);
       if (!nbytes) {
          Printf("Address = %lld\tNbytes = %d\t=====E R R O R=======", idcur, nbytes);
+         date = 0; time = 0;
          break;
       }
       if (nbytes < 0) {
@@ -1283,15 +1284,12 @@ void TFile::Map()
       TDatime::GetDateTime(datime, date, time);
       if (objlen != nbytes-keylen) {
          Float_t cx = Float_t(objlen+keylen)/Float_t(nbytes);
-         //Printf("%d/%06d  At:%-8d  N=%-8d  %-14s CX = %5.2f",date,time,idcur,nbytes,classname,cx);
          Printf("%d/%06d  At:%lld  N=%-8d  %-14s CX = %5.2f",date,time,idcur,nbytes,classname,cx);
       } else {
-         //Printf("%d/%06d  At:%-8d  N=%-8d  %-14s",date,time,idcur,nbytes,classname);
          Printf("%d/%06d  At:%lld  N=%-8d  %-14s",date,time,idcur,nbytes,classname);
       }
       idcur += nbytes;
    }
-   //Printf("%d/%06d  At:%-8d  N=%-8d  %-14s",date,time,idcur,1,"END");
    Printf("%d/%06d  At:%lld  N=%-8d  %-14s",date,time,idcur,1,"END");
 }
 
@@ -1310,6 +1308,59 @@ void TFile::Print(Option_t *option) const
 
    Printf("TFile: name=%s, title=%s, option=%s", GetName(), GetTitle(), GetOption());
    GetList()->R__FOR_EACH(TObject,Print)(option);
+}
+
+//______________________________________________________________________________
+Bool_t TFile::ReadBuffer(char *buf, Long64_t pos, Int_t len)
+{
+   // Read a buffer from the file at the offset 'pos' in the file.
+   // Returns kTRUE in case of failure.
+   // Compared to ReadBuffer(char*, Int_t), this routine does _not_
+   // change the cursor on the physical file representation (fD)
+   // if the data is in this TFile's cache.
+   
+   if (IsOpen()) {
+      
+      SetOffset(pos);
+      
+      Int_t st;
+      if ((st = ReadBufferViaCache(buf, len))) {
+         if (st == 2)
+            return kTRUE;
+         return kFALSE;
+      }
+      
+      Seek(pos);
+      
+      ssize_t siz;
+      Double_t start = 0;
+      if (gPerfStats != 0) start = TTimeStamp();
+      
+      while ((siz = SysRead(fD, buf, len)) < 0 && GetErrno() == EINTR)
+         ResetErrno();
+      
+      if (siz < 0) {
+         SysError("ReadBuffer", "error reading from file %s", GetName());
+         return kTRUE;
+      }
+      if (siz != len) {
+         Error("ReadBuffer", "error reading all requested bytes from file %s, got %ld of %d",
+               GetName(), (Long_t)siz, len);
+         return kTRUE;
+      }
+      fBytesRead  += siz;
+      fgBytesRead += siz;
+      fReadCalls++;
+      fgReadCalls++;
+      
+      if (gMonitoringWriter)
+         gMonitoringWriter->SendFileReadProgress(this);
+      if (gPerfStats != 0) {
+         gPerfStats->FileReadEvent(this, len, start);
+      }
+      return kFALSE;
+   }
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -1340,8 +1391,8 @@ Bool_t TFile::ReadBuffer(char *buf, Int_t len)
          return kTRUE;
       }
       if (siz != len) {
-         Error("ReadBuffer", "error reading all requested bytes from file %s, got %d of %d",
-               GetName(), siz, len);
+         Error("ReadBuffer", "error reading all requested bytes from file %s, got %ld of %d",
+               GetName(), (Long_t)siz, len);
          return kTRUE;
       }
       fBytesRead  += siz;
@@ -1442,7 +1493,7 @@ Int_t TFile::ReadBufferViaCache(char *buf, Int_t len)
          return 2;  // failure reading
       else if (st == 1) {
          // fOffset might have been changed via TFileCacheRead::ReadBuffer(), reset it
-         Seek(off + len);
+         SetOffset(off + len);
          return 1;
       }
       // fOffset might have been changed via TFileCacheRead::ReadBuffer(), reset it
@@ -1451,11 +1502,11 @@ Int_t TFile::ReadBufferViaCache(char *buf, Int_t len)
       // if write cache is active check if data still in write cache
       if (fWritable && fCacheWrite) {
          if (fCacheWrite->ReadBuffer(buf, off, len) == 0) {
-            Seek(off + len);
+            SetOffset(off + len);
             return 1;
          }
          // fOffset might have been changed via TFileCacheWrite::ReadBuffer(), reset it
-         Seek(off);
+         SetOffset(off);
       }
    }
 
@@ -1760,6 +1811,27 @@ Int_t TFile::ReOpen(Option_t *mode)
 }
 
 //______________________________________________________________________________
+void TFile::SetOffset(Long64_t offset, ERelativeTo pos)
+{
+   // Set position from where to start reading.
+   
+   switch (pos) {
+      case kBeg:
+         fOffset = offset + fArchiveOffset;
+         break;
+      case kCur:
+         fOffset += offset;
+         break;
+      case kEnd:
+         // this option is not used currently in the ROOT code
+         if (fArchiveOffset)
+            Error("SetOffset", "seeking from end in archive is not (yet) supported");
+         fOffset = fEND + offset;  // is fEND really EOF or logical EOF?
+         break;
+   }
+}
+
+//______________________________________________________________________________
 void TFile::Seek(Long64_t offset, ERelativeTo pos)
 {
    // Seek to a specific position in the file. Pos it either kBeg, kCur or kEnd.
@@ -1814,6 +1886,10 @@ void TFile::SetCompressionLevel(Int_t level)
 void TFile::SetCacheRead(TFileCacheRead *cache)
 {
    // Set a pointer to the read cache.
+   // NOTE:  This relinquish ownership of the previous cache, so if you do not
+   // already have a pointer to the previous cache (and there was a previous
+   // cache), you ought to retrieve (and delete it if needed) using:
+   //    TFileCacheRead *older = myfile->GetCacheRead();
 
    fCacheRead = cache;
 }
@@ -1896,7 +1972,7 @@ Int_t TFile::Write(const char *, Int_t opt, Int_t bufsiz)
       if (!GetTitle() || strlen(GetTitle()) == 0)
          Info("Write", "writing name = %s", GetName());
       else
-         Info("Write", "writing name = s title = %s", GetName(), GetTitle());
+         Info("Write", "writing name = %s title = %s", GetName(), GetTitle());
    }
 
    fMustFlush = kFALSE;
@@ -1946,13 +2022,13 @@ Bool_t TFile::WriteBuffer(const char *buf, Int_t len)
       if (siz < 0) {
          // Write the system error only once for this file
          SetBit(kWriteError); SetWritable(kFALSE);
-         SysError("WriteBuffer", "error writing to file %s (%d)", GetName(), siz);
+         SysError("WriteBuffer", "error writing to file %s (%ld)", GetName(), (Long_t)siz);
          return kTRUE;
       }
       if (siz != len) {
          SetBit(kWriteError);
-         Error("WriteBuffer", "error writing all requested bytes to file %s, wrote %d of %d",
-               GetName(), siz, len);
+         Error("WriteBuffer", "error writing all requested bytes to file %s, wrote %ld of %d",
+               GetName(), (Long_t)siz, len);
          return kTRUE;
       }
       fBytesWrite  += siz;
@@ -2245,7 +2321,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       TIter enext( info->GetElements() );
       TStreamerElement *el;
       const ROOT::TSchemaMatch* rules = 0;
-      if (cl->GetSchemaRules()) {
+      if (cl && cl->GetSchemaRules()) {
          rules = cl->GetSchemaRules()->FindRules(cl->GetName(), info->GetClassVersion());
       }
       while( (el=(TStreamerElement*)enext()) ) {
@@ -2372,6 +2448,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       list->Delete();
       delete list;
       delete [] path;
+      fclose(fpMAKE);
       return;
    }
 
@@ -2394,6 +2471,8 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       list->Delete();
       delete list;
       delete [] path;
+      fclose(fpMAKE);
+      fclose(ifp);
       return;
    }
    if (genreflex) {
@@ -2868,11 +2947,11 @@ TFile *TFile::OpenFromCache(const char *name, Option_t *option, const char *ftit
                      if (key.CompareTo("zip", TString::kIgnoreCase)) {
                         if (optioncount!=0) {
                            newoptions += "&";
-                           newoptions += key;
-                           newoptions += "=";
-                           newoptions += value;
-                           optioncount++;
                         }
+                        newoptions += key;
+                        newoptions += "=";
+                        newoptions += value;
+                        ++optioncount;
                      } else {
                         zipname = value;
                      }
@@ -2915,13 +2994,11 @@ TFile *TFile::OpenFromCache(const char *name, Option_t *option, const char *ftit
 
                   fgCacheFileForce = forcedcache;
 
-                  cachefile->Seek(0);
-                  remotfile->Seek(0);
-
                   if (!cachefile) {
                      need2copy = kTRUE;
                      ::Error("TFile::OpenFromCache",
                              "cannot open the cache file to check cache consistency");
+                     return 0;
                   }
 
                   if (!remotfile) {
@@ -2930,6 +3007,9 @@ TFile *TFile::OpenFromCache(const char *name, Option_t *option, const char *ftit
                      return 0;
                   }
 
+                  cachefile->Seek(0);
+                  remotfile->Seek(0);
+                  
                   if ((!cachefile->ReadBuffer(cacheblock,256)) &&
                       (!remotfile->ReadBuffer(remotblock,256))) {
                      if (memcmp(cacheblock, remotblock, 256)) {
@@ -3554,7 +3634,6 @@ Bool_t TFile::ShrinkCacheFileDir(Long64_t shrinksize, Long_t cleanupinterval)
    // the previous cleanup before the cleanup operation is repeated in
    // the cache directory
 
-   char cmd[4096];
    if (fgCacheFileDir == "") {
       return kFALSE;
    }
@@ -3588,12 +3667,13 @@ Bool_t TFile::ShrinkCacheFileDir(Long64_t shrinksize, Long_t cleanupinterval)
    // the shortest garbage collector in the world - one long line of PERL - unlinks files only,
    // if there is a symbolic link with '.ROOT.cachefile' for safety ;-)
 
+   TString cmd;
 #if defined(R__WIN32)
-   sprintf(cmd, "echo <TFile::ShrinkCacheFileDir>: cleanup to be implemented");
+   cmd = "echo <TFile::ShrinkCacheFileDir>: cleanup to be implemented";
 #elif defined(R__MACOSX)
-   sprintf(cmd, "perl -e 'my $cachepath = \"%s\"; my $cachesize = %lld;my $findcommand=\"find $cachepath -type f -exec stat -f \\\"\\%%a::\\%%N::\\%%z\\\" \\{\\} \\\\\\;\";my $totalsize=0;open FIND, \"$findcommand | sort -k 1 |\";while (<FIND>) { my ($accesstime, $filename, $filesize) = split \"::\",$_; $totalsize += $filesize;if ($totalsize > $cachesize) {if ( ( -e \"${filename}.ROOT.cachefile\" ) && ( -e \"${filename}\" ) ) {unlink \"$filename.ROOT.cachefile\";unlink \"$filename\";}}}close FIND;' ", fgCacheFileDir.Data(),shrinksize);
+   cmd.Format("perl -e 'my $cachepath = \"%s\"; my $cachesize = %lld;my $findcommand=\"find $cachepath -type f -exec stat -f \\\"\\%%a::\\%%N::\\%%z\\\" \\{\\} \\\\\\;\";my $totalsize=0;open FIND, \"$findcommand | sort -k 1 |\";while (<FIND>) { my ($accesstime, $filename, $filesize) = split \"::\",$_; $totalsize += $filesize;if ($totalsize > $cachesize) {if ( ( -e \"${filename}.ROOT.cachefile\" ) && ( -e \"${filename}\" ) ) {unlink \"$filename.ROOT.cachefile\";unlink \"$filename\";}}}close FIND;' ", fgCacheFileDir.Data(),shrinksize);
 #else
-   sprintf(cmd, "perl -e 'my $cachepath = \"%s\"; my $cachesize = %lld;my $findcommand=\"find $cachepath -type f -exec stat -c \\\"\\%%x::\\%%n::\\%%s\\\" \\{\\} \\\\\\;\";my $totalsize=0;open FIND, \"$findcommand | sort -k 1 |\";while (<FIND>) { my ($accesstime, $filename, $filesize) = split \"::\",$_; $totalsize += $filesize;if ($totalsize > $cachesize) {if ( ( -e \"${filename}.ROOT.cachefile\" ) && ( -e \"${filename}\" ) ) {unlink \"$filename.ROOT.cachefile\";unlink \"$filename\";}}}close FIND;' ", fgCacheFileDir.Data(),shrinksize);
+   cmd.Format("perl -e 'my $cachepath = \"%s\"; my $cachesize = %lld;my $findcommand=\"find $cachepath -type f -exec stat -c \\\"\\%%x::\\%%n::\\%%s\\\" \\{\\} \\\\\\;\";my $totalsize=0;open FIND, \"$findcommand | sort -k 1 |\";while (<FIND>) { my ($accesstime, $filename, $filesize) = split \"::\",$_; $totalsize += $filesize;if ($totalsize > $cachesize) {if ( ( -e \"${filename}.ROOT.cachefile\" ) && ( -e \"${filename}\" ) ) {unlink \"$filename.ROOT.cachefile\";unlink \"$filename\";}}}close FIND;' ", fgCacheFileDir.Data(),shrinksize);
 #endif
 
    tagfile->WriteBuffer(cmd, 4096);
@@ -4002,7 +4082,7 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
       writeop = dfile->WriteBuffer(copybuffer, (Int_t)read);
       written = dfile->GetBytesWritten() - w0;
       if ((written != read) || writeop) {
-         ::Error("TFile::Cp", "cannot write %d bytes to destination file %s", read, dst);
+         ::Error("TFile::Cp", "cannot write %lld bytes to destination file %s", read, dst);
          goto copyout;
       }
       totalread += read;
@@ -4033,7 +4113,10 @@ copyout:
 }
 
 //______________________________________________________________________________
-#if defined(R__LINUX) && !defined(R__WINGCC)
+//The next statement is not active anymore on Linux.
+//Using posix_fadvise introduces a performance penalty (10 %) on optimized files
+//and in addition it destroys the information of TTreePerfStats
+#if defined(R__neverLINUX) && !defined(R__WINGCC)
 Bool_t TFile::ReadBufferAsync(Long64_t offset, Int_t len)
 {
    // Read specified byte range asynchronously. Actually we tell the kernel

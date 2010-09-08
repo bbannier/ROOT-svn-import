@@ -17,6 +17,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include <errno.h>
 #ifdef WIN32
 #   include <io.h>
 #endif
@@ -78,7 +79,11 @@ void TQueryResultManager::AddLogFile(TProofQueryResult *pq)
    fflush(fLogFile);
 
    // Save current position
-   off_t lnow = lseek(fileno(fLogFile), (off_t) 0, SEEK_CUR);
+   off_t lnow = 0;
+   if ((lnow = lseek(fileno(fLogFile), (off_t) 0, SEEK_CUR)) < 0) {
+      Error("AddLogFile", "problems lseeking current position on log file (errno: %d)", errno);
+      return;
+   }
 
    // The range we are interested in
    Int_t start = pq->fStartLog;
@@ -95,7 +100,7 @@ void TQueryResultManager::AddLogFile(TProofQueryResult *pq)
    }
 
    // Restore initial position if partial send
-   lseek(fileno(fLogFile), lnow, SEEK_SET);
+   if (lnow >= 0) lseek(fileno(fLogFile), lnow, SEEK_SET);
 }
 //______________________________________________________________________________
 Int_t TQueryResultManager::CleanupQueriesDir()
@@ -274,17 +279,17 @@ Int_t TQueryResultManager::ApplyMaxQueries(Int_t mxq)
          }
 
          // Add the entry in the sorted list
-         sl->Add(new TObjString(Form("%d",st.fMtime)));
-         hl->Add(new TNamed((const char *)Form("%d",st.fMtime),fn.Data()));
+         sl->Add(new TObjString(TString::Format("%ld", st.fMtime)));
+         hl->Add(new TNamed((const char*)TString::Format("%ld",st.fMtime), fn.Data()));
          nq++;
       }
       gSystem->FreeDirectory(dirq);
 
       if (nq > 0)
-         dl->Add(new TParameter<Int_t>(Form("%s/%s", dir.Data(), sess), nq));
+         dl->Add(new TParameter<Int_t>(TString::Format("%s/%s", dir.Data(), sess), nq));
       else
          // Remove it
-         gSystem->Exec(Form("%s -fr %s/%s", kRM, dir.Data(), sess));
+         gSystem->Exec(TString::Format("%s -fr %s/%s", kRM, dir.Data(), sess));
    }
    gSystem->FreeDirectory(dirs);
 
@@ -630,13 +635,13 @@ Bool_t TQueryResultManager::FinalizeQuery(TProofQueryResult *pq,
    case TVirtualProofPlayer::kStopped:
       PDB(kGlobal, 1)
          Info("FinalizeQuery",
-              "query %d has been STOPPED: %d events processed", qn, np);
+              "query %d has been STOPPED: %lld events processed", qn, np);
       st = TQueryResult::kStopped;
       break;
    case TVirtualProofPlayer::kFinished:
       PDB(kGlobal, 1)
          Info("FinalizeQuery",
-              "query %d has been completed: %d events processed", qn, np);
+              "query %d has been completed: %lld events processed", qn, np);
       st = TQueryResult::kCompleted;
       break;
    default:
@@ -683,15 +688,15 @@ void TQueryResultManager::SaveQuery(TProofQueryResult *pq, Int_t mxq)
                if (farc && fcom)
                   break;
             }
-            if (farc) {
+            if (!farc && !fcom) {
+               break;
+            } else if (farc) {
                RemoveQuery(farc, kTRUE);
                fKeptQueries--;
             } else if (fcom) {
                RemoveQuery(fcom);
                fKeptQueries--;
             }
-            if (!farc && !fcom)
-               break;
          }
       }
       if (fKeptQueries < mxq) {
@@ -704,7 +709,7 @@ void TQueryResultManager::SaveQuery(TProofQueryResult *pq, Int_t mxq)
          if (gProofServ) {
             gProofServ->SendAsynMessage(emsg.Data());
          } else {
-            Warning("SaveQuery", emsg.Data());
+            Warning("SaveQuery", "%s", emsg.Data());
          }
       }
    } else {

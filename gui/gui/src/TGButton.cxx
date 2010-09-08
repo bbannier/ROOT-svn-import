@@ -2888,6 +2888,7 @@ Bool_t TGSplitButton::HandleKey(Event_t *event)
       fKeyNavigate = kTRUE;
       if (event->fType == kGKeyPress) {
          Event_t ev;
+         ev.fX = ev.fY = 1;
          UInt_t keysym;
          char tmp[2];
          
@@ -3029,9 +3030,8 @@ void TGSplitButton::HandleMenu(Int_t id)
       SetMBState(kButtonUp);
       Disconnect(this, "Clicked()", this);
       // connect clicked to the ItemClicked signal with the correct id
-      char str[20];
-      sprintf(str, "ItemClicked(=%d)", id);
-      Connect("Clicked()", "TGSplitButton", this, str);
+      Connect("Clicked()", "TGSplitButton", this, 
+              TString::Format("ItemClicked(=%d)", id));
 
       // reenable hidden entries
       const TList *list = fPopMenu->GetListOfEntries();

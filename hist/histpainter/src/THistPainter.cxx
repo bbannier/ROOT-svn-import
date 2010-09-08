@@ -224,7 +224,7 @@ Draw only grid (if the grid is requested).
 
 <tr><th valign=top>"HIST"</th><td>
 When an histogram has errors it is visualized by default with error bars. To
-visualize it without errors use the option HIST together with the required
+visualize it without errors use the option "HIST" together with the required
 option (eg "hist same c").  The "HIST" option can also be used to plot only the
 histogram and not the associated function(s).
 </td></tr>
@@ -1172,14 +1172,14 @@ It can be changed with <tt>TH1::SetContour()</tt> or
 <tt>TStyle::SetNumberContours()</tt>. The higher this number is, the smoother
 is the color change between cells.
 
-<p>The color palette in TStyle can be modified via <tt>gStyle->SePalette()</tt>.
+<p>The color palette in TStyle can be modified via <tt>gStyle->SetPalette()</tt>.
 
 <p>All the none empty bins are painted. Empty bins are not painted unless
 some bins have a negative content because in that case the null bins
 might be not empty.
 
 <p>Combined with the option <tt>"COL"</tt>, the option <tt>"Z"</tt> allows to
-display the color palette defined by <tt>gStyle->SePalette()</tt>.
+display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
 <p>In the following example, the histogram has only positive bins; the empty
 bins (containing 0) <u>are not drawn</u>.
@@ -1229,7 +1229,9 @@ Begin_Html
 For each bin the content is printed. The text attributes are:
 <ul>
 <li> text font = current TStyle font (<tt>gStyle->SetTextFont()</tt>).
-<li> text size = 0.02*padheight*markersize.
+<li> text size = 0.02*padheight*markersize (if <tt>h</tt> is the histogram drawn
+     with the option <tt>"TEXT"</tt> the marker size can be changed with
+     <tt>h->SetMarkerSize(markersize)</tt>).
 <li> text color = marker color.
 </ul>
 By default the format <tt>"g"</tt> is used. This format can be redefined
@@ -1239,6 +1241,7 @@ by calling <tt>gStyle->SetPaintTextFormat()</tt>.
 the angle <tt>nn</tt> (<tt>0 < nn < 90</tt>).
 
 <p>For 2D histograms the text is plotted in the center of each non empty cells.
+It is possible to plot empty cells by calling gStyle->SetHistMinimumZero().
 For 1D histogram the text is plotted at a y position equal to the bin content.
 
 <p>For 2D histograms when the option "E" (errors) is combined with the option
@@ -1270,7 +1273,7 @@ End_Macro
 Begin_Html
 
 <p>In the case of profile histograms it is possible to print the number
-of entries instead of the bin content. It is enough to combine the 
+of entries instead of the bin content. It is enough to combine the
 option "E" (for entries) with the option "TEXT".
 
 End_Html
@@ -1296,7 +1299,7 @@ Begin_Macro(source)
    c02->cd(2); profile->Draw("HIST TEXT0E");
 
    return c02;
-} 
+}
 End_Macro
 Begin_Html
 
@@ -1341,7 +1344,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"CONTZ"</tt>. The option <tt>"CONT"</tt> draws a contour plot using surface
 colors to distinguish contours.  Combined with the option <tt>"CONT"</tt> (or
 <tt>"CONT0"</tt>), the option <tt>"Z"</tt> allows to display the color palette
-defined by <tt>gStyle->SePalette()</tt>.
+defined by <tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1365,7 +1368,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"CONT1Z"</tt>. The option <tt>"CONT1"</tt> draws a contour plot using the
 line colors to distinguish contours. Combined with the option <tt>"CONT1"</tt>,
 the option <tt>"Z"</tt> allows to display the color palette defined by
-<tt>gStyle->SePalette()</tt>.
+<tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1431,7 +1434,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"CONT4"</tt>. The option <tt>"CONT4"</tt> draws a contour plot using surface
 colors to distinguish contours (<tt>"SURF"</tt> option at theta = 0). Combined
 with the option <tt>"CONT"</tt> (or <tt>"CONT0"</tt>), the option <tt>"Z"</tt>
-allows to display the color palette defined by <tt>gStyle->SePalette()</tt>.
+allows to display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1599,7 +1602,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"LEGO2"</tt>. The option <tt>"LEGO2"</tt> draws a lego plot using colors to
 show the cell contents.  Combined with the option <tt>"LEGO2"</tt>, the option
 <tt>"Z"</tt> allows to display the color palette defined by
-<tt>gStyle->SePalette()</tt>.
+<tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1692,7 +1695,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"SURF1"</tt>. The option <tt>"SURF1"</tt> draws a surface plot using the
 hidden surface removal technique.  Combined with the option <tt>"SURF1"</tt>,
 the option <tt>"Z"</tt> allows to display the color palette defined by
-<tt>gStyle->SePalette()</tt>.
+<tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1715,7 +1718,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"SURF2"</tt>. The option <tt>"SURF2"</tt> draws a surface plot using colors
 to show the cell contents. Combined with the option <tt>"SURF2"</tt>, the option
 <tt>"Z"</tt> allows to display the color palette defined by
-<tt>gStyle->SePalette()</tt>.
+<tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1738,7 +1741,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"SURF3"</tt>. The option <tt>"SURF3"</tt> draws a surface plot using the
 hidden line removal technique with, in addition, a filled contour view drawn on the
 top.  Combined with the option <tt>"SURF3"</tt>, the option <tt>"Z"</tt> allows
-to display the color palette defined by <tt>gStyle->SePalette()</tt>.
+to display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1781,7 +1784,7 @@ Begin_Html
 
 The following example shows a 2D histogram plotted with the option
 <tt>"SURF5 CYL"</tt>.  Combined with the option <tt>"SURF5"</tt>, the option
-<tt>"Z"</tt> allows to display the color palette defined by <tt>gStyle->SePalette()</tt>.
+<tt>"Z"</tt> allows to display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1805,7 +1808,7 @@ The following example shows a 2D histogram plotted with the option
 <tt>"SURF7"</tt>. The option <tt>"SURF7"</tt> draws a surface plot using the
 hidden surfaces removal technique with, in addition, a line contour view drawn on the
 top.  Combined with the option <tt>"SURF7"</tt>, the option <tt>"Z"</tt> allows
-to display the color palette defined by <tt>gStyle->SePalette()</tt>.
+to display the color palette defined by <tt>gStyle->SetPalette()</tt>.
 
 End_Html
 Begin_Macro(source)
@@ -1980,7 +1983,7 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-This option also works for horizontal plots. The example given in the section 
+This option also works for horizontal plots. The example given in the section
 <a href="http://root.cern.ch/root/html/THistPainter.html#HP100">
 "The bar chart option"</a> appears as follow:
 
@@ -2211,12 +2214,14 @@ is a collection of <tt>TH1</tt> (or derived) objects. For painting only the
 <li> The first histogram is paint.
 <li> The the sum of the first and second, etc...
 </ol>
-If option <tt>"NOSTACK"</tt> is specified, histograms are all paint in the
-same pad as if the option <tt>"SAME"</tt> had been specified.
+If the option <tt>"NOSTACK"</tt> is specified, the histograms are all paint in
+the same pad as if the option <tt>"SAME"</tt> had been specified. This allows to
+compute X and Y scales common to all the histograms, like
+<tt>TMultiGraph</tt> does for graphs.
 
-<p>If option <tt>"PADS"</tt> is specified, the current pad/canvas is subdivided
-into a number of pads equal to the number of histograms and each histogram
-is paint into a separate pad.
+<p>If the option <tt>"PADS"</tt> is specified, the current pad/canvas is
+subdivided into a number of pads equal to the number of histograms and each
+histogram is paint into a separate pad.
 
 <p>The following example shows various types of stacks.
 
@@ -2226,6 +2231,38 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
+If at least one of the histograms in the stack has errors, the whole stack is
+visualized by default with error bars. To visualize it without errors the
+option <tt>"HIST"</tt> should be used.
+
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *cst1 = new TCanvas("cst1","cst1",700,400);
+   cst1->Divide(2,1);
+
+   TH1F * hst11 = new TH1F("hst11", "", 20, -10, 10);
+   hst11->Sumw2();
+   hst11->FillRandom("gaus", 1000);
+   hst11->SetFillColor(kViolet);
+   hst11->SetLineColor(kViolet);
+
+   TH1F * hst12 = new TH1F("hst12", "", 20, -10, 10);
+   hst12->FillRandom("gaus", 500);
+   hst12->SetFillColor(kBlue);
+   hst12->SetLineColor(kBlue);
+
+   THStack st1("st1", "st1");
+   st1.Add(hst11);
+   st1.Add(hst12);
+
+   cst1->cd(1); st1.Draw();
+   cst1->cd(2); st1.Draw("hist");
+
+   return cst1;
+}
+End_Macro
+Begin_Html
 
 <a name="HP27"></a><h3>Drawing of 3D implicit functions</h3>
 
@@ -2552,6 +2589,10 @@ THistPainter::THistPainter()
    fGraph2DPainter = 0;
    fShowProjection = 0;
    fShowOption = "";
+   for (int i=0; i<kMaxCuts; i++) {
+      fCuts[i] = 0;
+      fCutsOpt[i] = 0;
+   }
 
    gStringEntries   = gEnv->GetValue("Hist.Stats.Entries",   "Entries");
    gStringMean      = gEnv->GetValue("Hist.Stats.Mean",      "Mean");
@@ -2766,7 +2807,8 @@ void THistPainter::DrawPanel()
    }
    TVirtualPadEditor *editor = TVirtualPadEditor::GetPadEditor();
    editor->Show();
-   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",gPad->GetCanvas(),gPad,fH));
+   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",
+                           (ULong_t)gPad->GetCanvas(), (ULong_t)gPad, (ULong_t)fH));
 }
 
 
@@ -3067,7 +3109,20 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
    l = strstr(chopt,"SPEC");
    if (l) {
       Hoption.Scat = 0;
-      Hoption.Spec = 1; strncpy(l,"    ",4);
+      strncpy(l,"    ",4);
+      Int_t bs=0;
+      l = strstr(chopt,"BF(");
+      if (l) {
+         if (sscanf(&l[3],"%d",&bs) > 0) {
+            Int_t i=0;
+            while (l[i]!=')') {
+               l[i] = ' ';
+               i++;
+            }
+            l[i] = ' ';
+         }
+      }
+      Hoption.Spec = TMath::Max(1600,bs);
       return 1;
    }
 
@@ -3393,7 +3448,8 @@ void THistPainter::Paint(Option_t *option)
    if (Hoption.Spec) {
       if (!TableInit()) return;
       if (!TClass::GetClass("TSpectrum2Painter")) gSystem->Load("libSpectrumPainter");
-      gROOT->ProcessLineFast(Form("TSpectrum2Painter::PaintSpectrum((TH2F*)0x%lx,\"%s\")",fH,option));
+      gROOT->ProcessLineFast(Form("TSpectrum2Painter::PaintSpectrum((TH2F*)0x%lx,\"%s\",%d)",
+                                  (ULong_t)fH, option, Hoption.Spec));
       return;
    }
 
@@ -3781,6 +3837,10 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
       strcat(chopt, "-");
       gridl = -gridl;
    }
+   if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
+      axis.SetLabelSize(0.);
+      axis.SetTitle("");
+   }
    axis.PaintAxis(axmin, xAxisYPos1,
                   axmax, xAxisYPos1,
                   umin, umax,  ndiv, chopt, gridl, drawGridOnly);
@@ -3863,6 +3923,10 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    if (yAxisPos) {
       strcat(chopt, "+L");
       gridl = -gridl;
+   }
+   if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
+      axis.SetLabelSize(0.);
+      axis.SetTitle("");
    }
    axis.PaintAxis(yAxisXPos1, aymin,
                   yAxisXPos1, aymax,
@@ -5362,7 +5426,10 @@ void THistPainter::PaintHist(Option_t *)
       }
    }
 
-   if (Hoption.Off) strcat(chopth,"][");
+   if (Hoption.Off) {
+      chopth[11] = ']';
+      chopth[12] = '[';
+   }
 
    //         Draw the histogram
 
@@ -5560,20 +5627,27 @@ Int_t THistPainter::PaintInit()
       }
    }
 
+
    //     Take into account maximum , minimum
 
    if (Hoption.Logy && ymin <= 0) {
       if (ymax >= 1) ymin = TMath::Max(.005,ymax*1e-10);
       else           ymin = 0.001*ymax;
    }
+
    Double_t xm = ymin;
    if (maximum) ymax = fH->GetMaximumStored();
    if (minimum) xm   = fH->GetMinimumStored();
-   if (Hoption.Logy && xm <= 0) {
-      Error(where, "log scale requested with zero or negative argument (%f)", xm);
+   if (Hoption.Logy && xm < 0) {
+      Error(where, "log scale requested with a negative argument (%f)", xm);
       return 0;
+   } else if (Hoption.Logy && xm>=0 && ymax==0) { // empty histogram in log scale
+      ymin = 0.01;
+      ymax = 10.;
+   } else {
+      ymin = xm;
    }
-   else ymin = xm;
+
    if (ymin >= ymax && !Hoption.Plus) {
       if (Hoption.Logy) {
          if (ymax > 0) ymin = 0.001*ymax;
@@ -5594,6 +5668,12 @@ Int_t THistPainter::PaintInit()
             ymax = 1;
          }
       }
+   }
+
+   // In some cases, mainly because of precision issues, ymin and ymax could almost equal.
+   if(TMath::AreEqualRel(ymin,ymax,1E-15)) {
+      ymin = ymin*(1-1E-14);
+      ymax = ymax*(1+1E-14);
    }
 
    //     take into account normalization factor
@@ -5653,6 +5733,7 @@ Int_t THistPainter::PaintInit()
    if (!maximum && !Hoption.Plus) {
       ymax += yMARGIN*(ymax-ymin);
    }
+
    Hparam.ymin = ymin;
    Hparam.ymax = ymax;
    return 1;
@@ -5880,6 +5961,9 @@ void THistPainter::PaintH3Iso()
    TView *view = gPad->GetView();
    if (!view) {
       Error("PaintH3Iso", "no TView in current pad");
+      delete [] x;
+      delete [] y;
+      delete [] z;
       return;
    }
    Double_t thedeg =  90 - gPad->GetTheta();
@@ -6558,7 +6642,7 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
    // Pavetext with statistics
    Bool_t done = kFALSE;
    if (!dostat && !fit) {
-      if (stats) { delete stats; fFunctions->Remove(stats); }
+      if (stats) { fFunctions->Remove(stats); delete stats;}
       return;
    }
    Double_t  statw  = gStyle->GetStatW();
@@ -7564,7 +7648,8 @@ void THistPainter::PaintTable(Option_t *option)
 
    //if palette option not specified, delete a possible existing palette
    if (!Hoption.Zscale) {
-      delete fFunctions->FindObject("palette");
+      TObject *palette = fFunctions->FindObject("palette");
+      if (palette) delete palette;
    }
 
    if (fH->GetEntries() != 0 && Hoption.Axis<=0) {
@@ -7639,7 +7724,7 @@ void THistPainter::PaintText(Option_t *)
       for (Int_t i=Hparam.xfirst; i<=Hparam.xlast;i++) {
          x  = fH->GetXaxis()->GetBinCenter(i);
          y  = fH->GetBinContent(i);
-	 yt = y;
+         yt = y;
          if (getentries) yt = hp->GetBinEntries(i);
          sprintf(value,format,yt);
          if (Hoption.Logx) {
@@ -7676,7 +7761,7 @@ void THistPainter::PaintText(Option_t *)
             }
             if (!IsInside(x,y)) continue;
             z = fH->GetBinContent(bin);
-            if (z < Hparam.zmin || z == 0) continue;
+            if (z < Hparam.zmin || (z == 0 && !gStyle->GetHistMinimumZero()) ) continue;
             if (Hoption.Text>2000) {
                e = fH->GetBinError(bin);
                sprintf(format,"#splitline{%s%s}{#pm %s%s}",
@@ -8332,7 +8417,7 @@ void THistPainter::SetShowProjection(const char *option,Int_t nbins)
    else                fShowOption = option+2;
    fShowProjection = projection+100*nbins;
    gROOT->MakeDefCanvas();
-   gPad->SetName(Form("%x_c_projection_%d",fH,fShowProjection));
+   gPad->SetName(Form("%lx_c_projection_%d", (ULong_t)fH, fShowProjection));
    gPad->SetGrid();
 }
 
@@ -8369,7 +8454,8 @@ void THistPainter::ShowProjectionX(Int_t /*px*/, Int_t py)
 
    // Create or set the new canvas proj x
    TVirtualPad *padsav = gPad;
-   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%x_c_projection_%d",fH,fShowProjection));
+   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%lx_c_projection_%d",
+                                                                              (ULong_t)fH, fShowProjection));
    if (c) {
       c->Clear();
    } else {
@@ -8427,7 +8513,8 @@ void THistPainter::ShowProjectionY(Int_t px, Int_t /*py*/)
 
    // Create or set the new canvas proj y
    TVirtualPad *padsav = gPad;
-   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%x_c_projection_%d",fH,fShowProjection));
+   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%lx_c_projection_%d",
+                                                                              (ULong_t)fH, fShowProjection));
    if(c) {
       c->Clear();
    } else {
@@ -8503,7 +8590,8 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
    Double_t cx    = (pxmax-pxmin)/(uxmax-uxmin);
    Double_t cy    = (pymax-pymin)/(uymax-uymin);
    TVirtualPad *padsav = gPad;
-   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%x_c_projection_%d",fH,fShowProjection));
+   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%lx_c_projection_%d",
+                                                                              (ULong_t)fH, fShowProjection));
    if(!c) {
       fShowProjection = 0;
       return;

@@ -114,7 +114,7 @@ Long64_t     TXSockBuf::fgMemMax = 10485760; // Max allowed allocated memory [10
 TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
                    const char *logbuf, Int_t loglevel, TXHandler *handler)
          : TSocket(), fMode(m), fLogLevel(loglevel),
-           fBuffer(logbuf), fASem(0),
+           fBuffer(logbuf), fASem(0), fAsynProc(1),
            fDontTimeout(kFALSE), fRDInterrupt(kFALSE), fXrdProofdVersion(-1)
 {
    // Constructor
@@ -335,6 +335,10 @@ void TXSocket::Close(Option_t *opt)
    // A session ID can be given using #...# signature, e.g. "#1#".
    // Default is opt = "".
 
+   Int_t to = gEnv->GetValue("XProof.AsynProcSemTimeout", 60);
+   if (fAsynProc.Wait(to*1000) != 0)
+      Warning("Close", "could not hold semaphore for async messages after %d sec: closing anyhow (may give error messages)", to);
+
    // Remove any reference in the global pipe and ready-sock queue
    TXSocket::fgPipe.Flush(this);
 
@@ -342,6 +346,7 @@ void TXSocket::Close(Option_t *opt)
    if (!fConn) {
       if (gDebug > 0)
          Info("Close","no connection: nothing to do");
+      fAsynProc.Post();
       return;
    }
 
@@ -373,6 +378,9 @@ void TXSocket::Close(Option_t *opt)
 
    // Delete the connection module
    SafeDelete(fConn);
+
+   // Post semaphore
+   fAsynProc.Post();
 }
 
 //_____________________________________________________________________________
@@ -385,6 +393,13 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    // Remember that we are in a separate thread, since unsolicited
    // responses are asynchronous by nature.
    UnsolRespProcResult rc = kUNSOL_KEEP;
+
+   // If we are closing we will not do anything
+   TXSemaphoreGuard semg(&fAsynProc);
+   if (!semg.IsValid()) {
+      Error("ProcessUnsolicitedMsg", "%p: async semaphore taken by Close()! Should not be here!", this);
+      return kUNSOL_CONTINUE;
+   }
 
    if (!m) {
       if (gDebug > 2)
@@ -780,13 +795,20 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
       case kXPD_wrkmortem:
          //
          // A worker died
-         Printf(" ");
-         Printf("| %.*s", len, (char *)pdata);
-         // Handle error
-         if (fHandler)
-            fHandler->HandleError();
-         else
-            Error("ProcessUnsolicitedMsg","handler undefined");
+         {  TString what = TString::Format("%.*s", len, (char *)pdata);
+            if (what.BeginsWith("idle-timeout")) {
+               // Notify the idle timeout
+               PostMsg(kPROOF_FATAL, kPROOF_WorkerIdleTO);
+            } else {
+               Printf(" ");
+               Printf("| %s", what.Data());
+               // Handle error
+               if (fHandler)
+                  fHandler->HandleError();
+               else
+                  Error("ProcessUnsolicitedMsg","handler undefined");
+            }
+         }
          break;
 
       case kXPD_touch:
@@ -845,15 +867,20 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
 }
 
 //_______________________________________________________________________
-void TXSocket::PostMsg(Int_t type)
+void TXSocket::PostMsg(Int_t type, const char *msg)
 {
    // Post a message of type 'type' into the read messages queue.
+   // If 'msg' is defined it is also added as TString.
    // This is used, for example, with kPROOF_FATAL to force the main thread
    // to mark this socket as bad, avoiding race condition when a worker
    // dies while in processing state.
 
    // Create the message
    TMessage m(type);
+
+   // Add the string if any
+   if (msg && strlen(msg) > 0)
+      m << TString(msg);
 
    // Write length in first word of buffer
    m.SetLength();
@@ -919,7 +946,7 @@ Int_t TXSocket::GetInterrupt(Bool_t &forward)
    // propagated to lower stages forward will be kTRUE after the call
 
    if (gDebug > 2)
-      Info("GetInterrupt","%p: waiting to lock mutex %p", fIMtx);
+      Info("GetInterrupt","%p: waiting to lock mutex %p", this, fIMtx);
 
    R__LOCKGUARD(fIMtx);
 
@@ -929,7 +956,7 @@ Int_t TXSocket::GetInterrupt(Bool_t &forward)
 
    // Check if filled
    if (fILev == -1)
-      Error("GetInterrupt","value is unset (%d) - protocol error",fILev);
+      Error("GetInterrupt", "value is unset (%d) - protocol error",fILev);
 
    // Fill output
    ilev = fILev;
@@ -1298,7 +1325,7 @@ void TXSocket::RemoteTouch()
       return;
    }
    if (fConn->LowWrite(&Request, 0, 0) != kOK)
-      Error("Touch", "%p: %s: problems sending touch request to server", this);
+      Error("Touch", "%p: problems sending touch request to server", this);
 
    // Done
    return;
@@ -1335,7 +1362,7 @@ void TXSocket::CtrlC()
       return;
    }
    if (fConn->LowWrite(&Request, 0, 0) != kOK)
-      Error("CtrlC", "%p: %s: problems sending ctrl-c request to server", this);
+      Error("CtrlC", "%p: problems sending ctrl-c request to server", this);
 
    // Done
    return;
@@ -1441,7 +1468,7 @@ TXSockBuf *TXSocket::PopUpSpare(Int_t size)
             buf = *i;
             if (gDebug > 2)
                Info("PopUpSpare","asked: %d, spare: %d/%d, REUSE buf %p, sz: %d",
-                                 size, fgSQue.size(), nBuf, buf, buf->fSiz);
+                                 size, (int) fgSQue.size(), nBuf, buf, buf->fSiz);
             // Drop from this list
             fgSQue.erase(i);
             return buf;
@@ -1452,7 +1479,7 @@ TXSockBuf *TXSocket::PopUpSpare(Int_t size)
       buf->Resize(size);
       if (gDebug > 2)
          Info("PopUpSpare","asked: %d, spare: %d/%d, maxsz: %d, RESIZE buf %p, sz: %d",
-                           size, fgSQue.size(), nBuf, maxsz, buf, buf->fSiz);
+                           size, (int) fgSQue.size(), nBuf, maxsz, buf, buf->fSiz);
       // Drop from this list
       fgSQue.pop_front();
       return buf;
@@ -1465,7 +1492,7 @@ TXSockBuf *TXSocket::PopUpSpare(Int_t size)
    nBuf++;
    if (gDebug > 2)
       Info("PopUpSpare","asked: %d, spare: %d/%d, maxsz: %d, NEW buf %p, sz: %d",
-                        size, fgSQue.size(), nBuf, maxsz, buf, buf->fSiz);
+                        size, (int) fgSQue.size(), nBuf, maxsz, buf, buf->fSiz);
 
    // We are done
    return buf;

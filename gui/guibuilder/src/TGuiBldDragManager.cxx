@@ -50,7 +50,7 @@
 #include "TGProgressBar.h"
 #include "TGScrollBar.h"
 #include "TGTextEntry.h"
-
+#include "snprintf.h"
 
 #undef DEBUG_LOCAL
 
@@ -228,28 +228,28 @@ const char *TGuiBldMenuDialog::GetParameters()
 
       // if necessary, replace the selected object by it's address
       if (selfobjpos == nparam-1) {
-         if (params[0]) strcat(params, ",");
+         if (params[0]) strncat(params, ",", 1023-strlen(params));
          sprintf(param, "(TObject*)0x%lx", (Long_t)fObject);
-         strcat(params, param);
+         strncat(params, param, 1023-strlen(params));
       }
 
-      if (params[0]) strcat(params, ",");
+      if (params[0]) strncat(params, ",", 1023-strlen(params));
       if (data) {
          if (!strncmp(type, "char*", 5))
-            sprintf(param, "\"%s\"", data);
+            snprintf(param, 255, "\"%s\"", data);
          else
-            strncpy(param, data, 256);
+            strncpy(param, data, 255);
       } else
          strcpy(param, "0");
 
-      strcat(params, param);
+      strncat(params, param, 1023-strlen(params));
    }
 
    // if selected object is the last argument, have to insert it here
    if (selfobjpos == nparam) {
-      if (params[0]) strcat(params, ",");
+      if (params[0]) strncat(params, ",", 1023-strlen(params));
       sprintf(param, "(TObject*)0x%lx", (Long_t)fObject);
-      strcat(params, param);
+      strncat(params, param, 1023-strlen(params));
    }
 
    return params;
@@ -323,7 +323,7 @@ void TGuiBldMenuDialog::Build()
          char        basictype[32];
 
          if (datatype) {
-            strcpy(basictype, datatype->GetTypeName());
+            strncpy(basictype, datatype->GetTypeName(), 30);
          } else {
             TClass *cl = TClass::GetClass(type);
             if (strncmp(type, "enum", 4) && (cl && !(cl->Property() & kIsEnum)))
@@ -365,7 +365,7 @@ void TGuiBldMenuDialog::Build()
 
             TList *opt;
             if ((opt = m->GetOptions())) {
-               Warning("Dialog", "option menu not yet implemented", opt);
+               Warning("Dialog", "option menu not yet implemented");
 
             } else {
                // we haven't got options - textfield ...
@@ -912,11 +912,15 @@ TGuiBldDragManager::TGuiBldDragManager() : TVirtualDragManager() ,
    CreateListOfDialogs();
 
    TString tmpfile = gSystem->TempDirectory();
-   fPasteFileName = gSystem->ConcatFileName(tmpfile.Data(),
-                             TString::Format("RootGuiBldClipboard%d.C", gSystem->GetPid()));
+   char *s = gSystem->ConcatFileName(tmpfile.Data(),
+               TString::Format("RootGuiBldClipboard%d.C", gSystem->GetPid()));
+   fPasteFileName = s;
+   delete [] s;
 
-   fTmpBuildFile = gSystem->ConcatFileName(tmpfile.Data(),
-                             TString::Format("RootGuiBldTmpFile%d.C", gSystem->GetPid()));
+   s = gSystem->ConcatFileName(tmpfile.Data(),
+               TString::Format("RootGuiBldTmpFile%d.C", gSystem->GetPid()));
+   fTmpBuildFile = s;
+   delete [] s;
 
    fName = "Gui Builder Drag Manager";
    SetWindowName(fName.Data());
@@ -1473,10 +1477,10 @@ Bool_t TGuiBldDragManager::IsSelectedVisible()
       return kTRUE;
    }
 
-   static Long_t was = gSystem->Now();
+   static Long64_t was = gSystem->Now();
    static Bool_t visible = kFALSE;
 
-   Long_t now = (long)gSystem->Now();
+   Long64_t now = gSystem->Now();
 
    if (now-was < 100) {
       return visible;
@@ -1950,9 +1954,9 @@ Bool_t TGuiBldDragManager::HandleExpose(Event_t *event)
       return kFALSE;
    }
 
-   static Long_t was = gSystem->Now();
+   static Long64_t was = gSystem->Now();
    static Window_t win = 0;
-   Long_t now = (long)gSystem->Now();
+   Long64_t now = gSystem->Now();
 
    if (event->fCount || (win == event->fWindow) || (now-was < 50) || fDragging) {
       if (fDragging) {
@@ -2952,46 +2956,48 @@ void TGuiBldDragManager::HandleDelete(Bool_t crop)
    h = y - y0;
 
    if (fLassoDrawn || fromGrab) {
-      TIter next(comp->GetList());
-      TGFrameElement *el;
+      if (comp) {
+         TIter next(comp->GetList());
+         TGFrameElement *el;
 
-      while ((el = (TGFrameElement*)next())) {
-         TGFrame *fr = el->fFrame;
+         while ((el = (TGFrameElement*)next())) {
+            TGFrame *fr = el->fFrame;
 
-         if ((fr->GetX() >= x0) && (fr->GetY() >= y0) &&
-             (fr->GetX() + (Int_t)fr->GetWidth() <= x) &&
-             (fr->GetY() + (Int_t)fr->GetHeight() <= y)) {
-            if (!crop) {
-               DeleteFrame(fr);
+            if ((fr->GetX() >= x0) && (fr->GetY() >= y0) &&
+                (fr->GetX() + (Int_t)fr->GetWidth() <= x) &&
+                (fr->GetY() + (Int_t)fr->GetHeight() <= y)) {
+               if (!crop) {
+                  DeleteFrame(fr);
+               } else {
+                  fr->Move(fr->GetX() - x0, fr->GetY() - y0);
+               }
             } else {
-               fr->Move(fr->GetX() - x0, fr->GetY() - y0);
-            }
-         } else {
-            if (crop) {
-               DeleteFrame(fr);
+               if (crop) {
+                  DeleteFrame(fr);
+               }
             }
          }
-      }
-      if (crop && comp) {
-         gVirtualX->TranslateCoordinates(comp->GetId(), comp->GetParent()->GetId(),
-                                          x0, y0, xx, yy, c);
+         if (crop && comp) {
+            gVirtualX->TranslateCoordinates(comp->GetId(), comp->GetParent()->GetId(),
+                                             x0, y0, xx, yy, c);
 
-         comp->MoveResize(xx, yy, w, h);
+            comp->MoveResize(xx, yy, w, h);
 
-         if (comp->GetParent()->InheritsFrom(TGMdiDecorFrame::Class())) {
-            TGMdiDecorFrame *decor = (TGMdiDecorFrame *)comp->GetParent();
+            if (comp->GetParent()->InheritsFrom(TGMdiDecorFrame::Class())) {
+               TGMdiDecorFrame *decor = (TGMdiDecorFrame *)comp->GetParent();
 
+               gVirtualX->TranslateCoordinates(decor->GetId(), decor->GetParent()->GetId(),
+                                               xx, yy, xx, yy, c);
 
-            gVirtualX->TranslateCoordinates(decor->GetId(), decor->GetParent()->GetId(),
-                                            xx, yy, xx, yy, c);
-
-            Int_t b = 2 * decor->GetBorderWidth();
-            decor->MoveResize(xx, yy, comp->GetWidth() + b,
-                              comp->GetHeight() + b + decor->GetTitleBar()->GetDefaultHeight());
+               Int_t b = 2 * decor->GetBorderWidth();
+               decor->MoveResize(xx, yy, comp->GetWidth() + b,
+                                 comp->GetHeight() + b + decor->GetTitleBar()->GetDefaultHeight());
+            }
          }
       }
    } else { //  no lasso drawn -> delete selected frame
-      DeleteFrame(frame);
+      if (frame)
+         DeleteFrame(frame);
       UngrabFrame();
       ChangeSelected(0);   //update editors
    }
@@ -3880,11 +3886,11 @@ Bool_t TGuiBldDragManager::HandleMotion(Event_t *event)
       return kFALSE;
    }
 
-   static Long_t was = gSystem->Now();
+   static Long64_t was = gSystem->Now();
    static Int_t gy = event->fYRoot;
    static Int_t gx = event->fXRoot;
 
-   Long_t now = (long)gSystem->Now();
+   Long64_t now = gSystem->Now();
 
    if ((now-was < 100) || !(event->fState & kButton1Mask) ||
        ((event->fYRoot == gy) && (event->fXRoot == gx))) {
@@ -5014,7 +5020,7 @@ void TGuiBldDragManager::HandleUpdateSelected(TGFrame *f)
    }
 
    TGCompositeFrame *parent = 0;
-   if (f->GetParent() && 
+   if (f->GetParent() &&
        f->GetParent()->InheritsFrom(TGCompositeFrame::Class())) {
       parent = (TGCompositeFrame*)f->GetParent();
    }
@@ -5481,8 +5487,8 @@ void TGuiBldDragManager::DoClassMenu(Int_t id)
 
       if (str.Contains("*DIALOG")) {
          TString str2;
-         str2.Form("((TGuiBldDragManager*)0x%lx)->%s((%s*)0x%lx)", this, method->GetName(),
-                  fPimpl->fMenuObject->ClassName(), fPimpl->fMenuObject);
+         str2.Form("((TGuiBldDragManager*)0x%lx)->%s((%s*)0x%lx)", (ULong_t)this, method->GetName(),
+                  fPimpl->fMenuObject->ClassName(), (ULong_t)fPimpl->fMenuObject);
          gCint->Calc((char *)str2.Data());
          //delete fFrameMenu;  // suicide (BB)?
          //fFrameMenu = 0;

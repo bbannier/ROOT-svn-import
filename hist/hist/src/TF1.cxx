@@ -500,7 +500,7 @@ TF1::TF1(const char *name, Double_t xmin, Double_t xmax, Int_t npar)
    fNdim       = 1;
 
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
 
    if (gStyle) {
@@ -589,7 +589,7 @@ TF1::TF1(const char *name,void *fcn, Double_t xmin, Double_t xmax, Int_t npar)
    fNdim       = 1;
 
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
 
    if (gStyle) {
@@ -611,7 +611,7 @@ TF1::TF1(const char *name,void *fcn, Double_t xmin, Double_t xmax, Int_t npar)
          Error("TF1","No function found with the signature %s(Double_t*,Double_t*)",funcname);
       }
    } else {
-      Error("TF1","can not find any function at the address 0x%lx. This function requested for %s",fcn,name);
+      Error("TF1","can not find any function at the address 0x%lx. This function requested for %s",(Long_t)fcn,name);
    }
 
 
@@ -678,7 +678,7 @@ TF1::TF1(const char *name,Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin
 
    // Store formula in linked list of formula in ROOT
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
@@ -750,7 +750,7 @@ TF1::TF1(const char *name,Double_t (*fcn)(const Double_t *, const Double_t *), D
 
    // Store formula in linked list of formula in ROOT
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
@@ -836,7 +836,7 @@ void TF1::CreateFromFunctor(const char *name, Int_t npar)
 
    // Store formula in linked list of formula in ROOT
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
@@ -942,7 +942,7 @@ void TF1::CreateFromCintClass(const char *name,void *ptr, Double_t xmin, Double_
    fNdim       = 1;
 
    TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
-   if (f1old) delete f1old;
+   gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
 
    if (gStyle) {
@@ -981,7 +981,7 @@ void TF1::CreateFromCintClass(const char *name,void *ptr, Double_t xmin, Double_
             Error("TF1","No function found in class %s with the signature operator() (Double_t*,Double_t*) or Eval(Double_t*,Double_t*)",className);
       }
    } else {
-      Error("TF1","can not find any class with name %s at the address 0x%lx",className,ptr);
+      Error("TF1","can not find any class with name %s at the address 0x%lx",className,(Long_t)ptr);
    }
 
 
@@ -1644,6 +1644,8 @@ Double_t TF1::GetMaximum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t m
    //  the fNpx to a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
    //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) and absolute (if |x| < 1     //  and maxiter (default = 100) controls the maximum number of iteration of the Brent algorithm
+   //
+   // NOTE: see also TF1::GetMaximumX and TF1::GetX
 
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
@@ -1672,7 +1674,9 @@ Double_t TF1::GetMaximumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
    //  the fNpx to a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
    //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) and absolute (if |x| < 1     //  and maxiter (default = 100) controls the maximum number of iteration of the Brent algorithm
-
+   //
+   // NOTE: see also TF1::GetX
+   
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
    ROOT::Math::BrentMinimizer1D bm;
@@ -1700,6 +1704,8 @@ Double_t TF1::GetMinimum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t m
    //  a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
    //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) and absolute (if |x| < 1     //  and maxiter (default = 100) controls the maximum number of iteration of the Brent algorithm
+   //
+   // NOTE: see also TF1::GetMaximumX and TF1::GetX
 
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
@@ -1728,6 +1734,8 @@ Double_t TF1::GetMinimumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
    //  a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
    //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) and absolute (if |x| < 1     //  and maxiter (default = 100) controls the maximum number of iteration of the Brent algorithm
+   //
+   // NOTE: see also TF1::GetX
 
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
@@ -1747,6 +1755,8 @@ Double_t TF1::GetMinimumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
 Double_t TF1::GetX(Double_t fy, Double_t xmin, Double_t xmax, Double_t epsilon, Int_t maxiter) const
 {
    // Returns the X value corresponding to the function value fy for (xmin<x<xmax).
+   // in other words it can find the roots of the function when fy=0 and successive calls
+   // by changing the next call to [xmin+eps,xmax] where xmin is the previous root.
    // Method:
    //  First, the grid search is used to bracket the maximum
    //  with the step size = (xmax-xmin)/fNpx. This way, the step size
@@ -1755,6 +1765,8 @@ Double_t TF1::GetX(Double_t fy, Double_t xmin, Double_t xmax, Double_t epsilon, 
    //  a small value speeds the algorithm up many times.
    //  Then, Brent's method is applied on the bracketed interval
    //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) and absolute (if |x| < 1     //  and maxiter (default = 100) controls the maximum number of iteration of the Brent algorithm
+   //
+   // NOTE: see also TF1::GetMaximumX, TF1::GetMinimumX
 
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
    
@@ -1880,7 +1892,10 @@ Int_t TF1::GetQuantiles(Int_t nprobSum, Double_t *q, const Double_t *probSum)
    //     f2->GetQuantiles(nprob,gr->GetY());
    //     gr->Draw("alp");
 
-   const Int_t npx     = TMath::Min(250,TMath::Max(50,2*nprobSum));
+   // LM: change to use fNpx 
+   // should we change code to use a root finder ? 
+   // It should be more precise and more efficient
+   const Int_t npx     = TMath::Max(fNpx, 2*nprobSum);
    const Double_t xMin = GetXmin();
    const Double_t xMax = GetXmax();
    const Double_t dx   = (xMax-xMin)/npx;
@@ -1927,9 +1942,10 @@ Int_t TF1::GetQuantiles(Int_t nprobSum, Double_t *q, const Double_t *probSum)
    // is monotone increasing
    for (i = 0; i < nprobSum; i++) {
       const Double_t r = probSum[i];
-      Int_t bin  = TMath::Max(TMath::BinarySearch(npx+1,integral.GetArray(),r)-1,(Long64_t)0);
-      while (bin < npx-1 && integral[bin+1] == r) {
-         if (integral[bin+2] == r) bin++;
+      Int_t bin  = TMath::Max(TMath::BinarySearch(npx+1,integral.GetArray(),r),(Long64_t)0);
+      // LM use a tolerance 1.E-12 (integral precision)
+      while (bin < npx-1 && TMath::AreEqualRel(integral[bin+1], r, 1E-12) ) {
+         if (TMath::AreEqualRel(integral[bin+2], r, 1E-12) ) bin++;
          else break;
       }
 
@@ -2012,6 +2028,7 @@ Double_t TF1::GetRandom()
          Warning("GetRandom","function:%s has %d negative values: abs assumed",GetName(),intNegative);
       }
       if (fIntegral[fNpx] == 0) {
+         delete [] xx;
          Error("GetRandom","Integral of function is zero");
          return 0;
       }
@@ -2544,39 +2561,43 @@ Double_t TF1::Integral(Double_t, Double_t, Double_t, Double_t, Double_t, Double_
 }
 
 //______________________________________________________________________________
-Double_t TF1::IntegralError(Double_t a, Double_t b, Double_t epsilon)
+Double_t TF1::IntegralError(Double_t a, Double_t b, const Double_t * params, const Double_t * covmat, Double_t epsilon )
 {
    // Return Error on Integral of a parameteric function between a and b 
-   // due to the parameters uncertainties.
-   // It is assumed the parameters are estimated from a fit and the covariance
-   // matrix resulting from the fit is used in estimating this error.
-   //
-   // IMPORTANT NOTE: The calculation is valid assuming the parameters 
-   // are resulting from the latest fit. If in the meantime a fit is done 
+   // due to the parameter uncertainties.
+   // A pointer to a vector of parameter values and to the elements of the covariance matrix (covmat) can be optionally passed.
+   // By default (i.e. when a zero pointer is passed) the current stored parameter values are used to estimate the integral error 
+   // together with the covariance matrix from the last fit (retrieved from the global fitter instance) 
+   // IMPORTANT NOTE: When no covariance matrix is passed and in the meantime a fit is done 
    // using another function, the routine will signal an error and return zero.
+   // 
+   // To get the matrix and values from an old fit do for example:  
+   // TFitResultPtr r = histo->Fit(func, "S");
+   // ..... after performing other fits on the same function do 
+   // func->IntegralError(x1,x2,r->GetParams(), r->GetCovarianceMatrix()->GetMatrixArray() );
 
    Double_t x1[1]; 
    Double_t x2[1]; 
    x1[0] = a, x2[0] = b;
-   return ROOT::TF1Helper::IntegralError(this,1,x1,x2,epsilon);
+   return ROOT::TF1Helper::IntegralError(this,1,x1,x2,params,covmat,epsilon);
 }
 
 //______________________________________________________________________________
-Double_t TF1::IntegralError(Int_t n, const Double_t * a, const Double_t * b, Double_t epsilon)
+Double_t TF1::IntegralError(Int_t n, const Double_t * a, const Double_t * b, const Double_t * params, const  Double_t * covmat, Double_t epsilon )
 {
    // Return Error on Integral of a parameteric function with dimension larger tan one 
    // between a[] and b[]  due to the parameters uncertainties.
-   // It is assumed the parameters are estimated from a fit and the covariance
-   // matrix resulting from the fit is used in estimating this error.
    // For a TF1 with dimension larger than 1 (for example a TF2 or TF3) 
    // TF1::IntegralMultiple is used for the integral calculation
    //
-   //
-   // IMPORTANT NOTE: The calculation is valid assuming the parameters 
-   // are resulting from the latest fit. If in the meantime a fit is done 
+   // A pointer to a vector of parameter values and to the elements of the covariance matrix (covmat) can be optionally passed.
+   // By default (i.e. when a zero pointer is passed) the current stored parameter values are used to estimate the integral error 
+   // together with the covariance matrix from the last fit (retrieved from the global fitter instance) 
+   // IMPORTANT NOTE: When no covariance matrix is passed and in the meantime a fit is done 
    // using another function, the routine will signal an error and return zero.
+   //
 
-   return ROOT::TF1Helper::IntegralError(this,n,a,b,epsilon);
+   return ROOT::TF1Helper::IntegralError(this,n,a,b,params,covmat,epsilon);
 }
 
 #ifdef INTHEFUTURE

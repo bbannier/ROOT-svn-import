@@ -57,9 +57,15 @@ TCondor::TCondor(const char *pool) : fPool(pool), fState(kFree)
       gSystem->Setenv("CONDOR_CONFIG",condorConf);
    }
 
-   const char *loc = gSystem->Which(gSystem->Getenv("PATH"), "condor_cod",
-                                    kExecutePermission);
-   fValid = (loc != 0);
+   char *loc = gSystem->Which(gSystem->Getenv("PATH"), "condor_cod",
+                                                kExecutePermission);
+
+   if (loc) {
+      fValid = kTRUE;
+      delete [] loc;
+   } else {
+      fValid = kFALSE;
+   }
 }
 
 
@@ -280,8 +286,8 @@ Bool_t TCondor::SetState(EState state)
 {
    // Set the state of workers
 
-   PDB(kCondor,1) Info("SetState","state: %s (%ld)",
-                       state == kSuspended ? "kSuspended" : "kActive", long(gSystem->Now()));
+   PDB(kCondor,1) Info("SetState","state: %s (%lld)",
+                       state == kSuspended ? "kSuspended" : "kActive", Long64_t(gSystem->Now()));
    TIter next(fClaims);
    TCondorSlave *claim;
    while((claim = (TCondorSlave*) next()) != 0) {

@@ -93,6 +93,7 @@ void     tlatex3        ();
 void     tlatex4        ();
 void     tlatex5        ();
 void     kerning        ();
+void     itbf           ();
 void     transpad       ();
 void     statfitparam   ();
 void     tgaxis1        ();
@@ -284,6 +285,7 @@ void stressGraphics(Int_t verbose = 0)
    tlatex4      ();
    tlatex5      ();
    kerning      ();
+   itbf         ();
    transpad     ();
    statfitparam ();
    if (!gOptionR) {
@@ -1115,6 +1117,27 @@ void kerning()
 
 
 //______________________________________________________________________________
+void itbf()
+{
+   // TLatex commands #kern, #lower, #it and #bf
+
+   TCanvas *C = StartTest(700, 500);
+
+   gStyle->SetTextFont(132);
+
+   (new TLatex(0.01, 0.9, "Positive k#kern[0.3]{e}#kern[0.3]{r}#kern[0.3]{n}#kern[0.3]{i}#kern[0.3]{n}#kern[0.3]{g} with #^{}kern[0.3]"))->Draw();
+   (new TLatex(0.01, 0.7, "Negative k#kern[-0.3]{e}#kern[-0.3]{r}#kern[-0.3]{n}#kern[-0.3]{i}#kern[-0.3]{n}#kern[-0.3]{g} with #^{}kern[-0.3]"))->Draw();
+   (new TLatex(0.01, 0.5, "Vertical a#lower[0.2]{d}#lower[0.4]{j}#lower[0.1]{u}#lower[-0.1]{s}#lower[-0.3]{t}#lower[-0.4]{m}#lower[-0.2]{e}#lower[0.1]{n}t with #^{}lower[-0.4...+0.4]"))->Draw();
+   (new TLatex(0.01, 0.3, "Font styles: #^{}bf{#bf{bold}}, #^{}it{#it{italic}}, #^{}bf{#^{}it{#bf{#it{bold italic}}}}, #^{}bf{#^{}bf{#bf{#bf{unbold}}}}"))->Draw();
+   (new TLatex(0.01, 0.1, "Font styles: abc#alpha#beta#gamma, #^{}it{#it{abc#alpha#beta#gamma}}, #^{}it{#^{}it{#it{#it{abc#alpha#beta#gamma}}}}"))->Draw();
+
+   TestReport1(C, "TLatex commands #kern, #lower, #it and #bf");
+   DoCcode(C);
+   TestReport2();
+}
+
+
+//______________________________________________________________________________
 void transpad()
 {
    // Transparent pad.
@@ -1154,7 +1177,7 @@ void transpad()
    pad2->Draw();
    pad2->cd();
    ht2->SetLineColor(kRed);
-   ht2->Draw("sames");
+   ht2->Draw("][sames");
    pad2->Update();
    TPaveStats *ps2 = (TPaveStats*)ht2->GetListOfFunctions()->FindObject("stats");
    ps2->SetX1NDC(0.65); ps2->SetX2NDC(0.85);

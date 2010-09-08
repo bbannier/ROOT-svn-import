@@ -120,8 +120,7 @@ void TObjectTable::Print(Option_t *option) const
    if (opt.Contains("all")) {
       TObject *obj;
       int i, num = 0;
-      Printf("");
-      Printf("List of all objects");
+      Printf("\nList of all objects");
       Printf("object   address            class                    name");
       Printf("================================================================================");
       for (i = 0; i < fSize; i++) {
@@ -131,8 +130,7 @@ void TObjectTable::Print(Option_t *option) const
          printf("%-8d 0x%-16lx %-24s %s\n", num, (Long_t)obj, obj->ClassName(),
                 obj->GetName());
       }
-      Printf("================================================================================");
-      Printf("");
+      Printf("================================================================================\n");
    }
 
    //print the number of instances per class
@@ -216,10 +214,10 @@ void TObjectTable::Remove(TObject *op)
 
    Int_t i = FindElement(op);
    if (fTable[i] == 0) {
-      Warning("Remove", "0x%08x not found at %d", (long)op, i);
+      Warning("Remove", "0x%lx not found at %d", (long)op, i);
       for (int j = 0; j < fSize; j++) {
          if (fTable[j] == op) {
-            Error("Remove", "%d found at %d !!!", (long)op, j);
+            Error("Remove", "0x%lx found at %d !!!", (long)op, j);
             i = j;
          }
       }
@@ -343,8 +341,7 @@ void TObjectTable::InstanceStatistics() const
 
    UpdateInstCount();
 
-   Printf("");
-   Printf("Object statistics");
+   Printf("\nObject statistics");
    Printf("class                         cnt    on heap     size    total size    heap size");
    Printf("================================================================================");
    TIter next(gROOT->GetListOfClasses());
@@ -364,8 +361,7 @@ void TObjectTable::InstanceStatistics() const
    }
    Printf("--------------------------------------------------------------------------------");
    Printf("Total:                   %8d%11d%9d%14d%13d", ncum, hcum, scum, tcum, thcum);
-   Printf("================================================================================");
-   Printf("");
+   Printf("================================================================================\n");
 }
 
 //______________________________________________________________________________
@@ -385,7 +381,7 @@ void TObjectTable::UpdateInstCount() const
          if (op->TestBit(TObject::kNotDeleted))
             op->IsA()->AddInstance(op->IsOnHeap());
          else
-            Error("UpdateInstCount", "oops 0x%08x\n", op);
+            Error("UpdateInstCount", "oops 0x%lx\n", (Long_t)op);
       }
 }
 
@@ -397,7 +393,7 @@ void *TObjectTable::CheckPtrAndWarn(const char *msg, void *vp)
 
    if (fTable && vp && fTable[FindElement((TObject*)vp)]) {
       Remove((TObject*)vp);
-      Warning("CheckPtrAndWarn", "%s (0x%08x)\n", msg, vp);
+      Warning("CheckPtrAndWarn", "%s (0x%lx)\n", msg, (Long_t)vp);
    }
    return vp;
 }

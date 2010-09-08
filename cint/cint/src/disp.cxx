@@ -1250,7 +1250,9 @@ int G__display_eachtemplatefunc(FILE *fout, G__Definetemplatefunc *deftmpfunc)
     if(G__more(fout,msg)) return(1);
     switch(def_para->type) {
     case G__TMPLT_POINTERARG3: fprintf(fout,"*"); G__more_col(1);
+    // Fallthrough
     case G__TMPLT_POINTERARG2: fprintf(fout,"*"); G__more_col(1);
+    // Fallthrough
     case G__TMPLT_POINTERARG1: fprintf(fout,"*"); G__more_col(1);
     }
     def_para=def_para->next;
@@ -1378,7 +1380,7 @@ int G__display_macro(FILE *fout,const char *name)
   struct G__var_array *var = &G__global;
   int ig15;
   G__FastAllocString msg(G__LONGLINE);
-  while(name[i]&&isspace(name[i])) i++;
+  while(name&&name[i]&&isspace(name[i])) i++;
 
   while(var) {
     for(ig15=0;ig15<var->allvar;ig15++) {
@@ -1484,7 +1486,7 @@ int G__display_files(FILE *fout)
 *  print source file
 *
 ********************************************************************/
-int G__pr(FILE *fout,G__input_file view)
+int G__pr(FILE *fout,const G__input_file &view)
 {
   int center,thisline,filenum;
   G__FastAllocString G__oneline(G__LONGLINE*2);
@@ -2397,16 +2399,46 @@ int G__system(char *com)
 
 }
 
+static void G__PrintLastErrorMsg(const char* text) {
+  char* lpMsgBuf;
+  DWORD dw = GetLastError(); 
+
+  ::FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+                  FORMAT_MESSAGE_FROM_SYSTEM |
+                  FORMAT_MESSAGE_IGNORE_INSERTS,
+                  NULL,
+                  dw,
+                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                  (char*)&lpMsgBuf,
+                  0, NULL );
+
+  G__fprinterr(G__serr,"%s\n%s (error code %d)\n", text, lpMsgBuf, dw);
+  LocalFree(lpMsgBuf);
+}
+
 /**************************************************************************
 * G__tmpfile()
 **************************************************************************/
 const char* G__tmpfilenam() {
    G__FastAllocString dirname(MAX_PATH);
    static char filename[MAX_PATH];
-   if (!::GetTempPath(MAX_PATH, dirname)) return 0;
-   if (!::GetTempFileName(dirname, "cint_", 0, filename)) return 0;
+   
+   if (!::GetTempPath(MAX_PATH, dirname)) {
+      G__PrintLastErrorMsg("G__tmpfilenam: failed to determine temp directory!\n");
+      return 0;
+   }
+   int trynumber = 0;
+   while (trynumber < 50 && !::GetTempFileName(dirname, "cint_", 0, filename)) {
+      if (++trynumber < 50)
+         Sleep(200);
+   }
+   if (trynumber >= 50) {
+      G__PrintLastErrorMsg("G__tmpfilenam: failed to create temporary file!\n");
+      return 0;
+   }
    return filename;
 }
+
 FILE* G__tmpfile() {
    return fopen(G__tmpfilenam(), "w+bTD"); // write and read (but write first), binary, temp, and delete when closed
 }

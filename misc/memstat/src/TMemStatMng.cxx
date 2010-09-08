@@ -20,10 +20,10 @@
 #include "TTree.h"
 #include "TArrayL64.h"
 #include "TH1.h"
+#include "TMD5.h"
 // Memstat
 #include "TMemStatBacktrace.h"
 #include "TMemStatMng.h"
-#include "TMemStatChecksum.h"
 
 using namespace memstat;
 
@@ -36,20 +36,21 @@ TMemStatMng* TMemStatMng::fgInstance = NULL;
 //****************************************************************************//
 
 TMemStatMng::TMemStatMng():
-      TObject(),
+   TObject(),
 #if !defined(__APPLE__)
-      fPreviousMallocHook(TMemStatHook::GetMallocHook()),
-      fPreviousFreeHook(TMemStatHook::GetFreeHook()),
+   fPreviousMallocHook(TMemStatHook::GetMallocHook()),
+   fPreviousFreeHook(TMemStatHook::GetFreeHook()),
 #endif
-      fDumpTree(NULL),
-      fUseGNUBuiltinBacktrace(kFALSE),
-      fBeginTime(0),
-      fPos(0),
-      fTimems(0),
-      fNBytes(0),
-      fN(0),
-      fBtID(0),
-      fBTCount(0)
+   fDumpTree(NULL),
+   fUseGNUBuiltinBacktrace(kFALSE),
+   fBeginTime(0),
+   fPos(0),
+   fTimems(0),
+   fNBytes(0),
+   fN(0),
+   fBtID(0),
+   fBTCount(0),
+   fSysInfo(NULL)
 {
    // Default constructor
 }
@@ -61,10 +62,9 @@ void TMemStatMng::Init()
 
    fBeginTime = fTimeStamp.AsDouble();
 
-   //fDumpFile = new TFile(Form("yams_%d.root", gSystem->GetPid()), "recreate");
-   fDumpFile = new TFile(g_cszFileName, "recreate");
+   fDumpFile = new TFile(Form("memstat_%d.root", gSystem->GetPid()), "recreate");
    Int_t opt = 200000;
-   if (!fDumpTree) {
+   if(!fDumpTree) {
       fDumpTree = new TTree("T", "Memory Statistics");
       fDumpTree->Branch("pos",   &fPos,   "pos/l", opt);
       fDumpTree->Branch("time",  &fTimems, "time/I", opt);
@@ -78,10 +78,25 @@ void TMemStatMng::Init()
 
    fFAddrsList = new TObjArray();
    fFAddrsList->SetOwner(kTRUE);
+   fFAddrsList->SetName("FAddrsList");
 
    fHbtids  = new TH1I("btids", "table of btids", 10000, 0, 1);   //where fHbtids is a member of the manager class
    fHbtids->SetDirectory(0);
+   // save the histogram and the TObjArray to the tree header
    fDumpTree->GetUserInfo()->Add(fHbtids);
+   fDumpTree->GetUserInfo()->Add(fFAddrsList);
+   // save the system info to a tree header
+   string sSysInfo(gSystem->GetBuildNode());
+   sSysInfo += " | ";
+   sSysInfo += gSystem->GetBuildCompilerVersion();
+   sSysInfo += " | ";
+   sSysInfo += gSystem->GetFlagsDebug();
+   sSysInfo += " ";
+   sSysInfo += gSystem->GetFlagsOpt();
+   fSysInfo = new TNamed("SysInfo", sSysInfo.c_str());
+
+   fDumpTree->GetUserInfo()->Add(fSysInfo);
+   fDumpTree->SetAutoSave(10000000);
 }
 
 //______________________________________________________________________________
@@ -90,7 +105,7 @@ TMemStatMng* TMemStatMng::GetInstance()
    // GetInstance - a static function
    // Initialize a singleton of MemStat manager
 
-   if (!fgInstance) {
+   if(!fgInstance) {
       fgInstance = new TMemStatMng;
       fgInstance->Init();
    }
@@ -105,12 +120,15 @@ void TMemStatMng::Close()
    // flashes all the buffered data and closes the output tree.
 
    // TODO: This is a temporary solution until we find a properalgorithm for SaveData
-   fgInstance->fDumpFile->WriteObject(fgInstance->fFAddrsList, "FAddrsList");
+   //fgInstance->fDumpFile->WriteObject(fgInstance->fFAddrsList, "FAddrsList");
 
    // to be documented
+   printf("TMemStatMng::Close called\n");
    fgInstance->fDumpTree->AutoSave();
+   fgInstance->fDumpTree->GetUserInfo()->Delete();
 
-   delete fgInstance->fFAddrsList;
+   //delete fgInstance->fFAddrsList;
+   //delete fgInstance->fSysInfo;
 
    delete fgInstance;
    fgInstance = NULL;
@@ -121,11 +139,11 @@ TMemStatMng::~TMemStatMng()
 {
    // if an instance is destructed - the hooks are reseted to old hooks
 
-   if (this != TMemStatMng::GetInstance())
+   if(this != TMemStatMng::GetInstance())
       return;
 
-   cout << ">>> All free/malloc calls count: " << fBTIDCount << endl;
-   cout << ">>> Unique BTIDs count: " << fBTChecksums.size() << endl;
+   Info("~TMemStatMng", ">>> All free/malloc calls count: %d", fBTIDCount);
+   Info("~TMemStatMng", ">>> Unique BTIDs count: %zu", fBTChecksums.size());
 
    Disable();
 }
@@ -135,7 +153,7 @@ void TMemStatMng::Enable()
 {
    // Enable memory hooks
 
-   if (this != GetInstance())
+   if(this != GetInstance())
       return;
 #if defined(__APPLE__)
    TMemStatHook::trackZoneMalloc(MacAllocHook, MacFreeHook);
@@ -151,7 +169,7 @@ void TMemStatMng::Disable()
 {
    // Disble memory hooks
 
-   if (this != GetInstance())
+   if(this != GetInstance())
       return;
 #if defined(__APPLE__)
    TMemStatHook::untrackZoneMalloc();
@@ -251,19 +269,22 @@ void TMemStatMng::AddPointer(void *ptr, Int_t size)
    const int stackentries = getBacktrace(stptr, g_BTStackLevel, fUseGNUBuiltinBacktrace);
 
    // save only unique BTs
-   const unsigned long crc = CCRC::CalculateDigest(reinterpret_cast<void*>(stptr), sizeof(void*) * stackentries);
+   TMD5 md5;
+   md5.Update(reinterpret_cast<UChar_t*>(stptr), sizeof(void*) * stackentries);
+   md5.Final();
+   string crc_digest(md5.AsString());
 
+   // for Debug. A counter of all (de)allacations.
    ++fBTIDCount;
 
-   CRCSet_t::const_iterator found = fBTChecksums.find(crc);
+   CRCSet_t::const_iterator found = fBTChecksums.find(crc_digest);
    // TODO: define a proper default value
    Int_t btid = -1;
-   if (fBTChecksums.end() == found) {
-
+   if(fBTChecksums.end() == found) {
       // check the size of the BT array container
-      int nbins = fHbtids->GetNbinsX();
+      const int nbins = fHbtids->GetNbinsX();
       //check that the current allocation in fHbtids is enough, otherwise expend it with
-      if (fBTCount + stackentries + 1 >= nbins) {
+      if(fBTCount + stackentries + 1 >= nbins) {
          fHbtids->SetBins(nbins * 2, 0, 1);
       }
 
@@ -271,52 +292,55 @@ void TMemStatMng::AddPointer(void *ptr, Int_t size)
       // A first value is a number of entries in a given stack
       btids[fBTCount++] = stackentries;
       btid = fBTCount;
+      if(stackentries <= 0) {
+         Warning("AddPointer",
+                 "A number of stack entries is equal or less than zero. For btid %d", btid);
+      }
 
       // add new BT's CRC value
-      pair<CRCSet_t::iterator, bool> res = fBTChecksums.insert(CRCSet_t::value_type(crc, btid));
-      if (!res.second)
-         Error("AddPointer", "Can't added new BTID to the container.");
+      pair<CRCSet_t::iterator, bool> res = fBTChecksums.insert(CRCSet_t::value_type(crc_digest, btid));
+      if(!res.second)
+         Error("AddPointer", "Can't added a new BTID to the container.");
 
-      for (int i = 0; i < stackentries; ++i) {
-         pointer_t func_addr = reinterpret_cast<pointer_t>(stptr[i]);
-
-
-         // save all functions of this BT
-         if (fFAddrs.find(func_addr) < 0) {
+      // save all symbols of this BT
+      for(int i = 0; i < stackentries; ++i) {
+         ULong_t func_addr = (ULong_t)(stptr[i]);
+         Int_t idx = fFAddrs.find(func_addr);
+         // check, whether it's a new symbol
+         if(idx < 0) {
             TString strFuncAddr;
             strFuncAddr += func_addr;
             TString strSymbolInfo;
             getSymbolFullInfo(stptr[i], &strSymbolInfo);
+
             TNamed *nm = new TNamed(strFuncAddr, strSymbolInfo);
             fFAddrsList->Add(nm);
-            fFAddrs.add(func_addr, fFAddrsList->GetSize() - 1);
+            idx = fFAddrsList->GetEntriesFast() - 1;
+            // TODO: more detailed error message...
+            if(!fFAddrs.add(func_addr, idx))
+               Error("AddPointer", "Can't add a function return address to the container");
          }
 
-         // add BT to the container
-         Int_t idx = fFAddrs.find(reinterpret_cast<pointer_t>(stptr[i]));
-         //TODO: in the error code prtint the address.
-         // Acutally there must not be a case, when we can't find an index
-         if (idx < 0)
-            Error("AddPointer", "There is no index for a given BT function return address.");
          // even if we have -1 as an index we add it to the container
          btids[fBTCount++] = idx;
       }
 
    } else {
-      // reuse existing BT
+      // reuse an existing BT
       btid = found->second;
    }
 
-   if (btid < 0)
-      Error("AddPointer", "negative BT id");
+   if(btid <= 0)
+      Error("AddPointer", "bad BT id");
 
    fTimeStamp.Set();
    Double_t CurTime = fTimeStamp.AsDouble();
    fTimems = Int_t(10000.*(CurTime - fBeginTime));
-   fPos    =  reinterpret_cast<pointer_t>(ptr);
+   ULong_t ul = (ULong_t)(ptr);
+   fPos    = (ULong64_t)(ul);
    fNBytes = size;
    fN      = 0;
    fBtID   = btid;
    fDumpTree->Fill();
-   //SaveToTree();
 }
+

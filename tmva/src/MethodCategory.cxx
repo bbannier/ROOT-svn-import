@@ -68,8 +68,9 @@ TMVA::MethodCategory::MethodCategory( const TString& jobName,
                                       DataSetInfo& theData,
                                       const TString& theOption,
                                       TDirectory* theTargetDir )
-   :  TMVA::MethodCompositeBase( jobName, Types::kCategory, methodTitle, theData, theOption, theTargetDir ),
-   fCatTree(0)
+ : TMVA::MethodCompositeBase( jobName, Types::kCategory, methodTitle, theData, theOption, theTargetDir ),
+   fCatTree(0),
+   fDataSetManager(NULL)
 {
    // standard constructor
 }
@@ -79,7 +80,8 @@ TMVA::MethodCategory::MethodCategory( DataSetInfo& dsi,
                                       const TString& theWeightFile,
                                       TDirectory* theTargetDir )
    : TMVA::MethodCompositeBase( Types::kCategory, dsi, theWeightFile, theTargetDir ),
-   fCatTree(0)
+     fCatTree(0),
+     fDataSetManager(NULL)
 {
    // constructor from weight file
 }
@@ -163,7 +165,7 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
    UInt_t newSpectatorIndex = primaryDSI.GetSpectatorInfos().size();
    fCategorySpecIdx.push_back(newSpectatorIndex);
    
-   primaryDSI.AddSpectator( Form("%s_cat%i:=%s", GetName(),fMethods.size(),theCut.GetTitle()),
+   primaryDSI.AddSpectator( Form("%s_cat%i:=%s", GetName(),(int)fMethods.size(),theCut.GetTitle()),
                             Form("%s:%s",GetName(),method->GetName()),
                             "pass", 0, 0, 'C' );
 
@@ -183,7 +185,8 @@ TMVA::DataSetInfo& TMVA::MethodCategory::CreateCategoryDSI(const TCut& theCut,
    DataSetInfo* dsi = new DataSetInfo(dsiName);
 
    // register the new dsi
-   DataSetManager::Instance().AddDataSetInfo(*dsi);
+//   DataSetManager::Instance().AddDataSetInfo(*dsi); // DSMTEST replaced by following line
+   fDataSetManager->AddDataSetInfo(*dsi);
 
    // copy the targets and spectators from the old dsi to the new dsi
    std::vector<VariableInfo>::iterator itrVarInfo;
@@ -431,7 +434,7 @@ void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode )
    TString theVariables;
    Int_t titleLength;
    gTools().ReadAttr( wghtnode, "NSubMethods",  nSubMethods );
-   void* subMethodNode = gTools().xmlengine().GetChild(wghtnode);
+   void* subMethodNode = gTools().GetChild(wghtnode);
 
    Log() << kINFO << "Recreating sub-classifiers from XML-file " << Endl;
 
@@ -471,7 +474,7 @@ void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode )
       // find the spectator index
       std::vector<VariableInfo>& spectators=primaryDSI.GetSpectatorInfos();
       std::vector<VariableInfo>::iterator itrVarInfo;
-      TString specName= Form("%s_cat%i", GetName(),fCategorySpecIdx.size()+1);
+      TString specName= Form("%s_cat%i", GetName(),(int)fCategorySpecIdx.size()+1);
 
       for (itrVarInfo = spectators.begin(); itrVarInfo != spectators.end(); ++itrVarInfo, ++counter) {
          if((specName==itrVarInfo->GetLabel()) || (specName==itrVarInfo->GetExpression())) {
@@ -481,7 +484,7 @@ void TMVA::MethodCategory::ReadWeightsFromXML( void* wghtnode )
          }
       }
 
-      subMethodNode = gTools().xmlengine().GetNext(subMethodNode);
+      subMethodNode = gTools().GetNextChild(subMethodNode);
    }
 
    InitCircularTree(DataInfo());

@@ -36,10 +36,11 @@ TBranchSTL::TBranchSTL():
    fID( -2 )
 {
    // Default constructor.
-   
+
    fIndArrayCl = TClass::GetClass( "TIndArray" );
    fBranchVector.reserve( 25 );
    fNleaves = 0;
+   fReadLeaves = (ReadLeaves_t)&TBranchSTL::ReadLeavesImpl;
 }
 
 //------------------------------------------------------------------------------
@@ -66,19 +67,20 @@ TBranchSTL::TBranchSTL( TTree *tree, const char *name,
    fIndArrayCl = TClass::GetClass( "TIndArray" );
    fBranchVector.reserve( 25 );
    fNleaves = 0;
+   fReadLeaves = (ReadLeaves_t)&TBranchSTL::ReadLeavesImpl;
 
    //---------------------------------------------------------------------------
    // Allocate and initialize the basket control arrays
    //---------------------------------------------------------------------------
    fBasketBytes = new Int_t[fMaxBaskets];
    fBasketEntry = new Long64_t[fMaxBaskets];
-   fBasketSeek = new Long64_t[fMaxBaskets]; 
+   fBasketSeek = new Long64_t[fMaxBaskets];
 
    for (Int_t i = 0; i < fMaxBaskets; ++i) {
       fBasketBytes[i] = 0;
       fBasketEntry[i] = 0;
       fBasketSeek[i] = 0;
-   } 
+   }
 
 }
 
@@ -105,6 +107,7 @@ TBranchSTL::TBranchSTL( TBranch* parent, const char* name,
    fDirectory = fTree->GetDirectory();
    fFileName = "";
    fNleaves = 0;
+   fReadLeaves = (ReadLeaves_t)&TBranchSTL::ReadLeavesImpl;
 
    SetName( name );
    fIndArrayCl = TClass::GetClass( "TIndArray" );
@@ -115,13 +118,13 @@ TBranchSTL::TBranchSTL( TBranch* parent, const char* name,
    //---------------------------------------------------------------------------
    fBasketBytes = new Int_t[fMaxBaskets];
    fBasketEntry = new Long64_t[fMaxBaskets];
-   fBasketSeek = new Long64_t[fMaxBaskets]; 
+   fBasketSeek = new Long64_t[fMaxBaskets];
 
    for (Int_t i = 0; i < fMaxBaskets; ++i) {
       fBasketBytes[i] = 0;
       fBasketEntry[i] = 0;
       fBasketSeek[i] = 0;
-   } 
+   }
 
 }
 
@@ -179,7 +182,7 @@ Int_t TBranchSTL::Fill()
          bytes = TBranch::Fill();
 
          if( bytes < 0 ) {
-            Error( "Fill", "The IO error while writing the indices!");      
+            Error( "Fill", "The IO error while writing the indices!");
             return -1;
          }
          totalBytes += bytes;
@@ -197,7 +200,7 @@ Int_t TBranchSTL::Fill()
             totalBytes += bytes;
          }
          return totalBytes;
-      } 
+      }
    }
 
    //---------------------------------------------------------------------------
@@ -213,7 +216,7 @@ Int_t TBranchSTL::Fill()
       fInd.Reserve( size );
 
    fInd.SetNumItems( size );
-  
+
    //---------------------------------------------------------------------------
    // Loop over the elements and create branches as needed
    //---------------------------------------------------------------------------
@@ -304,7 +307,7 @@ Int_t TBranchSTL::Fill()
    //----------------------------------------------------------------------------
    bytes = TBranch::Fill();
    if( bytes < 0 ) {
-      Error( "Fill", "The IO error while writing the indices!");      
+      Error( "Fill", "The IO error while writing the indices!");
       return -1;
    }
    totalBytes += bytes;
@@ -402,11 +405,11 @@ Int_t TBranchSTL::GetEntry( Long64_t entry, Int_t getall )
    void**              element    = 0;
    std::vector<void*>* elemVect   = 0;
    TBranchElement*     elemBranch = 0;
-  
+
    for( Int_t i = 0; i < size; ++i ) {
       element = (void**)fCollProxy->At(i);
       index   = fInd.At(i);
-    
+
       //------------------------------------------------------------------------
       // The case of zero pointers
       //------------------------------------------------------------------------
@@ -435,7 +438,7 @@ Int_t TBranchSTL::GetEntry( Long64_t entry, Int_t getall )
          elemBranch->SetAddress( &(fBranchVector[index].fPointers) );
 
          bytes = elemBranch->GetEntry( entry, getall );
-      
+
          if( bytes == 0 ) {
             Error( "GetEntry", "No entry for index %d, setting pointer to 0", index );
             *element = 0;
@@ -504,12 +507,12 @@ TStreamerInfo* TBranchSTL::GetInfo() const
       // Get the class info
       //------------------------------------------------------------------------
       TClass *cl = TClass::GetClass( fClassName );
-      
+
       //------------------------------------------------------------------------
       // Get unoptimized streamer info
       //------------------------------------------------------------------------
       fInfo = (TStreamerInfo*)cl->GetStreamerInfo( fClassVersion );
-      
+
       //------------------------------------------------------------------------
       // If the checksum is there and we're dealing with the foreign class
       //------------------------------------------------------------------------
@@ -522,7 +525,7 @@ TStreamerInfo* TBranchSTL::GetInfo() const
             TVirtualStreamerInfo* info = (TVirtualStreamerInfo*) cl->GetStreamerInfos()->UncheckedAt(i);
             if( !info )
                continue;
-            
+
             //------------------------------------------------------------------
             // If the checksum matches then retriev the info
             //------------------------------------------------------------------
@@ -542,7 +545,7 @@ TStreamerInfo* TBranchSTL::GetInfo() const
 Bool_t TBranchSTL::IsFolder() const
 {
    //branch declared folder if at least one entry
-   
+
    if( fBranches.GetEntriesFast() >= 1 )
       return kTRUE;
    return kFALSE;
@@ -552,7 +555,7 @@ Bool_t TBranchSTL::IsFolder() const
 void TBranchSTL::FillLeaves( TBuffer& b )
 {
    //TO BE DOCUMENTED
-   
+
    b.WriteClassBuffer( fIndArrayCl, &fInd );
 }
 
@@ -560,7 +563,7 @@ void TBranchSTL::FillLeaves( TBuffer& b )
 void TBranchSTL::Print(const char *option) const
 {
    // Print the branch parameters.
-   
+
    if (strncmp(option,"debugAddress",strlen("debugAddress"))==0) {
       if (strlen(GetName())>24) Printf("%-24s\n%-24s ", GetName(),"");
       else Printf("%-24s ", GetName());
@@ -569,8 +572,8 @@ void TBranchSTL::Print(const char *option) const
       Int_t ind = parent ? parent->GetListOfBranches()->IndexOf(this) : -1;
       TVirtualStreamerInfo *info = GetInfo();
       Int_t *branchOffset = parent ? parent->GetBranchOffset() : 0;
-      
-      Printf("%-16s %2d SplitCollPtr %-16s %-16s %8x %8x n/a\n",
+
+      Printf("%-16s %2d SplitCollPtr %-16s %-16s %8x %-16s n/a\n",
              info ? info->GetName() : "StreamerInfo unvailable", fID,
              GetClassName(), fParent ? fParent->GetName() : "n/a",
              (branchOffset && parent && ind>=0) ? branchOffset[ind] : 0,
@@ -600,10 +603,10 @@ void TBranchSTL::Print(const char *option) const
 }
 
 //------------------------------------------------------------------------------
-void TBranchSTL::ReadLeaves( TBuffer& b )
+void TBranchSTL::ReadLeavesImpl( TBuffer& b )
 {
    //TO BE DOCUMENTED
-   
+
    b.ReadClassBuffer( fIndArrayCl, &fInd );
 }
 

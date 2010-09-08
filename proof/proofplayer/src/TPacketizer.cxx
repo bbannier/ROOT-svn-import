@@ -372,8 +372,13 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
          slave->GetPerfIdx() : fMaxPerfIdx;
    }
 
-   Reset();                // setup file & filenode structure
-   ValidateFiles(dset, slaves);
+   // Setup file & filenode structure
+   Reset();
+   // Optimize the number of files to be open when running on subsample
+   Int_t validateMode = 0;
+   TProof::GetParameter(input, "PROOF_ValidateByFile", validateMode);
+   Bool_t byfile = (validateMode > 0 && num > -1) ? kTRUE : kFALSE;
+   ValidateFiles(dset, slaves, num, byfile);
 
    if (!fValid) return;
 
@@ -425,7 +430,8 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
          // If this element contains the end of the global range
          // adjust its number of entries
          if (num != -1 && (first+num < cur+eNum)) {
-            e->SetNum( first + num - cur );
+            e->SetNum(first + num - cur);
+            eNum = e->GetNum();
             PDB(kPacketizer,2)
                Info("TPacketizer","Processing element: Adjust end %lld", first + num - cur);
          }
@@ -433,8 +439,9 @@ TPacketizer::TPacketizer(TDSet *dset, TList *slaves, Long64_t first,
          // If this element contains the start of the global range
          // adjust its start and number of entries
          if (cur < first) {
-            e->SetFirst( eFirst + (first - cur) );
-            e->SetNum( e->GetNum() - (first - cur) );
+            e->SetFirst(eFirst + (first - cur));
+            e->SetNum(e->GetNum() - (first - cur));
+            eNum = e->GetNum();
             PDB(kPacketizer,2)
                Info("TPacketizer","Processing element: Adjust start %lld and end %lld",
                                   eFirst + (first - cur), first + num - cur);
@@ -586,7 +593,7 @@ TPacketizer::TFileNode *TPacketizer::NextUnAllocNode()
 
    TFileNode *fn = (TFileNode*) fUnAllocated->First();
    if (fn != 0 && fMaxSlaveCnt > 0 && fn->GetSlaveCnt() >= fMaxSlaveCnt) {
-      PDB(kPacketizer,1) Info("NextUnAllocNode","Reached Slaves per Node Limit (%d)",
+      PDB(kPacketizer,1) Info("NextUnAllocNode", "reached workers per node limit (%ld)",
                               fMaxSlaveCnt);
       fn = 0;
    }
@@ -631,7 +638,7 @@ TPacketizer::TFileNode *TPacketizer::NextActiveNode()
 
    TFileNode *fn = (TFileNode*) fActive->First();
    if (fn != 0 && fMaxSlaveCnt > 0 && fn->GetSlaveCnt() >= fMaxSlaveCnt) {
-      PDB(kPacketizer,1) Info("NextActiveNode","Reached Slaves per Node Limit (%d)", fMaxSlaveCnt);
+      PDB(kPacketizer,1) Info("NextActiveNode", "reached workers per node limit (%ld)", fMaxSlaveCnt);
       fn = 0;
    }
 
@@ -687,7 +694,7 @@ void TPacketizer::Reset()
 }
 
 //______________________________________________________________________________
-void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
+void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves, Long64_t maxent, Bool_t byfile)
 {
    // Check existence of file/dir/tree an get number of entries.
    // Assumes the files have been setup.
@@ -726,6 +733,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
    UInt_t tot = dset->GetListOfElements()->GetSize();
    Bool_t st = kTRUE;
 
+   Long64_t totent = 0, nopenf = 0;
    while (kTRUE) {
 
       // send work
@@ -785,8 +793,8 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
                   if (!elem->GetEntryList()) {
                      if (elem->GetFirst() > entries) {
                         Error("ValidateFiles",
-                              "first (%d) higher then number of entries (%d) in %d",
-                              elem->GetFirst(), entries, elem->GetFileName() );
+                              "first (%lld) higher then number of entries (%lld) in %s",
+                              elem->GetFirst(), entries, elem->GetFileName());
                         // disable element
                         slstat->fCurFile->SetDone();
                         elem->Invalidate();
@@ -795,7 +803,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
                      if (elem->GetNum() == -1) {
                         elem->SetNum(entries - elem->GetFirst());
                      } else if (elem->GetFirst() + elem->GetNum() > entries) {
-                        Warning("ValidateFiles", "Num (%lld) + First (%lld) larger then number of"
+                        Warning("ValidateFiles", "num (%lld) + first (%lld) larger then number of"
                                  " keys/entries (%lld) in %s", elem->GetNum(), elem->GetFirst(),
                                  entries, elem->GetFileName());
                         elem->SetNum(entries - elem->GetFirst());
@@ -815,7 +823,30 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
          }
       }
 
-      if ( mon.GetActive() == 0 ) break; // nothing to wait for anymore
+      // Check if there is anything to wait for
+      if (mon.GetActive() == 0) {
+         if (byfile && maxent > 0) {
+            // How many files do we still need ?
+            Long64_t nrestf = (maxent - totent) * nopenf / totent ;
+            if (nrestf <= 0 && maxent > totent) nrestf = 1;
+            if (nrestf > 0) {
+               PDB(kPacketizer,3)
+                  Info("ValidateFiles", "{%lld, %lld, %lld): needs to validate %lld more files",
+                                         maxent, totent, nopenf, nrestf);
+               si.Reset();
+               while ((slm = (TSlave *) si.Next()) && nrestf--) {
+                  workers.Add(slm);
+               }
+               continue;
+            } else {
+               PDB(kPacketizer,3)
+                  Info("ValidateFiles", "no need to validate more files");
+               break;
+            }
+         } else {
+            break;
+         }
+      }
 
       PDB(kPacketizer,3) {
          Info("ValidateFiles", "waiting for %d workers:", mon.GetActive());
@@ -903,8 +934,8 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
          //if (!e->GetEventList()) {
          if (!e->GetEntryList()){
             if ( e->GetFirst() > entries ) {
-               Error("ValidateFiles", "first (%d) higher then number of entries (%lld) in %s",
-                     e->GetFirst(), entries, e->GetFileName() );
+               Error("ValidateFiles", "first (%lld) higher then number of entries (%lld) in %s",
+                                      e->GetFirst(), entries, e->GetFileName());
 
                // Invalidate the element
                slavestat->fCurFile->SetDone();
@@ -916,12 +947,15 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
                e->SetNum( entries - e->GetFirst() );
             } else if ( e->GetFirst() + e->GetNum() > entries ) {
                Error("ValidateFiles",
-                     "Num (%d) + First (%d) larger then number of keys/entries (%lld) in %s",
-                     e->GetNum(), e->GetFirst(), entries, e->GetFileName() );
-               e->SetNum( entries - e->GetFirst() );
+                     "num (%lld) + first (%lld) larger then number of keys/entries (%lld) in %s",
+                     e->GetNum(), e->GetFirst(), entries, e->GetFileName());
+               e->SetNum(entries - e->GetFirst());
             }
          }
 
+         // Count
+         totent += entries;
+         nopenf++;
 
          // Notify the client
          n++;
@@ -944,8 +978,11 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves)
          e->Invalidate();
          dset->SetBit(TDSet::kSomeInvalid);
       }
+      PDB(kPacketizer,3) Info("ValidateFiles", " %lld events validated", totent);
 
-      workers.Add(slave); // Ready for the next job
+      // Ready for the next job, unless we have enough files
+      if (maxent < 0 || ((totent < maxent) && !byfile))
+         workers.Add(slave);
    }
 
    // report std. output from slaves??

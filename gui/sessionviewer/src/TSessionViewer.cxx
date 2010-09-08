@@ -469,7 +469,7 @@ void TSessionServerFrame::OnBtnConnectClicked()
 
    TProofDesc *desc;
    fViewer->GetActDesc()->fProofMgr = TProofMgr::Create(url);
-   if (!fViewer->GetActDesc()->fProofMgr || 
+   if (!fViewer->GetActDesc()->fProofMgr ||
        !fViewer->GetActDesc()->fProofMgr->IsValid()) {
       // hide connection progress bar from status bar
       fViewer->GetStatusBar()->GetBarPart(0)->HideFrame(fViewer->GetConnectProg());
@@ -2639,8 +2639,8 @@ void TSessionQueryFrame::Progress(Long64_t total, Long64_t processed)
                  fViewer->GetActDesc()->fActQuery->fStartTime;
    Float_t eta = 0;
    if (processed)
-      eta = ((Float_t)((Long_t)tdiff)*total/Float_t(processed) -
-            Long_t(tdiff))/1000.;
+      eta = ((Float_t)((Long64_t)tdiff)*total/Float_t(processed) -
+            Long64_t(tdiff))/1000.;
 
    tt = (Long_t)eta;
    if (tt > 0) {
@@ -2656,7 +2656,7 @@ void TSessionQueryFrame::Progress(Long64_t total, Long64_t processed)
       stm.Form("%d sec", ss);
    if (processed == total) {
       // finished
-      tt = (Long_t(tdiff)/1000);
+      tt = (Long_t) Long64_t(tdiff)/1000;
       if (tt > 0) {
          hh = (UInt_t)(tt / 3600);
          mm = (UInt_t)((tt % 3600) / 60);
@@ -2676,9 +2676,9 @@ void TSessionQueryFrame::Progress(Long64_t total, Long64_t processed)
                stm.Data(), processed, total);
       fTotal->SetText(buf.Data());
    }
-   if (processed > 0 && (Long_t)tdiff > 0) {
+   if (processed > 0 && (Long64_t)tdiff > 0) {
       buf.Form(" Processing Rate : %.1f events/sec   ",
-               (Float_t)processed/(Long_t)tdiff*1000.);
+               (Float_t)processed/(Long64_t)tdiff*1000.);
       fRate->SetText(buf);
    }
    fPrevProcessed = processed;
@@ -2783,8 +2783,8 @@ void TSessionQueryFrame::ProgressLocal(Long64_t total, Long64_t processed)
                  fViewer->GetActDesc()->fActQuery->fStartTime;
    Float_t eta = 0;
    if (processed)
-      eta = ((Float_t)((Long_t)tdiff)*total/(Float_t)(processed) -
-            (Long_t)(tdiff))/1000.;
+      eta = ((Float_t)((Long64_t)tdiff)*total/(Float_t)(processed) -
+            (Long64_t)(tdiff))/1000.;
 
    tt = (Long_t)eta;
    if (tt > 0) {
@@ -2804,7 +2804,7 @@ void TSessionQueryFrame::ProgressLocal(Long64_t total, Long64_t processed)
                stm.Data(), processed, total);
       fTotal->SetText(buf);
    } else {
-      tt = (Long_t(tdiff)/1000);
+      tt = (Long_t) Long64_t(tdiff)/1000;
       if (tt > 0) {
          hh = (UInt_t)(tt / 3600);
          mm = (UInt_t)((tt % 3600) / 60);
@@ -2816,14 +2816,14 @@ void TSessionQueryFrame::ProgressLocal(Long64_t total, Long64_t processed)
          stm = TString::Format("%d min %d sec", mm, ss);
       else
          stm = TString::Format("%d sec", ss);
-      buf.Form(" Processed : %ld events in %s", 
+      buf.Form(" Processed : %ld events in %s",
                (Long_t)processed, stm.Data());
       buf += cproc;
       fTotal->SetText(buf.Data());
    }
-   if (processed > 0 && (Long_t)tdiff > 0) {
+   if (processed > 0 && (Long64_t)tdiff > 0) {
       buf.Form(" Processing Rate : %.1f events/sec   ",
-               (Float_t)processed/(Long_t)tdiff*1000.);
+               (Float_t)processed/(Long64_t)tdiff*1000.);
       fRate->SetText(buf.Data());
    }
    fPrevProcessed = processed;
@@ -3370,7 +3370,7 @@ void TSessionQueryFrame::UpdateInfos()
                            result->GetStartTime().Convert());
    buffer += TString::Format(" Started   : %s\n",
                              result->GetStartTime().AsString());
-   buffer += TString::Format(" Real time : %d sec (CPU time: %.1f sec)\n", 
+   buffer += TString::Format(" Real time : %d sec (CPU time: %.1f sec)\n",
                              elapsed, result->GetUsedCPU());
 
    // Number of events processed, rate, size
@@ -3384,7 +3384,7 @@ void TSessionQueryFrame::UpdateInfos()
 
    // Package information
    if (strlen(result->GetParList()) > 1) {
-      buffer += TString::Format("%s Packages  :  %s\n", result->GetParList());
+      buffer += TString::Format(" Packages  :  %s\n", result->GetParList());
    }
 
    // Result information
@@ -3727,7 +3727,7 @@ void TSessionViewer::ReadConfiguration(const char *filename)
       item->SetUserData(litedesc);
       fSessions->Add((TObject *)litedesc);
       fActDesc = litedesc;
-   }   
+   }
    TIter next(fViewerEnv->GetTable());
    TEnvRec *er;
    while ((er = (TEnvRec*) next())) {
@@ -3953,7 +3953,6 @@ void TSessionViewer::UpdateListOfProofs()
                   }
                }
                if (found) continue;
-               p = d->GetProof();
                newdesc = new TSessionDescription();
                // and fill informations from Proof session
                newdesc->fTag       = d->GetName();
@@ -4233,9 +4232,9 @@ void TSessionViewer::WriteConfiguration(const char *filename)
          querystring += ";";
          querystring += TString::Format("%d",query->fNbFiles);
          querystring += ";";
-         querystring += TString::Format("%d",query->fNoEntries);
+         querystring += TString::Format("%lld",query->fNoEntries);
          querystring += ";";
-         querystring += TString::Format("%d",query->fFirstEntry);
+         querystring += TString::Format("%lld",query->fFirstEntry);
          fViewerEnv->SetValue(Form("QueryDescription.%d",qcnt), querystring);
          qcnt++;
       }
@@ -5574,7 +5573,7 @@ Bool_t TSessionViewer::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                   case kFileLoadConfig:
                      {
                         TGFileInfo fi;
-                        fi.fFilename = (char *)gSystem->BaseName(fConfigFile);
+                        fi.fFilename = strdup((char *)gSystem->BaseName(fConfigFile));
                         fi.fIniDir = strdup((char *)gSystem->HomeDirectory());
                         fi.fFileTypes = conftypes;
                         new TGFileDialog(fClient->GetRoot(), this, kFDOpen, &fi);
@@ -5589,7 +5588,7 @@ Bool_t TSessionViewer::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                   case kFileSaveConfig:
                      {
                         TGFileInfo fi;
-                        fi.fFilename = (char *)gSystem->BaseName(fConfigFile);
+                        fi.fFilename = strdup((char *)gSystem->BaseName(fConfigFile));
                         fi.fIniDir = strdup((char *)gSystem->HomeDirectory());
                         fi.fFileTypes = conftypes;
                         new TGFileDialog(fClient->GetRoot(), this, kFDSave, &fi);
@@ -5784,4 +5783,3 @@ Bool_t TSessionViewer::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
 
    return kTRUE;
 }
-

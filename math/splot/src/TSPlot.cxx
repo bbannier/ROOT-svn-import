@@ -428,15 +428,22 @@ The results above can be obtained by running the tutorial TestSPlot.C
 
 
 //____________________________________________________________________
-TSPlot::TSPlot()
+TSPlot::TSPlot() : 
+ fTree(0),
+ fTreename(0),
+ fVarexp(0),
+ fSelection(0)
 {
    // default constructor (used by I/O only)
    fNumbersOfEvents=0;
-   fTree = 0;
 }
 
 //____________________________________________________________________
-TSPlot::TSPlot(Int_t nx, Int_t ny, Int_t ne, Int_t ns, TTree *tree)
+TSPlot::TSPlot(Int_t nx, Int_t ny, Int_t ne, Int_t ns, TTree *tree) : 
+ fTreename(0),
+ fVarexp(0),
+ fSelection(0)
+
 {
    //normal TSPlot constructor
    // nx :  number of control variables
@@ -550,7 +557,6 @@ void TSPlot::MakeSPlot(Option_t *option)
 
    TVirtualFitter *minuit = TVirtualFitter::Fitter(0, 2);
    fPdfTot.ResizeTo(fNevents, fNSpecies);
-   Double_t *covmat = new Double_t[fNSpecies*fNSpecies];
 
    //now let's do it, excluding different yvars
    //for iplot = -1 none is excluded
@@ -587,7 +593,7 @@ void TSPlot::MakeSPlot(Option_t *option)
       }
       if (!opt.Contains("Q"))
          printf("\n");
-      covmat = minuit->GetCovarianceMatrix();
+      Double_t *covmat = minuit->GetCovarianceMatrix();
       SPlots(covmat, iplot);
 
       if (opt.Contains("W")){
@@ -1129,6 +1135,7 @@ void TSPlot::SetTreeSelection(const char* varexp, const char *selection, Long64_
      // }
    //}
    delete [] xvars;
+   delete [] var;
 }
 
 //____________________________________________________________________

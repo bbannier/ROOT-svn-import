@@ -15,6 +15,8 @@
 #include <vector>
 #include "TEveElement.h"
 
+class TGLSelectRecord;
+
 class TH2F;
 class TAxis;
 class THStack;
@@ -28,16 +30,18 @@ public:
       TString  fName;      // Name of the slice, eg. ECAL, HCAL.
       Float_t  fThreshold; // Only display towers with higher energy.
       Color_t  fColor;     // Color used to draw this longitudinal slice.
+      Color_t  fTransparency; // Transparency used to draw this longitudinal slice.
       
-      SliceInfo_t(): fName(""), fThreshold(0), fColor(kRed) {}
+      SliceInfo_t(): fName(""), fThreshold(0), fColor(kRed), fTransparency(0) {}
 
       virtual ~SliceInfo_t() {}
 
-      void Setup(const char* name, Float_t threshold, Color_t col)
+      void Setup(const char* name, Float_t threshold, Color_t col, Char_t transp = 101)
       {
          fName      = name;
          fThreshold = threshold;
          fColor     = col;
+         if (transp <= 100) fTransparency = transp;
       };
 
       ClassDef(SliceInfo_t, 0); // Slice info for histogram stack.
@@ -57,7 +61,10 @@ public:
 
       Float_t fFraction;
 
-      CellId_t(Int_t t, Int_t s, Float_t fr=1.f):fTower(t), fSlice(s), fFraction(fr){}
+      CellId_t(Int_t t, Int_t s, Float_t f=1.0f) : fTower(t), fSlice(s), fFraction(f) {}
+
+      bool operator<(const CellId_t& o) const
+      { return (fTower == o.fTower) ? fSlice < o.fSlice : fTower < o.fTower; }
    };
 
    struct CellGeom_t
@@ -173,6 +180,7 @@ public:
    vCellId_t&      GetCellsSelected()    { return fCellsSelected; }
    vCellId_t&      GetCellsHighlighted() { return fCellsHighlighted; }
    void            PrintCellsSelected();
+   void  ProcessSelection(vCellId_t& sel_cells, TGLSelectRecord& rec);
 
    virtual void    Rebin(TAxis *ax, TAxis *ay, vCellId_t &in, Bool_t et, RebinData_t &out) const = 0;
 
@@ -189,6 +197,8 @@ public:
    Float_t         GetSliceThreshold(Int_t slice) const;
    void            SetSliceColor(Int_t slice, Color_t col);
    Color_t         GetSliceColor(Int_t slice) const;
+   void            SetSliceTransparency(Int_t slice, Char_t t);
+   Char_t          GetSliceTransparency(Int_t slice) const;
 
    virtual void    GetEtaLimits(Double_t &min, Double_t &max) const = 0;
 
@@ -233,7 +243,6 @@ protected:
    typedef std::vector<vFloat_t>::iterator    vvFloat_i;
 
    vvFloat_t   fSliceVec;
-   vFloat_t    fValVec;
    vCellGeom_t fGeomVec;
 
    Int_t       fTower; // current tower
@@ -247,12 +256,15 @@ protected:
 public:
    TEveCaloDataVec(Int_t nslices);
    virtual ~TEveCaloDataVec();
-
+  
+   Int_t AddSlice();
    Int_t AddTower(Float_t etaMin, Float_t etaMax, Float_t phiMin, Float_t phiMax);
    void  FillSlice(Int_t slice, Float_t value);
    void  FillSlice(Int_t slice, Int_t tower, Float_t value);
 
    Int_t GetNCells() { return fGeomVec.size(); }
+   std::vector<Float_t>&  GetSliceVals(Int_t slice) { return fSliceVec[slice]; }
+   std::vector<TEveCaloData::CellGeom_t>& GetCellGeom() { return fGeomVec; } 
 
    virtual void GetCellList(Float_t etaMin, Float_t etaMax,
                             Float_t phi,    Float_t phiRng,
@@ -264,6 +276,7 @@ public:
    virtual void GetEtaLimits(Double_t &min, Double_t &max) const { min=fEtaMin, max=fEtaMax;}
    virtual void GetPhiLimits(Double_t &min, Double_t &max) const { min=fPhiMin; max=fPhiMax;}
 
+  
    virtual void  DataChanged();
    void          SetAxisFromBins(Double_t epsX=0.001, Double_t epsY=0.001);
 

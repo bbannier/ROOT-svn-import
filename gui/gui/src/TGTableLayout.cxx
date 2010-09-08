@@ -154,11 +154,12 @@ void TGTableLayout::FindRowColSizesSinglyAttached()
    TGFrameElement *ptr;
 
    while ((ptr = (TGFrameElement *) next())) {
+      if (ptr->fState == 0) continue;
       TGTableLayoutHints *layout =
             dynamic_cast<TGTableLayoutHints*>(ptr->fLayout);
       if (!layout) {
          Error("FindRowColSizesSinglyAttached", "didn't get TGTableLayoutHints from %s, layout = 0x%lx",
-               ptr->fFrame->GetName(), ptr->fLayout);
+               ptr->fFrame->GetName(), (ULong_t)ptr->fLayout);
          return;
       }
       UInt_t col = layout->GetAttachLeft();
@@ -208,6 +209,7 @@ void TGTableLayout::FindRowColSizesMultiplyAttached()
    TGFrameElement *ptr;
 
    while ((ptr = (TGFrameElement *) next())) {
+      if (ptr->fState == 0) continue;
       TGTableLayoutHints *layout =
             dynamic_cast<TGTableLayoutHints*>(ptr->fLayout);
       if (!layout) {

@@ -217,7 +217,7 @@ TGedTabInfo* TGedEditor::GetEditorTabInfo(const char* name)
    TGedFrame* nf = CreateNameFrame(tc, name);
    nf->SetGedEditor(this);
    nf->SetModelClass(0);
-   tc->AddFrame(nf, nf->GetLayoutHints());
+   tc->AddFrame(nf, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 2, 2, 2));
 
    // add to list of created tabs
    TGedTabInfo* ti = new TGedTabInfo(te, tc);
@@ -377,7 +377,7 @@ void TGedEditor::SetModel(TVirtualPad* pad, TObject* obj, Int_t event)
          TGedFrame* gfr;
          TIter ngf(&fGedFrames);
          while ((gfr = (TGedFrame*) ngf()))
-            fTabContainer->AddFrame(gfr, gfr->GetLayoutHints());
+            fTabContainer->AddFrame(gfr, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 2, 2, 2));
 
          fExclMap.Clear();
          fGedFrames.Clear();
@@ -421,9 +421,9 @@ void TGedEditor::Show()
    // Show editor.
 
    // gPad is setup properly in calling code for global and canvas editor.
-   SetCanvas(gPad->GetCanvas());
+   if (gPad) SetCanvas(gPad->GetCanvas());
 
-   if (fGlobal) {
+   if (fCanvas && fGlobal) {
       SetModel(fCanvas->GetClickSelectedPad(), fCanvas->GetClickSelected(), kButton1Down);
 
       if (fCanvas->GetShowEditor())
@@ -451,7 +451,7 @@ void TGedEditor::Show()
       }
       MoveResize(gedx, gedy, GetWidth(), ch > 700 ? 700 : ch);
       SetWMPosition(gedx, gedy);
-   } else {
+   } else if (fCanvas) {
       SetModel(fCanvas, fCanvas, kButton1Down);
    }
    MapWindow();

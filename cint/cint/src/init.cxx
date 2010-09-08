@@ -7,7 +7,7 @@
  * Description:
  *  Entry functions
  ************************************************************************
- * Copyright(c) 1995~2005  Masaharu Goto
+ * Copyright(c) 1995~2010  Masaharu Goto
  *
  * For the licensing terms see the file COPYING
  *
@@ -410,6 +410,7 @@ int G__load(char *commandfile)
          G__othermain = 1;
          G__main(argn, arg);
          if (G__return > G__RETURN_EXIT1) {
+            fclose(cfp);
             return 0;
          }
          G__return = G__RETURN_NON;
@@ -465,7 +466,7 @@ G__parse_hook_t* G__set_beforeparse_hook(G__parse_hook_t* hook)
 void G__display_note()
 {
    G__more(G__sout, "\n");
-   G__more(G__sout, "Note1: Cint is not aimed to be a 100%% ANSI/ISO compliant C/C++ language\n");
+   G__more(G__sout, "Note1: Cint is not aimed to be a 100% ANSI/ISO compliant C/C++ language\n");
    G__more(G__sout, " processor. It rather is a portable script language environment which\n");
    G__more(G__sout, " is close enough to the standard C++.\n");
    G__more(G__sout, "\n");
@@ -686,6 +687,8 @@ int G__main(int argc, char** argv)
 #ifndef G__TESTMAIN
    optind = 1;
 #endif
+   // Keep track of the +STUB -STUB argument
+   bool startedSTUB = false;
    /*************************************************************
     * Get command options
     *************************************************************/
@@ -1014,8 +1017,15 @@ int G__main(int argc, char** argv)
             G__debugtrace = G__istrace = G__debug = 1;
             G__setdebugcond();
             break;
-         case 'G': /* trace dump */
-            G__serr = fopen(optarg, "w");
+         case 'G': { /* trace dump */
+            FILE *newerr =  fopen(optarg, "w");
+            if (newerr==0) {
+               G__fprinterr(G__serr, " -G : unable to open file %s.\n",optarg);
+            } else {
+               G__serr = newerr;
+            }
+            break;
+         }
          case 't': /* trace of input file */
             /* sprintf(monitorfile,"%s",optarg); */
             G__fprinterr(G__serr, " -t : trace execution\n");
@@ -1254,10 +1264,16 @@ int G__main(int argc, char** argv)
       }
       else if (strcmp(sourcefile, "+STUB") == 0) {
          G__store_dictposition(&stubbegin);
+         startedSTUB = true;
          continue;
       }
       else if (strcmp(sourcefile, "-STUB") == 0) {
-         G__set_stubflags(&stubbegin);
+         if (startedSTUB) {
+            G__set_stubflags(&stubbegin);
+            startedSTUB = false;
+         } else {
+            G__more(G__sout, "Warning: -STUB needs to be after a +STUB\n");
+         }
          continue;
       }
 
@@ -2318,10 +2334,11 @@ void G__platformMacro()
    G__DEFINE_MACRO_S(__s390__);
 #endif
    
-   // Avoid any problem with __attribute__
+   // Avoid any problem with __attribute__ and __asm
    G__value (*store__GetSpecialObject) (G__CONST char *name,void **ptr,void** ppdict) = G__GetSpecialObject;
    G__GetSpecialObject = 0;
    G__add_macro("__attribute__(X)=");
+   G__add_macro("__asm(X)=");
    G__GetSpecialObject = store__GetSpecialObject;
 
    if (G__globalcomp != G__NOLINK)
@@ -2362,6 +2379,16 @@ void G__platformMacro()
 
    G__search_typename2("ssize_t", size_t_type, -1, 0, -1);
    G__setnewtype(-1, NULL, 0);
+   
+#if  defined(__APPLE__) && defined(__GNUC__)
+   // Apple MacOS X gcc header use directly __builtin_va_list, let's 
+   // make sure that rootcint does not complain about not knowing what it is.
+   G__linked_taginfo G__a_cxx_ACLiC_dictLN_va_list = { "va_list" , 115 , -1 };
+   // G__a_cxx_ACLiC_dictLN_va_list.tagnum = -1 ;
+   G__get_linked_tagnum_fwd(&G__a_cxx_ACLiC_dictLN_va_list);
+   G__search_typename2("__builtin_va_list",117,G__get_linked_tagnum(&G__a_cxx_ACLiC_dictLN_va_list),0,-1);
+   G__setnewtype(-1,NULL,0);
+#endif
 }
 
 //______________________________________________________________________________
@@ -2477,7 +2504,7 @@ int G__cintrevision(FILE* fp)
 {
    fprintf(fp, "\n");
    fprintf(fp, "cint : C/C++ interpreter  (mailing list 'cint@root.cern.ch')\n");
-   fprintf(fp, "   Copyright(c) : 1995~2005 Masaharu Goto (gotom@hanno.jp)\n");
+   fprintf(fp, "   Copyright(c) : 1995~2010 Masaharu Goto (gotom@hanno.jp)\n");
    fprintf(fp, "   revision     : %s by M.Goto\n\n", G__cint_version());
 
 #ifdef G__DEBUG

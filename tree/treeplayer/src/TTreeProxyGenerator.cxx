@@ -132,7 +132,7 @@ namespace ROOT {
    {
       TString result;
       int ndim = 0;
-      if (element && element->InheritsFrom(TStreamerBasicPointer::Class())) {
+      if (element->InheritsFrom(TStreamerBasicPointer::Class())) {
          TStreamerBasicPointer * elem = (TStreamerBasicPointer*)element;
          const char *countname = elem->GetCountName();
          if (countname && strlen(countname)>0) ndim = 1;
@@ -384,15 +384,22 @@ namespace ROOT {
          switch(stlType)  {
             case TClassEdit::kVector:   what = "vector"; break;
             case TClassEdit::kList:     what = "list"; break;
+            case -TClassEdit::kDeque: // same as positive
             case TClassEdit::kDeque:    what = "deque"; break;
+            case -TClassEdit::kMap: // same as positive
             case TClassEdit::kMap:      what = "map"; break;
+            case -TClassEdit::kMultiMap: // same as positive
             case TClassEdit::kMultiMap: what = "map"; break;
+            case -TClassEdit::kSet:  // same as positive
             case TClassEdit::kSet:      what = "set"; break;
+            case -TClassEdit::kMultiSet: // same as positive
             case TClassEdit::kMultiSet: what = "set"; break;
          }
-         directive = "#include <";
-         directive.Append(what);
-         directive.Append(">\n");
+         if (what[0]) {
+            directive = "#include <";
+            directive.Append(what);
+            directive.Append(">\n");
+         }
       } else if (cl->GetDeclFileName() && strlen(cl->GetDeclFileName()) ) {
          // Actually we probably should look for the file ..
          const char *filename = cl->GetDeclFileName();
@@ -425,6 +432,15 @@ namespace ROOT {
             }
          }
          directive = Form("#include \"%s\"\n",filename);
+      } else if (!strncmp(cl->GetName(), "pair<", 5)
+                 || !strncmp(cl->GetName(), "std::pair<", 10)) {
+         TClassEdit::TSplitType split(cl->GetName());
+         if (split.fElements.size() == 3) {
+            for (int arg = 1; arg < 3; ++arg) {
+               TClass* clArg = TClass::GetClass(split.fElements[arg].c_str());
+               if (clArg) AddHeader(clArg);
+            }
+         }
       }
       if (directive.Length()) {
          TIter i( &fListOfHeaders );
@@ -1083,18 +1099,17 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       TString branchName = leaf->GetBranch()->GetName();
       TString dataMemberName = leaf->GetName();
 
-      TBranchProxyDescriptor *desc;
       if (topdesc) {
-         topdesc->AddDescriptor( desc = new TBranchProxyDescriptor( dataMemberName.Data(),
-                                                                    type,
-                                                                    branchName.Data(),
-                                                                    true, false, true ),
+         topdesc->AddDescriptor( new TBranchProxyDescriptor( dataMemberName.Data(),
+                                                             type,
+                                                             branchName.Data(),
+                                                             true, false, true ),
                                  0 );
       } else {
-         AddDescriptor( desc = new TBranchProxyDescriptor( dataMemberName.Data(),
-                                                           type,
-                                                           branchName.Data(),
-                                                           true, false, true ) );
+         AddDescriptor( new TBranchProxyDescriptor( dataMemberName.Data(),
+                                                    type,
+                                                    branchName.Data(),
+                                                    true, false, true ) );
       }
 
       return 0;
@@ -1537,10 +1552,9 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       }
 
       pxDataMemberName = /* prefix + */ dataMemberName;
-      TBranchProxyDescriptor *desc;
       if (topdesc) {
-         topdesc->AddDescriptor( desc = new TBranchProxyDescriptor( pxDataMemberName.Data(), type,
-                                                                    dataMemberName.Data(), false),
+         topdesc->AddDescriptor( new TBranchProxyDescriptor( pxDataMemberName.Data(), type,
+                                                             dataMemberName.Data(), false),
                                  isBase );
       } else {
          Error("AnalyzeTree","topdesc should not be null in TTreeProxyGenerator::AnalyzeElement.");
@@ -1629,6 +1643,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
          cutfilename = gSystem->Which(incPath,fCutScript);
          if (cutfilename==0) {
             Error("WriteProxy","Can not find the user's cut script: %s",fCutScript.Data());
+            delete [] filename;
             return;
          }
       }
@@ -1659,6 +1674,8 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       Ssiz_t dot_pos = scriptfunc.Last('.');
       if (dot_pos == kNPOS) {
          Error("WriteProxy","User's script (%s) has no extension! Nothing will be written.",scriptfunc.Data());
+         delete [] filename;
+         delete [] cutfilename;
          return;
       }
       scriptfunc.Replace( dot_pos, fScript.Length()-dot_pos, "");
@@ -1674,6 +1691,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
             scriptHeader = possible;
             fListOfHeaders.Add(new TNamed("script",Form("#include \"%s\"\n",
                                                         scriptHeader.Data())));
+            delete [] name;
             break;
          }
       }
@@ -1694,6 +1712,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                cutscriptHeader = possible;
                fListOfHeaders.Add(new TNamed("cutscript",Form("#include \"%s\"\n",
                                                               cutscriptHeader.Data())));
+               delete [] name;
                break;
             }
          }
@@ -2032,6 +2051,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
             gSystem->Rename(tmpfilename,fHeaderFileName);
          } else gSystem->Unlink(tmpfilename);
       }
+      delete [] filename;
+      delete [] cutfilename;
    }
-
 }

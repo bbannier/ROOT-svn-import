@@ -139,7 +139,7 @@ The Y-axis is drawn on the right side of the plot.
 <p>
 
 Several drawing options can be combined. In the following example the graph
-is drawn as a smooth curve (optiob "C") and with markers (option "P"). The
+is drawn as a smooth curve (option "C") and with markers (option "P"). The
 option "A" request the definition of the axis.
 
 End_Html
@@ -651,7 +651,8 @@ void TGraphPainter::DrawPanelHelper(TGraph *theGraph)
    }
    TVirtualPadEditor *editor = TVirtualPadEditor::GetPadEditor();
    editor->Show();
-   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",gPad->GetCanvas(),gPad,theGraph));
+   gROOT->ProcessLine(Form("((TCanvas*)0x%lx)->Selected((TVirtualPad*)0x%lx,(TObject*)0x%lx,1)",
+                           (ULong_t)gPad->GetCanvas(), (ULong_t)gPad, (ULong_t)theGraph));
 }
 
 
@@ -1710,8 +1711,6 @@ void TGraphPainter::PaintGrapHist(TGraph *theGraph, Int_t npoints, const Double_
                // do not draw the two vertical lines on the edges
                Int_t nbpoints = npt-2;
                Int_t point1  = 1;
-               if (gxwork[0] > gPad->GetUxmin()) { nbpoints++; point1 = 0; }
-               if (gxwork[nbpoints] < gPad->GetUxmax()) nbpoints++;
 
                if (optionOff) {
                   // remove points before the low cutoff
@@ -1731,7 +1730,13 @@ void TGraphPainter::PaintGrapHist(TGraph *theGraph, Int_t npoints, const Double_
                      }
                   }
                   nbpoints = point2-point1+1;
+               } else {
+                  // if the 1st or last bin are not on the pad limits the
+                  // the two vertical lines on the edges are added.
+                  if (gxwork[0] > gPad->GetUxmin()) { nbpoints++; point1 = 0; }
+                  if (gxwork[nbpoints] < gPad->GetUxmax()) nbpoints++;
                }
+
                gPad->PaintPolyLine(nbpoints,&gxworkl[point1],&gyworkl[point1],noClip);
                continue;
             }
@@ -4082,4 +4087,3 @@ L390:
    delete [] qlx;
    delete [] qly;
 }
-

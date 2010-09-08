@@ -3,6 +3,11 @@
 <a name="tree"></a> 
 <h3>Tree</h3>
 <ul>
+<li>Introduce TBranch::Set/GetMakeClass to independently set each branch in MakeClass mode 
+and to have a good place to switch the ReadLeaves function appropriately (to and from
+the MakeClass mode (also known as the decomposed object mode)).   This can also be
+used to reset the mode of some branch with a MakeClass/MakeSelector file.
+</li>
 <li>In TTree and TChain LoadTree fReadEntry is now set to -1 in case of failure to find the proper row.</li>
 <li>In TTree::CloneTree, TChain::Merge and TTree::CopyEntries introduces more flexibility
 in the handling of the case where a TTreeIndex is 'missing' in one or more of the 
@@ -21,7 +26,8 @@ to control this merging:
    the resulting index had gaps (the default was similar to AsIsIndexOnError).   The new default is BuildIndexOnError  ; i.e.
 we now attempt by default to build the missing indices.
 </li>
-<li>Update MakeProxy so that the resulting skeleton is useable with Proof.</li>
+<li>Warning: The TTreeCache is no longer enabled by default in a TChain to align the behavior with a TTree.  You need to call
+TTree::SetCacheSize to enable the TTreeCache.</li> 
 <li>Correct and clarify the relationship between AutoFlush and AutoSave:
    <ul>
    <li>Both the AutoFlush and AutoSave interval can be specified in
@@ -36,9 +42,24 @@ multiple of the AutoFlush interval that is less than or equal
 to the original value of the AutoSave interval.</li>
    </ul>
 </li>
+<li>Update MakeProxy so that the resulting skeleton is useable with Proof.</li>
+<li>Replace the ReadLeaves virtual function by a fReadLeaves pointer to member function,
+this allows the customization of the ReadLeaves function at run-time depending on the
+underlying user class layout in TBranchElement.  This removes many if statements whose
+'answer' is known at initialization time.
+</li>
 <li>Add support for 'array' formula in TTree::Query.</li>
 <li>Set the initial value of fCacheSize to zero to indicate clearly that the TreeCache is disabled.</li>
 <li>In TChain::SetEntryList use only the treename to lookup the (sub)entryList (instead subdir/treename).</li>
+<li>Add support for the branch creation syntax:
+<pre style="border:gray 1px solid;padding:0.5em 2em;background:#ffe">   TString rootString;
+   t->Branch("rootString","TString",&amp;rootString, 1600, 0);</pre>
+which is 'natural' as it uses the legacy syntax (branch_name,class_name, user_data)
+but did not work because 'rootString' is an object rather than a pointer to an
+object. (However the simplier form:
+<pre style="border:gray 1px solid;padding:0.5em 2em;background:#ffe">   t->Branch("rootString",&amp;rootString, 1600, 0);</pre>
+works/worked fine).
+</li>
 <li>And many other bug fixes, security fixes, thread safety and performance improvements ; see the svn log for details.</li>
 </ul>
 <h4>TTree Scan and Draw</h4>
@@ -46,3 +67,4 @@ to the original value of the AutoSave interval.</li>
 <li>Insured that the generated histogram as an integral bin width when plotting a string or integer.</li>
 <li>Improved the output of TTree::Scan by inserting a blank space whenever a value is not available because there is no proper row in a friend.
 (Previously it was re-printing the previous value).  This required changes in </li>
+</ul>

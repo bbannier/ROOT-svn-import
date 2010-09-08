@@ -70,7 +70,8 @@ LDOPT         = -debug
 
 # Check if nmake version is 8.xx or 9.xx
 !if ([nmake /? 2>&1 | findstr /c:"Version 8\." > nul ] == 0) || \
-    ([nmake /? 2>&1 | findstr /c:"Version 9\." > nul ] == 0)
+    ([nmake /? 2>&1 | findstr /c:"Version 9\." > nul ] == 0) || \
+    ([nmake /? 2>&1 | findstr /c:"Version 10\." > nul ] == 0)
 MT_EXE        = mt -nologo -manifest $@.manifest -outputresource:$@;1
 MT_DLL        = mt -nologo -manifest $@.manifest -outputresource:$@;2
 EXTRAFLAGS    = -D_CRT_SECURE_NO_DEPRECATE
@@ -160,7 +161,8 @@ STRESSG       = stressGraphics$(ExeSuf)
 STRESSGUIO    = stressGUI.$(ObjSuf)
 STRESSGUIS    = stressGUI.$(SrcSuf)
 STRESSGUI     = stressGUI$(ExeSuf)
-STRESSGUILIBS = $(ROOTSYS)\lib\libASImage.lib $(ROOTSYS)\lib\libASImageGui.lib $(ROOTSYS)\lib\libRecorder.lib
+STRESSGUILIBS = $(ROOTSYS)\lib\libASImage.lib $(ROOTSYS)\lib\libASImageGui.lib \
+                $(ROOTSYS)\lib\libRecorder.lib $(ROOTSYS)\lib\libGuiHtml.lib
 
 !if exist("$(ROOTSYS)\lib\libGenVector.lib")
 STRESSVECO   = stressVector.$(ObjSuf)

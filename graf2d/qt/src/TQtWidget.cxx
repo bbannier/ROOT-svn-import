@@ -198,7 +198,7 @@ TQtWidget::TQtWidget(QWidget* mother, Qt::WFlags f,bool embedded) :
      ,fBits(0),fNeedStretch(false),fCanvas(0),fPixmapID(0)
      ,fPixmapScreen(0),fPaint(TRUE),fSizeChanged(FALSE)
      ,fDoubleBufferOn(FALSE),fEmbedded(embedded),fWrapper(0),fSaveFormat("PNG")
-     ,fInsidePaintEvent(false),fOldMousePos(-1,-1),fRefreshTimer(0)
+     ,fInsidePaintEvent(false),fOldMousePos(-1,-1),fIgnoreLeaveEnter(0),fRefreshTimer(0) 
 { setObjectName("tqtwidget"); Init() ;}
 
 //_____________________________________________________________________________
@@ -325,9 +325,11 @@ TApplication *TQtWidget::InitRint( Bool_t /*prompt*/, const char *appClassName, 
    //    . . .
    //  Gui.Prompt   yes
    //
-   static int localArgc   =0;
+   static int localArgc      =0;
+   static char **localArgv  =0;
    if (!gApplication) {
-       localArgc = argc ? *argc : qApp->argc();
+       QStringList args  = QCoreApplication::arguments ();
+       localArgc = argc ? *argc : args.size();
        // check the Gui.backend and Factory
        TString guiBackend(gEnv->GetValue("Gui.Backend", "native"));
        guiBackend.ToLower();
@@ -350,8 +352,18 @@ TApplication *TQtWidget::InitRint( Bool_t /*prompt*/, const char *appClassName, 
          }
          delete [] extLib;
        }
+       if (!argc && !argv ) {
+          localArgv  = new char*[args.size()]; // leaking :-(
+          for (int i = 0; i < args.size(); ++i) {
+             QString nextarg = args.at(i);
+             localArgv[i]= new char[nextarg.length()+1]; 
+             strcpy(localArgv[i], nextarg.toAscii().constData());
+          } 
+       } else {
+         localArgv  = argv;
+       }
 
-       TRint *rint = new TRint(appClassName, &localArgc, argv ? argv : qApp->argv(),options,numOptions,noLogo);
+       TRint *rint = new TRint(appClassName, &localArgc, localArgv, options,numOptions,noLogo);
        // To mimic what TRint::Run(kTRUE) does.
        Int_t prompt= gEnv->GetValue("Gui.Prompt", (Int_t)0);
        if (prompt) {
@@ -523,6 +535,7 @@ void TQtWidget::mousePressEvent (QMouseEvent *e)
    //    kButton1Down   =  1, kButton2Down   =  2, kButton3Down   =  3,
 
    EEventType rootButton = kNoEvent;
+   Qt::ContextMenuPolicy currentPolicy = contextMenuPolicy();
    fOldMousePos = e->pos();
    TCanvas *c = Canvas();
    if (c && !fWrapper ){
@@ -530,22 +543,30 @@ void TQtWidget::mousePressEvent (QMouseEvent *e)
       {
       case Qt::LeftButton:  rootButton = kButton1Down; break;
       case Qt::RightButton: {
-//          rootButton = kButton3Down; 
          // respect the QWidget::contextMenuPolicy
          // treat this event as QContextMenuEvent
-          if (contextMenuPolicy()) {
-             e->accept(); 
-             QContextMenuEvent evt(QContextMenuEvent::Other, e->pos() );
-             QApplication::sendEvent(this, &evt);
-          }
-          break;
-       }
+         if ( currentPolicy == Qt::DefaultContextMenu) {
+            e->accept();
+            QContextMenuEvent evt(QContextMenuEvent::Other, e->pos() );
+            QApplication::sendEvent(this, &evt);
+         } else {
+            rootButton = kButton3Down;
+         }
+         break;
+      }
       case Qt::MidButton:   rootButton = kButton2Down; break;
       default: break;
       };
       if (rootButton != kNoEvent) {
-         e->accept(); 
-         c->HandleInput(rootButton, e->x(), e->y());
+         e->accept();
+	 if (rootButton == kButton3Down) {
+           bool lastvalue = c->TestBit(kNoContextMenu);
+           c->SetBit(kNoContextMenu);
+	   c->HandleInput(rootButton, e->x(), e->y());
+           c->SetBit(kNoContextMenu, lastvalue);
+         } else {
+	   c->HandleInput(rootButton, e->x(), e->y());
+         }
          EmitSignal(kMousePressEvent);
          return;
       }
@@ -775,7 +796,7 @@ bool TQtWidget::Save(const QString &fileName,const char *format,int quality)cons
    if (rootFormatFound && c) {
       c->Print(fileName.toStdString().c_str(),saveType.toStdString().c_str());
       Ok = true;
-   } else {
+   } else if (GetOffScreenBuffer()) {
       // Since the "+" is a legal part of the file name and it is used by Onuchin
       // to indicate  the "animation" mode, we have to proceed very carefully
       int dot = fileName.lastIndexOf('.');
@@ -784,7 +805,11 @@ bool TQtWidget::Save(const QString &fileName,const char *format,int quality)cons
          plus = fileName.indexOf('+',dot+1);
       }
       QString fln = (plus > -1) ? TGQt::GetNewFileName(fileName.left(plus)) : fileName;
-      Ok = GetOffScreenBuffer() ? GetOffScreenBuffer()->save(fln,saveType.toStdString().c_str(),quality): false;
+      if (fCanvasDecorator.isNull()) {
+         Ok = GetOffScreenBuffer()->save(fln,saveType.toStdString().c_str(),quality);
+      } else {
+         /// add decoration
+      }
    }
    emit ((TQtWidget *)this)->Saved(Ok);
    return Ok;
@@ -884,6 +909,7 @@ void TQtWidget::paintEvent (QPaintEvent *e)
          screen.setClipRegion(region);
          // paint the the TCanvas double buffer
          if (fPixmapID)  screen.drawPixmap(0,0,*GetOffScreenBuffer());
+         if (!fCanvasDecorator.isNull()) fCanvasDecorator->paintEvent(screen,e);
       }
    }
    fInsidePaintEvent = false;

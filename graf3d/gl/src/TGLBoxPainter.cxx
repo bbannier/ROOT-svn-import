@@ -1,3 +1,14 @@
+// @(#)root/gl:$Id$
+// Author:  Timur Pocheptsov  31/08/2006
+
+/*************************************************************************
+ * Copyright (C) 1995-2006, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #include <ctype.h>
 
 #include "KeySymbols.h"
@@ -125,7 +136,7 @@ void TGLBoxPainter::Pan(Int_t px, Int_t py)
    if (fSelectedPart >= fSelectionBase) {//Pan camera.
       SaveModelviewMatrix();
       SaveProjectionMatrix();
-      
+
       fCamera->SetCamera();
       fCamera->Apply(fPadPhi, fPadTheta);
       fCamera->Pan(px, py);
@@ -138,11 +149,11 @@ void TGLBoxPainter::Pan(Int_t px, Int_t py)
       py = fCamera->GetHeight() - py;
       SaveModelviewMatrix();
       SaveProjectionMatrix();
-      
+
       fCamera->SetCamera();
       fCamera->Apply(fPadPhi, fPadTheta);
-      
-      
+
+
       if (!fHighColor) {
          if (fBoxCut.IsActive() && (fSelectedPart >= kXAxis && fSelectedPart <= kZAxis))
             fBoxCut.MoveBox(px, py, fSelectedPart);
@@ -151,7 +162,7 @@ void TGLBoxPainter::Pan(Int_t px, Int_t py)
       } else {
          MoveSection(px, py);
       }
-      
+
       RestoreProjectionMatrix();
       RestoreModelviewMatrix();
    }
@@ -186,7 +197,7 @@ void TGLBoxPainter::ProcessEvent(Int_t event, Int_t /*px*/, Int_t py)
       if (fBoxCut.IsActive())
          fBoxCut.TurnOnOff();
       if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", this));
+         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", (ULong_t)this));
       else
          Paint();
    } else if (event == kKeyPress && (py == kKey_c || py == kKey_C)) {

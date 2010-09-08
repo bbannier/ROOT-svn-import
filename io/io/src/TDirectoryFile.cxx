@@ -66,6 +66,9 @@ TDirectoryFile::TDirectoryFile() : TDirectory()
 //______________________________________________________________________________
 TDirectoryFile::TDirectoryFile(const char *name, const char *title, Option_t *classname, TDirectory* initMotherDir)
            : TDirectory()
+   , fModified(kFALSE), fWritable(kFALSE), fNbytesKeys(0), fNbytesName(0)
+   , fBufferSize(0), fSeekDir(0), fSeekParent(0), fSeekKeys(0)
+   , fFile(0), fKeys(0)
 {
 //*-*-*-*-*-*-*-*-*-*-*-* Create a new DirectoryFile *-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                     ==========================
@@ -141,6 +144,9 @@ TDirectoryFile::TDirectoryFile(const char *name, const char *title, Option_t *cl
 
 //______________________________________________________________________________
 TDirectoryFile::TDirectoryFile(const TDirectoryFile & directory) : TDirectory(directory)
+   , fModified(kFALSE), fWritable(kFALSE), fNbytesKeys(0), fNbytesName(0)
+   , fBufferSize(0), fSeekDir(0), fSeekParent(0), fSeekKeys(0)
+   , fFile(0), fKeys(0)
 {
    // Copy constructor.
    ((TDirectoryFile&)directory).Copy(*this);
@@ -218,7 +224,7 @@ void TDirectoryFile::Browse(TBrowser *b)
 {
    // Browse the content of the directory.
 
-   Char_t name[kMaxLen];
+   TString name;
 
    if (b) {
       TObject *obj = 0;
@@ -242,15 +248,14 @@ void TDirectoryFile::Browse(TBrowser *b)
             obj = fList->FindObject(key->GetName());
 
             if (obj) {
-               sprintf(name, "%s", obj->GetName());
-               b->Add(obj, name);
+               b->Add(obj, obj->GetName());
                if (obj->IsFolder() && !obj->InheritsFrom("TTree"))
                   skip = 1;
             }
          }
 
          if (!skip) {
-            sprintf(name, "%s;%d", key->GetName(), key->GetCycle());
+            name.Form("%s;%d", key->GetName(), key->GetCycle());
             b->Add(key, name);
          }
 
@@ -396,11 +401,11 @@ TObject *TDirectoryFile::FindObjectAnyFile(const char *name) const
 
 //______________________________________________________________________________
 TDirectory *TDirectoryFile::GetDirectory(const char *apath,
-                                     Bool_t printError, const char *funcname)
+                                         Bool_t printError, const char *funcname)
 {
-   // Find a directory using apath.
+   // Find a directory named "apath".
    // It apath is null or empty, returns "this" directory.
-   // Otherwie use apath to find a directory.
+   // Otherwise use the name "apath" to find a directory.
    // The absolute path syntax is:
    //    file.root:/dir1/dir2
    // where file.root is the file and /dir1/dir2 the desired subdirectory
@@ -467,9 +472,8 @@ TDirectory *TDirectoryFile::GetDirectory(const char *apath,
       delete [] path; return (TDirectory*)obj;
    }
 
-   char subdir[kMaxLen];
-   strcpy(subdir,path);
-   slash = (char*)strchr(subdir,'/');
+   TString subdir(path);
+   slash = (char*)strchr(subdir.Data(),'/');
    *slash = 0;
    //Get object with path from current directory/file
    if (!strcmp(subdir, "..")) {
@@ -480,13 +484,13 @@ TDirectory *TDirectoryFile::GetDirectory(const char *apath,
    }
    obj = Get(subdir);
    if (!obj) {
-      if (printError) Error(funcname,"Unknown directory %s", subdir);
+      if (printError) Error(funcname,"Unknown directory %s", subdir.Data());
       delete [] path; return 0;
    }
 
    //Check return object is a directory
    if (!obj->InheritsFrom(TDirectoryFile::Class())) {
-      if (printError) Error(funcname,"Object %s is not a directory", subdir);
+      if (printError) Error(funcname,"Object %s is not a directory", subdir.Data());
       delete [] path; return 0;
    }
    result = ((TDirectory*)obj)->GetDirectory(slash+1,printError,funcname);
@@ -498,7 +502,7 @@ void TDirectoryFile::Close(Option_t *)
 {
    // -- Delete all objects from memory and directory structure itself.
 
-   if (!fList) {
+   if (!fList || !fSeekDir) {
       return;
    }
 
@@ -571,7 +575,7 @@ void TDirectoryFile::Delete(const char *namecycle)
    if(strcmp(name,"*") == 0)   deleteall = 1;
    if(strcmp(name,"*T") == 0){ deleteall = 1; deletetree = 1;}
    if(strcmp(name,"T*") == 0){ deleteall = 1; deletetree = 1;}
-   if(strlen(namecycle) == 0){ deleteall = 1; deletetree = 1;}
+   if(namecycle==0 || strlen(namecycle) == 0){ deleteall = 1; deletetree = 1;}
    TRegexp re(name,kTRUE);
    TString s;
    Int_t deleteOK = 0;
@@ -1162,7 +1166,7 @@ void TDirectoryFile::ReadAll(Option_t* opt)
       while ((key = (TKey *) next())) {
          TObject *thing = GetList()->FindObject(key->GetName());
          if (thing) { delete thing; }
-         thing = key->ReadObj();
+         key->ReadObj();
       }
 }
 

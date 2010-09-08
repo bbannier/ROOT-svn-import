@@ -41,7 +41,9 @@ using namespace std;
 #pragma if  (defined (G__VISUAL) && (G__MSC_VER>=1310))
 #pragma link C++ class string::iterator;
 #pragma link C++ class string::const_iterator;
+#if (G__MSC_VER<1600)
 #pragma link C++ class _Ranit<char,long,char*,char&>;
+#endif
 #pragma link C++ class iterator<random_access_iterator_tag,char,long,char*,char&>;
 #pragma else
 //#pragma if ((G__GNUC>=3 && G__GNUC_MINOR>=1) && !defined(G__INTEL_COMPILER)) 
@@ -89,6 +91,8 @@ using namespace std;
 #pragma link C++ function operator+(const string&,const char*);
 
 #pragma link C++ function swap(string&,string&);
+#pragma link C++ function operator>>(istream&,string&);
+#pragma link C++ function operator<<(ostream&,const string&);
 #pragma link C++ function getline;
 //#endif // G__ROOT
 

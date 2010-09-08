@@ -151,6 +151,20 @@ namespace {
       return result;
    }
 
+//____________________________________________________________________________
+   inline PyObject* BoolNot( PyObject* value )
+   {
+      if ( PyObject_IsTrue( value ) == 1 ) {
+         Py_INCREF( Py_False );
+         Py_DECREF( value );
+         return Py_False;
+      } else {
+         Py_INCREF( Py_True );
+         Py_XDECREF( value );
+         return Py_True;
+      }
+   }
+
 //- "smart pointer" behavior ---------------------------------------------------
    PyObject* DeRefGetAttr( PyObject* self, PyObject* name )
    {
@@ -222,6 +236,15 @@ namespace {
          return ObjectProxy_Type.tp_richcompare( self, obj, Py_EQ );
 
       return CallPyObjMethod( self, "IsEqual", obj );
+   }
+
+//____________________________________________________________________________
+   PyObject* TObjectIsNotEqual( PyObject* self, PyObject* obj )
+   {
+      if ( ! ObjectProxy_Check( obj ) || ! ((ObjectProxy*)obj)->fObject )
+         return ObjectProxy_Type.tp_richcompare( self, obj, Py_NE );
+
+      return BoolNot( CallPyObjMethod( self, "IsEqual", obj ) );
    }
 
 //____________________________________________________________________________
@@ -956,6 +979,26 @@ namespace {
       return next;
    }
 
+//____________________________________________________________________________
+   PyObject* StlIterIsEqual( PyObject* self, PyObject* other )
+   {
+   // Called if operator== not available (e.g. if a global overload as under gcc).
+   // An exception is raised as the user should fix the dictionary.
+      return PyErr_Format( PyExc_LookupError, 
+         "No operator==(const %s&, const %s&) available in the dictionary!",
+         Utility::ClassName( self ).c_str(), Utility::ClassName( other ).c_str()  );
+   }
+
+//____________________________________________________________________________
+   PyObject* StlIterIsNotEqual( PyObject* self, PyObject* other )
+   {
+   // Called if operator== not available (e.g. if a global overload as under gcc).
+   // An exception is raised as the user should fix the dictionary.
+      return PyErr_Format( PyExc_LookupError,
+         "No operator!=(const %s&, const %s&) available in the dictionary!", 
+         Utility::ClassName( self ).c_str(), Utility::ClassName( other ).c_str()  );
+   }
+
 
 //- TDirectory member templates ----------------------------------------------
    PyObject* TDirectoryGetObject( ObjectProxy* self, PyObject* args )
@@ -1476,7 +1519,7 @@ namespace {
 
       // registration with CINT (note: CINT style signature for free functions)
          Long_t fid = Utility::InstallMethod(
-            0, pyfunc, name, "D - - 0 - - D - - 0 - -", (void*)TFNPyCallback, 2, npar );
+            0, pyfunc, name, 0, "D - - 0 - - D - - 0 - -", (void*)TFNPyCallback, 2, npar );
 
       // get constructor
          MethodProxy* method =
@@ -1589,7 +1632,7 @@ namespace {
          }
 
       // registration with CINT (note: CINT style signature for free functions)
-         Long_t fid = Utility::InstallMethod( 0, pyfunc, name,
+         Long_t fid = Utility::InstallMethod( 0, pyfunc, name, 0,
             "i - - 1 - - D - - 0 - - d - - 1 - - D - - 0 - - i - - 0 - -",
             (void*)TMinuitPyCallback, 5 );
 
@@ -1612,9 +1655,13 @@ namespace {
    };
 
 
-//- TVector behavior -----------------------------------------------------------
+//- simplistic len() functions -------------------------------------------------
    PyObject* ReturnThree( ObjectProxy*, PyObject* ) {
       return PyInt_FromLong( 3 );
+   }
+
+   PyObject* ReturnTwo( ObjectProxy*, PyObject* ) {
+      return PyInt_FromLong( 2 );
    }
 
 } // unnamed namespace
@@ -1662,13 +1709,22 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
       }
    }
 
-// map operator==() through GenObjectIsEqual to allow comparison to None
+// search for global comparator overloads (may fail; not sure whether it isn't better to
+// do this lazily just as is done for math operators, but this interplays nicely with the
+// generic versions)
+   Utility::AddBinaryOperator( pyclass, "==", "__eq__" ); 
+   Utility::AddBinaryOperator( pyclass, "!=", "__ne__" );
+
+// map operator==() through GenObjectIsEqual to allow comparison to None (kTRUE is to
+// require that the located method is a MethodProxy; this prevents circular calls as
+// GenObjectIsEqual is no MethodProxy)
    if ( HasAttrDirect( pyclass, PyStrings::gEq, kTRUE ) ) {
       Utility::AddToClass( pyclass, "__cpp_eq__",  "__eq__" );
       Utility::AddToClass( pyclass, "__eq__",  (PyCFunction) GenObjectIsEqual, METH_O );
    }
 
-// map operator!=() through GenObjectIsNotEqual to allow comparison to None
+// map operator!=() through GenObjectIsNotEqual to allow comparison to None (see note
+// on kTRUE above for __eq__)
    if ( HasAttrDirect( pyclass, PyStrings::gNe, kTRUE ) ) {
       Utility::AddToClass( pyclass, "__cpp_ne__",  "__ne__" );
       Utility::AddToClass( pyclass, "__ne__",  (PyCFunction) GenObjectIsNotEqual, METH_O );
@@ -1684,6 +1740,7 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
    // comparing for lists
       Utility::AddToClass( pyclass, "__cmp__", (PyCFunction) TObjectCompare, METH_O );
       Utility::AddToClass( pyclass, "__eq__",  (PyCFunction) TObjectIsEqual, METH_O );
+      Utility::AddToClass( pyclass, "__ne__",  (PyCFunction) TObjectIsNotEqual, METH_O );
 
       return kTRUE;
    }
@@ -1770,12 +1827,19 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
 
    if ( IsTemplatedSTLClass( name, "pair" ) ) {
       Utility::AddToClass( pyclass, "__getitem__", (PyCFunction) PairUnpack, METH_O );
+      Utility::AddToClass( pyclass, "__len__", (PyCFunction) ReturnTwo, METH_NOARGS );
 
       return kTRUE;
    }
 
    if ( name.find( "iterator" ) != std::string::npos ) {
       Utility::AddToClass( pyclass, "next", (PyCFunction) StlIterNext, METH_NOARGS );
+
+   // special case, if operator== is a global overload and included in the dictionary
+      if ( ! HasAttrDirect( pyclass, PyStrings::gCppEq, kTRUE ) )
+         Utility::AddToClass( pyclass, "__eq__",  (PyCFunction) StlIterIsEqual, METH_O );
+      if ( ! HasAttrDirect( pyclass, PyStrings::gCppNe, kTRUE ) )
+         Utility::AddToClass( pyclass, "__ne__",  (PyCFunction) StlIterIsNotEqual, METH_O );
 
       return kTRUE;
    }

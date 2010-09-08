@@ -3,6 +3,7 @@
 # Makefile definitions included by the top Makefile
 
 ARCH           := @architecture@
+HOST           := @host@
 @rootbuild@
 USECONFIG      := @useconfig@
 MKLIBOPTIONS   := @mkliboption@
@@ -32,6 +33,7 @@ TESTDIR        := @testdir@
 TUTDIR         := @tutdir@
 ACLOCALDIR     := @aclocaldir@
 
+BUILDX11       := @buildx11@
 X11LIBDIR      := @x11libdir@
 XPMLIBDIR      := @xpmlibdir@
 XPMLIB         := @xpmlib@
@@ -153,13 +155,13 @@ CHIRPLIBDIR    := @chirplibdir@
 CHIRPCLILIB    := @chirplib@
 CHIRPINCDIR    := $(filter-out /usr/include, @chirpincdir@)
 
-BUILDHDFS     := @buildhdfs@
-HDFSLIBDIR    := @hdfslibdir@
-HDFSCLILIB    := @hdfslib@
-HDFSINCDIR    := $(filter-out /usr/include, @hdfsincdir@)
-JNIINCDIR     := $(filter-out /usr/include, @jniincdir@) $(filter-out /usr/include, @jniincdir@/linux)
-JVMCLILIB     := @jvmlib@
-JVMLIBDIR     := @jvmlibdir@
+BUILDHDFS      := @buildhdfs@
+HDFSLIBDIR     := @hdfslibdir@
+HDFSCLILIB     := @hdfslib@
+HDFSINCDIR     := $(filter-out /usr/include, @hdfsincdir@)
+JNIINCDIR      := $(filter-out /usr/include, @jniincdir@) $(filter-out /usr/include, @jniincdir@/linux)
+JVMCLILIB      := @jvmlib@
+JVMLIBDIR      := @jvmlibdir@
 
 BUILDALIEN     := @buildalien@
 ALIENLIBDIR    := @alienlibdir@
@@ -192,6 +194,11 @@ BUILDFFTW3     := @buildfftw3@
 FFTW3LIBDIR    := @fftw3libdir@
 FFTW3LIB       := @fftw3lib@
 FFTW3INCDIR    := $(filter-out /usr/include, @fftw3incdir@)
+
+BUILDFITSIO    := @buildfitsio@
+CFITSIOLIBDIR  := @cfitsiolibdir@
+CFITSIOLIB     := @cfitsiolib@
+CFITSIOINCDIR  := $(filter-out /usr/include, @cfitsioincdir@)
 
 BUILDGVIZ      := @buildgviz@
 GRAPHVIZLIBDIR := @gvizlibdir@
@@ -235,6 +242,9 @@ AFSLIBDIR      := @afslibdir@
 AFSINCDIR      := @afsincdir@
 AFSEXTRACFLAGS := @afsextracflags@
 AFSSHARED      := @afsshared@
+
+ALLOCLIB       := @alloclib@
+ALLOCLIBDIR    := @alloclibdir@
 
 BUILDKRB5      := @buildkrb5@
 KRB5LIB        := @krb5lib@

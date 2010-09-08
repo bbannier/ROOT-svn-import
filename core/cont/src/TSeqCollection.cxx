@@ -99,48 +99,54 @@ void TSeqCollection::QSort(TObject **a, Int_t first, Int_t last)
 }
 
 //______________________________________________________________________________
-void TSeqCollection::QSort(TObject **a, TObject **b, Int_t first, Int_t last)
+void TSeqCollection::QSort(TObject **a, Int_t nBs, TObject ***b, Int_t first, Int_t last)
 {
-   // Sort array a of TObject pointers using a quicksort algorithm.
-   // Array b will be sorted just like a (a determines the sort).
-   // Uses ObjCompare() to compare objects.
+  // Sort array a of TObject pointers using a quicksort algorithm.
+  // Arrays b will be sorted just like a (a determines the sort).
+  // nBs is the number of TObject** arrays in b.
+  // Uses ObjCompare() to compare objects.
 
-   R__LOCKGUARD2(gCollectionMutex);
-   static TObject *tmp1, *tmp2;
-   static int i;           // "static" to save stack space
-   int j;
+  R__LOCKGUARD2(gCollectionMutex);
+  static TObject *tmp1, **tmp2;
+  static int i; // "static" to save stack space
+  int j,k;
 
-   while (last - first > 1) {
-      i = first;
-      j = last;
-      for (;;) {
-         while (++i < last && ObjCompare(a[i], a[first]) < 0)
-            ;
-         while (--j > first && ObjCompare(a[j], a[first]) > 0)
-            ;
-         if (i >= j)
-            break;
+  static int depth = 0;
+  if(depth == 0 && nBs > 0) tmp2 = new TObject*[nBs];
+  depth++;
 
-         tmp1 = a[i]; tmp2 = b[i];
-         a[i] = a[j]; b[i] = b[j];
-         a[j] = tmp1; b[j] = tmp2;
-      }
-      if (j == first) {
-         ++first;
-         continue;
-      }
-      tmp1 = a[first]; tmp2 = b[first];
-      a[first] = a[j]; b[first] = b[j];
-      a[j] = tmp1;     b[j] = tmp2;
-      if (j - first < last - (j + 1)) {
-         QSort(a, b, first, j);
-         first = j + 1;   // QSort(j + 1, last);
-      } else {
-         QSort(a, b, j + 1, last);
-         last = j;        // QSort(first, j);
-      }
-   }
+  while (last - first > 1) {
+     i = first;
+     j = last;
+     for (;;) {
+        while (++i < last && ObjCompare(a[i], a[first]) < 0) {}
+        while (--j > first && ObjCompare(a[j], a[first]) > 0) {}
+        if (i >= j) break;
+
+        tmp1 = a[i]; for(k=0;k<nBs;k++) tmp2[k] = b[k][i];
+        a[i] = a[j]; for(k=0;k<nBs;k++) b[k][i] = b[k][j];
+        a[j] = tmp1; for(k=0;k<nBs;k++) b[k][j] = tmp2[k];
+     }
+     if (j == first) {
+        ++first;
+        continue;
+     }
+     tmp1 = a[first]; for(k=0;k<nBs;k++) tmp2[k] = b[k][first];
+     a[first] = a[j]; for(k=0;k<nBs;k++) b[k][first] = b[k][j];
+     a[j] = tmp1; for(k=0;k<nBs;k++) b[k][j] = tmp2[k];
+     if (j - first < last - (j + 1)) {
+        QSort(a, nBs, b, first, j);
+        first = j + 1; // QSort(j + 1, last);
+     } else {
+        QSort(a, nBs, b, j + 1, last);
+        last = j; // QSort(first, j);
+     }
+  }
+  depth--;
+
+  if(depth == 0 && nBs > 0) delete [] tmp2;
 }
+
 
 //______________________________________________________________________________
 Long64_t TSeqCollection::Merge(TCollection *list)
@@ -194,6 +200,7 @@ Long64_t TSeqCollection::Merge(TCollection *list)
       // Current object mergeable - get corresponding objects in input lists
       templist = (TSeqCollection*)IsA()->New();
       nextlist.Reset();
+      Int_t indcoll = 0;
       while ((collcrt = nextlist())) {      // loop input lists
          if (!collcrt->InheritsFrom(TSeqCollection::Class())) {
             Error("Merge", "some objects in the input list are not collections - merging aborted");
@@ -203,12 +210,19 @@ Long64_t TSeqCollection::Merge(TCollection *list)
          // The next object to be merged with is a collection
          // the iterator skips the 'holes' the collections, we also need to do so.
          objtomerge = ((TSeqCollection*)collcrt)->At(indobj);
+         if (!objtomerge) {
+            Warning("Merge", "Object of type %s (position %d in list) not found in list %d. Continuing...", object->ClassName(), indobj, indcoll);
+            continue;
+         }
+/* 
+         // Dangerous - may try to merge non-corresponding histograms (A.G)
          while (objtomerge == 0
                 && indobj < ((TSeqCollection*)collcrt)->LastIndex() 
                ) {
             ++indobj;
             objtomerge = ((TSeqCollection*)collcrt)->At(indobj);
          }
+*/
          if (object->IsA() != objtomerge->IsA()) {
             Error("Merge", "object of type %s at index %d not matching object of type %s in input list",
                   object->ClassName(), indobj, objtomerge->ClassName());

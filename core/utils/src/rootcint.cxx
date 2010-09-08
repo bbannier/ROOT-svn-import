@@ -635,7 +635,10 @@ string R__tmpnam()
    strcpy(filename, tmpdir.c_str());
    strcat(filename, prefix);
    strcat(filename, radix);
-   close(mkstemp(filename));/*mkstemp not only generate file name but also opens the file*/
+   int temp_fileno = mkstemp(filename);/*mkstemp not only generate file name but also opens the file*/
+   if (temp_fileno >= 0) {
+      close(temp_fileno);
+   }
    remove(filename);
    tmpnamList.push_back(R__tmpnamElement(filename));
    return filename;
@@ -675,7 +678,7 @@ int AutoLoadCallbackImpl(char *c, char *)
    if (need.length() && gLibsNeeded.find(need)==string::npos) {
       gLibsNeeded += " " + need;
    }
-   return 1;
+   return -1; // We did not actually 'succeed' in loading the definition.
 }
 
 extern "C" int AutoLoadCallback(char *c, char *l)
@@ -1941,7 +1944,8 @@ int ElementStreamer(G__TypeInfo &ti, const char *R__t,int rwmode,const char *tcl
 
       case G__BIT_ISENUM:
          if (!R__t)  return 0;
-         (*dictSrcOut) << "            R__b << (Int_t&)" << R__t << ";" << std::endl;
+         (*dictSrcOut) << "            {  void *ptr_enum = (void*)&" << R__t << ";\n";
+         (*dictSrcOut) << "               R__b >> *reinterpret_cast<Int_t*>(ptr_enum); }" << std::endl;
          break;
 
       case R__BIT_HASSTREAMER:
@@ -2428,7 +2432,7 @@ void WriteClassInit(G__ClassInfo &cl)
    SchemaRuleClassMap_t::iterator rulesIt1 = G__ReadRules.find( cl.Fullname() );
    SchemaRuleClassMap_t::iterator rulesIt2 = G__ReadRawRules.find( cl.Fullname() );
 
-   MembersMap_t nameTypeMap;
+   MembersTypeMap_t nameTypeMap;
    CreateNameTypeMap( cl, nameTypeMap );
 
    //--------------------------------------------------------------------------
@@ -2791,6 +2795,8 @@ void WriteNamespaceInit(G__ClassInfo &cl)
 
                  << "         return &instance;" << std::endl
                  << "      }" << std::endl
+                 << "      // Insure that the inline function is _not_ optimized away by the compiler\n"
+                 << "      ::ROOT::TGenericClassInfo *(*_R__UNIQUE_(InitFunctionKeeper))() = &GenerateInitInstance;  " << std::endl
                  << "      // Static variable to force the class initialization" << std::endl
       // must be one long line otherwise R__UseDummy does not work
                  << "      static ::ROOT::TGenericClassInfo *_R__UNIQUE_(Init) = GenerateInitInstance();"
@@ -3137,9 +3143,10 @@ void WriteStreamer(G__ClassInfo &cl)
                      }
                   }
                } else if ((m.Type())->Property() & G__BIT_ISENUM) {
-                  if (i == 0)
-                     (*dictSrcOut) << "      R__b >> (Int_t&)" << m.Name() << ";" << std::endl;
-                  else
+                  if (i == 0) {
+                     (*dictSrcOut) << "      void *ptr_" << m.Name() << " = (void*)&" << m.Name() << ";\n";
+                     (*dictSrcOut) << "      R__b >> *reinterpret_cast<Int_t*>(ptr_" << m.Name() << ");" << std::endl;
+                  } else
                      (*dictSrcOut) << "      R__b << (Int_t)" << m.Name() << ";" << std::endl;
                } else {
                   if (isFloat16) {
@@ -4311,7 +4318,7 @@ int main(int argc, char **argv)
       return 1;
    }
 
-   char dictname[512];
+   char dictname[1024];
    int i, j, ic, ifl, force;
    int icc = 0;
    int use_preprocessor = 0;
@@ -4457,7 +4464,13 @@ int main(int argc, char **argv)
       ic++;
 
       // remove possible pathname to get the dictionary name
-      strcpy(dictname, argv[ifl]);
+      if (strlen(argv[ifl]) > (sizeof(dictname)-1)) {
+         Error(0, "rootcint: dictionary name too long (more than %d characters): %s\n",
+               sizeof(dictname)-1,argv[ifl]);
+         CleanupOnExit(1);
+         return 1;
+      }
+      strncpy(dictname, argv[ifl], sizeof(dictname)-1);
       char *p = 0;
       // find the right part of then name.
       for (p = dictname + strlen(dictname)-1;p!=dictname;--p) {
@@ -5395,7 +5408,7 @@ int main(int argc, char **argv)
 
          // during copy put dict include on top and remove later reference
          while (fgets(line, BUFSIZ, fp)) {
-            if (!strncmp(line, "#include", 8) && strstr(line, inclf))
+            if (!strncmp(line, "#include", 8) && strstr(line, "\" //newlink 3678 "))
                continue;
             fprintf(fpd, "%s", line);
 
@@ -5449,7 +5462,8 @@ int main(int argc, char **argv)
          Error(0,"%s: Unable to open output lib file %s\n",
                argv[0], liblist_filename.c_str());
       } else {
-         outputfile << gLibsNeeded << endl;
+         const size_t endStr = gLibsNeeded.find_last_not_of(" \t");
+         outputfile << gLibsNeeded.substr(0, endStr+1) << endl;
          G__ClassInfo clFile;
          clFile.Init();
          while (clFile.Next()) {

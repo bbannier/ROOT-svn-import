@@ -972,9 +972,9 @@ public:
    static Bool_t IsColorLocked();
 
    static void Color(const TGLColor& color);
-   static void Color(const TGLColor& color, UChar_t alpha);
-   static void Color(const TGLColor& color, Float_t alpha);
-   static void Color(Color_t color_index, Float_t alpha=1);
+   static void ColorAlpha(const TGLColor& color, UChar_t alpha);
+   static void ColorAlpha(const TGLColor& color, Float_t alpha);
+   static void ColorAlpha(Color_t color_index, Float_t alpha=1);
    static void ColorTransparency(Color_t color_index, Char_t transparency=0);
    static void Color3ub(UChar_t r, UChar_t g, UChar_t b);
    static void Color4ub(UChar_t r, UChar_t g, UChar_t b, UChar_t a);
@@ -999,39 +999,55 @@ public:
    static void BeginExtendPickRegion(Float_t scale);
    static void EndExtendPickRegion();
 
-   static void RenderPolyMarkers(const TAttMarker& marker, Float_t* p, Int_t n,
+   static void RenderPolyMarkers(const TAttMarker& marker, Char_t transp,
+                                 Float_t* p, Int_t n,
                                  Int_t pick_radius=0, Bool_t selection=kFALSE,
                                  Bool_t sec_selection=kFALSE);
-   static void RenderPoints(const TAttMarker& marker, Float_t* p, Int_t n,
+
+   static void RenderPoints(const TAttMarker& marker,
+                            Float_t* p, Int_t n,
                             Int_t pick_radius=0, Bool_t selection=kFALSE,
                             Bool_t sec_selection=kFALSE);
-   static void RenderCrosses(const TAttMarker& marker, Float_t* p, Int_t n,
+
+   static void RenderCrosses(const TAttMarker& marker,
+                             Float_t* p, Int_t n,
                              Bool_t sec_selection=kFALSE);
-   static void RenderPolyLine(const TAttLine& aline, Float_t* p, Int_t n,
+
+   static void RenderPolyLine(const TAttLine& aline, Char_t transp,
+                              Float_t* p, Int_t n,
                               Int_t pick_radius=0, Bool_t selection=kFALSE);
 
-   static void BeginAttLine(const TAttLine& aline, Int_t pick_radius=0, Bool_t selection=kFALSE);
+   static void BeginAttLine(const TAttLine& aline, Char_t transp,
+                            Int_t pick_radius=0, Bool_t selection=kFALSE);
    static void EndAttLine(Int_t pick_radius=0, Bool_t selection=kFALSE);
 
    // TODO: These draw routines should take LOD hints
-   static void SetDrawColors(const Float_t rgba[4]);
-   static void DrawSphere(const TGLVertex3 & position, Double_t radius, const Float_t rgba[4]);
-   static void DrawLine(const TGLLine3 & line, ELineHeadShape head, Double_t size, const Float_t rgba[4]);
+   static void SetDrawColors(const UChar_t rgba[4]);
+   static void DrawSphere(const TGLVertex3 & position, Double_t radius, const UChar_t rgba[4]);
+   static void DrawLine(const TGLLine3 & line, ELineHeadShape head, Double_t size, const UChar_t rgba[4]);
    static void DrawLine(const TGLVertex3 & start, const TGLVector3 & vector, ELineHeadShape head,
-                        Double_t size, const Float_t rgba[4]);
+                        Double_t size, const UChar_t rgba[4]);
    static void DrawRing(const TGLVertex3 & center, const TGLVector3 & normal,
-                        Double_t radius, const Float_t* rgba);
+                        Double_t radius, const UChar_t* rgba);
 
    static void DrawReferenceMarker(const TGLCamera  & camera,
                                    const TGLVertex3 & pos,
                                          Float_t      radius = 3,
-                                   const Float_t    * rgba   = 0);
+                                   const UChar_t    * rgba   = 0);
    static void DrawSimpleAxes(const TGLCamera      & camera,
                               const TGLBoundingBox & bbox,
                                     Int_t            axesType);
    static void DrawNumber(const TString    & num,
                           const TGLVertex3 & pos,
                                 Bool_t       center = kFALSE);
+
+   // Frequently used colors.
+   static const UChar_t fgRed[4];
+   static const UChar_t fgGreen[4];
+   static const UChar_t fgBlue[4];
+   static const UChar_t fgYellow[4];
+   static const UChar_t fgWhite[4];
+   static const UChar_t fgGrey[4];
 
    ClassDef(TGLUtil,0); // Wrapper class for misc GL pieces
 };
@@ -1053,6 +1069,20 @@ private:
 public:
    TGLCapabilitySwitch(Int_t what, Bool_t state);
    ~TGLCapabilitySwitch();
+};
+
+class TGLCapabilityEnabler
+{
+private:
+   TGLCapabilityEnabler(const TGLCapabilityEnabler &);
+   TGLCapabilityEnabler &operator = (const TGLCapabilityEnabler &);
+
+   Int_t    fWhat;
+   Bool_t   fFlip;
+
+public:
+   TGLCapabilityEnabler(Int_t what, Bool_t state);
+   ~TGLCapabilityEnabler();
 };
 
 class TGLFloatHolder

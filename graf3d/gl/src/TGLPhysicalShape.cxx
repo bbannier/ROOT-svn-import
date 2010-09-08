@@ -322,7 +322,7 @@ void TGLPhysicalShape::SetupGLColors(TGLRnrCtx & rnrCtx, const Float_t* color) c
       {
          // Outline also needs grey wireframe but respecting
          // transparency of main diffuse color.
-         TGLUtil::Color(rnrCtx.ColorSet().Outline(), 0.5f*color[3]);
+         TGLUtil::ColorAlpha(rnrCtx.ColorSet().Outline(), 0.5f*color[3]);
          break;
       }
       default:
@@ -348,8 +348,8 @@ void TGLPhysicalShape::Draw(TGLRnrCtx & rnrCtx) const
 
    // Debug tracing
    if (gDebug > 4) {
-      Info("TGLPhysicalShape::Draw", "this %d (class %s) LOD %d",
-           this, IsA()->GetName(), rnrCtx.ShapeLOD());
+      Info("TGLPhysicalShape::Draw", "this %ld (class %s) LOD %d",
+           (Long_t)this, IsA()->GetName(), rnrCtx.ShapeLOD());
    }
 
    // If LOD is pixel or less can draw pixel(point) directly, skipping
@@ -367,8 +367,8 @@ void TGLPhysicalShape::Draw(TGLRnrCtx & rnrCtx) const
    }
 
    if (gDebug > 4) {
-      Info("TGLPhysicalShape::Draw", "this %d (class %s) LOD %d",
-           this, IsA()->GetName(), rnrCtx.ShapeLOD());
+      Info("TGLPhysicalShape::Draw", "this %ld (class %s) LOD %d",
+           (Long_t)this, IsA()->GetName(), rnrCtx.ShapeLOD());
    }
 
    glPushMatrix();

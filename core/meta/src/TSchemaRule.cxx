@@ -45,7 +45,12 @@ TSchemaRule::~TSchemaRule()
 }
 
 //------------------------------------------------------------------------------
-TSchemaRule::TSchemaRule( const TSchemaRule& rhs ): TObject( rhs )
+TSchemaRule::TSchemaRule( const TSchemaRule& rhs ): TObject( rhs ),
+                            fVersionVect( 0 ), fChecksumVect( 0 ),
+                            fTargetVect( 0 ), fSourceVect( 0 ),
+                            fIncludeVect( 0 ), fEmbed( kTRUE ), 
+                            fReadFuncPtr( 0 ), fReadRawFuncPtr( 0 ),
+                            fRuleType( kNone )
 {
    // Copy Constructor.
    *this = rhs;
@@ -255,14 +260,14 @@ Bool_t TSchemaRule::SetFromRule( const char *rule )
    //-----------------------------------------------------------------------
    // Parse the rule and check it's validity
    //-----------------------------------------------------------------------
-   std::map<std::string, std::string> rule_values;
+   ROOT::MembersMap_t rule_values;
    
    std::string error_string;
    if( !ParseRule( rule, rule_values, error_string) ) {
       Error("SetFromRule","The rule (%s) is invalid: %s",rule,error_string.c_str());
       return kFALSE;
    }
-   std::map<std::string, std::string>::const_iterator it1;
+   ROOT::MembersMap_t ::const_iterator it1;
    
    it1 = rule_values.find( "type" );
    if( it1 != rule_values.end() ) {
@@ -616,7 +621,7 @@ Bool_t TSchemaRule::HasSource( const TString& source ) const
    TObject*      obj;
    TObjArrayIter it( fSourceVect );
    while( (obj = it.Next()) ) {
-      TNamed* var = (TNamed*)obj;
+      TSources* var = (TSources*)obj;
       if( var->GetName() == source )
          return kTRUE;
    }
@@ -803,6 +808,8 @@ Bool_t TSchemaRule::ProcessChecksum( const TString& checksum ) const
    //---------------------------------------------------------------------------
    // Check if we have valid list
    //---------------------------------------------------------------------------
+   if (!checksum[0])
+      return kFALSE;
    std::string chk = (const char*)checksum;
    if( chk[0] != '[' || chk[chk.size()-1] != ']' )
       return kFALSE;
@@ -861,8 +868,8 @@ void TSchemaRule::ProcessDeclaration( TObjArray* array, const TString& list )
 {
    // Split the list as a declaration into as a TObjArray of TNamed(name,type).
 
-   std::list<std::pair<std::string,std::string> >           elems;
-   std::list<std::pair<std::string,std::string> >::iterator it;
+   std::list<std::pair<ROOT::TSchemaType,std::string> >           elems;
+   std::list<std::pair<ROOT::TSchemaType,std::string> >::iterator it;
    ROOT::TSchemaRuleProcessor::SplitDeclaration( (const char*)list, elems );
 
    array->Clear();
@@ -871,7 +878,7 @@ void TSchemaRule::ProcessDeclaration( TObjArray* array, const TString& list )
       return;
 
    for( it = elems.begin(); it != elems.end(); ++it ) {
-      TNamed *type = new TNamed( it->second.c_str(), it->first.c_str() ) ;
+      TSources *type = new TSources( it->second.c_str(), it->first.fType.c_str(), it->first.fDimensions.c_str() ) ;
       array->Add( type );
    }
 }

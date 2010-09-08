@@ -50,6 +50,11 @@ protected:
    Bool_t            fTooltipShown;
    Int_t             fTooltipPixelTolerance;
    Int_t             fSecSelType; // secondary selection type
+   Bool_t            fDoInternalSelection;
+   Bool_t            fViewerCentricControls;
+   Float_t           fArrowKeyFactor;
+   Float_t           fMouseDragFactor;
+   Float_t           fMouseWheelFactor;
 
    virtual Bool_t Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2);
 
@@ -58,6 +63,8 @@ protected:
 
    virtual void   SelectForClicked(Event_t *event);
    virtual void   SelectForMouseOver();
+
+   Int_t ControlValue(Int_t v) { return fViewerCentricControls ? -v : v; }
 
 public:
    TGLEventHandler(TGWindow *w, TObject *obj);
@@ -92,6 +99,9 @@ public:
 
    Int_t GetSecSelType()  const { return fSecSelType; }
    void  SetSecSelType(Int_t t) { fSecSelType = t; }
+
+   Bool_t GetDoInternalSelection() const { return fDoInternalSelection; }
+   void   SetDoInternalSelection(Bool_t x) { fDoInternalSelection = x; }
 
    ClassDef(TGLEventHandler, 0); // Base-class and default implementation of event-handler for TGLViewer.
 };
