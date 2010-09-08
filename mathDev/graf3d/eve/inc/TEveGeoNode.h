@@ -46,6 +46,9 @@ protected:
 public:
    TEveGeoNode(TGeoNode* node);
 
+   virtual TObject* GetObject(const TEveException& /*eh*/="TEveElementList::GetObject ") const
+   { const TObject* obj = this; return const_cast<TObject*>(obj); }
+
    virtual const char* GetName()  const;
    virtual const char* GetTitle() const;
    virtual const char* GetElementName()  const;
@@ -66,8 +69,8 @@ public:
    virtual void   SetMainColor(Color_t color);
 
    virtual Bool_t  CanEditMainTransparency() const;
-   virtual UChar_t GetMainTransparency() const;
-   virtual void    SetMainTransparency(UChar_t t);
+   virtual Char_t  GetMainTransparency() const;
+   virtual void    SetMainTransparency(Char_t t);
 
    void UpdateNode(TGeoNode* node);
    void UpdateVolume(TGeoVolume* volume);

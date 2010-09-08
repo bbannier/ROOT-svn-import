@@ -52,7 +52,7 @@
 #pragma link C++ class RooCachedPdf+ ;
 #pragma link C++ class RooFFTConvPdf+ ;
 #pragma link C++ class RooDataHistSliceIter+ ;
-#pragma link C++ class RooCacheManager<vector<Double_t> >+ ;
+#pragma link C++ class RooCacheManager<vector<double> >+ ;
 #pragma link C++ class RooCacheManager<RooAbsCacheElement>+ ;
 #pragma link C++ class RooObjCacheManager+ ;
 #pragma link C++ class RooAbsCache+ ;
@@ -102,6 +102,7 @@
 #pragma link C++ class RooTreeDataStore- ;
 #pragma link C++ class RooCompositeDataStore+ ;
 #pragma link C++ class RooTreeData+ ;
+#pragma link C++ class RooRangeBoolean+ ;
 #ifndef __ROOFIT_NOROOMINIMIZER
 #pragma link C++ class RooMinimizer+ ;
 #pragma link C++ class RooMinimizerFcn+ ;

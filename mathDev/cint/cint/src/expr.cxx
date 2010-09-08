@@ -541,6 +541,7 @@ static void G__getiparseobject(G__value* result, char* item)
    /* '_$trc_[tagnum]_[addr]' */
    char *xtmp = item + 6;
    char *xx = strchr(xtmp, '_');
+   // assert(xx != 0);
    result->type = item[2];
    result->obj.reftype.reftype = (int)(item[3] - '0');
    result->isconst = (int)(item[4] - '0');
@@ -1031,6 +1032,7 @@ G__value G__calc_internal(const char* exprwithspace)
          case ',':
          case '<':
             ipunct = iout + 1;
+            // Mark as a punctuation as continue as usual
          default :
             exprnospace[iout++] = exprwithspace[iin++] ;
             break;

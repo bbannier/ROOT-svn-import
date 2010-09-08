@@ -202,8 +202,8 @@ Int_t TXNetFile::ParseOptions(const char *opts,
    Int_t fo = 0;
    TString s(opts);
 
-   Int_t i = 0;
-   for (i = 0; i < 4; i++) {
+   UInt_t i = 0;
+   for (i = 0; i < (sizeof(keys)/sizeof(keys[0])); i++) {
       Int_t j = s.Index(keys[i]);
       if (j != kNPOS) {
          TString val(s(j+strlen(keys[i]), s.Length()));
@@ -665,6 +665,15 @@ Bool_t TXNetFile::ReadBuffer(char *buffer, Int_t bufferLength)
    return result;
 }
 
+//_____________________________________________________________________________
+Bool_t TXNetFile::ReadBuffer(char *buffer, Long64_t pos, Int_t bufferLength)
+{
+   // Pass through to TNetFile implementation which will call back eventually
+   // to our ReadBuffer with 2 arguments to deal with xrootd errors.
+
+   return TNetFile::ReadBuffer(buffer, pos, bufferLength);
+}
+
 //______________________________________________________________________________
 Bool_t TXNetFile::ReadBufferAsync(Long64_t offs, Int_t bufferLength)
 {
@@ -777,7 +786,7 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
    Long64_t nr = fClient->ReadV(buf, pos, len, nbuf);
 
    if (gDebug > 1)
-      Info("ReadBuffers", "response from ReadV(%d) nr: %d", nbuf, nr);
+      Info("ReadBuffers", "response from ReadV(%d) nr: %lld", nbuf, nr);
 
    if (nr > 0) {
 
@@ -786,7 +795,7 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
               nr, nbuf);
 
       if (GetCacheRead()->GetBufferSize() < nr)
-         Info("ReadBuffers", "%lld bytes of data read with a smaller (%ld) TFileCacheRead buffer size?",
+         Info("ReadBuffers", "%lld bytes of data read with a smaller (%d) TFileCacheRead buffer size?",
               nr, GetCacheRead()->GetBufferSize());
 
       // Where should we leave the offset ?
@@ -803,7 +812,7 @@ Bool_t TXNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
 
       if (gPerfStats) {
          fOffset = pos[0];
-         gPerfStats->FileReadEvent(this, pos[nbuf-1]+len[nbuf-1]-pos[0], start);         
+         gPerfStats->FileReadEvent(this, pos[nbuf-1]+len[nbuf-1]-pos[0], start);
       }
 
       if (gMonitoringWriter)
@@ -1349,19 +1358,26 @@ void TXNetFile::SynchronizeCacheSize()
    // Synchronize the cache size
    // Alternative purging policy
 
+   if (fClient == 0) return;
+
    fClient->UseCache(TRUE);
    Int_t size;
    Long64_t bytessubmitted, byteshit, misscount, readreqcnt;
    Float_t  missrate, bytesusefulness;
    int newbsz = -1;
-   if (fClient && fClient->GetCacheInfo(size, bytessubmitted,
-                                        byteshit, misscount,
-                                        missrate, readreqcnt,
-                                        bytesusefulness) ) {
+   if (fClient->GetCacheInfo(size, bytessubmitted,
+                             byteshit, misscount,
+                             missrate, readreqcnt,
+                             bytesusefulness) ) {
 
       // To allow for some space for outstanding data
-      newbsz = GetCacheRead()->GetBufferSize() / 2 * 3;
-      newbsz = TMath::Max(newbsz, size);
+      TFileCacheRead *cacheRead = GetCacheRead();
+      if (cacheRead) {
+         newbsz = GetBufferSize() / 2 * 3;
+         newbsz = TMath::Max(newbsz, size);
+      } else {
+         newbsz = size;
+      }
 
    }
 
@@ -1410,11 +1426,11 @@ void TXNetFile::Print(Option_t *option) const
                                         byteshit, misscount,
                                         missrate, readreqcnt,
                                         bytesusefulness)) {
-      Printf(" Max size:                  %ld", size);
+      Printf(" Max size:                  %d",   size);
       Printf(" Bytes submitted:           %lld", bytessubmitted);
       Printf(" Bytes hit (estimation):    %lld", byteshit);
       Printf(" Miss count:                %lld", misscount);
-      Printf(" Miss rate:                 %f", missrate);
+      Printf(" Miss rate:                 %f",   missrate);
       Printf(" Read requests count:       %lld", readreqcnt);
       Printf(" Bytes usefulness:          %f\n", bytesusefulness);
    } else

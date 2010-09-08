@@ -170,7 +170,7 @@ static Int_t RootX11ErrorHandler(Display *disp, XErrorEvent *err)
    if (gDebug == (Long_t)gVirtualX) {
       gSystem->ProcessEvents();
       ::Error("RootX11ErrorHandler", "%s (XID: %u, XREQ: %u)", msg,
-               err->resourceid, err->request_code);
+               (UInt_t)err->resourceid, err->request_code);
       int *kil = (int*)1;
       delete kil;
       return 0;
@@ -178,14 +178,14 @@ static Int_t RootX11ErrorHandler(Display *disp, XErrorEvent *err)
 
    if (!err->resourceid) return 0;
 
-   TObject *w = (TObject *)gROOT->ProcessLineFast(Form("gClient->GetWindowById(%d)", err->resourceid));
+   TObject *w = (TObject *)gROOT->ProcessLineFast(Form("gClient->GetWindowById(%lu)", (ULong_t)err->resourceid));
 
    if (!w) {
       ::Error("RootX11ErrorHandler", "%s (XID: %u, XREQ: %u)", msg,
-               err->resourceid, err->request_code);
+               (UInt_t)err->resourceid, err->request_code);
    } else {
       ::Error("RootX11ErrorHandler", "%s (%s XID: %u, XREQ: %u)", msg, w->ClassName(),
-               err->resourceid, err->request_code);
+               (UInt_t)err->resourceid, err->request_code);
       w->Print("tree");
    }
    if (TROOT::Initialized()) {
@@ -1428,6 +1428,12 @@ void TGX11::MapModifierState(UInt_t &state, UInt_t &xstate, Bool_t tox)
          xstate |= Mod1Mask;
       if ((state & kKeyMod2Mask))
          xstate |= Mod2Mask;
+      if ((state & kKeyMod3Mask))
+         xstate |= Mod3Mask;
+      if ((state & kKeyMod4Mask))
+         xstate |= Mod4Mask;
+      if ((state & kKeyMod5Mask))
+         xstate |= Mod5Mask;
       if ((state & kButton1Mask))
          xstate |= Button1Mask;
       if ((state & kButton2Mask))
@@ -1448,6 +1454,12 @@ void TGX11::MapModifierState(UInt_t &state, UInt_t &xstate, Bool_t tox)
          state |= kKeyMod1Mask;
       if ((xstate & Mod2Mask))
          state |= kKeyMod2Mask;
+      if ((xstate & Mod3Mask))
+         state |= kKeyMod3Mask;
+      if ((xstate & Mod4Mask))
+         state |= kKeyMod4Mask;
+      if ((xstate & Mod5Mask))
+         state |= kKeyMod5Mask;
       if ((xstate & Button1Mask))
          state |= kButton1Mask;
       if ((xstate & Button2Mask))

@@ -169,6 +169,10 @@ void TEveTrackPropagator::Helix_t::Step(const TEveVector4& v, const TEveVector& 
 //
 // TEveTrackList has Get/Set methods for RnrStlye. TEveTrackEditor and
 // TEveTrackListEditor provide editor access.
+//
+// Specify whether 2D projected tracks get broken into several
+// segments when the projected space consists of separate domains
+// (like Rho-Z). This is true by default.
 
 ClassImp(TEveTrackPropagator);
 
@@ -181,32 +185,26 @@ Float_t             TEveTrackPropagator::fgEditorMaxZ  = 4000;
 
 //______________________________________________________________________________
 TEveTrackPropagator::TEveTrackPropagator(const char* n, const char* t,
-                                         TEveMagField *field) :
+                                         TEveMagField *field, Bool_t own_field) :
    TEveElementList(n, t),
    TEveRefBackPtr(),
 
    fStepper(kHelix),
    fMagFieldObj(field),
-   fMaxR    (350),
-   fMaxZ    (450),
+   fOwnMagFiledObj(own_field),
 
-   fNMax    (4096),
-   fMaxOrbs (0.5),
+   fMaxR    (350),   fMaxZ    (450),
+   fNMax    (4096),  fMaxOrbs (0.5),
 
    fEditPathMarks (kTRUE),
-   fFitDaughters  (kTRUE),
-   fFitReferences (kTRUE),
-   fFitDecay      (kTRUE),
-   fFitCluster2Ds (kTRUE),
-
-   fRnrDaughters  (kFALSE),
-   fRnrReferences (kFALSE),
-   fRnrDecay      (kFALSE),
-   fRnrCluster2Ds (kFALSE),
+   fFitDaughters  (kTRUE),   fFitReferences (kTRUE),
+   fFitDecay      (kTRUE),   fFitCluster2Ds (kTRUE),
+   fRnrDaughters  (kFALSE),  fRnrReferences (kFALSE),
+   fRnrDecay      (kFALSE),  fRnrCluster2Ds (kFALSE),
    fRnrFV         (kFALSE),
+   fPMAtt(), fFVAtt(),
 
-   fPMAtt(),
-   fFVAtt(),
+   fProjTrackBreaking(kPTB_Break), fRnrPTBMarkers(kFALSE), fPTBAtt(),
 
    fV()
 {
@@ -220,9 +218,14 @@ TEveTrackPropagator::TEveTrackPropagator(const char* n, const char* t,
    fFVAtt.SetMarkerStyle(4);
    fFVAtt.SetMarkerSize(1.5);
 
+   fPTBAtt.SetMarkerColor(kBlue);
+   fPTBAtt.SetMarkerStyle(4);
+   fPTBAtt.SetMarkerSize(0.8);
 
-   if (fMagFieldObj == 0)
+   if (fMagFieldObj == 0) {
       fMagFieldObj = new TEveMagFieldConst(0., 0., fgDefMagField);
+      fOwnMagFiledObj = kTRUE;
+   }
 }
 
 //______________________________________________________________________________
@@ -230,7 +233,10 @@ TEveTrackPropagator::~TEveTrackPropagator()
 {
    // Destructor.
 
-   delete fMagFieldObj;
+   if (fOwnMagFiledObj)
+   {
+      delete fMagFieldObj;
+   }
 }
 
 //______________________________________________________________________________
@@ -346,24 +352,31 @@ void TEveTrackPropagator::Update(const TEveVector4& v, const TEveVector& p,
          using namespace TMath;
 
          Float_t a = fgkB2C * fMagFieldObj->GetMaxFieldMag() * Abs(fH.fCharge);
-         fH.fR = p.Mag() / a;
+	 if (a > kAMin)
+	 {
+            fH.fR = p.Mag() / a;
 
-         // get phi step, compare fDelta with MaxAng
-         fH.fPhiStep = fH.fMaxAng * DegToRad();
-         if (fH.fR > fH.fDelta )
-         {
-            Float_t ang  = 2.0 * ACos(1.0f - fH.fDelta/fH.fR);
-            if (ang < fH.fPhiStep)
-               fH.fPhiStep = ang;
-         }
+            // get phi step, compare fDelta with MaxAng
+            fH.fPhiStep = fH.fMaxAng * DegToRad();
+            if (fH.fR > fH.fDelta )
+            {
+               Float_t ang  = 2.0 * ACos(1.0f - fH.fDelta/fH.fR);
+               if (ang < fH.fPhiStep)
+                  fH.fPhiStep = ang;
+            }
 
-         // check against maximum step-size
-         fH.fRKStep = fH.fR * fH.fPhiStep * Sqrt(1 + fH.fLam*fH.fLam);
-         if (fH.fRKStep > fH.fMaxStep || enforce_max_step)
-         {
-            fH.fPhiStep *= fH.fMaxStep / fH.fRKStep;
-            fH.fRKStep   = fH.fMaxStep;
-         }
+            // check against maximum step-size
+            fH.fRKStep = fH.fR * fH.fPhiStep * Sqrt(1 + fH.fLam*fH.fLam);
+            if (fH.fRKStep > fH.fMaxStep || enforce_max_step)
+            {
+               fH.fPhiStep *= fH.fMaxStep / fH.fRKStep;
+               fH.fRKStep   = fH.fMaxStep;
+            }
+	 }
+	 else
+	 {
+            fH.fRKStep = fH.fMaxStep; 
+	 }
       }
    }
 }
@@ -512,8 +525,9 @@ Bool_t TEveTrackPropagator::LoopToVertex(TEveVector& v, TEveVector& p)
    {
       TEveVector d1 = v;
       d1 -= currV;
+      Float_t d1_mag = d1.Mag();
 
-      if (d1.Mag() > kStepEps)
+      if (d1_mag > kStepEps)
       {
          Float_t step_frac = prod0 / (prod0 - prod1);
          if (step_frac > 0)
@@ -521,7 +535,7 @@ Bool_t TEveTrackPropagator::LoopToVertex(TEveVector& v, TEveVector& p)
             // Step for fraction of previous step size.
             // We pass 'enforce_max_step' flag to Update().
             Float_t orig_max_step = fH.fMaxStep;
-            fH.fMaxStep *= step_frac;
+            fH.fMaxStep = d1_mag * step_frac;
             Update(currV, p, kTRUE, kTRUE);
             Step(currV, p, forwV, forwP);
             p     = forwP;
@@ -753,20 +767,19 @@ void TEveTrackPropagator::SetMagField(Float_t bX, Float_t bY, Float_t bZ)
 {
    // Set constant magnetic field and rebuild tracks.
 
-   if (fMagFieldObj) delete fMagFieldObj;
-
-   fMagFieldObj = new TEveMagFieldConst(bX, bY, bZ);
-   RebuildTracks();
+   SetMagFieldObj(new TEveMagFieldConst(bX, bY, bZ));
 }
 
 //______________________________________________________________________________
-void TEveTrackPropagator::SetMagFieldObj(TEveMagField *mff)
+void TEveTrackPropagator::SetMagFieldObj(TEveMagField* field, Bool_t own_field)
 {
    // Set constant magnetic field and rebuild tracks.
 
-   if (fMagFieldObj) delete fMagFieldObj;
+   if (fMagFieldObj && fOwnMagFiledObj) delete fMagFieldObj;
 
-   fMagFieldObj = mff;
+   fMagFieldObj    = field;
+   fOwnMagFiledObj = own_field;
+
    RebuildTracks();
 }
 
@@ -922,6 +935,33 @@ void TEveTrackPropagator::SetRnrReferences(Bool_t rnr)
 }
 
 //______________________________________________________________________________
+void TEveTrackPropagator::SetRnrFV(Bool_t x)
+{
+   // Set first-vertex rendering and rebuild tracks.
+
+   fRnrFV = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetProjTrackBreaking(UChar_t x)
+{
+   // Set projection break-point mode and rebuild tracks.
+
+   fProjTrackBreaking = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::SetRnrPTBMarkers(Bool_t x)
+{
+   // Set projection break-point rendering and rebuild tracks.
+
+   fRnrPTBMarkers = x;
+   RebuildTracks();
+}
+
+//______________________________________________________________________________
 void TEveTrackPropagator::StepRungeKutta(Double_t step,
                                          Double_t* vect, Double_t* vout)
 {
@@ -964,9 +1004,9 @@ void TEveTrackPropagator::StepRungeKutta(Double_t step,
   Double_t yt;
   Double_t zt;
 
-  // Double_t maxit = 1992;
-  Double_t maxit = 10;
-  Double_t maxcut = 11;
+  // const Int_t maxit = 1992;
+  const Int_t maxit  = 500;
+  const Int_t maxcut = 11;
 
   const Double_t hmin   = 1e-4; // !!! MT ADD,  should be member
   const Double_t kdlt   = 1e-3; // !!! MT CHANGE from 1e-4, should be member

@@ -44,6 +44,12 @@ MATHMOREDH1  := $(MODDIRI)/Math/DistFuncMathMore.h \
                 $(MODDIRI)/Math/GSLMinimizer.h \
                 $(MODDIRI)/Math/GSLNLSMinimizer.h \
                 $(MODDIRI)/Math/GSLSimAnMinimizer.h \
+                $(MODDIRI)/Math/Vavilov.h \
+                $(MODDIRI)/Math/VavilovAccurate.h \
+                $(MODDIRI)/Math/VavilovAccuratePdf.h \
+                $(MODDIRI)/Math/VavilovAccurateCdf.h \
+                $(MODDIRI)/Math/VavilovAccurateQuantile.h \
+                $(MODDIRI)/Math/VavilovFast.h \
                 $(MODDIRS)/GSLError.h
 
 MATHMOREH    := $(filter-out $(MODDIRI)/Math/LinkDef%,$(wildcard $(MODDIRI)/Math/*.h))
@@ -103,3 +109,6 @@ distclean::     distclean-$(MODNAME)
 ##### extra rules ######
 $(MATHMOREO): CXXFLAGS += $(GSLFLAGS) -DGSL_VERSION_NUM=$(GSLVERSION) -DUSE_ROOT_ERROR
 $(MATHMOREDO): CXXFLAGS += $(GSLFLAGS) -DGSL_VERSION_NUM=$(GSLVERSION) -DUSE_ROOT_ERROR
+
+# Optimize dictionary with stl containers.
+$(MATHMOREDO): NOOPT = $(OPT)

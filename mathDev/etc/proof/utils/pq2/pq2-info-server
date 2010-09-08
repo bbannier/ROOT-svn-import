@@ -15,7 +15,7 @@ printhelp()
    echo "   -h | --help   Print this help"
    echo "   -v            Verbose mode"
    echo "   -k            Keep temporary files"
-   echo "   servers:      Comma-separated list of servers for which the information is wanted"
+   echo "   server:       Server for which the information is wanted"
    echo "   serviceurl:   URL of the PROOF master or data server providing the information;"
    echo "                 for data servers, it must include the directory."
    echo "                 Can be specified via the envs PQ2PROOFURL or PQ2DSSRVURL."
@@ -36,12 +36,14 @@ SERVER=""
 TDIR=$TMPDIR
 #
 # Parse long options first
+other_args=
 short_opts=
 for i in $@ ; do
    opt=""
    case $i in
       --*) opt=`echo "$i" | sed 's/--//'` ;;
-      *) short_opts="$short_opts $i" ;;
+      -*) short_opts="$short_opts $i" ;;
+      *) other_args="$other_args $i"; short_opts="$short_opts $i" ;;
    esac
    if test ! "x$opt" = "x" ; then
       case "$opt" in
@@ -68,16 +70,23 @@ if test ! "x$short_opts" = "x" ; then
       u) SRVURL="-u $OPTARG" ;;
       v) DBGOPT="-v" ;;
       \?) printhelp; exit 1 ;;
-   esac
+      esac
+      if test ! "x$OPTARG" = "x" ; then
+         noa=
+         for a in $other_args ; do
+            if test ! "x$OPTARG" = "x$a" ; then
+               noa="$noa $a"
+            fi
+         done
+         other_args=$noa
+      fi
    done
-fi
 
-# Fill empty fields with any non-prefixed argument
-eval next_arg=\$$OPTIND
-if test ! "x$next_arg" = "x" ; then
-   if test "x$SERVER" = "x" ; then
-      SERVER="-s $next_arg"
+   # Fill empty fields with any non-prefixed argument
+   if test ! "x$other_args" = "x" && test "x$SERVER" = "x" ; then
+      SERVER="-s $other_args"
    fi
+
 fi
 
 if test "x$SERVER" = "x"; then

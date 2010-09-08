@@ -15,14 +15,12 @@ printhelp()
    echo "   -h | --help   Print this help"
    echo "   -v            Verbose mode"
    echo "   -k            Keep temporary files"
-   echo "   --forcescan   the dataset are open to get the information; otherwise the"
+   echo "   --forcescan   the datasets are open to get the information; otherwise the"
    echo "                 pre-processed information is used."
-   echo "   --noupdate    if a cache is used do not update it (which may be slow on very servers)"
+   echo "   --noupdate    if a cache is used do not update it (which may be slow on some servers)"
    echo "   --refresh     refresh the information (requires appropriate credentials; typically"
    echo "                 it can be done only for owned datasets"
-   echo "   datasets      Comma-separated list of datasets to be analysed; the '*' wild card in"
-   echo "                 the items (in such a case the full string - as shown by pq2-ls - should"
-   echo "                 be given in quotes, e.g. \"/default/ganis/h1-set5*\""
+   echo "   datasets      Datasets to be analysed; the '*' wild card can be used"
    echo "   serviceurl:   URL of the PROOF master or data server providing the information;"
    echo "                 for data servers, it must include the directory."
    echo "                 Can be specified via the envs PQ2PROOFURL or PQ2DSSRVURL."
@@ -37,19 +35,21 @@ if test "x$PQ2" = "x" ; then
 fi
 
 DBGOPT=""
-DSNARG=""
+DSNAME=""
 KEEPOPT=""
 OPTIONS=""
 SRVURL=""
 TDIR=$TMPDIR
 #
 # Parse long options first
+other_args=
 short_opts=
 for i in $@ ; do
    opt=""
    case $i in
       --*) opt=`echo "$i" | sed 's/--//'` ;;
-      *) short_opts="$short_opts $i" ;;
+      -*) short_opts="$short_opts $i" ;;
+      *) other_args="$other_args $i"; short_opts="$short_opts $i" ;;
    esac
    if test ! "x$opt" = "x" ; then
       case "$opt" in
@@ -57,7 +57,7 @@ for i in $@ ; do
          *) oarg= ;;
       esac ;
       case $opt in
-         dataset=*) DSNARG="-d $oarg" ;;
+         dataset=*) DSNAME="-d $oarg" ;;
          forcescan) OPTIONS="forcescan:$OPTIONS" ;;
          help)      printhelp ; exit ;;
          keep)      KEEPOPT="-k" ;;
@@ -72,22 +72,28 @@ done
 if test ! "x$short_opts" = "x" ; then
    while getopts d:t:u:hkv i $short_opts ; do
       case $i in
-      d) DSNARG="-d $OPTARG" ;;
+      d) DSNAME="-d $OPTARG" ;;
       h) printhelp ; exit ;;
       k) KEEPOPT="-k" ;;
       t) TDIR="$OPTARG" ;;
       u) SRVURL="-u $OPTARG" ;;
       v) DBGOPT="-v" ;;
       \?) printhelp; exit 1 ;;
-   esac
+      esac
+      if test ! "x$OPTARG" = "x" ; then
+         noa=
+         for a in $other_args ; do
+            if test ! "x$OPTARG" = "x$a" ; then
+               noa="$noa $a"
+            fi
+         done
+         other_args=$noa
+      fi
    done
-fi
 
-# Fill empty fields with any non-prefixed argument
-eval next_arg=\$$OPTIND
-if test ! "x$next_arg" = "x" ; then
-   if test "x$DSNARG" = "x" ; then
-      DSNARG="-d $next_arg"
+   # Fill empty fields with any non-prefixed argument
+   if test ! "x$other_args" = "x" && test "x$DSNAME" = "x" ; then
+      DSNAME="-d $other_args"
    fi
 fi
 
@@ -96,7 +102,7 @@ if test ! "x$OPTIONS" = "x" ; then
 fi
 
 # Run
-export TMPDIR="$TDIR"; $PQ2 ls $DBGOPT $KEEPOPT $DSNARG $OPTIONS $SRVURL
+export TMPDIR="$TDIR"; $PQ2 ls $DBGOPT $KEEPOPT $DSNAME $OPTIONS $SRVURL
 
 
 

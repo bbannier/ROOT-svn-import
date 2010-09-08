@@ -479,9 +479,9 @@ void TASImage::ReadImage(const char *filename, EImageFileTypes /*type*/)
 
    if (!gIconPaths[0]) {
       init_icon_paths();
-      // suppress the "root : looking for image ..." messages
-      set_output_threshold(0);
    }
+   // suppress the "root : looking for image ..." messages
+   set_output_threshold(0);
 
    static ASImageImportParams iparams;
    iparams.flags = 0;
@@ -1103,8 +1103,8 @@ void TASImage::Draw(Option_t *option)
    if (opt.Contains("n") || !gPad || !gPad->IsEditable()) {
       Int_t w = -64;
       Int_t h = 64;
-      w = (fImage->width > 64) ? fImage->width : w;
-      h = (fImage->height > 64) ? fImage->height : h;
+      w = (fImage->width > 64) ? (Int_t)fImage->width : w;
+      h = (fImage->height > 64) ? (Int_t)fImage->height : h;
 
       Float_t cx = 1./gStyle->GetScreenFactor();
       w = Int_t(w*cx) + 4;
@@ -1498,6 +1498,9 @@ void TASImage::Paint(Option_t *option)
          return;
       } else if (gVirtualPS->InheritsFrom("TPDF")) {
          Warning("Paint", "PDF not implemeted yet");
+         return;
+      } else if (gVirtualPS->InheritsFrom("TSVG")) {
+         Warning("Paint", "SVG not implemeted yet");
          return;
       }
 
@@ -3638,8 +3641,8 @@ void TASImage::FillRectangleInternal(UInt_t col, Int_t x, Int_t y, UInt_t width,
 
    Bool_t has_alpha = (color & 0xff000000) != 0xff000000;
 
-   x = x > (int)fImage->width ? fImage->width : x;
-   y = y > (int)fImage->height ? fImage->height : y;
+   x = x > (int)fImage->width ? (Int_t)fImage->width : x;
+   y = y > (int)fImage->height ? (Int_t)fImage->height : y;
 
    width = x + width > fImage->width ? fImage->width - x : width;
    height = y + height > fImage->height ? fImage->height - y : height;
@@ -4523,7 +4526,7 @@ void TASImage::DrawDashLine(UInt_t x1,  UInt_t y1, UInt_t x2, UInt_t y2, UInt_t 
    }
 
    if ((nDash < 2) || !pDash || (nDash%2)) {
-      Warning("DrawDashLine", "Wrong input parameters n=%d %d", nDash, sizeof(pDash)-1);
+      Warning("DrawDashLine", "Wrong input parameters n=%d %ld", nDash, (Long_t)sizeof(pDash)-1);
       return;
    }
 
@@ -4670,7 +4673,7 @@ void TASImage::DrawSegments(UInt_t nseg, Segment_t *seg, const char *col, UInt_t
    // Draw segments.
 
    if (!nseg || !seg) {
-      Warning("DrawSegments", "Ivalid data nseg=%d seg=%d", nseg, seg);
+      Warning("DrawSegments", "Ivalid data nseg=%d seg=0x%lx", nseg, (Long_t)seg);
       return;
    }
 
@@ -4714,8 +4717,8 @@ void TASImage::FillSpans(UInt_t npt, TPoint *ppt, UInt_t *widths, const char *co
    }
 
    if (!npt || !ppt || !widths || (stipple && (!w || !h))) {
-      Warning("FillSpans", "Invalid input data npt=%d ppt=%x col=%s widths=%x stipple=%x w=%d h=%d",
-              npt, ppt, col, widths, stipple, w, h);
+      Warning("FillSpans", "Invalid input data npt=%d ppt=0x%lx col=%s widths=0x%lx stipple=0x%lx w=%d h=%d",
+              npt, (Long_t)ppt, col, (Long_t)widths, (Long_t)stipple, w, h);
       return;
    }
 
@@ -4773,8 +4776,8 @@ void TASImage::FillSpans(UInt_t npt, TPoint *ppt, UInt_t *widths, TImage *tile)
    }
 
    if (!npt || !ppt || !widths || !tile) {
-      Warning("FillSpans", "Invalid input data npt=%d ppt=%x widths=%x tile=%x",
-              npt, ppt, widths, tile);
+      Warning("FillSpans", "Invalid input data npt=%d ppt=0x%lx widths=0x%lx tile=0x%lx",
+              npt, (Long_t)ppt, (Long_t)widths, (Long_t)tile);
       return;
    }
 
@@ -4829,7 +4832,7 @@ void TASImage::CropSpans(UInt_t npt, TPoint *ppt, UInt_t *widths)
    }
 
    if (!npt || !ppt || !widths) {
-      Warning("CropSpans", "No points specified npt=%d ppt=%x widths=%x", npt, ppt, widths);
+      Warning("CropSpans", "No points specified npt=%d ppt=0x%lx widths=0x%lx", npt, (Long_t)ppt, (Long_t)widths);
       return;
    }
 
@@ -5138,7 +5141,7 @@ Bool_t TASImage::GetPolygonSpans(UInt_t npt, TPoint *ppt, UInt_t *nspans,
    }
 
    if ((npt < 3) || !ppt) {
-      Warning("GetPolygonSpans", "No points specified npt=%d ppt=%x", npt, ppt);
+      Warning("GetPolygonSpans", "No points specified npt=%d ppt=0x%lx", npt, (Long_t)ppt);
       return kFALSE;
    }
 
@@ -5334,7 +5337,7 @@ void TASImage::DrawFillArea(UInt_t count, TPoint *ptsIn, const char *col,
    }
 
    if ((count < 3) || !ptsIn) {
-      Warning("DrawFillArea", "No points specified npt=%d ppt=%x", count, ptsIn);
+      Warning("DrawFillArea", "No points specified npt=%d ppt=0x%lx", count, (Long_t)ptsIn);
       return;
    }
 
@@ -5448,7 +5451,7 @@ void TASImage::DrawFillArea(UInt_t count, TPoint *ptsIn, TImage *tile)
    }
 
    if ((count < 3) || !ptsIn) {
-      Warning("DrawFillArea", "No points specified npt=%d ppt=%x", count, ptsIn);
+      Warning("DrawFillArea", "No points specified npt=%d ppt=0x%lx", count, (Long_t)ptsIn);
       return;
    }
 
@@ -6647,7 +6650,7 @@ Bool_t TASImage::SetJpegDpi(const char *name, UInt_t set)
    // set - dpi resolution.
    // Returns kFALSE in case of error.
 
-   static char buf[20];
+   static char buf[32];
    FILE *fp = fopen(name, "rb+");
 
    if (!fp) {
@@ -6655,7 +6658,10 @@ Bool_t TASImage::SetJpegDpi(const char *name, UInt_t set)
       return kFALSE;
    }
 
-   if (!fread(buf, 1, 20, fp)) return kFALSE;
+   if (!fread(buf, 1, 20, fp)) {
+      fclose(fp);
+      return kFALSE;
+   }
 
    char dpi1 = (set & 0xffff) >> 8;
    char dpi2 = set & 0xff;

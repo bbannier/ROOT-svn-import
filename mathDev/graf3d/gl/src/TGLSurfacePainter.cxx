@@ -1,3 +1,14 @@
+// @(#)root/gl:$Id$
+// Author:  Timur Pocheptsov  31/08/2006
+
+/*************************************************************************
+ * Copyright (C) 1995-2006, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #include <algorithm>
 #include "Riostream.h"
 #include <cstdlib>
@@ -106,16 +117,16 @@ void TGLSurfacePainter::Pan(Int_t px, Int_t py)
       fCamera->SetCamera();
       fCamera->Apply(fPadPhi, fPadTheta);
       fCamera->Pan(px, py);
-      
+
       RestoreProjectionMatrix();
       RestoreModelviewMatrix();
    } else if (fSelectedPart > 0) {
       //Convert py into bottom-top orientation.
       py = fCamera->GetHeight() - py;
-      
+
       SaveModelviewMatrix();
       SaveProjectionMatrix();
-      
+
       fCamera->SetCamera();
       fCamera->Apply(fPadPhi, fPadTheta);
 
@@ -128,7 +139,7 @@ void TGLSurfacePainter::Pan(Int_t px, Int_t py)
       }
       else
          MoveSection(px, py);
-         
+
       RestoreProjectionMatrix();
       RestoreModelviewMatrix();
    }
@@ -200,7 +211,7 @@ void TGLSurfacePainter::ProcessEvent(Int_t event, Int_t /*px*/, Int_t py)
       if (fBoxCut.IsActive())
          fBoxCut.TurnOnOff();
       if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", this));
+         gROOT->ProcessLineFast(Form("((TGLPlotPainter *)0x%lx)->Paint()", (ULong_t)this));
       else
          Paint();
    } else if (event == kKeyPress && (py == kKey_c || py == kKey_C)) {

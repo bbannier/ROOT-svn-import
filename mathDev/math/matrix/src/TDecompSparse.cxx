@@ -31,6 +31,7 @@ TDecompSparse::TDecompSparse()
 
    fVerbose = 0;
    InitParam();
+   memset(fInfo,0,21*sizeof(Int_t));
 }
 
 //______________________________________________________________________________
@@ -51,6 +52,8 @@ TDecompSparse::TDecompSparse(Int_t nRows,Int_t nr_nonZeros,Int_t verbose)
    fIkeep  .Set(3*(fNrows+1));
    fIw     .Set((Int_t)(1.3 * (2*fNnonZeros+3*fNrows+1)+1));
    fIw1    .Set(2*(fNrows+1));
+
+   memset(fInfo,0,21*sizeof(Int_t));
 
    // These parameters can only be set after sparsity/pivoting pattern is known
    fNsteps = 0;
@@ -78,6 +81,8 @@ TDecompSparse::TDecompSparse(Int_t row_lwb,Int_t row_upb,Int_t nr_nonZeros,Int_t
    fIw     .Set((Int_t)(1.3 * (2*fNnonZeros+3*fNrows+1)+1));
    fIw1    .Set(2*(fNrows+1));
 
+   memset(fInfo,0,21*sizeof(Int_t));
+
    // These parameters can only be set after sparsity/pivoting pattern is known
    fNsteps = 0;
    fMaxfrt = 0;
@@ -92,6 +97,8 @@ TDecompSparse::TDecompSparse(const TMatrixDSparse &a,Int_t verbose)
 
    InitParam();
    SetMatrix(a);
+
+   memset(fInfo,0,21*sizeof(Int_t));
 }
 
 //______________________________________________________________________________
@@ -305,7 +312,7 @@ Bool_t TDecompSparse::Decompose()
             break;
          case 3 :
             if (fVerbose)
-               Info("Decompose()","rank deficient matrix detected; apparent rank = ",this->IError());
+               Info("Decompose()","rank deficient matrix detected; apparent rank = %d",this->IError());
             done = 1;
             break;
          default:

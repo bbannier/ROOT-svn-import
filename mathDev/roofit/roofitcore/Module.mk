@@ -88,7 +88,8 @@ ROOFITCOREH3   := RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic
                   RooAbsNumGenerator.h RooFoamGenerator.h RooNumGenConfig.h RooNumGenFactory.h \
                   RooMultiVarGaussian.h RooXYChi2Var.h RooAbsDataStore.h RooTreeDataStore.h RooTreeData.h \
                   RooMinimizer.h RooMinimizerFcn.h RooMoment.h RooStudyManager.h RooAbsStudy.h \
-                  RooGenFitStudy.h RooProofDriverSelector.h RooStudyPackage.h RooCompositeDataStore.h RooUnBinDataStore.h
+                  RooGenFitStudy.h RooProofDriverSelector.h RooStudyPackage.h RooCompositeDataStore.h \
+                  RooRangeBoolean.h RooUnBinDataStore.h
 
 ROOFITCOREH1   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH1))
 ROOFITCOREH2   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH2))
@@ -151,3 +152,8 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		   $(ROOFITCOREDS) $(ROOFITCOREDH)
 
 distclean::     distclean-$(MODNAME)
+
+# Optimize dictionary with stl containers.
+$(ROOFITCOREDO1): NOOPT = $(OPT)
+$(ROOFITCOREDO2): NOOPT = $(OPT)
+$(ROOFITCOREDO3): NOOPT = $(OPT)

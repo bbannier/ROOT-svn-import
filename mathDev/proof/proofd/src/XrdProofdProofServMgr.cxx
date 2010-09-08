@@ -367,7 +367,11 @@ int XrdProofdProofServMgr::Config(bool rcf)
    }
    XPDPRT("terminated sessions admin path set to "<<fTermAdminPath);
 
-   TRACE(DBG, "RC settings: "<< fProofServRCs);
+   TRACE(DBG, "RC settings: "<< fProofServRCs.size());
+   if (TRACING(DBG) && fProofServRCs.size() > 0) {
+      std::list<XrdOucString>::iterator ircs = fProofServRCs.begin();
+      for ( ; ircs != fProofServRCs.end(); ircs++) { TRACE(DBG, "  "<< *ircs); }
+   }
 
    if (!rcf) {
       // Try to recover active session previously started
@@ -1226,9 +1230,7 @@ int XrdProofdProofServMgr::DoDirectivePutEnv(char *val, XrdOucStream *, bool)
       return -1;
 
    // Env variable to exported to 'proofserv'
-   if (fProofServEnvs.length() > 0)
-      fProofServEnvs += ',';
-   fProofServEnvs += val;
+   fProofServEnvs.push_back(XrdOucString(val));
 
    return 0;
 }
@@ -1243,13 +1245,12 @@ int XrdProofdProofServMgr::DoDirectivePutRc(char *val, XrdOucStream *cfg, bool)
       return -1;
 
    // rootrc variable to be passed to 'proofserv':
-   if (fProofServRCs.length() > 0)
-      fProofServRCs += ',';
-   fProofServRCs += val;
+   XrdOucString rcval(val);
    while ((val = cfg->GetWord()) && val[0]) {
-      fProofServRCs += ' ';
-      fProofServRCs += val;
+      rcval += ' ';
+      rcval += val;
    }
+   fProofServRCs.push_back(rcval);
 
    return 0;
 }
@@ -1667,8 +1668,18 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       pmsg += (int) getpid();
       TRACE(FORK, pmsg);
 
-      // We set to the user ownerships
-      if (SetUserOwnerships(p) != 0) {
+      // We set to the user ownerships and create relevant dirs
+      bool asserdatadir = 1;
+      int srvtype = xps->SrvType();
+      TRACE(ALL,"srvtype = "<< srvtype);
+      if (xps->SrvType() != kXPD_Worker && !strchr(fMgr->DataDirOpts(), 'M')) {
+         asserdatadir = 0;
+      } else if (xps->SrvType() == kXPD_Worker && !strchr(fMgr->DataDirOpts(), 'W')) {
+         asserdatadir = 0;
+      }
+      const char *pord = asserdatadir ? ord.c_str() : 0;
+      const char *ptag = asserdatadir ? in.fSessionTag.c_str() : 0;
+      if (SetUserOwnerships(p, pord, ptag) != 0) {
          emsg = "SetUserOwnerships did not return OK - EXIT";
          TRACE(XERR, emsg);
          if (fcp.Post(0, emsg.c_str()) != 0)
@@ -2445,11 +2456,11 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p, void *input)
    xps->SetFileout(in->fLogFile.c_str());
 
    // Additional envs (xpd.putenv directive)
-   if (fProofServEnvs.length() > 0) {
+   if (fProofServEnvs.size() > 0) {
       // Go through the list
-      XrdOucString env;
-      int from = 0;
-      while ((from = fProofServEnvs.tokenize(env, from, ',')) != -1) {
+      std::list<XrdOucString>::iterator ienv = fProofServEnvs.begin();
+      for ( ; ienv != fProofServEnvs.end(); ienv++) {
+         XrdOucString env = *ienv;
          if (env.length() > 0) {
             // Resolve keywords
             fMgr->ResolveKeywords(env, p->Client());
@@ -2819,12 +2830,12 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    }
 
    // Additional rootrcs (xpd.putrc directive)
-   if (fProofServRCs.length() > 0) {
+   if (fProofServRCs.size() > 0) {
       fprintf(frc, "# Additional rootrcs (xpd.putrc directives)\n");
       // Go through the list
-      XrdOucString rc;
-      int from = 0;
-      while ((from = fProofServRCs.tokenize(rc, from, ',')) != -1) {
+      std::list<XrdOucString>::iterator ircs = fProofServRCs.begin();
+      for ( ; ircs != fProofServRCs.end(); ircs++) {
+         XrdOucString rc = *ircs;
          if (rc.length() > 0) {
             if (rc.find("Proof.DataSetManager") != STR_NPOS) {
                TRACE(ALL,"Proof.DataSetManager ignored: use xpd.datasetsrc to define dataset managers");
@@ -2848,6 +2859,16 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
          rc += " opt:";
          rc += (*ii)->fOpts;
       }
+      fprintf(frc, "%s\n", rc.c_str());
+   }
+
+   // If applicable, add datadir location
+   if (fMgr->DataDir() && strlen(fMgr->DataDir()) > 0) {
+      fprintf(frc, "# Data directory\n");
+      XrdOucString rc;
+      XPDFORM(rc, "ProofServ.DataDir: %s/%s/%s/%s/%s", fMgr->DataDir(),
+                  p->Client()->Group(), p->Client()->User(), xps->Ordinal(),
+                  in->fSessionTag.c_str());
       fprintf(frc, "%s\n", rc.c_str());
    }
 
@@ -2973,11 +2994,11 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    }
 
    // Additional envs (xpd.putenv directive)
-   if (fProofServEnvs.length() > 0) {
+   if (fProofServEnvs.size() > 0) {
       // Go through the list
-      XrdOucString env;
-      int from = 0;
-      while ((from = fProofServEnvs.tokenize(env, from, ',')) != -1) {
+      std::list<XrdOucString>::iterator ienv = fProofServEnvs.begin();
+      for ( ; ienv != fProofServEnvs.end(); ienv++) {
+         XrdOucString env = *ienv;
          if (env.length() > 0) {
             // Resolve keywords
             fMgr->ResolveKeywords(env, p->Client());
@@ -3472,7 +3493,8 @@ int XrdProofdProofServMgr::CleanupProofServ(bool all, const char *usr)
 }
 
 //___________________________________________________________________________
-int XrdProofdProofServMgr::SetUserOwnerships(XrdProofdProtocol *p)
+int XrdProofdProofServMgr::SetUserOwnerships(XrdProofdProtocol *p,
+                                             const char *ord, const char *stag)
 {
    // Set user ownerships on some critical files or directories.
    // Return 0 on success, -1 if enything goes wrong.
@@ -3510,6 +3532,39 @@ int XrdProofdProofServMgr::SetUserOwnerships(XrdProofdProtocol *p)
                TRACE(XERR, "problems asserting: "<<d);
             }
          }
+      }
+   }
+
+   // If applicable, make sure that the private data dir for this user exists 
+   // and has the right permissions
+   if (fMgr->DataDir() && strlen(fMgr->DataDir()) > 0 && ord && stag) {
+      XrdProofUI ui;
+      XrdProofdAux::GetUserInfo(XrdProofdProtocol::EUidAtStartup(), ui);
+      XrdOucString dgr, dus[3];
+      XPDFORM(dgr, "%s/%s", fMgr->DataDir(), p->Client()->UI().fGroup.c_str());
+      if (XrdProofdAux::AssertDir(dgr.c_str(), ui, fMgr->ChangeOwn()) == 0) {
+         if (XrdProofdAux::ChangeMod(dgr.c_str(), 0777) == 0) {
+            unsigned int mode = 0755;
+            if (strchr(fMgr->DataDirOpts(), 'g')) mode = 0775;
+            if (strchr(fMgr->DataDirOpts(), 'a') || strchr(fMgr->DataDirOpts(), 'o')) mode = 0777;
+            XPDFORM(dus[0], "%s/%s", dgr.c_str(), p->Client()->UI().fUser.c_str());
+            XPDFORM(dus[1], "%s/%s", dus[0].c_str(), ord);
+            XPDFORM(dus[2], "%s/%s", dus[1].c_str(), stag);
+            for (int i = 0; i < 3; i++) {
+               if (XrdProofdAux::AssertDir(dus[i].c_str(), p->Client()->UI(), fMgr->ChangeOwn()) == 0) {
+                  if (XrdProofdAux::ChangeMod(dus[i].c_str(), mode) != 0) {
+                     TRACE(XERR, "problems setting permissions "<< oct << mode<<" on: "<<dus[i]);
+                  }
+               } else {
+                  TRACE(XERR, "problems asserting: "<<dus[i]);
+                  break;
+               }
+            }
+         } else {
+            TRACE(XERR, "problems setting permissions 0777 on: "<<dgr);
+         }
+      } else {
+         TRACE(XERR, "problems asserting: "<<dgr);
       }
    }
 

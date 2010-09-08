@@ -72,12 +72,15 @@ TEveElement::TEveElement() :
    fCompound            (0),
    fVizModel            (0),
    fVizTag              (),
+   fNumChildren         (0),
    fParentIgnoreCnt     (0),
    fTopItemCnt          (0),
    fDenyDestroy         (0),
    fDestroyOnZeroRefCnt (kTRUE),
    fRnrSelf             (kTRUE),
    fRnrChildren         (kTRUE),
+   fCanEditMainColor    (kFALSE),
+   fCanEditMainTransparency(kFALSE),
    fCanEditMainTrans    (kFALSE),
    fMainTransparency    (0),
    fMainColorPtr        (0),
@@ -104,12 +107,15 @@ TEveElement::TEveElement(Color_t& main_color) :
    fCompound            (0),
    fVizModel            (0),
    fVizTag              (),
+   fNumChildren         (0),
    fParentIgnoreCnt     (0),
    fTopItemCnt          (0),
    fDenyDestroy         (0),
    fDestroyOnZeroRefCnt (kTRUE),
    fRnrSelf             (kTRUE),
    fRnrChildren         (kTRUE),
+   fCanEditMainColor    (kFALSE),
+   fCanEditMainTransparency(kFALSE),
    fCanEditMainTrans    (kFALSE),
    fMainTransparency    (0),
    fMainColorPtr        (&main_color),
@@ -136,12 +142,15 @@ TEveElement::TEveElement(const TEveElement& e) :
    fCompound            (0),
    fVizModel            (0),
    fVizTag              (e.fVizTag),
+   fNumChildren         (0),
    fParentIgnoreCnt     (0),
    fTopItemCnt          (0),
    fDenyDestroy         (0),
    fDestroyOnZeroRefCnt (e.fDestroyOnZeroRefCnt),
    fRnrSelf             (e.fRnrSelf),
    fRnrChildren         (e.fRnrChildren),
+   fCanEditMainColor    (e.fCanEditMainColor),
+   fCanEditMainTransparency(e.fCanEditMainTransparency),
    fCanEditMainTrans    (e.fCanEditMainTrans),
    fMainTransparency    (e.fMainTransparency),
    fMainColorPtr        (0),
@@ -189,6 +198,7 @@ TEveElement::~TEveElement()
    {
       (*p)->RemoveElementLocal(this);
       (*p)->fChildren.remove(this);
+      --((*p)->fNumChildren);
    }
    fParents.clear();
 
@@ -444,13 +454,18 @@ void TEveElement::PropagateVizParamsToElements(TEveElement* el)
 }
 
 //______________________________________________________________________________
-void TEveElement::CopyVizParams(const TEveElement* /* el */)
+void TEveElement::CopyVizParams(const TEveElement* el)
 {
    // Copy visualization parameters from element el.
    // This method needs to be overriden by any class that introduces
    // new parameters.
+   // Color is copied in sub-classes which define it.
    // See, for example, TEvePointSet::CopyVizParams(),
    // TEveLine::CopyVizParams() and TEveTrack::CopyVizParams().
+
+   fCanEditMainColor        = el->fCanEditMainColor;
+   fCanEditMainTransparency = el->fCanEditMainTransparency;
+   fMainTransparency        = el->fMainTransparency;
 
    AddStamp(kCBColorSelection | kCBObjProps);
 }
@@ -509,6 +524,9 @@ void TEveElement::WriteVizParams(ostream& out, const TString& var)
 
    out << t << "SetElementName(\""  << GetElementName()  << "\");\n";
    out << t << "SetElementTitle(\"" << GetElementTitle() << "\");\n";
+   out << t << "SetEditMainColor("  << fCanEditMainColor << ");\n";
+   out << t << "SetEditMainTransparency(" << fCanEditMainTransparency << ");\n";
+   out << t << "SetMainTransparency("     << fMainTransparency << ");\n";
 }
 
 //______________________________________________________________________________
@@ -650,7 +668,7 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
       if (gEve->GetUseOrphanage())
       {
          if (gDebug > 0)
-            Info(eh, Form("moving to orphanage '%s' on zero reference count.", GetElementName()));
+            Info(eh, "moving to orphanage '%s' on zero reference count.", GetElementName());
 
          PreDeleteElement();
          gEve->GetOrphanage()->AddElement(this);
@@ -658,7 +676,7 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
       else
       {
          if (gDebug > 0)
-            Info(eh, Form("auto-destructing '%s' on zero reference count.", GetElementName()));
+            Info(eh, "auto-destructing '%s' on zero reference count.", GetElementName());
 
          PreDeleteElement();
          delete this;
@@ -946,7 +964,7 @@ void TEveElement::ExportToCINT(char* var_name)
    // Export render-element to CINT with variable name var_name.
 
    const char* cname = IsA()->GetName();
-   gROOT->ProcessLine(TString::Format("%s* %s = (%s*)0x%lx;", cname, var_name, cname, this));
+   gROOT->ProcessLine(TString::Format("%s* %s = (%s*)0x%lx;", cname, var_name, cname, (ULong_t)this));
 }
 
 /******************************************************************************/
@@ -994,7 +1012,7 @@ void TEveElement::ExportSourceObjectToCINT(char* var_name) const
       throw eh + "source-object not set.";
 
    const char* cname = so->IsA()->GetName();
-   gROOT->ProcessLine(TString::Format("%s* %s = (%s*)0x%lx;", cname, var_name, cname, so));
+   gROOT->ProcessLine(TString::Format("%s* %s = (%s*)0x%lx;", cname, var_name, cname, (ULong_t)so));
 }
 
 /******************************************************************************/
@@ -1192,8 +1210,7 @@ void TEveElement::SetMainColorRGB(Float_t r, Float_t g, Float_t b)
 //______________________________________________________________________________
 void TEveElement::PropagateMainColorToProjecteds(Color_t color, Color_t old_color)
 {
-   // Convert RGB values to Color_t and call SetMainColor.
-   // Maybe this should be optional on gEve/element level.
+   // Propagate color to projected elements.
 
    TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
    if (pable && pable->HasProjecteds())
@@ -1203,14 +1220,18 @@ void TEveElement::PropagateMainColorToProjecteds(Color_t color, Color_t old_colo
 }
 
 //______________________________________________________________________________
-void TEveElement::SetMainTransparency(UChar_t t)
+void TEveElement::SetMainTransparency(Char_t t)
 {
    // Set main-transparency.
    // Transparency is clamped to [0, 100].
 
+   Char_t old_t = GetMainTransparency();
+
    if (t > 100) t = 100;
    fMainTransparency = t;
    StampColorSelection();
+
+   PropagateMainTransparencyToProjecteds(t, old_t);
 }
 
 //______________________________________________________________________________
@@ -1221,8 +1242,21 @@ void TEveElement::SetMainAlpha(Float_t alpha)
 
    if (alpha < 0) alpha = 0;
    if (alpha > 1) alpha = 1;
-   SetMainTransparency((UChar_t) (100.0f*(1.0f - alpha)));
+   SetMainTransparency((Char_t) (100.0f*(1.0f - alpha)));
 }
+
+//______________________________________________________________________________
+void TEveElement::PropagateMainTransparencyToProjecteds(Char_t t, Char_t old_t)
+{
+   // Propagate transparency to projected elements.
+
+   TEveProjectable* pable = dynamic_cast<TEveProjectable*>(this);
+   if (pable && pable->HasProjecteds())
+   {
+      pable->PropagateMainTransparency(t, old_t);
+   }
+}
+
 
 /******************************************************************************/
 
@@ -1317,7 +1351,7 @@ void TEveElement::AddElement(TEveElement* el)
                       GetElementName(), el->GetElementName()));
 
    el->AddParent(this);
-   fChildren.push_back(el);
+   fChildren.push_back(el); ++fNumChildren;
    el->AddIntoListTrees(this);
    ElementChanged();
 }
@@ -1330,7 +1364,7 @@ void TEveElement::RemoveElement(TEveElement* el)
    el->RemoveFromListTrees(this);
    RemoveElementLocal(el);
    el->RemoveParent(this);
-   fChildren.remove(el);
+   fChildren.remove(el); --fNumChildren;
    ElementChanged();
 }
 
@@ -1364,7 +1398,7 @@ void TEveElement::RemoveElementsInternal()
    {
       (*i)->RemoveParent(this);
    }
-   fChildren.clear();
+   fChildren.clear(); fNumChildren = 0;
 }
 
 //______________________________________________________________________________
@@ -1374,7 +1408,7 @@ void TEveElement::RemoveElements()
    // be done more efficiently then looping over them and removing
    // them one by one.
 
-   if ( ! fChildren.empty())
+   if (HasChildren())
    {
       RemoveElementsInternal();
       ElementChanged();
@@ -1413,7 +1447,7 @@ void TEveElement::ProjectChild(TEveElement* el, Bool_t same_depth)
          Float_t cd = pmgr->GetCurrentDepth();
          if (same_depth) pmgr->SetCurrentDepth((*i)->GetDepth());
 
-         pmgr->SubImportElements(el, dynamic_cast<TEveElement*>(*i));
+         pmgr->SubImportElements(el, (*i)->GetProjectedAsElement());
 
          if (same_depth) pmgr->SetCurrentDepth(cd);
       }
@@ -1443,7 +1477,7 @@ void TEveElement::ProjectAllChildren(Bool_t same_depth)
          Float_t cd = pmgr->GetCurrentDepth();
          if (same_depth) pmgr->SetCurrentDepth((*i)->GetDepth());
 
-         pmgr->SubImportChildren(this, dynamic_cast<TEveElement*>(*i));
+         pmgr->SubImportChildren(this, (*i)->GetProjectedAsElement());
 
          if (same_depth) pmgr->SetCurrentDepth(cd);
       }
@@ -1551,7 +1585,7 @@ TEveElement* TEveElement::FirstChild() const
 {
    // Returns the first child element or 0 if the list is empty.
 
-   return fChildren.empty() ? 0 : fChildren.front();
+   return HasChildren() ? fChildren.front() : 0;
 }
 
 //______________________________________________________________________________
@@ -1559,7 +1593,7 @@ TEveElement* TEveElement::LastChild () const
 {
    // Returns the last child element or 0 if the list is empty.
 
-   return fChildren.empty() ? 0 : fChildren.back();
+   return HasChildren() ? fChildren.back() : 0;
 }
 
 
@@ -1609,7 +1643,7 @@ void TEveElement::Destroy()
 
    if (fDenyDestroy > 0)
       throw eh + TString::Format("element '%s' (%s*) 0x%lx is protected against destruction.",
-                                 GetElementName(), IsA()->GetName(), this);
+                                 GetElementName(), IsA()->GetName(), (ULong_t)this);
 
    PreDeleteElement();
    delete this;
@@ -1629,7 +1663,7 @@ void TEveElement::DestroyOrWarn()
    }
    catch (TEveException& exc)
    {
-      Warning(eh, exc);
+      Warning(eh, "%s", exc.Data());
    }
 }
 
@@ -1640,7 +1674,8 @@ void TEveElement::DestroyElements()
 
    static const TEveException eh("TEveElement::DestroyElements ");
 
-   while ( ! fChildren.empty()) {
+   while (HasChildren())
+   {
       TEveElement* c = fChildren.front();
       if (c->fDenyDestroy <= 0)
       {
@@ -1648,15 +1683,14 @@ void TEveElement::DestroyElements()
             c->Destroy();
          }
          catch (TEveException exc) {
-            Warning(eh, Form("element destruction failed: '%s'.", exc.Data()));
+            Warning(eh, "element destruction failed: '%s'.", exc.Data());
             RemoveElement(c);
          }
       }
       else
       {
          if (gDebug > 0)
-            Info(eh, Form("element '%s' is protected agains destruction, removing locally.",
-			  c->GetElementName()));
+            Info(eh, "element '%s' is protected agains destruction, removing locally.", c->GetElementName());
          RemoveElement(c);
       }
    }
@@ -2048,7 +2082,7 @@ TObject* TEveElementObjectPtr::GetObject(const TEveException& eh) const
    // Virtual from TEveElement.
 
    if (fObject == 0)
-      throw(eh + "fObject not set.");
+      throw eh + "fObject not set.";
    return fObject;
 }
 
@@ -2062,7 +2096,7 @@ void TEveElementObjectPtr::ExportToCINT(char* var_name)
 
    TObject* obj = GetObject(eh);
    const char* cname = obj->IsA()->GetName();
-   gROOT->ProcessLine(Form("%s* %s = (%s*)0x%lx;", cname, var_name, cname, obj));
+   gROOT->ProcessLine(Form("%s* %s = (%s*)0x%lx;", cname, var_name, cname, (ULong_t)obj));
 }
 
 //______________________________________________________________________________
@@ -2094,18 +2128,22 @@ TEveElementObjectPtr::~TEveElementObjectPtr()
 ClassImp(TEveElementList);
 
 //______________________________________________________________________________
-TEveElementList::TEveElementList(const char* n, const char* t, Bool_t doColor) :
+TEveElementList::TEveElementList(const char* n, const char* t, Bool_t doColor, Bool_t doTransparency) :
    TEveElement(),
    TNamed(n, t),
    TEveProjectable(),
    fColor(0),
-   fDoColor(doColor),
    fChildClass(0)
 {
    // Constructor.
 
-   if (fDoColor) {
+   if (doColor) {
+      fCanEditMainColor = kTRUE;
       SetMainColorPtr(&fColor);
+   }
+   if (doTransparency)
+   {
+      fCanEditMainTransparency = kTRUE;
    }
 }
 
@@ -2115,7 +2153,6 @@ TEveElementList::TEveElementList(const TEveElementList& e) :
    TNamed      (e),
    TEveProjectable(),
    fColor      (e.fColor),
-   fDoColor    (e.fDoColor),
    fChildClass (e.fChildClass)
 {
    // Copy constructor.

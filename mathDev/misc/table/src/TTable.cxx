@@ -1528,7 +1528,7 @@ TTable *TTable::New(const Char_t *name, const Char_t *type, void *array, UInt_t 
 Bool_t TTable::OutOfBoundsError(const char *where, Int_t i) const
 {
    // Generate an out-of-bounds error. Always returns false.
-   Error(where, "index %d out of bounds (size: %d, this: 0x%08x)", i, fN, this);
+   Error(where, "index %d out of bounds (size: %d, this: 0x%lx)", i, fN, (Long_t)this);
    return kFALSE;
 }
 //______________________________________________________________________________
@@ -2137,7 +2137,7 @@ void TTable::StreamerHeader(TBuffer &b, Version_t version)
       b >> rbytes;            /* number of bytes per row */
       if (GetRowSize() == -1) fSize = rbytes;
       if (rbytes - GetRowSize()) {
-         Warning("StreamerHeader","Schema evolution warning: row size mismatch: expected %d, read %d bytes\n",GetRowSize(),rbytes);
+         Warning("StreamerHeader","Schema evolution warning: row size mismatch: expected %ld, read %ld bytes\n",GetRowSize(),rbytes);
       }
 
 #ifdef __STAR__
@@ -2416,7 +2416,7 @@ TTable::EColumnType  TTable::GetColumnType(const Char_t *columnName) const {retu
 
 //  pointer iterator
 //________________________________________________________________________________________________________________
-TTable::piterator::piterator(const TTable *t,EColumnType type): fCurrentRowIndex(0),fCurrentColIndex(0),fCurrentRowPtr(0)
+TTable::piterator::piterator(const TTable *t,EColumnType type): fCurrentRowIndex(0),fCurrentColIndex(0),fRowSize(0),fCurrentRowPtr(0),fCurrentColPtr(0)
 {
    //to be documented
    Int_t sz = 0;

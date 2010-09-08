@@ -47,7 +47,7 @@ Text attributes are:
 
 <a name="T1"></a><h3>Text Alignment</h3>
 The text alignment is an integer number (<tt>align</tt>) allowing to control
-the horizontal and vertical position of the text string with respect 
+the horizontal and vertical position of the text string with respect
 to the text position.
 The text alignment of any class inheriting from <tt>TAttText</tt> can
 be changed using the method <tt>SetTextAlign</tt> and retrieved using the
@@ -55,15 +55,15 @@ method <tt>GetTextAlign</tt>.
 <pre>
    align = 10*HorizontalAlign + VerticalAlign
 </pre>
-For Horizontal alignment the following convention applies:
+For horizontal alignment the following convention applies:
 <pre>
    1=left adjusted, 2=centered, 3=right adjusted
 </pre>
-For Vertical alignment the following convention applies:
+For vertical alignment the following convention applies:
 <pre>
    1=bottom adjusted, 2=centered, 3=top adjusted
 </pre>
-For example: 
+For example:
 <pre>
    align = 11 = left adjusted and bottom adjusted
    align = 32 = right adjusted and vertically centered
@@ -104,20 +104,33 @@ End_Macro
 
 Begin_Html
 <a name="T4"></a><h3>Text Size</h3>
-If the text precision (see next paragraph) is smaller than 3, the text 
-size is expressed in percentage of the current pad height.
-The textsize in pixels (say charheight) will be:
+If the text precision (see next paragraph) is smaller than 3, the text
+size (<tt>textsize</tt>) is a fraction of the current pad size. Therefore the
+same <tt>textsize</tt> value can generate text outputs with different absolute
+sizes in two different pads.
+The text size in pixels (<tt>charheight</tt>) is computed the following way:
+<p>
 <pre>
-   charheight = textsize*canvas_height   if current pad is horizontal.
-   charheight = textsize*canvas_width    if current pad is vertical.
+   pad_width  = gPad->XtoPixel(gPad->GetX2());
+   pad_height = gPad->YtoPixel(gPad->GetY1());
+   if (pad_width < pad_height)  charheight = textsize*pad_width;
+   else                         charheight = textsize*pad_height;
 </pre>
-If the text precision is equal to 3, the character size is given in pixel: 
+<p>
+If the text precision is equal to 3, the text size doesn't depend on the pad's
+dimensions. A given <tt>textsize</tt> value always generates the same absolute
+size. The text size (<tt>charheight</tt>) is given in pixels:
 <pre>
-   charheight = number of pixels
+   charheight = textsize;
 </pre>
+<p>
+Note that to scale fonts to the same size as the old True Type package a
+scale factor of <tt>0.93376068</tt> is apply to the text size before drawing.
+<p>
 The text size of any class inheriting from <tt>TAttText</tt> can
 be changed using the method <tt>SetTextSize</tt> and retrieved using the
 method <tt>GetTextSize</tt>.
+
 
 <a name="T5"></a><h3>Text Font and Precision</h3>
 The text font code is combination of the font number and the precision.
@@ -144,7 +157,7 @@ used. The fonts have a minimum (4) and maximum (37) size in pixels. These
 fonts are fast and are of good quality. Their size varies with large steps
 and they cannot be rotated.
 Precision 1 and 2 fonts have a different behaviour depending if the
-True Type Fonts are used or not. If TTF are used, you always get very good
+True Type Fonts (TTF) are used or not. If TTF are used, you always get very good
 quality scalable and rotatable fonts. However TTF are slow.
 
 <a name="T52"></a><h4>How to use True Type Fonts</h4>
@@ -158,7 +171,7 @@ with the command:
 <pre>
    gEnv->Print();
 </pre>
-if the TTF are in use the following line will appear at the beginning of the
+If the TTF are in use the following line will appear at the beginning of the
 printout given by this command:
 <pre>
    Unix.*.Root.UseTTFonts:   true                           [Global]
@@ -182,11 +195,11 @@ printout given by this command:
       12 :       symbol-medium-r-normal     "Symbol"
       13 :       times-medium-r-normal      "Times New Roman"
       14 :                                  "Wingdings"
-      15 :       Symbol italic (derived form Symbol)
+      15 :       Symbol italic (derived from Symbol)
 </pre>
 <br>
- The following picture shows how each font looks like. The number on the left
- is the "Text font code". In this picture precision 2 was selected.
+ The following picture shows how each font looks. The number on the left
+ is the "text font code". In this picture precision 2 was selected.
 End_Html
 Begin_Macro(source)
 fonts.C
@@ -198,7 +211,7 @@ TAttText::TAttText()
 {
    // AttText default constructor.
    //
-   // Default text attributes are taking from the current style.
+   // Default text attributes are taken from the current style.
 
    if (!gStyle) {
       ResetAttText();
@@ -217,7 +230,7 @@ TAttText::TAttText(Int_t align, Float_t angle, Color_t color, Style_t font, Floa
 {
    // AttText normal constructor.
    //
-   // Text attributes are taking from the argument list.
+   // Text attributes are taken from the argument list.
 
    fTextAlign = align;
    fTextAngle = angle;
@@ -334,7 +347,7 @@ void TAttText::SetTextSizePixels(Int_t npixels)
 {
    // Set the text size in pixels.
    // If the font precision is greater than 2, the text size is set to npixels,
-   // otherwise the text size is computed as a per cent of the pad size.
+   // otherwise the text size is computed as a percent of the pad size.
 
    if (fTextFont%10 > 2) {
       fTextSize = Float_t(npixels);

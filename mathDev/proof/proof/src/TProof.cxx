@@ -46,6 +46,7 @@
 #include "TEventList.h"
 #include "TFile.h"
 #include "TFileInfo.h"
+#include "TFunction.h"
 #include "TFTP.h"
 #include "THashList.h"
 #include "TInterpreter.h"
@@ -53,6 +54,8 @@
 #include "TMap.h"
 #include "TMath.h"
 #include "TMessage.h"
+#include "TMethodArg.h"
+#include "TMethodCall.h"
 #include "TMonitor.h"
 #include "TMutex.h"
 #include "TObjArray.h"
@@ -86,7 +89,7 @@ TVirtualMutex *gProofMutex = 0;
 // Rotating indicator
 char TProofMergePrg::fgCr[4] = {'-', '\\', '|', '/'};
 
-TList   *TProof::fgProofEnvList = 0;  // List of env vars for proofserv
+TList   *TProof::fgProofEnvList = 0;          // List of env vars for proofserv
 TPluginHandler *TProof::fgLogViewer = 0;      // Log viewer handler
 
 ClassImp(TProof)
@@ -483,6 +486,7 @@ void TProof::InitMembers()
    fIntHandler = 0;
    fProgressDialog = 0;
    fProgressDialogStarted = kFALSE;
+   SetBit(kUseProgressDialog);
    fPlayer = 0;
    fFeedback = 0;
    fChains = 0;
@@ -541,6 +545,30 @@ void TProof::InitMembers()
    fLastAssignedMerger = 0;
    fWorkersToMerge = 0;
    fFinalizationRunning = kFALSE;
+
+   // Check if the user defined a list of environment variables to send over:
+   // include them into the dedicated list
+   if (gSystem->Getenv("PROOF_ENVVARS")) {
+      TString envs(gSystem->Getenv("PROOF_ENVVARS")), env, envsfound;
+      Int_t from = 0;
+      while (envs.Tokenize(env, from, ",")) {
+         if (!env.IsNull()) {
+            if (!gSystem->Getenv(env)) {
+               Warning("Init", "request for sending over undefined environemnt variable '%s' - ignoring", env.Data());
+            } else {
+               if (!envsfound.IsNull()) envsfound += ",";
+               envsfound += env;
+               TProof::DelEnvVar(env);
+               TProof::AddEnvVar(env, gSystem->Getenv(env));
+            }
+         }
+      }
+      if (envsfound.IsNull()) {
+         Warning("Init", "none of the requested env variables were found: '%s'", envs.Data());
+      } else {
+         Info("Init", "the following environment variables have been added to the list to be sent to the nodes: '%s'", envsfound.Data());
+      }
+   }
 
    // Done
    return;
@@ -1211,7 +1239,7 @@ Int_t TProof::AddWorkers(TList *workerList)
          // Upload and Enable methods are intelligent and avoid
          // re-uploading or re-enabling of a package to a node that has it.
          UploadPackage(os->GetName());
-         EnablePackage(os->GetName(), kTRUE);
+         EnablePackage(os->GetName(), (TList *)0, kTRUE);
       }
    }
 
@@ -1323,7 +1351,7 @@ Bool_t TProof::StartSlaves(Bool_t attach)
       // Get list of workers
       if (gProofServ->GetWorkers(workerList, pc) == TProofServ::kQueryStop) {
          TString emsg("no resource currently available for this session: please retry later");
-         if (gDebug > 0) Info("StartSlaves", emsg.Data());
+         if (gDebug > 0) Info("StartSlaves", "%s", emsg.Data());
          gProofServ->SendAsynMessage(emsg.Data());
          return kFALSE;
       }
@@ -1406,7 +1434,7 @@ Bool_t TProof::StartSlaves(Bool_t attach)
                   return kFALSE;
                }
 
-               if (!gROOT->IsBatch()) {
+               if (!gROOT->IsBatch() && TestBit(kUseProgressDialog)) {
                   if ((fProgressDialog =
                      gROOT->GetPluginManager()->FindHandler("TProofProgressDialog")))
                      if (fProgressDialog->LoadPlugin() == -1)
@@ -1422,7 +1450,7 @@ Bool_t TProof::StartSlaves(Bool_t attach)
             Printf("Starting master: OK                                     ");
             StartupMessage("Master attached", kTRUE, 1, 1);
 
-            if (!gROOT->IsBatch()) {
+            if (!gROOT->IsBatch() && TestBit(kUseProgressDialog)) {
                if ((fProgressDialog =
                   gROOT->GetPluginManager()->FindHandler("TProofProgressDialog")))
                   if (fProgressDialog->LoadPlugin() == -1)
@@ -2649,7 +2677,15 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
          break;
 
       case kPROOF_FATAL:
-         MarkBad(s, "received kPROOF_FATAL");
+         {  TString msg;
+            if ((mess->BufferSize() > mess->Length()))
+               (*mess) >> msg;
+            if (msg.IsNull()) {
+               MarkBad(s, "received kPROOF_FATAL");
+            } else {
+               MarkBad(s, msg);
+            }
+         }
          if (fProgressDialogStarted) {
             // Finalize the progress dialog
             Emit("StopProcess(Bool_t)", kTRUE);
@@ -3088,7 +3124,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                (*mess) >> selec >> dsz >> first >> nent;
                // Start or reset the progress dialog
                if (!gROOT->IsBatch()) {
-                  if (fProgressDialog && !TestBit(kUsingSessionGui)) {
+                  if (fProgressDialog &&
+                      !TestBit(kUsingSessionGui) && TestBit(kUseProgressDialog)) {
                      if (!fProgressDialogStarted) {
                         fProgressDialog->ExecPlugin(5, this,
                                                    selec.Data(), dsz, first, nent);
@@ -3312,6 +3349,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                      while ((ourwi = (TSlaveInfo *)nxw())) {
                         if (!strcmp(ourwi->GetOrdinal(), slinfo->GetOrdinal())) {
                            ourwi->SetSysInfo(slinfo->GetSysInfo());
+                           ourwi->fHostName = slinfo->GetName();
                            break;
                         }
                      }
@@ -3508,7 +3546,7 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
             while ((o = nxo())) {
                AskForOutput((TSlave *)o);
             }
-            PDB(kSubmerger, 2) Info("HandleSubmerger", "kMergerDown: exit", merger_id);
+            PDB(kSubmerger, 2) Info("HandleSubmerger", "kMergerDown:%d: exit", merger_id);
          }
          break;
 
@@ -3885,7 +3923,7 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       }
    }
 
-   if (!reason || strcmp(reason, kPROOF_TerminateWorker)) {
+   if (!reason || (strcmp(reason, kPROOF_TerminateWorker) && strcmp(reason, kPROOF_WorkerIdleTO))) {
       // Message for notification
       const char *mastertype = (gProofServ && gProofServ->IsTopMaster()) ? "top master" : "master";
       TString src = IsMaster() ? Form("%s at %s", mastertype, thisurl.Data()) : "local session";
@@ -3915,7 +3953,7 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
          Printf("%s", msg.Data());
       }
    } else if (reason) {
-      if (gDebug > 0) {
+      if (gDebug > 0 && strcmp(reason, kPROOF_WorkerIdleTO)) {
          Info("MarkBad", "worker %s at %s:%d asked to terminate",
                          wrk->GetOrdinal(), wrk->GetName(), wrk->GetPort());
       }
@@ -5911,7 +5949,7 @@ void TProof::ClearData(UInt_t what, const char *dsname)
          // All files were removed successfully: remove also the dataset meta info
          RemoveDataSet(dsname);
       }
-   } else if (what &TProof::kUnregistered) {
+   } else if (what & TProof::kUnregistered) {
 
       // Get the existing files
       TString outtmp("ProofClearData_");
@@ -5968,9 +6006,8 @@ void TProof::ClearData(UInt_t what, const char *dsname)
       TMap *fcmap = GetDataSets(sel);
       if (!fcmap || fcmap->GetSize() <= 0) {
          PDB(kDataset,1)
-            Info("ClearData", "no dataset beloning to '%s'", sel.Data());
+         Warning("ClearData", "no dataset beloning to '%s'", sel.Data());
          SafeDelete(fcmap);
-         return;
       }
 
       // Go thorugh and prepare the lists per node
@@ -6018,7 +6055,7 @@ void TProof::ClearData(UInt_t what, const char *dsname)
          }
       }
       // Clean up the the received map
-      fcmap->SetOwner(kTRUE);
+      if (fcmap) fcmap->SetOwner(kTRUE);
       SafeDelete(fcmap);
       // List of the files to be removed
       Info("ClearData", "%d unregistered files to be removed:", nfiles);
@@ -6644,7 +6681,7 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
                   TString cmd(Form(kUNTAR3, gunzip, par.Data()));
                   status = gSystem->Exec(cmd);
                   if ((status = gSystem->Exec(cmd))) {
-                     Error("BuildPackageOnCLient", "failure executing: %s", cmd.Data());
+                     Error("BuildPackageOnClient", "failure executing: %s", cmd.Data());
                   } else {
                      // Go down to the package directory
                      gSystem->ChangeDirectory(pdir);
@@ -6684,11 +6721,14 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
 }
 
 //______________________________________________________________________________
-Int_t TProof::LoadPackage(const char *package, Bool_t notOnClient)
+Int_t TProof::LoadPackage(const char *package, Bool_t notOnClient, TList *loadopts)
 {
    // Load specified package. Executes the PROOF-INF/SETUP.C script
    // on all active nodes. If notOnClient = true, don't load package
    // on the client. The default is to load the package also on the client.
+   // The argument 'loadopts' specify a list of objects to be passed to the SETUP.
+   // The objects in the list must be streamable; the SETUP macro will be executed
+   // like this: SETUP.C(loadopts).
    // Returns 0 in case of success and -1 in case of error.
 
    if (!IsValid()) return -1;
@@ -6705,11 +6745,12 @@ Int_t TProof::LoadPackage(const char *package, Bool_t notOnClient)
    pac = gSystem->BaseName(pac);
 
    if (!notOnClient)
-      if (LoadPackageOnClient(pac) == -1)
+      if (LoadPackageOnClient(pac, loadopts) == -1)
          return -1;
 
    TMessage mess(kPROOF_CACHE);
    mess << Int_t(kLoadPackage) << pac;
+   if (loadopts) mess << loadopts;
    Broadcast(mess);
    Collect();
 
@@ -6717,12 +6758,16 @@ Int_t TProof::LoadPackage(const char *package, Bool_t notOnClient)
 }
 
 //______________________________________________________________________________
-Int_t TProof::LoadPackageOnClient(const char *pack)
+Int_t TProof::LoadPackageOnClient(const char *pack, TList *loadopts)
 {
    // Load specified package in the client. Executes the PROOF-INF/SETUP.C
    // script on the client. Returns 0 in case of success and -1 in case of error.
    // The code is equivalent to the one in TProofServ.cxx (TProof::kLoadPackage
    // case). Keep in sync in case of changes.
+   // The argument 'loadopts' specify a list of objects to be passed to the SETUP.
+   // The objects in the list must be streamable; the SETUP macro will be executed
+   // like this: SETUP.C(loadopts).
+   // Returns 0 in case of success and -1 in case of error.
 
    if (TestBit(TProof::kIsClient)) {
       Int_t status = 0;
@@ -6763,21 +6808,107 @@ Int_t TProof::LoadPackageOnClient(const char *pack)
 
       // check for SETUP.C and execute
       if (!gSystem->AccessPathName("PROOF-INF/SETUP.C")) {
-         Int_t err = 0;
-         Int_t errm = gROOT->Macro("PROOF-INF/SETUP.C", &err);
-         if (errm < 0)
+
+         // We need to change the name of the function to avoid problems when we load more packages
+         TString setup, setupfn;
+         setup.Form("SETUP_%x", TString(pack).Hash());
+         setupfn.Form("%s/%s.C", gSystem->TempDirectory(), setup.Data());
+         TMacro setupmc("PROOF-INF/SETUP.C");
+         TObjString *setupline = setupmc.GetLineWith("SETUP(");
+         if (setupline) {
+            TString setupstring(setupline->GetString());
+            setupstring.ReplaceAll("SETUP(", TString::Format("%s(", setup.Data()));
+            setupline->SetString(setupstring);
+         } else {
+            // Macro does not contain SETUP()
+            Warning("LoadPackageOnClient", "macro '%s/PROOF-INF/SETUP.C' does not contain a SETUP()"
+                                           " function", pack);
+         }
+         setupmc.SaveSource(setupfn.Data());
+         // Load the macro
+         if (gROOT->LoadMacro(setupfn.Data()) != 0) {
+            // Macro could not be loaded
+            Error("LoadPackageOnClient", "macro '%s/PROOF-INF/SETUP.C' could not be loaded:"
+                                         " cannot continue", pack);
             status = -1;
-         if (err > TInterpreter::kNoError && err <= TInterpreter::kFatal)
-            status = -1;
+         } else {
+            // Check the signature
+            TFunction *fun = (TFunction *) gROOT->GetListOfGlobalFunctions()->FindObject(setup);
+            if (!fun) {
+               // Notify the upper level
+               Error("LoadPackageOnClient", "function SETUP() not found in macro '%s/PROOF-INF/SETUP.C':"
+                                            " cannot continue", pack);
+               status = -1;
+            } else {
+               TMethodCall callEnv;
+               // Check the number of arguments
+               if (fun->GetNargs() == 0) {
+                  // No arguments (basic signature)
+                  callEnv.InitWithPrototype(setup,"");
+                  // Warn that the argument (if any) if ignored
+                  if (loadopts)
+                     Warning("LoadPackageOnClient", "loaded SETUP() does not take any argument:"
+                                                    " the specified TList object will be ignored");
+               } else if (fun->GetNargs() == 1) {
+                  TMethodArg *arg = (TMethodArg *) fun->GetListOfMethodArgs()->First();
+                  if (arg) {
+                     // Check argument type
+                     TString argsig(arg->GetTitle());
+                     if (argsig.BeginsWith("TList")) {
+                        callEnv.InitWithPrototype(setup,"TList *");
+                        callEnv.ResetParam();
+                        callEnv.SetParam((Long_t) loadopts);
+                     } else if (argsig.BeginsWith("const char")) {
+                        callEnv.InitWithPrototype(setup,"const char *");
+                        callEnv.ResetParam();
+                        TObjString *os = loadopts ? dynamic_cast<TObjString *>(loadopts->First()) : 0;
+                        if (os) {
+                           callEnv.SetParam((Long_t) os->GetName());
+                        } else {
+                           if (loadopts && loadopts->First()) {
+                              Warning("LoadPackageOnClient", "found object argument of type %s:"
+                                                             " SETUP expects 'const char *': ignoring",
+                                                             loadopts->First()->ClassName());
+                           }
+                           callEnv.SetParam((Long_t) 0);
+                        }
+                     } else {
+                        // Notify the upper level
+                        Error("LoadPackageOnClient", "unsupported SETUP signature: SETUP(%s)"
+                                                     " cannot continue", arg->GetTitle());
+                        status = -1;
+                     }
+                  } else {
+                     // Notify the upper level
+                     Error("LoadPackageOnClient", "cannot get information about the SETUP() argument:"
+                                                  " cannot continue");
+                     status = -1;
+                  }
+               } else if (fun->GetNargs() > 1) {
+                  // Notify the upper level
+                  Error("LoadPackageOnClient", "function SETUP() can have at most a 'TList *' argument:"
+                                               " cannot continue");
+                  status = -1;
+               }
+               // Execute
+               Long_t setuprc = (status == 0) ? 0 : -1;
+               if (status == 0) {
+                  callEnv.Execute(setuprc);
+                  if (setuprc < 0) status = -1;
+               }
+            }
+         }
+         // Remove the temporary macro file
+         if (!gSystem->AccessPathName(setupfn.Data())) gSystem->Unlink(setupfn.Data());
       } else {
          PDB(kPackage, 1)
-            Info("LoadPackageOnCLient",
+            Info("LoadPackageOnClient",
                  "package %s exists but has no PROOF-INF/SETUP.C script", pack);
       }
 
       gSystem->ChangeDirectory(ocwd);
 
-      if (!status) {
+      if (status == 0) {
          // create link to package in working directory
 
          fPackageLock->Lock();
@@ -6921,6 +7052,53 @@ Int_t TProof::EnablePackage(const char *package, Bool_t notOnClient)
    // In case notOnClient = true, don't enable the package on the client.
    // The default is to enable packages also on the client.
    // Returns 0 in case of success and -1 in case of error.
+   // Provided for backward compatibility.
+
+   return EnablePackage(package, (TList *)0, notOnClient);
+}
+
+//______________________________________________________________________________
+Int_t TProof::EnablePackage(const char *package, const char *loadopts,
+                            Bool_t notOnClient)
+{
+   // Enable specified package. Executes the PROOF-INF/BUILD.sh
+   // script if it exists followed by the PROOF-INF/SETUP.C script.
+   // In case notOnClient = true, don't enable the package on the client.
+   // The default is to enable packages also on the client.
+   // It is is possible to specify options for the loading step via 'loadopts';
+   // the string will be passed passed as argument to SETUP.
+   // Returns 0 in case of success and -1 in case of error.
+
+   TList *optls = 0;
+   if (loadopts && strlen(loadopts)) {
+      if (fProtocol > 28) {
+         optls = new TList;
+         optls->Add(new TObjString(loadopts));
+         optls->SetOwner(kTRUE);
+      } else {
+         // Notify
+         Warning("EnablePackage", "remote server does not support options: ignoring the option string");
+      }
+   }
+   // Run
+   Int_t rc = EnablePackage(package, optls, notOnClient);
+   // Clean up
+   SafeDelete(optls);
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
+Int_t TProof::EnablePackage(const char *package, TList *loadopts,
+                            Bool_t notOnClient)
+{
+   // Enable specified package. Executes the PROOF-INF/BUILD.sh
+   // script if it exists followed by the PROOF-INF/SETUP.C script.
+   // In case notOnClient = true, don't enable the package on the client.
+   // The default is to enable packages also on the client.
+   // It is is possible to specify a list of objects to be passed to the SETUP
+   // functions via 'loadopts'; the objects must be streamable.
+   // Returns 0 in case of success and -1 in case of error.
 
    if (!IsValid()) return -1;
 
@@ -6942,7 +7120,13 @@ Int_t TProof::EnablePackage(const char *package, Bool_t notOnClient)
    if (BuildPackage(pac, opt) == -1)
       return -1;
 
-   if (LoadPackage(pac, notOnClient) == -1)
+   TList *optls = loadopts;
+   if (optls && fProtocol <= 28) {
+      Warning("EnablePackage", "remote server does not support options: ignoring the option list");
+      optls = 0;
+   }
+
+   if (LoadPackage(pac, notOnClient, optls) == -1)
       return -1;
 
    return 0;
@@ -7241,6 +7425,7 @@ Int_t TProof::UploadPackageOnClient(const char *parpack, EUploadPackageOpt opt, 
 #ifndef WIN32
       char ctmp[4096];
       ssize_t sz = readlink(par.Data(), ctmp, 4096);
+      if (sz >= 4096) sz = 4095;
       if (sz > 0) {
          ctmp[sz] = '\0';
          par = ctmp;
@@ -7421,12 +7606,14 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
          TString np(gSystem->DirName(macro));
          if (!np.IsNull()) {
             np += ":";
-            Int_t ip = (mp.BeginsWith(".:")) ? 2 : 0;
-            mp.Insert(ip, np);
+            if (!mp.BeginsWith(np) && !mp.Contains(":"+np)) {
+               Int_t ip = (mp.BeginsWith(".:")) ? 2 : 0;
+               mp.Insert(ip, np);
+               TROOT::SetMacroPath(mp);
+               if (gDebug > 0)
+                  Info("Load", "macro path set to '%s'", TROOT::GetMacroPath());
+            }
          }
-         TROOT::SetMacroPath(mp);
-         if (gDebug > 0)
-            Info("Load", "macro path set to '%s'", TROOT::GetMacroPath());
       }
 
       // Wait for master and workers to be done
@@ -9504,14 +9691,6 @@ Bool_t TProof::RegisterDataSet(const char *dataSetName,
       return kFALSE;
    }
 
-   TSocket *master;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("RegisterDataSet", "No connection to the master!");
-      return kFALSE;
-   }
-
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kRegisterDataSet);
    mess << TString(dataSetName);
@@ -9580,14 +9759,6 @@ TMap *TProof::GetDataSets(const char *uri, const char* optStr)
       return 0;
    }
 
-   TSocket *master = 0;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("GetDataSets", "no connection to the master!");
-      return 0;
-   }
-
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kGetDataSets);
    mess << TString(uri?uri:"");
@@ -9620,15 +9791,6 @@ void TProof::ShowDataSets(const char *uri, const char* optStr)
    if (fProtocol < 15) {
       Info("ShowDataSets",
            "functionality not available: the server does not have dataset support");
-      return;
-   }
-
-   TSocket *master = 0;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("ShowDataSets",
-            "no connection to the master!");
       return;
    }
 
@@ -9712,6 +9874,8 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char *optStr)
 {
    // Get a list of TFileInfo objects describing the files of the specified
    // dataset.
+   // To get the short version (containing only the global meta information)
+   // specify optStr = "S:" or optStr = "short:".
    // To get the sub-dataset of files located on a given server(s) specify
    // the list of servers (comma-separated) in the 'optStr' field.
 
@@ -9725,15 +9889,7 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char *optStr)
       Info("GetDataSet", "specifying a dataset name is mandatory");
       return 0;
    }
-
-   TSocket *master = 0;
-
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("GetDataSet", "no connection to the master!");
-      return 0;
-   }
+   
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kGetDataSet);
    nameMess << TString(uri);
@@ -9777,13 +9933,6 @@ Int_t TProof::RemoveDataSet(const char *uri, const char* optStr)
    // Remove the specified dataset from the PROOF cluster.
    // Files are not deleted.
 
-   TSocket *master;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("RemoveDataSet", "no connection to the master!");
-      return kError;
-   }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kRemoveDataSet);
    nameMess << TString(uri?uri:"");
@@ -9820,13 +9969,6 @@ Int_t TProof::VerifyDataSet(const char *uri, const char* optStr)
    }
 
    Int_t nMissingFiles = 0;
-   TSocket *master;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("VerifyDataSet", "no connection to the master!");
-      return kError;
-   }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kVerifyDataSet);
    nameMess << TString(uri ? uri : "");
@@ -9851,14 +9993,6 @@ TMap *TProof::GetDataSetQuota(const char* optStr)
    if (IsLite()) {
       Info("UploadDataSet", "Lite-session: functionality not implemented");
       return (TMap *)0;
-   }
-
-   TSocket *master = 0;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("GetDataSetQuota", "no connection to the master!");
-      return 0;
    }
 
    TMessage mess(kPROOF_DATASETS);
@@ -9897,14 +10031,6 @@ void TProof::ShowDataSetQuota(Option_t* opt)
 
    if (IsLite()) {
       Info("UploadDataSet", "Lite-session: functionality not implemented");
-      return;
-   }
-
-   TSocket *master = 0;
-   if (fActiveSlaves->GetSize())
-      master = ((TSlave*)(fActiveSlaves->First()))->GetSocket();
-   else {
-      Error("ShowDataSetQuota", "no connection to the master!");
       return;
    }
 
@@ -10843,4 +10969,16 @@ void TProof::LogViewer(const char *url, Int_t idx)
    }
    // Done
    return;
+}
+
+//______________________________________________________________________________
+void TProof::SetProgressDialog(Bool_t on)
+{
+   // Enable/Disable the graphic progress dialog.
+   // By default the dialog is enabled
+
+   if (on)
+      SetBit(kUseProgressDialog);
+   else
+      ResetBit(kUseProgressDialog);
 }

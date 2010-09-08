@@ -408,9 +408,9 @@ char *TNode::GetObjectInfo(Int_t, Int_t) const
 
    const char *snull = "";
    if (!gPad) return (char*)snull;
-   static char info[64];
-   sprintf(info,"%s/%s, shape=%s/%s",GetName(),GetTitle(),fShape->GetName(),fShape->ClassName());
-   return info;
+   static TString info;
+   info.Form("%s/%s, shape=%s/%s",GetName(),GetTitle(),fShape->GetName(),fShape->ClassName());
+   return const_cast<char*>(info.Data());
 }
 
 
@@ -821,7 +821,7 @@ void TNode::Sizeof3D() const
 {
    // Return total size of this 3-D Node with its attributes.
 
-   if (fVisibility && fShape->GetVisibility()) {
+   if (fVisibility && fShape && fShape->GetVisibility()) {
       fShape->Sizeof3D();
    }
    if ( TestBit(kSonsInvisible) ) return;

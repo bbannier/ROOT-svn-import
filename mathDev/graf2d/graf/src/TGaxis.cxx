@@ -209,7 +209,7 @@ TGaxis::TGaxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax,
 
    fFunction = (TF1*)gROOT->GetFunction(funcname);
    if (!fFunction) {
-      Error("TGaxis, calling constructor with an unknown function:%s",funcname);
+      Error("TGaxis", "calling constructor with an unknown function: %s", funcname);
       fWmin = 0;
       fWmax = 1;
    } else {
@@ -1066,7 +1066,7 @@ void TGaxis::PaintAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t yma
 //*-*-              (with alphanumeric labels for horizontal axis).
 
    charheight = GetLabelSize();
-   if (optionText) charheight *= 0.66666;
+   if (optionText && GetLabelFont()%10 != 3) charheight *= 0.66666;
    textaxis->SetTextFont(GetLabelFont());
    if ((GetLabelFont()%10 < 2) && optionLog) // force TLatex mode in PaintLatex
       textaxis->SetTextFont((Int_t)(GetLabelFont()/10)*10+2);
@@ -2043,7 +2043,7 @@ void TGaxis::SetFunction(const char *funcname)
    }
    fFunction = (TF1*)gROOT->GetFunction(funcname);
    if (!fFunction) {
-      Error("SetFunction, Unknown function:%s",funcname);
+      Error("SetFunction", "unknown function: %s", funcname);
    } else {
       fWmin = fFunction->GetXmin();
       fWmax = fFunction->GetXmax();
@@ -2183,7 +2183,7 @@ void TGaxis::SetTimeOffset(Double_t toffset, Option_t *option)
    timeoff = (time_t)((Long_t)(toffset));
    utctis = gmtime(&timeoff);
 
-   strftime(tmp,256,"%Y-%m-%d %H:%M:%S",utctis);
+   strftime(tmp,20,"%Y-%m-%d %H:%M:%S",utctis);
    fTimeFormat.Append(tmp);
 
    // append the decimal part of the time offset

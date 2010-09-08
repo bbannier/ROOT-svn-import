@@ -20,9 +20,9 @@ endif
 # Compiler:
 CXX           = g++
 CC            = gcc
-CXXFLAGS      = -m32 -pipe -W -Wall -Woverloaded-virtual \
+CXXFLAGS      = -m32 -pipe -Wshadow -W -Wall -Woverloaded-virtual \
                 -fsigned-char -fno-common $(EXTRA_CXXFLAGS) $(FINK_CXXFLAGS)
-CFLAGS        = -m32 -pipe -W -Wall -fsigned-char -fno-common \
+CFLAGS        = -m32 -pipe -Wshadow -W -Wall -fsigned-char -fno-common \
                 $(EXTRA_CFLAGS) $(FINK_CFLAGS)
 CINTCXXFLAGS  = -m32 -pipe -W -Wall -Woverloaded-virtual \
                 -fsigned-char -fno-common $(EXTRA_CXXFLAGS) $(FINK_CXXFLAGS) \
@@ -102,7 +102,7 @@ endif
 
 # System libraries:
 SYSLIBS       = -lm $(EXTRA_LDFLAGS) $(FINK_LDFLAGS) $(OSTHREADLIBDIR) \
-                $(OSTHREADLIB) -ldl
+                $(OSTHREADLIB) -ldl $(ALLOCLIBDIR) $(ALLOCLIB)
 XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm $(EXTRA_LDFLAGS) $(FINK_LDFLAGS) -ldl
 
@@ -113,8 +113,8 @@ ifeq ($(F77),)
 F77           = gfortran
 endif
 F77FLAGS      = -m32 -std=legacy
-F77LIBS      := $(shell $(F77) -m32 -print-file-name=libgfortran.dylib)
-F77LIBS      += $(shell $(F77) -m32 -print-file-name=libgfortranbegin.a)
+F77LIBS      := $(shell $(F77) -m32 -print-file-name=libgfortran.dylib | grep /)
+F77LIBS      += $(shell $(F77) -m32 -print-file-name=libgfortranbegin.a | grep /)
 endif
 
 ifneq ($(findstring g77, $(F77)),)

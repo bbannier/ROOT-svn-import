@@ -41,6 +41,7 @@
 #include "TDSet.h"
 
 #include "Riostream.h"
+#include "TChain.h"
 #include "TClass.h"
 #include "TClassTable.h"
 #include "TCut.h"
@@ -167,6 +168,60 @@ TDSetElement::~TDSetElement()
 }
 
 //______________________________________________________________________________
+Int_t TDSetElement::MergeElement(TDSetElement *elem)
+{
+   // Check if 'elem' is overlapping or subsequent and, if the case, return
+   // a merged element.
+   // Returns:
+   //     1    if the elements are overlapping
+   //     0    if the elements are subsequent
+   //    -1    if the elements are neither overlapping nor subsequent
+
+   // The element must be defined
+   if (!elem) return -1;
+
+   // The file names and object names must be the same
+   if (strcmp(GetName(), elem->GetName()) || strcmp(GetTitle(), elem->GetTitle()))
+      return -1;
+
+   Int_t rc = -1;
+   // Check the overlap or subsequency
+   if (fFirst == 0 && fNum == -1) {
+      // Overlap, since we cover already the full range
+      rc = 1;
+   } else if (elem->GetFirst() == 0 && elem->GetNum() == -1) {
+      // Overlap, since 'elem' cover already the full range
+      fFirst = 0;
+      fNum = -1;
+      fEntries = elem->GetEntries();
+      rc = 1;
+   } else if (fFirst >= 0 && fNum > 0 && elem->GetFirst() >= 0 && elem->GetNum() > 0) {
+      Long64_t last = fFirst + fNum - 1, lastref = 0;
+      Long64_t lastelem = elem->GetFirst() + elem->GetNum() - 1;
+      if (elem->GetFirst() == last + 1) {
+         lastref = lastelem;
+         rc = 0;
+      } else if (fFirst == lastelem + 1) {
+         fFirst += elem->GetFirst();
+         lastref = last;
+         rc = 0;
+      } else if (elem->GetFirst() < last + 1 && elem->GetFirst() >= fFirst) {
+         lastref = (lastelem > last) ? lastelem : last;
+         rc = 1;
+      } else if (fFirst < lastelem + 1 && fFirst >= elem->GetFirst()) {
+         fFirst += elem->GetFirst();
+         lastref = (lastelem > last) ? lastelem : last;
+         rc = 1;
+      }
+      fNum = lastref - fFirst + 1;
+   }
+   if (rc >= 0 && fEntries < 0 && elem->GetEntries() > 0) fEntries = elem->GetEntries();
+
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
 TFileInfo *TDSetElement::GetFileInfo(const char *type)
 {
    // Return the content of this element in the form of a TFileInfo
@@ -220,14 +275,14 @@ void TDSetElement::Validate(Bool_t isTree)
          if (fNum <= entries - fFirst) {
             fValid = kTRUE;
          } else {
-            Error("Validate", "TDSetElement has only %d entries starting"
-                  " with entry %d, while %d were requested",
-                  entries - fFirst, fFirst, fNum);
+            Error("Validate", "TDSetElement has only %lld entries starting"
+                              " with entry %lld, while %lld were requested",
+                              entries - fFirst, fFirst, fNum);
          }
       }
    } else {
-      Error("Validate", "TDSetElement has only %d entries with"
-            " first entry requested as %d", entries, fFirst);
+      Error("Validate", "TDSetElement has only %lld entries with"
+            " first entry requested as %lld", entries, fFirst);
    }
 }
 
@@ -266,14 +321,14 @@ void TDSetElement::Validate(TDSetElement *elem)
             if (fNum <= entries - fFirst) {
                fValid = kTRUE;
             } else {
-               Error("Validate", "TDSetElement requests %d entries starting"
-                     " with entry %d, while TDSetElement to validate against"
-                     " has only %d entries", fNum, fFirst, entries);
+               Error("Validate", "TDSetElement requests %lld entries starting"
+                                 " with entry %lld, while TDSetElement to validate against"
+                                 " has only %lld entries", fNum, fFirst, entries);
             }
          }
       } else {
-         Error("Validate", "TDSetElement to validate against has only %d"
-               " entries, but this TDSetElement requested %d as its first"
+         Error("Validate", "TDSetElement to validate against has only %lld"
+               " entries, but this TDSetElement requested %lld as its first"
                " entry", entries, fFirst);
       }
    } else {
@@ -319,7 +374,15 @@ void TDSetElement::AddFriend(TDSetElement *friendElement, const char *alias)
       fFriends = new TList();
       fFriends->SetOwner();
    }
-   fFriends->Add(new TPair(new TDSetElement(*friendElement), new TObjString(alias)));
+   // Add alias (if any) as option 'friend_alias=<alias>|'
+   if (alias && strlen(alias) > 0) {
+      TUrl uf(friendElement->GetName());
+      TString uo(uf.GetOptions());
+      uo += TString::Format("friend_alias=%s|", alias);
+      uf.SetOptions(uo);
+      friendElement->SetName(uf.GetUrl());
+   }
+   fFriends->Add(new TDSetElement(*friendElement));
 }
 
 //______________________________________________________________________________
@@ -329,12 +392,7 @@ void TDSetElement::DeleteFriends()
    if (!fFriends)
       return;
 
-   TIter nxf(fFriends);
-   TPair *p = 0;
-   while ((p = (TPair *) nxf())) {
-      delete p->Key();
-      delete p->Value();
-   }
+   fFriends->SetOwner(kTRUE);
    delete fFriends;
    fFriends = 0;
 }
@@ -368,18 +426,21 @@ Long64_t TDSetElement::GetEntries(Bool_t isTree, Bool_t openfile)
 
    // Take into account possible prefixes
    TFile::EFileType typ = TFile::kDefault;
-   TString fname = gEnv->GetValue("Path.Localroot","");
-   if (!fname.IsNull())
-      typ = TFile::GetType(GetName(), "", &fname);
-   if (typ != TFile::kLocal)
-      fname = GetName();
+   TString fname = gEnv->GetValue("Path.Localroot",""), pfx(fname);
+   // Get the locality (disable warnings or errors in connection attempts)
+   Int_t oldLevel = gErrorIgnoreLevel;
+   gErrorIgnoreLevel = kError+1;
+   if ((typ = TFile::GetType(GetName(), "", &fname)) != TFile::kLocal) fname = GetName();
+   gErrorIgnoreLevel = oldLevel;
+   // Open the file
    TFile *file = TFile::Open(fname);
 
    if (gPerfStats)
       gPerfStats->FileOpenEvent(file, GetName(), start);
 
    if (file == 0) {
-      ::SysError("TDSet::GetEntries", "cannot open file %s", GetName());
+      ::SysError("TDSetElement::GetEntries",
+                 "cannot open file %s (type: %d, pfx: %s)", GetName(), typ, pfx.Data());
       return -1;
    }
 
@@ -580,14 +641,14 @@ TObject *TDSetElement::GetAssocObj(Long64_t i, Bool_t isentry)
    // returned.
    // This method is used when packet processing consist in processing the objects
    // in the associated object list.
-   
+
    TObject *o = 0;
    if (!fAssocObjList || fAssocObjList->GetSize() <= 0) return o;
-   
+
    TString s;
    Int_t pos = -1;
    if (isentry) {
-      if (i < fFirst) return o; 
+      if (i < fFirst) return o;
       s.Form("%lld", i - fFirst);
    } else {
       if (i < 0) return o;
@@ -662,7 +723,7 @@ TDSet::TDSet(const char *name,
    if (name && strlen(name) > 0) {
       // In the old constructor signature it was the 'type'
       if (!type) {
-         if ((c = TClass::GetClass(name)))
+         if (TClass::GetClass(name))
             fType = name;
          else
             // Default type is 'TTree'
@@ -672,12 +733,12 @@ TDSet::TDSet(const char *name,
          fName = name;
          // Check type
          if (strlen(type) > 0)
-            if ((c = TClass::GetClass(type)))
+            if (TClass::GetClass(type))
                fType = type;
       }
    } else if (type && strlen(type) > 0) {
       // Check the type
-      if ((c = TClass::GetClass(type)))
+      if (TClass::GetClass(type))
          fType = type;
    }
    // The correct class type
@@ -753,7 +814,9 @@ TDSet::TDSet(const TChain &chain, Bool_t withfriends)
          // Not an MSD option
          msd = "";
       }
-      if (Add(file, tree, dir, 0, -1, ((msd.IsNull()) ? 0 : msd.Data()))) {
+      Long64_t nent = (elem->GetEntries() > 0 &&
+                       elem->GetEntries() != TChain::kBigNumber) ? elem->GetEntries() : -1;
+      if (Add(file, tree, dir, 0, nent, ((msd.IsNull()) ? 0 : msd.Data()))) {
          if (elem->HasBeenLookedUp()) {
             // Save lookup information, if any
             TDSetElement *dse = (TDSetElement *) fElements->Last();
@@ -925,6 +988,7 @@ Bool_t TDSet::Add(const char *file, const char *objname, const char *dir,
    if (gProof && gProof->IsLite()) {
       TUrl u(file, kTRUE);
       if (!strcmp(u.GetProtocol(), "file")) {
+         fn = u.GetFile();
          gSystem->ExpandPathName(fn);
          if (!gSystem->IsAbsoluteFileName(fn))
             gSystem->PrependPathName(gSystem->WorkingDirectory(), fn);
@@ -942,7 +1006,7 @@ Bool_t TDSet::Add(const char *file, const char *objname, const char *dir,
    } else {
       TString msg;
       msg.Form("duplication detected: %40s is already in dataset - ignored", fn.Data());
-      Warning("Add", msg.Data());
+      Warning("Add", "%s", msg.Data());
       if (gProofServ) {
          msg.Insert(0, "WARNING: ");
          gProofServ->SendAsynMessage(msg);
@@ -1053,9 +1117,6 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
    }
    TString msg;
 
-   // Element to be added
-   TDSetElement *el = 0;
-
    // Check if a remap of the server coordinates is requested
    const char *file = fi->GetFirstUrl()->GetUrl();
    Bool_t setLookedUp = kTRUE;
@@ -1066,9 +1127,9 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
       setLookedUp = kFALSE;
    }
    // Check if it already exists in the TDSet
-   if ((el = (TDSetElement *) fElements->FindObject(file))) {
+   if (fElements->FindObject(file)) {
       msg.Form("duplication detected: %40s is already in dataset - ignored", file);
-      Warning("Add", msg.Data());
+      Warning("Add", "%s", msg.Data());
       if (gProofServ) {
          msg.Insert(0, "WARNING: ");
          gProofServ->SendAsynMessage(msg);
@@ -1095,7 +1156,7 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
          if (gProofServ)
             gProofServ->SendAsynMessage(msg);
          else
-            Warning("Add", msg.Data());
+            Warning("Add", "%s", msg.Data());
          return kFALSE;
       }
    }
@@ -1119,7 +1180,7 @@ Bool_t TDSet::Add(TFileInfo *fi, const char *meta)
    }
    const char *dataset = 0;
    if (strcmp(fi->GetTitle(), "TFileInfo")) dataset = fi->GetTitle();
-   el = new TDSetElement(file, objname, dir, first, -1, 0, dataset);
+   TDSetElement *el = new TDSetElement(file, objname, dir, first, -1, 0, dataset);
    el->SetEntries(num);
 
    // Set looked-up bit
@@ -1209,24 +1270,23 @@ void TDSet::AddFriend(TDSet *friendset, const char* alias)
       Error("AddFriend", "a friend set can only be added to a TTree TDSet");
       return;
    }
-   TList* thisList = GetListOfElements();
-   TList* friendsList = friendset->GetListOfElements();
+   TList *thisList = GetListOfElements();
+   TList *friendsList = friendset->GetListOfElements();
    if (thisList->GetSize() != friendsList->GetSize() && friendsList->GetSize() != 1) {
-      Error("AddFriend", "The friend Set has %d elements while the main one has %d",
+      Error("AddFriend", "the friend dataset has %d elements while the main one has %d",
             thisList->GetSize(), friendsList->GetSize());
       return;
    }
    TIter next(thisList);
    TIter next2(friendsList);
-   TDSetElement* friendElem = 0;
-   TString aliasString(alias);
+   TDSetElement *friendElem = 0;
    if (friendsList->GetSize() == 1)
       friendElem = dynamic_cast<TDSetElement*> (friendsList->First());
    while(TDSetElement* e = dynamic_cast<TDSetElement*> (next())) {
       if (friendElem) // just one elem in the friend TDSet
-         e->AddFriend(friendElem, aliasString);
+         e->AddFriend(friendElem, alias);
       else
-         e->AddFriend(dynamic_cast<TDSetElement*> (next2()), aliasString);
+         e->AddFriend(dynamic_cast<TDSetElement*> (next2()), alias);
    }
 }
 
@@ -1254,18 +1314,21 @@ Long64_t TDSet::GetEntries(Bool_t isTree, const char *filename, const char *path
 
    // Take into acoount possible prefixes
    TFile::EFileType typ = TFile::kDefault;
-   TString fname = gEnv->GetValue("Path.Localroot","");
-   if (!fname.IsNull())
-      typ = TFile::GetType(filename, "", &fname);
-   if (typ != TFile::kLocal)
-      fname = filename;
+   TString fname = gEnv->GetValue("Path.Localroot",""), pfx(fname);
+   // Get the locality (disable warnings or errors in connection attempts)
+   Int_t oldLevel = gErrorIgnoreLevel;
+   gErrorIgnoreLevel = kError+1;
+   if ((typ = TFile::GetType(filename, "", &fname)) != TFile::kLocal) fname = filename;
+   gErrorIgnoreLevel = oldLevel;
+   // Open the file
    TFile *file = TFile::Open(fname);
 
    if (gPerfStats)
       gPerfStats->FileOpenEvent(file, filename, start);
 
    if (file == 0) {
-      ::SysError("TDSet::GetEntries", "cannot open file %s", filename);
+      ::SysError("TDSet::GetEntries",
+                 "cannot open file %s (type: %d, pfx: %s)", filename, typ, pfx.Data());
       return -1;
    }
 

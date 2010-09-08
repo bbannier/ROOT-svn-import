@@ -185,10 +185,13 @@ TTabCom::TTabCom()
    fpClasses = 0;
    fpNamespaces = 0;
    fpUsers = 0;
+   fBuf = 0;
+   fpLoc = 0;
    fpEnvVars = 0;
    fpFiles = 0;
    fpSysIncFiles = 0;
    fVarIsPointer = kFALSE;
+   fLastIter = 0;
 
    InitPatterns();
 

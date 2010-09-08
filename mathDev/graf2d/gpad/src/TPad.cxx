@@ -455,8 +455,15 @@ TLegend *TPad::BuildLegend(Double_t x1, Double_t y1, Double_t x2, Double_t y2,
          }
       }
    }
-   if (leg) leg->Draw();
-   else Info("BuildLegend(void)","No object to build a TLegend.");
+   if (leg) {
+      TVirtualPad *gpadsave;
+      gpadsave = gPad;
+      this->cd();
+      leg->Draw();
+      gpadsave->cd();
+   } else {
+      Info("BuildLegend(void)","No object to build a TLegend.");
+   }
    return leg;
 }
 
@@ -2277,22 +2284,51 @@ void TPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
          if (!strcmp(axis->GetName(),"xaxis")) axisNumber = 1;
          if (!strcmp(axis->GetName(),"yaxis")) axisNumber = 2;
          if (ratio2 - ratio1 > 0.05) {
-            TH1 *hobj = (TH1*)axis->GetParent();
+            //update object owning this axis
+            TH1 *hobj1 = (TH1*)axis->GetParent();
             bin1 = axis->FindFixBin(xmin);
             bin2 = axis->FindFixBin(xmax);
             if (axisNumber == 1) axis->SetRange(bin1,bin2);
-            if (axisNumber == 2 && hobj) {
-               if (hobj->GetDimension() == 1) {
-                  if (hobj->GetNormFactor() != 0) {
-                     Double_t norm = hobj->GetSumOfWeights()/hobj->GetNormFactor();
+            if (axisNumber == 2 && hobj1) {
+               if (hobj1->GetDimension() == 1) {
+                  if (hobj1->GetNormFactor() != 0) {
+                     Double_t norm = hobj1->GetSumOfWeights()/hobj1->GetNormFactor();
                      xmin *= norm;
                      xmax *= norm;
                   }
-                  hobj->SetMinimum(xmin);
-                  hobj->SetMaximum(xmax);
-                  hobj->SetBit(TH1::kIsZoomed);
+                  hobj1->SetMinimum(xmin);
+                  hobj1->SetMaximum(xmax);
+                  hobj1->SetBit(TH1::kIsZoomed);
                } else {
                   axis->SetRange(bin1,bin2);
+               }
+            }
+            //update all histograms in the pad
+            TIter next(GetListOfPrimitives());
+            TObject *obj;
+            while ((obj= next())) {
+               if (!obj->InheritsFrom(TH1::Class())) continue;
+               TH1 *hobj = (TH1*)obj;
+               if (hobj == hobj1) continue;
+               bin1 = hobj->GetXaxis()->FindFixBin(xmin);
+               bin2 = hobj->GetXaxis()->FindFixBin(xmax);
+               if (axisNumber == 1) {
+                  hobj->GetXaxis()->SetRange(bin1,bin2);
+               } else if (axisNumber == 2) {
+                  if (hobj->GetDimension() == 1) {
+                     Double_t xxmin = xmin;
+                     Double_t xxmax = xmax;
+                     if (hobj->GetNormFactor() != 0) {
+                        Double_t norm = hobj->GetSumOfWeights()/hobj->GetNormFactor();
+                        xxmin *= norm;
+                        xxmax *= norm;
+                     }
+                     hobj->SetMinimum(xxmin);
+                     hobj->SetMaximum(xxmax);
+                     hobj->SetBit(TH1::kIsZoomed);
+                  } else {
+                     hobj->GetXaxis()->SetRange(bin1,bin2);
+                  }
                }
             }
             Modified(kTRUE);
@@ -3285,6 +3321,8 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
    Int_t nc = 2*nn+1;
    Double_t *x = new Double_t[nc];
    Double_t *y = new Double_t[nc];
+   memset(x,0,8*nc);
+   memset(y,0,8*nc);
 
    n = ClipPolygon(nn, xx, yy, nc, x, y,xmin,ymin,xmax,ymax);
    if (!n) {
@@ -4073,17 +4111,19 @@ void TPad::Print(const char *filenam, Option_t *option)
    //               "ps"  - Postscript file is produced (see special cases below)
    //          "Portrait" - Postscript file is produced (Portrait)
    //         "Landscape" - Postscript file is produced (Landscape)
+   //            "Title:" - The character strin after "Title:" becomes a table
+   //                       of content entry.
    //               "eps" - an Encapsulated Postscript file is produced
    //           "Preview" - an Encapsulated Postscript file with preview is produced.
    //               "pdf" - a PDF file is produced
    //               "svg" - a SVG file is produced
    //               "gif" - a GIF file is produced
-   //               "gif+NN" - an animated GIF file is produced, where NN is delay in 10ms units
+   //            "gif+NN" - an animated GIF file is produced, where NN is delay in 10ms units
    //               "xpm" - a XPM file is produced
    //               "png" - a PNG file is produced
    //               "jpg" - a JPEG file is produced.
    //                       NOTE: JPEG's lossy compression will make all sharp edges fuzzy.
-   //               "tiff" - a TIFF file is produced
+   //              "tiff" - a TIFF file is produced
    //               "cxx" - a C++ macro file is produced
    //               "xml" - a XML file
    //              "root" - a ROOT binary file
@@ -4346,11 +4386,12 @@ void TPad::Print(const char *filenam, Option_t *option)
    // in case we read directly from a Root file and the canvas
    // is not on the screen, set batch mode
 
+   char *l;
    Bool_t mustOpen  = kTRUE;
    Bool_t mustClose = kTRUE;
    char *copen=0, *cclose=0, *copenb=0, *ccloseb=0;
    if (!image) {
-      // The parenthesis mechanism is only valid for PS files.
+      // The parenthesis mechanism is only valid for PS and PDF files.
       copen   = (char*)strstr(psname.Data(),"("); if (copen)   *copen   = 0;
       cclose  = (char*)strstr(psname.Data(),")"); if (cclose)  *cclose  = 0;
       copenb  = (char*)strstr(psname.Data(),"["); if (copenb)  *copenb  = 0;
@@ -4382,7 +4423,7 @@ void TPad::Print(const char *filenam, Option_t *option)
    if (!gVirtualPS || mustOpen) {
       // Plugin Postscript driver
       TPluginHandler *h;
-      if (strstr(opt,"pdf")) {
+      if (strstr(opt,"pdf") || strstr(opt,"Title:")) {
          if ((h = gROOT->GetPluginManager()->FindHandler("TVirtualPS", "pdf"))) {
             if (h->LoadPlugin() == -1) return;
             h->ExecPlugin(0);
@@ -4402,6 +4443,11 @@ void TPad::Print(const char *filenam, Option_t *option)
 
       // Create a new Postscript, PDF or image file
       gVirtualPS->SetName(psname);
+      l = (char*)strstr(opt,"Title:");
+      if (l) {
+         gVirtualPS->SetTitle(&opt[6]);
+         strcpy(l,"pdf");
+      }
       gVirtualPS->Open(psname,pstype);
       gVirtualPS->SetBit(kPrintingPS);
       if (!copenb) {
@@ -4424,6 +4470,11 @@ void TPad::Print(const char *filenam, Option_t *option)
       if (!ccloseb) {
          gVirtualPS->NewPage();
          Paint();
+      }
+      l = (char*)strstr(opt,"Title:");
+      if (l) {
+         gVirtualPS->SetTitle(&opt[6]);
+         strcpy(l,"pdf");
       }
       Info("Print", "Current canvas added to %s file %s", opt, psname.Data());
       if (mustClose) {
@@ -4827,6 +4878,14 @@ void TPad::SaveAs(const char *filename, Option_t * /*option*/) const
    else if (psname.EndsWith(".eps"))
       ((TPad*)this)->Print(psname,"eps");
    else if (psname.EndsWith(".pdf"))
+      ((TPad*)this)->Print(psname,"pdf");
+   else if (psname.EndsWith(".pdf["))
+      ((TPad*)this)->Print(psname,"pdf");
+   else if (psname.EndsWith(".pdf]"))
+      ((TPad*)this)->Print(psname,"pdf");
+   else if (psname.EndsWith(".pdf("))
+      ((TPad*)this)->Print(psname,"pdf");
+   else if (psname.EndsWith(".pdf)"))
       ((TPad*)this)->Print(psname,"pdf");
    else if (psname.EndsWith(".svg"))
       ((TPad*)this)->Print(psname,"svg");

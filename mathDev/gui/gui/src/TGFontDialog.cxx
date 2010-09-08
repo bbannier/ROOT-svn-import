@@ -740,6 +740,7 @@ void TGFontDialog::GetFontName()
    fSize = atoi(size);
 
    sel = fFontStyles->GetSelected();
+   if (sel < 0) sel = 0;
 
    switch(sel) {
       case 0:
@@ -800,7 +801,8 @@ void TGFontDialog::GetFontName()
 out:
    Int_t oldAlign = fTextAlign;
 
-   fTextAlign = gAlignValues[fTextAligns->GetSelected()];
+   Int_t idx = fTextAligns->GetSelected();
+   fTextAlign = gAlignValues[idx >= 0 ? idx : 6];
 
    if (fSample) {
       if (fTextAlign != oldAlign) {

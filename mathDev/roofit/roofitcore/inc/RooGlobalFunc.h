@@ -112,7 +112,7 @@ RooCmdArg Weight(Double_t wgt) ;
 RooCmdArg Index(RooCategory& icat) ;
 RooCmdArg Import(const char* state, TH1& histo) ;
 RooCmdArg Import(const char* state, RooDataHist& dhist) ;
-RooCmdArg Import(TH1& histo) ;
+RooCmdArg Import(TH1& histo, Bool_t importDensity=kTRUE) ;
 
 // RooDataSet::ctor arguments
 RooCmdArg WeightVar(const char* name) ;
@@ -309,5 +309,7 @@ RooArgList L(const RooAbsArg& v1, const RooAbsArg& v2, const RooAbsArg& v3, cons
 RooConstVar& C(Double_t value) ;
 
 } // End namespace ShortHand
+
+class RooGlobalFunc {};
 
 #endif

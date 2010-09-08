@@ -138,6 +138,8 @@ public:
    static void      Ps();
    static void      ps() { Ps(); }
 
+   static Bool_t    IsInitialized();
+
    Long_t           Join(void **ret = 0);
    static Long_t    Join(Long_t id, void **ret = 0);
 
@@ -202,7 +204,7 @@ public:
 
 class TThreadTimer : public TTimer {
 public:
-   TThreadTimer(Long_t ms = 100);
+   TThreadTimer(Long_t ms = 10);
    Bool_t Notify();
 };
 

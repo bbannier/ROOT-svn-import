@@ -292,7 +292,7 @@ public:
 
 /*   TGraphStruct* graph(Bool_t useFactoryTag=kFALSE, Double_t textSize=0.03) ; */
 
-  void printComponentTree(const char* indent="",const char* namePat=0) ;
+  void printComponentTree(const char* indent="",const char* namePat=0, Int_t nLevel=999) ;
   void printCompactTree(const char* indent="",const char* fileName=0, const char* namePat=0, RooAbsArg* client=0) ;
   void printCompactTree(ostream& os, const char* indent="", const char* namePat=0, RooAbsArg* client=0) ;
   virtual void printCompactTreeHook(ostream& os, const char *ind="") ;
@@ -359,6 +359,10 @@ public:
   inline void clearShapeDirty() const { 
     _shapeDirty=kFALSE ; 
   }
+  
+  const char* aggregateCacheUniqueSuffix() const ;
+  virtual const char* cacheUniqueSuffix() const { return 0 ; }
+
  protected:
 
   // Client-Server relatation and Proxy management 

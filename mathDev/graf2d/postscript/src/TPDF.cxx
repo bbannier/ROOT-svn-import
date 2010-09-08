@@ -9,13 +9,44 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-//////////////////////////////////////////////////////////////////////////
-//                                                                      //
-// TPDF                                                                 //
-//                                                                      //
-// Graphics interface to PDF.                                           //
-//                                                                      //
-//////////////////////////////////////////////////////////////////////////
+
+//______________________________________________________________________________
+/* Begin_Html
+<center><h2>TPDF: Graphics interface to PDF</h2></center>
+Like PostScript, PDF is a vector graphics output format allowing a very high
+graphics output quality. The functionnalities provided by this class are very
+similar to those provided by <tt>TPostScript</tt>.
+<p>
+Compare to PostScript output, the PDF files are usually smaller because some
+parts of them can be compressed.
+<p>
+PDF also allows to define table of contents. This facility can be used in ROOT.
+The following example shows how to proceed:
+<pre>
+{
+   TCanvas* canvas = new TCanvas("canvas");
+   TH1F* histo = new TH1F("histo","test 1",10,0.,10.);
+   histo->SetFillColor(2);
+   histo->Fill(2.);
+   histo->Draw();
+   canvas->Print("plots.pdf(","Title:One bin filled");
+   histo->Fill(4.);
+   histo->Draw();
+   canvas->Print("plots.pdf","Title:Two bins filled");
+   histo->Fill(6.);
+   histo->Draw();
+   canvas->Print("plots.pdf","Title:Three bins filled");
+   histo->Fill(8.);
+   histo->Draw();
+   canvas->Print("plots.pdf","Title:Four bins filled");
+   histo->Fill(8.);
+   histo->Draw();
+   canvas->Print("plots.pdf)","Title:The fourth bin content is 2");
+}
+</pre>
+Each character string following the keyword "Title:" makes a new entry in
+the table of contents.
+End_Html */
 
 #ifdef WIN32
 #pragma optimize("",off)
@@ -49,12 +80,13 @@ const Int_t kObjInfo             =  2; // Info object
 const Int_t kObjOutlines         =  3; // Outlines object
 const Int_t kObjPages            =  4; // Pages object (pages index)
 const Int_t kObjPageResources    =  5; // Pages Resources object
-const Int_t kObjFont             =  6; // First Font object (14 in total)
-const Int_t kObjColorSpace       = 21; // ColorSpace object
-const Int_t kObjPatternResourses = 22; // Pattern Resources object
-const Int_t kObjPatternList      = 23; // Pattern list object
-const Int_t kObjPattern          = 24; // Pattern object
-const Int_t kObjFirstPage        = 49; // First page object
+const Int_t kObjContents         =  6; // Table of content
+const Int_t kObjFont             =  7; // First Font object (14 in total)
+const Int_t kObjColorSpace       = 22; // ColorSpace object
+const Int_t kObjPatternResourses = 23; // Pattern Resources object
+const Int_t kObjPatternList      = 24; // Pattern list object
+const Int_t kObjPattern          = 25; // Pattern object
+const Int_t kObjFirstPage        = 50; // First page object
 
 // Number of fonts
 const Int_t kNumberOfFonts = 15;
@@ -90,6 +122,7 @@ TPDF::TPDF() : TVirtualPS()
    fNbObj           = 0;
    fNbPage          = 0;
    fRange           = kFALSE;
+   SetTitle("PDF");
 }
 
 
@@ -120,6 +153,7 @@ TPDF::TPDF(const char *fname, Int_t wtype) : TVirtualPS(fname, wtype)
    fNbObj           = 0;
    fNbPage          = 0;
    fRange           = kFALSE;
+   SetTitle("PDF");
    Open(fname, wtype);
 }
 
@@ -176,10 +210,75 @@ void TPDF::Close(Option_t *)
    PrintStr("endstream@");
    Int_t streamLength = fNByte-fStartStream-10;
    PrintStr("endobj@");
-   NewObject(3*(fNbPage-1)+kObjFirstPage+2);
+   NewObject(4*(fNbPage-1)+kObjFirstPage+2);
    WriteInteger(streamLength, 0);
    PrintStr("@");
    PrintStr("endobj@");
+   NewObject(4*(fNbPage-1)+kObjFirstPage+3);
+   PrintStr("<<@");
+   if (!strstr(GetTitle(),"PDF")) {
+      PrintStr("/Title (");
+      PrintStr(GetTitle());
+      PrintStr(")@");
+   } else {
+      PrintStr("/Title (Page");
+      WriteInteger(fNbPage);
+      PrintStr(")@");
+   }
+   PrintStr("/Dest [");
+   WriteInteger(4*(fNbPage-1)+kObjFirstPage);
+   PrintStr(" 0 R /XYZ null null 0]@");
+   PrintStr("/Parent");
+   WriteInteger(kObjContents);
+   PrintStr(" 0 R");
+   PrintStr("@");
+   if (fNbPage > 1) {
+      PrintStr("/Prev");
+      WriteInteger(4*(fNbPage-2)+kObjFirstPage+3);
+      PrintStr(" 0 R");
+      PrintStr("@");
+   }
+   PrintStr(">>@");
+
+   NewObject(kObjOutlines);
+   PrintStr("<<@");
+   PrintStr("/Type /Outlines@");
+   PrintStr("/Count");
+   WriteInteger(fNbPage+1);
+   PrintStr("@");
+   PrintStr("/First");
+   WriteInteger(kObjContents);
+   PrintStr(" 0 R");
+   PrintStr("@");
+   PrintStr("/Last");
+   WriteInteger(kObjContents);
+   PrintStr(" 0 R");
+   PrintStr("@");
+   PrintStr(">>@");
+   PrintStr("endobj@");
+
+   NewObject(kObjContents);
+   PrintStr("<<@");
+   PrintStr("/Title (Contents)@");
+   PrintStr("/Dest [");
+   WriteInteger(kObjFirstPage);
+   PrintStr(" 0 R /XYZ null null 0]@");
+   PrintStr("/Count");
+   WriteInteger(fNbPage);
+   PrintStr("@");
+   PrintStr("/Parent");
+   WriteInteger(kObjOutlines);
+   PrintStr(" 0 R");
+   PrintStr("@");
+   PrintStr("/First");
+   WriteInteger(kObjFirstPage+3);
+   PrintStr(" 0 R");
+   PrintStr("@");
+   PrintStr("/Last");
+   WriteInteger(4*(fNbPage-1)+kObjFirstPage+3);
+   PrintStr(" 0 R");
+   PrintStr("@");
+   PrintStr(">>@");
 
    // List of all the pages
    NewObject(kObjPages);
@@ -190,7 +289,7 @@ void TPDF::Close(Option_t *)
    PrintStr("@");
    PrintStr("/Kids [");
    for (i=1; i<=fNbPage; i++) {
-      WriteInteger(3*(i-1)+kObjFirstPage);
+      WriteInteger(4*(i-1)+kObjFirstPage);
       PrintStr(" 0 R");
    }
    PrintStr(" ]");
@@ -223,7 +322,7 @@ void TPDF::Close(Option_t *)
    PrintStr("@");
    PrintStr("/Info");
    WriteInteger(kObjInfo);
-   PrintStr(" 0 R");
+   PrintStr(" 0 R@");
    PrintStr(">>@");
    PrintStr("startxref@");
    WriteInteger(refInd, 0);
@@ -1017,14 +1116,43 @@ void TPDF::NewPage()
       PrintStr("endstream@");
       Int_t streamLength = fNByte-fStartStream-10;
       PrintStr("endobj@");
-      NewObject(3*(fNbPage-2)+kObjFirstPage+2);
+      NewObject(4*(fNbPage-2)+kObjFirstPage+2);
       WriteInteger(streamLength, 0);
       PrintStr("@");
       PrintStr("endobj@");
+      NewObject(4*(fNbPage-2)+kObjFirstPage+3);
+      PrintStr("<<@");
+      if (!strstr(GetTitle(),"PDF")) {
+         PrintStr("/Title (");
+         PrintStr(GetTitle());
+         PrintStr(")@");
+      } else {
+         PrintStr("/Title (Page");
+         WriteInteger(fNbPage-1);
+         PrintStr(")@");
+      }
+      PrintStr("/Dest [");
+      WriteInteger(4*(fNbPage-2)+kObjFirstPage);
+      PrintStr(" 0 R /XYZ null null 0]@");
+      PrintStr("/Parent");
+      WriteInteger(kObjContents);
+      PrintStr(" 0 R");
+      PrintStr("@");
+      PrintStr("/Next");
+      WriteInteger(4*(fNbPage-1)+kObjFirstPage+3);
+      PrintStr(" 0 R");
+      PrintStr("@");
+      if (fNbPage>2) {
+         PrintStr("/Prev");
+         WriteInteger(4*(fNbPage-3)+kObjFirstPage+3);
+         PrintStr(" 0 R");
+         PrintStr("@");
+      }
+      PrintStr(">>@");
    }
 
    // Start a new page
-   NewObject(3*(fNbPage-1)+kObjFirstPage);
+   NewObject(4*(fNbPage-1)+kObjFirstPage);
    PrintStr("<<@");
    PrintStr("/Type /Page@");
    PrintStr("@");
@@ -1097,21 +1225,24 @@ void TPDF::NewPage()
    PrintStr("@");
 
    PrintStr("/Contents");
-   WriteInteger(3*(fNbPage-1)+kObjFirstPage+1);
+   WriteInteger(4*(fNbPage-1)+kObjFirstPage+1);
    PrintStr(" 0 R@");
    PrintStr(">>@");
    PrintStr("endobj@");
 
-   NewObject(3*(fNbPage-1)+kObjFirstPage+1);
+   NewObject(4*(fNbPage-1)+kObjFirstPage+1);
    PrintStr("<<@");
    PrintStr("/Length");
-   WriteInteger(3*(fNbPage-1)+kObjFirstPage+2);
+   WriteInteger(4*(fNbPage-1)+kObjFirstPage+2);
    PrintStr(" 0 R@");
    PrintStr("/Filter [/FlateDecode]@");
    PrintStr(">>@");
    PrintStr("stream@");
    fStartStream = fNByte;
    fCompress = kTRUE;
+
+   // Force the line width definition next time TPDF::SetLineWidth will be called.
+   fLineWidth = -1;
 
    PrintStr("1 0 0 1");
    if (fPageOrientation == 2) {
@@ -1235,13 +1366,13 @@ void TPDF::Open(const char *fname, Int_t wtype)
    NewObject(kObjRoot);
    PrintStr("<<@");
    PrintStr("/Type /Catalog@");
-   PrintStr("/Outlines");
-   WriteInteger(kObjOutlines);
-   PrintStr(" 0 R");
-   PrintStr("@");
    PrintStr("/Pages");
    WriteInteger(kObjPages);
-   PrintStr(" 0 R");
+   PrintStr(" 0 R@");
+   PrintStr("/Outlines");
+   WriteInteger(kObjOutlines);
+   PrintStr(" 0 R@");
+   PrintStr("/PageMode /UseOutlines@");
    PrintStr(">>@");
    PrintStr("endobj@");
 
@@ -1269,13 +1400,6 @@ void TPDF::Open(const char *fname, Int_t wtype)
    PrintStr(">>@");
    PrintStr("endobj@");
 
-   NewObject(kObjOutlines);
-   PrintStr("<<@");
-   PrintStr("/Type /Outlines@");
-   PrintStr("/Count 0@");
-   PrintStr(">>@");
-   PrintStr("endobj@");
-
    NewObject(kObjPageResources);
    PrintStr("<<@");
    PrintStr("/ProcSet [/PDF /Text]@");
@@ -1288,6 +1412,7 @@ void TPDF::Open(const char *fname, Int_t wtype)
       WriteInteger(kObjFont+i);
       PrintStr(" 0 R");
    }
+   PrintStr("@");
    PrintStr(">>@");
 
    PrintStr("/ColorSpace << /Cs8");
@@ -2019,14 +2144,11 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
 
    // Start the text
    if (!fCompress) PrintStr("@");
-   PrintStr(" BT");
 
    // Font and text size
    Int_t font = abs(fTextFont)/10;
    if( font > kNumberOfFonts || font < 1) font = 1;
 
-   sprintf(str," /F%d",font);
-   PrintStr(str);
    Double_t wh = (Double_t)gPad->XtoPixel(gPad->GetX2());
    Double_t hh = (Double_t)gPad->YtoPixel(gPad->GetY1());
    Float_t tsize, ftsize;
@@ -2041,8 +2163,6 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
    }
    Double_t fontsize = 72*(ftsize)/2.54;
    if( fontsize <= 0) return;
-   WriteReal(fontsize);
-   PrintStr(" Tf");
 
    // Text alignment
    Float_t tsizex = gPad->AbsPixeltoX(Int_t(tsize))-gPad->AbsPixeltoX(0);
@@ -2077,6 +2197,24 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
       }
    }
 
+   // Symbol Italic tan(15) = .26794
+   if (font == 15) {
+      Float_t tanAlpha = 0.26794;
+      Float_t dx = - tanAlpha * YtoPDF(y);
+      PrintStr(" q 1 0");
+      WriteReal(tanAlpha);
+      PrintStr(" 1");
+      WriteReal(dx);
+      PrintStr(" 0 cm");
+   }
+
+   PrintStr(" BT");
+
+   sprintf(str," /F%d",font);
+   PrintStr(str);
+   WriteReal(fontsize);
+   PrintStr(" Tf");
+
    // Text angle
    if(fTextAngle == 0) {
       WriteReal(XtoPDF(x));
@@ -2102,9 +2240,6 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
       PrintStr(" Tm");
    }
 
-   // Symbol Italic tan(15) = .26794
-   if (font == 15) PrintStr(" q 1 0 .26794 1 0 0 cm");
-
    const Int_t len=strlen(chars);
 
    // Calculate the individual character placements.
@@ -2126,7 +2261,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
    t.TAttText::Modify();
    Bool_t kerning;
    if (wa0-wa1 != 0) kerning = kTRUE;
-   else           kerning = kFALSE;
+   else              kerning = kFALSE;
    Int_t *charDeltas = 0;
    if (kerning) {
         charDeltas = new Int_t[len];
@@ -2143,7 +2278,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
         for (Int_t i = 1;i < len;i++) {
             tmp[0] = chars[i-1];
             UInt_t width;
-            t.GetTextAdvance(width, &tmp[0], false);
+            t.GetTextAdvance(width, &tmp[0], kFALSE);
             Double_t wwl = gPad->AbsPixeltoX(width - charDeltas[i]) - gPad->AbsPixeltoX(0);
             wwl -= 0.5*(gPad->AbsPixeltoX(1) - gPad->AbsPixeltoX(0)); // half a pixel ~ rounding error
             charDeltas[i] = (Int_t)((1000.0/Float_t(fontsize))*(XtoPDF(wwl) - XtoPDF(0))/scale);

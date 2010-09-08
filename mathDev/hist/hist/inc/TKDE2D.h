@@ -81,9 +81,9 @@ public:
 //    TH2D* GetHistogram(UInt_t nxbins = 100, UInt_t nybins = 100, Double_t xMin = 1.0, Double_t xMax = 0.0, Double_t yMin = 1.0, Double_t yMax = 0.0);
    
    TF2* GetFunction();
-   TF2* GetUpperFunction(Double_t confidenceLevel = 0.95);
-   TF2* GetLowerFunction(Double_t confidenceLevel = 0.95);
-   TF2* GetApproximateBias();
+   TF2* GetUpperFunction(Double_t confidenceLevel = 0.95) { /* t.b.i. */ }
+   TF2* GetLowerFunction(Double_t confidenceLevel = 0.95) { /* t.b.i. */ }
+   TF2* GetApproximateBias() { /* t.b.i. */ }
    
 private:
    
@@ -112,7 +112,7 @@ private:
       UInt_t Index(Double_t x) const;
    public:
       TKernel(UInt_t n, Double_t weight, TKDE2D* kde);
-      void ComputeAdaptiveWeights();
+      void ComputeAdaptiveWeights() { /* t.b.i. */ }
       Double_t operator()(const Double_t* x) const;
       Double_t GetWeight(Double_t x) const;
    };

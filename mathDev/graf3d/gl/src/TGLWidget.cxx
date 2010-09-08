@@ -135,10 +135,9 @@ TGLWidget::TGLWidget(Window_t glw, const TGWindow* p, Bool_t selectInput)
    {
       gVirtualX->GrabButton(GetId(), kAnyButton, kAnyModifier,
                             kButtonPressMask | kButtonReleaseMask, kNone, kNone);
-      gVirtualX->SelectInput(GetId(),
-                             kKeyPressMask | kExposureMask | kPointerMotionMask
-                             | kStructureNotifyMask | kFocusChangeMask
-                             | kEnterWindowMask | kLeaveWindowMask);
+      gVirtualX->SelectInput(GetId(), kKeyPressMask | kKeyReleaseMask | kExposureMask |
+                             kPointerMotionMask | kStructureNotifyMask | kFocusChangeMask |
+                             kEnterWindowMask | kLeaveWindowMask);
       gVirtualX->SetInputFocus(GetId());
    }
 }
@@ -428,11 +427,15 @@ Window_t TGLWidget::CreateWindow(const TGWindow* parent, const TGLFormat &format
    fill_format(glxfmt, format);
 
    Display *dpy = reinterpret_cast<Display *>(gVirtualX->GetDisplay());
+   if (!dpy) {
+      ::Error("TGLWidget::CreateWindow", "Display is not set!");
+      throw std::runtime_error("Display is not set!");
+   }
    XVisualInfo *visInfo = glXChooseVisual(dpy, DefaultScreen(dpy), &glxfmt[0]);
 
    if (!visInfo) {
-      ::Error("TGLWidget::CreateWindow", "No good visual found!");
-      throw std::runtime_error("No good visual found!");
+      ::Error("TGLWidget::CreateWindow", "No good OpenGL visual found!");
+      throw std::runtime_error("No good OpenGL visual found!");
    }
 
    Window_t winID = parent->GetId();
@@ -483,7 +486,7 @@ Bool_t TGLWidget::HandleCrossing(Event_t *ev)
 {
    // Handle mouse crossing event.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleCrossing((Event_t *)0x%lx)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleCrossing((Event_t *)0x%lx)", (ULong_t)this, (ULong_t)ev));
       return kTRUE;
    }
    if ((ev->fType == kEnterNotify) &&
@@ -501,7 +504,7 @@ Bool_t TGLWidget::HandleButton(Event_t *ev)
 {
    //Delegate call to the owner.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleButton((Event_t *)0x%lx)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleButton((Event_t *)0x%lx)", (ULong_t)this, (ULong_t)ev));
       return kTRUE;
    }
    if (fEventHandler)
@@ -514,7 +517,7 @@ Bool_t TGLWidget::HandleDoubleClick(Event_t *ev)
 {
    //Delegate call to the owner.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleDoubleClick((Event_t *)0x%lx)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleDoubleClick((Event_t *)0x%lx)", (ULong_t)this, (ULong_t)ev));
       return kTRUE;
    }
    if (fEventHandler)
@@ -527,7 +530,7 @@ Bool_t TGLWidget::HandleConfigureNotify(Event_t *ev)
 {
    //Delegate call to the owner.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleConfigureNotify((Event_t *)0x%lx)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleConfigureNotify((Event_t *)0x%lx)", (ULong_t)this, (ULong_t)ev));
       return kTRUE;
    }
    if (fEventHandler && fEventHandler->HandleConfigureNotify(ev))
@@ -543,7 +546,7 @@ Bool_t TGLWidget::HandleFocusChange(Event_t *ev)
 {
    //Delegate call to the owner.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleFocusChange((Event_t *)0x%lx)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleFocusChange((Event_t *)0x%lx)", (ULong_t)this, (ULong_t)ev));
       return kTRUE;
    }
    if (fEventHandler)
@@ -556,7 +559,7 @@ Bool_t TGLWidget::HandleKey(Event_t *ev)
 {
    //Delegate call to the owner.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleKey((Event_t *)0x%lx)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleKey((Event_t *)0x%lx)", (ULong_t)this, (ULong_t)ev));
       return kTRUE;
    }
    if (fEventHandler)
@@ -569,7 +572,7 @@ Bool_t TGLWidget::HandleMotion(Event_t *ev)
 {
    //Delegate call to the owner.
    if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleMotion((Event_t *)0x%lx)", this, ev));
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleMotion((Event_t *)0x%lx)", (ULong_t)this, (ULong_t)ev));
       return kTRUE;
    }
    if (fEventHandler)
@@ -588,4 +591,3 @@ void TGLWidget::DoRedraw()
    if (fEventHandler)
       return fEventHandler->Repaint();
 }
-

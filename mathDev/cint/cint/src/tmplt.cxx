@@ -824,6 +824,7 @@ int G__createtemplateclass(const char *new_name,G__Templatearg *targ
         if(isforwarddecl) {
           /* Ignore an incomplete declaration after a complete one */
           G__fignorestream(";");
+          if (spec_arg) G__freetemplatearg(spec_arg);
           return(0);
         }
         if(spec_arg) {
@@ -874,13 +875,13 @@ int G__createtemplateclass(const char *new_name,G__Templatearg *targ
 
   /* store parent_tagnum */
   {
-      int env_tagnum;
+      int env_tagnum2;
       if(-1!=G__def_tagnum) {
-        if(G__tagdefining!=G__def_tagnum) env_tagnum=G__tagdefining;
-        else                              env_tagnum=G__def_tagnum;
+        if(G__tagdefining!=G__def_tagnum) env_tagnum2=G__tagdefining;
+        else                              env_tagnum2=G__def_tagnum;
       }
-      else env_tagnum = -1;
-      deftmpclass->parent_tagnum = env_tagnum;
+      else env_tagnum2 = -1;
+      deftmpclass->parent_tagnum = env_tagnum2;
   }
 
   /* store template argument list */
@@ -1441,6 +1442,7 @@ void G__declare_template()
         if (isforwarddecl && isfrienddecl) {
            // We do not need to autoload friend declaration.
            if (isfrienddecl) G__set_class_autoloading(autoload_old);
+           G__freetemplatearg(targ);
            return;
         }
         fsetpos(G__ifile.fp,&pos);
@@ -1543,7 +1545,9 @@ void G__declare_template()
         c='<';
         if(p!=temp2) {
           p=strchr(temp2,'<');
-          *p='\0';  /* non constructor/destructor member function */
+          if (p) {
+             *p='\0';  /* non constructor/destructor member function */
+          }
           temp = temp2;
         }
       }
@@ -1953,10 +1957,12 @@ int G__gettemplatearglist(const char *paralist,G__Charlist *charlist_in
         if(string[0] && '*'==string[strlen(string)-1])
           string[strlen(string)-1]='\0';
         else G__genericerror("Error: this template requests pointer arg 3");
+        // Fallthrough to handle the 2nd and then 1st argument.
       case G__TMPLT_POINTERARG2:
         if(string[0] && '*'==string[strlen(string)-1])
           string[strlen(string)-1]='\0';
         else G__genericerror("Error: this template requests pointer arg 2");
+        // Fallthrough to handle the 1st argument.
       case G__TMPLT_POINTERARG1:
         if(string[0] && '*'==string[strlen(string)-1])
           string[strlen(string)-1]='\0';
@@ -2067,7 +2073,8 @@ static bool G__isLibrary( int index )
    return (G__srcfile[index].slindex != -1) || (G__srcfile[index].ispermanentsl == 2);
 }
    
-static int G__getIndex( int index, int tagnum ,std::vector<std::string> &headers )
+static int G__findSrcFile( int index, int tagnum, std::vector<std::string> &headers, std::vector<std::string> &fwdDecls,
+                        std::vector<std::string> &unknown)
 {
    //Function iterates through G__srcfile to find the name of *.h file where we have
    //class definition, then adds it to data container 'headers'.
@@ -2084,6 +2091,7 @@ static int G__getIndex( int index, int tagnum ,std::vector<std::string> &headers
       if( tagnum >= 0 && G__struct.comment[tagnum].p.com && strstr(G__struct.comment[tagnum].p.com, "//[INCLUDE:") )
       {
          // check whether G__struct.comment.p.com is set and starts with "//[INCLUDE:"
+         std::vector<std::string>* collectionToAddTo = &headers;
          char *pDel = G__struct.comment[tagnum].p.com;
          while( *pDel != 0 && *pDel != ':' ) pDel++;
          if( *pDel != 0 )pDel++;
@@ -2092,12 +2100,20 @@ static int G__getIndex( int index, int tagnum ,std::vector<std::string> &headers
          // and go on.
          while( *pDel != 0 )
          {
-            if( *pDel != ';' ) tmpHeader += *pDel;
-            else
-            {
-               it = std::find( headers.begin(), headers.end(), tmpHeader );
-               if( it == headers.end() ) headers.push_back( tmpHeader );
+            if (*pDel == ';') {
+               it = std::find(collectionToAddTo->begin(), collectionToAddTo->end(), tmpHeader );
+               if( it == collectionToAddTo->end() ) collectionToAddTo->push_back( tmpHeader );
                tmpHeader = "";
+            } else if (*pDel == '[') {
+               if (!strncmp(pDel, "[FWDDECL:", 9)) {
+                  collectionToAddTo = &fwdDecls;
+                  pDel += 8;
+               } else if (!strncmp(pDel, "[UNKNOWN:", 9)) {
+                  collectionToAddTo = &unknown;
+                  pDel += 8;
+               }
+            } else {
+               tmpHeader += *pDel;
             }
             pDel++;
          }
@@ -2172,13 +2188,15 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
 
   std::string className(tagname);
   std::vector<std::string> headers;
+  std::vector<std::string> fwdDecls;
+  std::vector<std::string> unknown;
   std::vector<std::string>::iterator it;
 
   if (fileNum >= 0) {
      if (G__srcfile[fileNum].filename[0] == '{')
         // ignore "{CINTEX dictionary translator}"
         return -4;
-     fileNum = G__getIndex(fileNum,-1, headers);
+     fileNum = G__findSrcFile(fileNum,-1, headers, fwdDecls, unknown);
      if( fileNum < 0 ) return fileNum;
   } else if (iSTLType != sSTLTypes.end()) {
      headers.push_back(iSTLType->second);
@@ -2193,13 +2211,17 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
       int index = gValue.tagnum;
       index = G__struct.filenum[index];
       if( index < 0 ) return -3;
-      if (G__srcfile[index].filename[0] == '{')
+      if (G__srcfile[index].filename && G__srcfile[index].filename[0] == '{')
          // ignore "{CINTEX dictionary translator}"
          return -4;
-      index = G__getIndex(index, gValue.tagnum, headers);
-      if( index < 0 ) return index;
-      //it = find( headers.begin(), headers.end(),G__srcfile[ index ].filename  );
-      //if( (it == headers.end()) && (G__srcfile[index].slindex == -1 ) ) headers.push_back( G__srcfile[index].filename );
+      index = G__findSrcFile(index, gValue.tagnum, headers, fwdDecls, unknown);
+      if (index < 0) {
+         if (gValue.type == 'U') {
+            fwdDecls.push_back(G__fulltagname(gValue.tagnum, 1));
+         } else {
+            unknown.push_back(call_para->string);
+         }
+      }
     }
     call_para = call_para->next;
   }
@@ -2207,7 +2229,7 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
   Cint::G__pGenerateDictionary pGD = Cint::G__GetGenerateDictionary();
   int storeDefTagum = G__def_tagnum;
   G__def_tagnum = -1;
-  int rtn = pGD( className, headers );
+  int rtn = pGD(className, headers, fwdDecls, unknown);
   G__def_tagnum = storeDefTagum;
   if( rtn != 0 ) return (-rtn)-2;
   int tagnum = G__defined_tagname( className.c_str(), 3 );
@@ -2218,6 +2240,19 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
         for( it = headers.begin(); it!= headers.end(); it++ ) {
            headersToInclude += *it + ";";
         }
+        if (!fwdDecls.empty()) {
+           headersToInclude += "[FWDDECL:";
+           for( it = fwdDecls.begin(); it!= fwdDecls.end(); it++ ) {
+              headersToInclude += *it + ";";
+           }
+        }
+        if (!unknown.empty()) {
+           headersToInclude += "[UNKNOWN:";
+           for( it = unknown.begin(); it!= unknown.end(); it++ ) {
+              headersToInclude += *it + ";";
+           }
+        }
+        
         G__struct.comment[tagnum].p.com = new char[headersToInclude.length() + 1];
         strcpy(G__struct.comment[tagnum].p.com, headersToInclude.c_str());
      }
@@ -2408,24 +2443,24 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
     /* If evaluated template argument is not identical as string to
      * the original argument, recursively call G__defined_tagname()
      * to find actual tagname. */
-    int typenum = -1;
+    int typenum2 = -1;
 #ifndef G__OLDIMPLEMENTATION1712
     int templatearg_enclosedscope=G__templatearg_enclosedscope;
     G__templatearg_enclosedscope=store_templatearg_enclosedscope;
 #endif
     if(-1==G__defined_typename(tagname)) {
-      typenum=G__newtype.alltype++;
-      G__newtype.type[typenum]='u';
-      G__newtype.name[typenum]=(char*)malloc(strlen(tagname)+1);
-      strcpy(G__newtype.name[typenum],tagname);
-      G__newtype.namerange->Insert(G__newtype.name[typenum], typenum);
-      G__newtype.hash[typenum] = strlen(tagname);
-      G__newtype.globalcomp[typenum] = G__globalcomp;
-      G__newtype.reftype[typenum] = G__PARANORMAL;
-      G__newtype.nindex[typenum] = 0;
-      G__newtype.index[typenum] = (int*)NULL;
-      G__newtype.iscpplink[typenum] = G__NOLINK;
-      G__newtype.comment[typenum].filenum = -1;
+      typenum2=G__newtype.alltype++;
+      G__newtype.type[typenum2]='u';
+      G__newtype.name[typenum2]=(char*)malloc(strlen(tagname)+1);
+      strcpy(G__newtype.name[typenum2],tagname);
+      G__newtype.namerange->Insert(G__newtype.name[typenum2], typenum2);
+      G__newtype.hash[typenum2] = strlen(tagname);
+      G__newtype.globalcomp[typenum2] = G__globalcomp;
+      G__newtype.reftype[typenum2] = G__PARANORMAL;
+      G__newtype.nindex[typenum2] = 0;
+      G__newtype.index[typenum2] = (int*)NULL;
+      G__newtype.iscpplink[typenum2] = G__NOLINK;
+      G__newtype.comment[typenum2].filenum = -1;
     }
     G__cattemplatearg(tagname,&call_para);
     tagnum = G__defined_tagname(tagname,1);
@@ -2433,20 +2468,20 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
     G__settemplatealias(tagnamein,tagname,tagnum,&call_para
                         ,deftmpclass->def_para,templatearg_enclosedscope);
 #endif
-    if(-1!=typenum) {
-      G__newtype.tagnum[typenum] = tagnum;
+    if(-1!=typenum2) {
+      G__newtype.tagnum[typenum2] = tagnum;
 #ifndef G__OLDIMPLEMENTATION1712
       if(templatearg_enclosedscope) {
-        G__newtype.parent_tagnum[typenum] = G__get_envtagnum();
+        G__newtype.parent_tagnum[typenum2] = G__get_envtagnum();
       }
       else {
-        G__newtype.parent_tagnum[typenum] = G__struct.parent_tagnum[tagnum];
+        G__newtype.parent_tagnum[typenum2] = G__struct.parent_tagnum[tagnum];
       }
 #else
-      G__newtype.parent_tagnum[typenum] = G__struct.parent_tagnum[tagnum];
+      G__newtype.parent_tagnum[typenum2] = G__struct.parent_tagnum[tagnum];
 #endif
 #ifndef G__OLDIMPLEMENTATION1503
-      if(3==defarg) G__struct.defaulttypenum[tagnum] = typenum;
+      if(3==defarg) G__struct.defaulttypenum[tagnum] = typenum2;
 #endif
     }
     G__freecharlist(&call_para);
@@ -3018,7 +3053,7 @@ int G__templatesubstitute(G__FastAllocString& symbol,G__Charlist *callpara
 
   while(defpara) {
     if(strcmp(defpara->string,symbol)==0) {
-      if(callpara->string) {
+      if(callpara && callpara->string) {
         symbol = callpara->string;
       }
       else if(defpara->default_parameter) {
@@ -3146,13 +3181,20 @@ char *G__gettemplatearg(int n,G__Templatearg *def_para)
 ***********************************************************************/
 int G__istemplatearg(char *paraname,G__Templatearg *def_para)
 {
-  int result=1;
-  while(def_para) {
-    if(strcmp(def_para->string,paraname)==0) return(result);
-    def_para = def_para->next;
-    ++result;
-  }
-  return(0);
+   int result=1;
+   while(def_para) {
+      size_t len = strlen(def_para->string);
+      if (strncmp(def_para->string,paraname,len)==0) {
+         // We have a partial match
+         if (paraname[len]=='\0' || paraname[len]==':') {
+            // We have a full match or a request for a nested type
+            return(result);
+         }
+      }
+      def_para = def_para->next;
+      ++result;
+   }
+   return(0);
 }
 
 
@@ -3221,7 +3263,6 @@ int G__matchtemplatefunc(G__Definetemplatefunc *deftmpfunc
   int freftype,reftype,ref;
   /* int fparadefault; */
   int fargtmplt;
-  int i;
   G__FastAllocString paratype(G__LONGLINE);
   int *fntarg;
   int fnt;
@@ -3236,7 +3277,7 @@ int G__matchtemplatefunc(G__Definetemplatefunc *deftmpfunc
     if(!deftmpfunc->func_para.paradefault[paran]) return(0);
   }
 
-  for(i=0;i<paran;i++) {
+  for(int i=0;i<paran;i++) {
     /* get template information for simplicity */
     ftype = deftmpfunc->func_para.type[i];
     ftagnum = deftmpfunc->func_para.tagnum[i];
@@ -3367,16 +3408,16 @@ int G__matchtemplatefunc(G__Definetemplatefunc *deftmpfunc
       else
         paratype = G__type2string(type,tagnum,-1,reftype,0);
       if(strncmp(paratype,"class ",6)==0) {
-        int j=0,i=6;
+        int j=0,i2=6;
         do {
-          paratype[j++] = paratype[i];
-        } while(paratype[i++]);
+          paratype[j++] = paratype[i2];
+        } while(paratype[i2++]);
       }
       else if(strncmp(paratype,"struct ",7)==0) {
-        int j=0,i=7;
+        int j=0,i2=7;
         do {
-          paratype[j++] = paratype[i];
-        } while(paratype[i++]);
+          paratype[j++] = paratype[i2];
+        } while(paratype[i2++]);
       }
       if(G__checkset_charlist(paratype,pcall_para,fargtmplt,ftype)) {
         /* match or newly set template argument */
@@ -3531,7 +3572,7 @@ int G__templatefunc(G__value *result,const char *funcname,G__param *libp
         int tmp=0;
         char *p = pexplicitarg-1;
         pexplicitarg = (char*)malloc(strlen(funcname)+1);
-        strcpy(pexplicitarg,funcname);
+        if (pexplicitarg) strcpy(pexplicitarg,funcname);
         *p = '<';
         G__hash(funcname,hash,tmp);
       }
@@ -3613,7 +3654,6 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
   int unsigned_flag,reftype,pointlevel;
   int tagnum,typenum;
   int narg;
-  int i;
 
   /**************************************************************
   * get to the end of list
@@ -3665,7 +3705,7 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
   deftmpfunc->next->next = (struct G__Definetemplatefunc*)NULL;
   deftmpfunc->next->def_para = (struct G__Templatearg*)NULL;
   deftmpfunc->next->name = (char*)NULL;
-  for(i=0;i<G__MAXFUNCPARA;i++) {
+  for(int i=0;i<G__MAXFUNCPARA;i++) {
     deftmpfunc->next->func_para.ntarg[i]=(int*)NULL;
     deftmpfunc->next->func_para.nt[i]=0;
   }
@@ -3766,7 +3806,6 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
       char *ntargc[20];
       int ntarg[20];
       int nt=0;
-      int i;
       /* f(T<E,K> a) or f(c<E,K> a) or f(c<E,b> a)
        * f(T<E> a) or f(c<T> a) or f(T<c> a) */
       deftmpfunc->func_para.type[tmp]='u';
@@ -3813,7 +3852,7 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
       deftmpfunc->func_para.nt[tmp] = nt;
       deftmpfunc->func_para.ntarg[tmp] = (int*)malloc(sizeof(int)*nt);
       deftmpfunc->func_para.ntargc[tmp] = (char**)malloc(sizeof(char*)*nt);
-      for(i=0;i<nt;i++) {
+      for(int i=0;i<nt;i++) {
         deftmpfunc->func_para.ntarg[tmp][i] = ntarg[i];
         if(0==ntarg[i]) deftmpfunc->func_para.ntargc[tmp][i] = ntargc[i];
         else deftmpfunc->func_para.ntargc[tmp][i] = (char*)NULL;
@@ -3922,8 +3961,8 @@ int G__createtemplatefunc(char *funcname,G__Templatearg *targ
 
   /*Hack by Scott Snyder: try not to gag on forward decl of template memfunc*/
   {
-    int c = G__fignorestream(";{");
-    if (';'!=c) G__fignorestream("}");
+    int c2 = G__fignorestream(";{");
+    if (';'!=c2) G__fignorestream("}");
   }
 
 #else /* G__TEMPLATEFUNC */

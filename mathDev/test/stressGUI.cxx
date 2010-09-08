@@ -73,6 +73,7 @@
 #include <TGSplitFrame.h>
 #include <TGTextEditor.h>
 #include <TRootHelpDialog.h>
+#include <TGHtmlBrowser.h>
 #include <HelpText.h>
 #include <TSystemDirectory.h>
 #include <TInterpreter.h>
@@ -107,6 +108,7 @@ void     testSplitFrame();
 void     testControlBars();
 void     testHelpDialog();
 void     testPaletteEditor();
+void     testHtmlBrowser();
 
 void     run_tutorials();
 void     guitest_playback();
@@ -186,6 +188,7 @@ void stressGUI()
          printf("Please generate the reference file by executing\n");
          printf("stressGUI with the -ref flag, as shown below:\n");
          printf("   stressGUI -ref\n");
+         gSystem->Unlink(gTmpfilename.Data());
          exit(0);
       }
       char line[160];
@@ -261,6 +264,7 @@ void stressGUI()
    testControlBars();
    testHelpDialog();
    testPaletteEditor();
+   testHtmlBrowser();
 
    if (!gOptionRef) {
 
@@ -423,7 +427,8 @@ void ProcessFrame(TGFrame *f, const char *title)
    img->WriteImage(outfile);
 
    if (!gOptionRef) {
-      if (!strstr(title, "Pack Frames")) {
+      if (!strstr(title, "Pack Frames") &&
+          !strstr(title, "HTML Browser")) {
          gSystem->RedirectOutput(gTmpfilename.Data(), "w", &gRH);
          ((TGMainFrame *)f)->SaveSource(Form("sgui_%02d.C", gTestNum));
          gSystem->Unlink(Form("sgui_%02d.C", gTestNum));
@@ -2260,6 +2265,20 @@ void testPaletteEditor()
    f->CloseWindow();
 
    delete img;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+//______________________________________________________________________________
+void testHtmlBrowser()
+{
+   // Test the HTML Browser.
+
+   TGHtmlBrowser *b = new TGHtmlBrowser("http://bellenot.web.cern.ch/bellenot/Public/html_test/html_test.html");
+   ProcessFrame((TGMainFrame*)b, "HTML Browser 1");
+   b->Selected("http://bellenot.web.cern.ch/bellenot/Public/html_test/gallery/");
+   ProcessFrame((TGMainFrame*)b, "HTML Browser 2");
+   b->CloseWindow();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

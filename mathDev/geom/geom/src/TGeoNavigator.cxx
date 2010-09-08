@@ -69,6 +69,7 @@ TGeoNavigator::TGeoNavigator()
                fCache(0),
                fCurrentVolume(0),
                fCurrentNode(0),
+               fTopNode(0),
                fLastNode(0),
                fNextNode(0),
                fForcedNode(0),
@@ -79,6 +80,14 @@ TGeoNavigator::TGeoNavigator()
                 
 {
 // dummy constructor
+   for (Int_t i=0; i<3; i++) {
+      fNormal[i] = 0.;
+      fCldir[i] = 0.;
+      fCldirChecked[i] = 0.;
+      fPoint[i] = 0.;
+      fDirection[i] = 0.;
+      fLastPoint[i] = 0.;
+   }
 }
 
 //_____________________________________________________________________________
@@ -107,6 +116,7 @@ TGeoNavigator::TGeoNavigator(TGeoManager* geom)
                fCache(0),
                fCurrentVolume(0),
                fCurrentNode(0),
+               fTopNode(0),
                fLastNode(0),
                fNextNode(0),
                fForcedNode(0),
@@ -157,6 +167,7 @@ TGeoNavigator::TGeoNavigator(const TGeoNavigator& gm)
                fCache(gm.fCache),
                fCurrentVolume(gm.fCurrentVolume),
                fCurrentNode(gm.fCurrentNode),
+               fTopNode(gm.fTopNode),
                fLastNode(gm.fLastNode),
                fNextNode(gm.fNextNode),
                fForcedNode(gm.fForcedNode),
@@ -206,6 +217,7 @@ TGeoNavigator& TGeoNavigator::operator=(const TGeoNavigator& gm)
       fCache = gm.fCache;
       fCurrentVolume = gm.fCurrentVolume;
       fCurrentNode = gm.fCurrentNode;
+      fTopNode = gm.fTopNode;
       fLastNode = gm.fLastNode;
       fNextNode = gm.fNextNode;
       fForcedNode = gm.fForcedNode;

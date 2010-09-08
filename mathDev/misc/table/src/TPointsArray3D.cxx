@@ -63,8 +63,11 @@ TPointsArray3D::TPointsArray3D()
 //*-*-*-*-*-*-*-*-*-*-*-*-*3-D PolyLine default constructor*-*-*-*-*-*-*-*-*-*-*
 //*-*                      ================================
 
+   fN = 0;
    fP = 0;
    fLastPoint = -1;
+   fGLList = 0;
+   fLastPoint = 0;
 }
 
 
@@ -82,6 +85,9 @@ TPointsArray3D::TPointsArray3D(Int_t n, Option_t *option)
    fP = new Float_t[3*fN];
    memset(fP,0,3*fN*sizeof(Float_t));
    fOption = option;
+
+   fGLList = 0;
+   fLastPoint = 0;
 }
 
 //______________________________________________________________________________
@@ -104,6 +110,9 @@ TPointsArray3D::TPointsArray3D(Int_t n, Float_t *p, Option_t *option)
       fLastPoint = -1;
    }
    fOption = option;
+
+   fGLList = 0;
+   fLastPoint = 0;
 }
 
 
@@ -132,6 +141,9 @@ TPointsArray3D::TPointsArray3D(Int_t n, Float_t *x, Float_t *y, Float_t *z, Opti
       memset(fP,0,3*fN*sizeof(Float_t));
    }
    fOption = option;
+
+   fGLList = 0;
+   fLastPoint = 0;
 }
 
 
@@ -147,7 +159,8 @@ TPointsArray3D::~TPointsArray3D()
 
 
 //______________________________________________________________________________
-TPointsArray3D::TPointsArray3D(const TPointsArray3D &point) : TPoints3DABC(point)
+TPointsArray3D::TPointsArray3D(const TPointsArray3D &point) : TPoints3DABC(point),
+                                                              fN(point.fN),fP(0),fGLList(point.fGLList),fLastPoint(point.fLastPoint)
 {
    //to be documented
    ((TPointsArray3D&)point).Copy(*this);

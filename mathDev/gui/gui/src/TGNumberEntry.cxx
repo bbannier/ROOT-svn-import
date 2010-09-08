@@ -242,7 +242,7 @@ static Long_t IntStr(const char *text)
    for (UInt_t i = 0; i < strlen(text); i++) {
       if (text[i] == '-') {
          sign = -1;
-      } else if ((isdigit(text[i])) && (l < 100000000)) {
+      } else if ((isdigit(text[i])) && (l < kMaxLong)) {
          l = 10 * l + (text[i] - '0');
       }
    }
@@ -370,7 +370,7 @@ static Double_t StrToReal(const char *text, RealInfo_t & ri)
    if (frac != 0) {
       for (UInt_t i = 0; i < strlen(frac); i++) {
          if (isdigit(frac[i])) {
-            if (ri.fFracNum < 100000000) {
+            if (ri.fFracNum < kMaxInt) {
                ri.fFracNum = 10 * ri.fFracNum + (frac[i] - '0');
                ri.fFracDigits++;
                ri.fFracBase *= 10;
@@ -505,7 +505,7 @@ static void GetNumbers(const char *s, Int_t & Sign,
    }
    while ((*s != 0) && ((strchr(Delimiters, *s) == 0) || (maxd2 == 0))) {
       if (isdigit(*s) && (d < maxd1)) {
-         if (n1 < 100000000) {
+         if (n1 < kMaxLong) {
             n1 = 10 * n1 + (*s - '0');
          }
          d++;
@@ -1233,7 +1233,8 @@ Double_t TGNumberEntryField::GetNumber() const
       {
          char text[256];
          RealInfo_t ri;
-         strncpy(text, GetText(), 256);
+         strncpy(text, GetText(), 255);
+         text[255] = 0;
          return StrToReal(text, ri);
       }
    case kNESDegree:
@@ -1813,7 +1814,7 @@ public:
    TGRepeatFireButton(const TGWindow *p, const TGPicture *pic,
                       Int_t id, Bool_t logstep)
     : TGPictureButton(p, pic, id), fTimer(0), fIgnoreNextFire(0),
-       fStep(TGNumberFormat::kNSSSmall), fStepLog(logstep), fDoLogStep(logstep) 
+       fStep(TGNumberFormat::kNSSSmall), fStepLog(logstep), fDoLogStep(logstep)
        { fEditDisabled = kEditDisable | kEditDisableGrab; }
    virtual ~TGRepeatFireButton() { delete fTimer; }
 
@@ -1911,7 +1912,7 @@ Bool_t TRepeatTimer::Notify()
 
    fButton->FireButton();
    Reset();
-   if ((long)fTime>20) fTime -= 10;
+   if ((Long64_t)fTime > 20) fTime -= 10;
    return kFALSE;
 }
 

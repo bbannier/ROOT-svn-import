@@ -266,13 +266,13 @@ void TNetFile::Print(Option_t *) const
    // Print some info about the net file.
 
    const char *fname = fUrl.GetFile();
-   Printf("URL:           %s", ((TUrl*)&fUrl)->GetUrl());
-   Printf("Remote file:   %s", &fname[1]);
-   Printf("Remote user:   %s", fUser.Data());
-   Printf("Title:         %s", fTitle.Data());
-   Printf("Option:        %s", fOption.Data());
-   Printf("Bytes written: %g", fBytesWrite);
-   Printf("Bytes read:    %g", fBytesRead);
+   Printf("URL:           %s",   ((TUrl*)&fUrl)->GetUrl());
+   Printf("Remote file:   %s",   &fname[1]);
+   Printf("Remote user:   %s",   fUser.Data());
+   Printf("Title:         %s",   fTitle.Data());
+   Printf("Option:        %s",   fOption.Data());
+   Printf("Bytes written: %lld", fBytesWrite);
+   Printf("Bytes read:    %lld", fBytesRead);
 }
 
 //______________________________________________________________________________
@@ -281,7 +281,7 @@ void TNetFile::PrintError(const char *where, Int_t err)
    // Print error string depending on error code.
 
    fErrorCode = err;
-   Error(where, gRootdErrStr[err]);
+   Error(where, "%s", gRootdErrStr[err]);
 }
 
 //______________________________________________________________________________
@@ -376,6 +376,16 @@ end:
 
    return result;
 }
+
+//______________________________________________________________________________
+Bool_t TNetFile::ReadBuffer(char *buf, Long64_t pos, Int_t len)
+{
+   // Read specified byte range from remote file via rootd daemon.
+   // Returns kTRUE in case of error.
+
+   SetOffset(pos);
+   return ReadBuffer(buf, len);
+}   
 
 //______________________________________________________________________________
 Bool_t TNetFile::ReadBuffers(char *buf,  Long64_t *pos, Int_t *len, Int_t nbuf)
@@ -562,20 +572,7 @@ void TNetFile::Seek(Long64_t offset, ERelativeTo pos)
 {
    // Set position from where to start reading.
 
-   switch (pos) {
-      case kBeg:
-         fOffset = offset + fArchiveOffset;
-         break;
-      case kCur:
-         fOffset += offset;
-         break;
-      case kEnd:
-         // this option is not used currently in the ROOT code
-         if (fArchiveOffset)
-            Error("Seek", "seeking from end in archive is not (yet) supported");
-         fOffset = fEND + offset;  // is fEND really EOF or logical EOF?
-      break;
-   }
+   SetOffset(offset, pos);
 }
 
 //______________________________________________________________________________

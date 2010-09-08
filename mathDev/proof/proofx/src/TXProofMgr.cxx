@@ -444,12 +444,12 @@ Bool_t TXProofMgr::HandleInput(const void *)
                fSocket->RemoteTouch();
                break;
             default:
-               Warning("HandleInput", "%p: got unknown message type: %d", what);
+               Warning("HandleInput", "%p: got unknown message type: %d", this, what);
                break;
          }
       }
    } else {
-      Warning("HandleInput", "%p: got message but socket is invalid!");
+      Warning("HandleInput", "%p: got message but socket is invalid!", this);
    }
 
    // We are done
@@ -830,8 +830,9 @@ void TXProofMgr::Find(const char *what, const char *how, const char *where)
       return;
    }
    // Server may not support it
-   if (fSocket->GetXrdProofdVersion() < 1007) {
-      Warning("Find", "functionality not supported by server");
+   if (fSocket->GetXrdProofdVersion() < 1006) {
+      Warning("Find", "functionality not supported by server (XrdProofd version: %d)",
+                      fSocket->GetXrdProofdVersion());
       return;
    }
 
@@ -1321,7 +1322,7 @@ Int_t TXProofMgr::GetFile(const char *remote, const char *local, const char *opt
       Long64_t size;
       sscanf(os->GetName(), "%lld", &size);
       if (size <= 0) {
-         Error("GetFile", "received null or negative size: %ldd", size);
+         Error("GetFile", "received null or negative size: %lld", size);
          close(fdout);
          return rc;
       }

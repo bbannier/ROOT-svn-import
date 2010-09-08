@@ -47,6 +47,9 @@ public:
              Float_t xOrg=0, Float_t yOrg=0, Float_t zOrg=0);
    virtual ~TEveArrow() {}
 
+   virtual TObject* GetObject(const TEveException& /*eh*/="TEveElementList::GetObject ") const
+   { const TObject* obj = this; return const_cast<TObject*>(obj); }
+
    void SetTubeR(Float_t x) { fTubeR = x; }
    void SetConeR(Float_t x) { fConeR = x; }
    void SetConeL(Float_t x) { fConeL = x; }
@@ -63,8 +66,6 @@ public:
 
    virtual void ComputeBBox();
    virtual void Paint(Option_t* option="");
-
-   virtual Bool_t CanEditMainColor() const { return kTRUE; }
 
    ClassDef(TEveArrow, 0); // Class for gl visualisation of arrow.
 };

@@ -927,14 +927,6 @@ void TGeoVolume::AddNodeOverlap(const TGeoVolume *vol, Int_t copy_no, TGeoMatrix
 {
 // Add a TGeoNode to the list of nodes. This is the usual method for adding
 // daughters inside the container volume.
-   if (vol->IsAssembly()) {
-      Warning("AddNodeOverlap", "Declaring assembly %s as possibly overlapping inside %s not allowed. Using AddNode instead !",vol->GetName(),GetName());
-      AddNode(vol, copy_no, mat, option);
-      return;
-   }   
-   TGeoMatrix *matrix = mat;
-   if (matrix==0) matrix = gGeoIdentity;
-   else           matrix->RegisterYourself();
    if (!vol) {
       Error("AddNodeOverlap", "Volume is NULL");
       return;
@@ -944,6 +936,14 @@ void TGeoVolume::AddNodeOverlap(const TGeoVolume *vol, Int_t copy_no, TGeoMatrix
       printf("### invalid volume was : %s\n", vol->GetName());
       return;
    }
+   if (vol->IsAssembly()) {
+      Warning("AddNodeOverlap", "Declaring assembly %s as possibly overlapping inside %s not allowed. Using AddNode instead !",vol->GetName(),GetName());
+      AddNode(vol, copy_no, mat, option);
+      return;
+   }   
+   TGeoMatrix *matrix = mat;
+   if (matrix==0) matrix = gGeoIdentity;
+   else           matrix->RegisterYourself();
    if (!fNodes) fNodes = new TObjArray();   
 
    if (fFinder) {
@@ -1140,6 +1140,31 @@ void TGeoVolume::PrintVoxels() const
    if (fVoxels) fVoxels->Print();
 }
 
+//_____________________________________________________________________________
+void TGeoVolume::ReplayCreation(const TGeoVolume *other)
+{
+// Recreate the content of the other volume without pointer copying. Voxels are 
+// ignored and supposed to be created in a later step via Voxelize.
+   Int_t nd = other->GetNdaughters();
+   if (!nd) return;
+   TGeoPatternFinder *finder = other->GetFinder();
+   if (finder) {
+      Int_t iaxis = finder->GetDivAxis();
+      Int_t ndiv = finder->GetNdiv();
+      Double_t start = finder->GetStart();
+      Double_t step = finder->GetStep();
+      Int_t numed = other->GetNode(0)->GetVolume()->GetMedium()->GetId();
+      TGeoVolume *voldiv = Divide(other->GetNode(0)->GetVolume()->GetName(), iaxis, ndiv, start, step, numed);
+      voldiv->ReplayCreation(other->GetNode(0)->GetVolume());
+      return;
+   }   
+   for (Int_t i=0; i<nd; i++) {
+      TGeoNode *node = other->GetNode(i);
+      if (node->IsOverlapping()) AddNodeOverlap(node->GetVolume(), node->GetNumber(), node->GetMatrix());
+      else AddNode(node->GetVolume(), node->GetNumber(), node->GetMatrix());
+   }
+}      
+   
 //_____________________________________________________________________________
 void TGeoVolume::PrintNodes() const
 {
@@ -1595,7 +1620,10 @@ void TGeoVolume::MakeCopyNodes(const TGeoVolume *other)
 // make a new list of nodes and copy all nodes of other volume inside
    Int_t nd = other->GetNdaughters();
    if (!nd) return;
-   if (fNodes) delete fNodes;   
+   if (fNodes) {
+      if (!TObject::TestBit(kVolumeImportNodes)) fNodes->Delete();
+      delete fNodes;   
+   }   
    fNodes = new TObjArray();
    for (Int_t i=0; i<nd; i++) fNodes->Add(other->GetNode(i));
    TObject::SetBit(kVolumeImportNodes);
@@ -2475,7 +2503,7 @@ void TGeoVolumeAssembly::AddNode(const TGeoVolume *vol, Int_t copy_no, TGeoMatri
 {
 // Add a component to the assembly. 
    TGeoVolume::AddNode(vol,copy_no,mat,option);
-   fShape->ComputeBBox();
+   ((TGeoShapeAssembly*)fShape)->NeedsBBoxRecompute();
 }   
 
 //_____________________________________________________________________________

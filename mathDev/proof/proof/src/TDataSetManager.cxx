@@ -262,6 +262,8 @@ Bool_t TDataSetManager::ReadGroupConfig(const char *cf)
    while (in.good()) {
       // Read new line
       line.ReadLine(in);
+      // Explicitely skip comment lines
+      if (line[0] == '#') continue;
       // Parse it
       Ssiz_t from = 0;
       TString key;
@@ -353,6 +355,23 @@ Bool_t TDataSetManager::ReadGroupConfig(const char *cf)
                     "problems parsing string: wrong or unsupported suffix? %s",
                     avgsize.Data());
          }
+      } else if (key == "include") {
+
+         // Read file to include
+         TString subfn;
+         if (!line.Tokenize(subfn, from, " ")) {// No token
+            if (gDebug > 0)
+               Info("ReadGroupConfig","incomplete line: '%s'", line.Data());
+            continue;
+         }
+         // The file must be readable
+         if (gSystem->AccessPathName(subfn, kReadPermission)) {
+            Error("ReadGroupConfig", "request to parse file '%s' which is not readable",
+                                     subfn.Data());
+            continue;
+         }
+         if (!ReadGroupConfig(subfn))
+            Error("ReadGroupConfig", "problems parsing include file '%s'", subfn.Data());
       }
    }
    in.close();
@@ -465,7 +484,7 @@ Int_t TDataSetManager::ScanDataSet(const char *uri, const char *opts)
    //                    marked as non-staged
    //    T, touch:       open and touch the files marked as staged when processing
    //                    only files marked as non-staged
-   //    C, checkstaged: check the actual stage status on selected files
+   //    I, nostagedcheck: do not check the actual stage status on selected files
    //
    //  'process' field:
    //    N, noaction:    do nothing on the selected files
@@ -491,8 +510,8 @@ Int_t TDataSetManager::ScanDataSet(const char *uri, const char *opts)
          o |= kReopen;
       if (strstr(opts, "touch:") || strchr(opts, 'T'))
          o |= kTouch;
-      if (strstr(opts, "checkstaged:") || strchr(opts, 'C'))
-         o |= kCheckStageStatus;
+      if (strstr(opts, "nostagedcheck:") || strchr(opts, 'I'))
+         o |= kNoStagedCheck;
       // Process options
       if (strstr(opts, "noaction:") || strchr(opts, 'N'))
          o |= kNoAction;
@@ -1455,7 +1474,13 @@ Int_t TDataSetManager::ScanDataSet(TFileCollection *dataset,
          } else if (fullproc) {
             // Full file validation
             rc = -2;
-            if (stager && stager->IsStaged(url.GetUrl())) {
+            Bool_t doscan = kTRUE;
+            if (checkstg) {
+               doscan = kFALSE;
+               if ((doall && fileInfo->TestBit(TFileInfo::kStaged)) ||
+                   (stager && stager->IsStaged(url.GetUrl()))) doscan = kTRUE;
+            }
+            if (doscan) {
                if ((rc = TDataSetManager::ScanFile(fileInfo, dbg)) < -1) continue;
                changed = kTRUE;
             } else if (stager) {
@@ -1517,7 +1542,8 @@ Int_t TDataSetManager::ScanFile(TFileInfo *fileinfo, Bool_t dbg)
    TUrl urlNoAnchor(furl);
    urlNoAnchor.SetAnchor("");
    urlNoAnchor.SetOptions("filetype=raw");
-   if (!(file = TFile::Open(urlNoAnchor.GetUrl()))) return rc;
+   // Wait max 5 secs per file
+   if (!(file = TFile::Open(urlNoAnchor.GetUrl(), "TIMEOUT=5"))) return rc;
 
    // OK, set the relevant flags
    rc = -1;
@@ -1541,7 +1567,8 @@ Int_t TDataSetManager::ScanFile(TFileInfo *fileinfo, Bool_t dbg)
    Int_t oldLevel = gErrorIgnoreLevel;
    gErrorIgnoreLevel = kError+1;
 
-   if (!(file = TFile::Open(url->GetUrl()))) {
+   // Wait max 5 secs per file
+   if (!(file = TFile::Open(url->GetUrl(), "TIMEOUT=5"))) {
       // If the file could be opened before, but fails now it is corrupt...
       if (dbg) ::Info("TDataSetManager::ScanFile", "marking %s as corrupt", url->GetUrl());
       fileinfo->SetBit(TFileInfo::kCorrupted);

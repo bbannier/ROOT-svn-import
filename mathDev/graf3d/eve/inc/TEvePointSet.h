@@ -52,11 +52,12 @@ public:
    TEvePointSet(const TEvePointSet& e);
    virtual ~TEvePointSet();
 
+   virtual TObject* GetObject(const TEveException& /*eh*/="TEvePointSet::GetObject ") const
+   { const TObject* obj = this; return const_cast<TObject*>(obj); }
+
    virtual TEvePointSet* CloneElement() const { return new TEvePointSet(*this); }
 
    virtual void ClonePoints(const TEvePointSet& e);
-
-   virtual void ComputeBBox();
 
    void  Reset(Int_t n_points=0, Int_t n_int_ids=0);
    Int_t GrowFor(Int_t n_points);
@@ -182,8 +183,10 @@ public:
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
    virtual void UpdateProjection();
+   virtual TEveElement* GetProjectedAsElement() { return this; }
 
    virtual void PointSelected(Int_t id);
+
 
    ClassDef(TEvePointSetProjected, 1); // Projected copy of a TEvePointSet.
 };

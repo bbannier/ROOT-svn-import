@@ -42,7 +42,22 @@ TGraph2DPainter::TGraph2DPainter()
 {
    // TGraph2DPainter default constructor
 
+   fX        = 0;
+   fY        = 0;
+   fZ        = 0;
+   fXN       = 0;
+   fYN       = 0;
+   fPTried   = 0;
+   fNTried   = 0;
+   fMTried   = 0;
+   fGraph2D  = 0;
    fDelaunay = 0;
+   fXmin     = 0.;
+   fXmax     = 0.;
+   fYmin     = 0.;
+   fYmax     = 0.;
+   fZmin     = 0.;
+   fZmax     = 0.;
 }
 
 
@@ -67,6 +82,12 @@ TGraph2DPainter::TGraph2DPainter(TGraphDelaunay *gd)
    fPTried   = 0;
    fNTried   = 0;
    fMTried   = 0;
+   fXmin     = 0.;
+   fXmax     = 0.;
+   fYmin     = 0.;
+   fYmax     = 0.;
+   fZmin     = 0.;
+   fZmax     = 0.;
 }
 
 
@@ -171,7 +192,12 @@ TList *TGraph2DPainter::GetContourList(Double_t contour)
       if (fZ[p1]>z2)  {z2=fZ[p1]; x2=fX[p1]; y2=fY[p1]; i2=1;}
       if (fZ[p2]<=z0) {z0=fZ[p2]; x0=fX[p2]; y0=fY[p2]; i0=2;}
       if (fZ[p2]>z2)  {z2=fZ[p2]; x2=fX[p2]; y2=fY[p2]; i2=2;}
-      i1 = 3-i2-i0;
+      if (i0==0 && i2==0) {
+         Error("GetContourList", "wrong vertices ordering");
+         return 0;
+      } else {
+         i1 = 3-i2-i0;
+      }
       x1 = fX[t[i1]-1];
       y1 = fY[t[i1]-1];
       z1 = fZ[t[i1]-1];

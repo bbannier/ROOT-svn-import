@@ -245,9 +245,26 @@ Int_t pq2register(const char *dsname, const char *files, const char *opt) {
    // Create the file collection
    TFileCollection *fc = new TFileCollection("dum", "dum", files);
 
+   // The option may contain the default tree name and/or the staged status
+   Int_t itb = kNPOS, ite = kNPOS;
+   TString o(opt), deftree;
+   if ((itb = o.Index("tree:")) != kNPOS) {
+      deftree = o(itb + 5, o.Length());
+      if ((ite = deftree.Index('|')) != kNPOS) deftree.Remove(ite);
+      o.ReplaceAll(TString::Format("tree:%s|", deftree.Data()), "");
+      if (!deftree.BeginsWith("/")) deftree.Insert(0, "/");
+      if (!deftree.IsNull()) fc->SetDefaultTreeName(deftree);
+   }
+   if (o.Contains("staged|")) {
+      fc->SetBitAll(TFileInfo::kStaged);
+      o.ReplaceAll("staged|", "");
+   }
+   // Update the collection
+   fc->Update();
+
    // Register the file collection
    Int_t rc =0;
-   if (RegisterDataSet(dsname, fc, opt) == 0) rc = 1;
+   if (RegisterDataSet(dsname, fc, o) == 0) rc = 1;
    // Cleanup
    delete fc;
 
@@ -437,22 +454,25 @@ void do_rm(const char *dsname)
 }
 
 //_______________________________________________________________________________________
-void do_verify(const char *dsname, const char *opt, const char *redir)
+int do_verify(const char *dsname, const char *opt, const char *redir)
 {
    // Execute 'verify'
 
    const char *action = "pq2-verify";
 
-   Int_t nd = 0;
+   Int_t nd = 0, rc = -1;
    Int_t printerr = 1;
    TString ds(dsname);
    if (!ds.Contains("*")) {
       nd++;
       // Verify the dataset
-      if (VerifyDataSet(dsname, opt, redir) < 0) {
+      if ((rc = VerifyDataSet(dsname, opt, redir)) < 0) {
          // Notify
          Printf("%s: ERROR: problems verifing dataset '%s'", action, dsname);
-         return;
+         return rc;
+      } else if (rc > 0) {
+         // Notify
+         Printf("%s: WARNING: %s: some files not yet online (staged)", action, dsname);
       }
       printerr = 0;
    } else {
@@ -461,21 +481,30 @@ void do_verify(const char *dsname, const char *opt, const char *redir)
       if (!dss) {
          // Notify
          Printf("%s: ERROR: problems retrieving info about datasets", action);
-         return;
+         return rc;
       }
       printerr = 0;
       // Iterate
+      Int_t xrc = -1;
       TIter nxd(dss);
       TObjString *os = 0;
       while ((os = dynamic_cast<TObjString*>(nxd()))) {
          nd++;
          // Verify the dataset
          Printf("%s: start verification of dataset '%s' ...", action, os->GetName());
-         if (VerifyDataSet(os->GetName(), opt, redir) != 0) {
+         if ((xrc = VerifyDataSet(os->GetName(), opt, redir)) < 0) {
             printerr = 1;
             // Notify
             Printf("%s: ERROR: problems verifying dataset '%s'", action, os->GetName());
             continue;
+         } else if (xrc > 0) {
+            // At least one is not fully available
+            rc = 1;
+            // Notify
+            Printf("%s: WARNING: %s: some files not yet online (staged)", action, os->GetName());
+         } else if (rc < 0) {
+            // At least one is good
+            rc = 0;
          }
       }
    }
@@ -490,7 +519,7 @@ void do_verify(const char *dsname, const char *opt, const char *redir)
       gSystem->Rename(flog.Data(), ferr.Data());
 
    // Done
-   return;
+   return rc;
 }
 
 //_______________________________________________________________________________________

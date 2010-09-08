@@ -115,7 +115,7 @@ void TEveCalo2DGL::DrawRPhi(TGLRnrCtx & rnrCtx, TEveCalo2D::vBinCells_t& cellLis
 
    UInt_t nPhi = data->GetPhiBins()->GetNbins();
 
-   for(UInt_t phiBin = 0; phiBin < nPhi; ++phiBin)
+   for(UInt_t phiBin = 1; phiBin <= nPhi; ++phiBin)
    {
       if (cellLists[phiBin] )
       {
@@ -271,6 +271,7 @@ void TEveCalo2DGL::DrawRhoZ(TGLRnrCtx & rnrCtx, TEveCalo2D::vBinCells_t& cellLis
    Float_t *sliceValsLow = new Float_t[nSlices];
    Bool_t   isBarrel;
    Float_t  towerH;
+   Float_t transEta = fM->GetTransitionEta();
 
    UInt_t nEta = data->GetEtaBins()->GetNbins();
    for (UInt_t etaBin = 1; etaBin <= nEta; ++etaBin)
@@ -295,7 +296,13 @@ void TEveCalo2DGL::DrawRhoZ(TGLRnrCtx & rnrCtx, TEveCalo2D::vBinCells_t& cellLis
             else
                sliceValsLow[it->fSlice] += cellData.Value(fM->fPlotEt);
          }
-         isBarrel = TMath::Abs(cellData.EtaMax()) < fM->GetTransitionEta();
+
+         isBarrel = true;
+         if ((cellData.EtaMax() > 0 && cellData.EtaMax() > transEta) ||
+             (cellData.EtaMin() < 0 && cellData.EtaMin() < -transEta))
+         {
+            isBarrel = false;
+         }
 
          // draw
          if (rnrCtx.SecSelection()) glLoadName(etaBin); // name-stack eta bin
@@ -422,6 +429,10 @@ void TEveCalo2DGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    TGLCapabilitySwitch light_off(GL_LIGHTING,  kFALSE);
    TGLCapabilitySwitch cull_off (GL_CULL_FACE, kFALSE);
 
+   glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
    if (fM->fCellIdCacheOK == kFALSE)
       fM->BuildCellIdCache();
 
@@ -433,6 +444,7 @@ void TEveCalo2DGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    else
       DrawRhoZ(rnrCtx, fM->fCellLists);
    if (rnrCtx.SecSelection()) glPopName();
+   glPopAttrib();
 }
 
 //______________________________________________________________________________
@@ -443,9 +455,7 @@ void TEveCalo2DGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* /*ps
    static const TEveException eh("TEveCalo2DGL::DrawHighlight ");
 
    if (fM->fData->GetCellsSelected().empty() && fM->fData->GetCellsHighlighted().empty())
-   {
       return;
-   }
 
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT |GL_POLYGON_BIT );
    glDisable(GL_LIGHTING);
@@ -454,9 +464,9 @@ void TEveCalo2DGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* /*ps
 
    TGLUtil::LineWidth(2);
    TGLUtil::LockColor();
-   try {
-   
-      if (!fM->fData->GetCellsHighlighted().empty()) 
+   try
+   {
+      if (!fM->fData->GetCellsHighlighted().empty())
       {
          glColor4ubv(rnrCtx.ColorSet().Selection(3).CArr());
 
@@ -464,7 +474,6 @@ void TEveCalo2DGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* /*ps
             DrawRPhiHighlighted(fM->fCellListsHighlighted);
          else
             DrawRhoZHighlighted(fM->fCellListsHighlighted);
-
       }
       if (!fM->fData->GetCellsSelected().empty())
       {
@@ -482,59 +491,44 @@ void TEveCalo2DGL::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* /*ps
    }
    catch (TEveException& exc)
    {
-      Warning(eh, exc);
+      Warning(eh, "%s", exc.what());
    }
 
    TGLUtil::UnlockColor();
    glPopAttrib();
-
-
-  
 }
 
- //______________________________________________________________________________
+//______________________________________________________________________________
 void TEveCalo2DGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & rec)
 {
    // Processes tower selection in eta bin or phi bin.
    // Virtual function from TGLogicalShape. Called from TGLViewer.
 
-   TEveCaloData::vCellId_t& cells = rec.GetHighlight() ? fM->fData->GetCellsHighlighted() : fM->fData->GetCellsSelected() ;
-   Int_t prev = cells.size();
-   if (!rec.GetMultiple()) cells.clear();
-
-   Int_t binID = -1;
+   TEveCaloData::vCellId_t sel;
    if (rec.GetN() > 2)
    {
-      binID       = rec.GetItem(1);
+      Int_t bin   = rec.GetItem(1);
       Int_t slice = rec.GetItem(2);
-      TEveCaloData::CellData_t cellData;
-      for (TEveCaloData::vCellId_i it = fM->fCellLists[binID]->begin();
-           it!=fM->fCellLists[binID]->end(); it++)
+      for (TEveCaloData::vCellId_i it = fM->fCellLists[bin]->begin();
+           it != fM->fCellLists[bin]->end(); ++it)
       {
          if ((*it).fSlice == slice)
          {
-
-            fM->fData->GetCellData(*it, cellData);
-            if (!IsRPhi())
+            if (IsRPhi())
             {
-               if ((rec.GetItem(3) && cellData.Phi() > 0) || (rec.GetItem(3) == kFALSE && cellData.Phi() < 0)) {
-                  cells.push_back(*it);
-               }
+               sel.push_back(*it);
             }
-            else {
-               cells.push_back(*it);
+            else
+            {
+               assert(rec.GetN() > 3);
+               Bool_t is_upper = (rec.GetItem(3) == 1);
+               TEveCaloData::CellData_t cd;
+               fM->fData->GetCellData(*it, cd);
+               if ((is_upper && cd.Phi() > 0) || (!is_upper && cd.Phi() < 0))
+                  sel.push_back(*it);
             }
          }
       }
    }
-
-   // set secondary selection result
-   if (prev == 0 && binID >= 0)
-      rec.SetSecSelResult(TGLSelectRecord::kEnteringSelection);
-   else if (prev  && binID < 0)
-      rec.SetSecSelResult(TGLSelectRecord::kLeavingSelection);
-   else if (prev  && binID >= 0)
-      rec.SetSecSelResult(TGLSelectRecord::kModifyingInternalSelection);
-
-   fM->fData->CellSelectionChanged();
+   fM->fData->ProcessSelection(sel, rec);
 }

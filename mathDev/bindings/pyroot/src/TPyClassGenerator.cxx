@@ -22,20 +22,20 @@
 namespace {
 
    //_________________________________________________________________________
-   int PyCtorCallback( G__value* res, G__CONST char*, struct G__param* libp, int hash )
+   int PyCtorCallback( G__value* res, G__CONST char*, struct G__param* /* libp */, int /* hash */ )
    {
       PyObject* pyclass = PyROOT::Utility::GetInstalledMethod( G__value_get_tagnum(res) );
       if ( ! pyclass )
          return 0;
 
       PyObject* args = PyTuple_New( 0 );
-      PyObject* result =  PyObject_Call( pyclass, args, NULL );
+      PyObject* result = PyObject_Call( pyclass, args, NULL );
       if ( ! result )
          PyErr_Print();
       Py_DECREF( args );
 
-      G__letint(res,'u',(Long_t)result);
-      res->ref   = (Long_t)result;
+      G__letint( res, 'u', (Long_t)result );
+      res->ref = (Long_t)result;
 
       G__linked_taginfo pti;
       pti.tagnum = -1;
@@ -48,13 +48,13 @@ namespace {
       clName = clName.substr( clName.rfind( '.' )+1, std::string::npos );
       pti.tagname = clName.c_str();
 
-      G__set_tagnum(res,G__get_linked_tagnum( &pti ));
+      G__set_tagnum( res, G__get_linked_tagnum( &pti ) );
 
-      return ( 1 || hash || res || libp );
+      return ( 1 );
    }
 
    //_________________________________________________________________________
-   int PyMemFuncCallback( G__value* res, G__CONST char*, struct G__param* libp, int hash )
+   int PyMemFuncCallback( G__value* res, G__CONST char*, struct G__param* libp, int /* hash */)
    {
       PyObject* pyfunc = PyROOT::Utility::GetInstalledMethod( G__value_get_tagnum(res) );
       if ( ! pyfunc )
@@ -127,11 +127,11 @@ namespace {
          PyErr_Print();
 
       TPyReturn* retval = new TPyReturn( result );
-      res->obj.i  = (Long_t)retval;
-      res->ref    = (Long_t)retval;
+      G__letint( res, 'u', (Long_t)retval );
+      res->ref = (Long_t)retval;
       G__set_tagnum( res, ((G__ClassInfo*)TPyReturn::Class()->GetClassInfo())->Tagnum() );
 
-      return ( 1 || hash || res || libp );
+      return ( 1 );
    }
 
 } // unnamed namespace
@@ -210,7 +210,7 @@ TClass* TPyClassGenerator::GetClass( const char* name, Bool_t load, Bool_t silen
    G__tag_memfunc_setup( tagnum );
 
 // special case: constructor; add method and store callback
-   PyROOT::Utility::InstallMethod( &gcl, pyclass, clName, "ellipsis", (void*)PyCtorCallback );
+   PyROOT::Utility::InstallMethod( &gcl, pyclass, clName, 0, "ellipsis", (void*)PyCtorCallback );
 
 // loop over and add member functions
    for ( int i = 0; i < PyList_GET_SIZE( attrs ); ++i ) {
@@ -223,7 +223,10 @@ TClass* TPyClassGenerator::GetClass( const char* name, Bool_t load, Bool_t silen
          std::string mtName = PyString_AS_STRING( label );
 
       // add method and store callback
-         PyROOT::Utility::InstallMethod( &gcl, attr, mtName, "ellipsis", (void*)PyMemFuncCallback );
+         if ( mtName != "__init__" ) {
+            PyROOT::Utility::InstallMethod(
+               &gcl, attr, mtName, "TPyReturn", "ellipsis", (void*)PyMemFuncCallback );
+         }
       }
 
       Py_DECREF( attr );

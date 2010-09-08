@@ -513,7 +513,7 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
          case '%': /* modulus */
             if (fexpression == 0.0) {
                if (G__no_exec_compile) G__letdouble(defined, 'd', 0.0);
-               else G__genericerror("Error: operator '%%' divided by zero");
+               else G__genericerror("Error: operator '%' divided by zero");
                return;
             }
             G__letint(defined, 'i', (long)fdefined % (long)fexpression);
@@ -991,7 +991,7 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
             case '%': /* modulus */
                if (ullexpression == 0) {
                   if (G__no_exec_compile) G__letdouble(defined, 'i', 0);
-                  else G__genericerror("Error: operator '%%' divided by zero");
+                  else G__genericerror("Error: operator '%' divided by zero");
                   return;
                }
                G__letULonglong(defined, 'm', ulldefined % ullexpression);
@@ -1222,7 +1222,7 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
             case '%': /* modulus */
                if (llexpression == 0) {
                   if (G__no_exec_compile) G__letdouble(defined, 'i', 0);
-                  else G__genericerror("Error: operator '%%' divided by zero");
+                  else G__genericerror("Error: operator '%' divided by zero");
                   return;
                }
                G__letLonglong(defined, 'n', lldefined % llexpression);
@@ -1477,7 +1477,7 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
             case '%': /* modulus */
                if (uexpression == 0) {
                   if (G__no_exec_compile) G__letdouble(defined, resultTypeChar, 0);
-                  else G__genericerror("Error: operator '%%' divided by zero");
+                  else G__genericerror("Error: operator '%' divided by zero");
                   return;
                }
                G__letint(defined, resultTypeChar, udefined % uexpression);
@@ -1732,7 +1732,7 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
             case '%': /* modulus */
                if (lexpression == 0) {
                   if (G__no_exec_compile) G__letdouble(defined, resultTypeChar, 0);
-                  else G__genericerror("Error: operator '%%' divided by zero");
+                  else G__genericerror("Error: operator '%' divided by zero");
                   return;
                }
                G__letint(defined, resultTypeChar, ldefined % lexpression);
@@ -2790,6 +2790,8 @@ int G__parenthesisovldobj(G__value* result3, G__value* result, const char* realn
 #endif
 )
 {
+   if (result->tagnum == -1) return 0;
+
    int known = 0;
    long store_struct_offset;
    int store_tagnum;
@@ -2884,9 +2886,10 @@ int G__parenthesisovld(G__value* result3, char* funcname, G__param* libp, int fl
       return(0);
 
    if (0 == funcname[0]) {
+      known = 1;
       result = *result3;
    }
-   else
+   else {
 
       if (flag == G__CALLMEMFUNC) {
          G__incsetup_memvar(G__tagnum);
@@ -2896,7 +2899,8 @@ int G__parenthesisovld(G__value* result3, char* funcname, G__param* libp, int fl
       else {
          result = G__getvariable(funcname, &known, &G__global, G__p_local);
       }
-
+   }
+   
    /* resolve A::staticmethod(1)(2,3) */
 
    if (
@@ -3057,7 +3061,7 @@ int G__tryindexopr(G__value* result7, G__value* para, int paran, int ig25)
 #ifdef G__ASM
          if (G__asm_noverflow) {
 #ifdef G__ASM_DBG
-            if (G__asm_dbg) G__fprinterr(G__serr, "%3x,%3x: SETSTROS  %s:%d\n", G__asm_cp, G__asm_dt, __LINE__, __LINE__);
+            if (G__asm_dbg) G__fprinterr(G__serr, "%3x,%3x: SETSTROS  %s:%d\n", G__asm_cp, G__asm_dt, __FILE__, __LINE__);
 #endif
             G__asm_inst[G__asm_cp] = G__SETSTROS;
             G__inc_cp_asm(1, 0);

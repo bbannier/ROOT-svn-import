@@ -1455,8 +1455,35 @@ void TRootBrowserLite::AddToTree(TObject *obj, const char *name, Int_t check)
          }
          // add the object only if not already in the list
          if ((!fLt->FindChildByName(fListLevel, name)) &&
-            (!fLt->FindChildByData(fListLevel, obj))) {
-            fLt->AddItem(fListLevel, name, obj);
+             (!fLt->FindChildByData(fListLevel, obj))) {
+            TGListTreeItem *it = fLt->AddItem(fListLevel, name, obj);
+            Long64_t bsize, fsize, objsize = 0;
+            TString objinfo = obj->GetObjectInfo(1, 1);
+            TString infos = obj->GetName();
+            infos += "\n";
+            infos += obj->GetTitle();
+            if (!objinfo.IsNull() && !objinfo.BeginsWith("x=")) {
+               objsize = objinfo.Atoll();
+               if (objsize > 0) {
+                  infos += "\n";
+                  bsize = fsize = objsize;
+                  if (fsize > 1024) {
+                     fsize /= 1024;
+                     if (fsize > 1024) {
+                        // 3.7MB is more informative than just 3MB
+                        infos += TString::Format("Size: %lld.%lldM", fsize/1024,
+                                                 (fsize%1024)/103);
+                     } else {
+                        infos += TString::Format("Size: %lld.%lldK", bsize/1024,
+                                                 (bsize%1024)/103);
+                     }
+                  } else {
+                     infos += TString::Format("Size: %lld bytes", bsize);
+                  }
+               }
+            }
+            if (it)
+               it->SetTipText(infos.Data());
          }
       }
    }
@@ -1736,6 +1763,8 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
 
    TRootHelpDialog *hd;
    TRootBrowserCursorSwitcher *cursorSwitcher = 0;
+   TDirectory *tdir = 0;
+   TString cmd;
 
    if (GET_SUBMSG(msg) != kCT_SELCHANGED) {
       cursorSwitcher = new TRootBrowserCursorSwitcher(fIconBox, fLt);
@@ -1753,6 +1782,7 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
          switch (GET_SUBMSG(msg)) {
 
             case kCM_BUTTON:
+               // fallthrough
             case kCM_MENU:
 
                switch (parm1) {
@@ -1988,6 +2018,7 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                      hd->Popup();
                      break;
                }
+               break;
             case kCM_COMBOBOX:
                if (parm1 == kFSComboBox) {
                   TGTreeLBEntry *e = (TGTreeLBEntry *) fFSComboBox->GetSelectedEntry();
@@ -2027,7 +2058,21 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                      Int_t x = (Int_t)(parm2 & 0xffff);
                      Int_t y = (Int_t)((parm2 >> 16) & 0xffff);
                      obj2 = (TObject *) item2->GetUserData();
-                     if (obj2) fBrowser->GetContextMenu()->Popup(x, y, obj2, fBrowser);
+                     if (obj2) {
+                        if (obj2->InheritsFrom("TTree")) {
+                           // if a tree not attached to any directory (e.g. in a TFolder)
+                           // then attach it to the current directory (gDirectory)
+                           cmd = TString::Format("((TTree *)0x%lx)->GetDirectory();",
+                                                 (ULong_t)obj2);
+                           tdir = (TDirectory *)gROOT->ProcessLine(cmd.Data());
+                           if (!tdir) {
+                              cmd = TString::Format("((TTree *)0x%lx)->SetDirectory(gDirectory);",
+                                                    (ULong_t)obj2);
+                              gROOT->ProcessLine(cmd.Data());
+                           }
+                        }
+                        fBrowser->GetContextMenu()->Popup(x, y, obj2, fBrowser);
+                     }
                   }
                   fClient->NeedRedraw(fLt);
                   fListView->LayoutHeader(0);
@@ -2122,7 +2167,19 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                                  break;
                               }
                            }
-                           if (obj2) fBrowser->GetContextMenu()->Popup(x, y, obj2, fBrowser);
+                           if (obj2->InheritsFrom("TTree")) {
+                              // if a tree not attached to any directory (e.g. in a TFolder)
+                              // then attach it to the current directory (gDirectory)
+                              cmd = TString::Format("((TTree *)0x%lx)->GetDirectory();",
+                                                    (ULong_t)obj2);
+                              tdir = (TDirectory *)gROOT->ProcessLine(cmd.Data());
+                              if (!tdir) {
+                                 cmd = TString::Format("((TTree *)0x%lx)->SetDirectory(gDirectory);",
+                                                       (ULong_t)obj2);
+                                 gROOT->ProcessLine(cmd.Data());
+                              }
+                           }
+                           fBrowser->GetContextMenu()->Popup(x, y, obj2, fBrowser);
                         }
                      }
                   }
@@ -2354,7 +2411,7 @@ void TRootBrowserLite::ListTreeHighlight(TGListTreeItem *item)
             if (!gApplication->GetAppRemote()) {
                gROOT->ProcessLine(Form(".R %s", item->GetText()));
                if (gApplication->GetAppRemote()) {
-                  Getlinem(kInit, TString::Format("\n%s:root [0]", 
+                  Getlinem(kInit, TString::Format("\n%s:root [0]",
                            gApplication->GetAppRemote()->ApplicationName()));
                }
             }
@@ -2386,7 +2443,7 @@ void TRootBrowserLite::ListTreeHighlight(TGListTreeItem *item)
             if (!gApplication->GetAppRemote()) {
                gROOT->ProcessLine(Form(".R %s", item->GetParent()->GetText()));
                if (gApplication->GetAppRemote()) {
-                  Getlinem(kInit, TString::Format("\n%s:root [0]", 
+                  Getlinem(kInit, TString::Format("\n%s:root [0]",
                            gApplication->GetAppRemote()->ApplicationName()));
                }
             }
@@ -2397,7 +2454,7 @@ void TRootBrowserLite::ListTreeHighlight(TGListTreeItem *item)
             }
          }
          else {
-            // check if the listtree item is from a local session or 
+            // check if the listtree item is from a local session or
             // from a remote session, then switch to the session it belongs to
             TGListTreeItem *top = item;
             while (top->GetParent()) {
@@ -2410,7 +2467,7 @@ void TRootBrowserLite::ListTreeHighlight(TGListTreeItem *item)
                   // switch to remote session if not already in
                   gROOT->ProcessLine(Form(".R %s", top->GetText()));
                   if (gApplication->GetAppRemote()) {
-                     Getlinem(kInit, TString::Format("\n%s:root [0]", 
+                     Getlinem(kInit, TString::Format("\n%s:root [0]",
                               gApplication->GetAppRemote()->ApplicationName()));
                   }
                }
@@ -2521,15 +2578,15 @@ void TRootBrowserLite::IconBoxAction(TObject *obj)
          browsable = kTRUE;
 
       if (obj->InheritsFrom("TLeaf")) {
-         TObject *dir = (TObject *)gROOT->ProcessLine(Form("((%s *)0x%lx)->GetBranch()->GetDirectory();", 
-                                                      obj->ClassName(), obj));
+         TObject *dir = (TObject *)gROOT->ProcessLine(Form("((%s *)0x%lx)->GetBranch()->GetDirectory();",
+                                                      obj->ClassName(), (ULong_t)obj));
          if (!dir) {
             browsable = kFALSE;
          }
       }
       if (obj->InheritsFrom("TBranchElement")) {
-         TObject *dir = (TObject *)gROOT->ProcessLine(Form("((%s *)0x%lx)->GetDirectory();", 
-                                                      obj->ClassName(), obj));
+         TObject *dir = (TObject *)gROOT->ProcessLine(Form("((%s *)0x%lx)->GetDirectory();",
+                                                      obj->ClassName(), (ULong_t)obj));
          if (!dir) {
             browsable = kFALSE;
          }
@@ -3029,7 +3086,7 @@ void TRootBrowserLite::ExecMacro()
    fTextEdit->SaveFile(tmpfile, kFALSE);
    gROOT->Macro(tmpfile);
    gSystem->Unlink(tmpfile);
-   delete tmpfile;
+   delete [] tmpfile;
    gROOT->SetExecutingMacro(kFALSE);
 }
 
@@ -3070,7 +3127,7 @@ void TRootBrowserLite::ShowMacroButtons(Bool_t show)
 }
 
 //______________________________________________________________________________
-void TRootBrowserLite::SetStatusText(const char *txt, Int_t col) 
+void TRootBrowserLite::SetStatusText(const char *txt, Int_t col)
 {
    // Set text in column col in status bar.
 
@@ -3082,8 +3139,8 @@ void TRootBrowserLite::SetStatusText(const char *txt, Int_t col)
 }
 
 //______________________________________________________________________________
-TBrowserImp *TRootBrowserLite::NewBrowser(TBrowser *b, const char *title, 
-                                      UInt_t width, UInt_t height, 
+TBrowserImp *TRootBrowserLite::NewBrowser(TBrowser *b, const char *title,
+                                      UInt_t width, UInt_t height,
                                       Option_t * /*opt*/)
 {
    // Interface method to the old browser.
@@ -3093,8 +3150,8 @@ TBrowserImp *TRootBrowserLite::NewBrowser(TBrowser *b, const char *title,
 }
 
 //______________________________________________________________________________
-TBrowserImp *TRootBrowserLite::NewBrowser(TBrowser *b, const char *title, Int_t x, 
-                                      Int_t y, UInt_t width, UInt_t height, 
+TBrowserImp *TRootBrowserLite::NewBrowser(TBrowser *b, const char *title, Int_t x,
+                                      Int_t y, UInt_t width, UInt_t height,
                                       Option_t * /*opt*/)
 {
    // Interface method to the old browser.
@@ -3102,4 +3159,3 @@ TBrowserImp *TRootBrowserLite::NewBrowser(TBrowser *b, const char *title, Int_t 
    TRootBrowserLite *browser = new TRootBrowserLite(b, title, x, y, width, height);
    return (TBrowserImp *)browser;
 }
-

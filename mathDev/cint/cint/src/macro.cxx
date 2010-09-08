@@ -359,6 +359,7 @@ static int G__replacefuncmacro(const char* item, G__Callfuncmacro* callfuncmacro
    // read definition and substitute
    fgetpos(G__mfp, &backup_pos);
    semicolumn = 0;
+   bool quote = false;
    while (1) {
       G__disp_mask = 10000; // FIXME: Crazy!
       c = G__fgetstream(symbol, 0,  punctuation);
@@ -366,7 +367,12 @@ static int G__replacefuncmacro(const char* item, G__Callfuncmacro* callfuncmacro
          if (!double_quote && !single_quote) {
             G__argsubstitute(symbol, callpara, defpara);
          }
-         fprintf(G__mfp, "%s", symbol());
+         if (quote) {
+            fprintf(G__mfp, "\"%s\"", symbol());
+            quote = false;
+         } else {
+            fprintf(G__mfp, "%s", symbol());
+         }
          fgetpos(G__mfp, &backup_pos);
          semicolumn = 0;
       }
@@ -400,6 +406,8 @@ static int G__replacefuncmacro(const char* item, G__Callfuncmacro* callfuncmacro
             }
             else {
                fseek(G__ifile.fp, -1, SEEK_CUR);
+               quote = true;
+               continue;
             }
          }
       }
@@ -438,7 +446,7 @@ static int G__transfuncmacro(const char* item, G__Deffuncmacro* deffuncmacro, G_
    /* set file pointer and position */
    callfuncmacro->call_fp = G__ifile.fp;
    callfuncmacro->call_filenum = G__ifile.filenum;
-   callfuncmacro->call_pos = call_pos;
+   if (G__ifile.fp) callfuncmacro->call_pos = call_pos;
    callfuncmacro->line = G__ifile.line_number;
    /* allocate and initialize next list */
    callfuncmacro->next = (struct G__Callfuncmacro*) malloc(sizeof(struct G__Callfuncmacro));
@@ -725,7 +733,7 @@ G__value G__execfuncmacro(const char* item, int* done)
    found = 0;
    struct G__Callfuncmacro* callfuncmacro = &deffuncmacro->callfuncmacro;
    while (callfuncmacro->next) {
-      if (
+      if (G__ifile.fp && (
          // --
 #ifdef G__NONSCALARFPOS
          G__ifile.line_number == callfuncmacro->line && G__ifile.filenum == callfuncmacro->call_filenum
@@ -737,7 +745,7 @@ G__value G__execfuncmacro(const char* item, int* done)
          call_pos == callfuncmacro->call_pos && G__ifile.filenum == callfuncmacro->call_filenum
 #endif // G__NONSCALARFPOSxxx
          // --
-      ) {
+      ) ) {
          found = 1;
          break;
       }
@@ -851,7 +859,7 @@ int G__execfuncmacro_noexec(const char* macroname)
    struct G__Callfuncmacro* callfuncmacro = &deffuncmacro->callfuncmacro;
    while (callfuncmacro->next) {
       // --
-      if (
+      if (G__ifile.fp && (
          // --
 #if defined(G__NONSCALARFPOS)
          G__ifile.line_number == callfuncmacro->line && G__ifile.filenum == callfuncmacro->call_filenum
@@ -863,7 +871,7 @@ int G__execfuncmacro_noexec(const char* macroname)
          call_pos == callfuncmacro->call_pos && G__ifile.filenum == callfuncmacro->call_filenum
 #endif // G__NONSCALARFPOSxxx
          // --
-      ) {
+      ) ) {
          // --
          found = 1;
          break;

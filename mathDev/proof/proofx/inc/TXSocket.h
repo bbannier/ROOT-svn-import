@@ -104,6 +104,8 @@ private:
    Int_t               fByteCur;       // current position in the first buffer
    TXSockBuf          *fBufCur;        // current read buffer
 
+   TSemaphore          fAsynProc;      // Control actions while processing async messages
+
    // Interrupts
    TMutex             *fIMtx;          // To protect interrupt queue
    kXR_int32           fILev;          // Highest received interrupt
@@ -134,7 +136,7 @@ private:
    void                PushBackSpare();
 
    // Post a message into the queue for asynchronous processing
-   void                PostMsg(Int_t type);
+   void                PostMsg(Int_t type, const char *msg = 0);
 
    // Auxilliary
    Int_t               GetLowSocket() const { return (fConn ? fConn->GetLowSocket() : -1); }
@@ -290,6 +292,22 @@ private:
    Int_t        fPipe[2];   // Pipe for input monitoring
    TString      fLoc;       // Location string
    TList        fReadySock;    // List of sockets ready to be read
+};
+
+//
+// Guard for a semaphore
+//
+class TXSemaphoreGuard {
+public:
+
+   TXSemaphoreGuard(TSemaphore *sem) : fSem(sem), fValid(kTRUE) { if (!fSem || fSem->TryWait()) fValid = kFALSE; }
+   virtual ~TXSemaphoreGuard() { if (fValid && fSem) fSem->Post(); }
+
+   Bool_t       IsValid() const { return fValid; }
+
+private:
+   TSemaphore  *fSem;
+   Bool_t       fValid;
 };
 
 #endif

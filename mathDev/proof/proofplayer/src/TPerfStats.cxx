@@ -335,7 +335,7 @@ void TPerfStats::PacketEvent(const char *slave, const char* slavename, const cha
    if (fMonitoringWriter) {
       if (!gProofServ || !gProofServ->GetSessionTag() || !gProofServ->GetProof() ||
           !gProofServ->GetProof()->GetQueryResult()) {
-         Error("PacketEvent", "some required object are undefined (0x%lx 0x%lx 0x%lx 0x%lx)",
+         Error("PacketEvent", "some required object are undefined (%p %p %p %p)",
                gProofServ, (gProofServ ? gProofServ->GetSessionTag() : 0),
               (gProofServ ? gProofServ->GetProof() : 0),
               ((gProofServ && gProofServ->GetProof()) ?
@@ -501,7 +501,7 @@ void TPerfStats::WriteQueryLog()
    if (sqlserv != "" && sqluser != "" && sqlpass != "" && gProofServ) {
       TString sql;
       sql.Form("INSERT INTO proofquerylog VALUES (0, '%s', '%s', "
-               "'%s', '%s', %d, %.2f, %lld, %lld, %d)",
+               "'%s', '%s', %ld, %.2f, %lld, %lld, %d)",
                gProofServ->GetUser(), gProofServ->GetGroup(),
                fTzero.AsString("s"), stop.AsString("s"),
                stop.GetSec()-fTzero.GetSec(), fTotCpuTime,
@@ -530,7 +530,7 @@ void TPerfStats::WriteQueryLog()
    if (fMonitoringWriter) {
       if (!gProofServ || !gProofServ->GetSessionTag() || !gProofServ->GetProof() ||
           !gProofServ->GetProof()->GetQueryResult()) {
-         Error("WriteQueryLog", "some required object are undefined (0x%lx 0x%lx 0x%lx 0x%lx)",
+         Error("WriteQueryLog", "some required object are undefined (%p %p %p %p)",
                gProofServ, (gProofServ ? gProofServ->GetSessionTag() : 0),
               (gProofServ ? gProofServ->GetProof() : 0),
               ((gProofServ && gProofServ->GetProof()) ?

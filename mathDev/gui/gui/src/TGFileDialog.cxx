@@ -219,7 +219,7 @@ TGFileDialog::TGFileDialog(const TGWindow *p, const TGWindow *main,
 
    fList->SetState(kButtonEngaged);
 
-   AddFrame(fFv, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 4, 4, 3, 1));
+   AddFrame(fFv, new TGLayoutHints(kLHintsTop | kLHintsExpandX | kLHintsExpandY, 4, 4, 3, 1));
 
    if (dlg_type == kFDOpen) {
       fCheckB->Connect("Toggled(Bool_t)","TGFileContainer",fFc,"SetMultipleSelection(Bool_t)");
@@ -310,7 +310,7 @@ TGFileDialog::TGFileDialog(const TGWindow *p, const TGWindow *main,
    //---- make the message box non-resizable
 
    SetWMSize(size.fWidth, size.fHeight);
-   SetWMSizeHints(size.fWidth, size.fHeight, size.fWidth, size.fHeight, 0, 0);
+   SetWMSizeHints(size.fWidth, size.fHeight, 10000, 10000, 1, 1);
 
    const char *wname = (dlg_type == kFDSave) ? "Save As..." : "Open";
    SetWindowName(wname);
@@ -545,10 +545,11 @@ Bool_t TGFileDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                            fFileInfo->fFileNamesList = new TList();
                         }
                         while ((el = (TObjString *) next())) {
+                           char *s = gSystem->ConcatFileName(fFc->GetDirectory(),
+                                                             el->GetString());
                            tmpString += "\"" + el->GetString() + "\" ";
-                           fFileInfo->fFileNamesList->Add(new TObjString(
-                              gSystem->ConcatFileName(fFc->GetDirectory(),
-                                                      el->GetString())));
+                           fFileInfo->fFileNamesList->Add(new TObjString(s));
+                           delete [] s;
                         }
                         fTbfname->Clear();
                         fTbfname->AddText(0, tmpString);

@@ -449,7 +449,7 @@ Int_t TSystem::Select(TFileHandler *, Long_t)
 //______________________________________________________________________________
 TTime TSystem::Now()
 {
-   // Return current time.
+   // Get current time in milliseconds since 0:00 Jan 1 1995.
 
    return TTime(0);
 }
@@ -486,18 +486,19 @@ Long_t TSystem::NextTimeOut(Bool_t mode)
 
    TOrdCollectionIter it((TOrdCollection*)fTimers);
    TTimer *t, *to = 0;
-   Long_t  tt, timeout = -1, tnow = Now();
+   Long64_t tt, tnow = Now();
+   Long_t   timeout = -1;
 
    while ((t = (TTimer *) it.Next())) {
       if (t->IsSync() == mode) {
-         tt = (long)t->GetAbsTime() - tnow;
+         tt = (Long64_t)t->GetAbsTime() - tnow;
          if (tt < 0) tt = 0;
          if (timeout == -1) {
-            timeout = tt;
+            timeout = (Long_t)tt;
             to = t;
          }
          if (tt < timeout) {
-            timeout = tt;
+            timeout = (Long_t)tt;
             to = t;
          }
       }
@@ -1914,7 +1915,7 @@ void TSystem::ListLibraries(const char *regexp)
    Ssiz_t start = 0, index = 0, end = 0;
    int i = 0;
 
-   Printf("");
+   Printf(" ");
    Printf("Loaded shared libraries");
    Printf("=======================");
 
@@ -2019,7 +2020,7 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
 
             Ssiz_t start, index, end;
             start = index = end = 0;
-            
+
             while ((start < slinked.Length()) && (index != kNPOS)) {
                index = slinked.Index(separator,&end,start);
                if (index >= 0) {
@@ -2419,16 +2420,19 @@ static void R__WriteDependencyFile(const TString &build_loc, const TString &depf
       Int_t len = strlen(gSystem->WorkingDirectory());
       if ( build_loc.Length() > (len+1) ) {
          builddep += " \"-p";
-         if (build_loc[len] == '/') {
+         if (build_loc[len] == '/' || build_loc[len+1] != '\\' ) {
+            // Since the path is now ran through TSystem::ExpandPathName the single \ is also possible.
             R__AddPath(builddep, build_loc.Data() + len + 1 );
          } else {
             // Case of dir\\name
             R__AddPath(builddep, build_loc.Data() + len + 2 );
-         }         
+         }
          builddep += "/\" ";
       }
    } else {
-      builddep += " \"-p" + build_loc + "/\" ";
+      builddep += " \"-p";
+      R__AddPath(builddep, build_loc);
+      builddep += "/\" ";
    }
    builddep += " -Y -- ";
 #ifndef ROOTINCDIR
@@ -2440,24 +2444,32 @@ static void R__WriteDependencyFile(const TString &build_loc, const TString &depf
    builddep += includes;
    builddep += defines;
    builddep += " -- \"";
-   builddep += gSystem->BaseName(filename);
+   builddep += filename;
+   builddep += "\" ";
+   TString targetname;
+   if (library.BeginsWith(gSystem->WorkingDirectory())) {
+      Int_t len = strlen(gSystem->WorkingDirectory());
+      if ( library.Length() > (len+1) ) {
+         if (library[len] == '/' || library[len+1] != '\\' ) {
+            targetname = library.Data() + len + 1;
+         } else {
+            targetname = library.Data() + len + 2;
+         }
+      } else {
+         targetname = library;
+      }
+   } else {
+      targetname = library;
+   }
+   builddep += " \"";
+   builddep += "-t";
+   R__AddPath(builddep, targetname);
    builddep += "\" > ";
    builddep += stderrfile;
    builddep += " 2>&1 ";
 
    TString adddictdep = "echo ";
-   if (library.BeginsWith(gSystem->WorkingDirectory())) {
-      Int_t len = strlen(gSystem->WorkingDirectory());
-      if ( library.Length() > (len+1) ) {
-         if (library[len] == '/') {
-            R__AddPath(adddictdep,library.Data() + len + 1);
-         } else {
-            R__AddPath(adddictdep,library.Data() + len + 2);            
-         }
-      } else {
-         R__AddPath(adddictdep,library);
-      }
-   }
+   R__AddPath(adddictdep,targetname);
    adddictdep += ": ";
    {
       char *cintdictversion = gSystem->Which(incPath,"cintdictversion.h");
@@ -2485,9 +2497,9 @@ static void R__WriteDependencyFile(const TString &build_loc, const TString &depf
    addversiondep += libname + version_var_prefix + " \"" + ROOT_RELEASE + "\" >> \""+depfilename+"\"";
 
    if (gDebug > 4)  {
-      ::Info("ACLiC",touch.Data());
-      ::Info("ACLiC",builddep.Data());
-      ::Info("ACLiC",adddictdep.Data());
+      ::Info("ACLiC", "%s", touch.Data());
+      ::Info("ACLiC", "%s", builddep.Data());
+      ::Info("ACLiC", "%s", adddictdep.Data());
    }
 
    Int_t depbuilt = !gSystem->Exec(touch);
@@ -2521,7 +2533,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    //     g : compile with debug symbol
    //     O : optimized the code (ignore if 'g' is specified)
    //     c : compile only, do not attempt to load the library.
-   //     - : if buildir is set, use a flat structure (see buildir below) 
+   //     - : if buildir is set, use a flat structure (see buildir below)
    //
    // If library_specified is specified, CompileMacro generates the file
    // "library_specified".soext where soext is the shared library extension for
@@ -2529,7 +2541,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    //
    // If build_dir is specified, it is used as an alternative 'root' for the
    // generation of the shared library.  The library is stored in a sub-directories
-   // of 'build_dir' including the full pathname of the script unless a flat 
+   // of 'build_dir' including the full pathname of the script unless a flat
    // directory structure is requested ('-' option).  With the '-' option the libraries
    // are created directly in the directory 'build_dir'; in particular this means that
    // 2 scripts with the same name in different source directory will over-write each
@@ -2657,15 +2669,47 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    // if non-zero, build_loc indicates where to build the shared library.
    TString build_loc = ExpandFileName(GetBuildDir());
    if (build_dir && strlen(build_dir)) build_loc = build_dir;
-   if (build_loc.Length() && (!IsAbsoluteFileName(build_loc)) ) {
+   if (build_loc == ".") {
+      build_loc = WorkingDirectory();
+   } else if (build_loc.Length() && (!IsAbsoluteFileName(build_loc)) ) {
       AssignAndDelete( build_loc , ConcatFileName( WorkingDirectory(), build_loc ) );
    }
 
+   // Get the include directory list in the dir1:dir2:dir3 format
+   // [Used for generating the .d file and to look for header files for
+   // the linkdef file]
+   TString incPath = GetIncludePath(); // of the form -Idir1  -Idir2 -Idir3
+   incPath.Append(":").Prepend(" ");
+   if (gEnv) {
+      TString fromConfig = gEnv->GetValue("ACLiC.IncludePaths","");
+      incPath.Append(fromConfig);
+   }
+   incPath.ReplaceAll(" -I",":");       // of form :dir1 :dir2:dir3
+   while ( incPath.Index(" :") != -1 ) {
+      incPath.ReplaceAll(" :",":");
+   }
+   incPath.Prepend(":.:");
+   incPath.Prepend(WorkingDirectory());
+
    // ======= Get the right file names for the dictionnary and the shared library
-   TString library = filename;
-   ExpandPathName( library );
-   if (! IsAbsoluteFileName(library) ) {
-      AssignAndDelete( library , ConcatFileName( WorkingDirectory(), library ) );
+   TString expFileName(filename);
+   ExpandPathName( expFileName );
+   TString library = expFileName;
+   if (! IsAbsoluteFileName(library) )
+   {
+      const char *whichlibrary = Which(incPath,library);
+      if (whichlibrary) {
+         library = whichlibrary;
+         delete [] whichlibrary;
+      } else {
+         ::Error("ACLiC","The file %s can not be found in the include path: %s",filename,incPath.Data());
+         return kFALSE;
+      }
+   } else {
+      if (gSystem->AccessPathName(library)) {
+         ::Error("ACLiC","The file %s can not be found.",filename);
+         return kFALSE;
+      }
    }
    { // Remove multiple '/' characters, rootcint treats them as comments.
       Ssiz_t pos = 0;
@@ -2684,6 +2728,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       file_dirname.Prepend(library(0,2));
    }
    TString file_location( file_dirname  ); // Location of the script.
+   incPath.Prepend( file_location + ":" );
 
    Ssiz_t dot_pos = library.Last('.');
    TString extension = library;
@@ -2745,13 +2790,13 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       } else {
          AssignAndDelete( library, ConcatFileName( build_loc, library) );
       }
-      
+
       Bool_t canWriteBuild_loc = !gSystem->AccessPathName(build_loc,kWritePermission);
       TString build_loc_store( build_loc );
       if (!flatBuildDir) {
          AssignAndDelete( build_loc, ConcatFileName( build_loc, lib_location) );
       }
-      
+
       if (gSystem->AccessPathName(build_loc,kFileExists)) {
          mkdirFailed = (0 != mkdir(build_loc, true));
          if (mkdirFailed && !canWriteBuild_loc) {
@@ -2766,14 +2811,14 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    }
 
    // ======= Check if the library need to loaded or compiled
-   if ( gInterpreter->IsLoaded(filename) ) {
+   if ( gInterpreter->IsLoaded(expFileName) ) {
       // the script has already been loaded in interpreted mode
       // Let's warn the user and unload it.
 
       ::Info("ACLiC","script has already been loaded in interpreted mode");
       ::Info("ACLiC","unloading %s and compiling it", filename);
 
-      if ( gInterpreter->UnloadFile( filename ) != 0 ) {
+      if ( gInterpreter->UnloadFile( expFileName ) != 0 ) {
          // We can not unload it.
          return kFALSE;
       }
@@ -2820,21 +2865,6 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       includes.Append(" ").Append(fromConfig).Append(" ");
    }
 
-   // Get the include directory list in the dir1:dir2:dir3 format
-   // [Used for generating the .d file and to look for header files for
-   // the linkdef file]
-   TString incPath = GetIncludePath(); // of the form -Idir1  -Idir2 -Idir3
-   incPath.Append(":").Prepend(" ");
-   if (gEnv) {
-      TString fromConfig = gEnv->GetValue("ACLiC.IncludePaths","");
-      incPath.Append(fromConfig);
-   }
-   incPath.ReplaceAll(" -I",":");       // of form :dir1 :dir2:dir3
-   while ( incPath.Index(" :") != -1 ) {
-      incPath.ReplaceAll(" :",":");
-   }
-   incPath.Prepend(file_location+":.:");
-
    // Extract the -D for the dependency generation.
    TString defines = " ";
    {
@@ -2876,7 +2906,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       Long_t lib_time, file_time;
 
       if ((gSystem->GetPathInfo( library, 0, (Long_t*)0, 0, &lib_time ) != 0) ||
-          (gSystem->GetPathInfo( filename, 0, (Long_t*)0, 0, &file_time ) == 0 &&
+          (gSystem->GetPathInfo( expFileName, 0, (Long_t*)0, 0, &file_time ) == 0 &&
           (lib_time < file_time))) {
 
          // the library does not exist or is older than the script.
@@ -2891,7 +2921,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
                AssignAndDelete( depfilename, ConcatFileName(depdir, BaseName(libname_noext)) );
                depfilename += "_" + extension + ".d";
             }
-            R__WriteDependencyFile(build_loc, depfilename, filename, library, libname, extension, version_var_prefix, includes, defines, incPath);
+            R__WriteDependencyFile(build_loc, depfilename, filename_fullpath, library, libname, extension, version_var_prefix, includes, defines, incPath);
          }
       }
 
@@ -2913,7 +2943,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
             char *line = new char[sz];
             line[0] = 0;
 
-            char c;
+            int c;
             Int_t current = 0;
             Int_t nested = 0;
             Bool_t hasversion = false;
@@ -3089,12 +3119,12 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       }
       ::Warning("ACLiC","Output will be written to %s",
                 emergency_loc.Data());
-      return CompileMacro(filename, opt, library_specified, emergency_loc, dirmode);
+      return CompileMacro(expFileName, opt, library_specified, emergency_loc, dirmode);
    }
 
    Info("ACLiC","creating shared library %s",library.Data());
 
-   R__WriteDependencyFile(build_loc, depfilename, filename, library, libname, extension, version_var_prefix, includes, defines, incPath);
+   R__WriteDependencyFile(build_loc, depfilename, filename_fullpath, library, libname, extension, version_var_prefix, includes, defines, incPath);
 
    // ======= Select the dictionary name
    TString dict = libname + "_ACLiC_dict";
@@ -3251,7 +3281,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    // ======= Run rootcint
    if (gDebug>3) {
       ::Info("ACLiC","creating the dictionary files");
-      if (gDebug>4)  ::Info("ACLiC",rcint.Data());
+      if (gDebug>4)  ::Info("ACLiC", "%s", rcint.Data());
    }
 
    Int_t dictResult = gSystem->Exec(rcint);
@@ -3286,6 +3316,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
                   all_libtoload.Append(" ").Append(libtoload);
                   depLibraries.Append(" ");
                   depLibraries.Append(GetLibraries(libtoload,"DSL",kFALSE));
+                  depLibraries = depLibraries.Strip(); // Remove any trailing spaces.
                }
             } else {
                gROOT->LoadClass("", libtoload);
@@ -3399,7 +3430,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    if (result) {
       if (gDebug>3) {
          ::Info("ACLiC","compiling the dictionary and script files");
-         if (gDebug>4)  ::Info("ACLiC",cmd.Data());
+         if (gDebug>4)  ::Info("ACLiC", "%s", cmd.Data());
       }
       Int_t compilationResult = gSystem->Exec( cmd );
       if (compilationResult) {
@@ -3444,8 +3475,8 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          // if filename is a header compiler won't compile it
          // instead, create temp source file which is a copy of the header
          Bool_t compileHeader=kFALSE;
-         size_t lenFilename=strlen(filename);
-         const char* endOfFilename=filename+lenFilename;
+         size_t lenFilename=expFileName.Length();
+         const char* endOfFilename=expFileName.Data()+lenFilename;
          // check all known header extensions
          for (Int_t iExt=0; !compileHeader && iExt<6; iExt++) {
             size_t lenExt=strlen(extensions[iExt]);
@@ -3453,12 +3484,12 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
                && !strcmp(extensions[iExt], endOfFilename-lenExt);
          }
 
-         TString filenameForCompiler(filename);
+         TString filenameForCompiler(expFileName);
          if (compileHeader) {
             // create temp source file
             filenameForCompiler= libname + "_ACLiC";
             filenameForCompiler+=".check.cxx";
-            gSystem->Link(filename, filenameForCompiler);
+            gSystem->Link(expFileName, filenameForCompiler);
          }
 
          comp.ReplaceAll("$SourceFiles",filenameForCompiler);
@@ -3471,11 +3502,11 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          if (mode==kDebug) comp.ReplaceAll("$Opt",fFlagsDebug);
          else comp.ReplaceAll("$Opt",fFlagsOpt);
 
-         if (gDebug>4)  ::Info("ACLiC",comp.Data());
+         if (gDebug>4)  ::Info("ACLiC", "%s", comp.Data());
 
          Int_t compilationResult = gSystem->Exec( comp );
 
-         if (filenameForCompiler.CompareTo(filename))
+         if (filenameForCompiler.CompareTo(expFileName))
             // remove temporary file
             gSystem->Unlink(filenameForCompiler);
 
@@ -3483,7 +3514,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
             ::Info("ACLiC","The compiler has not found any problem with your macro.\n"
             "\tProbably your macro uses something rootcint can't parse.\n"
             "\tCheck http://root.cern.ch/root/Cint.phtml?limitations for Cint's limitations.");
-            TString objfile=filename;
+            TString objfile=expFileName;
             Ssiz_t len=objfile.Length();
             objfile.Replace(len-extension.Length(), len, GetObjExt());
             gSystem->Unlink(objfile);
@@ -3518,7 +3549,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       if ( !result ) {
          if (gDebug>3) {
             ::Info("ACLiC","testing for missing symbols:");
-            if (gDebug>4)  ::Info("ACLiC",testcmd.Data());
+            if (gDebug>4)  ::Info("ACLiC", "%s", testcmd.Data());
          }
          gSystem->Exec(testcmd);
          gSystem->Unlink( exec );
@@ -3553,7 +3584,7 @@ Int_t TSystem::GetAclicProperties() const
 {
    // Return the ACLiC properties field.   See EAclicProperties for details
    // on the semantic of each bit.
-   
+
    return fAclicProperties;
 }
 
@@ -3692,7 +3723,7 @@ void TSystem::SetBuildDir(const char* build_dir, Bool_t isflat)
    // the library will be located at 'build_dir+/full/path/name/macro_C.so'
    // If 'isflat' is true, then no subdirectory is created and the library
    // is created directly in the directory 'build_dir'.  Note that in this
-   // mode there is a risk than 2 script of the same in different source 
+   // mode there is a risk than 2 script of the same in different source
    // directory will over-write each other.
 
    fBuildDir = build_dir;

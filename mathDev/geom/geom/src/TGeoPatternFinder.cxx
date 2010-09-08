@@ -90,7 +90,8 @@ TGeoPatternFinder::TGeoPatternFinder(const TGeoPatternFinder& pf) :
   fNdivisions(pf.fNdivisions),
   fDivIndex(pf.fDivIndex),
   fMatrix(pf.fMatrix),
-  fVolume(pf.fVolume)
+  fVolume(pf.fVolume),
+  fNextIndex(pf.fNextIndex)
 { 
    //copy constructor
 }
@@ -109,6 +110,7 @@ TGeoPatternFinder& TGeoPatternFinder::operator=(const TGeoPatternFinder& pf)
       fDivIndex=pf.fDivIndex;
       fMatrix=pf.fMatrix;
       fVolume=pf.fVolume;
+      fNextIndex = pf.fNextIndex;
    } 
    return *this;
 }
@@ -1488,6 +1490,9 @@ TGeoPatternHoneycomb::TGeoPatternHoneycomb(TGeoVolume *vol, Int_t nrows)
 {
 // Default constructor
    fNrows = nrows;
+   fAxisOnRows  = 0;            
+   fNdivisions  = 0;             
+   fStart       = 0;                 
 // compute everything else
 }
 //_____________________________________________________________________________

@@ -189,7 +189,7 @@ void TDataSetManagerFile::Init()
    fLockFileTimeLimit = 120;
 
    // Default validity of the cache
-   fCacheUpdatePeriod = gEnv->GetValue("ProofDataSet.CacheUpdatePeriod", 600);
+   fCacheUpdatePeriod = gEnv->GetValue("ProofDataSet.CacheUpdatePeriod", 0);
 
    // If the MSS url was not given, check if one is defined via env
    if (fMSSUrl.IsNull())
@@ -415,10 +415,14 @@ Int_t TDataSetManagerFile::NotifyUpdate(const char *group, const char *user,
       mac.SaveSource(fListFile.Data());
       if (!(newMd5 = TMD5::FileChecksum(fListFile.Data()))) {
          Error("NotifyUpdate", "problems calculating new checksum of %s", fListFile.Data());
+         SafeDelete(oldMd5);
          return -1;
       }
       if (*newMd5 == *oldMd5)
          Warning("NotifyUpdate", "checksum for %s did not change!", fListFile.Data());
+      // Cleanup
+      SafeDelete(oldMd5);
+      SafeDelete(newMd5);
    }
    // Done
    return 0;
@@ -720,8 +724,8 @@ TMap *TDataSetManagerFile::GetDataSets(const char *group, const char *user,
    Bool_t listing = (option & kList) ? kTRUE : kFALSE;
 
    // The last three options are mutually exclusive
-   if (((Int_t)printing + (Int_t)exporting + (Int_t)updating + (Int_t)refreshingls + (Int_t)listing) > 1) {
-      Error("GetDataSets", "only one of '?P', '?Q', '?E', '?R' or '?L' can be specified at once");
+   if (((Int_t)printing + (Int_t)exporting + (Int_t)updating + (Int_t)listing) > 1) {
+      Error("GetDataSets", "only one of '?P', '?Q', '?E' or '?L' can be specified at once");
       return 0;
    }
 
@@ -1176,6 +1180,7 @@ Int_t TDataSetManagerFile::CheckLocalCache(const char *group, const char *user,
    }
    // Get the file, if needed
    if (need_update) {
+      SafeDelete(locmd5);
       if (!TFile::Cp(path, locpath, kFALSE)) {
          Error("CheckLocalCache", "cannot get remote file '%s' - ignoring", path.Data());
          return -1;
@@ -1463,11 +1468,13 @@ Int_t TDataSetManagerFile::ChecksumDataSet(const char *path,
    // Save it to a file
    if (TMD5::WriteChecksum(md5path, md5sum) != 0) {
       Error("ChecksumDataSet", "problems saving checksum to '%s'", md5path);
+      SafeDelete(md5sum);
       return -1;
    }
    // Fill output
    checksum = md5sum->AsString();
    // Done
+   SafeDelete(md5sum);
    return 0;
 }
 
@@ -1737,10 +1744,13 @@ Int_t TDataSetManagerFile::ScanDataSet(const char *group, const char *user,
          if ((option & kReopen)) fopt++;
          if ((option & kTouch)) fopt++;
       }
-      if ((option & kCheckStageStatus)) fopt += 100;
-   } else if ((option & kStagedFiles) || (option & kReopen) || (option & kTouch)) {
-      Warning("ScanDataSet", "kAllFiles mode: ignoring kStagedFiles or kReopen"
-                             " or kTouch or kCheckStageStatus requests");
+      if ((option & kNoStagedCheck)) fopt += 100;
+   } else {
+      if ((option & kStagedFiles) || (option & kReopen) || (option & kTouch)) {
+         Warning("ScanDataSet", "kAllFiles mode: ignoring kStagedFiles or kReopen"
+                                " or kTouch requests");
+      }
+      if ((option & kNoStagedCheck)) fopt -= 100;
    }
 
    // Type of action
@@ -1804,16 +1814,19 @@ TMap *TDataSetManagerFile::GetDataSets(const char *uri, UInt_t option)
 }
 
 //______________________________________________________________________________
-TFileCollection *TDataSetManagerFile::GetDataSet(const char *uri, const char *srv)
+TFileCollection *TDataSetManagerFile::GetDataSet(const char *uri, const char *opts)
 {
    // Utility function used in various methods for user dataset upload.
 
-   TString dsUser, dsGroup, dsName;
+   TString dsUser, dsGroup, dsName, ss(opts);
 
    TFileCollection *fc = 0;
    if (!strchr(uri, '*')) {
       if (!ParseUri(uri, &dsGroup, &dsUser, &dsName)) return fc;
-      fc = GetDataSet(dsGroup, dsUser, dsName);
+      UInt_t opt = (ss.Contains("S:") || ss.Contains("short:")) ? kReadShort : 0;
+      ss.ReplaceAll("S:","");
+      ss.ReplaceAll("short:","");
+      fc = GetDataSet(dsGroup, dsUser, dsName, opt);
    } else {
       TMap *fcs = GetDataSets(uri);
       if (!fcs) return fc;
@@ -1832,10 +1845,10 @@ TFileCollection *TDataSetManagerFile::GetDataSet(const char *uri, const char *sr
       }
    }
 
-   if (fc && srv && strlen(srv) > 0) {
+   if (fc && !ss.IsNull()) {
       // Build up the subset
       TFileCollection *sfc = 0;
-      TString ss(srv), s;
+      TString s;
       Int_t from = 0;
       while (ss.Tokenize(s, from, ",")) {
          TFileCollection *xfc = fc->GetFilesOnServer(s.Data());

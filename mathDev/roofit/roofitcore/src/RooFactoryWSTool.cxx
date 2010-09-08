@@ -104,6 +104,7 @@ static Int_t init()
 
   // Miscellaneous
   RooFactoryWSTool::registerSpecial("dataobs",iface) ;
+  RooFactoryWSTool::registerSpecial("set",iface) ;
 
   return 0 ;
 }
@@ -361,7 +362,7 @@ RooAbsArg* RooFactoryWSTool::createArg(const char* className, const char* objNam
 	cintExpr += Form(",RooFactoryWSTool::as_DOUBLE(%d)",i) ;	
       } else if (RooCintUtils::isEnum(ti->c_str())) {	  	  
 	string qualvalue ;
-	if (_args[i].find(Form("::",className)) != string::npos) {		    
+	if (_args[i].find(Form("%s::",className)) != string::npos) {		    
 	  qualvalue = _args[i].c_str() ;
 	} else {	
 	  qualvalue =  Form("%s::%s",className,_args[i].c_str()) ;	    
@@ -801,6 +802,11 @@ RooAbsArg* RooFactoryWSTool::process(const char* expr)
   //                         define aliases for type names. For the definition of meta arguments in operator p.d.f.s
   //                         see the definitions below
 
+
+  // First perform basic syntax check
+  if (checkSyntax(expr)) {
+    return 0 ;
+  }
 
   // Allocate work buffer
   char* buf = new char[strlen(expr)+1] ;
@@ -1451,10 +1457,45 @@ vector<string> RooFactoryWSTool::splitFunctionArgs(const char* funcExpr)
 
 
 //_____________________________________________________________________________
+Bool_t RooFactoryWSTool::checkSyntax(const char* arg) 
+{
+  // Perform basic syntax on given factory expression. If function returns
+  // true syntax errors are found.
+  
+  // Count parentheses
+  Int_t nParentheses(0), nBracket(0), nAccolade(0) ;
+  const char* ptr = arg ;
+  while(*ptr) {
+    if (*ptr=='(') nParentheses++ ;
+    if (*ptr==')') nParentheses-- ;
+    if (*ptr=='[') nBracket++ ;
+    if (*ptr==']') nBracket-- ;
+    if (*ptr=='{') nAccolade++ ;
+    if (*ptr=='}') nAccolade-- ;
+    ptr++ ;
+  }
+  if (nParentheses!=0) {
+    coutE(ObjectHandling) << "RooFactoryWSTool::checkSyntax ERROR non-matching '" << (nParentheses>0?"(":")") << "' in expression" << endl ;
+    return kTRUE ;
+  }
+  if (nBracket!=0) {
+    coutE(ObjectHandling) << "RooFactoryWSTool::checkSyntax ERROR non-matching '" << (nBracket>0?"[":"]") << "' in expression" << endl ;
+    return kTRUE ;
+  }
+  if (nAccolade!=0) {
+    coutE(ObjectHandling) << "RooFactoryWSTool::checkSyntax ERROR non-matching '" << (nAccolade>0?"{":"}") << "' in expression" << endl ;
+    return kTRUE ;
+  }
+  return kFALSE ;
+}
+
+
+
+//_____________________________________________________________________________
 void RooFactoryWSTool::checkIndex(UInt_t idx) 
 {
   if (idx>_of->_args.size()-1) {
-    throw string(Form("Need argument number %d, but only %d args are provided",idx,_of->_args.size())) ;
+    throw string(Form("Need argument number %d, but only %d args are provided",idx,(Int_t)_of->_args.size())) ;
   }
 }
 
@@ -1637,6 +1678,16 @@ RooArgSet RooFactoryWSTool::asSET(const char* arg)
   strcpy(tmp,arg) ;
 
   RooArgSet s ;
+  
+  // If given object is not of {,,,} form, interpret given string as name of defined set
+  if (arg[0]!='{') {
+    const RooArgSet* defSet = ws().set(arg) ;
+    if (defSet) {
+      s.add(*defSet) ;
+      return s ;
+    }
+  }
+
   char* save ;
   char* tok = strtok_r(tmp,",{}",&save) ;
   while(tok) {
@@ -1864,7 +1915,7 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
     if (pargv.size()>1) {
       ft.simul(instName,pargv[0].c_str(),strchr(pargs,',')+1) ;
     } else {
-      throw string(Form("Need at least two arguments in call to SIMUL::%s, have %d: %s",instName,pargv.size(),pargs)) ;
+      throw string(Form("Need at least two arguments in call to SIMUL::%s, have %d: %s",instName,(Int_t)pargv.size(),pargs)) ;
     }
 
   } else if (cl=="EXPR") {
@@ -1961,7 +2012,7 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
     // int::name[func,intobs|range,normobs]
 
     if (pargv.size()<2 || pargv.size()>3) {
-      throw string(Form("int::%s, requires 2 or 3 arguments, have %d arguments",instName,pargv.size())) ;
+      throw string(Form("int::%s, requires 2 or 3 arguments, have %d arguments",instName,(Int_t)pargv.size())) ;
     }
 
     RooAbsReal& func = ft.asFUNC(pargv[0].c_str()) ;
@@ -1995,7 +2046,7 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
     // derive::name[func,obs,order]
 
     if (pargv.size()<2 || pargv.size()>3) {
-      throw string(Form("deriv::%s, requires 2 or 3 arguments, have %d arguments",instName,pargv.size())) ;
+      throw string(Form("deriv::%s, requires 2 or 3 arguments, have %d arguments",instName,(Int_t)pargv.size())) ;
     }
 
     RooAbsReal& func = ft.asFUNC(pargv[0].c_str()) ;
@@ -2015,7 +2066,7 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
     // cdf::name[pdf,obs,extranormobs]
 
     if (pargv.size()<2 || pargv.size()>3) {
-      throw string(Form("cdf::%s, requires 2 or 3 arguments, have %d arguments",instName,pargv.size())) ;
+      throw string(Form("cdf::%s, requires 2 or 3 arguments, have %d arguments",instName,(Int_t)pargv.size())) ;
     }
 
     RooAbsPdf& pdf = ft.asPDF(pargv[0].c_str()) ;
@@ -2033,9 +2084,9 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
 
   } else if (cl=="PROJ") {
 
-    // PROJ::name[pdf,intobs]
+    // PROJ::name(pdf,intobs)
     if (pargv.size()!=2) {
-      throw string(Form("PROJ::%s, requires 2 arguments, have %d arguments",instName,pargv.size())) ;
+      throw string(Form("PROJ::%s, requires 2 arguments, have %d arguments",instName,(Int_t)pargv.size())) ;
     }
 
     RooAbsPdf& pdf = ft.asPDF(pargv[0].c_str()) ;
@@ -2044,6 +2095,14 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
 
     if (ft.ws().import(*projection,Silence())) ft.logError() ;
 
+  } else if (cl=="set") {
+
+    // set::name(arg,arg,...)
+    if (ft.ws().defineSet(instName,pargs)) {
+      ft.logError() ;
+      return string(instName) ;
+    }
+    
   } else {
 
     throw string(Form("RooFactoryWSTool::SpecialsIFace::create() ERROR: Unknown meta-type %s",typeName)) ;

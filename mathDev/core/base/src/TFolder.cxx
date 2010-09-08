@@ -115,7 +115,7 @@ TFolder::TFolder(const char *name, const char *title) : TNamed(name,title)
 }
 
 //______________________________________________________________________________
-TFolder::TFolder(const TFolder &folder) : TNamed(folder)
+TFolder::TFolder(const TFolder &folder) : TNamed(folder),fFolders(0),fIsOwner(kFALSE)
 {
    // Copy constructor.
 
@@ -163,7 +163,7 @@ TFolder *TFolder::AddFolder(const char *name, const char *title, TCollection *co
    // Note that the folder name cannot contain slashes.
 
    if (strchr(name,'/')) {
-      ::Error("TFolder::TFolder","folder name cannot contain a slash", name);
+      ::Error("TFolder::TFolder","folder name cannot contain a slash: %s", name);
       return 0;
    }
    if (strlen(GetName()) == 0) {
@@ -281,7 +281,11 @@ TObject *TFolder::FindObject(const char *name) const
          return gROOT->GetRootFolder()->FindObject(name+1);
       }
    }
-   char cname[1024];
+   Int_t nch = strlen(name);
+   char *cname;
+   char csname[128];
+   if (nch <128) cname = csname;
+   else          cname = new char[nch+1];
    strcpy(cname,name);
    TObject *obj;
    char *slash = strchr(cname,'/');
@@ -293,6 +297,7 @@ TObject *TFolder::FindObject(const char *name) const
    } else {
       return fFolders->FindObject(name);
    }
+   if (nch >= 128) delete [] cname;
 }
 
 

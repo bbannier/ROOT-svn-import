@@ -15,6 +15,7 @@
 
 #include "TError.h"
 #include "TGeoManager.h"
+#include "TGeoMatrix.h"
 #include "TClass.h"
 #include "TMath.h"
 
@@ -217,14 +218,14 @@ void TEveUtil::ColorFromIdx(Color_t ci, UChar_t col[4], Bool_t alpha)
 }
 
 //______________________________________________________________________________
-void TEveUtil::ColorFromIdx(Color_t ci, UChar_t col[4], UChar_t transparency)
+void TEveUtil::ColorFromIdx(Color_t ci, UChar_t col[4], Char_t transparency)
 {
    // Fill col with RGBA values corresponding to index ci and transparency.
    // ROOT's indexed color palette does not support transparency.
 
    UChar_t alpha = (255*(100 - transparency))/100;
 
-   TColor* c = gROOT->GetColor(ci);   
+   TColor* c = gROOT->GetColor(ci);
    if (c)
    {
       col[0] = (UChar_t)(255*c->GetRed());
@@ -507,10 +508,18 @@ TEveGeoManagerHolder::TEveGeoManagerHolder(TGeoManager* new_gmgr, Int_t n_seg) :
    // NSegments is set to this value.
 
    gGeoManager = new_gmgr;
-   if (gGeoManager && n_seg > 2)
+   if (gGeoManager)
    {
-      fNSegments = gGeoManager->GetNsegments();
-      gGeoManager->SetNsegments(n_seg);
+      gGeoIdentity = (TGeoIdentity*) gGeoManager->GetListOfMatrices()->At(0);
+      if (n_seg > 2)
+      {
+         fNSegments = gGeoManager->GetNsegments();
+         gGeoManager->SetNsegments(n_seg);
+      }
+   }
+   else
+   {
+      gGeoIdentity = 0;
    }
 }
 
@@ -524,6 +533,14 @@ TEveGeoManagerHolder::~TEveGeoManagerHolder()
       gGeoManager->SetNsegments(fNSegments);
    }
    gGeoManager = fManager;
+   if (gGeoManager)
+   {
+      gGeoIdentity = (TGeoIdentity*) gGeoManager->GetListOfMatrices()->At(0);
+   }
+   else
+   {
+      gGeoIdentity = 0;
+   }
 }
 
 
@@ -609,8 +626,8 @@ void TEveRefBackPtr::DecRefCount(TEveElement* re)
       fBackRefs.erase(i);
       TEveRefCnt::DecRefCount();
    } else {
-      Warning(eh, Form("render element '%s' not found in back-refs.",
-                       re->GetObject(eh)->GetName()));
+      Warning(eh, "render element '%s' not found in back-refs.",
+                  re->GetObject(eh)->GetName());
    }
 }
 

@@ -129,16 +129,14 @@ TRootEmbeddedCanvas::TRootEmbeddedCanvas(const char *name, const TGWindow *p,
             }
          }
       }
-      
-      fCWinId = gGLManager->InitGLWindow((ULong_t)GetViewPort()->GetId());
-      
+
+      if (gGLManager)
+         fCWinId = gGLManager->InitGLWindow((ULong_t)GetViewPort()->GetId());
+      //Context creation deferred till TCanvas creation (since there is no way to pass it to TCanvas).
+
       if (!gGLManager || fCWinId == -1)
          gStyle->SetCanvasPreferGL(kFALSE);//TCanvas should not use gl.
-      else   
-         fCWinId = gGLManager->InitGLWindow((ULong_t)GetViewPort()->GetId());
-         //Context creation deferred till TCanvas creation (since there is no way to pass it to TCanvas).
    }
-
    if (fCWinId == -1)
       fCWinId = gVirtualX->InitWindow((ULong_t)GetViewPort()->GetId());
 
@@ -225,7 +223,7 @@ Bool_t TRootEmbeddedCanvas::HandleContainerButton(Event_t *event)
          fCanvas->HandleInput(EEventType(5), x, y);//hack
       if (button == kButton5)
          fCanvas->HandleInput(EEventType(6), x, y);//hack
-      
+
       fButton = 0;
    }
 
@@ -356,7 +354,7 @@ Bool_t TRootEmbeddedCanvas::HandleDNDDrop(TDNDData *data)
       if (!obj) return kTRUE;
       gPad->Clear();
       if (obj->InheritsFrom("TKey")) {
-         TObject *object = (TObject *)gROOT->ProcessLine(Form("((TKey *)0x%lx)->ReadObj();", obj));
+         TObject *object = (TObject *)gROOT->ProcessLine(Form("((TKey *)0x%lx)->ReadObj();", (ULong_t)obj));
          if (!object) return kTRUE;
          if (object->InheritsFrom("TGraph"))
             object->Draw("ACP");
@@ -410,7 +408,7 @@ Atom_t TRootEmbeddedCanvas::HandleDNDPosition(Int_t /*x*/, Int_t /*y*/, Atom_t a
    Window_t wtarget;
 
    gVirtualX->TranslateCoordinates(gClient->GetDefaultRoot()->GetId(),
-                                   gVirtualX->GetWindowID(fCanvas->GetCanvasID()), 
+                                   gVirtualX->GetWindowID(fCanvas->GetCanvasID()),
                                    xroot, yroot, px, py, wtarget);
 
    TPad *pad = fCanvas->Pick(px, py, 0);

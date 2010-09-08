@@ -43,8 +43,6 @@
 
 ClassImp(TEveTrack);
 
-Bool_t TEveTrack::fgDefaultBreakProjectedTracks = kTRUE;
-
 //______________________________________________________________________________
 TEveTrack::TEveTrack() :
    TEveLine(),
@@ -61,8 +59,7 @@ TEveTrack::TEveTrack() :
    fLockPoints(kFALSE),
    fPathMarks(),
    fLastPMIdx(0),
-   fPropagator(0),
-   fBreakProjectedTracks(kBPTDefault)
+   fPropagator(0)
 {
    // Default constructor.
 }
@@ -83,8 +80,7 @@ TEveTrack::TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* prop):
    fLockPoints(kFALSE),
    fPathMarks(),
    fLastPMIdx(0),
-   fPropagator(0),
-   fBreakProjectedTracks(kBPTDefault)
+   fPropagator(0)
 {
    // Constructor from TParticle.
 
@@ -116,8 +112,7 @@ TEveTrack::TEveTrack(TEveMCTrack* t, TEveTrackPropagator* prop):
    fLockPoints(kFALSE),
    fPathMarks(),
    fLastPMIdx(0),
-   fPropagator(0),
-   fBreakProjectedTracks(kBPTDefault)
+   fPropagator(0)
 {
    // Constructor from TEveUtil Monte Carlo track.
 
@@ -149,8 +144,7 @@ TEveTrack::TEveTrack(TEveRecTrack* t, TEveTrackPropagator* prop) :
    fLockPoints(kFALSE),
    fPathMarks(),
    fLastPMIdx(0),
-   fPropagator(0),
-   fBreakProjectedTracks(kBPTDefault)
+   fPropagator(0)
 {
    // Constructor from TEveUtil reconstructed track.
 
@@ -175,8 +169,7 @@ TEveTrack::TEveTrack(const TEveTrack& t) :
    fLockPoints(t.fLockPoints),
    fPathMarks(),
    fLastPMIdx(t.fLastPMIdx),
-   fPropagator(0),
-   fBreakProjectedTracks(t.fBreakProjectedTracks)
+   fPropagator(0)
 {
    // Copy constructor. Track paremeters are copied but the
    // extrapolation is not perfermed so you should still call
@@ -186,16 +179,10 @@ TEveTrack::TEveTrack(const TEveTrack& t) :
    if (fLockPoints)
       ClonePoints(t);
 
-   SetMainColor(t.GetMainColor());
-   // TEveLine
-   fRnrLine   = t.fRnrLine;
-   fRnrPoints = t.fRnrPoints;
-   // TLineAttrib
-   fLineColor = t.fLineColor;
-   fLineStyle = t.fLineStyle;
-   fLineWidth = t.fLineWidth;
    SetPathMarks(t);
    SetPropagator (t.fPropagator);
+
+   CopyVizParams(&t);
 }
 
 //______________________________________________________________________________
@@ -215,8 +202,32 @@ const TGPicture* TEveTrack::GetListTreeIcon(Bool_t)
    return fgListTreeIcons[4];
 }
 
+//______________________________________________________________________________
+void TEveTrack::ComputeBBox()
+{
+   // Compute the bounding box of the track.
 
-/******************************************************************************/
+   if (Size() > 0 || ! fPathMarks.empty())
+   {
+      BBoxInit();
+      Int_t    n = Size();
+      Float_t* p = TPolyMarker3D::fP;
+      for (Int_t i = 0; i < n; ++i, p += 3)
+      {
+         BBoxCheckPoint(p);
+      }
+      for (vPathMark_ci i = fPathMarks.begin(); i != fPathMarks.end(); ++i)
+      {
+         BBoxCheckPoint(i->fV);
+      }
+   }
+   else
+   {
+      BBoxZero();
+   }
+}
+
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrack::SetStdTitle()
@@ -249,20 +260,6 @@ void TEveTrack::SetTrackParams(const TEveTrack& t)
 
    fPathMarks.clear();
    SetPropagator(t.fPropagator);
-   fBreakProjectedTracks = t.fBreakProjectedTracks;
-
-   SetMainColor(t.GetMainColor());
-   // TEveLine
-   fRnrLine   = t.fRnrLine;
-   fRnrPoints = t.fRnrPoints;
-   // TMarkerAttrib
-   fMarkerColor = t.fMarkerColor;
-   fMarkerSize  = t.fMarkerSize;
-   fMarkerStyle = t.fMarkerStyle;
-   // TLineAttrib
-   fLineColor = t.fLineColor;
-   fLineStyle = t.fLineStyle;
-   fLineWidth = t.fLineWidth;
 }
 
 //______________________________________________________________________________
@@ -274,7 +271,7 @@ void TEveTrack::SetPathMarks(const TEveTrack& t)
              std::back_insert_iterator<vPathMark_t>(fPathMarks));
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrack::SetPropagator(TEveTrackPropagator* prop)
@@ -288,7 +285,7 @@ void TEveTrack::SetPropagator(TEveTrackPropagator* prop)
    if (fPropagator) prop->IncRefCount(this);
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrack::SetAttLineAttMarker(TEveTrackList* tl)
@@ -306,7 +303,7 @@ void TEveTrack::SetAttLineAttMarker(TEveTrackList* tl)
    SetMarkerSize(tl->GetMarkerSize());
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrack::MakeTrack(Bool_t recurse)
@@ -414,7 +411,7 @@ void TEveTrack::MakeTrack(Bool_t recurse)
    }
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrack::CopyVizParams(const TEveElement* el)
@@ -423,11 +420,9 @@ void TEveTrack::CopyVizParams(const TEveElement* el)
 
    // No local parameters.
 
-   const TEveTrack* t = dynamic_cast<const TEveTrack*>(el);
-   if (t)
-   {
-      fBreakProjectedTracks = t->fBreakProjectedTracks;
-   }
+   // const TEveTrack* t = dynamic_cast<const TEveTrack*>(el);
+   // if (t)
+   // {}
 
    TEveLine::CopyVizParams(el);
 }
@@ -439,8 +434,7 @@ void TEveTrack::WriteVizParams(ostream& out, const TString& var)
 
    TEveLine::WriteVizParams(out, var);
 
-   TString t = "   " + var + "->";
-   out << t << "SetBreakProjectedTracks(" << fBreakProjectedTracks << ");\n";
+   // TString t = "   " + var + "->";
 }
 
 //______________________________________________________________________________
@@ -451,30 +445,15 @@ TClass* TEveTrack::ProjectedClass(const TEveProjection*) const
    return TEveTrackProjected::Class();
 }
 
-//______________________________________________________________________________
-Bool_t TEveTrack::ShouldBreakTrack() const
-{
-   // Should this track be broken in projections.
+//==============================================================================
 
-   switch (fBreakProjectedTracks)
+namespace
+{
+   struct Cmp_pathmark_t
    {
-      default:
-      case kBPTDefault: return fgDefaultBreakProjectedTracks;
-      case kBPTAlways:  return kTRUE;
-      case kBPTNever:   return kFALSE;
-   }
-}
-
-/******************************************************************************/
-
-namespace {
-
-struct Cmp_pathmark_t
-{
-   bool operator()(TEvePathMark const & a, TEvePathMark const & b)
-   { return a.fTime < b.fTime; }
-};
-
+      bool operator()(TEvePathMark const & a, TEvePathMark const & b)
+      { return a.fTime < b.fTime; }
+   };
 }
 
 //______________________________________________________________________________
@@ -519,24 +498,48 @@ void TEveTrack::SecSelected(TEveTrack* track)
 //------------------------------------------------------------------------------
 
 //______________________________________________________________________________
+Bool_t TEveTrack::ShouldBreakTrack() const
+{
+   // Should this track be broken in projections.
+
+   Error("ShouldBreakTrack", "Deprected -- use TEveTrackPropagator functions.");
+   return fPropagator->GetProjTrackBreaking() == TEveTrackPropagator::kPTB_Break;
+}
+
+//______________________________________________________________________________
+UChar_t TEveTrack::GetBreakProjectedTracks() const
+{
+   // Deprected -- use TEveTrackPropagator functions.
+   Error("GetBreakProjectedTracks", "Deprected -- use TEveTrackPropagator functions.");
+   return 0;
+}
+
+//______________________________________________________________________________
+void TEveTrack::SetBreakProjectedTracks(UChar_t)
+{
+   // Deprected -- use TEveTrackPropagator functions.
+
+   Error("SetBreakProjectedTracks", "Deprected -- use TEveTrackPropagator functions.");
+}
+
+//______________________________________________________________________________
 Bool_t TEveTrack::GetDefaultBreakProjectedTracks()
 {
+   // Deprected -- use TEveTrackPropagator functions.
    // Return true if tracks get broken into several segments when the
    // projected space consists of separate domains (like Rho-Z).
    // Static function.
 
-   return fgDefaultBreakProjectedTracks;
+   ::Error("TEveTrack::GetDefaultBreakProjectedTracks", "Deprected -- use TEveTrackPropagator functions.");
+   return kTRUE;
 }
 
 //______________________________________________________________________________
-void TEveTrack::SetDefaultBreakProjectedTracks(Bool_t bt)
+void TEveTrack::SetDefaultBreakProjectedTracks(Bool_t)
 {
-   // Specify whether 2D projected tracks get broken into several
-   // segments when the projected space consists of separate domains
-   // (like Rho-Z). This is true by default.
-   // Static function.
+   // Deprected -- use TEveTrackPropagator functions.
 
-   fgDefaultBreakProjectedTracks = bt;
+   ::Error("TEveTrack::SetDefaultBreakProjectedTracks", "Deprected -- use TEveTrackPropagator functions.");
 }
 
 
@@ -610,7 +613,7 @@ TEveTrackList::~TEveTrackList()
    SetPropagator(0);
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::SetPropagator(TEveTrackPropagator* prop)
@@ -625,7 +628,7 @@ void TEveTrackList::SetPropagator(TEveTrackPropagator* prop)
    if (fPropagator) prop->IncRefCount();
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::MakeTracks(Bool_t recurse)
@@ -724,7 +727,7 @@ void TEveTrackList::SanitizeMinMaxCuts()
    fMaxP  = fMaxP  == 0 ? fLimP  : Min(fMaxP,  fLimP);
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::SetRnrLine(Bool_t rnr)
@@ -758,7 +761,7 @@ void TEveTrackList::SetRnrLine(Bool_t rnr, TEveElement* el)
    }
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::SetRnrPoints(Bool_t rnr)
@@ -793,7 +796,7 @@ void TEveTrackList::SetRnrPoints(Bool_t rnr, TEveElement* el)
    }
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::SetMainColor(Color_t col)
@@ -827,7 +830,7 @@ void TEveTrackList::SetLineColor(Color_t col, TEveElement* el)
    }
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::SetLineWidth(Width_t width)
@@ -861,7 +864,7 @@ void TEveTrackList::SetLineWidth(Width_t width, TEveElement* el)
    }
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::SetLineStyle(Style_t style)
@@ -895,7 +898,7 @@ void TEveTrackList::SetLineStyle(Style_t style, TEveElement* el)
    }
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::SetMarkerStyle(Style_t style)
@@ -929,7 +932,7 @@ void TEveTrackList::SetMarkerStyle(Style_t style, TEveElement* el)
    }
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::SetMarkerColor(Color_t col)
@@ -963,7 +966,7 @@ void TEveTrackList::SetMarkerColor(Color_t col, TEveElement* el)
    }
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::SetMarkerSize(Size_t size)
@@ -997,7 +1000,7 @@ void TEveTrackList::SetMarkerSize(Size_t size, TEveElement* el)
    }
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::SelectByPt(Float_t min_pt, Float_t max_pt)
@@ -1089,7 +1092,7 @@ void TEveTrackList::SelectByP(Float_t min_p, Float_t max_p, TEveElement* el)
    }
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 TEveTrack* TEveTrackList::FindTrackByLabel(Int_t label)
@@ -1137,7 +1140,7 @@ TEveTrack* TEveTrackList::FindTrackByIndex(Int_t index)
    return 0;
 }
 
-/******************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackList::CopyVizParams(const TEveElement* el)

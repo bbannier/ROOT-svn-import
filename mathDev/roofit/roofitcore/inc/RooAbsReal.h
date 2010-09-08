@@ -246,8 +246,10 @@ public:
     char _msg[1024] ;
     char _srvval[1024] ;
   } ;
-  static Bool_t evalErrorLoggingEnabled() { return _doLogEvalError ; }
-  static void enableEvalErrorLogging(Bool_t flag) { _doLogEvalError = flag ; }
+
+  enum ErrorLoggingMode { PrintErrors, CollectErrors, CountErrors } ;
+  static ErrorLoggingMode evalErrorLoggingMode() ;
+  static void setEvalErrorLoggingMode(ErrorLoggingMode m) ;
   void logEvalError(const char* message, const char* serverValueString=0) const ;
   static void logEvalError(const RooAbsReal* originator, const char* origName, const char* message, const char* serverValueString=0) ;
   static void printEvalErrors(ostream&os=std::cout, Int_t maxPerNode=10000000) ;
@@ -423,10 +425,12 @@ protected:
   virtual RooPlot *plotOn(RooPlot* frame, PlotOpt o) const;
   virtual RooPlot *plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asymCat, PlotOpt o) const;
 
+
 private:
 
-  static Bool_t _doLogEvalError ;
+  static ErrorLoggingMode _evalErrorMode ;
   static std::map<const RooAbsArg*,std::pair<std::string,std::list<EvalError> > > _evalErrorList ;
+  static Int_t _evalErrorCount ;
 
   Bool_t matchArgsByName(const RooArgSet &allArgs, RooArgSet &matchedArgs, const TList &nameList) const;
 

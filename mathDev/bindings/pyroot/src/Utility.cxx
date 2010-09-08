@@ -231,8 +231,11 @@ Bool_t PyROOT::Utility::AddToClass( PyObject* pyclass, const char* label, PyCall
    // not adding to existing MethodProxy; add callable directly to the class
       if ( PyErr_Occurred() )
          PyErr_Clear();
-      return PyObject_SetAttrString( pyclass,
-         const_cast< char* >( label ), (PyObject*)MethodProxy_New( label, pyfunc ) ) == 0;
+      Py_XDECREF( (PyObject*)method );
+      method = MethodProxy_New( label, pyfunc );
+      Bool_t isOk = PyObject_SetAttrString( pyclass, const_cast< char* >( label ), (PyObject*)method ) == 0;
+      Py_DECREF( method );
+      return isOk;
    }
 
    method->AddMethod( pyfunc );
@@ -307,27 +310,33 @@ Bool_t PyROOT::Utility::AddBinaryOperator(
       return kFALSE;
 
 // retrieve the class names to match the signature of any found global functions
-   PyObject* pyclass = PyObject_GetAttr( right, PyStrings::gClass );
-   if ( ! pyclass ) {
-      PyErr_Clear();
-      return kFALSE;
-   }
+   std::string rcname = ClassName( right );
+   std::string lcname = ClassName( left );
+   PyObject* pyclass = PyObject_GetAttr( left, PyStrings::gClass );
 
+   Bool_t result = AddBinaryOperator( pyclass, lcname, rcname, op, label );
+
+   Py_DECREF( pyclass );
+   return result;
+}
+
+//____________________________________________________________________________
+Bool_t PyROOT::Utility::AddBinaryOperator( PyObject* pyclass, const char* op, const char* label )
+{
+// install binary operator op in pyclass, working on two instances of pyclass
    PyObject* pyname = PyObject_GetAttr( pyclass, PyStrings::gName );
-   Py_DECREF( pyclass ); pyclass = 0;
-   std::string rcname = PyString_AS_STRING( pyname );
+   std::string cname = TClassEdit::ResolveTypedef( PyString_AS_STRING( pyname ) );
    Py_DECREF( pyname ); pyname = 0;
 
-   pyclass = PyObject_GetAttr( right, PyStrings::gClass );
-   pyname = PyObject_GetAttr( pyclass, PyStrings::gName );
-   std::string lcname = PyString_AS_STRING( pyname );
-   Py_DECREF( pyname ); pyname = 0;
+   return AddBinaryOperator( pyclass, cname, cname, op, label );
+}
 
-// note that pyclass has not been decref-ed: it will be used again to install
-// the operator, if found
-
-// find a global function with a matching signature
-   TCollection* funcs = gROOT->GetListOfGlobalFunctions( kFALSE );
+//____________________________________________________________________________
+Bool_t PyROOT::Utility::AddBinaryOperator( PyObject* pyclass, const std::string& lcname,
+   const std::string& rcname, const char* op, const char* label )
+{
+// find a global function with a matching signature and install the result on pyclass
+   TCollection* funcs = gROOT->GetListOfGlobalFunctions( kTRUE );
    TIter ifunc( funcs );
 
    std::string opname = "operator";
@@ -340,22 +349,19 @@ Bool_t PyROOT::Utility::AddBinaryOperator(
 
       if ( func->GetName() == opname ) {
          if ( ( lcname == TClassEdit::ResolveTypedef(
-                            ((TMethodArg*)func->GetListOfMethodArgs()->At(0))->GetTypeName(), true ) ) &&
+                           ((TMethodArg*)func->GetListOfMethodArgs()->At(0))->GetTypeName(), true ) ) &&
               ( rcname == TClassEdit::ResolveTypedef(
-                            ((TMethodArg*)func->GetListOfMethodArgs()->At(1))->GetTypeName(), true ) ) ) {
+                           ((TMethodArg*)func->GetListOfMethodArgs()->At(1))->GetTypeName(), true ) ) ) {
          // found a matching overload; add to class
             PyCallable* pyfunc = new TFunctionHolder< TScopeAdapter, TMemberAdapter >( func );
             Utility::AddToClass( pyclass, label ? label : gC2POperatorMapping[ op ].c_str(), pyfunc );
 
          // done; break out loop
-            Py_DECREF( pyclass );
             return kTRUE;
          }
 
       }
    }
-
-   Py_DECREF( pyclass );
 
    return kFALSE;
 }
@@ -594,6 +600,27 @@ const std::string PyROOT::Utility::Compound( const std::string& name )
 }
 
 //____________________________________________________________________________
+const std::string PyROOT::Utility::ClassName( PyObject* pyobj )
+{
+   std::string clname = "<unknown>";
+   PyObject* pyclass = PyObject_GetAttr( pyobj, PyStrings::gClass );
+   if ( pyclass != 0 ) {
+      PyObject* pyname = PyObject_GetAttr( pyclass, PyStrings::gName );
+
+      if ( pyname != 0 ) {
+         clname = PyString_AS_STRING( pyname );
+         Py_DECREF( pyname );
+      } else
+         PyErr_Clear();
+
+      Py_DECREF( pyclass );
+   } else
+      PyErr_Clear();
+
+   return clname;
+}
+
+//____________________________________________________________________________
 void PyROOT::Utility::ErrMsgCallback( char* msg )
 {
 // Translate CINT error/warning into python equivalent
@@ -689,7 +716,8 @@ void PyROOT::Utility::ErrMsgHandler( int level, Bool_t abort, const char* locati
 
 //____________________________________________________________________________
 Long_t PyROOT::Utility::InstallMethod( G__ClassInfo* scope, PyObject* callback, 
-   const std::string& mtName, const char* signature, void* func, Int_t npar, Long_t extra )
+   const std::string& mtName, const char* rtype, const char* signature,
+   void* func, Int_t npar, Long_t extra )
 {
    static Long_t s_fid = (Long_t)PyROOT::Utility::InstallMethod;
    ++s_fid;
@@ -703,9 +731,14 @@ Long_t PyROOT::Utility::InstallMethod( G__ClassInfo* scope, PyObject* callback,
    G__linked_taginfo pti;
    pti.tagnum = -1;
    pti.tagtype = 'c';
-   const char* cname = scope ? scope->Fullname() : 0;
-   std::string tname = cname ? std::string( cname ) + "::" + mtName : mtName;
-   pti.tagname = tname.c_str();
+   std::string tagname;                     // used as a buffer
+   if ( rtype ) {
+      tagname = rtype;
+   } else {
+      const char* cname = scope ? scope->Fullname() : 0;
+      tagname = cname ? std::string( cname ) + "::" + mtName : mtName;
+   }
+   pti.tagname = tagname.c_str();
    int tagnum = G__get_linked_tagnum( &pti );     // creates entry for new names
 
    if ( scope ) {   // add method to existing scope

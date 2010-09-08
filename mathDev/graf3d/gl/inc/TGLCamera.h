@@ -75,8 +75,10 @@ protected:
    TGLMatrix   fCamBase;         //! tranformation to center and rotation from up to x vector
    TGLMatrix   fCamTrans;        //! transformation relative to fCamTrans
    Bool_t      fExternalCenter;  //! use external center insead of scene center
+   Bool_t      fFixDefCenter;    //! use fixed default center
    TGLVector3  fExtCenter;       //! external camera center
    TGLVector3  fDefCenter;       //! deafult camera center
+   TGLVector3  fFDCenter;        //! fixed deafult camera center
    TGLVector3 *fCenter;          //! current camera center
 
    mutable Double_t fNearClip;   //! last applied near-clip
@@ -120,8 +122,9 @@ public:
    void   IncTimeStamp()       { fCacheDirty = kTRUE; ++fTimeStamp; }
    UInt_t TimeStamp()    const { return fTimeStamp; }
 
-   void SetViewport(const TGLRect & viewport);
-   TGLRect& RefViewport() { return fViewport; }
+   void           SetViewport(const TGLRect & viewport);
+   TGLRect&       RefViewport()       { return fViewport; }
+   const TGLRect& RefViewport() const { return fViewport; }
 
    // Camera manipulation interface (GL coord - origin bottom left)
    virtual void   Setup(const TGLBoundingBox & box, Bool_t reset=kTRUE) = 0;
@@ -148,6 +151,10 @@ public:
    void    SetCenterVec(Double_t x, Double_t y, Double_t z);
    void    SetCenterVecWarp(Double_t x, Double_t y, Double_t z);
    Double_t* GetCenterVec() { return fCenter->Arr(); }
+
+   void    SetFixDefCenter(Bool_t x) { fFixDefCenter = x; } 
+   void    SetFixDefCenterVec(Double_t x, Double_t y, Double_t z) { fFDCenter.Set(x, y, z); }
+   Double_t* GetFixDefCenterVec() { return fFDCenter.Arr(); }
 
    Double_t GetNearClip() const { return fNearClip; }
    Double_t GetFarClip()  const { return fFarClip;  }
@@ -188,8 +195,6 @@ public:
    void WindowToViewport(TPoint & point)             const { point.SetY(fViewport.Height() - point.GetY()); }
    void WindowToViewport(TGLRect & rect)             const { rect.Y() = fViewport.Height() - rect.Y(); }
    void WindowToViewport(TGLVertex3 & vertex)        const { vertex.Y() = fViewport.Height() - vertex.Y(); }
-
-   const TGLRect& RefViewport() const { return fViewport; }
 
    Float_t GetVAxisMinAngle(){return fVAxisMinAngle;}
    void    SetVAxisMinAngle(Float_t x){fVAxisMinAngle = x;}

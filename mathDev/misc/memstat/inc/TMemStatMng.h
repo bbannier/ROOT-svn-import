@@ -28,19 +28,19 @@ class TObjArray;
 namespace memstat {
 
    class TMemStatFAddrContainer {
-      typedef std::map<pointer_t, Int_t> Container_t;
+      typedef std::map<ULong_t, Int_t> Container_t;
       typedef Container_t::iterator pos_type;
       typedef Container_t::value_type value_type;
 
    public:
-      bool add(pointer_t addr, Int_t idx) {
+      bool add(ULong_t addr, Int_t idx) {
          std::pair<pos_type, bool> ret = fContainer.insert(value_type(addr, idx));
          return (ret.second);
       }
 
-      Int_t find(pointer_t addr) {
+      Int_t find(ULong_t addr) {
          pos_type iter = fContainer.find(addr);
-         if (fContainer.end() == iter)
+         if(fContainer.end() == iter)
             return -1;
 
          return iter->second;
@@ -51,7 +51,7 @@ namespace memstat {
    };
 
    class TMemStatMng: public TObject {
-      typedef std::map<unsigned long, Int_t> CRCSet_t;
+      typedef std::map<std::string, Int_t> CRCSet_t;
 
    private:
       TMemStatMng();
@@ -91,7 +91,7 @@ namespace memstat {
       Bool_t fUseGNUBuiltinBacktrace;
       TTimeStamp fTimeStamp;
       Double_t fBeginTime;    //time when monitoring starts
-      pointer_t fPos;         //position in memory where alloc/free happens
+      ULong64_t  fPos;        //position in memory where alloc/free happens
       Int_t    fTimems;       //10000*(current time - begin time)
       Int_t    fNBytes;       //number of bytes allocated/freed
       UInt_t   fN;
@@ -103,7 +103,9 @@ namespace memstat {
       TH1I *fHbtids;
       CRCSet_t fBTChecksums;
       Int_t fBTCount;
+      // for Debug. A counter of all (de)allacations.
       UInt_t  fBTIDCount;
+      TNamed *fSysInfo;
 
       ClassDef(TMemStatMng, 0)   // a manager of memstat sessions.
    };

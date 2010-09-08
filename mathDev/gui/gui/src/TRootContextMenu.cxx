@@ -432,7 +432,8 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
          char        basictype[32];
 
          if (datatype) {
-            strncpy(basictype, datatype->GetTypeName(), 32);
+            strncpy(basictype, datatype->GetTypeName(), 31);
+            basictype[31] = 0;
          } else {
             TClass *cl = TClass::GetClass(type);
             if (strncmp(type, "enum", 4) && (cl && !(cl->Property() & kIsEnum)))
@@ -482,7 +483,7 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
 
             TList *opt;
             if ((opt = m->GetOptions())) {
-               Warning("Dialog", "option menu not yet implemented", opt);
+               Warning("Dialog", "option menu not yet implemented");
 #if 0
                TMotifOptionMenu *o= new TMotifOptionMenu(argname);
                TIter nextopt(opt);

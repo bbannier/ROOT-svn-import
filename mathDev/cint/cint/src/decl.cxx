@@ -1335,11 +1335,6 @@ static int G__initary(G__FastAllocString& new_name)
       }
    }
    G__ASSERT(linear_index == num_of_elements);
-   // FIXME: This is bizzare!
-   if (!G__asm_noverflow && G__no_exec_compile) {
-      // FIXME: Why?
-      G__no_exec = 1;
-   }
    // Read and discard up to the next ',' or ';'.
    // FIXME: We should only allow spaces here!
    int c = G__fignorestream(",;");
@@ -2425,8 +2420,8 @@ void G__define_var(int tagnum, int typenum)
          if (G__globalcomp != G__NOLINK) {
             if (!bitfieldwarn) {
                if (G__dispmsg >= G__DISPNOTE) {
-                  G__fprinterr(G__serr, "Note: Bit-field not accessible from interpreter");
                   G__printlinenum();
+                  G__fprinterr(G__serr, "Note: Bit-field not accessible from interpreter\n");
                }
                bitfieldwarn = 1;
             }
@@ -2742,14 +2737,14 @@ void G__define_var(int tagnum, int typenum)
             G__prerun = 0;
             if (G__store_struct_offset) {
                // -- We have allocated memory for the object.
-               if (!temp[0] && (G__tagnum != -1)) {
+               if (!temp[0] && (tagnum != -1)) {
                   // -- We need to call the default constructor.
                   //
                   // We have:
                   //
                   // type a;
                   //
-                  temp.Format("%s()", G__struct.name[G__tagnum]);
+                  temp.Format("%s()", G__struct.name[tagnum]);
                   if (G__dispsource) {
                      G__fprinterr(G__serr, "\n!!!Calling default constructor 0x%lx.%s for declaration of %s", G__store_struct_offset, temp(), new_name());
                   }
@@ -3031,7 +3026,6 @@ void G__define_var(int tagnum, int typenum)
                      if (G__dispsource) {
                         G__fprinterr(G__serr, "\n!!!Calling constructor 0x%lx.%s for declaration of %s", G__store_struct_offset, temp(), new_name());
                      }
-                     G__decl = 0;
                      if (G__struct.iscpplink[tagnum] == G__CPPLINK) {
                         reg = G__getfunction(temp, &known, G__CALLCONSTRUCTOR);
                         G__var_type = var_type;
@@ -3051,7 +3045,6 @@ void G__define_var(int tagnum, int typenum)
                         G__getfunction(temp, &known, G__CALLCONSTRUCTOR);
                         G__static_alloc = store_static_alloc3;
                      }
-                     G__decl = 1;
                      if (G__return > G__RETURN_NORMAL) {
                         G__decl = store_decl;
                         G__constvar = 0;

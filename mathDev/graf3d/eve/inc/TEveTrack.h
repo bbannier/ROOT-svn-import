@@ -43,6 +43,7 @@ public:
    typedef vPathMark_t::iterator        vPathMark_i;
    typedef vPathMark_t::const_iterator  vPathMark_ci;
 
+   // Deprecated -- to be removed.
    enum EBreakProjectedTracks_e { kBPTDefault, kBPTAlways, kBPTNever };
 
 protected:
@@ -61,10 +62,6 @@ protected:
 
    TEveTrackPropagator *fPropagator;   // Pointer to shared render-style
 
-   UChar_t            fBreakProjectedTracks;  // How to handle breaks during projection - track specific settings.
-
-   static Bool_t      fgDefaultBreakProjectedTracks; // How to handle breaks during projection - global setting.
-
 public:
    TEveTrack();
    TEveTrack(TParticle* t, Int_t label, TEveTrackPropagator* prop=0);
@@ -72,6 +69,8 @@ public:
    TEveTrack(TEveRecTrack* t, TEveTrackPropagator* prop=0);
    TEveTrack(const TEveTrack& t);
    virtual ~TEveTrack();
+
+   virtual void ComputeBBox();
 
    virtual void SetStdTitle();
 
@@ -121,11 +120,11 @@ public:
 
    virtual TClass* ProjectedClass(const TEveProjection* p) const;
 
-   Bool_t  ShouldBreakTrack() const;
-
-   UChar_t GetBreakProjectedTracks() const     { return fBreakProjectedTracks; }
-   void    SetBreakProjectedTracks(UChar_t bt) { fBreakProjectedTracks = bt;   }
-
+   // These functions are deprecated -- use TEveTrackPropagator functions.
+   // Will be removed after 5.28.
+   Bool_t        ShouldBreakTrack() const;
+   UChar_t       GetBreakProjectedTracks() const;
+   void          SetBreakProjectedTracks(UChar_t bt);
    static Bool_t GetDefaultBreakProjectedTracks();
    static void   SetDefaultBreakProjectedTracks(Bool_t bt);
 
