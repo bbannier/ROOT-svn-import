@@ -106,10 +106,10 @@ void TKDE::SetOptions(EKernelType kern, EIteration iter, EMirror mir, EBinning b
       this->Warning("TKDE::SetOptions", "Data mirroring option cannot be used with data binning one! Mirroring ignored.");
       fUseMirroring = kFALSE;
    }
-   if (rho <= 0.0) {
-      MATH_ERROR_MSG("TKDE::SetOptions", "rho cannot be non-positive!" << std::endl);
-      exit(EXIT_FAILURE);
-   }
+//    if (rho <= 0.0) {
+//       MATH_ERROR_MSG("TKDE::SetOptions", "rho cannot be non-positive!" << std::endl);
+//       exit(EXIT_FAILURE);
+//    }
    fRho = rho;
 }
 
@@ -382,15 +382,23 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
    std::vector<Double_t>::iterator weight = weights.begin();
    Double_t minWeight = *weight * std::sqrt(0.02);
    std::vector<Double_t>::iterator data = fKDE->fData.begin();
-   Double_t x = fKDE->fRho / fKDE->fSigma * std::sqrt(fKDE->fSigma);
+   //Double_t x = fKDE->fRho / fKDE->fSigma * std::sqrt(fKDE->fSigma);
    Double_t f = 0.0;
    for (; weight != weights.end(); ++weight, ++data) {
-      f = (*fKDE->fKernel)(*data);
-      *weight = std::max((*weight *=  x / std::sqrt(f)), minWeight);
+      f =  (*fKDE->fKernel)(*data);
+      *weight = *weight  / std::sqrt(f); 
       fKDE->fAdaptiveBandwidthFactor += std::log(f);
    }
    fKDE->fAdaptiveBandwidthFactor = std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size())); 
-   transform(weights.begin(), weights.end(), fWeights.begin(), std::bind2nd(std::multiplies<Double_t>(), fKDE->fAdaptiveBandwidthFactor));
+   for (; weight != weights.end(); ++weight, ++data) {
+      if (fKDE->fRho >  0) 
+         *weight = *weight * fKDE->fRho * fKDE->fAdaptiveBandwidthFactor;
+      else 
+         *weight = *weight * std::abs(fKDE->fRho); 
+
+      *weight = std::max(*weight, minWeight);
+   }
+   //transform(weights.begin(), weights.end(), fWeights.begin(), std::bind2nd(std::multiplies<Double_t>(), ));
  }
 
 Double_t TKDE::TKernel::GetWeight(Double_t x) const {
