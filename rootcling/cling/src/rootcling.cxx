@@ -19,10 +19,10 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
-#include "clang/Frontend/PCHReader.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Sema/ParseAST.h"
+#include "clang/Parse/ParseAST.h"
+#include "clang/Serialization/ASTReader.h"
 
 #include "llvm/LLVMContext.h"
 #include "llvm/Module.h"
@@ -83,7 +83,8 @@ void AddIncludePath (clang::CompilerInstance* CI, const std::string fileName)
    clang::HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
    const bool IsUserSupplied = false;
    const bool IsFramework = false;
-   headerOpts.AddPath (fileName.c_str(), clang::frontend::Angled, IsUserSupplied, IsFramework);
+   const bool IsSysRootRelative = true;
+   headerOpts.AddPath (fileName.c_str(), clang::frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
 }
 
 void SetupLangOptions (clang::CompilerInstance* CI)
@@ -142,7 +143,7 @@ void OpenPCH (clang::CompilerInstance* CI, std::string fileName)
    clang::PreprocessorOptions & PO = CI->getInvocation().getPreprocessorOpts();
 
    std::string originalFile =
-      clang::PCHReader::getOriginalSourceFile(fileName, CI->getDiagnostics());
+      clang::ASTReader::getOriginalSourceFile(fileName, CI->getDiagnostics());
 
    if (! originalFile.empty())
    {
@@ -164,9 +165,10 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
 
    bool pch = IsPCH (fileName);
 
-   clang::TextDiagnosticPrinter diagClient (llvm::errs(), clang::DiagnosticOptions ());
+   clang::TextDiagnosticPrinter *diagClient = new 
+     clang::TextDiagnosticPrinter(llvm::errs(), clang::DiagnosticOptions (), false);
 
-   clang::Diagnostic diags (& diagClient);
+   clang::Diagnostic diags (diagClient);
 
    static const char* argv [] = { "program", "-x", "c++" };
 
@@ -234,7 +236,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
       (PP.getIdentifierTable (),
        PP.getLangOptions().NoBuiltin);
 
-   // PrintInfo (CI);
+   PrintInfo (CI);
 
    if (pch || sourceCode != "") {
 
@@ -255,7 +257,7 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
    else {
       const clang::FileEntry* File = CI->getFileManager().getFile(fileName);
       if (File)
-         CI->getSourceManager().createMainFileID(File, clang::SourceLocation());
+         CI->getSourceManager().createMainFileID(File);
       if (CI->getSourceManager().getMainFileID().isInvalid())
          error ("Error reading file");
    }

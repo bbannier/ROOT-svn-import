@@ -209,18 +209,19 @@ inline TString Message(const TString msg, const TString location)
    #endif
 
     if (loc == "")
-       return msg;
+      return msg;
     else
-       return loc + " " + msg;
+      return loc + " " + msg;
 }
 
 //______________________________________________________________________________
 void TScanner::ShowInfo(const TString msg, const TString location)
 {
+   const TString message = Message(msg, location);
    #ifdef DIRECT_OUTPUT
-      std::cout << Message(msg, location) << std::endl;
+      std::cout << message << std::endl;
    #else
-      fReporter->Info("CLR", Message(msg, location));
+      fReporter->Info("TScanner:ShowInfo", "CLR %s", message.Data());
    #endif
 }
 
@@ -228,10 +229,11 @@ void TScanner::ShowInfo(const TString msg, const TString location)
 void TScanner::ShowWarning(const TString msg, const TString location)
 {
    #ifdef SHOW_WARNINGS
+   const TString message = Message(msg, location);
       #ifdef DIRECT_OUTPUT
-         std::cout << Message(msg, location) << std::endl;
+         std::cout << message << std::endl;
       #else
-         fReporter->Warning("CLR", Message(msg, location));
+         fReporter->Warning("TScanner:ShowWarning", "CLR %s", message.Data());
       #endif
    #endif
 }
@@ -239,10 +241,11 @@ void TScanner::ShowWarning(const TString msg, const TString location)
 //______________________________________________________________________________
 void TScanner::ShowError(const TString msg, const TString location)
 {
+   const TString message = Message(msg, location);
    #ifdef DIRECT_OUTPUT
-      std::cout << Message(msg, location) << std::endl;
+      std::cout << message << std::endl;
    #else
-      fReporter->Error("CLR", Message (msg, location));
+      fReporter->Error("TScanner:ShowError", "CLR %s", message.Data());
    #endif
 }
 
@@ -1035,17 +1038,19 @@ unsigned int TScanner::FuncModifiers(clang::FunctionDecl* D)
    unsigned int modifiers = 0;
 
    switch (D->getStorageClass()) {
-      case clang::FunctionDecl::Extern:
+      case clang::SC_Extern:
          modifiers |= Reflex::EXTERN;
          break;
 
-      case clang::FunctionDecl::Static:
+      case clang::SC_Static:
          modifiers |= Reflex::STATIC;
          break;
 
       // case clang::VarDecl::PrivateExtern:
          // !?
          // break;
+   default:
+     break;
    }
 
    if (D->isPure())
@@ -1080,7 +1085,7 @@ unsigned int TScanner::FuncModifiers(clang::FunctionDecl* D)
          if (S->isConvertingConstructor(false))  // !? parameter allow explicit
             modifiers |= Reflex::CONVERTER;
 
-      } else if (clang::CXXDestructorDecl* S = dyn_cast <clang::CXXDestructorDecl> (M)) {
+      } else if (dyn_cast <clang::CXXDestructorDecl> (M)) {
          modifiers |= Reflex::DESTRUCTOR;
 
       } else if (clang::CXXConversionDecl* S = dyn_cast <clang::CXXConversionDecl> (M)) {
@@ -1112,6 +1117,8 @@ unsigned int TScanner::VisibilityModifiers(clang::AccessSpecifier access)
       case clang::AS_public:
          modifiers |= Reflex::PUBLIC;
          break;
+   default:
+     break;
    }
 
    return modifiers;
@@ -1130,25 +1137,27 @@ unsigned int TScanner::VarModifiers(clang::VarDecl* D)
 
    switch (D->getStorageClass()) {
 
-      case clang::VarDecl::Auto:
+      case clang::SC_Auto:
          modifiers |= Reflex::AUTO;
          break;
 
-      case clang::VarDecl::Register:
+      case clang::SC_Register:
          modifiers |= Reflex::REGISTER;
          break;
 
-      case clang::VarDecl::Extern:
+      case clang::SC_Extern:
          modifiers |= Reflex::EXTERN;
          break;
 
-      case clang::VarDecl::Static:
+      case clang::SC_Static:
          modifiers |= Reflex::STATIC;
          break;
 
-      case clang::VarDecl::PrivateExtern:
+      case clang::SC_PrivateExtern:
          modifiers |= Reflex::EXTERN; // !?
          break;
+   default:
+     break;
    }
 
    if (D->isStaticDataMember())
@@ -1180,7 +1189,7 @@ bool TScanner::VisitRecordDecl(clang::RecordDecl* D)
 					// GetClassBuilder is declared in clr-scan.h
    if(builder!=NULL){ // Is it OK?
       fClassBuilders.push(builder);
-      printf("\n\tPush()-ed a class builder; %d elements in the stack", fClassBuilders.size());
+      printf("\n\tPush()-ed a class builder; %d elements in the stack", (int) fClassBuilders.size());
 
       // I think this should be left as it is ?
       if (clang::CXXRecordDecl* C = dyn_cast <clang::CXXRecordDecl> (D)) {
@@ -1454,25 +1463,29 @@ bool TScanner::TraverseDeclContextHelper(DeclContext *DC)
 
 void TScanner::RemoveBuilder(clang::DeclContext *DC){
    if(DC->isRecord()){
-	fClassBuilders.pop();
+
         //printf("\nDEBUG - Removing the builder");
-        if(getClassName(DC)!=NULL)
-           printf("\nDEBUG - removing buider for %s", getClassName(DC));
+	TString className = getClassName(DC);
+        if(className.Length() > 0)
+	  printf("\nDEBUG - removing buider for %s", className.Data());
         else 
            printf("\nDEBUG - removing a builder");
-        printf("\n\tWe have %d elements left in the stack", fClassBuilders.size());
+        printf("\n\tWe have %d elements left in the stack",(int) fClassBuilders.size());
+
+	fClassBuilders.pop();
    }
 }
-const char* TScanner::getClassName(clang::DeclContext* DC){
+TString TScanner::getClassName(clang::DeclContext* DC){
    
    clang::NamedDecl* N=dyn_cast<clang::NamedDecl>(DC);
+   TString ret;
    if(N && (N->getIdentifier()!=NULL))
-      return N->getNameAsCString();
-   else return NULL;
+      ret = N->getNameAsString().c_str();
+   return ret;
 }
 
 void TScanner::DumpDecl(clang::Decl* D, const char* msg) {
-   char *name="";
+   std::string name;
    
    if (!D) {
       printf("\nDEBUG - DECL is NULL: %s", msg);
@@ -1483,7 +1496,7 @@ void TScanner::DumpDecl(clang::Decl* D, const char* msg) {
 
    //if(ctx && (ctx->isRecord() || ctx->isFunctionOrMethod())){
       clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
-      if(N && N->getIdentifier()) name = (char *) N->getNameAsCString();
+      if(N && N->getIdentifier()) name = N->getNameAsString();
       //}
       else name = "UNNAMED";
       
@@ -1494,7 +1507,7 @@ void TScanner::DumpDecl(clang::Decl* D, const char* msg) {
           N->getDeclKindName(),
           msg);
    */
-   printf("\nDEBUG - Decl %s of kind %s: %s", name, D->getDeclKindName(), msg);
+   printf("\nDEBUG - Decl %s of kind %s: %s", name.c_str(), D->getDeclKindName(), msg);
 }
 
 //______________________________________________________________________________
