@@ -362,12 +362,12 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
    // - v     : verbose mode: prints information about the number of used bins
    //           and calculated efficiencies with their errors
    // - cl=x  : determine the used confidence level (0<x<1) (default is 0.683)
-   // - cp    : Clopper-Pearson interval (see TEfficiency::ClopperPearsonLow)
-   // - w     : Wilson interval (see TEfficiency::WilsonLow)
-   // - n     : normal approximation propagation (see TEfficiency::NormalLow)
-   // - ac    : Agresti-Coull interval (see TEfficiency::AgrestiCoullLow)
+   // - cp    : Clopper-Pearson interval (see TEfficiency::ClopperPearson)
+   // - w     : Wilson interval (see TEfficiency::Wilson)
+   // - n     : normal approximation propagation (see TEfficiency::Normal)
+   // - ac    : Agresti-Coull interval (see TEfficiency::AgrestiCoull)
    // - b(a,b): bayesian interval using a prior probability ~Beta(a,b); a,b > 0
-   //           (see TEfficiency::BayesianLow)
+   //           (see TEfficiency::Bayesian)
    //
    // Note:
    // Unfortunately there is no straightforward approach for determining a confidence
@@ -415,10 +415,9 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
    option.ToLower();
 
    Bool_t bVerbose = false;
-   //pointer to functions returning the boundaries of the confidence interval
-   //(These are only used in the frequentist cases.)
-   Double_t (*pLow)(Int_t,Int_t,Double_t) = 0;
-   Double_t (*pUp)(Int_t,Int_t,Double_t) = 0;
+   //pointer to function returning the boundaries of the confidence interval
+   //(is only used in the frequentist cases.)
+   Double_t (*pBound)(Int_t,Int_t,Double_t,Bool_t) = 0;
    //confidence level
    Double_t conf = 0.683;
    //values for bayesian statistics
@@ -446,29 +445,25 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
    //normal approximation
    if(option.Contains("n")) {
       option.ReplaceAll("n","");
-      pLow = &TEfficiency::NormalLow;
-      pUp = &TEfficiency::NormalUp;
+      pBound = &TEfficiency::Normal;
    }
 
    //clopper pearson interval
    if(option.Contains("cp")) {
       option.ReplaceAll("cp","");
-      pLow = &TEfficiency::ClopperPearsonLow;
-      pUp = &TEfficiency::ClopperPearsonUp;
+      pBound = &TEfficiency::ClopperPearson;
    }
 
    //wilson interval
    if(option.Contains("w")) {
       option.ReplaceAll("w","");
-      pLow = &TEfficiency::WilsonLow;
-      pUp = &TEfficiency::WilsonUp;
+      pBound = &TEfficiency::Wilson;
    }
 
    //agresti coull interval
    if(option.Contains("ac")) {
       option.ReplaceAll("ac","");
-      pLow = &TEfficiency::AgrestiCoullLow;
-      pUp = &TEfficiency::AgrestiCoullUp;
+      pBound = &TEfficiency::AgrestiCoull;
    }
 
    //bayesian with prior
@@ -529,8 +524,8 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
 	 else
 	    continue;
       
-	 low = TEfficiency::BayesianLow(t,p,conf,alpha,beta);
-	 upper = TEfficiency::BayesianUp(t,p,conf,alpha,beta);
+	 low = TEfficiency::Bayesian(t,p,conf,alpha,beta,false);
+	 upper = TEfficiency::Bayesian(t,p,conf,alpha,beta,true);
       }
       else {
 	 if(t)
@@ -538,8 +533,8 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
 	 else
 	    continue;
 	 
-	 low = pLow(t,p,conf);
-	 upper = pUp(t,p,conf);
+	 low = pBound(t,p,conf,false);
+	 upper = pBound(t,p,conf,true);
       }
       //Set the point center and its errors
       SetPoint(npoint,pass->GetBinCenter(b),eff);
