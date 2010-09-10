@@ -32,14 +32,7 @@ class TList;
 
 class TEfficiency: public TNamed, public TAttLine, public TAttFill, public TAttMarker
 {
-public:
-   //function pointer to methods calculating confidence intervals
-   #ifdef __CINT__
-      typedef void* pBoundFunc;
-   #else
-      typedef Double_t(*pBoundFunc)(Int_t,Int_t,double);
-   #endif
-   
+public:  
       //enumaration type for different statistic options for calculating confidence intervals
       //kF* ... frequentist methods; kB* ... bayesian methods      
       enum {
@@ -56,16 +49,15 @@ protected:
 
       Double_t      fBeta_alpha;             //parameter for prior beta distribution (default = 1)
       Double_t      fBeta_beta;              //parameter for prior beta distribution (default = 1)
+      Double_t      (*fBoundary)(Int_t,Int_t,Double_t,Bool_t);               //!pointer to a method calculating the boundaries of confidence intervals
       Double_t      fConfLevel;              //confidence level (default = 0.95)
       TDirectory*   fDirectory;              //!pointer to directory holding this TEfficiency object
       TList*        fFunctions;              //pointer to list of functions
-      pBoundFunc    fLowerBound;             //!pointer to a method calculating the lower bound
       TGraphAsymmErrors* fPaintGraph;        //!temporary graph for painting
       TH1*          fPaintHisto;             //!temporary histogram for painting      
       TH1*          fPassedHistogram;        //histogram for events which passed certain criteria
       Int_t         fStatisticOption;        //defines how the confidence intervals are determined
       TH1*          fTotalHistogram;         //histogram for total number of events
-      pBoundFunc    fUpperBound;             //!pointer to a method calculating the upper bound
       Double_t      fWeight;                 //weight for all events (default = 1)
 
       enum{
@@ -125,14 +117,14 @@ public:
       void          SetConfidenceLevel(Double_t level);
       void          SetDirectory(TDirectory* dir);
       void          SetName(const char* name);
-      void          SetPassedEvents(Int_t bin,Int_t events);
+      Bool_t        SetPassedEvents(Int_t bin,Int_t events);
       Bool_t        SetPassedHistogram(const TH1& rPassed,Option_t* opt);
       void          SetStatisticOption(Int_t option);
       void          SetTitle(const char* title);
-      void          SetTotalEvents(Int_t bin,Int_t events);
+      Bool_t        SetTotalEvents(Int_t bin,Int_t events);
       Bool_t        SetTotalHistogram(const TH1& rTotal,Option_t* opt);
       void          SetWeight(Double_t weight);    
-      Bool_t        UsesBayesianStat() const;
+      Bool_t        UsesBayesianStat() const {return TestBit(kIsBayesian);}
 
       static Bool_t CheckBinning(const TH1& pass,const TH1& total);
       static Bool_t CheckConsistency(const TH1& pass,const TH1& total,Option_t* opt="");
@@ -141,16 +133,11 @@ public:
 					Int_t n=0,Double_t* p=0);
       
       //calculating boundaries of confidence intervals
-      static Double_t AgrestiCoullLow(Int_t total,Int_t passed,Double_t level);
-      static Double_t AgrestiCoullUp(Int_t total,Int_t passed,Double_t level);
-      static Double_t BayesianLow(Int_t total,Int_t passed,Double_t level,Double_t alpha=1,Double_t beta=1);
-      static Double_t BayesianUp(Int_t total,Int_t passed,Double_t level,Double_t alpha=1,Double_t beta=1);
-      static Double_t ClopperPearsonLow(Int_t total,Int_t passed,Double_t level);
-      static Double_t ClopperPearsonUp(Int_t total,Int_t passed,Double_t level);
-      static Double_t NormalLow(Int_t total,Int_t passed,Double_t level);
-      static Double_t NormalUp(Int_t total,Int_t passed,Double_t level);
-      static Double_t WilsonLow(Int_t total,Int_t passed,Double_t level);
-      static Double_t WilsonUp(Int_t total,Int_t passed,Double_t level);
+      static Double_t AgrestiCoull(Int_t total,Int_t passed,Double_t level,Bool_t bUpper);
+      static Double_t Bayesian(Int_t total,Int_t passed,Double_t level,Double_t alpha,Double_t beta,Bool_t bUpper);
+      static Double_t ClopperPearson(Int_t total,Int_t passed,Double_t level,Bool_t bUpper);
+      static Double_t Normal(Int_t total,Int_t passed,Double_t level,Bool_t bUpper);
+      static Double_t Wilson(Int_t total,Int_t passed,Double_t level,Bool_t bUpper);
       
       ClassDef(TEfficiency,1)     //calculating efficiencies
 };
