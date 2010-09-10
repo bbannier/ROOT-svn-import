@@ -79,6 +79,7 @@ public:
    void SetRange(Double_t xMin, Double_t xMax); // By default computed from the data
    
    Double_t operator()(const Double_t* x, const Double_t* p = 0) const;
+   Double_t GetFixedWeight() const;
    
    TH1D* GetHistogram(UInt_t nbins = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
    
@@ -86,6 +87,8 @@ public:
    TF1* GetUpperFunction(Double_t confidenceLevel = 0.95);
    TF1* GetLowerFunction(Double_t confidenceLevel = 0.95);
    TF1* GetApproximateBias();
+   
+   std::vector<Double_t> GetAdaptiveWeights() const;
    
 private:
    
