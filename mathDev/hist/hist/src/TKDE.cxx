@@ -1,5 +1,5 @@
-#include <algorithm>
 #include <functional>
+#include <algorithm>
 #include <numeric>
 #include <limits>
 
@@ -24,20 +24,22 @@ class TKDE::TKernel {
    UInt_t fNWeights; // Number of kernel weights (bandwidth as vectorized for binning)
    std::vector<Double_t> fWeights; // Kernel weights (bandwidth)
    UInt_t Index(Double_t x) const;
-   public:
-      TKernel(Double_t weight, TKDE* kde);
-      void ComputeAdaptiveWeights();
-      Double_t operator()(Double_t x) const;
-      Double_t GetWeight(Double_t x) const;
+public:
+   TKernel(Double_t weight, TKDE* kde);
+   void ComputeAdaptiveWeights();
+   Double_t operator()(Double_t x) const;
+   Double_t GetWeight(Double_t x) const;
+   Double_t GetFixedWeight() const;
+   std::vector<Double_t> GetAdaptiveWeights() const;
 };
 
 struct TKDE::KernelIntegrand {
    enum EIntegralResult{kNorm, kMu, kSigma2, kUnitIntegration};
    KernelIntegrand(const TKDE* kde, EIntegralResult intRes);
    Double_t operator()(Double_t x) const;
-   private:
-      const TKDE* fKDE;
-      EIntegralResult fIntegralResult;
+private:
+   const TKDE* fKDE;
+   EIntegralResult fIntegralResult;
 };
 
 TKDE::TKDE(UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho) :
@@ -106,10 +108,10 @@ void TKDE::SetOptions(EKernelType kern, EIteration iter, EMirror mir, EBinning b
       this->Warning("TKDE::SetOptions", "Data mirroring option cannot be used with data binning one! Mirroring ignored.");
       fUseMirroring = kFALSE;
    }
-//    if (rho <= 0.0) {
-//       MATH_ERROR_MSG("TKDE::SetOptions", "rho cannot be non-positive!" << std::endl);
-//       exit(EXIT_FAILURE);
-//    }
+   if (rho <= 0.0) {
+      MATH_ERROR_MSG("TKDE::SetOptions", "rho cannot be non-positive!" << std::endl);
+      exit(EXIT_FAILURE);
+   }
    fRho = rho;
 }
 
@@ -199,6 +201,7 @@ void TKDE::SetNBins(UInt_t nBins) {
 }
 
 void TKDE::SetUseBinsNEvents(UInt_t nEvents) {
+   // Sets User option for the minimum number of events for allowing automatic binning
    fUseBinsNEvents = nEvents;
    SetUseBins();
    SetKernel();
@@ -380,25 +383,16 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
    // Gets the adaptive weights (bandwidths) for TKernel internal computation
    std::vector<Double_t> weights = fWeights;
    std::vector<Double_t>::iterator weight = weights.begin();
-   Double_t minWeight = *weight * std::sqrt(0.02);
+   Double_t minWeight = *weight * 0.05;
    std::vector<Double_t>::iterator data = fKDE->fData.begin();
-   //Double_t x = fKDE->fRho / fKDE->fSigma * std::sqrt(fKDE->fSigma);
    Double_t f = 0.0;
    for (; weight != weights.end(); ++weight, ++data) {
-      f =  (*fKDE->fKernel)(*data);
-      *weight = *weight  / std::sqrt(f); 
+      f = (*fKDE->fKernel)(*data);
+      *weight = std::max(*weight *= fKDE->fRho / std::sqrt(f), minWeight);
       fKDE->fAdaptiveBandwidthFactor += std::log(f);
    }
    fKDE->fAdaptiveBandwidthFactor = std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size())); 
-   for (; weight != weights.end(); ++weight, ++data) {
-      if (fKDE->fRho >  0) 
-         *weight = *weight * fKDE->fRho * fKDE->fAdaptiveBandwidthFactor;
-      else 
-         *weight = *weight * std::abs(fKDE->fRho); 
-
-      *weight = std::max(*weight, minWeight);
-   }
-   //transform(weights.begin(), weights.end(), fWeights.begin(), std::bind2nd(std::multiplies<Double_t>(), ));
+   transform(weights.begin(), weights.end(), fWeights.begin(), std::bind2nd(std::multiplies<Double_t>(), fKDE->fAdaptiveBandwidthFactor));
  }
 
 Double_t TKDE::TKernel::GetWeight(Double_t x) const {
@@ -414,6 +408,34 @@ std::vector<Double_t> TKDE::GetBinCentreData() {
       result[i] = fXMin + i * binWidth + 0.5 * binWidth;
    }
    return result;
+}
+
+Double_t TKDE::GetFixedWeight() const {
+   Double_t result = -1.;
+   if (fIteration == TKDE::kAdaptive) {
+      this->Warning("TKDE::GetFixedWeight()", "Fixed iteration option not ennabled. Returning %f.", result);
+   } else {
+      result = fKernel->GetFixedWeight();
+   }
+   return result;
+}
+
+std::vector<Double_t> TKDE::GetAdaptiveWeights() const {
+   std::vector<Double_t> result(fData.size(), -1.);
+   if (fIteration == TKDE::kAdaptive) {
+      this->Warning("TKDE::GetFixedWeight()", "Adaptive iteration option not ennabled. Returning %f vector.", result[0]);
+   } else {
+      result = fKernel->GetAdaptiveWeights();
+   }
+   return result;
+}
+
+Double_t TKDE::TKernel::GetFixedWeight() const {
+   return fWeights[0];
+}
+
+std::vector<Double_t> TKDE::TKernel::GetAdaptiveWeights() const {
+   return fWeights;
 }
 
 Double_t TKDE::TKernel::operator()(Double_t x) const {
@@ -540,6 +562,7 @@ Double_t TKDE::ComputeKernelIntegral() const {
 }
 
 Double_t TKDE::ComputeMidspread (const Double_t* data, UInt_t dataSize) const {
+   // Computes the inter-quartile range from the data
    std::vector<Double_t> sample(data, data + dataSize);
    sort(sample.begin(), sample.end());
    UInt_t midpoint = dataSize / 2;
@@ -595,8 +618,7 @@ TH1D* TKDE::GetKDEHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
    
 TF1* TKDE::GetKDEFunction() {
    //Returns the estimated density 
-   fPDF = new TF1("KDE_Func", this, &TKDE::operator(), fXMin, fXMax, 0, "TKDE", "operator()");
-   return fPDF;
+   return fPDF = new TF1("KDE_Func", this, &TKDE::operator(), fXMin, fXMax, 0, "TKDE", "operator()");
 }
 
 TF1* TKDE::GetPDFUpperConfidenceInterval(Double_t confidenceLevel) {
