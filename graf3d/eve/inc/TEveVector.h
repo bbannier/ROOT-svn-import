@@ -85,6 +85,8 @@ public:
    TEveVectorT  Orthogonal() const;
    void         OrthoNormBase(TEveVectorT& a, TEveVectorT& b) const;
 
+   Bool_t       IsZero() const { return fX == 0 && fY == 0 && fZ == 0; }
+
    // Needed as ClassDefNV not available for 5.22
    virtual ~TEveVectorT() {}
 
