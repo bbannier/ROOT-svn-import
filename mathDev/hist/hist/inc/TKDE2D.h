@@ -81,17 +81,17 @@ public:
 //    TH2D* GetHistogram(UInt_t nxbins = 100, UInt_t nybins = 100, Double_t xMin = 1.0, Double_t xMax = 0.0, Double_t yMin = 1.0, Double_t yMax = 0.0);
    
    TF2* GetFunction();
-   TF2* GetUpperFunction(Double_t confidenceLevel = 0.95) { /* t.b.i. */ }
-   TF2* GetLowerFunction(Double_t confidenceLevel = 0.95) { /* t.b.i. */ }
-   TF2* GetApproximateBias() { /* t.b.i. */ }
+//    TF2* GetUpperFunction(Double_t confidenceLevel = 0.95);
+//    TF2* GetLowerFunction(Double_t confidenceLevel = 0.95);
+//    TF2* GetApproximateBias();
    
 private:
    
-   static const Double_t _2_PI_ROOT_INV = 0.398942280401432703; // (2*TMath::Pi())**-0.5
-   static const Double_t PI             = 3.14159265358979312;  // TMath::Pi()
-   static const Double_t PI_OVER2       = 1.57079632679489656;  // TMath::PiOver2()
-   static const Double_t PI_OVER4       = 0.785398163397448279; // TMath::PiOver4()
-   
+   static const Double_t _2_PI_ROOT_INV; // (2*TMath::Pi())**-0.5
+   static const Double_t PI;             // TMath::Pi()
+   static const Double_t PI_OVER2;       // TMath::PiOver2()
+   static const Double_t PI_OVER4;       // TMath::PiOver4()
+      
    TKDE2D();                      // Disallowed default constructor
    TKDE2D(TKDE2D& kde);           // Disallowed copy constructor
    TKDE2D operator=(TKDE2D& kde); // Disallowed assign operator
@@ -102,20 +102,8 @@ private:
 //    TFoam fFoam     // Used for simulation either with input distribution TKDE2D's TF2 PDF or user input data 
    TKDTreeID* fDataTree; // Auxilliary 2-D tree for data "binning"
    
+   class TKernel;
    friend class TKernel;
-   class TKernel {
-      std::vector<Double_t> fNWeights; // Kernel weights (bandwidth)
-      std::vector<Double_t> fWeights; // Kernel weights (bandwidth)
-      TKDE2D* fKDE;
-      const std::vector<Double_t> GetBinCentreData() const;
-      UInt_t Index(Double_t x, UInt_t i) const;
-      UInt_t Index(Double_t x) const;
-   public:
-      TKernel(UInt_t n, Double_t weight, TKDE2D* kde);
-      void ComputeAdaptiveWeights() { /* t.b.i. */ }
-      Double_t operator()(const Double_t* x) const;
-      Double_t GetWeight(Double_t x) const;
-   };
    
    TKernel* fKernel;
    
@@ -155,15 +143,8 @@ private:
    std::vector<Double_t> fCanonicalBandwidths;
    std::vector<Double_t> fKernelSigmas2;
    
+   struct KernelIntegrand;
    friend struct KernelIntegrand;
-   struct KernelIntegrand {
-      enum EIntegralResult{kNorm, kMu, kSigma2, kUnitIntegration};
-      KernelIntegrand(const TKDE2D* kde, EIntegralResult intRes);
-      Double_t operator()(Double_t x) const;
-   private:
-      const TKDE2D* fKDE;
-      EIntegralResult fIntegralResult;
-   };
    
    void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* x, const Double_t* y, Double_t xMin, Double_t xMax, Double_t yMin, Double_t yMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho);
   
@@ -221,7 +202,7 @@ private:
    TF2* GetKDEFunction();
    TF2* GetPDFUpperConfidenceInterval(Double_t confidenceLevel); // The density to estimate should be at least twice differentiable. 
    TF2* GetPDFLowerConfidenceInterval(Double_t confidenceLevel); // The density to estimate should be at least twice differentiable. 
-   TF2* GetKDEApproximateBias();
+//    TF2* GetKDEApproximateBias();
    
    ClassDef(TKDE2D, 1) // One dimensional semi-parametric Kernel Density Estimation 
    
