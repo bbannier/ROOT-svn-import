@@ -1,20 +1,24 @@
 2010-08-12  Timur Pocheptsov
 
 	* core/base/inc/TVirtualGL.h
-	TGLPaintDevice - HasFBO - new function to check, if GL has          	FBO extension.
+	TGLPaintDevice - HasFBO - new function to check, if GL has
+	FBO extension.
 
 	* core/base/inc/TVirtualPad.h
-	TVirtualPad - methods to switch on/off cover-flow in a    	canvas (used by TRootCanvas).
+	TVirtualPad - methods to switch on/off cover-flow in a
+	canvas (used by TRootCanvas).
 
 	* core/base/inc/TVirtualPadPainter.h
-	"cover-flow API" added to TVirtualPadPainter. Also, 	TVirtualPadPainter is now inherits TObject (to work with 	TTimer class).
+	"cover-flow API" added to TVirtualPadPainter. Also,
+	TVirtualPadPainter is now inherits TObject (to work with
+	TTimer class).
 
 	* graf2d/gpad/inc/TCanvas.h
 	Overriders for new methods from TVirtualPad.
 
 	* graf2d/gpad/inc/TPad.h
 	Overriders for new methods from TVirtualPad.
-	
+
 	* graf2d/gpad/src/TCanvas.cxx
 	Overriders for new methods from TVirtualPad. Modifications
 	in HandleInput - to pass the pressed key to the cover-flow.
@@ -40,13 +44,15 @@
 	HasFBO implementation.
 
 	* gui/gui/src/TRootCanvas.cxx
-	If gl has FBO extension, enable menu entry "Cover flow" in 	"View" menu. Switch on/off cover-flow, check/uncheck this 	menu entry.
+	If gl has FBO extension, enable menu entry "Cover flow" in
+	"View" menu. Switch on/off cover-flow, check/uncheck this
+	menu entry.
 
 2010-07-30  Timur Pocheptsov
 
 	* graf2d/win32gdk/Module.mk:
 	TGWin32GL removed, does not exist anymore.
-	
+
 	* graf2d/win32gdk/inc/LinkDef.h:
 	pragma directive for TGWin32GLManager was removed.
 
@@ -364,7 +370,7 @@
 	* TVirtualViewer3D:
 	From TVirtualViewer3D remove virtual functions:
 	  TObject *SelectObject(Int_t, Int_t){return 0;}
-	  void   DrawViewer(){}
+	  void     DrawViewer(){}
 	They were never defined and never called.
 
 	* TGLManager, TX11GL, TGWin32GL, TPad:
