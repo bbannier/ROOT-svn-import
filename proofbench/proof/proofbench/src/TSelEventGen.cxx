@@ -32,6 +32,7 @@
 #include "TFile.h"
 #include "TSortedList.h"
 #include "TRandom.h"
+#include "test/Event.h"
 
 ClassImp(TSelEventGen)
 
@@ -45,7 +46,8 @@ TSelEventGen::TSelEventGen():
    fNWorkersPerNode(0),
    fWorkerNumber(0),
    fTotalGen(0),
-   fDataSet(0)
+   fDataSet(0),
+   fChain(0)
 {
    if (gProofServ){
       fBaseDir=gProofServ->GetDataDir();
