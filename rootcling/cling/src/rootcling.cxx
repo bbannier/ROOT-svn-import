@@ -35,6 +35,8 @@
 #include "llvm/System/Signals.h"
 #include "llvm/Target/TargetSelect.h"
 
+#include "cling/Interpreter/Interpreter.h"
+
 #include "TSystem.h"
 
 #include "clr-scan.h"
@@ -44,6 +46,8 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+
+
 
 /* -------------------------------------------------------------------------- */
 
@@ -182,32 +186,36 @@ clang::CompilerInstance* ParseFileOrSource (const std::string fileName,
        diags);
 
    // Create a compiler instance to handle the actual work.
-   clang::CompilerInstance * CI = new clang::CompilerInstance;
-   CI->setLLVMContext (new llvm::LLVMContext);
-   CI->setInvocation (invocation);
+   cling::Interpreter* fInterpreter = new cling::Interpreter(gSystem->ExpandPathName("$(LLVMDIR)"));
+
+   clang::CompilerInstance * CI = fInterpreter->getCI ();
+
+   //   clang::CompilerInstance * CI = new clang::CompilerInstance;
+   //   CI->setLLVMContext (new llvm::LLVMContext);
+   //   CI->setInvocation (invocation);
 
    // Create the compilers actual diagnostics engine.
-   CI->createDiagnostics (argc, const_cast <char**> (argv));
-   if (! CI->hasDiagnostics ())
-      error ("No diagnostics");
+   //   CI->createDiagnostics (argc, const_cast <char**> (argv));
+   //   if (! CI->hasDiagnostics ())
+   //      error ("No diagnostics");
 
    if (pch)
       OpenPCH (CI, fileName);
 
-   CI->setTarget
-   (
-      clang::TargetInfo::CreateTargetInfo
-         (CI->getDiagnostics(),
-          CI->getTargetOpts())
-   );
+   //   CI->setTarget
+   //   (
+   //      clang::TargetInfo::CreateTargetInfo
+   //         (CI->getDiagnostics(),
+   //          CI->getTargetOpts())
+   //   );
 
    if (!CI->hasTarget ())
       error ("No target");
 
-   CI->getTarget().setForcedLangOptions(CI->getLangOpts());
+   //   CI->getTarget().setForcedLangOptions(CI->getLangOpts());
 
-   CI->createFileManager();
-   CI->createSourceManager();
+   //   CI->createFileManager();
+   //   CI->createSourceManager();
 
    SetupCI (CI);
    // set include directories before CI->createPreprocessor()
