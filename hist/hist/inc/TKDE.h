@@ -20,9 +20,10 @@
 #include "Math/Math.h"
 
 /*
-   Kernel Density Estimation class. The algorithm is described in (1) "Cranmer KS, Kernel Estimation in High-Energy
+   Kernel Density Estimation class. The three main references are (1) "Scott DW, Multivariate Density Estimation. Theory, Practice and Visualization. New York: Wiley", (2) "Jann Ben - ETH Zurich, Switzerland -, Univariate kernel density estimation document for KDENS: Stata module for univariate kernel density estimation." and (3) "Hardle W, Muller M, Sperlich S, Werwatz A, Nonparametric and Semiparametric Models. Springer."
+   The algorithm is briefly described in (4) "Cranmer KS, Kernel Estimation in High-Energy
    Physics. Computer Physics Communications 136:198-207,2001" - e-Print Archive: hep ex/0011057.
-   A binned version of this paper's algorithm is also implemented to address the performance issue due to its data
+   TODO: on hold-> A binned version is also implemented to address the performance issue due to its data
    size dependance.
 */
 class TKDE : public TNamed  {
@@ -129,7 +130,7 @@ private:
    UInt_t fNBins;          // Number of bins for binned data option
    UInt_t fNEvents;        // Data's number of events
    UInt_t fUseBinsNEvents; // If the algorithm is allowed to use binning this is the minimum number of events to do so
-   
+         
    Double_t fMean;  // Data mean
    Double_t fSigma; // Data std deviation
    Double_t fXMin;  // Data minimum value
@@ -141,6 +142,8 @@ private:
    
    std::vector<Double_t> fCanonicalBandwidths;
    std::vector<Double_t> fKernelSigmas2;
+   
+   std::vector<UInt_t> fBinCount; // Number of events per bin for binned data option
    
    struct KernelIntegrand;
    friend struct KernelIntegrand;
@@ -172,8 +175,10 @@ private:
    Double_t ComputeKernelIntegral() const;
    Double_t ComputeMidspread(const Double_t* data, UInt_t dataSize) const;
    
-   std::vector<Double_t> GetBinCentreData();
-
+   UInt_t Index(Double_t x) const;
+   
+   void SetBinCentreData();
+   void SetBinCountData(const Double_t* data);
    void CheckKernelValidity();
    void SetCanonicalBandwidth(); 
    void SetKernelSigma2(); 
@@ -190,7 +195,7 @@ private:
    void SetData(const Double_t* data);
    void SetMirroredData();
    
-   inline void SetData(Double_t x, UInt_t i) {
+   inline void SetData(Double_t x, UInt_t i) { //TODO: to delete
       // Set data point at the i-th data vector position
       fData[i] = x;
    }
