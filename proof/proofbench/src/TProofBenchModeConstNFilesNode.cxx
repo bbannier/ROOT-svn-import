@@ -98,7 +98,7 @@ TMap* TProofBenchModeConstNFilesNode::FilesToProcess(Int_t nf)
       TList *files = new TList;
       files->SetName(ni->GetName());
       for (Int_t i = 0; i<nf; i++) {
-         files->Add(new TObjString(TString::Format("EventTree_Benchmark_%d_0.root", i)));
+         files->Add(new TObjString(TString::Format("%s_EventTree_Benchmark_%d_0.root", ni->GetName(), i)));
       }
       filesmap->Add(new TObjString(ni->GetName()), files);
       //files->Print();
@@ -113,6 +113,7 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
                                               Int_t step,
                                               const TDSet* tdset,
                                               const char* option,
+                                              const TUrl* poolurl,
                                               TProof* proof)
 {
    // Make data sets out of data set 'tdset' and register them.
@@ -163,7 +164,7 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
       i++;
    }
 
-   return MakeDataSets(nf, np, wp, tdset, option, proof);
+   return MakeDataSets(nf, np, wp, tdset, option, poolurl, proof);
 }
 
 //______________________________________________________________________________
@@ -172,6 +173,7 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
                                               const Int_t *wp,
                                               const TDSet* tdset,
                                               const char *option,
+                                              const TUrl* poolurl,
                                               TProof* proof)
 {
    // Make data sets out of data set 'tdset' and register them.
@@ -202,6 +204,14 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
       Info("MakeDataSets", "Number of files a node is %d for %s", nf, GetName());
    }
 
+   Int_t newport=0;
+   const char* newprotocol=0;
+
+   if (poolurl){
+      newport=poolurl->GetPort();
+      newprotocol=poolurl->GetProtocol();
+   }
+   
    TString dsname;
    Int_t kp;
    for (kp=0; kp<np; kp++) {
@@ -258,6 +268,11 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf,
                      break;
                   }
                   nfilesadded++;
+               }
+               //change protocol and port
+               if (poolurl){
+                  url->SetProtocol(newprotocol);
+                  url->SetPort(newport);
                }
                fc->Add(fileinfo);
                //Info ("CreateDataSetsN", "added");

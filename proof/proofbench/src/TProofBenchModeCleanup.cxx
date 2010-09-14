@@ -64,7 +64,7 @@ TMap* TProofBenchModeCleanup::FilesToProcess(Int_t)
 
       //split load across the workers on the node
       for (Int_t i = 0; i <nworkers; i++) {
-         files->Add(new TObjString(TString::Format("EventTree_Cleanup_%d_0.root", i)));
+         files->Add(new TObjString(TString::Format("%s_EventTree_Cleanup_%d_0.root", ni->GetName(), i)));
       }
       filesmap->Add(new TObjString(ni->GetName()), files);
    }
@@ -79,6 +79,7 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
                                       Int_t,
                                       const TDSet* tdset,
                                       const char* option,
+                                      const TUrl* poolurl,
                                       TProof* proof)
 {
    // Make data set from data set tdset and register it.
@@ -99,6 +100,14 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
       return -1;
    }
 
+   Int_t newport=0;
+   const char* newprotocol=0;
+
+   if (poolurl){
+      newport=poolurl->GetPort();
+      newprotocol=poolurl->GetProtocol();
+   }
+
    TString dsname="DataSetEventCleanup";
    Info("MakeDataSetDataSets", "creating dataset '%s' ...", dsname.Data());
    // Create the TFileCollection
@@ -112,6 +121,13 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
    while ((tdelement=(TDSetElement*)nxtelement())){
       fileinfo=tdelement->GetFileInfo();
       //fileinfo->Print("A");
+      TUrl* url=fileinfo->GetCurrentUrl();
+
+      if (poolurl){
+         url->SetProtocol(newprotocol);
+         url->SetPort(newport);
+      }
+
       fc->Add(fileinfo);
    }
    fc->Update();
@@ -126,6 +142,7 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
                                       const Int_t*,
                                       const TDSet* tdset,
                                       const char* option,
+                                      const TUrl* poolurl,
                                       TProof* proof)
 {
    // Make data set from data set tdset and register it.
@@ -140,7 +157,7 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
    //    0 when ok
    //   <0 otherwise
 
-   return MakeDataSets(0, 0, 0, 0, tdset, option, proof);
+   return MakeDataSets(0, 0, 0, 0, tdset, option, poolurl, proof);
 }
 
 //______________________________________________________________________________

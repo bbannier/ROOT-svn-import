@@ -158,7 +158,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
          fProof->Process(fc_cleanup, "TSelEvent", "", -1);
       }
       else{
-         Error("Run", "File Collection does not exist; returning", dsname.Data());
+         Error("Run", "file Collection '%s' does not exist; returning", dsname.Data());
          return;
       }
 
@@ -255,7 +255,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
       fProof->AddInputData(lcopy); 
 
       Info("Run", "Cleaning up file caches in data set: %s", fDataSetCleanup.Data());
-      fProof->Process("TSelEvent", Long64_t(0));
+      fProof->Process("TSelEvent", Long64_t(1));
       fProof->ClearInputData(inputdataname.Data()); 
       delete lcopy;
       //Wait a second or 2 because start time of TQueryResult has only 1-second precision.

@@ -49,7 +49,32 @@ TSelEvent::TSelEvent(TTree *):
    fDebug(kFALSE),
    fCHist(0), 
    fPtHist(0),
-   fNTracksHist(0)
+   fNTracksHist(0),
+   event(0),
+   fEventName(0),
+   fTracks(0),
+   fHighPt(0),
+   fMuons(0),
+   fH(0),
+   b_event_fType(0),
+   b_fEventName(0),
+   b_event_fNtrack(0),
+   b_event_fNseg(0),
+   b_event_fNvertex(0),
+   b_event_fFlag(0),
+   b_event_fTemperature(0),
+   b_event_fMeasures(0),
+   b_event_fMatrix(0),
+   b_fClosestDistance(0),
+   b_event_fEvtHdr(0),
+   b_fTracks(0),
+   b_fHighPt(0),
+   b_fMuons(0),
+   b_event_fLastTrack(0),
+   b_event_fWebHistogram(0),
+   b_fH(0),
+   b_event_fTriggerBits(0),
+   b_event_fIsValid(0)
 {}
 
 //______________________________________________________________________________
@@ -60,7 +85,32 @@ TSelEvent::TSelEvent():
    fDebug(kFALSE),
    fCHist(0),
    fPtHist(0),
-   fNTracksHist(0)
+   fNTracksHist(0),
+   event(0),
+   fEventName(0),
+   fTracks(0),
+   fHighPt(0),
+   fMuons(0),
+   fH(0),
+   b_event_fType(0),
+   b_fEventName(0),
+   b_event_fNtrack(0),
+   b_event_fNseg(0),
+   b_event_fNvertex(0),
+   b_event_fFlag(0),
+   b_event_fTemperature(0),
+   b_event_fMeasures(0),
+   b_event_fMatrix(0),
+   b_fClosestDistance(0),
+   b_event_fEvtHdr(0),
+   b_fTracks(0),
+   b_fHighPt(0),
+   b_fMuons(0),
+   b_event_fLastTrack(0),
+   b_event_fWebHistogram(0),
+   b_fH(0),
+   b_event_fTriggerBits(0),
+   b_event_fIsValid(0)
 {}
 
 //______________________________________________________________________________
@@ -247,9 +297,9 @@ void TSelEvent::SlaveBegin(TTree *tree)
 
    //clear file cache
    if (fCleanupType==TProofBenchRun::kCleanupFileAdvise){
-      TIter nxt(fFilesToCleanupCacheFor);
+      TIter nxtf(fFilesToCleanupCacheFor);
       TFileInfo* fi=0;
-      while ((fi=dynamic_cast<TFileInfo*>(nxt()))){
+      while ((fi=dynamic_cast<TFileInfo*>(nxtf()))){
          TUrl* url=0;
 //         do {
             url=fi->GetCurrentUrl();

@@ -1,4 +1,4 @@
-// @(#)root/proofx:$Id:$
+// @(#)root/proofx:$Id$
 // Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
@@ -61,6 +61,7 @@ public:
                        Int_t step,
                        const TDSet* tdset,
                        const char* option,
+                       const TUrl* poolurl,
                        TProof* proof);
 
      Int_t MakeDataSets(Int_t nf,
@@ -68,6 +69,7 @@ public:
                         const Int_t *wp,
                         const TDSet* tdset,
                         const char *option,
+                        const TUrl* poolurl,
                         TProof* proof);
 
    TProofBenchMode::EFileType GetFileType(){return TProofBenchMode::kFileBenchmark;}
