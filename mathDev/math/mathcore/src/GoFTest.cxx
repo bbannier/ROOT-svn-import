@@ -292,20 +292,19 @@ namespace Math {
 /*
   Taken from (2)
 */Double_t GoFTest::PValueAD1Sample(Double_t A2) const {
-   if (A2 == 0)
-      return 0.0;
-   Double_t t0 = TMath::Power(TMath::Pi(), 2) / (8 * A2);
-   Double_t t1 = 25 * t0;
-   Double_t parms[2] = {A2, t0};
-   Double_t f0Integral = ComputeIntegral(parms);
-   parms[1] = t1;
-   Double_t f1Integral = ComputeIntegral(parms);
-   Double_t pvalue = 1 - (TMath::Sqrt(2 * TMath::Pi()) / A2 * (TMath::Exp(-t0) * f0Integral - 5.0 / 2.0 * TMath::Exp(-t1) * f1Integral));
-   if (pvalue > 1 || pvalue != pvalue) {
+   Double_t pvalue = 0.0;
+   if (A2 <= 0.0) {
+      return pvalue;
+   } else if (A2 < 2.) {
+      pvalue = std::pow(A2, -0.5) * std::exp(-1.2337141 / A2) * (2.00012 + (0.247105 - (0.0649821 - (0.0347962 - (0.011672 - 0.00168691 * A2) * A2) * A2) * A2) * A2);
+   } else {
+      pvalue = std::exp(-1. * std::exp(1.0776 - (2.30695 - (0.43424 - (.082433 - (0.008056 - 0.0003146 * A2) * A2) * A2) * A2) * A2));
+   }   
+   if (pvalue > 1. || pvalue != pvalue) {
       std::cerr << "Cannot compute p-value: data sample seems not to be from a true distribution. Check input parameters." << std::endl;
       pvalue  = -1;
    }
-   return pvalue;
+   return 1. - pvalue;
 }
 
 /*
