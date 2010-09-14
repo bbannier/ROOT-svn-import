@@ -82,6 +82,9 @@ fDataSetGenerated(0)
    if (stop==-1){
       fStop=fMaxNWorkers;
    }
+   if (fBaseDir.IsNull() && gProof){
+      fBaseDir=gProof->GetDataPoolUrl();
+   }
 }
 
 //______________________________________________________________________________
@@ -171,7 +174,9 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
 
    TProofBenchMode::EFileType filetype=fMode->GetFileType();
    fProof->SetParameter("PROOF_BenchmarkFileType", filetype);
-   fProof->SetParameter("PROOF_BenchmarkBaseDir", basedir.Data());
+   TUrl datapoolurl(basedir);
+   TString datadir=datapoolurl.GetFile();
+   fProof->SetParameter("PROOF_BenchmarkBaseDir", datadir.Data());
    fProof->SetParameter("PROOF_BenchmarkNEvents", nevents);
    fProof->SetParameter("PROOF_BenchmarkNTracks", ntracks);
    fProof->SetParameter("PROOF_BenchmarkRegenerate", regenerate);
@@ -200,7 +205,6 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nf,
    TString outputname, hostname, filename, newfilename;
 
    TIter nxt(l);
-   
    while((obj=nxt())){
       outputname=obj->GetName();
       if (outputname.Contains("PROOF_FilesGenerated")){
@@ -288,13 +292,14 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
        return -1;
    }
 
+   TUrl url(fBaseDir);
    if (tdset){
-      fMode->MakeDataSets(nf, start, stop, step, tdset, option, fProof);
+      fMode->MakeDataSets(nf, start, stop, step, tdset, option, &url, fProof);
       return 0;
    }
    else{
       if (fDataSetGenerated){
-         fMode->MakeDataSets(nf, start, stop, step, fDataSetGenerated, option, fProof);
+         fMode->MakeDataSets(nf, start, stop, step, fDataSetGenerated, option, &url, fProof);
       }
       else{
          Error("MakeDataSet", "Empty data set; Either generate files first or supply one.");
@@ -316,7 +321,8 @@ Int_t TProofBenchFileGenerator::MakeDataSets(const char* option)
    //        <0 otherwise
 
    if ( fDataSetGenerated ) {
-      fMode->MakeDataSets(-1, fStart, fStop, fStep, fDataSetGenerated, option, fProof);
+      TUrl url(fBaseDir);
+      fMode->MakeDataSets(-1, fStart, fStop, fStep, fDataSetGenerated, option, &url, fProof);
    }
    else{
       Error("MakeDataSet", "Generate files first");
@@ -347,12 +353,13 @@ Int_t TProofBenchFileGenerator::MakeDataSets(Int_t nf,
    //    0 when ok
    //   <0 otherwise
 
+   TUrl url(fBaseDir);
    if (tdset){
-      fMode->MakeDataSets(nf, np, wp, tdset, option, fProof);
+      fMode->MakeDataSets(nf, np, wp, tdset, option, &url, fProof);
    }
    else{
       if ( fDataSetGenerated ) {
-         fMode->MakeDataSets(nf, np, wp, fDataSetGenerated, option, fProof);
+         fMode->MakeDataSets(nf, np, wp, fDataSetGenerated, option, &url, fProof);
       }
       else{
          Error("MakeDataSet", "Empty data set; Either generate files first or supply one.");

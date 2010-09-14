@@ -1,4 +1,4 @@
-// @(#)root/proofx:$Id:$
+// @(#)root/proofx:$Id$
 // Author: Sangsu Ryu 22/06/2010
 
 /*************************************************************************
@@ -29,6 +29,7 @@
 class TProof;
 class TDSet;
 class TMap;
+class TUrl;
 
 R__EXTERN TProof *gProof;
 
@@ -52,6 +53,7 @@ public:
                               Int_t step=1,
                               const TDSet* tdset=0,
                               const char* option="",
+                              const TUrl* poolurl=0,
                               TProof* proof=gProof)=0;
 
    virtual Int_t MakeDataSets(Int_t nf,
@@ -59,6 +61,7 @@ public:
                               const Int_t *wp,
                               const TDSet* tdset=0,
                               const char *option="",
+                              const TUrl* poolurl=0,
                               TProof* proof=gProof)=0;
 
 

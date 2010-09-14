@@ -91,7 +91,7 @@ TMap* TProofBenchModeVaryingNFilesWorker::FilesToProcess(Int_t nf)
       Int_t nwrks=ni->GetNWrks();
       Int_t nfilesthisnode=nwrks*nf;
       for (Int_t i = 0; i<nfilesthisnode; i++) {
-         files->Add(new TObjString(TString::Format("EventTree_Benchmark_%d_0.root", i)));
+         files->Add(new TObjString(TString::Format("%s_EventTree_Benchmark_%d_0.root", ni->GetName(), i)));
       }
       filesmap->Add(new TObjString(ni->GetName()), files);
       //files->Print();
@@ -106,6 +106,7 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
                                                   Int_t step,
                                                   const TDSet* tdset,
                                                   const char* option,
+                                                  const TUrl* poolurl,
                                                   TProof* proof)
 {
    // Make data sets out of data set 'tdset' and register them.
@@ -156,7 +157,7 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
       wp[i]=nactive;
       i++;
    }
-   return MakeDataSets(nf, np, wp, tdset, option, proof);
+   return MakeDataSets(nf, np, wp, tdset, option, poolurl, proof);
 
 }
 
@@ -166,6 +167,7 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
                                                   const Int_t *wp,
                                                   const TDSet* tdset,
                                                   const char *option,
+                                                  const TUrl* poolurl,
                                                   TProof* proof)
 {
 
@@ -195,6 +197,14 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
    if (nf==-1){
       nf=fNFiles;
       Info("MakeDataSets", "Number of files a node is %d for %s", nf, GetName());
+   }
+
+   Int_t newport=0;
+   const char* newprotocol=0;
+
+   if (poolurl){
+      newport=poolurl->GetPort();
+      newprotocol=poolurl->GetProtocol();
    }
 
    // Dataset naming: DataSetEventConstNFilesNode_nworkersincluster_nfilesaworker
@@ -286,6 +296,12 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
                   }
                   nfilesadded_worker++;
                }
+
+               if (poolurl){
+                  url->SetProtocol(newprotocol);
+                  url->SetPort(newport);
+               }
+
                fc->Add(fileinfo);
                lecopy->Remove(tde);
             }
