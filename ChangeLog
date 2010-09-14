@@ -1,4 +1,4 @@
-2010-08-12  Timur Pocheptsov
+2010-08-12  Timur Pocheptsov  <Timur.Pocheptsov@cern.ch>
 
 	* core/base/inc/TVirtualGL.h
 	TGLPaintDevice - HasFBO - new function to check, if GL has
@@ -14,8 +14,6 @@
 	TTimer class).
 
 	* graf2d/gpad/inc/TCanvas.h
-	Overriders for new methods from TVirtualPad.
-
 	* graf2d/gpad/inc/TPad.h
 	Overriders for new methods from TVirtualPad.
 
@@ -48,19 +46,19 @@
 	"View" menu. Switch on/off cover-flow, check/uncheck this
 	menu entry.
 
-2010-07-30  Timur Pocheptsov
+2010-07-30  Timur Pocheptsov  <Timur.Pocheptsov@cern.ch>
 
 	* graf2d/win32gdk/Module.mk:
 	TGWin32GL removed, does not exist anymore.
 
 	* graf2d/win32gdk/inc/LinkDef.h:
-	pragma directive for TGWin32GLManager was removed.
+	Pragma directive for TGWin32GLManager was removed.
 
 	* graf3d/gl/src/TGLPlotPainter.cxx:
-	include "TGLAdapter.h" was removed.
+	Include TGLAdapter.h was removed.
 
 	* graf3d/gl/src/TGLWidget.cxx
-	compilation errors fixed.
+	Compilation errors fixed.
 
 2010-07-24  Matevz Tadel  <mtadel@greed>
 
@@ -68,7 +66,7 @@
 	* graf3d/gl/src/TGLPadPainter3D.cxx:
 	Implement text rendering for 3D / GL viewer mode.
 
-	Remove TGLFontManage member and add TGLRnrCtx.
+	Remove TGLFontManager member and add TGLRnrCtx.
 	This allows sharing of fonts with the rest of the world.
 	Add TGLRnrCtx argument to InitXyzz() functions.
 
@@ -170,11 +168,10 @@
 	it causes GL errors when fonts become too small.
 	All FBO examples now use mip-maps but with different sizes.
 
-2010-07-22 Timur Pocheptsov
+2010-07-22 Timur Pocheptsov  <Timur.Pocheptsov@cern.ch>
 
 	* core/base/inc/TVirtualGL.h
 	* core/base/src/TVirtualGL.cxx
-
 	Removed TVirtualGLPainter, TGLManager, ClassImp macros;
 	changed TGLPaintDevice interface.
 
@@ -184,30 +181,25 @@
 	* graf2d/win32gdk/inc/TGWin32VirtualGLProxy.h
 	* graf2d/win32gdk/src/TGWin32GL.cxx
 	* graf2d/win32gdk/src/TGWIn32VirtualGLProxy.cxx
-
 	Files were deleted, TGWin32GLManager and TX11GLManager are not used anymore.
 
 	* gui/gui/src/TRootCanvas.cxx
 	* gui/gui/src/TRootEmbeddedCanvas.cxx
-
 	TGLCanvasWidget now used instead of gGLManager and integer indices.
 
 	* graf2d/gpad/inc/TPad.h
 	* graf2d/gpad/inc/TCanvas.h
 	* graf2d/gpad/src/TPad.cxx
 	* graf2d/gpad/src/TCanvas.cxx
-
 	Integer indices for "gl device" replaced by pointer to TGLPaintDevice class
 	from TVirtualGL.h, all context management done internally by TGLCanvasWidget,
 	gGLManager removed.
 
 	* core/base/inc/TVirtualPad.h
-
 	Changes in gl-device management interface.
 
 	* graf3d/gl/src/TGLHistPainter.cxx
 	* graf3d/gl/src/TGLViewer.cxx
-
 	gGLManager is not used anymore
 
 2010-07-21  Matevz Tadel  <mtadel@greed>
@@ -290,24 +282,30 @@
 	* tutorials/eve/testgl1.C:
 	Add another view of the same histo -- drawn using FBO.
 
-2010-07-20  Timur Pocheptsov
+2010-07-20  Timur Pocheptsov  <Timur.Pocheptsov@cern.ch>
 
-	* core/base/inc/TVirtualGL.h Removed TVirtualGLManip - now
-	obsolete and not used anywhere at all (also removed
-	TVirtualGLManager corresponding member).
+	* core/base/inc/TVirtualGL.h
+	Removed TVirtualGLManip - now obsolete and not used anywhere at
+	all (also removed TVirtualGLManager corresponding member).
 
-	* core/base/inc/LinkDef1.h removed pragma for TVirtualGLManip
+	* core/base/inc/LinkDef1.h
+	Removed pragma for TVirtualGLManip.
 
-	* core/base/src/TVirtualGL.cxx removed ClassImp for TVirtualGLManip
+	* core/base/src/TVirtualGL.cxx
+	Removed ClassImp for TVirtualGLManip.
 
-	* win32gdk removed SelectManip methods from GL proxy and win32glmanager
+	* win32gdk
+	Removed SelectManip methods from GL proxy and win32glmanager.
 
-	* TGLAdapter class can be completely removed
+	* TGLAdapter
+	Class can be completely removed.
 
-	* LinkDef.h pragma for TGLAdapter removed
+	* LinkDef.h
+	Pragma for TGLAdapter removed.
 
-	* TGLManip - does not need to inherit TVirtualGLManip and does not
-	need to override Select function.
+	* TGLManip
+	Does not need to inherit TVirtualGLManip and does not need to
+	override Select function.
 
 2010-07-20  Matevz Tadel  <mtadel@pcalice14.cern.ch>
 
