@@ -8,10 +8,10 @@
  **********************************************************************/
 // Header file for GoFTest
 
+#include <memory>
+
 #ifndef ROOT_Math_GoFTest
 #define ROOT_Math_GoFTest
-
-
 
 #ifndef ROOT_Math_WrappedFunction
 #include "Math/WrappedFunction.h"
@@ -19,7 +19,6 @@
 #ifndef ROOT_TMath
 #include "TMath.h"
 #endif
-
 
 /*
   Goodness of Fit Statistical Tests Toolkit -- Anderson-Darling and Kolmogorov-Smirnov 1- and 2-Samples Tests
@@ -45,7 +44,13 @@ public:
       kKS,   // Kolmogorov-Smirnov Test
       kKS2s  // Kolmogorov-Smirnov 2-Samples Test
    };
-    
+   
+   template<class Function>
+   void SetFunction(Function& cdf, Bool_t isPDF = kTRUE) {
+      ROOT::Math::WrappedFunction<Function&> wcdf(cdf); 
+      SetProbabilityFunction(wcdf, isPDF);
+   }
+
    /* Constructor for using only with 2-samples tests */
    GoFTest(const Double_t* sample1, UInt_t sample1Size, const Double_t* sample2, UInt_t sample2Size);
   
@@ -54,9 +59,9 @@ public:
   
    /* Templated constructor for using only with 1-sample tests with a user specified distribution */
    template<class Dist>
-   GoFTest(const Double_t* sample, UInt_t sampleSize, const Dist& cdf) {
+   GoFTest(const Double_t* sample, UInt_t sampleSize, Dist& dist, Bool_t isPDF = kTRUE) {
       Instantiate(sample, sampleSize);
-      SetCDF(new ROOT::Math::WrappedFunction<const Dist&>(cdf));
+      SetFunction(dist, isPDF);
    }
    
    virtual ~GoFTest();
@@ -103,10 +108,11 @@ private:
    GoFTest();                       // Disallowed default constructor
    GoFTest(GoFTest& gof);           // Disallowed copy constructor
    GoFTest operator=(GoFTest& gof); // Disallowed assign operator
-  
-   typedef ROOT::Math::IBaseFunctionOneDim* CDF_Ptr;
-   CDF_Ptr fCDF;
-  
+
+   std::auto_ptr<IGenFunction> fCDF;
+
+   class PDFIntegral;
+     
    class Integrand { // Integrand of the integral term of the Anderson-Darling test statistic's asymtotic distribution as described in (2)
       Double_t* parms;
    public:
@@ -124,11 +130,12 @@ private:
    std::vector<std::vector<Double_t> > fSamples;
   
    Bool_t fTestSampleFromH0;
+   
+   void SetCDF();
+   void SetProbabilityFunction(const IGenFunction& cdf, Bool_t isPDF);
   
-   void SetCDF(CDF_Ptr cdf = 0);
-  
-   void Instantiate(const Double_t* sample, UInt_t sampleSize)
-      ; 
+   void Instantiate(const Double_t* sample, UInt_t sampleSize);
+    
    Double_t ComputeIntegral(Double_t* parms) const; // Computation of the integral term of the 1-Sample Anderson-Darling test statistic's asymtotic distribution as described in (2)
   
    Double_t GaussianCDF(Double_t x) const;
