@@ -29,14 +29,26 @@
 namespace ROOT {
 namespace Math {
    
-   class GoFTest::PDFIntegral : public IGenFunction { 
+   class GoFTest::PDFIntegrand {
       const IGenFunction* fPDF;
    public:
-      PDFIntegral(const IGenFunction* pdf) : fPDF(pdf) {}
+      PDFIntegrand(const IGenFunction* pdf) : fPDF(pdf) {}
+      
+      Double_t operator()(Double_t x) const {
+         return (*fPDF)(x);
+      }
+   };
+   
+   class GoFTest::PDFIntegral : public IGenFunction { 
+      const PDFIntegrand fPDF;
+   public:
+      PDFIntegral(const IGenFunction* pdf) : fPDF(PDFIntegrand(pdf)) {}
+      
+      PDFIntegral(const PDFIntegrand& pdf) : fPDF(pdf) {}
       
       Double_t operator() (Double_t x) const {
-         IntegratorOneDim  integral(IntegrationOneDim::kGAUSS);
-         integral.SetFunction(*fPDF);
+         IntegratorOneDim integral(IntegrationOneDim::kGAUSS);
+         integral.SetFunction(fPDF);
          return integral.IntegralLow(x);
       }
       
@@ -50,7 +62,7 @@ namespace Math {
    };
    
    template<>
-   void GoFTest::SetFunction(IGenFunction& f, Bool_t isPDF) {
+   void GoFTest::SetFunction(const IGenFunction& f, Bool_t isPDF) {
       SetProbabilityFunction(f, isPDF); 
    }
   
@@ -150,8 +162,11 @@ namespace Math {
    void GoFTest::SetCDF() { //  Setting parameter-free distributions 
       IGenFunction* cdf = 0;
       switch (fDist) {
+      default:
       case kLogNormal:
          LogSample();
+         cdf = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::LogNormalCDF);
+         fCDF = std::auto_ptr<IGenFunction>(cdf);
       case kGaussian :
          cdf = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::GaussianCDF);
          fCDF = std::auto_ptr<IGenFunction>(cdf);
@@ -160,8 +175,6 @@ namespace Math {
          cdf = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::ExponentialCDF);
          fCDF = std::auto_ptr<IGenFunction>(cdf);
          break;
-      case kUserDefined:
-         default:;
       }
    }
    
@@ -178,45 +191,27 @@ namespace Math {
          assert(!badSampleArg);
       }
       fCDF = std::auto_ptr<IGenFunction>((IGenFunction*)0);
-      fDist = kUserDefined; //TODO:remove
+      fDist = kUndefined;
       fSamples = std::vector<std::vector<Double_t> >(1);
       fTestSampleFromH0 = kTRUE;
       SetSamples(std::vector<const Double_t*>(1, sample), std::vector<UInt_t>(1, sampleSize));
    }
 
-   Double_t GoFTest::ComputeIntegral(Double_t* parms) const { 
-      ROOT::Math::IntegratorOneDim ig;
-      Integrand func(parms);
-      ig.SetFunction(func);
-      Double_t result = ig.IntegralUp( 0);
-      return result;
+   Double_t GoFTest::LogNormalCDF(Double_t x) const {
+      return ROOT::Math::lognormal_cdf(x, fMean, fSigma);
    }
-
+   
    Double_t GoFTest::GaussianCDF(Double_t x) const {
-      x -= fMean;
-      x /= fSigma;
-      return ROOT::Math::normal_cdf(x);
+      return ROOT::Math::normal_cdf(x, fSigma, fMean);
    }
 
    Double_t GoFTest::ExponentialCDF(Double_t x) const {
-      x /= fMean;
-      return ROOT::Math::exponential_cdf(x, 1.0);
+      return ROOT::Math::exponential_cdf(x, 1.0 / fMean);
    }
 
    void GoFTest::LogSample() {
       transform(fSamples[0].begin(), fSamples[0].end(), fSamples[0].begin(), std::ptr_fun<Double_t, Double_t>(TMath::Log));
       SetParameters();
-   }
-
-   GoFTest::Integrand::Integrand(Double_t* p) : parms(p) {}
-
-/*
-  Taken from (2)
-*/
-   Double_t GoFTest::Integrand::operator()(Double_t y) const {
-      Double_t z = parms[0];
-      Double_t t_j = parms[1];
-      return TMath::Exp(z / (8 * (1 + TMath::Power(y, 2))) - TMath::Power(y, 2) * t_j);
    }
 
 /*
