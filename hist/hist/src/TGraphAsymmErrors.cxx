@@ -513,8 +513,8 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
       }
       //use bin contents
       else {
-	 t = total->GetBinContent(b);
-	 p = pass->GetBinContent(b);
+	 t = int( total->GetBinContent(b) + 0.5);
+	 p = int(pass->GetBinContent(b) + 0.5);
       }
 
       //using bayesian statistics
