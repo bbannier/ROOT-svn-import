@@ -28,9 +28,34 @@
 
 namespace ROOT {
 namespace Math {
+   
+   class GoFTest::PDFIntegral : public IGenFunction { 
+      const IGenFunction* fPDF;
+   public:
+      PDFIntegral(const IGenFunction* pdf) : fPDF(pdf) {}
+      
+      Double_t operator() (Double_t x) const {
+         IntegratorOneDim  integral(IntegrationOneDim::kGAUSS);
+         integral.SetFunction(*fPDF);
+         return integral.IntegralLow(x);
+      }
+      
+      Double_t DoEval(Double_t x) const {
+         return (*this)(x);
+      }
+      
+      IGenFunction* Clone() const {
+         return new PDFIntegral(fPDF);
+      }
+   };
+   
+   template<>
+   void GoFTest::SetFunction(IGenFunction& f, Bool_t isPDF) {
+      SetProbabilityFunction(f, isPDF); 
+   }
   
    GoFTest::GoFTest(const Double_t* sample1, UInt_t sample1Size, const Double_t* sample2, UInt_t sample2Size)
-      : fCDF(0), fDist(kUndefined), fSamples(std::vector<std::vector<Double_t> >(2)), fTestSampleFromH0(kFALSE) {
+   : fCDF(std::auto_ptr<IGenFunction>((IGenFunction*)0)), fDist(kUndefined), fSamples(std::vector<std::vector<Double_t> >(2)), fTestSampleFromH0(kFALSE) {
       Bool_t badSampleArg = sample1 == 0 || sample1Size == 0;
       if (badSampleArg) { 
          std::string msg = "'sample1";
@@ -56,7 +81,7 @@ namespace Math {
    }
 
    GoFTest::GoFTest(const Double_t* sample, UInt_t sampleSize, EDistribution dist)   
-      : fCDF(0), fDist(dist), fSamples(std::vector<std::vector<Double_t> >(1)), fTestSampleFromH0(kTRUE) {
+   : fCDF(std::auto_ptr<IGenFunction>((IGenFunction*)0)), fDist(dist), fSamples(std::vector<std::vector<Double_t> >(1)), fTestSampleFromH0(kTRUE) {
       Bool_t badSampleArg = sample == 0 || sampleSize == 0;
       if (badSampleArg) { 
          std::string msg = "'sample";
@@ -72,7 +97,7 @@ namespace Math {
    }
 
    GoFTest::~GoFTest() {
-      delete fCDF;
+//       delete fCDF;
    }
 
    void GoFTest::SetSamples(std::vector<const Double_t*> samples, const std::vector<UInt_t> samplesSizes) {
@@ -122,20 +147,26 @@ namespace Math {
       return result;
    }
 
-   void GoFTest::SetCDF(CDF_Ptr cdf) { //  Setting parameter-free distributions 
+   void GoFTest::SetCDF() { //  Setting parameter-free distributions 
+      IGenFunction* cdf = 0;
       switch (fDist) {
       case kLogNormal:
          LogSample();
       case kGaussian :
-         fCDF = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::GaussianCDF);
+         cdf = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::GaussianCDF);
+         fCDF = std::auto_ptr<IGenFunction>(cdf);
          break;
       case kExponential:
-         fCDF = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::ExponentialCDF);
+         cdf = new ROOT::Math::WrappedMemFunction<GoFTest, Double_t (GoFTest::*)(Double_t) const>(*this, &GoFTest::ExponentialCDF);
+         fCDF = std::auto_ptr<IGenFunction>(cdf);
          break;
       case kUserDefined:
-      default:
-         fCDF = cdf;
+         default:;
       }
+   }
+   
+   void GoFTest::SetProbabilityFunction(const IGenFunction& f, Bool_t isPDF) {
+      fCDF = std::auto_ptr<IGenFunction>(isPDF ? PDFIntegral(&f).Clone() : f.Clone());
    }
 
    void GoFTest::Instantiate(const Double_t* sample, UInt_t sampleSize) {
@@ -146,8 +177,8 @@ namespace Math {
          MATH_ERROR_MSG("GoFTest::GoFTest", msg.c_str());
          assert(!badSampleArg);
       }
-      fCDF = 0;
-      fDist = kUserDefined;
+      fCDF = std::auto_ptr<IGenFunction>((IGenFunction*)0);
+      fDist = kUserDefined; //TODO:remove
       fSamples = std::vector<std::vector<Double_t> >(1);
       fTestSampleFromH0 = kTRUE;
       SetSamples(std::vector<const Double_t*>(1, sample), std::vector<UInt_t>(1, sampleSize));
