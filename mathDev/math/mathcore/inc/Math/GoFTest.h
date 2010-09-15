@@ -31,9 +31,8 @@ class GoFTest {
 public:
 
    enum EDistribution { // H0 distributions for using only with 1-sample tests
-      kUndefined = -2,  // value set for the 2-samples test for no defined distribution 
-      kUserDefined,     // Internal use only for the class's template constructor
-      kGaussian,        // Default value
+      kUndefined,  // value set for the 2-samples test for no defined distribution 
+      kGaussian,   // Default value
       kLogNormal,
       kExponential
    };
@@ -45,10 +44,10 @@ public:
       kKS2s  // Kolmogorov-Smirnov 2-Samples Test
    };
    
-   template<class Function>
-   void SetFunction(Function& cdf, Bool_t isPDF = kTRUE) {
-      ROOT::Math::WrappedFunction<Function&> wcdf(cdf); 
-      SetProbabilityFunction(wcdf, isPDF);
+   template<class Dist>
+   void SetFunction(const Dist& dist, Bool_t isPDF = kTRUE) {
+      ROOT::Math::WrappedFunction<const Dist&> wdist(dist); 
+      SetProbabilityFunction(wdist, isPDF);
    }
 
    /* Constructor for using only with 2-samples tests */
@@ -59,7 +58,7 @@ public:
   
    /* Templated constructor for using only with 1-sample tests with a user specified distribution */
    template<class Dist>
-   GoFTest(const Double_t* sample, UInt_t sampleSize, Dist& dist, Bool_t isPDF = kTRUE) {
+   GoFTest(const Double_t* sample, UInt_t sampleSize, const Dist& dist, Bool_t isPDF = kTRUE) {
       Instantiate(sample, sampleSize);
       SetFunction(dist, isPDF);
    }
@@ -111,15 +110,9 @@ private:
 
    std::auto_ptr<IGenFunction> fCDF;
 
+   class PDFIntegrand;
    class PDFIntegral;
-     
-   class Integrand { // Integrand of the integral term of the Anderson-Darling test statistic's asymtotic distribution as described in (2)
-      Double_t* parms;
-   public:
-      Integrand(Double_t* parms);
-      Double_t operator()(Double_t y) const;
-   };
-  
+   
    EDistribution fDist;
   
    Double_t fMean;
@@ -138,6 +131,7 @@ private:
     
    Double_t ComputeIntegral(Double_t* parms) const; // Computation of the integral term of the 1-Sample Anderson-Darling test statistic's asymtotic distribution as described in (2)
   
+   Double_t LogNormalCDF(Double_t x) const;
    Double_t GaussianCDF(Double_t x) const;
    Double_t ExponentialCDF(Double_t x) const;
   
