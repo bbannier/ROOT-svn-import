@@ -31,13 +31,18 @@ class GoFTest {
 public:
 
    enum EDistribution { // H0 distributions for using only with 1-sample tests
-      kUndefined = -2,  // value set for the 2-samples test for no defined distribution 
-      kUserDefined,     // Internal use only for the class's template constructor
-      kGaussian,        // Default value
+      kUndefined,       // Default value for non templated 1-sample test. Set with SetDistribution
+      kUserDefined,     // For internal use only within the class's template constructor
+      kGaussian,  
       kLogNormal,
       kExponential
    };
-  
+   
+   enum EUserDistribution { // User input distribution option
+      kCDF,
+      kPDF                  // Default value
+   };
+   
    enum ETestType { // Goodness of Fit test types for using with the class's unary funtion as a shorthand for the in-built methods
       kAD,   // Anderson-Darling Test. Default value
       kAD2s, // Anderson-Darling 2-Samples Test
@@ -45,9 +50,10 @@ public:
       kKS2s  // Kolmogorov-Smirnov 2-Samples Test
    };
    
-   template<class Function>
-   void SetFunction(Function& cdf, Bool_t isPDF = kTRUE) {
-      ROOT::Math::WrappedFunction<Function&> wcdf(cdf); 
+   /* Sets the user input distribution. To use with the template construtor to change the distribution parameter*/
+   template<class Dist>
+   void SetDistribution(const Dist& dist, Bool_t isPDF = kTRUE) {
+      ROOT::Math::WrappedFunction<Dist&> wcdf(dist); 
       SetProbabilityFunction(wcdf, isPDF);
    }
 
@@ -55,14 +61,17 @@ public:
    GoFTest(const Double_t* sample1, UInt_t sample1Size, const Double_t* sample2, UInt_t sample2Size);
   
    /* Constructor for using only with 1-sample tests with a specified distribution */
-   GoFTest(const Double_t* sample, UInt_t sampleSize, EDistribution dist = kGaussian);
+   GoFTest(const Double_t* sample, UInt_t sampleSize, EDistribution dist = kUndefined);
   
-   /* Templated constructor for using only with 1-sample tests with a user specified distribution */
+   /* Templated constructor for using only with 1-sample tests with a user specified distribution */  
    template<class Dist>
-   GoFTest(const Double_t* sample, UInt_t sampleSize, Dist& dist, Bool_t isPDF = kTRUE) {
+   GoFTest(const Double_t* sample, UInt_t sampleSize, const Dist& dist, EUserDistribution userDist = kPDF) {
       Instantiate(sample, sampleSize);
-      SetFunction(dist, isPDF);
+      SetDistribution(dist, userDist);
    }
+   
+   /* Sets the distribution type for the non templated 1-sample test */
+   void SetDistribution(EDistribution dist);
    
    virtual ~GoFTest();
 
