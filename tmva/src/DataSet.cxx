@@ -598,8 +598,8 @@ TTree* TMVA::DataSet::GetTree( Types::ETreeType type )
         itMethod != fResults.at(t).end(); itMethod++) {
 
 
-      Log() << "analysis type " << (itMethod->second->GetAnalysisType()==Types::kRegression ? "Regression" :
-				     (itMethod->second->GetAnalysisType()==Types::kMulticlass ? "multiclass" : "classification" )) << Endl;
+       Log() << kDEBUG << "analysis type: " << (itMethod->second->GetAnalysisType()==Types::kRegression ? "Regression" :
+                                                (itMethod->second->GetAnalysisType()==Types::kMulticlass ? "Multiclass" : "Classification" )) << Endl;
 
 
       if (itMethod->second->GetAnalysisType() == Types::kClassification) {
