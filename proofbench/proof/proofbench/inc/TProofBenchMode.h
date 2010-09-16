@@ -27,9 +27,8 @@
 #endif
 
 class TProof;
-class TDSet;
+class TList;
 class TMap;
-class TUrl;
 
 R__EXTERN TProof *gProof;
 
@@ -51,19 +50,16 @@ public:
                               Int_t start=1,
                               Int_t stop=-1,
                               Int_t step=1,
-                              const TDSet* tdset=0,
+                              const TList* listfiles=0,
                               const char* option="",
-                              const TUrl* poolurl=0,
                               TProof* proof=gProof)=0;
 
    virtual Int_t MakeDataSets(Int_t nf,
                               Int_t np,
                               const Int_t *wp,
-                              const TDSet* tdset=0,
+                              const TList* listfiles=0,
                               const char *option="",
-                              const TUrl* poolurl=0,
                               TProof* proof=gProof)=0;
-
 
    virtual EFileType GetFileType()=0;
 

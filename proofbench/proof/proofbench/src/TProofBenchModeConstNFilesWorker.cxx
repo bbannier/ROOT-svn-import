@@ -26,7 +26,6 @@
 #include "TFileInfo.h"
 #include "TProof.h"
 #include "TString.h"
-#include "TDSet.h"
 #include "Riostream.h"
 #include "TMap.h"
 #include "TObjArray.h"
@@ -104,13 +103,12 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
                                                 Int_t start,
                                                 Int_t stop,
                                                 Int_t step,
-                                                const TDSet* tdset,
+                                                const TList* listfiles,
                                                 const char* option,
-                                                const TUrl* poolurl,
                                                 TProof* proof)
 {
 
-   // Make data sets out of data set 'tdset' and register them.
+   // Make data sets out of list of files 'listfiles' and register them.
    // Input parameters
    //    nf: Number of files a node.
    //        When ==-1, data member fNFiles are used.
@@ -118,7 +116,7 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
    //    stop: Stop scan at 'stop' number of workers.
    //          When ==-1, it is set to total number of workers in the cluster.
    //    step: Scan every 'step' workers.
-   //    tdset: Data set ouf of which data sets are built and registered.
+   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built and registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
    // Return
@@ -130,7 +128,7 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
       return -1;
    }
 
-   if (!tdset){
+   if (!listfiles){
       Error("MakeDataSets", "No generated files provided; returning");
       return -1;
    }
@@ -158,26 +156,25 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
       wp[i]=nactive;
       i++;
    }
-   return MakeDataSets(nf, np, wp, tdset, option, poolurl, proof);
+   return MakeDataSets(nf, np, wp, listfiles, option, proof);
 }
 
 //______________________________________________________________________________
 Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
                                                 Int_t np,
                                                 const Int_t *wp,
-                                                const TDSet* tdset,
+                                                const TList* listfiles,
                                                 const char *option,
-                                                const TUrl* poolurl,
                                                 TProof* proof)
 {
 
-   // Make data sets out of data set 'tdset' and register them.
+   // Make data sets out of list of files 'listfiles' and register them.
    // Data set name has the form : DataSetEventConstNFilesWorker_nactiveworkersincluster_nfilesanode
    // Input parameters
    //    nf: Number of files a node.
    //    np: Number of test points.
    //    wp: 'np'-sized array containing the number of active workers to process files.
-   //    tdset: Data set ouf of which data sets are built and registered.
+   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built and registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
    // Return
@@ -189,7 +186,7 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
       return -1;
    }
 
-   if (!tdset){
+   if (!listfiles){
       Error("MakeDataSets", "No generated files provided; returning");
       return -1;
    }
@@ -197,14 +194,6 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
    if (nf==-1){
       nf=fNFiles;
       Info("MakeDataSets", "Number of files a node is %d for %s", nf, GetName());
-   }
-
-   Int_t newport=0;
-   const char* newprotocol=0;
-
-   if (poolurl){
-      newport=poolurl->GetPort();
-      newprotocol=poolurl->GetProtocol();
    }
 
    // Dataset naming: DataSetEventConstNFilesWorker_nworkersincluster_nfilesaworker
@@ -228,16 +217,13 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
          Int_t nfiles=nf*nworkers;
          Int_t nfilesadded=0;
          Int_t nfile;
-         TList* lelement=tdset->GetListOfElements();
-         TIter nxtelement(lelement); 
-         TDSetElement *tdelement;
+         TIter nxtfileinfo(listfiles); 
          TFileInfo* fileinfo;
          TUrl* url;
          TString hostname, filename, tmpstring;
 
-         while ((tdelement=(TDSetElement*)nxtelement())){
+         while ((fileinfo=(TFileInfo*)nxtfileinfo())){
 
-            fileinfo=tdelement->GetFileInfo();
             url=fileinfo->GetCurrentUrl();
             hostname=url->GetHost();
             filename=url->GetFile();
@@ -267,12 +253,7 @@ Int_t TProofBenchModeConstNFilesWorker::MakeDataSets(Int_t nf,
                   nfilesadded++;
                }
 
-               if (poolurl){
-                  url->SetProtocol(newprotocol);
-                  url->SetPort(newport);
-               }
-
-               fc->Add(fileinfo);
+               fc->Add((TFileInfo*)(fileinfo->Clone()));
                //Info ("CreateDataSetsN", "added");
             }
             else{

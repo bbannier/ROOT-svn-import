@@ -56,17 +56,15 @@ public:
                       Int_t,
                       Int_t,
                       Int_t,
-                      const TDSet* tdset,
+                      const TList* listfiles,
                       const char* option,
-                      const TUrl* poolurl,
                       TProof* proof);
  
    Int_t MakeDataSets(Int_t,
                       Int_t,
                       const Int_t*,
-                      const TDSet*,
+                      const TList*,
                       const char*,
-                      const TUrl* poolurl,
                       TProof*);
 
    TProofBenchMode::EFileType GetFileType();

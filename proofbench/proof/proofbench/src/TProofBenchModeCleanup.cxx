@@ -22,7 +22,6 @@
 #include "TFileInfo.h"
 #include "TProof.h"
 #include "TString.h"
-#include "TDSet.h"
 #include "TMap.h"
 #include "TProofNode.h"
 
@@ -77,35 +76,26 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
                                       Int_t,
                                       Int_t,
                                       Int_t,
-                                      const TDSet* tdset,
+                                      const TList* listfiles,
                                       const char* option,
-                                      const TUrl* poolurl,
                                       TProof* proof)
 {
-   // Make data set from data set tdset and register it.
+   // Make data set from list of file 'listfiles'and register it.
    // Input parameters
    //    Int_t Ignored.
    //    Int_t Ignored.
    //    Int_t Ignored.
    //    Int_t Ignored.
-   //    tdset Dataset from which data set is built and registered.
+   //    listfiles List of files (TFileInfo*) from which data set is built and registered.
    //    option Option to TProof::RegisterDataSet(...).
    //    proof Proof
    // Return
    //    0 when ok
    //   <0 otherwise
 
-   if (!tdset){
+   if (!listfiles){
       Error("MakeDataSets", "Empty data set; Files not generated");
       return -1;
-   }
-
-   Int_t newport=0;
-   const char* newprotocol=0;
-
-   if (poolurl){
-      newport=poolurl->GetPort();
-      newprotocol=poolurl->GetProtocol();
    }
 
    TString dsname="DataSetEventCleanup";
@@ -113,22 +103,11 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
    // Create the TFileCollection
    TFileCollection *fc = new TFileCollection;
 
-   TList* lelement=tdset->GetListOfElements();
-   TIter nxtelement(lelement);
-   TDSetElement *tdelement;
+   TIter nxtfileinfo(listfiles);
    TFileInfo* fileinfo;
 
-   while ((tdelement=(TDSetElement*)nxtelement())){
-      fileinfo=tdelement->GetFileInfo();
-      //fileinfo->Print("A");
-      TUrl* url=fileinfo->GetCurrentUrl();
-
-      if (poolurl){
-         url->SetProtocol(newprotocol);
-         url->SetPort(newport);
-      }
-
-      fc->Add(fileinfo);
+   while ((fileinfo=(TFileInfo*)nxtfileinfo())){
+      fc->Add((TFileInfo*)(fileinfo->Clone()));
    }
    fc->Update();
    proof->RegisterDataSet(dsname, fc, option);
@@ -140,24 +119,23 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
 Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
                                       Int_t,
                                       const Int_t*,
-                                      const TDSet* tdset,
+                                      const TList* listfiles,
                                       const char* option,
-                                      const TUrl* poolurl,
                                       TProof* proof)
 {
-   // Make data set from data set tdset and register it.
+   // Make data set from list of files 'listfiles' and register it.
    // Input parameters
    //    Int_t Ignored.
    //    Int_t Ignored.
    //    const Int_t* Ignored.
-   //    tdset Dataset from which data set is built and registered.
+   //    listfiles List of files (TFileInfo*) from which data set is built and registered.
    //    option Option to TProof::RegisterDataSet(...).
    //    proof Proof
    // Return
    //    0 when ok
    //   <0 otherwise
 
-   return MakeDataSets(0, 0, 0, 0, tdset, option, poolurl, proof);
+   return MakeDataSets(0, 0, 0, 0, listfiles, option, proof);
 }
 
 //______________________________________________________________________________

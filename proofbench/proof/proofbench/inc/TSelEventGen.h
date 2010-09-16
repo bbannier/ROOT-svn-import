@@ -54,7 +54,7 @@ private:
    Int_t fNWorkersPerNode;                    //total number of workers on this node
    Int_t fWorkerNumber;                       //worker number on this node
    TObject* fTotalGen;                        //events generated on this worker
-   TDSet* fDataSet;                           //dataset of files generated
+   TList* fFilesGenerated;                    //list of files generated
 
 protected:
 

@@ -31,7 +31,6 @@
 
 class TProof;
 class TProofBenchMode;
-class TDSet;
 
 R__EXTERN TProof *gProof;
 
@@ -53,7 +52,7 @@ private:
    Int_t fRegenerate;              //when true, regenerate files
 
    TList* fNodes;                  //list of nodes information
-   TDSet* fDataSetGenerated;       //data set generated at worker nodes for benchmarking
+   TList* fFilesGenerated;         //list of files generated at worker nodes for benchmarking
 
 protected:
 
@@ -84,7 +83,7 @@ public:
                               Int_t start=-1,
                               Int_t stop=-1,
                               Int_t step=-1,
-                              const TDSet* tdset=0,
+                              const TList* listfiles=0,
                               const char* option="V");
 
    virtual Int_t MakeDataSets(const char* option);
@@ -92,7 +91,7 @@ public:
    virtual Int_t MakeDataSets(Int_t nf,
                               Int_t np,
                               const Int_t *wp,
-                              const TDSet* tdset=0,
+                              const TList* listfiles=0,
                               const char *option="V");
 
    virtual void Print(Option_t* option="")const;

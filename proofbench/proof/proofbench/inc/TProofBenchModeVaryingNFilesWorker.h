@@ -59,17 +59,15 @@ public:
                       Int_t start,
                       Int_t stop,
                       Int_t step,
-                      const TDSet* tdset,
+                      const TList* listfiles,
                       const char* option,
-                      const TUrl* poolurl,
                       TProof* proof);
    
    Int_t MakeDataSets(Int_t nf,
                       Int_t np,
                       const Int_t *wp,
-                      const TDSet* tdset,
+                      const TList* listfiles,
                       const char *option,
-                      const TUrl* poolurl,
                       TProof* proof);
 
    TProofBenchMode::EFileType GetFileType(){return TProofBenchMode::kFileBenchmark;}
