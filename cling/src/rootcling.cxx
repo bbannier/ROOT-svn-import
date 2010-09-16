@@ -106,9 +106,9 @@ void SetupLangOptions (clang::CompilerInstance* CI)
    langInfo.NoInline = 1;
    langInfo.Exceptions = 1;
    langInfo.GNUMode = 1;
-   langInfo.NoInline = 1;
+   langInfo.NoInline = 0;
    langInfo.GNUInline = 1;
-   langInfo.DollarIdents = 1;
+   langInfo.DollarIdents = 0;
    langInfo.POSIXThreads = 1;
 }
 
@@ -291,7 +291,8 @@ clang::CompilerInstance* ParseSource (const std::string sourceCode)
 
 /* -------------------------------------------------------------------------- */
 
-std::string WriteStubFunctions (std::string inputFileName)
+std::string WriteStubFunctions (const std::string& inputFileName,
+                                const std::string& selectionFileName)
 {
    clang::CompilerInstance* CI = ParseFile (inputFileName);
 
@@ -301,7 +302,7 @@ std::string WriteStubFunctions (std::string inputFileName)
    /* fill Reflex dictionary */
 
    TScanner scanner;
-   scanner.Scan(&CI->getASTContext(), tu);
+   scanner.Scan(&CI->getASTContext(), tu, selectionFileName);
 
    /* write stub functions */
 
@@ -317,9 +318,9 @@ std::string WriteStubFunctions (std::string inputFileName)
    return source;
 }
 
-void Process (std::string inputFileName)
+void Process (std::string inputFileName, std::string selectionFileName)
 {
-   std::string source = WriteStubFunctions (inputFileName);
+   std::string source = WriteStubFunctions (inputFileName, selectionFileName);
 
    /* parse source and get translation unit */
 
@@ -496,15 +497,13 @@ int main (int argc, const char **argv)
    #endif
 
    #if 1
-      if (argc != 2)
+      if (argc != 3)
       {
-         std::cout << "Usage: " << argv[0] << " input_file..." << std::endl;
+         std::cout << "Usage: " << argv[0] << " input_file selection.xml|linkdef.h" << std::endl;
          return 1;
       }
 
-      std::string input_file = CharsToStd (argv [1]);
-
-      Process (input_file);
+      Process (argv[1], argv[2]);
       SimpleTest ();
    #endif
 

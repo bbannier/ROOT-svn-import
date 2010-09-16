@@ -1,4 +1,4 @@
-
+ 
 // Author: Zdenek Culik   16/04/2010
 // Modified by: Velislava Spasova
 
@@ -22,6 +22,8 @@
 #include "Reflex/Builder/FunctionBuilder.h"
 
 #include "TString.h"
+#include "XMLReader.h"
+#include "LinkdefReader.h"
 #include <stack>
 
 //using namespace clang;
@@ -65,6 +67,7 @@ public:
    static std::string  GetFuncProp (const Reflex::PropertyList& prop_list);
 
    std::stack <Reflex::ClassBuilder*> fClassBuilders; //ADDED BY VELISLAVA - a stack of ClassBuider-s
+
 
 private:
    static int fgAnonymousClassCounter;
@@ -177,10 +180,14 @@ public: // ADDED BY VELISLAVA
    bool VisitRecordDecl(clang::RecordDecl* D); // Visitor for every RecordDecl i.e. class node in the AST
    bool TraverseDeclContextHelper(clang::DeclContext *DC); // Here is the code magic :) - every Decl 
    // according to its type is processed by the corresponding Visitor method
+
    void RemoveBuilder(clang::DeclContext* DC); // Pop()-ing elements from the fClassBuilders stack
-   void Scan (clang::ASTContext* C, clang::Decl* D);
-   TString getClassName(clang::DeclContext* DC);
+   void Scan (clang::ASTContext* C, clang::Decl* D, const std::string& selectionFileName);
+   const char* getClassName(clang::DeclContext* DC);
    void DumpDecl(clang::Decl* D, const char* msg);
+   bool GetDeclName(clang::Decl* D, std::string& name);
+   bool GetDeclQualName(clang::Decl* D, std::string& qual_name);
+   bool GetFunctionPrototype(clang::Decl* D, std::string& prototype);
 };
 
 /* -------------------------------------------------------------------------- */

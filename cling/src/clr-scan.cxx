@@ -2,6 +2,8 @@
 // Modified by: Velislava Spasova
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "TObject.h"
 #include "clr-scan.h"
 
@@ -41,6 +43,9 @@ int TScanner::fgAnonymousEnumCounter  = 0;
 std::map <clang::Decl*, std::string> TScanner::fgAnonymousClassMap;
 std::map <clang::Decl*, std::string> TScanner::fgAnonymousEnumMap;
 
+SelectionRules sr;
+std::string outputFileName;
+std::ofstream outputFile;
 //______________________________________________________________________________
 void ClrStubFunction (void* result, void* obj, const std::vector<void*>& params, void* ctx)
 {
@@ -1117,6 +1122,7 @@ unsigned int TScanner::VisibilityModifiers(clang::AccessSpecifier access)
       case clang::AS_public:
          modifiers |= Reflex::PUBLIC;
          break;
+	 //TODO: Handle AS_None
    default:
      break;
    }
@@ -1171,51 +1177,67 @@ unsigned int TScanner::VarModifiers(clang::VarDecl* D)
 
 // This method visits a class node - for every class is created a new class buider
 // irrespectful of weather the class is internal for another class declaration or not.
-// For every clas the class builder is put on top of the fClassBuilders stack
+// For every class the class builder is put on top of the fClassBuilders stack
 bool TScanner::VisitRecordDecl(clang::RecordDecl* D)
 {
   
-   bool ret;
+   bool ret = true, selected;
    
    // in case it is implicit we don't create a builder 
    if(D && D->isImplicit()){
-      printf("\n\tImplicit declaration - we don't construct builder, VisitRecordDecl()");
+      //printf("\nDEBUG - Implicit declaration - we don't construct builder, VisitRecordDecl()");
       return true;
    }
 
-   DumpDecl(D, "VisitRecordDecl()");
+   // DEBUG DumpDecl(D, "VisitRecordDecl()");
 
-   Reflex::ClassBuilder* builder = GetClassBuilder(D); 	//template_parameters has a default value of ""
+
+   DumpDecl(D, "");
+
+   selected = sr.isDeclSelected(D);
+   if (selected) {
+      std::cout<<"\n\tSelected -> true";
+
+      std::string qual_name;
+
+      if (GetDeclQualName(D, qual_name))
+         outputFile<<qual_name<<std::endl;
+
+      Reflex::ClassBuilder* builder = GetClassBuilder(D); 	//template_parameters has a default value of ""
 					// GetClassBuilder is declared in clr-scan.h
-   if(builder!=NULL){ // Is it OK?
-      fClassBuilders.push(builder);
-      printf("\n\tPush()-ed a class builder; %d elements in the stack", (int) fClassBuilders.size());
+      if(builder!=NULL){ // Is it OK?
+         fClassBuilders.push(builder);
+         // DEBUG printf("\n\tPush()-ed a class builder; %d elements in the stack", fClassBuilders.size());
 
-      // I think this should be left as it is ?
-      if (clang::CXXRecordDecl* C = dyn_cast <clang::CXXRecordDecl> (D)) {
-         if (C->getDefinition() != NULL)                                                                                            
-            for (clang::CXXRecordDecl::base_class_iterator I = C->bases_begin(), E = C->bases_end(); I != E; ++I) {
+         // I think this should be left as it is ?
+         if (clang::CXXRecordDecl* C = dyn_cast <clang::CXXRecordDecl> (D)) {
+            if (C->getDefinition() != NULL)                                                                                            
+               for (clang::CXXRecordDecl::base_class_iterator I = C->bases_begin(), E = C->bases_end(); I != E; ++I) {
                                                                                                             
-               Reflex::Type type = ExploreQualType(I->getType());
-	       Reflex::OffsetFunction offset = NULL; // ?!
+                  Reflex::Type type = ExploreQualType(I->getType());
+                  Reflex::OffsetFunction offset = NULL; // ?!
                                                                                                     
-               unsigned int modifiers = VisibilityModifiers(I->getAccessSpecifier());
+                  unsigned int modifiers = VisibilityModifiers(I->getAccessSpecifier());
 
-               if (I->isVirtual())
-                  modifiers |= Reflex::VIRTUAL;
-
+                  if (I->isVirtual())
+                     modifiers |= Reflex::VIRTUAL;
+                  
                   builder->AddBase(type, offset, modifiers);
-                  printf("\n\tAddBase()-ed");
-            }
+                  // DEBUG printf("\n\tAddBase()-ed");
+               }
+         }
+         ret = true;
       }
-      ret = true;
-      printf("\n\tReturning true ...");
+      else{
+         ret = false;
+      }
    }
-   else{
-      ret = false;
-      printf("\n\tReturning false ...");
+   else {
+      std::cout<<"\n\tSelected -> false";
    }
    
+   // DEBUG if(ret) std::cout<<"\n\tReturning true ...";
+   // DEBUG else std::cout<<"\n\tReturning false ...";
    return ret;
 }
 
@@ -1224,54 +1246,89 @@ bool TScanner::VisitRecordDecl(clang::RecordDecl* D)
 // it uses the EnumerationBuilder from Reflex. 
 bool TScanner::VisitEnumDecl(clang::EnumDecl* D)
 {
-   DumpDecl(D, "VisitEnumDecl()");
+   // DEBUG DumpDecl(D, "VisitEnumDecl()");
+   DumpDecl(D, "");
+   //std::string name;
+   //GetDeclName(D, name);
+   //std::cout<<"\n"<<name/*<<" -> "<<D->getDeclKindName()*/;
 
    bool ret = true;
-   TString full_name = GetEnumName (D);
-   unsigned int modifiers = Visibility(D); // ?!
+
+   if(sr.isDeclSelected(D)) {
+
+      std::cout<<"\n\tSelected -> true";
+
+      std::string qual_name;
+
+      if (GetDeclQualName(D, qual_name))
+         outputFile<<qual_name<<std::endl;
+
+      TString full_name = GetEnumName (D);
+      unsigned int modifiers = Visibility(D); // ?!
    
-   clang::DeclContext *ctx = D->getDeclContext();
-   if (ctx->isRecord()){
-	Reflex::ClassBuilder* builder = fClassBuilders.top();
-	TString items;
+      clang::DeclContext *ctx = D->getDeclContext();
 
-	// should we do it that way ?!
-        // Here we create a string with all the enum entries in the form of name=value couples
-  	for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
-      	   if (items != "")
-           	items = items + ";";
-           items = items + I->getNameAsString();;
-           if (I->getInitExpr())
-           	items += "=" + APIntToStr(I->getInitVal());
-	}
-	
-	builder->AddEnum(full_name, items, &typeid(Reflex::UnknownType), modifiers); // typeid is actually
+      clang::Decl* parent = dyn_cast<clang::Decl> (ctx);
+      if (!parent) {
+         std::cout<<"Could not cast parent context to parent Decl"<<std::endl;
+         return false;
+      }
+      //if ((sr.isSelectionXMLFile() && ctx->isRecord()) || (sr.isLinkdefFile() && ctx->isRecord() && sr.isDeclSelected(parent))) {
+      if (ctx->isRecord() && sr.isDeclSelected(parent)) {
+         //if (ctx->isRecord() && sr.isDeclSelected(parent)){
+
+
+         //if (ctx->isRecord()){
+         Reflex::ClassBuilder* builder = fClassBuilders.top();
+         TString items;
+
+         // should we do it that way ?!
+         // Here we create a string with all the enum entries in the form of name=value couples
+         for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
+            if (items != "")
+               items = items + ";";
+            items = items + I->getNameAsString();
+            items = items + "=" + APIntToStr(I->getInitVal());
+            
+            //if (I->getInitExpr())
+            //items += "=" + APIntToStr(I->getInitVal());
+         }
+         
+         builder->AddEnum(full_name, items, &typeid(Reflex::UnknownType), modifiers); // typeid is actually
 					// class_name::enum_name, at least according to genreflex output!
+         // DEBUG std::cout<<"\n\tAdded enum "<<full_name<<" with items "<<items<<" to ClassBuilder";
+      }
+      else{
+         Reflex::EnumBuilder* builder =
+            new Reflex::EnumBuilder(full_name, typeid(Reflex::UnknownType), modifiers); // typeid is actually
+         // ::enum_name, at least according to genreflex output!
+         std::cout<<"\n\tCreated EnumBuilder for "<<full_name;
+         if(builder != NULL){ // Is it OK?
+            
+            builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
+            
+            // shouldwe do it that way?!
+            // Here we call the AddItem() method of the EnumBuilder for every enum entry
+            for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
+               std::string item_name = I->getNameAsString();
+               long value = APIntToLong(I->getInitVal());      
+               
+               builder->AddItem(item_name.c_str (), value);
+               // DEBUG std::cout<<"\n\tAdded item "<<item_name<<" = "<<value;
+            }
+            ret = true;
+         }
+         else{
+            ret = false;
+         }
+      }
    }
-   else{
-	Reflex::EnumBuilder* builder =
-      		new Reflex::EnumBuilder(full_name, typeid(Reflex::UnknownType), modifiers); // typeid is actually
-					// ::enum_name, at least according to genreflex output!
-        if(builder != NULL){ // Is it OK?
-
-           builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
-
-           // shouldwe do it that way?!
-           // Here we call the AddItem() method of the EnumBuilder for every enum entry
-           for (clang::EnumDecl::enumerator_iterator I = D->enumerator_begin(), E = D->enumerator_end(); I != E; ++I) {
-              std::string item_name = I->getNameAsString();
-              long value = APIntToLong(I->getInitVal());      
-                                                                                           
-              builder->AddItem(item_name.c_str (), value);
-           }
-           ret = true;
-           printf("\n\tReturning true ...");
-        }
-        else{
-           ret = false;
-           printf("\n\tReturning false ...");
-        }
+   else {
+      std::cout<<"\n\tSelected -> false";
    }
+
+   // DEBUG if (ret) std::cout<<"\n\tReturning true ...";
+   // DEBUG else std::cout<<"\n\tRetaurning false ...";
    return ret;
 }
 
@@ -1282,92 +1339,108 @@ bool TScanner::VisitEnumDecl(clang::EnumDecl* D)
 // and to override the VisitFieldDecl() visitor function
 bool TScanner::VisitVarDecl(clang::VarDecl* D)
 {
-   DumpDecl(D, "VisitVarDecl()");
+   // DEBUG DumpDecl(D, "VisitVarDecl()");
+   DumpDecl(D, "");
+   //std::string name;
+   //GetDeclName(D, name);
+   //std::cout<<"\n"<<name/*<<D->getDeclKindName()*/;
 
    bool ret = true;
 
-   Reflex::Type type = ExploreQualType(D->getType());
-   std::string var_name;
-   unsigned int modifiers = Visibility(D) | VarModifiers(D);
-   int offset = 0;
+   if(sr.isDeclSelected(D)){
+      std::cout<<"\n\tSelected -> true";
 
-   clang::DeclContext * ctx = D->getDeclContext();
-   if (ctx->isRecord()){
-	Reflex::ClassBuilder* builder = fClassBuilders.top();
-	
-	var_name = D->getNameAsString();
+      std::string qual_name;
 
-	/* What to do with this?
-	if (! Reflex::Scope::ByName("").IsNamespace())
-      	   ShowInfo("Bug");
-	*/
+      if (GetDeclQualName(D, qual_name))
+         outputFile<<qual_name<<std::endl;
 
-	try {
-      	   builder->AddDataMember(type, var_name.c_str (), offset, modifiers);
-           builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
-   	} catch (std::exception& e) {
-           ret = false;
-      	   ShowReflexWarning(TString(e.what()) + " ... var member " + var_name, GetLocation(D));
-           printf("\n\tError in adding data member to the class buider");
-   	}
-   }
-   else{
-	var_name = D->getQualifiedNameAsString();
+      Reflex::Type type = ExploreQualType(D->getType());
+      std::string var_name;
+      unsigned int modifiers = Visibility(D) | VarModifiers(D);
+      int offset = 0;
 
-	/* What to do with this?
-	if (! Reflex::Scope::ByName("").IsNamespace())
-      	   ShowInfo("Bug");
-	*/
+      var_name = D->getQualifiedNameAsString();
+      
+      /* What to do with this?
+         if (! Reflex::Scope::ByName("").IsNamespace())
+         ShowInfo("Bug");
+      */
 
-   	try {
-      	   Reflex::VariableBuilder builder =
-               Reflex::VariableBuilder(var_name.c_str (), type, offset, modifiers);
-
-           builder.AddProperty(fgClangDeclKey, ToDeclProp(D));
-   	} catch (std::exception& e) {
-           ret = false; // Is it OK?
-           ShowReflexWarning(TString(e.what()) + " ... variable " + var_name, GetLocation(D));
-           printf("\n\tError in creating a VariableBuilder");
-   	}
+      try {
+         Reflex::VariableBuilder builder =
+            Reflex::VariableBuilder(var_name.c_str (), type, offset, modifiers);
+         
+         // DEBUG std::cout<<"\n\tCreated VariableBuilder for "<<var_name;
+      
+         builder.AddProperty(fgClangDeclKey, ToDeclProp(D));
+      } catch (std::exception& e) {
+         ret = false; // Is it OK?
+         ShowReflexWarning(TString(e.what()) + " ... variable " + var_name, GetLocation(D));
+         printf("\n\tError in creating a VariableBuilder");
+      }
 
    }
-   if(ret) printf("\n\tReturning true ...");
-   else printf("\n\tReturning false ...");
+   else {
+      std::cout<<"\n\tSelected -> false";
+   }
+
+   // DEBUG if(ret) printf("\n\tReturning true ...");
+   // DEBUG else printf("\n\tReturning false ...");
+
    return ret;
 }
 
 bool TScanner::VisitFieldDecl(clang::FieldDecl* D)
 {
-   DumpDecl(D, "VisitFieldDecl()");
+   // DEBUG DumpDecl(D, "VisitFieldDecl()");
+   DumpDecl(D, "");
+   //std::string name;
+   //GetDeclName(D, name);
+   //std::cout<<"\n"<<name/*<<D->getDeclKindName()*/;
 
    bool ret = true;
 
-   Reflex::Type type = ExploreQualType(D->getType());
-   std::string var_name =  D->getNameAsString();;
-   //unsigned int modifiers = Visibility(D) | VarModifiers(D);
-   unsigned int modifiers = Visibility(D);
-   int offset = 0;
+   if(sr.isDeclSelected(D)){
+      std::cout<<"\n\tSelected -> true";
 
-   Reflex::ClassBuilder* builder = fClassBuilders.top();
-	
-   //var_name = D->getNameAsString();
+      std::string qual_name;
 
-	/* What to do with this?
-	if (! Reflex::Scope::ByName("").IsNamespace())
-      	   ShowInfo("Bug");
-	*/
+      if (GetDeclQualName(D, qual_name))
+         outputFile<<qual_name<<std::endl;
+      
+      Reflex::Type type = ExploreQualType(D->getType());
+      std::string var_name =  D->getNameAsString();;
+      //unsigned int modifiers = Visibility(D) | VarModifiers(D);
+      unsigned int modifiers = Visibility(D);
+      int offset = 0;
+      
+      Reflex::ClassBuilder* builder = fClassBuilders.top();
+      
+      //var_name = D->getNameAsString();
+      
+      /* What to do with this?
+         if (! Reflex::Scope::ByName("").IsNamespace())
+         ShowInfo("Bug");
+      */
 
-   try {
-      builder->AddDataMember(type, var_name.c_str (), offset, modifiers);
-      builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
-   } catch (std::exception& e) {
-      ret = false;
-      ShowReflexWarning(TString(e.what()) + " ... var member " + var_name, GetLocation(D));
-      printf("\n\tError in adding data member to the class buider");
+      try {
+         builder->AddDataMember(type, var_name.c_str (), offset, modifiers);
+         builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
+
+         // DEBUG std::cout<<"\n\tAdded variable "<<var_name<<" (Qualified name: "<<D->getQualifiedNameAsString()<<")";
+      } catch (std::exception& e) {
+         ret = false;
+         ShowReflexWarning(TString(e.what()) + " ... var member " + var_name, GetLocation(D));
+         printf("\n\tError in adding data member to the class buider");
+      }
+   }
+   else {
+      std::cout<<"\n\tSelected -> false";
    }
 
-   if(ret) printf("\n\tReturning true ...");
-   else printf("\n\tReturning false ...");
+   // DEBUG if(ret) printf("\n\tReturning true ...");
+   // DEBUG else printf("\n\tReturning false ...");
    return ret;
 }
 
@@ -1377,56 +1450,94 @@ bool TScanner::VisitFieldDecl(clang::FieldDecl* D)
 // it uses the FunctionBuilder from Reflex
 bool TScanner::VisitFunctionDecl(clang::FunctionDecl* D)
 {
-   DumpDecl(D, "VisitFunctionDecl()");
+   // DEBUG DumpDecl(D, "VisitFunctionDecl()");
+   DumpDecl(D, "");
+   //std::string name;
+   //GetDeclName(D, name);
+   //std::cout<<"\n"<<name/*<<D->getDeclKindName()*/;
+
    bool ret = true;
 
-   Reflex::Type type = FuncType(D);
-   TString name;
-   std::string func_name = D->getQualifiedNameAsString() + FuncParameterList(D);
+   if(sr.isDeclSelected(D)){
+      std::cout<<"\n\tSelected -> true";
 
-   TString params = FuncParameters(D);
-   int modifiers = FuncModifiers(D);
+      std::string qual_name;
+      std::string prototype;
 
-   TContext* context = AllocateContext ();
-   context->name = func_name;
+      if (GetDeclQualName(D, qual_name))
+         outputFile<<qual_name;
 
-   Reflex::StubFunction stub = ClrStubFunction;
-   void* stub_ctx = context;
+      if (GetFunctionPrototype(D, prototype))
+         outputFile<<prototype<<std::endl;
+      else
+         outputFile<<std::endl;
 
-   clang::DeclContext * ctx = D->getDeclContext();
+      Reflex::Type type = FuncType(D);
+      TString name;
+      std::string func_name = D->getQualifiedNameAsString() + FuncParameterList(D);
+      
+      TString params = FuncParameters(D);
+      int modifiers = FuncModifiers(D);
+      
+      TContext* context = AllocateContext ();
+      context->name = func_name;
+      
+      Reflex::StubFunction stub = ClrStubFunction;
+      void* stub_ctx = context;
+      
+      clang::DeclContext * ctx = D->getDeclContext();
+      clang::Decl* parent = dyn_cast<clang::Decl> (ctx);
+      if (!parent) {
+         std::cout<<"Could not cast parent context to parent Decl"<<std::endl;
+         return false;
+      }
 
-   if (ctx->isRecord()){
-	Reflex::ClassBuilder* builder = fClassBuilders.top();  
-     
-   	name = D->getNameAsString();
-	try {
-	   builder->AddFunctionMember(type, name, stub, stub_ctx, params, modifiers);
-   	   builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
-   	   builder->AddProperty(fgClangFuncKey, ToFuncProp (func_name));
-	} catch (std::exception& e) {
-           ret = false; // Is it OK? 
-      	   ShowReflexWarning(TString(e.what()) + " ... function member " + func_name, GetLocation(D));
-           printf("\n\tError in adding function member to the class builder");
-   	}
+      std::cout<<"\n\tParams are "<<params;
+
+      if ((sr.isSelectionXMLFile() && ctx->isRecord()) || (sr.isLinkdefFile() && ctx->isRecord() && sr.isDeclSelected(parent))) {
+         //if (ctx->isRecord() && sr.isDeclSelected(parent)){ // Do I need the second part? - Yes - Optimization for Linkdef?
+         Reflex::ClassBuilder* builder = fClassBuilders.top();  
+         
+         name = D->getNameAsString();
+         try {
+            builder->AddFunctionMember(type, name, stub, stub_ctx, params, modifiers);
+            builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
+            builder->AddProperty(fgClangFuncKey, ToFuncProp (func_name));
+
+            // DEBUG std::cout<<"\n\tAdded function member "<<name<<" (Qualified name: "<<D->getQualifiedNameAsString()<<")";
+            //name = D->getQualifiedNameAsString();
+
+         } catch (std::exception& e) {
+            ret = false; // Is it OK? 
+            ShowReflexWarning(TString(e.what()) + " ... function member " + func_name, GetLocation(D));
+            printf("\n\tError in adding function member to the class builder");
+         }
+      }
+      else{
+         name = D->getQualifiedNameAsString();
+         
+         try {
+            Reflex::FunctionBuilder builder =
+               Reflex::FunctionBuilder(type, name, stub, stub_ctx, params, modifiers);
+            
+            //printf("\n\tCreated FunctionBuilder for %s", func_name);
+            std::cout<<"\n\tCreated FunctionBuilder for "<<func_name;
+            
+            builder.AddProperty(fgClangDeclKey, ToDeclProp(D));
+            builder.AddProperty(fgClangFuncKey, ToFuncProp(func_name));
+            
+         } catch (std::exception& e) {
+            ret = false; // Is it OK?
+            ShowReflexWarning(TString(e.what()) + " ... function " + func_name, GetLocation(D));
+            printf("\n\tError in creating the function builder");
+         }
+      }
    }
-   else{
-        name = D->getQualifiedNameAsString();
-
-  	try {
-      	   Reflex::FunctionBuilder builder =
-         	Reflex::FunctionBuilder(type, name, stub, stub_ctx, params, modifiers);
-
-           builder.AddProperty(fgClangDeclKey, ToDeclProp(D));
-           builder.AddProperty(fgClangFuncKey, ToFuncProp(func_name));
-
-   	} catch (std::exception& e) {
-           ret = false; // Is it OK?
-      	   ShowReflexWarning(TString(e.what()) + " ... function " + func_name, GetLocation(D));
-           printf("\n\tError in creating the function builder");
-   	}
+   else {
+      std::cout<<"\n\tSelected -> false";
    }
-   if(ret) printf("\n\tReturning true ...");
-   else printf("\n\tReturning false ...");
+   // DEBUG if(ret) printf("\n\tReturning true ...");
+   // DEBUG else printf("\n\tReturning false ...");
    return ret;
 }
                                                                           
@@ -1442,11 +1553,11 @@ bool TScanner::TraverseDeclContextHelper(DeclContext *DC)
    clang::Decl* D = dyn_cast<clang::Decl>(DC);
    // skip implicit decls
    if (D && D->isImplicit()){
-      printf("\nDEBUG - Implicit declaration in TraverseDeclContextHelper()");
+      // DEBUG printf("\nDEBUG - Implicit declaration in TraverseDeclContextHelper()");
       return true;
    }
 
-   DumpDecl(D, "TraverseDeclContextHelper()");
+   // DEBUG DumpDecl(D, "TraverseDeclContextHelper()");
 
    for (DeclContext::decl_iterator Child = DC->decls_begin(), ChildEnd = DC->decls_end(); 
         ret && (Child != ChildEnd); ++Child) {
@@ -1463,19 +1574,20 @@ bool TScanner::TraverseDeclContextHelper(DeclContext *DC)
 
 void TScanner::RemoveBuilder(clang::DeclContext *DC){
    if(DC->isRecord()){
+      clang::Decl *D = dyn_cast<clang::Decl> (DC);
 
-        //printf("\nDEBUG - Removing the builder");
-	TString className = getClassName(DC);
-        if(className.Length() > 0)
-	  printf("\nDEBUG - removing buider for %s", className.Data());
-        else 
-           printf("\nDEBUG - removing a builder");
-        printf("\n\tWe have %d elements left in the stack",(int) fClassBuilders.size());
-
-	fClassBuilders.pop();
+      if (sr.isDeclSelected(D)) {
+         fClassBuilders.pop();
+         //printf("\nDEBUG - Removing the builder");
+         if(getClassName(DC)!=NULL)
+	   printf("\nDEBUG - Removing buider for %s", getClassName(DC));
+         else 
+            printf("\nDEBUG - removing a builder");
+         printf("\n\tWe have %d elements left in the stack", (int) fClassBuilders.size());
+      }
    }
 }
-TString TScanner::getClassName(clang::DeclContext* DC){
+const char* TScanner::getClassName(clang::DeclContext* DC){
    
    clang::NamedDecl* N=dyn_cast<clang::NamedDecl>(DC);
    TString ret;
@@ -1492,30 +1604,176 @@ void TScanner::DumpDecl(clang::Decl* D, const char* msg) {
       return;
    }
 
-   //clang::DeclContext *ctx = D->getDeclContext();
-
-   //if(ctx && (ctx->isRecord() || ctx->isFunctionOrMethod())){
-      clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
-      if(N && N->getIdentifier()) name = N->getNameAsString();
-      //}
-      else name = "UNNAMED";
+   GetDeclName(D, name);
       
-   /*
-   clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
-   printf("\nDecl %s (%s): %s",
-          N->getIdentifier() ? N->getNameAsCString() : "(UNNAMED)",
-          N->getDeclKindName(),
-          msg);
-   */
-   printf("\nDEBUG - Decl %s of kind %s: %s", name.c_str(), D->getDeclKindName(), msg);
+   std::cout<<"\n\n"<<name<<" -> "<<D->getDeclKindName()<<": "<<msg;
 }
 
 //______________________________________________________________________________
-void TScanner::Scan(clang::ASTContext* C, clang::Decl* D)
+bool TScanner::GetDeclName(clang::Decl* D, std::string& name)
+{
+   clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
+
+   if (N) {
+      if (N->getIdentifier()) {
+         name = N->getNameAsString();
+      }
+      //else if (N->isCXXClassMember()) { // CXXConstructor, CXXDestructor, operators
+      else {
+         name =  N->getNameAsString();
+      }
+      //else 
+      //   name = "strange";
+      return true;
+   }
+   else {
+      name = "UNNAMED";
+      return false;
+   }
+}
+
+
+bool TScanner::GetDeclQualName(clang::Decl* D, std::string& qual_name)
+{
+
+
+   clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
+
+   if (N) {
+      qual_name = N->getQualifiedNameAsString();
+      return true;
+   }
+   else {
+      return false;
+   }  
+}
+
+
+bool TScanner::GetFunctionPrototype(clang::Decl* D, std::string& prototype) {
+   if (!D) {
+      return false;
+   }
+
+   clang::FunctionDecl* F = dyn_cast<clang::FunctionDecl> (D);
+ 
+   if (F) {
+
+   prototype = "";
+   for (clang::FunctionDecl::param_iterator I = F->param_begin(), E = F->param_end(); I != E; ++I) {
+      clang::ParmVarDecl* P = *I;
+
+      if (prototype != "")
+         prototype += ",";
+
+      //TString type = P->getType().getAsString();
+      std::string type = P->getType().getAsString();
+      if (type.at(type.length()-1) == '*') {
+	 type.at(type.length()-2) = '*';
+	 type.erase(type.length()-1);
+      }
+      prototype += type;
+   }
+
+   prototype = "(" + prototype + ")";
+   return true;
+   }
+   else {
+      std::cout<<"Warning - can't convert Decl to FunctionDecl"<<std::endl;
+      return false;
+   }
+}
+
+
+//______________________________________________________________________________
+void TScanner::Scan(clang::ASTContext* C, clang::Decl* D,
+                    const std::string& selectionFileName)
 {
    fCtx = C;
-   printf("\nDEBUG from Velislava - into the Scan() function!!!");
-   TraverseDecl(D);
+   printf("\nDEBUG from Velislava - into the Scan() function!!!\n");
+
+   XMLReader xmlr;
+   LinkdefReader ldefr;
+
+   bool deep = false;
+
+   std::cout<<"selectionFileName = "<<selectionFileName<<std::endl;
+   int pos = selectionFileName.find("xml");
+   //std::cout<<"pos = "<<pos<<std::endl;
+
+
+   // This check could (and should) be performed in rootcling.cxx (if --deep - a flag should be set)
+   if (pos > -1)
+      sr.setSelectionFileType(kSelectionXMLFile);
+   else {
+      pos = selectionFileName.find("linkdef.h");
+      if (pos > -1)
+         sr.setSelectionFileType(kLinkdefFile);
+      else if (selectionFileName == "--deep") {
+         sr.setDeep(true);
+         deep = true;
+         std::cout<<"Deep set"<<std::endl;
+      }
+      else {
+         std::cout<<"Warning - unknown input parameter"<<std::endl;
+      }
+   }
+
+   if (!deep) {
+      std::ifstream file(selectionFileName.c_str());
+      if(file.is_open()){
+         
+         if (sr.isSelectionXMLFile()) {
+            std::cout<<"Selection XML file"<<std::endl;
+            
+            outputFileName = "testreflex_dict.out";
+            if (!xmlr.Parse(file, sr)) {
+               std::cout<<"Error parsing XML file"<<std::endl;
+            }
+            else {
+               std::cout<<"XML file successfully parsed"<<std::endl;
+            }
+            
+         }
+         if (sr.isLinkdefFile()) {
+            std::cout<<"Linkdef file"<<std::endl;
+            
+            outputFileName = "testcint_dict.out";
+            if (!ldefr.CPPHandler(file, sr)) {
+               std::cout<<"Error parsing Linkdef file"<<std::endl;
+            }
+            else {
+               std::cout<<"Linkdef file successfully parsed"<<std::endl;
+            }
+         }
+
+         file.close();
+      }
+      else {
+         std::cout<<"\tFile couldn't be opened"<<std::endl;
+      }
+   }
+   else {
+      outputFileName = "testreflex_dict.out";
+   }
+   
+   sr.printSelectionRules();
+   if (sr.getHasFileNameRule())
+      std::cout<<"File name detected"<<std::endl;
+   
+   outputFile.open(outputFileName.c_str());
+
+   if (!outputFile.is_open()) {
+      std::cout<<"Error - can't open output file"<<std::endl;
+   }
+   else {
+      TraverseDecl(D);
+      
+      if (!sr.areAllSelectionRulesUsed()) {
+         std::cout<<"\nDEBUG - unused sel rules"<<std::endl;
+      }
+   }
+
+   if (outputFile.is_open()) outputFile.close();
 }
 
 
