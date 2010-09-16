@@ -29,6 +29,7 @@
 #include "TProof.h"
 #include "TMap.h" 
 #include "TDSet.h"
+#include "TFileInfo.h"
 #include "TFile.h"
 #include "TSortedList.h"
 #include "TRandom.h"
@@ -46,7 +47,7 @@ TSelEventGen::TSelEventGen():
    fNWorkersPerNode(0),
    fWorkerNumber(0),
    fTotalGen(0),
-   fDataSet(0),
+   fFilesGenerated(0),
    fChain(0)
 {
    if (gProofServ){
@@ -275,7 +276,11 @@ void TSelEventGen::SlaveBegin(TTree *tree)
       return;
    }
 
-   fDataSet=new TDSet("TTree","EventTree");
+   fFilesGenerated=new TList();
+
+   TString sfilegenerated="PROOF_FilesGenerated" "_"+hostname+"_"+thisordinal;
+   fFilesGenerated->SetName(sfilegenerated);
+   fFilesGenerated->SetOwner(kTRUE);
 }
 
 //______________________________________________________________________________
@@ -399,7 +404,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
    filename=fBaseDir+"/"+filename;
 
    TString hostfqdn=TUrl(gSystem->HostName()).GetHostFQDN();
-   TString url="root://"+hostfqdn+"/"+filename;
+   TFileInfo* fi=new TFileInfo("root://"+hostfqdn+"/"+filename);
    TString seed = hostfqdn+"/"+filename;
 
    //generate files
@@ -417,10 +422,10 @@ Bool_t TSelEventGen::Process(Long64_t entry)
                if ( entries_file==neventstogenerate ){
                   //file size seems to be correct, skip generation
                   Info("Process", "Bench file (%s, entries=%lld) exists."
-                       " Skipping generation", url.Data(), entries_file);
+                       " Skipping generation", fi->GetFirstUrl()->GetFile(), entries_file);
                   neventstogenerate-=entries_file;
+                  fFilesGenerated->Add(fi);
                   filefound=kTRUE;
-                  fDataSet->Add(url);
                }
             }
          }
@@ -430,7 +435,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
       if (!filefound){
          gRandom->SetSeed(static_cast<UInt_t>(TMath::Hash(seed)));
          neventstogenerate-=GenerateFiles(fFileType, filename, neventstogenerate);
-         fDataSet->Add(url);
+         fFilesGenerated->Add(fi);
       }
    }
    else if (fFileType==TProofBenchMode::kFileCleanup){
@@ -464,9 +469,9 @@ Bool_t TSelEventGen::Process(Long64_t entry)
                   byteswritten=sizetree;
                   bytestowrite-=byteswritten;
                   Info("Process", "Cleanup file (%s, tree size=%lld) exists."
-                       " Skipping generation", url.Data(), sizetree);
+                       " Skipping generation", fi->GetFirstUrl()->GetFile(), sizetree);
+                  fFilesGenerated->Add(fi);
                   filefound=kTRUE;
-                  fDataSet->Add(url);
                }
             }
          }
@@ -477,7 +482,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
          gRandom->SetSeed(static_cast<UInt_t>(TMath::Hash(seed)));
          byteswritten=GenerateFiles(fFileType, filename, bytestowrite);
          bytestowrite-=byteswritten;
-         fDataSet->Add(url);
+         fFilesGenerated->Add(fi);
       }
    }
    else{
@@ -494,15 +499,7 @@ void TSelEventGen::SlaveTerminate()
    // The SlaveTerminate() function is called after all entries or objects
    // have been processed. When running with PROOF SlaveTerminate() is called
    // on each slave server.
-   TString hostname=TUrl(gSystem->HostName()).GetHostFQDN();
-   TString thisordinal=gProofServ->GetOrdinal();
-
-   TString sfilegenerated="PROOF_FilesGenerated" "_"+hostname+"_"+thisordinal;
-
-   TList* listoffilesgenerated=new TList;
-   listoffilesgenerated->SetName(sfilegenerated);
-   listoffilesgenerated->Add(fDataSet);
-   fOutput->Add(listoffilesgenerated);
+   fOutput->Add(fFilesGenerated);
 
    //set it back
    //TTree::SetMaxTreeSize(MaxTreeSizeOrg);

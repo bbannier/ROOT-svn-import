@@ -104,10 +104,10 @@ TString TProofBenchRunCleanup::GetNameStem()const
    TString namestem;
    switch (fCleanupType){
    case TProofBenchRun::kCleanupReadInFiles:
-      namestem="File";
+      namestem="ReadInFiles";
       break;
    case TProofBenchRun::kCleanupFileAdvise:
-      namestem="Kernel";
+      namestem="FileAdvise";
       break;
    default:
       break;

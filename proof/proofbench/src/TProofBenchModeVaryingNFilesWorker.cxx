@@ -26,7 +26,6 @@
 #include "TFileInfo.h"
 #include "TProof.h"
 #include "TString.h"
-#include "TDSet.h"
 #include "Riostream.h"
 #include "TMap.h"
 #include "TObjArray.h"
@@ -104,12 +103,11 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
                                                   Int_t start,
                                                   Int_t stop,
                                                   Int_t step,
-                                                  const TDSet* tdset,
+                                                  const TList* listfiles,
                                                   const char* option,
-                                                  const TUrl* poolurl,
                                                   TProof* proof)
 {
-   // Make data sets out of data set 'tdset' and register them.
+   // Make data sets out of list of files'listfiles' and register them.
    // Input parameters
    //    nf: Number of files a node.
    //        When ==-1, data member fNFiles are used.
@@ -117,7 +115,7 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
    //    stop: Stop scan at 'stop' number of workers.
    //          When ==-1, it is set to total number of workers in the cluster.
    //    step: Scan every 'step' workers.
-   //    tdset: Data set ouf of which data sets are built and registered.
+   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built and registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
    // Return
@@ -129,7 +127,7 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
       return -1;
    }
 
-   if (!tdset){
+   if (!listfiles){
        Error("MakeDataSets", "No generated files provided; returning");
        return -1;
    }
@@ -157,7 +155,7 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
       wp[i]=nactive;
       i++;
    }
-   return MakeDataSets(nf, np, wp, tdset, option, poolurl, proof);
+   return MakeDataSets(nf, np, wp, listfiles, option, proof);
 
 }
 
@@ -165,19 +163,18 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
 Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
                                                   Int_t np,
                                                   const Int_t *wp,
-                                                  const TDSet* tdset,
+                                                  const TList* listfiles,
                                                   const char *option,
-                                                  const TUrl* poolurl,
                                                   TProof* proof)
 {
 
-   // Make data sets out of data set 'tdset' and register them.
+   // Make data sets out of list of files 'listfiles' and register them.
    // Data set name has the form : DataSetEventConstNFilesWorker_nactiveworkersincluster_nfilesanode
    // Input parameters
    //    nf: Number of files a node.
    //    np: Number of test points.
    //    wp: 'np'-sized array containing the number of active workers to process files.
-   //    tdset: Data set ouf of which data sets are built and registered.
+   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built and registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
    // Return
@@ -189,7 +186,7 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
       return -1;
    }
 
-   if (!tdset){
+   if (!listfiles){
       Error("MakeDataSets", "No generated files provided; returning");
       return -1;
    }
@@ -198,15 +195,6 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
       nf=fNFiles;
       Info("MakeDataSets", "Number of files a node is %d for %s", nf, GetName());
    }
-
-   Int_t newport=0;
-   const char* newprotocol=0;
-
-   if (poolurl){
-      newport=poolurl->GetPort();
-      newprotocol=poolurl->GetProtocol();
-   }
-
    // Dataset naming: DataSetEventConstNFilesNode_nworkersincluster_nfilesaworker
 
    TString dsname;
@@ -220,8 +208,7 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
       nfiles=nf*wp[kp]; //number of files on all nodes for wp[kp] workers
 
       //Check if we have enough number of files
-      TList* le=tdset->GetListOfElements();
-      Int_t nfilesavailable=le->GetSize();
+      Int_t nfilesavailable=listfiles->GetSize();
       if (nfilesavailable<nfiles){
          Warning("MakeDataSets", "Number of available files (%d) is smaller than needed (%d)"
                 ,nfilesavailable, nfiles);
@@ -240,14 +227,7 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
                 ,nworkersavailable, wp[kp], nf*nworkersavailable, nf, nworkersavailable, nfiles, nf, wp[kp]);
       }
 
-      //copy tdset
-      TList* lecopy=new TList;
-      TIter nxte(le);
-      TDSetElement *tde;
-      while (tde=(TDSetElement*)nxte()){
-         lecopy->Add(new TDSetElement(*tde));
-      }
-      //lecopy->Print("A");
+      TList* listfiles_copy=(TList*)(listfiles->Clone("filelistcopy"));
 
       TIter nxwi(wl);
       TSlaveInfo *si = 0;
@@ -261,11 +241,10 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
          nodename=si->GetName(); 
 
          //start over for this worker
-         TIter nxtelement(lecopy);
+         TIter nxtfileinfo(listfiles_copy);
          Int_t nfilesadded_worker=0;
-         while ((tde=(TDSetElement*)nxtelement())){
+         while ((fileinfo=(TFileInfo*)nxtfileinfo())){
 
-            fileinfo=tde->GetFileInfo();
             url=fileinfo->GetCurrentUrl();
             hostname=url->GetHost(); 
             filename=url->GetFile();
@@ -297,13 +276,8 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
                   nfilesadded_worker++;
                }
 
-               if (poolurl){
-                  url->SetProtocol(newprotocol);
-                  url->SetPort(newport);
-               }
-
-               fc->Add(fileinfo);
-               lecopy->Remove(tde);
+               fc->Add((TFileInfo*)(fileinfo->Clone()));
+               listfiles_copy->Remove(fileinfo);
             }
             else{
                Error("MakeDataSets", "File name not recognized: %s", fileinfo->GetName());
@@ -323,8 +297,8 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
       fc->Update();
       // Register dataset with verification
       proof->RegisterDataSet(dsname, fc, option);
-      lecopy->SetOwner(kTRUE);
-      SafeDelete(lecopy);
+      listfiles_copy->SetOwner(kTRUE);
+      SafeDelete(listfiles_copy);
       SafeDelete(fc);
    }
    return 0;
