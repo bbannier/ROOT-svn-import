@@ -141,7 +141,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
       return;
    }
 
-   debug=-1?fDebug:debug;
+   debug=(debug==-1)?fDebug:debug;
 
    fProof->SetParallel(99999);
 
