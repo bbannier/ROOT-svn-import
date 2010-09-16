@@ -109,7 +109,7 @@ void goftest() {
    pt1->Draw();
    
    // ------------------------------------------------------------------------
-   // C a s e  1 :  C r e a t e   G a u s s i a n  r a n d o m  s a m p l e s
+   // C a s e  2 :  C r e a t e   G a u s s i a n  r a n d o m  s a m p l e s
    // ------------------------------------------------------------------------
 
    UInt_t nEvents2 = 2000;
@@ -190,4 +190,38 @@ void goftest() {
    sprintf(str2, "p-value for K-S 2-smps test: %f", pvalueKS_1);
    pt2-> AddText(str2);
    pt2-> Draw();
+   
+      
+   // ------------------------------------------------------------------------
+   // C a s e  3 :  C r e a t e   L a n d a u  r a n d o m  s a m p l e
+   // ------------------------------------------------------------------------
+   
+   UInt_t nEvents3 = 1000;
+
+   Double_t* sample3 = new Double_t[nEvents3];
+
+   for (UInt_t i = 0; i < nEvents3; ++i) { 
+      Double_t data = r.Landau();
+      sample3[i] = data;
+   }
+
+   // ------------------------------------------
+   // C r e a t e   G o F T e s t  o b j e c t s 
+   // ------------------------------------------
+   
+   /* Possible constructors for the user input distribution */
+   /*-------------------------------------------------------*/
+   
+   /* a) User input PDF */
+   ROOT::Math::GoFTest* goftest_3a = new ROOT::Math::GoFTest(sample3, nEvents3, TMath::Landau);
+   
+   /* b) User input CDF */
+   ROOT::Math::GoFTest* goftest_3b = new ROOT::Math::GoFTest(sample3, nEvents3, TMath::LandauI, ROOT::Math::GoFTest::kCDF);
+
+   /* Returning the p-value for the Anderson-Darling test statistic */
+   pvalueAD_1 = goftest_3a-> AndersonDarlingTest(); // p-value is the default choice
+   pvalueAD_2 = (*goftest_3b)(); // p-value and Anderson - Darling Test are the default choices
+   
+   /* Checking consistency between both tests */ 
+   assert(TMath::Abs(pvalueAD_1 - pvalueAD_2) < 0.00001 * pvalueAD_2);
 }
