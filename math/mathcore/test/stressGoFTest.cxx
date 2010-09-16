@@ -79,6 +79,8 @@ struct GoFTStress {
    private:  
    
    Int_t UnitTest1() {
+      std::cout << "UNIT TEST 1" << std::endl;
+      
       UInt_t nsmps = 2;
       const UInt_t smpSize1 = 71;
       const UInt_t smpSize2 = 135;
@@ -117,6 +119,7 @@ struct GoFTStress {
    }
    
    Int_t UnitTest2() {
+      std::cout << "UNIT TEST 2" << std::endl;
       
       const UInt_t nsmps = 2;
       const UInt_t smpSize = 16;
@@ -154,6 +157,8 @@ struct GoFTStress {
    }
    
    Int_t UnitTest3() {
+      std::cout << "UNIT TEST 3" << std::endl;
+      
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
          
@@ -192,7 +197,9 @@ struct GoFTStress {
       return result;
    }
    
-   Int_t UnitTest4(){
+   Int_t UnitTest4() {
+      std::cout << "UNIT TEST 4" << std::endl;
+      
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
@@ -232,6 +239,8 @@ struct GoFTStress {
    }
    
    Int_t UnitTest5() {
+      std::cout << "UNIT TEST 5" << std::endl;
+      
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
@@ -246,6 +255,7 @@ struct GoFTStress {
       }
       
       ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(sample, nEvents);
+      goft->SetDistribution(ROOT::Math::GoFTest::kGaussian);
    
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
          std::cout << "**Gaussian fitting**" << std::endl;
@@ -269,6 +279,7 @@ struct GoFTStress {
    }
    
    Int_t UnitTest6() {
+      std::cout << "UNIT TEST 6" << std::endl;
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
@@ -282,7 +293,7 @@ struct GoFTStress {
          assert(sample[i] == data);
       }
       
-      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(sample, nEvents, TMath::LandauI, kFALSE);
+      ROOT::Math::GoFTest* goft = new ROOT::Math::GoFTest(sample, nEvents, TMath::LandauI, ROOT::Math::GoFTest::kCDF);
          
       if (GoFTStress::fgDebugLevel == GoFTStress::kStandardDebug)
          std::cout << "**Landau fitting**" << std::endl;
@@ -306,6 +317,8 @@ struct GoFTStress {
    }
    
    Int_t UnitTest7() {
+      std::cout << "UNIT TEST 7" << std::endl;
+      
       UInt_t nEvents = 1000;
       UInt_t nsmps = 1;
       
