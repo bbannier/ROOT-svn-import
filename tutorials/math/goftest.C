@@ -62,7 +62,7 @@ void goftest() {
    // -----------------------------------------
    
    ROOT::Math::GoFTest* goftest_1 = new ROOT::Math::GoFTest(sample1, nEvents1, ROOT::Math::GoFTest::kLogNormal);
-   
+      
    /* Possible calls for the Anderson - DarlingTest test */
    /*----------------------------------------------------*/
    
@@ -75,6 +75,12 @@ void goftest() {
    Double_t pvalueAD_1 = goftest_1-> AndersonDarlingTest(); // p-value is the default choice
    Double_t pvalueAD_2 = (*goftest_1)(); // p-value and Anderson - Darling Test are the default choices
    assert(pvalueAD_1 == pvalueAD_2);
+   
+   /* Rebuild the test using the default 1-sample construtor */
+   delete goftest_1;
+   goftest_1 = new ROOT::Math::GoFTest(sample1, nEvents1); // User must then input a distribution type option
+   goftest_1->SetDistribution(ROOT::Math::GoFTest::kLogNormal);
+   
    
    /* Possible calls for the Kolmogorov - Smirnov test */
    /*--------------------------------------------------*/              
