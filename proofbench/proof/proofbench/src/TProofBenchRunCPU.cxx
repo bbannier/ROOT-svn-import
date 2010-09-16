@@ -150,13 +150,13 @@ void TProofBenchRunCPU::Run(Long64_t nevents,
       return;
    }
 
-   nevents=-1?fNEvents:nevents;
-   ntries=-1?fNTries:ntries;
-   start=-1?fStart:start;
-   stop=-1?fStop:stop;
-   step=-1?fStep:step;
-   debug=-1?fDebug:debug;
-   draw=-1?fDraw:draw;
+   nevents=(nevents==-1)?fNEvents:nevents;
+   ntries=(ntries==-1)?fNTries:ntries;
+   start=(start==-1)?fStart:start;
+   stop=(stop==-1)?fStop:stop;
+   step=(step==-1)?fStep:step;
+   debug=(debug==-1)?fDebug:debug;
+   draw=(draw==-1)?fDraw:draw;
 
    if (!fListPerfProfiles){
       fListPerfProfiles=new TList();

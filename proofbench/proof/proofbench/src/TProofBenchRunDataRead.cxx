@@ -168,12 +168,12 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
       return;
    }
 
-   nevents=-1?fNEvents:nevents;
-   ntries=-1?fNTries:ntries;
-   start=-1?fStart:start;
-   stop=-1?fStop:stop;
-   step=-1?fStep:step;
-   debug=-1?fDebug:debug;
+   nevents=(nevents==-1)?fNEvents:nevents;
+   ntries=(ntries==-1)?fNTries:ntries;
+   start=(start==-1)?fStart:start;
+   stop=(step==-1)?fStop:stop;
+   step=(step==-1)?fStep:step;
+   debug=(debug==-1)?fDebug:debug;
 
    if (!fListPerfProfiles){
       fListPerfProfiles=new TList();
