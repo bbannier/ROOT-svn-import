@@ -54,8 +54,17 @@ namespace Math {
    };
    
    template<>
-   void GoFTest::SetFunction(IGenFunction& f, Bool_t isPDF) {
+   void GoFTest::SetDistribution(const IGenFunction& f, Bool_t isPDF) {
       SetProbabilityFunction(f, isPDF); 
+   }
+   
+   void GoFTest::SetDistribution(EDistribution dist) {
+      if (!(kGaussian <= dist && dist <= kExponential)) {
+         std::cerr << "Invalid user input's distribution type for non templated 1-sample test!" << std::endl;
+         return;
+      }
+      fDist = dist;
+      SetCDF();
    }
   
    GoFTest::GoFTest(const Double_t* sample1, UInt_t sample1Size, const Double_t* sample2, UInt_t sample2Size)
@@ -100,9 +109,7 @@ namespace Math {
       SetCDF();
    }
 
-   GoFTest::~GoFTest() {
-//       delete fCDF;
-   }
+   GoFTest::~GoFTest() {}
 
    void GoFTest::SetSamples(std::vector<const Double_t*> samples, const std::vector<UInt_t> samplesSizes) {
       fCombinedSamples.assign(std::accumulate(samplesSizes.begin(), samplesSizes.end(), 0), 0.0);
@@ -165,11 +172,20 @@ namespace Math {
          fCDF = std::auto_ptr<IGenFunction>(cdf);
          break;
       case kUserDefined:
-         default:;
+         fCDF = std::auto_ptr<IGenFunction>(cdf);
+         fDist = kUndefined;
+         break;
+      case kUndefined:
+      default:
+         break;   
       }
    }
    
    void GoFTest::SetProbabilityFunction(const IGenFunction& f, Bool_t isPDF) {
+      if (fDist != kUserDefined) {
+         std::cerr << "Cannot set user defined distribution function with non templated 1-sample test!" << std::endl;
+         return;
+      }
       fCDF = std::auto_ptr<IGenFunction>(isPDF ? new PDFIntegral(f) : f.Clone());
    }
 
@@ -182,33 +198,30 @@ namespace Math {
          assert(!badSampleArg);
       }
       fCDF = std::auto_ptr<IGenFunction>((IGenFunction*)0);
-      fDist = kUserDefined; //TODO:remove
+      fDist = kUserDefined;
       fSamples = std::vector<std::vector<Double_t> >(1);
       fTestSampleFromH0 = kTRUE;
       SetSamples(std::vector<const Double_t*>(1, sample), std::vector<UInt_t>(1, sampleSize));
    }
 
-   Double_t GoFTest::LogNormalCDF(Double_t x) const {      
+   Double_t GoFTest::LogNormalCDF(Double_t x) const {    
+//       x -= fMean;
+//       x /= fSigma;  
       return ROOT::Math::lognormal_cdf(x, fMean, fSigma);   
    }
    
    Double_t GoFTest::GaussianCDF(Double_t x) const {
-      x -= fMean;
-      x /= fSigma;
-      return ROOT::Math::normal_cdf(x);
+      return ROOT::Math::normal_cdf(x, fSigma, fMean);
    }
 
    Double_t GoFTest::ExponentialCDF(Double_t x) const {
-      x /= fMean;
-      return ROOT::Math::exponential_cdf(x, 1.0);
+      return ROOT::Math::exponential_cdf(x, 1.0 / fMean);
    }
 
    void GoFTest::LogSample() {
       transform(fSamples[0].begin(), fSamples[0].end(), fSamples[0].begin(), std::ptr_fun<Double_t, Double_t>(TMath::Log));
       SetParameters();
    }
-
-
 
 /*
   Taken from (1)
@@ -322,7 +335,7 @@ namespace Math {
    } else {
       pvalue = std::exp(-1. * std::exp(1.0776 - (2.30695 - (0.43424 - (.082433 - (0.008056 - 0.0003146 * A2) * A2) * A2) * A2) * A2));
    }   
-   if (pvalue > 1. || pvalue != pvalue) {
+   if (pvalue < 0 || pvalue > 1 || pvalue != pvalue) {
       std::cerr << "Cannot compute p-value: data sample seems not to be from a true distribution. Check input parameters." << std::endl;
       pvalue  = -1;
    }
@@ -365,7 +378,7 @@ namespace Math {
    }
    A2 *= (N - 1) / (TMath::Power(N, 2)); // A2_akN in (1)
    Double_t pvalue = PValueAD2Samples(A2, N); // standartized A2
-   if (pvalue > 1 || pvalue != pvalue) {
+   if (pvalue < 0 || pvalue > 1 || pvalue != pvalue) {
       std::cerr << "Cannot compute the p-value or the test statistic: data samples seem not to be from a true distribution. Check input parameters." << std::endl;
       pvalue  = -1;
    }
@@ -376,7 +389,11 @@ namespace Math {
   Taken from (3)
 */Double_t GoFTest::AndersonDarlingTest(const Char_t* option) const {
    if (!fTestSampleFromH0) {
-      std::cerr << "Only 2-samples tests can be issued!" << std::endl;
+      std::cerr << "Only 2-sample tests can be issued!" << std::endl;
+      return -1;
+   } 
+   if (fDist == kUndefined) {
+      std::cerr << "Distribution type is undefined! Please set it with SetDistribution(GoFTest::EDistribution)." << std::endl;
       return -1;
    }
    Double_t A2 = 0.0;
@@ -411,7 +428,11 @@ namespace Math {
    Algorithm taken from (3) in page 737
 */Double_t GoFTest::KolmogorovSmirnovTest(const Char_t* option) const {
    if (!fTestSampleFromH0) {
-      std::cerr << "Only 2-samples tests can be issued!" << std::endl;
+      std::cerr << "Only 2-sample tests can be issued!" << std::endl;
+      return -1;
+   }
+   if (fDist == kUndefined) {
+      std::cerr << "Distribution type is undefined! Please set it with SetDistribution(GoFTest::EDistribution)." << std::endl;
       return -1;
    }
    Double_t Fo = 0.0, Dn = 0.0;
