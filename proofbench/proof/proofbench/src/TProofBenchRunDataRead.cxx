@@ -170,7 +170,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    nevents=(nevents==-1)?fNEvents:nevents;
    ntries=(ntries==-1)?fNTries:ntries;
    start=(start==-1)?fStart:start;
-   stop=(step==-1)?fStop:stop;
+   stop=(stop==-1)?fStop:stop;
    step=(step==-1)?fStep:step;
    debug=(debug==-1)?fDebug:debug;
 
