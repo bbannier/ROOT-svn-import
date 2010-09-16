@@ -1,23 +1,23 @@
-// Revision B - with error handling
+// @(#)root/meta:$Id: TCling.cxx 35213 2010-09-08 16:39:04Z axel $
+// Author: Velislava Spasova, 2010-09-16
+
+/*************************************************************************
+ * Copyright (C) 1995-2010, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// This class reads selection.xml files.                                //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
+
 
 #include "XMLReader.h"
-
-/*
-const std::string& XMLReader::getXMLFileName()
-{
-  return fXMLFileName;
-}
-std::ifstream& XMLReader::openXMLInStream(const std::string& fileName)
-{
-  fXMLInStream.open(fileName.c_str());
-  return fXMLInStream;
-}
-
-std::ifstream& XMLReader::getXMLInStream()
-{
-  return fXMLInStream;
-}
-*/
 
 std::map<std::string, XMLReader::ETagNames> XMLReader::fgMapTagNames;
 
@@ -61,7 +61,7 @@ bool XMLReader::GetNextTag(std::ifstream& file, std::string& out, int& lineCount
   while(file.good())
   {
     c = file.get();
-    if(file.good()){
+    if (file.good()){
       bool br = false; // break - we set it when we have found the end of the tag
 
       //count quotes - we don't want to count < and > inside quotes as opening/closing brackets
@@ -71,16 +71,16 @@ bool XMLReader::GetNextTag(std::ifstream& file, std::string& out, int& lineCount
       case '"': quotes = !quotes; // we are allowed to have only pair number of quotes per tag - for the attr. values
 	break;
       case '<': 
-	if(!quotes) angleBraceLevel = !angleBraceLevel; // we count < only outside quotes (i.e. quotes = false)
-	if(!angleBraceLevel) return false; // if angleBraceLevel = true, we have < outside quotes - this is error
+	if (!quotes) angleBraceLevel = !angleBraceLevel; // we count < only outside quotes (i.e. quotes = false)
+	if (!angleBraceLevel) return false; // if angleBraceLevel = true, we have < outside quotes - this is error
 	break;
       case '>': 
-	if(!quotes) angleBraceLevel = !angleBraceLevel; // we count > only outside quotes (i.e. quotes = false)
-	if(!angleBraceLevel) br = true; // if angleBraceLevel = true, we have > outside quotes - this is end of tag => break
+	if (!quotes) angleBraceLevel = !angleBraceLevel; // we count > only outside quotes (i.e. quotes = false)
+	if (!angleBraceLevel) br = true; // if angleBraceLevel = true, we have > outside quotes - this is end of tag => break
 	break;
       }
       out += c; // if c != {<,>,"}, add it to the tag 
-      if(br) break; // if br = true, we have reached the end of the tag and we stop reading from the input stream
+      if (br) break; // if br = true, we have reached the end of the tag and we stop reading from the input stream
            
     }
   }
@@ -114,27 +114,26 @@ bool XMLReader::GetNextTag(std::ifstream& file, std::string& out, int& lineCount
 
 bool XMLReader::CheckIsTagOK(const std::string& tag)
 {
-  if(tag.length()<3){
+  if (tag.length()<3){
     std::cout<<"This is not a tag!"<<std::endl;
     return false;
   }
 
   // if tag doesn't begin with <, this is not a tag
-  if(tag.at(0) != '<'){
+  if (tag.at(0) != '<'){
     std::cout<<"Malformed tag (tag doesn't begin with <)!"<<std::endl;
     return false;
   }
 
   // if the second symbol is space - this is malformed tag - name of the tag should go directly after the <
-  if(isspace(tag.at(1))){
+  if (isspace(tag.at(1))){
     std::cout<<"Malformed tag (there should be no white-spaces between < and name-of-tag)!"<<std::endl;
     return false;
   }
 
   // this for checks if there are spaces between / and the closing >
   int countWSp = 0;
-  //TODO: i >= 0 always true, because i is unsigned. Organize while cycle...
-  for (std::string::size_type i = tag.length()-2; i >= 0; --i) {
+  for (std::string::size_type i = tag.length()-2; true /*see break below*/; --i) {
     char c = tag[i];
    
     if (isspace(c)) {
@@ -147,6 +146,7 @@ bool XMLReader::CheckIsTagOK(const std::string& tag)
       }
       break;
     }
+    if (i == 0) break;
   }
 
   
@@ -247,10 +247,8 @@ bool XMLReader::GetAttributes(const std::string& tag, std::vector<Attributes>& o
       bool equalfound - shows if we have found the = symbol after the name
       bool value - shows if we have found or are reading the attribute value
       bool newattr - do we have other attributes to read
-      bool quotes - are we inside quotes
       char lastsymbol - I use it to detect a situation like name = xx"value"
      */
-    bool quotes = false;
     std::string attrtemp;
     bool name = false;
     bool equalfound = false;
@@ -276,7 +274,7 @@ bool XMLReader::GetAttributes(const std::string& tag, std::vector<Attributes>& o
       else if (isspace(c)) continue;
       else if (c == '"') {
 	lastsymbol = '"';
-	if(name && equalfound){ //if name was read and = was found
+	if (name && equalfound){ //if name was read and = was found
 	  if (!value){ // in this case we are starting to read the value of the attribute
 	      value = true;
 	  }
@@ -286,7 +284,7 @@ bool XMLReader::GetAttributes(const std::string& tag, std::vector<Attributes>& o
 	      std::cout<<"Attribute error - missing attribute name!"<<std::endl;
 	      return false;
 	    }
-	    if(attr_value.length() == 0) { // checks if the attribute value is empty
+	    if (attr_value.length() == 0) { // checks if the attribute value is empty
 	      std::cout<<"Attribute error - missing attibute value!"<<std::endl;
 	      return false;
 	    }
@@ -294,8 +292,8 @@ bool XMLReader::GetAttributes(const std::string& tag, std::vector<Attributes>& o
 	    // creates new Attributes object and pushes it back in the vector
 	    // then sets the variables in the initial state - if there are other attributes to be read
             if (attr_name == "proto_pattern") {
-               int pos = attr_value.find_last_of("(");
-
+               //int pos = attr_value.find_last_of("(");
+               printf("NOT IMPLEMENTED YET!\n");
             }
 	    Attributes at(attr_name, attr_value);
 	    out.push_back(at);
@@ -367,13 +365,13 @@ bool XMLReader::Parse(std::ifstream &file, SelectionRules& out)
     std::string tagStr;
 
     bool tagOK = GetNextTag(file, tagStr, lineNum);
-    if(!tagOK){
+    if (!tagOK){
       std::cout<<"Error at line "<<lineNum<<std::endl<<"Bad tag: "<<tagStr<<std::endl;
       out.clearSelectionRules();
       return false;
     }
 
-    if(!tagStr.empty()){
+    if (!tagStr.empty()){
       std::vector<Attributes> attr;
       std::string name;
       ETagNames tagKind = GetNameOfTag(tagStr, name);
@@ -391,7 +389,7 @@ bool XMLReader::Parse(std::ifstream &file, SelectionRules& out)
 	out.clearSelectionRules(); //clear the selection rules up to now
 	return false;
       case kClass: 
-	if(!IsStandaloneTag(tagStr)){ // if the class tag is not standalone, then it has (probably) some child nodes
+	if (!IsStandaloneTag(tagStr)){ // if the class tag is not standalone, then it has (probably) some child nodes
 	  parent = tagStr;
 	}
 	csr = new ClassSelectionRule(); // create new class selection rule
@@ -519,7 +517,7 @@ bool XMLReader::Parse(std::ifstream &file, SelectionRules& out)
 	// DEBUG else std::cout<<"No"<<std::endl;
      
 	// DEBUG std::cout<<"Selected: ";
-	if(!exclusion && !IsClosingTag(tagStr)) { // exclusion should be false, we are not interested in closing tags
+	if (!exclusion && !IsClosingTag(tagStr)) { // exclusion should be false, we are not interested in closing tags
 	  // as well as in key-tags such as <selection> and <lcgdict> 
 	  if (tagKind == kLcgdict || tagKind == kSelection) 
 	    ;// DEBUG std::cout<<"Don't care (don't create sel rule)"<<std::endl;
@@ -546,8 +544,8 @@ bool XMLReader::Parse(std::ifstream &file, SelectionRules& out)
 	}
 
 	// DEBUG std::cout<<"Is child: ";
-	if(!parent.empty()){
-           if(((tagKind == kClass) && parent == tagStr) || tagKind == kEndClass) // if this is the same tag as the parent
+	if (!parent.empty()){
+           if (((tagKind == kClass) && parent == tagStr) || tagKind == kEndClass) // if this is the same tag as the parent
 	    // or it is a closing tag, the tag is not a child
 	    ;// DEBUG std::cout<<"No"<<std::endl;
 	  // else if tagKind is one of the following, it means that we have a missing </class> tag
@@ -571,7 +569,7 @@ bool XMLReader::Parse(std::ifstream &file, SelectionRules& out)
 
 	    if (tagKind == kClass || tagKind == kProperties || tagKind == kEnum || tagKind == kFunction || 
 	       tagKind == kVariable) {
-               if(bsr->hasAttributeWithName(attr[i].name)) {
+               if (bsr->hasAttributeWithName(attr[i].name)) {
                   std::cout<<"Error - duplicating attribute at line "<<lineNum<<std::endl;
                   out.clearSelectionRules();
                   return false;
@@ -638,37 +636,3 @@ bool XMLReader::Parse(std::ifstream &file, SelectionRules& out)
   return true;
 
 }
-
-
-/////////////////////////////////////////////////////////////////////////////////////////
-/*
-int main(){
- 
-  XMLReader xmlr;
-  SelectionRules sr;
-
-  std::ifstream file("sel_test_bad.xml");
-  if(file.is_open()){
-    if(!xmlr.Parse(file, sr)) std::cout<<"Error parsing XML file"<<std::endl;
-    else std::cout<<"XML file successfully parsed"<<std::endl;
-  }
-  sr.printSelectionRules();
-*/
-  /* just a TEST
-  std::list<ClassSelectionRule> csr_list;
-  csr_list = sr.getClassSelectionRules();
-  std::list<ClassSelectionRule>::iterator it = csr_list.begin();
-
-  const attributesList attr_list = it->getAttributes();
-  attributesList::const_iterator cit = attr_list.begin();
-
-  for (; cit != attr_list.end(); ++cit) {
-    std::cout<<cit->first<<" = "<<cit->second<<std::endl;
-  }
-  const std::string value = it->getAttributeValue("name");
-  std::cout<<"value is: "<<value<<std::endl;
-  */
-/*
-  return 0;
-}
-*/
