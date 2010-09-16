@@ -105,7 +105,7 @@ void ClrSend (clang::Decl * D)
 {
    // info ("ClrSend");
 
-   scanner.Scan (Ctx, D);
+   //scanner.Scan (Ctx, D); COMMENTED by Velislava
 
    #ifdef LIST
       ClrListDecl (D);
