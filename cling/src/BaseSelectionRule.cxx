@@ -48,7 +48,6 @@ void BaseSelectionRule::setAttributeValue(const std::string& attributeName, cons
   int pos = attributeName.find("pattern");
   int pos_file = attributeName.find("file_pattern");
  
-  // DEBUG std::cout<<"pattern at pos "<<pos<<std::endl;
   if (pos > -1) {
      if (pos_file > -1) // if we have file_pattern 
         processPattern(attributeValue, file_sub_patterns);
@@ -62,9 +61,9 @@ const attributesList& BaseSelectionRule::getAttributes()
 }
 
 void BaseSelectionRule::printAttributes(int level)
-{
+{ 
   std::string tabs;
-  for (int i=0; i<level; ++i) {
+  for (int i = 0; i < level; ++i) {
     tabs+='\t';
   }
 
@@ -192,14 +191,11 @@ bool BaseSelectionRule::isSelected (const std::string& name, const std::string& 
 
       switch(fIsSelected){
       case kYes: 
-         // DEBUG std::cout<<"\tYes";
          return true;
       case kNo: 
-         // DEBUG std::cout<<"\tNo";
          dontCare = false;
          return false;
       case kDontCare: 
-         // DEBUG std::cout<<"\tDon't care";
          dontCare = true;
          return false;
       default:
@@ -291,7 +287,6 @@ void BaseSelectionRule::processPattern(const std::string& pattern, std::list<std
 
 bool BaseSelectionRule::BeginsWithStar(const std::string& pattern) {
   if (pattern.at(0) == '*') {
-     // DEBUG std::cout<<"Pattern begins with star"<<std::endl;
     return true;
   }
   else {
@@ -301,7 +296,6 @@ bool BaseSelectionRule::BeginsWithStar(const std::string& pattern) {
 
 bool BaseSelectionRule::EndsWithStar(const std::string& pattern) {
   if (pattern.at(pattern.length()-1) == '*') {
-     // DEBUG std::cout<<"Pattern ends with star"<<std::endl;
     return true;
   }
   else {
@@ -325,7 +319,6 @@ bool BaseSelectionRule::CheckPattern(const std::string& test, const std::string&
   pos_end = test.rfind(last);
 
   if (pos_end == -1) { // the last sub-pattern isn't conatained in the test string
-     // DEBUG std::cout<<"No match!"<<std::endl;
     return false;
   }
   if (!end) {  // if the pattern doesn't end with '*', the match has to be complete 
@@ -333,7 +326,6 @@ bool BaseSelectionRule::CheckPattern(const std::string& test, const std::string&
 
      int len = last.length(); // length of last sub-pattern
      if ((pos_end+len) < (int)test.length()) {
-        // DEBUG std::cout<<"No match!"<<std::endl;
         return false;
     }
   }
@@ -350,12 +342,15 @@ bool BaseSelectionRule::CheckPattern(const std::string& test, const std::string&
 
   if (isLinkdef) { // A* selects all global classes, unions, structs but not the nested, i.e. not A::B
                    // A::* selects the nested classes
-     //std::cout<<"Linkdef"<<std::endl;
      int len = (*it).length();
      int pos_colon = test.find("::", pos1+len);
      
      if (pos_colon > -1) {
+
+        #ifdef SELECTION_DEBUG
         std::cout<<"\tNested - don't generate dict (ret false to isSelected)"<<std::endl;
+        #endif
+
         return false;
      }
      

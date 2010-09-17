@@ -12,6 +12,8 @@
 
 /* -------------------------------------------------------------------------- */
 
+//#define DEBUG
+
 #define SHOW_WARNINGS
 // #define SHOW_TEMPLATE_INFO
 
@@ -54,8 +56,6 @@ void ClrStubFunction (void* result, void* obj, const std::vector<void*>& params,
    std::cout << "Calling stub function " << context->index << ", " << context->name << std::endl;
 
    // TO DO: call LLVM function context->func
-
-   // std::cout << "Called stub function " << context->index << ", " << context->name << std::endl;
 }
 
 //______________________________________________________________________________
@@ -1185,18 +1185,17 @@ bool TScanner::VisitRecordDecl(clang::RecordDecl* D)
    
    // in case it is implicit we don't create a builder 
    if(D && D->isImplicit()){
-      //printf("\nDEBUG - Implicit declaration - we don't construct builder, VisitRecordDecl()");
       return true;
    }
-
-   // DEBUG DumpDecl(D, "VisitRecordDecl()");
-
 
    DumpDecl(D, "");
 
    selected = sr.isDeclSelected(D);
    if (selected) {
+
+     #ifdef SELECTION_DEBUG
       std::cout<<"\n\tSelected -> true";
+     #endif
 
       std::string qual_name;
 
@@ -1204,10 +1203,9 @@ bool TScanner::VisitRecordDecl(clang::RecordDecl* D)
          outputFile<<qual_name<<std::endl;
 
       Reflex::ClassBuilder* builder = GetClassBuilder(D); 	//template_parameters has a default value of ""
-					// GetClassBuilder is declared in clr-scan.h
+      // GetClassBuilder is declared in clr-scan.h
       if(builder!=NULL){ // Is it OK?
          fClassBuilders.push(builder);
-         // DEBUG printf("\n\tPush()-ed a class builder; %d elements in the stack", fClassBuilders.size());
 
          // I think this should be left as it is ?
          if (clang::CXXRecordDecl* C = dyn_cast <clang::CXXRecordDecl> (D)) {
@@ -1223,7 +1221,6 @@ bool TScanner::VisitRecordDecl(clang::RecordDecl* D)
                      modifiers |= Reflex::VIRTUAL;
                   
                   builder->AddBase(type, offset, modifiers);
-                  // DEBUG printf("\n\tAddBase()-ed");
                }
          }
          ret = true;
@@ -1233,7 +1230,9 @@ bool TScanner::VisitRecordDecl(clang::RecordDecl* D)
       }
    }
    else {
-      std::cout<<"\n\tSelected -> false";
+      #ifdef SELECTION_DEBUG
+       std::cut<<"\n\tSelected -> false";
+      #endif
    }
    
    // DEBUG if(ret) std::cout<<"\n\tReturning true ...";
@@ -1246,12 +1245,8 @@ bool TScanner::VisitRecordDecl(clang::RecordDecl* D)
 // it uses the EnumerationBuilder from Reflex. 
 bool TScanner::VisitEnumDecl(clang::EnumDecl* D)
 {
-   // DEBUG DumpDecl(D, "VisitEnumDecl()");
    DumpDecl(D, "");
-   //std::string name;
-   //GetDeclName(D, name);
-   //std::cout<<"\n"<<name/*<<" -> "<<D->getDeclKindName()*/;
-
+ 
    bool ret = true;
 
    if(sr.isDeclSelected(D)) {
@@ -1296,13 +1291,14 @@ bool TScanner::VisitEnumDecl(clang::EnumDecl* D)
          
          builder->AddEnum(full_name, items, &typeid(Reflex::UnknownType), modifiers); // typeid is actually
 					// class_name::enum_name, at least according to genreflex output!
-         // DEBUG std::cout<<"\n\tAdded enum "<<full_name<<" with items "<<items<<" to ClassBuilder";
       }
       else{
          Reflex::EnumBuilder* builder =
             new Reflex::EnumBuilder(full_name, typeid(Reflex::UnknownType), modifiers); // typeid is actually
          // ::enum_name, at least according to genreflex output!
-         std::cout<<"\n\tCreated EnumBuilder for "<<full_name;
+         #ifdef SELECTION_DEBUG
+          std::cout<<"\n\tCreated EnumBuilder for "<<full_name;
+         #endif
          if(builder != NULL){ // Is it OK?
             
             builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
@@ -1314,7 +1310,6 @@ bool TScanner::VisitEnumDecl(clang::EnumDecl* D)
                long value = APIntToLong(I->getInitVal());      
                
                builder->AddItem(item_name.c_str (), value);
-               // DEBUG std::cout<<"\n\tAdded item "<<item_name<<" = "<<value;
             }
             ret = true;
          }
@@ -1324,11 +1319,11 @@ bool TScanner::VisitEnumDecl(clang::EnumDecl* D)
       }
    }
    else {
+     #ifdef SELECTION_DEBUG
       std::cout<<"\n\tSelected -> false";
+     #endif
    }
 
-   // DEBUG if (ret) std::cout<<"\n\tReturning true ...";
-   // DEBUG else std::cout<<"\n\tRetaurning false ...";
    return ret;
 }
 
@@ -1339,17 +1334,14 @@ bool TScanner::VisitEnumDecl(clang::EnumDecl* D)
 // and to override the VisitFieldDecl() visitor function
 bool TScanner::VisitVarDecl(clang::VarDecl* D)
 {
-   // DEBUG DumpDecl(D, "VisitVarDecl()");
    DumpDecl(D, "");
-   //std::string name;
-   //GetDeclName(D, name);
-   //std::cout<<"\n"<<name/*<<D->getDeclKindName()*/;
 
    bool ret = true;
 
    if(sr.isDeclSelected(D)){
-      std::cout<<"\n\tSelected -> true";
-
+      #ifdef SELECTION_DEBUG
+       std::cout<<"\n\tSelected -> true";
+      #endif
       std::string qual_name;
 
       if (GetDeclQualName(D, qual_name))
@@ -1370,8 +1362,6 @@ bool TScanner::VisitVarDecl(clang::VarDecl* D)
       try {
          Reflex::VariableBuilder builder =
             Reflex::VariableBuilder(var_name.c_str (), type, offset, modifiers);
-         
-         // DEBUG std::cout<<"\n\tCreated VariableBuilder for "<<var_name;
       
          builder.AddProperty(fgClangDeclKey, ToDeclProp(D));
       } catch (std::exception& e) {
@@ -1382,27 +1372,24 @@ bool TScanner::VisitVarDecl(clang::VarDecl* D)
 
    }
    else {
-      std::cout<<"\n\tSelected -> false";
+      #ifdef SELECTION_DEBUG
+       std::cout<<"\n\tSelected -> false";
+      #endif
    }
-
-   // DEBUG if(ret) printf("\n\tReturning true ...");
-   // DEBUG else printf("\n\tReturning false ...");
 
    return ret;
 }
 
 bool TScanner::VisitFieldDecl(clang::FieldDecl* D)
 {
-   // DEBUG DumpDecl(D, "VisitFieldDecl()");
    DumpDecl(D, "");
-   //std::string name;
-   //GetDeclName(D, name);
-   //std::cout<<"\n"<<name/*<<D->getDeclKindName()*/;
-
+ 
    bool ret = true;
 
    if(sr.isDeclSelected(D)){
-      std::cout<<"\n\tSelected -> true";
+      #ifdef SELECTION_DEBUG
+       std::cout<<"\n\tSelected -> true";
+      #endif
 
       std::string qual_name;
 
@@ -1428,7 +1415,6 @@ bool TScanner::VisitFieldDecl(clang::FieldDecl* D)
          builder->AddDataMember(type, var_name.c_str (), offset, modifiers);
          builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
 
-         // DEBUG std::cout<<"\n\tAdded variable "<<var_name<<" (Qualified name: "<<D->getQualifiedNameAsString()<<")";
       } catch (std::exception& e) {
          ret = false;
          ShowReflexWarning(TString(e.what()) + " ... var member " + var_name, GetLocation(D));
@@ -1436,11 +1422,11 @@ bool TScanner::VisitFieldDecl(clang::FieldDecl* D)
       }
    }
    else {
-      std::cout<<"\n\tSelected -> false";
+      #ifdef SELECTION_DEBUG
+       std::cout<<"\n\tSelected -> false";
+      #endif
    }
 
-   // DEBUG if(ret) printf("\n\tReturning true ...");
-   // DEBUG else printf("\n\tReturning false ...");
    return ret;
 }
 
@@ -1450,16 +1436,14 @@ bool TScanner::VisitFieldDecl(clang::FieldDecl* D)
 // it uses the FunctionBuilder from Reflex
 bool TScanner::VisitFunctionDecl(clang::FunctionDecl* D)
 {
-   // DEBUG DumpDecl(D, "VisitFunctionDecl()");
    DumpDecl(D, "");
-   //std::string name;
-   //GetDeclName(D, name);
-   //std::cout<<"\n"<<name/*<<D->getDeclKindName()*/;
 
    bool ret = true;
 
    if(sr.isDeclSelected(D)){
+      #ifdef SELECTION_DEBUG
       std::cout<<"\n\tSelected -> true";
+      #endif
 
       std::string qual_name;
       std::string prototype;
@@ -1491,8 +1475,9 @@ bool TScanner::VisitFunctionDecl(clang::FunctionDecl* D)
          std::cout<<"Could not cast parent context to parent Decl"<<std::endl;
          return false;
       }
-
+      #ifdef SELECTION_DEBUG
       std::cout<<"\n\tParams are "<<params;
+      #endif
 
       if ((sr.isSelectionXMLFile() && ctx->isRecord()) || (sr.isLinkdefFile() && ctx->isRecord() && sr.isDeclSelected(parent))) {
          //if (ctx->isRecord() && sr.isDeclSelected(parent)){ // Do I need the second part? - Yes - Optimization for Linkdef?
@@ -1504,7 +1489,6 @@ bool TScanner::VisitFunctionDecl(clang::FunctionDecl* D)
             builder->AddProperty(fgClangDeclKey, ToDeclProp(D));
             builder->AddProperty(fgClangFuncKey, ToFuncProp (func_name));
 
-            // DEBUG std::cout<<"\n\tAdded function member "<<name<<" (Qualified name: "<<D->getQualifiedNameAsString()<<")";
             //name = D->getQualifiedNameAsString();
 
          } catch (std::exception& e) {
@@ -1520,8 +1504,9 @@ bool TScanner::VisitFunctionDecl(clang::FunctionDecl* D)
             Reflex::FunctionBuilder builder =
                Reflex::FunctionBuilder(type, name, stub, stub_ctx, params, modifiers);
             
-            //printf("\n\tCreated FunctionBuilder for %s", func_name);
+            #ifdef SELECTION_DEBUG
             std::cout<<"\n\tCreated FunctionBuilder for "<<func_name;
+            #endif
             
             builder.AddProperty(fgClangDeclKey, ToDeclProp(D));
             builder.AddProperty(fgClangFuncKey, ToFuncProp(func_name));
@@ -1534,36 +1519,30 @@ bool TScanner::VisitFunctionDecl(clang::FunctionDecl* D)
       }
    }
    else {
+      #ifdef SELECTION_DEBUG
       std::cout<<"\n\tSelected -> false";
+      #endif
    }
-   // DEBUG if(ret) printf("\n\tReturning true ...");
-   // DEBUG else printf("\n\tReturning false ...");
+
    return ret;
 }
                                                                           
 bool TScanner::TraverseDeclContextHelper(DeclContext *DC)
 {
-   
-   bool ret=true;
-   
- 
+   bool ret = true;
+    
    if (!DC)
      return true;
 
    clang::Decl* D = dyn_cast<clang::Decl>(DC);
    // skip implicit decls
    if (D && D->isImplicit()){
-      // DEBUG printf("\nDEBUG - Implicit declaration in TraverseDeclContextHelper()");
       return true;
    }
 
-   // DEBUG DumpDecl(D, "TraverseDeclContextHelper()");
-
    for (DeclContext::decl_iterator Child = DC->decls_begin(), ChildEnd = DC->decls_end(); 
-        ret && (Child != ChildEnd); ++Child) {
-      
+        ret && (Child != ChildEnd); ++Child) {      
       ret=TraverseDecl(*Child);
-     
    }
  
    RemoveBuilder(DC); 
@@ -1571,19 +1550,20 @@ bool TScanner::TraverseDeclContextHelper(DeclContext *DC)
    
 }
 
-
 void TScanner::RemoveBuilder(clang::DeclContext *DC){
    if(DC->isRecord()){
       clang::Decl *D = dyn_cast<clang::Decl> (DC);
 
       if (sr.isDeclSelected(D)) {
          fClassBuilders.pop();
-         //printf("\nDEBUG - Removing the builder");
+
+         #ifdef SELECTION_DEBUG
          if(getClassName(DC)!=NULL)
 	   printf("\nDEBUG - Removing buider for %s", getClassName(DC));
          else 
             printf("\nDEBUG - removing a builder");
          printf("\n\tWe have %d elements left in the stack", (int) fClassBuilders.size());
+         #endif
       }
    }
 }
@@ -1593,6 +1573,7 @@ const char* TScanner::getClassName(clang::DeclContext* DC){
    TString ret;
    if(N && (N->getIdentifier()!=NULL))
       ret = N->getNameAsString().c_str();
+
    return ret;
 }
 
@@ -1600,13 +1581,16 @@ void TScanner::DumpDecl(clang::Decl* D, const char* msg) {
    std::string name;
    
    if (!D) {
+      #ifdef SELECTION_DEBUG
       printf("\nDEBUG - DECL is NULL: %s", msg);
+      #endif
       return;
    }
 
    GetDeclName(D, name);
-      
+   #ifdef SELECTION_DEBUG
    std::cout<<"\n\n"<<name<<" -> "<<D->getDeclKindName()<<": "<<msg;
+   #endif
 }
 
 //______________________________________________________________________________
@@ -1635,8 +1619,6 @@ bool TScanner::GetDeclName(clang::Decl* D, std::string& name)
 
 bool TScanner::GetDeclQualName(clang::Decl* D, std::string& qual_name)
 {
-
-
    clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
 
    if (N) {
@@ -1689,26 +1671,32 @@ void TScanner::Scan(clang::ASTContext* C, clang::Decl* D,
                     const std::string& selectionFileName)
 {
    fCtx = C;
+
+   #ifdef SELECTION_DEBUG
    printf("\nDEBUG from Velislava - into the Scan() function!!!\n");
+   #endif
 
    XMLReader xmlr;
    LinkdefReader ldefr;
-
    bool deep = false;
 
-   std::cout<<"selectionFileName = "<<selectionFileName<<std::endl;
-   int pos = selectionFileName.find("xml");
-   //std::cout<<"pos = "<<pos<<std::endl;
+   TString filename(selectionFileName);
 
+   #ifdef SELECTION_DEBUG
+   std::cout<<"filename = "<<filename.Data()<<std::endl;
+   #endif
+
+   //int pos = selectionFileName.find("xml");
 
    // This check could (and should) be performed in rootcling.cxx (if --deep - a flag should be set)
-   if (pos > -1)
+   std::cout<<"Printing pos value "<<filename.Data()<<"\n"<<kSelectionXMLFile<<kLinkdefFile;
+   if (filename.EndsWith(".xml", TString::kIgnoreCase))
       sr.setSelectionFileType(kSelectionXMLFile);
    else {
-      pos = selectionFileName.find("linkdef.h");
-      if (pos > -1)
+      //      pos = selectionFileName.find("linkdef.h");
+      if (filename.CompareTo("linkdef.h", TString::kIgnoreCase))
          sr.setSelectionFileType(kLinkdefFile);
-      else if (selectionFileName == "--deep") {
+      else if (filename.Data() == "--deep") {
          sr.setDeep(true);
          deep = true;
          std::cout<<"Deep set"<<std::endl;
@@ -1719,7 +1707,7 @@ void TScanner::Scan(clang::ASTContext* C, clang::Decl* D,
    }
 
    if (!deep) {
-      std::ifstream file(selectionFileName.c_str());
+      std::ifstream file(filename.Data());
       if(file.is_open()){
          
          if (sr.isSelectionXMLFile()) {
@@ -1756,7 +1744,10 @@ void TScanner::Scan(clang::ASTContext* C, clang::Decl* D,
       outputFileName = "testreflex_dict.out";
    }
    
-   sr.printSelectionRules();
+   #ifdef SELECTION_DEBUG
+     sr.printSelectionRules();
+   #endif
+
    if (sr.getHasFileNameRule())
       std::cout<<"File name detected"<<std::endl;
    
@@ -1769,7 +1760,9 @@ void TScanner::Scan(clang::ASTContext* C, clang::Decl* D,
       TraverseDecl(D);
       
       if (!sr.areAllSelectionRulesUsed()) {
+         #ifdef SELECTION_DEBUG
          std::cout<<"\nDEBUG - unused sel rules"<<std::endl;
+         #endif
       }
    }
 

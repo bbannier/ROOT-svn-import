@@ -312,7 +312,7 @@ std::string WriteStubFunctions (const std::string& inputFileName,
    std::ostringstream stream;
    stream << generator;
    std::string source = stream.str();
-
+   
    std::cout << source;
 
    return source;

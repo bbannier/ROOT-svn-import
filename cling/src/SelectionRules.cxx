@@ -286,8 +286,6 @@ bool SelectionRules::isDeclSelected(clang::Decl *D)
    kind = D->getDeclKindName();
 
    getDeclName(D, str_name, qual_name);
-      
-   //DEBUG std::cout<<"\nTESTING - Decl "<<str_name<<" (qual_name: "<<qual_name<<") of kind "<<kind;
    
    if (kind == "CXXRecord") { // structs, unions and classes are all CXXRecords
       return isClassSelected(D, qual_name);
@@ -420,7 +418,6 @@ bool SelectionRules::isParentClass(clang::Decl* D)
    clang::DeclContext *ctx = D->getDeclContext();
 
    if (ctx->isRecord()){
-      //DEBUG std::cout<<"\n\tDeclContext is Record";
       clang::Decl *parent = dyn_cast<clang::Decl> (ctx);
       if (!parent) {
          return false;
@@ -453,7 +450,6 @@ bool SelectionRules::isParentClass(clang::Decl* D, std::string& parent_name, std
    clang::DeclContext *ctx = D->getDeclContext();
 
    if (ctx->isRecord()){
-      //DEBUG std::cout<<"\n\tDeclContext is Record";
       clang::Decl *parent = dyn_cast<clang::Decl> (ctx);
       if (!parent) {
          return false;
@@ -553,8 +549,6 @@ bool SelectionRules::isClassSelected(clang::Decl* D, const std::string& qual_nam
          std::string file_name;
          if (getHasFileNameRule()){
 	   if (!GetDeclSourceFileName(D, file_name)){
-               // DEBUG   std::cout<<"Warning - can't obtain source file name "<<std::endl;
-               // DEBUG else std::cout<<"Source file name: "<<file_name<<std::endl;
 	   }
          }
          int fYes = 0;
@@ -590,18 +584,19 @@ bool SelectionRules::isClassSelected(clang::Decl* D, const std::string& qual_nam
                      if (pattern_value != "*" && pattern_value != "*::*") explicit_Yes = true;
                   }
                }
-               //else std::cout<<"\tYes returned"<<std::endl;
             }
             else if (!noName && !dontC) { // = kNo (noName = false <=> we have named rule for this class)
                // dontC = false <=> we are not in the exclusion part (for genreflex)
-
-               // DEBUG std::cout<<"\tisSelected() returned false and !noName and !DontC"<<std::endl;
 
                if (!isLinkdefFile()) {
                   // in genreflex - we could explicitly select classes from other source files
                   if (file) ++fFileNo; // if we have veto because of class defined in other source file -> implicit No
                   else {
+
+                     #ifdef SELECTION_DEBUG
                      std::cout<<"\tNo returned"<<std::endl;
+                     #endif
+
                      return false; // explicit No returned
                   }
                }
@@ -616,21 +611,32 @@ bool SelectionRules::isClassSelected(clang::Decl* D, const std::string& qual_nam
                   return false;
             }
             else if (dontC && !(it->hasMethodSelectionRules()) && !(it->hasFieldSelectionRules())) {
-               // DEBUG std::cout<<"\tisSelected() returned false and dontC and it has no field and method rules"<<std::endl;
+               
+               #ifdef SELECTION_DEBUG
                std::cout<<"Empty dontC returned = No"<<std::endl;
+               #endif
+
                return false;
             }
          }  
          if (isLinkdefFile()) {
             // for rootcint explicit (name) Yes is stronger than implicit (pattern) No which is stronger than implicit (pattern) Yes
+
+            #ifdef SELECTION_DEBUG
             std::cout<<"\n\tfYes = "<<fYes<<", fImplNo = "<<fImplNo<<std::endl;
+            #endif
+
             if (explicit_Yes) return true;
             else if (fImplNo > 0) return false;
             else return true;
          }
          else {                                 
             // for genreflex explicit Yes is stronger than implicit file No
+            
+            #ifdef SELECTION_DEBUG
             std::cout<<"\n\tfYes = "<<fYes<<", fFileNo = "<<fFileNo<<std::endl;
+            #endif
+
             if (fYes > 0) 
                return true;
             else 
@@ -662,7 +668,9 @@ bool SelectionRules::isVarFunEnumSelected(clang::Decl* D, const std::string& kin
    else if (kind == "Function") {
       getFunctionPrototype(D, prototype);
       prototype = qual_name + prototype;
+      #ifdef SELECTION_DEBUG
       std::cout<<"\tIn isVarFunEnumSelected()"<<prototype<<std::endl;
+      #endif
       it = fFunctionSelectionRules.begin();
       it_end = fFunctionSelectionRules.end();
    }
@@ -673,8 +681,11 @@ bool SelectionRules::isVarFunEnumSelected(clang::Decl* D, const std::string& kin
 
    std::string file_name;
    if (getHasFileNameRule()){
-      if (GetDeclSourceFileName(D, file_name))
+      if (GetDeclSourceFileName(D, file_name)){
+         #ifdef SELECTION_DEBUG
          std::cout<<"\tSource file name: "<<file_name<<std::endl;
+         #endif
+      }
    }
    
    int fYes = 0;
@@ -691,15 +702,12 @@ bool SelectionRules::isVarFunEnumSelected(clang::Decl* D, const std::string& kin
       if (selected) {
          ++fYes;
       }
-      //if (it->isSelected(qual_name, d, n)) ++fYes;
       else if (!n) {
          return false;
       }
    }
-   // DEBUG std::cout<<"\n\tfYes = "<<fYes;
 
       if (fYes == 0) {
-         //DEBUG std::cout<<" (fNo = "<<fNo<<" fYes = "<<fYes<<") Returning false";
          return false;
       }
       else return true;
@@ -775,14 +783,17 @@ bool SelectionRules::isLinkdefVarFunEnumSelected(clang::Decl* D, const std::stri
    }
 
    if (isLinkdefFile()) {
+
+      #ifdef SELECTION_DEBUG
       std::cout<<"\n\tfYes = "<<fYes<<", fImplNo = "<<fImplNo<<std::endl;
+      #endif
+
       if (explicit_Yes) return true;
       else if (fImplNo > 0) return false;
       else return true;
    }
    else{
       if (fYes == 0) {
-         //DEBUG std::cout<<" (fNo = "<<fNo<<" fYes = "<<fYes<<") Returning false";
          return false;
       }
       else return true;
@@ -811,7 +822,10 @@ bool SelectionRules::isLinkdefMethodSelected(clang::Decl* D, const std::string& 
 
    getFunctionPrototype(D, prototype);
    prototype = qual_name + prototype;
+
+   #ifdef SELECTION_DEBUG
    std::cout<<"\tFunction prototype = "<<prototype<<std::endl;
+   #endif
 
    int expl_Yes = 0, impl_r_Yes = 0, impl_rr_Yes = 0;
    int impl_r_No = 0, impl_rr_No = 0;
@@ -832,7 +846,11 @@ bool SelectionRules::isLinkdefMethodSelected(clang::Decl* D, const std::string& 
                explicit_r = true;
                if (selected) ++expl_Yes;
                else {
+
+                  #ifdef SELECTION_DEBUG
                   std::cout<<"\tExplicit rule kNo found"<<std::endl;
+                  #endif
+
                   return false; // == explicit kNo
                   
                }
@@ -850,22 +868,38 @@ bool SelectionRules::isLinkdefMethodSelected(clang::Decl* D, const std::string& 
                if (pat_value == par_pat) {
                   implicit_rr = true;
                   if (selected) {
+
+                     #ifdef SELECTION_DEBUG
                      std::cout<<"Implicit_rr rule ("<<pat_value<<"), selected = "<<selected<<std::endl;
+                     #endif
+
                      ++impl_rr_Yes;
                   }
                   else {
+
+                     #ifdef SELECTION_DEBUG
                      std::cout<<"Implicit_rr rule ("<<pat_value<<"), selected = "<<selected<<std::endl;
+                     #endif
+
                      ++impl_rr_No;
                   }
                }
                else {
                   implicit_r = true;
                   if (selected) {
+
+                     #ifdef SELECTION_DEBUG
                      std::cout<<"Implicit_r rule ("<<pat_value<<"), selected = "<<selected<<std::endl;
-                     ++impl_r_Yes;
+                     #endif
+
+                    ++impl_r_Yes;
                   }
                   else {
+
+                     #ifdef SELECTION_DEBUG
                      std::cout<<"Implicit_r rule ("<<pat_value<<"), selected = "<<selected<<std::endl;
+                     #endif
+
                      ++impl_r_No;
                   }
                }
@@ -874,31 +908,54 @@ bool SelectionRules::isLinkdefMethodSelected(clang::Decl* D, const std::string& 
       } 
    }
    if (explicit_r /*&& expl_Yes > 0*/){
+
+      #ifdef SELECTION_DEBUG
       std::cout<<"\tExplicit rule kYes found"<<std::endl;
+      #endif
+
       return true; // if we have excplicit kYes
    }
    else if (implicit_rr) {
       if (impl_rr_No > 0) {
+
+         #ifdef SELECTION_DEBUG
          std::cout<<"\tImplicit_rr rule kNo found"<<std::endl;
+         #endif
+
          return false;
       }
       else {
+         
+         #ifdef SELECTION_DEBUG
          std::cout<<"\tImplicit_rr rule kYes found"<<std::endl;
+         #endif
+
          return true;
       }
    }
    else if (implicit_r) {
       if (impl_r_No > 0) {
+         
+         #ifdef SELECTION_DEBUG
          std::cout<<"\tImplicit_r rule kNo found"<<std::endl;
+         #endif
+
          return false;
       }
       else {
+         
+         #ifdef SELECTION_DEBUG
          std::cout<<"\tImplicit_r rule kYes found"<<std::endl;
+         #endif
+
          return true;
       }
    }
    else {
+
+      #ifdef SELECTION_DEBUG
       std::cout<<"\tChecking parent class rules"<<std::endl;
+      #endif
       // check parent
 
       
@@ -952,17 +1009,31 @@ bool SelectionRules::isLinkdefMethodSelected(clang::Decl* D, const std::string& 
          }
       }
 
+      #ifdef SELECTION_DEBUG
       std::cout<<"\n\tfYes = "<<fYes<<", fImplNo = "<<fImplNo<<std::endl;
+      #endif
+
       if (explicit_Yes) {
+
+         #ifdef SELECTION_DEBUG
          std::cout<<"\tReturning Yes"<<std::endl;
+         #endif
+
          return true;
       }
       else if (fImplNo > 0) {
+         #ifdef SELECTION_DEBUG
          std::cout<<"\tReturning No"<<std::endl;
+         #endif
+
          return false;
       }
       else {
+
+         #ifdef SELECTION_DEBUG
          std::cout<<"\tReturning Yes"<<std::endl;
+         #endif
+
          return true;
       }
    }
@@ -1016,7 +1087,11 @@ bool SelectionRules::isMemberSelected(clang::Decl* D, const std::string& kind, c
                if (!isLinkdefFile()) {
                   if (file) ++fFileNo;
                   else {
+
+                     #ifdef SELECTION_DEBUG
                      std::cout<<"\tNo returned"<<std::endl;
+                     #endif
+
                      return false; // in genreflex we can't have that situation
                   }
                }
@@ -1034,7 +1109,11 @@ bool SelectionRules::isMemberSelected(clang::Decl* D, const std::string& kind, c
             }
             else if (dontC ) { // == kDontCare - we check the method and field selection rules for the class
                if (!it->hasMethodSelectionRules() && !it->hasFieldSelectionRules()) {
+
+                  #ifdef SELECTION_DEBUG
                   std::cout<<"\tNo fields and methods"<<std::endl;
+                  #endif
+
                   return false; // == kNo
                }
                else {
@@ -1050,7 +1129,11 @@ bool SelectionRules::isMemberSelected(clang::Decl* D, const std::string& kind, c
                      else {
       			getFunctionPrototype(D, prototype);
                         prototype = str_name + prototype;
+
+                        #ifdef SELECTION_DEBUG
                         std::cout<<"\tIn isMemberSelected (DC)"<<std::endl;
+                        #endif
+
                         members = it->getMethodSelectionRules();
                      }
                      mem_it = members.begin();
@@ -1066,17 +1149,32 @@ bool SelectionRules::isMemberSelected(clang::Decl* D, const std::string& kind, c
          }  
                   
          if (isLinkdefFile()) {
+
+            #ifdef SELECTION_DEBUG
             std::cout<<"\n\tfYes = "<<fYes<<", fImplNo = "<<fImplNo<<std::endl;
+            #endif
+
             if (explicit_Yes) {
+               #ifdef SELECTION_DEBUG
                std::cout<<"\tReturning Yes"<<std::endl;
+               #endif
+
                return true;
             }
             else if (fImplNo > 0) {
+
+               #ifdef SELECTION_DEBUG
                std::cout<<"\tReturning No"<<std::endl;
+               #endif
+
                return false;
             }
             else {
+
+               #ifdef SELECTION_DEBUG
                std::cout<<"\tReturning Yes"<<std::endl;
+               #endif
+
                return true;
             }
          }
