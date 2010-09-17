@@ -218,8 +218,7 @@ namespace TMVA {
 
       template<typename T>
       inline void ReadAttr( void* node, const char* , T& value );
-
-      inline void ReadAttr( void* node, const char* attrname, TString& value );
+      void ReadAttr( void* node, const char* attrname, TString& value );
 
       template<typename T>
       void        AddAttr     ( void* node, const char* , const T& value, Int_t precision = 16 );
@@ -247,17 +246,10 @@ template<typename T>
 void TMVA::Tools::ReadAttr( void* node, const char* attrname, T& value ) 
 {
    // add attribute from xml
-   const char* val = xmlengine().GetAttr(node, attrname);
-   std::stringstream s(val);
+   TString val;
+   ReadAttr( node, attrname, val );
+   std::stringstream s(val.Data());
    s >> value;
-}
-
-//_______________________________________________________________________
-void TMVA::Tools::ReadAttr( void* node, const char* attrname, TString& value ) 
-{
-   // add attribute from xml
-   const char* val = xmlengine().GetAttr(node, attrname);
-   value = TString(val);
 }
 
 //_______________________________________________________________________

@@ -156,6 +156,7 @@ void TMVA::Node::ReadXML( void* node,  UInt_t tmva_Version_Code )
 {
    // read attributes from XML
    ReadAttributes(node, tmva_Version_Code);
+
    const char* content = gTools().xmlengine().GetNodeContent(node);
    if (content) {
       std::stringstream s(content);
