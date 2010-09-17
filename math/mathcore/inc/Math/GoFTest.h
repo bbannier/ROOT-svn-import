@@ -52,7 +52,7 @@ public:
    
    /* Sets the user input distribution. To use with the template construtor to change the distribution parameter*/
    template<class Dist>
-   void SetDistribution(const Dist& dist, Bool_t isPDF = kTRUE) {
+   void SetDistribution(Dist& dist, Bool_t isPDF = kTRUE) {
       ROOT::Math::WrappedFunction<Dist&> wcdf(dist); 
       SetProbabilityFunction(wcdf, isPDF);
    }
@@ -65,7 +65,7 @@ public:
   
    /* Templated constructor for using only with 1-sample tests with a user specified distribution */  
    template<class Dist>
-   GoFTest(const Double_t* sample, UInt_t sampleSize, const Dist& dist, EUserDistribution userDist = kPDF) {
+   GoFTest(const Double_t* sample, UInt_t sampleSize, Dist& dist, EUserDistribution userDist = kPDF) {
       Instantiate(sample, sampleSize);
       SetDistribution(dist, userDist);
    }
