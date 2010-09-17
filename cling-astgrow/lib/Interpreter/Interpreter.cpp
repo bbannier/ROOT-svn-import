@@ -28,12 +28,13 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
-#include "clang/Sema/ParseAST.h"
+#include "clang/Parse/ParseAST.h"
 #include "clang/Sema/SemaConsumer.h"
-#include "../../clang/lib/Sema/Sema.h"
+//#include "../../clang/lib/Sema/Sema.h"
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Assembly/PrintModulePass.h"
+#include "llvm/Constants.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JIT.h"
@@ -161,6 +162,7 @@ void locate_cling_executable()
 {
 }
 
+#if 0
 //
 // MacroDetector
 //
@@ -338,6 +340,8 @@ MacroDetector::FileChanged(clang::SourceLocation Loc, clang::PPCallbacks::FileCh
    }
 }
 
+#endif // 0
+
 //
 //  Interpreter
 //
@@ -472,7 +476,7 @@ Interpreter::analyzeInput(const std::string& contextSource,
    //CI->createASTContext();
    CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
       PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-      PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
+      PP.getSelectorTable(), PP.getBuiltinInfo(), 0));
 
    CI->setASTConsumer(maybeGenerateASTPrinter());
    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
@@ -735,7 +739,7 @@ Interpreter::makeModuleFromCommandLine(const std::string& input_line, bool& have
    src += "void __cling_internal() {\n";
    src += "#define __CLING__MAIN_FILE_MARKER __cling__prompt\n";
    src += input_line;
-   src += "#undef __CLING__MAIN_FILE_MARKER\n";
+   src += "\n#undef __CLING__MAIN_FILE_MARKER\n";
    src += "\n} // end __cling_internal()\n";
    //fprintf(stderr, "input_line:\n%s\n", src.c_str());
    std::string wrapped;
@@ -873,7 +877,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped, bool
             //
             //  Handle a variable declarator.
             //
-            std::string decl = VD->getNameAsCString();
+            std::string decl = VD->getNameAsString();
             // FIXME: Probably should not remove the qualifiers!
             VD->getType().getUnqualifiedType().
             getAsStringInternal(decl, clang::PrintingPolicy(LO));
@@ -896,7 +900,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped, bool
             //
             //  Handle variable declarators with a constant initializer.
             //
-            if (I->isConstantInitializer(CI->getASTContext())) {
+            if (I->isConstantInitializer(CI->getASTContext(), false)) {
                //fprintf(stderr, "var decl, init is const.\n");
                std::pair<unsigned, unsigned> r = getStmtRange(I, SM, LO);
                wrapped_globals.append(decl + " = " +
@@ -925,7 +929,7 @@ Interpreter::createWrappedSrc(const std::string& src, std::string& wrapped, bool
             for (unsigned j = 0; j < numInits; ++j) {
                std::string stmt;
                llvm::raw_string_ostream stm(stmt);
-               stm << VD->getNameAsCString() << "[" << j << "] = ";
+               stm << VD->getNameAsString() << "[" << j << "] = ";
                std::pair<unsigned, unsigned> r =
                   getStmtRange(ILE->getInit(j), SM, LO);
                stm << src.substr(r.first, r.second - r.first) << ";\n";
@@ -987,7 +991,7 @@ Interpreter::createStatementList(const std::string& srcCode,
    //CI->createASTContext();
    CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
       PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-      PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0));
+      PP.getSelectorTable(), PP.getBuiltinInfo(), 0));
    // Create an ASTConsumer for this frontend run which
    // will produce a list of statements seen.
    StmtSplitter splitter(stmts);
@@ -1051,8 +1055,9 @@ Interpreter::createCI(const char* llvmdir /*=0*/)
       //  Buffer the error messages while we process
       //  the compiler options.
       //
-      clang::TextDiagnosticBuffer DiagsBuffer;
-      clang::Diagnostic Diags(&DiagsBuffer);
+      clang::TextDiagnosticBuffer *DiagsBuffer = new clang::TextDiagnosticBuffer();
+      // Diags takes ownership of DiagsBuffer
+      clang::Diagnostic Diags(DiagsBuffer);
       clang::CompilerInvocation::CreateFromArgs(CI->getInvocation(),
             fake_argv + 1, fake_argv + fake_argc, Diags);
       if (
@@ -1094,7 +1099,7 @@ Interpreter::createCI(const char* llvmdir /*=0*/)
          return 0;
       }
       // Output the buffered error messages now.
-      DiagsBuffer.FlushDiagnostics(CI->getDiagnostics());
+      DiagsBuffer->FlushDiagnostics(CI->getDiagnostics());
       if (CI->getDiagnostics().getNumErrors()) {
          CI->takeLLVMContext();
          delete CI;
@@ -1236,7 +1241,7 @@ Interpreter::compileString(const std::string& srcCode)
       CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
       clang::ASTContext *Ctx = new clang::ASTContext(CI->getLangOpts(),
          PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
-         PP.getSelectorTable(), PP.getBuiltinInfo(), false, 0);
+         PP.getSelectorTable(), PP.getBuiltinInfo(), 0);
       CI->setASTContext(Ctx);
       CI->setASTConsumer(maybeGenerateASTPrinter());
       Consumer = &CI->getASTConsumer();
@@ -1406,7 +1411,38 @@ Interpreter::executeCommandLine()
    //
    //  Run global initialization.
    //
-   m_engine->runStaticConstructorsDestructors(false);
+   
+   // incremental version of m_engine->runStaticConstructorsDestructors(false);
+
+   for (unsigned m = m_posInitGlobals.first, e = m_engine->modules_size(); m != e; ++m) {
+      const llvm::Module* module = m_engine->modules_at(m);
+      llvm::GlobalVariable *GV = module->getNamedGlobal("llvm.global_ctors");
+      llvm::ConstantArray *InitList = dyn_cast<llvm::ConstantArray>(GV->getInitializer());
+      m_posInitGlobals.first = m;
+      if (!InitList) continue;
+      for (unsigned i = m_posInitGlobals.second, e = InitList->getNumOperands(); i != e; ++i) {
+         m_posInitGlobals.second = 0;
+         if (llvm::ConstantStruct *CS = 
+             dyn_cast<llvm::ConstantStruct>(InitList->getOperand(i))) {
+            if (CS->getNumOperands() != 2) return; // Not array of 2-element structs.
+
+            llvm::Constant *FP = CS->getOperand(1);
+            if (FP->isNullValue())
+               break;  // Found a null terminator, exit.
+   
+            if (llvm::ConstantExpr *CE = dyn_cast<llvm::ConstantExpr>(FP))
+               if (CE->isCast())
+                  FP = CE->getOperand(0);
+            if (llvm::Function *F = dyn_cast<llvm::Function>(FP)) {
+               // Execute the ctor/dtor function!
+               m_engine->runFunction(F, std::vector<llvm::GenericValue>());
+            }
+         }
+         m_posInitGlobals.second = i + 1;
+      }
+   }
+   
+
    //
    //  Run the function __cling_internal().
    //
