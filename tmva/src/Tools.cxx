@@ -1021,6 +1021,10 @@ Bool_t TMVA::Tools::HasAttr( void* node, const char* attrname )
 void TMVA::Tools::ReadAttr( void* node, const char* attrname, TString& value )
 {
    // add attribute from xml
+   if(!HasAttr(node, attrname)) {
+      const char * nodename = xmlengine().GetNodeName(node);
+      Log() << kFATAL << "Trying to read non-existing attribute '" << attrname << "' from xml node '" << nodename << "'" << Endl;
+   }
    const char* val = xmlengine().GetAttr(node, attrname);
    value = TString(val);
 }
