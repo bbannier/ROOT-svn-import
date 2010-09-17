@@ -7,6 +7,7 @@
 #ifndef CLING_COMPILER_H
 #define CLING_COMPILER_H
 
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/System/Path.h"
 
 #include <string>
@@ -73,6 +74,11 @@ public:
       return prev;
    }
 
+   void installLazyFunctionCreator(void* (*fp)(const std::string&))
+   {
+      m_engine->InstallLazyFunctionCreator(fp);
+   }
+
    clang::CompilerInstance* getCI();
    clang::CompilerInstance* getASTCI();
 
@@ -84,6 +90,7 @@ private:
    llvm::Module* m_prev_module; // We do *not* own, m_engine owns it.
    unsigned long long m_numCallWrappers; // number of generated call wrappers
    bool m_printAST; // whether to print the AST to be processed
+   std::pair<unsigned,unsigned> m_posInitGlobals; // position (module idx, global idx) of next global to be initialized in m_ASTCI's AST
 
 private:
 
