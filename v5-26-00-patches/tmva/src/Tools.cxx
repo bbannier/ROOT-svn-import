@@ -1006,6 +1006,19 @@ void TMVA::Tools::ReadFloatArbitraryPrecision( Float_t& val, istream& is )
 }
 
 //_______________________________________________________________________
+void TMVA::Tools::ReadAttr( void* node, const char* attrname, TString& value ) 
+{
+   // add attribute from xml
+   if(!xmlengine().HasAttr(node, attrname)) {
+      const char * nodename = xmlengine().GetNodeName(node);
+      Log() << kFATAL << "Trying to read non-existing attribute '" << attrname << "' from xml node '" << nodename << "'" << Endl;
+   }
+   const char* val = xmlengine().GetAttr(node, attrname);
+   value = TString(val);
+}
+
+
+//_______________________________________________________________________
 void* TMVA::Tools::AddChild( void* parent, const char* childname, const char* content ) {
    return gTools().xmlengine().NewChild(parent, 0, childname, content);
 }

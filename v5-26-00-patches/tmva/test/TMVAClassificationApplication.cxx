@@ -32,50 +32,50 @@ int main( int argc, char** argv )
    // default MVA methods to be trained + tested
    std::map<std::string,int> Use;
 
-   Use["CutsGA"]          = 0; // other "Cuts" methods work identically
+   Use["CutsGA"]          = 1; // other "Cuts" methods work identically
    // ---
-   Use["Likelihood"]      = 0;
-   Use["LikelihoodD"]     = 0; // the "D" extension indicates decorrelated input variables (see option strings)
+   Use["Likelihood"]      = 1;
+   Use["LikelihoodD"]     = 1; // the "D" extension indicates decorrelated input variables (see option strings)
    Use["LikelihoodPCA"]   = 0; // the "PCA" extension indicates PCA-transformed input variables (see option strings)
    Use["LikelihoodKDE"]   = 0;
    Use["LikelihoodMIX"]   = 0;
    // ---
-   Use["PDERS"]           = 0;
+   Use["PDERS"]           = 1;
    Use["PDERSD"]          = 0;
    Use["PDERSPCA"]        = 0;
    Use["PDERSkNN"]        = 0; // depreciated until further notice
-   Use["PDEFoam"]         = 0;
+   Use["PDEFoam"]         = 1;
    // --
-   Use["KNN"]             = 0;
+   Use["KNN"]             = 1;
    // ---
    Use["HMatrix"]         = 0;
-   Use["Fisher"]          = 0;
+   Use["Fisher"]          = 1;
    Use["FisherG"]         = 0;
    Use["BoostedFisher"]   = 0;
-   Use["LD"]              = 0;
+   Use["LD"]              = 1;
    // ---
    Use["FDA_GA"]          = 0;
    Use["FDA_SA"]          = 0;
    Use["FDA_MC"]          = 0;
-   Use["FDA_MT"]          = 0;
+   Use["FDA_MT"]          = 1;
    Use["FDA_GAMT"]        = 0;
    Use["FDA_MCMT"]        = 0;
    // ---
-   Use["MLP"]             = 0; // this is the recommended ANN
+   Use["MLP"]             = 1; // this is the recommended ANN
    Use["MLPBFGS"]         = 0; // recommended ANN with optional training method
    Use["CFMlpANN"]        = 0; // *** missing
    Use["TMlpANN"]         = 0; 
    // ---
-   Use["SVM"]             = 0;
+   Use["SVM"]             = 1;
    // ---
-   Use["BDT"]             = 0;
+   Use["BDT"]             = 1;
    Use["BDTD"]            = 0;
-   Use["BDTG"]            = 0;
+   Use["BDTG"]            = 1;
    Use["BDTB"]            = 0;
    // ---
    Use["RuleFit"]         = 0;
    // ---
-   Use["Category"]        = 1;
+   Use["Category"]        = 0;
    // ---
    Use["Plugin"]          = 0;
    // ---------------------------------------------------------------
