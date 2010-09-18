@@ -182,6 +182,8 @@ void TMVA::MethodMLP::DeclareOptions()
 		    "Use regulator to avoid over-training");   //zjh
    DeclareOptionRef(fUpdateLimit=10, "UpdateLimit",
 		    "Number of updates for regulator before stop training");   //zjh
+   DeclareOptionRef(fCalculateErrors=kFALSE, "CalculateErrors",
+		    "Calculates inverse Hessian matrix at the end of the training to be able to calculate the uncertainties of an MVA value");   //zjh
 }
 
 //_______________________________________________________________________
@@ -363,9 +365,13 @@ void TMVA::MethodMLP::Train(Int_t nEpochs)
       UpdateRegulators();
       Log()<<kINFO<<"Done with handling of Regulator terms"<<Endl;
    }
-   Int_t numSynapses=fSynapses->GetEntriesFast();
-   fInvHessian.ResizeTo(numSynapses,numSynapses);
-   GetApproxInvHessian( fInvHessian ,false);
+
+   if( fCalculateErrors || fUseRegulator )
+   {
+      Int_t numSynapses=fSynapses->GetEntriesFast();
+      fInvHessian.ResizeTo(numSynapses,numSynapses);
+      GetApproxInvHessian( fInvHessian ,false);
+   }
 }
 
 //______________________________________________________________________________

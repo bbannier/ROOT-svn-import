@@ -631,7 +631,7 @@ const std::vector<Float_t> &TMVA::MethodANNBase::GetMulticlassValues()
    TObjArray* inputLayer = (TObjArray*)fNetwork->At(0);
 
    const Event * ev = GetEvent();
-
+    
    for (UInt_t i = 0; i < GetNvar(); i++) {
       neuron = (TNeuron*)inputLayer->At(i);
       neuron->ForceValue( ev->GetValue(i) );
@@ -729,15 +729,9 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
    vector<Int_t>* layout = new vector<Int_t>();
 
    void* xmlLayout = NULL;
-   try{
-      xmlLayout = gTools().GetChild(wghtnode, "Layout");
-   } catch( std::logic_error& ) {
+   xmlLayout = gTools().GetChild(wghtnode, "Layout");
+   if( !xmlLayout )
       xmlLayout = wghtnode;
-   }
-   if( !xmlLayout ){
-      Log() << kFATAL << "xml node if layout is empty" << Endl;
-   }
-   
 
    UInt_t nLayers;
    gTools().ReadAttr( xmlLayout, "NLayers", nLayers );
@@ -790,15 +784,10 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
 
 
    void* xmlInvHessian = NULL;
-   try{
-      xmlInvHessian = gTools().GetChild(wghtnode, "InverseHessian");
-   } catch ( std::logic_error& ){
+   xmlInvHessian = gTools().GetChild(wghtnode, "InverseHessian");
+   if( !xmlInvHessian )
       // no inverse hessian available
       return;  // ------------------ return from subroutine
-   }
-   if( !xmlInvHessian ){
-      Log() << kINFO << "xml node of inverse hessian is empty" << Endl;
-   }
 
    fUseRegulator = kTRUE;
 
