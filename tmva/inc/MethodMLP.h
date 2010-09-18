@@ -181,6 +181,7 @@ namespace TMVA {
 
       // general
       bool               fUseRegulator;         // zjh
+      bool               fCalculateErrors;
       Double_t           fPrior;                // zjh
       std::vector<Double_t> fPriorDev;          // zjh
       void               GetApproxInvHessian ( TMatrixD& InvHessian, bool regulate=true );   //rank-1 approximation, neglect 2nd derivatives. //zjh
