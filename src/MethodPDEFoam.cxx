@@ -736,7 +736,10 @@ void TMVA::MethodPDEFoam::AddWeightsXMLTo( void* parent ) const
    gTools().AddAttr( wght, "EvPerBin",        fEvPerBin );
    gTools().AddAttr( wght, "Compress",        fCompress );
    gTools().AddAttr( wght, "DoRegression",    DoRegression() );
+   gTools().AddAttr( wght, "CutNmin",         fNmin>0 );
    gTools().AddAttr( wght, "Nmin",            fNmin );
+   gTools().AddAttr( wght, "CutRMSmin",       false );
+   gTools().AddAttr( wght, "RMSmin",          0.0 );
    gTools().AddAttr( wght, "Kernel",          KernelToUInt(fKernel) );
    gTools().AddAttr( wght, "TargetSelection", TargetSelectionToUInt(fTargetSelection) );
    gTools().AddAttr( wght, "FillFoamWithOrigWeights", fFillFoamWithOrigWeights );
@@ -807,7 +810,12 @@ void  TMVA::MethodPDEFoam::ReadWeightsFromStream( istream& istr )
    istr >> regr;                            // regression foam
    SetAnalysisType( (regr ? Types::kRegression : Types::kClassification ) );
    
+   Bool_t CutNmin, CutRMSmin; // dummy for backwards compatib.
+   Float_t RMSmin;            // dummy for backwards compatib.
+   istr >> CutNmin;                         // cut on minimal number of events in cell
    istr >> fNmin;
+   istr >> CutRMSmin;                       // cut on minimal RMS in cell
+   istr >> RMSmin;
 
    UInt_t ker = 0;
    istr >> ker;                             // used kernel for GetMvaValue()
@@ -858,15 +866,23 @@ void TMVA::MethodPDEFoam::ReadWeightsFromXML( void* wghtnode )
    Bool_t regr;
    gTools().ReadAttr( wghtnode, "DoRegression",    regr );
    SetAnalysisType( (regr ? Types::kRegression : Types::kClassification ) );
+   Bool_t CutNmin; // dummy for backwards compatib.
+   gTools().ReadAttr( wghtnode, "CutNmin",         CutNmin );
    gTools().ReadAttr( wghtnode, "Nmin",            fNmin );
+   Bool_t CutRMSmin; // dummy for backwards compatib.
+   Float_t RMSmin;   // dummy for backwards compatib.
+   gTools().ReadAttr( wghtnode, "CutRMSmin",       CutRMSmin );
+   gTools().ReadAttr( wghtnode, "RMSmin",          RMSmin );
    UInt_t ker = 0;
    gTools().ReadAttr( wghtnode, "Kernel",          ker );
    fKernel = UIntToKernel(ker);
    UInt_t ts = 0;
    gTools().ReadAttr( wghtnode, "TargetSelection", ts );
    fTargetSelection = UIntToTargetSelection(ts);
-   gTools().ReadAttr( wghtnode, "FillFoamWithOrigWeights", fFillFoamWithOrigWeights );
-   gTools().ReadAttr( wghtnode, "UseYesNoCell",    fUseYesNoCell );
+   if (gTools().HasAttr(wghtnode, "FillFoamWithOrigWeights"))
+      gTools().ReadAttr( wghtnode, "FillFoamWithOrigWeights", fFillFoamWithOrigWeights );
+   if (gTools().HasAttr(wghtnode, "UseYesNoCell"))
+      gTools().ReadAttr( wghtnode, "UseYesNoCell", fUseYesNoCell );
    
    // clear old range [Xmin, Xmax] and prepare new range for reading
    fXmin.clear();
