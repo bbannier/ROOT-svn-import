@@ -305,7 +305,7 @@ namespace TMVA {
       // ---------- Foam projection methods
 
       // project foam to two-dimensional histogram
-      TH2D* Project2(Int_t idim1, Int_t idim2, const char *opt="nev", 
+      TH2D* Project2(Int_t idim1, Int_t idim2, const char *opt="cell_value", 
                      const char *ker="kNone", UInt_t maxbins=50);
 
       // helper function for Project2()
