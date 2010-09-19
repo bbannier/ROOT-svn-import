@@ -1367,12 +1367,15 @@ void TMVA::MethodMLP::GetApproxInvHessian(TMatrixD& InvHessian, bool regulate)  
 }
 
 // zjh =>_______________________________________________________________________
-Double_t TMVA::MethodMLP::GetMvaValues( Double_t& errUpper, Double_t& errLower ) //zjh
+Double_t TMVA::MethodMLP::GetMvaValueAsymError( Double_t& errUpper, Double_t& errLower ) //zjh
 {
 	Double_t MvaValue,MvaUpper,MvaLower,median,variance;
 	MvaValue=GetMvaValue();// contains back propagation
 	if (fInvHessian.GetNcols()==0) {
-	   Log() << kFATAL << "no inverse hessian matrix available. GetMvaValues( Double_t& errUpper, Double_t& errLower ) cannot be used." << Endl;
+	   Log() << kDEBUG << "no inverse hessian matrix available. Uncertainties given in GetMvaValues( Double_t& errUpper, Double_t& errLower ) cannot be used." << Endl;
+	   errUpper = 0.f;
+	   errLower = 0.f;
+	   return MvaValue;
 	}
 	Int_t numSynapses=fSynapses->GetEntriesFast();
 	if (fInvHessian.GetNcols()!=numSynapses) {

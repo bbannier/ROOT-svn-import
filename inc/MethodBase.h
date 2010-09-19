@@ -147,7 +147,7 @@ namespace TMVA {
       virtual Double_t GetMvaValue( Double_t* err = 0 ) = 0;
 
       //zjh=>
-      virtual Double_t GetMvaValues( Double_t& errUpper, Double_t& errLower)
+      virtual Double_t GetMvaValueAsymError( Double_t& errUpper, Double_t& errLower)
 		  {Double_t mva=GetMvaValue(&errUpper); errLower=errUpper;return mva;}
       //<=zjh
 
