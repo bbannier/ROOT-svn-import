@@ -111,7 +111,8 @@ namespace TMVA {
       enum ETrainingMethod { kBP=0, kBFGS, kGA };
       enum EBPTrainingMode { kSequential=0, kBatch };
 
-      Double_t GetMvaValues( Double_t& errUpper, Double_t& errLower );          //zjh
+      bool     HasInverseHessian() { return fCalculateErrors; }
+      Double_t GetMvaValueAsymError( Double_t& errUpper, Double_t& errLower );          //zjh
 
    protected:
 
@@ -181,7 +182,7 @@ namespace TMVA {
 
       // general
       bool               fUseRegulator;         // zjh
-      bool               fCalculateErrors;
+      bool               fCalculateErrors;      // compute inverse hessian matrix at the end of the training
       Double_t           fPrior;                // zjh
       std::vector<Double_t> fPriorDev;          // zjh
       void               GetApproxInvHessian ( TMatrixD& InvHessian, bool regulate=true );   //rank-1 approximation, neglect 2nd derivatives. //zjh
