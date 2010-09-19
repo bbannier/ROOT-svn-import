@@ -286,19 +286,20 @@ Bool_t TMVA::DecisionTreeNode::ReadDataRecord( istream& is, UInt_t tmva_Version_
    this->SetSelector((UInt_t)ivar);
    this->SetCutValue(cutVal);
    this->SetCutType(cutType);
-   this->SetNSigEvents(nsig);
-   this->SetNBkgEvents(nbkg);
-   this->SetNEvents(nEv);
-   this->SetNSigEvents_unweighted(nsig_unweighted);
-   this->SetNBkgEvents_unweighted(nbkg_unweighted);
-   this->SetNEvents_unweighted(nEv_unweighted);
-   this->SetSeparationIndex(separationIndex);
-   this->SetSeparationGain(separationGain);
-   this->SetNodeType(nodeType);
-   this->SetPurity();
-   this->SetResponse(response);
-   this->SetCC(cc);
-
+   if (fTrainInfo){
+      this->SetNSigEvents(nsig);
+      this->SetNBkgEvents(nbkg);
+      this->SetNEvents(nEv);
+      this->SetNSigEvents_unweighted(nsig_unweighted);
+      this->SetNBkgEvents_unweighted(nbkg_unweighted);
+      this->SetNEvents_unweighted(nEv_unweighted);
+      this->SetSeparationIndex(separationIndex);
+      this->SetSeparationGain(separationGain);
+      this->SetNodeType(nodeType);
+      this->SetPurity();
+      this->SetResponse(response);
+      this->SetCC(cc);
+   }
    return kTRUE;
 }
 
