@@ -10,8 +10,7 @@
 #include "Math/QuantFuncMathCore.h"
 #include "Math/RichardsonDerivator.h"
 
-#include "TKDE.h"//debugging
-#define disp(var) std::cout << #var << ": " << var << std::endl
+#include "TKDE.h"
 
 
 ClassImp(TKDE)
@@ -309,7 +308,7 @@ void TKDE::SetNBins(UInt_t nbins) {
    }
    fNBins = nbins;
    fWeightSize = fNBins / (fXMax - fXMin);
-   SetBinCentreData();
+   SetBinCentreData(fXMin, fXMax);
    SetBinCountData();
    SetKernel();
 }
@@ -333,7 +332,7 @@ void TKDE::SetData(const Double_t* data) {
    SetSigma(midspread);
    if (fUseBins) {
       fWeightSize = fNBins / (fXMax - fXMin);
-      SetBinCentreData();
+      SetBinCentreData(fXMin, fXMax);
       SetBinCountData();
    } else {
       fWeightSize = fNEvents / (fXMax - fXMin);
@@ -346,23 +345,26 @@ void TKDE::SetData(const Double_t* data) {
    
 void TKDE::SetMirroredEvents() {
    // Mirrors the data
-   UInt_t n = fData.size();
+   std::vector<Double_t> originalEvents = fEvents;
    if (fMirrorLeft) {
-      fData.resize(2 * n, 0.0);
-      transform(fEvents.begin(), fEvents.end(), fData.begin() + fNEvents, std::bind1st(std::minus<Double_t>(), 2 * fXMin));
+      fEvents.resize(2 * fNEvents, 0.0);
+      transform(fEvents.begin(), fEvents.begin() + fNEvents, fEvents.begin() + fNEvents, std::bind1st(std::minus<Double_t>(), 2 * fXMin));
    }
    if (fMirrorRight) {
-      fData.resize((fMirrorLeft + 2) * n, 0.0);
-      transform(fEvents.begin(), fEvents.end(), fData.begin() + 2 * fNEvents, std::bind1st(std::minus<Double_t>(), 2 * fXMax));
+      fEvents.resize((fMirrorLeft + 2) * fNEvents, 0.0);
+      transform(fEvents.begin(), fEvents.begin() + fNEvents, fEvents.begin() + (fMirrorLeft + 1) * fNEvents, std::bind1st(std::minus<Double_t>(), 2 * fXMax));
    }
    fNEvents *= (fMirrorLeft + fMirrorRight + 1);
    if(fUseBins) {
       fNBins *= (fMirrorLeft + fMirrorRight + 1);
-      fBinCount.assign(fNBins, 0);
-      for (UInt_t i = 0; i < fNEvents; ++i) {
-         fBinCount[Index(fData[i])]++; 
-      }
+      Double_t xmin = fMirrorLeft  ? 2 * fXMin - fXMax : fXMin;
+      Double_t xmax = fMirrorRight ? 2 * fXMax - fXMin : fXMax;
+      SetBinCentreData(xmin, xmax);
+      SetBinCountData();
+   } else {
+      fData = fEvents;
    }
+   fEvents = originalEvents;
 }
 
 void TKDE::SetMean() {
@@ -523,12 +525,12 @@ UInt_t TKDE::TKernel::GetNumberOfWeights() const {
    return fNWeights;
 }
       
-void TKDE::SetBinCentreData() {
+void TKDE::SetBinCentreData(Double_t xmin, Double_t xmax) {
    // Returns the bins' centres from the data for using with the binned option
    fData.assign(fNBins, 0.0);
-   Double_t binWidth((fXMax - fXMin) / fNBins);
+   Double_t binWidth((xmax - xmin) / fNBins);
    for (UInt_t i = 0; i < fNBins; ++i) {
-      fData[i] = fXMin + i * binWidth + 0.5 * binWidth;
+      fData[i] = xmin + (i + 0.5) * binWidth;
    }
 }
 
@@ -587,12 +589,12 @@ Double_t TKDE::TKernel::operator()(Double_t x) const {
 UInt_t TKDE::Index(Double_t x) const {
    // Returns the indices (bins) for the binned weights  
    Int_t bin = Int_t((x - fXMin) * fWeightSize);
-   if (fUseMirroring) {
+   if (fUseMirroring && (fMirrorLeft || !fMirrorRight)) {
       bin += fData.size() / (fMirrorLeft + fMirrorRight + 1);
    }
-   if (bin > (Int_t)fData.size()) {
-      return (Int_t)fData.size();
-   } else if (bin < 0) {
+   if (bin >= (Int_t)fData.size()) {
+      return (Int_t)(fData.size()) - 1;
+   } else if (bin <= 0) {
       return 0;
    }
    return bin;
