@@ -23,7 +23,7 @@
    Kernel Density Estimation class. The three main references are (1) "Scott DW, Multivariate Density Estimation. Theory, Practice and Visualization. New York: Wiley", (2) "Jann Ben - ETH Zurich, Switzerland -, Univariate kernel density estimation document for KDENS: Stata module for univariate kernel density estimation." and (3) "Hardle W, Muller M, Sperlich S, Werwatz A, Nonparametric and Semiparametric Models. Springer."
    The algorithm is briefly described in (4) "Cranmer KS, Kernel Estimation in High-Energy
    Physics. Computer Physics Communications 136:198-207,2001" - e-Print Archive: hep ex/0011057.
-   TODO: on hold-> A binned version is also implemented to address the performance issue due to its data
+   A binned version is also implemented to address the performance issue due to its data
    size dependance.
 */
 class TKDE : public TNamed  {
@@ -62,11 +62,11 @@ public:
    };
    
    template<class KernelFunction>
-   TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 0.0, Double_t xMax = 0.0, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0) {
-      Instantiate(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc), events, data, xMin, xMax, iter, mir, bin, rho);
+   TKDE(const KernelFunction& kernfunc, UInt_t events, const Double_t* data, Double_t xMin = 0.0, Double_t xMax = 0.0, Option_t* option = "KernelType:UserDefined;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", Double_t rho = 1.0) {
+      Instantiate(new ROOT::Math::WrappedFunction<const KernelFunction&>(kernfunc), events, data, xMin, xMax, option, rho);
    }
-      
-   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 0.0, Double_t xMax = 0.0, EKernelType kern = kGaussian, EIteration iter = kAdaptive, EMirror mir = kNoMirror, EBinning bin = kRelaxedBinning, Double_t rho = 1.0 );
+   
+   TKDE(UInt_t events, const Double_t* data, Double_t xMin = 0.0, Double_t xMax = 0.0, Option_t* option = "KernelType:Gaussian;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", Double_t rho = 1.0);
    
    virtual ~TKDE();
    
@@ -75,7 +75,7 @@ public:
    void SetIteration(EIteration iter);
    void SetMirror(EMirror mir);
    void SetBinning(EBinning);
-   void SetNBins(UInt_t nBins);
+   void SetNBins(UInt_t nbins);
    void SetUseBinsNEvents(UInt_t nEvents);
    void SetRange(Double_t xMin, Double_t xMax); // By default computed from the data
    
@@ -110,7 +110,8 @@ private:
    
    TKernel* fKernel;
    
-   std::vector<Double_t> fData; // Data events
+   std::vector<Double_t> fData;   // Data events
+   std::vector<Double_t> fEvents; // Original data storage
    
    TF1* fPDF;             // Output Kernel Density Estimation PDF function
    TF1* fUpperPDF;        // Output Kernel Density Estimation upper confidence interval PDF function
@@ -145,10 +146,12 @@ private:
    
    std::vector<UInt_t> fBinCount; // Number of events per bin for binned data option
    
+   std::vector<Bool_t> fSettedOptions; // User input options flag
+   
    struct KernelIntegrand;
    friend struct KernelIntegrand;
    
-   void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, EIteration iter, EMirror mir, EBinning bin, Double_t rho);
+   void Instantiate(KernelFunction_Ptr kernfunc, UInt_t events, const Double_t* data, Double_t xMin, Double_t xMax, Option_t* option, Double_t rho);
    
    inline Double_t GaussianKernel(Double_t x) const {
       // Returns the kernel evaluation at x 
@@ -173,12 +176,12 @@ private:
    Double_t ComputeKernelSigma2() const;
    Double_t ComputeKernelMu() const;
    Double_t ComputeKernelIntegral() const;
-   Double_t ComputeMidspread(const Double_t* data, UInt_t dataSize) const;
+   Double_t ComputeMidspread() ;
    
    UInt_t Index(Double_t x) const;
    
    void SetBinCentreData();
-   void SetBinCountData(const Double_t* data);
+   void SetBinCountData();
    void CheckKernelValidity();
    void SetCanonicalBandwidth(); 
    void SetKernelSigma2(); 
@@ -187,18 +190,16 @@ private:
    void SetHistogram();
    void SetUseBins();
    void SetMirror();
-   void SetMean(const Double_t* data, UInt_t dataSize);
-   void SetSigma(const Double_t* data, UInt_t dataSize, Double_t R);
+   void SetMean();
+   void SetSigma(Double_t R);
    void SetKernel();
    void SetKernelFunction(KernelFunction_Ptr kernfunc = 0);
-   void SetOptions(EKernelType kern, EIteration iter, EMirror mir, EBinning bin, Double_t rho, Bool_t isUserDefinedKernel = kFALSE);
+   void SetOptions(Option_t* option, Double_t rho);
+   void CheckOptions(Bool_t isUserDefinedKernel = kFALSE);
+   void GetOptions(std::string optionType, std::string option);
+   void AssureOptions();
    void SetData(const Double_t* data);
-   void SetMirroredData();
-   
-   inline void SetData(Double_t x, UInt_t i) { //TODO: to delete
-      // Set data point at the i-th data vector position
-      fData[i] = x;
-   }
+   void SetMirroredEvents();
       
    TH1D* GetKDEHistogram(UInt_t nbins, Double_t xMin, Double_t xMax);
    
