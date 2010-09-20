@@ -383,7 +383,7 @@ void TKDE::SetKernel() {
    UInt_t n = fData.size();
    //Optimal bandwidth (Silverman's rule of thumb with assumed Gaussian density) :
    Double_t weight(fCanonicalBandwidths[kGaussian] * fSigma * std::pow(3. / (8. * std::sqrt(PI)) * n, -0.2)); 
-   weight *= fCanonicalBandwidths[fKernelType] / fCanonicalBandwidths[kGaussian];
+   weight *= fRho * fCanonicalBandwidths[fKernelType] / fCanonicalBandwidths[kGaussian];
    fKernel = new TKernel(weight, this);
    if (fIteration == kAdaptive) {
       fKernel->ComputeAdaptiveWeights();
@@ -512,8 +512,8 @@ void TKDE::TKernel::ComputeAdaptiveWeights() {
       *weight = std::max(*weight /= std::sqrt(f), minWeight);
       fKDE->fAdaptiveBandwidthFactor += std::log(f);
    }
-   fKDE->fAdaptiveBandwidthFactor = std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size())); 
-   transform(weights.begin(), weights.end(), fWeights.begin(), std::bind2nd(std::multiplies<Double_t>(), fKDE->fRho * fKDE->fAdaptiveBandwidthFactor));
+   fKDE->fAdaptiveBandwidthFactor = fKDE->fUseMirroring ? 0.288 : std::sqrt(std::exp(fKDE->fAdaptiveBandwidthFactor / fKDE->fData.size())); 
+   transform(weights.begin(), weights.end(), fWeights.begin(), std::bind2nd(std::multiplies<Double_t>(), fKDE->fAdaptiveBandwidthFactor));
  }
 
 Double_t TKDE::TKernel::GetWeight(Double_t x) const {
