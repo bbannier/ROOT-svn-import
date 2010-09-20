@@ -67,8 +67,9 @@ class ROOTTestCmd(ShellCommand):
     description = ["running roottest"]
     descriptionDone = ["roottest"]
 
-    def __init__(self, workdir=None, **kwargs):
-        ShellCommand.__init__(self, workdir, **kwargs)
+    def __init__(self, command, workdir=None, **kwargs):
+        kwargs['timeout'] = None;
+        ShellCommand.__init__(self, workdir = workdir, command = command, **kwargs)
         self.makere      = re.compile(r'make\[\d+\]: \*\*\* \[([^]]+)')
         self.ignoreoutre = re.compile(r'^(Known failures:)|(Warning [A-Za-z])|(ROOT .* does not support)')
         self.ignoreerrre = re.compile(r'^Target `test. not remade because of errors\.')
@@ -285,8 +286,8 @@ class ROOTMailNotifier(MailNotifier):
             return # ignore
 
         # roottest on Windows is unreliable, silence it for now:
-        if 'Windows' in name and 'roottest' in name:
-            return
+        #if 'Windows' in name and 'roottest' in name:
+        #    return
 
         if build.getSourceStamp() and build.getSourceStamp().revision:
             revision = build.getSourceStamp().revision
@@ -410,7 +411,8 @@ class ROOTMailNotifier(MailNotifier):
 
     def changeAsHTML(self, c):
         cd = c.asDict();
-        t = 'Changed by: <b>' + cd['who'] + '</b><br/>'
+        t = '<br/>'
+        t += 'Changed by: <b>' + cd['who'] + '</b><br/>'
         t += 'Changed at: <b>' + cd['at'] + '</b><br/>'
         t += 'Revision: <b>' + cd['revision'] + '</b><br/>'
         t += 'Category: <b>' + cd['category'] + '</b><br/>'
