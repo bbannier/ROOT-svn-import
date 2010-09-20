@@ -180,7 +180,7 @@ private:
    
    UInt_t Index(Double_t x) const;
    
-   void SetBinCentreData();
+   void SetBinCentreData(Double_t xmin, Double_t xmax);
    void SetBinCountData();
    void CheckKernelValidity();
    void SetCanonicalBandwidth(); 
