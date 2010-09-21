@@ -538,7 +538,8 @@ void TKDE::SetBinCountData() {
    // Returns the bins' count from the data for using with the binned option
    fBinCount.assign(fNBins, 0);
    for (UInt_t i = 0; i < fNEvents; ++i) {
-      fBinCount[Index(fEvents[i])]++; 
+      if (fEvents[i] >= fXMin && fEvents[i] < fXMax) 
+         fBinCount[Index(fEvents[i])]++; 
    }
 }
 
@@ -594,7 +595,6 @@ UInt_t TKDE::Index(Double_t x) const {
       bin += fData.size() / (fMirrorLeft + fMirrorRight + 1);
    }
    if (bin > (Int_t)fData.size()) {
-      if (fUseBins) return 0;
       return (Int_t)(fData.size()) - 1;
    } else if (bin <= 0) {
       return 0;
