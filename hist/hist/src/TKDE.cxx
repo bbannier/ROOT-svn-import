@@ -117,7 +117,7 @@ void TKDE::GetOptions(std::string optionType, std::string option) {
       } else if (option.compare("cosinearch") == 0) {
          fKernelType = kUserDefined;
       } else {
-         this->Warning("TKDE::GetOptions", "Unknown kernel type option: setting to Gaussian");
+         this->Warning("GetOptions", "Unknown kernel type option: setting to Gaussian");
          fKernelType = kGaussian;
       }
    } else if (optionType.compare("iteration") == 0) {
@@ -127,7 +127,7 @@ void TKDE::GetOptions(std::string optionType, std::string option) {
       } else if (option.compare("fixed") == 0) {
          fIteration = kFixed;  
       } else {
-         this->Warning("TKDE::GetOptions", "Unknown iteration option: setting to Adaptive");
+         this->Warning("GetOptions", "Unknown iteration option: setting to Adaptive");
          fIteration = kAdaptive;
       }
    } else if (optionType.compare("mirror") == 0) {
@@ -151,7 +151,7 @@ void TKDE::GetOptions(std::string optionType, std::string option) {
       } else if (option.compare("mirrorasymboth") == 0) {
          fMirror = kMirrorAsymBoth;
       } else {
-         this->Warning("TKDE::GetOptions", "Unknown mirror option: setting to NoMirror");
+         this->Warning("GetOptions", "Unknown mirror option: setting to NoMirror");
          fMirror = kNoMirror;
       }
    } else if (optionType.compare("binning") == 0) {
@@ -163,7 +163,7 @@ void TKDE::GetOptions(std::string optionType, std::string option) {
       } else if (option.compare("forcedbinning") == 0) {
          fBinning = kForcedBinning;
       } else {
-         this->Warning("TKDE::GetOptions", "Unknown binning option: setting to RelaxedBinning");
+         this->Warning("GetOptions", "Unknown binning option: setting to RelaxedBinning");
          fBinning = kRelaxedBinning;
       }
    }
@@ -187,28 +187,28 @@ void TKDE::AssureOptions() {
 void TKDE::CheckOptions( Bool_t isUserDefinedKernel) {
    // Sets User global options
    if (!(isUserDefinedKernel) && !(fKernelType >= kGaussian && fKernelType < kUserDefined)) {
-      this->Error("TKDE::CheckOptions", "Illegal user kernel type input! Use template constructor for user defined kernel.");
+      this->Error("CheckOptions", "Illegal user kernel type input! Use template constructor for user defined kernel.");
       exit(EXIT_FAILURE);
    }
    if (fIteration != kAdaptive && fIteration != kFixed) {
-      this->Error("TKDE::CheckOptions", "Illegal user iteration type input!");
+      this->Error("CheckOptions", "Illegal user iteration type input!");
       exit(EXIT_FAILURE);
    }
    if (!(fMirror >= kNoMirror && fMirror <= kMirrorAsymBoth)) {
-      this->Error("TKDE::CheckOptions", "Illegal user mirroring type input!");
+      this->Error("CheckOptions", "Illegal user mirroring type input!");
       exit(EXIT_FAILURE);
    }
    SetMirror();
    if (!(fBinning >= kUnbinned && fBinning <= kForcedBinning)) {
-      this->Error("TKDE::CheckOptions", "Illegal user binning type input!");
+      this->Error("CheckOptions", "Illegal user binning type input!");
       exit(EXIT_FAILURE);
    }
    SetUseBins();
       if (fNBins >= fNEvents) {
-         this->Warning("TKDE::CheckOptions", "Default number of bins is greater or equal to number of events. Use SetNBins(UInt_t) to setthe appropriate number of bins");
+         this->Warning("CheckOptions", "Default number of bins is greater or equal to number of events. Use SetNBins(UInt_t) to set the appropriate number of bins");
    }
    if (fRho <= 0.0) {
-      MATH_ERROR_MSG("TKDE::CheckOptions", "rho cannot be non-positive!" << std::endl);
+      MATH_ERROR_MSG("CheckOptions", "rho cannot be non-positive!" << std::endl);
       exit(EXIT_FAILURE);
    }
 }
@@ -303,7 +303,7 @@ void TKDE::SetUseBins() {
 void TKDE::SetNBins(UInt_t nbins) {
    // Sets User option for number of bins
    if (!nbins) {
-      this->Error("TKDE::SetNBins", "Number of bins must be greater than zero.");
+      this->Error("SetNBins", "Number of bins must be greater than zero.");
       return;
    }
    fNBins = nbins;
@@ -415,7 +415,7 @@ void TKDE::SetKernelFunction(KernelFunction_Ptr kernfunc) {
             SetKernelSigma2();
             SetKernel();
          } else {
-            MATH_ERROR_MSG("TKDE::SetKernelFunction", "Undefined user kernel function input!" << std::endl);
+            MATH_ERROR_MSG("SetKernelFunction", "Undefined user kernel function input!" << std::endl);
             exit(EXIT_FAILURE);
          }
    }
@@ -445,7 +445,7 @@ TH1D* TKDE::GetHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
 void TKDE::SetRange(Double_t xMin, Double_t xMax) {
    // Sets minimum range value and maximum range value
    if (xMin >= xMax) {
-      MATH_ERROR_MSG("TKDE::SetRange", "Minimum range cannot be bigger or equal than the maximum range! Present range values remain the same." << std::endl);
+      MATH_ERROR_MSG("SetRange", "Minimum range cannot be bigger or equal than the maximum range! Present range values remain the same." << std::endl);
       return;
    }
    fXMin = xMin;
@@ -476,7 +476,7 @@ TF1* TKDE::GetApproximateBias() {
 void TKDE::Fill(Double_t data) {
    // Fills data member with User input data event for the unbinned option
    if (fUseBins) {
-      this->Warning("TKDE::Fill", "Cannot fill data with data binned option. Data input ignored.");
+      this->Warning("Fill", "Cannot fill data with data binned option. Data input ignored.");
       return;
    }
    fData.push_back(data);
@@ -545,7 +545,7 @@ void TKDE::SetBinCountData() {
 Double_t TKDE::GetFixedWeight() const {
    Double_t result = -1.;
    if (fIteration == TKDE::kAdaptive) {
-      this->Warning("TKDE::GetFixedWeight()", "Fixed iteration option not ennabled. Returning %f.", result);
+      this->Warning("GetFixedWeight()", "Fixed iteration option not ennabled. Returning %f.", result);
    } else {
       result = fKernel->GetFixedWeight();
    }
@@ -555,7 +555,7 @@ Double_t TKDE::GetFixedWeight() const {
 std::vector<Double_t> TKDE::GetAdaptiveWeights() const {
    std::vector<Double_t> result(fData.size(), -1.);
    if (fIteration == TKDE::kAdaptive) {
-      this->Warning("TKDE::GetFixedWeight()", "Adaptive iteration option not ennabled. Returning %f vector.", result[0]);
+      this->Warning("GetFixedWeight()", "Adaptive iteration option not ennabled. Returning %f vector.", result[0]);
    } else {
       result = fKernel->GetAdaptiveWeights();
    }
@@ -640,20 +640,20 @@ void TKDE::CheckKernelValidity() {
    Double_t unity = ComputeKernelIntegral();
    valid = valid && unity == 1.;
    if (!valid) {
-      MATH_ERROR_MSG("TKDE::CheckKernelValidity", "Kernel's integral is " << unity << std::endl);
+      MATH_ERROR_MSG("CheckKernelValidity", "Kernel's integral is " << unity << std::endl);
    }
    Double_t mu = ComputeKernelMu();
    valid = valid && mu == 0.;
    if (!valid) {
-      MATH_ERROR_MSG("TKDE::CheckKernelValidity", "Kernel's mu is " << mu << std::endl);
+      MATH_ERROR_MSG("CheckKernelValidity", "Kernel's mu is " << mu << std::endl);
    }
    Double_t sigma2 = ComputeKernelSigma2();
    valid = valid && sigma2 > 0 && sigma2 != std::numeric_limits<Double_t>::infinity();
    if (!valid) {
-      MATH_ERROR_MSG("TKDE::CheckKernelValidity", "Kernel's sigma2 is " << sigma2 << std::endl);
+      MATH_ERROR_MSG("CheckKernelValidity", "Kernel's sigma2 is " << sigma2 << std::endl);
    }
    if (!valid) {
-      MATH_ERROR_MSG("TKDE::CheckKernelValidity", "Validation conditions: the kernel's integral must be 1, the kernel's mu must be zero and the kernel's sigma2 must be finite positive to be a suitable kernel." << std::endl);
+      MATH_ERROR_MSG("CheckKernelValidity", "Validation conditions: the kernel's integral must be 1, the kernel's mu must be zero and the kernel's sigma2 must be finite positive to be a suitable kernel." << std::endl);
       exit(EXIT_FAILURE);
    }
 }
