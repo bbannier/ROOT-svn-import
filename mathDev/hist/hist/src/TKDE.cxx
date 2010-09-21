@@ -589,10 +589,12 @@ Double_t TKDE::TKernel::operator()(Double_t x) const {
 UInt_t TKDE::Index(Double_t x) const {
    // Returns the indices (bins) for the binned weights  
    Int_t bin = Int_t((x - fXMin) * fWeightSize);
+   if (bin == (Int_t)fData.size()) return --bin;
    if (fUseMirroring && (fMirrorLeft || !fMirrorRight)) {
       bin += fData.size() / (fMirrorLeft + fMirrorRight + 1);
    }
-   if (bin >= (Int_t)fData.size()) {
+   if (bin > (Int_t)fData.size()) {
+      if (fUseBins) return 0;
       return (Int_t)(fData.size()) - 1;
    } else if (bin <= 0) {
       return 0;
