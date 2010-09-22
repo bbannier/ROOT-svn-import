@@ -385,6 +385,7 @@ void TMVA::MethodBDT::Init( void )
    fPruneMethodS   = "NoPruning";
    fPruneMethod    = DecisionTree::kCostComplexityPruning;
    fPruneStrength  = 0;
+   fAutomatic      = kFALSE;
    fFValidationEvents = 0.5;
    fRandomisedTrees = kFALSE;
    fUseNvars        =  (GetNvar()>12) ? UInt_t(GetNvar()/8) : TMath::Max(UInt_t(2),UInt_t(GetNvar()/3));
