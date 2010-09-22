@@ -10,6 +10,7 @@
 #pragma link C++ namespace TMVA;
 
 // other classes
+#pragma link C++ class TMVA::TPrincipalWeighted+;
 #pragma link C++ class TMVA::TSpline2+;
 #pragma link C++ class TMVA::TSpline1+;
 #pragma link C++ class TMVA::PDF+;
