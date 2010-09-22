@@ -8,7 +8,7 @@
 #define CLING_COMPILER_H
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/System/Path.h"
+#include "llvm/ADT/OwningPtr.h"
 
 #include <string>
 #include <vector>
@@ -36,17 +36,15 @@ class Stmt;
 
 namespace cling {
 
+class CIBuilder;
+class ExecutionContext;
+
 //---------------------------------------------------------------------------
 //! Class for managing many translation units supporting automatic
 //! forward declarations and linking
 //---------------------------------------------------------------------------
 class Interpreter {
 public:
-
-   //---------------------------------------------------------------------
-   //! Mark the type of statement found in the command line
-   //---------------------------------------------------------------------
-   enum InputType { Incomplete, TopLevel, Stmt };
 
    //---------------------------------------------------------------------
    //! Constructor
@@ -58,15 +56,14 @@ public:
    //---------------------------------------------------------------------
    virtual ~Interpreter();
 
-   InputType analyzeInput(const std::string& contextSource,
-                          const std::string& line,
-                          int& indentLevel,
-                          std::vector<clang::FunctionDecl*> *fds);
+   int processLine(const std::string& input_line);
 
-   void processLine(const std::string& input_line);
    int loadFile(const std::string& filename,
-                const std::string* trailcode = 0);
+                const std::string* trailcode = 0,
+                bool allowSharedLib = true);
+
    int executeFile(const std::string& filename);
+
 
    bool setPrintAST(bool print = true) {
       bool prev = m_printAST;
@@ -74,54 +71,31 @@ public:
       return prev;
    }
 
-   void installLazyFunctionCreator(void* (*fp)(const std::string&))
-   {
-      m_engine->InstallLazyFunctionCreator(fp);
-   }
-
-   clang::CompilerInstance* getCI();
-   clang::CompilerInstance* getASTCI();
+   clang::CompilerInstance* getCI() const { return m_CI.get(); }
+   clang::CompilerInstance* createCI();
+   CIBuilder& getCIBuilder() const { return *m_CIBuilder.get(); }
 
 private:
-   llvm::LLVMContext* m_llvm_context; // We own, our types.
-   clang::CompilerInstance* m_CI; // We own, our compiler instance.
-   clang::CompilerInstance* m_ASTCI; // We own, our compiler instance for growing AST.
-   llvm::ExecutionEngine* m_engine; // We own, our JIT.
-   llvm::Module* m_prev_module; // We do *not* own, m_engine owns it.
+   llvm::OwningPtr<cling::CIBuilder> m_CIBuilder; // our compiler intsance builder
+   llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
+   llvm::OwningPtr<ExecutionContext> m_ExecutionContext; // compiler instance.
    unsigned long long m_numCallWrappers; // number of generated call wrappers
    bool m_printAST; // whether to print the AST to be processed
-   std::pair<unsigned,unsigned> m_posInitGlobals; // position (module idx, global idx) of next global to be initialized in m_ASTCI's AST
 
 private:
 
-   int analyzeTokens(clang::Preprocessor& PP, clang::Token& lastTok,
-                     int& indentLevel, bool& tokWasDo);
-
-   llvm::Module* makeModuleFromCommandLine(const std::string& input_line,
-                                           bool& haveStatements);
    void createWrappedSrc(const std::string& src, std::string& wrapped,
-                                           bool& haveStatements);
+                         bool& haveStatements);
+
+   std::string createUniqueFuncName();
 
    clang::CompilerInstance* createStatementList(const std::string& srcCode,
          std::vector<clang::Stmt*>& stmts);
 
-   clang::CompilerInstance* createCI(const char* llvmdir = 0);
    clang::ASTConsumer* maybeGenerateASTPrinter() const;
    clang::CompilerInstance* compileString(const std::string& srcCode);
    clang::CompilerInstance* compileFile(const std::string& filename,
                                         const std::string* trailcode = 0);
-
-   llvm::Module* doCodegen(clang::CompilerInstance* CI,
-                           const std::string& filename);
-
-   int verifyModule(llvm::Module* m);
-   void printModule(llvm::Module* m);
-   void executeCommandLine();
-   void executeFunction(const std::string& funcname);
-
-   llvm::sys::Path findDynamicLibrary(const std::string& filename,
-                                      bool addPrefix = true,
-                                      bool addSuffix = true) const;
 
 };
 
