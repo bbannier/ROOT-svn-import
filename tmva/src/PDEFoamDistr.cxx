@@ -231,12 +231,6 @@ void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, s
 	 Log() << kFATAL << "<PDEFoamDistr::FillHist> Histogram not initialized!" << Endl;
    }
 
-   // reset histograms
-   for (Int_t idim=0; idim<fDim; idim++) {
-      hsig.at(idim)->Reset();
-      hbkg.at(idim)->Reset();
-   }
-
    // get cell position and size
    PDEFoamVect  cellSize(fDim);
    PDEFoamVect  cellPosi(fDim);
@@ -256,6 +250,27 @@ void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, s
 
    // do range searching
    fBst->SearchVolume(&volume, &nodes);
+
+   // calc xmin and xmax of events found in cell
+   std::vector<Float_t> xmin(fDim, std::numeric_limits<float>::max());
+   std::vector<Float_t> xmax(fDim, -std::numeric_limits<float>::max());
+   for (UInt_t iev=0; iev<nodes.size(); iev++) {
+      std::vector<Float_t> ev = nodes.at(iev)->GetEventV();
+      for (Int_t idim=0; idim<fDim; idim++) {
+	 if (ev.at(idim) < xmin.at(idim))  xmin.at(idim) = ev.at(idim);
+	 if (ev.at(idim) > xmax.at(idim))  xmax.at(idim) = ev.at(idim);
+      }
+   }
+
+   // reset histogram ranges
+   for (Int_t idim=0; idim<fDim; idim++) {
+      hsig.at(idim)->GetXaxis()->SetLimits(VarTransform(idim,xmin.at(idim)), 
+					   VarTransform(idim,xmax.at(idim)));
+      hbkg.at(idim)->GetXaxis()->SetLimits(VarTransform(idim,xmin.at(idim)), 
+					   VarTransform(idim,xmax.at(idim)));
+      hsig.at(idim)->Reset();
+      hbkg.at(idim)->Reset();
+   }
 
    // fill histograms
    for (UInt_t iev=0; iev<nodes.size(); iev++) {

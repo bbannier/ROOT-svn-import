@@ -174,7 +174,7 @@ namespace TMVA {
       Long_t PeekLast();            // peek last created cell
       Int_t  Divide(PDEFoamCell *); // Divide iCell into two daughters; iCell retained, taged as inactive
       Double_t Eval(Double_t *xRand, Double_t &event_density); // evaluate distribution on point 'xRand'
-      Float_t GetSeparation(Float_t s, Float_t b); // calculate Gini index
+      Float_t GetSeparation(Float_t s, Float_t b); // calculate separation
 
       // ---------- Cell value access functions
 
