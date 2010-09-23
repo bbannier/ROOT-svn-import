@@ -263,6 +263,8 @@ int main( int argc, char** argv )
    std::cout << "--- Processing: " << theTree->GetEntries() << " events" << std::endl;
    TStopwatch sw;
    sw.Start();
+   int ec =0;
+
    for (Long64_t ievt=0; ievt<theTree->GetEntries();ievt++) {
 
       if (ievt%1000 == 0){
@@ -309,7 +311,7 @@ int main( int argc, char** argv )
             Double_t mva1 = reader->EvaluateMVA( mName); 
             Double_t mva2 = reader->EvaluateMVA( vecVar, mName); 
             if (mva1 == mva2) {
-               std::cout << "++++++++++++++ ERROR in "<< mName <<", obtaining idnetical output for different inputs" <<std::endl;
+               std::cout << "++++++++++++++ ERROR "<<ec++<<"in "<< mName <<", obtaining idnetical output ("<<mva1<<") for different inputs" <<std::endl;
             }
          }
       }
