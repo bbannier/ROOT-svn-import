@@ -37,6 +37,8 @@
 #include "ClangUtils.h"
 #include "ExecutionContext.h"
 
+#include "DependentNodesTransform.h"
+
 #include <cstdio>
 #include <iostream>
 #include <sstream>
@@ -584,8 +586,12 @@ Interpreter::compileString(const std::string& srcCode)
            E = S->WeakTopLevelDecls().end(); I != E; ++I)
       Consumer->HandleTopLevelDecl(clang::DeclGroupRef(*I));
 
-   clang::ASTContext *Ctx = &CI->getASTContext();
+   // Here we are substituting the dependent nodes with Cling invocations.
+   DependentNodesTransform* transformer = new DependentNodesTransform();
+   transformer->TransformNodes(S);
+   delete transformer;
 
+   clang::ASTContext *Ctx = &CI->getASTContext();
    Consumer->HandleTranslationUnit(*Ctx);
 
    //if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
