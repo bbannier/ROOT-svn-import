@@ -513,20 +513,13 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    if (!cell)
       Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
 
-   // get cell position and size
-   PDEFoamVect  cellSize(fDim);
-   PDEFoamVect  cellPosi(fDim);
-   cell->GetHcub(cellPosi, cellSize);
-
    // create edge histograms
    std::vector<TH1F*> hsig, hbkg;
    for (Int_t idim=0; idim<fDim; idim++) {
       hsig.push_back( new TH1F(Form("hsig_%i",idim), 
-			       Form("signal[%i]",idim), fNBin, 
-			       cellPosi[idim], cellPosi[idim]+cellSize[idim]) );
+			       Form("signal[%i]",idim), fNBin, 0, 1 ));
       hbkg.push_back( new TH1F(Form("hbkg_%i",idim), 
-			       Form("background[%i]",idim), fNBin, 
-			       cellPosi[idim], cellPosi[idim]+cellSize[idim]) );
+			       Form("background[%i]",idim), fNBin, 0, 1 ));
    }
 
    // Fill histograms
@@ -536,8 +529,8 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    Float_t xBest = 0.5;   // best division point
    Int_t   kBest = -1;    // best split dimension
    Float_t maxGain = -1.0; // maximum gain
-   Float_t nTotS = hsig.at(0)->Integral() + hsig.at(0)->GetBinContent(0) + hsig.at(0)->GetBinContent(hsig.at(0)->GetNbinsX()+1);
-   Float_t nTotB = hbkg.at(0)->Integral() + hbkg.at(0)->GetBinContent(0) + hbkg.at(0)->GetBinContent(hbkg.at(0)->GetNbinsX()+1);
+   Float_t nTotS = hsig.at(0)->Integral(0, hsig.at(0)->GetNbinsX()+1);
+   Float_t nTotB = hbkg.at(0)->Integral(0, hbkg.at(0)->GetNbinsX()+1);
    Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
 
    for (Int_t idim=0; idim<fDim; idim++) {
