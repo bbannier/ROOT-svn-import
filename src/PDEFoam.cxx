@@ -514,16 +514,20 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
       Log() << kFATAL << "<DTExplore> Null pointer given!" << Endl;
 
    // create edge histograms
-   std::vector<TH1F*> hsig, hbkg;
+   std::vector<TH1F*> hsig, hbkg, hsig_unw, hbkg_unw;
    for (Int_t idim=0; idim<fDim; idim++) {
       hsig.push_back( new TH1F(Form("hsig_%i",idim), 
 			       Form("signal[%i]",idim), fNBin, 0, 1 ));
       hbkg.push_back( new TH1F(Form("hbkg_%i",idim), 
 			       Form("background[%i]",idim), fNBin, 0, 1 ));
+      hsig_unw.push_back( new TH1F(Form("hsig_unw_%i",idim), 
+				   Form("signal_unw[%i]",idim), fNBin, 0, 1 ));
+      hbkg_unw.push_back( new TH1F(Form("hbkg_unw_%i",idim), 
+				   Form("background_unw[%i]",idim), fNBin, 0, 1 ));
    }
 
    // Fill histograms
-   fDistr->FillHist(cell, hsig, hbkg);
+   fDistr->FillHist(cell, hsig, hbkg, hsig_unw, hbkg_unw);
 
    // ------ determine the best division edge
    Float_t xBest = 0.5;   // best division point
@@ -531,14 +535,26 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
    Float_t maxGain = -1.0; // maximum gain
    Float_t nTotS = hsig.at(0)->Integral(0, hsig.at(0)->GetNbinsX()+1);
    Float_t nTotB = hbkg.at(0)->Integral(0, hbkg.at(0)->GetNbinsX()+1);
+   Float_t nTotS_unw = hsig_unw.at(0)->Integral(0, hsig_unw.at(0)->GetNbinsX()+1);
+   Float_t nTotB_unw = hbkg_unw.at(0)->Integral(0, hbkg_unw.at(0)->GetNbinsX()+1);
    Float_t parentGain = (nTotS+nTotB) * GetSeparation(nTotS,nTotB);
 
    for (Int_t idim=0; idim<fDim; idim++) {
       Float_t nSelS=hsig.at(idim)->GetBinContent(0);
       Float_t nSelB=hbkg.at(idim)->GetBinContent(0);
+      Float_t nSelS_unw=hsig_unw.at(idim)->GetBinContent(0);
+      Float_t nSelB_unw=hbkg_unw.at(idim)->GetBinContent(0);
       for(Int_t jLo=1; jLo<fNBin; jLo++) {
 	 nSelS += hsig.at(idim)->GetBinContent(jLo);
 	 nSelB += hbkg.at(idim)->GetBinContent(jLo);
+	 nSelS_unw += hsig_unw.at(idim)->GetBinContent(jLo);
+	 nSelB_unw += hbkg_unw.at(idim)->GetBinContent(jLo);
+
+	 // proceed if total number of events in left and right cell
+	 // is greater than fNmin
+	 if ( !( (nSelS_unw + nSelB_unw) >= GetNmin() && 
+		 (nTotS_unw-nSelS_unw + nTotB_unw-nSelB_unw) >= GetNmin() ) )
+	    continue;
 
 	 Float_t xLo = 1.0*jLo/fNBin;
 
@@ -575,10 +591,10 @@ void TMVA::PDEFoam::DTExplore(PDEFoamCell *cell)
       SetCellElement( cell, 0, nTotS + nTotB);
 
    // clean up
-   for (UInt_t ih=0; ih<hsig.size(); ih++)
-      delete hsig.at(ih);
-   for (UInt_t ih=0; ih<hbkg.size(); ih++)
-      delete hbkg.at(ih);
+   for (UInt_t ih=0; ih<hsig.size(); ih++)  delete hsig.at(ih);
+   for (UInt_t ih=0; ih<hbkg.size(); ih++)  delete hbkg.at(ih);
+   for (UInt_t ih=0; ih<hsig_unw.size(); ih++)  delete hsig_unw.at(ih);
+   for (UInt_t ih=0; ih<hbkg_unw.size(); ih++)  delete hbkg_unw.at(ih);
 }
 
 //_____________________________________________________________________
