@@ -214,7 +214,7 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
 }
 
 //_____________________________________________________________________
-void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, std::vector<TH1F*> &hbkg)
+void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, std::vector<TH1F*> &hbkg, std::vector<TH1F*> &hsig_unw, std::vector<TH1F*> &hbkg_unw)
 {
    // fill the given histograms with signal and background events,
    // which are located in the given cell
@@ -222,12 +222,14 @@ void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, s
    // sanity check
    if (!cell)
       Log() << kFATAL << "<PDEFoamDistr::FillHist> Null pointer for cell given!" << Endl;
-   if (Int_t(hsig.size()) != fDim || Int_t(hbkg.size()) != fDim)
+   if (Int_t(hsig.size()) != fDim || Int_t(hbkg.size()) != fDim || 
+       Int_t(hsig_unw.size()) != fDim || Int_t(hbkg_unw.size()) != fDim)
       Log() << kFATAL << "<PDEFoamDistr::FillHist> Edge histograms have wrong size!" << Endl;
 
    // check histograms
    for (Int_t idim=0; idim<fDim; idim++) {
-      if (!hsig.at(idim) || !hbkg.at(idim))
+      if (!hsig.at(idim) || !hbkg.at(idim) || 
+	  !hsig_unw.at(idim) || !hbkg_unw.at(idim))
 	 Log() << kFATAL << "<PDEFoamDistr::FillHist> Histogram not initialized!" << Endl;
    }
 
@@ -268,8 +270,14 @@ void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, s
 					   VarTransform(idim,xmax.at(idim)));
       hbkg.at(idim)->GetXaxis()->SetLimits(VarTransform(idim,xmin.at(idim)), 
 					   VarTransform(idim,xmax.at(idim)));
+      hsig_unw.at(idim)->GetXaxis()->SetLimits(VarTransform(idim,xmin.at(idim)), 
+					       VarTransform(idim,xmax.at(idim)));
+      hbkg_unw.at(idim)->GetXaxis()->SetLimits(VarTransform(idim,xmin.at(idim)), 
+					       VarTransform(idim,xmax.at(idim)));
       hsig.at(idim)->Reset();
       hbkg.at(idim)->Reset();
+      hsig_unw.at(idim)->Reset();
+      hbkg_unw.at(idim)->Reset();
    }
 
    // fill histograms
@@ -278,10 +286,13 @@ void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, s
       Float_t              wt = nodes.at(iev)->GetWeight();
       Bool_t           signal = nodes.at(iev)->IsSignal();
       for (Int_t idim=0; idim<fDim; idim++) {
-	 if (signal)
+	 if (signal) {
 	    hsig.at(idim)->Fill(VarTransform(idim,ev.at(idim)), wt);
-	 else
+	    hsig_unw.at(idim)->Fill(VarTransform(idim,ev.at(idim)), 1);
+	 } else {
 	    hbkg.at(idim)->Fill(VarTransform(idim,ev.at(idim)), wt);
+	    hbkg_unw.at(idim)->Fill(VarTransform(idim,ev.at(idim)), 1);
+	 }
       }
    }
 }

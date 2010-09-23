@@ -116,7 +116,8 @@ namespace TMVA {
       Double_t Density(Double_t *Xarg, Double_t &event_density);
 
       // Return fDim histograms with signal and bg events
-      void FillHist(PDEFoamCell* cell, std::vector<TH1F*>&, std::vector<TH1F*>&);
+      void FillHist(PDEFoamCell* cell, std::vector<TH1F*>&, std::vector<TH1F*>&, 
+		    std::vector<TH1F*>&, std::vector<TH1F*>&);
 
       // Getters and setters for foam filling method
       void SetDensityCalc( TDensityCalc dc ){ fDensityCalc = dc; };
