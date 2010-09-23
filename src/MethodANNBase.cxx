@@ -787,7 +787,7 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
    xmlInvHessian = gTools().GetChild(wghtnode, "InverseHessian");
    if( !xmlInvHessian )
       // no inverse hessian available
-      return;  // ------------------ return from subroutine
+      return;
 
    fUseRegulator = kTRUE;
 
@@ -1080,6 +1080,7 @@ void TMVA::MethodANNBase::MakeClassSpecific( std::ostream& fout, const TString& 
    fout << "   // nothing to clear" << endl;
    fout << "}" << endl;
 }
+
 //_________________________________________________________________________
 Bool_t TMVA::MethodANNBase::Debug() const 
 { 
