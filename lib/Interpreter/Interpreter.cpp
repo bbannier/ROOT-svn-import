@@ -28,7 +28,6 @@
 #include "clang/Sema/SemaConsumer.h"
 //#include "../../clang/lib/Sema/Sema.h"
 #include "llvm/Constants.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/System/DynamicLibrary.h"
 #include "llvm/System/Path.h"
@@ -125,9 +124,6 @@ Interpreter::~Interpreter()
    //m_prev_module = 0; // Don't do this, the engine does it.
 
    m_CI->takeLLVMContext(); // Don't take down the context with the CI.
-
-   // Shutdown the llvm library.
-   llvm::llvm_shutdown();
 }
 
 clang::CompilerInstance*
@@ -449,7 +445,7 @@ clang::ASTConsumer*
 Interpreter::maybeGenerateASTPrinter() const
 {
    if (m_printAST) {
-      return clang::CreateASTPrinter(&llvm::outs());
+      return clang::CreateASTDumper();
    }
    return new clang::ASTConsumer();
 }
