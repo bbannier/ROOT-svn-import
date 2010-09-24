@@ -237,6 +237,7 @@ ExecutionContext::runNewStaticConstructorsDestructors()
         mi != e; ++mi) {
       const llvm::Module* module = m_engine->modules_at(mi);
       llvm::GlobalVariable *GV = module->getNamedGlobal("llvm.global_ctors");
+      if (!GV) continue;
       llvm::ConstantArray *InitList = dyn_cast<llvm::ConstantArray>(GV->getInitializer());
       m_posInitGlobals.first = mi;
       if (!InitList) continue;
