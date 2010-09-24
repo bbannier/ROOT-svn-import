@@ -438,8 +438,8 @@ void TKDE::SetKernelSigmas2() {
 }
 
 TH1D* TKDE::GetHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
-   // Returns the histogram
-   return fHistogram ? fHistogram : fHistogram = GetKDEHistogram(nbins, xMin, xMax);
+   // Returns the histogram (name and title are obtained from the kde name and title) 
+   return GetKDEHistogram(nbins, xMin, xMax);
 }
 
 void TKDE::SetRange(Double_t xMin, Double_t xMax) {
@@ -455,22 +455,22 @@ void TKDE::SetRange(Double_t xMin, Double_t xMax) {
 
 TF1* TKDE::GetFunction() {
    // Returns the PDF estimate
-   return fPDF ? fPDF : GetKDEFunction();
+   return GetKDEFunction();
 }
 
 TF1* TKDE::GetUpperFunction(Double_t confidenceLevel) {
    // Returns the PDF upper estimate (upper confidence interval limit)
-   return fUpperPDF ? fUpperPDF : GetPDFUpperConfidenceInterval(confidenceLevel);
+   return GetPDFUpperConfidenceInterval(confidenceLevel);
 }
 
 TF1* TKDE::GetLowerFunction(Double_t confidenceLevel) {
    // Returns the PDF lower estimate (lower confidence interval limit)
-   return fLowerPDF ? fLowerPDF : GetPDFLowerConfidenceInterval(confidenceLevel);
+   return GetPDFLowerConfidenceInterval(confidenceLevel);
 }
 
 TF1* TKDE::GetApproximateBias() {
    // Returns the PDF estimate bias
-   return fApproximateBias ? fApproximateBias : GetKDEApproximateBias();
+   return GetKDEApproximateBias();
 }
 
 void TKDE::Fill(Double_t data) {
@@ -491,6 +491,11 @@ void TKDE::Fill(Double_t data) {
 Double_t TKDE::operator()(const Double_t* x, const Double_t*) const {
    // The class's unary function: returns the kernel density estimate
    return (*fKernel)(*x);
+}
+
+Double_t TKDE::operator()(Double_t x) const {
+   // The class's unary function: returns the kernel density estimate
+   return (*fKernel)(x);
 }
 
 TKDE::TKernel::TKernel(Double_t weight, TKDE* kde) :
@@ -606,7 +611,8 @@ Double_t TKDE::UpperConfidenceInterval(const Double_t* x, const Double_t* p) con
    // Returns the pointwise upper estimated density
    Double_t f = this->operator()(x);
    Double_t fsigma = GetError(*x);
-   Double_t z = ROOT::Math::normal_quantile(*p, 1.0);
+   Double_t prob = 1. - (1.-*p)/2;   // this is 1.-alpha/2
+   Double_t z = ROOT::Math::normal_quantile(prob, 1.0);
    return f + z * fsigma;
 }
 
@@ -614,17 +620,19 @@ Double_t TKDE::LowerConfidenceInterval(const Double_t* x, const Double_t* p) con
    // Returns the pointwise lower estimated density
    Double_t f = this->operator()(x);
    Double_t fsigma = GetError(*x);
-   Double_t z = ROOT::Math::normal_quantile(*p, 1.0);
-   return f - z * fsigma;
+   Double_t prob = (1.-*p)/2;    // this is alpha/2
+   Double_t z = ROOT::Math::normal_quantile(prob, 1.0);
+   return f + z * fsigma;
 }
 
-Double_t TKDE::ApproximateBias(const Double_t* x, const Double_t*) const {
+
+Double_t TKDE::GetBias(const Double_t x) const {
    // Returns the pointwise approximate estimated density bias
    ROOT::Math::Functor1D kern(this->fKernel, &TKDE::TKernel::operator());
    ROOT::Math::RichardsonDerivator rd;
    rd.SetFunction(kern);
-   Double_t df2 = rd.Derivative2(*x);
-   Double_t weight = fKernel->GetWeight(*x); // Bandwidth
+   Double_t df2 = rd.Derivative2(x);
+   Double_t weight = fKernel->GetWeight(x); // Bandwidth
    return  0.5 * fKernelSigmas2[fKernelType] * std::pow(weight, 2) * df2;
 }
 Double_t TKDE::GetError(Double_t x) const {
@@ -738,41 +746,53 @@ Double_t TKDE::KernelIntegrand::operator()(Double_t x) const {
 
 TH1D* TKDE::GetKDEHistogram(UInt_t nbins, Double_t xMin, Double_t xMax) {
    // Returns the histogram of the estimated density at data points
+   // name and title are built using KDE name and title
+   TString name = "histo_from_KDE_";  name+= GetName();
+   TString title = "Histogram of KDE"; title += GetTitle();
+   TH1D * histogram = 0;
    if (xMin < xMax) {
-      fHistogram = new TH1D("KDE Histogram", "KDE Histogram", nbins > 0 ? nbins : 100 /*fNBins*/, xMin, xMax);
+      histogram = new TH1D(name,title, nbins > 0 ? nbins : 100 /*fNBins*/, xMin, xMax);
    } else {
-      fHistogram = new TH1D("KDE Histogram", "KDE Histogram", nbins > 0 ? nbins : 100 /*fNBins*/, fXMin, fXMax);  
+      histogram = new TH1D(name,title, nbins > 0 ? nbins : 100 /*fNBins*/, fXMin, fXMax);  
    }
    for (Int_t bin = 1; bin <= fHistogram->GetNbinsX(); ++bin) {
       Double_t binCenter = fHistogram->GetBinCenter(bin);
-      fHistogram->Fill(binCenter, (*fKernel)(binCenter));
+      histogram->Fill(binCenter, (*fKernel)(binCenter));
    }
-   fHistogram->Scale(1. / fHistogram->Integral(), "width");
-   return (TH1D*)fHistogram->Clone();
+   histogram->Scale(1. / fHistogram->Integral(), "width");
+   return  histogram;
 }
    
 TF1* TKDE::GetKDEFunction() {
    //Returns the estimated density 
-   fPDF = new TF1("KDE_Func", this, &TKDE::operator(), fXMin, fXMax, 0, "TKDE", "operator()");
+   TString name = "KDE_"; name+= GetName();
+   TString title = "KDE_"; title+= GetTitle();
+   fPDF = new TF1(name.Data(), this, fXMin, fXMax, 0,"operator()");
+   fPDF->SetTitle(title);
    return (TF1*)fPDF->Clone();
 }
 
 TF1* TKDE::GetPDFUpperConfidenceInterval(Double_t confidenceLevel) {
    // Returns the upper estimated density 
-   fUpperPDF = new TF1("KDE_UpperFunc", this, &TKDE::UpperConfidenceInterval, fXMin, fXMax, 1, "TKDE", "UpperConfidenceInterval");
+   TString name; 
+   name.Form("KDE_UpperCL%f5.3_%s",confidenceLevel,GetName());
+   fUpperPDF = new TF1(name, this, &TKDE::UpperConfidenceInterval, fXMin, fXMax, 1, "TKDE", "UpperConfidenceInterval");
    fUpperPDF->SetParameter(0, confidenceLevel);
    return (TF1*)fUpperPDF->Clone();
 }
 
 TF1* TKDE::GetPDFLowerConfidenceInterval(Double_t confidenceLevel) {
    // Returns the upper estimated density 
-   fLowerPDF = new TF1("KDE_LowerFunc", this, &TKDE::LowerConfidenceInterval, fXMin, fXMax, 1, "TKDE", "LowerConfidenceInterval");
+   TString name; 
+   name.Form("KDE_LowerCL%f5.3_%s",confidenceLevel,GetName());
+   fLowerPDF = new TF1(name, this, &TKDE::LowerConfidenceInterval, fXMin, fXMax, 1, "TKDE", "LowerConfidenceInterval");
    fLowerPDF->SetParameter(0, confidenceLevel);
    return (TF1*)fLowerPDF->Clone();
 }
 
 TF1* TKDE::GetKDEApproximateBias(){
    // Returns the approximate bias
-   fApproximateBias = new TF1("KDE_ApproxBias", this, &TKDE::ApproximateBias, fXMin, fXMax, 0, "TKDE", "ApproximateBias");
+   TString name = "KDE_Bias_"; name += GetName();
+   fApproximateBias = new TF1(name, this, &TKDE::ApproximateBias, fXMin, fXMax, 0, "TKDE", "ApproximateBias");
    return (TF1*)fApproximateBias->Clone();
 }
