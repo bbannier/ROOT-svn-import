@@ -331,16 +331,21 @@ FileUrlServer::FileUrlServer(const char* name, Int_t port) :
 
 FileUrlServer::~FileUrlServer()
 {
+   if (fNewFileFileCheckTimer)
+   {
+      EndMonitoringNewFileFile();
+   }
+
    fServerThread->Kill();
    fServerThread->Join();
    delete fServerThread;
 
    {
       std::auto_ptr<TList> socks(fMonitor->GetListOfActives());
-      TIter next(&*socks);
-      TObject *obj;
-      while ((obj = next()))
+      while ( ! socks->IsEmpty())
       {
+         TObject *obj = socks->First();
+         socks->RemoveFirst();
          delete obj;
       }
    }
@@ -497,10 +502,11 @@ void* FileUrlServer::RunServer(FileUrlServer* srv)
       srv->fMonitor->Select(&ready, 0, 1000000);
       TThread::SetCancelOff();
 
-      TSocket *sock;
-      TIter next(&ready);
-      while ((sock = (TSocket*) next()))
+      while ( ! ready.IsEmpty())
       {
+         TSocket *sock = (TSocket*) ready.First();
+         ready.RemoveFirst();
+
          if (sock == srv->fServerSocket)
          {
             srv->AcceptConnection();
@@ -510,7 +516,6 @@ void* FileUrlServer::RunServer(FileUrlServer* srv)
             srv->MessageFrom(sock);
          }
       }
-      ready.Clear();
    }
 
    return 0;
@@ -532,7 +537,10 @@ void FileUrlServer::BeginMonitoringNewFileFile(const TString& file, Int_t sec)
 
    fNewFileFileCheckTimer = new TTimer(1000l*sec);
    fNewFileFileCheckTimer->Connect("Timeout()", "FileUrlServer", this, "CheckNewFileFile()");
+
+   gTQSender = fNewFileFileCheckTimer;
    CheckNewFileFile();
+   gTQSender = 0;
 }
 
 void FileUrlServer::CheckNewFileFile()
@@ -541,7 +549,7 @@ void FileUrlServer::CheckNewFileFile()
 
    static const TString _eh("FileUrlServer::CheckNewFileFile");
 
-   if (fNewFileFileCheckTimer == 0 || gQSender != fNewFileFileCheckTimer)
+   if (fNewFileFileCheckTimer == 0 || gTQSender != fNewFileFileCheckTimer)
    {
       Error(_eh, "Timer is not running or method called directly.");
       return;
@@ -550,9 +558,15 @@ void FileUrlServer::CheckNewFileFile()
    fNewFileFileCheckTimer->TurnOff();
 
    FILE *fp = fopen(fNewFileFile, "r");
+   if (fp == 0)
+   {
+      Warning(_eh, "Could not open new-file file for reading.");
+      return;
+   }
    TString line;
    line.Gets(fp, kTRUE);
    fclose(fp);
+   if ( ! line.IsNull())
    {
       TLockGuard _lck(fMutex);
 
