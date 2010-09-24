@@ -325,6 +325,7 @@ void TEveBoxProjectedGL::Draw(TGLRnrCtx& rnrCtx) const
       TGLObject::Draw(rnrCtx);
    }
 
+   if (TEveBoxProjected::fgDebugCornerPoints && ! fM->fDebugPoints.empty())
    {
       glColor3f(1,0,0);
       Int_t N = fM->fDebugPoints.size();
