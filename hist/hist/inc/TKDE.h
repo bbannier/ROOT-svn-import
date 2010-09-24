@@ -79,7 +79,15 @@ public:
    void SetUseBinsNEvents(UInt_t nEvents);
    void SetRange(Double_t xMin, Double_t xMax); // By default computed from the data
    
-   Double_t operator()(const Double_t* x, const Double_t* p = 0) const;
+   Double_t operator()(Double_t x) const;
+   Double_t operator()(const Double_t* x, const Double_t* p=0) const;  // needed for  creating TF1 
+
+   Double_t GetValue(Double_t x) const { return (*this)(x); }
+   Double_t GetError(Double_t x) const;
+
+   Double_t GetBias(Double_t x) const;
+
+
    Double_t GetFixedWeight() const;
    
    TH1D* GetHistogram(UInt_t nbins = 100, Double_t xMin = 1.0, Double_t xMax = 0.0);
@@ -90,6 +98,7 @@ public:
    TF1* GetApproximateBias();
    
    std::vector<Double_t> GetAdaptiveWeights() const;
+
    
 private:
    
@@ -170,8 +179,7 @@ private:
    }
    Double_t UpperConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
    Double_t LowerConfidenceInterval(const Double_t* x, const Double_t* p) const; // Valid if the bandwidth is small compared to nEvents**1/5
-   Double_t ApproximateBias(const Double_t* x, const Double_t* p) const;
-   Double_t GetError(Double_t x) const;
+   Double_t ApproximateBias(const Double_t* x, const Double_t* ) const { return GetBias(*x); }
    Double_t ComputeKernelL2Norm() const;
    Double_t ComputeKernelSigma2() const;
    Double_t ComputeKernelMu() const;
