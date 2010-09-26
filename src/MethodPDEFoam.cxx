@@ -184,8 +184,14 @@ void TMVA::MethodPDEFoam::DeclareOptions()
    AddPreDefVal(TString("Mpv"));
 }
 
+
+void TMVA::MethodPDEFoam::DeclareCompatibilityOptions() {
+   MethodBase::DeclareCompatibilityOptions();
+   DeclareOptionRef(fCutNmin = kTRUE, "CutNmin",  "Requirement for minimal number of events in cell");
+}
+
 //_______________________________________________________________________
-void TMVA::MethodPDEFoam::ProcessOptions() 
+void TMVA::MethodPDEFoam::ProcessOptions()
 {
    // process user options
    if (!(fFrac>=0. && fFrac<=1.)) {
@@ -194,8 +200,8 @@ void TMVA::MethodPDEFoam::ProcessOptions()
    }
 
    if (fnActiveCells < 1) {
-      Log() << kWARNING << "invalid number of active cells specified: " 
-	    << fnActiveCells << "; setting nActiveCells=2" << Endl;
+      Log() << kWARNING << "invalid number of active cells specified: "
+            << fnActiveCells << "; setting nActiveCells=2" << Endl;
       fnActiveCells = 2;
    }
    fnCells = fnActiveCells*2-1;
@@ -207,7 +213,7 @@ void TMVA::MethodPDEFoam::ProcessOptions()
       Log() << kWARNING << "Decision tree logic works only for a single foam (SigBgSeparate=F)" << Endl;
       fDTLogic = "None";
       fDTSeparation = kFoam;
-   } 
+   }
 
    // set separation to use
    if (fDTLogic == "None")

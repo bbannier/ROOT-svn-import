@@ -448,7 +448,7 @@ void TMVA::DecisionTreeNode::ReadAttributes(void* node, UInt_t /* tmva_Version_C
       SetNEvents_unweighted(tempNEvents_unweighted);
       SetSeparationIndex(tempSeparationIndex);
       SetSeparationGain(tempSeparationGain);
-      SetCC(tempCC);  
+      SetCC(tempCC);
    }
 }
 

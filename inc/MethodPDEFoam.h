@@ -12,7 +12,7 @@
  *      the multi-dimensional phase space in a finite number of hyper-rectangles  *
  *      (cells) of constant event density. This "foam" of cells is filled with    *
  *      averaged probability-density information sampled from a training event    *
- *      sample.    
+ *      sample.                                                                   *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Tancredi Carli   - CERN, Switzerland                                      *
@@ -22,10 +22,10 @@
  *                                                                                *
  * Original author of the TFoam implementation:                                   *
  *      S. Jadach - Institute of Nuclear Physics, Cracow, Poland                  *
- *                                                                                * 
+ *                                                                                *
  * Copyright (c) 2008:                                                            *
- *      CERN, Switzerland                                                         * 
- *      MPI-K Heidelberg, Germany                                                 * 
+ *      CERN, Switzerland                                                         *
+ *      MPI-K Heidelberg, Germany                                                 *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
  * modification, are permitted according to the terms listed in LICENSE           *
@@ -76,21 +76,21 @@ namespace TMVA {
    class MethodPDEFoam : public MethodBase {
 
    public:
-      
-      MethodPDEFoam( const TString& jobName, 
-                     const TString& methodTitle, 
+
+      MethodPDEFoam( const TString& jobName,
+                     const TString& methodTitle,
                      DataSetInfo& dsi,
                      const TString& theOption = "PDEFoam",
                      TDirectory* theTargetDir = 0 );
 
-      MethodPDEFoam( DataSetInfo& dsi, 
-                     const TString& theWeightFile,  
+      MethodPDEFoam( DataSetInfo& dsi,
+                     const TString& theWeightFile,
                      TDirectory* theTargetDir = NULL );
 
       virtual ~MethodPDEFoam( void );
 
       virtual Bool_t HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t numberTargets );
-    
+
       // training methods
       void Train( void );
       void TrainMonoTargetRegression( void );    // Regression output: one value
@@ -122,7 +122,7 @@ namespace TMVA {
 
       // possible kernels (option)
       EKernel GetKernel( void ) { return fKernel; }
-      UInt_t KernelToUInt(EKernel ker) const { 
+      UInt_t KernelToUInt(EKernel ker) const {
          if (ker == kNone)
             return 0;
          else if (ker == kGaus)
@@ -134,7 +134,7 @@ namespace TMVA {
             return 0;
          }
       }
-      EKernel UIntToKernel(UInt_t iker){  
+      EKernel UIntToKernel(UInt_t iker){
          if (iker == 0)
             return kNone;
          else if (iker == 1)
@@ -146,7 +146,7 @@ namespace TMVA {
             return kNone;
          }
       }
-      UInt_t TargetSelectionToUInt(ETargetSelection ts) const { 
+      UInt_t TargetSelectionToUInt(ETargetSelection ts) const {
          if (ts == kMean)
             return 0;
          else if (ts == kMpv)
@@ -156,7 +156,7 @@ namespace TMVA {
             return 0;
          }
       }
-      ETargetSelection UIntToTargetSelection(UInt_t its){  
+      ETargetSelection UIntToTargetSelection(UInt_t its){
          if (its == 0)
             return kMean;
          else if (its == 1)
@@ -191,8 +191,9 @@ namespace TMVA {
 
       // the option handling methods
       void DeclareOptions();
+      void DeclareCompatibilityOptions();
       void ProcessOptions();
-  
+
       // nice output
       void PrintCoefficients( void );
 
@@ -209,12 +210,13 @@ namespace TMVA {
       Int_t         fnActiveCells;    // Number of active cells
       Int_t         fnSampl;          // Number of MC events per cell in build-up (1000)
       Int_t         fnBin;            // Number of bins in build-up (100)
-      Int_t         fEvPerBin;        // Maximum events (equiv.) per bin in buid-up (1000) 
+      Int_t         fEvPerBin;        // Maximum events (equiv.) per bin in buid-up (1000)
       Float_t       fNSigBgRatio;     // ratio of number of signal events / bg events (training)
 
       Bool_t        fCompress;        // compress foam output file
       Bool_t        fMultiTargetRegression; // do regression on multible targets
       UInt_t        fNmin;            // minimal number of events in cell necessary to split cell"
+      Bool_t        fCutNmin;         // Keep for bw compatibility: Grabbing cell with maximal RMS to split next (TFoam default)
       UInt_t        fMaxDepth;        // maximum depth of cell tree
 
       TString       fKernelStr;       // Kernel for GetMvaValue() (option string)
@@ -226,7 +228,7 @@ namespace TMVA {
       TString       fDTLogic;         // use DT algorithm to split cells
       EDTSeparation fDTSeparation;    // enum which specifies the separation to use for the DT logic
       Bool_t        fPeekMax;         // peek up cell with max. driver integral for split
-     
+
       std::vector<Double_t> fXmin, fXmax; // range for histograms and foams
 
       // foams and densities
@@ -237,7 +239,7 @@ namespace TMVA {
       // default initialisation called by all constructors
       void Init( void );
 
-      ClassDef(MethodPDEFoam,0) // Analysis of PDEFoam discriminant (PDEFoam or Mahalanobis approach) 
+      ClassDef(MethodPDEFoam,0) // Analysis of PDEFoam discriminant (PDEFoam or Mahalanobis approach)
    };
 
 } // namespace TMVA

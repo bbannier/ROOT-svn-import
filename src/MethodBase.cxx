@@ -227,11 +227,11 @@ TMVA::MethodBase::MethodBase( Types::EMVA methodType,
    fSetupCompleted            (kFALSE)
 {
    // constructor used for Testing + Application of the MVA,
-   // only (no training), using given WeightFiles   
+   // only (no training), using given WeightFiles
 }
 
 //_______________________________________________________________________
-TMVA::MethodBase::~MethodBase( void ) 
+TMVA::MethodBase::~MethodBase( void )
 {
    // destructor
    if (!fSetupCompleted) Log() << kFATAL << "Calling destructor of method which got never setup" << Endl;
@@ -257,7 +257,7 @@ TMVA::MethodBase::~MethodBase( void )
 
    for (Int_t i = 0; i < 2; i++ ) {
       if (fEventCollections.at(i)) {
-         for (std::vector<Event*>::const_iterator it = fEventCollections.at(i)->begin(); 
+         for (std::vector<Event*>::const_iterator it = fEventCollections.at(i)->begin();
               it != fEventCollections.at(i)->end(); it++) {
             delete (*it);
          }
@@ -268,21 +268,21 @@ TMVA::MethodBase::~MethodBase( void )
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBase::SetupMethod() 
+void TMVA::MethodBase::SetupMethod()
 {
    // setup of methods
-   
+
    if (fSetupCompleted) Log() << kFATAL << "Calling SetupMethod for the second time" << Endl;
    InitBase();
    DeclareBaseOptions();
-   
+
    Init();
    DeclareOptions();
    fSetupCompleted = kTRUE;
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBase::ProcessSetup() 
+void TMVA::MethodBase::ProcessSetup()
 {
    // process all options
    // the "CheckForUnusedOptions" is done in an independent call, since it may be overridden by derived class
@@ -292,7 +292,7 @@ void TMVA::MethodBase::ProcessSetup()
 }
 
 //_______________________________________________________________________
-void TMVA::MethodBase::CheckSetup() 
+void TMVA::MethodBase::CheckSetup()
 {
    // check may be overridden by derived class
    // (sometimes, eg, fitters are used which can only be implemented during training phase)
@@ -371,7 +371,7 @@ void TMVA::MethodBase::DeclareBaseOptions()
    //               H                   for Help message
 
    DeclareOptionRef( fVerbose, "V", "Verbose output (short form of \"VerbosityLevel\" below - overrides the latter one)" );
-   
+
    DeclareOptionRef( fVerbosityLevelString="Default", "VerbosityLevel", "Verbosity level" );
    AddPreDefVal( TString("Default") ); // uses default defined in MsgLogger header
    AddPreDefVal( TString("Debug")   );
@@ -381,7 +381,7 @@ void TMVA::MethodBase::DeclareBaseOptions()
    AddPreDefVal( TString("Error")   );
    AddPreDefVal( TString("Fatal")   );
 
-   // If True (default): write all training results (weights) as text files only; 
+   // If True (default): write all training results (weights) as text files only;
    // if False: write also in ROOT format (not available for all methods - will abort if not
    fTxtWeightsOnly = kTRUE;  // OBSOLETE !!!
    fNormalise      = kFALSE; // OBSOLETE !!!
@@ -392,7 +392,7 @@ void TMVA::MethodBase::DeclareBaseOptions()
 
    DeclareOptionRef( fHasMVAPdfs, "CreateMVAPdfs", "Create PDFs for classifier outputs (signal and background)" );
 
-   DeclareOptionRef( fIgnoreNegWeightsInTraining, "IgnoreNegWeightsInTraining", 
+   DeclareOptionRef( fIgnoreNegWeightsInTraining, "IgnoreNegWeightsInTraining",
                      "Events with negative weights are ignored in the training (but are included for testing and performance evaluation)" );
 }
 
@@ -421,7 +421,7 @@ void TMVA::MethodBase::ProcessBaseOptions()
       // the final marked option string is written back to the original methodbase
       SetOptions( fMVAPdfS->GetOptions() );
    }
-   
+
    CreateVariableTransforms( fVarTransformString );
 
    if (!HasMVAPdfs()) {
@@ -483,13 +483,13 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition )
             GetTransformationHandler().AddTransformation( new VariableNormalizeTransform( DataInfo()), idxCls );
          else
             Log() << kFATAL << "<ProcessOptions> Variable transform '"
-                  << trName << "' unknown." << Endl;         
+                  << trName << "' unknown." << Endl;
          ClassInfo* clsInfo = DataInfo().GetClassInfo(idxCls);
          if( clsInfo )
             Log() << kINFO << " create Transformation " << trName << " with reference class " <<clsInfo->GetName() << "=("<< idxCls <<")"<<Endl;
          else
             Log() << kINFO << " create Transformation " << trName << " with events of all classes." << Endl;
-         
+
       }
    }
 }
