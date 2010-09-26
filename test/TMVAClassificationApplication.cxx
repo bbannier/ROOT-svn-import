@@ -283,17 +283,17 @@ int main( int argc, char** argv )
       Category_cat2 = (var3>0)&&(var4<0);
       Category_cat3 = (var3>0)&&(var4>=0);
 
-      // test the twodifferent Reader::EvaluateMVA functions 
+      // test the twodifferent Reader::EvaluateMVA functions
       // access via registered variables compared to access via vector<float>
       vecVar[0]=var1;
       vecVar[1]=var2;
       vecVar[2]=var3;
-      vecVar[3]=var4;      
+      vecVar[3]=var4;
       for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) {
          if (it->second) {
             TString mName = it->first + " method";
-            Double_t mva1 = reader->EvaluateMVA( mName); 
-            Double_t mva2 = reader->EvaluateMVA( vecVar, mName); 
+            Double_t mva1 = reader->EvaluateMVA( mName);
+            Double_t mva2 = reader->EvaluateMVA( vecVar, mName);
             if (mva1 != mva2) {
                std::cout << "++++++++++++++ ERROR in "<< mName <<", comparing different EvaluateMVA results val1=" << mva1 << " val2="<<mva2<<std::endl;
             }
@@ -308,16 +308,16 @@ int main( int argc, char** argv )
       for (std::map<std::string,int>::iterator it = Use.begin(); it != Use.end(); it++) {
          if (it->second) {
             TString mName = it->first + " method";
-            Double_t mva1 = reader->EvaluateMVA( mName); 
-            Double_t mva2 = reader->EvaluateMVA( vecVar, mName); 
+            Double_t mva1 = reader->EvaluateMVA( mName);
+            Double_t mva2 = reader->EvaluateMVA( vecVar, mName);
             if (mva1 == mva2) {
                std::cout << "++++++++++++++ ERROR "<<ec++<<"in "<< mName <<", obtaining idnetical output ("<<mva1<<") for different inputs" <<std::endl;
             }
          }
       }
-      // 
+      //
       // return the MVAs and fill to histograms
-      // 
+      //
       if (Use["CutsGA"]) {
          // Cuts is a special case: give the desired signal efficienciy
          Bool_t passed = reader->EvaluateMVA( "CutsGA method", effS );
