@@ -508,12 +508,12 @@ void  TMVA::MethodDT::ReadWeightsFromStream( istream& istr )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodDT::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodDT::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // returns MVA value
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return fTree->CheckEvent(*GetEvent(),fUseYesNoLeaf);
 }

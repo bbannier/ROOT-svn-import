@@ -550,20 +550,20 @@ Bool_t TMVA::MethodCategory::PassesCut( const Event* ev, UInt_t methodIdx )
 
 
 //_______________________________________________________________________
-Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // returns the mva value of the right sub-classifier
 
    if (fMethods.size()==0) return 0;
 
    UInt_t methodToUse = 0;
-   const Event* ev = GetEvent(); 
+   const Event* ev = GetEvent();
 
    // determine which sub-classifier to use for this event
    Int_t suitableCutsN = 0;
 
    for (UInt_t i=0; i<fMethods.size(); ++i) {
-      if (PassesCut(ev, i)) { 
+      if (PassesCut(ev, i)) {
          ++suitableCutsN;
          methodToUse=i;
       }
@@ -581,7 +581,7 @@ Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err )
 
    // get mva value from the suitable sub-classifier
    ev->SetVariableArrangement(&fVarMaps[methodToUse]);
-   Double_t mvaValue = dynamic_cast<MethodBase*>(fMethods[methodToUse])->GetMvaValue(ev,err);
+   Double_t mvaValue = dynamic_cast<MethodBase*>(fMethods[methodToUse])->GetMvaValue(ev,err,errUpper);
    ev->SetVariableArrangement(0);
 
    return mvaValue;

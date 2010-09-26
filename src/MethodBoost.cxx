@@ -830,7 +830,7 @@ const TMVA::Ranking* TMVA::MethodBoost::CreateRanking()
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // return boosted MVA response
    Double_t mvaValue = 0;
@@ -858,7 +858,7 @@ Double_t TMVA::MethodBoost::GetMvaValue( Double_t* err )
       mvaValue+=val*fMethodWeight[i];
    }
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return mvaValue;
 }
@@ -873,15 +873,15 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    // If tree type kTraining is set, the original training sample is
    // used to compute the ROC integral (original weights).
    //
-   // - singleMethod - if kTRUE, return ROC integral of single (last 
-   //                  trained) classifier; if kFALSE, return ROC 
+   // - singleMethod - if kTRUE, return ROC integral of single (last
+   //                  trained) classifier; if kFALSE, return ROC
    //                  integral of full classifier
    //
    // - eTT - tree type (Types::kTraining / Types::kTesting)
    //
    // - CalcOverlapIntergral - if kTRUE, the overlap integral of the
    //                          signal/background MVA distributions
-   //                          is calculated and stored in 
+   //                          is calculated and stored in
    //                          'fOverlap_integral'
 
    // set data sample training / testing
@@ -898,13 +898,13 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
       // calculate sum of weights of all methods
       Double_t AllMethodsWeight = 0;
       for (Int_t i=0; i<=fMethodIndex; i++)
-	 AllMethodsWeight += fMethodWeight.at(i);
+         AllMethodsWeight += fMethodWeight.at(i);
       // normalize the weights of the classifiers
-      if (fMethodWeightType == "LastMethod") 
-	 fMethodWeight.back() = AllMethodsWeight = 1.0;
+      if (fMethodWeightType == "LastMethod")
+         fMethodWeight.back() = AllMethodsWeight = 1.0;
       if (AllMethodsWeight != 0.0) {
-	 for (Int_t i=0; i<=fMethodIndex; i++)
-	    fMethodWeight[i] /= AllMethodsWeight;
+         for (Int_t i=0; i<=fMethodIndex; i++)
+            fMethodWeight[i] /= AllMethodsWeight;
       }
    }
 
@@ -916,8 +916,8 @@ Double_t TMVA::MethodBoost::GetBoostROCIntegral(Bool_t singleMethod, Types::ETre
    else {
       mvaRes = new std::vector <Float_t>(Data()->GetNEvents());
       for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {
-	 Data()->GetEvent(ievt);
-	 (*mvaRes)[ievt] = singleMethod ? method->GetMvaValue() : GetMvaValue(&err);
+         Data()->GetEvent(ievt);
+         (*mvaRes)[ievt] = singleMethod ? method->GetMvaValue() : GetMvaValue(&err);
       }
    }
 

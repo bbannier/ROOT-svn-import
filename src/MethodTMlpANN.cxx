@@ -214,7 +214,7 @@ void TMVA::MethodTMlpANN::ProcessOptions()
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodTMlpANN::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodTMlpANN::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // calculate the value of the neural net for the current event
    const Event* ev = GetEvent();
@@ -225,7 +225,7 @@ Double_t TMVA::MethodTMlpANN::GetMvaValue( Double_t* err )
    Double_t mvaVal = fMLP->Evaluate(0,d);
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return mvaVal;
 }

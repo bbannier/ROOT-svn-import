@@ -221,14 +221,14 @@ void  TMVA::MethodCompositeBase::ReadWeightsFromStream( istream& istr )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodCompositeBase::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodCompositeBase::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // return composite MVA response
    Double_t mvaValue = 0;
    for (UInt_t i=0;i< fMethods.size(); i++) mvaValue+=fMethods[i]->GetMvaValue()*fMethodWeight[i];
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return mvaValue;
 }

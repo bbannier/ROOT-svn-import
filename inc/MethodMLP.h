@@ -88,14 +88,14 @@ namespace TMVA {
    public:
 
       // standard constructors
-      MethodMLP( const TString& jobName, 
+      MethodMLP( const TString& jobName,
                  const TString&  methodTitle,
                  DataSetInfo& theData,
-                 const TString& theOption, 
+                 const TString& theOption,
                  TDirectory* theTargetDir = 0 );
 
-      MethodMLP( DataSetInfo& theData, 
-                 const TString& theWeightFile, 
+      MethodMLP( DataSetInfo& theData,
+                 const TString& theWeightFile,
                  TDirectory* theTargetDir = 0 );
 
       virtual ~MethodMLP();
@@ -112,7 +112,7 @@ namespace TMVA {
       enum EBPTrainingMode { kSequential=0, kBatch };
 
       bool     HasInverseHessian() { return fCalculateErrors; }
-      Double_t GetMvaValueAsymError( Double_t& errUpper, Double_t& errLower );          //zjh
+      Double_t GetMvaValueAsymError( Double_t* errUpper, Double_t* errLower );
 
    protected:
 

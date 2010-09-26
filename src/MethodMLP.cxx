@@ -1365,14 +1365,16 @@ void TMVA::MethodMLP::GetApproxInvHessian(TMatrixD& InvHessian, bool regulate)  
 
 }
 
-// zjh =>_______________________________________________________________________
-Double_t TMVA::MethodMLP::GetMvaValueAsymError( Double_t& errUpper, Double_t& errLower ) //zjh
+//_______________________________________________________________________
+Double_t TMVA::MethodMLP::GetMvaValueAsymError( Double_t* errLower, Double_t* errUpper )
 {
    Double_t MvaValue = GetMvaValue();// contains back propagation
-   if (fInvHessian.GetNcols()==0) {
-      errUpper = errLower = 0;
+
+   // no hessian (old training file) or no error reqested
+   if (fInvHessian.GetNcols()==0 || errLower==0 || errUpper==0)
       return MvaValue;
-   }
+
+
    Double_t MvaUpper,MvaLower,median,variance;
    Int_t numSynapses=fSynapses->GetEntriesFast();
    if (fInvHessian.GetNcols()!=numSynapses) {
@@ -1397,22 +1399,22 @@ Double_t TMVA::MethodMLP::GetMvaValueAsymError( Double_t& errUpper, Double_t& er
 
    //upper
    MvaUpper=fOutput->Eval(median+variance);
-   errUpper=MvaUpper-MvaValue;
-   //Log()<<kDEBUG<<"MvaUpper="<<MvaUpper<<"\terrUpper="<<errUpper<<Endl;
+   if(errUpper)
+      *errUpper=MvaUpper-MvaValue;
 
    //lower
    MvaLower=fOutput->Eval(median-variance);
-   errLower=MvaValue-MvaLower;
-   //Log()<<kDEBUG<<"MvaLower="<<MvaLower<<"\terrLower="<<errLower<<Endl;
-   //log()<<kDEBUG<<"MvaValue="<<MvaValue<<"\tActmedian="<<fOutput->Eval(median)<<Endl;
-   if (variance<0) {
-      Log()<<kWARNING<<"median="<<median<<"\tvariance="<<variance
-           <<"MvaUpper="<<MvaUpper<<"\terrUpper="<<errUpper<<"MvaLower="<<MvaLower<<"\terrLower="<<errLower<<Endl;
-   }
+   if(errLower)
+      *errLower=MvaValue-MvaLower;
 
+   if (variance<0) {
+      Log()<<kWARNING<<"median=" << median << "\tvariance=" << variance
+           <<"MvaLower=" << MvaLower <<"\terrLower=" << (errLower?*errLower:0)
+           <<"MvaUpper=" << MvaUpper <<"\terrUpper=" << (errUpper?*errUpper:0)
+           <<Endl;
+   }
    return MvaValue;
 }
-//<= zjh
 
 
 #ifdef MethodMLP_UseMinuit__

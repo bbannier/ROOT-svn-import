@@ -112,7 +112,7 @@ namespace TMVA {
       void ReadFoamsFromFile();
 
       // calculate the MVA value
-      Double_t GetMvaValue( Double_t* err = 0 );
+      Double_t GetMvaValue( Double_t* err = 0, Double_t* errUpper = 0 );
 
       // regression procedure
       virtual const std::vector<Float_t>& GetRegressionValues();

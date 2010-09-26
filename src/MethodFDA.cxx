@@ -493,13 +493,13 @@ Double_t TMVA::MethodFDA::InterpretFormula( const Event* event, std::vector<Doub
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodFDA::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodFDA::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // returns MVA value for given event
    const Event* ev = GetEvent();
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
    
    return InterpretFormula( ev, fBestPars.begin(), fBestPars.end() );
 }
