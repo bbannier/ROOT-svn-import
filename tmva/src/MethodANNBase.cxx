@@ -636,7 +636,7 @@ const std::vector<Float_t> &TMVA::MethodANNBase::GetMulticlassValues()
    TObjArray* inputLayer = (TObjArray*)fNetwork->At(0);
 
    const Event * ev = GetEvent();
-    
+   
    for (UInt_t i = 0; i < GetNvar(); i++) {
       neuron = (TNeuron*)inputLayer->At(i);
       neuron->ForceValue( ev->GetValue(i) );

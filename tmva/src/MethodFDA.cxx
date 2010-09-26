@@ -68,10 +68,10 @@ ClassImp(TMVA::MethodFDA)
 //_______________________________________________________________________
 TMVA::MethodFDA::MethodFDA( const TString& jobName,
                             const TString& methodTitle,
-                            DataSetInfo& theData, 
+                            DataSetInfo& theData,
                             const TString& theOption,
                             TDirectory* theTargetDir )
-   : MethodBase( jobName, Types::kFDA, methodTitle, theData, theOption, theTargetDir ), 
+   : MethodBase( jobName, Types::kFDA, methodTitle, theData, theOption, theTargetDir ),
      IFitterTarget   (),
      fFormula        ( 0 ),
      fNPars          ( 0 ),
@@ -86,10 +86,10 @@ TMVA::MethodFDA::MethodFDA( const TString& jobName,
 }
 
 //_______________________________________________________________________
-TMVA::MethodFDA::MethodFDA( DataSetInfo& theData, 
-                            const TString& theWeightFile,  
+TMVA::MethodFDA::MethodFDA( DataSetInfo& theData,
+                            const TString& theWeightFile,
                             TDirectory* theTargetDir )
-   : MethodBase( Types::kFDA, theData, theWeightFile, theTargetDir ), 
+   : MethodBase( Types::kFDA, theData, theWeightFile, theTargetDir ),
      IFitterTarget   (),
      fFormula        ( 0 ),
      fNPars          ( 0 ),
@@ -129,9 +129,9 @@ void TMVA::MethodFDA::Init( void )
 }
 
 //_______________________________________________________________________
-void TMVA::MethodFDA::DeclareOptions() 
+void TMVA::MethodFDA::DeclareOptions()
 {
-   // define the options (their key words) that can be set in the option string 
+   // define the options (their key words) that can be set in the option string
    //
    // format of function string:
    //    "x0*(0)+((1)/x1)**(2)..."
@@ -607,16 +607,16 @@ void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode )
    // read coefficients from xml weight file
    gTools().ReadAttr( wghtnode, "NPars", fNPars );
 
-   try {
+   if(gTools().HasAttr( wghtnode, "NDim")) {
       gTools().ReadAttr( wghtnode, "NDim" , fOutputDimensions );
-   } catch ( std::logic_error& ){
-      // attribute could not be read, it probably does not exist because the weight file has been written with an older version
+   } else {
+      // older weight files don't have this attribute
       fOutputDimensions = 1;
    }
 
    fBestPars.clear();
    fBestPars.resize( fNPars*fOutputDimensions );
-   
+
    void* ch = gTools().GetChild(wghtnode);
    Double_t par;
    UInt_t    ipar;
