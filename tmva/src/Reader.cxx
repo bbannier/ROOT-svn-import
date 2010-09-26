@@ -320,9 +320,10 @@ TMVA::Reader::GetMethodTypeFromFile( const TString& filename ) {
    TString fullMethodName("");
    if (filename.EndsWith(".xml")) {
       fin.close();
-      void* doc      = gTools().xmlengine().ParseFile(filename); 
+      void* doc      = gTools().xmlengine().ParseFile(filename);
       void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
       gTools().ReadAttr(rootnode, "Method", fullMethodName);
+      gTools().xmlengine().FreeDoc(doc);
    } else {
       char buf[512];
       fin.getline(buf,512);
@@ -371,14 +372,14 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const TStrin
 
    MethodBase *method = (dynamic_cast<MethodBase*>(im));
 
+   if (method==0) return im;
+
    if( method->GetMethodType() == Types::kCategory ){ 
       MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method)); 
       if( !methCat ) 
          Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl; 
       methCat->fDataSetManager = fDataSetManager; 
    }
-
-   if (method==0) return im;
 
    method->SetupMethod();
 

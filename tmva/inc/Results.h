@@ -81,6 +81,8 @@ namespace TMVA {
       // delete all stored data
       void Delete();
 
+      virtual const std::vector< Float_t >&  operator [] ( Int_t ievt ) const = 0;
+
    private:
       Types::ETreeType             fTreeType;    //! tree type for this result 
       const DataSetInfo*           fDsi;         //! a pointer to the datasetinfo-object
