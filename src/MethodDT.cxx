@@ -121,6 +121,7 @@ TMVA::MethodDT::MethodDT( const TString& jobName,
                           const TString& theOption,
                           TDirectory* theTargetDir ) :
    TMVA::MethodBase( jobName, Types::kDT, methodTitle, theData, theOption, theTargetDir )
+   , fTree(0)
    , fNodeMinEvents(0)
    , fNCuts(0)
    , fUseYesNoLeaf(kFALSE)
@@ -141,6 +142,7 @@ TMVA::MethodDT::MethodDT( DataSetInfo& dsi,
                           const TString& theWeightFile,
                           TDirectory* theTargetDir ) :
    TMVA::MethodBase( Types::kDT, dsi, theWeightFile, theTargetDir )
+   , fTree(0)
    , fNodeMinEvents(0)
    , fNCuts(0)
    , fUseYesNoLeaf(kFALSE)
@@ -271,7 +273,7 @@ void TMVA::MethodDT::Init( void )
    // common initialisation with defaults for the DT-Method
    fNodeMinEvents  = TMath::Max( 20, int( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
    fNCuts          = 20; 
-   fPruneMethod    = DecisionTree::kCostComplexityPruning;
+   fPruneMethod    = DecisionTree::kNoPruning;
    fPruneStrength  = 5;     // means automatic determination of the prune strength using a validation sample  
    fDeltaPruneStrength=0.1;
    fRandomisedTrees= kFALSE;
@@ -294,7 +296,7 @@ void TMVA::MethodDT::Train( void )
    TMVA::DecisionTreeNode::fgIsTraining=true;
    //SeparationBase *qualitySepType = new GiniIndex();
    fTree = new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0, /*qualitySepType,*/
-                             fRandomisedTrees, fUseNvars, 0 );
+                             fRandomisedTrees, fUseNvars, 1000,3,0 );
    if (fRandomisedTrees) Log()<<kWARNING<<" randomised Trees do not work yet in this framework," 
                                 << " as I do not know how to give each tree a new random seed, now they"
                                 << " will be all the same and that is not good " << Endl;
@@ -482,9 +484,19 @@ Double_t TMVA::MethodDT::TestTreeQuality( DecisionTree *dt )
 }
 
 //_______________________________________________________________________
-void TMVA::MethodDT::AddWeightsXMLTo( void* /*parent*/ ) const 
+void TMVA::MethodDT::AddWeightsXMLTo( void* parent ) const 
 {
-   Log() << kFATAL << "Please implement writing of weights as XML" << Endl;
+   fTree->AddXMLTo(parent);
+   //Log() << kFATAL << "Please implement writing of weights as XML" << Endl;
+}
+
+//_______________________________________________________________________
+void TMVA::MethodDT::ReadWeightsFromXML( void* wghtnode)
+{
+   if(fTree)
+      delete fTree;
+   fTree = new DecisionTree();
+   fTree->ReadXML(wghtnode,GetTrainingTMVAVersionCode());
 }
 
 //_______________________________________________________________________
