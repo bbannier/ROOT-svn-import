@@ -132,7 +132,7 @@ void TMVA::MethodLD::Train( void )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodLD::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodLD::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    //Returns the MVA classification output
    const Event* ev = GetEvent();
@@ -150,7 +150,7 @@ Double_t TMVA::MethodLD::GetMvaValue( Double_t* err )
    }
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return (*fRegressionReturnVal)[0];
 }

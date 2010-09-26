@@ -98,7 +98,7 @@ namespace TMVA {
 
       void CleanBoostOptions();
 
-      Double_t GetMvaValue( Double_t* err );
+      Double_t GetMvaValue( Double_t* err=0, Double_t* errUpper = 0 );
 
    private :
       // clean up

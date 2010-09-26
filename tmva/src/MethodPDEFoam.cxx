@@ -581,7 +581,7 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // Return Mva-Value for both separated and unified foams
 
@@ -618,11 +618,11 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err )
 
       if ( (neventsS>1e-10) || (neventsB>1e-10) ) // eq. (5) in paper T.Carli, B.Koblitz 2002
          discr_error = TMath::Sqrt( Sqr ( scaleB*neventsB
-					  / Sqr(neventsS+scaleB*neventsB)
-					  * errorS) +
+                                          / Sqr(neventsS+scaleB*neventsB)
+                                          * errorS) +
                                     Sqr ( scaleB*neventsS
-					  / Sqr(neventsS+scaleB*neventsB)
-					  * errorB) );
+                                          / Sqr(neventsS+scaleB*neventsB)
+                                          * errorB) );
       else discr_error = 1.;
 
       if (discr_error < 1e-10) discr_error = 1.;
@@ -643,6 +643,7 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err )
 
    // attribute error
    if (err != 0) *err = discr_error;
+   if (errUpper != 0) *errUpper = discr_error;
 
    if (fUseYesNoCell)
       return (discr < 0.5 ? -1 : 1);

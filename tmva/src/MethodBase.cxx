@@ -653,14 +653,21 @@ void TMVA::MethodBase::AddMulticlassOutput(Types::ETreeType type)
 //   regMulti->CreateDeviationHistograms( histNamePrefix );
 }
 
+
+
 //_______________________________________________________________________
-Double_t TMVA::MethodBase::GetMvaValue( const Event* const ev, Double_t* err ) {
+void TMVA::MethodBase::NoErrorCalc(Double_t* const err, Double_t* const errUpper) {
+   if(err) *err=-1;
+   if(errUpper) *errUpper=-1;
+}
+
+//_______________________________________________________________________
+Double_t TMVA::MethodBase::GetMvaValue( const Event* const ev, Double_t* err, Double_t* errUpper ) {
    fTmpEvent = ev;
-   Double_t val = GetMvaValue(err);
+   Double_t val = GetMvaValue(err, errUpper);
    fTmpEvent = 0;
    return val;
 }
-
 
 //_______________________________________________________________________
 void TMVA::MethodBase::AddClassifierOutput( Types::ETreeType type )
@@ -669,7 +676,7 @@ void TMVA::MethodBase::AddClassifierOutput( Types::ETreeType type )
 
    Data()->SetCurrentType(type);
 
-   ResultsClassification* clRes = 
+   ResultsClassification* clRes =
       (ResultsClassification*)Data()->GetResults(GetMethodName(), type, Types::kClassification );
 
    Long64_t nEvents = Data()->GetNEvents();

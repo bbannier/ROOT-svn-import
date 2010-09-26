@@ -86,7 +86,7 @@ namespace TMVA {
       void ReadWeightsFromXML   ( void* wghtnode );
 
       // calculate the MVA value
-      Double_t GetMvaValue( Double_t* err = 0 );
+      Double_t GetMvaValue( Double_t* err = 0, Double_t* errUpper = 0 );
 
       // the option handling methods
       void DeclareOptions();

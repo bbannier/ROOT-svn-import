@@ -580,12 +580,12 @@ void TMVA::MethodRuleFit::ReadWeightsFromXML( void* wghtnode )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodRuleFit::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodRuleFit::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // returns MVA value for given event
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return fRuleFit.EvalEvent( *GetEvent() );
 }

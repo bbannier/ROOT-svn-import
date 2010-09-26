@@ -373,7 +373,7 @@ void TMVA::MethodSVM::ReadWeightsFromStream( TFile& /* fFin */ )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodSVM::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodSVM::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // returns MVA value for given event
    Double_t myMVA = 0;
@@ -392,7 +392,7 @@ Double_t TMVA::MethodSVM::GetMvaValue( Double_t* err )
    myMVA -= fBparm;
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    // 08/12/09: changed sign here to make results agree with convention signal=1
    return 1.0/(1.0 + TMath::Exp(myMVA));

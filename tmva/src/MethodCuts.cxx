@@ -414,12 +414,12 @@ void TMVA::MethodCuts::ProcessOptions()
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodCuts::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodCuts::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // cut evaluation: returns 1.0 if event passed, 0.0 otherwise
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    // sanity check
    if (fCutMin == NULL || fCutMax == NULL || fNbins == 0) {

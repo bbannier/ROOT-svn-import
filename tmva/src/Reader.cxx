@@ -124,19 +124,19 @@ TMVA::Reader::Reader( const TString& theOption, Bool_t verbose )
      fVerbose( verbose ),
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
-     fMvaEventError( -1 ),
-     fMvaEventError2( -1 ),   //zjh
+     fMvaEventError( 0 ),
+     fMvaEventErrorUpper( 0 ),
      fLogger ( 0 )
 {
    // constructor
 
    fLogger = new MsgLogger(this);
 
-//    DataSetManager::CreateInstance(fDataInputHandler); // DSMTEST removed
-//    DataSetManager::Instance().AddDataSetInfo(fDataSetInfo); // DSMTEST removed
-   fDataSetManager = new DataSetManager( fDataInputHandler ); // DSMTEST 
+   //    DataSetManager::CreateInstance(fDataInputHandler); // DSMTEST removed
+   //    DataSetManager::Instance().AddDataSetInfo(fDataSetInfo); // DSMTEST removed
+   fDataSetManager = new DataSetManager( fDataInputHandler ); // DSMTEST
    fDataSetManager->AddDataSetInfo(fDataSetInfo); // DSMTEST
-   
+
 
 
    SetConfigName( GetName() );
@@ -153,8 +153,8 @@ TMVA::Reader::Reader( std::vector<TString>& inputVars, const TString& theOption,
      fVerbose( verbose ),
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
-     fMvaEventError( -1 ),
-     fMvaEventError2( -1 ),   //zjh
+     fMvaEventError( 0 ),
+     fMvaEventErrorUpper( 0 ),   //zjh
      fLogger ( 0 )
 {
    // constructor
@@ -179,13 +179,13 @@ TMVA::Reader::Reader( std::vector<std::string>& inputVars, const TString& theOpt
      fVerbose( verbose ),
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
-     fMvaEventError( -1 ),
-     fMvaEventError2( -1 ),   //zjh
+     fMvaEventError( 0 ),
+     fMvaEventErrorUpper( 0 ),
      fLogger ( 0 )
 {
    // constructor
    fLogger = new MsgLogger(this);
-   SetConfigName( GetName() );   
+   SetConfigName( GetName() );
    DeclareOptions();
    ParseOptions();
 
@@ -205,8 +205,8 @@ TMVA::Reader::Reader( const std::string& varNames, const TString& theOption, Boo
      fVerbose( verbose ),
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
-     fMvaEventError( -1 ),
-     fMvaEventError2( -1 ),   //zjh
+     fMvaEventError( 0 ),
+     fMvaEventErrorUpper( 0 ),
      fLogger ( 0 )
 {
    // constructor
@@ -228,8 +228,8 @@ TMVA::Reader::Reader( const TString& varNames, const TString& theOption, Bool_t 
      fVerbose( verbose ),
      fSilent ( kFALSE ),
      fColor  ( kFALSE ),
-     fMvaEventError( -1 ),
-     fMvaEventError2( -1 ),   //zjh
+     fMvaEventError( 0 ),
+     fMvaEventErrorUpper( 0 ),
      fLogger ( 0 )
 {
    // constructor
@@ -250,9 +250,10 @@ void TMVA::Reader::DeclareOptions()
    // declaration of configuration options
    if (gTools().CheckForSilentOption( GetOptions() )) Log().InhibitOutput(); // make sure is silent if wanted to
 
-   DeclareOptionRef( fVerbose, "V",      "Verbose flag" );
-   DeclareOptionRef( fColor,   "Color",  "Color flag (default True)" );
-   DeclareOptionRef( fSilent,  "Silent", "Boolean silent flag (default False)" );   
+   DeclareOptionRef( fVerbose,        "V",      "Verbose flag" );
+   DeclareOptionRef( fColor,          "Color",  "Color flag (default True)" );
+   DeclareOptionRef( fSilent,         "Silent", "Boolean silent flag (default False)" );
+   DeclareOptionRef( fCalculateError, "Error",  "Calculates errors (default False)" );
 }
 
 //_______________________________________________________________________
@@ -271,7 +272,7 @@ void TMVA::Reader::Init( void )
    // default initialisation (no member variables)
    // default initialisation (no member variables)
    if (Verbose()) fLogger->SetMinType( kVERBOSE );
-   
+
    gConfig().SetUseColor( fColor );
    gConfig().SetSilent  ( fSilent );
 }
@@ -296,7 +297,7 @@ void TMVA::Reader::AddVariable( const TString& expression, Int_t* datalink )
 void TMVA::Reader::AddSpectator( const TString& expression, Float_t* datalink )
 {
    // Add a float spectator or expression to the reader
-   DataInfo().AddSpectator( expression, "", "", 0, 0, 'F', kFALSE ,(void*)datalink ); 
+   DataInfo().AddSpectator( expression, "", "", 0, 0, 'F', kFALSE ,(void*)datalink );
 }
 
 //_______________________________________________________________________
@@ -353,11 +354,11 @@ TMVA::IMethod* TMVA::Reader::BookMVA( const TString& methodTag, const TString& w
 
    MethodBase* method = dynamic_cast<MethodBase*>(this->BookMVA( Types::Instance().GetMethodType(methodType),
                                                                  weightfile ) );
-   if( method->GetMethodType() == Types::kCategory ){ 
-      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method)); 
-      if( !methCat ) 
-	 Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl; 
-      methCat->fDataSetManager = fDataSetManager; 
+   if( method->GetMethodType() == Types::kCategory ){
+      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method));
+      if( !methCat )
+         Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl;
+      methCat->fDataSetManager = fDataSetManager;
    }
 
    return fMethodMap[methodTag] = method;
@@ -374,11 +375,11 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const TStrin
 
    if (method==0) return im;
 
-   if( method->GetMethodType() == Types::kCategory ){ 
-      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method)); 
-      if( !methCat ) 
-         Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl; 
-      methCat->fDataSetManager = fDataSetManager; 
+   if( method->GetMethodType() == Types::kCategory ){
+      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method));
+      if( !methCat )
+         Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl;
+      methCat->fDataSetManager = fDataSetManager;
    }
 
    method->SetupMethod();
@@ -392,10 +393,10 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const TStrin
 
    // check for unused options
    method->CheckSetup();
-   
+
    Log() << kINFO << "Booked classifier \"" << method->GetMethodName()
          << "\" of type: \"" << method->GetMethodTypeName() << "\"" << Endl;
-   
+
    return method;
 }
 
@@ -408,14 +409,14 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const char* 
    // books MVA method from weightfile
    IMethod* im = ClassifierFactory::Instance().Create(std::string(Types::Instance().GetMethodName( methodType )),
                                                       DataInfo(), "" );
-   
+
    MethodBase *method = (dynamic_cast<MethodBase*>(im));
 
-   if( method->GetMethodType() == Types::kCategory ){ 
-      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method)); 
-      if( !methCat ) 
-         Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl; 
-      methCat->fDataSetManager = fDataSetManager; 
+   if( method->GetMethodType() == Types::kCategory ){
+      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method));
+      if( !methCat )
+         Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl;
+      methCat->fDataSetManager = fDataSetManager;
    }
 
    method->SetupMethod();
@@ -429,10 +430,10 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const char* 
 
    // check for unused options
    method->CheckSetup();
-   
+
    Log() << kINFO << "Booked classifier \"" << method->GetMethodName()
          << "\" of type: \"" << method->GetMethodTypeName() << "\"" << Endl;
-   
+
    return method;
 #else
    Log() << kFATAL << "Method Reader::BookMVA(TMVA::Types::EMVA methodType, const char* xmlstr) is not available for ROOT versions prior to 5.26/00." << Endl;
@@ -449,10 +450,10 @@ Double_t TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const 
    // create a temporary event from the vector.
    Event* tmpEvent=new Event(inputVec, 2); // ToDo resolve magic 2 issue
    IMethod* imeth = FindMVA( methodTag );
-   MethodBase* meth = dynamic_cast<TMVA::MethodBase*>(imeth); 
+   MethodBase* meth = dynamic_cast<TMVA::MethodBase*>(imeth);
    if (meth->GetMethodType() == TMVA::Types::kCuts)
       dynamic_cast<TMVA::MethodCuts*>(meth)->SetTestSignalEfficiency( aux );
-   Double_t val = meth->GetMvaValue( tmpEvent, &fMvaEventError);
+   Double_t val = meth->GetMvaValue( tmpEvent, (fCalculateError?&fMvaEventError:0));
    delete tmpEvent;
    return val;
 }
@@ -467,7 +468,7 @@ Double_t TMVA::Reader::EvaluateMVA( const std::vector<Double_t>& inputVec, const
    if(fTmpEvalVec.size() != inputVec.size())
       fTmpEvalVec.resize(inputVec.size());
 
-   for (UInt_t idx=0; idx!=inputVec.size(); idx++ ) 
+   for (UInt_t idx=0; idx!=inputVec.size(); idx++ )
       fTmpEvalVec[idx]=inputVec[idx];
 
    return EvaluateMVA( fTmpEvalVec, methodTag, aux );
@@ -502,12 +503,13 @@ Double_t TMVA::Reader::EvaluateMVA( MethodBase* method, Double_t aux )
 {
    // evaluates the MVA
 
-   // the aux value is only needed for MethodCuts: it sets the required signal efficiency
+   // the aux value is only needed for MethodCuts: it sets the
+   // required signal efficiency
    if (method->GetMethodType() == TMVA::Types::kCuts)
       dynamic_cast<TMVA::MethodCuts*>(method)->SetTestSignalEfficiency( aux );
-   if (method->GetMethodType() == TMVA::Types::kMLP)
-      return method->GetMvaValueAsymError( fMvaEventError, fMvaEventError2 ); //zjh
-   else  return method->GetMvaValue( &fMvaEventError ); // attributed MVA response and error
+
+   return method->GetMvaValue( (fCalculateError?&fMvaEventError:0),
+                               (fCalculateError?&fMvaEventErrorUpper:0) );
 }
 
 //_______________________________________________________________________

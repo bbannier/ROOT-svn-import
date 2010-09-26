@@ -1256,18 +1256,19 @@ void  TMVA::MethodBDT::ReadWeightsFromStream( istream& istr )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err ){
-   return this->GetMvaValue( err, 0 );
+Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, Double_t* errUpper ){
+   return this->GetMvaValue( err, errUpper, 0 );
 }
+
 //_______________________________________________________________________
-Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, UInt_t useNTrees )
+Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, Double_t* errUpper, UInt_t useNTrees )
 {
    // Return the MVA value (range [-1;1]) that classifies the
    // event according to the majority vote from the total number of
    // decision trees.
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
    
    // allow for the possibility to use less trees in the actual MVA calculation
    // than have been originally trained.

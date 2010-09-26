@@ -99,8 +99,12 @@ namespace TMVA {
       void WriteMonitoringHistosToFile( void ) const;
 
       // calculate the MVA value
-      Double_t GetMvaValue( Double_t* err = 0);
-      Double_t GetMvaValue( Double_t* err , UInt_t useNTrees );
+      Double_t GetMvaValue( Double_t* err = 0, Double_t* errUpper = 0);
+
+   private:
+      Double_t GetMvaValue( Double_t* err, Double_t* errUpper, UInt_t useNTrees );
+
+   public:
       const std::vector<Float_t>& GetMulticlassValues();
 
       // regression response
