@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$   
-// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss,Or Cohen 
+// @(#)root/tmva $Id$
+// Author: Andreas Hoecker, Joerg Stelzer, Helge Voss, Kai Voss,Or Cohen
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -19,9 +19,9 @@
  *      Eckhard v. Toerne  <evt@uni-bonn.de>        - U of Bonn, Germany          *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
- *      CERN, Switzerland                                                         * 
- *      U. of Victoria, Canada                                                    * 
- *      MPI-K Heidelberg, Germany                                                 * 
+ *      CERN, Switzerland                                                         *
+ *      U. of Victoria, Canada                                                    *
+ *      MPI-K Heidelberg, Germany                                                 *
  *      LAPP, Annecy, France                                                      *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
@@ -68,10 +68,10 @@ namespace TMVA {
                    const TString& theOption = "",
                    TDirectory* theTargetDir = NULL );
 
-      MethodBoost( DataSetInfo& dsi, 
-                   const TString& theWeightFile,  
-                   TDirectory* theTargetDir = NULL );      
-      
+      MethodBoost( DataSetInfo& dsi,
+                   const TString& theWeightFile,
+                   TDirectory* theTargetDir = NULL );
+
       virtual ~MethodBoost( void );
 
       virtual Bool_t HasAnalysisType( Types::EAnalysisType type, UInt_t numberClasses, UInt_t /*numberTargets*/ );
@@ -81,14 +81,14 @@ namespace TMVA {
 
       // ranking of input variables
       const Ranking* CreateRanking();
-         
+
       // saves the name and options string of the boosted classifier
       Bool_t BookMethod( Types::EMVA theMethod, TString methodTitle, TString theOption );
       void SetBoostedMethodName ( TString methodName )     { fBoostedMethodName  = methodName; }
 
       Int_t          GetBoostNum() { return fBoostNum; }
 
-      // gives the monitoring historgram from the vector according to index of the 
+      // gives the monitoring historgram from the vector according to index of the
       // histrogram added in the MonitorBoost function
       TH1*           GetMonitoringHist( Int_t histInd ) { return (*fMonitorHist)[fDefaultHistNum+histInd]; }
 
@@ -101,7 +101,7 @@ namespace TMVA {
       Double_t GetMvaValue( Double_t* err );
 
    private :
-      // clean up 
+      // clean up
       void ClearAll();
 
       // print fit results
@@ -155,7 +155,7 @@ namespace TMVA {
       //Number of times the classifier is boosted (set by the user)
       Int_t             fBoostNum;
       // string specifying the boost type (AdaBoost / Bagging )
-      TString           fBoostType; 
+      TString           fBoostType;
 
       // string specifying the boost type ( ByError,Average,LastMethod )
       TString           fMethodWeightType;
@@ -201,7 +201,7 @@ namespace TMVA {
       // tree  to monitor values during the boosting
       TTree*            fMonitorTree;
 
-      // the stage of the boosting 
+      // the stage of the boosting
       Types::EBoostStage fBoostStage;
 
       //the number of histogram filled for every type of boosted classifier
@@ -219,7 +219,7 @@ namespace TMVA {
 
       // mva values for the last trained method (on training sample)
       std::vector<Float_t> *fMVAvalues;
-      
+
       DataSetManager* fDataSetManager; // DSMTEST
       friend class Factory; // DSMTEST
       friend class Reader;  // DSMTEST

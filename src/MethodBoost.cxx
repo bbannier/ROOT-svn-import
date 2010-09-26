@@ -72,14 +72,23 @@ TMVA::MethodBoost::MethodBoost( const TString& jobName,
                                 DataSetInfo& theData,
                                 const TString& theOption,
                                 TDirectory* theTargetDir ) :
-   TMVA::MethodCompositeBase( jobName, Types::kBoost, methodTitle, theData, theOption, theTargetDir ),
-   fRandomSeed(0),
-   fBoostedMethodTitle(methodTitle),
-   fBoostedMethodOptions(theOption),
-   fMonitorHist(0),
-   fROC_training(0.0),
-   fOverlap_integral(0.0),
-   fMVAvalues(0)
+   TMVA::MethodCompositeBase( jobName, Types::kBoost, methodTitle, theData, theOption, theTargetDir )
+   , fBoostNum(0)
+   , fMethodError(0)
+   , fOrigMethodError(0)
+   , fBoostWeight(0)
+   , fADABoostBeta(0)
+   , fRandomSeed(0)
+   , fBoostedMethodTitle(methodTitle)
+   , fBoostedMethodOptions(theOption)
+   , fMonitorHist(0)
+   , fMonitorBoostedMethod(kFALSE)
+   , fBoostStage(Types::kBoostProcBegin)
+   , fDefaultHistNum(0)
+   , fRecalculateMVACut(kFALSE)
+   , fROC_training(0.0)
+   , fOverlap_integral(0.0)
+   , fMVAvalues(0)
 {
    fMVAvalues = new std::vector<Float_t>;
 }
@@ -88,13 +97,23 @@ TMVA::MethodBoost::MethodBoost( const TString& jobName,
 TMVA::MethodBoost::MethodBoost( DataSetInfo& dsi,
                                 const TString& theWeightFile,
                                 TDirectory* theTargetDir )
-   : TMVA::MethodCompositeBase( Types::kBoost, dsi, theWeightFile, theTargetDir ),
-     fBoostNum(0), 
-     fRandomSeed(0), 
-     fMonitorHist(0), 
-     fROC_training(0.0), 
-     fOverlap_integral(0.0), 
-     fMVAvalues(0)
+   : TMVA::MethodCompositeBase( Types::kBoost, dsi, theWeightFile, theTargetDir )
+   , fBoostNum(0)
+   , fMethodError(0)
+   , fOrigMethodError(0)
+   , fBoostWeight(0)
+   , fADABoostBeta(0)
+   , fRandomSeed(0)
+   , fBoostedMethodTitle("")
+   , fBoostedMethodOptions("")
+   , fMonitorHist(0)
+   , fMonitorBoostedMethod(kFALSE)
+   , fBoostStage(Types::kBoostProcBegin)
+   , fDefaultHistNum(0)
+   , fRecalculateMVACut(kFALSE)
+   , fROC_training(0.0)
+   , fOverlap_integral(0.0)
+   , fMVAvalues(0)
 {
    fMVAvalues = new std::vector<Float_t>;
 }
@@ -136,7 +155,7 @@ void TMVA::MethodBoost::DeclareOptions()
 {
    DeclareOptionRef( fBoostNum = 1, "Boost_Num",
                      "Number of times the classifier is boosted");
-   
+
    DeclareOptionRef( fMonitorBoostedMethod = kTRUE, "Boost_MonitorMethod",
                      "Whether to write monitoring histogram for each boosted classifier");
    
@@ -610,6 +629,7 @@ void TMVA::MethodBoost::SingleBoost()
    Event * ev; Float_t w,v,wo; Bool_t sig=kTRUE;
    Double_t sumAll=0, sumWrong=0, sumAllOrig=0, sumWrongOrig=0, sumAll1=0;
    Bool_t* WrongDetection=new Bool_t[Data()->GetNEvents()];
+   for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) WrongDetection[ievt]=kTRUE;
 
    // finding the wrong events and calculating their total weights
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++) {

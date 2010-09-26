@@ -1,4 +1,4 @@
-// @(#)root/tmva $Id$    
+// @(#)root/tmva $Id$
 // Author: Andreas Hoecker, Joerg Stelzer, Fredrik Tegenfeldt, Helge Voss
 
 /**********************************************************************************
@@ -7,14 +7,14 @@
  * Class  : Rule                                                                  *
  *                                                                                *
  * Description:                                                                   *
- *      A class describing a 'rule cut'                                           * 
+ *      A class describing a 'rule cut'                                           *
  *                                                                                *
  *                                                                                *
  * Authors (alphabetical):                                                        *
  *      Fredrik Tegenfeldt <Fredrik.Tegenfeldt@cern.ch> - Iowa State U., USA      *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
- *      CERN, Switzerland                                                         * 
+ *      CERN, Switzerland                                                         *
  *      Iowa State U.                                                             *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
@@ -41,7 +41,7 @@ namespace TMVA {
       RuleCut( const std::vector< const TMVA::Node * > & nodes );
 
       // copy constructor
-      RuleCut( const RuleCut & other ) { Copy( other ); }
+      RuleCut( const RuleCut & other ) : fLogger(0) { Copy( other ); }
 
       // empty constructor
       RuleCut();
@@ -95,7 +95,7 @@ namespace TMVA {
 
 
       mutable MsgLogger*    fLogger;   // message logger
-      MsgLogger& Log() const { return *fLogger; }    
+      MsgLogger& Log() const { return *fLogger; }
    };
 }
 

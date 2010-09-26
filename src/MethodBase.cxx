@@ -1024,13 +1024,13 @@ void TMVA::MethodBase::TestClassification()
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
       
       const Event* ev = GetEvent(ievt);
-      Float_t v = (*mvaRes)[ievt];
+      Float_t v = (*mvaRes)[ievt][0];
       Float_t w = ev->GetWeight();
       
       if (DataInfo().IsSignal(ev)) {
          mva_s ->Fill( v, w );
          if (mvaProb) {
-            proba_s->Fill( (*mvaProb)[ievt], w );
+            proba_s->Fill( (*mvaProb)[ievt][0], w );
             rarity_s->Fill( GetRarity( v ), w );
          }
          
@@ -1039,7 +1039,7 @@ void TMVA::MethodBase::TestClassification()
       else {
          mva_b ->Fill( v, w );
          if (mvaProb) {
-            proba_b->Fill( (*mvaProb)[ievt], w );
+            proba_b->Fill( (*mvaProb)[ievt][0], w );
             rarity_b->Fill( GetRarity( v ), w );
          }
          mva_eff_b ->Fill( v, w );
@@ -1209,11 +1209,12 @@ void TMVA::MethodBase::WriteStateToFile() const
    Log() << kINFO << "Creating weight file in xml format: "
          << gTools().Color("lightblue") << xmlfname << gTools().Color("reset") << Endl;
    void* doc      = gTools().xmlengine().NewDoc();
-   void* rootnode = gTools().AddChild(0,"MethodSetup");
+   void* rootnode = gTools().AddChild(0,"MethodSetup", "", true);
    gTools().xmlengine().DocSetRootElement(doc,rootnode);
    gTools().AddAttr(rootnode,"Method", GetMethodTypeName() + "::" + GetMethodName());
    WriteStateToXML(rootnode);
    gTools().xmlengine().SaveDoc(doc,xmlfname);
+   gTools().xmlengine().FreeDoc(doc);
 }
 
 //_______________________________________________________________________
@@ -1232,6 +1233,7 @@ void TMVA::MethodBase::ReadStateFromFile()
       void* doc = gTools().xmlengine().ParseFile(tfname);
       void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
       ReadStateFromXML(rootnode);
+      gTools().xmlengine().FreeDoc(doc);
    }
    else {
       filebuf fb;
@@ -1257,18 +1259,17 @@ void TMVA::MethodBase::ReadStateFromFile()
 //_______________________________________________________________________
 void TMVA::MethodBase::ReadStateFromXMLString( const char* xmlstr ) {
    // for reading from memory
-   
+
 #if (ROOT_SVN_REVISION >= 32259) && (ROOT_VERSION_CODE >= 334336) // 5.26/00
    void* doc = gTools().xmlengine().ParseString(xmlstr);
-
    void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
-
-   return ReadStateFromXML(rootnode);
+   ReadStateFromXML(rootnode);
+   gTools().xmlengine().FreeDoc(doc);
 #else
    Log() << kFATAL << "Method MethodBase::ReadStateFromXMLString( const char* xmlstr ) is not available for ROOT versions prior to 5.26/00." << Endl;
-   return;
 #endif
 
+   return;
 }
 
 //_______________________________________________________________________
@@ -1346,8 +1347,8 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
       }
       else if (nodeName=="MVAPdfs") {
          TString pdfname;
-         if (fMVAPdfS) delete fMVAPdfS;
-         if (fMVAPdfB) delete fMVAPdfB;
+         if (fMVAPdfS) { delete fMVAPdfS; fMVAPdfS=0; }
+         if (fMVAPdfB) { delete fMVAPdfB; fMVAPdfB=0; }
          void* pdfnode = gTools().GetChild(ch);
          if (pdfnode) {
             gTools().ReadAttr(pdfnode, "Name", pdfname);
@@ -1363,7 +1364,7 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
          ReadWeightsFromXML(ch);
       }
       else {
-         std::cout << "Unparsed: " << nodeName << std::endl;
+         Log() << kWARNING << "Unparsed XML node: '" << nodeName << "'" << Endl;
       }
       ch = gTools().GetNextChild(ch);
 
@@ -1566,13 +1567,9 @@ void TMVA::MethodBase::AddSpectatorsXMLTo( void* parent ) const
 
       // we do not want to write spectators that are category-cuts,
       // except if the method is the category method and the spectators belong to it
-      if( vi.GetVarType()=='C' ) {
+      if( vi.GetVarType()=='C' )
          continue;
-         if(GetMethodTypeName()!="Category")
-            continue;
-         if(!vi.GetTitle().BeginsWith(GetMethodName()+":") )
-            continue;
-      }
+
       void* spec = gTools().AddChild( specs, "Spectator" );
       gTools().AddAttr( spec, "SpecIndex", writeIdx++ );
       vi.AddToXML( spec );
@@ -1687,7 +1684,7 @@ void TMVA::MethodBase::ReadTargetsFromXML( void* tarnode )
       gTools().ReadAttr( ch, "TargetIndex", tarIdx);
       gTools().ReadAttr( ch, "Expression", expression);
       DataInfo().AddTarget(expression,"","",0,0);
-     
+
       ch = gTools().GetNextChild(ch);
    }
 }

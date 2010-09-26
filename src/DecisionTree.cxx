@@ -86,12 +86,15 @@ using std::vector;
 ClassImp(TMVA::DecisionTree)
 
 //_______________________________________________________________________
-TMVA::DecisionTree::DecisionTree(): 
+TMVA::DecisionTree::DecisionTree():
    BinaryTree(),
    fNvars      (0),
    fNCuts      (-1),
    fSepType    (NULL),
    fMinSize    (0),
+   fMinSepGain (0),
+   fUseSearchTree(kFALSE),
+   fPruneStrength(0),
    fPruneMethod(kCostComplexityPruning),
    fNodePurityLimit(0.5),
    fRandomisedTree (kFALSE),
@@ -100,15 +103,16 @@ TMVA::DecisionTree::DecisionTree():
    fNNodesMax(999999),
    fMaxDepth(999999),
    fClass(0),
-   fTreeID(0)
+   fTreeID(0),
+   fAnalysisType(Types::kClassification)
 {
-   // default constructor using the GiniIndex as separation criterion, 
+   // default constructor using the GiniIndex as separation criterion,
    // no restrictions on minium number of events in a leave note or the
    // separation gain in the node splitting
 }
 
 //_______________________________________________________________________
-TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType,Int_t minSize, Int_t nCuts, UInt_t cls, 
+TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType, Int_t minSize, Int_t nCuts, UInt_t cls,
                                   Bool_t randomisedTree, Int_t useNvars, UInt_t nNodesMax,
                                   UInt_t nMaxDepth, Int_t iSeed, Float_t purityLimit, Int_t treeID):
    BinaryTree(),
@@ -116,6 +120,9 @@ TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType,Int_t minSize, I
    fNCuts          (nCuts),
    fSepType        (sepType),
    fMinSize        (minSize),
+   fMinSepGain     (0),
+   fUseSearchTree  (kFALSE),
+   fPruneStrength  (0),
    fPruneMethod    (kCostComplexityPruning),
    fNodePurityLimit(purityLimit),
    fRandomisedTree (randomisedTree),
@@ -130,7 +137,7 @@ TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType,Int_t minSize, I
    // events in a no that is still subjected to further splitting, the
    // number of bins in the grid used in applying the cut for the node
    // splitting.
-   
+
    if (sepType == NULL) { // it is interpreted as a regression tree, where
                           // currently the separation type (simple least square)
                           // cannot be chosen freely)
@@ -155,7 +162,10 @@ TMVA::DecisionTree::DecisionTree( const DecisionTree &d ):
    fNCuts      (d.fNCuts),
    fSepType    (d.fSepType),
    fMinSize    (d.fMinSize),
-   fPruneMethod(d.fPruneMethod),
+   fMinSepGain (d.fMinSepGain),
+   fUseSearchTree  (d.fUseSearchTree),
+   fPruneStrength  (d.fPruneStrength),
+   fPruneMethod    (d.fPruneMethod),
    fNodePurityLimit(d.fNodePurityLimit),
    fRandomisedTree (d.fRandomisedTree),
    fUseNvars       (d.fUseNvars),
@@ -249,9 +259,11 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
    Double_t s=0, b=0;
    Double_t suw=0, buw=0;
    Double_t target=0, target2=0;
-   const UInt_t cNvars = fNvars;
-   Double_t *xmin = new Double_t[Int_t(cNvars)];
-   Double_t *xmax = new Double_t[Int_t(cNvars)];
+   Float_t *xmin = new Float_t[fNvars];
+   Float_t *xmax = new Float_t[fNvars];
+   for (UInt_t ivar=0; ivar<fNvars; ivar++) {
+      xmin[ivar]=xmax[ivar]=0;
+   }
    for (UInt_t iev=0; iev<eventSample.size(); iev++) {
       const TMVA::Event* evt = eventSample[iev];
       const Double_t weight = evt->GetWeight();
@@ -291,7 +303,7 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
          if (eventSample[i]->GetClass() != fClass) {
             nBkg += eventSample[i]->GetWeight();
             Log() << kINFO << "Event "<< i<< " has (original) weight: " <<  eventSample[i]->GetWeight()/eventSample[i]->GetBoostWeight() 
-		  << " boostWeight: " << eventSample[i]->GetBoostWeight() << Endl;
+                  << " boostWeight: " << eventSample[i]->GetBoostWeight() << Endl;
          }
       }
       Log() << kINFO << " that gives in total: " << nBkg<<Endl;
