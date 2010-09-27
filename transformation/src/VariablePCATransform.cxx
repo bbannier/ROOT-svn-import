@@ -27,6 +27,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <stdexcept>
 
 #include "TVectorF.h"
 #include "TVectorD.h"
@@ -115,7 +116,6 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
 
    const Int_t inputSize = fGet.size();
    const UInt_t nCls = GetNClasses();
-   //UInt_t evCls = ev->GetClass();
 
    // if we have more than one class, take the last PCA analysis where all classes are combined if 
    // the cls parameter is outside the defined classes
@@ -131,22 +131,22 @@ const TMVA::Event* TMVA::VariablePCATransform::Transform( const Event* const ev,
    std::vector<Float_t> principalComponents;
 
    // set the variable values
-   const std::vector<UInt_t>* varArrange = ev->GetVariableArrangement();
-   if(!varArrange) {
+//    const std::vector<UInt_t>* varArrange = ev->GetVariableArrangement();
+//    if(!varArrange) {
 
       GetInput( ev, input );
       X2P( principalComponents, input, cls );
       SetOutput( fTransformedEvent, principalComponents, ev );
 
-   } else {
-      // TODO: check what has to be done here
-      std::vector<Float_t> rv(inputSize);
-      for (Int_t ivar=0; ivar<inputSize; ++ivar)
-         rv[ivar] = ev->GetValue(ivar);
-      X2P( principalComponents, input, cls );
-      for (Int_t ivar=0; ivar<inputSize; ++ivar)
-         fTransformedEvent->SetVal(ivar, rv[ivar]);
-   }
+//    } else {
+//       // TODO: check what has to be done here
+//       std::vector<Float_t> rv(inputSize);
+//       for (Int_t ivar=0; ivar<inputSize; ++ivar)
+//          rv[ivar] = ev->GetValue(ivar);
+//       X2P( principalComponents, input, cls );
+//       for (Int_t ivar=0; ivar<inputSize; ++ivar)
+//          fTransformedEvent->SetVal(ivar, rv[ivar]);
+//    }
 
    return fTransformedEvent;
 }
@@ -177,22 +177,22 @@ const TMVA::Event* TMVA::VariablePCATransform::InverseTransform( const Event* co
    std::vector<Float_t> output;
 
    // set the variable values
-   const std::vector<UInt_t>* varArrange = ev->GetVariableArrangement();
-   if(!varArrange) {
+//    const std::vector<UInt_t>* varArrange = ev->GetVariableArrangement();
+//    if(!varArrange) {
 
       GetInput( ev, principalComponents, kTRUE );
       P2X( output, principalComponents, cls );
       SetOutput( fBackTransformedEvent, output, ev, kTRUE );
 
-   } else {
-      // TODO: check what has to be done here
-      std::vector<Float_t> rv(inputSize);
-      for (Int_t ivar=0; ivar<inputSize; ++ivar)
-         rv[ivar] = ev->GetValue(ivar);
-      P2X( principalComponents, output, cls );
-      for (Int_t ivar=0; ivar<inputSize; ++ivar)
-         fBackTransformedEvent->SetVal(ivar, rv[ivar]);
-   }
+//    } else {
+//       // TODO: check what has to be done here
+//       std::vector<Float_t> rv(inputSize);
+//       for (Int_t ivar=0; ivar<inputSize; ++ivar)
+//          rv[ivar] = ev->GetValue(ivar);
+//       P2X( principalComponents, output, cls );
+//       for (Int_t ivar=0; ivar<inputSize; ++ivar)
+//          fBackTransformedEvent->SetVal(ivar, rv[ivar]);
+//    }
 
    return fBackTransformedEvent;
 }
@@ -335,6 +335,8 @@ void TMVA::VariablePCATransform::AttachXMLTo(void* parent) {
    void* trfxml = gTools().AddChild(parent, "Transform");
    gTools().AddAttr(trfxml, "Name", "PCA");
 
+   VariableTransformBase::AttachXMLTo( trfxml );
+
    // write mean values to stream
    for (UInt_t sbType=0; sbType<fMeanValues.size(); sbType++) {
       void* meanxml = gTools().AddChild( trfxml, "Statistics");
@@ -373,6 +375,24 @@ void TMVA::VariablePCATransform::ReadFromXML( void* trfnode )
    UInt_t clsIdx;
    TString classtype;
    TString nodeName;
+
+
+   Bool_t newFormat = kFALSE;
+
+   void* inpnode = NULL;
+   try{
+      inpnode = gTools().GetChild(trfnode, "Selection"); // new xml format
+      newFormat = kTRUE;
+   }catch( std::logic_error& excpt ){
+      newFormat = kFALSE; // old xml format
+   }
+   if( newFormat ){
+      // ------------- new format --------------------
+      // read input
+      VariableTransformBase::ReadFromXML( inpnode );
+
+   }
+
 
    void* ch = gTools().GetChild(trfnode);
    while (ch) {

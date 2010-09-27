@@ -197,7 +197,7 @@ const TMVA::Event* TMVA::VariableDecorrTransform::Transform( const TMVA::Event* 
    }
 
    input.clear();
-   for (Int_t ivar=0; ivar<nvar; ivar++) input.at(ivar) = vec(ivar);
+   for (Int_t ivar=0; ivar<nvar; ivar++) input.push_back( vec(ivar) );
 
    SetOutput( fTransformedEvent, input, ev );
 
@@ -205,7 +205,7 @@ const TMVA::Event* TMVA::VariableDecorrTransform::Transform( const TMVA::Event* 
 }
 
 //_______________________________________________________________________
-const TMVA::Event* TMVA::VariableDecorrTransform::InverseTransform( const TMVA::Event* const ev, Int_t cls ) const
+const TMVA::Event* TMVA::VariableDecorrTransform::InverseTransform( const TMVA::Event* const /*ev*/, Int_t /*cls*/ ) const
 {
    // apply the inverse decorrelation transformation ... 
    // TODO : ... build the inverse transformation

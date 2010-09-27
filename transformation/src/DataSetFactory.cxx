@@ -893,7 +893,6 @@ void  TMVA::DataSetFactory::BuildEventVector( TMVA::DataSetInfo& dsi,
 
                // event accepted, fill temporary ntuple
                tmpEventVector.find(currentInfo.GetTreeType())->second.at(cl).push_back(new Event(vars, tgts , vis, cl , weight));
-
             }
          }
          
@@ -1304,9 +1303,7 @@ TMVA::DataSet*  TMVA::DataSetFactory::MixEvents( DataSetInfo& dsi,
    Log() << kINFO << "Create internal testing tree" << Endl;        
    ds->SetEventCollection(testingEventVector,  Types::kTesting  ); 
 
-
    return ds;
-   
 }
 
 
