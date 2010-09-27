@@ -80,7 +80,9 @@ namespace TMVA {
       virtual const Event* Transform       ( const Event* const, Int_t cls ) const = 0;
       virtual const Event* InverseTransform( const Event* const, Int_t cls ) const = 0;
 
+      
       void ToggleInputSortOrder( const Bool_t sortOrder ) { fSortGet = sortOrder; }
+      void SetOutputDataSetInfo( DataSetInfo* outputDsi ) { fDsiOutput = outputDsi; }
 
       // accessors
       void   SetEnabled  ( Bool_t e ) { fEnabled = e; }
@@ -90,10 +92,10 @@ namespace TMVA {
       Bool_t IsNormalised() const { return fNormalise; }
 
       // variable selection
-      virtual void           SelectInput( const TString& inputVariables  );
+      virtual void           SelectInput( const TString& inputVariables, Bool_t putIntoVariables = kFALSE );
       virtual void           GetInput ( const Event* event, std::vector<Float_t>& input, Bool_t backTransform = kFALSE  ) const;
       virtual void           SetOutput( Event* event, std::vector<Float_t>& output, const Event* oldEvent = 0, Bool_t backTransform = kFALSE ) const;
-      virtual void           CountVariableTypes( UInt_t& nvars, UInt_t& ntgts, UInt_t& nspcts );
+      virtual void           CountVariableTypes( UInt_t& nvars, UInt_t& ntgts, UInt_t& nspcts ) const;
 
       void SetUseSignalTransform( Bool_t e=kTRUE) { fUseSignalTransform = e; }
       Bool_t UseSignalTransform() const { return fUseSignalTransform; }
@@ -138,6 +140,7 @@ namespace TMVA {
       UInt_t GetNSpectators() const { return fDsi.GetNSpectators(); }
 
       DataSetInfo& fDsi;
+      DataSetInfo* fDsiOutput;
 
       std::vector<TMVA::VariableInfo>& Variables() { return fVariables; }
       std::vector<TMVA::VariableInfo>& Targets() { return fTargets; }
@@ -170,10 +173,10 @@ namespace TMVA {
       std::vector<TMVA::VariableInfo>  fSpectators;         // event spectators [saved to weight file --> TODO ]
 
 
-      Bool_t                           fVariableTypesAreCounted; // true if variable types have been counted already
-      UInt_t                           fNVariables;         // number of variables to be transformed
-      UInt_t                           fNTargets;           // number of targets to be transformed
-      UInt_t                           fNSpectators;        // number of spectators to be transformed
+      mutable Bool_t                   fVariableTypesAreCounted; // true if variable types have been counted already
+      mutable UInt_t                   fNVariables;         // number of variables to be transformed
+      mutable UInt_t                   fNTargets;           // number of targets to be transformed
+      mutable UInt_t                   fNSpectators;        // number of spectators to be transformed
 
       Bool_t                           fSortGet;            // if true, sort the variables into the order as defined by the user at the var definition
                                                             // if false, sort the variables according to the order given for the var transformation

@@ -43,7 +43,8 @@ ClassImp(TMVA::VariableRearrangeTransform)
 
 //_______________________________________________________________________
 TMVA::VariableRearrangeTransform::VariableRearrangeTransform( DataSetInfo& dsi )
-   : VariableTransformBase( dsi, Types::kRearranged, "Rearrange" )
+ : fEnabled(kTRUE), 
+   VariableTransformBase( dsi, Types::kRearranged, "Rearrange" )
 { 
    // constructor
 }
@@ -60,13 +61,15 @@ void TMVA::VariableRearrangeTransform::Initialize()
 }
 
 //_______________________________________________________________________
-Bool_t TMVA::VariableRearrangeTransform::PrepareTransformation( const std::vector<Event*>& /*events*/ )
+Bool_t TMVA::VariableRearrangeTransform::PrepareTransformation( const std::vector<Event*>& events )
 {
    // prepare transformation --> (nothing to do)
    if (!IsEnabled() || IsCreated()) return kTRUE;
 
    UInt_t nvars = 0, ntgts = 0, nspcts = 0;
    CountVariableTypes( nvars, ntgts, nspcts );
+   std::cout << "vartypes&varrearrtransf: " << nvars << " " << ntgts << " " << nspcts << std::endl;
+   events[0]->Print(std::cout);
    if( ntgts>0 )
       Log() << kFATAL << "Targets used in Rearrange-transformation." << Endl;
 
@@ -77,6 +80,8 @@ Bool_t TMVA::VariableRearrangeTransform::PrepareTransformation( const std::vecto
 //_______________________________________________________________________
 const TMVA::Event* TMVA::VariableRearrangeTransform::Transform( const TMVA::Event* const ev, Int_t /*cls*/ ) const
 {
+   if( !fEnabled )
+      return ev;
 
    // apply the normalization transformation
    if (!IsCreated()) Log() << kFATAL << "Transformation not yet created" << Endl;
@@ -85,8 +90,20 @@ const TMVA::Event* TMVA::VariableRearrangeTransform::Transform( const TMVA::Even
       fTransformedEvent = new Event();
 
    FloatVector input; // will be filled with the selected variables, (targets)
+//    std::cout << "========" << std::endl;
+//    UInt_t nvars = 0, ntgts = 0, nspcts = 0;
+//    CountVariableTypes( nvars, ntgts, nspcts );
+//    std::cout << "vartypes&varrearrtransf/trnsfrm: " << nvars << " " << ntgts << " " << nspcts << std::endl;
+//    ev->Print(std::cout);
    GetInput( ev, input );
+   for( std::vector<Float_t>::iterator it = input.begin(), itEnd = input.end(); it != itEnd; ++it ){
+      std::cout << (*it) << "  ";
+   }
+   std::cout << std::endl;
    SetOutput( fTransformedEvent, input, ev );
+//    std::cout << "transformed ---" << std::endl;
+//    fTransformedEvent->Print(std::cout);
+
 
    return fTransformedEvent;
 }
@@ -94,6 +111,9 @@ const TMVA::Event* TMVA::VariableRearrangeTransform::Transform( const TMVA::Even
 //_______________________________________________________________________
 const TMVA::Event* TMVA::VariableRearrangeTransform::InverseTransform( const TMVA::Event* const ev, Int_t /*cls*/ ) const
 {
+   if( !fEnabled )
+      return ev;
+
    // apply the inverse transformation
    if (!IsCreated()) Log() << kFATAL << "Transformation not yet created" << Endl;
 
@@ -101,8 +121,13 @@ const TMVA::Event* TMVA::VariableRearrangeTransform::InverseTransform( const TMV
       fBackTransformedEvent = new Event( *ev );
 
    FloatVector input;  // will be filled with the selected variables, targets, (spectators)
+   std::cout << "inv =====" << std::endl;
    GetInput( ev, input, kTRUE );
+   ev->Print(std::cout);
    SetOutput( fBackTransformedEvent, input, ev, kTRUE );
+   std::cout << "inv ---" << std::endl;
+   fBackTransformedEvent->Print(std::cout);
+
 
    return fBackTransformedEvent;
 }
@@ -147,13 +172,13 @@ std::vector<TString>* TMVA::VariableRearrangeTransform::GetTransformationStrings
 }
 
 //_______________________________________________________________________
-void TMVA::VariableRearrangeTransform::AttachXMLTo(void* /*parent*/) 
+void TMVA::VariableRearrangeTransform::AttachXMLTo(void* parent) 
 {
 //    // create XML description of Rearrange transformation
-//    void* trfxml = gTools().AddChild(parent, "Transform");
-//    gTools().AddAttr(trfxml, "Name", "Rearrange");
+   void* trfxml = gTools().AddChild(parent, "Transform");
+   gTools().AddAttr(trfxml, "Name", "Rearrange");
 
-//    VariableTransformBase::AttachXMLTo( trfxml );
+   VariableTransformBase::AttachXMLTo( trfxml );
 
 //    Int_t numC = (GetNClasses()<= 1)?1:GetNClasses()+1;
 
@@ -174,9 +199,24 @@ void TMVA::VariableRearrangeTransform::AttachXMLTo(void* /*parent*/)
 }
 
 //_______________________________________________________________________
-void TMVA::VariableRearrangeTransform::ReadFromXML( void* /*trfnode*/ ) 
+void TMVA::VariableRearrangeTransform::ReadFromXML( void* trfnode ) 
 {
 //    // Read the transformation matrices from the xml node
+
+
+   Bool_t newFormat = kFALSE;
+
+   void* inpnode = NULL;
+   try{
+      inpnode = gTools().GetChild(trfnode, "Selection"); // new xml format
+      newFormat = kTRUE;
+   }catch( std::logic_error& excpt ){
+      Log() << kFATAL << "Unknown weight file format for transformations." << Endl;
+   }
+   
+   VariableTransformBase::ReadFromXML( inpnode );
+   
+   SetCreated();
 
 //    Bool_t newFormat = kFALSE;
 

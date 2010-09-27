@@ -111,6 +111,7 @@
 #include "TMVA/ClassifierFactory.h"
 #include "TMVA/IMethod.h"
 #include "TMVA/MethodCuts.h"
+#include "TMVA/MethodCategory.h"
 #include "TMVA/DataSetManager.h"
 
 ClassImp(TMVA::Reader)
@@ -363,6 +364,18 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const TStrin
                                                       DataInfo(), weightfile );
 
    MethodBase *method = (dynamic_cast<MethodBase*>(im));
+
+
+   // set fDataSetManager if MethodCategory (to enable Category to create datasetinfo objects) // DSMTEST
+   if( method->GetMethodType() == Types::kCategory ){ // DSMTEST
+      MethodCategory *methCat = (dynamic_cast<MethodCategory*>(im)); // DSMTEST
+      if( !methCat ) // DSMTEST
+	 Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl; // DSMTEST
+      methCat->fDataSetManager = fDataSetManager; // DSMTEST
+   } // DSMTEST
+
+
+
 
    if (method==0) return im;
 

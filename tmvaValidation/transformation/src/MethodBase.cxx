@@ -479,6 +479,8 @@ void TMVA::MethodBase::CreateVariableTransforms(const TString& trafoDefinition,
 
          TList* trClsList = gTools().ParseFormatLine( tdef, "_" ); // split entry to get trf-name and class-name
          TListIter trClsIt(trClsList);
+	 if( trClsList->GetSize() < 1 )
+	    log << kFATAL << "Incorrect transformation string provided." << Endl;
          const TString& trName = ((TObjString*)trClsList->At(0))->GetString();
 
          if (trClsList->GetEntries() > 1) {
@@ -634,7 +636,15 @@ void TMVA::MethodBase::TrainMethod()
    // all histograms should be created in the method's subdirectory
    BaseDir()->cd();
 
+      std::cout << "---===--- trainmethod methodbase" << std::endl;
+      Data()->GetEvent()->Print(std::cout); // --------------------------
+
+
    GetTransformationHandler().CalcTransformations(Data()->GetEventCollection());
+
+      std::cout << "---===--- trainmethod methodbase calctrafo" << std::endl;
+      Data()->GetEvent()->Print(std::cout); // --------------------------
+
 
    // call training of derived MVA
    Log() << kINFO << "Begin training" << Endl;

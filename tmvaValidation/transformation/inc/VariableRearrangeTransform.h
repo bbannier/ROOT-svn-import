@@ -55,8 +55,8 @@ namespace TMVA {
       virtual const Event* Transform(const Event* const, Int_t cls ) const;
       virtual const Event* InverseTransform( const Event* const, Int_t cls ) const;
 
-/*       void WriteTransformationToStream ( std::ostream& ) const; */
-/*       void ReadTransformationFromStream( std::istream&, const TString& ); */
+      void WriteTransformationToStream ( std::ostream& ) const {}
+      void ReadTransformationFromStream( std::istream&, const TString& ) { SetCreated(); }
 
       virtual void AttachXMLTo(void* parent);
       virtual void ReadFromXML( void* trfnode );
@@ -69,7 +69,12 @@ namespace TMVA {
       // provides string vector giving explicit transformation
       std::vector<TString>* GetTransformationStrings( Int_t cls ) const;
 
+      // disable the rearrange transformation. Transformation stays in, but nothing is done.
+      void ToggleEnable( Bool_t enable = kTRUE ) { fEnabled = enable; };
+
    private:
+
+      Bool_t fEnabled; // if set false: dont't do this transformation
 
       ClassDef(VariableRearrangeTransform,0) // Variable transformation: normalization
    };

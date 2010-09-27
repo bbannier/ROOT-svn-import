@@ -57,6 +57,7 @@
 #include "TMVA/Ranking.h"
 #include "TMVA/VariableInfo.h"
 #include "TMVA/DataSetManager.h"
+#include "TMVA/VariableRearrangeTransform.h"
 
 REGISTER_METHOD(Category)
 
@@ -130,14 +131,39 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
 
    Log() << kINFO << "Adding sub-classifier: " << addedMethodName << "::" << theTitle << Endl;
 
+
+   // add transformation to rearrange the input variables
+   VariableRearrangeTransform* rearrangeTransformation = new VariableRearrangeTransform(DataInfo());
+   TString variables(theVariables);
+   variables.ReplaceAll(":",","); // use ',' as separator between variables
+   std::cout << "variables " << variables.Data() << std::endl;
+
    DataSetInfo& dsi = CreateCategoryDSI(theCut, theVariables, theTitle);
+
+
+   rearrangeTransformation->SetOutputDataSetInfo( &dsi );
+   rearrangeTransformation->ToggleInputSortOrder(kFALSE); // take the order of variables from the option string
+   rearrangeTransformation->SelectInput( variables, kTRUE );
+   std::cout << "set input done "  << std::endl;
+
+   rearrangeTransformation->ToggleEnable(kFALSE);
 
    IMethod* addedMethod = ClassifierFactory::Instance().Create(addedMethodName,GetJobName(),theTitle,dsi,theOptions);
 
    MethodBase *method = (dynamic_cast<MethodBase*>(addedMethod));
 
+   std::cout << "thevariables " << theVariables.Data() << std::endl;
+   std::cout << "num vars " << method->GetNVariables() << std::endl;
+
+
+
    method->SetupMethod();
    method->ParseOptions();
+
+
+
+   method->GetTransformationHandler().AddTransformation( rearrangeTransformation, -1 );
+
    method->ProcessSetup();
 
    // set or create correct method base dir for added method
@@ -168,6 +194,9 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
    primaryDSI.AddSpectator( Form("%s_cat%i:=%s", GetName(),fMethods.size(),theCut.GetTitle()),
                             Form("%s:%s",GetName(),method->GetName()),
                             "pass", 0, 0, 'C' );
+
+
+   rearrangeTransformation->ToggleEnable(kTRUE);
 
    return method;
 }
@@ -327,6 +356,9 @@ void TMVA::MethodCategory::InitCircularTree(const DataSetInfo& dsi)
 //_______________________________________________________________________
 void TMVA::MethodCategory::Train()
 {
+      std::cout << "---===--- methodcat train" << std::endl;
+      Data()->GetEvent()->Print(std::cout); // --------------------------
+
    // train all sub-classifiers
 
    // specify the minimum # of training events and set 'classification'
@@ -370,6 +402,13 @@ void TMVA::MethodCategory::Train()
 
          Log() << kINFO << "Train method: " << mva->GetMethodName() << " for " 
                << (analysisType == Types::kRegression ? "Regression" : "Classification") << Endl;
+
+      std::cout << "---===--- data " << std::endl;
+      Data()->GetEvent()->Print(std::cout); // --------------------------
+      std::cout << "---===--- train method " << std::endl;
+      mva->Data()->GetEvent()->Print(std::cout); // --------------------------
+
+
          mva->TrainMethod();
          Log() << kINFO << "Training finished" << Endl;
 
@@ -554,7 +593,11 @@ Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err )
    if (fMethods.size()==0) return 0;
 
    UInt_t methodToUse = 0;
+//    std::cout << "GMVAV " << std::flush;
    const Event* ev = GetEvent(); 
+
+//    std::cout << "input event: " << std::endl;
+//    ev->Print(std::cout);
 
    // determine which sub-classifier to use for this event
    Int_t suitableCutsN = 0;
@@ -577,9 +620,7 @@ Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err )
    }
 
    // get mva value from the suitable sub-classifier
-   ev->SetVariableArrangement(&fVarMaps[methodToUse]);
    Double_t mvaValue = dynamic_cast<MethodBase*>(fMethods[methodToUse])->GetMvaValue(ev,err);
-   ev->SetVariableArrangement(0);
 
    return mvaValue;
 }

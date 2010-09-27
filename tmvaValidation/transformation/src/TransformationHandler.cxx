@@ -65,6 +65,7 @@
 #include "TMVA/VariablePCATransform.h"
 #include "TMVA/VariableGaussTransform.h"
 #include "TMVA/VariableNormalizeTransform.h"
+#include "TMVA/VariableRearrangeTransform.h"
 
 //_______________________________________________________________________
 TMVA::TransformationHandler::TransformationHandler( DataSetInfo& dsi, const TString& callerName ) 
@@ -867,6 +868,9 @@ void TMVA::TransformationHandler::ReadFromXML( void* trfsnode )
       } 
       else if (trfname == "Normalize" ) {
          newtrf = new VariableNormalizeTransform(fDataSetInfo);
+      } 
+      else if (trfname == "Rearrange" ) {
+         newtrf = new VariableRearrangeTransform(fDataSetInfo);
       } 
       else if (trfname != "None") {
          Log() << kFATAL << "<ReadFromXML> Variable transform '"

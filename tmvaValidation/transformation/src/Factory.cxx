@@ -819,14 +819,14 @@ void TMVA::Factory::WriteDataInformation()
    processTrfs = fTransformations;
 
    // remove any trace of identity transform - if given (avoid to apply it twice)
-   processTrfs.ReplaceAll(" ","");
-   processTrfs.ReplaceAll("I;","");
-   processTrfs.ReplaceAll(";I","");
-   processTrfs.ReplaceAll("I","");
+//    processTrfs.ReplaceAll(" ","");
+//    processTrfs.ReplaceAll("I;","");
+//    processTrfs.ReplaceAll(";I","");
+//    processTrfs.ReplaceAll("I","");
 
    // and re-add identity transform at beginning
-   if (processTrfs.Length() > 0) processTrfs = TString("I;") + processTrfs;
-   else                          processTrfs = TString("I");
+//    if (processTrfs.Length() > 0) processTrfs = TString("I;") + processTrfs;
+//    else                          processTrfs = TString("I");
 
    std::vector<TMVA::TransformationHandler*> trfs;
 
@@ -903,6 +903,11 @@ void TMVA::Factory::TrainAllMethods()
 
       MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
 
+      std::cout << "---===---" << std::endl;
+      mva->Data()->GetEvent()->Print(std::cout); // --------------------------
+
+
+
       if (mva->Data()->GetNTrainingEvents() < MinNoTrainingEvents) {
          Log() << kWARNING << "Method " << mva->GetMethodName() 
                << " not trained (training tree has less entries ["
@@ -914,7 +919,13 @@ void TMVA::Factory::TrainAllMethods()
       Log() << kINFO << "Train method: " << mva->GetMethodName() << " for " 
             << (fAnalysisType == Types::kRegression ? "Regression" : 
 		(fAnalysisType == Types::kMulticlass ? "Multiclass classification" : "Classification")) << Endl;
+
+
+
+      std::cout << "---===--- trainmethod" << std::endl;
+      mva->Data()->GetEvent()->Print(std::cout); // --------------------------
       mva->TrainMethod();
+
       Log() << kINFO << "Training finished" << Endl;
    }
 
@@ -963,6 +974,15 @@ void TMVA::Factory::TrainAllMethods()
                                                        .Create( std::string(Types::Instance().GetMethodName(methodType)), 
                                                                 dataSetInfo, weightfile ) );
         
+	 // set fDataSetManager if MethodCategory (to enable Category to create datasetinfo objects) // DSMTEST
+	 if( m->GetMethodType() == Types::kCategory ){ // DSMTEST
+	    MethodCategory *methCat = (dynamic_cast<MethodCategory*>(m)); // DSMTEST
+	    if( !methCat ) // DSMTEST
+	       Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Factory" << Endl; // DSMTEST
+	    methCat->fDataSetManager = fDataSetManager; // DSMTEST
+	 } // DSMTEST
+
+
          m->SetupMethod();
          m->ReadStateFromFile();
          m->SetTestvarName(testvarName);
