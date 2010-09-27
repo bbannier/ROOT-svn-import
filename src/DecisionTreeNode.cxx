@@ -294,6 +294,7 @@ Bool_t TMVA::DecisionTreeNode::ReadDataRecord( istream& is, UInt_t tmva_Version_
    this->SetSelector((UInt_t)ivar);
    this->SetCutValue(cutVal);
    this->SetCutType(cutType);
+   this->SetNodeType(nodeType);
    if (fTrainInfo){
       this->SetNSigEvents(nsig);
       this->SetNBkgEvents(nbkg);
@@ -303,9 +304,8 @@ Bool_t TMVA::DecisionTreeNode::ReadDataRecord( istream& is, UInt_t tmva_Version_
       this->SetNEvents_unweighted(nEv_unweighted);
       this->SetSeparationIndex(separationIndex);
       this->SetSeparationGain(separationGain);
-      this->SetNodeType(nodeType);
       this->SetPurity();
-      this->SetResponse(response);
+      //      this->SetResponse(response); old .txt weightfiles don't know regression yet
       this->SetCC(cc);
    }
    return kTRUE;
