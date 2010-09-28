@@ -122,6 +122,8 @@ namespace TMVA {
       Int_t                           fNCuts;           // grid used in cut applied in node splitting
       Bool_t                          fUseYesNoLeaf;    // use sig or bkg classification in leave nodes or sig/bkg
       Double_t                        fNodePurityLimit; // purity limit for sig/bkg nodes
+      UInt_t                          fNNodesMax;       // max # of nodes
+      UInt_t                          fMaxDepth;        // max depth
 
 
       Double_t                         fErrorFraction;   // ntuple var: misclassification error fraction 
