@@ -126,6 +126,8 @@ TMVA::MethodDT::MethodDT( const TString& jobName,
    , fNCuts(0)
    , fUseYesNoLeaf(kFALSE)
    , fNodePurityLimit(0)
+   , fNNodesMax(0)
+   , fMaxDepth(0)
    , fErrorFraction(0)
    , fPruneStrength(0)
    , fAutomatic(kFALSE)
@@ -147,6 +149,8 @@ TMVA::MethodDT::MethodDT( DataSetInfo& dsi,
    , fNCuts(0)
    , fUseYesNoLeaf(kFALSE)
    , fNodePurityLimit(0)
+   , fNNodesMax(0)
+   , fMaxDepth(0)
    , fErrorFraction(0)
    , fPruneStrength(0)
    , fAutomatic(kFALSE)
@@ -212,6 +216,12 @@ void TMVA::MethodDT::DeclareOptions()
    AddPreDefVal(TString("ExpectedError"));
    AddPreDefVal(TString("CostComplexity"));
 
+   DeclareOptionRef(fNNodesMax=100000,"NNodesMax","Max number of nodes in tree");
+   if (DoRegression()) {
+      DeclareOptionRef(fMaxDepth=50,"MaxDepth","Max depth of the decision tree allowed");
+   }else{
+      DeclareOptionRef(fMaxDepth=3,"MaxDepth","Max depth of the decision tree allowed");
+   }
 }
 
 //_______________________________________________________________________
@@ -281,6 +291,11 @@ void TMVA::MethodDT::Init( void )
 
    // reference cut value to distingiush signal-like from background-like events   
    SetSignalReferenceCut( 0 );
+   if (fAnalysisType == Types::kClassification || fAnalysisType == Types::kMulticlass ) {
+      fMaxDepth        = 3;
+   }else {
+      fMaxDepth = 50;
+   }
 }
 
 //_______________________________________________________________________
@@ -295,8 +310,8 @@ void TMVA::MethodDT::Train( void )
 {
    TMVA::DecisionTreeNode::fgIsTraining=true;
    //SeparationBase *qualitySepType = new GiniIndex();
-   fTree = new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0, /*qualitySepType,*/
-                             fRandomisedTrees, fUseNvars, 1000,3,0 );
+   fTree = new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0, 
+                             fRandomisedTrees, fUseNvars, fNNodesMax, fMaxDepth,0 );
    if (fRandomisedTrees) Log()<<kWARNING<<" randomised Trees do not work yet in this framework," 
                                 << " as I do not know how to give each tree a new random seed, now they"
                                 << " will be all the same and that is not good " << Endl;

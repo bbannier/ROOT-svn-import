@@ -426,7 +426,7 @@ void TMVA::MethodBDT::Init( void )
       fMaxDepth        = 3;
       fBoostType      = "AdaBoost";
    }else {
-      fMaxDepth = 100;
+      fMaxDepth = 50;
       fBoostType      = "AdaBoostR2";
       fAdaBoostR2Loss = "Quadratic";
    }
