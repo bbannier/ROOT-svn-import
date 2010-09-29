@@ -63,7 +63,7 @@ Float_t TEveCaloData::CellData_t::Value(Bool_t isEt) const
    if (isEt)
       return fValue;
    else
-      return TMath::Abs(fValue/TMath::Cos(Theta()));
+      return TMath::Abs(fValue/TMath::Sin(Theta()));
 }
 
 //______________________________________________________________________________
@@ -629,8 +629,8 @@ void TEveCaloDataVec::DataChanged()
 
       if (sum > fMaxValEt ) fMaxValEt=sum;
 
-      cos = Cos(2*ATan(Exp( -Abs(fGeomVec[tw].Eta()))));
-      sum /= Abs(cos);
+      sum /= Sin(EtaToTheta(fGeomVec[tw].Eta()));
+
       if (sum > fMaxValE) fMaxValE=sum;
    }
 
