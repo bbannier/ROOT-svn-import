@@ -618,7 +618,7 @@ void TEveCaloDataVec::DataChanged()
 
    fMaxValE = 0;
    fMaxValEt = 0;
-   Float_t sum=0, cos=0;
+   Float_t sum=0;
    //   printf("geom vec %d slices %d\n",fGeomVec.size(), fSliceVec.size() );
 
    for (UInt_t tw=0; tw<fGeomVec.size(); tw++)
