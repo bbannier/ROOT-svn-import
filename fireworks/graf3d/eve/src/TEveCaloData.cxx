@@ -629,7 +629,7 @@ void TEveCaloDataVec::DataChanged()
 
       if (sum > fMaxValEt ) fMaxValEt=sum;
 
-      sum /= Sin(EtaToTheta(fGeomVec[tw].Eta()));
+      sum /= Abs(Sin(EtaToTheta(fGeomVec[tw].Eta())));
 
       if (sum > fMaxValE) fMaxValE=sum;
    }
@@ -784,8 +784,8 @@ void TEveCaloDataHist::DataChanged()
 
          if (value > fMaxValEt ) fMaxValEt = value;
 
-         Double_t cos = Cos(2*ATan(Exp(-Abs(eta))));
-         value /= Abs(cos);
+         value /= Abs(Sin(EtaToTheta(eta)));
+
          if (value > fMaxValE) fMaxValE = value;
       }
    }
