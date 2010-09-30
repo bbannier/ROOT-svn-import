@@ -23,15 +23,18 @@
 #include "TProof.h"
 #include "TString.h"
 #include "TMap.h"
-#include "TProofNode.h"
+#include "TProofNodes.h"
 
 ClassImp(TProofBenchModeCleanup)
 
 //______________________________________________________________________________
-TProofBenchModeCleanup::TProofBenchModeCleanup(TProof* proof)
-:fProof(proof), fNodes(0), fName("ConstNFilesNode")
+TProofBenchModeCleanup::TProofBenchModeCleanup(TProof* proof,
+                                               TProofNodes* nodes)
+:fProof(proof), fNodes(nodes), fName("ConstNFilesNode")
 {
-   FillNodeInfo();
+   if (!fProof){
+      fProof=gProof;
+   }
 }
 
 //______________________________________________________________________________
@@ -53,32 +56,31 @@ TMap* TProofBenchModeCleanup::FilesToProcess(Int_t)
 
    TMap *filesmap = new TMap;
    filesmap->SetName("PROOF_FilesToProcess");
-   TIter nxni(fNodes);
-   TProofNode *ni = 0;
 
-   while ((ni = (TProofNode *) nxni())) {
+   TList* nodes=fNodes->GetListOfNodes();
+   TIter nxtnode(nodes);
+
+   TList *node = 0;
+
+   while ((node = (TList*) nxtnode())) {
       TList *files = new TList;
-      Int_t nworkers=ni->GetNWrks();
-      files->SetName(ni->GetName());
+      files->SetName(node->GetName());
+      Int_t nwrks=node->GetSize();
 
       //split load across the workers on the node
-      for (Int_t i = 0; i <nworkers; i++) {
-         files->Add(new TObjString(TString::Format("%s_EventTree_Cleanup_%d_0.root", ni->GetName(), i)));
+      for (Int_t i = 0; i <nwrks; i++) {
+         files->Add(new TObjString(TString::Format("%s_EventTree_Cleanup_%d_0.root", node->GetName(), i)));
       }
-      filesmap->Add(new TObjString(ni->GetName()), files);
+      filesmap->Add(new TObjString(node->GetName()), files);
    }
 
    return filesmap;
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
-                                      Int_t,
-                                      Int_t,
-                                      Int_t,
-                                      const TList* listfiles,
-                                      const char* option,
-                                      TProof* proof)
+Int_t TProofBenchModeCleanup::MakeDataSets(Int_t, Int_t, Int_t, Int_t,
+                                     const TList* listfiles, const char* option,
+                                     TProof* proof)
 {
    // Make data set from list of file 'listfiles'and register it.
    // Input parameters
@@ -116,21 +118,19 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
-                                      Int_t,
-                                      const Int_t*,
-                                      const TList* listfiles,
-                                      const char* option,
-                                      TProof* proof)
+Int_t TProofBenchModeCleanup::MakeDataSets(Int_t, Int_t, const Int_t*,
+                                    const TList* listfiles, const char* option,
+                                    TProof* proof)
 {
    // Make data set from list of files 'listfiles' and register it.
    // Input parameters
-   //    Int_t Ignored.
-   //    Int_t Ignored.
-   //    const Int_t* Ignored.
-   //    listfiles List of files (TFileInfo*) from which data set is built and registered.
-   //    option Option to TProof::RegisterDataSet(...).
-   //    proof Proof
+   //    Int_t: Ignored.
+   //    Int_t: Ignored.
+   //    const Int_t*: Ignored.
+   //    listfiles: List of files (TFileInfo*) from which data set is built and
+   //               registered.
+   //    option: Option to TProof::RegisterDataSet(...).
+   //    proof: Proof
    // Return
    //    0 when ok
    //   <0 otherwise
@@ -139,7 +139,7 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t,
 }
 
 //______________________________________________________________________________
-void TProofBenchModeCleanup::Print(Option_t* option)const
+void TProofBenchModeCleanup::Print(Option_t* option) const
 {
    if (fProof) fProof->Print(option);
    if (fNodes) fNodes->Print(option);
@@ -164,64 +164,19 @@ void TProofBenchModeCleanup::SetNFiles(Int_t)
 }
 
 //______________________________________________________________________________
-TProof* TProofBenchModeCleanup::GetProof()const
+TProof* TProofBenchModeCleanup::GetProof() const
 {
    return fProof;
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchModeCleanup::GetNFiles()const
+Int_t TProofBenchModeCleanup::GetNFiles() const
 {
    return 0;
 }
 
 //______________________________________________________________________________
-const char* TProofBenchModeCleanup::GetName()const
+const char* TProofBenchModeCleanup::GetName() const
 {
    return fName.Data();
-}
-
-//______________________________________________________________________________
-Int_t TProofBenchModeCleanup::FillNodeInfo()
-{
-   // Re-Generate the list of worker node info (fNodes).
-   // The existing info is always removed.
-   // Return
-   //    0 when ok
-   //   <0 otherwise
-
-   if (!fProof){
-      Error("FillNodeInfo", "proof not set, doing nothing");
-      return -1;
-   }
-
-   if (fNodes) {
-      fNodes->SetOwner(kTRUE);
-      SafeDelete(fNodes);
-   }
-   fNodes = new TList;
-   fNodes->SetOwner();//fNodes is the owner of the members
-
-   // Get info
-   TList *wl = fProof->GetListOfSlaveInfos();
-   if (!wl) {
-      Error("FillNodeInfo", "could not get information about workers!");
-      return -2;
-   }
-
-   TIter nxwi(wl);
-   TSlaveInfo *si = 0;
-   TProofNode *ni = 0;
-   while ((si = (TSlaveInfo *) nxwi())) {
-      if (!(ni = (TProofNode *) fNodes->FindObject(si->GetName()))) {
-         ni = new TProofNode(si->GetName(), si->GetSysInfo().fPhysRam);
-         fNodes->Add(ni);
-      } else {
-         ni->AddWrks(1);
-      }
-   }
-   // Notify
-   Info("FillNodeInfo","%d physically different mahcines found", fNodes->GetSize());
-   // Done
-   return 0;
 }

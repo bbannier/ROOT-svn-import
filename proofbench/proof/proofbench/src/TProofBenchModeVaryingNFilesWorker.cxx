@@ -21,7 +21,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TProofBenchModeVaryingNFilesWorker.h"
-#include "TProofNode.h"
+#include "TProofNodes.h"
 #include "TFileCollection.h"
 #include "TFileInfo.h"
 #include "TProof.h"
@@ -33,14 +33,13 @@
 ClassImp(TProofBenchModeVaryingNFilesWorker)
 
 //______________________________________________________________________________
-TProofBenchModeVaryingNFilesWorker::TProofBenchModeVaryingNFilesWorker(Int_t nfiles, TProof* proof)
-:fProof(proof),
-fNFiles(nfiles),
-fNodes(0),
-fName("VaryingNFilesWorker")
+TProofBenchModeVaryingNFilesWorker::TProofBenchModeVaryingNFilesWorker
+                         (Int_t nfiles, TProof* proof, TProofNodes* nodes)
+:fProof(proof), fNFiles(nfiles), fNodes(nodes), fName("VaryingNFilesWorker")
 {
-   FillNodeInfo();
-
+   if (!fProof){
+      fProof=gProof;
+   }
    //default number of files a worker is 1
    if (fNFiles==-1){
       fNFiles=1;
@@ -53,7 +52,7 @@ TProofBenchModeVaryingNFilesWorker::~TProofBenchModeVaryingNFilesWorker()
 }
 
 //______________________________________________________________________________
-void TProofBenchModeVaryingNFilesWorker::Print(Option_t* option)const
+void TProofBenchModeVaryingNFilesWorker::Print(Option_t* option) const
 {
    if (fProof) fProof->Print(option);
    Printf("fNFiles=%d", fNFiles);
@@ -81,31 +80,29 @@ TMap* TProofBenchModeVaryingNFilesWorker::FilesToProcess(Int_t nf)
 
    TMap *filesmap = new TMap;
    filesmap->SetName("PROOF_FilesToProcess");
-   TIter nxni(fNodes);
-   TProofNode *ni = 0;
+   TList* nodes=fNodes->GetListOfNodes();
+   TIter nxtnode(nodes);
+   TList *node = 0;
 
-   while ((ni = (TProofNode *) nxni())) {
+   while ((node = (TList*) nxtnode())) {
       TList *files = new TList;
-      files->SetName(ni->GetName());
-      Int_t nwrks=ni->GetNWrks();
+      files->SetName(node->GetName());
+      Int_t nwrks=node->GetSize();
       Int_t nfilesthisnode=nwrks*nf;
       for (Int_t i = 0; i<nfilesthisnode; i++) {
-         files->Add(new TObjString(TString::Format("%s_EventTree_Benchmark_%d_0.root", ni->GetName(), i)));
+         files->Add(new TObjString(TString::Format("%s_EventTree_Benchmark"
+                                      "_%d_0.root", node->GetName(), i)));
       }
-      filesmap->Add(new TObjString(ni->GetName()), files);
+      filesmap->Add(new TObjString(node->GetName()), files);
       //files->Print();
    }
    return filesmap;
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
-                                                  Int_t start,
-                                                  Int_t stop,
-                                                  Int_t step,
-                                                  const TList* listfiles,
-                                                  const char* option,
-                                                  TProof* proof)
+Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf, Int_t start,
+      Int_t stop, Int_t step, const TList* listfiles, const char* option,
+      TProof* proof)
 {
    // Make data sets out of list of files'listfiles' and register them.
    // Input parameters
@@ -115,7 +112,8 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
    //    stop: Stop scan at 'stop' number of workers.
    //          When ==-1, it is set to total number of workers in the cluster.
    //    step: Scan every 'step' workers.
-   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built and registered.
+   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built
+   //               and registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
    // Return
@@ -134,18 +132,13 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
 
    if (nf==-1){
       nf=fNFiles;
-      Info("MakeDataSets", "Number of files a worker is %d for %s", nf, GetName());
+      Info("MakeDataSets", "Number of files a worker is %d for %s", nf,
+           GetName());
    }
 
    //default max worker number is the number of all workers in the cluster
    if (stop==-1){
-      TIter nxni(fNodes);
-      TProofNode *ni = 0;
-      Int_t nallworkers=0;
-      while ((ni = (TProofNode *) nxni())) {
-         nallworkers+=ni->GetNWrks();
-      }
-      stop=nallworkers;
+      stop=fNodes->GetNWorkersCluster();
    }
 
    const Int_t np=(stop-start)/step+1;
@@ -160,21 +153,21 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
-                                                  Int_t np,
-                                                  const Int_t *wp,
-                                                  const TList* listfiles,
-                                                  const char *option,
-                                                  TProof* proof)
+Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf, Int_t np,
+                                        const Int_t *wp, const TList* listfiles,
+                                        const char *option, TProof* proof)
 {
 
    // Make data sets out of list of files 'listfiles' and register them.
-   // Data set name has the form : DataSetEventConstNFilesWorker_nactiveworkersincluster_nfilesanode
+   // Data set name has the form :
+   //          DataSetEventConstNFilesWorker_nactiveworkersincluster_nfilesanode
    // Input parameters
    //    nf: Number of files a node.
    //    np: Number of test points.
-   //    wp: 'np'-sized array containing the number of active workers to process files.
-   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built and registered.
+   //    wp: 'np'-sized array containing the number of active workers to process
+   //        files.
+   //    listfiles: List of files (TFileInfo*) ouf of which data sets are built
+   //               and registered.
    //    option: Option to TProof::RegisterDataSet(...).
    //    proof: Proof
    // Return
@@ -193,9 +186,11 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
 
    if (nf==-1){
       nf=fNFiles;
-      Info("MakeDataSets", "Number of files a node is %d for %s", nf, GetName());
+      Info("MakeDataSets", "Number of files a node is %d for %s", nf,
+           GetName());
    }
-   // Dataset naming: DataSetEventConstNFilesNode_nworkersincluster_nfilesaworker
+   // Dataset naming:
+   // DataSetEventConstNFilesNode_nworkersincluster_nfilesaworker
 
    TString dsname;
    Int_t kp;
@@ -210,10 +205,11 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
       //Check if we have enough number of files
       Int_t nfilesavailable=listfiles->GetSize();
       if (nfilesavailable<nfiles){
-         Warning("MakeDataSets", "Number of available files (%d) is smaller than needed (%d)"
-                ,nfilesavailable, nfiles);
+         Warning("MakeDataSets", "Number of available files (%d) is smaller"
+                 " than needed (%d)" ,nfilesavailable, nfiles);
       }
-      //Check if number of requested workers are not greater than number of available workers
+      //Check if number of requested workers are not greater than number of
+      //available workers
       TList *wl = proof->GetListOfSlaveInfos();
       if (!wl) {
          Error("MakeDataSets", "Could not get information about workers!");
@@ -222,9 +218,12 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
 
       Int_t nworkersavailable=wl->GetSize();
       if (nworkersavailable<wp[kp]){ 
-         Warning("MakeDataSets", "Number of available workers (%d) is smaller than needed (%d); "
-                                 "Only upto %d(=%d files/worker * %d workers) out of %d(=%d files/worker* %d workers) files will be added to the data set"
-                ,nworkersavailable, wp[kp], nf*nworkersavailable, nf, nworkersavailable, nfiles, nf, wp[kp]);
+         Warning("MakeDataSets", "Number of available workers (%d) is smaller"
+                 " than needed (%d); Only upto %d"
+                 "(=%d files/worker * %d workers) out of %d(=%d files/worker*"
+                 " %d workers) files will be added to the data set",
+                 nworkersavailable, wp[kp], nf*nworkersavailable, nf,
+                 nworkersavailable, nfiles, nf, wp[kp]);
       }
 
       TList* listfiles_copy=(TList*)(listfiles->Clone("filelistcopy"));
@@ -252,7 +251,8 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
             if (hostname!=nodename) continue; 
 
             //Info("MakeDataSets", "filename=%s", fileinfo->GetName());
-            //filename=root://hostname/directory/EventTree_Benchmark_filenumber_serial.root
+            //filename=root://hostname/directory/EventTree_Benchmark_filenumber_
+            //serial.root
             //remove upto "Benchmark_"
             tmpstring=filename;
             TString stem="_Benchmark_";
@@ -280,7 +280,8 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
                listfiles_copy->Remove(fileinfo);
             }
             else{
-               Error("MakeDataSets", "File name not recognized: %s", fileinfo->GetName());
+               Error("MakeDataSets", "File name not recognized: %s",
+                     fileinfo->GetName());
                return -1;
             }
          }
@@ -307,74 +308,38 @@ Int_t TProofBenchModeVaryingNFilesWorker::MakeDataSets(Int_t nf,
 //______________________________________________________________________________
 void TProofBenchModeVaryingNFilesWorker::SetProof(TProof* proof)
 {
+   if (!proof){
+      Warning("SetProof", "proof is null; doing nothing");
+   }
    fProof=proof;
 }
 
 //______________________________________________________________________________
 void TProofBenchModeVaryingNFilesWorker::SetNFiles(Int_t nfiles)
 {
+   if (nfiles<=0){
+      //Warning("SetNFiles", "Number of files per worker does not make sense; doing nothing");
+      Printf("Number of files per worker does not make sense; doing nothing;"
+             " fNFiles=%d", fNFiles);
+      return;
+   }
    fNFiles=nfiles;
 }
 
 //______________________________________________________________________________
-TProof* TProofBenchModeVaryingNFilesWorker::GetProof()const
+TProof* TProofBenchModeVaryingNFilesWorker::GetProof() const
 {
    return fProof;
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchModeVaryingNFilesWorker::GetNFiles()const
+Int_t TProofBenchModeVaryingNFilesWorker::GetNFiles() const
 {
    return fNFiles;
 }
 
 //______________________________________________________________________________
-const char* TProofBenchModeVaryingNFilesWorker::GetName()const
+const char* TProofBenchModeVaryingNFilesWorker::GetName() const
 {
    return fName.Data();
-}
-
-//______________________________________________________________________________
-Int_t TProofBenchModeVaryingNFilesWorker::FillNodeInfo()
-{
-   // Re-Generate the list of worker node info (fNodes)
-   // (the existing info is always removed)
-   // Return
-   //    0 if ok
-   //   <0 otherwise
-
-   if (!fProof){
-      Error("FillNodeInfo", "proof not set, doing nothing");
-      return -1;
-   }
-
-   if (fNodes) {
-      fNodes->SetOwner(kTRUE);
-      SafeDelete(fNodes);
-   }
-   fNodes = new TList;
-   fNodes->SetOwner();//fNodes is the owner of the members
-
-   // Get info
-   TList *wl = fProof->GetListOfSlaveInfos();
-   if (!wl) {
-      Error("FillNodeInfo", "could not get information about workers!");
-      return -2;
-   }
-
-   TIter nxwi(wl);
-   TSlaveInfo *si = 0;
-   TProofNode *ni = 0;
-   while ((si = (TSlaveInfo *) nxwi())) {
-      if (!(ni = (TProofNode *) fNodes->FindObject(si->GetName()))) {
-         ni = new TProofNode(si->GetName(), si->GetSysInfo().fPhysRam);
-         fNodes->Add(ni);
-      } else {
-         ni->AddWrks(1);
-      }
-   }
-   // Notify
-   Info("FillNodeInfo","%d physically different mahcines found", fNodes->GetSize());
-   // Done
-   return 0;
 }

@@ -35,8 +35,7 @@
 #endif
 
 class TProof;
-
-R__EXTERN TProof *gProof;
+class TProofNodes;
 
 class TProofBenchModeConstNFilesNode : public TProofBenchMode {
 
@@ -44,47 +43,40 @@ private:
 
    TProof* fProof;   //proof
    Int_t fNFiles;    //number of files per node
-   TList* fNodes;    //list of nodes
+   TProofNodes * fNodes;    //list of nodes
    TString fName;    //name of this mode
 
 protected:
 
-   Int_t FillNodeInfo();
-
 public:
 
-   TProofBenchModeConstNFilesNode(Int_t nfiles=-1, TProof* proof=gProof);
+   TProofBenchModeConstNFilesNode(Int_t nfiles=-1, TProof* proof=0,
+                                  TProofNodes* nodes=0);
    virtual ~TProofBenchModeConstNFilesNode();
 
-   TMap* FilesToProcess(Int_t nf);
+   TMap* FilesToProcess(Int_t nfiles);
 
-   Int_t MakeDataSets(Int_t nf,
-                      Int_t start,
-                      Int_t stop,
-                      Int_t step,
-                      const TList* listfiles,
-                      const char* option,
+   Int_t MakeDataSets(Int_t nfiles, Int_t start, Int_t stop, Int_t step,
+                      const TList* listfiles, const char* option,
                       TProof* proof);
    
-   Int_t MakeDataSets(Int_t nf,
-                      Int_t np,
-                      const Int_t *wp,
-                      const TList* listfiles,
-                      const char *option,
+   Int_t MakeDataSets(Int_t nfiles, Int_t np, const Int_t *wp,
+                      const TList* listfiles, const char *option,
                       TProof* proof);
 
    TProofBenchMode::EFileType GetFileType();
 
-   void Print(Option_t* option=0)const;
+   void Print(Option_t* option=0) const;
 
    void SetProof(TProof* proof);
    void SetNFiles(Int_t nfiles);
 
-   TProof* GetProof()const;
-   Int_t GetNFiles()const;
-   const char* GetName()const;
+   TProof* GetProof() const;
+   Int_t GetNFiles() const;
+   const char* GetName() const;
 
-   ClassDef(TProofBenchModeConstNFilesNode,0)  //A mode for PROOF benchmark test
+   ClassDef(TProofBenchModeConstNFilesNode,0)  //A mode for PROOF benchmark
+                                               //test
 };
 
 #endif

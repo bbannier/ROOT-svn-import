@@ -29,56 +29,43 @@
 #endif
 
 class TProof;
-
-R__EXTERN TProof *gProof;
+class TProofNodes;
 
 class TProofBenchModeCleanup : public TProofBenchMode {
 
 private:
 
    TProof* fProof;    //proof
-   TList* fNodes;     //list of nodes
+   TProofNodes* fNodes;     //list of nodes
    TString fName;     //name of this mode
-
-protected:
-
-   Int_t FillNodeInfo();
 
 public:
 
-   TProofBenchModeCleanup(TProof* proof=gProof);
+   TProofBenchModeCleanup(TProof* proof=0, TProofNodes* node=0);
 
    virtual ~TProofBenchModeCleanup();
 
    TMap* FilesToProcess(Int_t);
  
-   Int_t MakeDataSets(Int_t,
-                      Int_t,
-                      Int_t,
-                      Int_t,
-                      const TList* listfiles,
-                      const char* option,
-                      TProof* proof);
+   Int_t MakeDataSets(Int_t, Int_t, Int_t, Int_t, const TList* listfiles,
+                      const char* option, TProof* proof);
  
-   Int_t MakeDataSets(Int_t,
-                      Int_t,
-                      const Int_t*,
-                      const TList*,
-                      const char*,
+   Int_t MakeDataSets(Int_t, Int_t, const Int_t*, const TList*, const char*,
                       TProof*);
 
    TProofBenchMode::EFileType GetFileType();
 
-   void Print(Option_t* option=0)const;
+   void Print(Option_t* option=0) const;
  
    void SetProof(TProof* proof);
    void SetNFiles(Int_t);
 
-   TProof* GetProof()const;
-   Int_t GetNFiles()const;
-   const char* GetName()const;
+   TProof* GetProof() const;
+   Int_t GetNFiles() const;
+   const char* GetName() const;
 
-   ClassDef(TProofBenchModeCleanup,0)    //Cleaning-up mode for PROOF benchmark test
+   ClassDef(TProofBenchModeCleanup,0)    //Cleaning-up mode for PROOF
+                                         // benchmark test
 };
 
 #endif

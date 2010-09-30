@@ -26,8 +26,6 @@
 
 #include "TProofBenchRunCleanup.h"
 #include "TProofBenchMode.h"
-#include "TProofNode.h"
-#include "TFile.h"
 #include "TFileCollection.h"
 #include "TFileInfo.h"
 #include "TProof.h"
@@ -43,45 +41,26 @@
 #include "TKey.h"
 #include "TPerfStats.h"
 #include "TPad.h"
+#include "TROOT.h"
 
 ClassImp(TProofBenchRunCleanup)
 
 //______________________________________________________________________________
-TProofBenchRunCleanup::TProofBenchRunCleanup(TProofBenchRun::ECleanupType cleanuptype,
-               TString filename,
-               Option_t* foption,
-               TProof* proof,
-               Int_t maxnworkers,
-               Long64_t nevents,
-               Int_t debug):
-fProof(0),
-fCleanupType(cleanuptype),
-fNEvents(nevents),
-fDebug(debug),
-fFile(0),
-fDirProofBench(0)
+TProofBenchRunCleanup::TProofBenchRunCleanup(
+               TProofBenchRun::ECleanupType cleanuptype,
+               TDirectory* dirproofbench, TProof* proof, Int_t debug):
+fProof(proof), fCleanupType(cleanuptype), fDebug(debug),
+fDirProofBench(dirproofbench)
 {
    //Default constructor
  
-   fProof=proof?proof:gProof;
-
-   if (!OpenFile(filename.Data(), foption)){
-      gDirectory->cd("Rint:/");
-      gDirectory->mkdir("ProofBench");
-      gDirectory->cd("ProofBench");
-      fDirProofBench=gDirectory;
+   if (!fProof){
+       fProof=gProof;
    }
 
    TString name="Cleanup"+GetNameStem();
 
    fName=name;
-   if (maxnworkers>0){
-      SetMaxNWorkers(maxnworkers);
-   }
-   else{
-      SetMaxNWorkers("1x");
-   }
-
    gEnv->SetValue("Proof.StatsTrace",1);
 
 }
@@ -92,14 +71,10 @@ TProofBenchRunCleanup::~TProofBenchRunCleanup()
    //destructor
    fProof=0;
    fDirProofBench=0;
-   if (fFile){
-      fFile->Close();
-      delete fFile;
-   }
 } 
 
 //______________________________________________________________________________
-TString TProofBenchRunCleanup::GetNameStem()const
+TString TProofBenchRunCleanup::GetNameStem() const
 {
    TString namestem;
    switch (fCleanupType){
@@ -116,13 +91,8 @@ TString TProofBenchRunCleanup::GetNameStem()const
 }
 
 //______________________________________________________________________________
-void TProofBenchRunCleanup::Run(Long64_t,
-                                Int_t,
-                                Int_t,
-                                Int_t,
-                                Int_t,
-                                Int_t debug,
-                                Int_t)
+void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t,
+                                Int_t debug, Int_t)
 {
    // Clean up cache between bench mark runs. 
    // Input parameters
@@ -150,7 +120,8 @@ void TProofBenchRunCleanup::Run(Long64_t,
 
    if (fCleanupType==TProofBenchRun::kCleanupReadInFiles){
       TString dsname="DataSetEventCleanup";
-      Info("Run", "Clean-up run by reading in files of data set: %s", dsname.Data());
+      Info("Run", "Clean-up run by reading in files of data set: %s",
+                   dsname.Data());
       TFileCollection* fc_cleanup=fProof->GetDataSet(dsname.Data());
 
       TTime starttime = gSystem->Now();
@@ -158,7 +129,8 @@ void TProofBenchRunCleanup::Run(Long64_t,
          fProof->Process(fc_cleanup, "TSelEvent", "", -1);
       }
       else{
-         Error("Run", "file Collection '%s' does not exist; returning", dsname.Data());
+         Error("Run", "file Collection '%s' does not exist; returning",
+                       dsname.Data());
          return;
       }
 
@@ -183,8 +155,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
             newname+=Form("%lld", ncalls);
             tnew->SetName(newname);
    
-            Info("Run", "PROOF_PerfStats found, directory=%s", fDirProofBench->GetName());
-            if (fFile && fFile->IsWritable()){
+            if (fDirProofBench->IsWritable()){
                fDirProofBench->cd();
                tnew->Write();
                tnew->Delete();
@@ -208,7 +179,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
             newname+=Form("%lld", ncalls);
             hnew->SetName(newname);
    
-            if (fFile && fFile->IsWritable()){
+            if (fDirProofBench->IsWritable()){
                fDirProofBench->cd();
                hnew->Write();
                delete hnew;
@@ -230,7 +201,7 @@ void TProofBenchRunCleanup::Run(Long64_t,
             newname+=Form("%lld", ncalls);
             hnew->SetName(newname);
 
-            if (fFile && fFile->IsWritable()){
+            if (fDirProofBench->IsWritable()){
                fDirProofBench->cd();
                hnew->Write();
                delete hnew;
@@ -247,43 +218,43 @@ void TProofBenchRunCleanup::Run(Long64_t,
       //fProof->ClearInputData(inputdataname.Data());
 
       TFileCollection* fc=fProof->GetDataSet(fDataSetCleanup.Data());
-      THashList* l=fc->GetList();
-
-      THashList* lcopy=dynamic_cast<THashList*>(l->Clone());
  
-      lcopy->SetName(inputdataname.Data());
-      fProof->AddInputData(lcopy); 
+      if (fc){
+         THashList* l=fc->GetList();
 
-      Info("Run", "Cleaning up file caches in data set: %s", fDataSetCleanup.Data());
-      fProof->Process("TSelEvent", Long64_t(1));
-      fProof->ClearInputData(inputdataname.Data()); 
-      delete lcopy;
-      //Wait a second or 2 because start time of TQueryResult has only 1-second precision.
-      gSystem->Sleep(1500);
+         THashList* lcopy=dynamic_cast<THashList*>(l->Clone());
+ 
+         lcopy->SetName(inputdataname.Data());
+         fProof->AddInputData(lcopy); 
+
+         Info("Run", "Cleaning up file caches in data set: %s",
+                     fDataSetCleanup.Data());
+         fProof->Process("TSelEvent", Long64_t(1));
+         fProof->ClearInputData(inputdataname.Data()); 
+         delete lcopy;
+         //Wait a second or 2 because start time of TQueryResult has only 1-second precision.
+         gSystem->Sleep(1500);
+      }
+      else{
+         Error("Run", "DataSet not found: %s", fDataSetCleanup.Data());
+      }
    }
    else if (fCleanupType==TProofBenchRun::kCleanupNotSpecified){
       Error("Run", "fCleanupType==kCleanupNotSpecified; try again"
-                   " with either TProofBenchRun::kCleanupReadInFiles or TProofBenchRun::kCleanupFileAdvise");
+                   " with either TProofBenchRun::kCleanupReadInFiles"
+                   " or TProofBenchRun::kCleanupFileAdvise");
    }
 
    DeleteParameters();
 }
 
 //______________________________________________________________________________
-void TProofBenchRunCleanup::Print(Option_t* option)const{
+void TProofBenchRunCleanup::Print(Option_t* option) const
+{
    Printf("Name=%s", fName.Data());
    if (fProof) fProof->Print(option);
    Printf("fCleanupType=%s%s", "k", fName.Data());
-   Printf("fNEvents=%lld", fNEvents);
-   Printf("fMaxNWorkers=%d", fMaxNWorkers);
    Printf("fDebug=%d", fDebug);
-   if (fFile){
-       fFile->Print(option);
-       fFile->ls(option);
-   }
-   else{
-      Printf("No file open");
-   }
    if (fDirProofBench){
       Printf("fDirProofBench=%s", fDirProofBench->GetPath());
    }
@@ -297,51 +268,10 @@ void TProofBenchRunCleanup::DrawPerfProfiles()
 }
 
 //______________________________________________________________________________
-void TProofBenchRunCleanup::SetCleanupType(TProofBenchRun::ECleanupType cleanuptype)
+void TProofBenchRunCleanup::SetCleanupType
+       (TProofBenchRun::ECleanupType cleanuptype)
 {
    fCleanupType=cleanuptype;
-}
-
-//______________________________________________________________________________
-void TProofBenchRunCleanup::SetNEvents(Long64_t nevents)
-{
-   fNEvents=nevents;
-}
-
-//______________________________________________________________________________
-void TProofBenchRunCleanup::SetMaxNWorkers(Int_t maxnworkers)
-{
-  fMaxNWorkers=maxnworkers;
-}
-
-//______________________________________________________________________________
-void TProofBenchRunCleanup::SetMaxNWorkers(TString sworkers)
-{
-
-   // Set the maximum number of workers for benchmark test
-   // Input parameters
-   //    sworkers: Can be "1x", "2x" and so on, where total number of workers is set 
-   //              to 1*no_total_workers, 2*no_total_workers respectively.
-   //              For now only "1x" is supported
-   // Return
-   //    Nothing
-
-   sworkers.ToLower();
-   sworkers.Remove(TString::kTrailing, ' ');
-   if (fProof){
-      if (sworkers.Contains("x")){//nx
-         TList* lslave=fProof->GetListOfSlaveInfos();
-         // Number of slave workers regardless of its status, active or inactive
-         Int_t nslaves=lslave->GetSize();  
-         sworkers.Remove(TString::kTrailing, 'x');
-         Int_t mult=sworkers.Atoi();
-         fMaxNWorkers=mult*nslaves;
-      }
-   }
-   else{
-      Error("SetMaxNWorkers", "Proof not set, doing nothing");
-   }
-   return;
 }
 
 //______________________________________________________________________________
@@ -357,107 +287,44 @@ void TProofBenchRunCleanup::SetDebug(Int_t debug)
 }
 
 //______________________________________________________________________________
-TFile* TProofBenchRunCleanup::OpenFile(const char* filename,
-                                       Option_t* option,
-                                       const char* ftitle,
-                                       Int_t compress)
-{
-   // Opens a file which output profiles and/or intermediate files (trees, histograms when debug is set)
-   // are to be written to. Makes a directory named "ProofBench" and changes to the directory.
-   // Input parameters:
-   //    filename: Name of the file to open
-   //    option: Option to TFile::Open(...) function
-   //    ftitle: Title for TFile::Open(...) function
-   //    compress: Compression for TFile::Open(...) function
-   // Returns
-   //    Open file if a file is already open
-   //    New file just opened
-   //    0 when open fails;
-
-   TString sfilename(filename);
-   sfilename.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
-   sfilename.Remove(TString::kBoth, '\t');//remove leading and trailing tab character(s)
-
-   if (sfilename.IsNull()){
-      return fFile;
-   }
-
-   TString soption(option);
-   soption.ToLower();
-
-   if (fFile){
-      Error("OpenFile", "File alaredy open; %s; Close it before open another file", fFile->GetName());
-      return fFile;
-   }
-
-   TDirectory* dirsav=gDirectory;
-   fFile=new TFile(sfilename, option, ftitle, compress);
-
-   if (fFile->IsZombie()){ // Open failed
-      Error("FileOpen", "Cannot open file: %s", sfilename.Data());
-      fFile->Close();
-      fFile=0;
-      dirsav->cd();
-      return 0;
-   }
-   else{ // Open succeeded
-      fFile->mkdir("ProofBench");
-      fFile->cd("ProofBench");
-      SetDirProofBench(gDirectory);
-      return fFile;
-   }
-}
-
-//______________________________________________________________________________
 void TProofBenchRunCleanup::SetDirProofBench(TDirectory* dir)
 {
    fDirProofBench=dir;
 }
 
 //______________________________________________________________________________
-TProofBenchRun::ECleanupType TProofBenchRunCleanup::GetCleanupType()const
+TProofBenchRun::ECleanupType TProofBenchRunCleanup::GetCleanupType() const
 {
    return fCleanupType;
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchRunCleanup::GetMaxNWorkers()const
-{
-   return fMaxNWorkers;
-}
-
-//______________________________________________________________________________
-TString TProofBenchRunCleanup::GetDataSetCleanup()const
+TString TProofBenchRunCleanup::GetDataSetCleanup() const
 {
    return fDataSetCleanup;
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchRunCleanup::GetDebug()const
+Int_t TProofBenchRunCleanup::GetDebug() const
 {
    return fDebug;
 }
 
 //______________________________________________________________________________
-TFile* TProofBenchRunCleanup::GetFile()const
-{
-   return fFile;
-}
-
-//______________________________________________________________________________
-TDirectory* TProofBenchRunCleanup::GetDirProofBench()const
+TDirectory* TProofBenchRunCleanup::GetDirProofBench() const
 {
    return fDirProofBench;
 }
 
 //______________________________________________________________________________
-const char* TProofBenchRunCleanup::GetName()const
+const char* TProofBenchRunCleanup::GetName() const
 {
    return fName.Data();
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchRunCleanup::SetParameters(){
+Int_t TProofBenchRunCleanup::SetParameters()
+{
    if (!fProof){
       Error("SetParameters", "Proof not set; Doing nothing");
       return 1;
@@ -469,7 +336,8 @@ Int_t TProofBenchRunCleanup::SetParameters(){
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchRunCleanup::DeleteParameters(){
+Int_t TProofBenchRunCleanup::DeleteParameters()
+{
    if (!fProof){
       Error("DeleteParameters", "Proof not set; Doing nothing");
       return 1;
@@ -480,7 +348,8 @@ Int_t TProofBenchRunCleanup::DeleteParameters(){
 }
 
 //______________________________________________________________________________
-const char* TProofBenchRunCleanup::BuildPatternName(const char* objname, const char* delimiter)
+const char* TProofBenchRunCleanup::BuildPatternName(const char* objname,
+                                                    const char* delimiter)
 {
 
    TString newname(objname);
