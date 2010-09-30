@@ -1,6 +1,6 @@
 Index: core/meta/src/TClassRef.cxx
 ===================================================================
---- core/meta/src/TClassRef.cxx	(revision 35466)
+--- core/meta/src/TClassRef.cxx	(revision 35913)
 +++ core/meta/src/TClassRef.cxx	(working copy)
 @@ -55,37 +55,31 @@
  }
@@ -58,9 +58,9 @@ Index: core/meta/src/TClassRef.cxx
  //______________________________________________________________________________
 Index: core/meta/src/TClass.cxx
 ===================================================================
---- core/meta/src/TClass.cxx	(revision 35466)
+--- core/meta/src/TClass.cxx	(revision 35913)
 +++ core/meta/src/TClass.cxx	(working copy)
-@@ -717,7 +717,7 @@
+@@ -716,7 +716,7 @@
     fVersionUsed(kFALSE), fProperty(0),
     fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
     fCurrentInfo(0), fRefStart(0), fRefProxy(0),
@@ -69,7 +69,7 @@ Index: core/meta/src/TClass.cxx
  {
     // Default ctor.
  
-@@ -741,7 +741,7 @@
+@@ -740,7 +740,7 @@
     fVersionUsed(kFALSE), fProperty(0),
     fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
     fCurrentInfo(0), fRefStart(0), fRefProxy(0),
@@ -78,7 +78,7 @@ Index: core/meta/src/TClass.cxx
  {
     // Create a TClass object. This object contains the full dictionary
     // of a class. It has list to baseclasses, datamembers and methods.
-@@ -791,7 +791,7 @@
+@@ -790,7 +790,7 @@
     fVersionUsed(kFALSE), fProperty(0),
     fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
     fCurrentInfo(0), fRefStart(0), fRefProxy(0),
@@ -87,7 +87,7 @@ Index: core/meta/src/TClass.cxx
  {
     // Create a TClass object. This object contains the full dictionary
     // of a class. It has list to baseclasses, datamembers and methods.
-@@ -820,7 +820,7 @@
+@@ -819,7 +819,7 @@
     fVersionUsed(kFALSE), fProperty(0),
     fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
     fCurrentInfo(0), fRefStart(0), fRefProxy(0),
@@ -96,7 +96,7 @@ Index: core/meta/src/TClass.cxx
  {
     // Create a TClass object. This object contains the full dictionary
     // of a class. It has list to baseclasses, datamembers and methods.
-@@ -1081,7 +1081,8 @@
+@@ -1080,7 +1080,8 @@
    fCurrentInfo(cl.fCurrentInfo),
    fRefStart(cl.fRefStart),
    fRefProxy(cl.fRefProxy),
@@ -106,7 +106,7 @@ Index: core/meta/src/TClass.cxx
  {
     //copy constructor
     
-@@ -1190,7 +1191,14 @@
+@@ -1189,7 +1190,14 @@
     delete fCollectionProxy;
     delete fIsAMethod;
     delete fSchemaRules;
@@ -122,7 +122,7 @@ Index: core/meta/src/TClass.cxx
  }
  
  //------------------------------------------------------------------------------
-@@ -1666,6 +1674,9 @@
+@@ -1665,6 +1673,9 @@
        gCint->CallFunc_SetFuncProto(f,fClassInfo,"Streamer","TBuffer&",&fOffsetStreamer);
        fInterStreamer = f;
        fOffsetStreamer = const_cast<TClass*>(this)->GetBaseClassOffset(TObject::Class());
@@ -132,7 +132,7 @@ Index: core/meta/src/TClass.cxx
     }
  }
  
-@@ -4411,6 +4422,7 @@
+@@ -4410,6 +4421,7 @@
     TClass *kl = const_cast<TClass*>(this);
  
     kl->fStreamerType = kNone;
@@ -140,7 +140,7 @@ Index: core/meta/src/TClass.cxx
  
     if (InheritsFrom(TObject::Class())) {
        kl->SetBit(kIsTObject);
-@@ -4420,6 +4432,7 @@
+@@ -4419,6 +4431,7 @@
        if (delta==0) kl->SetBit(kStartWithTObject);
  
        kl->fStreamerType  = kTObject;
@@ -148,7 +148,7 @@ Index: core/meta/src/TClass.cxx
     }
  
     if (fClassInfo) {
-@@ -4431,6 +4444,7 @@
+@@ -4430,6 +4443,7 @@
  
           kl->SetBit(kIsForeign);
           kl->fStreamerType  = kForeign;
@@ -156,7 +156,7 @@ Index: core/meta/src/TClass.cxx
  
        } else if ( kl->fStreamerType == kNone ) {
           if ( gCint->ClassInfo_FileName(fClassInfo) 
-@@ -4438,16 +4452,29 @@
+@@ -4437,16 +4451,29 @@
              kl->SetBit(kIsForeign);
           }
           kl->fStreamerType  = kInstrumented;
@@ -189,7 +189,7 @@ Index: core/meta/src/TClass.cxx
        return 0;
     }
  
-@@ -4856,6 +4883,138 @@
+@@ -4855,6 +4882,138 @@
  }
  
  //______________________________________________________________________________
@@ -328,7 +328,7 @@ Index: core/meta/src/TClass.cxx
  void TClass::Streamer(void *object, TBuffer &b, const TClass *onfile_class) const
  {
     // Stream object of this class to or from buffer.
-@@ -4866,7 +5025,7 @@
+@@ -4865,7 +5024,7 @@
        case kExternal|kEmulated: 
        {
           //There is special streamer for the class
@@ -337,7 +337,7 @@ Index: core/meta/src/TClass.cxx
           streamer->SetOnFileClass( onfile_class );
           (*streamer)(b,object);
  
-@@ -4943,6 +5102,7 @@
+@@ -4942,6 +5101,7 @@
        }
     }
  }
@@ -345,7 +345,7 @@ Index: core/meta/src/TClass.cxx
  
  //______________________________________________________________________________
  void TClass::AdoptStreamer(TClassStreamer *str)
-@@ -4960,13 +5120,16 @@
+@@ -4959,13 +5119,16 @@
     if (str) {
        fStreamerType = kExternal | ( fStreamerType&kEmulated );
        fStreamer = str;
@@ -366,7 +366,7 @@ Index: core/meta/src/TClass.cxx
  
 Index: core/meta/inc/TClass.h
 ===================================================================
---- core/meta/inc/TClass.h	(revision 35466)
+--- core/meta/inc/TClass.h	(revision 35913)
 +++ core/meta/inc/TClass.h	(working copy)
 @@ -131,6 +131,9 @@
     TVirtualRefProxy  *fRefProxy;        //!Pointer to reference proxy if this class represents a reference
@@ -412,7 +412,7 @@ Index: core/meta/inc/TClass.h
  };
 Index: core/meta/inc/TClassStreamer.h
 ===================================================================
---- core/meta/inc/TClassStreamer.h	(revision 35466)
+--- core/meta/inc/TClassStreamer.h	(revision 35913)
 +++ core/meta/inc/TClassStreamer.h	(working copy)
 @@ -35,7 +35,7 @@
     virtual void SetOnFileClass( const TClass* cl ) { fOnFileClass = const_cast<TClass*>(cl); }
@@ -449,7 +449,7 @@ Index: core/meta/inc/TClassStreamer.h
     ClassStreamerFunc_t fStreamer;
 Index: core/meta/inc/TClassRef.h
 ===================================================================
---- core/meta/inc/TClassRef.h	(revision 35466)
+--- core/meta/inc/TClassRef.h	(revision 35913)
 +++ core/meta/inc/TClassRef.h	(working copy)
 @@ -40,6 +40,8 @@
  
@@ -485,7 +485,7 @@ Index: core/meta/inc/TClassRef.h
  
 Index: core/cont/inc/TCollectionProxyInfo.h
 ===================================================================
---- core/cont/inc/TCollectionProxyInfo.h	(revision 35466)
+--- core/cont/inc/TCollectionProxyInfo.h	(revision 35913)
 +++ core/cont/inc/TCollectionProxyInfo.h	(working copy)
 @@ -85,9 +85,6 @@
     struct EnvironBase;
@@ -766,7 +766,7 @@ Index: core/cont/inc/TCollectionProxyInfo.h
        }
 Index: core/cont/inc/TVirtualCollectionProxy.h
 ===================================================================
---- core/cont/inc/TVirtualCollectionProxy.h	(revision 35466)
+--- core/cont/inc/TVirtualCollectionProxy.h	(revision 35913)
 +++ core/cont/inc/TVirtualCollectionProxy.h	(working copy)
 @@ -9,8 +9,8 @@
   * For the list of contributors see $ROOTSYS/README/CREDITS.             *
@@ -972,7 +972,7 @@ Index: core/cont/inc/TVirtualCollectionProxy.h
  #endif
 Index: core/base/src/String.cxx
 ===================================================================
---- core/base/src/String.cxx	(revision 35466)
+--- core/base/src/String.cxx	(revision 35913)
 +++ core/base/src/String.cxx	(working copy)
 @@ -30,20 +30,24 @@
     UChar_t nwh;
@@ -1014,7 +1014,7 @@ Index: core/base/src/String.cxx
        if (nbig > 254) {
 Index: core/base/src/TBuffer.cxx
 ===================================================================
---- core/base/src/TBuffer.cxx	(revision 35466)
+--- core/base/src/TBuffer.cxx	(revision 35913)
 +++ core/base/src/TBuffer.cxx	(working copy)
 @@ -288,3 +288,34 @@
  
@@ -1053,9 +1053,9 @@ Index: core/base/src/TBuffer.cxx
 +
 Index: core/base/src/TObject.cxx
 ===================================================================
---- core/base/src/TObject.cxx	(revision 35466)
+--- core/base/src/TObject.cxx	(revision 35913)
 +++ core/base/src/TObject.cxx	(working copy)
-@@ -799,7 +799,7 @@
+@@ -801,7 +801,7 @@
     if (IsA()->CanIgnoreTObjectStreamer()) return;
     UShort_t pidf;
     if (R__b.IsReading()) {
@@ -1066,9 +1066,9 @@ Index: core/base/src/TObject.cxx
        fBits |= kIsOnHeap;  // by definition de-serialized object is on heap
 Index: core/base/src/TString.cxx
 ===================================================================
---- core/base/src/TString.cxx	(revision 35466)
+--- core/base/src/TString.cxx	(revision 35913)
 +++ core/base/src/TString.cxx	(working copy)
-@@ -1089,14 +1089,37 @@
+@@ -1090,14 +1090,37 @@
     UChar_t nwh;
     if (b.IsReading()) {
        b >> nwh;
@@ -1116,7 +1116,7 @@ Index: core/base/src/TString.cxx
        if (nbig > 254) {
 Index: core/base/inc/TBuffer.h
 ===================================================================
---- core/base/inc/TBuffer.h	(revision 35466)
+--- core/base/inc/TBuffer.h	(revision 35913)
 +++ core/base/inc/TBuffer.h	(working copy)
 @@ -32,10 +32,13 @@
  class TProcessID;
@@ -1172,7 +1172,7 @@ Index: core/base/inc/TBuffer.h
     virtual   Int_t    ReadArray(Char_t    *&c) = 0;
 Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
 ===================================================================
---- cint/reflex/inc/Reflex/Builder/CollectionProxy.h	(revision 35466)
+--- cint/reflex/inc/Reflex/Builder/CollectionProxy.h	(revision 35913)
 +++ cint/reflex/inc/Reflex/Builder/CollectionProxy.h	(working copy)
 @@ -18,7 +18,7 @@
  // by this Reflex build, this must match the version number of 
@@ -1411,7 +1411,7 @@ Index: cint/reflex/inc/Reflex/Builder/CollectionProxy.h
        return 0;
 Index: tree/tree/src/TBranchElement.cxx
 ===================================================================
---- tree/tree/src/TBranchElement.cxx	(revision 35466)
+--- tree/tree/src/TBranchElement.cxx	(revision 35913)
 +++ tree/tree/src/TBranchElement.cxx	(working copy)
 @@ -38,12 +38,15 @@
  #include "TStreamerInfo.h"
@@ -1444,34 +1444,37 @@ Index: tree/tree/src/TBranchElement.cxx
        br->SetReadLeavesPtr();
        // Note: This is a tail recursion.
        SwitchContainer(br->GetListOfBranches());
-@@ -139,6 +146,8 @@
+@@ -139,6 +146,9 @@
  , fBranchClass()
  , fBranchOffset(0)
  , fBranchID(-1)
 +, fReadActionSequence(0)
 +, fIterators(0)
++, fPtrIterators(0)
  {
     // -- Default and I/O constructor.
     fNleaves = 0;
-@@ -173,6 +182,8 @@
+@@ -173,6 +183,9 @@
  , fBranchClass(sinfo->GetClass())
  , fBranchOffset(0)
  , fBranchID(-1)
 +, fReadActionSequence(0)
 +, fIterators(0)
++, fPtrIterators(0)
  {
     // -- Constructor when the branch object is not a TClonesArray nor an STL container.
     //
-@@ -209,6 +220,8 @@
+@@ -209,6 +222,9 @@
  , fBranchClass(sinfo->GetClass())
  , fBranchOffset(0)
  , fBranchID(-1)
 +, fReadActionSequence(0)
 +, fIterators(0)
++, fPtrIterators(0)
  {
     // -- Constructor when the branch object is not a TClonesArray nor an STL container.
     //
-@@ -560,7 +573,8 @@
+@@ -560,7 +576,8 @@
              if (err >= 0) {
                 // Return on success.
                 // FIXME: Why not on error too?
@@ -1481,53 +1484,58 @@ Index: tree/tree/src/TBranchElement.cxx
              }
           }
        }
-@@ -599,6 +613,8 @@
+@@ -599,6 +616,9 @@
  , fParentClass()
  , fBranchClass(TClonesArray::Class())
  , fBranchID(-1)
 +, fReadActionSequence(0)
 +, fIterators(0)
++, fPtrIterators(0)
  {
     // -- Constructor when the branch object is a TClonesArray.
     //
-@@ -618,6 +634,8 @@
+@@ -618,6 +638,9 @@
  , fParentClass()
  , fBranchClass(TClonesArray::Class())
  , fBranchID(-1)
 +, fReadActionSequence(0)
 +, fIterators(0)
++, fPtrIterators(0)
  {
     // -- Constructor when the branch object is a TClonesArray.
     //
-@@ -729,6 +747,8 @@
+@@ -729,6 +752,9 @@
  , fParentClass()
  , fBranchClass(cont->GetCollectionClass())
  , fBranchID(-1)
 +, fReadActionSequence(0)
 +, fIterators(0)
++, fPtrIterators(0)
  {
     // -- Constructor when the branch object is an STL collection.
     //
-@@ -747,6 +767,8 @@
+@@ -747,6 +773,9 @@
  , fParentClass()
  , fBranchClass(cont->GetCollectionClass())
  , fBranchID(-1)
 +, fReadActionSequence(0)
 +, fIterators(0)
++, fPtrIterators(0)
  {
     // -- Constructor when the branch object is an STL collection.
     //
-@@ -880,6 +902,9 @@
+@@ -880,6 +909,10 @@
        delete fCollProxy;
     }
     fCollProxy = 0;
 +   
 +   delete fReadActionSequence;
 +   delete fIterators;
++   delete fPtrIterators;
  }
  
  //
-@@ -1719,7 +1744,14 @@
+@@ -1719,7 +1752,14 @@
              }
           }
           fInit = kTRUE;
@@ -1542,7 +1550,7 @@ Index: tree/tree/src/TBranchElement.cxx
     }
  }
  
-@@ -2611,9 +2643,9 @@
+@@ -2611,9 +2651,9 @@
              //
              // Compensate for the i/o routines adding our local offset later.
              if (subBranch->fObject == 0 && localOffset == TStreamerInfo::kMissing) {
@@ -1554,37 +1562,92 @@ Index: tree/tree/src/TBranchElement.cxx
              }
           } else {
              // -- Set fBranchOffset for sub-branch.
-@@ -3146,7 +3178,9 @@
+@@ -3146,7 +3186,13 @@
     // TODO: Exception safety a la TPushPop
     TVirtualCollectionProxy* proxy = GetCollectionProxy();
     TVirtualCollectionProxy::TPushPop helper(proxy, fObject);
 -   void* alternate = proxy->Allocate(fNdata, true);
 +   void* alternate = proxy->Allocate(fNdata, true);   
-+   fIterators->CreateIterators(alternate);
++   if(fSTLtype != TClassEdit::kVector && proxy->HasPointers() && fSplitLevel > TTree::kSplitCollectionOfPointers ) {
++      fPtrIterators->CreateIterators(alternate);
++   } else {
++      fIterators->CreateIterators(alternate);
++   }      
 +   
     Int_t nbranches = fBranches.GetEntriesFast();
     switch (fSTLtype) {
        case TClassEdit::kSet:
-@@ -3213,9 +3247,18 @@
+@@ -3204,22 +3250,64 @@
+       // 'dropped' from the current schema) so let's no copy it in a random place.
+       return;
+    }
++   
++   R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
++   
++   // STL container sub-branch (contains the elements).
++   fNdata = fBranchCount->GetNdata();
++   if (!fNdata || !fObject) {
++      return;
++   }
++   TStreamerInfo *info = GetInfo();
++   if (info == 0) return;
++   
++   TVirtualCollectionProxy *proxy = GetCollectionProxy();
++   TVirtualCollectionProxy::TPushPop helper(proxy, fObject);
++   
++   // R__ASSERT(0);
++   TVirtualCollectionPtrIterators *iter = fBranchCount->fPtrIterators;
++   fReadActionSequence->ReadBuffer(b,iter->fBegin,iter->fEnd);
++   
++   //   char **arr = (char **)proxy->At(0);
++   //   char **end = arr + proxy->Size();
++   //   fReadActionSequence->ReadBufferVecPtr(b,arr,end);
++   
++   //   info->ReadBufferSTLPtrs(b, proxy, fNdata, fID, fOffset);
++   //   for(UInt_t ii=0; ii < fIDs.size(); ++ii) {
++   //      info->ReadBufferSTLPtrs(b, proxy, fNdata, fIDs[ii], fOffset);
++   //   }
++}
+ 
++//______________________________________________________________________________
++void TBranchElement::ReadLeavesCollectionSplitVectorPtrMember(TBuffer& b)
++{
++   // -- Read leaves into i/o buffers for this branch.
++   // Case of a data member within a collection (fType == 41).
++   
++   ValidateAddress();   
++   if (fObject == 0)
++   {
++      // We have nowhere to copy the data (probably because the data member was
++      // 'dropped' from the current schema) so let's no copy it in a random place.
++      return;
++   }
++   
+    R__PushCache onfileObject(((TBufferFile&)b),fOnfileObject);
+-
++   
+    // STL container sub-branch (contains the elements).
+    fNdata = fBranchCount->GetNdata();
+    if (!fNdata || !fObject) {
        return;
     }
     TStreamerInfo *info = GetInfo();
 +   if (info == 0) return;
-+
++   
     TVirtualCollectionProxy *proxy = GetCollectionProxy();
     TVirtualCollectionProxy::TPushPop helper(proxy, fObject);
++   
  
-+//   TVirtualCollectionIterators *iter = fBranchCount->fIterators;
-+//   fReadActionSequence->ReadBufferVecPtr(b,iter->fBegin,iter->fEnd);
-+
-+//   char **arr = (char **)proxy->At(0);
-+//   char **end = arr + proxy->Size();
-+//   fReadActionSequence->ReadBufferVecPtr(b,arr,end);
-+
-    info->ReadBufferSTLPtrs(b, proxy, fNdata, fID, fOffset);
-    for(UInt_t ii=0; ii < fIDs.size(); ++ii) {
-       info->ReadBufferSTLPtrs(b, proxy, fNdata, fIDs[ii], fOffset);
-@@ -3244,15 +3287,15 @@
+-   info->ReadBufferSTLPtrs(b, proxy, fNdata, fID, fOffset);
+-   for(UInt_t ii=0; ii < fIDs.size(); ++ii) {
+-      info->ReadBufferSTLPtrs(b, proxy, fNdata, fIDs[ii], fOffset);
+-   }
++   TVirtualCollectionIterators *iter = fBranchCount->fIterators;
++   fReadActionSequence->ReadBufferVecPtr(b,iter->fBegin,iter->fEnd);
+ }
+ 
+ //______________________________________________________________________________
+@@ -3244,15 +3332,15 @@
        return;
     }
     TStreamerInfo *info = GetInfo();
@@ -1602,12 +1665,12 @@ Index: tree/tree/src/TBranchElement.cxx
 -      info->ReadBuffer(b, *proxy,  fIDs[ii], fNdata, fOffset,1);
 -   }
 +   
-+   TVirtualCollectionIterators*iter = fBranchCount->fIterators;
++   TVirtualCollectionIterators *iter = fBranchCount->fIterators;
 +   fReadActionSequence->ReadBuffer(b,iter->fBegin,iter->fEnd);
  }
  
  //______________________________________________________________________________
-@@ -3322,10 +3365,12 @@
+@@ -3322,10 +3410,12 @@
        return;
     }
     TStreamerInfo *info = GetInfo();
@@ -1624,7 +1687,7 @@ Index: tree/tree/src/TBranchElement.cxx
  }
  
  //______________________________________________________________________________
-@@ -3362,10 +3407,8 @@
+@@ -3362,10 +3452,8 @@
     if (!info) {
        return;
     }
@@ -1637,7 +1700,7 @@ Index: tree/tree/src/TBranchElement.cxx
  }
  
  //______________________________________________________________________________
-@@ -3401,10 +3444,8 @@
+@@ -3401,10 +3489,8 @@
     if (!info) {
        return;
     }
@@ -1650,7 +1713,7 @@ Index: tree/tree/src/TBranchElement.cxx
  }
  
  //______________________________________________________________________________
-@@ -3438,10 +3479,8 @@
+@@ -3438,10 +3524,8 @@
     if (!info) {
        return;
     }
@@ -1663,7 +1726,7 @@ Index: tree/tree/src/TBranchElement.cxx
     fNdata = (Int_t) GetValue(0, 0);
  }
  
-@@ -3812,11 +3851,14 @@
+@@ -3812,11 +3896,18 @@
           if (matched) {
              // Change from 3/31 to 4/41
              SetType(4);
@@ -1676,11 +1739,15 @@ Index: tree/tree/src/TBranchElement.cxx
 +            SwitchContainer(GetListOfBranches());
 +            SetReadLeavesPtr();
 +            
-+            fIterators = new TVirtualCollectionIterators(fCollProxy);
++            if(fSTLtype != TClassEdit::kVector && fCollProxy->HasPointers() && fSplitLevel > TTree::kSplitCollectionOfPointers ) {
++               fPtrIterators = new TVirtualCollectionPtrIterators(fCollProxy);
++            } else {
++               fIterators = new TVirtualCollectionIterators(fCollProxy);
++            }
           } else {
              // FIXME: Must maintain fObject here as well.
              fAddress = 0;
-@@ -3833,49 +3875,69 @@
+@@ -3833,47 +3924,78 @@
              if (fSTLtype == TClassEdit::kNotSTL) {
                 fSTLtype = TMath::Abs(TClassEdit::IsSTLCont(newType->GetName()));
              }
@@ -1698,7 +1765,12 @@ Index: tree/tree/src/TBranchElement.cxx
 +            SetReadActionSequence();
 +            SetReadLeavesPtr();
 +            delete fIterators;
-+            fIterators = new TVirtualCollectionIterators(fCollProxy);
++            delete fPtrIterators;
++            if(fSTLtype != TClassEdit::kVector && fCollProxy->HasPointers() && fSplitLevel > TTree::kSplitCollectionOfPointers ) {
++               fPtrIterators = new TVirtualCollectionPtrIterators(fCollProxy);
++            } else {
++               fIterators = new TVirtualCollectionIterators(fCollProxy);
++            }
 +         } 
 +         else if ((newType == TClonesArray::Class()) && (oldProxy->GetValueClass() && !oldProxy->HasPointers() && oldProxy->GetValueClass()->InheritsFrom(TObject::Class()))) 
 +         {            
@@ -1738,9 +1810,6 @@ Index: tree/tree/src/TBranchElement.cxx
 -                  clm->BuildRealData(); //just in case clm derives from an abstract class
 -                  clm->GetStreamerInfo();
 -               }
--            } else {
--               // FIXME: We must maintain fObject here as well.
--               fAddress = 0;
 +            
 +            // We cannot insure that the TClonesArray is set for the
 +            // proper class (oldProxy->GetValueClass()), so we assume that
@@ -1762,7 +1831,7 @@ Index: tree/tree/src/TBranchElement.cxx
 +               case TVirtualStreamerInfo::kAnyP:
 +                  fStreamerType = TVirtualStreamerInfo::kObjectP;
 +                  break;
-             }
++            }
 +            fClonesName = oldProxy->GetValueClass()->GetName();
 +            delete fCollProxy;
 +            fCollProxy = 0;
@@ -1775,18 +1844,24 @@ Index: tree/tree/src/TBranchElement.cxx
 +            SetReadLeavesPtr();
 +            delete fIterators;
 +            fIterators = 0;
++            delete fPtrIterators;
++            fPtrIterators =0;
 +         } else {
 +            // FIXME: We must maintain fObject here as well.
 +            fAddress = 0;
-          }
-+      } else {
-+         if (!fIterators) {
-+            fIterators = new TVirtualCollectionIterators(GetCollectionProxy());
 +         }
++      } else {
++         if (!fIterators && !fPtrIterators) {
++            if(fSTLtype != TClassEdit::kVector && GetCollectionProxy()->HasPointers() && fSplitLevel > TTree::kSplitCollectionOfPointers ) {
++               fPtrIterators = new TVirtualCollectionPtrIterators(GetCollectionProxy());
+             } else {
+-               // FIXME: We must maintain fObject here as well.
+-               fAddress = 0;
++               fIterators = new TVirtualCollectionIterators(GetCollectionProxy());
+             }
+          }
        }
-    }
- 
-@@ -4189,6 +4251,62 @@
+@@ -4189,6 +4311,66 @@
  }
  
  //______________________________________________________________________________
@@ -1818,17 +1893,21 @@ Index: tree/tree/src/TBranchElement.cxx
 +   TStreamerInfoActions::TActionSequence *original = 0;
 +   TStreamerInfoActions::TActionSequence *transient = 0;
 +   if (fType == 41) {
-+      if (GetParentClass() == GetInfo()->GetClass()) {
-+         if( fTargetClassName.Length() && fTargetClassName != fClassName ) {
-+            original = GetCollectionProxy()->GetConversionReadMemberWiseActions(fBranchClass.GetClass(), fClassVersion);
-+         } else {
-+            original = GetCollectionProxy()->GetReadMemberWiseActions(fClassVersion);
-+         }
++      if( fSplitLevel >= TTree::kSplitCollectionOfPointers && fBranchCount->fSTLtype == TClassEdit::kVector) {
++         original = fInfo->GetReadMemberWiseActions(kTRUE); 
 +      } else {
-+         // Base class and embedded objects.
-+         
-+         transient = TStreamerInfoActions::TActionSequence::CreateReadMemberWiseActions(GetInfo(),GetCollectionProxy());
-+         original = transient;
++         if (GetParentClass() == GetInfo()->GetClass()) {
++            if( fTargetClassName.Length() && fTargetClassName != fClassName ) {
++               original = GetCollectionProxy()->GetConversionReadMemberWiseActions(fBranchClass.GetClass(), fClassVersion);
++            } else {
++               original = GetCollectionProxy()->GetReadMemberWiseActions(fClassVersion);
++            }
++         } else {
++            // Base class and embedded objects.
++            
++            transient = TStreamerInfoActions::TActionSequence::CreateReadMemberWiseActions(GetInfo(),GetCollectionProxy());
++            original = transient;
++         }
 +      }
 +   } else if (fType == 31) {
 +      original = fInfo->GetReadMemberWiseActions(kTRUE);            
@@ -1849,7 +1928,20 @@ Index: tree/tree/src/TBranchElement.cxx
  void TBranchElement::SetReadLeavesPtr()
  {
     // Set the ReadLeaves pointer to execute the expected operations.
-@@ -4221,6 +4339,8 @@
+@@ -4199,7 +4381,11 @@
+       fReadLeaves = (ReadLeaves_t)&TBranchElement::ReadLeavesCollection;
+    } else if (fType == 41) {
+       if( fSplitLevel >= TTree::kSplitCollectionOfPointers ) {
+-         fReadLeaves = (ReadLeaves_t)&TBranchElement::ReadLeavesCollectionSplitPtrMember;
++         if (fBranchCount->fSTLtype == TClassEdit::kVector) {
++            fReadLeaves = (ReadLeaves_t)&TBranchElement::ReadLeavesCollectionSplitVectorPtrMember;
++         } else {
++            fReadLeaves = (ReadLeaves_t)&TBranchElement::ReadLeavesCollectionSplitPtrMember;
++         }
+       } else {
+          fReadLeaves = (ReadLeaves_t)&TBranchElement::ReadLeavesCollectionMember;
+       }
+@@ -4221,6 +4407,8 @@
     } else {
        Fatal("SetReadLeavePtr","Unexpected branch type %d for %s",fType,GetName());
     }
@@ -1858,7 +1950,7 @@ Index: tree/tree/src/TBranchElement.cxx
  }
  
  //______________________________________________________________________________
-@@ -4239,6 +4359,8 @@
+@@ -4239,6 +4427,8 @@
        fInfo = 0;
        fInit = kFALSE;
        fInitOffsets = kFALSE;
@@ -1867,7 +1959,7 @@ Index: tree/tree/src/TBranchElement.cxx
  
        Int_t nbranches = fBranches.GetEntriesFast();
        for (Int_t i = 0; i < nbranches; ++i) {
-@@ -4353,7 +4475,7 @@
+@@ -4353,7 +4543,7 @@
           fLeaves.Add(leaf);
           fTree->GetListOfLeaves()->Add(leaf);
        }
@@ -1878,13 +1970,14 @@ Index: tree/tree/src/TBranchElement.cxx
        TDirectory* dirsav = fDirectory;
 Index: tree/tree/inc/TBranchElement.h
 ===================================================================
---- tree/tree/inc/TBranchElement.h	(revision 35466)
+--- tree/tree/inc/TBranchElement.h	(revision 35913)
 +++ tree/tree/inc/TBranchElement.h	(working copy)
-@@ -34,8 +34,12 @@
+@@ -34,8 +34,13 @@
  class TFolder;
  class TStreamerInfo;
  class TVirtualCollectionProxy;
 +class TVirtualCollectionIterators;
++class TVirtualCollectionPtrIterators;
  class TVirtualArray;
  
 +namespace TStreamerInfoActions { class TActionSequence; }
@@ -1893,7 +1986,7 @@ Index: tree/tree/inc/TBranchElement.h
  class TBranchElement : public TBranch {
  
  // Friends
-@@ -80,7 +84,9 @@
+@@ -80,7 +85,10 @@
     TClassRef                fBranchClass;   //! Reference to class definition in fClassName
     Int_t                   *fBranchOffset;  //! Sub-Branch offsets with respect to current transient class
     Int_t                    fBranchID;      //! ID number assigned by a TRefTable.
@@ -1901,10 +1994,19 @@ Index: tree/tree/inc/TBranchElement.h
 +   std::vector<Int_t>       fIDs;           //! List of the serial number of all the StreamerInfo to be used.   
 +   TStreamerInfoActions::TActionSequence *fReadActionSequence;  //! Set of actions to be executed to extract the data from the basket.
 +   TVirtualCollectionIterators           *fIterators;     //! holds the iterators when the branch is of fType==4.
++   TVirtualCollectionPtrIterators        *fPtrIterators;  //! holds the iterators when the branch is of fType==4 and it is a split collection of pointers.
  
  // Not implemented
  private:
-@@ -119,6 +125,7 @@
+@@ -111,6 +119,7 @@
+    void ReadLeavesMakeClass(TBuffer& b);
+    void ReadLeavesCollection(TBuffer& b);
+    void ReadLeavesCollectionSplitPtrMember(TBuffer& b);
++   void ReadLeavesCollectionSplitVectorPtrMember(TBuffer& b);
+    void ReadLeavesCollectionMember(TBuffer& b);
+    void ReadLeavesClones(TBuffer& b);
+    void ReadLeavesClonesMember(TBuffer& b);
+@@ -119,6 +128,7 @@
     void ReadLeavesMemberBranchCount(TBuffer& b);
     void ReadLeavesMemberCounter(TBuffer& b);
     void SetReadLeavesPtr();
@@ -1912,7 +2014,7 @@ Index: tree/tree/inc/TBranchElement.h
  
  // Public Interface.
  public:
-@@ -176,6 +183,7 @@
+@@ -176,6 +186,7 @@
     virtual void             SetBasketSize(Int_t buffsize);
     virtual void             SetBranchFolder() { SetBit(kBranchFolder); }
     virtual void             SetClassName(const char* name) { fClassName = name; }
@@ -1922,9 +2024,9 @@ Index: tree/tree/inc/TBranchElement.h
     virtual void             SetTargetClassName(const char *name);
 Index: io/sql/src/TBufferSQL2.cxx
 ===================================================================
---- io/sql/src/TBufferSQL2.cxx	(revision 35466)
+--- io/sql/src/TBufferSQL2.cxx	(revision 35913)
 +++ io/sql/src/TBufferSQL2.cxx	(working copy)
-@@ -931,6 +931,13 @@
+@@ -930,6 +930,13 @@
  }
  
  //______________________________________________________________________________
@@ -1938,7 +2040,7 @@ Index: io/sql/src/TBufferSQL2.cxx
  Version_t TBufferSQL2::ReadVersion(UInt_t *start, UInt_t *bcnt, const TClass *)
  {
     // read version value from buffer
-@@ -1072,6 +1079,46 @@
+@@ -1071,6 +1078,46 @@
  }
  
  //______________________________________________________________________________
@@ -1987,7 +2089,7 @@ Index: io/sql/src/TBufferSQL2.cxx
     // Write Float16 value
 Index: io/sql/inc/TBufferSQL2.h
 ===================================================================
---- io/sql/inc/TBufferSQL2.h	(revision 35466)
+--- io/sql/inc/TBufferSQL2.h	(revision 35913)
 +++ io/sql/inc/TBufferSQL2.h	(working copy)
 @@ -152,8 +152,9 @@
     virtual Int_t    CheckByteCount(UInt_t startpos, UInt_t bcnt, const char *classname); // SL
@@ -2015,9 +2117,9 @@ Index: io/sql/inc/TBufferSQL2.h
     virtual Int_t    ReadArray(UChar_t   *&c);
 Index: io/xml/src/TBufferXML.cxx
 ===================================================================
---- io/xml/src/TBufferXML.cxx	(revision 35466)
+--- io/xml/src/TBufferXML.cxx	(revision 35913)
 +++ io/xml/src/TBufferXML.cxx	(working copy)
-@@ -1358,6 +1358,13 @@
+@@ -1357,6 +1357,13 @@
  }
  
  //______________________________________________________________________________
@@ -2031,7 +2133,7 @@ Index: io/xml/src/TBufferXML.cxx
  Version_t TBufferXML::ReadVersion(UInt_t *start, UInt_t *bcnt, const TClass * /*cl*/)
  {
     // read version value from buffer
-@@ -1510,6 +1517,50 @@
+@@ -1509,6 +1516,50 @@
  }
  
  //______________________________________________________________________________
@@ -2084,7 +2186,7 @@ Index: io/xml/src/TBufferXML.cxx
     // write a Float16_t to the buffer
 Index: io/xml/inc/TBufferXML.h
 ===================================================================
---- io/xml/inc/TBufferXML.h	(revision 35466)
+--- io/xml/inc/TBufferXML.h	(revision 35913)
 +++ io/xml/inc/TBufferXML.h	(working copy)
 @@ -66,8 +66,9 @@
     virtual Int_t    CheckByteCount(UInt_t startpos, UInt_t bcnt, const char *classname); // SL
@@ -2112,7 +2214,7 @@ Index: io/xml/inc/TBufferXML.h
     virtual Int_t    ReadArray(UChar_t   *&c);
 Index: io/io/src/TStreamerInfo.cxx
 ===================================================================
---- io/io/src/TStreamerInfo.cxx	(revision 35466)
+--- io/io/src/TStreamerInfo.cxx	(revision 35913)
 +++ io/io/src/TStreamerInfo.cxx	(working copy)
 @@ -69,6 +69,8 @@
  
@@ -2184,7 +2286,7 @@ Index: io/io/src/TStreamerInfo.cxx
                 }
 Index: io/io/src/TEmulatedMapProxy.cxx
 ===================================================================
---- io/io/src/TEmulatedMapProxy.cxx	(revision 35466)
+--- io/io/src/TEmulatedMapProxy.cxx	(revision 35913)
 +++ io/io/src/TEmulatedMapProxy.cxx	(working copy)
 @@ -204,6 +204,29 @@
     }
@@ -2218,7 +2320,7 @@ Index: io/io/src/TEmulatedMapProxy.cxx
     // TClassStreamer IO overload.
 Index: io/io/src/TMakeProject.cxx
 ===================================================================
---- io/io/src/TMakeProject.cxx	(revision 35466)
+--- io/io/src/TMakeProject.cxx	(revision 35913)
 +++ io/io/src/TMakeProject.cxx	(working copy)
 @@ -412,7 +412,7 @@
     UInt_t numberOfClasses = 0;
@@ -2231,7 +2333,7 @@ Index: io/io/src/TMakeProject.cxx
        fprintf(fp, "#endif\n");
 Index: io/io/src/TBufferFile.cxx
 ===================================================================
---- io/io/src/TBufferFile.cxx	(revision 35466)
+--- io/io/src/TBufferFile.cxx	(revision 35913)
 +++ io/io/src/TBufferFile.cxx	(working copy)
 @@ -34,6 +34,7 @@
  #include "TStreamerInfo.h"
@@ -2549,7 +2651,7 @@ Index: io/io/src/TBufferFile.cxx
     // Check that the buffer position corresponds to the byte count.
 Index: io/io/src/TEmulatedCollectionProxy.cxx
 ===================================================================
---- io/io/src/TEmulatedCollectionProxy.cxx	(revision 35466)
+--- io/io/src/TEmulatedCollectionProxy.cxx	(revision 35913)
 +++ io/io/src/TEmulatedCollectionProxy.cxx	(working copy)
 @@ -45,6 +45,7 @@
     : TGenCollectionProxy(copy)
@@ -2618,9 +2720,9 @@ Index: io/io/src/TEmulatedCollectionProxy.cxx
     // TClassStreamer IO overload
 Index: io/io/src/TStreamerInfoActions.cxx
 ===================================================================
---- io/io/src/TStreamerInfoActions.cxx	(revision 35466)
+--- io/io/src/TStreamerInfoActions.cxx	(revision 35913)
 +++ io/io/src/TStreamerInfoActions.cxx	(working copy)
-@@ -10,15 +10,997 @@
+@@ -10,15 +10,1004 @@
   *************************************************************************/
  
  #include "TStreamerInfo.h"
@@ -2636,6 +2738,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
 +#include "TMemberStreamer.h"
 +#include "TError.h"
 +#include "TClassEdit.h"
++#include "TVirtualCollectionIterators.h"
  
  static const Int_t kRegrouped = TStreamerInfo::kOffsetL;
  
@@ -2889,9 +2992,15 @@ Index: io/io/src/TStreamerInfoActions.cxx
 +   private:
 +      void Init() {
 +         if (fProxy) {
-+            fNext = fProxy->GetFunctionNext();
-+            fCopyIterator = fProxy->GetFunctionCopyIterator();
-+            fDeleteIterator = fProxy->GetFunctionDeleteIterator();
++            if (fProxy->HasPointers()) {
++               fNext = TVirtualCollectionPtrIterators::Next;
++               fCopyIterator = TVirtualCollectionPtrIterators::CopyIterator;
++               fDeleteIterator = TVirtualCollectionPtrIterators::DeleteIterator;               
++            } else {
++               fNext = fProxy->GetFunctionNext();
++               fCopyIterator = fProxy->GetFunctionCopyIterator();
++               fDeleteIterator = fProxy->GetFunctionDeleteIterator();
++            }
 +         }
 +      }
 +   public:
@@ -2899,7 +3008,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
 +      TVirtualCollectionProxy::Next_t               fNext;
 +      TVirtualCollectionProxy::CopyIterator_t       fCopyIterator;
 +      TVirtualCollectionProxy::DeleteIterator_t     fDeleteIterator;
-+
++      
 +      TGenericLoopConfig(TVirtualCollectionProxy *proxy) : fProxy(proxy), fNext(0), fCopyIterator(0), fDeleteIterator(0)
 +      { 
 +         Init(); 
@@ -2910,7 +3019,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
 +         printf("TGenericLoopConfig: proxy=%s\n",fProxy->GetCollectionClass()->GetName());
 +      }
 +      virtual TLoopConfiguration* Copy() { return new TGenericLoopConfig(*this); }
-+  };
++   };
 +
 +   inline void ReadSTLMemberWiseSameClass(TBuffer &buf, void *addr, const TConfiguration *conf, Version_t vers)
 +   {
@@ -3264,7 +3373,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
 +         char *ptr = (char*)start;
 +         info->ReadBufferSkip(b,&ptr,config->fElemId,info->GetTypes()[config->fElemId]+TStreamerInfo::kSkip,aElement,n,0);
 +      } else {
-+         info->ReadBuffer(b, *b.PeekDataCache(), config->fElemId, n, config->fOffset, 2);
++         info->ReadBuffer(b, *b.PeekDataCache(), config->fElemId, n, config->fOffset, 1 | 2);
 +      }
 +      if (aElement->TestBit(TStreamerElement::kRepeat)) {
 +         b.SetBufferOffset(bufpos); 
@@ -3405,7 +3514,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
 +      iter = (char*)iter + config->fOffset;
 +      end = (char*)end + config->fOffset;
 +      for(; iter != end; iter = (char*)iter + incr ) {
-+         T *x = (T*) ((char*) iter );
++         T *x = (T*) ((char*) iter);
 +         buf >> *x;
 +      }
 +      return 0;
@@ -3619,7 +3728,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
  void TStreamerInfo::Compile()
  {
     // loop on the TStreamerElement list
-@@ -59,6 +1041,7 @@
+@@ -59,6 +1048,7 @@
     delete[] fComp;
     fComp = 0;
  
@@ -3627,7 +3736,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
  
     Int_t ndata = fElements->GetEntries();
  
-@@ -66,6 +1049,7 @@
+@@ -66,6 +1056,7 @@
     fType   = new Int_t[ndata+1];
  
     SetBit(kIsCompiled);
@@ -3635,7 +3744,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
  
     if (!ndata) {
        // This may be the case for empty classes (e.g., TAtt3D).
-@@ -76,6 +1060,7 @@
+@@ -76,6 +1067,7 @@
        return;
     }
  
@@ -3643,7 +3752,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
     fComp = new TCompInfo[ndata];
     fNewType = new Int_t[ndata];
     fLength = new Int_t[ndata];
-@@ -135,9 +1120,9 @@
+@@ -135,9 +1127,9 @@
                ((element->GetFactor() == previous->GetFactor())
                 && (element->GetXmin() == previous->GetXmin())
                 && (element->GetXmax() == previous->GetXmax())
@@ -3655,7 +3764,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
        {
           if (fLength[keep] == 0) {
              fLength[keep]++;
-@@ -167,6 +1152,10 @@
+@@ -167,6 +1159,10 @@
        previous = element;
     }
  
@@ -3666,7 +3775,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
     for (i = 0; i < fNdata; ++i) {
        element = (TStreamerElement*) fElem[i];
        if (!element) {
-@@ -176,6 +1165,181 @@
+@@ -176,6 +1172,181 @@
        fComp[i].fNewClass = element->GetNewClass();
        fComp[i].fClassName = TString(element->GetTypeName()).Strip(TString::kTrailing, '*');
        fComp[i].fStreamer = element->GetStreamer();
@@ -3848,7 +3957,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
     }
     ComputeSize();
  
-@@ -185,3 +1349,245 @@
+@@ -185,3 +1356,273 @@
        ls();
     }
  }
@@ -3862,6 +3971,15 @@ Index: io/io/src/TStreamerInfoActions.cxx
 +   TStreamerInfoActions::TActionSequence *sequence = new TStreamerInfoActions::TActionSequence(info,ndata);
 +   if ( (proxy->GetCollectionType() == TClassEdit::kVector) || (proxy->GetProperties() & TVirtualCollectionProxy::kIsEmulated) ) 
 +   {
++      if (proxy->HasPointers()) {
++         // Instead of the creating a new one let's copy the one from the StreamerInfo.
++         delete sequence;
++         
++         sequence = static_cast<TStreamerInfo*>(info)->GetReadMemberWiseActions(kTRUE)->CreateCopy();
++         
++         return sequence;
++      }
++      
 +      // We can speed up the iteration in case of vector.  We also know that all emulated collection are stored internally as a vector.
 +      Long_t increment = proxy->GetIncrement();
 +      sequence->fLoopConfig = new TVectorLoopConfig(increment);
@@ -3905,7 +4023,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
 +      }
 +      if ( (proxy->GetCollectionType() == TClassEdit::kVector) || (proxy->GetProperties() & TVirtualCollectionProxy::kIsEmulated)  
 +            || (proxy->GetCollectionType() == TClassEdit::kSet || proxy->GetCollectionType() == TClassEdit::kMultiSet
-+                       || proxy->GetCollectionType() == TClassEdit::kMap || proxy->GetCollectionType() == TClassEdit::kMultiMap) )
++            || proxy->GetCollectionType() == TClassEdit::kMap || proxy->GetCollectionType() == TClassEdit::kMultiMap) )
 +      {
 +         if (element->TestBit(TStreamerElement::kCache)) {
 +            sequence->AddAction( UseCacheVectorLoop, new TConfigurationUseCache(info,i,0) );
@@ -4040,15 +4158,34 @@ Index: io/io/src/TStreamerInfoActions.cxx
 +   }
 +}
 +
++TStreamerInfoActions::TActionSequence *TStreamerInfoActions::TActionSequence::CreateCopy()
++{
++   // Create a copy of this sequence.
++   
++   TStreamerInfoActions::TActionSequence *sequence = new TStreamerInfoActions::TActionSequence(fStreamerInfo,fActions.size());
++
++   sequence->fLoopConfig = fLoopConfig ? fLoopConfig->Copy() : 0;
++
++   TStreamerInfoActions::ActionContainer_t::iterator end = fActions.end();
++   for(TStreamerInfoActions::ActionContainer_t::iterator iter = fActions.begin();
++       iter != end;
++       ++iter) 
++   {
++      TConfiguration *conf = iter->fConfiguration->Copy();
++      sequence->AddAction( iter->fAction, conf );
++   }
++   return sequence;
++}
++
 +TStreamerInfoActions::TActionSequence *TStreamerInfoActions::TActionSequence::CreateSubSequence(const std::vector<Int_t> &element_ids, size_t offset)
 +{
 +   // Create a sequence containing the subset of the action corresponding to the SteamerElement whose ids is contained in the vector.
 +   // 'offset' is the location of this 'class' within the object (address) that will be pass to ReadBuffer when using this sequence.
-+
++   
 +   TStreamerInfoActions::TActionSequence *sequence = new TStreamerInfoActions::TActionSequence(fStreamerInfo,element_ids.size());
-+
++   
 +   sequence->fLoopConfig = fLoopConfig ? fLoopConfig->Copy() : 0;
-+
++   
 +   for(UInt_t id = 0; id < element_ids.size(); ++id) {
 +      if ( element_ids[id] < 0 ) {
 +         TStreamerInfoActions::ActionContainer_t::iterator end = fActions.end();
@@ -4096,7 +4233,7 @@ Index: io/io/src/TStreamerInfoActions.cxx
 +
 Index: io/io/src/TStreamerInfoReadBuffer.cxx
 ===================================================================
---- io/io/src/TStreamerInfoReadBuffer.cxx	(revision 35466)
+--- io/io/src/TStreamerInfoReadBuffer.cxx	(revision 35913)
 +++ io/io/src/TStreamerInfoReadBuffer.cxx	(working copy)
 @@ -665,7 +665,10 @@
  
@@ -4128,9 +4265,128 @@ Index: io/io/src/TStreamerInfoReadBuffer.cxx
     return 0;
  }
  
+@@ -1631,14 +1634,6 @@
+                                           fMethod,fLength,fComp,fOldVersion);
+ }
+ 
+-Int_t TStreamerInfo::ReadBufferSkip(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t i, Int_t kase,
+-                                    TStreamerElement *aElement, Int_t narr,
+-                                    Int_t eoffset)
+-{
+-  return TStreamerInfo__ReadBufferSkipImp(this, b,arr,i,kase,aElement,narr,eoffset,
+-                                          fMethod,fLength,fComp,fOldVersion);
+-}
+-
+ Int_t TStreamerInfo::ReadBufferSkip(TBuffer &b, const TVirtualArray &arr, Int_t i, Int_t kase,
+                                     TStreamerElement *aElement, Int_t narr,
+                                     Int_t eoffset)
+@@ -1665,15 +1660,6 @@
+                                           fOldVersion);
+ }
+ 
+-Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, const TPointerCollectionAdapter &arr,  Int_t i, Int_t kase,
+-                                    TStreamerElement *aElement, Int_t narr,
+-                                    Int_t eoffset)
+-{
+-  return TStreamerInfo__ReadBufferConvImp(b,arr,i,kase,aElement,narr,eoffset,fMethod,
+-                                          fElem,fLength,fClass,fOffset,fNewType,fNdata,fType,fgElement,fComp,
+-                                          fOldVersion);
+-}
+-
+ Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, const TVirtualArray &arr,  Int_t i, Int_t kase,
+                                     TStreamerElement *aElement, Int_t narr,
+                                     Int_t eoffset)
+@@ -1701,15 +1687,6 @@
+                                           fOldVersion);
+ }
+ 
+-Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const TPointerCollectionAdapter &arr,  Int_t i, Int_t kase,
+-                                    TStreamerElement *aElement, Int_t narr,
+-                                    Int_t eoffset)
+-{
+-  return TStreamerInfo__ReadBufferArtificialImp(b,arr,i,kase,aElement,narr,eoffset,fMethod,
+-                                          fElem,fLength,fClass,fOffset,fNewType,fNdata,fType,fgElement,fComp,
+-                                          fOldVersion);
+-}
+-
+ Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const TVirtualArray &arr,  Int_t i, Int_t kase,
+                                     TStreamerElement *aElement, Int_t narr,
+                                     Int_t eoffset)
+@@ -1733,13 +1710,6 @@
+                                       fLength,fClass,fOffset,fNewType,fNdata,fType,fgElement,fComp,fOldVersion);
+ }
+ 
+-Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t first,
+-                                Int_t narr, Int_t eoffset, Int_t arrayMode)
+-{
+-  return TStreamerInfo__ReadBufferImp(this,b,arr,first,narr,eoffset,arrayMode,fMethod,fElem,
+-                                      fLength,fClass,fOffset,fNewType,fNdata,fType,fgElement,fComp,fOldVersion);
+-}
+-
+ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const TVirtualArray &arr, Int_t first,
+                                 Int_t narr, Int_t eoffset, Int_t arrayMode)
+ {
+@@ -1758,9 +1728,6 @@
+ template Int_t TStreamerInfo::ReadBufferSkip<TVirtualCollectionProxy>(TBuffer &b, const TVirtualCollectionProxy &arr, Int_t i, Int_t kase,
+                                        TStreamerElement *aElement, Int_t narr,
+                                        Int_t eoffset);
+-template Int_t TStreamerInfo::ReadBufferSkip<TStreamerInfo::TPointerCollectionAdapter>(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t i, Int_t kase,
+-                                       TStreamerElement *aElement, Int_t narr,
+-                                       Int_t eoffset);
+ template Int_t TStreamerInfo::ReadBufferSkip<TVirtualArray>(TBuffer &b, const TVirtualArray &arr, Int_t i, Int_t kase,
+                                        TStreamerElement *aElement, Int_t narr,
+                                        Int_t eoffset);
+@@ -1771,9 +1738,6 @@
+ template Int_t TStreamerInfo::ReadBufferConv<TVirtualCollectionProxy>(TBuffer &b, const TVirtualCollectionProxy &arr,  Int_t i, Int_t kase,
+                                        TStreamerElement *aElement, Int_t narr,
+                                        Int_t eoffset);
+-template Int_t TStreamerInfo::ReadBufferConv<TStreamerInfo::TPointerCollectionAdapter>(TBuffer &b, const TPointerCollectionAdapter &arr,  Int_t i, Int_t kase,
+-                                       TStreamerElement *aElement, Int_t narr,
+-                                       Int_t eoffset);
+ template Int_t TStreamerInfo::ReadBufferConv<TVirtualArray>(TBuffer &b, const TVirtualArray &arr,  Int_t i, Int_t kase,
+                                        TStreamerElement *aElement, Int_t narr,
+                                        Int_t eoffset);
+@@ -1784,9 +1748,6 @@
+ template Int_t TStreamerInfo::ReadBufferArtificial<TVirtualCollectionProxy>(TBuffer &b, const TVirtualCollectionProxy &arr,  Int_t i, Int_t kase,
+                                              TStreamerElement *aElement, Int_t narr,
+                                              Int_t eoffset);
+-template Int_t TStreamerInfo::ReadBufferArtificial<TStreamerInfo::TPointerCollectionAdapter>(TBuffer &b, const TPointerCollectionAdapter &arr,  Int_t i, Int_t kase,
+-                                             TStreamerElement *aElement, Int_t narr,
+-                                             Int_t eoffset);
+ template Int_t TStreamerInfo::ReadBufferArtificial<TVirtualArray>(TBuffer &b, const TVirtualArray &arr,  Int_t i, Int_t kase,
+                                              TStreamerElement *aElement, Int_t narr,
+                                              Int_t eoffset);
+@@ -1795,8 +1756,6 @@
+                                                  Int_t narr, Int_t eoffset, Int_t arrayMode);
+ template Int_t TStreamerInfo::ReadBuffer<TVirtualCollectionProxy>(TBuffer &b, const TVirtualCollectionProxy &arr, Int_t first,
+                                                                   Int_t narr, Int_t eoffset, Int_t arrayMode);
+-template Int_t TStreamerInfo::ReadBuffer<TStreamerInfo::TPointerCollectionAdapter>(TBuffer &b, const TPointerCollectionAdapter &arr, Int_t first,
+-                                                                    Int_t narr, Int_t eoffset, Int_t arrayMode);
+ template Int_t TStreamerInfo::ReadBuffer<TVirtualArray>(TBuffer &b, const TVirtualArray &arr, Int_t first,
+                                                         Int_t narr, Int_t eoffset, Int_t arrayMode);
+ 
+@@ -1815,18 +1774,6 @@
+ }
+ 
+ //______________________________________________________________________________
+-Int_t TStreamerInfo::ReadBufferSTLPtrs(TBuffer &b,
+-                                       TVirtualCollectionProxy *cont,
+-                                       Int_t nc, Int_t first, Int_t eoffset )
+-{
+-   //  The STL vector/list is deserialized from the buffer b
+-
+-   if (!nc) return 0;
+-   int ret = ReadBuffer(b, TPointerCollectionAdapter(cont), first,nc,eoffset,1);
+-   return ret;
+-}
+-
+-//______________________________________________________________________________
+ Int_t TStreamerInfo::ReadBufferClones(TBuffer &b, TClonesArray *clones,
+                                       Int_t nc, Int_t first, Int_t eoffset)
+ {
 Index: io/io/src/TGenCollectionProxy.cxx
 ===================================================================
---- io/io/src/TGenCollectionProxy.cxx	(revision 35466)
+--- io/io/src/TGenCollectionProxy.cxx	(revision 35913)
 +++ io/io/src/TGenCollectionProxy.cxx	(working copy)
 @@ -33,10 +33,13 @@
  #include "TInterpreter.h"
@@ -4611,7 +4867,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
  void TGenCollectionProxy::Streamer(TBuffer &buff)
  {
     // Streamer Function.
-@@ -1105,3 +1185,334 @@
+@@ -1105,3 +1185,326 @@
     Streamer(b, objp, 0);
  }
  
@@ -4810,14 +5066,6 @@ Index: io/io/src/TGenCollectionProxy.cxx
 +   
 +   if ( !fValue ) InitializeEx();
 +
-+//   fprintf(stderr,"GetFunctionNext for %s will give: ",fClass.GetClassName());
-+//   if (fSTL_type==TClassEdit::kVector || (fProperties & kIsEmulated)) 
-+//      fprintf(stderr,"vector/emulated iterator\n");
-+//   else if ( (fProperties & kIsAssociative) && read)
-+//      fprintf(stderr,"an associative read iterator\n");
-+//   else 
-+//      fprintf(stderr,"a generic iterator\n");
-+
 +   if (fSTL_type==TClassEdit::kVector || (fProperties & kIsEmulated)) 
 +      return TGenCollectionProxy__VectorNext;
 +   else if ( (fProperties & kIsAssociative) && read)
@@ -4948,7 +5196,7 @@ Index: io/io/src/TGenCollectionProxy.cxx
 +
 Index: io/io/src/TGenCollectionStreamer.cxx
 ===================================================================
---- io/io/src/TGenCollectionStreamer.cxx	(revision 35466)
+--- io/io/src/TGenCollectionStreamer.cxx	(revision 35913)
 +++ io/io/src/TGenCollectionStreamer.cxx	(working copy)
 @@ -30,21 +30,22 @@
  #include "TStreamerInfo.h"
@@ -5355,7 +5603,7 @@ Index: io/io/src/TGenCollectionStreamer.cxx
     // TClassStreamer IO overload.
 Index: io/io/inc/TBufferFile.h
 ===================================================================
---- io/io/inc/TBufferFile.h	(revision 35466)
+--- io/io/inc/TBufferFile.h	(revision 35913)
 +++ io/io/inc/TBufferFile.h	(working copy)
 @@ -49,7 +49,6 @@
  
@@ -5415,7 +5663,7 @@ Index: io/io/inc/TBufferFile.h
     virtual   Int_t    ReadArray(UChar_t   *&c);
 Index: io/io/inc/TEmulatedCollectionProxy.h
 ===================================================================
---- io/io/inc/TEmulatedCollectionProxy.h	(revision 35466)
+--- io/io/inc/TEmulatedCollectionProxy.h	(revision 35913)
 +++ io/io/inc/TEmulatedCollectionProxy.h	(working copy)
 @@ -107,6 +107,10 @@
     // Block commit of containees
@@ -5432,7 +5680,7 @@ Index: io/io/inc/TStreamerInfoActions.h
 ===================================================================
 --- io/io/inc/TStreamerInfoActions.h	(revision 0)
 +++ io/io/inc/TStreamerInfoActions.h	(revision 0)
-@@ -0,0 +1,145 @@
+@@ -0,0 +1,146 @@
 +// @(#)root/io:$Id$
 +// Author: Philippe Canal 05/2010
 +
@@ -5560,6 +5808,7 @@ Index: io/io/inc/TStreamerInfoActions.h
 +
 +      void AddToOffset(Int_t delta);
 +      
++      TActionSequence *CreateCopy();      
 +      static TActionSequence *CreateReadMemberWiseActions(TVirtualStreamerInfo *info, TVirtualCollectionProxy *proxy);
 +      TActionSequence *CreateSubSequence(const std::vector<Int_t> &element_ids, size_t offset);      
 +      
@@ -5588,7 +5837,7 @@ Added: svn:eol-style
 
 Index: io/io/inc/TCollectionProxyFactory.h
 ===================================================================
---- io/io/inc/TCollectionProxyFactory.h	(revision 35466)
+--- io/io/inc/TCollectionProxyFactory.h	(revision 35913)
 +++ io/io/inc/TCollectionProxyFactory.h	(working copy)
 @@ -28,10 +28,15 @@
  #ifndef ROOT_TClassStreamer
@@ -5656,7 +5905,7 @@ Index: io/io/inc/TCollectionProxyFactory.h
  #endif
 Index: io/io/inc/TGenCollectionProxy.h
 ===================================================================
---- io/io/inc/TGenCollectionProxy.h	(revision 35466)
+--- io/io/inc/TGenCollectionProxy.h	(revision 35913)
 +++ io/io/inc/TGenCollectionProxy.h	(working copy)
 @@ -25,10 +25,26 @@
  //
@@ -5890,23 +6139,9 @@ Index: io/io/inc/TGenCollectionProxy.h
        CheckFunctions();
     }
     virtual ~AnyCollectionProxy() {  }
-Index: io/io/inc/LinkDef.h
-===================================================================
---- io/io/inc/LinkDef.h	(revision 35466)
-+++ io/io/inc/LinkDef.h	(working copy)
-@@ -43,4 +43,9 @@
- #pragma link C++ options=version(0) class TVirtualObject-;
- #pragma link C++ options=version(0) class TVirtualArray-;
- 
-+#pragma link C++ namespace TStreamerInfoActions;
-+#pragma link C++ class TStreamerInfoActions::TConfiguredAction+;
-+#pragma link C++ class TStreamerInfoActions::TActionSequence+;
-+#pragma link C++ class TStreamerInfoActions::TConfiguration-;
-+
- #endif
 Index: io/io/inc/TGenCollectionStreamer.h
 ===================================================================
---- io/io/inc/TGenCollectionStreamer.h	(revision 35466)
+--- io/io/inc/TGenCollectionStreamer.h	(revision 35913)
 +++ io/io/inc/TGenCollectionStreamer.h	(working copy)
 @@ -21,6 +21,7 @@
  //////////////////////////////////////////////////////////////////////////
@@ -5964,9 +6199,23 @@ Index: io/io/inc/TGenCollectionStreamer.h
        CheckFunctions();
     }
     virtual ~AnyCollectionStreamer() {  }
+Index: io/io/inc/LinkDef.h
+===================================================================
+--- io/io/inc/LinkDef.h	(revision 35913)
++++ io/io/inc/LinkDef.h	(working copy)
+@@ -43,4 +43,9 @@
+ #pragma link C++ options=version(0) class TVirtualObject-;
+ #pragma link C++ options=version(0) class TVirtualArray-;
+ 
++#pragma link C++ namespace TStreamerInfoActions;
++#pragma link C++ class TStreamerInfoActions::TConfiguredAction+;
++#pragma link C++ class TStreamerInfoActions::TActionSequence+;
++#pragma link C++ class TStreamerInfoActions::TConfiguration-;
++
+ #endif
 Index: io/io/inc/TStreamerInfo.h
 ===================================================================
---- io/io/inc/TStreamerInfo.h	(revision 35466)
+--- io/io/inc/TStreamerInfo.h	(revision 35913)
 +++ io/io/inc/TStreamerInfo.h	(working copy)
 @@ -44,6 +44,8 @@
  class TVirtualArray;
@@ -6005,11 +6254,30 @@ Index: io/io/inc/TStreamerInfo.h
     Int_t               GetNdata()   const {return fNdata;}
     Int_t               GetNumber()  const {return fNumber;}
     Int_t              *GetLengths() const {return fLength;}
+@@ -231,10 +238,6 @@
+    Int_t               ReadBufferSkip(TBuffer &b, const TVirtualCollectionProxy &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+    Int_t               ReadBufferConv(TBuffer &b, const TVirtualCollectionProxy &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+    Int_t               ReadBufferArtificial(TBuffer &b, const TVirtualCollectionProxy &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+-   Int_t               ReadBuffer(TBuffer &b, const TPointerCollectionAdapter &arrptr, Int_t first,Int_t narr=1,Int_t eoffset=0,Int_t mode=0);
+-   Int_t               ReadBufferSkip(TBuffer &b, const TPointerCollectionAdapter &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+-   Int_t               ReadBufferConv(TBuffer &b, const TPointerCollectionAdapter &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+-   Int_t               ReadBufferArtificial(TBuffer &b, const TPointerCollectionAdapter &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+    Int_t               ReadBuffer(TBuffer &b, const TVirtualArray &arrptr, Int_t first,Int_t narr=1,Int_t eoffset=0,Int_t mode=0);
+    Int_t               ReadBufferSkip(TBuffer &b, const TVirtualArray &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+    Int_t               ReadBufferConv(TBuffer &b, const TVirtualArray &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+@@ -252,7 +255,6 @@
+ 
+    Int_t               ReadBufferClones(TBuffer &b, TClonesArray *clones, Int_t nc, Int_t first, Int_t eoffset);
+    Int_t               ReadBufferSTL(TBuffer &b, TVirtualCollectionProxy *cont, Int_t nc, Int_t first, Int_t eoffset );
+-   Int_t               ReadBufferSTLPtrs(TBuffer &b, TVirtualCollectionProxy *cont, Int_t nc, Int_t first, Int_t eoffset );
+    void                SetCheckSum(UInt_t checksum) {fCheckSum = checksum;}
+    void                SetClass(TClass *cl) {fClass = cl;}
+    void                SetClassVersion(Int_t vers) {fClassVersion=vers;}
 Index: io/io/inc/TVirtualCollectionIterators.h
 ===================================================================
 --- io/io/inc/TVirtualCollectionIterators.h	(revision 0)
 +++ io/io/inc/TVirtualCollectionIterators.h	(revision 0)
-@@ -0,0 +1,135 @@
+@@ -0,0 +1,256 @@
 +// @(#)root/cont:$Id$
 +// Author: Philippe Canal 20/08/2010
 +
@@ -6034,6 +6302,9 @@ Index: io/io/inc/TVirtualCollectionIterators.h
 +
 +#ifndef ROOT_TVirtualCollectionProxy
 +#include "TVirtualCollectionProxy.h"
++#endif
++#ifndef ROOT_TError
++#include "TError.h"
 +#endif
 +
 +struct TVirtualCollectionIterators
@@ -6071,7 +6342,7 @@ Index: io/io/inc/TVirtualCollectionIterators.h
 +   TVirtualCollectionIterators(CreateIterators_t creator, DeleteTwoIterators_t destruct) : fBegin( &(fBeginBuffer[0]) ), fEnd(&(fEndBuffer[0])), fCreateIterators(creator), fDeleteTwoIterators(destruct) 
 +   {
 +   }
-+
++   
 +   inline void CreateIterators(void *collection)
 +   {
 +      // Initialize the fBegin and fEnd iterators.
@@ -6085,6 +6356,124 @@ Index: io/io/inc/TVirtualCollectionIterators.h
 +         // assert(end != endbuf);
 +         fDeleteTwoIterators(fBegin,fEnd);
 +      }      
++   }
++};
++
++struct TVirtualCollectionPtrIterators
++{
++public:
++   typedef TVirtualCollectionProxy::Next_t Next_t;
++   typedef TVirtualCollectionProxy::CopyIterator_t Copy_t;
++   typedef TVirtualCollectionProxy::CreateIterators_t CreateIterators_t;
++   typedef TVirtualCollectionProxy::DeleteIterator_t Delete_t;
++   typedef TVirtualCollectionProxy::DeleteTwoIterators_t DeleteTwoIterators_t;
++   
++private:
++   TVirtualCollectionPtrIterators(); // Intentionally unimplemented.
++   TVirtualCollectionPtrIterators(const TVirtualCollectionPtrIterators&); // Intentionally unimplemented.
++   
++   CreateIterators_t    fCreateIterators;
++   DeleteTwoIterators_t fDeleteTwoIterators;
++   
++   Bool_t fAllocated;
++
++   char  fRawBeginBuffer[TVirtualCollectionProxy::fgIteratorArenaSize];
++   char  fRawEndBuffer[TVirtualCollectionProxy::fgIteratorArenaSize];
++
++   struct TInternalIterator {
++      TInternalIterator() : fCopy(0),fDelete(0),fNext(0),fIter(0) {}
++      TInternalIterator(const TInternalIterator &source) : fCopy(source.fCopy),fDelete(source.fDelete),fNext(source.fNext),fIter(0) {}
++
++      Copy_t    fCopy;
++      Delete_t  fDelete;
++      Next_t    fNext;
++
++      void     *fIter;
++   };
++   
++   TInternalIterator fBeginBuffer;
++   TInternalIterator fEndBuffer;
++
++public:
++   // Note when the collection is a vector, fBegin and fEnd points to
++   // the start and end of the memory content rather than to the address
++   // of iterators (saving one dereference when being used).
++   
++   void *fBegin; // Pointer to the starting iterator (collection->begin())
++   void *fEnd;   // Pointer to the ending iterator (collection->end())
++   
++   TVirtualCollectionPtrIterators(TVirtualCollectionProxy *proxy) : fCreateIterators(0), fDeleteTwoIterators(0), fAllocated(kFALSE),
++                                                                    fBegin( &(fRawBeginBuffer[0]) ),
++                                                                    fEnd( &(fRawEndBuffer[0]) )
++   {
++      //         memset(fBeginBuffer,0,TVirtualCollectionProxy::fgIteratorArenaSize);
++      //         memset(fEndBuffer,0,TVirtualCollectionProxy::fgIteratorArenaSize);
++      if (proxy) {
++         fCreateIterators = proxy->GetFunctionCreateIterators();
++         fDeleteTwoIterators = proxy->GetFunctionDeleteTwoIterators();
++         
++         fEndBuffer.fCopy = fBeginBuffer.fCopy = proxy->GetFunctionCopyIterator();
++         fEndBuffer.fNext = fBeginBuffer.fNext = proxy->GetFunctionNext();
++         fEndBuffer.fDelete = fBeginBuffer.fDelete = proxy->GetFunctionDeleteIterator();
++      } else {
++         ::Fatal("TIterators::TIterators","Created with out a collection proxy!\n");
++      }
++   }
++   
++   inline void CreateIterators(void *collection)
++   {
++      // Initialize the fBegin and fEnd iterators.
++      
++      fBegin = &(fRawBeginBuffer[0]);
++      fEnd = &(fRawEndBuffer[0]);
++      fCreateIterators(collection, &fBegin, &fEnd);
++      if (fBegin != &(fRawBeginBuffer[0])) {
++         // The iterator where too large to buffer in the  buffer
++         fAllocated = kTRUE;
++      }
++      fBeginBuffer.fIter = fBegin;
++      fEndBuffer.fIter = fEnd;
++      fBegin = &fBeginBuffer;
++      fEnd = &fEndBuffer;
++   }
++   
++   inline ~TVirtualCollectionPtrIterators() 
++   {
++      if (fAllocated) {
++         // assert(end != endbuf);
++         fDeleteTwoIterators(fBeginBuffer.fIter,fEndBuffer.fIter);
++      }
++   }
++   
++   static void *Next(void *iter, const void *end) 
++   {
++      TInternalIterator *internal_iter = (TInternalIterator*) iter;
++      TInternalIterator *internal_end = (TInternalIterator*) end;
++      
++      void **ptr = (void**)internal_iter->fNext(internal_iter->fIter,internal_end->fIter);
++      if(ptr) return *ptr;
++      else return 0;
++   }
++   
++   static void DeleteIterator(void *iter)
++   {
++      TInternalIterator *internal_iter = (TInternalIterator*) iter;
++      if (internal_iter->fDelete) {
++         internal_iter->fDelete(internal_iter->fIter);
++      }
++   }
++   
++   static void *CopyIterator(void *dest, const void *source)
++   {
++      TInternalIterator *internal_source = (TInternalIterator*)source;
++      TInternalIterator *internal_dest = new TInternalIterator(*internal_source);
++      
++      void *newiter = internal_source->fCopy(dest,internal_source->fIter);
++      if (newiter == dest) {
++         internal_dest->fDelete = 0;
++      }
++      internal_dest->fIter = newiter;
++      return internal_dest;
 +   }
 +};
 +
@@ -6155,7 +6544,7 @@ Added: svn:eol-style
 
 Index: io/io/inc/TEmulatedMapProxy.h
 ===================================================================
---- io/io/inc/TEmulatedMapProxy.h	(revision 35466)
+--- io/io/inc/TEmulatedMapProxy.h	(revision 35913)
 +++ io/io/inc/TEmulatedMapProxy.h	(working copy)
 @@ -50,6 +50,10 @@
     // Return the current size of the container
