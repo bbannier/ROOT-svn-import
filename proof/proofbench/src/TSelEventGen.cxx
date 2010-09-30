@@ -39,16 +39,9 @@ ClassImp(TSelEventGen)
 
 //______________________________________________________________________________
 TSelEventGen::TSelEventGen():
-   fFileType(TProofBenchMode::kFileNotSpecified),
-   fBaseDir(""),
-   fNEvents(10000),
-   fNTracks(100),
-   fRegenerate(kFALSE),
-   fNWorkersPerNode(0),
-   fWorkerNumber(0),
-   fTotalGen(0),
-   fFilesGenerated(0),
-   fChain(0)
+fFileType(TProofBenchMode::kFileNotSpecified), fBaseDir(""), fNEvents(10000),
+fNTracks(100), fRegenerate(kFALSE), fNWorkersPerNode(0), fWorkerNumber(0),
+fTotalGen(0), fFilesGenerated(0), fChain(0)
 {
    if (gProofServ){
       fBaseDir=gProofServ->GetDataDir();
@@ -72,14 +65,15 @@ void TSelEventGen::Begin(TTree *)
 
    TString option = GetOption();
    // Determine the test type
-   TMap *filemap = dynamic_cast<TMap *>(fInput->FindObject("PROOF_FilesToProcess"));
+   TMap *filemap = dynamic_cast<TMap *>
+                     (fInput->FindObject("PROOF_FilesToProcess"));
    if (filemap) {
       Info("Begin", "dumping the file map:");
       filemap->Print();
    } else {
       if (fInput->FindObject("PROOF_FilesToProcess")) {
-         Error("Begin", "object 'PROOF_FilesToProcess' found but not a map (%s)",
-                        fInput->FindObject("PROOF_FilesToProcess")->ClassName());
+         Error("Begin", "object 'PROOF_FilesToProcess' found but not a map"
+              " (%s)", fInput->FindObject("PROOF_FilesToProcess")->ClassName());
       } else {
          Error("Begin", "object 'PROOF_FilesToProcess' not found");
       }
@@ -124,7 +118,8 @@ void TSelEventGen::SlaveBegin(TTree *tree)
             found_filetype=kTRUE; 
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkFileType not type TParameter<Int_t>*");
+            Error("SlaveBegin", "PROOF_BenchmarkFileType not type TParameter"
+                                "<Int_t>*");
          }
          continue;
       }
@@ -133,19 +128,22 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          if (a){
             TString proof_benchmarkbasedir=a->GetTitle();
             if (!proof_benchmarkbasedir.IsNull()){
-               if (!gSystem->AccessPathName(proof_benchmarkbasedir, kWritePermission)){
+               if (!gSystem->AccessPathName(proof_benchmarkbasedir,
+                                            kWritePermission)){
                   //directory is writable
                   fBaseDir=proof_benchmarkbasedir;
                   Info("BeginSlave", "Using directory \"%s\"", fBaseDir.Data());
                }
                else{
                   //directory is not writable, use default directory
-                  Warning("BeginSlave", "\"%s\" directory is not writable, using default directory: %s",
+                  Warning("BeginSlave", "\"%s\" directory is not writable,"
+                          " using default directory: %s",
                           proof_benchmarkbasedir.Data(), fBaseDir.Data());
                }
             } 
             else{
-               Info("BeginSlave", "Using default directory: %s", fBaseDir.Data());
+               Info("BeginSlave", "Using default directory: %s",
+                                   fBaseDir.Data());
             }
             found_basedir=kTRUE; 
          }
@@ -161,7 +159,8 @@ void TSelEventGen::SlaveBegin(TTree *tree)
             found_nevents=kTRUE; 
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkEvents not type TParameter<Long64_t>*");
+            Error("SlaveBegin", "PROOF_BenchmarkEvents not type TParameter"
+                                "<Long64_t>*");
          }
          continue;
       }
@@ -172,7 +171,8 @@ void TSelEventGen::SlaveBegin(TTree *tree)
             found_ntracks=kTRUE; 
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkNTracks not type TParameter<Int_t>*");
+            Error("SlaveBegin", "PROOF_BenchmarkNTracks not type TParameter"
+                                "<Int_t>*");
          }
          continue;
       }
@@ -183,7 +183,8 @@ void TSelEventGen::SlaveBegin(TTree *tree)
             found_regenerate=kTRUE; 
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkRegenerate not type TParameter<Int_t>*");
+            Error("SlaveBegin", "PROOF_BenchmarkRegenerate not type TParameter"
+                                "<Int_t>*");
          }
          continue;
       }
@@ -202,19 +203,24 @@ void TSelEventGen::SlaveBegin(TTree *tree)
    }
    
    if (!found_filetype){
-      Warning("SlaveBegin", "PROOF_BenchmarkFileType not found; using default: %d", fFileType);
+      Warning("SlaveBegin", "PROOF_BenchmarkFileType not found; using default:"
+                            " %d", fFileType);
    }
    if (!found_basedir){
-      Warning("SlaveBegin", "PROOF_BenchmarkBaseDir not found; using default: %s", fBaseDir.Data());
+      Warning("SlaveBegin", "PROOF_BenchmarkBaseDir not found; using default:"
+                            " %s", fBaseDir.Data());
    }
    if (!found_nevents){
-      Warning("SlaveBegin", "PROOF_BenchmarkNEvents not found; using default: %lld", fNEvents);
+      Warning("SlaveBegin", "PROOF_BenchmarkNEvents not found; using default:"
+                            " %lld", fNEvents);
    }
    if (!found_ntracks){
-      Warning("SlaveBegin", "PROOF_BenchmarkNTracks not found; using default: %d", fNTracks);
+      Warning("SlaveBegin", "PROOF_BenchmarkNTracks not found; using default:"
+                            " %d", fNTracks);
    }
    if (!found_regenerate){
-      Warning("SlaveBegin", "PROOF_BenchmarkRegenerate not found; using default: %d", fRegenerate);
+      Warning("SlaveBegin", "PROOF_BenchmarkRegenerate not found; using"
+                            " default: %d", fRegenerate);
    }
    if (!found_slaveinfos){
       Error("SlaveBegin", "PROOF_SlaveInfos not found");
@@ -266,8 +272,10 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          }
       }
 
-      Info("SlaveBegin", "Number of workers on this node (%s) is %d", hostname.Data(), fNWorkersPerNode); 
-      Info("SlaveBegin", "Worker number on this node (%s) is %d", hostname.Data(), fWorkerNumber); 
+      Info("SlaveBegin", "Number of workers on this node (%s) is %d",
+                          hostname.Data(), fNWorkersPerNode); 
+      Info("SlaveBegin", "Worker number on this node (%s) is %d",
+                          hostname.Data(), fWorkerNumber); 
 
       Print();
    }
@@ -284,17 +292,26 @@ void TSelEventGen::SlaveBegin(TTree *tree)
 }
 
 //______________________________________________________________________________
-Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype, TString filename, Long64_t sizenevents)
+Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype,
+                                     TString filename, Long64_t sizenevents)
 {
-//runtype is run type either TProofBench::kRunGenerateFileBench or TProofBench::kRunGenerateFileCleanup
-//filename is the name of the file to be generated
-//sizenevents is number of events to generate when runtype==TProofBench::kRunGenerateFileBench
-// and size of the file to generate when runtype==TProofBench::kRunGenerateFileCleanup
-//returns number of entries in the file when runtype==TProofBench::kRunGenerateFileBench
-//returns bytes written when runtype==TProofBench::kRunGenerateFileCleanup
+//Generate files for IO-bound run
+//Input parameters
+//   filetype: File type either TProofBenchMode::kFileBenchmark or
+//                TProofBenchMode::kFileCleanup
+//   filename: The name of the file to be generated
+//   sizenevents: Either the number of events to generate when
+//                filetype==TProofBenchMode::kFileBenchmark
+//                or the size of the file to generate when
+//                filetype==TProofBenchMode::kFileCleanup
+//Returns
+//   Either Number of entries in the file when
+//   filetype==TProofBenchMode::kFileBenchmark
+//   or bytes written when filetype==TProofBenchMode::kFileCleanup
 //return 0 in case error
 
-   if (!(filetype==TProofBenchMode::kFileBenchmark || filetype==TProofBenchMode::kFileCleanup)){
+   if (!(filetype==TProofBenchMode::kFileBenchmark
+     || filetype==TProofBenchMode::kFileCleanup)){
       Error("GenerateFiles", "File type not supported; %d", filetype);
       return 0;
    }
@@ -331,7 +348,8 @@ Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype, TStrin
          size_generated+=eventtree->Fill();
       }
       nentries=eventtree->GetEntries();
-      Info("GenerateFiles", "%s generated with %lld entries", filename.Data(), nentries);
+      Info("GenerateFiles", "%s generated with %lld entries", filename.Data(),
+                                                              nentries);
    }
    else if (filetype==TProofBenchMode::kFileCleanup){
       Info("GenerateFiles", "Generating %s", filename.Data());   
@@ -339,7 +357,8 @@ Long64_t TSelEventGen::GenerateFiles(TProofBenchMode::EFileType filetype, TStrin
          event->Build(i++, fNTracks, 0);
          size_generated+=eventtree->Fill();
       }
-      Info("GenerateFiles", "%s generated with %lld bytes", filename.Data(), size_generated);
+      Info("GenerateFiles", "%s generated with %lld bytes", filename.Data(),
+                                                            size_generated);
    }
    savedir = gDirectory;
 
@@ -383,7 +402,8 @@ Bool_t TSelEventGen::Process(Long64_t entry)
 
    TDSetElement *fCurrent = 0;
    TPair *elemPair = 0;
-   if (fInput && (elemPair = dynamic_cast<TPair *>(fInput->FindObject("PROOF_CurrentElement")))) {
+   if (fInput && (elemPair = dynamic_cast<TPair *>
+                      (fInput->FindObject("PROOF_CurrentElement")))) {
       if ((fCurrent = dynamic_cast<TDSetElement *>(elemPair->Value()))) {
          Info("Process", "entry %lld: file: '%s'", entry, fCurrent->GetName());
       } else {
@@ -422,7 +442,8 @@ Bool_t TSelEventGen::Process(Long64_t entry)
                if ( entries_file==neventstogenerate ){
                   //file size seems to be correct, skip generation
                   Info("Process", "Bench file (%s, entries=%lld) exists."
-                       " Skipping generation", fi->GetFirstUrl()->GetFile(), entries_file);
+                       " Skipping generation", fi->GetFirstUrl()->GetFile(),
+                                               entries_file);
                   neventstogenerate-=entries_file;
                   fFilesGenerated->Add(fi);
                   filefound=kTRUE;
@@ -434,7 +455,8 @@ Bool_t TSelEventGen::Process(Long64_t entry)
 
       if (!filefound){
          gRandom->SetSeed(static_cast<UInt_t>(TMath::Hash(seed)));
-         neventstogenerate-=GenerateFiles(fFileType, filename, neventstogenerate);
+         neventstogenerate-=GenerateFiles(fFileType, filename,
+                                          neventstogenerate);
          fFilesGenerated->Add(fi);
       }
    }
@@ -463,13 +485,15 @@ Bool_t TSelEventGen::Process(Long64_t entry)
             TTree* t=(TTree*)f.Get("EventTree");
             if (t){
                Long64_t sizetree=t->GetTotBytes();
-               Info("Process", "sizetree=%lld bytestowrite=%lld", sizetree, bytestowrite);
+               Info("Process", "sizetree=%lld bytestowrite=%lld", sizetree,
+                                                                  bytestowrite);
                if (0.9*bytestowrite<sizetree && sizetree<1.1*bytestowrite){
                   //file size seems to be correct, skip generation
                   byteswritten=sizetree;
                   bytestowrite-=byteswritten;
                   Info("Process", "Cleanup file (%s, tree size=%lld) exists."
-                       " Skipping generation", fi->GetFirstUrl()->GetFile(), sizetree);
+                       " Skipping generation", fi->GetFirstUrl()->GetFile(),
+                                               sizetree);
                   fFilesGenerated->Add(fi);
                   filefound=kTRUE;
                }
@@ -486,7 +510,8 @@ Bool_t TSelEventGen::Process(Long64_t entry)
       }
    }
    else{
-      Error("Process", "Run type not recognized: fFileType=%d, returning", fFileType);
+      Error("Process", "Run type not recognized: fFileType=%d, returning",
+                       fFileType);
       return kTRUE;
    }
 

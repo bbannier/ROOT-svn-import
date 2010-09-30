@@ -32,8 +32,7 @@
 #endif
 
 class TProof;
-
-R__EXTERN TProof *gProof;
+class TProofNodes;
 
 class TProofBenchModeConstNFilesWorker : public TProofBenchMode {
 
@@ -41,47 +40,40 @@ private:
 
    TProof* fProof;            //proof
    Int_t fNFiles;             //number of files a node for I/O test
-   TList* fNodes;             //list of nodes
+   TProofNodes* fNodes;       //list of nodes
    TString fName;             //name of this mode
 
 protected:
 
-   Int_t FillNodeInfo();
-
 public:
    
-   TProofBenchModeConstNFilesWorker(Int_t nfiles=1, TProof* proof=gProof);
+   TProofBenchModeConstNFilesWorker(Int_t nfiles=1, TProof* proof=0, TProofNodes* nodes=0);
     virtual ~TProofBenchModeConstNFilesWorker();
 
-    TMap* FilesToProcess(Int_t nf);
+    TMap* FilesToProcess(Int_t nfiles);
 
-    Int_t MakeDataSets(Int_t nf,
-                       Int_t start,
-                       Int_t stop,
-                       Int_t step,
-                       const TList* listfiles,
-                       const char* option,
+    Int_t MakeDataSets(Int_t nfiles, Int_t start, Int_t stop, Int_t step,
+                       const TList* listfiles, const char* option,
                        TProof* proof);
 
-     Int_t MakeDataSets(Int_t nf,
-                        Int_t np,
-                        const Int_t *wp,
-                        const TList* listfiles,
-                        const char *option,
+     Int_t MakeDataSets(Int_t nfiles, Int_t np, const Int_t *wp,
+                        const TList* listfiles, const char *option,
                         TProof* proof);
 
-   TProofBenchMode::EFileType GetFileType(){return TProofBenchMode::kFileBenchmark;}
+   TProofBenchMode::EFileType GetFileType()
+                        {return TProofBenchMode::kFileBenchmark;}
 
-   void Print(Option_t* option=0)const;
+   void Print(Option_t* option=0) const;
 
    void SetProof(TProof* proof);
    void SetNFiles(Int_t nfiles);
 
-   TProof* GetProof()const;
-   Int_t GetNFiles()const;
-   const char* GetName()const; 
+   TProof* GetProof() const;
+   Int_t GetNFiles() const;
+   const char* GetName() const; 
 
-   ClassDef(TProofBenchModeConstNFilesWorker,0)  //A mode for PROOF benchmark test
+   ClassDef(TProofBenchModeConstNFilesWorker,0)  //A mode for PROOF benchmark
+                                                 // test
 };
 
 #endif

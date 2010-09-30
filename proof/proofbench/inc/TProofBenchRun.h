@@ -24,6 +24,8 @@
 #include "TObject.h"
 #endif
 
+class TFile;
+
 class TProofBenchRun : public TObject {
 
 private:
@@ -35,7 +37,8 @@ public:
       kReadFull=1,                            //read in a full event
       kReadOpt=2,                             //read in part of an event
       kReadNo=4,                              //do not read in event
-      kReadAll=kReadFull | kReadOpt | kReadNo //read in a full event, part of a event and no event
+      kReadAll=kReadFull | kReadOpt | kReadNo //read in a full event,
+                                              // part of a event and no event
    };
 
    enum EHistType {
@@ -48,21 +51,16 @@ public:
 
    enum ECleanupType {
       kCleanupNotSpecified=0,               //clean-up type not specified
-      kCleanupReadInFiles=1,                       //clean-up by reading in dedicated files
-      kCleanupFileAdvise=2                      //clean-up by system call
+      kCleanupFileAdvise=1,                 //clean-up by system call
+      kCleanupReadInFiles=2                 //clean-up by reading in dedicated
+                                            //files
    };
 
    virtual ~TProofBenchRun();
 
-   virtual void Run(Long64_t nevents=-1,
-                    Int_t ntries=-1,
-                    Int_t start=-1,
-                    Int_t stop=-1,
-                    Int_t step=-1,
-                    Int_t debug=-1,
+   virtual void Run(Long64_t nevents=-1, Int_t start=-1, Int_t stop=-1,
+                    Int_t step=-1, Int_t ntries=-1, Int_t debug=-1,
                     Int_t draw=-1)=0;
-
-   virtual void DrawPerfProfiles()=0;
 
    virtual void Print(Option_t* option="")const=0;
 

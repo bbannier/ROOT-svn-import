@@ -43,74 +43,30 @@ ClassImp(TSelEvent)
 
 //______________________________________________________________________________
 TSelEvent::TSelEvent(TTree *):
-   fReadType(TProofBenchRun::kReadNotSpecified),
-   fCleanupType(TProofBenchRun::kCleanupNotSpecified),
-   fFilesToCleanupCacheFor(0),
-   fDebug(kFALSE),
-   fCHist(0), 
-   fPtHist(0),
-   fNTracksHist(0),
-   event(0),
-   fEventName(0),
-   fTracks(0),
-   fHighPt(0),
-   fMuons(0),
-   fH(0),
-   b_event_fType(0),
-   b_fEventName(0),
-   b_event_fNtrack(0),
-   b_event_fNseg(0),
-   b_event_fNvertex(0),
-   b_event_fFlag(0),
-   b_event_fTemperature(0),
-   b_event_fMeasures(0),
-   b_event_fMatrix(0),
-   b_fClosestDistance(0),
-   b_event_fEvtHdr(0),
-   b_fTracks(0),
-   b_fHighPt(0),
-   b_fMuons(0),
-   b_event_fLastTrack(0),
-   b_event_fWebHistogram(0),
-   b_fH(0),
-   b_event_fTriggerBits(0),
-   b_event_fIsValid(0)
+fReadType(TProofBenchRun::kReadNotSpecified),
+fCleanupType(TProofBenchRun::kCleanupNotSpecified),
+fFilesToCleanupCacheFor(0), fDebug(kFALSE), fCHist(0), fPtHist(0),
+fNTracksHist(0), event(0), fEventName(0), fTracks(0), fHighPt(0), fMuons(0),
+fH(0), b_event_fType(0), b_fEventName(0), b_event_fNtrack(0), b_event_fNseg(0),
+b_event_fNvertex(0), b_event_fFlag(0), b_event_fTemperature(0),
+b_event_fMeasures(0), b_event_fMatrix(0), b_fClosestDistance(0),
+b_event_fEvtHdr(0), b_fTracks(0), b_fHighPt(0), b_fMuons(0),
+b_event_fLastTrack(0), b_event_fWebHistogram(0), b_fH(0),
+b_event_fTriggerBits(0), b_event_fIsValid(0)
 {}
 
 //______________________________________________________________________________
 TSelEvent::TSelEvent():
-   fReadType(TProofBenchRun::kReadNotSpecified),
-   fCleanupType(TProofBenchRun::kCleanupNotSpecified),
-   fFilesToCleanupCacheFor(0),
-   fDebug(kFALSE),
-   fCHist(0),
-   fPtHist(0),
-   fNTracksHist(0),
-   event(0),
-   fEventName(0),
-   fTracks(0),
-   fHighPt(0),
-   fMuons(0),
-   fH(0),
-   b_event_fType(0),
-   b_fEventName(0),
-   b_event_fNtrack(0),
-   b_event_fNseg(0),
-   b_event_fNvertex(0),
-   b_event_fFlag(0),
-   b_event_fTemperature(0),
-   b_event_fMeasures(0),
-   b_event_fMatrix(0),
-   b_fClosestDistance(0),
-   b_event_fEvtHdr(0),
-   b_fTracks(0),
-   b_fHighPt(0),
-   b_fMuons(0),
-   b_event_fLastTrack(0),
-   b_event_fWebHistogram(0),
-   b_fH(0),
-   b_event_fTriggerBits(0),
-   b_event_fIsValid(0)
+fReadType(TProofBenchRun::kReadNotSpecified),
+fCleanupType(TProofBenchRun::kCleanupNotSpecified),
+fFilesToCleanupCacheFor(0), fDebug(kFALSE), fCHist(0), fPtHist(0),
+fNTracksHist(0), event(0), fEventName(0), fTracks(0), fHighPt(0), fMuons(0),
+fH(0), b_event_fType(0), b_fEventName(0), b_event_fNtrack(0), b_event_fNseg(0),
+b_event_fNvertex(0), b_event_fFlag(0), b_event_fTemperature(0),
+b_event_fMeasures(0), b_event_fMatrix(0), b_fClosestDistance(0),
+b_event_fEvtHdr(0), b_fTracks(0), b_fHighPt(0), b_fMuons(0),
+b_event_fLastTrack(0), b_event_fWebHistogram(0), b_fH(0),
+b_event_fTriggerBits(0), b_event_fIsValid(0)
 {}
 
 //______________________________________________________________________________
@@ -134,16 +90,17 @@ void TSelEvent::Begin(TTree *)
    TObject *obj;
    while ((obj = nxt())){
       sinput=obj->GetName();
-      Info("Begin", "name=%s", sinput.Data());
+      //Info("Begin", "name=%s", sinput.Data());
       if (sinput.Contains("PROOF_BenchmarkReadType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
             fReadType=TProofBenchRun::EReadType(a->GetVal());
             found_readtype=kTRUE;
-            Info("Begin", "PROOF_BenchmarkReadType=%d", fReadType);
+            //Info("Begin", "PROOF_BenchmarkReadType=%d", fReadType);
          }
          else{
-            Error("Begin", "PROOF_BenchmarkReadType not type TParameter<Int_t>*"); 
+            Error("Begin", "PROOF_BenchmarkReadType not type TParameter"
+                           "<Int_t>*"); 
          } 
          continue;
       }
@@ -152,10 +109,11 @@ void TSelEvent::Begin(TTree *)
          if (a){
             fCleanupType=TProofBenchRun::ECleanupType(a->GetVal());
             found_cleanuptype=kTRUE;
-            Info("Begin", "PROOF_BenchmarkCleanupType=%d", fCleanupType);
+            //Info("Begin", "PROOF_BenchmarkCleanupType=%d", fCleanupType);
          }
          else{
-            Error("Begin", "PROOF_BenchmarkCleanupType not type TParameter<Int_t>*"); 
+            Error("Begin", "PROOF_BenchmarkCleanupType not type TParameter"
+                           "<Int_t>*"); 
          } 
          continue;
       }
@@ -164,7 +122,7 @@ void TSelEvent::Begin(TTree *)
          if (a){
             fDebug= a->GetVal();
             found_debug=kTRUE;
-            Info("Begin", "PROOF_BenchmarkDebug=%d", fDebug);
+            //Info("Begin", "PROOF_BenchmarkDebug=%d", fDebug);
          }
          else{
             Error("Begin", "PROOF_BenchmarkDebug not type TParameter<Int_t>*"); 
@@ -176,22 +134,25 @@ void TSelEvent::Begin(TTree *)
          if (l){
             fFilesToCleanupCacheFor=l;
             found_filestocleanupcachefor=kTRUE;
-            Info("Begin", "PROOF_BenchmarkFilesToCleanupCacheFor:");
+            //Info("Begin", "PROOF_BenchmarkFilesToCleanupCacheFor:");
             fFilesToCleanupCacheFor->Print("A");
          }
          else{
-            Error("Begin", "PROOF_BenchmarkFilesToCleanupCacheFor not type THashList*"); 
+            Error("Begin", "PROOF_BenchmarkFilesToCleanupCacheFor not type"
+                           " THashList*"); 
          } 
          continue;
       }
    }
 
    if (!found_readtype && !found_cleanuptype){
-      Error("Begin", "Neither of PROOF_BenchmarkReadType nor PROOF_BenchmarkCleanupType found");
+      Error("Begin", "Neither of PROOF_BenchmarkReadType nor"
+                     " PROOF_BenchmarkCleanupType found");
       return;
    }
    if (!found_debug){
-      Warning("Begin", "PROOF_BenchmarkDebug not found; using default: %d", fDebug);
+      Warning("Begin", "PROOF_BenchmarkDebug not found; using default: %d",
+                       fDebug);
    }
 }
 
@@ -226,7 +187,8 @@ void TSelEvent::SlaveBegin(TTree *tree)
             Info("SlaveBegin", "PROOF_BenchmarkReadType=%d", fReadType);
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkReadType not type TParameter<Int_t>*"); 
+            Error("SlaveBegin", "PROOF_BenchmarkReadType not type TParameter"
+                                "<Int_t>*"); 
          } 
          continue;
       }
@@ -238,7 +200,8 @@ void TSelEvent::SlaveBegin(TTree *tree)
             Info("SlaveBegin", "PROOF_BenchmarkCleanupType=%d", fCleanupType);
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkCleanupType not type TParameter<Int_t>*"); 
+            Error("SlaveBegin", "PROOF_BenchmarkCleanupType not type TParameter"
+                                "<Int_t>*"); 
          } 
          continue;
       }
@@ -250,7 +213,8 @@ void TSelEvent::SlaveBegin(TTree *tree)
             Info("SlaveBegin", "PROOF_BenchmarkDebug=%d", fDebug);
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkDebug not type TParameter<Int_t>*"); 
+            Error("SlaveBegin", "PROOF_BenchmarkDebug not type TParameter"
+                                "<Int_t>*"); 
          } 
          continue;
       }
@@ -263,18 +227,21 @@ void TSelEvent::SlaveBegin(TTree *tree)
             fFilesToCleanupCacheFor->Print("A");
          }
          else{
-            Error("SlaveBegin", "PROOF_BenchmarkFilesToCleanupCacheFor not type THashList*"); 
+            Error("SlaveBegin", "PROOF_BenchmarkFilesToCleanupCacheFor not type"
+                                " THashList*"); 
          } 
          continue;
       }
    }
 
    if (!found_readtype && !found_cleanuptype){
-      Error("SlaveBegin", "Neither of PROOF_BenchmarkReadType  PROOF_BenchmarkCleanupType found");
+      Error("SlaveBegin", "Neither of PROOF_BenchmarkReadType"
+                          "  PROOF_BenchmarkCleanupType found");
       return;
    }
    if (!found_debug){
-      Warning("SlaveBegin", "PROOF_BenchmarkDebug not found; using default: %d", fDebug);
+      Warning("SlaveBegin", "PROOF_BenchmarkDebug not found; using default: %d",
+                            fDebug);
    }
 
    if (fDebug){
@@ -285,7 +252,8 @@ void TSelEvent::SlaveBegin(TTree *tree)
    
       fOutput->Add(fPtHist);
    
-      fNTracksHist = new TH1F("ntracks_dist","N_{Tracks} per Event Distribution", 100, 50, 150);
+      fNTracksHist = new TH1F("ntracks_dist","N_{Tracks} per Event"
+                              " Distribution", 100, 50, 150);
       //enable rebinning
       fNTracksHist->SetBit(TH1::kCanRebin);
       fNTracksHist->SetDirectory(0);
@@ -308,7 +276,8 @@ void TSelEvent::SlaveBegin(TTree *tree)
             TString localhostname=TUrl(gSystem->HostName()).GetHostFQDN();
             if (hostname==localhostname){
                TString filename=url->GetFile();
-               Info("SlaveBegin", "Cleaning up cache for file: %s", filename.Data());
+               Info("SlaveBegin", "Cleaning up cache for file: %s",
+                                   filename.Data());
                Int_t fd;
                fd = open(filename.Data(), O_RDONLY);
                if (fd) {
@@ -316,7 +285,8 @@ void TSelEvent::SlaveBegin(TTree *tree)
                   posix_fadvise(fd, 0,0,POSIX_FADV_DONTNEED);
                   close(fd);
                } else {
-                  Error("SlaveBegin", "Cannot open file for clean up: %s", filename.Data());
+                  Error("SlaveBegin", "Cannot open file for clean up: %s",
+                                       filename.Data());
                }
             }
 //         } while ((url=fi->NextUrl()));

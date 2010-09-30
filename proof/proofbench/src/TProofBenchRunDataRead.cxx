@@ -24,8 +24,7 @@
 #include "TProofBenchRunDataRead.h"
 #include "TProofBenchRunCleanup.h"
 #include "TProofBenchMode.h"
-#include "TProofNode.h"
-#include "TFile.h"
+#include "TProofNodes.h"
 #include "TFileCollection.h"
 #include "TFileInfo.h"
 #include "TProof.h"
@@ -46,69 +45,42 @@
 #include "TQueryResult.h"
 #include "TMath.h"
 #include "TStyle.h"
+#include "TROOT.h"
 
 ClassImp(TProofBenchRunDataRead)
 
 //______________________________________________________________________________
 TProofBenchRunDataRead::TProofBenchRunDataRead(TProofBenchMode* mode,
-                                               TProofBenchRunCleanup* runcleanup,
-                                               TProofBenchRun::EReadType readtype,
-                                               TString filename,
-                                                Option_t* foption,
-                                                TProof* proof,
-                                                Int_t maxnworkers,
-                                                Long64_t nevents,
-                                                Int_t ntries,
-                                                Int_t start,
-                                                Int_t stop,
-                                                Int_t step,
-                                                Int_t debug):
-fProof(0),
-fReadType(readtype),
-fMode(mode),
-fRunCleanup(runcleanup),
-fNEvents(nevents),
-fNTries(ntries),
-fMaxNWorkers(0),
-fStart(start),
-fStop(stop),
-fStep(step),
-fDebug(debug),
-fFile(0),
-fDirProofBench(0),
-fNodes(0),
-fPerfStats(0),
-fListPerfProfiles(0),
-fCPerfProfiles(0),
-fName(0)
+                            TProofBenchRunCleanup* runcleanup,
+                            TProofBenchRun::EReadType readtype,
+                            TDirectory* dirproofbench, TProof* proof,
+                            TProofNodes* nodes, Long64_t nevents, Int_t ntries,
+                            Int_t start, Int_t stop, Int_t step, Int_t debug):
+fProof(proof), fReadType(readtype), fMode(mode), fRunCleanup(runcleanup),
+fNEvents(nevents), fNTries(ntries), fStart(start), fStop(stop), fStep(step),
+fDebug(debug), fDirProofBench(dirproofbench), fNodes(nodes), fPerfStats(0),
+fListPerfProfiles(0), fCPerfProfiles(0), fName(0)
 {
 
    //Default constructor
 
-   fProof=proof?proof:gProof;
-
-   if(!OpenFile(filename.Data(), foption)){//file open failed
-      gDirectory->cd("Rint:/");
-      gDirectory->mkdir("ProofBench");
-      gDirectory->cd("ProofBench");
-      fDirProofBench=gDirectory; 
+   if (!fProof){
+      fProof=gProof;
    }
 
    //set name
    fName="DataRead"+GetNameStem();
 
-   if (maxnworkers>0){
-      SetMaxNWorkers(maxnworkers);
-   }
-   else{
-      SetMaxNWorkers("1x");
-   }
-
    if (stop==-1){
-      fStop=fMaxNWorkers;
+      if (fNodes){
+         fNodes->GetNWorkersCluster();
+      }
+      else{
+         if (fProof){
+            fStop=fProof->GetListOfSlaveInfos()->GetSize();
+         }
+      }
    }
-
-   FillNodeInfo();
 
    fPerfStats=new TList();
 
@@ -122,14 +94,6 @@ TProofBenchRunDataRead::~TProofBenchRunDataRead()
    // Destructor
    fProof=0;
    fDirProofBench=0;
-   if (fFile){
-      fFile->Close();
-      delete fFile;
-   }
-   if (fNodes){
-      fNodes->SetOwner(kTRUE);
-      SafeDelete(fNodes);
-   }
    if (fPerfStats){
       fPerfStats->SetOwner(kTRUE);
       SafeDelete(fPerfStats);
@@ -142,21 +106,17 @@ TProofBenchRunDataRead::~TProofBenchRunDataRead()
 } 
 
 //______________________________________________________________________________
-void TProofBenchRunDataRead::Run(Long64_t nevents,
-                                 Int_t ntries,
-                                 Int_t start,
-                                 Int_t stop,
-                                 Int_t step,
-                                 Int_t debug,
-                                 Int_t)
+void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
+                                 Int_t step, Int_t ntries, Int_t debug, Int_t)
 {
    // Run benchmark
    // Input parameters
-   //    nevents: Number of events to run per file. When it is -1, data member fNEvents is used. 
-   //    ntries: Number of tries. When it is -1, data member fNTries is used.
+   //    nevents: Number of events to run per file. When it is -1, data member
+   //             fNEvents is used. 
    //    start: Start scan with 'start' workers.
    //    stop: Stop scan at 'stop workers.
    //    step: Scan every 'step' workers.
+   //    ntries: Number of tries. When it is -1, data member fNTries is used.
    //    debug: debug switch.
    //    Int_t: Ignored
    // Returns
@@ -168,97 +128,111 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    }
 
    nevents=(nevents==-1)?fNEvents:nevents;
-   ntries=(ntries==-1)?fNTries:ntries;
    start=(start==-1)?fStart:start;
    stop=(stop==-1)?fStop:stop;
    step=(step==-1)?fStep:step;
+   ntries=(ntries==-1)?fNTries:ntries;
    debug=(debug==-1)?fDebug:debug;
 
    if (!fListPerfProfiles){
       fListPerfProfiles=new TList();
+      fListPerfProfiles->SetOwner(kFALSE); //do not delete outputs
+   }
+   else{
+      fListPerfProfiles->Clear();
    }
 
    Int_t quotient=(stop-start)/step;
    Int_t ndiv=quotient+1;
-   Int_t ns_min=start;
-   Int_t ns_max=quotient*step+start;
+   Double_t ns_min=start-step/2.;
+   Double_t ns_max=quotient*step+start+step/2.;
 
    //find perfstat event profile
-   TString profile_perfstat_event_name=BuildProfileName("hProf", "PerfStat_Event");
-   TProfile* profile_perfstat_event=(TProfile*)(fListPerfProfiles->FindObject(profile_perfstat_event_name.Data()));
+   TString profile_perfstat_event_name=BuildProfileName("hProf",
+                                                        "PerfStat_Event");
+   TProfile* profile_perfstat_event=(TProfile*)
+            (fListPerfProfiles->FindObject(profile_perfstat_event_name.Data()));
 
+   fDirProofBench->cd();
    //book one if one does not exists yet or reset the existing one
    if (!profile_perfstat_event){
-      TString profile_perfstat_event_title=BuildProfileTitle("Profile", "PerfStat Event");
-      profile_perfstat_event= new TProfile(profile_perfstat_event_name, profile_perfstat_event_title, ndiv, ns_min-0.5, ns_max+0.5);
+      TString profile_perfstat_event_title=BuildProfileTitle("Profile",
+                                                             "PerfStat Event");
+      profile_perfstat_event= new TProfile(profile_perfstat_event_name,
+                           profile_perfstat_event_title, ndiv, ns_min, ns_max);
 
       profile_perfstat_event->SetDirectory(fDirProofBench);
-      profile_perfstat_event->GetXaxis()->SetTitle("Number of Slaves");
+      profile_perfstat_event->GetXaxis()->SetTitle("Active Slaves");
       profile_perfstat_event->GetYaxis()->SetTitle("Events/sec");
       profile_perfstat_event->SetMarkerStyle(21);
 
       fListPerfProfiles->Add(profile_perfstat_event);
-      Info("Run", "profile %s added", profile_perfstat_event_name.Data());
    }
    else{
       profile_perfstat_event->Reset();
    }
    //find perfstat IO profile
    TString profile_perfstat_IO_name=BuildProfileName("hProf", "PerfStat_IO");
-   TProfile* profile_perfstat_IO=(TProfile*)(fListPerfProfiles->FindObject(profile_perfstat_IO_name.Data()));
+   TProfile* profile_perfstat_IO=(TProfile*)
+               (fListPerfProfiles->FindObject(profile_perfstat_IO_name.Data()));
 
    //book one if one does not exists yet or reset the existing one
    if (!profile_perfstat_IO){
-      TString profile_perfstat_IO_title=BuildProfileTitle("Profile", "PerfStat IO");
-      profile_perfstat_IO= new TProfile(profile_perfstat_IO_name, profile_perfstat_IO_title, ndiv, ns_min-0.5, ns_max+0.5);
+      TString profile_perfstat_IO_title=BuildProfileTitle("Profile",
+                                                          "PerfStat IO");
+      profile_perfstat_IO= new TProfile(profile_perfstat_IO_name,
+                               profile_perfstat_IO_title, ndiv, ns_min, ns_max);
       profile_perfstat_IO->SetDirectory(fDirProofBench);
-      profile_perfstat_IO->GetXaxis()->SetTitle("Number of Slaves");
+      profile_perfstat_IO->GetXaxis()->SetTitle("Active Slaves");
       profile_perfstat_IO->GetYaxis()->SetTitle("MB/sec");
       profile_perfstat_IO->SetMarkerStyle(21);
 
       fListPerfProfiles->Add(profile_perfstat_IO);
-      Info("Run", "profile %s added", profile_perfstat_IO_name.Data());
    }
    else{
       profile_perfstat_IO->Reset();
    }
 
    //find queryresult profile
-   TString profile_queryresult_event_name=BuildProfileName("hProf", "QueryResult_Event");
-   Info("Run", "profile query result event name=%s", profile_queryresult_event_name.Data());
+   TString profile_queryresult_event_name=BuildProfileName("hProf",
+                                                           "QueryResult_Event");
 
-   TProfile* profile_queryresult_event=(TProfile*)(fListPerfProfiles->FindObject(profile_queryresult_event_name.Data()));
+   TProfile* profile_queryresult_event=(TProfile*)
+         (fListPerfProfiles->FindObject(profile_queryresult_event_name.Data()));
 
    if (!profile_queryresult_event){
-      TString profile_queryresult_event_title=BuildProfileTitle("Profile", "QueryResult Event");
-      profile_queryresult_event=new TProfile(profile_queryresult_event_name, profile_queryresult_event_title, ndiv, ns_min-0.5, ns_max+0.5);
+      TString profile_queryresult_event_title=BuildProfileTitle("Profile",
+                                                           "QueryResult Event");
+      profile_queryresult_event=new TProfile(profile_queryresult_event_name,
+                         profile_queryresult_event_title, ndiv, ns_min, ns_max);
       profile_queryresult_event->SetDirectory(fDirProofBench);
-      profile_queryresult_event->GetXaxis()->SetTitle("Number of Slaves");
+      profile_queryresult_event->GetXaxis()->SetTitle("Active Slaves");
       profile_queryresult_event->GetYaxis()->SetTitle("Events/sec");
       profile_queryresult_event->SetMarkerStyle(22);
 
       fListPerfProfiles->Add(profile_queryresult_event);
-      Info("Run", "profile %s added", profile_queryresult_event_name.Data());
    }
    else{
        profile_queryresult_event->Reset();
    }
 
    //find queryresult profile
-   TString profile_queryresult_IO_name=BuildProfileName("hProf", "QueryResult_IO");
-   Info("Run", "profile query result IO name=%s", profile_queryresult_IO_name.Data());
-   TProfile* profile_queryresult_IO=(TProfile*)(fListPerfProfiles->FindObject(profile_queryresult_IO_name.Data()));
+   TString profile_queryresult_IO_name=BuildProfileName("hProf",
+                                                        "QueryResult_IO");
+   TProfile* profile_queryresult_IO=(TProfile*)
+            (fListPerfProfiles->FindObject(profile_queryresult_IO_name.Data()));
 
    if (!profile_queryresult_IO){
-      TString profile_queryresult_IO_title=BuildProfileTitle("Profile", "QueryResult IO");
-      profile_queryresult_IO=new TProfile(profile_queryresult_IO_name, profile_queryresult_IO_title, ndiv, ns_min-0.5, ns_max+0.5);
+      TString profile_queryresult_IO_title=BuildProfileTitle("Profile",
+                                                             "QueryResult IO");
+      profile_queryresult_IO=new TProfile(profile_queryresult_IO_name,
+                            profile_queryresult_IO_title, ndiv, ns_min, ns_max);
       profile_queryresult_IO->SetDirectory(fDirProofBench);
-      profile_queryresult_IO->GetXaxis()->SetTitle("Number of Slaves");
+      profile_queryresult_IO->GetXaxis()->SetTitle("Active Slaves");
       profile_queryresult_IO->GetYaxis()->SetTitle("MB/sec");
       profile_queryresult_IO->SetMarkerStyle(22);
 
       fListPerfProfiles->Add(profile_queryresult_IO);
-      Info("Run", "profile %s added", profile_queryresult_IO_name.Data());
    }
    else{
        profile_queryresult_IO->Reset();
@@ -269,10 +243,13 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
       TString canvasname=TString("Performance Profiles ")+GetName();
       fCPerfProfiles=new TCanvas(canvasname.Data(), canvasname.Data());
    }
+
+   //cleanup up the canvas
+   fCPerfProfiles->Clear();
+
    //divide the canvas as many as the number of profiles in the list
    Int_t nprofiles=fListPerfProfiles->GetSize();
 
-   Info("Run", "# profiles=%d", nprofiles);
    if (nprofiles<=2){
       fCPerfProfiles->Divide(nprofiles);
    }
@@ -282,8 +259,8 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
       fCPerfProfiles->Divide(nside,nside);
    }
 
-   //reset the list of performance statistics trees
-   fPerfStats->Delete();
+   //do not delete performance statistics trees
+   fPerfStats->Clear();
 
    for (Int_t nactive=start; nactive<=stop; nactive+=step) {
       for (Int_t j=0; j<ntries; j++) {
@@ -323,7 +300,8 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
             continue;
          }
 
-         Info("Run", "Total number of events to process is %lld", nevents_total); 
+         Info("Run", "Total number of events to process is %lld",
+                      nevents_total); 
          TTime starttime = gSystem->Now();
          fProof->Process(dsname.Data(), "TSelEvent", "", nevents_total);
          DeleteParameters();
@@ -332,16 +310,14 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
 
          TList* l = fProof->GetOutputList();
 
-         Info("Run", "Printing out output list");
-         l->Print("A");
-
          //save perfstats
          TString perfstats_name = "PROOF_PerfStats";
          TTree* t = dynamic_cast<TTree*>(l->FindObject(perfstats_name.Data()));
          if (t) {
             TTree* tnew=(TTree*)t->Clone("tnew");
 
-            FillPerfStatProfiles(tnew, profile_perfstat_event, profile_perfstat_IO, nactive);
+            FillPerfStatProfiles(tnew, profile_perfstat_event,
+                                 profile_perfstat_IO, nactive);
 
             fCPerfProfiles->cd(npad++);
             profile_perfstat_event->Draw();
@@ -357,7 +333,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
             tnew->SetName(newname);
             fPerfStats->Add(tnew);
 
-            if (debug && fFile && fFile->IsWritable()){
+            if (debug && fDirProofBench->IsWritable()){
                fDirProofBench->cd();
                tnew->Write();
             }
@@ -372,7 +348,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
          TDatime qr_end=queryresult->GetEndTime();
          Float_t qr_init=queryresult->GetInitTime(); 
          Float_t qr_proc=queryresult->GetProcTime();
-         Float_t qr_usedcpu=queryresult->GetUsedCPU();
+         //Float_t qr_usedcpu=queryresult->GetUsedCPU();
          Long64_t qr_bytes=queryresult->GetBytes();
 
          Long64_t qr_entries=queryresult->GetEntries();
@@ -410,7 +386,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
                TString newname=BuildNewPatternName(ptdist_name, nactive, j);
                hnew->SetName(newname);
 
-               if (fFile && fFile->IsWritable()){
+               if (fDirProofBench->IsWritable()){
                   fDirProofBench->cd();
                   hnew->Write();
                   delete hnew;
@@ -427,7 +403,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
                TString newname=BuildNewPatternName(tracksdist_name, nactive, j);
                hnew->SetName(newname);
 
-               if (fFile && fFile->IsWritable()){
+               if (fDirProofBench->IsWritable()){
                   fDirProofBench->cd();
                   hnew->Write();
                   delete hnew;
@@ -443,7 +419,7 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
    }//for number of workers
    
    //save performance profiles to file
-   if (fFile && fFile->IsWritable()){
+   if (fDirProofBench->IsWritable()){
       fDirProofBench->cd();
       profile_perfstat_event->Write();
       profile_perfstat_IO->Write();
@@ -453,14 +429,19 @@ void TProofBenchRunDataRead::Run(Long64_t nevents,
 }
 
 //______________________________________________________________________________
-void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t, TProfile* profile_event, TProfile* profile_IO, Int_t nactive)
+void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t,
+                                 TProfile* profile_event, TProfile* profile_IO,
+                                 Int_t nactive)
 {
 
    // Fill performance profiles using tree 't'(PROOF_PerfStats).
    // Input parameters
-   //    t: Proof output tree (PROOF_PerfStat) containing performance statistics.
-   //    profile_event: Event-rate profile to be filled up with information from tree 't'.
-   //    profile_IO: IO-rate profile to be filled up with information from tree 't'.
+   //    t: Proof output tree (PROOF_PerfStat) containing performance
+   //       statistics.
+   //    profile_event: Event-rate profile to be filled up with information
+   //                   from tree 't'.
+   //    profile_IO: IO-rate profile to be filled up with information from
+   //                tree 't'.
    //    nactive: Number of active workers processed the query.
    // Return
    //    Nothing
@@ -468,8 +449,6 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t, TProfile* profile_ev
    Long64_t nevents_holder;
    Long64_t bytes_holder;
    Double_t time_holder;
-
-   Int_t max_slaves=0;
 
    // extract timing information
    TPerfEvent pe;
@@ -513,8 +492,10 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t, TProfile* profile_ev
       //}
       //skip information from workers
       if (pe.fEvtNode.Contains(".")) continue;
-      if (pe.fType==TVirtualPerfStats::kStart) start= pe.fTimeStamp.GetSec()+1e-9*pe.fTimeStamp.GetNanoSec();
-      if (pe.fType==TVirtualPerfStats::kStop) end= pe.fTimeStamp.GetSec()+1e-9*pe.fTimeStamp.GetNanoSec();
+      if (pe.fType==TVirtualPerfStats::kStart) start= pe.fTimeStamp.GetSec()
+                                              +1e-9*pe.fTimeStamp.GetNanoSec();
+      if (pe.fType==TVirtualPerfStats::kStop) end= pe.fTimeStamp.GetSec()
+                                              +1e-9*pe.fTimeStamp.GetNanoSec();
    }
      
    //if (nevents_kPacket!=fNEvents){
@@ -539,7 +520,8 @@ void TProofBenchRunDataRead::FillPerfStatProfiles(TTree* t, TProfile* profile_ev
 }
 
 //______________________________________________________________________________
-void TProofBenchRunDataRead::Print(Option_t* option)const{
+void TProofBenchRunDataRead::Print(Option_t* option) const
+{
 
    Printf("Name=%s", fName.Data());
    if (fProof) fProof->Print(option);
@@ -548,18 +530,10 @@ void TProofBenchRunDataRead::Print(Option_t* option)const{
    if (fRunCleanup) fRunCleanup->Print(option);
    Printf("fNEvents=%lld", fNEvents);
    Printf("fNTries=%d", fNTries);
-   Printf("fMaxNWorkers=%d", fMaxNWorkers);
    Printf("fStart=%d", fStart);
    Printf("fStop=%d", fStop);
    Printf("fStep=%d", fStep);
    Printf("fDebug=%d", fDebug);
-   if (fFile){
-       fFile->Print(option);
-       fFile->ls(option);
-   }
-   else{
-      Printf("No file open"); 
-   }
    if (fDirProofBench){
       Printf("fDirProofBench=%s", fDirProofBench->GetPath());
    }
@@ -637,40 +611,6 @@ void TProofBenchRunDataRead::SetNTries(Int_t ntries)
 }
 
 //______________________________________________________________________________
-void TProofBenchRunDataRead::SetMaxNWorkers(Int_t maxnworkers)
-{
-  fMaxNWorkers=maxnworkers;
-}
-
-//______________________________________________________________________________
-void TProofBenchRunDataRead::SetMaxNWorkers(TString sworkers)
-{
-   //Set the maximum number of workers for benchmark test
-   //Input parameters
-   //    sworkers: can be "1x", "2x" and so on, where total number of workers is set 
-   //              to 1*no_total_workers, 2*no_total_workers respectively.
-   //              For now only "1x" is supported
-   // Return
-   //    Nothing
-
-   sworkers.ToLower();
-   sworkers.Remove(TString::kTrailing, ' ');
-   if (fProof){
-      if (sworkers.Contains("x")){//nx
-         TList* lslave=fProof->GetListOfSlaveInfos();
-         Int_t nslaves=lslave->GetSize();  //number of slave workers regardless of its status, active or inactive
-         sworkers.Remove(TString::kTrailing, 'x');
-         Int_t mult=sworkers.Atoi();
-         fMaxNWorkers=mult*nslaves; //this number to be parameterized in the future
-      }
-   }
-   else{
-      Error("SetMaxNWorkers", "Proof not set, doing nothing");
-   }
-   return;
-}
-
-//______________________________________________________________________________
 void TProofBenchRunDataRead::SetStart(Int_t start)
 {
    fStart=start;
@@ -692,58 +632,6 @@ void TProofBenchRunDataRead::SetStep(Int_t step)
 void TProofBenchRunDataRead::SetDebug(Int_t debug)
 {
    fDebug=debug;
-}
-
-//______________________________________________________________________________
-TFile* TProofBenchRunDataRead::OpenFile(const char* filename,
-                                        Option_t* option,
-                                        const char* ftitle,
-                                        Int_t compress)
-{
-   // Opens a file which output profiles and/or intermediate files (trees, histograms when debug is set)
-   // are to be written to. Makes a directory named "ProofBench" and changes to the directory.
-   // Input parameters
-   //    filename: Name of the file to open
-   //    option: Option for TFile::Open(...) function
-   //    ftitle: Title parameter for TFile::Open(...) function
-   //    compress: Compression parameter for TFile::Open(...) function
-   // Returns
-   //    Open file if a file is already open
-   //    New file just opened
-   //    0 when open fails;
-
-   TString sfilename(filename);
-   sfilename.Remove(TString::kBoth, ' '); //remove leading and trailing white space(s)
-   sfilename.Remove(TString::kBoth, '\t');//remove leading and trailing tab character(s)
-
-   if (sfilename.IsNull()){
-      return fFile;
-   }
-
-   TString soption(option);
-   soption.ToLower();
-
-   if (fFile){
-      Error("OpenFile", "File alaredy open; %s; Close it before open another file", fFile->GetName());
-      return fFile;
-   }
-
-   TDirectory* dirsav=gDirectory;
-   fFile=new TFile(sfilename, option, ftitle, compress);
-
-   if (fFile->IsZombie()){//open failed
-      Error("FileOpen", "Cannot open file: %s", sfilename.Data());
-      fFile->Close();
-      fFile=0;
-      dirsav->cd();
-      return 0;
-   }
-   else{//open succeeded
-      fFile->mkdir("ProofBench");
-      fFile->cd("ProofBench");
-      SetDirProofBench(gDirectory);
-      return fFile;
-   }
 }
 
 //______________________________________________________________________________
@@ -783,12 +671,6 @@ Int_t TProofBenchRunDataRead::GetNTries()const
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchRunDataRead::GetMaxNWorkers()const
-{
-   return fMaxNWorkers;
-}
-
-//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::GetStart()const
 {
    return fStart;
@@ -810,12 +692,6 @@ Int_t TProofBenchRunDataRead::GetStep()const
 Int_t TProofBenchRunDataRead::GetDebug()const
 {
    return fDebug;
-}
-
-//______________________________________________________________________________
-TFile* TProofBenchRunDataRead::GetFile()const
-{
-   return fFile;
 }
 
 //______________________________________________________________________________
@@ -869,51 +745,6 @@ TString TProofBenchRunDataRead::GetNameStem()const
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchRunDataRead::FillNodeInfo()
-{
-   // Re-Generate the list of worker node info (fNodes)
-   // The existing info is always removed.
-   // Return
-   //    0 if ok
-   //   <0 otherwise
-
-   if (!fProof){
-      Error("FillNodeInfo", "proof not set, doing nothing");
-      return -1;
-   }
-
-   if (fNodes) {
-      fNodes->SetOwner(kTRUE);
-      SafeDelete(fNodes);
-   }
-   fNodes = new TList;
-   fNodes->SetOwner();//fNodes is the owner of the members
-
-   // Get info
-   TList *wl = fProof->GetListOfSlaveInfos();
-   if (!wl) {
-      Error("FillNodeInfo", "could not get information about workers!");
-      return -2;
-   }
-
-   TIter nxwi(wl);
-   TSlaveInfo *si = 0;
-   TProofNode *ni = 0;
-   while ((si = (TSlaveInfo *) nxwi())) {
-      if (!(ni = (TProofNode *) fNodes->FindObject(si->GetName()))) {
-         ni = new TProofNode(si->GetName(), si->GetSysInfo().fPhysRam);
-         fNodes->Add(ni);
-      } else {
-         ni->AddWrks(1);
-      }
-   }
-   // Notify
-   Info("FillNodeInfo","%d physically different mahcines found", fNodes->GetSize());
-   // Done
-   return 0;
-}
-
-//______________________________________________________________________________
 Int_t TProofBenchRunDataRead::SetParameters()
 {
    if (!fProof){
@@ -927,7 +758,8 @@ Int_t TProofBenchRunDataRead::SetParameters()
 }
 
 //______________________________________________________________________________
-Int_t TProofBenchRunDataRead::DeleteParameters(){
+Int_t TProofBenchRunDataRead::DeleteParameters()
+{
    if (!fProof){
       Error("DeleteParameters", "Proof not set; Doing nothing");
       return 1;
@@ -938,7 +770,9 @@ Int_t TProofBenchRunDataRead::DeleteParameters(){
 }
 
 //______________________________________________________________________________
-TString TProofBenchRunDataRead::BuildPatternName(const TString& objname, const TString& delimiter){
+TString TProofBenchRunDataRead::BuildPatternName(const TString& objname,
+                                                 const TString& delimiter)
+{
   
    if (!fMode){
       Error("BuildPatternName", "Mode is not set");
@@ -955,7 +789,10 @@ TString TProofBenchRunDataRead::BuildPatternName(const TString& objname, const T
 }
 
 //______________________________________________________________________________
-TString TProofBenchRunDataRead::BuildNewPatternName(const TString& objname, Int_t nactive, Int_t tries, const TString& delimiter){
+TString TProofBenchRunDataRead::BuildNewPatternName(const TString& objname,
+                                                    Int_t nactive, Int_t tries,
+                                                    const TString& delimiter)
+{
   
    if (!fMode){
       Error("BuildNewPatternName", "Mode is not set");
@@ -972,7 +809,9 @@ TString TProofBenchRunDataRead::BuildNewPatternName(const TString& objname, Int_
 }
 
 //______________________________________________________________________________
-TString TProofBenchRunDataRead::BuildProfileName(const TString& objname, const TString& type, const TString& delimiter){
+TString TProofBenchRunDataRead::BuildProfileName(const TString& objname,
+                                 const TString& type, const TString& delimiter)
+{
    if (!fMode){
       Error("BuildProfileName", "Mode is not set");
       //return 0;
@@ -986,7 +825,9 @@ TString TProofBenchRunDataRead::BuildProfileName(const TString& objname, const T
 }
 
 //______________________________________________________________________________
-TString TProofBenchRunDataRead::BuildProfileTitle(const TString& objname, const TString& type, const TString& delimiter){
+TString TProofBenchRunDataRead::BuildProfileTitle(const TString& objname,
+                                 const TString& type, const TString& delimiter)
+{
    if (!fMode){
       Error("BuildProfileTitle", "Mode is not set");
       //return 0;
