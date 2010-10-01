@@ -63,6 +63,8 @@ TMVA::Rule::Rule( RuleEnsemble *re,
    , fImportance    ( 0.0 )
    , fImportanceRef ( 1.0 )
    , fRuleEnsemble  ( re )
+   , fSSB           ( 0 )
+   , fSSBNeve       ( 0 )
    , fLogger( new MsgLogger("RuleFit") )
 {
    // the main constructor for a Rule
@@ -72,7 +74,7 @@ TMVA::Rule::Rule( RuleEnsemble *re,
    //   nodes  - a vector of Node; from these all possible rules will be created
    //
    //
-   
+
    fCut     = new RuleCut( nodes );
    fSSB     = fCut->GetPurity();
    fSSBNeve = fCut->GetCutNeve();
@@ -88,6 +90,8 @@ TMVA::Rule::Rule( RuleEnsemble *re )
    , fImportance    ( 0.0 )
    , fImportanceRef ( 1.0 )
    , fRuleEnsemble  ( re )
+   , fSSB           ( 0 )
+   , fSSBNeve       ( 0 )
    , fLogger( new MsgLogger("RuleFit") )
 {
    // the simple constructor
@@ -103,6 +107,8 @@ TMVA::Rule::Rule()
    , fImportance    ( 0.0 )
    , fImportanceRef ( 1.0 )
    , fRuleEnsemble  ( 0 )
+   , fSSB           ( 0 )
+   , fSSBNeve       ( 0 )
    , fLogger( new MsgLogger("RuleFit") )
 {
    // the simple constructor
@@ -112,6 +118,7 @@ TMVA::Rule::Rule()
 TMVA::Rule::~Rule() 
 {
    // destructor
+   delete fCut;
    delete fLogger;
 }
 
@@ -337,6 +344,7 @@ void TMVA::Rule::PrintLogger(const char *title) const
 void TMVA::Rule::PrintRaw( ostream& os ) const
 {
    // extensive print function used to print info for the weight file
+   Int_t dp = os.precision();
    const UInt_t nvars = fCut->GetNvars();
    os << "Parameters: "
       << std::setprecision(10)
@@ -360,6 +368,7 @@ void TMVA::Rule::PrintRaw( ostream& os ) const
          << " " << (fCut->GetCutDoMax(i) ? "T":"F")
          << std::endl;
    }
+   os << std::setprecision(dp);
 }
 
 //_______________________________________________________________________

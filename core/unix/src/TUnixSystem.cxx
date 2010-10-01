@@ -563,7 +563,7 @@ void TUnixSystem::SetDisplay()
                           utmp_entry->ut_host);
                } else {
                   char disp[64];
-                  sprintf(disp, "%s:0.0", utmp_entry->ut_host);
+                  snprintf(disp, sizeof(disp), "%s:0.0", utmp_entry->ut_host);
                   Setenv("DISPLAY", disp);
                   Warning("SetDisplay", "DISPLAY not set, setting it to %s",
                           disp);
@@ -574,7 +574,7 @@ void TUnixSystem::SetDisplay()
                if ((he = gethostbyaddr((const char*)&utmp_entry->ut_addr,
                                        sizeof(utmp_entry->ut_addr), AF_INET))) {
                   char disp[64];
-                  sprintf(disp, "%s:0.0", he->h_name);
+                  snprintf(disp, sizeof(disp), "%s:0.0", he->h_name);
                   Setenv("DISPLAY", disp);
                   Warning("SetDisplay", "DISPLAY not set, setting it to %s",
                           disp);
@@ -1424,8 +1424,10 @@ int TUnixSystem::CopyFile(const char *f, const char *t, Bool_t overwrite)
       return -1;
 
    FILE *to   = fopen(t, "w");
-   if (!to)
+   if (!to) {
+      fclose(from);
       return -1;
+   }
 
    const int bufsize = 1024;
    char buf[bufsize];
@@ -2238,31 +2240,31 @@ void TUnixSystem::StackTrace()
                if (name.Contains(".so") || name.Contains(".sl")) noShare = kFALSE;
                if (noShare) offset = addr;
                if (noPath)  name = "`which " + name + "`";
-               sprintf(buffer, "%s -e %s 0x%016lx", addr2line, name.Data(), offset);
+               snprintf(buffer, sizeof(buffer), "%s -e %s 0x%016lx", addr2line, name.Data(), offset);
                Bool_t nodebug = kTRUE;
                if (FILE *pf = ::popen(buffer, "r")) {
                   char buf[2048];
                   if (fgets(buf, 2048, pf)) {
                      buf[strlen(buf)-1] = 0;  // remove trailing \n
                      if (strncmp(buf, "??", 2)) {
-                        sprintf(buffer, format2, addr, symname, buf, libname);
+                        snprintf(buffer, sizeof(buffer), format2, addr, symname, buf, libname);
                         nodebug = kFALSE;
                      }
                   }
                   ::pclose(pf);
                }
                if (nodebug)
-                  sprintf(buffer, format1, addr, symname,
-                          gte ? "+" : "-", diff, libname);
+                  snprintf(buffer, sizeof(buffer), format1, addr, symname,
+                           gte ? "+" : "-", diff, libname);
             } else {
                if (symaddr)
-                  sprintf(buffer, format1, addr, symname,
-                          gte ? "+" : "-", diff, libname);
+                  snprintf(buffer, sizeof(buffer), format1, addr, symname,
+                           gte ? "+" : "-", diff, libname);
                else
-                  sprintf(buffer, format3, addr, symname, libname);
+                  snprintf(buffer, sizeof(buffer), format3, addr, symname, libname);
             }
          } else {
-            sprintf(buffer, format4, addr);
+            snprintf(buffer, sizeof(buffer), format4, addr);
          }
 
          if (demangle)
@@ -2277,7 +2279,7 @@ void TUnixSystem::StackTrace()
          FILE *f = TempFileName(tmpf2);
          if (f) fclose(f);
          file1.close();
-         sprintf(buffer, "%s %s < %s > %s", filter, cppfiltarg, tmpf1.Data(), tmpf2.Data());
+         snprintf(buffer, sizeof(buffer), "%s %s < %s > %s", filter, cppfiltarg, tmpf1.Data(), tmpf2.Data());
          Exec(buffer);
          ifstream file2(tmpf2);
          TString line;
@@ -2765,9 +2767,7 @@ const char *TUnixSystem::GetLinkedLibraries()
       }
       delete tok;
    }
-   if (p) {
-      ClosePipe(p);
-   }
+   ClosePipe(p);
 #endif
 
    delete [] exe;
@@ -3719,7 +3719,7 @@ const char *TUnixSystem::UnixHomedirectory(const char *name)
 {
    // Returns the user's home directory.
 
-   static char path[kMAXPATHLEN], mydir[kMAXPATHLEN];
+   static char path[kMAXPATHLEN], mydir[kMAXPATHLEN] = { '\0' };
    struct passwd *pw;
 
    if (name) {
@@ -4129,7 +4129,13 @@ int TUnixSystem::UnixUnixService(const char *sockpath, int backlog)
    // Prepare structure
    memset(&unserver, 0, sizeof(unserver));
    unserver.sun_family = AF_UNIX;
-   sprintf(unserver.sun_path, "%s", sockpath);
+
+   if (strlen(sockpath) > sizeof(unserver.sun_path)-1) {
+      ::Error("TUnixSystem::UnixUnixService", "socket path %s, longer than max allowed length (%u)",
+              sockpath, (UInt_t)sizeof(unserver.sun_path)-1);
+      return -1;
+   }
+   strcpy(unserver.sun_path, sockpath);
 
    // Create socket
    if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
@@ -4569,16 +4575,21 @@ int TUnixSystem::ReadUtmpFile()
    }
 
    gUtmpContents = (STRUCT_UTMP *) malloc(size);
-   if (!gUtmpContents) return 0;
-
-   n_read = fread(gUtmpContents, 1, size, utmp);
-   if (ferror(utmp) || fclose(utmp) == EOF || n_read < size) {
-      free(gUtmpContents);
-      gUtmpContents = 0;
+   if (!gUtmpContents) {
+      fclose(utmp);
       return 0;
    }
 
-   return size / sizeof(STRUCT_UTMP);
+   n_read = fread(gUtmpContents, 1, size, utmp);
+   if (!ferror(utmp)) {
+      if (fclose(utmp) != EOF && n_read == size)
+         return size / sizeof(STRUCT_UTMP);
+   } else
+      fclose(utmp);
+
+   free(gUtmpContents);
+   gUtmpContents = 0;
+   return 0;
 }
 
 //______________________________________________________________________________

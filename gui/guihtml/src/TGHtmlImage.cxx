@@ -291,6 +291,7 @@ TImage *TGHtml::LoadImage(const char *url, int w, int h)
 const char *TGHtml::GetPctWidth(TGHtmlElement *p, char *opt, char *ret)
 {
    // Return the height and width, converting to percent if required
+   // ret must be at least 16 characters long
 
    int n, m, val;
    const char *tz, *z;
@@ -306,20 +307,20 @@ const char *TGHtml::GetPctWidth(TGHtmlElement *p, char *opt, char *ret)
       val = fCanvas->GetWidth() * 100;
    }
    if (!fInTd) {
-      sprintf(ret, "%d", val / n);
+      snprintf(ret, 15, "%d", val / n);
    } else {
       while (pElem && pElem->fType != Html_TD) pElem = pElem->fPPrev;
       if (!pElem) return z;
       tz = pElem->MarkupArg(opt, 0);
       if (tz && !strchr(tz, '%') && sscanf(tz, "%d", &m)) {
-         sprintf(ret, "%d", m * 100 / n);
+         snprintf(ret, 15, "%d", m * 100 / n);
          return ret;
       }
       pElem = ((TGHtmlCell *)pElem)->fPTable;
       if (!pElem) return z;
       tz = pElem->MarkupArg(opt, 0);
       if (tz && !strchr(tz, '%') && sscanf(tz, "%d", &m)) {
-         sprintf(ret, "%d", m * 100 / n);
+         snprintf(ret, 15, "%d", m * 100 / n);
          return ret;
       }
       return z;

@@ -2011,8 +2011,9 @@ TList *TProof::GetListOfSlaveInfos()
 
    while ((slave = (TSlave *) next()) != 0) {
       if (slave->GetSlaveType() == TSlave::kSlave) {
+         const char *name = IsLite() ? gSystem->HostName() : slave->GetName();
          TSlaveInfo *slaveinfo = new TSlaveInfo(slave->GetOrdinal(),
-                                                slave->GetName(),
+                                                name,
                                                 slave->GetPerfIdx());
          fSlaveInfo->Add(slaveinfo);
 
@@ -2695,7 +2696,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
       case kPROOF_STOP:
          // Stop collection from this worker
          Info("HandleInputMessage", "received kPROOF_STOP from %s: disabling any further collection this worker",
-                                    (sl ? sl->GetOrdinal() : "undef"));
+              sl->GetOrdinal());
          rc = 1;
          break;
 
@@ -2872,7 +2873,6 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
             PDB(kGlobal,2)
                Info("HandleInputMessage","kPROOF_OUTPUTOBJECT: enter");
             Int_t type = 0;
-
             const char *prefix = gProofServ ? gProofServ->GetPrefix() : "Lite-0";
             if (!TestBit(TProof::kIsClient) && !fMergersSet && !fFinalizationRunning) {
                Info("HandleInputMessage", "finalization on %s started ...", prefix);
@@ -3343,6 +3343,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                   TSlaveInfo* slinfo =
                      dynamic_cast<TSlaveInfo*>(tmpinfo->At(i));
                   if (slinfo) {
+                     // If PROOF-Lite
+                     if (IsLite()) slinfo->fHostName = gSystem->HostName();
                      // Check if we have already a instance for this worker
                      TIter nxw(fSlaveInfo);
                      TSlaveInfo *ourwi = 0;
@@ -3589,14 +3591,17 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                   }
                   // Mergers count will be set dynamically
                   if (fMergersCount == 0) {
-                     if (GetNumberOfSlaves() > 1)
-                        fMergersCount = TMath::Nint(TMath::Sqrt(GetNumberOfSlaves()));
+                     if (GetNumberOfActiveSlaves() > 1) {
+                        fMergersCount = TMath::Nint(TMath::Sqrt(GetNumberOfActiveSlaves()));
+                        if (GetNumberOfActiveSlaves() / fMergersCount < 2)
+                           fMergersCount = (Int_t) TMath::Sqrt(GetNumberOfActiveSlaves());
+                     }
                      if (fMergersCount > 1)
                         msg.Form("%s: Number of mergers set dynamically to %d (for %d workers)",
-                                 prefix, fMergersCount, GetNumberOfSlaves());
+                                 prefix, fMergersCount, GetNumberOfActiveSlaves());
                      else {
                         msg.Form("%s: No mergers will be used for %d workers",
-                                 prefix, GetNumberOfSlaves());
+                                 prefix, GetNumberOfActiveSlaves());
                         fMergersCount = -1;
                      }
                      if (gProofServ)
@@ -3605,7 +3610,7 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                         Printf("%s",msg.Data());
                   } else {
                      msg.Form("%s: Number of mergers set by user to %d (for %d workers)",
-                              prefix, fMergersCount, GetNumberOfSlaves());
+                              prefix, fMergersCount, GetNumberOfActiveSlaves());
                      if (gProofServ)
                         gProofServ->SendAsynMessage(msg);
                      else
@@ -4010,6 +4015,20 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       } else {
          fBadSlaves->Add(wrk);
          wrk->Close();
+         // Update the mergers count, if needed
+         if (fMergersSet) {
+            Int_t mergersCount = -1;
+            TParameter<Int_t> *mc = dynamic_cast<TParameter<Int_t> *>(GetParameter("PROOF_UseMergers"));
+            if (mc) mergersCount = mc->GetVal(); // Value set by user
+            // Mergers count is set dynamically: recalculate it
+            if (mergersCount == 0) {
+               if (GetNumberOfActiveSlaves() > 1) {
+                  fMergersCount = TMath::Nint(TMath::Sqrt(GetNumberOfActiveSlaves()));
+                  if (GetNumberOfActiveSlaves() / fMergersCount < 2)
+                     fMergersCount = (Int_t) TMath::Sqrt(GetNumberOfActiveSlaves());
+               }
+            }
+         }
       }
 
       // Update session workers files
@@ -5073,8 +5092,8 @@ void TProof::RecvLogFile(TSocket *s, Int_t size)
 
    while (filesize < size) {
       left = Int_t(size - filesize);
-      if (left > kMAXBUF)
-         left = kMAXBUF;
+      if (left >= kMAXBUF)
+         left = kMAXBUF-1;
       rec = s->RecvRaw(&buf, left);
       filesize = (rec > 0) ? (filesize + rec) : filesize;
       if (!fLogToWindowOnly) {
@@ -6004,7 +6023,7 @@ void TProof::ClearData(UInt_t what, const char *dsname)
       // Get registered data files
       TString sel = TString::Format("/%s/%s/", GetGroup(), GetUser());
       TMap *fcmap = GetDataSets(sel);
-      if (!fcmap || fcmap->GetSize() <= 0) {
+      if (!fcmap || (fcmap && fcmap->GetSize() <= 0)) {
          PDB(kDataset,1)
          Warning("ClearData", "no dataset beloning to '%s'", sel.Data());
          SafeDelete(fcmap);
@@ -6012,51 +6031,53 @@ void TProof::ClearData(UInt_t what, const char *dsname)
 
       // Go thorugh and prepare the lists per node
       TString opt;
-      TIter nxfc(fcmap);
       TObjString *os = 0;
-      while ((os = (TObjString *) nxfc())) {
-         TFileCollection *fc = 0;
-         if ((fc = (TFileCollection *) fcmap->GetValue(os))) {
-            TFileInfo *fi = 0;
-            TIter nxfi(fc->GetList());
-            while ((fi = (TFileInfo *) nxfi())) {
-               // Get special "file:" url
-               fi->ResetUrl();
-               Int_t nurl = fi->GetNUrls();
-               TUrl *up = 0;
-               while (nurl-- && fi->NextUrl()) {
-                  up = fi->GetCurrentUrl();
-                  if (!strcmp(up->GetProtocol(), "file")) {
-                     opt = up->GetOptions();
-                     if (opt.BeginsWith("node=")) {
-                        host=opt;
-                        host.ReplaceAll("node=","");
-                        file = up->GetFile();
-                        PDB(kDataset,2)
-                           Info("ClearData", "found: host: %s, file: %s", host.Data(), file.Data());
-                        // Remove this from the full list, if there
-                        TList *fl = (TList *) afmap->GetValue(host.Data());
-                        if (fl) {
-                           TObjString *fn = (TObjString *) fl->FindObject(file.Data());
-                           if (fn) {
-                              fl->Remove(fn);
-                              SafeDelete(fn);
-                              nfiles--;
-                           } else {
-                              Warning("ClearData",
-                                      "registered file '%s' not found in the full list!", file.Data());
+      if (fcmap) {
+         TIter nxfc(fcmap);
+         while ((os = (TObjString *) nxfc())) {
+            TFileCollection *fc = 0;
+            if ((fc = (TFileCollection *) fcmap->GetValue(os))) {
+               TFileInfo *fi = 0;
+               TIter nxfi(fc->GetList());
+               while ((fi = (TFileInfo *) nxfi())) {
+                  // Get special "file:" url
+                  fi->ResetUrl();
+                  Int_t nurl = fi->GetNUrls();
+                  TUrl *up = 0;
+                  while (nurl-- && fi->NextUrl()) {
+                     up = fi->GetCurrentUrl();
+                     if (!strcmp(up->GetProtocol(), "file")) {
+                        opt = up->GetOptions();
+                        if (opt.BeginsWith("node=")) {
+                           host=opt;
+                           host.ReplaceAll("node=","");
+                           file = up->GetFile();
+                           PDB(kDataset,2)
+                              Info("ClearData", "found: host: %s, file: %s", host.Data(), file.Data());
+                           // Remove this from the full list, if there
+                           TList *fl = (TList *) afmap->GetValue(host.Data());
+                           if (fl) {
+                              TObjString *fn = (TObjString *) fl->FindObject(file.Data());
+                              if (fn) {
+                                 fl->Remove(fn);
+                                 SafeDelete(fn);
+                                 nfiles--;
+                              } else {
+                                 Warning("ClearData",
+                                       "registered file '%s' not found in the full list!", file.Data());
+                              }
                            }
+                           break;
                         }
-                        break;
                      }
                   }
                }
             }
          }
+         // Clean up the the received map
+         if (fcmap) fcmap->SetOwner(kTRUE);
+         SafeDelete(fcmap);
       }
-      // Clean up the the received map
-      if (fcmap) fcmap->SetOwner(kTRUE);
-      SafeDelete(fcmap);
       // List of the files to be removed
       Info("ClearData", "%d unregistered files to be removed:", nfiles);
       afmap->Print();
@@ -9889,7 +9910,7 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char *optStr)
       Info("GetDataSet", "specifying a dataset name is mandatory");
       return 0;
    }
-   
+
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kGetDataSet);
    nameMess << TString(uri);
@@ -10447,7 +10468,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, TString &value)
    // Returns -1 in case of error (i.e. list is 0, parameter does not exist
    // or value type does not match), 0 otherwise.
 
-   TObject *obj = c->FindObject(par);
+   TObject *obj = c ? c->FindObject(par) : (TObject *)0;
    if (obj) {
       TNamed *p = dynamic_cast<TNamed*>(obj);
       if (p) {
@@ -10466,7 +10487,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Int_t &value)
    // Returns -1 in case of error (i.e. list is 0, parameter does not exist
    // or value type does not match), 0 otherwise.
 
-   TObject *obj = c->FindObject(par);
+   TObject *obj = c ? c->FindObject(par) : (TObject *)0;
    if (obj) {
       TParameter<Int_t> *p = dynamic_cast<TParameter<Int_t>*>(obj);
       if (p) {
@@ -10484,7 +10505,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Long_t &value)
    // Returns -1 in case of error (i.e. list is 0, parameter does not exist
    // or value type does not match), 0 otherwise.
 
-   TObject *obj = c->FindObject(par);
+   TObject *obj = c ? c->FindObject(par) : (TObject *)0;
    if (obj) {
       TParameter<Long_t> *p = dynamic_cast<TParameter<Long_t>*>(obj);
       if (p) {
@@ -10502,7 +10523,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Long64_t &value)
    // Returns -1 in case of error (i.e. list is 0, parameter does not exist
    // or value type does not match), 0 otherwise.
 
-   TObject *obj = c->FindObject(par);
+   TObject *obj = c ? c->FindObject(par) : (TObject *)0;
    if (obj) {
       TParameter<Long64_t> *p = dynamic_cast<TParameter<Long64_t>*>(obj);
       if (p) {
@@ -10520,7 +10541,7 @@ Int_t TProof::GetParameter(TCollection *c, const char *par, Double_t &value)
    // Returns -1 in case of error (i.e. list is 0, parameter does not exist
    // or value type does not match), 0 otherwise.
 
-   TObject *obj = c->FindObject(par);
+   TObject *obj = c ? c->FindObject(par) : (TObject *)0;
    if (obj) {
       TParameter<Double_t> *p = dynamic_cast<TParameter<Double_t>*>(obj);
       if (p) {

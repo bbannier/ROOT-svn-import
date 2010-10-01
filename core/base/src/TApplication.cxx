@@ -83,6 +83,7 @@ TApplication::TApplication()
    fNoLog           = kFALSE;
    fNoLogo          = kFALSE;
    fQuit            = kFALSE;
+   fUseMemstat      = kFALSE;
    fFiles           = 0;
    fIdleTimer       = 0;
    fSigHandler      = 0;
@@ -153,6 +154,7 @@ TApplication::TApplication(const char *appClassName,
    fNoLog           = kFALSE;
    fNoLogo          = kFALSE;
    fQuit            = kFALSE;
+   fUseMemstat      = kFALSE;
    fExitOnException = kDontExit;
    fAppImp          = 0;
 
@@ -193,6 +195,16 @@ TApplication::TApplication(const char *appClassName,
 
    // to allow user to interact with TCanvas's under WIN32
    gROOT->SetLineHasBeenProcessed();
+
+   // activate TMemStat
+   if (fUseMemstat || gEnv->GetValue("Root.TMemStat", 0)) {
+      fUseMemstat = kTRUE;
+      Long64_t maxcalls = gEnv->GetValue("Root.TMemStat.maxcalls", 5000000);
+      const char *ssystem = gEnv->GetValue("Root.TMemStat.system","gnubuiltin");
+      if (maxcalls > 0) {
+         gROOT->ProcessLine(Form("new TMemStat(\"%s\",%lld);",ssystem,maxcalls));
+      }
+   }
 }
 
 //______________________________________________________________________________
@@ -206,6 +218,12 @@ TApplication::~TApplication()
    SafeDelete(fAppImp);
    if (fgApplications)
       fgApplications->Remove(this);
+
+   //close TMemStat
+   if (fUseMemstat) {
+      ProcessLine("TMemStat::Close()");
+      fUseMemstat = kFALSE;
+   }
 }
 
 //______________________________________________________________________________
@@ -327,14 +345,17 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
    //    -n : do not execute logon and logoff macros as specified in .rootrc
    //    -q : exit after processing command line macro files
    //    -l : do not show splash screen
+   //    -x : exit on exception
    // The last three options are only relevant in conjunction with TRint.
    // The following help and info arguments are supported:
-   //    -?      : print usage
-   //    -h      : print usage
-   //    --help  : print usage
-   //    -config : print ./configure options
+   //    -?       : print usage
+   //    -h       : print usage
+   //    --help   : print usage
+   //    -config  : print ./configure options
+   //    -memstat : run with memory usage monitoring
    // In addition to the above options the arguments that are not options,
-   // i.e. they don't start with - or + are treated as follows:
+   // i.e. they don't start with - or + are treated as follows (and also removed
+   // from the argument array):
    //   <file>.root are considered ROOT files and added to the InputFiles() list
    //   <macro>.C   are considered ROOT macros and also added to the InputFiles() list
    //   <dir>       is considered the desired working directory and available
@@ -343,6 +364,8 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
    // In TRint we set the working directory to the <dir>, the ROOT files are
    // connected, and the macros are executed. If your main TApplication is not
    // TRint you have to decide yourself what to do whith these options.
+   // All specified arguments (also the ones removed) can always be retrieved
+   // via the TApplication::Argv() method.
 
    static char null[1] = { "" };
 
@@ -372,11 +395,15 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
          fprintf(stderr, "  -h      : print usage\n");
          fprintf(stderr, "  --help  : print usage\n");
          fprintf(stderr, "  -config : print ./configure options\n");
+         fprintf(stderr, "  -memstat : run with memory usage monitoring\n");
          fprintf(stderr, "\n");
          Terminate(0);
       } else if (!strcmp(argv[i], "-config")) {
          fprintf(stderr, "ROOT ./configure options:\n%s\n", gROOT->GetConfigOptions());
          Terminate(0);
+      } else if (!strcmp(argv[i], "-memstat")) {
+         fUseMemstat = kTRUE;
+         argv[i] = null;
       } else if (!strcmp(argv[i], "-b")) {
          MakeBatch();
          argv[i] = null;
@@ -1021,7 +1048,6 @@ void TApplication::Run(Bool_t retrn)
    fIsRunning = kTRUE;
 
    gSystem->Run();
-
    fIsRunning = kFALSE;
 }
 
@@ -1073,6 +1099,12 @@ void TApplication::Terminate(Int_t status)
 {
    // Terminate the application by call TSystem::Exit() unless application has
    // been told to return from Run(), by a call to SetReturnFromRun().
+
+   //close TMemStat
+   if (fUseMemstat) {
+      ProcessLine("TMemStat::Close()");
+      fUseMemstat = kFALSE;
+   }
 
    Emit("Terminate(Int_t)", status);
 

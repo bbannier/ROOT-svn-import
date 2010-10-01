@@ -722,7 +722,9 @@ Int_t TGeoManager::AddShape(const TGeoShape *shape)
 //_____________________________________________________________________________
 Int_t TGeoManager::AddTrack(Int_t id, Int_t pdgcode, TObject *particle)
 {
-// Add a track to the list of tracks
+// Add a track to the list of tracks. Use this for primaries only. For secondaries,
+// add them to the parent track. The method create objects that are registered
+// to the analysis manager but have to be cleaned-up by the user via ClearTracks().
    Int_t index = fNtracks;
    fTracks->AddAtAndExpand(GetGeomPainter()->AddTrack(id,pdgcode,particle),fNtracks++);
    return index;
@@ -1493,7 +1495,7 @@ void TGeoManager::AnimateTracks(Double_t tmin, Double_t tmax, Int_t nframes, Opt
    Int_t i, j;
    TString opt(option);
    Bool_t save = kFALSE, geomanim=kFALSE;
-   char fname[15];
+   TString fname;
    if (opt.Contains("/S")) save = kTRUE;
 
    if (opt.Contains("/G")) geomanim = kTRUE;
@@ -1529,12 +1531,7 @@ void TGeoManager::AnimateTracks(Double_t tmin, Double_t tmax, Int_t nframes, Opt
          ModifiedPad();
       }
       if (save) {
-         Int_t ndigits=1;
-         Int_t result=i;
-         while ((result /= 10)) ndigits++;
-         sprintf(fname, "anim0000.gif");
-         char *fpos = fname+8-ndigits;
-         sprintf(fpos, "%d.gif", i);
+         fname = Form("anim%04d.gif", i);
          gPad->Print(fname);
       }
       t += dt;
@@ -1940,16 +1937,11 @@ void TGeoManager::OptimizeVoxels(const char *filename)
       return;
    }
    ofstream out;
-   char *fname = new char[20];
-   char quote = '"';
-   if (!strlen(filename))
-      sprintf(fname, "tgeovox.C");
-   else
-      sprintf(fname, "%s", filename);
+   TString fname = filename;
+   if (fname.IsNull()) fname = "tgeovox.C";
    out.open(fname, ios::out);
    if (!out.good()) {
       Error("OptimizeVoxels", "cannot open file");
-      delete [] fname;
       return;
    }
    // write header
@@ -1968,7 +1960,7 @@ void TGeoManager::OptimizeVoxels(const char *filename)
    TIter next(fVolumes);
    while ((vol=(TGeoVolume*)next())) {
       if (!vol->GetVoxels()) continue;
-      out<<"   vol = gGeoManager->GetVolume("<<quote<<vol->GetName()<<quote<<");"<<endl;
+      out<<"   vol = gGeoManager->GetVolume(\""<<vol->GetName()<<"\");"<<endl;
       cyltype = vol->OptimizeVoxels();
       if (cyltype) {
          out<<"   vol->SetCylVoxels();"<<endl;
@@ -1978,7 +1970,6 @@ void TGeoManager::OptimizeVoxels(const char *filename)
    }
    out << "}" << endl;
    out.close();
-   delete [] fname;
 }
 //_____________________________________________________________________________
 Int_t TGeoManager::Parse(const char *expr, TString &expr1, TString &expr2, TString &expr3)
@@ -2111,16 +2102,11 @@ void TGeoManager::SaveAttributes(const char *filename)
       return;
    }
    ofstream out;
-   char *fname = new char[20];
-   char quote = '"';
-   if (!strlen(filename))
-      sprintf(fname, "tgeoatt.C");
-   else
-      sprintf(fname, "%s", filename);
+   TString fname(filename);
+   if (fname.IsNull()) fname = "tgeoatt.C";
    out.open(fname, ios::out);
    if (!out.good()) {
       Error("SaveAttributes", "cannot open file");
-      delete [] fname;
       return;
    }
    // write header
@@ -2133,7 +2119,7 @@ void TGeoManager::SaveAttributes(const char *filename)
    out << "//=== Attributes for " << GetTitle() << " geometry"<<endl;
    out << "//===== <run this macro AFTER loading the geometry in memory>"<<endl;
    // save current top volume
-   out << "   TGeoVolume *top = gGeoManager->GetVolume("<<quote<<fTopVolume->GetName()<<quote<<");"<<endl;
+   out << "   TGeoVolume *top = gGeoManager->GetVolume(\""<<fTopVolume->GetName()<<"\");"<<endl;
    out << "   TGeoVolume *vol = 0;"<<endl;
    out << "   TGeoNode *node = 0;"<<endl;
    out << "   // clear all volume attributes and get painter"<<endl;
@@ -2160,7 +2146,6 @@ void TGeoManager::SaveAttributes(const char *filename)
    out << "   gPad->x3d();"<<endl;
    out << "}" << endl;
    out.close();
-   delete [] fname;
 }
 //_____________________________________________________________________________
 TGeoNode *TGeoManager::SearchNode(Bool_t downwards, const TGeoNode *skipnode)
@@ -3290,9 +3275,8 @@ Int_t TGeoManager::Export(const char *filename, const char *name, Option_t *opti
          Error("Export","Cannot open file");
          return 0;
       }
-      char keyname[256];
-      if (name && strlen(name)) strcpy(keyname,name);
-      else                      strcpy(keyname,GetName());
+      TString keyname = name;
+      if (keyname.IsNull()) keyname = GetName();
       TString opt = option;
       opt.ToLower();
       if (opt.Contains("v")) {

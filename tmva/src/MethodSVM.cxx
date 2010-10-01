@@ -1,5 +1,5 @@
-// @(#)root/tmva $Id$ 
-// Author: Marcin Wolter, Andrzej Zemla 
+// @(#)root/tmva $Id$
+// Author: Marcin Wolter, Andrzej Zemla
 
 /**********************************************************************************
  * Project: TMVA - a Root-integrated toolkit for multivariate data analysis       *
@@ -13,7 +13,7 @@
  * Authors (alphabetical):                                                        *
  *      Marcin Wolter  <Marcin.Wolter@cern.ch> - IFJ PAN, Krakow, Poland          *
  *      Andrzej Zemla  <azemla@cern.ch>          - IFJ PAN, Krakow, Poland        *
- *      (IFJ PAN: Henryk Niewodniczanski Inst. Nucl. Physics, Krakow, Poland)     *   
+ *      (IFJ PAN: Henryk Niewodniczanski Inst. Nucl. Physics, Krakow, Poland)     *
  *                                                                                *
  * Introduction of regression by:                                                 *
  *      Krzysztof Danielowski <danielow@cern.ch> - IFJ PAN & AGH, Krakow, Poland  *
@@ -22,8 +22,8 @@
  *                                                                                *
  *                                                                                *
  * Copyright (c) 2005:                                                            *
- *      CERN, Switzerland                                                         * 
- *      MPI-K Heidelberg, Germany                                                 * 
+ *      CERN, Switzerland                                                         *
+ *      MPI-K Heidelberg, Germany                                                 *
  *      PAN, Krakow, Poland                                                       *
  *                                                                                *
  * Redistribution and use in source and binary forms, with or without             *
@@ -32,8 +32,8 @@
  **********************************************************************************/
 
 //_______________________________________________________________________
-//                                                                      
-// SMO Platt's SVM classifier with Keerthi & Shavade improvements   
+//
+// SMO Platt's SVM classifier with Keerthi & Shavade improvements
 //_______________________________________________________________________
 
 #include "Riostream.h"
@@ -73,26 +73,46 @@ ClassImp(TMVA::MethodSVM)
 //_______________________________________________________________________
 TMVA::MethodSVM::MethodSVM( const TString& jobName, const TString& methodTitle, DataSetInfo& theData, 
                             const TString& theOption, TDirectory* theTargetDir ) 
-   : MethodBase( jobName, Types::kSVM, methodTitle, theData, theOption, theTargetDir ),
-     fWgSet(0),
-     fInputData(0),
-     fSupportVectors(0),
-     fSVKernelFunction(0),
-     fMinVars(0),
-     fMaxVars(0)
+   : MethodBase( jobName, Types::kSVM, methodTitle, theData, theOption, theTargetDir )
+   , fCost(0)
+   , fTolerance(0)
+   , fMaxIter(0)
+   , fNSubSets(0)
+   , fBparm(0)
+   , fGamma(0)
+   , fWgSet(0)
+   , fInputData(0)
+   , fSupportVectors(0)
+   , fSVKernelFunction(0)
+   , fMinVars(0)
+   , fMaxVars(0)
+   , fDoubleSigmaSquared(0)
+   , fOrder(0)
+   , fTheta(0)
+   , fKappa(0)
 {
    // standard constructor
 }
 
 //_______________________________________________________________________
 TMVA::MethodSVM::MethodSVM( DataSetInfo& theData, const TString& theWeightFile, TDirectory*  theTargetDir )
-   : MethodBase( Types::kSVM, theData, theWeightFile, theTargetDir ),
-     fWgSet(0),
-     fInputData(0),
-     fSupportVectors(0),
-     fSVKernelFunction(0),
-     fMinVars(0),
-     fMaxVars(0)
+   : MethodBase( Types::kSVM, theData, theWeightFile, theTargetDir )
+   , fCost(0)
+   , fTolerance(0)
+   , fMaxIter(0)
+   , fNSubSets(0)
+   , fBparm(0)
+   , fGamma(0)
+   , fWgSet(0)
+   , fInputData(0)
+   , fSupportVectors(0)
+   , fSVKernelFunction(0)
+   , fMinVars(0)
+   , fMaxVars(0)
+   , fDoubleSigmaSquared(0)
+   , fOrder(0)
+   , fTheta(0)
+   , fKappa(0)
 {
    // constructor from weight file
 }
@@ -241,8 +261,8 @@ void TMVA::MethodSVM::ReadWeightsFromXML( void* wghtnode )
    gTools().ReadAttr( wghtnode, "NSupVec",fNsupv   );
 
    Float_t alpha=0.;
-   Float_t alpha_p = 0.; 
-   
+   Float_t alpha_p = 0.;
+
    Int_t typeFlag=-1;
    UInt_t ns = 0;
    std::vector<Float_t>* svector = new std::vector<Float_t>(GetNvar());
@@ -267,11 +287,11 @@ void TMVA::MethodSVM::ReadWeightsFromXML( void* wghtnode )
       alpha_p=temp[3];
       for (UInt_t ivar = 0; ivar < GetNvar(); ivar++)
          (*svector)[ivar]=temp[ivar+4];
-         
+
       fSupportVectors->push_back(new SVEvent(svector,alpha,alpha_p,typeFlag));
       supportvectornode = gTools().GetNextChild(supportvectornode);
    }
-   
+
    void* maxminnode = supportvectornode;
    for (UInt_t ivar = 0; ivar < GetNvar(); ivar++)
       gTools().ReadAttr( maxminnode,"Var"+gTools().StringFromInt(ivar),(*fMaxVars)[ivar]);
@@ -280,6 +300,7 @@ void TMVA::MethodSVM::ReadWeightsFromXML( void* wghtnode )
       gTools().ReadAttr( maxminnode,"Var"+gTools().StringFromInt(ivar),(*fMinVars)[ivar]);
    if (fSVKernelFunction!=0) delete fSVKernelFunction;
    fSVKernelFunction = new SVKernelFunction(fGamma);
+   delete svector;
 }
 
 //_______________________________________________________________________
@@ -287,27 +308,27 @@ void TMVA::MethodSVM::WriteWeightsToStream( TFile& ) const
 {
    //TODO write IT
    // write training sample (TTree) to file
-}  
+}
 
 //_______________________________________________________________________
 void  TMVA::MethodSVM::ReadWeightsFromStream( istream& istr )
 {
    if (fSupportVectors !=0) { delete fSupportVectors; fSupportVectors = 0;}
    fSupportVectors = new std::vector<TMVA::SVEvent*>(0);
-   
+
    // read configuration from input stream
    istr >> fBparm;
-      
+
    UInt_t fNsupv;
    istr >> fNsupv;
-   fSupportVectors->reserve(fNsupv);      
+   fSupportVectors->reserve(fNsupv);
 
    Float_t typeTalpha=0.;
    Float_t alpha=0.;
    Int_t typeFlag=-1;
    UInt_t ns = 0;
    std::vector<Float_t>* svector = new std::vector<Float_t>(GetNvar());
-      
+
    fMaxVars = new TVectorD( GetNvar() );
    fMinVars = new TVectorD( GetNvar() );
 
@@ -318,13 +339,13 @@ void  TMVA::MethodSVM::ReadWeightsFromStream( istream& istr )
       alpha = typeTalpha<0?-typeTalpha:typeTalpha;
       for (UInt_t ivar = 0; ivar < GetNvar(); ivar++)
          istr>>svector->at(ivar);
-         
+
       fSupportVectors->push_back(new SVEvent(svector,alpha,typeFlag,ns));
    }
 
    for (UInt_t ivar = 0; ivar < GetNvar(); ivar++)
       istr >> (*fMaxVars)[ivar];
-     
+
    for (UInt_t ivar = 0; ivar < GetNvar(); ivar++)
       istr >> (*fMinVars)[ivar];
 
@@ -342,6 +363,7 @@ void  TMVA::MethodSVM::ReadWeightsFromStream( istream& istr )
       fSVKernelFunction = new SVKernelFunction();
       fSVKernelFunction->setCompatibilityParams(k, fOrder, fTheta, fKappa);
    }
+   delete svector;
 }
 
 //_______________________________________________________________________
@@ -355,8 +377,8 @@ Double_t TMVA::MethodSVM::GetMvaValue( Double_t* err )
 {
    // returns MVA value for given event
    Double_t myMVA = 0;
-   
-   
+
+   // TODO: avoid creation of a new SVEvent every time (Joerg)
    SVEvent* ev = new SVEvent( GetEvent(),0. ); //check for specificators
 
    for (UInt_t ievt = 0; ievt < fSupportVectors->size() ; ievt++) {
@@ -364,6 +386,8 @@ Double_t TMVA::MethodSVM::GetMvaValue( Double_t* err )
                  * fSupportVectors->at(ievt)->GetTypeFlag()
                  * fSVKernelFunction->Evaluate( fSupportVectors->at(ievt), ev ) );
    }
+
+   delete ev;
 
    myMVA -= fBparm;
 
@@ -382,14 +406,14 @@ const std::vector<Float_t>& TMVA::MethodSVM::GetRegressionValues()
    fRegressionReturnVal->clear();
 
    Double_t myMVA = 0;
-   
+
    const Event *baseev = GetEvent();
    SVEvent* ev = new SVEvent( baseev,0. ); //check for specificators
 
    for (UInt_t ievt = 0; ievt < fSupportVectors->size() ; ievt++) {
       myMVA += ( fSupportVectors->at(ievt)->GetDeltaAlpha()
             *fSVKernelFunction->Evaluate( fSupportVectors->at(ievt), ev ) );
-   }   
+   }
    myMVA += fBparm;
    Event * evT = new Event(*baseev);
    evT->SetTarget(0,myMVA);
@@ -399,6 +423,8 @@ const std::vector<Float_t>& TMVA::MethodSVM::GetRegressionValues()
    fRegressionReturnVal->push_back(evT2->GetTarget(0));
 
    delete evT;
+
+   delete ev;
 
    return *fRegressionReturnVal;
 }

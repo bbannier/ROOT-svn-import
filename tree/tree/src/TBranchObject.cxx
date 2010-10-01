@@ -404,9 +404,9 @@ void TBranchObject::SetAddress(void* add)
          }
          if (clobj && clobj->InheritsFrom(TClonesArray::Class())) {
             if (isDot) {
-               sprintf(fullname, "%s%s", bname, &rdname[1]);
+               snprintf(fullname,200, "%s%s", bname, &rdname[1]);
             } else {
-               sprintf(fullname, "%s", &rdname[1]);
+               snprintf(fullname,200, "%s", &rdname[1]);
             }
             branch = (TBranch*) fBranches.FindObject(fullname);
          } else {
@@ -418,18 +418,18 @@ void TBranchObject::SetAddress(void* add)
                   if (code == 1) {
                      // Case of a string ... we do not need the size
                      if (isDot) {
-                        sprintf(fullname, "%s%s", bname, &rdname[0]);
+                        snprintf(fullname,200, "%s%s", bname, &rdname[0]);
                      } else {
-                        sprintf(fullname, "%s", &rdname[0]);
+                        snprintf(fullname,200, "%s", &rdname[0]);
                      }
                   } else {
                      continue;
                   }
                }
                if (isDot) {
-                  sprintf(fullname, "%s%s", bname, &rdname[0]);
+                  snprintf(fullname,200, "%s%s", bname, &rdname[0]);
                } else {
-                  sprintf(fullname, "%s", &rdname[0]);
+                  snprintf(fullname,200, "%s", &rdname[0]);
                }
                // let's remove the stars!
                UInt_t cursor;
@@ -446,9 +446,9 @@ void TBranchObject::SetAddress(void* add)
                   continue;
                }
                if (isDot) {
-                  sprintf(fullname, "%s%s", bname, &rdname[1]);
+                  snprintf(fullname,200, "%s%s", bname, &rdname[1]);
                } else {
-                  sprintf(fullname, "%s", &rdname[1]);
+                  snprintf(fullname,200, "%s", &rdname[1]);
                }
                branch = (TBranch*) fBranches.FindObject(fullname);
             }
@@ -456,9 +456,9 @@ void TBranchObject::SetAddress(void* add)
       } else {
          if (dm->IsBasic()) {
             if (isDot) {
-               sprintf(fullname, "%s%s", bname, &rdname[0]);
+               snprintf(fullname,200, "%s%s", bname, &rdname[0]);
             } else {
-               sprintf(fullname, "%s", &rdname[0]);
+               snprintf(fullname,200, "%s", &rdname[0]);
             }
             branch = (TBranch*) fBranches.FindObject(fullname);
          }

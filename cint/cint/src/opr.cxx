@@ -1958,7 +1958,7 @@ void G__bstore(int operatortag, G__value expressionin, G__value* defined)
 }
 
 //______________________________________________________________________________
-int G__scopeoperator(char* name, int* phash, long* pstruct_offset, int* ptagnum)
+int G__scopeoperator(char * name, int* phash, long* pstruct_offset, int* ptagnum)
 {
    // -- FIXME: Describe this function!
    // May need to modify this function to support multiple usage of
@@ -1989,7 +1989,7 @@ int G__scopeoperator(char* name, int* phash, long* pstruct_offset, int* ptagnum)
    if (pc == name) {
       /* strip scope operator, set hash and return */
       temp = name + 2;
-      strcpy(name, temp);
+      strcpy(name, temp); // Okay since we 'reduce' the size of the string
       G__hash(name, (*phash), i)
       /* If we do no have anymore scope operator, we know the request of
          for the global name space */
@@ -2000,7 +2000,7 @@ int G__scopeoperator(char* name, int* phash, long* pstruct_offset, int* ptagnum)
    if (strncmp(name, "std::", 5) == 0 && G__ignore_stdnamespace) {
       // strip scope operator, set hash and return
       temp = name + 5;
-      strcpy(name, temp);
+      strcpy(name, temp); // Okay since we 'reduce' the size of the string
       G__hash(name, (*phash), i)
       goto re_try_after_std;
    }
@@ -2061,10 +2061,10 @@ int G__scopeoperator(char* name, int* phash, long* pstruct_offset, int* ptagnum)
    temp = member;
    if (*name == '~') {
       // -- Explicit destructor.
-      strcpy(name + 1, temp);
+      strcpy(name + 1, temp); // Okay since we 'reduce' the size of the string
    }
    else {
-      strcpy(name, temp);
+      strcpy(name, temp); // Okay since we 'reduce' the size of the string
    }
    G__hash(name, *phash, i)
    return G__CLASSSCOPE;
@@ -2620,15 +2620,15 @@ int G__overloadopr(int operatortag, G__value expressionin, G__value* defined)
                else {
                   expr.Format("*%s*)%ld", arg2(), expressionin.ref);
                }
-               strcpy(arg2, expr);
+               arg2 = expr;
             } else {
                G__fprinterr(G__serr, "G__overloadopr: expected ')' in %s\n", arg2());
             }
          } else if (expressionin.type == 'm') {
-            strcat(arg2, "ULL");
+            arg2 += "ULL";
          }
          else if (expressionin.type == 'n') {
-            strcat(arg2, "LL");
+            arg2 += "LL";
          }
       }
       if (defined->type == 'u') {
@@ -2670,7 +2670,7 @@ int G__overloadopr(int operatortag, G__value expressionin, G__value* defined)
                else {
                   expr.Format("*%s*)%ld", arg1(), defined->ref);
                }
-               strcpy(arg1, expr);
+               arg1 = expr;
             }
          }
          expr.Format("%s(%s,%s)", opr(), arg1(), arg2());

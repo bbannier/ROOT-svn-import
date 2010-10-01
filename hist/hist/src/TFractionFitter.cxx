@@ -160,6 +160,7 @@ TFractionFitter::TFractionFitter() :
    fNpfits        = 0;
    fNDF           = 0;
    fChisquare     = 0;
+   fNpar          = 0;
 }
 
 //______________________________________________________________________________
@@ -301,12 +302,8 @@ void TFractionFitter::SetRangeX(Int_t low, Int_t high) {
    //     low:  lower X bin number
    //     high: upper X bin number
 
-   if (low <=0 || high <= 0) {
-      Error("SetRangeX","Invalid fit range");
-      return;
-   }
-   fLowLimitX = (low > 0) ? low : 1;
-   fHighLimitX = (high <= fData->GetNbinsX()) ? high : fData->GetNbinsX();
+   fLowLimitX = (low > 0 ) ? low : 1;
+   fHighLimitX = ( high > 0 && high <= fData->GetNbinsX()) ? high : fData->GetNbinsX();
    CheckConsistency();
 }
 
@@ -333,13 +330,9 @@ void TFractionFitter::SetRangeY(Int_t low, Int_t high) {
       Error("SetRangeY","Y range cannot be set for 1D histogram");
       return;
    }
-   if (low <=0 || high <= 0) {
-      Error("SetRangeY","Invalid fit range");
-      return;
-   }
 
    fLowLimitY = (low > 0) ? low : 1;
-   fHighLimitY = (high <= fData->GetNbinsY()) ? high : fData->GetNbinsY();
+   fHighLimitY = (high > 0 && high <= fData->GetNbinsY()) ? high : fData->GetNbinsY();
    CheckConsistency();
 }
 
@@ -368,13 +361,9 @@ void TFractionFitter::SetRangeZ(Int_t low, Int_t high) {
       return;
    }
 
-   if (low <=0 || high <= 0) {
-      Error("SetRangeZ","Invalid fit range");
-      return;
-   }
 
    fLowLimitZ = (low > 0) ? low : 1;
-   fHighLimitZ = (high <= fData->GetNbinsZ()) ? high : fData->GetNbinsZ();
+   fHighLimitZ = (high > 0 && high <= fData->GetNbinsZ()) ? high : fData->GetNbinsZ();
    CheckConsistency();
 }
 
@@ -784,7 +773,7 @@ void TFractionFitFCN(Int_t& npar, Double_t* gin, Double_t& f, Double_t* par, Int
 
    TFractionFitter* fitter = dynamic_cast<TFractionFitter*>(fractionFitter->GetObjectFit());
    if (!fitter) {
-      fitter->Error("TFractionFitFCN","Invalid fit object encountered!");
+      Error("TFractionFitFCN","Invalid fit object encountered!");
       return;
    }
    fitter->ComputeFCN(npar, gin, f, par, flag);

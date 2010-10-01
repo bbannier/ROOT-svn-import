@@ -272,7 +272,7 @@ TSocket::TSocket(const char *sockpath) : TNamed(sockpath, "")
    fCompress  = 0;
    fTcpWindowSize = -1;
    fUUIDs = 0;
-   fLastUsageMtx   = 0;
+   fLastUsageMtx  = 0;
 
    fSocket = gSystem->OpenConnection(sockpath, -1, -1);
    if (fSocket > 0) {
@@ -284,7 +284,8 @@ TSocket::TSocket(const char *sockpath) : TNamed(sockpath, "")
 //______________________________________________________________________________
 TSocket::TSocket(Int_t desc) : TNamed("", "")
 {
-   // Create a socket. The socket will use descriptor desc.
+   // Create a socket. The socket will adopt previously opened TCP socket with
+   // descriptor desc.
 
    R__ASSERT(gROOT);
    R__ASSERT(gSystem);
@@ -306,6 +307,41 @@ TSocket::TSocket(Int_t desc) : TNamed("", "")
    } else
       fSocket = -1;
 }
+
+//______________________________________________________________________________
+TSocket::TSocket(Int_t desc, const char *sockpath) : TNamed(sockpath, "")
+{
+   // Create a socket. The socket will adopt previously opened Unix socket with
+   // descriptor desc. The sockpath arg is for info purposes only. Use
+   // this method to adopt e.g. a socket created via socketpair().
+
+   R__ASSERT(gROOT);
+   R__ASSERT(gSystem);
+
+   fUrl = sockpath;
+
+   fService = "unix";
+   fSecContext = 0;
+   fRemoteProtocol= -1;
+   fServType = kSOCKD;
+   fAddress.fPort = -1;
+   fName.Form("unix:%s", sockpath);
+   SetTitle(fService);
+   fBytesSent = 0;
+   fBytesRecv = 0;
+   fCompress  = 0;
+   fTcpWindowSize = -1;
+   fUUIDs = 0;
+   fLastUsageMtx  = 0;
+
+   if (desc >= 0) {
+      fSocket  = desc;
+      R__LOCKGUARD2(gROOTMutex);
+      gROOT->GetListOfSockets()->Add(this);
+   } else
+      fSocket = -1;
+}
+
 
 //______________________________________________________________________________
 TSocket::TSocket(const TSocket &s) : TNamed(s)
@@ -824,10 +860,11 @@ oncemore:
 Int_t TSocket::RecvRaw(void *buffer, Int_t length, ESendRecvOptions opt)
 {
    // Receive a raw buffer of specified length bytes. Using option kPeek
-   // one can peek at incoming data. Returns -1 in case of error. In case
-   // of opt == kOob: -2 means EWOULDBLOCK and -3 EINVAL. In case of non-blocking
-   // mode (kNoBlock) -4 means EWOULDBLOCK. Returns -5 if pipe broken or
-   // reset by peer (EPIPE || ECONNRESET).
+   // one can peek at incoming data. Returns number of received bytes.
+   // Returns -1 in case of error. In case of opt == kOob: -2 means
+   // EWOULDBLOCK and -3 EINVAL. In case of non-blocking mode (kNoBlock)
+   // -4 means EWOULDBLOCK. Returns -5 if pipe broken or reset by
+   // peer (EPIPE || ECONNRESET).
 
    TSystem::ResetErrno();
 
@@ -863,22 +900,34 @@ Bool_t TSocket::RecvStreamerInfos(TMessage *mess)
       TList *list = (TList*)mess->ReadObject(TList::Class());
       TIter next(list);
       TStreamerInfo *info;
-      while ((info = (TStreamerInfo*)next())) {
-         Int_t oldc = info->GetClassVersion();
-         TClass *cl = TClass::GetClass(info->GetName(),kTRUE);
-         if (!cl) {
+      TObjLink *lnk = list->FirstLink();
+      // First call BuildCheck for regular class
+      while (lnk) {
+         info = (TStreamerInfo*)lnk->GetObject();
+         TObject *element = info->GetElements()->UncheckedAt(0);
+         Bool_t isstl = element && strcmp("This",element->GetName())==0;
+         if (!isstl) {
             info->BuildCheck();
-            continue;
+            if (gDebug > 0)
+               Info("RecvStreamerInfos", "importing TStreamerInfo: %s, version = %d",
+                    info->GetName(), info->GetClassVersion());
          }
-         cl->GetStreamerInfo();
-         if (cl->GetStreamerInfos()->At(oldc)) {
-            continue;
-         }
-         info->BuildCheck();
-         if (gDebug > 0)
-            Info("RecvStreamerInfos", "importing TStreamerInfo: %s, version = %d",
-                 info->GetName(), info->GetClassVersion());
+         lnk = lnk->Next();
       }
+      // Then call BuildCheck for stl class
+      lnk = list->FirstLink();
+      while (lnk) {
+         info = (TStreamerInfo*)lnk->GetObject();
+         TObject *element = info->GetElements()->UncheckedAt(0);
+         Bool_t isstl = element && strcmp("This",element->GetName())==0;
+         if (isstl) {
+            info->BuildCheck();
+            if (gDebug > 0)
+               Info("RecvStreamerInfos", "importing TStreamerInfo: %s, version = %d",
+                    info->GetName(), info->GetClassVersion());
+         }
+         lnk = lnk->Next();
+     }
       delete list;
       delete mess;
 

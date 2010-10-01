@@ -36,7 +36,6 @@
 #include "TList.h"
 #include "NetErrors.h"
 #include "TRegexp.h"
-#include "snprintf.h"
 #include "TVirtualMutex.h"
 #include "TTimer.h"
 #include "TBase64.h"
@@ -1113,7 +1112,9 @@ Bool_t TAuthenticate::GetUserPasswd(TString &user, TString &passwd,
 
    // If user also not set via  ~/.rootnetrc or ~/.netrc ask user.
    if (user == "") {
-      user = PromptUser(fRemote);
+      char *p = PromptUser(fRemote);
+      user = p;
+      delete [] p;
       if (user == "") {
          Error("GetUserPasswd", "user name not set");
          return 1;
@@ -2096,10 +2097,12 @@ Int_t TAuthenticate::SshAuth(TString &user)
    if (reuse == 1 && sshproto == 0) {
 
       // Save type of key
-      if (kind != kROOTD_RSAKEY  || retval < 1 || retval > 2)
-         Warning("SshAuth",
-                 "problems recvn RSA key flag: got message %d, flag: %d",
-                 kind, retval);
+      if (kind != kROOTD_RSAKEY  || retval < 1 || retval > 2) {
+         Error("SshAuth",
+               "problems recvn RSA key flag: got message %d, flag: %d",
+               kind, retval);
+         return 0;
+      }
 
       fRSAKey = retval - 1;
 
@@ -2186,12 +2189,16 @@ const char *TAuthenticate::GetSshUser(TString user) const
 
    if (user == "") {
       if (fgPromptUser) {
-         usr = PromptUser(fRemote);
+         char *p = PromptUser(fRemote);
+         usr = p;
+         delete [] p;
       } else {
-
          usr = fgDefaultUser;
-         if (usr == "")
-            usr = PromptUser(fRemote);
+         if (usr == "") {
+            char *p = PromptUser(fRemote);
+            usr = p;
+            delete [] p;
+         }
       }
    } else {
       usr = user;
@@ -2479,7 +2486,7 @@ Int_t TAuthenticate::ClearAuth(TString &user, TString &passwd, Bool_t &pwdhash)
                   if (ltmp) {
                      if (tmpsalt[ltmp-1] == '#' &&
                          tmpsalt[ltmp-10] == '#') {
-                        strncpy(ctag,&tmpsalt[ltmp-10],10);
+                        strlcpy(ctag,&tmpsalt[ltmp-10],11);
                         // We drop the random tag
                         ltmp -= 10;
                         tmpsalt[ltmp] = 0;
@@ -2508,7 +2515,7 @@ Int_t TAuthenticate::ClearAuth(TString &user, TString &passwd, Bool_t &pwdhash)
                        " may result in corrupted rndmtag");
             }
             if (tmptag) {
-               strncpy(ctag, tmptag, 10);
+               strlcpy(ctag, tmptag, 11);
                delete [] tmptag;
             }
          }
@@ -2765,7 +2772,9 @@ Int_t TAuthenticate::ClearAuth(TString &user, TString &passwd, Bool_t &pwdhash)
    badpass1:
       if (passwd == "") {
          TString xp(Form("%s@%s password: ", user.Data(),fRemote.Data()));
-         passwd = PromptPasswd(xp);
+         char *p = PromptPasswd(xp);
+         passwd = p;
+         delete [] p;
          if (passwd == "")
             Error("ClearAuth", "password not set");
       }
@@ -2926,6 +2935,7 @@ THostAuth *TAuthenticate::HasHostAuth(const char *host, const char *user,
 
       if (hostFQDN == ai->GetHost() &&
           !strcmp(user, ai->GetUser()) && srvtyp == ai->GetServer()) {
+         SafeDelete(next);
          return ai;
       }
    }
@@ -2997,6 +3007,7 @@ void TAuthenticate::FileExpand(const char *fexp, FILE *ftmp)
             char *ffull = new char[flen];
             sprintf(ffull, "%s/%s", gSystem->HomeDirectory(), fileinc + 1);
             strcpy(fileinc, ffull);
+            delete [] ffull;
          }
          // Check if file exist and can be read ... ignore if not ...
          if (!gSystem->AccessPathName(fileinc, kReadPermission)) {
@@ -3523,15 +3534,14 @@ Int_t TAuthenticate::GenRSAKeys()
       char test[2 * rsa_STRLEN] = "ThisIsTheStringTest01203456-+/";
       Int_t lTes = 31;
       char *tdum = GetRandString(0, lTes - 1);
-      strncpy(test, tdum, lTes);
+      strlcpy(test, tdum, lTes+1);
       delete [] tdum;
       char buf[2 * rsa_STRLEN];
       if (gDebug > 3)
          Info("GenRSAKeys", "local: test string: '%s' ", test);
 
       // Private/Public
-      strncpy(buf, test, lTes);
-      buf[lTes] = 0;
+      strlcpy(buf, test, lTes+1);
 
       // Try encryption with private key
       int lout = TRSA_fun::RSA_encode()(buf, lTes, rsa_n, rsa_e);
@@ -3549,8 +3559,7 @@ Int_t TAuthenticate::GenRSAKeys()
          continue;
 
       // Public/Private
-      strncpy(buf, test, lTes);
-      buf[lTes] = 0;
+      strlcpy(buf, test, lTes+1);
 
       // Try encryption with public key
       lout = TRSA_fun::RSA_encode()(buf, lTes, rsa_n, rsa_d);
@@ -3695,8 +3704,7 @@ Int_t TAuthenticate::SecureSend(TSocket *sock, Int_t enc,
    Int_t nsen = -1;
 
    if (key == 0) {
-      strncpy(buftmp, str, slen);
-      buftmp[slen] = 0;
+      strlcpy(buftmp, str, slen+1);
 
       if (enc == 1)
          ttmp = TRSA_fun::RSA_encode()(buftmp, slen, fgRSAPriKey.n,
@@ -3849,16 +3857,14 @@ Int_t TAuthenticate::DecodeRSAPublic(const char *rsaPubExport, rsa_NUMBER &rsa_n
             // Get <hex_n> ...
             int l1 = (int) (pd2 - pd1 - 1);
             char *rsa_n_exp = new char[l1 + 1];
-            strncpy(rsa_n_exp, pd1 + 1, l1);
-            rsa_n_exp[l1] = 0;
+            strlcpy(rsa_n_exp, pd1 + 1, l1+1);
             if (gDebug > 2)
                ::Info("TAuthenticate::DecodeRSAPublic",
                       "got %ld bytes for rsa_n_exp", (Long_t)strlen(rsa_n_exp));
             // Now <hex_d>
             int l2 = (int) (pd3 - pd2 - 1);
             char *rsa_d_exp = new char[l2 + 1];
-            strncpy(rsa_d_exp, pd2 + 1, l2);
-            rsa_d_exp[l2] = 0;
+            strlcpy(rsa_d_exp, pd2 + 1, 13);
             if (gDebug > 2)
                ::Info("TAuthenticate::DecodeRSAPublic",
                       "got %ld bytes for rsa_d_exp", (Long_t)strlen(rsa_d_exp));
@@ -4027,8 +4033,7 @@ Int_t TAuthenticate::SendRSAPublicKey(TSocket *socket, Int_t key)
    Int_t slen = fgRSAPubExport[key].len;
    Int_t ttmp = 0;
    if (key == 0) {
-      strncpy(buftmp,fgRSAPubExport[key].keys,slen);
-      buftmp[slen] = 0;
+      strlcpy(buftmp,fgRSAPubExport[key].keys,slen+1);
       ttmp = TRSA_fun::RSA_encode()(buftmp, slen, rsa_n, rsa_d);
       sprintf(buflen, "%d", ttmp);
    } else if (key == 1) {
@@ -4942,7 +4947,7 @@ static Int_t RecvHostAuth(TSocket *s, Option_t *opt)
 
    while (strcmp(buf, "END")) {
       // Clean buffer
-      Int_t nc = (nr < kMAXSECBUF)? nr : kMAXSECBUF ;
+      Int_t nc = (nr >= kMAXSECBUF) ? kMAXSECBUF - 1 : nr ;
       buf[nc] = '\0';
 
       // Create THostAuth

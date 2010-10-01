@@ -53,7 +53,7 @@
 #include <typeinfo>
 #include <algorithm>
 
-const Int_t kMaxLen     = 512;
+const Int_t kMaxLen     = 1024;
 R__EXTERN TTree *gTree;
 
 
@@ -252,11 +252,11 @@ void TTreeFormula::Init(const char*name, const char* expression)
       }
    }
    if (fNoper==1 && GetAction(0)==kAliasString) {
-      TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
+      TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
       R__ASSERT(subform);
       if (subform->TestBit(kIsCharacter)) SetBit(kIsCharacter);
    } else if (fNoper==2 && GetAction(0)==kAlternateString) {
-      TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
+      TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
       R__ASSERT(subform);
       if (subform->TestBit(kIsCharacter)) SetBit(kIsCharacter);
    }
@@ -823,8 +823,8 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
          alias = fTree->GetFriendAlias(leaf->GetBranch()->GetTree());
       }
    }
-   if (alias) sprintf(scratch,"%s.%s",alias,leaf->GetName());
-   else if (leaf) strcpy(scratch,leaf->GetName());
+   if (alias) snprintf(scratch,kMaxLen-1,"%s.%s",alias,leaf->GetName());
+   else if (leaf) strlcpy(scratch,leaf->GetName(),kMaxLen);
 
    TTree *tleaf = realtree;
    if (leaf) {
@@ -1767,13 +1767,13 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                         // Unsupported case.
                         Error("DefinedVariable",
                               "%s is a datamember of %s BUT is not yet of a supported type (%d)",
-                              right,cl->GetName(),type);
+                              right,cl ? cl->GetName() : "unknown class",type);
                         return -2;
                      default:
                         // Unknown and Unsupported case.
                         Error("DefinedVariable",
                               "%s is a datamember of %s BUT is not of a unknown type (%d)",
-                              right,cl->GetName(),type);
+                              right,cl ? cl->GetName() : "unknown class",type);
                         return -2;
                   }
 
@@ -1886,7 +1886,8 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                   }
                }
             } else {
-               Error("DefinedVariable","%s is not a datamember of %s",work,cl->GetName());
+               if (cl) Error("DefinedVariable","%s is not a datamember of %s",work,cl->GetName());
+               // no else, we warned earlier that the class was missing.
                return -1;
             }
 
@@ -1966,7 +1967,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
          while (last->fNext) { last = last->fNext; }
          
       }
-      if (last->GetClass() != objClass) {
+      if (last && last->GetClass() != objClass) {
          TClass *mother_cl;
          if (leaf->IsA()==TLeafObject::Class()) {
             // in this case mother_cl is not really used
@@ -2220,15 +2221,11 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
             TIter next(fTree->GetIteratorOnAllLeaves());
             TLeaf* leafcur = 0;
             while (!leaf && (leafcur = (TLeaf*) next())) {
-               if (leafcur) {
-                  TBranch* br = leafcur->GetBranch();
-                  Bool_t yes = BranchHasMethod(leafcur, br, work, params, readentry);
-                  if (yes) {
-                     leaf = leafcur;
-                     //fprintf(stderr, "Does have a method %s for %s found in leafcur %s.\n", work, leafcur->GetBranch()->GetName(), leafcur->GetName());
-                  }
-               } else {
-                  Fatal("FindLeafForExpression", "Tree has no leaves!");
+               TBranch* br = leafcur->GetBranch();
+               Bool_t yes = BranchHasMethod(leafcur, br, work, params, readentry);
+               if (yes) {
+                  leaf = leafcur;
+                  //fprintf(stderr, "Does have a method %s for %s found in leafcur %s.\n", work, leafcur->GetBranch()->GetName(), leafcur->GetName());
                }
             }
             if (!leaf) {
@@ -2271,9 +2268,9 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
             // return -1;
             //}
             // We need to recover the info not used.
-            strcpy(right,work);
-            strcat(right,"(");
-            strcat(right,params);
+            strlcpy(right,work,kMaxLen);
+            strncat(right,"(",kMaxLen-1-strlen(right));
+            strncat(right,params,kMaxLen-1-strlen(right));
             final = kTRUE;
 
             // we reset work
@@ -2303,10 +2300,10 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
             foundAtSign = kFALSE;
          }
 
-         if (left[0]==0) strcpy(left,work);
+         if (left[0]==0) strlcpy(left,work,kMaxLen);
          if (!leaf && !branch) {
             // So far, we have not found a matching leaf or branch.
-            strcpy(first,work);
+            strlcpy(first,work,kMaxLen);
 
             std::string treename(first);
             if (treename.size() && treename[treename.size()-1]=='.') {
@@ -2424,10 +2421,10 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
                   branch = leaf->GetBranch();
                   if (leaf->IsOnTerminalBranch()) {
                      final = kTRUE;
-                     strcpy(right,first);
+                     strlcpy(right,first,kMaxLen);
                      //We need to put the delimiter back!
-                     if (foundAtSign) strcat(right,"@");
-                     if (cname[i]=='.') strcat(right,".");
+                     if (foundAtSign) strncat(right,"@",kMaxLen-1-strlen(right));
+                     if (cname[i]=='.') strncat(right,".",kMaxLen-1-strlen(right));
 
                      // We reset work
                      current = &(work[0]);
@@ -2459,8 +2456,8 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
             // No dot is allowed in subbranches and leaves, so
             // we always remove it in the present case.
             if (cname[i]) work[strlen(work)-1] = '\0';
-            sprintf(scratch,"%s.%s",first,work);
-            sprintf(scratch2,"%s.%s.%s",first,second,work);
+            snprintf(scratch,sizeof(scratch),"%s.%s",first,work);
+            snprintf(scratch2,sizeof(scratch2),"%s.%s.%s",first,second,work);
 
             if (previousdot) {
                currentname = &(work[previousdot+1]);
@@ -2505,8 +2502,8 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
             }
             if (tmp_leaf) {
                // Something was found.
-               if (second[0]) strcat(second,".");
-               strcat(second,work);
+               if (second[0]) strncat(second,".",kMaxLen-1-strlen(second));
+               strncat(second,work,kMaxLen-1-strlen(second));
                leaf = tmp_leaf;
                useLeafCollectionObject = foundAtSign;
                foundAtSign = kFALSE;
@@ -2535,7 +2532,7 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
 
    // Copy the left over for later use.
    if (strlen(work)) {
-      strcat(right,work);
+      strncat(right,work,kMaxLen-1-strlen(right));
    }
 
    if (i<nchname) {
@@ -2543,9 +2540,9 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
          // In some cases we remove a little to fast the period, we add
          // it back if we need.  It is assumed that 'right' and the rest of
          // the name was cut by a delimiter, so this should be safe.
-         strcat(right,".");
+         strncat(right,".",kMaxLen-1-strlen(right));
       }
-      strcat(right,&cname[i]);
+      strncat(right,&cname[i],kMaxLen-1-strlen(right));
    }
 
    if (!final && branch) {
@@ -2557,7 +2554,7 @@ Int_t TTreeFormula::FindLeafForExpression(const char* expression, TLeaf*& leaf, 
    }
 
    if (leaf && leaf->InheritsFrom(TLeafObject::Class()) ) {
-      if (strlen(right)==0) strcpy(right,work);
+      if (strlen(right)==0) strlcpy(right,work,kMaxLen);
    }
 
    if (leaf==0 && left[0]!=0) {
@@ -2738,7 +2735,7 @@ Int_t TTreeFormula::DefinedVariable(TString &name, Int_t &action)
 
    // Find the top level leaf and deal with dimensions
 
-   char    cname[kMaxLen];  strcpy(cname,name.Data());
+   char    cname[kMaxLen];  strlcpy(cname,name.Data(),kMaxLen);
    char     dims[kMaxLen];   dims[0] = '\0';
 
    Bool_t final = kFALSE;
@@ -3246,6 +3243,9 @@ Bool_t TTreeFormula::BranchHasMethod(TLeaf* leafcur, TBranch* branch, const char
             // cl = clones->GetClass();
             delete clonesinfo;
          }
+      } else {
+         Error("BranchHasMethod","A TClonesArray was stored in a branch type no yet support (i.e. neither TBranchObject nor TBranchElement): %s",branch->IsA()->GetName());
+         return kFALSE;
       }
       cl = clones->GetClass();
    } else if (cl && cl->GetCollectionProxy()) {
@@ -3270,7 +3270,6 @@ Bool_t TTreeFormula::BranchHasMethod(TLeaf* leafcur, TBranch* branch, const char
       }
    }
 
-   cl = 0;
    return kFALSE;
 }
 
@@ -4140,7 +4139,7 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
             // a TTree Variable Alias (i.e. a sub-TTreeFormula)
             case kAlias: {
                int aliasN = i;
-               TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(aliasN));
+               TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(aliasN));
                R__ASSERT(subform);
 
                Double_t param = subform->EvalInstance(instance);
@@ -4151,7 +4150,7 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
             // a TTree Variable Alias String (i.e. a sub-TTreeFormula)
             case kAliasString: {
                int aliasN = i;
-               TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(aliasN));
+               TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(aliasN));
                R__ASSERT(subform);
 
                pos2++;
@@ -4160,8 +4159,8 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
             }
             case kMinIf: {
                int alternateN = i;
-               TTreeFormula *primary = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN));
-               TTreeFormula *condition = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN+1));
+               TTreeFormula *primary = static_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN));
+               TTreeFormula *condition = static_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN+1));
                Double_t param = FindMin(primary,condition);
                ++i; // skip the place holder for the condition
                tab[pos] = param; pos++;
@@ -4169,8 +4168,8 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
             }
             case kMaxIf: {
                int alternateN = i;
-               TTreeFormula *primary = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN));
-               TTreeFormula *condition = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN+1));
+               TTreeFormula *primary = static_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN));
+               TTreeFormula *condition = static_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN+1));
                Double_t param = FindMax(primary,condition);
                ++i; // skip the place holder for the condition
                tab[pos] = param; pos++;
@@ -4180,7 +4179,7 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
             // a TTree Variable Alternate (i.e. a sub-TTreeFormula)
             case kAlternate: {
                int alternateN = i;
-               TTreeFormula *primary = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN));
+               TTreeFormula *primary = static_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN));
 
                // First check whether we are in range for the primary formula
                if (instance < primary->GetNdata()) {
@@ -4200,7 +4199,7 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
             }
             case kAlternateString: {
                int alternateN = i;
-               TTreeFormula *primary = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN));
+               TTreeFormula *primary = static_cast<TTreeFormula*>(fAliases.UncheckedAt(alternateN));
 
                // First check whether we are in range for the primary formula
                if (instance < primary->GetNdata()) {
@@ -4449,7 +4448,7 @@ Bool_t TTreeFormula::IsInteger(Bool_t fast) const
    }
    
    if (fNoper==2 && GetAction(0)==kAlternate) {
-      TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
+      TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
       R__ASSERT(subform);
       return subform->IsInteger(kFALSE);
    }
@@ -4461,7 +4460,7 @@ Bool_t TTreeFormula::IsInteger(Bool_t fast) const
    if (fNoper > 1) return kFALSE;
 
    if (GetAction(0)==kAlias) {
-      TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
+      TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
       R__ASSERT(subform);
       return subform->IsInteger(kFALSE);
    }
@@ -4664,7 +4663,7 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
          value[i] = '*';
       value[kMAXLENGTH-1] = 0;
    } else if (mode == -1) {
-      sprintf(value, "%s", GetTitle());
+      snprintf(value, kMAXLENGTH-1, "%s", GetTitle());
    } else if (mode == 0) {
       if ( (fNstring && fNval==0 && fNoper==1) ||
            (TestBit(kIsCharacter)) )
@@ -4686,7 +4685,7 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
             }
          }
          if (val) {
-            strncpy(value, val, kMAXLENGTH-1);
+            strlcpy(value, val, kMAXLENGTH);
          } else {
             value[0] = '\0';
          }
@@ -4718,11 +4717,11 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
                case 'i':
                { 
                   switch (outputSizeLevel) {
-                     case 0:  sprintf(value,Form("%%%s",decform),(Short_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                     case 2:  sprintf(value,Form("%%%s",decform),(Long_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                     case 3:  sprintf(value,Form("%%%s",decform),(Long64_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 0:  snprintf(value,kMAXLENGTH,Form("%%%s",decform),(Short_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 2:  snprintf(value,kMAXLENGTH,Form("%%%s",decform),(Long_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 3:  snprintf(value,kMAXLENGTH,Form("%%%s",decform),(Long64_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
                      case 1:
-                     default: sprintf(value,Form("%%%s",decform),(Int_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     default: snprintf(value,kMAXLENGTH,Form("%%%s",decform),(Int_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
                   }
                   break;
                }
@@ -4732,11 +4731,11 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
                case 'u':
                { 
                   switch (outputSizeLevel) {
-                     case 0:  sprintf(value,Form("%%%s",decform),(UShort_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                     case 2:  sprintf(value,Form("%%%s",decform),(ULong_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                     case 3:  sprintf(value,Form("%%%s",decform),(ULong64_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 0:  snprintf(value,kMAXLENGTH,Form("%%%s",decform),(UShort_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 2:  snprintf(value,kMAXLENGTH,Form("%%%s",decform),(ULong_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 3:  snprintf(value,kMAXLENGTH,Form("%%%s",decform),(ULong64_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
                      case 1:
-                     default: sprintf(value,Form("%%%s",decform),(UInt_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     default: snprintf(value,kMAXLENGTH,Form("%%%s",decform),(UInt_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
                   }
                   break;
                }
@@ -4747,15 +4746,15 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
                case 'G':
                {
                   switch (outputSizeLevel) {
-                     case 2:  sprintf(value,Form("%%%s",decform),(long double)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 2:  snprintf(value,kMAXLENGTH,Form("%%%s",decform),(long double)((TTreeFormula*)this)->EvalInstance(instance)); break;
                      case 1:
-                     default: sprintf(value,Form("%%%s",decform),((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     default: snprintf(value,kMAXLENGTH,Form("%%%s",decform),((TTreeFormula*)this)->EvalInstance(instance)); break;
                   }
                   expo = strchr(value,'e');
                   break;
                }
                default:
-                  sprintf(value,Form("%%%sg",decform),((TTreeFormula*)this)->EvalInstance(instance));
+                  snprintf(value,kMAXLENGTH,Form("%%%sg",decform),((TTreeFormula*)this)->EvalInstance(instance));
                   expo = strchr(value,'e');
             }
             if (expo) {
@@ -4773,7 +4772,7 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
                }
             }
          } else {
-            sprintf(value,Form(" %%%sc",decform),' ');
+            snprintf(value,kMAXLENGTH,Form(" %%%sc",decform),' ');
          }
       }
    }
@@ -4801,7 +4800,7 @@ void TTreeFormula::ResetLoading()
       n = fNoper;
    }
    for(Int_t k=0; k <= n; ++k) {
-      TTreeFormula *f = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(k));
+      TTreeFormula *f = static_cast<TTreeFormula*>(fAliases.UncheckedAt(k));
       if (f) {
          f->ResetLoading();
       }
@@ -4817,11 +4816,11 @@ void TTreeFormula::SetAxis(TAxis *axis)
    if (TestBit(kIsCharacter)) {
       fAxis = axis;
       if (fNoper==1 && GetAction(0)==kAliasString){
-         TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
+         TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
          R__ASSERT(subform);
          subform->SetAxis(axis);
       } else if (fNoper==2 && GetAction(0)==kAlternateString){
-         TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
+         TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
          R__ASSERT(subform);
          subform->SetAxis(axis);
       }
@@ -4897,13 +4896,13 @@ void TTreeFormula::UpdateFormulaLeaves()
    // A safer alternative would be to recompile the whole thing .... However
    // currently compile HAS TO be called from the constructor!
 
-   char names[512];
+   TString names(kMaxLen);
    Int_t nleaves = fLeafNames.GetEntriesFast();
    ResetBit( kMissingLeaf );
    for (Int_t i=0;i<nleaves;i++) {
       if (!fTree) break;
       if (!fLeafNames[i]) continue;
-      sprintf(names,"%s/%s",fLeafNames[i]->GetTitle(),fLeafNames[i]->GetName());
+      names.Form("%s/%s",fLeafNames[i]->GetTitle(),fLeafNames[i]->GetName());
       TLeaf *leaf = fTree->GetLeaf(names);
       fLeaves[i] = leaf;
       if (fBranches[i] && leaf) fBranches[i]=leaf->GetBranch();
@@ -4936,7 +4935,7 @@ void TTreeFormula::UpdateFormulaLeaves()
          case kMinIf:
          case kMaxIf:
          {
-            TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(k));
+            TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(k));
             R__ASSERT(subform);
             subform->UpdateFormulaLeaves();
             break;
@@ -4950,7 +4949,7 @@ void TTreeFormula::UpdateFormulaLeaves()
                case kMin:
                case kMax:
                {
-                  TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(k));
+                  TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(k));
                   R__ASSERT(subform);
                   subform->UpdateFormulaLeaves();
                   break;
@@ -5020,7 +5019,7 @@ void TTreeFormula::ResetDimensions() {
          continue;
       }
       if (action==kAlias || action==kAliasString) {
-         TTreeFormula *subform = dynamic_cast<TTreeFormula*>(fAliases.UncheckedAt(i));
+         TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(i));
          R__ASSERT(subform);
          switch(subform->GetMultiplicity()) {
             case 0: break;
@@ -5417,7 +5416,7 @@ Bool_t TTreeFormula::LoadCurrentDim() {
                }
             }
             virt_dim++;
-         } else if (hasBranchCount2 && k==info->GetVarDim()) {
+         } else if (hasBranchCount2 && info && k==info->GetVarDim()) {
 
             // nothing to do, at some point I thought this might be useful:
             // if (fIndexes[i][k]>=0) {

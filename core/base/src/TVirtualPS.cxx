@@ -69,15 +69,16 @@ void TVirtualPS::PrintStr(const char *str)
 {
    // Output the string str in the output buffer
 
+   if (!str || !str[0])
+      return;
    Int_t len = strlen(str);
-   if (!len || !str) return;
    while (len) {
       if (str[0] == '@') {
          if (fLenBuffer) {
             fStream->write(fBuffer, fLenBuffer);
             fNByte += fLenBuffer;
             fLenBuffer = 0;
-            fStream->write("\n", 1); 
+            fStream->write("\n", 1);
             fNByte++;
             fPrinted = kTRUE;
          }
@@ -149,7 +150,7 @@ void TVirtualPS::PrintFast(Int_t len, const char *str)
       fNByte++;
    }
    if (len > 0) {
-      strncpy(fBuffer + fLenBuffer, str, len);
+      strlcpy(fBuffer + fLenBuffer, str, len+1);
       fLenBuffer += len;
       fBuffer[fLenBuffer] = 0;
    }
@@ -167,9 +168,9 @@ void TVirtualPS::WriteInteger(Int_t n, Bool_t space )
 
    char str[15];
    if (space) {
-      sprintf(str," %d", n);
+      snprintf(str,15," %d", n);
    } else {
-      sprintf(str,"%d", n);
+      snprintf(str,15,"%d", n);
    }
    PrintStr(str);
 }
@@ -181,6 +182,6 @@ void TVirtualPS::WriteReal(Float_t z)
    // Write a Real number to the file
 
    char str[15];
-   sprintf(str," %g", z);
+   snprintf(str,15," %g", z);
    PrintStr(str);
 }

@@ -30,7 +30,6 @@
 #include "TGComboBox.h"
 #include "TColor.h"
 #include "TPaveLabel.h"
-#include "snprintf.h"
 #include "TVirtualPad.h"
 
 ClassImp(TAttTextEditor)
@@ -170,7 +169,7 @@ TGComboBox* TAttTextEditor::BuildFontSizeComboBox(TGFrame* parent, Int_t id)
 
    c->AddEntry("Default", 0);
    for (int i = 1; i <= 50; i++) {
-      snprintf(a, 100, "%d", i);
+      snprintf(a, 99, "%d", i);
       c->AddEntry(a, i);
    }
 

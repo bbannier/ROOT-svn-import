@@ -282,7 +282,7 @@ TColor::TColor(Int_t color, Float_t r, Float_t g, Float_t b, const char *name,
 
    char aname[32];
    if (!name || !*name) {
-      sprintf(aname, "Color%d", color);
+      snprintf(aname,32, "Color%d", color);
       SetName(aname);
    }
 
@@ -1537,11 +1537,11 @@ Int_t TColor::CreateGradientColorTable(UInt_t Number, Double_t* Stops,
       // create the colors...
       nColorsGradient = (Int_t) (floor(NColors*Stops[g]) - floor(NColors*Stops[g-1]));
       for (c = 0; c < nColorsGradient; c++) {
-         color = new TColor(highestIndex,
-                            Red[g-1] + c * (Red[g] - Red[g-1])/ nColorsGradient,
-                            Green[g-1] + c * (Green[g] - Green[g-1])/ nColorsGradient,
-                            Blue[g-1] + c * (Blue[g] - Blue[g-1])/ nColorsGradient,
-                            "  ");
+         new TColor(highestIndex,
+                    Red[g-1] + c * (Red[g] - Red[g-1])/ nColorsGradient,
+                    Green[g-1] + c * (Green[g] - Green[g-1])/ nColorsGradient,
+                    Blue[g-1] + c * (Blue[g] - Blue[g-1])/ nColorsGradient,
+                    "  ");
          palette[nPalette] = highestIndex;
          nPalette++;
          highestIndex++;

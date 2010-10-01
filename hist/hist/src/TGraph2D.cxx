@@ -529,7 +529,7 @@ void TGraph2D::DirectoryAutoAdd(TDirectory *dir)
       SetDirectory(dir);
       if (dir) {
          ResetBit(kCanDelete);
-      }      
+      }
    }
 }
 
@@ -707,8 +707,8 @@ TFitResultPtr TGraph2D::Fit(TF2 *f2, Option_t *option, Option_t *)
    //  =============================
    //   By default a chi2 fitting function is used for fitting a TGraph.
    //   The function is implemented in FitUtil::EvaluateChi2.
-   //   In case of TGraph2DErrors an effective chi2 is used 
-   //   (see TGraphErrors fit in TGraph::Fit) and is implemented in 
+   //   In case of TGraph2DErrors an effective chi2 is used
+   //   (see TGraphErrors fit in TGraph::Fit) and is implemented in
    //   FitUtil::EvaluateChi2Effective
    //   To specify a User defined fitting function, specify option "U" and
    //   call the following functions:
@@ -932,6 +932,10 @@ TH2D *TGraph2D::GetHistogram(Option_t *option)
       Double_t ymax  = GetYmax();
       Double_t xmin  = GetXmin();
       Double_t ymin  = GetYmin();
+///      Double_t xmax  = GetXmaxE();
+///      Double_t ymax  = GetYmaxE();
+///      Double_t xmin  = GetXminE();
+///      Double_t ymin  = GetYminE();
       hxmin = xmin-fMargin*(xmax-xmin);
       hymin = ymin-fMargin*(ymax-ymin);
       hxmax = xmax+fMargin*(xmax-xmin);
@@ -962,11 +966,13 @@ TH2D *TGraph2D::GetHistogram(Option_t *option)
          hzmin = fMinimum;
       } else {
          hzmin = GetZmin();
+///         hzmin = GetZminE();
       }
       if (fMaximum != -1111) {
          hzmax = fMaximum;
       } else {
          hzmax = GetZmax();
+///         hzmax = GetZmaxE();
       }
       if (hzmin==hzmax) {
          hzmin = hzmin-0.01*hzmin;
@@ -1105,6 +1111,8 @@ void TGraph2D::Paint(Option_t *option)
 
    if (opt.Contains("line") && !opt.Contains("tri")) opt.Append("tri0");
 
+///   if (opt.Contains("err")  && !opt.Contains("tri")) opt.Append("tri0");
+
    if (opt.Contains("tri0")) {
       GetHistogram("empty");
    } else {
@@ -1152,10 +1160,10 @@ TH1 *TGraph2D::Project(Option_t *option) const
    TH2D *h2 = 0;
    Int_t nch = strlen(GetName()) +opt.Length() +2;
    char *name = new char[nch];
-   sprintf(name,"%s_%s",GetName(),option);
+   snprintf(name,nch,"%s_%s",GetName(),option);
    nch = strlen(GetTitle()) +opt.Length() +2;
    char *title = new char[nch];
-   sprintf(title,"%s_%s",GetTitle(),option);
+   snprintf(title,nch,"%s_%s",GetTitle(),option);
 
    Double_t hxmin = GetXmin();
    Double_t hxmax = GetXmax();

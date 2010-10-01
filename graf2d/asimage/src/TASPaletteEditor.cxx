@@ -359,7 +359,7 @@ Bool_t TASPaletteEditor::ProcessMessage(Long_t msg, Long_t param1, Long_t param2
                         fImagePad->Modified();
                         fImagePad->Update();
                      }
-                     UpdateScreen(kTRUE);
+                     if (fPalette) UpdateScreen(kTRUE);
                      break;
 
                   case 21: // redo
@@ -443,9 +443,9 @@ void TASPaletteEditor::Save()
       // write into a ROOT file
       char fn[512];
       if (strcmp(".pal.root", fi.fFilename + strlen(fi.fFilename) - 9) != 0)
-         sprintf(fn, "%s%s", fi.fFilename, ".pal.root");
+         snprintf(fn,512, "%s%s", fi.fFilename, ".pal.root");
       else
-         strcpy(fn, fi.fFilename);
+         strncpy(fn, fi.fFilename,512);
 
       gROOT->ProcessLine(Form("gROOT->SaveObjectAs((TASPaletteEditor*)0x%lx,\"%s\",\"%s\");",(ULong_t)this,fn,"q"));
    }
@@ -484,7 +484,7 @@ void TASPaletteEditor::Open()
       // read from a ROOT file
       char fn[512];
       if (strcmp(".pal.root", fi.fFilename + strlen(fi.fFilename) - 9) != 0)
-         sprintf(fn, "%s%s", fi.fFilename, ".pal.root");
+         snprintf(fn,512, "%s%s", fi.fFilename, ".pal.root");
       else
          strcpy(fn, fi.fFilename);
       TDirectory *dirsav = gDirectory;

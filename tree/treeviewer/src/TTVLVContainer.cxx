@@ -134,7 +134,8 @@ const char *TTVLVEntry::ConvertAliases()
             fConvName.ReplaceAll(item->GetAlias(), item->GetTrueName());
       }
       if (fConvName == start) {
-         Warning(item->GetAlias(), "Cannot convert aliases for this expression.");
+         //the following line is deadcode reported by coverity because item=0
+         //if (item) Warning(item->GetAlias(), "Cannot convert aliases for this expression.");
          return(fConvName.Data());
       }
    }
@@ -512,7 +513,7 @@ Bool_t TTVLVContainer::HandleButton(Event_t *event)
             if (fViewer) {
                char msg[2000];
                msg[0] = 0;
-               sprintf(msg, "Content : %s", f->GetTrueName());
+               snprintf(msg,2000, "Content : %s", f->GetTrueName());
                fViewer->Message(msg);
             }
          }

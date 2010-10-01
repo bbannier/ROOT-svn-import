@@ -353,7 +353,7 @@ TSQLFile::TSQLFile(const char* dbname, Option_t* option, const char* user, const
    TDirectoryFile::Build();
    fFile = this;
 
-   if (strstr(dbname,"oracle://")!=0) {
+   if (dbname && strstr(dbname,"oracle://")!=0) {
       fBasicTypes = oracle_BasicTypes;
       fOtherTypes = oracle_OtherTypes;
    }
@@ -1450,10 +1450,6 @@ TSQLResult* TSQLFile::SQLQuery(const char* cmd, Int_t flag, Bool_t* ok)
    TSQLResult* res = fSQL->Query(cmd);
    if (ok!=0) *ok = res!=0;
    if (res==0) return 0;
-   if (flag==0) {
-      delete res;
-      return 0;
-   }
 //   if ((flag==2) && IsOracle())
 //      res = new TSQLResultCopy(res);
    return res;
@@ -2546,14 +2542,14 @@ Long64_t TSQLFile::StoreObjectInTables(Long64_t keyid, const void* obj, const TC
 
    TSQLStructure* s = buffer.SqlWriteAny(obj, cl, objid);
 
-   if ((buffer.GetErrorFlag()>0) && (s!=0)) {
+   if ((buffer.GetErrorFlag()>0) && s) {
       Error("StoreObjectInTables","Cannot convert object data to TSQLStructure");
       objid = -1;
    } else {
       TObjArray cmds;
       // here tables may be already created, therefore
       // it should be protected by transactions operations
-      if (!s->ConvertToTables(this, keyid, &cmds)) {
+      if (s && !s->ConvertToTables(this, keyid, &cmds)) {
          Error("StoreObjectInTables","Cannot convert to SQL statements");
          objid = -1;
       } else {

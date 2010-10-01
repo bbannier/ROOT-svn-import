@@ -40,6 +40,14 @@ ClassImp(TSpectrumTransform)
 TSpectrumTransform::TSpectrumTransform() 
 {
    //default constructor
+   fSize=0;
+   fTransformType=kTransformCos;
+   fDegree=0;
+   fDirection=kTransformForward;
+   fXmin=0;
+   fXmax=0;
+   fFilterCoeff=0;
+   fEnhanceCoeff=0.5;
 }
 
 //____________________________________________________________________________    
@@ -1767,6 +1775,7 @@ L&quot;);</span></p>
       }
       break;
    }
+   if (!working_space) return;
    for (i = 0, old_area = 0; i < fSize; i++) {
       old_area += working_space[i];
    }
@@ -2373,6 +2382,7 @@ L&quot;);</span></p>
       }
       break;
    }
+   if (!working_space) return;
    for (i = 0, old_area = 0; i < fSize; i++) {
       old_area += working_space[i];
    }

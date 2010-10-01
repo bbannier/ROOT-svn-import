@@ -56,7 +56,7 @@ XRDPLUGINSA := $(XROOTDDIRL)/libXrdClient.$(XRDSOEXT)
 XRDPLUGINS  := $(XRDPLUGINSA)
 XRDLIBS     := $(XRDPLUGINS)
 else
-XRDLIBS     := $(XROOTDDIRL)/libXrdOuc.a $(XROOTDDIRL)/libXrdNet.a \
+XRDLIBS     := $(XROOTDDIRL)/libXrdOuc.a $(XROOTDDIRL)/libXrdNet.a $(XROOTDDIRL)/libXrdNetUtil.a \
                $(XROOTDDIRL)/libXrdSys.a \
                $(LPATH)/libXrdClient.$(XRDSOEXT) $(LPATH)/libXrdSut.$(XRDSOEXT)
 XRDNETXD    := $(XROOTDDIRL)/libXrdOuc.a $(XROOTDDIRL)/libXrdSys.a \
@@ -155,6 +155,9 @@ $(XROOTDMAKE): $(XROOTDCFGD)
                 fi; \
 		if [ "x$(BUILDXRDGSI)" = "x" ] ; then \
 		   xopt="$$xopt --disable-gsi"; \
+		fi; \
+		if [ ! "x$(BUILDBONJOUR)" = "x" ] ; then \
+		   xopt="$$xopt --enable-bonjour"; \
 		fi; \
 		if [ ! "x$(SSLLIBDIR)" = "x" ] ; then \
 		   xlib=`echo $(SSLLIBDIR) | cut -c3-`; \
@@ -296,6 +299,7 @@ $(XROOTDDIRL)/libXrdSut.$(XRDSOEXT): $(XROOTDBUILD)
 #
 $(XROOTDDIRL)/libXrdOuc.a: $(XROOTDBUILD)
 $(XROOTDDIRL)/libXrdNet.a: $(XROOTDBUILD)
+$(XROOTDDIRL)/libXrdNetUtil.a: $(XROOTDBUILD)
 $(XROOTDDIRL)/libXrdSys.a: $(XROOTDBUILD)
 $(XROOTDDIRL)/libXrd.a: $(XROOTDBUILD)
 $(XROOTDDIRL)/libXrdClient.a: $(XROOTDBUILD)

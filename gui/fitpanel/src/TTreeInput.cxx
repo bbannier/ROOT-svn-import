@@ -136,8 +136,10 @@ Bool_t TTreeInput::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                switch (parm1) {
                   case 1:
                      // here copy the string from text buffer to return variable
-                     strcpy(fStrvars, fTEVars->GetBuffer()->GetString());
-                     strcpy(fStrcuts, fTECuts->GetBuffer()->GetString());
+                     // see TFitEditor.cxx for the maximum length:
+                     // char variables[256] = {0}; char cuts[256] = {0};
+                     strlcpy(fStrvars, fTEVars->GetBuffer()->GetString(), 256);
+                     strlcpy(fStrcuts, fTECuts->GetBuffer()->GetString(), 256);
                      delete this;
                      break;
                   case 2:
@@ -155,8 +157,10 @@ Bool_t TTreeInput::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
          switch (GET_SUBMSG(msg)) {
             case kTE_ENTER:
                // here copy the string from text buffer to return variable
-               strcpy(fStrvars, fTEVars->GetBuffer()->GetString());
-               strcpy(fStrcuts, fTECuts->GetBuffer()->GetString());
+               // see TFitEditor.cxx for the maximum length:
+               // char variables[256] = {0}; char cuts[256] = {0};
+               strlcpy(fStrvars, fTEVars->GetBuffer()->GetString(), 256);
+               strlcpy(fStrcuts, fTECuts->GetBuffer()->GetString(), 256);
                delete this;
                break;
             case kTE_TAB:

@@ -20,6 +20,9 @@
 // error handling, sorting, inspection, printing, drawing, etc.         //
 // Every object which inherits from TObject can be stored in the        //
 // ROOT collection classes.                                             //
+// TObject's bits can be used as flags, bits 0 - 13 and 24-31 are       //
+// reserved as  global bits while bits 14 - 23 can be used in different //
+// class hierarchies (watch out for overlaps).                          //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -64,10 +67,9 @@ TObject::TObject() : fUniqueID(0), fBits(kNotDeleted)
    // TObject constructor. It sets the two data words of TObject to their
    // initial values. The unique ID is set to 0 and the status word is
    // set depending if the object is created on the stack or allocated
-   // on the heap. Of the status word the high 8 bits are reserved for
-   // system usage and the low 24 bits are user settable. Depending on
-   // the ROOT environment variable "Root.MemStat" (see TEnv.h) the object
-   // is added to the global TObjectTable for bookkeeping.
+   // on the heap. Depending on the ROOT environment variable "Root.MemStat"
+   // (see TEnv) the object is added to the global TObjectTable for
+   // bookkeeping.
 
    if (TStorage::IsOnHeap(this))
       fBits |= kIsOnHeap;
@@ -322,10 +324,8 @@ void TObject::Dump() const
    else
       Printf("==> Dumping object at: 0x%016lx, name=%s, class=%s\n",(Long_t)this,GetName(),ClassName());
 
-   char parent[256];
-   parent[0] = 0;
    TDumpMembers dm;
-   ((TObject*)this)->ShowMembers(dm, parent);
+   ((TObject*)this)->ShowMembers(dm);
 }
 
 //______________________________________________________________________________
@@ -446,7 +446,7 @@ char *TObject::GetObjectInfo(Int_t px, Int_t py) const
    static char info[64];
    Float_t x = gPad->AbsPixeltoX(px);
    Float_t y = gPad->AbsPixeltoY(py);
-   sprintf(info,"x=%g, y=%g",gPad->PadtoX(x),gPad->PadtoY(y));
+   snprintf(info,64,"x=%g, y=%g",gPad->PadtoX(x),gPad->PadtoY(y));
    return info;
 }
 
@@ -631,13 +631,13 @@ void TObject::SaveAs(const char *filename, Option_t *option) const
    // The function is available via the object context menu.
 
    //==============Save object as a root file===============================
-   if (strstr(filename,".root")) {
+   if (filename && strstr(filename,".root")) {
       if (gDirectory) gDirectory->SaveObjectAs(this,filename,"");
       return;
    }
 
    //==============Save object as a XML file================================
-   if (strstr(filename,".xml")) {
+   if (filename && strstr(filename,".xml")) {
       if (gDirectory) gDirectory->SaveObjectAs(this,filename,"");
       return;
    }

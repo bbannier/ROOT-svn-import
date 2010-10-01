@@ -43,7 +43,6 @@
 #include "TObjString.h"
 #include "TList.h"
 #include "TClass.h"
-#include "snprintf.h"
 
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
@@ -330,7 +329,7 @@ void TSAXParserCallback::Characters(void *fParser, const xmlChar *ch,
    TSAXParser *parser = (TSAXParser*)fParser;
 
    char *str = new char[len+1];
-   strncpy(str, (const char*) ch, len);
+   strlcpy(str, (const char*) ch, len+1);
    str[len] = '\0';
 
    parser->OnCharacters(str);

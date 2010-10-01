@@ -50,8 +50,29 @@ namespace memstat {
       Container_t fContainer;
    };
 
+   const UShort_t g_digestSize = 16;
+   struct SCustomDigest {
+      SCustomDigest() {
+         memset(fValue, 0, g_digestSize);
+      }
+      SCustomDigest(UChar_t _val[g_digestSize]) {
+         memcpy(fValue, _val, g_digestSize);
+      }
+
+      UChar_t fValue[g_digestSize];
+   };
+   inline bool operator< (const SCustomDigest &a, const SCustomDigest &b)
+   {
+      for(int i = 0; i < g_digestSize; ++i) {
+         if(a.fValue[i] != b.fValue[i])
+            return (a.fValue[i] < b.fValue[i]);
+      }
+      return false;
+   }
+
+
    class TMemStatMng: public TObject {
-      typedef std::map<std::string, Int_t> CRCSet_t;
+      typedef std::map<SCustomDigest, Int_t> CRCSet_t;
 
    private:
       TMemStatMng();
@@ -62,7 +83,8 @@ namespace memstat {
       void Disable();                      //Disable memory statistic
       static TMemStatMng* GetInstance();   //get instance of class - ONLY ONE INSTANCE
       static void Close();                 //close MemStatManager
-
+      void SetMaxcalls(Long64_t maxcalls);
+      
    public:
       //stack data members
       void SetUseGNUBuiltinBacktrace(Bool_t newVal) {
@@ -80,6 +102,8 @@ namespace memstat {
       static void FreeHook(void* ptr, const void* /*caller*/);
       static void MacAllocHook(void *ptr, size_t size);
       static void MacFreeHook(void *ptr);
+      Int_t generateBTID(UChar_t *CRCdigest, Int_t stackEntries,
+                         void **stackPointers);
 
 
       //  memory information
@@ -96,6 +120,7 @@ namespace memstat {
       Int_t    fNBytes;       //number of bytes allocated/freed
       UInt_t   fN;
       Int_t    fBtID;         //back trace identifier
+      Long64_t fMaxCalls;     //max number of malloc/frees to register in the output Tree
 
    private:
       TMemStatFAddrContainer fFAddrs;

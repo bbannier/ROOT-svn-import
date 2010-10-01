@@ -213,7 +213,7 @@ static inline UInt_t MapKeySym(const QKeyEvent &qev)
 #if 0
    QByteArray oar = gQt->GetTextDecoder()->fromUnicode(qev.text());
    const char *r = oar.constData();
-   qstrncpy((char *)&text, (const char *)r,1);
+   qstrlcpy((char *)&text, (const char *)r,1);
    return text;
 #else
    text = UInt_t(qev.text().toAscii().data()[0]);
@@ -397,6 +397,7 @@ bool TQtClientFilter::eventFilter( QObject *qWidget, QEvent *e ){
    TQtClientWidget *frame = dynamic_cast<TQtClientWidget *>(qWidget);
    if (!(frame /* && gQt->IsRegistered(frame)  */) )    {
          if (filterTime) filterTime->Stop();
+         delete &evt;
          return kFALSE; // it is a desktop, it is NOT ROOT gui object
    }
    QPaintDevice *paintDev = (QPaintDevice *)frame;

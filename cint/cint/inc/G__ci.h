@@ -341,10 +341,6 @@
 #endif
 #endif
 
-#ifdef __VMS
-#define G__VMS
-#endif
-
 #if defined(__BORLANDC__) || defined(__BCPLUSPLUS) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
 #ifndef G__BORLAND
 #define G__BORLAND
@@ -435,15 +431,6 @@ typedef unsigned long long G__uint64;
 
 #ifndef G__IF_DUMMY
 #define G__IF_DUMMY /* avoid compiler warning */
-#endif
-
-#ifdef G__VMS
-#ifndef G__NONSCALARFPOS
-#define G__NONSCALARFPOS
-#endif
-typedef long fpos_tt; /* pos_t is defined to be a struct{32,32} in VMS.
-                         Therefore,pos_tt is defined to be a long. This
-                         is used in G__ifunc_table_VMS, G__functentry_VMS*/
 #endif
 
 #if defined(G__BORLAND) || defined(G__VISUAL)
@@ -1103,10 +1090,6 @@ struct G__friendtag;
 struct G__bytecodefunc;
 #endif
 struct G__funcentry;
-#ifdef G__VMS
-struct G__funcentry_VMS;
-struct G__ifunc_table_VMS;
-#endif
 struct G__ifunc_table;
 struct G__inheritance;
 struct G__var_array;
@@ -1132,18 +1115,21 @@ struct G__va_list_para;
 **************************************************************************/
 struct G__ifunc_table;
 struct G__var_array;
-struct G__dictposition; // decl in Api.h because of Cint7's having C++ content
+struct G__dictposition; /* decl in Api.h because of Cint7's having C++ content */
 
 /**************************************************************************
 * comment information
 *
 **************************************************************************/
 struct G__comment_info {
-  union {
-    char  *com;
-    fpos_t pos;
-  } p;
-  int   filenum;
+   union {
+      char  *com;
+      fpos_t pos;
+   } p;
+   int   filenum;
+#ifdef __cplusplus
+   G__comment_info() : filenum(0) { p.com = 0; };
+#endif
 };
 
 /**************************************************************************
@@ -1192,13 +1178,8 @@ struct G__friendtag {
 **************************************************************************/
 struct G__param {
   int paran;
-#ifdef G__OLDIMPLEMENTATION1530
-  char parameter[G__MAXFUNCPARA][G__ONELINE];
-#endif
   G__value para[G__MAXFUNCPARA];
-#ifndef G__OLDIMPLEMENTATION1530
   char parameter[G__MAXFUNCPARA][G__ONELINE];
-#endif
 };
 
 
@@ -1613,6 +1594,11 @@ G__EXPORT void G__SET_CINT_API_POINTERS_FUNCNAME (void *a[G__NUMBER_OF_API_FUNCT
 
 #endif /* __CINT__ */
 
+#if defined(G__WIN32) 
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
+#endif
 
 #if defined(G__WIN32) && (!defined(G__SYMANTEC)) && defined(G__CINTBODY)
 /* ON562 , this used to be test for G__SPECIALSTDIO */
@@ -1701,8 +1687,9 @@ G__signaltype G__signal G__P((int sgnl,void (*f)(int)));
 
 /***********************************************************************/
 #if defined(__cplusplus) && !defined(__CINT__)
-// Helper class to avoid compiler warning about casting function pointer
-// to void pointer.
+/* Helper class to avoid compiler warning about casting function pointer
+** to void pointer.
+*/
 class G__func2void {
    typedef void (*funcptr_t)();
 
@@ -1726,6 +1713,11 @@ public:
       return _tmp._read;
    }
 };
+#elif !__CINT__
+typedef union {
+   void *_read;
+   void (*_write)();   
+} funcptr_and_voidptr;
 #endif /* __cplusplus  && ! __CINT__*/
 
 #endif /* __MAKECINT__ */

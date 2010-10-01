@@ -38,7 +38,6 @@
 #include "TObjString.h"
 #include "TTabCom.h"
 #include "TError.h"
-#include "snprintf.h"
 #include <stdlib.h>
 
 #ifdef R__BUILDEDITLINE
@@ -204,7 +203,7 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
 
    // Goto into raw terminal input mode
    char defhist[kMAXPATHLEN];
-   sprintf(defhist, "%s/.root_hist", gSystem->HomeDirectory());
+   snprintf(defhist, sizeof(defhist), "%s/.root_hist", gSystem->HomeDirectory());
    logon = gEnv->GetValue("Rint.History", defhist);
    // In the code we had HistorySize and HistorySave, in the rootrc and doc
    // we have HistSize and HistSave. Keep the doc as it is and check
@@ -225,7 +224,7 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
    }
    Gl_histsize(hist_size, hist_save);
    Gl_histinit((char *)logon);
-     
+
 #ifdef R__BUILDEDITLINE
    // black on white or white on black?
    static const char* defaultColorsBW[] = {
@@ -485,9 +484,9 @@ char *TRint::GetPrompt()
 
    char *s = gCint->GetPrompt();
    if (s[0])
-      strcpy(fPrompt, s);
+      strlcpy(fPrompt, s, sizeof(fPrompt));
    else
-      sprintf(fPrompt, fDefaultPrompt.Data(), fNcmd);
+      snprintf(fPrompt, sizeof(fPrompt), fDefaultPrompt.Data(), fNcmd);
 
    return fPrompt;
 }
@@ -627,8 +626,8 @@ void TRint::Terminate(Int_t status)
             ProcessFile(logoff);
          delete [] mac;
       }
-
-      gSystem->Exit(status);
+      TApplication::Terminate(status);
+      //gSystem->Exit(status);
    }
 }
 

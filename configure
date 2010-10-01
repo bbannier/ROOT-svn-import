@@ -391,7 +391,15 @@ check_library() {
     libdirs="$*"
 
     if test ! "x$iossdk" = "x" ; then
-        libdirs="$iossdk/usr/lib"
+        sdklibs=""
+        for i in $libdirs; do
+            #if test $i = "/usr/lib"; then
+                sdklibs="$sdklibs ${iossdk}${i}"
+            #else
+            #    sdklibs="$sdklibs $i"
+            #fi
+        done
+        libdirs="$sdklibs"
     fi
 
     # Write a message
@@ -590,7 +598,15 @@ check_header()  {
     hdrdirs="$*"
 
     if test ! "x$iossdk" = "x" ; then
-        hdrdirs="$iossdk/usr/include"
+        sdkhdrs=""
+        for i in $hdrdirs; do
+            #if test $i = "/usr/include"; then
+                sdkhdrs="$sdkhdrs ${iossdk}${i}"
+            #else
+            #    sdkhdrs="$sdkhdrs $i"
+            #fi
+        done
+        hdrdirs="$sdkhdrs"
     fi
 
     # Write a message
@@ -1325,7 +1341,7 @@ with options, prefix with --with-, enables corresponding support
   pythia8-libdir     PYHTIA8 support, location of libpythia8.so
   python-incdir      Python support, location of Python.h
   python-libdir      Python support, location of libpython
-  qt-incdir          Qt support, location of qt.h
+  qt-incdir          Qt support, location of Qt/qglobal.h
   qt-libdir          Qt support, location of libqt-mt or libqt
   ruby-incdir        Ruby support, location of ruby.h
   ruby-libdir        Ruby support, location of libruby
@@ -1613,7 +1629,7 @@ if test $# -gt 0 ; then
       --with-pythia8-libdir=*) pythia8libdir=$optarg ; enable_pythia8="yes" ;;
       --with-python-incdir=*)  pythonincdir=$optarg  ; enable_python="yes"  ;;
       --with-python-libdir=*)  pythonlibdir=$optarg  ; enable_python="yes"  ;;
-      --with-qt-incdir=*)      qtincdir=$optarg      ; enable_qt="yes"; enable_qtgsi="yes" ;;
+      --with-qt-incdir=*)      qtincdir=$optarg      ; mocdir=$optarg/../bin; enable_qt="yes"; enable_qtgsi="yes" ;;
       --with-qt-libdir=*)      qtlibdir=$optarg      ; enable_qt="yes"; enable_qtgsi="yes" ;;
       --with-ruby-incdir=*)    rubyincdir=$optarg    ; enable_ruby="yes"    ;;
       --with-ruby-libdir=*)    rubylibdir=$optarg    ; enable_ruby="yes"    ;;
@@ -2846,7 +2862,8 @@ shiftold=""
 if test ! "x$enable_rfio" = "xno" ; then
     # Check for RFIO include and library
     keepincdir=$shiftincdir
-    check_header "rfio_api.h" "$shiftincdir" $RFIO $RFIO/include $RFIO/h \
+    check_header "rfio_api.h" "$shiftincdir" $RFIO $RFIO/include \
+        $RFIO/include/shift $RFIO/h \
         /cern/pro/include /cern/new/include /cern/old/include \
         /opt/shift/include /usr/local/shift/inlcude /usr/include/shift \
         /usr/local/include/shift /usr/include /usr/local/include
@@ -2908,7 +2925,8 @@ castorold=""
 if test ! "x$enable_castor" = "xno" ; then
     # Check for Castor include and library
     keepincdir=$castorincdir
-    check_header "rfio_api.h" "$castorincdir" $CASTOR $CASTOR/include $CASTOR/h \
+    check_header "rfio_api.h" "$castorincdir" $CASTOR $CASTOR/include \
+        $CASTOR/include/shift $CASTOR/h \
         /cern/pro/include /cern/new/include /cern/old/include \
         /opt/shift/include /usr/local/shift/inlcude /usr/include/shift \
         /usr/local/include/shift /usr/include /usr/local/include
@@ -2928,7 +2946,8 @@ if test ! "x$enable_castor" = "xno" ; then
         fi
     fi
 
-    check_header "stager_api.h" "$keepincdir" $CASTOR $CASTOR/include $CASTOR/h \
+    check_header "stager_api.h" "$keepincdir" $CASTOR $CASTOR/include \
+        $CASTOR/include/shift $CASTOR/h \
         /cern/pro/include /cern/new/include /cern/old/include \
         /opt/shift/include /usr/local/shift/inlcude /usr/include/shift \
         /usr/local/include/shift /usr/include /usr/local/include
@@ -3115,25 +3134,25 @@ if test ! "x$enable_gviz" = "xno"; then
     # Check for graphviz include and library
     check_header "gvc.h" "$gvizincdir" $GVIZ $GVIZ/include \
                   /usr/local/include/graphviz /usr/include/graphviz \
-                  /opt/local/include/graphviz
+                  $finkdir/include/graphviz
     gvizinc=$found_hdr
     gvizincdir=$found_dir
 
     # At this time, libgvplugin_core.a should always be prefered over .so,
     # to avoid forcing users to install graphviz.
     check_library "libgvc gvc" "no" "$gvizlibdir" $GVIZ $GVIZ/lib \
-                  $GVIZ/.libs /usr/local/lib /usr/lib /opt/local/lib
+                  $GVIZ/.libs /usr/local/lib /usr/lib $finkdir/lib
     gvizlib1=$found_lib
     gvizlib1raw=$found_raw_lib
     gvizlibir=$found_dir
     check_library "libgraph graph" "no" "$gvizlibdir" $GVIZ $GVIZ/lib \
-                  $GVIZ/.libs /usr/local/lib /usr/lib /opt/local/lib
+                  $GVIZ/.libs /usr/local/lib /usr/lib $finkdir/lib
     gvizlib2=$found_lib
     check_library "libcdt cdt" "no" "$gvizlibdir" $GVIZ $GVIZ/lib \
-                  $GVIZ/.libs /usr/local/lib /usr/lib /opt/local/lib
+                  $GVIZ/.libs /usr/local/lib /usr/lib $finkdir/lib
     gvizlib3=$found_lib
     check_library "libpathplan pathplan" "no" "$gvizlibdir" $GVIZ $GVIZ/lib \
-                  $GVIZ/.libs /usr/local/lib /usr/lib /opt/local/lib
+                  $GVIZ/.libs /usr/local/lib /usr/lib $finkdir/lib
     gvizlib4=$found_lib
 
     # the plugin libraries are in the directory "$gvizlibdir"/graphviz
@@ -3146,7 +3165,7 @@ if test ! "x$enable_gviz" = "xno"; then
     fi
     check_library "libgvplugin_dot_layout gvplugin_dot_layout" "no" "$gvizlibpdir" $GVIZ $GVIZ/lib \
                   $GVIZ/.libs /usr/local/lib/graphviz /usr/lib/graphviz \
-                  /opt/local/lib/graphviz
+                  $finkdir/lib/graphviz
     gvizlibp1=$found_lib
     gvizlibpir=$found_dir
 
@@ -3505,21 +3524,21 @@ if test ! "x$enable_asimage" = "xno" ; then
     # for a system library, then see if we have various headers needed.
     if test "x$enable_builtin_afterimage" = "xyes" ; then
        check_header "jpeglib.h" "" $ASIMAGE $ASIMAGE/include \
-          /usr/local/include /usr/include /opt/include
+          /usr/local/include /usr/include /opt/include $finkdir/include
        asjpegincdir=$found_dir
        check_header "png.h" "" $ASIMAGE $ASIMAGE/include $ASPNG/include \
           /usr/local/include /usr/include /usr/local/include/libpng \
-          /opt/include
+          /opt/include $finkdir/include
        aspngincdir=$found_dir
        if test ! "x$enable_astiff" = "xno" ; then
            check_header "tiffio.h" "" $ASIMAGE $ASIMAGE/include \
-               /usr/local/include /usr/include /opt/include
+               /usr/local/include /usr/include /opt/include $finkdir/include
            astiffincdir=$found_dir
        else
            astiffincdir="--with-tiff=no"
        fi
        check_header "gif_lib.h" "" $ASIMAGE $ASIMAGE/include \
-          /usr/local/include /usr/include /opt/include
+          /usr/local/include /usr/include /opt/include $finkdir/include
        asgifincdir=$found_dir
 
        asextralib=""
@@ -3537,7 +3556,8 @@ if test ! "x$enable_asimage" = "xno" ; then
        fi
        for k in $aslibs ; do
            check_library $k "$enable_shared" "" \
-             $ASIMAGE $ASIMAGE/lib $ASPNG/lib /usr/local/lib /usr/lib /opt/lib
+             $ASIMAGE $ASIMAGE/lib $ASPNG/lib /usr/local/lib /usr/lib /opt/lib \
+			 $finkdir/lib
            if test "x$k" = "xlibz" ; then
                found_libz=$found_lib
                found_dirz=$found_dir
@@ -3630,12 +3650,12 @@ if test ! "x$enable_python" = "xno" ; then
     # Check for Python include and library
     mypython=`$cwhich python 2> /dev/null`
     if test ! "x$mypython" = "x" && test -x "$mypython" ; then
-       pythonvers=`python -c 'import sys; print sys.version[:3]'`
-       pythonsysincdir=`python -c 'import sys;print sys.prefix + "/include/python" + sys.version[:3]'`
-       pythonsyslibdir=`python -c 'import sys; print sys.prefix + "/lib/python" + sys.version[:3]'`
+       pythonvers=`python -c 'import sys; sys.stdout.write(sys.version[:3])'`
+       pythonsysincdir=`python -c 'import sys; sys.stdout.write(sys.prefix + "/include/python" + sys.version[:3])'`
+       pythonsyslibdir=`python -c 'import sys; sys.stdout.write(sys.prefix + "/lib/python" + sys.version[:3])'`
        pythonsyslibdir2=
        if test "x$platform" = "xmacosx"; then
-          pythonsyslibdir2=`python -c 'import sys; print sys.prefix'`
+          pythonsyslibdir2=`python -c 'import sys; sys.stdout.write(sys.prefix)'`
        fi
     fi
     check_header "Python.h" "$pythonincdir" $PYTHONDIR $PYTHONDIR/include \
@@ -3645,7 +3665,7 @@ if test ! "x$enable_python" = "xno" ; then
     pysuffix=""
     if test "x$platform" = "xwin32"; then
        if test ! "x$mypython" = "x" && test -x "$mypython" ; then
-          pythonvers=`python -c 'import sys; print sys.version[:3].replace(".","")' | tr -d '\r'`
+          pythonvers=`python -c 'import sys; sys.stdout.write(sys.version[:3].replace(".",""))' | tr -d '\r'`
           if test ! "x$pythonincdir" = "x" ; then
              pythonincdir=`cygpath -m $pythonincdir`
           fi
@@ -3658,8 +3678,8 @@ if test ! "x$enable_python" = "xno" ; then
     check_library "python${pythonvers}${pysuffix} libpython${pythonvers}${pysuffix} \
                    libpython${pysuffix} python${pysuffix} Python${pysuffix}" \
         "$enable_shared" "$pythonlibdir" $PYTHONDIR/libs $PYTHONDIR/lib \
-        $PYTHONDIR $pythonsyslibdir $pythonsyslibdir/config \
-        $pythonsyslibdir2 /usr/lib
+        $PYTHONDIR $pythonsyslibdir $pythonsyslibdir2 /usr/local/lib /usr/lib \
+        $pythonsyslibdir/config
     pythonlib=$found_lib
     pythonlibdir=$found_dir
 
@@ -3762,8 +3782,8 @@ if test ! "x$enable_xml" = "xno" ; then
        result "not found"
        # fall back in case xml2-config is not found
        keepincdir=$xmlincdir
-       check_header "libxml2/libxml/tree.h" "$xmlincdir" $XMLDIR $XMLDIR/include \
-           /opt/include /usr/local/include
+       check_header "libxml/tree.h" "$xmlincdir" $XMLDIR $XMLDIR/include \
+           /opt/include/libxml2 /usr/local/include/libxml2 /usr/include/libxml2 $finkdir/include/libxml2
        xmlincdir=$found_dir
 
        keeplibdir=$xmllibdir
@@ -3813,6 +3833,7 @@ check_explicit "$enable_xml" "$enable_xml_explicit" \
 #
 message "Checking whether to build xrootd"
 xrdcomm=""
+vercomm=
 
 # If we are required to use an external XROOTD distribution
 # we just define the pointers
@@ -3825,9 +3846,6 @@ if test ! "x$xrdlibdir" = "x" && test ! "x$xrdincdir" = "x"; then
    externalxrd="yes"
 elif test ! "x$xrootddir" = "x"; then
    externalxrd="yes"
-fi
-if test "x$enable_xrootd" = "xyes" && test "x$externalxrd" = "xyes"; then
-
    if test ! "x$xrdlibdir" = "x" && test ! "x$xrdincdir" = "x"; then
       xrdcomm="no, using xrootd at $xrdlibdir, $xrdincdir"
       if test ! -f "$xrdincdir/XrdVersion.hh" ; then
@@ -3846,40 +3864,50 @@ if test "x$enable_xrootd" = "xyes" && test "x$externalxrd" = "xyes"; then
          xrdcomm="no, asked to use installation at $xrootddir, but version file missing: disabling"
       fi
    fi
+fi
+# Decode version
+xrdver=
+decver=0
+if test ! "x$enable_xrootd" = "xno" ; then
 
-   if test "x$enable_xrootd" = "yes" ; then
+   if test "x$externalxrd" = "xyes"; then
+      verh=$xrdincdir/XrdVersion.hh
+   else
+      verh=net/xrootd/src/xrootd/src/XrdVersion.hh
+   fi
+   xrdver=`grep XrdVERSION $verh`
+   if test $? -eq 0 ; then
+      set $xrdver
+      xrdver=$3
+   else
+      xrdver="unknown"
+   fi
+   if test ! "x$xrdver" = "xunknown"; then
+      tmpver=`echo $xrdver | sed 's|v||' | cut -c2-9`
+      decver=`expr 1 \* 0"$tmpver"`
+   fi
+fi
+if test "x$enable_xrootd" = "xyes" && test "x$externalxrd" = "xyes"; then
+
+   if test "x$enable_xrootd" = "xyes" ; then
 
       # Check version
-      verh=$xrdincdir/XrdVersion.hh
-      xrdver=`grep XrdVERSION $verh`
-      if test $? -eq 0 ; then
-         set $xrdver
-         xrdver=$3
-      else
-         xrdver="unknown"
-      fi
-
       decrefone=20070628
       decreftwo=20070723
       decrefthree=20071004
-      decver=0
-      if test ! "x$xrdver" = "xunknown"; then
-         tmpver=`echo $xrdver | cut -c2-9`
-         decver=`expr 1 \* 0"$tmpver"`
-      fi
       if [ $decver -gt $decrefone ] ; then
          if [ $decver -gt $decrefthree ] ; then
-            xrdcomm="$xrdcomm (version is > 20071004)"
+            xrdcomm="$xrdcomm"
             extraxrdflags="$extraxrdflags"
          elif [ $decver -gt $decreftwo ] ; then
-            xrdcomm="$xrdcomm (version is > 20070723)"
+            vercomm=" (>$decreftwo, <=$decrefthree: setting -DOLDXRDLOCATE)"
             extraxrdflags="-DOLDXRDLOCATE $extraxrdflags"
          else
-            xrdcomm="$xrdcomm (version is > 20070628)"
+            vercomm=" (>$decrefone, <=$decreftwo: setting -DOLDXRDLOCATE -DOLDXRDOUC)"
             extraxrdflags="-DOLDXRDOUC -DOLDXRDLOCATE $extraxrdflags"
          fi
       else
-         xrdcomm="$xrdcomm (version is <= 20070628: setting the appropriate compilation flag)"
+         vercomm=" (<= $decrefone: setting -DOLDXRDLOCATE -DOLDXRDOUC -DOLDXRCPHYCONN)"
          extraxrdflags="-DOLDXRCPHYCONN -DOLDXRDOUC -DOLDXRDLOCATE $extraxrdflags"
       fi
    fi
@@ -3935,12 +3963,13 @@ else
    xrdcomm="$enable_xrootd$xrdcomm"
 fi
 
+xrdcomm="$xrdcomm"
 result $xrdcomm
-
 if test "x$enable_xrootd" = "xyes"; then
     buildxrd="yes"
     hasxrd=""
     hasnotxrd="#"
+    echo "Xrootd version $xrdver $vercomm"
 else
     buildxrd="no"
     hasxrd="#"
@@ -5990,6 +6019,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@xrdaddopts@|$xrdaddopts|"            \
     -e "s|@xrdlibdir@|$xrdlibdir|"              \
     -e "s|@xrdincdir@|$xrdincdir|"              \
+    -e "s|@xrdversion@|$decver|"                \
     -e "s|@cursesincdir@|$cursesincdir|"        \
     -e "s|@curseshdr@|$curseshdr|"              \
     -e "s|@curseslib@|$curseslib|"              \

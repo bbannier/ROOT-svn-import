@@ -836,8 +836,8 @@ void TH3::FitSlicesZ(TF1 *f1, Int_t binminx, Int_t binmaxx, Int_t binminy, Int_t
    const TArrayD *xbins = fXaxis.GetXbins();
    const TArrayD *ybins = fYaxis.GetXbins();
    for (ipar=0;ipar<npar;ipar++) {
-      sprintf(name,"%s_%d",GetName(),ipar);
-      sprintf(title,"Fitted value of par[%d]=%s",ipar,f1->GetParName(ipar));
+      snprintf(name,80,"%s_%d",GetName(),ipar);
+      snprintf(title,80,"Fitted value of par[%d]=%s",ipar,f1->GetParName(ipar));
       if (xbins->fN == 0) {
          hlist[ipar] = new TH2D(name, title,
                                 nbinsx, fXaxis.GetXmin(), fXaxis.GetXmax(),
@@ -850,7 +850,7 @@ void TH3::FitSlicesZ(TF1 *f1, Int_t binminx, Int_t binmaxx, Int_t binminy, Int_t
       hlist[ipar]->GetXaxis()->SetTitle(fXaxis.GetTitle());
       hlist[ipar]->GetYaxis()->SetTitle(fYaxis.GetTitle());
    }
-   sprintf(name,"%s_chi2",GetName());
+   snprintf(name,80,"%s_chi2",GetName());
    TH2D *hchi2 = new TH2D(name,"chisquare", nbinsx, fXaxis.GetXmin(), fXaxis.GetXmax()
       , nbinsy, fYaxis.GetXmin(), fYaxis.GetXmax());
 
@@ -1639,7 +1639,7 @@ TH1D *TH3::ProjectionX(const char *name, Int_t iymin, Int_t iymax, Int_t izmin, 
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.
-   //   if option "o" original axis range of the taget axes will be
+   //   if option "o" original axis range of the target axes will be
    //   kept, but only bins inside the selected range will be filled.
    //
    //   NOTE that if a TH1D named "name" exists in the current directory or pad and having   
@@ -1717,7 +1717,7 @@ TH1D *TH3::ProjectionY(const char *name, Int_t ixmin, Int_t ixmax, Int_t izmin, 
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.
-   //   if option "o" original axis range of the taget axes will be
+   //   if option "o" original axis range of the target axes will be
    //   kept, but only bins inside the selected range will be filled.
    //
    //   NOTE that if a TH1D named "name" exists in the current directory or pad and having   
@@ -1796,7 +1796,7 @@ TH1D *TH3::ProjectionZ(const char *name, Int_t ixmin, Int_t ixmax, Int_t iymin, 
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.
-   //   if option "o" original axis range of the taget axes will be
+   //   if option "o" original axis range of the target axes will be
    //   kept, but only bins inside the selected range will be filled.
    //
    //   NOTE that if a TH1D named "name" exists in the current directory or pad and having   
@@ -1963,6 +1963,7 @@ TH1D *TH3::DoProject1D(const char* name, const char* title, TAxis* projX,
    if ( projX == GetXaxis() ) { refX = &ixbin;   refY = &out1bin; refZ = &out2bin; }
    if ( projX == GetYaxis() ) { refX = &out2bin; refY = &ixbin;   refZ = &out1bin; }
    if ( projX == GetZaxis() ) { refX = &out2bin; refY = &out1bin; refZ = &ixbin;   }
+   R__ASSERT (refX != 0 && refY != 0 && refZ != 0); 
 
    // Fill the projected histogram excluding underflow/overflows if considered in the option
    // if specified in the option (by default they considered)
@@ -2198,6 +2199,7 @@ TH2D *TH3::DoProject2D(const char* name, const char * title, TAxis* projX, TAxis
    if ( projX == GetZaxis() && projY == GetXaxis() ) { refX = &iybin;  refY = &outbin; refZ = &ixbin;  }
    if ( projX == GetYaxis() && projY == GetZaxis() ) { refX = &outbin; refY = &ixbin;  refZ = &iybin;  }
    if ( projX == GetZaxis() && projY == GetYaxis() ) { refX = &outbin; refY = &iybin;  refZ = &ixbin;  }
+   R__ASSERT (refX != 0 && refY != 0 && refZ != 0); 
 
    // Fill the projected histogram excluding underflow/overflows if considered in the option
    // if specified in the option (by default they considered)
@@ -2337,7 +2339,7 @@ TH1 *TH3::Project3D(Option_t *option) const
    // option = "zy" return the z versus y projection into a TH2D histogram
    // NB: the notation "a vs b" means "a" vertical and "b" horizontal
    //
-   // option = "o" original axis range of the taget axes will be
+   // option = "o" original axis range of the target axes will be
    //   kept, but only bins inside the selected range will be filled.
    //
    // If option contains the string "e", errors are computed
@@ -2637,6 +2639,7 @@ TProfile2D *TH3::DoProjectProfile2D(const char* name, const char * title, TAxis*
    if ( projX == GetZaxis() && projY == GetXaxis() ) { refX = &iybin;  refY = &outbin; refZ = &ixbin;  }
    if ( projX == GetYaxis() && projY == GetZaxis() ) { refX = &outbin; refY = &ixbin;  refZ = &iybin;  }
    if ( projX == GetZaxis() && projY == GetYaxis() ) { refX = &outbin; refY = &iybin;  refZ = &ixbin;  }
+   R__ASSERT (refX != 0 && refY != 0 && refZ != 0); 
 
    Int_t outmin = outAxis->GetFirst(); 
    Int_t outmax = outAxis->GetLast(); 
@@ -2714,7 +2717,7 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    // option = "zy" return the z versus y projection into a TProfile2D histogram
    // NB: the notation "a vs b" means "a" vertical and "b" horizontal
    //
-   // option = "o" original axis range of the taget axes will be
+   // option = "o" original axis range of the target axes will be
    //   kept, but only bins inside the selected range will be filled.
    //
    // The projection is made for the selected bins only.

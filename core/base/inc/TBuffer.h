@@ -53,8 +53,6 @@ protected:
    TBuffer(const TBuffer &);           // not implemented
    void operator=(const TBuffer &);    // not implemented
 
-   void Expand(Int_t newsize);  // expand buffer to newsize
-
    Int_t Read(const char *name) { return TObject::Read(name); }
    Int_t Write(const char *name, Int_t opt, Int_t bufs)
                               { return TObject::Write(name, opt, bufs); }
@@ -87,6 +85,7 @@ public:
    Int_t    BufferSize() const { return fBufSize; }
    void     DetachBuffer() { fBuffer = 0; }
    Int_t    Length()     const { return (Int_t)(fBufCur - fBuffer); }
+   void     Expand(Int_t newsize);  // expand buffer to newsize
 
    virtual Bool_t     CheckObject(const TObject *obj) = 0;
    virtual Bool_t     CheckObject(const void *obj, const TClass *ptrClass) = 0;
@@ -119,6 +118,7 @@ public:
    virtual void      *ReadObjectAny(const TClass* cast) = 0;
    virtual void       SkipObjectAny() = 0;
 
+   virtual void       TagStreamerInfo(TVirtualStreamerInfo* info) = 0;
    virtual void       IncrementLevel(TVirtualStreamerInfo* info) = 0;
    virtual void       SetStreamerElementNumber(Int_t) = 0;
    virtual void       DecrementLevel(TVirtualStreamerInfo*) = 0;

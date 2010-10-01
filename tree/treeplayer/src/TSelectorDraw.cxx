@@ -219,7 +219,7 @@ void TSelectorDraw::Begin(TTree *tree)
       }
 
       if (i) {
-         strncpy(varexp,varexp0,i); varexp[i]=0;
+         strlcpy(varexp,varexp0,i+1); 
 
          Int_t mustdelete=0;
          SetBit(kCustomHistogram);
@@ -445,7 +445,8 @@ void TSelectorDraw::Begin(TTree *tree)
    } else { // if (hname)
       hname  = hdefault;
       hkeep  = 0;
-      varexp = (char*)varexp0;
+      varexp = new char[strlen(varexp0)+1];
+      strlcpy(varexp,varexp0,strlen(varexp0)+1);
       if (gDirectory) {
          fOldHistogram = (TH1*)gDirectory->Get(hname);
          if (fOldHistogram) { fOldHistogram->Delete(); fOldHistogram = 0;}
@@ -453,7 +454,11 @@ void TSelectorDraw::Begin(TTree *tree)
    }
 
    // Decode varexp and selection
-   if (!CompileVariables(varexp, realSelection.GetTitle())) {SetStatus(-1); return;}
+   if (!CompileVariables(varexp, realSelection.GetTitle())) {
+      SetStatus(-1); 
+      delete [] varexp;
+      return;
+   }
    if (fDimension > 4 && !(optpara || optcandle || opt5d)) {
       Error("Begin","Too many variables. Use the option \"para\", \"gl5d\" or \"candle\" to display more than 4 variables.");
       SetStatus(-1);

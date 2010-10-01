@@ -507,8 +507,9 @@ Int_t TProofPlayer::ReinitSelector(TQueryResult *qr)
          md5hold = qr->GetSelecHdr()->Checksum();
 
          // If nothing has changed nothing to do
-         if (*md5hcur == *md5hold && *md5icur == *md5iold)
-            expandselec = kFALSE;
+         if (md5hcur && md5hold && md5icur && md5iold)
+            if (*md5hcur == *md5hold && *md5icur == *md5iold)
+               expandselec = kFALSE;
 
          SafeDelete(md5icur);
          SafeDelete(md5hcur);
@@ -743,6 +744,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
       if (!(fSelector = TSelector::GetSelector(selector_file))) {
          Error("Process", "cannot load: %s", selector_file );
+         gProofServ->GetCacheLock()->Unlock();
          return -1;
       }
 
@@ -819,6 +821,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    } CATCH(excode) {
       SetProcessing(kFALSE);
       Error("Process","exception %d caught", excode);
+      gProofServ->GetCacheLock()->Unlock();
       return -1;
    } ENDTRY;
 
@@ -1917,7 +1920,7 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
       if (fPacketizer) {
          TObject *pperf = (TObject *) fPacketizer->GetProgressPerf(kTRUE);
          if (pperf) fOutput->Add(pperf);
-         TList *parms = fPacketizer->GetConfigParams();
+         TList *parms = fPacketizer->GetConfigParams(kTRUE);
          if (parms) {
             TIter nxo(parms);
             TObject *o = 0;
@@ -2102,19 +2105,6 @@ Bool_t TProofPlayerRemote::SendSelector(const char* selector_file)
       return kTRUE;
    }
 
-   // Supported extensions for the implementation file
-   const char *cext[3] = { ".C", ".cxx", ".cc" };
-   Int_t e = 0;
-   for ( ; e < 3; e++)
-      if (strstr(selector_file, cext[e]))
-         break;
-   if (e >= 3) {
-      Info("SendSelector",
-           "Invalid extension: %s (supportd extensions: .C, .cxx, .cc", selector_file);
-      return kFALSE;
-   }
-   Int_t l = strlen(cext[e]);
-
    // Extract the fine name first
    TString selec = selector_file;
    TString aclicMode;
@@ -2141,11 +2131,12 @@ Bool_t TProofPlayerRemote::SendSelector(const char* selector_file)
 
    // Header file
    TString header = selec;
-   header.Replace(header.Length()-l, l,".h");
+   header.Remove(header.Last('.'));
+   header += ".h";
    if (gSystem->AccessPathName(header, kReadPermission)) {
       TString h = header;
-      header = selec;
-      header.Replace(header.Length()-l, l,".hh");
+      header.Remove(header.Last('.'));
+      header += ".hh";
       if (gSystem->AccessPathName(header, kReadPermission)) {
          Info("SendSelector",
               "header file not found: tried: %s %s", h.Data(), header.Data());
@@ -3122,9 +3113,6 @@ Long64_t TProofPlayerRemote::DrawSelect(TDSet *set, const char *varexp,
    Long64_t r = Process(set, selector, option, nentries, firstentry);
    fProof->RemoveFeedback(objname);
 
-   // Remove the feedback canvas
-   FeedBackCanvas(TString::Format("%s_canvas", objname.Data()), kFALSE);
-
    fInput->Remove(varexpobj);
    fInput->Remove(selectionobj);
    if (TNamed *opt = dynamic_cast<TNamed*> (fInput->FindObject("PROOF_OPTIONS"))) {
@@ -3382,7 +3370,7 @@ Long64_t TProofPlayerSuperMaster::Process(TDSet *dset, const char *selector_file
          } else {
             submasters = dynamic_cast<TList*>(msd->Key());
          }
-         submasters->Add(sl);
+         if (submasters) submasters->Add(sl);
       }
 
       // Add TDSetElements to msd list
@@ -3426,7 +3414,7 @@ Long64_t TProofPlayerSuperMaster::Process(TDSet *dset, const char *selector_file
             return -1;
          } else {
             TList *elements = dynamic_cast<TList*>(msd->Value());
-            elements->Add(elem);
+            if (elements) elements->Add(elem);
          }
       }
 
@@ -3437,8 +3425,8 @@ Long64_t TProofPlayerSuperMaster::Process(TDSet *dset, const char *selector_file
          TList *setelements = dynamic_cast<TList*>(msd->Value());
 
          // distribute elements over the masters
-         Int_t nmasters = submasters->GetSize();
-         Int_t nelements = setelements->GetSize();
+         Int_t nmasters = submasters ? submasters->GetSize() : -1;
+         Int_t nelements = setelements ? setelements->GetSize() : -1;
          for (Int_t i=0; i<nmasters; i++) {
 
             Long64_t nent = 0;
@@ -3449,10 +3437,14 @@ Long64_t TProofPlayerSuperMaster::Process(TDSet *dset, const char *selector_file
                        j++) {
                TDSetElement *elem =
                   dynamic_cast<TDSetElement*>(setelements->At(j));
-               set.Add(elem->GetFileName(), elem->GetObjName(),
-                       elem->GetDirectory(), elem->GetFirst(),
-                       elem->GetNum(), elem->GetMsd());
-               nent += elem->GetNum();
+               if (elem) {
+                  set.Add(elem->GetFileName(), elem->GetObjName(),
+                        elem->GetDirectory(), elem->GetFirst(),
+                        elem->GetNum(), elem->GetMsd());
+                  nent += elem->GetNum();
+               } else {
+                  Warning("Process", "not a TDSetElement object");
+               }
             }
 
             if (set.GetListOfElements()->GetSize()>0) {
@@ -3462,35 +3454,39 @@ Long64_t TProofPlayerSuperMaster::Process(TDSet *dset, const char *selector_file
                mesg << &set << fn << fInput << opt << Long64_t(-1) << Long64_t(0);
 
                TSlave *sl = dynamic_cast<TSlave*>(submasters->At(i));
-               PDB(kGlobal,1) Info("Process",
-                                   "Sending TDSet with %d elements to submaster %s",
-                                   set.GetListOfElements()->GetSize(),
-                                   sl->GetOrdinal());
-               sl->GetSocket()->Send(mesg);
-               usedmasters.Add(sl);
+               if (sl) {
+                  PDB(kGlobal,1) Info("Process",
+                                    "Sending TDSet with %d elements to submaster %s",
+                                    set.GetListOfElements()->GetSize(),
+                                    sl->GetOrdinal());
+                  sl->GetSocket()->Send(mesg);
+                  usedmasters.Add(sl);
 
-               // setup progress info
-               fSlaves.AddLast(sl);
-               fSlaveProgress.Set(fSlaveProgress.GetSize()+1);
-               fSlaveProgress[fSlaveProgress.GetSize()-1] = 0;
-               fSlaveTotals.Set(fSlaveTotals.GetSize()+1);
-               fSlaveTotals[fSlaveTotals.GetSize()-1] = nent;
-               fSlaveBytesRead.Set(fSlaveBytesRead.GetSize()+1);
-               fSlaveBytesRead[fSlaveBytesRead.GetSize()-1] = 0;
-               fSlaveInitTime.Set(fSlaveInitTime.GetSize()+1);
-               fSlaveInitTime[fSlaveInitTime.GetSize()-1] = -1.;
-               fSlaveProcTime.Set(fSlaveProcTime.GetSize()+1);
-               fSlaveProcTime[fSlaveProcTime.GetSize()-1] = -1.;
-               fSlaveEvtRti.Set(fSlaveEvtRti.GetSize()+1);
-               fSlaveEvtRti[fSlaveEvtRti.GetSize()-1] = -1.;
-               fSlaveMBRti.Set(fSlaveMBRti.GetSize()+1);
-               fSlaveMBRti[fSlaveMBRti.GetSize()-1] = -1.;
-               fSlaveActW.Set(fSlaveActW.GetSize()+1);
-               fSlaveActW[fSlaveActW.GetSize()-1] = 0;
-               fSlaveTotS.Set(fSlaveTotS.GetSize()+1);
-               fSlaveTotS[fSlaveTotS.GetSize()-1] = 0;
-               fSlaveEffS.Set(fSlaveEffS.GetSize()+1);
-               fSlaveEffS[fSlaveEffS.GetSize()-1] = 0.;
+                  // setup progress info
+                  fSlaves.AddLast(sl);
+                  fSlaveProgress.Set(fSlaveProgress.GetSize()+1);
+                  fSlaveProgress[fSlaveProgress.GetSize()-1] = 0;
+                  fSlaveTotals.Set(fSlaveTotals.GetSize()+1);
+                  fSlaveTotals[fSlaveTotals.GetSize()-1] = nent;
+                  fSlaveBytesRead.Set(fSlaveBytesRead.GetSize()+1);
+                  fSlaveBytesRead[fSlaveBytesRead.GetSize()-1] = 0;
+                  fSlaveInitTime.Set(fSlaveInitTime.GetSize()+1);
+                  fSlaveInitTime[fSlaveInitTime.GetSize()-1] = -1.;
+                  fSlaveProcTime.Set(fSlaveProcTime.GetSize()+1);
+                  fSlaveProcTime[fSlaveProcTime.GetSize()-1] = -1.;
+                  fSlaveEvtRti.Set(fSlaveEvtRti.GetSize()+1);
+                  fSlaveEvtRti[fSlaveEvtRti.GetSize()-1] = -1.;
+                  fSlaveMBRti.Set(fSlaveMBRti.GetSize()+1);
+                  fSlaveMBRti[fSlaveMBRti.GetSize()-1] = -1.;
+                  fSlaveActW.Set(fSlaveActW.GetSize()+1);
+                  fSlaveActW[fSlaveActW.GetSize()-1] = 0;
+                  fSlaveTotS.Set(fSlaveTotS.GetSize()+1);
+                  fSlaveTotS[fSlaveTotS.GetSize()-1] = 0;
+                  fSlaveEffS.Set(fSlaveEffS.GetSize()+1);
+                  fSlaveEffS[fSlaveEffS.GetSize()-1] = 0.;
+               } else {
+                  Warning("Process", "not a TSlave object");
+               }
             }
          }
       }

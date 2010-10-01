@@ -1063,7 +1063,7 @@ Int_t TGX11::OpenDisplay(Display *disp)
 
    // Inquire the the XServer Vendor
    char vendor[132];
-   strcpy(vendor, XServerVendor(fDisplay));
+   strlcpy(vendor, XServerVendor(fDisplay),132);
 
    // Create primitives graphic contexts
    for (i = 0; i < kMAXGC; i++)
@@ -2859,7 +2859,7 @@ Int_t TGX11::SetTextFont(char *fontname, ETextSetMode mode)
          XSetFont(fDisplay, *gGCtext, gTextFont->fid);
          XSetFont(fDisplay, *gGCinvt, gTextFont->fid);
          gFont[gCurrentFontNumber].id = gTextFont;
-         strcpy(gFont[gCurrentFontNumber].name,fontname);
+         strlcpy(gFont[gCurrentFontNumber].name,fontname,80);
          gCurrentFontNumber++;
          if (gCurrentFontNumber == kMAXFONT) gCurrentFontNumber = 0;
       }
@@ -3208,6 +3208,7 @@ Pixmap_t TGX11::ReadGIF(int x0, int y0, const char *file, Window_t id)
    long ft = ftell(fd);
    if (ft <=0) {
       Error("ReadGIF", "unable to open GIF file");
+      fclose(fd);
       return pic;
    } else {
       filesize = Seek_t(ft);
