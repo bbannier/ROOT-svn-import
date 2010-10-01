@@ -210,11 +210,11 @@ const char *TFolder::FindFullPathName(const char *name) const
       gFolderPath[0] = '/';
       gFolderPath[1] = 0;
       for (Int_t l=0;l<=gFolderLevel;l++) {
-         strcat(gFolderPath,"/");
-         strcat(gFolderPath,gFolderD[l]);
+         strlcat(gFolderPath, "/", sizeof(gFolderPath));
+         strlcat(gFolderPath, gFolderD[l], sizeof(gFolderPath));
       }
-      strcat(gFolderPath,"/");
-      strcat(gFolderPath,name);
+      strlcat(gFolderPath, "/", sizeof(gFolderPath));
+      strlcat(gFolderPath,name, sizeof(gFolderPath));
       gFolderLevel = -1;
       return gFolderPath;
    }
@@ -284,22 +284,29 @@ TObject *TFolder::FindObject(const char *name) const
    Int_t nch = strlen(name);
    char *cname;
    char csname[128];
-   if (nch <128) cname = csname;
-   else          cname = new char[nch+1];
-   strcpy(cname,name);
+   if (nch < (int)sizeof(csname))
+      cname = csname;
+   else
+      cname = new char[nch+1];
+   strcpy(cname, name);
    TObject *obj;
    char *slash = strchr(cname,'/');
    if (slash) {
       *slash = 0;
       obj = fFolders->FindObject(cname);
-      if (!obj) return 0;
-      return obj->FindObject(slash+1);
+      if (!obj) {
+         if (nch >= (int)sizeof(csname)) delete [] cname;
+         return 0;
+      }
+      TObject *ret = obj->FindObject(slash+1);
+      if (nch >= (int)sizeof(csname)) delete [] cname;
+      return ret;
    } else {
-      return fFolders->FindObject(name);
+      TObject *ret = fFolders->FindObject(cname);
+      if (nch >= (int)sizeof(csname)) delete [] cname;
+      return ret;
    }
-   if (nch >= 128) delete [] cname;
 }
-
 
 //______________________________________________________________________________
 TObject *TFolder::FindObjectAny(const char *name) const

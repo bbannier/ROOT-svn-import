@@ -559,7 +559,6 @@ void TMultiGraph::LeastSquareFit(Int_t m, Double_t *a, Double_t xmin, Double_t x
    Int_t npp;
    while ((g = (TGraph*) next())) {
       px=g->GetX();
-      py=g->GetY();
       npp=g->GetN();
       for (bin=0; bin<npp; bin++){
          xk=px[bin];
@@ -787,12 +786,12 @@ void TMultiGraph::Paint(Option_t *option)
             lastx  = fHistogram->GetXaxis()->GetLast();
             if (nch) {
                xtitle = new char[nch+1];
-               strcpy(xtitle,fHistogram->GetXaxis()->GetTitle());
+               strlcpy(xtitle,fHistogram->GetXaxis()->GetTitle(),nch+1);
             }
             nch = strlen(fHistogram->GetYaxis()->GetTitle());
             if (nch) {
                ytitle = new char[nch+1];
-               strcpy(ytitle,fHistogram->GetYaxis()->GetTitle());
+               strlcpy(ytitle,fHistogram->GetYaxis()->GetTitle(),nch+1);
             }
             delete fHistogram;
             fHistogram = 0;

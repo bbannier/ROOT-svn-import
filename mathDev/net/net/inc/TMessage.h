@@ -67,13 +67,13 @@ protected:
    void SetLength() const;               // only called by T(P)Socket::Send()
 
 public:
-   TMessage(UInt_t what = kMESS_ANY);
+   TMessage(UInt_t what = kMESS_ANY, Int_t bufsiz = TBuffer::kInitialSize);
    virtual ~TMessage();
 
    void     ForceWriteInfo(TVirtualStreamerInfo *info, Bool_t force);
    void     Forward();
    TClass  *GetClass() const { return fClass;}
-   void     IncrementLevel(TVirtualStreamerInfo* info);
+   void     TagStreamerInfo(TVirtualStreamerInfo* info);
    void     Reset();
    void     Reset(UInt_t what) { SetWhat(what); Reset(); }
    UInt_t   What() const { return fWhat; }

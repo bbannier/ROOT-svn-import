@@ -320,9 +320,10 @@ TMVA::Reader::GetMethodTypeFromFile( const TString& filename ) {
    TString fullMethodName("");
    if (filename.EndsWith(".xml")) {
       fin.close();
-      void* doc      = gTools().xmlengine().ParseFile(filename); 
+      void* doc      = gTools().xmlengine().ParseFile(filename);
       void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
       gTools().ReadAttr(rootnode, "Method", fullMethodName);
+      gTools().xmlengine().FreeDoc(doc);
    } else {
       char buf[512];
       fin.getline(buf,512);
@@ -371,14 +372,14 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const TStrin
 
    MethodBase *method = (dynamic_cast<MethodBase*>(im));
 
+   if (method==0) return im;
+
    if( method->GetMethodType() == Types::kCategory ){ 
       MethodCategory *methCat = (dynamic_cast<MethodCategory*>(method)); 
       if( !methCat ) 
          Log() << kERROR << "Method with type kCategory cannot be casted to MethodCategory. /Reader" << Endl; 
       methCat->fDataSetManager = fDataSetManager; 
    }
-
-   if (method==0) return im;
 
    method->SetupMethod();
 
@@ -504,7 +505,8 @@ Double_t TMVA::Reader::EvaluateMVA( MethodBase* method, Double_t aux )
    // the aux value is only needed for MethodCuts: it sets the required signal efficiency
    if (method->GetMethodType() == TMVA::Types::kCuts)
       dynamic_cast<TMVA::MethodCuts*>(method)->SetTestSignalEfficiency( aux );
-   if (method->GetMethodType() == TMVA::Types::kMLP) return method->GetMvaValues( fMvaEventError, fMvaEventError2 ); //zjh
+   if (method->GetMethodType() == TMVA::Types::kMLP)
+      return method->GetMvaValues( fMvaEventError, fMvaEventError2 ); //zjh
    else  return method->GetMvaValue( &fMvaEventError ); // attributed MVA response and error
 }
 

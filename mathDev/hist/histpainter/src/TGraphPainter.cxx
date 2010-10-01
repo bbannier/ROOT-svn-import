@@ -1031,8 +1031,8 @@ void TGraphPainter::PaintGraph(TGraph *theGraph, Int_t npoints, const Double_t *
       // Create a temporary histogram and fill each channel with the
       // function value.
       char chopth[8] = " ";
-      if (strstr(chopt,"x+")) strcat(chopth, "x+");
-      if (strstr(chopt,"y+")) strcat(chopth, "y+");
+      if (strstr(chopt,"x+")) strncat(chopth, "x+",2);
+      if (strstr(chopt,"y+")) strncat(chopth, "y+",2);
       if (!theGraph->GetHistogram()) {
          // the graph is created with at least as many channels as there are
          // points to permit zooming on the full range.
@@ -3568,23 +3568,23 @@ void TGraphPainter::PaintStats(TGraph *theGraph, TF1 *fit)
    char t[64];
    char textstats[50];
    Int_t ndf = fit->GetNDF();
-   sprintf(textstats,"#chi^{2} / ndf = %s%s / %d","%",stats->GetFitFormat(),ndf);
-   sprintf(t,textstats,(Float_t)fit->GetChisquare());
+   snprintf(textstats,50,"#chi^{2} / ndf = %s%s / %d","%",stats->GetFitFormat(),ndf);
+   snprintf(t,64,textstats,(Float_t)fit->GetChisquare());
    if (print_fchi2) stats->AddText(t);
    if (print_fprob) {
-      sprintf(textstats,"Prob  = %s%s","%",stats->GetFitFormat());
-      sprintf(t,textstats,(Float_t)TMath::Prob(fit->GetChisquare(),ndf));
+      snprintf(textstats,50,"Prob  = %s%s","%",stats->GetFitFormat());
+      snprintf(t,64,textstats,(Float_t)TMath::Prob(fit->GetChisquare(),ndf));
       stats->AddText(t);
    }
    if (print_fval || print_ferrors) {
       for (Int_t ipar=0;ipar<fit->GetNpar();ipar++) {
          if (print_ferrors) {
-            sprintf(textstats,"%-8s = %s%s #pm %s%s ",fit->GetParName(ipar),"%",stats->GetFitFormat(),"%",stats->GetFitFormat());
-            sprintf(t,textstats,(Float_t)fit->GetParameter(ipar)
+            snprintf(textstats,50,"%-8s = %s%s #pm %s%s ",fit->GetParName(ipar),"%",stats->GetFitFormat(),"%",stats->GetFitFormat());
+            snprintf(t,64,textstats,(Float_t)fit->GetParameter(ipar)
                             ,(Float_t)fit->GetParError(ipar));
          } else {
-            sprintf(textstats,"%-8s = %s%s ",fit->GetParName(ipar),"%",stats->GetFitFormat());
-            sprintf(t,textstats,(Float_t)fit->GetParameter(ipar));
+            snprintf(textstats,50,"%-8s = %s%s ",fit->GetParName(ipar),"%",stats->GetFitFormat());
+            snprintf(t,64,textstats,(Float_t)fit->GetParameter(ipar));
          }
          t[63] = 0;
          stats->AddText(t);

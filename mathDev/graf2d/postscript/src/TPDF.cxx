@@ -107,6 +107,7 @@ TPDF::TPDF() : TVirtualPS()
 
    fStream          = 0;
    fCompress        = kFALSE;
+   fPageNotEmpty    = kFALSE;
    gVirtualPS       = this;
    fRed             = 0.;
    fGreen           = 0.;
@@ -139,6 +140,7 @@ TPDF::TPDF(const char *fname, Int_t wtype) : TVirtualPS(fname, wtype)
 
    fStream          = 0;
    fCompress        = kFALSE;
+   fPageNotEmpty    = kFALSE;
    fRed             = 0.;
    fGreen           = 0.;
    fBlue            = 0.;
@@ -306,7 +308,7 @@ void TPDF::Close(Option_t *)
    PrintStr("0000000000 65535 f @");
    char str[21];
    for (i=0; i<fNbObj; i++) {
-      sprintf(str,"%10.10d 00000 n @",fObjPos[i]);
+      snprintf(str,21,"%10.10d 00000 n @",fObjPos[i]);
       PrintStr(str);
    }
 
@@ -1099,6 +1101,8 @@ void TPDF::NewPage()
 {
    // Start a new PDF page.
 
+   if(!fPageNotEmpty)return;
+
    // Compute pad conversion coefficients
    if (gPad) {
       Double_t ww   = gPad->GetWw();
@@ -1385,7 +1389,7 @@ void TPDF::Open(const char *fname, Int_t wtype)
    PrintStr("/CreationDate (");
    TDatime t;
    char str[17];
-   sprintf(str,"D:%4.4d%2.2d%2.2d%2.2d%2.2d%2.2d",
+   snprintf(str,17,"D:%4.4d%2.2d%2.2d%2.2d%2.2d%2.2d",
                 t.GetYear()  , t.GetMonth(),
                 t.GetDay()   , t.GetHour(),
                 t.GetMinute(), t.GetSecond());
@@ -1430,6 +1434,7 @@ void TPDF::Open(const char *fname, Int_t wtype)
    PatternEncode();
 
    NewPage();
+   fPageNotEmpty = kFALSE;
 }
 
 //______________________________________________________________________________
@@ -1840,6 +1845,7 @@ void TPDF::PrintStr(const char *str)
 
    Int_t len = strlen(str);
    if (len == 0) return;
+   fPageNotEmpty = kTRUE;
 
    if (fCompress) {
       if (fLenBuffer+len >= fSizBuffer) {
@@ -1860,6 +1866,7 @@ void TPDF::PrintFast(Int_t len, const char *str)
 {
    // Fast version of Print
 
+   fPageNotEmpty = kTRUE;
    if (fCompress) {
       if (fLenBuffer+len >= fSizBuffer) {
          fBuffer  = TStorage::ReAllocChar(fBuffer, 2*fSizBuffer, fSizBuffer);
@@ -2042,7 +2049,7 @@ void TPDF::SetFillPatterns(Int_t ipat, Int_t color)
       WriteReal(colGreen);
       WriteReal(colBlue);
    }
-   sprintf(cpat, " /P%2.2d scn", ipat);
+   snprintf(cpat,10," /P%2.2d scn", ipat);
    PrintStr(cpat);
 }
 
@@ -2210,7 +2217,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
 
    PrintStr(" BT");
 
-   sprintf(str," /F%d",font);
+   snprintf(str,8," /F%d",font);
    PrintStr(str);
    WriteReal(fontsize);
    PrintStr(" Tf");
@@ -2295,9 +2302,9 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
       if (chars[i]!='\n') {
          if (kerning) PrintStr("(");
          if (chars[i]=='(' || chars[i]==')') {
-            sprintf(str,"\\%c",chars[i]);
+            snprintf(str,8,"\\%c",chars[i]);
          } else {
-            sprintf(str,"%c",chars[i]);
+            snprintf(str,8,"%c",chars[i]);
          }
          PrintStr(str);
          if (kerning) {
@@ -2419,7 +2426,7 @@ void TPDF::WriteReal(Float_t z)
    // format "%g" when writing it with "%g" generates a number with exponent.
 
    char str[15];
-   sprintf(str," %g", z);
-   if (strstr(str,"e") || strstr(str,"E")) sprintf(str," %10.8f", z);
+   snprintf(str,15," %g", z);
+   if (strstr(str,"e") || strstr(str,"E")) snprintf(str,15," %10.8f", z);
    PrintStr(str);
 }

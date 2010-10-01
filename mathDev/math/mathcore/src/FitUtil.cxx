@@ -339,7 +339,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
 
 
    double chi2 = 0;
-   int nRejected = 0; 
+   //int nRejected = 0; 
    
    // do not cache parameter values (it is not thread safe)
    //func.SetParameters(p); 
@@ -420,10 +420,11 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    }
    
    // reset the number of fitting data points
-   if (nRejected != 0)  nPoints = n - nRejected;
+   nPoints = n;  // no points are rejected 
+   //if (nRejected != 0)  nPoints = n - nRejected;   
 
 #ifdef DEBUG
-   std::cout << "chi2 = " << chi2 << " n = " << nRejected << std::endl;
+   std::cout << "chi2 = " << chi2 << " n = " << nPoints  /*<< " rejected = " << nRejected */ << std::endl;
 #endif
 
 
@@ -449,7 +450,7 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
    assert(data.HaveCoordErrors() ); 
 
    double chi2 = 0;
-   int nRejected = 0; 
+   //int nRejected = 0; 
    
 
    //func.SetParameters(p); 
@@ -532,10 +533,11 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
    }
    
    // reset the number of fitting data points
-   if (nRejected != 0)  nPoints = n - nRejected;
+   nPoints = n;  // no points are rejected 
+   //if (nRejected != 0)  nPoints = n - nRejected;   
 
 #ifdef DEBUG
-   std::cout << "chi2 = " << chi2 << " n = " << nRejected << std::endl;
+   std::cout << "chi2 = " << chi2 << " n = " << nPoints << /* " rejected = " << nRejected */ << std::endl;
 #endif
 
    return chi2;
@@ -766,11 +768,12 @@ void FitUtil::EvaluateChi2Gradient(const IModelFunction & f, const BinData & dat
    } 
 
    // correct the number of points
+   nPoints = n; 
    if (nRejected != 0)  {
       assert(nRejected <= n);
       nPoints = n - nRejected;
       if (nPoints < npar)  MATH_ERROR_MSG("FitUtil::EvaluateChi2Gradient","Error - too many points rejected for overflow in gradient calculation");
-   }
+   } 
 
    // copy result 
    std::copy(g.begin(), g.end(), grad);
@@ -844,7 +847,7 @@ double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data
 #endif
 
    double logl = 0;
-   unsigned int nRejected = 0; 
+   //unsigned int nRejected = 0; 
 
    for (unsigned int i = 0; i < n; ++ i) { 
       const double * x = data.Coords(i);
@@ -864,13 +867,14 @@ double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data
    }
    
    // reset the number of fitting data points
-   if (nRejected != 0)  { 
-      assert(nRejected <= n);
-      nPoints = n - nRejected;
-      if ( nPoints < func.NPar() ) 
-         MATH_ERROR_MSG("FitUtil::EvaluateLogL","Error too many points rejected because of bad pdf values");
+   nPoints = n; 
+//    if (nRejected != 0)  { 
+//       assert(nRejected <= n);
+//       nPoints = n - nRejected;
+//       if ( nPoints < func.NPar() ) 
+//          MATH_ERROR_MSG("FitUtil::EvaluateLogL","Error too many points rejected because of bad pdf values");
 
-   }
+//    }
 
 #ifdef DEBUG
    std::cout << "Logl = " << logl << " np = " << nPoints << std::endl;
@@ -1034,7 +1038,7 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
 #endif
    
    double loglike = 0;
-   int nRejected = 0; 
+   //int nRejected = 0; 
 
    // get fit option and check case of using integral of bins
    const DataOptions & fitOpt = data.Opt();
@@ -1105,7 +1109,8 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
    }
    
    // reset the number of fitting data points
-   if (nRejected != 0)  nPoints = n - nRejected;
+   nPoints = n; 
+   //if (nRejected != 0)  nPoints = n - nRejected;
 
 #ifdef DEBUG
    std::cout << "Loglikelihood  = " << loglike << std::endl;

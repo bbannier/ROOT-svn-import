@@ -72,7 +72,7 @@ protected:
    TList           *fFree;           //Free segments linked list table
    TArrayC         *fClassIndex;     //!Index of TStreamerInfo classes written to this file
    TObjArray       *fProcessIDs;     //!Array of pointers to TProcessIDs
-   Long64_t         fOffset;         //!Seek offset used by remote file classes
+   Long64_t         fOffset;         //!Seek offset cache
    TArchiveFile    *fArchive;        //!Archive file from which we read this file
    TFileCacheRead  *fCacheRead;      //!Pointer to the read cache (if any)
    TFileCacheWrite *fCacheWrite;     //!Pointer to the write cache (if any)
@@ -129,7 +129,7 @@ private:
    void operator=(const TFile &);
 
    static void   CpProgress(Long64_t bytesread, Long64_t size, TStopwatch &watch);
-   static TFile *OpenFromCache(const char *name, Option_t *option = "",
+   static TFile *OpenFromCache(const char *name, Option_t * = "",
                                const char *ftitle = "", Int_t compress = 1,
                                Int_t netopt = 0);
 

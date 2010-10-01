@@ -657,17 +657,11 @@ static int G__iscastexpr_body(const char* ebuf, int lenbuf)
 {
    // --
    int result;
-   char* temp = (char*) malloc(strlen(ebuf) + 1);
-   if (!temp) {
-      G__genericerror("Internal error: malloc, G__iscastexpr_body(), temp");
-      return 0;
-   }
-   strcpy(temp, ebuf + 1);
+   G__FastAllocString temp(ebuf+1);
    temp[lenbuf-2] = 0;
    // Using G__istypename() is questionable.
    // May need to use G__string2type() for better language compliance.
    result = G__istypename(temp);
-   free((void*) temp);
    return result;
 }
 
@@ -936,11 +930,10 @@ static int G__getoperator(int newoperator, int oldoperator)
 //
 
 //______________________________________________________________________________
-extern "C"
-char* G__setiparseobject(G__value* result, char* str)
+char* G__setiparseobject(G__value* result, G__FastAllocString &str)
 {
    // --
-   sprintf(str, "_$%c%d%c_%d_%c%lu"
+   str.Format("_$%c%d%c_%d_%c%lu"
            , result->type
            , 0
            , (0 == result->isconst) ? '0' : '1'
@@ -1134,6 +1127,18 @@ G__value G__getexpr(const char* expression)
    //
    for (ig1 = 0; ig1 < length; ++ig1) {
       c = expression[ig1];
+      if (!single_quote && !double_quote) {
+         if (lenbuf > 1 && ebuf[lenbuf - 1] == ' ') {
+            // we had a space - do we keep it?
+            char beforeSpaceChar = ebuf[lenbuf - 2];
+            if (((isalnum(c) || c == '_') && (isalnum(beforeSpaceChar) || beforeSpaceChar == '_'))
+                || (c == '>' && beforeSpaceChar == '>')) {}
+            else {
+               // not two identifiers / template "> >" - replace the space
+               ebuf[--lenbuf] = 0;
+            }
+         }
+      }
       switch (c) {
 
             /***************************************************
@@ -1190,8 +1195,14 @@ G__value G__getexpr(const char* expression)
                if (lenbuf - inew == 3 && strncmp(expression + inew, "new", 3) == 0) { /* ON994 */
                   return(G__new_operator(expression + ig1 + 1));
                }
-               /* else ignore c, shoud not happen, but not sure */
-               inew = ig1 + 1;
+               if (lenbuf && ebuf[lenbuf - 1] != ' ') {
+                  // keep space for now; if statement checking for beforeSpaceChar will
+                  // later determine whether it's worth keeping this space.
+                  ebuf[lenbuf++] = c;
+               } else {
+                  // collapse multiple spaces into one
+                  inew = ig1 + 1;
+               }
             }
             else ebuf[lenbuf++] = c;
             break;
@@ -1937,7 +1948,7 @@ G__value G__getitem(const char* item)
                         G__genericerror("Internal error: malloc in G__getitem(),sbuf");
                         return G__null;
                      }
-                     sprintf(sbuf, "$%s", item);
+                     sprintf(sbuf, "$%s", item); // Okay, right size.
                      G__gettingspecial = 1;
                      G__var_type = store_var_typeB;
                      result3 = G__getitem(sbuf);

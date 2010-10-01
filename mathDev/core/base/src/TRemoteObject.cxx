@@ -87,7 +87,7 @@ void TRemoteObject::Browse(TBrowser *b)
          b->SetRefreshFlag(kFALSE);
       gApplication->SetBit(TApplication::kProcessRemotely);
       TObject *obj = (TObject *)gROOT->ProcessLine(Form("((TApplicationServer *)gApplication)->BrowseKey(\"%s\");", GetName()));
-      if (b && obj) {
+      if (obj) {
          if (obj->IsA()->GetMethodWithPrototype("SetDirectory", "TDirectory*"))
             gROOT->ProcessLine(Form("((%s *)0x%lx)->SetDirectory(0);", obj->ClassName(), (ULong_t)obj));
          obj->Browse(b);
@@ -118,7 +118,7 @@ void TRemoteObject::Browse(TBrowser *b)
       if (ret) {
          TIter next(ret);
          while ((robj = (TRemoteObject *)next())) {
-            file = robj->GetName();
+            //file = robj->GetName();
             b->Add(robj, robj->GetName());
          }
       }

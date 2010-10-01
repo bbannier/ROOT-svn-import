@@ -97,11 +97,9 @@ TStyleDialog::TStyleDialog(TStyleManager *sm, TStyle *cur, Int_t mode,
    h1->AddFrame(fNameLabel, layoutNameLabel);
 
    if (fMode == 1) {
-      Char_t *newName = (Char_t *)
-               malloc((5 + strlen(fCurStyle->GetName())) * sizeof(Char_t));
-      sprintf(newName, "%s_1", fCurStyle->GetName());
-      fName = new TGTextEntry(h1, newName, kName);
-      free(newName);
+      TString newName;
+      newName.Form("%s_1", fCurStyle->GetName());
+      fName = new TGTextEntry(h1, newName.Data(), kName);
    } else if (fMode == 2) {
       // The names of the 5 basics styles can not be modified.
       fName = new TGTextEntry(h1, fCurStyle->GetName(), kName);
@@ -126,12 +124,11 @@ TStyleDialog::TStyleDialog(TStyleManager *sm, TStyle *cur, Int_t mode,
       case 2: 
          fTitle = new TGTextEntry(h2, fCurStyle->GetTitle(), kTitle);
          break;
-      case 3:
-         Char_t *newTitle = (Char_t *)
-                  malloc((30 + strlen(fCurPad->GetCanvas()->GetName())) * sizeof(Char_t));
-         sprintf(newTitle, "Imported from canvas %s", fCurPad->GetCanvas()->GetName());
-         fTitle = new TGTextEntry(h2, newTitle, kTitle);
-         free(newTitle);
+      case 3: {
+         TString newTitle("Imported from canvas ");
+         newTitle += fCurPad->GetCanvas()->GetName();
+         fTitle = new TGTextEntry(h2, newTitle.Data(), kTitle);
+      }
    }
    fTitle->Associate(this);
    fTitle->Resize(200, 22);

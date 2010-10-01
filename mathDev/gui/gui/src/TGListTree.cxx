@@ -57,7 +57,6 @@
 #include "TGDNDManager.h"
 #include "TBufferFile.h"
 #include "Riostream.h"
-#include "snprintf.h"
 
 Pixel_t          TGListTree::fgGrayPixel = 0;
 const TGFont    *TGListTree::fgDefaultFont = 0;
@@ -1310,7 +1309,7 @@ void TGListTree::Search(Bool_t /*close*/)
    if (ret) {
       item = FindItemByPathname(srch->fBuffer);
       if (!item) {
-         snprintf(msg, 256, "Couldn't find \"%s\"", srch->fBuffer);
+         snprintf(msg, 255, "Couldn't find \"%s\"", srch->fBuffer);
          gVirtualX->Bell(20);
          new TGMsgBox(fClient->GetDefaultRoot(), fCanvas, "Container", msg,
                       kMBIconExclamation, kMBOk, 0);
@@ -2305,11 +2304,9 @@ start:
       s = strchr(p, '/');
 
       if (!s) {
-         strncpy(dirname, p, 1023);
-         dirname[1023] = 0;
+         strlcpy(dirname, p, 1024);
       } else {
-         strncpy(dirname, p, s-p);
-         dirname[s-p] = 0;
+         strlcpy(dirname, p, s-p);
       }
 
       item = FindChildByName(item, dirname);
@@ -2360,12 +2357,12 @@ void TGListTree::GetPathnameFromItem(TGListTreeItem *item, char *path, Int_t dep
 
    *path = '\0';
    while (item) {
-      snprintf(tmppath, 1024, "/%s%s", item->GetText(), path);
-      strncpy(path, tmppath, 1024);
+      snprintf(tmppath, 1023, "/%s%s", item->GetText(), path);
+      strlcpy(path, tmppath, 1024);
       item = item->fParent;
       if (--depth == 0 && item) {
-         snprintf(tmppath, 1024, "...%s", path);
-         strncpy(path, tmppath, 1024);
+         snprintf(tmppath, 1023, "...%s", path);
+         strlcpy(path, tmppath, 1024);
          return;
       }
    }
@@ -2554,6 +2551,8 @@ void TGListTree::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    } else {
       out << "," << GetOptionString() << ",ucolor);" << endl;
    }
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    out << endl;
 

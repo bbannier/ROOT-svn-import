@@ -72,7 +72,7 @@ namespace {
 
       PyObject* pymetabases = PyTuple_New( PyTuple_GET_SIZE( pybases ) );
       for ( int i = 0; i < PyTuple_GET_SIZE( pybases ); ++i ) {
-         PyObject* btype = (PyObject*)PyTuple_GetItem( pybases, i )->ob_type;
+         PyObject* btype = (PyObject*)Py_TYPE( PyTuple_GetItem( pybases, i ) );
          Py_INCREF( btype );
          PyTuple_SET_ITEM( pymetabases, i, btype );
       }
@@ -209,8 +209,8 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
    CallableCache_t cache;
 
 // bypass custom __getattr__ for efficiency
-   getattrofunc oldgetattro = pyclass->ob_type->tp_getattro;
-   pyclass->ob_type->tp_getattro = PyType_Type.tp_getattro;
+   getattrofunc oldgetattro = Py_TYPE(pyclass)->tp_getattro;
+   Py_TYPE(pyclass)->tp_getattro = PyType_Type.tp_getattro;
 
    const size_t nMethods = klass.FunctionMemberSize();
    for ( size_t inm = 0; inm < nMethods; ++inm ) {
@@ -343,7 +343,7 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
 
          if ( mb.IsStatic() ) {
          // allow access at the class level (always add after setting instance level)
-            PyObject_SetAttrString( (PyObject*)pyclass->ob_type,
+            PyObject_SetAttrString( (PyObject*)Py_TYPE(pyclass),
                const_cast< char* >( property->GetName().c_str() ), (PyObject*)property );
          }
 
@@ -352,7 +352,7 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
    }
 
 // restore custom __getattr__
-   pyclass->ob_type->tp_getattro = oldgetattro;
+   Py_TYPE(pyclass)->tp_getattro = oldgetattro;
 
 // all ok, done
    return 0;
@@ -411,7 +411,7 @@ template PyObject* PyROOT::BuildRootClassBases< \
 //____________________________________________________________________________
 PyObject* PyROOT::MakeRootClass( PyObject*, PyObject* args )
 {
-   std::string cname = PyString_AsString( PyTuple_GetItem( args, 0 ) );
+   std::string cname = PyROOT_PyUnicode_AsString( PyTuple_GetItem( args, 0 ) );
 
    if ( PyErr_Occurred() )
       return 0;
@@ -456,7 +456,7 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
       }
 
    // should be a string
-      scName = PyString_AsString( pyscope );
+      scName = PyROOT_PyUnicode_AsString( pyscope );
       Py_DECREF( pyscope );
       if ( PyErr_Occurred() )
          return 0;
@@ -569,7 +569,7 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
    std::string actual = klass.Name( ROOT::Reflex::FINAL );
 
 // first try to retrieve an existing class representation
-   PyObject* pyactual = PyString_FromString( actual.c_str() );
+   PyObject* pyactual = PyROOT_PyUnicode_FromString( actual.c_str() );
    PyObject* pyclass = force ? 0 : PyObject_GetAttr( scope, pyactual );
 
    Bool_t bClassFound = pyclass ? kTRUE : kFALSE;
@@ -630,7 +630,7 @@ template PyObject* PyROOT::MakeRootClassFromString< ROOT::Reflex::Scope,\
 PyObject* PyROOT::GetRootGlobal( PyObject*, PyObject* args )
 {
 // get the requested name
-   std::string ename = PyString_AsString( PyTuple_GetItem( args, 0 ) );
+   std::string ename = PyROOT_PyUnicode_AsString( PyTuple_GetItem( args, 0 ) );
 
    if ( PyErr_Occurred() )
       return 0;
@@ -707,27 +707,33 @@ PyObject* PyROOT::BindRootObjectNoCast( void* address, TClass* klass, Bool_t isR
 }
 
 //____________________________________________________________________________
-inline static Long_t GetObjectOffset( TClass* klass, TClass* clActual, void* address ) {
+inline static Long_t GetObjectOffset( TClass* clCurrent, TClass* clDesired, void* address, bool downcast = true ) {
 // root/meta base class offset fails in the case of virtual inheritance
    Long_t offset = 0;
 
-   if ( clActual && klass != clActual ) {
-      G__ClassInfo* ciKlass  = (G__ClassInfo*)klass->GetClassInfo();
-      G__ClassInfo* ciActual = (G__ClassInfo*)clActual->GetClassInfo();
-      if ( ciKlass && ciActual ) {
+   if ( clDesired && clCurrent != clDesired ) {
+      TClass* clBase    = downcast ? clCurrent : clDesired;
+      TClass* clDerived = downcast ? clDesired : clCurrent;
+
+      G__ClassInfo* ciBase    = (G__ClassInfo*)clBase->GetClassInfo();
+      G__ClassInfo* ciDerived = (G__ClassInfo*)clDerived->GetClassInfo();
+      if ( ciBase && ciDerived ) {
 #ifdef WIN32
       // Windows cannot cast-to-derived for virtual inheritance
       // with CINT's (or Reflex's) interfaces.
-         long baseprop = ciActual->IsBase( *ciKlass );
+         long baseprop = ciDerived->IsBase( *ciBase );
          if ( !baseprop || (baseprop & G__BIT_ISVIRTUALBASE) ) 
-            offset = clActual->GetBaseClassOffset( klass );
+            offset = clDerived->GetBaseClassOffset( clBase );
          else
 #endif
-            offset = G__isanybase( ciKlass->Tagnum(), ciActual->Tagnum(), (Long_t)address );
+            offset = G__isanybase( ciBase->Tagnum(), ciDerived->Tagnum(), (Long_t)address );
       } else {
-         offset = clActual->GetBaseClassOffset( klass ); 
+         offset = clDerived->GetBaseClassOffset( clBase ); 
       }
    }
+
+   if ( offset < 0 ) // error return of G__isanybase()
+      return 0;
 
    return offset;
 }
@@ -750,7 +756,7 @@ PyObject* PyROOT::BindRootObject( void* address, TClass* klass, Bool_t isRef )
 // memory regulator
    TObject* object = 0;
    if ( ! isRef && klass->IsTObject() ) {
-      object = (TObject*)((Long_t)address - GetObjectOffset( klass, TObject::Class(), address ) );
+      object = (TObject*)((Long_t)address - GetObjectOffset( klass, TObject::Class(), address, false ) );
 
    // use the old reference if the object already exists
       PyObject* oldPyObject = TMemoryRegulator::RetrieveObject( object );

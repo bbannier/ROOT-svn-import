@@ -543,8 +543,8 @@ void TApplicationServer::HandleSocketInput()
                   mess->ReadString(str, sizeof(str));
                   {  Long_t size;
                      Int_t  bin;
-                     char   name[1024];
-                     sscanf(str, "%s %d %ld", name, &bin, &size);
+                     char   name[2048];
+                     sscanf(str, "%2047s %d %ld", name, &bin, &size);
                      ReceiveFile(name, bin ? kTRUE : kFALSE, size);
                   }
                   break;
@@ -1242,13 +1242,13 @@ Long_t TApplicationServer::ProcessLine(const char *line, Bool_t, Int_t *)
                rm->ReadString(str, sizeof(str));
                Long_t size;
                Int_t  bin;
-               char name[1024];
-               sscanf(str, "%s %d %ld", name, &bin, &size);
+               char name[2048];
+               sscanf(str, "%2047s %d %ld", name, &bin, &size);
                ReceiveFile(name, bin ? kTRUE : kFALSE, size);
             }
          }
-
       }
+      delete [] imp;
    }
 
    // Process the line now

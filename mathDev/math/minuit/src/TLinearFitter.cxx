@@ -271,6 +271,7 @@ TLinearFitter::TLinearFitter(Int_t ndim, const char *formula, Option_t *opt)
    fFixedParams=0;
    fSpecial=0;
    fInputFunction=0;
+   fFormula = 0;
    TString option=opt;
    option.ToUpper();
    if (option.Contains("D"))
@@ -318,6 +319,8 @@ TLinearFitter::TLinearFitter(TFormula *function, Option_t *opt)
       fStoreData=kFALSE;
    fIsSet=kTRUE;
    fRobust=kFALSE;
+   fInputFunction=0;
+
    SetFormula(function);
 }
 
@@ -370,7 +373,7 @@ TLinearFitter::TLinearFitter(const TLinearFitter& tlf) :
    }
    if (tlf.fFormula) { 
       fFormula = new char[fFormulaSize+1]; 
-      strcpy(fFormula,tlf.fFormula);
+      strlcpy(fFormula,tlf.fFormula,fFormulaSize+1);
    }
 
 }
@@ -418,7 +421,7 @@ TLinearFitter& TLinearFitter::operator=(const TLinearFitter& tlf)
       fFormula = 0; 
       if (tlf.fFormula) { 
          fFormula = new char[fFormulaSize+1]; 
-         strcpy(fFormula,tlf.fFormula);
+         strlcpy(fFormula,tlf.fFormula,fFormulaSize+1);
       }
 
       if (fFixedParams)   delete [] fFixedParams;
@@ -443,7 +446,6 @@ TLinearFitter& TLinearFitter::operator=(const TLinearFitter& tlf)
       fNdim=tlf.fNdim;
       fNfixed=tlf.fNfixed;
       fSpecial=tlf.fSpecial;
-      strcpy(fFormula,tlf.fFormula);
       fIsSet=tlf.fIsSet;
       fStoreData=tlf.fStoreData;
       fChisquare=tlf.fChisquare;
@@ -527,7 +529,7 @@ void TLinearFitter::AddPoint(Double_t *x, Double_t y, Double_t e)
          fX(j,i)=x[i];
    }
    //add the point to the design matrix, if the formula has been set
-   if (!fFunctions.IsEmpty() || fInputFunction || fSpecial>199 || !fRobust)
+   if (!fFunctions.IsEmpty() || fInputFunction || fSpecial>200 || !fRobust)
       AddToDesign(x, y, e);
    else if (!fStoreData)
       Error("AddPoint", "Point can't be added, because the formula hasn't been set and data is not stored");
@@ -565,7 +567,7 @@ void TLinearFitter::AssignData(Int_t npoints, Int_t xncols, Double_t *x, Double_
       fE=1;
    }
    Int_t xfirst;
-   if (!fFunctions.IsEmpty() || fInputFunction || fSpecial>199) {
+   if (!fFunctions.IsEmpty() || fInputFunction || fSpecial>200) {
       if (same)
          xfirst=fNpoints;
 
@@ -819,7 +821,7 @@ Int_t TLinearFitter::Eval()
    // Returns 0 if the fit is ok, 1 if there are errors
 
    Double_t e;
-   if (fFunctions.IsEmpty()&&(!fInputFunction)&&(fSpecial<200)){
+   if (fFunctions.IsEmpty()&&(!fInputFunction)&&(fSpecial<=200)){
       Error("TLinearFitter::Eval", "The formula hasn't been set");
       return 1;
    }
@@ -1294,6 +1296,7 @@ void TLinearFitter::GetParameters(TVectorD &vpar)
 Int_t TLinearFitter::GetParameter(Int_t ipar,char* name,Double_t& value,Double_t& /*verr*/,Double_t& /*vlow*/, Double_t& /*vhigh*/) const
 {
 //Returns the value and the name of the parameter #ipar
+//NB: In the calling function he argument name must be set large enough
 
    if (ipar<0 || ipar>fNfunctions) {
       Error("GetParError", "illegal value of parameter");
@@ -1469,7 +1472,7 @@ void TLinearFitter::SetFormula(const char *formula)
       fInputFunction = 0;
    fFormulaSize = strlen(formula);
    fFormula = new char[fFormulaSize+1];
-   strcpy(fFormula, formula);
+   strlcpy(fFormula, formula,fFormulaSize+1);
    fSpecial = 0;
    //in case of a hyperplane:
    char *fstring;
@@ -1504,8 +1507,8 @@ void TLinearFitter::SetFormula(const char *formula)
       char pattern[5];
       char replacement[6];
       for (i=0; i<fNdim; i++){
-         sprintf(pattern, "x%d", i);
-         sprintf(replacement, "x[%d]", i);
+         snprintf(pattern,5, "x%d", i);
+         snprintf(replacement,6, "x[%d]", i);
          sstring = sstring.ReplaceAll(pattern, Int_t(i/10)+2, replacement, Int_t(i/10)+4);
       }
 
@@ -2021,7 +2024,14 @@ Int_t TLinearFitter::EvalRobust(Double_t h)
    Int_t nmini = 300;
    Int_t i, j, maxind=0, k, k1 = 500;
    Int_t nbest = 10;
-   Double_t chi2;
+   Double_t chi2 = -1;
+
+   if (fFunctions.IsEmpty()&&(!fInputFunction)&&(fSpecial<=200)){
+      Error("TLinearFitter::EvalRobust", "The formula hasn't been set");
+      return 1;
+   }
+
+
    Double_t *bestchi2 = new Double_t[nbest];
    for (i=0; i<nbest; i++)
       bestchi2[i]=1e30;

@@ -435,7 +435,7 @@ struct symtab **slookup(symbol, file)
 	register int first = 0;
 	register int last = file->i_ndefs - 1;
 
-	if (file) while (last >= first)
+	while (last >= first)
 	{
 	    /* Fast inline binary search */
 	    register char *s1;
@@ -488,10 +488,9 @@ int merge2defines(file1, file2)
                 {
                 	/* make sure deflen % SYMTABINC == 0 is still true */
                 	deflen += (SYMTABINC - deflen % SYMTABINC) % SYMTABINC;
-                	i_defs=(struct symtab**)
-			    malloc(deflen*sizeof(struct symtab*));
-                	if (i_defs==NULL) return 0;
+                	i_defs=(struct symtab**)malloc(deflen*sizeof(struct symtab*));
         	}
+         if (i_defs==NULL) return 0;
 
         	while ((last1 >= first1) && (last2 >= first2))
         	{
@@ -630,9 +629,11 @@ find_includes(filep, file, file_red, recursion, failOK)
 		case ELIF:
 			if (!recursion)
 				gobble(filep, file, file_red);
+         /* fallthrough */
 		case ENDIF:
 			if (recursion)
 				return(type);
+         /* fallthrough */
 		case DEFINE:
 			define(line, file);
 			break;

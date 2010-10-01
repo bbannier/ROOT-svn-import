@@ -228,8 +228,7 @@ int G__compile_bytecode(G__ifunc_table* iref, int iexist)
    int store_asm_noverflow = G__asm_noverflow;
    int funcstatus;
    long store_globalvarpointer = G__globalvarpointer;
-   G__FastAllocString funcname_sb(G__ONELINE);
-   char *funcname = funcname_sb;
+   G__FastAllocString funcname(G__ONELINE);
    int store_dispsource = G__dispsource;
    if (G__step || G__stepover) {
       G__dispsource = 0;
@@ -258,7 +257,7 @@ int G__compile_bytecode(G__ifunc_table* iref, int iexist)
       G__asm_index = iexist;
       ++G__templevel;
       ++G__calldepth;
-      strcpy(funcname, ifunc->funcname[iexist]);
+      funcname = ifunc->funcname[iexist];
       if (-1 == ifunc->tagnum) {
          funcstatus = G__TRYNORMAL;
       }
@@ -373,7 +372,7 @@ void G__add_label_bytecode(char* label)
          G__labeltable[G__nlabel].pc = G__asm_cp;
          label[len-1] = 0;
          G__labeltable[G__nlabel].label = (char*) malloc(strlen(label) + 1);
-         strcpy(G__labeltable[G__nlabel].label, label);
+         strcpy(G__labeltable[G__nlabel].label, label); // Okay, we allocated enough space
          ++G__nlabel;
       }
    }
@@ -393,7 +392,7 @@ void G__add_jump_bytecode(char* label)
          G__asm_inst[G__asm_cp] = G__JMP;
          G__inc_cp_asm(2, 0);
          G__gototable[G__ngoto].label = (char*) malloc(strlen(label) + 1);
-         strcpy(G__gototable[G__ngoto].label, label);
+         strcpy(G__gototable[G__ngoto].label, label); // Okay, we allocated enough space
          ++G__ngoto;
       }
    }
@@ -496,7 +495,6 @@ void G__make_ifunctable(char* funcheader)
    char store_type;
    int store_tagnum;
    int store_typenum;
-   int isparam;
    int store_access;
    int paranu = 0;
    int dobody = 0;
@@ -643,7 +641,7 @@ void G__make_ifunctable(char* funcheader)
                char* ptrrefbuf = 0;
                if (*posEndType) {
                   ptrrefbuf = new char[strlen(posEndType) + 1];
-                  strcpy(ptrrefbuf, posEndType);
+                  strcpy(ptrrefbuf, posEndType); // Okay we allocated enough space
                }
                strcpy(oprtype, G__type2string(G__newtype.type[oprtypenum] , -1, -1, G__newtype.reftype[oprtypenum], G__newtype.isconst[oprtypenum]));
                if (ptrrefbuf) {
@@ -674,7 +672,7 @@ void G__make_ifunctable(char* funcheader)
                   char* ptrrefbuf = 0;
                   if (*posEndType) {
                      ptrrefbuf = new char[strlen(posEndType) + 1];
-                     strcpy(ptrrefbuf, posEndType);
+                     strcpy(ptrrefbuf, posEndType); // Okay we allocated enough space
                   }
                   strcpy(oprtype, G__fulltagname(oprtagnum, 0));
                   if (ptrrefbuf) {
@@ -863,9 +861,7 @@ void G__make_ifunctable(char* funcheader)
 #else
       G__access = G__PRIVATE;
 #endif
-      G__FastAllocString vinfo_sb(20);
-      char* vinfo = vinfo_sb;
-      strcpy(vinfo,"G__virtualinfo");
+      G__FastAllocString vinfo("G__virtualinfo");
       G__letvariable(vinfo, G__null, &G__global, G__p_local);
       G__access = store_access;
       G__var_type = store_type;
@@ -911,7 +907,6 @@ void G__make_ifunctable(char* funcheader)
     *   func(   int   a   ,  double   b )
     *         -  -  - - - -
     */
-   isparam = 0;
    G__FastAllocString paraname(G__LONGLINE);
    cin = G__fgetname_template(paraname, 0, "<*&,()=");
    if (strlen(paraname) && isspace(cin)) {
@@ -1112,13 +1107,6 @@ void G__make_ifunctable(char* funcheader)
        ) && ((cin == ',') || (cin == ';'))
          && strncmp(funcheader, "ClassDef", 8) != 0
       ) {
-      /* this is ANSI style func proto without param name */
-      if (isparam) {
-         fsetpos(G__ifile.fp, &temppos);
-         G__ifile.line_number = store_line_number;
-         G__readansiproto(G__p_ifunc, func_now);
-         cin = G__fignorestream(",;");
-      }
       if (cin == ',') {
          /* ignore other prototypes */
          G__fignorestream(";");
@@ -1170,12 +1158,6 @@ void G__make_ifunctable(char* funcheader)
       }
       /* this is ANSI style func proto without param name */
       if (0 == G__p_ifunc->ansi[func_now]) G__p_ifunc->ansi[func_now] = 1;
-      if (isparam) {
-         fsetpos(G__ifile.fp, &temppos);
-         G__ifile.line_number = store_line_number;
-         G__readansiproto(G__p_ifunc, func_now);
-         cin = G__fignorestream(",;");
-      }
       if (cin == ',') {
          /* ignore other prototypes */
          G__fignorestream(";");
@@ -1210,12 +1192,6 @@ void G__make_ifunctable(char* funcheader)
       // This is an ANSI style function prototype without a parameter name.
       if (!G__p_ifunc->ansi[func_now]) {
          G__p_ifunc->ansi[func_now] = 1;
-      }
-      if (isparam) {
-         fsetpos(G__ifile.fp, &temppos);
-         G__ifile.line_number = store_line_number;
-         G__readansiproto(G__p_ifunc, func_now);
-         cin = G__fignorestream(",;{");
       }
       if (cin == ',') {/* ignore other prototypes */
          G__fignorestream(";");
@@ -1296,15 +1272,6 @@ void G__make_ifunctable(char* funcheader)
        *                             ^
        * and rewind file to just before the '{...}'
        */
-      if ('\0' == paraname[0] && isparam) {
-         /* Strange case
-          *   type f(type) { };
-          *          ^ <--  ^   */
-         fsetpos(G__ifile.fp, &temppos);
-         G__ifile.line_number = store_line_number;
-         G__readansiproto(G__p_ifunc, func_now);
-         cin = G__fignorestream("{");
-      }
       if (
          G__HASH_MAIN == G__p_ifunc->hash[func_now] &&
          !strcmp(G__p_ifunc->funcname[func_now], "main") &&
@@ -1787,7 +1754,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                      if (strcmp(buf, "short") && strcmp(buf, "int") && strcmp(buf, "long")) {
                         G__ifile.line_number = store_line;
                         fsetpos(G__ifile.fp, &pos);
-                        strcpy(buf, "int");
+                        buf = "int";
                         //fprintf(stderr, "G__readansiproto: buf: '%s'\n", buf);
                         c = ' ';
                      }
@@ -2130,7 +2097,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                               if (param_name[0] == ']') {
                                  len = 0;
                               }
-                              strcpy(param_name + len, "[]");
+                              param_name.Replace(len, "[]");
                               ptrcnt -= 2;
                               len = strlen(param_name);
                               fseek(G__ifile.fp, -1, SEEK_CUR);
@@ -2166,7 +2133,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
          // -- Remember the default text, and then evaluate it.
          ifunc->param[func_now][iin]->pdefault = (G__value*) malloc(sizeof(G__value));
          ifunc->param[func_now][iin]->def = (char*) malloc(strlen(buf) + 1);
-         strcpy(ifunc->param[func_now][iin]->def, buf);
+         strcpy(ifunc->param[func_now][iin]->def, buf); // Okay we allocated enough sapce
          if (buf[0] == '(') {
             int len = strlen(buf);
             if (
@@ -2179,7 +2146,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
                for (; i < len - 3; ++i) {
                   buf[i-1] = buf[i];
                }
-               strcpy(buf + i - 1, "()");
+               buf.Replace(i - 1, "()");
             }
          }
          int store_def_tagnum = G__def_tagnum;
@@ -2283,7 +2250,7 @@ static int G__readansiproto(G__ifunc_table_internal* ifunc, int func_now)
       }
       else {
          ifunc->param[func_now][iin]->name = (char*) malloc(strlen(param_name) + 1);
-         strcpy(ifunc->param[func_now][iin]->name, param_name);
+         strcpy(ifunc->param[func_now][iin]->name, param_name); // Okay we allocated enough space
       }
    }
    ifunc->para_nu[func_now] = iin;
@@ -3154,19 +3121,11 @@ struct G__ifunc_table_internal* G__overload_match G__P((const char* funcname, st
 void G__rate_parameter_match(G__param* libp, G__ifunc_table_internal* p_ifunc, int ifn, G__funclist* funclist, int recursive)
 {
    // -- FIXME: Describe this function!
-#ifdef G__DEBUG
-   int i = 0xa3a3a3a3;
-#else // G__DEBUG
    int i;
-#endif // G__DEBUG
    char param_type, formal_type;
    int param_tagnum, formal_tagnum;
    int param_reftype, formal_reftype;
-#ifdef G__DEBUG
-   int param_isconst = 0xa3a3a3a3, formal_isconst = 0xa5a5a5a5;
-#else // G__DEBUG
    int param_isconst = 0, formal_isconst = 0;
-#endif // G__DEBUG
    funclist->rate = 0;
    for (i = 0;i < libp->paran;i++) {
       param_type = libp->para[i].type;
@@ -3458,8 +3417,7 @@ void G__rate_parameter_match(G__param* libp, G__ifunc_table_internal* p_ifunc, i
             struct G__ifunc_table_internal *ifunc2;
             int ifn2;
             int hash2;
-            G__FastAllocString funcname2_sb(G__ONELINE);
-            char *funcname2 = funcname2_sb;
+            G__FastAllocString funcname2(G__ONELINE);
             struct G__param para;
             G__incsetup_memfunc(formal_tagnum);
             ifunc2 = G__struct.memfunc[formal_tagnum];
@@ -3471,7 +3429,7 @@ void G__rate_parameter_match(G__param* libp, G__ifunc_table_internal* p_ifunc, i
             } else {
                G__store_struct_offset = 0;
             }
-            strcpy(funcname2, G__struct.name[formal_tagnum]);
+            funcname2 = G__struct.name[formal_tagnum];
             G__hash(funcname2, hash2, ifn2);
             ifunc2 = G__overload_match(funcname2, &para, hash2, ifunc2
                                        , G__TRYCONSTRUCTOR, G__PUBLIC, &ifn2, 1
@@ -3488,16 +3446,15 @@ void G__rate_parameter_match(G__param* libp, G__ifunc_table_internal* p_ifunc, i
             struct G__ifunc_table_internal *ifunc2;
             int ifn2 = -1;
             int hash2;
-            G__FastAllocString funcname2_sb(G__ONELINE);
-            char *funcname2 = funcname2_sb;
+            G__FastAllocString funcname2(G__ONELINE);
             struct G__param para;
             G__incsetup_memfunc(param_tagnum);
             para.paran = 0;
             long store_struct_offset = G__store_struct_offset;
             G__store_struct_offset = libp->para[i].obj.i;
             /* search for  operator type */
-            sprintf(funcname2, "operator %s"
-                    , G__type2string(formal_type, formal_tagnum, -1, 0, 0));
+            funcname2.Format("operator %s"
+                             , G__type2string(formal_type, formal_tagnum, -1, 0, 0));
             G__hash(funcname2, hash2, ifn2);
             ifunc2 = G__struct.memfunc[param_tagnum];
             ifunc2 = G__overload_match(funcname2, &para, hash2, ifunc2
@@ -3506,8 +3463,8 @@ void G__rate_parameter_match(G__param* libp, G__ifunc_table_internal* p_ifunc, i
                                       );
             if (!ifunc2) {
                /* search for  operator const type */
-               sprintf(funcname2, "operator %s"
-                       , G__type2string(formal_type, formal_tagnum, -1, 0, 1));
+               funcname2.Format("operator %s"
+                                , G__type2string(formal_type, formal_tagnum, -1, 0, 1));
                G__hash(funcname2, hash2, ifn2);
                ifunc2 = G__struct.memfunc[param_tagnum];
                ifunc2 = G__overload_match(funcname2, &para, hash2, ifunc2
@@ -3518,22 +3475,6 @@ void G__rate_parameter_match(G__param* libp, G__ifunc_table_internal* p_ifunc, i
             G__store_struct_offset = store_struct_offset;
             if (ifunc2 && -1 != ifn2)
                funclist->p_rate[i] = G__USRCONVMATCH;
-            else {
-              // 4/04/07
-              // There is a particular case which should be handled in a
-              // especial way...
-              // va_list : take a look at TObject::DoError to see an axample,
-              // this built-in type is seen in gcc as a "char *" and it's seen
-              // in cint as a user defined structure so the matching
-              // wont work... the only thing I see as feasible for the moment
-              // is to hard code this case here... and say that when comparing
-              // a parameter -> va_list == char *
-              // Big note: as everything else donde for the stubs removal we
-              // need a few ifdef's (we dont know how it works for different
-              // compilers)
-              if( param_type=='C' && strcmp(G__struct.name[formal_tagnum], "va_list")==0 )
-                funclist->p_rate[i] = G__USRCONVMATCH;
-            }
          }
       }
 
@@ -3543,7 +3484,9 @@ void G__rate_parameter_match(G__param* libp, G__ifunc_table_internal* p_ifunc, i
          break;
       }
       else {
-         if (param_isconst != formal_isconst) funclist->p_rate[i] += G__CVCONVMATCH;
+         if (param_isconst != formal_isconst) {
+            funclist->p_rate[i] += G__CVCONVMATCH;
+         }
          /*
          if('u'==param_type && (0!=param_isconst&& 0==formal_isconst)) {
            funclist->p_rate[i]=G__NOMATCH;
@@ -3576,8 +3519,6 @@ int G__convert_param(G__param* libp, G__ifunc_table_internal* p_ifunc, int ifn, 
    G__value* param;
    G__FastAllocString conv(G__ONELINE);
    G__FastAllocString arg1(G__ONELINE);
-   G__FastAllocString parameter_sb(G__ONELINE);
-   char *parameter = parameter_sb;
    long store_struct_offset;
    int store_tagnum;
    int store_isconst;
@@ -3806,12 +3747,6 @@ int G__convert_param(G__param* libp, G__ifunc_table_internal* p_ifunc, int ifn, 
                         G__inc_cp_asm(2, 0);
                      }
 #endif
-                     if (param->obj.i < 0)
-                        sprintf(parameter, "(%s)(%ld)", G__struct.name[formal_tagnum]
-                                , param->obj.i);
-                     else
-                        sprintf(parameter, "(%s)%ld", G__struct.name[formal_tagnum]
-                                , param->obj.i);
                   }
                   match = 1;
                   G__pop_tempobject();
@@ -3876,8 +3811,6 @@ int G__convert_param(G__param* libp, G__ifunc_table_internal* p_ifunc, int ifn, 
                }
 #endif
                *param = G__p_tempbuf->obj;
-               sprintf(parameter, "(%s)%ld" , G__struct.name[formal_tagnum]
-                       , G__p_tempbuf->obj.obj.i);
             } /* end of if(match==0) */
 
          }
@@ -4553,7 +4486,7 @@ match_found:
                   *ptmplt = '<';
                   free((void*)ifunc->funcname[ifn]);
                   ifunc->funcname[ifn] = (char*)malloc(strlen(funcnamein) + 1);
-                  strcpy(ifunc->funcname[ifn], funcnamein);
+                  strcpy(ifunc->funcname[ifn], funcnamein); // Okay we allocated enough space
                   G__hash(funcnamein, hash, tmp);
                   ifunc->hash[ifn] = hash;
                }
@@ -5548,8 +5481,6 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
                                                             );
             G__tagnum = virtualtag;
             if ('~' == funcname[0]) {
-               //strcpy(funcname + 1, G__struct.name[G__tagnum]);
-               //G__hash(funcname, hash, itemp);
                G__hash(G__struct.name[G__tagnum], hash, itemp);
                hash += '~';
             }
@@ -5810,9 +5741,9 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
    //
    G__ifile.line_number = p_ifunc->pentry[ifn]->line_number;
    if (p_ifunc->pentry[ifn]->filenum>=0) {
-      strcpy(G__ifile.name, G__srcfile[p_ifunc->pentry[ifn]->filenum].filename);
+      G__strlcpy(G__ifile.name, G__srcfile[p_ifunc->pentry[ifn]->filenum].filename, G__MAXFILENAME);
    } else {
-      strcpy(G__ifile.name, "unknown");
+      G__strlcpy(G__ifile.name, "unknown", G__MAXFILENAME);
    }
    G__ifile.filenum = p_ifunc->pentry[ifn]->filenum;
    //
@@ -5899,7 +5830,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
          G__FastAllocString temp(G__ONELINE);
          cin = G__fgetstream(temp, 0, ",)");
          if (temp[0] != '\0') {
-            strcpy(paraname[ipara], temp);
+            paraname[ipara] = temp;
             ++ipara;
          }
       }
@@ -6236,8 +6167,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
             if (
                1
             ) {
-               G__FastAllocString temp_sb(G__ONELINE);
-               char *temp = temp_sb;
+               G__FastAllocString temp(G__ONELINE);
                /* don't call copy constructor if returning reference type */
                if (G__PARANORMAL != p_ifunc->reftype[ifn]) {
                   if (p_ifunc->p_tagtable[ifn] != result7->tagnum) {
@@ -6266,17 +6196,17 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
 
                if (result7->type == 'u' || (result7->type == 'i' && -1 != result7->tagnum)) {
                   if (result7->obj.i < 0)
-                     sprintf(temp, "%s((%s)(%ld))", G__struct.name[p_ifunc->p_tagtable[ifn]]
-                             , G__fulltagname(result7->tagnum, 1) , result7->obj.i);
+                     temp.Format( "%s((%s)(%ld))", G__struct.name[p_ifunc->p_tagtable[ifn]]
+                                  , G__fulltagname(result7->tagnum, 1) , result7->obj.i);
                   else
-                     sprintf(temp, "%s((%s)%ld)", G__struct.name[p_ifunc->p_tagtable[ifn]]
-                             , G__fulltagname(result7->tagnum, 1) , result7->obj.i);
+                     temp.Format( "%s((%s)%ld)", G__struct.name[p_ifunc->p_tagtable[ifn]]
+                                  , G__fulltagname(result7->tagnum, 1) , result7->obj.i);
                }
                else {
                   G__FastAllocString buf2(G__ONELINE);
                   G__valuemonitor(*result7, buf2);
-                  sprintf(temp, "%s(%s)", G__struct.name[p_ifunc->p_tagtable[ifn]]
-                          , buf2());
+                  temp.Format( "%s(%s)", G__struct.name[p_ifunc->p_tagtable[ifn]]
+                               , buf2());
                }
 
                store_tagnum = G__tagnum;
@@ -6301,7 +6231,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
                      G__fprinterr(G__serr,
                                   "\n!!!Calling copy/conversion constructor for return temp object 0x%lx.%s"
                                   , G__store_struct_offset
-                                  , temp);
+                                  , temp());
                   }
                   G__getfunction(temp, &itemp, G__TRYCONSTRUCTOR);
                   if (itemp &&
@@ -6322,7 +6252,7 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
                      G__fprinterr(G__serr,
                                   "\n!!!Calling copy/conversion constructor for return temp object 0x%lx.%s"
                                   , G__store_struct_offset
-                                  , temp);
+                                  , temp());
                   }
                   buf = G__getfunction(temp, &itemp, G__TRYCONSTRUCTOR);
                   G__globalvarpointer = store_globalvarpointer;
@@ -6369,10 +6299,10 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
                   else if (-1 != (offset = G__ispublicbase(p_ifunc->p_tagtable[ifn]
                                            , result7->tagnum
                                            , result7->obj.i))) {
-                     sprintf(temp, "%s((%s)(%ld))"
-                             , G__struct.name[p_ifunc->p_tagtable[ifn]]
-                             , G__fulltagname(p_ifunc->p_tagtable[ifn], 1)
-                             , result7->obj.i + offset);
+                     temp.Format( "%s((%s)(%ld))"
+                                  , G__struct.name[p_ifunc->p_tagtable[ifn]]
+                                  , G__fulltagname(p_ifunc->p_tagtable[ifn], 1)
+                                  , result7->obj.i + offset);
                      if (G__CPPLINK != G__struct.iscpplink[G__tagnum]) {
                         /* interpreted class */
                         if (store_p_tempobject)
@@ -6591,12 +6521,12 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
    G__ifile.line_number = G_local.prev_line_number;
    G__ifile.filenum = G_local.prev_filenum;
    if (-1 != G__ifile.filenum && 0 != G__srcfile[G__ifile.filenum].filename) {
-      strcpy(G__ifile.name, G__srcfile[G__ifile.filenum].filename);
+      G__strlcpy(G__ifile.name, G__srcfile[G__ifile.filenum].filename,G__MAXFILENAME);
    }
    else {
       G__ifile.name[0] = '\0';
    }
-   if (G__dispsource && G__ifile.name && G__ifile.name[0]) {
+   if (G__dispsource && G__ifile.name[0]) {
       G__fprinterr(G__serr, "\n# %s   ", G__ifile.name);
    }
    // Recover file pointer and fpos.

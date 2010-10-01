@@ -31,6 +31,9 @@
 #endif
 
 #include <stdio.h>
+#include <string.h>
+#include <snprintf.h>   // part of stdio.h on systems that have it
+#include <strlcpy.h>    // part of string.h on systems that have it
 
 
 
@@ -43,6 +46,7 @@ class TMemberInspector;
 class TObject;
 class TNamed;
 class TRootIOCtor;
+class TString;
 
 //---- types -------------------------------------------------------------------
 
@@ -167,7 +171,7 @@ R__EXTERN Int_t gDebug;
 
 //---- ClassDef macros ---------------------------------------------------------
 
-typedef void (*ShowMembersFunc_t)(void *obj, TMemberInspector &R__insp, char *R__parent);
+typedef void (*ShowMembersFunc_t)(void *obj, TMemberInspector &R__insp);
 class TVirtualIsAProxy;
 typedef TClass *(*IsAGlobalFunc_t)(const TClass*, const void *obj);
 
@@ -271,7 +275,7 @@ public: \
    static Version_t Class_Version() { return id; } \
    static void Dictionary(); \
    virtual TClass *IsA() const { return name::Class(); } \
-   virtual void ShowMembers(TMemberInspector &insp, char *parent); \
+   virtual void ShowMembers(TMemberInspector &insp); \
    virtual void Streamer(TBuffer &b); \
    void StreamerNVirtual(TBuffer &b) { name::Streamer(b); } \
    static const char *DeclFileName() { return __FILE__; } \
@@ -288,7 +292,7 @@ static const char *Class_Name(); \
 static Version_t Class_Version() { return id; } \
 static void Dictionary(); \
 TClass *IsA() const { return name::Class(); } \
-void ShowMembers(TMemberInspector &insp, char *parent); \
+void ShowMembers(TMemberInspector &insp); \
 void Streamer(TBuffer &b); \
 void StreamerNVirtual(TBuffer &b) { name::Streamer(b); } \
 static const char *DeclFileName() { return __FILE__; } \
@@ -311,14 +315,12 @@ static const char *ImplFileName();
 
 #define ClassDef(name,id) \
    _ClassDef_(name,id) \
-   friend void ROOT__ShowMembersFunc(name *obj, TMemberInspector &R__insp, \
-                                     char *R__parent); \
+   friend void ROOT__ShowMembersFunc(name *obj, TMemberInspector &R__insp); \
    static int DeclFileLine() { return __LINE__; }
 
 #define ClassDefNV(name,id) \
    _ClassDefNV_(name,id) \
-   friend void ROOT__ShowMembersFunc(name *obj, TMemberInspector &R__insp, \
-                                     char *R__parent); \
+   friend void ROOT__ShowMembersFunc(name *obj, TMemberInspector &R__insp); \
    static int DeclFileLine() { return __LINE__; }
 
 #endif
@@ -400,14 +402,12 @@ static const char *ImplFileName();
 
 #define ClassDefT(name,id) \
    _ClassDef_(name,id) \
-   friend void ROOT__ShowMembersFunc(name *obj, TMemberInspector &R__insp, \
-                                     char *R__parent); \
+   friend void ROOT__ShowMembersFunc(name *obj, TMemberInspector &R__insp); \
    static int DeclFileLine() { return __LINE__; }
 
 #define ClassDefTNV(name,id) \
    _ClassDefNV_(name,id) \
-   friend void ROOT__ShowMembersFunc(name *obj, TMemberInspector &R__insp, \
-                                     char *R__parent); \
+   friend void ROOT__ShowMembersFunc(name *obj, TMemberInspector &R__insp); \
    static int DeclFileLine() { return __LINE__; }
 
 #endif

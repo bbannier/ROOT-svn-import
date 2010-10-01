@@ -282,7 +282,7 @@ void G__define_type()
 
    c = G__fgetname_template(type1, 0, "*{");
    if (c == '*') {
-      strcat(type1, "*");
+      type1 += "*";
       c = ' ';
    }
    // Consume any const, volatile, mutable, or typename qualifier. // FIXME: mutable is illegal in a typedef.
@@ -311,16 +311,16 @@ void G__define_type()
       // above since it does not allow for distinction between global
       // namespace and local namespace) ... but at least it is an improvement
       // over the current behavior.
-      strcpy(type1, type1 + 2);
+      strcpy((char*)type1, type1 + 2);  // Okay since we reduce the size ...
    }
    while (isspace(c)) {
       len = strlen(type1);
       c = G__fgetspace();
       if (c == ':') {
          c = G__fgetspace(); // skip the next ':'
-         strcat(type1, "::");
+         type1 += "::";
          c = G__fgetname_template(temp, 0, "{");
-         strcat(type1, temp);
+         type1 += temp;
       }
       else if ((c == '<') || (c == ',') || (type1[len-1] == '<') || (type1[len-1] == ',')) {
          type1[len++] = c;
@@ -363,27 +363,27 @@ void G__define_type()
    }
    else if (!strcmp(type1, "unsigned*")) {
       unsigned_flag = 1;
-      strcpy(type1, "int*");
+      type1 = "int*";
    }
    else if (!strcmp(type1, "signed*")) {
       unsigned_flag = 0;
-      strcpy(type1, "int*");
+      type1 = "int*";
    }
    else if (!strcmp(type1, "unsigned&")) {
       unsigned_flag = 1;
-      strcpy(type1, "int&");
+      type1 = "int&";
    }
    else if (!strcmp(type1, "signed&")) {
       unsigned_flag = 0;
-      strcpy(type1, "int&");
+      type1 = "int&";
    }
    else if (!strcmp(type1, "unsigned*&")) {
       unsigned_flag = 1;
-      strcpy(type1, "int*&");
+      type1 = "int*&";
    }
    else if (!strcmp(type1, "signed*&")) {
       unsigned_flag = 0;
-      strcpy(type1, "int*&");
+      type1 = "int*&";
    }
 
    /*
@@ -949,7 +949,7 @@ void G__define_type()
       typenum = G__newtype.alltype;
       len = strlen(type_name);
       G__newtype.name[typenum] = (char*) malloc(len + 2);
-      strcpy(G__newtype.name[typenum], type_name);
+      strcpy(G__newtype.name[typenum], type_name); // Okay, we allocated the right size
       G__newtype.namerange->Insert(G__newtype.name[typenum], typenum);
       G__newtype.iscpplink[typenum] = G__NOLINK;
       G__newtype.comment[typenum].p.com = 0;
@@ -1367,7 +1367,7 @@ int G__search_typename(const char* typenamein, int typein, int tagnum, int refty
       }
       G__newtype.hash[G__newtype.alltype] = len;
       G__newtype.name[G__newtype.alltype] = (char*)malloc((size_t)(len + 1));
-      strcpy(G__newtype.name[G__newtype.alltype], type_name);
+      strcpy(G__newtype.name[G__newtype.alltype], type_name); // Okay, we allocated the right size
       G__newtype.namerange->Insert(G__newtype.name[G__newtype.alltype], G__newtype.alltype);
       G__newtype.nindex[G__newtype.alltype] = 0;
       G__newtype.parent_tagnum[G__newtype.alltype] = G__static_parent_tagnum;

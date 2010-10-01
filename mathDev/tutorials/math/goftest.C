@@ -17,6 +17,7 @@
 #include "TH1.h"
 #include "TF1.h"
 #include "Math/GoFTest.h"
+#include "Math/Functor.h"
 #include "TRandom3.h"
 #include "Math/DistFunc.h"
 
@@ -61,7 +62,7 @@ void goftest() {
    // C r e a t e   G o F T e s t  o b j e c t 
    // -----------------------------------------
    
-   ROOT::Math::GoFTest* goftest_1 = new ROOT::Math::GoFTest(sample1, nEvents1, ROOT::Math::GoFTest::kLogNormal);
+   ROOT::Math::GoFTest* goftest_1 = new ROOT::Math::GoFTest(nEvents1, sample1, ROOT::Math::GoFTest::kLogNormal);
       
    /* Possible calls for the Anderson - DarlingTest test */
    /*----------------------------------------------------*/
@@ -78,7 +79,7 @@ void goftest() {
    
    /* Rebuild the test using the default 1-sample construtor */
    delete goftest_1;
-   goftest_1 = new ROOT::Math::GoFTest(sample1, nEvents1); // User must then input a distribution type option
+   goftest_1 = new ROOT::Math::GoFTest(nEvents1, sample1 ); // User must then input a distribution type option
    goftest_1->SetDistribution(ROOT::Math::GoFTest::kLogNormal);
    
    
@@ -152,7 +153,7 @@ void goftest() {
    // C r e a t e   G o F T e s t  o b j e c t 
    // -----------------------------------------
    
-   ROOT::Math::GoFTest* goftest_2 = new ROOT::Math::GoFTest(sample1, nEvents1, sample2, nEvents2);
+   ROOT::Math::GoFTest* goftest_2 = new ROOT::Math::GoFTest(nEvents1, sample1, nEvents2, sample2);
    
    /* Possible calls for the Anderson - DarlingTest test */
    /*----------------------------------------------------*/
@@ -205,7 +206,6 @@ void goftest() {
    UInt_t nEvents3 = 1000;
 
    Double_t* sample3 = new Double_t[nEvents3];
-
    for (UInt_t i = 0; i < nEvents3; ++i) { 
       Double_t data = r.Landau();
       sample3[i] = data;
@@ -219,15 +219,27 @@ void goftest() {
    /*-------------------------------------------------------*/
    
    /* a) User input PDF */
-   ROOT::Math::GoFTest* goftest_3a = new ROOT::Math::GoFTest(sample3, nEvents3, TMath::Landau);
-   
+   ROOT::Math::Functor1D f(&TMath::Landau);
+   double min = 3*TMath::MinElement(nEvents3, sample3);
+   double max = 3*TMath::MaxElement(nEvents3, sample3);
+   ROOT::Math::GoFTest* goftest_3a = new ROOT::Math::GoFTest(nEvents3, sample3, f,  ROOT::Math::GoFTest::kPDF, min,max);  // need to specify am interval
    /* b) User input CDF */
-   ROOT::Math::GoFTest* goftest_3b = new ROOT::Math::GoFTest(sample3, nEvents3, TMath::LandauI, ROOT::Math::GoFTest::kCDF);
+   ROOT::Math::Functor1D fI(&TMath::LandauI);
+   ROOT::Math::GoFTest* goftest_3b = new ROOT::Math::GoFTest(nEvents3, sample3, fI, ROOT::Math::GoFTest::kCDF,min,max);
 
+   
    /* Returning the p-value for the Anderson-Darling test statistic */
    pvalueAD_1 = goftest_3a-> AndersonDarlingTest(); // p-value is the default choice
+   
    pvalueAD_2 = (*goftest_3b)(); // p-value and Anderson - Darling Test are the default choices
    
    /* Checking consistency between both tests */ 
-   assert(TMath::Abs(pvalueAD_1 - pvalueAD_2) < 0.00001 * pvalueAD_2);
+   std::cout << " \n\nTEST with LANDAU distribution:\t";
+   if (TMath::Abs(pvalueAD_1 - pvalueAD_2) > 1.E-1 * pvalueAD_2) { 
+      std::cout << "FAILED " << std::endl;
+      Error("goftest","Error in comparing testing using Landau and Landau CDF");
+      std::cerr << " pvalues are " << pvalueAD_1 << "  " << pvalueAD_2 << std::endl;
+   }
+   else 
+      std::cout << "OK ( pvalues = " << pvalueAD_2 << "  )" << std::endl;
 }

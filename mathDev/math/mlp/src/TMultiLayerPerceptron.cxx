@@ -258,6 +258,8 @@ TMultiLayerPerceptron::TMultiLayerPerceptron()
    fData = 0;
    fCurrentTree = -1;
    fCurrentTreeWeight = 1;
+   fStructure = "";
+   fWeight = "1";
    fTraining = 0;
    fTrainingOwner = false;
    fTest = 0;
@@ -320,15 +322,17 @@ TMultiLayerPerceptron::TMultiLayerPerceptron(const char * layout, TTree * data,
    fOutType =  TNeuron::kLinear;
    fextF = extF;
    fextD = extD;
+   fEventWeight = 0;
+   fManager = 0;
    if (data) {
       BuildNetwork();
       AttachData();
    }
    fLearningMethod = TMultiLayerPerceptron::kBFGS;
    fEta = .1;
-   fEtaDecay = 1;
-   fDelta = 0;
    fEpsilon = 0;
+   fDelta = 0;
+   fEtaDecay = 1;
    fTau = 3;
    fLastAlpha = 0;
    fReset = 50;
@@ -367,6 +371,7 @@ TMultiLayerPerceptron::TMultiLayerPerceptron(const char * layout,
    fStructure = layout;
    fData = data;
    fCurrentTree = -1;
+   fCurrentTreeWeight = 1;
    fTraining = training;
    fTrainingOwner = false;
    fTest = test;
@@ -376,6 +381,8 @@ TMultiLayerPerceptron::TMultiLayerPerceptron(const char * layout,
    fOutType =  TNeuron::kLinear;
    fextF = extF;
    fextD = extD;
+   fEventWeight = 0;
+   fManager = 0;
    if (data) {
       BuildNetwork();
       AttachData();
@@ -435,6 +442,8 @@ TMultiLayerPerceptron::TMultiLayerPerceptron(const char * layout, TTree * data,
    fOutType =  TNeuron::kLinear;
    fextF = extF;
    fextD = extD;
+   fEventWeight = 0;
+   fManager = 0;
    if (data) {
       BuildNetwork();
       data->Draw(Form(">>fTrainingList_%lu",(ULong_t)this),training,"goff");
@@ -488,6 +497,7 @@ TMultiLayerPerceptron::TMultiLayerPerceptron(const char * layout,
    fStructure = layout;
    fData = data;
    fCurrentTree = -1;
+   fCurrentTreeWeight = 1;
    fTraining = new TEventList(Form("fTrainingList_%lu",(ULong_t)this));
    fTrainingOwner = true;
    fTest = new TEventList(Form("fTestList_%lu",(ULong_t)this));
@@ -499,6 +509,8 @@ TMultiLayerPerceptron::TMultiLayerPerceptron(const char * layout,
    fOutType =  TNeuron::kLinear;
    fextF = extF;
    fextD = extD;
+   fEventWeight = 0;
+   fManager = 0;
    if (data) {
       BuildNetwork();
       data->Draw(Form(">>fTrainingList_%lu",(ULong_t)this),training,"goff");
@@ -680,8 +692,8 @@ void TMultiLayerPerceptron::SetReset(Int_t reset)
 void TMultiLayerPerceptron::GetEntry(Int_t entry) const
 {
    // Load an entry into the network
-   if (fData)
-      fData->GetEntry(entry);
+   if (!fData) return;
+   fData->GetEntry(entry);
    if (fData->GetTreeNumber() != fCurrentTree) {
       ((TMultiLayerPerceptron*)this)->fCurrentTree = fData->GetTreeNumber();
       fManager->Notify();
@@ -2466,6 +2478,7 @@ void TMultiLayerPerceptron::Draw(Option_t * /*option*/)
             TLine* synapse = new TLine(xStep*(layer+1),yStep_this*(neuron1+1),xStep*(layer+2),yStep_next*(neuron2+1));
             synapse->Draw();
             theSynapse = (TSynapse *) it->Next();
+            if (!theSynapse) continue;
             synapse->SetLineWidth(Int_t((theSynapse->GetWeight()/maxWeight)*10.));
             synapse->SetLineStyle(1);
             if(((TMath::Abs(theSynapse->GetWeight())/maxWeight)*10.)<0.5) synapse->SetLineStyle(2);

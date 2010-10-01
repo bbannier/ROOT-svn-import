@@ -137,16 +137,21 @@ static int ReadUtmp()
    }
 
    gUtmpContents = (STRUCT_UTMP *) malloc(size);
-   if (!gUtmpContents) return 0;
-
-   n_read = fread(gUtmpContents, 1, size, utmp);
-   if (ferror(utmp) || fclose(utmp) == EOF || n_read < size) {
-      free(gUtmpContents);
-      gUtmpContents = 0;
+   if (!gUtmpContents) {
+      fclose(utmp);
       return 0;
    }
 
-   return size / sizeof(STRUCT_UTMP);
+   n_read = fread(gUtmpContents, 1, size, utmp);
+   if (!ferror(utmp)) {
+      if (fclose(utmp) != EOF && n_read == size)
+         return size / sizeof(STRUCT_UTMP);
+   } else
+      fclose(utmp);
+
+   free(gUtmpContents);
+   gUtmpContents = 0;
+   return 0;
 }
 
 static STRUCT_UTMP *SearchEntry(int n, const char *tty)
@@ -356,10 +361,11 @@ static void PrintUsage(char *pname)
    fprintf(stderr, "  -x : exit on exception\n");
    fprintf(stderr, " dir : if dir is a valid directory cd to it before executing\n");
    fprintf(stderr, "\n");
-   fprintf(stderr, "  -?      : print usage\n");
-   fprintf(stderr, "  -h      : print usage\n");
-   fprintf(stderr, "  --help  : print usage\n");
-   fprintf(stderr, "  -config : print ./configure options\n");
+   fprintf(stderr, "  -?       : print usage\n");
+   fprintf(stderr, "  -h       : print usage\n");
+   fprintf(stderr, "  --help   : print usage\n");
+   fprintf(stderr, "  -config  : print ./configure options\n");
+   fprintf(stderr, "  -memstat : run with memory usage monitoring\n");
    fprintf(stderr, "\n");
 }
 
@@ -476,9 +482,9 @@ int main(int argc, char **argv)
    // Build argv vector
    argvv = new char* [argc+2];
 #ifdef ROOTBINDIR
-   sprintf(arg0, "%s/%s", ROOTBINDIR, ROOTBINARY);
+   snprintf(arg0, sizeof(arg0), "%s/%s", ROOTBINDIR, ROOTBINARY);
 #else
-   sprintf(arg0, "%s/bin/%s", getenv("ROOTSYS"), ROOTBINARY);
+   snprintf(arg0, sizeof(arg0), "%s/bin/%s", getenv("ROOTSYS"), ROOTBINARY);
 #endif
    argvv[0] = arg0;
    argvv[1] = (char *) "-splash";

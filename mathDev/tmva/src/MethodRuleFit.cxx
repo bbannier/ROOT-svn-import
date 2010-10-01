@@ -62,6 +62,43 @@ TMVA::MethodRuleFit::MethodRuleFit( const TString& jobName,
                                     const TString& theOption,
                                     TDirectory* theTargetDir ) :
    MethodBase( jobName, Types::kRuleFit, methodTitle, theData, theOption, theTargetDir )
+   , fSignalFraction(0)
+   , fNTImportance(0)
+   , fNTCoefficient(0)
+   , fNTSupport(0)
+   , fNTNcuts(0)
+   , fNTNvars(0)
+   , fNTPtag(0)
+   , fNTPss(0)
+   , fNTPsb(0)
+   , fNTPbs(0)
+   , fNTPbb(0)
+   , fNTSSB(0)
+   , fNTType(0)
+   , fUseRuleFitJF(kFALSE)
+   , fRFNrules(0)
+   , fRFNendnodes(0)
+   , fNTrees(0)
+   , fTreeEveFrac(0)
+   , fMinFracNEve(0)
+   , fMaxFracNEve(0)
+   , fNCuts(0)
+   , fPruneMethod(TMVA::DecisionTree::kCostComplexityPruning)
+   , fPruneStrength(0)
+   , fUseBoost(kFALSE)
+   , fGDPathEveFrac(0)
+   , fGDValidEveFrac(0)
+   , fGDTau(0)
+   , fGDTauPrec(0)
+   , fGDTauMin(0)
+   , fGDTauMax(0)
+   , fGDTauScan(0)
+   , fGDPathStep(0)
+   , fGDNPathSteps(0)
+   , fGDErrScale(0)
+   , fMinimp(0)
+   , fRuleMinDist(0)
+   , fLinQuantile(0)
 {
    // standard constructor
 }
@@ -71,6 +108,43 @@ TMVA::MethodRuleFit::MethodRuleFit( DataSetInfo& theData,
                                     const TString& theWeightFile,
                                     TDirectory* theTargetDir ) :
    MethodBase( Types::kRuleFit, theData, theWeightFile, theTargetDir )
+   , fSignalFraction(0)
+   , fNTImportance(0)
+   , fNTCoefficient(0)
+   , fNTSupport(0)
+   , fNTNcuts(0)
+   , fNTNvars(0)
+   , fNTPtag(0)
+   , fNTPss(0)
+   , fNTPsb(0)
+   , fNTPbs(0)
+   , fNTPbb(0)
+   , fNTSSB(0)
+   , fNTType(0)
+   , fUseRuleFitJF(kFALSE)
+   , fRFNrules(0)
+   , fRFNendnodes(0)
+   , fNTrees(0)
+   , fTreeEveFrac(0)
+   , fMinFracNEve(0)
+   , fMaxFracNEve(0)
+   , fNCuts(0)
+   , fPruneMethod(TMVA::DecisionTree::kCostComplexityPruning)
+   , fPruneStrength(0)
+   , fUseBoost(kFALSE)
+   , fGDPathEveFrac(0)
+   , fGDValidEveFrac(0)
+   , fGDTau(0)
+   , fGDTauPrec(0)
+   , fGDTauMin(0)
+   , fGDTauMax(0)
+   , fGDTauScan(0)
+   , fGDPathStep(0)
+   , fGDNPathSteps(0)
+   , fGDErrScale(0)
+   , fMinimp(0)
+   , fRuleMinDist(0)
+   , fLinQuantile(0)
 {
    // constructor from weight file
 }
@@ -529,6 +603,7 @@ void  TMVA::MethodRuleFit::WriteMonitoringHistosToFile( void ) const
 void TMVA::MethodRuleFit::MakeClassSpecific( std::ostream& fout, const TString& className ) const
 {
    // write specific classifier response
+   Int_t dp = fout.precision();
    fout << "   // not implemented for class: \"" << className << "\"" << std::endl;
    fout << "};" << std::endl;
    fout << "void   " << className << "::Initialize(){}" << std::endl;
@@ -539,13 +614,14 @@ void TMVA::MethodRuleFit::MakeClassSpecific( std::ostream& fout, const TString& 
    MakeClassLinear(fout);
    fout << "   return rval;" << std::endl;
    fout << "}" << std::endl;
-
+   fout << std::setprecision(dp);
 }
 
 //_______________________________________________________________________
 void TMVA::MethodRuleFit::MakeClassRuleCuts( std::ostream& fout ) const
 {
    // print out the rule cuts
+   Int_t dp = fout.precision();
    if (!fRuleFit.GetRuleEnsemble().DoRules()) {
       fout << "   //" << std::endl;
       fout << "   // ==> MODEL CONTAINS NO RULES <==" << std::endl;
@@ -595,6 +671,7 @@ void TMVA::MethodRuleFit::MakeClassRuleCuts( std::ostream& fout ) const
       fout << ") rval+=" << setprecision(10) << (*rules)[ir]->GetCoefficient() << ";" << std::flush;
       fout << "   // importance = " << Form("%3.3f",impr) << std::endl;
    }
+   fout << std::setprecision(dp);
 }
 
 //_______________________________________________________________________

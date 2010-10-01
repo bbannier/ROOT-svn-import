@@ -240,11 +240,12 @@ TUUID::TUUID(const char *uuid)
    fClockSeqHiAndReserved = 0;
    fClockSeqLow           = 0;
    fNode[0]               = 0;
+   fUUIDIndex             = 0;
 
    if (!uuid || !*uuid)
       Error("TUUID", "null string not allowed");
-
-   SetFromString(uuid);
+   else
+      SetFromString(uuid);
 }
 
 //______________________________________________________________________________
@@ -521,7 +522,7 @@ const char *TUUID::AsString() const
 
    static char uuid[40];
 
-   sprintf(uuid, "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+   snprintf(uuid,40, "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
            fTimeLow, fTimeMid, fTimeHiAndVersion, fClockSeqHiAndReserved,
            fClockSeqLow, fNode[0], fNode[1], fNode[2], fNode[3], fNode[4],
            fNode[5]);
@@ -654,8 +655,8 @@ void TUUID::SetUUID(const char *uuid)
 
    if (!uuid || !*uuid)
       Error("SetUUID", "null string not allowed");
-
-   SetFromString(uuid);
+   else
+      SetFromString(uuid);
 }
 
 //______________________________________________________________________________

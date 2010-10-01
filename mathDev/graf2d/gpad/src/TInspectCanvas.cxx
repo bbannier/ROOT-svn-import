@@ -225,13 +225,13 @@ void TInspectCanvas::InspectObject(TObject *obj)
    ttitle.DrawText(x1+0.2, y3+0.1, cl->GetName());
    if (proxy==0) {
       ttitle.SetTextColor(4);
-      strncpy(line,obj->GetName(),kline);
+      strlcpy(line,obj->GetName(),kline);
       ttitle.DrawText(xvalue+0.2, y3+0.1, line);
       ttitle.SetTextColor(6);
       ttitle.DrawText(xtitle+2, y3+0.1, obj->GetTitle());
    } else {
       ttitle.SetTextColor(4);
-      sprintf(line,"%s:%d","Foreign object",0);
+      snprintf(line,1023,"%s:%d","Foreign object",0);
       ttitle.DrawText(xvalue+0.2, y3+0.1, line);
       ttitle.SetTextColor(6);
       ttitle.DrawText(xtitle+2, y3+0.1, "no title given");
@@ -264,7 +264,7 @@ void TInspectCanvas::InspectObject(TObject *obj)
          pname = &line[kname];
          for (Int_t i=0;i<kline;i++) line[i] = ' ';
          line[kline-1] = 0;
-         strncpy(pname,rd->GetName(),128);
+         strlcpy(pname,rd->GetName(),kline-kname);
          if (strstr(member->GetFullTypeName(),"**")) strcat(pname,"**");
 
          // Encode data value or pointer value
@@ -294,12 +294,12 @@ void TInspectCanvas::InspectObject(TObject *obj)
                }
             } else if (membertype) {
                if (!strcmp(membertype->GetTypeName(), "char"))
-                  strncpy(&line[kvalue], *ppointer,128);
+                  strlcpy(&line[kvalue], *ppointer,kline-kvalue);
                else
-                  strncpy(&line[kvalue], membertype->AsString(p3pointer),128);
+                  strlcpy(&line[kvalue], membertype->AsString(p3pointer),kline-kvalue);
             } else if (!strcmp(member->GetFullTypeName(), "char*") ||
                      !strcmp(member->GetFullTypeName(), "const char*")) {
-               strncpy(&line[kvalue], *ppointer,128);
+               strlcpy(&line[kvalue], *ppointer,kline-kvalue);
             } else {
                if (pass == 1) tlink = new TLink(xvalue+0.1, ytext, p3pointer);
             }
@@ -307,11 +307,11 @@ void TInspectCanvas::InspectObject(TObject *obj)
             if (isdate) {
                cdatime = (UInt_t*)pointer;
                TDatime::GetDateTime(cdatime[0],cdate,ctime);
-               sprintf(&line[kvalue],"%d/%d",cdate,ctime);
+               snprintf(&line[kvalue],kline-kvalue,"%d/%d",cdate,ctime);
             } else if (isbits) {
-               sprintf(&line[kvalue],"0x%08x", *(UInt_t*)pointer);
+               snprintf(&line[kvalue],kline-kvalue,"0x%08x", *(UInt_t*)pointer);
             } else {
-               strncpy(&line[kvalue], membertype->AsString(pointer),128);
+               strlcpy(&line[kvalue], membertype->AsString(pointer),kline-kvalue);
             }
          else
             sprintf(&line[kvalue],"->%lx ", (Long_t)pointer);
@@ -322,7 +322,7 @@ void TInspectCanvas::InspectObject(TObject *obj)
              strcmp(member->GetFullTypeName(), "const char*")) {
             Int_t lentit = strlen(member->GetTitle());
             if (lentit >= kline-ktitle) lentit = kline-ktitle-1;
-            strncpy(&line[ktitle],member->GetTitle(),128);
+            strlcpy(&line[ktitle],member->GetTitle(),kline-ktitle);
             line[ktitle+lentit] = 0;
             ltit = ktitle;
          }

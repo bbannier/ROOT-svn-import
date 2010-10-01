@@ -25,7 +25,6 @@
 */
 //End_Html
 
-#include "snprintf.h"
 #include "TGedEditor.h"
 #include "TGComboBox.h"
 #include "TGButtonGroup.h"
@@ -413,7 +412,7 @@ TGComboBox* TPieEditor::BuildFontSizeComboBox(TGFrame* parent, Int_t id)
 
    c->AddEntry("Default", 0);
    for (int i = 1; i <= 50; i++) {
-      snprintf(a, 100, "%d", i);
+      snprintf(a, 99, "%d", i);
       c->AddEntry(a, i);
    }
 

@@ -74,8 +74,13 @@ TMVA::MethodFDA::MethodFDA( const TString& jobName,
    : MethodBase( jobName, Types::kFDA, methodTitle, theData, theOption, theTargetDir ), 
      IFitterTarget   (),
      fFormula        ( 0 ),
+     fNPars          ( 0 ),
      fFitter         ( 0 ),
-     fConvergerFitter( 0 )
+     fConvergerFitter( 0 ),
+     fSumOfWeightsSig( 0 ),
+     fSumOfWeightsBkg( 0 ),
+     fSumOfWeights   ( 0 ),
+     fOutputDimensions( 0 )
 {
    // standard constructor
 }
@@ -87,8 +92,13 @@ TMVA::MethodFDA::MethodFDA( DataSetInfo& theData,
    : MethodBase( Types::kFDA, theData, theWeightFile, theTargetDir ), 
      IFitterTarget   (),
      fFormula        ( 0 ),
+     fNPars          ( 0 ),
      fFitter         ( 0 ),
-     fConvergerFitter( 0 )
+     fConvergerFitter( 0 ),
+     fSumOfWeightsSig( 0 ),
+     fSumOfWeightsBkg( 0 ),
+     fSumOfWeights   ( 0 ),
+     fOutputDimensions( 0 )
 {
    // constructor from weight file
 }
@@ -597,16 +607,16 @@ void TMVA::MethodFDA::ReadWeightsFromXML( void* wghtnode )
    // read coefficients from xml weight file
    gTools().ReadAttr( wghtnode, "NPars", fNPars );
 
-   try {
+   if(gTools().HasAttr( wghtnode, "NDim")) {
       gTools().ReadAttr( wghtnode, "NDim" , fOutputDimensions );
-   } catch ( std::logic_error& ){
-      // attribute could not be read, it probably does not exist because the weight file has been written with an older version
+   } else {
+      // older weight files don't have this attribute
       fOutputDimensions = 1;
    }
 
    fBestPars.clear();
    fBestPars.resize( fNPars*fOutputDimensions );
-   
+
    void* ch = gTools().GetChild(wghtnode);
    Double_t par;
    UInt_t    ipar;

@@ -354,9 +354,9 @@ Int_t TChain::Add(const char* name, Long64_t nentries /* = kBigNumber */)
       while ((obj = (TObjString*)next())) {
          file = obj->GetName();
          if (behind_dot_root.Length() != 0)
-            nf += AddFile(Form("%s/%s/%s",directory.Data(),file,behind_dot_root.Data()),kBigNumber);
+            nf += AddFile(Form("%s/%s/%s",directory.Data(),file,behind_dot_root.Data()),nentries);
          else
-            nf += AddFile(Form("%s/%s",directory.Data(),file),kBigNumber);
+            nf += AddFile(Form("%s/%s",directory.Data(),file),nentries);
       }
       l.Delete();
    }
@@ -442,7 +442,7 @@ Int_t TChain::AddFile(const char* name, Long64_t nentries /* = kBigNumber */, co
    //Search for a a slash between the .root and the end
    Int_t nch = strlen(name) + strlen(treename);
    char *filename = new char[nch+1];
-   strcpy(filename,name);
+   strlcpy(filename,name,nch+1); 
    if (dot) {
       char *pos = filename + (dot-name) + 5;
       while (*pos) {
@@ -2391,7 +2391,7 @@ void TChain::SetEventList(TEventList *evlist)
    }
 
    char enlistname[100];
-   sprintf(enlistname, "%s_%s", evlist->GetName(), "entrylist");
+   snprintf(enlistname,100, "%s_%s", evlist->GetName(), "entrylist");
    TEntryList *enlist = new TEntryList(enlistname, evlist->GetTitle());
    enlist->SetDirectory(0);
 

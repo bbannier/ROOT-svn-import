@@ -118,6 +118,14 @@ TSystem::TSystem(const char *name, const char *title) : TNamed(name, title), fAc
    fInsideNotify        = kFALSE;
    fBeepDuration        = 0;
    fBeepFreq            = 0;
+   fDone                = kFALSE;
+   fAclicMode           = kDefault;
+   fInControl           = kFALSE;
+   fLevel               = 0;
+   fMaxrfd              = -1;
+   fMaxwfd              = -1;
+   fNfd                 = 0;
+   fSigcnt              = 0;
 
    gLibraryVersion = new Int_t [gLibraryVersionMax];
    memset(gLibraryVersion, 0, gLibraryVersionMax*sizeof(Int_t));
@@ -1032,7 +1040,7 @@ const char *TSystem::ExpandFileName(const char *fname)
    c = fname + strspn(fname, " \t\f\r");
    //VP  if (isalnum(c[0])) { strcpy(inp, WorkingDirectory()); strcat(inp, "/"); } // add $cwd
 
-   strcat(inp, c);
+   strlcat(inp, c, kBufSize);
 
 again:
    iter++; c = inp; ier = 0;
@@ -1045,7 +1053,7 @@ again:
          p = HomeDirectory(); e = c + 1; if (!p) ier++;
       }
       if (p) {                         // we have smth to copy
-         strcpy(x, p); x += strlen(p); c = e-1; continue;
+         strlcpy(x, p, kBufSize); x += strlen(p); c = e-1; continue;
       }
 
       p = 0;
@@ -1054,16 +1062,17 @@ again:
          p = HomeDirectory(buff); e = c+1+n; if (!p) ier++;
       }
       if (p) {                          // we have smth to copy
-         strcpy(x,p); x += strlen(p); c = e-1; continue;
+         strlcpy(x, p, kBufSize); x += strlen(p); c = e-1; continue;
       }
 
       p = 0;
       if (c[0] == '.' && c[1] == '/' && c[-1] == ' ') { // $cwd
-         p = strcpy(buff, WorkingDirectory()); e = c + 1; if (!p) ier++;
+         strlcpy(buff, WorkingDirectory(), kBufSize);
+         p = buff;
+         e = c + 1;
       }
-
       if (p) {                          // we have smth to copy */
-         strcpy(x,p); x += strlen(p); c = e-1; continue;
+         strlcpy(x, p, kBufSize); x += strlen(p); c = e-1; continue;
       }
 
       if (c[0] != '$') {                // not $, simple copy
@@ -1087,10 +1096,11 @@ again:
             p = Getenv(buff);
          }
          if (!p && !strcmp(buff, "cwd")) { // it is $cwd
-            p = strcpy(buff, WorkingDirectory());
+            strlcpy(buff, WorkingDirectory(), kBufSize);
+            p = buff;
          }
          if (!p && !strcmp(buff, "$")) { // it is $$ (replace by GetPid())
-            sprintf(buff, "%d", GetPid());
+            snprintf(buff,kBufSize*4, "%d", GetPid());
             p = buff;
          }
          if (!p) {                      // too bad, nothing can help
@@ -1108,7 +1118,7 @@ again:
             int lp = strlen(p);
             if (lp >= kBufSize) {
                // make sure lx will be >= kBufSize (see below)
-               strncpy(x, p, kBufSize);
+               strlcpy(x, p, kBufSize);
                x += kBufSize;
                break;
             } else
@@ -1118,7 +1128,7 @@ again:
    }
 
    x[0] = 0; lx = x - out;
-   if (ier && iter < 3) { strcpy(inp, out); goto again; }
+   if (ier && iter < 3) { strlcpy(inp, out, kBufSize); goto again; }
    ncopy = (lx >= kBufSize) ? kBufSize-1 : lx;
    xname[0] = 0; strncat(xname, out, ncopy);
 
@@ -3961,8 +3971,7 @@ TString TSystem::SplitAclicMode(const char* filename, TString &aclicMode,
    }
 
    // remove the possible ACLiC + or ++ and g or O
-   char postfix[4];
-   postfix[0] = 0;
+   aclicMode.Clear();
    int len = strlen(fname);
    const char *mode = 0;
    if (len > 1) {
@@ -3981,17 +3990,16 @@ TString TSystem::SplitAclicMode(const char* filename, TString &aclicMode,
       }
       if (remove) {
          fname[strlen(fname)-2] = 0;
-         strcpy(postfix, "++");
+         aclicMode = "++";
       } else {
          fname[strlen(fname)-1] = 0;
-         strcpy(postfix, "+");
+         aclicMode = "+";
       }
       if (mode)
-         strcat(postfix, mode);
+         aclicMode += mode;
    }
 
    TString resFilename = fname;
-   aclicMode = postfix;
    arguments = "(";
    if (arg) arguments += arg;
    else arguments = "";

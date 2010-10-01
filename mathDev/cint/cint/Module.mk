@@ -26,7 +26,8 @@ CINTDIRT     := $(MODDIRBASE)/tool
 CINTCONF     := $(CINTDIRI)/configcint.h
 CINTH        := $(wildcard $(CINTDIRI)/*.h)
 CINTHT       := $(sort $(patsubst $(CINTDIRI)/%.h,include/%.h,$(CINTH) $(CINTCONF)))
-CINTS1       := $(wildcard $(MODDIRS)/*.c)
+CINTS1       := $(wildcard $(MODDIRS)/*.c) \
+                $(MODDIRS)/config/strlcpy.c $(MODDIRS)/config/strlcat.c $(MODDIRS)/config/snprintf.c
 CINTS2       := $(wildcard $(MODDIRS)/*.cxx) \
                 $(MODDIRSD)/longif.cxx $(MODDIRSD)/Apiif.cxx \
                 $(MODDIRSD)/stdstrct.cxx
@@ -40,10 +41,10 @@ CINTCONFMK   := cint/ROOT/configcint.mk
 
 CINTS1       := $(filter-out $(MODDIRS)/dlfcn.%,$(CINTS1))
 
-CINTS2       := $(filter-out $(MODDIRS)/sunos.%,$(CINTS2))
-CINTS2       := $(filter-out $(MODDIRS)/macos.%,$(CINTS2))
-CINTS2       := $(filter-out $(MODDIRS)/winnt.%,$(CINTS2))
-CINTS2       := $(filter-out $(MODDIRS)/newsos.%,$(CINTS2))
+CINTS2       := $(filter-out $(MODDIRS)/config/sunos.%,$(CINTS2))
+CINTS2       := $(filter-out $(MODDIRS)/config/macos.%,$(CINTS2))
+CINTS2       := $(filter-out $(MODDIRS)/config/winnt.%,$(CINTS2))
+CINTS2       := $(filter-out $(MODDIRS)/config/newsos.%,$(CINTS2))
 CINTS2       := $(filter-out $(MODDIRS)/loadfile_tmp.%,$(CINTS2))
 
 # strip off possible leading path from compiler command name
@@ -109,10 +110,10 @@ CINTS2       += $(MODDIRSD)/libstrm.cxx
 endif
 endif
 ifeq ($(PLATFORM),sunos)
-CINTS1       += $(MODDIRS)/sunos.c
+CINTS1       += $(MODDIRS)/config/sunos.c
 endif
 ifeq ($(PLATFORM),macos)
-CINTS2       += $(MODDIRS)/macos.cxx
+CINTS2       += $(MODDIRS)/config/macos.cxx
 CINTS2       += $(MODDIRSD)/fakestrm.cxx
 endif
 ifeq ($(PLATFORM),macosx)
@@ -122,7 +123,7 @@ ifeq ($(PLATFORM),lynxos)
 CINTS2       += $(MODDIRSD)/fakestrm.cxx
 endif
 ifeq ($(PLATFORM),win32)
-CINTS2       += $(MODDIRS)/winnt.cxx
+CINTS2       += $(MODDIRS)/config/winnt.cxx
 CINTS2       := $(filter-out $(MODDIRSD)/longif.%,$(CINTS2))
 CINTS2       += $(MODDIRSD)/longif3.cxx
 ifeq ($(VC_MAJOR),16)
@@ -138,9 +139,6 @@ else
   endif
  endif
 endif
-endif
-ifeq ($(PLATFORM),vms)
-CINTS2       += $(MODDIRSD)/fakestrm.cxx
 endif
 ifeq ($(CXXCMD),icc)
 CINTS2       := $(filter-out $(MODDIRSD)/libstrm.%,$(CINTS2))

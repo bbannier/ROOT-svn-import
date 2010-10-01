@@ -45,6 +45,9 @@ TGraph2DPainter::TGraph2DPainter()
    fX        = 0;
    fY        = 0;
    fZ        = 0;
+   fEX       = 0;
+   fEY       = 0;
+   fEZ       = 0;
    fXN       = 0;
    fYN       = 0;
    fPTried   = 0;
@@ -58,6 +61,12 @@ TGraph2DPainter::TGraph2DPainter()
    fYmax     = 0.;
    fZmin     = 0.;
    fZmax     = 0.;
+   fXNmin    = 0;
+   fXNmax    = 0;
+   fYNmin    = 0;
+   fYNmax    = 0;
+   fNdt      = 0;
+   fNpoints  = 0;
 }
 
 
@@ -72,6 +81,9 @@ TGraph2DPainter::TGraph2DPainter(TGraphDelaunay *gd)
    fX        = fGraph2D->GetX();
    fY        = fGraph2D->GetY();
    fZ        = fGraph2D->GetZ();
+   fEX       = fGraph2D->GetEX();
+   fEY       = fGraph2D->GetEY();
+   fEZ       = fGraph2D->GetEZ();
    fNdt      = 0;
    fXN       = 0;
    fYN       = 0;
@@ -194,6 +206,10 @@ TList *TGraph2DPainter::GetContourList(Double_t contour)
       if (fZ[p2]>z2)  {z2=fZ[p2]; x2=fX[p2]; y2=fY[p2]; i2=2;}
       if (i0==0 && i2==0) {
          Error("GetContourList", "wrong vertices ordering");
+         delete [] xs0;
+         delete [] ys0;
+         delete [] xs1;
+         delete [] ys1;
          return 0;
       } else {
          i1 = 3-i2-i0;
@@ -382,6 +398,7 @@ void TGraph2DPainter::Paint(Option_t *option)
    Bool_t markers   = opt.Contains("p") && !triangles;
    Bool_t contour   = opt.Contains("cont");
    Bool_t line      = opt.Contains("line");
+   Bool_t err       = opt.Contains("err");
 
    fGraph2D->TAttLine::Modify();
    fGraph2D->TAttFill::Modify();
@@ -403,9 +420,10 @@ void TGraph2DPainter::Paint(Option_t *option)
    if (Hoption.Logz && fZmin <= 0) fZmin = TMath::Min((Double_t)1, (Double_t)0.001*fGraph2D->GetZmax());
 
    if (triangles) PaintTriangles(option);
-   if (markers)   PaintPolyMarker(option);
    if (contour)   PaintContour(option);
    if (line)      PaintPolyLine(option);
+   if (err)       PaintErrors(option);
+   if (markers)   PaintPolyMarker(option);
 }
 
 
@@ -446,6 +464,108 @@ void TGraph2DPainter::PaintContour(Option_t * /*option*/)
          }
       }
    }
+}
+
+
+//______________________________________________________________________________
+void TGraph2DPainter::PaintErrors(Option_t * /* option */)
+{
+   // Paints the 2D graph as error bars
+
+   Double_t temp1[3],temp2[3];
+
+   TView *view = gPad->GetView();
+   if (!view) {
+      Error("PaintErrors", "No TView in current pad");
+      return;
+   }
+
+   Int_t  it;
+
+   Double_t *xm = new Double_t[2];
+   Double_t *ym = new Double_t[2];
+
+   fGraph2D->SetLineStyle(fGraph2D->GetLineStyle());
+   fGraph2D->SetLineWidth(fGraph2D->GetLineWidth());
+   fGraph2D->SetLineColor(fGraph2D->GetLineColor());
+   fGraph2D->TAttLine::Modify();
+
+   for (it=0; it<fNpoints; it++) {
+      if(fX[it] < fXmin || fX[it] > fXmax) continue;
+      if(fY[it] < fYmin || fY[it] > fYmax) continue;
+      if (fEX) {
+         temp1[0] = fX[it]-fEX[it];
+         temp1[1] = fY[it];
+         temp1[2] = fZ[it];
+         temp1[0] = TMath::Max(temp1[0],fXmin);
+         temp1[1] = TMath::Max(temp1[1],fYmin);
+         temp1[2] = TMath::Max(temp1[2],fZmin);
+         temp1[2] = TMath::Min(temp1[2],fZmax);
+         if (Hoption.Logx) temp1[0] = TMath::Log10(temp1[0]);
+         if (Hoption.Logy) temp1[1] = TMath::Log10(temp1[1]);
+         if (Hoption.Logz) temp1[2] = TMath::Log10(temp1[2]);
+         view->WCtoNDC(temp1, &temp2[0]);
+         xm[0] = temp2[0];
+         ym[0] = temp2[1];
+
+         temp1[0] = fX[it]+fEX[it];
+         temp1[0] = TMath::Max(temp1[0],fXmin);
+         if (Hoption.Logx) temp1[0] = TMath::Log10(temp1[0]);
+         view->WCtoNDC(temp1, &temp2[0]);
+         xm[1] = temp2[0];
+         ym[1] = temp2[1];
+         gPad->PaintPolyLine(2,xm,ym);
+      }
+      if (fEY) {
+         temp1[0] = fX[it];
+         temp1[1] = fY[it]-fEY[it];
+         temp1[2] = fZ[it];
+         temp1[0] = TMath::Max(temp1[0],fXmin);
+         temp1[1] = TMath::Max(temp1[1],fYmin);
+         temp1[2] = TMath::Max(temp1[2],fZmin);
+         temp1[2] = TMath::Min(temp1[2],fZmax);
+         if (Hoption.Logx) temp1[0] = TMath::Log10(temp1[0]);
+         if (Hoption.Logy) temp1[1] = TMath::Log10(temp1[1]);
+         if (Hoption.Logz) temp1[2] = TMath::Log10(temp1[2]);
+         view->WCtoNDC(temp1, &temp2[0]);
+         xm[0] = temp2[0];
+         ym[0] = temp2[1];
+
+         temp1[1] = fY[it]+fEY[it];
+         temp1[1] = TMath::Max(temp1[1],fYmin);
+         if (Hoption.Logy) temp1[1] = TMath::Log10(temp1[1]);
+         view->WCtoNDC(temp1, &temp2[0]);
+         xm[1] = temp2[0];
+         ym[1] = temp2[1];
+         gPad->PaintPolyLine(2,xm,ym);
+      }
+      if (fEZ) {
+         temp1[0] = fX[it];
+         temp1[1] = fY[it];
+         temp1[2] = fZ[it]-fEZ[it];
+         temp1[0] = TMath::Max(temp1[0],fXmin);
+         temp1[1] = TMath::Max(temp1[1],fYmin);
+         temp1[2] = TMath::Max(temp1[2],fZmin);
+         temp1[2] = TMath::Min(temp1[2],fZmax);
+         if (Hoption.Logx) temp1[0] = TMath::Log10(temp1[0]);
+         if (Hoption.Logy) temp1[1] = TMath::Log10(temp1[1]);
+         if (Hoption.Logz) temp1[2] = TMath::Log10(temp1[2]);
+         view->WCtoNDC(temp1, &temp2[0]);
+         xm[0] = temp2[0];
+         ym[0] = temp2[1];
+
+         temp1[2] = fZ[it]+fEZ[it];
+         temp1[2] = TMath::Max(temp1[2],fZmin);
+         temp1[2] = TMath::Min(temp1[2],fZmax);
+         if (Hoption.Logz) temp1[2] = TMath::Log10(temp1[2]);
+         view->WCtoNDC(temp1, &temp2[0]);
+         xm[1] = temp2[0];
+         ym[1] = temp2[1];
+         gPad->PaintPolyLine(2,xm,ym);
+      }
+   }
+   delete [] xm;
+   delete [] ym;
 }
 
 
@@ -695,6 +815,7 @@ void TGraph2DPainter::PaintPolyMarker(Option_t *option)
    delete [] ym;
 }
 
+
 //______________________________________________________________________________
 void TGraph2DPainter::PaintPolyLine(Option_t * /* option */)
 {
@@ -739,6 +860,7 @@ void TGraph2DPainter::PaintPolyLine(Option_t * /* option */)
    delete [] xm;
    delete [] ym;
 }
+
 
 //______________________________________________________________________________
 void TGraph2DPainter::PaintPolyMarker0(Int_t n, Double_t *x, Double_t *y)

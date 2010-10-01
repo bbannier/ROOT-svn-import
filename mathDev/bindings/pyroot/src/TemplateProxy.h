@@ -22,7 +22,7 @@ namespace PyROOT {
    public:
       void Set( const std::string& name, PyObject* pyclass )
       {
-         fPyName  = PyString_FromString( const_cast< char* >( name.c_str() ) );
+         fPyName  = PyROOT_PyUnicode_FromString( const_cast< char* >( name.c_str() ) );
          Py_XINCREF( pyclass );
          fPyClass = pyclass;
       }
@@ -50,7 +50,7 @@ namespace PyROOT {
    template< typename T >
    inline Bool_t TemplateProxy_CheckExact( T* object )
    {
-      return object && object->ob_type == &TemplateProxy_Type;
+      return object && Py_TYPE(object) == &TemplateProxy_Type;
    }
 
 //- creation -----------------------------------------------------------------

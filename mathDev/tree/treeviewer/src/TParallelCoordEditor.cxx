@@ -905,7 +905,9 @@ void TParallelCoordEditor::SetModel(TObject* obj)
 {
    // Pick up the used parallel coordinates plot attributes.
 
+   if (!obj) return;
    fParallel = dynamic_cast<TParallelCoord*>(obj);
+   if (!fParallel) return;
    fAvoidSignal = kTRUE;
 
    Color_t c = fParallel->GetLineColor();

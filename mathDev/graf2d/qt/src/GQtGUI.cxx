@@ -646,7 +646,7 @@ class TXlfd {
       if (fontSlant != "*" ) 
          fIsFontItalic = ((fontSlant[0] == 'i') || (fontSlant[0] == 'o')) ? 1 : 0;
       
-      bool ok;
+      bool ok=true;
       QString fontPointSize = fontName.section('-',8,8);
       if (fontPointSize != "*") 
         fPointSize = fontPointSize.toInt(&ok);
@@ -1229,7 +1229,7 @@ void         TGQt::SetWindowBackground(Window_t id, ULong_t color)
    // Set the window background color.
    if (id == kNone || id == kDefault ) return;
    TQtClientWidget *wd =  dynamic_cast<TQtClientWidget*>(wid(id));
-   wd->setEraseColor(QtColor(color));
+   if (wd) wd->setEraseColor(QtColor(color));
 }
 //______________________________________________________________________________
 void         TGQt::SetWindowBackgroundPixmap(Window_t id, Pixmap_t pxm)
@@ -1237,7 +1237,7 @@ void         TGQt::SetWindowBackgroundPixmap(Window_t id, Pixmap_t pxm)
    // Set pixmap as window background.
    if (pxm  != kNone && id != kNone && id != kDefault ) {
       TQtClientWidget *wd =  dynamic_cast<TQtClientWidget*>(wid(id));
-      wd->setErasePixmap (*fQPixmapGuard.Pixmap(pxm));
+      if (wd) wd->setErasePixmap (*fQPixmapGuard.Pixmap(pxm));
    }
  }
 //______________________________________________________________________________
@@ -1448,11 +1448,14 @@ FontStruct_t TGQt::LoadQueryFont(const char *font_name)
    // Parse X11-like font definition to QFont parameters:
    // -adobe-helvetica-medium-r-*-*-12-*-*-*-*-*-iso8859-1
    // -adobe-helvetica-medium-r-*-*-*-12-*-*-*-*-iso8859-1
+   QString fontName(QString(font_name).trimmed());
+   QFont *newFont = 0;
+   if (fontName.toLower() == "qt-default") newFont = new QFont(QApplication::font());
+   else {
 #ifdef R__UNIX
-   QFont *newFont = new QFont();
-   newFont->setRawName(QString(font_name));
+   newFont = new QFont();
+   newFont->setRawName(fontName);
 #else
-   QString fontName(font_name);
    QString fontFamily = fontName.section('-',1,2);
    int weight = QFont::Normal;
 
@@ -1466,16 +1469,15 @@ FontStruct_t TGQt::LoadQueryFont(const char *font_name)
    int fontSize=12;
    int fontPointSize   = fontName.section('-',8,8).toInt(&ok);
    if (ok) fontSize = fontPointSize;
-   QFont *newFont = new QFont(fontFamily,fontSize,weight,italic);
+   newFont = new QFont(fontFamily,fontSize,weight,italic);
    if (!ok) {
       int fontPixelSize   = fontName.section('-',7,7).toInt(&ok);
       if (ok)
          newFont->setPixelSize(int(TMath::Max(fontPixelSize,1)));
    }
 #endif
-#if QT_VERSION >= 0x40000
    newFont->setStyleHint(QFont::System,QFont::PreferDevice);
-#endif   
+   }
    //fprintf(stderr, " 0x%p = LoadQueryFont(const char *%s) = family=%s, w=%s, size=%d (pt), pixel size=%d\n",
    //        newFont, font_name,(const char *)fontFamily,(const char *)fontWeight,fontSize,newFont->pixelSize());
    return FontStruct_t(newFont);
@@ -1933,7 +1935,7 @@ void         TGQt::SendEvent(Window_t id, Event_t *ev)
 {
    // Send event ev to window id.
 
-   if ( (ev->fType  == kClientMessage || ev->fType  == kDestroyNotify) && ev &&  id != kNone )
+   if (ev &&  (ev->fType  == kClientMessage || ev->fType  == kDestroyNotify) &&  id != kNone )
    {
       TQUserEvent qEvent(*ev);
       static TQtClientWidget *gMessageDispatcherWidget = 0;
@@ -1954,7 +1956,7 @@ void         TGQt::SendEvent(Window_t id, Event_t *ev)
       // fprintf(stderr, "  TGQt::SendEvent(Window_t id, Event_t *ev) %p type=%d\n", wid(id), ev->fType);
       QApplication::postEvent(receiver,new TQUserEvent(*ev));
    } else {
-      fprintf(stderr,"TQt::SendEvent:: unknown event %d for widget: %p\n",ev->fType,wid(id));
+      if (ev) fprintf(stderr,"TQt::SendEvent:: unknown event %d for widget: %p\n",ev->fType,wid(id));
    }
 }
 //______________________________________________________________________________
@@ -2238,8 +2240,8 @@ Int_t TGQt::TextWidth(FontStruct_t font, const char *s, Int_t len)
       QFontMetrics metric(*(QFont *)font);
       char* str = new char[len+1];
       memset(str,0,len+1);
-      strncpy(str,s,len);
-      QString qstr = strncpy(str,s,len);
+      strlcpy(str,s,len+1);
+      QString qstr = strncpy(str,s,len);  //to be fixed
       delete [] str;
       textWidth = metric.width(qstr,len);
       // fprintf(stderr," TGQt::TextWidth  %d %d <%s> \n", textWidth, len, (const char *)qstr);
@@ -2366,7 +2368,7 @@ static inline Int_t MapKeySym(int key, bool toQt=true)
 #if 0
    UInt_t text;
    QByteArray r = gQt->GetTextDecoder()->fromUnicode(qev.text());
-   qstrncpy((char *)&text, (const char *)r,1);
+   qstrlcpy((char *)&text, (const char *)r,1);
    return text;
 #else
    return key;
@@ -2959,7 +2961,7 @@ char **TGQt::ListFonts(const char *fontname, Int_t max, Int_t &count)
        for ( QStringList::Iterator it = xlFonts.begin(); it != xlFonts.end(); ++it ) {
           char *nextFont = new char[(*it).length()+1];
           *list = nextFont; list++;
-          strncpy(nextFont,(*it).toStdString().c_str(),(*it).length());
+          strlcpy(nextFont,(*it).toStdString().c_str(),(*it).length()+1);
        }
     }
     return listFont;

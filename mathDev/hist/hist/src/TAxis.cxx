@@ -214,9 +214,6 @@ const char *TAxis::ChooseTimeFormat(Double_t axislength)
       case 7:
         formatstr = "%m/%y";
         break;
-      default:
-        formatstr = "%H:%M:%S";
-        break;
    }
    return formatstr;
 }
@@ -326,7 +323,7 @@ Int_t TAxis::FindBin(const char *label)
    // count number of labels in the list
    Int_t n = 0;
    TIter next(fLabels);
-   while ((obj = (TObjString*)next())) {
+   while (next()) {
       n++;
    }
    TH1 *h = (TH1*)fParent;
@@ -469,9 +466,10 @@ Double_t TAxis::GetBinWidth(Int_t bin) const
 {
    // Return bin width
 
-   if (bin <1 ) bin = 1;
+   if (fNbins <= 0) return 0;
+   if (fXbins.fN <= 0)  return (fXmax - fXmin) / Double_t(fNbins);
    if (bin >fNbins) bin = fNbins;
-   if (!fXbins.fN)  return (fXmax - fXmin) / Double_t(fNbins);
+   if (bin <1 ) bin = 1;
    return fXbins.fArray[bin] - fXbins.fArray[bin-1];
 }
 
@@ -708,7 +706,7 @@ void TAxis::SetDefaults()
    fLast    = 0;
    fBits2   = 0;
    char name[2];
-   strncpy(name,GetName(),1);
+   strlcpy(name,GetName(),2);
    name[1] = 0;
    TAttAxis::ResetAttAxis(name);
    fTimeDisplay = 0;
@@ -966,7 +964,7 @@ void TAxis::SetTimeOffset(Double_t toffset, Option_t *option)
    // append the decimal part of the time offset
    Double_t ds = toffset-(Int_t)toffset;
    if(ds!= 0) {
-      sprintf(tmp,"s%g",ds);
+      snprintf(tmp,20,"s%g",ds);
       fTimeFormat.Append(tmp);
    }
 

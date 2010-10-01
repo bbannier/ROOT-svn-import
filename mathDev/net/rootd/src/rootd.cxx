@@ -695,7 +695,7 @@ again:
                    gFile, dev, ino, smode, gUser.c_str(), (int) getpid());
       if (write(fid, tmsg, strlen(tmsg)) == -1)
          Error(ErrSys, kErrFatal, "RootdCheckTab: error writing %s", sfile);
-      if (tmsg && tmsg != msg)
+      if (tmsg != msg)
          delete[] tmsg;
    }
 
@@ -1819,7 +1819,7 @@ void RootdChdir(const char *dir)
       }
 
       if (!getcwd(buffer, kMAXPATHLEN)) {
-         if (*dir == '/')
+         if (dir && *dir == '/')
             SPrintf(buffer, kMAXBUFLEN, "%s", dir);
       }
       NetSend(buffer, kROOTD_CHDIR);

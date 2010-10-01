@@ -47,7 +47,6 @@
 #include "Riostream.h"
 #include "TGComboBox.h"
 #include "TGListBox.h"
-#include "snprintf.h"
 
 //_____________________________________________________________________________
 //
@@ -90,7 +89,9 @@ TGHtml::TGHtml(const TGWindow *p, int w, int h, int id) : TGView(p, w, h, id)
    fVarId = 0;  // do we need this??
    fInputIdx = 0;
    fRadioIdx = 0;
+   fSelBegin.fI = 0;
    fSelBegin.fP = 0;
+   fSelEnd.fI = 0;
    fSelEnd.fP = 0;
    fPSelStartBlock = 0;
    fPSelEndBlock = 0;
@@ -98,6 +99,7 @@ TGHtml::TGHtml(const TGWindow *p, int w, int h, int id) : TGView(p, w, h, id)
    fInsOffTime = DEF_HTML_INSERT_OFF_TIME;
    fInsStatus = 0;
    fInsTimer = 0;
+   fIns.fI = 0;
    fIns.fP = 0;
    fPInsBlock = 0;
    fInsIndex = 0;
@@ -153,7 +155,15 @@ TGHtml::TGHtml(const TGWindow *p, int w, int h, int id) : TGView(p, w, h, id)
 
    fColorUsed = 0;
 
-   for (i = 0; i < N_CACHE_GC; ++i) fAGcCache[i].fIndex = 0;
+   for (i = 0; i < N_CACHE_GC; ++i) {
+      fAGcCache[i].fIndex = 0;
+      fAGcCache[i].fColor = 0;
+      fAGcCache[i].fFont  = 0;
+      fAGcCache[i].fGc    = 0;
+   }
+   fLastGC = 0;
+   fSelEndIndex =0;
+   fSelStartIndex = 0;
    fGcNextToFree = 0;
    fImageList = 0;
    fZBaseHref = 0;
@@ -1472,7 +1482,7 @@ TGFont *TGHtml::GetFont(int iFont)
       if (iFamily < 4) size += 2;
 #endif
 
-      snprintf(name, 200, familyStr, size);
+      snprintf(name, 199, familyStr, size);
 
       // Get the named font
       fAFont[iFont] = fClient->GetFont(name);
@@ -1575,7 +1585,7 @@ int TGHtml::GetColorByName(const char *zColor)
       if (i == n) {
          snprintf(zAltColor, 15, "#%s", zColor);
       } else {
-         strncpy(zAltColor, zColor, 15);
+         strlcpy(zAltColor, zColor, sizeof(zAltColor));
       }
       name = GetUid(zAltColor);
    } else {
@@ -2042,7 +2052,7 @@ int TGHtml::SetInsert(const char *insIx)
 }
 
 //______________________________________________________________________________
-void TGHtml::SavePrimitive(ostream &out, Option_t * /*= ""*/)
+void TGHtml::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 {
    // Save a html widget as a C++ statement(s) on output stream out.
 
@@ -2050,6 +2060,8 @@ void TGHtml::SavePrimitive(ostream &out, Option_t * /*= ""*/)
    out << GetName() << " = new TGHtml(" << fParent->GetName()
        << "," << GetWidth() << "," << GetHeight()
        << ");"<< endl;
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    if (fCanvas->GetBackground() != TGFrame::GetWhitePixel()) {
       out << "   " << GetName() << "->ChangeBackground(" << fCanvas->GetBackground() << ");" << endl;

@@ -1,4 +1,4 @@
-// @(#)root/mathcore:$Id: GoFTest.cxx 34992 2010-08-25 10:36:11Z moneta $
+// @(#)root/mathcore:$Id$
 // Authors: Bartolomeu Rabacal    05/2010 
 /**********************************************************************
  *                                                                    *
@@ -29,36 +29,91 @@
 namespace ROOT {
 namespace Math {
    
+   struct CDFWrapper : public IGenFunction { 
+      // wrapper around a cdf funciton to re-scale for the range
+      Double_t fXmin; // lower range for x 
+      Double_t fXmax; // lower range for x 
+      Double_t fNorm; // normalization
+      const IGenFunction* fCDF; // cdf pointer (owned by the class) 
+
+      
+      virtual ~CDFWrapper() { if (fCDF) delete fCDF; }
+
+      CDFWrapper(const IGenFunction& cdf, Double_t xmin=0, Double_t xmax=-1) : 
+         fCDF(cdf.Clone())
+      {
+         if (xmin >= xmax) { 
+            fNorm = 1; 
+            fXmin = -std::numeric_limits<double>::infinity();
+            fXmax = std::numeric_limits<double>::infinity();
+         }
+         else {
+            fNorm = cdf(xmax) - cdf(xmin); 
+            fXmin = xmin; 
+            fXmax = xmax; 
+         }
+      }
+
+      Double_t DoEval(Double_t x) const {
+         if (x <= fXmin) return 0; 
+         if (x >= fXmax) return 1.0; 
+         return (*fCDF)(x)/fNorm;
+      }
+      
+      IGenFunction* Clone() const {
+         return new CDFWrapper(*fCDF,fXmin,fXmax);
+      }
+   };
+
+
    class PDFIntegral : public IGenFunction { 
-      const IGenFunction* fPDF;
+      Double_t fXmin; // lower range for x 
+      Double_t fXmax; // lower range for x 
+      Double_t fNorm; // normalization
+      mutable IntegratorOneDim fIntegral;
+      const IGenFunction* fPDF; // pdf pointer (owned by the class) 
    public:
 
       virtual ~PDFIntegral() { if (fPDF) delete fPDF; }
 
-      PDFIntegral(const IGenFunction* pdf) : fPDF(pdf) {
+      PDFIntegral(const IGenFunction& pdf, Double_t xmin=0, Double_t xmax=-1) : 
+         fXmin(xmin), 
+         fXmax(xmax),
+         fNorm(1),
+         fPDF(pdf.Clone())
+      {
+         // compute normalization
+         fIntegral.SetFunction(*fPDF);  // N.B. must be fPDF (the cloned copy) and not pdf which can disappear
+         if (fXmin >= fXmax) {  
+            fXmin = -std::numeric_limits<double>::infinity();
+            fXmax = std::numeric_limits<double>::infinity();
+         }
+         if (fXmin ==  std::numeric_limits<double>::infinity() && fXmax == std::numeric_limits<double>::infinity() ) { 
+            fNorm = fIntegral.Integral();
+         }
+         else if (fXmin == std::numeric_limits<double>::infinity() )
+            fNorm = fIntegral.IntegralLow(fXmax);
+         else if (fXmax == std::numeric_limits<double>::infinity() )
+            fNorm = fIntegral.IntegralUp(fXmin);
+         else
+            fNorm = fIntegral.Integral(fXmin, fXmax);
       }
-      
-      Double_t operator() (Double_t x) const {
-         IntegratorOneDim  integral;
-         integral.SetFunction(*fPDF);
-         return integral.IntegralLow(x);
-      }
-      
+            
       Double_t DoEval(Double_t x) const {
-         return (*this)(x);
+         if (x <= fXmin) return 0; 
+         if (x >= fXmax) return 1.0; 
+         if (fXmin == std::numeric_limits<double>::infinity() )
+            return fIntegral.IntegralLow(x)/fNorm;
+         else 
+            return fIntegral.Integral(fXmin,x)/fNorm;
       }
       
       IGenFunction* Clone() const {
-         return new PDFIntegral(fPDF);
+         return new PDFIntegral(*fPDF,fXmin,fXmax);
       }
    };
-   
-   template<>
-   void GoFTest::SetDistribution(IGenFunction& f, GoFTest::EUserDistribution userDist) {
-      SetDistributionFunction(f, userDist); 
-   };
-   
-   void GoFTest::SetDistributionType(EDistribution dist) {
+
+   void GoFTest::SetDistribution(EDistribution dist) {
       if (!(kGaussian <= dist && dist <= kExponential)) {
          std::cerr << "Cannot set distribution type! Distribution type option must be ennabled." << std::endl;
          return;
@@ -67,8 +122,11 @@ namespace Math {
       SetCDF();
    }
   
-   GoFTest::GoFTest(const Double_t* sample1, UInt_t sample1Size, const Double_t* sample2, UInt_t sample2Size)
-   : fCDF(std::auto_ptr<IGenFunction>((IGenFunction*)0)), fDist(kUndefined), fSamples(std::vector<std::vector<Double_t> >(2)), fTestSampleFromH0(kFALSE) {
+   GoFTest::GoFTest( UInt_t sample1Size, const Double_t* sample1, UInt_t sample2Size, const Double_t* sample2 )
+   : fCDF(std::auto_ptr<IGenFunction>((IGenFunction*)0)), 
+     fDist(kUndefined), 
+     fSamples(std::vector<std::vector<Double_t> >(2)), 
+     fTestSampleFromH0(kFALSE) {
       Bool_t badSampleArg = sample1 == 0 || sample1Size == 0;
       if (badSampleArg) { 
          std::string msg = "'sample1";
@@ -93,8 +151,11 @@ namespace Math {
       SetParameters();
    }
 
-   GoFTest::GoFTest(const Double_t* sample, UInt_t sampleSize, EDistribution dist)   
-   : fCDF(std::auto_ptr<IGenFunction>((IGenFunction*)0)), fDist(dist), fSamples(std::vector<std::vector<Double_t> >(1)), fTestSampleFromH0(kTRUE) {
+   GoFTest::GoFTest(UInt_t sampleSize, const Double_t* sample, EDistribution dist)   
+   : fCDF(std::auto_ptr<IGenFunction>((IGenFunction*)0)), 
+     fDist(dist), 
+     fSamples(std::vector<std::vector<Double_t> >(1)), 
+     fTestSampleFromH0(kTRUE) {
       Bool_t badSampleArg = sample == 0 || sampleSize == 0;
       if (badSampleArg) { 
          std::string msg = "'sample";
@@ -177,15 +238,20 @@ namespace Math {
       fCDF = std::auto_ptr<IGenFunction>(cdf);
    }
    
-   void GoFTest::SetDistributionFunction(const IGenFunction& f, Bool_t isPDF) {
-      if (fDist != kUserDefined) {
-         std::cerr << "Cannot set distribution function! User defined distribution option must be ennabled." << std::endl;
-         return;
+   void GoFTest::SetDistributionFunction(const IGenFunction& f, Bool_t isPDF, Double_t xmin, Double_t xmax) {
+      if (fDist > kUserDefined) {
+         MATH_WARN_MSG("SetDistributionFunction","Distribution type is changed to user defined");
       }
-      fCDF = std::auto_ptr<IGenFunction>(isPDF ? new PDFIntegral(f.Clone()) : f.Clone());
+      fDist = kUserDefined; 
+      // function will be cloned inside the wrapper PDFIntegral of CDFWrapper classes
+      if (isPDF) 
+         fCDF = std::auto_ptr<IGenFunction>(new PDFIntegral(f,xmin,xmax) ); 
+      else 
+         fCDF = std::auto_ptr<IGenFunction>(new CDFWrapper(f,xmin,xmax) ); 
    }
 
    void GoFTest::Instantiate(const Double_t* sample, UInt_t sampleSize) {
+      // initialization function for the template constructors
       Bool_t badSampleArg = sample == 0 || sampleSize == 0;
       if (badSampleArg) { 
          std::string msg = "'sample";
@@ -195,6 +261,8 @@ namespace Math {
       }
       fCDF = std::auto_ptr<IGenFunction>((IGenFunction*)0);
       fDist = kUserDefined;
+      fMean = 0;
+      fSigma = 0; 
       fSamples = std::vector<std::vector<Double_t> >(1);
       fTestSampleFromH0 = kTRUE;
       SetSamples(std::vector<const Double_t*>(1, sample), std::vector<UInt_t>(1, sampleSize));

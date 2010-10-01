@@ -521,7 +521,7 @@ void TGSplitFrame::SplitHor()
    // via the context menu.
 
    char side[200];
-   sprintf(side, "top");
+   snprintf(side, 200, "top");
    if (fFrame) {
       new TGInputDialog(gClient->GetRoot(), GetTopFrame(),
                "In which side the actual frame has to be kept (top / bottom)", 
@@ -569,7 +569,7 @@ void TGSplitFrame::SplitVer()
    // via the context menu.
 
    char side[200];
-   sprintf(side, "left");
+   snprintf(side, 200, "left");
    if (fFrame) {
       new TGInputDialog(gClient->GetRoot(), GetTopFrame(),
                "In which side the actual frame has to be kept (left / right)", 
@@ -752,6 +752,8 @@ void TGSplitFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    } else {
       out << "," << GetOptionString() << ",ucolor);" << endl;
    }
+   if (option && strstr(option, "keep_names"))
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    // setting layout manager if it differs from the main frame type
    TGLayoutManager * lm = GetLayoutManager();

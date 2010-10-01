@@ -238,9 +238,9 @@ TGeoMaterial::~TGeoMaterial()
 char *TGeoMaterial::GetPointerName() const
 {
 // Provide a pointer name containing uid.
-   static char name[20];
-   sprintf(name,"pMat%d", GetUniqueID());
-   return name;
+   static TString name;
+   name = Form("pMat%d", GetUniqueID());
+   return (char*)name.Data();
 }    
 
 //_____________________________________________________________________________
@@ -752,7 +752,10 @@ void TGeoMixture::DefineElement(Int_t /*iel*/, Int_t z, Int_t natoms)
 // Define the mixture element at index iel by number of atoms in the chemical formula.
    TGeoElementTable *table = gGeoManager->GetElementTable();
    TGeoElement *elem = table->GetElement(z);
-   if (!elem) Fatal("DefineElement", "In mixture %s, element with Z=%i not found",GetName(),z);
+   if (!elem) {
+      Fatal("DefineElement", "In mixture %s, element with Z=%i not found",GetName(),z);
+      return;
+   }   
    AddElement(elem, natoms);
 }
    
@@ -863,6 +866,12 @@ TGeoMaterial *TGeoMixture::DecayMaterial(Double_t time, Double_t precision)
       }
    }
    if (ncomp1>1) mix = new TGeoMixture(Form("%s-evol",GetName()), ncomp, rho); 
+   else {
+      Error("DecayMaterial","No components left after decay of %s?", GetName());
+      delete [] weight;
+      delete pop;
+      return 0;
+   }
    for (i=0; i<ncomp; i++) {
       weight[i] /= amed;
       if (weight[i]<precision) continue;

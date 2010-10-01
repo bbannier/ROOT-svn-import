@@ -48,8 +48,8 @@
   (i.e. direct copy of the raw byte on disk). The "fast" mode is typically
   5 times faster than the mode unzipping and unstreaming the baskets.
 
-  NOTE1: By default histograms are added. However if histograms have their bit kIsAverage
-        set, the contents are averaged instead of being summed. See TH1::Add.
+  NOTE1: By default histograms are added. However hadd does not support the case where
+         histograms have their bit TH1::kIsAverage set.
 
   NOTE2: hadd returns a status code: 0 if OK, -1 otherwise
 
@@ -106,7 +106,7 @@ int main( int argc, char **argv )
 
    Bool_t force = kFALSE;
    reoptimize = kFALSE;
-   
+
    int ffirst = 2;
    Int_t newcomp = 1;
    for( int a = 1; a < argc; ++a ) {
@@ -122,7 +122,7 @@ int main( int argc, char **argv )
       } else if ( argv[a][0] == '-' ) {
          char ft[4];
          for( int j=0; j<=9; ++j ) {
-            sprintf(ft,"-f%d",j);
+            snprintf(ft,4,"-f%d",j);
             if (!strcmp(argv[a],ft)) {
                force = kTRUE;
                newcomp = j;
@@ -380,23 +380,21 @@ int MergeRootfile( TDirectory *target, TList *sourcelist)
          // note that this will just store obj in the current directory level,
          // which is not persistent until the complete directory itself is stored
          // by "target->Write()" below
-         if ( obj ) {
-            target->cd();
+         target->cd();
 
-            //!!if the object is a tree, it is stored in globChain...
-            if(obj->IsA()->InheritsFrom( TDirectory::Class() )) {
-               //printf("cas d'une directory\n");
-            } else if(obj->IsA()->InheritsFrom( TTree::Class() )) {
-               if (!noTrees) {
-                  globChain->ls();
-                  if (fastMethod && !reoptimize) globChain->Merge(target->GetFile(),0,"keep fast");
-                  else                           globChain->Merge(target->GetFile(),0,"keep");
-                  delete globChain;
-               }
-            } else {
-               int nbytes2 = obj->Write( key->GetName(), TObject::kSingleKey );
-               if (nbytes2 <= 0) status = -1;
+         //!!if the object is a tree, it is stored in globChain...
+         if(obj->IsA()->InheritsFrom( TDirectory::Class() )) {
+            //printf("cas d'une directory\n");
+         } else if(obj->IsA()->InheritsFrom( TTree::Class() )) {
+            if (!noTrees) {
+               globChain->ls();
+               if (fastMethod && !reoptimize) globChain->Merge(target->GetFile(),0,"keep fast");
+               else                           globChain->Merge(target->GetFile(),0,"keep");
+               delete globChain;
             }
+         } else {
+            int nbytes2 = obj->Write( key->GetName(), TObject::kSingleKey );
+            if (nbytes2 <= 0) status = -1;
          }
          oldkey = key;
          delete obj;

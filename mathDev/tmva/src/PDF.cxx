@@ -580,6 +580,7 @@ void TMVA::PDF::ValidatePDF( TH1* originalHist ) const
       Double_t ey = originalHist->GetBinError( bin );
 
       Int_t binPdfHist = fPDFHist->FindBin( x );
+      if(binPdfHist<0) continue; // happens only if hist-dim>3
 
       Double_t yref = GetVal( x );
       Double_t rref = ( originalHist->GetSumOfWeights()/fPDFHist->GetSumOfWeights() *
@@ -936,6 +937,7 @@ void TMVA::PDF::ReadXML( void* pdfnode )
 ostream& TMVA::operator<< ( ostream& os, const PDF& pdf )
 {
    // write the pdf
+   Int_t dp = os.precision();
    os << "MinNSmooth      " << pdf.fMinNsmooth << std::endl;
    os << "MaxNSmooth      " << pdf.fMaxNsmooth << std::endl;
    os << "InterpolMethod  " << pdf.fInterpolMethod << std::endl;
@@ -963,6 +965,8 @@ ostream& TMVA::operator<< ( ostream& os, const PDF& pdf )
       os << std::setw(15) << std::left << histToWrite->GetBinContent(i+1) << " ";
       if ((i+1)%5==0) os << std::endl;
    }
+
+   os << std::setprecision(dp);
    return os; // Return the output stream.
 }
 

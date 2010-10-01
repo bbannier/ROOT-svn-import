@@ -252,6 +252,10 @@ TGraphAsymmErrors::TGraphAsymmErrors(const TH1* pass, const TH1* total, Option_t
    // Creates a TGraphAsymmErrors by dividing two input TH1 histograms:
    // pass/total. (see TGraphAsymmErrors::Divide)
 
+   if (!pass || !total) { 
+      Error("TGraphAsymmErrors","Invalid histogram pointers");
+      return;
+   }
    if (!CtorAllocate()) return;
 
    std::string sname = "divide_" + std::string(pass->GetName()) + "_by_" +
@@ -417,7 +421,7 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
    Bool_t bVerbose = false;
    //pointer to function returning the boundaries of the confidence interval
    //(is only used in the frequentist cases.)
-   Double_t (*pBound)(Int_t,Int_t,Double_t,Bool_t) = 0;
+   Double_t (*pBound)(Int_t,Int_t,Double_t,Bool_t) = &TEfficiency::ClopperPearson; // default method
    //confidence level
    Double_t conf = 0.683;
    //values for bayesian statistics

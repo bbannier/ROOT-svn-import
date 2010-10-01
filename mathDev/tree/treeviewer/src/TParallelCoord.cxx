@@ -237,8 +237,10 @@ void  TParallelCoord::ApplySelectionToTree()
    // Apply the current selection to the tree.
 
    if(!fTree) return;
-   if(fSelectList->GetSize() == 0) return;
-   if(fCurrentSelection == 0) fCurrentSelection = (TParallelCoordSelect*)fSelectList->First();
+   if(fSelectList) {
+      if(fSelectList->GetSize() == 0) return;
+      if(fCurrentSelection == 0) fCurrentSelection = (TParallelCoordSelect*)fSelectList->First();
+   }
    fCurrentEntries = GetEntryList();
    fNentries = fCurrentEntries->GetN();
    fCurrentFirst = 0;
@@ -1097,8 +1099,7 @@ TParallelCoordSelect* TParallelCoord::SetCurrentSelection(const char* title)
    TIter next(fSelectList);
    TParallelCoordSelect* sel;
    while((sel = (TParallelCoordSelect*)next()) && strcmp(sel->GetTitle(),title))
-   if(!sel) return 0;
-   fCurrentSelection = sel;
+   if (sel) fCurrentSelection = sel;
    return sel;
 }
 

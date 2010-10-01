@@ -110,9 +110,11 @@ XPDLIB       := $(LPATH)/libXrdProofd.$(SOEXT)
 XPCONNO      := $(MODDIRS)/XrdProofConn.o $(MODDIRS)/XrdProofPhyConn.o \
                 $(MODDIRS)/XProofProtUtils.o
 
+# Extra definitions
+# CXXFLAGS += $(BONJOURCPPFLAGS)
 # Extra include paths and libs
 XPROOFDEXELIBS :=
-XPROOFDEXESYSLIBS :=
+XPROOFDEXESYSLIBS := $(DNSSDLIB)
 XPROOFDEXE     :=
 ifeq ($(BUILDXRD),yes)
 XPDINCEXTRA    := $(XROOTDDIRI:%=-I%)
@@ -122,6 +124,20 @@ XPDLIBEXTRA    += -L$(XROOTDDIRL) -lXrdOuc -lXrdNet -lXrdSys \
 XPROOFDEXELIBS := $(XROOTDDIRL)/libXrd.a $(XROOTDDIRL)/libXrdClient.a \
                   $(XROOTDDIRL)/libXrdNet.a $(XROOTDDIRL)/libXrdOuc.a \
                   $(XROOTDDIRL)/libXrdSys.a $(XROOTDDIRL)/libXrdSut.a
+# Starting from Jul 2010 XrdNet has been split in two libs: XrdNet and XrdNetUtil;
+# both are needed
+XRDNETUTIL     :=
+ifneq ($(XRDVERSION),)
+XRDNETUTIL     := $(shell if test $(XRDVERSION) -gt 20100729; then \
+                             echo "yes"; \
+                          fi)
+endif
+ifeq ($(XRDNETUTIL),yes)
+XPDLIBEXTRA    += -L$(XROOTDDIRL) -lXrdNetUtil
+XPROOFDEXELIBS += $(XROOTDDIRL)/libXrdNetUtil.a
+endif
+XPDLIBEXTRA    +=  $(DNSSDLIB)
+
 ifeq ($(PLATFORM),solaris)
 XPROOFDEXESYSLIBS := -lsendfile
 endif
@@ -181,6 +197,7 @@ ifneq ($(ICC_GE_9),)
 # remove when xrootd has moved from strstream.h -> sstream.
 $(XPDO): CXXFLAGS += -Wno-deprecated $(XPDINCEXTRA) $(EXTRA_XRDFLAGS)
 else
+CXXFLAGS += $(BONJOURCPPFLAGS)
 ifneq ($(GCC_MAJOR),)
 ifneq ($(GCC_MAJOR),2)
 # remove when xrootd has moved from strstream.h -> sstream.

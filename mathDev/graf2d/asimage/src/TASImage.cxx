@@ -399,7 +399,10 @@ const char *TASImage::TypeFromMagicNumber(const char *file)
 
    if (!fp) return 0;
 
-   if (!fread(&magic, 1, 1, fp)) return 0;
+   if (!fread(&magic, 1, 1, fp)) {
+      fclose(fp);
+      return 0;
+   }
 
    switch (magic) {
       case 0x00:
@@ -497,12 +500,15 @@ void TASImage::ReadImage(const char *filename, EImageFileTypes /*type*/)
    iparams.return_animation_delay = -1;
 
    TString ext;
-   const char *dot = strrchr(filename, '.');
+   const char *dot;
+   if (filename) dot = strrchr(filename, '.');
+   else          dot = 0;
    ASImage *image = 0;
    TString fname = filename;
 
    if (!dot) {
-      ext = TypeFromMagicNumber(filename);
+      if (filename) ext = TypeFromMagicNumber(filename);
+      else ext = dot + 1;
    } else {
       ext = dot + 1;
    }
@@ -1040,7 +1046,7 @@ void TASImage::FromPad(TVirtualPad *pad, Int_t x, Int_t y, UInt_t w, UInt_t h)
    }
 
    if (w == 0) {
-      w = pad->UtoPixel(1.);
+      w = TMath::Abs(pad->UtoPixel(1.));
    }
 
    if (h == 0) {
@@ -1722,10 +1728,10 @@ char *TASImage::GetObjectInfo(Int_t px, Int_t py) const
    }
 
    if (fImage->alt.vector) {
-      sprintf(info, "x: %d  y: %d   %.5g",
+      snprintf(info,64,"x: %d  y: %d   %.5g",
               px, py, fImage->alt.vector[px + py * fImage->width]);
    } else {
-      sprintf(info, "x: %d  y: %d", px, py);
+      snprintf(info,64,"x: %d  y: %d", px, py);
    }
 
    return info;
@@ -2784,6 +2790,7 @@ Double_t *TASImage::Vectorize(UInt_t max_colors, UInt_t dither, Int_t opaque_thr
    fPalette = *pal;
    fImage->alt.vector = vec;
    UnZoom();
+   if (res) delete res;
    return (Double_t*)fImage->alt.vector;
 }
 
@@ -3341,6 +3348,7 @@ void TASImage::Crop(Int_t x, Int_t y, UInt_t width, UInt_t height)
    if (!imout) {
       Warning("Crop", "Failed to start image output");
       destroy_asimage(&img);
+      if (imdec) delete [] imdec;
       return;
    }
 
@@ -5204,6 +5212,7 @@ Bool_t TASImage::GetPolygonSpans(UInt_t npt, TPoint *ppt, UInt_t *nspans,
       // in case of non-convex polygon
       if (i < 0) {
          delete [] firstWidth;
+	 delete [] firstPoint;
          return kTRUE;
       }
 
@@ -5260,6 +5269,9 @@ void TASImage::FillPolygon(UInt_t npt, TPoint *ppt, const char *col,
          delete [] firstWidth;
          delete [] firstPoint;
       }
+   } else {
+      if (firstWidth) delete [] firstWidth;
+      if (firstPoint) delete [] firstPoint;
    }
 }
 
@@ -5283,6 +5295,9 @@ void TASImage::FillPolygon(UInt_t npt, TPoint *ppt, TImage *tile)
          delete [] firstWidth;
          delete [] firstPoint;
       }
+   } else {
+      if (firstWidth) delete [] firstWidth;
+      if (firstPoint) delete [] firstPoint;
    }
 }
 
@@ -5305,6 +5320,9 @@ void TASImage::CropPolygon(UInt_t npt, TPoint *ppt)
          delete [] firstWidth;
          delete [] firstPoint;
       }
+   } else {
+         if (firstWidth) delete [] firstWidth;
+         if (firstPoint) delete [] firstPoint;
    }
 }
 
@@ -6468,7 +6486,8 @@ void TASImage::Gray(Bool_t on)
       CARD32 *bb = imdec->buffer.blue;
 
       ASScanline result;
-      prepare_scanline(fImage->width, 0, &result, fgVisual->BGR_mode);
+      ASScanline *sl = prepare_scanline(fImage->width, 0, &result, fgVisual->BGR_mode);
+      if (sl) delete sl;
 
       for (i = 0; i < fImage->height; i++) {
          imdec->decode_image_scanline(imdec);

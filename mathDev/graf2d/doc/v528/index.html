@@ -59,6 +59,8 @@
      </pre>
 </li>
 <li> Small fix regarding line width in TPDF.</li>
+<li> In some cases there was some extra blanck page at the beginning of the
+     PDF files. In particular when generated using the "[]" mechanism.</li>
 </ul>
 
 <h4>SVG</h4>
@@ -88,6 +90,12 @@
 <li> Initialize the <tt>Visual</tt> in <tt>TASImage::ReadImage</tt>. This fix
      a long standing problem with THtml: Without this fix all the embeded
      macros generating GUI output did not work in THtml.</li>
+</ul>
+
+<h4>TImageDump</h4>
+</ul>
+<li> Small boxes (less than one pixel width) were not drawn properly.
+</li>
 </ul>
 
 <h3>Graphics Primitives</h3>
@@ -175,7 +183,7 @@
 <h4>TText</h4>
 <ul>
 <li> New method <tt>GetTextAdvance</tt> to return the text advance for string
-     text taking the kerning into account or not.
+     text taking the kerning into account or not.</li>
 </li>
 </ul>
 
@@ -184,7 +192,14 @@
 <li> In case of horizontal axis with the font size in pixel (font precision = 3)
      the labels were not visible.</li>
 <li> Alpha numeric labels are not scaled anymore in case of text precision 3 
-     (size in pixels). They are in the other precisions.
+     (size in pixels). They are in the other precisions.</li>
+<li> Fix a precision issue on Mac. With the following lines the last label
+     (10^3) did not show:
+     <pre>
+     t1 = new TH1F("test","test", 100,1,1000);
+     t1.Draw();
+     gPad->SetLogx(1);
+     </pre></li>
 </ul>
 
 <h4>TPaveStats</h4>

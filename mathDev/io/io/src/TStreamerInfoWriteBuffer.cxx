@@ -137,7 +137,7 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
    b.IncrementLevel(thisVar);
 
    //mark this class as being used in the current file
-   thisVar->TagFile((TFile *)b.GetParent());
+   b.TagStreamerInfo(thisVar);
 
    //============
 
@@ -526,7 +526,10 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
                TVirtualCollectionProxy *proxy = cl->GetCollectionProxy();
                TClass* vClass = proxy ? proxy->GetValueClass() : 0;
 
-               if (!b.TestBit(TBuffer::kCannotHandleMemberWiseStreaming) && thisVar->GetStreamMemberWise() && cl->CanSplit()
+               if (!b.TestBit(TBuffer::kCannotHandleMemberWiseStreaming) 
+                   && proxy && vClass
+                   && thisVar->GetStreamMemberWise() 
+                   && cl->CanSplit()
                    && !(strspn(aElement->GetTitle(),"||") == 2)
                    && !(gInterpreter->ClassInfo_RootFlag(vClass->GetClassInfo()) & 1) ) {
                   // Let's save the collection member-wise.
@@ -574,7 +577,9 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
                TMemberStreamer *pstreamer = fComp[i].fStreamer;
                TVirtualCollectionProxy *proxy = cl->GetCollectionProxy();
                TClass* vClass = proxy ? proxy->GetValueClass() : 0;
-               if (!b.TestBit(TBuffer::kCannotHandleMemberWiseStreaming) && thisVar->GetStreamMemberWise() && cl->CanSplit()
+               if (!b.TestBit(TBuffer::kCannotHandleMemberWiseStreaming)
+                   && proxy && vClass
+                   && thisVar->GetStreamMemberWise() && cl->CanSplit()
                    && !(strspn(aElement->GetTitle(),"||") == 2)
                    && !(vClass->GetClassInfo() && (gInterpreter->ClassInfo_RootFlag(vClass->GetClassInfo()) & 1) ) ) {
                   // Let's save the collection in member-wise order.

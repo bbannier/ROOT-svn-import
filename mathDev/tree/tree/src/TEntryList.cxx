@@ -532,12 +532,12 @@ void TEntryList::DirectoryAutoAdd(TDirectory* dir)
 //________________________________________________________________________
 Bool_t TEntryList::Enter(Long64_t entry, TTree *tree)
 {
-//Add entry #entry to the list
-//When tree = 0, adds to the current list
-//When tree != 0, finds the list, corresponding to this tree
-//When tree is a chain, the entry is assumed to be global index and the local
-//entry is recomputed from the treeoffset information of the chain
-
+   //Add entry #entry to the list
+   //When tree = 0, adds to the current list
+   //When tree != 0, finds the list, corresponding to this tree
+   //When tree is a chain, the entry is assumed to be global index and the local
+   //entry is recomputed from the treeoffset information of the chain
+   
    if (!tree){
       if (!fLists) {
          if (!fBlocks) fBlocks = new TObjArray();
@@ -692,6 +692,7 @@ Long64_t TEntryList::GetEntry(Int_t index)
               break;
          }
          fCurrent = templist;
+         if (!fCurrent) return -1;
          Long64_t localentry = index - (ntotal - fCurrent->GetN());
          fLastIndexQueried = index;
          fLastIndexReturned = fCurrent->GetEntry(localentry);
@@ -739,6 +740,7 @@ TEntryList *TEntryList::GetEntryList(const char *treename, const char *filename,
       Info("GetEntryList","tree: %s, file: %s",
                           (treename ? treename : "-"), (filename ? filename : "-"));
 
+   if (!treename || !filename) return 0;
    TString option = opt;
    option.ToUpper();
    Bool_t nexp = option.Contains("NE");
@@ -877,8 +879,10 @@ Long64_t TEntryList::Next()
          fCurrent = (TEntryList*)fLists->First();
          if (!fCurrent) return 0;
          if (fShift) {
-            while (fCurrent->GetTreeNumber()<0)
+            while (fCurrent->GetTreeNumber()<0) {
                fCurrent = (TEntryList*)fLists->After(fCurrent);
+               if (!fCurrent) return 0;
+            }
          }
       }
       result = fCurrent->Next();
@@ -900,9 +904,13 @@ Long64_t TEntryList::Next()
 
          //find the list with the next non-zero entry
          while (result<0 && fCurrent!=((TEntryList*)fLists->Last())){
+            if (!fCurrent) return 0;
             fCurrent->fLastIndexQueried = -1;
             fCurrent->fLastIndexReturned = 0;
             fCurrent = (TEntryList*)fLists->After(fCurrent);
+            // fCurrent is guarantee to be non-zero because it is not the 'last' 
+            // element of the list.
+            if (!fCurrent) return 0;
             if (!fShift)
                result = fCurrent->Next();
             else {

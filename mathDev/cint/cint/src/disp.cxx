@@ -715,15 +715,15 @@ static int G__display_classinheritance(FILE *fout,int tagnum,const char *space)
       if(baseclass->herit[i]->property&G__ISINDIRECTVIRTUALBASE) {
         if(G__more(fout,"(virtual) ")) return(1);
       }
-      sprintf(msg,"%s %s"
-              ,G__access2string(baseclass->herit[i]->baseaccess)
-              ,G__fulltagname(baseclass->herit[i]->basetagnum,0));
+      msg.Format("%s %s"
+                 ,G__access2string(baseclass->herit[i]->baseaccess)
+                 ,G__fulltagname(baseclass->herit[i]->basetagnum,0));
       if(G__more(fout,msg)) return(1);
       temp[0]='\0';
       G__getcomment(temp,&G__struct.comment[baseclass->herit[i]->basetagnum]
                     ,baseclass->herit[i]->basetagnum);
       if(temp[0]) {
-         sprintf(msg," //%s",temp());
+         msg.Format(" //%s",temp());
         if(G__more(fout,msg)) return(1);
       }
       if(G__more(fout,"\n")) return(1);
@@ -942,7 +942,7 @@ int G__display_class(FILE *fout, char *name,int base,int start)
     G__FastAllocString tmpbuf(pt1);
     *pt1=' ';
     ++pt1;
-    strcpy(pt1,tmpbuf);
+    strcpy(pt1,tmpbuf);  // Legacy, we hope the caller created a bit of wiggle room
   }
 
   if(isdigit(*(name+i))) tagnum = atoi(name+i);
@@ -973,17 +973,15 @@ int G__display_class(FILE *fout, char *name,int base,int start)
             ,G__struct.line_number[tagnum]);
   }
   if(G__more(fout,msg)) return(1);
-  sprintf(
-    msg,
-    " (tagnum=%d,voffset=%d,isabstract=%d,parent=%d,gcomp=%d:%d,funcs(dn21=~xcpd)=%x)",
-    tagnum,
-    G__struct.virtual_offset[tagnum],
-    G__struct.isabstract[tagnum],
-    G__struct.parent_tagnum[tagnum],
-    G__struct.globalcomp[tagnum],
-    G__struct.iscpplink[tagnum],
-    G__struct.funcs[tagnum]
-  );
+    msg.Format(" (tagnum=%d,voffset=%d,isabstract=%d,parent=%d,gcomp=%d:%d,funcs(dn21=~xcpd)=%x)",
+               tagnum,
+               G__struct.virtual_offset[tagnum],
+               G__struct.isabstract[tagnum],
+               G__struct.parent_tagnum[tagnum],
+               G__struct.globalcomp[tagnum],
+               G__struct.iscpplink[tagnum],
+               G__struct.funcs[tagnum]
+               );
   if(G__more(fout,msg)) return(1);
   if('$'==G__struct.name[tagnum][0]) {
     msg.Format(" (typedef %s)",G__struct.name[tagnum]+1);
@@ -1632,7 +1630,7 @@ int G__dump_tracecoverage(FILE *fout)
       view.line_number=0;
       view.filenum=iarg;
       view.fp=G__srcfile[iarg].fp;
-      strcpy(view.name,G__srcfile[iarg].filename);
+      G__strlcpy(view.name,G__srcfile[iarg].filename,G__MAXFILENAME);
       fprintf(fout
               ,"%s trace coverage==========================================\n"
               ,view.name);
@@ -1641,7 +1639,6 @@ int G__dump_tracecoverage(FILE *fout)
   }
   return(0);  
 }
-
 /******************************************************************
 * void G__objectmonitor()
 *
@@ -1856,7 +1853,7 @@ int G__varmonitor(FILE *fout,G__var_array *var,const char *index,const char *add
         }
         else if (var->varlabel[imon1][1] /* num of elements */ == INT_MAX /* unspecified length flag */) {
           // -- Special case dimension, unspecified length.
-          strcpy(msg, "[]");
+          msg = "[]";
           if (G__more(fout, msg)) {
             return 1;
           }
@@ -2123,7 +2120,7 @@ va_list arg;
        buf = (char*)malloc(len+5);
        /* Reset the counter */
        va_start(argptr,fmt);       
-       result = vsprintf(buf,fmt,argptr);
+       result = vsprintf(buf,fmt,argptr); // Okay, we allocated the right size.
        (*G__ErrMsgCallback)(buf);
        free((void*)buf);
        fclose(fpnull);

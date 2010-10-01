@@ -133,7 +133,7 @@ TCanvas::TCanvas(Bool_t build) : TPad(), fDoubleBuffer(0)
    fPainter = 0;
    fUseGL = gStyle->GetCanvasPreferGL();
 
-   if (!build || TClass::IsCallingNew()) {
+   if (!build || TClass::IsCallingNew() != TClass::kRealNew) {
       Constructor();
    } else {
       const char *defcanvas = gROOT->GetDefCanvasName();
@@ -905,9 +905,9 @@ void TCanvas::DrawEventStatus(Int_t event, Int_t px, Int_t py, TObject *selected
    fCanvasImp->SetStatusText(selected->GetTitle(),0);
    fCanvasImp->SetStatusText(selected->GetName(),1);
    if (event == kKeyPress)
-      sprintf(atext, "%c", (char) px);
+      snprintf(atext, kTMAX, "%c", (char) px);
    else
-      sprintf(atext, "%d,%d", px, py);
+      snprintf(atext, kTMAX, "%d,%d", px, py);
    fCanvasImp->SetStatusText(atext,2);
    fCanvasImp->SetStatusText(selected->GetObjectInfo(px,py),3);
    gPad = savepad;
@@ -1379,14 +1379,14 @@ TCanvas *TCanvas::MakeDefCanvas()
       Int_t n = lc->GetSize() + 1;
       cdef = new char[strlen(defcanvas)+15];
       do {
-         strcpy(cdef, Form("%s_n%d", defcanvas, n++));
+         strlcpy(cdef,Form("%s_n%d", defcanvas, n++),strlen(defcanvas)+15);
       } while (lc->FindObject(cdef));
    } else
       cdef = StrDup(Form("%s",defcanvas));
 
    TCanvas *c = new TCanvas(cdef, cdef, 1);
 
-   Printf("<TCanvas::MakeDefCanvas>: created default TCanvas with name %s",cdef);
+   ::Info("TCanvas::MakeDefCanvas"," created default TCanvas with name %s",cdef);
    delete [] cdef;
    return c;
 }
@@ -1678,14 +1678,14 @@ void TCanvas::SaveSource(const char *filename, Option_t *option)
    } else {
       Int_t nch = strlen(cname);
       if (nch < 10) {
-         strcpy(lcname,cname);
+         strlcpy(lcname,cname,10);
          for (Int_t k=1;k<=nch;k++) {if (lcname[nch-k] == ' ') lcname[nch-k] = 0;}
-         if (lcname[0] == 0) {invalid = kTRUE; strcpy(lcname,"c1"); nch = 2;}
+         if (lcname[0] == 0) {invalid = kTRUE; strlcpy(lcname,"c1",10); nch = 2;}
          cname = lcname;
       }
       fname = new char[nch+3];
-      strcpy(fname,cname);
-      strcat(fname,".C");
+      strlcpy(fname,cname,nch+3);
+      strncat(fname,".C",2);
       out.open(fname, ios::out);
    }
    if (!out.good ()) {
@@ -1952,6 +1952,7 @@ void TCanvas::Streamer(TBuffer &b)
                                         colold->GetGreen(),
                                         colold->GetBlue(),
                                         colold->GetName());
+                  if (!colcur) return;
                }
             }
          }

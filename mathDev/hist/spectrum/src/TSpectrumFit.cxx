@@ -38,17 +38,55 @@ ClassImp(TSpectrumFit)
 TSpectrumFit::TSpectrumFit() :TNamed("SpectrumFit", "Miroslav Morhac peak fitter") 
 {
    //default constructor
-   fNPeaks = 0;   
-   fPositionInit  = 0;
-   fPositionCalc  = 0;   
-   fPositionErr   = 0;   
-   fFixPosition   = 0;   
-   fAmpInit   = 0;   
-   fAmpCalc   = 0;   
-   fAmpErr    = 0;   
-   fFixAmp    = 0;     
-   fArea      = 0;   
-   fAreaErr   = 0;      
+
+   fNPeaks = 0;
+   fNumberIterations = 1;
+   fXmin = 0;
+   fXmax = 100; 
+   fStatisticType = kFitOptimChiCounts;
+   fAlphaOptim = kFitAlphaHalving;     
+   fPower = kFitPower2;                
+   fFitTaylor = kFitTaylorOrderFirst;  
+   fAlpha =1; 
+   fChi = 0;                    
+   fPositionInit   = 0;
+   fPositionCalc   = 0;
+   fPositionErr   = 0;
+   fFixPosition   = 0;
+   fAmpInit   = 0;
+   fAmpCalc   = 0;
+   fAmpErr    = 0;
+   fFixAmp    = 0;
+   fArea      = 0;
+   fAreaErr   = 0;
+   fSigmaInit = 2;
+   fSigmaCalc = 1;
+   fSigmaErr  = 0;
+   fTInit = 0; 
+   fTCalc = 0;
+   fTErr = 0; 
+   fBInit = 1; 
+   fBCalc = 0;
+   fBErr = 0; 
+   fSInit = 0; 
+   fSCalc = 0;
+   fSErr = 0; 
+   fA0Init = 0; 
+   fA0Calc = 0;
+   fA0Err = 0;
+   fA1Init = 0;
+   fA1Calc = 0;
+   fA1Err = 0;
+   fA2Init = 0;
+   fA2Calc = 0;
+   fA2Err = 0;
+   fFixSigma = false;
+   fFixT = true;
+   fFixB = true;
+   fFixS = true;
+   fFixA0 = true;
+   fFixA1 = true;
+   fFixA2 = true;
 }
 
 //______________________________________________________________________________
@@ -109,7 +147,16 @@ T, S and slope B).</p>
       Error ("TSpectrumFit","Invalid number of peaks, must be > than 0");
       return;
    }
-   fNPeaks = numberPeaks;   
+   fNPeaks = numberPeaks;  
+   fNumberIterations = 1;
+   fXmin = 0;
+   fXmax = 100; 
+   fStatisticType = kFitOptimChiCounts;
+   fAlphaOptim = kFitAlphaHalving;     
+   fPower = kFitPower2;                
+   fFitTaylor = kFitTaylorOrderFirst;  
+   fAlpha =1; 
+   fChi = 0;                    
    fPositionInit   = new Double_t[numberPeaks];
    fPositionCalc   = new Double_t[numberPeaks];   
    fPositionErr   = new Double_t[numberPeaks];   
@@ -120,23 +167,33 @@ T, S and slope B).</p>
    fFixAmp    = new Bool_t[numberPeaks];     
    fArea      = new Double_t[numberPeaks];   
    fAreaErr   = new Double_t[numberPeaks];      
-   fXmin=0,fXmax=100,fSigmaInit = 2,fFixSigma = false;
-   fAlpha =1;                     
-   fStatisticType = kFitOptimChiCounts;
-   fAlphaOptim = kFitAlphaHalving;     
-   fPower = kFitPower2;                
-   fFitTaylor = kFitTaylorOrderFirst;  
-   fTInit = 0;  
-   fFixT = true;
-   fBInit = 1;  
-   fFixB = true;
-   fSInit = 0;  
-   fFixS = true;
+   fSigmaInit = 2;
+   fSigmaCalc = 1;
+   fSigmaErr  = 0;
+   fTInit = 0; 
+   fTCalc = 0;
+   fTErr = 0; 
+   fBInit = 1; 
+   fBCalc = 0;
+   fBErr = 0; 
+   fSInit = 0; 
+   fSCalc = 0;
+   fSErr = 0; 
    fA0Init = 0; 
-   fFixA0 = true;
+   fA0Calc = 0;
+   fA0Err = 0;
    fA1Init = 0;
-   fFixA1 = true;
+   fA1Calc = 0;
+   fA1Err = 0;
    fA2Init = 0;
+   fA2Calc = 0;
+   fA2Err = 0;
+   fFixSigma = false;
+   fFixT = true;
+   fFixB = true;
+   fFixS = true;
+   fFixA0 = true;
+   fFixA1 = true;
    fFixA2 = true;
 }
     
@@ -721,27 +778,15 @@ Double_t TSpectrumFit::Ourpowl(Double_t a, Int_t pw)
 {                               
    //power function
    Double_t c;
+   Double_t a2 = a*a;
    c = 1;
-   if (pw > 0)
-      c = c * a * a;
-   
-   else if (pw > 2)
-      c = c * a * a;
-   
-   else if (pw > 4)
-      c = c * a * a;
-   
-   else if (pw > 6)
-      c = c * a * a;
-   
-   else if (pw > 8)
-      c = c * a * a;
-   
-   else if (pw > 10)
-      c = c * a * a;
-   
-   else if (pw > 12)
-      c = c * a * a;
+   if (pw >  0) c *= a2;
+   if (pw >  2) c *= a2;
+   if (pw >  4) c *= a2;
+   if (pw >  6) c *= a2;
+   if (pw >  8) c *= a2;
+   if (pw > 10) c *= a2;
+   if (pw > 12) c *= a2;
    return (c);
 }
 
@@ -2517,11 +2562,13 @@ pm-&gt;SetMarkerColor(kRed);</span></p>
    }
    rozmer = j;
    if (rozmer == 0){
-      Error ("FitAwmi","All parameters are fixed");   
+      Error ("FitAwmi","All parameters are fixed");
+      delete [] working_space;
       return;    
    }
    if (rozmer >= fXmax - fXmin + 1){
       Error ("FitAwmi","Number of fitted parameters is larger than # of fitted points");   
+      delete [] working_space;
       return;    
    }
    Double_t **working_matrix = new Double_t *[rozmer];

@@ -38,7 +38,6 @@
 #include "TFile.h"
 #include "TMemberStreamer.h"
 #include "TStreamer.h"
-#include "snprintf.h"
 
 extern "C" void R__zip(int cxlevel, int *srcsize, char *src, int *tgtsize, char *tgt, int *irep);
 
@@ -759,7 +758,7 @@ XMLNodePointer_t TBufferXML::XmlWriteObject(const void* obj, const TClass* cl)
    PopStack();
 
    if (gDebug>1)
-      Info("XmlWriteObject","Done write for class: %s",cl->GetName());
+      Info("XmlWriteObject","Done write for class: %s", cl ? cl->GetName() : "null");
 
    return objnode;
 }
@@ -1417,7 +1416,7 @@ UInt_t TBufferXML::WriteVersion(const TClass *cl, Bool_t /* useBcnt */)
 
    if (gDebug>2)
       Info("WriteVersion", "Class: %s, version = %d",
-          (cl ? cl->GetName() : "null"), fVersionBuf);
+           cl->GetName(), fVersionBuf);
 
    return 0;
 }
@@ -1838,10 +1837,12 @@ void TBufferXML::ReadFastArray(Char_t    *c, Int_t n)
    // if nodename==CharStar, read all array as string
 
    if ((n>0) && VerifyItemNode(xmlio::CharStar)) {
-      const char* buf = XmlReadValue(xmlio::CharStar);
-      Int_t size = strlen(buf);
-      if (size<n) size = n;
-      memcpy(c, buf, size);
+      const char* buf;
+      if ((buf = XmlReadValue(xmlio::CharStar))) {
+         Int_t size = strlen(buf);
+         if (size<n) size = n;
+         memcpy(c, buf, size);
+      }
    } else
       TBufferXML_ReadFastArray(c);
 }
@@ -2474,8 +2475,9 @@ void TBufferXML::ReadCharP(Char_t    *c)
    // Reads array of characters from buffer
 
    BeforeIOoperation();
-   const char* buf = XmlReadValue(xmlio::CharStar);
-   strcpy(c, buf);
+   const char* buf;
+   if ((buf = XmlReadValue(xmlio::CharStar)))
+      strcpy(c, buf);
 }
 
 //______________________________________________________________________________
@@ -2964,7 +2966,7 @@ void TBufferXML::SetFloatFormat(const char* fmt)
    if (fmt==0) fmt = "%e";
    fgFloatFmt = fmt;
 }
-    
+
 const char* TBufferXML::GetFloatFormat()
 {
    // return current printf format for float/double members, default "%e"
