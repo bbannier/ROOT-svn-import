@@ -99,6 +99,7 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nfiles, Long64_t nevents,
    //    0 when ok
    //   <0 otherwise
 
+   Info("GenerateFiles", "Generating files for mode %s.", fMode->GetName());
    Int_t nactive_sav;
 
    if (fProof){
@@ -148,6 +149,13 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nfiles, Long64_t nevents,
 
    // Build file map to generate on worker nodes
    TMap* filesmap=fMode->FilesToProcess(nfiles);
+
+   if (!filesmap){
+      Error("GenerateFiles", "Could not figure out files to be generated;"
+                             " returning.");
+      return -1;
+   }
+
    // Add the file map in the input list
    fProof->AddInput(filesmap);
 
@@ -215,7 +223,7 @@ Int_t TProofBenchFileGenerator::GenerateFiles(Int_t nfiles, Long64_t nevents,
    }
    
    // Print outputs
-   Info("GenerateFiles", "List of files generarted:");
+   Info("GenerateFiles", "List of files generarted or that exist already:");
    fFilesGenerated->Print("A");
 
    // Clear input parameters

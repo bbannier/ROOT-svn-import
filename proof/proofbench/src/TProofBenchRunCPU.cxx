@@ -202,9 +202,15 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
    //Delete the list of performance statistics trees
    fPerfStats->Delete();
 
+   Info("Run", "Running CPU-bound tests; %d ~ %d active worker(s),"
+               " every %d worker(s).", start, stop, step);
+
    for (Int_t nactive=start; nactive<=stop; nactive+=step) {
       fProof->SetParallel(nactive);
       for (Int_t j=0; j<ntries; j++) {
+
+         Info("Run", "Running CPU-bound tests with %d active worker(s)."
+                     " %dth trial.", nactive, j);
 
          Int_t npad=1; //pad number
 

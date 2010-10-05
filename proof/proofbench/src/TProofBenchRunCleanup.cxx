@@ -120,7 +120,7 @@ void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t,
 
    if (fCleanupType==TProofBenchRun::kCleanupReadInFiles){
       TString dsname="DataSetEventCleanup";
-      Info("Run", "Clean-up run by reading in files of data set: %s",
+      Info("Run", "Cleaning up file cache by reading in files of data set %s.",
                    dsname.Data());
       TFileCollection* fc_cleanup=fProof->GetDataSet(dsname.Data());
 
@@ -227,7 +227,7 @@ void TProofBenchRunCleanup::Run(Long64_t, Int_t, Int_t, Int_t, Int_t,
          lcopy->SetName(inputdataname.Data());
          fProof->AddInputData(lcopy); 
 
-         Info("Run", "Cleaning up file caches in data set: %s",
+         Info("Run", "Cleaning up file cache of data set %s.",
                      fDataSetCleanup.Data());
          fProof->Process("TSelEvent", Long64_t(1));
          fProof->ClearInputData(inputdataname.Data()); 

@@ -98,6 +98,10 @@ TMap* TProofBenchModeConstNFilesNode::FilesToProcess(Int_t nf)
       }
       filesmap->Add(new TObjString(node->GetName()), files);
    }
+
+   Info("FilesToProcess", "Map of files to be generated:");
+   filesmap->Print("A", -1);
+
    return filesmap;
 }
 
@@ -132,14 +136,18 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf, Int_t start,
 
    if (nf==-1){
       nf=fNFiles;
-      Info("MakeDataSets", "Number of files a node is %d for %s", nf,
-                                                                  GetName());
+      //Info("MakeDataSets", "Number of files a node is %d for %s", nf,
+      //                                                            GetName());
    }
 
    // Default max worker number is the number of all workers in the cluster
    if (stop==-1){
       stop=fNodes->GetNWorkersCluster();
    }
+
+   Info("MakeDataSets", "Making data sets for mode %s, number of files a node"
+        "=%d, %d ~ %d active worker(s), every %d worker(s).", 
+         GetName(), nf, start, stop, step);
 
    const Int_t np=(stop-start)/step+1;
    Int_t wp[np];
@@ -191,7 +199,8 @@ Int_t TProofBenchModeConstNFilesNode::MakeDataSets(Int_t nf, Int_t np,
    for (kp=0; kp<np; kp++) {
       // Dataset name
       dsname.Form("DataSetEvent%s_%d_%d", GetName(), wp[kp], nf);
-      Info("MakeDataSets", "creating dataset '%s' ...", dsname.Data());
+      Info("MakeDataSets", "Creating dataset '%s' for %d active worker(s).",
+            dsname.Data(), wp[kp]);
       // Create the TFileCollection
       TFileCollection *fc = new TFileCollection;
 

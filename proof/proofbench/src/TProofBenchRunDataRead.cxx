@@ -262,15 +262,21 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
    //do not delete performance statistics trees
    fPerfStats->Clear();
 
+   Int_t nf=fMode->GetNFiles();
+   TString smode=fMode->GetName();
+   Info("Run", "Running IO-bound tests for mode %s; %d ~ %d active worker(s),"
+               " every %d worker(s).", smode.Data(), start, stop, step);
+
    for (Int_t nactive=start; nactive<=stop; nactive+=step) {
       for (Int_t j=0; j<ntries; j++) {
+
+         Info("Run", "Running IO-bound tests with %d active worker(s)."
+                     " %dth trial.", nactive, j);
 
          Int_t npad=1; //pad number
 
          TString dsname; 
-         Int_t nf=fMode->GetNFiles();
-         TString smode=fMode->GetName();
-   
+
          //cleanup run
          dsname.Form("DataSetEvent%s_%d_%d", smode.Data(), nactive, nf);
          if (fRunCleanup->GetCleanupType()==TProofBenchRun::kCleanupFileAdvise){
@@ -283,13 +289,11 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
          SetParameters();
          fProof->SetParallel(nactive);
 
-         Info("Run", "Processing data set : %s", dsname.Data()); 
-
          TFileCollection* fc=0;
          Long64_t nfiles=0;
          Long64_t nevents_total=-1; //-1 for all events in the group of files
          if ((fc=fProof->GetDataSet(dsname.Data()))){
-            fc->Print();
+            //fc->Print();
             nfiles=fc->GetNFiles();
             if (nevents>0){
                nevents_total=nfiles*nevents;
@@ -300,8 +304,9 @@ void TProofBenchRunDataRead::Run(Long64_t nevents, Int_t start, Int_t stop,
             continue;
          }
 
-         Info("Run", "Total number of events to process is %lld",
-                      nevents_total); 
+         Info("Run", "Processing data set %s (%lld events to be processed) with"
+              " %d active worker(s).", dsname.Data(), nevents_total, nactive); 
+
          TTime starttime = gSystem->Now();
          fProof->Process(dsname.Data(), "TSelEvent", "", nevents_total);
          DeleteParameters();
