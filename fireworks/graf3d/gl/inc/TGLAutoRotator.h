@@ -30,12 +30,12 @@ protected:
    TTimer    *fTimer;
 
    Double_t   fWPhi;
-   Double_t   fWTheta, fMaxTheta, fMinTheta;
-   Double_t   fWDolly, fMinDolly, fMaxDolly;
+   Double_t   fWTheta, fATheta;
+   Double_t   fWDolly, fADolly;
 
    Double_t   fDt;
    Double_t   fTime;
-   Double_t   fDeltaTheta;
+   Double_t   fThetaA0, fDollyA0;
    Bool_t     fTimerRunning;
 
 public:
@@ -51,22 +51,18 @@ public:
 
    // --------------------------------
 
-   Double_t GetWPhi() const         { return fWPhi; }
-   void     SetWPhi(Double_t w)     { fWPhi = w;    }
+   Double_t GetWPhi() const       { return fWPhi; }
+   void     SetWPhi(Double_t w)   { fWPhi = w;    }
 
-   Double_t GetWTheta() const       { return fWTheta;   }
-   void     SetWTheta(Double_t w)   { fWTheta = w;      }
-   Double_t GetMinTheta() const     { return fMinTheta; }
-   void     SetMinTheta(Double_t w) { fMinTheta = w;    }
-   Double_t GetMaxTheta() const     { return fMaxTheta; }
-   void     SetMaxTheta(Double_t w) { fMaxTheta = w;    }
+   Double_t GetWTheta() const     { return fWTheta; }
+   void     SetWTheta(Double_t w) { fWTheta = w;    }
+   Double_t GetATheta() const     { return fATheta; }
+   void     SetATheta(Double_t a);
 
-   Double_t GetWDolly() const       { return fWDolly;   }
-   void     SetWDolly(Double_t w)   { fWDolly = w;      }
-   Double_t GetMinDolly() const     { return fMinDolly; }
-   void     SetMinDolly(Double_t w) { fMinDolly = w;    }
-   Double_t GetMaxDolly() const     { return fMaxDolly; }
-   void     SetMaxDolly(Double_t w) { fMaxDolly = w;    }
+   Double_t GetWDolly() const     { return fWDolly; }
+   void     SetWDolly(Double_t w) { fWDolly = w;    }
+   Double_t GetADolly() const     { return fADolly; }
+   void     SetADolly(Double_t a);
 
    ClassDef(TGLAutoRotator, 0); // Short description.
 };

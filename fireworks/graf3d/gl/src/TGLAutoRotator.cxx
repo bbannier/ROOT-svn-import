@@ -22,8 +22,8 @@
 // Automatically rotates GL camera.
 //
 // W's are angular velocities.
-// Min/MaxTheta is in units of Pi/2
-// Min/MaxDolly is a factor of starting camera position.
+// ATheta -- Theta amplitude in units of Pi/2.
+// ADolly -- In/out amplitude in units of initial distance.
 
 ClassImp(TGLAutoRotator);
 
@@ -31,9 +31,10 @@ ClassImp(TGLAutoRotator);
 TGLAutoRotator::TGLAutoRotator(TGLViewer* v) :
    fViewer(v),
    fTimer(new TTimer),
-   fWPhi(0.2),
-   fWTheta(0.1),  fMaxTheta(0.5), fMinTheta(-0.5),
-   fWDolly(0.05), fMinDolly(0.5), fMaxDolly(1.5)
+   fWPhi  (0.30),
+   fWTheta(0.15), fATheta(0.5),
+   fWDolly(0.10), fADolly(0.4),
+   fTimerRunning(kFALSE)
 {
    // Constructor.
 
@@ -51,6 +52,36 @@ TGLAutoRotator::~TGLAutoRotator()
 //==============================================================================
 
 //______________________________________________________________________________
+void TGLAutoRotator::SetATheta(Double_t a)
+{
+   // Set relative amplitude of theta oscilation.
+   // Value range: 0.01 -> 1.
+
+   a = TMath::Range(0.01, 1, a);
+   if (fTimerRunning)
+   {
+      fThetaA0 = fThetaA0 * a / fATheta;
+   }
+   fATheta = a;
+}
+
+//______________________________________________________________________________
+void TGLAutoRotator::SetADolly(Double_t a)
+{
+   // Set relative amplitude of forward/backward oscilation.
+   // Value range: 0.01 -> 1.
+
+  a = TMath::Range(0.01, 1, a);
+  if (fTimerRunning)
+  {
+     fDollyA0 = fDollyA0 * a / fADolly;
+  }
+  fADolly = a;
+}
+
+//==============================================================================
+
+//______________________________________________________________________________
 void TGLAutoRotator::Start(Double_t delta_t)
 {
    if (fTimerRunning)
@@ -63,7 +94,9 @@ void TGLAutoRotator::Start(Double_t delta_t)
 
    fDt = delta_t;
    fTime = 0;
-   fDeltaTheta = 0;
+
+   fThetaA0 = fATheta * TMath::PiOver2();
+   fDollyA0 = fADolly * fCamera->GetCamTrans().GetBaseVec(4).Mag();
 
    fTimerRunning = kTRUE;
    fTimer->SetTime(TMath::Nint(1000*delta_t));
@@ -95,15 +128,22 @@ void TGLAutoRotator::Timeout()
 
    fTimer->TurnOff();
 
-   // Double_t dtheta;
-   if (fDeltaTheta == 0)
-   {
+   using namespace TMath;
 
-   }
-   else
-   {
+   fTime += fDt;
+   Double_t delta_p = fWPhi*fDt;
+   Double_t delta_t = fThetaA0*fWTheta*Cos(fWTheta*fTime)*fDt;
+   Double_t delta_d = fDollyA0*fWDolly*Cos(fWDolly*fTime)*fDt;
+   Double_t th      = fCamera->GetTheta();
 
-   }
+   // printf("t=%f, d_p=%f, d_t=%f, d_d=%f, th=%f\n", fTime, delta_p,
+   // delta_t, delta_d, th);
+
+   if (th + delta_t > 3.0 || th + delta_t < 0.1416)
+      delta_t = 0;
+
+   fCamera->RotateRad(delta_t, delta_p);
+   fCamera->RefCamTrans().MoveLF(1, -delta_d);
 
    fViewer->RequestDraw(TGLRnrCtx::kLODHigh);
 
