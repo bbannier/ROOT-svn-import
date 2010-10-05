@@ -181,7 +181,7 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
          if (a){
             fHistType=TProofBenchRun::EHistType(a->GetVal());
             found_histtype=kTRUE;
-            Info("SlaveBegin", "PROOF_BenchmarkHistType=%d", fHistType);
+            //Info("SlaveBegin", "PROOF_BenchmarkHistType=%d", fHistType);
          }
          else{
             Error("SlaveBegin", "PROOF_BenchmarkHistType not type TParameter"
@@ -194,7 +194,7 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
          if (a){
             fNHists=a->GetVal();
             found_nhists=kTRUE;
-            Info("SlaveBegin", "PROOF_BenchmarkNHists=%d", fNHists);
+            //Info("SlaveBegin", "PROOF_BenchmarkNHists=%d", fNHists);
          }
          else{
             Error("SlaveBegin", "PROOF_BenchmarkNHists not type TParameter"
@@ -207,7 +207,7 @@ void TSelHist::SlaveBegin(TTree * /*tree*/)
          if (a){
             fDraw=a->GetVal();
             found_draw=kTRUE;
-            Info("SlaveBegin", "PROOF_BenchmarkDraw=%d", fDraw);
+            //Info("SlaveBegin", "PROOF_BenchmarkDraw=%d", fDraw);
          }
          else{
             Error("SlaveBegin", "PROOF_BenchmarkDraw not type TParameter"

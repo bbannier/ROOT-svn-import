@@ -30,7 +30,7 @@ ClassImp(TProofBenchModeCleanup)
 //______________________________________________________________________________
 TProofBenchModeCleanup::TProofBenchModeCleanup(TProof* proof,
                                                TProofNodes* nodes)
-:fProof(proof), fNodes(nodes), fName("ConstNFilesNode")
+:fProof(proof), fNodes(nodes), fName("Cleanup")
 {
    if (!fProof){
       fProof=gProof;
@@ -74,6 +74,9 @@ TMap* TProofBenchModeCleanup::FilesToProcess(Int_t)
       filesmap->Add(new TObjString(node->GetName()), files);
    }
 
+   Info("FilesToProcess", "Map of files to be generated:");
+   filesmap->Print("A", -1);
+
    return filesmap;
 }
 
@@ -101,7 +104,7 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t, Int_t, Int_t, Int_t,
    }
 
    TString dsname="DataSetEventCleanup";
-   Info("MakeDataSetDataSets", "creating dataset '%s' ...", dsname.Data());
+   Info("MakeDataSetDataSets", "Creating dataset '%s'.", dsname.Data());
    // Create the TFileCollection
    TFileCollection *fc = new TFileCollection;
 
@@ -134,6 +137,8 @@ Int_t TProofBenchModeCleanup::MakeDataSets(Int_t, Int_t, const Int_t*,
    // Return
    //    0 when ok
    //   <0 otherwise
+
+   Info("MakeDataSets", "Making data sets for mode %s.", GetName()); 
 
    return MakeDataSets(0, 0, 0, 0, listfiles, option, proof);
 }

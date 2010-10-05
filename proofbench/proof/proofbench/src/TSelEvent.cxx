@@ -178,13 +178,13 @@ void TSelEvent::SlaveBegin(TTree *tree)
    TObject *obj;
    while ((obj = nxt())){
       sinput=obj->GetName();
-      Info("SlaveBegin", "name=%s", sinput.Data());
+      //Info("SlaveBegin", "name=%s", sinput.Data());
       if (sinput.Contains("PROOF_BenchmarkReadType")){
          TParameter<Int_t>* a=dynamic_cast<TParameter<Int_t>*>(obj);
          if (a){
             fReadType=TProofBenchRun::EReadType(a->GetVal());
             found_readtype=kTRUE;
-            Info("SlaveBegin", "PROOF_BenchmarkReadType=%d", fReadType);
+            //Info("SlaveBegin", "PROOF_BenchmarkReadType=%d", fReadType);
          }
          else{
             Error("SlaveBegin", "PROOF_BenchmarkReadType not type TParameter"
@@ -197,7 +197,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
          if (a){
             fCleanupType=TProofBenchRun::ECleanupType(a->GetVal());
             found_cleanuptype=kTRUE;
-            Info("SlaveBegin", "PROOF_BenchmarkCleanupType=%d", fCleanupType);
+            //Info("SlaveBegin", "PROOF_BenchmarkCleanupType=%d", fCleanupType);
          }
          else{
             Error("SlaveBegin", "PROOF_BenchmarkCleanupType not type TParameter"
@@ -210,7 +210,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
          if (a){
             fDebug= a->GetVal();
             found_debug=kTRUE;
-            Info("SlaveBegin", "PROOF_BenchmarkDebug=%d", fDebug);
+            //Info("SlaveBegin", "PROOF_BenchmarkDebug=%d", fDebug);
          }
          else{
             Error("SlaveBegin", "PROOF_BenchmarkDebug not type TParameter"
@@ -223,8 +223,8 @@ void TSelEvent::SlaveBegin(TTree *tree)
          if (l){
             fFilesToCleanupCacheFor=l;
             found_filestocleanupcachefor=kTRUE;
-            Info("SlaveBegin", "PROOF_BenchmarkFilesToCleanupCacheFor:");
-            fFilesToCleanupCacheFor->Print("A");
+            //Info("SlaveBegin", "PROOF_BenchmarkFilesToCleanupCacheFor:");
+            //fFilesToCleanupCacheFor->Print("A");
          }
          else{
             Error("SlaveBegin", "PROOF_BenchmarkFilesToCleanupCacheFor not type"
@@ -276,7 +276,7 @@ void TSelEvent::SlaveBegin(TTree *tree)
             TString localhostname=TUrl(gSystem->HostName()).GetHostFQDN();
             if (hostname==localhostname){
                TString filename=url->GetFile();
-               Info("SlaveBegin", "Cleaning up cache for file: %s",
+               Info("SlaveBegin", "Cleaning up file cache of file %s.",
                                    filename.Data());
                Int_t fd;
                fd = open(filename.Data(), O_RDONLY);

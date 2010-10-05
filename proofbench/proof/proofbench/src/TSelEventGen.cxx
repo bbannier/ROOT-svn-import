@@ -39,7 +39,7 @@ ClassImp(TSelEventGen)
 
 //______________________________________________________________________________
 TSelEventGen::TSelEventGen():
-fFileType(TProofBenchMode::kFileNotSpecified), fBaseDir(""), fNEvents(10000),
+fFileType(TProofBenchMode::kFileNotSpecified), fBaseDir(""), fNEvents(100000),
 fNTracks(100), fRegenerate(kFALSE), fNWorkersPerNode(0), fWorkerNumber(0),
 fTotalGen(0), fFilesGenerated(0), fChain(0)
 {
@@ -68,8 +68,8 @@ void TSelEventGen::Begin(TTree *)
    TMap *filemap = dynamic_cast<TMap *>
                      (fInput->FindObject("PROOF_FilesToProcess"));
    if (filemap) {
-      Info("Begin", "dumping the file map:");
-      filemap->Print();
+      //Info("Begin", "dumping the file map:");
+      //filemap->Print();
    } else {
       if (fInput->FindObject("PROOF_FilesToProcess")) {
          Error("Begin", "object 'PROOF_FilesToProcess' found but not a map"
@@ -189,7 +189,6 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          continue;
       }
       if (sinput.Contains("PROOF_SlaveInfos")){
-         obj->Print("a"); 
          TSortedList* a=dynamic_cast<TSortedList*>(obj);
          if (a){
             listofslaveinfos=a;
@@ -274,10 +273,10 @@ void TSelEventGen::SlaveBegin(TTree *tree)
 
       Info("SlaveBegin", "Number of workers on this node (%s) is %d",
                           hostname.Data(), fNWorkersPerNode); 
-      Info("SlaveBegin", "Worker number on this node (%s) is %d",
-                          hostname.Data(), fWorkerNumber); 
+      //Info("SlaveBegin", "Worker number on this node (%s) is %d",
+      //                    hostname.Data(), fWorkerNumber); 
 
-      Print();
+      //Print();
    }
    else {
       Error("SlaveBegin", "Slave info empty");

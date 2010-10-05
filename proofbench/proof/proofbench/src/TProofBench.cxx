@@ -178,7 +178,7 @@ Int_t TProofBench::MakeDataSets(Int_t nfiles, Long64_t nevents,
    //   <0 otherwise
 
    if (!fProof){
-      Error("GenerateFiles", "Proof not set, doing nothing");
+      Error("MakeDataSets", "Proof not set, doing nothing");
       return -1;
    }
    
