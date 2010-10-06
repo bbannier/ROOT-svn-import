@@ -579,11 +579,11 @@ void TGLViewerEditor::CreateExtrasTab()
    {
       TGCompositeFrame *l = new TGHorizontalFrame(p);
 
-      TGTextButton *b = new TGTextButton(l, "Start", 80);
+      TGTextButton *b = new TGTextButton(l, "Start");
       b->Connect("Clicked()", "TGLViewerEditor", this, "DoRotatorStart()");
       l->AddFrame(b, new TGLayoutHints(kLHintsLeft | kLHintsExpandX));
 
-      b = new TGTextButton(l, "Stop", 80);
+      b = new TGTextButton(l, "Stop");
       b->Connect("Clicked()", "TGLViewerEditor", this, "DoRotatorStop()");
       l->AddFrame(b, new TGLayoutHints(kLHintsLeft | kLHintsExpandX));
 
