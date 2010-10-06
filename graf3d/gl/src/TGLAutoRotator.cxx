@@ -16,6 +16,7 @@
 
 #include "TMath.h"
 #include "TTimer.h"
+#include "TStopwatch.h"
 
 //______________________________________________________________________________
 //
@@ -29,12 +30,12 @@ ClassImp(TGLAutoRotator);
 
 //______________________________________________________________________________
 TGLAutoRotator::TGLAutoRotator(TGLViewer* v) :
-   fViewer(v),
-   fTimer(new TTimer),
-   fDt    (0.02),
-   fWPhi  (0.30),
+   fViewer(v), fCamera(0),
+   fTimer(new TTimer), fWatch(new TStopwatch),
+   fDt    (0.01),
+   fWPhi  (0.40),
    fWTheta(0.15), fATheta(0.5),
-   fWDolly(0.10), fADolly(0.4),
+   fWDolly(0.30), fADolly(0.4),
    fTimerRunning(kFALSE)
 {
    // Constructor.
@@ -47,6 +48,7 @@ TGLAutoRotator::~TGLAutoRotator()
 {
    // Destructor.
 
+   delete fWatch;
    delete fTimer;
 }
 
@@ -55,10 +57,15 @@ TGLAutoRotator::~TGLAutoRotator()
 //______________________________________________________________________________
 void TGLAutoRotator::SetDt(Double_t dt)
 {
-   // Set time between two redraws.
-   // Range: 0.01 -> 1.
+   // Set time between two redraws in seconds.
+   // Range: 0.001 -> 1.
 
    fDt = TMath::Range(0.01, 1.0, dt);
+   if (fTimerRunning)
+   {
+      fTimer->SetTime(TMath::Nint(1000*fDt));
+      fTimer->Reset();
+   }
 }
 
 //______________________________________________________________________________
@@ -101,8 +108,6 @@ void TGLAutoRotator::Start()
 
    fCamera = & fViewer->CurrentCamera();
 
-   fTime = 0;
-
    fThetaA0 = fATheta * TMath::PiOver2();
    fDollyA0 = fADolly * fCamera->GetCamTrans().GetBaseVec(4).Mag();
 
@@ -110,6 +115,7 @@ void TGLAutoRotator::Start()
    fTimer->SetTime(TMath::Nint(1000*fDt));
    fTimer->Reset();
    fTimer->TurnOn();
+   fWatch->Start();
 }
 
 //______________________________________________________________________________
@@ -117,6 +123,7 @@ void TGLAutoRotator::Stop()
 {
    if (fTimerRunning)
    {
+      fWatch->Stop();
       fTimer->TurnOff();
       fTimerRunning = kFALSE;
    }
@@ -131,18 +138,16 @@ void TGLAutoRotator::Timeout()
       return;
    }
 
-   fTimer->TurnOff();
-
    using namespace TMath;
 
-   fTime += fDt;
-   Double_t delta_p = fWPhi*fDt;
-   Double_t delta_t = fThetaA0*fWTheta*Cos(fWTheta*fTime)*fDt;
-   Double_t delta_d = fDollyA0*fWDolly*Cos(fWDolly*fTime)*fDt;
-   Double_t th      = fCamera->GetTheta();
+   fWatch->Stop();
+   Double_t time = fWatch->RealTime();
+   fWatch->Continue();
 
-   // printf("t=%f, d_p=%f, d_t=%f, d_d=%f, th=%f\n", fTime, delta_p,
-   // delta_t, delta_d, th);
+   Double_t delta_p = fWPhi*fDt;
+   Double_t delta_t = fThetaA0*fWTheta*Cos(fWTheta*time)*fDt;
+   Double_t delta_d = fDollyA0*fWDolly*Cos(fWDolly*time)*fDt;
+   Double_t th      = fCamera->GetTheta();
 
    if (th + delta_t > 3.0 || th + delta_t < 0.1416)
       delta_t = 0;
@@ -151,7 +156,4 @@ void TGLAutoRotator::Timeout()
    fCamera->RefCamTrans().MoveLF(1, -delta_d);
 
    fViewer->RequestDraw(TGLRnrCtx::kLODHigh);
-
-   fTimer->SetTime(TMath::Nint(1000*fDt));
-   fTimer->TurnOn();
 }
