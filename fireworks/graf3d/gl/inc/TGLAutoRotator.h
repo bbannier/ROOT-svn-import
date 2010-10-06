@@ -17,6 +17,7 @@
 class TGLCamera;
 class TGLViewer;
 class TTimer;
+class TStopwatch;
 
 class TGLAutoRotator : public TObject
 {
@@ -25,16 +26,16 @@ private:
    TGLAutoRotator& operator=(const TGLAutoRotator&); // Not implemented
 
 protected:
-   TGLViewer *fViewer;
-   TGLCamera *fCamera;
-   TTimer    *fTimer;
+   TGLViewer  *fViewer;
+   TGLCamera  *fCamera;
+   TTimer     *fTimer;
+   TStopwatch *fWatch;
 
    Double_t   fDt;
    Double_t   fWPhi;
    Double_t   fWTheta, fATheta;
    Double_t   fWDolly, fADolly;
 
-   Double_t   fTime;
    Double_t   fThetaA0, fDollyA0;
    Bool_t     fTimerRunning;
 

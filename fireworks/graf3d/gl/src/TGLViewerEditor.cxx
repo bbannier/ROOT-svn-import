@@ -558,8 +558,8 @@ void TGLViewerEditor::CreateExtrasTab()
 
    p = new TGGroupFrame(tab, "Auto rotator", kVerticalFrame);
 
-   fARotDt = MakeLabeledNEntry(p, "Delta T:", labw, 5, TGNumberFormat::kNESRealTwo);
-   fARotDt->SetLimits(TGNumberFormat::kNELLimitMinMax, 0.01, 1);
+   fARotDt = MakeLabeledNEntry(p, "Delta T:", labw, 5, TGNumberFormat::kNESRealThree);
+   fARotDt->SetLimits(TGNumberFormat::kNELLimitMinMax, 0.001, 1);
 
    fARotWPhi = MakeLabeledNEntry(p, "Omega Phi:", labw, 5, TGNumberFormat::kNESRealTwo);
    fARotWPhi->SetLimits(TGNumberFormat::kNELLimitMinMax, -10, 10);
