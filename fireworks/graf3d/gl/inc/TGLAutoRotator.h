@@ -29,11 +29,11 @@ protected:
    TGLCamera *fCamera;
    TTimer    *fTimer;
 
+   Double_t   fDt;
    Double_t   fWPhi;
    Double_t   fWTheta, fATheta;
    Double_t   fWDolly, fADolly;
 
-   Double_t   fDt;
    Double_t   fTime;
    Double_t   fThetaA0, fDollyA0;
    Bool_t     fTimerRunning;
@@ -42,14 +42,21 @@ public:
    TGLAutoRotator(TGLViewer* v);
    virtual ~TGLAutoRotator();
 
+   TGLCamera* GetCamera() const { return fCamera; }
+
    // --------------------------------
 
-   void Start(Double_t delta_t);
+   void Start();
    void Stop();
 
    void Timeout();
 
    // --------------------------------
+
+   Bool_t   IsRunning() const     { return fTimerRunning; }
+
+   Double_t GetDt() const         { return fDt; }
+   void     SetDt(Double_t dt);
 
    Double_t GetWPhi() const       { return fWPhi; }
    void     SetWPhi(Double_t w)   { fWPhi = w;    }

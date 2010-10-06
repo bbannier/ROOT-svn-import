@@ -80,6 +80,10 @@ private:
 
    TGLClipSetSubEditor *fClipSet;
 
+   TGNumberEntry    *fARotDt,     *fARotWPhi;
+   TGNumberEntry    *fARotATheta, *fARotWTheta;
+   TGNumberEntry    *fARotADolly, *fARotWDolly;
+
    TGNumberEntry    *fStereoZeroParallax;
    TGNumberEntry    *fStereoEyeOffsetFac;
    TGNumberEntry    *fStereoFrustumAsymFac;
@@ -96,7 +100,7 @@ private:
    void CreateStyleTab();
    void CreateGuidesTab();
    void CreateClippingTab();
-   void CreateStereoTab();
+   void CreateExtrasTab();
 
    void UpdateReferencePosState();
 
@@ -126,7 +130,10 @@ public:
    void UpdateViewerAxes(Int_t id);
    void UpdateViewerReference();
    void DoCameraOverlay();
-   // Stereo
+   // Extras
+   void UpdateRotator();
+   void DoRotatorStart();
+   void DoRotatorStop();
    void UpdateStereo();
 
    void DetachFromPad(){fIsInPad = kFALSE;}
