@@ -95,6 +95,8 @@ TMVA::MethodCFMlpANN::MethodCFMlpANN( const TString& jobName,
                                       const TString& theOption,
                                       TDirectory* theTargetDir  ) :
    TMVA::MethodBase( jobName, Types::kCFMlpANN, methodTitle, theData, theOption, theTargetDir  ),
+   fNlayers(0),
+   fNcycles(0),
    fNodes(0),
    fYNN(0)
 {
@@ -132,6 +134,8 @@ TMVA::MethodCFMlpANN::MethodCFMlpANN( DataSetInfo& theData,
                                       const TString& theWeightFile,  
                                       TDirectory* theTargetDir ):
    TMVA::MethodBase( Types::kCFMlpANN, theData, theWeightFile, theTargetDir ),
+   fNlayers(0),
+   fNcycles(0),
    fNodes(0),
    fYNN(0)
 {
@@ -293,7 +297,7 @@ void TMVA::MethodCFMlpANN::Train( void )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodCFMlpANN::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodCFMlpANN::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // returns CFMlpANN output (normalised within [0,1])
    Bool_t isOK = kTRUE;
@@ -308,7 +312,7 @@ Double_t TMVA::MethodCFMlpANN::GetMvaValue( Double_t* err )
    if (!isOK) Log() << kFATAL << "EvalANN returns (!isOK) for event " << Endl;
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    return myMVA;
 }

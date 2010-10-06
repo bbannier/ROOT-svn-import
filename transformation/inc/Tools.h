@@ -198,10 +198,16 @@ namespace TMVA {
                              kOriginalWelcomeMsgColor,
                              kOriginalWelcomeMsgBW };
 
+      // print TMVA citation (to be called from, eg, .TMVAlogon)
+      enum ECitation { kPlainText = 1,
+		       kBibTeX };
+
       void TMVAWelcomeMessage();
       void TMVAWelcomeMessage( MsgLogger& logger, EWelcomeMessage m = kStandardWelcomeMsg );
       void TMVAVersionMessage( MsgLogger& logger );
       void ROOTVersionMessage( MsgLogger& logger );
+
+      void TMVACitation( MsgLogger& logger, ECitation citType = kPlainText );
 
       // string tools
 
@@ -230,7 +236,7 @@ namespace TMVA {
       template<typename T>
       void        AddAttr     ( void* node, const char* , const T& value, Int_t precision = 16 );
       void        AddAttr     ( void* node, const char* attrname, const char* value );
-      void*       AddChild    ( void* parent, const char* childname, const char* content = 0 );
+      void*       AddChild    ( void* parent, const char* childname, const char* content = 0, bool isRootNode = false );
       Bool_t      AddRawLine  ( void* node, const char * raw );
       Bool_t      AddComment  ( void* node, const char* comment );
 
@@ -254,6 +260,7 @@ namespace TMVA {
 } // namespace TMVA
 
 //_______________________________________________________________________
+// coverity[ -tainted_data_argument : arg-2 ]
 template<typename T>
 void TMVA::Tools::ReadAttr( void* node, const char* attrname, T& value )
 {

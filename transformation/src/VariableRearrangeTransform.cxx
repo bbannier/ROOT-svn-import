@@ -207,12 +207,11 @@ void TMVA::VariableRearrangeTransform::ReadFromXML( void* trfnode )
    Bool_t newFormat = kFALSE;
 
    void* inpnode = NULL;
-   try{
-      inpnode = gTools().GetChild(trfnode, "Selection"); // new xml format
-      newFormat = kTRUE;
-   }catch( std::logic_error& excpt ){
-      Log() << kFATAL << "Unknown weight file format for transformations." << Endl;
-   }
+
+   inpnode = gTools().GetChild(trfnode, "Selection"); // new xml format
+   if(inpnode == NULL)
+      Log() << kFATAL << "Unknown weight file format for transformations. (tried to read in 'rearrange' transform)" << Endl;
+   newFormat = kTRUE;
    
    VariableTransformBase::ReadFromXML( inpnode );
    

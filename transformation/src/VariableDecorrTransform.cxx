@@ -354,6 +354,7 @@ void TMVA::VariableDecorrTransform::WriteTransformationToStream( std::ostream& o
 {
    // write the decorrelation matrix to the stream
    Int_t cls = 0;
+   Int_t dp = o.precision();
    for (std::vector<TMatrixD*>::const_iterator itm = fDecorrMatrices.begin(); itm != fDecorrMatrices.end(); itm++) {
       o << "# correlation matrix " << std::endl;
       TMatrixD* mat = (*itm);
@@ -367,6 +368,7 @@ void TMVA::VariableDecorrTransform::WriteTransformationToStream( std::ostream& o
       cls++;
    }
    o << "##" << std::endl;
+   o << std::setprecision(dp);
 }
 
 //_______________________________________________________________________
@@ -375,6 +377,10 @@ void TMVA::VariableDecorrTransform::AttachXMLTo(void* parent)
    // node attachment to parent
    void* trf = gTools().AddChild(parent, "Transform");
    gTools().AddAttr(trf,"Name", "Decorrelation");
+
+
+   VariableTransformBase::AttachXMLTo( trf );
+
 
    for (std::vector<TMatrixD*>::const_iterator itm = fDecorrMatrices.begin(); itm != fDecorrMatrices.end(); itm++) {
       TMatrixD* mat = (*itm);
@@ -396,6 +402,27 @@ void TMVA::VariableDecorrTransform::AttachXMLTo(void* parent)
 //_______________________________________________________________________
 void TMVA::VariableDecorrTransform::ReadFromXML( void* trfnode ) 
 {
+
+
+
+   Bool_t newFormat = kFALSE;
+
+   void* inpnode = NULL;
+   
+   inpnode = gTools().GetChild(trfnode, "Selection"); // new xml format
+   if( inpnode!=NULL )
+      newFormat = kTRUE; // new xml format
+
+   if( newFormat ){
+      // ------------- new format --------------------
+      // read input
+      VariableTransformBase::ReadFromXML( inpnode );
+
+   }
+
+
+
+
    // Read the transformation matrices from the xml node
 
    // first delete the old matrices
@@ -482,6 +509,8 @@ void TMVA::VariableDecorrTransform::MakeFunction( std::ostream& fout, const TStr
 {
    // creates C++ code fragment of the decorrelation transform for inclusion in standalone C++ class
 
+   Int_t dp = fout.precision();
+
    UInt_t numC = fDecorrMatrices.size();
    // creates a decorrelation function
    if (part==1) {
@@ -523,4 +552,6 @@ void TMVA::VariableDecorrTransform::MakeFunction( std::ostream& fout, const TStr
       fout << "   for (int i=0; i<"<<matx->GetNrows()<<";i++) iv[i] = tv[i];" << std::endl;
       fout << "}" << std::endl;
    }
+
+   fout << std::setprecision(dp);
 }

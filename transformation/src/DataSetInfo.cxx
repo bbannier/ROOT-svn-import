@@ -135,7 +135,7 @@ TMVA::ClassInfo* TMVA::DataSetInfo::GetClassInfo( Int_t cls ) const
       return fClasses.at(cls);
    }
    catch(...) {
-      return NULL;
+      return 0;
    }
 }
 
@@ -169,7 +169,7 @@ Bool_t TMVA::DataSetInfo::HasCuts() const
 {
    Bool_t hasCuts = kFALSE;
    for (std::vector<ClassInfo*>::iterator it = fClasses.begin(); it < fClasses.end(); it++) {
-      if( (*it)->GetCut() != "" ) hasCuts = kTRUE;
+      if( TString((*it)->GetCut()) != TString("") ) hasCuts = kTRUE;
    }
    return hasCuts;
 }

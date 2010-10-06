@@ -29,6 +29,9 @@
  * (http://tmva.sourceforge.net/LICENSE)                                          *
  **********************************************************************************/
 
+#include <cmath>
+#include <limits>
+
 #ifndef ROOT_TMath
 #include "TMath.h"
 #endif
@@ -48,8 +51,6 @@ TMVA::PDEFoamDistr::PDEFoamDistr()
      fVolFrac(-1.),
      fBst(NULL),
      fDensityCalc(kEVENT_DENSITY), // default: fill event density to BinarySearchTree
-     fSignalClass(1),
-     fBackgroundClass(0),
      fLogger( new MsgLogger("PDEFoamDistr"))
 {}
 
@@ -71,8 +72,6 @@ TMVA::PDEFoamDistr::PDEFoamDistr(const PDEFoamDistr &distr)
      fVolFrac         (distr.fVolFrac),
      fBst             (distr.fBst),
      fDensityCalc     (kEVENT_DENSITY), // default: fill event density to BinarySearchTree
-     fSignalClass     (distr.fSignalClass),
-     fBackgroundClass (distr.fBackgroundClass),
      fLogger( new MsgLogger("PDEFoamDistr"))
 {
    // Copy constructor
@@ -125,19 +124,18 @@ void TMVA::PDEFoamDistr::FillBinarySearchTree( const Event* ev, EFoamType ft, Bo
 
    TMVA::Event *event = new TMVA::Event(*ev);
  
-   // set event class and normalization
-   if (ft==kSeparate || ft==kDiscr){
-      event->SetClass(ev->GetClass()==fSignalClass ? fSignalClass : fBackgroundClass);
-   } else if (ft==kMultiTarget){
+   // set event variables in case of multi-target regression
+   if (ft==kMultiTarget){
       // since in multi target regression targets are handled like
       // variables, remove targets and add them to the event variabels
       std::vector<Float_t> targets = ev->GetTargets();
       for (UInt_t i = 0; i < targets.size(); i++)
          event->SetVal(i+ev->GetValues().size(), targets.at(i));
       event->GetTargets().clear();
-      event->SetClass(fSignalClass);
    }
    fBst->Insert(event);
+
+   delete event;
 }
 
 //_____________________________________________________________________
@@ -169,7 +167,7 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
    std::vector<Double_t> ub(fDim);
 
    // probevolume relative to hypercube with edge length 1:
-   static const Double_t probevolume_inv = TMath::Power((fVolFrac/2), fDim);
+   const Double_t probevolume_inv = std::pow((fVolFrac/2), fDim);
 
    // set upper and lower bound for search volume
    for (Int_t idim = 0; idim < fDim; idim++) {
@@ -186,7 +184,7 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
 
    // normalized density: (number of counted events) / volume / (total
    // number of events) should be ~1 on average
-   const Double_t count = (Double_t) (nodes.size()); // number of events found
+   const UInt_t count = nodes.size(); // number of events found
 
    // store density based on total number of events
    event_density = count * probevolume_inv;
@@ -196,21 +194,105 @@ Double_t TMVA::PDEFoamDistr::Density( Double_t *Xarg, Double_t &event_density )
       weighted_count += (nodes.at(j))->GetWeight();
 
    if (FillDiscriminator()){ // calc number of signal events in nodes
-      Double_t N_sig = 0;    // number of target events found
+      Double_t N_sig = 0;    // number of signal events found
       // now sum over all nodes->IsSignal;
-      for (Int_t j=0; j<count; j++){
-         N_sig += ((nodes.at(j))->IsSignal()?1.:0.) * (nodes.at(j))->GetWeight();
+      for (UInt_t j=0; j<count; j++){
+         if (nodes.at(j)->IsSignal()) N_sig += nodes.at(j)->GetWeight();
       }
       return (N_sig/(weighted_count+0.1))*probevolume_inv; // return:  (N_sig/N_total) / (cell_volume)
    }
    else if (FillTarget0()){ // calc sum of weighted target values
       Double_t N_tar = 0;   // number of target events found
       // now sum over all nodes->GetTarget(0);
-      for (Int_t j=0; j<count; j++) {
+      for (UInt_t j=0; j<count; j++) {
          N_tar += ((nodes.at(j))->GetTargets()).at(0) * ((nodes.at(j))->GetWeight());
       }
       return (N_tar/(weighted_count+0.1))*probevolume_inv; // return:  (N_tar/N_total) / (cell_volume)
    }
 
    return ((weighted_count+0.1)*probevolume_inv); // return:  N_total(weighted) / cell_volume
+}
+
+//_____________________________________________________________________
+void TMVA::PDEFoamDistr::FillHist(PDEFoamCell* cell, std::vector<TH1F*> &hsig, std::vector<TH1F*> &hbkg, std::vector<TH1F*> &hsig_unw, std::vector<TH1F*> &hbkg_unw)
+{
+   // fill the given histograms with signal and background events,
+   // which are located in the given cell
+
+   // sanity check
+   if (!cell)
+      Log() << kFATAL << "<PDEFoamDistr::FillHist> Null pointer for cell given!" << Endl;
+   if (Int_t(hsig.size()) != fDim || Int_t(hbkg.size()) != fDim || 
+       Int_t(hsig_unw.size()) != fDim || Int_t(hbkg_unw.size()) != fDim)
+      Log() << kFATAL << "<PDEFoamDistr::FillHist> Edge histograms have wrong size!" << Endl;
+
+   // check histograms
+   for (Int_t idim=0; idim<fDim; idim++) {
+      if (!hsig.at(idim) || !hbkg.at(idim) || 
+	  !hsig_unw.at(idim) || !hbkg_unw.at(idim))
+	 Log() << kFATAL << "<PDEFoamDistr::FillHist> Histogram not initialized!" << Endl;
+   }
+
+   // get cell position and size
+   PDEFoamVect  cellSize(fDim);
+   PDEFoamVect  cellPosi(fDim);
+   cell->GetHcub(cellPosi, cellSize);
+
+   // determine lower and upper cell bound
+   std::vector<Double_t> lb(fDim); // lower bound
+   std::vector<Double_t> ub(fDim); // upper bound
+   for (Int_t idim = 0; idim < fDim; idim++) {
+      lb[idim] = VarTransformInvers(idim, cellPosi[idim] - std::numeric_limits<float>::epsilon());
+      ub[idim] = VarTransformInvers(idim, cellPosi[idim] + cellSize[idim] + std::numeric_limits<float>::epsilon());
+   }
+
+   // create TMVA::Volume object needed for searching within the BST
+   TMVA::Volume volume(&lb, &ub); // volume to search in
+   std::vector<const TMVA::BinarySearchTreeNode*> nodes; // BST nodes found
+
+   // do range searching
+   fBst->SearchVolume(&volume, &nodes);
+
+   // calc xmin and xmax of events found in cell
+   std::vector<Float_t> xmin(fDim, std::numeric_limits<float>::max());
+   std::vector<Float_t> xmax(fDim, -std::numeric_limits<float>::max());
+   for (UInt_t iev=0; iev<nodes.size(); iev++) {
+      std::vector<Float_t> ev = nodes.at(iev)->GetEventV();
+      for (Int_t idim=0; idim<fDim; idim++) {
+	 if (ev.at(idim) < xmin.at(idim))  xmin.at(idim) = ev.at(idim);
+	 if (ev.at(idim) > xmax.at(idim))  xmax.at(idim) = ev.at(idim);
+      }
+   }
+
+   // reset histogram ranges
+   for (Int_t idim=0; idim<fDim; idim++) {
+      hsig.at(idim)->GetXaxis()->SetLimits(VarTransform(idim,xmin.at(idim)), 
+					   VarTransform(idim,xmax.at(idim)));
+      hbkg.at(idim)->GetXaxis()->SetLimits(VarTransform(idim,xmin.at(idim)), 
+					   VarTransform(idim,xmax.at(idim)));
+      hsig_unw.at(idim)->GetXaxis()->SetLimits(VarTransform(idim,xmin.at(idim)), 
+					       VarTransform(idim,xmax.at(idim)));
+      hbkg_unw.at(idim)->GetXaxis()->SetLimits(VarTransform(idim,xmin.at(idim)), 
+					       VarTransform(idim,xmax.at(idim)));
+      hsig.at(idim)->Reset();
+      hbkg.at(idim)->Reset();
+      hsig_unw.at(idim)->Reset();
+      hbkg_unw.at(idim)->Reset();
+   }
+
+   // fill histograms
+   for (UInt_t iev=0; iev<nodes.size(); iev++) {
+      std::vector<Float_t> ev = nodes.at(iev)->GetEventV();
+      Float_t              wt = nodes.at(iev)->GetWeight();
+      Bool_t           signal = nodes.at(iev)->IsSignal();
+      for (Int_t idim=0; idim<fDim; idim++) {
+	 if (signal) {
+	    hsig.at(idim)->Fill(VarTransform(idim,ev.at(idim)), wt);
+	    hsig_unw.at(idim)->Fill(VarTransform(idim,ev.at(idim)), 1);
+	 } else {
+	    hbkg.at(idim)->Fill(VarTransform(idim,ev.at(idim)), wt);
+	    hbkg_unw.at(idim)->Fill(VarTransform(idim,ev.at(idim)), 1);
+	 }
+      }
+   }
 }

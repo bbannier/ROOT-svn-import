@@ -57,8 +57,19 @@ TMVA::MethodKNN::MethodKNN( const TString& jobName,
                             DataSetInfo& theData, 
                             const TString& theOption,
                             TDirectory* theTargetDir ) 
-   : TMVA::MethodBase(jobName, Types::kKNN, methodTitle, theData, theOption, theTargetDir),
-     fModule(0)
+   : TMVA::MethodBase(jobName, Types::kKNN, methodTitle, theData, theOption, theTargetDir)
+   , fSumOfWeightsS(0)
+   , fSumOfWeightsB(0)
+   , fModule(0)
+   , fnkNN(0)
+   , fBalanceDepth(0)
+   , fScaleFrac(0)
+   , fSigmaFact(0)
+   , fTrim(kFALSE)
+   , fUseKernel(kFALSE)
+   , fUseWeight(kFALSE)
+   , fUseLDA(kFALSE)
+   , fTreeOptDepth(0)
 {
    // standard constructor
 }
@@ -67,8 +78,19 @@ TMVA::MethodKNN::MethodKNN( const TString& jobName,
 TMVA::MethodKNN::MethodKNN( DataSetInfo& theData, 
                             const TString& theWeightFile,  
                             TDirectory* theTargetDir ) 
-   : TMVA::MethodBase( Types::kKNN, theData, theWeightFile, theTargetDir),
-     fModule(0)
+   : TMVA::MethodBase( Types::kKNN, theData, theWeightFile, theTargetDir)
+   , fSumOfWeightsS(0)
+   , fSumOfWeightsB(0)
+   , fModule(0)
+   , fnkNN(0)
+   , fBalanceDepth(0)
+   , fScaleFrac(0)
+   , fSigmaFact(0)
+   , fTrim(kFALSE)
+   , fUseKernel(kFALSE)
+   , fUseWeight(kFALSE)
+   , fUseLDA(kFALSE)
+   , fTreeOptDepth(0)
 {
    // constructor from weight file
 }
@@ -255,12 +277,12 @@ void TMVA::MethodKNN::Train()
 }
 
 //_______________________________________________________________________
-Double_t TMVA::MethodKNN::GetMvaValue( Double_t* err )
+Double_t TMVA::MethodKNN::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // Compute classifier response
 
    // cannot determine error
-   if (err != 0) *err = -1;
+   NoErrorCalc(err, errUpper);
 
    //
    // Define local variables
@@ -274,7 +296,7 @@ Double_t TMVA::MethodKNN::GetMvaValue( Double_t* err )
    
    for (Int_t ivar = 0; ivar < nvar; ++ivar) {
       vvec[ivar] = ev->GetValue(ivar);
-   }   
+   }
 
    // search for fnkNN+2 nearest neighbors, pad with two 
    // events to avoid Monte-Carlo events with zero distance

@@ -49,6 +49,9 @@
 #ifndef ROOT_TMVA_PDEFoamCell
 #include "TMVA/PDEFoamCell.h"
 #endif
+#ifndef ROOT_TMVA_MsgLogger
+#include "TMVA/MsgLogger.h"
+#endif
 
 namespace TMVA {
    enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget };
@@ -74,9 +77,6 @@ namespace TMVA {
       TDensityCalc fDensityCalc;// method of density calculation
 
    protected:
-      UInt_t fSignalClass;      // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
-      Int_t fBackgroundClass;  // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
-
       mutable MsgLogger* fLogger;                     //! message logger
       MsgLogger& Log() const { return *fLogger; }
 
@@ -115,14 +115,15 @@ namespace TMVA {
       // returns density at a given point by range searching in BST
       Double_t Density(Double_t *Xarg, Double_t &event_density);
 
+      // Return fDim histograms with signal and bg events
+      void FillHist(PDEFoamCell* cell, std::vector<TH1F*>&, std::vector<TH1F*>&, 
+		    std::vector<TH1F*>&, std::vector<TH1F*>&);
+
       // Getters and setters for foam filling method
       void SetDensityCalc( TDensityCalc dc ){ fDensityCalc = dc; };
       Bool_t FillDiscriminator(){ return fDensityCalc == kDISCRIMINATOR; }
       Bool_t FillTarget0()      { return fDensityCalc == kTARGET;        }
       Bool_t FillEventDensity() { return fDensityCalc == kEVENT_DENSITY; }
-
-      void SetSignalClass( Int_t cls )     { fSignalClass = cls;  } // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
-      void SetBackgroundClass( Int_t cls ) { fBackgroundClass = cls;  } // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
 
       ClassDef(PDEFoamDistr,2) //Class for Event density
    };  //end of PDEFoamDistr

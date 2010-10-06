@@ -154,9 +154,9 @@ const TMVA::Event* TMVA::TransformationHandler::Transform( const Event* ev ) con
 //_______________________________________________________________________
 const TMVA::Event* TMVA::TransformationHandler::InverseTransform( const Event* ev, Bool_t suppressIfNoTargets ) const 
 {
-   // the inverse transformation (use reverse iterators to go backwards through the transformations)
-   TListIter trIt(&fTransformations,kIterBackward);
-   std::vector< Int_t >::const_reverse_iterator rClsIt = fTransformationsReferenceClasses.rbegin();
+   // the inverse transformation
+   TListIter trIt(&fTransformations);
+   std::vector< Int_t >::const_iterator rClsIt = fTransformationsReferenceClasses.begin();
    const Event* trEv = ev;
    UInt_t nvars = 0, ntgts = 0, nspcts = 0;
    while (VariableTransformBase *trf = (VariableTransformBase*) trIt() ) {
@@ -847,7 +847,7 @@ void TMVA::TransformationHandler::ReadFromStream( std::istream& )
 }
 
 //_______________________________________________________________________
-void TMVA::TransformationHandler::ReadFromXML( void* trfsnode ) 
+void TMVA::TransformationHandler::ReadFromXML( void* trfsnode )
 {
    void* ch = gTools().GetChild( trfsnode );
    while(ch) {
@@ -859,13 +859,13 @@ void TMVA::TransformationHandler::ReadFromXML( void* trfsnode )
 
       if (trfname == "Decorrelation" ) {
          newtrf = new VariableDecorrTransform(fDataSetInfo);
-      } 
+      }
       else if (trfname == "PCA" ) {
          newtrf = new VariablePCATransform(fDataSetInfo);
-      } 
+      }
       else if (trfname == "Gauss" ) {
          newtrf = new VariableGaussTransform(fDataSetInfo);
-      } 
+      }
       else if (trfname == "Normalize" ) {
          newtrf = new VariableNormalizeTransform(fDataSetInfo);
       } 
@@ -873,19 +873,21 @@ void TMVA::TransformationHandler::ReadFromXML( void* trfsnode )
          newtrf = new VariableRearrangeTransform(fDataSetInfo);
       } 
       else if (trfname != "None") {
+      }
+      else {
          Log() << kFATAL << "<ReadFromXML> Variable transform '"
                << trfname << "' unknown." << Endl;
       }
       newtrf->ReadFromXML( ch );
       AddTransformation( newtrf, idxCls );
-      ch = gTools().GetNextChild(ch);      
+      ch = gTools().GetNextChild(ch);
    }
 }
 
 //_______________________________________________________________________
 void TMVA::TransformationHandler::PrintVariableRanking() const
 {
-   // prints ranking of input variables   
+   // prints ranking of input variables
    Log() << kINFO << "Ranking input variables..." << Endl;
    std::vector<Ranking*>::const_iterator it = fRanking.begin();
    for (; it != fRanking.end(); it++) (*it)->Print();
@@ -951,7 +953,7 @@ Double_t TMVA::TransformationHandler::GetMax( Int_t ivar, Int_t cls ) const
 {
    try {
       return fVariableStats.at(cls).at(ivar).fMax;
-   } 
+   }
    catch(...) {
       try {
          return fVariableStats.at(fNumC-1).at(ivar).fMax;
