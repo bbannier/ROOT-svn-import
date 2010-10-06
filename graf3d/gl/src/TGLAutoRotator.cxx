@@ -31,6 +31,7 @@ ClassImp(TGLAutoRotator);
 TGLAutoRotator::TGLAutoRotator(TGLViewer* v) :
    fViewer(v),
    fTimer(new TTimer),
+   fDt    (0.02),
    fWPhi  (0.30),
    fWTheta(0.15), fATheta(0.5),
    fWDolly(0.10), fADolly(0.4),
@@ -52,12 +53,21 @@ TGLAutoRotator::~TGLAutoRotator()
 //==============================================================================
 
 //______________________________________________________________________________
+void TGLAutoRotator::SetDt(Double_t dt)
+{
+   // Set time between two redraws.
+   // Range: 0.01 -> 1.
+
+   fDt = TMath::Range(0.01, 1.0, dt);
+}
+
+//______________________________________________________________________________
 void TGLAutoRotator::SetATheta(Double_t a)
 {
    // Set relative amplitude of theta oscilation.
    // Value range: 0.01 -> 1.
 
-   a = TMath::Range(0.01, 1, a);
+   a = TMath::Range(0.01, 1.0, a);
    if (fTimerRunning)
    {
       fThetaA0 = fThetaA0 * a / fATheta;
@@ -71,7 +81,7 @@ void TGLAutoRotator::SetADolly(Double_t a)
    // Set relative amplitude of forward/backward oscilation.
    // Value range: 0.01 -> 1.
 
-  a = TMath::Range(0.01, 1, a);
+  a = TMath::Range(0.01, 1.0, a);
   if (fTimerRunning)
   {
      fDollyA0 = fDollyA0 * a / fADolly;
@@ -82,24 +92,22 @@ void TGLAutoRotator::SetADolly(Double_t a)
 //==============================================================================
 
 //______________________________________________________________________________
-void TGLAutoRotator::Start(Double_t delta_t)
+void TGLAutoRotator::Start()
 {
    if (fTimerRunning)
    {
-      Error("Start", "Already running.");
-      return;
+      Stop();
    }
 
    fCamera = & fViewer->CurrentCamera();
 
-   fDt = delta_t;
    fTime = 0;
 
    fThetaA0 = fATheta * TMath::PiOver2();
    fDollyA0 = fADolly * fCamera->GetCamTrans().GetBaseVec(4).Mag();
 
    fTimerRunning = kTRUE;
-   fTimer->SetTime(TMath::Nint(1000*delta_t));
+   fTimer->SetTime(TMath::Nint(1000*fDt));
    fTimer->Reset();
    fTimer->TurnOn();
 }
@@ -107,14 +115,11 @@ void TGLAutoRotator::Start(Double_t delta_t)
 //______________________________________________________________________________
 void TGLAutoRotator::Stop()
 {
-   if (!fTimerRunning)
+   if (fTimerRunning)
    {
-      Error("Stop", "Already running.");
-      return;
+      fTimer->TurnOff();
+      fTimerRunning = kFALSE;
    }
-
-   fTimer->TurnOff();
-   fTimerRunning = kFALSE;
 }
 
 //______________________________________________________________________________
@@ -147,5 +152,6 @@ void TGLAutoRotator::Timeout()
 
    fViewer->RequestDraw(TGLRnrCtx::kLODHigh);
 
+   fTimer->SetTime(TMath::Nint(1000*fDt));
    fTimer->TurnOn();
 }
